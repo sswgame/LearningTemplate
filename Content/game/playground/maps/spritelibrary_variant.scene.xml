@@ -31,8 +31,8 @@
 					                 _localScale="6,6,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _clipPath="game/playground/data/sprites/labeled.sprite.xml"
-					                 _spriteLibraryPath="game/playground/data/sprites/variant.spritelib.xml"
+					                 _clipPath="guid:610dfc8fcbee2620db7da73379b2189d"
+					                 _spriteLibraryPath="guid:fd3d8eeb8ff695b6627ebd1f2da5328e"
 					                 _sortingLayer="Default"
 					                 _orderInLayer="0" />
 				</_listComponent>

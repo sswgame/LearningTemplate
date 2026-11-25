@@ -34,7 +34,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="160,1,160" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="120" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="160,1,160" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="120" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -49,7 +49,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,3,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,3,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -64,7 +64,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0.2" _localRotation="0,0,0" _localScale="0.8,3.2,0.05" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0.2" _localRotation="0,0,0" _localScale="0.8,3.2,0.05" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="2" />
 					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
 					<ClimbZoneComponent _localID="9868195776723156160" _axis="0,1,0" _climbSpeed="3" _lateralSpeed="0" _bSwing="false" />
 				</_listComponent>
@@ -81,7 +81,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,5,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,5,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -96,7 +96,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0.22" _localRotation="0,0,0" _localScale="6,5.2,0.02" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0.22" _localRotation="0,0,0" _localScale="6,5.2,0.02" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4" />
 					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
 					<ClimbZoneComponent _localID="9868195776723156160" _axis="0,1,0" _climbSpeed="2" _lateralSpeed="1.5" _bSwing="false" />
 				</_listComponent>
@@ -113,7 +113,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.1,6,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.1,6,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="3" />
 					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
 					<ClimbZoneComponent _localID="9868195776723156160" _axis="0,1,0" _climbSpeed="3" _lateralSpeed="0" _bSwing="true" />
 				</_listComponent>
@@ -123,8 +123,8 @@
 			<GameObject _schemaVersion="0" _name="Pool" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="30,2,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/pool.zone.xml" _shape="Box" _halfExtents="5,2,5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="10,0.02,10" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="8" />
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="guid:898a8be1dea64e0493015028c8c39f22" _shape="Box" _halfExtents="5,2,5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="10,0.02,10" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="8" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -139,7 +139,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.6,2,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.6,2,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="2" />
 					<TeleportTriggerComponent _localID="4021243564544822838" _activatorTag="Player" _bOnce="false" _destination="11" _bMatchFacing="true" />
 					<MinimapMarkerComponent _localID="15882014908331153694" _color="0.4,0.7,1,1" _size="10" _bClampToEdge="true" />
 				</_listComponent>
@@ -156,7 +156,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.6,2,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.6,2,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="2" />
 					<TeleportTriggerComponent _localID="4021243564544822838" _activatorTag="Player" _bOnce="false" _destination="10" _bMatchFacing="true" />
 				</_listComponent>
 			</GameObject>
@@ -165,8 +165,8 @@
 			<GameObject _schemaVersion="0" _name="Chest" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.4,0" _localRotation="0,0,0" _localScale="1,0.8,0.7" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
-					<InteractableComponent _localID="10644522701805113517" _interactionID="OpenChest" _catalogPath="game/playground/data/outdoors.interactions.xml" _priority="0" _bEnabled="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.4,0" _localRotation="0,0,0" _localScale="1,0.8,0.7" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1" />
+					<InteractableComponent _localID="10644522701805113517" _interactionID="OpenChest" _catalogPath="guid:02cba15920e9420c894816cf06098313" _priority="0" _bEnabled="true" />
 					<ItemBoxComponent _localID="811355330383306693" _openBy="Use" _maxOpenCount="1" _bHideWhenOpened="false" _respawnDelay="0" _seed="3">
 						<_listChoice>
 							<ItemBoxChoice _item="potion_health" _weight="1" _count="2" />
@@ -180,8 +180,8 @@
 			<GameObject _schemaVersion="0" _name="Potion" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="4,0,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="0.3,0.5,0.3" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.6" />
-					<InteractableComponent _localID="10644522701805113517" _interactionID="PickUp" _catalogPath="game/playground/data/outdoors.interactions.xml" _priority="0" _bEnabled="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="0.3,0.5,0.3" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.6" />
+					<InteractableComponent _localID="10644522701805113517" _interactionID="PickUp" _catalogPath="guid:02cba15920e9420c894816cf06098313" _priority="0" _bEnabled="true" />
 					<PickupComponent _localID="6323976741138821867" _itemID="potion_health" _count="1" _bPickUpOnTouch="false" />
 				</_listComponent>
 			</GameObject>
@@ -197,7 +197,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.3,0.3,0.05" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.3,0.3,0.05" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.6" />
 					<PickupComponent _localID="6323976741138821867" _itemID="herb_wild" _count="3" _bPickUpOnTouch="true" />
 				</_listComponent>
 			</GameObject>
@@ -214,9 +214,9 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,2,0" _localRotation="0,0,0" _localScale="0.5,4,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="3" />
-					<MeshComponent _localID="163494941664531515" _localPosition="0,4.2,0" _localRotation="0,0,0" _localScale="2,1.6,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2" />
-					<InteractableComponent _localID="10644522701805113517" _interactionID="Chop" _catalogPath="game/playground/data/outdoors.interactions.xml" _priority="0" _bEnabled="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,2,0" _localRotation="0,0,0" _localScale="0.5,4,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="3" />
+					<MeshComponent _localID="163494941664531515" _localPosition="0,4.2,0" _localRotation="0,0,0" _localScale="2,1.6,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="2" />
+					<InteractableComponent _localID="10644522701805113517" _interactionID="Chop" _catalogPath="guid:02cba15920e9420c894816cf06098313" _priority="0" _bEnabled="true" />
 					<GatheringNodeComponent _localID="17749173230493077954" _item="wood_log" _count="2" _uses="2" _respawnDelay="2" _fallDuration="1" />
 					<MinimapMarkerComponent _localID="15882014908331153694" _color="0.4,0.9,0.4,1" _size="8" _bClampToEdge="false" />
 				</_listComponent>
@@ -226,8 +226,8 @@
 			<GameObject _schemaVersion="0" _name="FishingSpot" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="16,0,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.02,0" _localRotation="0,0,0" _localScale="3,0.04,3" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="3" />
-					<InteractableComponent _localID="10644522701805113517" _interactionID="Fish" _catalogPath="game/playground/data/outdoors.interactions.xml" _priority="0" _bEnabled="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.02,0" _localRotation="0,0,0" _localScale="3,0.04,3" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="3" />
+					<InteractableComponent _localID="10644522701805113517" _interactionID="Fish" _catalogPath="guid:02cba15920e9420c894816cf06098313" _priority="0" _bEnabled="true" />
 					<ItemBoxComponent _localID="811355330383306693" _openBy="Use" _maxOpenCount="0" _bHideWhenOpened="false" _respawnDelay="0" _seed="11">
 						<_listChoice>
 							<ItemBoxChoice _item="fish_trout" _weight="1" _count="1" />
@@ -241,8 +241,8 @@
 			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="0,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
-					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
-					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="false" _bPlayOnBegin="true" />
+					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="guid:0a55fa69f6f749e88ca135bc3d803483" _materialPath="guid:0b440989e7fbcb53768a75149e9b6bdb" _boundsRadius="2" _skeletonPath="guid:03273c012fee9c977aa7fb87663429b1" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="guid:4acc784c4115bb691da73754fcd0a89c" _animationSetPath="guid:5cdc50168836caff61298efe87d056fc" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="false" _bPlayOnBegin="true" />
 					<PawnComponent _localID="11149290121538025405" _moveAction="Move" _lookAction="None" _upAction="Playground.MoveUp" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player0" _bLockMouse="false">
 						<_listButton>
 							<item>Jump</item>
@@ -274,7 +274,7 @@
 							</_listTag>
 						</_tags>
 					</TagComponent>
-					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/ui/outdoors.ui.xml" />
+					<HUDControllerComponent _localID="17122754535480611078" _documentPath="guid:772d2fe8bb2a4a2ab5e16f434628f66a" />
 					<MinimapComponent _localID="14348804441869400080" _panelName="Minimap" _range="20" _bRotateWithView="false" _captureCamera="19" />
 				</_listComponent>
 			</GameObject>

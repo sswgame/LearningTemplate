@@ -1,8 +1,8 @@
 <?asset guid="2e9cf7406dc866621fd2206e04ca469f"?>
-<Prefab formatVersion="0" _base="common/prefabs/kaykit/skeleton_rogue_cape.prefab.xml" name="SkeletonWarriorHelmet">
+<Prefab formatVersion="0" _base="guid:29c331e32bb5778df30f5ba8786a1d09" name="SkeletonWarriorHelmet">
 	<PrefabOverrides>
 		<Override key="#0244d8c8807cd288">
-			<MeshComponent _meshID="common/models/kaykit/skeleton_warrior/parts/skeleton_warrior_helmet.mesh" />
+			<MeshComponent _meshID="guid:27d632d1066b2527bea3be2868773f47" />
 		</Override>
 	</PrefabOverrides>
 </Prefab>

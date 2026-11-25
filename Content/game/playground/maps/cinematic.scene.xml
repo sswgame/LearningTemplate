@@ -39,7 +39,7 @@
 		<entity id="5" name="Director">
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
-					<SequencePlayerComponent _localID="7060533932593436227" _sequencePath="game/playground/data/cinematic.seq.xml" _framesPerSecond="30" _loopMode="None" _bAutoPlay="false">
+					<SequencePlayerComponent _localID="7060533932593436227" _sequencePath="guid:189bde9ad80a13304074f20ba179d003" _framesPerSecond="30" _loopMode="None" _bAutoPlay="false">
 						<_listBinding>
 							<SequenceBindingSlot _binding="1" _object="3" />
 							<SequenceBindingSlot _binding="2" _object="4" />
@@ -61,21 +61,21 @@
 		<entity id="7" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="30,1,30" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="30,1,30" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="25" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="8" name="BoxLeft">
 			<GameObject _schemaVersion="0" _name="BoxLeft" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-3,1.25,0" _localRotation="0,0,0" _localScale="2.5,2.5,2.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="2.2" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-3,1.25,0" _localRotation="0,0,0" _localScale="2.5,2.5,2.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:a475fbe06e97f84b16b8333ffad1ed79" _boundsRadius="2.2" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="9" name="BoxRight">
 			<GameObject _schemaVersion="0" _name="BoxRight" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="3,1.25,0" _localRotation="0,0,0" _localScale="2.5,2.5,2.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2.2" />
+					<MeshComponent _localID="163493842152903304" _localPosition="3,1.25,0" _localRotation="0,0,0" _localScale="2.5,2.5,2.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="2.2" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -83,7 +83,7 @@
 			<GameObject _schemaVersion="0" _name="Actor" _bActive="true">
 				<_listComponent>
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,1" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" />
-					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="common/data/anim/skeleton.animgraph.xml" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Idle_Combat" _bPlayOnBegin="true" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="guid:8d5a84b9050b8cadf1d06d0d49363c85" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Idle_Combat" _bPlayOnBegin="true" />
 					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonMinion" _seed="0" _bMergeParts="true" />
 				</_listComponent>
 			</GameObject>

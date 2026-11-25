@@ -5,7 +5,7 @@
 	외곽선은 메시 외곽선 패스(MeshOutline, 머티리얼이 켠 것)가 그린다.
 	고르는 법: `-gv_renderPipeline=engine/pipeline/forwardtoonpipeline.xml` (FrameRenderer 초기화).
 -->
-<RenderPipelineDesc _base="engine/pipeline/forwardpipeline.xml" _name="ForwardToonPipeline">
+<RenderPipelineDesc _base="guid:a75d4f411b530b43612e42001606bcec" _name="ForwardToonPipeline">
 	<_listAttachment>
 		<RenderPassAttachment _name="DepthOfFieldColor" _op="Remove" />
 	</_listAttachment>

@@ -10,19 +10,19 @@
 			                       _attachOwner="None"
 			                       _attachOwnerID="0"
 			                       _attachComponent="None"
-			                       _meshID="common/models/props/arrow.mesh"
-			                       _materialPath="common/materials/blaster_palette.material"
+			                       _meshID="guid:08ddb9e7d9057c05276a03daedcc2340"
+			                       _materialPath="guid:5c15a1cb672a93ff7e5d910662693aa2"
 			                       _boundsRadius="0.5"
 			                       _gpuSpinSeed="0"
 			                       _bVisible="true"
-			                       _skeletonPath="common/models/props/arrow/arrow.skeleton.xml"
+			                       _skeletonPath="guid:d858550453588095bd58f353d5db529c"
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
 			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath=""
-			                           _animationSetPath="common/models/props/arrow/arrow.animset.xml"
+			                           _animationSetPath="guid:b7578d41c1e7979c7454ca14437b0b2f"
 			                           _initialState="Arrow_Hidden"
 			                           _currentState=""
 			                           _stateTime="0"
@@ -34,7 +34,7 @@
 			                           _bPlayOnBegin="true" />
 			<PairedAnimationComponent _localID="4756347524451515510" _componentName="PairedAnimationComponent"
 			                          _bActive="true"
-			                          _pairedAnimationPath="common/data/anim/bow_shoot.pairedanim.xml"
+			                          _pairedAnimationPath="guid:5d70fdf422cb3d7ef5f7b413a2b3a113"
 			                          _role="Arrow"
 			                          _bStartOnPlay="false" />
 		</_listComponent>

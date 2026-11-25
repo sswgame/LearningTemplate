@@ -73,10 +73,10 @@
 					                  _attachOwner="None"
 					                  _attachOwnerID="0"
 					                  _attachComponent="None"
-					                  _heightfieldPath="game/playground/heightfields/valley.heightfield"
-					                  _materialPath="engine/materials/terrain.material"
-					                  _layerWeightsPath="game/playground/heightfields/valley.layerweights"
-					                  _detailTexturePath="engine/textures/terrain/terrain_detail.dds"
+					                  _heightfieldPath="guid:75518446e6f8ea20de63ef832da69631"
+					                  _materialPath="guid:f8349c02da55a1d5c28265c9247af3a9"
+					                  _layerWeightsPath="guid:9b202b1315460ef5dfe237580af37ac6"
+					                  _detailTexturePath="guid:8cb5719f760f68154b72860300cc8b8d"
 					                  _size="256,256"
 					                  _heightMin="0"
 					                  _heightMax="40"
@@ -105,7 +105,7 @@
 					                    _attachOwnerID="0"
 					                    _attachComponent="None"
 					                    _shape="Lake"
-					                    _materialPath="engine/materials/water.material"
+					                    _materialPath="guid:1546675df109d0a941207e13ed3a21b6"
 					                    _size="124,124"
 					                    _cellSize="1"
 					                    _riverWidth="6"
@@ -140,7 +140,7 @@
 					                    _attachOwnerID="0"
 					                    _attachComponent="None"
 					                    _shape="River"
-					                    _materialPath="engine/materials/water.material"
+					                    _materialPath="guid:1546675df109d0a941207e13ed3a21b6"
 					                    _size="64,64"
 					                    _cellSize="1"
 					                    _riverWidth="8"
@@ -181,7 +181,7 @@
 					                  _cellSize="32">
 						<_listLayer>
 							<FoliageLayer _name="Grass"
-							              _materialPath="engine/materials/grass.material"
+							              _materialPath="guid:1259c59255193befd5cea3a0fd0b9676"
 							              _tint="0.42,0.7,0.26,1"
 							              _tintVariation="0.3"
 							              _fadeStart="35"
@@ -210,7 +210,7 @@
 								</_listMesh>
 							</FoliageLayer>
 							<FoliageLayer _name="Flowers"
-							              _materialPath="engine/materials/grass.material"
+							              _materialPath="guid:1259c59255193befd5cea3a0fd0b9676"
 							              _tint="1,1,1,1"
 							              _tintVariation="0.15"
 							              _fadeStart="40"
@@ -235,22 +235,22 @@
 								       _densityLayerIndex="-1"
 								       _seed="12" />
 								<_listMesh>
-									<FoliageMesh _meshID="common/models/quaternius/nature/flower_3_group.mesh" _weight="1">
+									<FoliageMesh _meshID="guid:47047aa75c27ff63c8fba34c99db5404" _weight="1">
 										<_listSection>
-											<FoliageSection _sectionName="leaves" _materialPath="common/materials/quaternius/grass_leaves.material" />
-											<FoliageSection _sectionName="flowers" _materialPath="common/materials/quaternius/grass_flowers.material" />
+											<FoliageSection _sectionName="leaves" _materialPath="guid:a60fa4ef3e4359297098bd114e356554" />
+											<FoliageSection _sectionName="flowers" _materialPath="guid:75cc37c0905a0db6d89b96082f7d4741" />
 										</_listSection>
 									</FoliageMesh>
-									<FoliageMesh _meshID="common/models/quaternius/nature/flower_4_group.mesh" _weight="1">
+									<FoliageMesh _meshID="guid:0e5fb9ab48b8041b172fe5127ba3ea93" _weight="1">
 										<_listSection>
-											<FoliageSection _sectionName="leaves" _materialPath="common/materials/quaternius/grass_leaves.material" />
-											<FoliageSection _sectionName="flowers" _materialPath="common/materials/quaternius/grass_flowers.material" />
+											<FoliageSection _sectionName="leaves" _materialPath="guid:a60fa4ef3e4359297098bd114e356554" />
+											<FoliageSection _sectionName="flowers" _materialPath="guid:75cc37c0905a0db6d89b96082f7d4741" />
 										</_listSection>
 									</FoliageMesh>
 								</_listMesh>
 							</FoliageLayer>
 							<FoliageLayer _name="Bushes"
-							              _materialPath="common/materials/quaternius/foliage_leaves_twistedtree.material"
+							              _materialPath="guid:bc6a44a13b7726f9aa1efab57ea4478f"
 							              _tint="1,1,1,1"
 							              _tintVariation="0.15"
 							              _fadeStart="120"
@@ -275,17 +275,17 @@
 								       _densityLayerIndex="-1"
 								       _seed="13" />
 								<_listMesh>
-									<FoliageMesh _meshID="common/models/quaternius/nature/bush_common_flowers.mesh" _weight="1">
+									<FoliageMesh _meshID="guid:b34f4e586a11b4e6738529a9c60faeb9" _weight="1">
 										<_listSection>
-											<FoliageSection _sectionName="leaves_normaltree" _materialPath="common/materials/quaternius/foliage_leaves_normaltree.material" />
-											<FoliageSection _sectionName="flowers" _materialPath="common/materials/quaternius/foliage_flowers.material" />
+											<FoliageSection _sectionName="leaves_normaltree" _materialPath="guid:f0c62a12734833fd5af09b53fbf0d79c" />
+											<FoliageSection _sectionName="flowers" _materialPath="guid:629eedaa8284f8ebef640ccd22252acc" />
 										</_listSection>
 									</FoliageMesh>
-									<FoliageMesh _meshID="common/models/quaternius/nature/bush_common.mesh" _weight="1" />
+									<FoliageMesh _meshID="guid:36bfc48ea645f79c4ee1f9cbd562db6d" _weight="1" />
 								</_listMesh>
 							</FoliageLayer>
 							<FoliageLayer _name="Trees"
-							              _materialPath="engine/materials/foliage.material"
+							              _materialPath="guid:64c6d0e9764de443927f7f27cd2b5964"
 							              _tint="1,1,1,1"
 							              _tintVariation="0.2"
 							              _fadeStart="250"
@@ -310,40 +310,40 @@
 								       _densityLayerIndex="-1"
 								       _seed="14" />
 								<_listMesh>
-									<FoliageMesh _meshID="common/models/quaternius/nature/commontree_1.mesh" _weight="1">
+									<FoliageMesh _meshID="guid:82be2f79f149f6c94f6e16d4ae33e5f4" _weight="1">
 										<_listSection>
-											<FoliageSection _sectionName="bark_normaltree" _materialPath="common/materials/quaternius/foliage_bark_normaltree.material" />
-											<FoliageSection _sectionName="leaves_normaltree" _materialPath="common/materials/quaternius/foliage_leaves_normaltree.material" />
+											<FoliageSection _sectionName="bark_normaltree" _materialPath="guid:0748913b09922899f3df4c6cd2f36fe1" />
+											<FoliageSection _sectionName="leaves_normaltree" _materialPath="guid:f0c62a12734833fd5af09b53fbf0d79c" />
 										</_listSection>
 									</FoliageMesh>
-									<FoliageMesh _meshID="common/models/quaternius/nature/commontree_2.mesh" _weight="1">
+									<FoliageMesh _meshID="guid:ae149e071f6ac062c3df46adab584c11" _weight="1">
 										<_listSection>
-											<FoliageSection _sectionName="bark_normaltree" _materialPath="common/materials/quaternius/foliage_bark_normaltree.material" />
-											<FoliageSection _sectionName="leaves_normaltree" _materialPath="common/materials/quaternius/foliage_leaves_normaltree.material" />
+											<FoliageSection _sectionName="bark_normaltree" _materialPath="guid:0748913b09922899f3df4c6cd2f36fe1" />
+											<FoliageSection _sectionName="leaves_normaltree" _materialPath="guid:f0c62a12734833fd5af09b53fbf0d79c" />
 										</_listSection>
 									</FoliageMesh>
-									<FoliageMesh _meshID="common/models/quaternius/nature/commontree_5.mesh" _weight="1">
+									<FoliageMesh _meshID="guid:418dac8941392d1e746f7db119a8cb81" _weight="1">
 										<_listSection>
-											<FoliageSection _sectionName="bark_normaltree" _materialPath="common/materials/quaternius/foliage_bark_normaltree.material" />
-											<FoliageSection _sectionName="leaves_normaltree" _materialPath="common/materials/quaternius/foliage_leaves_normaltree.material" />
+											<FoliageSection _sectionName="bark_normaltree" _materialPath="guid:0748913b09922899f3df4c6cd2f36fe1" />
+											<FoliageSection _sectionName="leaves_normaltree" _materialPath="guid:f0c62a12734833fd5af09b53fbf0d79c" />
 										</_listSection>
 									</FoliageMesh>
-									<FoliageMesh _meshID="common/models/quaternius/nature/pine_1.mesh" _weight="1">
+									<FoliageMesh _meshID="guid:db37905794be27aea29a047e1bf1324d" _weight="1">
 										<_listSection>
-											<FoliageSection _sectionName="bark_normaltree" _materialPath="common/materials/quaternius/foliage_bark_normaltree.material" />
-											<FoliageSection _sectionName="leaves_pine" _materialPath="common/materials/quaternius/foliage_leaves_pine.material" />
+											<FoliageSection _sectionName="bark_normaltree" _materialPath="guid:0748913b09922899f3df4c6cd2f36fe1" />
+											<FoliageSection _sectionName="leaves_pine" _materialPath="guid:e6edb5753131235c95adefa8e97cbc25" />
 										</_listSection>
 									</FoliageMesh>
-									<FoliageMesh _meshID="common/models/quaternius/nature/pine_3.mesh" _weight="1">
+									<FoliageMesh _meshID="guid:7a719406f104941f4337e6526550be73" _weight="1">
 										<_listSection>
-											<FoliageSection _sectionName="bark_normaltree" _materialPath="common/materials/quaternius/foliage_bark_normaltree.material" />
-											<FoliageSection _sectionName="leaves_pine" _materialPath="common/materials/quaternius/foliage_leaves_pine.material" />
+											<FoliageSection _sectionName="bark_normaltree" _materialPath="guid:0748913b09922899f3df4c6cd2f36fe1" />
+											<FoliageSection _sectionName="leaves_pine" _materialPath="guid:e6edb5753131235c95adefa8e97cbc25" />
 										</_listSection>
 									</FoliageMesh>
 								</_listMesh>
 							</FoliageLayer>
 							<FoliageLayer _name="Rocks"
-							              _materialPath="common/materials/quaternius/foliage_rocks.material"
+							              _materialPath="guid:6449a416da982f524045e1f5ad02f396"
 							              _tint="1,1,1,1"
 							              _tintVariation="0.15"
 							              _fadeStart="100"
@@ -368,9 +368,9 @@
 								       _densityLayerIndex="-1"
 								       _seed="15" />
 								<_listMesh>
-									<FoliageMesh _meshID="common/models/quaternius/nature/rock_medium_1.mesh" _weight="1" />
-									<FoliageMesh _meshID="common/models/quaternius/nature/rock_medium_2.mesh" _weight="1" />
-									<FoliageMesh _meshID="common/models/quaternius/nature/rock_medium_3.mesh" _weight="1" />
+									<FoliageMesh _meshID="guid:92c0a8f3d03ec23789e6acf33b2f1dc3" _weight="1" />
+									<FoliageMesh _meshID="guid:d4b357c19593fe0ddc44d8cfaf1532d2" _weight="1" />
+									<FoliageMesh _meshID="guid:04ab0fc1b793c96e779fc0c0119b3cdb" _weight="1" />
 								</_listMesh>
 							</FoliageLayer>
 						</_listLayer>

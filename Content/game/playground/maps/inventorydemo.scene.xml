@@ -26,7 +26,7 @@
 				<_listComponent>
 					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
 					<CharacterAppearanceComponent _localID="13827364293183997314" _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="CustomizeTownsfolk" _seed="0" _bMergeParts="true" />
-					<CharacterEquipmentComponent _localID="14928403153068946980" _componentName="CharacterEquipmentComponent" _bActive="true" _bagSlotCount="4" _bagMaxWeight="3" _pickupPrefab="common/prefabs/gimmicks/loot/pickup.prefab.xml" />
+					<CharacterEquipmentComponent _localID="14928403153068946980" _componentName="CharacterEquipmentComponent" _bActive="true" _bagSlotCount="4" _bagMaxWeight="3" _pickupPrefab="guid:035aa9cc6dce4590b4c25dd89d9d9e67" />
 					<PawnComponent _localID="11149290121538025405" _moveAction="None" _lookAction="None" _upAction="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player0" _bLockMouse="false">
 						<_listButton>
 							<item>Interact</item>
@@ -72,14 +72,14 @@
 		<entity id="6" name="InventoryDemo">
 			<GameObject _schemaVersion="0" _name="InventoryDemo" _bActive="true">
 				<_listComponent>
-					<InventoryShopDemoComponent _localID="17448692205256493972" _componentName="InventoryShopDemoComponent" _bActive="true" _shopsPath="game/playground/data/inventorydemo.shops.xml" _shopID="general" _startingGold="100" _characterName="Player" _inventoryDocument="common/ui/inventory/inventory.ui.xml" _shopDocument="common/ui/shop/shop.ui.xml" />
+					<InventoryShopDemoComponent _localID="17448692205256493972" _componentName="InventoryShopDemoComponent" _bActive="true" _shopsPath="guid:3dc972f7fe0eb334dcaed9be870247f5" _shopID="general" _startingGold="100" _characterName="Player" _inventoryDocument="guid:d4b9aba48e79036f07eeadf7ef2ccbc4" _shopDocument="guid:31d3621cede3fdd40788ddaf304c9288" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="9" name="CraftingStation">
 			<GameObject _schemaVersion="0" _name="CraftingStation" _bActive="true">
 				<_listComponent>
-					<CraftingDemoComponent _localID="5139995369692792800" _recipePath="game/playground/data/craftdemo.recipes.xml" _station="Workbench" _startLevel="1" _characterName="Player" />
+					<CraftingDemoComponent _localID="5139995369692792800" _recipePath="guid:5f89991d4b19917891b55c265268af40" _station="Workbench" _startLevel="1" _characterName="Player" />
 				</_listComponent>
 			</GameObject>
 		</entity>

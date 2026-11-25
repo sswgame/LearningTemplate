@@ -64,7 +64,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _materialPath="guid:51749176fa5a59f663092304d160221f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -79,9 +79,9 @@
 					<ScavengerGameModeComponent _localID="6120447738510926413" _componentName="ScavengerGameModeComponent"
 					                            _bActive="true"
 					                            _companyMoon="company"
-					                            _threatTable="game/playground/coopscavenger/data/threats.spawns.xml"
-					                            _weatherCatalog="game/playground/coopscavenger/data/moon.weather.xml"
-					                            _shopCatalog="game/playground/coopscavenger/data/terminal.shops.xml"
+					                            _threatTable="guid:97e2692bfb7f460787ab2d75d3e05611"
+					                            _weatherCatalog="guid:5b0c9e7a4f3d4d1f8a6e2c71b9d40f36"
+					                            _shopCatalog="guid:d27f61a8be9c4c50b3f1e84a6507c9d2"
 					                            _unlockItem="lockpick"
 					                            _speedItem="boots_low"
 					                            _speedItemStepScale="0.7"
@@ -100,10 +100,10 @@
 					                          _moveAction="Move"
 					                          _useAction="CoopScavenger.Use"
 					                          _leverAction="CoopScavenger.Lever"
-					                          _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
+					                          _markerPrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5" />
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
 					                        _bActive="true"
-					                        _documentPath="game/playground/coopscavenger/ui/hud.ui.xml" />
+					                        _documentPath="guid:52e008cdf55b4bb9aeb3c6bc3e56b7e3" />
 				</_listComponent>
 			</GameObject>
 		</entity>

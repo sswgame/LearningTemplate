@@ -311,7 +311,6 @@ SW_TEST_CASE( GameInstanceTest, NetSessionRefusesLocalRestoreAndClientSaves )
     config._gamePort      = 0; // 운영체제가 고른다
     GameNetSessionParams serverParams;
     SW_REQUIRE_TRUE( server.makeServerParams( config, serverParams ) );
-    SW_REQUIRE_TRUE( server.initialize( serverParams ) );
     SubsystemScope testScope;
     SW_REQUIRE_TRUE( testScope.bind( &timeScale ) );
     SW_REQUIRE_TRUE( testScope.bind( &session ) );
@@ -319,11 +318,15 @@ SW_TEST_CASE( GameInstanceTest, NetSessionRefusesLocalRestoreAndClientSaves )
     MemoryLocalDatabase         database;
     LifecycleTestGame           game{ database, LifecycleTestStep::Succeed };
     SW_REQUIRE_TRUE( game.initialize( nullptr ) );
+    // 답하지 않는 서버 자리 — 게임이 메시지를 등록하지 않은 세션이 답하면 와이어 판이 달라 거절된다(이 테스트의 일이 아니다).
+    SW_REQUIRE_TRUE( server.initialize( serverParams ) );
+    const NetAddress silentServer = NetAddress::makeLoopback( server.getListenPort() );
+    server.shutdown();
     SW_EXPECT_FALSE( game.getSaveLock().isBlocked() );
 
     GameNetSessionParams clientParams;
     clientParams._role          = GameNetRole::Client;
-    clientParams._serverAddress = NetAddress::makeLoopback( server.getListenPort() );
+    clientParams._serverAddress = silentServer;
     SW_REQUIRE_TRUE( session.initialize( clientParams ) );
     game.update( 1.0f / 60.0f );
     SW_EXPECT_TRUE( game.getSaveLock().isBlocked() );
@@ -339,7 +342,6 @@ SW_TEST_CASE( GameInstanceTest, NetSessionRefusesLocalRestoreAndClientSaves )
     session.shutdown();
     SW_EXPECT_TRUE( game.getSubsystem<GameSaveSlots>().load( "save/none" ) );
     game.shutdown();
-    server.shutdown();
 }
 
 /** @brief [GameInstanceTest] 프레임 순서 계약 — 끝난 세이브 요청의 완료가 파생 프레임 훅보다 먼저, 개발 부분은 파생 훅 뒤다(`GameInstance::update`) */

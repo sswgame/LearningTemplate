@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="e029f692a7bbfb56977776a5b482472c"?>
 <!-- 외형 라이브러리 프리셋(metal): 청동. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
-<MaterialDef formatVersion="0" name="Bronze" _base="engine/materials/library/metal/base.material">
+<MaterialDef formatVersion="0" name="Bronze" _base="guid:efcf6ddf6c4126d00a334310cf234013">
 	<_properties>
 		<item name="_color" defaultValue="0.8 0.5 0.28 1" />
 		<item name="_roughness" defaultValue="0.35" />

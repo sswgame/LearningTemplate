@@ -10,8 +10,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="common/models/kaykit/skeleton_rogue/parts/skeleton_rogue_cape.mesh"
-			               _materialPath="common/materials/kaykit_skeleton.material"
+			               _meshID="guid:999376b5addbb5019902ff3948dd1339"
+			               _materialPath="guid:f20c72a82580d41a01e67363572af6e1"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

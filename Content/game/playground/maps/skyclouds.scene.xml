@@ -79,7 +79,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _materialPath="guid:51749176fa5a59f663092304d160221f"
 					               _boundsRadius="6" />
 				</_listComponent>
 			</GameObject>

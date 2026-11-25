@@ -51,7 +51,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/surfacelibrary/background_brick.material"
+					               _materialPath="guid:dfaba5e4e90c56c03c3fc20561f2ce9b"
 					               _boundsRadius="9" />
 				</_listComponent>
 			</GameObject>
@@ -66,7 +66,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Sphere"
-					               _materialPath="game/playground/materials/distortion_lens.material"
+					               _materialPath="guid:214bda249e39d87c771f796453fa927d"
 					               _boundsRadius="1" />
 				</_listComponent>
 			</GameObject>

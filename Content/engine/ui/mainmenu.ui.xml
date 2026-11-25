@@ -22,7 +22,7 @@
 					<ButtonWidget _name="QuitGame" _visibility="Collapsed" _command="QuitGame">
 						<TextWidget _text="Quit Game" />
 					</ButtonWidget>
-					<UserWidget _name="Hint" _document="engine/ui/parts/inputhint.ui.xml" />
+					<UserWidget _name="Hint" _document="guid:cb6b29f3e7d84ce2bddeed6d242d5311" />
 				</BoxPanel>
 			</BorderPanel>
 		</CanvasPanel>

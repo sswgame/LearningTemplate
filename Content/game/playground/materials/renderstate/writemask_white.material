@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="7c16330592d634a32fabd4fa78b463cd"?>
-<MaterialDef formatVersion="0" name="writemask_white" _base="game/playground/materials/renderstate/plain_white.material">
+<MaterialDef formatVersion="0" name="writemask_white" _base="guid:894626cb31efa8b9066de50f37e23553">
 	<_listBlendTarget>
 		<BlendTargetState colorWriteMask="R"/>
 	</_listBlendTarget>

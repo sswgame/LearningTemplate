@@ -24,8 +24,8 @@
 			<GameObject _schemaVersion="0" _name="Bench" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,0.6" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
-					<SmartObjectComponent _localID="5375787612174973679" _smartObjectID="Bench" _catalogPath="common/data/interactions/default.interactions.xml">
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,0.6" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<SmartObjectComponent _localID="5375787612174973679" _smartObjectID="Bench" _catalogPath="guid:cdbf334b25664cdc5567e078412c810f">
 						<_listClaimant />
 					</SmartObjectComponent>
 				</_listComponent>
@@ -35,7 +35,7 @@
 			<GameObject _schemaVersion="0" _name="anna" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="-4,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1.6,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1.6,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -43,7 +43,7 @@
 			<GameObject _schemaVersion="0" _name="ben" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="4,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1.6,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1.6,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -51,7 +51,7 @@
 			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,2" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1.6,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1.6,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -59,14 +59,14 @@
 			<GameObject _schemaVersion="0" _name="Latecomer" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,-2" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1.6,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,1.6,0.5" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="8" name="SmartObjectDemo">
 			<GameObject _schemaVersion="0" _name="SmartObjectDemo" _bActive="true">
 				<_listComponent>
-					<SmartObjectDemoComponent _localID="1513042426502960458" _scheduleDataPath="game/playground/data/smartobject.schedules.xml" _startMinute="480" />
+					<SmartObjectDemoComponent _localID="1513042426502960458" _scheduleDataPath="guid:cd6f6a69c818c5a9a1619347c10526e2" _startMinute="480" />
 				</_listComponent>
 			</GameObject>
 		</entity>

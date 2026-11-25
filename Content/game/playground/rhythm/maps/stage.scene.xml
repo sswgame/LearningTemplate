@@ -51,7 +51,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<RhythmGameModeComponent _localID="8629025867396012359" _componentName="RhythmGameModeComponent" _bActive="true"
-					                         _chart="game/playground/rhythm/data/stage1.chart.xml"
+					                         _chart="guid:e62d0ddecee57cae7b2d0a05e358e799"
 					                         _clock="Music"
 					                         _missLifeDelta="-4"
 					                         _maxLife="100"
@@ -59,7 +59,7 @@
 					                         _clearReward="30" />
 					<RhythmViewComponent _localID="5675568754244570621" _componentName="RhythmViewComponent" _bActive="true"
 					                     _music="game/playground/rhythm/data/stage1.music.xml"
-					                     _notePrefab="game/playground/prefabs/ruleviews/cube.prefab.xml"
+					                     _notePrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5"
 					                     _laneWidth="1.2"
 					                     _hiSpeed="8"
 					                     _viewLength="16">
@@ -71,7 +71,7 @@
 						</_listLaneAction>
 					</RhythmViewComponent>
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true"
-					                        _documentPath="game/playground/rhythm/ui/hud.ui.xml" />
+					                        _documentPath="guid:413d689669350a579af76ba0cb92af39" />
 				</_listComponent>
 			</GameObject>
 		</entity>

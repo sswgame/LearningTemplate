@@ -1,5 +1,5 @@
 <?asset guid="4759a2882e81053d64aca317ee85513a"?>
-<Prefab formatVersion="0" _base="game/playground/abilityarena/prefabs/caster.prefab.xml" name="ArenaGrunt">
+<Prefab formatVersion="0" _base="guid:c048b0fd611c93d2f4700e0d0851f8eb" name="ArenaGrunt">
 	<PrefabOverrides>
 		<Override key="#bc5c6d31c40801c6">
 			<ArenaUnitComponent _kind="Grunt" />

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="0748913b09922899f3df4c6cd2f36fe1"?>
 <!-- Quaternius Stylized Nature 의 식생(FoliageComponent) 구간 머티리얼 — CommonTree · Pine 줄기(glTF MASK 0.2 · 양면). 부모(foliage.material)에 알베도 · 알파 컷오프(glTF MASK 0.2)만 바꾸고 양면으로 그린다. -->
-<MaterialDef formatVersion="0" name="foliage_bark_normaltree" _base="engine/materials/foliage.material" alphaMode="Mask" cullMode="None" twoSidedLighting="true">
+<MaterialDef formatVersion="0" name="foliage_bark_normaltree" _base="guid:64c6d0e9764de443927f7f27cd2b5964" alphaMode="Mask" cullMode="None" twoSidedLighting="true">
 	<_properties>
 		<item name="_alphaCutoff" defaultValue="0.2" />
 		<item name="_albedoMap" assetPath="common/textures/quaternius/nature/bark_normaltree.dds" />

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="5cb3b7819d321d0203a7adb3b2f67c7d"?>
 <!-- 외형 라이브러리 갈래 바탕: 나무 — 오브젝트 Y 축 나이테 + 결, 칠(_patternAmount)과 니스(코트). -->
-<MaterialDef formatVersion="0" name="AppearanceWood" _base="engine/materials/library/appearance.material">
+<MaterialDef formatVersion="0" name="AppearanceWood" _base="guid:dec52472672bb347f0b472ac23617b92">
 	<_properties>
 		<item name="_color" defaultValue="0.62 0.43 0.26 1" />
 		<item name="_secondaryColor" defaultValue="0.36 0.22 0.12 1" />

@@ -51,7 +51,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _materialPath="guid:51749176fa5a59f663092304d160221f"
 					               _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
@@ -82,12 +82,12 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b"
 					               _boundsRadius="0.9" />
 					<InteractableComponent _localID="10644522701805113517" _componentName="InteractableComponent"
 					                       _bActive="true"
 					                       _interactionID="PickUp"
-					                       _catalogPath="game/playground/data/interactionhighlight.interactions.xml"
+					                       _catalogPath="guid:a4ae47848dc63ff026e9f43994f6f38a"
 					                       _priority="0"
 					                       _bEnabled="true" />
 				</_listComponent>
@@ -102,7 +102,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _materialPath="guid:8c9750760f544d393d0405c50debad00"
 					               _boundsRadius="1.5" />
 				</_listComponent>
 			</GameObject>
@@ -116,12 +116,12 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b"
 					               _boundsRadius="0.9" />
 					<InteractableComponent _localID="10644522701805113517" _componentName="InteractableComponent"
 					                       _bActive="true"
 					                       _interactionID="Hide"
-					                       _catalogPath="game/playground/data/interactionhighlight.interactions.xml"
+					                       _catalogPath="guid:a4ae47848dc63ff026e9f43994f6f38a"
 					                       _priority="0"
 					                       _bEnabled="true" />
 				</_listComponent>

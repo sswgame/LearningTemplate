@@ -31,8 +31,8 @@
 					                 _localScale="24,14,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _textureName="engine/textures/prototype/grid_light.dds"
-					                 _materialPath="engine/materials/sprite2dlit.material"
+					                 _textureName="guid:3ef33cfa2122b8bed4be86682dbed8b2"
+					                 _materialPath="guid:39c05fe22138bb5dc3f0ba06404fe9e4"
 					                 _sortingLayer="Background"
 					                 _orderInLayer="0" />
 				</_listComponent>

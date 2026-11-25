@@ -21,8 +21,8 @@
 			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
-			                           _animationGraphPath="common/data/anim/ubc_shooter.animgraph.xml"
-			                           _animationSetPath="common/models/quaternius/animations/ual1_standard/ual1_standard.animset.xml"
+			                           _animationGraphPath="guid:8cebced63ca8ff97b480861e215c639c"
+			                           _animationSetPath="guid:594f05e80f63e6d0d710fedaa21bc48e"
 			                           _initialState="idle_loop"
 			                           _currentState=""
 			                           _stateTime="0"
@@ -34,10 +34,10 @@
 			                           _bPlayOnBegin="true" />
 			<AnimationNotifyComponent _localID="3803990792213876096" _componentName="AnimationNotifyComponent"
 			                          _bActive="true"
-			                          _notifyTablePath="common/characters/ubc/ubc_body.notifies.xml" />
+			                          _notifyTablePath="guid:90d32d0e27254fb48fcd490fe15e2926" />
 			<PoseModifierComponent _localID="8397761042515027675" _componentName="PoseModifierComponent"
 			                       _bActive="true"
-			                       _rigPath="common/rigs/ubc_player_body.rig.xml"
+			                       _rigPath="guid:da4c4d9ba9049f1730c2c0edc61b4520"
 			                       _socketSetPath=""
 			                       _physicsAssetPath=""
 			                       _bRigEnabled="true" />

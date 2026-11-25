@@ -1,14 +1,14 @@
 <?asset guid="487e9f4458a7d6ecf66c371db3a72749"?>
-<Prefab formatVersion="0" _base="game/playground/shooter3d/prefabs/quadshell.prefab.xml" name="Trilobite">
+<Prefab formatVersion="0" _base="guid:53ab17d5a6c435e2c34fc93965d562fe" name="Trilobite">
 	<PrefabOverrides>
 		<Override key="#55727fc07d545151">
-			<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/trilobite.animgraph.xml" _animationSetPath="common/models/quaternius/scifi/enemy_trilobite/enemy_trilobite.animset.xml" />
+			<SkeletalAnimatorComponent _animationGraphPath="guid:5b49acf9e250618c8b0aa7c5eb24e2e5" _animationSetPath="guid:d60286faccb88466c2706ca7f67ef038" />
 		</Override>
 		<Override key="#34ca7d789ac3cd80">
-			<AnimationNotifyComponent _notifyTablePath="common/characters/trilobite/trilobite.notifies.xml" />
+			<AnimationNotifyComponent _notifyTablePath="guid:ceac9f0afdd283524eff26ae8d91c3f3" />
 		</Override>
 		<Override key="#35e161a3a492d464">
-			<RagdollComponent _physicsAssetPath="common/characters/trilobite/trilobite.physics.xml" />
+			<RagdollComponent _physicsAssetPath="guid:143ad73a66964ca5cd16cc32d8086025" />
 		</Override>
 		<Override key="#bfe4aa906b270582">
 			<CharacterAppearanceComponent _presetID="Trilobite" />

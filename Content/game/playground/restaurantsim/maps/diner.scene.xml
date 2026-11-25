@@ -24,7 +24,7 @@
 			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="2.5,0,0" _localRotation="0,0,0" _localScale="12,1,9" _attachOwner="None" _attachComponent="None"
-					               _meshID="Plane" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+					               _meshID="Plane" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -33,7 +33,7 @@
 			<GameObject _schemaVersion="0" _name="KitchenCounter" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="2.5,0.5,3.2" _localRotation="0,0,0" _localScale="8,1,0.6" _attachOwner="None" _attachComponent="None"
-					               _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+					               _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -41,7 +41,7 @@
 			<GameObject _schemaVersion="0" _name="DoorStep" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="2.5,0.1,-3.2" _localRotation="0,0,0" _localScale="2,0.2,0.6" _attachOwner="None" _attachComponent="None"
-					               _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+					               _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -50,13 +50,13 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<RestaurantGameModeComponent _localID="8504174413167791898"
-					                             _shops="game/playground/restaurantsim/data/market.shops.xml"
+					                             _shops="guid:32165336c534916bbdaac60579720456"
 					                             _shop="harbor_market"
 					                             _buyCount="10"
 					                             _pantrySlotCount="60"
 					                             _startGold="200"
 					                             _stationPrice="20"
-					                             _reputationCatalog="game/playground/restaurantsim/data/friendship.xml"
+					                             _reputationCatalog="guid:e52df26b4b94461e80012d3386f74c4e"
 					                             _cookCount="2"
 					                             _serverCount="1"
 					                             _dailyWage="15"
@@ -85,9 +85,9 @@
 					                            _openAction="Restaurant.Open"
 					                            _seatOrigin="0,0"
 					                            _seatSpacing="1.6"
-					                            _bodyPrefab="game/playground/prefabs/ruleviews/person.prefab.xml"
-					                            _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
-					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/restaurantsim/ui/hud.ui.xml" />
+					                            _bodyPrefab="guid:56ef54f8e64fa9dfc3af2e669052ff87"
+					                            _markerPrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5" />
+					<HUDControllerComponent _localID="17122754535480611078" _documentPath="guid:ce34c2a6849a59377c1ba4a0f44c74f3" />
 				</_listComponent>
 			</GameObject>
 		</entity>

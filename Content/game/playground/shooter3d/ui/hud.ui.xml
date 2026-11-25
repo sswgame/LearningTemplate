@@ -3,11 +3,11 @@
 	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
 	<SafeZonePanel _visibility="SelfHitTestInvisible">
 		<CanvasPanel _visibility="SelfHitTestInvisible">
-			<ImageWidget _name="Crosshair" _visibility="{bind:_crosshairVisibility}" _imagePath="game/playground/shooter3d/textures/crosshair.dds" _imageSize="32,32">
+			<ImageWidget _name="Crosshair" _visibility="{bind:_crosshairVisibility}" _imagePath="guid:27d3457fb0c5d9c6278ffec6e7b5ecbd" _imageSize="32,32">
 				<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-16,-16" _offsetMax="16,16" />
 				<_brush _color="1,1,1,0.9" />
 			</ImageWidget>
-			<ImageWidget _name="HitMarker" _visibility="{bind:_hitMarkerVisibility}" _imagePath="game/playground/shooter3d/textures/hitmarker.dds" _imageSize="48,48">
+			<ImageWidget _name="HitMarker" _visibility="{bind:_hitMarkerVisibility}" _imagePath="guid:d6d9d61d89b628e65cb1da67c0252987" _imageSize="48,48">
 				<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-24,-24" _offsetMax="24,24" />
 				<_brush _color="1,0.35,0.3,1" />
 			</ImageWidget>

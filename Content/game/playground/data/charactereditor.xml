@@ -5,7 +5,7 @@
      레퍼런스 포즈는 스켈레톤 이름에서 만든다(knight.refpose.xml). previewPreset 은 창의 미리보기 몸(기준 프리셋이 없을 때 입히는 프리셋)이다. -->
 <CharacterEditor sockets="common/data/sockets/kaykit_humanoid.sockets.xml"
                  skeleton="common/models/kaykit/knight/knight.skeleton.xml"
-                 items="common/data/items.xml"
+                 items="guid:4badc0e51625bfd6a27973c9146fa095"
                  appearance="common/data/appearance"
                  animationSet="common/models/kaykit/knight/knight.animset.xml"
                  previewPreset="Adventurer"

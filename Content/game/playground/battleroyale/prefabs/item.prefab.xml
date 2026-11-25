@@ -3,7 +3,7 @@
 <Prefab formatVersion="0" name="BattleRoyaleItem">
 	<GameObject _schemaVersion="0" _name="BattleRoyaleItem" _bActive="true">
 		<_listComponent>
-			<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+			<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" _bVisible="true" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

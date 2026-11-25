@@ -32,7 +32,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="25" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -47,7 +47,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.15,0" _localRotation="0,0,0" _localScale="1.2,0.1,1.2" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.9" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.15,0" _localRotation="0,0,0" _localScale="1.2,0.1,1.2" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.9" />
 					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false">
 						<_requiredTags>
 							<_listTag />
@@ -68,7 +68,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="0.45" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:a475fbe06e97f84b16b8333ffad1ed79" _boundsRadius="0.45" />
 					<SensorWeightOverrideComponent _localID="861614548064773020" _weight="40" />
 				</_listComponent>
 			</GameObject>

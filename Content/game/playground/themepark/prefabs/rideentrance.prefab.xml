@@ -10,8 +10,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="game/playground/themepark/models/ride_entrance.mesh"
-			               _materialPath="game/playground/themepark/materials/palette.material"
+			               _meshID="guid:4431b1be3ba47a7ba5ab9eaa0510ee63"
+			               _materialPath="guid:f98b75136c9751024935391bd97d22c2"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

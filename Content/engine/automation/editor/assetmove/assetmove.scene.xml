@@ -16,7 +16,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/automation/editor/assetmove/pack/probe.material"
+					               _materialPath="guid:3c797007a9112a3a818ecaa85827c7c8"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -35,7 +35,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/automation/editor/assetmove/pack/detail/probe_detail.material"
+					               _materialPath="guid:5493f67238ca38fffe800212618fd00e"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />

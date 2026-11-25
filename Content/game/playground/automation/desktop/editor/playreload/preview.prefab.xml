@@ -9,7 +9,7 @@
 			               _attachOwner="None"
 			               _attachComponent="None"
 			               _meshID="Cube"
-			               _materialPath="game/playground/automation/desktop/editor/playreload/probe.material"
+			               _materialPath="guid:e09bfb298f7c4a05b8001826f9182c33"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

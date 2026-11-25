@@ -51,7 +51,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _materialPath="guid:8c9750760f544d393d0405c50debad00"
 					               _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
@@ -64,7 +64,7 @@
 					              _localScale="1,1,1"
 					              _attachOwner="None"
 					              _attachComponent="None"
-					              _effectPath="engine/vfx/gpudebrisburst.vfx.xml"
+					              _effectPath="guid:6281a1c904124ff2afb0e721016d04e7"
 					              _seed="1"
 					              _bPlayOnBegin="true" />
 				</_listComponent>

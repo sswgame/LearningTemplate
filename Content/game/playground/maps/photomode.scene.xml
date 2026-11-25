@@ -9,7 +9,7 @@
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
 					<CameraComponent _localID="17709685451340727998" _localPosition="0,2,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.05" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
-					<CameraDirectorComponent _localID="17954231826208681790" _catalogPath="game/playground/data/photomode.cameras.xml" _initialPreset="still" _bReadInput="true">
+					<CameraDirectorComponent _localID="17954231826208681790" _catalogPath="guid:239fce68c3df392ddaa3685f6dde6f06" _initialPreset="still" _bReadInput="true">
 						<_listGroupTarget />
 					</CameraDirectorComponent>
 				</_listComponent>
@@ -26,7 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Runner" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="-20,1,10" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
 					<SplineComponent _localID="1299529188794216424" _samplesPerSegment="16" _type="Linear" _bClosed="false">
 						<_listControlPoint>
 							<item>0,0,0</item>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="6554fca8d06c03eaa87a8300162d7df5"?>
 <!-- 외형 라이브러리 갈래 바탕: 비늘 — 엇갈린 원판 + 박막(물고기 무지갯빛, _filmWeight 0 이면 파충류). -->
-<MaterialDef formatVersion="0" name="AppearanceScales" _base="engine/materials/library/appearance.material">
+<MaterialDef formatVersion="0" name="AppearanceScales" _base="guid:dec52472672bb347f0b472ac23617b92">
 	<_properties>
 		<item name="_color" defaultValue="0.32 0.4 0.2 1" />
 		<item name="_secondaryColor" defaultValue="0.12 0.15 0.07 1" />

@@ -47,7 +47,7 @@
 			<GameObject _schemaVersion="0" _name="Weather" _bActive="true">
 				<_listComponent>
 					<GameStateComponent _localID="6673597520240684436" />
-					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="game/playground/data/boat.weather.xml" _startWeather="calm" _seed="11" />
+					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="guid:88cfd171d0e9113bd2c68a653fa0930e" _startWeather="calm" _seed="11" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -67,7 +67,7 @@
 					                    _attachOwner="None"
 					                    _attachComponent="None"
 					                    _shape="Lake"
-					                    _materialPath="engine/materials/water.material"
+					                    _materialPath="guid:1546675df109d0a941207e13ed3a21b6"
 					                    _size="240,160"
 					                    _cellSize="2"
 					                    _riverWidth="6"
@@ -100,7 +100,7 @@
 					                    _attachOwner="None"
 					                    _attachComponent="None"
 					                    _shape="River"
-					                    _materialPath="engine/materials/water.material"
+					                    _materialPath="guid:1546675df109d0a941207e13ed3a21b6"
 					                    _size="64,64"
 					                    _cellSize="2"
 					                    _riverWidth="30"
@@ -124,28 +124,28 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="10" name="Rowboat" prefab="game/playground/prefabs/vehicles/rowboat.prefab.xml">
+		<entity id="10" name="Rowboat" prefab="guid:f637b3e64fda9f78df809910d04ba2aa">
 			<PrefabOverrides>
 				<Override key="#63e709ac676dd304">
 					<RigidBodyComponent _localPosition="0,0.3,-40" _localRotation="0,0,0" />
 				</Override>
 			</PrefabOverrides>
 		</entity>
-		<entity id="11" name="Downwind" prefab="game/playground/prefabs/vehicles/sailboat.prefab.xml">
+		<entity id="11" name="Downwind" prefab="guid:3d7425fdb0b66ae39a1eb101668c0b40">
 			<PrefabOverrides>
 				<Override key="#63e709ac676dd304">
 					<RigidBodyComponent _localPosition="-60,0.3,40" _localRotation="0,1.5708,0" />
 				</Override>
 			</PrefabOverrides>
 		</entity>
-		<entity id="12" name="Upwind" prefab="game/playground/prefabs/vehicles/sailboat.prefab.xml">
+		<entity id="12" name="Upwind" prefab="guid:3d7425fdb0b66ae39a1eb101668c0b40">
 			<PrefabOverrides>
 				<Override key="#63e709ac676dd304">
 					<RigidBodyComponent _localPosition="60,0.3,-10" _localRotation="0,-1.5708,0" />
 				</Override>
 			</PrefabOverrides>
 		</entity>
-		<entity id="13" name="Drifter" prefab="game/playground/prefabs/vehicles/rowboat.prefab.xml">
+		<entity id="13" name="Drifter" prefab="guid:f637b3e64fda9f78df809910d04ba2aa">
 			<PrefabOverrides>
 				<Override key="#63e709ac676dd304">
 					<RigidBodyComponent _localPosition="-80,0.3,130" _localRotation="0,1.5708,0" />
@@ -173,7 +173,7 @@
 					               _attachOwner="None"
 					               _attachComponent="#19b3407eb1f9cd74"
 					               _meshID="Capsule"
-					               _materialPath="engine/materials/defaultmaterial.material"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 					               _boundsRadius="1"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -205,7 +205,7 @@
 					               _attachOwner="None"
 					               _attachComponent="#19b3407eb1f9cd74"
 					               _meshID="Capsule"
-					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _materialPath="guid:8c9750760f544d393d0405c50debad00"
 					               _boundsRadius="1"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />

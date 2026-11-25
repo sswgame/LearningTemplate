@@ -51,7 +51,7 @@
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>
-	<ExpectLog id="Asset.Moved" contains="to 'scratch/assetmanage/probe_renamed.material' and fixed 1 referencing file(s)" count="1"/>
+	<ExpectLog id="Asset.Moved" contains="to 'scratch/assetmanage/probe_renamed.material' and fixed 0 referencing file(s)" count="1"/>
 	<Expect watch="Editor.ReferenceCount" equals="0"/>
 	<Variable name="gv_editorWatchAsset" value="scratch/assetmanage/probe_renamed.material"/>
 	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>

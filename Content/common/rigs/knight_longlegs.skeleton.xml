@@ -1,5 +1,5 @@
 <?asset guid="c1e01714c10f1c2e826fa176ec1ad920"?>
-<SkeletonVariant _base="common/models/kaykit/knight/knight.skeleton.xml" _pelvisBone="hips">
+<SkeletonVariant _base="guid:03273c012fee9c977aa7fb87663429b1" _pelvisBone="hips">
 	<_listBoneOverride>
 		<SkeletonBoneOverride _bone="hips" _translationScale="1.35" _translationMode="ScaleByPelvisHeight" />
 		<SkeletonBoneOverride _bone="lowerleg.l" _translationScale="1.35" />

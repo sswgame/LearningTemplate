@@ -10,8 +10,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="game/playground/themepark/models/coaster_steel_straight.mesh"
-			               _materialPath="game/playground/themepark/materials/palette.material"
+			               _meshID="guid:4bc0f6bd968f5f3b831e06c81df0412a"
+			               _materialPath="guid:f98b75136c9751024935391bd97d22c2"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

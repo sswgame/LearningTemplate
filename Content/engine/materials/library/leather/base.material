@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="3753a174a4da8d6ea16bfbc0ca9460dd"?>
 <!-- 외형 라이브러리 갈래 바탕: 가죽 — 천이 아니다: 거친 유전체 + 세포 결 노멀, 광택은 코트(_coatWeight). -->
-<MaterialDef formatVersion="0" name="AppearanceLeather" _base="engine/materials/library/appearance.material">
+<MaterialDef formatVersion="0" name="AppearanceLeather" _base="guid:dec52472672bb347f0b472ac23617b92">
 	<_properties>
 		<item name="_color" defaultValue="0.32 0.18 0.1 1" />
 		<item name="_secondaryColor" defaultValue="0.15 0.08 0.04 1" />

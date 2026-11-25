@@ -52,7 +52,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _materialPath="guid:51749176fa5a59f663092304d160221f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -68,10 +68,10 @@
 					                _attachOwner="None"
 					                _attachComponent="None" />
 					<HousingPlotComponent _localID="9951375036076253157" _bAutoPlay="false"
-					                      _partCatalog="game/playground/data/housingparts.xml"
+					                      _partCatalog="guid:a1b28f5ae79867cc319e8dc9d5fc7f2d"
 					                      _startingFunds="500"
-					                      _ghostPlaceablePrefab="game/playground/prefabs/housing/ghost_placeable.prefab.xml"
-					                      _ghostBlockedPrefab="game/playground/prefabs/housing/ghost_blocked.prefab.xml">
+					                      _ghostPlaceablePrefab="guid:5abdee560d861983684ba251ab22caf6"
+					                      _ghostBlockedPrefab="guid:82eaf011b81e5bead985714a705638f1">
 						<_settings _plotID="home" _sizeX="8" _sizeZ="6" _levelCount="2" _historyLimit="64" _bFreePlacement="true" />
 					</HousingPlotComponent>
 				</_listComponent>

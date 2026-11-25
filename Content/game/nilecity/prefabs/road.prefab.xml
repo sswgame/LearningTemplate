@@ -10,8 +10,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="game/nilecity/models/path_short.mesh"
-			               _materialPath="game/nilecity/materials/palette.material"
+			               _meshID="guid:c7461a9d71956594012c84141fa41b6e"
+			               _materialPath="guid:29ce1e750ae5713e282c51fead5df3d5"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

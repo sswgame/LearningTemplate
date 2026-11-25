@@ -64,7 +64,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="game/playground/velmora/materials/hearth.material"
+					               _materialPath="guid:1e3a9a5333bfa0d8936bcffb57b5c02b"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -83,7 +83,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="game/playground/velmora/materials/fernwood.material"
+					               _materialPath="guid:24096717ab6d0d443176f3c8d948fbad"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -102,7 +102,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="game/playground/velmora/materials/cinderhold.material"
+					               _materialPath="guid:9fc225066cb0088ac9b36ca99f00c44e"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -140,13 +140,13 @@
 					                          _bActive="true"
 					                          _moveAction="Move"
 					                          _useAction="Velmora.Use"
-					                          _cubePrefab="game/playground/prefabs/ruleviews/cube.prefab.xml"
-					                          _spherePrefab="game/playground/prefabs/ruleviews/sphere.prefab.xml" />
+					                          _cubePrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5"
+					                          _spherePrefab="guid:b92426b2b59ef865478a176cc6ad30e7" />
 					<VelmoraEncounterViewComponent _localID="5883340216079361947" _componentName="VelmoraEncounterViewComponent"
 					                               _bActive="true"
 					                               _attackAction="Velmora.Attack"
 					                               _dashAction="Velmora.Dash"
-					                               _spherePrefab="game/playground/prefabs/ruleviews/sphere.prefab.xml" />
+					                               _spherePrefab="guid:b92426b2b59ef865478a176cc6ad30e7" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -154,7 +154,7 @@
 		<entity id="12" name="RoomHUD">
 			<GameObject _schemaVersion="0" _name="RoomHUD" _bActive="true">
 				<_listComponent>
-					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true" _documentPath="game/playground/ui/actionroom.ui.xml" />
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true" _documentPath="guid:40d0aa0b4253d754d4447f50f6980bba" />
 					<ActionRoomHUDComponent _localID="5120394671823349907" _componentName="ActionRoomHUDComponent" _bActive="true" />
 				</_listComponent>
 			</GameObject>

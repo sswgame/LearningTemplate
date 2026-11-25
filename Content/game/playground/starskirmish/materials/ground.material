@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="33ba5e2089cc0596fca70b5ebfa9eaf2"?>
 <!-- 전장 땅 — 기본 머티리얼에 흙빛 회색을 기본값으로 둔 것이다. -->
-<MaterialDef formatVersion="0" name="StarSkirmishGround" _base="engine/materials/defaultmaterial.material">
+<MaterialDef formatVersion="0" name="StarSkirmishGround" _base="guid:0e23c2ee4018be638b51655cf03239d2">
 	<_properties>
 		<item name="_color" defaultValue="0.42 0.4 0.36 1.0" />
 	</_properties>

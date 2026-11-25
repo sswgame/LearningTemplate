@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="d53115c7802b1e1eb5caeca24bafda2a"?>
 <!-- 툰 쇼케이스(toonshowcase.scene.xml)의 바닥 — 그림자가 보이는 차분한 색의 기본 머티리얼. -->
-<MaterialDef formatVersion="0" name="ToonShowcaseGround" _base="engine/materials/defaultmaterial.material">
+<MaterialDef formatVersion="0" name="ToonShowcaseGround" _base="guid:0e23c2ee4018be638b51655cf03239d2">
 	<_properties>
 		<item name="_color" defaultValue="0.55 0.62 0.5 1.0" />
 	</_properties>

@@ -6,7 +6,7 @@
 -->
 <ZoneProfile>
 	<_listModule>
-		<ZoneModuleDef _name="poison" _modulePath="game/playground/zones/poisondamage.zonemodule.xml" />
+		<ZoneModuleDef _name="poison" _modulePath="guid:703df9c6665064002a337488cb604a41" />
 		<ZoneModuleDef _name="cough" _kind="Blackboard">
 			<_listParam>
 				<ZoneParamDef _name="key" _value="Coughing" />

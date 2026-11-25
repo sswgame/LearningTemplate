@@ -64,7 +64,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _materialPath="guid:51749176fa5a59f663092304d160221f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -77,8 +77,8 @@
 				<_listComponent>
 					<GhostHuntGameModeComponent _localID="8351720046193582771" _componentName="GhostHuntGameModeComponent"
 					                            _bActive="true"
-					                            _areaGraph="game/playground/ghosthunt/data/mansion.areas.xml"
-					                            _lootCatalog="game/playground/ghosthunt/data/mansion.loot.xml"
+					                            _areaGraph="guid:c0aca66a92d043a1a440b05efc6107ca"
+					                            _lootCatalog="guid:79bb11de8ae7478c96fdb6190067eae6"
 					                            _startRoom="foyer"
 					                            _seed="5"
 					                            _bagSlotCount="4"
@@ -96,10 +96,10 @@
 					                          _strobeAction="GhostHunt.Strobe"
 					                          _vacuumAction="GhostHunt.Vacuum"
 					                          _useAction="GhostHunt.Use"
-					                          _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
+					                          _markerPrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5" />
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
 					                        _bActive="true"
-					                        _documentPath="game/playground/ghosthunt/ui/hud.ui.xml" />
+					                        _documentPath="guid:d7251d7015ea49d68a1431dd1d8a352b" />
 				</_listComponent>
 			</GameObject>
 		</entity>

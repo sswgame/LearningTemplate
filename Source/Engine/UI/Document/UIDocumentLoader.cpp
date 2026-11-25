@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -151,7 +152,14 @@ namespace sw
                             formatstring( message.data(), message.capacity(), "'%#' needs a _document path", pTag );
                             return fail( element, message );
                         }
-                        node._fragment               = normalizeDocumentPath( pFragment );
+                        const expected<AssetReferenceTarget> target = AssetRegistry::readReferenceText( pFragment ); // 저장 꼴은 GUID 참조다
+                        if ( target.has_value() == false )
+                        {
+                            fixed_string<constant::buffer::kMax256> message;
+                            formatstring( message.data(), message.capacity(), "_document '%#': %#", pFragment, target.error().message() );
+                            return fail( element, message );
+                        }
+                        node._fragment               = normalizeDocumentPath( target->_path );
                         vector<string>& listFragment = _pAsset->_listFragment;
                         VectorUtil::addUnique( listFragment, node._fragment );
                     }
@@ -197,7 +205,14 @@ namespace sw
                         const utf8* pPath = item.getText();
                         if ( StringUtil::isNullOrEmpty( pPath ) )
                             return fail( item, "_listStyleSheet has an empty item" );
-                        _pAsset->_listStyleSheet.push_back( normalizeDocumentPath( pPath ) );
+                        const expected<AssetReferenceTarget> target = AssetRegistry::readReferenceText( pPath );
+                        if ( target.has_value() == false )
+                        {
+                            fixed_string<constant::buffer::kMax256> message;
+                            formatstring( message.data(), message.capacity(), "_listStyleSheet '%#': %#", pPath, target.error().message() );
+                            return fail( item, message );
+                        }
+                        _pAsset->_listStyleSheet.push_back( normalizeDocumentPath( target->_path ) );
                     }
                     return {};
                 }

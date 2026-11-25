@@ -10,8 +10,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="game/nilecity/models/building_type_h.mesh"
-			               _materialPath="game/nilecity/materials/palette.material"
+			               _meshID="guid:82f48f0316f376d55456b984582887f5"
+			               _materialPath="guid:29ce1e750ae5713e282c51fead5df3d5"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="false" />

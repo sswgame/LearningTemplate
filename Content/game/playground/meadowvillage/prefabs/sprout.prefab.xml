@@ -11,8 +11,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="common/models/quaternius/nature/plant_1.mesh"
-			               _materialPath="common/models/quaternius/nature/plant_1/materials/leaves.material"
+			               _meshID="guid:0720b9e2842585db45ac0fa443e26118"
+			               _materialPath="guid:29f421a3e751b7acb64802c13136672c"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

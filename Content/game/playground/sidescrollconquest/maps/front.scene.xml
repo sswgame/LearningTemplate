@@ -67,12 +67,12 @@
 					                       _holdAction="Conquest.Hold"
 					                       _chargeAction="Conquest.Charge"
 					                       _trainAction="Conquest.Train"
-					                       _sitePrefab="game/playground/prefabs/ruleviews/cube.prefab.xml"
-					                       _soldierPrefab="game/playground/prefabs/ruleviews/person.prefab.xml"
-					                       _commanderPrefab="game/playground/prefabs/ruleviews/hero.prefab.xml"
+					                       _sitePrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5"
+					                       _soldierPrefab="guid:56ef54f8e64fa9dfc3af2e669052ff87"
+					                       _commanderPrefab="guid:d2d9056c68a15eabd00a04317606c0de"
 					                       _shownResource="gold" />
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true"
-					                        _documentPath="game/playground/sidescrollconquest/ui/hud.ui.xml" />
+					                        _documentPath="guid:0f4f893807bb0c8cd458b4b441dc3627" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -22,8 +22,8 @@
 			                       _bShareCrowdPose="true" />
 			<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
-			                           _animationGraphPath="common/data/anim/quadshell.animgraph.xml"
-			                           _animationSetPath="common/models/quaternius/scifi/enemy_quadshell/enemy_quadshell.animset.xml"
+			                           _animationGraphPath="guid:28d1fc8ee6c8f8d1620a40cbec761cac"
+			                           _animationSetPath="guid:6a37f6de775cf77e1340fb3451314631"
 			                           _initialState="Look"
 			                           _currentState=""
 			                           _stateTime="0"
@@ -35,10 +35,10 @@
 			                           _bPlayOnBegin="true" />
 			<AnimationNotifyComponent _localID="3803990792213876096" _componentName="AnimationNotifyComponent"
 			                          _bActive="true"
-			                          _notifyTablePath="common/characters/quadshell/quadshell.notifies.xml" />
+			                          _notifyTablePath="guid:64dca205343c0722d746178349eddb10" />
 			<RagdollComponent _localID="3882491709238727780" _componentName="RagdollComponent"
 			                  _bActive="true"
-			                  _physicsAssetPath="common/characters/quadshell/quadshell.physics.xml"
+			                  _physicsAssetPath="guid:6ac5b2ec9738887209560352474c7c12"
 			                  _bRagdollOnFatalHit="true"
 			                  _bAutoGetUp="false" />
 			<CharacterAppearanceComponent _localID="13827364293183997314" _componentName="CharacterAppearanceComponent"
@@ -102,7 +102,7 @@
 			               _moveAction="None"
 			               _lookAction="None"
 			               _upAction="None"
-			               _aiControllerPrefab="game/playground/shooter3d/prefabs/enemy_ai.prefab.xml"
+			               _aiControllerPrefab="guid:ba6e6ea9e478bd2e394ee79eed38855b"
 			               _maxPitch="80.21409"
 			               _autoPossess="AI"
 			               _bLockMouse="false">

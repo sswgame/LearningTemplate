@@ -22,8 +22,8 @@
 		<entity id="3" name="Head">
 			<GameObject _schemaVersion="0" _name="Head" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="game/playground/models/testhead.mesh" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="game/playground/models/testhead/testhead.skeleton.xml" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
-					<FacialAnimationComponent _localID="11666666369737208355" _facialRigPath="game/playground/data/testhead.facial.xml" _bBlink="false" _bSaccades="false" />
+					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="guid:a8bed4f48f809671826186595f09b437" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="1" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="guid:5a218b04c1623225764b811a57430d35" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
+					<FacialAnimationComponent _localID="11666666369737208355" _facialRigPath="guid:8c27f89e6897f9da8bcb946b4d3c358f" _bBlink="false" _bSaccades="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>

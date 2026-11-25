@@ -71,7 +71,7 @@
 					               _attachOwner="None"
 					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/defaultmaterial.material"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -116,7 +116,7 @@
 					               _attachOwner="None"
 					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/defaultmaterial.material"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -160,7 +160,7 @@
 					               _attachOwner="None"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/defaultmaterial.material"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -172,7 +172,7 @@
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
-					<KinematicVehicleComponent _localID="3610959554269325066" _tuning="common/data/vehicles/kart.vehicle.xml"
+					<KinematicVehicleComponent _localID="3610959554269325066" _tuning="guid:ac43c1f814fc7ab0ced13bbe596abca2"
 					                           _driftButton="Drift"
 					                           _boostButton="Boost"
 					                           _jumpButton="Jump"

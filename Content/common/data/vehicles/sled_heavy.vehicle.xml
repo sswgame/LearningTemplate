@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="e68906757258e87e695966dd3f71a057"?>
 <!-- 무거운 썰매 — 썰매의 변형. 질량 한 칸만 바꾼다: 경사 중력 · 구름 저항은 질량과 상관없고 공기 저항만 덜 걸려 내리막 끝속도가 높다. -->
-<KinematicVehicleSettings _base="common/data/vehicles/sled.vehicle.xml">
+<KinematicVehicleSettings _base="guid:c637ee71c2b9a0d0e9cff5028522df4e">
 	<_inertia _mass="240" />
 </KinematicVehicleSettings>

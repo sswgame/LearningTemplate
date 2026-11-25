@@ -43,189 +43,189 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,10" _localRotation="0,0,0" _localScale="40,1,40" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="30" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,10" _localRotation="0,0,0" _localScale="40,1,40" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="30" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="10" name="WireX0">
 			<GameObject _schemaVersion="0" _name="WireX0" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-4,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-4,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="11" name="WireX1">
 			<GameObject _schemaVersion="0" _name="WireX1" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-3.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-3.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="12" name="WireX2">
 			<GameObject _schemaVersion="0" _name="WireX2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-3,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-3,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="13" name="WireX3">
 			<GameObject _schemaVersion="0" _name="WireX3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-2.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-2.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="14" name="WireX4">
 			<GameObject _schemaVersion="0" _name="WireX4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-2,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-2,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="15" name="WireX5">
 			<GameObject _schemaVersion="0" _name="WireX5" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-1.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-1.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="16" name="WireX6">
 			<GameObject _schemaVersion="0" _name="WireX6" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-1,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-1,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="17" name="WireX7">
 			<GameObject _schemaVersion="0" _name="WireX7" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-0.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-0.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="18" name="WireX8">
 			<GameObject _schemaVersion="0" _name="WireX8" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="19" name="WireX9">
 			<GameObject _schemaVersion="0" _name="WireX9" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="20" name="WireX10">
 			<GameObject _schemaVersion="0" _name="WireX10" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="1,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="1,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="21" name="WireX11">
 			<GameObject _schemaVersion="0" _name="WireX11" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="1.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="1.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="22" name="WireX12">
 			<GameObject _schemaVersion="0" _name="WireX12" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="2,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="2,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="23" name="WireX13">
 			<GameObject _schemaVersion="0" _name="WireX13" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="2.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="2.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="24" name="WireX14">
 			<GameObject _schemaVersion="0" _name="WireX14" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="3,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="3,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="25" name="WireX15">
 			<GameObject _schemaVersion="0" _name="WireX15" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="3.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="3.5,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="26" name="WireX16">
 			<GameObject _schemaVersion="0" _name="WireX16" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="4,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="4,1.5,4" _localRotation="0,0,0.08" _localScale="0.02,3,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="27" name="WireY0">
 			<GameObject _schemaVersion="0" _name="WireY0" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.3,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.3,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="28" name="WireY1">
 			<GameObject _schemaVersion="0" _name="WireY1" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.6,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.6,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="29" name="WireY2">
 			<GameObject _schemaVersion="0" _name="WireY2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="30" name="WireY3">
 			<GameObject _schemaVersion="0" _name="WireY3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,1.2,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1.2,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="31" name="WireY4">
 			<GameObject _schemaVersion="0" _name="WireY4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,1.5,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1.5,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="32" name="WireY5">
 			<GameObject _schemaVersion="0" _name="WireY5" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,1.8,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1.8,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="33" name="WireY6">
 			<GameObject _schemaVersion="0" _name="WireY6" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,2.1,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,2.1,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="34" name="WireY7">
 			<GameObject _schemaVersion="0" _name="WireY7" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,2.4,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,2.4,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="35" name="WireY8">
 			<GameObject _schemaVersion="0" _name="WireY8" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,2.7,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,2.7,4.5" _localRotation="0,0,0" _localScale="8.5,0.02,0.02" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.3" />
 				</_listComponent>
 			</GameObject>
 		</entity>

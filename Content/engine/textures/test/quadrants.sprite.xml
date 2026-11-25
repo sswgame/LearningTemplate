@@ -1,5 +1,5 @@
 <?asset guid="dc59cfae162c13e4d089f481c3d8150b"?>
-<SpriteClipAsset _atlasPath="engine/textures/test/quadrants.dds" _atlasPixelSize="0,0">
+<SpriteClipAsset _atlasPath="guid:02b451717dc7eac75de9a188f4b33c41" _atlasPixelSize="0,0">
 	<_listFrame>
 		<SpriteClipFrame _uvRect="0,0,0.5,0.5" _borderPixels="0,0,0,0" _durationMs="250" />
 		<SpriteClipFrame _uvRect="0.5,0,0.5,0.5" _borderPixels="0,0,0,0" _durationMs="250" />

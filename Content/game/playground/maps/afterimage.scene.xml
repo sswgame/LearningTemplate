@@ -23,7 +23,7 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="30,1,30" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="30,1,30" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="25" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -31,9 +31,9 @@
 			<GameObject _schemaVersion="0" _name="Actor" _bActive="true">
 				<_listComponent>
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" />
-					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="common/data/anim/skeleton.animgraph.xml" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Idle_Combat" _bPlayOnBegin="true" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="guid:8d5a84b9050b8cadf1d06d0d49363c85" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Idle_Combat" _bPlayOnBegin="true" />
 					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonMinion" _seed="0" _bMergeParts="true" />
-					<PoseAfterimageComponent _localID="17679853847592840277" _materialPath="engine/materials/instancecustomcolor.material" _color="0.4,0.8,1,0.6" _capturePeriod="0.1" _lifetime="0.6" _maxGhosts="6" _bCaptureOnBeginPlay="true">
+					<PoseAfterimageComponent _localID="17679853847592840277" _materialPath="guid:b01f08d2ec93202f4ecd166389d811ef" _color="0.4,0.8,1,0.6" _capturePeriod="0.1" _lifetime="0.6" _maxGhosts="6" _bCaptureOnBeginPlay="true">
 						<_opacityOverLife>
 							<_listKey>
 								<FloatCurveKey _time="0" _value="1" _interpolation="Linear" />

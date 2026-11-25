@@ -3,8 +3,8 @@
 <!--
   에디터 시나리오 — 콘텐츠 브라우저의 폴더 · 묶음 옮기기(S3). 테스트 폴더 engine/automation/editor/assetmove 를 실행마다 scratch/assetmove 로 복사해 사본에만 쓴다.
   pack/ 에는 probe.material 과 detail/probe_detail.material 이 있고 assetmove.scene.xml 이 둘을 쓴다. target/ 에는 keep.material 이 있다.
-  ① 폴더 타일 pack 을 폴더 타일 target 위에 놓으면 확인 대화상자가 계획을 보인다(옮길 파일 2, 고칠 참조 파일 1). Move 를 누르면 두 파일이 target/pack/ 으로 가고
-     씬의 두 칸이 같은 트랜잭션에서 고쳐진다(Asset.MovedSet). 빈 원본 폴더는 지워진다.
+  ① 폴더 타일 pack 을 폴더 타일 target 위에 놓으면 확인 대화상자가 계획을 보인다(옮길 파일 2, 고칠 참조 파일 0 — 씬은 GUID 로 적는다). Move 를 누르면 두 파일이 target/pack/ 으로 가고
+     씬의 두 칸은 고치지 않아도 새 자리를 가리킨다(Asset.MovedSet, 참조 수 1). 빈 원본 폴더는 지워진다.
   ② refuse/noted.material 은 notes.scene.xml 이 주석(경로 칸 밖)에서 적는다. refuse 폴더를 target 에 놓으면 대화상자가 거절 이유(outside a path field)와
      그 파일 이름을 빨간 글로 보이고 Move 가 꺼져 있다 — Cancel 로 닫으면 아무것도 옮기지 않는다.
   ③ 열린 문서가 옮김을 따라간다(감사 P0-4): target/keep.material 을 머티리얼 패널에서 열고 거칠기를 0.9 로 고친 채(미저장) kept.material 로 이름을 바꾸면(asset.moveScratch —
@@ -13,7 +13,7 @@
      (asset.expectScratchMoveRefused). 씬 파일 자신은 미저장이어도 옮길 수 있고(renamed.scene.xml), Ctrl+S 가 새 자리에 쓰고 옛 파일을 되살리지 않는다.
   ⑤ 플레이 중의 옮기기는 거절된다("stop playing first").
   쓰기 실패 되돌리기는 잠긴 파일이 있어야 해 시나리오가 만들 수 없다 — applyAssetMoves 의 되돌림 경로는 로그 id EditorAssetFileCommands.MoveRolledBack · MoveIncomplete 로 본다.
-  볼 그림: assetmove/confirm.png(파일 2 · 참조 1 · 바깥 도메인 목록), assetmove/refused.png(빨간 이유 글, 꺼진 Move).
+  볼 그림: assetmove/confirm.png(파일 2 · 참조 0 · 바깥 도메인 목록), assetmove/refused.png(빨간 이유 글, 꺼진 Move).
   실행: App -EnableEditor -scenario=engine/automation/editor/assetmove.scenario.xml -unattended
 -->
 <Scenario name="editor.assetmove" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
@@ -40,7 +40,7 @@
 	<EditorClick mark="contentBrowser.move.confirm" state="Up"/>
 	<EditorWaitStable/>
 	<ExpectLog id="Asset.MovedSet" contains="Moved 2 asset(s)" count="1"/>
-	<ExpectLog id="Asset.MovedSet" contains="fixed 1 referencing file(s)" count="1"/>
+	<ExpectLog id="Asset.MovedSet" contains="fixed 0 referencing file(s)" count="1"/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
 	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/target/pack/probe.material"/>
 	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>

@@ -2,19 +2,19 @@
 <!-- 사격장 해골 적(KayKit 해골 미니언) — 생물 적(quadshell)과 같은 규칙 · AI · 이동에 사람형 리그 · 그래프 · 알림 · 물리 에셋을 얹고 절단을 더한다.
      몸 영역 표(skeleton_warrior.fit.xml)는 KayKit 해골 리그 41 뼈의 표라 미니언 몸에도 맞는다. 쓰러뜨린 맞음이 머리 · 팔 뼈에 들면 그 영역이 떨어진다
      (ShooterEnemyComponent 가 쓰러짐을 정하고 IHealthSource::deliverFatalHit 으로 래그돌 · 절단에 치명 신호를 다시 보낸다). -->
-<Prefab formatVersion="0" _base="game/playground/shooter3d/prefabs/quadshell.prefab.xml" name="Skeleton">
+<Prefab formatVersion="0" _base="guid:53ab17d5a6c435e2c34fc93965d562fe" name="Skeleton">
 	<PrefabOverrides>
 		<Override key="#55727fc07d545151">
-			<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/skeleton.animgraph.xml" _animationSetPath="common/models/kaykit/skeleton_minion/skeleton_minion.animset.xml" _initialState="Spawn_Ground_Skeletons" />
+			<SkeletalAnimatorComponent _animationGraphPath="guid:8d5a84b9050b8cadf1d06d0d49363c85" _animationSetPath="guid:1c6ee4fa920f615b5fe64876c6250db0" _initialState="Spawn_Ground_Skeletons" />
 		</Override>
 		<Override key="#34ca7d789ac3cd80">
-			<AnimationNotifyComponent _notifyTablePath="common/characters/skeleton_minion/skeleton_minion.notifies.xml" />
+			<AnimationNotifyComponent _notifyTablePath="guid:0b662c03e64bbb225cc9b3ee308c67dd" />
 		</Override>
 		<Override key="#35e161a3a492d464">
-			<RagdollComponent _physicsAssetPath="common/characters/skeleton_warrior/skeleton_warrior.physics.xml" />
+			<RagdollComponent _physicsAssetPath="guid:838a817bb59114526689cc7f27a02f17" />
 		</Override>
 		<Add after="#35e161a3a492d464">
-			<SkeletalSeveringComponent _localID="12034596935017574515" _componentName="SkeletalSeveringComponent" _bActive="true" _severedSurfaceChannel="Blood" _regionTablePath="common/characters/skeleton_warrior/skeleton_warrior.fit.xml">
+			<SkeletalSeveringComponent _localID="12034596935017574515" _componentName="SkeletalSeveringComponent" _bActive="true" _severedSurfaceChannel="Blood" _regionTablePath="guid:9fb8f706daaf99963cf9c891924fce5a">
 				<_listSeverableRegion>
 					<item>Head</item>
 					<item>Arm_L</item>

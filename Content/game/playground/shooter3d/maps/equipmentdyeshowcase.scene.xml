@@ -10,7 +10,7 @@
 		<entity id="1" name="Floor">
 			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="12,1,12" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Plane" _materialPath="game/playground/shooter3d/materials/floor.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="12,1,12" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Plane" _materialPath="guid:4d4bf5a109be9458f9b57d913e137a49" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

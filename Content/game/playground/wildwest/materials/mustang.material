@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="1869faa8090e21596537ab436c35ea06"?>
 <!-- 머스탱 말(흑갈색) — 기본 머티리얼에 색을 기본값으로 둔 것이다. -->
-<MaterialDef formatVersion="0" name="WildWestMustang" _base="engine/materials/defaultmaterial.material">
+<MaterialDef formatVersion="0" name="WildWestMustang" _base="guid:0e23c2ee4018be638b51655cf03239d2">
 	<_properties>
 		<item name="_color" defaultValue="0.22 0.17 0.14 1.0" />
 		<item name="_roughness" defaultValue="0.7" />

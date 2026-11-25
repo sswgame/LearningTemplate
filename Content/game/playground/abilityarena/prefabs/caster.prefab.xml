@@ -10,8 +10,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="game/playground/abilityarena/models/character_orc.mesh"
-			               _materialPath="game/playground/abilityarena/materials/palette.material"
+			               _meshID="guid:9deba0b6b9ccc92386ad59e3b326a763"
+			               _materialPath="guid:dbd65db778768cf619dfcefae9bef66b"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

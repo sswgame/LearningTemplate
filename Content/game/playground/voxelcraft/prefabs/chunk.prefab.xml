@@ -11,7 +11,7 @@
 			               _attachOwnerID="0"
 			               _attachComponent="None"
 			               _meshID=""
-			               _materialPath="game/playground/voxelcraft/materials/blocks.material"
+			               _materialPath="guid:9eb1d1a8e15248eae83ea9abd53317d4"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="false" />
@@ -24,7 +24,7 @@
 			               _attachOwnerID="0"
 			               _attachComponent="#0244d8c8807cd288"
 			               _meshID=""
-			               _materialPath="game/playground/voxelcraft/materials/water.material"
+			               _materialPath="guid:a0e03ba1f37f11fd6d6d9f2b6077d26d"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="false" />

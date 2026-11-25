@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="a0e03ba1f37f11fd6d6d9f2b6077d26d"?>
 <!-- 블록 청크의 물(반투명) 머티리얼 — 불투명 블록 머티리얼(셰이더 · 아틀라스 · _atlasGrid)을 물려받고 유리 머티리얼과 같은 블렌드를 쓴다. 알파는 메셔의 정점 색이 준다. -->
-<MaterialDef formatVersion="0" name="VoxelWater" _base="game/playground/voxelcraft/materials/blocks.material" alphaMode="Blend">
+<MaterialDef formatVersion="0" name="VoxelWater" _base="guid:9eb1d1a8e15248eae83ea9abd53317d4" alphaMode="Blend">
 	<_permutations>
 		<_alwaysDefines>
 			<item>MATERIAL_BLEND_TRANSLUCENT</item>

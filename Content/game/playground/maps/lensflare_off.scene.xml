@@ -15,14 +15,14 @@
 		<entity id="2" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,6" _localRotation="0,0,0" _localScale="20,1,20" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="15" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,6" _localRotation="0,0,0" _localScale="20,1,20" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="15" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="3" name="Occluder">
 			<GameObject _schemaVersion="0" _name="Occluder" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-1.6,1.2,4" _localRotation="0,0,0" _localScale="1.2,2.4,0.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-1.6,1.2,4" _localRotation="0,0,0" _localScale="1.2,2.4,0.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>

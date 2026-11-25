@@ -10,8 +10,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="game/playground/abilityarena/models/character_human.mesh"
-			               _materialPath="game/playground/abilityarena/materials/palette.material"
+			               _meshID="guid:29d96fad084c461263603103acb96bf4"
+			               _materialPath="guid:dbd65db778768cf619dfcefae9bef66b"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

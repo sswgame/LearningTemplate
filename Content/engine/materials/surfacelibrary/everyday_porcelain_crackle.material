@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="1ba99fce681ba40c72afde0c77a6c37c"?>
 <!-- 빙렬 청자 유약 — 유약 밑의 가는 균열(칸 무늬, 홈 깊이 0 — 유약이 덮어 평평하다). 부모(environmentsurface.material)의 값을 바꾸고 Clear Coat 셰이딩 모델(MATERIAL_LOBE_COAT)을 고른 프리셋이다. -->
-<MaterialDef formatVersion="0" name="PorcelainCrackle" _base="engine/materials/environmentsurface.material">
+<MaterialDef formatVersion="0" name="PorcelainCrackle" _base="guid:2de2ddc37fa7786ba07716ca4e1c5ded">
 	<_properties>
 		<item name="_baseColor" defaultValue="0.70 0.80 0.72 1"/>
 		<item name="_roughness" defaultValue="0.3"/>

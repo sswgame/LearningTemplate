@@ -10,8 +10,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="common/models/kaykit/knight/parts/knight_cape.mesh"
-			               _materialPath="common/materials/kaykit_knight.material"
+			               _meshID="guid:1d3efc667a508f4ac80f370484e573e3"
+			               _materialPath="guid:0b440989e7fbcb53768a75149e9b6bdb"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

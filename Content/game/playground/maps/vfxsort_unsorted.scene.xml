@@ -70,7 +70,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _materialPath="guid:8c9750760f544d393d0405c50debad00"
 					               _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
@@ -83,7 +83,7 @@
 					              _localScale="1,1,1"
 					              _attachOwner="None"
 					              _attachComponent="None"
-					              _effectPath="engine/vfx/vfxsort_cpu.vfx.xml"
+					              _effectPath="guid:f3d22e6f9a7f42c8a1ddd943c05161df"
 					              _seed="1"
 					              _bPlayOnBegin="true" />
 				</_listComponent>
@@ -97,7 +97,7 @@
 					              _localScale="1,1,1"
 					              _attachOwner="None"
 					              _attachComponent="None"
-					              _effectPath="engine/vfx/vfxsort_gpu.vfx.xml"
+					              _effectPath="guid:9348c3aa207a463ebc4d7ac290eb8c3e"
 					              _seed="1"
 					              _bPlayOnBegin="true" />
 				</_listComponent>

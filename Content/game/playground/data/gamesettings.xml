@@ -7,15 +7,15 @@
   <!-- _bUIPauseMenu: Esc · 패드 Start 가 엔진 일시정지 메뉴를 연다(런타임 UI 시나리오 frontend · pausemenu) -->
   <!-- 컷씬 입력 레이어가 이동을 막는 동안에도 메뉴 · 옵션이 열리는지 automation/cutscenetrigger 가 본다. -->
   <!-- 사용자 설정 스키마(키 바인딩)는 미니게임들의 몫을 한 파일에 모은다(data/playground.settings.xml). -->
-  <Engine _windowTitle="SWEngine" _userSettingsSchema="game/playground/data/playground.settings.xml" _telemetrySchema="game/playground/data/playground.telemetry.xml" _bUIPauseMenu="true">
+  <Engine _windowTitle="SWEngine" _userSettingsSchema="guid:b77aba8b701558d4d656f0f051fcb23f" _telemetrySchema="guid:6189150233e1fa27bea913340207ef87" _bUIPauseMenu="true">
     <_listResourceLayer>
       <item>game/playground/layers/zones</item>
       <!-- 발걸음 소리(사격장이 쓰던 층 — 표면 종류마다 소리 이벤트 한 칸만 얹는다) -->
       <item>game/playground/shooter3d/layers/footsteps</item>
     </_listResourceLayer>
   </Engine>
-  <startMap>game/playground/maps/hub.scene.xml</startMap>
-  <autosaveSettings>game/playground/data/autosave.xml</autosaveSettings>
+  <startMap>guid:57d6125ff94a46bfb947271e54e65b52</startMap>
+  <autosaveSettings>guid:70b60a0f20789631bcbc0f534d22af0f</autosaveSettings>
   <!-- 게임 범위 기능 — 첫 씬 전에 켜 인스턴스 내내 둔다. 지역 효과 시연 · 마을의 어빌리티 카탈로그(data/abilities.xml) · 클래스와 미니게임이 나눠 쓰는 탄 표(data/projectiles.xml)를 PlaygroundAbilities 가, 사격장의 무기 표(data/weapons.xml)를 Shooter3D 가 건다(무기가 탄을 보므로 이 순서). -->
   <gameFeatures>
     <item>PlaygroundAbilities</item>
@@ -97,11 +97,11 @@
   <onlineGameBuild>1.0.0</onlineGameBuild>
   <onlineRequestRetryLimit>3</onlineRequestRetryLimit>
   <!-- 플레이어 통계 · 업적(PlayerStatsSubsystem) — 업적은 로컬 플랫폼 서비스(SDK 없음)까지 간다 -->
-  <statCatalog>game/playground/data/playground.stats.xml</statCatalog>
-  <localizationProject>game/playground/data/localization/playground.locproject.xml</localizationProject>
-  <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
+  <statCatalog>guid:e59190f1f39432535148b7a8522b9b33</statCatalog>
+  <localizationProject>guid:01f81ee7bc934e9f7f85119639e0cdb1</localizationProject>
+  <loadingScreen>guid:8685b6809ad8bd0cc6672017781c4f1f</loadingScreen>
   <!-- 시네마틱 시퀀스의 소리 구간 · 허브 농장의 도구 · 미니게임(광산 · RTS 매치 · 테마파크 · 아레나)이 내는 이벤트 -->
-  <audioEvents>game/playground/audio/playground.audioevents.xml</audioEvents>
+  <audioEvents>guid:ee82ee5f21a4ff18bba046d9ae3417a3</audioEvents>
   <!-- 벤치 캐릭터 프리팹(-gv_stressTestCharacterPrefab — 부하 시나리오 load/townsfolk)의 외형은 공용 팩(common)의 외형 데이터다. 외형이 장비 아이템을 참조하므로 아이템도 함께 -->
   <RequiredData kind="items" pack="common"/>
   <RequiredData kind="appearance" pack="common"/>

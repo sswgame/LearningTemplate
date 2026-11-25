@@ -21,8 +21,8 @@
 			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
-			                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
-			                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"
+			                           _animationGraphPath="guid:4acc784c4115bb691da73754fcd0a89c"
+			                           _animationSetPath="guid:5cdc50168836caff61298efe87d056fc"
 			                           _initialState="Idle"
 			                           _currentState=""
 			                           _stateTime="0"

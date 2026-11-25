@@ -26,7 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="6,0,0" _localRotation="0,0,0" _localScale="24,1,8" _attachOwner="None" _attachComponent="None"
-					               _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+					               _meshID="Plane" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -34,7 +34,7 @@
 			<GameObject _schemaVersion="0" _name="Trail" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="6,0.01,0" _localRotation="0,0,0" _localScale="16,1,2" _attachOwner="None" _attachComponent="None"
-					               _meshID="Plane" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+					               _meshID="Plane" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -42,7 +42,7 @@
 			<GameObject _schemaVersion="0" _name="LanternWest" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="4,0.6,2.2" _localRotation="0,0,0" _localScale="0.4,1.2,0.4" _attachOwner="None" _attachComponent="None"
-					               _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+					               _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" _bVisible="true" />
 					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="#0244d8c8807cd288"
 					                    _bodyType="Static" _layer="Static" _material="None" _mass="0">
 						<_listShape>
@@ -59,7 +59,7 @@
 			<GameObject _schemaVersion="0" _name="LanternEast" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="8,0.6,-2.2" _localRotation="0,0,0" _localScale="0.4,1.2,0.4" _attachOwner="None" _attachComponent="None"
-					               _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+					               _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" _bVisible="true" />
 					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="#0244d8c8807cd288"
 					                    _bodyType="Static" _layer="Static" _material="None" _mass="0">
 						<_listShape>
@@ -122,9 +122,9 @@
 					                     _equipAction="JRPG.Equip"
 					                     _classChangeAction="JRPG.ClassChange"
 					                     _classChangeMember="1"
-					                     _bodyPrefab="game/playground/prefabs/ruleviews/person.prefab.xml"
-					                     _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
-					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/classicjrpg/ui/hud.ui.xml" />
+					                     _bodyPrefab="guid:56ef54f8e64fa9dfc3af2e669052ff87"
+					                     _markerPrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5" />
+					<HUDControllerComponent _localID="17122754535480611078" _documentPath="guid:4834f16d133578748f520d0d12a0b31f" />
 				</_listComponent>
 			</GameObject>
 		</entity>

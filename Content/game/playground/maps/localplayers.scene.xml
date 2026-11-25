@@ -31,7 +31,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="100,1,100" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="100,1,100" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.866" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -39,7 +39,7 @@
 			<GameObject _schemaVersion="0" _name="Player0" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="-2,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Capsule" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Capsule" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" />
 					<PawnComponent _localID="11149290121538025405" _moveAction="Move" _lookAction="None" _upAction="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player0" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
@@ -59,7 +59,7 @@
 			<GameObject _schemaVersion="0" _name="Player1" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="2,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Capsule" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Capsule" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.866" />
 					<PawnComponent _localID="11149290121538025405" _moveAction="Move" _lookAction="None" _upAction="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player1" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />

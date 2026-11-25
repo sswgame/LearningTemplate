@@ -57,7 +57,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="game/playground/materials/toonshowcase_ground.material"
+					               _materialPath="guid:d53115c7802b1e1eb5caeca24bafda2a"
 					               _boundsRadius="6"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -76,7 +76,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID=""
-					               _materialPath="game/playground/materials/toonshowcase_lit.material"
+					               _materialPath="guid:2c1cce8b2bc8b7d55066be67130652aa"
 					               _boundsRadius="2"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -112,7 +112,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Sphere"
-					               _materialPath="game/playground/materials/toonshowcase_ground.material"
+					               _materialPath="guid:d53115c7802b1e1eb5caeca24bafda2a"
 					               _boundsRadius="0.5"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -163,7 +163,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID=""
-					               _materialPath="game/playground/materials/toonshowcase_lit.material"
+					               _materialPath="guid:2c1cce8b2bc8b7d55066be67130652aa"
 					               _boundsRadius="2"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />

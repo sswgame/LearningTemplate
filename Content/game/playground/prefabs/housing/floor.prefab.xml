@@ -13,7 +13,7 @@
 			               _attachOwner="None"
 			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
-			               _materialPath="engine/materials/prototypegrid_light.material"
+			               _materialPath="guid:8c9750760f544d393d0405c50debad00"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

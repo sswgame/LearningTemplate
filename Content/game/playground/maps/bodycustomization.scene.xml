@@ -26,7 +26,7 @@
 			<GameObject _schemaVersion="0" _name="Weather" _bActive="true">
 				<_listComponent>
 					<GameStateComponent _localID="6673597520240684436" />
-					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="game/playground/data/bodydemo.weather.xml" _startWeather="clear" _seed="7" />
+					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="guid:f950da7490c81a828784dcdb2cba999c" _startWeather="clear" _seed="7" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -41,7 +41,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,0.5,8" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="9" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,0.5,8" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="9" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -56,7 +56,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="8,0.2,8" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="8,0.2,8" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -65,9 +65,9 @@
 				<_listComponent>
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="0,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="" _materialPath="" _boundsRadius="2" />
-					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Idle_Combat" _bPlayOnBegin="true" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Idle_Combat" _bPlayOnBegin="true" />
 					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="BodyDemoWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="common/characters/bodyfluid.surfacechannels.xml" />
-					<PoseModifierComponent _localID="8397761042515027675" _rigPath="common/rigs/skeleton_bodydemo.rig.xml" _bRigEnabled="true" />
+					<PoseModifierComponent _localID="8397761042515027675" _rigPath="guid:877579be2adce78498d337df54283d52" _bRigEnabled="true" />
 					<CharacterBodyDynamicsComponent _localID="101379428086715354" _eyeSocket="Eyes" _hitImpulseScale="0.02" _sunTraceDistance="50" _wipeEvent="WipeFace" _fluidSmearStrength="0.6" />
 				</_listComponent>
 			</GameObject>

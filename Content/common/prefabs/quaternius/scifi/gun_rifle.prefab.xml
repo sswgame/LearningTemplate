@@ -11,8 +11,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="common/models/quaternius/scifi/gun_rifle.mesh"
-			               _materialPath="common/models/quaternius/scifi/gun_rifle/materials/mi_guns_batch1.material"
+			               _meshID="guid:f8f9b2bd0d0d184c93df823fc56fa27e"
+			               _materialPath="guid:bd9e4ef074865884a3a14352db7fef42"
 			               _boundsRadius="0.55"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

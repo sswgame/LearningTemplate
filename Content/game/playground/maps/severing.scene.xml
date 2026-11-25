@@ -31,7 +31,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="25" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -39,10 +39,10 @@
 			<GameObject _schemaVersion="0" _name="Skeleton" _bActive="true">
 				<_listComponent>
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
-					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="common/data/anim/skeleton.animgraph.xml" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Idle_Combat" _bPlayOnBegin="true" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="guid:8d5a84b9050b8cadf1d06d0d49363c85" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Idle_Combat" _bPlayOnBegin="true" />
 					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
-					<RagdollComponent _localID="3882491709238727780" _physicsAssetPath="common/characters/skeleton_warrior/skeleton_warrior.physics.xml" _bRagdollOnFatalHit="true" _bAutoGetUp="false" />
-					<SkeletalSeveringComponent _localID="12034596935017574515" _severedSurfaceChannel="Blood" _regionTablePath="common/characters/skeleton_warrior/skeleton_warrior.fit.xml">
+					<RagdollComponent _localID="3882491709238727780" _physicsAssetPath="guid:838a817bb59114526689cc7f27a02f17" _bRagdollOnFatalHit="true" _bAutoGetUp="false" />
+					<SkeletalSeveringComponent _localID="12034596935017574515" _severedSurfaceChannel="Blood" _regionTablePath="guid:9fb8f706daaf99963cf9c891924fce5a">
 						<_listSeverableRegion>
 							<item>Head</item>
 							<item>Arm_L</item>

@@ -71,7 +71,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="game/playground/materials/prototypegrid_dark_glossy.material"
+					               _materialPath="guid:67af9ceba630adc6073bd2ed37a9b5c3"
 					               _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
@@ -85,7 +85,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b"
 					               _boundsRadius="1.3" />
 				</_listComponent>
 			</GameObject>
@@ -99,7 +99,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b"
 					               _boundsRadius="1.8" />
 				</_listComponent>
 			</GameObject>
@@ -113,7 +113,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _materialPath="guid:8c9750760f544d393d0405c50debad00"
 					               _boundsRadius="1.8" />
 				</_listComponent>
 			</GameObject>
@@ -175,7 +175,7 @@
 						<_values _whiteTemperature="4000"
 						         _shadowsGain="0.8,0.9,1.3,1"
 						         _highlightsGain="1.3,1.05,0.8,1"
-						         _colorGradingLUT="game/playground/textures/postprocess/lut_sepia.dds"
+						         _colorGradingLUT="guid:f3b35f531321ec84ddb5d9374c0742a3"
 						         _colorGradingLUTIntensity="0.5" />
 						<_overrides _bWhiteTemperature="true"
 						            _bShadowsGain="true"
@@ -294,7 +294,7 @@
 					                            _blendWeight="1"
 					                            _priority="0"
 					                            _shape="Unbound">
-						<_values _bloomScale="2" _bloomDirtMask="game/playground/textures/postprocess/bloomdirt.dds" _bloomDirtMaskIntensity="6" />
+						<_values _bloomScale="2" _bloomDirtMask="guid:15d8c349a3828d7ef149b8d00fef0a42" _bloomDirtMaskIntensity="6" />
 						<_overrides _bBloomScale="true" _bBloomDirtMask="true" _bBloomDirtMaskIntensity="true" />
 					</PostProcessVolumeComponent>
 				</_listComponent>
@@ -356,7 +356,7 @@
 					                            _shape="Unbound">
 						<_values>
 							<_listBlendable>
-								<PostProcessBlendable _materialPath="engine/materials/postprocess/colortint.material" _weight="1" _location="BeforeTonemap" />
+								<PostProcessBlendable _materialPath="guid:8c975948d48915faf995f3277a049149" _weight="1" _location="BeforeTonemap" />
 							</_listBlendable>
 						</_values>
 						<_overrides _bListBlendable="true" />
@@ -380,7 +380,7 @@
 					                            _shape="Unbound">
 						<_values>
 							<_listBlendable>
-								<PostProcessBlendable _materialPath="engine/materials/postprocess/colortint.material" _weight="0.5" _location="AfterTonemap" />
+								<PostProcessBlendable _materialPath="guid:8c975948d48915faf995f3277a049149" _weight="0.5" _location="AfterTonemap" />
 							</_listBlendable>
 						</_values>
 						<_overrides _bListBlendable="true" />
@@ -404,7 +404,7 @@
 					                            _shape="Unbound">
 						<_values>
 							<_listBlendable>
-								<PostProcessBlendable _materialPath="engine/materials/postprocess/colortint.material" _weight="1" _location="ReplacingTonemap" />
+								<PostProcessBlendable _materialPath="guid:8c975948d48915faf995f3277a049149" _weight="1" _location="ReplacingTonemap" />
 							</_listBlendable>
 						</_values>
 						<_overrides _bListBlendable="true" />

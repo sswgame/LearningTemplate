@@ -16,7 +16,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="2" name="SkyDay" layers="Day" prefab="engine/prefabs/sky/autumn_field_puresky.prefab.xml" />
-		<entity id="3" name="SkyNight" layers="Night" prefab="engine/prefabs/sky/moonless_golf.prefab.xml" />
+		<entity id="2" name="SkyDay" layers="Day" prefab="guid:18c173f5f57e06e6922499fd0e6d8b76" />
+		<entity id="3" name="SkyNight" layers="Night" prefab="guid:0b130d11116dfdab3aef5b41fcae87bd" />
 	</entities>
 </Scene>

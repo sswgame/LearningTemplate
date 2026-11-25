@@ -13,7 +13,7 @@
 			                _attachComponent="None" />
 			<ZoneVolumeComponent _localID="4170813354090212695" _componentName="ZoneVolumeComponent"
 			                     _bActive="true"
-			                     _zoneProfile="game/playground/zones/poisonspread.zone.xml"
+			                     _zoneProfile="guid:bb8bf5a070eb12cfd8a3a421d5fe8fcf"
 			                     _shape="Cylinder"
 			                     _halfExtents="1,1.5,1"
 			                     _pullCenterOffset="0,0,0"

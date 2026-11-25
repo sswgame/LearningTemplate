@@ -24,7 +24,7 @@
 					                 _bOrthographic="true" />
 					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _catalogPath="game/playground/starskirmish/data/skirmish.cameras.xml"
+					                         _catalogPath="guid:db92288971ab8486894008fb1eb1c5bc"
 					                         _initialPreset="play"
 					                         _focusPoint="14,0,14"
 					                         _bReadInput="true">
@@ -68,7 +68,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/starskirmish/materials/ground.material"
+					               _materialPath="guid:33ba5e2089cc0596fca70b5ebfa9eaf2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -87,7 +87,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/starskirmish/materials/drag.material"
+					               _materialPath="guid:bd455f2ef238e7e1154f21fa919d8903"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="false" />
@@ -100,9 +100,9 @@
 				<_listComponent>
 					<LockstepSkirmishGameModeComponent _localID="8311947226649749812" _componentName="LockstepSkirmishGameModeComponent"
 					                                   _bActive="true"
-					                                   _unitDataPath="game/playground/starskirmish/data/units.xml"
+					                                   _unitDataPath="guid:7fc7857ebaa1d14af919f348c2c71d2d"
 					                                   _startMinerals="50"
-					                                   _commanderTreePath="game/playground/starskirmish/data/commander.bt.xml"
+					                                   _commanderTreePath="guid:7c6b8f3107dccf9c6258c1679a245dfb"
 					                                   _workerUnitID="worker"
 					                                   _depotUnitID="command_center"
 					                                   _supplyUnitID="supply_depot"
@@ -170,12 +170,12 @@
 					</RTSCommandInputComponent>
 					<RTSBattlefieldViewComponent _localID="14406087344678571906" _componentName="RTSBattlefieldViewComponent"
 					                             _bActive="true"
-					                             _unitModelPath="game/playground/starskirmish/data/units.views.xml"
-					                             _unitPrefab="game/playground/starskirmish/prefabs/unit.prefab.xml">
+					                             _unitModelPath="guid:2d72ab58db40cc1124f6e8c649d5a84a"
+					                             _unitPrefab="guid:d0d09e1d9a299bbd2113797b98e0be4a">
 						<_listCliffPrefab>
-							<item>game/playground/starskirmish/prefabs/cliff_rock_1.prefab.xml</item>
-							<item>game/playground/starskirmish/prefabs/cliff_rock_2.prefab.xml</item>
-							<item>game/playground/starskirmish/prefabs/cliff_rock_3.prefab.xml</item>
+							<item>guid:100b57001482478b413659bf444cf6f2</item>
+							<item>guid:8a422d9b48de45b045eaa505dec644b2</item>
+							<item>guid:3c99d982133218a4820496d32a2f9fee</item>
 						</_listCliffPrefab>
 						<_unitPool _maxIdleCount="32" />
 					</RTSBattlefieldViewComponent>
@@ -193,8 +193,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/kaykit_space/rock_a.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kaykit_space.material"
+					               _meshID="guid:1483c5142458750f27c7228a0b9c7469"
+					               _materialPath="guid:2c6c9c5419f4b6fc43c0d0169d61a930"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -212,8 +212,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/kaykit_space/rock_b.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kaykit_space.material"
+					               _meshID="guid:c97e2abc57c09130653b331133f35c03"
+					               _materialPath="guid:2c6c9c5419f4b6fc43c0d0169d61a930"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -231,8 +231,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/kaykit_space/rocks_a.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kaykit_space.material"
+					               _meshID="guid:ad558d45104fd24119392b314f47b442"
+					               _materialPath="guid:2c6c9c5419f4b6fc43c0d0169d61a930"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -250,8 +250,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/kaykit_space/rocks_b.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kaykit_space.material"
+					               _meshID="guid:cf922153383190a234a4a15579ae8ffb"
+					               _materialPath="guid:2c6c9c5419f4b6fc43c0d0169d61a930"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -269,8 +269,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/kaykit_space/terrain_low.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kaykit_space.material"
+					               _meshID="guid:6b4cc14cd1b7157d77c087dca08f455f"
+					               _materialPath="guid:2c6c9c5419f4b6fc43c0d0169d61a930"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -288,8 +288,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/kaykit_space/terrain_slope.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kaykit_space.material"
+					               _meshID="guid:233aac10955d3e3469a59ad991ad709b"
+					               _materialPath="guid:2c6c9c5419f4b6fc43c0d0169d61a930"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -307,8 +307,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/kaykit_space/terrain_slope_inner_corner.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kaykit_space.material"
+					               _meshID="guid:0f43b011c3e3f251534ceafcd76e5759"
+					               _materialPath="guid:2c6c9c5419f4b6fc43c0d0169d61a930"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -326,8 +326,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/kaykit_space/terrain_slope_outer_corner.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kaykit_space.material"
+					               _meshID="guid:ee313651b557f3190c5ba0df8eddfa7a"
+					               _materialPath="guid:2c6c9c5419f4b6fc43c0d0169d61a930"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -345,8 +345,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/kaykit_space/terrain_tall.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kaykit_space.material"
+					               _meshID="guid:c24ffd930e32353a34076f0b025923dc"
+					               _materialPath="guid:2c6c9c5419f4b6fc43c0d0169d61a930"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -364,8 +364,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/craft_cargo_a.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:dc84bb83a197996158cce168eb5b0e93"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -383,8 +383,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/craft_racer.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:4f53d7513052a01df8e527a0abc6ed50"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -402,8 +402,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/craft_speeder_a.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:82a1c0f37a9b89561e6a56cf0de23d7b"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -421,8 +421,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/craft_speeder_b.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:351d9d3fc1c6c4fc58ef8ac0dbc991c0"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -440,8 +440,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/crater.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:d117ab416e077478560f5bbdcbc7c03c"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -459,8 +459,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/hangar_large_a.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:4e78f6abcbe900a118e3e6cb1c5c16c8"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -478,8 +478,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/hangar_round_a.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:4ce10a96d4126ff39741aeba31a32329"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -497,8 +497,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/hangar_small_a.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:55d72dff35fb1cce7d6c708033448fe9"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -516,8 +516,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/machine_generator.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:10e627e924d16b31fb8e69a5d8a88c83"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -535,8 +535,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/machine_wireless.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:926106397615ab451a341c7361381600"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -554,8 +554,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/platform_large.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:834c2142b09500e82848b1504a0e8c61"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -573,8 +573,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/rock_crystals.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:9668340d974716f2cafd3193e676d92a"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -592,8 +592,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/structure.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:e3ea8e98fae90e9029952db254fa8671"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -611,8 +611,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/turret_double.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:9ca166d4ab8467db1bf1d8c89d2b6023"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -630,8 +630,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/starskirmish/models/turret_single.mesh"
-					               _materialPath="game/playground/starskirmish/materials/kenney_space.material"
+					               _meshID="guid:145ca1976496a42d47e1890f463b02f1"
+					               _materialPath="guid:49fef4096bbf36734a85cfd125e604f6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />

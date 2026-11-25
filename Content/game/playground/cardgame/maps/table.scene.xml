@@ -64,10 +64,10 @@
 					                         _moveAction="Move"
 					                         _confirmAction="Card.Confirm"
 					                         _endTurnAction="Card.EndTurn"
-					                         _cardPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml"
-					                         _enemyPrefab="game/playground/prefabs/ruleviews/hero.prefab.xml" />
+					                         _cardPrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5"
+					                         _enemyPrefab="guid:d2d9056c68a15eabd00a04317606c0de" />
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true"
-					                        _documentPath="game/playground/cardgame/ui/hud.ui.xml" />
+					                        _documentPath="guid:98f221769b87d86e0d4114562dbe515b" />
 				</_listComponent>
 			</GameObject>
 		</entity>

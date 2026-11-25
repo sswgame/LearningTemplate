@@ -28,7 +28,7 @@
 			               _attachOwnerID="0"
 			               _attachComponent="#19b3407eb1f9cd74"
 			               _meshID="Capsule"
-			               _materialPath="game/playground/wildwest/materials/rider.material"
+			               _materialPath="guid:bfc19c51b5252a851d4b9e7efa4ce412"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
@@ -41,7 +41,7 @@
 			               _attachOwnerID="0"
 			               _attachComponent="#19b3407eb1f9cd74"
 			               _meshID="Cube"
-			               _materialPath="game/playground/wildwest/materials/hat.material"
+			               _materialPath="guid:cabd7a4fcfa38fafba4adceb33f36eb4"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
@@ -54,7 +54,7 @@
 			               _attachOwnerID="0"
 			               _attachComponent="#19b3407eb1f9cd74"
 			               _meshID="Cube"
-			               _materialPath="game/playground/wildwest/materials/hat.material"
+			               _materialPath="guid:cabd7a4fcfa38fafba4adceb33f36eb4"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

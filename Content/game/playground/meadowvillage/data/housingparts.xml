@@ -3,14 +3,14 @@
 <!-- 초원 마을(minigames/meadowvillage) 하우징 부품 카탈로그(GF_Housing, HousingPartCatalog) — 마을 판 상태 오브젝트(VillageState)의 부지가 쓴다. 칸 1 m(공유 땅 칸과 같다), 층 3 m.
      벽과 문은 끝 소켓(wallEnd)에 서로 붙는다. 프리팹 원점은 점유 칸의 가운데 바닥(회전 0). -->
 <HousingPartCatalog currency="Gold" cellSize="1" levelHeight="3" socketSnapRadius="0.6">
-	<Part id="floor" name="Floor" prefab="game/playground/meadowvillage/prefabs/housing/floor.prefab.xml" layer="Floor" height="0.1" cost="5" refundRatio="0.5"/>
-	<Part id="wall" name="Wall" prefab="game/playground/meadowvillage/prefabs/housing/wall.prefab.xml" layer="Structure" height="2.8" cost="10" refundRatio="0.5" snapTo="wallEnd">
+	<Part id="floor" name="Floor" prefab="guid:f5cbb6bbba27405d9d256415bba2e1d7" layer="Floor" height="0.1" cost="5" refundRatio="0.5"/>
+	<Part id="wall" name="Wall" prefab="guid:f8adfc981c7d4f1685787330ecaaf965" layer="Structure" height="2.8" cost="10" refundRatio="0.5" snapTo="wallEnd">
 		<Socket kind="wallEnd" position="-0.5,0,0"/>
 		<Socket kind="wallEnd" position="0.5,0,0"/>
 	</Part>
-	<Part id="door" name="Door" prefab="game/playground/meadowvillage/prefabs/housing/door.prefab.xml" layer="Structure" height="2.8" cost="20" refundRatio="0.5" snapTo="wallEnd">
+	<Part id="door" name="Door" prefab="guid:7a24372c0ca94d03b1b77ccd95df6ef6" layer="Structure" height="2.8" cost="20" refundRatio="0.5" snapTo="wallEnd">
 		<Socket kind="wallEnd" position="-0.5,0,0"/>
 		<Socket kind="wallEnd" position="0.5,0,0"/>
 	</Part>
-	<Part id="table" name="Table" prefab="game/playground/meadowvillage/prefabs/housing/table.prefab.xml" sizeX="2" sizeZ="1" height="0.8" cost="30" refundRatio="0.5"/>
+	<Part id="table" name="Table" prefab="guid:8e28bb64368e4904a63afce77fa34214" sizeX="2" sizeZ="1" height="0.8" cost="30" refundRatio="0.5"/>
 </HousingPartCatalog>

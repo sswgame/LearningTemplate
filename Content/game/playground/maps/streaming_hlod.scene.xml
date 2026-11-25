@@ -23,28 +23,28 @@
 		<entity id="3" name="RockA">
 			<GameObject _schemaVersion="0" _name="RockA" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="3,0.5,3" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="0.9" _bStatic="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="3,0.5,3" _meshID="Cube" _materialPath="guid:a475fbe06e97f84b16b8333ffad1ed79" _boundsRadius="0.9" _bStatic="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="RockB">
 			<GameObject _schemaVersion="0" _name="RockB" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="7,0.5,6" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="0.9" _bStatic="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="7,0.5,6" _meshID="Cube" _materialPath="guid:a475fbe06e97f84b16b8333ffad1ed79" _boundsRadius="0.9" _bStatic="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="5" name="Lamp">
 			<GameObject _schemaVersion="0" _name="Lamp" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="35,0.5,5" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="0.9" />
+					<MeshComponent _localID="163493842152903304" _localPosition="35,0.5,5" _meshID="Cube" _materialPath="guid:a475fbe06e97f84b16b8333ffad1ed79" _boundsRadius="0.9" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="6" name="RockC">
 			<GameObject _schemaVersion="0" _name="RockC" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="65,0.5,5" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="0.9" _bStatic="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="65,0.5,5" _meshID="Cube" _materialPath="guid:a475fbe06e97f84b16b8333ffad1ed79" _boundsRadius="0.9" _bStatic="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

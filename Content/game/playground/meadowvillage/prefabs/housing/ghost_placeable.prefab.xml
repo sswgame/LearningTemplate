@@ -13,7 +13,7 @@
 			               _attachOwner="None"
 			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
-			               _materialPath="game/playground/meadowvillage/materials/housing/ghost_placeable.material"
+			               _materialPath="guid:13c89abafc574e80bb8db92d18b7bf55"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

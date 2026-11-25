@@ -50,7 +50,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _materialPath="guid:8c9750760f544d393d0405c50debad00"
 					               _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
@@ -63,7 +63,7 @@
 					              _localScale="1,1,1"
 					              _attachOwner="None"
 					              _attachComponent="None"
-					              _effectPath="engine/vfx/gpusparklights256.vfx.xml"
+					              _effectPath="guid:05890e6a7672ef2e61a749fe1ebe5d85"
 					              _seed="1"
 					              _bPlayOnBegin="true" />
 				</_listComponent>

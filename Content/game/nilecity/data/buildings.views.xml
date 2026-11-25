@@ -4,30 +4,30 @@
      mesh = 메시 에셋(쿠킹 도달 계산이 이 칸을 본다), width = 한 칸(1 m)에 맞출 때 나누는 폭 — 크기 n 칸 건물은 n / width 배로 그린다. -->
 <RuleViewCatalog>
   <!-- 집 — 빈 땅은 낮은 울타리, 단계(0..7)마다 커지는 집. 키는 <건물 id>.empty · <건물 id>.<단계> 다 -->
-  <View id="house.empty" mesh="game/nilecity/models/fence_low.mesh" width="2"/>
-  <View id="house.0" mesh="game/nilecity/models/building_type_h.mesh" width="2"/>
-  <View id="house.1" mesh="game/nilecity/models/building_type_a.mesh" width="2"/>
-  <View id="house.2" mesh="game/nilecity/models/building_type_g.mesh" width="2"/>
-  <View id="house.3" mesh="game/nilecity/models/building_type_c.mesh" width="2"/>
-  <View id="house.4" mesh="game/nilecity/models/building_type_e.mesh" width="2"/>
-  <View id="house.5" mesh="game/nilecity/models/building_type_f.mesh" width="2"/>
-  <View id="house.6" mesh="game/nilecity/models/building_type_b.mesh" width="2"/>
-  <View id="house.7" mesh="game/nilecity/models/building_type_d.mesh" width="2"/>
+  <View id="house.empty" mesh="guid:e67e72dc719400f23bb3de574a5edc35" width="2"/>
+  <View id="house.0" mesh="guid:82f48f0316f376d55456b984582887f5" width="2"/>
+  <View id="house.1" mesh="guid:07679fcf34b7323d0628b013620b7118" width="2"/>
+  <View id="house.2" mesh="guid:2c61f6f5eafadaa4c5179797b6c5c8de" width="2"/>
+  <View id="house.3" mesh="guid:b6d61fe09565c19973498271284ab6e9" width="2"/>
+  <View id="house.4" mesh="guid:96d01080aaa94e8b6a14e24c29c91d4b" width="2"/>
+  <View id="house.5" mesh="guid:fb34fe34171a5f0e6909ba4dd21189ef" width="2"/>
+  <View id="house.6" mesh="guid:553059eecc329e93042440c7314e1b20" width="2"/>
+  <View id="house.7" mesh="guid:83f063b3f7b9447a1f4c880426c74277" width="2"/>
   <!-- 봉사 건물 — 한 칸은 작은 집, 두 칸은 넓은 집 -->
-  <View id="well" mesh="game/nilecity/models/building_type_h.mesh" width="2"/>
-  <View id="shrine" mesh="game/nilecity/models/building_type_h.mesh" width="2"/>
-  <View id="apothecary" mesh="game/nilecity/models/building_type_h.mesh" width="2"/>
-  <View id="water_supply" mesh="game/nilecity/models/building_type_c.mesh" width="2"/>
-  <View id="juggler" mesh="game/nilecity/models/building_type_c.mesh" width="2"/>
-  <View id="scribe_school" mesh="game/nilecity/models/building_type_c.mesh" width="2"/>
-  <View id="tax_collector" mesh="game/nilecity/models/building_type_c.mesh" width="2"/>
+  <View id="well" mesh="guid:82f48f0316f376d55456b984582887f5" width="2"/>
+  <View id="shrine" mesh="guid:82f48f0316f376d55456b984582887f5" width="2"/>
+  <View id="apothecary" mesh="guid:82f48f0316f376d55456b984582887f5" width="2"/>
+  <View id="water_supply" mesh="guid:b6d61fe09565c19973498271284ab6e9" width="2"/>
+  <View id="juggler" mesh="guid:b6d61fe09565c19973498271284ab6e9" width="2"/>
+  <View id="scribe_school" mesh="guid:b6d61fe09565c19973498271284ab6e9" width="2"/>
+  <View id="tax_collector" mesh="guid:b6d61fe09565c19973498271284ab6e9" width="2"/>
   <!-- 생산 · 창고 · 시장(밭 grain_farm · fig_farm 은 줄이 없어 색 상자다) -->
-  <View id="potter" mesh="game/nilecity/models/building_type_g.mesh" width="2"/>
-  <View id="brewery" mesh="game/nilecity/models/building_type_g.mesh" width="2"/>
-  <View id="granary" mesh="game/nilecity/models/building_type_d.mesh" width="2"/>
-  <View id="storage_yard" mesh="game/nilecity/models/building_type_d.mesh" width="2"/>
-  <View id="bazaar" mesh="game/nilecity/models/building_type_f.mesh" width="2"/>
+  <View id="potter" mesh="guid:2c61f6f5eafadaa4c5179797b6c5c8de" width="2"/>
+  <View id="brewery" mesh="guid:2c61f6f5eafadaa4c5179797b6c5c8de" width="2"/>
+  <View id="granary" mesh="guid:83f063b3f7b9447a1f4c880426c74277" width="2"/>
+  <View id="storage_yard" mesh="guid:83f063b3f7b9447a1f4c880426c74277" width="2"/>
+  <View id="bazaar" mesh="guid:fb34fe34171a5f0e6909ba4dd21189ef" width="2"/>
   <!-- 장식 — 정원 · 광장은 화분(집보다 작게 만든 모델이라 3 배 — 폭 2/3), 조각상은 줄이 없어 색 상자다 -->
-  <View id="garden" mesh="game/nilecity/models/planter.mesh" width="0.666667"/>
-  <View id="plaza" mesh="game/nilecity/models/planter.mesh" width="0.666667"/>
+  <View id="garden" mesh="guid:695c333b6dddf799f725463e3f4cef9b" width="0.666667"/>
+  <View id="plaza" mesh="guid:695c333b6dddf799f725463e3f4cef9b" width="0.666667"/>
 </RuleViewCatalog>

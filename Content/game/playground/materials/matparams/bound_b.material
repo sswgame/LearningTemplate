@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="95d78b53ba5e0216f067716693bdd3f6"?>
 <!-- bound_a 와 다른 머티리얼이다 — 같은 묶음 값을 읽는다. -->
-<MaterialDef formatVersion="0" name="matparams_bound_b" _base="engine/materials/defaultmaterial.material">
+<MaterialDef formatVersion="0" name="matparams_bound_b" _base="guid:0e23c2ee4018be638b51655cf03239d2">
 	<_properties>
 		<item name="_color" collection="game/playground/materials/matparams/world.matparams.xml" collectionParameter="WorldTint"/>
 		<item name="_roughness" defaultValue="0.2"/>

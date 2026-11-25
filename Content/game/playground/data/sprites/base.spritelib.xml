@@ -1,6 +1,6 @@
 <?asset guid="91ceefba1a994d4f5beac39a05733e03"?>
 <!-- 시나리오 automation/spritelibrary 의 바탕 라이브러리 — 라벨 Idle 은 아틀라스의 왼쪽 위 칸이다. -->
-<SpriteLibrary _atlasPath="engine/textures/test/quadrants.dds">
+<SpriteLibrary _atlasPath="guid:02b451717dc7eac75de9a188f4b33c41">
 	<_listCategory>
 		<SpriteLibraryCategory _name="Body">
 			<_listLabel>

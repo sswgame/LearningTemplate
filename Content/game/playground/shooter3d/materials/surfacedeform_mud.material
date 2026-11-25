@@ -2,7 +2,7 @@
 <?asset guid="4318d5b5973d4f06bd5623c7b2f74fb3"?>
 <!-- 빗마당(maps/rainyard) 진흙 — 표면 변형 층을 읽는 지면(engine/materials/surfacedeform.material)에 색과 격자(크기 가늠용)만 얹는다.
      발자국 · 젖은 자국 · 고이는 빗물 · 빗방울 링은 부모 셰이더(surface_deform.hlsl)가 낸다. -->
-<MaterialDef formatVersion="0" name="SurfaceDeformMud" _base="engine/materials/surfacedeform.material">
+<MaterialDef formatVersion="0" name="SurfaceDeformMud" _base="guid:e1360521536d34240642a32657ba62dc">
 	<_properties>
 		<item name="_color" defaultValue="0.26 0.19 0.12 1.0" />
 		<item name="_roughness" defaultValue="0.6" />

@@ -58,8 +58,8 @@
 					<KartGameModeComponent _localID="489024443286610025" _componentName="KartGameModeComponent" _bActive="true"
 					                       _trackID="sunny_oval"
 					                       _bItems="true"
-					                       _itemCatalog="game/playground/kartracing/data/circuit.kartitems.xml"
-					                       _vehicleSettings="common/data/vehicles/kart.vehicle.xml"
+					                       _itemCatalog="guid:041dc3291ef33e6291a7d17fc9ab5826"
+					                       _vehicleSettings="guid:ac43c1f814fc7ab0ced13bbe596abca2"
 					                       _botCount="3"
 					                       _countdownSeconds="3"
 					                       _finishTimeoutSeconds="8"
@@ -72,11 +72,11 @@
 					                       _driftAction="Kart.Drift"
 					                       _boostAction="Kart.Boost"
 					                       _itemAction="Kart.Item"
-					                       _trackPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml"
-					                       _kartPrefab="game/playground/kartracing/prefabs/kart.prefab.xml"
-					                       _itemPrefab="game/playground/prefabs/ruleviews/ball.prefab.xml" />
+					                       _trackPrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5"
+					                       _kartPrefab="guid:ee5df9761e9e8b5cb7a2e648025636ea"
+					                       _itemPrefab="guid:17f143aaafa52a5087125a89f2ac27c8" />
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true"
-					                        _documentPath="game/playground/kartracing/ui/hud.ui.xml" />
+					                        _documentPath="guid:a69e2414bc417532acfd9a97b27406be" />
 				</_listComponent>
 			</GameObject>
 		</entity>

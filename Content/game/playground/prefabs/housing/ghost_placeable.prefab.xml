@@ -13,7 +13,7 @@
 			               _attachOwner="None"
 			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
-			               _materialPath="game/playground/materials/housing/ghost_placeable.material"
+			               _materialPath="guid:bae05ddd97d705aacbd4e1c9f1fd04d6"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

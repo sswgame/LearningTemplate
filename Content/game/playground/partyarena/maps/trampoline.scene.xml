@@ -51,7 +51,7 @@
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
 					<PartyGameModeComponent _localID="16549415557893916493" _componentName="PartyGameModeComponent" _bActive="true"
-					                        _items="game/playground/partyarena/data/trampoline.partyitems.xml"
+					                        _items="guid:2348b0e431d001a7e61414692c11bf80"
 					                        _botCount="2"
 					                        _roundLimit="3"
 					                        _intermissionSeconds="2"
@@ -63,11 +63,11 @@
 					                         _jumpAction="Party.Jump"
 					                         _attackAction="Party.Attack"
 					                         _poundAction="Party.Pound"
-					                         _floorPrefab="game/playground/prefabs/ruleviews/disc.prefab.xml"
-					                         _playerPrefab="game/playground/prefabs/ruleviews/ball.prefab.xml"
-					                         _itemPrefab="game/playground/prefabs/ruleviews/ball.prefab.xml" />
+					                         _floorPrefab="guid:91f640c4f7ab84508cf6695816495576"
+					                         _playerPrefab="guid:17f143aaafa52a5087125a89f2ac27c8"
+					                         _itemPrefab="guid:17f143aaafa52a5087125a89f2ac27c8" />
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true"
-					                        _documentPath="game/playground/partyarena/ui/hud.ui.xml" />
+					                        _documentPath="guid:c59a77125b8050dd40e4de3cee91abbe" />
 				</_listComponent>
 			</GameObject>
 		</entity>

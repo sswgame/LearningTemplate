@@ -16,7 +16,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="game/playground/shooter3d/materials/floor.material"
+					               _materialPath="guid:4d4bf5a109be9458f9b57d913e137a49"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />

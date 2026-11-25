@@ -25,7 +25,7 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -41,7 +41,7 @@
 				<Part path="1">
 					<PrefabOverrides>
 						<Override key="#0244d8c8807cd288">
-							<MeshComponent _materialPath="game/playground/materials/renderstate/plain_red.material" />
+							<MeshComponent _materialPath="guid:a475fbe06e97f84b16b8333ffad1ed79" />
 						</Override>
 					</PrefabOverrides>
 				</Part>
@@ -55,7 +55,7 @@
 		<entity id="6" name="Snow" layers="Winter">
 			<GameObject _schemaVersion="0" _name="Snow" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,1.25,0" _localRotation="0,0,0" _localScale="2.5,2.5,2.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="2.2" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1.25,0" _localRotation="0,0,0" _localScale="2.5,2.5,2.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:a475fbe06e97f84b16b8333ffad1ed79" _boundsRadius="2.2" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -24,7 +24,7 @@
 					                 _bOrthographic="true" />
 					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _catalogPath="game/playground/frontiertown/data/frontier.cameras.xml"
+					                         _catalogPath="guid:7b1a3da697c95fb51063d3ce14e9625b"
 					                         _initialPreset="frontier"
 					                         _focusPoint="16,0,16"
 					                         _bReadInput="false">
@@ -70,7 +70,7 @@
 					                       _bActive="true"
 					                       _playerState="4"
 					                       _bAutoPlay="false"
-					                       _cityDataPath="game/playground/frontiertown/data/city.xml"
+					                       _cityDataPath="guid:78f5b7d531117fa25596b595bcd1ae3d"
 					                       _landSize="32"
 					                       _secondsPerDay="24"
 					                       _startHour="6"
@@ -85,8 +85,8 @@
 					                       _fastTimeScale="8" />
 					<CityViewComponent _localID="7240113358861402917" _componentName="CityViewComponent"
 					                   _bActive="true"
-					                   _roadPrefab="game/playground/frontiertown/prefabs/tile.prefab.xml"
-					                   _blockBuildingPrefab="game/playground/frontiertown/prefabs/building.prefab.xml"
+					                   _roadPrefab="guid:59f6516016cff9babb0b7078e9c7f8c5"
+					                   _blockBuildingPrefab="guid:6ffbb9e47d363839f0cb28b54880c9d6"
 					                   _roadColor="0.45,0.42,0.38,1"
 					                   _houseBlockColor="0.85,0.72,0.45,1"
 					                   _decorationBlockColor="0.85,0.72,0.45,1" />
@@ -97,7 +97,7 @@
 					                                   _bActive="true"
 					                                   _playerState="4"
 					                                   _bAutoPlay="false"
-					                                   _unitDataPath="game/playground/frontiertown/data/units.xml"
+					                                   _unitDataPath="guid:76d4b3db0b1f18238f653be840042028"
 					                                   _startMinerals="500"
 					                                   _workerUnit="worker"
 					                                   _soldierUnit="marine"
@@ -109,8 +109,8 @@
 					                                   _patrolB="10.5,0,6.5" />
 					<RTSBattlefieldViewComponent _localID="12821698634257031784" _componentName="RTSBattlefieldViewComponent"
 					                             _bActive="true"
-					                             _unitModelPath="game/playground/frontiertown/data/units.views.xml"
-					                             _unitPrefab="game/playground/starskirmish/prefabs/unit.prefab.xml">
+					                             _unitModelPath="guid:59476f5f8088b5bec3b4317a83b9829e"
+					                             _unitPrefab="guid:d0d09e1d9a299bbd2113797b98e0be4a">
 						<_unitPool _maxIdleCount="8" />
 					</RTSBattlefieldViewComponent>
 				</_listComponent>

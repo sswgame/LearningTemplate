@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="2c1cce8b2bc8b7d55066be67130652aa"?>
 <!-- 툰 쇼케이스(toonshowcase.scene.xml)의 비교용 PBR 구 — 툰 구와 같은 색의 기본 머티리얼(forwardlit). -->
-<MaterialDef formatVersion="0" name="ToonShowcaseLit" _base="engine/materials/defaultmaterial.material">
+<MaterialDef formatVersion="0" name="ToonShowcaseLit" _base="guid:0e23c2ee4018be638b51655cf03239d2">
 	<_properties>
 		<item name="_color" defaultValue="0.95 0.55 0.35 1.0" />
 	</_properties>

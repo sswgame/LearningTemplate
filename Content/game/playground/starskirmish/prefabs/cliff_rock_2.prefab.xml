@@ -11,8 +11,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="common/models/quaternius/nature/rock_medium_2.mesh"
-			               _materialPath="common/models/quaternius/nature/rock_medium_2/materials/rocks.material"
+			               _meshID="guid:d4b357c19593fe0ddc44d8cfaf1532d2"
+			               _materialPath="guid:d5fb66477eae656c339f27cf29c9a982"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

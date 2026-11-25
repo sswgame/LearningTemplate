@@ -34,7 +34,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="100,1,100" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="100,1,100" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.866" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -42,7 +42,7 @@
 			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="0,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Capsule" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Capsule" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" />
 					<PawnComponent _localID="11149290121538025405" _moveAction="Move" _lookAction="None" _upAction="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player0" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
@@ -83,7 +83,7 @@
 		<entity id="7" name="LandingDirector">
 			<GameObject _schemaVersion="0" _name="LandingDirector" _bActive="true">
 				<_listComponent>
-					<SequencePlayerComponent _localID="7060533932593436227" _sequencePath="game/playground/data/cutscenelanding.seq.xml" _framesPerSecond="30" _loopMode="None" _playerMovement="Free" _bAutoPlay="false" _bHideHUD="false" _bSkippable="false" _bAllowFastForward="false">
+					<SequencePlayerComponent _localID="7060533932593436227" _sequencePath="guid:7a1e1c6a2dfdf3fd57c2fc67b59af525" _framesPerSecond="30" _loopMode="None" _playerMovement="Free" _bAutoPlay="false" _bHideHUD="false" _bSkippable="false" _bAllowFastForward="false">
 						<_listBinding />
 					</SequencePlayerComponent>
 				</_listComponent>
@@ -107,7 +107,7 @@
 		<entity id="9" name="GateDirector">
 			<GameObject _schemaVersion="0" _name="GateDirector" _bActive="true">
 				<_listComponent>
-					<SequencePlayerComponent _localID="7060533932593436227" _sequencePath="game/playground/data/cutscenegate.seq.xml" _framesPerSecond="30" _loopMode="None" _playerMovement="Blocked" _confineTarget="4" _confineCenter="8" _confineRadius="3" _bAutoPlay="false" _bHideHUD="true" _bSkippable="true" _bAllowFastForward="true">
+					<SequencePlayerComponent _localID="7060533932593436227" _sequencePath="guid:20c53d3e350d4cff11f78a38533353d3" _framesPerSecond="30" _loopMode="None" _playerMovement="Blocked" _confineTarget="4" _confineCenter="8" _confineRadius="3" _bAutoPlay="false" _bHideHUD="true" _bSkippable="true" _bAllowFastForward="true">
 						<_listBinding>
 							<SequenceBindingSlot _binding="1" _object="10" />
 						</_listBinding>
