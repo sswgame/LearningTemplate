@@ -6,6 +6,9 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskManager.h"
+
+#include "Editor/Common/Asset/Texture/RawImageData.h"
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
@@ -20,6 +23,18 @@ namespace sw::editor
         struct TextureBlockEncoderInternal
         {
             static constexpr uint32 kBlockSize = 4;
+            /** @brief 띠 하나의 화소 행 수입니다(블록 높이의 배수) — BC 압축의 띠(`TextureImporter` `BandCompressJob`)와 같은 크기다. */
+            static constexpr uint32 kBandRows = 64;
+            static_assert( kBandRows % kBlockSize == 0, "bands must cover whole 4x4 block rows" );
+
+            /** @brief 밉의 가로 띠 하나입니다. */
+            struct Band
+            {
+                const uint8* _pRGBA{ nullptr };
+                uint8*       _pOut{ nullptr };
+                uint32       _rowCount{ 0 };
+                bool         _bEncoded{ false };
+            };
 
             /** @brief 스레드마다 하나인 astcenc 문맥입니다 — 문맥 만들기(표 계산)가 무거워 밉마다 만들지 않는다. 스레드가 끝나면 놓는다. */
             struct ASTCContext
@@ -126,7 +141,7 @@ namespace sw::editor
         return format == RHIFormat::ASTC_4x4_UNORM || format == RHIFormat::ETC2_RGBA8_UNORM || format == RHIFormat::EAC_R11_UNORM || format == RHIFormat::EAC_RG11_UNORM;
     }
 
-    bool TextureBlockEncoder::encodeMip( RHIFormat format, const uint8* pRGBA, uint32 width, uint32 height, vector<uint8>& ioBytes )
+    bool TextureBlockEncoder::encodeMip( RHIFormat format, const uint8* pRGBA, uint32 width, uint32 height, vector<uint8>& ioBytes, TaskManager* pTaskManager )
     {
         using Internal = TextureBlockEncoderInternal;
         if ( isEncodable( format ) == false )
@@ -140,14 +155,41 @@ namespace sw::editor
         const size_t offset     = ioBytes.size();
         const size_t mipBytes   = static_cast<size_t>( blocksX ) * blocksY * blockBytes;
         ioBytes.resize( offset + mipBytes );
-        if ( format == RHIFormat::ASTC_4x4_UNORM )
+
+        vector<Internal::Band> listBand;
+        for ( uint32 firstRow = 0; firstRow < height; firstRow += Internal::kBandRows )
         {
-            if ( Internal::encodeASTC( pRGBA, width, height, ioBytes.data() + offset, mipBytes ) )
-                return true;
+            Internal::Band band;
+            band._pRGBA    = pRGBA + static_cast<size_t>( firstRow ) * width * RawImageData::kChannelCount;
+            band._pOut     = ioBytes.data() + offset + static_cast<size_t>( firstRow / Internal::kBlockSize ) * blocksX * blockBytes;
+            band._rowCount = MathUtil::min( Internal::kBandRows, height - firstRow );
+            listBand.push_back( band );
+        }
+        const auto encodeBand = [format, width, blocksX, blockBytes]( uint32, Internal::Band& band )
+        {
+            if ( format == RHIFormat::ASTC_4x4_UNORM )
+            {
+                const size_t bandBytes = static_cast<size_t>( ( band._rowCount + Internal::kBlockSize - 1 ) / Internal::kBlockSize ) * blocksX * blockBytes;
+                band._bEncoded         = Internal::encodeASTC( band._pRGBA, width, band._rowCount, band._pOut, bandBytes );
+                return;
+            }
+            Internal::encodeETC( format, band._pRGBA, width, band._rowCount, band._pOut );
+            band._bEncoded = true;
+        };
+        if ( pTaskManager != nullptr )
+            pTaskManager->runParallelInto<Internal::Band>( listBand, 2, encodeBand );
+        else
+        {
+            for ( Internal::Band& band : listBand )
+                encodeBand( 0, band );
+        }
+        for ( const Internal::Band& band : listBand )
+        {
+            if ( band._bEncoded )
+                continue;
             ioBytes.resize( offset );
             return false;
         }
-        Internal::encodeETC( format, pRGBA, width, height, ioBytes.data() + offset );
         return true;
     }
 } // namespace sw::editor

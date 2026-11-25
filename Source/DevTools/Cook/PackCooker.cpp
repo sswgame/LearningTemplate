@@ -726,6 +726,10 @@ namespace sw
                 if ( configText.has_value() == false )
                     return unexpected( configText.error() );
                 string canonical = std::move( *configText );
+                for ( const AssetImportedFolder& imported : AssetIdentityRules::getProjectRules()._listImportedFolder )
+                    canonical.append( "\nraw=" ).append( imported._sourceFolder );
+                for ( const string& extension : params._listStoredExtension )
+                    canonical.append( "\nstored=" ).append( extension );
                 canonical.append( "\nshader=" ).append( params._shaderFolder ).append( "\ntarget=" ).append( params._buildTarget );
                 // 팩 형식 버전도 설정이다 - 형식을 올리면 옛 형식의 산출물을 재사용하지 않는다(리더가 거절할 팩을 남기지 않게).
                 utf8 arrFormat[constant::buffer::kMax32];
@@ -852,7 +856,7 @@ namespace sw
                         bytes = std::move( item._listGeneratedByte );
                     if ( bRead == false )
                         return false; // 읽기가 이유를 남겼다. 소멸하는 쓰기가 임시 파일을 지운다
-                    const expected<PackEntryStorage> storage = config._compression.selectEntryStorage( item._relativePath );
+                    const expected<PackEntryStorage> storage = PackEntryStorageRule::select( item._relativePath, params._listStoredExtension );
                     if ( storage.has_value() == false )
                         return false; // 규칙이 이유를 남겼다. 소멸하는 쓰기가 임시 파일을 지운다
                     step = writer.append( item._relativePath, *storage, std::move( bytes ) );
@@ -1412,6 +1416,12 @@ namespace sw
         string_view         fileName;
         PackCookerInternal::splitPath( normalized, listDirectory, fileName );
 
+        // 임포트하는 원본 폴더(`textures_raw/` …)의 이름은 정체성 규칙이 정본이다 — 새 임포터의 원본 폴더를 팩 설정에 다시 적지 않는다.
+        for ( const AssetImportedFolder& imported : AssetIdentityRules::getProjectRules()._listImportedFolder )
+        {
+            if ( PackCookerInternal::containsDirectory( listDirectory, imported._sourceFolder ) )
+                return false;
+        }
         for ( const string& directory : config._listGlobalExcludeDirectory )
         {
             if ( PackCookerInternal::containsDirectory( listDirectory, directory ) )

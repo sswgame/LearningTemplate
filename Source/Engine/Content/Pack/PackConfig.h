@@ -60,12 +60,6 @@ namespace sw
 
         PROPERTY( Required, Min = 1 )
         uint64 _writeWindowBytes{ 0 }; ///< 쓰기가 이만큼의 원본을 모아 병렬로 압축한다. 쓰기의 최고 메모리가 이 값의 몇 배다(콘텐츠 크기와 무관)
-
-        PROPERTY( Required )
-        vector<string> _listStoredExtension; ///< 압축하지 않고 담는 확장자(`.dds` — 이미 압축된 형식, 대소문자 무시). 범위 읽기가 풀기 없이 바이트를 읽는다(`PackEntryStorage::Stored`)
-
-        /** @brief 팩 안 경로 @p relativePath 의 저장 방식입니다(`PackEntryStorageRule::select` — 쿠커 · 모드 팩 빌더가 같은 규칙). */
-        [[nodiscard]] expected<PackEntryStorage> selectEntryStorage( string_view relativePath ) const { return PackEntryStorageRule::select( relativePath, _listStoredExtension ); }
     };
 } // namespace sw
 

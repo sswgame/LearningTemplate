@@ -271,6 +271,32 @@ namespace sw
 
 namespace sw
 {
+    LocalContentHashCacheScope::LocalContentHashCacheScope( LocalContentHashCacheUse use )
+        : _use{ use }
+    {
+        loadLocalCache();
+    }
+
+    LocalContentHashCacheScope::~LocalContentHashCacheScope()
+    {
+        if ( _use != LocalContentHashCacheUse::LoadAndSave )
+            return;
+        loadLocalCache();
+        const expected<void> saved = engine::getSubsystem<ContentHashCache>().save();
+        if ( saved.has_value() == false )
+            SW_LOG_WARNING_ID( "ContentHashCache.LocalCacheNotSaved", "Content hash cache not saved - the next run hashes every file again: %# (%#)", saved.error().message(), saved.error().detail() );
+    }
+
+    void LocalContentHashCacheScope::loadLocalCache()
+    {
+        const expected<void> loaded = engine::getSubsystem<ContentHashCache>().load( ContentHashCache::makeLocalCachePath() );
+        if ( loaded.has_value() == false )
+            SW_LOG_WARNING_ID( "ContentHashCache.LocalCacheDropped", "Content hash cache dropped - every file is hashed again: %# (%#)", loaded.error().message(), loaded.error().detail() );
+    }
+} // namespace sw
+
+namespace sw
+{
     // 파일 내용 해시 캐시 — 셰이더 컴파일 · 쿠킹이 워커에서 묻는다.
     SW_ENGINE_SERVICE_SUBSYSTEM( ContentHashCache, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( ContentHashCache ) );
 } // namespace sw

@@ -143,7 +143,7 @@ namespace sw::editor
 
         /**
          * @brief 바뀐 에셋 하나를 다시 읽습니다. 에디터 스레드 임포터(있으면), 엔진 캐시의 `reload`, 활성 씬의 `notifyAssetUsers` 순서로 처리합니다. 게임 스레드에서 틱 밖에서 호출합니다.
-         * @details **워커 임포터를 가진 원본(`AssetImportThread::Worker` · `WorkerParallel`: 모델 · 텍스처 · 높이장 원본)은 여기서 임포트하지 않습니다** — 긴 일은 에디터 스레드에서 동기로 돌지 않는다.
+         * @details **워커 임포터를 가진 원본(`AssetReloadRoute::_pfnImportBatch`: 모델 · 텍스처 · 높이장 원본)은 여기서 임포트하지 않습니다** — 긴 일은 에디터 스레드에서 동기로 돌지 않는다.
          *          그런 원본은 감시 이벤트가 임포트 잡(`EditorAssetImportJob`)으로 보내고, 임포트가 쓴 결과 파일의 사건이 이 함수로 와서 캐시 리로드 · 씬 알림을 한다.
          * @return 처리했으면 `Reloaded`, 핫 리로드 대상이 아니거나 아무 캐시도 들지 않은 파일이면(워커 임포터의 원본 포함) `NotTracked`,
          *         경로표가 가리키는 캐시가 등록되지 않았으면(오류를 남겼다) `Failed` 입니다.
@@ -166,9 +166,9 @@ namespace sw::editor
          * @brief 원본 하나의 임포트를 잡에 올립니다. 에디터 스레드에서만 부릅니다(감시 이벤트가 부르며, 테스트가 직접 넣는다).
          * @details 같은 원본이 이미 기다리면 합친다. 같은 원본을 지금 임포트하는 중이면 잡을 취소해(다음 원본 전에 멈춘다) 앞 잡의 남은 일을 버리고, 이 원본을 다시 올린다.
          *          한 번에 잡 하나만 돌고 다음 잡은 `update` 가 시작한다.
-         * @param pfnImport 워커에서 부를 임포터입니다(`AssetReloadRoute::_pfnImportSource`, `Worker` 인 것만).
+         * @param pfnImport 워커에서 부를 임포터입니다(`AssetReloadRoute::_pfnImportBatch`).
          */
-        void requestSourceImport( string_view relativePath, AssetSourceImporterFunc pfnImport, AssetImportThread thread );
+        void requestSourceImport( string_view relativePath, AssetSourceBatchImporterFunc pfnImport );
 
         /**
          * @brief @p resources 의 레지스트리에서 그 경로를 가진 캐시(`AssetCacheBase::isCached`)마다 `reload` 를 호출합니다. 이름을 모르는 모듈 캐시를 처리하는 경로입니다.
@@ -215,9 +215,8 @@ namespace sw::editor
         /** @brief 잡에 올렸거나 기다리는 원본 하나와 그 임포터입니다. */
         struct ImportRequest
         {
-            string                  _relativePath;
-            AssetSourceImporterFunc _pfnImport{ nullptr };
-            AssetImportThread       _thread{ AssetImportThread::Worker }; ///< `WorkerParallel` 이면 잡이 폴더 묶음마다 동시에 돈다
+            string                       _relativePath;
+            AssetSourceBatchImporterFunc _pfnImport{ nullptr };
         };
 
         /** @brief 바뀐 파일을 반영합니다(`applyChangedFile`). 에디터가 저장하며 이미 반영한 그 내용이면(`applySavedAsset` 의 내용 해시) 건너뛴다. */

@@ -10,6 +10,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetFormat.h"
 
 namespace sw::editor
@@ -58,6 +59,11 @@ namespace sw::editor
                     }
                     return;
                 }
+                if ( rule._mode == EditorAssetMatchMode::ImportSource )
+                {
+                    AssetIdentityRules::getProjectRules().forEachSourceExtension( rule._importSourceFolder, func );
+                    return;
+                }
                 for ( uint32 index = 0; index < rule._suffixCount; ++index )
                 {
                     func( rule._pSuffix[index] );
@@ -73,7 +79,8 @@ namespace sw::editor
                 size_t matchedLength{ 0 };
                 forEachRuleSuffix( rule, [&]( string_view suffix )
                 {
-                    const bool bMatched = rule._mode == EditorAssetMatchMode::Extension ? FileUtil::hasExtension( path, suffix ) : StringUtil::endsWith( path, suffix, true );
+                    const bool bExtension = rule._mode == EditorAssetMatchMode::Extension || rule._mode == EditorAssetMatchMode::ImportSource;
+                    const bool bMatched   = bExtension ? FileUtil::hasExtension( path, suffix ) : StringUtil::endsWith( path, suffix, true );
                     if ( bMatched && suffix.size() > matchedLength )
                         matchedLength = suffix.size();
                 } );
@@ -147,7 +154,7 @@ namespace sw::editor
             }
 
             /** @brief 핫 리로드 대상 규칙(캐시나 임포터가 있다)이면 true 입니다. */
-            static bool isReloadable( const EditorAssetMatchRule& rule ) { return rule._reload._pCacheKindName != nullptr || rule._reload._pfnImportSource != nullptr; }
+            static bool isReloadable( const EditorAssetMatchRule& rule ) { return rule._reload._pCacheKindName != nullptr || rule._reload._pfnImportSource != nullptr || rule._reload._pfnImportBatch != nullptr; }
         };
     } // namespace
 } // namespace sw::editor
@@ -184,6 +191,16 @@ namespace sw::editor
         rule._pSuffix     = pSuffix;
         rule._suffixCount = count;
         rule._reload      = reload;
+        return rule;
+    }
+
+    EditorAssetMatchRule EditorAssetMatchRule::importSource( string_view sourceFolder, EditorAssetMatchPriority priority, const AssetReloadRoute& reload )
+    {
+        EditorAssetMatchRule rule{};
+        rule._mode               = EditorAssetMatchMode::ImportSource;
+        rule._priority           = priority;
+        rule._importSourceFolder = sourceFolder;
+        rule._reload             = reload;
         return rule;
     }
 

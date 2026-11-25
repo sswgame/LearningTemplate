@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
@@ -260,6 +261,8 @@ namespace sw
                 }
                 else
                 {
+                    // 변경 없는 임포트 · 대조가 원본과 산출물을 다시 읽지 않는다(git 색인처럼 크기 · 시각이 그대로인 파일만 건너뛴다 — 판정은 여전히 내용 해시다).
+                    const LocalContentHashCacheScope hashCacheScope{ bCheck ? LocalContentHashCacheUse::LoadOnly : LocalContentHashCacheUse::LoadAndSave };
                     return importAssetsWithEditorModule( editorModule, kKind, bCheck );
                 }
             }

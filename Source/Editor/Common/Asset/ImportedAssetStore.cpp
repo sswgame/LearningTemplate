@@ -15,6 +15,7 @@
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
+#include "Editor/Common/Asset/ModelImport/ModelImporter.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetGUID.h"
@@ -55,7 +56,7 @@ namespace sw::editor
     {
         const string&                           normalized = sourcePath.str();
         StringBuilder<constant::buffer::kMax64> segmentBuilder;
-        segmentBuilder.appendFormat( "/%#/", ModelImportUtil::kRawModelFolder );
+        segmentBuilder.appendFormat( "/%#/", ModelImporter::kRawFolder );
         const size_t at = normalized.find( segmentBuilder.view() );
         return at == string::npos ? AbsolutePath{} : FileUtil::toDiskPath( string_view( normalized ).substr( 0, at ) );
     }
@@ -164,18 +165,13 @@ namespace sw::editor
         }
     }
 
-    uint32 ImportedAssetStore::removeUnreferenced( const AbsolutePath& resourceRoot, vector<string>& inoutListProblem )
+    uint32 ImportedAssetStore::removeUnreferenced( const vector<AbsolutePath>& listDomainFolder, vector<string>& inoutListProblem )
     {
-        const AbsolutePath   root = resourceRoot.join( {} );
-        vector<AbsolutePath> listFolder;
-        // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 보지 않는다(EditorContentScan 이 뺀다)
-        if ( root.empty() || EditorContentScan::collectFolders( root, listFolder, true ) == false )
-            return 0;
         uint32 removedCount = 0;
-        for ( const AbsolutePath& folder : listFolder )
+        for ( const AbsolutePath& domainFolder : listDomainFolder )
         {
-            const AbsolutePath store = folder;
-            if ( FileUtil::getFileNamePart( store.str() ) != kStoreFolderName || FileUtil::getFileNamePart( FileUtil::getDirectoryPart( store.str() ) ) != kModelFolderName )
+            const AbsolutePath store = domainFolder.join( kModelFolderName ).join( kStoreFolderName );
+            if ( FileUtil::isDirectory( store ) == false )
                 continue;
             // 같은 도메인의 임포트 결과(`<x>/models/**`)가 가리키는 파일만 남긴다. 손 데이터는 저장소를 직접 가리키지 않는다(키가 내용과 함께 바뀐다) — 셋의 이름으로 찾는다.
             vector<AbsolutePath> listResult;

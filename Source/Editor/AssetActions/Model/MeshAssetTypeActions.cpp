@@ -30,13 +30,10 @@ namespace sw::editor
 
         const MeshAssetTypeActions s_meshActions{};
 
-        /** @brief `models_raw/` 의 모델 원본입니다. 임포트하는 것이 리로드다. */
-        constexpr string_view kArrModelSourceExt[] = { ".glb", ".gltf", ".vrm" };
-
+        // 모델 원본은 임포트하는 것이 리로드다.
         const EditorAssetMatchRule kArrMeshRule[] = {
             EditorAssetMatchRule::engineType( MeshAssetFormat::kAssetType, { "Mesh" } ),
-            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, kArrModelSourceExt, SW_COUNT_OF( kArrModelSourceExt ), EditorAssetMatchPriority::Suffix,
-                                            { "Mesh", &ModelImporter::importChangedSourceModel, AssetImportThread::WorkerParallel } ),
+            EditorAssetMatchRule::importSource( ModelImporter::kRawFolder, EditorAssetMatchPriority::Suffix, { "Mesh", nullptr, &ModelImporter::importChangedSources } ),
         };
     } // namespace
 

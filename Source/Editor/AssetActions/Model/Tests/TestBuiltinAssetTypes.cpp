@@ -8,6 +8,9 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
 
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Asset/AssetDatabase.h"
+
 using namespace sw;
 using namespace sw::editor;
 
@@ -70,9 +73,35 @@ SW_TEST_CASE( BuiltinAssetTypesTest, ReloadRoutesNameTheCacheAndImporter )
     for ( const string_view path : { string_view{ "common/textures_raw/rock.png" }, string_view{ "common/models_raw/rock.glb" } } )
     {
         const AssetReloadRoute source = EditorAssetTypeRegistry::findReloadRoute( path );
-        SW_EXPECT_TRUE( source._pfnImportSource != nullptr );
-        SW_EXPECT_TRUE( source._importThread == AssetImportThread::WorkerParallel );
+        SW_EXPECT_TRUE( source._pfnImportSource == nullptr );
+        SW_EXPECT_TRUE( source._pfnImportBatch != nullptr );
     }
+}
+
+/**
+ * @brief [BuiltinAssetTypesTest] 임포트하는 원본의 확장자는 정체성 규칙(`Config/Dev/AssetIdentity.json`) 하나에서 온다 — 규칙의 모든 원본 확장자가 임포터를 가진 종류로 풀리고, 규칙 밖의 확장자는 아니다
+ */
+SW_TEST_CASE( BuiltinAssetTypesTest, ImportSourcesFollowTheIdentityRules )
+{
+    const AssetIdentityRules& rules = AssetIdentityRules::getProjectRules();
+    for ( const AssetImportedFolder& imported : rules._listImportedFolder )
+    {
+        for ( const string& extension : imported._listSourceExtension )
+        {
+            StringBuilder<constant::buffer::kMax256> path;
+            path.appendFormat( "common/%#/rock%#", imported._sourceFolder, extension );
+            const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( path.view() );
+            SW_EXPECT_TRUE_MSG( route._pfnImportBatch != nullptr, path.c_str() );
+            SW_EXPECT_TRUE( rules.isImportSource( imported._sourceFolder, path.view() ) );
+        }
+        SW_EXPECT_FALSE( rules.isImportSource( imported._sourceFolder, "common/rock.stamp" ) );
+    }
+    // 스프라이트 시트는 텍스처의 원본(HDR 빼고)과 임포트한 텍스처다.
+    const EditorAssetType sprite{ SpriteClipAsset::kAssetType };
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( sprite, "common/textures_raw/hero.png" ) );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( sprite, "common/textures_raw/hero.bmp" ) );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( sprite, "common/textures/hero.dds" ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( sprite, "common/textures_raw/sky.hdr" ) );
 }
 
 /** @brief [BuiltinAssetTypesTest] 새 에셋 틀은 글과 베낄 원본 가운데 하나만 채우고, 만든 파일 이름이 그 틀의 종류로 풀린다 */

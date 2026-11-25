@@ -52,7 +52,6 @@ namespace sw
         uint32         _packBlockSize{ 0 };    ///< 모드 팩을 묶을 때(`ModPackBuilder`)의 블록 크기 — 2 의 거듭제곱(`kPackMinBlockSize` ~ `kPackMaxBlockSize`). 런타임에는 `Config/` 의 팩 설정이 없어 게임 데이터가 든다
         vector<string> _listOverridablePrefix; ///< 모드가 덮어쓸 수 있는 기본 리소스 id 접두(끝 `/`). 이것과 `_listOverridablePath` 가 모두 비면 덮어쓰기를 받지 않는다
         vector<string> _listOverridablePath;   ///< 모드가 덮어쓸 수 있는 기본 리소스 id 하나씩 — 여러 미니게임의 표가 함께 든 폴더를 통째로 열지 않으려고 파일로 연다
-        vector<string> _listStoredExtension;   ///< 모드 팩에 압축하지 않고 담는 확장자(`<Stored extension=".dds"/>`, 하나 이상 필수) — 런타임에는 `Config/` 의 팩 설정이 없어 게임 데이터가 든다(`PackEntryStorageRule`)
 
         /** @brief 설정 글을 읽습니다. 모르는 원소 · 빠진 칸 · 0 인 한계 · 끝이 `/` 가 아니거나 정규형이 아닌 접두 · 정규형 파일이 아닌 경로면 이유를 오류로 남기고 false 입니다. */
         [[nodiscard]] static bool parseXMLText( string_view text, string_view sourceName, ModSupportSettings& outSettings );
@@ -67,7 +66,5 @@ namespace sw
     private:
         /** @brief `<Overridable prefix>` 또는 `<Overridable path>` 한 줄을 읽습니다(카탈로그 표의 손 읽기, `parseXMLText`). */
         [[nodiscard]] bool readOverridable( const XMLNode& node, string_view sourceName );
-        /** @brief `<Stored extension="…"/>` 한 줄을 읽습니다(`.` 로 시작하는 확장자 — 모드 팩의 저장 방식 규칙, `PackEntryStorageRule`). */
-        [[nodiscard]] bool readStored( const XMLNode& node, string_view sourceName );
     };
 } // namespace sw

@@ -16,6 +16,7 @@
 #include "Editor/Common/Asset/Texture/RawImageData.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookCodeFingerprint.h"
@@ -28,7 +29,6 @@ namespace sw::editor
     {
         struct HeightfieldImporterInternal
         {
-            static constexpr string_view kRawFolder         = "heightfields_raw";
             static constexpr string_view kImportedFolder    = "heightfields";
             static constexpr string_view kImportStampHeader = "SWHEIGHTFIELDIMPORT 1";
             static constexpr string_view kHoleSuffix        = "_holes";
@@ -176,7 +176,7 @@ namespace sw::editor
         class HeightfieldRawImporter final : public IRawAssetImporter
         {
         public:
-            string_view getRawFolderName() const override { return HeightfieldImporterInternal::kRawFolder; }
+            string_view getRawFolderName() const override { return HeightfieldImporter::kRawFolder; }
             string_view getStampHeader() const override { return HeightfieldImporterInternal::kImportStampHeader; }
             string_view getImportedLabel() const override { return "지형 에셋"; }
             uint64      findCodeFingerprint() const override { return CookCodeFingerprint::find( "HeightfieldImport" ); }
@@ -221,7 +221,7 @@ namespace sw::editor
     bool HeightfieldImporter::isSourceHeightfield( string_view path )
     {
         using Internal = HeightfieldImporterInternal;
-        if ( FileUtil::hasAnyExtension( path, { ".png", ".r16" } ) == false )
+        if ( AssetIdentityRules::getProjectRules().isImportSource( kRawFolder, path ) == false )
             return false;
         const string stem = FileUtil::removeExtension( path );
         return StringUtil::endsWith( stem, Internal::kHoleSuffix, true ) == false && StringUtil::endsWith( stem, Internal::kSplatSuffix, true ) == false &&
@@ -243,7 +243,7 @@ namespace sw::editor
         const string                             stem = FileUtil::removeExtension( FileUtil::getFileNamePart( rawPath.str() ) );
         StringBuilder<constant::buffer::kMax256> nameBuilder;
         nameBuilder.appendFormat( "%#.png", string_view( stem ).substr( 0, stem.size() - Internal::kSplatSuffix.size() ) );
-        return AssetImportStampUtil::makeImportedPath( rawPath.getParent().join( nameBuilder.view() ), Internal::kRawFolder, Internal::kImportedFolder, LayerWeightsAsset::kExtension );
+        return AssetImportStampUtil::makeImportedPath( rawPath.getParent().join( nameBuilder.view() ), kRawFolder, Internal::kImportedFolder, LayerWeightsAsset::kExtension );
     }
 
     bool HeightfieldImporter::readLayerWeights( const AbsolutePath& sourcePath, LayerWeightsAsset& outData )
@@ -295,48 +295,38 @@ namespace sw::editor
 
     bool HeightfieldImporter::isRawHeightfieldPath( string_view path )
     {
-        if ( FileUtil::hasAnyExtension( path, { ".png", ".r16" } ) == false )
-            return false;
-        return AssetImportStampUtil::isUnderRawFolder( path, HeightfieldImporterInternal::kRawFolder );
+        return AssetIdentityRules::getProjectRules().isImportSource( kRawFolder, path ) && AssetImportStampUtil::isUnderRawFolder( path, kRawFolder );
     }
 
-    bool HeightfieldImporter::importChangedSourceHeightfield( const AssetPaths& assetPaths, string_view relativePath )
+    void HeightfieldImporter::importChangedSources( AssetSourceBatch& batch )
     {
-        if ( isRawHeightfieldPath( relativePath ) == false )
-            return false;
         // 바뀐 파일이 영향을 주는 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 적는 길은 명령줄 임포트와 같은 한 곳이다. 구멍 마스크 · 곁 스플랫도 원본 해시에 들어간다.
-        const HeightfieldRawImporter     importer;
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
-        if ( derivedDataCache.has_value() == false )
+        vector<AssetSourceBatchEntry> listEntry;
+        for ( size_t itemIndex = 0; itemIndex < batch._listItem.size(); ++itemIndex )
         {
-            SW_LOG_ERROR_ID( "HeightfieldImporter.DerivedDataConfigUnreadable", "Heightfield import skipped: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
-            return true;
+            AssetSourceBatchItem& item = batch._listItem[itemIndex];
+            item._bRan                 = true;
+            item._bHandled             = isRawHeightfieldPath( item._relativePath );
+            if ( item._bHandled )
+                listEntry.push_back( AssetSourceBatchEntry{ itemIndex, HeightfieldImporterInternal::findAffectedSources( item._relativePath ) } );
         }
-        // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않고 직렬로 돈다(워커는 에디터 서비스 범위를 읽지 않는다).
-        const AssetImportSummary summary = AssetImportStampUtil::importSources( assetPaths.getRootFolderPathFor( relativePath ), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ),
-                                                                                nullptr, *derivedDataCache );
-        for ( const string& problem : summary._listProblem )
-        {
-            SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldImportFailed", "Heightfield import failed: %#", problem.c_str() );
-        }
-        SW_LOG_INFO_ID( "HeightfieldImporter.HeightfieldImportChangedImported", "Heightfield import: %# changed -> %# imported", relativePath, summary._importedCount );
-        return true;
+        const HeightfieldRawImporter importer;
+        AssetImportStampUtil::importChangedSources( batch, listEntry, importer );
     }
 
     AbsolutePath HeightfieldImporter::makeImportedHeightfieldPath( const AbsolutePath& rawPath )
     {
         using Internal = HeightfieldImporterInternal;
-        return AssetImportStampUtil::makeImportedPath( rawPath, Internal::kRawFolder, Internal::kImportedFolder, HeightfieldAsset::kExtension );
+        return AssetImportStampUtil::makeImportedPath( rawPath, kRawFolder, Internal::kImportedFolder, HeightfieldAsset::kExtension );
     }
 
     uint64 HeightfieldImporter::computeSourceHash( const AbsolutePath& sourcePath )
     {
         using Internal = HeightfieldImporterInternal;
-        vector<uint8> bytes;
-        if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
+        uint64 hash    = AssetSourceLocator::computeHash( sourcePath );
+        if ( hash == 0 )
             return 0;
         StringBuilder<constant::buffer::kMax64> versionText;
-        uint64                                  hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
         if ( isSourceLayerWeights( sourcePath.str() ) )
         {
             versionText.appendFormat( "splat=%#;format=%#", Internal::kSplatImporterVersion, LayerWeightsAsset::kVersion );
