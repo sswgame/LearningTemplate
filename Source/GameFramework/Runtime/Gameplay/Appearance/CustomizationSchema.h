@@ -273,7 +273,7 @@ namespace sw
         /**
          * @brief @p values 를 이 스키마의 지금 판으로 올려 @p outValues 에 담습니다. 판을 찍지 않은 값과 지금 판의 값은 단계 없이 옮기고, 결과에는 지금 판을 찍습니다.
          * @details 지금 판에 뜻이 없는 값(단계를 지나고도 없는 이름 · 견본 밖 번호)은 그 값만 빼고 이름을 @p pOutListDropped 에 담는다 — 나머지는 읽는다(패치가 세이브 전체를 버리지 않게).
-         *          세이브 · 공유 코드를 읽는 쪽이 빠진 것을 오류 로그로 남긴다. 정상 콘텐츠에서는 생기지 않는다(쿠킹 검사 `customization-release`).
+         *          세이브 · 공유 코드를 읽는 쪽이 빠진 것을 오류 로그로 남긴다. 정상 콘텐츠에서는 생기지 않는다(쿠킹 검사 `format-release`).
          * @return 이 스키마보다 새 판(다른 빌드 · 더 새 콘텐츠가 쓴 값 — 다운그레이드)이면 까닭이고 @p outValues 는 그대로입니다. 원본을 덮지 않는다.
          */
         [[nodiscard]] expected<void> migrate( const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped = nullptr ) const;
