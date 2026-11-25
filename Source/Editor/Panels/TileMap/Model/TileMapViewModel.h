@@ -153,7 +153,7 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax256>& editPath() { return _pathBuffer; }
         const utf8*                              getPath() const { return _pathBuffer.c_str(); }
         fixed_string<constant::buffer::kMax128>& editName() { return _nameBuffer; }
-        /** @brief 이름 칸(`editName`)을 다 고쳤습니다 — "Edit Tile Map Name" 으로 알립니다(이름은 칸이 문서다 — 저장할 때 맵으로 옮긴다). */
+        /** @brief 이름 칸(`editName`)을 다 고쳤습니다. "Edit Tile Map Name" 으로 알립니다(이름은 칸이 문서이고 저장할 때 맵으로 옮긴다). */
         void                                     commitName();
         fixed_string<constant::buffer::kMax256>& editTileSetInput() { return _tileSetBuffer; }
         int32&                                   editInputWidth() { return _inputWidth; }

@@ -263,7 +263,7 @@ namespace sw::editor
         outState._up             = pLink != nullptr ? pLink->_up : EditorNetLinkSettings{};
         outState._down           = pLink != nullptr ? pLink->_down : EditorNetLinkSettings{};
 
-        // 프리셋 — 표 경로는 엔진 기본 에셋 표가 원본이다. 읽지 못하면(이유는 표가 알린다) 단추가 없을 뿐 슬라이더는 그대로 쓴다 — 실패 표시를 남긴다.
+        // 프리셋: 표 경로는 엔진 기본 에셋 표가 원본이다. 읽지 못하면(이유는 표가 알린다) 단추가 없을 뿐 슬라이더는 그대로 쓰고, 실패 표시를 남긴다.
         if ( _bPresetTableAttempted == SW_FALSE )
         {
             _bPresetTableAttempted = SW_TRUE;

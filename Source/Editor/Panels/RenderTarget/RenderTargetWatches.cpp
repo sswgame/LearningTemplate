@@ -67,7 +67,7 @@ namespace sw::editor
             return readRenderTargetPanelValue( 0, outValue );
         }
 
-        /** @brief `Editor.RenderTargetSnapshotReady` 의 활동 수 — 그린 프레임 수입니다. 되읽기는 GPU 가 프레임을 넘겨야 도착한다 — 그리기가 멈추면 스냅숏도 오지 않는다. */
+        /** @brief `Editor.RenderTargetSnapshotReady` 의 활동 수, 곧 그린 프레임 수입니다. 되읽기는 GPU 가 프레임을 넘겨야 도착하므로 그리기가 멈추면 스냅숏도 오지 않는다. */
         [[nodiscard]] uint64 readRenderTargetActivity( const GameObjectManager* /*pManager*/ )
         {
             return RenderPresentCounter::read();

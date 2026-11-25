@@ -194,7 +194,7 @@ namespace sw::editor
         /** @brief 위젯 타입 @p typeName 을 @p pTarget 에 붙이고(패널이면 그 안에, 아니면 그 뒤에) 되돌리기 항목을 남깁니다. 붙였으면 true 입니다. */
         bool addWidget( UIScreen& screen, const hashed_string& typeName, Widget* pTarget );
         /**
-         * @brief 위젯 타입 @p typeName 을 @p pTarget 에 붙일 수 있으면 true 입니다(`addWidget` 이 실패하는 두 까닭 — 모르는 타입 · 받을 패널 없음 — 을 미리 본다). 트리를 바꾸지 않는다.
+         * @brief 위젯 타입 @p typeName 을 @p pTarget 에 붙일 수 있으면 true 입니다(`addWidget` 이 실패하는 두 까닭(모르는 타입 · 받을 패널 없음)을 미리 본다). 트리를 바꾸지 않는다.
          * @details 팔레트 끌기가 놓을 자리를 열기 전에 부른다(EditorUI R11) — 붙지 않을 자리는 강조하지 않고 끄는 쪽이 금지 표시를 한다.
          */
         [[nodiscard]] bool canAddWidget( WidgetTree& tree, const hashed_string& typeName, Widget* pTarget ) const;

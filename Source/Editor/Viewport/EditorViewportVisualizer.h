@@ -132,7 +132,7 @@ namespace sw::editor
 // pToggleLabel · pTooltip 은 현지화 키다(`SW_LOCKEYREF( "EdVisualizer", "..." )`) — 툴바가 그릴 때 지금 언어로 푼다.
 #define SW_EDITOR_VISUALIZER_GATHER( name, pID, order, pIcon, pToggleLabel, pTooltip, bDefaultOn, pGather ) SW_EDITOR_REGISTER( ::sw::editor::EditorVisualizerRegistration, Visualizer_##name, { pID, order }, pIcon, pToggleLabel, pTooltip, bDefaultOn, nullptr, pGather )
 /**
- * @brief 화면 도구(`_pTool` — 값을 그리고 마우스를 명령으로 낸다)가 있는 시각화를 등록합니다. **MVVM View 파일에서만** 컴파일된다(위 주석). 앞 인자는
+ * @brief 화면 도구(`_pTool` — 값을 그리고 마우스를 명령으로 낸다)가 있는 시각화를 등록합니다. MVVM View 파일에서만 컴파일된다(위 주석). 앞 인자는
  *        `SW_EDITOR_VISUALIZER_GATHER` 와 같고, @p pGather 는 모으기가 없으면 nullptr 입니다(Model 의 모으기 함수는 그 Model 헤더가 선언한다).
  */
 #define SW_EDITOR_VISUALIZER_TOOL( name, pID, order, pIcon, pToggleLabel, pTooltip, bDefaultOn, pTool, pGather )                                                \

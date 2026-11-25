@@ -1,7 +1,7 @@
 /**
  * @file EditorUndoCoverage.cpp
  * @brief 되돌리기 전수 검사(`editor.undoCoverage`)입니다 — 거래를 받는 명령을 모두 실행하고 되돌린 뒤 씬 해시가 처음과 같은지 봅니다.
- * @details 씬 명령은 형식으로 거래를 받는다(`EditorSceneCommandActionFn`). 형식이 막지 못하는 틈 — 거래 안에서 기록 없이 바꾸는 것, 기록이 덜 되돌리는 것 — 을
+ * @details 씬 명령은 형식으로 거래를 받는다(`EditorSceneCommandActionFn`). 형식이 막지 못하는 틈(거래 안에서 기록 없이 바꾸는 것, 기록이 덜 되돌리는 것)을
  *          이 검사가 잡는다(언리얼 에디터의 트랜잭션 테스트 · 유니티 Undo 테스트처럼 실행 → 되돌리기 → 상태 비교). 시나리오 `editor/undocoverage` 가 부른다.
  *          둘째 검사(`editor.undoCoverageProperties`)는 인스펙터 프로퍼티 전수다 — 프로퍼티 단위 기록(`PropertyEditStep.h`)은 값 글 하나만 되돌리므로, 한 쓰기가
  *          다른 칸을 고치는 타입(`onPropertyChanged`)이 되돌리기에서 어긋나는지 추측하지 않고 프로퍼티마다 편집 → 되돌리기 → 씬 해시로 가린다(설계 E-7).

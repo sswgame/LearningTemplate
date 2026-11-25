@@ -20,7 +20,7 @@ namespace sw::editor
     struct DialogueGraphEdit
     {
         // ------------------------------------------------------------------------------
-        // 편집 명령 — 고친 뒤 이 명령이 정한 되돌리기 이름으로 @p session 에 알린다(감사 E-16 — 창은 알림 · 이름을 모른다)
+        // 편집 명령: 고친 뒤 이 명령이 정한 되돌리기 이름으로 @p session 에 알린다(감사 E-16, 창은 알림 · 이름을 모른다)
         // ------------------------------------------------------------------------------
         /** @brief 창이 노드를 하나 더했습니다 — "Add Dialogue Node". */
         static void commitNodeAdded( const EditorGraphEditSession& session );

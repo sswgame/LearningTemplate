@@ -30,7 +30,7 @@ namespace sw::editor
     struct AnimationGraphEdit
     {
         // ------------------------------------------------------------------------------
-        // 편집 명령 — 고친 뒤 이 명령이 정한 되돌리기 이름으로 @p session 에 알린다(감사 E-16 — 창은 알림 · 이름을 모른다)
+        // 편집 명령: 고친 뒤 이 명령이 정한 되돌리기 이름으로 @p session 에 알린다(감사 E-16, 창은 알림 · 이름을 모른다)
         // ------------------------------------------------------------------------------
         /** @brief 레이어 편집(`AnimationGraphLayerEdit` — 이름은 그 모델이 정했다)을 알립니다. */
         static void commitLayerEdit( const EditorGraphEditSession& session, const utf8* pLayerEditLabel );

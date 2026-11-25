@@ -396,7 +396,7 @@ namespace sw::editor
         constexpr ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY |
                                           ImGuiTableFlags_SizingStretchProp;
 
-        // 테이블을 열기 **전에** 걸러 둔다. 테이블이 남은 영역을 모두 차지하므로 0건 안내를 테이블 뒤에 그리면
+        // 테이블을 열기 전에 걸러 둔다. 테이블이 남은 영역을 모두 차지하므로 0건 안내를 테이블 뒤에 그리면
         // 화면 밖으로 밀린다. 테이블을 아예 열지 않아야 보인다. 행마다 필터를 다시 만들지 않는 효과도 있다.
         const EditorListFilter filter{ _localizationFilter.c_str() };
 

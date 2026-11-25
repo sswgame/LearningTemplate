@@ -26,7 +26,7 @@ namespace sw::editor
         /** @brief 월드 점을 캔버스 좌표로 옮깁니다. 카메라 뒤면 false 입니다. */
         [[nodiscard]] static bool projectPoint( const float4x4& viewProj, const float3& worldPt, const float2& canvasPos, const float2& canvasSize, float2& outScreenPt );
         /**
-         * @brief 월드 선분을 **근평면에서 잘라** 화면 선분으로 옮깁니다. 점마다 투영하면 한쪽 끝이 카메라 뒤인 선분(카메라를 가로지르는 격자선)을 통째로 버린다.
+         * @brief 월드 선분을 근평면에서 잘라 화면 선분으로 옮깁니다. 점마다 투영하면 한쪽 끝이 카메라 뒤인 선분(카메라를 가로지르는 격자선)을 통째로 버린다.
          * @return 선분 전체가 카메라 뒤면 false 입니다.
          */
         [[nodiscard]] static bool projectSegment( const float4x4& viewProj, const float3& worldA, const float3& worldB, const float2& canvasPos, const float2& canvasSize,

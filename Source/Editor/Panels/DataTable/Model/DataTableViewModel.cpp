@@ -400,7 +400,7 @@ namespace sw::editor
 
     void DataTableViewModel::collectVisibleRecords( const EditorListFilter& filter, vector<size_t>& outListVisibleIndex, LocalizationRowFilter rowFilter ) const
     {
-        // 호출한 쪽이 **멤버 버퍼를 다시 쓴다** — 지역 `vector` 면 프레임마다 할당하고 해제한다.
+        // 호출한 쪽이 멤버 버퍼를 다시 쓴다 — 지역 `vector` 면 프레임마다 할당하고 해제한다.
         outListVisibleIndex.clear();
         outListVisibleIndex.reserve( _localizationSheet._listRecord.size() );
         for ( size_t recordIndex = 0; recordIndex < _localizationSheet._listRecord.size(); ++recordIndex )
@@ -450,7 +450,7 @@ namespace sw::editor
 
     bool DataTableViewModel::openGameDataFile( const AbsolutePath& absolutePath )
     {
-        // 읽지 못하면 아무 파일도 열지 않는다 — 앞 파일의 글을 그대로 들고 열면, 저장할 때 **앞 파일의 내용을 이 파일에** 쓴다.
+        // 읽지 못하면 아무 파일도 열지 않는다 — 앞 파일의 글을 그대로 들고 열면, 저장할 때 앞 파일의 내용을 이 파일에 쓴다.
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
         {

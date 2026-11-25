@@ -12,7 +12,7 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 검증이 도는 동안 **이 호출의** 로더가 남기는 경고 · 오류 줄을 모읍니다. 다른 스레드의 줄이 섞이면 멀쩡한 파일이 실패로 보이므로 추적 id 로 가른다. */
+        /** @brief 검증이 도는 동안 이 호출의 로더가 남기는 경고 · 오류 줄을 모읍니다. 다른 스레드의 줄이 섞이면 멀쩡한 파일이 실패로 보이므로 추적 id 로 가른다. */
         class CatalogWarningCollector
         {
         public:

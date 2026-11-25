@@ -149,7 +149,7 @@ namespace sw::editor
             {
                 const ImGuiWindow* const pWindow = ImGui::GetCurrentWindow();
                 const ImVec2             center{ ( mark._min._x + mark._max._x ) * 0.5f, ( mark._min._y + mark._max._y ) * 0.5f };
-                // 메뉴 막대 층(주 메뉴 막대 · 상태줄 항목)은 창 안쪽 영역(`InnerClipRect` — 메뉴 막대 아래) 밖에 그린다 — 그 층은 메뉴 막대 사각형으로 본다.
+                // 메뉴 막대 층(주 메뉴 막대 · 상태줄 항목)은 창 안쪽 영역(`InnerClipRect`, 메뉴 막대 아래) 밖에 그리므로 그 층은 메뉴 막대 사각형으로 본다.
                 // 예전에는 상태줄의 Cancel 이 늘 '잘림' 으로 보여 lightprobebakecancel 이 졌다.
                 if ( pWindow->DC.NavLayerCurrent == ImGuiNavLayer_Menu )
                     return pWindow->MenuBarRect().Contains( center ) == false;

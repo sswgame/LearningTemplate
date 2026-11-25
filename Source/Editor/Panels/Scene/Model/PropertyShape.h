@@ -112,7 +112,7 @@ namespace sw::editor
          */
         float32 computeDraggedNumber( const Ray& ray ) const;
         /**
-         * @brief 레이 @p ray 가 가리키는 자리로 끈 float3 저장 값입니다(상자 반 크기는 그 축만 — 배율로 나눈다, 화살표는 잡은 길이를 지킨 새 방향 — 잡은 길이가 0 이면 단위 길이).
+         * @brief 레이 @p ray 가 가리키는 자리로 끈 float3 저장 값입니다(상자 반 크기는 그 축만 배율로 나눈다, 화살표는 잡은 길이를 지킨 새 방향이고 잡은 길이가 0 이면 단위 길이).
          * @details 원기둥 반지름은 옆 축 어느 쪽에서 끌어도 x 에, 원기둥 반 높이(`BoxExtent` 축 Y)는 y 에 쓴다. 점(`Point`)은 잡은 점을 지나 레이에 수직인 평면 위의 자리다(배율로 나눈 로컬 점).
          */
         float3 computeDraggedVector( const Ray& ray ) const;
@@ -120,7 +120,7 @@ namespace sw::editor
 
     /**
      * @struct PropertyShapeValue
-     * @brief 선언 하나의 지금 값입니다 — 모양, 틀, 저장 값(float32 는 `_number`, float3 는 `_vector`), 둘째 값(`_range` — 원뿔 길이 · 캡슐 반 높이),
+     * @brief 선언 하나의 지금 값입니다: 모양, 틀, 저장 값(float32 는 `_number`, float3 는 `_vector`), 둘째 값(`_range`: 원뿔 길이 · 캡슐 반 높이),
      *        저장 → 월드 배율(`_numberScale` · `_rangeScale` · `_vectorScale` — 쓰는 쪽 규칙으로 정한다, `PropertyShapeDecl::makeValue`).
      */
     struct SW_EDITOR_API PropertyShapeValue
@@ -153,7 +153,7 @@ namespace sw::editor
         void addLines( const EditorVisualizerLine& prototype, EditorVisualizerDrawList& outDrawList ) const;
         /**
          * @brief 모양의 손잡이를 @p outListHandle 뒤에 붙입니다(비우지 않는다). 원뿔 길이 · 캡슐 반 높이 손잡이는 @p rangeProperty 를 쓴다.
-         * @details 값의 배율이 `kMinScale` 보다 작으면 손잡이가 없다. 구 6, 상자 6, 원뿔 5(반각 4 · 길이 1 — 길이가 `kMinExtent` 보다 짧으면 반각 손잡이는 없다), 화살표 1, 원 4, 캡슐 6(바닥 원점이면 5 — 바닥 쪽 높이 손잡이는 없다),
+         * @details 값의 배율이 `kMinScale` 보다 작으면 손잡이가 없다. 구 6, 상자 6, 원뿔 5(반각 4 · 길이 1. 길이가 `kMinExtent` 보다 짧으면 반각 손잡이는 없다), 화살표 1, 원 4, 캡슐 6(바닥 원점이면 5, 바닥 쪽 높이 손잡이는 없다),
          *          원기둥 6(반지름 4 · 반 높이 2), 점 목록은 점마다 1 이다.
          */
         void collectHandles( uint64 componentID, const hashed_string& property, const hashed_string& rangeProperty, vector<PropertyShapeHandle>& outListHandle ) const;

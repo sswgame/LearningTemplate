@@ -2,7 +2,7 @@
  * @file InspectorComponentEdit.h
  * @brief 기본 컴포넌트 인스펙터 확장(카메라 · 트랜스폼 · 태그 · 스프라이트)의 edit model — 컴포넌트에서 값을 모으고(`gather*`) 고친 값을 넣습니다(`apply*`). ImGui 를 모릅니다.
  * @details 확장 View(`*ComponentInspector.cpp`)는 컴포넌트 헤더를 보지 않고 이 값만 그린다(`docs/agents/EditorUI.md` MVVM 계약). 확장이 받는 `Component*` 는 인스펙터 틀이 넘긴 것을 그대로 여기로 돌려준다.
- *          되돌리기 · dirty 는 인스펙터 틀이 확장 영역을 위젯 하나로 묶어 남긴다(`InspectorPropertyUndo::trackComponentRegion` — 바뀐 프로퍼티만) — 여기서 따로 남기지 않는다(언리얼 `IDetailCustomization` 의 프로퍼티 핸들과 같은 선).
+ *          되돌리기 · dirty 는 인스펙터 틀이 확장 영역을 위젯 하나로 묶어 남긴다(`InspectorPropertyUndo::trackComponentRegion`, 바뀐 프로퍼티만). 여기서 따로 남기지 않는다(언리얼 `IDetailCustomization` 의 프로퍼티 핸들과 같은 선).
  *          등록(`SW_EDITOR_INSPECTOR_FOR_TYPE`)에 쓰는 형 정보도 여기서 준다(형 정보 함수가 컴포넌트 헤더를 요구한다).
  */
 #pragma once

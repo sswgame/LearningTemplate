@@ -198,7 +198,7 @@ namespace sw::editor
         void openGameDataText( string&& text );
 
     private:
-        /** @brief 레코드 @p key 의 전(@p before — 없으면 더한 키) · 후(@p after — 없으면 지운 키)를 한 단계로 올립니다. */
+        /** @brief 레코드 @p key 의 전(@p before, 없으면 더한 키) · 후(@p after, 없으면 지운 키)를 한 단계로 올립니다. */
         void pushRecordStep( string_view label, const optional<LocalizationRecord>& before, const optional<LocalizationRecord>& after, size_t recordIndex );
         /** @brief 레코드 @p key 를 @p pRecord 로 둡니다(없으면 지운다). @p recordIndex 는 다시 넣을 자리다. */
         void applyRecord( const string& key, const shared_ptr<const LocalizationRecord>& pRecord, size_t recordIndex );

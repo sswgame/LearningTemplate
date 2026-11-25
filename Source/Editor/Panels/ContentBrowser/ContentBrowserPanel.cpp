@@ -1242,7 +1242,7 @@ namespace sw::editor
             return _model.getSelectedFolderPath();
         };
 
-        // 끄는 동안(능력 Hover 인 창): 에셋 영역 위면 놓을 자리를 보인다 — 폴더 위면 그 폴더, 아니면 영역 전체를 강조한다(데이터 · 선택 색 — R11, taste app-screens).
+        // 끄는 동안(능력 Hover 인 창): 에셋 영역 위면 놓을 자리를 보인다. 폴더 위면 그 폴더, 아니면 영역 전체를 강조한다(데이터 · 선택 색, R11, taste app-screens).
         float2 hoverPosition{};
         if ( EditorFileDrop::findHover( hoverPosition ) && isInside( hoverPosition, _assetViewMin, _assetViewMax ) && _model.canImport() )
         {

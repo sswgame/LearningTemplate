@@ -3,7 +3,7 @@
  * @brief 카탈로그 문서 안에서 곡선(`FloatCurve`: `<_listKey>` 아래 `<FloatCurveKey _time _value _interpolation/>`)과 색 그래디언트(`_red` `_green` `_blue` `_alpha` 네 곡선)를 찾고, 키를 더하는 ImGui 없는 도우미입니다.
  * @details 카탈로그 편집기의 표는 루트 바로 아래 원소의 속성만 칸으로 보여 주므로 VFX 효과 파일(`*.vfx.xml`)처럼 곡선이 깊이 중첩된 파일의 곡선은 표로 못 고쳤다.
  *          이 도우미는 한 원소 아래의 모든 곡선을 모아 "곡선 편집" 창(`CatalogTableEditor`)에 넘긴다. 키 값을 고치는 일은 기존 셀 편집(`CatalogDocument::setCell`)과 같은 길이고 원문의 주석 · 들여쓰기가 남는다.
- *          곡선인지는 **이름이 아니라 모양**으로 판정한다(`_listKey` 자식이 있는 원소) - VFX 의 `_sizeOverLife` 도, 앞으로 곡선을 쓰는 다른 데이터 종류도 같은 길을 쓴다.
+ *          곡선인지는 이름이 아니라 모양으로 판정한다(`_listKey` 자식이 있는 원소) - VFX 의 `_sizeOverLife` 도, 앞으로 곡선을 쓰는 다른 데이터 종류도 같은 길을 쓴다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -73,7 +73,7 @@ namespace sw::editor
         /**
          * @brief 그래프에서 고친 곡선 @p edited 를 문서의 곡선 원소 @p curveElementIndex 에 적습니다(키를 끌기 · 메뉴로 더하기 · 지우기 — 언리얼 Curve Editor 처럼 그래프에서 바로 고친다).
          * @details 읽은 키(값을 못 읽은 키는 그대로 둔다)를 시각 순으로 @p edited 의 키와 짝지어 `_time` · `_value` · `_interpolation` 을 고치고, 남는 키는 지우고 모자란 키는 더한다.
-         *          사본에서 고쳐 한 번에 넣는다 — 끌기 하나가 되돌리기 한 단계다. 접선은 적지 않는다(카탈로그 곡선은 자동 접선만 읽는다 — `makeFloatCurve`).
+         *          사본에서 고쳐 한 번에 넣으므로 끌기 하나가 되돌리기 한 단계다. 접선은 적지 않는다(카탈로그 곡선은 자동 접선만 읽는다, `makeFloatCurve`).
          * @return 문서가 바뀌었으면 true 입니다. 같은 자리에 놓았으면 false(오류 없음), 실패하면 문서는 그대로이고 `getError` 에 이유가 있습니다.
          */
         [[nodiscard]] static bool applyEditedCurve( CatalogDocument& inoutDocument, int32 curveElementIndex, const FloatCurve& edited );

@@ -278,7 +278,7 @@ namespace sw::editor
         /**
          * @brief 상자 패널에서 끄는 점 @p point 가 들어갈 위치입니다 — 자식 가운데(@p listChildCenter, 상자 축 좌표, 자식 순서)가 @p point 보다 작은 자식 수입니다.
          * @details 끄는 자식 자신도 목록에 있다. 분리한 뒤의 번호는 `findReorderIndex` 가 고친다. 마지막 자식의 가운데가 첫 자식보다 작으면(RTL 거울 등) 거꾸로 놓인 것으로
-         *          보고 가운데가 @p point 보다 **큰** 자식 수를 센다.
+         *          보고 가운데가 @p point 보다 큰 자식 수를 센다.
          */
         static uint32 findBoxInsertIndex( const vector<float32>& listChildCenter, float32 point );
         /** @brief 자식 @p fromIndex 를 분리하고 끼울 번호입니다 — 사이 위치 @p insertIndex(떼기 전 번호)가 자신 뒤면 하나 당깁니다. */

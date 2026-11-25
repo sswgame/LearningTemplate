@@ -31,7 +31,7 @@ namespace sw::editor
         /** @brief 사본을 파일에 씁니다. 검사를 통과하지 못하면 쓰지 않고 false 입니다(미저장 표시는 문서 패널이 든다). */
         [[nodiscard]] bool saveDocument();
 
-        /** @brief 속성 그리드가 사본을 고쳤습니다 — "Edit Audio Event" 로 알립니다(끄는 동안은 상호작용 구간 하나, 이름은 모델이 정한다 — 감사 E-16). */
+        /** @brief 속성 그리드가 사본을 고쳤습니다. "Edit Audio Event" 로 알립니다(끄는 동안은 상호작용 구간 하나, 이름은 모델이 정한다, 감사 E-16). */
         void markPropertyEdited() const { recordDocumentEdit( "Edit Audio Event" ); }
         /** @brief @p libraryName 을 고치는 중이면 true 입니다. */
         bool isEditing( const hashed_string& libraryName ) const { return _libraryName.empty() == false && _libraryName == libraryName; }
