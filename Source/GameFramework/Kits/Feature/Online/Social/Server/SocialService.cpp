@@ -5,10 +5,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialStoreRecords.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
@@ -17,6 +16,7 @@
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -28,19 +28,18 @@ namespace sw
     {
         struct SocialServiceInternal
         {
-            static constexpr FormatDef kFormat{ "SOCL" };
-            static constexpr int64     kPresenceTTLMs     = 90000;
-            static constexpr int64     kPresenceRefreshMs = 30000;
+            static constexpr int64 kPresenceTTLMs     = 90000;
+            static constexpr int64 kPresenceRefreshMs = 30000;
 
-            static const hashed_string& getLinkTable()
+            static const ServiceRecordTable<SocialLinkStoreRecord>& getLinkTable()
             {
-                static const hashed_string s_table{ "social_link" };
+                static const ServiceRecordTable<SocialLinkStoreRecord> s_table{ "social_link" };
                 return s_table;
             }
 
-            static const hashed_string& getCountTable()
+            static const ServiceRecordTable<SocialCountStoreRecord>& getCountTable()
             {
-                static const hashed_string s_table{ "social_count" };
+                static const ServiceRecordTable<SocialCountStoreRecord> s_table{ "social_count" };
                 return s_table;
             }
 
@@ -76,49 +75,44 @@ namespace sw
                 return string( key.view() );
             }
 
-            static vector<uint8> encodeLink( SocialLinkState state, int64 sinceMs )
+            static SocialLinkStoreRecord encodeLink( SocialLinkState state, int64 sinceMs )
             {
-                BitWriter writer;
-                kFormat.writeVersion( writer );
-                writer.writeVarUint( static_cast<uint64>( state ) );
-                writer.writeVarInt( sinceMs );
-                return writer.getBytes();
+                SocialLinkStoreRecord record;
+                record._state   = state;
+                record._sinceMs = sinceMs;
+                return record;
             }
 
-            [[nodiscard]] static bool decodeLink( const vector<uint8>& bytes, SocialLinkState& outState, int64& outSinceMs )
+            [[nodiscard]] static bool decodeLink( const ServiceRecord& raw, SocialLinkState& outState, int64& outSinceMs )
             {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
+                SocialLinkStoreRecord record;
+                if ( getLinkTable().decode( raw, record ) == false || record._state == SocialLinkState::Count )
                     return false;
-                const uint64 state = reader.readVarUint();
-                outSinceMs         = reader.readVarInt();
-                if ( reader.hasOverflowed() || state >= static_cast<uint64>( SocialLinkState::Count ) )
-                    return false;
-                outState = static_cast<SocialLinkState>( state );
+                outState   = record._state;
+                outSinceMs = record._sinceMs;
                 return true;
             }
 
-            static vector<uint8> encodeCounts( const SocialCounts& counts )
+            static SocialCountStoreRecord encodeCounts( const SocialCounts& counts )
             {
-                BitWriter writer;
-                kFormat.writeVersion( writer );
-                writer.writeVarInt( counts._friendCount );
-                writer.writeVarInt( counts._incomingCount );
-                writer.writeVarInt( counts._outgoingCount );
-                writer.writeVarInt( counts._blockedCount );
-                return writer.getBytes();
+                SocialCountStoreRecord record;
+                record._friendCount   = counts._friendCount;
+                record._incomingCount = counts._incomingCount;
+                record._outgoingCount = counts._outgoingCount;
+                record._blockedCount  = counts._blockedCount;
+                return record;
             }
 
-            [[nodiscard]] static bool decodeCounts( const vector<uint8>& bytes, SocialCounts& outCounts )
+            [[nodiscard]] static bool decodeCounts( const ServiceRecord& raw, SocialCounts& outCounts )
             {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
+                SocialCountStoreRecord record;
+                if ( getCountTable().decode( raw, record ) == false )
                     return false;
-                outCounts._friendCount   = reader.readVarInt32();
-                outCounts._incomingCount = reader.readVarInt32();
-                outCounts._outgoingCount = reader.readVarInt32();
-                outCounts._blockedCount  = reader.readVarInt32();
-                return reader.hasOverflowed() == false;
+                outCounts._friendCount   = record._friendCount;
+                outCounts._incomingCount = record._incomingCount;
+                outCounts._outgoingCount = record._outgoingCount;
+                outCounts._blockedCount  = record._blockedCount;
+                return true;
             }
 
             static void addCounts( SocialCounts& inoutCounts, const SocialCounts& delta )
@@ -200,12 +194,12 @@ namespace sw
                 SocialLinkState selfState  = SocialLinkState::None;
                 SocialLinkState otherState = SocialLinkState::None;
                 int64           sinceMs    = 0;
-                if ( pSelfLink != nullptr && Internal::decodeLink( pSelfLink->_bytes, selfState, sinceMs ) == false )
+                if ( pSelfLink != nullptr && Internal::decodeLink( *pSelfLink, selfState, sinceMs ) == false )
                     selfState = SocialLinkState::None;
-                if ( otherLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( otherLink._bytes, otherState, sinceMs ) == false )
+                if ( otherLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( otherLink, otherState, sinceMs ) == false )
                     otherState = SocialLinkState::None;
                 SocialCounts counts;
-                if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount._bytes, counts ) == false )
+                if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount, counts ) == false )
                     counts = SocialCounts{};
                 ServiceTransaction transaction;
                 if ( pSelfLink != nullptr )
@@ -312,13 +306,13 @@ namespace sw
                 int64           sinceMs    = 0;
                 SocialCounts    selfCounts;
                 SocialCounts    otherCounts;
-                if ( selfLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( selfLink._bytes, selfState, sinceMs ) == false )
+                if ( selfLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( selfLink, selfState, sinceMs ) == false )
                     selfState = SocialLinkState::None;
-                if ( otherLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( otherLink._bytes, otherState, sinceMs ) == false )
+                if ( otherLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( otherLink, otherState, sinceMs ) == false )
                     otherState = SocialLinkState::None;
-                if ( selfCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( selfCount._bytes, selfCounts ) == false )
+                if ( selfCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( selfCount, selfCounts ) == false )
                     selfCounts = SocialCounts{};
-                if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount._bytes, otherCounts ) == false )
+                if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount, otherCounts ) == false )
                     otherCounts = SocialCounts{};
 
                 _decision = SocialCounts::decide( _operation, selfState, otherState, selfCounts, otherCounts );
@@ -360,7 +354,7 @@ namespace sw
                 {
                     SocialLink link;
                     const bool bParsed = ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), link._otherID ) &&
-                                         SocialServiceInternal::decodeLink( record._bytes, link._state, link._sinceMs );
+                                         SocialServiceInternal::decodeLink( record, link._state, link._sinceMs );
                     if ( bParsed )
                         read._value.push_back( link );
                 }

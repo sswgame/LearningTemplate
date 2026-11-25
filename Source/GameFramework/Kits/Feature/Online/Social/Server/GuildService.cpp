@@ -7,15 +7,15 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialStoreRecords.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -27,8 +27,6 @@ namespace sw
     {
         struct GuildServiceInternal
         {
-            static constexpr FormatDef   kFormat{ "GLDR" };
-            static constexpr FormatDef   kGuildFormat{ "GILD" };                           ///< 길드 레코드이다
             static constexpr int64       kMaxExperience   = static_cast<int64>( 1 ) << 53; ///< 경험치 상한이다. 넘으면 상한에 멈춘다
             static constexpr const utf8* kSequenceKey     = "guild";
             static constexpr uint32      kReplacementChar = 0xFFFDu;
@@ -77,50 +75,49 @@ namespace sw
             }
 
             /** @brief 꺼내기 허용의 남은 한도입니다. 부여 · 회수의 재전송은 멱등 기록(`ServiceIdempotency`)이 가리므로 기록에는 한도만 둡니다. */
-            static vector<uint8> encodeGrant( int64 remaining )
+            static GuildGrantStoreRecord encodeGrant( int64 remaining )
             {
-                BitWriter writer;
-                kFormat.writeVersion( writer );
-                writer.writeVarInt( remaining );
-                return writer.getBytes();
+                GuildGrantStoreRecord record;
+                record._remaining = remaining;
+                return record;
             }
 
-            [[nodiscard]] static bool decodeGrant( const vector<uint8>& bytes, int64& outRemaining )
+            [[nodiscard]] static bool decodeGrant( const ServiceRecord& raw, int64& outRemaining )
             {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
+                GuildGrantStoreRecord record;
+                if ( getGrantTable().decode( raw, record ) == false )
                     return false;
-                outRemaining = reader.readVarInt();
-                return reader.hasOverflowed() == false && 0 <= outRemaining;
+                outRemaining = record._remaining;
+                return true;
             }
 
-            static const hashed_string& getGuildTable()
+            static const ServiceRecordTable<GuildStoreRecord>& getGuildTable()
             {
-                static const hashed_string s_table{ "social_guild" };
+                static const ServiceRecordTable<GuildStoreRecord> s_table{ "social_guild" };
                 return s_table;
             }
 
-            static const hashed_string& getMemberTable()
+            static const ServiceRecordTable<GuildMemberStoreRecord>& getMemberTable()
             {
-                static const hashed_string s_table{ "social_guild_member" };
+                static const ServiceRecordTable<GuildMemberStoreRecord> s_table{ "social_guild_member" };
                 return s_table;
             }
 
-            static const hashed_string& getAccountGuildTable()
+            static const ServiceLinkTable& getAccountGuildTable()
             {
-                static const hashed_string s_table{ "social_account_guild" };
+                static const ServiceLinkTable s_table{ "social_account_guild" };
                 return s_table;
             }
 
-            static const hashed_string& getNameTable()
+            static const ServiceLinkTable& getNameTable()
             {
-                static const hashed_string s_table{ "social_guild_name" };
+                static const ServiceLinkTable s_table{ "social_guild_name" };
                 return s_table;
             }
 
-            static const hashed_string& getInviteTable()
+            static const ServiceRecordTable<GuildInviteStoreRecord>& getInviteTable()
             {
-                static const hashed_string s_table{ "social_guild_invite" };
+                static const ServiceRecordTable<GuildInviteStoreRecord> s_table{ "social_guild_invite" };
                 return s_table;
             }
 
@@ -130,9 +127,9 @@ namespace sw
                 return s_table;
             }
 
-            static const hashed_string& getApplicationTable()
+            static const ServiceRecordTable<GuildApplicationStoreRecord>& getApplicationTable()
             {
-                static const hashed_string s_table{ "social_guild_application" };
+                static const ServiceRecordTable<GuildApplicationStoreRecord> s_table{ "social_guild_application" };
                 return s_table;
             }
 
@@ -160,22 +157,22 @@ namespace sw
                 return string( reverseKey.view() );
             }
 
-            static const hashed_string& getDepositorTable()
+            static const ServiceLinkTable& getDepositorTable()
             {
-                static const hashed_string s_table{ "social_guild_depositor" };
+                static const ServiceLinkTable s_table{ "social_guild_depositor" };
                 return s_table;
             }
 
             /** @brief 맡긴 사람이 준 꺼내기 허용(`<길드>/<맡긴 사람>/<받는 계정>/<자산>`)입니다. */
-            static const hashed_string& getGrantTable()
+            static const ServiceRecordTable<GuildGrantStoreRecord>& getGrantTable()
             {
-                static const hashed_string s_table{ "social_guild_storage_grant" };
+                static const ServiceRecordTable<GuildGrantStoreRecord> s_table{ "social_guild_storage_grant" };
                 return s_table;
             }
 
-            static const hashed_string& getSequenceTable()
+            static const ServiceLinkTable& getSequenceTable()
             {
-                static const hashed_string s_table{ "social_sequence" };
+                static const ServiceLinkTable s_table{ "social_sequence" };
                 return s_table;
             }
 
@@ -199,121 +196,96 @@ namespace sw
                 return key;
             }
 
-            static vector<uint8> encodeGuild( const GuildInfo& info )
+            static GuildStoreRecord encodeGuild( const GuildInfo& info )
             {
-                BitWriter writer;
-                kGuildFormat.writeVersion( writer );
-                ServiceKeyUtil::writeString( writer, info._name );
-                ServiceKeyUtil::writeString( writer, info._announcement );
-                writer.writeVarUint( info._masterID );
-                writer.writeVarInt( info._createdMs );
-                writer.writeVarInt( info._memberCount );
-                writer.writeVarInt( info._experience );
-                writer.writeBits( info._bOpenToApply == SW_TRUE ? 1u : 0u, 1 );
-                return writer.getBytes();
+                GuildStoreRecord record;
+                record._name         = info._name;
+                record._announcement = info._announcement;
+                record._masterID     = info._masterID;
+                record._createdMs    = info._createdMs;
+                record._memberCount  = info._memberCount;
+                record._experience   = info._experience;
+                record._bOpenToApply = info._bOpenToApply;
+                return record;
             }
 
-            [[nodiscard]] static bool decodeGuild( const vector<uint8>& bytes, uint64 guildID, GuildInfo& outInfo )
+            [[nodiscard]] static bool decodeGuild( const ServiceRecord& raw, uint64 guildID, GuildInfo& outInfo )
             {
-                BitReader  reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                const bool bHeadOk = kGuildFormat.readVersion( reader ) && ServiceKeyUtil::readString( reader, GuildLimit::kMaxNameSize, outInfo._name ) &&
-                                     ServiceKeyUtil::readString( reader, GuildLimit::kMaxAnnouncementSize, outInfo._announcement );
-                if ( bHeadOk == false )
+                GuildStoreRecord record;
+                if ( getGuildTable().decode( raw, record ) == false )
                     return false;
                 outInfo._guildID      = guildID;
-                outInfo._masterID     = reader.readVarUint();
-                outInfo._createdMs    = reader.readVarInt();
-                outInfo._memberCount  = reader.readVarInt32();
-                outInfo._experience   = reader.readVarInt();
-                outInfo._bOpenToApply = reader.readBits( 1 ) == 1u ? SW_TRUE : SW_FALSE;
-                return reader.hasOverflowed() == false && 0 <= outInfo._experience;
-            }
-
-            static vector<uint8> encodeMember( GuildRole role, int64 joinedMs )
-            {
-                BitWriter writer;
-                kFormat.writeVersion( writer );
-                writer.writeVarUint( static_cast<uint64>( role ) );
-                writer.writeVarInt( joinedMs );
-                return writer.getBytes();
-            }
-
-            [[nodiscard]] static bool decodeMember( const vector<uint8>& bytes, GuildMember& outMember )
-            {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
-                    return false;
-                const uint64 role   = reader.readVarUint();
-                outMember._joinedMs = reader.readVarInt();
-                if ( reader.hasOverflowed() || role >= static_cast<uint64>( GuildRole::Count ) )
-                    return false;
-                outMember._role = static_cast<GuildRole>( role );
+                outInfo._name         = std::move( record._name );
+                outInfo._announcement = std::move( record._announcement );
+                outInfo._masterID     = record._masterID;
+                outInfo._createdMs    = record._createdMs;
+                outInfo._memberCount  = record._memberCount;
+                outInfo._experience   = record._experience;
+                outInfo._bOpenToApply = record._bOpenToApply;
                 return true;
             }
 
-            static vector<uint8> encodeID( uint64 value )
+            static GuildMemberStoreRecord encodeMember( GuildRole role, int64 joinedMs )
             {
-                BitWriter writer;
-                kFormat.writeVersion( writer );
-                writer.writeVarUint( value );
-                return writer.getBytes();
+                GuildMemberStoreRecord record;
+                record._role     = role;
+                record._joinedMs = joinedMs;
+                return record;
             }
 
-            [[nodiscard]] static bool decodeID( const vector<uint8>& bytes, uint64& outValue )
+            [[nodiscard]] static bool decodeMember( const ServiceRecord& raw, GuildMember& outMember )
             {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
+                GuildMemberStoreRecord record;
+                if ( getMemberTable().decode( raw, record ) == false || record._role == GuildRole::Count )
                     return false;
-                outValue = reader.readVarUint();
-                return reader.hasOverflowed() == false;
+                outMember._role     = record._role;
+                outMember._joinedMs = record._joinedMs;
+                return true;
             }
 
-            static vector<uint8> encodeInvite( AccountID inviterID, int64 expiresMs )
+            static GuildInviteStoreRecord encodeInvite( AccountID inviterID, int64 expiresMs )
             {
-                BitWriter writer;
-                kFormat.writeVersion( writer );
-                writer.writeVarUint( inviterID );
-                writer.writeVarInt( expiresMs );
-                return writer.getBytes();
+                GuildInviteStoreRecord record;
+                record._inviterID = inviterID;
+                record._expiresMs = expiresMs;
+                return record;
             }
 
-            static vector<uint8> encodeApplication( int64 appliedMs, int64 expiresMs )
+            static GuildApplicationStoreRecord encodeApplication( int64 appliedMs, int64 expiresMs )
             {
-                BitWriter writer;
-                kFormat.writeVersion( writer );
-                writer.writeVarInt( appliedMs );
-                writer.writeVarInt( expiresMs );
-                return writer.getBytes();
+                GuildApplicationStoreRecord record;
+                record._appliedMs = appliedMs;
+                record._expiresMs = expiresMs;
+                return record;
             }
 
-            [[nodiscard]] static bool decodeApplication( const vector<uint8>& bytes, int64& outAppliedMs, int64& outExpiresMs )
+            [[nodiscard]] static bool decodeApplication( const ServiceRecord& raw, int64& outAppliedMs, int64& outExpiresMs )
             {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
+                GuildApplicationStoreRecord record;
+                if ( getApplicationTable().decode( raw, record ) == false )
                     return false;
-                outAppliedMs = reader.readVarInt();
-                outExpiresMs = reader.readVarInt();
-                return reader.hasOverflowed() == false;
+                outAppliedMs = record._appliedMs;
+                outExpiresMs = record._expiresMs;
+                return true;
             }
 
-            [[nodiscard]] static bool decodeInviteExpiry( const vector<uint8>& bytes, int64& outExpiresMs )
+            [[nodiscard]] static bool decodeInviteExpiry( const ServiceRecord& raw, int64& outExpiresMs )
             {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
+                GuildInviteStoreRecord record;
+                if ( getInviteTable().decode( raw, record ) == false )
                     return false;
-                (void)reader.readVarUint(); // 초대한 사람 필드는 건너뛴다. 읽기가 넘쳤는지는 아래 hasOverflowed 가 확인한다
-                outExpiresMs = reader.readVarInt();
-                return reader.hasOverflowed() == false;
+                outExpiresMs = record._expiresMs;
+                return true;
             }
 
             /** @brief 초대 레코드의 만료 시각을 읽습니다(보존 쓸기). */
-            [[nodiscard]] static bool readInviteExpiryMs( const ServiceRecord& record, int64& outTimeMs ) { return decodeInviteExpiry( record._bytes, outTimeMs ); }
+            [[nodiscard]] static bool readInviteExpiryMs( const ServiceRecord& record, int64& outTimeMs ) { return decodeInviteExpiry( record, outTimeMs ); }
 
             /** @brief 가입 신청 레코드의 만료 시각을 읽습니다(TTL 쓸기). */
             [[nodiscard]] static bool readApplicationExpiryMs( const ServiceRecord& record, int64& outTimeMs )
             {
                 int64 appliedMs = 0;
-                return decodeApplication( record._bytes, appliedMs, outTimeMs );
+                return decodeApplication( record, appliedMs, outTimeMs );
             }
 
             /** @brief TTL 쓸기가 지우는 신청의 역색인 `<계정>/<길드>` 를 같은 트랜잭션에서 지웁니다 — 빼면 만료된 신청마다 역색인 줄이 탈퇴 때까지 남는다. */
@@ -385,7 +357,7 @@ namespace sw
                 const ServiceStoreResult read = connection.readRecord( GuildServiceInternal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( accountID ), outRecord );
                 if ( read != ServiceStoreResult::Ok )
                     return read == ServiceStoreResult::NotFound ? ServiceStoreResult::NotFound : ServiceStoreResult::Unavailable;
-                return GuildServiceInternal::decodeID( outRecord._bytes, outGuildID ) ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
+                return GuildServiceInternal::getAccountGuildTable().decode( ServiceKeyUtil::makeHex64( accountID ), outRecord, outGuildID ) ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
             }
 
             ServiceStoreResult runOnce( ServiceCommitAttempt& connection )
@@ -444,7 +416,7 @@ namespace sw
                 if ( nameRead != ServiceStoreResult::NotFound || ( sequenceRead != ServiceStoreResult::Ok && sequenceRead != ServiceStoreResult::NotFound ) )
                     return ServiceStoreResult::Unavailable;
                 uint64 nextID = 1;
-                if ( sequenceRead == ServiceStoreResult::Ok && Internal::decodeID( sequenceRecord._bytes, nextID ) == false )
+                if ( sequenceRead == ServiceStoreResult::Ok && Internal::getSequenceTable().decode( Internal::kSequenceKey, sequenceRecord, nextID ) == false )
                     return ServiceStoreResult::Unavailable;
                 GuildInfo info;
                 info._guildID     = nextID;
@@ -453,12 +425,12 @@ namespace sw
                 info._createdMs   = _request._nowMs.count();
                 info._memberCount = 1;
                 ServiceTransaction transaction;
-                transaction.put( Internal::getSequenceTable(), Internal::kSequenceKey, Internal::encodeID( nextID + 1 ), sequenceRecord._version );
+                transaction.put( Internal::getSequenceTable(), Internal::kSequenceKey, nextID + 1, sequenceRecord._version );
                 transaction.put( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( nextID ), Internal::encodeGuild( info ), ServiceRecord::kAbsentVersion );
                 transaction.put( Internal::getMemberTable(), Internal::makePairKey( nextID, _request._accountID ), Internal::encodeMember( GuildRole::Master, _request._nowMs.count() ),
                                  ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), Internal::encodeID( nextID ), ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getNameTable(), nameKey, Internal::encodeID( nextID ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), nextID, ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getNameTable(), nameKey, nextID, ServiceRecord::kAbsentVersion );
                 const ServiceStoreResult commitResult = connection.commit( transaction );
                 if ( commitResult == ServiceStoreResult::Ok )
                 {
@@ -477,7 +449,7 @@ namespace sw
                 GuildInfo     info;
                 const string  guildKey = ServiceKeyUtil::makeHex64( _request._guildID );
                 const bool    bGuildOk = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
-                                      Internal::decodeGuild( guildRecord._bytes, _request._guildID, info );
+                                      Internal::decodeGuild( guildRecord, _request._guildID, info );
                 if ( bGuildOk == false )
                     return fail( SocialResult::NotFound );
                 if ( info._bOpenToApply == SW_FALSE )
@@ -501,7 +473,7 @@ namespace sw
                         return true; // 다시 낸 신청은 아래 put 이 덮어쓴다
                     int64      appliedMs = 0;
                     int64      expiresMs = 0;
-                    const bool bLive     = Internal::decodeApplication( record._bytes, appliedMs, expiresMs ) && _request._nowMs.count() < expiresMs;
+                    const bool bLive     = Internal::decodeApplication( record, appliedMs, expiresMs ) && _request._nowMs.count() < expiresMs;
                     if ( bLive )
                         ++liveCount;
                     else if ( deadCount < kMaxDeadErase )
@@ -536,7 +508,7 @@ namespace sw
                 GuildInfo     info;
                 const string  guildKey = ServiceKeyUtil::makeHex64( _request._guildID );
                 const bool    bGuildOk = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
-                                      Internal::decodeGuild( guildRecord._bytes, _request._guildID, info );
+                                      Internal::decodeGuild( guildRecord, _request._guildID, info );
                 if ( bGuildOk == false )
                     return fail( SocialResult::NotFound );
                 const bool bReachesCap = _request._amount >= Internal::kMaxExperience - info._experience;
@@ -562,13 +534,13 @@ namespace sw
                 const string  inviteKey = Internal::makePairKey( _request._accountID, _request._guildID );
                 const string  guildKey  = ServiceKeyUtil::makeHex64( _request._guildID );
                 const bool    bInvited  = connection.readRecord( Internal::getInviteTable(), inviteKey, inviteRecord ) == ServiceStoreResult::Ok &&
-                                      Internal::decodeInviteExpiry( inviteRecord._bytes, expiresMs );
+                                      Internal::decodeInviteExpiry( inviteRecord, expiresMs );
                 if ( bInvited == false )
                     return fail( SocialResult::NotFound );
                 if ( _request._nowMs.count() >= expiresMs )
                     return fail( SocialResult::InviteExpired );
                 const bool bGuildOk = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
-                                      Internal::decodeGuild( guildRecord._bytes, _request._guildID, info );
+                                      Internal::decodeGuild( guildRecord, _request._guildID, info );
                 if ( bGuildOk == false )
                     return fail( SocialResult::NotFound ); // 해산된 길드이다
                 if ( info._memberCount >= GuildLimit::kMaxMember )
@@ -578,7 +550,7 @@ namespace sw
                 transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
                 transaction.put( Internal::getMemberTable(), Internal::makePairKey( _request._guildID, _request._accountID ),
                                  Internal::encodeMember( GuildRole::Member, _request._nowMs.count() ), ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), Internal::encodeID( _request._guildID ),
+                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), _request._guildID,
                                  ServiceRecord::kAbsentVersion );
                 transaction.erase( Internal::getInviteTable(), inviteKey, inviteRecord._version );
                 const ServiceStoreResult commitResult = connection.commit( transaction );
@@ -600,10 +572,10 @@ namespace sw
                 GuildMember   selfMember;
                 const string  guildKey = ServiceKeyUtil::makeHex64( guildID );
                 const bool    bReadOk  = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
-                                     Internal::decodeGuild( guildRecord._bytes, guildID, info ) &&
+                                     Internal::decodeGuild( guildRecord, guildID, info ) &&
                                      connection.readRecord( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord ) ==
                                          ServiceStoreResult::Ok &&
-                                     Internal::decodeMember( selfMemberRecord._bytes, selfMember );
+                                     Internal::decodeMember( selfMemberRecord, selfMember );
                 if ( bReadOk == false )
                     return ServiceStoreResult::Unavailable;
                 _serviceResult._guildID = guildID;
@@ -951,7 +923,7 @@ namespace sw
                     {
                         GuildApplication application;
                         int64            expiresMs = 0;
-                        const bool       bLive     = Internal::decodeApplication( record._bytes, application._appliedMs, expiresMs ) && _request._nowMs.count() < expiresMs &&
+                        const bool       bLive     = Internal::decodeApplication( record, application._appliedMs, expiresMs ) && _request._nowMs.count() < expiresMs &&
                                            ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), application._accountID );
                         if ( bLive )
                             _serviceResult._listApplication.push_back( application );
@@ -964,7 +936,7 @@ namespace sw
                 int64         expiresMs        = 0;
                 const string  applicationKey   = Internal::makePairKey( guildID, _request._targetID );
                 const bool    bApplicationRead = connection.readRecord( Internal::getApplicationTable(), applicationKey, applicationRecord ) == ServiceStoreResult::Ok &&
-                                              Internal::decodeApplication( applicationRecord._bytes, appliedMs, expiresMs );
+                                              Internal::decodeApplication( applicationRecord, appliedMs, expiresMs );
                 if ( bApplicationRead == false )
                     return fail( SocialResult::NotFound );
                 ServiceTransaction transaction;
@@ -988,7 +960,7 @@ namespace sw
                 transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( inoutInfo ), guildRecord._version );
                 transaction.put( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._targetID ), Internal::encodeMember( GuildRole::Member, _request._nowMs.count() ),
                                  ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._targetID ), Internal::encodeID( guildID ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._targetID ), guildID, ServiceRecord::kAbsentVersion );
                 const ServiceStoreResult commitResult = connection.commit( transaction );
                 if ( commitResult == ServiceStoreResult::Ok )
                     _serviceResult._joinedID = _request._targetID;
@@ -1006,7 +978,7 @@ namespace sw
                 const string  guildKey        = ServiceKeyUtil::makeHex64( guildID );
                 const bool    bTargetOk       = _request._targetID != _request._accountID &&
                                        connection.readRecord( Internal::getMemberTable(), targetMemberKey, targetMemberRecord ) == ServiceStoreResult::Ok &&
-                                       Internal::decodeMember( targetMemberRecord._bytes, targetMember );
+                                       Internal::decodeMember( targetMemberRecord, targetMember );
                 if ( bTargetOk == false )
                     return fail( SocialResult::NotFound );
                 ServiceTransaction transaction;
@@ -1103,7 +1075,7 @@ namespace sw
                     }
                     if ( bHeld == false && listBalance.size() >= static_cast<size_t>( GuildLimit::kMaxDepositorAsset ) )
                         return fail( SocialResult::StorageLimit ); // 떠날 때 몫 전체를 이동 하나(다리 상한)로 돌려준다
-                    transaction.put( Internal::getDepositorTable(), Internal::makePairKey( guildID, depositorID ), Internal::encodeID( depositorID ) );
+                    transaction.put( Internal::getDepositorTable(), Internal::makePairKey( guildID, depositorID ), depositorID );
                 }
 
                 LedgerTransferRequest transfer;
@@ -1161,7 +1133,7 @@ namespace sw
                     const ServiceStoreResult read      = connection.readRecord( Internal::getGrantTable(), recordKey, grantRecord );
                     if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
                         return ServiceStoreResult::Unavailable;
-                    bAllowed = read == ServiceStoreResult::Ok && Internal::decodeGrant( grantRecord._bytes, remaining ) && _request._amount <= remaining;
+                    bAllowed = read == ServiceStoreResult::Ok && Internal::decodeGrant( grantRecord, remaining ) && _request._amount <= remaining;
                     if ( bAllowed )
                         inoutTransaction.put( Internal::getGrantTable(), recordKey, Internal::encodeGrant( remaining - _request._amount ), grantRecord._version );
                 }
@@ -1216,7 +1188,7 @@ namespace sw
                 GuildMember   targetMember;
                 const string  targetMemberKey = Internal::makePairKey( guildID, _request._targetID );
                 const bool    bTargetOk       = connection.readRecord( Internal::getMemberTable(), targetMemberKey, targetMemberRecord ) == ServiceStoreResult::Ok &&
-                                       Internal::decodeMember( targetMemberRecord._bytes, targetMember );
+                                       Internal::decodeMember( targetMemberRecord, targetMember );
                 if ( bTargetOk == false )
                     return fail( SocialResult::NotFound );
                 if ( bExists == false )
@@ -1263,7 +1235,7 @@ namespace sw
                 {
                     GuildMember member;
                     const bool  bParsed = ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), member._accountID ) &&
-                                         GuildServiceInternal::decodeMember( record._bytes, member );
+                                         GuildServiceInternal::decodeMember( record, member );
                     if ( bParsed == false )
                         continue;
                     _serviceResult._listNotifyMember.push_back( member._accountID );
@@ -1418,7 +1390,7 @@ namespace sw
                     GuildMember member;
                     AccountID   memberID = kInvalidAccountID;
                     if ( ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), memberID ) == false || memberID == deletedID ||
-                         GuildServiceInternal::decodeMember( record._bytes, member ) == false )
+                         GuildServiceInternal::decodeMember( record, member ) == false )
                         continue;
                     const bool bBetter = bFound == false || member._role > outMember._role ||
                                          ( member._role == outMember._role && ( member._joinedMs < outMember._joinedMs ||
@@ -1450,8 +1422,8 @@ namespace sw
                 const ServiceStoreResult memberRead = connection.readRecord( Internal::getMemberTable(), memberKey, memberRecord );
                 if ( guildRead == ServiceStoreResult::Unavailable || memberRead == ServiceStoreResult::Unavailable )
                     return ServiceStoreResult::Unavailable;
-                const bool bGuildOk  = guildRead == ServiceStoreResult::Ok && Internal::decodeGuild( guildRecord._bytes, guildID, info );
-                const bool bMemberOk = memberRead == ServiceStoreResult::Ok && Internal::decodeMember( memberRecord._bytes, selfMember );
+                const bool bGuildOk  = guildRead == ServiceStoreResult::Ok && Internal::decodeGuild( guildRecord, guildID, info );
+                const bool bMemberOk = memberRead == ServiceStoreResult::Ok && Internal::decodeMember( memberRecord, selfMember );
                 if ( const ServiceStoreResult grants = eraseGrants( connection, guildID, accountID, false ); grants != ServiceStoreResult::Ok )
                     return grants;
                 if ( const ServiceStoreResult share = burnShare( connection, guildID, accountID, accountID, nowMs ); share != ServiceStoreResult::Ok )
@@ -1534,7 +1506,7 @@ namespace sw
             {
                 transaction.erase( Internal::getInviteTable(), record._key, record._version );
                 int64 expiresMs = 0;
-                if ( Internal::decodeInviteExpiry( record._bytes, expiresMs ) )
+                if ( Internal::decodeInviteExpiry( record, expiresMs ) )
                     transaction.erase( Internal::getInviteExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, record._key ) );
             }
             if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction ); committed != ServiceStoreResult::Ok )
@@ -1565,7 +1537,7 @@ namespace sw
             return ServiceStoreResult::Ok;
         if ( read != ServiceStoreResult::Ok )
             return read;
-        if ( Internal::decodeID( selfGuildRecord._bytes, guildID ) == false )
+        if ( Internal::getAccountGuildTable().decode( ServiceKeyUtil::makeHex64( accountID ), selfGuildRecord, guildID ) == false )
         {
             ServiceTransaction broken; // 지운 계정의 깨진 줄이다 — 지우기만 한다
             broken.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( accountID ), selfGuildRecord._version );

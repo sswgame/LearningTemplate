@@ -7,8 +7,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardStoreRecords.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
@@ -19,6 +18,7 @@
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -32,7 +32,6 @@ namespace sw
     {
         struct LeaderboardServiceInternal
         {
-            static constexpr FormatDef   kFormat{ "LDBD" };
             static constexpr int32       kRebuildBatch         = 256;
             static constexpr int32       kPlayersPerPage       = 600; ///< 정산 저장소 일 하나가 쓰는 사람 수(커밋 50 번). 페이지 사이에 다른 요청이 저장소 워커를 쓴다
             static constexpr int64       kDayMs                = 86400000;
@@ -44,15 +43,15 @@ namespace sw
             static constexpr const utf8* kAchievementSender    = "system.achievement";
             static constexpr const utf8* kSeasonSender         = "system.season";
 
-            static const hashed_string& getAchievementTable()
+            static const ServiceRecordTable<LeaderboardValueRecord>& getAchievementTable()
             {
-                static const hashed_string s_table{ "lb_achievement" };
+                static const ServiceRecordTable<LeaderboardValueRecord> s_table{ "lb_achievement" };
                 return s_table;
             }
 
-            static const hashed_string& getSeasonResultTable()
+            static const ServiceRecordTable<LeaderboardSeasonResultRecord>& getSeasonResultTable()
             {
-                static const hashed_string s_table{ "lb_season_result" };
+                static const ServiceRecordTable<LeaderboardSeasonResultRecord> s_table{ "lb_season_result" };
                 return s_table;
             }
 
@@ -103,12 +102,11 @@ namespace sw
             /** @brief 점수 값의 갱신 시각을 읽습니다(보존 쓸기). 기간 끝보다 늦을 수 없으므로 색인 줄이 기간을 넘기면 레코드도 넘긴다. */
             [[nodiscard]] static bool readScoreTimeMs( const ServiceRecord& record, int64& outTimeMs )
             {
-                BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
+                LeaderboardValueRecord value;
+                if ( getScoreTable().decode( record, value ) == false )
                     return false;
-                (void)reader.readVarInt(); // 점수는 건너뛴다. 넘쳤는지는 아래 hasOverflowed 가 본다
-                outTimeMs = reader.readVarInt();
-                return reader.hasOverflowed() == false;
+                outTimeMs = value._updatedMs;
+                return true;
             }
 
             /** @brief 시즌 id 를 16진 8자리 문자열로 만듭니다. 작업 id 와 우편 멱등 키를 64바이트 안에 두려는 것입니다. */
@@ -166,15 +164,15 @@ namespace sw
                 return ServiceMail::stageSend( connection, mail, inoutTransaction, mailKey, bReplayed );
             }
 
-            static const hashed_string& getScoreTable()
+            static const ServiceRecordTable<LeaderboardValueRecord>& getScoreTable()
             {
-                static const hashed_string s_table{ "lb_score" };
+                static const ServiceRecordTable<LeaderboardValueRecord> s_table{ "lb_score" };
                 return s_table;
             }
 
-            static const hashed_string& getStatTable()
+            static const ServiceRecordTable<LeaderboardValueRecord>& getStatTable()
             {
-                static const hashed_string s_table{ "lb_stat" };
+                static const ServiceRecordTable<LeaderboardValueRecord> s_table{ "lb_stat" };
                 return s_table;
             }
 
@@ -206,36 +204,36 @@ namespace sw
                 return bParsed;
             }
 
-            static vector<uint8> encodeScore( int64 score, int64 updatedMs, string_view displayName )
+            static LeaderboardValueRecord encodeScore( int64 score, int64 updatedMs, string_view displayName )
             {
-                BitWriter writer;
-                kFormat.writeVersion( writer );
-                writer.writeVarInt( score );
-                writer.writeVarInt( updatedMs );
-                ServiceKeyUtil::writeString( writer, displayName );
-                return writer.getBytes();
+                LeaderboardValueRecord record;
+                record._value       = score;
+                record._updatedMs   = updatedMs;
+                record._displayName = string( displayName );
+                return record;
             }
 
             static bool isAchievementIDLess( const OnlineAchievementDef& left, const OnlineAchievementDef& right ) { return left._achievementID < right._achievementID; }
 
             /** @brief 점수와 표시 이름을 읽습니다. 계정 목록 조회가 씁니다. */
-            [[nodiscard]] static bool decodeScoreWithName( const vector<uint8>& bytes, int64& outScore, string& outDisplayName )
+            [[nodiscard]] static bool decodeScoreWithName( const ServiceRecord& raw, int64& outScore, string& outDisplayName )
             {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
+                LeaderboardValueRecord record;
+                if ( getScoreTable().decode( raw, record ) == false )
                     return false;
-                outScore                               = reader.readVarInt();
-                [[maybe_unused]] const int64 updatedMs = reader.readVarInt(); // 쓰지 않지만 읽어야 이름 필드에 닿는다. 넘쳤는지는 아래 hasOverflowed 가 본다
-                return ServiceKeyUtil::readString( reader, OnlineLimit::kMaxDisplayNameSize, outDisplayName ) && reader.hasOverflowed() == false;
+                outScore       = record._value;
+                outDisplayName = std::move( record._displayName );
+                return true;
             }
 
-            [[nodiscard]] static bool decodeScore( const vector<uint8>& bytes, int64& outScore )
+            /** @brief 점수 · 통계 · 업적 값을 읽습니다(세 표가 같은 레코드 형식이다). */
+            [[nodiscard]] static bool decodeScore( const ServiceRecord& raw, int64& outScore )
             {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
+                LeaderboardValueRecord record;
+                if ( getScoreTable().decode( raw, record ) == false )
                     return false;
-                outScore = reader.readVarInt();
-                return reader.hasOverflowed() == false;
+                outScore = record._value;
+                return true;
             }
 
             /** @brief 갱신 방식에 따라 새 값을 정합니다. 쓸 필요가 없으면 @p outbChanged 가 false 입니다. */
@@ -277,7 +275,7 @@ namespace sw
                     {
                         LeaderboardScoreRow row;
                         const bool          bParsed = ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), row._accountID ) &&
-                                             decodeScore( record._bytes, row._score );
+                                             decodeScore( record, row._score );
                         if ( bParsed )
                             outListScore.push_back( row );
                     }
@@ -389,15 +387,15 @@ namespace sw
     /** @brief 점수(또는 통계) 하나를 버전 조건으로 쓰는 일의 입력입니다. 저장소 스레드가 읽는 값 복사입니다(`LeaderboardService::submitWrite` 가 받으므로 이름 있는 이름공간에 둔다). */
     struct LeaderboardWriteInput
     {
-        hashed_string     _table{};
-        string            _key{};
-        string            _displayName{};
-        int64             _value{ 0 };
-        UnixMilliseconds  _nowMs{ 0 };
-        LeaderboardUpdate _update{ LeaderboardUpdate::Best };
-        LeaderboardOrder  _order{ LeaderboardOrder::Descending };
-        NetIdempotencyKey _idempotencyKey{};  ///< Sum · Latest 쓰기의 멱등 기록 키. 비면(서버 안의 파생 쓰기) 기록하지 않는다
-        int64             _expiryBaseMs{ 0 }; ///< 0 이 아니면 레코드를 처음 만들 때 이 시각의 TTL 색인 줄(`lb_score_expiry`)을 함께 넣는다
+        const ServiceRecordTable<LeaderboardValueRecord>* _pTable{ nullptr };
+        string                                            _key{};
+        string                                            _displayName{};
+        int64                                             _value{ 0 };
+        UnixMilliseconds                                  _nowMs{ 0 };
+        LeaderboardUpdate                                 _update{ LeaderboardUpdate::Best };
+        LeaderboardOrder                                  _order{ LeaderboardOrder::Descending };
+        NetIdempotencyKey                                 _idempotencyKey{};  ///< Sum · Latest 쓰기의 멱등 기록 키. 비면(서버 안의 파생 쓰기) 기록하지 않는다
+        int64                                             _expiryBaseMs{ 0 }; ///< 0 이 아니면 레코드를 처음 만들 때 이 시각의 TTL 색인 줄(`lb_score_expiry`)을 함께 넣는다
     };
 
     namespace
@@ -469,11 +467,11 @@ namespace sw
                             return write._result;
                     }
                     ServiceRecord            record;
-                    const ServiceStoreResult readResult = attempt.readRecord( input._table, input._key, record );
+                    const ServiceStoreResult readResult = attempt.readRecord( *input._pTable, input._key, record );
                     if ( readResult != ServiceStoreResult::Ok && readResult != ServiceStoreResult::NotFound )
                         return write._result;
                     int64      oldValue = 0;
-                    const bool bHasOld  = readResult == ServiceStoreResult::Ok && Internal::decodeScore( record._bytes, oldValue );
+                    const bool bHasOld  = readResult == ServiceStoreResult::Ok && Internal::decodeScore( record, oldValue );
                     bool       bChanged = false;
                     write._finalValue   = Internal::applyUpdate( input._update, input._order, bHasOld, oldValue, input._value, bChanged );
                     if ( bChanged == false )
@@ -481,7 +479,7 @@ namespace sw
                         return LeaderboardServiceResult{ LeaderboardResult::Ok }; // 더 좋지 않으므로 쓰지 않는다
                     }
                     ServiceTransaction transaction;
-                    transaction.put( input._table, input._key, Internal::encodeScore( write._finalValue, input._nowMs.count(), input._displayName ), record._version );
+                    transaction.put( *input._pTable, input._key, Internal::encodeScore( write._finalValue, input._nowMs.count(), input._displayName ), record._version );
                     if ( readResult == ServiceStoreResult::NotFound && input._expiryBaseMs > 0 ) // 계정 · 기간마다 한 번이다(같은 줄을 여럿이 쓰지 않는다)
                         transaction.put( Internal::getScoreExpiryTable(), ServiceTTLRule::makeTTLIndexKey( input._expiryBaseMs, input._key ),
                                                 ServiceRecord::kAnyVersion );
@@ -541,7 +539,7 @@ namespace sw
                                           {
                     LeaderboardStat stat;
                     stat._name = string( name );
-                    if ( LeaderboardServiceInternal::decodeScore( record._bytes, stat._value ) == false )
+                    if ( LeaderboardServiceInternal::decodeScore( record, stat._value ) == false )
                         return false;
                     read._value._listStat.push_back( std::move( stat ) );
                     return true;
@@ -567,7 +565,7 @@ namespace sw
                  {
                     LeaderboardStat stat;
                     stat._name = record._key.substr( prefix.size() );
-                    bDecode    = LeaderboardServiceInternal::decodeScore( record._bytes, stat._value );
+                    bDecode    = LeaderboardServiceInternal::decodeScore( record, stat._value );
                     if ( bDecode )
                         read._value.push_back( std::move( stat ) );
                     return bDecode;
@@ -615,7 +613,7 @@ namespace sw
                                                  {
                     AchievementState achievement;
                     achievement._achievementID = string( achievementID );
-                    if ( LeaderboardServiceInternal::decodeScore( record._bytes, achievement._unlockedMs ) )
+                    if ( LeaderboardServiceInternal::decodeScore( record, achievement._unlockedMs ) )
                         read._value._listAchievement.push_back( std::move( achievement ) );
                     return true;
                 } );
@@ -694,7 +692,7 @@ namespace sw
                         continue; // 이 기간에 점수가 없다
                     LeaderboardEntry entry;
                     entry._accountID = accountID;
-                    if ( readResult != ServiceStoreResult::Ok || LeaderboardServiceInternal::decodeScoreWithName( record._bytes, entry._score, entry._displayName ) == false )
+                    if ( readResult != ServiceStoreResult::Ok || LeaderboardServiceInternal::decodeScoreWithName( record, entry._score, entry._displayName ) == false )
                     {
                         read._value.clear();
                         return read;
@@ -715,21 +713,18 @@ namespace sw
             {
                 LeaderboardRead<LeaderboardEntry> read;
                 read._value._accountID = accountID;
-                ServiceRecord            record;
-                const ServiceStoreResult readResult = connection.readRecord( LeaderboardServiceInternal::getSeasonResultTable(), key, record );
+                LeaderboardSeasonResultRecord record;
+                const ServiceStoreResult      readResult = LeaderboardServiceInternal::getSeasonResultTable().read( connection, key, record );
                 if ( readResult == ServiceStoreResult::NotFound )
                 {
                     read._result = LeaderboardResult::NotRanked;
                     return read;
                 }
                 if ( readResult != ServiceStoreResult::Ok )
-                    return read;
-                BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
-                if ( LeaderboardServiceInternal::kFormat.readVersion( reader ) == false )
-                    return read;
-                read._value._score = reader.readVarInt();
-                read._value._rank  = reader.readVarInt32();
-                read._result       = reader.hasOverflowed() ? LeaderboardServiceResult::fail( OnlineError::kUnavailable ) : LeaderboardResult::Ok;
+                    return read; // 깨진 결과(표가 오류 로그를 남긴다)도 실패다
+                read._value._score = record._score;
+                read._value._rank  = record._rank;
+                read._result       = LeaderboardResult::Ok;
                 return read;
             }
 
@@ -777,7 +772,7 @@ namespace sw
                 for ( const ServiceRecord& record : listRecord )
                 {
                     if ( string_view( record._key ).substr( prefixSize ) == name )
-                        return LeaderboardServiceInternal::decodeScore( record._bytes, outValue );
+                        return LeaderboardServiceInternal::decodeScore( record, outValue );
                 }
                 return true;
             }
@@ -794,7 +789,7 @@ namespace sw
                     return true; // 앞선 실행이 이미 정산했다
                 if ( read != ServiceStoreResult::NotFound )
                     return false;
-                inoutTransaction.put( Internal::getSeasonResultTable(), key, Internal::encodeScore( row._score, rank, string_view{} ), ServiceRecord::kAbsentVersion );
+                inoutTransaction.put( Internal::getSeasonResultTable(), key, LeaderboardSeasonResultRecord{ row._score, rank, {} }, ServiceRecord::kAbsentVersion );
                 inoutTransaction.put( Internal::getSeasonResultExpiryTable(), ServiceTTLRule::makeTTLIndexKey( season._endMs + Internal::kSettlementWindowMs, key ),
                                       ServiceRecord::kAnyVersion ); // 정산 창이 닫힌 뒤부터 잰다 - 창 안에서는 이 결과가 다시 돌기의 멱등이다
                 const LeaderboardRewardTier* pTier = findTier( season, rank );
@@ -1060,7 +1055,7 @@ namespace sw
             return;
         }
         LeaderboardWriteInput input;
-        input._table = LeaderboardServiceInternal::getScoreTable();
+        input._pTable = &LeaderboardServiceInternal::getScoreTable();
         StringBuilder<constant::buffer::kMax128> keyBuilder;
         keyBuilder.appendFormat( "%#%#", LeaderboardServiceInternal::makeScorePrefix( pBoard->_boardID, periodID ), ServiceKeyUtil::makeHex64( accountID ) );
         input._key            = string( keyBuilder.view() );
@@ -1130,7 +1125,7 @@ namespace sw
             return;
         }
         LeaderboardWriteInput input;
-        input._table = LeaderboardServiceInternal::getStatTable();
+        input._pTable = &LeaderboardServiceInternal::getStatTable();
         StringBuilder<constant::buffer::kMax128> keyBuilder;
         keyBuilder.appendFormat( "%#/%#", ServiceKeyUtil::makeHex64( accountID ), statName );
         input._key            = string( keyBuilder.view() );

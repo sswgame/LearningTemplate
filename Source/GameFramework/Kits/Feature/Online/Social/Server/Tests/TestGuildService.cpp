@@ -7,11 +7,13 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialStoreRecords.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -1170,15 +1172,20 @@ namespace
     /** @brief 서비스 레코드를 저장소에 바로 씁니다 — API 로는 만들 수 없는 "상한 한 쪽보다 많은" 상태를 세운다(옛 데이터 · 다른 판 서버 · 불변식이 깨진 뒤). */
     struct GuildRawRecord
     {
-        static vector<uint8> encode( std::initializer_list<int64> listValue )
+        static const ServiceRecordTable<GuildApplicationStoreRecord>& getApplicationTable()
         {
-            BitWriter writer;
-            writer.writeBits( 0, 8 ); // 서비스의 레코드 형식 판
-            for ( const int64 value : listValue )
-            {
-                writer.writeVarInt( value );
-            }
-            return writer.getBytes();
+            static const ServiceRecordTable<GuildApplicationStoreRecord> s_table{ "social_guild_application" };
+            return s_table;
+        }
+        static const ServiceRecordTable<GuildGrantStoreRecord>& getGrantTable()
+        {
+            static const ServiceRecordTable<GuildGrantStoreRecord> s_table{ "social_guild_storage_grant" };
+            return s_table;
+        }
+        static const ServiceLinkTable& getDepositorTable()
+        {
+            static const ServiceLinkTable s_table{ "social_guild_depositor" };
+            return s_table;
         }
 
         static string makePairKey( uint64 first, uint64 second )
@@ -1188,11 +1195,32 @@ namespace
             return string( key.view() );
         }
 
-        static void put( MemoryServiceDatabase& database, const utf8* pTable, const string& key, const vector<uint8>& bytes )
+        static void commit( MemoryServiceDatabase& database, const ServiceTransaction& transaction ) { SW_REQUIRE_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok ); }
+
+        static void putApplication( MemoryServiceDatabase& database, const string& key, int64 appliedMs, int64 expiresMs )
+        {
+            GuildApplicationStoreRecord record;
+            record._appliedMs = appliedMs;
+            record._expiresMs = expiresMs;
+            ServiceTransaction transaction;
+            transaction.put( getApplicationTable(), key, record );
+            commit( database, transaction );
+        }
+
+        static void putGrant( MemoryServiceDatabase& database, const string& key, int64 remaining )
+        {
+            GuildGrantStoreRecord record;
+            record._remaining = remaining;
+            ServiceTransaction transaction;
+            transaction.put( getGrantTable(), key, record );
+            commit( database, transaction );
+        }
+
+        static void putDepositor( MemoryServiceDatabase& database, const string& key, AccountID depositorID )
         {
             ServiceTransaction transaction;
-            transaction.put( hashed_string( pTable ), key, bytes, ServiceRecord::kAnyVersion );
-            SW_REQUIRE_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
+            transaction.put( getDepositorTable(), key, depositorID );
+            commit( database, transaction );
         }
 
         static int32 countPrefix( MemoryServiceDatabase& database, const utf8* pTable, const string& prefix )
@@ -1220,12 +1248,11 @@ SW_TEST_CASE( GuildServiceTest, ApplicationCapCountsPastDeadApplications )
     SW_EXPECT_TRUE( rig.setOpen( kMaster, true ) == SocialResult::Ok );
     for ( AccountID applicant = 10; applicant < 70; ++applicant ) // 죽은 신청(키가 앞이다)
     {
-        GuildRawRecord::put( rig._database, "social_guild_application", GuildRawRecord::makePairKey( guildID, applicant ), GuildRawRecord::encode( { kNowMs - 2000, kNowMs - 1000 } ) );
+        GuildRawRecord::putApplication( rig._database, GuildRawRecord::makePairKey( guildID, applicant ), kNowMs - 2000, kNowMs - 1000 );
     }
     for ( AccountID applicant = 1000; applicant < 1000 + static_cast<AccountID>( GuildLimit::kMaxApplication ); ++applicant ) // 살아 있는 신청
     {
-        GuildRawRecord::put( rig._database, "social_guild_application", GuildRawRecord::makePairKey( guildID, applicant ),
-                             GuildRawRecord::encode( { kNowMs, kNowMs + GuildLimit::kApplicationLifetimeMs } ) );
+        GuildRawRecord::putApplication( rig._database, GuildRawRecord::makePairKey( guildID, applicant ), kNowMs, kNowMs + GuildLimit::kApplicationLifetimeMs );
     }
 
     SW_EXPECT_TRUE( rig.run( GuildOperation::Apply, 5000, kInvalidAccountID, "", guildID )._result == SocialResult::PendingLimit );
@@ -1254,7 +1281,7 @@ SW_TEST_CASE( GuildServiceTest, LeavingErasesEveryGrantPastOnePage )
         StringBuilder<constant::buffer::kMax128> keyBuilder;
         keyBuilder.appendFormat( "%#%#/cur.g%#", prefix, ServiceKeyUtil::makeHex64( kOfficer ), 100 + index );
         const string key( keyBuilder.view() );
-        GuildRawRecord::put( rig._database, "social_guild_storage_grant", key, GuildRawRecord::encode( { 1 } ) );
+        GuildRawRecord::putGrant( rig._database, key, 1 );
     }
 
     SW_REQUIRE_TRUE( rig.runKeyed( GuildOperation::Leave, kMember, kInvalidAccountID, "test/grant.leave" ) == SocialResult::Ok );
@@ -1273,7 +1300,7 @@ SW_TEST_CASE( GuildServiceTest, AccountDeletionBurnsEveryShareRecordPastOnePage 
     constexpr AccountID kLastDepositor = 10 + static_cast<AccountID>( GuildLimit::kMaxMember ) + 20;
     for ( AccountID depositorID = 10; depositorID <= kLastDepositor; ++depositorID )
     {
-        GuildRawRecord::put( rig._database, "social_guild_depositor", GuildRawRecord::makePairKey( guildID, depositorID ), vector<uint8>{ 1 } );
+        GuildRawRecord::putDepositor( rig._database, GuildRawRecord::makePairKey( guildID, depositorID ), depositorID );
     }
     // 마지막 기록의 몫에 잔액을 둔다 — 한 쪽 밖이다
     StringBuilder<constant::buffer::kMax64> tokenBuilder;
