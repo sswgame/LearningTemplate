@@ -7,7 +7,7 @@
   소스 모드다(content/ 아래 낱개 파일) — 개발 실행이 시작 때 팩으로 묶어 올린다. 배포는 묶은 content.pack 만 받는다.
   켜기: App -gv_firstMinigame=velmora -gv_modList=velmora_tidecaves (시나리오 game/playground/automation/sequence/velmora_carry.2)
 -->
-<Mod id="velmora_tidecaves" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0">
+<Mod id="velmora_tidecaves" version="1.0.0" minContentVersion="0" maxContentVersion="0" priority="0">
 	<Layer path="game/playground/data/regions.xml"/>
 	<Layer path="game/playground/data/quests.xml"/>
 	<Layer path="game/playground/data/monsters.xml"/>
