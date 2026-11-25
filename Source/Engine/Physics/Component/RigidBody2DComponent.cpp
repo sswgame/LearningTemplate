@@ -2,7 +2,6 @@
 
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -15,6 +14,7 @@
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -22,8 +22,7 @@ namespace sw
     {
         struct RigidBody2DComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "RB2S" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "RB2S" };
         };
 
         /** @brief 지금 월드 회전에서 Z 축 둘레 각만 바꾼 회전입니다(다른 축 회전은 2D 물리가 모른다 — 그대로 둔다). */
@@ -218,7 +217,7 @@ namespace sw
         float32 angular = getAngularVelocity();
         if ( io.isWriting() && ( _bodyType != PhysicsBodyType::Dynamic || ( linear.getLengthSquared() == 0.0f && angular == 0.0f ) ) )
             return; // 멈춘 바디는 실을 것이 없다 — 큰 씬의 정적 바디마다 칸을 쓰지 않는다
-        io.header( RigidBody2DComponentInternal::kStateTag, RigidBody2DComponentInternal::kStateVersion );
+        io.header( RigidBody2DComponentInternal::kStateFormat );
         io.value( linear );
         io.value( angular );
         if ( io.isWriting() )

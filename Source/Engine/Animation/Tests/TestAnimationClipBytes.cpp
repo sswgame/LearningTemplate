@@ -113,8 +113,7 @@ SW_TEST_CASE( AnimationClipBytesTest, WellFormedBytesRead )
 /** @brief [AnimationClipBytesTest] 어느 길이로 잘려도 거절하고 비운다 */
 SW_TEST_CASE( AnimationClipBytesTest, EveryTruncatedLengthIsRefused )
 {
-    SW_EXPECT_LOG( "AnimationClip.AnimationClipNoSWAC" );
-    SW_EXPECT_LOG( "AnimationClip.AnimationClipVersionNot" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_LOG( "AnimationClip.AnimationClipMalformed" );
     const vector<uint8> bytes = XTestUtil::makeClipBytes();
     for ( size_t length = 0; length < bytes.size(); ++length )

@@ -38,14 +38,14 @@ namespace sw
         WalletComponent*    pWallet = io.isReading() ? findOnPlayerState<WalletComponent>() : nullptr;
         if ( io.isReading() && io.check( pState != nullptr && pWallet != nullptr ) == false )
             return;
-        io.header( kStateTag, kStateVersion ); // 배치를 마쳤는지는 상태 칸이다(`GameModeComponent::serializeState`)
+        io.header( kStateFormat ); // 배치를 마쳤는지는 상태 칸이다(`GameModeComponent::serializeState`)
         if ( io.isOk() == false )
             return;
         CitySimulation restoredCity;
         if ( io.isReading() && io.check( initializeCity( restoredCity, *pState, *pWallet ) ) == false )
             return;
         CitySimulation& city = io.isWriting() ? getMutableCity() : restoredCity;
-        io.section( CitySimulation::kStateTag, CitySimulation::kStateVersion, [&city]( StateIO& bodyIO )
+        io.section( CitySimulation::kStateFormat, [&city]( StateIO& bodyIO )
         { bodyIO.value( city ); } );
         io.end();
         if ( io.isWriting() || io.isOk() == false )

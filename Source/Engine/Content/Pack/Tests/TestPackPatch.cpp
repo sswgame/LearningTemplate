@@ -180,8 +180,8 @@ SW_TEST_CASE( PackPatchTest, PatchOverTwoGiBIsAccepted )
     pool.push_back( '\0' );
 
     PackHeader header{};
-    header._magic            = kPackMagic;
-    header._formatVersion    = kPackFormatVersion;
+    header._magic            = kPackFormat._tag;
+    header._formatVersion    = kPackFormat._version;
     header._sectorAlignment  = kPackSectorAlignment;
     header._flags            = static_cast<uint16>( static_cast<uint16>( PackFlag::HasCRC32 ) | static_cast<uint16>( PackFlag::HasStringPool ) | static_cast<uint16>( PackFlag::HasBlockHash ) );
     header._fileCount        = 1;

@@ -6,7 +6,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -113,9 +112,6 @@ namespace sw
         };
         /** @brief 이 에셋 종류입니다(등록은 `PartyItemSpawner.cpp` 의 줄이 로더를 더한다). */
         static constexpr AssetTypeDef kAssetType{ "PartyItemSpawner", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "PISP" );
-        static constexpr uint32 kStateVersion = 0;
 
         PartyItemSpawner();
 

@@ -4,7 +4,6 @@
 
 #include "Core/Algorithm/CompareUtil.h"
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -12,6 +11,7 @@
 #include "Engine/Presentation/IPlayerNotificationSink.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -32,10 +32,8 @@ namespace sw
     {
         struct AutosaveInternal
         {
-            static constexpr uint32      kInfoTag           = FourCCUtil::make( "ASAV" );
-            static constexpr uint32      kInfoVersion       = 0;
-            static constexpr uint32      kSlotFormatVersion = 0; ///< 상태 슬롯의 봉투 형식 버전 - 게임 상태 바이트(스냅샷 봉투)를 바꾸면 올린다
-            static constexpr const utf8* kInfoExtension     = ".info";
+            static constexpr FormatDef   kInfoFormat{ "ASAV" };
+            static constexpr const utf8* kInfoExtension = ".info";
         };
     } // namespace
 } // namespace sw
@@ -398,10 +396,8 @@ namespace sw
             return false;
 
         LocalStoreWriteOptions stateOptions{};
-        stateOptions._formatVersion = AutosaveInternal::kSlotFormatVersion;
         LocalStoreWriteOptions infoOptions{};
-        infoOptions._formatVersion = AutosaveInternal::kInfoVersion;
-        _savingSlot                = info;
+        _savingSlot = info;
         // 기록은 상태 바로 뒤에 맡긴다 - 저장소는 맡은 순서로 쓰므로, 끝낼 때 맡긴 종료 저장도 기록까지 남는다(완료를 기다렸다 맡기면 저장소가 닫힌 뒤가 된다).
         _saveRequest = _pStore->submitWrite( info._slotName, std::move( stateBytes ), stateOptions, SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &AutosaveManager::onSlotWritten, this ) );
         _infoRequest = _pStore->submitWrite( _settings.makeInfoSlotName( slot ), std::move( infoBytes ), infoOptions,
@@ -467,7 +463,7 @@ namespace sw
             ++slot;
         }
         AutosaveSlotInfo info{};
-        const bool       bRead = completion._result == LocalStoreResult::Ok && completion._formatVersion == AutosaveInternal::kInfoVersion && slot < _settings._slotCount &&
+        const bool       bRead = completion._result == LocalStoreResult::Ok && slot < _settings._slotCount &&
                            readSlotInfo( completion._bytes, info );
         if ( bRead == false )
         {
@@ -484,7 +480,7 @@ namespace sw
     bool AutosaveManager::writeSlotInfo( const AutosaveSlotInfo& info, vector<uint8>& outBytes )
     {
         Archive archive;
-        StateIO::writeHeader( archive, AutosaveInternal::kInfoTag, AutosaveInternal::kInfoVersion );
+        AutosaveInternal::kInfoFormat.write( archive );
         archive << info._sequence;
         archive << info._playTime;
         archive << static_cast<uint8>( info._trigger );
@@ -498,7 +494,7 @@ namespace sw
     bool AutosaveManager::readSlotInfo( const vector<uint8>& bytes, AutosaveSlotInfo& outInfo )
     {
         Archive archive( bytes.data(), bytes.size() );
-        if ( StateIO::readHeader( archive, AutosaveInternal::kInfoTag, AutosaveInternal::kInfoVersion ) == false )
+        if ( AutosaveInternal::kInfoFormat.check( archive ).has_value() == false ) // 부르는 쪽이 칸 이름과 함께 알린다
             return false;
         uint8 trigger = 0;
         archive >> outInfo._sequence;

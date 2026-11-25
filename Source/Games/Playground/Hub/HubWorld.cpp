@@ -16,14 +16,13 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool HubProfile::write( BitWriter& writer ) const
     {
-        writer.writeVarUint( kFormatVersion );
+        kFormat.writeVersion( writer );
         return ReplicatedLayout::writeFull( *this, writer );
     }
 
     bool HubProfile::read( BitReader& reader )
     {
-        const uint64 formatVersion = reader.readVarUint();
-        if ( reader.hasOverflowed() || formatVersion != kFormatVersion )
+        if ( kFormat.readVersion( reader ) == false )
             return false;
         return ReplicatedLayout::readFull( reader, *this, nullptr ) == FixedReadResult::Ok; // `Ok` 일 때만 값을 바꾼다
     }

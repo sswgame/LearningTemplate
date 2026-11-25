@@ -21,6 +21,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -55,7 +56,8 @@ namespace sw
         friend struct AssetTypeLoader;
 
         /** @brief 현재 형식의 버전입니다. 레이아웃을 바꾸면 올리고 모델을 다시 임포트해야 합니다. */
-        static constexpr uint32 kVersion = 0;
+        static constexpr FormatDef kFormat{ "SWFR" };
+        static constexpr uint32    kVersion = kFormat._version; ///< 임포트 스탬프가 섞는다
         /** @brief 확장자입니다. */
         static constexpr string_view kExtension = ".fracture";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */

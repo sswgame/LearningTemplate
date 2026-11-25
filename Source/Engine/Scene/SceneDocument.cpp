@@ -4,7 +4,6 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
@@ -17,6 +16,7 @@
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
@@ -36,7 +36,6 @@ namespace sw
             static constexpr const utf8* kEntity        = "entity";
             static constexpr const utf8* kGameObject    = "GameObject";
             static constexpr const utf8* kDefaultEntity = "Entity";
-            static constexpr uint32      kBinMagic      = FourCCUtil::make( "SCN1" );
             // 배치: 이름 · 월드 설정(리플렉션 바이너리) · 기본 엔티티 목록 · 셀 목록(셀 좌표 x · z, 그 셀의 엔티티 목록).
             // 엔티티 하나: 이름 · 프리팹 경로 · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXML`) · id 범위 · 앵커 파일 id · 레이어 목록 · 인스턴스 덮어쓰기 목록.
             // 프리팹은 경로 하나로 가리킨다. 상태의 컴포넌트 키는 고정 지역 id(`_localID`, `ComponentStableKey` — 감사 A-2)다. 셀에는 레이어 목록이 붙는다.
@@ -47,7 +46,7 @@ namespace sw
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
             // 셀 색인의 구간 뒤에 그 조각의 HLOD 대리 파일 id(`StreamingCell::_hlodFileID`, 0 이면 없음)가 온다.
             // 그 뒤에 조각 내용의 XZ 경계(`StreamingCell::_contentBounds`, 최소 x · z · 최대 x · z — 빈 경계면 최소가 최대보다 크다)가 온다.
-            static constexpr uint32 kBinVersion = 0;
+            static constexpr FormatDef kBinFormat{ "SWSC" };
             // 고정 머리: 매직 · 판 · 머리 길이 · 내용 길이.
             static constexpr uint64 kFixedHeadBytes = 2u * sizeof( uint32 ) + 2u * sizeof( uint64 );
             // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯, 목록 수 둘, 파일 id · id 범위 · 앵커 id(8바이트씩)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
@@ -635,22 +634,11 @@ namespace sw
             return false;
         }
         Archive fixedArch( fixedHead.data(), fixedHead.size() );
-        uint32  magic{ 0 };
-        uint32  version{ 0 };
-        uint64  headSize{ 0 };
-        uint64  contentSize{ 0 };
-        fixedArch >> magic >> version >> headSize >> contentSize;
-        if ( magic != SceneDocumentInternal::kBinMagic )
-        {
-            SW_LOG_ERROR_ID( "SceneDocument.BadBinaryMagic", "Bad binary magic: %#", absPath );
+        if ( SceneDocumentInternal::kBinFormat.read( fixedArch, absPath ) == false )
             return false;
-        }
-        if ( version != SceneDocumentInternal::kBinVersion )
-        {
-            SW_LOG_ERROR_ID( "Scene.UnsupportedBinaryVersion", "Unsupported binary version %# in %# (this build reads %#) - cook the scene again", version, absPath,
-                             SceneDocumentInternal::kBinVersion );
-            return false;
-        }
+        uint64 headSize{ 0 };
+        uint64 contentSize{ 0 };
+        fixedArch >> headSize >> contentSize;
         vector<uint8> head;
         const bool    bHeadRead = headSize > SceneDocumentInternal::kFixedHeadBytes &&
                                AssetIO::readBinaryAssetRange( assetID, SceneDocumentInternal::kFixedHeadBytes, headSize - SceneDocumentInternal::kFixedHeadBytes, head );
@@ -778,7 +766,8 @@ namespace sw
         }
         arch << maxCellFileID;
         Archive file;
-        file << SceneDocumentInternal::kBinMagic << SceneDocumentInternal::kBinVersion << static_cast<uint64>( SceneDocumentInternal::kFixedHeadBytes + arch.getSize() )
+        SceneDocumentInternal::kBinFormat.write( file );
+        file << static_cast<uint64>( SceneDocumentInternal::kFixedHeadBytes + arch.getSize() )
              << static_cast<uint64>( content.getSize() );
         file.writeBytes( arch.getData(), arch.getSize() );
         file.writeBytes( content.getData(), content.getSize() );

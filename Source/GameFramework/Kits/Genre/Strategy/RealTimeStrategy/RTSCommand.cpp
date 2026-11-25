@@ -42,8 +42,7 @@ namespace sw
     {
         Archive archive;
         StateIO io( archive );
-        uint32  version = kFormatVersion;
-        io.value( version );
+        io.header( kFormat );
         vector<RTSCommand> listCopy = listCommand; // `list` 는 쓰기에도 고칠 수 있는 목록을 받는다(값은 바꾸지 않는다)
         io.list( listCopy, sizeof( uint8 ) + sizeof( uint32 ), [&io]( RTSCommand& command )
         { command.serializeState( io ); } );
@@ -57,7 +56,7 @@ namespace sw
             return true;
         Archive archive( bytes.data(), bytes.size() );
         StateIO io( archive );
-        io.expect( kFormatVersion );
+        io.header( kFormat );
         vector<RTSCommand> listCommand;
         io.list( listCommand, sizeof( uint8 ) + sizeof( uint32 ), [&io]( RTSCommand& command )
         { command.serializeState( io ); } );

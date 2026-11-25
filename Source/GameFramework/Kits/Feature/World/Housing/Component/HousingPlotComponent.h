@@ -21,6 +21,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Housing/Network/HousingReplication.h"
@@ -55,8 +56,7 @@ namespace sw
         SW_REGISTERED_COMPONENT( HousingPlotComponent );
         friend class HousingNetSessionComponent; ///< 세션이 틱 뒤에 요청을 꺼내 보내고 판정 · 주인을 돌려준다
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "HPLT" );
-        static constexpr uint32 kStateVersion = 0;
+        static constexpr FormatDef kStateFormat{ "HPLT" };
 
         HousingPlotComponent();
         ~HousingPlotComponent() override;

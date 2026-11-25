@@ -37,7 +37,7 @@ namespace sw
         WalletComponent*    pWallet = io.isReading() ? findOnPlayerState<WalletComponent>() : nullptr;
         if ( io.check( pState != nullptr && pWallet != nullptr ) == false )
             return;
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         // 틱 수 · 순찰 방향은 상태 칸이다(`GameModeComponent::serializeState`). 유닛 id 는 묶은 값으로 손 본문이 싣는다.
         uint64 workerValue  = _worker.packed();
         uint64 soldierValue = _soldier.packed();

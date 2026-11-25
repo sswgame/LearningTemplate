@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Feature/World/Overworld/Component/OverworldGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -11,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/TileMap/Component/TileMapComponent.h"
 
@@ -22,9 +22,7 @@ namespace sw
 {
     namespace
     {
-        constexpr uint32 kGameModeStateTag     = FourCCUtil::make( "TOWN" ); // 게임에서 키트로 옮기기 전 태그 그대로(바꿀 까닭이 없다)
-        constexpr uint32 kGameModeStateVersion = 0;
-
+        constexpr FormatDef kGameModeStateFormat{ "TOWN" }; // 게임에서 키트로 옮기기 전 태그 그대로(바꿀 까닭이 없다)
     } // namespace
 
     SW_AUTOMATION_GETTER_WATCH( overworldHeroTileX, "Overworld.HeroTileX", "Tile column of the hero", OverworldGameModeComponent, &OverworldGameModeComponent::getHeroTileX );
@@ -196,11 +194,11 @@ namespace sw
 
     void OverworldGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( kGameModeStateTag, kGameModeStateVersion );
+        io.header( kGameModeStateFormat );
         if ( io.isOk() == false )
             return;
         OverworldTileMover mover = _mover;
-        io.section( OverworldTileMover::kStateTag, OverworldTileMover::kStateVersion, [&mover]( StateIO& bodyIO )
+        io.section( OverworldTileMover::kStateFormat, [&mover]( StateIO& bodyIO )
         { bodyIO.value( mover ); } );
         io.end();
         if ( io.isReading() && io.isOk() )

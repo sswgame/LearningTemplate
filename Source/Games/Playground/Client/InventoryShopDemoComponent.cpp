@@ -2,13 +2,13 @@
 
 #include "Games/Playground/Client/InventoryShopDemoComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/UISystem.h"
@@ -25,8 +25,7 @@ namespace sw
     {
         struct InventoryShopDemoInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "IVSD" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "IVSD" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventBought    = "ShopBought";
@@ -151,7 +150,7 @@ namespace sw
 
     void InventoryShopDemoComponent::serializeGameState( StateIO& io )
     {
-        io.header( InventoryShopDemoInternal::kStateTag, InventoryShopDemoInternal::kStateVersion );
+        io.header( InventoryShopDemoInternal::kStateFormat );
         if ( io.isWriting() )
         {
             io.value( _wallet );

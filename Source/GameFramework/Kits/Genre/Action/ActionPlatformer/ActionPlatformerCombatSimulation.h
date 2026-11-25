@@ -8,7 +8,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -73,9 +72,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32  kStateTag     = FourCCUtil::make( "APCR" );
-        static constexpr uint32  kStateVersion = 0;
-        static constexpr float32 kFrameTime    = 1.0f / 60.0f; ///< 한 프레임의 시간(탄과 총에 쓴다)
+        static constexpr float32 kFrameTime = 1.0f / 60.0f; ///< 한 프레임의 시간(탄과 총에 쓴다)
 
         ActionPlatformerCombatSimulation();
 

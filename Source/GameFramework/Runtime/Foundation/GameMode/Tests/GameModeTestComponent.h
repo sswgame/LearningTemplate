@@ -12,6 +12,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
@@ -85,7 +86,7 @@ namespace sw
         }
         void serializeGameState( StateIO& io ) override
         {
-            io.header( FourCCUtil::make( "TGMC" ), 1 );
+            io.header( FormatDef{ "TGMC" } );
             io.end();
             if ( io.isWriting() || io.isOk() == false || _viewPath.empty() )
                 return;

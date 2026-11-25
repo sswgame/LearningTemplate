@@ -19,6 +19,7 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -226,6 +227,7 @@ namespace sw
             uint32                                _layerIndex{ 0 };
             uint32                                _instanceCount{ 0 };
         };
+        static constexpr FormatDef kStateFormat{ "FOLC" };
 
         /**
          * @brief 레이어 하나의 머티리얼들입니다. 바람 · 페이드 값이 레이어 값이라 레이어마다 자기 인스턴스를 가진다.
@@ -244,8 +246,6 @@ namespace sw
             float32 _radius{ 0.0f };
             float32 _remaining{ 0.0f }; ///< 다시 자라기까지 남은 시간(초, `_regrowSeconds` 가 0 이면 쓰지 않는다)
         };
-
-        static constexpr uint32 kStateVersion = 0;
 
         /** @brief 셀 @p cell 의 항목 보이기를 지금 벤 자리들에 맞춥니다. 새로 만든 셀과 다시 자란 뒤에 부릅니다. */
         void applyCuts( Cell& cell ) const;

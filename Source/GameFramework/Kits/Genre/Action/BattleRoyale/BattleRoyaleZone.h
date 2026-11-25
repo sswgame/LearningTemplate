@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -77,9 +76,6 @@ namespace sw
     class SW_KIT_API BattleRoyaleZone
     {
     public:
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "BRZN" );
-        static constexpr uint32 kStateVersion = 0;
-
         BattleRoyaleZone();
 
         /** @brief 설정, 맵 크기, 시드, 지형(빌려 옴 — 자기장보다 오래 산다)을 설정하고, 첫 원을 맵 중심에 놓은 뒤 첫 단계의 다음 원을 고릅니다. */

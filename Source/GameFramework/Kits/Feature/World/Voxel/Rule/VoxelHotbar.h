@@ -3,11 +3,11 @@
  * @brief 아홉 슬롯 핫바입니다. 부순 블록을 모으고, 고른 슬롯의 블록을 놓습니다.
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -40,10 +40,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr int32  kSlotCount    = 9;
-        static constexpr int32  kMaxStack     = 64;
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "VXHB" );
-        static constexpr uint32 kStateVersion = 0;
+        static constexpr int32     kSlotCount = 9;
+        static constexpr int32     kMaxStack  = 64;
+        static constexpr FormatDef kStateFormat{ "VXHB" };
 
         /** @brief 세이브의 블록 id ↔ 번호에 @p pCatalog 를 씁니다. 저장하지 않는 핫바(테스트)는 nullptr 이어도 됩니다 — 읽기는 카탈로그 없이 거절합니다. */
         explicit VoxelHotbar( const VoxelBlockCatalog* pCatalog );

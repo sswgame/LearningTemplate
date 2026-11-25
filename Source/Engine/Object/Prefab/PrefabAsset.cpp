@@ -3,7 +3,6 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetFormat.h"
@@ -21,6 +20,7 @@
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Object/Prefab/PrefabPathStack.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
@@ -72,9 +72,8 @@ namespace sw
                 return true;
             }
             static constexpr const utf8* kVariantOverrides = "overrides"; ///< JSON 변형의 다른 점(글 하나 — 중첩 노드의 `overrides` 와 같다)
-            static constexpr uint32      kBinMagic         = FourCCUtil::make( "PFB2" );
             /** @brief 상태 뒤에 중첩 인스턴스 노드(부품 경로 `_partPath` · 고정 지역 id `_localID` — 감사 A-2)가 붙는다. 다른 버전은 읽지 않는다(쿠킹본은 다시 쿠킹한다). */
-            static constexpr uint32 kBinVersion = 0;
+            static constexpr FormatDef kBinFormat{ "SWPF" };
 
             static void collectPrefabRefsFromText( const utf8* pText, vector<string>& outListPath )
             {
@@ -841,21 +840,8 @@ namespace sw
             return false;
         }
 
-        uint32 magic{ 0 };
-        arch >> magic;
-        if ( magic != PrefabAssetInternal::kBinMagic )
-        {
-            SW_LOG_ERROR_ID( "PrefabAsset.BadBinaryMagic", "Bad binary magic: %#", absPath );
+        if ( PrefabAssetInternal::kBinFormat.read( arch, absPath ) == false )
             return false;
-        }
-
-        uint32 version{ 0 };
-        arch >> version;
-        if ( version != PrefabAssetInternal::kBinVersion )
-        {
-            SW_LOG_ERROR_ID( "PrefabAsset.CookedPrefabVersionNot", "Cooked prefab version %# is not %# in %# - cook the prefabs again", version, PrefabAssetInternal::kBinVersion, absPath );
-            return false;
-        }
 
         // 노드 하나는 글 여섯의 길이와 부모 번호다 — 파일 크기만큼의 노드(한 개가 수백 바이트)를 잡지 않는다.
         constexpr uint32 kMinBytesPerNode = sizeof( uint32 ) * 6 + sizeof( int32 );
@@ -1096,8 +1082,7 @@ namespace sw
     bool PrefabAsset::saveToBinaryFile( const AbsolutePath& absPath ) const
     {
         Archive arch;
-        arch << PrefabAssetInternal::kBinMagic;
-        arch << PrefabAssetInternal::kBinVersion;
+        PrefabAssetInternal::kBinFormat.write( arch );
         arch << _name;
         arch << _stateData;
         arch << static_cast<uint32>( _listNestedInstance.size() );

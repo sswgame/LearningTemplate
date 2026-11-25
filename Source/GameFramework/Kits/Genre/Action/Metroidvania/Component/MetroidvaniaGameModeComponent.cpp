@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Component/MetroidvaniaGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
@@ -12,6 +11,7 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
@@ -24,8 +24,7 @@ namespace sw
     {
         struct MetroidvaniaGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "MVGM" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "MVGM" };
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kDamageStat = "damage"; ///< 부적 능력치 이름 — 플레이어 공격력에 더한다(카탈로그 `<Charm><Stats damage>`)
@@ -613,7 +612,7 @@ namespace sw
 
     void MetroidvaniaGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( MetroidvaniaGameModeComponentInternal::kStateTag, MetroidvaniaGameModeComponentInternal::kStateVersion );
+        io.header( MetroidvaniaGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false || io.check( io.isWriting() || ( _pCatalog != nullptr && _pAreas != nullptr ) ) == false )
             return;
         // 방 · 지형 · 배치는 씬 데이터로 `startGame` 이 이미 세웠다. 규칙 객체는 같은 카탈로그로 연 사본에 읽는다(그래프 · 지갑은 이 디렉터의 것을 빌린다).

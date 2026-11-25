@@ -20,7 +20,6 @@ namespace sw
         struct AnimationClipInternal
         {
             /** @brief 파일 머리의 매직(`SWAC`)입니다. */
-            static constexpr uint8 kArrMagic[4] = { 'S', 'W', 'A', 'C' };
             /** @brief 플래그 비트입니다. 반복을 나타냅니다. */
             static constexpr uint32 kFlagLoop = 1u;
             /** @brief 문자열 하나의 길이 상한입니다. 깨진 파일이 거대한 할당을 일으키지 않게 합니다. */
@@ -247,8 +246,7 @@ namespace sw
     {
         outBytes.clear();
         AnimationClipInternal::Writer writer{ outBytes };
-        writer.writeRaw( AnimationClipInternal::kArrMagic, sizeof( AnimationClipInternal::kArrMagic ) );
-        writer.writeUint( kVersion );
+        kFormat.write( outBytes );
         writer.writeUint( _bLoop == SW_TRUE ? AnimationClipInternal::kFlagLoop : 0u );
         writer.writeFloat( _duration );
         writer.writeString( _name.c_str() );
@@ -284,22 +282,9 @@ namespace sw
     bool AnimationClip::readFromBytes( const uint8* pData, size_t byteCount, string_view sourceLabel )
     {
         clear();
-        const bool bMissingClipMagic = pData == nullptr || byteCount < sizeof( AnimationClipInternal::kArrMagic ) ||
-                                       Memory::compare( pData, AnimationClipInternal::kArrMagic, sizeof( AnimationClipInternal::kArrMagic ) ) != 0;
-        if ( bMissingClipMagic )
-        {
-            SW_LOG_ERROR_ID( "AnimationClip.AnimationClipNoSWAC", "Animation clip '%#' has no SWAC magic", sourceLabel );
+        ByteReader reader{ pData, pData != nullptr ? byteCount : 0 };
+        if ( kFormat.read( reader, sourceLabel ) == false )
             return false;
-        }
-
-        ByteReader reader{ pData, byteCount };
-        (void)reader.skipBytes( sizeof( AnimationClipInternal::kArrMagic ) ); // 위에서 길이와 매직을 봤다
-        const uint32 version = reader.readUint32();
-        if ( version != kVersion )
-        {
-            SW_LOG_ERROR_ID( "AnimationClip.AnimationClipVersionNot", "Animation clip '%#' is version %#, not the current %# - re-import the model", sourceLabel, version, kVersion );
-            return false;
-        }
         const uint32 flags = reader.readUint32();
         _bLoop             = ( flags & AnimationClipInternal::kFlagLoop ) != 0 ? SW_TRUE : SW_FALSE;
         _duration          = reader.readFloat32();

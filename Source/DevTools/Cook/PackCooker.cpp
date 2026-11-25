@@ -729,7 +729,7 @@ namespace sw
                 canonical.append( "\nshader=" ).append( params._shaderFolder ).append( "\ntarget=" ).append( params._buildTarget );
                 // 팩 형식 버전도 설정이다 - 형식을 올리면 옛 형식의 산출물을 재사용하지 않는다(리더가 거절할 팩을 남기지 않게).
                 utf8 arrFormat[constant::buffer::kMax32];
-                formatstring( arrFormat, constant::buffer::kMax32, "\nformat=%#", kPackFormatVersion );
+                formatstring( arrFormat, constant::buffer::kMax32, "\nformat=%#", kPackFormat._version );
                 canonical.append( arrFormat );
                 return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );
             }

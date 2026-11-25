@@ -4,6 +4,8 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -13,15 +15,15 @@ namespace sw
     {
         struct ServiceAuditLogInternal
         {
-            static constexpr uint64 kVersion        = 0;
-            static constexpr int32  kMaxActorSize   = 128;
-            static constexpr int32  kMaxActionSize  = 64;
-            static constexpr int32  kMaxSubjectSize = 128;
+            static constexpr FormatDef kFormat{ "AUDT" };
+            static constexpr int32     kMaxActorSize   = 128;
+            static constexpr int32     kMaxActionSize  = 64;
+            static constexpr int32     kMaxSubjectSize = 128;
 
             static vector<uint8> encode( const ServiceAuditEntry& entry )
             {
                 BitWriter writer;
-                writer.writeVarUint( kVersion );
+                kFormat.writeVersion( writer );
                 ServiceKeyUtil::writeString( writer, entry._actor );
                 ServiceKeyUtil::writeString( writer, entry._action );
                 ServiceKeyUtil::writeString( writer, entry._subject );
@@ -35,7 +37,7 @@ namespace sw
             [[nodiscard]] static bool decode( const vector<uint8>& bytes, ServiceAuditEntry& outEntry )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readVarUint() != kVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 bool bRead = ServiceKeyUtil::readString( reader, kMaxActorSize, outEntry._actor );
                 bRead      = bRead && ServiceKeyUtil::readString( reader, kMaxActionSize, outEntry._action );

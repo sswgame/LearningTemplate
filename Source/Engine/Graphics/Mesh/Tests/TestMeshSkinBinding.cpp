@@ -91,8 +91,8 @@ SW_TEST_CASE( MeshSkinBindingTest, TruncatedOrBadInverseBindsAreRejected )
     SW_EXPECT_TRUE( read._listVertex.empty() );
 
     vector<uint8> otherVersion = bytes;
-    otherVersion[4]            = static_cast<uint8>( MeshAssetFormat::kVersion + 1u );
-    SW_EXPECT_LOG( "MeshAssetFormat.MeshAssetVersionVertex" );
+    otherVersion[4]            = uint8{ 0xFF };
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_FALSE( MeshAssetFormat::readFromBytes( otherVersion.data(), otherVersion.size(), read ) );
 }
 

@@ -2,13 +2,13 @@
 
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
@@ -25,8 +25,7 @@ namespace sw
     {
         struct VoxelGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "VOXL" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "VOXL" };
         };
     } // namespace
 } // namespace sw
@@ -157,7 +156,7 @@ namespace sw
 
     void VoxelGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion );
+        io.header( VoxelGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         const VoxelBlockCatalog* const pBoundCatalog = _world.getCatalog();

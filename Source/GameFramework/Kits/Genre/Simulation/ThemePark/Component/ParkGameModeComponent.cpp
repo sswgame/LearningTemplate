@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
 
@@ -14,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Navigation/NavGridObstacle.h"
@@ -24,8 +24,7 @@ namespace sw
     {
         struct ParkGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "PARK" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "PARK" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`)가 정한다.
             static constexpr const utf8* kEventBlocked = "ParkBlocked";
@@ -381,7 +380,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ParkGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion );
+        io.header( ParkGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         ThemeParkSimulation restoredSimulation;

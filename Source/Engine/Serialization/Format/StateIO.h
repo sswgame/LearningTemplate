@@ -20,6 +20,7 @@ namespace sw
     struct Countdown;
     struct DeterministicRandom32;
     struct FixedStepTimer;
+    struct FormatDef;
     struct int2;
     struct Radians;
     struct RateAccumulator;
@@ -216,13 +217,13 @@ namespace sw
         }
 
         /**
-         * @brief 형식 표(4 글자 태그)와 판입니다. 읽을 때 표가 다르면 거절합니다.
-         * @details 읽은 판이 @p version 보다 옛것이면 판 올림 사슬(`SW_STATE_FORMAT_UPGRADE` — 표마다 n → n+1 단계)로 머리 뒤 바이트를 올린 뒤 이어 읽습니다.
-         *          단계가 빠졌거나 실패하거나 새 판(내리기)이면 오류를 남기고 거절합니다(옛 판을 그대로 읽는 폴백은 없다). 올린 바이트는 이 입구가 들고,
-         *          그 뒤의 칸(바깥 형식의 남은 칸 포함 — 단계가 그대로 옮긴다)은 거기서 읽힌다. 언리얼 `FCustomVersion` 의 판 분기를 등록된 순수 함수 사슬로 둔 자리다.
+         * @brief 형식 @p format 의 머리(표 · 판)입니다. 읽을 때 표가 다르면 거절합니다.
+         * @details 읽은 판이 옛것이면 형식이 든 단계(`FormatDef`)로 머리 뒤 바이트를 올린 뒤 이어 읽습니다.
+         *          단계가 없거나 실패하거나 새 판(내리기)이면 오류를 남기고 거절합니다(옛 판을 그대로 읽는 폴백은 없다). 올린 바이트는 이 입구가 들고,
+         *          그 뒤의 칸(바깥 형식의 남은 칸 포함 — 단계가 그대로 옮긴다)은 거기서 읽힌다. 언리얼 `FCustomVersion` 의 판 분기를 순수 함수 사슬로 둔 자리다.
          *          표가 다르면 판을 알 수 없다는 경고(`StateIO.HeaderTagMismatch`)를 남기고 거절합니다 — 표가 있어 첫 판(0)과 판 칸이 없는 바이트가 갈린다.
          */
-        void header( uint32 tag, uint32 version );
+        void header( const FormatDef& format );
 
         /** @brief 읽는 중이고 @p bCondition 이 거짓이면 거절합니다. 지금까지 맞으면 true 입니다. 쓰는 중에는 늘 true 입니다. */
         bool check( bool bCondition );
@@ -314,12 +315,12 @@ namespace sw
          * @details 쓸 때는 @p body 를 새 아카이브에 받아 길이를 붙이고, 읽을 때는 구간을 잘라 @p body 에 넘긴다. 본문 안의 거절은 바깥 아카이브에 옮겨진다.
          */
         template <typename TBody>
-        void section( uint32 tag, uint32 version, TBody&& body )
+        void section( const FormatDef& format, TBody&& body )
         {
             if ( isReading() )
             {
                 Archive sectionBody;
-                if ( readExpectedSection( *_pArchive, tag, version, sectionBody ) == false )
+                if ( readExpectedSection( *_pArchive, format, sectionBody ) == false )
                 {
                     fail();
                     return;
@@ -336,7 +337,7 @@ namespace sw
             Archive sectionBody;
             StateIO bodyIO( sectionBody );
             body( bodyIO );
-            writeSection( *_pArchive, tag, version, sectionBody );
+            writeSection( *_pArchive, format, sectionBody );
         }
 
         /** @brief @p object 의 `serializeState` 로 씁니다. `serializeState` 는 쓸 때 값을 바꾸지 않으므로 const 를 벗겨도 안전합니다(언리얼 `Serialize` 도 const 가 아닌 함수 하나다). */
@@ -370,33 +371,30 @@ namespace sw
         }
 
         // 아래는 바이트 약속의 낮은 층이다. `serializeState` 는 위의 칸 함수를 쓰고, 이것은 입구 자신과 일부러 꾸민 바이트를 만드는 테스트, 섹션을 표로 갈라 읽는 쪽이 쓴다.
-        static void writeHeader( Archive& outArchive, uint32 tag, uint32 version );
-        /** @brief 머리를 읽고 @p tag 와 @p version 이 같으면 true 입니다. */
-        [[nodiscard]] static bool readHeader( Archive& archive, uint32 tag, uint32 version );
         /**
          * @brief 구간 하나를 씁니다. 표, 버전, 본문 길이(uint32), 본문 순입니다. 읽는 쪽은 모르는 표를 길이로 건너뜁니다.
          * @details 상태 하나에 키트와 기반 상태 여럿을 실을 때 쓴다(`GameStateComponent`, 키트 여럿을 든 디렉터).
          *          한 구간의 형식이 바뀌어도 다른 구간은 그대로 읽히고, 빠진 구간은 읽는 쪽이 새 판으로 둔다.
          *          @p body 는 쓰기 모드로 다 쓴 아카이브이다.
          */
-        static void writeSection( Archive& outArchive, uint32 tag, uint32 version, const Archive& body );
+        static void writeSection( Archive& outArchive, const FormatDef& format, const Archive& body );
         /**
          * @brief `writeSection` 이 쓴 구간 하나의 머리를 읽고 본문을 자릅니다. 본문은 읽기 전용 보기이며 @p archive 의 바이트를 가리킵니다.
          * @return 머리가 잘렸거나 길이가 남은 바이트를 넘으면 없음이며, @p archive 에 오류를 남긴다. 값으로 돌려줘 실패한 읽기가 부르는 쪽의 칸을 덮지 않는다.
          */
         [[nodiscard]] static optional<Section> readSection( Archive& archive );
         /**
-         * @brief 표가 @p tag 이고 버전이 @p version 인 구간 하나를 읽어 본문을 @p outBody 로 자릅니다. 다른 표이거나 올릴 수 없는 판이면 false 입니다.
+         * @brief 형식 @p format 의 구간 하나를 읽어 본문을 @p outBody 로 자릅니다. 다른 표이거나 올릴 수 없는 판이면 false 입니다.
          * @details 자리가 정해진 구간(디렉터가 든 키트 상태)은 이것으로 읽는다 — 표와 버전을 부르는 쪽이 따로 견주면 하나를 빼먹는다(버전을 안 봐 옛 판을 새 판으로 읽었다).
          *          옛 판 구간은 `upgradeSectionBody` 로 올린 본문(@p outBody 가 소유)을 돌려준다. 표로 갈라 읽는 쪽(`GameStateComponent`)만 `readSection` 을 쓴다.
          */
-        [[nodiscard]] static bool readExpectedSection( Archive& archive, uint32 tag, uint32 version, Archive& outBody );
+        [[nodiscard]] static bool readExpectedSection( Archive& archive, const FormatDef& format, Archive& outBody );
         /**
-         * @brief 표 @p tag 의 판 @p fromVersion 구간 본문 @p inoutBody 를 판 @p toVersion 까지 올립니다(`SW_STATE_FORMAT_UPGRADE` 사슬 — `header` 와 같은 표). 같은 판이면 그대로 true 입니다.
+         * @brief 형식 @p format 의 판 @p fromVersion 구간 본문 @p inoutBody 를 지금 판까지 올립니다(`header` 와 같은 단계). 같은 판이면 그대로 true 입니다.
          * @details 올리면 @p inoutBody 는 올린 바이트를 소유한 읽기 아카이브가 된다. 단계가 빠졌거나 실패하면 오류를 남기고 false 이며 @p inoutBody 는 그대로다.
          *          구간에 실린 상태의 단계는 구간 머리 뒤 바이트(그 상태가 쓴 바이트 전부 — 안쪽 머리가 있으면 그것까지)를 받는다.
          */
-        [[nodiscard]] static bool upgradeSectionBody( uint32 tag, uint32 fromVersion, uint32 toVersion, Archive& inoutBody );
+        [[nodiscard]] static bool upgradeSectionBody( const FormatDef& format, uint32 fromVersion, Archive& inoutBody );
 
         static void               writeName( Archive& outArchive, const hashed_string& name );
         [[nodiscard]] static bool readName( Archive& archive, hashed_string& outName );
@@ -452,8 +450,6 @@ namespace sw
         /** @brief 난수 상태입니다. 0 은 있을 수 없는 상태라 거절합니다. */
         void valueRandom( DeterministicRandom32& inoutRandom );
 
-        /** @brief 바이트 @p inoutBytes 를 표 @p tag 의 판 @p fromVersion 에서 @p toVersion 까지 올립니다(판 올림 사슬). 실패하면 오류를 남기고 false 입니다. */
-        [[nodiscard]] static bool upgradeBytes( uint32 tag, uint32 fromVersion, uint32 toVersion, vector<uint8>& inoutBytes );
         /** @brief 아카이브에서 나머지 바이트를 모두 읽어 @p outBytes 에 담습니다(남은 것이 없으면 빈다). */
         static void readRemainingBytes( Archive& archive, vector<uint8>& outBytes );
 

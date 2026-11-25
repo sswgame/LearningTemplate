@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveGame.h"
@@ -45,7 +46,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 외형 프리셋 세이브 본문(JSON)입니다. 판(`_formatVersion`)이 `UserAppearancePresetStore::kVersion` 이 아니면 읽지 않습니다. */
+    /** @brief 외형 프리셋 세이브 본문(JSON)입니다. 판(`_formatVersion`)이 `UserAppearancePresetStore::kFormat` 의 판이 아니면 읽지 않습니다. */
     REFLECT()
     struct SW_GF_API UserAppearancePresetFile
     {
@@ -70,7 +71,7 @@ namespace sw
     class SW_GF_API UserAppearancePresetStore : public SaveGame
     {
     public:
-        static constexpr int32 kVersion = 0;
+        static constexpr FormatDef kFormat{ "UAPP" };
 
         UserAppearancePresetStore();
 
@@ -90,9 +91,9 @@ namespace sw
         /** @brief 즐겨찾기만 저장한 순서대로 모읍니다. */
         void collectFavorites( vector<const UserAppearancePresetRecord*>& outListPreset ) const;
 
-        [[nodiscard]] const utf8* getFormatKind() const override { return "UserAppearancePresetStore"; }
-        [[nodiscard]] bool        writeBytes( vector<uint8>& outBytes ) const override;
-        [[nodiscard]] bool        readBytes( const uint8* pData, size_t size ) override;
+        [[nodiscard]] const FormatDef& getFormat() const override { return kFormat; }
+        [[nodiscard]] bool             writeBytes( vector<uint8>& outBytes ) const override;
+        [[nodiscard]] bool             readBytes( const uint8* pData, size_t size ) override;
         /** @brief 프리셋 파일 글을 만듭니다. 이름 · 코드에 잘못된 UTF-8 이 있으면 오류입니다(`JSONSerializer::serialize`). */
         [[nodiscard]] expected<string> saveToText() const;
         /** @brief 텍스트에서 읽습니다. JSON 이 아니거나 판이 지금과 다르면 false 이고 목록은 그대로입니다. */

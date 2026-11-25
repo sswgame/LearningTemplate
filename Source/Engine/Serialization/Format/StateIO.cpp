@@ -9,7 +9,7 @@
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
-#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -104,11 +104,11 @@ namespace sw
         (void)_pSourceArchive->setOffset( _pSourceArchive->getSize() - _pUpgradedArchive->getRemainingBytes() );
     }
 
-    void StateIO::header( uint32 tag, uint32 version )
+    void StateIO::header( const FormatDef& format )
     {
         if ( isWriting() )
         {
-            writeHeader( *_pArchive, tag, version );
+            format.write( *_pArchive );
             return;
         }
         uint32 readTag     = 0;
@@ -117,18 +117,18 @@ namespace sw
         *_pArchive >> readVersion;
         if ( check( _pArchive->isOk() ) == false )
             return;
-        if ( readTag != tag )
+        if ( readTag != format._tag )
         {
-            SW_LOG_WARNING_ID( "StateIO.HeaderTagMismatch", "State header tag %# is not the expected %# - the bytes are another format, so its version cannot be known and it is refused (no upgrade)", readTag, tag );
+            SW_LOG_WARNING_ID( "StateIO.HeaderTagMismatch", "State header tag %# is not the expected %# - the bytes are another format, so its version cannot be known and it is refused (no upgrade)", readTag, format._tag );
             fail();
             return;
         }
-        if ( readVersion == version )
+        if ( readVersion == format._version )
             return;
         // 옛 판 — 머리 뒤 바이트를 사슬로 올리고 그 바이트에서 이어 읽는다. 한 입구에서 두 번 올리는 일은 없다(안쪽 형식의 머리는 올린 바이트 안에서 다시 올린다).
         vector<uint8> bytes;
         readRemainingBytes( *_pArchive, bytes );
-        if ( check( upgradeBytes( tag, readVersion, version, bytes ) ) == false )
+        if ( check( format.raise( readVersion, bytes ) ) == false )
             return;
         unique_ptr<Archive> pUpgraded = make_unique<Archive>();
         pUpgraded->writeBytes( bytes.data(), bytes.size() );
@@ -148,23 +148,14 @@ namespace sw
             outBytes.assign( pBytes, pBytes + remaining );
     }
 
-    bool StateIO::upgradeBytes( uint32 tag, uint32 fromVersion, uint32 toVersion, vector<uint8>& inoutBytes )
+    bool StateIO::upgradeSectionBody( const FormatDef& format, uint32 fromVersion, Archive& inoutBody )
     {
-        // 종류 이름은 표의 네 글자다(`FourCCUtil::make` 의 바이트 순서 — 파일 앞에서 글자 순서 그대로).
-        const utf8           kind[4] = { static_cast<utf8>( tag & 0xFFu ), static_cast<utf8>( ( tag >> 8 ) & 0xFFu ), static_cast<utf8>( ( tag >> 16 ) & 0xFFu ), static_cast<utf8>( ( tag >> 24 ) & 0xFFu ) };
-        FormatUpgradePayload payload{};
-        payload._pBytes = &inoutBytes;
-        return FormatUpgradeStep::upgrade( FormatUpgradeDomain::StateBytes, string_view{ kind, 4 }, fromVersion, toVersion, payload );
-    }
-
-    bool StateIO::upgradeSectionBody( uint32 tag, uint32 fromVersion, uint32 toVersion, Archive& inoutBody )
-    {
-        if ( fromVersion == toVersion )
+        if ( fromVersion == format._version )
             return true;
         vector<uint8> bytes;
         Archive       body = inoutBody; // 실패하면 받은 본문을 그대로 둔다
         readRemainingBytes( body, bytes );
-        if ( upgradeBytes( tag, fromVersion, toVersion, bytes ) == false )
+        if ( format.raise( fromVersion, bytes ) == false )
             return false;
         Archive upgraded;
         upgraded.writeBytes( bytes.data(), bytes.size() );
@@ -194,24 +185,9 @@ namespace sw
         *_pArchive << inoutCount;
     }
 
-    void StateIO::writeHeader( Archive& outArchive, uint32 tag, uint32 version )
+    void StateIO::writeSection( Archive& outArchive, const FormatDef& format, const Archive& body )
     {
-        outArchive << tag;
-        outArchive << version;
-    }
-
-    bool StateIO::readHeader( Archive& archive, uint32 tag, uint32 version )
-    {
-        uint32 readTag     = 0;
-        uint32 readVersion = 0;
-        archive >> readTag;
-        archive >> readVersion;
-        return archive.isOk() && readTag == tag && readVersion == version;
-    }
-
-    void StateIO::writeSection( Archive& outArchive, uint32 tag, uint32 version, const Archive& body )
-    {
-        writeHeader( outArchive, tag, version );
+        format.write( outArchive );
         outArchive.writeSection( body.getData(), static_cast<uint32>( body.getSize() ) );
     }
 
@@ -233,13 +209,13 @@ namespace sw
         return section;
     }
 
-    bool StateIO::readExpectedSection( Archive& archive, uint32 tag, uint32 version, Archive& outBody )
+    bool StateIO::readExpectedSection( Archive& archive, const FormatDef& format, Archive& outBody )
     {
         optional<Section> section = readSection( archive );
-        if ( section.has_value() == false || section->_tag != tag )
+        if ( section.has_value() == false || section->_tag != format._tag )
             return false;
         outBody = std::move( section->_body );
-        return upgradeSectionBody( tag, section->_version, version, outBody );
+        return upgradeSectionBody( format, section->_version, outBody );
     }
 
     void StateIO::writeName( Archive& outArchive, const hashed_string& name )

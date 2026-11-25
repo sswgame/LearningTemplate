@@ -7,7 +7,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -101,9 +100,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "GHEN" );
-        static constexpr uint32 kStateVersion = 0;
 
         GhostEncounter();
 

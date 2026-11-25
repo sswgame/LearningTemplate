@@ -104,7 +104,7 @@ namespace sw
         if ( bytes.size() < sizeof( XMLBinaryHeader ) )
             return false;
         std::memcpy( &magic, bytes.data(), sizeof( magic ) );
-        return magic == kMagic;
+        return magic == kFormat._tag;
     }
 
     bool XMLBinary::encode( const XMLNode& root, vector<uint8>& outBytes )
@@ -120,7 +120,7 @@ namespace sw
             builder._listNode[index]._headerDistance = static_cast<uint32>( sizeof( XMLBinaryHeader ) + index * sizeof( XMLBinaryNode ) );
         for ( size_t index = 0; index < builder._listAttribute.size(); ++index )
             builder._listAttribute[index]._headerDistance = static_cast<uint32>( sizeof( XMLBinaryHeader ) + nodeBytes + index * sizeof( XMLBinaryAttribute ) );
-        const XMLBinaryHeader header{ kMagic, kVersion, static_cast<uint32>( builder._listNode.size() ), static_cast<uint32>( builder._listAttribute.size() ),
+        const XMLBinaryHeader header{ kFormat._tag, kFormat._version, static_cast<uint32>( builder._listNode.size() ), static_cast<uint32>( builder._listAttribute.size() ),
                                       static_cast<uint32>( builder._strings.size() ) };
         outBytes.resize( sizeof( header ) + nodeBytes + attributeBytes + builder._strings.size() );
         uint8* pOut = outBytes.data();
@@ -142,7 +142,7 @@ namespace sw
         const XMLBinaryHeader& header        = *reinterpret_cast<const XMLBinaryHeader*>( bytes.data() );
         const uint64           expectedBytes = sizeof( XMLBinaryHeader ) + uint64{ header._nodeCount } * sizeof( XMLBinaryNode ) + uint64{ header._attributeCount } * sizeof( XMLBinaryAttribute ) +
                                      header._stringBytes;
-        if ( header._version != kVersion || header._nodeCount == 0 || header._stringBytes == 0 || expectedBytes != bytes.size() || bytes.back() != 0 )
+        if ( header._version != kFormat._version || header._nodeCount == 0 || header._stringBytes == 0 || expectedBytes != bytes.size() || bytes.back() != 0 )
             return false;
         const XMLBinaryNode*      pNodes      = XMLBinaryInternal::getNodes( header );
         const XMLBinaryAttribute* pAttributes = XMLBinaryInternal::getAttributes( header );

@@ -550,7 +550,7 @@ namespace sw
 
     void CharacterAppearanceComponent::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         const AppearanceDatabase* pDatabase = findDatabase();
         // 게임 선택만 싣는다 — 미리보기(편집기 데이터)는 세이브의 뜻이 없다
         uint8  bSelection = _bSelectionSet == SW_TRUE && _pPreviewDatabase == nullptr && pDatabase != nullptr ? SW_TRUE : SW_FALSE;

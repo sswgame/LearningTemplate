@@ -2,7 +2,6 @@
 
 #include "Games/Playground/FeatureDemo/CraftingDemoComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
@@ -11,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
@@ -24,8 +24,7 @@ namespace sw
     {
         struct CraftingDemoComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "FDCR" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "FDCR" };
 
             static bool runEnqueue( const vector<string>& listArgument, string& outReply )
             {
@@ -161,7 +160,7 @@ namespace sw
 
     void CraftingDemoComponent::serializeGameState( StateIO& io )
     {
-        io.header( CraftingDemoComponentInternal::kStateTag, CraftingDemoComponentInternal::kStateVersion );
+        io.header( CraftingDemoComponentInternal::kStateFormat );
         if ( io.isWriting() )
         {
             io.value( _crafter );

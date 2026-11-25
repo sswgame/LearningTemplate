@@ -467,7 +467,7 @@ namespace sw
 
     void HousingPlotComponent::serializeGameState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         if ( io.isWriting() )
         {
             // 세션 주체(계정 없는 연결)는 그 세션에만 뜻이 있다 — 싣지 않는다(불러온 판에서 아무도 열지 못하는 부지가 된다).

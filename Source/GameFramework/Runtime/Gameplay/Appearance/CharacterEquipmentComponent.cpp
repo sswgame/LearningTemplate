@@ -231,7 +231,7 @@ namespace sw
 
     void CharacterEquipmentComponent::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         // 낀 칸마다 칸 이름 + 인스턴스(`Inventory::serializeSlot` — 가방 · 판 상태의 인벤토리와 같은 바이트)
         constexpr uint32 kWornMinBytes = 4 + Inventory::kSlotStateMinBytes;
         if ( io.isWriting() )

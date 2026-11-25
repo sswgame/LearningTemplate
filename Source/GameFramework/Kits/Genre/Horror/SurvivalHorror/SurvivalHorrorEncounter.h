@@ -7,7 +7,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -82,9 +81,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr int32  kMonsterActorID = 1000000; ///< 괴물의 차례 번호이다(조사자 번호와 겹치지 않게 큰 값을 쓴다)
-        static constexpr uint32 kStateTag       = FourCCUtil::make( "HENC" );
-        static constexpr uint32 kStateVersion   = 0;
+        static constexpr int32 kMonsterActorID = 1000000; ///< 괴물의 차례 번호이다(조사자 번호와 겹치지 않게 큰 값을 쓴다)
 
         SurvivalHorrorEncounter();
 

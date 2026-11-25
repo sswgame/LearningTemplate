@@ -182,7 +182,7 @@ namespace
                 outArchive << batch._daysLeft;
             }
             // 조리(`Crafter`): 머리표, 배운 레시피 수, 작업 수
-            sw::StateIO::writeHeader( outArchive, sw::Crafter::kStateTag, sw::Crafter::kStateVersion );
+            sw::Crafter::kStateFormat.write( outArchive );
             outArchive << static_cast<uint32>( 0 );
             outArchive << static_cast<uint32>( 0 );
             market.writeState( outArchive );
@@ -541,7 +541,7 @@ SW_TEST_CASE( RestaurantReadStateTestShop, ShopStateRefusesNegativePrices )
     const auto readFixture = []( float32 sellFactor, float32 buyModifier, float32 sellModifier, int32 daysSinceRestock )
     {
         sw::Archive written;
-        sw::StateIO::writeHeader( written, sw::ShopManager::kStateTag, sw::ShopManager::kStateVersion );
+        sw::ShopManager::kStateFormat.write( written );
         written << static_cast<uint32>( 1 );
         sw::StateIO::writeName( written, "market" );
         written << static_cast<uint32>( 0 ); // 재고

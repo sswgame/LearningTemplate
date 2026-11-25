@@ -2,14 +2,13 @@
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/Component/PartyGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
-
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineBot.h"
@@ -21,8 +20,7 @@ namespace sw
     {
         struct PartyGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "PTGM" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "PTGM" };
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
@@ -349,7 +347,7 @@ namespace sw
 
     void PartyGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( PartyGameModeComponentInternal::kStateTag, PartyGameModeComponentInternal::kStateVersion );
+        io.header( PartyGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 시리즈는 같은 카탈로그 · 같은 사람 수로, 무대는 읽은 시리즈의 라운드로 연 뒤에 읽는다(키트 계약).

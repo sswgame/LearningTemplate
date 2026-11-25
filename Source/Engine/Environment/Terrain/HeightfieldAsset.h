@@ -6,7 +6,7 @@
  *          | 바이트 | 의미 |
  *          |---|---|
  *          | 4 | 매직 `SWHF` |
- *          | 4 | 버전 번호(`kVersion`) |
+ *          | 4 | 판(`kFormat`) |
  *          | 4 | 해상도 N(한 변의 샘플 수, 2 이상) |
  *          | 4 | 플래그(비트 0 = 구멍 마스크가 있다) |
  *          | 2 × N × N | 높이(0..65535, 행 우선이며 z 가 바깥, x 가 안쪽) |
@@ -16,12 +16,12 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -31,7 +31,7 @@ namespace sw
      */
     struct SW_API HeightfieldAsset
     {
-        static constexpr uint32      kMagic     = FourCCUtil::make( "SWHF" );
+        static constexpr FormatDef   kFormat{ "SWHF" };
         static constexpr string_view kExtension = ".heightfield";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
@@ -39,7 +39,7 @@ namespace sw
         };
         /** @brief 이 에셋 종류입니다(등록은 `HeightfieldAsset.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "HeightfieldAsset", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
-        static constexpr uint32       kVersion       = 0u;
+        static constexpr uint32       kVersion       = kFormat._version; ///< 임포트 스탬프가 섞는다
         static constexpr uint32       kFlagHoleMask  = 1u;
         static constexpr uint32       kMaxResolution = 8193u;
 

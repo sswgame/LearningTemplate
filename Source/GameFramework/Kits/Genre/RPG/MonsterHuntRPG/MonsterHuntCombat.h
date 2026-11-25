@@ -4,7 +4,6 @@
  *        기반 `ElementChart` 상태이상), 아드레날린 포인트(적중으로 쌓이고 피격으로 줄어듦)를 관리합니다.
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -67,9 +66,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "WCMB" );
-        static constexpr uint32 kStateVersion = 0;
 
         MonsterHuntCombat();
 

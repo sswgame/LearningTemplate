@@ -26,6 +26,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 namespace sw
@@ -43,9 +44,8 @@ namespace sw
             /** @brief 청크 메시 정점 만들기를 워커로 나누는 최소 청크 수입니다. 청크 하나가 디스패치 비용(수십 us)보다 훨씬 크다. */
             static constexpr uint32 kParallelChunkMeshCount = 2;
             /** @brief `findEditedArea` 가 바뀐 청크 둘레로 더 넓히는 칸 수입니다. 높이 질의는 셀의 두 샘플을, 노멀은 그 이웃 샘플을 읽는다. */
-            static constexpr uint32 kEditedAreaMarginCells = 2;
-            /** @brief `writeState` 형식 버전입니다. 형식을 바꾸면 올린다. */
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr uint32    kEditedAreaMarginCells = 2;
+            static constexpr FormatDef kStateFormat{ "TERS" };
 
             static const hashed_string& getLayerColorName( uint32 layerIndex )
             {
@@ -615,14 +615,12 @@ namespace sw
     void TerrainComponent::serializeState( StateIO& io )
     {
         // 쓸 값으로 채운 지역 변수를 놓는다 — 읽을 때는 읽은 값으로 덮인다.
-        uint32 version  = TerrainComponentInternal::kStateVersion;
-        bool   bHeights = _bHeightsWritten && _heightfield.isValid();
-        io.value( version );
+        bool bHeights = _bHeightsWritten && _heightfield.isValid();
+        io.header( TerrainComponentInternal::kStateFormat );
         io.value( bHeights );
-        if ( io.isReading() && ( io.isOk() == false || version != TerrainComponentInternal::kStateVersion ) )
+        if ( io.isOk() == false )
         {
-            SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedEditState", "Terrain '%#': unsaved edit state (version %#) did not read - keeping the asset values", _heightfieldPath.c_str(), version );
-            io.fail();
+            SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedEditState", "Terrain '%#': unsaved edit state did not read - keeping the asset values", _heightfieldPath.c_str() );
             return;
         }
         if ( bHeights && serializeHeightEdits( io ) == false )

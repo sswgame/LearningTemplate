@@ -21,6 +21,7 @@
 #include "Engine/Content/Pack/PackCompressionUtil.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include <algorithm>
 
@@ -149,23 +150,11 @@ namespace sw
             return false;
         }
 
-        if ( _header._magic != kPackMagic )
+        if ( const expected<void> head = kPackFormat.check( _header._magic, _header._formatVersion ); head.has_value() == false )
         {
-            const auto badMagic = _header._magic; // 잠금을 놓기 전에 복사한다 — 놓은 뒤 헤더를 읽지 않는다
             closeLocked();
             lock.unlock();
-            SW_LOG_ERROR_ID( "PackReader.InvalidPackMagicX", "Invalid pack magic (0x%# vs expected 0x%#): %#", Fmt( badMagic, Format( 8, Format::Padding::Zero ).hex() ),
-                             Fmt( kPackMagic, Format( 8, Format::Padding::Zero ).hex() ), packFilePath );
-            return false;
-        }
-
-        if ( _header._formatVersion != kPackFormatVersion )
-        {
-            const auto badVersion = _header._formatVersion;
-            closeLocked();
-            lock.unlock();
-            SW_LOG_ERROR_ID( "PackReader.UnsupportedPackFormatVersion", "Unsupported pack format version %#: %#", badVersion, packFilePath );
-            return false;
+            return FormatDef::report( head, packFilePath );
         }
 
         // 암호화한 팩은 받지 않는다. 풀 방법이 없으므로 플래그 · 방식을 보고 거절한다(평문으로 풀지 않는다).

@@ -2,12 +2,11 @@
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/Component/CardBattleGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
-
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -16,8 +15,7 @@ namespace sw
     {
         struct CardBattleGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "CBGM" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "CBGM" };
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
@@ -221,7 +219,7 @@ namespace sw
 
     void CardBattleGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( CardBattleGameModeComponentInternal::kStateTag, CardBattleGameModeComponentInternal::kStateVersion );
+        io.header( CardBattleGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 전투는 같은 카탈로그 · 같은 덱으로 연 뒤에 읽는다(키트 계약).

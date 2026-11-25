@@ -259,7 +259,7 @@ namespace sw
             visit( _weather, "weather" );
             visit( _land, "land" );
         };
-        const bool bRead = _restore.serializeSections( io, kStateTag, kStateVersion, GameStateComponentInternal::kSectionCount, forEachSection, "the session state" );
+        const bool bRead = _restore.serializeSections( io, kStateFormat, GameStateComponentInternal::kSectionCount, forEachSection, "the session state" );
         if ( io.isReading() && bRead )
             _listClockEvent.clear();
     }

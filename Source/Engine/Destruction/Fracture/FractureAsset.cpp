@@ -17,8 +17,6 @@ namespace sw
     {
         struct FractureAssetInternal
         {
-            static constexpr uint8 kArrMagic[4] = { 'S', 'W', 'F', 'R' };
-
             static void writeFloat3( ByteWriter& writer, const float3& value )
             {
                 writer.writeFloat32( value._x );
@@ -184,11 +182,7 @@ namespace sw
         outBytes.clear();
         outBytes.reserve( 64 + _listVertex.size() * FractureAssetInternal::kStoredVertexBytes + _graph._listNode.size() * 36 );
         ByteWriter writer{ outBytes };
-        for ( const uint8 magic : FractureAssetInternal::kArrMagic )
-        {
-            outBytes.push_back( magic );
-        }
-        writer.writeUint32( kVersion );
+        kFormat.write( outBytes );
         writer.writeUint32( _graph._leafCount );
         writer.writeUint32( static_cast<uint32>( _graph._listNode.size() ) );
         writer.writeUint32( static_cast<uint32>( _graph._listChildNode.size() ) );
@@ -260,20 +254,9 @@ namespace sw
     bool FractureAsset::readFromBytes( const uint8* pData, size_t size )
     {
         clear();
-        const bool bMissingFractureMagic = pData == nullptr || size < 8 || Memory::compare( pData, FractureAssetInternal::kArrMagic, 4 ) != 0;
-        if ( bMissingFractureMagic )
-        {
-            SW_LOG_ERROR_ID( "FractureAsset.NotFractureAssetBad", "Not a fracture asset (bad magic)" );
+        ByteReader reader{ pData, pData != nullptr ? size : 0 };
+        if ( kFormat.read( reader, "fracture asset" ) == false )
             return false;
-        }
-        ByteReader reader{ pData, size };
-        (void)reader.skipBytes( sizeof( FractureAssetInternal::kArrMagic ) ); // 위에서 길이와 매직을 봤다
-        const uint32 version = reader.readUint32();
-        if ( version != kVersion )
-        {
-            SW_LOG_ERROR_ID( "FractureAsset.FractureAssetVersionNot", "Fracture asset version %# is not %# - re-import the model", version, kVersion );
-            return false;
-        }
         const uint32 leafCount   = reader.readUint32();
         const uint32 nodeCount   = reader.readUint32();
         const uint32 childCount  = reader.readUint32();

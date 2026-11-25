@@ -5,11 +5,11 @@
  *          (도시 · RTS 를 섞는 `FrontierSkirmishGameModeComponent` 와 같은 자리).
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
@@ -46,8 +46,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "VLEN" );
-        static constexpr uint32 kStateVersion = 0;
+        static constexpr FormatDef kStateFormat{ "VLEN" };
 
         VelmoraEncounterGameModeComponent();
         virtual ~VelmoraEncounterGameModeComponent() override;

@@ -3,7 +3,6 @@
 #include "Engine/Character/Hit/RagdollComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -20,6 +19,7 @@
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -27,8 +27,7 @@ namespace sw
     {
         struct RagdollComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "RAGD" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "RAGD" };
 
             static void decompose( const float4x4& matrix, float3& outPosition, quaternion& outRotation )
             {
@@ -205,7 +204,7 @@ namespace sw
     {
         if ( io.isWriting() && _state != RagdollState::Ragdoll )
             return; // 서 있는 몸은 실을 것이 없다
-        io.header( RagdollComponentInternal::kStateTag, RagdollComponentInternal::kStateVersion );
+        io.header( RagdollComponentInternal::kStateFormat );
         if ( io.isWriting() )
             return;
         io.end();

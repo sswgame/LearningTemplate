@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
@@ -157,9 +156,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "AROM" );
-        static constexpr uint32 kStateVersion = 0;
 
         /** @brief 비활성(None)과 게이트 닫힘 상태로 시작합니다. */
         ActionRoom();

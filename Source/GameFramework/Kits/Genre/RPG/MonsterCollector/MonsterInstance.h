@@ -6,7 +6,6 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -180,9 +179,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "MCST" );
-        static constexpr uint32 kStateVersion = 0;
-        static constexpr int32  kPartySize    = 6;
+        static constexpr int32 kPartySize = 6;
 
         MonsterStorage();
 

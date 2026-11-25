@@ -2,8 +2,8 @@
  * @file SchemaMigrate.h
  * @brief 바이너리 값 인코딩 버전, orphan(모르는 필드) 기록과 정책, 값 강제 변환 도우미입니다.
  * @details 이 파일은 자기 기술형 스트림 안의 값 강제 변환과 모르는 칸 정책만 맡는다 — 판이 다른 데이터의 이관은 여기가 아니라 판 사슬이다:
- *          타입 판 `REFLECT( Version = N )` + `SW_TYPE_VERSION_PATCH`(상태 바이트 `StateIO::reflected` · 서비스 레코드 `ServiceRecordUtil`), 파일 종류마다 `SW_SAVE_FORMAT_UPGRADE` ·
- *          `SW_ASSET_FORMAT_UPGRADE` · `SW_STATE_FORMAT_UPGRADE`(`FormatUpgrade.h`), 고정 배치형은 `SW_FIXED_LAYOUT_CONVERSION`. `deserializeVersioned` 자체는 판이 다르면 거절한다 —
+ *          타입 판 `REFLECT( Version = N )` + `SW_TYPE_VERSION_PATCH`(상태 바이트 `StateIO::reflected` · 서비스 레코드 `ServiceRecordUtil`), XML 에셋 종류마다
+ *          `SW_ASSET_FORMAT_UPGRADE`(`FormatUpgrade.h`), 바이트 형식은 선언이 단계를 든다(`FormatDef`), 고정 배치형은 `SW_FIXED_LAYOUT_CONVERSION`. `deserializeVersioned` 자체는 판이 다르면 거절한다 —
  *          부르는 쪽이 사슬로 올린 뒤 지금 판으로 읽는다. 파일 이름이 `SchemaMigrate` 로 남은 것은 옛 이름이다.
  */
 #pragma once

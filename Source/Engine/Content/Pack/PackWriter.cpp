@@ -432,8 +432,8 @@ namespace sw
 
         // 색인 구역은 FAT · 블록 표 · 블록 해시 표 · 스트링 풀 · 헤더 순으로 빈틈 없이 잇는다 — `_indexOffset` 부터 파일 끝까지 한 구간이다(색인 서명의 자리).
         PackHeader header{};
-        header._magic              = kPackMagic;
-        header._formatVersion      = kPackFormatVersion;
+        header._magic              = kPackFormat._tag;
+        header._formatVersion      = kPackFormat._version;
         header._dlcAppID           = _desc._dlcAppID;
         header._compressionType    = static_cast<uint8>( _desc._compression );
         header._encryptionType     = static_cast<uint8>( PackEncryptionKind::None );

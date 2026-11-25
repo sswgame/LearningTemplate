@@ -4,13 +4,13 @@
  */
 #pragma once
 #include "Core/Container/string.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -50,8 +50,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "OPLC" );
-        static constexpr uint32 kStateVersion = 0;
+        static constexpr FormatDef kStateFormat{ "OPLC" };
 
         /** @brief 타일 (1,1), 입력 허용으로 시작합니다. */
         OverworldTileMover();

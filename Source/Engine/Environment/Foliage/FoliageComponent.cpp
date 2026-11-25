@@ -774,14 +774,7 @@ namespace sw
 
     void FoliageComponent::serializeState( StateIO& io )
     {
-        uint32 version = kStateVersion;
-        io.value( version );
-        if ( io.isReading() && ( io.isOk() == false || version != kStateVersion ) )
-        {
-            SW_LOG_WARNING_ID( "FoliageComponent.CutStateVersion", "Foliage cut state (version %#) did not read - keeping the current cuts", version );
-            io.fail();
-            return;
-        }
+        io.header( kStateFormat );
         // 사본에 받아 끝까지 맞을 때만 옮긴다.
         vector<CutArea> listArea = _listCutArea;
         io.list( listArea, static_cast<uint32>( sizeof( float32 ) * 5 ), [&io]( CutArea& area )

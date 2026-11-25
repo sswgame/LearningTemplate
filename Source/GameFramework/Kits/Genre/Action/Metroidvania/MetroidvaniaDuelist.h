@@ -6,7 +6,6 @@
  *          호출한 시각이다. 너무 일찍 누르면(창 밖) 패리가 아니라 그냥 맞는다.
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -56,9 +55,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "MDUE" );
-        static constexpr uint32 kStateVersion = 0;
 
         MetroidvaniaDuelist();
 

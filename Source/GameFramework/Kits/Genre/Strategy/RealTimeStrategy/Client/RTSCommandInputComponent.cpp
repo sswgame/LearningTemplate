@@ -146,7 +146,7 @@ namespace sw
 
     void RTSCommandInputComponent::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         uint64       matchID   = _selectionMatchID;
         RTSSelection selection = _selection;
         io.value( matchID );

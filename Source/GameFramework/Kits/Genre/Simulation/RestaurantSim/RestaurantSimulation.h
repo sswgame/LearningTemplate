@@ -6,7 +6,6 @@
 #pragma once
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -276,9 +275,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr float32 kStepMinutes  = 1.0f;
-        static constexpr uint32  kStateTag     = FourCCUtil::make( "RSIM" );
-        static constexpr uint32  kStateVersion = 0;
+        static constexpr float32 kStepMinutes = 1.0f;
 
         RestaurantSimulation();
 

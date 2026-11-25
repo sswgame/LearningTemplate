@@ -107,7 +107,7 @@ SW_TEST_CASE( ServerDirectoryTest, RecordRoundTripsAndRejectsBadProperties )
     status._state                     = sw::ServerState::Maintenance;
     const sw::vector<uint8> listBytes = sw::ServerRecord::encode( status );
     SW_REQUIRE_TRUE( listBytes.empty() == false );
-    SW_EXPECT_EQUAL( sw::ServerRecord::kFormatVersion, listBytes[0] );
+    SW_EXPECT_EQUAL( static_cast<uint8>( sw::ServerRecord::kFormat._version ), listBytes[0] );
 
     sw::ServerStatus read;
     SW_REQUIRE_TRUE( sw::ServerRecord::decode( listBytes, read ) );
@@ -124,7 +124,7 @@ SW_TEST_CASE( ServerDirectoryTest, RecordRoundTripsAndRejectsBadProperties )
     SW_EXPECT_TRUE( read._state == sw::ServerState::Maintenance );
 
     sw::vector<uint8> listOldVersion = listBytes;
-    listOldVersion[0]                = static_cast<uint8>( sw::ServerRecord::kFormatVersion + 1 );
+    listOldVersion[0]                = static_cast<uint8>( sw::ServerRecord::kFormat._version + 1 );
     SW_EXPECT_FALSE( sw::ServerRecord::decode( listOldVersion, read ) );
 
     sw::ServerStatus noPort       = status;

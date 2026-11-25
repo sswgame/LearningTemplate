@@ -7,6 +7,7 @@
 
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/Recast/RecastAreaUtil.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include <cstring>
 #include <recastnavigation/DetourAlloc.h>
@@ -23,8 +24,7 @@ namespace sw
         struct RecastTileCacheInternal
         {
             /** @brief 층 묶음 바이트의 머리(`SWTC`)와 형식 버전입니다. */
-            static constexpr uint32 kPackMagic   = 0x43545753u;
-            static constexpr uint32 kPackVersion = 0;
+            static constexpr FormatDef kPackFormat{ "SWTC" };
             /** @brief 층에서 짓는 동안 쓰는 임시 메모리 상한(바이트)입니다. 타일 크기 256 의 층도 담는다. */
             static constexpr size_t kBuildScratchBytes = 4u * constant::memory::kBytesPerMegabyte;
 
@@ -67,7 +67,7 @@ namespace sw
                 const bool bHeaderRead = readValue( bytes, offset, magic ) && readValue( bytes, offset, version ) && readValue( bytes, offset, layerCount );
                 if ( bHeaderRead == false )
                     return false;
-                const bool bWrongHeader = magic != kPackMagic || version != kPackVersion || layerCount > RecastTileCache::kMaxLayerCount;
+                const bool bWrongHeader = kPackFormat.check( magic, version ).has_value() == false || layerCount > RecastTileCache::kMaxLayerCount;
                 if ( bWrongHeader )
                     return false;
                 for ( uint32 layerIndex = 0; layerIndex < layerCount; ++layerIndex )
@@ -294,8 +294,7 @@ namespace sw
         }
 
         RecastTileCacheStoreCompressor compressor;
-        Internal::writeValue( outBytes, Internal::kPackMagic );
-        Internal::writeValue( outBytes, Internal::kPackVersion );
+        Internal::kPackFormat.write( outBytes );
         Internal::writeValue( outBytes, static_cast<uint32>( layerCount ) );
         bool bBuilt = true;
         for ( int32 layerIndex = 0; layerIndex < layerCount && bBuilt; ++layerIndex )

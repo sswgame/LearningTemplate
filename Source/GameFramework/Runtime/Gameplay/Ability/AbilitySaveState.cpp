@@ -8,7 +8,7 @@ namespace sw
 {
     void AbilitySaveState::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         io.reflected( *this ); // 실수의 유한은 아카이브가, 개수 하한은 칸의 `PROPERTY( Min )` 이 본다
         if ( io.isReading() == false || io.isOk() == false )
             return;

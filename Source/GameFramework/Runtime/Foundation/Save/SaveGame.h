@@ -10,6 +10,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -82,13 +83,8 @@ namespace sw
         SaveGame( SaveGame&& ) noexcept            = default;
         SaveGame& operator=( SaveGame&& ) noexcept = default;
 
-        /**
-         * @brief 이 타입의 바이트 형식 버전입니다. 봉투에 적힌다. 읽을 때 옛 판이면 판 올림 사슬(`SW_SAVE_FORMAT_UPGRADE( id, getFormatKind(), n, n+1, fn )`)로 올리고,
-         *        새 판 · 빠진 단계는 거절합니다. 옛 버전 리더는 두지 않습니다(바이트를 올린 뒤 현재 리더가 읽는다).
-         */
-        virtual uint32 getFormatVersion() const { return 0; }
-        /** @brief 판 올림 사슬의 종류 이름입니다(`FormatUpgradeDomain::SaveBytes`). 타입마다 다르고 바꾸지 않는다 — 바꾸면 옛 세이브의 단계를 찾지 못한다. */
-        [[nodiscard]] virtual const utf8* getFormatKind() const = 0;
+        /** @brief 이 타입의 바이트 형식(이름 · 판 · 올리기 단계)입니다. 판은 봉투에 적힌다 — 읽을 때 옛 판이면 형식의 단계로 올리고, 새 판 · 단계 없는 판은 거절합니다. 표는 바꾸지 않는다. */
+        [[nodiscard]] virtual const FormatDef& getFormat() const = 0;
         /** @brief 세이브 바이트를 씁니다. 파생 타입이 자기 형식(리플렉션 세이브는 자기 타입)으로 씁니다. */
         [[nodiscard]] virtual bool writeBytes( vector<uint8>& outBytes ) const = 0;
         /** @brief 세이브 바이트를 읽습니다. `writeBytes` 와 같은 형식입니다. */
@@ -96,7 +92,7 @@ namespace sw
 
         /**
          * @brief 슬롯에 쓰기를 맡기고 요청 id 를 반환합니다. 완료를 짝지을 때 이 id 를 쓰며, 바이트를 만들지 못하면 0 입니다.
-         * @param options 압축과 봉인 옵션이다. 형식 버전은 `getFormatVersion()` 으로 채운다.
+         * @param options 압축과 봉인 옵션이다. 형식 버전은 `getFormat()` 의 판으로 채운다.
          */
         uint64 saveToSlot( ILocalStore& store, string_view slot, const LocalStoreWriteOptions& options ) const;
         /** @brief 읽기 완료에서 불러옵니다. 읽기가 실패했거나 형식 버전이 다르거나 바이트가 깨졌으면 false 이며, 그때 지금 값은 그대로일 수 있습니다. */

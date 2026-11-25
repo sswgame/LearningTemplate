@@ -6,11 +6,11 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -64,8 +64,7 @@ namespace sw
     class SW_KIT_API VoxelWorld
     {
     public:
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "VXWL" );
-        static constexpr uint32 kStateVersion = 0;
+        static constexpr FormatDef kStateFormat{ "VXWL" };
 
         VoxelWorld();
 

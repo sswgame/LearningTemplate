@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -13,7 +14,7 @@ namespace sw
         struct CommandStackInternal
         {
             /** @brief 기록 형식의 판입니다. 명령 · 단계의 모양이 바뀌면 올린다(옛 판의 기록은 버린다). */
-            static constexpr uint32 kSaveVersion = 0;
+            static constexpr FormatDef kSaveFormat{ "EDUN" };
 
             static void writeStep( Archive& archive, const editor::UndoStep& step )
             {
@@ -435,7 +436,7 @@ namespace sw
 
     void CommandStack::save( Archive& outArchive ) const
     {
-        outArchive << CommandStackInternal::kSaveVersion;
+        CommandStackInternal::kSaveFormat.write( outArchive );
         CommandStackInternal::writeList( outArchive, _listCommand, _index, &CommandStack::isPersistable );
         outArchive << _bHistorySuspended;
         CommandStackInternal::writeList( outArchive, _listSuspendedCommand, _suspendedIndex, &CommandStack::isPersistable );
@@ -447,10 +448,8 @@ namespace sw
         _listSuspendedCommand.clear();
         _suspendedIndex    = 0;
         _bHistorySuspended = SW_FALSE;
-        uint32 version{ 0 };
-        archive >> version;
         bool       bSuspended{ false };
-        const bool bLoaded = archive.isOk() && version == CommandStackInternal::kSaveVersion && CommandStackInternal::readList( archive, _listCommand, _index ) &&
+        const bool bLoaded = CommandStackInternal::kSaveFormat.check( archive ).has_value() && CommandStackInternal::readList( archive, _listCommand, _index ) &&
                              ( archive >> bSuspended ).isOk() && CommandStackInternal::readList( archive, _listSuspendedCommand, _suspendedIndex );
         if ( bLoaded == false )
         {

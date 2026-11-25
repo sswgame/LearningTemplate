@@ -4,12 +4,12 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -71,8 +71,7 @@ namespace sw
     class SW_GF_API Inventory
     {
     public:
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "INVT" );
-        static constexpr uint32 kStateVersion = 0;
+        static constexpr FormatDef kStateFormat{ "INVT" };
 
         Inventory();
 
@@ -147,7 +146,7 @@ namespace sw
         /**
          * @brief 슬롯 하나의 상태(이름 · 개수 · 내구도 · 피해 · 꾸미기 스키마 판 · 꾸미기 · 뗀 부품)입니다. 인벤토리 · 장비 · 제작 대기열의 꺼낸 재료 · 가게의 되사기 · 바닥의 아이템이 같은 형식을 쓴다.
          *        읽다 깨지면 io 가 거절 상태다. 꾸미기 값은 쓴 판 그대로 싣고, 스키마를 아는 쪽(외형 해석 · 염색)이 지금 판으로 올린다(`CustomizationSchemaDef::migrate`).
-         * @details 이 모양을 바꾸면 이것을 품은 형식(INVT · CEQP · CRFT · SHOP · BRMT · PICK)의 판을 모두 올리고 옛 슬롯을 옮기는 단계(`SW_STATE_FORMAT_UPGRADE`)를 둔다.
+         * @details 이 모양을 바꾸면 이것을 품은 형식(INVT · CEQP · CRFT · SHOP · BRMT · PICK)의 판을 모두 올리고 옛 슬롯을 옮기는 단계(`FormatDef`)를 둔다.
          */
         static void serializeSlot( StateIO& io, InventorySlot& inoutSlot );
         /** @brief `serializeSlot` 하나의 최소 바이트입니다 — 이름(4) + 개수 · 내구도 · 피해(12) + 꾸미기 판(4) + 꾸미기 수 · 부품 수(8). 담은 개수를 읽을 때 남은 바이트로 거르는 데 쓴다. */

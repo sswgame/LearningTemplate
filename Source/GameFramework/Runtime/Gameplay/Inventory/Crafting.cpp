@@ -326,7 +326,7 @@ namespace sw
 
     void Crafter::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         vector<hashed_string> listLearned( _uniqueLearnedRecipe.begin(), _uniqueLearnedRecipe.end() );
         VectorUtil::sort( listLearned, []( const hashed_string& left, const hashed_string& right )
         {

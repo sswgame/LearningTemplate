@@ -6,10 +6,10 @@
  *          땅을 나누는 다른 키트의 디렉터(RTS 등)는 같은 오브젝트에서 이 디렉터 뒤에 붙는다 — 판을 여는 설정은 이 디렉터의 씬 데이터 하나다.
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -33,8 +33,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "FTCT" );
-        static constexpr uint32 kStateVersion = 0;
+        static constexpr FormatDef kStateFormat{ "FTCT" };
 
         CityGameModeComponent();
         virtual ~CityGameModeComponent() override;

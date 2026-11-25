@@ -6,6 +6,7 @@
 #include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Content/ContentHash.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -13,10 +14,8 @@ namespace sw
     {
         struct AssetScanCacheInternal
         {
-            /** @brief 파일의 머리 표지입니다. */
-            static constexpr uint32 kMagic = 0x53415753u; // "SWAS"
-            /** @brief 파일 틀의 판입니다(줄의 배치). 뽑은 바이트의 판은 따로 든다. */
-            static constexpr uint32 kFormatVersion = 0;
+            /** @brief 파일 틀입니다(줄의 배치). 뽑은 바이트의 판은 따로 든다. */
+            static constexpr FormatDef kFormat{ "SWAS" };
             /** @brief 머리(표지 · 틀의 판 · 뽑은 바이트의 판 · 몸통 해시)의 바이트 수입니다. */
             static constexpr size_t kHeaderBytes = 20;
             /** @brief 줄 하나가 차지하는 최소 바이트입니다(빈 열쇠 길이 4 + 도장 16 + 빈 바이트 길이 4). */
@@ -53,9 +52,9 @@ namespace sw
         const uint32 formatVersion  = reader.readUint32();
         const uint32 payloadVersion = reader.readUint32();
         const uint64 bodyHash       = reader.readUint64();
-        if ( reader.hasOverflowed() || magic != Internal::kMagic )
+        if ( reader.hasOverflowed() || magic != Internal::kFormat._tag )
             return unexpected( Error{ ErrorKind::InvalidArgument, "asset scan cache is not a cache file", cachePath.str() } );
-        if ( formatVersion != Internal::kFormatVersion || payloadVersion != _payloadVersion )
+        if ( formatVersion != Internal::kFormat._version || payloadVersion != _payloadVersion )
             return {}; // 다른 판 — 빈 캐시로 시작하고 다음 save 가 이 판으로 덮는다
         // 정체성이 틀린 줄로 풀리면 참조가 조용히 다른 에셋을 가리킨다 — 깨진 바이트는 통째로 버린다.
         if ( ContentHash::computeBytes( bytes.data() + Internal::kHeaderBytes, bytes.size() - Internal::kHeaderBytes ) != bodyHash )
@@ -90,8 +89,7 @@ namespace sw
             return {}; // 실은 그대로다
         vector<uint8> bytes;
         ByteWriter    writer{ bytes };
-        writer.writeUint32( Internal::kMagic );
-        writer.writeUint32( Internal::kFormatVersion );
+        Internal::kFormat.write( bytes );
         writer.writeUint32( _payloadVersion );
         const size_t hashOffset = writer.getByteCount();
         writer.writeUint64( 0 );

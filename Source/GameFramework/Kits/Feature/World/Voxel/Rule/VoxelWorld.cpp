@@ -259,7 +259,7 @@ namespace sw
 
     void VoxelWorld::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         // 청크 수(월드 크기)는 설정이 정한다 — 저장된 수로 읽어 같은 청크 좌표에 옮긴다. 줄어 밖에 블록이 남은 청크가 있으면 거절한다(감사 A-6).
         int32 savedCountX = _chunkCountX;
         int32 savedCountZ = _chunkCountZ;

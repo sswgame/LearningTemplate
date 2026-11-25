@@ -2,13 +2,13 @@
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Component/RhythmGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -17,8 +17,7 @@ namespace sw
     {
         struct RhythmGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "RHGM" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "RHGM" };
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
@@ -216,7 +215,7 @@ namespace sw
 
     void RhythmGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( RhythmGameModeComponentInternal::kStateTag, RhythmGameModeComponentInternal::kStateVersion );
+        io.header( RhythmGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 판은 같은 채보 · 같은 판정 창으로 연 뒤에 읽는다(키트 계약).

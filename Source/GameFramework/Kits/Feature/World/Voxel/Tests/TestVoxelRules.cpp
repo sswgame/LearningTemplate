@@ -99,7 +99,7 @@ namespace
             {
                 listPaletteID.push_back( block._id );
             }
-            io.header( VoxelWorld::kStateTag, VoxelWorld::kStateVersion );
+            io.header( VoxelWorld::kStateFormat );
             io.value( chunkCountX );
             io.value( chunkCountZ );
             io.list( listPaletteID );
@@ -700,7 +700,7 @@ SW_TEST_CASE( VoxelHotbarTest, StateRoundTripsAndRefusesBadCounts )
     Archive       prefix;
     StateIO       prefixIO( prefix );
     hashed_string glassID = hashed_string( "glass" );
-    prefixIO.header( VoxelHotbar::kStateTag, VoxelHotbar::kStateVersion );
+    prefixIO.header( VoxelHotbar::kStateFormat );
     prefixIO.value( glassID );
     vector<uint8> listBadCount                           = listSaved;
     listBadCount[prefix.getSize() + sizeof( int32 ) - 1] = 0x7f;

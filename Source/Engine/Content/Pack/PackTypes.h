@@ -4,7 +4,7 @@
  * @details 레이아웃은 데이터가 아니라 형식이라 C++ 구조체로 손으로 씁니다. 팩을 쓰는 쪽(`PackStreamWriter`)과 읽는 쪽(`PackReader`)이
  *          같은 구조체를 그대로 쓰고 읽으므로 두 쪽의 오프셋이 어긋날 수 없습니다 — 예전에는 계약 JSON 에서 C++ 헤더와 파이썬 `struct.pack` 이
  *          따로 나와 "마운트는 되는데 파일이 0개" 인 팩이 생길 수 있었습니다. 필드를 고치면 아래 `static_assert` 가 크기 · 오프셋을 다시 못 박게
- *          함께 고치고 `kPackFormatVersion` 을 올립니다(옛 팩은 리더가 거절하고 쿠커가 다시 씁니다).
+ *          함께 고치고 `kPackFormat` 의 판을 올립니다(옛 팩은 리더가 거절하고 쿠커가 다시 씁니다).
  *
  *          파일 배치(형식 3, 쓰는 쪽이 정하고 리더는 헤더의 오프셋만 믿는다): 페이로드(오프셋 0 부터, 항목마다 섹터 정렬) · 섹터 정렬 FAT(32B × 항목) ·
  *          블록 표(8B × 블록) · (블록 해시 표, 32B × 블록 — `HasBlockHash` 일 때) · 항목 경로 목록(스트링 풀, NUL 종료 경로를 잇는다) · 헤더(96B, **파일 끝**). FAT 은 경로 해시 오름차순이고 리더는 아니면 거절한다.
@@ -23,6 +23,7 @@
 #include "Core/Math/BitUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include <cstddef>
 
@@ -99,16 +100,13 @@ namespace sw
         AES256GCM = 2, ///< AES-256-GCM(상용 수준 보안)
     };
 
-    /** @brief 'SWPK' 매직 넘버(리틀엔디언)입니다. */
-    inline constexpr uint32 kPackMagic = 0x4B505753;
-
     /**
      * @brief 현재 지원하는 리소스 팩 바이너리 포맷 버전입니다. 레이아웃을 바꾸면 올립니다.
      * @details 스트링 풀의 맨 앞(오프셋 0)이 마운트 도메인(NUL 종료, 언리얼 pak mount point)이다 — `engine` · `game/playground` · `dlc/winter`, 패치 팩은 빈 글(항목이 전체 경로).
      *          헤더는 파일 끝(96B)이고 CRC 는 블록마다다(블록 표). 다른 판은 리더가 거절하고 쿠커가 다시 쓴다
      *          (판은 팩 쿠킹 설정 해시에 들어가 옛 산출물을 재사용하지 않는다).
      */
-    inline constexpr uint32 kPackFormatVersion = 0;
+    inline constexpr FormatDef kPackFormat{ "SWPK" };
 
     /** @brief 블록 크기(압축 전)의 형식 한계입니다. 쓰는 쪽은 이 안의 2 의 거듭제곱만 쓰고(`PackConfig` 의 `_blockSize`) 리더는 밖의 값을 거절합니다. */
     inline constexpr uint32 kPackMinBlockSize = 64 * constant::memory::kBytesPerKilobyte;

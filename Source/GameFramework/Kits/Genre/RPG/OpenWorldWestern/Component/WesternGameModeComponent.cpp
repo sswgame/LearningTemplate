@@ -98,7 +98,7 @@ namespace sw
     void WesternGameModeComponent::serializeGameState( StateIO& io )
     {
         // 플레이어의 삶만 싣는다 — 지갑 · 평판 · 시계 · 날씨는 판 상태가, 말 상태는 말 컴포넌트가, 자리는 씬 오브젝트가 싣는다.
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         if ( io.isOk() == false )
             return;
         if ( io.isWriting() )

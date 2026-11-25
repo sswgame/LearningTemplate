@@ -23,6 +23,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 
@@ -34,7 +35,7 @@ namespace sw::editor
         {
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션의 키와 형식 판입니다. */
             static constexpr string_view kCarryStoreKey = "editor.playSession";
-            static constexpr uint32      kCarryVersion  = 0;
+            static constexpr FormatDef   kCarryFormat{ "EDPS" };
 
             /**
              * @brief 월드의 플레이 상태를 바꿉니다. 활성 씬의 시작과 끝은 `SceneManager` 가 처리하며, 플레이 중에 씬을 바꾸면 새 씬도 시작합니다.
@@ -726,7 +727,8 @@ namespace sw::editor
     unique_ptr<ScenePlaySnapshot> EditorPlaySession::carryOut( PlaySessionData& data, IModuleStateStore& store )
     {
         Archive archive;
-        archive << EditorPlaySessionInternal::kCarryVersion << static_cast<uint8>( data._state ) << static_cast<uint8>( data._queuedState ) << data._pendingStepCount
+        EditorPlaySessionInternal::kCarryFormat.write( archive );
+        archive << static_cast<uint8>( data._state ) << static_cast<uint8>( data._queuedState ) << data._pendingStepCount
                 << data._heldSceneEditCount << data._startPosition << ( data._bStartQueued == SW_TRUE ) << ( data._bSimulate == SW_TRUE ) << ( data._bStartAtPosition == SW_TRUE )
                 << ( data._bStartMovePending == SW_TRUE ) << ( data._bEjected == SW_TRUE );
         store.store( EditorPlaySessionInternal::kCarryStoreKey, vector<uint8>( archive.getData(), archive.getData() + archive.getSize() ) );
@@ -740,21 +742,21 @@ namespace sw::editor
         vector<uint8> bytes;
         if ( store.take( EditorPlaySessionInternal::kCarryStoreKey, bytes ) == false )
             return false;
-        Archive archive( bytes.data(), bytes.size() );
-        uint32  version{ 0 };
-        uint8   state{ 0 };
-        uint8   queuedState{ 0 };
-        uint32  pendingStepCount{ 0 };
-        uint32  heldSceneEditCount{ 0 };
-        float3  startPosition{};
-        bool    bStartQueued{ false };
-        bool    bSimulate{ false };
-        bool    bStartAtPosition{ false };
-        bool    bStartMovePending{ false };
-        bool    bEjected{ false };
-        archive >> version >> state >> queuedState >> pendingStepCount >> heldSceneEditCount >> startPosition >> bStartQueued >> bSimulate >> bStartAtPosition >> bStartMovePending >> bEjected;
+        Archive    archive( bytes.data(), bytes.size() );
+        uint8      state{ 0 };
+        uint8      queuedState{ 0 };
+        uint32     pendingStepCount{ 0 };
+        uint32     heldSceneEditCount{ 0 };
+        float3     startPosition{};
+        bool       bStartQueued{ false };
+        bool       bSimulate{ false };
+        bool       bStartAtPosition{ false };
+        bool       bStartMovePending{ false };
+        bool       bEjected{ false };
+        const bool bHead = EditorPlaySessionInternal::kCarryFormat.check( archive ).has_value();
+        archive >> state >> queuedState >> pendingStepCount >> heldSceneEditCount >> startPosition >> bStartQueued >> bSimulate >> bStartAtPosition >> bStartMovePending >> bEjected;
         constexpr uint8 kMaxState = static_cast<uint8>( PlaySessionState::Paused );
-        if ( archive.isOk() == false || version != EditorPlaySessionInternal::kCarryVersion || state > kMaxState || queuedState > kMaxState )
+        if ( bHead == false || archive.isOk() == false || state > kMaxState || queuedState > kMaxState )
         {
             SW_LOG_WARNING_ID( "EditorPlaySession.CarriedPlaySessionUnreadable", "The play session from the previous editor instance could not be read - starting stopped" );
             return false;

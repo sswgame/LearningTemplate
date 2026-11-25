@@ -4,6 +4,8 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -13,8 +15,8 @@ namespace sw
     {
         struct ServiceMailCampaignInternal
         {
-            static constexpr uint64 kFormat   = 0;
-            static constexpr int32  kPageSize = 64;
+            static constexpr FormatDef kFormat{ "MCMP" };
+            static constexpr int32     kPageSize = 64;
         };
 
         /**
@@ -162,7 +164,7 @@ namespace sw
     vector<uint8> ServiceMailCampaign::encode( const ServiceMailCampaign& campaign )
     {
         BitWriter writer;
-        writer.writeVarUint( ServiceMailCampaignInternal::kFormat );
+        ServiceMailCampaignInternal::kFormat.writeVersion( writer );
         writer.writeVarUint( campaign._campaignID );
         writer.writeVarUint( campaign._actorID );
         writer.writeVarInt( campaign._startMs );
@@ -183,7 +185,7 @@ namespace sw
     bool ServiceMailCampaign::decode( const vector<uint8>& bytes, ServiceMailCampaign& outCampaign )
     {
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( reader.readVarUint() != ServiceMailCampaignInternal::kFormat )
+        if ( ServiceMailCampaignInternal::kFormat.readVersion( reader ) == false )
             return false;
         outCampaign._campaignID   = reader.readVarUint();
         outCampaign._actorID      = reader.readVarUint();

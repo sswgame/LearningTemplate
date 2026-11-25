@@ -6,7 +6,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -223,10 +222,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag       = FourCCUtil::make( "JBTL" );
-        static constexpr uint32 kStateVersion   = 0;
-        static constexpr int32  kEnemyActorBase = 100; ///< TurnOrder 의 적 번호는 이 값에 적 인덱스를 더한 값이다
-        static constexpr int32  kDefendPriority = 1;
+        static constexpr int32 kEnemyActorBase = 100; ///< TurnOrder 의 적 번호는 이 값에 적 인덱스를 더한 값이다
+        static constexpr int32 kDefendPriority = 1;
 
         JRPGBattle();
 

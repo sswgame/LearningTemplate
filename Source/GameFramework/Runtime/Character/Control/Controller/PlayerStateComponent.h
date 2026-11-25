@@ -8,6 +8,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -33,8 +34,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateVersion = 0;
+        static constexpr FormatDef kStateFormat{ "PLST" };
 
         PlayerStateComponent();
         ~PlayerStateComponent() override = default;

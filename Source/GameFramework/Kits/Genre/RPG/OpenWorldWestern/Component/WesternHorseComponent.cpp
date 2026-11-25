@@ -140,7 +140,7 @@ namespace sw
 
     void WesternHorseComponent::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         uint8 bOpened = _bOpened;
         io.value( bOpened );
         if ( bOpened == SW_TRUE )

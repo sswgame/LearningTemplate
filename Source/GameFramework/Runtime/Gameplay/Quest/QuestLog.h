@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -14,6 +13,7 @@
 
 #include "Engine/Behavior/GameplayContext.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -112,9 +112,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr int32  kMaxChainedStages = 32; ///< 한 번에 넘어가는 단계 수의 상한. 서로를 가리키는 단계에서 멈추게 한다
-        static constexpr uint32 kStateTag         = FourCCUtil::make( "QLOG" );
-        static constexpr uint32 kStateVersion     = 0;
+        static constexpr int32     kMaxChainedStages = 32; ///< 한 번에 넘어가는 단계 수의 상한. 서로를 가리키는 단계에서 멈추게 한다
+        static constexpr FormatDef kStateFormat{ "QLOG" };
 
         QuestLog();
 

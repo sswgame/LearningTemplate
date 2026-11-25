@@ -128,12 +128,12 @@ SW_TEST_CASE( GameStateSnapshotTest, RejectsForeignHeaderAndOtherVersion )
 
     vector<uint8> foreign = bytes;
     foreign[0]            = static_cast<uint8>( foreign[0] ^ 0xFFu );
-    SW_EXPECT_LOG( "GameStateSnapshot.StateSnapshotNoSWST" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_FALSE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, foreign.data(), static_cast<uint32>( foreign.size() ) ) );
 
     vector<uint8> otherVersion = bytes;
     otherVersion[4]            = static_cast<uint8>( otherVersion[4] + 1u ); // 판 번호(머리 둘째 칸)의 낮은 바이트
-    SW_EXPECT_LOG( "GameStateSnapshot.StateSnapshotVersionNot" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_FALSE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, otherVersion.data(), static_cast<uint32>( otherVersion.size() ) ) );
 }
 
@@ -264,7 +264,7 @@ SW_TEST_CASE( GameStateSnapshotTest, ReadSceneIDPeeksTheHeaderOnly )
     // 머리가 없는 버퍼 · 머리 앞에서 잘린 버퍼는 없음이다.
     vector<uint8> foreign = saveA;
     foreign[0]            = static_cast<uint8>( foreign[0] ^ 0xFFu );
-    SW_EXPECT_LOG( "GameStateSnapshot.StateSnapshotNoSWST" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_FALSE( GameStateSnapshot::readSceneID( foreign.data(), static_cast<uint32>( foreign.size() ) ).has_value() );
     SW_EXPECT_FALSE( GameStateSnapshot::readSceneID( nullptr, 0 ).has_value() );
     SW_EXPECT_FALSE( GameStateSnapshot::readSceneID( saveA.data(), 18 ).has_value() ); // 씬 정체 글의 길이 칸에서 잘렸다

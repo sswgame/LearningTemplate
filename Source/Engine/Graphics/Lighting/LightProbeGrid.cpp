@@ -6,6 +6,7 @@
 #include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -14,7 +15,8 @@ namespace sw
         struct LightProbeGridInternal
         {
             /// @brief 머리말 바이트 수 — 매직 · 버전 · 시작점 · 간격 · 프로브 수 셋.
-            static constexpr size_t kHeaderBytes = sizeof( uint32 ) * 2 + sizeof( float32 ) * 6 + sizeof( uint32 ) * 3;
+            static constexpr FormatDef kFormat{ "SWLP" };
+            static constexpr size_t    kHeaderBytes = sizeof( uint32 ) * 2 + sizeof( float32 ) * 6 + sizeof( uint32 ) * 3;
             /// @brief 프로브 하나의 바이트 수입니다.
             static constexpr size_t kProbeBytes = sizeof( float32 ) * SH9Color::kCoefficientCount;
             /// @brief 한 파일의 프로브 수 상한 — 깨진 머리말이 큰 할당을 일으키지 않게 막는다(256 × 64 × 256).
@@ -71,8 +73,7 @@ namespace sw
         outBytes.clear();
         outBytes.reserve( Internal::kHeaderBytes + Internal::kProbeBytes * _listProbe.size() );
         ByteWriter writer{ outBytes };
-        writer.writeUint32( kMagic );
-        writer.writeUint32( kVersion );
+        Internal::kFormat.write( outBytes );
         writer.writeFloat32( _layout._origin._x );
         writer.writeFloat32( _layout._origin._y );
         writer.writeFloat32( _layout._origin._z );
@@ -98,10 +99,8 @@ namespace sw
         if ( pData == nullptr || size < Internal::kHeaderBytes )
             return unexpected( Error{ ErrorKind::InvalidArgument, "probe file is shorter than its header" } );
         ByteReader reader{ pData, size };
-        if ( reader.readUint32() != kMagic )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "probe file magic is not SWLP" } );
-        if ( reader.readUint32() != kVersion )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "probe file version differs - bake the volume again" } );
+        if ( expected<void> head = Internal::kFormat.check( reader ); head.has_value() == false )
+            return unexpected( std::move( head.error() ) );
         LightProbeGridLayout layout{};
         layout._origin._x  = reader.readFloat32();
         layout._origin._y  = reader.readFloat32();

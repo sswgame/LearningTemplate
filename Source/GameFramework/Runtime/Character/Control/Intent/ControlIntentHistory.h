@@ -7,7 +7,6 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -17,6 +16,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
@@ -43,7 +43,7 @@ namespace sw
     /**
      * @class ControlIntentHistory
      * @brief 폰마다 틱 고리 하나를 둡니다. 조종 시스템이 켜진 동안(`ControlSystem::setRecording`) 틱마다 모든 폰의 의도를 넣습니다.
-     * @details 파일(`.swintent`)은 머리에 `kMagic`('SWIN', 리틀 엔디언), `kVersion`, 폰 수를 쓴다.
+     * @details 파일(`.swintent`)은 머리(`kFormat`)와 폰 수를 쓴다.
      *          그다음 폰마다 이름, 시작 틱(기록 시작에서 센 수), 틱 수를 쓰고, 틱마다 `ControlIntent::write` 를 쓴다.
      *          시작 상태(씬과 난수 씨앗)는 싣지 않는다. **같은 씬을 처음부터 같은 고정 프레임 시간으로** 재생할 때만 같은 궤적이 나온다.
      *          자동화 시나리오의 `fixedDelta` 와 같은 조건이다.
@@ -54,8 +54,7 @@ namespace sw
     class SW_GF_API ControlIntentHistory
     {
     public:
-        static constexpr uint32      kMagic                = FourCCUtil::make( "SWIN" );
-        static constexpr uint32      kVersion              = 0;
+        static constexpr FormatDef   kFormat{ "SWIN" };
         static constexpr string_view kExtension            = ".swintent";
         static constexpr int32       kDefaultCapacityTicks = 3600; ///< 폰마다 기본 링 버퍼 크기. 60 Hz 로 1 분이다
         static constexpr int32       kMaxTrackCount        = 4096; ///< 파일 하나의 폰 수 상한(깨진 머리를 큰 할당으로 읽지 않게)

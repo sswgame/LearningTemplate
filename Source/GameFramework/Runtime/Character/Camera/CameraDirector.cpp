@@ -2,11 +2,11 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirector.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -15,9 +15,8 @@ namespace sw
     {
         struct CameraDirectorInternal
         {
-            static constexpr uint32 kStateTag      = FourCCUtil::make( "CDIR" );
-            static constexpr uint32 kStateVersion  = 0;
-            static constexpr uint32 kLayerMinBytes = 64; ///< 층 하나의 최소 바이트(이름 · 블렌드 · 진행 · 포즈 둘 · 상태)
+            static constexpr FormatDef kStateFormat{ "CDIR" };
+            static constexpr uint32    kLayerMinBytes = 64; ///< 층 하나의 최소 바이트(이름 · 블렌드 · 진행 · 포즈 둘 · 상태)
 
             static bool isCut( const BlendCurveDef& blend ) { return blend._curve == BlendCurve::Cut || blend._duration <= 0.0f; }
 
@@ -346,7 +345,7 @@ namespace sw
     void CameraDirector::serializeState( StateIO& io, const CameraPresetCatalog* pCatalog )
     {
         using Internal = CameraDirectorInternal;
-        io.header( Internal::kStateTag, Internal::kStateVersion );
+        io.header( Internal::kStateFormat );
         if ( io.isOk() == false )
             return;
         uint8      bHasPose   = _bHasPose;

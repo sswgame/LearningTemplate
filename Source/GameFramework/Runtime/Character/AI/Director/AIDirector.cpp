@@ -3,7 +3,6 @@
 #include "GameFramework/Runtime/Character/AI/Director/AIDirector.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -12,6 +11,7 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
@@ -27,9 +27,8 @@ namespace sw
         {
             static constexpr const utf8* kArrBlockName[] = { "weight", "pacing", "cooldown", "maxCount", "cycle", "minTime", "intensity", "area", "condition", "cost" };
             /** @brief 스폰 감독의 씨앗을 감독 씨앗에서 떼어 낼 때 섞는 값입니다(같은 씨앗이 두 수열에서 같은 수를 내지 않게). */
-            static constexpr uint32 kSpawnSeedSalt = 0x5bd1e995u;
-            static constexpr uint32 kStateTag      = FourCCUtil::make( "AIDR" );
-            static constexpr uint32 kStateVersion  = 0;
+            static constexpr uint32    kSpawnSeedSalt = 0x5bd1e995u;
+            static constexpr FormatDef kStateFormat{ "AIDR" };
 
             template <typename T>
             static uint64 hashValue( uint64 hash, const T& value )
@@ -566,7 +565,7 @@ namespace sw
         using Internal = AIDirectorInternal;
         if ( io.check( _pProfile != nullptr ) == false )
             return;
-        io.header( Internal::kStateTag, Internal::kStateVersion );
+        io.header( Internal::kStateFormat );
         if ( io.isOk() == false )
             return;
         io.reflected( *this ); // 시계 · 단계 · 풀 · 항목 칸의 하한은 칸의 `PROPERTY( Min )` 이 지킨다

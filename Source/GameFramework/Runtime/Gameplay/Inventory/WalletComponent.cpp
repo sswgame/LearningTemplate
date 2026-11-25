@@ -26,7 +26,7 @@ namespace sw
 
     void WalletComponent::serializeState( StateIO& io )
     {
-        _restore.serialize( io, kStateTag, kStateVersion, _wallet, "the wallet" );
+        _restore.serialize( io, kStateFormat, _wallet, "the wallet" );
     }
 
     void WalletComponent::restoreState( vector<uint8>&& bytes )

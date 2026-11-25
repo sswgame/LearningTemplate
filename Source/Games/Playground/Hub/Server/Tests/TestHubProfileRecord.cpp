@@ -31,7 +31,7 @@ SW_TEST_CASE( HubProfileRecordTest, RecordRoundTripsAndRefusesUnknownVersion )
     SW_EXPECT_TRUE( loaded._position == saved._position );
 
     BitWriter unknown;
-    unknown.writeVarUint( HubProfile::kFormatVersion + 1 );
+    unknown.writeVarUint( HubProfile::kFormat._version + 1 );
     HubProfile untouched;
     SW_EXPECT_FALSE( HubProfileStore::decodeRecord( unknown.getBytes(), untouched ) );
 

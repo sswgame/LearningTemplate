@@ -614,7 +614,7 @@ namespace sw
                 }
             } );
         };
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         uint32 shopCount = static_cast<uint32>( _listRuntime.size() );
         io.count( ShopStateInternal::kShopMinBytes, shopCount );
         if ( io.isOk() == false )

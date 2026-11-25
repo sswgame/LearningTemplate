@@ -3,7 +3,6 @@
 #include "Games/Playground/FeatureDemo/SpawnDirectorDemoComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
@@ -11,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -19,8 +19,7 @@ namespace sw
     {
         struct SpawnDirectorDemoComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "FDSP" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "FDSP" };
         };
     } // namespace
 
@@ -105,7 +104,7 @@ namespace sw
 
     void SpawnDirectorDemoComponent::serializeGameState( StateIO& io )
     {
-        io.header( SpawnDirectorDemoComponentInternal::kStateTag, SpawnDirectorDemoComponentInternal::kStateVersion );
+        io.header( SpawnDirectorDemoComponentInternal::kStateFormat );
         if ( io.isWriting() )
         {
             io.value( _director );

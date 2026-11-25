@@ -6,7 +6,6 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -27,6 +26,7 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -304,9 +304,8 @@ namespace sw
         /** @brief 체형 축 데이터의 발 들림 축(`footLiftAxis` — 굽 높이 채널)이 정한 발 들림(m)입니다. 몸 동작(`CharacterBodyDynamicsComponent`)이 발 디딤 IK 입력으로 넘긴다. */
         float32 getFootLift() const { return _footLift; }
         /** @brief 이 컴포넌트가 조립에 쓰는 외형 데이터입니다(미리보기 데이터, 아니면 게임 서비스). 없으면 nullptr 입니다. */
-        const AppearanceDatabase* findDatabase() const;
-        static constexpr uint32   kStateTag     = FourCCUtil::make( "CAPP" );
-        static constexpr uint32   kStateVersion = 0;
+        const AppearanceDatabase*  findDatabase() const;
+        static constexpr FormatDef kStateFormat{ "CAPP" };
         /**
          * @brief `ComponentStateCodec` 계약 — 게임 중 꾸민 모습을 게임 세이브에 싣습니다: 게임 선택(`applySelection` — 공유 코드, 판이 따로 있어 옛 판을 읽는다)과 슬롯 덮어쓰기.
          * @details 프리셋 id · 시드는 프로퍼티라 씬과 함께 실린다. 미리보기 입히기(편집기 데이터)는 싣지 않는다. 장비 인스턴스(아이템 염색)는 `CharacterEquipmentComponent` 가 싣는다.

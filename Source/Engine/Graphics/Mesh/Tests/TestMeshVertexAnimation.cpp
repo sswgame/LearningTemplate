@@ -242,7 +242,7 @@ SW_TEST_CASE( MeshVertexAnimationTest, BytesRoundTripEveryField )
  */
 SW_TEST_CASE( MeshVertexAnimationTest, ReadRejectsNonVertexAnimationBytes )
 {
-    SW_EXPECT_LOG( "MeshVertexAnimation.VertexAnimationNotSWVA" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     using Util                    = MeshVertexAnimationTestUtil;
     MeshVertexAnimation animation = Util::makeRamp( SW_TRUE );
     vector<uint8>       bytes;
@@ -264,11 +264,11 @@ SW_TEST_CASE( MeshVertexAnimationTest, ReadRejectsNonVertexAnimationBytes )
  */
 SW_TEST_CASE( MeshVertexAnimationTest, ReadRejectsOtherVersion )
 {
-    SW_EXPECT_LOG( "MeshVertexAnimation.VertexAnimationVersionNot" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     using Util = MeshVertexAnimationTestUtil;
     vector<uint8> bytes;
     Util::makeRamp( SW_TRUE ).makeBytes( bytes );
-    Util::patch( bytes, Util::kOffsetVersion, MeshVertexAnimation::kVersion + 1u );
+    Util::patch( bytes, Util::kOffsetVersion, MeshVertexAnimation::kFormat._version + 1u );
     MeshVertexAnimation read;
     SW_EXPECT_FALSE( read.readFromBytes( bytes.data(), bytes.size(), "version" ) );
     SW_EXPECT_TRUE( read.isEmpty() );
@@ -336,7 +336,7 @@ SW_TEST_CASE( MeshVertexAnimationTest, ReadRejectsBadFrameRate )
 /** @brief [MeshVertexAnimationTest] 어느 길이로 잘려도, 경계에 NaN 이 있어도 읽지 않고 비운다 */
 SW_TEST_CASE( MeshVertexAnimationTest, EveryTruncatedLengthAndNonFiniteBoundsAreRejected )
 {
-    SW_EXPECT_LOG( "MeshVertexAnimation.VertexAnimationNotSWVA" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_LOG( "MeshVertexAnimation.VertexAnimationMalformedFrames" );
     vector<uint8> bytes;
     MeshVertexAnimationTestUtil::makeRamp( SW_FALSE ).makeBytes( bytes );

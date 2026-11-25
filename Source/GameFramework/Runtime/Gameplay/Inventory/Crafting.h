@@ -7,7 +7,6 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -15,6 +14,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -138,9 +138,7 @@ namespace sw
     class SW_GF_API Crafter
     {
     public:
-        static constexpr uint32 kStateTag = FourCCUtil::make( "CRFT" );
-        /// 2: 작업마다 꺼낸 재료 조각을 쓴다(판 1 은 머리표가 없어 거절한다). 3: 조각 슬롯에 꾸미기 스키마 판(`Inventory::serializeSlot` — 판 2 는 `SW_STATE_FORMAT_UPGRADE` 가 올린다)
-        static constexpr uint32 kStateVersion = 0;
+        static constexpr FormatDef kStateFormat{ "CRFT" };
 
         /** @brief 재료를 인벤토리 대신 다른 곳(신선도별 재고, 원가 장부)에서 가져오는 함수입니다. 인자는 (재료 목록, 횟수)이고, 재료를 모두 가져왔으면 true 를 반환합니다. */
         using ConsumeInputsDelegate = Delegate<bool( const ItemStackList& inputs, int32 count )>;

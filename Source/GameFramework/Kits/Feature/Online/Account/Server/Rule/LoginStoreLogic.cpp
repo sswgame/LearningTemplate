@@ -9,6 +9,8 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
@@ -26,16 +28,16 @@ namespace sw
     {
         struct LoginStoreLogicInternal
         {
-            static constexpr uint8 kRecordFormat       = 0;
-            static constexpr int32 kStoreRetryLimit    = 4; ///< 조건부 쓰기가 다른 쓰기와 부딪혔을 때 다시 읽는 횟수이다
-            static constexpr int32 kMaxLinkCount       = 16;
-            static constexpr int32 kDigestHexSize      = LoginConstant::kDigestSize * 2;
-            static constexpr utf8  kDigestLabel[]      = "sw-login-token-digest-v1";
-            static constexpr utf8  kGuestLabel[]       = "sw-guest-v1";
-            static constexpr utf8  kSubjectLabel[]     = "sw-platform-subject-v1:";
-            static constexpr utf8  kGuestNamePrefix[]  = "Guest-";
-            static constexpr utf8  kPlayerNamePrefix[] = "Player";
-            static constexpr int32 kMaxHintNameSize    = 12;
+            static constexpr FormatDef kRecordFormat{ "LOGN" };
+            static constexpr int32     kStoreRetryLimit    = 4; ///< 조건부 쓰기가 다른 쓰기와 부딪혔을 때 다시 읽는 횟수이다
+            static constexpr int32     kMaxLinkCount       = 16;
+            static constexpr int32     kDigestHexSize      = LoginConstant::kDigestSize * 2;
+            static constexpr utf8      kDigestLabel[]      = "sw-login-token-digest-v1";
+            static constexpr utf8      kGuestLabel[]       = "sw-guest-v1";
+            static constexpr utf8      kSubjectLabel[]     = "sw-platform-subject-v1:";
+            static constexpr utf8      kGuestNamePrefix[]  = "Guest-";
+            static constexpr utf8      kPlayerNamePrefix[] = "Player";
+            static constexpr int32     kMaxHintNameSize    = 12;
 
             static const hashed_string& getAccountTable()
             {
@@ -144,7 +146,7 @@ namespace sw
                 vector<uint8> encodeSession() const
                 {
                     BitWriter writer;
-                    writer.writeBits( kRecordFormat, 8 );
+                    kRecordFormat.writeVersion( writer );
                     writer.writeVarUint( _accountID );
                     writer.writeVarInt( _issuedAtMs );
                     writer.writeVarInt( _expiresAtMs );
@@ -171,7 +173,7 @@ namespace sw
             static vector<uint8> encodeAccount( const AccountRecord& record )
             {
                 BitWriter writer;
-                writer.writeBits( kRecordFormat, 8 );
+                kRecordFormat.writeVersion( writer );
                 writer.writeVarUint( record._accountID );
                 ServiceKeyUtil::writeString( writer, record._displayName );
                 writer.writeBytes( record._arrSalt, LoginConstant::kSaltSize );
@@ -187,7 +189,7 @@ namespace sw
             [[nodiscard]] static bool decodeAccount( const vector<uint8>& bytes, AccountRecord& outRecord )
             {
                 BitReader reader{ bytes.data(), static_cast<int32>( bytes.size() ) };
-                if ( reader.readBits( 8 ) != kRecordFormat )
+                if ( kRecordFormat.readVersion( reader ) == false )
                     return false;
                 AccountRecord record;
                 record._accountID = reader.readVarUint();
@@ -210,7 +212,7 @@ namespace sw
             static vector<uint8> encodeProfile( const ProfileRecord& record )
             {
                 BitWriter writer;
-                writer.writeBits( kRecordFormat, 8 );
+                kRecordFormat.writeVersion( writer );
                 ServiceKeyUtil::writeString( writer, record._nameKey );
                 ServiceKeyUtil::writeString( writer, record._displayName );
                 ServiceKeyUtil::writeString( writer, record._guestDigestHex );
@@ -222,7 +224,7 @@ namespace sw
             [[nodiscard]] static bool decodeProfile( const vector<uint8>& bytes, uint64 version, ProfileRecord& outRecord )
             {
                 BitReader reader{ bytes.data(), static_cast<int32>( bytes.size() ) };
-                if ( reader.readBits( 8 ) != kRecordFormat )
+                if ( kRecordFormat.readVersion( reader ) == false )
                     return false;
                 ProfileRecord record;
                 const bool    bTextOk = ServiceKeyUtil::readString( reader, LoginConstant::kMaxLoginNameSize, record._nameKey ) &&
@@ -242,7 +244,7 @@ namespace sw
             [[nodiscard]] static bool decodeSession( const vector<uint8>& bytes, SessionRecord& outRecord )
             {
                 BitReader reader{ bytes.data(), static_cast<int32>( bytes.size() ) };
-                if ( reader.readBits( 8 ) != kRecordFormat )
+                if ( kRecordFormat.readVersion( reader ) == false )
                     return false;
                 SessionRecord record;
                 record._accountID        = reader.readVarUint();

@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -70,9 +69,6 @@ namespace sw
     class SW_KIT_API KlondikeGame
     {
     public:
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "CKLN" );
-        static constexpr uint32 kStateVersion = 0;
-
         KlondikeGame();
 
         /** @brief 섞은 덱으로 새 판을 엽니다. 설정이 범위 밖이면 오류를 남기고 false 를 반환하며 판은 그대로입니다. 아래 두 함수도 같습니다. */

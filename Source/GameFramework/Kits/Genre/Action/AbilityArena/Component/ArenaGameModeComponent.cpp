@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Component/ArenaGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -13,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -34,8 +34,7 @@ namespace sw
     {
         struct ArenaGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "ARNA" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "ARNA" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 팩의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventWave       = "ArenaWaveStart";
@@ -185,7 +184,7 @@ namespace sw
     void ArenaGameModeComponent::serializeGameState( StateIO& io )
     {
         // 웨이브 · 처치 수는 상태 칸이다(`GameModeComponent::serializeState` 가 싣는다) — 손 본문은 판 머리만.
-        io.header( ArenaGameModeComponentInternal::kStateTag, ArenaGameModeComponentInternal::kStateVersion );
+        io.header( ArenaGameModeComponentInternal::kStateFormat );
         io.end();
     }
 

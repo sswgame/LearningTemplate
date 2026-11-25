@@ -8,7 +8,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
@@ -17,6 +16,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -43,9 +43,8 @@ namespace sw
         static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
 
         /** @brief 도구 · 커서는 틱 뒤 게임 스레드에서만 바뀝니다 — 커서 뷰가 병렬 틱에서 읽어도 됩니다(자기 틱이 쓰는 것은 따로 둔 `_bInputLive` 뿐이다). */
-        static constexpr bool   kTickReadSafe = true;
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "CTBI" );
-        static constexpr uint32 kStateVersion = 0;
+        static constexpr bool      kTickReadSafe = true;
+        static constexpr FormatDef kStateFormat{ "CTBI" };
 
         CityBuildInputComponent();
         virtual ~CityBuildInputComponent() override;

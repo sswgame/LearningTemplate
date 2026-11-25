@@ -2,11 +2,10 @@
 
 #include "Games/NileCity/NileGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
-
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -15,9 +14,8 @@ namespace sw
     {
         struct NileGameModeComponentInternal
         {
-            static constexpr uint32  kStateTag     = FourCCUtil::make( "NILE" );
-            static constexpr uint32  kStateVersion = 0;
-            static constexpr float32 kPercent      = 100.0f; ///< 비율 → 백분율(로그)
+            static constexpr FormatDef kStateFormat{ "NILE" };
+            static constexpr float32   kPercent = 100.0f; ///< 비율 → 백분율(로그)
         };
     } // namespace
 
@@ -171,7 +169,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     void NileGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( NileGameModeComponentInternal::kStateTag, NileGameModeComponentInternal::kStateVersion );
+        io.header( NileGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         CitySimulation  restoredCity;

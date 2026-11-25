@@ -1,10 +1,8 @@
 /**
  * @file FormatUpgrade.h
- * @brief 저장된 형식의 판 올림 사슬입니다 — 종류마다 n → n+1 순수 함수를 등록하고(`SW_ASSET_FORMAT_UPGRADE` · `SW_SAVE_FORMAT_UPGRADE` · `SW_STATE_FORMAT_UPGRADE` · `SW_TYPE_VERSION_PATCH`), 읽는 쪽이 옛 판을 현재 판까지 올린다.
- * @details 출시 뒤 첫 판 올림에서 사용자 데이터(세이브)와 저장소 밖 데이터(모드 · 사용자 에셋)를 잃지 않게 한다. 빠진 단계는 오류다 — 옛 판을 그대로 읽거나
- *          기본값으로 채우는 폴백은 없다. 표가 빈 종류는 예전처럼 판이 다르면 거절한다(그 종류에 아직 이관이 없다).
- *          언리얼 `FCustomVersion`(종류마다 판 + Serialize 안의 판 분기)을 분기 대신 등록된 순수 함수 사슬로 둔 자리다 — 단계마다 단위 테스트가
- *          `Test/Fixtures/formats/<종류>/v<n>/` 의 표본을 올려 본다.
+ * @brief 종류 · 타입이 판을 든 형식(XML 에셋 · 리플렉션 본문)의 판 올림 사슬입니다 — n → n+1 순수 함수를 등록하고(`SW_ASSET_FORMAT_UPGRADE` · `SW_TYPE_VERSION_PATCH`) 읽는 쪽이 지금 판까지 한 판씩 올립니다.
+ * @details 바이트 형식(세이브 · 상태 · 쿠킹본 · 캐시)은 단계를 선언 자신이 든다(`FormatDef`). 이 둘만 판이 밖(종류 정의 · 생성 코드)에 있어 단계를 이름으로 잇는다.
+ *          빠진 단계는 오류다 — 옛 판을 그대로 읽거나 기본값으로 채우는 폴백은 없다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -12,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -19,13 +18,7 @@ namespace sw
     /** @brief 판 올림이 다루는 데이터의 자리입니다. 종류 이름은 자리마다 따로 센다. */
     enum class FormatUpgradeDomain : uint8
     {
-        AssetXML,  ///< XML 에셋 — 종류 이름은 `AssetTypeDef::_name`, 판은 루트의 `formatVersion`
-        SaveBytes, ///< 세이브 바이트 — 종류 이름은 `SaveGame::getFormatKind`, 판은 로컬 저장 봉투의 형식 판
-        /**
-         * 런타임 상태(세이브 · 스냅숏 안의 형식 하나) — 종류 이름은 상태 표(`FourCCUtil` 네 글자), 판은 `StateIO::header` · 구간 머리의 판.
-         * 바이트는 그 머리 뒤부터다(`StateIO::header` 는 아카이브 끝까지 — 바깥 형식의 남은 칸이 붙는다, 구간은 본문만). 단계는 `SW_STATE_FORMAT_UPGRADE` 로 건다.
-         */
-        StateBytes,
+        AssetXML, ///< XML 에셋 — 종류 이름은 `AssetTypeDef::_name`, 판은 루트의 `formatVersion`
         /**
          * 리플렉션 타입 하나의 본문 — 종류 이름은 타입 FQN(`TypeInfo::_fullyQualifiedName`), 판은 `REFLECT( Version = N )`(`TypeMetadata::getVersion`).
          * 판은 그릇이 아니라 타입에 있다: 이 타입을 싣는 곳(상태 바이트의 `StateIO::reflected` 본문, 서비스 레코드)마다 같은 사슬이 돈다(ezEngine GraphPatch 의 타입 판 자리).
@@ -34,23 +27,15 @@ namespace sw
         ReflectedType,
     };
 
-    /** @brief 한 단계가 고치는 데이터입니다. `AssetXML` 은 `_root`, `SaveBytes` 는 `_pBytes` 가 찬다. */
-    class Archive;
-
+    /** @brief 한 단계가 고치는 데이터입니다. `AssetXML` 은 `_root`, `ReflectedType` 은 `_pBytes` 가 찬다. */
     struct FormatUpgradePayload
     {
         XMLNode        _root{};            ///< 에셋 루트(제자리에서 고친다)
-        vector<uint8>* _pBytes{ nullptr }; ///< 세이브 바이트(제자리에서 고친다)
+        vector<uint8>* _pBytes{ nullptr }; ///< 본문 바이트(제자리에서 고친다)
     };
 
     /** @brief n → n+1 순수 함수입니다. 데이터만 보고 고치며, 고치지 못하면 false 입니다(사슬이 멈추고 읽기가 실패한다). */
     using FormatUpgradeFunction = bool ( * )( FormatUpgradePayload& payload );
-    /**
-     * @brief 상태 형식 하나의 n → n+1 순수 함수입니다(`SW_STATE_FORMAT_UPGRADE`). @p inOldBody 에서 판 n 의 자기 칸만 읽어 @p outNewBody 에 판 n+1 칸으로 씁니다.
-     * @details 머리는 읽지도 쓰지도 않는다(머리 뒤 바이트다). 읽고 남은 바이트(바깥 형식의 칸)는 `FormatUpgradeStep::runStateStep` 이 그대로 뒤에 붙인다. 고치지 못하면 false 입니다.
-     */
-    using StateUpgradeFunction = bool ( * )( Archive& inOldBody, Archive& outNewBody );
-
     /**
      * @struct FormatUpgradeStep
      * @brief 판 올림 단계 하나(등록 항목)와 그 표입니다. 문자열과 함수는 등록한 이미지의 정적 저장소에 있습니다.
@@ -74,9 +59,6 @@ namespace sw
         [[nodiscard]] static bool upgrade( FormatUpgradeDomain domain, string_view kind, uint32 fromVersion, uint32 toVersion, FormatUpgradePayload& payload );
         /** @brief (자리, 종류)에 등록된 단계 수입니다(진단 · 테스트). */
         static uint32 countSteps( FormatUpgradeDomain domain, string_view kind );
-
-        /** @brief 상태 단계를 바이트 단계로 감쌉니다(`SW_STATE_FORMAT_UPGRADE` 가 등록하는 함수가 부른다). @p pFunction 으로 `_pBytes` 의 앞 칸을 다시 쓰고 읽지 않은 나머지를 그대로 붙입니다. 함수가 지거나 읽기가 넘치면 false 이고 바이트는 그대로입니다. */
-        [[nodiscard]] static bool runStateStep( StateUpgradeFunction pFunction, FormatUpgradePayload& payload );
     };
 } // namespace sw
 
@@ -95,27 +77,11 @@ namespace sw
     SW_STATIC_REGISTRATION( formatUpgrade, ::sw::FormatUpgradeStep, ::sw::FormatUpgradeRegistrar, id, ::sw::FormatUpgradeDomain::AssetXML, kindName, fromVersion, pFunction )
 
 /**
- * @brief 상태 표 @p kindName(네 글자 글, 예 `"CLOK"` — 형식의 `kStateTag` 와 같은 글)의 판 @p fromVersion → @p toVersion 단계 @p pFunction(`StateUpgradeFunction`)을 등록합니다.
- *        `StateIO::header` 와 `StateIO::readExpectedSection` · 표로 갈라 읽는 구간(`GameStateComponent`)이 옛 판을 이 사슬로 올린다. 규칙은 `SW_ASSET_FORMAT_UPGRADE` 와 같다.
- *        언리얼 `FCustomVersion` 의 판 분기 · 유니티 `FormerlySerializedAs` 자리를 등록된 순수 함수 사슬로 둔다.
- */
-#define SW_STATE_FORMAT_UPGRADE( id, kindName, fromVersion, toVersion, pFunction )                                                                                  \
-    static_assert( ( toVersion ) == ( fromVersion ) + 1, "a format upgrade step raises exactly one version" );                                                      \
-    static_assert( sizeof( kindName ) == 5, "a state kind name is the four letters of its tag" );                                                                   \
-    SW_STATIC_REGISTRATION( formatUpgrade, ::sw::FormatUpgradeStep, ::sw::FormatUpgradeRegistrar, id, ::sw::FormatUpgradeDomain::StateBytes, kindName, fromVersion, \
-                            +[]( ::sw::FormatUpgradePayload& payload ) -> bool { return ::sw::FormatUpgradeStep::runStateStep( pFunction, payload ); } )
-
-/**
- * @brief 리플렉션 타입 @p typeFqn(`"sw::LevelProgress"` — `TypeInfo::_fullyQualifiedName` 과 같은 글)의 판 @p fromVersion → @p toVersion 패치 @p pFunction(`StateUpgradeFunction`)을 등록합니다.
+ * @brief 리플렉션 타입 @p typeFqn(`"sw::LevelProgress"` — `TypeInfo::_fullyQualifiedName` 과 같은 글)의 판 @p fromVersion → @p toVersion 패치 @p pFunction(`FormatStep`)을 등록합니다.
  * @details 판은 타입의 `REFLECT( Version = N )` 한 곳이다. 패치는 옛 판 본문에서 자기 칸만 읽어 다음 판 칸으로 쓴다(읽지 않은 꼬리는 그대로 붙는다).
  *          이 타입을 싣는 모든 그릇이 같은 사슬을 탄다 — `StateIO::reflected` 의 상태 본문과 `ServiceRecordUtil` 의 영속 레코드.
  *          ezEngine `ezGraphPatch`(타입 이름 + 판마다 패치 하나, 그릇이 아니라 타입마다)를 바이트 본문에 둔 자리다. 규칙은 `SW_ASSET_FORMAT_UPGRADE` 와 같다.
  */
 #define SW_TYPE_VERSION_PATCH( id, typeFqn, fromVersion, toVersion, pFunction )                                \
     static_assert( ( toVersion ) == ( fromVersion ) + 1, "a format upgrade step raises exactly one version" ); \
-    SW_STATIC_REGISTRATION( formatUpgrade, ::sw::FormatUpgradeStep, ::sw::FormatUpgradeRegistrar, id, ::sw::FormatUpgradeDomain::ReflectedType, typeFqn, fromVersion, +[]( ::sw::FormatUpgradePayload& payload ) -> bool { return ::sw::FormatUpgradeStep::runStateStep( pFunction, payload ); } )
-
-/** @brief 세이브 종류 @p kindName(`SaveGame::getFormatKind`)의 판 @p fromVersion → @p toVersion 단계를 등록합니다. 규칙은 `SW_ASSET_FORMAT_UPGRADE` 와 같다. */
-#define SW_SAVE_FORMAT_UPGRADE( id, kindName, fromVersion, toVersion, pFunction )                              \
-    static_assert( ( toVersion ) == ( fromVersion ) + 1, "a format upgrade step raises exactly one version" ); \
-    SW_STATIC_REGISTRATION( formatUpgrade, ::sw::FormatUpgradeStep, ::sw::FormatUpgradeRegistrar, id, ::sw::FormatUpgradeDomain::SaveBytes, kindName, fromVersion, pFunction )
+    SW_STATIC_REGISTRATION( formatUpgrade, ::sw::FormatUpgradeStep, ::sw::FormatUpgradeRegistrar, id, ::sw::FormatUpgradeDomain::ReflectedType, typeFqn, fromVersion, +[]( ::sw::FormatUpgradePayload& payload ) -> bool { return ::sw::FormatDef::runStep( pFunction, *payload._pBytes ); } )

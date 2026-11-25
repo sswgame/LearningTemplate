@@ -16,6 +16,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -54,7 +55,7 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `MeshVertexAnimation.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "MeshVertexAnimation", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
         /** @brief 쿠킹본 형식 버전입니다. */
-        static constexpr uint32 kVersion = 0;
+        static constexpr FormatDef kFormat{ "SWVA" };
 
         vector<MeshVertexAnimationElement> _listFrameVertex;
         float3                             _boundsCenter{ 0.0f, 0.0f, 0.0f };

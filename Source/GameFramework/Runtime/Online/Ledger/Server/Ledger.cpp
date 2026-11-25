@@ -9,6 +9,8 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/Runtime/Online/Ledger/Server/LedgerItemInstance.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -21,11 +23,11 @@ namespace sw
     {
         struct LedgerInternal
         {
-            static constexpr uint64 kJournalFormat   = 0;
-            static constexpr uint64 kCarryFormat     = 0;
-            static constexpr uint64 kTombstoneFormat = 0;
-            static constexpr int32  kListPageSize    = 64;
-            static constexpr int32  kTimeHexWidth    = 16;
+            static constexpr FormatDef kJournalFormat{ "LJRN" };
+            static constexpr FormatDef kCarryFormat{ "LCRY" };
+            static constexpr FormatDef kTombstoneFormat{ "LTMB" };
+            static constexpr int32     kListPageSize = 64;
+            static constexpr int32     kTimeHexWidth = 16;
 
             /** @brief 한 (보유자, 자산)의 순변화입니다. */
             struct Delta
@@ -68,7 +70,7 @@ namespace sw
             static vector<uint8> encodeJournal( const LedgerTransferRequest& request, uint64 contentHash, const vector<LedgerTransferResult::HolderBalance>& listHolderBalance )
             {
                 BitWriter writer;
-                writer.writeVarUint( kJournalFormat );
+                kJournalFormat.writeVersion( writer );
                 writer.writeVarInt( request._timeMs );
                 writer.writeVarUint( static_cast<uint64>( request._actorKind ) );
                 writer.writeVarUint( request._actorID );
@@ -94,7 +96,7 @@ namespace sw
             [[nodiscard]] static bool decodeJournal( const vector<uint8>& bytes, LedgerJournalEntry& outEntry, vector<LedgerTransferResult::HolderBalance>* pOutListHolderBalance )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readVarUint() != kJournalFormat )
+                if ( kJournalFormat.readVersion( reader ) == false )
                     return false;
                 outEntry._timeMs       = reader.readVarInt();
                 const uint64 actorKind = reader.readVarUint();
@@ -150,7 +152,7 @@ namespace sw
             static vector<uint8> encodeCarry( const LedgerSupplyStats& supply )
             {
                 BitWriter writer;
-                writer.writeVarUint( kCarryFormat );
+                kCarryFormat.writeVersion( writer );
                 writer.writeVarInt( supply._issued );
                 writer.writeVarInt( supply._burned );
                 return writer.releaseBytes();
@@ -159,7 +161,7 @@ namespace sw
             [[nodiscard]] static bool decodeCarry( const vector<uint8>& bytes, LedgerSupplyStats& inoutSupply )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readVarUint() != kCarryFormat )
+                if ( kCarryFormat.readVersion( reader ) == false )
                     return false;
                 const int64 issued = reader.readVarInt();
                 const int64 burned = reader.readVarInt();
@@ -587,7 +589,7 @@ namespace sw
     {
         const string key = LedgerHolder::makeAccount( accountID ).makeKey();
         BitWriter    writer;
-        writer.writeVarUint( LedgerInternal::kTombstoneFormat );
+        LedgerInternal::kTombstoneFormat.writeVersion( writer );
         writer.writeVarInt( timeMs );
         inoutTransaction.put( getTombstoneTable(), key, writer.releaseBytes() );
         inoutTransaction.put( getDeletionQueueTable(), key, vector<uint8>{} );

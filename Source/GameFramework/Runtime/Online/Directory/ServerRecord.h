@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -87,9 +88,9 @@ namespace sw
      */
     struct SW_GF_API ServerRecord
     {
-        static constexpr int32 kMaxNameSize    = 16;
-        static constexpr int32 kMaxAddressSize = 128;
-        static constexpr uint8 kFormatVersion  = 0;
+        static constexpr int32     kMaxNameSize    = 16;
+        static constexpr int32     kMaxAddressSize = 128;
+        static constexpr FormatDef kFormat{ "SRVR" };
 
         static string makeRecordKey( uint64 serverID );
         /**

@@ -2,9 +2,9 @@
 
 #include "GameFramework/Runtime/Foundation/Save/GameStateSnapshot.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/Time/WallClock.h"
 
 #include "Engine/Content/AssetRegistry.h"
@@ -20,7 +20,7 @@
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Save/SnapshotFaultHook.h"
@@ -33,17 +33,16 @@ namespace sw
     {
         struct StateEnvelopeInternal
         {
-            static constexpr uint32 kMagic = FourCCUtil::make( "SWST" );
             /**
-             * @brief 스냅샷 봉투의 버전입니다. 읽을 때도 이 버전만 받습니다.
+             * @brief 스냅샷 봉투의 형식입니다. 읽을 때도 지금 판만 받습니다.
              * @details 봉투 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실린다.
              *          섹션은 씬 오브젝트(오브젝트마다 정체 · 반사 상태 · 컴포넌트 상태), 파생의 리플렉션 상태, 씬 몫(늘 올라 있는 오브젝트의 파일 id · 스트리밍 셀 상태 · 데이터 레이어 상태) 셋이다.
              *          토큰이 지금 프로세스와 같으면(핫 리로드) id 를 복원하고, 다르면(다른 실행의 세이브 파일) id 를 읽고 버린다.
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
              *          머리의 씬 정체는 찍을 때 활성 씬의 GUID 참조(`AssetRegistry::makeReferenceText`)다 — 읽을 때 지금 경로로 풀고, 지금 활성 씬과 다르면 섞지 않고 거절한다.
-             *          옛 판은 판 올림 사슬(`upgradeEnvelope`)이 한 번 올린다.
+             *          옛 판은 슬롯에서 읽은 자리가 형식의 단계로 한 번 올린다(`upgradeEnvelope`).
              */
-            static constexpr uint32 kVersion = 0;
+            static constexpr FormatDef kFormat{ "SWST" };
 
             /** @brief 봉투 머리(매직 · 판 뒤의 칸)입니다. */
             struct Header
@@ -62,25 +61,8 @@ namespace sw
              */
             static bool readHeader( const void* pInBuffer, uint32 size, Archive& arch, Header& outHeader )
             {
-                if ( pInBuffer == nullptr || size < sizeof( uint32 ) )
+                if ( pInBuffer == nullptr || size < sizeof( uint32 ) || kFormat.read( arch, "state snapshot" ) == false )
                     return false;
-                uint32 magic = 0;
-                Memory::copy( &magic, pInBuffer, sizeof( uint32 ) );
-                if ( magic != kMagic )
-                {
-                    SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotNoSWST", "State snapshot has no SWST header - not written by GameStateSnapshot::writeEnvelope" );
-                    return false;
-                }
-                if ( size < sizeof( uint32 ) * 4 )
-                    return false;
-                arch >> magic;
-                uint32 version = 0;
-                arch >> version;
-                if ( version != kVersion )
-                {
-                    SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotVersionNot", "State snapshot version %# is not this build's %#", version, kVersion );
-                    return false;
-                }
                 arch >> outHeader._processToken;
                 const string  sceneReference = arch.readString();
                 string        contentText    = arch.readString();
@@ -334,8 +316,7 @@ namespace sw
                                            vector<uint8>& outBytes )
     {
         Archive arch;
-        arch << StateEnvelopeInternal::kMagic;
-        arch << StateEnvelopeInternal::kVersion;
+        StateEnvelopeInternal::kFormat.write( arch );
         arch << ObjectStateSerializer::getProcessToken();
         // 이 세이브를 찍은 씬 — 읽는 쪽이 같은 씬 위인지 봉투를 풀기 전에 본다(씬이 없으면 빈 글). 세이브가 남은 뒤 씬을 옮겨도 풀리게 GUID 로 적는다.
         const string sceneID = GameStateSnapshotInternal::findActiveSceneID();
@@ -480,15 +461,19 @@ namespace sw
 
     bool GameStateSnapshot::upgradeEnvelope( vector<uint8>& inoutBytes )
     {
-        uint32 arrHead[2]{}; // 매직 · 판
-        if ( inoutBytes.size() < sizeof( arrHead ) )
-            return true; // 잘린 봉투 · 머리 없는 바이트는 읽기가 까닭을 남긴다
-        Memory::copy( arrHead, inoutBytes.data(), sizeof( arrHead ) );
-        if ( arrHead[0] != StateEnvelopeInternal::kMagic || arrHead[1] >= StateEnvelopeInternal::kVersion )
-            return true;
-        FormatUpgradePayload payload;
-        payload._pBytes = &inoutBytes;
-        return FormatUpgradeStep::upgrade( FormatUpgradeDomain::SaveBytes, kFormatKind, arrHead[1], StateEnvelopeInternal::kVersion, payload );
+        constexpr const FormatDef& kFormat = StateEnvelopeInternal::kFormat;
+        ByteReader                 reader{ inoutBytes.data(), inoutBytes.size() };
+        const uint32               tag     = reader.readUint32();
+        const uint32               version = reader.readUint32();
+        if ( reader.hasOverflowed() || tag != kFormat._tag || version >= kFormat._version )
+            return true; // 잘린 봉투 · 다른 바이트 · 새 판은 읽기가 까닭을 남긴다
+        vector<uint8> body( inoutBytes.begin() + static_cast<ptrdiff_t>( reader.getOffset() ), inoutBytes.end() );
+        if ( kFormat.raise( version, body ) == false )
+            return false;
+        inoutBytes.clear();
+        kFormat.write( inoutBytes );
+        inoutBytes.insert( inoutBytes.end(), body.begin(), body.end() );
+        return true;
     }
 
     optional<string> GameStateSnapshot::readSceneID( const void* pInBuffer, uint32 size )

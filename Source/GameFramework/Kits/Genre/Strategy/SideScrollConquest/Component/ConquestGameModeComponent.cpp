@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/Component/ConquestGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -11,6 +10,7 @@
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -19,8 +19,7 @@ namespace sw
     {
         struct ConquestGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "CQGM" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "CQGM" };
 
             static constexpr const utf8* kWinResult     = "win";
             static constexpr const utf8* kLoseResult    = "lose";
@@ -274,7 +273,7 @@ namespace sw
 
     void ConquestGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( ConquestGameModeComponentInternal::kStateTag, ConquestGameModeComponentInternal::kStateVersion );
+        io.header( ConquestGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 판은 같은 카탈로그로 `initialize` 한 뒤에 읽는다(키트 계약). 꺼내기 표는 대입이 옮기지 않아 이 디렉터의 표가 그대로다.

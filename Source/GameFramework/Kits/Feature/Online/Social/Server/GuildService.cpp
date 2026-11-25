@@ -7,6 +7,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
@@ -24,18 +26,18 @@ namespace sw
     {
         struct GuildServiceInternal
         {
-            static constexpr uint8       kFormatVersion      = 0;
-            static constexpr uint8       kGuildFormatVersion = 0;                             ///< 길드 레코드이다
-            static constexpr int64       kMaxExperience      = static_cast<int64>( 1 ) << 53; ///< 경험치 상한이다. 넘으면 상한에 멈춘다
-            static constexpr const utf8* kSequenceKey        = "guild";
-            static constexpr uint32      kReplacementChar    = 0xFFFDu;
-            static constexpr uint32      kFirstPrintable     = 0x20u;
-            static constexpr uint32      kDeleteChar         = 0x7Fu;
-            static constexpr const utf8* kStorageDomain      = "guild";
-            static constexpr const utf8* kDepositReason      = "guild.deposit";
-            static constexpr const utf8* kWithdrawReason     = "guild.withdraw";
-            static constexpr const utf8* kRefundReason       = "guild.refund"; ///< 떠나거나 내보내진 멤버에게 그의 몫을 돌려준다
-            static constexpr int32       kGrantPageSize      = 128;            ///< 길드의 허용 전체를 훑을 때(떠나는 멤버가 받은 허용 지우기) 한 번에 읽는 수이다
+            static constexpr FormatDef   kFormat{ "GLDR" };
+            static constexpr FormatDef   kGuildFormat{ "GILD" };                           ///< 길드 레코드이다
+            static constexpr int64       kMaxExperience   = static_cast<int64>( 1 ) << 53; ///< 경험치 상한이다. 넘으면 상한에 멈춘다
+            static constexpr const utf8* kSequenceKey     = "guild";
+            static constexpr uint32      kReplacementChar = 0xFFFDu;
+            static constexpr uint32      kFirstPrintable  = 0x20u;
+            static constexpr uint32      kDeleteChar      = 0x7Fu;
+            static constexpr const utf8* kStorageDomain   = "guild";
+            static constexpr const utf8* kDepositReason   = "guild.deposit";
+            static constexpr const utf8* kWithdrawReason  = "guild.withdraw";
+            static constexpr const utf8* kRefundReason    = "guild.refund"; ///< 떠나거나 내보내진 멤버에게 그의 몫을 돌려준다
+            static constexpr int32       kGrantPageSize   = 128;            ///< 길드의 허용 전체를 훑을 때(떠나는 멤버가 받은 허용 지우기) 한 번에 읽는 수이다
             /// 신청 표를 끝까지 훑을 때 한 번에 읽는 수이다. 읽은 쪽마다 읽기 집합의 범위 조건이 하나씩 붙으므로(상한 `kMaxConditionCount`) 크게 잡는다 — 죽은 신청은 TTL 쓸기가 지워 쪽 수가 늘지 않는다
             static constexpr int32 kApplicationPageSize = 256;
 
@@ -77,7 +79,7 @@ namespace sw
             static vector<uint8> encodeGrant( int64 remaining )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarInt( remaining );
                 return writer.getBytes();
             }
@@ -85,7 +87,7 @@ namespace sw
             [[nodiscard]] static bool decodeGrant( const vector<uint8>& bytes, int64& outRemaining )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 outRemaining = reader.readVarInt();
                 return reader.hasOverflowed() == false && 0 <= outRemaining;
@@ -199,7 +201,7 @@ namespace sw
             static vector<uint8> encodeGuild( const GuildInfo& info )
             {
                 BitWriter writer;
-                writer.writeBits( kGuildFormatVersion, 8 );
+                kGuildFormat.writeVersion( writer );
                 ServiceKeyUtil::writeString( writer, info._name );
                 ServiceKeyUtil::writeString( writer, info._announcement );
                 writer.writeVarUint( info._masterID );
@@ -213,7 +215,7 @@ namespace sw
             [[nodiscard]] static bool decodeGuild( const vector<uint8>& bytes, uint64 guildID, GuildInfo& outInfo )
             {
                 BitReader  reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                const bool bHeadOk = reader.readBits( 8 ) == kGuildFormatVersion && ServiceKeyUtil::readString( reader, GuildLimit::kMaxNameSize, outInfo._name ) &&
+                const bool bHeadOk = kGuildFormat.readVersion( reader ) && ServiceKeyUtil::readString( reader, GuildLimit::kMaxNameSize, outInfo._name ) &&
                                      ServiceKeyUtil::readString( reader, GuildLimit::kMaxAnnouncementSize, outInfo._announcement );
                 if ( bHeadOk == false )
                     return false;
@@ -229,7 +231,7 @@ namespace sw
             static vector<uint8> encodeMember( GuildRole role, int64 joinedMs )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarUint( static_cast<uint64>( role ) );
                 writer.writeVarInt( joinedMs );
                 return writer.getBytes();
@@ -238,7 +240,7 @@ namespace sw
             [[nodiscard]] static bool decodeMember( const vector<uint8>& bytes, GuildMember& outMember )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 const uint64 role   = reader.readVarUint();
                 outMember._joinedMs = reader.readVarInt();
@@ -251,7 +253,7 @@ namespace sw
             static vector<uint8> encodeID( uint64 value )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarUint( value );
                 return writer.getBytes();
             }
@@ -259,7 +261,7 @@ namespace sw
             [[nodiscard]] static bool decodeID( const vector<uint8>& bytes, uint64& outValue )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 outValue = reader.readVarUint();
                 return reader.hasOverflowed() == false;
@@ -268,7 +270,7 @@ namespace sw
             static vector<uint8> encodeInvite( AccountID inviterID, int64 expiresMs )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarUint( inviterID );
                 writer.writeVarInt( expiresMs );
                 return writer.getBytes();
@@ -277,7 +279,7 @@ namespace sw
             static vector<uint8> encodeApplication( int64 appliedMs, int64 expiresMs )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarInt( appliedMs );
                 writer.writeVarInt( expiresMs );
                 return writer.getBytes();
@@ -286,7 +288,7 @@ namespace sw
             [[nodiscard]] static bool decodeApplication( const vector<uint8>& bytes, int64& outAppliedMs, int64& outExpiresMs )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 outAppliedMs = reader.readVarInt();
                 outExpiresMs = reader.readVarInt();
@@ -296,7 +298,7 @@ namespace sw
             [[nodiscard]] static bool decodeInviteExpiry( const vector<uint8>& bytes, int64& outExpiresMs )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 (void)reader.readVarUint(); // 초대한 사람 필드는 건너뛴다. 읽기가 넘쳤는지는 아래 hasOverflowed 가 확인한다
                 outExpiresMs = reader.readVarInt();

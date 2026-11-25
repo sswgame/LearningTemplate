@@ -3,7 +3,6 @@
 #include "Engine/Destruction/Fracture/FractureBaseComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -32,6 +31,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw
@@ -101,8 +101,7 @@ namespace sw
 
         struct FractureComponentBaseInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "FRST" );
-            static constexpr uint32 kStateVersion = 0;
+            static constexpr FormatDef kStateFormat{ "FRST" };
 
             /// `_listRuntime` 은 그룹 번호 오름차순이다(그룹 변경 뒤 정렬, 복원은 상태의 오름차순 그룹 순서). 그 순서로 이분 탐색한다 — 사건 · 충돌마다 부르는 곳이라 선형이면 그룹 수만큼 든다.
             static bool isGroupBefore( const FractureGroupRuntime& lhs, const FractureGroupRuntime& rhs ) { return lhs._groupID < rhs._groupID; }
@@ -1525,7 +1524,7 @@ namespace sw
 
     void FractureBaseComponent::serializeState( StateIO& io )
     {
-        io.header( FractureComponentBaseInternal::kStateTag, FractureComponentBaseInternal::kStateVersion );
+        io.header( FractureComponentBaseInternal::kStateFormat );
         vector<uint8> bytes;
         if ( io.isWriting() && _bStateReady == SW_TRUE && _state.getEventCount() > 0 )
             makeNetworkSnapshot( bytes );

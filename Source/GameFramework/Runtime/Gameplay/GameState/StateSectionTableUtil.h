@@ -9,6 +9,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -30,23 +31,19 @@ namespace sw
         {
             Archive body;
             state.writeState( body );
-            StateIO::writeSection( outArchive, TState::kStateTag, TState::kStateVersion, body );
+            StateIO::writeSection( outArchive, TState::kStateFormat, body );
         }
 
         /**
-         * @brief 구간 하나를 사본에 읽고 끝까지 맞으면 반영합니다. 옛 판은 판 올림 사슬(`SW_STATE_FORMAT_UPGRADE`)로 올려 읽습니다(감사 A-6).
+         * @brief 구간 하나를 사본에 읽고 끝까지 맞으면 반영합니다. 옛 판은 형식이 든 단계(`FormatDef`)로 올려 읽습니다(감사 A-6).
          *        올릴 단계가 없거나 깨졌으면 경고를 남기고 그대로 둔 채 false 입니다(부르는 쪽이 로드 전체를 실패시킨다).
          */
         template <typename TState>
         [[nodiscard]] static bool applyStateSection( const Section& section, TState& inoutState, const utf8* pName )
         {
             Archive body = section._body;
-            if ( StateIO::upgradeSectionBody( TState::kStateTag, section._version, TState::kStateVersion, body ) == false )
-            {
-                SW_LOG_WARNING_ID( "GameState.SectionVersionNot", "GameState: %# section version %# is not %# and has no upgrade chain to it", pName, section._version,
-                                   TState::kStateVersion );
+            if ( StateIO::upgradeSectionBody( TState::kStateFormat, section._version, body ) == false )
                 return false;
-            }
             TState     state = inoutState;
             const bool bRead = state.readState( body ) && body.getRemainingBytes() == 0;
             if ( bRead == false )
@@ -58,11 +55,11 @@ namespace sw
             return true;
         }
 
-        /** @brief 머리(@p tag · @p version), 구간 수 @p sectionCount, 구간들을 씁니다. */
+        /** @brief 머리(@p format), 구간 수 @p sectionCount, 구간들을 씁니다. */
         template <typename TForEach>
-        static void write( Archive& archive, uint32 tag, uint32 version, uint32 sectionCount, const TForEach& forEachSection )
+        static void write( Archive& archive, const FormatDef& format, uint32 sectionCount, const TForEach& forEachSection )
         {
-            StateIO::writeHeader( archive, tag, version );
+            format.write( archive );
             archive << sectionCount;
             forEachSection( [&archive]( const auto& state, const utf8* )
             { writeStateSection( archive, state ); } );
@@ -73,9 +70,9 @@ namespace sw
          * @param pOwnerName 거절 오류에 적을 이름(예 "the session state")
          */
         template <typename TForEach>
-        [[nodiscard]] static bool read( StateIO& io, uint32 tag, uint32 version, uint32 sectionCount, const TForEach& forEachSection, const utf8* pOwnerName )
+        [[nodiscard]] static bool read( StateIO& io, const FormatDef& format, uint32 sectionCount, const TForEach& forEachSection, const utf8* pOwnerName )
         {
-            io.header( tag, version );
+            io.header( format );
             Archive& archive    = io.getArchive(); // 머리 뒤에 받는다 — 옛 판이면 올린 바이트다
             uint32   savedCount = 0;
             io.count( kMinSectionBytes, savedCount );
@@ -104,7 +101,7 @@ namespace sw
                 bool bKnown = false;
                 forEachSection( [&section, &bKnown, &bAllApplied]( auto& state, const utf8* pName )
                 {
-                    if ( section._tag == std::decay_t<decltype( state )>::kStateTag )
+                    if ( section._tag == std::decay_t<decltype( state )>::kStateFormat._tag )
                     {
                         if ( applyStateSection( section, state, pName ) == false )
                             bAllApplied = false;
@@ -124,7 +121,7 @@ namespace sw
                     break;
                 forEachSection( [&section]( auto& state, const utf8* pName )
                 {
-                    if ( section->_tag == std::decay_t<decltype( state )>::kStateTag )
+                    if ( section->_tag == std::decay_t<decltype( state )>::kStateFormat._tag )
                         (void)applyStateSection( *section, state, pName ); // 같은 판으로 떠 둔 것이다
                 } );
             }

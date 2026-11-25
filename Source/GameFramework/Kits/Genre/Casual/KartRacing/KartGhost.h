@@ -13,6 +13,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
 
@@ -40,11 +42,11 @@ namespace sw
     class SW_KIT_API KartGhost
     {
     public:
-        static constexpr uint8 kButtonDrift   = 1u << 0;
-        static constexpr uint8 kButtonBoost   = 1u << 1;
-        static constexpr uint8 kButtonJump    = 1u << 2;
-        static constexpr uint8 kButtonUseItem = 1u << 3;
-        static constexpr uint8 kVersion       = 0;
+        static constexpr uint8     kButtonDrift   = 1u << 0;
+        static constexpr uint8     kButtonBoost   = 1u << 1;
+        static constexpr uint8     kButtonJump    = 1u << 2;
+        static constexpr uint8     kButtonUseItem = 1u << 3;
+        static constexpr FormatDef kFormat{ "KGHT" };
 
         KartGhost();
 

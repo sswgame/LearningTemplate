@@ -60,7 +60,7 @@ namespace sw
      */
     struct SW_API MeshAssetFormat
     {
-        /** @brief 지금 형식의 버전입니다. 레이아웃을 바꾸면 올리고 모델 원본을 다시 임포트합니다. */
+        /** @brief 지금 판입니다(머리는 .cpp 의 `FormatDef` — 임포트 스탬프가 섞는다). 레이아웃을 바꾸면 올리고 모델 원본을 다시 임포트합니다. */
         static constexpr uint32 kVersion = 0;
         /** @brief 헤더의 바이트 수입니다(고정 필드 28 + UV 경계 float32 4 개). */
         static constexpr uint32 kHeaderSize = 44;

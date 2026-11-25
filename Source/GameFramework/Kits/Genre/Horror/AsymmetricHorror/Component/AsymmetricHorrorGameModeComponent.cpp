@@ -2,12 +2,11 @@
 
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/Component/AsymmetricHorrorGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
-
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -18,10 +17,9 @@ namespace sw
     {
         struct AsymmetricHorrorGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "AHGM" );
-            static constexpr uint32 kStateVersion = 0;
-            static constexpr int32  kPlayer       = 0;  ///< 늘 사람이 잡는 생존자(카메라 · 감시 값의 주인)
-            static constexpr int32  kMaxSurvivors = 32; ///< 사람 비트(`_humanMask`)에 들어가는 수
+            static constexpr FormatDef kStateFormat{ "AHGM" };
+            static constexpr int32     kPlayer       = 0;  ///< 늘 사람이 잡는 생존자(카메라 · 감시 값의 주인)
+            static constexpr int32     kMaxSurvivors = 32; ///< 사람 비트(`_humanMask`)에 들어가는 수
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventHit           = "AsymmetricHorrorHit";
@@ -461,7 +459,7 @@ namespace sw
     void AsymmetricHorrorGameModeComponent::serializeGameState( StateIO& io )
     {
         using Internal = AsymmetricHorrorGameModeComponentInternal;
-        io.header( Internal::kStateTag, Internal::kStateVersion );
+        io.header( Internal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 판은 같은 카탈로그 · 설정으로 `initialize` 한 뒤에 읽는다(키트 계약). 무대와 생존자는 바이트가 정한다.

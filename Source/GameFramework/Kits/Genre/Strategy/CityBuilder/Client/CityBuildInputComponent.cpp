@@ -130,7 +130,7 @@ namespace sw
 
     void CityBuildInputComponent::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         int32 selectedTool = _selectedTool;
         io.value( selectedTool );
         io.end();
