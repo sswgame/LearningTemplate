@@ -12,7 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Registry/ServiceFactoryList.h"
+#include "Core/Registry/FactoryRegistrationList.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Reflection/EnumName.h"
@@ -64,7 +64,7 @@ namespace sw
      * @class OnlinePushRelayEntry
      * @brief 중계할 수 있는 알림 하나의 등록 항목입니다. 만들면 등록되고 파괴되면 제거됩니다. 키트 서버 `.cpp` 의 이름 공간 범위에 둡니다.
      */
-    class SW_KIT_SERVER_API OnlinePushRelayEntry final : private ServiceFactoryNode
+    class SW_KIT_SERVER_API OnlinePushRelayEntry final : private FactoryRegistration
     {
     public:
         /**

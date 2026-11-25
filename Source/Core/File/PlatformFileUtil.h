@@ -192,9 +192,9 @@ namespace sw
         static void recordFileOpenedForRead( string_view filePath, size_t byteCount );
 
         /** @brief 읽기 관찰자 등록 토큰입니다. 토큰이 사라지면 관찰자를 뗍니다. */
-        using ReadObserverRegistration = ObserverSlot<IFileReadObserver>::Registration;
+        using ReadObserverSubscription = ObserverSlot<IFileReadObserver>::Subscription;
         /** @brief 쓰기 관찰자 등록 토큰입니다. 토큰이 사라지면 관찰자를 뗍니다. */
-        using WriteObserverRegistration = ObserverSlot<IFileWriteObserver>::Registration;
+        using WriteObserverSubscription = ObserverSlot<IFileWriteObserver>::Subscription;
         /** @brief 걸린 읽기 관찰자를 범위 동안 떼어 두는 범위입니다(테스트가 호스트의 관찰자를 비우고 자기 것을 걸 때). */
         using ReadObserverSuspension = ObserverSlot<IFileReadObserver>::Suspension;
         /** @brief 걸린 쓰기 관찰자를 범위 동안 떼어 두는 범위입니다(테스트만). */
@@ -208,7 +208,7 @@ namespace sw
          * @brief 읽기 관찰자를 겁니다. 관찰자는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다(`isActive()` 가 false).
          * @param pObserver 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
          */
-        [[nodiscard]] static ReadObserverRegistration bindReadObserver( IFileReadObserver* pObserver );
+        [[nodiscard]] static ReadObserverSubscription bindReadObserver( IFileReadObserver* pObserver );
 
         /** @brief 이 프로세스가 @p filePath 를 바꾼 뒤 부릅니다 — 걸린 쓰기 관찰자(`IFileWriteObserver::recordFileWritten`)에 알린다. `FileUtil` 의 쓰기 입구가 부릅니다. */
         static void recordFileWritten( string_view filePath );
@@ -216,7 +216,7 @@ namespace sw
          * @brief 쓰기 관찰자를 겁니다. 관찰자는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다(읽기 관찰자와 같은 모양).
          * @param pObserver 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
          */
-        [[nodiscard]] static WriteObserverRegistration bindWriteObserver( IFileWriteObserver* pObserver );
+        [[nodiscard]] static WriteObserverSubscription bindWriteObserver( IFileWriteObserver* pObserver );
 
         /**
          * @brief OS 경계에 들어온 경로가 엄격한 절대 경로인지 봅니다(R2 - 디스크 I/O 는 절대 경로만). 아니면 오류(`File.RelativePath`)를 남기고 false - 부르는 OS 호출은 실패한다.

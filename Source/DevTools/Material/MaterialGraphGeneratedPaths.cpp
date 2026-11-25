@@ -139,8 +139,8 @@ namespace sw
             }
         };
 
-        const MaterialGraphSourceGenerator         s_materialGraphSourceGenerator;
-        const IShaderSourceGenerator::Registration s_materialGraphSourceGeneratorRegistration{ s_materialGraphSourceGenerator };
+        const MaterialGraphSourceGenerator      s_materialGraphSourceGenerator;
+        const IShaderSourceGenerator::Registrar s_materialGraphSourceGeneratorRegistrar{ s_materialGraphSourceGenerator };
     } // namespace
 
     bool MaterialGraphGeneratedPaths::makeGeneratedPaths( string_view graphID, MaterialGraphGeneratedPaths& outPaths )

@@ -17,12 +17,12 @@ namespace sw::internal
     /** @brief 보고자 함수의 형식입니다(`LowLevelReporterFunc` 가 가리키는 것). */
     using LowLevelReporterSignature = std::remove_pointer_t<LowLevelReporterFunc>;
     /** @brief 보고자 등록 토큰입니다. 토큰이 사라지면 보고자를 떼고, 이후 보고는 stderr 로 간다. */
-    using LowLevelReporterRegistration = ObserverSlot<LowLevelReporterSignature>::Registration;
+    using LowLevelReporterSubscription = ObserverSlot<LowLevelReporterSignature>::Subscription;
     /** @brief 걸린 보고자를 범위 동안 떼어 두는 범위입니다(테스트만). */
     using LowLevelReporterSuspension = ObserverSlot<LowLevelReporterSignature>::Suspension;
 
     /** @brief 보고자를 겁니다. 보고자는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다. nullptr 이면 빈 토큰입니다. */
-    [[nodiscard]] SW_API LowLevelReporterRegistration bindLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept;
+    [[nodiscard]] SW_API LowLevelReporterSubscription bindLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept;
     /** @brief 걸린 보고자를 범위 동안 떼어 둡니다 — 테스트만 쓴다. 범위가 끝날 때 칸이 비어 있어야 되돌린다. */
     [[nodiscard]] SW_API LowLevelReporterSuspension suspendLowLevelReporter() noexcept;
 } // namespace sw::internal

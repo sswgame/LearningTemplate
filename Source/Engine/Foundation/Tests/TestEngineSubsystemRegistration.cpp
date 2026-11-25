@@ -133,9 +133,9 @@ namespace
 {
     /** @brief 테스트 목록에 단 서브시스템 칸 등록입니다(엔진의 `SW_ENGINE_SUBSYSTEM_SLOT` 와 같은 값). */
     template <class T>
-    struct TestServiceRecord : engine::EngineSubsystemSlotRegistration
+    struct TestSubsystemSlotRegistration : engine::EngineSubsystemSlotRegistration
     {
-        TestServiceRecord( engine::EngineRegistrationList& list, engine::EngineSubsystemVisibility visibility )
+        TestSubsystemSlotRegistration( engine::EngineRegistrationList& list, engine::EngineSubsystemVisibility visibility )
             : engine::EngineSubsystemSlotRegistration{ list,
                                                        SubsystemSlotOf<T>::kTypeName,
                                                        getSubsystemTypeHash<T>(),
@@ -149,17 +149,17 @@ namespace
 
     /** @brief 테스트 목록에 단 공장 등록입니다(엔진의 `SW_ENGINE_SUBSYSTEM` 과 같은 값 — @p TAfter 를 먼저 만든다). */
     template <class T, class... TAfter>
-    struct TestSubsystemRecord : engine::EngineSubsystemRecord
+    struct TestSubsystemRegistration : engine::EngineSubsystemRegistration
     {
-        TestSubsystemRecord( engine::EngineRegistrationList& list, engine::EngineSubsystemStage stage )
-            : engine::EngineSubsystemRecord{ list,
-                                             T::kSubsystemName,
-                                             getSubsystemTypeHash<T>(),
-                                             stage,
-                                             engine::EngineSubsystemAfter<TAfter...>::getHashes(),
-                                             "(test)",
-                                             &engine::EngineRegistrationOps<T>::emplace,
-                                             engine::EngineSubsystemMemoryTag<T>::kValue }
+        TestSubsystemRegistration( engine::EngineRegistrationList& list, engine::EngineSubsystemStage stage )
+            : engine::EngineSubsystemRegistration{ list,
+                                                   T::kSubsystemName,
+                                                   getSubsystemTypeHash<T>(),
+                                                   stage,
+                                                   engine::EngineSubsystemAfter<TAfter...>::getHashes(),
+                                                   "(test)",
+                                                   &engine::EngineRegistrationOps<T>::emplace,
+                                                   engine::EngineSubsystemMemoryTag<T>::kValue }
         {
         }
     };
@@ -178,10 +178,10 @@ namespace
         }
 
         /** @brief 순서대로 놓인 공장의 이름을 공백으로 잇습니다. */
-        static string joinNames( const vector<const engine::EngineSubsystemRecord*>& listRecord )
+        static string joinNames( const vector<const engine::EngineSubsystemRegistration*>& listRecord )
         {
             string joined;
-            for ( const engine::EngineSubsystemRecord* const pRecord : listRecord )
+            for ( const engine::EngineSubsystemRegistration* const pRecord : listRecord )
             {
                 if ( joined.empty() == false )
                     joined += ' ';
@@ -209,13 +209,13 @@ namespace
 /** @brief [EngineRegistrationTest] 등록한 타입의 칸이 범위에서 찾은 객체를 들고, 창구는 그 칸을 읽는다. 끊으면 비고 다시 묶을 수 있다 */
 SW_TEST_CASE( EngineRegistrationTest, BindFillsSlotAndAccessReadsIt )
 {
-    engine::EngineRegistrationList         list;
-    const TestServiceRecord<RequiredValue> requiredRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
-    const TestServiceRecord<OptionalValue> optionalRecord{ list, engine::EngineSubsystemVisibility::HostOnly };
-    RequiredValue                          required{ 7 };
-    OptionalValue                          optional{ 9 };
-    SubsystemScope                         parentScope;
-    SubsystemScope                         scope{ &parentScope };
+    engine::EngineRegistrationList                     list;
+    const TestSubsystemSlotRegistration<RequiredValue> requiredRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
+    const TestSubsystemSlotRegistration<OptionalValue> optionalRecord{ list, engine::EngineSubsystemVisibility::HostOnly };
+    RequiredValue                                      required{ 7 };
+    OptionalValue                                      optional{ 9 };
+    SubsystemScope                                     parentScope;
+    SubsystemScope                                     scope{ &parentScope };
     SW_REQUIRE_TRUE( parentScope.bind( &required ) ); // 부모 범위까지 찾는다
     SW_REQUIRE_TRUE( scope.bind( &optional ) );
 
@@ -236,9 +236,9 @@ SW_TEST_CASE( EngineRegistrationTest, BindFillsSlotAndAccessReadsIt )
  */
 SW_TEST_CASE( EngineRegistrationTest, UndeclaredSlotLookupDuringInitializeFailsStartup )
 {
-    engine::EngineRegistrationList              list;
-    const TestServiceRecord<SlotProbeSubsystem> probeRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
-    SubsystemScope                              scope;
+    engine::EngineRegistrationList                          list;
+    const TestSubsystemSlotRegistration<SlotProbeSubsystem> probeRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
+    SubsystemScope                                          scope;
     (void)scope.emplaceSubsystem<SlotProbeSubsystem>();
     (void)scope.emplaceSubsystem<SlotLookupSubsystem<0>>( "ZLookup", vector<const utf8*>{} );
     SW_REQUIRE_TRUE( list.bindSubsystemSlots( scope ).isBound() );
@@ -254,9 +254,9 @@ SW_TEST_CASE( EngineRegistrationTest, UndeclaredSlotLookupDuringInitializeFailsS
 /** @brief [EngineRegistrationTest] 칸 길 조회도 선언한 의존이면 초기화 중에 찾아도 된다 */
 SW_TEST_CASE( EngineRegistrationTest, DeclaredSlotLookupDuringInitializeIsAllowed )
 {
-    engine::EngineRegistrationList              list;
-    const TestServiceRecord<SlotProbeSubsystem> probeRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
-    SubsystemScope                              scope;
+    engine::EngineRegistrationList                          list;
+    const TestSubsystemSlotRegistration<SlotProbeSubsystem> probeRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
+    SubsystemScope                                          scope;
     (void)scope.emplaceSubsystem<SlotProbeSubsystem>();
     (void)scope.emplaceSubsystem<SlotLookupSubsystem<0>>( "ZLookup", vector<const utf8*>{ "SlotProbe" } );
     SW_REQUIRE_TRUE( list.bindSubsystemSlots( scope ).isBound() );
@@ -268,11 +268,11 @@ SW_TEST_CASE( EngineRegistrationTest, DeclaredSlotLookupDuringInitializeIsAllowe
 /** @brief [EngineRegistrationTest] 필수 칸이 비면 그 타입 이름으로 알린다. 선택 칸은 비어도 알리지 않는다 */
 SW_TEST_CASE( EngineRegistrationTest, MissingRequiredSlotIsReportedByName )
 {
-    engine::EngineRegistrationList          list;
-    const TestServiceRecord<RequiredValue>  requiredRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
-    const TestServiceRecord<OptionalValue>  optionalRecord{ list, engine::EngineSubsystemVisibility::HostOnly };
-    SubsystemScope                          emptyScope;
-    const engine::EngineSubsystemBindResult missing = list.bindSubsystemSlots( emptyScope );
+    engine::EngineRegistrationList                     list;
+    const TestSubsystemSlotRegistration<RequiredValue> requiredRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
+    const TestSubsystemSlotRegistration<OptionalValue> optionalRecord{ list, engine::EngineSubsystemVisibility::HostOnly };
+    SubsystemScope                                     emptyScope;
+    const engine::EngineSubsystemBindResult            missing = list.bindSubsystemSlots( emptyScope );
     SW_REQUIRE_TRUE( missing._kind == engine::EngineSubsystemBindKind::MissingRequired );
     SW_REQUIRE_NOT_NULL( missing._pTypeName );
     SW_EXPECT_EQUAL( string( "RequiredValue" ), string( missing._pTypeName ) );
@@ -291,12 +291,12 @@ SW_TEST_CASE( EngineRegistrationTest, MissingRequiredSlotIsReportedByName )
 /** @brief [EngineRegistrationTest] 게임 모듈 범위에는 게임 노출 칸만 걸리고, 호스트 · 에디터 범위에는 모두 걸린다. 빈 칸은 걸지 않는다 */
 SW_TEST_CASE( EngineRegistrationTest, ModuleScopeFiltersByVisibility )
 {
-    engine::EngineRegistrationList         list;
-    const TestServiceRecord<RequiredValue> requiredRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
-    const TestServiceRecord<OptionalValue> optionalRecord{ list, engine::EngineSubsystemVisibility::HostOnly };
-    RequiredValue                          required{ 1 };
-    OptionalValue                          optional{ 2 };
-    SubsystemScope                         scope;
+    engine::EngineRegistrationList                     list;
+    const TestSubsystemSlotRegistration<RequiredValue> requiredRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
+    const TestSubsystemSlotRegistration<OptionalValue> optionalRecord{ list, engine::EngineSubsystemVisibility::HostOnly };
+    RequiredValue                                      required{ 1 };
+    OptionalValue                                      optional{ 2 };
+    SubsystemScope                                     scope;
     SW_REQUIRE_TRUE( scope.bind( &required ) );
     SW_REQUIRE_TRUE( scope.bind( &optional ) );
     SW_REQUIRE_TRUE( list.bindSubsystemSlots( scope ).isBound() );
@@ -328,13 +328,13 @@ SW_TEST_CASE( EngineRegistrationTest, ModuleScopeFiltersByVisibility )
 /** @brief [EngineRegistrationTest] 만드는 순서는 선언한 먼저 만들 타입이 정하고, 의존이 없는 것끼리는 이름 순이다(단 순서 · 링크 순서는 보지 않는다) */
 SW_TEST_CASE( EngineRegistrationTest, BuildOrderFollowsDeclaredDependenciesThenName )
 {
-    engine::EngineRegistrationList               list;
-    const TestSubsystemRecord<Echo, Delta>       echoRecord{ list, Util::kStartup };  // Echo 는 Delta 뒤
-    const TestSubsystemRecord<Delta, Alpha>      deltaRecord{ list, Util::kStartup }; // Delta 는 Alpha 뒤
-    const TestSubsystemRecord<Charlie>           charlieRecord{ list, Util::kStartup };
-    const TestSubsystemRecord<Alpha>             alphaRecord{ list, Util::kStartup };
-    const TestSubsystemRecord<Bravo>             bravoRecord{ list, Util::kShared }; // 다른 단계는 끼지 않는다
-    vector<const engine::EngineSubsystemRecord*> listOrder;
+    engine::EngineRegistrationList                     list;
+    const TestSubsystemRegistration<Echo, Delta>       echoRecord{ list, Util::kStartup };  // Echo 는 Delta 뒤
+    const TestSubsystemRegistration<Delta, Alpha>      deltaRecord{ list, Util::kStartup }; // Delta 는 Alpha 뒤
+    const TestSubsystemRegistration<Charlie>           charlieRecord{ list, Util::kStartup };
+    const TestSubsystemRegistration<Alpha>             alphaRecord{ list, Util::kStartup };
+    const TestSubsystemRegistration<Bravo>             bravoRecord{ list, Util::kShared }; // 다른 단계는 끼지 않는다
+    vector<const engine::EngineSubsystemRegistration*> listOrder;
     SW_REQUIRE_TRUE( list.orderSubsystems( Util::kStartup, listOrder ).has_value() );
     SW_EXPECT_EQUAL( string( "Alpha Charlie Delta Echo" ), Util::joinNames( listOrder ) );
     SW_REQUIRE_TRUE( list.orderSubsystems( Util::kShared, listOrder ).has_value() );
@@ -352,31 +352,31 @@ SW_TEST_CASE( EngineRegistrationTest, BuildOrderFollowsDeclaredDependenciesThenN
 SW_TEST_CASE( EngineRegistrationTest, BuildOrderRejectsCycleUnknownAndOtherStage )
 {
     {
-        engine::EngineRegistrationList               list;
-        const TestSubsystemRecord<Alpha, Bravo>      alphaRecord{ list, Util::kStartup };
-        const TestSubsystemRecord<Bravo, Alpha>      bravoRecord{ list, Util::kStartup };
-        vector<const engine::EngineSubsystemRecord*> listOrder;
-        const expected<void>                         ordered = list.orderSubsystems( Util::kStartup, listOrder );
+        engine::EngineRegistrationList                     list;
+        const TestSubsystemRegistration<Alpha, Bravo>      alphaRecord{ list, Util::kStartup };
+        const TestSubsystemRegistration<Bravo, Alpha>      bravoRecord{ list, Util::kStartup };
+        vector<const engine::EngineSubsystemRegistration*> listOrder;
+        const expected<void>                               ordered = list.orderSubsystems( Util::kStartup, listOrder );
         SW_REQUIRE_FALSE( ordered.has_value() );
         const string error = Util::describe( ordered.error() );
         SW_EXPECT_TRUE_MSG( error.find( "cycle" ) != string::npos, error );
         SW_EXPECT_TRUE( listOrder.empty() );
     }
     {
-        engine::EngineRegistrationList               list;
-        const TestSubsystemRecord<Alpha, Charlie>    alphaRecord{ list, Util::kStartup }; // Charlie 는 등록이 없다
-        vector<const engine::EngineSubsystemRecord*> listOrder;
-        const expected<void>                         ordered = list.orderSubsystems( Util::kStartup, listOrder );
+        engine::EngineRegistrationList                     list;
+        const TestSubsystemRegistration<Alpha, Charlie>    alphaRecord{ list, Util::kStartup }; // Charlie 는 등록이 없다
+        vector<const engine::EngineSubsystemRegistration*> listOrder;
+        const expected<void>                               ordered = list.orderSubsystems( Util::kStartup, listOrder );
         SW_REQUIRE_FALSE( ordered.has_value() );
         const string error = Util::describe( ordered.error() );
         SW_EXPECT_TRUE_MSG( error.find( "no registration" ) != string::npos, error );
     }
     {
-        engine::EngineRegistrationList               list;
-        const TestSubsystemRecord<Alpha, Bravo>      alphaRecord{ list, Util::kStartup };
-        const TestSubsystemRecord<Bravo>             bravoRecord{ list, Util::kShared }; // 범위가 다르면 공장이 찾지 못한다
-        vector<const engine::EngineSubsystemRecord*> listOrder;
-        const expected<void>                         ordered = list.orderSubsystems( Util::kStartup, listOrder );
+        engine::EngineRegistrationList                     list;
+        const TestSubsystemRegistration<Alpha, Bravo>      alphaRecord{ list, Util::kStartup };
+        const TestSubsystemRegistration<Bravo>             bravoRecord{ list, Util::kShared }; // 범위가 다르면 공장이 찾지 못한다
+        vector<const engine::EngineSubsystemRegistration*> listOrder;
+        const expected<void>                               ordered = list.orderSubsystems( Util::kStartup, listOrder );
         SW_REQUIRE_FALSE( ordered.has_value() );
         const string error = Util::describe( ordered.error() );
         SW_EXPECT_TRUE_MSG( error.find( "another stage" ) != string::npos, error );
@@ -386,12 +386,12 @@ SW_TEST_CASE( EngineRegistrationTest, BuildOrderRejectsCycleUnknownAndOtherStage
 /** @brief [EngineRegistrationTest] 칸은 프로세스에 하나라 묶는 범위도 하나다 — 두 번째 바인딩은 칸을 덮지 않고 거절되고, 그 범위의 끊기는 앞 바인딩을 건드리지 않는다 */
 SW_TEST_CASE( EngineRegistrationTest, SecondBindIsRejectedAndKeepsTheFirst )
 {
-    engine::EngineRegistrationList         list;
-    const TestServiceRecord<RequiredValue> requiredRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
-    RequiredValue                          first{ 1 };
-    RequiredValue                          second{ 2 };
-    SubsystemScope                         firstScope;
-    SubsystemScope                         secondScope;
+    engine::EngineRegistrationList                     list;
+    const TestSubsystemSlotRegistration<RequiredValue> requiredRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
+    RequiredValue                                      first{ 1 };
+    RequiredValue                                      second{ 2 };
+    SubsystemScope                                     firstScope;
+    SubsystemScope                                     secondScope;
     SW_REQUIRE_TRUE( firstScope.bind( &first ) );
     SW_REQUIRE_TRUE( secondScope.bind( &second ) );
 
@@ -429,9 +429,9 @@ SW_TEST_CASE( EngineRegistrationTest, RunningEngineRejectsASecondEngineBinding )
 /** @brief [EngineRegistrationTest] 공장이 받는 범위는 등록이 적은 먼저 만들 타입만 찾는다 — 먼저 서 있어도 적지 않은 타입은 찾기로 받지 않는다 */
 SW_TEST_CASE( EngineRegistrationTest, FactoryScopeDeclaresOnlyTheAfterList )
 {
-    engine::EngineRegistrationList          list;
-    const TestSubsystemRecord<Delta, Alpha> deltaRecord{ list, Util::kStartup };
-    SubsystemScope                          scope;
+    engine::EngineRegistrationList                list;
+    const TestSubsystemRegistration<Delta, Alpha> deltaRecord{ list, Util::kStartup };
+    SubsystemScope                                scope;
     (void)scope.emplaceSubsystem<Alpha>();
     (void)scope.emplaceSubsystem<Bravo>(); // 먼저 서 있지만 적지 않았다
     engine::EngineSubsystemFactoryScope factoryScope{ scope, deltaRecord };
@@ -444,24 +444,24 @@ SW_TEST_CASE( EngineRegistrationTest, FactoryScopeDeclaresOnlyTheAfterList )
 /** @brief [EngineRegistrationTest] 먼저 만든 서브시스템을 받아 만든 서브시스템은 그것에 (간접으로라도) 수명으로 기대야 한다 — 아니면 두 이름을 대며 거절한다 */
 SW_TEST_CASE( EngineRegistrationTest, LifetimeDependencyMustFollowTheAfterList )
 {
-    engine::EngineRegistrationList            list;
-    const TestSubsystemRecord<Alpha>          alphaRecord{ list, Util::kStartup };
-    const TestSubsystemRecord<Delta, Alpha>   deltaRecord{ list, Util::kStartup };   // Delta 는 Alpha 에 기댄다
-    const TestSubsystemRecord<Echo, Alpha>    echoRecord{ list, Util::kStartup };    // Echo 는 Delta 를 거쳐 Alpha 에 닿는다
-    const TestSubsystemRecord<Foxtrot, Alpha> foxtrotRecord{ list, Util::kStartup }; // Foxtrot 은 Alpha 를 받았는데 기대지 않는다
-    SubsystemScope                            scope;
+    engine::EngineRegistrationList                  list;
+    const TestSubsystemRegistration<Alpha>          alphaRecord{ list, Util::kStartup };
+    const TestSubsystemRegistration<Delta, Alpha>   deltaRecord{ list, Util::kStartup };   // Delta 는 Alpha 에 기댄다
+    const TestSubsystemRegistration<Echo, Alpha>    echoRecord{ list, Util::kStartup };    // Echo 는 Delta 를 거쳐 Alpha 에 닿는다
+    const TestSubsystemRegistration<Foxtrot, Alpha> foxtrotRecord{ list, Util::kStartup }; // Foxtrot 은 Alpha 를 받았는데 기대지 않는다
+    SubsystemScope                                  scope;
     (void)scope.emplaceSubsystem<Alpha>();
     (void)scope.emplaceSubsystem<Delta>();
     (void)scope.emplaceSubsystem<Echo>();
     (void)scope.emplaceSubsystem<Foxtrot>();
 
-    const vector<const engine::EngineSubsystemRecord*> listGood{ &alphaRecord, &deltaRecord, &echoRecord };
-    const vector<vector<uint32>>                       listGoodBuilt{ { 0 }, { 1 }, { 2 } };
+    const vector<const engine::EngineSubsystemRegistration*> listGood{ &alphaRecord, &deltaRecord, &echoRecord };
+    const vector<vector<uint32>>                             listGoodBuilt{ { 0 }, { 1 }, { 2 } };
     SW_EXPECT_TRUE( engine::EngineRegistrationList::findLifetimeMismatch( listGood, listGoodBuilt, scope.getCollection() ).has_value() );
 
-    const vector<const engine::EngineSubsystemRecord*> listBad{ &alphaRecord, &foxtrotRecord };
-    const vector<vector<uint32>>                       listBadBuilt{ { 0 }, { 3 } };
-    const expected<void>                               mismatch = engine::EngineRegistrationList::findLifetimeMismatch( listBad, listBadBuilt, scope.getCollection() );
+    const vector<const engine::EngineSubsystemRegistration*> listBad{ &alphaRecord, &foxtrotRecord };
+    const vector<vector<uint32>>                             listBadBuilt{ { 0 }, { 3 } };
+    const expected<void>                                     mismatch = engine::EngineRegistrationList::findLifetimeMismatch( listBad, listBadBuilt, scope.getCollection() );
     SW_REQUIRE_FALSE( mismatch.has_value() );
     const string error = Util::describe( mismatch.error() );
     SW_EXPECT_TRUE_MSG( error.find( "Foxtrot" ) != string::npos && error.find( "Alpha" ) != string::npos && error.find( "does not depend" ) != string::npos, error );

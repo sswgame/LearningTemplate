@@ -32,7 +32,7 @@ namespace sw
         }
 
         /** @brief 건 보고기의 등록입니다. 프로세스 끝까지 쥔다 — 상수 초기화라 다른 TU 의 정적 초기화가 먼저 `install` 을 불러도 된다. */
-        RaceDetectContext::ReportFunctionRegistration s_reportFunctionRegistration{};
+        RaceDetectContext::ReportFunctionSubscription s_reportFunctionRegistration{};
 
         /** @brief 프로그램 시작 때 보고기를 겁니다. `Core` 목적 파일을 통째로 넣는 실행 파일(Engine.dll)은 이것으로 충분합니다. */
         [[maybe_unused]] const bool s_bDataRaceReporterInstalled = []() noexcept

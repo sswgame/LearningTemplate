@@ -148,7 +148,7 @@ namespace sw
             /** @brief 외부 출력이 켜진 동안 태스크 훅을 쥡니다(`shutdown` 이 풉니다). */
             static inline Subscription s_taskProfileHookBinding{};
             /** @brief 외부 출력이 할당을 관찰하는 동안 쥔 관찰자 등록입니다(`shutdown` 이 풉니다). */
-            static inline Memory::AllocationObserverRegistration s_allocationObserverRegistration{};
+            static inline Memory::AllocationObserverSubscription s_allocationObserverRegistration{};
 #endif
         };
 

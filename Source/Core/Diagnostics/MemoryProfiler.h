@@ -473,7 +473,7 @@ namespace sw
 
         MemoryLeakWindow _leakWindow; ///< 누수 측정 창. 태그 합계는 위 `_shard` 칸에 둔다(그래서 `_shard` 뒤에 선언한다)
 
-        Memory::AllocationTrackerRegistration _trackerRegistration; ///< 할당기에 건 등록. 엔진 기록기가 먼저 걸린 뒤의 지역 프로파일러(테스트)는 빈 토큰이다
+        Memory::AllocationTrackerSubscription _trackerRegistration; ///< 할당기에 건 등록. 엔진 기록기가 먼저 걸린 뒤의 지역 프로파일러(테스트)는 빈 토큰이다
 
         // 콜 스택 세부 추적용 — 할당 때 `_bDetailedTrackingEnabled` 가 true 였던 블록만 올라간다(해제는 블록 헤더의 해시로 내린다)
         mutable mutex                                                    _stackMapMutex;

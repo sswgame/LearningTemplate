@@ -64,7 +64,7 @@ namespace sw
          * @details 게이트가 서 있는 동안 리소스 루트(`Content/`) 아래로 가는 모든 파일 쓰기(저장 · Quick Open 으로 연 원본 포함)는 오류와 함께 거절된다.
          *          프로젝트 루트의 추적 폴더 `docs/` · `Config/` 도 같은 문이 막는다(`Config/Editor/` 만 허용 목록 — 에디터 설정 저장 길). 사본(작업 도메인)은 리소스 루트 밖이라 열려 있다.
          */
-        [[nodiscard]] static FileUtil::WriteFilterRegistration acquireWriteFilter();
+        [[nodiscard]] static FileUtil::WriteFilterSubscription acquireWriteFilter();
         /** @brief 글 @p text 안의 GUID 글 표기(앞뒤가 글자 · 숫자가 아닌 소문자 16진 32 자) 가운데 @p mapGUID 에 있는 것을 바꿉니다. */
         static string rebaseIdentities( string_view text, const unordered_map<AssetGUID, AssetGUID>& mapGUID );
     };

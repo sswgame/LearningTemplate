@@ -123,24 +123,24 @@ namespace sw::engine
     };
 
     /**
-     * @struct EngineSubsystemRecord
+     * @struct EngineSubsystemRegistration
      * @brief 서브시스템 공장 하나의 등록입니다(`SW_ENGINE_SUBSYSTEM` · `SW_ENGINE_SUBSYSTEM_WITH_SLOT` 이 정적으로 둔다).
      */
-    struct SW_API EngineSubsystemRecord
+    struct SW_API EngineSubsystemRegistration
     {
-        const utf8*                  _pTypeName;     ///< 오류 문구 · 동점 순서에 쓰는 타입 이름
-        uint64                       _typeHash;      ///< 의존이 가리키는 타입 해시
-        EngineSubsystemStage         _stage;         ///< 만드는 단계
-        span<const uint64>           _listAfterHash; ///< 먼저 만들 타입의 해시(같은 단계)
-        const utf8*                  _pAfterNames;   ///< 먼저 만들 타입들의 글(`( A, B )`, 오류 문구용)
-        EngineSubsystemFactory       _pfnFactory;    ///< 만드는 법
-        MemoryTag                    _memoryTag;     ///< 공장이 도는 동안 거는 할당 태그(등록 줄 형식의 `kSubsystemMemoryTag` — `EngineSubsystemMemoryTag`)
-        const EngineSubsystemRecord* _pNext;         ///< 목록의 다음(먼저 단 쪽)
+        const utf8*                        _pTypeName;     ///< 오류 문구 · 동점 순서에 쓰는 타입 이름
+        uint64                             _typeHash;      ///< 의존이 가리키는 타입 해시
+        EngineSubsystemStage               _stage;         ///< 만드는 단계
+        span<const uint64>                 _listAfterHash; ///< 먼저 만들 타입의 해시(같은 단계)
+        const utf8*                        _pAfterNames;   ///< 먼저 만들 타입들의 글(`( A, B )`, 오류 문구용)
+        EngineSubsystemFactory             _pfnFactory;    ///< 만드는 법
+        MemoryTag                          _memoryTag;     ///< 공장이 도는 동안 거는 할당 태그(등록 줄 형식의 `kSubsystemMemoryTag` — `EngineSubsystemMemoryTag`)
+        const EngineSubsystemRegistration* _pNext;         ///< 목록의 다음(먼저 단 쪽)
 
-        EngineSubsystemRecord( EngineRegistrationList& list, const utf8* pTypeName, uint64 typeHash, EngineSubsystemStage stage, span<const uint64> listAfterHash,
-                               const utf8* pAfterNames, EngineSubsystemFactory pfnFactory, MemoryTag memoryTag );
-        EngineSubsystemRecord( const EngineSubsystemRecord& )            = delete;
-        EngineSubsystemRecord& operator=( const EngineSubsystemRecord& ) = delete;
+        EngineSubsystemRegistration( EngineRegistrationList& list, const utf8* pTypeName, uint64 typeHash, EngineSubsystemStage stage, span<const uint64> listAfterHash,
+                                     const utf8* pAfterNames, EngineSubsystemFactory pfnFactory, MemoryTag memoryTag );
+        EngineSubsystemRegistration( const EngineSubsystemRegistration& )            = delete;
+        EngineSubsystemRegistration& operator=( const EngineSubsystemRegistration& ) = delete;
     };
 
     /**
@@ -154,7 +154,7 @@ namespace sw::engine
     class SW_API EngineSubsystemFactoryScope
     {
     public:
-        EngineSubsystemFactoryScope( SubsystemScope& scope, const EngineSubsystemRecord& record );
+        EngineSubsystemFactoryScope( SubsystemScope& scope, const EngineSubsystemRegistration& record );
         EngineSubsystemFactoryScope( const EngineSubsystemFactoryScope& )            = delete;
         EngineSubsystemFactoryScope& operator=( const EngineSubsystemFactoryScope& ) = delete;
 
@@ -207,8 +207,8 @@ namespace sw::engine
         void requireDeclared( uint64 typeHash, const utf8* pLookup ) const;
 
     private:
-        SubsystemScope&              _scope;  ///< 넣는 범위
-        const EngineSubsystemRecord& _record; ///< 지금 도는 공장의 등록(먼저 만들 타입)
+        SubsystemScope&                    _scope;  ///< 넣는 범위
+        const EngineSubsystemRegistration& _record; ///< 지금 도는 공장의 등록(먼저 만들 타입)
     };
 
     /**
@@ -252,7 +252,7 @@ namespace sw::engine
          * @brief @p stage 의 공장을 만드는 순서로 늘어놓습니다(선언한 먼저 만들 타입으로 위상 정렬, 동점은 이름 순).
          * @return 같은 타입 둘 · 모르는 타입 · 다른 단계의 타입 · 순환이면 무엇인지입니다.
          */
-        [[nodiscard]] expected<void> orderSubsystems( EngineSubsystemStage stage, vector<const EngineSubsystemRecord*>& outListOrder ) const;
+        [[nodiscard]] expected<void> orderSubsystems( EngineSubsystemStage stage, vector<const EngineSubsystemRegistration*>& outListOrder ) const;
         /**
          * @brief @p stage 의 공장을 만드는 순서로 부릅니다. 순서를 정하지 못하거나 수명 의존이 만드는 순서와 어긋나면(`findLifetimeMismatch`) 이유를 남기고 멈춘다 — 폴백이 없다.
          */
@@ -264,14 +264,14 @@ namespace sw::engine
          *          닿아야 한다 — 받은 것이 먼저 서고 늦게 내려야 들고 있는 참조가 산다. 서브시스템이 아닌 것을 건 공장(인터페이스만 거는 줄)은 볼 것이 없다.
          * @return 어긋난 곳이 있으면 그 두 이름(대상)입니다.
          */
-        [[nodiscard]] static expected<void> findLifetimeMismatch( const vector<const EngineSubsystemRecord*>& listOrder, const vector<vector<uint32>>& listBuilt, const SubsystemCollection& collection );
+        [[nodiscard]] static expected<void> findLifetimeMismatch( const vector<const EngineSubsystemRegistration*>& listOrder, const vector<vector<uint32>>& listBuilt, const SubsystemCollection& collection );
 
     private:
         friend struct EngineSubsystemSlotRegistration;
-        friend struct EngineSubsystemRecord;
+        friend struct EngineSubsystemRegistration;
 
         const EngineSubsystemSlotRegistration* _pSlotHead;      ///< 서브시스템 칸 등록(나중에 단 것이 앞). 칸은 등록이 가리키는 곳에 있어 등록은 읽기만 한다
-        const EngineSubsystemRecord*           _pSubsystemHead; ///< 공장 등록(나중에 단 것이 앞)
+        const EngineSubsystemRegistration*     _pSubsystemHead; ///< 공장 등록(나중에 단 것이 앞)
         const ISubsystemLocator*               _pBoundScope;    ///< 칸을 묶은 범위(묶지 않았으면 nullptr) — 프로세스당 하나
     };
 
@@ -336,7 +336,7 @@ namespace sw::engine
 #define SW_ENGINE_SUBSYSTEM( Type, lifetime, stage, after, Function )                                                                            \
     static_assert( ::sw::kSubsystemLifetimeMatches<Type, ::sw::SubsystemLifetime::lifetime>,                                                     \
                    #Type ": a GameInstance subsystem overrides resetGameInstanceState and findGameInstanceState, a Process subsystem neither" ); \
-    static const ::sw::engine::EngineSubsystemRecord s_engineSubsystemRecord_##Type                                                              \
+    static const ::sw::engine::EngineSubsystemRegistration s_engineSubsystemRegistration_##Type                                                  \
     {                                                                                                                                            \
         ::sw::engine::EngineRegistrationList::getGlobal(), #Type, ::sw::getSubsystemTypeHash<Type>(), ::sw::engine::EngineSubsystemStage::stage, \
             ::sw::engine::EngineSubsystemAfter<SW_ENGINE_REGISTRATION_UNPAREN after>::getHashes(), #after, Function,                             \

@@ -76,7 +76,7 @@ namespace sw
             }
         };
 
-        GameInstanceClient                          s_gameInstanceClient;
-        const IGameInstanceClientHook::Registration s_gameInstanceClientRegistration{ s_gameInstanceClient };
+        GameInstanceClient                       s_gameInstanceClient;
+        const IGameInstanceClientHook::Registrar s_gameInstanceClientRegistrar{ s_gameInstanceClient };
     } // namespace
 } // namespace sw

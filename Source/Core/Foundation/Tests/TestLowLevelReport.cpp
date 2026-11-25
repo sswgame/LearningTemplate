@@ -180,7 +180,7 @@ namespace
     private:
         int32                                  _savedStderr;
         internal::LowLevelReporterSuspension   _suspension;
-        internal::LowLevelReporterRegistration _registration;
+        internal::LowLevelReporterSubscription _registration;
     };
 } // namespace
 
@@ -355,14 +355,14 @@ SW_TEST_CASE( LowLevelReportTest, MissingRequiredServiceReportsOneErrorBeforeSto
 SW_TEST_CASE( LowLevelReportTest, SecondReporterBindAsserts )
 {
     const internal::LowLevelReporterSuspension   hostSuspension = internal::suspendLowLevelReporter();
-    const internal::LowLevelReporterRegistration first          = internal::bindLowLevelReporter( &LowLevelReportTestInternal::reporter );
+    const internal::LowLevelReporterSubscription first          = internal::bindLowLevelReporter( &LowLevelReportTestInternal::reporter );
     SW_EXPECT_TRUE( first.isActive() );
     LowLevelReportTestInternal::_s_received = {};
     LowLevelReportTestInternal::_s_bHandled = true;
     {
         test::ScopedAssertCapture capture;
         // 이중 등록 단언은 보고 통로로도 나가 첫 보고자가 받는다(로그에는 닿지 않는다 — 로그 보고자는 떼어 두었다)
-        const internal::LowLevelReporterRegistration second = internal::bindLowLevelReporter( &LowLevelReportTestInternal::reporter );
+        const internal::LowLevelReporterSubscription second = internal::bindLowLevelReporter( &LowLevelReportTestInternal::reporter );
         SW_EXPECT_FALSE( second.isActive() );
         if ( test::ScopedAssertCapture::kAssertsAreActive )
             SW_EXPECT_EQUAL( 1u, capture.getCount() );

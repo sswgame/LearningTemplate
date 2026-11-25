@@ -16,7 +16,7 @@ namespace sw
         struct OnlineProtocolRegistryInternal
         {
             /** @brief 등록 목록입니다(함수 정적 — 정적 초기화 순서와 상관없이 처음 쓸 때 선다). */
-            static SW_DEFINE_SERVICE_FACTORY_LIST( getList, "Online protocol" )
+            static SW_DEFINE_FACTORY_REGISTRATION_LIST( getList, "Online protocol" )
         };
     } // namespace
 } // namespace sw
@@ -24,7 +24,7 @@ namespace sw
 namespace sw
 {
     OnlineProtocolEntry::OnlineProtocolEntry( const utf8* pName, uint16 methodRange, SchemaHashFunction pComputeMethodHash, SchemaHashFunction pComputeMessageHash )
-        : ServiceFactoryNode{}
+        : FactoryRegistration{}
         , _pComputeMethodHash{ pComputeMethodHash }
         , _pComputeMessageHash{ pComputeMessageHash }
         , _methodRange{ methodRange }
@@ -73,7 +73,7 @@ namespace sw
 
     void OnlineProtocolRegistry::registerEntry( OnlineProtocolEntry* pEntry )
     {
-        if ( ServiceFactoryNode::addTo( OnlineProtocolRegistryInternal::getList(), pEntry ) )
+        if ( FactoryRegistration::addTo( OnlineProtocolRegistryInternal::getList(), pEntry ) )
             return;
         // 오르지 못한 항목은 해시에 빠지므로 이 빌드의 해시가 키트 목록과 어긋납니다. 고칠 곳은 항목 선언이므로 모든 구성에서 멈춥니다.
         // 모듈 로드(정적 초기화) 중이라 로거가 아직 없을 수 있다 — `reportFatalError` 은 표준 오류에 먼저 쓴다.
@@ -89,7 +89,7 @@ namespace sw
     uint64 OnlineProtocolRegistry::computeSchemaHash()
     {
         uint64 hash = HashUtil::combine( 0, OnlineProtocolConstant::kBaseVersion );
-        for ( const ServiceFactoryNode* pNode : OnlineProtocolRegistryInternal::getList().getItems() )
+        for ( const FactoryRegistration* pNode : OnlineProtocolRegistryInternal::getList().getItems() )
         {
             const OnlineProtocolEntry* pEntry = static_cast<const OnlineProtocolEntry*>( pNode );
             hash                              = HashUtil::combine( hash, pEntry->_methodRange );

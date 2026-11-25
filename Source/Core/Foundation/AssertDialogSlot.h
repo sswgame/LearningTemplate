@@ -17,12 +17,12 @@ namespace sw::internal
     /** @brief 대화상자 함수의 형식입니다(`AssertDialogFunc` 가 가리키는 것). */
     using AssertDialogSignature = std::remove_pointer_t<AssertDialogFunc>;
     /** @brief 대화상자 등록 토큰입니다. 토큰이 사라지면 대화상자를 떼고, 이후 단언은 늘 멈춘다. */
-    using AssertDialogRegistration = ObserverSlot<AssertDialogSignature>::Registration;
+    using AssertDialogSubscription = ObserverSlot<AssertDialogSignature>::Subscription;
 
     /**
      * @brief 대화상자를 겁니다. 걸 때 "항상 무시" 로 기억한 자리를 잊습니다. 대화상자는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다.
      * @param pfnDialog nullptr 이면 빈 토큰입니다.
      */
-    [[nodiscard]] SW_API AssertDialogRegistration bindAssertDialog( AssertDialogFunc pfnDialog ) noexcept;
+    [[nodiscard]] SW_API AssertDialogSubscription bindAssertDialog( AssertDialogFunc pfnDialog ) noexcept;
 } // namespace sw::internal
 #endif

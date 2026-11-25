@@ -112,7 +112,7 @@ namespace sw
             [[maybe_unused]] uint8 _reserved             : 7;
         };
 
-        DevToolsClient                          s_devToolsClient;
-        const IDevToolsClientPart::Registration s_devToolsClientRegistration{ s_devToolsClient };
+        DevToolsClient                       s_devToolsClient;
+        const IDevToolsClientPart::Registrar s_devToolsClientRegistrar{ s_devToolsClient };
     } // namespace
 } // namespace sw

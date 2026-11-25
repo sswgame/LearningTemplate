@@ -1944,8 +1944,8 @@
     "check_fact_store": "check_index_cache — 사실 저장소는 index_cache 다(2026-11-21)",
     "read_last_assistant_text": "read_last_reply_text(2026-11-21)",
     "unfold_paths": "expand_paths(2026-11-21)",
-    "unregisterAllocationObserver": "Memory::registerAllocationObserver 가 돌려준 AllocationObserverRegistration 토큰의 reset — 관찰자 칸은 ObserverSlot(2026-11-21)",
-    "unregisterAllocationTracker": "Memory::registerAllocationTracker 가 돌려준 AllocationTrackerRegistration 토큰의 reset — 기록기 칸은 ObserverSlot(2026-11-21)",
+    "unregisterAllocationObserver": "Memory::registerAllocationObserver 가 돌려준 AllocationObserverSubscription 토큰의 reset — 관찰자 칸은 ObserverSlot(2026-11-21)",
+    "unregisterAllocationTracker": "Memory::registerAllocationTracker 가 돌려준 AllocationTrackerSubscription 토큰의 reset — 기록기 칸은 ObserverSlot(2026-11-21)",
     "freeAligned": "Memory::free — 해제 길은 하나(CRT 는 Windows 에서 모든 블록을 정렬 힙에서 잡는다, 2026-11-21)",
     "setTimingClock": "SubsystemCollection::setTimingEnabled — Time 을 티어 2 로 내려 MonotonicClock 을 직접 읽는다(2026-11-21)",
     "_pClockNanos": "SubsystemCollection::_bTimingEnabled — 시계 함수 포인터 우회 삭제(2026-11-21)",
@@ -2341,6 +2341,20 @@
     "getAudioService": "getAudioSubsystem — 형식 이름을 *Subsystem 으로 바꾼 데 따른 딸린 이름(2026-11-26)(2026-11-26)",
     "findAudioService": "findAudioSubsystem — 형식 이름을 *Subsystem 으로 바꾼 데 따른 딸린 이름(2026-11-26)(2026-11-26)",
     "getTelemetryService": "getTelemetrySubsystem — 형식 이름을 *Subsystem 으로 바꾼 데 따른 딸린 이름(2026-11-26)(2026-11-26)",
-    "getFontService": "getFontSubsystem — 형식 이름을 *Subsystem 으로 바꾼 데 따른 딸린 이름(2026-11-26)(2026-11-26)"
+    "getFontService": "getFontSubsystem — 형식 이름을 *Subsystem 으로 바꾼 데 따른 딸린 이름(2026-11-26)(2026-11-26)",
+    "EngineSubsystemRecord": "EngineSubsystemRegistration — 목록에 달리는 정적 기록은 *Registration 이다(Record · FactoryNode 와 같은 일, 2026-11-26)(2026-11-26)",
+    "s_engineSubsystemRecord_": "s_engineSubsystemRegistration_ — 목록에 달리는 정적 기록은 *Registration 이다(Record · FactoryNode 와 같은 일, 2026-11-26)(2026-11-26)",
+    "ServiceFactoryNode": "FactoryRegistration — 목록에 달리는 정적 기록은 *Registration 이다(Record · FactoryNode 와 같은 일, 2026-11-26)(2026-11-26)",
+    "ServerServiceFactory": "ServerServiceRegistration — 목록에 달리는 정적 기록은 *Registration 이다(Record · FactoryNode 와 같은 일, 2026-11-26)(2026-11-26)",
+    "SW_DEFINE_SERVICE_FACTORY_LIST": "SW_DEFINE_FACTORY_REGISTRATION_LIST — 목록에 달리는 정적 기록은 *Registration 이다(Record · FactoryNode 와 같은 일, 2026-11-26)(2026-11-26)",
+    "ReportFunctionRegistration": "ReportFunctionSubscription — 이동 전용으로 연결을 푸는 핸들은 Subscription 이다 — ObserverSlot 의 토큰도 같은 일을 한다(2026-11-26)(2026-11-26)",
+    "LockObserverRegistration": "LockObserverSubscription — 이동 전용으로 연결을 푸는 핸들은 Subscription 이다 — ObserverSlot 의 토큰도 같은 일을 한다(2026-11-26)(2026-11-26)",
+    "WriteFilterRegistration": "WriteFilterSubscription — 이동 전용으로 연결을 푸는 핸들은 Subscription 이다 — ObserverSlot 의 토큰도 같은 일을 한다(2026-11-26)(2026-11-26)",
+    "ReadObserverRegistration": "ReadObserverSubscription — 이동 전용으로 연결을 푸는 핸들은 Subscription 이다 — ObserverSlot 의 토큰도 같은 일을 한다(2026-11-26)(2026-11-26)",
+    "WriteObserverRegistration": "WriteObserverSubscription — 이동 전용으로 연결을 푸는 핸들은 Subscription 이다 — ObserverSlot 의 토큰도 같은 일을 한다(2026-11-26)(2026-11-26)",
+    "AssertDialogRegistration": "AssertDialogSubscription — 이동 전용으로 연결을 푸는 핸들은 Subscription 이다 — ObserverSlot 의 토큰도 같은 일을 한다(2026-11-26)(2026-11-26)",
+    "LowLevelReporterRegistration": "LowLevelReporterSubscription — 이동 전용으로 연결을 푸는 핸들은 Subscription 이다 — ObserverSlot 의 토큰도 같은 일을 한다(2026-11-26)(2026-11-26)",
+    "AllocationObserverRegistration": "AllocationObserverSubscription — 이동 전용으로 연결을 푸는 핸들은 Subscription 이다 — ObserverSlot 의 토큰도 같은 일을 한다(2026-11-26)(2026-11-26)",
+    "AllocationTrackerRegistration": "AllocationTrackerSubscription — 이동 전용으로 연결을 푸는 핸들은 Subscription 이다 — ObserverSlot 의 토큰도 같은 일을 한다(2026-11-26)(2026-11-26)"
   }
 }

@@ -41,7 +41,7 @@ namespace sw
         ~RaceDetectContext() = default;
 
         /** @brief 보고 함수 등록 토큰입니다. 토큰이 사라지면 보고 함수를 뗍니다(그 뒤 경합은 멈추기만 한다). */
-        using ReportFunctionRegistration = ObserverSlot<DataRaceReportSignature>::Registration;
+        using ReportFunctionSubscription = ObserverSlot<DataRaceReportSignature>::Subscription;
         /** @brief 걸린 보고 함수를 범위 동안 떼어 두는 범위입니다(테스트가 자기 보고 함수를 걸 때). */
         using ReportFunctionSuspension = ObserverSlot<DataRaceReportSignature>::Suspension;
 
@@ -49,7 +49,7 @@ namespace sw
          * @brief 경합을 찾았을 때 부를 보고 함수를 겁니다. 보고기는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다(예전에는 말없이 덮어썼다).
          *        걸린 것이 없으면 멈추기만 합니다. 모든 구성에 있지만 검사 구성에서만 불립니다.
          */
-        [[nodiscard]] static ReportFunctionRegistration bindReportFunction( DataRaceReportFunction pFunction );
+        [[nodiscard]] static ReportFunctionSubscription bindReportFunction( DataRaceReportFunction pFunction );
         /** @brief 걸린 보고 함수를 범위 동안 떼어 둡니다 — 테스트만 쓴다. */
         [[nodiscard]] static ReportFunctionSuspension suspendReportFunction();
         /** @brief 걸린 보고 함수입니다. 없으면 nullptr 입니다. */

@@ -237,7 +237,7 @@ namespace sw
         return result;
     }
 
-    FileUtil::WriteFilterRegistration AutomationScratchWorkspace::acquireWriteFilter()
+    FileUtil::WriteFilterSubscription AutomationScratchWorkspace::acquireWriteFilter()
     {
         return FileUtil::bindWriteFilter( &AutomationScratchWorkspaceInternal::allowWrite );
     }

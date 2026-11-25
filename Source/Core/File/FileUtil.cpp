@@ -848,7 +848,7 @@ namespace sw
         FileUtilInternal::s_writeCounters._removalEpoch.fetch_add( 1, std::memory_order_release );
     }
 
-    FileUtil::WriteFilterRegistration FileUtil::bindWriteFilter( WriteFilter filter )
+    FileUtil::WriteFilterSubscription FileUtil::bindWriteFilter( WriteFilter filter )
     {
         return FileUtilInternal::s_writeCounters._writeFilterSlot.bind( filter );
     }
