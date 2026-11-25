@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -17,7 +18,6 @@
 
 namespace sw
 {
-    class Archive;
     class BitReader;
     class BitWriter;
 
@@ -41,6 +41,7 @@ namespace sw
 namespace sw
 {
     /** @brief 자기장의 지금 단계입니다. */
+    ENUM()
     enum class BattleRoyaleZoneStage : uint8
     {
         Waiting = 0, ///< 다음 원이 드러나 있고 아직 줄지 않는다
@@ -72,10 +73,14 @@ namespace sw
      * @details 다음 원은 항상 지금 원 안에 통째로 들어간다. 중심은 지금 중심에서 (R − r) 안의 원판에서 고르고, 그 원이 맵 안에 있고 지형 콜백이 허락할 때까지 `_centerAttempts` 번 시도한다(다 실패하면 지금 중심을 쓴다).
      *          줄어드는 동안 중심과 반지름은 선형 보간한다. 피해는 원 밖에서만 받고, 지금 단계의 초당 피해를 쓴다.
      *          시간은 `update` 로만 흐르고 난수는 시드 하나로 만들므로, 같은 시드면 같은 원이 나온다.
+     *          원 상태 칸은 선언 하나(`RuntimeState` · `Replicated` · 범위)가 세이브와 넷의 배치 · 순서 · 거절 규칙이다.
      */
+    REFLECT()
     class SW_KIT_API BattleRoyaleZone
     {
     public:
+        REFLECT_BODY();
+
         BattleRoyaleZone();
 
         /** @brief 설정, 맵 크기, 시드, 지형(빌려 옴 — 자기장보다 오래 산다)을 설정하고, 첫 원을 맵 중심에 놓은 뒤 첫 단계의 다음 원을 고릅니다. */
@@ -92,14 +97,13 @@ namespace sw
         [[nodiscard]] bool pickPointInside( GameRandom& random, float2& outPosition ) const;
         void               pollEvents( vector<BattleRoyaleZoneEvent>& outListEvent );
 
-        /** @brief 네트워크용으로 원 상태를 씁니다(설정과 시드는 양쪽이 같다고 가정합니다). 단계 번호나 단계가 코덱 범위를 넘으면 false 입니다. */
+        /** @brief 네트워크용으로 원 상태(`Replicated` 칸)를 씁니다(설정과 시드는 양쪽이 같다고 가정합니다). 선언 범위 밖 값이면 false 이고 @p writer 에 쓰다 만 비트가 남습니다. */
         [[nodiscard]] bool writeState( BitWriter& writer ) const;
-        /** @brief 네트워크용으로 `writeState` 가 쓴 값을 읽습니다. 값이 범위를 넘으면 상태를 바꾸지 않고 false 를 반환합니다. */
+        /** @brief 네트워크용으로 `writeState` 가 쓴 값을 읽습니다. 값이 선언 범위 밖이거나 설정에 없는 단계면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( BitReader& reader );
         /**
-         * @brief 세이브(`Archive`)에 넷 코덱(`writeState( BitWriter& )`)의 바이트를 길이가 붙은 본문으로 싣고 난수 상태를 붙입니다. 설정과 지형은 `initialize` 에서 받은 것이고, 알림은 읽을 때 비웁니다.
-         *        넷 코덱이 쓰지 못하면 아무것도 싣지 않고 @p outArchive 를 오류 상태로 둡니다.
-         *        `writeState( Archive& )` 가 쓴 값을 읽습니다. 본문이 잘렸거나 넷 코덱이 거절하면 상태를 바꾸지 않고 false 를 반환합니다.
+         * @brief 세이브(`Archive`)에 원 상태(`RuntimeState` 칸)와 난수 상태를 싣습니다. 넷은 시드를 양쪽이 같다고 보고 난수를 싣지 않지만, 세이브는 다음 원을 같은 수열로 골라야 합니다.
+         *        설정과 지형은 `initialize` 에서 받은 것이고, 알림은 읽을 때 비웁니다. 바이트가 잘렸거나 값이 선언 범위 밖이거나 설정에 없는 단계면 상태를 바꾸지 않고 false 를 반환합니다.
          */
         SW_DECLARE_STATE_IO();
 
@@ -118,21 +122,34 @@ namespace sw
         void                            beginPhase( int32 phaseIndex );
         const BattleRoyaleZonePhaseDef* findPhase() const;
         void                            pushEvent( BattleRoyaleZoneEvent::Kind kind );
+        /** @brief 읽은 단계가 설정에 있는지 봅니다. 마지막이 아닌 단계는 그 단계의 정의가 있어야 합니다(수의 범위는 칸 선언이 본다). */
+        bool isPhaseValid() const;
 
     private:
         BattleRoyaleZoneDef                       _settings;
         NotificationBuffer<BattleRoyaleZoneEvent> _eventBuffer;
         const IBrZoneTerrain*                     _pTerrain;
         GameRandom                                _random;
-        float2                                    _center;
-        float2                                    _fromCenter; ///< 줄기 시작할 때의 원
-        float2                                    _nextCenter;
-        float32                                   _radius;
-        float32                                   _fromRadius;
-        float32                                   _nextRadius;
         float32                                   _mapSize;
-        float32                                   _stageRemaining;
-        int32                                     _phaseIndex;
-        BattleRoyaleZoneStage                     _stage;
+
+        // 실수의 범위는 NaN · 무한대를 거절하는 경계다(바이트는 실수 비트 그대로). 음수 남은 시간은 `update` 의 시간을 늘리고 음수 반지름은 모두를 원 밖으로 만든다.
+        PROPERTY( RuntimeState, Replicated, Min = 0, Max = 1024 )
+        int32 _phaseIndex;
+        PROPERTY( RuntimeState, Replicated )
+        BattleRoyaleZoneStage _stage;
+        PROPERTY( RuntimeState, Replicated, Min = 0, Max = 1000000000 )
+        float32 _stageRemaining;
+        PROPERTY( RuntimeState, Replicated, Min = -1000000000, Max = 1000000000 )
+        float2 _center;
+        PROPERTY( RuntimeState, Replicated, Min = 0, Max = 1000000000 )
+        float32 _radius;
+        PROPERTY( RuntimeState, Replicated, Min = -1000000000, Max = 1000000000 )
+        float2 _fromCenter; ///< 줄기 시작할 때의 원
+        PROPERTY( RuntimeState, Replicated, Min = 0, Max = 1000000000 )
+        float32 _fromRadius;
+        PROPERTY( RuntimeState, Replicated, Min = -1000000000, Max = 1000000000 )
+        float2 _nextCenter;
+        PROPERTY( RuntimeState, Replicated, Min = 0, Max = 1000000000 )
+        float32 _nextRadius;
     };
 } // namespace sw
