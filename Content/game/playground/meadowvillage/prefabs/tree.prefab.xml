@@ -11,8 +11,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="common/models/quaternius/nature/commontree_1.mesh"
-			               _materialPath="common/models/quaternius/nature/commontree_1/materials/bark_normaltree.material"
+			               _meshID="guid:82be2f79f149f6c94f6e16d4ae33e5f4"
+			               _materialPath="guid:beb58ac46c138dca55b739fe9d9a5c0a"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true"
@@ -20,7 +20,7 @@
 			<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 			                      _bActive="true"
 			                      _attachComponent="#0244d8c8807cd288"
-			                      _materialPath="common/models/quaternius/nature/commontree_1/materials/leaves_normaltree.material"
+			                      _materialPath="guid:a264702a01d2c2818f2d87debc3aee04"
 			                      _sectionName="leaves_normaltree" />
 		</_listComponent>
 	</GameObject>

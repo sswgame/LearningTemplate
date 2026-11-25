@@ -1,5 +1,5 @@
 <?asset guid="c98c08acc17ff8eebf1d60e16b24b2d6"?>
-<Scene formatVersion="3" _base="game/playground/maps/envshowcase.scene.xml" name="WaterPlay">
+<Scene formatVersion="3" _base="guid:00b449d65480c509bf9771ffdda59360" name="WaterPlay">
 	<!-- 물 · 지형 물리 시나리오(automation/waterplay)의 무대 — envshowcase 를 물려받아 물리를 얹는다.
 	     지형에 충돌(TerrainColliderComponent)을 더하고, 강 경로를 스플라인이 몰게 하고(SplineRiverPathComponent), 호수 위 상자는 폰툰으로 뜨고(BuoyancyComponent — 파도 있는 물),
 	     공중의 물 상자(BuoyancyVolumeComponent — 상자 부피, 흐름)에 떨어진 상자는 떠서 흐름을 따라 밀리고, 지형에 떨어진 상자는 풀을 눕히며(FoliageInfluencerComponent) 지형 위에 멈추고,
@@ -16,10 +16,10 @@
 					                  _attachOwner="None"
 					                  _attachOwnerID="0"
 					                  _attachComponent="None"
-					                  _heightfieldPath="game/playground/heightfields/valley.heightfield"
-					                  _materialPath="engine/materials/terrain.material"
-					                  _layerWeightsPath="game/playground/heightfields/valley.layerweights"
-					                  _detailTexturePath="engine/textures/terrain/terrain_detail.dds"
+					                  _heightfieldPath="guid:75518446e6f8ea20de63ef832da69631"
+					                  _materialPath="guid:f8349c02da55a1d5c28265c9247af3a9"
+					                  _layerWeightsPath="guid:9b202b1315460ef5dfe237580af37ac6"
+					                  _detailTexturePath="guid:8cb5719f760f68154b72860300cc8b8d"
 					                  _size="256,256"
 					                  _heightMin="0"
 					                  _heightMax="40"
@@ -49,7 +49,7 @@
 					                    _attachOwnerID="0"
 					                    _attachComponent="None"
 					                    _shape="River"
-					                    _materialPath="engine/materials/water.material"
+					                    _materialPath="guid:1546675df109d0a941207e13ed3a21b6"
 					                    _size="64,64"
 					                    _cellSize="1"
 					                    _riverWidth="8"
@@ -95,7 +95,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1" />
 					<BuoyancyComponent _localID="14871376986610601733" _waterDensity="1000" _linearDrag="200">
 						<_listPontoon>
 							<BuoyancyPontoon _localPosition="0.4,-0.3,0.4" _radius="0.35" />
@@ -111,7 +111,7 @@
 			<GameObject _schemaVersion="0" _name="WaterTank" _bActive="true">
 				<_listComponent>
 					<BuoyancyVolumeComponent _localID="8700096275853675763" _localPosition="-60,50,60" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _halfExtents="3,2,3" _buoyancy="2" _linearDrag="1" _angularDrag="1" _flowVelocity="0.3,0,0" _layerMask="4294967295" />
-					<MeshComponent _localID="163493842152903304" _localPosition="-60,50,60" _localRotation="0,0,0" _localScale="6,4,6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/water.material" _boundsRadius="5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-60,50,60" _localRotation="0,0,0" _localScale="6,4,6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:1546675df109d0a941207e13ed3a21b6" _boundsRadius="5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -126,7 +126,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -141,7 +141,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1" />
 					<FoliageInfluencerComponent _localID="8452882449997777425" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _radius="1.5" />
 				</_listComponent>
 			</GameObject>
@@ -164,7 +164,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.2,0.8,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="1" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.2,0.8,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:a475fbe06e97f84b16b8333ffad1ed79" _boundsRadius="1" />
 					<JointComponent _localID="17555290165949469737" _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _jointType="Hinge" _axis="1,0,0" _normalAxis="0,1,0" _minLimit="0" _maxLimit="0" _swingLimitNormal="0" _swingLimitPlane="0" _motorMode="Off" _motorTarget="0" _motorMaxForce="0" _bLimitsEnabled="false" _bCollideConnectedBodies="false" _bConnectToWorld="true" />
 				</_listComponent>
 			</GameObject>

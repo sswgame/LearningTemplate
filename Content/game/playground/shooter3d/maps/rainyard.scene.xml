@@ -1,5 +1,5 @@
 <?asset guid="9a17abe1c4944db38b1aaa554d43869f"?>
-<Scene formatVersion="3" _base="game/playground/shooter3d/maps/arena.scene.xml" name="Shooter3DRainYard">
+<Scene formatVersion="3" _base="guid:12d39350b79eb1e5903098fceef6374f" name="Shooter3DRainYard">
 	<!-- 빗마당 무대(automation/rainyard.scenario.xml) — 아레나를 물려받아 시작 자리(0, -16) 앞 x = 0 줄에 표면을 +Z 로 늘어놓는다(플레이어가 W 로 곧장 지나간다):
 	     흙(Dirt, z -14 ~ -10) · 웅덩이(얕은 물 4 cm, z -10 ~ -6) · 진흙(Mud, z -6 ~ -2), 그리고 흙 옆 돌(아레나 바닥 Stone, x -3.5 z -12 — 젖은 자국이 보이게 변형 지면을 깐다).
 	     패드는 2 cm 두께의 정적 상자(물리 재질 = 표면 종류)와 그 위의 변형 지면(PlaneDense)이다 — 발걸음은 패드 재질로, 웅덩이는 물(WaterBodyComponent)로 종류를 정한다.
@@ -16,35 +16,35 @@
 				<_listComponent>
 					<ShooterGameModeComponent _localID="13246353635651928858" _componentName="ShooterGameModeComponent"
 					                          _bActive="true"
-					                          _effectPrefab="game/playground/shooter3d/prefabs/effect.prefab.xml"
-					                          _tracerPrefab="game/playground/shooter3d/prefabs/tracer.prefab.xml"
-					                          _autoPlayPrefab="game/playground/shooter3d/prefabs/autoplay_ai.prefab.xml"
+					                          _effectPrefab="guid:f1f248c4fca2ae3b2050c941c365c29e"
+					                          _tracerPrefab="guid:30703977e33786c7530db23759979f13"
+					                          _autoPlayPrefab="guid:db9836711aca7b372e2ebbb9fc0c0eae"
 					                          _player="50"
 					                          _arenaHalfSize="20"
 					                          _pacingProfile="game/playground/shooter3d/data/arena.director.xml"
-					                          _spawnTable="game/playground/shooter3d/data/rainyard.spawns.xml"
+					                          _spawnTable="guid:a4ea400538e948a2a07b6a6a2c8276dd"
 					                          _pacingSeed="1"
 					                          _effectPoolSize="32"
 					                          _tracerPoolSize="24"
 					                          _bAutoPlay="false">
 						<_listEnemyKind>
-							<ShooterEnemyKind _prefab="game/playground/shooter3d/prefabs/quadshell.prefab.xml" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="game/playground/shooter3d/prefabs/quadshell.prefab.xml" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="game/playground/shooter3d/prefabs/trilobite.prefab.xml" _preset="Trilobite">
+							<ShooterEnemyKind _prefab="guid:487e9f4458a7d6ecf66c371db3a72749" _preset="Trilobite">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="game/playground/shooter3d/prefabs/quadshell.prefab.xml" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="game/playground/shooter3d/prefabs/skeleton.prefab.xml" _preset="SkeletonMinion">
+							<ShooterEnemyKind _prefab="guid:d09c50d9428157b3c1ac9ebde784336d" _preset="SkeletonMinion">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
 						</_listEnemyKind>
-						<_eliteEnemyKind _prefab="game/playground/shooter3d/prefabs/trilobite.prefab.xml" _preset="Trilobite">
+						<_eliteEnemyKind _prefab="guid:487e9f4458a7d6ecf66c371db3a72749" _preset="Trilobite">
 							<_pool _maxIdleCount="8" />
 						</_eliteEnemyKind>
 						<_enemyGrowth _baseHealth="30" _healthPerWave="10" _minHealthScale="0.1" _baseSpeed="2.2" _speedPerWave="0.3" _maxSpeed="5.5" />
@@ -73,21 +73,21 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.011,0" _localRotation="0,0,0" _localScale="3,1,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="PlaneDense" _materialPath="game/playground/shooter3d/materials/surfacedeform_dirt.material" _boundsRadius="3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.011,0" _localRotation="0,0,0" _localScale="3,1,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="PlaneDense" _materialPath="guid:957c306f190d4c88aa615b3e1b90ef94" _boundsRadius="3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="301" name="StoneGround">
 			<GameObject _schemaVersion="0" _name="StoneGround" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-3.5,0.004,-12" _localRotation="0,0,0" _localScale="3,1,4" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="game/playground/shooter3d/materials/surfacedeform_stone.material" _boundsRadius="3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-3.5,0.004,-12" _localRotation="0,0,0" _localScale="3,1,4" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="guid:952f4ad9eb6f433abc3a46e1b31032a5" _boundsRadius="3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="302" name="Puddle">
 			<GameObject _schemaVersion="0" _name="Puddle" _bActive="true">
 				<_listComponent>
-					<WaterBodyComponent _localID="5729965392566960456" _localPosition="0,0.04,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _materialPath="engine/materials/water.material" _size="3,4" _cellSize="0.5" _shallowColor="0.22,0.26,0.26,0.25" _deepColor="0.1,0.14,0.16,0.6" _deepDepth="2" />
+					<WaterBodyComponent _localID="5729965392566960456" _localPosition="0,0.04,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _materialPath="guid:1546675df109d0a941207e13ed3a21b6" _size="3,4" _cellSize="0.5" _shallowColor="0.22,0.26,0.26,0.25" _deepColor="0.1,0.14,0.16,0.6" _deepDepth="2" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -102,7 +102,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.011,0" _localRotation="0,0,0" _localScale="3,1,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="PlaneDense" _materialPath="game/playground/shooter3d/materials/surfacedeform_mud.material" _boundsRadius="3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.011,0" _localRotation="0,0,0" _localScale="3,1,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="PlaneDense" _materialPath="guid:4318d5b5973d4f06bd5623c7b2f74fb3" _boundsRadius="3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -111,9 +111,9 @@
 				<_listComponent>
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="16,0.05,-18" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
-					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Walking_A" _bPlayOnBegin="true" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Walking_A" _bPlayOnBegin="true" />
 					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
-					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml" />
+					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="guid:41d588160a20a771c2a97324cfa7aca3" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 				</_listComponent>
 			</GameObject>
@@ -122,7 +122,7 @@
 			<GameObject _schemaVersion="0" _name="Weather" _bActive="true">
 				<_listComponent>
 					<GameStateComponent _localID="6673597520240684436" />
-					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="game/playground/shooter3d/data/rainyard.weather.xml" _startWeather="clear" _seed="7" />
+					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="guid:f4d756b52a404f1b90e435883e0c93c3" _startWeather="clear" _seed="7" />
 				</_listComponent>
 			</GameObject>
 		</entity>

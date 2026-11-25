@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="b67825f13a5a87453cf25e2cee53a430"?>
 <!-- 외형 라이브러리 프리셋(eye): 말 — 가로 막대 · 짙은 갈색. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
-<MaterialDef formatVersion="0" name="EyeHorse" _base="engine/materials/library/eye/base.material">
+<MaterialDef formatVersion="0" name="EyeHorse" _base="guid:9d7f9e16c3115a47596f3841ee1e39e1">
 	<_properties>
 		<item name="_layerColor" defaultValue="0.15 0.08 0.04 1" />
 		<item name="_pupilShape" defaultValue="2" />

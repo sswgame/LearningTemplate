@@ -10,8 +10,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="game/playground/themepark/models/coaster_train.mesh"
-			               _materialPath="game/playground/themepark/materials/palette.material"
+			               _meshID="guid:fbeac45353eb5ef971df23cada3ab531"
+			               _materialPath="guid:f98b75136c9751024935391bd97d22c2"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

@@ -3,7 +3,7 @@
 <Prefab formatVersion="1" name="Sky_belfast_sunset_puresky">
 	<GameObject _schemaVersion="0" _name="Sky_belfast_sunset_puresky" _bActive="true">
 		<_listComponent>
-			<SkyComponent _localID="14376368575749838118" _intensity="1" _mode="Hdri" _hdriTexture="engine/textures/sky/belfast_sunset_puresky.dds" _hdriRotation="0" _hdriRadianceMap="engine/prefabs/sky/belfast_sunset_puresky.radiancemap">
+			<SkyComponent _localID="14376368575749838118" _intensity="1" _mode="Hdri" _hdriTexture="guid:5fceea740b9d17a7479ce287d5ca4db4" _hdriRotation="0" _hdriRadianceMap="engine/prefabs/sky/belfast_sunset_puresky.radiancemap">
 				<_listHdriAmbient>
 					<item>4.367898</item>
 					<item>3.616571</item>

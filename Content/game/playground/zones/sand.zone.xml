@@ -36,6 +36,6 @@
 				<ZoneParamDef _name="drag" _value="0.5" />
 			</_listParam>
 		</ZoneModuleDef>
-		<ZoneModuleDef _name="npcAvoid" _modulePath="game/playground/zones/npcavoid.zonemodule.xml" />
+		<ZoneModuleDef _name="npcAvoid" _modulePath="guid:8783944de90f47de0998e2cafb506306" />
 	</_listModule>
 </ZoneProfile>

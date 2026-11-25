@@ -22,7 +22,7 @@
 		<entity id="3" name="SpawnDemo">
 			<GameObject _schemaVersion="0" _name="SpawnDemo" _bActive="true">
 				<_listComponent>
-					<SpawnDirectorDemoComponent _localID="9065291843214911321" _spawnTable="game/playground/data/spawndemo.spawns.xml" _spawnPrefab="game/playground/prefabs/spawndummy.prefab.xml" _seed="7" />
+					<SpawnDirectorDemoComponent _localID="9065291843214911321" _spawnTable="guid:6b3049a9496aa1ae1bc01969ac141258" _spawnPrefab="guid:53b6f074bff42c8a06ab4c77511a6366" _seed="7" />
 				</_listComponent>
 			</GameObject>
 		</entity>

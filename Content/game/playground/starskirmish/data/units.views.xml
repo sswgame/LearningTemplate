@@ -5,27 +5,27 @@
      키트 모델은 크기가 제각각이라(안테나 0.75 · 격납고 3.3) 모델마다 폭을 두고 Footprint Fill · Unit Fill 로 늘린다. -->
 <RuleViewCatalog>
   <!-- 자원 -->
-  <View id="minerals" mesh="game/playground/starskirmish/models/rock_crystals.mesh" width="0.85"/>
-  <View id="rich_minerals" mesh="game/playground/starskirmish/models/rock_crystals.mesh" width="0.85"/>
-  <View id="geyser" mesh="game/playground/starskirmish/models/crater.mesh" width="0.83"/>
+  <View id="minerals" mesh="guid:9668340d974716f2cafd3193e676d92a" width="0.85"/>
+  <View id="rich_minerals" mesh="guid:9668340d974716f2cafd3193e676d92a" width="0.85"/>
+  <View id="geyser" mesh="guid:d117ab416e077478560f5bbdcbc7c03c" width="0.83"/>
 
   <!-- 건물 -->
-  <View id="command_center" mesh="game/playground/starskirmish/models/hangar_large_a.mesh" width="3.0"/>
-  <View id="supply_depot" mesh="game/playground/starskirmish/models/machine_generator.mesh" width="0.7"/>
-  <View id="refinery" mesh="game/playground/starskirmish/models/structure.mesh" width="1.0"/>
-  <View id="barracks" mesh="game/playground/starskirmish/models/hangar_small_a.mesh" width="2.0"/>
-  <View id="academy" mesh="game/playground/starskirmish/models/machine_wireless.mesh" width="0.75"/>
-  <View id="factory" mesh="game/playground/starskirmish/models/hangar_round_a.mesh" width="3.27"/>
-  <View id="starport" mesh="game/playground/starskirmish/models/platform_large.mesh" width="2.0"/>
-  <View id="bunker" mesh="game/playground/starskirmish/models/turret_double.mesh" width="0.9"/>
-  <View id="missile_turret" mesh="game/playground/starskirmish/models/turret_single.mesh" width="0.72"/>
+  <View id="command_center" mesh="guid:4e78f6abcbe900a118e3e6cb1c5c16c8" width="3.0"/>
+  <View id="supply_depot" mesh="guid:10e627e924d16b31fb8e69a5d8a88c83" width="0.7"/>
+  <View id="refinery" mesh="guid:e3ea8e98fae90e9029952db254fa8671" width="1.0"/>
+  <View id="barracks" mesh="guid:55d72dff35fb1cce7d6c708033448fe9" width="2.0"/>
+  <View id="academy" mesh="guid:926106397615ab451a341c7361381600" width="0.75"/>
+  <View id="factory" mesh="guid:4ce10a96d4126ff39741aeba31a32329" width="3.27"/>
+  <View id="starport" mesh="guid:834c2142b09500e82848b1504a0e8c61" width="2.0"/>
+  <View id="bunker" mesh="guid:9ca166d4ab8467db1bf1d8c89d2b6023" width="0.9"/>
+  <View id="missile_turret" mesh="guid:145ca1976496a42d47e1890f463b02f1" width="0.72"/>
 
   <!-- 유닛 -->
-  <View id="worker" mesh="game/playground/starskirmish/models/craft_miner.mesh" width="2.6"/>
-  <View id="marine" mesh="game/playground/starskirmish/models/craft_speeder_a.mesh" width="2.1"/>
-  <View id="firebat" mesh="game/playground/starskirmish/models/craft_speeder_b.mesh" width="2.03"/>
-  <View id="vulture" mesh="game/playground/starskirmish/models/craft_racer.mesh" width="2.03"/>
-  <View id="tank" mesh="game/playground/starskirmish/models/craft_cargo_a.mesh" width="2.45"/>
-  <View id="goliath" mesh="game/playground/starskirmish/models/craft_speeder_b.mesh" width="2.03"/>
-  <View id="wraith" mesh="game/playground/starskirmish/models/craft_racer.mesh" width="2.03"/>
+  <View id="worker" mesh="guid:f4885382ce9e08ebbe6b436e4bfaaa7b" width="2.6"/>
+  <View id="marine" mesh="guid:82a1c0f37a9b89561e6a56cf0de23d7b" width="2.1"/>
+  <View id="firebat" mesh="guid:351d9d3fc1c6c4fc58ef8ac0dbc991c0" width="2.03"/>
+  <View id="vulture" mesh="guid:4f53d7513052a01df8e527a0abc6ed50" width="2.03"/>
+  <View id="tank" mesh="guid:dc84bb83a197996158cce168eb5b0e93" width="2.45"/>
+  <View id="goliath" mesh="guid:351d9d3fc1c6c4fc58ef8ac0dbc991c0" width="2.03"/>
+  <View id="wraith" mesh="guid:4f53d7513052a01df8e527a0abc6ed50" width="2.03"/>
 </RuleViewCatalog>

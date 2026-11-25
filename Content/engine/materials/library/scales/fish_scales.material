@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="accbbc1a8fb57c369915910bce461287"?>
 <!-- 외형 라이브러리 프리셋(scales): 물고기 비늘(무지갯빛). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
-<MaterialDef formatVersion="0" name="FishScales" _base="engine/materials/library/scales/base.material">
+<MaterialDef formatVersion="0" name="FishScales" _base="guid:6554fca8d06c03eaa87a8300162d7df5">
 	<_properties>
 		<item name="_color" defaultValue="0.7 0.72 0.75 1" />
 		<item name="_secondaryColor" defaultValue="0.4 0.45 0.5 1" />

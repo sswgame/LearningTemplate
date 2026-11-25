@@ -48,8 +48,8 @@
 					                                 _bActive="true"
 					                                 _moveAction="Move"
 					                                 _jumpAction="KitDemo.Jump"
-					                                 _cubePrefab="game/playground/prefabs/ruleviews/cube.prefab.xml"
-					                                 _spherePrefab="game/playground/prefabs/ruleviews/sphere.prefab.xml" />
+					                                 _cubePrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5"
+					                                 _spherePrefab="guid:b92426b2b59ef865478a176cc6ad30e7" />
 				</_listComponent>
 			</GameObject>
 		</entity>

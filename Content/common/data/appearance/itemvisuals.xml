@@ -8,48 +8,48 @@
      강체 메시를 프리팹(prefabs/kaykit/)으로 감싼 것이다. 총은 Quaternius Sci-Fi Essentials(CC0, prefabs/quaternius/scifi/) — offset 은 손잡이를 손에 맞추는 Gun 소켓 기준 자리다. -->
 <ItemVisualCatalog>
   <ItemVisual id="body_knight">
-    <Part name="Body" kind="Skinned" mesh="common/models/kaykit/knight.mesh" skeleton="common/models/kaykit/knight/knight.skeleton.xml"
-          material="common/materials/kaykit_knight.material" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"/>
+    <Part name="Body" kind="Skinned" mesh="guid:0a55fa69f6f749e88ca135bc3d803483" skeleton="common/models/kaykit/knight/knight.skeleton.xml"
+          material="guid:0b440989e7fbcb53768a75149e9b6bdb" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
   <ItemVisual id="body_rogue">
-    <Part name="Body" kind="Skinned" mesh="common/models/kaykit/rogue.mesh" skeleton="common/models/kaykit/rogue/rogue.skeleton.xml"
-          material="common/materials/kaykit_rogue.material" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"/>
+    <Part name="Body" kind="Skinned" mesh="guid:280e04fea2b71b78b96d6d5cfc90a04c" skeleton="common/models/kaykit/rogue/rogue.skeleton.xml"
+          material="guid:eab2332dcf9f011cb2733c761c7a0cc5" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
   <!-- 사격장 적 생물(Quaternius Sci-Fi Essentials, CC0) — 자기 스켈레톤 · 클립 · 맞음 상자를 가진 몸이라 프리팹이 종류마다 따로다(game/playground/shooter3d/prefabs/). -->
   <ItemVisual id="body_quadshell">
-    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/scifi/enemy_quadshell.mesh" skeleton="common/models/quaternius/scifi/enemy_quadshell/enemy_quadshell.skeleton.xml"
-          material="common/models/quaternius/scifi/enemy_quadshell/materials/mi_enemies.material" sockets="common/data/sockets/quadshell.sockets.xml"/>
+    <Part name="Body" kind="Skinned" mesh="guid:bad1c6ff17aa64d3fb7e312980333ba3" skeleton="common/models/quaternius/scifi/enemy_quadshell/enemy_quadshell.skeleton.xml"
+          material="guid:7faeeb1c61b3e8ab295021e7a9f66b42" sockets="common/data/sockets/quadshell.sockets.xml"/>
   </ItemVisual>
   <ItemVisual id="body_trilobite">
-    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/scifi/enemy_trilobite.mesh" skeleton="common/models/quaternius/scifi/enemy_trilobite/enemy_trilobite.skeleton.xml"
-          material="common/models/quaternius/scifi/enemy_trilobite/materials/mi_enemies_large.material" sockets="common/data/sockets/trilobite.sockets.xml"/>
+    <Part name="Body" kind="Skinned" mesh="guid:20238087668992581c760d907e22092f" skeleton="common/models/quaternius/scifi/enemy_trilobite/enemy_trilobite.skeleton.xml"
+          material="guid:2ee2cc5a8c5ef91df95775000145e476" sockets="common/data/sockets/trilobite.sockets.xml"/>
   </ItemVisual>
   <ItemVisual id="body_skeleton_minion">
-    <Part name="Body" kind="Skinned" mesh="common/models/kaykit/skeleton_minion.mesh" skeleton="common/models/kaykit/skeleton_minion/skeleton_minion.skeleton.xml"
-          material="common/materials/kaykit_skeleton.material" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"
+    <Part name="Body" kind="Skinned" mesh="guid:856b0fd05101fd718f434ea3541798bd" skeleton="common/models/kaykit/skeleton_minion/skeleton_minion.skeleton.xml"
+          material="guid:f20c72a82580d41a01e67363572af6e1" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"
           fitTables="common/characters/skeleton_warrior/skeleton_warrior.fit.xml" fit="common/characters/skeleton_warrior/skeleton_body.partfit.xml"/>
   </ItemVisual>
   <ItemVisual id="body_skeleton_warrior" _base="body_skeleton_minion">
-    <Part name="Body" mesh="common/models/kaykit/skeleton_warrior.mesh" skeleton="common/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.xml"/>
+    <Part name="Body" mesh="guid:0cc992c7d9fd8f937dae3b221b7660a5" skeleton="common/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.xml"/>
   </ItemVisual>
   <!-- 몸 동작 무대(maps/bodycustomization)의 해골 — 전사 몸에 몸 채널 매핑(굽 높이 · 어깨 · 허리)을 단다. 다른 전사는 매핑 없이 그대로다. -->
   <ItemVisual id="body_skeleton_bodydemo" _base="body_skeleton_warrior">
     <Part name="Body" bodyShapes="common/characters/skeleton_warrior/skeleton_warrior.bodyshape.xml"/>
   </ItemVisual>
   <ItemVisual id="body_skeleton_rogue" _base="body_skeleton_minion">
-    <Part name="Body" mesh="common/models/kaykit/skeleton_rogue.mesh" skeleton="common/models/kaykit/skeleton_rogue/skeleton_rogue.skeleton.xml"/>
+    <Part name="Body" mesh="guid:bd00d0714b3d7788269776f432ede6a5" skeleton="common/models/kaykit/skeleton_rogue/skeleton_rogue.skeleton.xml"/>
   </ItemVisual>
 
   <ItemVisual id="helmet_knight" tags="Helmet.Full">
-    <Part name="Shell" kind="SocketPrefab" prefab="common/prefabs/kaykit/knight_helmet.prefab.xml" socket="Helmet"/>
+    <Part name="Shell" kind="SocketPrefab" prefab="guid:73be3aa73dc4412155047fa80cb6838a" socket="Helmet"/>
   </ItemVisual>
   <!-- 같은 메시 · 다른 머티리얼의 두 길 — 고정된 변형은 항목을 물려받아 material 만 적고, 꾸미기로 고르는 변형은 MaterialVariant 를 둔다(시나리오 showcase/itemvariant). -->
   <ItemVisual id="helmet_knight_gilded" _base="helmet_knight">
-    <Part name="Shell" material="common/materials/kaykit_knight_gilded.material"/>
+    <Part name="Shell" material="guid:a9050f74edcf521276954af2d494db12"/>
   </ItemVisual>
   <ItemVisual id="helmet_knight_dyeable" _base="helmet_knight" customization="HelmetFinish">
     <Part name="Shell">
-      <MaterialVariant name="Gilded" material="common/materials/kaykit_knight_gilded.material"/>
+      <MaterialVariant name="Gilded" material="guid:a9050f74edcf521276954af2d494db12"/>
     </Part>
   </ItemVisual>
   <!-- 염색하는 투구 — 아이템 인스턴스마다 색(스키마 ArmorDye)이 다르다. 메시 · 머티리얼은 helmet_knight 그대로다. -->
@@ -59,159 +59,159 @@
   <ItemVisual id="heels_high"><BodyChannel name="Heel.Height" value="0.1" blend="Max"/></ItemVisual>
   <ItemVisual id="boots_low"><BodyChannel name="Heel.Height" value="0.03" blend="Max"/></ItemVisual>
   <ItemVisual id="helmet_skeleton" _base="helmet_knight">
-    <Part name="Shell" prefab="common/prefabs/kaykit/skeleton_warrior_helmet.prefab.xml"/>
+    <Part name="Shell" prefab="guid:2e9cf7406dc866621fd2206e04ca469f"/>
   </ItemVisual>
   <ItemVisual id="hood_skeleton" tags="Hood">
-    <Part name="Hood" kind="SocketPrefab" prefab="common/prefabs/kaykit/skeleton_rogue_hood.prefab.xml" socket="Helmet"/>
+    <Part name="Hood" kind="SocketPrefab" prefab="guid:39429c347eeae0bdaea02ec240018ce2" socket="Helmet"/>
   </ItemVisual>
   <ItemVisual id="cape_rogue" tags="Cape">
-    <Part name="Cape" kind="SocketPrefab" prefab="common/prefabs/kaykit/rogue_cape.prefab.xml" socket="Back"/>
+    <Part name="Cape" kind="SocketPrefab" prefab="guid:75e20f04788a717f0f48de8da5c0fcd9" socket="Back"/>
   </ItemVisual>
   <ItemVisual id="cape_knight" tags="Cape.Heraldic">
-    <Part name="Cape" kind="Skinned" mesh="common/models/kaykit/knight_cape_chain.mesh" skeleton="common/rigs/knight_cape.skeleton.xml"
-          rig="common/rigs/knight_cape.rig.xml" material="common/materials/kaykit_knight.material" socket="Back"/>
+    <Part name="Cape" kind="Skinned" mesh="guid:19c26666376db6e9d283eac6160c83ea" skeleton="common/rigs/knight_cape.skeleton.xml"
+          rig="common/rigs/knight_cape.rig.xml" material="guid:0b440989e7fbcb53768a75149e9b6bdb" socket="Back"/>
     <!-- UBC 몸은 KayKit 골격(chest · hips)이 없다 — 같은 기사 망토를 UBC 뼈에 붙는 망토로 입는다(세트 완성 표현도 이 길을 탄다) -->
     <ForBody bodies="body_ubc_male body_ubc_female" visual="cape_heraldic_ubc"/>
   </ItemVisual>
   <!-- UBC 몸(Quaternius 기본 캐릭터)용 스프링 망토 — 기사 망토 사슬을 UBC 어깨 폭으로 줄인 메시(ubc_cape_chain), 리그는 UBC 뼈에 붙는다. -->
   <ItemVisual id="cape_heraldic_ubc" tags="Cape.Heraldic">
-    <Part name="Cape" kind="Skinned" mesh="common/models/kaykit/ubc_cape_chain.mesh" skeleton="common/models/kaykit/ubc_cape_chain/ubc_cape_chain.skeleton.xml"
-          rig="common/rigs/ubc_cape.rig.xml" material="common/materials/kaykit_knight.material" socket="Back"/>
+    <Part name="Cape" kind="Skinned" mesh="guid:021a9870d88a4b63b530413ad0f55b93" skeleton="common/models/kaykit/ubc_cape_chain/ubc_cape_chain.skeleton.xml"
+          rig="common/rigs/ubc_cape.rig.xml" material="guid:0b440989e7fbcb53768a75149e9b6bdb" socket="Back"/>
   </ItemVisual>
   <ItemVisual id="cape_skeleton" _base="cape_rogue">
-    <Part name="Cape" prefab="common/prefabs/kaykit/skeleton_rogue_cape.prefab.xml"/>
+    <Part name="Cape" prefab="guid:29c331e32bb5778df30f5ba8786a1d09"/>
   </ItemVisual>
   <ItemVisual id="shield_round" tags="Shield">
-    <Part name="Shield" kind="SocketPrefab" prefab="common/prefabs/kaykit/round_shield.prefab.xml" socket="Shield"/>
+    <Part name="Shield" kind="SocketPrefab" prefab="guid:5288c309f1fa54916c03185bcffe1ef0" socket="Shield"/>
   </ItemVisual>
   <ItemVisual id="shield_skeleton" _base="shield_round">
-    <Part name="Shield" prefab="common/prefabs/kaykit/skeleton_shield.prefab.xml"/>
+    <Part name="Shield" prefab="guid:ec4c8e81f97d9626f3cd568b3e7f8730"/>
   </ItemVisual>
   <ItemVisual id="blade_skeleton" tags="Weapon.Melee">
-    <Part name="Blade" kind="SocketPrefab" prefab="common/prefabs/kaykit/skeleton_blade.prefab.xml" socket="Blade"/>
+    <Part name="Blade" kind="SocketPrefab" prefab="guid:62da916a064a5fecdf3c07a888d5ecfb" socket="Blade"/>
   </ItemVisual>
   <ItemVisual id="axe_skeleton" tags="Weapon.Melee">
-    <Part name="Axe" kind="SocketPrefab" prefab="common/prefabs/kaykit/skeleton_axe.prefab.xml" socket="Blade"/>
+    <Part name="Axe" kind="SocketPrefab" prefab="guid:4069c4bdcc294bac6dade12803e675ae" socket="Blade"/>
   </ItemVisual>
 
   <!-- 병합 부품(CharacterAppearance 의 Merge Parts) — 몸과 같은 41 관절 리그에 묶은 스킨드 메시라 skeleton · rig 를 적지 않는다(적으면 따로 그리는 부품이다).
        models_raw/kaykit/knight_merge_*.glb 는 knight.glb 의 본에 붙은 강체 부품(투구 · 둥근 방패 · 한손검)을 부모 본 하나에 가중치 1 로 묶어 만든 것이고(credits.md),
        몸과 같은 머티리얼(kaykit_knight)이라 병합 메시에서 한 구간이 된다. 소켓 부품(helmet_knight 등)과 달리 오브젝트가 없고 몸 한 유닛이 한 번에 스키닝한다. -->
   <ItemVisual id="helmet_knight_merged" tags="Helmet.Full">
-    <Part name="Shell" kind="Skinned" mesh="common/models/kaykit/knight_merge_helmet.mesh" material="common/materials/kaykit_knight.material"/>
+    <Part name="Shell" kind="Skinned" mesh="guid:2ad5dd228d5be23bdeebe382449c84a5" material="guid:0b440989e7fbcb53768a75149e9b6bdb"/>
   </ItemVisual>
   <ItemVisual id="shield_round_merged" tags="Shield">
-    <Part name="Shield" kind="Skinned" mesh="common/models/kaykit/knight_merge_shield_round.mesh" material="common/materials/kaykit_knight.material"/>
+    <Part name="Shield" kind="Skinned" mesh="guid:8a36a6fb0d440cd579f6b5e5a909436a" material="guid:0b440989e7fbcb53768a75149e9b6bdb"/>
   </ItemVisual>
   <ItemVisual id="sword_knight_merged" tags="Weapon.Melee">
-    <Part name="Blade" kind="Skinned" mesh="common/models/kaykit/knight_merge_sword.mesh" material="common/materials/kaykit_knight.material"/>
+    <Part name="Blade" kind="Skinned" mesh="guid:e01c8c987be2f59b584fa37db3dc558b" material="guid:0b440989e7fbcb53768a75149e9b6bdb"/>
   </ItemVisual>
 
   <ItemVisual id="scifi_rifle" customization="Gun" tags="Weapon.Gun">
-    <Part name="Body" kind="SocketPrefab" prefab="common/prefabs/quaternius/scifi/gun_rifle.prefab.xml" sockets="common/data/sockets/gun_rifle.sockets.xml" socket="Gun"
+    <Part name="Body" kind="SocketPrefab" prefab="guid:b41783a03cd8bcbdb412a64c25c64270" sockets="common/data/sockets/gun_rifle.sockets.xml" socket="Gun"
           offset="0 0 0"/>
   </ItemVisual>
   <ItemVisual id="scifi_shotgun" _base="scifi_rifle">
-    <Part name="Body" prefab="common/prefabs/quaternius/scifi/gun_sniper.prefab.xml" sockets="common/data/sockets/gun_sniper.sockets.xml"/>
+    <Part name="Body" prefab="guid:d687f2105939ea466a470a4dd4d6ad2d" sockets="common/data/sockets/gun_sniper.sockets.xml"/>
   </ItemVisual>
   <ItemVisual id="scifi_pistol" _base="scifi_rifle">
-    <Part name="Body" prefab="common/prefabs/quaternius/scifi/gun_pistol.prefab.xml" sockets="common/data/sockets/gun_pistol.sockets.xml"/>
+    <Part name="Body" prefab="guid:c6c38a5ca3efac580433f428be03803c" sockets="common/data/sockets/gun_pistol.sockets.xml"/>
   </ItemVisual>
 
   <!-- 활 쇼케이스(maps/bowshowcase.scene.xml) — 활과 메긴 화살이 앞으로 뻗은 왼손 소켓(BowGrip)에 붙고, 둘 다 페어드 애니메이션 역할(Bow · Arrow)을 프리팹 데이터로 든다. -->
   <ItemVisual id="bow_long" tags="Weapon.Bow">
-    <Part name="Bow" kind="SocketPrefab" prefab="common/prefabs/props/bow.prefab.xml" socket="BowGrip"/>
-    <Part name="Arrow" kind="SocketPrefab" prefab="common/prefabs/props/arrow.prefab.xml" socket="BowGrip"/>
+    <Part name="Bow" kind="SocketPrefab" prefab="guid:76f9aad5290360d3ee649bb9055d42f3" socket="BowGrip"/>
+    <Part name="Arrow" kind="SocketPrefab" prefab="guid:8258ab7c5f236ecfa69ddb071b23f7a1" socket="BowGrip"/>
   </ItemVisual>
 
   <!-- 마을 사람 몸 — Quaternius Universal Base Characters(전신, 65 뼈 리그 — UAL 클립과 같은 리그). 머리카락 구간(mi_hair_*)은 그리지 않고 머리 꾸미기(hair_*)가 고른다.
        옷(outfit_*)은 Outfits 묶음의 부품이고, 덮는 몸은 피팅 표(ubc.fit.xml)의 숨김 영역 · 피부 × 천 잘라 내기가 뺀다. -->
   <ItemVisual id="body_ubc_male">
-    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/characters/superhero_male_fullbody.mesh" skeleton="common/models/quaternius/characters/superhero_male_fullbody/superhero_male_fullbody.skeleton.xml"
+    <Part name="Body" kind="Skinned" mesh="guid:ec3163ce674598cf46d324476b23d553" skeleton="common/models/quaternius/characters/superhero_male_fullbody/superhero_male_fullbody.skeleton.xml"
           sockets="common/data/sockets/ubc_humanoid.sockets.xml" fitTables="common/characters/ubc/ubc.fit.xml" fit="common/characters/ubc/body_male.partfit.xml" bodyShapes="common/characters/ubc/ubc.bodyshape.xml">
-      <Section name="mi_superhero_male" material="common/models/quaternius/characters/superhero_male_fullbody/materials/mi_superhero_male.material"/>
-      <Section name="mi_eyes" material="common/models/quaternius/characters/superhero_male_fullbody/materials/mi_eyes.material"/>
+      <Section name="mi_superhero_male" material="guid:e4e3ae351cca447042468e7f6ce80446"/>
+      <Section name="mi_eyes" material="guid:ce2a0ffa572ee49a5e76d3e7069b6ff6"/>
     </Part>
   </ItemVisual>
   <ItemVisual id="body_ubc_female">
-    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/characters/superhero_female_fullbody.mesh" skeleton="common/models/quaternius/characters/superhero_female_fullbody/superhero_female_fullbody.skeleton.xml"
+    <Part name="Body" kind="Skinned" mesh="guid:c06746431c4c955088274303d347eb01" skeleton="common/models/quaternius/characters/superhero_female_fullbody/superhero_female_fullbody.skeleton.xml"
           sockets="common/data/sockets/ubc_humanoid.sockets.xml" fitTables="common/characters/ubc/ubc.fit.xml" fit="common/characters/ubc/body_female.partfit.xml" bodyShapes="common/characters/ubc/ubc.bodyshape.xml">
-      <Section name="mi_superhero_female" material="common/models/quaternius/characters/superhero_female_fullbody/materials/mi_superhero_female.material"/>
-      <Section name="mi_eyes" material="common/models/quaternius/characters/superhero_female_fullbody/materials/mi_eyes.material"/>
+      <Section name="mi_superhero_female" material="guid:90b0ddf55b8dc21c0db135947d5c40dd"/>
+      <Section name="mi_eyes" material="guid:ebf75801bbc740b0b7be96afd829c2d8"/>
     </Part>
   </ItemVisual>
   <ItemVisual id="hair_simpleparted">
-    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_simpleparted.mesh" material="common/materials/quaternius/hair_1.material">
+    <Part name="Hair" kind="Skinned" mesh="guid:7fc7ca91fbf1d36db485e8494222de6d" material="guid:0ce7ebadacf3e963f227506afd1fa9cd">
       <ChannelMaterial channel="Hair.Length" name="_length" channelMin="-1" channelMax="0" valueMin="0.35" valueMax="1"/>
     </Part>
-    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_regular.mesh" material="common/models/quaternius/hair/eyebrows_regular/materials/mi_hair_1.material"/>
+    <Part name="Brows" kind="Skinned" mesh="guid:a246f98be0cd21d85e751f83b86ba32b" material="guid:53bc46c67eaf9d254b27c00cd31ac275"/>
   </ItemVisual>
   <ItemVisual id="hair_buzzed" _base="hair_simpleparted">
-    <Part name="Hair" mesh="common/models/quaternius/hair/hair_buzzed.mesh" material="common/materials/quaternius/hair_1.material"/>
+    <Part name="Hair" mesh="guid:ab0308bfe24bef5176054038b6875733" material="guid:0ce7ebadacf3e963f227506afd1fa9cd"/>
   </ItemVisual>
   <ItemVisual id="hair_bearded" _base="hair_buzzed">
-    <Part name="Beard" kind="Skinned" mesh="common/models/quaternius/hair/hair_beard.mesh" material="common/materials/quaternius/hair_1.material" _before="Brows"/>
+    <Part name="Beard" kind="Skinned" mesh="guid:a28556afcce94fc7e5090a2958548a89" material="guid:0ce7ebadacf3e963f227506afd1fa9cd" _before="Brows"/>
   </ItemVisual>
   <ItemVisual id="hair_long">
-    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_long.mesh" material="common/materials/quaternius/hair_2.material">
+    <Part name="Hair" kind="Skinned" mesh="guid:42e9e184fc86eeac849da37e4a7a14ef" material="guid:d23db9d78fcff06250df9abaa7540b48">
       <ChannelMaterial channel="Hair.Length" name="_length" channelMin="-1" channelMax="0" valueMin="0.35" valueMax="1"/>
     </Part>
-    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_female.mesh" material="common/models/quaternius/hair/eyebrows_female/materials/mi_hair_2.material"/>
+    <Part name="Brows" kind="Skinned" mesh="guid:74af75a10e49eb0b7f294eebe9cd6f51" material="guid:21dc8314209701eb88f87923521386f4"/>
   </ItemVisual>
   <!-- 긴 머리 스프링 — hair_long 메시를 사슬 4 뼈에 다시 묶은 hair_long_chain(자기 스켈레톤)과 리그 ubc_hair_long(뿌리는 몸의 Head, 사슬은 SpringChain)이다.
        자기 리그가 있어 몸을 리더로 따르지 않고 몸에 합치지 않는다(망토와 같은 길). hair_buns 는 hair_long(스프링 없음)을 잇는다. -->
   <ItemVisual id="hair_long_spring">
-    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_long_chain.mesh" skeleton="common/models/quaternius/hair/hair_long_chain/hair_long_chain.skeleton.xml"
-          rig="common/rigs/ubc_hair_long.rig.xml" material="common/materials/quaternius/hair_2.material">
+    <Part name="Hair" kind="Skinned" mesh="guid:615467a7c84ab1e862e39d2da0c55003" skeleton="common/models/quaternius/hair/hair_long_chain/hair_long_chain.skeleton.xml"
+          rig="common/rigs/ubc_hair_long.rig.xml" material="guid:d23db9d78fcff06250df9abaa7540b48">
       <ChannelMaterial channel="Hair.Length" name="_length" channelMin="-1" channelMax="0" valueMin="0.35" valueMax="1"/>
     </Part>
-    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_female.mesh" material="common/models/quaternius/hair/eyebrows_female/materials/mi_hair_2.material"/>
+    <Part name="Brows" kind="Skinned" mesh="guid:74af75a10e49eb0b7f294eebe9cd6f51" material="guid:21dc8314209701eb88f87923521386f4"/>
   </ItemVisual>
   <ItemVisual id="hair_buns" _base="hair_long">
-    <Part name="Hair" mesh="common/models/quaternius/hair/hair_buns.mesh" material="common/materials/quaternius/hair_2.material"/>
+    <Part name="Hair" mesh="guid:688786b6dbbabc7d1e590a2e21a695dc" material="guid:d23db9d78fcff06250df9abaa7540b48"/>
   </ItemVisual>
   <ItemVisual id="hair_buzzed_female" _base="hair_long">
-    <Part name="Hair" mesh="common/models/quaternius/hair/hair_buzzedfemale.mesh" material="common/materials/quaternius/hair_1.material"/>
+    <Part name="Hair" mesh="guid:cd4e5c7d653cd6f8aab320dfabc72b35" material="guid:0ce7ebadacf3e963f227506afd1fa9cd"/>
   </ItemVisual>  <ItemVisual id="outfit_peasant_male" tags="Outfit.Peasant">
-    <Part name="Arms" kind="Skinned" mesh="common/models/quaternius/outfits/male_peasant_arms.mesh" fit="common/characters/ubc/outfits/male_peasant_arms.partfit.xml">
-      <Section name="mi_peasant" material="common/models/quaternius/outfits/male_peasant_arms/materials/mi_peasant.material"/>
-      <Section name="mi_regular_male" material="common/models/quaternius/outfits/male_peasant_arms/materials/mi_regular_male.material"/>
+    <Part name="Arms" kind="Skinned" mesh="guid:3c583f57407c477c49fe377ca04a7454" fit="common/characters/ubc/outfits/male_peasant_arms.partfit.xml">
+      <Section name="mi_peasant" material="guid:e11f5981adbe050594d06aa67a58cf54"/>
+      <Section name="mi_regular_male" material="guid:35a35db46913f29732b2759f6819e7b8"/>
     </Part>
-    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/outfits/male_peasant_body.mesh" fit="common/characters/ubc/outfits/male_peasant_body.partfit.xml" material="common/models/quaternius/outfits/male_peasant_body/materials/mi_peasant.material"/>
-    <Part name="Legs" kind="Skinned" mesh="common/models/quaternius/outfits/male_peasant_legs.mesh" fit="common/characters/ubc/outfits/male_peasant_legs.partfit.xml" material="common/models/quaternius/outfits/male_peasant_legs/materials/mi_peasant.material"/>
-    <Part name="Feet" kind="Skinned" mesh="common/models/quaternius/outfits/male_peasant_feet.mesh" fit="common/characters/ubc/outfits/male_peasant_feet.partfit.xml" material="common/models/quaternius/outfits/male_peasant_feet/materials/mi_peasant.material"/>
+    <Part name="Body" kind="Skinned" mesh="guid:fe1d53f46218cf772de342f1552bd23d" fit="common/characters/ubc/outfits/male_peasant_body.partfit.xml" material="guid:6ca05c83e5458b538fbe4849a0a15ec3"/>
+    <Part name="Legs" kind="Skinned" mesh="guid:b112d2ff7edf1b2b2641d23bcb5e57e7" fit="common/characters/ubc/outfits/male_peasant_legs.partfit.xml" material="guid:512146f8741affe88ba3bc0f52ee2723"/>
+    <Part name="Feet" kind="Skinned" mesh="guid:f2af80afe7e818d8f08782800d82c27a" fit="common/characters/ubc/outfits/male_peasant_feet.partfit.xml" material="guid:db07673c70d0e76e9956429880debe52"/>
   </ItemVisual>
   <ItemVisual id="outfit_peasant_female" tags="Outfit.Peasant">
-    <Part name="Arms" kind="Skinned" mesh="common/models/quaternius/outfits/female_peasant_arms.mesh" fit="common/characters/ubc/outfits/female_peasant_arms.partfit.xml" material="common/models/quaternius/outfits/female_peasant_arms/materials/mi_peasant.material"/>
-    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/outfits/female_peasant_body.mesh" fit="common/characters/ubc/outfits/female_peasant_body.partfit.xml" material="common/models/quaternius/outfits/female_peasant_body/materials/mi_peasant.material"/>
-    <Part name="Legs" kind="Skinned" mesh="common/models/quaternius/outfits/female_peasant_legs.mesh" fit="common/characters/ubc/outfits/female_peasant_legs.partfit.xml" material="common/models/quaternius/outfits/female_peasant_legs/materials/mi_peasant.material"/>
-    <Part name="Feet" kind="Skinned" mesh="common/models/quaternius/outfits/female_peasant_feet.mesh" fit="common/characters/ubc/outfits/female_peasant_feet.partfit.xml" material="common/models/quaternius/outfits/female_peasant_feet/materials/mi_peasant.material"/>
+    <Part name="Arms" kind="Skinned" mesh="guid:ca00103bd567fe34b6f979db95b4a427" fit="common/characters/ubc/outfits/female_peasant_arms.partfit.xml" material="guid:bd7c4ad98625bebc43c3522987036dba"/>
+    <Part name="Body" kind="Skinned" mesh="guid:22d3db7afc0ea277a4a273587c42029d" fit="common/characters/ubc/outfits/female_peasant_body.partfit.xml" material="guid:906502ffc36afd9c9c0e58da6a9c424a"/>
+    <Part name="Legs" kind="Skinned" mesh="guid:9039fc5f4ee84be0b6fcc5c905fb17b7" fit="common/characters/ubc/outfits/female_peasant_legs.partfit.xml" material="guid:ddea6dddee84eab955eeda04f19a5d46"/>
+    <Part name="Feet" kind="Skinned" mesh="guid:81a8d3a01045e63967f9e0a45f2c1d10" fit="common/characters/ubc/outfits/female_peasant_feet.partfit.xml" material="guid:4505d5ee15bb341bad93c74be8f32021"/>
   </ItemVisual>
   <ItemVisual id="outfit_ranger_male" tags="Outfit.Ranger">
-    <Part name="Arms" kind="Skinned" mesh="common/models/quaternius/outfits/male_ranger_arms.mesh" fit="common/characters/ubc/outfits/male_ranger_arms.partfit.xml">
-      <Section name="mi_ranger" material="common/models/quaternius/outfits/male_ranger_arms/materials/mi_ranger.material"/>
-      <Section name="mi_regular_male" material="common/models/quaternius/outfits/male_ranger_arms/materials/mi_regular_male.material"/>
+    <Part name="Arms" kind="Skinned" mesh="guid:fbb2f2de46e0b49af9574769a00725de" fit="common/characters/ubc/outfits/male_ranger_arms.partfit.xml">
+      <Section name="mi_ranger" material="guid:4e5890b1da272c28a24d0ed4feabd167"/>
+      <Section name="mi_regular_male" material="guid:2fe0f5b46afd610229541ae732742bae"/>
     </Part>
-    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/outfits/male_ranger_body.mesh" fit="common/characters/ubc/outfits/male_ranger_body.partfit.xml" material="common/models/quaternius/outfits/male_ranger_body/materials/mi_ranger.material"/>
-    <Part name="Legs" kind="Skinned" mesh="common/models/quaternius/outfits/male_ranger_legs.mesh" fit="common/characters/ubc/outfits/male_ranger_legs.partfit.xml" material="common/models/quaternius/outfits/male_ranger_legs/materials/mi_ranger.material"/>
-    <Part name="Feet_boots" kind="Skinned" mesh="common/models/quaternius/outfits/male_ranger_feet_boots.mesh" fit="common/characters/ubc/outfits/male_ranger_feet_boots.partfit.xml" material="common/models/quaternius/outfits/male_ranger_feet_boots/materials/mi_ranger.material"/>
-    <Part name="Pauldron" kind="Skinned" mesh="common/models/quaternius/outfits/male_ranger_acc_pauldron.mesh" fit="common/characters/ubc/outfits/male_ranger_acc_pauldron.partfit.xml" material="common/models/quaternius/outfits/male_ranger_acc_pauldron/materials/mi_ranger.material"/>
+    <Part name="Body" kind="Skinned" mesh="guid:c9688c3dd8d7ade8705d1ebb2a6508fe" fit="common/characters/ubc/outfits/male_ranger_body.partfit.xml" material="guid:626a46ad23b7ee492dd56868879a8bda"/>
+    <Part name="Legs" kind="Skinned" mesh="guid:0a485783ecb570a4ff78c94fb4138f10" fit="common/characters/ubc/outfits/male_ranger_legs.partfit.xml" material="guid:70e5d06250448d955ecf55784d076c0f"/>
+    <Part name="Feet_boots" kind="Skinned" mesh="guid:c7e1c96a7e8001b775cd7c719d718360" fit="common/characters/ubc/outfits/male_ranger_feet_boots.partfit.xml" material="guid:f6d2490be388ad586da2d74866f2b025"/>
+    <Part name="Pauldron" kind="Skinned" mesh="guid:d803893b6817ad6f7c89299f74641626" fit="common/characters/ubc/outfits/male_ranger_acc_pauldron.partfit.xml" material="guid:dfc239d735a2910a8f286f214d82075a"/>
   </ItemVisual>
   <ItemVisual id="outfit_ranger_female" tags="Outfit.Ranger">
-    <Part name="Arms" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_arms.mesh" fit="common/characters/ubc/outfits/female_ranger_arms.partfit.xml">
-      <Section name="mi_ranger" material="common/models/quaternius/outfits/female_ranger_arms/materials/mi_ranger.material"/>
-      <Section name="mi_regular_female" material="common/models/quaternius/outfits/female_ranger_arms/materials/mi_regular_female.material"/>
+    <Part name="Arms" kind="Skinned" mesh="guid:3f46ae3a8fdbb15fe2e2bedcaa9c2ade" fit="common/characters/ubc/outfits/female_ranger_arms.partfit.xml">
+      <Section name="mi_ranger" material="guid:f602fda0b80ad520cd938db5debf9de7"/>
+      <Section name="mi_regular_female" material="guid:160d915c8e92f97669f3a5020ffa1baa"/>
     </Part>
-    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_body.mesh" fit="common/characters/ubc/outfits/female_ranger_body.partfit.xml" material="common/models/quaternius/outfits/female_ranger_body/materials/mi_ranger.material"/>
-    <Part name="Legs" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_legs.mesh" fit="common/characters/ubc/outfits/female_ranger_legs.partfit.xml" material="common/models/quaternius/outfits/female_ranger_legs/materials/mi_ranger.material"/>
-    <Part name="Feet" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_feet.mesh" fit="common/characters/ubc/outfits/female_ranger_feet.partfit.xml" material="common/models/quaternius/outfits/female_ranger_feet/materials/mi_ranger.material"/>
-    <Part name="Pauldrons" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_acc_pauldrons.mesh" fit="common/characters/ubc/outfits/female_ranger_acc_pauldrons.partfit.xml" material="common/models/quaternius/outfits/female_ranger_acc_pauldrons/materials/mi_ranger.material"/>
+    <Part name="Body" kind="Skinned" mesh="guid:419cb73cc46cf9e06e6d4e0cc8624314" fit="common/characters/ubc/outfits/female_ranger_body.partfit.xml" material="guid:32612638c30b4e32b913612104b88417"/>
+    <Part name="Legs" kind="Skinned" mesh="guid:c9546a67f1a517dc29200920696fd571" fit="common/characters/ubc/outfits/female_ranger_legs.partfit.xml" material="guid:77bf1fe1596d89db91dfabbaef5cc187"/>
+    <Part name="Feet" kind="Skinned" mesh="guid:c259809e5c49a8b0f0f331d592fdccac" fit="common/characters/ubc/outfits/female_ranger_feet.partfit.xml" material="guid:f7704dc548e1c30b959b15f2d5b06260"/>
+    <Part name="Pauldrons" kind="Skinned" mesh="guid:a7398cac61cd82ca3d591cd351600343" fit="common/characters/ubc/outfits/female_ranger_acc_pauldrons.partfit.xml" material="guid:2e1fd527323b881e4e952382b7e9dbe8"/>
   </ItemVisual>
   <!-- 레인저 두건(Quaternius Modular Character Outfits — Fantasy, 몸과 같은 UBC 리그) — 꾸미기 고르기 "Hood" 의 외형. 머리카락은 규칙이 감춘다(rules.xml). -->
   <ItemVisual id="hood_ranger_male" tags="Hood.Ranger">
-    <Part name="Hood" kind="Skinned" mesh="common/models/quaternius/outfits/male_ranger_head_hood.mesh" material="common/models/quaternius/outfits/male_ranger_head_hood/materials/mi_ranger.material"/>
+    <Part name="Hood" kind="Skinned" mesh="guid:b73666b1083d8186d22c3ff63426b3e8" material="guid:9cf071b68aa42c5b9bb8e51277a5c8d5"/>
   </ItemVisual>
   <ItemVisual id="hood_ranger_female" tags="Hood.Ranger">
-    <Part name="Hood" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_head_hood.mesh" material="common/models/quaternius/outfits/female_ranger_head_hood/materials/mi_ranger.material"/>
+    <Part name="Hood" kind="Skinned" mesh="guid:c5cd45e0b3cb9c94ae5b954543710a46" material="guid:6cc61dbaae321983cf799b15ad21c876"/>
   </ItemVisual>
 </ItemVisualCatalog>

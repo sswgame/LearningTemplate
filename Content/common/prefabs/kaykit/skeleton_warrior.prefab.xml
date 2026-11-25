@@ -22,8 +22,8 @@
 			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
-			                           _animationGraphPath="common/data/anim/skeleton.animgraph.xml"
-			                           _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml"
+			                           _animationGraphPath="guid:8d5a84b9050b8cadf1d06d0d49363c85"
+			                           _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f"
 			                           _initialState="Idle_Combat"
 			                           _currentState=""
 			                           _stateTime="0"

@@ -40,7 +40,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="80,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="60" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="80,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="60" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -62,7 +62,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -70,7 +70,7 @@
 			<GameObject _schemaVersion="0" _name="Swamp" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/swamp.zone.xml" _shape="Box" _halfExtents="2,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="guid:c0132485206b586b58adca5a48a87d3d" _shape="Box" _halfExtents="2,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -85,7 +85,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -93,7 +93,7 @@
 			<GameObject _schemaVersion="0" _name="Dune" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="8,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/dune.zone.xml" _shape="Cylinder" _halfExtents="3,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="guid:c91138d8af23f02768b8864e4da804af" _shape="Cylinder" _halfExtents="3,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -108,7 +108,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -116,7 +116,7 @@
 			<GameObject _schemaVersion="0" _name="QuietDune" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="15,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/dune.zone.xml" _shape="Cylinder" _halfExtents="3,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0">
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="guid:c91138d8af23f02768b8864e4da804af" _shape="Cylinder" _halfExtents="3,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0">
 						<_listModuleOverride>
 							<ZoneModuleDef _name="npcAvoid" _op="Remove" />
 							<ZoneModuleDef _name="sink">
@@ -140,14 +140,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="13" name="LavaPool">
 			<GameObject _schemaVersion="0" _name="LavaPool" _bActive="true">
 				<_listComponent>
-					<WaterBodyComponent _localID="5729965392566960456" _localPosition="22,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _surfaceKind="Lava" _materialPath="engine/materials/water.material" _size="4,6" _cellSize="0.5" />
+					<WaterBodyComponent _localID="5729965392566960456" _localPosition="22,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _surfaceKind="Lava" _materialPath="guid:1546675df109d0a941207e13ed3a21b6" _size="4,6" _cellSize="0.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -162,14 +162,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="15" name="Sea">
 			<GameObject _schemaVersion="0" _name="Sea" _bActive="true">
 				<_listComponent>
-					<WaterBodyComponent _localID="5729965392566960456" _localPosition="29,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _surfaceKind="Sea" _materialPath="engine/materials/water.material" _size="5,6" _cellSize="0.5" />
+					<WaterBodyComponent _localID="5729965392566960456" _localPosition="29,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _surfaceKind="Sea" _materialPath="guid:1546675df109d0a941207e13ed3a21b6" _size="5,6" _cellSize="0.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -184,7 +184,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -192,7 +192,7 @@
 			<GameObject _schemaVersion="0" _name="SulfurVent" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="36,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/sulfurvent.zone.xml" _shape="Box" _halfExtents="2,1.5,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="guid:abd3a3d9e13ab2af855a187a0b4ff57c" _shape="Box" _halfExtents="2,1.5,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -207,7 +207,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -215,7 +215,7 @@
 			<GameObject _schemaVersion="0" _name="Spring" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="42,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/buffspring.zone.xml" _shape="Cylinder" _halfExtents="1.5,1.5,1.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="guid:f0a3e1ee852129c56d2e9998b7dcdf54" _shape="Cylinder" _halfExtents="1.5,1.5,1.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -230,7 +230,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -238,7 +238,7 @@
 			<GameObject _schemaVersion="0" _name="SkillCircle" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="48,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/skillarea.zone.xml" _shape="Cylinder" _halfExtents="1.5,1.5,1.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="guid:d09251c8f2367db315e07fb1290108fb" _shape="Cylinder" _halfExtents="1.5,1.5,1.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -253,7 +253,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -261,7 +261,7 @@
 			<GameObject _schemaVersion="0" _name="Pit" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="54,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/deathpit.zone.xml" _shape="Box" _halfExtents="2,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="guid:6d56f39975d06be37a07deb851b6da62" _shape="Box" _halfExtents="2,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -276,7 +276,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -284,7 +284,7 @@
 			<GameObject _schemaVersion="0" _name="ZeroG" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="60,3,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/zerog.zone.xml" _shape="Box" _halfExtents="2,3,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="guid:7631712d293160330094574f00fcf48f" _shape="Box" _halfExtents="2,3,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -299,7 +299,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -314,7 +314,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -329,7 +329,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -344,7 +344,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,0.5,10" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,0.5,10" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -359,7 +359,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4.5" />
 					<NavMeshModifierComponent _localID="7476001263293725082" _areaName="Lava" _bIgnoreFromBuild="false" />
 				</_listComponent>
 			</GameObject>
@@ -368,7 +368,7 @@
 			<GameObject _schemaVersion="0" _name="LavaField" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="20,0,12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/lava.zone.xml" _shape="Box" _halfExtents="1,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="guid:c070f43a04824203ed2ac3b728a9e82b" _shape="Box" _halfExtents="1,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -399,8 +399,8 @@
 			<GameObject _schemaVersion="0" _name="Walker" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="0,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
-					<MeshComponent _localID="163494941664531515" _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.2" />
+					<MeshComponent _localID="163494941664531515" _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.4" />
 					<AbilitySystemComponent _localID="2238906797121419031" _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
@@ -423,8 +423,8 @@
 			<GameObject _schemaVersion="0" _name="Villager" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="4,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
-					<MeshComponent _localID="163494941664531515" _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.2" />
+					<MeshComponent _localID="163494941664531515" _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.4" />
 					<AbilitySystemComponent _localID="2238906797121419031" _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
@@ -443,8 +443,8 @@
 			<GameObject _schemaVersion="0" _name="Victim" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="8,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
-					<MeshComponent _localID="163494941664531515" _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.2" />
+					<MeshComponent _localID="163494941664531515" _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.4" />
 					<AbilitySystemComponent _localID="2238906797121419031" _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
@@ -462,8 +462,8 @@
 			<GameObject _schemaVersion="0" _name="Spirit" _bActive="true">
 				<_listComponent>
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="12,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
-					<MeshComponent _localID="163494941664531515" _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="1.2" />
+					<MeshComponent _localID="163494941664531515" _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.4" />
 					<AbilitySystemComponent _localID="2238906797121419031" _abilitySetID="FireSpirit" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
@@ -488,7 +488,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.3,0.2,0.6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.45" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.3,0.2,0.6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.45" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="0.2" _touchDistance="0.15" />
 					<TagComponent _localID="5249839963692551013">
 						<_tags>
@@ -511,7 +511,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.45" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.45" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="0.6" _touchDistance="0.15" />
 					<TagComponent _localID="5249839963692551013">
 						<_tags>
@@ -534,7 +534,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.45" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.45" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="0.6" _touchDistance="0.15" />
 				</_listComponent>
 			</GameObject>
@@ -550,7 +550,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.2,0.3,1.2" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.9" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.2,0.3,1.2" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.9" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="0.3" _touchDistance="0.15" />
 					<VehicleSeatComponent _localID="9451712765012233414" />
 				</_listComponent>
@@ -567,7 +567,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.45" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.45" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="0.6" _touchDistance="0.15" />
 				</_listComponent>
 			</GameObject>
@@ -583,7 +583,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.4,0.6,0.4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.45" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.4,0.6,0.4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.45" />
 					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="0.6" _touchDistance="0.15" />
 					<TagComponent _localID="5249839963692551013">
 						<_tags>

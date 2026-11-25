@@ -57,7 +57,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="game/playground/materials/toonshowcase_ground.material"
+					               _materialPath="guid:d53115c7802b1e1eb5caeca24bafda2a"
 					               _boundsRadius="6"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -76,7 +76,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Sphere"
-					               _materialPath="game/playground/materials/surfaceshowcase_base.material"
+					               _materialPath="guid:339e3731b65ebe0a7daef3301cc4a87b"
 					               _boundsRadius="0.6"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -95,7 +95,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Sphere"
-					               _materialPath="game/playground/materials/surfaceshowcase_wet.material"
+					               _materialPath="guid:ec2c5ee9253a56b60ba9a3bbb011ee59"
 					               _boundsRadius="0.6"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -114,7 +114,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Sphere"
-					               _materialPath="game/playground/materials/surfaceshowcase_dirt.material"
+					               _materialPath="guid:76349d2aa68b8615a337de70ce68b860"
 					               _boundsRadius="0.6"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -133,7 +133,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Sphere"
-					               _materialPath="game/playground/materials/surfaceshowcase_blood.material"
+					               _materialPath="guid:522da97951f522c554b1d575f4f6ecd5"
 					               _boundsRadius="0.6"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -152,7 +152,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Sphere"
-					               _materialPath="game/playground/materials/surfaceshowcase_tear.material"
+					               _materialPath="guid:ab222eefebec5f816ffb5a7397d1f53c"
 					               _boundsRadius="0.6"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />

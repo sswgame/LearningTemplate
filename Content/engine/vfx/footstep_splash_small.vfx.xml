@@ -4,7 +4,7 @@
      반복하지 않는 한 번 터지기다: 발걸음 반응(SurfaceFootprintSystem)이 효과 풀 오브젝트를 돌려 쓰며 발 자리에서 다시 튼다. 텍스처는 Kenney 파티클 팩(CC0). -->
 <VFXEffectDef>
 	<_listEmitter>
-		<VFXEmitterDef _name="Droplets" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Alpha" _bLooping="false"
+		<VFXEmitterDef _name="Droplets" _texturePath="guid:6ccbb6cd99d1e6a55391cd4c91f29516" _blendMode="Alpha" _bLooping="false"
 		               _maxParticles="6" _duration="0.1" _spawnRate="0" _lifetimeMin="0.25" _lifetimeMax="0.4"
 		               _velocityMin="-0.6, 0.6, -0.6" _velocityMax="0.6, 1.2, 0.6" _gravity="0, -9.8, 0">
 			<_listBurst><VFXBurstDef _time="0" _count="6"/></_listBurst>

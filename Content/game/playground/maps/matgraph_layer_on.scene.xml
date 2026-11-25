@@ -22,14 +22,14 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="GraphSphere">
 			<GameObject _schemaVersion="0" _name="GraphSphere" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1.6,1.6,1.6" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="game/playground/materials/matgraph/layered_stone.gen.material" _boundsRadius="1.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1.6,1.6,1.6" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="guid:b57284fa22393893dd76c20ebe05da8b" _boundsRadius="1.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>

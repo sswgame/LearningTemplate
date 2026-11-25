@@ -351,9 +351,9 @@ namespace sw::test
             float3 high{};
             for ( uint32 axis = 0; axis < 3; ++axis )
             {
-                ( &low._x )[axis]  = static_cast<float32>( MathUtil::max( range._arrFirst[axis], job._clip._arrFirst[axis] ) );
-                ( &high._x )[axis] = static_cast<float32>( MathUtil::min( range._arrLast[axis], job._clip._arrLast[axis] ) );
-                if ( ( &low._x )[axis] > ( &high._x )[axis] )
+                low.data()[axis]  = static_cast<float32>( MathUtil::max( range._arrFirst[axis], job._clip._arrFirst[axis] ) );
+                high.data()[axis] = static_cast<float32>( MathUtil::min( range._arrLast[axis], job._clip._arrLast[axis] ) );
+                if ( low.data()[axis] > high.data()[axis] )
                     return;
             }
             const float3 normal = ( cornerB - cornerA ).cross( cornerC - cornerB );

@@ -7,7 +7,7 @@
 			                           _possessAtStart="0"
 			                           _turnRate="20"
 			                           _arriveDistance="0.15"
-			                           _behaviorTree="game/playground/harvestvalley/data/ai/autofarmer.bt.xml"
+			                           _behaviorTree="guid:a21099633f6a37a36569489cc0296c43"
 			                           _cultivateLimit="32" />
 		</_listComponent>
 	</GameObject>

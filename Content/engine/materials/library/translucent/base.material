@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="843bd87f676e375f9f5da51a290c658b"?>
 <!-- 외형 라이브러리 갈래 바탕: 얇은 반투명(커튼 · 얇은 천) — 알파 블렌드 + 투과(언리얼 Thin Translucent). renderQueue 0 — 유리(-100) 뒤에 그려 굴절 위에 얹힌다. -->
-<MaterialDef formatVersion="0" name="AppearanceTranslucent" _base="engine/materials/library/appearance.material" alphaMode="Blend" cullMode="None" twoSidedLighting="true">
+<MaterialDef formatVersion="0" name="AppearanceTranslucent" _base="guid:dec52472672bb347f0b472ac23617b92" alphaMode="Blend" cullMode="None" twoSidedLighting="true">
 	<_properties>
 		<item name="_color" defaultValue="0.9 0.88 0.82 0.55" />
 		<item name="_subsurfaceColor" defaultValue="1 0.95 0.85 1" />

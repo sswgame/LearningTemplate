@@ -5,7 +5,7 @@
 	(PrePostProcess 자리 = 피사계 심도 앞). 이 파일이 하는 일은 모듈이 쓸 셰이더를 `_listExtensionShader` 로 선언하는 것뿐이다.
 	시나리오 `game/playground/automation/extensionpass.scenario.xml` 이 `gv_renderPipeline` 로 고른다.
 -->
-<RenderPipelineDesc _base="engine/pipeline/forwardpipeline.xml" _name="ModulePassPipeline">
+<RenderPipelineDesc _base="guid:a75d4f411b530b43612e42001606bcec" _name="ModulePassPipeline">
 	<_listPass>
 		<RenderGraphPassDesc _name="Fog" _op="Remove" />
 		<RenderGraphPassDesc _name="DistortionApply" _op="Remove" />

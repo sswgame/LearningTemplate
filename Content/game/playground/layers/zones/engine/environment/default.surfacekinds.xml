@@ -6,9 +6,9 @@
 -->
 <SurfaceKindTable>
 	<_listKind>
-		<SurfaceKindDef _name="Ice" _zoneProfile="game/playground/zones/ice.zone.xml" />
-		<SurfaceKindDef _name="Sea" _zoneProfile="game/playground/zones/sea.zone.xml" />
-		<SurfaceKindDef _name="Lava" _zoneProfile="game/playground/zones/lava.zone.xml" />
-		<SurfaceKindDef _name="Thorns" _zoneProfile="game/playground/zones/thorns.zone.xml" />
+		<SurfaceKindDef _name="Ice" _zoneProfile="guid:5e632139d17aef1eac57fdc043274a65" />
+		<SurfaceKindDef _name="Sea" _zoneProfile="guid:c958c7c3337e7102d091ce5ea612a24f" />
+		<SurfaceKindDef _name="Lava" _zoneProfile="guid:c070f43a04824203ed2ac3b728a9e82b" />
+		<SurfaceKindDef _name="Thorns" _zoneProfile="guid:90fa2d79538d17803158496cc08b3464" />
 	</_listKind>
 </SurfaceKindTable>

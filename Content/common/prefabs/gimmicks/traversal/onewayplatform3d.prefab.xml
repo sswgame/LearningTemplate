@@ -43,7 +43,7 @@
 			               _attachOwnerID="0"
 			               _attachComponent="#63e709ac676dd304"
 			               _meshID="Cube"
-			               _materialPath="engine/materials/defaultmaterial.material"
+			               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

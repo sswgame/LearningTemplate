@@ -412,11 +412,11 @@ namespace sw::editor
                                 float32      arrCoord[3];
                                 for ( uint32 axis = 0; axis < 3; ++axis )
                                 {
-                                    const float32 cellSize = ( &extent._x )[axis] / static_cast<float32>( arrCount[axis] );
+                                    const float32 cellSize = extent.data()[axis] / static_cast<float32>( arrCount[axis] );
                                     float32       offset   = 0.5f;
                                     if ( arrCount[axis] > 1 )
                                         offset += random.nextRange( -jitter, jitter );
-                                    arrCoord[axis] = ( &boundsMin._x )[axis] + cellSize * ( static_cast<float32>( arrCell[axis] ) + offset );
+                                    arrCoord[axis] = boundsMin.data()[axis] + cellSize * ( static_cast<float32>( arrCell[axis] ) + offset );
                                 }
                                 FractureSiteUtil::addIfInside( outListSite, float3{ arrCoord[0], arrCoord[1], arrCoord[2] }, isInsideMesh );
                             }

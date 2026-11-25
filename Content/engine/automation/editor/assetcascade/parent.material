@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="a99dbaa114d4fbb1205035c28567be97"?>
 <!-- 조부모(grand)를 펼쳐 넣고 색만 바꾼다 -->
-<MaterialDef formatVersion="0" name="CascadeParent" _base="engine/automation/editor/assetcascade/grand.material">
+<MaterialDef formatVersion="0" name="CascadeParent" _base="guid:a81e9a02e7f80fa49a8a1ef57cb01fdb">
 	<_properties>
 		<item name="_color" defaultValue="0.8 0.2 0.2 1.0"/>
 	</_properties>

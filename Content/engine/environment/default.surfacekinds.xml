@@ -16,7 +16,7 @@
 	프로필이 그 게임의 이펙트를 부르기 때문이다. Lava · Sea 는 액체(WaterBodyComponent _surfaceKind)가 내는 종류, Thorns 는 물리 재질이다.
 -->
 <SurfaceKindTable _waterKind="Water" _deformResolution="640" _deformExtent="20" _deformDepthRange="0.15"
-                  _wetnessCollection="engine/materials/weather.matparams.xml" _wetnessParameter="Weather" _wetThreshold="0.5"
+                  _wetnessCollection="guid:d4a6dcfaefbfafcfd96263788f8a8e54" _wetnessParameter="Weather" _wetThreshold="0.5"
                   _wetFeetSteps="6" _wetPrintSize="0.12,0.26" _wetPrintDrySpeed="0.05" _stepEffectPoolSize="16">
 	<_listKind>
 		<SurfaceKindDef _name="Default" _rollingResistance="0.015" _gripScale="1" />

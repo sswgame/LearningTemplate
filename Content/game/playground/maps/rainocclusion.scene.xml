@@ -30,35 +30,35 @@
 		<entity id="4" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="60,1,60" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="game/playground/materials/weathergarden_ground.material" _boundsRadius="45" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="60,1,60" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="guid:27e8b5f04c914e0fa1d36c5b9f7280ed" _boundsRadius="45" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="5" name="Roof">
 			<GameObject _schemaVersion="0" _name="Roof" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,3.1,0" _localRotation="0,0,0" _localScale="8,0.2,8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="6" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,3.1,0" _localRotation="0,0,0" _localScale="8,0.2,8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="6" name="WallBack">
 			<GameObject _schemaVersion="0" _name="WallBack" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,1.5,4" _localRotation="0,0,0" _localScale="8,3,0.2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1.5,4" _localRotation="0,0,0" _localScale="8,3,0.2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="7" name="WallLeft">
 			<GameObject _schemaVersion="0" _name="WallLeft" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-4,1.5,0" _localRotation="0,0,0" _localScale="0.2,3,8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-4,1.5,0" _localRotation="0,0,0" _localScale="0.2,3,8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="8" name="WallRight">
 			<GameObject _schemaVersion="0" _name="WallRight" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="4,1.5,0" _localRotation="0,0,0" _localScale="0.2,3,8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="4,1.5,0" _localRotation="0,0,0" _localScale="0.2,3,8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="4.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -72,7 +72,7 @@
 		<entity id="10" name="Rain">
 			<GameObject _schemaVersion="0" _name="Rain" _bActive="true">
 				<_listComponent>
-					<VFXComponent _localID="7647927963071728401" _localPosition="0,12,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _effectPath="engine/vfx/precipitation_rain_heavy.vfx.xml" _seed="21" _bPlayOnBegin="true" />
+					<VFXComponent _localID="7647927963071728401" _localPosition="0,12,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _effectPath="guid:28aec32ab585430da8b934ddfa2b94b1" _seed="21" _bPlayOnBegin="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

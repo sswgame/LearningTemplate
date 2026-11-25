@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="fbe0dba01e63d4fee9bb3fb59e2d4011"?>
 <!-- 외형 라이브러리 갈래 바탕: 천 — Charlie 시엔(언리얼 Cloth) + 직조 무늬. 면 · 울 · 벨벳 · 데님. -->
-<MaterialDef formatVersion="0" name="AppearanceCloth" _base="engine/materials/library/appearance.material">
+<MaterialDef formatVersion="0" name="AppearanceCloth" _base="guid:dec52472672bb347f0b472ac23617b92">
 	<_properties>
 		<item name="_sheenWeight" defaultValue="0.85" />
 		<item name="_sheenColor" defaultValue="0.25 0.25 0.25 1" />

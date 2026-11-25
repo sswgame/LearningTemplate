@@ -24,12 +24,12 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b"
 					               _boundsRadius="0.9" />
 					<InteractableComponent _localID="10644522701805113517" _componentName="InteractableComponent"
 					                       _bActive="true"
 					                       _interactionID="Use"
-					                       _catalogPath="game/playground/automation/resourcecondition/table.interactions.xml"
+					                       _catalogPath="guid:008e5a96f5d7f1d5dec21f216c052fec"
 					                       _priority="0"
 					                       _bEnabled="true" />
 				</_listComponent>

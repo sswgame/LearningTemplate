@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="357091b98d4202833a56b17575b044a3"?>
 <!-- 외형 라이브러리 프리셋(skin): 눈물 · 침 · 땀에 젖은 피부(런타임 마스크 없이 전체). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
-<MaterialDef formatVersion="0" name="SkinWet" _base="engine/materials/library/skin/base.material">
+<MaterialDef formatVersion="0" name="SkinWet" _base="guid:840a34cee276109e0b3866e08bd97f76">
 	<_properties>
 		<item name="_wetness" defaultValue="1" />
 		<item name="_wetMeniscus" defaultValue="0.6" />

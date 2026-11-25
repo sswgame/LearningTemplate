@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="6ddad94964510d742a292a801ca3995f"?>
 <!-- 외형 라이브러리 갈래 바탕: 솔질 금속 · 칼날 — 비등방 GGX(갈린 방향 = UV u). -->
-<MaterialDef formatVersion="0" name="AppearanceBrushedMetal" _base="engine/materials/library/appearance.material">
+<MaterialDef formatVersion="0" name="AppearanceBrushedMetal" _base="guid:dec52472672bb347f0b472ac23617b92">
 	<_properties>
 		<item name="_metallic" defaultValue="1" />
 		<item name="_roughness" defaultValue="0.3" />

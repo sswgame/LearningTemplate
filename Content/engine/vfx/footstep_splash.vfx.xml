@@ -4,7 +4,7 @@
      반복하지 않는 한 번 터지기다: 발걸음 반응(SurfaceFootprintSystem)이 효과 풀 오브젝트를 돌려 쓰며 발 자리에서 다시 튼다. 텍스처는 Kenney 파티클 팩(CC0). -->
 <VFXEffectDef>
 	<_listEmitter>
-		<VFXEmitterDef _name="Droplets" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Alpha" _bLooping="false"
+		<VFXEmitterDef _name="Droplets" _texturePath="guid:6ccbb6cd99d1e6a55391cd4c91f29516" _blendMode="Alpha" _bLooping="false"
 		               _maxParticles="14" _duration="0.1" _spawnRate="0" _lifetimeMin="0.35" _lifetimeMax="0.6"
 		               _velocityMin="-1.1, 1.2, -1.1" _velocityMax="1.1, 2.4, 1.1" _gravity="0, -9.8, 0">
 			<_listBurst><VFXBurstDef _time="0" _count="14"/></_listBurst>
@@ -16,7 +16,7 @@
 				<_alpha><_listKey><FloatCurveKey _time="0" _value="0.9" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.4" _interpolation="Linear"/></_listKey></_alpha>
 			</_colorOverLife>
 		</VFXEmitterDef>
-		<VFXEmitterDef _name="Spray" _texturePath="engine/textures/particles/kenney_particle/smoke_04.dds" _blendMode="Alpha" _bLooping="false"
+		<VFXEmitterDef _name="Spray" _texturePath="guid:fc441c743c5ba08b2cea30d58bbc255f" _blendMode="Alpha" _bLooping="false"
 		               _maxParticles="3" _duration="0.1" _spawnRate="0" _lifetimeMin="0.25" _lifetimeMax="0.4"
 		               _velocityMin="-0.4, 0.4, -0.4" _velocityMax="0.4, 0.9, 0.4" _gravity="0, -2, 0">
 			<_listBurst><VFXBurstDef _time="0" _count="3"/></_listBurst>
