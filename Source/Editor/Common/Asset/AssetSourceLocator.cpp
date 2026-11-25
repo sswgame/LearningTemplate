@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Process/ProcessEnvironment.h"
 
+#include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -28,6 +29,17 @@ namespace sw::editor
                     return nullopt;
                 const optional<AssetSourceAddress> address = AssetSourceAddress::tryParse( meta._source );
                 return address.has_value() && address->isStored() ? address : nullopt;
+            }
+
+            /** @brief 원본의 바이트가 있는 파일입니다. 저장소 주소를 풀지 못한 까닭은 오류로 남기고, 없는 파일은 부르는 쪽이 알린다. */
+            static optional<AbsolutePath> resolveOrReport( const AbsolutePath& sourcePath )
+            {
+                const expected<AbsolutePath> contentPath = AssetSourceLocator::resolve( sourcePath );
+                if ( contentPath.has_value() )
+                    return *contentPath;
+                if ( findStoredAddress( sourcePath ).has_value() )
+                    SW_LOG_ERROR_ID( "AssetSourceLocator.StoredSourceNotFound", "Source '%#': %# '%#'", sourcePath.str(), contentPath.error().message(), contentPath.error().detail() );
+                return nullopt;
             }
         };
     } // namespace
@@ -59,14 +71,14 @@ namespace sw::editor
 
     bool AssetSourceLocator::readBytes( const AbsolutePath& sourcePath, vector<uint8>& outBytes )
     {
-        const expected<AbsolutePath> contentPath = resolve( sourcePath );
-        if ( contentPath.has_value() == false )
-        {
-            if ( AssetSourceLocatorInternal::findStoredAddress( sourcePath ).has_value() )
-                SW_LOG_ERROR_ID( "AssetSourceLocator.StoredSourceNotFound", "Source '%#': %# '%#'", sourcePath.str(), contentPath.error().message(), contentPath.error().detail() );
-            return false;
-        }
-        return FileUtil::readFile( *contentPath, outBytes ) && outBytes.empty() == false;
+        const optional<AbsolutePath> contentPath = AssetSourceLocatorInternal::resolveOrReport( sourcePath );
+        return contentPath.has_value() && FileUtil::readFile( *contentPath, outBytes ) && outBytes.empty() == false;
+    }
+
+    uint64 AssetSourceLocator::computeHash( const AbsolutePath& sourcePath )
+    {
+        const optional<AbsolutePath> contentPath = AssetSourceLocatorInternal::resolveOrReport( sourcePath );
+        return contentPath.has_value() ? AssetImportStampUtil::computeFileHash( *contentPath ) : 0;
     }
 
     void AssetSourceLocator::collectStoredSources( const AbsolutePath& folder, vector<AbsolutePath>& inoutListSourcePath )

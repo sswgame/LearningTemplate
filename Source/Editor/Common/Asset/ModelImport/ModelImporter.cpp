@@ -254,7 +254,7 @@ namespace sw::editor
              * @param listSectionMaterialName 구간을 나누는 glTF 머티리얼마다의 이름입니다(VRM · 머티리얼이 여럿인 텍스처 glTF). 본 메시를 머티리얼 구간으로도 나눕니다.
              */
             [[nodiscard]] static bool readSkinnedModel( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const ModelImportRule& rule, const AbsolutePath& sourcePath,
-                                                        const vector<string>& listSectionMaterialName, ModelImportResult& outResult )
+                                                        const vector<string>& listSectionMaterialName, TaskManager* pTaskManager, ModelImportResult& outResult )
             {
                 unordered_map<const cgltf_node*, int32> mapJointBone;
                 vector<float4x4>                        listParentOffset;
@@ -350,12 +350,23 @@ namespace sw::editor
                 outResult._mesh._skinBinding._listInverseBind = std::move( listBoneInverseBind );
                 outResult._mesh._skinBinding._layoutHash      = outResult._skeleton.getHierarchyHash( boneCount );
                 outResult._bSkinned                           = SW_TRUE;
-                return readClips( data, mapJointBone, listParentOffset, rule, sourcePath, outResult );
+                return readClips( data, mapJointBone, listParentOffset, rule, sourcePath, pTaskManager, outResult );
             }
 
-            /** @brief 애니메이션마다 클립 하나를 만들어 규칙의 코덱으로 압축합니다. 규칙의 클립 목록에 원본에 없는 이름이 있으면 false 입니다. */
+            /** @brief 클립 하나를 다시 표본하고 압축하는 일의 입력과 결과입니다(`readClips`). */
+            struct ClipTask
+            {
+                const cgltf_animation*          _pAnimation{ nullptr };
+                string                          _name;
+                ModelImportAnimation::ClipExtra _extra{};
+                ModelImportClip                 _imported{};
+                bool                            _bChannelsRead{ false };
+                bool                            _bCompressed{ false };
+            };
+
+            /** @brief 애니메이션마다 클립 하나를 만들어 규칙의 코덱으로 압축합니다(@p pTaskManager 가 있으면 클립끼리 나눠 돈다 — 결과는 같다). 규칙의 클립 목록에 원본에 없는 이름이 있으면 false 입니다. */
             [[nodiscard]] static bool readClips( const cgltf_data& data, const unordered_map<const cgltf_node*, int32>& mapJointBone, const vector<float4x4>& listParentOffset,
-                                                 const ModelImportRule& rule, const AbsolutePath& sourcePath, ModelImportResult& inoutResult )
+                                                 const ModelImportRule& rule, const AbsolutePath& sourcePath, TaskManager* pTaskManager, ModelImportResult& inoutResult )
             {
                 if ( rule._bImportAnimations == SW_FALSE )
                     return true;
@@ -393,6 +404,7 @@ namespace sw::editor
                 AnimationCodecSettings        settings{};
                 settings._precision     = rule._animationPrecision;
                 settings._shellDistance = rule._animationShellDistance;
+                vector<ClipTask> listTask;
                 for ( cgltf_size animationIndex = 0; animationIndex < data.animations_count; ++animationIndex )
                 {
                     const cgltf_animation&                   animation = data.animations[animationIndex];
@@ -410,39 +422,61 @@ namespace sw::editor
                         listRequestedFound[*requestedIndex] = SW_TRUE;
                     }
 
+                    ClipTask task;
+                    task._pAnimation   = &animation;
+                    task._name         = clipName;
+                    const auto itExtra = mapExtra.find( clipName );
+                    if ( itExtra != mapExtra.end() )
+                    {
+                        task._extra = std::move( itExtra->second );
+                        mapExtra.erase( itExtra );
+                    }
+                    const string baseStem    = ModelImportUtil::makeFileStem( clipName );
+                    task._imported._fileStem = ModelImportUtil::makeNumberedStem( baseStem, mapStemUse[baseStem]++ );
+                    listTask.push_back( std::move( task ) );
+                }
+
+                // 클립끼리는 독립이다(원본은 읽기만 하고 클립마다 자기 칸에 쓴다) — 다시 표본 · 압축을 워커와 나눈다. 오류는 아래에서 클립 순서로 남긴다.
+                const auto importClip = [&]( uint32, ClipTask& task )
+                {
+                    task._imported._clip.setName( hashed_string( task._name ) );
+                    task._imported._clip.setRootMotionTrack( rootMotionBone );
                     // 모프 가중치 채널은 타깃 이름의 커브가 된다. 가중치만 움직이는 클립(말하기)도 그 길이를 가진다.
                     vector<AnimationClipCurve> listMorphCurve;
                     float32                    morphDuration = 0.0f;
                     AnimationRawClip           rawClip;
-                    const bool                 bChannelsRead = ModelImportAnimation::readMorphWeightCurves( animation, rule._animationSampleRate, listMorphCurve, morphDuration ) &&
-                                               ModelImportAnimation::resampleAnimation( animation, skeleton, mapJointBone, listRest, listParentOffset, rule._animationSampleRate, morphDuration, rawClip );
-                    if ( bChannelsRead == false )
-                    {
-                        SW_LOG_ERROR_ID( "ModelImporter.GlTFClipChannelWhose", "glTF '%#': clip '%#' has a channel whose keys cannot be read", sourcePath.str(), clipName.c_str() );
-                        return false;
-                    }
-                    ModelImportClip imported{};
-                    imported._clip.setName( hashed_string( clipName ) );
-                    imported._clip.setRootMotionTrack( rootMotionBone );
+                    task._bChannelsRead = ModelImportAnimation::readMorphWeightCurves( *task._pAnimation, rule._animationSampleRate, listMorphCurve, morphDuration ) &&
+                                          ModelImportAnimation::resampleAnimation( *task._pAnimation, skeleton, mapJointBone, listRest, listParentOffset, rule._animationSampleRate, morphDuration, rawClip );
+                    if ( task._bChannelsRead == false )
+                        return;
                     for ( const AnimationClipCurve& curve : listMorphCurve )
                     {
-                        imported._clip.addCurve( curve );
+                        task._imported._clip.addCurve( curve );
                     }
-                    const auto itExtra = mapExtra.find( clipName );
-                    if ( itExtra != mapExtra.end() )
+                    applyClipExtra( task._extra, task._imported );
+                    task._bCompressed = task._imported._clip.compressFrom( rawClip, *pCodec, settings, &task._imported._stats );
+                };
+                if ( pTaskManager != nullptr )
+                    pTaskManager->runParallelInto<ClipTask>( listTask, 2, importClip );
+                else
+                {
+                    for ( ClipTask& task : listTask )
+                        importClip( 0, task );
+                }
+
+                for ( ClipTask& task : listTask )
+                {
+                    if ( task._bChannelsRead == false )
                     {
-                        applyClipExtra( itExtra->second, imported );
-                        mapExtra.erase( itExtra );
-                    }
-                    if ( imported._clip.compressFrom( rawClip, *pCodec, settings, &imported._stats ) == false )
-                    {
-                        SW_LOG_ERROR_ID( "ModelImporter.GlTFClipCouldNot", "glTF '%#': clip '%#' could not be compressed with '%#'", sourcePath.str(), clipName.c_str(), pCodec->getName() );
+                        SW_LOG_ERROR_ID( "ModelImporter.GlTFClipChannelWhose", "glTF '%#': clip '%#' has a channel whose keys cannot be read", sourcePath.str(), task._name.c_str() );
                         return false;
                     }
-                    const string baseStem = ModelImportUtil::makeFileStem( clipName );
-                    const uint32 useCount = mapStemUse[baseStem]++;
-                    imported._fileStem    = ModelImportUtil::makeNumberedStem( baseStem, useCount );
-                    inoutResult._listClip.push_back( std::move( imported ) );
+                    if ( task._bCompressed == false )
+                    {
+                        SW_LOG_ERROR_ID( "ModelImporter.GlTFClipCouldNot", "glTF '%#': clip '%#' could not be compressed with '%#'", sourcePath.str(), task._name.c_str(), pCodec->getName() );
+                        return false;
+                    }
+                    inoutResult._listClip.push_back( std::move( task._imported ) );
                 }
                 return validateClipNamesMatched( rule, listRequestedFound, mapExtra, sourcePath.str() );
             }
@@ -528,7 +562,7 @@ namespace sw::editor
 
             /** @brief 스킨이 있는 모델을 읽습니다. 규칙의 이동 · 재중심이나 LOD 는 스킨드 모델에 맞지 않아 거절합니다. 읽었으면 아바타에 없는 본을 경고합니다. */
             [[nodiscard]] static bool readSkinnedAsset( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const vector<string>& listSectionMaterialName, const ModelImportRule& rule,
-                                                        const AbsolutePath& sourcePath, ModelImportResult& outResult )
+                                                        const AbsolutePath& sourcePath, TaskManager* pTaskManager, ModelImportResult& outResult )
             {
                 const bool bMoves = rule._recenter != ModelRecenter::None || rule._arrTranslation[0] != 0.0f || rule._arrTranslation[1] != 0.0f || rule._arrTranslation[2] != 0.0f;
                 if ( bMoves )
@@ -536,7 +570,7 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "ModelImporter.GlTFSkinnedImportRule", "glTF '%#' is skinned - import rule translation / recenter would break its bind matrices", sourcePath.str() );
                     return false;
                 }
-                if ( readSkinnedModel( data, listRoot, rule, sourcePath, listSectionMaterialName, outResult ) == false )
+                if ( readSkinnedModel( data, listRoot, rule, sourcePath, listSectionMaterialName, pTaskManager, outResult ) == false )
                     return false;
                 ModelImportVrm::warnMissingAvatarBones( outResult, sourcePath.str() );
                 return true;
@@ -647,7 +681,7 @@ namespace sw::editor
                 if ( folderAt == string::npos )
                     return uniqueFootprint;
                 StringBuilder<constant::buffer::kMax512> rawFolder;
-                rawFolder.appendFormat( "%#/%#/%#", string_view( sideFolder ).substr( 0, folderAt ), ModelImportUtil::kRawModelFolder, string_view( sideFolder ).substr( folderAt + marker.size() ) );
+                rawFolder.appendFormat( "%#/%#/%#", string_view( sideFolder ).substr( 0, folderAt ), ModelImporter::kRawFolder, string_view( sideFolder ).substr( folderAt + marker.size() ) );
                 const AbsolutePath rawPath = FileUtil::toDiskPath( rawFolder.view() ); // 폴더 이름 조각을 바꾼 글이다
                 if ( FileUtil::isDirectory( rawPath ) == false )
                     return uniqueFootprint;
@@ -745,7 +779,7 @@ namespace sw::editor
                 const AbsolutePath domain = ImportedAssetStore::findDomainFolder( sourcePath );
                 if ( domain.empty() )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.ClipSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its clips", sourcePath.str(), ModelImportUtil::kRawModelFolder.data() );
+                    SW_LOG_ERROR_ID( "ModelImporter.ClipSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its clips", sourcePath.str(), ModelImporter::kRawFolder.data() );
                     return false;
                 }
                 const string settingsText = rule.makeClipSettingsText();
@@ -791,14 +825,15 @@ namespace sw::editor
         {
         public:
             /** @brief @p assetPaths 는 부른 스레드가 찾아 넘긴 경로 상태다 — `importSource` 가 워커에서 돌아 서비스를 찾지 않는다. */
-            ModelRawImporter( const AssetPaths& assetPaths, const ModelImportConfig& config, const TextureImportConfig& textureConfig )
+            ModelRawImporter( const AssetPaths& assetPaths, const ModelImportConfig& config, const TextureImportConfig& textureConfig, TaskManager* pTaskManager )
                 : _assetPaths{ assetPaths }
                 , _config{ config }
-                , _imageRuleText{ textureConfig.makeSelectionText() }
+                , _hashInput{ ModelImportHashInput::collect( textureConfig ) }
+                , _pTaskManager{ pTaskManager }
             {
             }
 
-            string_view getRawFolderName() const override { return ModelImportUtil::kRawModelFolder; }
+            string_view getRawFolderName() const override { return ModelImporter::kRawFolder; }
             string_view getStampHeader() const override { return ModelImportUtil::kImportStampHeader; }
             string_view getImportedLabel() const override { return "메시"; }
             uint64      findCodeFingerprint() const override { return CookCodeFingerprint::find( "ModelImport" ); }
@@ -812,7 +847,7 @@ namespace sw::editor
                 ModelImportRule rule;
                 if ( findRule( sourcePath, assetPath, rule ) == false )
                     return 0; // 규칙이 겹치는 원본은 해시를 만들지 않는다(0 = 읽지 못함). 어긋남으로 잡히고 임포트도 같은 오류로 멈춘다
-                return ModelImporter::computeSourceHash( sourcePath, rule, _imageRuleText );
+                return ModelImporter::computeSourceHash( sourcePath, rule, _hashInput );
             }
             uint64      computeImportedHash( const AbsolutePath& importedPath ) const override { return ModelImporter::computeImportedHash( importedPath ); }
             const utf8* findUnsupportedReason( const AbsolutePath& sourcePath ) const override
@@ -834,7 +869,7 @@ namespace sw::editor
                 ModelImportRule rule;
                 if ( findRule( sourcePath, assetPath, rule ) == false )
                     return false;
-                return ModelImporter::importModel( _assetPaths, sourcePath, rule, importedPath );
+                return ModelImporter::importModel( _assetPaths, sourcePath, rule, importedPath, _pTaskManager );
             }
 
         private:
@@ -860,14 +895,15 @@ namespace sw::editor
         private:
             const AssetPaths&        _assetPaths;
             const ModelImportConfig& _config;
-            string                   _imageRuleText; ///< 꺼낼 이미지의 텍스처 규칙을 고르는 글(원본 해시에 섞는다)
+            ModelImportHashInput     _hashInput;
+            TaskManager* const       _pTaskManager; ///< 원본 하나의 클립을 나눠 돌 작업 시스템(빌림). nullptr 이면 부른 스레드가 차례로 돈다
         };
     } // namespace
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    bool ModelImporter::readModelAsset( const AbsolutePath& sourcePath, const ModelImportRule& rule, ModelImportResult& outResult )
+    bool ModelImporter::readModelAsset( const AbsolutePath& sourcePath, const ModelImportRule& rule, ModelImportResult& outResult, TaskManager* pTaskManager )
     {
         using Internal = ModelImporterInternal;
         outResult      = ModelImportResult{};
@@ -897,7 +933,7 @@ namespace sw::editor
         }
 
         if ( data.skins_count > 0 )
-            return Internal::readSkinnedAsset( data, listRoot, listSectionMaterialName, rule, sourcePath, outResult );
+            return Internal::readSkinnedAsset( data, listRoot, listSectionMaterialName, rule, sourcePath, pTaskManager, outResult );
         return Internal::readStaticModel( data, listRoot, listSectionMaterialName, rule, sourcePath, outResult );
     }
 
@@ -935,11 +971,11 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImporter::importModel( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const ModelImportRule& rule, const AbsolutePath& outputPath )
+    bool ModelImporter::importModel( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const ModelImportRule& rule, const AbsolutePath& outputPath, TaskManager* pTaskManager )
     {
         using Internal = ModelImporterInternal;
         ModelImportResult result{};
-        if ( readModelAsset( sourcePath, rule, result ) == false )
+        if ( readModelAsset( sourcePath, rule, result, pTaskManager ) == false )
             return false;
         // 장비 메시 — 몸의 스킨 · 체형 모프를 옮겨 쓴다(쿠킹 단계 전이, 외형 피팅이 같은 체형을 장비에 베이크한다).
         if ( rule._bodySurface.empty() == false && transferBodySurface( sourcePath.str(), rule, result._mesh ) == false )
@@ -999,43 +1035,33 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImporter::importChangedSourceModel( const AssetPaths& assetPaths, string_view relativePath )
+    void ModelImporter::importChangedSources( AssetSourceBatch& batch )
     {
-        if ( MeshAssetFormat::isMeshAssetPath( relativePath ) )
-            return false;
-
-        const AbsolutePath& resourceRoot = assetPaths.getRootFolderPathFor( relativePath ); // 작업 도메인 사본은 실행 뿌리 아래다
-        const AbsolutePath  normalized   = resourceRoot.join( relativePath );
-        if ( makeImportedModelPath( normalized ).empty() )
+        // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 쓰는 길은 `importAllModels` 와 같은 `AssetImportStampUtil` 한 곳이라
+        // 에디터에서 임포트한 것과 `App --import-models` 로 임포트한 것이 같은 판정을 받는다.
+        vector<AssetSourceBatchEntry> listEntry;
+        for ( size_t itemIndex = 0; itemIndex < batch._listItem.size(); ++itemIndex )
         {
-            SW_LOG_WARNING_ID( "ModelImporter.ModelSourcesMustUnder", "Model sources must be under `%#` to be imported: %#", ModelImportUtil::kRawModelFolder, relativePath );
-            return true;
+            AssetSourceBatchItem& item = batch._listItem[itemIndex];
+            item._bRan                 = true;
+            if ( MeshAssetFormat::isMeshAssetPath( item._relativePath ) )
+                continue; // 원본이 아니다 — 캐시가 다시 읽는다
+            item._bHandled                = true;
+            const AbsolutePath sourcePath = batch._pAssetPaths->getRootFolderPathFor( item._relativePath ).join( item._relativePath ); // 작업 도메인 사본은 실행 뿌리 아래다
+            if ( makeImportedModelPath( sourcePath ).empty() )
+                SW_LOG_WARNING_ID( "ModelImporter.ModelSourcesMustUnder", "Model sources must be under `%#` to be imported: %#", ModelImporter::kRawFolder, item._relativePath );
+            else
+                listEntry.push_back( AssetSourceBatchEntry{ itemIndex, vector<string>{ item._relativePath } } );
         }
-
-        // 스탬프를 기록하는 경로가 하나여야 에디터에서 임포트한 것과 `App --import-models` 로 임포트한 것이 같은 판정을 받는다.
         // 규칙 파일이 없거나 깨졌으면 규칙 없이 임포트하지 않는다(결과가 말없이 바뀐다) — 로드가 오류를 남겼다.
-        ModelImportConfig config{};
-        if ( config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) == false )
-            return true;
-        // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 쓰는 길은 `importAllModels` 와 같은 `AssetImportStampUtil` 한 곳이다.
+        ModelImportConfig   config{};
         TextureImportConfig textureConfig{};
-        if ( textureConfig.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == false )
-            return true;
-        const ModelRawImporter           importer{ assetPaths, config, textureConfig };
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
-        if ( derivedDataCache.has_value() == false )
-        {
-            SW_LOG_ERROR_ID( "ModelImporter.DerivedDataConfigUnreadable", "Model import skipped: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
-            return true;
-        }
-        // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 원본 하나라 직렬과 같다.
-        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr, *derivedDataCache );
-        for ( const string& problem : summary._listProblem )
-        {
-            SW_LOG_ERROR_ID( "ModelImporter.ModelImportFailed", "Model import failed: %#", problem.c_str() );
-        }
-        SW_LOG_INFO_ID( "ModelImporter.ModelImportChangedImported", "Model import: %# changed -> %# imported", relativePath, summary._importedCount );
-        return true;
+        const bool          bReady = listEntry.empty() == false && config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) &&
+                            textureConfig.loadFromFile( TextureImporter::makeDefaultImportConfigPath() );
+        if ( bReady == false )
+            return;
+        const ModelRawImporter importer{ *batch._pAssetPaths, config, textureConfig, batch._pTaskManager };
+        AssetImportStampUtil::importChangedSources( batch, listEntry, importer );
     }
 
     AssetImportSummary ModelImporter::importAllModels( const AssetPaths& assetPaths, const AbsolutePath& resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
@@ -1043,7 +1069,8 @@ namespace sw::editor
         TextureImportConfig textureConfig{};
         if ( textureConfig.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == false )
             return AssetImportSummary::makeFailed( "ModelImporter: the texture import rules could not be read (see the log)" );
-        const ModelRawImporter           importer{ assetPaths, config, textureConfig };
+        TaskManager* const               pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
+        const ModelRawImporter           importer{ assetPaths, config, textureConfig, pTaskManager };
         const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
         if ( derivedDataCache.has_value() == false )
         {
@@ -1051,11 +1078,18 @@ namespace sw::editor
             problemBuilder.appendFormat( "DDC config: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
             return AssetImportSummary::makeFailed( string( problemBuilder.view() ) );
         }
-        AssetImportSummary summary =
-            AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>(), *derivedDataCache ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
+        AssetImportSummary    summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
+        unordered_set<string> uniqueDomain;
+        vector<AbsolutePath>  listDomain;
+        for ( const string& sourcePath : summary._listSourcePath )
+        {
+            AbsolutePath domain = ImportedAssetStore::findDomainFolder( resourceRoot.join( sourcePath ) );
+            if ( uniqueDomain.insert( domain.str() ).second )
+                listDomain.push_back( std::move( domain ) );
+        }
         if ( mode == AssetImportMode::ImportStale )
-            (void)ImportedAssetStore::removeUnreferenced( resourceRoot, summary._listProblem ); // 원본을 고치면 옛 키의 공유 파일이 남는다 — 전체를 다 본 지금 지운다(범위 임포트는 다른 원본의 참조를 몰라 하지 않는다)
-        for ( const string& rule : AssetImportRuleUtil::findRulesMatchingNothing( config.getRules(), AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer ) ) )
+            (void)ImportedAssetStore::removeUnreferenced( listDomain, summary._listProblem ); // 원본을 고치면 옛 키의 공유 파일이 남는다 — 전체를 다 본 지금 지운다(범위 임포트는 다른 원본의 참조를 몰라 하지 않는다)
+        for ( const string& rule : AssetImportRuleUtil::findRulesMatchingNothing( config.getRules(), summary._listSourcePath ) )
         {
             StringBuilder<constant::buffer::kMax512> problemBuilder;
             problemBuilder.appendFormat( "ModelImportConfig: rule %# matches no model source - its patterns are dead (a moved folder?)", rule );
@@ -1118,7 +1152,7 @@ namespace sw::editor
 
     AbsolutePath ModelImporter::makeImportedModelPath( const AbsolutePath& rawModelPath )
     {
-        return AssetImportStampUtil::makeImportedPath( rawModelPath, ModelImportUtil::kRawModelFolder, ModelImportUtil::kImportedModelFolder,
+        return AssetImportStampUtil::makeImportedPath( rawModelPath, ModelImporter::kRawFolder, ModelImportUtil::kImportedModelFolder,
                                                        MeshAssetFormat::kExtension );
     }
 
@@ -1162,7 +1196,19 @@ namespace sw::editor
         return sourcePath.removeExtension().appendSuffix( ModelImportUtil::kClipDataSuffix );
     }
 
-    uint64 ModelImporter::computeSourceHash( const AbsolutePath& sourcePath, const ModelImportRule& rule, string_view imageRuleText )
+    ModelImportHashInput ModelImportHashInput::collect( const TextureImportConfig& textureConfig )
+    {
+        ModelImportHashInput                  input;
+        const unique_ptr<EngineDefaultAssets> pDefaultAssets = EngineDefaultAssets::load();
+        input._imageRuleText                                 = textureConfig.makeSelectionText();
+        if ( pDefaultAssets == nullptr )
+            return input;                                                                                                // 읽기가 까닭을 남겼다 — 빈 견본은 computeSourceHash 가 원본마다 오류로 알린다
+        (void)AssetIO::readTextAsset( AssetID{ pDefaultAssets->_toonMaterialTemplate.get() }, input._toonTemplateText ); // 못 읽으면 빈 글 — 위와 같다
+        (void)AssetIO::readTextAsset( AssetID{ pDefaultAssets->_pbrMaterialTemplate.get() }, input._pbrTemplateText );
+        return input;
+    }
+
+    uint64 ModelImporter::computeSourceHash( const AbsolutePath& sourcePath, const ModelImportRule& rule, const ModelImportHashInput& input )
     {
         vector<uint8> bytes;
         if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
@@ -1187,10 +1233,8 @@ namespace sw::editor
             hash = HashUtil::computeStringHash64( avatarText.c_str(), avatarText.size(), false, hash );
         }
         // 모델 옆 머티리얼을 찍어 내는 견본(VRM 은 툰, 그 밖은 PBR)도 섞는다 — 견본에 프로퍼티 · 스위치를 더하면 이미 쓴 머티리얼도 다시 써야 한다.
-        const unique_ptr<EngineDefaultAssets> pDefaultAssets = EngineDefaultAssets::load();
-        string                                templateText;
-        if ( pDefaultAssets == nullptr ||
-             AssetIO::readTextAsset( AssetID{ ( bVrm ? pDefaultAssets->_toonMaterialTemplate : pDefaultAssets->_pbrMaterialTemplate ).get() }, templateText ) == false )
+        const string& templateText = bVrm ? input._toonTemplateText : input._pbrTemplateText;
+        if ( templateText.empty() )
         {
             SW_LOG_ERROR_ID( "ModelImporter.MaterialTemplateUnreadable", "Model '%#': the material template could not be read - the import stamp cannot be computed", sourcePath.str() );
             return 0;
@@ -1227,7 +1271,7 @@ namespace sw::editor
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( clipDataBytes.data() ), clipDataBytes.size(), false, hash );
 
         // 버퍼 · 이미지를 옆 파일로 둘 수 있다. 그 바이트가 바뀌어도 어긋남이어야 한다(이미지는 결과의 공유 원본으로 꺼낸다). data URI 는 이미 본문에 있다.
-        return ModelImportUtil::mixExternalFiles( sourcePath, bytes, imageRuleText, hash );
+        return ModelImportUtil::mixExternalFiles( sourcePath, bytes, input._imageRuleText, hash );
     }
 
     void ModelImporter::collectImportedFiles( const AbsolutePath& importedMeshPath, vector<AbsolutePath>& outListPath )

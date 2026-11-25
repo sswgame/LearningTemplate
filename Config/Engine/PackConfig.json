@@ -3,8 +3,7 @@
     "_codec": "Zlib",
     "_level": 0,
     "_blockSize": 131072,
-    "_writeWindowBytes": 67108864,
-    "_listStoredExtension": [ ".dds", ".ktx2", ".png", ".jpg", ".ogg" ]
+    "_writeWindowBytes": 67108864
   },
   "_layout": {
     "_mode": "Sorted",
@@ -17,10 +16,6 @@
   },
   "_bExcludeRawShaderSource": true,
   "_listGlobalExcludeDirectory": [
-    "textures_raw",
-    "shaders_raw",
-    "models_raw",
-    "heightfields_raw",
     "rigs_raw",
     "docs",
     ".git",
@@ -41,26 +36,6 @@
     "*.swp"
   ],
   "_listRule": [
-    {
-      "_name": "Exclude_Raw_Source_Assets",
-      "_listExcludeDirectory": [
-        "textures_raw",
-        "shaders_raw",
-        "models_raw",
-        "heightfields_raw",
-        "rigs_raw"
-      ],
-      "_listExcludePattern": [],
-      "_bRecursive": true
-    },
-    {
-      "_name": "Exclude_Documentation",
-      "_listExcludeDirectory": [
-        "docs"
-      ],
-      "_listExcludePattern": [],
-      "_bRecursive": true
-    },
     {
       "_name": "Exclude_Localization_Authoring_Tables",
       "_listExcludeDirectory": [],

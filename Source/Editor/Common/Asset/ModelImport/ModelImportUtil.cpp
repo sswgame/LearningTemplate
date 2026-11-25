@@ -14,11 +14,16 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/ModelImport/ModelImporter.h"
+#include "Editor/Common/Asset/Texture/TextureImporter.h"
+
+#include "Engine/Asset/AssetDatabase.h"
+
 namespace sw::editor
 {
     bool ModelImportUtil::isSourceModel( string_view path )
     {
-        return FileUtil::hasAnyExtension( path, { ".glb", ".gltf", ".vrm" } );
+        return AssetIdentityRules::getProjectRules().isImportSource( ModelImporter::kRawFolder, path );
     }
 
     void* ModelImportUtil::allocate( void* pUser, cgltf_size size )
@@ -69,7 +74,7 @@ namespace sw::editor
             return hash; // 깨진 원본은 임포트가 오류로 알린다
         }
         StringBuilder<constant::buffer::kMax64> rawMarker;
-        rawMarker.appendFormat( "/%#/", kRawTextureFolder );
+        rawMarker.appendFormat( "/%#/", TextureImporter::kRawFolder );
         const auto mixFile = [&hash]( const AbsolutePath& path )
         {
             vector<uint8> fileBytes;

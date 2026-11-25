@@ -12,14 +12,11 @@ endif()
 # 손으로 돌리지 않으면 테스트가 낡은 산출물을 거절하며 돈다(2026-11-02 — `.mesh` 5 판에서 모델이 모두 빠진 채 시나리오가 돌았다). 그래서 ctest 가 먼저
 # 낡은 것만 임포트한다(스탬프가 맞으면 곧바로 끝난다). 모든 테스트가 이 고정 단계를 요구한다(`ImportedAssets` — 이 파일과 Scenario 의 맨 아래).
 # 라벨로 거른 실행(`-L hostgpu`)도 ctest 가 고정 단계를 함께 넣는다.
-set(previous_import_test "")
-foreach(import_kind IN ITEMS heightfields textures models)
-	add_test(NAME Import.${import_kind}
-		COMMAND $<TARGET_FILE:App> --import-${import_kind} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Import.${import_kind}.log
-		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-	set_tests_properties(Import.${import_kind} PROPERTIES LABELS import TIMEOUT 3600 RUN_SERIAL TRUE FIXTURES_SETUP ImportedAssets DEPENDS "${previous_import_test}")
-	set(previous_import_test Import.${import_kind})
-endforeach()
+# 세 종류를 한 프로세스가 차례로 돈다 — 무변경 임포트는 일보다 기동 · 종료(모듈 전부 올리고 내리기)가 크다. 어느 종류가 졌는지는 로그의 종류별 요약(`AssetImportEntry.SourcesImportedProblems`)이 말한다.
+add_test(NAME Import.assets
+	COMMAND $<TARGET_FILE:App> --import-textures --import-models --import-heightfields -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Import.assets.log
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+set_tests_properties(Import.assets PROPERTIES LABELS import TIMEOUT 7200 RUN_SERIAL TRUE FIXTURES_SETUP ImportedAssets)
 
 # 단위 테스트 — 헤드리스(창 · GPU 없음)라 nogpu. 순서는 매번 섞이고 씨앗을 찍는다. JSON 보고(판 번호 `TestRunner::kReportSchemaVersion` · 케이스 이름 · 파일 · 줄 · 결과 · 시간 · 실패 위치)는
 # 항목마다 빌드 폴더의 고정 경로 `Testing/Reports/<항목>.json` 에 통과한 실행도 남는다 — 실패 추적과 케이스 시간 추세(샤드 균형을 정할 자료)를 남긴다.
@@ -151,12 +148,10 @@ if(TARGET EditorModule)
 	# 임포트 검사 — 원본과 임포트 산출물(`.dds` · `.mesh` · `.heightfield`)이 맞는지 보기만 한다(고정 단계 `Import.*` 뒤라 새 체크아웃에서도 맞아야 한다).
 	# 임포트가 산출물을 쓰고 검사가 다른 판정(스탬프 · 판 번호)을 하면 여기서 갈린다. 형식 변형 검사(`--check-texture-variants`)는 넣지 않는다 — 모든 텍스처를
 	# ASTC · ETC2 로 먼저 구워야 해(`--cook-texture-variants`, 교차 빌드의 CookAssets 몫) 묶음마다 돌 크기가 아니다.
-	foreach(import_kind IN ITEMS textures models heightfields)
-		add_test(NAME ToolCheck.${import_kind}
-			COMMAND $<TARGET_FILE:App> --check-${import_kind} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/ToolCheck.${import_kind}.log
-			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-		set_tests_properties(ToolCheck.${import_kind} PROPERTIES LABELS nogpu TIMEOUT 300)
-	endforeach()
+	add_test(NAME ToolCheck.imports
+		COMMAND $<TARGET_FILE:App> --check-textures --check-models --check-heightfields -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/ToolCheck.imports.log
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(ToolCheck.imports PROPERTIES LABELS nogpu TIMEOUT 300)
 
 	# 초상화 굽기 — 스튜디오 씬 → 패킷(게임 스레드)과 그리기 · 읽기(렌더 스레드 명령 `RenderThread::executeAndWait`)를 한 번 지난다.
 	# 예전에는 게임 스레드가 렌더 스레드를 세우고 직접 그렸고, 그 길을 도는 테스트가 없었다. 창 · GPU 가 필요해 hostgpu 다.

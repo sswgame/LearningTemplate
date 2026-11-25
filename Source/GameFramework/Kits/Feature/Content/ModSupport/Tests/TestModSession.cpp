@@ -7,6 +7,7 @@
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Config/PackStorageSettings.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Pack/PackManager.h"
@@ -43,8 +44,14 @@ namespace
             settings._maxEntryBytes         = 4096;
             settings._packBlockSize         = kPackMinBlockSize;
             settings._listOverridablePrefix = { "testproject/data/" };
-            settings._listStoredExtension   = { ".dds" };
             return settings;
+        }
+
+        static PackStorageSettings makeStorage()
+        {
+            PackStorageSettings storage;
+            storage._listStoredExtension = { ".dds" };
+            return storage;
         }
 
         static bool writeText( const AbsolutePath& path, string_view text )
@@ -132,7 +139,7 @@ SW_TEST_CASE( ModSessionTest, PackedModMatchesItsSourceHash )
         SW_REQUIRE_TRUE( session.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
         sourceHash = session.getDigest()._configHash;
     }
-    SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source, modDir.join( ModPackBuilder::kPackFileName ), Internal::makeSettings() ) );
+    SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source, modDir.join( ModPackBuilder::kPackFileName ), Internal::makeSettings(), Internal::makeStorage() ) );
     SW_REQUIRE_TRUE( FileUtil::removeDirectory( source ) );
 
     ModAllowList allowList;
@@ -351,7 +358,7 @@ SW_TEST_CASE( ModSessionTest, ModPackStoresTexturesUncompressed )
     const string       dataPath    = "mods/stone/data/stone.txt";
     SW_REQUIRE_TRUE( Internal::writeText( source.join( texturePath ), "not really a dds - bytes only" ) );
     SW_REQUIRE_TRUE( Internal::writeText( source.join( dataPath ), "stone" ) );
-    SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source, packPath, Internal::makeSettings() ) );
+    SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source, packPath, Internal::makeSettings(), Internal::makeStorage() ) );
 
     PackReader reader;
     SW_REQUIRE_TRUE( reader.open( packPath.str() ) );

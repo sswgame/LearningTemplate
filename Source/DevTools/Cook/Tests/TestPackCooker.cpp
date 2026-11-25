@@ -4,11 +4,13 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/Cook/PackCooker.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Content/Pack/PackWriter.h"
@@ -94,6 +96,23 @@ SW_TEST_CASE( PackCookerTest, DroppedShaderIsNeededOnlyWhenAnOriginIsReached )
     SW_EXPECT_FALSE( PackCooker::isRequestedByReachedOrigin( mapRequested, setIncluded, "engine/shaders/bin/dx12/unknown_ps.dxil" ) ); // 요청 밖
     const unordered_set<string> setBoth = { "engine/pipeline/forward.xml", "game/playground/materials/rock.material" };
     SW_EXPECT_TRUE( PackCooker::isRequestedByReachedOrigin( mapRequested, setBoth, "engine/shaders/bin/dx12/lit_ps.dxil" ) );
+}
+
+/**
+ * @brief [PackCookerTest] 임포트하는 원본 폴더는 팩 설정이 적지 않아도 어느 깊이에서든 빠진다 - 폴더 이름은 정체성 규칙(`AssetIdentity.json`)의 것이다
+ */
+SW_TEST_CASE( PackCookerTest, ImportSourceFoldersAreExcludedByTheIdentityRules )
+{
+    const PackConfig config;
+    for ( const AssetImportedFolder& imported : AssetIdentityRules::getProjectRules()._listImportedFolder )
+    {
+        StringBuilder<constant::buffer::kMax128> path;
+        path.appendFormat( "shooter3d/%#/rock%#", imported._sourceFolder, imported._listSourceExtension[0] );
+        SW_EXPECT_FALSE( includes( config, path.view() ) );
+        path.clear();
+        path.appendFormat( "shooter3d/%#/rock%#", imported._folder, imported._listOutputSuffix[0] );
+        SW_EXPECT_TRUE( includes( config, path.view() ) );
+    }
 }
 
 /**

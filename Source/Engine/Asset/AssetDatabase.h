@@ -81,6 +81,32 @@ namespace sw
 
         vector<AssetImportedFolder> _listImportedFolder; ///< 임포트 산출물 폴더 — 그 안의 정체성 없는 파일(머리 · `.meta` 없음)은 산출물(캐시)이다
 
+        /**
+         * @brief 이 프로젝트의 규칙입니다(`ProcessRoots::_project`). 처음 부를 때 읽고 그 뒤로 바뀌지 않는다(`ProcessRoots` 와 같다). 읽지 못하면 멈춘다.
+         * @details 임포터와 에디터의 종류 판정이 원본 확장자(`isImportSource`)를 물을 때 쓴다 — 워커 · 정적 규칙 표에서도 물어 서비스 범위를 찾지 않는다. 배포본(개발 정책 파일이 없다)은 부르지 않는다.
+         */
+        [[nodiscard]] static const AssetIdentityRules& getProjectRules();
+        /** @brief 원본 폴더 이름이 @p sourceFolder 인 줄들의 원본 확장자(`.png`)를 하나씩 @p func 에 넘깁니다(줄이 겹치면 같은 확장자가 다시 나온다). 그런 줄이 없으면 단언입니다(임포터의 폴더 이름과 규칙이 어긋났다). */
+        template <typename Func>
+        void forEachSourceExtension( string_view sourceFolder, Func&& func ) const
+        {
+            bool bFound = false;
+            for ( const AssetImportedFolder& imported : _listImportedFolder )
+            {
+                if ( string_view{ imported._sourceFolder } != sourceFolder )
+                    continue;
+                bFound = true;
+                for ( const string& extension : imported._listSourceExtension )
+                    func( string_view{ extension } );
+            }
+            assertSourceFolder( bFound, sourceFolder );
+        }
+        /**
+         * @brief @p path 의 확장자가 원본 폴더 @p sourceFolder("textures_raw")에서 임포트하는 원본이면 true 입니다(폴더 자리는 보지 않는다, 대소문자 무시).
+         * @details 원본 확장자의 정본이다 — 임포터 · 에디터 종류 판정 · 파일 감시 · 가져오기 대화상자 · 참조 검사 · 파이썬 도구가 같은 목록을 본다.
+         */
+        [[nodiscard]] bool isImportSource( string_view sourceFolder, string_view path ) const;
+
         /** @brief 프로젝트 루트의 규칙 파일을 읽습니다. 없거나 칸이 빠지면 오류를 남기고 false 입니다(기본 규칙으로 대신하지 않는다). */
         [[nodiscard]] bool load( const AbsolutePath& projectRoot );
         /** @brief 리소스 id @p assetID 의 정체성 자리입니다. 대소문자는 가리지 않습니다. */
@@ -119,6 +145,9 @@ namespace sw
          * @return 대상에 정체성이 없거나(머리 · `.meta` 없음 — `asset-ids --fix` 먼저) 읽기 · 쓰기가 지면 오류를 남기고 false 입니다(디스크는 시작 상태).
          */
         [[nodiscard]] bool replaceContentKeepingIdentity( const AbsolutePath& targetAbs, string_view targetID, const AbsolutePath& newContentAbs ) const;
+
+    private:
+        static void assertSourceFolder( bool bFound, string_view sourceFolder );
     };
 
     /**

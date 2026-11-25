@@ -17,7 +17,9 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetPackIndex.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/PackStorageSettings.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
@@ -236,10 +238,12 @@ namespace sw
             SW_LOG_ERROR_ID( "ModSession.ExportNoSource", "mod.pack: '%#' has no %#/ source folder to pack", string( id ), ModPackBuilder::kSourceFolderName );
             return false;
         }
-        const AbsolutePath exportFolder = getExportFolder().join( id );
-        const AbsolutePath packPath     = exportFolder.join( ModPackBuilder::kPackFileName );
-        const AbsolutePath manifestPath = exportFolder.join( ModManifest::kFileName );
-        const bool         bExported    = FileUtil::ensureDirectoryExists( exportFolder ) && ModPackBuilder::buildFromFolder( sourceFolder, packPath, settings ) &&
+        const AbsolutePath  exportFolder = getExportFolder().join( id );
+        const AbsolutePath  packPath     = exportFolder.join( ModPackBuilder::kPackFileName );
+        const AbsolutePath  manifestPath = exportFolder.join( ModManifest::kFileName );
+        PackStorageSettings storage; // 쿠커와 같은 저장 방식(엔진 데이터 — 배포본에도 있다)
+        const bool          bExported = FileUtil::ensureDirectoryExists( exportFolder ) && storage.loadFromAsset( AssetID{ game::getSubsystem<EngineDefaultAssets>()._packStorage.get() } ) &&
+                               ModPackBuilder::buildFromFolder( sourceFolder, packPath, settings, storage ) &&
                                FileUtil::copyFile( modFolder.join( ModManifest::kFileName ), manifestPath );
         if ( bExported == false )
         {
@@ -520,8 +524,10 @@ namespace sw
         // 프로세스마다 다른 이름이다 — 시나리오 체인은 백엔드마다 자식 프로세스가 같은 폴더를 동시에 쓰고, 마운트한 팩은 열려 있어 바꿔 쓸 수 없다.
         StringBuilder<constant::buffer::kMax256> textBuilder;
         textBuilder.appendFormat( "%#.%#.pack", manifest._id, Process::getCurrentProcessID() );
-        const AbsolutePath builtPath = request._buildFolder.join( textBuilder.view() );
-        if ( ModPackBuilder::buildFromFolder( sourceFolder, builtPath, settings ) == false )
+        const AbsolutePath  builtPath = request._buildFolder.join( textBuilder.view() );
+        PackStorageSettings storage;
+        const bool          bBuilt = storage.loadFromAsset( AssetID{ game::getSubsystem<EngineDefaultAssets>()._packStorage.get() } ) && ModPackBuilder::buildFromFolder( sourceFolder, builtPath, settings, storage );
+        if ( bBuilt == false )
             return false;
         _listBuiltPackPath.push_back( builtPath );
         outPackPath = builtPath;
