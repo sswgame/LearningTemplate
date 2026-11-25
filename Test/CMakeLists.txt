@@ -191,7 +191,8 @@ set_tests_properties(Pack.MakePatch PROPERTIES LABELS nogpu TIMEOUT 300)
 # 스크립트 자체 테스트 — `Scripts/<폴더>/tests/test_*.py` 를 모두 돈다. 손으로 한 줄씩 등록하면 빠뜨린다(test_cook_code_fingerprint ·
 # test_shipping_host_defaults 가 빠져 있었다). 무엇을 보는지는 각 파일 머리말에 있다.
 # 이름은 `Scripts.<줄기의 낙타 이름>`(test_move_asset.py → Scripts.MoveAsset). cmake 를 부르는 테스트(vcpkg 설치 보호)는 SW_CMAKE_COMMAND 로 받는다.
-file(GLOB list_script_test CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Scripts/*/tests/test_*.py")
+# 도구 정책 훅의 판정 테스트(`.claude/hooks/test_*.py`)도 함께 돈다 — 손으로만 돌면 규칙 데이터가 바뀌어도 모른다.
+file(GLOB list_script_test CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Scripts/*/tests/test_*.py" "${CMAKE_SOURCE_DIR}/.claude/hooks/test_*.py")
 foreach(script_test IN LISTS list_script_test)
 	get_filename_component(script_test_stem "${script_test}" NAME_WE)
 	string(REGEX REPLACE "^test_" "" script_test_stem "${script_test_stem}")
@@ -226,7 +227,7 @@ if(TARGET OnlineLoadBot)
 	set_tests_properties(OnlineLoadBot.localServer PROPERTIES LABELS nogpu TIMEOUT 120)
 
 	# 대상 인자의 짝 규칙 — 전용 서버에 붙는 길(`--server` · `--tls` · `--game`)과 외부 저장소(`--store-config` — PostgreSQL · RESP)는 띄울 서버 · 서비스가 있어야 해
-	# 여기서 돌지 않는다(`py -3 -m Scripts net-pair` · `online-local` 몫). 대신 그 인자를 읽고 맞지 않는 짝을 거절하는지 본다(종료 코드가 아니라 거절 글로 판정한다).
+	# 여기서 돌지 않는다(`Net.*` 항목 몫 — Test/Net). 대신 그 인자를 읽고 맞지 않는 짝을 거절하는지 본다(종료 코드가 아니라 거절 글로 판정한다).
 	set(load_bot_base_argument --scenario=${load_bot_dir}/Scenarios/smoke.json --load=${load_bot_dir}/Scenarios/smoke.load.xml -unattended)
 	add_test(NAME OnlineLoadBot.RejectsTwoTargets
 		COMMAND $<TARGET_FILE:OnlineLoadBot> ${load_bot_base_argument} --server=127.0.0.1:1 --local-server=0
@@ -364,6 +365,12 @@ if(SW_CPU_HEAVY_TEST AND TARGET EditorModule)
 	set_tests_properties(Bake.Portraits.DirectX11 Bake.Portraits.DirectX12 Bake.Portraits.Vulkan Bake.Portraits.OpenGL PROPERTIES DEPENDS ${SW_CPU_HEAVY_TEST})
 endif()
 
+# ctest 항목이 띄우는 시나리오(`Content/` 기준 경로)를 적는다 — 항목을 만드는 자리마다 부른다. Scenario/ 의 끝이 어느 항목도 띄우지 않는 시나리오를 찾아 구성을 세운다.
+function(sw_register_scenarios)
+	set_property(GLOBAL APPEND PROPERTY SW_REGISTERED_SCENARIOS ${ARGN})
+endfunction()
+
+add_subdirectory(Net)
 add_subdirectory(Scenario)
 
 # 퍼저(Linux-Fuzz 프리셋만) — 신뢰 경계 파서의 스모크 `Fuzz.<이름>.Smoke`. 임포트 산출물을 읽지 않아 위의 고정 단계를 요구하지 않는다(다른 폴더라 걸리지 않는다).

@@ -71,6 +71,7 @@ from common.git import run_git, run_git_or_raise  # noqa: E402
 from common.paths import get_build_dir, get_project_root  # noqa: E402
 from common.run_process import ProcessResult, build_preset_or_exit, run_process  # noqa: E402
 from dev.scenario_reach import read_reach, select_reached  # noqa: E402
+from net.ctest_items import read_items as read_net_items  # noqa: E402
 
 DEFAULT_DATABASE = Path("Saved") / "TestHistory" / "history.sqlite"
 QUARANTINE_PATH = Path("Config") / "Rules" / "Test" / "Quarantine.json"
@@ -563,10 +564,20 @@ def make_scenario_command(item: CtestItem, scenario: str, content_root: Path, ou
     return command
 
 
+def read_manual_scenarios(project_root: Path) -> dict[str, str]:
+    """ctest 가 띄울 수 없는 시나리오 → 까닭과 명령(`Config/Rules/Test/ManualScenarios.json`)."""
+    table = json.loads((project_root / "Config" / "Rules" / "Test" / "ManualScenarios.json").read_text(encoding="utf-8"))
+    return {entry["path"]: f"손으로 돈다: {entry['reason']} — `{entry['command']}`" for entry in table["_scenarios"]}
+
+
 def make_scenario_runs(list_item: Sequence[CtestItem], map_scenario: dict[str, list[ChangedFile]], content_root: Path, build_dir: Path,
                        output: Path, find_branch: Callable[[str], str],
-                       map_quarantine: dict[str, QuarantineEntry] | None = None) -> tuple[list[ChangedRun], list[ChangedRow]]:
-    """시나리오마다 실행 하나. 두 번 기동 쌍은 ctest 항목 그대로(기록 없이) 돌고, ctest 항목에 없는 시나리오(조건이 붙은 하위 폴더)는 표에 그렇다고 적는다."""
+                       map_quarantine: dict[str, QuarantineEntry] | None = None, map_net: dict[str, str] | None = None,
+                       map_manual: dict[str, str] | None = None) -> tuple[list[ChangedRun], list[ChangedRow]]:
+    """
+    시나리오마다 실행 하나. 두 번 기동 쌍 · 여러 프로세스 시나리오(@p map_net — 시나리오 → ctest 이름)는 ctest 항목 그대로(기록 없이) 돈다.
+    항목이 띄울 수 없는 시나리오(@p map_manual — 시나리오 → 까닭과 명령)는 표에 그렇다고 적고, 어느 쪽도 아니면 실패다(아무도 돌리지 않는 시나리오다).
+    """
     list_run: list[ChangedRun] = []
     list_row: list[ChangedRow] = []
     for scenario, list_changed in sorted(map_scenario.items()):
@@ -589,7 +600,14 @@ def make_scenario_runs(list_item: Sequence[CtestItem], map_scenario: dict[str, l
             list_run.append(ChangedRun(scenario, list_changed, ["ctest", "-R", f"^{re.escape(pair_item.name)}$", "--output-on-failure"], str(build_dir),
                                        folder, pair_item.timeout_seconds))
             continue
-        list_row.append(ChangedRow(scenario, describe_change(list_changed), "", "ctest 항목에 없다(조건이 붙은 하위 폴더) — 손으로 돈다",
+        net_item = next((item for item in list_item if item.name == (map_net or {}).get(scenario)), None)
+        if net_item is not None:
+            if all(run.item != net_item.name for run in list_run):   # 한 항목이 여러 시나리오를 띄운다 — 한 번만 돈다
+                list_run.append(ChangedRun(net_item.name, list_changed, ["ctest", "-R", f"^{re.escape(net_item.name)}$", "--output-on-failure"], str(build_dir),
+                                           folder, net_item.timeout_seconds))
+            continue
+        manual = (map_manual or {}).get(scenario)
+        list_row.append(ChangedRow(scenario, describe_change(list_changed), "" if manual else "NotRun", manual or "어느 ctest 항목도 띄우지 않는다 — 항목을 만들거나 Config/Rules/Test/ManualScenarios.json 에 까닭을 적는다",
                                    find_branch(list_changed[0].path)))
     return list_run, list_row
 
@@ -821,7 +839,9 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
         print("CHANGED_FAILED")
         return ExitCode.VIOLATION
     map_quarantine = {entry.test: entry for entry in list_quarantine}
-    list_scenario_run, list_row = make_scenario_runs(list_item, map_scenario, project_root / "Content", build_dir, output, find_branch, map_quarantine)
+    map_net = {scenario: item.test_name for item in read_net_items() for scenario in item.scenarios}
+    list_scenario_run, list_row = make_scenario_runs(list_item, map_scenario, project_root / "Content", build_dir, output, find_branch, map_quarantine, map_net,
+                                                     read_manual_scenarios(project_root))
     editor_unit_run = make_editor_unit_run(list_item, list_editor_file, map_scenario, project_root / "Content", output)
     if editor_unit_run is not None:
         list_scenario_run.insert(0, editor_unit_run)   # 시나리오 읽기 오류 · 없는 이름을 시나리오보다 먼저 알린다
@@ -929,14 +949,21 @@ def run_changed_self_check() -> None:
         (content_root / "game/g/automation/first.scenario.xml").write_text('<Scenario>\n  <Launch variable="gv_first" value="1"/>\n</Scenario>\n', encoding="utf-8")
         (content_root / "game/g/automation/new.scenario.xml").write_text('<Scenario>\n\t<Launch variable="gv_new" value="two words"/>\n</Scenario>\n', encoding="utf-8")
         list_scenario_run, list_row = make_scenario_runs(list_item, {key: value for key, value in map_scenario.items() if "old.view" not in key}, content_root,
-                                                         Path("B"), Path("O"), lambda path: "w-x")
+                                                         Path("B"), Path("O"), lambda path: "w-x", map_manual={"engine/automation/rhiswap/x.scenario.xml": "까닭"})
+        _, list_lost_row = make_scenario_runs(list_item, {"engine/automation/rhiswap/x.scenario.xml": map_scenario["engine/automation/rhiswap/x.scenario.xml"]}, content_root,
+                                              Path("B"), Path("O"), lambda path: "w-x")
+        assert [row.kind for row in list_lost_row] == ["NotRun"], "어느 항목도 띄우지 않는 시나리오는 실패다"
+        net_item = CtestItem("Net.x", ("py",), "", 30)
+        list_net_run, list_net_row = make_scenario_runs([net_item], {key: map_scenario["engine/automation/rhiswap/x.scenario.xml"] for key in ("a.scenario.xml", "b.scenario.xml")}, content_root,
+                                                        Path("B"), Path("O"), lambda path: "w-x", map_net={"a.scenario.xml": "Net.x", "b.scenario.xml": "Net.x"})
+        assert [run.item for run in list_net_run] == ["Net.x"] and not list_net_row, "여러 프로세스 항목은 한 번만 돈다"
     command = next(run.command for run in list_scenario_run if run.item == "game/g/automation/new.scenario.xml")
     assert get_argument(command, "scenario") == "game/g/automation/new.scenario.xml" and get_argument(command, "scenario-backends") == "all"
     assert get_argument(command, "scenario-backend-split") is None and get_argument(command, "scenario-keep-going") is None, "모든 백엔드에서 혼자"
     assert "-gv_first=1" not in command and command[-1] == "-gv_new=two words" and "-scenario-record-missing-golden" in command, command
     assert any(run.command[0] == "ctest" and "^Scenario\\.g\\.sequence\\.pair$" in run.command and run.timeout_seconds == 600 for run in list_scenario_run), "쌍은 ctest 항목 그대로"
     assert next(run.timeout_seconds for run in list_scenario_run if run.item == "game/g/automation/new.scenario.xml") == SINGLE_SCENARIO_TIMEOUT_SECONDS, "체인에서 꺼낸 하나"
-    assert [row.item for row in list_row] == ["engine/automation/rhiswap/x.scenario.xml"] and list_row[0].kind == "", "체인 밖은 실패가 아니다"
+    assert [row.item for row in list_row] == ["engine/automation/rhiswap/x.scenario.xml"] and list_row[0].kind == "", "까닭이 적힌 것은 실패가 아니다"
     chain_item = next(item for item in list_item if "game/g/automation/new.scenario.xml" in (get_argument(item.command, "scenario") or "").split(","))
     quarantined = {chain_item.name: QuarantineEntry(chain_item.name, "흔들림", datetime.date(2099, 1, 1))}
     list_scenario_run_q, list_row_q = make_scenario_runs(list_item, {key: value for key, value in map_scenario.items() if key == "game/g/automation/new.scenario.xml"}, Path("C"),

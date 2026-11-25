@@ -26,7 +26,7 @@
 #               shader warm: 지난 Release 체인이 남긴 셰이더 요청 기록(build/Ninja-Release/Testing/ShaderRequests/*.shaderrequests — 체인 자식마다 하나)만 Release App 으로
 #               컴파일해 그 빌드 폴더의 셰이더 DDC 를 네 백엔드 모두 채운다(`App --cook-shaders -shader-request-dir=`). 셰이더 · 공용 hlsli 를 고친 묶음도 GPU 단계가 캐시 미스 컴파일을
 #               떠안지 않는다(2026-11-19: dx11 empty 체인 19 분 중 FXC 559 개 — 캐시가 차면 74 초). 기록이 없으면(첫 실행) 할 일이 없다고 찍고 끝난다. 전체 굽기는 5 만 개를 넘어 넣지 않는다.
-#   gpu-release Release ctest 전체 — 시나리오 그림 · 골든 · 기록 대조의 정본(모든 게임 · 네 백엔드). 체인이 다음 묶음의 shader warm 이 읽을 요청 기록을 남긴다.
+#   gpu-release Release ctest 전체 — 시나리오 그림 · 골든 · 기록 대조의 정본(모든 게임 · 네 백엔드)과 여러 프로세스 네트워크(`Net.*`, 라벨 net). 체인이 다음 묶음의 shader warm 이 읽을 요청 기록을 남긴다.
 #               체인(부하 측정 제외)은 그래픽 API 검증 층(-rhi-validation) · 교착 탐지(-deadlock-detection) · bindless 죽은 번호 검사를 켠다 — 검증 층 오류 · 경고는 로그 게이트에서 진다.
 #   tidy        바뀐 파일 clang-tidy(Scripts/lint/clang_tidy.py --changed origin/main — ASan 컴파일 DB, 통과한 TU 는 포함 닫힘 해시로 캐시). 단계가 아니라 갈래다:
 #               ASan 빌드 직후 뒤에서 띄워 서버 · 배포 빌드, changed, cpu 와 겹쳐 돌고(2026-11-21: 746 TU 2055 초를 build 단계 끝에서 기다렸다),
