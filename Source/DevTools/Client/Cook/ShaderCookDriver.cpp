@@ -18,6 +18,7 @@
 #include "DevTools/Client/Cook/ShaderCookDriver.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
@@ -25,6 +26,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/StringUtil.h"
@@ -96,13 +98,55 @@ namespace sw
             /** @brief 작업 하나의 결과 칸입니다. 작업마다 자기 칸에만 쓰고(공유 상태를 건드리지 않는다), 합치는 일은 요청 순서대로 직렬로 합니다. */
             struct FormatResult
             {
-                ShaderReflectionData _reflection;
-                int64                _reflectNanos{ 0 };   ///< 리플렉션 · 계약 검사에 쓴 시간
-                uint32               _violationCount{ 0 }; ///< 계약 검사가 센 위반 수(매니페스트에 넣을 때만 더한다)
-                bool                 _bCooked{ false };    ///< 낡아서 새로 컴파일해 썼다
-                bool                 _bCompileFailed{ false };
-                bool                 _bReflected{ false };  ///< 바이너리에서 `_reflection` 을 채웠다
-                bool                 _bUnreadable{ false }; ///< 컴파일은 성공(또는 최신)인데 리플렉션을 읽지 못했다
+                shared_ptr<const ShaderReflectionData> _pReflection;         ///< 바이너리의 리플렉션. 바이트가 같은 바이너리는 한 벌을 함께 쓴다
+                int64                                  _reflectNanos{ 0 };   ///< 리플렉션 · 계약 검사에 쓴 시간
+                uint32                                 _violationCount{ 0 }; ///< 계약 검사가 센 위반 수(매니페스트에 넣을 때만 더한다)
+                bool                                   _bCooked{ false };    ///< 낡아서 새로 컴파일해 썼다
+                bool                                   _bCompileFailed{ false };
+                bool                                   _bUnreadable{ false }; ///< 컴파일은 성공(또는 최신)인데 리플렉션을 읽지 못했다
+            };
+
+            /**
+             * @brief 쿠킹 한 번 동안 바이트코드(내용 해시)마다 뽑은 리플렉션입니다 — 변형 대부분은 바이트코드가 같아(엔진 DX12 19,739 개의 서로 다른 바이트코드 2,880 개) 변형마다 리플렉터를 띄우지 않습니다.
+             */
+            class ReflectionMemo
+            {
+            public:
+                struct Entry
+                {
+                    shared_ptr<const ShaderReflectionData> _pReflection; ///< 리플렉션을 읽지 못했으면 nullptr
+                    uint32                                 _violationCount{ 0 };
+                };
+
+                /** @brief 바이트코드의 리플렉션과 계약 위반 수입니다. 처음 본 바이트면 뽑습니다(두 워커가 함께 뽑아도 먼저 넣은 것을 둘 다 쓴다). 여러 워커가 부른다. */
+                Entry read( const ShaderCompileResult& compileResult, ShaderTargetFormat format, string_view binaryPath )
+                {
+                    const uint64 key = HashUtil::appendBytes64( compileResult._record._outputHash, reinterpret_cast<const uint8*>( &format ), sizeof( format ) );
+                    {
+                        ScopedLock<mutex> lock{ _mutex };
+                        const auto        iter = _mapEntry.find( key );
+                        if ( iter != _mapEntry.end() )
+                            return iter->second;
+                    }
+                    Entry                          entry;
+                    expected<ShaderReflectionData> reflected = ShaderReflectionData::reflect( compileResult._bytecode, format );
+                    if ( reflected.has_value() )
+                    {
+                        // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름과 숫자로 드러난다.
+                        entry._violationCount = ShaderBindingValidatorIssue::validate( *reflected, format, binaryPath );
+                        entry._pReflection    = sw::make_shared<const ShaderReflectionData>( std::move( *reflected ) );
+                    }
+                    else
+                    {
+                        SW_LOG_ERROR_ID( "ShaderCooker.ReflectionFailed", "Shader reflection failed for %#: %# (%#)", binaryPath, reflected.error().message(), reflected.error().detail() );
+                    }
+                    ScopedLock<mutex> lock{ _mutex };
+                    return _mapEntry.emplace( key, std::move( entry ) ).first->second;
+                }
+
+            private:
+                mutex                        _mutex;
+                unordered_map<uint64, Entry> _mapEntry; ///< 바이트코드 해시에 형식을 섞은 값 → 리플렉션
             };
 
             /**
@@ -116,6 +160,7 @@ namespace sw
                 const vector<vector<uint32>>*    _pListChain{ nullptr };
                 const vector<ShaderCompileDesc>* _pListDesc{ nullptr };   ///< 사슬과 짝
                 FormatResult*                    _pListResult{ nullptr }; ///< 작업 수만큼. 작업 `i` 는 `_pListResult[i]` 에만 쓴다
+                ReflectionMemo                   _reflectionMemo{};
 
                 /** @brief 사슬 @p chainIndex 의 컴파일 결과를 씁니다. 사슬의 첫 작업이 쓰고 리플렉션을 뽑으며, 나머지(중복 요청)는 실패만 함께 센다. */
                 void finishChain( uint32 chainIndex, const ShaderCompileResult& compileResult )
@@ -129,7 +174,7 @@ namespace sw
                 }
 
                 /** @brief 작업 하나의 바이너리를 쓰고(내용이 다를 때만) 그 리플렉션을 결과 칸에 담습니다. */
-                void finishTask( const FormatTask& task, const ShaderCompileDesc& desc, const ShaderCompileResult& compileResult, FormatResult& outResult ) const
+                void finishTask( const FormatTask& task, const ShaderCompileDesc& desc, const ShaderCompileResult& compileResult, FormatResult& outResult )
                 {
                     // 최신 판정은 컴파일의 쿠킹 기록 하나다 — 기록의 입력(소스 · 연 헤더 · 없던 앞자리 후보)과 도구가 그대로면 DDC 적중이라 컴파일러를 타지 않고, 파일은 내용이 다를 때만 쓴다.
                     outResult._bCompileFailed = ShaderCooker::writeBinary( desc, compileResult, task._outPath, outResult._bCooked ) == false;
@@ -138,22 +183,13 @@ namespace sw
 
                     // 새로 쿠킹했든 이미 최신이든 리플렉션은 항상 그 바이트에서 뽑는다 — 이전 매니페스트에서 가져오지 않는다.
                     // 리플렉션이 빠지면 런타임이 조용히 폴백하고, 배포 빌드에서는 그대로 실패한다.
-                    const Stopwatch                reflectWatch;
-                    expected<ShaderReflectionData> reflected = ShaderReflectionData::reflect( compileResult._bytecode, task._format );
-                    if ( reflected.has_value() )
-                    {
-                        outResult._reflection = std::move( *reflected );
-                        // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름과 숫자로 드러난다.
-                        outResult._violationCount = ShaderBindingValidatorIssue::validate( outResult._reflection, task._format, task._outPath.str() );
-                        outResult._bReflected     = true;
-                    }
-                    else
-                    {
-                        // 리플렉션이 빠진 바이너리는 런타임이 빈 레이아웃으로 읽는다 — 읽지 못한 것으로 세어 쿠킹을 실패시킨다.
-                        SW_LOG_ERROR_ID( "ShaderCooker.ReflectionFailed", "Shader reflection failed for %#: %# (%#)", task._outPath.str(), reflected.error().message(), reflected.error().detail() );
-                        outResult._bUnreadable = true;
-                    }
-                    outResult._reflectNanos = reflectWatch.getElapsedNanoseconds();
+                    // 리플렉션을 읽지 못한 바이너리는 런타임이 빈 레이아웃으로 읽는다 — 읽지 못한 것으로 세어 쿠킹을 실패시킨다.
+                    const Stopwatch       reflectWatch;
+                    ReflectionMemo::Entry entry = _reflectionMemo.read( compileResult, task._format, task._outPath.str() );
+                    outResult._bUnreadable      = entry._pReflection == nullptr;
+                    outResult._violationCount   = entry._violationCount;
+                    outResult._pReflection      = std::move( entry._pReflection );
+                    outResult._reflectNanos     = reflectWatch.getElapsedNanoseconds();
                 }
             };
 
@@ -379,10 +415,10 @@ namespace sw
                     ShaderReflectionLibrary::EntryMap& manifest = ioState._mapManifest[task._outDir.str()];
                     if ( manifest.find( task._fileName ) != manifest.end() )
                         continue;
-                    if ( result._bReflected )
+                    if ( result._pReflection != nullptr )
                     {
                         ioState._summary._contractViolationCount += result._violationCount;
-                        manifest.emplace( task._fileName, std::move( result._reflection ) );
+                        manifest.emplace( task._fileName, std::move( result._pReflection ) );
                     }
                     else if ( result._bUnreadable )
                     {
