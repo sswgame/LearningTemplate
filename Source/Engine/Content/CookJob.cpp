@@ -233,14 +233,21 @@ namespace sw
         return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );
     }
 
+    optional<CookInput> CookJob::makeDiskInput( const AbsolutePath& diskPath, uint64 contentHash )
+    {
+        CookInput input;
+        if ( CookJobInternal::makeDiskInput( diskPath, input._kind, input._source ) == false )
+            return nullopt;
+        input._contentHash = contentHash;
+        return input;
+    }
+
     bool CookJob::recordDiskInput( const AbsolutePath& diskPath, uint64 contentHash )
     {
-        CookInputKind kind = CookInputKind::DiskFile;
-        string        source;
-        if ( CookJobInternal::makeDiskInput( diskPath, kind, source ) == false )
-            return false;
-        CookJobInternal::recordContentInput( *this, kind, std::move( source ), contentHash );
-        return true;
+        const optional<CookInput> input = makeDiskInput( diskPath, contentHash );
+        if ( input.has_value() )
+            recordInput( *input );
+        return input.has_value();
     }
 
     void CookJob::recordInput( const CookInput& input )

@@ -264,6 +264,19 @@ namespace sw
 
 namespace sw
 {
+    class ShaderCompileClaims;
+    class ShaderCompileSession;
+
+    /** @brief 묶음 컴파일이 컴파일 기록을 두는 단위입니다. */
+    enum class ShaderRecordScope : uint8
+    {
+        Request, ///< 요청마다 파일 하나 — 뒤이은 실행 중 컴파일이 요청 하나로 찾는다(데우기 · 핫 리로드)
+        Source,  ///< 소스 · 형식마다 파일 하나(`ShaderSourceRecord`) — 쿠킹이 같은 묶음으로 다시 온다
+    };
+
+    /** @brief 묶음 컴파일의 결과 하나를 받습니다 — 요청 번호(목록의 자리)와 결과. */
+    using ShaderCompiledDelegate = Delegate<void( uint32 requestIndex, const ShaderCompileResult& result )>;
+
     /**
      * @class ShaderCompiler
      * @brief HLSL 소스를 RHI 백엔드별 바이트코드(DXIL, SPIR-V, DXBC)로 컴파일하는 파사드입니다.
@@ -277,41 +290,43 @@ namespace sw
          * @return 컴파일 결과(성공 여부와 바이트코드)
          * @details 스레드 계약: 워커에서 동시에 불린다(병렬 쿠킹). 공유 상태는 읽기 전용(`AssetPaths` 읽기)이거나 원자값이다.
          *          서로 다른 @p desc 만 동시에 넣는다 — 같은 셰이더 변형을 두 스레드가 동시에 컴파일하면 같은 캐시 파일을 함께 쓴다.
+         * @param pClaims 지금 컴파일하는 글의 표(실행 중 컴파일). 글이 같은 요청이 동시에 오면 한 스레드만 컴파일한다. nullptr 이면 기다리지 않는다
          */
-        static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc );
+        static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc, ShaderCompileClaims* pClaims = nullptr );
         /**
-         * @brief @p listDesc 중 아직 DDC 에 없는 요청을 병렬로 전처리해, 글이 서로 다른 것만 하나씩 병렬로 컴파일합니다 — 뒤이은 `compileHLSL` 이 나머지 변형을 글로 맞힌다.
-         * @details 묶음(데우기 · 쿠킹)이 먼저 부른다. 부르지 않아도 결과는 같다 — 같은 글의 변형이 동시에 돌면 서로의 결과를 보지 못해 같은 컴파일을 되풀이할 뿐이다.
-         *          실패는 여기서 세지 않는다(같은 요청을 컴파일하는 쪽이 세고 오류를 다시 남긴다). 게임 · 기동 스레드에서 부른다.
+         * @brief 요청 묶음을 병렬로 컴파일하고 요청마다 결과를 @p onCompiled 에 한 번씩 넘깁니다(쿠킹 · 데우기).
+         * @details 요청마다 DDC 를 보고, 없는 것만 **한 번** 전처리해 닿는 글이 서로 다른 것만 하나씩 컴파일한다 — 글이 같은 변형은 그 결과를 함께 받는다(지면 같은 오류를 받는다).
+         *          같은 글 가운데 목록에서 가장 앞선 요청이 컴파일하므로 워커 수와 무관하게 같은 바이트다. 소스는 묶음 동안 한 번만 읽는다(`ShaderCompileSession`).
+         *          언리얼 `FShaderCompilingManager` 의 작업 묶음 · 중복 작업 합치기(`FShaderJobCache`) 자리다.
+         * @param recordScope 기록을 요청마다 쓸지 소스마다 한 번 쓸지
+         * @param onCompiled 워커에서 동시에 불린다(요청 번호 순서가 아니다)
          */
-        static void compileDistinct( const vector<ShaderCompileDesc>& listDesc );
-        /** @brief 전처리한 글에서 바이트코드에 들지 않는 것(`#line` 줄 · 빈칸 · 빈 줄)을 걷어 낸 글입니다 — 글 키(DDC)가 이것을 해시한다. 입력만으로 정해진다. */
-        [[nodiscard]] static string normalizePreprocessedText( string_view text );
+        static void compileBatch( const vector<ShaderCompileDesc>& listDesc, ShaderRecordScope recordScope, const ShaderCompiledDelegate& onCompiled );
 
         /**
          * @brief 엔진이 모든 컴파일에 넣는 define(엔진 텍스처 칸 표 `SW_EMU_SLOT_<이름>=<칸>` · `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index`, 렌더 정책 `SW_TAA_*` · `SW_PROBE_*` · `SW_AUTO_EXPOSURE_*`)을 @p inoutList 뒤에 더합니다.
          * @details 렌더 정책 값은 `EngineConfig::_render`(Config/Engine/EngineConfig.json)가 정본이다 — 셰이더가 읽는 정책 값은 이 한 경로로만 간다(셰이더에 기본값이 없다).
          *          값은 요청이 실어 온 사본 @p enginePolicy 다 — 컴파일 워커에서 불리므로 설정을 직접 읽지 않는다.
-         * @details 요청에 없고 엔진 바이너리가 정하는 컴파일 입력이라 도구 지문(`getToolchainFingerprint`)이 이 목록을 섞는다 —
-         *          그래야 표가 바뀌면 모든 셰이더 캐시(실행 캐시 · 컴파일 캐시 · 쿠킹본)가 함께 낡는다. 요청 desc 로 키를 만드는 캐시가 이 값을 몰라
+         * @details 요청에 없고 엔진 바이너리가 정하는 컴파일 입력이라 작업 키의 설정 해시(동작의 define 목록)에 이 목록이 든다 —
+         *          그래야 표가 바뀌면 모든 셰이더 캐시(실행 캐시 · 컴파일 기록 · 쿠킹본)가 함께 낡는다. 요청 desc 로 키를 만드는 캐시가 이 값을 몰라
          *          옛 칸 번호의 바이트를 새것으로 돌려준 결함(DX11 · GL 검정 화면)이 있었다.
          */
         static void appendEngineDefines( vector<ShaderMacroDefine>& inoutList, const ShaderEnginePolicy& enginePolicy );
 
         /**
-         * @brief 요청 @p desc 의 컴파일 기록이 지금 소스 · 헤더 · 도구와 맞으면 그 기록입니다 — 없거나 낡았으면 빈 값입니다. 컴파일하지 않습니다(쿠킹본 판정).
-         * @details @p desc 는 `compileHLSL` 에 넣는 것과 같다(엔진 define 은 안에서 더한다).
+         * @brief 요청마다 컴파일한 바이트코드의 해시입니다 — 컴파일 기록이 지금 소스 · 헤더 · 도구와 맞는 것만, 없거나 낡았으면 빈 값입니다. 컴파일하지 않습니다(쿠킹본 판정).
+         * @details @p listDesc 는 `compileBatch` 에 넣는 것과 같다(엔진 define 은 안에서 더한다). 소스마다의 기록을 먼저 보고, 없으면 요청마다의 기록을 본다.
          */
-        [[nodiscard]] static optional<CookRecord> findCurrentRecord( const ShaderCompileDesc& desc );
+        [[nodiscard]] static vector<optional<uint64>> findCurrentBytecodeHashes( const vector<ShaderCompileDesc>& listDesc );
         /** @brief 컴파일 결과 @p result 가 요청 @p desc 에 지금도 맞으면 true 입니다(메모리 캐시). 입력을 기록하지 않은 결과는 맞을 수 없습니다. */
         [[nodiscard]] static bool isResultCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc );
 
         /**
          * @brief 컴파일러 도구의 지문입니다. 컴파일러를 부르는 코드의 지문(`CookCodeFingerprint` "ShaderCompiler" — 인자 · 플래그를 고치면 저절로 바뀐다), Vulkan 타깃 버전, 설치된 컴파일러 버전(vcpkg 설치 기록)을 섞는다.
          * @details 소스 내용 해시만 보면 DXC 를 바꾸거나 옵션을 고쳐도 아무것도 다시 쿠킹하지 않는다. 슬롯 계약 숫자(시프트 포함)는 `binding_slots.hlsli` 에 있고 그 파일은 입력이다.
-         *          엔진 define(`appendEngineDefines`)도 섞는다 — 그 값은 요청이 실어 온 사본 @p enginePolicy 다(워커가 설정을 직접 읽지 않는다). 작업 키의 코드 지문 칸이다.
+         *          엔진 define(`appendEngineDefines`)은 섞지 않는다 — 동작 키의 define 에 이미 들고, 글 키는 값이 글에 나온 셰이더만 갈라야 한다(정책 값 하나를 고쳐 모두 다시 컴파일하지 않는다).
          */
-        static uint64 getToolchainFingerprint( const ShaderEnginePolicy& enginePolicy );
+        static uint64 getToolchainFingerprint();
         /** @brief 지문 계산의 본체입니다. 입력만으로 정해집니다(테스트가 상수만으로 같은 값이 나오는지 확인합니다). */
         static uint64 makeToolchainFingerprint( uint64 compilerCodeFingerprint, uint32 vulkanTargetVersion, string_view compilerVersion );
 

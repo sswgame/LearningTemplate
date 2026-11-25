@@ -701,6 +701,21 @@ namespace sw
         engine::runParallelByCost( static_cast<uint32>( listShader.size() ), SW_DELEGATE_METHOD( ParallelBlockDelegate, &ShaderWarmJob::run, &warmJob ) );
     }
 
+    void FramePSOManager::requestShaders( const RHIPipelineStateDesc& desc ) const
+    {
+        // PSO 를 만드는 스레드는 하나라(`MaterialPSOBuilder.h`) 그 안에서 셰이더를 처음 컴파일하면 변형들의 컴파일(한 건 수백 ms)이 한 줄로 선다 — 셰이더는 백그라운드 로드 워커가 나눠 얻고,
+        // 만드는 쪽은 같은 요청에 합류해 남은 것만 기다린다(언리얼도 셰이더 컴파일 작업과 PSO 생성을 나눈다).
+        if ( engine::areEngineServicesBound() == false )
+            return;
+        vector<ShaderCompileDesc> listShader;
+        appendShaderWarm( desc, listShader );
+        ShaderCache& shaderCache = engine::getSubsystem<ShaderCache>();
+        for ( const ShaderCompileDesc& shader : listShader )
+        {
+            (void)shaderCache.request( shader ); // 결과는 캐시에 남는다 — 실패는 뒤의 PSO 생성이 경로와 함께 알린다
+        }
+    }
+
     void FramePSOManager::collectOutputPSOJobs( vector<PassPSOJob>& inoutListJob )
     {
         // 주 출력에 그리는 패스(Present · Canvas · Present 를 대신하는 FSR 의 RCAS)의 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 씬 뷰 · 게임 뷰 등,
@@ -1177,6 +1192,7 @@ namespace sw
         RenderPSOCache::MaterialPSOEntry entry = createMaterialPSOVariant( passPSO, passType, pPermutation, viewMode, bReverseCulling, vertexFormat, &deferredDesc );
         if ( entry._state == RenderPSOCache::MaterialPSOState::Building )
         {
+            requestShaders( deferredDesc );
             _pCache->requestMaterialPSO( _pDevice, key, std::move( deferredDesc ), bUrgent, usesAsyncMaterialPSOBuilder() );
             return false;
         }

@@ -78,6 +78,38 @@ SW_TEST_CASE( ShaderIncludeRecordTest, AbsentCandidateThatAppearsMakesTheRecordS
     SW_EXPECT_FALSE( record.isFresh( desc ) );
 }
 
+/**
+ * @brief [ShaderIncludeRecordTest] 묶음의 표(`ShaderIncludeCache`)로 읽어도 작업의 입력(없던 후보 둘 · 연 헤더)은 같고, 파일은 처음 읽은 바이트다
+ * @details 변이: 표에서 읽을 때 입력을 적지 않으면 뒤 변형의 기록이 헤더를 잃어 헤더를 고쳐도 낡지 않는다.
+ */
+SW_TEST_CASE( ShaderIncludeRecordTest, CachedReadsRecordTheSameInputs )
+{
+    const IncludeFixture fixture;
+    SW_REQUIRE_TRUE( fixture.create() );
+    CookJobDesc desc;
+    desc._cookerName      = "Shader";
+    desc._codeFingerprint = 1;
+    desc._target          = "vulkan";
+    const ShaderIncludeResolver resolver{
+        vector<ShaderIncludeRootDomain>{ ShaderIncludeRootDomain{ "engine", fixture._engineShaders }, ShaderIncludeRootDomain{ "common", fixture._commonShaders } },
+        sw::make_shared<ShaderIncludeCache>()
+    };
+    vector<uint8>     firstBytes;
+    vector<CookInput> listFirst;
+    {
+        CookJob job{ desc };
+        SW_REQUIRE_TRUE( resolver.findInclude( fixture.makeInput(), "x.hlsli", firstBytes ).has_value() );
+        listFirst = job.getInputs();
+    }
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( fixture._commonShaders.join( "x.hlsli" ), "float4 x() { return 9; }\n" ) );
+    CookJob       job{ desc };
+    vector<uint8> secondBytes;
+    SW_REQUIRE_TRUE( resolver.findInclude( fixture.makeInput(), "x.hlsli", secondBytes ).has_value() );
+    SW_EXPECT_EQUAL( size_t( 3 ), listFirst.size() );
+    SW_EXPECT_TRUE( job.getInputs() == listFirst );
+    SW_EXPECT_TRUE( firstBytes == secondBytes );
+}
+
 /** @brief [ShaderIncludeRecordTest] 자기 폴더의 헤더가 include 루트의 같은 이름을 가리면 문제로 적는다 */
 SW_TEST_CASE( ShaderIncludeRecordTest, ShadowedHeaderIsAProblem )
 {

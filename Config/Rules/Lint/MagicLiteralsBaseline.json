@@ -467,7 +467,6 @@
     "Source/Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.cpp": {"integer": 2},
     "Source/Engine/Graphics/Shader/Compile/RHIShaderRequest.cpp": {"integer": 1},
     "Source/Engine/Graphics/Shader/Compile/SPIRVOpenGLPatch.cpp": {"integer": 1},
-    "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp": {"integer": 1},
     "Source/Engine/Graphics/Shader/Compile/WebGPUShaderContainer.cpp": {"integer": 1},
     "Source/Engine/Graphics/Shader/Reflection/ShaderReflectionDx.cpp": {"integer": 3},
     "Source/Engine/Graphics/Shader/Reflection/ShaderReflectionSPIRV.cpp": {"integer": 12},

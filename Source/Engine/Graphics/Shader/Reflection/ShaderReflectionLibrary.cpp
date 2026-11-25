@@ -28,7 +28,7 @@ namespace sw
         /// @brief 'SRFM' 매니페스트 매직입니다.
         constexpr uint32 kMagic = FourCCUtil::make( "SRFM" );
         /// @brief 매니페스트 포맷 버전입니다. 쿠킹하는 쪽과 읽는 쪽이 같은 파일에 있으므로 한 곳만 올리면 됩니다.
-        constexpr uint32 kVersion = 4; ///< 4: 컴퓨트 스레드 그룹 크기(_groupSize) 추가 · 2: 구조버퍼 원소 레이아웃(_listStructuredElement) 추가 · 3: 리소스 종류를 글자 대신 `ShaderBindingKind` 한 바이트로
+        constexpr uint32 kVersion = 5; ///< 5: 서로 다른 리플렉션을 한 번만 적고 항목은 번호를 든다 · 4: 컴퓨트 스레드 그룹 크기(_groupSize) 추가 · 2: 구조버퍼 원소 레이아웃(_listStructuredElement) 추가 · 3: 리소스 종류를 글자 대신 `ShaderBindingKind` 한 바이트로
 
         void writeReflectionInternal( Archive& archive, const ShaderReflectionData& reflection )
         {
@@ -177,28 +177,41 @@ namespace sw
 
             uint32 magic{ 0 };
             uint32 version{ 0 };
-            uint32 entryCount{ 0 };
             archive >> magic;
             archive >> version;
-            archive >> entryCount;
             if ( magic != kMagic || version != kVersion )
             {
                 SW_LOG_WARNING_ID( "ShaderReflectionLibrary.ReflectionManifestFormatDoes", "The reflection manifest format does not match (magic=%# version=%#): %#", magic, version, manifestRelative.c_str() );
                 return false;
             }
 
-            for ( uint32 entryIndex = 0; entryIndex < entryCount; ++entryIndex )
+            constexpr uint32                               kMinReflectionBytes = sizeof( uint32 ) * 6; // 개수 셋 + 스레드 그룹 셋
+            constexpr uint32                               kMinEntryBytes      = sizeof( uint32 ) * 2; // 이름 길이 + 번호
+            vector<shared_ptr<const ShaderReflectionData>> listReflection;
+            bool                                           bRead           = true;
+            const uint32                                   reflectionCount = archive.readCount( kMinReflectionBytes );
+            for ( uint32 index = 0; index < reflectionCount && bRead; ++index )
             {
-                string               entryKey;
-                ShaderReflectionData entryData;
+                auto pReflection = sw::make_shared<ShaderReflectionData>();
+                bRead            = readReflectionInternal( archive, *pReflection );
+                listReflection.push_back( std::move( pReflection ) );
+            }
+            const uint32 entryCount = bRead ? archive.readCount( kMinEntryBytes ) : 0;
+            for ( uint32 index = 0; index < entryCount && bRead; ++index )
+            {
+                string entryKey;
+                uint32 reflectionIndex{ 0 };
                 archive >> entryKey;
-                if ( readReflectionInternal( archive, entryData ) == false )
-                {
-                    SW_LOG_WARNING_ID( "ShaderReflectionLibrary.ReflectionManifestCorrupt", "The reflection manifest is corrupt: %#", manifestRelative.c_str() );
-                    outMapEntry.clear();
-                    return false;
-                }
-                outMapEntry.emplace( std::move( entryKey ), std::move( entryData ) );
+                archive >> reflectionIndex;
+                bRead = archive.isError() == false && reflectionIndex < listReflection.size();
+                if ( bRead )
+                    outMapEntry.emplace( std::move( entryKey ), listReflection[reflectionIndex] );
+            }
+            if ( bRead == false || archive.isError() )
+            {
+                SW_LOG_WARNING_ID( "ShaderReflectionLibrary.ReflectionManifestCorrupt", "The reflection manifest is corrupt: %#", manifestRelative.c_str() );
+                outMapEntry.clear();
+                return false;
             }
             return true;
         }
@@ -239,14 +252,43 @@ namespace sw
         VectorUtil::sort( listEntry, []( const EntryMap::value_type* pLhs, const EntryMap::value_type* pRhs )
         { return pLhs->first < pRhs->first; } );
 
+        // 서로 다른 리플렉션에 처음 나온 차례(키 순서)로 번호를 준다. 같은지는 적히는 바이트로 본다.
+        vector<uint32>                                     listEntryIndex;
+        vector<vector<uint8>>                              listReflectionBytes;
+        unordered_map<const ShaderReflectionData*, uint32> mapIndexByAddress; // 쿠커가 한 벌을 나눠 쓰는 항목은 다시 적어 보지 않는다
+        unordered_map<string, uint32>                      mapIndexByBytes;
+        listEntryIndex.reserve( listEntry.size() );
+        for ( const EntryMap::value_type* pEntry : listEntry )
+        {
+            const auto [addressIter, bNewAddress] = mapIndexByAddress.emplace( pEntry->second.get(), 0u );
+            if ( bNewAddress )
+            {
+                Archive       reflectionArchive;
+                vector<uint8> reflectionBytes;
+                writeReflectionInternal( reflectionArchive, *pEntry->second );
+                reflectionArchive.writeData( reflectionBytes );
+                string bytesKey( reinterpret_cast<const utf8*>( reflectionBytes.data() ), reflectionBytes.size() );
+                const auto [bytesIter, bNewBytes] = mapIndexByBytes.emplace( std::move( bytesKey ), static_cast<uint32>( listReflectionBytes.size() ) );
+                if ( bNewBytes )
+                    listReflectionBytes.push_back( std::move( reflectionBytes ) );
+                addressIter->second = bytesIter->second;
+            }
+            listEntryIndex.push_back( addressIter->second );
+        }
+
         Archive archive;
         archive << kMagic;
         archive << kVersion;
-        archive << static_cast<uint32>( listEntry.size() );
-        for ( const EntryMap::value_type* pEntry : listEntry )
+        archive << static_cast<uint32>( listReflectionBytes.size() );
+        for ( const vector<uint8>& reflectionBytes : listReflectionBytes )
         {
-            archive << string_view( pEntry->first );
-            writeReflectionInternal( archive, pEntry->second );
+            archive.writeBytes( reflectionBytes.data(), reflectionBytes.size() );
+        }
+        archive << static_cast<uint32>( listEntry.size() );
+        for ( size_t entryIndex = 0; entryIndex < listEntry.size(); ++entryIndex )
+        {
+            archive << string_view( listEntry[entryIndex]->first );
+            archive << listEntryIndex[entryIndex];
         }
 
         vector<uint8> bytes;
@@ -261,8 +303,8 @@ namespace sw
             return false;
         }
 
-        SW_LOG_INFO_ID( "ShaderReflectionLibrary.ReflectionManifestEntriesBytes", "Reflection manifest %# (%# entries, %# bytes)", outPath.c_str(),
-                        static_cast<uint32>( mapEntry.size() ), static_cast<uint32>( bytes.size() ) );
+        SW_LOG_INFO_ID( "ShaderReflectionLibrary.ReflectionManifestEntriesBytes", "Reflection manifest %# (%# entries, %# distinct reflections, %# bytes)", outPath.c_str(),
+                        static_cast<uint32>( mapEntry.size() ), static_cast<uint32>( listReflectionBytes.size() ), static_cast<uint32>( bytes.size() ) );
         return true;
     }
 
@@ -327,7 +369,7 @@ namespace sw
         if ( entryIter == manifestIter->second.end() )
             return false;
 
-        outReflection = entryIter->second;
+        outReflection = *entryIter->second;
         return true;
     }
 

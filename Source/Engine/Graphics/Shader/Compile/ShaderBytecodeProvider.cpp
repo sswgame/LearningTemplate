@@ -4,6 +4,7 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompileClaims.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
@@ -88,14 +89,17 @@ namespace sw
     }
 
     LiveShaderBytecodeProvider::LiveShaderBytecodeProvider( bool bDebugCodegen )
-        : _bDebugCodegen{ static_cast<uint8>( bDebugCodegen ? SW_TRUE : SW_FALSE ) }
+        : _pClaims{ make_unique<ShaderCompileClaims>() }
+        , _bDebugCodegen{ static_cast<uint8>( bDebugCodegen ? SW_TRUE : SW_FALSE ) }
     {
     }
+
+    LiveShaderBytecodeProvider::~LiveShaderBytecodeProvider() = default;
 
     ShaderCompileResult LiveShaderBytecodeProvider::load( const ShaderCompileDesc& desc ) const
     {
         // 컴파일러가 셰이더 DDC(`DerivedDataCache` 의 `Shader` 버킷)를 먼저 본다(언리얼 에디터의 DDC). 코드젠은 기동에서 뜬 진단 정책 사본이 정한다(makeLiveCompileDesc).
-        return ShaderCompiler::compileHLSL( ShaderCache::makeLiveCompileDesc( desc, _bDebugCodegen != SW_FALSE ) );
+        return ShaderCompiler::compileHLSL( ShaderCache::makeLiveCompileDesc( desc, _bDebugCodegen != SW_FALSE ), _pClaims.get() );
     }
 
     bool LiveShaderBytecodeProvider::isCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const

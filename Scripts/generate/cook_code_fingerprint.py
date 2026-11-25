@@ -33,7 +33,7 @@ from common.exit_code import ExitCode  # noqa: E402
 SOURCE_EXTENSIONS = (".h", ".hpp", ".cpp", ".inl", ".xxx")
 # 셰이더 바이트를 내는 도구 꾸러미 — DXC(DXIL · SPIR-V · GL)와 Tint(SPIR-V → WGSL, dawn[tint-tools]). 판이 바뀌면 셰이더 DDC · 쿠킹본이 낡는다.
 # 언리얼은 셰이더 형식마다 컴파일러 판(IShaderFormat::GetVersion)을 셰이더 맵 키에 넣는다. FXC(d3dcompiler_47)는 OS 의 것이라 vcpkg 기록에 없다 —
-# DXBC 캐시 키가 실린 d3dcompiler 의 내용 해시를 따로 넣는다(ShaderCompiler.cpp getFxcLibraryHash).
+# DXBC 캐시 키가 실린 d3dcompiler 의 내용 해시를 따로 넣는다(ShaderCompilerBackend.cpp getFxcLibraryHash).
 LIST_SHADER_TOOL_PACKAGE = ("directx-dxc", "dawn")
 
 

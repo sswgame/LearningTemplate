@@ -19,7 +19,7 @@ namespace sw
     /**
      * @class IShaderBytecodeProvider
      * @brief 바이트코드 공급자 계약입니다(데이터 없는 인터페이스). 구현은 `CookedShaderBytecodeProvider` · `LiveShaderBytecodeProvider` 둘이고 `ShaderCache::initialize` 가 콘텐츠 정책으로 고른다.
-     * @details 스레드 계약: 로드 워커가 동시에 부른다 — 구현은 상태가 없다.
+     * @details 스레드 계약: 로드 워커가 동시에 부른다 — 구현은 여러 스레드가 함께 써도 된다.
      */
     class IShaderBytecodeProvider
     {
@@ -60,11 +60,13 @@ namespace sw
     public:
         /** @brief @p bDebugCodegen 은 기동에서 뜬 디버그 코드젠 깃발입니다(`ShaderCache::isLiveDebugCodegen`) — 컴파일 워커가 진단 정책을 직접 읽지 않는다. */
         explicit LiveShaderBytecodeProvider( bool bDebugCodegen );
+        ~LiveShaderBytecodeProvider() override;
         [[nodiscard]] ShaderCompileResult load( const ShaderCompileDesc& desc ) const override;
         [[nodiscard]] bool                isCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc ) const override;
         [[nodiscard]] bool                getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const override;
 
     private:
-        uint8 _bDebugCodegen; ///< 실시간 컴파일의 디버그 코드젠(만들 때 받은 사본)
+        unique_ptr<ShaderCompileClaims> _pClaims;       ///< 글이 같은 요청이 동시에 오면 한 스레드만 컴파일한다(여러 로드 워커가 부른다)
+        uint8                           _bDebugCodegen; ///< 실시간 컴파일의 디버그 코드젠(만들 때 받은 사본)
     };
 } // namespace sw

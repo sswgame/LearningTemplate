@@ -25,6 +25,14 @@ namespace sw
     {
         struct ShaderRecompilerInternal
         {
+            /** @brief 묶음 컴파일의 결과를 요청 번호의 칸에 둡니다(워커에서 불린다 — 칸마다 한 번). */
+            struct BatchReceiver
+            {
+                vector<ShaderCompileResult> _listResult;
+
+                void recordResult( uint32 requestIndex, const ShaderCompileResult& result ) { _listResult[requestIndex] = result; }
+            };
+
             static const ShaderRecompiler* findRecompiler()
             {
                 const LiveShaderSubsystem* const pLiveShader = engine::findSubsystem<LiveShaderSubsystem>();
@@ -109,17 +117,26 @@ namespace sw
         uint32               changed  = 0;
         uint32               failed   = 0;
         ReloadTracker* const pTracker = engine::findSubsystem<ReloadTracker>();
+        // 셰이더 DDC 는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 컴파일러 안에서 DDC 에 맞아 컴파일러를
+        // 타지 않는다. DDC 항목은 소스와 자기가 연 헤더의 내용(의존 기록)을 보므로, 바뀐 헤더를
+        // 연 셰이더만 실제로 다시 컴파일된다. 한 번에 묶어 워커에서 컴파일한다 — 공용 헤더를 고치면 수백 개가 낡아, 하나씩 하면 게임 스레드가 그 합만큼 멈춘다.
+        // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(진단 정책의 디버그 코드젠). 요청 그대로 컴파일하면 리로드한
+        // 셰이더만 디버그 정보를 잃는다.
+        // 엔진 설정 값은 지금 캐시의 사본으로 싣는다 — 모은 요청에는 그 항목을 넣을 때의 사본이 실려 있다.
+        vector<ShaderCompileDesc> listLiveDesc;
+        listLiveDesc.reserve( listToCompile.size() );
         for ( const ShaderCompileDesc& desc : listToCompile )
         {
-            // 셰이더 DDC 는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 컴파일러 안에서 DDC 에 맞아 컴파일러를
-            // 타지 않는다. DDC 항목은 소스와 자기가 연 헤더의 내용(의존 기록)을 보므로, 바뀐 헤더를
-            // 연 셰이더만 실제로 다시 컴파일된다.
-            // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(진단 정책의 디버그 코드젠). 요청 그대로 컴파일하면 리로드한
-            // 셰이더만 디버그 정보를 잃는다.
-            // 엔진 설정 값은 지금 캐시의 사본으로 싣는다 — 모은 요청에는 그 항목을 넣을 때의 사본이 실려 있다.
-            ShaderCompileDesc liveDesc          = ShaderCache::makeLiveCompileDesc( desc, shaderCache.isLiveDebugCodegen() );
-            liveDesc._enginePolicy              = shaderCache.findEnginePolicy();
-            const ShaderCompileResult newResult = ShaderCompiler::compileHLSL( liveDesc );
+            listLiveDesc.push_back( ShaderCache::makeLiveCompileDesc( desc, shaderCache.isLiveDebugCodegen() ) );
+            listLiveDesc.back()._enginePolicy = shaderCache.findEnginePolicy();
+        }
+        ShaderRecompilerInternal::BatchReceiver receiver;
+        receiver._listResult.resize( listLiveDesc.size() );
+        ShaderCompiler::compileBatch( listLiveDesc, ShaderRecordScope::Request, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &ShaderRecompilerInternal::BatchReceiver::recordResult, &receiver ) );
+        for ( size_t index = 0; index < listToCompile.size(); ++index )
+        {
+            const ShaderCompileDesc&   desc      = listToCompile[index];
+            const ShaderCompileResult& newResult = receiver._listResult[index];
             if ( newResult._bSuccess == false )
             {
                 ++failed;

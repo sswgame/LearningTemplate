@@ -36,15 +36,18 @@ namespace sw
     public:
         /** @brief 매니페스트 읽기 · 조회가 거는 할당 태그입니다. */
         static constexpr MemoryTag kMemoryTag = MemoryTag::Shader;
-        /// @brief 매니페스트 한 개의 내용입니다(쿠킹할 때 채우고 파일로 쿠킹합니다).
-        using EntryMap = unordered_map<string, ShaderReflectionData>;
+        /**
+         * @brief 매니페스트 한 개의 내용입니다(쿠킹할 때 채우고 파일로 쿠킹합니다). 바이너리 파일 이름 → 리플렉션이고, 리플렉션이 같은 항목은 한 벌을 함께 씁니다.
+         * @details 변형 대부분은 자원 선언이 같다 — 엔진 도메인 DX12 의 19,739 항목이 서로 다른 리플렉션 133 개다(한 벌씩 적으면 파일이 126 MB, 나누면 2 MB 남짓).
+         */
+        using EntryMap = unordered_map<string, shared_ptr<const ShaderReflectionData>>;
 
         /** @brief 매니페스트 파일 이름입니다(RHI 폴더 안에 놓입니다). */
         static const utf8* getManifestFileName();
 
         /**
          * @brief 매니페스트를 파일로 쿠킹합니다(쿠커 전용).
-         * @details 항목은 키 순서로 씁니다. 같은 항목 집합이면 넣은 순서와 상관없이 같은 바이트입니다.
+         * @details 항목은 키 순서로 씁니다. 같은 항목 집합이면 넣은 순서와 상관없이 같은 바이트입니다. 서로 다른 리플렉션은 한 번만 쓰고 항목은 그 번호를 적습니다.
          * @param absDirectory 매니페스트를 놓을 절대 디렉터리(`.../shaders/bin/<rhi>`)
          */
         [[nodiscard]] static bool save( const EntryMap& mapEntry, const AbsolutePath& absDirectory );
