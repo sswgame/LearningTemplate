@@ -3,7 +3,7 @@
 	파이프라인 XML 만으로 컴퓨트 효과를 더한 포워드 파이프라인 — 코드 없이 패스 한 줄과 셰이더 하나다. 시나리오: automation/computepass.
 	고르는 법: `-gv_renderPipeline=game/playground/pipeline/computepasspipeline.xml`.
 -->
-<RenderPipelineDesc _base="game/playground/pipeline/tessellationstagepipeline.xml" _name="ComputePassPipeline">
+<RenderPipelineDesc _base="guid:c755b53333008817343dd6bd2fea1ed9" _name="ComputePassPipeline">
 	<_listAttachment>
 		<RenderPassAttachment _name="TonemapColor" _op="Remove" />
 		<RenderPassAttachment _name="SwappedColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Load" _role="" _resolutionDivisor="1" />

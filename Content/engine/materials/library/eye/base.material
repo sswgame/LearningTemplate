@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="9d7f9e16c3115a47596f3841ee1e39e1"?>
 <!-- 외형 라이브러리 갈래 바탕: 눈 — 공막(얕은 산란) · 각막 굴절 시차 홍채 · 윤부 · 동공 모양 · 각막 젖음 · 홍채 집광 · 반사판 · 눈물 띠. 동공 확장은 인스턴스 값 _customData0.x(런타임). -->
-<MaterialDef formatVersion="0" name="AppearanceEye" _base="engine/materials/library/appearance.material">
+<MaterialDef formatVersion="0" name="AppearanceEye" _base="guid:dec52472672bb347f0b472ac23617b92">
 	<_properties>
 		<item name="_color" defaultValue="0.92 0.9 0.88 1" />
 		<item name="_secondaryColor" defaultValue="0.06 0.05 0.05 1" />

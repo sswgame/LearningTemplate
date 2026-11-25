@@ -8,7 +8,7 @@
 			                _localScale="1,1,1"
 			                _attachOwner="None"
 			                _attachComponent="None"
-			                _albedoTexture="engine/textures/particles/kenney_particle/dirt_01.dds"
+			                _albedoTexture="guid:9d6790535755c5cc665b36378db9c994"
 			                _color="0.32,0.02,0.02,0.95"
 			                _roughness="0.3"
 			                _metallic="0"

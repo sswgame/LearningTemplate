@@ -33,7 +33,7 @@
 			<Selector id="task" name="Task">
 				<Sequence id="shipNow" name="ShipNow">
 					<Condition test="blackboard(ProduceCount) > 0 &amp;&amp; (blackboard(Tired) || blackboard(ProduceCount) >= 6)"/>
-					<SubTree tree="game/playground/harvestvalley/data/ai/autofarmer_ship.bt.xml"/>
+					<SubTree tree="guid:5f7677dc1c1b88bf7f8ceeb24a9f0cc5"/>
 				</Sequence>
 				<Sequence id="harvest" name="Harvest">
 					<Condition test="!blackboard(Tired) &amp;&amp; hasBlackboard(HarvestTile)"/>
@@ -125,7 +125,7 @@
 				</Sequence>
 				<Sequence id="shipRest" name="ShipRest">
 					<Condition test="blackboard(ProduceCount) > 0"/>
-					<SubTree tree="game/playground/harvestvalley/data/ai/autofarmer_ship.bt.xml"/>
+					<SubTree tree="guid:5f7677dc1c1b88bf7f8ceeb24a9f0cc5"/>
 				</Sequence>
 				<Sequence id="sleep" name="Sleep">
 					<Action name="Sleep" task="ai.state" state="Sleep"/>

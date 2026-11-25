@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="61a95e3c498c467e0c22926366797aa1"?>
 <!-- 외형 라이브러리 갈래 바탕: 비단 · 공단 — 비등방 GGX(실 방향 = UV u) 와 약한 시엔. -->
-<MaterialDef formatVersion="0" name="AppearanceSilk" _base="engine/materials/library/appearance.material">
+<MaterialDef formatVersion="0" name="AppearanceSilk" _base="guid:dec52472672bb347f0b472ac23617b92">
 	<_properties>
 		<item name="_sheenWeight" defaultValue="0.35" />
 		<item name="_sheenColor" defaultValue="0.5 0.5 0.5 1" />

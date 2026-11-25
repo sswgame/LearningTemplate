@@ -1,8 +1,8 @@
 <?asset guid="bbf52b5ce424637af68dca4617e3c6d2"?>
-<Prefab formatVersion="1" _base="game/playground/themepark/prefabs/coasterrail.prefab.xml" name="CoasterSupport">
+<Prefab formatVersion="1" _base="guid:94c7af9d2a79521e98ae320433386e47" name="CoasterSupport">
 	<PrefabOverrides>
 		<Override key="#0244d8c8807cd288">
-			<MeshComponent _localScale="2,2,2" _meshID="game/playground/themepark/models/support_small.mesh" />
+			<MeshComponent _localScale="2,2,2" _meshID="guid:ecb9680cd637d9a070351dcd40a34af9" />
 		</Override>
 	</PrefabOverrides>
 </Prefab>

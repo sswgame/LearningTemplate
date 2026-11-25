@@ -25,7 +25,7 @@
 				<_listComponent>
 					<InventoryShopDemoComponent _localID="3506037313902174496" _componentName="InventoryShopDemoComponent"
 					                            _bActive="true"
-					                            _shopsPath="game/playground/automation/desktop/editor/playreload/shop.shops.xml"
+					                            _shopsPath="guid:72ee80e5cd4944678b0bc5e12850cfa9"
 					                            _shopID="general"
 					                            _startingGold="75" />
 				</_listComponent>
@@ -43,14 +43,14 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/automation/desktop/editor/playreload/probe.material"
+					               _materialPath="guid:e09bfb298f7c4a05b8001826f9182c33"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="5" name="PrefabProp" prefab="game/playground/automation/desktop/editor/playreload/probe.prefab.xml">
+		<entity id="5" name="PrefabProp" prefab="guid:2aa5f84261ff458492a4c366a27f1a21">
 			<PrefabOverrides>
 				<Override key="#0244d8c8807cd288">
 					<MeshComponent _localPosition="1.2,1,0" />

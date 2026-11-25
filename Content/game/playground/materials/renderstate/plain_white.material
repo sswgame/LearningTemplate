@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="894626cb31efa8b9066de50f37e23553"?>
-<MaterialDef formatVersion="0" name="plain_white" _base="engine/materials/defaultmaterial.material">
+<MaterialDef formatVersion="0" name="plain_white" _base="guid:0e23c2ee4018be638b51655cf03239d2">
 	<_properties>
 		<item name="_color" defaultValue="0.9 0.9 0.9 1"/>
 	</_properties>

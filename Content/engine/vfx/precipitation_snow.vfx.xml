@@ -8,7 +8,7 @@
 		<VFXUserParameterDef _name="Intensity" _value="1, 1, 1, 1"/>
 	</_listUserParameter>
 	<_listEmitter>
-		<VFXEmitterDef _name="Flakes" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Alpha" _bLooping="true"
+		<VFXEmitterDef _name="Flakes" _texturePath="guid:6ccbb6cd99d1e6a55391cd4c91f29516" _blendMode="Alpha" _bLooping="true"
 		               _maxParticles="1000" _duration="1" _spawnRate="110" _lifetimeMin="8" _lifetimeMax="8"
 		               _spawnHalfExtents="10, 1, 10" _space="World" _velocityMin="-0.5, -1.8, -0.5" _velocityMax="0.5, -1.2, 0.5" _gravity="0, 0, 0" _tintParameter="Intensity">
 			<_collision _mode="Kill" _method="PhysicsRaycast" _openSkyDistance="60"/>

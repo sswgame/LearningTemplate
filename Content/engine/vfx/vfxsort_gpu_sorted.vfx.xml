@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="9c5bf0b9948d45feacf90fce92ef935f"?>
 <!-- vfxsort_gpu 변형 — 퍼프를 뷰 깊이로 정렬한다(GPU 정렬 컴퓨트, 풀 64 는 정렬 한도 512 안). 시나리오 game/playground/automation/vfxsort. -->
-<VFXEffectDef _base="engine/vfx/vfxsort_gpu.vfx.xml">
+<VFXEffectDef _base="guid:9348c3aa207a463ebc4d7ac290eb8c3e">
 	<_listEmitter>
 		<VFXEmitterDef _name="Puffs" _sortMode="ViewDepth" />
 	</_listEmitter>

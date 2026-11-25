@@ -2,7 +2,7 @@
 <!--
 	파이프라인 XML 의 지오메트리 스테이지 — 패스 칸에 진입점을 적으면 그 스테이지가 붙는다. 시나리오: automation/geometrystage.
 -->
-<RenderPipelineDesc _base="game/playground/pipeline/tessellationstagepipeline.xml" _name="GeometryStagePipeline">
+<RenderPipelineDesc _base="guid:c755b53333008817343dd6bd2fea1ed9" _name="GeometryStagePipeline">
 	<_listPass>
 		<RenderGraphPassDesc _name="Tonemap" _vertexEntryPoint="" _geometryEntryPoint="GSMain" _hullEntryPoint="" _domainEntryPoint="" />
 	</_listPass>

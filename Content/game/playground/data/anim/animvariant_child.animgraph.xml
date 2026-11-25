@@ -1,6 +1,6 @@
 <?asset guid="2944214d01b0ae8eeb80808392b3d988"?>
 <!-- 바탕 그래프의 Idle 상태만 바꾼 차이 — 이름이 열쇠라 id · 반복은 물려받는다. -->
-<AnimationGraphAsset _base="game/playground/data/anim/animvariant_base.animgraph.xml">
+<AnimationGraphAsset _base="guid:3324774a823d44dee2697c279310ee2f">
 	<nodes>
 		<node name="Idle">
 			<blend_space x="Speed" min_x="0" max_x="1">

@@ -43,7 +43,7 @@
 			               _attachOwnerID="0"
 			               _attachComponent="#63e709ac676dd304"
 			               _meshID="Cube"
-			               _materialPath="engine/materials/defaultmaterial.material"
+			               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
@@ -65,7 +65,7 @@
 			<SmartObjectComponent _localID="5375787612174973679" _componentName="SmartObjectComponent"
 			                      _bActive="true"
 			                      _smartObjectID="LowCover"
-			                      _catalogPath="common/data/interactions/default.interactions.xml">
+			                      _catalogPath="guid:cdbf334b25664cdc5567e078412c810f">
 				<_listClaimant />
 			</SmartObjectComponent>
 		</_listComponent>

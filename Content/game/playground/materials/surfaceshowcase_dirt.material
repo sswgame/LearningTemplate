@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="76349d2aa68b8615a337de70ce68b860"?>
 <!-- 표면 셰이더 쇼케이스(surfaceshowcase.scene.xml)의 구 — surfacelit.material 에 Dirt 값만 켠 것. 마스크 텍스처는 비워 흰색으로 읽히므로 켠 채널이 구 전체를 덮는다. -->
-<MaterialDef formatVersion="0" name="SurfaceShowcaseDirt" _base="engine/materials/surfacelit.material">
+<MaterialDef formatVersion="0" name="SurfaceShowcaseDirt" _base="guid:0b1aa486303c557dc0b90a00dcea8cc9">
 	<_properties>
 		<item name="_color" defaultValue="0.6 0.6 0.6 1.0" />
 		<item name="_surfaceDirt" defaultValue="1.0" />

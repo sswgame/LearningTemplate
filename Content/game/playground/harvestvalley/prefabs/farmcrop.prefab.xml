@@ -10,8 +10,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="game/playground/harvestvalley/models/crops_leafs_stage_a.mesh"
-			               _materialPath="engine/materials/defaultmaterial.material"
+			               _meshID="guid:5837a347d86e0ccf4f26819276b80bf9"
+			               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="false" />

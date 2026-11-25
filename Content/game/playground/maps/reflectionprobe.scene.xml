@@ -26,7 +26,7 @@
 		<entity id="3" name="MirrorFloor">
 			<GameObject _schemaVersion="0" _name="MirrorFloor" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="9,1,9" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="game/playground/materials/reflectionprobe_mirror.material" _boundsRadius="8" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="9,1,9" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="guid:456ecda93701a6a0f3bcd93c11cd775f" _boundsRadius="8" />
 				</_listComponent>
 			</GameObject>
 		</entity>

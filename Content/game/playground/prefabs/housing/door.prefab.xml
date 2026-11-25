@@ -13,7 +13,7 @@
 			               _attachOwner="None"
 			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
-			               _materialPath="engine/materials/prototypegrid_dark.material"
+			               _materialPath="guid:51749176fa5a59f663092304d160221f"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
@@ -23,7 +23,7 @@
 			               _attachOwner="None"
 			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
-			               _materialPath="engine/materials/prototypegrid_orange.material"
+			               _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

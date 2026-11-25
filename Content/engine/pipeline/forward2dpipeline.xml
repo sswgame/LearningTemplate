@@ -4,7 +4,7 @@
 	톤맵(Reinhard)은 흰색을 0.5 로 누른다 — 픽셀 아트의 색이 그대로 나와야 하는 2D 에는 맞지 않는다(유니티 2D URP 의 기본도 톤맵 없음).
 	고르는 법: `-gv_renderPipeline=engine/pipeline/forward2dpipeline.xml` (FrameRenderer 초기화).
 -->
-<RenderPipelineDesc _base="engine/pipeline/forwardpipeline.xml" _name="Forward2DPipeline">
+<RenderPipelineDesc _base="guid:a75d4f411b530b43612e42001606bcec" _name="Forward2DPipeline">
 	<_listAttachment>
 		<RenderPassAttachment _name="DepthOfFieldColor" _op="Remove" />
 		<RenderPassAttachment _name="SceneColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" _role="" _resolutionDivisor="1" />

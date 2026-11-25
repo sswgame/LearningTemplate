@@ -64,7 +64,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _materialPath="guid:51749176fa5a59f663092304d160221f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -123,10 +123,10 @@
 					                                 _bActive="true"
 					                                 _moveAction="Move"
 					                                 _useAction="AsymmetricHorror.Use"
-					                                 _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
+					                                 _markerPrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5" />
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
 					                        _bActive="true"
-					                        _documentPath="game/playground/asymmetrichorror/ui/hud.ui.xml" />
+					                        _documentPath="guid:b8153e942740444980bc3a2e1d31d107" />
 				</_listComponent>
 			</GameObject>
 		</entity>

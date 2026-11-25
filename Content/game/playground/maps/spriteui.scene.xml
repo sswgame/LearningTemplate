@@ -30,7 +30,7 @@
 					                 _localScale="1.2,1.2,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _clipPath="engine/textures/test/quadrants.sprite.xml" />
+					                 _clipPath="guid:dc59cfae162c13e4d089f481c3d8150b" />
 					<SpriteAnimatorComponent _localID="6519445003455735703"
 					                         _bRepeat="true" />
 				</_listComponent>
@@ -44,7 +44,7 @@
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _textureName="engine/textures/test/checker.dds" />
+					                 _textureName="guid:2f8ecca6a35bee326d0d3e97b4feb7c7" />
 					<WidgetComponent _localID="11339505928329980331" _drawSize="96,10" _worldOffset="0,0.85,0" />
 					<HealthBarComponent _localID="13661083042096604780" _hpRatio="0.4" _bVisible="true" />
 				</_listComponent>
@@ -71,7 +71,7 @@
 					                 _localScale="0.9,0.9,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _textureName="engine/textures/test/quadrants.dds"
+					                 _textureName="guid:02b451717dc7eac75de9a188f4b33c41"
 					                 _uvRect="0.5,0.5,0.5,0.5"
 					                 _tint="1,0.55,0.1,1" />
 				</_listComponent>
@@ -85,7 +85,7 @@
 					                 _localScale="0.9,0.9,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _textureName="engine/textures/test/quadrants.dds"
+					                 _textureName="guid:02b451717dc7eac75de9a188f4b33c41"
 					                 _uvRect="0.5,0.5,0.5,0.5"
 					                 _tint="1,0.55,0.1,1" />
 					<FadeOutComponent _localID="8724306910464882795" _duration="3.6" />

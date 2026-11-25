@@ -33,7 +33,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="400,1,400" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="400,1,400" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Plane" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="0.866" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -48,7 +48,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="31" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -63,7 +63,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="31" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -78,7 +78,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="31" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -86,8 +86,8 @@
 			<GameObject _schemaVersion="0" _name="SledSnow" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="-6,11.15,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.15,0" _localRotation="0,0,0" _localScale="1,0.3,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
-					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/sled.vehicle.xml" _bUsePhysicsGround="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.15,0" _localRotation="0,0,0" _localScale="1,0.3,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="1.5" />
+					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="guid:c637ee71c2b9a0d0e9cff5028522df4e" _bUsePhysicsGround="true" />
 					<VehicleSeatComponent _localID="9451712765012233414" _seatOffset="0,0.6,0" _exitOffset="-1.5,0,0" _enterDistance="4" _bDriverSeat="false" />
 				</_listComponent>
 			</GameObject>
@@ -96,8 +96,8 @@
 			<GameObject _schemaVersion="0" _name="SledIce" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="0,11.15,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.15,0" _localRotation="0,0,0" _localScale="1,0.3,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
-					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/sled.vehicle.xml" _bUsePhysicsGround="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.15,0" _localRotation="0,0,0" _localScale="1,0.3,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="1.5" />
+					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="guid:c637ee71c2b9a0d0e9cff5028522df4e" _bUsePhysicsGround="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -105,7 +105,7 @@
 			<GameObject _schemaVersion="0" _name="SledRider" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="-5,11.2,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.6,0" _localRotation="0,0,0" _localScale="0.45,1.2,0.35" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.7" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.6,0" _localRotation="0,0,0" _localScale="0.45,1.2,0.35" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="0.7" />
 					<PawnComponent _localID="11149290121538025405" _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
@@ -117,12 +117,12 @@
 			<GameObject _schemaVersion="0" _name="KartFlat" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="8,0,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="1.5" />
 					<PawnComponent _localID="11149290121538025405" _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
-					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
+					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="guid:ac43c1f814fc7ab0ced13bbe596abca2" _bUsePhysicsGround="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -130,12 +130,12 @@
 			<GameObject _schemaVersion="0" _name="KartHill" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="-12,0.97,25" _localRotation="0,3.14159265,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="1.5" />
 					<PawnComponent _localID="11149290121538025405" _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
-					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
+					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="guid:ac43c1f814fc7ab0ced13bbe596abca2" _bUsePhysicsGround="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -143,12 +143,12 @@
 			<GameObject _schemaVersion="0" _name="LeanKart" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="16,0,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="1.5" />
 					<PawnComponent _localID="11149290121538025405" _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
-					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
+					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="guid:ac43c1f814fc7ab0ced13bbe596abca2" _bUsePhysicsGround="true" />
 					<VehicleSeatComponent _localID="9451712765012233414" _seatOffset="0,0.6,0" _exitOffset="-1.5,0,0" _enterDistance="4" _bDriverSeat="false" />
 				</_listComponent>
 			</GameObject>
@@ -157,7 +157,7 @@
 			<GameObject _schemaVersion="0" _name="Rider" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="17,0,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.6,0" _localRotation="0,0,0" _localScale="0.45,1.2,0.35" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.7" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.6,0" _localRotation="0,0,0" _localScale="0.45,1.2,0.35" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="0.7" />
 					<PawnComponent _localID="11149290121538025405" _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
@@ -169,7 +169,7 @@
 			<GameObject _schemaVersion="0" _name="Rail" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="-20,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,4.15,0" _localRotation="0.155,0,0" _localScale="0.3,0.1,50.6" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="26" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,4.15,0" _localRotation="0.155,0,0" _localScale="0.3,0.1,50.6" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="26" />
 					<SplineComponent _localID="1299529188794216424" _samplesPerSegment="16" _type="Linear" _bClosed="false">
 						<_listControlPoint>
 							<item>0,8,-25</item>
@@ -183,8 +183,8 @@
 			<GameObject _schemaVersion="0" _name="Minecart" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="-20,8,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.4,0" _localRotation="0,0,0" _localScale="1,0.8,1.4" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
-					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="common/data/vehicles/minecart.vehicle.xml" _rail="14" _bUsePhysicsGround="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.4,0" _localRotation="0,0,0" _localScale="1,0.8,1.4" _attachOwner="None" _attachComponent="#ae80bcb72e918025" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="1.5" />
+					<KinematicVehicleComponent _localID="3610959554269325066" _driftButton="Drift" _boostButton="Boost" _jumpButton="Jump" _tuning="guid:71075126319c7fc8300317e5e3ccf233" _rail="14" _bUsePhysicsGround="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

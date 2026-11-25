@@ -23,112 +23,112 @@
 		<entity id="3" name="Backdrop">
 			<GameObject _schemaVersion="0" _name="Backdrop" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="20,5,2" _localRotation="0,0,0" _localScale="44,12,0.2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="20,5,2" _localRotation="0,0,0" _localScale="44,12,0.2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="30" name="TerrainFloor">
 			<GameObject _schemaVersion="0" _name="TerrainFloor" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="20.0,0.5,0" _localRotation="0,0,0" _localScale="40,1,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="20.0,0.5,0" _localRotation="0,0,0" _localScale="40,1,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="31" name="TerrainCeiling">
 			<GameObject _schemaVersion="0" _name="TerrainCeiling" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="20.0,9.5,0" _localRotation="0,0,0" _localScale="40,1,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="20.0,9.5,0" _localRotation="0,0,0" _localScale="40,1,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="32" name="TerrainLeft">
 			<GameObject _schemaVersion="0" _name="TerrainLeft" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0.5,5.0,0" _localRotation="0,0,0" _localScale="1,8,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0.5,5.0,0" _localRotation="0,0,0" _localScale="1,8,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="33" name="TerrainRight">
 			<GameObject _schemaVersion="0" _name="TerrainRight" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="39.5,5.0,0" _localRotation="0,0,0" _localScale="1,8,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="39.5,5.0,0" _localRotation="0,0,0" _localScale="1,8,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="34" name="TerrainLedge">
 			<GameObject _schemaVersion="0" _name="TerrainLedge" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="24.5,3.0,0" _localRotation="0,0,0" _localScale="1,4,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="24.5,3.0,0" _localRotation="0,0,0" _localScale="1,4,2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="5" name="PlayerBody">
 			<GameObject _schemaVersion="0" _name="PlayerBody" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="2.5,1.5,0" _localRotation="0,0,0" _localScale="0.7,0.9,0.7" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="2.5,1.5,0" _localRotation="0,0,0" _localScale="0.7,0.9,0.7" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="6" name="CorpseBody">
 			<GameObject _schemaVersion="0" _name="CorpseBody" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="2.5,1.5,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _bVisible="false" />
+					<MeshComponent _localID="163493842152903304" _localPosition="2.5,1.5,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.866" _bVisible="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="7" name="Bench">
 			<GameObject _schemaVersion="0" _name="Bench" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="2.5,1.2,0.6" _localRotation="0,0,0" _localScale="1.2,0.4,0.6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="2.5,1.2,0.6" _localRotation="0,0,0" _localScale="1.2,0.4,0.6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="8" name="LiftHall">
 			<GameObject _schemaVersion="0" _name="LiftHall" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="5.5,1.6,0.6" _localRotation="0,0,0" _localScale="0.6,1.2,0.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="5.5,1.6,0.6" _localRotation="0,0,0" _localScale="0.6,1.2,0.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="9" name="LiftThrone">
 			<GameObject _schemaVersion="0" _name="LiftThrone" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="27.5,1.6,0.6" _localRotation="0,0,0" _localScale="0.6,1.2,0.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="27.5,1.6,0.6" _localRotation="0,0,0" _localScale="0.6,1.2,0.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="20" name="Husk">
 			<GameObject _schemaVersion="0" _name="Husk" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="9,1.5,0" _localRotation="0,0,0" _localScale="0.9,1,0.9" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="9,1.5,0" _localRotation="0,0,0" _localScale="0.9,1,0.9" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="21" name="Warden">
 			<GameObject _schemaVersion="0" _name="Warden" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="33,1.5,0" _localRotation="0,0,0" _localScale="0.9,1,0.9" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="33,1.5,0" _localRotation="0,0,0" _localScale="0.9,1,0.9" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="22" name="WingsPickup">
 			<GameObject _schemaVersion="0" _name="WingsPickup" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="18,1.5,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="18,1.5,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="23" name="EdgePickup">
 			<GameObject _schemaVersion="0" _name="EdgePickup" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="37,1.5,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="37,1.5,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="10" name="MetroidvaniaGameMode">
 			<GameObject _schemaVersion="0" _name="MetroidvaniaGameMode" _bActive="true">
 				<_listComponent>
-					<MetroidvaniaGameModeComponent _localID="13563141952773540282" _areaDataPath="game/playground/metroidvania/data/caverns.areas.xml" _startPosition="2.5,1.5" _fallY="-3" _markerReach="1" _goalFlag="boss_warden" _playerDamage="50" _playerPoiseDamage="10" _playerReach="2.2" _playerAttackInterval="0.35" _enemyDamage="10" _bossDamage="15" _bossDamageTakenScale="0.4" _enemyReach="1.8" _enemyStartup="0.5" _enemyInterval="1" _respawnDelaySeconds="1" _resultHoldSeconds="3" _seed="7">
+					<MetroidvaniaGameModeComponent _localID="13563141952773540282" _areaDataPath="guid:db36341cb45a419781b6306b02073706" _startPosition="2.5,1.5" _fallY="-3" _markerReach="1" _goalFlag="boss_warden" _playerDamage="50" _playerPoiseDamage="10" _playerReach="2.2" _playerAttackInterval="0.35" _enemyDamage="10" _bossDamage="15" _bossDamageTakenScale="0.4" _enemyReach="1.8" _enemyStartup="0.5" _enemyInterval="1" _respawnDelaySeconds="1" _resultHoldSeconds="3" _seed="7">
 						<_listTerrainRow>
 							<item>########################################</item>
 							<item>#......................................#</item>
@@ -178,7 +178,7 @@
 							<item>23</item>
 						</_listPickupBody>
 					</MetroidvaniaViewComponent>
-					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/metroidvania/ui/hud.ui.xml" />
+					<HUDControllerComponent _localID="17122754535480611078" _documentPath="guid:40568f948b794f5eadfd1450801287b3" />
 				</_listComponent>
 			</GameObject>
 		</entity>

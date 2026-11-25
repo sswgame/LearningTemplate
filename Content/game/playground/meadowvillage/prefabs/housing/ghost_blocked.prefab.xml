@@ -13,7 +13,7 @@
 			               _attachOwner="None"
 			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
-			               _materialPath="game/playground/meadowvillage/materials/housing/ghost_blocked.material"
+			               _materialPath="guid:c507e830bed24d8d9d951d1c8fca8777"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

@@ -4,7 +4,7 @@
      띠 텍스처는 u 가 길이 · v 가 폭이라 둥근 circle_05 를 쓴다(머리 · 꼬리가 흐려진다). 세로 줄인 trace_01 은 한 열만 읽혀 띠가 보이지 않았다. -->
 <VFXEffectDef>
 	<_listEmitter>
-		<VFXEmitterDef _name="Trail" _renderMode="Ribbon" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Additive" _bLooping="true"
+		<VFXEmitterDef _name="Trail" _renderMode="Ribbon" _texturePath="guid:6ccbb6cd99d1e6a55391cd4c91f29516" _blendMode="Additive" _bLooping="true"
 		               _maxParticles="32" _duration="1" _spawnRate="30" _lifetimeMin="0.8" _lifetimeMax="0.8"
 		               _velocityMin="0, 1.5, 0" _velocityMax="0, 1.5, 0" _gravity="0, 0, 0">
 			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.3" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.05" _interpolation="Linear"/></_listKey></_sizeOverLife>

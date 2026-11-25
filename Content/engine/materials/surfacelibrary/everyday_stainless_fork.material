@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="45c238818f58c4a07389f07b16926184"?>
 <!-- 스테인리스 포크 — 밝은 금속, 미세 헤어라인과 잔무늬. 부모(environmentsurface.material)의 값을 바꾸고 Anisotropic 셰이딩 모델(MATERIAL_LOBE_ANISOTROPY)을 고른 프리셋이다. -->
-<MaterialDef formatVersion="0" name="StainlessFork" _base="engine/materials/environmentsurface.material">
+<MaterialDef formatVersion="0" name="StainlessFork" _base="guid:2de2ddc37fa7786ba07716ca4e1c5ded">
 	<_properties>
 		<item name="_baseColor" defaultValue="0.78 0.78 0.79 1"/>
 		<item name="_metallic" defaultValue="1"/>

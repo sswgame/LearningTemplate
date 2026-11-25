@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="2c767795272780d23e7c8f00e56ccbac"?>
 <!-- 얼음 — 매끈한 푸른 표면, 안쪽 균열 칸, 가장자리가 밝은 프레넬, 반짝이. 부모(gimmicksurface.material)의 값만 바꾼 프리셋이다. -->
-<MaterialDef formatVersion="0" name="Ice" _base="engine/materials/gimmicksurface.material">
+<MaterialDef formatVersion="0" name="Ice" _base="guid:8a294f6743a2c3d9e9b1df598f2575d5">
 	<_properties>
 		<item name="_effect" defaultValue="6"/>
 		<item name="_baseColor" defaultValue="0.70 0.85 0.95 1"/>

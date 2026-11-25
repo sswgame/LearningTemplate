@@ -50,7 +50,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _materialPath="guid:51749176fa5a59f663092304d160221f"
 					               _boundsRadius="12" />
 				</_listComponent>
 			</GameObject>
@@ -64,7 +64,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b"
 					               _boundsRadius="1.3" />
 				</_listComponent>
 			</GameObject>
@@ -78,7 +78,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b"
 					               _boundsRadius="1.8" />
 				</_listComponent>
 			</GameObject>
@@ -92,7 +92,7 @@
 					               _attachOwner="None"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _materialPath="guid:8c9750760f544d393d0405c50debad00"
 					               _boundsRadius="1.8"
 					               _appearSeconds="4"
 					               _bAppearOnTeleport="true" />

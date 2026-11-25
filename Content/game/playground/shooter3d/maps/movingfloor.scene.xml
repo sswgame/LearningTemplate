@@ -55,7 +55,7 @@
 					               _attachOwner="None"
 					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/defaultmaterial.material"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -127,8 +127,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="#f5c571168b1146be"
-					               _meshID="common/models/quaternius/scifi/gun_rifle.mesh"
-					               _materialPath="common/models/quaternius/scifi/gun_rifle/materials/mi_guns_batch1.material"
+					               _meshID="guid:f8f9b2bd0d0d184c93df823fc56fa27e"
+					               _materialPath="guid:bd9e4ef074865884a3a14352db7fef42"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -203,12 +203,12 @@
 					</FirstPersonCameraComponent>
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
 					                        _bActive="true"
-					                        _documentPath="game/playground/shooter3d/ui/hud.ui.xml" />
+					                        _documentPath="guid:8e0e9ee5e170cd62744103f69d894e08" />
 					<ShooterPlayerComponent _localID="4923146993261169814" _componentName="ShooterPlayerComponent"
 					                        _bActive="true"
 					                        _gameMode="51"
 					                        _spawnPosition="2.4,0,-5"
-					                        _bodyPrefab="game/playground/shooter3d/prefabs/player_body.prefab.xml"
+					                        _bodyPrefab="guid:89b8fb80a5077f29627a753bb8c9b4ac"
 					                        _eyeHeight="1.6"
 					                        _maxHealth="100"
 					                        _regenDelay="4"
@@ -227,9 +227,9 @@
 				<_listComponent>
 					<ShooterGameModeComponent _localID="13246353635651928858" _componentName="ShooterGameModeComponent"
 					                          _bActive="true"
-					                          _effectPrefab="game/playground/shooter3d/prefabs/effect.prefab.xml"
-					                          _tracerPrefab="game/playground/shooter3d/prefabs/tracer.prefab.xml"
-					                          _autoPlayPrefab="game/playground/shooter3d/prefabs/autoplay_ai.prefab.xml"
+					                          _effectPrefab="guid:f1f248c4fca2ae3b2050c941c365c29e"
+					                          _tracerPrefab="guid:30703977e33786c7530db23759979f13"
+					                          _autoPlayPrefab="guid:db9836711aca7b372e2ebbb9fc0c0eae"
 					                          _player="50"
 					                          _arenaHalfSize="20"
 					                          _effectPoolSize="32"
@@ -291,7 +291,7 @@
 					                 _bOrthographic="false" />
 					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _catalogPath="game/playground/shooter3d/data/shooter.cameras.xml"
+					                         _catalogPath="guid:93848841e4b9069dc60653a33118413b"
 					                         _initialPreset="firstperson"
 					                         _target="50"
 					                         _cycleAction="CycleCamera"

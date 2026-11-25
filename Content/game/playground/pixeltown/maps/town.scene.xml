@@ -47,8 +47,8 @@
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<TileMapComponent _localID="10766413655964845934" _tileMapPath="game/playground/pixeltown/maps/town.tilemap.xml"
-					                          _materialPath="engine/materials/sprite2dpixel.material"
+					<TileMapComponent _localID="10766413655964845934" _tileMapPath="guid:000ee3be79c92795056cbaf23be1298c"
+					                          _materialPath="guid:fc92c1367e380a5e52809d5824e9bdbf"
 					                          _sortingLayer="Default"
 					                          _orderInLayer="-20"
 					                          _colliderLayer="0"
@@ -64,8 +64,8 @@
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<TileMapComponent _localID="10766413655964845934" _tileMapPath="game/playground/pixeltown/maps/townprops.tilemap.xml"
-					                          _materialPath="engine/materials/sprite2dpixel.material"
+					<TileMapComponent _localID="10766413655964845934" _tileMapPath="guid:282c5ac5590c78b8ad05ab8342660d6a"
+					                          _materialPath="guid:fc92c1367e380a5e52809d5824e9bdbf"
 					                          _sortingLayer="Default"
 					                          _orderInLayer="-10"
 					                          _colliderLayer="0"
@@ -81,8 +81,8 @@
 					                 _localScale="1,2,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _clipPath="game/playground/pixeltown/sprites/hero.sprite.xml"
-					                 _materialPath="engine/materials/sprite2dpixel.material"
+					                 _clipPath="guid:7354100977e6417b392a277d432041b2"
+					                 _materialPath="guid:fc92c1367e380a5e52809d5824e9bdbf"
 					                 _sortingLayer="Default"
 					                 _orderInLayer="0" />
 					<SpriteAnimatorComponent _localID="6519445003455735703"
@@ -110,14 +110,14 @@
 					                 _localScale="2,2,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _clipPath="game/playground/pixeltown/sprites/elder.sprite.xml"
-					                 _materialPath="engine/materials/sprite2dpixel.material"
+					                 _clipPath="guid:7f7cd6b4d4ad6a9df44f8dd87631a8d1"
+					                 _materialPath="guid:fc92c1367e380a5e52809d5824e9bdbf"
 					                 _sortingLayer="Default"
 					                 _orderInLayer="0" />
 					<SpriteAnimatorComponent _localID="6519445003455735703"
 					                         _currentAnimation="idle_down"
 					                         _bRepeat="true" />
-					<DialogueRunnerComponent _localID="1294512687050719775" _graphPath="game/playground/pixeltown/dialogue/elder.dialogue.xml" _bPostSubtitles="true">
+					<DialogueRunnerComponent _localID="1294512687050719775" _graphPath="guid:ef7f110232363806a3a073c9d3e3e86f" _bPostSubtitles="true">
 						<_listSpeakerSlot>
 							<DialogueSpeakerSlot _speaker="1" _object="5" />
 						</_listSpeakerSlot>

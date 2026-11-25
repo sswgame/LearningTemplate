@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="0d1ff8d535a0e31eb3ce591c20f20380"?>
 <!-- 외형 라이브러리 프리셋(silk): 공단(더 길게 끌린 광택). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
-<MaterialDef formatVersion="0" name="Satin" _base="engine/materials/library/silk/base.material">
+<MaterialDef formatVersion="0" name="Satin" _base="guid:61a95e3c498c467e0c22926366797aa1">
 	<_properties>
 		<item name="_color" defaultValue="0.55 0.06 0.1 1" />
 		<item name="_secondaryColor" defaultValue="0.5 0.05 0.09 1" />

@@ -26,7 +26,7 @@
 					                 _bOrthographic="true" />
 					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _catalogPath="game/playground/themepark/data/park.cameras.xml"
+					                         _catalogPath="guid:bf4c9892ec246fff9a2eb910f6237815"
 					                         _initialPreset="park"
 					                         _target="19"
 					                         _bReadInput="true">
@@ -47,7 +47,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="game/playground/themepark/materials/grass.material"
+					               _materialPath="guid:b18b3dad5b9d467a7f6872c322a1cd47"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -65,8 +65,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/themepark/models/park_entrance.mesh"
-					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _meshID="guid:37a0a2029a98877360ae3952ffc8f79f"
+					               _materialPath="guid:f98b75136c9751024935391bd97d22c2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -84,8 +84,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/themepark/models/stall_food.mesh"
-					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _meshID="guid:b7c2834fe563aaab5ed0e7208dc50c92"
+					               _materialPath="guid:f98b75136c9751024935391bd97d22c2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -122,8 +122,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/props/bench.mesh"
-					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
+					               _meshID="guid:815dbc7a5ad29d216d5f84067ac16901"
+					               _materialPath="guid:61df2202da4688bdf715764e631cab92"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -131,7 +131,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
+					                      _materialPath="guid:5e5ffa666fcfe078a22595c607480c5a"
 					                      _sectionName="mi_trim_metal" />
 					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -166,8 +166,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/themepark/models/trash.mesh"
-					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _meshID="guid:faa97e09c67530d912dac8d10ade037f"
+					               _materialPath="guid:f98b75136c9751024935391bd97d22c2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -204,8 +204,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/themepark/models/stall_drinks.mesh"
-					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _meshID="guid:53512bc0397770ed4b52c439ea004812"
+					               _materialPath="guid:f98b75136c9751024935391bd97d22c2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -242,8 +242,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/props/bench.mesh"
-					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
+					               _meshID="guid:815dbc7a5ad29d216d5f84067ac16901"
+					               _materialPath="guid:61df2202da4688bdf715764e631cab92"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -251,7 +251,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
+					                      _materialPath="guid:5e5ffa666fcfe078a22595c607480c5a"
 					                      _sectionName="mi_trim_metal" />
 					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -286,8 +286,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/themepark/models/trash.mesh"
-					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _meshID="guid:faa97e09c67530d912dac8d10ade037f"
+					               _materialPath="guid:f98b75136c9751024935391bd97d22c2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -324,8 +324,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/themepark/models/stall_information.mesh"
-					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _meshID="guid:a681cc5e02ba889abfd1081da4c128e0"
+					               _materialPath="guid:f98b75136c9751024935391bd97d22c2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -362,8 +362,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/props/bench.mesh"
-					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
+					               _meshID="guid:815dbc7a5ad29d216d5f84067ac16901"
+					               _materialPath="guid:61df2202da4688bdf715764e631cab92"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -371,7 +371,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
+					                      _materialPath="guid:5e5ffa666fcfe078a22595c607480c5a"
 					                      _sectionName="mi_trim_metal" />
 					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -406,8 +406,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/themepark/models/trash.mesh"
-					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _meshID="guid:faa97e09c67530d912dac8d10ade037f"
+					               _materialPath="guid:f98b75136c9751024935391bd97d22c2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -444,8 +444,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/themepark/models/stall_toilets.mesh"
-					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _meshID="guid:d54b569a1b4c9638cf55558c0acf7556"
+					               _materialPath="guid:f98b75136c9751024935391bd97d22c2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -482,8 +482,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/props/bench.mesh"
-					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
+					               _meshID="guid:815dbc7a5ad29d216d5f84067ac16901"
+					               _materialPath="guid:61df2202da4688bdf715764e631cab92"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -491,7 +491,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
+					                      _materialPath="guid:5e5ffa666fcfe078a22595c607480c5a"
 					                      _sectionName="mi_trim_metal" />
 					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -526,8 +526,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/themepark/models/trash.mesh"
-					               _materialPath="game/playground/themepark/materials/palette.material"
+					               _meshID="guid:faa97e09c67530d912dac8d10ade037f"
+					               _materialPath="guid:f98b75136c9751024935391bd97d22c2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -578,34 +578,34 @@
 					                      _seed="2654435769"
 					                      _mode="Edge">
 						<_listModel>
-							<PropScatterModel _meshID="common/models/quaternius/nature/commontree_1.mesh" _weight="0.25">
+							<PropScatterModel _meshID="guid:82be2f79f149f6c94f6e16d4ae33e5f4" _weight="0.25">
 								<_listSection>
-									<PropScatterSection _sectionName="bark_normaltree" _materialPath="common/models/quaternius/nature/commontree_1/materials/bark_normaltree.material" />
-									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="common/models/quaternius/nature/commontree_1/materials/leaves_normaltree.material" />
+									<PropScatterSection _sectionName="bark_normaltree" _materialPath="guid:beb58ac46c138dca55b739fe9d9a5c0a" />
+									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="guid:a264702a01d2c2818f2d87debc3aee04" />
 								</_listSection>
 							</PropScatterModel>
-							<PropScatterModel _meshID="common/models/quaternius/nature/commontree_2.mesh" _weight="0.2">
+							<PropScatterModel _meshID="guid:ae149e071f6ac062c3df46adab584c11" _weight="0.2">
 								<_listSection>
-									<PropScatterSection _sectionName="bark_normaltree" _materialPath="common/models/quaternius/nature/commontree_2/materials/bark_normaltree.material" />
-									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="common/models/quaternius/nature/commontree_2/materials/leaves_normaltree.material" />
+									<PropScatterSection _sectionName="bark_normaltree" _materialPath="guid:033e0e56e282fe539fc8009e94f288b2" />
+									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="guid:9b2bd000096b5fffacca672cf9174791" />
 								</_listSection>
 							</PropScatterModel>
-							<PropScatterModel _meshID="common/models/quaternius/nature/commontree_3.mesh" _weight="0.15">
+							<PropScatterModel _meshID="guid:c8e78b6dbaab847f61641a64b813e2d6" _weight="0.15">
 								<_listSection>
-									<PropScatterSection _sectionName="bark_normaltree" _materialPath="common/models/quaternius/nature/commontree_3/materials/bark_normaltree.material" />
-									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="common/models/quaternius/nature/commontree_3/materials/leaves_normaltree.material" />
+									<PropScatterSection _sectionName="bark_normaltree" _materialPath="guid:cdee5cc11aa6a9b8ba3e820bbba376dd" />
+									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="guid:7b822b495adac687b1e094fbd999ca91" />
 								</_listSection>
 							</PropScatterModel>
-							<PropScatterModel _meshID="common/models/quaternius/nature/pine_1.mesh" _weight="0.1">
+							<PropScatterModel _meshID="guid:db37905794be27aea29a047e1bf1324d" _weight="0.1">
 								<_listSection>
-									<PropScatterSection _sectionName="bark_normaltree" _materialPath="common/models/quaternius/nature/pine_1/materials/bark_normaltree.material" />
-									<PropScatterSection _sectionName="leaves_pine" _materialPath="common/models/quaternius/nature/pine_1/materials/leaves_pine.material" />
+									<PropScatterSection _sectionName="bark_normaltree" _materialPath="guid:6583b116852fbc490bf37b45c9447ffa" />
+									<PropScatterSection _sectionName="leaves_pine" _materialPath="guid:c1e5a10484a1efd970721266a0f96b23" />
 								</_listSection>
 							</PropScatterModel>
-							<PropScatterModel _meshID="common/models/quaternius/nature/bush_common_flowers.mesh" _weight="0.3">
+							<PropScatterModel _meshID="guid:b34f4e586a11b4e6738529a9c60faeb9" _weight="0.3">
 								<_listSection>
-									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/leaves_normaltree.material" />
-									<PropScatterSection _sectionName="flowers" _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/flowers.material" />
+									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="guid:284b35ec9a775d35485612fbd25fbfe7" />
+									<PropScatterSection _sectionName="flowers" _materialPath="guid:451183a49602986f9f64d40f9589ee1b" />
 								</_listSection>
 							</PropScatterModel>
 						</_listModel>
@@ -654,15 +654,15 @@
 					</ParkGameModeComponent>
 					<ParkViewComponent _localID="6184027395518830417" _componentName="ParkViewComponent"
 					                   _bActive="true"
-					                   _guestPrefab="game/playground/themepark/prefabs/guest.prefab.xml"
-					                   _carFrontPrefab="game/playground/themepark/prefabs/coastercarfront.prefab.xml"
-					                   _carPrefab="game/playground/themepark/prefabs/coastercar.prefab.xml"
-					                   _railPrefab="game/playground/themepark/prefabs/coasterrail.prefab.xml"
-					                   _supportPrefab="game/playground/themepark/prefabs/coastersupport.prefab.xml"
-					                   _stationPrefab="game/playground/themepark/prefabs/coasterstation.prefab.xml"
-					                   _rideEntrancePrefab="game/playground/themepark/prefabs/rideentrance.prefab.xml"
-					                   _pathPrefab="game/playground/themepark/prefabs/path.prefab.xml"
-					                   _flatRidePrefab="game/playground/themepark/prefabs/flatride.prefab.xml"
+					                   _guestPrefab="guid:54ee8ee63c5cd0d39a39de4c5065ef6a"
+					                   _carFrontPrefab="guid:0387581112fae5da240a2bf963a5ba7a"
+					                   _carPrefab="guid:e10e1b7a524de7c36fb18505a605af5c"
+					                   _railPrefab="guid:94c7af9d2a79521e98ae320433386e47"
+					                   _supportPrefab="guid:bbf52b5ce424637af68dca4617e3c6d2"
+					                   _stationPrefab="guid:b38ec3a8bcbecad1365b6ca61355b745"
+					                   _rideEntrancePrefab="guid:ed185ea48083b52f8c2f0e832d4a5d4a"
+					                   _pathPrefab="guid:a2649ac7804e9be9cc5c11f539bd43b8"
+					                   _flatRidePrefab="guid:cc291151065e6b1172dc12accd7a43e5"
 					                   _happyColor="0.3,0.85,0.35,1"
 					                   _contentColor="0.95,0.85,0.25,1"
 					                   _unhappyColor="0.9,0.25,0.2,1"

@@ -4,7 +4,7 @@
      측정: py -3 -m Scripts perf-compare --cases vfxGpuLights256 (씬 game/playground/maps/vfxgpulights256.scene.xml). 기준은 슬롯 32(gpusparklights). -->
 <VFXEffectDef>
 	<_listEmitter>
-		<VFXEmitterDef _name="LitEmbers" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Additive" _bLooping="true"
+		<VFXEmitterDef _name="LitEmbers" _texturePath="guid:6ccbb6cd99d1e6a55391cd4c91f29516" _blendMode="Additive" _bLooping="true"
 		               _maxParticles="256" _duration="1" _spawnRate="120" _lifetimeMin="1.5" _lifetimeMax="2"
 		               _velocityMin="-1, 1, -1" _velocityMax="1, 3, 1" _gravity="0, -9.8, 0">
 			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.02" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.02" _interpolation="Linear"/></_listKey></_sizeOverLife>

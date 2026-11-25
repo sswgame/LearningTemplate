@@ -51,7 +51,7 @@
 					                             _attackAction="KitDemo.Attack"
 					                             _dashAction="KitDemo.Dash"
 					                             _playerView="3"
-					                             _spherePrefab="game/playground/prefabs/ruleviews/sphere.prefab.xml" />
+					                             _spherePrefab="guid:b92426b2b59ef865478a176cc6ad30e7" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -98,7 +98,7 @@
 		<entity id="6" name="RoomHUD">
 			<GameObject _schemaVersion="0" _name="RoomHUD" _bActive="true">
 				<_listComponent>
-					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true" _documentPath="game/playground/ui/actionroom.ui.xml" />
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true" _documentPath="guid:40d0aa0b4253d754d4447f50f6980bba" />
 					<ActionRoomHUDComponent _localID="5120394671823349907" _componentName="ActionRoomHUDComponent" _bActive="true" />
 				</_listComponent>
 			</GameObject>

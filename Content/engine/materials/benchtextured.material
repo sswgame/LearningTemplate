@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="5634e58d4c5e4c2b50d7902ed885a5cb"?>
 <!-- 벤치·시각 검증용: 기본 머티리얼과 같지만 _albedoMap 이 DXT1(BC1) 텍스처를 가리킨다. -gv_defaultMaterial 로 고른다. -->
-<MaterialDef formatVersion="0" name="StressTestTextured" _base="engine/materials/defaultmaterial.material">
+<MaterialDef formatVersion="0" name="StressTestTextured" _base="guid:0e23c2ee4018be638b51655cf03239d2">
 	<_properties>
 		<item name="_albedoMap" assetPath="engine/textures/test/checker.dds" />
 	</_properties>

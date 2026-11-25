@@ -30,7 +30,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="40,1,40" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="40,1,40" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -45,14 +45,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,1,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,1,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:0e23c2ee4018be638b51655cf03239d2" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="5" name="Curtain">
 			<GameObject _schemaVersion="0" _name="Curtain" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="4,3,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="game/playground/materials/toonshowcase_lit.material" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="4,3,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="guid:2c1cce8b2bc8b7d55066be67130652aa" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" />
 					<ClothComponent _localID="10065198837581336125" _width="1" _height="1" _columnCount="9" _rowCount="9" _pinMode="TopEdge" _mass="0.5" _stretchCompliance="0" _shearCompliance="0" _bendCompliance="0.001" _linearDamping="0.1" _friction="0.6" _gravityFactor="1" _vertexRadius="0.02" _iterationCount="8" _layer="Default" />
 				</_listComponent>
 			</GameObject>
@@ -60,7 +60,7 @@
 		<entity id="6" name="Sheet">
 			<GameObject _schemaVersion="0" _name="Sheet" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,1.6,0" _localRotation="1.5707963,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="game/playground/materials/toonshowcase_lit.material" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1.6,0" _localRotation="1.5707963,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="guid:2c1cce8b2bc8b7d55066be67130652aa" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" />
 					<ClothComponent _localID="10065198837581336125" _width="2" _height="1" _columnCount="17" _rowCount="9" _pinMode="None" _mass="0.5" _stretchCompliance="0" _shearCompliance="0" _bendCompliance="0.001" _linearDamping="0.1" _friction="0.6" _gravityFactor="1" _vertexRadius="0.02" _iterationCount="8" _layer="Default" />
 				</_listComponent>
 			</GameObject>

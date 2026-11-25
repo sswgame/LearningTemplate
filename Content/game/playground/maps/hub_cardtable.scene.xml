@@ -9,21 +9,21 @@
 		<entity id="1" name="Table">
 			<GameObject _schemaVersion="0" _name="Table" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.6,3" _localRotation="0,0,0" _localScale="2.4,0.8,1.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.6,3" _localRotation="0,0,0" _localScale="2.4,0.8,1.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Deck">
 			<GameObject _schemaVersion="0" _name="Deck" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="-0.5,-0.15,3" _localRotation="0,0,0" _localScale="0.3,0.1,0.45" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-0.5,-0.15,3" _localRotation="0,0,0" _localScale="0.3,0.1,0.45" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.866" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="3" name="Hand">
 			<GameObject _schemaVersion="0" _name="Hand" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0.5,-0.18,3" _localRotation="0,0,0" _localScale="0.6,0.04,0.45" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0.5,-0.18,3" _localRotation="0,0,0" _localScale="0.6,0.04,0.45" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.866" />
 				</_listComponent>
 			</GameObject>
 		</entity>

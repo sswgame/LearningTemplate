@@ -1,38 +1,38 @@
 <?asset guid="03d0a103fa865b8bd811cda6faeb90de"?>
-<StressTestSceneSettings _knightMesh="common/models/kaykit/knight.mesh"
-                    _knightMaterial="common/materials/kaykit_knight.material"
-                    _knightSkeleton="common/models/kaykit/knight/knight.skeleton.xml"
-                    _knightClips="common/models/kaykit/knight/knight.animset.xml"
+<StressTestSceneSettings _knightMesh="guid:0a55fa69f6f749e88ca135bc3d803483"
+                    _knightMaterial="guid:0b440989e7fbcb53768a75149e9b6bdb"
+                    _knightSkeleton="guid:03273c012fee9c977aa7fb87663429b1"
+                    _knightClips="guid:5cdc50168836caff61298efe87d056fc"
                     _characterEvenClip="Idle"
                     _characterOddClip="Walking_A"
-                    _faceMesh="game/playground/models/testhead.mesh"
-                    _faceSkeleton="game/playground/models/testhead/testhead.skeleton.xml"
-                    _faceClips="game/playground/models/testhead/testhead.animset.xml"
-                    _faceRig="game/playground/data/testhead.facial.xml"
-                    _faceVoice="game/playground/voice/testline.wav"
+                    _faceMesh="guid:a8bed4f48f809671826186595f09b437"
+                    _faceSkeleton="guid:5a218b04c1623225764b811a57430d35"
+                    _faceClips="guid:d4ddca312858dace9209badaee5f303d"
+                    _faceRig="guid:8c27f89e6897f9da8bcb946b4d3c358f"
+                    _faceVoice="guid:e329cca25c1a5837f300bc436b023dac"
                     _faceTalkClip="Talk"
                     _faceExpression="Happy"
-                    _glassMaterial="engine/materials/glassmaterial.material"
-                    _permutationMaterial="game/playground/materials/stresstest_permutation.material"
+                    _glassMaterial="guid:d3a34da7fb773e70492bd5081b0acded"
+                    _permutationMaterial="guid:fc971e7bc3e960427217eb1d6b6c18ae"
                     _rigAimState="2H_Ranged_Aiming"
-                    _rigWeaponMesh="common/models/kaykit/rogue/parts/2h_crossbow.mesh"
-                    _rigWeaponMaterial="common/materials/kaykit_rogue.material"
-                    _rigCapeMesh="common/models/kaykit/knight/parts/knight_cape.mesh"
-                    _rigCapeMaterial="common/materials/kaykit_knight.material"
-                    _rigKnightRig="common/rigs/knight.rig.xml"
-                    _rigWeaponRig="common/rigs/knight_weapon.rig.xml"
-                    _rigCapeRig="common/rigs/knight_cape.rig.xml"
-                    _rigCapeSkeleton="common/rigs/knight_cape.skeleton.xml"
-                    _rigWeaponSockets="common/rigs/crossbow_2h.sockets.xml"
-                    _combatEnemyMesh="common/models/kaykit/skeleton_warrior.mesh"
-                    _combatEnemyMaterial="common/materials/kaykit_skeleton.material"
-                    _combatEnemySkeleton="common/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.xml"
-                    _combatEnemyClips="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml"
-                    _combatEnemyNotifies="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml"
-                    _combatEnemySockets="common/characters/skeleton_warrior/skeleton_warrior.sockets.xml"
-                    _combatEnemyPhysics="common/characters/skeleton_warrior/skeleton_warrior.physics.xml"
-                    _combatSwordMesh="common/models/kaykit/skeleton_blade.mesh"
-                    _combatSwordMaterial="common/materials/kaykit_skeleton.material"
+                    _rigWeaponMesh="guid:bcddec722161684d5d68d9bdff60c866"
+                    _rigWeaponMaterial="guid:eab2332dcf9f011cb2733c761c7a0cc5"
+                    _rigCapeMesh="guid:1d3efc667a508f4ac80f370484e573e3"
+                    _rigCapeMaterial="guid:0b440989e7fbcb53768a75149e9b6bdb"
+                    _rigKnightRig="guid:7bf484d88aae3122567033bcab852c8b"
+                    _rigWeaponRig="guid:bdccc8ee26345fa9c3e2c6c0d8f6a30b"
+                    _rigCapeRig="guid:3e8ceeba845e62f010ddabfd422f0d83"
+                    _rigCapeSkeleton="guid:a21aa11620d90edb6aa14aad5fe67d86"
+                    _rigWeaponSockets="guid:0069524abbb317bc54dd98f0bb7ed23b"
+                    _combatEnemyMesh="guid:0cc992c7d9fd8f937dae3b221b7660a5"
+                    _combatEnemyMaterial="guid:f20c72a82580d41a01e67363572af6e1"
+                    _combatEnemySkeleton="guid:1dc4e94180a5227a8cfb7e4234ff232d"
+                    _combatEnemyClips="guid:f16f0881b585be5590c84b56aa39346f"
+                    _combatEnemyNotifies="guid:41d588160a20a771c2a97324cfa7aca3"
+                    _combatEnemySockets="guid:88459ede77129d62f7781de030072fad"
+                    _combatEnemyPhysics="guid:838a817bb59114526689cc7f27a02f17"
+                    _combatSwordMesh="guid:d2b584987a934d2ac14f864bef8e701b"
+                    _combatSwordMaterial="guid:f20c72a82580d41a01e67363572af6e1"
                     _combatShooterRange="3"
                     _cubeSpacing="2"
                     _cameraHeightRatio="0.28"
@@ -114,13 +114,13 @@
                     _nameplateBackgroundColor="0.1,0.1,0.1,0.8"
                     _hangulTextWidth="900">
 	<_listScanProp>
-		<StressTestScanProp _mesh="common/models/polyhaven/barrel_03.mesh" _material="common/models/polyhaven/barrel_03/materials/barrel_03.material" />
-		<StressTestScanProp _mesh="common/models/polyhaven/concrete_road_barrier.mesh" _material="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material" />
-		<StressTestScanProp _mesh="common/models/polyhaven/industrial_pastic_container.mesh" _material="common/models/polyhaven/industrial_pastic_container/materials/industrial_pastic_container.material" />
-		<StressTestScanProp _mesh="common/models/polyhaven/metal_jerrycan.mesh" _material="common/models/polyhaven/metal_jerrycan/materials/metal_jerrycan.material" />
-		<StressTestScanProp _mesh="common/models/polyhaven/old_military_crate.mesh" _material="common/models/polyhaven/old_military_crate/materials/military_crate_m_01.material" />
-		<StressTestScanProp _mesh="common/models/polyhaven/power_box_01.mesh" _material="common/models/polyhaven/power_box_01/materials/power_box_01.material" />
-		<StressTestScanProp _mesh="common/models/polyhaven/propane_tank.mesh" _material="common/models/polyhaven/propane_tank/materials/propane_tank.material" />
-		<StressTestScanProp _mesh="common/models/polyhaven/wooden_crate_01.mesh" _material="common/models/polyhaven/wooden_crate_01/materials/wooden_crate_01.material" />
+		<StressTestScanProp _mesh="guid:d687e9ad1468083b43a5853e622571bf" _material="guid:8019c36c607865404f18b442ea604cc2" />
+		<StressTestScanProp _mesh="guid:7c2aec7992f38bfe2711ee6735319ea8" _material="guid:b859dd90e58e900f2c07cad6bb977a25" />
+		<StressTestScanProp _mesh="guid:5dc84b0be15d28e8c72c5d2d3450d3b0" _material="guid:632f3252acf21ae3a348722b098fb613" />
+		<StressTestScanProp _mesh="guid:33d0e585ab3d132244a95d129e5aa17f" _material="guid:01cf48fed3b5a2839345a3d84a70742d" />
+		<StressTestScanProp _mesh="guid:d78f939cf9354e97d87c5c6215bfe636" _material="guid:d5984388bcc17434b2db8739412931df" />
+		<StressTestScanProp _mesh="guid:4c680031b8b67419161950a43191a08b" _material="guid:91108e848cda3caac31371996b31ad75" />
+		<StressTestScanProp _mesh="guid:b51b00e9ade33bfd129f43c246bc6c55" _material="guid:795b84a1a681b8bd8762d04cd83e255b" />
+		<StressTestScanProp _mesh="guid:6af190870e0fae6cbcebf85dd5f15286" _material="guid:7d8d7737abb8b89751cb6a1fbe61d0d9" />
 	</_listScanProp>
 </StressTestSceneSettings>

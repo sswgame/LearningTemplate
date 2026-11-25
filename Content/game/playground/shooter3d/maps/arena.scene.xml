@@ -16,7 +16,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="game/playground/shooter3d/materials/floor.material"
+					               _materialPath="guid:4d4bf5a109be9458f9b57d913e137a49"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -67,7 +67,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/wall.material"
+					               _materialPath="guid:9e327da44de61e7e84ec2aba599d4825"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -87,7 +87,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/wall.material"
+					               _materialPath="guid:9e327da44de61e7e84ec2aba599d4825"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -107,7 +107,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/wall.material"
+					               _materialPath="guid:9e327da44de61e7e84ec2aba599d4825"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -127,7 +127,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/wall.material"
+					               _materialPath="guid:9e327da44de61e7e84ec2aba599d4825"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -147,7 +147,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/cover.material"
+					               _materialPath="guid:8365a6f57d7b62f860ace2599e5c2888"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -167,7 +167,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/cover.material"
+					               _materialPath="guid:8365a6f57d7b62f860ace2599e5c2888"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -187,7 +187,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/cover.material"
+					               _materialPath="guid:8365a6f57d7b62f860ace2599e5c2888"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -207,7 +207,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/cover.material"
+					               _materialPath="guid:8365a6f57d7b62f860ace2599e5c2888"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -227,7 +227,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/cover.material"
+					               _materialPath="guid:8365a6f57d7b62f860ace2599e5c2888"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -247,7 +247,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/cover.material"
+					               _materialPath="guid:8365a6f57d7b62f860ace2599e5c2888"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -267,7 +267,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/cover.material"
+					               _materialPath="guid:8365a6f57d7b62f860ace2599e5c2888"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -287,7 +287,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/cover.material"
+					               _materialPath="guid:8365a6f57d7b62f860ace2599e5c2888"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -307,7 +307,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/cover.material"
+					               _materialPath="guid:8365a6f57d7b62f860ace2599e5c2888"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -327,7 +327,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/cover.material"
+					               _materialPath="guid:8365a6f57d7b62f860ace2599e5c2888"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -504,8 +504,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="#f5c571168b1146be"
-					               _meshID="common/models/quaternius/scifi/gun_rifle.mesh"
-					               _materialPath="common/models/quaternius/scifi/gun_rifle/materials/mi_guns_batch1.material"
+					               _meshID="guid:f8f9b2bd0d0d184c93df823fc56fa27e"
+					               _materialPath="guid:bd9e4ef074865884a3a14352db7fef42"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -581,12 +581,12 @@
 					</FirstPersonCameraComponent>
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
 					                        _bActive="true"
-					                        _documentPath="game/playground/shooter3d/ui/hud.ui.xml" />
+					                        _documentPath="guid:8e0e9ee5e170cd62744103f69d894e08" />
 					<ShooterPlayerComponent _localID="4923146993261169814" _componentName="ShooterPlayerComponent"
 					                        _bActive="true"
 					                        _gameMode="51"
 					                        _spawnPosition="0,0,-16"
-					                        _bodyPrefab="game/playground/shooter3d/prefabs/player_body.prefab.xml"
+					                        _bodyPrefab="guid:89b8fb80a5077f29627a753bb8c9b4ac"
 					                        _eyeHeight="1.6"
 					                        _maxHealth="100"
 					                        _regenDelay="4"
@@ -605,36 +605,36 @@
 				<_listComponent>
 					<ShooterGameModeComponent _localID="13246353635651928858" _componentName="ShooterGameModeComponent"
 					                          _bActive="true"
-					                          _effectPrefab="game/playground/shooter3d/prefabs/effect.prefab.xml"
-					                          _tracerPrefab="game/playground/shooter3d/prefabs/tracer.prefab.xml"
-					                          _autoPlayPrefab="game/playground/shooter3d/prefabs/autoplay_ai.prefab.xml"
+					                          _effectPrefab="guid:f1f248c4fca2ae3b2050c941c365c29e"
+					                          _tracerPrefab="guid:30703977e33786c7530db23759979f13"
+					                          _autoPlayPrefab="guid:db9836711aca7b372e2ebbb9fc0c0eae"
 					                          _player="50"
 					                          _arenaHalfSize="20"
 					                          _pacingProfile="game/playground/shooter3d/data/arena.director.xml"
-					                          _spawnTable="game/playground/shooter3d/data/arena.spawns.xml"
+					                          _spawnTable="guid:12cb4974b26306129fddf631e4704b55"
 					                          _pacingSeed="1"
 					                          _effectPoolSize="32"
 					                          _tracerPoolSize="24"
 					                          _matchDownLimit="3"
 					                          _bAutoPlay="false">
 						<_listEnemyKind>
-							<ShooterEnemyKind _prefab="game/playground/shooter3d/prefabs/quadshell.prefab.xml" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="game/playground/shooter3d/prefabs/quadshell.prefab.xml" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="game/playground/shooter3d/prefabs/trilobite.prefab.xml" _preset="Trilobite">
+							<ShooterEnemyKind _prefab="guid:487e9f4458a7d6ecf66c371db3a72749" _preset="Trilobite">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="game/playground/shooter3d/prefabs/quadshell.prefab.xml" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="game/playground/shooter3d/prefabs/skeleton.prefab.xml" _preset="SkeletonMinion">
+							<ShooterEnemyKind _prefab="guid:d09c50d9428157b3c1ac9ebde784336d" _preset="SkeletonMinion">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
 						</_listEnemyKind>
-						<_eliteEnemyKind _prefab="game/playground/shooter3d/prefabs/trilobite.prefab.xml" _preset="Trilobite">
+						<_eliteEnemyKind _prefab="guid:487e9f4458a7d6ecf66c371db3a72749" _preset="Trilobite">
 							<_pool _maxIdleCount="8" />
 						</_eliteEnemyKind>
 						<_enemyGrowth _baseHealth="30" _healthPerWave="10" _minHealthScale="0.1" _baseSpeed="2.2" _speedPerWave="0.3" _maxSpeed="5.5" />
@@ -703,7 +703,7 @@
 					                 _bOrthographic="false" />
 					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _catalogPath="game/playground/shooter3d/data/shooter.cameras.xml"
+					                         _catalogPath="guid:93848841e4b9069dc60653a33118413b"
 					                         _initialPreset="firstperson"
 					                         _target="50"
 					                         _cycleAction="CycleCamera"
@@ -744,7 +744,7 @@
 					</CameraComponent>
 					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _catalogPath="game/playground/shooter3d/data/cctv.cameras.xml"
+					                         _catalogPath="guid:64c9075b3f4c14200da7b99039332760"
 					                         _initialPreset="cctv_sweep"
 					                         _bReadInput="false">
 						<_listGroupTarget />
@@ -764,7 +764,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/shooter3d/materials/cctvmonitor.material"
+					               _materialPath="guid:aa706f2ac93ff2aac820a5b7ccd52750"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -797,8 +797,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/barrel_large.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:ef1d90eb24fc2c860a1fbc1ec7f7233b"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -816,8 +816,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/barrel_small.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:8ce79ed8e8d60a8b5caa820d242be4e8"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -835,8 +835,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/barrier.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:c90e48c175701979754691cd0a35bf42"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -854,8 +854,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/barrier_column.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:adaaf0f0013699a896b730a8dd9c45e1"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -873,8 +873,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/barrier_corner.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:0259a8d9fcd659e15d3ee8dab59fbd1f"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -892,8 +892,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/barrier_half.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:05ed6b84bc1298e443564670fb6205ac"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -911,8 +911,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/box_large.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:3f9ce121ff5a0c50f6fb7f3fee424dd2"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -930,8 +930,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/box_small.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:bfd914a8653cdd29327d37feb10d9948"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -949,8 +949,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/column.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:a2faca58160d701cd4f24ba9de5d85d6"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -968,8 +968,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/crates_stacked.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:a0f151db8021a9af35c5248879c8af9f"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -987,8 +987,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/floor_tile_large.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:5fe112eb39fcd4678a2a56cf8a184bc9"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1006,8 +1006,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/floor_tile_small.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:158d085c74791240cf14e80f5e435078"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1025,8 +1025,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/keg.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:770e0ad71dc43feaacabf23135be6f11"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1044,8 +1044,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/pillar.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:9c8477f61cb4826b50882154b5752951"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1063,8 +1063,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/wall.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:4ed024004cbf6003902fb8392c4f1ed1"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1082,8 +1082,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/wall_broken.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:12b2d6ec53be0fec1c398c3aae566b5a"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1101,8 +1101,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/wall_corner.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:ec5cda432f37e4d5d58ecd34c7fb7b3e"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1120,8 +1120,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/wall_doorway.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:a500f05355a7d157a774854bd5be5c17"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1139,8 +1139,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/shooter3d/models/kaykit_dungeon/wall_half.mesh"
-					               _materialPath="game/playground/shooter3d/materials/kaykit_dungeon.material"
+					               _meshID="guid:fb02107615e625ef3c7b2ce1a95bc256"
+					               _materialPath="guid:82339b09ea46ff64b6bd796ec3b14b7f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1158,8 +1158,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/concrete_road_barrier.mesh"
-					               _materialPath="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material"
+					               _meshID="guid:7c2aec7992f38bfe2711ee6735319ea8"
+					               _materialPath="guid:b859dd90e58e900f2c07cad6bb977a25"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1178,8 +1178,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/concrete_road_barrier.mesh"
-					               _materialPath="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material"
+					               _meshID="guid:7c2aec7992f38bfe2711ee6735319ea8"
+					               _materialPath="guid:b859dd90e58e900f2c07cad6bb977a25"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1198,8 +1198,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/concrete_road_barrier.mesh"
-					               _materialPath="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material"
+					               _meshID="guid:7c2aec7992f38bfe2711ee6735319ea8"
+					               _materialPath="guid:b859dd90e58e900f2c07cad6bb977a25"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1218,8 +1218,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/concrete_road_barrier.mesh"
-					               _materialPath="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material"
+					               _meshID="guid:7c2aec7992f38bfe2711ee6735319ea8"
+					               _materialPath="guid:b859dd90e58e900f2c07cad6bb977a25"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1238,8 +1238,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/barrel_03.mesh"
-					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _meshID="guid:d687e9ad1468083b43a5853e622571bf"
+					               _materialPath="guid:8019c36c607865404f18b442ea604cc2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1258,8 +1258,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/barrel_03.mesh"
-					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _meshID="guid:d687e9ad1468083b43a5853e622571bf"
+					               _materialPath="guid:8019c36c607865404f18b442ea604cc2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1278,8 +1278,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/barrel_03.mesh"
-					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _meshID="guid:d687e9ad1468083b43a5853e622571bf"
+					               _materialPath="guid:8019c36c607865404f18b442ea604cc2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1298,8 +1298,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/barrel_03.mesh"
-					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _meshID="guid:d687e9ad1468083b43a5853e622571bf"
+					               _materialPath="guid:8019c36c607865404f18b442ea604cc2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1318,8 +1318,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/barrel_03.mesh"
-					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _meshID="guid:d687e9ad1468083b43a5853e622571bf"
+					               _materialPath="guid:8019c36c607865404f18b442ea604cc2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1338,8 +1338,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/barrel_03.mesh"
-					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _meshID="guid:d687e9ad1468083b43a5853e622571bf"
+					               _materialPath="guid:8019c36c607865404f18b442ea604cc2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1358,8 +1358,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/barrel_03.mesh"
-					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _meshID="guid:d687e9ad1468083b43a5853e622571bf"
+					               _materialPath="guid:8019c36c607865404f18b442ea604cc2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1378,8 +1378,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/wooden_crate_01.mesh"
-					               _materialPath="common/models/polyhaven/wooden_crate_01/materials/wooden_crate_01.material"
+					               _meshID="guid:6af190870e0fae6cbcebf85dd5f15286"
+					               _materialPath="guid:7d8d7737abb8b89751cb6a1fbe61d0d9"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1398,8 +1398,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/wooden_crate_01.mesh"
-					               _materialPath="common/models/polyhaven/wooden_crate_01/materials/wooden_crate_01.material"
+					               _meshID="guid:6af190870e0fae6cbcebf85dd5f15286"
+					               _materialPath="guid:7d8d7737abb8b89751cb6a1fbe61d0d9"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1418,8 +1418,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/wooden_crate_01.mesh"
-					               _materialPath="common/models/polyhaven/wooden_crate_01/materials/wooden_crate_01.material"
+					               _meshID="guid:6af190870e0fae6cbcebf85dd5f15286"
+					               _materialPath="guid:7d8d7737abb8b89751cb6a1fbe61d0d9"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1438,8 +1438,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/propane_tank.mesh"
-					               _materialPath="common/models/polyhaven/propane_tank/materials/propane_tank.material"
+					               _meshID="guid:b51b00e9ade33bfd129f43c246bc6c55"
+					               _materialPath="guid:795b84a1a681b8bd8762d04cd83e255b"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1458,8 +1458,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/propane_tank.mesh"
-					               _materialPath="common/models/polyhaven/propane_tank/materials/propane_tank.material"
+					               _meshID="guid:b51b00e9ade33bfd129f43c246bc6c55"
+					               _materialPath="guid:795b84a1a681b8bd8762d04cd83e255b"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1478,8 +1478,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/metal_jerrycan.mesh"
-					               _materialPath="common/models/polyhaven/metal_jerrycan/materials/metal_jerrycan.material"
+					               _meshID="guid:33d0e585ab3d132244a95d129e5aa17f"
+					               _materialPath="guid:01cf48fed3b5a2839345a3d84a70742d"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1498,8 +1498,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/metal_jerrycan.mesh"
-					               _materialPath="common/models/polyhaven/metal_jerrycan/materials/metal_jerrycan.material"
+					               _meshID="guid:33d0e585ab3d132244a95d129e5aa17f"
+					               _materialPath="guid:01cf48fed3b5a2839345a3d84a70742d"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1518,8 +1518,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/industrial_pastic_container.mesh"
-					               _materialPath="common/models/polyhaven/industrial_pastic_container/materials/industrial_pastic_container.material"
+					               _meshID="guid:5dc84b0be15d28e8c72c5d2d3450d3b0"
+					               _materialPath="guid:632f3252acf21ae3a348722b098fb613"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1538,8 +1538,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/industrial_pastic_container.mesh"
-					               _materialPath="common/models/polyhaven/industrial_pastic_container/materials/industrial_pastic_container.material"
+					               _meshID="guid:5dc84b0be15d28e8c72c5d2d3450d3b0"
+					               _materialPath="guid:632f3252acf21ae3a348722b098fb613"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1558,8 +1558,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/power_box_01.mesh"
-					               _materialPath="common/models/polyhaven/power_box_01/materials/power_box_01.material"
+					               _meshID="guid:4c680031b8b67419161950a43191a08b"
+					               _materialPath="guid:91108e848cda3caac31371996b31ad75"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1577,8 +1577,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/polyhaven/power_box_01.mesh"
-					               _materialPath="common/models/polyhaven/power_box_01/materials/power_box_01.material"
+					               _meshID="guid:4c680031b8b67419161950a43191a08b"
+					               _materialPath="guid:91108e848cda3caac31371996b31ad75"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />

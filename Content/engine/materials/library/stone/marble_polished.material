@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="5037f3adeb11b105b77d555324a32a61"?>
 <!-- 외형 라이브러리 프리셋(stone): 광낸 대리석. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
-<MaterialDef formatVersion="0" name="MarblePolished" _base="engine/materials/library/stone/base.material">
+<MaterialDef formatVersion="0" name="MarblePolished" _base="guid:cf0c0dafe2edd285c3e0926cb34d729c">
 	<_properties>
 		<item name="_color" defaultValue="0.9 0.89 0.86 1" />
 		<item name="_secondaryColor" defaultValue="0.55 0.55 0.58 1" />

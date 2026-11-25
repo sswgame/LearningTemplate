@@ -19,7 +19,7 @@
 			               _attachOwnerID="0"
 			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
-			               _materialPath="engine/materials/defaultmaterial.material"
+			               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
@@ -34,7 +34,7 @@
 			</GimmickSensorComponent>
 			<ElementStatusComponent _localID="11244445018458652199" _componentName="ElementStatusComponent"
 			                        _bActive="true"
-			                        _tablePath="common/data/elements/default.elements.xml"
+			                        _tablePath="guid:ac01140596a95e56bae3086435957f8a"
 			                        _elementMaterial="Torch"
 			                        _signalStatus="Burning"
 			                        _startStimulus="None" />

@@ -32,8 +32,8 @@
 					                 _localScale="20,12,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _textureName="engine/textures/prototype/grid_light.dds"
-					                 _materialPath="engine/materials/sprite2dlit.material"
+					                 _textureName="guid:3ef33cfa2122b8bed4be86682dbed8b2"
+					                 _materialPath="guid:39c05fe22138bb5dc3f0ba06404fe9e4"
 					                 _sortingLayer="Background"
 					                 _orderInLayer="0" />
 				</_listComponent>
@@ -56,7 +56,7 @@
 					                       _outerAngle="360"
 					                       _normalMapHeight="1"
 					                       _bCastShadows="false"
-					                       _cookieTexturePath="engine/textures/particles/kenney_particle/window_01.dds" />
+					                       _cookieTexturePath="guid:1ffd69eb3bb88ed8a0184d72f734e724" />
 				</_listComponent>
 			</GameObject>
 		</entity>

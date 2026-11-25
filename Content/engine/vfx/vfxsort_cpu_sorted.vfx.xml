@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="cc0e07ab74f24e34b041da04cc54c4ec"?>
 <!-- vfxsort_cpu 변형 — 퍼프를 뷰 깊이로 정렬한다(먼 것부터, 뷰마다 — 주 시점과 반대편 PiP 가 서로 다른 순서). 시나리오 game/playground/automation/vfxsort. -->
-<VFXEffectDef _base="engine/vfx/vfxsort_cpu.vfx.xml">
+<VFXEffectDef _base="guid:f3d22e6f9a7f42c8a1ddd943c05161df">
 	<_listEmitter>
 		<VFXEmitterDef _name="Puffs" _sortMode="ViewDepth" />
 	</_listEmitter>
