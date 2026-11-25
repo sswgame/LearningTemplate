@@ -24,12 +24,12 @@
 #include "DevTools/Maintenance/SavedCleanupSubsystem.h"
 #include "DevTools/Network/NetLineEmulation.h"
 #include "DevTools/Network/NetListenLaunch.h"
+#include "DevTools/Network/ServerPoseOverlay.h"
 #include "DevTools/Profiling/FrameProfileSession.h"
 #include "DevTools/Profiling/Memory/MemoryExportSubsystem.h"
 #include "DevTools/Profiling/ProfilerLaunchSubsystem.h"
 #include "DevTools/Profiling/ProfilerTraceExport.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
-#include "DevTools/ServerPose/ServerPoseOverlay.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Engine.h"

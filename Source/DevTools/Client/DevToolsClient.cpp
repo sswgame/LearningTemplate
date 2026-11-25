@@ -1,7 +1,10 @@
 #include "pch.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -12,11 +15,11 @@
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 #include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 #include "DevTools/Client/Capture/StartupCaptureSubsystem.h"
-#include "DevTools/Client/Console/DevConsoleOverlay.h"
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
 #include "DevTools/Client/Diagnostics/AssertDialog.h"
 #include "DevTools/Client/Shader/LiveShaderSubsystem.h"
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
+#include "DevTools/Console/DevConsoleController.h"
 #include "DevTools/DevToolsClientPart.h"
 #include "DevTools/Diagnostics/CrashInjection.h"
 
@@ -31,11 +34,163 @@
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/UI/Layout/BoxPanel.h"
+#include "Engine/UI/Layout/CanvasPanel.h"
+#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/Widgets/BorderPanel.h"
+#include "Engine/UI/Widgets/TextWidget.h"
+#include "Engine/UI/Widgets/UIBrush.h"
 #include "Engine/Visual/MeshLODSystem.h"
 
 namespace sw
 {
+    /**
+     * @class DevConsoleOverlay
+     * @brief 게임 창 위쪽에 출력 줄과 입력 줄을 런타임 UI 오버레이로 그리는 화면 하나입니다(플랫폼 창을 띄우지 않는다 — 언리얼 `UConsole` 이 뷰포트 캔버스에 그리는 자리). 그리기만 한다 — 키보드는 `InputManager` 의 콘솔 포커스로 받는다.
+     * @details 화면은 오버레이 레이어라서 포커스 · 포인터 · 게임 입력을 받지 않는다. 줄 위젯은 처음 보일 때 정해진 수만큼 만들고 글만 바꾼다.
+     */
+    class DevConsoleOverlay final : public IDevConsoleView
+    {
+    public:
+        explicit DevConsoleOverlay( UISystem& ui );
+        ~DevConsoleOverlay() override;
+        DevConsoleOverlay( const DevConsoleOverlay& )            = delete;
+        DevConsoleOverlay& operator=( const DevConsoleOverlay& ) = delete;
+
+        /** @brief 화면을 열거나 닫습니다. */
+        void setVisible( bool bVisible ) override;
+        /** @brief 그릴 줄(위에서 아래로)을 넘깁니다. @p listErrorFlag 가 0 이 아닌 줄은 오류 색, 마지막 줄(입력 줄)은 입력 색으로 그립니다. */
+        void present( const vector<string>& listLine, const vector<uint8>& listErrorFlag ) override;
+
+    private:
+        UISystem*      _pUI;
+        UIScreenHandle _screen; ///< 오버레이 화면입니다(닫혀 있으면 무효).
+    };
+
+    namespace
+    {
+        struct DevConsoleOverlayInternal
+        {
+            static constexpr float32 kFontSize = 14.0f;
+            static constexpr float4  kPanelColor{ 0.07f, 0.08f, 0.1f, 0.92f };
+            static constexpr float4  kLineColor{ 0.84f, 0.86f, 0.9f, 1.0f };
+            static constexpr float4  kErrorColor{ 1.0f, 0.47f, 0.43f, 1.0f };
+            static constexpr float4  kInputColor{ 1.0f, 0.86f, 0.47f, 1.0f };
+            static constexpr float4  kPanelPadding{ 8.0f, 6.0f, 8.0f, 6.0f }; ///< 좌 · 위 · 우 · 아래
+            static constexpr float32 kLineSpacing = 2.0f;
+        };
+
+        /**
+         * @class DevConsoleScreen
+         * @brief 창 위쪽 가로 전체의 패널 하나와 줄마다 글 위젯 하나입니다. 줄 수가 같으면 글과 색만 바꾼다(같은 글이면 무효화도 없다).
+         */
+        class DevConsoleScreen final : public UIScreen
+        {
+        public:
+            DevConsoleScreen( const UIScreenDef& desc, unique_ptr<Widget> root, WidgetID column )
+                : UIScreen{ desc, std::move( root ) }
+                , _column{ column }
+            {
+            }
+
+            static unique_ptr<DevConsoleScreen> create()
+            {
+                unique_ptr<CanvasPanel> root  = make_unique<CanvasPanel>();
+                unique_ptr<BorderPanel> panel = make_unique<BorderPanel>();
+                panel->setName( hashed_string( "DevConsolePanel" ) );
+                panel->setBackground( UIBrush::makeSolid( DevConsoleOverlayInternal::kPanelColor, 0.0f ) );
+                panel->setContentPadding( DevConsoleOverlayInternal::kPanelPadding );
+                // 위 가장자리에 붙고 가로로 늘어난다. 높이는 줄 수를 따른다.
+                WidgetLayoutSlot slot = panel->getLayoutSlot();
+                slot._anchorMin       = float2{ 0.0f, 0.0f };
+                slot._anchorMax       = float2{ 1.0f, 0.0f };
+                slot._offsetMin       = float2{ 0.0f, 0.0f };
+                slot._offsetMax       = float2{ 0.0f, 0.0f };
+                slot._bAutoSize       = true;
+                slot._growVertical    = UIGrowDirection::End;
+                panel->setLayoutSlot( slot );
+                unique_ptr<BoxPanel> column = make_unique<BoxPanel>();
+                column->setOrientation( UIOrientation::Vertical );
+                column->setSpacing( DevConsoleOverlayInternal::kLineSpacing );
+                const WidgetID columnID = column->getID();
+                (void)panel->addChild( std::move( column ) );
+                (void)root->addChild( std::move( panel ) );
+
+                UIScreenDef desc{};
+                desc._layer       = UILayer::Overlay;
+                desc._bTakesFocus = false;
+                desc._bShowCursor = false;
+                return sw::make_unique<DevConsoleScreen>( desc, std::move( root ), columnID );
+            }
+
+            void present( const vector<string>& listLine, const vector<uint8>& listErrorFlag )
+            {
+                PanelWidget* pColumn = static_cast<PanelWidget*>( getTree().findWidgetByID( _column ) );
+                if ( pColumn == nullptr )
+                    return;
+                const uint32 lineCount = static_cast<uint32>( listLine.size() );
+                if ( pColumn->getChildCount() != lineCount )
+                {
+                    pColumn->clearChildren();
+                    for ( uint32 index = 0; index < lineCount; ++index )
+                    {
+                        unique_ptr<TextWidget> text  = make_unique<TextWidget>();
+                        TextLayoutStyle        style = text->getTextStyle();
+                        style._fontSize              = DevConsoleOverlayInternal::kFontSize;
+                        text->setTextStyle( style );
+                        text->setLocalized( false ); // 개발 도구라 번역하지 않는다(명령 · 값 그대로)
+                        (void)pColumn->addChild( std::move( text ) );
+                    }
+                }
+                for ( uint32 index = 0; index < lineCount; ++index )
+                {
+                    TextWidget*   pText  = static_cast<TextWidget*>( pColumn->getChild( index ) );
+                    const bool    bInput = index + 1 == lineCount;
+                    const bool    bError = index < listErrorFlag.size() && listErrorFlag[index] != 0;
+                    const float4& color  = bInput ? DevConsoleOverlayInternal::kInputColor : ( bError ? DevConsoleOverlayInternal::kErrorColor : DevConsoleOverlayInternal::kLineColor );
+                    pText->setColor( color );
+                    pText->setText( listLine[index] );
+                }
+            }
+
+        private:
+            WidgetID _column;
+        };
+    } // namespace
+
+    DevConsoleOverlay::DevConsoleOverlay( UISystem& ui )
+        : _pUI{ &ui }
+        , _screen{ kInvalidUIScreenHandle }
+    {
+    }
+
+    DevConsoleOverlay::~DevConsoleOverlay()
+    {
+        setVisible( false );
+    }
+
+    void DevConsoleOverlay::setVisible( bool bVisible )
+    {
+        if ( bVisible == ( _screen != kInvalidUIScreenHandle ) )
+            return;
+        if ( bVisible )
+        {
+            _screen = _pUI->pushScreen( DevConsoleScreen::create() );
+            return;
+        }
+        _pUI->closeScreen( _screen );
+        _screen = kInvalidUIScreenHandle;
+    }
+
+    void DevConsoleOverlay::present( const vector<string>& listLine, const vector<uint8>& listErrorFlag )
+    {
+        // 화면은 UI 시스템이 소유한다 — 핸들로 다시 찾는다(닫혔으면 아무것도 하지 않는다).
+        if ( UIScreen* pScreen = _pUI->findScreen( _screen ) )
+            static_cast<DevConsoleScreen*>( pScreen )->present( listLine, listErrorFlag );
+    }
+
     /** @brief `-gv_meshLodForce=N` — 메시 LOD 를 화면 크기와 상관없이 단계 N 으로 그립니다(-1 이면 화면 크기로 고른다). 활성 씬에만 건다(에디터 미리보기 씬은 자기 고정을 쓴다). 언리얼 `r.ForceLOD` 자리. */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_meshLodForce, MeshLODSystem::kPickByScreenSize, "Draw every LOD mesh of the active scene at this LOD level regardless of screen size (-1 = pick by screen size)" );
     /** @brief `-gv_autoRenderScaleForce=S` — 자동 렌더 배율을 S(0 초과 1 이하)로 고정합니다. 0 이면 끔(조정기 경로). 시나리오 game/playground/automation/renderscalestep 이 쓴다. 언리얼 `r.DynamicRes.TestScreenPercentage` 자리. */

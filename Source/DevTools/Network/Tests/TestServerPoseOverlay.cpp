@@ -4,7 +4,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "DevTools/ServerPose/ServerPoseOverlay.h"
+#include "DevTools/Network/ServerPoseOverlay.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
