@@ -5,7 +5,7 @@
  *          끝난 횟수는 `EditorBakeRunState` 를 함께 쓴다. 프레임마다 프로브 하나를 GPU 로 찍고(`ReflectionProbeBaker::captureProbes` - 면 여섯을 그려 읽기), 풀기(half → float) ·
  *          접기 · 거르기 · 파일 쓰기는 에디터 백그라운드 잡(`EditorReflectionProbeFilterJob`)에 맡긴다. 잡이 끝난 프레임에 프로브에 넘기고 다음 프로브를 찍는다(잡은 한 번에 하나 -
  *          같은 잠금 안에서 차례가 지켜진다). 앞서 넘긴 프로브는 취소해도 남는다. 취소 때 접는 중이던 프로브는 넘기지 않는다(파일은 써졌을 수 있다).
- *          상태줄 항목(`EditorReflectionProbeBakeStatus.cpp`)이 진행과 Cancel 단추를 보인다.
+ *          상태줄 항목(`EditorStatusBarItems.cpp`)이 진행과 Cancel 단추를 보인다.
  *          GPU 읽기는 렌더 스레드를 비우고 이 스레드가 컨텍스트를 잡는 길이라 다른 스레드로 옮기지 않는다. 예전에는 접기 · 거르기(GGX 표본) · 쓰기도 이 프레임에서 해 프로브마다 프레임이 멈췄다.
  *          결과 파일은 씬 파일 옆 `<씬 이름>.<오브젝트 이름(소문자)>.reflprobe` 이고 프로브의 `_probeDataPath` 에 적는다 — 씬을 저장해야 경로가 남으므로 씬을 고친 것으로 표시한다.
  */

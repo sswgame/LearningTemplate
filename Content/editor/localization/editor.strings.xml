@@ -4484,8 +4484,7 @@
 		<entry key="EdVerb.Cancel" source="Cancel">
 			<origins>
 				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
-				<item>Source/Editor/Common/GUI/Status/EditorLightProbeBakeStatus.cpp</item>
-				<item>Source/Editor/Common/GUI/Status/EditorReflectionProbeBakeStatus.cpp</item>
+				<item>Source/Editor/Common/GUI/Status/EditorStatusBarItems.cpp</item>
 				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
@@ -4800,13 +4799,13 @@
 		</entry>
 		<entry key="EdVisualizer.RigTargetGizmoLabel" source="Rig Target">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/RigTargetGizmoVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.RigTargetGizmoTip"
 		       source="Gizmo on the rig target picked in the Rig Debug window; releasing a drag writes the target offset into the rig asset">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/RigTargetGizmoVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.SelectionBoundsLabel" source="Sel">
@@ -4822,13 +4821,13 @@
 		</entry>
 		<entry key="EdVisualizer.TerrainBrushLabel" source="Terrain">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.TerrainBrushTip"
 		       source="Terrain tool: drag on the terrain to sculpt or paint layers (brush settings window, Ctrl+Z undoes one drag)">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.AllProcesses" source="All processes">

@@ -8,6 +8,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -213,4 +214,9 @@ namespace sw::editor
 
     SW_AUTOMATION_WATCH( editorTerrainBrushToolActive, "Editor.TerrainBrushToolActive", "1 when the terrain tool (scene view Terrain toggle) ran this or the last frame",
                          &TerrainBrushToolInternal::readToolActive );
+
+    /** @brief 지형 칠하기 도구 모드("Terrain") 토글입니다. 켜면 `process` 가 브러시 원 · 설정 창을 그리고 드래그로 높이 · 레이어 가중치를 고칩니다. */
+    SW_EDITOR_VISUALIZER_TOOL( TerrainBrush, "terrainbrush", 140, SW_EDITOR_ICON_NAME( "Heightfield" ), SW_LOCKEYREF( "EdVisualizer", "TerrainBrushLabel" ),
+                               SW_LOCKEYREF( "EdVisualizer", "TerrainBrushTip" ), false,
+                               &TerrainBrushTool::process, nullptr );
 } // namespace sw::editor

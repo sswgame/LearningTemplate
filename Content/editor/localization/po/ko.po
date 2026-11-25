@@ -4419,8 +4419,7 @@ msgid "Apply"
 msgstr "적용"
 
 #: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
-#: Source/Editor/Common/GUI/Status/EditorLightProbeBakeStatus.cpp
-#: Source/Editor/Common/GUI/Status/EditorReflectionProbeBakeStatus.cpp
+#: Source/Editor/Common/GUI/Status/EditorStatusBarItems.cpp
 #: Source/Editor/Common/Widgets/EditorWidgets.cpp
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
@@ -4730,12 +4729,12 @@ msgctxt "EdVisualizer.PropertyShapesTip"
 msgid "Shows the shapes that component properties declare (light radius and cone, volumes, directions) on the selected objects, with handles that edit the values"
 msgstr "선택한 오브젝트의 컴포넌트 프로퍼티가 선언한 모양(빛 반경 · 원뿔, 볼륨, 방향)을 표시하고 손잡이로 값을 고칩니다"
 
-#: Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp
+#: Source/Editor/Viewport/RigTargetGizmoVisualizer.cpp
 msgctxt "EdVisualizer.RigTargetGizmoLabel"
 msgid "Rig Target"
 msgstr "리그 대상"
 
-#: Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp
+#: Source/Editor/Viewport/RigTargetGizmoVisualizer.cpp
 msgctxt "EdVisualizer.RigTargetGizmoTip"
 msgid "Gizmo on the rig target picked in the Rig Debug window; releasing a drag writes the target offset into the rig asset"
 msgstr "리그 디버그 창에서 고른 리그 대상의 기즈모입니다. 끌기를 놓으면 대상 오프셋을 리그 에셋에 씁니다"
@@ -4750,12 +4749,12 @@ msgctxt "EdVisualizer.SelectionBoundsTip"
 msgid "Shows the bounding box of the selected objects in accent-colored lines"
 msgstr "고른 오브젝트의 경계 상자를 강조색 선으로 표시합니다"
 
-#: Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
 msgctxt "EdVisualizer.TerrainBrushLabel"
 msgid "Terrain"
 msgstr "지형"
 
-#: Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
 msgctxt "EdVisualizer.TerrainBrushTip"
 msgid "Terrain tool: drag on the terrain to sculpt or paint layers (brush settings window, Ctrl+Z undoes one drag)"
 msgstr "지형 도구: 지형 위를 끌어 깎거나 레이어를 칠합니다(브러시 설정 창, Ctrl+Z 는 한 번의 끌기를 되돌린다)"

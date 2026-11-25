@@ -1,6 +1,6 @@
 /**
  * @file EditorViewportVisualizer.cpp
- * @brief 등록된 시각화 가운데 켜진 것을 그립니다(시각화 자체는 `Viewport/Visualizers/` 의 각 파일)
+ * @brief 등록된 시각화 가운데 켜진 것을 그립니다(모으기는 `Viewport/Model/Visualizers/` 의 각 파일, 화면 도구는 `Viewport/` 의 그 도구 파일)
  */
 #include "pch.h"
 

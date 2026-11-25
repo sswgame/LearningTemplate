@@ -84,11 +84,10 @@ views = [
     "Viewport/EditorViewportPicker.cpp",
     "Viewport/EditorViewportProjection.cpp",
     "Viewport/EditorViewportVisualizer.cpp",
+    "Viewport/RigTargetGizmoVisualizer.cpp",
     "Viewport/ViewportInputOverlay.cpp",
     "Viewport/TerrainBrushTool.cpp",
     "Viewport/ViewportToolbarSettings.cpp",
-    "Viewport/Visualizers/RigTargetGizmoVisualizer.cpp",
-    "Viewport/Visualizers/TerrainBrushVisualizer.cpp",
 ]
 patterns = [
     "^Editor/Common/Workspace/",
