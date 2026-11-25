@@ -22,7 +22,7 @@
  *  - InputMapEvaluate.cpp: 평가기 · 상태 — update() 가 매 프레임 도는 상태 머신과 is/wasActionXxx() 상태 조회.
  *  - InputMapAsset.cpp: InputMap XML 정의 · 묶음의 로드와 저장.
  *  - InputBinding.cpp: 바인딩 종류 표(`BindingKinds`).
- * 맵이 들고 있거나 맵을 읽는 협력 클래스는 따로 있다.
+ * 맵이 들고 있거나 맵을 읽는 협력 클래스 — 앞의 둘(InputActionBuffer · InputAccessibilitySettings)은 이 파일 끝에 정의가 있다.
  *  - InputActionBuffer: 선입력 버퍼링과 격투 게임식 커맨드 시퀀스, 패턴 판정(맵이 들고 프레임마다 진행).
  *  - InputGlyphResolver: 액션을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회(상태 없음).
  *  - InputAccessibilitySettings: 감도 · 축 반전 · 데드존 · 토글 액션(맵이 들고, 맵을 다시 읽어도 남는다).
@@ -1148,10 +1148,7 @@ namespace sw
     }
 } // namespace sw
 
-/**
- * @file InputAccessibilitySettings.cpp
- * @brief 플레이어마다의 입력 설정(토글 액션 목록)을 구현합니다.
- */
+// InputAccessibilitySettings — 플레이어마다의 입력 설정(토글 액션 목록).
 
 namespace sw
 {

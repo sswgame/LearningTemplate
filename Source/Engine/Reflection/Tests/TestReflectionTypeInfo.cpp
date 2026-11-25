@@ -20,7 +20,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Serializer/Serializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 // 리플렉션 데이터 모델 — TypeInfo · TypeRegistry · PropertyInfo · 메타데이터.
 /**
