@@ -4,7 +4,7 @@
  * @details 런타임(RHI · 셰이더 캐시 · 렌더러)은 `RenderDiagnostics::get` 만 묻고 누가 값을 채우는지 모른다. 개발 도구가 `SW_RENDER_DIAGNOSTICS_PROVIDER` 한 줄로
  *          채우는 함수를 붙이고(실행 인자 · 콘솔 · 에디터 창이 바꾸는 개발 변수를 읽는다), 아무것도 붙지 않으면 기본값(진단 없음, GPU 라이트 그리드)이다.
  *          Shipping 은 `get` 이 상수 기본값이라 진단 분기가 접혀 바이너리에서 빠진다. 진단마다 setter · 변수를 늘리지 않고 이 구조체에 칸을 더한다.
- *          **스레드:** 채우는 함수(개발 변수를 읽는다)는 게임 스레드만 부른다(`publish`). 렌더 스레드 · 기록 워커 · 셰이더 컴파일은 `publish` 가 내보낸
+ *          스레드: 채우는 함수(개발 변수를 읽는다)는 게임 스레드만 부른다(`publish`). 렌더 스레드 · 기록 워커 · 셰이더 컴파일은 `publish` 가 내보낸
  *          원자 사본만 읽는다 — 개발 변수는 콘솔 · 에디터가 게임 스레드에서 잠금 없이 쓰기 때문이다(언리얼 콘솔 변수의 렌더 스레드 사본 `GetValueOnRenderThread` 와 같은 생각).
  *          언리얼은 같은 자리를 `r.ShaderDevelopmentMode` · `r.CheckNaN` · `r.Shaders.Optimize` 같은 개발 콘솔 변수로 두고 Shipping 에서 컴파일 아웃한다 —
  *          여기서는 변수는 개발 도구에 두고 런타임에는 정책 값 하나만 남긴다(Godot 의 RenderingServer 디버그 설정 묶음과 같은 모양).

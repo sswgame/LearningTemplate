@@ -202,9 +202,9 @@ namespace sw
 
             /**
              * @brief 확보된 칸(`packSize`) 안에 들어갈 때만 씁니다.
-             * @details `writeNumericValue` 뿐 아니라 switch 안에서 **직접 `Memory::copy` 하는 형제 경로들**도 이것을 거쳐야 합니다.
+             * @details `writeNumericValue` 뿐 아니라 switch 안에서 직접 `Memory::copy` 하는 형제 경로들도 이것을 거쳐야 합니다.
              *          칸 크기는 셰이더 리플렉션이 정하고(`ShaderVariableInfo::_size`) 쓰는 크기는
-             *          `_shaderType`(리플렉션 전에는 `getDefaultShaderTypeFor`)이 정하므로 **둘이 어긋날 수 있습니다.**
+             *          `_shaderType`(리플렉션 전에는 `getDefaultShaderTypeFor`)이 정하므로 둘이 어긋날 수 있습니다.
              *          예를 들어 셰이더가 `uint`(4바이트)로 선언한 자리에 `_shaderType` 이
              *          `Float4` 인 `ChannelMask` 를 쓰면 4바이트 칸에 16바이트를 씁니다.
              *          조용히 넘치는 대신 쓰지 않고 false 를 반환합니다(부르는 쪽이 경고합니다).
@@ -340,7 +340,7 @@ namespace sw
 
             /**
              * @brief 텍스처 — 붙은 텍스처의 bindless 인덱스입니다(_value 에 숫자를 적어 덮어쓰는 것도 허용한다).
-             * @details 붙은 텍스처가 없으면 0 이 아니라 kInvalidIndex 를 넣는다. 0 은 Vulkan 에서 첫 번째 텍스처라는 **유효한** 인덱스다(DX12 는 0 을
+             * @details 붙은 텍스처가 없으면 0 이 아니라 kInvalidIndex 를 넣는다. 0 은 Vulkan 에서 첫 번째 텍스처라는 유효한 인덱스다(DX12 는 0 을
              *          null 텍스처로 비워 둔다 — D3D12RHIDevice::kNullTextureBindlessIndex). 셰이더의 Bindless::sampleIndex 는 kInvalidIndex 를 "텍스처 없음" 으로 처리한다.
              */
             [[nodiscard]] static bool packTextureIndex( const MaterialProperty& prop, string_view value, uint8* pDst, uint32 packSize )

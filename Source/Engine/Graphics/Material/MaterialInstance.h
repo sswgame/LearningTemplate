@@ -34,7 +34,7 @@ namespace sw
     public:
         /**
          * @brief 생성 키입니다. create() 만 만들 수 있습니다.
-         * @details 생성자가 이 키를 요구하므로 `make_shared<MaterialInstance>()` 도 스택의 `MaterialInstance x;` 도 **컴파일되지 않는다.**
+         * @details 생성자가 이 키를 요구하므로 `make_shared<MaterialInstance>()` 도 스택의 `MaterialInstance x;` 도 컴파일되지 않는다.
          *          모든 MaterialInstance 가 Engine 안에서 shared_ptr 로 만들어진다는 것을 컴파일러가 보장한다. 그래서 렌더 패킷이
          *          소유권을 가질 수 있고, 제어 블록이 모듈 DLL 에 있는 일이 없다. 린트가 아니라 타입이 지킨다.
          */
@@ -65,7 +65,7 @@ namespace sw
         void releaseRHI( IRHIDevice* pDevice );
         /** @brief (디바이스 통보 — `_renderResourceHook`) 디바이스가 이미 없을 때 부릅니다. 텍스처 참조만 놓습니다. */
         void clearRHI( IRHIDevice* pDevice );
-        /** @brief (디바이스 통보 — `_renderResourceHook`) 새 디바이스에서 할 일이 없습니다 — 덮어쓴 텍스처는 다음 패킹이 다시 요청한다. */
+        /** @brief (디바이스 통보, `_renderResourceHook`) 새 디바이스에서 할 일이 없습니다. 덮어쓴 텍스처는 다음 패킹이 다시 요청한다. */
         [[nodiscard]] bool initRHI( IRHIDevice* ) { return true; }
 
         /**
@@ -79,7 +79,7 @@ namespace sw
          * @brief 부모가 선언한 런타임 정적 스위치(`bShaderFeature="0"`, 이름이나 키워드)를 켭니다. 받았으면 true 입니다.
          * @details 부모가 없거나, 선언하지 않은 이름이거나, 에셋 상태만 쿠킹되는 스위치(`bShaderFeature="1"`)면 오류를 남기고 false 다 — 받으면 Dev 는 실시간 컴파일이
          *          가리고 배포에서는 그 조합의 바이너리가 없어 대체 해시로 그린다. 정적 스위치를 고정으로 바꾸는 변형은 자식 머티리얼(`_base`)로 적는다(쿠커가 그 조합을 굽는다).
-         *          언리얼 MID 는 정적 스위치를 바꿀 수 없고(MIC 에셋만 — 쿠킹이 컴파일), 유니티 shader_feature 는 머티리얼 에셋이 쓴 키워드만 남긴다 — 여기도 같은 경계다.
+         *          언리얼 MID 는 정적 스위치를 바꿀 수 없고(MIC 에셋만 되고 쿠킹이 컴파일), 유니티 shader_feature 는 머티리얼 에셋이 쓴 키워드만 남긴다 — 여기도 같은 경계다.
          */
         [[nodiscard]] bool enableKeyword( hashed_string keyword );
         /** @brief 부모가 선언한 런타임 정적 스위치를 끕니다. 규칙은 `enableKeyword` 와 같습니다. */
@@ -87,7 +87,7 @@ namespace sw
 
         /**
          * @brief 일반 오버라이드입니다(Enum/BitFlag/Color/Range/Bool/스칼라 텍스트). 받았으면 true 입니다.
-         * @details 부모의 정적 종류 칸(키워드를 내는 Bool · Keyword — `shaderKeyword`)은 오류(`MaterialInstance.StaticValueRejected`)로 거절하고 false 다 — 그 값은 define 이라
+         * @details 부모의 정적 종류 칸(키워드를 내는 Bool · Keyword, `shaderKeyword`)은 오류(`MaterialInstance.StaticValueRejected`)로 거절하고 false 다 — 그 값은 define 이라
          *          런타임에 바꾸면 쿠킹하지 않은 조합이 생긴다(배포에서 대체 해시). 그 칸은 자식 머티리얼(`_base`)에 적고(쿠커가 굽는다), 런타임 전환은 부모가 선언한 런타임 스위치
          *          (`enableKeyword`)로 한다. 언리얼 MID 도 정적 파라미터를 못 바꾼다(MIC 에셋만).
          */
@@ -97,7 +97,7 @@ namespace sw
         /** @brief 벡터 파라미터를 설정합니다. 정적 종류 칸 거절은 `setScalarParameter` 와 같습니다. */
         void setVectorParameter( hashed_string name, const float4& value );
         /**
-         * @brief 텍스처 파라미터를 **텍스처 에셋**으로 덮어씁니다(리소스 경로, 예: `engine/textures/perlin.dds`). 빈 경로면 덮어쓰기를 지웁니다.
+         * @brief 텍스처 파라미터를 텍스처 에셋으로 덮어씁니다(리소스 경로, 예: `engine/textures/perlin.dds`). 빈 경로면 덮어쓰기를 지웁니다.
          * @details 언리얼 MIC 의 `SetTextureParameterValue( UTexture* )`, 유니티 `MaterialPropertyBlock.SetTexture( Texture )` 처럼 디스크립터
          *          인덱스가 아니라 텍스처 자체를 가리킨다. 경로만 적고, 다음 `getRenderBinding` 이 TextureCache 로 요청하고 반환한다.
          *          셰이더에 넣는 값(네이티브 bindless 의 SRV 인덱스, DX11 과 GL 의 슬롯 서수)은 그때마다 지금 텍스처에서 읽으므로 텍스처를 다시

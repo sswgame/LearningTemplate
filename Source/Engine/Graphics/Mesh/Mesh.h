@@ -246,7 +246,7 @@ namespace sw
     public:
         /**
          * @brief 생성 키입니다. create() 만 만들 수 있습니다.
-         * @details 생성자가 이 키를 요구하므로 `make_shared<Mesh>()` 도 스택의 `Mesh x;` 도 **컴파일되지 않는다.**
+         * @details 생성자가 이 키를 요구하므로 `make_shared<Mesh>()` 도 스택의 `Mesh x;` 도 컴파일되지 않는다.
          *          모든 Mesh 가 Engine 안에서 shared_ptr 로 만들어진다는 것을 컴파일러가 보장한다. 그래서 렌더 패킷이
          *          소유권을 가질 수 있고, 제어 블록이 모듈 DLL 에 있는 일이 없다. 린트가 아니라 타입이 지킨다.
          */
@@ -269,7 +269,7 @@ namespace sw
         /**
          * @brief 빈 메시를 Engine.dll 안에서 shared_ptr 로 만듭니다.
          * @details 도형을 만드는 것은 이 클래스의 일이 아니다. `MeshUtil` 이 이 함수로 메시를 만들어 정점을 채운다.
-         *          Mesh 가 책임지는 것은 **정점 버퍼와 그 수명**뿐이다.
+         *          Mesh 가 책임지는 것은 정점 버퍼와 그 수명뿐이다.
          * @param cpuAccess CPU 정점을 업로드 뒤에도 쥐는가입니다. 되읽을 파일이 없는 메시라 `Keep` 만 된다(assert) — 놓을 수 있는 것은 `createForAsset` 의 파일 메시다
          */
         static shared_ptr<Mesh> create( MeshCPUAccess cpuAccess );
@@ -347,7 +347,7 @@ namespace sw
         /** @brief CPU 정점을 지금 쥐고 있으면 `Keep` 으로 바꾸고 true 입니다. 이미 놓았으면 바꾸지 않고 false 입니다(파일을 다시 읽는 것은 `retainCPUVertices`). 어느 스레드에서 불러도 된다. */
         [[nodiscard]] bool tryRetainCPUVertices();
         /**
-         * @brief CPU 정점을 `Keep` 으로 바꿉니다 — 이미 놓았으면 원본 파일(`getSourceAsset`)을 다시 읽어 되돌립니다(디스크 읽기 — 메시 캐시의 로드 단계가 부른다).
+         * @brief CPU 정점을 `Keep` 으로 바꿉니다. 이미 놓았으면 원본 파일(`getSourceAsset`)을 다시 읽어 되돌립니다(디스크 읽기, 메시 캐시의 로드 단계가 부른다).
          * @return 파일을 읽지 못하거나 파일의 정점 수가 올린 것과 다르면(디스크에서 바뀌었고 아직 다시 읽지 않았다) 오류를 남기고 false 입니다.
          */
         [[nodiscard]] bool retainCPUVertices();
@@ -362,7 +362,7 @@ namespace sw
          * @brief 이 메시의 정점을 GPU 가 변형해도 되는지 표시합니다(기본은 꺼짐).
          * @details 유니티의 `Mesh.vertexBufferTarget |= Raw` 옵트인에 해당한다. 켠 메시만 모프 풀에
          *          들어간다. 모두 넣으면 풀이 쓸데없이 커지고, 예산을 넘긴 메시는 어차피 레스트로 그려진다.
-         * @note **GPU 쪽 변형은 CPU 사본(`MeshCPUView::getVertices`)에 반영되지 않는다.** 유니티 문서도 같은 주의를 준다.
+         * @note GPU 쪽 변형은 CPU 사본(`MeshCPUView::getVertices`)에 반영되지 않는다. 유니티 문서도 같은 주의를 준다.
          *       CPU 는 레스트 포즈만 안다(피킹과 바운드는 그 값을 본다).
          */
         void setGPUMorphEnabled( bool bEnabled );
@@ -435,9 +435,9 @@ namespace sw
         /**
          * @brief 낮은 상세 단계(LOD 1 이상)를 설정합니다. 정점은 탄젠트가 든 값이어야 합니다(`.mesh` 를 읽은 값 — 쓰기가 단계마다 `computeTangents` 로 구했다).
          * @details 단계마다 정점이 있고 인덱스 수가 0 이 아닌 3 의 배수이며 번호가 그 단계 정점 안이고, 임계값은 (0, 1) 안에서 단계가 낮아질수록 작아야 한다. 정점 애니메이션이 있는 메시는
-         *          LOD 를 받지 않는다. 구간 있는 메시는 단계마다 구간 범위(`MeshLODLevel::_listSectionRange`, 구간 순서 · 수가 LOD 0 과 같다)를 받는다 — **구간을 먼저 설정**한다.
-         *          모프 타깃이 있는 메시도 받지만 낮은 단계 정점은 모프 차이가 없다(먼 캐릭터의 표정은 보이지 않는다 — 언리얼도 낮은 LOD 의 모프 타깃을 덜어 낸다). 스킨드 메시는 받는다 — 단계마다 스킨 정점(`MeshLODLevel::_listSkinVertex`)이 정점과 같은 길이로 오고 뼈 번호가 `getSkinBoneCount` 안이어야 하며,
-         *          스킨 없는 메시의 단계는 스킨이 없어야 한다(그래서 **스킨을 먼저 설정**한다 — `setSkin` 은 LOD 를 뗀다). GPU 스키닝은 LOD 0 뒤의 낮은 단계 정점도 변형한다.
+         *          LOD 를 받지 않는다. 구간 있는 메시는 단계마다 구간 범위(`MeshLODLevel::_listSectionRange`, 구간 순서 · 수가 LOD 0 과 같다)를 받는다 — 구간을 먼저 설정한다.
+         *          모프 타깃이 있는 메시도 받지만 낮은 단계 정점은 모프 차이가 없다(먼 캐릭터의 표정은 보이지 않는다. 언리얼도 낮은 LOD 의 모프 타깃을 덜어 낸다). 스킨드 메시는 받는다. 단계마다 스킨 정점(`MeshLODLevel::_listSkinVertex`)이 정점과 같은 길이로 오고 뼈 번호가 `getSkinBoneCount` 안이어야 하며,
+         *          스킨 없는 메시의 단계는 스킨이 없어야 한다(그래서 스킨을 먼저 설정한다 — `setSkin` 은 LOD 를 뗀다). GPU 스키닝은 LOD 0 뒤의 낮은 단계 정점도 변형한다.
          *          어기면 오류를 남기고 LOD 를 비운 채 false 입니다. 빈 목록은 LOD 를 뗀다.
          *          CPU 정점(`MeshCPUView::getVertices`)은 LOD 0 그대로다 — 물리 · 내비 · 피킹은 LOD 를 보지 않는다. 내용 번호가 바뀐다(정점 풀이 다시 올린다).
          */
@@ -508,7 +508,7 @@ namespace sw
         /** @brief 메시 공간의 축 정렬 경계(최대)입니다. */
         const float3& getLocalBoundsMax() const { return _localBoundsMax; }
         /**
-         * @brief 이 메시 **내용**의 정체성 토큰입니다(`IdentityToken`). 만들 때와 `setVertices` 때마다 새 토큰을 받습니다.
+         * @brief 이 메시 내용의 정체성 토큰입니다(`IdentityToken`). 만들 때와 `setVertices` 때마다 새 토큰을 받습니다.
          * @details 정점 풀과 모프 풀은 메시 집합이 그대로인지를 이 토큰으로 판단한다. 포인터만 보면 메시가 지워진 위치에 새 메시가
          *          생기거나(할당기는 같은 크기의 공간을 곧바로 다시 준다) 같은 메시의 정점을 바꿀 때 "같은 집합" 으로 보여 옛 정점을 그린다.
          *          기억하는 쪽은 토큰을 값으로 들어 주소 재사용이 없다 — 프로세스 번호 발급기를 두지 않는다(언리얼 `FRenderResource` 가 GPU 자원을 객체 수명에 묶는 자리).

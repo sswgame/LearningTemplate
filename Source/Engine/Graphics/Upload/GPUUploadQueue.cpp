@@ -82,7 +82,7 @@ namespace sw
         };
 
         // 워커가 나눠 만들고 부른 스레드도 함께 만든다(포크-조인 `runParallel` — 스테이지를 따로 만들고 기다리지 않는다, 언리얼 ParallelFor 와 같다).
-        // 기다리는 것이 목적이 아니라 **RT 가 만들지 않는 것**이 목적이다. 워커에서 만들 수 없는 백엔드는 여기서 직렬로 만든다.
+        // 기다리는 것이 목적이 아니라 RT 가 만들지 않는 것이 목적이다. 워커에서 만들 수 없는 백엔드는 여기서 직렬로 만든다.
         if ( _bParallel == SW_TRUE && _pTaskManager != nullptr )
             _pTaskManager->runParallel( count, 2, SW_DELEGATE_LAMBDA( ParallelBlockDelegate, uploadBlock ) );
         else

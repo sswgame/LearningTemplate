@@ -2,7 +2,7 @@
  * @file CanvasPainter.h
  * @brief 캔버스 칠하기 도구를 정의합니다. UI 단위의 모양을 물리 픽셀 사각형(`CanvasQuad`)으로 바꿔 그리기 목록에 쌓습니다.
  * @details 언리얼 Slate 의 `FSlateDrawElement::MakeBox`, `MakeText` 와 `FSlateElementBatcher` 가 하는 일을 한 곳에서 처리한다(유니티 UIR 의
- *          `MeshGenerationContext`, Godot `CanvasItem::draw_*` 에 해당한다). 변환, 자르기, 불투명도는 스택으로 관리하고, 사각 자르기는 일괄의 **가위**로,
+ *          `MeshGenerationContext`, Godot `CanvasItem::draw_*` 에 해당한다). 변환, 자르기, 불투명도는 스택으로 관리하고, 사각 자르기는 일괄의 가위로,
  *          둥근 자르기만 셰이더의 부호 거리로 처리한다. 같은 텍스처(최대 4개)와 같은 가위가 이어지면 한 일괄이 된다.
  */
 #pragma once

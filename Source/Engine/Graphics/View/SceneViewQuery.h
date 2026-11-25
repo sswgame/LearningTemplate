@@ -3,7 +3,7 @@
  * @brief 게임 코드가 카메라 하나에 묻는 질의(점 · 경계가 절두체 안인가, 화면 크기, 월드 ↔ 화면 좌표)의 정본입니다.
  * @details 언리얼 `FSceneView`(`ViewFrustum` · `ProjectWorldToScreen` · `DeprojectScreenToWorld`)와 유니티 `GeometryUtility.TestPlanesAABB` ·
  *          `Camera.WorldToScreenPoint` · `Camera.ScreenPointToRay` 자리다. 절두체와 화면 크기 식은 렌더러 · LOD 와 같은 `LODView`(→ `Frustum`)를 그대로 쓴다.
- *          여기 있는 판정은 **기하만** 본다(`InFrustum`) — 가림이나 렌더러가 실제로 그렸는지(언리얼 `WasRecentlyRendered`, 유니티 `Renderer.isVisible`)는 보지 않는다.
+ *          여기 있는 판정은 기하만 본다(`InFrustum`) — 가림이나 렌더러가 실제로 그렸는지(언리얼 `WasRecentlyRendered`, 유니티 `Renderer.isVisible`)는 보지 않는다.
  *          그래픽스 층이라 오브젝트를 모른다 — 오브젝트의 렌더 경계로 묻는 것은 `CameraComponent::isObjectInFrustum` 이다.
  */
 #pragma once

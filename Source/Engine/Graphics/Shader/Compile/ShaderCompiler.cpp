@@ -95,7 +95,7 @@ namespace sw
                 CompileAction action;
                 action._bUseCache  = true;
                 action._sourceHash = sourceHash;
-                // define 은 정본(정렬)으로 적는다 — 받은 차례로 적으면 같은 조합이 차례만 달라 두 벌이 쌓인다. 헤더는 키에 넣지 않는다 — 어느 헤더를 열었는지는
+                // define 은 정본(정렬)으로 적는다. 받은 차례로 적으면 같은 조합이 차례만 달라 두 벌이 쌓인다. 헤더는 키에 넣지 않는다. 어느 헤더를 열었는지는
                 // 컴파일하고 나서야 알아(키는 컴파일 전에 필요하다) 작업의 입력으로 기록하고, 맞출 때 그 기록의 입력이 지금도 같은지 본다(`CookRecord::isFresh`).
                 string text;
                 text.append( "source=" ).append( desc._source.str() ).append( "\nentry=" ).append( desc._entryPoint );

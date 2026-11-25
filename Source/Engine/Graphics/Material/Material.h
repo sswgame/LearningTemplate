@@ -55,10 +55,10 @@ namespace sw
      * 값이 바뀔 때마다 만드는 불변 사본(`MaterialRenderData`)과 렌더 쪽 객체(`MaterialRenderProxy`)만 스냅샷으로 받는다(`getRenderBinding`).
      * 예전에는 한 객체가 속성 목록과 상수 버퍼를 함께 가져, 렌더 스레드의 초기화가 게임 스레드가 읽는 속성 목록을 고쳤다(데이터 경합).
      *
-     * enable_shared_from_this 인 이유는 렌더 패킷(GPUScene 스냅샷)이 이 객체의 **소유권을 함께 싣기** 위해서다.
+     * enable_shared_from_this 인 이유는 렌더 패킷(GPUScene 스냅샷)이 이 객체의 소유권을 함께 싣기 위해서다.
      * 렌더 스레드는 씬을 못 보고 패킷만 받는데, 게임 스레드가 오브젝트를 지우거나 인스턴스를 바꾼 뒤에도
      * 큐에 남은 패킷(링 깊이만큼)이 이 머티리얼을 역참조한다. 소유권이 패킷을 따라가면 그 구간이 사라진다.
-     * 그래서 렌더에 실리는 Material 은 반드시 shared_ptr 로 소유되어야 하고, **반드시 create() 로 만든다.**
+     * 그래서 렌더에 실리는 Material 은 반드시 shared_ptr 로 소유되어야 하고, 반드시 create() 로 만든다.
      * shared_ptr 의 제어 블록(소멸 코드)은 make_shared 를 부른 쪽 DLL 에 있다. 게임 모듈이 만든 머티리얼을
      * 엔진(GPUScene 스냅샷)이 마지막까지 가지고 있다가 모듈이 언로드된 뒤 놓으면 이미 없는 코드로 뛰어든다.
      * create() 는 Engine.dll 안에서 만들므로 누가 마지막에 놓든 안전하다.
@@ -75,7 +75,7 @@ namespace sw
 
         /**
          * @brief 생성 키입니다. create() 만 만들 수 있습니다.
-         * @details 생성자가 이 키를 요구하므로 `make_shared<Material>()` 도 스택의 `Material x;` 도 **컴파일되지 않는다.**
+         * @details 생성자가 이 키를 요구하므로 `make_shared<Material>()` 도 스택의 `Material x;` 도 컴파일되지 않는다.
          *          모든 Material 이 Engine 안에서 shared_ptr 로 만들어진다는 것을 컴파일러가 보장한다. 그래서 렌더 패킷이
          *          소유권을 가질 수 있고, 제어 블록이 모듈 DLL 에 있는 일이 없다. 린트가 아니라 타입이 지킨다.
          */
@@ -122,7 +122,7 @@ namespace sw
          */
         MaterialRenderBinding getRenderBinding( const MaterialRenderInputs& inputs );
         /**
-         * @brief 그리기 전 동기화입니다 — 레이아웃을 셰이더에 맞추고(`ensureShaderLayout`) 묶음 값을 다시 패킹한다. 텍스처 번호는 받을 일이 없다(R-6 — 캐시가 같은 번호를 다시 묶는다).
+         * @brief 그리기 전 동기화입니다. 레이아웃을 셰이더에 맞추고(`ensureShaderLayout`) 묶음 값을 다시 패킹한다. 텍스처 번호는 받을 일이 없다(R-6, 캐시가 같은 번호를 다시 묶는다).
          * @details 이 머티리얼을 직접 그리는 `getRenderBinding` 과, 부모 바이트를 복사하는 `MaterialInstance::getRenderBinding` 이 함께 부른다. 예전에는 직접 그릴 때만 불러,
          *          인스턴스로만 그리는 머티리얼(색만 바꾼 식생 구간)은 로드 중 텍스처(회색) 번호를 끝까지 쥐었다. 바뀐 것이 없으면 비교만 해 매 프레임 불러도 싸다.
          */
@@ -202,9 +202,9 @@ namespace sw
         /** @brief resolveTextureAssets 가 빌린 텍스처를 캐시에 반환합니다. */
         void releaseTextureAssets();
         /**
-         * @brief 머티리얼 텍스처의 **백엔드 SRV 인덱스**를 서수 순서로 반환합니다. 서수는 텍스처 프로퍼티의 차례(빈 칸 포함)이고 빈 칸은 kInvalidDescriptorIndex 다.
+         * @brief 머티리얼 텍스처의 백엔드 SRV 인덱스를 서수 순서로 반환합니다. 서수는 텍스처 프로퍼티의 차례(빈 칸 포함)이고 빈 칸은 kInvalidDescriptorIndex 다.
          * @details 네이티브 bindless 가 없는 백엔드(DX11, GL, WebGPU)에서 엔진이 이 순서대로 t16..t31 에 바인딩한다.
-         *          그 백엔드에서 MaterialCB 에 실리는 값은 SRV 인덱스가 아니라 이 배열의 **서수**다. 셰이더 변형은 그 칸 수(`getTextureSlotCount`)만 선언한다(웹).
+         *          그 백엔드에서 MaterialCB 에 실리는 값은 SRV 인덱스가 아니라 이 배열의 서수다. 셰이더 변형은 그 칸 수(`getTextureSlotCount`)만 선언한다(웹).
          */
         const vector<RHITextureSRVIndex>& getMaterialTextureSRVs() const { return _listMaterialTextureSRV; }
         /**
@@ -219,7 +219,7 @@ namespace sw
         static constexpr uint32 kMaxRuntimeStaticSwitchCount = 4;
         /**
          * @brief 런타임 스위치(`bShaderFeature="0"`)를 켜거나 끕니다. 바꿨거나 이미 그 상태면 true 입니다.
-         * @details 선언하지 않은 이름과 에셋 상태만 쿠킹되는 스위치(`bShaderFeature="1"`)는 **모든 빌드에서** 오류로 거절한다 — 받으면 Dev 는 실시간 컴파일이 가리고
+         * @details 선언하지 않은 이름과 에셋 상태만 쿠킹되는 스위치(`bShaderFeature="1"`)는 모든 빌드에서 오류로 거절한다 — 받으면 Dev 는 실시간 컴파일이 가리고
          *          Shipping 에서만 바이너리가 없어 물체가 사라진다(유니티 shader_feature 를 런타임에 켠 것과 같은 결함). 쿠커 · 미리 만들기는 런타임 스위치의 모든 조합을
          *          같은 함수(`collectRuntimeSwitchVariants`)로 만든다.
          */

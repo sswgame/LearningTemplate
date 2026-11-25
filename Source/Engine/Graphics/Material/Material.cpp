@@ -177,7 +177,7 @@ namespace sw
 
         // DX12 · Vulkan 은 셰이더가 전역 bindless 인덱스로 힙 · 배열을 직접 읽는다. DX11 · GL 은 그게 안 되므로
         // (SM5.0 은 리소스 배열 동적 인덱싱이 없고, GL 은 SPIR-V 라 ARB_bindless_texture 를 못 쓴다) 엔진이
-        // 머티리얼 텍스처를 t16..t31 고정 슬롯에 바인딩하고 CB 에는 **서수**를 넣는다.
+        // 머티리얼 텍스처를 t16..t31 고정 슬롯에 바인딩하고 CB 에는 서수를 넣는다.
         // 서수는 텍스처 프로퍼티의 차례(빈 칸 포함)로 고정한다 — 셰이더 변형이 그 수만큼만 칸을 선언하고(MATERIAL_TEXTURE_COUNT, 웹 단계 텍스처 한도),
         // 인스턴스가 빈 칸을 덮어써도 같은 서수다(언리얼 머티리얼의 텍스처 매개변수가 컴파일 때 칸을 받는 것과 같다).
         const bool    bNativeBindless = pRHI->supportsNativeBindlessSampling();
@@ -315,12 +315,12 @@ namespace sw
         if ( _pRHIDevice != pDevice )
             return;
 
-        // 빌린 텍스처도 **여기서 놓는다.** 널 디바이스로 부르면 `TextureCache` 는 참조 수만 줄이고
+        // 빌린 텍스처도 여기서 놓는다. 널 디바이스로 부르면 `TextureCache` 는 참조 수만 줄이고
         // GPU 호출은 하지 않는다(디바이스가 이미 없으므로 그것이 맞다).
         //
         // 주의: `releaseRHI` 와 이 함수는 같은 상태를 남겨야 한다. 목록이 남은 채 `initRHI` 가 오면 `resolveTextureAssets` 가
-        // 목록에 **덧붙여** `ordinal` 이 0 이 아닌 값에서 시작하고, 네이티브 bindless 가 없는 백엔드(DX11 · GL)는 그 서수를
-        // t16..t31 고정 슬롯 번호로 쓰므로 **엉뚱한 텍스처를 읽거나**, 한도를 넘어 흰색으로 남는다.
+        // 목록에 덧붙여 `ordinal` 이 0 이 아닌 값에서 시작하고, 네이티브 bindless 가 없는 백엔드(DX11 · GL)는 그 서수를
+        // t16..t31 고정 슬롯 번호로 쓰므로 엉뚱한 텍스처를 읽거나, 한도를 넘어 흰색으로 남는다.
         releaseTextureAssets();
         // 상수 버퍼는 프록시의 것이다 — 프록시가 같은 통보를 받는다.
         _pRHIDevice = nullptr;
@@ -430,7 +430,7 @@ namespace sw
 
     bool Material::ensureShaderLayout( RHIBackend backend, const MaterialRenderInputs& inputs )
     {
-        // 머티리얼 바이트의 기준은 .material 의 프로퍼티 순서가 아니라 **셰이더의 MaterialData 원소 레이아웃**이다(언리얼도
+        // 머티리얼 바이트의 기준은 .material 의 프로퍼티 순서가 아니라 셰이더의 MaterialData 원소 레이아웃이다(언리얼도
         // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 로드 경로에서도 맞춰야 한다 — XML 순서로 패킹하면 stride 가 0 이고,
         // 그러면 GPUScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
         //
@@ -527,7 +527,7 @@ namespace sw
                 }
             }
         }
-        // 주의: "멤버가 있는 첫 상수버퍼" 로 폴백하지 않는다 — **PassCB 를 머티리얼 레이아웃으로 착각**해 조용히 엉뚱한
+        // 주의: "멤버가 있는 첫 상수버퍼" 로 폴백하지 않는다 — PassCB 를 머티리얼 레이아웃으로 착각해 조용히 엉뚱한
         // 오프셋에 값을 써 넣는다. 모든 셰이더가 SW_MATERIAL_BEGIN/END(g_SwMaterials) 아니면 MaterialCB 를 선언하므로,
         // 못 찾으면 조용히 틀리지 않고 알린다.
         if ( pSchemaCb == nullptr )
@@ -603,7 +603,7 @@ namespace sw
         for ( MaterialProperty& prop : _data._listProperty )
         {
             // 키워드 · UI 전용 필드는 머티리얼 원소의 멤버가 아니다.
-            // 텍스처는 멤버다(`uint ...Map` — 인덱스 · 서수). 다른 프로퍼티처럼 리플렉션 오프셋을 받는다 — 건너뛰면 XML 순서로 쌓은 자리에
+            // 텍스처는 멤버다(`uint ...Map`: 인덱스 · 서수). 다른 프로퍼티처럼 리플렉션 오프셋을 받는다. 건너뛰면 XML 순서로 쌓은 자리에
             // 남아, XML 순서가 셰이더 구조체와 다른 머티리얼(toon)에서 인덱스가 남의 칸에 들어가고 제 칸은 0(첫 실제 텍스처)이 된다.
             if ( MaterialPacking::isNonBufferType( prop._type ) )
                 continue;

@@ -245,7 +245,7 @@ namespace sw
                     bool         bIsArray{ false };
                     const uint32 blockTypeID = resolveBlockStruct( var._typeID, bIsArray );
 
-                    // SSBO 는 SPIR-V 버전에 따라 **두 가지**로 표현된다. StorageBuffer 저장 클래스(1.4+ / Vulkan 1.1+
+                    // SSBO 는 SPIR-V 버전에 따라 두 가지로 표현된다. StorageBuffer 저장 클래스(1.4+ / Vulkan 1.1+
                     // 타깃)이거나, 구식으로는 Uniform 저장 클래스에 구조체 타입이 BufferBlock 으로 데코레이션된다.
                     // 둘 다 봐야 한다. 앞쪽만 보면 GL 용 SPIR-V 의 StructuredBuffer 가 상수버퍼로 분류돼, 바인더가 그것을 CB 슬롯으로
                     // 걸고 bindStructuredBuffer 는 부르지 않는다(GL 에서 인스턴스 행렬이 모두 0 으로 읽혀 메시가 하나도 안 그려진다).

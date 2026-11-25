@@ -1,4 +1,4 @@
-// MaterialCacheTest — 머티리얼 캐시의 키가 한 곳(`AssetRegistry::toCacheKey`)을 지나는지(nogpu — `acquire` 는 초기화하지 않는다).
+// MaterialCacheTest: 머티리얼 캐시의 키가 한 곳(`AssetRegistry::toCacheKey`)을 지나는지(nogpu, `acquire` 는 초기화하지 않는다).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

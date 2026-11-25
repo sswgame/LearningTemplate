@@ -80,7 +80,7 @@ namespace sw
      *          메시 패스의 기능(왜곡 · 외곽선 · 변형 · 변위 · 굴절 · 반투명)과 함께 적지 않는다(읽기 오류 — 그려지지 않는 기능이다). 언리얼 Material Domain = Post Process 와 같다.
      */
     inline constexpr const utf8* kMaterialDomainPostProcessDefine = "MATERIAL_DOMAIN_POST_PROCESS";
-    /// @brief 장면 색 사본을 굴절해 읽는 머티리얼의 define 입니다 — 렌더러가 굴절 배치를 가른다(`GPUScene::hasRefractionBatches`, scene_refraction.hlsli 를 쓰는 셰이더 — 물 · 외형 유리).
+    /// @brief 장면 색 사본을 굴절해 읽는 머티리얼의 define 입니다. 렌더러가 굴절 배치를 가른다(`GPUScene::hasRefractionBatches`, scene_refraction.hlsli 를 쓰는 셰이더: 물 · 외형 유리).
     inline constexpr const utf8* kMaterialRefractionDefine = "MATERIAL_REFRACTION";
     /// @brief 반투명 블렌드 define 입니다 — `alphaMode="Blend"` 와 함께 움직인다(하나만 있으면 알파가 새거나 불투명 목록에서 섞인다).
     inline constexpr const utf8* kMaterialTranslucentDefine = "MATERIAL_BLEND_TRANSLUCENT";

@@ -94,7 +94,7 @@ namespace sw
 
             /**
              * @brief 타입 하나가 cbuffer 안에서 차지하는 바이트 수입니다(HLSL 패킹 규칙).
-             * @details 리플렉션의 타입 서술에는 크기가 없고 변수 서술에만 있습니다. 구조체 **멤버**를 펼칠 때는
+             * @details 리플렉션의 타입 서술에는 크기가 없고 변수 서술에만 있습니다. 구조체 멤버를 펼칠 때는
              *          여기서 계산합니다. 규칙: 배열 원소와 구조체는 16바이트 정렬, 마지막 원소 뒤 패딩은 없습니다
              *          (D3D 가 변수 Size 로 보고하는 값과 같은 규칙. `float arr[3]` 은 36, `float4 arr[6]` 은 96).
              */
@@ -146,10 +146,10 @@ namespace sw
             }
 
             /**
-             * @brief cbuffer 의 변수 목록을 멤버 표로 만듭니다. **구조체 하나로 감싼 cbuffer 는 한 겹 벗깁니다.**
+             * @brief cbuffer 의 변수 목록을 멤버 표로 만듭니다. 구조체 하나로 감싼 cbuffer 는 한 겹 벗깁니다.
              * @details 엔진 cbuffer(PassCB 등)는 맨 필드로 선언하지만, `cbuffer name { name_t data; }` 나
              *          `ConstantBuffer<name_t>` 처럼 구조체 하나로 감싼 cbuffer 도 리플렉션에는 "구조체 변수 하나짜리 CB" 로
-             *          보입니다. 엔진(ShaderParameterBinder)과 머티리얼 패커는 **필드 이름**으로 오프셋을 찾으므로 변수가
+             *          보입니다. 엔진(ShaderParameterBinder)과 머티리얼 패커는 필드 이름으로 오프셋을 찾으므로 변수가
              *          하나뿐이고 그것이 구조체면 그 멤버들을 CB 의 멤버로 올립니다. 오프셋은 구조체 시작(= 변수 StartOffset)
              *          기준으로 더합니다. 맨 필드 cbuffer 는 그대로 통과합니다.
              */
@@ -281,7 +281,7 @@ namespace sw
 
             /**
              * @brief D3D11 · D3D12 리플렉션 인터페이스에서 ShaderReflectionData 를 채웁니다(두 API 는 타입 이름과 레지스터 공간만 다르다).
-             * @details 상수버퍼의 자리(공간 · 바인드 포인트)는 **이름으로** 바인딩 서술을 찾아 정한다 — `GetConstantBufferByIndex` 의 열거
+             * @details 상수버퍼의 자리(공간 · 바인드 포인트)는 이름으로 바인딩 서술을 찾아 정한다 — `GetConstantBufferByIndex` 의 열거
              *          순서는 register(bN) 과 다를 수 있다. 찾지 못하면 열거 순서를 쓴다.
              */
             template <typename TAPI>
@@ -301,7 +301,7 @@ namespace sw
                     typename TAPI::BufferDesc cbDesc{};
                     pCb->GetDesc( &cbDesc );
                     // StructuredBuffer<T> 의 원소 타입 레이아웃은 "가상 CB"(Type == D3D_CT_RESOURCE_BIND_INFO, 변수 $Element 하나)로 열거된다.
-                    // CB 가 아니라 **원소 레이아웃**으로 따로 낸다 — GPUScene 머티리얼 데이터(g_SwMaterials)의 패킹 기준이다.
+                    // CB 가 아니라 원소 레이아웃으로 따로 낸다 — GPUScene 머티리얼 데이터(g_SwMaterials)의 패킹 기준이다.
                     const bool bStructuredElement = cbDesc.Type == D3D_CT_RESOURCE_BIND_INFO;
                     if ( bStructuredElement == false && cbDesc.Type != D3D_CT_CBUFFER )
                         continue;

@@ -22,7 +22,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 강체 스킨 원본 표입니다(키: 원본의 내용 토큰 — 표가 들고 있어 지운 원본의 주소가 새 원본의 키로 다시 쓰이지 않는다) — 에셋 매니저가 내장 캐시로 만들어 소유한다(`Mesh::acquireRigidSkinSource`). */
+        /** @brief 강체 스킨 원본 표입니다(키: 원본의 내용 토큰. 표가 들고 있어 지운 원본의 주소가 새 원본의 키로 다시 쓰이지 않는다). 에셋 매니저가 내장 캐시로 만들어 소유한다(`Mesh::acquireRigidSkinSource`). */
         class RigidSkinMeshCache final : public WeakInternCache<IdentityToken, Mesh, DefaultHash<IdentityToken>>
         {
         public:
@@ -604,7 +604,7 @@ namespace sw
             const float32 determinant = du1 * dv2 - du2 * dv1;
             if ( determinant == 0.0f )
                 continue; // UV 가 퇴화한 면은 방향을 주지 않는다
-            // 탄젠트 = dP/du. 바이탄젠트는 **-dP/dv** 다 — UV 의 v 가 아래로 늘어(위가 0, glTF 와 같다) 노멀 맵의 초록(+Y, 그림의 위쪽)이 v 가 줄어드는 쪽이다.
+            // 탄젠트 = dP/du. 바이탄젠트는 -dP/dv 다 — UV 의 v 가 아래로 늘어(위가 0, glTF 와 같다) 노멀 맵의 초록(+Y, 그림의 위쪽)이 v 가 줄어드는 쪽이다.
             const float3 faceTangent   = ( edge1 * dv2 - edge2 * dv1 ) / determinant;
             const float3 faceBitangent = ( edge1 * du2 - edge2 * du1 ) / determinant;
             const bool   bUsable       = MathUtil::isFinite( faceTangent.getLengthSquared() ) && faceTangent.getLengthSquared() > 0.0f &&

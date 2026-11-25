@@ -3,7 +3,7 @@
  * @brief 그리지 않고 진행하는 고정 걸음(`SimulationOnlyFrameQueue`)입니다 — 시나리오의 고정 대기가 프레임마다 그리기를 건너뛰어 시간을 줄인다.
  * @details 고정 델타(`DeterministicRunPolicy::_fixedFrameDelta`) 실행 전용이다. 게임 스레드 프레임(입력 · 씬 틱 · UI · 관찰자 · 렌더 패킷 짓기)은 그대로 돌고,
  *          렌더 스레드는 그 패킷의 상태(텍스처 업로드 · GPU 장면 업로드)만 받고 패스를 기록하지 않으며 Present 하지 않는다 — 시뮬레이션 상태가 그리는 실행과 비트까지 같다
- *          (패킷 짓기가 게임 상태를 건드리는 몫 — LOD 뷰 · 그려진 화면비 · 컷 소비 — 도 같이 돈다). 언리얼 `-fixedtimestep` 헤드리스 틱 · 유니티 `Physics.Simulate` 와 같은 자리.
+ *          (패킷 짓기가 게임 상태를 건드리는 몫인 LOD 뷰 · 그려진 화면비 · 컷 소비도 같이 돈다). 언리얼 `-fixedtimestep` 헤드리스 틱 · 유니티 `Physics.Simulate` 와 같은 자리.
  *          렌더 프레임에 묶인 것(TAA · 모션 블러 · 노출 적응 · 깊이 히스토리 · 가림)은 다음에 그리는 프레임이 기록을 버린다(`FrameViewTarget::markFrameSkipped`).
  *          GPU 입자는 누적 단계 요청이라 그리는 프레임이 따라잡고, 다 따라잡을 때까지 캡처 준비(`CaptureReadiness`)가 남은 일로 센다 — 따라잡기 전 그림을 찍지 않는다.
  */
@@ -51,7 +51,7 @@ namespace sw
         /** @brief (게임 스레드) 마지막으로 그리지 않은 프레임의 번호입니다(패킷에 싣는다 — `RenderFramePacket::_simulationOnlySerial`). 0 이면 그런 프레임이 없었다. */
         uint64 getLastSkippedSerial() const { return _skippedSerial.load( std::memory_order_acquire ); }
         /**
-         * @brief (렌더 스레드) 그린 프레임 하나가 끝났습니다 — 그 패킷이 실은 건너뛴 번호 @p packetSkippedSerial 까지를, 남은 따라잡기(@p pendingCatchUpSteps — GPU 입자의 남은 단계)가 0 이면 다 따라잡은 것으로 적습니다.
+         * @brief (렌더 스레드) 그린 프레임 하나가 끝났습니다. 그 패킷이 실은 건너뛴 번호 @p packetSkippedSerial 까지를, 남은 따라잡기(@p pendingCatchUpSteps, GPU 입자의 남은 단계)가 0 이면 다 따라잡은 것으로 적습니다.
          */
         void reportDrawnFrame( uint64 packetSkippedSerial, uint64 pendingCatchUpSteps );
         /** @brief (어느 스레드든) 건너뛴 프레임 뒤의 따라잡기가 남았으면 true 입니다 — 캡처 준비가 남은 일로 센다(`CaptureReadiness::countPendingRenderJobs`). */

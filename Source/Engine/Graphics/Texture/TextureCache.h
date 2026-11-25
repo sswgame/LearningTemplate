@@ -43,7 +43,7 @@ namespace sw
         uint32 _maxUpgradesPerFrame{ 0 };        ///< 이 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한(0 이면 끝남 확인만)
         uint64 _poolBytes{ 0 };                  ///< 위쪽 밉으로 올린 텍스처 바이트 합의 상한(`TextureStreamingPool`)
         uint64 _maxBytesInFlight{ 0 };           ///< 범위로 읽는 중 · 제출을 기다리는 위쪽 밉 바이트 합의 상한(MR-2 — 하나가 이보다 크면 혼자일 때만 읽는다)
-        uint32 _viewHeightPixels{ 0 };           ///< 주 뷰의 높이(픽셀) — 화면 크기를 필요한 밉으로 바꾼다(0 이면 화면을 모른다 — 올리고 내리는 판단을 하지 않는다, R6-6)
+        uint32 _viewHeightPixels{ 0 };           ///< 주 뷰의 높이(픽셀). 화면 크기를 필요한 밉으로 바꾼다(0 이면 화면을 모르므로 올리고 내리는 판단을 하지 않는다, R6-6)
         uint32 _idleFramesBeforeRelease{ 0 };    ///< 화면 크기를 알리지 않은 지 이만큼 지나면 필요 없는 것으로 본다(`TextureStreamingConfig::_idleFramesBeforeRelease`)
         uint32 _minFramesBetweenChanges{ 0 };    ///< 밉을 바꾼 뒤 다시 바꾸기까지의 최소 프레임(`TextureStreamingConfig::_minFramesBetweenChanges`)
         uint32 _promoteBudgetMarginPercent{ 0 }; ///< 올리기가 남기는 예산 여유(%)(`TextureStreamingConfig::_promoteBudgetMarginPercent`)
@@ -91,9 +91,9 @@ namespace sw
      * @class TextureCache
      * @brief 리소스 상대 경로를 키로 Texture2D 를 소유합니다. 머티리얼은 포인터만 빌립니다.
      * @note 디바이스 수명은 이 캐시의 일이 아닙니다. `Texture2D` 가 `RHIRenderResource` 라서 스스로 통보받습니다.
-     * @note `MaterialCache` 와 구조가 같습니다. **갈라지는 부분은 그쪽 헤더에 적어 두었습니다.** 두 벌이
+     * @note `MaterialCache` 와 구조가 같습니다. 갈라지는 부분은 그쪽 헤더에 적어 두었습니다. 두 벌이
      *       어긋나 있던 적이 있으므로, 다음에 한쪽을 고칠 때 다른 쪽도 같이 보십시오.
-     * @note **렌더 텍스처**: `rendertarget/` 로 시작하는 경로는 파일이 아니라 렌더 타깃입니다(`Texture2D::createRenderTarget`). 카메라가 그 경로로
+     * @note 렌더 텍스처: `rendertarget/` 로 시작하는 경로는 파일이 아니라 렌더 타깃입니다(`Texture2D::createRenderTarget`). 카메라가 그 경로로
      *       그리고(`CameraRenderOutput`), 머티리얼은 DDS 와 같은 경로(`acquire`)로 빌려 읽습니다. 크기는 처음 만들 때 정해집니다. 카메라가
      *       `declareRenderTarget` 으로 먼저 알리면 그 크기, 아니면 `kDefaultRenderTargetSize` 입니다.
      * @note 렌더 타깃 크기를 받는 인터페이스(`IRenderTargetDeclarationSink`)는 상속하지 않는다. 캐시가 가진 어댑터 멤버가 구현해 이 캐시로 넘기고,
@@ -121,7 +121,7 @@ namespace sw
         TextureCache( const TextureCache& )            = delete;
         TextureCache& operator=( const TextureCache& ) = delete;
         /**
-         * @brief 텍스처 품질(`-gv_textureMipDrop` — 사용자 설정 graphics.textureQuality)의 사본을 지금 변수 값으로 다시 뜹니다. **게임 스레드 전용**(Debug 단언)입니다.
+         * @brief 텍스처 품질(`-gv_textureMipDrop` — 사용자 설정 graphics.textureQuality)의 사본을 지금 변수 값으로 다시 뜹니다. 게임 스레드 전용(Debug 단언)입니다.
          * @details 로드 워커 · 렌더 스레드(업로드 펌프 · 스트리밍)는 변수 대신 이 사본을 읽는다. 만들 때 한 번, 그 뒤 게임 스레드가 패킷을 짓기 시작할 때마다 부른다(`RenderPacketBuilder::beginPacket`).
          */
         void refreshQualitySettings();
@@ -135,8 +135,8 @@ namespace sw
          * @details 로드는 두 단계다. DDS 읽기와 확인은 워커에서(`Texture2D::readImage`), GPU 업로드는 디바이스를 쓰는 스레드에서 한다 — DX11 은 즉시 컨텍스트로,
          *          GL 은 스레드에 묶인 컨텍스트로 올리므로 워커에서 올릴 수 없다. 업로드는 렌더 스레드가 프레임마다 `completePendingLoads` 로 하거나, 그 스레드에서
          *          `wait()` 한 쪽이 그 자리에서 한다. 렌더 텍스처 · CPU 텍스처는 읽을 파일이 없어 업로드 단계만 있다.
-         *          **수명 계약**: 핸들이 준비된 텍스처의 참조 하나를 쥐고, 마지막 핸들이 사라질 때 놓는다.
-         *          **SRV 번호 계약(R-6)**: 새로 읽는 항목은 시작할 때 번호를 예약해 로드 중 텍스처를 가리키게 하고(`IRHIDevice::reserveBindlessTexture`), 업로드가 끝나면
+         *          수명 계약: 핸들이 준비된 텍스처의 참조 하나를 쥐고, 마지막 핸들이 사라질 때 놓는다.
+         *          SRV 번호 계약(R-6): 새로 읽는 항목은 시작할 때 번호를 예약해 로드 중 텍스처를 가리키게 하고(`IRHIDevice::reserveBindlessTexture`), 업로드가 끝나면
          *          같은 번호를 진짜 텍스처로, 실패하면 누락 체커로 다시 묶는다. 받은 쪽은 `TextureLoadOperation::getStableSRV` 를 한 번 받아 쥐면 된다 — 밉 올리기 · 핫 리로드 ·
          *          크기 변경도 같은 번호를 다시 묶는다(언리얼 `FD3D12BindlessDescriptorManager` 도 번호 할당은 스레드 안전이고 디스크립터 갱신은 렌더 스레드가 나중에 한다).
          *          자리 텍스처(엔진 기본 에셋의 로드 중 텍스처 · 누락 체커)는 처음 비동기 요청이 동기로 올려 둔다. 엔진 서비스가 없으면(도구 · 테스트) 예약하지 않는다.
@@ -156,14 +156,14 @@ namespace sw
         /**
          * @brief 경로의 텍스처를 확보하고 GPU 에 업로드합니다(렌더 텍스처 경로면 렌더 타깃을 만듭니다). 실패하면 nullptr 입니다.
          * @details `request` 와 같은 로드 작업을 기다린다(새 로드는 이 자리에서 읽는다) — 디바이스를 쓰는 스레드에서만 부른다(업로드를 그 자리에서 한다).
-         *          **수명 계약**: 성공하면 참조를 하나 셉니다. 돌려준 포인터는 짝이 되는 `release` 까지 살아 있습니다(객체는 `unique_ptr` 이라
+         *          수명 계약: 성공하면 참조를 하나 셉니다. 돌려준 포인터는 짝이 되는 `release` 까지 살아 있습니다(객체는 `unique_ptr` 이라
          *          맵이 원소를 옮겨도 주소가 그대로입니다). 같은 경로를 동시에 원한 스레드는 같은 로드를 기다려 받습니다.
          */
         Texture2D* acquire( string_view relativePath );
         /**
          * @brief 워커가 읽기를 마친 텍스처를 @p pDevice 에 올립니다(렌더 스레드, 프레임 기록 전 한 번, `FrameRenderer::updateTextureUploads`). 끝낸(bindless 에 등록해 공개한) 수를 반환합니다.
          * @details 업로드는 세 단계다(RHIAsyncUploads U8) — 워커 읽기 → 이 함수가 `beginUpload`(텍스처 생성 · 제출, 기다리지 않는다) → 이후 프레임의 이 함수가 `finishUpload`
-         *          (`pollTransfer` 가 `Complete` 면 bindless 등록과 공개). 같은 호출이 이미 제출한 로드의 끝남 확인을 먼저 하고, @p maxCount 는 **새로 제출하는 수**에 적용한다
+         *          (`pollTransfer` 가 `Complete` 면 bindless 등록과 공개). 같은 호출이 이미 제출한 로드의 끝남 확인을 먼저 하고, @p maxCount 는 새로 제출하는 수에 적용한다
          *          (확인은 값싸다). `Busy` 면 그 프레임의 나머지 제출을 미루고 다음 프레임에 다시 낸다. 블로킹이 아닌 길이라 `wait()` 한 쪽이 있으면 그쪽이 먼저 끝낸다.
          *          한 프레임에 @p maxCount 개까지만 제출한다 — 한꺼번에 도착한 수백 장이 한 프레임을 늘리지 않게(언리얼 텍스처 스트리밍의 프레임당 예산과 같다).
          *          요청한 디바이스가 아니라 지금 올리는 디바이스로 올린다 — 요청 뒤 디바이스가 내려가고(백엔드 교체 · 테스트의 디바이스 차례) 새로 섰으면 옛 주소는 죽었다.
@@ -219,7 +219,7 @@ namespace sw
         static bool isCPUTexturePath( string_view relativePath );
         /**
          * @brief CPU 픽셀(RGBA8 밉 하나, 행 사이에 빈틈 없음)을 원본으로 하는 텍스처를 @p relativePath(`cpu/...`)에 만듭니다(게임 스레드). GPU 자원은 첫 `acquire` 가 업로드합니다.
-         * @details 언리얼 랜드스케이프 가중치 맵이나 유니티 `TerrainData` 알파맵처럼 **한 소유자만 쓰는** 텍스처입니다(지형마다의 스플랫). 원본은 캐시가 보관하고
+         * @details 언리얼 랜드스케이프 가중치 맵이나 유니티 `TerrainData` 알파맵처럼 한 소유자만 쓰는 텍스처입니다(지형마다의 스플랫). 원본은 캐시가 보관하고
          *          `requestRegionUpdate` 가 고치므로 디바이스를 다시 만들어도 칠한 내용이 남습니다. 항목은 `releaseCPUTexture` 까지 남습니다(참조가 0 이면 GPU 자원만 해제합니다).
          * @return 경로가 `cpu/` 가 아니거나, 이미 있거나, 크기가 틀리면 false 입니다.
          */
@@ -239,7 +239,7 @@ namespace sw
         /**
          * @brief 이미 만든 렌더 텍스처를 새 크기로 다시 만듭니다(렌더 스레드, 기록 전에). 크기가 같거나 아직 없으면 크기만 알리고 false 입니다.
          * @details 언리얼 `UTextureRenderTarget2D::ResizeTarget` 에 해당합니다. 위젯이 그리기 크기를 바꾼 캔버스 대상처럼, 먼저 만든 크기가 낡은 경우에 씁니다.
-         *          `Texture2D` 객체는 **그대로 두고** GPU 자원만 바꿉니다(빌린 포인터가 그대로 유효합니다). SRV 번호는 지켜 새 타깃으로 다시 묶으므로(R-6)
+         *          `Texture2D` 객체는 그대로 두고 GPU 자원만 바꿉니다(빌린 포인터가 그대로 유효합니다). SRV 번호는 지켜 새 타깃으로 다시 묶으므로(R-6)
          *          머티리얼은 다시 받지 않는다. 만들지 못하면 그 번호를 누락 체커로 다시 묶는다. 옛 타깃은 해제 줄로 가므로 기다리지 않는다.
          * @return 다시 만들었으면 true 입니다. 실패는 로그를 남깁니다.
          */
@@ -247,13 +247,13 @@ namespace sw
         /**
          * @brief 경로의 텍스처를 디스크에서 다시 읽어 GPU 에 업로드합니다(에디터 핫 리로드).
          * @details 캐시에 없으면 아무 일도 하지 않습니다. 아무도 안 쓰는 것을 업로드할 이유가 없습니다.
-         *          `Texture2D` 객체는 **그대로 두고** 내용만 교체합니다. 머티리얼이 포인터를
+         *          `Texture2D` 객체는 그대로 두고 내용만 교체합니다. 머티리얼이 포인터를
          *          빌려 가 있으므로 객체를 바꾸면 빌린 쪽이 해제된 것을 가리킵니다.
          *          파일을 GPU 자원을 놓기 전에 읽는다 — 읽지 못하면(깨진 DDS · 반쯤 쓰인 파일) 옛 텍스처를 그대로 두고 Failed 입니다.
          */
         [[nodiscard]] ReloadResult reload( const AssetID& assetID );
         /**
-         * @brief 이미 가진 텍스처를 **참조 수를 바꾸지 않고** 찾습니다. 없거나 처음 업로드하는 중이면 nullptr 입니다.
+         * @brief 이미 가진 텍스처를 참조 수를 바꾸지 않고 찾습니다. 없거나 처음 업로드하는 중이면 nullptr 입니다.
          * @warning 빌린 포인터입니다. 누군가 `acquire` 로 참조를 잡고 있는 동안만 유효하고, 마지막 `release` 나 `clear` 뒤에는 해제된 객체입니다.
          *          저장하지 말고 그 자리에서 쓰십시오. 오래 보관해야 하면 `acquire` 와 `release` 짝으로 빌립니다.
          */
@@ -283,7 +283,7 @@ namespace sw
         /** @brief 그리지 못한 굽기를 다음 프레임으로 돌려놓습니다(렌더 스레드). 그 사이 같은 결과의 새 요청이 들어왔으면 버립니다. */
         void deferLayerBake( TextureLayerBakeRequest request );
         /**
-         * @brief 맡겨 둔 굽기 가운데 텍스처가 모두 와 있는 것을 이번 프레임에 그릴 것으로 옮깁니다(렌더 스레드, 이번 프레임의 로드를 끝내기 **전** — `FrameRenderer::updateTextureUploads`).
+         * @brief 맡겨 둔 굽기 가운데 텍스처가 모두 와 있는 것을 이번 프레임에 그릴 것으로 옮깁니다(렌더 스레드, 이번 프레임의 로드를 끝내기 전 — `FrameRenderer::updateTextureUploads`).
          * @details 예약한 SRV 번호의 다시 묶기는 다음 프레임부터 셰이더에 보인다. 이번 프레임에 끝난 텍스처로 구우면 로드 중 텍스처가 결과에 굳는다 — 굽기는 한 번뿐이다.
          */
         void selectReadyLayerBakes();

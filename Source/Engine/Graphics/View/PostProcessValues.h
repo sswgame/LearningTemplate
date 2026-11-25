@@ -61,7 +61,7 @@ namespace sw
         static bool hasActive( const vector<PostProcessBlendable>& listBlendable, PostProcessBlendableLocation location );
         /**
          * @brief @p inoutList 를 @p target 쪽으로 @p alpha 만큼 섞습니다 — 같은 (경로, 자리) 의 무게는 직선으로 섞고, @p target 에만 있는 항목은 무게 0 에서 섞여 들어온다.
-         * @param bFadeMissing @p target 에 없는 항목의 무게를 1 - @p alpha 배로 줄인다(포즈 블렌드 — 다른 카메라로 넘어가면 사라진다). 볼륨은 false 다(더하기만 한다 — 언리얼과 같다).
+         * @param bFadeMissing @p target 에 없는 항목의 무게를 1 - @p alpha 배로 줄인다(포즈 블렌드. 다른 카메라로 넘어가면 사라진다). 볼륨은 false 다(언리얼처럼 더하기만 한다).
          * @details 무게가 0 이 된 항목은 지운다(목록이 프레임마다 자라지 않게).
          */
         static void blendList( vector<PostProcessBlendable>& inoutList, const vector<PostProcessBlendable>& target, float32 alpha, bool bFadeMissing );

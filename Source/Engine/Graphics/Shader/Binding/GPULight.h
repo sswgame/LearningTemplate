@@ -14,8 +14,8 @@ namespace sw
     /**
      * @struct GPULight
      * @brief 라이트 하나입니다. 셰이더의 `LightData`(lighting.hlsli)와 레이아웃이 같아야 합니다.
-     * @details **`float4` 다섯입니다.** 원소를 `float3` 과 섞으면 std430 은 vec4 를 16 바이트 경계에
-     *          맞추는 반면 DX · Vulkan 은 DXC 가 명시 오프셋을 적어 넘어가, **OpenGL 에서만** 값이
+     * @details `float4` 다섯입니다. 원소를 `float3` 과 섞으면 std430 은 vec4 를 16 바이트 경계에
+     *          맞추는 반면 DX · Vulkan 은 DXC 가 명시 오프셋을 적어 넘어가, OpenGL 에서만 값이
      *          어긋납니다. 증상이 "빛 하나가 조용히 엉뚱한 위치에 있다"라 찾기 어렵습니다.
      *          `float4` 는 그 자체가 16 바이트 정렬 단위라 이 함정이 없습니다.
      */
