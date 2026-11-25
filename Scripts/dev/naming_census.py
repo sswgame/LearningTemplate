@@ -19,14 +19,16 @@ import json
 import re
 from collections import defaultdict
 from pathlib import Path
+from typing import Iterable
 
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from lint.lint_scope import make_whole_scope
-from lint.naming_words import collect_source_names, is_external_name, DECLARATION_KINDS, read_table, split_lower_words
+from lint.name_collection import DECLARATION_KINDS, is_external_name, iterate_names, split_lower_words
+from lint.rule_tables import read_rule_table
 
 
-def build_census(list_name: list[tuple[str, str, str]]) -> dict[str, dict[str, tuple[str, str]]]:
+def build_census(list_name: Iterable[tuple[str, str, str]]) -> dict[str, dict[str, tuple[str, str]]]:
     """(종류, 이름, 파일) → 낱말 → 이름 → (종류, 첫 파일)."""
     census: dict[str, dict[str, tuple[str, str]]] = defaultdict(dict)
     for kind, name, path in list_name:
@@ -64,7 +66,7 @@ class NamingCensusCommand(Command):
 
     def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
         project_root = context.root
-        census = build_census(collect_source_names(project_root, make_whole_scope(project_root)))
-        count = write_census(Path(args.out), census, read_table(project_root))
+        census = build_census(iterate_names(project_root, make_whole_scope(project_root)))
+        count = write_census(Path(args.out), census, read_rule_table(project_root, "naming-words"))
         print(f"[NamingCensus] 낱말 {count}개 → {args.out}")
         return ExitCode.PASSED

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/naming_words.py
 
@@ -38,70 +36,33 @@ Scripts/lint/naming_words.py
 verb · term · predicate · lookup · word · kind 의 위반은 모두 실패다. 예전에는 이름 기준선(남은 위반 이름 목록, 줄기만 하는 래칫)을 두었으나 영역별 이전이
 0 에 닿아 은퇴했다(2026-11-21) — 이름 하나의 예외는 `_keep` 에 까닭과 함께 둔다.
 
-`py -3 -m Scripts lint naming-words [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
+`py -3 -m Scripts lint naming-words [--self-check]` 로 돌리고, 커밋 훅이 돌린다.
 """
 
 from __future__ import annotations
 
-import argparse
 import functools
 import re
-import sys
-from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Iterable, Mapping, Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
+from lint.acronyms import find_bad_words
+from lint.cpp_code import strip_comments_and_strings
+from lint.lint_rule import LintRule, SourceFile
+from lint.lint_scope import LintScope, is_under
+from lint.name_collection import (
+    CMAKE_FUNCTION_SHAPE, ENUM_CLASS_DECLARATION, EXTENSIONS, PYTHON_SHAPES, collect_declarations, collect_path_names, collect_script_declarations, declares_names,
+    is_cmake_path, is_external_name, list_file_names, list_path_names, split_lower_words, split_words,
+)
+from lint.rule_tables import ExceptionTable, get_table_path
 
-from common.exit_code import ExitCode  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from lint.lint_scope import LintScope, is_under, make_whole_scope, read_texts  # noqa: E402
-from lint.acronyms import check_find_bad_words, find_acronym_problems  # noqa: E402
-from lint.rule_tables import ExceptionTable, get_table_path, read_rule_table  # noqa: E402
-
-RULE_ID = "naming-words"
-CONFIG_PATH = get_table_path(RULE_ID)   # 안내 글이 가리키는 낱말 표
+CONFIG_PATH = get_table_path("naming-words")   # 안내 글이 가리키는 낱말 표
 NAME_RULES = ("verb", "term", "predicate", "lookup", "word", "kind", "component", "interface", "timing")   # 이름마다 한 줄씩 모으는 판정(같은 이름은 처음 자리 하나만)
-KEEP_SECTIONS = ("_keep", "_acronymKeep", "_timingAccessorKeep")   # 이름 하나씩의 예외 — 까닭은 형식이 보고, 낡은 줄은 예전처럼 세지 않는다
-EXTENSIONS = (".h", ".cpp", ".inl")
-COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
-STRING = re.compile(r'R"\((?:.|\n)*?\)"|"(?:[^"\\\n]|\\.)*"')
+KEEP_SECTIONS = ("_keep", "_acronymKeep", "_timingAccessorKeep")   # 이름 하나씩의 예외 — 까닭은 형식이 보고, 낡은 줄은 세지 않는다
+Row = tuple[str, str, str]   # 판정(`NAME_RULES` · banned · acronym) · 이름 · 안내
 FUNCTION = re.compile(r"\b_?([a-z][a-z0-9]*)[A-Z]\w*\s*\(")
 BOOL_FUNCTION = re.compile(r"\bbool\s+(?:\w+::)*(_?[a-z][A-Za-z0-9]*)\s*\(")
 IDENTIFIER = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
 WORD_RUN = re.compile(r"\w+")   # `\b` 사이의 글자 덩어리 — 옛 이름이 맞을 수 있는 자리는 그 이름의 첫 덩어리와 같은 덩어리에서만 시작한다
-ANY_WORD = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z0-9]+")
-
-
-def strip_code(text: str) -> str:
-    return STRING.sub('""', COMMENT.sub("", text))
-
-
-def split_words(name: str, function: bool = False) -> list[str]:
-    """식별자 하나의 단어들 — 앞 `_` 과 머리(`k` 상수 · `b` 불 · `s` 정적, 변수면 `arr` · `list` · `map` · `set` 컬렉션)를 떼고 낙타 · 밑줄로 가른다.
-    함수 이름은 컬렉션 머리를 떼지 않는다(`setAxisTags` 의 `set` 은 동사다)."""
-    words: list[str] = []
-    for part in name.strip("_").split("_"):
-        words.extend(ANY_WORD.findall(part))
-    prefixes = ("k", "b", "s", "g", "m", "p") if function else ("k", "b", "s", "g", "m", "p", "arr", "list", "map", "set")
-    if len(words) > 1 and words[0] in prefixes:
-        words = words[1:]
-    return words
-
-
-# 선언 모으기 — 낱말 표(`_words`)와 전수 집계(`py -3 -m Scripts naming-census`)가 같은 것을 본다. 쓰는 자리(호출 · 참조)가 아니라 선언만 본다:
-# 우리가 짓지 않은 바깥 이름(Win32 · Vulkan · ImGui)은 쓰기만 하므로 대부분 빠지고, 바깥 가상 함수를 덮어쓰는 자리는 `_externalPatterns` 가 가린다.
-NOT_NAME = {"return", "else", "new", "delete", "throw", "case", "goto", "co_return", "co_yield", "co_await", "and", "or", "not", "typename", "class", "struct",
-            "enum", "union", "using", "namespace", "operator", "sizeof", "if", "while", "for", "switch", "do", "catch", "decltype", "alignof", "alignas", "static_assert",
-            "public", "private", "protected", "const", "constexpr", "override", "final", "noexcept", "volatile", "default", "mutable", "static", "inline", "virtual",
-            "explicit", "friend", "template", "typedef", "extern", "auto", "void", "defined", "this", "nullptr", "true", "false", "requires", "export", "import"}
-TYPE_DECLARATION = re.compile(r"\b(?:class|struct|union|enum(?:\s+class|\s+struct)?)\s+(?:(?:SW_\w+|alignas\s*\([^)]*\)|\[\[[^\]]*\]\])\s+)*([A-Za-z_]\w*)")
-ENUM_CLASS_DECLARATION = re.compile(r"\benum\s+(?:class|struct)\s+(?:(?:SW_\w+|\[\[[^\]]*\]\])\s+)*([A-Za-z_]\w*)")
-ENUM_BODY = re.compile(r"\benum\b[^;{()]*\{([^}]*)\}")
-ALIAS_DECLARATION = re.compile(r"\busing\s+([A-Za-z_]\w*)\s*=|\btypedef\b[^;{}]*?\b([A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*;")
-MACRO_DECLARATION = re.compile(r"^[ \t]*#[ \t]*define[ \t]+([A-Za-z_]\w*)", re.M)
-FUNCTION_DECLARATION = re.compile(r"\b([A-Za-z_]\w*)[\s\*&>]+((?:[A-Za-z_]\w*::)*)~?([A-Za-z_]\w*)\s*\(")
-VARIABLE_DECLARATION = re.compile(r"\b([A-Za-z_]\w*)[\s\*&>]+([A-Za-z_]\w*)\s*(?=[;=\{\[,\)]|:(?!:))")
-MACRO_NAME = re.compile(r"[A-Z0-9_]+")
 #: 기반 목록이 있는 형식 정의(`class X : public Y {`) — 전방 선언(`class X;`)은 `{` 가 없어 빠진다. 기반 목록은 둘째 무리(없으면 None)
 TYPE_DEFINITION = re.compile(r"\b(?:class|struct)\s+(?:(?:SW_\w+|alignas\s*\([^)]*\)|\[\[[^\]]*\]\])\s+)*([A-Za-z_]\w*)\s*(?:final\s*)?(?::(?!:)\s*([^{;()]*))?\{")
 REFLECT_INTERFACE_TYPE = re.compile(r"\bREFLECT\(\s*Interface\b[^)]*\)\s*(?:class|struct)\s+(?:SW_\w+\s+)*([A-Za-z_]\w*)")
@@ -109,17 +70,6 @@ TIMING_ACCESSOR = re.compile(r"(?<![\w.>:])(get[A-Z]\w*(?:Nanoseconds|Microsecon
 SHIPPING_HEADER_ROOTS = ("Source/Core/", "Source/Engine/", "Source/GameFramework/")
 SHIPPING_HEADER_SKIP_PARTS = ("/DevTools/", "/Editor/", "/Tests/", "/Dev/")   # 배포에서 빠지는 모듈 · 폴더(`SW_DEV_ONLY_SOURCE_PATTERNS`)
 COMPONENT_SUFFIX = "Component"
-LETTERS = re.compile(r"[A-Za-z]+")
-PARAMETER_PREFIXES = ("out", "inout", "outb", "inoutb", "arr", "list", "map", "set")
-DECLARATION_KINDS = ("type", "enumerator", "alias", "function", "member", "constant", "variable", "macro", "command", "file", "folder")
-
-
-def classify_variable(name: str) -> str:
-    if name.startswith(("_", "m_", "s_")) or re.match(r"m[A-Z]", name):
-        return "member"
-    if re.match(r"k[A-Z]", name):
-        return "constant"
-    return "variable"
 
 
 def find_first_base(bases: str | None) -> str:
@@ -146,90 +96,6 @@ def find_component_problem(name: str, first_base: str) -> str | None:
     return None
 
 
-def collect_declarations(code: str) -> list[tuple[str, str]]:
-    """주석 · 문자열을 뺀 코드의 (종류, 이름) — 형식 · 열거자 · 별칭 · 함수 · 멤버 · 상수 · 변수(지역 · 인자 · 전역) · 매크로.
-    shortcut: 정규식이라 `Type value( args )` 직접 초기화는 함수로 센다 — 낱말 검사는 종류와 무관해 판정이 바뀌지 않는다, 종류별 수가 중요해지면 clang 색인으로 바꾼다."""
-    list_declaration: list[tuple[str, str]] = []
-    for match in TYPE_DECLARATION.finditer(code):
-        if match.group(1) not in NOT_NAME:
-            list_declaration.append(("type", match.group(1)))
-    for match in ENUM_BODY.finditer(code):
-        for item in match.group(1).split(","):
-            found = re.match(r"\s*([A-Za-z_]\w*)", item)
-            if found:
-                list_declaration.append(("enumerator", found.group(1)))
-    for match in ALIAS_DECLARATION.finditer(code):
-        name = match.group(1) or match.group(2)
-        if name not in NOT_NAME:
-            list_declaration.append(("alias", name))
-    for match in MACRO_DECLARATION.finditer(code):
-        list_declaration.append(("macro", match.group(1)))
-    for match in FUNCTION_DECLARATION.finditer(code):
-        before, name = match.group(1), match.group(3)
-        if before not in NOT_NAME - {"const", "constexpr", "static", "inline", "virtual", "explicit", "friend", "auto", "void", "extern"} \
-                and name not in NOT_NAME and MACRO_NAME.fullmatch(name) is None:
-            list_declaration.append(("function", name))
-    for match in VARIABLE_DECLARATION.finditer(code):
-        before, name = match.group(1), match.group(2)
-        if before not in NOT_NAME - {"const", "constexpr", "static", "inline", "auto", "mutable", "volatile", "extern"} and name not in NOT_NAME \
-                and MACRO_NAME.fullmatch(name) is None:
-            list_declaration.append((classify_variable(name), name))
-    return list_declaration
-
-
-def collect_path_names(relative: str, root_depth: int = 1) -> list[tuple[str, str]]:
-    """경로의 (file, 파일 줄기) 와 (folder, 폴더 이름)들 — 뿌리 마디(`Source` · `Scripts` · `.claude/hooks` …, @p root_depth 개)는 뺀다."""
-    parts = relative.split("/")[root_depth:]
-    return [("folder", part) for part in parts[:-1]] + [("file", parts[-1].split(".")[0])] if parts else []
-
-
-# 스크립트 · 빌드 이름 — Python(Scripts · 훅 · 스킬 스크립트) · 셸 · CMake. 파이썬은 PEP 8(docs/agents/NamingCpp.md: 모듈 · 함수 snake_case ·
-# 클래스 PascalCase · 상수 UPPER_CASE)의 꼴도 보고, CMake 는 함수 꼴(sw_snake_case)과 낱말을 본다(옵션 SW_ 는 낱말만). CLI 명령(`Command` 의 `name`)과 린트 규칙 id(`Rule("…"`)도 이름이다.
-SCRIPT_ROOTS = ("Scripts", ".claude/hooks", ".claude/skills", "cmake")
-SCRIPT_EXTENSIONS = (".py", ".sh", ".cmake")
-PYTHON_FUNCTION = re.compile(r"^[ \t]*def[ \t]+([A-Za-z_]\w*)", re.M)
-PYTHON_CLASS = re.compile(r"^[ \t]*class[ \t]+([A-Za-z_]\w*)", re.M)
-PYTHON_CONSTANT = re.compile(r"^(_?[A-Z][A-Z0-9_]*|_?k[A-Z]\w*)[ \t]*[:=]", re.M)   # 옛 kPascalCase 도 모아 꼴 검사가 막는다
-PYTHON_SHAPES = {"function": (re.compile(r"_*[a-z0-9_]+"), "함수는 snake_case"), "type": (re.compile(r"_?[A-Z][A-Za-z0-9]*"), "클래스는 PascalCase"),
-               "constant": (re.compile(r"_?[A-Z][A-Z0-9_]*"), "모듈 상수는 UPPER_CASE"), "file": (re.compile(r"_*[a-z0-9_]+"), "모듈 파일은 snake_case"),
-               "folder": (re.compile(r"[a-z0-9_]+"), "패키지 폴더는 snake_case")}
-COMMAND_NAME = re.compile(r"\b(?:LegacyCommand|Rule)\(\s*\"([a-z][a-z0-9-]*)\"|^    name = \"([a-z][a-z0-9-]*)\"", re.M)
-SHELL_FUNCTION = re.compile(r"^[ \t]*(?:function[ \t]+)?([A-Za-z_]\w*)[ \t]*\(\)", re.M)
-CMAKE_FUNCTION = re.compile(r"\b(?:function|macro)\s*\(\s*([A-Za-z_]\w*)", re.I)
-CMAKE_OPTION = re.compile(r"\boption\s*\(\s*([A-Za-z_]\w*)", re.I)
-CMAKE_FUNCTION_SHAPE = re.compile(r"sw_[a-z0-9]+(?:_[a-z0-9]+)*")
-CMAKE_OUTSIDE_ROOTS = ("Source", "Test", "ThirdParty")   # cmake/ 밖의 CMake — 함수 꼴만 본다(파일 · 폴더 이름은 그 뿌리의 규칙이 본다)
-FOREIGN_CMAKE_PART = "vcpkg-port"                        # 받아 온 vcpkg 포트는 남의 코드다
-
-
-def collect_script_declarations(path: str, text: str) -> list[tuple[str, str]]:
-    """스크립트 파일 하나의 (종류, 이름) — 함수 · 클래스 · 모듈 상수 · CLI 명령(파이썬), 함수(셸), 함수 · 매크로 · 옵션(CMake)."""
-    if path.endswith(".py"):
-        return ([("function", name) for name in PYTHON_FUNCTION.findall(text) if not name.startswith("__")] + [("type", name) for name in PYTHON_CLASS.findall(text)]
-                + [("constant", name) for name in PYTHON_CONSTANT.findall(text)] + [("command", first or second) for first, second in COMMAND_NAME.findall(text)])
-    if path.endswith(".sh"):
-        return [("function", name) for name in SHELL_FUNCTION.findall(text)]
-    return [("function", name) for name in CMAKE_FUNCTION.findall(text)] + [("macro", name) for name in CMAKE_OPTION.findall(text)]
-
-
-def is_cmake_path(path: str) -> bool:
-    return path.endswith((".cmake", "CMakeLists.txt"))
-
-
-def split_lower_words(name: str, kind: str) -> list[str]:
-    """낱말 표의 열쇠 — `split_words` 의 낱말을 숫자에서 다시 가르고(`Vector3D` → vector · d) 소문자로, 숫자만인 마디와 한 글자는 뺀다."""
-    words: list[str] = []
-    for word in split_words(name, function=kind == "function"):
-        words.extend(piece.lower() for piece in LETTERS.findall(word) if len(piece) > 1)
-    while kind != "function" and len(words) > 1 and words[0] in PARAMETER_PREFIXES:   # 출력 인자 머리(`outbChanged` · `inoutListCrumb`)
-        words = words[1:]
-    return words
-
-
-def is_external_name(name: str, patterns: Sequence[re.Pattern]) -> bool:
-    return any(pattern.match(name) for pattern in patterns)
-
-
 def is_third_person_verb(word: str) -> bool:
     """3인칭 단수 동사 꼴(끝이 s)이면 true — s 로 끝나는 명사 · 명령형(`focus` · `axis` · `atlas` · `class`)은 뺀다."""
     return word.endswith("s") and not word.endswith(("ss", "us", "is", "as", "os"))
@@ -252,277 +118,261 @@ def find_term_word(name: str, banned_terms: dict, keep_terms: Sequence[str]) -> 
     return None
 
 
-@functools.lru_cache(maxsize=256)
-def compile_banned_names(list_name: tuple[str, ...]) -> re.Pattern:
-    return re.compile(r"\b(" + "|".join(map(re.escape, list_name)) + r")\b")
-
-
-def find_banned_names(code: str, banned_names: dict, map_first_run: dict[str, str | None]) -> list[str]:
-    """
-    @p code 의 옛 이름(`\b(이름|…)\b` 의 차례대로) — 옛 이름 1 249 개를 엮은 정규식을 파일마다 모든 자리에서 돌리지 않고, 글의 덩어리(`WORD_RUN`)에 첫 덩어리가
-    있는 이름만 엮어 돈다. 이름이 맞는 자리는 늘 그 이름의 첫 덩어리와 같은 덩어리이므로(`\b` 로 시작한다) 뺀 이름은 어디서도 맞지 않고, 표 차례를 지켜
-    엮어 겹친 이름(`YawUtil` · `YawUtil::fromWorld`)도 전체를 엮은 것과 같은 것을 고른다. 첫 글자가 덩어리 글자가 아닌 이름(첫 덩어리 None)은 늘 엮는다.
-    """
-    set_run = set(WORD_RUN.findall(code))
-    list_candidate = tuple(name for name in banned_names if map_first_run[name] is None or map_first_run[name] in set_run)
-    return [match.group(1) for match in compile_banned_names(list_candidate).finditer(code)] if list_candidate else []
-
-
 def is_shipping_header(path: str) -> bool:
     """배포 구성이 짓는 엔진 층 헤더인가 — timing 판정의 범위."""
     return path.endswith((".h", ".inl")) and path.startswith(SHIPPING_HEADER_ROOTS) and not any(part in path for part in SHIPPING_HEADER_SKIP_PARTS)
 
 
-def classify_names(list_code: Iterable[tuple[str, str]], table: dict) -> tuple[list[str], dict[str, dict[str, str]]]:
-    """(기준선 없는 문제 목록, 규칙 → {이름: 경로 · 안내}) — 기준선 규칙의 위반은 이름으로 모아 기준선과 견준다. @p list_code 는 (경로, `strip_code` 한 글)."""
-    banned_verbs = table["_banned"]
-    banned_terms = table.get("_bannedTerms", {})
-    keep_terms = table.get("_keepTerms", [])
-    predicate_words = set(table.get("_predicateWords", []))
-    lookup_words = set(table.get("_lookupWords", []))
-    keep = table["_keep"]
-    timing_keep = table.get("_timingAccessorKeep", {})
-    banned_names = table.get("_bannedNames", {})
-    map_first_run = {name: (match.group(0) if (match := WORD_RUN.match(name)) else None) for name in banned_names}
-    map_term: dict[str, str | None] = {}   # 이름 → 금지 명사 — 같은 식별자가 파일마다 수백 번 나와 `_keepTerms` 지우기를 이름마다 한 번만 한다
+class NameTable:
+    """낱말 표(`NamingWords.json`)와 이름 이력(`_bannedNames`)을 판정이 묻기 좋게 편 것."""
 
-    list_problem: list[str] = []
-    seen: set[str] = set()
-    found_by_rule: dict[str, dict[str, str]] = {rule: {} for rule in NAME_RULES}
+    def __init__(self, table: Mapping) -> None:
+        self.banned_verbs = table["_banned"]
+        self.banned_terms = table.get("_bannedTerms", {})
+        self.keep_terms = table.get("_keepTerms", [])
+        self.predicate_words = set(table.get("_predicateWords", []))
+        self.lookup_words = set(table.get("_lookupWords", []))
+        self.keep = table["_keep"]
+        self.timing_keep = table.get("_timingAccessorKeep", {})
+        self.banned_names = table.get("_bannedNames", {})
+        self.map_first_run = {name: (match.group(0) if (match := WORD_RUN.match(name)) else None) for name in self.banned_names}
+        self.map_term: dict[str, str | None] = {}   # 이름 → 금지 명사 — 같은 식별자가 파일마다 수백 번 나와 `_keepTerms` 지우기를 이름마다 한 번만 한다
+        words = table.get("_words", {"a": (), "b": ()})
+        self.known = {*words["a"], *words["b"]}
+        self.scoped = table.get("_scopedWords", {})
+        self.externals = [re.compile(pattern) for pattern in table.get("_externalPatterns", ())]
+        self.external_paths = table.get("_externalPaths", ())
+        # 파이썬 snake_case 이름도 같은 합성어로 본다(`RequiredNameFields` 는 `required_name_fields` 도 덮는다)
+        self.keep_term_patterns = [re.compile(re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_?", re.escape(term)), re.I) for term in self.keep_terms]
+        self.acronyms = {item.upper() for item in table.get("_acronyms", ())}
+        self.acronym_keep = table.get("_acronymKeep", {})
 
-    def record(rule: str, name: str, path: str, hint: str) -> None:
-        if name not in keep and name not in found_by_rule[rule]:
-            found_by_rule[rule][name] = f"{path}: {hint}"
+    def find_banned_names(self, code: str) -> list[str]:
+        """
+        @p code 의 옛 이름(`\\b(이름|…)\\b` 의 차례대로) — 옛 이름 천여 개를 엮은 정규식을 파일마다 모든 자리에서 돌리지 않고, 글의 덩어리(`WORD_RUN`)에 첫 덩어리가
+        있는 이름만 엮어 돈다. 이름이 맞는 자리는 늘 그 이름의 첫 덩어리와 같은 덩어리이므로(`\\b` 로 시작한다) 뺀 이름은 어디서도 맞지 않고, 표 차례를 지켜
+        엮어 겹친 이름(`YawUtil` · `YawUtil::fromWorld`)도 전체를 엮은 것과 같은 것을 고른다. 첫 글자가 덩어리 글자가 아닌 이름(첫 덩어리 None)은 늘 엮는다.
+        """
+        set_run = set(WORD_RUN.findall(code))
+        list_candidate = tuple(name for name in self.banned_names if self.map_first_run[name] is None or self.map_first_run[name] in set_run)
+        return [match.group(1) for match in compile_banned_names(list_candidate).finditer(code)] if list_candidate else []
 
-    for path, code in list_code:
+    def classify_code(self, path: str, code: str) -> list[Row]:
+        """C++ 글 하나(주석 · 문자열을 지운 것)의 위반 — word 밖의 판정."""
+        list_row: list[Row] = []
+
+        def record(rule: str, name: str, hint: str) -> None:
+            if name not in self.keep:
+                list_row.append((rule, name, f"{path}: {hint}"))
+
+        banned_names = self.banned_names
         if banned_names:
-            for name in find_banned_names(code, banned_names, map_first_run):
-                if f"name:{name}" not in seen:
-                    seen.add(f"name:{name}")
-                    list_problem.append(f"{path}: 옛 이름 '{name}' — {banned_names[name]}")
+            for name in self.find_banned_names(code):
+                list_row.append(("banned", name, f"{path}: 옛 이름 '{name}' — {banned_names[name]}"))
         for word, name in collect_words(code):
-            if name in keep:
+            if name in self.keep:
                 continue
-            if word in banned_verbs:
-                record("verb", name, path, f"함수 앞 단어 '{word}'({name}) 는 금지 동사다 — {banned_verbs[word]}")
+            if word in self.banned_verbs:
+                record("verb", name, f"함수 앞 단어 '{word}'({name}) 는 금지 동사다 — {self.banned_verbs[word]}")
             words = split_words(name, function=True)
-            if len(words) > 1 and words[-1] in ("For", "Of") and words[0] not in lookup_words:
-                record("lookup", name, path, f"'{name}' 는 동사 없는 For · Of 게터다 — get · find · findOrAdd · compute 로 시작한다(_lookupWords)")
+            if len(words) > 1 and words[-1] in ("For", "Of") and words[0] not in self.lookup_words:
+                record("lookup", name, f"'{name}' 는 동사 없는 For · Of 게터다 — get · find · findOrAdd · compute 로 시작한다(_lookupWords)")
         for match in ENUM_CLASS_DECLARATION.finditer(code):
             name = match.group(1)
             if name.endswith("Type"):
-                record("kind", name, path, f"열거형 '{name}' 의 끝이 Type 이다 — 값의 갈래는 …Kind(NamingCpp, 언리얼 E…Kind · 유니티 …Kind). 프로토콜 · 외부 API 의 자기 용어면 _keep 에 이유와 함께")
+                record("kind", name, f"열거형 '{name}' 의 끝이 Type 이다 — 값의 갈래는 …Kind(NamingCpp, 언리얼 E…Kind · 유니티 …Kind). 프로토콜 · 외부 API 의 자기 용어면 _keep 에 이유와 함께")
         for match in TYPE_DEFINITION.finditer(code):
             name = match.group(1)
             problem = find_component_problem(name, find_first_base(match.group(2)))
             if problem is not None:
-                record("component", name, path, problem)
+                record("component", name, problem)
         for match in REFLECT_INTERFACE_TYPE.finditer(code):
             name = match.group(1)
             if re.fullmatch(r"I[A-Z]\w*", name) is None:
-                record("interface", name, path, f"REFLECT( Interface ) 형식 '{name}' 는 I + 대문자로 시작한다 — 상태 없는 계약의 이름 규칙(NamingCpp 인터페이스)")
+                record("interface", name, f"REFLECT( Interface ) 형식 '{name}' 는 I + 대문자로 시작한다 — 상태 없는 계약의 이름 규칙(NamingCpp 인터페이스)")
         if is_shipping_header(path):
             for match in TIMING_ACCESSOR.finditer(code):
                 name = match.group(1)
-                if name not in timing_keep:
-                    record("timing", name, path, f"배포 헤더의 시간 접근자 '{name}' — 감시 값 재료면 프로파일러 구간(SW_PROFILE_SCOPE)으로 재고 감시 값이 구간을 읽는다"
+                if name not in self.timing_keep:
+                    record("timing", name, f"배포 헤더의 시간 접근자 '{name}' — 감시 값 재료면 프로파일러 구간(SW_PROFILE_SCOPE)으로 재고 감시 값이 구간을 읽는다"
                                                  f"(SceneTickScheduler::kComponentTickScopeName). 측정이 아니면 {CONFIG_PATH} 의 _timingAccessorKeep 에 까닭과 함께")
         for match in BOOL_FUNCTION.finditer(code):
             name = match.group(1)
             words = split_words(name, function=True)
             first = words[0] if words else ""
-            if is_third_person_verb(first) and first not in predicate_words:
-                record("predicate", name, path, f"bool 함수 '{name}' 가 3인칭 문장형('{first}')이다 — is · has · can · should · uses · needs · requires · supports 로(_predicateWords, 언리얼 Is/Has/Uses/Requires…)")
-        if banned_terms:
+            if is_third_person_verb(first) and first not in self.predicate_words:
+                record("predicate", name, f"bool 함수 '{name}' 가 3인칭 문장형('{first}')이다 — is · has · can · should · uses · needs · requires · supports 로(_predicateWords, 언리얼 Is/Has/Uses/Requires…)")
+        if self.banned_terms:
+            set_term: set[str] = set()
             for match in IDENTIFIER.finditer(code):
                 name = match.group(0)
-                if name in keep or name in found_by_rule["term"]:
+                if name in self.keep or name in set_term:
                     continue
-                if name not in map_term:
-                    map_term[name] = find_term_word(name, banned_terms, keep_terms)
-                term = map_term[name]
+                if name not in self.map_term:
+                    self.map_term[name] = find_term_word(name, self.banned_terms, self.keep_terms)
+                term = self.map_term[name]
                 if term is not None:
-                    record("term", name, path, f"'{name}' 에 금지 명사 '{term}' 가 있다 — {banned_terms[term]}")
-    return list_problem, found_by_rule
+                    set_term.add(name)
+                    record("term", name, f"'{name}' 에 금지 명사 '{term}' 가 있다 — {self.banned_terms[term]}")
+        return list_row
 
-
-def list_name_problems(found_by_rule: dict[str, dict[str, str]]) -> list[str]:
-    """이름 판정(verb · term · predicate · lookup · word · kind)의 위반 줄 — 줄 머리는 판정 이름(`[verb]`)."""
-    return [f"[{rule}] {where}" for rule in NAME_RULES for _, where in sorted(found_by_rule[rule].items())]
-
-
-def read_sources(project_root: Path, scope: LintScope) -> list[tuple[str, str]]:
-    return read_texts(project_root, scope.select(("Source",), EXTENSIONS))
-
-
-def read_codes(project_root: Path, scope: LintScope) -> list[tuple[str, str]]:
-    """범위 안 `Source` C++ 의 (경로, `strip_code` 한 글) — 이름 판정 둘(`classify_names` · `collect_source_names`)이 함께 쓴다."""
-    return [(path, strip_code(text)) for path, text in read_sources(project_root, scope)]
-
-
-def collect_source_names(project_root: Path, scope: LintScope, list_code: list[tuple[str, str]] | None = None) -> list[tuple[str, str, str]]:
-    """범위 안의 (종류, 이름, 파일) — `Source` 의 C++ 선언과 모든 파일의 파일 · 폴더 이름, 스크립트 뿌리(`SCRIPT_ROOTS`)의 선언과 스크립트 파일 · 폴더 이름.
-    @p list_code 는 이미 읽어 지운 C++ 글(`read_codes`, 없으면 여기서 읽는다)."""
-    list_name = [(kind, name, path) for path, code in (read_codes(project_root, scope) if list_code is None else list_code) for kind, name in collect_declarations(code)]
-    for path in scope.select(("Source",)):
-        list_name.extend((kind, name, path) for kind, name in collect_path_names(path))
-    list_script = scope.select(SCRIPT_ROOTS, SCRIPT_EXTENSIONS) + [path for path in scope.select(SCRIPT_ROOTS) if path.endswith("CMakeLists.txt")]
-    for path, text in read_texts(project_root, list_script):
-        list_name.extend((kind, name, path) for kind, name in collect_script_declarations(path, text))
-        depth = 2 if path.startswith(".claude/") else 1
-        list_name.extend((kind, name, path) for kind, name in collect_path_names(path, depth) if name != "CMakeLists")
-    list_outside_cmake = [path for path in scope.select(CMAKE_OUTSIDE_ROOTS, skip_parts=(FOREIGN_CMAKE_PART,)) if is_cmake_path(path)] + scope.select(("CMakeLists.txt",))
-    for path, text in read_texts(project_root, list_outside_cmake):
-        list_name.extend(("function", name, path) for name in CMAKE_FUNCTION.findall(text))
-    return list_name
-
-
-def read_table(project_root: Path) -> dict:
-    """낱말 표에 이름 이력 표의 `_bannedNames` 를 붙인 것 — 판정 함수는 표 하나를 받는다."""
-    table = read_rule_table(project_root, RULE_ID)
-    table["_bannedNames"] = read_rule_table(project_root, RULE_ID, "BannedNames")["_bannedNames"]
-    return table
-
-
-def classify_words(list_name: Iterable[tuple[str, str, str]], table: dict) -> dict[str, str]:
-    """word 규칙 — 선언 이름 · 파일 · 폴더 이름의 **모든 낱말**이 낱말 표(`_words` 의 a 업계 · b 게임)에 있는가. 이름 → 경로 · 안내.
-    `_scopedWords` 의 낱말은 그 경로 아래에서만 받는다(게임의 walk 는 맞고 엔진의 walk 는 순회다). 표준 합성어(`_keepTerms`) · 바깥 이름(`_externalPatterns`) · `_keep` 은 뺀다."""
-    words = table["_words"]
-    known = set(words["a"]) | set(words["b"])
-    scoped = table["_scopedWords"]
-    externals = [re.compile(pattern) for pattern in table["_externalPatterns"]]
-    # 파이썬 snake_case 이름도 같은 합성어로 본다(`RequiredNameFields` 는 `required_name_fields` 도 덮는다)
-    keep_terms = [re.compile(re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_?", re.escape(term)), re.I) for term in table.get("_keepTerms", [])]
-    keep = table["_keep"]
-    external_paths = table["_externalPaths"]
-    banned_names = table.get("_bannedNames", {})
-    found: dict[str, str] = {}
-    for kind, name, path in list_name:
-        if name in keep or name in found or is_external_name(name, externals) or is_under(path, external_paths):
-            continue
-        if name in banned_names and not path.startswith("Source/"):   # C++ 의 옛 이름은 classify_names 가 코드 전체에서 본다
-            found[name] = f"{path}: 옛 이름 '{name}' — {banned_names[name]}"
-            continue
+    def find_word_problem(self, kind: str, name: str, path: str) -> str | None:
+        """word 판정 — 이름의 **모든 낱말**이 낱말 표(`_words` 의 a 업계 · b 게임)에 있는가. 어긋나면 안내다.
+        `_scopedWords` 의 낱말은 그 경로 아래에서만 받는다(게임의 walk 는 맞고 엔진의 walk 는 순회다). 표준 합성어(`_keepTerms`) · 바깥 이름(`_externalPatterns`) · `_keep` 은 뺀다."""
+        if name in self.keep or is_external_name(name, self.externals) or is_under(path, self.external_paths):
+            return None
+        if name in self.banned_names and not path.startswith("Source/"):   # C++ 의 옛 이름은 classify_code 가 코드 전체에서 본다
+            return f"{path}: 옛 이름 '{name}' — {self.banned_names[name]}"
         if kind == "function" and is_cmake_path(path) and CMAKE_FUNCTION_SHAPE.fullmatch(name) is None:
-            found[name] = f"{path}: CMake 함수 '{name}' 는 sw_snake_case 여야 한다(docs/agents/NamingCpp.md — 내장 명령 꼴 + 우리 접두, 약어도 소문자)"
-            continue
+            return f"{path}: CMake 함수 '{name}' 는 sw_snake_case 여야 한다(docs/agents/NamingCpp.md — 내장 명령 꼴 + 우리 접두, 약어도 소문자)"
         shape = PYTHON_SHAPES.get(kind) if path.endswith(".py") else None
         if shape is not None and shape[0].fullmatch(name) is None:
-            found[name] = f"{path}: 파이썬 이름 '{name}' 가 PEP 8 꼴이 아니다 — {shape[1]}(docs/agents/NamingCpp.md). 바깥 덮어쓰기(setUp · do_POST)는 _keep"
-            continue
+            return f"{path}: 파이썬 이름 '{name}' 가 PEP 8 꼴이 아니다 — {shape[1]}(docs/agents/NamingCpp.md). 바깥 덮어쓰기(setUp · do_POST)는 _keep"
         stripped = name
-        for term in keep_terms:
+        for term in self.keep_term_patterns:
             stripped = term.sub("_", stripped)
         for word in split_lower_words(stripped, kind):
-            if word in known:
+            if word in self.known:
                 continue
-            if word in scoped:
-                if is_under(path, scoped[word]["paths"]):
-                    continue
-                found[name] = f"{path}: '{name}' 의 낱말 '{word}' 는 {' · '.join(scoped[word]['paths'])} 에서만 쓴다 — {scoped[word]['hint']}"
-            else:
-                found[name] = (f"{path}: '{name}' 의 낱말 '{word}' 가 낱말 표에 없다 — 언리얼 · 유니티 · Godot · 일반 용어와 대조한 뒤 {CONFIG_PATH} 의 "
-                               f"_words(a 업계 · b 게임)에 올리거나 업계 낱말로 바꾼다")
-            break
-    return found
+            if word not in self.scoped:
+                return (f"{path}: '{name}' 의 낱말 '{word}' 가 낱말 표에 없다 — 언리얼 · 유니티 · Godot · 일반 용어와 대조한 뒤 {CONFIG_PATH} 의 "
+                        f"_words(a 업계 · b 게임)에 올리거나 업계 낱말로 바꾼다")
+            if not is_under(path, self.scoped[word]["paths"]):
+                return f"{path}: '{name}' 의 낱말 '{word}' 는 {' · '.join(self.scoped[word]['paths'])} 에서만 쓴다 — {self.scoped[word]['hint']}"
+        return None
+
+    def classify_words(self, path: str, list_name: Iterable[tuple[str, str]]) -> list[Row]:
+        return [("word", name, problem) for kind, name in dict.fromkeys(list_name) if (problem := self.find_word_problem(kind, name, path)) is not None]
+
+    def classify_acronyms(self, path: str, code: str) -> list[Row]:
+        """약어를 첫 글자만 대문자로 쓴 이름 — 파일 · 폴더 이름과 C++ 식별자."""
+        list_row: list[Row] = []
+        for segment in path.rsplit(".", 1)[0].split("/")[1:]:
+            name = segment.split(".")[0]
+            if name not in self.acronym_keep and (list_bad := find_bad_words(name, self.acronyms)):
+                list_row.append(("acronym", name, f"{path}: 경로 낱말 '{name}' 의 약어는 모두 대문자({', '.join(list_bad)}) — NamingCpp Acronyms"))
+        for name in sorted(set(IDENTIFIER.findall(code)) - self.acronym_keep.keys()):
+            if list_bad := find_bad_words(name, self.acronyms):
+                list_row.append(("acronym", name, f"{path}: '{name}' 의 약어는 모두 대문자({', '.join(list_bad)}) — 바깥 이름 · 데이터 철자면 {CONFIG_PATH} 의 _acronymKeep 에 까닭과 함께"))
+        return list_row
 
 
-def collect_violations(project_root: Path, scope: LintScope) -> tuple[list[str], dict[str, dict[str, str]]]:
-    table = read_table(project_root)
-    list_code = read_codes(project_root, scope)
-    list_problem, found_by_rule = classify_names(list_code, table)
-    found_by_rule["word"] = classify_words(collect_source_names(project_root, scope, list_code), table)
-    return list_problem, found_by_rule
+@functools.lru_cache(maxsize=256)
+def compile_banned_names(list_name: tuple[str, ...]) -> re.Pattern:
+    return re.compile(r"\b(" + "|".join(map(re.escape, list_name)) + r")\b")
 
 
-def check_naming_words(project_root: Path, scope: LintScope) -> list[str]:
-    list_problem, found_by_rule = collect_violations(project_root, scope)
-    table = read_table(project_root)
-    list_problem += list_name_problems(found_by_rule) + find_acronym_problems(project_root, scope, table)
-    return list_problem + ExceptionTable(CONFIG_PATH, table, KEEP_SECTIONS).list_problems(scope.whole_repo, stale_sections=())
+def list_problems(rows: Iterable[Row]) -> list[str]:
+    """판정마다 이름 하나에 한 줄(처음 자리) — 줄 머리는 판정 이름(`[verb]`), 옛 이름 · 약어는 머리가 없다."""
+    map_hint: dict[tuple[str, str], str] = {}
+    for rule, name, hint in rows:
+        map_hint.setdefault((rule, name), hint)
+    return [f"[{rule}] {hint}" if rule in NAME_RULES else hint for (rule, _), hint in sorted(map_hint.items(), key=lambda item: item[0])]
 
 
-def run_self_check() -> None:
-    check_find_bad_words()   # 약어 판정(옛 acronyms 규칙)
-    table = {"_banned": {"drain": "flush 또는 poll"},
-             "_bannedTerms": {"Verdict": "Result", "Work": "Job"}, "_keepTerms": ["WorkArea"], "_predicateWords": ["is", "has", "uses", "starts"], "_lookupWords": ["get", "find"],
-             "_keep": {"MailboxServiceResult": "이유"}}
-    clean = 'struct FooComponent : Component {}; int getValue( int x ); struct MailboxServiceResult {}; // drainEvents() hasWork\nconst char* s = "drainEvents() Verdict"; bool hasValue(); bool setAxisTags(); bool focusPanel(); bool startsWith(); RECT readWorkArea; int getSlotFor( int x );'
-    problems, found_by_rule = classify_names([("a.h", strip_code(clean))], table)
-    assert problems == [] and all(not names for names in found_by_rule.values()), (problems, found_by_rule)
-    bad = 'void drainEvents( int x ); struct FooVerdict {}; bool hasPendingWork(); bool drawsBatch(); int materialGroupFor( int x ); int _verdictCount;'
-    problems, found_by_rule = classify_names([("a.h", strip_code(bad))], table)
-    assert problems == [], problems   # 금지 명사 Verdict 는 term 기준선 규칙이 본다
-    assert set(found_by_rule["verb"]) == {"drainEvents"}, found_by_rule
-    assert set(found_by_rule["term"]) == {"FooVerdict", "hasPendingWork", "_verdictCount"}, found_by_rule
-    assert set(found_by_rule["predicate"]) == {"drawsBatch"}, found_by_rule
-    assert set(found_by_rule["lookup"]) == {"materialGroupFor"}, found_by_rule
-    kind_problems, kind_found = classify_names([("a.h", strip_code("enum class PacketType : uint8 { A }; enum class PacketKind { A }; enum OldType { B }; struct ValueType {};"))], table)
-    assert set(kind_found["kind"]) == {"PacketType"}, kind_found   # enum class 만 본다 — 구조체 · 옛 enum 은 다른 규칙 몫
-    shape_code = strip_code("class SW_API FooComponent : public SceneComponent {}; struct BarMover final : public sw::Component {}; struct BazComponent : public Widget<Component> {};"
-                            "class ComponentHandle {}; class SW_API Component {}; struct QuxComponent; REFLECT( Interface ) struct IGood { }; REFLECT( Interface ) struct Bad { };")
-    _, shape_found = classify_names([("a.h", shape_code)], table)
-    assert set(shape_found["component"]) == {"BarMover", "BazComponent"}, shape_found   # 양성: 접미 없는 컴포넌트 · 컴포넌트가 아닌 Component 끝말. 음성: FooComponent · ComponentHandle · 기반 Component · 전방 선언
-    assert set(shape_found["interface"]) == {"Bad"}, shape_found   # 양성: I 없는 인터페이스. 음성: IGood
-    timing_table = dict(table, _timingAccessorKeep={"getElapsedMicroseconds": "시계 형식"})
-    timing_code = strip_code("int64 getLastStepMicroseconds() const { return watch.getElapsedMicroseconds(); } int64 getElapsedMicroseconds() const; uint64 Foo::getPeakNanoseconds();")
-    _, timing_found = classify_names([("Source/GameFramework/a.h", timing_code)], timing_table)
-    assert set(timing_found["timing"]) == {"getLastStepMicroseconds"}, timing_found   # 양성: 배포 헤더의 선언. 음성: 부르기 · 예외 표 · `A::` 정의
-    for path in ("Source/Editor/a.h", "Source/Engine/Tests/a.h", "Source/DevTools/a.h", "Source/Engine/a.cpp"):
-        assert classify_names([(path, timing_code)], timing_table)[1]["timing"] == {}, path   # 음성: 배포에 없는 모듈 · 테스트 · .cpp
-    assert find_first_base("public sw::Map<Key, Value>, private Other") == "Map" and find_first_base(None) == ""
-    name_problems = list_name_problems(found_by_rule)
-    assert len(name_problems) == 6 and name_problems[0].startswith("[verb] a.h: ") and any("materialGroupFor" in line for line in name_problems), name_problems
-    table_names = dict(table, _bannedNames={"CombatHealth": "HealthStateMachine"})
-    assert classify_names([("a.h", strip_code("// CombatHealth\nconst char* s = \"CombatHealth\";"))], table_names)[0] == [], "주석 · 문자열의 옛 이름은 본다고 하지 않는다"
-    assert len(classify_names([("a.h", "CombatHealth health; int getCombatHealthRatio();")], table_names)[0]) == 1, "통째 이름만 막는다"
-    overlap = dict(table, _bannedNames={"YawUtil": "a", "YawUtil::fromWorld": "b", "Gone": "c", "new-names": "d"})
-    assert find_banned_names("x = YawUtil::fromWorld( v ); new-names;", overlap["_bannedNames"], {"YawUtil": "YawUtil", "YawUtil::fromWorld": "YawUtil", "Gone": "Gone", "new-names": "new"}) \
-        == ["YawUtil", "new-names"], "표 차례로 엮은 것과 같다 — 앞 이름(YawUtil)이 이기고, 글에 없는 이름은 엮지 않는다"
-    assert [line.split("'")[1] for line in classify_names([("a.h", "auto y = YawUtil::fromWorld( v );")], overlap)[0]] == ["YawUtil"]
+class NamingWordsRule(LintRule):
+    id = "naming-words"
+    group = "이름"
+    blocks = "표에 없는 낱말(모든 이름 · 파일 · 폴더의 모든 낱말) · 금지 동사 · 금지 명사 · 금지 이름 · 약어 표기(모두 대문자)"
+    why_not_type = "업계 용어인지는 형식이 말하지 못한다"
+    tables = ("", "BannedNames")
 
-    code = strip_code("#define SW_SCENE_WATCH 1\nenum class Mode { Idle, Walk };\nusing Alias = int;\nstruct SceneWalkKey {};\n"
-                     "void hoverMark( int outbChanged, const Foo& inoutListCrumb ) { float _walkSpeed = 1; const int kMaxCount = 2; }")
-    declared = set(collect_declarations(code))
-    for item in (("macro", "SW_SCENE_WATCH"), ("enumerator", "Walk"), ("alias", "Alias"), ("type", "SceneWalkKey"), ("function", "hoverMark"),
-                 ("variable", "outbChanged"), ("variable", "inoutListCrumb"), ("member", "_walkSpeed"), ("constant", "kMaxCount")):
-        assert item in declared, (item, declared)
-    assert split_lower_words("outbChanged", "variable") == ["changed"] and split_lower_words("inoutListCrumb", "variable") == ["crumb"]
-    assert split_lower_words("D3D12Vector3D", "type") == ["vector"] and split_lower_words("setAxisTags", "function") == ["set", "axis", "tags"]
-    assert collect_path_names("Source/Games/Walk/WalkPath.h") == [("folder", "Games"), ("folder", "Walk"), ("file", "WalkPath")]
-    table_words = {"_words": {"a": ["scene", "key", "speed", "area", "mark", "hover", "rc", "at"], "b": ["ghost"]}, "_keep": {},
-                  "_scopedWords": {"walk": {"paths": ["Source/Games"], "hint": "순회는 iterate"}}, "_externalPatterns": [r"^PFN_"], "_externalPaths": [".claude/skills/ponytail"], "_keepTerms": ["WorkArea"]}
-    found = classify_words([("type", "SceneWalkKey", "Source/Engine/a.h"), ("member", "_walkSpeed", "Source/Games/b.h"), ("member", "_ghostKey", "Source/a.h"),
-                           ("variable", "rcWorkArea", "Source/a.h"), ("alias", "PFN_vkWeirdo", "Source/a.h"), ("function", "aimAtMark", "Source/a.h"),
-                           ("folder", "Walk", "Source/Games/Walk/x.h")], table_words)
-    assert set(found) == {"SceneWalkKey", "aimAtMark"} and "iterate" in found["SceneWalkKey"] and "'aim'" in found["aimAtMark"], found
-    script = "MAX_SCENE = 1\nkSceneKey = 2\nclass SceneKey:\n    def hover_mark(self) -> None: ...\n    def hoverScene(self) -> None: ...\n"
-    found = classify_words([(kind, name, "Scripts/lint/scene_key.py") for kind, name in collect_script_declarations("Scripts/lint/scene_key.py", script)]
-                           + [("file", "SceneKey", "Scripts/lint/SceneKey.py"), ("file", "SceneKey", "cmake/SceneKey.cmake")], table_words | {"_words": {"a": ["max", "scene", "key", "hover", "mark"], "b": []}})
-    assert set(found) == {"kSceneKey", "hoverScene", "SceneKey"} and "Scripts/lint/SceneKey.py" in found["SceneKey"], found   # PEP 8 꼴 — CMake 파일 이름은 보지 않는다
-    found = classify_words([("file", "scene_key", "Scripts/dev/scene_key.py"), ("command", "scene-key", "Scripts/__main__.py")],
-                           table_words | {"_words": {"a": ["scene", "key"], "b": []}, "_bannedNames": {"scene_key": "key_scene", "scene-key": "key-scene"}})
-    assert set(found) == {"scene_key", "scene-key"} and "key_scene" in found["scene_key"], found   # 스크립트의 옛 이름
-    found = classify_words([("function", "sw_scene_key", "cmake/a.cmake"), ("function", "sw_sceneKey", "cmake/a.cmake"), ("function", "scene_key", "Source/CMakeLists.txt")],
-                           table_words | {"_words": {"a": ["sw", "scene", "key"], "b": []}})
-    assert set(found) == {"sw_sceneKey", "scene_key"} and all("sw_snake_case" in hint for hint in found.values()), found   # CMake 함수 꼴
+    @functools.cached_property
+    def names(self) -> NameTable:
+        return NameTable({**self.read_table(), "_bannedNames": self.read_table("BannedNames")["_bannedNames"]})
 
+    def selects(self, path: str) -> bool:
+        return declares_names(path)
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="이름을 업계 용어 표와 대조한다")
-    parser.add_argument("--self-check", action="store_true")
-    arguments = parser.parse_args(argv)
-    if arguments.self_check:
-        run_self_check()
-        print("[NamingWords] self-check OK")
-        return ExitCode.PASSED
-    project_root = get_project_root()
-    list_problem = check_naming_words(project_root, make_whole_scope(project_root))
-    for problem in list_problem:
-        print(f"  - {problem}")
-    print(f"[NamingWords] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
-    return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
+    def inspect(self, file: SourceFile) -> list[Row]:
+        if not file.path.startswith("Source/") or not file.path.endswith(EXTENSIONS):
+            return self.names.classify_words(file.path, list_file_names(file.path, file.text))
+        code = file.code_with_macros
+        return (self.names.classify_code(file.path, code) + self.names.classify_words(file.path, list_file_names(file.path, code))
+                + self.names.classify_acronyms(file.path, code))
 
+    def evaluate(self, scope: LintScope, found: Mapping[str, list[Row]]) -> list[str]:
+        list_row = [row for rows in found.values() for row in rows]
+        for path in scope.list_file:
+            list_row += self.names.classify_words(path, list_path_names(path))
+        table = ExceptionTable(CONFIG_PATH, self.read_table(), KEEP_SECTIONS)
+        return list_problems(list_row) + table.list_problems(scope.whole_repo, stale_sections=())
 
-if __name__ == "__main__":
-    sys.exit(main())
+    def self_check(self) -> None:
+        def check_code(code: str, table: Mapping, path: str = "a.h") -> dict[str, set[str]]:
+            map_name: dict[str, set[str]] = {rule: set() for rule in (*NAME_RULES, "banned")}
+            for rule, name, _ in NameTable(table).classify_code(path, strip_comments_and_strings(code)):
+                map_name[rule].add(name)
+            return map_name
+
+        def check_words(list_name: Iterable[tuple[str, str, str]], table: Mapping) -> dict[str, str]:
+            names = NameTable({"_banned": {}, **table})
+            return {name: problem for kind, name, path in list_name if (problem := names.find_word_problem(kind, name, path)) is not None}
+
+        table = {"_banned": {"drain": "flush 또는 poll"},
+                 "_bannedTerms": {"Verdict": "Result", "Work": "Job"}, "_keepTerms": ["WorkArea"], "_predicateWords": ["is", "has", "uses", "starts"], "_lookupWords": ["get", "find"],
+                 "_keep": {"MailboxServiceResult": "이유"}}
+        clean = 'struct FooComponent : Component {}; int getValue( int x ); struct MailboxServiceResult {}; // drainEvents() hasWork\nconst char* s = "drainEvents() Verdict"; bool hasValue(); bool setAxisTags(); bool focusPanel(); bool startsWith(); RECT readWorkArea; int getSlotFor( int x );'
+        found = check_code(clean, table)
+        assert not any(found.values()), found
+        bad = 'void drainEvents( int x ); struct FooVerdict {}; bool hasPendingWork(); bool drawsBatch(); int materialGroupFor( int x ); int _verdictCount;'
+        found = check_code(bad, table)
+        assert found["verb"] == {"drainEvents"}, found
+        assert found["term"] == {"FooVerdict", "hasPendingWork", "_verdictCount"}, found
+        assert found["predicate"] == {"drawsBatch"}, found
+        assert found["lookup"] == {"materialGroupFor"}, found
+        assert check_code("enum class PacketType : uint8 { A }; enum class PacketKind { A }; enum OldType { B }; struct ValueType {};", table)["kind"] == {"PacketType"}   # enum class 만 본다 — 구조체 · 옛 enum 은 다른 규칙 몫
+        shape_code = ("class SW_API FooComponent : public SceneComponent {}; struct BarMover final : public sw::Component {}; struct BazComponent : public Widget<Component> {};"
+                                "class ComponentHandle {}; class SW_API Component {}; struct QuxComponent; REFLECT( Interface ) struct IGood { }; REFLECT( Interface ) struct Bad { };")
+        shape_found = check_code(shape_code, table)
+        assert shape_found["component"] == {"BarMover", "BazComponent"}, shape_found   # 양성: 접미 없는 컴포넌트 · 컴포넌트가 아닌 Component 끝말. 음성: FooComponent · ComponentHandle · 기반 Component · 전방 선언
+        assert shape_found["interface"] == {"Bad"}, shape_found   # 양성: I 없는 인터페이스. 음성: IGood
+        timing_table = dict(table, _timingAccessorKeep={"getElapsedMicroseconds": "시계 형식"})
+        timing_code = ("int64 getLastStepMicroseconds() const { return watch.getElapsedMicroseconds(); } int64 getElapsedMicroseconds() const; uint64 Foo::getPeakNanoseconds();")
+        assert check_code(timing_code, timing_table, "Source/GameFramework/a.h")["timing"] == {"getLastStepMicroseconds"}   # 양성: 배포 헤더의 선언. 음성: 부르기 · 예외 표 · `A::` 정의
+        for path in ("Source/Editor/a.h", "Source/Engine/Tests/a.h", "Source/DevTools/a.h", "Source/Engine/a.cpp"):
+            assert check_code(timing_code, timing_table, path)["timing"] == set(), path   # 음성: 배포에 없는 모듈 · 테스트 · .cpp
+        assert find_first_base("public sw::Map<Key, Value>, private Other") == "Map" and find_first_base(None) == ""
+        name_problems = list_problems(NameTable(table).classify_code("a.h", strip_comments_and_strings(bad)))
+        assert len(name_problems) == 6 and "[verb] a.h: " in "".join(name_problems) and any("materialGroupFor" in line for line in name_problems), name_problems
+        table_names = dict(table, _bannedNames={"CombatHealth": "HealthStateMachine"})
+        assert check_code("// CombatHealth\nconst char* s = \"CombatHealth\";", table_names)["banned"] == set(), "주석 · 문자열의 옛 이름은 본다고 하지 않는다"
+        assert check_code("CombatHealth health; int getCombatHealthRatio();", table_names)["banned"] == {"CombatHealth"}, "통째 이름만 막는다"
+        overlap = dict(table, _bannedNames={"YawUtil": "a", "YawUtil::fromWorld": "b", "Gone": "c", "new-names": "d"})
+        assert NameTable(overlap).find_banned_names("x = YawUtil::fromWorld( v ); new-names;") == ["YawUtil", "new-names"], "표 차례로 엮은 것과 같다 — 앞 이름(YawUtil)이 이기고, 글에 없는 이름은 엮지 않는다"
+
+        code = strip_comments_and_strings("#define SW_SCENE_WATCH 1\nenum class Mode { Idle, Walk };\nusing Alias = int;\nstruct SceneWalkKey {};\n"
+                         "void hoverMark( int outbChanged, const Foo& inoutListCrumb ) { float _walkSpeed = 1; const int kMaxCount = 2; }")
+        declared = set(collect_declarations(code))
+        for item in (("macro", "SW_SCENE_WATCH"), ("enumerator", "Walk"), ("alias", "Alias"), ("type", "SceneWalkKey"), ("function", "hoverMark"),
+                     ("variable", "outbChanged"), ("variable", "inoutListCrumb"), ("member", "_walkSpeed"), ("constant", "kMaxCount")):
+            assert item in declared, (item, declared)
+        assert split_lower_words("outbChanged", "variable") == ["changed"] and split_lower_words("inoutListCrumb", "variable") == ["crumb"]
+        assert split_lower_words("D3D12Vector3D", "type") == ["vector"] and split_lower_words("setAxisTags", "function") == ["set", "axis", "tags"]
+        assert collect_path_names("Source/Games/Walk/WalkPath.h") == [("folder", "Games"), ("folder", "Walk"), ("file", "WalkPath")]
+        table_words = {"_words": {"a": ["scene", "key", "speed", "area", "mark", "hover", "rc", "at"], "b": ["ghost"]}, "_keep": {},
+                      "_scopedWords": {"walk": {"paths": ["Source/Games"], "hint": "순회는 iterate"}}, "_externalPatterns": [r"^PFN_"], "_externalPaths": [".claude/skills/ponytail"], "_keepTerms": ["WorkArea"]}
+        found = check_words([("type", "SceneWalkKey", "Source/Engine/a.h"), ("member", "_walkSpeed", "Source/Games/b.h"), ("member", "_ghostKey", "Source/a.h"),
+                               ("variable", "rcWorkArea", "Source/a.h"), ("alias", "PFN_vkWeirdo", "Source/a.h"), ("function", "aimAtMark", "Source/a.h"),
+                               ("folder", "Walk", "Source/Games/Walk/x.h")], table_words)
+        assert set(found) == {"SceneWalkKey", "aimAtMark"} and "iterate" in found["SceneWalkKey"] and "'aim'" in found["aimAtMark"], found
+        script = "MAX_SCENE = 1\nkSceneKey = 2\nclass SceneKey:\n    def hover_mark(self) -> None: ...\n    def hoverScene(self) -> None: ...\n"
+        found = check_words([(kind, name, "Scripts/lint/scene_key.py") for kind, name in collect_script_declarations("Scripts/lint/scene_key.py", script)]
+                               + [("file", "SceneKey", "Scripts/lint/SceneKey.py"), ("file", "SceneKey", "cmake/SceneKey.cmake")], table_words | {"_words": {"a": ["max", "scene", "key", "hover", "mark"], "b": []}})
+        assert set(found) == {"kSceneKey", "hoverScene", "SceneKey"} and "Scripts/lint/SceneKey.py" in found["SceneKey"], found   # PEP 8 꼴 — CMake 파일 이름은 보지 않는다
+        found = check_words([("file", "scene_key", "Scripts/dev/scene_key.py"), ("command", "scene-key", "Scripts/__main__.py")],
+                               table_words | {"_words": {"a": ["scene", "key"], "b": []}, "_bannedNames": {"scene_key": "key_scene", "scene-key": "key-scene"}})
+        assert set(found) == {"scene_key", "scene-key"} and "key_scene" in found["scene_key"], found   # 스크립트의 옛 이름
+        found = check_words([("function", "sw_scene_key", "cmake/a.cmake"), ("function", "sw_sceneKey", "cmake/a.cmake"), ("function", "scene_key", "Source/CMakeLists.txt")],
+                               table_words | {"_words": {"a": ["sw", "scene", "key"], "b": []}})
+        assert set(found) == {"sw_sceneKey", "scene_key"} and all("sw_snake_case" in hint for hint in found.values()), found   # CMake 함수 꼴
+        acronyms = {"ID", "JSON", "UV", "PSO", "UI"}
+        assert find_bad_words("AssetId", acronyms) == ["Id"]
+        assert find_bad_words("jsonText", acronyms) == []
+        assert find_bad_words("JsonRoundTrip", acronyms) == ["Json"]
+        assert find_bad_words("countMaterialPSOs", acronyms) == []
+        assert find_bad_words("Uint32", acronyms) == []
+        assert find_bad_words("Idle", acronyms) == []
+        assert find_bad_words("_pUiSystem", acronyms) == ["Ui"]
+        assert find_bad_words("gv_editorUiScale", acronyms) == []
+        assert find_bad_words("kArrUv2", acronyms) == ["Uv2"]

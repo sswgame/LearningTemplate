@@ -222,7 +222,7 @@ Shape (Python 3.10):
 - Text I/O names `encoding="utf-8"` (bytes: `"rb"` · `read_bytes()`).
 - `pathlib.Path`; `os.path` only for `normpath`, `relpath`, `commonpath`, `commonprefix`, `expandvars`, `splitext`.
 - `sys.exit(…main())` as the single `__main__` line, never `raise SystemExit(…)` (tests: `unittest.main()`).
-- Under `Scripts/`, a command is one `Command` subclass in one file (`common/command.py`): one-line literal `name` · `help`, `run` returns `ExitCode`, a failure raises `CommandError`. Adding or deleting the file adds or removes the command — no list names it. Commands share code only through a library module, never by importing each other; only a file run by path ends with `sys.exit(XCommand.main())`.
+- Under `Scripts/`, a command is one `Command` subclass in one file (`common/command.py`): one-line literal `name` · `help`, `run` returns `ExitCode`, a failure raises `CommandError`. Adding or deleting the file adds or removes the command — no list names it. A lint rule is likewise one `LintRule` subclass in one file (`lint/lint_rule.py`): `inspect` sees one file, `evaluate` turns the findings into problem lines. Commands and rules share code only through a library module, never by importing each other; only a file run by path ends with `sys.exit(XCommand.main())`.
 - Output is plain `print`. Catch only expected exceptions; `except Exception` only at a boundary that must keep going and reports what it swallowed. A missing required setting stops with `sys.exit`, never `os.environ.get( "X", "<default>" )`.
 
 ### HLSL

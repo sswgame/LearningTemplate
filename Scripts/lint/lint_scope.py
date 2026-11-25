@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/lint_scope.py
 
-규칙이 볼 파일 — 모든 린트 규칙은 `check(projectRoot, scope)` 한 모양이다(`rules.py`). 규칙은 저장소를 스스로 걷지 않고 이 목록에서 고른다.
+규칙이 볼 파일 — 린트 규칙은 이 목록의 파일만 본다(`lint_rule.py`). 규칙은 저장소를 스스로 걷지 않고 이 목록에서 고른다.
 
 - 커밋 훅(`py -3 -m Scripts lint`): 스테이지된 파일(더하기 · 고치기)과 지운 파일(옮기기의 옛 자리 포함). 커밋 비용이 저장소 크기가 아니라
   바뀐 양에 비례한다 — clang-tidy 를 바뀐 파일에만 돌리는 것, 언리얼 UBT 가 바뀐 모듈만 다시 짓는 것과 같다.
@@ -63,10 +61,6 @@ class LintScope:
         set_file = set(files)
         return any(path in set_file or (is_under(path, roots) and (not tuple_suffix or path.endswith(tuple_suffix)))
                    for path in (*self.list_file, *self.list_removed))
-
-    def list_absolute(self, project_root: Path, suffixes: Sequence[str] = ()) -> list[str]:
-        """파일마다 도는 규칙(프로세스로 나눈다)에 넘길 절대 경로."""
-        return [str(project_root / path) for path in self.select(suffixes=suffixes)]
 
 
 def make_whole_scope(project_root: Path) -> LintScope:
@@ -133,38 +127,25 @@ def _read_bytes(key: str) -> bytes | None:
 
 def read_bytes(path: Path | str) -> bytes | None:
     """
-    파일 바이트(없으면 None, 그 밖의 OSError 는 올린다). **규칙은 파일 내용을 이것(`readText` · `read_texts`)이나 `index_cache` 로만 얻는다** — 커밋 훅은
+    파일 바이트(없으면 None, 그 밖의 OSError 는 올린다). **규칙은 파일 내용을 이것(`SourceFile` · `read_text` · `read_texts`)이나 `index_cache` 로만 얻는다** — 커밋 훅은
     규칙 스물 몇 개가 같은 스테이지 파일을 보므로 한 번 읽어 함께 쓴다. `pre_commit.check_read_bound` 가 스테이지 파일 하나에 모든 규칙이 연 파일이 그 파일
     한 번뿐인지 본다(직접 `read_text` 하면 두 번째 열기로 걸린다). 크기 한도는 `--all` 이 저장소 전체를 붙잡지 않게 둔다(커밋 훅의 스테이지는 다 담는다).
     """
     return _read_bytes(os.path.normcase(os.path.abspath(path)))
 
 
-@functools.lru_cache(maxsize=256)
-def _read_text(key: str, errors: str, encoding: str) -> str | None:
-    data = _read_bytes(key)   # OSError 는 캐시하지 않고 올린다(read_text 가 None 으로)
-    try:
-        return None if data is None else data.decode(encoding, errors).replace("\r\n", "\n").replace("\r", "\n")
-    except UnicodeDecodeError:
-        return None
-
-
 def read_text(path: Path | str, errors: str = "strict", encoding: str = "utf-8") -> str | None:
-    """
-    `Path.read_text` 와 같은 글(줄 끝은 LF 로). 못 읽거나(지웠거나 OSError) `errors="strict"` 에서 UTF-8 이 아니면 None.
-    커밋 훅은 규칙마다 같은 스테이지 파일을 부르므로 푼 글도 함께 쓴다 — 같은 글 객체라 글을 열쇠로 둔 전처리 캐시(`cpp_shape.strip_code`)의 비교가 싸다.
-    한도(256)는 커밋 훅의 스테이지를 담고 `--all` 이 저장소 전체의 글을 붙잡지 않게 둔다.
-    """
+    """`Path.read_text` 와 같은 글(줄 끝은 LF 로). 못 읽거나(지웠거나 OSError) `errors="strict"` 에서 UTF-8 이 아니면 None."""
     try:
-        return _read_text(os.path.normcase(os.path.abspath(path)), errors, encoding)
-    except OSError:
+        data = read_bytes(path)
+        return None if data is None else data.decode(encoding, errors).replace("\r\n", "\n").replace("\r", "\n")
+    except (OSError, UnicodeDecodeError):
         return None
 
 
 def clear_read_cache() -> None:
-    """읽은 바이트 · 글을 잊는다 — `pre_commit.check_read_bound` 가 파일을 실제로 여는지 세기 전에 부른다."""
+    """읽은 바이트를 잊는다 — `pre_commit.check_read_bound` 가 파일을 실제로 여는지 세기 전에 부른다."""
     _read_bytes.cache_clear()
-    _read_text.cache_clear()
 
 
 def read_texts(project_root: Path, list_relative: Iterable[str], errors: str = "strict") -> list[tuple[str, str]]:

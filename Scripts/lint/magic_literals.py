@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/magic_literals.py
 
@@ -23,29 +21,21 @@ Scripts/lint/magic_literals.py
 
 from __future__ import annotations
 
-import argparse
 import collections
-import functools
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Mapping, Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-from common.exit_code import ExitCode  # noqa: E402
-from common.git import run_git_in_hook_repository  # noqa: E402
-from lint.cpp_shape import strip_code  # noqa: E402
-from lint.lint_scope import LintScope, make_whole_scope, read_text  # noqa: E402
-from lint.parallel import flat_map_in_processes  # noqa: E402
-from lint.rule_tables import Baseline  # noqa: E402
+from common.git import run_git_in_hook_repository
+from lint.cpp_code import is_source_file
+from lint.lint_rule import LintRule, SourceFile, inspect_files
+from lint.lint_scope import LintScope, make_file_scope, make_whole_scope
+from lint.rule_tables import Baseline
 
 
-RULE_ID = "magic-literals"
 GROWN_ADVICE = "이름 붙은 상수(XxxInternal · 소유 타입)나 데이터(PROPERTY · 카탈로그)로 옮긴다"
 RATCHET_COMMAND = "py -3 -m Scripts lint magic-literals --ratchet"
-SOURCE_EXTENSIONS = (".h", ".cpp", ".inl")
 KINDS = ("minus-one", "float", "integer", "hex")
 
 # 단항 `-1`(뺄셈 `x - 1` 은 아니다): 앞이 여는 괄호 · 쉼표 · 대입 · 비교 · return · 삼항 · 중괄호 · 논리 연산(`&& -1 <= x`)이다.
@@ -86,8 +76,6 @@ MINUS_ONE_RULES: tuple[tuple[bool, re.Pattern[str]], ...] = (
 class LiteralRow:
     """리터럴 하나입니다."""
 
-    path: str
-    line: int
     kind: str      # minus-one · float · hex · integer
     value: str
     place: str     # generated · test · reflection-meta · format · named-definition · table-row · field-default · code
@@ -131,20 +119,19 @@ def is_common_float(value: str) -> bool:
         return False
 
 
-def inspect_text(text: str, relative: str) -> list[LiteralRow]:
-    """글 하나의 리터럴을 모읍니다(자체 시험이 파일 없이 부를 수 있게 나눴다). 주석 · 문자열 · 전처리 줄은 보지 않는다."""
+def find_literals(file: SourceFile) -> list[LiteralRow]:
+    """파일 하나의 리터럴을 모읍니다. 주석 · 문자열 · 전처리 줄은 보지 않는다."""
     list_row: list[LiteralRow] = []
-    list_raw = text.split("\n")
-    for index, line in enumerate(strip_code(text).split("\n")):
+    for index, line in enumerate(file.code.split("\n")):
         if not any(char.isdigit() for char in line):
             continue
-        place = classify_place(relative, line)
+        place = classify_place(file.path, line)
 
         def add_row(kind: str, value: str, common: bool) -> None:
-            list_row.append(LiteralRow(relative, index + 1, kind, value, place, common))
+            list_row.append(LiteralRow(kind, value, place, common))
 
         for _ in MINUS_ONE.finditer(line):
-            add_row("minus-one", "-1", is_arithmetic_minus_one(list_raw[index]))   # 뜻은 주석까지 본다(`// 무제한`)
+            add_row("minus-one", "-1", is_arithmetic_minus_one(file.lines[index]))   # 뜻은 주석까지 본다(`// 무제한`)
         masked = MINUS_ONE.sub(lambda match: " " * len(match.group(0)), line)
         for match in FLOAT.finditer(masked):
             add_row("float", match.group(0), is_common_float(match.group(0)))
@@ -157,36 +144,12 @@ def inspect_text(text: str, relative: str) -> list[LiteralRow]:
     return list_row
 
 
-def inspect_file(project_root: Path, file: Path) -> list[LiteralRow]:
-    """파일 하나를 봅니다(프로세스로 넘기므로 모듈 최상위에 둔다)."""
-    text = read_text(file, errors="ignore")
-    if text is None:
-        raise FileNotFoundError(file)   # scope 의 파일은 있다 — 예전 read_text 처럼 멈춘다
-    return inspect_text(text, file.relative_to(project_root).as_posix())
-
-
-def is_source_file(relative: str) -> bool:
-    return relative.startswith("Source/") and relative.endswith(SOURCE_EXTENSIONS) and "/ThirdParty/" not in relative
-
-
-def list_source_files(project_root: Path) -> list[Path]:
-    return sorted(path for path in (project_root / "Source").rglob("*") if path.is_file() and is_source_file(path.relative_to(project_root).as_posix()))
-
-
-def collect_rows(project_root: Path, list_file: Sequence[Path] | None = None) -> list[LiteralRow]:
-    list_row = flat_map_in_processes(functools.partial(inspect_file, project_root), list(list_file) if list_file is not None else list_source_files(project_root))
-    return sorted(list_row, key=lambda row: (row.path, row.line))
-
-
 # --- 래칫 ------------------------------------------------------------------------------------------
 
-def count_by_file(list_row: Iterable[LiteralRow]) -> dict[str, dict[str, int]]:
-    """파일마다 래칫이 세는 종류별 수입니다(0 인 종류 · 파일은 적지 않는다 — 기준선 JSON 이 짧고 diff 가 읽힌다)."""
-    counts: dict[str, collections.Counter[str]] = collections.defaultdict(collections.Counter)
-    for row in list_row:
-        if row.counted:
-            counts[row.path][row.kind] += 1
-    return {path: {kind: counter[kind] for kind in KINDS if counter[kind] > 0} for path, counter in counts.items()}
+def count_kinds(file: SourceFile) -> dict[str, int]:
+    """래칫이 세는 종류별 수입니다(0 인 종류는 적지 않는다 — 기준선 JSON 이 짧고 diff 가 읽힌다)."""
+    counter = collections.Counter(row.kind for row in find_literals(file) if row.counted)
+    return {kind: counter[kind] for kind in KINDS if counter[kind] > 0}
 
 
 def read_staged_renames(project_root: Path) -> dict[str, str]:
@@ -202,101 +165,71 @@ def read_staged_renames(project_root: Path) -> dict[str, str]:
     return map_old
 
 
-def check_magic_literals(project_root: Path, scope: LintScope) -> list[str]:
-    """scope 의 C++ 파일의 래칫 검사입니다. 없는 파일의 기준선은 저장소 전체일 때만 센다."""
-    list_relative = [relative for relative in scope.select() if is_source_file(relative)]
-    list_problem: list[str] = []
-    if list_relative:
-        actual = count_by_file(collect_rows(project_root, [project_root / relative for relative in list_relative]))
-        list_problem = compare_baseline(Baseline.load(project_root, RULE_ID), actual, list_relative, read_staged_renames(project_root))
-    if scope.whole_repo:
-        list_problem += Baseline.load(project_root, RULE_ID).list_missing(set(scope.list_file))
-    return list_problem
+class MagicLiteralsRule(LintRule):
+    id = "magic-literals"
+    group = "래칫"
+    blocks = "일반 코드의 이름 없는 숫자 리터럴이 파일마다 늘어남"
+    why_not_type = "리터럴이 매직인지는 형식이 가르지 못한다"
+    tables = ("Baseline",)
 
+    def selects(self, path: str) -> bool:
+        return is_source_file(path)
 
-def compare_baseline(baseline: Baseline, actual: dict[str, dict[str, int]], list_path: Iterable[str], map_old: dict[str, str]) -> list[str]:
-    """늘었으면 이름 붙이기를, 줄었으면 기준선 낮추기를 요구한다(옮긴 파일은 옛 경로의 기준선을 잇는다)."""
-    return baseline.compare(actual, list_path, map_old, KINDS, lambda _: GROWN_ADVICE, RATCHET_COMMAND)
+    def inspect(self, file: SourceFile) -> dict[str, int]:
+        return count_kinds(file)
 
+    def evaluate(self, scope: LintScope, found: Mapping[str, dict[str, int]]) -> list[str]:
+        """늘었으면 이름 붙이기를, 줄었으면 기준선 낮추기를 요구한다(옮긴 파일은 옛 경로의 기준선을 잇는다). 없는 파일의 기준선은 저장소 전체일 때만 센다."""
+        baseline = Baseline.load(self.root, self.id)
+        list_path = [path for path in scope.list_file if self.selects(path)]
+        list_problem = baseline.compare(found, list_path, read_staged_renames(self.root), KINDS, lambda _: GROWN_ADVICE, RATCHET_COMMAND) if list_path else []
+        return list_problem + (baseline.list_missing(set(scope.list_file)) if scope.whole_repo else [])
 
-def run_self_check() -> int:
-    arr_case: tuple[tuple[str, bool], ...] = (
-        ("static constexpr int32 kNoTeam = -1;", False),
-        ("int32 _stock{ -1 }; // 무제한", False),
-        ("int64 _priceOverride = -1;", False),
-        ("int32 selectedIndex = -1;", False),
-        ("    return -1;", False),
-        ("const Vec3 down( 0.0f, -1, 0.0f );", True),
-        ("int32 fileDescriptor{ -1 };", True),
-        ("int32 _lastLogHour{ -1 };", False),
-        ("return found ? index : -1;", False),
-        ("pushEvent( Kind::Sidestep, player, -1 );", False),
-        ("foo( a, -1 );", False),
-    )
-    failures = 0
+    def update_baseline(self, list_accept: Sequence[str] | None) -> None:
+        scope = make_whole_scope(self.root) if list_accept is None else make_file_scope(self.root, list_accept)
+        found, _ = inspect_files(self.root, {self: scope})
+        Baseline.load(self.root, self.id).update(self.root, found[self.id], list_accept)
 
-    def expect(condition: bool, message: str) -> None:
-        nonlocal failures
-        if not condition:
-            print(f"[MagicLiterals] self-check: {message}")
-            failures += 1
+    def self_check(self) -> None:
+        arr_case: tuple[tuple[str, bool], ...] = (
+            ("static constexpr int32 kNoTeam = -1;", False),
+            ("int32 _stock{ -1 }; // 무제한", False),
+            ("int64 _priceOverride = -1;", False),
+            ("int32 selectedIndex = -1;", False),
+            ("    return -1;", False),
+            ("const Vec3 down( 0.0f, -1, 0.0f );", True),
+            ("int32 fileDescriptor{ -1 };", True),
+            ("int32 _lastLogHour{ -1 };", False),
+            ("return found ? index : -1;", False),
+            ("pushEvent( Kind::Sidestep, player, -1 );", False),
+            ("foo( a, -1 );", False),
+        )
+        for line, expected in arr_case:
+            assert is_arithmetic_minus_one(line) == expected, f"'{line}' -> arithmetic should be {expected}"
+        list_row = find_literals(SourceFile("Source/Sample.cpp", "int32 last = size - 1;\nint32 none = -1; // -1 in a comment\nfloat32 half = 0.5f;\nuint32 mask = 0xFF;\n"))
+        assert [row.kind for row in list_row] == ["minus-one", "float", "hex"], "subtraction and comments are not literals"
+        assert classify_place("Source/Engine/Foo/Tests/TestFoo.cpp", "x = 42;") == "test", "tests are their own place"
+        assert classify_place("Source/Engine/Foo.cpp", "PROPERTY( Min = 10 )") == "reflection-meta", "reflection metadata is its own place"
 
-    for line, expected in arr_case:
-        expect(is_arithmetic_minus_one(line) == expected, f"'{line}' -> arithmetic should be {expected}")
-    list_row = inspect_text("int32 last = size - 1;\nint32 none = -1; // -1 in a comment\nfloat32 half = 0.5f;\nuint32 mask = 0xFF;\n", "Source/Sample.cpp")
-    expect([row.kind for row in list_row] == ["minus-one", "float", "hex"], "subtraction and comments are not literals")
-    expect(classify_place("Source/Engine/Foo/Tests/TestFoo.cpp", "x = 42;") == "test", "tests are their own place")
-    expect(classify_place("Source/Engine/Foo.cpp", "PROPERTY( Min = 10 )") == "reflection-meta", "reflection metadata is its own place")
+        # 래칫이 세지 않는 오탐 유형 — 하나씩 고정한다.
+        def counted_values(code: str) -> list[str]:
+            return [row.value for row in find_literals(SourceFile("Source/Sample.cpp", code)) if row.counted]
 
-    # 래칫이 세지 않는 오탐 유형 — 하나씩 고정한다.
-    def counted_values(code: str) -> list[str]:
-        return [row.value for row in inspect_text(code, "Source/Sample.cpp") if row.counted]
-
-    expect(counted_values("x = 0.0f + 1.0 * 2.0f - 0.5f;") == [], "common math floats (0 · 1 · 2 · 0.5) are not counted")
-    expect(counted_values("x = speed * 0.35f;") == ["0.35f"], "a tuning float is counted")
-    expect(counted_values("m = v & 0xFFFFFFFFu; n = w & 0xFF;") == [], "all-bits masks are not counted")
-    expect(counted_values("m = v & 0x7F;") == ["0x7F"], "a partial mask is counted")
-    expect(counted_values("x = ( a << 16 ) | ( b >> 24 ); y <<= 8;") == [], "shift widths are not counted")
-    expect(counted_values("x = a * 16;") == ["16"], "a multiplier is counted")
-    expect(counted_values("if ( *p == L'\\0' ) {}") == [], "an escaped char literal is not a number")
-    expect(counted_values("const Vec3 down( 0.0f, -1, 0.0f );") == [], "direction -1 is arithmetic")
-    expect(counted_values("static constexpr float32 kSpeed = 3.5f;") == [], "a named definition is not counted")
-    expect(counted_values("    { 3.5f, 12, 0x10 },") == [], "an initializer table row is not counted")
-    expect(counted_values("int32 _target = -1;") == ["-1"], "an index sentinel -1 is counted")
-    expect(counted_values("io.check( 0 <= a && -1 <= b );") == ["-1"], "-1 after a logical operator is unary")
-    expect(counted_values("        float32 _walkSpeed{ 3.5f }; ///< 걷기 속도") == [], "a field default is the tuning value's home")
-    expect(counted_values("        , _walkSpeed{ 3.5f }") == [], "a constructor initializer is the PROPERTY default's home")
-    expect(counted_values("        int32 _target{ -1 };") == ["-1"], "a -1 field default is still a sentinel")
-    expect(counted_values("        pilot._heat = 3.5f;") == ["3.5f"], "assigning a member in a body is code")
-    expect(counted_values("        return _speed = 3.5f;") == ["3.5f"], "return is not a type")
-    expect(counted_values("return a < b ? -1 : 1;") == [], "a sign ternary is arithmetic")
-    # 래칫 판정(늘면 · 줄면 · 옮긴 파일 · --ratchet)은 표 형식 테스트(Scripts/lint/tests/test_rule_tables.py)가 본다.
-    print(f"[MagicLiterals] self-check {'OK' if failures == 0 else 'FAIL'}")
-    return ExitCode.PASSED if failures == 0 else ExitCode.VIOLATION
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="숫자 리터럴 래칫(일반 코드의 이름 없는 리터럴이 파일마다 늘지 않게)")
-    parser.add_argument("--ratchet", action="store_true", help="줄어든 파일의 기준선을 낮추고 없어진 파일을 지운다(올리지 않는다)")
-    parser.add_argument("--accept", nargs="+", default=None, metavar="FILE", help="그 파일들의 기준선을 지금 수로 바꾼다(올리는 유일한 길 — 통합에서만)")
-    parser.add_argument("--self-check", action="store_true", help="분류 · 래칫 규칙의 자체 시험")
-    args = parser.parse_args(argv)
-    sys.stdout.reconfigure(encoding="utf-8")
-    if args.self_check:
-        return run_self_check()
-
-    project_root = Path(__file__).resolve().parents[2]
-    if args.ratchet or args.accept is not None:
-        Baseline.load(project_root, RULE_ID).update(project_root, "MagicLiterals", list_source_files(project_root),
-                                                    lambda list_file: count_by_file(collect_rows(project_root, list_file)), args.accept)
-        return ExitCode.PASSED
-
-    list_problem = check_magic_literals(project_root, make_whole_scope(project_root))
-    for problem in list_problem:
-        print(f"  - {problem}")
-    print(f"[MagicLiterals] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
-    return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+        assert counted_values("x = 0.0f + 1.0 * 2.0f - 0.5f;") == [], "common math floats (0 · 1 · 2 · 0.5) are not counted"
+        assert counted_values("x = speed * 0.35f;") == ["0.35f"], "a tuning float is counted"
+        assert counted_values("m = v & 0xFFFFFFFFu; n = w & 0xFF;") == [], "all-bits masks are not counted"
+        assert counted_values("m = v & 0x7F;") == ["0x7F"], "a partial mask is counted"
+        assert counted_values("x = ( a << 16 ) | ( b >> 24 ); y <<= 8;") == [], "shift widths are not counted"
+        assert counted_values("x = a * 16;") == ["16"], "a multiplier is counted"
+        assert counted_values("if ( *p == L'\\0' ) {}") == [], "an escaped char literal is not a number"
+        assert counted_values("const Vec3 down( 0.0f, -1, 0.0f );") == [], "direction -1 is arithmetic"
+        assert counted_values("static constexpr float32 kSpeed = 3.5f;") == [], "a named definition is not counted"
+        assert counted_values("    { 3.5f, 12, 0x10 },") == [], "an initializer table row is not counted"
+        assert counted_values("int32 _target = -1;") == ["-1"], "an index sentinel -1 is counted"
+        assert counted_values("io.check( 0 <= a && -1 <= b );") == ["-1"], "-1 after a logical operator is unary"
+        assert counted_values("        float32 _walkSpeed{ 3.5f }; ///< 걷기 속도") == [], "a field default is the tuning value's home"
+        assert counted_values("        , _walkSpeed{ 3.5f }") == [], "a constructor initializer is the PROPERTY default's home"
+        assert counted_values("        int32 _target{ -1 };") == ["-1"], "a -1 field default is still a sentinel"
+        assert counted_values("        pilot._heat = 3.5f;") == ["3.5f"], "assigning a member in a body is code"
+        assert counted_values("        return _speed = 3.5f;") == ["3.5f"], "return is not a type"
+        assert counted_values("return a < b ? -1 : 1;") == [], "a sign ternary is arithmetic"

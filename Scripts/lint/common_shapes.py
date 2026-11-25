@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/common_shapes.py
 
@@ -42,27 +40,20 @@ Scripts/lint/common_shapes.py
    형식으로 못 막는 까닭: 리터럴 암시적 생성은 정상 코드이고, 자리마다 한 번 만드는 형식(C++20 고정 문자열 템플릿 인자)은 표준이 C++17 이라 미뤘다(2026-11-12).
 
 예외는 `Config/Rules/Lint/CommonShapes.json` 의 판정 칸(`_<판정>`)에 까닭과 함께 적는다. 까닭 빈 줄 · 낡은 예외(더는 없는 자리)는 표 형식(`rule_tables`)이 낸다.
-`py -3 -m Scripts lint common-shapes [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
+`py -3 -m Scripts lint common-shapes [--self-check]` 로 돌리고, 커밋 훅이 돌린다.
 """
 
 from __future__ import annotations
 
-import argparse
 import re
-import sys
-from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Mapping
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
+from lint.cpp_code import is_our_cpp, strip_code
+from lint.function_spans import find_closing_brace, find_function_spans
+from lint.lint_rule import LintRule, SourceFile
+from lint.lint_scope import LintScope
+from lint.rule_tables import ExceptionTable
 
-from common.exit_code import ExitCode  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from lint.cpp_shape import is_target, strip_code  # noqa: E402
-from lint.function_spans import find_closing_brace, find_function_spans, run_self_check as run_function_spans_self_check  # noqa: E402
-from lint.lint_scope import LintScope, make_whole_scope, read_texts  # noqa: E402
-from lint.rule_tables import ExceptionTable  # noqa: E402
-
-RULE_ID = "common-shapes"
 SECTIONS = ("_enumNameSwitch", "_firstComponent", "_oneLineValidator", "_savedText", "_makeDelta", "_assetEntrance", "_engineChildCommand", "_nameHashKey",
             "_editorContentScan", "_statePair", "_frameIntern")   # 판정(`collect_violations` 의 규칙)마다 예외 칸 하나
 EXTENSIONS = (".h", ".cpp", ".inl")
@@ -129,10 +120,9 @@ def find_id_dropping_entrances(code: str) -> list[str]:
     return list_entrance
 
 
-def find_state_pairs(text: str) -> list[tuple[int, str, str]]:
-    """손으로 짝지은 `writeState` · `readState( Archive& )` 의 (줄, 함수, 설명). 글은 주석 · 문자열 · 전처리 줄을 지운 `strip_code` 로 본다."""
+def find_state_pairs(code: str) -> list[tuple[int, str, str]]:
+    """손으로 짝지은 `writeState` · `readState( Archive& )` 의 (줄, 함수, 설명) — @p code 는 주석 · 문자열 · 전처리 줄을 지운 글이다."""
     list_found: list[tuple[int, str, str]] = []
-    code = strip_code(text)
     for match in STATE_SIGNATURE.finditer(code):
         line = code.count("\n", 0, match.start()) + 1
         owner, name, end = match.group(1), match.group(2), match.group(3)
@@ -156,9 +146,10 @@ def find_literal_names(code: str) -> list[tuple[str, str]]:
     return list_found
 
 
-def collect_violations(path: str, text: str) -> list[tuple[str, str, str]]:
-    """글 하나의 (규칙, 예외 열쇠, 설명) 들을 돌려준다."""
-    code = COMMENT_PATTERN.sub("", text)
+def collect_violations(file: SourceFile) -> list[tuple[str, str, str]]:
+    """파일 하나의 (규칙, 예외 열쇠, 설명) 들을 돌려준다."""
+    path = file.path
+    code = COMMENT_PATTERN.sub("", file.text)
     list_violation: list[tuple[str, str, str]] = []
     if not path.startswith("Source/Core/"):
         for enum_name in find_same_spelling_switches(code):
@@ -180,8 +171,8 @@ def collect_violations(path: str, text: str) -> list[tuple[str, str, str]]:
     if "/Editor/" in path:
         for argument in sorted(set(get_scan_key(match) for match in EDITOR_SCAN_PATTERN.finditer(code))):
             list_violation.append(("editorContentScan", f"{path}|{argument}", f"FileUtil 손 훑기({argument}) — 리소스 트리는 EditorContentScan"))
-    if is_target(path) and path != STATE_ENTRY_FILE:
-        for line, name, message in find_state_pairs(text):
+    if is_our_cpp(path) and path != STATE_ENTRY_FILE:
+        for line, name, message in find_state_pairs(file.code):
             list_violation.append(("statePair", f"{path}|{name}", f"{line}줄: {message}"))
     if path.endswith(".cpp"):
         for function, line in find_literal_names(code):
@@ -189,101 +180,88 @@ def collect_violations(path: str, text: str) -> list[tuple[str, str, str]]:
     return list_violation
 
 
-def find_problems(list_source: Iterable[tuple[str, str]], table: ExceptionTable, whole_repo: bool = True) -> list[str]:
-    list_problem: list[str] = []
-    for path, text in list_source:
-        for rule, key, message in collect_violations(path, text):
-            if not table.allows("_" + rule, key):
-                list_problem.append(f"{path}: {message} (예외는 {table.path} 의 _{rule} 에 '{key}' 와 까닭)")
+def find_problems(found: Mapping[str, list[tuple[str, str, str]]], table: ExceptionTable, whole_repo: bool = True) -> list[str]:
+    list_problem = [f"{path}: {message} (예외는 {table.path} 의 _{rule} 에 '{key}' 와 까닭)"
+                    for path, list_violation in found.items() for rule, key, message in list_violation if not table.allows("_" + rule, key)]
     return list_problem + table.list_problems(whole_repo)
 
 
-def read_sources(project_root: Path, scope: LintScope) -> list[tuple[str, str]]:
-    return read_texts(project_root, scope.select(("Source",), EXTENSIONS, SKIP_PARTS))
+class CommonShapesRule(LintRule):
+    id = "common-shapes"
+    group = "모양"
+    blocks = "공통 기반을 두고 손으로 적은 모양(열거 이름 표 · id 를 버리는 입구 · 손으로 짝지은 writeState · readState( Archive& ) · 프레임 함수 안의 리터럴 hashed_string …)"
+    why_not_type = "칸 이름 · switch 글자 · 부른 함수는 형식이 말하지 못한다"
+    tables = ("",)
 
+    def selects(self, path: str) -> bool:
+        return path.startswith("Source/") and path.endswith(EXTENSIONS) and not any(part in SKIP_PARTS for part in path.split("/"))
 
-def check_common_shapes(project_root: Path, scope: LintScope) -> list[str]:
-    return find_problems(read_sources(project_root, scope), ExceptionTable.load(project_root, RULE_ID, SECTIONS), scope.whole_repo)
+    def inspect(self, file: SourceFile) -> list[tuple[str, str, str]]:
+        return collect_violations(file)
 
+    def evaluate(self, scope: LintScope, found: Mapping[str, list[tuple[str, str, str]]]) -> list[str]:
+        return find_problems(found, self.load_exceptions(*SECTIONS), scope.whole_repo)
 
-def make_table(**sections: dict[str, str]) -> ExceptionTable:
-    return ExceptionTable.make(RULE_ID, **{**{section: {} for section in SECTIONS}, **sections})
+    def self_check(self) -> None:
+        def violations(path: str, text: str) -> list[tuple[str, str, str]]:
+            return collect_violations(SourceFile(path, text))
 
+        def problems(path: str, text: str, **sections: dict[str, str]) -> list[str]:
+            return find_problems({path: violations(path, text)}, ExceptionTable.make(self.id, **{**{section: {} for section in SECTIONS}, **sections}))
 
-def run_self_check() -> None:
-    run_function_spans_self_check()   # 공용 함수 범위 도우미(`경로|함수` 열쇠)도 함께 본다
-    same = 'const utf8* f( Kind k ) { switch ( k )\n{\ncase Kind::Aa: return "Aa";\ncase Kind::Bb: return "Bb";\n}\n}'
-    other = 'const utf8* f( Kind k ) { switch ( k )\n{\ncase Kind::Aa: return "aa";\ncase Kind::Bb: return "Bb";\n}\n}'
-    filtered = 'const utf8* f( Kind k ) { switch ( k )\n{\ncase Kind::Aa: return "Aa";\ncase Kind::Bb: return "Bb";\ndefault: return nullptr;\n}\n}'
-    assert find_same_spelling_switches(same) == ["Kind"]
-    assert find_same_spelling_switches(other) == []
-    assert find_same_spelling_switches(filtered) == []
-    assert len(find_problems([("Source/A/a.cpp", same)], make_table())) == 1
-    assert find_problems([("Source/Core/a.cpp", same)], make_table()) == []
-    assert find_problems([("Source/A/a.cpp", same)], make_table(_enumNameSwitch={"Source/A/a.cpp|Kind": "이유"})) == []
-    stale = find_problems([("Source/A/a.cpp", "int x;")], make_table(_enumNameSwitch={"Source/A/a.cpp|Kind": "이유"}))
-    assert len(stale) == 1 and "낡은" in stale[0], stale
-    validator = "static expected<void> validateX( const AutomationStep& step )\n{\n    MyParams params;\n    return step.readProperties( params );\n}"
-    assert [v[0] for v in collect_violations("Source/A/a.cpp", validator)] == ["oneLineValidator"]
-    dropping = "bool A::loadFromAsset( const AssetID& assetID )\n{\n    string text;\n    if ( AssetIO::readTextAsset( assetID, text ) == false )\n        return false;\n    return loadFromXMLText( text, assetID.view() );\n}"
-    carrying = dropping.replace("loadFromXMLText( text, assetID.view() )", "loadComposed( text, assetID.view(), ResourceContext::forType( *StaticType() ).withAsset( assetID ) )")
-    assert find_id_dropping_entrances(dropping) == ["A::loadFromAsset"], find_id_dropping_entrances(dropping)
-    assert find_id_dropping_entrances(carrying) == []
-    other_name = "bool B::loadFromPack( const DataPath& root )\n{\n    string text;\n    if ( AssetIO::readTextAsset( AssetID{ path }, text ) == false )\n        return false;\n    return loadFromXMLText( text, path );\n}"
-    assert find_id_dropping_entrances(other_name) == ["B::loadFromPack"], "이름이 loadFromAsset 이 아니어도 입구다"
-    passing = "bool C::loadDesc( const AssetID& assetID )\n{\n    string text;\n    if ( AssetIO::readTextAsset( assetID, text ) == false )\n        return false;\n    return parseDesc( assetID.view(), assetID, text );\n}"
-    assert find_id_dropping_entrances(passing) == [], "읽은 id 를 그대로 넘기면 싣는 것이다"
-    calling = "void D::f()\n{\n    if ( E::loadThing( x ) )\n    {\n        AssetIO::readTextAsset( AssetID{ p }, t );\n    }\n}"
-    assert find_id_dropping_entrances(calling) == [], "호출은 입구가 아니다"
-    child = "const ProcessCommand command = ProcessCommand::at( *executable, std::move( listArgument ) );"
-    assert [v[0] for v in collect_violations("Source/Editor/a.cpp", child)] == ["engineChildCommand"]
-    assert collect_violations("Source/Editor/a.cpp", "EngineChildProcess::makeCommand( parent, path, {} );") == []
-    scan = "(void)FileUtil::collectFiles( resourceRoot, \"\", listFile, true );"
-    assert [v[1] for v in collect_violations("Source/Editor/a.cpp", scan)] == ["Source/Editor/a.cpp|resourceRoot"]
-    assert collect_violations("Source/Engine/a.cpp", scan) == [], "에디터 밖(쿠커 · 엔진)은 보지 않는다"
-    assert collect_violations("Source/Editor/a.cpp", "(void)EditorContentScan::collectFiles( root, root, \"\", listFile, true );") == []
-    assert [v[0] for v in collect_violations("Source/A/a.cpp", "_mapByHash[name.getHash()] = value;")] == ["nameHashKey"]
-    assert [v[0] for v in collect_violations("Source/A/a.cpp", "map.emplace( name.getHash(), value );")] == ["nameHashKey"]
-    assert [v[0] for v in collect_violations("Source/A/a.cpp", "const uint64 key = name.getHash();")] == ["nameHashKey"]
-    assert collect_violations("Source/A/a.cpp", "if ( list[ index ]._id.getHash() == other ) {}") == [], "앞 첨자는 키가 아니다"
-    assert collect_violations("Source/A/a.cpp", "(void)index.assign( name.view(), name.getHash() );") == [], "공용 색인으로 넣는 것은 걸리지 않는다"
-    # 손으로 짝지은 상태 읽기 · 쓰기(옛 state-shape)
-    assert len(find_state_pairs("void A::writeState( Archive& outArchive ) const\n{\n}\n")) == 1
-    assert len(find_state_pairs("bool A::readState( sw::Archive& archive )\n{\n}\n")) == 1
-    assert len(find_state_pairs("void writeState( Archive& outArchive ) const;\n")) == 1
-    assert len(find_state_pairs("void writeState( Archive& outArchive ) const { outArchive << _x; }\n")) == 1
-    assert find_state_pairs("void writeState( Archive& outArchive ) const { StateIO::writeObject( *this, outArchive ); }\n") == []
-    assert find_state_pairs("bool readState( Archive& archive, const C& c )\n{\n    StateIO io( archive );\n    return io.isOk();\n}\n") == []
-    assert find_state_pairs("void A::serializeState( StateIO& io )\n{\n}\nSW_DECLARE_STATE_IO();\n") == []
-    assert find_state_pairs("// void writeState( Archive& outArchive ) const;\n") == []
-    assert find_state_pairs("void writeState( BitWriter& writer ) const;\n") == []
-    pair = "void A::writeState( Archive& outArchive ) const\n{\n}\n"
-    assert [v[1] for v in collect_violations("Source/A/a.cpp", pair)] == ["Source/A/a.cpp|writeState"]
-    assert collect_violations(STATE_ENTRY_FILE, pair) == [] and collect_violations("Source/ThirdParty/x/a.cpp", pair) == [], "입구 자신 · 남의 코드는 보지 않는다"
-    # 프레임 함수 안의 리터럴 이름(옛 frame-intern)
-    tick = 'void Foo::onTick( float32 deltaTime )\n{\n    use( hashed_string( "A" ) );\n}\n'
-    assert [v[1] for v in collect_violations("Source/A/a.cpp", tick)] == ["Source/A/a.cpp|onTick"], "틱 안의 리터럴은 잡아야 한다"
-    assert find_problems([("Source/A/a.cpp", tick)], make_table(_frameIntern={"Source/A/a.cpp|onTick": "까닭"})) == [], "예외는 통과해야 한다"
-    assert collect_violations("Source/A/a.h", tick) == [], "머리는 보지 않는다"
-    clean = 'void Foo::onTick( float32 deltaTime )\n{\n    static const hashed_string s_name( "A" );\n    use( s_name );\n}\nvoid Foo::load()\n{\n    use( hashed_string( "B" ) );\n}\n'
-    assert collect_violations("Source/A/a.cpp", clean) == [], "static 과 프레임 밖 함수는 통과해야 한다"
-    assert collect_violations("Source/A/a.cpp", 'void Foo::updateView()\n{\n    // hashed_string( "A" )\n}\n') == [], "주석은 통과해야 한다"
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="공통 기반이 있는데 손으로 다시 적은 모양을 본다")
-    parser.add_argument("--self-check", action="store_true")
-    arguments = parser.parse_args(argv)
-    if arguments.self_check:
-        run_self_check()
-        print("[CommonShapes] self-check OK")
-        return ExitCode.PASSED
-    list_problem = check_common_shapes(get_project_root(), make_whole_scope(get_project_root()))
-    for problem in list_problem:
-        print(f"  - {problem}")
-    print(f"[CommonShapes] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
-    return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+        same = 'const utf8* f( Kind k ) { switch ( k )\n{\ncase Kind::Aa: return "Aa";\ncase Kind::Bb: return "Bb";\n}\n}'
+        other = 'const utf8* f( Kind k ) { switch ( k )\n{\ncase Kind::Aa: return "aa";\ncase Kind::Bb: return "Bb";\n}\n}'
+        filtered = 'const utf8* f( Kind k ) { switch ( k )\n{\ncase Kind::Aa: return "Aa";\ncase Kind::Bb: return "Bb";\ndefault: return nullptr;\n}\n}'
+        assert find_same_spelling_switches(same) == ["Kind"]
+        assert find_same_spelling_switches(other) == []
+        assert find_same_spelling_switches(filtered) == []
+        assert len(problems("Source/A/a.cpp", same)) == 1
+        assert problems("Source/Core/a.cpp", same) == []
+        assert problems("Source/A/a.cpp", same, _enumNameSwitch={"Source/A/a.cpp|Kind": "이유"}) == []
+        stale = problems("Source/A/a.cpp", "int x;", _enumNameSwitch={"Source/A/a.cpp|Kind": "이유"})
+        assert len(stale) == 1 and "낡은" in stale[0], stale
+        validator = "static expected<void> validateX( const AutomationStep& step )\n{\n    MyParams params;\n    return step.readProperties( params );\n}"
+        assert [v[0] for v in violations("Source/A/a.cpp", validator)] == ["oneLineValidator"]
+        dropping = "bool A::loadFromAsset( const AssetID& assetID )\n{\n    string text;\n    if ( AssetIO::readTextAsset( assetID, text ) == false )\n        return false;\n    return loadFromXMLText( text, assetID.view() );\n}"
+        carrying = dropping.replace("loadFromXMLText( text, assetID.view() )", "loadComposed( text, assetID.view(), ResourceContext::forType( *StaticType() ).withAsset( assetID ) )")
+        assert find_id_dropping_entrances(dropping) == ["A::loadFromAsset"], find_id_dropping_entrances(dropping)
+        assert find_id_dropping_entrances(carrying) == []
+        other_name = "bool B::loadFromPack( const DataPath& root )\n{\n    string text;\n    if ( AssetIO::readTextAsset( AssetID{ path }, text ) == false )\n        return false;\n    return loadFromXMLText( text, path );\n}"
+        assert find_id_dropping_entrances(other_name) == ["B::loadFromPack"], "이름이 loadFromAsset 이 아니어도 입구다"
+        passing = "bool C::loadDesc( const AssetID& assetID )\n{\n    string text;\n    if ( AssetIO::readTextAsset( assetID, text ) == false )\n        return false;\n    return parseDesc( assetID.view(), assetID, text );\n}"
+        assert find_id_dropping_entrances(passing) == [], "읽은 id 를 그대로 넘기면 싣는 것이다"
+        calling = "void D::f()\n{\n    if ( E::loadThing( x ) )\n    {\n        AssetIO::readTextAsset( AssetID{ p }, t );\n    }\n}"
+        assert find_id_dropping_entrances(calling) == [], "호출은 입구가 아니다"
+        child = "const ProcessCommand command = ProcessCommand::at( *executable, std::move( listArgument ) );"
+        assert [v[0] for v in violations("Source/Editor/a.cpp", child)] == ["engineChildCommand"]
+        assert violations("Source/Editor/a.cpp", "EngineChildProcess::makeCommand( parent, path, {} );") == []
+        scan = "(void)FileUtil::collectFiles( resourceRoot, \"\", listFile, true );"
+        assert [v[1] for v in violations("Source/Editor/a.cpp", scan)] == ["Source/Editor/a.cpp|resourceRoot"]
+        assert violations("Source/Engine/a.cpp", scan) == [], "에디터 밖(쿠커 · 엔진)은 보지 않는다"
+        assert violations("Source/Editor/a.cpp", "(void)EditorContentScan::collectFiles( root, root, \"\", listFile, true );") == []
+        assert [v[0] for v in violations("Source/A/a.cpp", "_mapByHash[name.getHash()] = value;")] == ["nameHashKey"]
+        assert [v[0] for v in violations("Source/A/a.cpp", "map.emplace( name.getHash(), value );")] == ["nameHashKey"]
+        assert [v[0] for v in violations("Source/A/a.cpp", "const uint64 key = name.getHash();")] == ["nameHashKey"]
+        assert violations("Source/A/a.cpp", "if ( list[ index ]._id.getHash() == other ) {}") == [], "앞 첨자는 키가 아니다"
+        assert violations("Source/A/a.cpp", "(void)index.assign( name.view(), name.getHash() );") == [], "공용 색인으로 넣는 것은 걸리지 않는다"
+        # 손으로 짝지은 상태 읽기 · 쓰기(옛 state-shape)
+        assert len(find_state_pairs(strip_code("void A::writeState( Archive& outArchive ) const\n{\n}\n"))) == 1
+        assert len(find_state_pairs(strip_code("bool A::readState( sw::Archive& archive )\n{\n}\n"))) == 1
+        assert len(find_state_pairs(strip_code("void writeState( Archive& outArchive ) const;\n"))) == 1
+        assert len(find_state_pairs(strip_code("void writeState( Archive& outArchive ) const { outArchive << _x; }\n"))) == 1
+        assert find_state_pairs(strip_code("void writeState( Archive& outArchive ) const { StateIO::writeObject( *this, outArchive ); }\n")) == []
+        assert find_state_pairs(strip_code("bool readState( Archive& archive, const C& c )\n{\n    StateIO io( archive );\n    return io.isOk();\n}\n")) == []
+        assert find_state_pairs(strip_code("void A::serializeState( StateIO& io )\n{\n}\nSW_DECLARE_STATE_IO();\n")) == []
+        assert find_state_pairs(strip_code("// void writeState( Archive& outArchive ) const;\n")) == []
+        assert find_state_pairs(strip_code("void writeState( BitWriter& writer ) const;\n")) == []
+        pair = "void A::writeState( Archive& outArchive ) const\n{\n}\n"
+        assert [v[1] for v in violations("Source/A/a.cpp", pair)] == ["Source/A/a.cpp|writeState"]
+        assert violations(STATE_ENTRY_FILE, pair) == [] and violations("Source/ThirdParty/x/a.cpp", pair) == [], "입구 자신 · 남의 코드는 보지 않는다"
+        # 프레임 함수 안의 리터럴 이름(옛 frame-intern)
+        tick = 'void Foo::onTick( float32 deltaTime )\n{\n    use( hashed_string( "A" ) );\n}\n'
+        assert [v[1] for v in violations("Source/A/a.cpp", tick)] == ["Source/A/a.cpp|onTick"], "틱 안의 리터럴은 잡아야 한다"
+        assert problems("Source/A/a.cpp", tick, _frameIntern={"Source/A/a.cpp|onTick": "까닭"}) == [], "예외는 통과해야 한다"
+        assert violations("Source/A/a.h", tick) == [], "머리는 보지 않는다"
+        clean = 'void Foo::onTick( float32 deltaTime )\n{\n    static const hashed_string s_name( "A" );\n    use( s_name );\n}\nvoid Foo::load()\n{\n    use( hashed_string( "B" ) );\n}\n'
+        assert violations("Source/A/a.cpp", clean) == [], "static 과 프레임 밖 함수는 통과해야 한다"
+        assert violations("Source/A/a.cpp", 'void Foo::updateView()\n{\n    // hashed_string( "A" )\n}\n') == [], "주석은 통과해야 한다"

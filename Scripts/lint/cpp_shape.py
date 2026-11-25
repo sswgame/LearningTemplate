@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/cpp_shape.py
 
@@ -38,137 +36,36 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
    종류마다 함수를 템플릿 인자로 주는지 생성자 인자로 주는지 달라 모양을 외워야 한다. 매크로가 그 공개 함수로 펼쳐지므로 접근 제어로 막지 못한다.
    `Core/Delegate/` (맨 API 의 정의 · 구현 · 그 테스트)만 뺀다.
 
-`py -3 -m Scripts lint cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`rules.py` 표)이 staged 파일에 돌린다.
+`py -3 -m Scripts lint cpp-shape` 로 돌리고, 커밋 훅이 staged 파일에 돌린다.
 """
 
 from __future__ import annotations
 
-import argparse
 import functools
 import re
-import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Mapping
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
+from common.git import run_git_or_raise
+from lint.cpp_code import BODY_OPEN, find_param_list_end, get_line_of, is_our_cpp, match_brace, strip_code
+from lint.lint_rule import LintRule, SourceFile
+from lint.lint_scope import LintScope
+from lint.rule_tables import get_table_path
 
-from common.git import run_git_or_raise  # noqa: E402
-from lint.lint_scope import LintScope, make_file_scope, make_whole_scope, read_text  # noqa: E402
-from lint.parallel import flat_map_in_processes  # noqa: E402
-from lint.rule_tables import ExceptionTable, get_table_path, read_rule_table  # noqa: E402
 
-
-SKIP_FOLDERS = ("ThirdParty", "Generated", ".gen.")
 BOOL_FLAG_EXEMPT = "NOLINT(sw-bool-flag)"
 ONLINE_KIT_FOLDER = "Source/GameFramework/Kits/Feature/Online/"
 ONLINE_CORE_FOLDER = "Source/GameFramework/Kits/Feature/Online/OnlineCore/"  # 프로토콜 표의 기반(OnlineProtocolService)이 사는 곳 — 기반은 인터페이스를 잇는다
 ONLINE_INTERFACE_PATTERN = re.compile(r"public\s+(IOnlineServerService|OnlineClientService)\b")
-ACCESS_KEYWORDS = ("public", "protected", "private")
 RULE_ID = "cpp-shape"
-EXCEPTION_SECTIONS = ("_stateMutator", "_multipleBase", "_staticOwner")
+HINT = get_table_path(RULE_ID) + " 의 {} 에 까닭과 함께"   # 예외를 어디에 적는가
+Finding = tuple[int, str, str, str]   # 줄 · 글 · 예외 칸 · 예외 열쇠(칸이 빈 것은 예외가 없는 판정)
 UNCOUNTED_BASES = ("enable_shared_from_this",)  # 표준 믹스인 — 상속 계층이 아니다
 
 
 # ------------------------------------------------------------------------------
-# 1) 주석 · 문자열을 지운 글(위치는 그대로)
+# 1) 클래스 몸통의 문장 분류
 # ------------------------------------------------------------------------------
-STRIP_START = re.compile(r'//|/\*|R"|["\']')   # 지울 것이 시작할 수 있는 자리 — 그 사이 글자는 그대로 둔다
-RAW_STRING_HEAD = re.compile(r'R"([^(]*)\(')
-PREPROCESSOR_LINE = re.compile(r"^[ \t]*#(?:[^\n]*\\\n)*[^\n]*$", re.M)
-
-
-def blank_text(text: str) -> str:
-    """줄 바꿈만 남기고 같은 길이의 공백으로."""
-    return "\n".join(" " * len(part) for part in text.split("\n"))
-
-
-@functools.lru_cache(maxsize=64)
-def strip_code(text: str) -> str:
-    """
-    주석 · 문자열 · 문자 상수 · 전처리 줄을 같은 길이의 공백으로 바꿉니다(줄 번호를 지킨다).
-
-    C++ 글 규칙 일곱(cpp-shape · common-shapes · byte-read · magic-literals · mutable-statics · result-types · thread-owners)이 같은 파일에 부른다 —
-    커밋 훅은 한 프로세스에서 차례로 돌므로 글 하나를 한 번만 지운다(`lint_scope.read_text` 가 같은 글 객체를 돌려줘 열쇠 비교가 싸다).
-    지울 것이 시작할 수 있는 자리(`STRIP_START`)로 건너뛴다 — 글자마다 파이썬으로 돌던 것보다 약 5 배 빠르다(같은 출력, `run_self_check`).
-    """
-    list_piece: list[str] = []
-    copied = 0
-    size = len(text)
-
-    def blank(start: int, end: int) -> None:
-        nonlocal copied
-        end = min(end, size)
-        list_piece.append(text[copied:start])
-        list_piece.append(blank_text(text[start:end]))
-        copied = max(end, start)
-
-    index = 0
-    while True:
-        match = STRIP_START.search(text, index)
-        if match is None:
-            break
-        index = match.start()
-        char = text[index]
-        if text.startswith("//", index):
-            end = text.find("\n", index)
-            end = size if end < 0 else end
-            blank(index, end)
-            index = end
-        elif text.startswith("/*", index):
-            end = text.find("*/", index + 2)
-            end = size if end < 0 else end + 2
-            blank(index, end)
-            index = end
-        elif char == "R" and text.startswith('R"', index) and (index == 0 or not (text[index - 1].isalnum() or text[index - 1] == "_")):
-            head = RAW_STRING_HEAD.match(text, index)
-            if head is None:
-                index += 1
-                continue
-            end = text.find(")" + head.group(1) + '"', index)
-            end = size if end < 0 else end + len(head.group(1)) + 2
-            blank(index + 1, end)
-            index = end
-        elif char == '"' or (char == "'" and not (index > 0 and (text[index - 1].isalnum() or text[index - 1] == "_"))):
-            end = index + 1
-            while end < size and text[end] != char and text[end] != "\n":
-                end += 2 if text[end] == "\\" else 1
-            blank(index + 1, end)
-            index = end + 1
-        else:
-            index += 1
-    list_piece.append(text[copied:])
-    stripped = "".join(list_piece)
-    return PREPROCESSOR_LINE.sub(lambda m: blank_text(m.group(0)), stripped)
-
-
-def match_brace(text: str, open_index: int) -> int:
-    depth = 0
-    for index in range(open_index, len(text)):
-        if text[index] == "{":
-            depth += 1
-        elif text[index] == "}":
-            depth -= 1
-            if depth == 0:
-                return index
-    return len(text) - 1
-
-
-BODY_OPEN = re.compile(r"\s*(?:const\s*|noexcept\s*|override\s*|final\s*|->\s*[\w:<>]+\s*)*\{")  # 인자 목록 `)` 뒤의 함수 본문 시작
-
-
-def find_param_list_end(code: str, index: int) -> int:
-    """인자 목록 안의 @p index 에서 그 목록을 닫는 `)` 위치입니다(없으면 글 끝)."""
-    depth = 0
-    for position in range(index, len(code)):
-        if code[position] == "(":
-            depth += 1
-        elif code[position] == ")":
-            if depth == 0:
-                return position
-            depth -= 1
-    return len(code)
-
-
 def previous_token(text: str, index: int) -> str:
     position = index - 1
     while position >= 0 and text[position].isspace():
@@ -183,9 +80,6 @@ def previous_token(text: str, index: int) -> str:
     return text[position]
 
 
-# ------------------------------------------------------------------------------
-# 2) 클래스 몸통의 문장 분류
-# ------------------------------------------------------------------------------
 TYPE_HEAD = re.compile(r"(?:^|[\s;{}])(?:template\s*<.*>\s*)?(class|struct|union|enum(?:\s+class|\s+struct)?)\b\s*(?:alignas\s*\([^)]*\)\s*)?(?:(?:SW_\w+|\[\[[^\]]*\]\])\s*)*(?:\w+::)*(\w*)", re.S)
 BODY_PREV_KEYWORDS = ("const", "override", "final", "noexcept", "try", "mutable")
 
@@ -284,10 +178,6 @@ def parse_bases(after_name: str) -> list[str]:
     return list_base
 
 
-def get_line_of(text: str, index: int) -> int:
-    return text.count("\n", 0, index) + 1
-
-
 def parse_class(code: str, start: int, end: int, info: ClassInfo, out_classes: list[ClassInfo]) -> None:
     access = "public" if info.is_struct else "private"
     index = start
@@ -381,7 +271,7 @@ def collect_classes(code: str) -> list[ClassInfo]:
 
 
 # ------------------------------------------------------------------------------
-# 3) 검사
+# 2) 검사
 # ------------------------------------------------------------------------------
 def check_declaration_order(info: ClassInfo) -> list[tuple[int, str]]:
     problems: list[tuple[int, str]] = []
@@ -531,7 +421,7 @@ def collect_static_only_types(code: str) -> tuple[dict[str, tuple[int, list[str]
     return static_only, owners
 
 
-def check_static_owner(code: str, relative: str, table: ExceptionTable) -> list[tuple[int, str]]:
+def check_static_owner(code: str, relative: str) -> list[Finding]:
     """
     주인 우선(`docs/agents/CppStyle.md Helpers`): 헤더의 static 함수만 든 타입이 같은 헤더의 타입 하나를 함수 서명 절반 이상에서 받으면 그 함수들은 그 타입의 (static) 멤버다.
     이름(`XUtil` · `XScanner` · `XRules` …)은 보지 않는다 — 2026-11-08 `MarkupTagScanner`(데이터 `MarkupToken` 옆)처럼 Util 이 아닌 이름으로 같은 모양이 남았다.
@@ -543,8 +433,6 @@ def check_static_owner(code: str, relative: str, table: ExceptionTable) -> list[
     static_only, owners = collect_static_only_types(code)
     problems = []
     for name, (line, statics) in static_only.items():
-        if table.allows("_staticOwner", f"{relative}|{name}"):
-            continue
         counts: dict[str, int] = {}
         for signature in statics:
             for owner in sorted(set(re.findall(r"\b([A-Z]\w*)\b", signature)) & owners - {name}):
@@ -554,7 +442,7 @@ def check_static_owner(code: str, relative: str, table: ExceptionTable) -> list[
         owner, count = max(sorted(counts.items()), key=lambda item: item[1])   # 같은 수면 이름 순 첫 것 — 집합 순서(해시)로 메시지가 실행마다 바뀌었다
         if count * 2 >= len(statics):
             problems.append((line, f"`{name}` 는 static 함수만 들고 그 함수 대부분({count}/{len(statics)})이 같은 헤더의 `{owner}` 를 다룬다 — `{owner}` 의 (static) 멤버로 합친다"
-                                   f"(CppStyle.md Helpers 주인 우선). 주인이 정말 없으면 {table.hint('_staticOwner')} 적는다"))
+                                   f"(CppStyle.md Helpers 주인 우선). 주인이 정말 없으면 {HINT.format('_staticOwner')} 적는다", "_staticOwner", f"{relative}|{name}"))
     return problems
 
 
@@ -602,12 +490,11 @@ def check_manual_depletion(code: str, relative: str) -> list[tuple[int, str]]:
     return [(get_line_of(code, match.start()), f"`{match.group(1)}` 를 손으로 깎는다 — DepletingValue::take 를 쓴다") for match in MANUAL_DEPLETION.finditer(code)]
 
 
-def check_online_protocol_table(raw: str, code: str, relative: str) -> list[tuple[int, str]]:
+def check_online_protocol_table(code: str, relative: str) -> list[tuple[int, str]]:
     """온라인 키트의 서버 · 클라이언트는 프로토콜 표로 선다 — 손 switch 와 메서드마다 다른 지표 · 보존이 되돌아오지 않게 한다."""
     normalized = relative.replace("\\", "/")
     if normalized.startswith(ONLINE_KIT_FOLDER) is False or normalized.startswith(ONLINE_CORE_FOLDER) or "/Tests/" in normalized:
         return []
-    del raw
     list_problem: list[tuple[int, str]] = []
     for match in ONLINE_INTERFACE_PATTERN.finditer(code):
         list_problem.append((get_line_of(code, match.start()), f"온라인 키트는 {match.group(1)} 를 직접 잇지 않고 OnlineProtocolService · OnlineProtocolClient 로 선다(예외 없음)"))
@@ -660,24 +547,19 @@ def check_bare_delegate_create(code: str, relative: str, names: frozenset[str] |
     return [(get_line_of(code, match.start()), "델리게이트는 SW_DELEGATE_FUNCTION · SW_DELEGATE_METHOD · SW_DELEGATE_LAMBDA 로 붙인다") for match in list_match if match.group(1) in names]
 
 
-@functools.lru_cache(maxsize=1)
-def load_rules(project_root: str) -> tuple[ExceptionTable, int]:
-    """예외 표(`경로|타입` → 까닭 칸 셋)와 규칙 10 의 문턱 `_stateMutatorMinFunctions`. 프로세스마다 한 번 읽는다 — 파일 · 칸이 없으면 멈춘다."""
-    data = read_rule_table(Path(project_root), RULE_ID)
-    return ExceptionTable(get_table_path(RULE_ID), data, EXCEPTION_SECTIONS), int(data["_stateMutatorMinFunctions"])
 
 
 def count_bases(info: ClassInfo) -> list[str]:
     return [base for base in info.bases if not base.endswith(UNCOUNTED_BASES)]
 
 
-def check_multiple_bases(info: ClassInfo, relative: str, table: ExceptionTable) -> list[tuple[int, str]]:
+def check_multiple_bases(info: ClassInfo, relative: str) -> list[Finding]:
     """기반이 둘 이상인 클래스를 찾는다 — 서브시스템 · 구현은 창구를 멤버로 들어 건다(`exposeMember` · `SW_MODULE_PART`)."""
     counted = count_bases(info)
-    if len(counted) < 2 or table.allows("_multipleBase", f"{relative}|{info.name}"):
+    if len(counted) < 2:
         return []
     return [(info.line, f"`{info.name}` 의 기반이 {len(counted)} 개다({', '.join(counted)}) — 기반은 하나다. 창구 인터페이스는 구현을 멤버로 들어 건다"
-                        f"(`SubsystemScope::exposeMember` · `SW_MODULE_PART`). 불가피하면 {table.hint('_multipleBase')} 적는다")]
+                        f"(`SubsystemScope::exposeMember` · `SW_MODULE_PART`). 불가피하면 {HINT.format('_multipleBase')} 적는다", "_multipleBase", f"{relative}|{info.name}")]
 
 
 FIELD_MUTATION = (r"\s*(?:\.|->)\s*(?:{fields})\b\s*(?:\[[^\]]*\]\s*)*(?:[-+*/%|&^]?=(?!=)|\+\+|--|"
@@ -729,7 +611,7 @@ def find_state_mutators(code: str) -> dict[str, tuple[int, str, int]]:
     return result
 
 
-def check_state_mutators(code: str, relative: str, minimum: int, table: ExceptionTable) -> list[tuple[int, str]]:
+def check_state_mutators(code: str, relative: str, minimum: int) -> list[Finding]:
     """
     상태와 그것을 바꾸는 논리는 한 타입(`docs/agents/CppStyle.md Helpers` 주인 우선): `.cpp` 의 상태 구조체 공개 칸을 따로 선 `…Internal` 의 static 함수 여럿이
     차례로 바꾸면, 상태를 비공개 칸 + 그 함수들을 멤버로 든 클래스로 합친다(`TerrainBrushToolState`). 규칙 4 는 헤더만 보아 이 모양이 `.cpp` 에 남았다(2026-11-09).
@@ -739,139 +621,72 @@ def check_state_mutators(code: str, relative: str, minimum: int, table: Exceptio
         return []
     problems = []
     for state, (line, helper, count) in find_state_mutators(code).items():
-        if count >= minimum and not table.allows("_stateMutator", f"{relative}|{state}"):
+        if count >= minimum:
             problems.append((line, f"`{state}` 의 공개 칸을 `{helper}` 의 static 함수 {count} 개가 바꾼다 — 상태와 그것을 바꾸는 논리는 한 타입이다: 칸을 비공개로, 그 함수들을 `{state}` 의 멤버로"
-                                   f"(CppStyle.md Helpers). 불가피하면 {table.hint('_stateMutator')} 적는다"))
+                                   f"(CppStyle.md Helpers). 불가피하면 {HINT.format('_stateMutator')} 적는다", "_stateMutator", f"{relative}|{state}"))
     return problems
 
 
-def mark_live_exceptions(project_root: Path, table: ExceptionTable, minimum: int) -> None:
-    """규칙 10 · 기반 하나 예외 가운데 아직 걸리는 자리를 쓴 것으로 적는다 — 파일마다 도는 판정은 다른 프로세스라 쓴 키가 돌아오지 않아,
-    전체 실행에서 그 자리만 다시 본다. 쓰이지 않은 줄은 표 형식이 낡은 예외로 낸다."""
-    for key in table.get("_stateMutator"):
-        relative, state = key.split("|", 1)
-        path = project_root / relative
-        hit = find_state_mutators(strip_code(path.read_text(encoding="utf-8-sig", errors="ignore"))).get(state) if path.exists() else None
-        if hit is not None and hit[2] >= minimum:
-            table.mark_used("_stateMutator", key)
-    for key in table.get("_multipleBase"):
-        relative, class_name = key.split("|", 1)
-        path = project_root / relative
-        code = strip_code(path.read_text(encoding="utf-8-sig", errors="ignore")) if path.exists() else ""
-        if any(info.name == class_name and len(count_bases(info)) >= 2 for info in collect_classes(code)):
-            table.mark_used("_multipleBase", key)
+class CppShapeRule(LintRule):
+    id = "cpp-shape"
+    group = "모양"
+    blocks = "선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 기반 하나 · 델리게이트 매크로"
+    why_not_type = "합법 C++ 의 배치 규칙이다"
+    tables = ("",)
 
+    @functools.cached_property
+    def state_mutator_minimum(self) -> int:
+        """규칙 10 의 문턱."""
+        return int(self.read_table()["_stateMutatorMinFunctions"])
 
-def inspect_file(path: Path, relative: str) -> list[str]:
-    raw = read_text(path, errors="ignore", encoding="utf-8-sig")
-    if raw is None:
-        raise FileNotFoundError(path)   # 부른 쪽이 있는 파일만 넘긴다 — 예전 read_text 처럼 멈춘다
-    code = strip_code(raw)
-    raw_lines = raw.splitlines()
-    list_problem: list[tuple[int, str]] = []
-    table, minimum = load_rules(str(Path(__file__).resolve().parents[2]))
-    for info in collect_classes(code):
-        list_problem += check_multiple_bases(info, relative, table)
-        list_problem += check_declaration_order(info)
-        list_problem += check_bool_flags(info, raw_lines)
-        list_problem += check_bit_field_runs(info, raw_lines)
-    if relative.endswith(".cpp"):
-        list_problem += check_anonymous_namespaces(code)
-        list_problem += check_state_mutators(code, relative, minimum, table)
-    list_problem += check_static_owner(code, relative, table)
-    list_problem += check_includes_inside_braces(raw, code)
-    list_problem += check_shared_temp_in_tests(code, relative)
-    list_problem += check_manual_depletion(code, relative)
-    list_problem += check_inline_browser_js(code)
-    list_problem += check_online_protocol_table(raw, code, relative)
-    list_problem += check_net_message_table(code, relative)
-    list_problem += check_bare_delegate_create(code, relative)
-    return [f"{relative}:{line}: {message}" for line, message in sorted(set(list_problem))]
+    def selects(self, path: str) -> bool:
+        return is_our_cpp(path)
 
+    def inspect(self, file: SourceFile) -> list[Finding]:
+        code = file.code
+        list_plain: list[tuple[int, str]] = []
+        list_finding: list[Finding] = []
+        for info in collect_classes(code):
+            list_finding += check_multiple_bases(info, file.path)
+            list_plain += check_declaration_order(info)
+            list_plain += check_bool_flags(info, file.lines)
+            list_plain += check_bit_field_runs(info, file.lines)
+        if file.path.endswith(".cpp"):
+            list_plain += check_anonymous_namespaces(code)
+            list_finding += check_state_mutators(code, file.path, self.state_mutator_minimum)
+        list_finding += check_static_owner(code, file.path)
+        list_plain += check_includes_inside_braces(file.text, code)
+        list_plain += check_shared_temp_in_tests(code, file.path)
+        list_plain += check_manual_depletion(code, file.path)
+        list_plain += check_inline_browser_js(code)
+        list_plain += check_online_protocol_table(code, file.path)
+        list_plain += check_net_message_table(code, file.path)
+        list_plain += check_bare_delegate_create(code, file.path)
+        return list_finding + [(line, message, "", "") for line, message in list_plain]
 
-def is_target(relative: str) -> bool:
-    return relative.startswith("Source/") and relative.endswith((".h", ".cpp")) and not any(skip in relative for skip in SKIP_FOLDERS)
+    def evaluate(self, scope: LintScope, found: Mapping[str, list[Finding]]) -> list[str]:
+        table = self.load_exceptions("_stateMutator", "_multipleBase", "_staticOwner")
+        list_problem = [f"{path}:{line}: {message}" for path, list_finding in found.items() for line, message in
+                        sorted({(line, message) for line, message, section, key in list_finding if not (section and table.allows(section, key))})]
+        return list_problem + table.list_problems(scope.whole_repo, stale_sections=("_stateMutator", "_multipleBase"))   # 주인 우선 예외는 낡은 줄을 세지 않는다
 
-
-def inspect_listed_file(project_root: Path, file: str) -> list[str]:
-    """파일 하나를 봅니다. 대상이 아니면 빈 목록입니다(`check_cpp_shape` 가 프로세스로 넘기므로 모듈 최상위에 둔다)."""
-    path = Path(file).resolve()
-    try:
-        relative = path.relative_to(project_root).as_posix()
-    except ValueError:
-        return []
-    return inspect_file(path, relative) if is_target(relative) and path.exists() else []
-
-
-def check_cpp_shape(project_root: Path, scope: LintScope) -> list[str]:
-    """scope 가운데 Source 의 C++ 파일을 보고 어긋남을 `경로:줄: 설명` 으로 돌려준다. 파일마다 정규식이 오래 돌아 프로세스로 나눈다.
-    저장소 전체일 때만 더는 없는 예외 자리를 센다(바뀐 파일만 보고 "쓰이지 않는다" 고 말할 수 없다)."""
-    list_violation = flat_map_in_processes(functools.partial(inspect_listed_file, project_root), scope.list_absolute(project_root, (".h", ".cpp")))
-    data = read_rule_table(project_root, RULE_ID)   # 프로세스 캐시(`load_rules`)와 따로 — 쓴 키를 이 실행에서만 센다
-    table = ExceptionTable(get_table_path(RULE_ID), data, EXCEPTION_SECTIONS)
-    if scope.whole_repo:
-        mark_live_exceptions(project_root, table, int(data["_stateMutatorMinFunctions"]))
-    return list_violation + table.list_problems(scope.whole_repo, stale_sections=("_stateMutator", "_multipleBase"))   # 주인 우선 예외는 낡은 줄을 세지 않는다(예전 판정 그대로)
-
-
-def run_self_check() -> int:
-    """규칙 10(.cpp 상태 · `…Internal` 변경자) · 규칙 12(델리게이트 매크로) · strip_code 의 자체 테스트입니다."""
-    failures = 0
-
-    def expect(condition: bool, message: str) -> None:
-        nonlocal failures
-        if not condition:
-            print(f"[CppShape] self-check: {message}")
-            failures += 1
-
-    table = ExceptionTable.make(RULE_ID, _stateMutator={}, _multipleBase={}, _staticOwner={})
-    helper = ("struct CapState\n{\n    vector<int32> _listGroup;\n    int32 _count = 0;\n};\n"
-              "struct FooInternal\n{\n    static void group( CapState& inoutState ) { inoutState._listGroup.push_back( 1 ); }\n"
-              "    static void count( CapState* pState ) { pState->_count += 1; }\n"
-              "    static int32 read( const CapState& state ) { return state._count; }\n};\n")
-    expect(len(check_state_mutators(helper, "Source/Engine/Foo.cpp", 2, table)) == 1, "two Internal statics mutating a .cpp state's public fields are flagged")
-    expect(check_state_mutators(helper, "Source/Engine/Foo.h", 2, table) == [], "headers are rule 4's job")
-    expect(check_state_mutators(helper, "Source/Engine/Foo.cpp", 2, ExceptionTable.make(RULE_ID, _stateMutator={"Source/Engine/Foo.cpp|CapState": "why"})) == [], "an exception passes")
-    expect(check_state_mutators(helper, "Source/Engine/Foo.cpp", 3, table) == [], "the threshold is data")
-    readers = helper.replace("CapState& inoutState ) { inoutState._listGroup.push_back( 1 ); }", "const CapState& state ) { use( state._listGroup ); }")
-    expect(check_state_mutators(readers, "Source/Engine/Foo.cpp", 2, table) == [], "const readers are not counted")
-    factory = helper.replace("CapState& inoutState ) { inoutState.", "CapState& outState ) { outState.")
-    expect(check_state_mutators(factory, "Source/Engine/Foo.cpp", 2, table) == [], "an outX fill (parser · factory record) is not counted")
-    owned = ("class CapState\n{\npublic:\n    void group();\nprivate:\n    vector<int32> _listGroup;\n};\n"
-             "struct FooInternal\n{\n    static void a( CapState& s ) { s._listGroup.clear(); }\n    static void b( CapState& s ) { s._listGroup.clear(); }\n};\n")
-    expect(check_state_mutators(owned, "Source/Engine/Foo.cpp", 2, table) == [], "private fields are not counted")
-    names = frozenset({"Delegate", "DoneDelegate"})
-    bare = "void f()\n{\n    auto d = DoneDelegate::create<&Foo::bar>( this );\n    auto e = sw::Delegate<void( int32 )>::template create( []( int32 ) {} );\n}\n"
-    expect(len(check_bare_delegate_create(strip_code(bare), "Source/Engine/Foo.cpp", names)) == 2, "a bare delegate create is flagged")
-    wrapped = "void f()\n{\n    auto d = SW_DELEGATE_METHOD( DoneDelegate, &Foo::bar, this );\n    auto m = Mesh::create( desc );\n}\n"
-    expect(check_bare_delegate_create(strip_code(wrapped), "Source/Engine/Foo.cpp", names) == [], "the macro form and a non-delegate factory pass")
-    stripped = {
-        'a // c\nb': 'a     \nb', 'x /* c\nd */ y': 'x     \n     y', 's = "q\\"w";': 's = "    ";', "c = 'x'; it's": "c = ' '; it's",
-        'r = R"d(a)"b\n)d";': 'r = R       \n   ;', 'fooR"x"': 'fooR" "', '#define A \\\n  B\nint q;': '           \n   \nint q;',
-        'u = "open\nnext': 'u = "    \nnext', '/* open': '       ',
-    }
-    for text, want in stripped.items():
-        expect(strip_code(text) == want, f"strip_code({text!r}) == {want!r}, got {strip_code(text)!r}")
-    print(f"[CppShape] self-check {'OK' if failures == 0 else 'FAIL'}")
-    return 0 if failures == 0 else 1
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="C++ 모양 규칙(선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 중괄호 안 include · .cpp 상태 변경자 · 델리게이트 매크로)을 본다")
-    parser.add_argument("--files", nargs="*", default=None, help="볼 파일(없으면 --all)")
-    parser.add_argument("--all", action="store_true", help="Source 전체")
-    parser.add_argument("--self-check", action="store_true", help="규칙 10 의 자체 시험")
-    args = parser.parse_args(argv)
-    sys.stdout.reconfigure(encoding="utf-8")
-    if args.self_check:
-        return run_self_check()
-    project_root = Path(__file__).resolve().parents[2]
-    list_violation = check_cpp_shape(project_root, make_file_scope(project_root, args.files) if args.files else make_whole_scope(project_root))
-    for line in list_violation:
-        print(line)
-    print(f"[CppShape] {'FAIL' if list_violation else 'OK'} — {len(list_violation)}건")
-    return 1 if list_violation else 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    def self_check(self) -> None:
+        helper = ("struct CapState\n{\n    vector<int32> _listGroup;\n    int32 _count = 0;\n};\n"
+                  "struct FooInternal\n{\n    static void group( CapState& inoutState ) { inoutState._listGroup.push_back( 1 ); }\n"
+                  "    static void count( CapState* pState ) { pState->_count += 1; }\n"
+                  "    static int32 read( const CapState& state ) { return state._count; }\n};\n")
+        assert len(check_state_mutators(helper, "Source/Engine/Foo.cpp", 2)) == 1, "two Internal statics mutating a .cpp state's public fields are flagged"
+        assert check_state_mutators(helper, "Source/Engine/Foo.h", 2) == [], "headers are rule 4's job"
+        assert check_state_mutators(helper, "Source/Engine/Foo.cpp", 3) == [], "the threshold is data"
+        readers = helper.replace("CapState& inoutState ) { inoutState._listGroup.push_back( 1 ); }", "const CapState& state ) { use( state._listGroup ); }")
+        assert check_state_mutators(readers, "Source/Engine/Foo.cpp", 2) == [], "const readers are not counted"
+        factory = helper.replace("CapState& inoutState ) { inoutState.", "CapState& outState ) { outState.")
+        assert check_state_mutators(factory, "Source/Engine/Foo.cpp", 2) == [], "an outX fill (parser · factory record) is not counted"
+        owned = ("class CapState\n{\npublic:\n    void group();\nprivate:\n    vector<int32> _listGroup;\n};\n"
+                 "struct FooInternal\n{\n    static void a( CapState& s ) { s._listGroup.clear(); }\n    static void b( CapState& s ) { s._listGroup.clear(); }\n};\n")
+        assert check_state_mutators(owned, "Source/Engine/Foo.cpp", 2) == [], "private fields are not counted"
+        names = frozenset({"Delegate", "DoneDelegate"})
+        bare = "void f()\n{\n    auto d = DoneDelegate::create<&Foo::bar>( this );\n    auto e = sw::Delegate<void( int32 )>::template create( []( int32 ) {} );\n}\n"
+        assert len(check_bare_delegate_create(strip_code(bare), "Source/Engine/Foo.cpp", names)) == 2, "a bare delegate create is flagged"
+        wrapped = "void f()\n{\n    auto d = SW_DELEGATE_METHOD( DoneDelegate, &Foo::bar, this );\n    auto m = Mesh::create( desc );\n}\n"
+        assert check_bare_delegate_create(strip_code(wrapped), "Source/Engine/Foo.cpp", names) == [], "the macro form and a non-delegate factory pass"

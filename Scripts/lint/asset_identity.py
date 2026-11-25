@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/asset_identity.py
 
@@ -13,13 +11,12 @@ Scripts/lint/asset_identity.py
   (`<AssetMeta _guid="…" _source="<파일 이름>" />`, 원본이 저장소 밖에 있으면 `_source="store:<SHA-256>/<파일 이름>"`, 그 에셋만의 임포트 예외는 자식 `<_listImportOverride>` 의 `<AssetImportOverride _key _value/>`)에 정체성을 든다. GUID 는 소문자 16진 32 자 하나의 철자다.
 - `--fix` 는 조용히 새 GUID 를 만들지 않는다: 머리를 잃은 글은 HEAD 의 같은 경로에 있던 GUID 를 되살리고, 짝 잃은 `.meta` 는 원본을 내용(HEAD 의 블롭 해시)
   · 이름으로 찾아 다시 붙인다. 붙일 곳이 하나로 정해지지 않으면 오류다. 새 GUID 는 정체성이 처음 생기는 파일(새 글 · 새 원본)과 복사본에만 준다.
-- 커밋 훅(린트 규칙 `asset-ids` — `check_asset_identity` 가 `check_staged_asset_identity` 를 부른다): 바뀐 파일과 그 짝의 머리 없음 · 짝 없음, 새 GUID 와 인덱스의 겹침(`git grep`), 그리고 HEAD 에 있던
+- 커밋 훅(린트 규칙 `asset-ids`, `asset_ids.py`): 바뀐 파일과 그 짝의 머리 없음 · 짝 없음, 새 GUID 와 인덱스의 겹침(`git grep`), 그리고 HEAD 에 있던
   경로의 GUID 가 바뀐 것(한 커밋에서 같은 경로를 지우고 다시 만들었다 — 내용 바꾸기는 GUID 를 지킨다)을 막는다. 저장소 전체는 `asset-ids` 가 본다.
 """
 
 from __future__ import annotations
 
-import argparse
 import fnmatch
 import json
 import re
@@ -31,8 +28,6 @@ from pathlib import Path
 from typing import Iterator
 from xml.sax.saxutils import quoteattr
 
-from common.command import Command, ScriptContext
-from common.exit_code import ExitCode
 from common.git import run_git_bytes, run_git_in_hook_repository
 from lint.lint_scope import LintScope
 
@@ -660,65 +655,6 @@ def write_keeping_identity(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8", newline="\n")
 
 
-def run_self_check(project_root: Path | None = None) -> None:
-    """C++ `AssetGUIDTest` 와 같은 사례 · 규칙 파일의 산출물 폴더가 참조 칸 표의 임포트 폴더와 같은가."""
-    if project_root is None:
-        from common.paths import get_project_root
-        project_root = get_project_root()
-    sample = "0123456789abcdef0011223344556677"
-    with_declaration = write_header('<?xml version="1.0" encoding="utf-8"?>\n<!-- note -->\n<Root/>\n', sample)
-    assert with_declaration == f'<?xml version="1.0" encoding="utf-8"?>\n<?asset guid="{sample}"?>\n<!-- note -->\n<Root/>\n', with_declaration
-    assert read_header(with_declaration) == (FOUND, sample)
-    assert write_header("<Root/>\r\n", sample) == f'<?asset guid="{sample}"?>\r\n<Root/>\r\n'
-    other = create_guid()
-    assert read_header(write_header(with_declaration, other)) == (FOUND, other) and len(write_header(with_declaration, other)) == len(with_declaration)
-    assert read_header('<?xml version="1.0"?>\n<Root/>')[0] == MISSING
-    assert read_header('<?asset guid="nope"?>\n<Root/>')[0] == INVALID
-    assert read_header(f'<?asset guid="{sample}" extra="1"?>\n<Root/>')[0] == INVALID
-    assert read_header(f'<Root/>\n<?asset guid="{sample}"?>')[0] == MISSING
-    assert read_header(f'<?asset guid="{sample}"?>\n<!-- <?asset guid?> -->\n<Root/>') == (FOUND, sample)
-    assert read_header('<?xml version="1.0"\n<Root/>')[0] == INVALID
-    assert not is_guid(sample.upper()) and not is_guid("0" * GUID_LENGTH) and not is_guid(sample[:-1])
-    assert parse_meta(make_meta_text("a/b/hit.ogg", sample)) == (sample, "hit.ogg", ())
-    overrides = (("animationCodec", "raw"), ("generateMips", "false"))
-    assert parse_meta(make_meta_text("a/horse.glb", sample, overrides)) == (sample, "horse.glb", overrides)
-    assert parse_meta(make_meta_text("a/horse.glb", sample, overrides).replace('_value="raw"', '_value="raw" _note="x"')) is None
-    assert parse_meta(f'<AssetMeta _guid="{sample}" _source="hit.ogg"><Other /></AssetMeta>') is None
-    assert parse_meta(f'<AssetMeta _guid="{sample}" _source="hit.ogg" _extra="1" />') is None
-    stored_source = f"store:{'0a' * 32}/horse.glb"   # 저장소 밖 원본 — C++ AssetMetaTest.StoredSourceAddressIsOneOfTwoForms 와 같은 사례
-    stored = make_meta_text("a/horse.glb", sample, overrides, stored_source)
-    assert parse_meta(stored) == (sample, stored_source, overrides)
-    assert parse_meta(make_meta_text("b/pony.glb", sample, overrides, stored_source)) == (sample, f"store:{'0a' * 32}/pony.glb", overrides)
-    for wrong in (f"store:{'0A' * 32}/horse.glb", "store:0a/horse.glb", f"store:{'0a' * 32}/", f"store:{'0a' * 32}/a/horse.glb", "a/horse.glb", "..", "C:horse.glb", ""):
-        assert parse_meta(f'<AssetMeta _guid="{sample}" _source="{wrong}" />') is None, wrong
-
-    rules = load_rules(project_root)
-    assert make_output_guid("0123456789abcdef0011223344556677", ".MESH") == "28016f06802dfbf1a257d90c3347b2fb"   # C++ AssetGUIDTest.OutputIdentityComesFromSourceAndOutputName 과 같은 글
-    assert next(iterate_imported_sources("common/models/a/b/c.mesh", rules.list_imported)) == ("common/models_raw/a/b/c.glb", ".mesh")
-    map_source = {"common/models_raw/a.glb": sample}
-    assert find_output_guid("common/models/a/b/c.mesh", map_source, rules.list_imported) == make_output_guid(sample, "/b/c.mesh")
-    assert find_output_guid("common/models/a.mesh", map_source, rules.list_imported) == make_output_guid(sample, ".mesh")
-    assert find_output_guid("common/models/_shared/x.material", map_source, rules.list_imported) is None
-    assert find_output_guid("common/prefabs/a.prefab.xml", map_source, rules.list_imported) is None
-    assert find_output_guid("common/models/a.facial.xml", map_source, rules.list_imported) is None   # glb 는 표정 표를 내지 않는다 — C++ `AssetReferenceFieldsTest.ImportedOutputsResolveFromTheirSource` 와 같은 사례
-    assert find_output_guid("common/models/a/a.facial.xml", {"common/models_raw/a.vrm": sample}, rules.list_imported) == make_output_guid(sample, "/a.facial.xml")
-    assert find_output_guid("common/models/a/clips", map_source, rules.list_imported) == make_output_guid(sample, "/clips")
-    table = add_identity_redirect('<?asset guid="x"?>\n<Redirects>\n\t<Redirect from="a/b.xml" to="a/c.xml" />\n</Redirects>\n', sample, other)
-    assert table == f'<?asset guid="x"?>\n<Redirects>\n\t<Redirect from="a/b.xml" to="a/c.xml" />\n\t<IdentityRedirect from="{sample}" to="{other}" />\n</Redirects>\n', table
-    assert add_identity_redirect(table, sample, "0" * 31 + "1").count("IdentityRedirect") == 1   # 같은 옛 GUID 의 줄은 바꾼다
-    list_issue, _ = collect_issues({"a/x.prefab.xml": write_header("<P/>", sample), "a/y.prefab.xml": write_header("<P/>", sample), "a/z.ogg": "",
-                                  "a/w.ogg.meta": make_meta_text("a/w.ogg", other), "a/golden/q.ppm": ""}, rules)
-    misplaced = write_header("<F/>", create_guid())
-    kept, _ = collect_issues({"game/x/models/head.facial.xml": misplaced, "game/x/data/head.facial.xml": write_header("<F/>", sample),
-                             "game/x/models/head/head.mirrortable.xml": write_header("<M/>", other), "game/x/models_raw/head.facial.xml": write_header("<F/>", create_guid())}, rules)
-    assert [(issue.kind, issue.asset_id) for issue in kept] == [("kept-in-derived", "game/x/models/head.facial.xml")], kept
-    assert [(issue.kind, issue.asset_id) for issue in list_issue] == [("orphan-meta", "a/w.ogg.meta"), ("duplicate", "a/y.prefab.xml"), ("missing-meta", "a/z.ogg")], list_issue
-    list_issue, map_guid = collect_issues({"a/horse.glb.meta": stored}, rules)   # 원본이 저장소 밖에 있다 — 짝 잃은 서술이 아니다
-    assert not list_issue and map_guid == {sample: "a/horse.glb"}, list_issue
-    list_issue, _ = collect_issues({"a/horse.glb.meta": stored, "a/horse.glb": ""}, rules)   # 곁에도 있으면 어느 쪽이 원본인지 둘이다
-    assert [issue.kind for issue in list_issue] == ["invalid-meta"], list_issue
-
-
 IDENTITY_REDIRECT_ELEMENT = "IdentityRedirect"   # C++ `AssetRedirect` 의 정체성 대체 줄
 
 
@@ -747,38 +683,3 @@ def redirect_identity(project_root: Path, from_id: str, to_id: str) -> str:
     text = table_path.read_text(encoding="utf-8") if table_path.is_file() else write_header("<Redirects>\n</Redirects>\n", create_guid())
     _write(table_path, add_identity_redirect(text, map_path_to_guid[from_id.lower()], map_path_to_guid[to_id.lower()]))
     return table_id
-
-
-def check_asset_identity(project_root: Path, scope: LintScope) -> list[str]:
-    """린트 규칙(`rules.py`): 커밋 훅은 스테이지의 바뀐 파일과 그 짝만(`check_staged_asset_identity`), `--all` 은 작업 트리 전체."""
-    if not scope.whole_repo:
-        return check_staged_asset_identity(project_root, scope) or []
-    rules = load_rules(project_root)
-    list_issue, _ = collect_issues(read_worktree_texts(project_root, list_worktree_ids(project_root), rules), rules)
-    return [str(issue) for issue in list_issue]
-
-
-class AssetIdsCommand(Command):
-    name = "asset-ids"
-    help = "에셋 정체성(GUID — 우리 형식 글의 머리 <?asset guid?> · 원본 곁 .meta) 검사, --fix 로 없는 GUID 만들기 · 짝 잃은 .meta 다시 붙이기 · 복사본 새 GUID"
-
-    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--fix", action="store_true", help="없는 GUID 를 만들고, 짝 잃은 .meta 를 다시 붙이고, 복사본에 새 GUID 를 준다")
-        parser.add_argument("--redirect", nargs=2, metavar=("지울_id", "남길_id"), help="지울 에셋을 가리키던 참조가 남길 에셋으로 풀리는 줄을 리다이렉트 표에 적는다")
-
-    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
-        project_root = context.root
-        if args.redirect:
-            table_id = redirect_identity(project_root, *args.redirect)
-            print(f"[asset-ids] {CONTENT_FOLDER}/{table_id} 에 정체성 대체 줄을 적었다 — 이제 '{args.redirect[0]}' 를 지운다")
-            return ExitCode.PASSED
-        if args.fix:
-            left = fix_worktree(project_root)
-            print(f"[asset-ids] {'FAIL' if left else 'OK'} — 남은 결함 {left}건")
-            return ExitCode.VIOLATION if left else ExitCode.PASSED
-        rules = load_rules(project_root)
-        list_issue, map_guid = collect_issues(read_worktree_texts(project_root, list_worktree_ids(project_root), rules), rules)
-        for issue in list_issue:
-            print(f"  - {issue}")
-        print(f"[asset-ids] {'FAIL' if list_issue else 'OK'} — 정체성 {len(map_guid)}개, 결함 {len(list_issue)}건")
-        return ExitCode.VIOLATION if list_issue else ExitCode.PASSED

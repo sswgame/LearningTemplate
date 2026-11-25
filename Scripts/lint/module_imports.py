@@ -3,8 +3,8 @@
 """
 Scripts/lint/module_imports.py
 
-Scripts 안 모듈이 거쳐서라도 import 하는 모듈의 파일 — 규칙 표(`rules.py`)는 규칙의 입력을, 사실 캐시(`index_cache.py`)는 뽑는 법의 판을 이것으로 정한다.
-`rules.py` 에 두면 사실 캐시가 규칙 표를 import 해, 표에 규칙 한 줄을 더해도 모든 규칙의 캐시가 버려져 저장소 전체를 다시 읽었다.
+Scripts 안 모듈이 거쳐서라도 import 하는 모듈의 파일 — 규칙의 기반(`lint_rule.py`)은 규칙의 입력을, 사실 캐시(`index_cache.py`)는 뽑는 법의 판을 이것으로 정한다.
+`lint_rule.py` 에 두면 사실 캐시가 규칙의 기반을 import 해, 기반을 고쳐도 모든 규칙의 캐시가 버려져 저장소 전체를 다시 읽었다.
 """
 
 from __future__ import annotations

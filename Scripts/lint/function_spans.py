@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/function_spans.py
 
@@ -10,17 +8,12 @@ C++ 글에서 함수 정의와 람다의 본문 범위를 찾아 이름을 붙�
 - 람다: `[캡처]( 인자 ) {` · `[캡처] {` 를 담은 함수(또는 람다) 이름 + `#lambda<순번>`(담은 것 안에서 나온 차례, 1 부터) — 예외 함수 안에 새 람다가 생기면
   열쇠가 달라져 걸린다.
 - 근사다: 매크로가 만든 함수 · 여러 줄에 걸친 반환 형식은 이름을 얻지 못한다(그 자리는 `?`).
-
-    py -3 Scripts/lint/function_spans.py --self-check
 """
 
 from __future__ import annotations
 
-import argparse
 import re
-import sys
 from dataclasses import dataclass
-from typing import Sequence
 
 FUNCTION_HEAD = re.compile(
     r"^[ \t]*(?:template\s*<[^>]*>\s*)?(?:\[\[nodiscard\]\]\s*)?(?:[\w:<>,]+[ \t*&]+)+([\w:~]+)[ \t]*"
@@ -75,28 +68,3 @@ def find_function_spans(code: str) -> list[FunctionSpan]:
         list_span.append(span)
         list_open.append(span)
     return list_span
-
-
-def run_self_check() -> None:
-    code = (
-        "bool A::loadFromAsset( const AssetID& id )\n{\n    if ( x )\n    {\n        call();\n    }\n"
-        "    each( []( int v ) { use( v ); } );\n    each( [&] { other(); } );\n}\n\n"
-        "static EditorMarkHit evaluate( const State& s, const float2& a = float2{ 0.5f, 0.5f } )\n{\n    run( [this]() mutable {\n        inner( [] { deep(); } );\n    } );\n}\n"
-        "int32 arr[2]{ 1, 2 };\n"
-    )
-    list_span = find_function_spans(code)
-    names = [span.name for span in list_span]
-    assert names == ["A::loadFromAsset", "A::loadFromAsset#lambda1", "A::loadFromAsset#lambda2", "evaluate", "evaluate#lambda1", "evaluate#lambda1#lambda1"], names   # 제어문 블록 · 배열 초기화는 함수 · 람다가 아니다
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="함수 · 람다 본문 범위 도우미의 자체 검사")
-    parser.add_argument("--self-check", action="store_true")
-    parser.parse_args(argv)
-    run_self_check()
-    print("[FunctionSpans] self-check OK")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/asset_references.py
 
@@ -18,19 +16,14 @@ GUID 로 적은 참조(`guid:<32자>`)는 색인을 짓는 쪽(`App --check-asse
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Callable, Iterable
 
-from common.command import Command, ScriptContext
-from common.exit_code import ExitCode
 from common.git import run_git, run_git_bytes
-from lint.asset_identity import META_EXTENSION, RULES_PATH, ImportedFolder, iterate_imported_sources, load_rules
-from lint.index_cache import Facts, get_index_keys, open_facts
-from lint.lint_scope import LintScope
+from lint.asset_identity import META_EXTENSION, ImportedFolder, iterate_imported_sources, load_rules
 
 CONFIG_PATH = "Config/Dev/AssetReferenceFields.json"
 GENERATED_PATH = "Config/Dev/AssetReferenceFields.generated.json"   # 리플렉션 파서가 낸 경로 칸 표 — Scripts/generate/asset_reference_field_list.py 가 쓴다
@@ -348,34 +341,6 @@ def collect_reference_problems(map_reference: dict[str, list[Reference]], assets
     return list_problem
 
 
-def check_asset_references(project_root: Path, scope: LintScope) -> list[str]:
-    """
-    린트 규칙(`rules.py`): 인덱스 전체의 끊어진 참조 — 지우거나 옮긴 에셋을 가리키던 다른 파일(역참조)까지 잡으려고 판정은 늘 전체로 낸다.
-    참조 파일마다 뽑은 경로는 블롭 id 를 키로 한 색인(`index_cache`)에 두어 바뀐 파일만 다시 읽는다. 커밋 훅은 Content · CMake 참조 파일이 바뀌었을 때만 돈다
-    (칸 목록이 바뀌면 `Rule.inputs` 가 저장소 전체로 돌린다).
-    """
-    config = load_config(project_root)
-    if not scope.whole_repo and not scope.touches((CONTENT_FOLDER,), files=config.list_cmake_file):
-        return []
-    map_key = get_index_keys(project_root)
-    list_index = list(map_key)
-    prefix = CONTENT_FOLDER + "/"
-    assets = AssetSet(path[len(prefix):] for path in list_index if path.startswith(prefix))
-    list_referrer = [path for path in list_index if is_referrer(path, config)]
-    def open_references(**options: Any) -> Facts:
-        return open_facts(project_root, "asset-refs", [__file__, str(project_root / CONFIG_PATH), str(project_root / GENERATED_PATH), str(project_root / RULES_PATH)], list_referrer,
-                         lambda path, text: [[reference.line, reference.field, reference.start, reference.end, reference.path] for reference in extract_references(path, text, config)],
-                         map_key=map_key, read_texts=lambda list_path: read_index_blobs(project_root, list_path), contribute=lambda _, list_row: [row[4] for row in list_row], **options)
-
-    # 판정은 참조한 경로만으로 난다(없는 경로) — 요약(경로마다 참조 수)으로 거르고, 걸린 것이 있을 때만 사실 전체를 읽어 줄 번호를 낸다.
-    list_failing = [path for path in open_references().summary if is_checked_path(path, config) and not resolves(path, assets, config)]
-    if not list_failing:
-        return []
-    map_fact = open_references(want=list_referrer).map_fact   # 걸린 때만 — 줄 번호를 내려고 모든 조각을 읽는다
-    map_reference = {path: [Reference(*row) for row in list_row] for path, list_row in map_fact.items()}
-    return collect_reference_problems(map_reference, assets, config)
-
-
 def check_working_tree(project_root: Path) -> list[str]:
     """작업 트리 전체 검사(손으로 돌릴 때) — 인덱스의 파일 목록, 작업 트리의 내용."""
     config = load_config(project_root)
@@ -385,15 +350,3 @@ def check_working_tree(project_root: Path) -> list[str]:
     list_referrer = [path for path in list_index if is_referrer(path, config)]
     map_text = {path: (project_root / path).read_text(encoding="utf-8", errors="replace") for path in list_referrer}
     return collect_problems(list_referrer, map_text, assets, config)
-
-
-class AssetRefsCommand(Command):
-    name = "asset-refs"
-    help = "작업 트리의 에셋 참조가 모두 있는지 본다(커밋 전 검사 · App --check-asset-refs 와 같은 칸 목록)"
-
-    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
-        list_problem = check_working_tree(context.root)
-        for problem in list_problem:
-            print(f"  - {problem}")
-        print(f"[AssetReferences] {'FAIL' if list_problem else 'OK'} — 끊어진 참조 {len(list_problem)}건")
-        return ExitCode.VIOLATION if list_problem else ExitCode.PASSED

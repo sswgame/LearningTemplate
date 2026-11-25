@@ -6,12 +6,11 @@ git 실행 파일 탐색과 git 이 알려 주는 파일 목록 — setup(vcpkg 
 
 from __future__ import annotations
 
-import contextlib
 import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Iterator, Sequence
+from typing import Sequence
 
 from . import HOOK_GIT_ENVIRONMENT
 from .host_platform import is_windows_host
@@ -61,17 +60,6 @@ def ensure_git_on_path() -> str | None:
 def make_hook_environment() -> dict[str, str]:
     """커밋 훅이 넘긴 저장소 환경 변수(`common.HOOK_GIT_ENVIRONMENT` — 프로세스 시작에 떼어 둔 것)를 되돌린 환경."""
     return {**os.environ, **HOOK_GIT_ENVIRONMENT}
-
-
-@contextlib.contextmanager
-def outside_hook_repository() -> Iterator[None]:
-    """`run_git_in_hook_repository` 가 커밋 훅의 저장소 변수를 되돌려 쓰지 않는 구간 — 임시 저장소를 훅 입구(`make_staged_scope`)로 읽는 자체 검사가 쓴다."""
-    saved = dict(HOOK_GIT_ENVIRONMENT)
-    HOOK_GIT_ENVIRONMENT.clear()
-    try:
-        yield
-    finally:
-        HOOK_GIT_ENVIRONMENT.update(saved)
 
 
 def run_git(args: Sequence[str], *, cwd: Path | None = None) -> ProcessResult:
