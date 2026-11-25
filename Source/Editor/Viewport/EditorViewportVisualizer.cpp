@@ -9,7 +9,6 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportProjection.h"

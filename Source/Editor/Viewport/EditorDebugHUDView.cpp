@@ -9,7 +9,6 @@
 
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
 
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Viewport/Model/EditorDebugHUDViewModel.h"
 

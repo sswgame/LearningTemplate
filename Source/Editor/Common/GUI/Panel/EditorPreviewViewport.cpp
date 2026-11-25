@@ -5,7 +5,6 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Viewport/Model/EditorOrbitMath.h"

@@ -7,7 +7,6 @@
 #include "Core/Math/Ray.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"

@@ -2,7 +2,6 @@
 
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 
 #include <imgui.h>

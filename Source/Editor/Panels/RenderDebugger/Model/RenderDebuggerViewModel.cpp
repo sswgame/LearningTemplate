@@ -2,6 +2,9 @@
 
 #include "Editor/Panels/RenderDebugger/Model/RenderDebuggerViewModel.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
@@ -219,5 +222,169 @@ namespace sw::editor
     {
         _scalar              = scalar;
         _state._bufferLayout = BufferViewLayout::make( _state._bufferContent._entry._elementSize, scalar, findSelectedMembers() );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    RenderGraphLayout RenderGraphLayout::make( const RenderGraphSnapshot& snapshot )
+    {
+        RenderGraphLayout layout{};
+        vector<uint32>    listRowInColumn( snapshot._levelCount, 0u );
+        layout._listNode.reserve( snapshot._listPass.size() );
+        for ( uint32 passIndex = 0; passIndex < static_cast<uint32>( snapshot._listPass.size() ); ++passIndex )
+        {
+            const uint32 column = snapshot._listPass[passIndex]._level;
+            if ( column >= listRowInColumn.size() )
+                listRowInColumn.resize( column + 1, 0u );
+            RenderGraphLayoutNode node{};
+            node._pass     = passIndex;
+            node._column   = column;
+            node._row      = listRowInColumn[column]++;
+            node._position = float2{ static_cast<float32>( column ) * kColumnSpacing, static_cast<float32>( node._row ) * kRowSpacing };
+            layout._listNode.push_back( node );
+        }
+        layout._columnCount = static_cast<uint32>( listRowInColumn.size() );
+
+        // 자원마다 마지막으로 쓴 패스 — 읽기(쓰기 아닌 접근)는 그 패스에서 잇는다. 한 패스 안에서는 읽기를 먼저 본다(읽고 쓰는 UAV 가 자기 자신을 잇지 않게).
+        vector<optional<uint32>> listLastWriter( snapshot._listResource.size() );
+        for ( uint32 passIndex = 0; passIndex < static_cast<uint32>( snapshot._listPass.size() ); ++passIndex )
+        {
+            const RenderGraphSnapshotPass& pass = snapshot._listPass[passIndex];
+            for ( const RenderGraphSnapshotAccess& access : pass._listAccess )
+            {
+                const bool bRead = isRenderGraphWriteAccess( access._access ) == false || access._access == RenderGraphAccess::UnorderedAccess;
+                if ( bRead == false || access._resource >= listLastWriter.size() || listLastWriter[access._resource].has_value() == false )
+                    continue;
+                const uint32 fromPass = *listLastWriter[access._resource];
+                if ( fromPass == passIndex )
+                    continue;
+                const bool bLinked = VectorUtil::containsIf( layout._listLink, [fromPass, passIndex]( const RenderGraphLayoutLink& link )
+                { return link._fromPass == fromPass && link._toPass == passIndex; } );
+                if ( bLinked == false )
+                    layout._listLink.push_back( RenderGraphLayoutLink{ fromPass, passIndex, access._resource } );
+            }
+            for ( const RenderGraphSnapshotAccess& access : pass._listAccess )
+            {
+                if ( isRenderGraphWriteAccess( access._access ) && access._resource < listLastWriter.size() )
+                    listLastWriter[access._resource] = passIndex;
+            }
+        }
+        return layout;
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    BufferViewLayout BufferViewLayout::make( uint32 elementSize, BufferViewScalar scalar, const vector<RenderBufferEntry::Member>& listMember )
+    {
+        BufferViewLayout layout{};
+        layout._stride      = elementSize;
+        layout._columnCount = MathUtil::min( elementSize / kCellBytes, kMaxColumnCount );
+        layout._scalar      = scalar;
+        for ( uint32 column = 0; column < layout._columnCount; ++column )
+        {
+            const uint32                     offset  = column * kCellBytes;
+            const RenderBufferEntry::Member* pMember = nullptr;
+            for ( const RenderBufferEntry::Member& member : listMember )
+            {
+                if ( member._offset <= offset && offset < member._offset + member._sizeBytes )
+                    pMember = &member;
+            }
+            StringBuilder<constant::buffer::kMax64> name;
+            BufferViewScalar                        columnScalar = BufferViewScalar::Hex;
+            if ( pMember == nullptr )
+            {
+                name.appendFormat( "+%#", offset );
+            }
+            else
+            {
+                name.append( pMember->_name );
+                if ( pMember->_sizeBytes > kCellBytes )
+                    name.appendFormat( "[%#]", ( offset - pMember->_offset ) / kCellBytes );
+                const string_view type{ pMember->_type };
+                if ( type.find( "Float" ) == 0 )
+                    columnScalar = BufferViewScalar::Float;
+                else if ( type.find( "Int" ) == 0 )
+                    columnScalar = BufferViewScalar::Int;
+                else if ( type.find( "Uint" ) == 0 || type.find( "Bool" ) == 0 )
+                    columnScalar = BufferViewScalar::Uint;
+            }
+            layout._listColumnName.emplace_back( name.view() );
+            layout._listColumnScalar.push_back( columnScalar );
+        }
+        return layout;
+    }
+
+    uint32 BufferViewLayout::getRowCount( size_t byteCount ) const
+    {
+        if ( _stride == 0 )
+            return 0;
+        return static_cast<uint32>( MathUtil::min( byteCount / _stride, static_cast<size_t>( kMaxRowCount ) ) );
+    }
+
+    bool BufferViewLayout::formatRow( const vector<uint8>& byte, uint32 row, vector<string>& outListCell ) const
+    {
+        outListCell.clear();
+        const size_t rowOffset = static_cast<size_t>( row ) * _stride;
+        if ( _stride == 0 || rowOffset + _stride > byte.size() )
+            return false;
+        for ( uint32 column = 0; column < _columnCount; ++column )
+        {
+            uint32 bits = 0;
+            Memory::copy( &bits, byte.data() + rowOffset + static_cast<size_t>( column ) * kCellBytes, kCellBytes );
+            StringBuilder<constant::buffer::kMax32> cell;
+            switch ( _scalar == BufferViewScalar::Shader ? _listColumnScalar[column] : _scalar )
+            {
+                case BufferViewScalar::Float:
+                {
+                    float32 value = 0.0f;
+                    Memory::copy( &value, &bits, sizeof( value ) );
+                    cell.appendFormat( "%.6g", static_cast<float64>( value ) );
+                    break;
+                }
+                case BufferViewScalar::Int:
+                {
+                    int32 value = 0;
+                    Memory::copy( &value, &bits, sizeof( value ) );
+                    cell.appendFormat( "%#", value );
+                    break;
+                }
+                case BufferViewScalar::Hex:
+                {
+                    cell.appendFormat( "0x%08X", bits );
+                    break;
+                }
+                case BufferViewScalar::Uint:
+                case BufferViewScalar::Shader:
+                case BufferViewScalar::Count:
+                {
+                    cell.appendFormat( "%#", bits );
+                    break;
+                }
+            }
+            outListCell.emplace_back( cell.view() );
+        }
+        return true;
+    }
+
+    const utf8* BufferViewLayout::getScalarLabel( BufferViewScalar scalar )
+    {
+        switch ( scalar )
+        {
+            case BufferViewScalar::Shader:
+                return "shader";
+            case BufferViewScalar::Float:
+                return "float";
+            case BufferViewScalar::Uint:
+                return "uint";
+            case BufferViewScalar::Int:
+                return "int";
+            case BufferViewScalar::Hex:
+                return "hex";
+            case BufferViewScalar::Count:
+                break;
+        }
+        return "";
     }
 } // namespace sw::editor

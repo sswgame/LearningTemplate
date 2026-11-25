@@ -9,7 +9,6 @@
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -636,4 +635,22 @@ namespace sw::editor
 {
     // 테마는 환경설정 섹션 "Editor/Appearance" 다. 저장은 EditorPreferences.json 하나에 하고, 값을 고치면(창에서 편집하거나 파일을 다시 읽으면) 테마를 다시 적용한다.
     SW_EDITOR_SETTINGS( EditorAppearanceConfig, "appearance", "Editor/Appearance", 200, &EditorThemeInternal::onAppearanceChanged );
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    ImVec4 EditorColorUtil::toImVec4( const Color& color )
+    {
+        return ImVec4{ color._r, color._g, color._b, color._a };
+    }
+
+    uint32 EditorColorUtil::toImU32( const Color& color )
+    {
+        return color.toAbgr();
+    }
+
+    Color EditorColorUtil::fromImVec4( const ImVec4& value )
+    {
+        return Color{ value.x, value.y, value.z, value.w };
+    }
 } // namespace sw::editor
