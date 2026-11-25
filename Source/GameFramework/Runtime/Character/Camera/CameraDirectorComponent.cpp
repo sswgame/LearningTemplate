@@ -197,6 +197,8 @@ namespace sw
         , _exposureOffset{ 0.0f }
         , _overrideDef{}
         , _presetBeforeOverride{}
+        , _viewRequest{}
+        , _bViewRequested{ false }
         , _bViewOverride{ false }
         , _photoMode{}
         , _photoInputMap{}
@@ -289,18 +291,24 @@ namespace sw
         updateCamera( 0.0f );
     }
 
-    void CameraDirectorComponent::setViewOverride( const float3& position, const float3& euler, float32 fieldOfViewY, float32 farPlane )
+    void CameraDirectorComponent::requestViewOverride( const CameraViewOverride& view )
+    {
+        _viewRequest    = view;
+        _bViewRequested = true;
+    }
+
+    void CameraDirectorComponent::applyViewOverride( const CameraViewOverride& view )
     {
         _overrideDef._id                 = hashed_string( CameraDirectorComponentInternal::kOverridePresetID );
         _overrideDef._view._mode         = CameraPresetMode::Fixed;
         _overrideDef._view._aim          = CameraAimMode::Angles;
-        _overrideDef._view._offset       = position;
-        _overrideDef._view._pitch        = Radians::fromRadians( euler._x );
-        _overrideDef._view._yaw          = Radians::fromRadians( euler._y );
-        _overrideDef._lens._fieldOfViewY = Radians::fromRadians( fieldOfViewY );
+        _overrideDef._view._offset       = view._position;
+        _overrideDef._view._pitch        = Radians::fromRadians( view._euler._x );
+        _overrideDef._view._yaw          = Radians::fromRadians( view._euler._y );
+        _overrideDef._lens._fieldOfViewY = Radians::fromRadians( view._fieldOfViewY );
         _overrideDef._lens._nearPlane    = CameraDirectorComponentInternal::kOverrideNearPlane;
-        SW_ASSERT( farPlane >= CameraDirectorComponentInternal::kOverrideNearPlane * 2.0f ); // 호출부 속성(`Far Plane`)의 범위가 지킨다. 올려 맞추지 않는다
-        _overrideDef._lens._farPlane      = farPlane;
+        SW_ASSERT( view._farPlane >= CameraDirectorComponentInternal::kOverrideNearPlane * 2.0f ); // 호출부 속성(`Far Plane`)의 범위가 지킨다. 올려 맞추지 않는다
+        _overrideDef._lens._farPlane      = view._farPlane;
         _overrideDef._lens._bOrthographic = SW_FALSE;
         // 덮어쓰는 동안에는 값만 바꾼다 — 매 프레임 블렌드를 새로 시작하면 영영 도착하지 못한다.
         if ( _bViewOverride )
@@ -313,7 +321,7 @@ namespace sw
         _bViewOverride = true;
     }
 
-    void CameraDirectorComponent::clearViewOverride()
+    void CameraDirectorComponent::releaseViewOverride()
     {
         if ( _bViewOverride == false )
             return;
@@ -479,7 +487,10 @@ namespace sw
     void CameraDirectorComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
+        if ( _bViewRequested == false )
+            releaseViewOverride(); // 덮은 쪽이 이번 틱까지 다시 묻지 않았다 — 풀기를 그쪽에 맡기지 않는다
         updateCamera( context.getDeltaTime() );
+        _bViewRequested = false;
     }
 
     bool CameraDirectorComponent::activatePreset( const hashed_string& id )
@@ -570,6 +581,8 @@ namespace sw
 
     void CameraDirectorComponent::updateCamera( float32 deltaTime )
     {
+        if ( _bViewRequested )
+            applyViewOverride( _viewRequest );
         if ( _director.hasActivePreset() == false )
             return;
         // 포토 모드는 게임이 멈춰도 움직이므로 실제 경과로 돌고, 게임 카메라에는 입력을 주지 않는다.

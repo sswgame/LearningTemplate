@@ -82,7 +82,11 @@ SW_TEST_CASE( CameraSystemTest, DirectorAloneHearsTheShakeChannel )
     CameraDirectorComponent* pDirector = pRig->addComponent<CameraDirectorComponent>();
     SW_REQUIRE_NOT_NULL( pDirector );
     manager.beginPlay();
-    pDirector->setViewOverride( float3{ 0.0f, 2.0f, 0.0f }, float3{}, 1.0f, 100.0f ); // 켠 시점이 있어야 디렉터가 푼다
+    pDirector->requestViewOverride( CameraViewOverride{
+        float3{ 0.0f, 2.0f, 0.0f },
+        float3{},
+        1.0f, 100.0f
+    } ); // 켠 시점이 있어야 디렉터가 푼다 — 틱 없이 부르는 동안 요청이 이어진다
     pDirector->updateCamera( 0.0f );
     const float3 restPosition = CameraPose::makePoseFromCamera( *pCamera )._position;
 

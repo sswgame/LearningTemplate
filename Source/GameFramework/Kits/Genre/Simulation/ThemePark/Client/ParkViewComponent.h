@@ -167,9 +167,7 @@ namespace sw
         vector<uint8>                _listRideShown;  ///< 배치 번호 → 모습을 세웠으면 SW_TRUE
         MaterialTintCache            _tintCache;      ///< 손님 · 평지 놀이기구 색(같은 색은 나눠 쓴다. 배치 키가 인스턴스다)
         shared_ptr<MaterialInstance> _arrGuestLook[3];
-        uint32                       _shownRevision;  ///< 모습을 세운 공원의 번호(0 이면 아직 — 열린 디렉터는 1 부터다)
-        int32                        _ridingCoaster;  ///< 0 이상이면 그 코스터에 타고 있다
-        uint8                        _bWasRiding : 1; ///< 앞 프레임에 카메라를 덮었다
-        [[maybe_unused]] uint8       _reserved   : 7;
+        uint32                       _shownRevision; ///< 모습을 세운 공원의 번호(0 이면 아직 — 열린 디렉터는 1 부터다)
+        int32                        _ridingCoaster; ///< 0 이상이면 그 코스터에 타고 있다
     };
 } // namespace sw

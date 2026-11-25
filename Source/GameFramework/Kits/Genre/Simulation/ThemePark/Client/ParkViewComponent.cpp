@@ -107,8 +107,6 @@ namespace sw
         , _arrGuestLook{}
         , _shownRevision{ 0 }
         , _ridingCoaster{ constant::invalid_index::kInt32 }
-        , _bWasRiding{ SW_FALSE }
-        , _reserved{ 0 }
     {
         setCanEverTick( true );
     }
@@ -389,22 +387,15 @@ namespace sw
 
     void ParkViewComponent::updateCameraOverride( GameObjectManager& manager, const ParkGameModeComponent& director )
     {
-        // 카메라 디렉터는 PostPhysics 틱 뒤에 포즈를 쓴다. 이 그룹(PrePhysics)에서 넣은 시점을 같은 프레임에 읽는다. 카메라 오브젝트에는 다른 쓰기가 없다.
-        const CoasterTrain* const pTrain = director.findCoasterTrain( _ridingCoaster );
-        if ( pTrain == nullptr && _bWasRiding == SW_FALSE )
-            return;
-        GameObject* const              pRigObject = manager.resolveGameObject( _cameraRig );
+        // 탄 동안만 프레임마다 시점을 요청한다 — 내리면 요청이 끊기고 카메라 디렉터가 스스로 원래 프리셋으로 돌아간다.
+        const CoasterTrain* const      pTrain     = director.findCoasterTrain( _ridingCoaster );
+        GameObject* const              pRigObject = pTrain != nullptr ? manager.resolveGameObject( _cameraRig ) : nullptr;
         CameraDirectorComponent* const pRig       = pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
-        _bWasRiding                               = pTrain != nullptr ? SW_TRUE : SW_FALSE;
         if ( pRig == nullptr )
             return;
-        if ( pTrain == nullptr )
-        {
-            pRig->clearViewOverride();
-            return;
-        }
         // 맨 앞 차량에 탄 시점이다. 롤까지 따라간다(루프에서 하늘이 아래로 온다).
         const CoasterTrackFrame frame = pTrain->getFrame();
-        pRig->setViewOverride( manager.getWorldOrigin().toLocal( frame._position + frame._up * _rideEyeHeight ), OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up ), _rideFieldOfView.radians(), _rideFarPlane );
+        pRig->requestViewOverride( CameraViewOverride{ manager.getWorldOrigin().toLocal( frame._position + frame._up * _rideEyeHeight ), OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up ),
+                                                       _rideFieldOfView.radians(), _rideFarPlane } );
     }
 } // namespace sw
