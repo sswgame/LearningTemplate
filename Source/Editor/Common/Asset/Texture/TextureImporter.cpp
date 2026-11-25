@@ -746,7 +746,7 @@ namespace sw::editor
         }
         AssetImportSummary summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
         // 공유 원본이 쓰는 규칙은 패턴에 맞는 파일이 없어도(모델 옆 자리로 골랐다) 살아 있다.
-        const vector<string> listSourcePath = AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer );
+        const vector<string>& listSourcePath = summary._listSourcePath;
         // 원본마다 공유 규칙 이름을 한 번만 구한다 — 규칙마다 원본 전체를 훑으면 규칙 수 × 원본 수다.
         unordered_set<string> uniqueSharedRuleName;
         for ( const string& path : listSourcePath )

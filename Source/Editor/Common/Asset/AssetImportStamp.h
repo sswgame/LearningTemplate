@@ -42,12 +42,15 @@ namespace sw::editor
         vector<string> _listProblem;
         /** @brief 취소로 보지 않은 원본(리소스 경로)입니다(`AssetImportControl`). 스탬프 줄은 그대로다. */
         vector<string> _listSkippedPath;
+        /** @brief 이번에 본 원본(리소스 경로 — 규칙을 고르는 경로)의 정렬한 목록입니다. 뒤에 원본 전체를 보는 일(죽은 규칙 · 공유 저장소 정리)이 트리를 다시 훑지 않는다. */
+        vector<string> _listSourcePath;
         uint32         _sourceCount;
         uint32         _importedCount;
 
         AssetImportSummary()
             : _listProblem{}
             , _listSkippedPath{}
+            , _listSourcePath{}
             , _sourceCount{ 0 }
             , _importedCount{ 0 }
         {
@@ -219,8 +222,6 @@ namespace sw::editor
          */
         [[nodiscard]] static AssetImportSummary importAll( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager,
                                                            const DerivedDataCache& derivedDataCache );
-        /** @brief 리소스 루트 아래 모든 원본 폴더의 원본 경로(루트 기준 — 규칙을 고르는 경로)를 정렬해 돌려줍니다(`importAll` 이 훑는 원본과 같다). */
-        [[nodiscard]] static vector<string> collectSourceAssetPaths( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer );
 
         /**
          * @brief @p listAssetPath(리소스 루트 기준, 구분자 · 대소문자 무시)의 원본만 스탬프와 대조하고 어긋났으면 임포트합니다(ImportStale). 에디터 핫 리로드가 바뀐 원본만 임포트하는 길입니다.

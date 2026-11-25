@@ -592,17 +592,15 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 원본 폴더 하나의 스탬프를 읽고 임포트할 원본을 @p inoutListFile 끝에 더합니다(직렬 준비). @p pScope 밖의 원본은 읽지도 해시하지도 않는다. */
-            static void collectRawFolder( const string& rootDir, const AbsolutePath& rawFolder, const IRawAssetImporter& importer, const unordered_set<string>* pScope,
-                                          vector<RawFolder>& inoutListFolder, vector<SourceFile>& inoutListFile )
+            /** @brief 원본 폴더 하나(파일 @p listContentFile)의 스탬프를 읽고 임포트할 원본을 @p inoutListFile 끝에 더합니다(직렬 준비). @p pScope 밖의 원본은 읽지도 해시하지도 않는다. */
+            static void collectRawFolder( const string& rootDir, const AbsolutePath& rawFolder, const vector<EditorContentFile>& listContentFile, const IRawAssetImporter& importer,
+                                          const unordered_set<string>* pScope, vector<RawFolder>& inoutListFolder, vector<SourceFile>& inoutListFile )
             {
                 RawFolder folder;
                 folder._path      = rawFolder;
                 folder._firstFile = inoutListFile.size();
                 readStamp( rawFolder.join( importer.getStampFileName() ), importer.getStampHeader(), folder._mapStamped );
 
-                vector<EditorContentFile> listContentFile;
-                (void)EditorContentScan::collectTreeFiles( rawFolder, AbsolutePath{}, listContentFile ); // 폴더는 방금 훑어서 찾았다
                 unordered_map<string, uint64> mapByteCount;
                 vector<AbsolutePath>          listPath;
                 for ( const EditorContentFile& contentFile : listContentFile )
@@ -795,13 +793,19 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 리소스 루트 아래의 원본 폴더를 모두 모읍니다(옛 작업 도메인 자리의 찌꺼기는 `EditorContentScan` 이 뺀다). 훑지 못하면 false 입니다. */
-            [[nodiscard]] static bool collectRawFolders( const AbsolutePath& rootDir, string_view rawFolderName, vector<AbsolutePath>& outListFolder )
+            /** @brief 리소스 루트를 한 번 훑어 원본 폴더마다 파일을 모읍니다(폴더 경로 순). 원본 폴더를 먼저 찾고 다시 훑지 않는다. 옛 작업 도메인 자리의 찌꺼기는 `EditorContentScan` 이 뺀다. 훑지 못하면 false 입니다. */
+            [[nodiscard]] static bool collectRawFolders( const AbsolutePath& rootDir, string_view rawFolderName, map<string, vector<EditorContentFile>>& outMapFolder )
             {
-                if ( rootDir.empty() || EditorContentScan::collectFolders( rootDir, outListFolder, true ) == false )
+                vector<EditorContentFile> listTreeFile;
+                if ( rootDir.empty() || EditorContentScan::collectTreeFiles( rootDir, AbsolutePath{}, listTreeFile ) == false )
                     return false;
-                VectorUtil::removeIf( outListFolder, [rawFolderName]( const AbsolutePath& folder )
-                { return FileUtil::getFileNamePart( folder.str() ) != rawFolderName; } );
+                for ( EditorContentFile& file : listTreeFile )
+                {
+                    string rawFolder;
+                    string relativePath;
+                    if ( splitRawPath( file._path, rawFolderName, rawFolder, relativePath ) )
+                        outMapFolder[rawFolder].push_back( std::move( file ) );
+                }
                 return true;
             }
 
@@ -814,30 +818,32 @@ namespace sw::editor
             static AssetImportSummary importFolders( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, const vector<string>* pListScopePath,
                                                      TaskManager* pTaskManager, const DerivedDataCache* pDerivedDataCache, const AssetImportControl* pControl )
             {
-                AssetImportSummary    summary;
-                const AbsolutePath    rootDir = resourceRoot.join( {} );
-                vector<AbsolutePath>  listRawFolder;
-                unordered_set<string> uniqueScope;
+                AssetImportSummary                     summary;
+                const AbsolutePath                     rootDir = resourceRoot.join( {} );
+                map<string, vector<EditorContentFile>> mapRawFolder;
+                unordered_set<string>                  uniqueScope;
                 if ( pListScopePath != nullptr )
                 {
                     for ( const string& assetPath : *pListScopePath )
                         uniqueScope.insert( makeScopeKey( assetPath ) );
-                    collectScopeFolders( rootDir, *pListScopePath, importer.getRawFolderName(), listRawFolder );
+                    vector<AbsolutePath> listScopeFolder;
+                    collectScopeFolders( rootDir, *pListScopePath, importer.getRawFolderName(), listScopeFolder );
+                    for ( const AbsolutePath& rawFolder : listScopeFolder )
+                        (void)EditorContentScan::collectTreeFiles( rawFolder, AbsolutePath{}, mapRawFolder[rawFolder.str()] ); // 폴더가 있는 것을 방금 보았다 — 도중에 멈춘 목록은 훑기가 알린다
                 }
-                else if ( collectRawFolders( rootDir, importer.getRawFolderName(), listRawFolder ) == false )
+                else if ( collectRawFolders( rootDir, importer.getRawFolderName(), mapRawFolder ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
                     problemBuilder.appendFormat( "리소스 루트를 훑지 못했습니다: %#", rootDir.str() );
                     summary._listProblem.push_back( string( problemBuilder.view() ) );
                     return summary;
                 }
-                VectorUtil::sort( listRawFolder );
 
                 const unordered_set<string>* const pScope = pListScopePath != nullptr ? &uniqueScope : nullptr;
                 vector<RawFolder>                  listFolder;
                 vector<SourceFile>                 listFile;
-                for ( const AbsolutePath& rawFolder : listRawFolder )
-                    collectRawFolder( rootDir.str(), rawFolder, importer, pScope, listFolder, listFile );
+                for ( const auto& [rawFolder, listContentFile] : mapRawFolder )
+                    collectRawFolder( rootDir.str(), FileUtil::toDiskPath( rawFolder ), listContentFile, importer, pScope, listFolder, listFile );
 
                 vector<vector<uint32>> listChain;
                 makeChains( listFile, listChain );
@@ -855,7 +861,14 @@ namespace sw::editor
                 job.runPhases();
 
                 for ( const RawFolder& folder : listFolder )
+                {
                     mergeRawFolder( rootDir.str(), folder, listFile, listFileResult, importer, mode, pScope, summary );
+                    for ( const string& rejectedPath : folder._uniqueRejected )
+                        summary._listSourcePath.push_back( folder._path.join( rejectedPath ).str().substr( rootDir.str().size() + 1 ) );
+                }
+                for ( const SourceFile& file : listFile )
+                    summary._listSourcePath.push_back( file._assetPath );
+                VectorUtil::sort( summary._listSourcePath );
                 return summary;
             }
         };
@@ -879,29 +892,6 @@ namespace sw::editor
                                                         const DerivedDataCache& derivedDataCache )
     {
         return AssetImportStampInternal::importFolders( resourceRoot, importer, mode, nullptr, pTaskManager, &derivedDataCache, nullptr );
-    }
-
-    vector<string> AssetImportStampUtil::collectSourceAssetPaths( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer )
-    {
-        const AbsolutePath   rootDir = resourceRoot.join( {} );
-        vector<AbsolutePath> listFolder;
-        vector<string>       listAssetPath;
-        if ( AssetImportStampInternal::collectRawFolders( rootDir, importer.getRawFolderName(), listFolder ) == false )
-            return listAssetPath;
-        for ( const AbsolutePath& folder : listFolder )
-        {
-            vector<AbsolutePath> listPath;
-            (void)EditorContentScan::collectFiles( folder, "", listPath, true );
-            AssetSourceLocator::collectStoredSources( folder, listPath );
-            for ( const AbsolutePath& path : listPath )
-            {
-                const string sourcePath = FileUtil::normalizeSeparators( path.str() );
-                if ( importer.isSourceFile( sourcePath ) && sourcePath.size() > rootDir.str().size() + 1 )
-                    listAssetPath.push_back( sourcePath.substr( rootDir.str().size() + 1 ) );
-            }
-        }
-        VectorUtil::sort( listAssetPath );
-        return listAssetPath;
     }
 
     AssetImportSummary AssetImportStampUtil::importSources( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,

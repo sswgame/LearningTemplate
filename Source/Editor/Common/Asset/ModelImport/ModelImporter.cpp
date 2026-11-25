@@ -1078,10 +1078,18 @@ namespace sw::editor
             problemBuilder.appendFormat( "DDC config: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
             return AssetImportSummary::makeFailed( string( problemBuilder.view() ) );
         }
-        AssetImportSummary summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
+        AssetImportSummary    summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
+        unordered_set<string> uniqueDomain;
+        vector<AbsolutePath>  listDomain;
+        for ( const string& sourcePath : summary._listSourcePath )
+        {
+            AbsolutePath domain = ImportedAssetStore::findDomainFolder( resourceRoot.join( sourcePath ) );
+            if ( uniqueDomain.insert( domain.str() ).second )
+                listDomain.push_back( std::move( domain ) );
+        }
         if ( mode == AssetImportMode::ImportStale )
-            (void)ImportedAssetStore::removeUnreferenced( resourceRoot, summary._listProblem ); // 원본을 고치면 옛 키의 공유 파일이 남는다 — 전체를 다 본 지금 지운다(범위 임포트는 다른 원본의 참조를 몰라 하지 않는다)
-        for ( const string& rule : AssetImportRuleUtil::findRulesMatchingNothing( config.getRules(), AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer ) ) )
+            (void)ImportedAssetStore::removeUnreferenced( listDomain, summary._listProblem ); // 원본을 고치면 옛 키의 공유 파일이 남는다 — 전체를 다 본 지금 지운다(범위 임포트는 다른 원본의 참조를 몰라 하지 않는다)
+        for ( const string& rule : AssetImportRuleUtil::findRulesMatchingNothing( config.getRules(), summary._listSourcePath ) )
         {
             StringBuilder<constant::buffer::kMax512> problemBuilder;
             problemBuilder.appendFormat( "ModelImportConfig: rule %# matches no model source - its patterns are dead (a moved folder?)", rule );
