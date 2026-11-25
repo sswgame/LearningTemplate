@@ -33,11 +33,11 @@ namespace sw
         float32 _stiffness{ 0.2f };
         PROPERTY( Min = 0.0, Max = 1.0, Units = ratio, Tooltip = "Velocity lost per step" )
         float32 _damping{ 0.15f };
-        PROPERTY( Tooltip = "Multiplier on world gravity (sag)" )
+        PROPERTY( Min = 0.0, Max = 2.0, Tooltip = "Multiplier on world gravity (sag)" )
         float32 _gravityScale{ 0.3f };
         PROPERTY( Name = "maxSwingDegrees", Min = 0.0, Max = 90.0, Tooltip = "Largest swing away from the animated direction; 0 = unlimited" )
         Radians _maxSwing{ Radians::fromDegrees( 20.0f ) };
-        PROPERTY( Min = 0.0, Tooltip = "Multiplier on hit / landing impulses" )
+        PROPERTY( Min = 0.0, Max = 4.0, Tooltip = "Multiplier on hit / landing impulses" )
         float32 _impulseScale{ 1.0f };
         PROPERTY( Min = 0.0, Units = m, Tooltip = "Particle radius against the colliders" )
         float32 _particleRadius{ 0.02f };
