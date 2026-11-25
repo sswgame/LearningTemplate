@@ -147,6 +147,16 @@ namespace sw
         float32 _fearDecayPerSecond{ 0.25f }; ///< 쌓인 겁이 식는 속도(초당)
         PROPERTY( Name = "buckChance", Min = 0.0, Max = 1.0 )
         float32 _buckChanceScale{ 0.8f }; ///< 저항이 0일 때 탄 사람을 떨어뜨릴 확률
+        PROPERTY( Name = "healthRegenRatio", Min = 0.0 )
+        float32 _healthRegenRatio{ 0.02f }; ///< 초당 회복하는 체력(최대 체력의 비율)
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _healthRegenDelay{ 3.0f }; ///< 다친 뒤 회복이 다시 시작하기까지
+        PROPERTY( Name = "staminaRegenRatio", Min = 0.0 )
+        float32 _staminaRegenRatio{ 0.1f }; ///< 초당 회복하는 스태미나(최대의 비율)
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _staminaRegenDelay{ 1.0f }; ///< 쓴 뒤 회복이 다시 시작하기까지
+        PROPERTY( Name = "exhaustRatio", Min = 0.0, Max = 1.0 )
+        float32 _exhaustRatio{ 0.25f }; ///< 바닥난 스태미나가 이 비율까지 차야 다시 달린다
     };
 } // namespace sw
 
@@ -268,6 +278,14 @@ namespace sw
         float32 _deadEyeDrain{ 20.0f }; ///< 데드아이를 켜 둔 동안 초당 소모량
         PROPERTY( Min = 0.0 )
         float32 _deadEyeMinimum{ 10.0f }; ///< 이만큼 있어야 켤 수 있다
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _healthRegenDelay{ 4.0f }; ///< 다친 뒤 체력 회복이 다시 시작하기까지
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _staminaRegenDelay{ 1.0f }; ///< 쓴 뒤 스태미나 회복이 다시 시작하기까지
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _deadEyeRegenDelay{ 2.0f }; ///< 끈 뒤 데드아이 회복이 다시 시작하기까지
+        PROPERTY( Name = "exhaustRatio", Min = 0.0, Max = 1.0 )
+        float32 _exhaustRatio{ 0.2f }; ///< 바닥난 스태미나가 이 비율까지 차야 다시 달린다
     };
 } // namespace sw
 
