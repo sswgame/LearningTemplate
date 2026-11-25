@@ -660,7 +660,6 @@
     "Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolSelfTest.cpp": {"integer": 9},
     "Source/GameFramework/Kits/Feature/Online/Admin/Editor/Model/AdminToolUtil.cpp": {"integer": 2},
     "Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp": {"integer": 1},
-    "Source/GameFramework/Kits/Feature/Online/Chat/Server/ChatTextNormalizer.cpp": {"hex": 3},
     "Source/GameFramework/Kits/Feature/Online/Economy/Runtime/ReceiptBuyerToken.h": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Steam/SteamReceiptValidator.cpp": {"integer": 40},
     "Source/GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.cpp": {"integer": 1},

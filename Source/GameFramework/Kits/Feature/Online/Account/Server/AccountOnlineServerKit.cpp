@@ -9,7 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginSecretVault.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginStoreLogic.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketKey.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderManager.h"
@@ -86,7 +86,7 @@ namespace sw
                 const string& ticketKeyEnvironment     = kitConfig._ticketKeySecretEnvironment;
                 const string& linkSecretKeyEnvironment = kitConfig._linkSecretKeySecretEnvironment;
                 uint8         arrTicketKey[LoginTicketAuthority::kMasterKeySize];
-                if ( expected<void> result = LoginTicketKey::readFromEnvironment( ticketKeyEnvironment, arrTicketKey ); result.has_value() == false )
+                if ( expected<void> result = LoginTicketAuthority::readMasterKey( ticketKeyEnvironment, arrTicketKey ); result.has_value() == false )
                     return result;
                 // 비밀번호 해시는 작업 풀 위의 줄에서 돈다 — 이 프로세스(전용 서버 · 프로세스 안 서버 · 부하 봇은 엔진을 세운다)에 작업 풀이 없으면 기동 오류다(감사 O-3).
                 TaskManager* const   pTaskManager = game::findSubsystem<TaskManager>();
@@ -192,7 +192,7 @@ namespace sw
                 if ( linkSecretKeyEnvironment.empty() )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "a login provider revokes link secrets on account deletion - set _linkSecretKeySecretEnvironment" } );
                 uint8 arrVaultKey[LoginSecretVault::kKeySize];
-                if ( expected<void> result = LoginTicketKey::readFromEnvironment( linkSecretKeyEnvironment, arrVaultKey ); result.has_value() == false )
+                if ( expected<void> result = LoginTicketAuthority::readMasterKey( linkSecretKeyEnvironment, arrVaultKey ); result.has_value() == false )
                     return result;
                 _secretVault.initialize( &game::getSubsystem<INetSecurityProvider>(), arrVaultKey );
                 Memory::wipe( arrVaultKey, sizeof( arrVaultKey ) );

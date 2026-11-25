@@ -7,9 +7,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
-#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatTextNormalizer.h"
-#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatModeration.h"
 
 using namespace sw;
 

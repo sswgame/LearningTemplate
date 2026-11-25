@@ -1,13 +1,89 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatModeration.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include <algorithm>
+
+namespace sw
+{
+    bool ChatTextNormalizer::loadFromFile( const AbsolutePath& path )
+    {
+        _listIgnored.clear();
+        string content;
+        if ( FileUtil::readTextFile( path, content ) == false )
+        {
+            SW_LOG_ERROR_ID( "ChatTextNormalizer.CannotRead", "Chat ignored-character file '%#' could not be read", path.str() );
+            return false;
+        }
+        vector<uint32> listCodepoint;
+        bool           bValid = true;
+        StringUtil::forEachLine( content, [&]( string_view line )
+        {
+            line = StringUtil::trimEnd( line );
+            if ( line.empty() || line.front() == '#' )
+                return;
+            uint32 codepoint{ 0 };
+            if ( StringUtil::tryParseCodepointNotation( line, codepoint ) == false || codepoint == 0 )
+            {
+                SW_LOG_ERROR_ID( "ChatTextNormalizer.BadLine", "Chat ignored-character file '%#' has a line that is not U+XXXX: '%#'", path.str(), line );
+                bValid = false;
+                return;
+            }
+            listCodepoint.push_back( codepoint );
+        } );
+        if ( bValid == false )
+            return false;
+        setIgnored( std::move( listCodepoint ) );
+        return true;
+    }
+
+    void ChatTextNormalizer::setIgnored( vector<uint32> listCodepoint )
+    {
+        VectorUtil::sort( listCodepoint );
+        listCodepoint.erase( std::unique( listCodepoint.begin(), listCodepoint.end() ), listCodepoint.end() );
+        _listIgnored = std::move( listCodepoint );
+    }
+
+    namespace
+    {
+        struct ChatTextNormalizerInternal
+        {
+            static constexpr uint32 kFullwidthASCIIFirst  = 0xFF01u; ///< 전각 `!`
+            static constexpr uint32 kFullwidthASCIILast   = 0xFF5Eu; ///< 전각 `~`
+            static constexpr uint32 kFullwidthToASCIIDiff = 0xFEE0u; ///< 전각 글자 - 반각 글자
+        };
+    } // namespace
+
+    uint32 ChatTextNormalizer::normalize( uint32 codepoint ) const
+    {
+        if ( ChatTextNormalizerInternal::kFullwidthASCIIFirst <= codepoint && codepoint <= ChatTextNormalizerInternal::kFullwidthASCIILast )
+            codepoint -= ChatTextNormalizerInternal::kFullwidthToASCIIDiff; // 전각 ASCII 를 반각으로 바꾼다
+        if ( 'A' <= codepoint && codepoint <= 'Z' )
+            codepoint = codepoint - 'A' + 'a';
+        return std::binary_search( _listIgnored.begin(), _listIgnored.end(), codepoint ) ? 0u : codepoint;
+    }
+
+    uint64 ChatTextNormalizer::computeTextHash( string_view text ) const
+    {
+        uint64 hash   = HashUtil::kFNVOffset64;
+        size_t offset = 0;
+        while ( offset < text.size() )
+        {
+            const uint32 codepoint = normalize( StringUtil::decodeUTF8( text, offset ) );
+            if ( codepoint == 0 )
+                continue;
+            hash = HashUtil::fnvStep64( hash, codepoint );
+        }
+        return hash;
+    }
+} // namespace sw
 
 namespace sw
 {
@@ -188,5 +264,48 @@ namespace sw
             StringUtil::appendUTF8( outText, listMasked[index] != 0 ? ChatWordFilterInternal::kMaskCodepoint : listCodepoint[index] );
         }
         return ChatFilterResult::Masked;
+    }
+} // namespace sw
+
+namespace sw
+{
+    ChatSpamGuard::ChatSpamGuard()
+        : _bucketMap{}
+        , _mapAccountToHistory{}
+        , _settings{}
+    {
+    }
+
+    void ChatSpamGuard::initialize( const ChatSpamConfig& settings, const ChatTextNormalizer& normalizer )
+    {
+        _settings   = settings;
+        _normalizer = normalizer;
+        _bucketMap.initialize( settings._burstCount, settings._refillIntervalMs, static_cast<size_t>( settings._maxTrackedAccount ) );
+        _mapAccountToHistory.clear();
+    }
+
+    ChatSpamResult ChatSpamGuard::check( AccountID accountID, string_view text, int64 nowMs, int64& outRetryAfterMs )
+    {
+        const uint64 hash        = _normalizer.computeTextHash( text );
+        History&     history     = _mapAccountToHistory[accountID];
+        int32        repeatCount = 0;
+        for ( const SentText& sent : history )
+        {
+            const bool bRecent = nowMs - sent._timeMs < _settings._repeatWindowMs;
+            repeatCount += ( bRecent && sent._hash == hash ) ? 1 : 0;
+        }
+        if ( repeatCount >= _settings._maxRepeatCount )
+        {
+            outRetryAfterMs = _settings._repeatWindowMs;
+            return ChatSpamResult::Repeated;
+        }
+        if ( _bucketMap.tryConsume( accountID, nowMs, outRetryAfterMs ) == false )
+            return ChatSpamResult::RateLimited;
+        SentText sent;
+        sent._hash   = hash;
+        sent._timeMs = nowMs;
+        history.push( sent );
+        outRetryAfterMs = 0;
+        return ChatSpamResult::Allowed;
     }
 } // namespace sw

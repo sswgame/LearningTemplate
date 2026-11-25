@@ -1,4 +1,4 @@
-// LoginTicketKeyTest · PlatformLoginProviderConfigTest — 계정 키트 서버의 설정 읽기: 티켓 주 키의 16 진 글, 외부 로그인 제공자 항목(방식별 필수 키 · 모르는 키 · 이름 규칙 · 기본 주체 경로).
+// LoginTicketMasterKeyTest · PlatformLoginProviderConfigTest — 계정 키트 서버의 설정 읽기: 티켓 주 키의 16 진 글, 외부 로그인 제공자 항목(방식별 필수 키 · 모르는 키 · 이름 규칙 · 기본 주체 경로).
 // 철자가 틀린 설정이 조용히 기본값이 되지 않는지 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketKey.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
 
@@ -27,8 +27,8 @@ namespace
     };
 } // namespace
 
-/** @brief [LoginTicketKeyTest] 주 키는 16 진수 64 자이고 앞이 높은 자리다. 대문자 · 앞뒤 공백은 받고, 길이 · 글자가 틀리면 거절한다 */
-SW_TEST_CASE( LoginTicketKeyTest, ParseHex )
+/** @brief [LoginTicketMasterKeyTest] 주 키는 16 진수 64 자이고 앞이 높은 자리다. 대문자 · 앞뒤 공백은 받고, 길이 · 글자가 틀리면 거절한다 */
+SW_TEST_CASE( LoginTicketMasterKeyTest, ParseHex )
 {
     static_assert( LoginTicketAuthority::kMasterKeySize == 32 );
     string text;
@@ -39,7 +39,7 @@ SW_TEST_CASE( LoginTicketKeyTest, ParseHex )
         text.push_back( kDigits[index & 0xF] );
     }
     uint8 arrKey[LoginTicketAuthority::kMasterKeySize]{};
-    SW_REQUIRE_TRUE( LoginTicketKey::parseHex( text, arrKey ) );
+    SW_REQUIRE_TRUE( LoginTicketAuthority::parseMasterKeyHex( text, arrKey ) );
     for ( int32 index = 0; index < LoginTicketAuthority::kMasterKeySize; ++index )
     {
         SW_EXPECT_EQUAL( static_cast<uint8>( index ), arrKey[index] );
@@ -52,18 +52,18 @@ SW_TEST_CASE( LoginTicketKeyTest, ParseHex )
         character = 'a' <= character && character <= 'f' ? static_cast<utf8>( character - 'a' + 'A' ) : character;
     }
     uint8 arrUpper[LoginTicketAuthority::kMasterKeySize]{};
-    SW_EXPECT_TRUE( LoginTicketKey::parseHex( upper.view(), arrUpper ) );
+    SW_EXPECT_TRUE( LoginTicketAuthority::parseMasterKeyHex( upper.view(), arrUpper ) );
     SW_EXPECT_EQUAL( uint8( 31 ), arrUpper[31] );
 
     uint8 arrBad[LoginTicketAuthority::kMasterKeySize]{};
-    SW_EXPECT_FALSE( LoginTicketKey::parseHex( "", arrBad ) );
-    SW_EXPECT_FALSE( LoginTicketKey::parseHex( text.substr( 2 ), arrBad ) );
+    SW_EXPECT_FALSE( LoginTicketAuthority::parseMasterKeyHex( "", arrBad ) );
+    SW_EXPECT_FALSE( LoginTicketAuthority::parseMasterKeyHex( text.substr( 2 ), arrBad ) );
     fixed_string<constant::buffer::kMax128> tooLong;
     formatstring( tooLong.data(), tooLong.capacity(), "%#00", text );
-    SW_EXPECT_FALSE( LoginTicketKey::parseHex( tooLong.view(), arrBad ) );
+    SW_EXPECT_FALSE( LoginTicketAuthority::parseMasterKeyHex( tooLong.view(), arrBad ) );
     string notHex = text;
     notHex[10]    = 'g';
-    SW_EXPECT_FALSE( LoginTicketKey::parseHex( notHex, arrBad ) );
+    SW_EXPECT_FALSE( LoginTicketAuthority::parseMasterKeyHex( notHex, arrBad ) );
 }
 
 /** @brief [PlatformLoginProviderConfigTest] 방식마다 필수 키를 읽고, 주체 경로의 기본값은 OIDC 가 `sub` · 프로필이 `id` 다 */

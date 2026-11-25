@@ -5,7 +5,6 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerSelectionQuery.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"

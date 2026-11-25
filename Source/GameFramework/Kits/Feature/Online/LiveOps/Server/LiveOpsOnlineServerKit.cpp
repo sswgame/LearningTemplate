@@ -2,7 +2,6 @@
 
 #include "Core/Network/DevOnlineExtension.h"
 
-#include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsServer.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
@@ -18,6 +17,27 @@
 // 라이브 운영 키트의 서버 조립 — 기간 이벤트 · 원격 설정 값 · 기기 등록 · 푸시 발송 서비스와 바인딩을 만든다.
 // 실제 푸시 제공자는 설정이 있을 때만 만든다 — 자격(서비스 계정 키)은 환경 변수에서 읽고, 없으면 서버 기동이 실패한다. 지금은 FCM 이다.
 // 설정은 `LiveOpsKitConfig` 이다.
+
+namespace sw
+{
+    class IPushNotificationProvider;
+
+    template <typename T>
+    class RegistrationSlot;
+
+    /**
+     * @struct LiveOpsDevOptions
+     * @brief 라이브 운영 키트의 개발 대체물 값입니다. DevOnline 단위(이 파일 아래)가 올리고 단위가 없는 구성(배포)에서 `_bFakePush` 를 켜면 기동 오류다.
+     */
+    struct LiveOpsDevOptions
+    {
+        using CreateFakePushProviderFunction = unique_ptr<IPushNotificationProvider> ( * )();
+
+        CreateFakePushProviderFunction _pCreateFakePushProvider{ nullptr }; ///< `_bFakePush` 가 발송기에 올리는 가짜 제공자("fake")를 만든다
+
+        static RegistrationSlot<const LiveOpsDevOptions>& getDevOnline(); ///< 개발 대체물 칸(`SW_DEFINE_DEV_ONLINE_EXTENSION` 이 정의 — `DevOnlineExtension` 으로 읽는다)
+    };
+} // namespace sw
 
 namespace sw
 {

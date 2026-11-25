@@ -8,7 +8,6 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountConnectAuthenticator.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketKey.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/ConnectAdmission.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
@@ -53,7 +52,7 @@ namespace sw
                     return unexpected( Error{ ErrorKind::InvalidArgument, "gameConnect needs _serverName - the name game tickets are issued for" } );
                 _serverName = std::move( kitConfig._serverName );
                 uint8 arrTicketKey[LoginTicketAuthority::kMasterKeySize];
-                if ( expected<void> result = LoginTicketKey::readFromEnvironment( kitConfig._ticketKeySecretEnvironment, arrTicketKey ); result.has_value() == false )
+                if ( expected<void> result = LoginTicketAuthority::readMasterKey( kitConfig._ticketKeySecretEnvironment, arrTicketKey ); result.has_value() == false )
                     return result;
                 _ticketAuthority.initialize( &_crypto, arrTicketKey );
                 Memory::wipe( arrTicketKey, sizeof( arrTicketKey ) );
