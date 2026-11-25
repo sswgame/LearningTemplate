@@ -523,7 +523,7 @@ namespace sw
         if ( _session.isActive() && bDead )
             _session.cancel();
         else if ( _session.isActive() )
-            updateActiveSession( manager, viewer, context.getDeltaTime(), bHeld, bPressed );
+            updateActiveSession( manager, viewer, context.getDeltaTime().count(), bHeld, bPressed );
         else
             updateFocusAndBegin( manager, owner, viewer, bPressed );
         handleSessionEvents( context, owner );

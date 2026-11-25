@@ -157,7 +157,7 @@ namespace sw
         if ( _bHasOverride == SW_FALSE && _catalogReload.isStale() )
             resolveDefinition();
         if ( _cooldownRemaining > 0.0f )
-            _cooldownRemaining = MathUtil::max( 0.0f, _cooldownRemaining - context.getDeltaTime() );
+            _cooldownRemaining = MathUtil::max( 0.0f, _cooldownRemaining - context.getDeltaTime().count() );
         applyHighlightToMeshes();
     }
 

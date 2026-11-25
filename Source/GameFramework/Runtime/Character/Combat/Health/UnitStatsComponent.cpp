@@ -119,7 +119,7 @@ namespace sw
 
         if ( _invincibilityTime > 0.0f )
         {
-            _invincibilityTime -= context.getDeltaTime();
+            _invincibilityTime -= context.getDeltaTime().count();
             if ( _invincibilityTime < 0.0f )
                 _invincibilityTime = 0.0f;
         }

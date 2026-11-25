@@ -43,7 +43,7 @@ namespace
 
         void tick( float32 deltaTime )
         {
-            TickContext context{ *_pObject, deltaTime };
+            TickContext context{ *_pObject, GameSeconds{ deltaTime } };
             _pFade->onTick( context );
         }
     };

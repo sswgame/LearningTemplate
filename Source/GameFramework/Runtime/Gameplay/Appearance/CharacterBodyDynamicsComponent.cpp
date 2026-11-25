@@ -106,10 +106,10 @@ namespace sw
     void CharacterBodyDynamicsComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        if ( context.getDeltaTime() <= 0.0f )
+        if ( context.getDeltaTime().count() <= 0.0f )
             return;
         // 물리 질의 · 표면 쓰기 · 다른 컴포넌트 쓰기는 틱(워커) 밖에서 한다 — 쌓은 시간을 틱 뒤 게임 스레드가 한 번에 쓴다.
-        _pendingSeconds += context.getDeltaTime();
+        _pendingSeconds += context.getDeltaTime().count();
         context.deferPostTickOnComponent( *this, []( CharacterBodyDynamicsComponent& self, GameObjectManager& manager )
         { self.update( manager ); } );
     }

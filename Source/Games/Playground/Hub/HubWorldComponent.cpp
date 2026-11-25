@@ -311,7 +311,7 @@ namespace sw
         Component::onTick( context );
         tryStartLink();
         if ( _pServer != nullptr )
-            _pServer->update( context.getDeltaTime() );
+            _pServer->update( context.getDeltaTime().count() );
         _client.update();
     }
 } // namespace sw

@@ -137,7 +137,7 @@ namespace sw
     void ActionRoomHUDComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        _notificationLeft -= context.getDeltaTime();
+        _notificationLeft -= context.getDeltaTime().count();
         if ( _notificationLeft <= 0.0f )
             _notification = Notification::None;
         context.deferPostTickOnComponent( *this, []( ActionRoomHUDComponent& hud )

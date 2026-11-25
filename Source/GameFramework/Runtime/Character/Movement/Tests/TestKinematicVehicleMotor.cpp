@@ -298,13 +298,13 @@ SW_TEST_CASE( KinematicVehicleMotorTest, PressInAFrameWithoutAStepReachesTheNext
     KinematicVehicleInput pressed;
     pressed._bJumpPressed         = SW_TRUE;
     constexpr float32 kQuarter    = KinematicVehicleMotorTestUtil::kStep * 0.25f;
-    const int32       pressedStep = motor.advance( pressed, kQuarter );
+    const int32       pressedStep = motor.advance( pressed, GameSeconds{ kQuarter } );
     SW_REQUIRE_EQUAL( 0, pressedStep ); // 걸음이 없는 프레임이다
     int32                         jumpCount = 0;
     vector<KinematicVehicleEvent> listEvent;
     for ( int32 frame = 0; frame < 40; ++frame )
     {
-        (void)motor.advance( KinematicVehicleInput{}, kQuarter );
+        (void)motor.advance( KinematicVehicleInput{}, GameSeconds{ kQuarter } );
         listEvent.clear();
         motor.pollEvents( listEvent );
         for ( const KinematicVehicleEvent& event : listEvent )

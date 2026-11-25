@@ -27,7 +27,7 @@ namespace sw
         Component::onTick( context );
         if ( _bShowing == SW_FALSE )
             return;
-        _remaining -= context.getDeltaTime();
+        _remaining -= context.getDeltaTime().count();
         if ( _remaining > 0.0f )
             return;
         hide();

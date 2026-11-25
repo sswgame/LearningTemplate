@@ -99,7 +99,7 @@ namespace sw
         Component::onTick( context );
         if ( _bPlaying == SW_FALSE )
             return;
-        _elapsed += MathUtil::max( context.getDeltaTime(), 0.0f );
+        _elapsed += MathUtil::max( context.getDeltaTime().count(), 0.0f );
         _pose = KillcamShot::sample( _playing, _settings, _elapsed );
         applyPose();
         if ( _pose._phase == KillcamPhase::Done )

@@ -479,7 +479,7 @@ namespace sw
     void CameraDirectorComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        updateCamera( context.getDeltaTime() );
+        updateCamera( context.getDeltaTime().count() );
     }
 
     bool CameraDirectorComponent::activatePreset( const hashed_string& id )

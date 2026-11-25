@@ -123,7 +123,7 @@ namespace sw
     void CreatureTownViewComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령 · 스폰은 틱 뒤에 낸다
+        _bInputLive = context.getDeltaTime().count() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령 · 스폰은 틱 뒤에 낸다
         context.deferPostTickOnComponent( *this, []( CreatureTownViewComponent& view, GameObjectManager& manager )
         { view.updateView( manager ); } );
     }

@@ -354,7 +354,7 @@ namespace sw
     void FoliageComponent::onTick( TickContext& context )
     {
         SceneComponent::onTick( context );
-        updateRegrow( context.getDeltaTime() );
+        updateRegrow( context.getDeltaTime().count() );
         float3     viewPosition{};
         const bool bCanUpdateView = _listCell.empty() == false && EnvironmentUtil::findViewPosition( context.getManager(), viewPosition );
         if ( bCanUpdateView )

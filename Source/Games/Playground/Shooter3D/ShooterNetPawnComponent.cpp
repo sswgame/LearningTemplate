@@ -336,7 +336,7 @@ namespace sw
             return;
         }
         ShooterBodyMovementComponent* pMovement = findMovement();
-        const bool                    bIdle     = _role == Role::None || pMovement == nullptr || findGameMode() == nullptr || context.getDeltaTime() <= 0.0f;
+        const bool                    bIdle     = _role == Role::None || pMovement == nullptr || findGameMode() == nullptr || context.getDeltaTime().count() <= 0.0f;
         if ( bIdle )
             return;
         // 발동은 한 프레임만 참이다 — 입력 틱(30 Hz)이 없던 프레임의 발동이 사라지지 않게 매 프레임 모은다.
@@ -346,12 +346,12 @@ namespace sw
         if ( _role == Role::Server )
         {
             // 입력 몫도 틱과 같은 시계(게임 시간)로 채운다 — 클라이언트의 입력 틱이 이 시계로 돌고, 고정 간격으로 되풀이하는 넷 재생에서도 같은 몫이 된다.
-            _server.accumulateInputBudget( context.getDeltaTime() );
+            _server.accumulateInputBudget( context.getDeltaTime().count() );
             context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn, GameObjectManager& manager )
             { netPawn.runServerFrame( manager ); } );
             return;
         }
-        _accumulator += context.getDeltaTime();
+        _accumulator += context.getDeltaTime().count();
         int32 tickCount = 0;
         while ( _accumulator >= _tickInterval && tickCount < ShooterNetPawnComponentInternal::kMaxTicksPerFrame )
         {
@@ -361,7 +361,7 @@ namespace sw
         if ( _accumulator >= _tickInterval )
             _accumulator = 0.0f; // 따라잡지 못한 시간은 버린다 — 몰아 돌린 틱이 다음 프레임을 또 밀지 않게
         _pendingStepCount += tickCount;
-        _smoother.update( context.getDeltaTime() );
+        _smoother.update( context.getDeltaTime().count() );
         context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn, GameObjectManager& manager )
         { netPawn.runClientFrame( manager ); } );
     }

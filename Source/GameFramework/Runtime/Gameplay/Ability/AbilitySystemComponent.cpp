@@ -160,7 +160,7 @@ namespace sw
     void AbilitySystemComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        advanceTime( context.getDeltaTime() );
+        advanceTime( context.getDeltaTime().count() );
     }
 
     void AbilitySystemComponent::compactPendingRemovals()

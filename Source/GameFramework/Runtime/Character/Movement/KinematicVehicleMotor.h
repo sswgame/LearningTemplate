@@ -320,7 +320,7 @@ namespace sw
         /** @brief 한 걸음 나아갑니다. */
         void update( const KinematicVehicleInput& input, float32 deltaTime );
         /** @brief 프레임 시간을 고정 걸음으로 나눠 나아갑니다. 눌림 입력은 다음 걸음 하나에 주며(걸음이 없는 프레임의 눌림은 다음 걸음까지 남는다), 진행한 걸음 수를 반환합니다. */
-        int32 advance( const KinematicVehicleInput& input, float32 frameTime );
+        int32 advance( const KinematicVehicleInput& input, GameSeconds frameTime );
         void  pollEvents( vector<KinematicVehicleEvent>& outListEvent );
 
         /** @brief 앞 속도 @p speed 에서 조향 1 의 회전 속도(라디안/초)입니다. 조향 반경은 속도를 이 값으로 나눈 것입니다. */

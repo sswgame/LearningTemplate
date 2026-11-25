@@ -521,10 +521,10 @@ namespace sw
         GameObject*                     pOwner                = getOwner();
         FirstPersonCameraComponent*     pCamera               = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const ShooterGameModeComponent* pGameMode             = findGameMode<ShooterGameModeComponent>();
-        const bool                      bMissingCameraContext = pCamera == nullptr || pGameMode == nullptr || context.getDeltaTime() <= 0.0f;
+        const bool                      bMissingCameraContext = pCamera == nullptr || pGameMode == nullptr || context.getDeltaTime().count() <= 0.0f;
         if ( bMissingCameraContext )
             return;
-        const float32 step = MathUtil::min( context.getDeltaTime(), 0.1f );
+        const float32 step = MathUtil::min( context.getDeltaTime().count(), 0.1f );
 
         // 시점 카메라의 프리셋(1인칭, 3인칭, 궤도, CCTV)이 바뀌면 틱이 끝난 뒤 가시성을 맞춘다.
         const bool bFirstPerson = queryFirstPerson();

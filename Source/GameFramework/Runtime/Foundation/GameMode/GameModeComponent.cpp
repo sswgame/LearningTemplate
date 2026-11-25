@@ -222,7 +222,7 @@ namespace sw
     {
         // 규칙은 오브젝트를 만들고 지우고 남의 오브젝트를 읽고 쓴다 — 틱(워커)은 시간만 쌓고 규칙은 틱 뒤(게임 스레드, 같은 프레임의 적용 단계)에 돈다.
         // 언리얼 GameMode 가 게임 스레드에서 도는 자리다. 디렉터 사이 순서(`_tickAfter`)는 틱 뒤 큐의 디스패치 순번(뒤 스테이지가 뒤)이 지킨다.
-        _pendingRuleDeltaTime += context.getDeltaTime();
+        _pendingRuleDeltaTime += context.getDeltaTime().count();
         context.deferPostTickOnComponent( *this, []( GameModeComponent& gameMode )
         { gameMode.runPendingRules(); } );
     }

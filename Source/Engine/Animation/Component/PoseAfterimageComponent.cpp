@@ -89,7 +89,7 @@ namespace sw
         if ( _bCapturing == SW_FALSE && countVisibleGhosts() == 0 )
             return;
         // 사본은 다른 오브젝트다 — 사본 쓰기(끄기 · 불투명도 · 포즈 고정)는 틱 뒤에 한 번에 한다. 그사이 흐른 시간은 쌓아 둔다.
-        _pendingGhostStep += MathUtil::max( context.getDeltaTime(), 0.0f );
+        _pendingGhostStep += MathUtil::max( context.getDeltaTime().count(), 0.0f );
         context.deferPostTickOnComponent( *this, []( PoseAfterimageComponent& afterimage, GameObjectManager& manager )
         { afterimage.advanceGhosts( manager ); } );
     }

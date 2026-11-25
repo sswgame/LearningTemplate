@@ -702,7 +702,7 @@ namespace sw
             context.deferPostTickOnComponent( *this, []( GimmickCircuitComponent& self, GameObjectManager& sceneManager )
             { self.refreshPlateWeights( sceneManager ); } );
         }
-        const int32 stepCount = _circuit.consumeTime( context.getDeltaTime() );
+        const int32 stepCount = _circuit.consumeTime( context.getDeltaTime().count() );
         if ( stepCount <= 0 )
             return;
         // 스텝은 회로 자기 상태만 돈다(센서는 읽기만). 작동기 쓰기(남의 오브젝트)는 마지막에 한 번 틱 뒤로 모은다 — 언리얼 Mass 의 Defer 자리.

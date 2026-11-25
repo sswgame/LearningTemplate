@@ -71,7 +71,7 @@ namespace sw
         Component::onTick( context );
         if ( _tableReload.isStale() )
             rebuild(); // 규칙 테이블 파일이 바뀌었으므로 새 테이블로 다시 만든다. 상태는 처음부터 시작한다
-        if ( _grid.update( context.getDeltaTime() ) > 0 )
+        if ( _grid.update( context.getDeltaTime().count() ) > 0 )
             publishSignal();
     }
 

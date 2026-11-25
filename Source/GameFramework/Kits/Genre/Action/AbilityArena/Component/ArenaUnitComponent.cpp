@@ -69,7 +69,7 @@ namespace sw
         MeshComponent*          pMesh              = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         AbilitySystemComponent* pAbilitySystem     = pOwner != nullptr ? pOwner->getComponent<AbilitySystemComponent>() : nullptr;
         const PawnComponent*    pPawn              = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        const bool              bMissingComponents = pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || context.getDeltaTime() <= 0.0f;
+        const bool              bMissingComponents = pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || context.getDeltaTime().count() <= 0.0f;
         if ( bMissingComponents )
             return;
         const ArenaGameModeComponent* pGameMode = findGameMode<ArenaGameModeComponent>();
@@ -77,7 +77,7 @@ namespace sw
             return;
         if ( _deathRemainRatio < 1.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
         {
-            _deathRemainRatio = MathUtil::max( 0.0f, _deathRemainRatio - context.getDeltaTime() / pGameMode->getDeathLifeSpan() ); // 같은 시간 뒤 디렉터가 걷는다
+            _deathRemainRatio = MathUtil::max( 0.0f, _deathRemainRatio - context.getDeltaTime().count() / pGameMode->getDeathLifeSpan() ); // 같은 시간 뒤 디렉터가 걷는다
             return;
         }
 
@@ -102,7 +102,7 @@ namespace sw
         // 속박 · 기절 · 둔화 배율은 공용 이동기와 같은 계약으로 읽는다(`MovementConstraint`).
         const MovementConstraint constraint = MovementConstraint::read( *pOwner );
         if ( direction.getLengthSquared() > 0.0f && speed.has_value() && constraint._bMoveBlocked == SW_FALSE )
-            position = position + direction * ( *speed * constraint._speedScale * context.getDeltaTime() );
+            position = position + direction * ( *speed * constraint._speedScale * context.getDeltaTime().count() );
         if ( _kind != ArenaUnitKind::Player )
             separateFromEnemies( *pGameMode, position );
         const float32 halfSize = pGameMode->getArenaHalfSize();

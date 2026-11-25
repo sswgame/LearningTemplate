@@ -46,7 +46,7 @@ SW_TEST_CASE( PoseAfterimageTest, PoolIsPreparedAndReleased )
 
     pAfterimage->startCapturing();
     {
-        TickContext context{ *pAfterimage->getOwner(), 0.5f };
+        TickContext context{ *pAfterimage->getOwner(), GameSeconds{ 0.5f } };
         pAfterimage->onTick( context );
     }
     SW_EXPECT_TRUE( pAfterimage->isCapturing() );

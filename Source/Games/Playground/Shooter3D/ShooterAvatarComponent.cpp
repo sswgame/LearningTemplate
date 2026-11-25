@@ -261,7 +261,7 @@ namespace sw
         const ShooterPlayerComponent* pPlayer             = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
         SkeletalAnimatorComponent*    pAnimator           = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         SceneComponent*               pScene              = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        const bool                    bMissingAvatarParts = ( pPlayer == nullptr && _bReplicated == SW_FALSE ) || pScene == nullptr || context.getDeltaTime() <= 0.0f;
+        const bool                    bMissingAvatarParts = ( pPlayer == nullptr && _bReplicated == SW_FALSE ) || pScene == nullptr || context.getDeltaTime().count() <= 0.0f;
         if ( bMissingAvatarParts )
             return;
         ShooterAvatarPose pose = _replicatedPose;
@@ -276,7 +276,7 @@ namespace sw
             pose._bOnGround        = pPlayer->isOnGround() ? SW_TRUE : SW_FALSE;
             pose._bTwoHanded       = pPlayer->getWeapon( pPlayer->getWeaponIndex() ).getDef()._bTwoHanded;
         }
-        const float32 step = MathUtil::min( context.getDeltaTime(), 0.1f );
+        const float32 step = MathUtil::min( context.getDeltaTime().count(), 0.1f );
         sampleGunJerk( _locomotion.getDirection() != LocomotionDirection::Idle );
 
         // 몸은 발 자리에 서서 보는 쪽을 본다(KayKit 은 +Z 가 앞).

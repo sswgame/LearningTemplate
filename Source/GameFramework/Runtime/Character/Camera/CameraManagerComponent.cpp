@@ -161,7 +161,7 @@ namespace sw
         const InputManager* pInput = _cycleAction.empty() == false ? game::findSubsystem<InputManager>() : nullptr;
         if ( pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).wasActionTriggered( _cycleAction ) )
             (void)cycleViewTarget( _cycleRole );
-        updateCamera( context.getDeltaTime() );
+        updateCamera( context.getDeltaTime().count() );
     }
 
     void CameraManagerComponent::setViewTarget( const GameObjectHandle& target, const BlendCurveDef& blend )

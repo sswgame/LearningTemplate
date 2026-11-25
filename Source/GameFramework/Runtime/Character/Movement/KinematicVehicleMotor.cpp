@@ -224,7 +224,7 @@ namespace sw
             updateVertical( clamped, deltaTime );
     }
 
-    int32 KinematicVehicleMotor::advance( const KinematicVehicleInput& input, float32 frameTime )
+    int32 KinematicVehicleMotor::advance( const KinematicVehicleInput& input, GameSeconds frameTime )
     {
         const int32           stepCount = _timer.consume( frameTime );
         KinematicVehicleInput stepInput = input;

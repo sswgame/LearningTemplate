@@ -257,14 +257,14 @@ namespace sw
                 optional<VFXPhysicsCollisionScene> collision;
                 if ( pPhysicsScene != nullptr && def._collision._mode != VFXCollisionMode::None )
                     collision.emplace( *pPhysicsScene, getEmitterWorldMatrix( emitterIndex ) );
-                pCPUSimulation->update( context.getDeltaTime(), collision.has_value() ? &*collision : nullptr );
+                pCPUSimulation->update( context.getDeltaTime().count(), collision.has_value() ? &*collision : nullptr );
                 bAllFinished = bAllFinished && pCPUSimulation->isFinished();
             }
             else
             {
                 if ( def._space == VFXSimulationSpace::World )
                     pGPUEmitter->setEmitterTransform( emitterToFrame );
-                pGPUEmitter->update( context.getDeltaTime() );
+                pGPUEmitter->update( context.getDeltaTime().count() );
                 bAllFinished = bAllFinished && pGPUEmitter->isFinished();
             }
         }

@@ -287,11 +287,11 @@ namespace sw
     void ShooterEnemyComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        if ( _bLaunched == SW_FALSE || context.getDeltaTime() <= 0.0f )
+        if ( _bLaunched == SW_FALSE || context.getDeltaTime().count() <= 0.0f )
             return;
         if ( _bReplica == SW_TRUE )
         {
-            updateReplica( MathUtil::min( context.getDeltaTime(), 0.1f ) );
+            updateReplica( MathUtil::min( context.getDeltaTime().count(), 0.1f ) );
             return;
         }
         GameObject* pOwner = getOwner();
@@ -299,7 +299,7 @@ namespace sw
         const ShooterGameModeComponent* pGameMode = context.readOther<ShooterGameModeComponent>( _gameMode );
         if ( pGameMode == nullptr )
             return;
-        const float32 step = MathUtil::min( context.getDeltaTime(), 0.1f );
+        const float32 step = MathUtil::min( context.getDeltaTime().count(), 0.1f );
         _phaseTime += step;
 
         // 판단은 AI 조종자가 했다 — 여기는 폰의 의도(이동 축 · 조종 요 · Attack)만 읽는다.
