@@ -462,17 +462,85 @@ namespace sw
             int32      _size{ 0 };
         };
 
-        /** @brief 잠금 안에서 쌓고 잠금 밖에서 보내는 배치입니다. 둘을 swap 해서 할당 없이 넘깁니다. */
-        struct OutgoingBatch
+        /**
+         * @brief 받은 데이터그램 하나에 되보낼 수 있는 몫입니다 — 그 데이터그램의 주소로만, 받은 바이트 수까지만 보낸다.
+         * @details UDP 의 보낸 주소는 누구나 위조할 수 있어, 확인하지 않은 주소에 받은 것보다 많이 보내면 남을 때리는 증폭기가 된다(RFC 9000 8.1).
+         *          QUIC 은 인증서 때문에 3 배까지 주고 요청을 1200 바이트로 채우는데, 이 핸드셰이크의 답은 요청보다 크지 않아 1 배로 좁혔다.
+         *          받은 데이터그램으로만 만들고 복사하지 못하므로(옮기면 앞의 것은 빈다) 몫이 늘지 않는다.
+         */
+        class ReplyAllowance
         {
-            vector<OutgoingDatagram> _listDatagram{};
-            vector<uint8>            _bytes{};
+        public:
+            explicit ReplyAllowance( const NetReceivedDatagram& received )
+                : _to{ received._from }
+                , _remainingBytes{ static_cast<int32>( received._buffer.size() ) }
+            {
+            }
+            ReplyAllowance( ReplyAllowance&& other ) noexcept
+                : _to{ other._to }
+                , _remainingBytes{ other._remainingBytes }
+            {
+                other._remainingBytes = 0;
+            }
+            ~ReplyAllowance() = default;
 
-            void clear()
+            ReplyAllowance( const ReplyAllowance& )            = delete;
+            ReplyAllowance& operator=( const ReplyAllowance& ) = delete;
+            ReplyAllowance& operator=( ReplyAllowance&& )      = delete;
+
+            const NetAddress& getAddress() const { return _to; }
+            /** @brief @p byteCount 만큼 씁니다. 남은 몫보다 크면 false 이고 쓰지 않는다 — 보내지 않는 것이 답이다(상대가 다시 묻는다). */
+            [[nodiscard]] bool consume( int32 byteCount )
+            {
+                if ( byteCount > _remainingBytes )
+                    return false;
+                _remainingBytes -= byteCount;
+                return true;
+            }
+
+        private:
+            NetAddress _to;
+            int32      _remainingBytes;
+        };
+
+        /**
+         * @brief 잠금 안에서 쌓고 잠금 밖에서 보내는 배치입니다. 둘을 swap 해서 할당 없이 넘깁니다.
+         * @details 주소를 바로 받지 않는다 — 확인된 상대(연결 슬롯)나 받은 데이터그램의 몫(`ReplyAllowance`)으로만 넣는다. 확인하지 않은 주소로 더 보내는 코드를 쓸 수 없다.
+         */
+        class OutgoingBatch
+        {
+        public:
+            /** @brief @p slot 의 상대에게 보낼 @p size 바이트의 자리입니다. 다음 호출 전에 채운다. */
+            uint8* addDatagram( const NetEndpointSlot& slot, int32 size ) { return append( slot._address, size ); }
+            /** @brief 받은 데이터그램에 답할 @p size 바이트의 자리입니다. 몫을 넘으면 nullptr 이고 넣지 않는다. */
+            [[nodiscard]] uint8* addReply( ReplyAllowance& inoutReply, int32 size ) { return inoutReply.consume( size ) ? append( inoutReply.getAddress(), size ) : nullptr; }
+
+            const vector<OutgoingDatagram>& getDatagramList() const { return _listDatagram; }
+            const uint8*                    getData( const OutgoingDatagram& datagram ) const { return _bytes.data() + datagram._offset; }
+            void                            reserveBytes( size_t byteCount ) { _bytes.reserve( byteCount ); }
+            void                            clear()
             {
                 _listDatagram.clear();
                 _bytes.clear();
             }
+            void swap( OutgoingBatch& other )
+            {
+                _listDatagram.swap( other._listDatagram );
+                _bytes.swap( other._bytes );
+            }
+
+        private:
+            uint8* append( const NetAddress& to, int32 size )
+            {
+                const size_t offset = _bytes.size();
+                _bytes.resize( offset + static_cast<size_t>( size ) );
+                _listDatagram.push_back( OutgoingDatagram{ to, static_cast<int32>( offset ), size } );
+                return _bytes.data() + offset;
+            }
+
+        private:
+            vector<OutgoingDatagram> _listDatagram{};
+            vector<uint8>            _bytes{};
         };
 
         /** @brief 끝난 비동기 연결입니다. 잠금 밖에서 채웁니다. */
@@ -498,9 +566,9 @@ namespace sw
         /** @brief 데이터 패킷이 아닌 제어 패킷 하나에서 읽은 값입니다(값 둘의 뜻은 종류마다 다르다). */
         struct ControlPacket
         {
-            NetAddress      _from{};
+            ReplyAllowance& _reply; ///< 보낸 주소와 되보낼 몫
             float64         _nowSeconds{ 0.0 };
-            optional<int32> _slotIndex; ///< 보낸 주소의 슬롯(없으면 비어 있다)
+            optional<int32> _slotIndex{}; ///< 보낸 주소의 슬롯(없으면 비어 있다)
             uint64          _valueA{ 0 };
             uint64          _valueB{ 0 };
         };
@@ -513,7 +581,7 @@ namespace sw
          */
         struct SealedDatagram
         {
-            NetAddress                            _from{};
+            ReplyAllowance                        _reply;                ///< 보낸 주소와 되보낼 몫(연 뒤에 경로 확인을 이 몫으로 보낸다)
             const uint8*                          _pBody{ nullptr };     ///< 체크섬 헤더 뒤의 본문
             uint64                                _connectionToken{ 0 }; ///< 확인한 때의 연결 값. 연 뒤에 슬롯이 아직 이 연결인지 본다
             optional<NetPacketSealer::OpenResult> _result{};             ///< 비어 있으면 받는 키가 없었다(그사이 닫혔다)
@@ -552,12 +620,12 @@ namespace sw
         // 아래 함수는 모두 잠금을 잡은 채로 부른다.
         /** @brief 방금 보낼 배치에 넣은 끊김 알림을 @p slot 의 닫은 기록으로 남깁니다. */
         void addClosingRecord( const NetEndpointSlot& slot ) SW_REQUIRES_LOCK( _mutex );
-        /** @brief @p from 이 닫은 연결로 보낸 패킷이면 끊김 알림을 다시 보냅니다(재요청 간격마다 한 번). */
-        void resendClosing( float64 nowSeconds, const NetAddress& from, uint32 connectionToken ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 닫은 연결로 온 패킷이면 끊김 알림을 다시 보냅니다(재요청 간격마다 한 번). */
+        void resendClosing( float64 nowSeconds, ReplyAllowance& inoutReply, uint32 connectionToken ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 받은 데이터그램 하나의 헤더와 종류를 검사하고 종류별 처리로 넘깁니다. 틀린 패킷은 `_rejectedPacketCount` 로만 셉니다. 암호화 데이터는 `_listSealed` 에 모읍니다. */
-        void handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size ) SW_REQUIRES_LOCK( _mutex, _updateThread );
+        void handlePacket( float64 nowSeconds, const NetReceivedDatagram& datagram ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 암호화하지 않은 데이터 패킷의 연결 값을 확인하고 본문을 연결에 넘깁니다. */
-        void handlePayloadPacket( float64 nowSeconds, const NetAddress& from, optional<int32> slotIndex, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
+        void handlePayloadPacket( float64 nowSeconds, ReplyAllowance& inoutReply, optional<int32> slotIndex, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 제어 패킷을 종류별로 처리합니다(핸드셰이크 · 거절 · 끊기). */
         void handleControlPacket( PacketKind type, const ControlPacket& packet, BitReader& reader ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 서버가 연결 요청에 답합니다. 프로토콜이 다르면 거절, 빈 슬롯이 없으면 가득 참, 아니면 챌린지를 보냅니다. */
@@ -572,29 +640,34 @@ namespace sw
         void requestWake( float64 dueTime ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 남은 깨움이 있으면 지우고 깨울 전송을, 없으면 nullptr 를 돌려줍니다. 깨우기(시스템 호출)는 잠금을 놓은 뒤 한다. */
         INetTransport* consumeWakeRequest() SW_REQUIRES_LOCK( _mutex );
-        void           sendControl( const NetAddress& to, PacketKind type, uint64 valueA, uint64 valueB ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 제어 패킷의 본문을 `_packetWriter` 에 씁니다. 끊김은 연결 값 하나만 싣는다 — 닫힌 연결에 되보내는 알림이 가장 작은 데이터 패킷보다 크지 않게. */
+        void writeControl( PacketKind type, uint64 valueA, uint64 valueB ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 연결 슬롯의 상대에게 제어 패킷을 보냅니다. */
+        void sendControl( const NetEndpointSlot& slot, PacketKind type, uint64 valueA, uint64 valueB ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 받은 패킷에 제어 패킷으로 답합니다(주소를 확인하기 전의 답은 모두 이 길이다). */
+        void replyControl( ReplyAllowance& inoutReply, PacketKind type, uint64 valueA, uint64 valueB ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 연결 요청을 거절합니다. 이유, 이 엔드포인트의 프로토콜 ID, 요청에 든 클라이언트 솔트(위조 거절을 걸러 내는 값)를 싣습니다. */
-        void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt ) SW_REQUIRES_LOCK( _mutex );
+        void replyDenied( ReplyAllowance& inoutReply, NetDisconnectReason reason, uint64 clientSalt ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 클라이언트가 챌린지 응답을 보냅니다. 암호화 방식이면 공개 키를, 토큰 결속이면 토큰과 증명 태그를 함께 싣습니다. */
         void sendChallengeResponse( NetEndpointSlot& slot ) SW_REQUIRES_LOCK( _mutex );
-        /** @brief 서버가 수락을 보냅니다. 암호화 방식이면 공개 키와 키 확인 태그를 함께 싣습니다. */
-        void sendAccepted( int32 slotIndex ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 서버가 챌린지 응답에 수락으로 답합니다. 암호화 방식이면 공개 키와 키 확인 태그를 함께 싣습니다. */
+        void replyAccepted( ReplyAllowance& inoutReply, int32 slotIndex ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 서버가 응답의 공개 키, 토큰, 증명을 읽고 검증해 키를 만듭니다. 틀리면 거절을 보내고 false 를 반환합니다. */
-        [[nodiscard]] bool acceptSecureResponse( BitReader& reader, const NetAddress& from, uint64 clientSalt, uint64 challenge, unique_ptr<NetSlotSecurity>& outSecurity ) SW_REQUIRES_LOCK( _mutex );
+        [[nodiscard]] bool acceptSecureResponse( BitReader& reader, const ControlPacket& packet, unique_ptr<NetSlotSecurity>& outSecurity ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 클라이언트가 수락의 공개 키와 키 확인 태그를 읽고 키를 만듭니다. 틀리면 연결을 닫고 false 를 반환합니다. */
         [[nodiscard]] bool acceptSecureAccepted( BitReader& reader, NetEndpointSlot& slot, int32 slotIndex, uint32 serverIndex ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 봉인하는 종류인가입니다(데이터 · 끊기 · 경로 확인). */
         static bool isSealed( PacketKind type ) { return type == PacketKind::Payload || type == PacketKind::Disconnect || type == PacketKind::PathProbe; }
-        /** @brief 새 주소 @p from 에서 온 진짜 패킷입니다 — 그 주소로 경로 확인을 보냅니다(재요청 간격마다 한 번). */
-        void probePath( float64 nowSeconds, NetEndpointSlot& slot, const NetAddress& from ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 새 주소에서 온 진짜 패킷입니다 — 그 주소로 경로 확인을 보냅니다(재요청 간격마다 한 번). */
+        void probePath( float64 nowSeconds, NetEndpointSlot& slot, ReplyAllowance& inoutReply ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 연 경로 확인을 처리합니다 — 클라이언트는 그대로 되돌리고, 서버는 묻고 있던 주소에서 온 같은 값이면 연결을 그 주소로 옮깁니다. */
         void handlePathProbe( int32 slotIndex, const NetAddress& from, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
-        /** @brief 봉인하는 종류의 패킷을 만들어 @p to 로 보냅니다(@p pPlain 을 봉인). 보낸 데이터그램의 바이트 수를 반환하며, 실패하면 0 입니다. */
-        int32 sendSealed( NetEndpointSlot& slot, const NetAddress& to, PacketKind type, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 봉인하는 종류의 패킷 본문을 `_packetWriter` 에 만듭니다(@p pPlain 을 봉인). 봉인 번호가 다 떨어졌으면 false 입니다. */
+        [[nodiscard]] bool writeSealed( NetEndpointSlot& slot, PacketKind type, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 암호화 방식의 데이터 패킷과 끊기 패킷(헤더 8바이트 뒤의 본문)의 슬롯 · 연결 값을 확인해 `_listSealed` 에 넣습니다. 여는 것은 잠금 밖(`openSealedPackets`)이다. */
-        void queueSealedPacket( float64 nowSeconds, PacketKind type, const NetAddress& from, optional<int32> slotIndex, const uint8* pBody, int32 bodySize ) SW_REQUIRES_LOCK( _mutex, _updateThread );
+        void queueSealedPacket( float64 nowSeconds, PacketKind type, ReplyAllowance&& reply, optional<int32> slotIndex, const uint8* pBody, int32 bodySize ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 잠금 밖에서 연 데이터그램 하나를 처리합니다. 슬롯이 그사이 닫혔거나 다른 연결이면 버립니다. */
-        void handleOpenedPacket( float64 nowSeconds, const SealedDatagram& sealed ) SW_REQUIRES_LOCK( _mutex, _updateThread );
+        void handleOpenedPacket( float64 nowSeconds, SealedDatagram& sealed ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 키를 막 만든 슬롯의 받는 방향 상태를 `update` 스레드 소유(`_listReceiveCrypt`)로 옮깁니다. 슬롯에는 보내는 쪽만 남는다. */
         void installReceiveCrypt( int32 slotIndex, NetEndpointSlot& slot ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 닫힌 연결(`_listClosedReceiveCrypt`)의 받는 키를 지웁니다. */
@@ -606,8 +679,14 @@ namespace sw
         /** @brief 이 엔드포인트의 기능 마스크(`NetProtocolFeature`)입니다. 역할과 자격이 정해진 뒤(listen, connect) 프로토콜 ID에 섞습니다. */
         uint32 computeFeatureMask() const SW_REQUIRES_LOCK( _mutex );
         bool   isEncrypted() const SW_REQUIRES_LOCK( _mutex ) { return _settings._security._mode == NetSecurityMode::Encrypted; }
-        /** @brief `_packetWriter` 의 본문에 헤더(헤더 값과 체크섬)를 붙여 보낼 배치에 넣습니다. */
-        void sendFramed( const NetAddress& to, uint32 headerID ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief `_packetWriter` 의 본문에 헤더를 붙인 데이터그램의 바이트 수입니다. */
+        int32 getFramedSize() const SW_REQUIRES_LOCK( _mutex );
+        /** @brief `_packetWriter` 의 본문에 헤더(헤더 값과 체크섬)를 붙여 @p pPacket(`getFramedSize` 바이트)에 씁니다. */
+        void writeFrame( uint8* pPacket, uint32 headerID ) const SW_REQUIRES_LOCK( _mutex );
+        /** @brief `_packetWriter` 의 패킷을 연결 슬롯의 상대에게 보낼 배치에 넣습니다. */
+        void sendFramed( const NetEndpointSlot& slot, uint32 headerID ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief `_packetWriter` 의 패킷으로 답합니다. 받은 바이트보다 크면 보내지 않습니다. */
+        void replyFramed( ReplyAllowance& inoutReply, uint32 headerID ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 패킷 하나를 씁니다. 대역폭 토큰이 남아 있으면 메시지까지 싣고, 다 썼으면 헤더(확인)만 싣습니다. 보낸 바이트만큼 토큰에서 뺍니다. */
         void sendPayload( float64 nowSeconds, NetEndpointSlot& slot ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 지난 충전 이후 흐른 시간만큼 대역폭 토큰을 채웁니다. 상한은 보내기 간격 두 번어치이고, 최소 패킷 하나 크기입니다. */
