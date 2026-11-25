@@ -15,7 +15,7 @@
 	<Expect watch="Cloth.HighestY" target="Curtain" near="3" tolerance="0.02"/>
 	<Expect watch="Cloth.LowestY" target="Curtain" near="2" tolerance="0.1"/>
 	<!-- ② 옮기기 -->
-	<DevCommand line="object.place Curtain 4 4 0"/>
+	<DevCommand line="object.move Curtain 4 4 0"/> <!-- 순간이동이면 천을 새로 걸어 따라오는지 보지 못한다 -->
 	<WaitUntil watch="Cloth.HighestY" target="Curtain" near="4" tolerance="0.02" timeoutFrames="30"/>
 	<WaitUntil watch="Cloth.LowestY" target="Curtain" near="3" tolerance="0.15" timeoutSeconds="2"/>
 	<!-- ③ 걸침 -->

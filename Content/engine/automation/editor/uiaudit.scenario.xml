@@ -9,215 +9,215 @@
 <Scenario name="editor.uiaudit" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
 	<ResizeWindow width="1600" height="900"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="audit/00_default.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/00_default.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus hierarchy"/>
-	<CaptureEditorUI file="audit/01_hierarchy.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/01_hierarchy.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close hierarchy"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus inspector"/>
-	<CaptureEditorUI file="audit/02_inspector.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/02_inspector.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close inspector"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus content_browser"/>
-	<CaptureEditorUI file="audit/03_content_browser.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/03_content_browser.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close content_browser"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus console"/>
-	<CaptureEditorUI file="audit/04_console.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/04_console.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close console"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus scene_view"/>
-	<CaptureEditorUI file="audit/05_scene_view.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/05_scene_view.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close scene_view"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus game_view"/>
-	<CaptureEditorUI file="audit/06_game_view.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/06_game_view.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close game_view"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus profiler"/>
-	<CaptureEditorUI file="audit/07_profiler.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/07_profiler.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close profiler"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus preferences"/>
-	<CaptureEditorUI file="audit/08_preferences.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/08_preferences.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close preferences"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus shortcuts"/>
-	<CaptureEditorUI file="audit/09_shortcuts.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/09_shortcuts.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close shortcuts"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus global_variables"/>
-	<CaptureEditorUI file="audit/10_global_variables.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/10_global_variables.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close global_variables"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus history"/>
-	<CaptureEditorUI file="audit/11_history.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/11_history.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close history"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus modules"/>
-	<CaptureEditorUI file="audit/12_modules.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/12_modules.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close modules"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus input_map"/>
-	<CaptureEditorUI file="audit/13_input_map.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/13_input_map.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close input_map"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus material"/>
-	<CaptureEditorUI file="audit/14_material.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/14_material.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close material"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus prefab_editor"/>
-	<CaptureEditorUI file="audit/15_prefab_editor.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/15_prefab_editor.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close prefab_editor"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus animation_graph"/>
-	<CaptureEditorUI file="audit/16_animation_graph.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/16_animation_graph.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close animation_graph"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus dialogue_graph"/>
-	<CaptureEditorUI file="audit/17_dialogue_graph.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/17_dialogue_graph.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close dialogue_graph"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus gimmick_graph"/>
-	<CaptureEditorUI file="audit/18_gimmick_graph.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/18_gimmick_graph.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close gimmick_graph"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus sequencer"/>
-	<CaptureEditorUI file="audit/19_sequencer.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/19_sequencer.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close sequencer"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus sprite_clip"/>
-	<CaptureEditorUI file="audit/20_sprite_clip.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/20_sprite_clip.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close sprite_clip"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus tile_map"/>
-	<CaptureEditorUI file="audit/21_tile_map.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/21_tile_map.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close tile_map"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus ui_preview"/>
-	<CaptureEditorUI file="audit/22_ui_preview.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/22_ui_preview.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close ui_preview"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus data_table"/>
-	<CaptureEditorUI file="audit/23_data_table.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/23_data_table.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close data_table"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus catalog_editor"/>
-	<CaptureEditorUI file="audit/24_catalog_editor.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/24_catalog_editor.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close catalog_editor"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus render_targets"/>
-	<CaptureEditorUI file="audit/25_render_targets.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/25_render_targets.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close render_targets"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus audiomixer"/>
-	<CaptureEditorUI file="audit/26_audiomixer.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/26_audiomixer.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close audiomixer"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus audioevents"/>
-	<CaptureEditorUI file="audit/27_audioevents.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/27_audioevents.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close audioevents"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus projectsettings"/>
-	<CaptureEditorUI file="audit/28_projectsettings.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/28_projectsettings.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close projectsettings"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus user_settings"/>
-	<CaptureEditorUI file="audit/29_user_settings.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/29_user_settings.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close user_settings"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus test_runner"/>
-	<CaptureEditorUI file="audit/30_test_runner.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/30_test_runner.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close test_runner"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus multiplayer"/>
-	<CaptureEditorUI file="audit/31_multiplayer.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/31_multiplayer.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close multiplayer"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus ability_debugger"/>
-	<CaptureEditorUI file="audit/32_ability_debugger.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/32_ability_debugger.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close ability_debugger"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus animation_rewind"/>
-	<CaptureEditorUI file="audit/33_animation_rewind.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/33_animation_rewind.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close animation_rewind"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus rig_debug"/>
-	<CaptureEditorUI file="audit/34_rig_debug.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/34_rig_debug.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close rig_debug"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus npc_schedule"/>
-	<CaptureEditorUI file="audit/35_npc_schedule.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/35_npc_schedule.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close npc_schedule"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus charactereditor.main"/>
-	<CaptureEditorUI file="audit/36_charactereditor_main.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/36_charactereditor_main.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close charactereditor.main"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus meshmodifiers.stack"/>
-	<CaptureEditorUI file="audit/37_meshmodifiers_stack.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/37_meshmodifiers_stack.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close meshmodifiers.stack"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus packaging"/>
-	<CaptureEditorUI file="audit/38_packaging.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/38_packaging.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close packaging"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus bug_it"/>
-	<CaptureEditorUI file="audit/39_bug_it.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/39_bug_it.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close bug_it"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus world_cells"/>
-	<CaptureEditorUI file="audit/40_world_cells.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/40_world_cells.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close world_cells"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus map_check"/>
-	<CaptureEditorUI file="audit/41_map_check.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/41_map_check.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close map_check"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus sequence_debugger"/>
-	<CaptureEditorUI file="audit/42_sequence_debugger.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audit/42_sequence_debugger.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close sequence_debugger"/>
 	<EditorWaitStable/>

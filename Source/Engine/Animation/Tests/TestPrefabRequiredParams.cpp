@@ -8,7 +8,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 using namespace sw;
 
@@ -58,4 +60,18 @@ SW_TEST_CASE( PrefabRequiredPropertiesTest, RequiredPropertiesAreCheckedOnTheMer
     SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXMLString( pObject, empty, ObjectLoadContext{ SerializePurpose::Authoring } ) );
     SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJSONString( pObject, R"({"_schemaVersion":0,"_name":"Walker","_listComponent":[{"LocomotionWarpingComponent":{"_speedCurve":""}}]})",
                                                                 ObjectLoadContext{ SerializePurpose::Authoring } ) );
+}
+
+/** @brief [PrefabRequiredPropertiesTest] 코드로 붙인 컴포넌트는 플레이를 시작할 때 빈 필수 칸을 오류로 알린다 — 로드의 필수 칸 검사를 지나지 않아 반만 채운 채 돌던 것이다. 채우면 알리지 않는다 */
+SW_TEST_CASE( PrefabRequiredPropertiesTest, BeginPlayReportsEmptyRequiredNames )
+{
+    SW_EXPECT_LOG( "ObjectValidation.RequiredEmptyAtBeginPlay" );
+    GameObjectManager           manager;
+    LocomotionWarpingComponent* pWarping = manager.createGameObject( hashed_string( "Walker" ) )->addComponent<LocomotionWarpingComponent>();
+    SW_REQUIRE_NOT_NULL( pWarping );
+    SW_EXPECT_EQUAL( 1u, ObjectValidation::reportEmptyRequired( *pWarping ) );
+    const PropertyInfo* pCurve = LocomotionWarpingComponent::StaticType()->findProperty( hashed_string( "_speedCurve" ) );
+    SW_REQUIRE_NOT_NULL( pCurve );
+    *pCurve->getValuePtr<hashed_string>( static_cast<void*>( pWarping ) ) = hashed_string( "Speed" );
+    SW_EXPECT_EQUAL( 0u, ObjectValidation::reportEmptyRequired( *pWarping ) );
 }

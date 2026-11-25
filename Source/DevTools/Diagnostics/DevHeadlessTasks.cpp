@@ -1,14 +1,12 @@
 #include "pch.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestRunner.h"
 
 #include "DevTools/Diagnostics/ReflectionDocWriter.h"
+#include "DevTools/Diagnostics/UnitTestRun.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Facial/LipSyncImport.h"
@@ -51,44 +49,9 @@ namespace sw
              */
             static bool runUnitTestTask( HeadlessTaskContext& context )
             {
-                const CommandLineManager& commandLine = context._commandLine;
-                test::TestRunOptions      options;
-                int32                     seed        = 0;
-                int32                     repeatCount = 1;
-                (void)commandLine.getArgument( CommandLineArgument::TEST_FILTER, options._filter );
-                (void)commandLine.getArgument( CommandLineArgument::TEST_SOURCE, options._sourceFolder );
-                (void)commandLine.getArgument( CommandLineArgument::TEST_SEED, seed );
-                (void)commandLine.getArgument( CommandLineArgument::TEST_REPEAT, repeatCount );
-                (void)commandLine.getArgument( CommandLineArgument::TEST_REPORT, options._reportPath );
-                bool bUpdateSnapshots        = false;
-                bool bRecordMissingSnapshots = false;
-                (void)commandLine.getArgument( CommandLineArgument::UPDATE_SNAPSHOTS, bUpdateSnapshots );
-                (void)commandLine.getArgument( CommandLineArgument::RECORD_MISSING_SNAPSHOTS, bRecordMissingSnapshots );
-                if ( bUpdateSnapshots && bRecordMissingSnapshots )
-                {
-                    SW_LOG_ERROR_ID( "Headless.SnapshotFlagsConflict", "--update-snapshots rewrites every snapshot and --record-missing-snapshots only the missing ones - pick one" );
-                    return false;
-                }
-                options._snapshotWriteMode = bUpdateSnapshots        ? test::SnapshotWriteMode::All
-                                           : bRecordMissingSnapshots ? test::SnapshotWriteMode::Missing
-                                                                     : test::SnapshotWriteMode::Off;
-                (void)commandLine.getArgument( CommandLineArgument::TEST_RUN_DISABLED, options._bRunDisabled );
-                (void)commandLine.getArgument( CommandLineArgument::TEST_CHILD_ROLE, options._childRole );
-                (void)commandLine.getArgument( CommandLineArgument::TEST_CHILD_ARG, options._childArgument );
-                (void)commandLine.getArgument( CommandLineArgument::TEST_ISOLATED_CASE, options._isolatedCase );
-                string shard{ "0/1" }; // 주지 않으면 몫 하나(전부)
-                (void)commandLine.getArgument( CommandLineArgument::TEST_SHARD, shard );
-                if ( test::TestRunner::parseShard( shard, options._shardIndex, options._shardCount ) == false )
-                {
-                    SW_LOG_ERROR_ID( "Headless.TestShardNotI", "--test-shard=%# is not i/n (0 <= i < n)", shard.c_str() );
-                    return false;
-                }
-                options._seed          = static_cast<uint32>( seed );
-                options._repeatCount   = repeatCount > 0 ? static_cast<uint32>( repeatCount ) : 1u;
-                options._pCrashHandler = &engine::getSubsystem<CrashHandler>();
-                const bool bPassed     = test::TestRunner::run( options );
+                const bool bPassed = UnitTestRun::run( context._commandLine, {}, {} );
                 // 이 실행의 "전부 통과" 를 에디터까지 통과한 것으로 읽지 않게 한다 - 에디터 모듈은 이 단계에 아직 올라오지 않았다.
-                SW_LOG_INFO_ID( "Headless.EditorCasesRunElsewhere", "Editor cases are not in this run - they run inside the editor (self test editor.unitTests, ctest Scenario.editor)" );
+                SW_LOG_INFO_ID( "Headless.EditorCasesRunElsewhere", "Editor cases are not in this run - they run with --test-editor (ctest UnitTests.Editor)" );
                 return bPassed;
             }
 

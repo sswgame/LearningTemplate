@@ -37,3 +37,13 @@ SW_TEST_CASE( AutomationStepArgsTest, EnumVariableComparesByEnumeratorName )
     SW_EXPECT_TRUE( bMatched );
     SW_EXPECT_FALSE( AutomationStepArgsUtil::compareVariable( *pInfo, "Bogus", 0.0f, bMatched ) );
 }
+
+/** @brief [AutomationStepArgsTest] 수를 글로 적을 때 지수의 0 을 지우지 않는다 — `<Record>` · `is` 비교 · 보고가 읽는 글이다 */
+SW_TEST_CASE( AutomationStepArgsTest, NumbersKeepTheirExponent )
+{
+    SW_EXPECT_EQUAL( string( "1" ), AutomationStepArgsUtil::formatNumber( 1.0 ) );
+    SW_EXPECT_EQUAL( string( "10" ), AutomationStepArgsUtil::formatNumber( 10.0 ) );
+    SW_EXPECT_EQUAL( string( "0.5" ), AutomationStepArgsUtil::formatNumber( 0.5 ) );
+    SW_EXPECT_EQUAL( string( "1.5e-10" ), AutomationStepArgsUtil::formatNumber( 1.5e-10 ) );
+    SW_EXPECT_EQUAL( string( "1.5e+20" ), AutomationStepArgsUtil::formatNumber( 1.5e20 ) );
+}

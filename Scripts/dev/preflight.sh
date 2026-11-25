@@ -26,8 +26,10 @@
 #               shader warm: 지난 Release 체인이 남긴 셰이더 요청 기록(build/Ninja-Release/Testing/ShaderRequests/*.shaderrequests — 체인 자식마다 하나)만 Release App 으로
 #               컴파일해 그 빌드 폴더의 셰이더 DDC 를 네 백엔드 모두 채운다(`App --cook-shaders -shader-request-dir=`). 셰이더 · 공용 hlsli 를 고친 묶음도 GPU 단계가 캐시 미스 컴파일을
 #               떠안지 않는다(2026-11-19: dx11 empty 체인 19 분 중 FXC 559 개 — 캐시가 차면 74 초). 기록이 없으면(첫 실행) 할 일이 없다고 찍고 끝난다. 전체 굽기는 5 만 개를 넘어 넣지 않는다.
-#   gpu-release Release ctest 전체 — 시나리오 그림 · 골든 · 기록 대조의 정본(모든 게임 · 네 백엔드). 체인이 다음 묶음의 shader warm 이 읽을 요청 기록을 남긴다.
+#   gpu-release Release ctest 전체(부하 측정 라벨 load 만 뺀다) — 시나리오 그림 · 골든 · 기록 대조의 정본(모든 게임 · 네 백엔드)과 여러 프로세스 네트워크(`Net.*`, 라벨 net). 체인이 다음 묶음의 shader warm 이 읽을 요청 기록을 남긴다.
 #               체인(부하 측정 제외)은 그래픽 API 검증 층(-rhi-validation) · 교착 탐지(-deadlock-detection) · bindless 죽은 번호 검사를 켠다 — 검증 층 오류 · 경고는 로그 게이트에서 진다.
+#   load        부하 측정 시나리오(Release ctest -L load, 16 개 약 6 분) — 묶음마다가 아니라 Linux 와 함께 모아서(--no-linux 가 아닐 때 Linux 앞에서) 돈다. 측정은 조절 값 · 퇴행 확인만이라
+#               WINDOWS_OK 를 막지 않고 끝 줄 LOAD_FAILED 로 낸다(VERIFIED 는 막는다). 따로는 build/Ninja-Release 에서 `ctest -L load` 하나다. 바뀐 부하 시나리오는 changed 가 그대로 돈다.
 #   tidy        바뀐 파일 clang-tidy(Scripts/lint/clang_tidy.py --changed origin/main — ASan 컴파일 DB, 통과한 TU 는 포함 닫힘 해시로 캐시). 단계가 아니라 갈래다:
 #               ASan 빌드 직후 뒤에서 띄워 서버 · 배포 빌드, changed, cpu 와 겹쳐 돌고(2026-11-21: 746 TU 2055 초를 build 단계 끝에서 기다렸다),
 #               gpu-release 앞에서 합류한다 — GPU 단계는 혼자 돈다. clang-tidy 는 낮은 우선순위라 겹친 테스트가 CPU 를 먼저 받는다(테스트는 부하와 무관해야 한다).
@@ -437,7 +439,7 @@ join_tidy
 
 if [ $RUN_GPU -eq 1 ]; then
   begin_stage gpu-release
-  run_ctest Ninja-Release all || windows_failed "Ninja-Release ctest"
+  run_ctest Ninja-Release all -LE '^load$' || windows_failed "Ninja-Release ctest"
   stage_passed gpu-release
 fi
 [ $TIDY_FAILED -eq 0 ] || windows_failed "clang-tidy - build/Ninja-Release-ASan/Testing/Logs/verify.tidy.log"
@@ -464,6 +466,8 @@ if [ $RUN_LINUX -eq 0 ]; then
   [ $DRY -eq 1 ] || echo "VERIFIED=$SHA (시작 단계 $FROM, linux 는 단계 기록으로 건너뜀)"
   exit 0
 fi
+run_ctest Ninja-Release load -L '^load$'
+LOAD_RC=$?
 echo "== linux 시작 $(date +%T)"
 begin_stage linux
 PYTHONUTF8=1 run build/verify.linux.log py -3 -m Scripts linux-scenarios all "${RECORD[@]}"
@@ -482,9 +486,10 @@ case " ${RECORD[*]} " in
     ;;
 esac
 echo "== done $(date +%T)"
+[ $LOAD_RC -eq 0 ] || echo "LOAD_FAILED sha=$SHA - build/Ninja-Release/Testing/Logs/verify.ctest.load.log"
 [ $RC -eq 0 ] || echo "LINUX_FAILED sha=$SHA"
 [ "$SAN_RC" = 0 ] || [ "$SAN_RC" = skip ] || echo "SANITIZE_FAILED (address) sha=$SHA - build/verify.sanitize.log"
-[ $RC -eq 0 ] && { [ "$SAN_RC" = 0 ] || [ "$SAN_RC" = skip ]; } || exit 1
+[ $LOAD_RC -eq 0 ] && [ $RC -eq 0 ] && { [ "$SAN_RC" = 0 ] || [ "$SAN_RC" = skip ]; } || exit 1
 SAN_NOTE=""
 [ "$SAN_RC" = skip ] && SAN_NOTE=", sanitize 건너뜀"
 [ "$SAN_RC" = skip ] || stage_passed linux   # --record 실행은 골든을 쓰는 실행이라 통과 기록을 남기지 않는다

@@ -18,7 +18,7 @@
 	<EditorClick mark="collisionResponses.cell.0.0" state="Up"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="collisioncells/edited.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="collisioncells/edited.png"/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
 	<EditorWaitStable/>

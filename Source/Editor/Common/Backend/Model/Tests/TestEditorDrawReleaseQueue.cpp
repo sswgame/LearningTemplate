@@ -2,7 +2,7 @@
  * @file TestEditorDrawReleaseQueue.cpp
  * @brief UI 스레드가 놓은 GPU 자원을 그것을 그릴 수 있는 마지막 스냅샷 뒤에 디바이스로 넘기는 큐(`EditorDrawReleaseQueue`) 테스트입니다.
  * @details 디바이스는 가짜(`RHIFakeDevice.h`) — `enqueueGPURelease` 로 받은 해제를 쌓아 두고, 테스트가 "GPU 가 그 프레임을 끝냈다" 를 흉내 내어 부른다.
- *          에디터 케이스라 `App --test` 가 아니라 에디터 자체 테스트(`editor.unitTests`, `Scenario.editor` 체인)에서 돈다.
+ *          에디터 케이스라 `App --test` 가 아니라 `App --test-editor`(ctest `UnitTests.Editor`)에서 돈다.
  */
 #include "pch.h"
 

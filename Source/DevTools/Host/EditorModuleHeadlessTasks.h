@@ -35,16 +35,26 @@ namespace sw
 
         /** @brief 에디터 모듈을 처음 부를 때 올려(정적 등록 · 타입 등록 · ABI 대조) 진입점 @p pSymbol 을 찾습니다. 실패하면 nullptr 이고 다시 올리려 하지 않는다. */
         [[nodiscard]] void* findEntry( const utf8* pSymbol, const utf8* pPurpose );
+        /** @brief 켜진 에디터 확장 모듈(`EditorExtension`)을 의존 순서로 올립니다(에디터 모듈 뒤 — 올린 것은 소멸이 거꾸로 내린다). 하나라도 못 올리면 false 입니다. */
+        [[nodiscard]] bool loadExtensions();
         /** @brief 이 실행에서 모듈을 올린 횟수입니다(0 또는 1 — 테스트 · 로그용). */
         uint32 getLoadCount() const { return _loadCount; }
 
     private:
-        [[maybe_unused]] void*  _pLibrary;             ///< 올린 에디터 모듈의 OS 핸들(없으면 nullptr)
-        uint32                  _loadCount;            ///< 올린 횟수
-        [[maybe_unused]] uint32 _entryCallCount;       ///< 진입점을 찾은 작업 수
-        [[maybe_unused]] uint8  _bLoadAttempted   : 1; ///< 올리기를 한 번 해 봤다(실패해도 다시 하지 않는다)
-        [[maybe_unused]] uint8  _bTypesRegistered : 1;
-        [[maybe_unused]] uint8  _reserved         : 6;
+        /** @brief 올린 확장 모듈 하나입니다. */
+        struct ExtensionLibrary
+        {
+            string _name;
+            void*  _pLibrary{ nullptr };
+        };
+
+        vector<ExtensionLibrary> _listExtension;        ///< 올린 순서
+        [[maybe_unused]] void*   _pLibrary;             ///< 올린 에디터 모듈의 OS 핸들(없으면 nullptr)
+        uint32                   _loadCount;            ///< 올린 횟수
+        [[maybe_unused]] uint32  _entryCallCount;       ///< 진입점을 찾은 작업 수
+        [[maybe_unused]] uint8   _bLoadAttempted   : 1; ///< 올리기를 한 번 해 봤다(실패해도 다시 하지 않는다)
+        [[maybe_unused]] uint8   _bTypesRegistered : 1;
+        [[maybe_unused]] uint8   _reserved         : 6;
     };
 
     /**
@@ -68,6 +78,12 @@ namespace sw
      * @return 끊어진 참조 · 목록에 없는 `AssetPath` 프로퍼티가 하나도 없으면 true 를 반환합니다.
      */
     [[nodiscard]] bool validateAssetReferencesWithEditorModule( EditorModuleHeadlessSession& session );
+    /**
+     * @brief 창 · GPU 없이 에디터 인스턴스를 세워(`EditorAPI::initializeHeadless`) 에디터 단위 테스트를 돌립니다(`App --test-editor`). Shipping 에서는 실패합니다.
+     * @details 에디터 화면(활성 씬 · 프레임)이 필요한 케이스는 태그 `editorApp` 으로 빠져 에디터 자체 테스트 `editor.unitTests` 가 돈다.
+     * @return 하나도 지지 않았으면 true 를 반환합니다.
+     */
+    [[nodiscard]] bool runUnitTestsWithEditorModule( EditorModuleHeadlessSession& session, const CommandLineManager& commandLine );
 
     /**
      * @struct EditorModuleHeadlessTask

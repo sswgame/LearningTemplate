@@ -90,13 +90,35 @@ namespace sw
                 return true;
 #endif
             }
+
+            /**
+             * @brief 섀도 복사 없이 여는 라이브러리 파일 @p modulePath 를 열어도 되는지 봅니다(엔진 ABI 스탬프 · 지연 import).
+             * @details 섀도 복사본(`ModuleShadowCopy::writeShadowCopy`)과 같은 이유로 로드하기 **전에** 본다 — 스탬프가 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
+             */
+            [[nodiscard]] static bool isLibraryFileUsable( string_view moduleName, const AbsolutePath& modulePath )
+            {
+                vector<uint8> bytes;
+                if ( ModuleShadowCopy::readModuleFile( modulePath, bytes ) == false )
+                {
+                    SW_LOG_ERROR_ID( "LiveReloadManager.FailedReadModuleFile", "Failed to read the module %# (locked)", modulePath.str() );
+                    return false;
+                }
+                string moduleStamp;
+                if ( ModuleLibraryPatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp() )
+                {
+                    SW_LOG_ERROR_ID( "LiveReloadManager.ModuleFileBuiltAgainstDifferent", "Module %# was built against different engine headers than the running engine (module '%#', engine %#) — rebuild them together",
+                                     moduleName, moduleStamp, engine::getEngineABIStamp() );
+                    return false;
+                }
+                return ModuleShadowCopy::shouldRejectDelayImports( moduleName, modulePath.str(), bytes ) == false;
+            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    LiveReloadManager::LiveReloadManager( FileWatchService& fileWatch )
+    LiveReloadManager::LiveReloadManager( FileWatchService& fileWatch, ModuleOpenMode openMode )
         : _mapModule{}
         , _dependencyGraph{}
         , _listSharedModule{}
@@ -115,6 +137,7 @@ namespace sw
         , _shadowCopySerials{}
         , _cascadePhases{}
         , _buildFinishedSeconds{ 0.0 }
+        , _openMode{ openMode }
         , _completedReloadCount{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
         , _bBuildStampPending{ SW_FALSE }
@@ -216,21 +239,7 @@ namespace sw
             return true;
         }
 
-        // 섀도 복사본과 같은 이유로 로드하기 **전에** 스탬프를 확인한다. 스탬프가 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
-        vector<uint8> bytes;
-        if ( ModuleShadowCopy::readModuleFile( modulePath, bytes ) == false )
-        {
-            SW_LOG_ERROR_ID( "LiveReloadManager.FailedReadSharedModule", "Failed to read the shared module %# (locked)", modulePath.str() );
-            return false;
-        }
-        string moduleStamp;
-        if ( ModuleLibraryPatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp() )
-        {
-            SW_LOG_ERROR_ID( "LiveReloadManager.SharedModuleBuiltAgainst", "Shared module %# was built against different engine headers than the running engine (module '%#', engine %#) — rebuild them together",
-                             moduleName, moduleStamp, engine::getEngineABIStamp() );
-            return false;
-        }
-        if ( ModuleShadowCopy::shouldRejectDelayImports( moduleName, modulePath.str(), bytes ) )
+        if ( LiveReloadManagerInternal::isLibraryFileUsable( moduleName, modulePath ) == false )
             return false;
 
         // 불변 조건: 여기서 전역 헤드는 비어 있다(등록할 때마다 비운다). 로드하면 이 모듈의 정적 등록기만 매달린다.
@@ -268,7 +277,7 @@ namespace sw
             return false;
         }
         // 바깥 빌드의 신호는 모듈 폴더의 성공 스탬프다(`update`). 감시는 첫 등록이 한 번 건다 — 모듈이 없는 프로세스(테스트)는 감시 스레드를 띄우지 않는다.
-        if ( _moduleFolderWatch.isActive() == false )
+        if ( _openMode == ModuleOpenMode::ShadowCopy && _moduleFolderWatch.isActive() == false )
         {
             _buildStampPath = moduleDir.join( config::kFileModuleBuildStamp );
             if ( readBuildToken( _buildStampPath, _seenBuildToken ) == false )
@@ -286,7 +295,7 @@ namespace sw
         moduleRecord._originalModulePath = ModuleLibraryUtil::findModuleLibraryPath( moduleName );
         if ( loadShadowCopyModule( moduleRecord ) )
         {
-            if ( verifyModuleBindings() == false )
+            if ( verifyBindings( moduleName, moduleRecord ) == false ) // 앞서 올린 모듈의 바인딩은 새 모듈이 바꾸지 못한다 — 새것만 본다
                 markGraphBroken( "a module is bound to a stale dependency image after registration" );
             return true;
         }
@@ -302,6 +311,11 @@ namespace sw
 
     void LiveReloadManager::triggerReload( string_view moduleName )
     {
+        if ( _openMode == ModuleOpenMode::Direct )
+        {
+            SW_LOG_ERROR_ID( "LiveReloadManager.ReloadInDirectMode", "Headless runs open modules directly and cannot reload %#", moduleName );
+            return;
+        }
         if ( _bReloadGraphBroken == SW_TRUE )
         {
             SW_LOG_ERROR_ID( "LiveReloadManager.ReloadGraphBrokenRestart", "Reload graph is broken — restart the process (ignored %#)", moduleName );
@@ -571,27 +585,33 @@ namespace sw
         bool bAllBound = true;
         for ( const auto& [moduleName, pModuleRecord] : _mapModule )
         {
-            const ModuleRecord& moduleRecord = *pModuleRecord;
-            if ( moduleRecord._pLibraryModule == nullptr )
-                continue;
-            for ( const string& dependencyName : _dependencyGraph.getDependsOn( moduleName ) )
-            {
-                // 이 매니저가 로드하지 않은 의존(Engine 처럼 처음부터 링크된 것)은 교체되지 않으므로 검사할 것이 없다.
-                const auto dependencyIt = _mapModule.find( dependencyName );
-                if ( dependencyIt == _mapModule.end() || dependencyIt->second->_pLibraryModule == nullptr )
-                    continue;
-
-                const void*                   pActual{ nullptr };
-                const void*                   pExpected{ nullptr };
-                const ShadowLibraryNameState& dependencyLibraryName = dependencyIt->second->_libraryName;
-                const string                  dependencyFileName    = dependencyLibraryName._loaded.empty() ? ModuleLibraryUtil::formatSharedLibraryName( dependencyName ) : dependencyLibraryName._loaded;
-                if ( LiveReloadManagerInternal::isBoundTo( moduleRecord._pLibraryModule, dependencyName, dependencyFileName, dependencyIt->second->_pLibraryModule, pActual,
-                                                           pExpected ) )
-                    continue;
-
-                SW_LOG_ERROR_ID( "LiveReloadManager.ModuleBoundStaleImage", "Module %# is bound to a stale %# image (bound %#, current %#)", moduleName, dependencyName, pActual, pExpected );
+            if ( verifyBindings( moduleName, *pModuleRecord ) == false )
                 bAllBound = false;
-            }
+        }
+        return bAllBound;
+    }
+
+    bool LiveReloadManager::verifyBindings( string_view moduleName, const ModuleRecord& moduleRecord ) const
+    {
+        if ( moduleRecord._pLibraryModule == nullptr )
+            return true;
+        bool bAllBound = true;
+        for ( const string& dependencyName : _dependencyGraph.getDependsOn( moduleName ) )
+        {
+            // 이 매니저가 로드하지 않은 의존(Engine 처럼 처음부터 링크된 것)은 교체되지 않으므로 검사할 것이 없다.
+            const auto dependencyIt = _mapModule.find( dependencyName );
+            if ( dependencyIt == _mapModule.end() || dependencyIt->second->_pLibraryModule == nullptr )
+                continue;
+
+            const void*                   pActual{ nullptr };
+            const void*                   pExpected{ nullptr };
+            const ShadowLibraryNameState& dependencyLibraryName = dependencyIt->second->_libraryName;
+            const string                  dependencyFileName    = dependencyLibraryName._loaded.empty() ? ModuleLibraryUtil::formatSharedLibraryName( dependencyName ) : dependencyLibraryName._loaded;
+            if ( LiveReloadManagerInternal::isBoundTo( moduleRecord._pLibraryModule, dependencyName, dependencyFileName, dependencyIt->second->_pLibraryModule, pActual, pExpected ) )
+                continue;
+
+            SW_LOG_ERROR_ID( "LiveReloadManager.ModuleBoundStaleImage", "Module %# is bound to a stale %# image (bound %#, current %#)", moduleName, dependencyName, pActual, pExpected );
+            bAllBound = false;
         }
         return bAllBound;
     }
@@ -679,13 +699,20 @@ namespace sw
         if ( FileUtil::getFileStamp( context._originalModulePath, outShadow._sourceStamp ) == false )
             SW_LOG_WARNING_ID( "LiveReloadManager.CannotReadTimeNext", "Cannot read the time of %# - the next build stamp check reloads it again", context._originalModulePath.str() );
 
-        BLOCK( "Create Shadow Copy" )
+        AbsolutePath libraryPath = context._originalModulePath;
+        if ( _openMode == ModuleOpenMode::Direct )
+        {
+            if ( LiveReloadManagerInternal::isLibraryFileUsable( context._moduleName, libraryPath ) == false )
+                return false;
+        }
+        else
         {
             // 원본을 대조하고 세대 이름을 붙여 복사본으로 쓴다. 로드하기 **전이라** 대조에 걸린 모듈의 정적 초기화는 돌지 않는다.
             ShadowCopyParams params;
             populateShadowCopyParams( context, params );
             if ( ModuleShadowCopy::writeShadowCopy( params, _shadowCopySerials, context._libraryName, outShadow._tempPath ) == false )
                 return false;
+            libraryPath = outShadow._tempPath;
         }
 
         BLOCK( "Load Dynamic Library" )
@@ -697,23 +724,19 @@ namespace sw
 
             // 교체 라이브러리의 정적 등록자는 옛 라이브러리가 도는 동안 돈다 — 같은 이름의 등록(개발 명령 · 감시 값 · 시나리오 단계 · 에디터 등록)을 거절하지 않고 대체하게 한다.
             // 첫 로드는 진짜 중복(두 모듈이 같은 이름을 정의)이 있을 수 있으니 거절을 그대로 둔다.
-            if ( outShadow._tempPath.empty() )
-            {
-                outShadow._pHandle = nullptr;
-            }
-            else if ( context._pLibraryModule != nullptr )
+            if ( context._pLibraryModule != nullptr )
             {
                 RegistrationReloadScope reloadScope;
-                outShadow._pHandle = ModuleLibraryUtil::loadLibraryAt( outShadow._tempPath );
+                outShadow._pHandle = ModuleLibraryUtil::loadLibraryAt( libraryPath );
             }
             else
             {
-                outShadow._pHandle = ModuleLibraryUtil::loadLibraryAt( outShadow._tempPath );
+                outShadow._pHandle = ModuleLibraryUtil::loadLibraryAt( libraryPath );
             }
             if ( outShadow._pHandle == nullptr )
             {
                 context._libraryName._current = context._libraryName._loaded;
-                SW_LOG_ERROR_ID( "LiveReloadManager.FailedLoadDynamicLibrary", "Failed to load dynamic library (keeping old): %#", outShadow._tempPath.c_str() );
+                SW_LOG_ERROR_ID( "LiveReloadManager.FailedLoadDynamicLibrary", "Failed to load dynamic library (keeping old): %#", libraryPath.c_str() );
                 ModuleShadowCopy::removeArtifacts( outShadow._tempPath );
                 outShadow = {};
                 return false;
@@ -815,7 +838,7 @@ namespace sw
             return false;
         }
 
-        SW_LOG_INFO_ID( "LiveReloadManager.ModuleLoadedShadow", "Module loaded (shadow: %#)", context._tempModulePath.c_str() );
+        SW_LOG_INFO_ID( "LiveReloadManager.ModuleLoadedShadow", "Module loaded (%#)", context._tempModulePath.empty() ? context._originalModulePath.c_str() : context._tempModulePath.c_str() );
         return true;
     }
 

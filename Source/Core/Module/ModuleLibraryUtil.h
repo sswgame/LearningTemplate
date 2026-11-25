@@ -92,6 +92,8 @@ namespace sw
          * @details 떼어 낸 스레드가 아직 그 라이브러리의 코드를 돌 수 있을 때 쓴다(언로드 뒤 남은 몇 명령이 빈 주소를 돈다). 리로드는 새 사본을 따로 싣으므로 옛 사본만 남는다.
          */
         static bool pinLibraryContaining( const void* pAddress );
+        /** @brief 주소 @p pAddress 를 담은 이미지의 모듈 이름(접두어 · 확장자 없는 파일 이름)입니다. 실행 파일이면 그 이름이고, 찾지 못하면 비어 있습니다. */
+        [[nodiscard]] static string findImageNameContaining( const void* pAddress );
         /** @brief 동적 라이브러리에서 심볼 주소를 찾습니다. */
         static void* getDynamicSymbol( void* pHandle, string_view symbolName );
         /** @brief 로드한 동적 라이브러리를 메모리에서 내립니다. */

@@ -85,7 +85,7 @@
 	<WaitUntil watch="Editor.SequencerSelectedTrack" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.SequencerTrackIssueCount" equals="1"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="sequencerkeys/sequencer.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="sequencerkeys/sequencer.png"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

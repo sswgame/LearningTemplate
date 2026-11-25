@@ -8,13 +8,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -28,7 +26,6 @@
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
@@ -1061,39 +1058,37 @@ namespace sw
     {
         struct HubPawnReplicationDevInternal
         {
-            /** @brief 바닥 위의 자리를 로그에 남깁니다 — 두 클라이언트의 줄을 `Scripts net-pair mmo` 가 견줍니다(한쪽의 자기 자리와 다른 쪽이 본 자리). */
-            static bool runFloorStatus( const vector<string>& listArgument, string& outReply )
+            // 바닥 기준의 자리 — 두 클라이언트 시나리오가 `<Record>` 로 보고에 남기고 `Scripts net-pair mmo` 가 견준다(한쪽의 자기 자리와 다른 쪽이 본 자리). 바닥 위가 아니면 값이 없다.
+            [[nodiscard]] static bool readFloorX( const HubPawnReplicationComponent& component, float64& outValue )
             {
-                if ( listArgument.empty() == false )
-                    return false;
-                const SceneManager* const pScenes  = game::findSubsystem<SceneManager>();
-                const Scene* const        pScene   = pScenes != nullptr ? pScenes->getActiveScene() : nullptr;
-                GameObjectManager* const  pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
-                // 예측하는 클라이언트는 씬에 하나다 — 둘이면 오류로 명령을 보내지 않는다.
-                const HubPawnReplicationComponent* pComponent = pManager != nullptr ? pManager->getComponentRegistry().findUnique<HubPawnReplicationComponent>( []( const HubPawnReplicationComponent& component )
-                { return component.getPredictedValue() != 0; } )
-                                                                                    : nullptr;
-                if ( pComponent == nullptr )
-                {
-                    outReply = "no hub pawn replication in the scene";
-                    return true;
-                }
-                const float3                             own  = pComponent->getFloorLocalPosition();
-                const float3                             seen = pComponent->getRemoteFloorLocalPosition();
-                StringBuilder<constant::buffer::kMax256> reply;
-                reply.appendFormat( "floor self=%# x=%# z=%# seen=%# x=%# z=%#", pComponent->getFloorNumber(), own._x, own._z, pComponent->getRemoteFloorNumber(), seen._x, seen._z );
-                outReply = string( reply.view() );
-                SW_LOG_INFO_ID( "Hub.FloorStatus", "[Hub] %#", outReply.c_str() );
-                return true;
+                outValue = static_cast<float64>( component.getFloorLocalPosition()._x );
+                return component.getFloorNumber() != 0;
+            }
+            [[nodiscard]] static bool readFloorZ( const HubPawnReplicationComponent& component, float64& outValue )
+            {
+                outValue = static_cast<float64>( component.getFloorLocalPosition()._z );
+                return component.getFloorNumber() != 0;
+            }
+            [[nodiscard]] static bool readRemoteFloorX( const HubPawnReplicationComponent& component, float64& outValue )
+            {
+                outValue = static_cast<float64>( component.getRemoteFloorLocalPosition()._x );
+                return component.getRemoteFloorNumber() != 0;
+            }
+            [[nodiscard]] static bool readRemoteFloorZ( const HubPawnReplicationComponent& component, float64& outValue )
+            {
+                outValue = static_cast<float64>( component.getRemoteFloorLocalPosition()._z );
+                return component.getRemoteFloorNumber() != 0;
             }
         };
     } // namespace
 
-    SW_DEV_COMMAND( HubFloor, "hub.floor", "hub.floor", "Log where this pawn and the pawn it sees stand on the moving floor", &HubPawnReplicationDevInternal::runFloorStatus );
-
     SW_AUTOMATION_GETTER_WATCH( hubPawnFloorSlip, "Hub.PawnFloorSlip", "Distance the own pawn slid on the moving floor it stands on (metres)", HubPawnReplicationComponent, &HubPawnReplicationComponent::getFloorSlip );
     SW_AUTOMATION_GETTER_WATCH( hubPawnFloor, "Hub.PawnFloor", "Number of the moving floor the own pawn stands on (0 none)", HubPawnReplicationComponent, &HubPawnReplicationComponent::getFloorNumber );
     SW_AUTOMATION_GETTER_WATCH( hubRemotePawnFloor, "Hub.RemotePawnFloor", "Number of the moving floor another player's pawn is shown standing on (0 none)", HubPawnReplicationComponent, &HubPawnReplicationComponent::getRemoteFloorNumber );
+    SW_AUTOMATION_COMPONENT_WATCH( hubPawnFloorX, "Hub.PawnFloorX", "Own pawn's X on the moving floor it stands on (floor space; no value off the floor)", HubPawnReplicationComponent, &HubPawnReplicationDevInternal::readFloorX );
+    SW_AUTOMATION_COMPONENT_WATCH( hubPawnFloorZ, "Hub.PawnFloorZ", "Own pawn's Z on the moving floor it stands on (floor space; no value off the floor)", HubPawnReplicationComponent, &HubPawnReplicationDevInternal::readFloorZ );
+    SW_AUTOMATION_COMPONENT_WATCH( hubRemotePawnFloorX, "Hub.RemotePawnFloorX", "Another player's shown X on the moving floor (floor space; no value off the floor)", HubPawnReplicationComponent, &HubPawnReplicationDevInternal::readRemoteFloorX );
+    SW_AUTOMATION_COMPONENT_WATCH( hubRemotePawnFloorZ, "Hub.RemotePawnFloorZ", "Another player's shown Z on the moving floor (floor space; no value off the floor)", HubPawnReplicationComponent, &HubPawnReplicationDevInternal::readRemoteFloorZ );
     SW_AUTOMATION_GETTER_WATCH( hubPawnPredicted, "Hub.PawnPredicted", "1 while this client predicts its own pawn", HubPawnReplicationComponent, &HubPawnReplicationComponent::getPredictedValue );
     SW_AUTOMATION_GETTER_WATCH( hubPawnCorrections, "Hub.PawnCorrections", "Times the server state rewound the predicted pawn", HubPawnReplicationComponent,
                                 &HubPawnReplicationComponent::getCorrectionCount );

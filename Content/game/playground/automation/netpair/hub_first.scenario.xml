@@ -9,7 +9,7 @@
 <Scenario name="game.playground.netpair.hub_first" fixedDelta="0.0166667" realTime="true" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Expect watch="Hub.RulesValid" equals="1"/>
 	<Expect watch="Hub.NetRole" equals="0"/>
-	<DevCommand line="net.ticketconnect 127.0.0.1:17880 hub_netpair hub_netpair_pw_1 playground_hub 127.0.0.1:17877"/>
+	<DevCommand line="net.ticketconnect {gv_onlineServerAddress} hub_netpair hub_netpair_pw_1 playground_hub {gv_gameServerAddress}"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutSeconds="30"/>
 	<Expect watch="Hub.NetRole" equals="2"/>
 	<Expect watch="Hub.Level" equals="1"/>
@@ -75,7 +75,7 @@
 	<WaitUntil watch="Hub.ResultCount" equals="11" timeoutSeconds="10"/>
 	<Expect watch="Hub.LastResult" equals="9"/>
 	<Expect watch="Hub.PartySize" equals="1"/>
-	<!-- 하위 레벨 미니게임(카드 탁자 — 허브가 그대로다)은 서버가 들어가고 나온다: 실행기가 아래 첫 상태 줄을 보고 서버 콘솔에 `minigame.enter`, 둘째 상태 줄을 보고 `minigame.leave` 를 넣는다.
+	<!-- 하위 레벨 미니게임(카드 탁자 — 허브가 그대로다)은 서버가 들어가고 나온다: 실행기가 아래 첫 상태 줄(로그 id `Hub.Status`)을 보고 서버 콘솔에 `minigame.enter`, 둘째 줄을 보고 `minigame.leave` 를 넣는다.
 	     이 클라이언트는 알림만 받아 같은 하위 레벨을 세우고 내린다. 진행 · 복제가 그대로이고 행동이 계속 판정된다 -->
 	<DevCommand line="hub.status"/>
 	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutWallSeconds="60"/>

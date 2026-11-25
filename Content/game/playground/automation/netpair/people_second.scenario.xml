@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="496bdbffc627d1f8a574f229a2e3cc64"?>
+<!--
+  두 계정의 친구 · 거래(둘째 사람) — `people_first` 의 짝. 받은 친구 신청을 받고, 거래를 받아 잠그고 확정한다. 모자란 거래는 상대가 물려 취소로 끝난다.
+-->
+<Scenario name="game.playground.netpair.people_second" fixedDelta="0.0166667" realTime="true" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<DevCommand line="online.connect"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.login 2"/>
+	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.friend list"/>
+	<WaitUntil watch="Log.Count" key="Playground.FriendList" atLeast="1" timeoutWallSeconds="30"/>
+	<WaitUntil watch="Playground.FriendPendingCount" equals="1" timeoutWallSeconds="90"/>
+	<DevCommand line="playground.online.friend accept"/>
+	<WaitUntil watch="Log.Count" key="Playground.FriendAccepted" atLeast="1" timeoutWallSeconds="30"/>
+	<WaitUntil watch="Playground.FriendCount" equals="1" timeoutWallSeconds="30"/>
+	<!-- 가진 만큼의 거래 -->
+	<WaitUntil watch="Playground.TradeState" is="Invited" timeoutWallSeconds="90"/>
+	<DevCommand line="playground.online.trade accept"/>
+	<WaitUntil watch="Playground.TradePeerOffer" equals="40" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.trade lock"/>
+	<WaitUntil watch="Playground.TradeLockedCount" equals="2" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.trade confirm"/>
+	<WaitUntil watch="Playground.TradeSettledCount" equals="1" timeoutWallSeconds="30"/>
+	<!-- 모자란 거래 -->
+	<WaitUntil watch="Playground.TradeState" is="Invited" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.trade accept"/>
+	<WaitUntil watch="Playground.TradeState" is="Cancelled" timeoutWallSeconds="60"/>
+	<Expect watch="Playground.TradeSettledCount" equals="1"/>
+	<Expect watch="Playground.PeopleRefusedCount" equals="0"/>
+	<DevCommand line="online.disconnect"/>
+	<Pass/>
+</Scenario>
