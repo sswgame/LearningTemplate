@@ -64,7 +64,7 @@ class Command(abc.ABC):
         try:
             return command.run(ScriptContext(get_project_root()), args)
         except CommandError as error:
-            print(f"[{cls.name}] FAILED {error}", flush=True)
+            print(f"[{cls.name}] FAILED {error}", file=sys.stderr, flush=True)
             return ExitCode.VIOLATION
 
 

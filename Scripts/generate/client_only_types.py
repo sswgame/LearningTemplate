@@ -23,6 +23,11 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
+
+from common.command import Command, ScriptContext  # noqa: E402
+from common.exit_code import ExitCode  # noqa: E402
+
 #: 실행 파일 옆 표 이름 — `ClientOnlyTypeTable::kTableFile` · `pack.py` 의 `CLIENT_ONLY_TYPE_TABLE` 과 같은 이름이다.
 TABLE_FILE_NAME = "ClientOnlyTypes.json"
 #: 인자가 여러 줄에 걸친 `REFLECT( …,\n … )` 도 잡는다(괄호 한 겹 안의 괄호까지) — 한 줄만 보던 꼴은 두 줄 REFLECT 아바타를 표에서 빠뜨려 서버 쿠킹이 졌다.
@@ -52,16 +57,20 @@ def write_table(list_header: Sequence[Path], output: Path) -> int:
     return len(list_name)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="전용 서버가 짓지 않는 소스의 리플렉션 형식 이름 표를 쓴다(서버 구성 빌드가 부른다)")
-    parser.add_argument("--headers", type=Path, required=True, help="헤더 절대 경로를 한 줄에 하나씩 적은 파일")
-    parser.add_argument("--output", type=Path, required=True, help=f"쓸 표(실행 파일 옆 {TABLE_FILE_NAME})")
-    arguments = parser.parse_args(argv)
-    list_header = [Path(line) for line in arguments.headers.read_text(encoding="utf-8").splitlines() if line.strip()]
-    count = write_table(list_header, arguments.output)
-    print(f"[ClientOnlyTypes] {arguments.output} ({count} 형식)")
-    return 0
+class ClientOnlyTypesCommand(Command):
+    name = "client-only-types"
+    help = "전용 서버가 짓지 않는 소스의 리플렉션 형식 이름 표를 쓴다(서버 구성 빌드가 부른다)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--headers", type=Path, required=True, help="헤더 절대 경로를 한 줄에 하나씩 적은 파일")
+        parser.add_argument("--output", type=Path, required=True, help=f"쓸 표(실행 파일 옆 {TABLE_FILE_NAME})")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        list_header = [Path(line) for line in args.headers.read_text(encoding="utf-8").splitlines() if line.strip()]
+        count = write_table(list_header, args.output)
+        print(f"[ClientOnlyTypes] {args.output} ({count} 형식)")
+        return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(ClientOnlyTypesCommand.main())

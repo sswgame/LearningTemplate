@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from generate.cook_if_inputs_changed import fingerprint, main, split_commands  # noqa: E402
+from generate.cook_if_inputs_changed import fingerprint, CookIfInputsChangedCommand, split_commands  # noqa: E402
 
 
 def touch_later(path: Path, text: str) -> None:
@@ -46,7 +46,7 @@ class CookIfInputsChangedTest(unittest.TestCase):
             f"c=pathlib.Path(r'{self.counter}');c.write_text(str(int(c.read_text()) + 1 if c.exists() else 1));"
             f"sys.exit({exit_code})"
         )
-        return main(["--stamp", str(self.root / "Cook.inputs"), "--input", str(self.root / "Content"),
+        return CookIfInputsChangedCommand.main(["--stamp", str(self.root / "Cook.inputs"), "--input", str(self.root / "Content"),
                      "--binaries", str(self.root / "Bin"), "--output", str(self.output), "--", sys.executable, "-c", script])
 
     def runs(self) -> int:

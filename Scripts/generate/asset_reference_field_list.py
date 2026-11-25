@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common.command import Command, ScriptContext  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 from common.shared_file_update import update_shared_text_file  # noqa: E402
 
@@ -71,18 +71,21 @@ def update_table(output_path: Path, map_built: dict[str, set[str]], set_game: se
     return update_shared_text_file(output_path, merge_text)
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="파서가 쓴 경로 칸 목록을 저장소의 표로 모은다")
-    parser.add_argument("--inputs", type=Path, required=True, help="CMake 가 쓴 `<주인>\\t<목록>` 줄 파일")
-    parser.add_argument("--output", type=Path, required=True, help="저장소의 표")
-    parser.add_argument("--stamp", type=Path, required=True, help="마치면 건드리는 파일(빌드 의존)")
-    arguments = parser.parse_args(argv)
+class AssetReferenceFieldListCommand(Command):
+    name = "asset-reference-field-list"
+    help = "파서가 쓴 경로 칸 목록을 저장소의 표로 모은다(빌드 단계)"
 
-    game_folder = Path(__file__).resolve().parents[2] / "Source" / "Games"
-    update_table(arguments.output, read_built_owners(arguments.inputs), {path.name for path in game_folder.iterdir() if path.is_dir()})
-    arguments.stamp.touch()
-    return ExitCode.PASSED
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--inputs", type=Path, required=True, help="CMake 가 쓴 `<주인>\\t<목록>` 줄 파일")
+        parser.add_argument("--output", type=Path, required=True, help="저장소의 표")
+        parser.add_argument("--stamp", type=Path, required=True, help="마치면 건드리는 파일(빌드 의존)")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        game_folder = context.root / "Source" / "Games"
+        update_table(args.output, read_built_owners(args.inputs), {path.name for path in game_folder.iterdir() if path.is_dir()})
+        args.stamp.touch()
+        return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(AssetReferenceFieldListCommand.main())
