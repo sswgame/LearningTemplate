@@ -220,6 +220,8 @@ namespace sw
          * @details 셰이더 바이트코드는 디바이스를 쓰지 않아 백엔드와 상관없이 병렬로 된다. PSO 생성은 이 스레드가 차례로 한다(`createPassPSOS` · `getOrCreateExtensionProgramPSO`).
          */
         void warmShaders( const vector<ShaderCompileDesc>& listShader ) const;
+        /** @brief @p desc 의 셰이더를 백그라운드로 얻기 시작합니다 — 빌더 줄에 넣은 변형의 셰이더가 빌더 스레드 앞에서 나뉘어 컴파일된다. 기다리지 않는다. */
+        void requestShaders( const RHIPipelineStateDesc& desc ) const;
         /**
          * @brief 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 마다 폴백 버퍼를 만듭니다(셋업 전용).
          * @details 기록 중에는 만들 수 없다. 버퍼 생성과 `registerBindlessBufferSRV` 는 bindless 레지스트리를 바꾸는데, 패스 콜백은 태스크 워커에서 병렬로 돈다.

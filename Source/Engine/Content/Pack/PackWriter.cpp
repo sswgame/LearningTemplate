@@ -50,6 +50,7 @@ namespace sw
         uint32             _crc32{ 0 };
         ICompressionCodec* _pCodec{ nullptr }; ///< 이 블록의 코덱. 팩 코덱이 `None` 이거나 항목이 `Stored` 면 nullptr 이고 원본을 그대로 쓴다
         vector<uint8>      _listPayload;       ///< 코덱이 낸 바이트. 코덱이 없으면 비어 있다. 코덱이 있는데 비면 압축이 실패한 것이다(빈 블록은 없다)
+        uint64             _storedHash{ 0 };   ///< 저장 바이트의 해시(같은 페이로드 찾기)
         int64              _nanos{ 0 };
 
         /** @brief 파일에 쓸 바이트입니다. */
@@ -81,7 +82,8 @@ namespace sw
                 const bool bCompressed = bound != 0 && pCodec->compress( inoutSlot._pSource, inoutSlot._rawSize, inoutSlot._listPayload.data(), bound, compressedSize, _compressionLevel );
                 inoutSlot._listPayload.resize( bCompressed ? compressedSize : 0 );
             }
-            inoutSlot._nanos = stopwatch.getElapsedNanoseconds();
+            inoutSlot._storedHash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, inoutSlot.getStoredData(), inoutSlot.getStoredSize() );
+            inoutSlot._nanos      = stopwatch.getElapsedNanoseconds();
         }
     };
 } // namespace sw
@@ -99,6 +101,7 @@ namespace sw
         , _listBlock{}
         , _listBlockDigest{}
         , _stringPoolBytes{}
+        , _mapStoredPayload{}
         , _mapPreviousSlot{}
         , _payloadEnd{ 0 }
         , _usedPayloadBytes{ 0 }
@@ -290,6 +293,7 @@ namespace sw
         {
             const size_t blockCount = ( entry._bytes.size() + _desc._blockSize - 1 ) / _desc._blockSize;
             uint64       storedSize = 0;
+            uint64       storedHash = HashUtil::kFNVOffset64;
             for ( size_t index = slotIndex; index < slotIndex + blockCount; ++index )
             {
                 const BlockSlot& slot = listSlot[index];
@@ -297,6 +301,7 @@ namespace sw
                 if ( slot._pCodec != nullptr && slot._listPayload.empty() )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "pack codec failed to compress a block", entry._relativePath } );
                 storedSize += slot.getStoredSize();
+                storedHash = HashUtil::appendBytes64( storedHash, reinterpret_cast<const uint8*>( &slot._storedHash ), sizeof( slot._storedHash ) );
             }
             if ( storedSize > MathUtil::kMaxUInt32 )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "compressed pack entry does not fit the 32-bit entry fields", entry._relativePath } );
@@ -307,13 +312,21 @@ namespace sw
             const bool bKeepSlot  = storedSize > 0 && slotIt != _mapPreviousSlot.end() && storedSize <= slotIt->second._capacity;
             if ( bKeepSlot )
                 dataOffset = slotIt->second._offset;
-            else if ( storedSize > 0 )
+            StoredPayload        payload{ 0, static_cast<uint32>( storedSize ), static_cast<uint32>( entry._bytes.size() ), static_cast<uint32>( _listBlock.size() ) };
+            const bool           bShareable = storedSize > 0 && _desc._layoutMode == PackLayoutMode::Sorted;
+            const StoredPayload* pShared    = bShareable ? findStoredPayload( storedHash, payload, &listSlot[slotIndex], blockCount ) : nullptr;
+            if ( pShared != nullptr )
+                dataOffset = pShared->_offset;
+            else if ( bKeepSlot == false && storedSize > 0 )
             {
                 const expected<void> padded = padToSector();
                 if ( padded.has_value() == false )
                     return padded;
                 dataOffset = _file.getSize();
             }
+            payload._offset = dataOffset;
+            if ( bShareable && pShared == nullptr )
+                _mapStoredPayload.emplace( storedHash, payload ); // 해시가 겹친 다른 바이트면 처음 것이 남는다 — 이 페이로드는 나눠 쓰이지 않을 뿐이다
 
             if ( dataOffset > PackFileEntryOnDisk::kMaxDataOffset )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "pack payload offset does not fit the 56-bit placement field", entry._relativePath } );
@@ -330,7 +343,7 @@ namespace sw
                 const BlockSlot&     slot    = listSlot[slotIndex];
                 const uint8*         pStored = slot.getStoredData();
                 const size_t         size    = slot.getStoredSize();
-                const expected<void> written = writeBytes( dataOffset + compressedEnd, pStored, size );
+                const expected<void> written = pShared == nullptr ? writeBytes( dataOffset + compressedEnd, pStored, size ) : expected<void>{}; // 같은 바이트를 이미 썼다
                 if ( written.has_value() == false )
                     return written;
                 compressedEnd += static_cast<uint32>( size );
@@ -344,7 +357,7 @@ namespace sw
                     _listBlockDigest.push_back( blockDigest );
                 }
             }
-            if ( bKeepSlot == false && storedSize > 0 )
+            if ( bKeepSlot == false && pShared == nullptr && storedSize > 0 )
                 _payloadEnd = _file.getSize();
             _usedPayloadBytes += PackWriterInternal::alignToPackSector( storedSize );
             _listDiskEntry.push_back( diskEntry );
@@ -355,6 +368,23 @@ namespace sw
         _listPending.clear();
         _pendingBytes = 0;
         return {};
+    }
+
+    const PackStreamWriter::StoredPayload* PackStreamWriter::findStoredPayload( uint64 storedHash, const StoredPayload& candidate, const BlockSlot* pSlot, size_t blockCount ) const
+    {
+        const auto iter = _mapStoredPayload.find( storedHash );
+        if ( iter == _mapStoredPayload.end() || iter->second._storedSize != candidate._storedSize || iter->second._rawSize != candidate._rawSize )
+            return nullptr;
+        // 해시가 같아도 블록마다 저장 끝 · 원본 CRC 까지 같아야 같은 페이로드다.
+        uint32 storedEnd = 0;
+        for ( size_t index = 0; index < blockCount; ++index )
+        {
+            storedEnd += static_cast<uint32>( pSlot[index].getStoredSize() );
+            const PackBlockEntryOnDisk& block = _listBlock[iter->second._firstBlock + index];
+            if ( block._compressedEnd != storedEnd || block._crc32 != pSlot[index]._crc32 )
+                return nullptr;
+        }
+        return &iter->second;
     }
 
     expected<void> PackStreamWriter::writeBytes( uint64 offset, const uint8* pData, size_t size )

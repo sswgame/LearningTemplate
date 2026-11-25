@@ -247,16 +247,9 @@ namespace sw
         return desc;
     }
 
-    bool ShaderCooker::cookShader( const ShaderCompileDesc& desc, const AbsolutePath& outputPath, ShaderCookResult& outResult )
+    bool ShaderCooker::writeBinary( const ShaderCompileDesc& desc, const ShaderCompileResult& compileResult, const AbsolutePath& outputPath, bool& outWritten )
     {
-        outResult               = ShaderCookResult{};
-        outResult._sourcePath   = desc._source.str();
-        outResult._outputPath   = string( outputPath.str() );
-        outResult._entryPoint   = desc._entryPoint;
-        outResult._stage        = desc._stage;
-        outResult._targetFormat = desc._targetFormat;
-
-        ShaderCompileResult compileResult = ShaderCompiler::compileHLSL( desc );
+        outWritten = false;
         if ( compileResult._bSuccess == false || compileResult._bytecode.empty() )
         {
             SW_LOG_WARNING_ID( "ShaderCooker.FailedCompileShader", "Failed to compile shader '%#' [%#] for %#: %#", desc._source.c_str(), desc._entryPoint, getSubfolderForFormat( desc._targetFormat ),
@@ -265,21 +258,16 @@ namespace sw
         }
 
         // 무변경 재쿠킹이 파일을 건드리지 않는다 — 내용 해시는 도장(크기 · 시각)이 그대로면 파일을 다시 읽지 않는다.
-        const AbsolutePath outputFile = outputPath;
-        const bool         bCurrent   = FileUtil::isRegularFile( outputFile ) && ContentHash::computeFile( outputPath ) == compileResult._record._outputHash;
-        if ( bCurrent == false )
+        if ( FileUtil::isRegularFile( outputPath ) && ContentHash::computeFile( outputPath ) == compileResult._record._outputHash )
+            return true;
+        if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || FileUtil::writeFile( outputPath, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
         {
-            if ( FileUtil::ensureParentDirectoryExists( outputFile ) == false || FileUtil::writeFile( outputFile, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
-            {
-                SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookedBytecode", "Failed to write cooked bytecode to %#", outputPath.str() );
-                return false;
-            }
-            SW_LOG_INFO_ID( "ShaderCooker.CookedShaderUBytes", "Cooked shader '%#' [%#] -> '%#' (%# bytes)", desc._source.c_str(), desc._entryPoint, outputPath.str(),
-                            static_cast<uint64>( compileResult._bytecode.size() ) );
-            outResult._bWritten = SW_TRUE;
+            SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookedBytecode", "Failed to write cooked bytecode to %#", outputPath.str() );
+            return false;
         }
-        outResult._bytecode = std::move( compileResult._bytecode );
-        outResult._bSuccess = SW_TRUE;
+        SW_LOG_INFO_ID( "ShaderCooker.CookedShaderUBytes", "Cooked shader '%#' [%#] -> '%#' (%# bytes)", desc._source.c_str(), desc._entryPoint, outputPath.str(),
+                        static_cast<uint64>( compileResult._bytecode.size() ) );
+        outWritten = true;
         return true;
     }
 } // namespace sw
