@@ -46,14 +46,28 @@ def run_process(command: Sequence[str | Path],
                cwd: Path | None = None,
                timeout_seconds: float | None = None,
                capture: bool = True,
-               environment: Mapping[str, str] | None = None) -> ProcessResult:
+               environment: Mapping[str, str] | None = None,
+               log: Path | None = None) -> ProcessResult:
     """
     `command` 를 돌리고 끝날 때까지 기다립니다.
 
     - `bCapture` : 출력을 잡는다(UTF-8, 깨진 바이트는 대체 글자). 거짓이면 부모 콘솔로 흘린다.
+    - `log` : 출력과 오류를 함께 이 파일에 쓴다(폴더는 만든다 — 잡지 않는다).
     - `environment` : 자식의 환경(없으면 이 프로세스의 것) — git 은 `git.run_git` 이 저장소 환경 변수를 뺀 것을 넘긴다.
     """
     list_argument = [str(part) for part in command]
+    if log is not None:
+        log.parent.mkdir(parents=True, exist_ok=True)
+        with open(log, "wb") as stream:
+            try:
+                completed = subprocess.run(list_argument, cwd=str(cwd) if cwd else None, stdout=stream, stderr=subprocess.STDOUT, timeout=timeout_seconds, check=False,
+                                           env=dict(environment) if environment is not None else None)
+                return ProcessResult(return_code=completed.returncode)
+            except (FileNotFoundError, PermissionError) as error:
+                stream.write(f"실행 파일을 띄우지 못했다: {list_argument[0]} ({error})\n".encode("utf-8"))
+                return ProcessResult(return_code=-1, launched=False)
+            except subprocess.TimeoutExpired:
+                return ProcessResult(return_code=-1, timed_out=True)
     try:
         completed = subprocess.run(list_argument, cwd=str(cwd) if cwd else None, capture_output=capture, timeout=timeout_seconds,
                                    encoding="utf-8", errors="replace", check=False, env=dict(environment) if environment is not None else None)
