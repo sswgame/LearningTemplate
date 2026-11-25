@@ -23,6 +23,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Compile/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -369,13 +370,14 @@ namespace sw
             computeJob._shaderPath                  = std::move( computeShader._shaderPath );
             computeJob._listDefine                  = std::move( computeShader._listDefine );
             computeJob._passType                    = passType;
+            computeJob._parameters                  = ComputeShaderParameterTable{ info._pComputeParameters, info._computeParameterCount };
         }
 
         // 파이프라인 컴퓨트 패스는 셰이더가 패스마다 달라 표가 아니라 그래프를 돈다. 컴퓨트 능력이 없는 백엔드는 이 패스를 돌리지 못한다.
         // 이미 있는 패스는 만들지 않는다 — 다시 부르는 자리(백버퍼 형식 변경 · 셰이더 핫 리로드)에서 덮어쓰면 옛 PSO 가 파괴되지 않고 남는다.
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
         {
-            RHIPipelineStateHandle existingCompute{ 0 };
+            ComputePipeline existingCompute{};
             if ( _pCache->findPipelineComputePSO( hashed_string( pass._name.c_str() ), existingCompute ) )
                 continue;
             // 일반 풀스크린 패스의 컴퓨트 구현 — 네이티브 bindless 에서만 만든다(에뮬 백엔드는 픽셀 구현이 돈다 — 그 PSO 는 위의 표 단계가 늘 만든다). 키는 패스 이름이다.
@@ -387,6 +389,7 @@ namespace sw
                 computeJob._listDefine                  = std::move( computeShader._listDefine );
                 computeJob._pipelinePassName            = hashed_string( pass._name.c_str() );
                 computeJob._passType                    = pass._type;
+                computeJob._parameters                  = ComputePassShader::kParameters;
                 continue;
             }
             if ( pass._type != RenderPassKind::Compute )
@@ -398,6 +401,7 @@ namespace sw
             computeJob._listDefine                  = std::move( computeShader._listDefine );
             computeJob._pipelinePassName            = hashed_string( pass._name.c_str() );
             computeJob._passType                    = RenderPassKind::Compute;
+            computeJob._parameters                  = ComputePassShader::kParameters;
         }
 
         // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPSO 주석 참고).
@@ -459,16 +463,26 @@ namespace sw
                 SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", computeJob._passType, computeJob._shaderPath.c_str() );
                 continue;
             }
-            // 어느 셰이더로 만들었는지 적는다 — 셰이더 핫 리로드가 그 셰이더의 PSO 만 놓는다(`RenderPSOCache::releasePSOsUsingShader`).
+            // 레이아웃을 적는다 — 셰이더 핫 리로드가 그 셰이더의 PSO 만 놓고(`RenderPSOCache::releasePSOsUsingShader`), 매개변수 표를 여기서 한 번 리플렉션에 푼다(기록은 이름을 찾지 않는다).
             RHIPipelineStateDesc computeDesc{};
             computeDesc._computeShaderPath = computeJob._shaderPath;
             computeDesc._computeEntryPoint = computeJob._entryPoint;
             computeDesc._listShaderDefine  = computeJob._listDefine;
-            _pCache->registerDesc( pso._handle, computeDesc );
+            registerLayout( pso._handle, computeDesc );
+            const ShaderBindingLayout* const pLayout = findLayout( pso._handle );
+            ComputeShaderBindings            bindings;
+            // 셰이더가 선언한 자원을 표가 모르면 그 PSO 를 쓰지 않는다 — 걸지 않은 칸을 읽는 디스패치를 만들지 않는다(이름은 resolve 가 남겼다).
+            if ( pLayout == nullptr || ComputeShaderBindings::resolve( *pLayout, computeJob._parameters, computeJob._shaderPath, bindings ) == false )
+            {
+                SW_LOG_ERROR_ID( "FramePSOManager.ComputeParametersUnresolved", "Compute PSO for pass %# (shader '%#') does not match its parameter table - the pass draws nothing", computeJob._passType,
+                                 computeJob._shaderPath.c_str() );
+                pso.release( _pDevice );
+                continue;
+            }
             if ( computeJob._pipelinePassName.empty() == false )
-                _pCache->setPipelineComputePSO( _pDevice, computeJob._pipelinePassName, std::move( pso ) ); // 패스 이름이 키다
+                _pCache->setPipelineComputePSO( _pDevice, computeJob._pipelinePassName, std::move( pso ), bindings ); // 패스 이름이 키다
             else
-                _pCache->setEnginePSO( _pDevice, computeJob._passType, std::move( pso ) );
+                _pCache->setEnginePSO( _pDevice, computeJob._passType, std::move( pso ), bindings );
         }
         for ( const PassPSOJob& job : listJob )
         {
@@ -536,10 +550,10 @@ namespace sw
             (void)_pCache->releasePSOsUsingShader( _pDevice, shaderPath ); // 놓은 수는 쓰지 않는다 — 빈 자리는 createPassPSOs · 지연 생성이 채운다
     }
 
-    RHIPipelineStateHandle FramePSOManager::findPipelineComputePSO( const hashed_string& passName ) const
+    ComputePipeline FramePSOManager::findPipelineComputePSO( const hashed_string& passName ) const
     {
-        RHIPipelineStateHandle pso{ 0 };
-        return _pCache->findPipelineComputePSO( passName, pso ) ? pso : RHIPipelineStateHandle{ 0 };
+        ComputePipeline pipeline{};
+        return _pCache->findPipelineComputePSO( passName, pipeline ) ? pipeline : ComputePipeline{};
     }
 
     RHIPipelineStateHandle FramePSOManager::getEnginePSO( RenderPassKind passType ) const
@@ -549,6 +563,14 @@ namespace sw
         if ( isFramePassType( passType ) && _pipeline.hasFramePass( passType ) == false )
             return 0;
         return _pCache->findEnginePSO( passType );
+    }
+
+    ComputePipeline FramePSOManager::getComputePSO( RenderPassKind passType ) const
+    {
+        // `getEnginePSO` 와 같은 규칙 — 이 파이프라인이 선언하지 않은 프레임 패스는 빈 값이다.
+        if ( isFramePassType( passType ) && _pipeline.hasFramePass( passType ) == false )
+            return ComputePipeline{};
+        return _pCache->findEngineComputePSO( passType );
     }
 
     RHIPipelineStateHandle FramePSOManager::findOutputPSO( RenderPassKind passType, RHIFormat targetFormat ) const
@@ -1031,7 +1053,7 @@ namespace sw
 
         for ( const auto& [passType, passState] : _pCache->getEnginePSOs() )
         {
-            const RHIPipelineStateHandle passPSO = passState._handle;
+            const RHIPipelineStateHandle passPSO = passState._pso._handle;
             if ( passPSO == 0 || getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false )
                 continue;
             const bool                        bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
@@ -1063,7 +1085,7 @@ namespace sw
                 const GPUShaderPermutation permutation = GPUMaterialRegistry::makeShaderPermutation( entry, bAppearanceDither );
                 for ( const auto& [passType, passState] : _pCache->getEnginePSOs() )
                 {
-                    const RHIPipelineStateHandle passPSO          = passState._handle;
+                    const RHIPipelineStateHandle passPSO          = passState._pso._handle;
                     const bool                   bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
                     const bool                   bSkippedPass     = passPSO == 0 || getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false || bTransparentPass != bTransparentMaterial;
                     if ( bSkippedPass || getRenderPassKindInfo( passType ).shouldDrawMaterial( &permutation._listDefine ) == false )
@@ -1255,7 +1277,7 @@ namespace sw
             return;
         for ( const auto& [passType, passState] : _pCache->getEnginePSOs() )
         {
-            const RHIPipelineStateHandle passPSO  = passState._handle;
+            const RHIPipelineStateHandle passPSO  = passState._pso._handle;
             const RenderPassKindInfo&    passInfo = getRenderPassKindInfo( passType );
             if ( passPSO == 0 || passInfo.shouldDrawSceneMeshes() == false )
                 continue;

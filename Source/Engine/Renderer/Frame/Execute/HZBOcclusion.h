@@ -23,6 +23,7 @@
 
 namespace sw
 {
+    struct ComputePipeline;
     struct OcclusionCullingConfig;
     class FrameBufferTable;
     class IRHICommandList;
@@ -62,20 +63,20 @@ namespace sw
          *          깊이 사본은 생산자(`FrameGraphExecutor::recordDepthHistory`)가 RW 텍스처 상태로 넘겨 둔다.
          * @param graphContext 이 패스의 그래프 문맥(선언한 접근 · 자원 표 · 리스트)입니다.
          * @param viewSlot 이 뷰의 칸(`registerFrameResources` 와 같은 값)입니다.
-         * @param pso `RenderPassKind::HZBBuild` 의 PSO 입니다(없으면 0 — 짓지 않는다).
+         * @param pipeline `RenderPassKind::HZBBuild` 의 컴퓨트 PSO 입니다(비면 짓지 않는다).
          * @param depthWidth · depthHeight 깊이 사본에서 읽을 사각형(px) — 자동 렌더 배율이면 텍스처보다 작다.
          * @param viewProj 그 깊이를 그린 뷰-투영(행 벡터 규약)입니다.
          * @param bWriteTiles 16 px 밉의 최대 깊이를 가림 타일 버퍼에도 쓸지입니다(프레임 처음 주 시점 — 되읽기).
          * @return 지었으면 true. 버퍼 · 사본 · PSO 가 없거나 용량이 모자라면 false 이고 `_bHZBValid` 를 내린다.
          */
-        bool record( const RenderGraphPassContext& graphContext, uint32 viewSlot, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight,
+        bool record( const RenderGraphPassContext& graphContext, uint32 viewSlot, IRHIDevice& device, const ComputePipeline& pipeline, uint32 depthWidth, uint32 depthHeight,
                      const float4x4& viewProj, bool bWriteTiles, FrameViewTarget& target ) const;
         /**
          * @brief 뷰 그래프 패스 안(2 단계 가림의 뒤 단계 · 화면 공간 반사 앞)에서 피라미드를 짓습니다. 인자 뜻은 프레임 패스 판과 같다.
          * @details 부르는 패스가 피라미드 · 가림 타일을 UAV 로 선언했다(`ViewGraphResource::hzb` · `occlusionTiles` — 뷰 자원 표의 칸 0). 앞 UAV 는 레벨 콜백이 내고, 밉 사이는
          *          선언한 핸들의 `uavBarrier`, 끝은 같은 패스가 읽는 셰이더 읽기로 `transition` 한다 — 손 전이가 없다.
          */
-        bool recordInViewPass( const RenderGraphPassContext& graphContext, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight,
+        bool recordInViewPass( const RenderGraphPassContext& graphContext, IRHIDevice& device, const ComputePipeline& pipeline, uint32 depthWidth, uint32 depthHeight,
                                const float4x4& viewProj, FrameViewTarget& target ) const;
         /**
          * @brief 주 시점 가림 타일을 되읽는 복사를 프레임 그래프 리스트에 넣고, 이미 도착한 사본이 있으면 우편함에 올립니다(`getSnapshot`).
@@ -114,7 +115,7 @@ namespace sw
          * @details @p barriers 가 디스패치 앞(`begin`) · 밉 사이(`betweenMips`) · 뒤(`end`)의 배리어를 낸다 — 프레임 패스는 그래프 핸들, 뷰 패스 안은 손 배리어다(cpp 의 두 판).
          */
         template <typename Barriers>
-        bool recordPyramid( IRHIPassCommandList& cmd, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj, bool bWriteTiles,
+        bool recordPyramid( IRHIPassCommandList& cmd, IRHIDevice& device, const ComputePipeline& pipeline, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj, bool bWriteTiles,
                             FrameViewTarget& target, const Barriers& barriers ) const;
 
     private:

@@ -26,7 +26,7 @@ namespace sw
                 {
                     const RHIDescriptorIndex                      index   = bUAV ? RHIDescriptorIndex{ entry._uav } : RHIDescriptorIndex{ entry._srv };
                     const optional<RHIComputeBindingLog::Binding> binding = index != kInvalidDescriptorIndex ? device.getComputeBindingLog().find( index, bUAV ) : nullopt;
-                    const ShaderBindingSlot*                      pSlot   = binding.has_value() ? psoCache.findComputeBufferSlot( binding->_pso, binding->_slot, bUAV, device.getShaderTargetFormat() ) : nullptr;
+                    const ShaderBindingSlot*                      pSlot   = binding.has_value() ? psoCache.findComputeBufferSlot( binding->_pso, binding->_slot, bUAV ) : nullptr;
                     // 크기가 다르면 셰이더가 다른 형식으로 읽는다(RAW 로 건 자리) — 틀린 이름을 붙이지 않는다.
                     if ( pSlot == nullptr || pSlot->_elementStride != entry._elementSize )
                         continue;

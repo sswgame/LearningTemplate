@@ -129,7 +129,6 @@ namespace sw
          *          DX12 는 루트 상수, Vulkan 은 푸시 상수를 쓰고, DX11 과 GL 은 계약 슬롯 b2 의 상수 버퍼로 흉내 낸다.
          */
         virtual void setGraphicsRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
-        virtual void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )                                             = 0;
         /**
          * @brief 그래픽스(픽셀) 단계에 쓰기 버퍼 u# 를 겁니다(UAV 레지스트리의 인덱스). 렌더 패스를 연 **뒤** 드로우 앞에서 부릅니다 — 셰이더 메시지 채널(`GPUMessageChannel::bindGraphics`)이 쓴다.
          * @details DX12 는 슬롯 테이블의 u 범위(모든 단계에 보인다), Vulkan 은 슬롯 세트의 u 바인딩, GL 은 SSBO `kUAVBinding0 + slot`, DX11 은 `OMSetRenderTargetsAndUnorderedAccessViews` 의
@@ -174,21 +173,6 @@ namespace sw
          * @param slot  HLSL `register(tN)` 의 N 입니다.
          */
         virtual void bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) = 0;
-
-        /**
-         * @brief 컴퓨트 스테이지에 상수 버퍼를 지정한 레지스터 슬롯(bN)에 바인딩합니다.
-         * @details 컴퓨트 패스(gpu_cull 등) 전용이다. bindConstantBuffer 는 그래픽스 스테이지만 대상으로 한다.
-         * @param constantBufferIndex bindless 디스크립터 인덱스입니다.
-         * @param slot                HLSL `register(bN)` 의 N 입니다.
-         */
-        virtual void bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) = 0;
-
-        /**
-         * @brief 컴퓨트 스테이지에 읽기 전용 구조화 SRV 버퍼를 지정한 레지스터 슬롯(tN)에 바인딩합니다.
-         * @param index bindless 디스크립터 인덱스입니다.
-         * @param slot  HLSL `register(tN)` 의 N 입니다.
-         */
-        virtual void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) = 0;
 
         // ------------------------------------------------------------------------------
         // 5) blit: 컬러 복사 (`kRHIBackBufferTexture` 는 스왑체인, 0 은 오류). 텍스처 상태 전이는 `IRHICommandList` 에만 있다
@@ -246,6 +230,29 @@ namespace sw
          *          아무것도 하지 않는다(`RHICapabilities::_bGPUBreadcrumbs` 가 거짓). 소실 뒤 읽는 쪽은 `IRHIDevice::readLastBreadcrumbs` 다. 0 은 표지가 아니다. 최상위 비트가 선 값은 패스의 끝 표지다(`GPUBreadcrumbs::kEndMarkerBit` — DX12 는 끝 칸에 MARKER_OUT 으로 쓴다).
          */
         virtual void writeBreadcrumb( uint32 markerID ) = 0;
+
+    private:
+        // ------------------------------------------------------------------------------
+        // 8) 컴퓨트 레지스터 번호 걸기 — 패스 몸통은 부르지 않는다. 셰이더 매개변수 구조체(`ComputeShaderParameters`)가 PSO 를 만들 때 리플렉션에서 푼 번호로만 건다.
+        //    번호를 손으로 적던 모양(셰이더의 레지스터를 고치면 C++ 의 같은 숫자를 함께 고쳐야 했다)을 쓸 수 없게 한다. 백엔드 · 전달자는 오버라이드한다(`IRHICommandContext`).
+        // ------------------------------------------------------------------------------
+        friend class ComputeShaderBindings;
+
+        /** @brief 컴퓨트 스테이지의 u# 에 쓰기 버퍼 · RW 텍스처를 겁니다(UAV 레지스트리의 인덱스). 네이티브 bindless 의 RW 텍스처 칸(u5..u7)은 배열 번호로 읽어 무시된다. */
+        virtual void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) = 0;
+        /**
+         * @brief 컴퓨트 스테이지에 상수 버퍼를 지정한 레지스터 슬롯(bN)에 바인딩합니다.
+         * @details 컴퓨트 패스(gpu_cull 등) 전용이다. bindConstantBuffer 는 그래픽스 스테이지만 대상으로 한다.
+         * @param constantBufferIndex bindless 디스크립터 인덱스입니다.
+         * @param slot                HLSL `register(bN)` 의 N 입니다.
+         */
+        virtual void bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) = 0;
+        /**
+         * @brief 컴퓨트 스테이지에 읽기 전용 구조화 SRV 버퍼를 지정한 레지스터 슬롯(tN)에 바인딩합니다.
+         * @param index bindless 디스크립터 인덱스입니다.
+         * @param slot  HLSL `register(tN)` 의 N 입니다.
+         */
+        virtual void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) = 0;
     };
 
     class IRHICommandList;

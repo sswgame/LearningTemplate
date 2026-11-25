@@ -37,6 +37,7 @@
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -496,11 +497,12 @@ namespace sw
         constants._albedoIndex = static_cast<uint32>( albedo._srv );
 
         // 1) 분류 — 간접 인자를 지우고(그룹 하나) 타일마다 그룹 하나. 렌더 패스 밖이다. G버퍼 알베도는 그래프가 이 패스의 입력으로 셰이더 읽기 상태로 옮겨 두었다.
-        IRHIPassCommandList& cmd = *context._pCmd;
-        cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::DeferredTileClassify ) );
-        // g_DeferredTileArgsRW(u0) / g_DeferredTileListRW(u1) — deferred_tile_classify.hlsl 레지스터와 1:1 이다.
-        cmd.bindComputeUAV( graphPass.getBufferUAV( ViewGraphResource::deferredTileArgs() ), 0 );
-        cmd.bindComputeUAV( graphPass.getBufferUAV( ViewGraphResource::deferredTileList() ), 1 );
+        IRHIPassCommandList&                                cmd = *context._pCmd;
+        ComputeShaderParameters<DeferredTileClassifyShader> parameters;
+        parameters.set( DeferredTileClassifyShader::TileArgs, graphPass.getBufferUAV( ViewGraphResource::deferredTileArgs() ) );
+        parameters.set( DeferredTileClassifyShader::TileList, graphPass.getBufferUAV( ViewGraphResource::deferredTileList() ) );
+        if ( parameters.apply( cmd, _psoManager.getComputePSO( RenderPassKind::DeferredTileClassify ) ) == false )
+            return false;
         constants._mode = kModeClear;
         cmd.setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.dispatchCompute( 1, 1, 1 );
@@ -550,9 +552,9 @@ namespace sw
         FramePassContext&                         context  = input._context;
         const RenderGraphPassDesc&                passDesc = input._passDesc;
         const hashed_string&                      target   = input._declaredColor[0]._attachment;
-        const RHIPipelineStateHandle              pso      = _psoManager.findPipelineComputePSO( hashed_string( passDesc._name.c_str() ) );
+        const ComputePipeline                     pipeline = _psoManager.findPipelineComputePSO( hashed_string( passDesc._name.c_str() ) );
         const TransientAttachmentPool::Attachment output   = activePool().find( target );
-        if ( pso == 0 || output._uav == kInvalidDescriptorIndex )
+        if ( pipeline.isValid() == false || output._uav == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputeImplementationNotReady", "Pass '%#' compute implementation has no PSO or no RW output - it does not run", passDesc._name );
             return;
@@ -603,7 +605,9 @@ namespace sw
             return;
         }
         // 입력은 레벨 콜백이 셰이더 읽기로, 출력은 이 패스의 UAV 선언으로 RW 텍스처 상태로 옮겼다(`bindPassCallbacks`). 뒤 패스의 읽기 · UAV 는 레벨 콜백이 옮기거나 기다린다.
-        context._pCmd->setComputePipelineState( pso );
+        // 컴퓨트 구현은 네이티브 bindless 에서만 만든다 — 출력도 루트 상수의 RW 번호라 이름으로 거는 칸이 없다(표는 같은 컴퓨트 패스 표다).
+        if ( ComputeShaderParameters<ComputePassShader>{}.apply( *context._pCmd, pipeline ) == false )
+            return;
         context._pCmd->setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         context._pCmd->dispatchThreads( constants._width, constants._height, 1 );
         (void)markAttachmentCleared( target );
@@ -622,9 +626,9 @@ namespace sw
         FramePassContext&                         context  = input._context;
         const RenderGraphPassDesc&                passDesc = input._passDesc;
         const hashed_string&                      target   = input._declaredColor[0]._attachment;
-        const RHIPipelineStateHandle              pso      = _psoManager.findPipelineComputePSO( hashed_string( passDesc._name.c_str() ) );
+        const ComputePipeline                     pipeline = _psoManager.findPipelineComputePSO( hashed_string( passDesc._name.c_str() ) );
         const TransientAttachmentPool::Attachment output   = activePool().find( target );
-        if ( pso == 0 || output._uav == kInvalidDescriptorIndex )
+        if ( pipeline.isValid() == false || output._uav == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputePassNotReady", "Compute pass '%#' has no PSO or no RW output - it does not run", passDesc._name );
             return;
@@ -636,9 +640,11 @@ namespace sw
         constants._width       = _pActiveView->scaleToRect( output, true ); // 사각형 밖은 디스패치하지 않는다
         constants._height      = _pActiveView->scaleToRect( output, false );
         // 출력은 UAV, 입력은 UAV 읽기로 이 패스가 선언했다 — 레벨 콜백이 RW 텍스처 상태로 옮기고, 앞 컴퓨트의 쓰기 뒤면 텍스처 UAV 배리어로 기다린다(`bindPassCallbacks`).
-        // 슬롯은 PSO 뒤에 건다(다른 PSO 를 걸면 컴퓨트 슬롯이 빈다).
-        context._pCmd->setComputePipelineState( pso );
-        context._pCmd->bindComputeUAV( output._uav, shaderslot::kComputeTextureUAV0 );
+        // 에뮬은 출력 · 입력이 RW 칸 0 · 1 · 2 다(네이티브는 셰이더가 번호로 읽어 칸이 리플렉션에 없다 — 걸지 않는다).
+        constexpr ComputePassShader::Parameter arrInputParameter[] = { ComputePassShader::Input0, ComputePassShader::Input1 };
+        static_assert( sizeof( arrInputParameter ) / sizeof( arrInputParameter[0] ) == sizeof( constants._arrInputIndex ) / sizeof( constants._arrInputIndex[0] ), "compute pass inputs and RW slots differ" );
+        ComputeShaderParameters<ComputePassShader> parameters;
+        parameters.set( ComputePassShader::Output, output._uav );
         for ( uint32 inputIndex = 0; inputIndex < passDesc._listResolvedInput.size(); ++inputIndex )
         {
             const TransientAttachmentPool::Attachment source = activePool().find( passDesc._listResolvedInput[inputIndex]._attachment );
@@ -648,8 +654,10 @@ namespace sw
                 return;
             }
             constants._arrInputIndex[inputIndex] = bNative ? static_cast<uint32>( source._uav ) : inputIndex + 1u;
-            context._pCmd->bindComputeUAV( source._uav, shaderslot::kComputeTextureUAV0 + inputIndex + 1u );
+            parameters.set( arrInputParameter[inputIndex], source._uav );
         }
+        if ( parameters.apply( *context._pCmd, pipeline ) == false )
+            return;
         context._pCmd->setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         context._pCmd->dispatchThreads( constants._width, constants._height, 1 );
         // 뒤 패스가 샘플하면 레벨 콜백이 셰이더 읽기로 옮긴다. 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다.

@@ -259,7 +259,7 @@ namespace sw
         inline constexpr uint32 kComputeShaderUAVSlotCount = SW_COMPUTE_SHADER_UAV_SLOT_COUNT;
         /// @brief 셰이더 메시지 링의 쓰기 슬롯(u4)입니다 — 셰이더 소유 슬롯 바로 뒤, RW 텍스처 슬롯 바로 앞이라 어느 컴퓨트와도 겹치지 않습니다. 그래픽스 단계도 같은 번호다(`IRHICommandList::bindGraphicsUAV`).
         inline constexpr uint32 kGPUMessageUAV = SW_SLOT_GPU_MESSAGE_UAV;
-        /// @brief 컴퓨트 RW 텍스처 슬롯 u5..u7 입니다. DX11 과 GL 만 실제 슬롯이고, DX12 와 Vulkan 은 배열 인덱스라 bindComputeUAV 가 무시합니다.
+        /// @brief 컴퓨트 RW 텍스처 슬롯 u5..u7 입니다. DX11 과 GL 만 실제 슬롯이고, DX12 와 Vulkan 은 배열 인덱스라 리플렉션에 칸이 없어 컴퓨트 매개변수 구조체가 걸지 않습니다(`EngineComputeShaders.h`).
         inline constexpr uint32 kComputeTextureUAV0         = SW_SLOT_COMPUTE_TEXUAV0;
         inline constexpr uint32 kComputeTextureUAVSlotCount = SW_COMPUTE_TEXUAV_SLOT_COUNT;
         inline constexpr uint32 kStaticSamplerCount         = SW_STATIC_SAMPLER_COUNT;

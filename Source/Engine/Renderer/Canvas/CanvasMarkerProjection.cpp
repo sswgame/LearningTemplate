@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Debug/GPUMessage.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Canvas/CanvasQuadBuffer.h"
 
@@ -86,12 +87,12 @@ namespace sw
         _bMarkerReadsInstances = bAnyInstanceSlot;
     }
 
-    void CanvasMarkerProjection::record( IRHIPassCommandList& cmd, const CanvasQuadBuffer& quadBuffer, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIBufferSRVIndex instanceSRV,
-                                         RHIBufferSRVIndex placeholderSRV, GPUMessageChannel& inoutMessages, bool bShowInstanceSlots ) const
+    void CanvasMarkerProjection::record( IRHIPassCommandList& cmd, const CanvasQuadBuffer& quadBuffer, const ComputePipeline& pipeline, RHIBufferHandle instanceBuffer,
+                                         RHIBufferSRVIndex instanceSRV, RHIBufferSRVIndex placeholderSRV, const GPUMessageChannel& messages, bool bShowInstanceSlots ) const
     {
         if ( _markerCount == 0 )
             return;
-        if ( pso == 0 )
+        if ( pipeline.isValid() == false )
         {
             // 셰이더가 쿠킹되지 않았거나 컴퓨트 능력이 없는 백엔드다. CPU 투영으로 대신하지 않는다 — 켜진 마커의 앵커 배율은 CPU 가 0 으로 올렸으므로 그려지지 않는다.
             SW_LOG_ERROR_ONCE_ID( "Canvas.CanvasMarkerProjectionCompute", "The canvas marker projection compute PSO is missing (shader not cooked or no compute support) - GPU-projected markers are not drawn" );
@@ -112,15 +113,16 @@ namespace sw
         SW_PROFILE_SCOPE( "RT.Canvas.MarkerProject" );
         // 앵커 원소는 사각형 버퍼의 맨 앞이다. 쓰기 앞 UAV · 캔버스 그리기 앞 셰이더 읽기 · 인스턴스 버퍼 읽기는 프레임 그래프가 낸다
         // (`CanvasMarkers` · `InstanceBuffer` — `FrameGraphExecutor::beginFrame` 이 등록한다. 인스턴스 버퍼는 쓰는 패스가 없는 프레임에 셰이더 읽기로 쉰다).
-        cmd.setComputePipelineState( pso );
-        // g_MarkerRows(t0) / g_MarkerInstances(t1) / g_MarkerQuadsRW(u0). canvas_marker.hlsl 레지스터와 1:1 이다.
-        cmd.bindComputeShaderResource( _markerRowBuffer._srv, 0 );
-        cmd.bindComputeShaderResource( _bMarkerReadsInstances ? instanceSRV : placeholderSRV, 1 );
-        cmd.bindComputeUAV( quads._uav, 0 );
+        ComputeShaderParameters<CanvasMarkerShader> parameters;
+        parameters.set( CanvasMarkerShader::MarkerRows, _markerRowBuffer._srv );
+        parameters.set( CanvasMarkerShader::MarkerInstances, _bMarkerReadsInstances ? instanceSRV : placeholderSRV );
+        parameters.set( CanvasMarkerShader::Quads, quads._uav );
+        parameters.set( CanvasMarkerShader::GPUMessages, messages.getComputeUAV() ); // 메시지 변형 PSO 일 때만 셰이더가 읽는다
+        if ( parameters.apply( cmd, pipeline ) == false )
+            return;
         // 루트 상수 하나(canvas_marker.hlsl g_MarkerDebugMode) — 1 이면 앵커의 네 번째 값에 인스턴스 칸 유무 코드를 쓴다(보기 모드 MarkerSlots).
         const uint32 debugMode = bShowInstanceSlots ? 1u : 0u;
         cmd.setComputeRootConstants( 1, &debugMode );
-        inoutMessages.bindCompute( cmd ); // canvas_marker.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
         cmd.dispatchThreads( _markerCount, 1, 1 );
     }
 

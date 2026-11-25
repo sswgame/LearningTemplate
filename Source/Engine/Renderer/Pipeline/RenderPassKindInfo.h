@@ -24,6 +24,7 @@
 
 namespace sw
 {
+    struct ComputeShaderParameterInfo;
     /**
      * @brief G버퍼 패스가 머티리얼 셰이더에 추가하는 define 입니다. 픽셀 출력 서명을 MRT 로 바꿉니다.
      * @details 머티리얼이 셰이더 경로를 정하므로 디퍼드의 G버퍼 패스도 머티리얼의 `.hlsl` 로 그립니다. 그 셰이더가
@@ -183,7 +184,7 @@ namespace sw
          */
         static constexpr uint32 kOutputPass = BitUtil::bit( 19 );
         /**
-         * @brief 셰이더가 메시지(`SW_GPU_ASSERT` · `SW_GPU_PRINT` · `SW_GPU_LOG`)를 가진 패스다 — 컴퓨트(gpu_cull · mesh_morph · canvas_marker)와 그래픽스(Present 의 fullscreen_blit). `-gv_gpuMessages` 가 켜지면 PSO 가 `kGPUMessagesDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 메시지 버퍼를 u4 에 건다(컴퓨트 `bindCompute`, 그래픽스 `bindGraphics`).
+         * @brief 셰이더가 메시지(`SW_GPU_ASSERT` · `SW_GPU_PRINT` · `SW_GPU_LOG`)를 가진 패스다 — 컴퓨트(gpu_cull · mesh_morph · canvas_marker)와 그래픽스(Present 의 fullscreen_blit). `-gv_gpuMessages` 가 켜지면 PSO 가 `kGPUMessagesDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 메시지 버퍼를 u4 에 건다(컴퓨트는 매개변수 구조체의 `getComputeUAV`, 그래픽스 `bindGraphics`).
          * @details define 은 `selectRenderPassShader` 가 붙인다 — 쿠커와 런타임이 같은 함수를 부르므로 어긋나지 않고, Shipping 은 `GPUMessageChannel::isRequested` 가 거짓이라 변형이 생기지 않는다.
          */
         static constexpr uint32 kGPUMessageTarget = BitUtil::bit( 20 );
@@ -290,6 +291,13 @@ namespace sw
          *          PSO(RGBA8)와 렌더 타깃이 어긋났다(D3D12 ExecuteIndirect 검증 · Vulkan 렌더 패스 비호환). 셰이더 · 깊이 · 블렌드는 그대로 자기 표에서 정한다(쿠커와 같은 답).
          */
         RenderPassKind _targetSourceType{ RenderPassKind::Invalid };
+        /**
+         * @brief 컴퓨트 패스 셰이더의 매개변수 표(`EngineComputeShaders.h` 의 `kParameters`)입니다. PSO 를 만들 때 리플렉션에 풀어 PSO 옆에 둔다(`ComputeShaderBindings::resolve`).
+         * @details 빈 표는 이름으로 거는 자원이 없는 셰이더(루트 상수 · bindless 만)다 — 셰이더가 자원을 선언하면 PSO 생성이 오류로 멈춘다.
+         */
+        const ComputeShaderParameterInfo* _pComputeParameters{ nullptr };
+        /** @brief `_pComputeParameters` 의 줄 수입니다. */
+        uint32 _computeParameterCount{ 0 };
         /** @brief `RenderPassTraitFlag` 의 합입니다. */
         uint32 _flags{ 0 };
         /** @brief 출력 선언이 없을 때의 컬러 RT 수입니다. */

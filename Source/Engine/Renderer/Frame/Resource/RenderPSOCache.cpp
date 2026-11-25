@@ -72,13 +72,13 @@ namespace sw
         return it != _mapPSODesc.end() ? it->second._depthStencilFormat : RHIFormat::Unknown;
     }
 
-    const ShaderBindingSlot* RenderPSOCache::findComputeBufferSlot( RHIPipelineStateHandle pso, uint32 slot, bool bUAV, ShaderTargetFormat targetFormat )
+    const ShaderBindingSlot* RenderPSOCache::findComputeBufferSlot( RHIPipelineStateHandle pso, uint32 slot, bool bUAV ) const
     {
-        RHIPipelineStateDesc desc{};
-        if ( findDesc( pso, desc ) == false || desc._computeShaderPath.empty() )
+        const ShaderBindingLayout* pLayout = findLayout( pso );
+        if ( pLayout == nullptr )
             return nullptr;
         const ShaderBindingKind kind = bUAV ? ShaderBindingKind::RwStructuredBuffer : ShaderBindingKind::StructuredBuffer;
-        for ( const ShaderBindingSlot& candidate : _bindingLayoutCache.getOrBuild( desc, targetFormat ).getSlots() )
+        for ( const ShaderBindingSlot& candidate : pLayout->getSlots() )
         {
             if ( candidate._kind == kind && candidate._registerIndex == slot )
                 return &candidate;
@@ -127,17 +127,24 @@ namespace sw
         _mapPSODesc.erase( handle );
     }
 
-    void RenderPSOCache::setEnginePSO( IRHIDevice* pDevice, RenderPassKind passType, RHIPipelineState&& pso )
+    void RenderPSOCache::setEnginePSO( IRHIDevice* pDevice, RenderPassKind passType, RHIPipelineState&& pso, const ComputeShaderBindings& computeBindings )
     {
-        RHIPipelineState& slot = _mapEnginePSO[passType];
-        releaseReplacedPSO( pDevice, slot );
-        slot = std::move( pso );
+        PassPSOEntry& slot = _mapEnginePSO[passType];
+        releaseReplacedPSO( pDevice, slot._pso );
+        slot._pso             = std::move( pso );
+        slot._computeBindings = computeBindings;
     }
 
     RHIPipelineStateHandle RenderPSOCache::findEnginePSO( RenderPassKind passType ) const
     {
         const auto it = _mapEnginePSO.find( passType );
-        return ( it != _mapEnginePSO.end() ) ? it->second._handle : RHIPipelineStateHandle{ 0 };
+        return ( it != _mapEnginePSO.end() ) ? it->second._pso._handle : RHIPipelineStateHandle{ 0 };
+    }
+
+    ComputePipeline RenderPSOCache::findEngineComputePSO( RenderPassKind passType ) const
+    {
+        const auto it = _mapEnginePSO.find( passType );
+        return ( it != _mapEnginePSO.end() ) ? ComputePipeline{ it->second._pso._handle, it->second._computeBindings } : ComputePipeline{};
     }
 
     void RenderPSOCache::setOutputPSO( IRHIDevice* pDevice, RenderPassKind passType, RHIFormat targetFormat, RHIPipelineState&& pso )
@@ -172,19 +179,20 @@ namespace sw
         return true;
     }
 
-    void RenderPSOCache::setPipelineComputePSO( IRHIDevice* pDevice, const hashed_string& passName, RHIPipelineState&& pso )
+    void RenderPSOCache::setPipelineComputePSO( IRHIDevice* pDevice, const hashed_string& passName, RHIPipelineState&& pso, const ComputeShaderBindings& computeBindings )
     {
-        RHIPipelineState& slot = _mapPipelineComputePSO[passName];
-        releaseReplacedPSO( pDevice, slot );
-        slot = std::move( pso );
+        PassPSOEntry& slot = _mapPipelineComputePSO[passName];
+        releaseReplacedPSO( pDevice, slot._pso );
+        slot._pso             = std::move( pso );
+        slot._computeBindings = computeBindings;
     }
 
-    bool RenderPSOCache::findPipelineComputePSO( const hashed_string& passName, RHIPipelineStateHandle& outPipelineState ) const
+    bool RenderPSOCache::findPipelineComputePSO( const hashed_string& passName, ComputePipeline& outPipeline ) const
     {
         const auto it = _mapPipelineComputePSO.find( passName );
         if ( it == _mapPipelineComputePSO.end() )
             return false;
-        outPipelineState = it->second._handle;
+        outPipeline = ComputePipeline{ it->second._pso._handle, it->second._computeBindings };
         return true;
     }
 
@@ -297,9 +305,9 @@ namespace sw
             _mapMaterialPSO.clear();
         }
 
-        for ( auto& [passType, pso] : _mapEnginePSO )
+        for ( auto& [passType, entry] : _mapEnginePSO )
         {
-            pso.release( pDevice );
+            entry._pso.release( pDevice );
         }
         _mapEnginePSO.clear();
 
@@ -314,9 +322,9 @@ namespace sw
             pso.release( pDevice );
         }
         _mapGlobalPSO.clear();
-        for ( auto& [passName, pso] : _mapPipelineComputePSO )
+        for ( auto& [passName, entry] : _mapPipelineComputePSO )
         {
-            pso.release( pDevice );
+            entry._pso.release( pDevice );
         }
         _mapPipelineComputePSO.clear();
 
@@ -358,12 +366,12 @@ namespace sw
         bool bPassReleased{ false };
         for ( auto it = _mapEnginePSO.begin(); it != _mapEnginePSO.end(); )
         {
-            if ( VectorUtil::contains( listAffected, it->second._handle ) == false )
+            if ( VectorUtil::contains( listAffected, it->second._pso._handle ) == false )
             {
                 ++it;
                 continue;
             }
-            destroy( it->second );
+            destroy( it->second._pso );
             bPassReleased = true;
             it            = _mapEnginePSO.erase( it );
         }
@@ -389,12 +397,12 @@ namespace sw
         }
         for ( auto it = _mapPipelineComputePSO.begin(); it != _mapPipelineComputePSO.end(); )
         {
-            if ( it->second.isValid() && VectorUtil::contains( listAffected, it->second._handle ) == false )
+            if ( it->second._pso.isValid() && VectorUtil::contains( listAffected, it->second._pso._handle ) == false )
             {
                 ++it;
                 continue;
             }
-            destroy( it->second );
+            destroy( it->second._pso );
             it = _mapPipelineComputePSO.erase( it );
         }
 

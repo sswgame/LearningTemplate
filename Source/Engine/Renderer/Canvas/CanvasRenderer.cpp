@@ -71,10 +71,10 @@ namespace sw
         _quadBuffer.upload( device, inoutFrame, _markers.getMarkerCount() > 0 );
     }
 
-    void CanvasRenderer::recordMarkerProjection( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIBufferSRVIndex instanceSRV, RHIBufferSRVIndex placeholderSRV,
-                                                 GPUMessageChannel& inoutMessages, bool bShowInstanceSlots )
+    void CanvasRenderer::recordMarkerProjection( IRHIPassCommandList& cmd, const ComputePipeline& pipeline, RHIBufferHandle instanceBuffer, RHIBufferSRVIndex instanceSRV,
+                                                 RHIBufferSRVIndex placeholderSRV, const GPUMessageChannel& messages, bool bShowInstanceSlots )
     {
-        _markers.record( cmd, _quadBuffer, pso, instanceBuffer, instanceSRV, placeholderSRV, inoutMessages, bShowInstanceSlots );
+        _markers.record( cmd, _quadBuffer, pipeline, instanceBuffer, instanceSRV, placeholderSRV, messages, bShowInstanceSlots );
     }
 
     uint32 CanvasRenderer::drawList( IRHIPassCommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth,

@@ -16,6 +16,7 @@
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIPipelineState.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/Shader/Binding/ComputeShaderParameters.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 #include "Engine/Graphics/View/RenderViewMode.h"
 #include "Engine/Renderer/Frame/Resource/MaterialPSOBuilder.h"
@@ -77,6 +78,16 @@ namespace sw
             [[nodiscard]] static MaterialPSOEntry failed() { return MaterialPSOEntry{ 0, {}, MaterialPSOState::Failed }; }
         };
 
+        /**
+         * @struct PassPSOEntry
+         * @brief 엔진 패스 · 파이프라인 컴퓨트 패스의 PSO 하나와, 컴퓨트면 그 PSO 에서 풀어 둔 매개변수 표입니다(`ComputeShaderBindings::resolve` — 기록은 이름을 찾지 않는다).
+         */
+        struct PassPSOEntry
+        {
+            RHIPipelineState      _pso{};
+            ComputeShaderBindings _computeBindings{};
+        };
+
         /** @brief 등록된 PSO 하나와 그 바인딩 레이아웃입니다. `collectLayouts` 가 반환합니다. */
         struct RegisteredLayout
         {
@@ -105,25 +116,29 @@ namespace sw
         [[nodiscard]] bool findDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief PSO 의 깊이 형식만 돌려줍니다(모르는 PSO · 깊이 없는 PSO 는 `Unknown`). 프레임마다 묻는 자리가 서술 전체(글 여럿)를 복사하지 않게 한다. */
         RHIFormat findDepthStencilFormat( RHIPipelineStateHandle pso ) const;
-        /** @brief 레이아웃 없이 desc 만 핸들에 적습니다 — 컴퓨트 PSO(`createComputePipelineState`)가 어느 셰이더로 만들었는지 `releasePSOsUsingShader` 가 알게 한다. 0 핸들은 무시합니다. */
+        /** @brief 레이아웃 없이 desc 만 핸들에 적습니다 — 어느 셰이더로 만들었는지 `releasePSOsUsingShader` 가 알게 한다(레이아웃이 필요 없는 테스트 장치). 0 핸들은 무시합니다. */
         void registerDesc( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
         /**
          * @brief 컴퓨트 PSO 의 @p slot(@p bUAV 면 u 슬롯, 아니면 t 슬롯)이 선언한 구조 버퍼 슬롯입니다. 모르는 PSO · 구조 버퍼가 아닌 슬롯이면 nullptr 입니다(버퍼 보기가 원소 형식을 읽는다).
-         * @details 컴퓨트 PSO 는 레이아웃을 등록하지 않으므로(`registerDesc`) 만든 서술로 리플렉션 레이아웃을 짓는다(캐시).
          */
-        const ShaderBindingSlot* findComputeBufferSlot( RHIPipelineStateHandle pso, uint32 slot, bool bUAV, ShaderTargetFormat targetFormat );
+        const ShaderBindingSlot* findComputeBufferSlot( RHIPipelineStateHandle pso, uint32 slot, bool bUAV ) const;
         /** @brief 등록된 (PSO, 레이아웃) 모두를 복사해 반환합니다. 셋업에서 폴백 버퍼 stride 를 모을 때 씁니다. */
         void collectLayouts( vector<RegisteredLayout>& outListLayout ) const;
 
         // ------------------------------------------------------------------------------
         // 2) 엔진 패스 PSO 와 출력 포맷별 PSO. Present 와 Canvas 처럼 주 출력에 그리는 패스는 대상 포맷마다 PSO 가 다르다
         // ------------------------------------------------------------------------------
-        /** @brief 패스 타입의 엔진 PSO 를 둡니다. 다른 핸들을 덮어쓰면 옛 핸들은 @p pDevice 로 해제한다(`IRHIDevice::releaseHandle` — 쓰던 프레임 뒤로 미룬다). */
-        void setEnginePSO( IRHIDevice* pDevice, RenderPassKind passType, RHIPipelineState&& pso );
+        /**
+         * @brief 패스 타입의 엔진 PSO 를 둡니다. 다른 핸들을 덮어쓰면 옛 핸들은 @p pDevice 로 해제한다(`IRHIDevice::releaseHandle` — 쓰던 프레임 뒤로 미룬다).
+         * @param computeBindings 컴퓨트 PSO 면 그 PSO 에서 푼 매개변수 표입니다(그래픽스는 빈 값).
+         */
+        void setEnginePSO( IRHIDevice* pDevice, RenderPassKind passType, RHIPipelineState&& pso, const ComputeShaderBindings& computeBindings = ComputeShaderBindings{} );
         /** @brief 패스 타입의 엔진 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle findEnginePSO( RenderPassKind passType ) const;
+        /** @brief 패스 타입의 엔진 컴퓨트 PSO 와 풀어 둔 매개변수 표입니다. 없으면 빈 값(`isValid` 거짓)입니다. */
+        ComputePipeline findEngineComputePSO( RenderPassKind passType ) const;
         /** @brief 엔진 PSO 모두입니다. 머티리얼 변형을 만들 때 씬 메시 패스를 고르려고 훑습니다(기록 전). */
-        const unordered_map<RenderPassKind, RHIPipelineState>& getEnginePSOs() const { return _mapEnginePSO; }
+        const unordered_map<RenderPassKind, PassPSOEntry>& getEnginePSOs() const { return _mapEnginePSO; }
 
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다. 부르는 쪽이 폴백으로 갑니다. 덮어쓴 옛 핸들은 `setEnginePSO` 와 같이 해제한다. */
         void setOutputPSO( IRHIDevice* pDevice, RenderPassKind passType, RHIFormat targetFormat, RHIPipelineState&& pso );
@@ -137,10 +152,10 @@ namespace sw
         void setGlobalPSO( IRHIDevice* pDevice, uint64 descHash, RHIPipelineState&& pso );
         /** @brief 그 지문의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
         [[nodiscard]] bool findGlobalPSO( uint64 descHash, RHIPipelineStateHandle& outPipelineState ) const;
-        /** @brief 렌더 파이프라인의 컴퓨트 패스 PSO 를 패스 이름으로 둡니다(XML 패스 하나에 PSO 하나). 실패(0)도 기록합니다. */
-        void setPipelineComputePSO( IRHIDevice* pDevice, const hashed_string& passName, RHIPipelineState&& pso );
+        /** @brief 렌더 파이프라인의 컴퓨트 패스 PSO 와 그 PSO 에서 푼 매개변수 표를 패스 이름으로 둡니다(XML 패스 하나에 PSO 하나). 실패(0)도 기록합니다. */
+        void setPipelineComputePSO( IRHIDevice* pDevice, const hashed_string& passName, RHIPipelineState&& pso, const ComputeShaderBindings& computeBindings );
         /** @brief 그 컴퓨트 패스의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
-        [[nodiscard]] bool findPipelineComputePSO( const hashed_string& passName, RHIPipelineStateHandle& outPipelineState ) const;
+        [[nodiscard]] bool findPipelineComputePSO( const hashed_string& passName, ComputePipeline& outPipeline ) const;
 
         // ------------------------------------------------------------------------------
         // 3) 머티리얼 퍼뮤테이션 변형: 키는 `MaterialPSOKey`(패스 PSO, 퍼뮤테이션 해시, 뷰 모드, 정점 형식, 컬 반전)
@@ -221,13 +236,13 @@ namespace sw
         uint64 _layoutSerial                                                            SW_GUARDED_BY( _layoutMutex ){ 0 }; ///< 레이아웃 등록 번호(`getLayoutSerial`)
         mutable shared_mutex                                                            _layoutMutex;                       ///< 기록 워커들이 배치마다 조회만 한다 — 공유 잠금(언리얼 PSO 캐시의 `FRWLock`)
         /// @brief 엔진이 만들어 둔 패스별 PSO 입니다. 키가 enum 이라 조회에 문자열을 만들지 않습니다.
-        unordered_map<RenderPassKind, RHIPipelineState> _mapEnginePSO;
+        unordered_map<RenderPassKind, PassPSOEntry> _mapEnginePSO;
         /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPSOKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
         unordered_map<uint64, RHIPipelineState> _mapOutputPSO;
         /// @brief 코드가 짓는 PSO 입니다(키 = 서술체 지문 `RHIPipelineStateDesc::computeHash`).
         unordered_map<uint64, RHIPipelineState> _mapGlobalPSO;
         /// @brief 렌더 파이프라인 컴퓨트 패스의 PSO 입니다(키 = 패스 이름).
-        unordered_map<hashed_string, RHIPipelineState>                                      _mapPipelineComputePSO;
+        unordered_map<hashed_string, PassPSOEntry>                                          _mapPipelineComputePSO;
         unordered_map<MaterialPSOKey, MaterialPSOEntry, MaterialPSOKeyHash> _mapMaterialPSO SW_GUARDED_BY( _materialPSOMutex );
         mutable shared_mutex                                                                _materialPSOMutex; ///< `_layoutMutex` 와 같은 까닭의 공유 잠금
         /// @brief 머티리얼 변형의 생성 줄과 전용 스레드입니다. 캐시가 소유해 미리보기 렌더러와 함께 씁니다(해제는 `releaseAll` 이 스레드부터 합류합니다).

@@ -94,8 +94,12 @@ namespace sw
 
         /** @brief 패스 타입에 해당하는 엔진 PSO 입니다. 없으면 0 입니다. 프레임 패스(`isFramePassType`)는 이 파이프라인이 선언하지 않았으면 0 입니다. */
         RHIPipelineStateHandle getEnginePSO( RenderPassKind passType ) const;
-        /** @brief 파이프라인 컴퓨트 패스(`RenderPassKind::Compute`) @p passName 의 PSO 입니다. 없으면 0 입니다. */
-        RHIPipelineStateHandle findPipelineComputePSO( const hashed_string& passName ) const;
+        /**
+         * @brief 컴퓨트 패스 타입의 엔진 PSO 와 그 PSO 에서 풀어 둔 매개변수 표입니다(`ComputeShaderParameters::apply` 가 받는다). 없으면 빈 값입니다. 프레임 패스 규칙은 `getEnginePSO` 와 같다.
+         */
+        ComputePipeline getComputePSO( RenderPassKind passType ) const;
+        /** @brief 파이프라인 컴퓨트 패스(`RenderPassKind::Compute` · 풀스크린 패스의 컴퓨트 구현) @p passName 의 PSO 와 매개변수 표입니다. 없으면 빈 값입니다. */
+        ComputePipeline findPipelineComputePSO( const hashed_string& passName ) const;
         /**
          * @brief 디퍼드 조명 타일 종류 @p tileClass 의 PSO(조명 패스 서술 + 그 종류의 엽만 — deferred_lighting.hlsl VSTile)입니다. 없으면 0 입니다.
          * @details **조회만 한다.** 셋업(`createPassPSOs`)이 분류를 쓸 수 있는 백엔드(네이티브 bindless · 간접 인자)와 조명 패스가 있는 파이프라인에서 만든다.
@@ -206,11 +210,12 @@ namespace sw
         /** @brief 셋업이 만들 컴퓨트 패스 PSO 하나입니다(셰이더 경로 · define 은 쿠커와 같은 `selectRenderPassShader`). */
         struct ComputePSOJob
         {
-            string         _shaderPath;
-            string         _entryPoint; ///< 비면 스테이지 기본값입니다
-            vector<string> _listDefine;
-            hashed_string  _pipelinePassName; ///< 파이프라인 컴퓨트 패스면 그 이름입니다(비면 엔진 슬롯 `_passType`)
-            RenderPassKind _passType{ RenderPassKind::Invalid };
+            string                      _shaderPath;
+            string                      _entryPoint; ///< 비면 스테이지 기본값입니다
+            vector<string>              _listDefine;
+            hashed_string               _pipelinePassName; ///< 파이프라인 컴퓨트 패스면 그 이름입니다(비면 엔진 슬롯 `_passType`)
+            RenderPassKind              _passType{ RenderPassKind::Invalid };
+            ComputeShaderParameterTable _parameters{}; ///< 셰이더의 매개변수 표(PSO 를 만들 때 리플렉션에 푼다)
         };
 
         /** @brief 그래픽스 PSO desc 의 셰이더 요청(정점 · 있으면 픽셀)을 @p inoutListShader 에 더합니다. 백엔드 팩토리와 같은 해석이라(`RHIShaderRequest::resolveGraphics`) 캐시 키가 같다. */

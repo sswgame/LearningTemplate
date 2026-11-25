@@ -725,8 +725,8 @@ namespace sw
     {
         if ( _nanCheck.isActive() == false || pDevice == nullptr )
             return;
-        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassKind::NanCheck );
-        if ( pso == 0 )
+        const ComputePipeline pipeline = _psoManager.getComputePSO( RenderPassKind::NanCheck );
+        if ( pipeline.isValid() == false )
         {
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.GvNanCheckButNaN", "The NaN check is on but its PSO is missing (shader not cooked?) - no output is scanned" );
             return;
@@ -753,7 +753,7 @@ namespace sw
                 formatstring( arrName, sizeof( arrName ), "%#:%#", pass._name, output._attachment.view() );
                 // 컴퓨트가 엔진 텍스처로 읽도록 셰이더 읽기 상태로 옮기고, 다음 프레임의 패스가 쓰도록 렌더 타깃 상태로 돌려 둔다.
                 pCmd->prepareTextureForShaderRead( attachment._texture );
-                _nanCheck.scan( *pCmd, pso, arrName, attachment._srv, attachment._width, attachment._height );
+                _nanCheck.scan( *pCmd, pipeline, arrName, attachment._srv, attachment._width, attachment._height );
                 pCmd->prepareTextureForRenderTarget( attachment._texture );
             }
         }

@@ -48,6 +48,12 @@ namespace sw
                     return;
                 for ( ShaderReflectedBinding& resource : inoutReflection._listResource )
                 {
+                    // GL 의 컴퓨트 RW 텍스처 칸은 이미지 유닛 번호다(common.hlsli 의 명시 binding) — 레지스터 u5..u7 로 되돌린다(컴퓨트 매개변수 표가 그 번호로 건다).
+                    if ( bOpenGL && resource._kind == ShaderBindingKind::RwTexture && resource._registerSpace == 0 && resource._bindPoint >= shaderslot::gl::kImageUnit0 )
+                    {
+                        resource._bindPoint = shaderslot::kComputeTextureUAV0 + ( resource._bindPoint - shaderslot::gl::kImageUnit0 );
+                        continue;
+                    }
                     if ( resource._kind != ShaderBindingKind::StructuredBuffer || resource._registerSpace != 0 )
                         continue;
                     const bool bWritable = resource._bindPoint >= uShift;

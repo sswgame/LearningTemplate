@@ -85,7 +85,7 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
     computeDesc._computeShaderPath = "shaders/blur_cs.hlsl";
     cache.registerDesc( kBlurPSO, computeDesc );
     const hashed_string computePassName{ "Blur" };
-    cache.setPipelineComputePSO( &device, computePassName, makePSO( kBlurPSO ) );
+    cache.setPipelineComputePSO( &device, computePassName, makePSO( kBlurPSO ), ComputeShaderBindings{} );
     // 머티리얼 변형: 만든 것(4 — 그림자 셰이더) · 실패한 것 · 만드는 중인 것.
     cache.registerDesc( kVariantPSO, makeGraphicsDesc( "shaders/shadow.hlsl" ) );
     cache.setMaterialPSO( makeVariantKey( 100 ), RenderPSOCache::MaterialPSOEntry::ready( makePSO( kVariantPSO ) ) );
@@ -95,7 +95,7 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
     // 컴퓨트 셰이더 하나 — 그 PSO 만 놓고, 실패한 변형 · 만드는 중인 변형은 다시 만들게 지운다. 패스 PSO · 만든 변형은 그대로다.
     SW_EXPECT_EQUAL( 1u, cache.releasePSOsUsingShader( &device, "engine:shaders/blur_cs.hlsl" ) );
     SW_EXPECT_TRUE( factory._listDestroyedPipelineState == vector<RHIPipelineStateHandle>{ kBlurPSO } );
-    RHIPipelineStateHandle found{ 0 };
+    ComputePipeline found{};
     SW_EXPECT_FALSE( cache.findPipelineComputePSO( computePassName, found ) );
     SW_EXPECT_EQUAL( kForwardPSO, cache.findEnginePSO( RenderPassKind::ForwardOpaque ) );
     SW_EXPECT_EQUAL( kShadowPSO, cache.findEnginePSO( RenderPassKind::Shadow ) );

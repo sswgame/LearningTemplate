@@ -11,6 +11,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Graph/FrameBufferTable.h"
@@ -800,14 +801,13 @@ namespace sw
         context.uavBarrier( RenderGraphBufferUAV{ VFXFrameResource::particles() }, slot );
     }
 
-    void VFXGPUSimulation::recordSimulation( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const
+    void VFXGPUSimulation::recordSimulation( const RenderGraphPassContext& context, const ComputePipeline& pipeline ) const
     {
-        const bool bNothingToDispatch = _listDispatch.empty() || pso == 0 || _paramBuffer.isValid() == false || context.getCommandList() == nullptr;
+        const bool bNothingToDispatch = _listDispatch.empty() || pipeline.isValid() == false || _paramBuffer.isValid() == false || context.getCommandList() == nullptr;
         if ( bNothingToDispatch )
             return;
         SW_PROFILE_SCOPE( "RT.VFX.Simulate" );
         IRHIPassCommandList& cmd = *context.getCommandList();
-        cmd.setComputePipelineState( pso );
         // 깊이 히스토리 — 지난 프레임 그 뷰가 남긴 깊이를 옮긴 R32 실수 텍스처. RW 텍스처로 읽는다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다).
         // 생산자(`FrameGraphExecutor::recordDepthHistory` — 입력을 채운 판정 `canCopyDepthHistory` 와 같다)가 RW 텍스처 상태로 넘겨 두었다.
         // 비 가림 맵을 읽는 방출기는 그 맵의 사본을 같은 자리에 건다(`getCollisionDepth`).
@@ -822,68 +822,74 @@ namespace sw
                                    context.getBuffer( RenderGraphBufferUAV{ VFXFrameResource::args() }, state._frameSlot ) != 0;
             if ( bDeclared == false )
                 continue;
-            // g_VFXParams(t0) / g_VFXStateRW(u0) / g_VFXParticlesRW(u1) / g_VFXArgsRW(u2) / 깊이 히스토리(RW 텍스처 슬롯 0) / 루트 상수 g_VFXParamBase.
-            // vfx_simulate.hlsl 레지스터와 1:1 이다.
-            cmd.bindComputeShaderResource( _paramBuffer._srv, 0 );
-            cmd.bindComputeUAV( state._stateBuffer._uav, 0 );
-            cmd.bindComputeUAV( state._particleBuffer._uav, 1 );
-            cmd.bindComputeUAV( state._argsBuffer._uav, 2 );
-            // 라이트 버퍼(u3) — 라이트를 쓰는 방출기만 건다. 매개변수의 라이트 행이 슬롯 수 0 이면 셰이더는 읽지도 쓰지도 않는다.
+            // 루트 상수 g_VFXParamBase 는 패스마다 `recordEmitterPasses` 가 쓴다.
+            ComputeShaderParameters<VFXSimulationShader> parameters;
+            parameters.set( VFXSimulationShader::Params, _paramBuffer._srv );
+            parameters.set( VFXSimulationShader::State, state._stateBuffer._uav );
+            parameters.set( VFXSimulationShader::Particles, state._particleBuffer._uav );
+            parameters.set( VFXSimulationShader::Args, state._argsBuffer._uav );
+            // 라이트 버퍼 — 라이트를 쓰는 방출기만 건다. 매개변수의 라이트 행이 슬롯 수 0 이면 셰이더는 읽지도 쓰지도 않는다.
             const bool bWritesLights = dispatch._bLights && bLightBufferReady;
             if ( bWritesLights )
-                cmd.bindComputeUAV( _frameInput._lightUAV, 3 );
+                parameters.set( VFXSimulationShader::Lights, _frameInput._lightUAV );
             const VFXDepthHistoryInput& depth = getCollisionDepth( state._clock.getDef()._collision );
-            if ( depth._texture != 0 && depth._uav != kInvalidDescriptorIndex )
-                cmd.bindComputeUAV( depth._uav, shaderslot::kComputeTextureUAV0 );
+            if ( depth._texture != 0 )
+                parameters.set( VFXSimulationShader::SceneDepth, depth._uav ); // 에뮬 백엔드의 RW 칸 0(네이티브는 루트 상수의 번호로 읽는다)
+            if ( parameters.apply( cmd, pipeline ) == false )
+                return;
             recordEmitterPasses( context, dispatch );
             if ( bWritesLights )
                 context.uavBarrier( getLightBufferUAV() ); // 다음 방출기가 같은 버퍼의 다른 슬롯 범위를 쓴다 — 범위가 겹치지 않아도 상태 추적을 맞춘다
         }
     }
 
-    void VFXGPUSimulation::recordSort( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const
+    void VFXGPUSimulation::recordSort( const RenderGraphPassContext& context, const ComputePipeline& pipeline ) const
     {
         // 정렬 — 방출기(ViewDepth 는 방출기 × 뷰)마다 워크그룹 하나가 살아 있는 입자를 정렬해 순서 버퍼의 그 구간에 쓴다(vfx_particle_sort.hlsl).
-        const bool bSortReady = _listSortDispatch.empty() == false && pso != 0 && _orderBuffer.isValid() && _paramBuffer.isValid() && context.getCommandList() != nullptr;
+        const bool bSortReady = _listSortDispatch.empty() == false && pipeline.isValid() && _orderBuffer.isValid() && _paramBuffer.isValid() && context.getCommandList() != nullptr;
         if ( bSortReady == false || context.getBuffer( RenderGraphBufferUAV{ VFXFrameResource::order() } ) == 0 )
             return;
         SW_PROFILE_SCOPE( "RT.VFX.SortParticles" );
         IRHIPassCommandList& cmd = *context.getCommandList();
-        cmd.setComputePipelineState( pso );
         for ( const SortDispatch& dispatch : _listSortDispatch )
         {
             const EmitterState& state = *dispatch._pState;
             if ( hasDeclaredReads( context, state ) == false )
                 continue;
-            // g_VFXParams(t0) / g_VFXParticles(t1) / g_VFXArgs(t2) / g_VFXOrderRW(u0) / 루트 상수 g_VFXSortParamBase. 레지스터와 1:1 이다.
-            cmd.bindComputeShaderResource( _paramBuffer._srv, 0 );
-            cmd.bindComputeShaderResource( state._particleBuffer._srv, 1 );
-            cmd.bindComputeShaderResource( state._argsBuffer._srv, 2 );
-            cmd.bindComputeUAV( _orderBuffer._uav, 0 );
+            // 루트 상수는 g_VFXSortParamBase 다.
+            ComputeShaderParameters<VFXParticleSortShader> parameters;
+            parameters.set( VFXParticleSortShader::Params, _paramBuffer._srv );
+            parameters.set( VFXParticleSortShader::Particles, state._particleBuffer._srv );
+            parameters.set( VFXParticleSortShader::Args, state._argsBuffer._srv );
+            parameters.set( VFXParticleSortShader::Order, _orderBuffer._uav );
+            if ( parameters.apply( cmd, pipeline ) == false )
+                return;
             cmd.setComputeRootConstants( 1, &dispatch._paramRow );
             cmd.dispatchCompute( 1, 1, 1 );
         }
     }
 
-    void VFXGPUSimulation::recordMeshInstances( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const
+    void VFXGPUSimulation::recordMeshInstances( const RenderGraphPassContext& context, const ComputePipeline& pipeline ) const
     {
         // 메시 입자 — 렌더 입력을 인스턴스 칸으로 옮긴다. 인스턴스 애니메이션 · 컬링이 이어서 이 버퍼를 읽는다(그 앞 전이도 그래프가 낸다).
         const bool bMeshWrites =
-            _listMeshDispatch.empty() == false && pso != 0 && _frameInput._instanceUAV != kInvalidDescriptorIndex && _paramBuffer.isValid() && context.getCommandList() != nullptr;
+            _listMeshDispatch.empty() == false && pipeline.isValid() && _frameInput._instanceUAV != kInvalidDescriptorIndex && _paramBuffer.isValid() && context.getCommandList() != nullptr;
         if ( bMeshWrites == false || context.getBuffer( getInstanceBufferUAV() ) == 0 )
             return;
         IRHIPassCommandList& cmd = *context.getCommandList();
-        cmd.setComputePipelineState( pso );
         for ( const MeshDispatch& dispatch : _listMeshDispatch )
         {
             const EmitterState& state = *dispatch._pState;
             if ( hasDeclaredReads( context, state ) == false )
                 continue;
-            // g_VFXParams(t0) / g_VFXParticles(t1) / g_VFXArgs(t2) / g_VFXInstancesRW(u0) / 루트 상수 g_VFXMeshParamBase. vfx_mesh_instance.hlsl 과 1:1 이다.
-            cmd.bindComputeShaderResource( _paramBuffer._srv, 0 );
-            cmd.bindComputeShaderResource( state._particleBuffer._srv, 1 );
-            cmd.bindComputeShaderResource( state._argsBuffer._srv, 2 );
-            cmd.bindComputeUAV( _frameInput._instanceUAV, 0 );
+            // 루트 상수는 g_VFXMeshParamBase 다.
+            ComputeShaderParameters<VFXMeshInstanceShader> parameters;
+            parameters.set( VFXMeshInstanceShader::Params, _paramBuffer._srv );
+            parameters.set( VFXMeshInstanceShader::Particles, state._particleBuffer._srv );
+            parameters.set( VFXMeshInstanceShader::Args, state._argsBuffer._srv );
+            parameters.set( VFXMeshInstanceShader::Instances, _frameInput._instanceUAV );
+            if ( parameters.apply( cmd, pipeline ) == false )
+                return;
             cmd.setComputeRootConstants( 1, &dispatch._paramRow );
             cmd.dispatchCompute( dispatch._groupCount, 1, 1 );
             context.uavBarrier( getInstanceBufferUAV() ); // 다음 방출기가 같은 버퍼의 다른 칸을 쓴다 — 칸이 겹치지 않아도 상태 추적을 맞춘다
