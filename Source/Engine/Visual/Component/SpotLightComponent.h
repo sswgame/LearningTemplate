@@ -15,11 +15,11 @@ namespace sw
 {
     /**
      * @class SpotLightComponent
-     * @brief 한 점에서 **원뿔 안으로만** 퍼지는 빛입니다. 위치와 방향이 모두 월드 트랜스폼에서 나옵니다.
-     * @details 점광에 원뿔을 곱한 것입니다. 거리 감쇠는 `PointLightComponent` 와 **같은 식**을 쓰고
+     * @brief 한 점에서 원뿔 안으로만 퍼지는 빛입니다. 위치와 방향이 모두 월드 트랜스폼에서 나옵니다.
+     * @details 점광에 원뿔을 곱한 것입니다. 거리 감쇠는 `PointLightComponent` 와 같은 식을 쓰고
      *          (`lighting.hlsli` 의 한 분기), 거기에 안쪽/바깥쪽 각 사이의 부드러운 감쇠를 곱합니다.
      *          언리얼 `USpotLightComponent` 의 `InnerConeAngle` / `OuterConeAngle` 과 같은 규약입니다.
-     * @note 방향은 기본 방향(**아래**)을 이 컴포넌트의 월드 회전으로 돌린 것입니다(`LightComponent` 의 방향 규약). 기본이 아래인
+     * @note 방향은 기본 방향(아래)을 이 컴포넌트의 월드 회전으로 돌린 것입니다(`LightComponent` 의 방향 규약). 기본이 아래인
      *       까닭: 전방 +Z 를 쓰면 카메라 쪽으로 쏴 화면이 통째로 하얘져 "스폿인지" 를 알 수 없습니다.
      * @note 그림자는 켤 때만 드리웁니다(`_bCastShadow`, 기본 끔). 그림자 아틀라스의 칸 하나에 바깥 원뿔을 덮는 원근으로 그립니다(`FrameShadowData`).
      */

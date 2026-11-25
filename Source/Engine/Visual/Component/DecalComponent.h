@@ -34,7 +34,7 @@ namespace sw
      */
     struct DecalDrawData
     {
-        float4x4 _world{};                         ///< 상자(-0.5..0.5)의 월드 행렬 — 행 0 · 1 · 2 가 상자 축(1 이 투영 축 — 아래를 본다)
+        float4x4 _world{};                         ///< 상자(-0.5..0.5)의 월드 행렬. 행 0 · 1 · 2 가 상자 축(1 이 투영 축, 아래를 본다)
         float4x4 _worldToLocal{};                  ///< 그 역행렬
         float4   _color{ 1.0f, 1.0f, 1.0f, 1.0f }; ///< 알베도 곱 · 불투명도(a)
         float4   _surface{};                       ///< x 거칠기, y 금속도, z 노멀 세기, w 각도 페이드 시작(투영 축과 면 노멀의 cos)

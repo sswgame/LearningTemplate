@@ -17,7 +17,7 @@ namespace sw
     /**
      * @class ButtonWidget
      * @brief 포커스를 받는 테두리 패널입니다. 자식(텍스트, 이미지)을 감싸고, 상태(보통, 호버, 누름, 꺼짐)마다 배경 브러시를 바꿉니다.
-     * @details **클릭**은 왼쪽 버튼을 이 버튼 위에서 누르고 이 버튼 위에서 떼는 것이다(누른 동안 포인터를 잡으며, 밖에서 떼면 클릭이 아니다. Slate 와 같다). 포커스를 가진 채 `UI.Accept` 를 눌러도 클릭이다.
+     * @details 클릭은 왼쪽 버튼을 이 버튼 위에서 누르고 이 버튼 위에서 떼는 것이다(누른 동안 포인터를 잡으며, 밖에서 떼면 클릭이 아니다. Slate 와 같다). 포커스를 가진 채 `UI.Accept` 를 눌러도 클릭이다.
      *          클릭하면 `getOnClicked()` 를 부르고, `_command` 가 있으면 화면의 명령(`UIScreen::onCommand`, UI 문서가 쓰는 경로)을 낸다. 누르면 포커스가 이 버튼으로 온다. 포커스 표시는 포커스 테두리(탐색 방식)다.
      */
     REFLECT( Category = "UI", DisplayName = "Button", Tooltip = "Focusable bordered panel that fires a click" )

@@ -4,7 +4,7 @@
  *        두거나 · 묻거나 · 보고 프로세스(`App -crash-reporter=<폴더>`)에 넘겨 올립니다.
  * @details 참고: 언리얼 CrashReportClient(별도 프로세스가 덤프 · 로그 · 컨텍스트를 묶어 "보내기?" 를 묻고 올린다), Sentry · Backtrace(미니덤프 업로드 ·
  *          빵부스러기 · 빌드 id 로 심볼 매칭). 크래시 순간에는 아무것도 보내지 않습니다 — 죽어 가는 프로세스는 할당 없이 파일만 씁니다(`CrashHandler`).
- *          **기본은 기계 안에만**(`telemetry.crashReports` = `local`) — 묶음은 만들지만 보내지 않습니다.
+ *          기본은 기계 안에만(`telemetry.crashReports` = `local`) — 묶음은 만들지만 보내지 않습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -66,10 +66,10 @@ namespace sw
     /**
      * @class CrashReportService
      * @brief 엔진 서비스입니다(`game::findSubsystem<CrashReportService>()`). 기동 단계 `Telemetry` 가 세우고 지난 크래시를 묶습니다.
-     * @details **묶음** `<보고 폴더>/crash_<세션>/`: `crash.dmp` · `crash.txt`(컨텍스트 — 사유 · 주소 · 백엔드 · GPU · 빌드 id) · `crash.stack.txt` ·
+     * @details 묶음 `<보고 폴더>/crash_<세션>/`: `crash.dmp` · `crash.txt`(컨텍스트 — 사유 · 주소 · 백엔드 · GPU · 빌드 id) · `crash.stack.txt` ·
      *          `crash.breadcrumbs.txt`(최근 사건) · `last.log`(그 세션의 로그, 끝 `kMaxLogBytes`) · `manifest.json`(세션 · 상태 · 사유 · 빌드 id · 시스템 정보 · 파일 목록).
      *          원래 크래시 파일은 묶음으로 옮기고(다시 묶지 않는다), 로그는 복사합니다. 묶음은 `kMaxReports` 개까지 — 넘으면 오래된 것부터 지웁니다.
-     *          **동의**를 바꾸면 이미 있는 묶음에도 적용합니다: `local` 로 바꾸면 기다리던 · 보낼 줄의 묶음이 기계 안으로 돌아오고(철회), `send` 로 바꾸면
+     *          동의를 바꾸면 이미 있는 묶음에도 적용합니다: `local` 로 바꾸면 기다리던 · 보낼 줄의 묶음이 기계 안으로 돌아오고(철회), `send` 로 바꾸면
      *          답을 기다리던 묶음이 보낼 줄에 섭니다(이미 `local` 로 모인 묶음은 소급해 보내지 않는다).
      */
     class SW_API CrashReportService : public Subsystem
@@ -118,7 +118,7 @@ namespace sw
         /** @brief 보낼 줄에 있고 시도가 남은 묶음 수입니다. */
         uint32 countPendingUploads() const;
         /**
-         * @brief 보고 프로세스로 띄울 실행 파일입니다(`kReporterArgument` 를 알아듣는 것 — App). 비면(기본) 띄우지 않습니다 — 테스트 실행 파일 같은
+         * @brief 보고 프로세스로 띄울 실행 파일입니다(`kReporterArgument` 를 알아듣는 것, App). 비면(기본) 띄우지 않습니다. 테스트 실행 파일 같은
          *        다른 호스트가 자기를 보고 프로세스로 다시 띄우지 않게, 띄울 쪽(Engine)이 정합니다.
          */
         void setReporterExecutable( const AbsolutePath& executablePath ) { _reporterExecutable = executablePath; }

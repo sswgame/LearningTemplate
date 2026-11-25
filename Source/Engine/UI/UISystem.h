@@ -63,25 +63,25 @@ namespace sw
      *          엔진에서는 서브시스템 `UI`(Client 대상)입니다 — 배율 규칙 · 기본 메뉴를 엔진 데이터(팩 설정 `PackEngineSettings` 가 덮어씀)로 정하고
      *          문서 · 스타일 시트 캐시(서브시스템 `UIDocuments` · `UIStyleSheets`)의 다시 읽기 알림을 받으며, Dev 에서는 디버그 HUD 를 붙입니다(`initializeSubsystem`).
      *
-     *          **화면 스택**: 화면은 레이어(`UILayer`)마다 쌓인다. 그리기 순서는 레이어 순서, 같은 레이어 안에서는 쌓인 순서이고, 입력은 그 역순이다.
-     *          맨 위에서 포커스를 받는 화면이 **활성 화면**이며 포커스와 UI 액션을 받는다.
+     *          화면 스택: 화면은 레이어(`UILayer`)마다 쌓인다. 그리기 순서는 레이어 순서, 같은 레이어 안에서는 쌓인 순서이고, 입력은 그 역순이다.
+     *          맨 위에서 포커스를 받는 화면이 활성 화면이며 포커스와 UI 액션을 받는다.
      *          모달 화면과 로딩 화면은 아래 화면과 게임의 입력을 막는다(`isGameInputBlocked`, 플레이어 컨트롤러가 확인한다).
      *          다른 화면에 덮인 화면은 그때의 포커스를 기억했다가 다시 활성이 되면 돌려준다. 닫기는 지연 처리하며, 이번 입력 처리가 끝난 뒤에 실행한다.
      *
-     *          **액션 입력**: UI 는 키와 버튼을 직접 보지 않고 자기 입력 맵(`EngineDefaultAssets::_uiInputMap`, 레이어 `UI`, 활성 화면이 있을 때만 켠다)의
+     *          액션 입력: UI 는 키와 버튼을 직접 보지 않고 자기 입력 맵(`EngineDefaultAssets::_uiInputMap`, 레이어 `UI`, 활성 화면이 있을 때만 켠다)의
      *          액션(`UI.Navigate*`, `UI.Accept`, `UI.Back`, `UI.FocusNext` 등)을 받아 활성 화면의 포커스 경로로 보낸다.
-     *          UI 가 사용한 액션의 물리 입력은 뗄 때까지 **소비된 입력**이다(`isActionConsumed`). 플레이어 컨트롤러가 의도를 만들 때 이것만 확인하면 되므로,
+     *          UI 가 사용한 액션의 물리 입력은 뗄 때까지 소비된 입력이다(`isActionConsumed`). 플레이어 컨트롤러가 의도를 만들 때 이것만 확인하면 되므로,
      *          패드 A 로 메뉴를 눌러도 점프하지 않는다. 위젯이 처리한 마우스 버튼도 소비된다.
      *          입력 방식(포인터 또는 탐색)은 이번 프레임에 마지막으로 쓴 장치로 정한다. 텍스트 입력 위젯이 포커스를 가지면
      *          키보드 포커스 `UI` 를 잡는다. 그동안 게임은 키를 보지 못하고, UI 액션은 Back 과 Tab 만 받는다.
      *
      *          핫 리로드: 언로드되는 모듈 라이브러리에 vtable 이 있는 화면과 위젯(게임이나 키트가 만든 타입)을 가진 화면은 그 자리에서 닫는다. 게임 스레드에서만 호출한다.
      *
-     *          **화면 스택 자신의 책임**(값 멤버, 비가상 직접 호출 — 화면 목록 · 포커스 경로와 떼면 매 프레임 서로를 되묻는 것들이라 남긴다):
+     *          화면 스택 자신의 책임(값 멤버, 비가상 직접 호출 — 화면 목록 · 포커스 경로와 떼면 매 프레임 서로를 되묻는 것들이라 남긴다):
      *          입력 라우팅 `UIInputRouter`(포인터 · 포커스 · 소비는 화면 트리를 따라 간다 — `getInputRouter`, 포커스를 함께 옮기는 `setInputMode`),
      *          그리기 목록과 재사용 판정 상태 · 레이어 숨김 요청 수 `UICanvasPaintState`(스택을 칠한 결과다 — `getPaintState`. 숨김 요청은 화면마다 `_bHiddenByLayer` 를 맞추므로
      *          `addLayerHideRequest` 가 이 클래스에 있다). 화면 스택과 프레임 순서도 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 기준이다).
-     *          **따로 선 서브시스템**(값 멤버가 아니다 — `engine::getSubsystem<T>()`): 이 시스템이 의존하는 것 — 클립보드 `UIClipboardService` · 전역 명령 표 `UIGlobalCommandRegistry` ·
+     *          따로 선 서브시스템(값 멤버가 아니다, `engine::getSubsystem<T>()`): 이 시스템이 의존하는 것: 클립보드 `UIClipboardService` · 전역 명령 표 `UIGlobalCommandRegistry` ·
      *          바인딩 변환기 `UIBindingConverterRegistry` · 문서 캐시 `UIDocumentCache` · 스타일 시트 캐시 `UIStyleSheetCache` · 테마 `UIThemeController`.
      *          이 시스템에 의존하고 UI 갱신 칸(`onPointerProcessed` · `onUpdateBeforeScreens` · `onUpdateAfterScreens` · `onUpdateBeforeLayout` · `onUpdateAfterPaint`)에 거는 것 —
      *          알림 `UINotificationService` · 자막 `UISubtitleService` · 툴팁 `UITooltipService` · 접근성 `UIAccessibilityService` ·
@@ -141,7 +141,7 @@ namespace sw
         /** @brief 게임 화면 수입니다 — 개발 겹치기 화면(`UIScreen::isDevOverlay`)은 세지 않아 HUD 를 띄운 실행과 아닌 실행의 값이 같다(`<ExpectUI screens>`). */
         uint32 getGameScreenCount() const;
         /**
-         * @brief 메뉴 스택 깊이 — 닫히는 중이 아니고 포커스를 받을 수 있는 화면(`UIScreen::canTakeFocus` — HUD · Overlay 제외) 수입니다. 시나리오 단언(`ExpectUI screens`)이 쓴다.
+         * @brief 메뉴 스택 깊이: 닫히는 중이 아니고 포커스를 받을 수 있는 화면(`UIScreen::canTakeFocus`, HUD · Overlay 제외) 수입니다. 시나리오 단언(`ExpectUI screens`)이 쓴다.
          * @details HUD · 알림 · 로딩 뒤 검은 페이드(Overlay)와 닫기 애니메이션 중인 화면을 세면 값이 게임 · 프레임 타이밍에 달린다(일시정지 → 옵션이 2 가 아니라 3 이었다).
          */
         uint32 getMenuStackDepth() const;
@@ -225,7 +225,7 @@ namespace sw
         bool setResourceTagOverride( UIScreen& screen, const ResourceTagSet& tagOverride );
 
         // --- 핫 리로드 ---------------------------------------------------------------
-        // 문서(`.ui.xml`)와 스타일 시트의 파일 변화는 **에디터**의 파일 감시가 캐시 다시 읽기로 이어 준다(`EditorAssetType` 표의 `kAnyCacheHoldingPath`).
+        // 문서(`.ui.xml`)와 스타일 시트의 파일 변화는 에디터의 파일 감시가 캐시 다시 읽기로 이어 준다(`EditorAssetType` 표의 `kAnyCacheHoldingPath`).
         // 에디터 없이(`-EnableEditor` 없이) 띄운 App 은 파일을 고쳐도 반영되지 않는다 — 정상이다.
         /**
          * @brief 문서 @p documentPath 가 바뀌었을 때, 그 문서(또는 그것을 조각으로 쓰는 문서)로 연 화면을 새로 생성합니다(캐시의 다시 읽기 알림이 부릅니다).
@@ -240,26 +240,26 @@ namespace sw
 
         // --- 화면 스택 위의 UI 서비스 -------------------------------------------------------
         /**
-         * @brief 화면 틱 **앞**에서 도는 UI 서비스의 칸입니다(자막 `UISubtitleService` · 툴팁 `UITooltipService`). 인자는 실제 프레임 시간입니다.
+         * @brief 화면 틱 앞에서 도는 UI 서비스의 칸입니다(자막 `UISubtitleService` · 툴팁 `UITooltipService`). 인자는 실제 프레임 시간입니다.
          * @details 화면 스택 위에서 자기 화면을 여닫는 서비스는 이 시스템의 값 멤버가 아니라 서브시스템이다(UI 에 의존 — `engine::getSubsystem<UINotificationService>()` 처럼
          *          찾는다). 기동에서 이 칸에 걸고 종료에서 푼다 — 언리얼 Slate 의 `OnPreTick` · Godot `SceneTree.process_frame` 신호와 같은 자리다.
          *          화면 그리기를 막은 동안(`isOnScreenSuppressed`)에도 불린다 — 포인터를 보는 서비스(툴팁)는 스스로 거른다.
          */
         UIUpdateDelegate& onUpdateBeforeScreens() { return _onUpdateBeforeScreens; }
-        /** @brief 화면 틱 **뒤**에서 도는 UI 서비스의 칸입니다(알림 `UINotificationService` — 이번 프레임에 화면이 올린 알림까지 본다). */
+        /** @brief 화면 틱 뒤에서 도는 UI 서비스의 칸입니다(알림 `UINotificationService` — 이번 프레임에 화면이 올린 알림까지 본다). */
         UIUpdateDelegate& onUpdateAfterScreens() { return _onUpdateAfterScreens; }
         /**
-         * @brief 스타일 뒤, 레이아웃 **앞**에서 도는 UI 서비스의 칸입니다(위젯 컴포넌트 `UIWidgetComponentService` 의 화면 마커 투영 — 같은 프레임에 배치된다).
+         * @brief 스타일 뒤, 레이아웃 앞에서 도는 UI 서비스의 칸입니다(위젯 컴포넌트 `UIWidgetComponentService` 의 화면 마커 투영 — 같은 프레임에 배치된다).
          * @details 게임 틱과 트랜스폼 적용 뒤의 월드 점을 이번 뷰포트(`getViewport`)로 투영하는 자리다. 화면 그리기를 막은 동안에도 불린다.
          */
         UIUpdateDelegate& onUpdateBeforeLayout() { return _onUpdateBeforeLayout; }
         /**
-         * @brief 화면 스택을 다 그린 **뒤**에서 도는 UI 서비스의 칸입니다(오프스크린 화면 `UIOffscreenScreens` — 이번 프레임의 레이아웃 · 그리기 컨텍스트로 자기 화면을 그린다).
+         * @brief 화면 스택을 다 그린 뒤에서 도는 UI 서비스의 칸입니다(오프스크린 화면 `UIOffscreenScreens` — 이번 프레임의 레이아웃 · 그리기 컨텍스트로 자기 화면을 그린다).
          * @details 화면 그리기를 막은 동안(`isOnScreenSuppressed`)에도 불린다 — 스택 밖 화면은 계속 그린다. 언리얼 Slate `OnPostTick` 자리다.
          */
         UIUpdateDelegate& onUpdateAfterPaint() { return _onUpdateAfterPaint; }
         /**
-         * @brief 입력 처리(`processInput`)에서 화면 위젯의 포인터를 보낸 **뒤**에 도는 칸입니다(위젯 컴포넌트 서비스 — 화면 위젯 아래가 아닌 마우스 이벤트를 월드 광선으로).
+         * @brief 입력 처리(`processInput`)에서 화면 위젯의 포인터를 보낸 뒤에 도는 칸입니다(위젯 컴포넌트 서비스 — 화면 위젯 아래가 아닌 마우스 이벤트를 월드 광선으로).
          * @details 이번 프레임의 포인터 이벤트는 `getInputRouter().getFramePointerEvents()` 다. 화면 그리기를 막은 동안(`isOnScreenSuppressed`)에는 포인터를 보내지 않으므로 이 칸도 불리지 않는다.
          */
         UIUpdateDelegate& onPointerProcessed() { return _onPointerProcessed; }
@@ -287,7 +287,7 @@ namespace sw
          */
         [[nodiscard]] Subscription addLayerHideRequest( UILayerMask layers );
         /**
-         * @brief 이 시스템이 공개하는 창구들입니다 — 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). 시스템이 창구 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-shape`).
+         * @brief 이 시스템이 공개하는 창구들입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). 시스템이 창구 인터페이스를 함께 상속하지 않는다(다중 상속 금지, 린트 `cpp-shape`).
          * @details `IInputCaptureQuery` 는 게임 코드의 입력 판정, `IUILayerVisibility` 는 레이어 숨김 요청, `IEngineUIDriver` 는 엔진 루프의 프레임 단계다.
          */
         IInputCaptureQuery& getInputCaptureQuery() { return _inputCaptureQuery; }
@@ -393,7 +393,7 @@ namespace sw
         /** @brief 등록된 화면 스위치(`UIScreenSwitches`, 견본 · 벤치 · 옵션 메뉴 등)를 순서대로 돌려 개발 스위치에 맞게 화면을 열고 닫습니다. */
         void syncScreenSwitches();
         /**
-         * @brief 뷰포트에서 화면 등급(`screen` — compact · regular)과 방향(`orientation`)을 정해 리소스 태그로 올립니다. 바뀐 프레임에만 올린다 — 그 태그를 쓴 문서는 다시 읽힌다.
+         * @brief 뷰포트에서 화면 등급(`screen`: compact · regular)과 방향(`orientation`)을 정해 리소스 태그로 올립니다. 바뀐 프레임에만 올리고, 그 태그를 쓴 문서는 다시 읽힌다.
          * @details 좁은 화면 재배치는 데이터다(문서의 `_when` 변형) — 코드가 배치를 고르지 않는다. 규칙은 `UIScaleSettings::makeScreenTags` 한 곳이다(에디터 미리보기도 같은 함수).
          *          Android 의 smallestWidth 자원 한정자 · 유니티 Device Simulator 의 방향과 같은 자리다(기억).
          */

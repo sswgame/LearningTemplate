@@ -57,7 +57,7 @@ namespace sw
      * @brief 자막 줄을 받아 오버레이 레이어의 자막 화면(`engine/ui/subtitles.ui.xml`)에 보여 줍니다. 엔진 범위 서브시스템 `UISubtitles` 입니다.
      * @details 언리얼의 `FSubtitleManager` 에 해당한다. 표시 규칙은 엔진 설정(`EngineConfig::_subtitles`)이 정하고, 없거나 틀리면 기동이 오류로 멈춘다.
      *          줄은 `_maxVisibleLineCount` 까지 동시에 보이고(오래된 것이 위), 넘치는 줄은 대기열에서 기다렸다가 자리가 나면 그때부터 시간을 센다.
-     *          보이는 시간은 준 길이, 0 이면 읽기 시간 — max( 최소 표시 시간, 글자 수 × 글자당 시간 ) — 이다. 음성이 낸 줄은 그 음성이 끝날 때까지도 남는다
+     *          보이는 시간은 준 길이, 0 이면 읽기 시간 max( 최소 표시 시간, 글자 수 × 글자당 시간 ) 이다. 음성이 낸 줄은 그 음성이 끝날 때까지도 남는다
      *          (언리얼 Dialogue Wave 자막이 소리 길이를 따르는 것과 같다 — 짧은 음성도 읽을 시간은 준다).
      *          사용자 설정은 매 프레임 읽는다. `gv_subtitles` 를 끄면 화면은 닫지만 줄은 계속 받고 시간도 흐른다(켜면 지금 줄부터 보인다).
      *          `gv_subtitleSize` 는 문서에 적힌 글 크기에 설정의 `_arrSizeScale` 배율을 곱하고, `gv_subtitleBackgroundOpacity` 는 줄 바탕의 알파다.

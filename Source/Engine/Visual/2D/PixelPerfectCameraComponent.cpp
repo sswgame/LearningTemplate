@@ -179,7 +179,7 @@ namespace sw
         const GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
-        // 다른 오브젝트의 메시를 고치므로 틱 뒤로 미룬다(그 오브젝트의 틱 — 애니메이터의 프레임 넘기기 — 와 겹치지 않게).
+        // 다른 오브젝트의 메시를 고치므로 틱 뒤로 미룬다(그 오브젝트의 틱인 애니메이터의 프레임 넘기기와 겹치지 않게).
         pManager->executeOrDeferPostTickOnScene( [unit]( GameObjectManager& sceneManager )
         {
             sceneManager.getCameraRegistry().setPixelSnapUnit( unit );

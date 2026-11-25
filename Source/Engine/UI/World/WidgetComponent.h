@@ -84,11 +84,11 @@ namespace sw
     /**
      * @class WidgetComponent
      * @brief 오브젝트 위치에 위젯 하나를 띄웁니다.
-     * @details **Screen**: 위젯 컴포넌트 서비스(`UIWidgetComponentService`)의 HUD 레이어 마커 화면(캔버스 패널)에 위젯을 자식으로 두고, 매 프레임 UI 갱신의 레이아웃 앞 칸
+     * @details Screen: 위젯 컴포넌트 서비스(`UIWidgetComponentService`)의 HUD 레이어 마커 화면(캔버스 패널)에 위젯을 자식으로 두고, 매 프레임 UI 갱신의 레이아웃 앞 칸
      *          (게임 틱과 트랜스폼 적용 뒤, 병렬 틱 밖)이 오브젝트의 월드 점을 게임 카메라로 투영해 그 위젯의 화면 앵커(`UIScreenMarkers::setAnchor`)를 옮긴다.
      *          위젯은 피벗이 앵커 점에 오도록 원점 기준으로 배치 · 칠하고, 위치와 거리 배율은 캔버스 셰이더가 앵커로 적용한다. 그래서 마커가 움직여도
      *          다시 배치 · 칠하지 않고 사각형 버퍼도 다시 올리지 않는다(RTS 이름 2,000 개 기준). 마커 내용은 자르기를 쓸 수 없다.
-     *          **World**: 위젯 트리를 렌더 텍스처에 그려 사각형 메시에 붙인다(렌더 텍스처 경로는 `getRenderTargetPath`).
+     *          World: 위젯 트리를 렌더 텍스처에 그려 사각형 메시에 붙인다(렌더 텍스처 경로는 `getRenderTargetPath`).
      *
      *          위젯은 시작할 때 문서(`_documentPath`, 없으면 파생 클래스의 `getDefaultDocument`)로 만들거나 `setContent` 로 코드가 넘긴다(넘긴 것이 있으면 문서를 읽지 않는다). 화면 마커는 `_drawSize` 가 있으면 그 크기로 고정해 레이아웃 경계가 되고,
      *          없으면 위젯의 원하는 크기를 쓴다. 기준점은 주 씬 컴포넌트의 위치 + `_worldOffset`(월드 축, 머리 위 HP 바)이다(씬 컴포넌트가 없으면 시작할 때 오류를 남긴다).

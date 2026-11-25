@@ -1,7 +1,7 @@
 /**
  * @file TextBidi.h
  * @brief 양방향 텍스트(UAX #9 단순 버전)를 정의합니다. 코드 포인트마다 수준을 정하고(강한 문자, 숫자, 중립), 줄마다 수준 순서로 뒤집어 눈에 보이는 순서를 냅니다.
- * @details 언리얼 `TextBiDi`(ICU), Godot TextServer(ICU), 유니티 TextCore 에 해당한다. 배치(`TextLayoutEngine`)가 줄을 나눈 **뒤** 줄마다 부른다(L2).
+ * @details 언리얼 `TextBiDi`(ICU), Godot TextServer(ICU), 유니티 TextCore 에 해당한다. 배치(`TextLayoutEngine`)가 줄을 나눈 뒤 줄마다 부른다(L2).
  *          지원하는 것은 강한 L 과 R, 숫자(W7. 앞 강한 문자가 L 이면 L), 중립(N1, N2. 양쪽이 같으면 그 방향, 다르면 문단 방향), 단락 구분(`\n`),
  *          덮어쓰기 한 겹(RLO, LRO … PDF. 안의 글자를 모두 강한 R 이나 L 로 보며, 의사 문화권 `qps-plocm` 이 쓴다), 줄 끝 공백은 문단 수준(L1, 배치가 처리),
  *          RTL 수준의 괄호 거울(L4)이다. 지원하지 않는 것은 중첩된 방향 제어(LRE, RLE, LRI, RLI, FSI, PDI 와 둘 이상의 덮어쓰기), 숫자 앞뒤 기호의 세부 규칙

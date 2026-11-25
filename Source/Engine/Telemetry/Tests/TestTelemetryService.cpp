@@ -177,7 +177,7 @@ SW_TEST_CASE( TelemetryServiceTest, FailedUploadBacksOff )
     uploader.setResult( TelemetryUploadResult::Failed );
     fixture._service.setUploader( uploader );
 
-    fixture._service.flush(); // 첫 실패 — 0 ~ 10 초 물러선다(시각 0 에 한 번만 넘긴다 — 첫 지터가 0 이어도 다시 보내지 않는다)
+    fixture._service.flush(); // 첫 실패: 0 ~ 10 초 물러선다(시각 0 에 한 번만 넘긴다. 첫 지터가 0 이어도 다시 보내지 않는다)
     SW_EXPECT_EQUAL( uint32{ 1 }, uploader.getCallCount() );
 
     fixture._service.update( 100.0f ); // 첫 물러서기를 넘는다 — 둘째 실패, 5 ~ 10 초 물러선다

@@ -52,7 +52,7 @@ namespace sw
         const DDSImageData& getSplashImage() const { return _splashData; }
 
         /**
-         * @brief BGRA 32bpp 이미지를 **상자 평균**으로 다른 크기에 옮겨 담습니다.
+         * @brief BGRA 32bpp 이미지를 상자 평균으로 다른 크기에 옮겨 담습니다.
          *
          * @param pSource      원본 픽셀(BGRA, 위에서 아래로).
          * @param sourceWidth  원본 가로. 0 이면 아무것도 하지 않습니다.
@@ -62,7 +62,7 @@ namespace sw
          * @param destHeight   결과 세로.
          *
          * @details 플랫폼마다 늘리는 방법이 다릅니다. Win32 는 `StretchDIBits`(HALFTONE)가 해 주지만
-         *          **X11 의 `XPutImage` 는 1:1 로만 찍습니다**(줄이지 않으면 1376×768 원본이
+         *          X11 의 `XPutImage` 는 1:1 로만 찍습니다(줄이지 않으면 1376×768 원본이
          *          480×280 창에 좌상단만 그려집니다). 줄이는 배율이 크므로(약 2.9배) 최근접이
          *          아니라 상자 평균을 씁니다. 글자와 로고 가장자리가 부서지지 않게 하기 위해서입니다.
          *          늘릴 때는 원본 한 픽셀만 들어오므로 자연히 최근접이 됩니다.
@@ -81,7 +81,7 @@ namespace sw
 
         /**
          * @brief 스플래시 이미지(textures/splash.dds)를 로드합니다. `initialize` 앞에 부른다(`SplashWindow::initialize`) — 부르지 않으면 이미지 없는 스플래시다.
-         * @details 성공하면 픽셀은 **항상 BGRA 32bpp** 입니다. 플랫폼 구현이 채널 순서를 다시 묻지
+         * @details 성공하면 픽셀은 항상 BGRA 32bpp 입니다. 플랫폼 구현이 채널 순서를 다시 묻지
          *          않아도 되도록 여기서 맞춰 줍니다(`normalizeSplashToBgra`).
          *          플랫폼 `initialize` 가 에셋을 읽지 않으므로 창 테스트가 에셋 없이 창만 본다(Win32SplashWindowTest).
          */
@@ -89,15 +89,15 @@ namespace sw
 
     protected:
         /**
-         * @brief 로드한 스플래시 픽셀을 **BGRA 순서로 맞춥니다.** 이미 BGRA 면 아무것도 하지 않습니다.
-         * @details Win32 의 `BI_RGB` 32bpp DIB 와 X11 의 리틀 엔디언 TrueColor 비주얼이 **같은 순서**
+         * @brief 로드한 스플래시 픽셀을 BGRA 순서로 맞춥니다. 이미 BGRA 면 아무것도 하지 않습니다.
+         * @details Win32 의 `BI_RGB` 32bpp DIB 와 X11 의 리틀 엔디언 TrueColor 비주얼이 같은 순서
          *          (메모리에서 B,G,R,X)를 원하므로, 플랫폼마다 따로 뒤집을 이유가 없습니다.
          */
         void normalizeSplashToBgra();
 
         /**
-         * @brief 스플래시 이미지를 **창 크기(`_width` × `_height`)로** 줄여 `_listScaledPixel` 에 담습니다. 이미지가 없으면 비웁니다.
-         * @details X11 의 `XPutImage` 와 Wayland 의 공유 메모리 버퍼는 **1:1 로만** 찍습니다. 줄이지 않으면 1376×768 원본이 480×280 창에 **좌상단만** 그려집니다.
+         * @brief 스플래시 이미지를 창 크기(`_width` × `_height`)로 줄여 `_listScaledPixel` 에 담습니다. 이미지가 없으면 비웁니다.
+         * @details X11 의 `XPutImage` 와 Wayland 의 공유 메모리 버퍼는 1:1 로만 찍습니다. 줄이지 않으면 1376×768 원본이 480×280 창에 좌상단만 그려집니다.
          *          `loadSplashImage` 와 창 크기를 정한 뒤 부릅니다.
          */
         void createScaledImage();

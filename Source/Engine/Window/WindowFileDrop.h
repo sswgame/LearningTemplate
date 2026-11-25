@@ -3,7 +3,7 @@
  * @brief OS 파일 끌어 놓기(탐색기 · 파일 관리자에서 창으로 파일을 끌어 놓기)의 플랫폼 공통 값입니다 — 창이 내는 사건(`WindowFileDropEvent`)과 창의 능력(`WindowFileDropSupport`).
  * @details 창 시스템마다 프로토콜이 다르다: Win32 `WM_DROPFILES`(`DragAcceptFiles` — 놓은 순간만, 메인 스레드가 MTA 라 OLE `IDropTarget` 을 쓰지 않는다), X11 XDND(들어옴 · 위치 · 놓기 · 나감),
  *          Wayland `wl_data_device`(enter · motion · drop · leave). 받는 쪽은 사건 하나로 받는다(SDL `SDL_EVENT_DROP_*` · GLFW `glfwSetDropCallback` · Godot `files_dropped` 자리).
- *          경로는 **믿지 않는 바깥 입력**이다 — 받는 쪽이 정규화 · 확장자 · 크기를 검사한다(에디터 `ContentBrowserFileDropPlan`). 원시 입력 큐(`RawInputEvent`)에 싣지 않는다 — 길이가 정해지지 않은 글이고 리플레이 대상이 아니다.
+ *          경로는 믿지 않는 바깥 입력이다. 받는 쪽이 정규화 · 확장자 · 크기를 검사한다(에디터 `ContentBrowserFileDropPlan`). 원시 입력 큐(`RawInputEvent`)에 싣지 않는다. 길이가 정해지지 않은 글이고 리플레이 대상이 아니다.
  */
 #pragma once
 #include "Core/Container/string.h"

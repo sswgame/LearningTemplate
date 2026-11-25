@@ -26,7 +26,7 @@ namespace sw
     {
         struct CrashReportServiceInternal
         {
-            // 열거자 순서의 이름 표 — 항목 수가 열거자 수와 다르면 컴파일이 멈춘다(예전에는 맨 배열과 손으로 센 수 3 · 5 였다).
+            // 열거자 순서의 이름 표 — 항목 수가 열거자 수와 다르면 컴파일이 멈춘다.
             static constexpr auto kArrConsentName = makeEnumTable<CrashReportConsent, const utf8*>( "local", "ask", "send" );
             static constexpr auto kArrStateName   = makeEnumTable<CrashReportState, const utf8*>( "local", "awaitingDecision", "queued", "sent", "declined" );
 

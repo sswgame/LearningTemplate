@@ -1,7 +1,7 @@
 /**
  * @file TelemetryService.h
  * @brief 텔레메트리 파이프라인 — 동의 · 스키마 대조 · 표본 · 묶음 · 디스크 스풀(JSON lines, 크기 상한 · 회전) · 올리기 · 장면별 프레임 시간 요약 · 크래시 빵부스러기.
- * @details **동의가 꺼져 있으면(기본) 아무것도 모으지 않고 쓰지 않고 보내지 않습니다** — 사건은 버려지고, 동의를 거두면 쓰지 않은 묶음과 스풀 파일을 지웁니다.
+ * @details 동의가 꺼져 있으면(기본) 아무것도 모으지 않고 쓰지 않고 보내지 않습니다 — 사건은 버려지고, 동의를 거두면 쓰지 않은 묶음과 스풀 파일을 지웁니다.
  *          동의는 사용자 설정 `telemetry.enabled`(개인 정보 카테고리, 기본 false)가 정합니다(`bindConsentSetting`). 동의해도 기본 업로더는 아무 데도
  *          보내지 않습니다(`NullTelemetryUploader`) — 실제로 보내려면 게임이 업로더와 HTTP 창구를 끼웁니다.
  *          참고: 언리얼 `FAnalytics` · `IAnalyticsProvider`(공급자 교체 · 세션 · 사건 속성), Unity Analytics(사건 스키마 · 세션 표본 · 오프라인 큐).
@@ -132,19 +132,19 @@ namespace sw
     /**
      * @class TelemetryService
      * @brief 엔진 서비스입니다(`engine::getTelemetryService`, 게임은 `game::findSubsystem<TelemetryService>()`). `record` 는 아무 스레드에서나 부릅니다(잠금 하나).
-     * @details **흐름**: `record` → 스키마 대조(모르는 사건 · 필드 · 타입 → 거절) → 빵부스러기 → 동의 → 세션 표본 → 사건 표본 → 묶음. 묶음이 `batchEvents` 에
+     * @details 흐름: `record` → 스키마 대조(모르는 사건 · 필드 · 타입 → 거절) → 빵부스러기 → 동의 → 세션 표본 → 사건 표본 → 묶음. 묶음이 `batchEvents` 에
      *          닿거나 `flushSeconds` 가 지나면(`update`) 스풀 파일 `telemetry_<세션>_<번호>.jsonl` 에 덧붙입니다. 파일이 `maxFileBytes` 를 넘으면 닫고 다음
      *          번호로 회전하며, 닫힌 파일은 업로더에 넘겨 `Sent` 면 지웁니다. 스풀 전체가 `maxFiles` · `maxTotalBytes` 를 넘으면 가장 오래된 닫힌 파일을
      *          지웁니다(보내지 못한 것을 무한히 쌓지 않는다). 지난 실행이 남긴 파일도 닫힌 파일로 이어 받습니다.
-     *          **표본**은 결정적입니다 — 세션은 세션 id 해시, 사건은 (세션 · 사건 · 그 사건의 번호) 해시. 줄의 `sample` 이 비율이라 받는 쪽이 무게를 다시 준다.
-     *          **장면 요약**: `recordFrame` 이 장면별 프레임 시간을 모아, 장면이 바뀌거나 끝날 때 `perf.sceneSummary`(프레임 수 · 평균 · p50 · p99 · 최대)를 남깁니다.
-     *          **프레임 관찰자**: 엔진 루프가 기동 뒤 서비스를 관찰자로 붙입니다(서브시스템이 섰을 때만). 씬 틱 뒤(`onAfterSceneTick`)에 활성 씬의 프레임 하나를
+     *          표본은 결정적입니다 — 세션은 세션 id 해시, 사건은 (세션 · 사건 · 그 사건의 번호) 해시. 줄의 `sample` 이 비율이라 받는 쪽이 무게를 다시 준다.
+     *          장면 요약: `recordFrame` 이 장면별 프레임 시간을 모아, 장면이 바뀌거나 끝날 때 `perf.sceneSummary`(프레임 수 · 평균 · p50 · p99 · 최대)를 남깁니다.
+     *          프레임 관찰자: 엔진 루프가 기동 뒤 서비스를 관찰자로 붙입니다(서브시스템이 섰을 때만). 씬 틱 뒤(`onAfterSceneTick`)에 활성 씬의 프레임 하나를
      *          기록하고 세션 시계를 흘립니다(`recordFrame` → `update`).
-     *          **스레드**: 게임 쪽 잠금(`_mutex`)은 메모리(묶음 · 빵부스러기 · 시계)만 지킨다. 스풀 쓰기 · 회전 · 상한 · 올리기는 전용 스레드 `TelemetrySpool`
+     *          스레드: 게임 쪽 잠금(`_mutex`)은 메모리(묶음 · 빵부스러기 · 시계)만 지킨다. 스풀 쓰기 · 회전 · 상한 · 올리기는 전용 스레드 `TelemetrySpool`
      *          (`DedicatedWorker`)가 받은 순서대로 하고, 그 상태는 스풀 잠금(`_spoolMutex`)이 지킨다. 네트워크 올리기는 어느 잠금도 쥐지 않는다 — 끝점이 느려도
      *          프레임 · 다른 스레드의 `record` 가 기다리지 않는다(감사 N-6). 올리기가 `Failed` 면 지수 물러서기(`uploadRetrySeconds` ~ `uploadRetryMaxSeconds`,
      *          지터)만큼 세션 시계가 흐를 때까지 다시 보내지 않는다. 언리얼 `FHttpModule`(비동기) + 분석 공급자의 배치 플러시와 같은 자리다.
-     *          **서브시스템** `Telemetry`(Client 대상): 엔진 · 게임 스키마를 읽고 스풀 폴더(사용자 설정 파일 옆 `telemetry/`)로
+     *          서브시스템 `Telemetry`(Client 대상): 엔진 · 게임 스키마를 읽고 스풀 폴더(사용자 설정 파일 옆 `telemetry/`)로
      *          서며 동의를 사용자 설정에 묶습니다. 같은 동의를 쓰는 크래시 보고(`CrashReportService`)의 지난 크래시 묶기도 이 단계가 세우고 내립니다.
      */
     class SW_API TelemetryService : public Subsystem
@@ -185,7 +185,7 @@ namespace sw
         [[nodiscard]] bool loadSchemaText( string_view xmlText, string_view sourceName );
 
         /**
-         * @brief 동의를 정합니다. 켜지면 `session.start` 를 남깁니다. **꺼지면** 쓰지 않은 묶음 · 장면 시간을 지우고 스풀 파일 지우기를 스풀 워커에 넘깁니다
+         * @brief 동의를 정합니다. 켜지면 `session.start` 를 남깁니다. 꺼지면 쓰지 않은 묶음 · 장면 시간을 지우고 스풀 파일 지우기를 스풀 워커에 넘깁니다
          *        (이미 꺼져 있어도 남은 파일을 지운다 — 동의 없이 보낼 것이 남지 않는다). 앞서 넘긴 쓰기가 먼저 끝나고 지우기가 그 뒤에 온다.
          */
         void setConsent( bool bEnabled );

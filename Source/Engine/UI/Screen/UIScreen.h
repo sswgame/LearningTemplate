@@ -43,14 +43,14 @@ namespace sw
      * @details 맨 위에서 포커스를 받는 화면이 입력을 받는다(`UISystem` 의 "활성 화면"). 다른 화면이 덮으면 그때의 포커스 위젯을 기억했다가
      *          다시 활성이 되면 돌려준다. 닫기(`close`)는 지연 처리하므로, 이벤트 처리 중에 닫아도 이번 경로가 끝난 뒤에 지워진다.
      *
-     *          **명령**: 트리의 위젯이 낸 명령(버튼의 `_command`, 클릭, `UI.Accept`)은 `onCommand` 로 온다. 기본 구현은 `registerCommand` 로 등록한 함수를
+     *          명령: 트리의 위젯이 낸 명령(버튼의 `_command`, 클릭, `UI.Accept`)은 `onCommand` 로 온다. 기본 구현은 `registerCommand` 로 등록한 함수를
      *          부르고, C++ 화면 클래스는 이를 재정의한다(유니티 UI Toolkit 의 컨트롤러가 이름으로 위젯을 찾아 등록하는 것에 해당한다).
      *          문서로 연 화면(`UISystem::openScreen`)은 그 문서 경로와 문서에서 분리한 바인딩 식을 보관한다.
      *
-     *          **애니메이션**: 화면마다 재생기 하나(`getAnimationPlayer`)가 문서의 `<_listAnimation>` 을 가진다. `Open` 은 올릴 때, `Close` 는 닫을 때
+     *          애니메이션: 화면마다 재생기 하나(`getAnimationPlayer`)가 문서의 `<_listAnimation>` 을 가진다. `Open` 은 올릴 때, `Close` 는 닫을 때
      *          재생하고, 닫기는 `Close` 가 끝난 뒤에 실제로 지운다(그동안 화면은 입력과 포커스를 받지 않는다).
      *
-     *          **타입**: 엔진 밖(키트 · 게임) 모듈의 화면 클래스는 `REFLECT( Abstract )` 를 붙이고 `getTypeInfo()` 를 자기 `StaticType()` 으로 재정의한다(위젯 · 뷰모델과 같은 규칙).
+     *          타입: 엔진 밖(키트 · 게임) 모듈의 화면 클래스는 `REFLECT( Abstract )` 를 붙이고 `getTypeInfo()` 를 자기 `StaticType()` 으로 재정의한다(위젯 · 뷰모델과 같은 규칙).
      *          그 모듈을 내릴 때 UI 가 타입의 모듈 이름으로 그 화면을 닫는다(`TypeRegistry::subscribeModuleUnloading`). 엔진 화면 클래스는 재정의하지 않아도 된다(엔진은 내려가지 않는다).
      */
     REFLECT( Abstract )

@@ -41,12 +41,12 @@ namespace sw
      * @class PixelPerfectCameraComponent
      * @brief 같은 오브젝트의 카메라를 픽셀 아트용으로 맞춥니다 — 유니티 Pixel Perfect Camera(2D) · Godot 의 정수 배율 스트레치 + 2D 스냅 자리입니다.
      * @details 프레임마다(틱 그룹 PostPhysics — 카메라를 따라가게 하는 컴포넌트보다 늦고 시차 레이어보다 이르게):
-     *          (1) 뷰포트 픽셀 크기(`CameraRegistry::getViewportWidth/Height`, 엔진 루프가 틱 전에 적는다)에서 **정수 배율**
+     *          (1) 뷰포트 픽셀 크기(`CameraRegistry::getViewportWidth/Height`, 엔진 루프가 틱 전에 적는다)에서 정수 배율
      *              `max(1, min(⌊폭/기준폭⌋, ⌊높이/기준높이⌋))` 을 고르고, 직교 높이를 `뷰포트 높이 / (배율 × PPU)` 로 둔다 — 자산 픽셀 하나가
      *              늘 화면 픽셀 배율×배율 칸이다.
      *          (2) 그리는 눈을 화면 픽셀 격자(1 / (배율 × PPU))에 붙인다 — 트랜스폼은 두고 `CameraComponent::setViewOffset` 만 바꾼다(감쇠로 따라가는
      *              카메라가 반 픽셀 아래의 움직임을 잃지 않게).
-     *          (3) 픽셀 스냅이 켜져 있으면 **자산 픽셀** 격자(1 / PPU)를 카메라 레지스트리와 씬의 모든 메시에 알린다 — sprite_2d.hlsl 이 스프라이트
+     *          (3) 픽셀 스냅이 켜져 있으면 자산 픽셀 격자(1 / PPU)를 카메라 레지스트리와 씬의 모든 메시에 알린다 — sprite_2d.hlsl 이 스프라이트
      *              원점을 그 격자에 붙여(`GPUSpriteInstanceData::_pixelSnap`) 배율 4 에서도 스프라이트가 화면 픽셀 1 칸이 아니라 자산 픽셀 1 칸(화면 4 칸)씩
      *              움직인다 — 두 스프라이트의 아트 픽셀이 어긋나지 않는다(유니티 Pixel Snapping 과 같은 격자). 화면 픽셀 격자로 붙이면 래스터화가
      *              이미 하는 일이라 아무것도 바뀌지 않는다. 단위가 바뀔 때만 알리고, 틱 뒤로 미룬다(다른 오브젝트의 틱과 겹치지 않게).

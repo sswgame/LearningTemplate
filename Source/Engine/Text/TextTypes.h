@@ -1,7 +1,7 @@
 /**
  * @file TextTypes.h
  * @brief 텍스트 계층이 함께 쓰는 값 타입을 정의합니다. 폰트 굵기, 기울기, 면 번호, 메트릭, SDF 비트맵이 있습니다.
- * @details 길이는 둘로 나뉜다. 면과 글리프 메트릭은 **em 비율**(1 = 폰트 크기)이고, 래스터 결과는 **래스터 픽셀**(`SDFRasterParams::_pixelSize` 기준)이다.
+ * @details 길이는 둘로 나뉜다. 면과 글리프 메트릭은 em 비율(1 = 폰트 크기)이고, 래스터 결과는 래스터 픽셀(`SDFRasterParams::_pixelSize` 기준)이다.
  *          화면 크기는 em 비율 × 폰트 크기(UI 단위)로 구하며, 래스터 크기와 화면 크기를 섞지 않는다.
  */
 #pragma once

@@ -3,7 +3,7 @@
  * @brief 엔진 범위의 주 창 서비스입니다 — 주 창을 소유하고, 입력 · RHI · 자동화 · 에디터가 `engine::findSubsystem<MainWindowSubsystem>()` 로 찾아 읽습니다.
  * @details 예전에는 `GenericWindow::setActiveWindow` / `getActiveWindow` 정적 포인터가 두 일을 함께 했다: Engine 이 만든 창을 App 에 넘기는 소유권 전달 칸(`release()` 로 놓고 App 이
  *          `unique_ptr` 로 받음)과, 입력 · RHI 가 읽는 관찰 포인터. 소유권이 정적 칸을 거치면 누가 창을 파괴하는지가 경로마다 달랐고(그래서 `~GenericWindow` 가 전역을 끊었다),
- *          범위 없는 테스트가 그 칸을 서로 덮었다. 이제 **창은 이 서브시스템이 소유하고**(만든 쪽이 `adopt` 로 넘긴다), 읽는 쪽은 범위에서 찾는다.
+ *          범위 없는 테스트가 그 칸을 서로 덮었다. 이제 창은 이 서브시스템이 소유하고(만든 쪽이 `adopt` 로 넘긴다), 읽는 쪽은 범위에서 찾는다.
  *          서브시스템은 창을 쓰는 서브시스템(RHI)보다 먼저 서고 나중에 내려가므로 창이 먼저 사라지는 순서가 없다. 이 서비스가 없는 호스트(서버 · 테스트 하네스)에서
  *          `findSubsystem` 은 nullptr 이고, 읽는 쪽은 "창 없음" 으로 다룬다(지금까지 `getActiveWindow()` 가 nullptr 이던 때와 같다).
  */

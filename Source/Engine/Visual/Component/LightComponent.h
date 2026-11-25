@@ -38,7 +38,7 @@ namespace sw
      * @details 언리얼 `ULightComponent` 의 자리입니다. 색 · 세기의 세터 · 등록과 해제 · 위치 · 방향 함수는 여기 하나입니다. 새 종류는 파생
      *          하나(GPU 원소의 자기 칸은 `writeGPULightKindProperties` 재정의) + 셰이더 분기 하나입니다. 수집(`collectSceneLights`)은 종류를 모릅니다.
      *
-     *          **방향 규약.** 파생의 기본 방향은 **로컬** 방향이고, 월드 회전(부모 포함)이 그것을 돌립니다. 회전이 없는 루트 빛은 기본
+     *          방향 규약. 파생의 기본 방향은 로컬 방향이고, 월드 회전(부모 포함)이 그것을 돌립니다. 회전이 없는 루트 빛은 기본
      *          방향을 그대로 씁니다. 주의: "로컬 회전이 0 이면 기본 방향, 아니면 전방(+Z)" 처럼 갈라 두면 부모의 회전을 무시하고, 회전이
      *          임계값을 넘는 순간 방향이 기본 방향에서 +Z 로 튄다.
      *
@@ -91,7 +91,7 @@ namespace sw
          */
         void writeGPULight( GPULight& outLight ) const;
         /**
-         * @brief 이 빛 원소 **바로 뒤**에 붙는 원소를 씁니다(자유 모양 2D 빛의 변). 기본은 없습니다.
+         * @brief 이 빛 원소 바로 뒤에 붙는 원소를 씁니다(자유 모양 2D 빛의 변). 기본은 없습니다.
          * @details 셰이더는 빛 원소의 개수 칸(자유 모양은 `_extra.z`)만큼 뒤 원소를 읽는다 — 모으는 쪽(`collectSceneLights`)이 `writeGPULight` 바로 다음에 부른다.
          */
         virtual void appendGPUTrailingElements( vector<GPULight>& /*inoutListLight*/ ) const {}

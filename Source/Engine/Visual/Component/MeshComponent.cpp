@@ -120,7 +120,7 @@ namespace sw
         if ( bSameID && ( _mesh != nullptr || _meshLoad.isLoading() ) )
             return;
         _resolvedMeshID = hashedMeshID;
-        // **공유되는** 메시를 받는다(`.mesh` 경로는 메시 캐시, 그 밖은 내장 도형). 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
+        // 공유되는 메시를 받는다(`.mesh` 경로는 메시 캐시, 그 밖은 내장 도형). 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
         if ( MeshAssetFormat::isMeshAssetPath( meshID ) == false )
         {
             _meshLoad.reset();
@@ -213,7 +213,7 @@ namespace sw
 
     void MeshComponent::startAppearanceRamp( float32 direction )
     {
-        // 시간이 0 이면 바로 끝 값이다(등장을 끈 물체 — 데이터 `_appearSeconds`). 플레이 전 씬(에디터 편집 · 로드 중)도 그렇다 — 씬 시간이 흐르지 않아(편집 모드는
+        // 시간이 0 이면 바로 끝 값이다(등장을 끈 물체, 데이터 `_appearSeconds`). 플레이 전 씬(에디터 편집 · 로드 중)도 그렇다. 씬 시간이 흐르지 않아(편집 모드는
         // 경과 0) 램프가 끝나지 않고 메시가 0 에 머문다(유니티 편집 모드 · 언리얼 에디터 월드도 등장 페이드를 하지 않는다).
         const GameObject* const pOwner   = getOwner();
         const bool              bPlaying = pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->hasBegunPlay(); // 읽기다 — 틱(보이기 바꾸기)에서 불린다

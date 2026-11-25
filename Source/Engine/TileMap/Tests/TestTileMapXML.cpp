@@ -214,7 +214,7 @@ SW_TEST_CASE( TileMapXMLTest, ExtraTilesBeyondTheDeclaredCountAreIgnored )
 
 /**
  * @brief [TileMapXMLTest] 깨진 문서는 실패로 끝나고, 반쯤 채운 상태를 남기지 않는다
- * @details 로드는 **먼저 비우고** 읽는다. 그래서 실패한 로드 뒤의 객체는 빈 맵이지 이전 맵이
+ * @details 로드는 먼저 비우고 읽는다. 그래서 실패한 로드 뒤의 객체는 빈 맵이지 이전 맵이
  *          아니다 — 부르는 쪽이 그 사실을 알아야 "왜 맵이 사라졌나" 를 여기서 찾는다.
  */
 SW_TEST_CASE( TileMapXMLTest, MalformedDocumentFailsAndLeavesAnEmptyMap )

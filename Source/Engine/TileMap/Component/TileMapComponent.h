@@ -42,10 +42,10 @@ namespace sw
      *          맵의 행 0 이 위이고 칸 (x, y) 의 가운데는 오브젝트 원점에서 ((x + 0.5)·s, −(y + 0.5)·s) 입니다(s = 타일셋의 `tileSize`). 오브젝트의
      *          월드 트랜스폼을 따릅니다. 플레이 중에는 `setTileBrush` 로 칠할 수 있습니다 — 칠한 칸과 이웃 여덟 칸의 규칙을 다시 고르고 바디 · 외곽선을 다시 만듭니다.
      *
-     *          **청크.** 칸은 한 변 `kChunkSize` 칸의 청크로 나뉘고 청크마다 그리기 배치 하나입니다(`TileChunkGrid`). 칠한 칸이 없는 청크는 배치를 만들지 않아
+     *          청크. 칸은 한 변 `kChunkSize` 칸의 청크로 나뉘고 청크마다 그리기 배치 하나입니다(`TileChunkGrid`). 칠한 칸이 없는 청크는 배치를 만들지 않아
      *          성긴 큰 맵이 칸 수만큼 항목을 들지 않습니다(유니티 Tilemap 의 Chunk 모드). 플레이 중 빈 청크에 칠하면 그 청크의 배치는 틱 뒤에 만들어집니다.
      *
-     *          **편집 중 미리보기.** 상태를 읽은 뒤(`onPostLoad`)와 맵 · 머티리얼 · 정렬을 바꿀 때 그리기 배치를 만듭니다 — 에디터에서 플레이 전에도 보입니다.
+     *          편집 중 미리보기. 상태를 읽은 뒤(`onPostLoad`)와 맵 · 머티리얼 · 정렬을 바꿀 때 그리기 배치를 만듭니다 — 에디터에서 플레이 전에도 보입니다.
      *          물리 바디는 `rebuild`(플레이 시작)만 만듭니다. 편집 중에는 틱이 없으므로 오브젝트를 옮긴 뒤의 칸 자리는 다음 미리보기 갱신에 따라옵니다.
      */
     REFLECT( Category = "Rendering 2D", DisplayName = "Tile Map Renderer", Tooltip = "Draws a tile layer with rule and animated tiles and builds its colliders", Meta = "Icon=TileMap" )
@@ -140,7 +140,7 @@ namespace sw
         void markCollisionDirty( int32 chunkIndex );
         /** @brief 표시된 청크 바디만 다시 만들고 외곽선 · 병합 사각형을 다시 구합니다. 한 프레임에 여러 칸을 칠해도 한 번이다. */
         void flushCollision();
-        /** @brief 청크 하나의 정적 바디(셰이프 여럿 — 맵 원점 기준)를 맞춥니다 — 바디가 있으면 셰이프만 가고, 없으면 만들고, 단단한 칸이 없으면 놓습니다. */
+        /** @brief 청크 하나의 정적 바디(셰이프 여럿, 맵 원점 기준)를 맞춥니다. 바디가 있으면 셰이프만 가고, 없으면 만들고, 단단한 칸이 없으면 놓습니다. */
         void rebuildChunkBody( int32 chunkIndex, const vector<uint8>& listSolid, IPhysicsScene2D& scene );
         /** @brief 청크 하나의 병합 사각형 셰이프를 지금 축 배율(`_colliderScale`)로 @p outListShape 에 붙입니다(맵 원점 기준). */
         void appendChunkShapes( int32 chunkIndex, const vector<uint8>& listSolid, vector<PhysicsShapeDesc2D>& outListShape ) const;

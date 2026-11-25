@@ -17,7 +17,7 @@ namespace sw
         /**
          * @class HarfBuzzTextShaper
          * @brief `ITextShaper` 의 HarfBuzz 구현입니다. 면마다 `hb_font` 하나를 캐시합니다(게임 스레드 — 래스터라이저와 같은 규칙).
-         * @details 결과는 `ITextShaper` 계약대로 **논리 순서**다. HarfBuzz 는 RTL 런을 눈에 보이는 순서로 내므로 뒤집어 붙인다(배치가 다시 뒤집는다).
+         * @details 결과는 `ITextShaper` 계약대로 논리 순서다. HarfBuzz 는 RTL 런을 눈에 보이는 순서로 내므로 뒤집어 붙인다(배치가 다시 뒤집는다).
          *          길이는 em 비율이다 — 글꼴 단위(upem)로 셰이핑하고 upem 으로 나눈다. y 오프셋은 HarfBuzz 의 위 + 를 배치의 아래 + 로 뒤집는다.
          */
         class HarfBuzzTextShaper final : public ITextShaper

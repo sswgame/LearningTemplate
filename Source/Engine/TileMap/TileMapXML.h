@@ -148,7 +148,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 플래그 레이어 테이블입니다. **레이어마다 항목이 하나이고 순서는 `TileFlagLayer` 값 순서입니다.**
+     * @brief 플래그 레이어 테이블입니다. 레이어마다 항목이 하나이고 순서는 `TileFlagLayer` 값 순서입니다.
      * @details XML 속성 이름은 파일 형식이다. 바꾸면 기존 맵의 그 레이어가 기본값으로 읽힌다. 쓰는 순서도 이 테이블 순서라
      *          항목 순서를 바꾸면 저장 바이트가 바뀐다. 본문(nullptr)으로 저장하는 레이어는 하나뿐이다.
      */
@@ -213,7 +213,7 @@ namespace sw
 
         /**
          * @brief 칸마다 정수 하나를 드는 이름 붙은 데이터 레이어입니다(지형 비용 · 발소리 · 지역 번호 같은 게임 값). Godot TileSet custom data 와 같은 모양입니다.
-         * @details 플래그 레이어(0/1, 엔진 표 `kArrTileFlagLayerInfo`)와 달리 이름과 기본값은 **맵 데이터**가 정한다 — 장르가 새 값을 원해도 엔진 코드를 고치지 않는다.
+         * @details 플래그 레이어(0/1, 엔진 표 `kArrTileFlagLayerInfo`)와 달리 이름과 기본값은 맵 데이터가 정한다 — 장르가 새 값을 원해도 엔진 코드를 고치지 않는다.
          *          XML 은 `<dataLayers><layer name=".." default="..">행 우선 정수들</layer></dataLayers>` 이고, 레이어가 없는 맵은 이 요소를 쓰지 않는다(기존 맵과 바이트까지 같다).
          *          이름 · 기본값은 필수이고 이름은 겹치지 않으며, 값 수는 셀 수와 같아야 한다 — 모자란 값을 기본값으로 메우지 않고 읽기 오류다.
          */
@@ -237,7 +237,7 @@ namespace sw
         vector<Warp>   _listWarp{};
         /**
          * @brief 타일 레이어의 타일셋(`.tileset.xml`) 경로입니다. 비어 있으면 타일 레이어가 없고 `<tileLayer>` 를 쓰지 않습니다(기존 맵과 바이트까지 같습니다).
-         * @details 타일 레이어는 셀마다 **브러시**(그냥 타일, 규칙 타일)를 칠한다. 보일 모습(아틀라스 셀)은 저장하지 않고 읽는 쪽이 규칙으로 고른다
+         * @details 타일 레이어는 셀마다 브러시(그냥 타일, 규칙 타일)를 칠한다. 보일 모습(아틀라스 셀)은 저장하지 않고 읽는 쪽이 규칙으로 고른다
          *          (`TileSetAsset::resolveVisual`). 이웃을 칠하면 모습이 따라 바뀐다(유니티의 Rule Tile, Godot 의 terrain).
          */
         string _tileSetPath{};
@@ -285,7 +285,7 @@ namespace sw
 
         /** @brief 리소스 id 의 타일맵 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). */
         [[nodiscard]] SW_API bool load( const AssetID& assetID );
-        /** @brief **디스크 파일**의 타일맵 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
+        /** @brief 디스크 파일의 타일맵 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] SW_API bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief XML 본문에서 타일맵을 읽습니다(리소스가 아닌 글 — 덮어쓰기 층 · 다시 읽기 기록을 받지 않는다). */
         [[nodiscard]] SW_API bool loadFromXML( string_view xml );
@@ -296,7 +296,7 @@ namespace sw
         /**
          * @brief 타일맵 XML 본문을 만듭니다.
          * @details `<t>` 는 항상 `_width × _height` 개를 적는다. 타일 배열이 그보다 짧으면
-         *          (크기만 바꾸고 셀을 늘리지 않은 상태) 모자란 셀은 **읽기 쪽 기본값**으로 적고
+         *          (크기만 바꾸고 셀을 늘리지 않은 상태) 모자란 셀은 읽기 쪽 기본값으로 적고
          *          경고를 남긴다. 배열 밖을 읽지 않으면서 왕복도 어긋나지 않는 방법이다.
          */
         SW_API string toXML() const;

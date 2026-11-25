@@ -6,7 +6,7 @@
  *          (언리얼 `UNiagaraFunctionLibrary::SpawnSystemAtLocation` 의 컴포넌트 풀 · 시스템 에셋의 MaxPoolSize 자리).
  *          효과는 반복하지 않아야 한다 — 반복하는 효과는 끝나지 않아 풀이 놀지 않는다. 풀 오브젝트는 파생(`GameObject::setTransient`)이라 세이브에 들지 않고 씬과 함께 사라진다.
  *          그리는 것이 없는 전용 서버(`build::kWithClientCode` 가 거짓)는 틀지 않는다.
- *          **오브젝트는 안전 지점에서만 만든다.** `play` 는 매니저의 구조 변경 명령 버퍼(`executeOrDeferPostTickOnScene`)로 넘긴다 — 틱 중(병렬 틱 · 알림 처리)이면
+ *          오브젝트는 안전 지점에서만 만든다. `play` 는 매니저의 구조 변경 명령 버퍼(`executeOrDeferPostTickOnScene`)로 넘긴다 — 틱 중(병렬 틱 · 알림 처리)이면
  *          틱 뒤 게임 스레드로 미루고, 틱 밖이면 바로 튼다(언리얼 Mass 의 Defer() 명령 버퍼 · 유니티 EntityCommandBuffer 자리). 그래서 부르는 쪽이 어느 스레드 · 어느 단계인지 몰라도 된다.
  *          씬 서비스(`ISceneService`)이고 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생긴다(`manager.getSubsystem<sw::VFXEffectPool>()`).
  */

@@ -57,9 +57,9 @@ namespace sw
      *          입력과 포커스를 받지 않으므로 게임과 메뉴를 막지 않는다. 보일 것이 없으면 화면을 닫는다. 항목은 조각 `engine/ui/parts/notification.ui.xml`
      *          (`Message`, `Count`, 루트의 스타일 클래스 `notification <종류>`)로 만든다. 게임 스레드에서만 쓴다.
      *
-     *          **이름.** 항목 조각의 위젯은 한 트리에 여럿 들어가므로 붙이기 전에 이름을 `<번호>`(루트), `<번호>.Message`, `<번호>.Count` 로 바꾼다. 번호는 올린 차례(`Entry::_order`)이고,
+     *          이름. 항목 조각의 위젯은 한 트리에 여럿 들어가므로 붙이기 전에 이름을 `<번호>`(루트), `<번호>.Message`, `<번호>.Count` 로 바꾼다. 번호는 올린 차례(`Entry::_order`)이고,
      *          그래서 "name is used twice" 경고가 나지 않는다(`getEntryWidgetName`).
-     *          **들어오기 · 나가기.** 항목 위젯은 불투명도 0 으로 붙고 `kFadeSeconds` 동안 1 로 올라온다. 시간이 다 되면 보이는 목록(자리 계산, `getVisibleCount`)에서는 바로 빠지고
+     *          들어오기 · 나가기. 항목 위젯은 불투명도 0 으로 붙고 `kFadeSeconds` 동안 1 로 올라온다. 시간이 다 되면 보이는 목록(자리 계산, `getVisibleCount`)에서는 바로 빠지고
      *          위젯은 같은 시간 동안 0 으로 사라진 뒤 지운다(화면은 사라지는 항목까지 없어져야 닫는다). 움직임 줄이기(`gv_uiReduceMotion`)이면 페이드 없이 바로 붙고 바로 지운다.
      */
     class SW_API UINotificationService final : public Subsystem
