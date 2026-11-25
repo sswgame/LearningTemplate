@@ -67,6 +67,9 @@ namespace sw::editor
      */
     struct TextureImporter
     {
+        /** @brief 원본 이미지를 두는 폴더 이름입니다. 쿠킹은 이 폴더를 팩에서 뺍니다(`Config/Engine/PackConfig.json`). 원본 확장자는 `AssetIdentityRules::isImportSource( kRawFolder, … )` 가 답한다. */
+        static constexpr string_view kRawFolder = "textures_raw";
+
         /**
          * @brief 텍스처 파일 하나를 주어진 임포트 규칙에 따라 DDS 로 임포트합니다.
          * @param sourcePath 원본 소스 이미지 경로입니다.

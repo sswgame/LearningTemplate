@@ -23,9 +23,6 @@ namespace sw::editor
      */
     struct ModelImportUtil
     {
-        /** @brief 모델 원본을 두는 폴더 이름입니다. 쿠킹은 이 폴더를 팩에서 뺍니다(`Config/Engine/PackConfig.json`). */
-        static constexpr string_view kRawModelFolder = "models_raw";
-
         /** @brief 원본 폴더 옆에 임포트된 `.mesh` 를 두는 폴더 이름입니다. */
         static constexpr string_view kImportedModelFolder = "models";
 
@@ -48,9 +45,6 @@ namespace sw::editor
 
         /** @brief VRM 모델 옆 폴더에서 툰 머티리얼을 담는 폴더 이름입니다. */
         static constexpr string_view kMaterialFolder = "materials";
-
-        /** @brief 머티리얼이 쓰는 내장 이미지를 꺼내 두는 원본 텍스처 폴더 이름입니다. 텍스처 임포트가 이 이미지를 옆 `textures/` 의 DDS 로 변환합니다. */
-        static constexpr string_view kRawTextureFolder = "textures_raw";
 
         /** @brief 정점 하나가 받는 본 영향 수입니다(`JOINTS_0`, `WEIGHTS_0`). */
         static constexpr uint32 kInfluenceCount = 4;

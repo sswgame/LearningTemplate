@@ -204,6 +204,9 @@ namespace sw::editor
      */
     struct ModelImporter
     {
+        /** @brief 모델 원본을 두는 폴더 이름입니다. 쿠킹은 이 폴더를 팩에서 뺍니다(`Config/Engine/PackConfig.json`). 원본 확장자는 `AssetIdentityRules::isImportSource( kRawFolder, … )` 가 답한다. */
+        static constexpr string_view kRawFolder = "models_raw";
+
         /** @brief glTF 파일 하나를 메시, 스켈레톤, 부착 메시, 클립으로 읽습니다. 파일은 쓰지 않습니다. 규칙이나 부가 데이터가 잘못되었으면 false 입니다. */
         [[nodiscard]] static bool readModelAsset( const AbsolutePath& sourcePath, const ModelImportRule& rule, ModelImportResult& outResult, TaskManager* pTaskManager = nullptr );
 

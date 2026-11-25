@@ -106,6 +106,7 @@ namespace sw::editor
         CookableSource, ///< 엔진의 쿠킹 규칙(`AssetCookPath::isCookableSource`)을 따른다. 쿠커가 쿠킹하는 저작 소스만 해당한다(씬 · 프리팹)
         EndsWith,       ///< 경로가 접미사 하나로 끝난다(`.theme.xml` 처럼 점이 둘 이상인 이름)
         Extension,      ///< 경로의 확장자가 목록 하나다(`.png`)
+        ImportSource,   ///< 경로의 확장자가 임포트하는 원본이다(`AssetIdentityRules::isImportSource` — 확장자의 정본은 `Config/Dev/AssetIdentity.json` 이고 에디터가 따로 적지 않는다)
     };
 
     /**
@@ -134,6 +135,7 @@ namespace sw::editor
         const string_view*       _pSuffix{ nullptr };     ///< `EndsWith` · `Extension` 의 접미사. 그 밖의 방식은 nullptr
         uint32                   _suffixCount{ 0 };
         bool ( *_pfnAcceptPath )( string_view path ){ nullptr }; ///< 접미사가 맞은 뒤 더 보는 조건(높이장 원본 위치). nullptr 이면 접미사만 본다
+        string_view      _importSourceFolder{};                  ///< `ImportSource` 의 원본 폴더 이름("textures_raw" — 임포터가 선언한다). 그 밖의 방식은 빈 글
         AssetReloadRoute _reload{};                              ///< 이 규칙의 파일을 핫 리로드가 다시 읽는 길. 비면 핫 리로드 대상이 아니다
 
         /** @brief 엔진 종류 @p def 의 여는 접미사로 판정합니다. */
@@ -142,6 +144,8 @@ namespace sw::editor
         static EditorAssetMatchRule cookableSource( const AssetTypeDef& def, const AssetReloadRoute& reload = {} );
         /** @brief 접미사 목록(@p pSuffix, @p count)으로 판정합니다. */
         static EditorAssetMatchRule suffixes( EditorAssetMatchMode mode, const string_view* pSuffix, uint32 count, EditorAssetMatchPriority priority, const AssetReloadRoute& reload = {} );
+        /** @brief 원본 폴더 @p sourceFolder 의 임포터가 받는 원본 확장자로 판정합니다. @p sourceFolder 는 등록이 살아 있는 동안 있어야 합니다(임포터의 상수). */
+        static EditorAssetMatchRule importSource( string_view sourceFolder, EditorAssetMatchPriority priority, const AssetReloadRoute& reload = {} );
     };
 
     /**

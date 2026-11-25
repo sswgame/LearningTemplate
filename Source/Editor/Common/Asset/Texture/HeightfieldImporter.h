@@ -35,6 +35,9 @@ namespace sw::editor
      */
     struct HeightfieldImporter
     {
+        /** @brief 원본을 두는 폴더 이름입니다. 원본 확장자는 `AssetIdentityRules::isImportSource( kRawFolder, … )` 가 답한다. */
+        static constexpr string_view kRawFolder = "heightfields_raw";
+
         /** @brief 원본(+ 곁 구멍 마스크)을 읽어 높이장으로 만듭니다. */
         [[nodiscard]] static bool readHeightfield( const AbsolutePath& sourcePath, HeightfieldAsset& outData );
         /** @brief 원본 하나를 임포트해 @p outputPath 에 씁니다. */

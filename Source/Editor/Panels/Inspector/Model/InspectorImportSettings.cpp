@@ -9,7 +9,7 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
-#include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
+#include "Editor/Common/Asset/ModelImport/ModelImporter.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -69,9 +69,9 @@ namespace sw::editor
         if ( StringUtil::endsWith( assetID, AssetMeta::kExtension ) )
             return SourceKind::None;
         fixed_string<constant::buffer::kMax64> modelSegment;
-        formatstring( modelSegment.data(), modelSegment.capacity(), "/%#/", ModelImportUtil::kRawModelFolder );
+        formatstring( modelSegment.data(), modelSegment.capacity(), "/%#/", ModelImporter::kRawFolder );
         fixed_string<constant::buffer::kMax64> textureSegment;
-        formatstring( textureSegment.data(), textureSegment.capacity(), "/%#/", ModelImportUtil::kRawTextureFolder );
+        formatstring( textureSegment.data(), textureSegment.capacity(), "/%#/", TextureImporter::kRawFolder );
         if ( assetID.find( modelSegment.view() ) != string_view::npos )
             return SourceKind::Model;
         if ( assetID.find( textureSegment.view() ) != string_view::npos )

@@ -405,8 +405,6 @@ namespace sw::editor
          */
         struct TextureImporterInternal
         {
-            /** @brief 원본 이미지를 두는 폴더 이름입니다. 쿠킹은 이 폴더를 팩에서 뺍니다(`Config/Engine/PackConfig.json`). */
-            static constexpr string_view kRawTextureFolder = "textures_raw";
             /** @brief 원본 폴더 옆에 임포트된 DDS 를 두는 폴더 이름입니다. 런타임은 여기의 DDS 만 읽습니다. */
             static constexpr string_view kImportedTextureFolder = "textures";
             /** @brief 스탬프의 헤더 줄입니다. 형식이나 판정이 바뀌면 올립니다. 이전 스탬프는 모두 어긋남이 되어 한 번 다시 임포트합니다. */
@@ -415,7 +413,7 @@ namespace sw::editor
             static constexpr uint32 kImporterVersion = 2; // 2: BC 압축 원본을 4 의 배수 크기로 다시 표본한다
 
             /** @brief 임포트하는 원본 이미지 확장자인지 확인합니다. `.dds`, `import.stamp` 같은 파일은 원본이 아닙니다. */
-            static bool isSourceImage( string_view path ) { return FileUtil::hasAnyExtension( path, { ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".hdr" } ); }
+            static bool isSourceImage( string_view path ) { return AssetIdentityRules::getProjectRules().isImportSource( TextureImporter::kRawFolder, path ); }
         };
 
         /**
@@ -432,7 +430,7 @@ namespace sw::editor
             {
             }
 
-            string_view  getRawFolderName() const override { return TextureImporterInternal::kRawTextureFolder; }
+            string_view  getRawFolderName() const override { return TextureImporter::kRawFolder; }
             string_view  getStampHeader() const override { return TextureImporterInternal::kImportStampHeader; }
             string_view  getImportedLabel() const override { return "DDS"; }
             uint64       findCodeFingerprint() const override { return CookCodeFingerprint::find( "TextureImport" ); }
@@ -720,7 +718,7 @@ namespace sw::editor
             item._bHandled                = true;
             const AbsolutePath sourcePath = batch._pAssetPaths->getRootFolderPathFor( item._relativePath ).join( item._relativePath ); // 워커다 — 잡을 올린 에디터 스레드가 넘긴 경로 상태를 쓴다. 작업 도메인 사본은 실행 뿌리 아래다
             if ( makeImportedTexturePath( sourcePath ).empty() )
-                SW_LOG_WARNING_ID( "TextureImporter.SourceImagesMustUnder", "Source images must be under `%#` to be imported: %#", TextureImporterInternal::kRawTextureFolder, item._relativePath );
+                SW_LOG_WARNING_ID( "TextureImporter.SourceImagesMustUnder", "Source images must be under `%#` to be imported: %#", TextureImporter::kRawFolder, item._relativePath );
             else
                 listEntry.push_back( AssetSourceBatchEntry{ itemIndex, vector<string>{ item._relativePath } } );
         }
@@ -771,13 +769,13 @@ namespace sw::editor
 
     string TextureImporter::makeImportedTexturePath( string_view rawTexturePath )
     {
-        return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporterInternal::kRawTextureFolder, TextureImporterInternal::kImportedTextureFolder,
+        return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporter::kRawFolder, TextureImporterInternal::kImportedTextureFolder,
                                                        ".dds" );
     }
 
     AbsolutePath TextureImporter::makeImportedTexturePath( const AbsolutePath& rawTexturePath )
     {
-        return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporterInternal::kRawTextureFolder, TextureImporterInternal::kImportedTextureFolder,
+        return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporter::kRawFolder, TextureImporterInternal::kImportedTextureFolder,
                                                        ".dds" );
     }
 

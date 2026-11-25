@@ -681,7 +681,7 @@ namespace sw::editor
                 if ( folderAt == string::npos )
                     return uniqueFootprint;
                 StringBuilder<constant::buffer::kMax512> rawFolder;
-                rawFolder.appendFormat( "%#/%#/%#", string_view( sideFolder ).substr( 0, folderAt ), ModelImportUtil::kRawModelFolder, string_view( sideFolder ).substr( folderAt + marker.size() ) );
+                rawFolder.appendFormat( "%#/%#/%#", string_view( sideFolder ).substr( 0, folderAt ), ModelImporter::kRawFolder, string_view( sideFolder ).substr( folderAt + marker.size() ) );
                 const AbsolutePath rawPath = FileUtil::toDiskPath( rawFolder.view() ); // 폴더 이름 조각을 바꾼 글이다
                 if ( FileUtil::isDirectory( rawPath ) == false )
                     return uniqueFootprint;
@@ -779,7 +779,7 @@ namespace sw::editor
                 const AbsolutePath domain = ImportedAssetStore::findDomainFolder( sourcePath );
                 if ( domain.empty() )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.ClipSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its clips", sourcePath.str(), ModelImportUtil::kRawModelFolder.data() );
+                    SW_LOG_ERROR_ID( "ModelImporter.ClipSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its clips", sourcePath.str(), ModelImporter::kRawFolder.data() );
                     return false;
                 }
                 const string settingsText = rule.makeClipSettingsText();
@@ -833,7 +833,7 @@ namespace sw::editor
             {
             }
 
-            string_view getRawFolderName() const override { return ModelImportUtil::kRawModelFolder; }
+            string_view getRawFolderName() const override { return ModelImporter::kRawFolder; }
             string_view getStampHeader() const override { return ModelImportUtil::kImportStampHeader; }
             string_view getImportedLabel() const override { return "메시"; }
             uint64      findCodeFingerprint() const override { return CookCodeFingerprint::find( "ModelImport" ); }
@@ -1049,7 +1049,7 @@ namespace sw::editor
             item._bHandled                = true;
             const AbsolutePath sourcePath = batch._pAssetPaths->getRootFolderPathFor( item._relativePath ).join( item._relativePath ); // 작업 도메인 사본은 실행 뿌리 아래다
             if ( makeImportedModelPath( sourcePath ).empty() )
-                SW_LOG_WARNING_ID( "ModelImporter.ModelSourcesMustUnder", "Model sources must be under `%#` to be imported: %#", ModelImportUtil::kRawModelFolder, item._relativePath );
+                SW_LOG_WARNING_ID( "ModelImporter.ModelSourcesMustUnder", "Model sources must be under `%#` to be imported: %#", ModelImporter::kRawFolder, item._relativePath );
             else
                 listEntry.push_back( AssetSourceBatchEntry{ itemIndex, vector<string>{ item._relativePath } } );
         }
@@ -1152,7 +1152,7 @@ namespace sw::editor
 
     AbsolutePath ModelImporter::makeImportedModelPath( const AbsolutePath& rawModelPath )
     {
-        return AssetImportStampUtil::makeImportedPath( rawModelPath, ModelImportUtil::kRawModelFolder, ModelImportUtil::kImportedModelFolder,
+        return AssetImportStampUtil::makeImportedPath( rawModelPath, ModelImporter::kRawFolder, ModelImportUtil::kImportedModelFolder,
                                                        MeshAssetFormat::kExtension );
     }
 

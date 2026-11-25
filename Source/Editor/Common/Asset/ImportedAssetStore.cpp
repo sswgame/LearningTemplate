@@ -15,6 +15,7 @@
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
+#include "Editor/Common/Asset/ModelImport/ModelImporter.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetGUID.h"
@@ -55,7 +56,7 @@ namespace sw::editor
     {
         const string&                           normalized = sourcePath.str();
         StringBuilder<constant::buffer::kMax64> segmentBuilder;
-        segmentBuilder.appendFormat( "/%#/", ModelImportUtil::kRawModelFolder );
+        segmentBuilder.appendFormat( "/%#/", ModelImporter::kRawFolder );
         const size_t at = normalized.find( segmentBuilder.view() );
         return at == string::npos ? AbsolutePath{} : FileUtil::toDiskPath( string_view( normalized ).substr( 0, at ) );
     }
