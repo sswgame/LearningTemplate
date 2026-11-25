@@ -61,8 +61,8 @@ namespace
             , _firstSink{}
             , _secondSink{}
         {
-            _first.initialize( &_store, 1 );
-            _second.initialize( &_store, 2 );
+            _first.initialize( _store, 1 );
+            _second.initialize( _store, 2 );
             SW_EXPECT_TRUE( _first.registerJob( definition, SW_DELEGATE_METHOD( ScheduledJobFunction, &RunSink::onRun, &_firstSink ) ) );
             SW_EXPECT_TRUE( _second.registerJob( definition, SW_DELEGATE_METHOD( ScheduledJobFunction, &RunSink::onRun, &_secondSink ) ) );
         }
@@ -334,7 +334,7 @@ SW_TEST_CASE( ServiceSchedulerTest, RunRecordsExpireAndLongWindowsAreRefused )
     SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "service_schedule_expiry" ) ) ); // 차지 줄 · 끝 줄 둘 다 지웠다
 
     ServiceScheduler guarded;
-    guarded.initialize( &rig._store, 3 );
+    guarded.initialize( rig._store, 3 );
     guarded.setRunTTLMs( 1000 );
     ScheduleDef window;
     window._jobID         = "window.job";
@@ -560,22 +560,22 @@ SW_TEST_CASE( ServiceTTLTest, JobSweepsOnSchedule )
     rig.put( "b", kDayStart ); // 회차 시각 기준으로는 아직 남는다
 
     ServiceScheduler scheduler;
-    scheduler.initialize( &store, 1 );
+    scheduler.initialize( store, 1 );
     constexpr int32 kMinuteOfDay = 0;
 
     ServiceTTLMonitor empty;
-    SW_EXPECT_TRUE( empty.initialize( &store, &scheduler, {}, kMinuteOfDay ) );
+    SW_EXPECT_TRUE( empty.initialize( store, scheduler, {}, kMinuteOfDay ) );
 
     ServiceTTLMonitor badRule;
-    SW_EXPECT_FALSE( badRule.initialize( &store, &scheduler, { rig.makeRule( 0 ) }, kMinuteOfDay ) );
+    SW_EXPECT_FALSE( badRule.initialize( store, scheduler, { rig.makeRule( 0 ) }, kMinuteOfDay ) );
 
     ServiceTTLRule unlimited     = rig.makeRule();
     unlimited._maxDeletePerSweep = 0; // 상한은 설정이 정한다 - 없으면 기동 오류다
     ServiceTTLMonitor noLimit;
-    SW_EXPECT_FALSE( noLimit.initialize( &store, &scheduler, { unlimited }, kMinuteOfDay ) );
+    SW_EXPECT_FALSE( noLimit.initialize( store, scheduler, { unlimited }, kMinuteOfDay ) );
 
     ServiceTTLMonitor job;
-    SW_REQUIRE_TRUE( job.initialize( &store, &scheduler, { rig.makeRule() }, kMinuteOfDay ) );
+    SW_REQUIRE_TRUE( job.initialize( store, scheduler, { rig.makeRule() }, kMinuteOfDay ) );
     scheduler.update( UnixMilliseconds{ kNowMs } );
     while ( store.pollCompletions() > 0 )
     {

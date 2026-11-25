@@ -70,16 +70,16 @@ namespace sw
         VoxelWorld();
 
         /** @brief 크기를 정하고 올라온 청크 · 저장본을 비웁니다. 청크 수가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). */
-        [[nodiscard]] bool initialize( int32 chunkCountX, int32 chunkCountZ, const VoxelBlockCatalog* pCatalog );
+        [[nodiscard]] bool initialize( int32 chunkCountX, int32 chunkCountZ, const VoxelBlockCatalog& catalog );
         /** @brief 빌린 카탈로그만 @p catalog 로 바꿉니다. 블록 번호는 이어 읽는 `readState` 가 id 로 다시 짝짓는다 — 읽기 앞에서만 부르고, 읽기가 거절하면 앞 카탈로그로 되돌린다. */
         void rebindCatalog( const VoxelBlockCatalog& catalog ) { _pCatalog = &catalog; }
         /** @brief 저장본이 없는 청크를 채울 생성 훅을 정합니다. 훅 없이 저장본도 없는 청크는 올리지 않습니다(`loadChunk` 가 오류). */
         void setChunkGenerator( VoxelChunkGenerator generator ) { _generator = std::move( generator ); }
         /**
          * @brief 공유 땅을 빌립니다. 복셀 땅은 이 키트의 것이므로 월드 발자국(X × Z 블록, 막힘) 전체를 한 번에 얻습니다. 블록 (0, 0) 이 땅의 @p origin 셀에 해당합니다.
-         * @return 그 위치에 다른 키트의 땅이 있으면 false 를 반환하고 아무것도 얻지 않습니다. @p pLand 가 nullptr 이면 true 를 반환합니다. `initialize` 뒤에 호출합니다.
+         * @return 그 위치에 다른 키트의 땅이 있으면 false 를 반환하고 아무것도 얻지 않습니다. `initialize` 뒤에 호출합니다.
          */
-        [[nodiscard]] bool bindLand( LandRegistry* pLand, const int2& origin );
+        [[nodiscard]] bool bindLand( LandRegistry& land, const int2& origin );
 
         /**
          * @brief 청크 하나를 올립니다. 저장본이 있으면 풀고, 없으면 생성 훅으로 채웁니다. 이웃 여덟 청크의 판 번호도 올립니다(경계 면 · 꼭짓점 그늘).

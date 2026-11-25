@@ -64,7 +64,7 @@ SW_TEST_CASE( SkirmishMatchTest, BasesOpenMirrored )
     RTSCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kSkirmishUnitXML, "SkirmishMatchTest" ) );
     SkirmishMatch match;
-    SW_REQUIRE_TRUE( match.initialize( &catalog, kBothHuman, makeSettings() ) );
+    SW_REQUIRE_TRUE( match.initialize( catalog, kBothHuman, makeSettings() ) );
 
     for ( int32 player = 0; player < SkirmishMatch::kPlayerCount; ++player )
     {
@@ -103,7 +103,7 @@ SW_TEST_CASE( SkirmishMatchTest, MissingLayoutUnitRefusesTheMatch )
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kNoGeyserUnitXML, "SkirmishMatchTest" ) );
     SW_EXPECT_LOG( "SkirmishMatch.MapLayoutPlacesBut" );
     SkirmishMatch match;
-    SW_EXPECT_FALSE( match.initialize( &catalog, kBothHuman, makeSettings() ) );
+    SW_EXPECT_FALSE( match.initialize( catalog, kBothHuman, makeSettings() ) );
 }
 
 /**
@@ -115,8 +115,8 @@ SW_TEST_CASE( SkirmishMatchTest, LockstepAndStateRoundTripKeepTheChecksum )
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kSkirmishUnitXML, "SkirmishMatchTest" ) );
     SkirmishMatch host;
     SkirmishMatch client;
-    SW_REQUIRE_TRUE( host.initialize( &catalog, kBothHuman, makeSettings() ) );
-    SW_REQUIRE_TRUE( client.initialize( &catalog, kBothHuman, makeSettings() ) );
+    SW_REQUIRE_TRUE( host.initialize( catalog, kBothHuman, makeSettings() ) );
+    SW_REQUIRE_TRUE( client.initialize( catalog, kBothHuman, makeSettings() ) );
     const uint32 startChecksum = host.computeChecksum();
     run( host, kGatherFrames );
     run( client, kGatherFrames );
@@ -126,7 +126,7 @@ SW_TEST_CASE( SkirmishMatchTest, LockstepAndStateRoundTripKeepTheChecksum )
     Archive written;
     host.writeState( written );
     SkirmishMatch restored;
-    SW_REQUIRE_TRUE( restored.initialize( &catalog, kBothHuman, makeSettings() ) );
+    SW_REQUIRE_TRUE( restored.initialize( catalog, kBothHuman, makeSettings() ) );
     Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( host.computeChecksum(), restored.computeChecksum() );

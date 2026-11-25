@@ -57,7 +57,7 @@ namespace
         [[nodiscard]] bool setUp()
         {
             s_thinkCount = 0;
-            if ( _catalog.loadFromXMLText( kCommanderUnitXML, "RTSCommanderAITest" ) == false || _world.initialize( &_catalog, 48, 48 ) == false )
+            if ( _catalog.loadFromXMLText( kCommanderUnitXML, "RTSCommanderAITest" ) == false || _world.initialize( _catalog, 48, 48 ) == false )
                 return false;
             _wallet.add( _world.getSettings()._mineralCurrency, 1000 );
             (void)_world.addPlayer( 0, _wallet, float3{ 6.0f, 0.0f, 6.0f } );

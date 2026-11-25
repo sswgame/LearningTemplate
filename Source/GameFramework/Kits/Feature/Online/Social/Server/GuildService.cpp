@@ -1293,10 +1293,9 @@ namespace sw
     {
     }
 
-    void GuildService::initialize( ServiceStore* pStore )
+    void GuildService::initialize( ServiceStore& store )
     {
-        SW_ASSERT( pStore != nullptr );
-        _store.bindStore( pStore );
+        _store.bindStore( &store );
     }
 
     void GuildService::shutdown()

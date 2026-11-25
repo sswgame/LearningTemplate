@@ -50,7 +50,7 @@ namespace
         /** @brief 모든 칸이 @p pName 재질인 격자를 세웁니다. */
         [[nodiscard]] bool makeGrid( int32 width, int32 height, const utf8* pName, ElementGrid& outGrid ) const
         {
-            if ( outGrid.initialize( width, height, &_table ) == false )
+            if ( outGrid.initialize( width, height, _table ) == false )
                 return false;
             for ( int32 y = 0; y < height; ++y )
             {
@@ -64,16 +64,15 @@ namespace
     };
 } // namespace
 
-/** @brief [ElementGridTest] 표가 없거나 재질이 없거나 크기가 1 보다 작으면 세우지 않고, 표에 없는 재질은 칸에 놓지 않는다 */
+/** @brief [ElementGridTest] 재질이 없거나 크기가 1 보다 작으면 세우지 않고, 표에 없는 재질은 칸에 놓지 않는다 */
 SW_TEST_CASE( ElementGridTest, RefusesBadSizeTableAndMaterial )
 {
     const ElementGridTestTable rules;
     ElementGrid                grid;
     SW_EXPECT_LOG( "ElementGrid.ElementGridRefusedSizeX" );
-    SW_EXPECT_FALSE( grid.initialize( 0, 3, &rules._table ) );
-    SW_EXPECT_FALSE( grid.initialize( 3, 3, nullptr ) );
+    SW_EXPECT_FALSE( grid.initialize( 0, 3, rules._table ) );
     const ElementRuleCatalog empty{};
-    SW_EXPECT_FALSE( grid.initialize( 3, 3, &empty ) );
+    SW_EXPECT_FALSE( grid.initialize( 3, 3, empty ) );
     SW_REQUIRE_TRUE( rules.makeGrid( 2, 1, "Grass", grid ) );
     SW_EXPECT_LOG( "ElementGrid.MaterialNotInTable" );
     grid.setMaterial( int2{ 0, 0 }, 6 ); // 재질은 여섯 개(0 ~ 5)
@@ -219,7 +218,7 @@ SW_TEST_CASE( ElementGridTest, StateRoundTripAndRejects )
     ElementRuleCatalog small;
     SW_REQUIRE_TRUE( small.loadFromXMLText( R"(<ElementRules><Material id="Empty"/></ElementRules>)", "small" ) );
     ElementGrid reduced;
-    SW_REQUIRE_TRUE( reduced.initialize( 4, 2, &small ) );
+    SW_REQUIRE_TRUE( reduced.initialize( 4, 2, small ) );
     Archive forReduced( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( reduced.readState( forReduced ) ); // 풀 · 물 번호가 이 표에 없다
 }

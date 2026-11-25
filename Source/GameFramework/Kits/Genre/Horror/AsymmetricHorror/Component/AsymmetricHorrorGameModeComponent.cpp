@@ -223,7 +223,7 @@ namespace sw
                              AsymmetricHorrorGameModeComponentInternal::kMaxSurvivors );
             return false;
         }
-        if ( _match.initialize( makeSettings(), _pCatalog.get() ) == false )
+        if ( _match.initialize( makeSettings(), *_pCatalog ) == false )
         {
             SW_LOG_ERROR_ID( "AsymmetricHorror.MatchRefused", "Asymmetric horror game mode: the match refused killer '%#' or the fixed step %# - the match does not open", _killer.c_str(), _fixedStep );
             return false;
@@ -468,7 +468,7 @@ namespace sw
         AsymmetricHorrorMatch restoredMatch;
         if ( io.isReading() )
         {
-            if ( _pCatalog == nullptr || restoredMatch.initialize( makeSettings(), _pCatalog.get() ) == false )
+            if ( _pCatalog == nullptr || restoredMatch.initialize( makeSettings(), *_pCatalog ) == false )
             {
                 SW_LOG_ERROR_ID( "AsymmetricHorror.StateNeedsCatalog", "Asymmetric horror game mode: state read before the rules catalog is bound - refused" );
                 io.fail();

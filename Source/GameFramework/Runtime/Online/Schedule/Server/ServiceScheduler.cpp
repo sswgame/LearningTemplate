@@ -183,9 +183,9 @@ namespace sw
         shutdown();
     }
 
-    void ServiceScheduler::initialize( ServiceStore* pStore, uint64 serverID )
+    void ServiceScheduler::initialize( ServiceStore& store, uint64 serverID )
     {
-        _store.bindStore( pStore );
+        _store.bindStore( &store );
         _serverID = serverID;
         _listJob.clear();
     }

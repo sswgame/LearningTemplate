@@ -165,7 +165,7 @@ namespace
             burn._status  = "Burn";
             burn._chance  = 0.5f;
             _chart.addStatusChance( burn );
-            SW_REQUIRE_TRUE( _combat.initialize( &_catalog, 7 ) );
+            SW_REQUIRE_TRUE( _combat.initialize( _catalog, 7 ) );
         }
 
         bool readFixture( float32 adrenaline )
@@ -584,16 +584,6 @@ SW_TEST_CASE( MonsterHuntBestiaryTest, StateRoundTripsAndRefusesBadEntries )
 }
 
 /**
- * @brief [MonsterHuntCombatSetupTest] 카탈로그 없는 시작은 대신 쓸 수치 없이 오류로 멈춘다
- */
-SW_TEST_CASE( MonsterHuntCombatSetupTest, InitializeRefusesNoCatalog )
-{
-    SW_EXPECT_LOG( "MonsterHuntCombat.MonsterHuntCombatRefusedNoCatalog" );
-    sw::MonsterHuntCombat combat;
-    SW_EXPECT_FALSE( combat.initialize( nullptr, 1 ) );
-}
-
-/**
  * @brief [MonsterHuntCombatTest] 공짜 동작은 스태미나가 바닥이어도 되고, 값이 있는 동작은 모자라면 값을 깎지 않는다
  */
 SW_TEST_CASE_F( MonsterHuntCombatTest, ActionsSpendStaminaOnlyWhenAffordable )
@@ -687,7 +677,7 @@ SW_TEST_CASE_F( MonsterHuntCombatTest, AdrenalinePointsAccumulateAndClamp )
 SW_TEST_CASE_F( MonsterHuntCombatTest, StatusRollsAreDeterministicAcrossState )
 {
     sw::MonsterHuntCombat twin;
-    SW_REQUIRE_TRUE( twin.initialize( &_catalog, 7 ) );
+    SW_REQUIRE_TRUE( twin.initialize( _catalog, 7 ) );
     const auto rollStatus = [this]( sw::MonsterHuntCombat& combat )
     {
         combat.getStamina().refill();
@@ -701,7 +691,7 @@ SW_TEST_CASE_F( MonsterHuntCombatTest, StatusRollsAreDeterministicAcrossState )
     sw::Archive written;
     _combat.writeState( written );
     sw::MonsterHuntCombat restored;
-    SW_REQUIRE_TRUE( restored.initialize( &_catalog, 99 ) );
+    SW_REQUIRE_TRUE( restored.initialize( _catalog, 99 ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     for ( int32 cast = 0; cast < 16; ++cast )
@@ -888,7 +878,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, InvestigationReadStateChecksFoundClues 
 SW_TEST_CASE_F( MonsterHuntContractTest, HaggleCountersUpToLimit )
 {
     sw::MonsterHuntHaggle haggle;
-    SW_REQUIRE_TRUE( haggle.initialize( &_catalog, "griffin" ) );
+    SW_REQUIRE_TRUE( haggle.initialize( _catalog, "griffin" ) );
     SW_EXPECT_EQUAL( 100, haggle.getOffer() );
 
     SW_EXPECT_EQUAL( sw::MonsterHuntHaggleResult::Countered, haggle.propose( 151 ) ); // 한도(150)를 1 넘는다
@@ -910,7 +900,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, HaggleCountersUpToLimit )
 SW_TEST_CASE_F( MonsterHuntContractTest, HaggleBreaksOffAtMaxAnger )
 {
     sw::MonsterHuntHaggle rounds;
-    SW_REQUIRE_TRUE( rounds.initialize( &_catalog, "rounds" ) );
+    SW_REQUIRE_TRUE( rounds.initialize( _catalog, "rounds" ) );
     for ( int32 round = 0; round < 3; ++round )
     {
         SW_EXPECT_EQUAL( sw::MonsterHuntHaggleResult::Countered, rounds.propose( 200 ) );
@@ -919,12 +909,12 @@ SW_TEST_CASE_F( MonsterHuntContractTest, HaggleBreaksOffAtMaxAnger )
     SW_EXPECT_EQUAL( 100, rounds.getFinalReward() );
 
     sw::MonsterHuntHaggle greedy;
-    SW_REQUIRE_TRUE( greedy.initialize( &_catalog, "griffin" ) );
+    SW_REQUIRE_TRUE( greedy.initialize( _catalog, "griffin" ) );
     SW_EXPECT_EQUAL( sw::MonsterHuntHaggleResult::BrokenOff, greedy.propose( 100000 ) );
     SW_EXPECT_EQUAL( 100, greedy.getFinalReward() );
 
     sw::MonsterHuntHaggle settled;
-    SW_REQUIRE_TRUE( settled.initialize( &_catalog, "griffin" ) );
+    SW_REQUIRE_TRUE( settled.initialize( _catalog, "griffin" ) );
     SW_EXPECT_EQUAL( sw::MonsterHuntHaggleResult::Countered, settled.propose( 160 ) );
     const int32 offer = settled.getOffer();
     SW_EXPECT_EQUAL( offer, settled.acceptOffer() );
@@ -937,19 +927,19 @@ SW_TEST_CASE_F( MonsterHuntContractTest, HaggleBreaksOffAtMaxAnger )
 SW_TEST_CASE_F( MonsterHuntContractTest, HaggleSurvivesExtremeAsks )
 {
     sw::MonsterHuntHaggle calm;
-    SW_REQUIRE_TRUE( calm.initialize( &_catalog, "calm" ) );
+    SW_REQUIRE_TRUE( calm.initialize( _catalog, "calm" ) );
     SW_EXPECT_EQUAL( sw::MonsterHuntHaggleResult::Countered, calm.propose( std::numeric_limits<int32>::max() ) );
     SW_EXPECT_EQUAL( 150, calm.getOffer() );
     SW_EXPECT_EQUAL( sw::MonsterHuntHaggleResult::Countered, calm.propose( std::numeric_limits<int32>::max() ) );
     SW_EXPECT_EQUAL( 150, calm.getOffer() );
 
     sw::MonsterHuntHaggle negative;
-    SW_REQUIRE_TRUE( negative.initialize( &_catalog, "griffin" ) );
+    SW_REQUIRE_TRUE( negative.initialize( _catalog, "griffin" ) );
     SW_EXPECT_EQUAL( sw::MonsterHuntHaggleResult::Accepted, negative.propose( -50 ) );
     SW_EXPECT_EQUAL( 0, negative.getFinalReward() );
 
     sw::MonsterHuntHaggle unpaid;
-    SW_REQUIRE_TRUE( unpaid.initialize( &_catalog, "free" ) );
+    SW_REQUIRE_TRUE( unpaid.initialize( _catalog, "free" ) );
     SW_EXPECT_EQUAL( sw::MonsterHuntHaggleResult::BrokenOff, unpaid.propose( 1 ) ); // 처음 보상이 0 이어도 0 으로 나누지 않는다
     SW_EXPECT_EQUAL( 0, unpaid.getFinalReward() );
 }
@@ -965,7 +955,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, HaggleWithoutContractIsClosed )
     SW_EXPECT_EQUAL( 0, neverStarted.acceptOffer() );
 
     sw::MonsterHuntHaggle unknown;
-    SW_EXPECT_FALSE( unknown.initialize( &_catalog, "nothing" ) );
+    SW_EXPECT_FALSE( unknown.initialize( _catalog, "nothing" ) );
     SW_EXPECT_EQUAL( sw::MonsterHuntHaggleResult::Closed, unknown.propose( 10 ) );
 }
 
@@ -975,13 +965,13 @@ SW_TEST_CASE_F( MonsterHuntContractTest, HaggleWithoutContractIsClosed )
 SW_TEST_CASE_F( MonsterHuntContractTest, HaggleReadStateChecksRange )
 {
     sw::MonsterHuntHaggle haggle;
-    SW_REQUIRE_TRUE( haggle.initialize( &_catalog, "griffin" ) );
+    SW_REQUIRE_TRUE( haggle.initialize( _catalog, "griffin" ) );
     SW_EXPECT_EQUAL( sw::MonsterHuntHaggleResult::Countered, haggle.propose( 151 ) );
 
     sw::Archive written;
     haggle.writeState( written );
     sw::MonsterHuntHaggle restored;
-    SW_REQUIRE_TRUE( restored.initialize( &_catalog, "rounds" ) );
+    SW_REQUIRE_TRUE( restored.initialize( _catalog, "rounds" ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( 125, restored.getOffer() );
@@ -1341,7 +1331,7 @@ SW_TEST_CASE_F( MonsterHuntCombatTest, CombatDeterminism )
 {
     _stats.setValue( "signIntensity", 20.0f );
     const auto setup = [this]( sw::MonsterHuntCombat& combat ) -> bool
-    { return combat.initialize( &_catalog, 7 ); };
+    { return combat.initialize( _catalog, 7 ); };
     const auto step = [this]( sw::MonsterHuntCombat& combat, int32 stepIndex )
     {
         const sw::MonsterHuntAction arrAction[] = { sw::MonsterHuntAction::FastAttack, sw::MonsterHuntAction::StrongAttack, sw::MonsterHuntAction::Dodge, sw::MonsterHuntAction::Roll };

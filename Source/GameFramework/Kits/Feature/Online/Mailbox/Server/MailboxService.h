@@ -73,7 +73,7 @@ namespace sw
         MailboxService& operator=( const MailboxService& ) = delete;
 
         /** @brief 저장소가 없으면 false 를 반환합니다. 첫 `tick` 이 캠페인 읽기를 맡깁니다. */
-        [[nodiscard]] bool initialize( ServiceStore* pStore, const MailboxServiceConfig& settings );
+        [[nodiscard]] bool initialize( ServiceStore& store, const MailboxServiceConfig& settings );
         /** @brief 맡긴 작업(요청, 만료 정리, 캠페인)이 끝날 때까지 저장소를 회수합니다. 상한은 5초이며 저장소를 종료하기 전에 부릅니다. */
         void shutdown();
 

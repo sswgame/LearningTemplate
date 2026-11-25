@@ -88,23 +88,18 @@ namespace sw
     {
     }
 
-    bool CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, ReputationState& reputation, QuestLog& questLog, const WorldClock& clock, int32 width, int32 height )
+    bool CreatureTown::initialize( const CreatureLifeCatalog& catalog, ReputationState& reputation, QuestLog& questLog, const WorldClock& clock, int32 width, int32 height )
     {
-        if ( pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "CreatureTown.CreatureTownNeedsCatalog", "CreatureTown: no creature catalog - the rules are read from its <Rules>" );
-            return false;
-        }
         if ( width < 1 || height < 1 )
         {
             SW_LOG_ERROR_ID( "CreatureTown.CreatureTownRefusedTownSize", "CreatureTown: refused town size %#x%# (needs >= 1 in both)", width, height );
             return false;
         }
-        _pCatalog    = pCatalog;
+        _pCatalog    = &catalog;
         _pReputation = &reputation;
         _pQuestLog   = &questLog;
         _pClock      = &clock;
-        _settings    = pCatalog->getRules();
+        _settings    = catalog.getRules();
         _topology    = GridTopology{ width, height };
         _listObject.assign( static_cast<size_t>( _topology.getCellCount() ), hashed_string{} );
         _listHabitat.clear();
@@ -120,15 +115,15 @@ namespace sw
         return true;
     }
 
-    bool CreatureTown::bindLand( LandRegistry* pLand, const int2& origin )
+    bool CreatureTown::bindLand( LandRegistry& land, const int2& origin )
     {
-        LandBinding land;
-        land.bind( pLand, origin, hashed_string( "CreatureLife" ) );
+        LandBinding binding;
+        binding.bind( land, origin, hashed_string( "CreatureLife" ) );
         // 이미 놓인 셀을 먼저 모두 볼 수 있어야 얻는다(반쯤 얻고 실패하지 않게 하려는 것이다).
         for ( int32 index = 0; index < _topology.getCellCount(); ++index )
         {
             const int2 cell = _topology.toCell( index );
-            if ( _listObject[static_cast<size_t>( index )].empty() == false && land.isUsable( cell._x, cell._y ) == false )
+            if ( _listObject[static_cast<size_t>( index )].empty() == false && binding.isUsable( cell._x, cell._y ) == false )
                 return false;
         }
         for ( int32 index = 0; index < _topology.getCellCount(); ++index )
@@ -136,9 +131,9 @@ namespace sw
             const hashed_string& object = _listObject[static_cast<size_t>( index )];
             const int2           cell   = _topology.toCell( index );
             if ( object.empty() == false )
-                (void)land.claimRect( cell._x, cell._y, cell._x, cell._y, isBlockingObject( object ) );
+                (void)binding.claimRect( cell._x, cell._y, cell._x, cell._y, isBlockingObject( object ) );
         }
-        _land = land;
+        _land = binding;
         return true;
     }
 

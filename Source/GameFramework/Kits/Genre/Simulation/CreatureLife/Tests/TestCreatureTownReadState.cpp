@@ -135,7 +135,7 @@ namespace
         CreatureTownReadStateTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kCatalogXML, "CreatureTownReadStateTest" ) );
-            SW_REQUIRE_TRUE( _town.initialize( &_catalog, _reputation, _questLog, _clock, kTownSize, kTownSize ) );
+            SW_REQUIRE_TRUE( _town.initialize( _catalog, _reputation, _questLog, _clock, kTownSize, kTownSize ) );
         }
     };
 } // namespace
@@ -153,7 +153,7 @@ SW_TEST_CASE_F( CreatureTownReadStateTest, RealAndCraftedStatesRead )
     sw::Archive written;
     _town.writeState( written );
     sw::CreatureTown restored;
-    SW_REQUIRE_TRUE( restored.initialize( &_catalog, _reputation, _questLog, _clock, kTownSize, kTownSize ) );
+    SW_REQUIRE_TRUE( restored.initialize( _catalog, _reputation, _questLog, _clock, kTownSize, kTownSize ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( size_t( 1 ), restored.getCreatures().size() );
@@ -328,15 +328,9 @@ SW_TEST_CASE( CreatureTownReadStateTest, CatalogWithoutRulesIsRefused )
     SW_EXPECT_LOG( "CreatureLifeCatalog.RulesMissing" );
     SW_EXPECT_LOG( "CreatureLifeCatalog.RulesInvalid" );
     SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
-    SW_EXPECT_LOG( "CreatureTown.CreatureTownNeedsCatalog" );
     SW_EXPECT_LOG( "XMLCatalog.NoEntries" ); // 규칙만 빠진 카탈로그는 항목도 없다 — 읽기가 함께 알린다
     sw::CreatureLifeCatalog bare;
     SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CreatureLifeCatalog><Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/></Appeal></CreatureLifeCatalog>)", "CreatureTownReadStateTest" ) );
     sw::CreatureLifeCatalog partial;
     SW_EXPECT_FALSE( partial.loadFromXMLText( R"(<CreatureLifeCatalog><Rules talkPoints="5"/><Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/></Appeal></CreatureLifeCatalog>)", "CreatureTownReadStateTest" ) );
-    sw::ReputationState reputation;
-    sw::QuestLog        questLog;
-    sw::WorldClock      clock;
-    sw::CreatureTown    town;
-    SW_EXPECT_FALSE( town.initialize( nullptr, reputation, questLog, clock, kTownSize, kTownSize ) );
 }

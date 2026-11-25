@@ -116,14 +116,14 @@ namespace sw
     {
     }
 
-    bool VoxelWorld::initialize( int32 chunkCountX, int32 chunkCountZ, const VoxelBlockCatalog* pCatalog )
+    bool VoxelWorld::initialize( int32 chunkCountX, int32 chunkCountZ, const VoxelBlockCatalog& catalog )
     {
         if ( chunkCountX < 1 || chunkCountZ < 1 )
         {
             SW_LOG_ERROR_ID( "VoxelWorld.VoxelWorldRefusedChunkCounts", "VoxelWorld: refused chunk counts %# x %# - both must be at least 1", chunkCountX, chunkCountZ );
             return false;
         }
-        _pCatalog    = pCatalog;
+        _pCatalog    = &catalog;
         _chunkCountX = chunkCountX;
         _chunkCountZ = chunkCountZ;
         _mapChunk.clear();
@@ -131,13 +131,13 @@ namespace sw
         return true;
     }
 
-    bool VoxelWorld::bindLand( LandRegistry* pLand, const int2& origin )
+    bool VoxelWorld::bindLand( LandRegistry& land, const int2& origin )
     {
-        LandBinding land;
-        land.bind( pLand, origin, hashed_string( "Voxel" ) );
-        if ( land.claimRect( 0, 0, getSizeX() - 1, getSizeZ() - 1, true ) == false )
+        LandBinding binding;
+        binding.bind( land, origin, hashed_string( "Voxel" ) );
+        if ( binding.claimRect( 0, 0, getSizeX() - 1, getSizeZ() - 1, true ) == false )
             return false;
-        _land = land;
+        _land = binding;
         return true;
     }
 

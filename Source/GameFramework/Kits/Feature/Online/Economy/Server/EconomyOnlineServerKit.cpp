@@ -84,7 +84,7 @@ namespace sw
                 settings._pExternalLinks         = interfaces.find<const IAccountExternalLinks>(); // 계정 키트(영수증 구매자를 외부 로그인으로 묶는 제공자가 쓴다 — 그런 제공자가 있는데 없으면 서비스가 거절한다)
                 settings._bAcceptSandboxReceipts = kitConfig._bAcceptSandboxReceipts ? SW_TRUE : SW_FALSE;
                 settings._refundRecovery         = kitConfig._refundRecovery;
-                if ( _service.initialize( context._pStore, settings ) == false )
+                if ( _service.initialize( *context._pStore, settings ) == false )
                 {
                     _receiptRegistry.shutdown();
                     shutdown();

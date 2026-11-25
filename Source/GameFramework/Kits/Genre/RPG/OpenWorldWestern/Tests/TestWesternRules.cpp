@@ -168,7 +168,7 @@ namespace
     {
         sw::WesternHorse _horse{};
 
-        WesternHorseTest() { SW_REQUIRE_TRUE( _horse.initialize( &_catalog, "steady", 7 ) ); }
+        WesternHorseTest() { SW_REQUIRE_TRUE( _horse.initialize( _catalog, "steady", 7 ) ); }
 
         int32 popCount( sw::WesternHorse& horse, sw::WesternHorseEvent::Kind kind )
         {
@@ -219,7 +219,7 @@ namespace
     {
         sw::WesternSurvival _survival{};
 
-        WesternSurvivalTest() { SW_REQUIRE_TRUE( _survival.initialize( &_catalog ) ); }
+        WesternSurvivalTest() { SW_REQUIRE_TRUE( _survival.initialize( _catalog ) ); }
 
         bool readFixture( float32 healthCore, uint8 bDeadEyeActive, const sw::vector<uint64>& listMark = {}, int32 deadEyeLevel = 2 )
         {
@@ -633,7 +633,7 @@ SW_TEST_CASE_F( WesternHorseTest, BondSourcesFollowTheirRules )
     SW_EXPECT_NEAR( 30.5f, _horse.getBondExperience(), kWesternTolerance );
 
     sw::WesternHorse fed;
-    SW_REQUIRE_TRUE( fed.initialize( &_catalog, "steady", 1 ) );
+    SW_REQUIRE_TRUE( fed.initialize( _catalog, "steady", 1 ) );
     SW_EXPECT_TRUE( fed.feed( "hay" ) );
     SW_EXPECT_NEAR( 5.0f, fed.getBondExperience(), kWesternTolerance );
     SW_EXPECT_TRUE( fed.feed( "apple" ) );
@@ -720,7 +720,7 @@ SW_TEST_CASE_F( WesternHorseTest, FearBuildsAndThrowsRider )
     SW_EXPECT_NEAR( 0.2f, _horse.getFear(), kWesternTolerance );
 
     sw::WesternHorse wild;
-    SW_REQUIRE_TRUE( wild.initialize( &_catalog, "wild", 3 ) );
+    SW_REQUIRE_TRUE( wild.initialize( _catalog, "wild", 3 ) );
     SW_EXPECT_EQUAL( sw::WesternHorseReaction::Rearing, wild.frighten( 1.0f ) ); // 탄 사람이 없다
     SW_EXPECT_NEAR( 0.0f, wild.getFear(), kWesternTolerance );
     SW_EXPECT_EQUAL( 1, popCount( wild, sw::WesternHorseEvent::Kind::Spooked ) );
@@ -730,7 +730,7 @@ SW_TEST_CASE_F( WesternHorseTest, FearBuildsAndThrowsRider )
     SW_EXPECT_EQUAL( sw::WesternHorseReaction::Rearing, wild.frighten( 1.0f ) ); // 이미 떨어뜨렸다
 
     sw::WesternHorse tame;
-    SW_REQUIRE_TRUE( tame.initialize( &_catalog, "steady", 3 ) );
+    SW_REQUIRE_TRUE( tame.initialize( _catalog, "steady", 3 ) );
     tame.setRidden( true );
     SW_EXPECT_EQUAL( sw::WesternHorseReaction::Calm, tame.frighten( 1.0f ) );
     SW_EXPECT_EQUAL( sw::WesternHorseReaction::Rearing, tame.frighten( 1.0f ) ); // 확률 0 이면 떨어뜨리지 않는다
@@ -743,8 +743,8 @@ SW_TEST_CASE_F( WesternHorseTest, RandomStreamIgnoresRider )
 {
     sw::WesternHorse ridden;
     sw::WesternHorse empty;
-    SW_REQUIRE_TRUE( ridden.initialize( &_catalog, "coin", 11 ) );
-    SW_REQUIRE_TRUE( empty.initialize( &_catalog, "coin", 11 ) );
+    SW_REQUIRE_TRUE( ridden.initialize( _catalog, "coin", 11 ) );
+    SW_REQUIRE_TRUE( empty.initialize( _catalog, "coin", 11 ) );
     for ( int32 fright = 0; fright < 8; ++fright )
     {
         ridden.setRidden( true );
@@ -767,7 +767,7 @@ SW_TEST_CASE_F( WesternHorseTest, RandomStreamIgnoresRider )
 SW_TEST_CASE_F( WesternHorseTest, StateRoundTripsAcrossBreeds )
 {
     sw::WesternHorse coin;
-    SW_REQUIRE_TRUE( coin.initialize( &_catalog, "coin", 5 ) );
+    SW_REQUIRE_TRUE( coin.initialize( _catalog, "coin", 5 ) );
     coin.addBondExperience( 12.5f );
     coin.setRidden( true );
 
@@ -932,14 +932,10 @@ SW_TEST_CASE_F( WesternSurvivalTest, DeadEyeNeedsMinimum )
 }
 
 /**
- * @brief [WesternSurvivalTest] 카탈로그 없는 시작은 오류로 멈춘다. 상태는 범위 밖 코어와 깨진 깃발을 거절하고 그대로 둔다
+ * @brief [WesternSurvivalTest] 상태는 범위 밖 코어와 깨진 깃발을 거절하고 그대로 둔다
  */
 SW_TEST_CASE_F( WesternSurvivalTest, InitializeAndStateChecks )
 {
-    SW_EXPECT_LOG( "WesternSurvival.WesternSurvivalRefusedNoCatalog" );
-    sw::WesternSurvival empty;
-    SW_EXPECT_FALSE( empty.initialize( nullptr ) );
-
     SW_REQUIRE_TRUE( readFixture( 40.0f, SW_TRUE ) ); // 형식은 맞다
     SW_EXPECT_NEAR( 40.0f, _survival.getCore( sw::WesternCore::Health ), kWesternTolerance );
     SW_EXPECT_TRUE( _survival.isDeadEyeActive() );

@@ -443,8 +443,7 @@ namespace sw
         _outgoingEditBuffer.clear();
         _pendingRequestCount = 0;
         _replicatedOwner     = HousingPlotOwner::None;
-        _layout.initialize( _settings, *_pCatalog );
-        _layout.bindWallet( &_wallet );
+        _layout.initialize( _settings, *_pCatalog, _wallet );
         // 판 상태(같은 오브젝트의 GameStateComponent)가 있으면 그 공유 땅에서 부지를 차지한다 — 밭 · 도시 · 전장 키트와 한 맵의 칸을 나눈다.
         // 판 상태가 없는 씬은 단독 부지다(땅이 없는 게임 — 선택 연동이지 빠진 필수 값이 아니다).
         GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
@@ -463,7 +462,7 @@ namespace sw
                                  land.getCellSize(), _pCatalog->getRoot()._cellSize );
                 return false;
             }
-            if ( _layout.bindLand( &land, land.computeCell( AbsolutePosition{ getOwner()->getManager()->getWorldOrigin().toAbsolute( getPlotOrigin() ) } ) ) == false )
+            if ( _layout.bindLand( land, land.computeCell( AbsolutePosition{ getOwner()->getManager()->getWorldOrigin().toAbsolute( getPlotOrigin() ) } ) ) == false )
                 return false;
         }
         _wallet.clear();
@@ -504,8 +503,7 @@ namespace sw
             return;
         _ownerID = owner;
         _layout  = std::move( layout );
-        _wallet  = std::move( wallet );
-        _layout.bindWallet( &_wallet );
+        _wallet  = std::move( wallet ); // 레이아웃이 빌린 지갑의 주소는 그대로다
     }
 
     void HousingPlotComponent::onStateRestored( bool bRestored )

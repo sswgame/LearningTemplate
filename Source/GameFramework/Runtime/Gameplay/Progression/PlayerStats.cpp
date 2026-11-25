@@ -125,9 +125,15 @@ namespace sw
     {
     }
 
-    void PlayerStats::initialize( const StatCatalog* pCatalog )
+    void PlayerStats::initialize( const StatCatalog& catalog )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
+        _mapValue.clear();
+    }
+
+    void PlayerStats::shutdown()
+    {
+        _pCatalog = nullptr;
         _mapValue.clear();
     }
 

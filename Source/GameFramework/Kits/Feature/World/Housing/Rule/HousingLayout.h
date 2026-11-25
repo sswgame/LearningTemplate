@@ -47,7 +47,6 @@ namespace sw
         SupportsOthers, ///< 위에 놓인 것을 받치고 있어 치우거나 옮길 수 없다
         FreePlacementNotAllowed,
         NotEnoughFunds,
-        NoWallet,
         NothingToUndo,
         NothingToRedo,
         UnknownPlot, ///< 네트워크: 서버에 그 id 의 부지가 없다
@@ -157,18 +156,16 @@ namespace sw
 
         HousingLayout();
 
-        /** @brief 부지를 엽니다. 배치 · 이력을 비우고 다음 id 를 1 로 둡니다. 카탈로그는 레이아웃보다 오래 살아야 합니다(공유 캐시의 한 벌). */
-        void initialize( const HousingPlotSettings& settings, const HousingPartCatalog& catalog );
+        /** @brief 부지를 엽니다. 배치 · 이력을 비우고 다음 id 를 1 로 둡니다. 카탈로그(공유 캐시의 한 벌)와 값을 내고 받는 지갑(카탈로그 통화)은 레이아웃보다 오래 살아야 합니다. */
+        void initialize( const HousingPlotSettings& settings, const HousingPartCatalog& catalog, Wallet& wallet );
         /** @brief 빌린 카탈로그만 @p catalog 로 바꿉니다(배치 · 땅 · 지갑은 그대로). 배치가 새 판에 맞는지는 이어 읽는 `readState` 가 본다 — 디렉터의 읽기 길만 부른다. */
         void rebindCatalog( const HousingPartCatalog& catalog ) { _pCatalog = &catalog; }
-        /** @brief 값을 내고 받는 지갑입니다(카탈로그 통화). 비면 값이 있는 부품은 `NoWallet` 입니다. */
-        void bindWallet( Wallet* pWallet ) { _pWallet = pWallet; }
         /**
          * @brief 공유 땅(`LandRegistry` — 판 상태)에서 부지 전체를 차지합니다. 부지 칸 (0, 0) 이 땅 칸 @p origin 이고 칸 크기가 같아야 합니다(부르는 쪽이 본다).
          * @details 주인 이름은 `Housing.<부지 id>` 다. 막힘이 아닌 차지(다른 키트가 그 칸에 놓지 못하지만 길은 지난다)이고, 남의 칸이 하나라도 있으면 아무것도 차지하지 않고 false 다 —
-         *          두 키트(밭 · 도시 · 전장)가 한 맵에서 같은 칸을 쓰지 않는다. @p pLand 가 nullptr 이면 단독 부지(차지 없음)이고 true 다.
+         *          두 키트(밭 · 도시 · 전장)가 한 맵에서 같은 칸을 쓰지 않는다. 땅이 없는 부지는 부르지 않는다(차지 없음).
          */
-        [[nodiscard]] bool bindLand( LandRegistry* pLand, const int2& origin );
+        [[nodiscard]] bool bindLand( LandRegistry& land, const int2& origin );
         /** @brief 차지한 땅을 반납합니다(부지를 닫을 때). 차지하지 않았으면 아무것도 하지 않는다. */
         void releaseLand();
         /** @brief 공유 땅을 차지했으면 true 입니다. */

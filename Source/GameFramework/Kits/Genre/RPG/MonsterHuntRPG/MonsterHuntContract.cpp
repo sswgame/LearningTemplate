@@ -187,10 +187,10 @@ namespace sw
     {
     }
 
-    bool MonsterHuntHaggle::initialize( const MonsterHuntCatalog* pCatalog, const hashed_string& contractID )
+    bool MonsterHuntHaggle::initialize( const MonsterHuntCatalog& catalog, const hashed_string& contractID )
     {
-        _pCatalog    = pCatalog;
-        _pContract   = pCatalog != nullptr ? pCatalog->findContract( contractID ) : nullptr;
+        _pCatalog    = &catalog;
+        _pContract   = catalog.findContract( contractID );
         _anger       = 0.0f;
         _offer       = _pContract != nullptr ? _pContract->_reward : 0;
         _finalReward = 0;

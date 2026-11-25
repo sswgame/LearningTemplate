@@ -36,7 +36,7 @@ namespace
 
         explicit MailboxFixture( MailboxServiceConfig settings, bool bLogin = true )
         {
-            SW_EXPECT_TRUE( _service.initialize( &_rig._server._store, settings ) );
+            SW_EXPECT_TRUE( _service.initialize( _rig._server._store, settings ) );
             SW_EXPECT_TRUE( _rig._server._host.registerServerService( &_service ) );
             _rig._server.start();
             _clientIndex = _rig._clients.connect( _rig._server._port, { &_client } );
@@ -302,14 +302,6 @@ SW_TEST_CASE( MailboxServiceTest, SweepRemovesExpiredMail )
     SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kPlayer ) ); // 발행한 재원은 받지 않으면 사라진다
 }
 
-/** @brief [MailboxServiceTest] 시작: 저장소가 없으면 서지 않는다 */
-SW_TEST_CASE( MailboxServiceTest, NeedsStore )
-{
-    SW_EXPECT_LOG( "MailboxService.MailboxServiceNeedsStore" );
-    MailboxService service;
-    SW_EXPECT_FALSE( service.initialize( nullptr, MailboxServiceTestUtil::makeQuietSettings() ) );
-}
-
 /** @brief [MailboxServiceTest] 시작: 받은 우편의 보관 기간이 없으면 서지 않는다(설정 필수 값, 기본값으로 메우지 않는다) */
 SW_TEST_CASE( MailboxServiceTest, NeedsClaimedRetention )
 {
@@ -319,7 +311,7 @@ SW_TEST_CASE( MailboxServiceTest, NeedsClaimedRetention )
     MailboxServiceConfig  settings = MailboxServiceTestUtil::makeQuietSettings();
     settings._claimedRetentionMs   = 0;
     MailboxService service;
-    SW_EXPECT_FALSE( service.initialize( &store, settings ) );
+    SW_EXPECT_FALSE( service.initialize( store, settings ) );
 }
 
 /** @brief [MailboxServiceTest] 정리: 받은 우편은 받은 뒤 보관 기간이 지나면 정리가 지운다 — 우편 레코드가 0 이 되고 받은 재화는 그대로다 */

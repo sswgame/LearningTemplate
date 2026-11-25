@@ -111,12 +111,12 @@ namespace sw
         int2          _origin{};
         uint16        _owner{ LandRegistry::kNoOwner };
 
-        /** @brief 땅에 바인딩합니다. @p pLand 가 nullptr 이면 해제하며, 이미 차지한 셀은 그대로 둡니다. 주인 이름은 키트 이름입니다. */
-        void bind( LandRegistry* pLand, const int2& origin, const hashed_string& ownerName )
+        /** @brief 땅에 바인딩합니다. 이미 차지한 셀은 그대로 둡니다. 주인 이름은 키트 이름입니다(단독으로 돌 키트는 부르지 않는다). */
+        void bind( LandRegistry& land, const int2& origin, const hashed_string& ownerName )
         {
-            _pLand  = pLand;
+            _pLand  = &land;
             _origin = origin;
-            _owner  = pLand != nullptr ? pLand->registerOwner( ownerName ) : LandRegistry::kNoOwner;
+            _owner  = land.registerOwner( ownerName );
         }
         bool isBound() const { return _pLand != nullptr && _owner != LandRegistry::kNoOwner; }
         /** @brief 키트 셀 사각(양 끝 포함)을 차지합니다. 바인딩하지 않았으면 true 입니다. */

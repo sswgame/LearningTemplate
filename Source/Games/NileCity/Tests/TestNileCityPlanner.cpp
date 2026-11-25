@@ -52,7 +52,7 @@ namespace
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kNileCityXML, "NileCityPlannerTest" ) );
             _wallet.add( _catalog.getRules()._currency, kStartingMoney );
-            SW_REQUIRE_TRUE( _city.initialize( &_catalog, kTestWidth, kTestHeight, _wallet ) );
+            SW_REQUIRE_TRUE( _city.initialize( _catalog, kTestWidth, kTestHeight, _wallet ) );
         }
 
         CityTerrain findTerrain( int32 x, int32 y ) const { return _city.findTile( x, y )->_terrain; }

@@ -326,7 +326,7 @@ namespace
                 return read;
             if ( expected<void> providers = _providers.initialize( listConfig, OnlineProviderFile::getTrustText( trustFile ), _clock ); providers.has_value() == false )
                 return providers;
-            _dispatcher.initialize( &_store, PushDispatcherConfig{} );
+            _dispatcher.initialize( _store, PushDispatcherConfig{} );
             for ( int32 index = 0; index < _providers.getProviderCount(); ++index )
             {
                 SW_EXPECT_TRUE( _dispatcher.registerProvider( _providers.getProvider( index ) ) );

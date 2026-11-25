@@ -220,7 +220,7 @@ SW_TEST_CASE( CraftingTest, CancelReturnsWornInputWithSameDurability )
     SW_EXPECT_FALSE( inventory.reduceSlotDurability( swordSlot, 60.0f ) ); // 40 남음
 
     sw::Crafter crafter;
-    crafter.initialize( &recipes );
+    crafter.initialize( recipes );
     crafter.learnRecipe( kReforge );
     SW_REQUIRE_TRUE( crafter.enqueue( kReforge, inventory, sw::hashed_string{}, 1 ) == sw::CraftResult::Ok );
     SW_EXPECT_EQUAL( 0, inventory.getItemCount( kSword ) );
@@ -229,7 +229,7 @@ SW_TEST_CASE( CraftingTest, CancelReturnsWornInputWithSameDurability )
     sw::Archive written;
     crafter.writeState( written );
     sw::Crafter restored;
-    restored.initialize( &recipes );
+    restored.initialize( recipes );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
 

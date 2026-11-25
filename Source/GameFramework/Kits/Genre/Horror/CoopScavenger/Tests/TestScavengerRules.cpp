@@ -556,7 +556,7 @@ SW_TEST_CASE_F( ScavengerFacilityTest, LockedDoorsUseBorrowedFlags )
     SW_REQUIRE_TRUE( locked.loadFromXMLText( kScavengerLockedXML, "ScavengerTest" ) );
     sw::GameFlags flags;
     flags.setFlag( "story.beat" );
-    _facility.bindFlags( flags );
+    _facility.initialize( locked, flags );
     SW_REQUIRE_TRUE( _facility.createLayout( locked, *locked.findMoon( "rust" ), 7u, 1.0f ) );
     SW_EXPECT_EQUAL( 2, _facility.getLockedDoorCount() );
 
@@ -615,8 +615,9 @@ SW_TEST_CASE_F( ScavengerFacilityTest, StateRoundTripRebuildsGraph )
     sw::Archive written;
     _facility.writeState( written );
 
+    sw::GameFlags         flags;
     sw::ScavengerFacility restored;
-    restored.bindCatalog( &_catalog );
+    restored.initialize( _catalog, flags );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( 3, restored.getRoomCount() );
@@ -634,8 +635,9 @@ SW_TEST_CASE_F( ScavengerFacilityTest, StateRoundTripRebuildsGraph )
  */
 SW_TEST_CASE_F( ScavengerFacilityTest, ReadStateRefusesBrokenScrap )
 {
+    sw::GameFlags         flags;
     sw::ScavengerFacility restored;
-    restored.bindCatalog( &_catalog );
+    restored.initialize( _catalog, flags );
     const sw::ScavengerScrap good = ScavengerTestUtil::makeScrap( 4, 10, 5.0f, false );
     SW_REQUIRE_TRUE( readFixture( restored, 7u, good, 5 ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 10, restored.computeGroundValue() );

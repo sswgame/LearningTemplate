@@ -199,9 +199,9 @@ namespace sw
     {
     }
 
-    void Crafter::initialize( const RecipeCatalog* pCatalog )
+    void Crafter::initialize( const RecipeCatalog& catalog )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _uniqueLearnedRecipe.clear();
         _listJob.clear();
     }

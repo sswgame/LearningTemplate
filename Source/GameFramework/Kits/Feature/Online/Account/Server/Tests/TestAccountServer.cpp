@@ -142,7 +142,7 @@ namespace
         {
             _pRig = make_unique<test::OnlineTestFixture>( false );
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize]{ 1, 2, 3 };
-            SW_EXPECT_TRUE( _loginService.initialize( &_pRig->_server._store, &_crypto, &_hasher, game::findSubsystem<TaskManager>(), settings, arrMasterKey ).has_value() );
+            SW_EXPECT_TRUE( _loginService.initialize( _pRig->_server._store, _crypto, _hasher, *game::findSubsystem<TaskManager>(), settings, arrMasterKey ).has_value() );
             _accountServer.initialize( &_loginService, AccountServerConfig{} );
             SW_EXPECT_TRUE( _pRig->_server._host.registerServerService( &_accountServer ) );
             _pRig->_server.start();

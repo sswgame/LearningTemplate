@@ -80,7 +80,7 @@ namespace sw
         , _iceStimulus{ other._iceStimulus }
         , _electricStimulus{ other._electricStimulus }
     {
-        _grid.setTable( &_table );
+        _grid.setTable( _table );
     }
 
     AdventureElementGrid& AdventureElementGrid::operator=( const AdventureElementGrid& other )
@@ -97,7 +97,7 @@ namespace sw
         _fireStimulus     = other._fireStimulus;
         _iceStimulus      = other._iceStimulus;
         _electricStimulus = other._electricStimulus;
-        _grid.setTable( &_table );
+        _grid.setTable( _table );
         return *this;
     }
 
@@ -195,7 +195,7 @@ namespace sw
         }
         _settings = settings;
         populateRuleTable();
-        if ( _grid.initialize( width, height, &_table ) == false )
+        if ( _grid.initialize( width, height, _table ) == false )
             return false;
         _eventBuffer.clear();
         return true;

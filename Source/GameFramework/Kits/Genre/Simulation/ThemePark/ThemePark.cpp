@@ -144,10 +144,10 @@ namespace sw
         }
     }
 
-    void ThemeParkSimulation::bindLand( LandRegistry* pLand )
+    void ThemeParkSimulation::bindLand( LandRegistry& land )
     {
-        _pLand     = pLand;
-        _landOwner = pLand != nullptr ? pLand->registerOwner( hashed_string( "ThemePark" ) ) : LandRegistry::kNoOwner;
+        _pLand     = &land;
+        _landOwner = land.registerOwner( hashed_string( "ThemePark" ) );
     }
 
     int32 ThemeParkSimulation::buildRide( const ParkRide& ride, int32 buildCost )

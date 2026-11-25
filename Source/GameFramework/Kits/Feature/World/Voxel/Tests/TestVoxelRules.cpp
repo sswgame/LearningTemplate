@@ -31,7 +31,7 @@ namespace
             _stone = addBlock( "stone", true, true );
             _water = addBlock( "water", false, false );
             _glass = addBlock( "glass", true, false );
-            SW_REQUIRE_TRUE( _world.initialize( 2, 2, &_catalog ) );
+            SW_REQUIRE_TRUE( _world.initialize( 2, 2, _catalog ) );
             loadAll( _world );
         }
 
@@ -246,7 +246,7 @@ SW_TEST_CASE( VoxelWorldTest, RevisionIsNeverReused )
     SW_EXPECT_TRUE( loaded.hasChanged( rig._world, 0, 0 ) );
 
     const VoxelFixture::ChunkRevisionSnapshot reloaded( rig._world );
-    SW_REQUIRE_TRUE( rig._world.initialize( 2, 2, &rig._catalog ) );
+    SW_REQUIRE_TRUE( rig._world.initialize( 2, 2, rig._catalog ) );
     VoxelFixture::loadAll( rig._world );
     SW_EXPECT_TRUE( reloaded.hasChanged( rig._world, 1, 1 ) );
 }
@@ -254,8 +254,9 @@ SW_TEST_CASE( VoxelWorldTest, RevisionIsNeverReused )
 SW_TEST_CASE( VoxelWorldTest, RefusesEmptyWorld )
 {
     SW_EXPECT_LOG( "VoxelWorld.VoxelWorldRefusedChunkCounts" );
-    VoxelWorld world;
-    SW_EXPECT_FALSE( world.initialize( 0, 1, nullptr ) );
+    const VoxelBlockCatalog catalog;
+    VoxelWorld              world;
+    SW_EXPECT_FALSE( world.initialize( 0, 1, catalog ) );
 }
 
 SW_TEST_CASE( VoxelWorldTest, StateRoundTripsAndBumpsRevisions )
@@ -284,7 +285,7 @@ SW_TEST_CASE( VoxelWorldTest, CraftedStateLeavesTheWorldAlone )
     // 청크 수가 줄었다(감사 A-6): 실린 청크가 줄어든 월드 안이거나 밖이어도 공기면 읽고, 밖에 블록이 남으면 버리지 않고 거절한다
     VoxelFixture target;
     VoxelWorld   other;
-    SW_REQUIRE_TRUE( other.initialize( 1, 1, &target._catalog ) );
+    SW_REQUIRE_TRUE( other.initialize( 1, 1, target._catalog ) );
     Archive inside( listSaved.data(), listSaved.size() );
     SW_EXPECT_TRUE( other.readState( inside ) );
     VoxelFixture outsideAir;
@@ -339,7 +340,7 @@ SW_TEST_CASE( VoxelWorldTest, ResidencyLoadsOnlyTheRadiusNearestFirst )
 {
     VoxelFixture rig;
     VoxelWorld   world;
-    SW_REQUIRE_TRUE( world.initialize( 8, 8, &rig._catalog ) );
+    SW_REQUIRE_TRUE( world.initialize( 8, 8, rig._catalog ) );
     world.setChunkGenerator( [&rig]( const VoxelWorld&, int32, int32, vector<VoxelBlockIndex>& outBlocks )
     { outBlocks[0] = rig._stone; } ); // 청크마다 모서리 블록 하나
     SW_EXPECT_EQUAL( uint32( 3 ), world.updateResidency( 4, 4, 2, 3 ) );
@@ -365,7 +366,7 @@ SW_TEST_CASE( VoxelWorldTest, UnloadStoresOnlyChangedChunksAndReloadRestoresThem
     VoxelFixture rig;
     VoxelWorld   world;
     int32        generatedCount = 0;
-    SW_REQUIRE_TRUE( world.initialize( 4, 4, &rig._catalog ) );
+    SW_REQUIRE_TRUE( world.initialize( 4, 4, rig._catalog ) );
     world.setChunkGenerator( [&rig, &generatedCount]( const VoxelWorld&, int32, int32, vector<VoxelBlockIndex>& outBlocks )
     {
         ++generatedCount;
@@ -390,7 +391,7 @@ SW_TEST_CASE( VoxelWorldTest, UnloadStoresOnlyChangedChunksAndReloadRestoresThem
     // 세이브는 저장본 하나만 싣는다 — 같은 생성 훅의 새 월드가 읽으면 바뀐 블록과 생성 블록이 함께 나온다
     const vector<uint8> listSaved = VoxelFixture::save( world );
     VoxelWorld          restored;
-    SW_REQUIRE_TRUE( restored.initialize( 4, 4, &rig._catalog ) );
+    SW_REQUIRE_TRUE( restored.initialize( 4, 4, rig._catalog ) );
     restored.setChunkGenerator( []( const VoxelWorld&, int32, int32, vector<VoxelBlockIndex>& ) {} );
     Archive reading( listSaved.data(), listSaved.size() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
@@ -457,7 +458,7 @@ SW_TEST_CASE( VoxelWorldTest, SaveSurvivesCatalogReorder )
     const VoxelBlockIndex water = addBlock( "water" );
     const VoxelBlockIndex stone = addBlock( "stone" );
     SW_REQUIRE_TRUE( stone != rig._stone && glass != rig._glass );
-    SW_REQUIRE_TRUE( world.initialize( 2, 2, &reordered ) );
+    SW_REQUIRE_TRUE( world.initialize( 2, 2, reordered ) );
 
     Archive reading( listSaved.data(), listSaved.size() );
     SW_REQUIRE_TRUE( world.readState( reading ) );
@@ -503,7 +504,7 @@ SW_TEST_CASE( VoxelWorldTest, SaveWithUnknownBlockIsRefused )
     block._name = "stone";
     SW_REQUIRE_TRUE( onlyStone.addBlock( block ).has_value() );
     VoxelWorld world;
-    SW_REQUIRE_TRUE( world.initialize( 2, 2, &onlyStone ) );
+    SW_REQUIRE_TRUE( world.initialize( 2, 2, onlyStone ) );
     Archive reading( listSaved.data(), listSaved.size() );
     SW_EXPECT_FALSE( world.readState( reading ) );
 }
@@ -673,7 +674,7 @@ SW_TEST_CASE( VoxelBodyTest, OverlapIgnoresTheTouchingFace )
 
 SW_TEST_CASE( VoxelHotbarTest, AddFillsSameBlockThenEmptySlotsAndReturnsTheRest )
 {
-    VoxelHotbar hotbar{ nullptr };
+    VoxelHotbar hotbar;
     SW_EXPECT_EQUAL( 0, hotbar.addBlock( 1, 60 ) );
     SW_EXPECT_EQUAL( 0, hotbar.addBlock( 2, 1 ) );
     SW_EXPECT_EQUAL( 0, hotbar.addBlock( 1, 10 ) ); // 첫 칸을 64 로 채우고 나머지 6 은 빈 칸으로
@@ -685,7 +686,7 @@ SW_TEST_CASE( VoxelHotbarTest, AddFillsSameBlockThenEmptySlotsAndReturnsTheRest 
     SW_EXPECT_EQUAL( 0, hotbar.addBlock( 3, -5 ) );
     SW_EXPECT_EQUAL( 0, hotbar.countBlock( 3 ) );
 
-    VoxelHotbar full{ nullptr };
+    VoxelHotbar full;
     const int32 capacity = VoxelHotbar::kSlotCount * VoxelHotbar::kMaxStack;
     SW_EXPECT_EQUAL( 5, full.addBlock( 1, capacity + 5 ) );
     SW_EXPECT_EQUAL( capacity, full.countBlock( 1 ) );
@@ -693,7 +694,7 @@ SW_TEST_CASE( VoxelHotbarTest, AddFillsSameBlockThenEmptySlotsAndReturnsTheRest 
 
 SW_TEST_CASE( VoxelHotbarTest, ConsumeEmptiesTheSlotAndSelectWraps )
 {
-    VoxelHotbar     hotbar{ nullptr };
+    VoxelHotbar     hotbar;
     VoxelBlockIndex block = kVoxelAirBlock;
     SW_EXPECT_FALSE( hotbar.consumeSelected( block ) );
     SW_EXPECT_EQUAL( 0, hotbar.addBlock( 7, 1 ) );
@@ -716,15 +717,17 @@ SW_TEST_CASE( VoxelHotbarTest, ConsumeEmptiesTheSlotAndSelectWraps )
 SW_TEST_CASE( VoxelHotbarTest, StateRoundTripsAndRefusesBadCounts )
 {
     VoxelFixture rig;
-    VoxelHotbar  hotbar{ &rig._catalog };
+    VoxelHotbar  hotbar;
+    hotbar.initialize( rig._catalog );
     SW_EXPECT_EQUAL( 0, hotbar.addBlock( rig._glass, 12 ) );
     hotbar.select( 3 );
     Archive writing;
     hotbar.writeState( writing );
     const vector<uint8> listSaved( writing.getData(), writing.getData() + writing.getSize() );
 
-    VoxelHotbar restored{ &rig._catalog };
-    Archive     reading( listSaved.data(), listSaved.size() );
+    VoxelHotbar restored;
+    restored.initialize( rig._catalog );
+    Archive reading( listSaved.data(), listSaved.size() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( 12, restored.countBlock( rig._glass ) );
     SW_EXPECT_EQUAL( 3, restored.getSelectedIndex() );
@@ -737,8 +740,9 @@ SW_TEST_CASE( VoxelHotbarTest, StateRoundTripsAndRefusesBadCounts )
     prefixIO.value( glassID );
     vector<uint8> listBadCount                           = listSaved;
     listBadCount[prefix.getSize() + sizeof( int32 ) - 1] = 0x7f;
-    VoxelHotbar target{ &rig._catalog };
-    Archive     badCount( listBadCount.data(), listBadCount.size() );
+    VoxelHotbar target;
+    target.initialize( rig._catalog );
+    Archive badCount( listBadCount.data(), listBadCount.size() );
     SW_EXPECT_FALSE( target.readState( badCount ) );
     SW_EXPECT_EQUAL( 0, target.countBlock( rig._glass ) );
 
@@ -758,7 +762,8 @@ SW_TEST_CASE( VoxelHotbarTest, StateRoundTripsAndRefusesBadCounts )
 SW_TEST_CASE( VoxelHotbarTest, SaveSurvivesCatalogReorder )
 {
     VoxelFixture rig;
-    VoxelHotbar  hotbar{ &rig._catalog };
+    VoxelHotbar  hotbar;
+    hotbar.initialize( rig._catalog );
     SW_EXPECT_EQUAL( 0, hotbar.addBlock( rig._glass, 5 ) );
     Archive writing;
     hotbar.writeState( writing );
@@ -774,8 +779,9 @@ SW_TEST_CASE( VoxelHotbarTest, SaveSurvivesCatalogReorder )
     }
     const VoxelBlockIndex glass = reordered.findBlockIndex( hashed_string( "glass" ) ).value();
     SW_REQUIRE_TRUE( glass != rig._glass );
-    VoxelHotbar restored{ &reordered };
-    Archive     reading( listSaved.data(), listSaved.size() );
+    VoxelHotbar restored;
+    restored.initialize( reordered );
+    Archive reading( listSaved.data(), listSaved.size() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( 5, restored.countBlock( glass ) );
 
@@ -784,8 +790,9 @@ SW_TEST_CASE( VoxelHotbarTest, SaveSurvivesCatalogReorder )
     sand._id   = hashed_string( "sand" );
     sand._name = "sand";
     SW_REQUIRE_TRUE( onlySand.addBlock( sand ).has_value() );
-    VoxelHotbar missing{ &onlySand };
-    Archive     readingMissing( listSaved.data(), listSaved.size() );
+    VoxelHotbar missing;
+    missing.initialize( onlySand );
+    Archive readingMissing( listSaved.data(), listSaved.size() );
     SW_EXPECT_FALSE( missing.readState( readingMissing ) );
 }
 
@@ -803,7 +810,7 @@ SW_TEST_CASE( VoxelTerrainTest, SameSeedSameWorldAndColumnsAreLayered )
     settings._treeChance   = 0.0f;
     const auto loadTerrain = [&rig, &settings]( VoxelWorld& world )
     {
-        SW_REQUIRE_TRUE( world.initialize( 2, 2, &rig._catalog ) );
+        SW_REQUIRE_TRUE( world.initialize( 2, 2, rig._catalog ) );
         world.setChunkGenerator( VoxelTerrainSettings::makeChunkGenerator( settings ) );
         SW_REQUIRE_EQUAL( uint32( 4 ), world.updateResidency( 0, 0, 1, 4 ) );
     };
@@ -847,7 +854,7 @@ SW_TEST_CASE( VoxelTerrainTest, TreesMatchAcrossChunksGeneratedApart )
     settings._waterLevel      = 0; // 물 · 모래가 없어 모든 기둥이 풀이다
     settings._heightAmplitude = 0;
     VoxelWorld world;
-    SW_REQUIRE_TRUE( world.initialize( 2, 1, &rig._catalog ) );
+    SW_REQUIRE_TRUE( world.initialize( 2, 1, rig._catalog ) );
     // 경계(x = 15 | 16)에 맞닿은 두 기둥: 한쪽에 줄기가 있으면 맞은편 같은 높이는 잎이다(잎 덩어리 반경 안). 경계에 나무가 서는 씨앗이 나올 때까지 씨앗을 바꿔 본다.
     uint32 matchedCount = 0;
     for ( uint32 seed = 1; seed <= 64 && matchedCount == 0; ++seed )
@@ -887,7 +894,7 @@ SW_TEST_CASE( VoxelTerrainTest, DecorationsFollowSeed )
     const auto            computeOreDigest = [&]( uint32 seed )
     {
         VoxelWorld world;
-        SW_EXPECT_TRUE( world.initialize( 2, 2, &fixture._catalog ) );
+        SW_EXPECT_TRUE( world.initialize( 2, 2, fixture._catalog ) );
         VoxelTerrainSettings settings;
         settings._seed            = seed;
         settings._treeChance      = 0.0f;

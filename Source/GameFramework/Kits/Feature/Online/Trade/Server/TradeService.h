@@ -64,7 +64,7 @@ namespace sw
         TradeService();
 
         /** @brief 넘긴 객체는 모두 빌려 씁니다. @p serverID 는 이 서버 프로세스의 id 이며 0이 아니어야 합니다. 재시작 복구 인덱스에 씁니다. */
-        void initialize( ServiceStore* pStore, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings );
+        void initialize( ServiceStore& store, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings );
         void shutdown();
         /** @brief 이 서버가 연 열린 거래를 모두 닫습니다. 기동할 때 한 번 부르며 닫힌 거래는 `pollUpdates` 로 회수합니다. */
         void recoverOwnedTrades( UnixMilliseconds nowMs );

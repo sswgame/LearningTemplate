@@ -59,9 +59,9 @@ namespace sw
     bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, GameStateComponent& state, WalletComponent& wallet ) const
     {
         const GridTopology& land = state.getLand().getTopology();
-        if ( findCatalog() == nullptr || outWorld.initialize( findCatalog(), land._width, land._height ) == false )
+        if ( findCatalog() == nullptr || outWorld.initialize( *findCatalog(), land._width, land._height ) == false )
             return false;
-        outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
+        outWorld.bindLand( state.getLand(), int2{ 0, 0 } );
         (void)outWorld.addPlayer( 0, wallet.getWallet(), float3{ 2.0f, 0.0f, 2.0f } ); // 플레이어 0 이 플레이어 지갑을 쓴다
         return true;
     }

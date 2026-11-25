@@ -109,7 +109,7 @@ namespace sw
     {
         if ( acquireRequired( _recipePath, _pRecipes ) == false )
             return false;
-        _crafter.initialize( _pRecipes.get() );
+        _crafter.initialize( *_pRecipes );
         _level = _startLevel;
         return true;
     }
@@ -168,7 +168,7 @@ namespace sw
             return;
         }
         Crafter crafter;
-        crafter.initialize( _pRecipes.get() );
+        crafter.initialize( *_pRecipes );
         io.value( crafter );
         if ( io.isOk() == false )
             return;

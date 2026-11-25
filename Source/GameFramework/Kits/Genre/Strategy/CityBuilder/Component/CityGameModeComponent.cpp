@@ -57,10 +57,10 @@ namespace sw
     bool CityGameModeComponent::initializeCity( CitySimulation& outCity, GameStateComponent& state, WalletComponent& wallet ) const
     {
         const CityCatalog* const pCatalog = findCatalog();
-        if ( pCatalog == nullptr || outCity.initialize( pCatalog, _landSize, _landSize, wallet.getWallet() ) == false )
+        if ( pCatalog == nullptr || outCity.initialize( *pCatalog, _landSize, _landSize, wallet.getWallet() ) == false )
             return false;
         // 땅은 놓기 전에 빌린다 — 이미 놓인 도로 · 건물은 땅을 얻지 않는다(CitySimulation::bindLand).
-        outCity.bindLand( &state.getLand(), int2{ 0, 0 } );
+        outCity.bindLand( state.getLand(), int2{ 0, 0 } );
         return true;
     }
 

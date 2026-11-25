@@ -167,14 +167,14 @@ namespace sw
          * @details 지갑이 없으면 알리고, 건설과 도로 놓기는 모두 돈 부족으로 거절된다. 달 결산에서 돈이 모자라면 지갑이 빚(`Wallet::charge`)을 진다.
          * @return 규칙은 카탈로그의 `<Rules>`(`CityCatalog::getRules`)이다 — 게임이 C++ 값으로 주는 길은 없다(감사 K-4). 카탈로그가 있고 크기가 1 이상이고 규칙이 범위 안이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다(값을 조용히 맞추지 않는다).
          */
-        [[nodiscard]] bool initialize( const CityCatalog* pCatalog, int32 width, int32 height, Wallet& wallet );
+        [[nodiscard]] bool initialize( const CityCatalog& catalog, int32 width, int32 height, Wallet& wallet );
         void               setTerrain( int32 x, int32 y, CityTerrain terrain );
         void               fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
         /**
          * @brief 공유 땅을 빌립니다. 도시 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이후 도로와 건물은 놓기 전에 땅을 얻고(건물은 막힘, 도로는 막히지 않음) 허물면 반납합니다.
-         * @details 지형(`setTerrain`)은 땅 테이블과 무관하다. 이미 놓인 도로와 건물은 땅을 얻지 않으므로 건설하기 전에 호출해야 한다. @p pLand 가 nullptr 이면 빌린 땅을 반납한다.
+         * @details 지형(`setTerrain`)은 땅 테이블과 무관하다. 이미 놓인 도로와 건물은 땅을 얻지 않으므로 건설하기 전에 호출해야 한다.
          */
-        void bindLand( LandRegistry* pLand, const int2& origin );
+        void bindLand( LandRegistry& land, const int2& origin );
 
         /**
          * @brief 한 달을 결산합니다. 물자를 먹고, 세리가 다녀간 집이 세금을 내고, 일꾼 임금을 냅니다. 돈이 모자라면 지갑이 빚을 집니다. @p bNewYear 가 true 이면 범람이 다음 해의 비옥함을 정합니다.

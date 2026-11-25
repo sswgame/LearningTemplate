@@ -49,7 +49,7 @@ namespace
             , _router{}
             , _service{}
         {
-            _router.initialize( &_cache );
+            _router.initialize( _cache );
             SW_EXPECT_TRUE( _service.initialize( &_router, 1, maxPartySize ) );
         }
 

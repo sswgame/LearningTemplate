@@ -83,10 +83,11 @@ namespace sw
     {
     }
 
-    void HousingLayout::initialize( const HousingPlotSettings& settings, const HousingPartCatalog& catalog )
+    void HousingLayout::initialize( const HousingPlotSettings& settings, const HousingPartCatalog& catalog, Wallet& wallet )
     {
         _settings = settings;
         _pCatalog = &catalog;
+        _pWallet  = &wallet;
         _listPlacement.clear();
         _listCellOwner.assign( static_cast<size_t>( HousingLayoutInternal::kLayerCount * settings._levelCount * settings._sizeX * settings._sizeZ ), 0u );
         _listEdit.clear();
@@ -95,22 +96,20 @@ namespace sw
         ++_revision;
     }
 
-    bool HousingLayout::bindLand( LandRegistry* pLand, const int2& origin )
+    bool HousingLayout::bindLand( LandRegistry& land, const int2& origin )
     {
         releaseLand();
-        if ( pLand == nullptr )
-            return true;
-        LandBinding                             land;
+        LandBinding                             binding;
         fixed_string<constant::buffer::kMax128> landName;
         formatstring( landName.data(), landName.capacity(), "Housing.%#", _settings._plotID.c_str() );
-        land.bind( pLand, origin, hashed_string( landName.c_str() ) );
-        if ( land.claimRect( 0, 0, _settings._sizeX - 1, _settings._sizeZ - 1, false ) == false )
+        binding.bind( land, origin, hashed_string( landName.c_str() ) );
+        if ( binding.claimRect( 0, 0, _settings._sizeX - 1, _settings._sizeZ - 1, false ) == false )
         {
             SW_LOG_ERROR_ID( "HousingLayout.LandTaken", "Housing plot '%#': its %#x%# cells at land cell %#,%# are outside the land or used by another kit", _settings._plotID.c_str(), _settings._sizeX,
                              _settings._sizeZ, origin._x, origin._y );
             return false;
         }
-        _land = land;
+        _land = binding;
         return true;
     }
 
@@ -356,9 +355,7 @@ namespace sw
         check._result = validateFootprint( *pPart, check._transform, 0, check._cellMin, check._cellMax );
         if ( check._result != HousingPlaceResult::Ok || pPart->_cost == 0 )
             return check;
-        if ( _pWallet == nullptr )
-            check._result = HousingPlaceResult::NoWallet;
-        else if ( _pWallet->canAfford( _pCatalog->getRoot()._currency, pPart->_cost ) == false )
+        if ( _pWallet->canAfford( _pCatalog->getRoot()._currency, pPart->_cost ) == false )
             check._result = HousingPlaceResult::NotEnoughFunds;
         return check;
     }
@@ -378,8 +375,6 @@ namespace sw
             return result;
         if ( charge > 0 )
         {
-            if ( _pWallet == nullptr )
-                return HousingPlaceResult::NoWallet;
             if ( _pWallet->trySpend( _pCatalog->getRoot()._currency, charge ) == false )
                 return HousingPlaceResult::NotEnoughFunds;
         }
@@ -402,11 +397,7 @@ namespace sw
         if ( supportsOthers( *pPlacement ) )
             return HousingPlaceResult::SupportsOthers;
         if ( refund > 0 )
-        {
-            if ( _pWallet == nullptr )
-                return HousingPlaceResult::NoWallet;
             _pWallet->add( _pCatalog->getRoot()._currency, refund );
-        }
         occupy( *pPlacement, 0 );
         _listPlacement.erase( _listPlacement.begin() + ( pPlacement - _listPlacement.data() ) );
         ++_revision;

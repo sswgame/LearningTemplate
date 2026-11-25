@@ -108,7 +108,7 @@ namespace
             , _registration{}
             , _service{}
         {
-            _router.initialize( &_cache );
+            _router.initialize( _cache );
             ServerDirectoryDependencies dependencies;
             dependencies._pStore  = &_store;
             dependencies._pRouter = &_router;

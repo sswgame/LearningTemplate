@@ -542,10 +542,9 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, Storage )
 {
     sw::MonsterStorage storage;
     SW_EXPECT_LOG( "MonsterInstance.MonsterStorageRefusedBoxCapacity" );
-    SW_EXPECT_FALSE( storage.initialize( &_catalog, -1 ) );
-    SW_EXPECT_FALSE( storage.initialize( nullptr, 1 ) );
+    SW_EXPECT_FALSE( storage.initialize( _catalog, -1 ) );
     SW_EXPECT_EQUAL( sw::MonsterStoragePlace::Refused, storage.add( make( "normie", 5 ) ) ); // 시작하지 않았다
-    SW_REQUIRE_TRUE( storage.initialize( &_catalog, 1 ) );
+    SW_REQUIRE_TRUE( storage.initialize( _catalog, 1 ) );
     SW_EXPECT_EQUAL( 1, storage.getBoxCapacity() );
     SW_EXPECT_FALSE( storage.hasUsableMonster() );
 
@@ -568,7 +567,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, Storage )
     SW_EXPECT_EQUAL( 10, storage.getParty()[0]._level );
 
     sw::MonsterStorage last;
-    SW_REQUIRE_TRUE( last.initialize( &_catalog, 5 ) );
+    SW_REQUIRE_TRUE( last.initialize( _catalog, 5 ) );
     (void)last.add( make( "normie", 5 ) );
     (void)last.add( make( "rocky", 5 ) );
     last.getParty()[1]._hp = 0;
@@ -589,7 +588,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, Storage )
 SW_TEST_CASE_F( MonsterCollectorRulesTest, StorageState )
 {
     sw::MonsterStorage source;
-    SW_REQUIRE_TRUE( source.initialize( &_catalog, 8 ) );
+    SW_REQUIRE_TRUE( source.initialize( _catalog, 8 ) );
     for ( int32 index = 0; index < 8; ++index )
     {
         SW_EXPECT_TRUE( source.add( make( "normie", 5 + index, "strike" ) ) != sw::MonsterStoragePlace::Full );
@@ -599,7 +598,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, StorageState )
 
     sw::Archive        reading( written.getData(), written.getSize() );
     sw::MonsterStorage restored;
-    SW_REQUIRE_TRUE( restored.initialize( &_catalog, 8 ) );
+    SW_REQUIRE_TRUE( restored.initialize( _catalog, 8 ) );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( MonsterTestUtil::isSameState( source, restored ) );
     SW_EXPECT_EQUAL( 6u, restored.getParty().size() );
@@ -607,7 +606,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, StorageState )
 
     sw::Archive        readingSmall( written.getData(), written.getSize() );
     sw::MonsterStorage small;
-    SW_REQUIRE_TRUE( small.initialize( &_catalog, 1 ) );
+    SW_REQUIRE_TRUE( small.initialize( _catalog, 1 ) );
     SW_EXPECT_FALSE( small.readState( readingSmall ) ); // 박스 정원 1
     SW_EXPECT_TRUE( small.getParty().empty() );
 
@@ -633,7 +632,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, StorageState )
         fixture << static_cast<uint32>( 0 );
         sw::Archive        readingFixture( fixture.getData(), fixture.getSize() );
         sw::MonsterStorage target;
-        return target.initialize( &_catalog, 8 ) && target.readState( readingFixture ) == false && target.getParty().empty();
+        return target.initialize( _catalog, 8 ) && target.readState( readingFixture ) == false && target.getParty().empty();
     };
     const sw::MonsterInstance good = make( "normie", 5, "strike" );
     SW_EXPECT_FALSE( refuses( good, 6 ) );

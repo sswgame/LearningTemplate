@@ -33,8 +33,7 @@ namespace
             , _wallet{}
             , _owner{ HousingOwnerID::kNone }
         {
-            _layout.initialize( settings, catalog );
-            _layout.bindWallet( &_wallet );
+            _layout.initialize( settings, catalog, _wallet );
             _wallet.setBalance( hashed_string( "Gold" ), funds );
         }
 

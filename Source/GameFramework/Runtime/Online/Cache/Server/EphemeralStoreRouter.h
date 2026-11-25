@@ -44,7 +44,7 @@ namespace sw
         EphemeralStoreRouter& operator=( const EphemeralStoreRouter& ) = delete;
 
         /** @brief @p pStore 는 빌려 쓴다(라우터보다 오래 산다). */
-        void initialize( IEphemeralStore* pStore );
+        void initialize( IEphemeralStore& store );
         /** @brief 기다리는 요청마다 `Unavailable` 답을 부르고 구독을 모두 풉니다. 두 번 불러도 됩니다. */
         void shutdown();
 

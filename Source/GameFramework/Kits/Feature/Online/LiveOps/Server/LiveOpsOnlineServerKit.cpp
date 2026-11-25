@@ -73,7 +73,7 @@ namespace sw
                 const expected<optional<AbsolutePath>> trustFile = entry.resolveFile( kitConfig._pushTrustFile, "_pushTrustFile" );
                 if ( trustFile.has_value() == false )
                     return unexpected( trustFile.error() );
-                _dispatcher.initialize( context._pStore, PushDispatcherConfig{} );
+                _dispatcher.initialize( *context._pStore, PushDispatcherConfig{} );
                 // 오프라인 푸시는 우편함 키트가 접속하지 않은 계정의 새 우편에, 이벤트 운영은 GM 키트가 쓴다. 부르는 것은 모든 키트가 시작한 뒤다.
                 expected<void> assembled = createPushProviders( *providersFile, *trustFile, context._clock )
                                                .and_then( [&]

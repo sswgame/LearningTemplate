@@ -303,8 +303,8 @@ namespace sw
     {
         if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pRecipes ) == false || acquireBoundCatalog( _pItemCatalog ) == false || acquireRequired( _elementChart.path(), _pChart ) == false || validateSetup() == false || openQuest() == false )
             return false;
-        const bool bOpened = _haggle.initialize( _pCatalog.get(), _contract.key() ) && _investigation.initialize( *_pCatalog, _contract.key(), _questLog ) &&
-                             _combat.initialize( _pCatalog.get(), _seed ) && openBag() && openSkills();
+        const bool bOpened = _haggle.initialize( *_pCatalog, _contract.key() ) && _investigation.initialize( *_pCatalog, _contract.key(), _questLog ) &&
+                             _combat.initialize( *_pCatalog, _seed ) && openBag() && openSkills();
         if ( bOpened == false )
             return false;
         _bestiary.initialize( *_pCatalog, *_pChart );
@@ -647,8 +647,8 @@ namespace sw
         Countdown                resultHold     = _resultHold;
         if ( io.isReading() )
         {
-            const bool bReady = _pCatalog != nullptr && _pChart != nullptr && _pRecipes != nullptr && _pItemCatalog != nullptr && restoredHaggle.initialize( _pCatalog.get(), _contract.key() ) &&
-                                restoredInvestigation.initialize( *_pCatalog, _contract.key(), _questLog ) && restoredCombat.initialize( _pCatalog.get(), _seed ) &&
+            const bool bReady = _pCatalog != nullptr && _pChart != nullptr && _pRecipes != nullptr && _pItemCatalog != nullptr && restoredHaggle.initialize( *_pCatalog, _contract.key() ) &&
+                                restoredInvestigation.initialize( *_pCatalog, _contract.key(), _questLog ) && restoredCombat.initialize( *_pCatalog, _seed ) &&
                                 restoredBag.initialize( *_pItemCatalog, _bagSlotCount );
             if ( bReady == false )
             {

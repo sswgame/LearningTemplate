@@ -106,7 +106,7 @@ namespace sw
         _wallet.clear();
         _wallet.add( findCatalog()->getRules()._currency, getStartingMoney() );
         CitySimulation& city = getMutableCity();
-        if ( city.initialize( findCatalog(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, _wallet ) == false )
+        if ( city.initialize( *findCatalog(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, _wallet ) == false )
             return false; // 범위 밖 도시 설정은 도시가 오류를 남겼다
         const NileCityLayout layout = makeCityLayout();
         NileCityPlanner::paintTerrain( city, layout );
@@ -181,8 +181,8 @@ namespace sw
         if ( io.isReading() )
         {
             // 자동 계획을 읽지 못하면 이유는 플래너가 남겼다
-            if ( io.check( restoredPlanner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ) ) == false || io.check( restoredClock.initialize( makeClockSettings() ) ) == false ||
-                 io.check( restoredCity.initialize( findCatalog(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, _wallet ) ) == false )
+            if ( io.check( findCatalog() != nullptr ) == false || io.check( restoredPlanner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ) ) == false || io.check( restoredClock.initialize( makeClockSettings() ) ) == false ||
+                 io.check( restoredCity.initialize( *findCatalog(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, _wallet ) ) == false )
                 return;
         }
         io.value( io.isWriting() ? getMutableCity() : restoredCity );

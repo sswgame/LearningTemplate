@@ -68,7 +68,7 @@ namespace sw
                 settings._pNameIndex           = interfaces.find<const IAccountNameIndex>(); // 접속하지 않은 계정도 이름으로 찾는다
                 settings._pLiveEventControl    = interfaces.find<ILiveEventControl>();
                 settings._sanctionLimit        = _sanctionLimit;
-                if ( _service.initialize( context._pStore, settings ) == false )
+                if ( _service.initialize( *context._pStore, settings ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the admin service needs a store" } );
                 for ( const AdminSeedEntry& seed : _listSeed )
                 {

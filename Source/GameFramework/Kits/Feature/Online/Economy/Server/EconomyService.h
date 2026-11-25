@@ -187,7 +187,7 @@ namespace sw
         EconomyService& operator=( const EconomyService& ) = delete;
 
         /** @brief 카탈로그나 저장소가 없거나 Shipping 에 개발 전용 영수증 제공자가 있으면 false 를 반환합니다. 호스트에 등록하는 일은 호출하는 쪽이 합니다(`host.registerServerService( &service )`). */
-        [[nodiscard]] bool initialize( ServiceStore* pStore, const EconomyServiceConfig& settings );
+        [[nodiscard]] bool initialize( ServiceStore& store, const EconomyServiceConfig& settings );
         void               shutdown();
 
         /** @brief 요청 하나를 맡깁니다. 서비스 스레드에서 부릅니다. @p onReply 는 정확히 한 번 불리며, 규칙 위반 거절은 바로, 나머지는 저장소 완료에서 불립니다. */

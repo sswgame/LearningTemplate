@@ -79,7 +79,7 @@ namespace sw
         }
         _locator.initialize( pScene );
         _schedule.setActivityLocator( &_locator );
-        if ( _schedule.initialize( _pCatalog.get(), ScheduleSystemSettings{}, _startMinute ) == false )
+        if ( _schedule.initialize( *_pCatalog, ScheduleSystemSettings{}, _startMinute ) == false )
             return false; // 일정 시스템이 까닭을 남겼다
         _minute = _startMinute;
         _listClaim.assign( static_cast<size_t>( _schedule.getNPCCount() ), 0 );

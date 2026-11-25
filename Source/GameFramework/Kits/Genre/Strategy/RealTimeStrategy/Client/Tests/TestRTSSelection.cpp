@@ -36,7 +36,7 @@ namespace
 
         bool setUp( const RTSCatalog& catalog )
         {
-            if ( _world.initialize( &catalog, kMapSize, kMapSize ) == false )
+            if ( _world.initialize( catalog, kMapSize, kMapSize ) == false )
                 return false;
             for ( int32 player = 0; player < 2; ++player )
             {

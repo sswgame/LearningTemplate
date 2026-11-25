@@ -86,7 +86,7 @@ namespace sw
          *              전리품 테이블을 적은 동물이 없는 카탈로그면 둘 다 nullptr 이어도 된다 — 적은 동물이 있는데 없으면 시작하지 않는다.
          * @return 카탈로그가 없거나, 전리품을 적은 동물이 있는데 전리품 카탈로그 · 가방이 없거나, 지역이 카탈로그에 없거나, 생존 수치를 열지 못하면 오류를 남기고 false 입니다(시작하지 않는다).
          */
-        [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, Wallet& wallet, ReputationState& reputation, WorldClock& clock, GameFlags& flags,
+        [[nodiscard]] bool initialize( const WesternCatalog& catalog, const LootCatalog* pLoot, Wallet& wallet, ReputationState& reputation, WorldClock& clock, GameFlags& flags,
                                        WeatherSystem& weather, Inventory* pInventory, const hashed_string& regionID, float32 regionBaseTemperature,
                                        const AIPerceptionSettings& sight );
         /** @brief 빌린 카탈로그만 @p catalog 로 바꿉니다(지갑 · 평판 · 시계는 그대로). 법 · 생존 · 동물은 이어 읽는 `readState` 가 새 판으로 다시 연다 — 읽기 앞에서만 부른다. */

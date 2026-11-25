@@ -346,22 +346,20 @@ namespace sw
 
     LoginService::~LoginService() = default; // 비밀번호 요청(`LoginPasswordCall`)이 이 파일에서 완전한 형식이다
 
-    expected<void> LoginService::initialize( ServiceStore* pStore, ILoginCrypto* pCrypto, IPasswordHasher* pHasher, TaskManager* pTaskManager, const LoginServiceConfig& settings,
+    expected<void> LoginService::initialize( ServiceStore& store, ILoginCrypto& crypto, IPasswordHasher& hasher, TaskManager& taskManager, const LoginServiceConfig& settings,
                                              const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] )
     {
         // 비밀번호 해시는 작업 풀 위의 상한 있는 줄에서만 돈다 — 작업 풀 · 해시 구현이 없으면 기동 오류다(저장소 워커로 대신하지 않는다, 감사 O-3).
-        if ( pTaskManager == nullptr || pHasher == nullptr )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the login service needs the task manager and a password hasher - password hashing does not run on store workers" } );
         PasswordHashQueueConfig hashSettings;
         hashSettings._maxConcurrentPasswordHashes = settings._maxConcurrentPasswordHashes;
         hashSettings._maxQueuedPasswordHashes     = settings._maxQueuedPasswordHashes;
-        if ( expected<void> queued = _hashQueue.initialize( *pTaskManager, *pHasher, hashSettings ); queued.has_value() == false )
+        if ( expected<void> queued = _hashQueue.initialize( taskManager, hasher, hashSettings ); queued.has_value() == false )
             return queued;
-        _store.bindStore( pStore );
-        _pCrypto  = pCrypto;
+        _store.bindStore( &store );
+        _pCrypto  = &crypto;
         _settings = settings;
         _revocationScanJob.setPeriod( settings._revocationScanMs );
-        _ticketAuthority.initialize( pCrypto, arrTicketMasterKey );
+        _ticketAuthority.initialize( &crypto, arrTicketMasterKey );
         _mapClientToAttemptBucket.initialize( settings._attemptBurst, settings._attemptRefillMs, kMaxTrackedClientCount );
         return {};
     }

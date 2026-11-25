@@ -234,8 +234,8 @@ SW_TEST_CASE( ServerBusTest, EphemeralBusCarriesEnvelopeAcrossServers )
     sw::MemoryEphemeralStore    storeB( &database );
     sw::EphemeralStoreRouter    routerA;
     sw::EphemeralStoreRouter    routerB;
-    routerA.initialize( &storeA );
-    routerB.initialize( &storeB );
+    routerA.initialize( storeA );
+    routerB.initialize( storeB );
     sw::EphemeralServerBus busA( &routerA, kServerA );
     sw::EphemeralServerBus busB( &routerB, kServerB );
     busB.subscribe( "test.cache" );
@@ -281,7 +281,7 @@ SW_TEST_CASE( ServerBusTest, EphemeralBusBindsRouterOnlyBeforeSubscribing )
     sw::MemoryEphemeralDatabase database( clock );
     sw::MemoryEphemeralStore    store( &database );
     sw::EphemeralStoreRouter    router;
-    router.initialize( &store );
+    router.initialize( store );
     sw::EphemeralStoreRouter otherRouter; // 묶기 거절만 본다(앞에 붙이지 않는다 — 앞 하나는 라우터 하나가 꺼낸다)
 
     sw::EphemeralServerBus bus( nullptr, kServerA );

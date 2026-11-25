@@ -108,7 +108,7 @@ namespace sw
         GhostEncounter();
 
         /** @brief 카탈로그와 시드를 정하고 새 싸움을 엽니다. 카탈로그가 없거나 시드가 0 이면 오류를 남기고 false 를 반환하며 그대로입니다. */
-        [[nodiscard]] bool initialize( const GhostCatalog* pCatalog, uint32 seed );
+        [[nodiscard]] bool initialize( const GhostCatalog& catalog, uint32 seed );
         /** @brief 유령을 모두 치웁니다(방을 나갔을 때). 흡입도 끊습니다. */
         void clear();
         /** @brief 유령을 숨은 채로 만들고 유령 번호(1부터)를 반환합니다. 모르는 종류이면 0 입니다. */

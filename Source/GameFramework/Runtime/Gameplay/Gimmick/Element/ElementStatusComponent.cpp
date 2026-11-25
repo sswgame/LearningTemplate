@@ -38,7 +38,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ElementStatusComponent.ElementRuleTableCould", "Element rule table %# could not be read", _tablePath.c_str() );
             return;
         }
-        if ( _grid.initialize( 1, 1, pTable.get() ) == false )
+        if ( _grid.initialize( 1, 1, *pTable ) == false )
             return; // 이유는 ElementGrid 가 남겼다
         _pTable                        = std::move( pTable );
         const optional<int32> material = _pTable->findMaterial( _elementMaterial );

@@ -78,7 +78,7 @@ namespace sw
 
             expected<void> start( OnlineServerKitContext& context, const Dependencies& interfaces, const UnorderedDependencies& ) override
             {
-                _service.initialize( context._pStore, &_policy, interfaces.find<const ILedgerPolicy>(), context._serverID, _serviceSettings );
+                _service.initialize( *context._pStore, &_policy, interfaces.find<const ILedgerPolicy>(), context._serverID, _serviceSettings );
                 // 상대 찾기는 필수 키트라 정렬이 없으면 기동 오류로 막았다.
                 _server.initialize( &_service, &interfaces.get<IAccountDirectory>(), interfaces.find<AccountPresence>(), context._pMetricRegistry );
                 _server.setBalanceNotification( interfaces.find<IBalanceChangedListener>() ); // 경제 키트(정산 잔액 변경 알림)

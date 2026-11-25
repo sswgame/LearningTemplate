@@ -162,14 +162,9 @@ namespace sw
     {
     }
 
-    bool CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, Wallet& wallet )
+    bool CitySimulation::initialize( const CityCatalog& catalog, int32 width, int32 height, Wallet& wallet )
     {
-        if ( pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "CitySimulation.CitySimulationNeedsCatalog", "CitySimulation: no city catalog - the rules are read from its <Rules>" );
-            return false;
-        }
-        const CitySettings& settings = pCatalog->getRules();
+        const CitySettings& settings = catalog.getRules();
         if ( width < 1 || height < 1 )
         {
             SW_LOG_ERROR_ID( "CitySimulation.CitySimulationRefusedMapSize", "CitySimulation: refused map size %#x%# (needs >= 1 in both)", width, height );
@@ -181,7 +176,7 @@ namespace sw
             SW_LOG_ERROR_ID( "CitySimulation.CitySimulationRefusedSettings", "CitySimulation: refused settings - %#", rangeError.c_str() );
             return false;
         }
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _pWallet  = &wallet;
         _settings = settings;
         _topology = GridTopology{ width, height };
@@ -248,9 +243,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 건설
     // ------------------------------------------------------------------------------
-    void CitySimulation::bindLand( LandRegistry* pLand, const int2& origin )
+    void CitySimulation::bindLand( LandRegistry& land, const int2& origin )
     {
-        _land.bind( pLand, origin, hashed_string( "CityBuilder" ) );
+        _land.bind( land, origin, hashed_string( "CityBuilder" ) );
     }
 
     CityPlaceResult CitySimulation::placeRoad( int32 x, int32 y )

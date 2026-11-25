@@ -142,9 +142,9 @@ namespace sw
         void beginBattle();
         /**
          * @brief 전투 동안 공유 땅을 빌립니다. 전장 전체(막힘 아님)를 한 번에 얻으며, 전장 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 전투가 끝나면 `releaseLand` 로 반납합니다.
-         * @return 그 위치에 남의 땅이 있으면 false 이며 땅을 묶지 않는다(전장은 단독으로 동작한다). @p pLand 가 nullptr 이면 true 이다. `initialize` 뒤에 호출해야 한다.
+         * @return 그 위치에 남의 땅이 있으면 false 이며 땅을 묶지 않는다(전장은 단독으로 동작한다). `initialize` 뒤에 호출해야 한다.
          */
-        [[nodiscard]] bool bindLand( LandRegistry* pLand, const int2& origin );
+        [[nodiscard]] bool bindLand( LandRegistry& land, const int2& origin );
         /** @brief 빌린 전장 땅을 반납하고 바인딩을 해제합니다(전투가 끝났을 때). */
         void releaseLand();
 

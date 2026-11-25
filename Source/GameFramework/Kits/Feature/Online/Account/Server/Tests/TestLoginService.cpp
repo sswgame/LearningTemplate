@@ -137,8 +137,8 @@ namespace
             , _service{}
         {
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize]{ 1, 2, 3 };
-            _router.initialize( &_cache );
-            SW_EXPECT_TRUE( _service.initialize( &_store, &_crypto, &_hasher, game::findSubsystem<TaskManager>(), settings, arrMasterKey ).has_value() );
+            _router.initialize( _cache );
+            SW_EXPECT_TRUE( _service.initialize( _store, _crypto, _hasher, *game::findSubsystem<TaskManager>(), settings, arrMasterKey ).has_value() );
             _service.attachCache( &_router );
             SW_EXPECT_TRUE( _service.registerPlatformProvider( &_provider ) );
         }

@@ -121,7 +121,7 @@ namespace
             , _queue{}
             , _serverID{ serverID }
         {
-            _router.initialize( &_faultCache );
+            _router.initialize( _faultCache );
             if ( pHub != nullptr )
             {
                 _transport = make_unique<LocalServerBus>( pHub, serverID );

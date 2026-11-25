@@ -22,10 +22,9 @@ namespace sw
         shutdown();
     }
 
-    void EphemeralStoreRouter::initialize( IEphemeralStore* pStore )
+    void EphemeralStoreRouter::initialize( IEphemeralStore& store )
     {
-        SW_ASSERT( pStore != nullptr );
-        _pStore = pStore;
+        _pStore = &store;
     }
 
     void EphemeralStoreRouter::shutdown()

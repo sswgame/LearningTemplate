@@ -93,7 +93,7 @@ namespace sw
                 ScheduleSystem schedules;
                 schedules.setFlags( &flags );
                 schedules.setActionContext( world );
-                if ( schedules.initialize( pCatalog.get(), ScheduleSystemSettings{}, 7 * kMinutesPerHour ) == false )
+                if ( schedules.initialize( *pCatalog, ScheduleSystemSettings{}, 7 * kMinutesPerHour ) == false )
                 {
                     outReply = "the schedule system did not start";
                     return false;

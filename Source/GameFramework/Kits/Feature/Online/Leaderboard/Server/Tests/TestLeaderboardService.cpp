@@ -75,7 +75,7 @@ namespace
             , _store{ &database }
             , _service{}
         {
-            _router.initialize( &_cache );
+            _router.initialize( _cache );
             LeaderboardServiceDependencies dependencies;
             dependencies._pStore     = &_store;
             dependencies._pRouter    = &_router;
@@ -925,7 +925,7 @@ SW_TEST_CASE( LeaderboardServiceTest, SchedulerSettlesEndedSeasonOnce )
     LeaderboardWorld    world;
     LeaderboardFixture& rig = world._rig;
     ServiceScheduler    scheduler;
-    scheduler.initialize( &rig._store, 1 );
+    scheduler.initialize( rig._store, 1 );
     rig._service.setScheduler( &scheduler );
     rig.addSeasonBoard( "season", 1 );
     rig.addSeasonBoard( "season", 1 ); // 다시 등록해도 작업은 하나다

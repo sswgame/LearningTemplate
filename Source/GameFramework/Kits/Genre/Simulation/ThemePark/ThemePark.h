@@ -316,10 +316,10 @@ namespace sw
         void update( float32 deltaTime );
 
         /**
-         * @brief 공유 땅을 빌립니다. 월드 원점이 땅의 원점과 셀 크기를 따릅니다(공원은 셀 격자가 없으므로 월드 사각형으로 얻습니다). @p pLand 가 nullptr 이면 빌린 땅을 반납합니다.
+         * @brief 공유 땅을 빌립니다. 월드 원점이 땅의 원점과 셀 크기를 따릅니다(공원은 셀 격자가 없으므로 월드 사각형으로 얻습니다).
          * @details 그 뒤로 놀이기구는 지을 때 영역(`_footprintCenter`, `_footprintSize`)을 막힘으로 얻는다.
          */
-        void bindLand( LandRegistry* pLand );
+        void bindLand( LandRegistry& land );
         /**
          * @brief @p from 에서 @p to 로 걷는 길의 점(시작은 뺀다, 마지막이 @p to)을 @p outListPoint 에 채웁니다. 곧게 지날 수 있거나 격자 밖이면 @p to 하나입니다.
          * @details 손님의 걸음과 깔리는 길의 모습이 같은 함수를 부른다 — 길은 손님이 걷는 자리에 놓인다.

@@ -181,17 +181,17 @@ namespace sw
         CreatureTown();
 
         /**
-         * @brief 크기를 정하고 모든 셀을 비웁니다. 규칙 수치는 @p pCatalog 의 `<Rules>` 에서만 받는다(없으면 false, 감사 K-4). @p width 나 @p height 가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). 평판, 부탁 일지, 시계를 빌립니다.
+         * @brief 크기를 정하고 모든 셀을 비웁니다. 규칙 수치는 @p catalog 의 `<Rules>` 에서만 받는다(감사 K-4). @p width 나 @p height 가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). 평판, 부탁 일지, 시계를 빌립니다.
          * @param reputation 호감도(세력 `creature.<종 id>`)를 쌓을 플레이어 평판, @p questLog 부탁 일지, @p clock 날을 셀 시계 — 빌려 쓰며 마을보다 오래 살아야 한다.
          * @return 크기가 1 이상이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다(값을 조용히 맞추지 않는다).
          */
-        [[nodiscard]] bool initialize( const CreatureLifeCatalog* pCatalog, ReputationState& reputation, QuestLog& questLog, const WorldClock& clock, int32 width, int32 height );
+        [[nodiscard]] bool initialize( const CreatureLifeCatalog& catalog, ReputationState& reputation, QuestLog& questLog, const WorldClock& clock, int32 width, int32 height );
 
         /**
          * @brief 공유 땅을 빌립니다. 마을 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이미 놓인 오브젝트의 셀을 얻고, 그 뒤로는 오브젝트를 놓을 때 얻고 비우면 반납합니다.
-         * @return 이미 놓인 셀 하나라도 남의 땅이면 false 이며 땅을 묶지 않는다. @p pLand 가 nullptr 이면 빌린 땅을 반납하고 true 이다.
+         * @return 이미 놓인 셀 하나라도 남의 땅이면 false 이며 땅을 묶지 않는다.
          */
-        [[nodiscard]] bool bindLand( LandRegistry* pLand, const int2& origin );
+        [[nodiscard]] bool bindLand( LandRegistry& land, const int2& origin );
         /** @brief 셀에 오브젝트를 놓고(빈 id 는 비우기) 서식지를 다시 맞춥니다. 밖이거나 그 셀의 공유 땅이 남의 것이면 false 를 반환하고 상태는 그대로입니다. */
         bool setObject( int32 x, int32 y, const hashed_string& object );
         /** @brief 시계와 날씨로 이번 시의 방문을 굴리고, 찾아온 수를 반환합니다. */

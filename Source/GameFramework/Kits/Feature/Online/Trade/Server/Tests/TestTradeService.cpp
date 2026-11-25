@@ -39,7 +39,7 @@ namespace
         {
             _settings._inviteTimeoutMs = 30000; // 키트 설정의 필수 칸 — 견본 값
             _settings._idleTimeoutMs   = 300000;
-            _service.initialize( &_store, &_policy, nullptr, kServer, _settings );
+            _service.initialize( _store, &_policy, nullptr, kServer, _settings );
         }
 
         void poll()

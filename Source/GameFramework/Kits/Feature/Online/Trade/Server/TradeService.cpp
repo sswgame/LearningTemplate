@@ -99,10 +99,10 @@ namespace sw
     {
     }
 
-    void TradeService::initialize( ServiceStore* pStore, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings )
+    void TradeService::initialize( ServiceStore& store, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings )
     {
         SW_ASSERT( settings._idleTimeoutMs > 0 && settings._inviteTimeoutMs > 0 ); // 거래 키트 설정의 필수 칸이다 — 0 이면 열리자마자 시한이 끝난다
-        _store.bindStore( pStore );
+        _store.bindStore( &store );
         _pPolicy       = pPolicy;
         _pLedgerPolicy = pLedgerPolicy;
         _serverID      = serverID;

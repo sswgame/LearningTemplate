@@ -147,7 +147,7 @@ namespace sw
 
         Crafter();
 
-        void initialize( const RecipeCatalog* pCatalog );
+        void initialize( const RecipeCatalog& catalog );
         /**
          * @brief 재료를 가져오는 쪽을 바꿉니다. 지정해 두면 `craft` 와 `enqueue` 가 인벤토리에서 빼지 않고 이 함수를 부릅니다. 이 함수가 false 를 반환하면 `MissingInputs` 입니다.
          * @details 지정한 동안 `craft` 는 재료를 빼기 **전에** 결과를 넣을 공간을 확인한다. 재료를 되돌릴 방법이 없기 때문이다. `cancel` 이 돌려주는 재료는 인벤토리로 간다.

@@ -387,7 +387,7 @@ namespace sw
                 rule._backfillRolloutMs = rolloutMs; // 배포 창은 서버 전체에 하나다 - 옛 판 서버가 내려가는 시간은 표와 상관없다
             }
             parts._context._listTTLRule.clear();
-            if ( parts._ttlMonitor.initialize( parts._store.get(), &parts._scheduler, std::move( listRule ), parts._config._ttlSweepMinuteOfDay ) == false )
+            if ( parts._ttlMonitor.initialize( *parts._store, parts._scheduler, std::move( listRule ), parts._config._ttlSweepMinuteOfDay ) == false )
                 return unexpected( Error{ ErrorKind::ExternalFailure, "the TTL sweep job could not be scheduled" } );
         }
         if ( expected<void> host = startHost( settings ); host.has_value() == false )
@@ -480,7 +480,7 @@ namespace sw
         const uint64 serverID = static_cast<uint64>( parts._config._serverID );
         parts._bus            = make_unique<EphemeralServerBus>( nullptr, serverID ); // 라우터는 호스트가 연 뒤에 묶는다
         parts._busFront       = make_unique<ServerBus>( *parts._bus );
-        parts._scheduler.initialize( parts._store.get(), serverID );
+        parts._scheduler.initialize( *parts._store, serverID );
         parts._scheduler.setRunTTLMs( parts._config._scheduleRunTTL.getExpireAfterMs() ); // 키트가 구간 작업을 등록하기 전이다 // 보존 쓸기는 키트가 규칙을 올린 뒤 `initialize` 가 등록한다
         parts._remoteConfig.requestReload( *parts._store );
         parts._nextRemoteConfigReloadMs = nowMs + Internal::kRemoteConfigReloadMs;

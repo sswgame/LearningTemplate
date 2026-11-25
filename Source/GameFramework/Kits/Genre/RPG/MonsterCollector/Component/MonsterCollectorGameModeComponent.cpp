@@ -200,7 +200,7 @@ namespace sw
 
     bool MonsterCollectorGameModeComponent::openStorage()
     {
-        if ( _storage.initialize( _pCatalog.get(), _boxCapacity ) == false )
+        if ( _storage.initialize( *_pCatalog, _boxCapacity ) == false )
             return false;
         for ( const CatalogKey<MonsterSpeciesDef>& starter : _listStarter )
         {
@@ -512,7 +512,7 @@ namespace sw
         const bool     bInBattle           = _phase == MonsterCollectorPhase::Battle;
         if ( io.isReading() )
         {
-            if ( _pCatalog == nullptr || _pChart == nullptr || restoredStorage.initialize( _pCatalog.get(), _boxCapacity ) == false )
+            if ( _pCatalog == nullptr || _pChart == nullptr || restoredStorage.initialize( *_pCatalog, _boxCapacity ) == false )
             {
                 SW_LOG_ERROR_ID( "MonsterCollector.StateNeedsCatalog", "Monster collector game mode: state read before the catalog and the element chart are loaded - refused" );
                 io.fail();

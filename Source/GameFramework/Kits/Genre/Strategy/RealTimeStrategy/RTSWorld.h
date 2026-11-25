@@ -215,7 +215,7 @@ namespace sw
          * @brief 카탈로그와 격자 크기로 판을 비웁니다. 규칙은 카탈로그의 `<Rules>`(`RTSCatalog::getRules`)이다 — 게임이 C++ 값으로 주는 길은 없다(감사 K-4).
          * @details 카탈로그가 없거나 크기가 1 보다 작으면 오류를 남기고 false 를 반환하며 판은 그대로입니다(1 로 올려 받지 않는다).
          */
-        [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, int32 width, int32 height );
+        [[nodiscard]] bool initialize( const RTSCatalog& catalog, int32 width, int32 height );
         /** @brief 빌린 카탈로그만 @p catalog 로 바꿉니다. 유닛 · 명령의 정의는 이어 읽는 `readState` 가 id 로 다시 찾는다 — 읽기 앞에서만 부른다. 규칙 수치(고정 걸음)는 연 판의 것이다. */
         void rebindCatalog( const RTSCatalog& catalog ) { _pCatalog = &catalog; }
         /** @brief 지형이 막힌 곳(절벽, 물)을 지정합니다. 유닛을 놓기 전에 칠합니다. */
@@ -225,9 +225,9 @@ namespace sw
         /**
          * @brief 공유 땅을 빌립니다. 월드 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이후 건물은 놓을 때 땅을 얻고(막힘) 부서지면 반납합니다.
          * @details 다른 키트가 막아 둔 땅은 땅 격자에서 막힌 곳이다. 땅 리비전이 바뀌면 `update` 머리에서 땅 격자를 다시 칠한다(하늘 격자는 그대로 둔다).
-         *          막히지 않은 남의 땅(도로)에도 건물을 짓지 못한다. 이미 놓인 건물은 땅을 얻지 않으므로 건물을 놓기 전에 호출해야 한다. @p pLand 가 nullptr 이면 빌린 땅을 반납한다.
+         *          막히지 않은 남의 땅(도로)에도 건물을 짓지 못한다. 이미 놓인 건물은 땅을 얻지 않으므로 건물을 놓기 전에 호출해야 한다.
          */
-        void bindLand( LandRegistry* pLand, const int2& origin );
+        void bindLand( LandRegistry& land, const int2& origin );
         /** @brief 플레이어를 추가하고 플레이어 번호를 반환합니다. 자원은 빌린 지갑 @p pWallet 에서 쓰며, 지갑은 월드보다 오래 살아야 합니다. nullptr 이면 아무것도 살 수 없습니다. */
         int32 addPlayer( int32 team, Wallet& wallet, const float3& startPosition );
         /** @brief 유닛, 건물(건설이 끝난 상태), 자원을 놓습니다. 건물과 자원은 @p position 이 속한 셀이 왼쪽 아래가 됩니다. 놓을 수 없으면 무효 id 를 반환합니다. */

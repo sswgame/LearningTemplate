@@ -292,7 +292,7 @@ namespace sw
             return unexpected( Error{ ErrorKind::ExternalFailure, "online service host could not listen for the admin port", settings._adminListenAddress.toString() } );
         }
         if ( settings._pEphemeralStore != nullptr )
-            _ephemeralRouter.initialize( settings._pEphemeralStore );
+            _ephemeralRouter.initialize( *settings._pEphemeralStore );
         _bInitialized = SW_TRUE;
         return {};
     }

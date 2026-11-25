@@ -108,7 +108,7 @@ namespace sw
          * @details 비밀번호 해시는 저장소 워커가 아니라 @p pTaskManager 위의 상한 있는 줄(`PasswordHashQueue`, `_maxConcurrentPasswordHashes` · `_maxQueuedPasswordHashes`)에서 돈다.
          *          작업 풀이 없거나 상한이 1 미만이면 오류입니다(기동 실패 — 저장소 워커로 대신하지 않는다).
          */
-        [[nodiscard]] expected<void> initialize( ServiceStore* pStore, ILoginCrypto* pCrypto, IPasswordHasher* pHasher, TaskManager* pTaskManager, const LoginServiceConfig& settings,
+        [[nodiscard]] expected<void> initialize( ServiceStore& store, ILoginCrypto& crypto, IPasswordHasher& hasher, TaskManager& taskManager, const LoginServiceConfig& settings,
                                                  const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] );
         void                         shutdown();
 

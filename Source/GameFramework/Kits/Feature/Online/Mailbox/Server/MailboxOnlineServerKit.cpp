@@ -56,7 +56,7 @@ namespace sw
                 _settings._pBalanceNotification = interfaces.find<IBalanceChangedListener>(); // 경제 키트(수령 · 만료 반환의 잔액 변경 알림)
                 _settings._pOfflinePush         = interfaces.find<IOfflinePushSender>();      // 라이브 운영 키트(접속하지 않은 계정의 기기 푸시)
                 _settings._pScheduler           = context._pScheduler;                        // 만료 정리를 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
-                if ( _service.initialize( context._pStore, _settings ) == false )
+                if ( _service.initialize( *context._pStore, _settings ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the mailbox service needs a store, a sweep interval of at least a minute and a claimed-mail retention" } );
                 return {};
             }

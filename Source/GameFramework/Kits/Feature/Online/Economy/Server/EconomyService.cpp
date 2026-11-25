@@ -93,12 +93,12 @@ namespace sw
         SW_ASSERT( _calls.isEmpty() && _localCalls.isEmpty() );
     }
 
-    bool EconomyService::initialize( ServiceStore* pStore, const EconomyServiceConfig& settings )
+    bool EconomyService::initialize( ServiceStore& store, const EconomyServiceConfig& settings )
     {
-        const bool bMissingDependencies = pStore == nullptr || settings._pCurrencyCatalog == nullptr || settings._pOfferCatalog == nullptr;
+        const bool bMissingDependencies = settings._pCurrencyCatalog == nullptr || settings._pOfferCatalog == nullptr;
         if ( bMissingDependencies )
         {
-            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceNeedsStoreBoth", "EconomyService needs a store and both catalogs" );
+            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceNeedsCatalogs", "EconomyService needs both catalogs" );
             return false;
         }
         // 서명 없는 개발 전용 제공자는 DevOnline 단위가 있는 구성(개발)에서만 받는다 — 배포는 그 단위를 짓지 않는다.
@@ -119,7 +119,7 @@ namespace sw
             SW_LOG_ERROR_ID( "EconomyService.EconomyServiceNeedsRefundRecovery", "EconomyService needs a refund recovery policy (_refundRecovery: Debt or Unspent)" );
             return false;
         }
-        _store.bindStore( pStore );
+        _store.bindStore( &store );
         _settings = settings;
         _refundCursorJob.setPeriod( settings._refundCursorRetryMs ); // 첫 틱에 읽고, 못 읽었으면 이 간격 뒤에 다시 읽는다
         _deliveryJob.setPeriod( settings._deliveryScanIntervalMs );  // 기동 직후 한 번 읽는다

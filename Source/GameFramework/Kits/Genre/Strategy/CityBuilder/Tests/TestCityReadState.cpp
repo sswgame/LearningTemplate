@@ -173,7 +173,7 @@ namespace
 
         bool open( sw::CitySimulation& outCity )
         {
-            return outCity.initialize( &_catalog, kCitySize, kCitySize, _wallet );
+            return outCity.initialize( _catalog, kCitySize, kCitySize, _wallet );
         }
     };
 } // namespace
@@ -213,7 +213,7 @@ SW_TEST_CASE_F( CityReadStateTest, CityDeterminism )
     const auto      setup = [this]( CityRun& run )
     {
         run._wallet.add( _catalog.getRules()._currency, 1000 );
-        return run._city.initialize( &_catalog, kSize, kSize, run._wallet );
+        return run._city.initialize( _catalog, kSize, kSize, run._wallet );
     };
     const auto step = []( CityRun& run, int32 stepIndex )
     {
@@ -471,8 +471,4 @@ SW_TEST_CASE( CityCatalogTest, CatalogWithoutRulesIsRefused )
     SW_EXPECT_LOG( "CityCatalog.RulesMissing" );
     sw::CityCatalog bare;
     SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CityCatalog roadCost="1"><Building id="hut" name="Hut" kind="House" size="1" cost="1"/><HouseLevel name="Hut" population="5"/></CityCatalog>)", "CityCatalogTest" ) );
-    sw::CitySimulation city;
-    sw::Wallet         wallet;
-    SW_EXPECT_LOG( "CitySimulation.CitySimulationNeedsCatalog" );
-    SW_EXPECT_FALSE( city.initialize( nullptr, 4, 4, wallet ) );
 }

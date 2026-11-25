@@ -33,7 +33,7 @@ namespace
             , _dispatcher{}
             , _nowMs{ kNowMs }
         {
-            _dispatcher.initialize( &_store, settings );
+            _dispatcher.initialize( _store, settings );
             SW_EXPECT_TRUE( _dispatcher.registerProvider( &_provider ) );
         }
 

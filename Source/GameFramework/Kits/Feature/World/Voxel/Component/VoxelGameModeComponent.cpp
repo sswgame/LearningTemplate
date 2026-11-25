@@ -199,7 +199,7 @@ namespace sw
         }
         if ( bBlocksKnown == false )
             return false;
-        if ( _world.initialize( _chunkCountX, _chunkCountZ, _pCatalog.get() ) == false )
+        if ( _world.initialize( _chunkCountX, _chunkCountZ, *_pCatalog ) == false )
             return false;
         // 광석 · 눈도 지형 생성기가 같은 씨앗으로 놓는다(감사 K-8). 깊을수록 철이다.
         VoxelTerrainSettings settings;

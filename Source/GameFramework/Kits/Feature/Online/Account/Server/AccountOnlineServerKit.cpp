@@ -89,8 +89,10 @@ namespace sw
                 if ( expected<void> result = LoginTicketKey::readFromEnvironment( ticketKeyEnvironment, arrTicketKey ); result.has_value() == false )
                     return result;
                 // 비밀번호 해시는 작업 풀 위의 줄에서 돈다 — 이 프로세스(전용 서버 · 프로세스 안 서버 · 부하 봇은 엔진을 세운다)에 작업 풀이 없으면 기동 오류다(감사 O-3).
-                TaskManager* const   pTaskManager = game::findSubsystem<TaskManager>();
-                const expected<void> loginReady   = _loginService.initialize( context._pStore, &_crypto, &_hasher, pTaskManager, loginSettings, arrTicketKey );
+                TaskManager* const pTaskManager = game::findSubsystem<TaskManager>();
+                if ( pTaskManager == nullptr )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the login service needs the task manager - password hashing does not run on store workers" } );
+                const expected<void> loginReady = _loginService.initialize( *context._pStore, _crypto, _hasher, *pTaskManager, loginSettings, arrTicketKey );
                 Memory::wipe( arrTicketKey, sizeof( arrTicketKey ) );
                 if ( loginReady.has_value() == false )
                     return loginReady;

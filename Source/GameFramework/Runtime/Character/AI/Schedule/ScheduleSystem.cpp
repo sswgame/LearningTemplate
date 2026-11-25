@@ -205,7 +205,7 @@ namespace sw
         }
     }
 
-    bool ScheduleSystem::initialize( const ScheduleCatalog* pCatalog, const ScheduleSystemSettings& settings, int32 absoluteMinute )
+    bool ScheduleSystem::initialize( const ScheduleCatalog& catalog, const ScheduleSystemSettings& settings, int32 absoluteMinute )
     {
         // 값을 범위 안으로 맞춰 돌지 않는다. 상태를 바꾸기 전에 본다.
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
@@ -215,15 +215,13 @@ namespace sw
             return false;
         }
         shutdown();
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _settings = settings;
         if ( _settings._clock._listSeason.empty() ) // `WorldClockSettings::_listSeason` 의 계약(계절 없음 = 이름 하나)을 시계와 똑같이 따른다
             _settings._clock._listSeason.push_back( hashed_string( "Default" ) );
         _minute = absoluteMinute;
-        _defaultLocator.initialize( pCatalog );
+        _defaultLocator.initialize( catalog );
         _flagsRevision = _services._pFlags != nullptr ? _services._pFlags->getRevision() : 0;
-        if ( _pCatalog == nullptr )
-            return true;
 
         const vector<NPCScheduleDef>& listDef = _pCatalog->getNPCs();
         for ( int32 defIndex = 0; defIndex < static_cast<int32>( listDef.size() ); ++defIndex )

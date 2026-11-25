@@ -78,7 +78,7 @@ SW_TEST_CASE( RTSCommandTest, ApplyTakesOnlyTheIssuersUnits )
     sw::RTSCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSCommandTest" ) );
     sw::RTSWorld world;
-    SW_REQUIRE_TRUE( world.initialize( &catalog, 32, 32 ) );
+    SW_REQUIRE_TRUE( world.initialize( catalog, 32, 32 ) );
     sw::Wallet arrWallet[2];
     (void)world.addPlayer( 0, arrWallet[0], sw::float3{} );
     (void)world.addPlayer( 1, arrWallet[1], sw::float3{} );

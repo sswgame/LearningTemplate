@@ -377,7 +377,7 @@ SW_TEST_CASE( EphemeralStoreTest, RouterDispatchesRepliesToLiveOwnersOnly )
 {
     CacheFixture             rig;
     sw::EphemeralStoreRouter router;
-    router.initialize( &rig._store );
+    router.initialize( rig._store );
 
     int32             callCount = 0;
     sw::vector<uint8> listGotValue;
@@ -423,7 +423,7 @@ SW_TEST_CASE( EphemeralStoreTest, RouterRefusesDeadOwnerEmptyDelegateAndEarlySub
     sw::EphemeralStoreRouter router;
     const sw::Subscription   early = router.subscribe( "chan", []( const sw::EphemeralMessage& ) {} );
     SW_EXPECT_FALSE( early.isActive() );
-    router.initialize( &rig._store );
+    router.initialize( rig._store );
 
     sw::EphemeralStoreRouter otherRouter;
     const sw::Subscription   foreignOwner = otherRouter.openReplyOwner(); // 다른 라우터의 몫
@@ -445,7 +445,7 @@ SW_TEST_CASE( EphemeralStoreTest, RouterSharesChannelUntilLastSubscriberLeaves )
     CacheFixture             rig;
     sw::MemoryEphemeralStore publisher( &rig._database );
     sw::EphemeralStoreRouter router;
-    router.initialize( &rig._store );
+    router.initialize( rig._store );
 
     int32            firstCount  = 0;
     int32            secondCount = 0;
@@ -486,7 +486,7 @@ SW_TEST_CASE( EphemeralStoreTest, RouterShutdownAnswersPendingExactlyOnce )
 {
     CacheFixture             rig;
     sw::EphemeralStoreRouter router;
-    router.initialize( &rig._store );
+    router.initialize( rig._store );
     const sw::Subscription owner   = router.openReplyOwner();
     sw::Subscription       channel = router.subscribe( "chan", []( const sw::EphemeralMessage& ) {} );
 

@@ -96,7 +96,7 @@ namespace sw
                 dependencies._pBus       = context._pBus;
                 dependencies._pNameIndex = interfaces.find<const IAccountNameIndex>();
                 _socialService.initialize( dependencies );
-                _guildService.initialize( context._pStore );
+                _guildService.initialize( *context._pStore );
                 _guildService.setLedgerPolicy( interfaces.find<const ILedgerPolicy>() ); // 창고에서 꺼낼 때 화폐 상한을 본다. 경제 키트가 없으면 원장 상한만 본다
                 // 채팅 키트는 순서 없는 목록(`OnlineKitUnordered`)에 적는다 — 채팅이 이 키트의 차단 목록에 의존해 순환이 된다. 채팅의 멤버 창은 채팅 서비스가 서기 전과 내린 뒤의 호출을 무시하므로
                 // 순서가 없어도 되고, 찾기는 모든 키트의 `initialize` 뒤인 여기서 한다.

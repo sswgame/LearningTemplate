@@ -58,7 +58,7 @@ namespace sw
     /**
      * @class ScavengerFacility
      * @brief 위성 하나의 하루치 지도입니다. 방 id 는 `outside`(바깥), `ship`(우주선), `entrance`(정문 안), `room1`.. 이고 연결 종류는
-     *        `Ship`, `MainEntrance`, `Door`, `FireExit` 입니다. 잠긴 문은 `unlocked.<방>` 플래그 조건이라 `unlockDoor` 로 엽니다(열쇠와 자물쇠 따개를 쓰며, 플래그는 빌린 것이고 `setFlags` 로 정합니다).
+     *        `Ship`, `MainEntrance`, `Door`, `FireExit` 입니다. 잠긴 문은 `unlocked.<방>` 플래그 조건이라 `unlockDoor` 로 엽니다(열쇠와 자물쇠 따개를 쓰며, 플래그는 `initialize` 로 빌립니다).
      * @details 방 n 은 앞선 방 하나에 이어 붙어 나무가 되고(잠금을 빼면 모든 방이 정문에서 닿는다), 확률로 고리 통로를 더하며, 정문에서 가장 먼 방부터
      *          화재 출구가 바깥으로 난다. 고철은 위성의 목록에서 `spawnWeight` 로 고르고, 가치는 정의 범위 x 위성 배율 x 날씨 배율이다.
      *          같은 시드와 같은 위성이면 같은 지도와 같은 고철이 나온다.
@@ -74,6 +74,12 @@ namespace sw
 
         ScavengerFacility();
 
+        /** @brief 지도를 만들 카탈로그와 문 잠금을 둘 플래그를 함께 빌립니다. 둘 다 시설보다 오래 살아야 합니다. 새 객체에 `readState` 하기 전에 부릅니다. */
+        void initialize( const ScavengerCatalog& catalog, GameFlags& flags )
+        {
+            _pCatalog = &catalog;
+            _pFlags   = &flags;
+        }
         /** @brief 지도를 만들고 고철을 놓습니다. 회사 위성이면 바깥과 우주선만 있습니다. 지도를 읽다 실패하면 false 를 반환합니다. */
         [[nodiscard]] bool createLayout( const ScavengerCatalog& catalog, const ScavengerMoonDef& moon, uint32 seed, float32 valueScale );
         void               clear();
@@ -88,9 +94,7 @@ namespace sw
 
         const AreaGraph& getGraph() const { return _graph; }
         /** @brief 빌린 플래그를 반환합니다(빌리지 않았으면 빈 플래그입니다). */
-        const GameFlags& getFlags() const;
-        /** @brief 문 잠금을 둘 플래그를 빌립니다. 시설보다 오래 살아야 합니다. 빌리기 전의 시설은 잠긴 문이 열리지 않습니다. */
-        void                          bindFlags( GameFlags& flags ) { _pFlags = &flags; }
+        const GameFlags&              getFlags() const;
         const vector<ScavengerScrap>& getGroundScrap() const { return _listGroundScrap; }
         const ScavengerScrap*         findGroundScrap( int32 uid ) const;
         /** @brief 바닥 고철 가치의 합을 반환합니다(시신은 제외합니다). */
@@ -105,8 +109,6 @@ namespace sw
          *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 그래프는 빌린 카탈로그의 위성으로 다시 만듭니다. 데이터가 깨졌거나, 만든 지도가 있는데 카탈로그가 없거나 없는 위성이면 false 를 반환하고 상태는 그대로입니다.
          */
         SW_DECLARE_STATE_IO();
-        /** @brief 지도를 다시 만들 카탈로그를 빌립니다. 새 객체에 `readState` 하기 전에 호출해야 합니다(`createLayout` 도 이 값을 설정합니다). */
-        void bindCatalog( const ScavengerCatalog* pCatalog ) { _pCatalog = pCatalog; }
 
     private:
         AreaGraph _graph;

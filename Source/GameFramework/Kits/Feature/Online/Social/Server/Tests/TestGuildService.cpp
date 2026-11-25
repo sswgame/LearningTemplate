@@ -65,7 +65,7 @@ namespace
             , _sink{}
             , _eventSubscription{}
         {
-            _service.initialize( &_store );
+            _service.initialize( _store );
             _eventSubscription = _service.bindEventDelegate( SW_DELEGATE_METHOD( GuildEventDelegate, &GuildEventSink::onEvent, &_sink ) );
         }
 
@@ -975,7 +975,7 @@ namespace
     {
         ConnectionServiceStore store( connection );
         GuildService           service;
-        service.initialize( &store );
+        service.initialize( store );
         service.submit( request, 1 );
         while ( store.pollCompletions() > 0 )
         {

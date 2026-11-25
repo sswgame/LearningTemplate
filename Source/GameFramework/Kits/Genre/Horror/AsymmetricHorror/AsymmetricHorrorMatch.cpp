@@ -81,7 +81,7 @@ namespace sw
     {
     }
 
-    bool AsymmetricHorrorMatch::initialize( const AsymmetricHorrorMatchSettings& settings, const AsymmetricHorrorRulesCatalog* pCatalog )
+    bool AsymmetricHorrorMatch::initialize( const AsymmetricHorrorMatchSettings& settings, const AsymmetricHorrorRulesCatalog& catalog )
     {
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
@@ -90,7 +90,7 @@ namespace sw
             return false;
         }
         _settings = settings;
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _killer   = AsymmetricHorrorKiller{};
         _listSurvivor.clear();
         _listGenerator.clear();
@@ -1219,7 +1219,7 @@ namespace sw
         if ( io.isReading() )
         {
             AsymmetricHorrorMatch restored;
-            if ( io.check( restored.initialize( _settings, _pCatalog ) ) == false )
+            if ( io.check( restored.initialize( _settings, *_pCatalog ) ) == false )
                 return;
             *this = std::move( restored );
         }

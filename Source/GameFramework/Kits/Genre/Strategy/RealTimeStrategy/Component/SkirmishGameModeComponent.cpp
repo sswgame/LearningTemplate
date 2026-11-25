@@ -254,7 +254,7 @@ namespace sw
         matchSettings._macroAI               = _macroAI;
         matchSettings._opponentAI            = _opponentAI;
         matchSettings._pCommanderTree        = _pCommanderTree.snapshot(); // 판은 받은 때의 트리로 끝까지 돈다
-        if ( _match.initialize( findCatalog(), *humanMask, matchSettings ) == false )
+        if ( _match.initialize( *findCatalog(), *humanMask, matchSettings ) == false )
             return false;
         _listStepEvent.clear();
         do

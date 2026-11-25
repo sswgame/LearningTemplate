@@ -59,9 +59,9 @@ namespace sw
     {
     }
 
-    bool SkirmishMatch::initialize( const RTSCatalog* pCatalog, uint8 humanMask, const SkirmishMatchSettings& matchSettings )
+    bool SkirmishMatch::initialize( const RTSCatalog& catalog, uint8 humanMask, const SkirmishMatchSettings& matchSettings )
     {
-        if ( _world.initialize( pCatalog, kMapSize, kMapSize ) == false )
+        if ( _world.initialize( catalog, kMapSize, kMapSize ) == false )
             return false;
         if ( _world.claimEvents( _eventLease ) == false )
             return false; // 이 매치의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
@@ -71,7 +71,7 @@ namespace sw
         for ( const hashed_string& layoutID : { _settings._depotID, _settings._workerID, hashed_string( SkirmishMatchInternal::kMineralID ),
                                                 hashed_string( SkirmishMatchInternal::kRichMineralID ), hashed_string( SkirmishMatchInternal::kGeyserID ) } )
         {
-            if ( pCatalog->find( layoutID ) != nullptr )
+            if ( catalog.find( layoutID ) != nullptr )
                 continue;
             SW_LOG_ERROR_ID( "SkirmishMatch.MapLayoutPlacesBut", "[Skirmish] the map layout places '%#' but the unit catalog has no such unit - the match cannot start", layoutID.c_str() );
             bLayoutKnown = false;

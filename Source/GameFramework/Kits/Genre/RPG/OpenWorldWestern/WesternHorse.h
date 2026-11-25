@@ -71,7 +71,7 @@ namespace sw
         WesternHorse();
 
         /** @brief 품종으로 시작합니다. 품종이 없으면 false 를 반환합니다. */
-        [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const hashed_string& horseID, uint32 seed );
+        [[nodiscard]] bool initialize( const WesternCatalog& catalog, const hashed_string& horseID, uint32 seed );
         /**
          * @brief 시간을 흘립니다. 게이지 회복(코어 배율), 코어 감소, 겁 식기, 탄 시간 경험치를 처리합니다.
          * @param deltaTime 실제 초 @param gameHours 이번에 흐른 게임 시간

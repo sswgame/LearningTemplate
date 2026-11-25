@@ -71,7 +71,7 @@ namespace
             , _bus{}
             , _service{}
         {
-            _router.initialize( &_cache );
+            _router.initialize( _cache );
             SocialServiceDependencies dependencies;
             dependencies._pStore     = &_store;
             dependencies._pRouter    = &_router;

@@ -9,11 +9,17 @@
 
 namespace sw
 {
-    VoxelHotbar::VoxelHotbar( const VoxelBlockCatalog* pCatalog )
+    VoxelHotbar::VoxelHotbar()
         : _arrSlot{}
-        , _pCatalog{ pCatalog }
+        , _pCatalog{ nullptr }
         , _selectedIndex{ 0 }
     {
+    }
+
+    void VoxelHotbar::initialize( const VoxelBlockCatalog& catalog )
+    {
+        *this     = VoxelHotbar{};
+        _pCatalog = &catalog;
     }
 
     void VoxelHotbar::serializeState( StateIO& io )

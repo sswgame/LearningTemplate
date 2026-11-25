@@ -165,7 +165,7 @@ namespace sw
     public:
         GuildService();
 
-        void initialize( ServiceStore* pStore );
+        void initialize( ServiceStore& store );
         void shutdown();
 
         void submit( const GuildRequest& request, uint64 requestTag );

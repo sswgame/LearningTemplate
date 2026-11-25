@@ -117,7 +117,7 @@ namespace sw
          * @param humanMask 사람이 맡는 플레이어 깃발(`kHumanPlayer0` · `kHumanPlayer1`, 0 이면 둘 다 AI). 사람 쪽 일꾼도 처음에는 광물을 캐러 간다.
          * @return 월드(`RTSWorld::initialize`)가 거절하면 false 입니다. 그러면 판을 시작하지 않는다.
          */
-        [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, uint8 humanMask, const SkirmishMatchSettings& matchSettings );
+        [[nodiscard]] bool initialize( const RTSCatalog& catalog, uint8 humanMask, const SkirmishMatchSettings& matchSettings );
         /** @brief 월드를 배속 @p timeScale 로 돌리고 AI 는 월드가 진행한 시간만큼 돌려 알림을 넘깁니다. 상태는 30 초마다, 승패는 한 번 로그로 남깁니다. */
         void update( float32 deltaTime, float32 timeScale );
         /** @brief 이번까지 쌓인 월드 알림(화면용 사본)을 꺼냅니다. */

@@ -212,14 +212,9 @@ namespace sw
     {
     }
 
-    bool RTSWorld::initialize( const RTSCatalog* pCatalog, int32 width, int32 height )
+    bool RTSWorld::initialize( const RTSCatalog& catalog, int32 width, int32 height )
     {
-        if ( pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "RTSWorld.RTSWorldNeedsCatalog", "RTSWorld: no unit catalog - the rules are read from its <Rules>" );
-            return false;
-        }
-        const RTSSettings& settings   = pCatalog->getRules();
+        const RTSSettings& settings   = catalog.getRules();
         const string       rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
@@ -231,7 +226,7 @@ namespace sw
             SW_LOG_ERROR_ID( "RTSWorld.RTSWorldRefusedSizeX", "RTSWorld: refused size %#x%# (both need 1 or more)", width, height );
             return false;
         }
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _settings = settings;
         if ( _grid.initialize( width, height, 1.0f, float3{ 0.0f, 0.0f, 0.0f } ) == false || _airGrid.initialize( width, height, 1.0f, float3{ 0.0f, 0.0f, 0.0f } ) == false )
             return false;
@@ -263,9 +258,9 @@ namespace sw
         return _grid.isInside( x, y ) && _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE;
     }
 
-    void RTSWorld::bindLand( LandRegistry* pLand, const int2& origin )
+    void RTSWorld::bindLand( LandRegistry& land, const int2& origin )
     {
-        _land.bind( pLand, origin, hashed_string( "RealTimeStrategy" ) );
+        _land.bind( land, origin, hashed_string( "RealTimeStrategy" ) );
         repaintGrid();
         _landRevision = _land.getRevision();
     }

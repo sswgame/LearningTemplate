@@ -97,19 +97,14 @@ namespace sw
         SW_ASSERT( _calls.isEmpty() );
     }
 
-    bool MailboxService::initialize( ServiceStore* pStore, const MailboxServiceConfig& settings )
+    bool MailboxService::initialize( ServiceStore& store, const MailboxServiceConfig& settings )
     {
-        if ( pStore == nullptr )
-        {
-            SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNeedsStore", "MailboxService needs a store" );
-            return false;
-        }
         if ( settings._claimedRetentionMs <= 0 )
         {
             SW_LOG_ERROR_ID( "MailboxService.ClaimedRetentionMissing", "MailboxService needs a claimed-mail retention above zero (claimedRetentionMs %#)", settings._claimedRetentionMs );
             return false;
         }
-        _store.bindStore( pStore );
+        _store.bindStore( &store );
         _settings = settings;
         _sweepJob.setPeriod( settings._pScheduler == nullptr ? settings._sweepIntervalMs : 0 ); // 예약 테이블이 있으면 회차가 부른다
         _campaignJob.setPeriod( settings._campaignRefreshMs );

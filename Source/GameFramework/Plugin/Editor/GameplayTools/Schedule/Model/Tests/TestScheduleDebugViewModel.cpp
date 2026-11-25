@@ -47,7 +47,7 @@ SW_TEST_CASE( ScheduleDebugViewModelTest, GathersTheSelectedNPC )
     ScheduleCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDebugCatalogXML, "ScheduleDebugViewModelTest" ) );
     ScheduleSystem system;
-    SW_REQUIRE_TRUE( system.initialize( &catalog, ScheduleSystemSettings{}, 8 * 60 ) );
+    SW_REQUIRE_TRUE( system.initialize( catalog, ScheduleSystemSettings{}, 8 * 60 ) );
 
     ScheduleDebugViewModel model;
     ScheduleDebugViewState state;

@@ -218,10 +218,9 @@ namespace sw
     {
     }
 
-    void PushNotificationDispatcher::initialize( ServiceStore* pStore, const PushDispatcherConfig& settings )
+    void PushNotificationDispatcher::initialize( ServiceStore& store, const PushDispatcherConfig& settings )
     {
-        SW_ASSERT( pStore != nullptr );
-        _store.bindStore( pStore );
+        _store.bindStore( &store );
         _accountBucketMap.initialize( settings._accountBurst, settings._accountRefillIntervalMs, static_cast<size_t>( settings._maxTrackedAccountCount ) );
     }
 

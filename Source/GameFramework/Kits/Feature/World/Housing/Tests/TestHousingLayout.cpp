@@ -59,8 +59,7 @@ namespace
             _settings._sizeZ          = 6;
             _settings._levelCount     = 2;
             _settings._bFreePlacement = bFreePlacement;
-            _layout.initialize( _settings, _catalog );
-            _layout.bindWallet( &_wallet );
+            _layout.initialize( _settings, _catalog, _wallet );
             _wallet.setBalance( hashed_string( "Gold" ), 1000 );
         }
 
@@ -250,10 +249,6 @@ SW_TEST_CASE( HousingLayoutTest, CostRefundAndSupport )
                                                     0, 0.0f
     },
                                       HousingPlacementMode::Grid ) == HousingPlaceResult::SupportsOthers );
-
-    HousingFixture noWallet;
-    noWallet._layout.bindWallet( nullptr );
-    SW_EXPECT_TRUE( noWallet.place( "floor", 0.5f, 0.5f ) == HousingPlaceResult::NoWallet );
 }
 
 // ---- 되돌리기 ----
@@ -331,7 +326,7 @@ SW_TEST_CASE( HousingLayoutTest, LoadRefusesMismatchesAndFollowsReplacement )
 
     HousingFixture otherPlot;
     otherPlot._settings._plotID = hashed_string( "barn" );
-    otherPlot._layout.initialize( otherPlot._settings, otherPlot._catalog );
+    otherPlot._layout.initialize( otherPlot._settings, otherPlot._catalog, otherPlot._wallet );
     SW_EXPECT_LOG( "HousingLayout.SavedPlotDiffers" );
     SW_EXPECT_FALSE( HousingFixture::load( otherPlot._layout, bytes ) );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( otherPlot._layout.getPlacements().size() ) );
@@ -342,7 +337,7 @@ SW_TEST_CASE( HousingLayoutTest, LoadRefusesMismatchesAndFollowsReplacement )
 
     HousingFixture small;
     small._settings._sizeX = 1;
-    small._layout.initialize( small._settings, small._catalog );
+    small._layout.initialize( small._settings, small._catalog, small._wallet );
     SW_EXPECT_LOG( "HousingLayout.SavedPlacementBreaksRules" );
     SW_EXPECT_FALSE( HousingFixture::load( small._layout, bytes ) );
 
@@ -372,7 +367,7 @@ SW_TEST_CASE( HousingLayoutTest, PlotClaimsItsCellsOnTheSharedLand )
     LandRegistry land;
     land.initialize( 16, 16, 1.0f, AbsolutePosition{} );
     HousingFixture home;
-    SW_REQUIRE_TRUE( home._layout.bindLand( &land, int2{ 2, 2 } ) );
+    SW_REQUIRE_TRUE( home._layout.bindLand( land, int2{ 2, 2 } ) );
     SW_EXPECT_TRUE( home._layout.hasClaimedLand() );
     SW_EXPECT_TRUE( land.getOwnerName( 2, 2 ) == hashed_string( "Housing.home" ) );
     SW_EXPECT_TRUE( land.getOwnerName( 7, 7 ) == hashed_string( "Housing.home" ) ); // 6 x 6 칸의 끝
@@ -381,16 +376,16 @@ SW_TEST_CASE( HousingLayoutTest, PlotClaimsItsCellsOnTheSharedLand )
 
     HousingFixture neighbour;
     neighbour._settings._plotID = hashed_string( "next" );
-    neighbour._layout.initialize( neighbour._settings, neighbour._catalog );
+    neighbour._layout.initialize( neighbour._settings, neighbour._catalog, neighbour._wallet );
     SW_EXPECT_LOG( "HousingLayout.LandTaken" );
-    SW_EXPECT_FALSE( neighbour._layout.bindLand( &land, int2{ 5, 5 } ) ); // home 의 칸과 겹친다
+    SW_EXPECT_FALSE( neighbour._layout.bindLand( land, int2{ 5, 5 } ) ); // home 의 칸과 겹친다
     SW_EXPECT_FALSE( neighbour._layout.hasClaimedLand() );
     SW_EXPECT_TRUE( land.getOwnerName( 10, 10 ).empty() ); // 반쯤 차지하지 않는다
 
     home._layout.releaseLand();
     SW_EXPECT_TRUE( land.getOwnerName( 2, 2 ).empty() );
-    SW_EXPECT_TRUE( neighbour._layout.bindLand( &land, int2{ 5, 5 } ) );
-    SW_EXPECT_TRUE( neighbour._layout.bindLand( nullptr, int2{} ) ); // 땅 없는 부지는 단독이다 — 다시 묶으면 앞의 차지를 반납한다
+    SW_EXPECT_TRUE( neighbour._layout.bindLand( land, int2{ 5, 5 } ) );
+    neighbour._layout.releaseLand(); // 땅 없는 부지는 단독이다 — 다시 묶으면 앞의 차지를 반납한다
     SW_EXPECT_FALSE( neighbour._layout.hasClaimedLand() );
     SW_EXPECT_TRUE( land.getOwnerName( 5, 5 ).empty() );
 }

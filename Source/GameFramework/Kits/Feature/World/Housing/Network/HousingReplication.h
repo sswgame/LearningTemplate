@@ -193,7 +193,7 @@ namespace sw
         uint32           _placementID{ 0 };
     };
 
-    /** @brief `update` 한 번 동안 빌려 주는 부지 하나입니다. 레이아웃은 지갑이 묶여 있고(`bindWallet`) 셋 다 `update` 가 끝날 때까지 산다. */
+    /** @brief `update` 한 번 동안 빌려 주는 부지 하나입니다. 레이아웃은 지갑을 빌려 열렸고 셋 다 `update` 가 끝날 때까지 산다. */
     struct HousingNetPlotRef
     {
         HousingLayout*   _pLayout{ nullptr };

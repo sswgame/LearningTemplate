@@ -254,7 +254,7 @@ namespace sw
         AsymmetricHorrorMatch();
 
         /** @brief 규칙과 살인마를 정합니다. 살인마 id 를 모르면 false 를 반환합니다. */
-        [[nodiscard]] bool initialize( const AsymmetricHorrorMatchSettings& settings, const AsymmetricHorrorRulesCatalog* pCatalog );
+        [[nodiscard]] bool initialize( const AsymmetricHorrorMatchSettings& settings, const AsymmetricHorrorRulesCatalog& catalog );
         /** @brief 생존자를 세웁니다(`start` 전). 카탈로그가 없거나 시작했거나 체력 · 치료 규칙이 범위 밖이면 이유를 돌려줍니다. */
         [[nodiscard]] expected<int32> addSurvivor( const float3& position );
         void                          setKillerPosition( const float3& position );

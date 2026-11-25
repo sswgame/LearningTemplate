@@ -115,7 +115,7 @@ namespace sw
         settings._clock = clock.getSettings();
         // 계획은 곧은 선(기본), 화면 안 걸음은 격자 길 — 도착 시각은 계획이 정하므로 격자를 바꿔도 일정이 갈리지 않는다.
         _schedule.setPathing( nullptr, &_finePathing );
-        if ( _schedule.initialize( _pCatalog.get(), settings, FarmVillageGameModeComponentInternal::computeAbsoluteMinute( clock ) ) == false )
+        if ( _schedule.initialize( *_pCatalog, settings, FarmVillageGameModeComponentInternal::computeAbsoluteMinute( clock ) ) == false )
             return false;
         _listPosition.assign( static_cast<size_t>( _schedule.getNPCCount() ), float3{} );
         _listBodySpeed.assign( static_cast<size_t>( _schedule.getNPCCount() ), 0.0f );
