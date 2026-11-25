@@ -6,7 +6,7 @@
  */
 #pragma once
 #include "Core/Memory/Memory.h"
-#include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/Clock.h"
 #include "Core/Time/TimePoint.h"

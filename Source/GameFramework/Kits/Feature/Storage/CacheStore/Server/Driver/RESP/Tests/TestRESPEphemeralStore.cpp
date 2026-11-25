@@ -2,7 +2,7 @@
 
 #include "Core/Container/deque.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 

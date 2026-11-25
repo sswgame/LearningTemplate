@@ -9,7 +9,7 @@
 #include "Core/Network/Message/NetCompression.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/Message/Tests/StreamEndpointPair.h"
-#include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Testing/TestFramework.h"
 
 #include <cstring>
