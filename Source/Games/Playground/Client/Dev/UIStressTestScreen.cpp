@@ -62,12 +62,12 @@ namespace sw
             static UIScreenHandle syncSwitch( UISystem& uiSystem, UIScreenHandle current )
             {
                 const uint32              wanted    = gv_stressTestUiWidgets > 0 ? static_cast<uint32>( gv_stressTestUiWidgets ) : 0u;
-                const UIStressTestScreen* pBench    = static_cast<const UIStressTestScreen*>( uiSystem.findScreen( current ) );
+                UIStressTestScreen* const pBench    = static_cast<UIStressTestScreen*>( uiSystem.findScreen( current ) );
                 const uint32              cellCount = pBench != nullptr ? pBench->getCellCount() : 0u;
                 if ( wanted == cellCount )
                     return current;
                 if ( pBench != nullptr )
-                    uiSystem.closeScreen( current );
+                    pBench->close();
                 return wanted > 0 ? uiSystem.pushScreen( UIStressTestScreen::create( wanted ) ) : kInvalidUIScreenHandle;
             }
         };

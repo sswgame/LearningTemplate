@@ -13,7 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/UI/Screen/UIScreenTypes.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -62,7 +62,6 @@ namespace sw
         void updatePauseLabel();
 
     private:
-        UISystem*            _pUI;
         IntentRewindSession* _pSession;
         Subscription         _scrubSubscription;         ///< 슬라이더 값 변경 구독. 화면이 먼저 닫혀 슬라이더가 사라지면 무효가 된다
         Subscription         _arrCommandRegistration[3]; ///< 화면 명령(뒤로 · 정지 · 닫기) 등록 구독. 화면이 먼저 닫히면 무효가 된다
@@ -71,7 +70,7 @@ namespace sw
         float32              _shownMax;
         uint32               _furthestTick;
         uint32               _seekTicksPerFrame;
-        UIScreenHandle       _screen;
+        UIOwnedScreen        _screen;
         uint8                _bOpen;
         uint8                _bPaused;
         uint8                _bSyncing; ///< `update` 가 슬라이더 값을 쓰는 동안 참 — 그 알림을 사용자 입력으로 보지 않는다

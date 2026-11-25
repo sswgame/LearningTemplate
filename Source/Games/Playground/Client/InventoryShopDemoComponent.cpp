@@ -83,8 +83,8 @@ namespace sw
         , _wallet{}
         , _currency{}
         , _provider{}
-        , _inventoryScreen{ kInvalidUIScreenHandle }
-        , _shopScreen{ kInvalidUIScreenHandle }
+        , _inventoryScreen{}
+        , _shopScreen{}
     {
     }
 
@@ -102,14 +102,8 @@ namespace sw
 
     void InventoryShopDemoComponent::closeScreens()
     {
-        UISystem* pUI = game::findSubsystem<UISystem>();
-        if ( pUI != nullptr )
-        {
-            pUI->closeScreen( _inventoryScreen );
-            pUI->closeScreen( _shopScreen );
-        }
-        _inventoryScreen = kInvalidUIScreenHandle;
-        _shopScreen      = kInvalidUIScreenHandle;
+        _inventoryScreen.reset();
+        _shopScreen.reset();
     }
 
     bool InventoryShopDemoComponent::startGame()
@@ -185,21 +179,21 @@ namespace sw
     {
         UISystem*                    pUI        = game::findSubsystem<UISystem>();
         CharacterEquipmentComponent* pCharacter = findCharacter();
-        if ( pUI == nullptr || pCharacter == nullptr || pUI->findScreen( _inventoryScreen ) != nullptr )
+        if ( pUI == nullptr || pCharacter == nullptr || _inventoryScreen.find() != nullptr )
             return false;
-        _inventoryScreen = InventoryScreen::open( *pUI, _inventoryDocument.path(), *pCharacter );
-        return _inventoryScreen != kInvalidUIScreenHandle;
+        _inventoryScreen = UIOwnedScreen( *pUI, InventoryScreen::open( *pUI, _inventoryDocument.path(), *pCharacter ) );
+        return _inventoryScreen.isHeld();
     }
 
     bool InventoryShopDemoComponent::openShop()
     {
         UISystem*                    pUI        = game::findSubsystem<UISystem>();
         CharacterEquipmentComponent* pCharacter = findCharacter();
-        if ( pUI == nullptr || pCharacter == nullptr || isStarted() == false || pUI->findScreen( _shopScreen ) != nullptr )
+        if ( pUI == nullptr || pCharacter == nullptr || isStarted() == false || _shopScreen.find() != nullptr )
             return false;
         // 가방은 캐릭터의 것이다 — 산 것은 인벤토리 화면에 그대로 보인다(칸 · 무게가 모자라면 가게가 NoRoom 으로 거절한다).
         _provider   = make_unique<LocalShopPurchaseProvider>( *_pShops, *pCharacter->getBag().getCatalog(), _shop, _wallet, pCharacter->getBagForTrade(), _shopID );
-        _shopScreen = ShopScreen::open( *pUI, _shopDocument.path(), *_provider );
-        return _shopScreen != kInvalidUIScreenHandle;
+        _shopScreen = UIOwnedScreen( *pUI, ShopScreen::open( *pUI, _shopDocument.path(), *_provider ) );
+        return _shopScreen.isHeld();
     }
 } // namespace sw

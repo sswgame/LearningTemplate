@@ -14,7 +14,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
-#include "Engine/UI/Screen/UIScreenTypes.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -137,12 +137,10 @@ namespace sw
         void closeScreens();
         /** @brief 씬 로드가 끝났습니다 — 실패면 알리고, 성공이면 앞선 실패의 알림을 닫습니다. */
         void onSceneLoadCompleted( const SceneLoadCompletedEvent& event );
-        void closeLoadFailure();
         /** @brief 저장이 끝났습니다 — 실패면 알리고(다시 저장), 성공이면 앞선 실패의 알림을 닫습니다. */
         void onSaveGameSaved( const SaveGameSavedEvent& event );
         /** @brief 불러오기가 끝났습니다 — 실패면 알리고(다시 불러오기), 성공이면 앞선 실패의 알림을 닫습니다. */
         void onSaveGameLoaded( const SaveGameLoadedEvent& event );
-        void closeSaveFailure();
         /** @brief 페이드 패널을 알파에 맞춥니다. 알파가 0 이면 닫고, 0 보다 크면 열고 불투명도를 맞춥니다. */
         void syncFadeOverlay( float32 alpha );
         /** @brief 진행 슬라이더(`Progress`)를 로드 진행에 맞춥니다. 진행을 모르면 접는다. 문서에 슬라이더가 없으면 아무것도 하지 않는다. */
@@ -173,10 +171,10 @@ namespace sw
         LoadingScreenSettings _settings;
         string                _currentTip;
         UISystem*             _pUISystem;
-        UIScreenHandle        _loadingScreen;
-        UIScreenHandle        _fadeScreen;
-        UIScreenHandle        _loadFailureDialog;
-        UIScreenHandle        _saveFailureDialog;
+        UIOwnedScreen         _loadingScreen;
+        UIOwnedScreen         _fadeScreen;
+        UIOwnedScreen         _loadFailureDialog;
+        UIOwnedScreen         _saveFailureDialog;
         float32               _shownSeconds;
         float32               _spinnerAngle;
         Subscription          _sceneLoadSubscription;

@@ -213,6 +213,7 @@ namespace sw
         , _bGlyphStyleKnown{ SW_FALSE }
         , _bOnScreenSuppressed{ SW_FALSE }
         , _pauseRequest{}
+        , _screenCloseSubscriptions{ make_unique<SubscriptionList>( SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &UISystem::releaseOwnedScreen, this ) ) }
         , _layerHideSubscriptions{ make_unique<SubscriptionList>( SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &UISystem::releaseLayerHideRequest, this ) ) }
     {
     }
@@ -434,6 +435,16 @@ namespace sw
             player.stop( hashed_string( UIAnimation::kOpenName ) );
             (void)player.play( hashed_string( UIAnimation::kCloseName ) );
         }
+    }
+
+    Subscription UISystem::ownScreen( UIScreenHandle handle )
+    {
+        return _screenCloseSubscriptions->issue( handle );
+    }
+
+    void UISystem::releaseOwnedScreen( uint64 handle )
+    {
+        closeScreen( static_cast<UIScreenHandle>( handle ) );
     }
 
     unique_ptr<Widget> UISystem::instantiateDocument( string_view documentPath, const ResourceTagSet& tagOverride, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding,

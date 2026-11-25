@@ -14,7 +14,7 @@ namespace sw
         , _pGPUManager{ nullptr }
         , _listCanvasAnchor{}
         , _listFreeAnchor{}
-        , _screen{ kInvalidUIScreenHandle }
+        , _screen{}
     {
     }
 
@@ -87,7 +87,7 @@ namespace sw
 
     void UIScreenMarkers::removeScreen()
     {
-        _screen = kInvalidUIScreenHandle;
+        _screen.reset();
         _listAnchor.clear();
         _listMarker.clear();
         _activeMarkerCount = 0;

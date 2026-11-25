@@ -134,11 +134,6 @@ namespace sw
         // --- 화면 스택 ---------------------------------------------------------------
         /** @brief 화면을 해당 레이어의 맨 위에 올립니다. 활성 화면이 바뀌면 포커스를 옮깁니다(탐색 방식이면 기본 포커스). */
         UIScreenHandle pushScreen( unique_ptr<UIScreen> screen );
-        /**
-         * @brief 화면을 닫습니다. 지연 처리하므로 이벤트 처리 중에 닫아도 이번 경로가 끝난 뒤, 다음 `processInput` 끝과 `update` 앞에서 지웁니다.
-         * @details 화면에 `Close` 애니메이션이 있으면 재생하고 끝난 뒤 지운다. 그동안 화면은 입력과 포커스를 받지 않고 그리기만 한다.
-         */
-        void closeScreen( UIScreenHandle handle );
         /** @brief 화면을 찾습니다. 없거나 이미 지웠으면 nullptr 입니다(닫는 중인 화면은 찾을 수 있습니다). */
         UIScreen* findScreen( UIScreenHandle handle ) const;
         /** @brief 지금 활성 화면(맨 위에서 포커스를 받는 화면)을 반환합니다. 입력을 막는 화면 아래로는 내려가지 않습니다. 없으면 nullptr 입니다. */
@@ -359,6 +354,9 @@ namespace sw
         uint32 closeScreensOfModule( string_view moduleName );
 
     private:
+        friend class UIOwnedScreen; ///< 소유한 화면을 닫는다(`ownScreen`)
+        friend class UIScreen;      ///< 자기를 닫는다(`UIScreen::close`)
+
         /** @brief 문서를 캐시에서 찾아 위젯 트리를 생성합니다. 스타일 시트는 문서와 조각(끼워 넣은 순서)의 것을 모읍니다. 실패하면 오류를 로그에 남기고 nullptr 를 반환합니다. */
         /** @brief 모듈 내림 알림(`TypeRegistry::subscribeModuleUnloading`)입니다 — `closeScreensOfModule` 을 부릅니다. */
         void onModuleUnloadingNotification( string_view moduleName ) { (void)closeScreensOfModule( moduleName ); }
@@ -408,6 +406,15 @@ namespace sw
         void refreshActiveScreen();
         /** @brief 정지 화면이 하나라도 있으면 게임 시간 정지 요청을 걸어 두고, 없으면 풉니다. */
         void syncPauseRequest();
+        /**
+         * @brief 화면을 닫습니다. 지연 처리하므로 이벤트 처리 중에 닫아도 이번 경로가 끝난 뒤, 다음 `processInput` 끝과 `update` 앞에서 지웁니다.
+         * @details 밖에서는 화면을 소유한 값(`UIOwnedScreen`)이나 화면 자신(`UIScreen::close`)이 닫는다. 화면에 `Close` 애니메이션이 있으면 재생하고 끝난 뒤 지운다. 그동안 화면은 입력과 포커스를 받지 않고 그리기만 한다.
+         */
+        void closeScreen( UIScreenHandle handle );
+        /** @brief 화면 @p handle 을 소유하는 구독입니다 — 풀리면 닫습니다(`UIOwnedScreen`). */
+        [[nodiscard]] Subscription ownScreen( UIScreenHandle handle );
+        /** @brief 화면의 소유 구독이 풀렸습니다(@p handle 은 `UIScreenHandle`). */
+        void releaseOwnedScreen( uint64 handle );
         /** @brief 레이어 숨김 요청 하나의 구독이 풀렸습니다(@p layers 는 `UILayerMask`). */
         void releaseLayerHideRequest( uint64 layers );
 
@@ -504,17 +511,18 @@ namespace sw
         string                       _pauseMenuDocument;   ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
         UIScreenHandle               _nextScreenHandle;
         uint32                       _nextPushOrder;
-        uint32                       _textRevision;            ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
-        uint32                       _converterRevision;       ///< 마지막 바인딩 단계가 본 변환기 표 번호입니다(`UIBindingConverterRegistry::getRevision`).
-        uint32                       _glyphRevision;           ///< 액션 글리프가 바뀔 때마다 오르는 번호입니다(입력 장치 종류 · 키 재배치).
-        uint32                       _glyphBindingRevision;    ///< 마지막으로 본 게임 · UI 입력 맵의 바인딩 번호 합입니다.
-        InputGlyphStyle              _glyphStyle;              ///< 마지막으로 본 입력 장치 종류입니다(`refreshInputGlyphs`).
-        uint8                        _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있는지 나타냅니다.
-        uint8                        _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
-        uint8                        _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
-        uint8                        _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
-        Subscription                 _pauseRequest;            ///< 정지 화면이 하나라도 있는 동안 건 게임 시간 정지 요청입니다(`syncPauseRequest`).
-        unique_ptr<SubscriptionList> _layerHideSubscriptions;  ///< 레이어 숨김 요청의 구독입니다(`addLayerHideRequest`).
+        uint32                       _textRevision;             ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
+        uint32                       _converterRevision;        ///< 마지막 바인딩 단계가 본 변환기 표 번호입니다(`UIBindingConverterRegistry::getRevision`).
+        uint32                       _glyphRevision;            ///< 액션 글리프가 바뀔 때마다 오르는 번호입니다(입력 장치 종류 · 키 재배치).
+        uint32                       _glyphBindingRevision;     ///< 마지막으로 본 게임 · UI 입력 맵의 바인딩 번호 합입니다.
+        InputGlyphStyle              _glyphStyle;               ///< 마지막으로 본 입력 장치 종류입니다(`refreshInputGlyphs`).
+        uint8                        _bPendingClose       : 1;  ///< 닫기를 요청한 화면이 있는지 나타냅니다.
+        uint8                        _bTextRevisionKnown  : 1;  ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
+        uint8                        _bGlyphStyleKnown    : 1;  ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
+        uint8                        _bOnScreenSuppressed : 1;  ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
+        Subscription                 _pauseRequest;             ///< 정지 화면이 하나라도 있는 동안 건 게임 시간 정지 요청입니다(`syncPauseRequest`).
+        unique_ptr<SubscriptionList> _screenCloseSubscriptions; ///< 소유한 쪽이 닫을 화면의 구독입니다(`ownScreen`).
+        unique_ptr<SubscriptionList> _layerHideSubscriptions;   ///< 레이어 숨김 요청의 구독입니다(`addLayerHideRequest`).
 
         SW_SERVICE_SLOT( UISystem, Required );
     };

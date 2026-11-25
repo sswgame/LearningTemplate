@@ -11,15 +11,11 @@ namespace sw
 {
     TitleMenuComponent::TitleMenuComponent()
         : Component{}
-        , _pUISystem{ nullptr }
-        , _menu{ kInvalidUIScreenHandle }
+        , _menu{}
     {
     }
 
-    TitleMenuComponent::~TitleMenuComponent()
-    {
-        closeMenu();
-    }
+    TitleMenuComponent::~TitleMenuComponent() = default;
 
     void TitleMenuComponent::onBeginPlay()
     {
@@ -27,21 +23,12 @@ namespace sw
         UISystem* pUI = game::findSubsystem<UISystem>();
         if ( pUI == nullptr || pUI->isInitialized() == false )
             return;
-        _pUISystem = pUI;
-        _menu      = pUI->openScreen<MainMenuScreen>( pUI->getEngineDocuments()._mainMenu ); // 열지 못하면 문서 생성 단계가 까닭을 남긴다
+        _menu = UIOwnedScreen( *pUI, pUI->openScreen<MainMenuScreen>( pUI->getEngineDocuments()._mainMenu ) ); // 열지 못하면 문서 생성 단계가 까닭을 남긴다
     }
 
     void TitleMenuComponent::onEndPlay()
     {
-        closeMenu();
+        _menu.reset();
         Component::onEndPlay();
-    }
-
-    void TitleMenuComponent::closeMenu()
-    {
-        if ( _pUISystem != nullptr && _menu != kInvalidUIScreenHandle )
-            _pUISystem->closeScreen( _menu );
-        _menu      = kInvalidUIScreenHandle;
-        _pUISystem = nullptr;
     }
 } // namespace sw

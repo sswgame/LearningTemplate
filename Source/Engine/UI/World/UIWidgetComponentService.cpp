@@ -57,8 +57,6 @@ namespace sw
         }
         _listComponent.clear();
         // 화면 스택은 아직 있다(이것이 먼저 내려간다) — 마커 화면을 닫는다.
-        if ( _markers.getScreen() != kInvalidUIScreenHandle )
-            _pUI->closeScreen( _markers.getScreen() );
         _markers.clear();
         _pUI = nullptr;
     }
@@ -96,8 +94,8 @@ namespace sw
     {
         if ( widget == nullptr )
             return kInvalidWidgetID;
-        UIScreen* pMarkers = _pUI->findScreen( _markers.getScreen() );
-        if ( pMarkers == nullptr || pMarkers->isClosing() )
+        UIScreen* pMarkers = _markers.findScreen();
+        if ( pMarkers == nullptr )
         {
             unique_ptr<CanvasPanel> root = make_unique<CanvasPanel>();
             root->setVisibility( WidgetVisibility::SelfHitTestInvisible ); // 빈 곳 클릭은 아래(게임)로 넘긴다
@@ -105,8 +103,8 @@ namespace sw
             desc._layer       = UILayer::HUD;
             desc._bTakesFocus = false;
             desc._bShowCursor = false;
-            _markers.setScreen( _pUI->pushScreen( sw::make_unique<UIScreen>( desc, std::move( root ) ) ) );
-            pMarkers = _pUI->findScreen( _markers.getScreen() );
+            _markers.setScreen( UIOwnedScreen( *_pUI, _pUI->pushScreen( sw::make_unique<UIScreen>( desc, std::move( root ) ) ) ) );
+            pMarkers = _markers.findScreen();
         }
         PanelWidget* pRoot = castTo<PanelWidget>( pMarkers->getTree().getRoot() );
         if ( pRoot == nullptr )
@@ -118,7 +116,7 @@ namespace sw
 
     void UIWidgetComponentService::removeScreenMarker( WidgetID widget )
     {
-        UIScreen*    pMarkers = _pUI->findScreen( _markers.getScreen() );
+        UIScreen*    pMarkers = _markers.findScreen();
         Widget*      pWidget  = pMarkers != nullptr ? pMarkers->getTree().findWidgetByID( widget ) : nullptr;
         PanelWidget* pRoot    = pWidget != nullptr ? pWidget->getParent() : nullptr;
         if ( pRoot == nullptr )
@@ -126,15 +124,12 @@ namespace sw
         _markers.releaseAnchor( pWidget->getPaintAnchor() );
         (void)pRoot->removeChild( pWidget ); // 부모에서 찾은 위젯이므로 항상 제거된다
         if ( pRoot->getChildCount() == 0 )
-        {
-            _pUI->closeScreen( _markers.getScreen() );
             _markers.removeScreen();
-        }
     }
 
     Widget* UIWidgetComponentService::findScreenMarker( WidgetID widget ) const
     {
-        const UIScreen* pMarkers = _pUI->findScreen( _markers.getScreen() );
+        const UIScreen* pMarkers = _markers.findScreen();
         return pMarkers != nullptr ? pMarkers->getTree().findWidgetByID( widget ) : nullptr;
     }
 

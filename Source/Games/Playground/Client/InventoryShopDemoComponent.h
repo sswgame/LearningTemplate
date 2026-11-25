@@ -11,7 +11,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Screen/UIScreenTypes.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
@@ -77,7 +77,7 @@ namespace sw
         Wallet                                _wallet;
         hashed_string                         _currency;
         unique_ptr<LocalShopPurchaseProvider> _provider;
-        UIScreenHandle                        _inventoryScreen;
-        UIScreenHandle                        _shopScreen;
+        UIOwnedScreen                         _inventoryScreen;
+        UIOwnedScreen                         _shopScreen;
     };
 } // namespace sw

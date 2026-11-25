@@ -70,7 +70,7 @@ namespace sw
         , _pUI{ nullptr }
         , _updateSubscription{}
         , _nextOrder{ 0 }
-        , _screen{ kInvalidUIScreenHandle }
+        , _screen{}
     {
     }
 
@@ -183,17 +183,14 @@ namespace sw
         }
         announceVisible();
         // 3) 보일 것이 없으면 화면을 닫는다(오버레이라 입력과 무관하며, 열고 닫는 비용은 알림 단위로 든다).
-        const bool bIdleScreenOpen = _listVisible.empty() && _listFading.empty() && _screen != kInvalidUIScreenHandle;
+        const bool bIdleScreenOpen = _listVisible.empty() && _listFading.empty() && _screen.isHeld();
         if ( bIdleScreenOpen )
-        {
-            _pUI->closeScreen( _screen );
-            _screen = kInvalidUIScreenHandle;
-        }
+            _screen.reset();
     }
 
     void UINotificationService::announceVisible()
     {
-        UIScreen* pScreen = _screen != kInvalidUIScreenHandle ? _pUI->findScreen( _screen ) : nullptr;
+        UIScreen* pScreen = _screen.find();
         if ( pScreen == nullptr )
             return;
         for ( Entry& entry : _listVisible )
@@ -214,9 +211,7 @@ namespace sw
         _listVisible.clear();
         _listQueued.clear();
         _listFading.clear();
-        if ( _screen != kInvalidUIScreenHandle && _pUI->findScreen( _screen ) != nullptr )
-            _pUI->closeScreen( _screen );
-        _screen = kInvalidUIScreenHandle;
+        _screen.reset();
     }
 
     void UINotificationService::resetGameInstanceState( GameInstanceBoundary boundary )
@@ -243,11 +238,11 @@ namespace sw
 
     UIScreen* UINotificationService::acquireScreen()
     {
-        UIScreen* pScreen = _pUI->findScreen( _screen );
-        if ( pScreen != nullptr && pScreen->isClosing() == false )
+        UIScreen* pScreen = _screen.find();
+        if ( pScreen != nullptr )
             return pScreen;
-        _screen = _pUI->openScreen( _pUI->getEngineDocuments()._notifications );
-        return _pUI->findScreen( _screen );
+        _screen = UIOwnedScreen( *_pUI, _pUI->openScreen( _pUI->getEngineDocuments()._notifications ) );
+        return _screen.find();
     }
 
     void UINotificationService::showEntry( Entry& entry )
@@ -294,7 +289,7 @@ namespace sw
     {
         using Internal = UINotificationServiceInternal;
         // 연 화면이 없으면 고칠 위젯도 없다 — 기동 전(`_pUI` 가 아직 없다)에 같은 글이 다시 와 합치기만 한 경우다(`announceVisible` 과 같은 기준).
-        UIScreen* pScreen = _screen != kInvalidUIScreenHandle ? _pUI->findScreen( _screen ) : nullptr;
+        UIScreen* pScreen = _screen.find();
         Widget*   pEntry  = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
         if ( pEntry == nullptr )
             return; // 아직 기다리는 중이다
@@ -311,7 +306,7 @@ namespace sw
 
     void UINotificationService::startFadeOut( const Entry& entry )
     {
-        UIScreen* pScreen = _pUI->findScreen( _screen );
+        UIScreen* pScreen = _screen.find();
         Widget*   pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
         if ( pWidget == nullptr )
             return; // 위젯을 만들지 못했던 항목이다
@@ -328,7 +323,7 @@ namespace sw
 
     void UINotificationService::removeEntryWidget( WidgetID widget )
     {
-        UIScreen*    pScreen = _pUI->findScreen( _screen );
+        UIScreen*    pScreen = _screen.find();
         Widget*      pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( widget ) : nullptr;
         PanelWidget* pParent = pWidget != nullptr ? pWidget->getParent() : nullptr;
         if ( pParent != nullptr )

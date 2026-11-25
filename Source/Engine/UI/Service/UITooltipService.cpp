@@ -32,7 +32,7 @@ namespace sw
     UITooltipService::UITooltipService()
         : _pUI{ nullptr }
         , _updateSubscription{}
-        , _screen{ kInvalidUIScreenHandle }
+        , _screen{}
         , _hoverOwner{ kInvalidWidgetID }
         , _shownOwner{ kInvalidWidgetID }
         , _hoverSeconds{ 0.0f }
@@ -163,7 +163,7 @@ namespace sw
 
     const utf8* UITooltipService::findGameInstanceState() const
     {
-        return _screen == kInvalidUIScreenHandle ? nullptr : "a shown tooltip";
+        return _screen.isHeld() ? "a shown tooltip" : nullptr;
     }
 
     void UITooltipService::clear()
@@ -175,24 +175,24 @@ namespace sw
 
     void UITooltipService::show( const Widget& owner )
     {
-        if ( _screen == kInvalidUIScreenHandle )
+        if ( _screen.isHeld() == false )
         {
             if ( _bDocumentFailed )
                 return;
             const string& documentPath = _pUI->getEngineDocuments()._tooltip;
-            _screen                    = _pUI->openScreen( documentPath );
-            if ( _pUI->findScreen( _screen ) == nullptr )
+            _screen                    = UIOwnedScreen( *_pUI, _pUI->openScreen( documentPath ) );
+            if ( _screen.find() == nullptr )
             {
                 SW_LOG_ERROR_ID( "UITooltipService.TooltipScreenCouldNot", "[UI] Tooltip screen '%#' could not be opened - tooltips are not shown", documentPath.c_str() );
-                _screen          = kInvalidUIScreenHandle;
+                _screen.reset();
                 _bDocumentFailed = SW_TRUE;
                 return;
             }
         }
-        UIScreen* pScreen = _pUI->findScreen( _screen );
+        UIScreen* pScreen = _screen.find();
         if ( pScreen == nullptr )
         {
-            _screen = kInvalidUIScreenHandle; // 누군가 닫았으므로 다음 프레임에 다시 연다
+            _screen.reset(); // 누군가 닫았으므로 다음 프레임에 다시 연다
             return;
         }
         const WidgetTree& tree  = pScreen->getTree();
@@ -222,9 +222,7 @@ namespace sw
 
     void UITooltipService::hide()
     {
-        if ( _screen != kInvalidUIScreenHandle )
-            _pUI->closeScreen( _screen );
-        _screen     = kInvalidUIScreenHandle;
+        _screen.reset();
         _shownOwner = kInvalidWidgetID;
     }
 } // namespace sw

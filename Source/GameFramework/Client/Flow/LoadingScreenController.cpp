@@ -95,10 +95,10 @@ namespace sw
         , _settings{}
         , _currentTip{}
         , _pUISystem{ nullptr }
-        , _loadingScreen{ kInvalidUIScreenHandle }
-        , _fadeScreen{ kInvalidUIScreenHandle }
-        , _loadFailureDialog{ kInvalidUIScreenHandle }
-        , _saveFailureDialog{ kInvalidUIScreenHandle }
+        , _loadingScreen{}
+        , _fadeScreen{}
+        , _loadFailureDialog{}
+        , _saveFailureDialog{}
         , _shownSeconds{ 0.0f }
         , _spinnerAngle{ 0.0f }
         , _sceneLoadSubscription{}
@@ -143,7 +143,7 @@ namespace sw
 
     void LoadingScreenController::onSceneLoadCompleted( const SceneLoadCompletedEvent& event )
     {
-        closeLoadFailure();
+        _loadFailureDialog.reset();
         const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
         const bool                bSuperseded   = pSceneManager != nullptr && pSceneManager->isTransitioning(); // 뒤 요청에 밀렸다 — 그 로드의 끝이 온다
         if ( event._bSuccess || bSuperseded || _pUISystem == nullptr || _pUISystem->isInitialized() == false )
@@ -155,30 +155,22 @@ namespace sw
         desc._acceptText       = SW_LOCKEYREF( "SceneLoad", "Retry" );
         desc._cancelText       = SW_LOCKEYREF( "UIMenu", "Cancel" );
         const string levelName = event._levelName;
-        _loadFailureDialog     = ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [levelName]( ConfirmDialogResult result )
+        _loadFailureDialog     = UIOwnedScreen( *_pUISystem, ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [levelName]( ConfirmDialogResult result )
             {
             SceneManager* const pScenes = game::findSubsystem<SceneManager>();
             if ( result == ConfirmDialogResult::Accepted && pScenes != nullptr && pScenes->requestLoadFuture( levelName, SceneLoadKind::Travel ).isValid() == false )
                 SW_LOG_ERROR_ID( "LoadingScreen.RetryNotRequested", "The scene '%#' could not be requested again", levelName.c_str() );
-        } ) );
-    }
-
-    void LoadingScreenController::closeLoadFailure()
-    {
-        if ( _pUISystem != nullptr && _loadFailureDialog != kInvalidUIScreenHandle )
-            _pUISystem->closeScreen( _loadFailureDialog );
-        _loadFailureDialog = kInvalidUIScreenHandle;
+        } ) ) );
     }
 
     bool LoadingScreenController::isShowingLoadFailure() const
     {
-        const UIScreen* const pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _loadFailureDialog ) : nullptr;
-        return pScreen != nullptr && pScreen->isClosing() == false;
+        return _loadFailureDialog.find() != nullptr;
     }
 
     void LoadingScreenController::onSaveGameSaved( const SaveGameSavedEvent& event )
     {
-        closeSaveFailure();
+        _saveFailureDialog.reset();
         if ( event._bSuccess || _pUISystem == nullptr || _pUISystem->isInitialized() == false )
             return;
         ConfirmDialogDesc desc{};
@@ -187,17 +179,17 @@ namespace sw
         desc._acceptText   = SW_LOCKEYREF( "SceneLoad", "Retry" );
         desc._cancelText   = SW_LOCKEYREF( "UIMenu", "Cancel" );
         const string slot  = event._slot;
-        _saveFailureDialog = ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [slot]( ConfirmDialogResult result )
+        _saveFailureDialog = UIOwnedScreen( *_pUISystem, ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [slot]( ConfirmDialogResult result )
         {
             GameSaveSlots* const pSlots = game::findSubsystem<GameSaveSlots>();
             if ( result == ConfirmDialogResult::Accepted && pSlots != nullptr )
                 (void)pSlots->save( slot ); // 또 지면 그 이벤트가 다시 알린다
-        } ) );
+        } ) ) );
     }
 
     void LoadingScreenController::onSaveGameLoaded( const SaveGameLoadedEvent& event )
     {
-        closeSaveFailure();
+        _saveFailureDialog.reset();
         // 세이브의 씬이 열리지 않아 진 것은 씬 로드 실패 알림이 이미 말한다.
         if ( event._bSuccess || event._bSuperseded || isShowingLoadFailure() || _pUISystem == nullptr || _pUISystem->isInitialized() == false )
             return;
@@ -207,31 +199,20 @@ namespace sw
         desc._acceptText   = SW_LOCKEYREF( "SceneLoad", "Retry" );
         desc._cancelText   = SW_LOCKEYREF( "UIMenu", "Cancel" );
         const string slot  = event._slot;
-        _saveFailureDialog = ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [slot]( ConfirmDialogResult result )
+        _saveFailureDialog = UIOwnedScreen( *_pUISystem, ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [slot]( ConfirmDialogResult result )
         {
             GameSaveSlots* const pSlots = game::findSubsystem<GameSaveSlots>();
             if ( result == ConfirmDialogResult::Accepted && pSlots != nullptr )
                 (void)pSlots->load( slot );
-        } ) );
-    }
-
-    void LoadingScreenController::closeSaveFailure()
-    {
-        if ( _pUISystem != nullptr && _saveFailureDialog != kInvalidUIScreenHandle )
-            _pUISystem->closeScreen( _saveFailureDialog );
-        _saveFailureDialog = kInvalidUIScreenHandle;
+        } ) ) );
     }
 
     bool LoadingScreenController::isShowingSaveFailure() const
     {
-        const UIScreen* const pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _saveFailureDialog ) : nullptr;
-        return pScreen != nullptr && pScreen->isClosing() == false;
+        return _saveFailureDialog.find() != nullptr;
     }
 
-    LoadingScreenController::~LoadingScreenController()
-    {
-        closeScreens();
-    }
+    LoadingScreenController::~LoadingScreenController() = default;
 
     void LoadingScreenController::bindUISystem( UISystem* pUISystem )
     {
@@ -255,7 +236,7 @@ namespace sw
             return false; // 문서를 적지 않은 게임은 로딩 화면이 없다(gamesettings 의 `loadingScreen`)
         if ( findLoadingScreen() != nullptr )
             return true;
-        _loadingScreen    = _pUISystem->openScreen<LoadingScreen>( _settings._documentPath.get() );
+        _loadingScreen    = UIOwnedScreen( *_pUISystem, _pUISystem->openScreen<LoadingScreen>( _settings._documentPath.get() ) );
         UIScreen* pScreen = findLoadingScreen();
         if ( pScreen == nullptr )
         {
@@ -292,8 +273,7 @@ namespace sw
             else
             {
                 // 닫고 검은 화면에서 씬으로 돌아온다 — 페이드는 Overlay 층이라 입력을 막지 않는다.
-                pScreen->close();
-                _loadingScreen = kInvalidUIScreenHandle;
+                _loadingScreen.reset();
                 transition.fadeInFromBlack( _settings._fadeInSeconds );
             }
         }
@@ -343,29 +323,20 @@ namespace sw
 
     UIScreen* LoadingScreenController::findLoadingScreen() const
     {
-        UIScreen* pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _loadingScreen ) : nullptr;
-        return pScreen != nullptr && pScreen->isClosing() == false ? pScreen : nullptr;
+        return _loadingScreen.find();
     }
 
     UIScreen* LoadingScreenController::findFadeScreen() const
     {
-        UIScreen* pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _fadeScreen ) : nullptr;
-        return pScreen != nullptr && pScreen->isClosing() == false ? pScreen : nullptr;
+        return _fadeScreen.find();
     }
 
     void LoadingScreenController::closeScreens()
     {
-        closeLoadFailure();
-        closeSaveFailure();
-        if ( _pUISystem != nullptr )
-        {
-            if ( _loadingScreen != kInvalidUIScreenHandle )
-                _pUISystem->closeScreen( _loadingScreen );
-            if ( _fadeScreen != kInvalidUIScreenHandle )
-                _pUISystem->closeScreen( _fadeScreen );
-        }
-        _loadingScreen = kInvalidUIScreenHandle;
-        _fadeScreen    = kInvalidUIScreenHandle;
+        _loadFailureDialog.reset();
+        _saveFailureDialog.reset();
+        _loadingScreen.reset();
+        _fadeScreen.reset();
     }
 
     void LoadingScreenController::syncFadeOverlay( float32 alpha )
@@ -373,9 +344,7 @@ namespace sw
         UIScreen* pScreen = findFadeScreen();
         if ( alpha <= 0.0f )
         {
-            if ( pScreen != nullptr )
-                pScreen->close();
-            _fadeScreen = kInvalidUIScreenHandle;
+            _fadeScreen.reset();
             return;
         }
         if ( pScreen == nullptr )
@@ -390,7 +359,7 @@ namespace sw
             desc._layer       = UILayer::Overlay;
             desc._bTakesFocus = false;
             desc._bShowCursor = false;
-            _fadeScreen       = _pUISystem->pushScreen( sw::make_unique<UIScreen>( desc, std::move( panel ) ) );
+            _fadeScreen       = UIOwnedScreen( *_pUISystem, _pUISystem->pushScreen( sw::make_unique<UIScreen>( desc, std::move( panel ) ) ) );
             pScreen           = findFadeScreen();
             if ( pScreen == nullptr )
                 return;

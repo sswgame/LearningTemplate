@@ -15,6 +15,7 @@
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Presentation/IPlayerNotificationSink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
@@ -99,7 +100,7 @@ namespace sw
         const string& getVisibleText( uint32 index ) const { return _listVisible[index]._desc._text; }
         uint32        getVisibleCountOf( uint32 index ) const { return _listVisible[index]._count; }
         /** @brief 알림 화면입니다(보일 것이 없으면 무효). */
-        UIScreenHandle getScreen() const { return _screen; }
+        UIScreenHandle getScreen() const { return _screen.getHandle(); }
         /** @brief 사라지는 중이라 위젯만 남은 항목 수입니다. */
         uint32 getFadingCount() const { return static_cast<uint32>( _listFading.size() ); }
         /** @brief 올린 차례가 @p order 인 항목의 위젯 이름입니다. @p part 가 비면 항목 루트(`<번호>`), 아니면 `<번호>.<part>`(`Message`, `Count`)입니다. */
@@ -163,7 +164,7 @@ namespace sw
         UISystem*           _pUI;                ///< 화면 스택(기동이 찾는다, 그 전 · 종료 뒤에는 nullptr — `post` 는 쌓기만 한다)
         Subscription        _updateSubscription; ///< UI 갱신 칸(`UISystem::onUpdateAfterScreens`) 구독
         uint64              _nextOrder;
-        UIScreenHandle      _screen;
+        UIOwnedScreen       _screen;
 
         SW_SERVICE_SLOT( UINotificationService, Required );
     };

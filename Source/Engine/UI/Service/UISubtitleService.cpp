@@ -50,7 +50,7 @@ namespace sw
         , _authoredBackground{}
         , _authoredTextFontSize{ 0.0f }
         , _authoredSpeakerFontSize{ 0.0f }
-        , _screen{ kInvalidUIScreenHandle }
+        , _screen{}
         , _lineIDAllocator{}
         , _bGamePaused{ SW_FALSE }
         , _bDocumentFailed{ SW_FALSE }
@@ -162,7 +162,7 @@ namespace sw
     {
         _listActive.clear();
         _listQueued.clear();
-        closeScreen();
+        _screen.reset();
     }
 
     void UISubtitleService::update( float32 deltaSeconds )
@@ -186,15 +186,15 @@ namespace sw
         const bool bShow = gv_subtitles && _listActive.empty() == false;
         if ( bShow == false )
         {
-            closeScreen();
+            _screen.reset();
             return;
         }
-        if ( _screen == kInvalidUIScreenHandle && openScreen() == false )
+        if ( _screen.isHeld() == false && openScreen() == false )
             return;
-        UIScreen* pScreen = _pUI->findScreen( _screen );
+        UIScreen* pScreen = _screen.find();
         if ( pScreen == nullptr )
         {
-            _screen = kInvalidUIScreenHandle; // 누군가 닫았으므로 다음 프레임에 다시 연다
+            _screen.reset(); // 누군가 닫았으므로 다음 프레임에 다시 연다
             return;
         }
         const float32 sizeScale         = computeSizeScale( gv_subtitleSize );
@@ -227,7 +227,7 @@ namespace sw
     {
         using Internal = UISubtitleServiceInternal;
         UISubtitleLayoutReport report;
-        const UIScreen*        pScreen = _pUI != nullptr && _screen != kInvalidUIScreenHandle ? _pUI->findScreen( _screen ) : nullptr;
+        const UIScreen*        pScreen = _screen.find();
         if ( pScreen == nullptr )
             return report;
         const WidgetTree& tree          = pScreen->getTree();
@@ -258,12 +258,12 @@ namespace sw
         if ( _bDocumentFailed )
             return false;
         const string& documentPath = _pUI->getEngineDocuments()._subtitles;
-        _screen                    = _pUI->openScreen( documentPath );
-        UIScreen* pScreen          = _pUI->findScreen( _screen );
+        _screen                    = UIOwnedScreen( *_pUI, _pUI->openScreen( documentPath ) );
+        UIScreen* pScreen          = _screen.find();
         if ( pScreen == nullptr )
         {
             SW_LOG_ERROR_ID( "UISubtitle.SubtitleScreenCouldNot", "[UI] Subtitle screen '%#' could not be opened - subtitles are not shown", documentPath.c_str() );
-            _screen          = kInvalidUIScreenHandle;
+            _screen.reset();
             _bDocumentFailed = SW_TRUE;
             return false;
         }
@@ -278,7 +278,7 @@ namespace sw
             {
                 SW_LOG_ERROR_ID( "UISubtitle.SubtitleScreenLacksLineSlot", "[UI] Subtitle screen '%#' lacks Line%# / Speaker%# / Text%# for %# visible lines (EngineConfig _subtitles) - subtitles are not shown",
                                  documentPath.c_str(), slot, slot, slot, _config._maxVisibleLineCount );
-                closeScreen();
+                _screen.reset();
                 _bDocumentFailed = SW_TRUE;
                 return false;
             }
@@ -288,14 +288,6 @@ namespace sw
         _authoredSpeakerFontSize = tree.findWidget<TextWidget>( UISubtitleServiceInternal::makeSlotName( "Speaker", 0 ) )->getTextStyle()._fontSize;
         _authoredTextFontSize    = tree.findWidget<TextWidget>( UISubtitleServiceInternal::makeSlotName( "Text", 0 ) )->getTextStyle()._fontSize;
         return true;
-    }
-
-    void UISubtitleService::closeScreen()
-    {
-        if ( _screen == kInvalidUIScreenHandle )
-            return;
-        _pUI->closeScreen( _screen );
-        _screen = kInvalidUIScreenHandle;
     }
 
     void UISubtitleService::applySlot( UIScreen& screen, uint32 slot, const UISubtitleLine* pLine, float32 sizeScale, float32 backgroundOpacity )

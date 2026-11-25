@@ -154,12 +154,13 @@ namespace sw
             /** @brief 화면 스위치: `gv_uiDemo` 를 따라 견본 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 바꿔 첫 버튼에 포커스 테두리를 보입니다). */
             static UIScreenHandle syncSwitch( UISystem& uiSystem, UIScreenHandle current )
             {
-                const bool bOpen = current != kInvalidUIScreenHandle && uiSystem.findScreen( current ) != nullptr;
+                UIScreen* const pCurrent = uiSystem.findScreen( current );
+                const bool      bOpen    = pCurrent != nullptr;
                 if ( gv_uiDemo == bOpen )
                     return current;
                 if ( bOpen )
                 {
-                    uiSystem.closeScreen( current );
+                    pCurrent->close();
                     return kInvalidUIScreenHandle;
                 }
                 const UIScreenHandle screen = uiSystem.pushScreen( UIDemoScreen::create() );
