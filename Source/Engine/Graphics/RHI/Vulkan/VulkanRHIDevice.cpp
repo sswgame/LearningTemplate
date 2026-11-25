@@ -8,7 +8,7 @@
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"

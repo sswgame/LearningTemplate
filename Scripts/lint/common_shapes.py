@@ -20,7 +20,7 @@ Scripts/lint/common_shapes.py
    `XMLDocument::parseResourceText` · `XMLReadUtil::parseResourceRoot` · `loadResource…`)을 지나거나, 읽은 id 변수를 그대로 다음 함수에 넘겨야 한다.
    예전에는 이름 둘(`loadFromAsset` · `loadFromFile( const AssetID& )`)만 보아 다른 이름의 입구(타일맵 `load`)가 빠졌다 — 입구는 이름이 아니라 "load 로 시작하고 리소스 글을 읽는다" 로 고른다.
    형식으로 못 막는 까닭: 읽은 글과 id 가 같은 함수 안에서 이어지는지(자료 흐름)다.
-6. 엔진 자식 손 명령: `ProcessCommand::at(` 은 `EngineChildProcess::makeCommand` 가 맡는다 — 자동화 실행의 자식에 `-unattended` 를 넘긴다.
+6. 엔진 자식 손 명령: `ProcessCommand::at(` 은 `ProcessCommand::forEngineChild` 가 맡는다 — 자동화 실행의 자식에 `-unattended` 를 넘긴다.
    빠지면 넷 플레이 클라이언트가 사람의 실행으로 떠 사양으로 품질을 골라 서버와 합성이 갈렸다. 엔진이 아닌 도구(Tracy · tint · 편집기)는 예외 표에 까닭과 함께.
    형식으로 못 막는 까닭: 띄우는 실행 파일이 엔진인지는 실행 때의 값이고, 정당한 사용처(Core 테스트 실행기 · 엔진 · 에디터 도구)가 층에 걸쳐 Core 가 friend 로 알 수 없다.
 7. 에디터의 리소스 트리 손 훑기: 에디터 코드(`/Editor/` 아래)의 `FileUtil::collectFiles(` · `collectFolders(` 는 `EditorContentScan` 이 맡는다 —
@@ -165,7 +165,7 @@ def collect_violations(file: SourceFile) -> list[tuple[str, str, str]]:
     for entrance in find_id_dropping_entrances(code):
         list_violation.append(("assetEntrance", f"{path}|{entrance}", f"id 를 버리는 리소스 입구({entrance}) — ResourceContext::withAsset · parseResourceText · parseResourceRoot"))
     if ENGINE_CHILD_PATTERN.search(code):
-        list_violation.append(("engineChildCommand", path, "ProcessCommand::at 손 명령 — 엔진 자식은 EngineChildProcess::makeCommand"))
+        list_violation.append(("engineChildCommand", path, "ProcessCommand::at 손 명령 — 엔진 자식은 ProcessCommand::forEngineChild"))
     if NAME_HASH_KEY_PATTERN.search(code):
         list_violation.append(("nameHashKey", path, "getHash() 를 손으로 키로 쓴다 — 저장 · 조회 키는 NameHashIndex(같은 해시의 다른 이름을 거절)"))
     if "/Editor/" in path:
@@ -234,7 +234,7 @@ class CommonShapesRule(LintRule):
         assert find_id_dropping_entrances(calling) == [], "호출은 입구가 아니다"
         child = "const ProcessCommand command = ProcessCommand::at( *executable, std::move( listArgument ) );"
         assert [v[0] for v in violations("Source/Editor/a.cpp", child)] == ["engineChildCommand"]
-        assert violations("Source/Editor/a.cpp", "EngineChildProcess::makeCommand( parent, path, {} );") == []
+        assert violations("Source/Editor/a.cpp", "ProcessCommand::forEngineChild( parent, path, {} );") == []
         scan = "(void)FileUtil::collectFiles( resourceRoot, \"\", listFile, true );"
         assert [v[1] for v in violations("Source/Editor/a.cpp", scan)] == ["Source/Editor/a.cpp|resourceRoot"]
         assert violations("Source/Engine/a.cpp", scan) == [], "에디터 밖(쿠커 · 엔진)은 보지 않는다"

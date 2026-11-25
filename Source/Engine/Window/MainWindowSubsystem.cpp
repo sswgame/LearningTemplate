@@ -3,7 +3,7 @@
 #include "Engine/Window/MainWindowSubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"

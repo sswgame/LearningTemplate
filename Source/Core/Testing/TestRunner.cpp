@@ -20,7 +20,6 @@
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
-#include "Core/Process/StandardOutput.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/JSONStringUtil.h"
 #include "Core/String/StringBuilder.h"

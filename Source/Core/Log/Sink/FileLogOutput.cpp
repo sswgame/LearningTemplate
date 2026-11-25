@@ -7,7 +7,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
-#include "Core/Process/ProcessSession.h"
+#include "Core/Process/Process.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 

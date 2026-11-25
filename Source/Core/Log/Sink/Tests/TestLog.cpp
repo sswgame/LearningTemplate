@@ -17,7 +17,7 @@
 #include "Core/Log/Sink/FileLogOutput.h"
 #include "Core/Log/Sink/ILogOutput.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/ProcessSession.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"

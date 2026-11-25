@@ -2,7 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/UserDataPath.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/Testing/TestFramework.h"
 
 // 사용자 데이터 경로 — 게임 이름은 소문자 폴더. 로컬 저장 자리(`LocalStoreLocation`)는 종류를 만드는 쪽이 고르고, 데이터 폴더 아래 자리는 상대 경로만 받는다.

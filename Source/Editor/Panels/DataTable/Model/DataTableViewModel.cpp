@@ -8,7 +8,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Process/EngineChildProcess.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -208,7 +208,7 @@ namespace sw::editor
         StringBuilder<constant::buffer::kMax1024> project;
         project.appendFormat( "-loc-project=%#", _localizationSheet._projectPath.str() );
         listArgument.push_back( string( project.view() ) );
-        ProcessCommand command = EngineChildProcess::makeCommand( editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), std::move( listArgument ) );
+        ProcessCommand command = ProcessCommand::forEngineChild( editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), std::move( listArgument ) );
         if ( _pLocalizationToolJob->request( std::move( command ), ProcessRoots::get()._project.str() ) == false )
             return false;
         _runningTool            = tool;

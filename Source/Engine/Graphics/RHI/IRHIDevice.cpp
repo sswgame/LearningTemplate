@@ -10,7 +10,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/LogOnce.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/EngineConfig.h"

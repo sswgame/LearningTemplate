@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Online/HTTP/TelemetryUploadLink.h"
 
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/String/JSONStringUtil.h"
 
 #include "Engine/Telemetry/CrashReportService.h"

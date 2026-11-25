@@ -4,7 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Process/EngineChildProcess.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
@@ -209,7 +209,7 @@ namespace sw::editor
             const string& scenarioPath = _scenarios.getChosen();
             // 에디터 상태 폴더는 주지 않는다 — 시나리오 실행은 자식 프로세스가 제 실행 뿌리 아래 폴더를 쓴다(`EditorPaths::getEditorStateDirectory`).
             const string         backendArgument = TestRunnerPanelInternal::makeBackendArgument(); // " -dx12" 꼴 — 앞 공백 · 줄표를 뗀다
-            const ProcessCommand command         = EngineChildProcess::makeCommand(
+            const ProcessCommand command         = ProcessCommand::forEngineChild(
                 editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), EditorTestOutputParser::makeScenarioArguments( scenarioPath, backendArgument.empty() ? string_view{} : string_view( backendArgument ).substr( 2 ) ) );
             if ( _pJob->request( command, TestRunnerPanelInternal::getBinDirectory() ) )
             {
@@ -244,8 +244,8 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RunSelectedCases" ) ) )
         {
             // 작업 폴더는 Bin 이다 — 테스트는 거기서 위로 올라가며 Content/ 를 찾는다(CLAUDE.md 의 테스트 실행 규칙).
-            // 자동화 실행이 부른 테스트 자식도 자동화 실행이다(EngineChildProcess)
-            const ProcessCommand command = EngineChildProcess::makeCommand( editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), EditorTestOutputParser::makeUnitTestArguments( filter ) );
+            // 자동화 실행이 부른 테스트 자식도 자동화 실행이다(ProcessCommand::forEngineChild)
+            const ProcessCommand command = ProcessCommand::forEngineChild( editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), EditorTestOutputParser::makeUnitTestArguments( filter ) );
             if ( _pJob->request( command, TestRunnerPanelInternal::getBinDirectory() ) )
             {
                 _externalRunKind = ExternalRunKind::UnitTestRun;
