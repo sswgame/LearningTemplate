@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Concurrency/ThreadSafety.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Diagnostics/PhaseTimings.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -12,7 +13,6 @@
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIConstantBufferWriteLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIInitPhaseTimings.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -841,7 +841,7 @@ namespace sw
         /// @brief 컴퓨트 디스패치가 건 버퍼의 기록입니다(getComputeBindingLog 참고).
         unique_ptr<RHIComputeBindingLog> _pComputeBindingLog;
         /// @brief 마지막 `initialize` 의 단계별 시간입니다(`markInitPhase`).
-        RHIInitPhaseTimings _initPhaseTimings;
+        PhaseTimings _initPhaseTimings;
         /// @brief 드로우 기록 진단입니다(`getDrawDiagnostics`). 장치와 함께 생기고 사라진다 — 백엔드를 바꾸면 횟수가 다시 시작한다.
         RHIDrawDiagnostics _drawDiagnostics;
         /// @brief 이번 프레임의 기록 경로 상수 버퍼 쓰기입니다(`getConstantBufferWriteLog`).
