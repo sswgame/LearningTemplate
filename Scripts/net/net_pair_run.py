@@ -42,6 +42,7 @@ _FLOOR_TOLERANCE = 0.3  # 바닥 위에 선 자리(m) - 절대 자리로 보내�
 _CONNECTED_ID = "Net.ClientConnected"
 _DISCONNECTED_ID = "GameNetSession.NetSessionClientDisconnected"
 _HUB_ENTERED_ID = "Hub.Admitted"
+_CLIENT_LEFT_ID = "GameNetSession.NetSessionClientDisconnected"
 _HUB_SAVED_ID = "Hub.ProfileSaved"
 _DOWNED_ID = "ShooterPlayer.YouOverrunWaveAfter"
 _BORN_AGAIN_ID = "ShooterPlayer.BornAgain"
@@ -178,10 +179,12 @@ def _run_mmo(argument: argparse.Namespace) -> int:
             if client.return_code != 0:
                 server.stop()
                 return _finish([server], list_client, [], "")
-            # 재접속은 앞 진행이 저장된 뒤에 읽는다 — 서버가 나간 연결을 알아채고 저장한 사건을 기다린다.
-            if not server.wait_for_log(_HUB_SAVED_ID, _TIMEOUT_SECONDS, index + 1):
-                server.stop()
-                return _finish([server], list_client, [f"the server did not save the profile after {client.name} left"], "")
+            # 재접속은 앞 진행이 저장된 뒤에 읽는다 — 서버가 나간 연결을 알아챈 사건과 저장한 사건을 기다린다.
+            # 두 번째 클라이언트는 진행을 바꾸지 않아 서버가 다시 쓰지 않는다(`HubProfileStore::requestSave` 가 같은 바이트를 건너뛴다) — 저장은 첫 번째 것만 본다.
+            for log_id, count in ((_CLIENT_LEFT_ID, index + 1), (_HUB_SAVED_ID, 1)):
+                if not server.wait_for_log(log_id, _TIMEOUT_SECONDS, count):
+                    server.stop()
+                    return _finish([server], list_client, [f"the server log has no '{log_id}' (x{count}) after {client.name} left"], "")
         # 두 클라이언트를 함께 — 서로의 폰이 걷는 것을 보고, 회선 흉내 아래에서 어긋난 예측이 되돌아온다.
         north, south = (group.start_scenario(account, client_exe, _GAME, scenario, {**addresses, **_MMO_EMULATION}) for scenario, account in _MMO_PAWN_CLIENTS)
         for client in (north, south):
