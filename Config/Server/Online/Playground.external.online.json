@@ -30,6 +30,8 @@
         {
             "_name": "chat",
             "_settings": {
+                "_maxChannelPerMember": 16,
+                "_reportContextCount": 10,
                 "_historyTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 20000 },
                 "_bannedWordsFile": "Config/Server/chat_banned_words.txt",
                 "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt",
@@ -62,6 +64,8 @@
         {
             "_name": "leaderboard",
             "_settings": {
+                "_maxAroundRadius": 25,
+                "_nameCacheTTLMs": 2592000000,
                 "_pastScoreTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
                 "_seasonResultTTL": { "_expireAfterDays": 365, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },
                 "_catalog": "game/playground/data/playground.leaderboards.xml"
@@ -70,6 +74,9 @@
         {
             "_name": "liveops",
             "_settings": {
+                "_pushMaxDevicePerAccount": 10,
+                "_pushMaxRetry": 5,
+                "_pushFirstBackoffMs": 1000,
                 "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 },
                 "_pushProvidersFile": "Config/Server/Online/Providers/Playground.push.json",
                 "_pushTrustFile": "Config/Server/Online/ca-bundle.pem"
@@ -78,6 +85,8 @@
         {
             "_name": "mailbox",
             "_settings": {
+                "_maxClaimAllCount": 16,
+                "_maxClaimAllScanCount": 500,
                 "_claimedRetentionDays": 30,
                 "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 }
             }
@@ -85,6 +94,9 @@
         {
             "_name": "matchmaking",
             "_settings": {
+                "_partyLobby": { "_partyTTLMs": 1800000, "_lobbyTTLMs": 7200000, "_inviteTTLMs": 300000 },
+                "_queue": { "_leaseTTLMs": 10000, "_leaseRenewMs": 3000, "_noServerGiveUpMs": 30000, "_resultGraceMs": 10000, "_ratingWaitMs": 3000 },
+                "_agent": { "_expectTTLMs": 120000, "_recordRefreshMs": 1000, "_maxRecordCount": 256 },
                 "_catalog": "game/playground/data/playground.matchmodes.xml",
                 "_reconnectGraceMs": 60000,
                 "_cancelConfirmWaitMs": 3000,
@@ -94,6 +106,8 @@
         {
             "_name": "social",
             "_settings": {
+                "_links": { "_maxFriend": 200, "_maxIncoming": 100, "_maxOutgoing": 100, "_maxBlocked": 500 },
+                "_guild": { "_maxMember": 100, "_maxApplication": 50, "_maxStorageGrant": 32, "_inviteLifetimeMs": 604800000, "_applicationLifetimeMs": 604800000 },
                 "_expiredInviteTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },
                 "_expiredApplicationTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 }
             }

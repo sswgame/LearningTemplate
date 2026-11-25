@@ -32,5 +32,11 @@ namespace sw
         /** @brief 시즌 결과(순위 · 점수)의 TTL 입니다. 정산 창이 닫힌 뒤 이 기간이 지나면 지웁니다. */
         PROPERTY( Required )
         ServiceTTLConfig _seasonResultTTL{};
+        /** @brief 둘레 읽기(내 순위 위아래)의 반지름 상한입니다. 요청의 와이어 상한을 넘지 못합니다. */
+        PROPERTY( Required, Min = 0, Max = LeaderboardLimit::kMaxPage )
+        int32 _maxAroundRadius{ 0 };
+        /** @brief 표시 이름 캐시의 시한(밀리초)입니다. */
+        PROPERTY( Required, Min = 1000 )
+        int64 _nameCacheTTLMs{ 0 };
     };
 } // namespace sw

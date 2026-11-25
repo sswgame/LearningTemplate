@@ -27,5 +27,11 @@ namespace sw
         /** @brief 끝난 전체 우편(캠페인)과 그 수령 표식의 TTL 입니다. 캠페인이 끝난 뒤 이 기간이 지나면 TTL 쓸기가 지웁니다. */
         PROPERTY( Required )
         ServiceTTLConfig _endedCampaignTTL{};
+        /** @brief 모두 받기 한 번에 받는 우편 수입니다(우편마다 커밋이라 저장소 일을 묶는다). */
+        PROPERTY( Required, Min = 1, Max = 64 )
+        int32 _maxClaimAllCount{ 0 };
+        /** @brief 모두 받기 한 번에 훑는 우편 레코드 수입니다(최근 것부터). `_maxClaimAllCount` 이상이어야 합니다. */
+        PROPERTY( Required, Min = 1, Max = 5000 )
+        int32 _maxClaimAllScanCount{ 0 };
     };
 } // namespace sw

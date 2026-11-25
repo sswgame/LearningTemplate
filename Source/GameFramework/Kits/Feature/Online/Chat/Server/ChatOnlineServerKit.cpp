@@ -101,6 +101,8 @@ namespace sw
                 _settings._bannedWordsPath       = bannedWordsPath->has_value() ? *( *bannedWordsPath ) : AbsolutePath{};
                 _settings._ignoredCharactersPath = ignoredCharactersPath->has_value() ? *( *ignoredCharactersPath ) : AbsolutePath{};
                 _settings._spam                  = kitConfig._spam;
+                _settings._maxChannelPerMember   = kitConfig._maxChannelPerMember;
+                _settings._reportContextCount    = kitConfig._reportContextCount;
                 // 멤버 창은 친구와 매칭 키트가 `start` 에서 읽는다. 부르는 것은 모든 키트가 시작한 뒤다.
                 return registerServerService( context, entry, &_server )
                     .and_then( [&]

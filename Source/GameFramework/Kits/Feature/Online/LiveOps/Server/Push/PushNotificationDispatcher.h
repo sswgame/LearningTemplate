@@ -36,6 +36,9 @@ namespace sw
         int64 _accountRefillIntervalMs{ 600000 }; ///< 계정마다 10분에 하나씩 다시 채운다
         int32 _accountBurst{ 6 };                 ///< 한꺼번에 보낼 수 있는 상한이다
         int32 _maxTrackedAccountCount{ 100000 };  ///< 도배 제한이 보관하는 계정 수의 상한이다
+        int32 _maxDevicePerAccount{ 0 };          ///< 필수 — 계정마다 등록할 수 있는 기기 수(키트 설정 `_pushMaxDevicePerAccount`, `PushLimit::kMaxDevicePerAccount` 이하). 넘으면 가장 오래된 기기를 밀어낸다
+        int32 _maxRetry{ 0 };                     ///< 필수 — 일시 실패 · 제공자 지연을 다시 시도하는 횟수(키트 설정 `_pushMaxRetry`)
+        int64 _firstBackoffMs{ 0 };               ///< 필수 — 첫 재시도까지의 밀리초이고 시도마다 두 배가 된다(키트 설정 `_pushFirstBackoffMs`)
     };
 } // namespace sw
 
@@ -79,7 +82,7 @@ namespace sw
         PushNotificationDispatcher& operator=( const PushNotificationDispatcher& ) = delete;
 
         /** @brief @p pStore 는 빌려 씁니다. 맡긴 작업은 저장소의 `shutdown` 과 `pollCompletions` 가 회수하므로 이 객체는 그때까지 살아 있어야 합니다. */
-        void initialize( ServiceStore* pStore, const PushDispatcherConfig& settings );
+        [[nodiscard]] bool initialize( ServiceStore* pStore, const PushDispatcherConfig& settings );
         /** @brief 제공자를 등록합니다. 빌려 쓰는 포인터이며 같은 id 가 있으면 false 를 반환합니다. */
         [[nodiscard]] bool registerProvider( IPushNotificationProvider* pProvider );
 
@@ -150,6 +153,7 @@ namespace sw
         vector<PushDeliveryResult>         _listResultScratch;
         EventBuffer<PushDeviceCompletion>  _completionBuffer;
         TokenBucketMap                     _accountBucketMap;
+        PushDispatcherConfig               _settings; ///< `initialize` 가 받은 운영 값
         PushDispatcherStats                _stats;
         IDAllocator<uint64>                _deliveryIDAllocator;
         ServiceStoreTracker                _store; ///< 저장소에 맡긴 일의 앞이다

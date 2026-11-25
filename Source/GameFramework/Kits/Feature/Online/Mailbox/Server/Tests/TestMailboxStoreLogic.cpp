@@ -128,7 +128,7 @@ SW_TEST_CASE( MailboxStoreLogicTest, CapExceededLeavesTheMail )
     (void)sendReward( batch, "batch.b", "gold", 90 );
     (void)sendReward( batch, "batch.c", "gems", 3 );
     MailboxClaimReply reply;
-    SW_EXPECT_TRUE( MailboxStoreLogic::claimAll( batch, kRecipient, kNowMs + 1000, kClaimedMs, &policy, reply ) == MailboxResult::Ok );
+    SW_EXPECT_TRUE( MailboxStoreLogic::claimAll( batch, kRecipient, kNowMs + 1000, kClaimedMs, 16, 500, &policy, reply ) == MailboxResult::Ok );
     SW_EXPECT_EQUAL( reply._claimedCount, 2 ); // 금 하나 + 보석, 남은 금 우편은 상한에 걸린다
     SW_EXPECT_TRUE( readBalance( batch, kRecipient, "gold" ) <= 100 );
     SW_EXPECT_EQUAL( readBalance( batch, kRecipient, "gems" ), int64( 3 ) );
@@ -285,7 +285,7 @@ SW_TEST_CASE( MailboxStoreLogicTest, ClaimAllReachesPastTheFirstPage )
         (void)sendReward( database, key.view(), "gold", 0, 0, kNowMs + index ); // 첨부 없는 최근 알림
     }
     MailboxClaimReply reply;
-    SW_EXPECT_TRUE( MailboxStoreLogic::claimAll( database, kRecipient, kNowMs + 1000, kClaimedMs, &policy, reply ) == MailboxResult::Ok );
+    SW_EXPECT_TRUE( MailboxStoreLogic::claimAll( database, kRecipient, kNowMs + 1000, kClaimedMs, 16, 500, &policy, reply ) == MailboxResult::Ok );
     SW_EXPECT_EQUAL( 3, reply._claimedCount );
     SW_EXPECT_FALSE( reply._bMoreRemaining );
     SW_EXPECT_EQUAL( readBalance( database, kRecipient, "gold" ), int64( 30 ) );
@@ -362,4 +362,17 @@ SW_TEST_CASE( MailboxStoreLogicTest, CampaignEndedBetweenReadAndCommitIsNotPaid 
     LedgerBalance balance;
     SW_EXPECT_TRUE( Ledger::readBalance( database, LedgerHolder::makeAccount( kRecipient ), "gold", balance ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( int64( 0 ), balance._amount );
+}
+
+/** @brief [MailboxStoreLogicTest] 모두 받기 한 번의 우편 수는 설정이 정한다 — 상한을 1 로 주면 하나만 받고 남았다고 알린다 */
+SW_TEST_CASE( MailboxStoreLogicTest, ClaimAllCountComesFromSettings )
+{
+    MemoryServiceDatabase database;
+    const FixedCapPolicy  policy{ 100 };
+    (void)sendReward( database, "one.a", "gems", 1 );
+    (void)sendReward( database, "one.b", "gems", 1 );
+    MailboxClaimReply reply;
+    SW_EXPECT_TRUE( MailboxStoreLogic::claimAll( database, kRecipient, kNowMs + 1000, kClaimedMs, 1, 500, &policy, reply ) == MailboxResult::Ok );
+    SW_EXPECT_EQUAL( reply._claimedCount, 1 );
+    SW_EXPECT_TRUE( reply._bMoreRemaining == SW_TRUE );
 }

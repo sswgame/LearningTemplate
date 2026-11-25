@@ -2213,6 +2213,17 @@
     "CheckpointPassed": "KartRacer::_nextCheckpoint — 지난 수의 사본이었다 (2026-11-25)",
     "SeriesWon": "PartyRoundSeries::getWinner — 우승의 사본이었다 (2026-11-25)",
     "EnemiesRespawned": "Rested · Died — 적은 쉬거나 죽을 때 늘 다시 나온다 (2026-11-25)",
-    "GoldGained": "WalletEvent — 골드는 지갑이 알린다 (2026-11-25)"
+    "GoldGained": "WalletEvent — 골드는 지갑이 알린다 (2026-11-25)",
+    "kMaxIncoming": "SocialLinkPolicy::_maxIncoming — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
+    "kMaxOutgoing": "SocialLinkPolicy::_maxOutgoing — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
+    "kMaxBlocked": "SocialLinkPolicy::_maxBlocked — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
+    "kInviteLifetimeMs": "GuildPolicy::_inviteLifetimeMs — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
+    "kApplicationLifetimeMs": "GuildPolicy::_applicationLifetimeMs — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
+    "MatchQueueLimit": "MatchQueuePolicy — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
+    "kMaxAround": "LeaderboardKitConfig::_maxAroundRadius — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
+    "kNameTTLMs": "LeaderboardKitConfig::_nameCacheTTLMs — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
+    "kReportContextCount": "ChatKitConfig::_reportContextCount — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
+    "kMaxClaimAllCount": "MailboxKitConfig::_maxClaimAllCount — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
+    "kMaxClaimAllScanCount": "MailboxKitConfig::_maxClaimAllScanCount — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)"
   }
 }

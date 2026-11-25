@@ -6,6 +6,7 @@
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Tests/MatchmakingTestPolicy.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 
@@ -50,7 +51,7 @@ namespace
             , _service{}
         {
             _router.initialize( &_cache );
-            SW_EXPECT_TRUE( _service.initialize( &_router, 1, maxPartySize ) );
+            SW_EXPECT_TRUE( _service.initialize( &_router, 1, test::MatchmakingTestPolicy::makePartyLobby(), maxPartySize ) );
         }
 
         ~PartyFixture()
@@ -171,8 +172,8 @@ SW_TEST_CASE( PartyLobbyServiceTest, RefusesBadMaxPartySize )
     SW_EXPECT_LOG( "PartyLobbyService.PartyLobbyServiceRefusedStartMax" );
     PartyFixture      rig;
     PartyLobbyService service;
-    SW_EXPECT_FALSE( service.initialize( &rig._router, 2, PartyLobbyLimit::kMinPartySize - 1 ) );
-    SW_EXPECT_FALSE( service.initialize( &rig._router, 2, PartyLobbyLimit::kMaxPartySize + 1 ) );
+    SW_EXPECT_FALSE( service.initialize( &rig._router, 2, test::MatchmakingTestPolicy::makePartyLobby(), PartyLobbyLimit::kMinPartySize - 1 ) );
+    SW_EXPECT_FALSE( service.initialize( &rig._router, 2, test::MatchmakingTestPolicy::makePartyLobby(), PartyLobbyLimit::kMaxPartySize + 1 ) );
 
     PartyFoundSink sink; // 시작하지 못한 서비스는 찾기에 Unavailable 로 답한다
     service.findPartyOfAccount( kAlice, 9, SW_DELEGATE_METHOD( PartyLobbyService::PartyFoundDelegate, &PartyFoundSink::onFound, &sink ) );
@@ -269,7 +270,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, QueueingExtendsTheAccountIndex )
 {
     PartyFixture rig;
     const uint64 partyID = rig.makeParty( kAlice );
-    rig._clock.advanceMilliseconds( PartyLobbyLimit::kPartyTTLMs - 1000 );
+    rig._clock.advanceMilliseconds( test::MatchmakingTestPolicy::kPartyTTLMs - 1000 );
     rig._service.reservePartyTicket( partyID, 0x100000001ull, vector<AccountID>{ kAlice }, PartyLobbyService::PartyFoundDelegate{} );
     rig.poll();
     rig._clock.advanceMilliseconds( 2000 );
@@ -330,7 +331,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, PartyExpires )
 {
     PartyFixture rig;
     (void)rig.makeParty( kAlice );
-    rig._clock.advanceMilliseconds( PartyLobbyLimit::kPartyTTLMs + 1 );
+    rig._clock.advanceMilliseconds( test::MatchmakingTestPolicy::kPartyTTLMs + 1 );
     SW_EXPECT_TRUE( rig.find( kAlice )._result == MatchmakingResult::NotInParty );
     (void)rig.makeParty( kAlice );
 }

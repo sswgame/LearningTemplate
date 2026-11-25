@@ -12,6 +12,9 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchModeCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 
 namespace sw
 {
@@ -41,5 +44,14 @@ namespace sw
          */
         PROPERTY()
         bool _bGameServer{ false };
+        /** @brief 파티 · 로비 · 초대 레코드의 수명입니다. */
+        PROPERTY( Required )
+        PartyLobbyPolicy _partyLobby{};
+        /** @brief 대기열의 임대 · 포기 · 통계 대기 시한입니다. */
+        PROPERTY( Required )
+        MatchQueuePolicy _queue{};
+        /** @brief 게임 서버가 배정 명단을 받는 운영 값입니다(`_bGameServer` 가 꺼진 서버도 적는다 — 켜는 순간 값이 있어야 한다). */
+        PROPERTY( Required )
+        MatchServerAgentPolicy _agent{};
     };
 } // namespace sw

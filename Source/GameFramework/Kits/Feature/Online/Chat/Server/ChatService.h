@@ -18,7 +18,7 @@
  *            새 글이 없는 채널(귓속말 쌍, 해산된 길드)도 색인 줄이 남아 있어 함께 지워진다(개인정보 보존 기간).
  *            같은 트랜잭션에 보낸 사람 색인 `chat_history_sender`(`<보낸 계정>/<보낸 시각>/<기록 키>`)과 그 TTL 색인 줄도 넣는다 — 탈퇴 정리(`eraseAccount`)가
  *            계정이 보낸 기록을 찾는다. 이 색인도 기록과 같은 기간에 TTL 규칙(`makeSenderTTLRule`)이 지운다.
- *          - 신고(`reportMessage`)는 저장된 기록에서 그 메시지와 앞 메시지(`ChatLimit::kReportContextCount`)를 읽어 신고 레코드(`ServiceReportStore`)로 남긴다.
+ *          - 신고(`reportMessage`)는 저장된 기록에서 그 메시지와 앞 메시지(키트 설정 `_reportContextCount` 개)를 읽어 신고 레코드(`ServiceReportStore`)로 남긴다.
  *            기록은 틱마다 쓰이므로 막 받은 메시지는 아직 없을 수 있다(NotFound). GM 키트가 목록을 읽고 처리한다. 계정마다 도배를 제한한다.
  *          - `shutdown` 은 맡긴 저장 작업을 회수하고(최대 5초) 접속 상태 찾기를 취소한다. 호스트(접속 상태, 저장소)보다 먼저 종료해도 늦게 종료해도 된다.
  *
@@ -88,6 +88,8 @@ namespace sw
         int32          _maxPendingSendPerMember{ 4 };                                          ///< 제재 첫 읽기를 기다리는 말하기 요청의 상한이다
         int64          _pendingSendRetryAfterMs{ 1000 };                                       ///< 대기 큐가 찼을 때 클라이언트에 알려 줄 기다릴 시간(ms)이다
         int64          _reportRefillIntervalMs{ 60 * constant::time::kMillisecondsPerSecond }; ///< 계정마다 신고 하나가 다시 차는 간격이다
+        int32          _maxChannelPerMember{ 0 };                                              ///< 필수 — 한 계정이 들어가 있을 수 있는 채널 수(키트 설정 `_maxChannelPerMember`). 0 이하면 `initialize` 가 거절한다
+        int32          _reportContextCount{ 0 };                                               ///< 필수 — 신고 스냅숏에 담는 메시지 수(키트 설정 `_reportContextCount`, `ServiceReportConstant::kMaxLineCount` 이하)
         int32          _reportBurst{ 3 };                                                      ///< 계정마다 한꺼번에 낼 수 있는 신고 수이다
     };
 } // namespace sw

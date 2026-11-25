@@ -326,7 +326,11 @@ namespace
                 return read;
             if ( expected<void> providers = _providers.initialize( listConfig, OnlineProviderFile::getTrustText( trustFile ), _clock ); providers.has_value() == false )
                 return providers;
-            _dispatcher.initialize( &_store, PushDispatcherConfig{} );
+            PushDispatcherConfig dispatcherConfig;
+            dispatcherConfig._maxDevicePerAccount = 10;
+            dispatcherConfig._maxRetry            = 5;
+            dispatcherConfig._firstBackoffMs      = 1000;
+            SW_EXPECT_TRUE( _dispatcher.initialize( &_store, dispatcherConfig ) );
             for ( int32 index = 0; index < _providers.getProviderCount(); ++index )
             {
                 SW_EXPECT_TRUE( _dispatcher.registerProvider( _providers.getProvider( index ) ) );
@@ -489,7 +493,7 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
     const auto            makeOnlineJSON = [&providersFile]( string_view trustOption )
     {
         StringBuilder<constant::buffer::kMax1024> resultBuilder;
-        resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "liveops", "_settings": { "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 }, "_pushProvidersFile": "%#"%# } } ] })", providersFile, trustOption );
+        resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "liveops", "_settings": { "_pushMaxDevicePerAccount": 10, "_pushMaxRetry": 5, "_pushFirstBackoffMs": 1000, "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 }, "_pushProvidersFile": "%#"%# } } ] })", providersFile, trustOption );
         return test::OnlineRuntimeFixture::withBaseTTL( resultBuilder.view() );
     };
     const int64 nowMs = WallClock::nowUnixMilliseconds().count();

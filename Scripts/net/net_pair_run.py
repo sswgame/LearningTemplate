@@ -477,10 +477,13 @@ def _start_match_servers(group: ProcessGroup, server_exe: Path, cache_server: _C
     leaderboard = {"_name": "leaderboard", "_settings": {
         "_pastScoreTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
         "_seasonResultTTL": {"_expireAfterDays": 365, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
-        "_catalog": f"{content}.leaderboards.xml"}}
+        "_catalog": f"{content}.leaderboards.xml", "_maxAroundRadius": 25, "_nameCacheTTLMs": 2592000000}}
 
     def matchmaking(game_server: bool) -> dict:
-        return {"_name": "matchmaking", "_settings": {"_catalog": f"{content}.matchmodes.xml", "_reconnectGraceMs": 60000, "_cancelConfirmWaitMs": 3000, "_bGameServer": game_server}}
+        return {"_name": "matchmaking", "_settings": {"_catalog": f"{content}.matchmodes.xml", "_reconnectGraceMs": 60000, "_cancelConfirmWaitMs": 3000, "_bGameServer": game_server,
+                                                       "_partyLobby": {"_partyTTLMs": 1800000, "_lobbyTTLMs": 7200000, "_inviteTTLMs": 300000},
+                                                       "_queue": {"_leaseTTLMs": 10000, "_leaseRenewMs": 3000, "_noServerGiveUpMs": 30000, "_resultGraceMs": 10000, "_ratingWaitMs": 3000},
+                                                       "_agent": {"_expectTTLMs": 120000, "_recordRefreshMs": 1000, "_maxRecordCount": 256}}}
 
     # 허브는 배정받는 서버가 아니다(`_publicAddress` 없음) - 매치 서버만 디렉터리에 선다.
     hub_online = make_online_config([make_account_kit(accounts), make_game_connect_kit(_MMO_SERVER_NAME), directory, leaderboard, matchmaking(False)], topology="MultiServer")

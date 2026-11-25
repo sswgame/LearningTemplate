@@ -42,6 +42,8 @@ namespace sw
                 , _server{}
                 , _agent{}
                 , _backfill{}
+                , _partyLobbyPolicy{}
+                , _queuePolicy{}
                 , _maxPartySize{ 0 }
                 , _reconnectGraceMs{ 0 }
                 , _cancelConfirmWaitMs{ 0 }
@@ -57,6 +59,8 @@ namespace sw
                 _maxPartySize        = kitConfig._maxPartySize;
                 _reconnectGraceMs    = kitConfig._reconnectGraceMs;
                 _cancelConfirmWaitMs = kitConfig._cancelConfirmWaitMs;
+                _partyLobbyPolicy    = kitConfig._partyLobby;
+                _queuePolicy         = kitConfig._queue;
                 _bGameServer         = kitConfig._bGameServer ? SW_TRUE : SW_FALSE;
                 if ( kitConfig._catalog.empty() == false )
                 {
@@ -73,7 +77,7 @@ namespace sw
                 if ( _bGameServer == SW_FALSE )
                     return {};
                 // 배정받은 계정만 게임 포트에 들이는 정책이다. 계정 키트의 `gameConnect` 가 `start` 에서 찾는다.
-                _agent.initialize( context._serverDescriptor._serverID, context._serverDescriptor._capacity );
+                _agent.initialize( context._serverDescriptor._serverID, context._serverDescriptor._capacity, kitConfig._agent );
                 _backfill.initialize( &_queue, &_agent, context._serverDescriptor ); // 채운 사람이 접속할 곳은 디렉터리에 올린 이 서버의 설명이다
                 return exposeInterface<IConnectAdmission>( context, entry, _agent ).and_then( [&]
                 { return exposeInterface<IMatchBackfillSender>( context, entry, _backfill ); } );
@@ -83,7 +87,7 @@ namespace sw
             {
                 if ( context._pRouter == nullptr )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "matchmaking needs a cache (authority leases and server lists)" } );
-                if ( _partyLobby.initialize( context._pRouter, context._serverID, _maxPartySize ) == false )
+                if ( _partyLobby.initialize( context._pRouter, context._serverID, _partyLobbyPolicy, _maxPartySize ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "matchmaking setting _maxPartySize is out of range (the party lobby service logged the range)" } );
                 MatchQueueDependencies dependencies;
                 dependencies._pRouter              = context._pRouter;
@@ -91,12 +95,13 @@ namespace sw
                 dependencies._pPartyLobby          = &_partyLobby;
                 dependencies._serverID             = context._serverID;
                 dependencies._cancelConfirmWaitMs  = _cancelConfirmWaitMs;
+                dependencies._policy               = _queuePolicy;
                 dependencies._seatReservationTTLMs = static_cast<int64>( context._pConfig->_seatReservationSeconds ) * constant::time::kMillisecondsPerSecond;
                 dependencies._pStatSource          = interfaces.find<IAccountStatSource>(); // 실력 모드의 통계이다. 순위표 키트가 없으면 실력 모드는 기동 오류다
                 if ( _queue.initialize( dependencies, _listMode ) == false )
                 {
                     _partyLobby.shutdown(); // 실패한 start 는 `stop` 이 보지 않으므로 세운 파티 · 로비를 여기서 내린다
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "matchmaking has a rated mode but the leaderboard kit (stat source) is not assembled" } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the match queue refused its settings (it logged which one - lease times, cancel wait, seat reservation or a rated mode without the leaderboard kit)" } );
                 }
                 if ( _bGameServer == SW_TRUE )
                     _agent.startReading( context._pRouter );                                                                                                            // 대기열이 남긴 명단 기록을 읽는다(버스 배정은 잃을 수 있다)
@@ -139,6 +144,8 @@ namespace sw
             int32                            _maxPartySize;
             int32                            _reconnectGraceMs;
             int32                            _cancelConfirmWaitMs;
+            PartyLobbyPolicy                 _partyLobbyPolicy; ///< `initialize` 가 설정에서 읽어 `start` 가 서비스에 넘긴다
+            MatchQueuePolicy                 _queuePolicy;      ///< 같다
             uint8                            _bGameServer : 1;
         };
     } // namespace
