@@ -135,7 +135,7 @@ namespace sw
         : _trackID{}
         , _bItems{ true }
         , _itemCatalog{}
-        , _vehicle{}
+        , _vehicleSettings{}
         , _botCount{ 3 }
         , _countdownSeconds{ 3.0f }
         , _finishTimeoutSeconds{ 10.0f }
@@ -186,7 +186,7 @@ namespace sw
 
     bool KartGameModeComponent::startGame()
     {
-        if ( acquireBoundCatalog( _pTrackCatalog ) == false || acquireRequired( _vehicle, _pVehicle ) == false )
+        if ( acquireBoundCatalog( _pTrackCatalog ) == false || acquireRequired( _vehicleSettings, _pVehicle ) == false )
             return false;
         if ( _bItems && ( acquireRequired( _itemCatalog, _pItemCatalog ) == false || acquireBoundCatalog( _pProjectileCatalog ) == false ) )
             return false;

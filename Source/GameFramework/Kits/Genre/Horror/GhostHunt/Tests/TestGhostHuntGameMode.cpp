@@ -66,7 +66,7 @@ namespace
             GhostHuntGameModeComponent* pDirector = manager.createGameObject( hashed_string( "Director" ) )->addComponent<GhostHuntGameModeComponent>();
             const bool                  bSet      = pDirector != nullptr && setProperty( *pDirector, "_startRoom", pStartRoom ) &&
                               setProperty( *pDirector, "_areaGraph", test::ScopedScratchDomain::makeID( "ghosthunt/data/mansion.areas.xml" ).str() ) &&
-                              setProperty( *pDirector, "_loot", test::ScopedScratchDomain::makeID( "ghosthunt/data/mansion.loot.xml" ).str() ) && setProperty( *pDirector, "_resultHoldSeconds", "1000" );
+                              setProperty( *pDirector, "_lootCatalog", test::ScopedScratchDomain::makeID( "ghosthunt/data/mansion.loot.xml" ).str() ) && setProperty( *pDirector, "_resultHoldSeconds", "1000" );
             return bSet ? pDirector : nullptr; // 결과 유지 시간이 길어 미니게임 흐름이 없는 테스트가 끝내기를 부르지 않는다
         }
 

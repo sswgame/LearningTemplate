@@ -15,17 +15,18 @@
 
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    struct MeshAssetFormat;
+    struct MeshSkinBinding;
     struct ResourceContext;
 
     class DataInheritanceSource;
-
-    struct MeshSkinBinding;
 
     /**
      * @struct SkeletonBone
@@ -59,11 +60,14 @@ namespace sw
     {
         REFLECT_BODY();
 
+        /// .cpp 에 둔다 — `AssetRef<MeshAssetFormat>` 의 칸이 만들어지는 곳만 메시 형식을 알면 된다(`PhysicsShapeDesc3D` 와 같다).
+        SkeletonAttachment();
+
         PROPERTY( Required, Tooltip = "Source node name" )
         string _name;
-        /** @brief 따로 임포트된 메시(`.mesh`)의 리소스 경로입니다. 메시 공간은 노드 로컬입니다. */
-        PROPERTY( Required, Tooltip = "Resource path of the separately imported mesh (mesh space is the node's local space)" )
-        string _meshPath;
+        /** @brief 따로 임포트된 메시(`.mesh`)입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). 메시 공간은 노드 로컬입니다. */
+        PROPERTY( Required, Tooltip = "Separately imported mesh (mesh space is the node's local space)" )
+        AssetRef<MeshAssetFormat> _meshPath;
         PROPERTY( Required, Tooltip = "Parent bone name" )
         hashed_string _parentBone;
         PROPERTY( Required, Tooltip = "Local transform from the parent bone" )

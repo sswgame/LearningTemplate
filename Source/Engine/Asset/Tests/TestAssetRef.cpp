@@ -142,14 +142,14 @@ SW_TEST_CASE( AssetRefTest, CatalogPathRuleDecidesTheKind )
 SW_TEST_CASE( AssetRefTest, BuiltinAndCatalogInADocument )
 {
     AssetRefSample sample;
-    SW_REQUIRE_TRUE( JSONSerializer::deserialize( &sample, *AssetRefSample::StaticType(), R"({"_shape":"Ball","_catalog":"game/x/data/refsample.xml"})" ) );
-    SW_EXPECT_TRUE( sample._shape == "Ball" );
+    SW_REQUIRE_TRUE( JSONSerializer::deserialize( &sample, *AssetRefSample::StaticType(), R"({"_builtin":"Ball","_catalog":"game/x/data/refsample.xml"})" ) );
+    SW_EXPECT_TRUE( sample._builtin == "Ball" );
     SW_EXPECT_TRUE( sample._catalog == "game/x/data/refsample.xml" );
 
     AssetRefSample wrongShape;
     SW_EXPECT_LOG( "AssetRef.WrongType" );
-    (void)JSONSerializer::deserialize( &wrongShape, *AssetRefSample::StaticType(), R"({"_shape":"Cube"})" );
-    SW_EXPECT_TRUE( wrongShape._shape.empty() );
+    (void)JSONSerializer::deserialize( &wrongShape, *AssetRefSample::StaticType(), R"({"_builtin":"Cube"})" );
+    SW_EXPECT_TRUE( wrongShape._builtin.empty() );
 
     AssetRefSample wrongCatalog;
     SW_EXPECT_LOG( "AssetRef.WrongType" );

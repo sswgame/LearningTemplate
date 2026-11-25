@@ -157,7 +157,7 @@ namespace sw
         PROPERTY( Required, Category = "Mansion", DisplayName = "Area Graph", Tooltip = "Rooms (rectangles in metres) and links; the kind of a locked link is the door id of the catalog" )
         AssetRef<AreaGraph> _areaGraph;
         PROPERTY( Required, Category = "Mansion", DisplayName = "Loot", Tooltip = "Loot tables of the furniture" )
-        AssetRef<LootCatalog> _loot;
+        AssetRef<LootCatalog> _lootCatalog;
         PROPERTY( Category = "Mansion", DisplayName = "Start Room" )
         hashed_string _startRoom;
         PROPERTY( Category = "Mansion", DisplayName = "Seed", Min = 1 )

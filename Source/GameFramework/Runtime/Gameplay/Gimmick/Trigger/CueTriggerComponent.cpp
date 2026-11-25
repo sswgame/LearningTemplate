@@ -17,7 +17,7 @@ namespace sw
     CueTriggerComponent::CueTriggerComponent()
         : TriggerComponent( TriggerAuthority::Local ) // 연출 · 소리는 월드마다 같이 도는 보이는 일이다
         , _cue{}
-        , _sound{}
+        , _soundAsset{}
         , _cooldown{ 10.0f }
         , _cooldownLeft{ 0.0f }
     {
@@ -37,8 +37,8 @@ namespace sw
         _cooldownLeft               = _cooldown;
         const SceneComponent* pRoot = pOwner->getPrimarySceneComponent();
         GimmickUtil::sendCue( *pOwner, _cue, pRoot != nullptr ? pRoot->getWorldPosition() : float3{}, 0.0f, activator.getHandle() );
-        if ( _sound.empty() == false )
-            (void)GameSound::play( _sound.id() );
+        if ( _soundAsset.empty() == false )
+            (void)GameSound::play( _soundAsset.id() );
         return true;
     }
 } // namespace sw

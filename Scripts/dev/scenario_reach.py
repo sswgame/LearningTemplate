@@ -21,7 +21,7 @@ from typing import Callable, Iterable, Mapping, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-from lint.asset_identity import META_EXTENSION, ImportedFolder  # noqa: E402
+from lint.asset_identity import META_EXTENSION, ImportedFolder, iterate_imported_sources, make_output_guid  # noqa: E402
 
 SCENARIO_SUFFIX = ".scenario.xml"
 #: 다른 파일을 적는 글 에셋. 나머지(그림 · 소리 · 모델)는 잎이다.
@@ -87,6 +87,19 @@ def collect_references(path: str, text: str, set_content: frozenset[str] | set[s
                 set_reference.add(candidate)
     set_reference.discard(path)
     return set_reference
+
+
+def map_output_sources(list_output: Iterable[str], map_guid: Mapping[str, str], list_imported: Sequence[ImportedFolder]) -> dict[str, str]:
+    """임포트 산출물(디스크의 리소스 id)의 GUID → 그 원본. 산출물 GUID 는 원본 GUID 와 산출물 이름의 해시라 거꾸로 풀 수 없어 있는 산출물로 만든다."""
+    # shortcut: 임포트하지 않은 작업 트리(산출물 없음)에서는 산출물 GUID 로 적은 참조가 이어지지 않는다 — 원본 이름표(.meta)에 산출물 목록이 생기면 그것으로 바꾼다
+    map_source_guid = {path.lower(): guid for guid, path in map_guid.items()}
+    map_output: dict[str, str] = {}
+    for output in list_output:
+        for source, output_name in iterate_imported_sources(output, tuple(list_imported)):
+            if source in map_source_guid:
+                map_output[make_output_guid(map_source_guid[source], output_name)] = source
+                break
+    return map_output
 
 
 def find_asset_of(content_path: str) -> str:
@@ -181,6 +194,8 @@ def read_reach(project_root: Path, list_changed: Sequence[str], list_content: Se
         if match is not None:
             map_guid[match.group(1) or match.group(2)] = find_asset_of(path)
     list_imported = load_rules(project_root).list_imported
+    list_output = [path.relative_to(content_root).as_posix() for folder in {imported.folder for imported in list_imported} for path in content_root.glob(f"**/{folder}/**/*") if path.is_file()]
+    map_guid.update(map_output_sources(list_output, map_guid, list_imported))
     map_reference = {path: collect_references(path, text, set_content, map_guid, list_imported) for path, text in map_text.items()}
     list_changed_content = [path[len("Content/"):] for path in list_changed if path.startswith("Content/")]
     map_source = {path: (project_root / path).read_text(encoding="utf-8", errors="replace")
