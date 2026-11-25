@@ -9,8 +9,8 @@
      그 파일 이름을 빨간 글로 보이고 Move 가 꺼져 있다 — Cancel 로 닫으면 아무것도 옮기지 않는다.
   ③ 열린 문서가 옮김을 따라간다(감사 P0-4): target/keep.material 을 머티리얼 패널에서 열고 거칠기를 0.9 로 고친 채(미저장) kept.material 로 이름을 바꾸면(asset.moveScratch —
      콘텐츠 브라우저와 같은 applyAssetMoves) 패널의 문서 경로가 새 id 로 간다. 저장하면 새 자리에 편집이 들어가고 옛 자리에 파일이 되살아나지 않는다.
-  ④ 열린 씬: assetmove.scene.xml 을 열고 빛 컴포넌트를 더해 미저장으로 두면, 그 씬이 적은 probe.material 의 옮기기는 계획에서 "먼저 저장" 으로 거절된다
-     (asset.expectScratchMoveRefused). 씬 파일 자신은 미저장이어도 옮길 수 있고(renamed.scene.xml), Ctrl+S 가 새 자리에 쓰고 옛 파일을 되살리지 않는다.
+  ④ 열린 씬: assetmove.scene.xml 을 열고 빛 컴포넌트를 더해 미저장으로 두어도, 그 씬이 GUID 로 적은 probe.material 은 옮겨진다(고칠 글이 없다 — 저장하면 GUID 가 그대로다).
+     씬 파일 자신은 미저장이어도 옮길 수 있고(renamed.scene.xml), Ctrl+S 가 새 자리에 쓰고 옛 파일을 되살리지 않는다.
   ⑤ 플레이 중의 옮기기는 거절된다("stop playing first").
   쓰기 실패 되돌리기는 잠긴 파일이 있어야 해 시나리오가 만들 수 없다 — applyAssetMoves 의 되돌림 경로는 로그 id EditorAssetFileCommands.MoveRolledBack · MoveIncomplete 로 본다.
   볼 그림: assetmove/confirm.png(파일 2 · 참조 0 · 바깥 도메인 목록), assetmove/refused.png(빨간 이유 글, 꺼진 Move).
@@ -102,7 +102,7 @@
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
 	<DevCommand line="asset.expectScratchMissing scratch/assetmove/target/keep.material"/>
 	<DevCommand line="asset.expectScratchContains scratch/assetmove/target/kept.material 0.9"/>
-	<!-- ④ 미저장 씬이 적은 에셋은 옮기지 않는다("먼저 저장"). 씬 파일 자신은 옮겨지고 Ctrl+S 가 새 자리에 쓴다 -->
+	<!-- ④ 미저장 씬이 GUID 로 적은 에셋은 옮겨지고 씬의 편집은 남는다. 씬 파일 자신도 옮겨지고 Ctrl+S 가 새 자리에 쓴다 -->
 	<DevCommand line="scene.open scratch/assetmove/assetmove.scene.xml"/>
 	<EditorWaitStable/>
 	<DevCommand line="select.type MeshComponent"/>
@@ -110,7 +110,11 @@
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.SceneDirty" equals="1" timeoutFrames="60"/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
-	<DevCommand line="asset.expectScratchMoveRefused scratch/assetmove/target/pack/probe.material scratch/assetmove/target/pack/probe_moved.material unsaved"/>
+	<DevCommand line="asset.moveScratch scratch/assetmove/target/pack/probe.material scratch/assetmove/target/pack/probe_moved.material"/>
+	<ExpectLog id="Asset.Moved" contains="probe_moved.material" count="1"/>
+	<Expect watch="Editor.SceneDirty" equals="1"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
 	<DevCommand line="asset.moveScratch scratch/assetmove/assetmove.scene.xml scratch/assetmove/renamed.scene.xml"/>
 	<ExpectLog id="Asset.Moved" contains="renamed.scene.xml" count="1"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
