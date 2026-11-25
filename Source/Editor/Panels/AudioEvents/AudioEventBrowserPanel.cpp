@@ -3,13 +3,13 @@
 #include "Editor/Panels/AudioEvents/AudioEventBrowserPanel.h"
 
 #include "Core/Log/LogOnce.h"
+#include "Core/Math/Color.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/EditorColor.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"

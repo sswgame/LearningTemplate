@@ -5,10 +5,10 @@
 #pragma once
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Color.h"
 
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorThemeKey.h"
-#include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorExports.h"
 
 struct ImDrawList;
