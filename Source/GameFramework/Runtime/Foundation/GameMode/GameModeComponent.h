@@ -297,12 +297,6 @@ namespace sw
             reportMissingCatalog( TCatalog::kDataKind );
             return false;
         }
-        /** @brief 입력 맵의 동작이 눌려 있으면 true 입니다. 위젯이 받은 입력은 게임으로 새지 않습니다(`UIInputMapView`). */
-        [[nodiscard]] bool isActionDown( const hashed_string& action ) const;
-        /** @brief 입력 맵의 동작이 이번 프레임에 발동했으면 true 입니다(`UIInputMapView`). */
-        [[nodiscard]] bool wasActionTriggered( const hashed_string& action ) const;
-        /** @brief 입력 맵의 2D 축 동작(`Move`)입니다. 위젯이 받은 입력은 게임으로 새지 않습니다(`UIInputMapView`). 입력 서비스가 없으면 0 입니다. */
-        [[nodiscard]] float2 getActionVector2D( const hashed_string& action ) const;
         /**
          * @brief 판이 도는 동안 @p interval 초마다 `logStatus` 를 부르게 합니다(서브틱 주기). 파생의 `startGame` 이 부릅니다 — 디렉터가 남은 시간을 손으로 세지 않는다.
          * @details 멈춘 씬(델타 0)에서는 주기가 차지 않는다. 틱 뒤 게임 스레드에서 부르므로 남의 오브젝트를 읽어도 된다(규칙과 같은 자리).

@@ -9,9 +9,6 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/IGameAutoplayQuery.h"
 #include "Engine/Foundation/StateHashBuilder.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
@@ -483,26 +480,6 @@ namespace sw
     {
         SW_LOG_ERROR_ID( "GameMode.BoundCatalogMissing",
                          "GameMode: catalog '%#' is not bound in the game scope - the minigame (features, catalogs) or gamesettings gameFeatures must load it; the game cannot start", kind );
-    }
-
-    bool GameModeComponent::isActionDown( const hashed_string& action ) const
-    {
-        const InputManager* pInput = game::findSubsystem<InputManager>();
-        return pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).isActionDown( action );
-    }
-
-    bool GameModeComponent::wasActionTriggered( const hashed_string& action ) const
-    {
-        const InputManager* pInput = game::findSubsystem<InputManager>();
-        return pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).wasActionTriggered( action );
-    }
-
-    float2 GameModeComponent::getActionVector2D( const hashed_string& action ) const
-    {
-        const InputManager* pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return float2{ 0.0f, 0.0f };
-        return GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).getVector2D( action );
     }
 
     void GameModeComponent::compactSpawned( const GameObjectManager& manager )

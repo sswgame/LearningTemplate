@@ -7,6 +7,7 @@
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
+#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -57,12 +58,13 @@ namespace sw
             return; // 로컬 멀티가 열리지 않았다(빙의할 때 알렸다) — 다른 사용자의 입력으로 대신하지 않는다
         const InputMap&           inputMap = *pUserMap;
         const IInputCaptureQuery* pCapture = context._pInputCapture;
+        const GameInputView       view( inputMap, pCapture ); // 디렉터 뷰 · 카메라와 같은 거르기
         // UI 가 커서를 바라면(메뉴가 열렸다) 잠금을 쉰다 — 닫히면 요청해 둔 잠금으로 돌아간다.
         const bool bUIWantsCursor = pCapture != nullptr && pCapture->shouldShowCursor();
         bool       bLook          = bUIWantsCursor == false;
         if ( pawn.needsMouseLock() )
         {
-            if ( _mouseLockAction.empty() == false && wasActionTriggeredForGame( inputMap, pCapture, _mouseLockAction ) )
+            if ( _mouseLockAction.empty() == false && view.wasActionTriggered( _mouseLockAction ) )
             {
                 _bMouseLockRequested = _bMouseLockRequested == SW_TRUE ? SW_FALSE : SW_TRUE;
                 SW_LOG_INFO_ID( "PlayerControllerComponent.PlayerMouseLock", "Player %# mouse lock %# (%#)", _playerIndex, _bMouseLockRequested == SW_TRUE ? "engaged" : "released", _mouseLockAction.c_str() );
@@ -74,10 +76,10 @@ namespace sw
         // 모달 · 로딩 화면이 떠 있으면 게임 입력이 없다 — 의도는 0, 조종 회전은 그대로.
         if ( pCapture != nullptr && pCapture->isGameInputCaptured() )
             return;
-        if ( pawn.getMoveAction().empty() == false && ( pCapture == nullptr || pCapture->isActionCaptured( inputMap, pawn.getMoveAction() ) == false ) )
-            outIntent._move = inputMap.getVector2D( pawn.getMoveAction() );
-        if ( pawn.getUpAction().empty() == false && ( pCapture == nullptr || pCapture->isActionCaptured( inputMap, pawn.getUpAction() ) == false ) )
-            outIntent._moveUp = inputMap.getAxis1D( pawn.getUpAction() );
+        if ( pawn.getMoveAction().empty() == false )
+            outIntent._move = view.getVector2D( pawn.getMoveAction() );
+        if ( pawn.getUpAction().empty() == false )
+            outIntent._moveUp = view.getAxis1D( pawn.getUpAction() );
         // 서브틱 입력: 프레임 시작의 조종 회전과 프레임 전체의 시선 값을 보관한다. 발동 버튼이 눌린 순간의 회전은 이 둘로 만든다.
         const float32 startYaw   = getControlYaw();
         const float32 startPitch = getControlPitch();
@@ -93,7 +95,7 @@ namespace sw
         const hashed_string& triggerLookButton = pawn.getTriggerLookButton();
         float32              triggerYaw        = getControlYaw();
         float32              triggerPitch      = getControlPitch();
-        if ( triggerLookButton.empty() == false && wasActionTriggeredForGame( inputMap, pCapture, triggerLookButton ) )
+        if ( triggerLookButton.empty() == false && view.wasActionTriggered( triggerLookButton ) )
         {
             InputPressInstant instant{};
             if ( inputMap.tryGetActionPressInstant( inputMap.getActionHandle( triggerLookButton ), instant ) )
@@ -108,8 +110,8 @@ namespace sw
         for ( size_t buttonIndex = 0; buttonIndex < buttonCount; ++buttonIndex )
         {
             const hashed_string& name = listButton[buttonIndex];
-            outIntent.setButton( static_cast<int32>( buttonIndex ), isActionDownForGame( inputMap, pCapture, name ) );
-            if ( wasActionTriggeredForGame( inputMap, pCapture, name ) == false )
+            outIntent.setButton( static_cast<int32>( buttonIndex ), view.isActionDown( name ) );
+            if ( view.wasActionTriggered( name ) == false )
                 continue;
             if ( name == triggerLookButton )
                 outIntent.addTrigger( static_cast<int32>( buttonIndex ), triggerYaw, triggerPitch, context._viewTick );
@@ -121,18 +123,8 @@ namespace sw
         for ( size_t analogIndex = 0; analogIndex < analogCount; ++analogIndex )
         {
             const hashed_string& name         = listAnalog[analogIndex];
-            outIntent._arrAnalog[analogIndex] = pCapture != nullptr && pCapture->isActionCaptured( inputMap, name ) ? 0.0f : inputMap.getAxis1D( name );
+            outIntent._arrAnalog[analogIndex] = view.getAxis1D( name );
         }
-    }
-
-    bool PlayerControllerComponent::isActionDownForGame( const InputMap& inputMap, const IInputCaptureQuery* pCapture, const hashed_string& action )
-    {
-        return inputMap.isActionDown( action ) && ( pCapture == nullptr || pCapture->isActionCaptured( inputMap, action ) == false );
-    }
-
-    bool PlayerControllerComponent::wasActionTriggeredForGame( const InputMap& inputMap, const IInputCaptureQuery* pCapture, const hashed_string& action )
-    {
-        return inputMap.wasActionTriggered( action ) && ( pCapture == nullptr || pCapture->isActionCaptured( inputMap, action ) == false );
     }
 
     void PlayerControllerComponent::onPossessed( PawnComponent& pawn )
