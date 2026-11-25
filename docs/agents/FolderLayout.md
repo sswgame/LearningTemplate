@@ -51,6 +51,8 @@ GameFramework 런타임(`GameFrameworkLayers.toml`): `Foundation`(0) 게임 서�
 
 CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Environment·Config>/` 는 `include()` 만 하는 모듈, `Toolchain/` 플래그 · 툴체인, `Scripts/` 는 `cmake -P` 전용, `Templates/` 는 `configure_file` 입력, 빌드 정책 데이터는 `Config/Build/`, 테스트 전용 `cmake -P` 드라이버는 `IntegrationTests/<영역>/Run*.cmake`.
 
+테스트 폴더는 역할마다 이름 하나: 테스트 틀 `Source/Core/TestFramework/`, 모듈 옆 단위 테스트 `Tests/`(C++ · VS Code 확장 JS), 실행 파일을 띄워 보는 CTest 항목의 등록 · 드라이버 · 픽스처 `IntegrationTests/<영역>/`, 어느 테스트를 돌리고 빼는지의 표 `Config/Rules/TestSelection/`, 파이썬은 관례대로 `Scripts/<묶음>/tests/`. `Test` · `Testing` 폴더는 만들지 않는다(`Testing/` 은 CTest 빌드 출력 이름).
+
 ## 4 그 밖의 규칙
 
 | 규칙 | 까닭 |
