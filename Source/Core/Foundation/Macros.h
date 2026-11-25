@@ -95,7 +95,7 @@
 namespace sw::internal
 {
     /**
-     * @brief `SW_ASSERT` 가 멈추기 **전에** 무엇이 어디서 어긋났는지 stderr 에 남깁니다.
+     * @brief `SW_ASSERT` 가 멈추기 전에 무엇이 어디서 어긋났는지 stderr 에 남깁니다.
      * @details 디버거 없이 실행하면(CI, 테스트 자식 프로세스, 다른 사람의 PC) 크래시 리포트의 "EXCEPTION_BREAKPOINT"(리눅스는 SIGILL)와
      *          스택만 남는다. 이 함수가 없으면 어느 식이 어긋났는지 알 수 없다.
      *          그래서 식, 파일, 줄, 함수를 남기고 버퍼를 비운 뒤 멈춘다. 로거는 비동기라 멈추면 메시지를 잃을 수 있기 때문이다.
@@ -259,11 +259,11 @@ namespace sw::internal
 //     아래 티어는 `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` · `SW_LOW_LEVEL_ASSERT` 로 보고한다(`SW_LOG_*` 와 같은 호출 구조: 수준은 이름에,
 //     호출하는 쪽의 이름은 인자가 아니라 파일에서 자동으로 정해진다). 구조는 Godot 의 `_err_print_error` + `add_error_handler` 와 같다 —
 //     `const char*` 만 오가는 동기 통로이고, 로그가 기동 때 거는 보고자(`bindLowLevelReporter`, `Logger.cpp`)가 로그 줄로 바꾼다.
-//     **Error · 단언은 보고자가 있어도 stderr 에 먼저 동기로 쓰고 flush 한 뒤** 보고자에게 넘긴다(비동기 로거는 크래시 직전 메시지를 잃는다).
+//     Error · 단언은 보고자가 있어도 stderr 에 먼저 동기로 쓰고 flush 한 뒤 보고자에게 넘긴다(비동기 로거는 크래시 직전 메시지를 잃는다).
 //     Warning 은 보고자가 받아 가면 stderr 에 쓰지 않는다. 보고자가 없거나 받지 못하면(로거 이전 · 로거 없는 도구 · 싱크 없음) stderr 에 남는다.
 //     stderr 로 가는 경로는 `Core/Foundation/Macros.cpp` 한 곳이다.
 //
-//     **서식은 `printf` 문법이다(`snprintf`). 엔진 `formatstring` 의 `%#` 가 아니다.** 어긋남은 `SW_PRINTF_FORMAT` 이 컴파일러(`-Wformat`)에게 맡긴다.
+//     서식은 `printf` 문법이다(`snprintf`). 엔진 `formatstring` 의 `%#` 가 아니다. 어긋남은 `SW_PRINTF_FORMAT` 이 컴파일러(`-Wformat`)에게 맡긴다.
 // ------------------------------------------------------------------------------
 #if defined( SW_COMPILER_CLANG ) || defined( SW_COMPILER_GCC )
     /** @brief `printf` 식 서식 인자를 컴파일러가 검사하게 합니다(`-Wformat`). @p formatIndex 는 서식 문자열, @p firstArgIndex 는 첫 가변 인자의 위치(1부터)입니다. */
@@ -299,7 +299,7 @@ namespace sw::internal
     /** @brief 단언 실패 하나를 `Error` 로 보고합니다(`SW_LOG_ASSERT` 와 같은 모양의 글, 로그 id `SW_ASSERT_LOG_ID`). */
     SW_API void reportLowLevelAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept;
     /**
-     * @brief 반드시 있어야 하는 서비스 · 서브시스템 조회가 비었을 때 부르는 **유일한** 보고 함수입니다. 모든 구성에서 `Error` 를 stderr 에 먼저 쓰고 로그로 남긴 뒤 `abort` 합니다.
+     * @brief 반드시 있어야 하는 서비스 · 서브시스템 조회가 비었을 때 부르는 유일한 보고 함수입니다. 모든 구성에서 `Error` 를 stderr 에 먼저 쓰고 로그로 남긴 뒤 `abort` 합니다.
      *        @p pLookup 은 어느 조회였는지 알리는 글입니다(대개 `SW_FUNCTION_SIGNATURE` 나 타입 이름).
      * @details `SW_ASSERT` 는 Release 에서 사라져 부른 쪽의 `*pFound` 가 조용한 널 역참조가 되고, `SW_LOG_ASSERT` 는 Release 에서 로그만 남기고 이어 가 같은 결과가 된다.
      *          필수 서비스의 부재는 호출 순서의 결함이라 폴백 없이 모든 구성에서 멈춘다(`SubsystemScope::get` · `engine::getSubsystem` · `game::getSubsystem` · `editor::getSubsystem` 이 모두 이것을 쓴다).
@@ -308,7 +308,7 @@ namespace sw::internal
      */
     SW_API void reportMissingRequiredService( const utf8* pLookup ) noexcept;
     /**
-     * @brief 치명 오류 한 줄을 남기고 프로세스를 멈춥니다. 엔진에서 `std::abort` 를 부르는 **유일한** 자리입니다(`reportFatalError` · `SW_LOW_LEVEL_FATAL` 이 부른다).
+     * @brief 치명 오류 한 줄을 남기고 프로세스를 멈춥니다. 엔진에서 `std::abort` 를 부르는 유일한 자리입니다(`reportFatalError` · `SW_LOW_LEVEL_FATAL` 이 부른다).
      * @details stderr 에 먼저 동기로 쓰고(로거 이전 · 정적 초기화 중에도 남는다) 로그 보고자에게 넘긴다. 보고자는 줄을 쓰고 비동기 싱크를 비운다
      *          (`Logger::flushGlobalForCrash`) — 직접 `std::abort` 를 부르면 이 둘을 빠뜨려 크래시 직전 줄을 잃는다.
      */
@@ -499,10 +499,10 @@ namespace sw
     /**
      * @brief 스핀 대기 중에 CPU 에 "기다리는 중" 이라고 알려 줍니다(Pause/Yield).
      * @details
-     * - **x64**: `PAUSE`(`_mm_pause`). 스핀 루프가 파이프라인을 헛돌리는 것을 줄여 전력을 아끼고, 루프를 빠져나올 때
+     * - x64: `PAUSE`(`_mm_pause`). 스핀 루프가 파이프라인을 헛돌리는 것을 줄여 전력을 아끼고, 루프를 빠져나올 때
      *   생기는 메모리 순서 위반 페널티를 없앱니다. 같은 코어의 다른 하이퍼스레드에 자원을 양보하는 효과도 있습니다.
-     * - **arm64**: `yield`. 같은 코어를 나눠 쓰는 다른 스레드에 양보하라는 힌트입니다.
-     * - **wasm**: 스핀 힌트 명령이 없어 아무 일도 하지 않습니다(브라우저 메인 스레드는 스핀하지 않고, 워커 스핀은 짧다).
+     * - arm64: `yield`. 같은 코어를 나눠 쓰는 다른 스레드에 양보하라는 힌트입니다.
+     * - wasm: 스핀 힌트 명령이 없어 아무 일도 하지 않습니다(브라우저 메인 스레드는 스핀하지 않고, 워커 스핀은 짧다).
      */
     SW_INLINE void cpuPause() noexcept
     {

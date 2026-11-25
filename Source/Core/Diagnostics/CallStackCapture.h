@@ -73,7 +73,7 @@ namespace std
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1-1) 심볼 변환의 **공통 관문** — 플랫폼 구현이 시작하기 전에 함께 거치는 두 곳
+    // 1-1) 심볼 변환의 공통 관문 — 플랫폼 구현이 시작하기 전에 함께 거치는 두 곳
     // ------------------------------------------------------------------------------
     /**
      * @brief 프레임이 하나도 없을 때 반환하는 문자열입니다.
@@ -82,10 +82,10 @@ namespace sw
     inline constexpr auto kEmptyCallStackText = "[Empty CallStack]";
 
     /**
-     * @brief 심볼을 쓸 수 없을 때 **주소만** 찍은 스택 문자열을 만듭니다.
-     * @details 심볼 변환은 전역 락을 잡는데, 이 함수는 **크래시 경로에서도 불립니다.** 다른 스레드가 이미 심볼 변환 중이면,
+     * @brief 심볼을 쓸 수 없을 때 주소만 찍은 스택 문자열을 만듭니다.
+     * @details 심볼 변환은 전역 락을 잡는데, 이 함수는 크래시 경로에서도 불립니다. 다른 스레드가 이미 심볼 변환 중이면,
      *          기다리다 교착하는 대신 주소만 남기고 빠져나와야 합니다(주소는 맵 파일로 나중에 풀 수 있습니다). 플랫폼마다 본체
-     *          (DbgHelp 와 backtrace_symbols)는 다르지만 **이 관문만은 같아야 해서** 한 벌을 함께 씁니다.
+     *          (DbgHelp 와 backtrace_symbols)는 다르지만 이 관문만은 같아야 해서 한 벌을 함께 씁니다.
      * @note 일부러 평범한 함수로 둡니다. 크래시 경로에 간접 호출(델리게이트 · 함수 포인터)을 끼워 넣지 않기 위해서입니다.
      */
     SW_API string formatRawCallStackFrames( void* const* ppFrame, uint32 frameCount );
@@ -119,7 +119,7 @@ namespace sw
          * @brief 주어진 플랫폼 컨텍스트가 가리키는 지점의 콜 스택을 캡처합니다.
          * @param outStack 캡처한 콜 스택을 담을 구조체
          * @param pPlatformContext Windows 는 `CONTEXT*`. 다른 플랫폼은 이 값을 무시하고 현재 스택을 캡처합니다.
-         * @param pPlatformThread  그 컨텍스트의 스레드(Windows `HANDLE`). nullptr 이면 지금 스레드 — 크래시를 **다른 스레드에서** 보고할 때
+         * @param pPlatformThread  그 컨텍스트의 스레드(Windows `HANDLE`). nullptr 이면 지금 스레드 — 크래시를 다른 스레드에서 보고할 때
          *                         폴트 스레드를 넘깁니다. 다른 플랫폼은 무시합니다.
          * @details 크래시 핸들러용입니다. 핸들러 안에서 capture() 를 부르면 예외 디스패치 프레임(KiUserExceptionDispatcher 등)이
          *          앞쪽을 채워서 정작 폴트 지점이 잘립니다. 컨텍스트에서 스택을 따라가면 실제 폴트 프레임이 [0] 에 옵니다.

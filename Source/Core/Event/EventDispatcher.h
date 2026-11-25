@@ -29,22 +29,22 @@ namespace sw
      * @class EventDispatcher
      * @brief 채널 기반 멀티캐스트 이벤트 전달자입니다.
      *
-     * @details **스레드 계약이 두 쪽으로 나뉩니다. 섞어 쓰면 안 됩니다.**
+     * @details 스레드 계약이 두 쪽으로 나뉩니다. 섞어 쓰면 안 됩니다.
      *
      *          | 쪽 | 함수 | 부를 수 있는 스레드 |
      *          | --- | --- | --- |
-     *          | 큐 | `push` · `enqueueEvent` · `getPendingEventCount` | **아무 스레드** |
-     *          | 버스 | `subscribe` · 구독(`Subscription`)의 해제 · `publish` · `processEvents` · `clear` | **소유 스레드만** |
+     *          | 큐 | `push` · `enqueueEvent` · `getPendingEventCount` | 아무 스레드 |
+     *          | 버스 | `subscribe` · 구독(`Subscription`)의 해제 · `publish` · `processEvents` · `clear` | 소유 스레드만 |
      *
      *          큐 쪽은 `_queueSpinLock` 과 프레임 아레나가 온전히 지킵니다. 워커 스레드가 이벤트를 넣으면, 소유 스레드가
      *          프레임마다 `processEvents` 로 꺼내 브로드캐스트합니다. 이 클래스는 실제로 이렇게 쓰입니다(`Engine::update`
      *          이 프레임마다 한 번 꺼냅니다).
      *
-     *          버스 쪽이 소유 스레드 전용인 이유는 **`broadcast` 가 잠금 밖에서 돌기 때문**입니다. 콜백이 다시 구독 · 해제 ·
+     *          버스 쪽이 소유 스레드 전용인 이유는 `broadcast` 가 잠금 밖에서 돌기 때문입니다. 콜백이 다시 구독 · 해제 ·
      *          발행을 부를 수 있어야 하는데 `SpinLock` 은 재귀 잠금이 아니므로, 잠금을 잡은 채로 콜백을 부를 수 없습니다
      *          (`processEvents` 도 같은 이유로 엔트리만 잠금 안에서 복사해 옵니다). 같은 스레드의 재진입은
      *          `MulticastDelegate` 가 처리합니다. broadcast 중의 `remove` 는 그 자리에서 무효화하고, 삭제는 broadcast 가
-     *          끝난 뒤로 미룹니다. **다른 스레드가 끼어드는 것만** 막을 수 없어서, 막는 대신 **계약으로 정하고 디버그
+     *          끝난 뒤로 미룹니다. 다른 스레드가 끼어드는 것만 막을 수 없어서, 막는 대신 **계약으로 정하고 디버그
      *          빌드에서 확인합니다.**
      *
      * @note 스냅샷을 브로드캐스트하는 방법도 있지만, 그러면 콜백이 자신을 해제해도 사본이 계속 호출되어 같은 스레드
@@ -74,9 +74,9 @@ namespace sw
 
         /**
          * @brief 지정한 채널에서 이벤트를 구독합니다. 돌려준 구독이 사라지면 해제됩니다.
-         * @details 채널은 타입을 지운 멀티캐스트(`ChannelMulticast`) 하나이고 그 코드는 Core 에만 있다 — 구체 타입으로 바꾸는 일은 **구독자 쪽** 델리게이트가 한다.
+         * @details 채널은 타입을 지운 멀티캐스트(`ChannelMulticast`) 하나이고 그 코드는 Core 에만 있다 — 구체 타입으로 바꾸는 일은 구독자 쪽 델리게이트가 한다.
          *          그래서 채널 표가 이벤트 타입을 처음 만진 모듈의 코드를 가리키지 않아, 모듈을 내려도 채널은 그대로다(구독자의 델리게이트만 떼어진다).
-         *          해제(구독의 소멸)는 버스 함수라 **소유 스레드에서** 합니다. `clear` 가 채널을 지우면 구독도 무효가 됩니다.
+         *          해제(구독의 소멸)는 버스 함수라 소유 스레드에서 합니다. `clear` 가 채널을 지우면 구독도 무효가 됩니다.
          */
         template <typename T>
         [[nodiscard]] Subscription subscribe( hashed_string channel, const Delegate<void( const T& )>& delegate )
@@ -91,9 +91,9 @@ namespace sw
 
         /**
          * @brief 지정한 채널로 이벤트를 즉시 발행합니다.
-         * @warning **`broadcast` 는 잠금 밖에서 돕니다.** 콜백이 다시 구독 · 해제 · 발행을 부를 수 있어야 하는데 `SpinLock` 은
+         * @warning `broadcast` 는 잠금 밖에서 돕니다. 콜백이 다시 구독 · 해제 · 발행을 부를 수 있어야 하는데 `SpinLock` 은
          *          재귀 잠금이 아니기 때문입니다(`processEvents` 도 같은 이유로 엔트리만 잠금 안에서 복사해 옵니다). 그래서
-         *          **발행 중에 다른 스레드가 구독을 바꾸는 것은 안전하지 않습니다.** 구독 변경은 발행하는 스레드에서 하거나
+         *          발행 중에 다른 스레드가 구독을 바꾸는 것은 안전하지 않습니다. 구독 변경은 발행하는 스레드에서 하거나
          *          프레임 경계로 미루십시오.
          */
         template <typename T>
@@ -192,7 +192,7 @@ namespace sw
     private:
         /**
          * @brief 큐를 비우는(processEvents 하는) 스레드를 현재 스레드로 정합니다. `processEvents` 가 부릅니다.
-         * @details 주인을 **생성한 스레드**가 아니라 **큐를 비우는 스레드**로 잡는 이유가 있습니다. 이 객체를 어디서 만들었는지는
+         * @details 주인을 생성한 스레드가 아니라 큐를 비우는 스레드로 잡는 이유가 있습니다. 이 객체를 어디서 만들었는지는
          *          우연이지만, 프레임마다 큐를 꺼내 브로드캐스트하는 쪽은 설계상 하나로 정해져 있습니다(`Engine::update`).
          *          언리얼의 게임 스레드와 같은 역할입니다.
          */
@@ -200,14 +200,14 @@ namespace sw
 
         /**
          * @brief 버스 함수가 주인 스레드에서 불렸는지 확인합니다.
-         * @details **검사 구성(배포가 아닌 구성) 전용입니다.** 배포본에서는 호출이 통째로 사라집니다. `SW_LOG_ASSERT` 는 배포에서도 Error 를
+         * @details 검사 구성(배포가 아닌 구성) 전용입니다. 배포본에서는 호출이 통째로 사라집니다. `SW_LOG_ASSERT` 는 배포에서도 Error 를
          *          남기므로, `publish` 마다 도는 검사를 그대로 두면 위반했을 때 배포본 로그가 뒤덮입니다. 아직 아무도 큐를
          *          비우지 않았으면(주인이 정해지지 않았으면) 아무 말도 하지 않습니다.
          */
         void assertBusThread() const;
 
         /**
-         * @brief 큐에 남은 이벤트의 소멸자를 부릅니다. `_queueSpinLock` 을 **잡은 채로** 부르십시오.
+         * @brief 큐에 남은 이벤트의 소멸자를 부릅니다. `_queueSpinLock` 을 잡은 채로 부르십시오.
          * @details 아레나를 되감으면 메모리만 돌아올 뿐이고, 소멸자는 여기서만 불립니다.
          */
         void removeQueuedEvents() SW_REQUIRES_LOCK( _queueSpinLock );
@@ -237,14 +237,14 @@ namespace sw
         Subscription subscribeErased( hashed_string channel, EventTypeID type, Delegate<void( const EventBase& )> delegate );
         /** @brief 타입을 지운 즉시 발행입니다(`publish` 의 본체). */
         void publishErased( hashed_string channel, EventTypeID type, const EventBase& eventRef );
-        /** @brief 채널 + 타입의 멀티캐스트를 찾거나 만듭니다. `_busSpinLock` 을 **잡은 채로** 부르십시오. */
+        /** @brief 채널 + 타입의 멀티캐스트를 찾거나 만듭니다. `_busSpinLock` 을 잡은 채로 부르십시오. */
         shared_ptr<ChannelMulticast> getOrCreateChannelUnlocked( hashed_string channel, EventTypeID type ) SW_REQUIRES_LOCK( _busSpinLock );
 
     private:
         mutable SpinLock _busSpinLock;
         mutable SpinLock _queueSpinLock;
         /**
-         * @brief (채널, 이벤트 타입) → 멀티캐스트 표입니다. **이 표 하나만 기준입니다.**
+         * @brief (채널, 이벤트 타입) → 멀티캐스트 표입니다. 이 표 하나만 기준입니다.
          * @details 같은 키로 멀티캐스트를 가리키는 표를 따로 두지 말 것 — 항상 함께 쓰이고 함께 비워지는 같은 표를 두 벌 두면,
          *          한쪽만 고친 날 디스패치가 이미 사라진 멀티캐스트를 부르게 됩니다.
          */

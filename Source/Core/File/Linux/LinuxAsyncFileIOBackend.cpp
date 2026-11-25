@@ -73,7 +73,7 @@ namespace sw
      * @brief 리눅스 io_uring 백엔드입니다(시스템 호출 직접 — liburing 없음). IO 스레드 하나가 SQE 를 채워 제출하고 CQE 를 거둡니다.
      * @details 다른 스레드의 새 요청은 eventfd 에 쓰고, 링에 걸어 둔 eventfd 읽기가 끝나 IO 스레드가 깹니다(링은 IO 스레드만 만진다 — 잠금 없음).
      *          읽기는 `IORING_OP_READV`(5.1+)로 걸어 오래된 커널에서도 돈다. 짧게 끝난 읽기는 남은 구간을 다시 건다.
-     *          `io_uring_setup` 이 실패하면(ENOSYS — 옛 커널 · WSL1, EPERM — 컨테이너 seccomp · `kernel.io_uring_disabled`) `start` 가 false 를
+     *          `io_uring_setup` 이 실패하면(옛 커널 · WSL1 의 ENOSYS, 컨테이너 seccomp · `kernel.io_uring_disabled` 의 EPERM) `start` 가 false 를
      *          돌려 매니저가 스레드 풀로 내려간다.
      */
     class IOUringAsyncFileIOBackend final : public IAsyncFileIOBackend

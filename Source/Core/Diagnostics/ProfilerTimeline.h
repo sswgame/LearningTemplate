@@ -90,7 +90,7 @@ namespace sw
         uint32 countActiveThreads( uint32 frameCount ) const;
 #if !defined( SW_SHIPPING )
         /**
-         * @brief 긴 캡처를 시작합니다 — 링과 따로, 스레드마다 @p maxEventsPerThread 사건까지 **처음부터** 모읍니다(오래된 것을 버리지 않는다).
+         * @brief 긴 캡처를 시작합니다 — 링과 따로, 스레드마다 @p maxEventsPerThread 사건까지 처음부터 모읍니다(오래된 것을 버리지 않는다).
          * @details 기록이 꺼져 있으면 켭니다(끝날 때 원래대로). 예산을 넘은 스레드는 더 담지 않고 잘림 표지만 남깁니다. 프레임 경계도 같은 수까지 담습니다.
          *          켜 두는 동안 사건마다 벡터 덧붙이기 한 번이 더 듭니다(링 기록과 같은 위치에서). 이미 진행 중이면 처음부터 다시 시작합니다.
          */

@@ -277,11 +277,11 @@ SW_TEST_CASE( FileTest, FileStampReportsSizeAndDetectsChanges )
 
 /**
  * @brief [FileTest] 디렉터리 수집이 경로 대소문자 유지
- * @details collectFiles/collectFolders 는 **실제 파일시스템을 훑어** 경로를 만든다. 그래서 돌려준 경로는
+ * @details collectFiles/collectFolders 는 실제 파일시스템을 훑어 경로를 만든다. 그래서 돌려준 경로는
  *          그대로 열 수 있어야 한다. 결과를 normalizePath 로 통째 소문자화하면, 대소문자를 가리는
  *          파일시스템(리눅스 CI)에서는 상위 디렉터리 이름(`/home/runner/work/LearningTemplate/.../Resource`)
  *          까지 소문자가 되어 열거한 파일이 곧바로 "File not found" 가 된다. 윈도우에서는 파일이
- *          그냥 열려서 드러나지 않으므로, 여기서는 **문자열이 만든 그대로인지**를 본다.
+ *          그냥 열려서 드러나지 않으므로, 여기서는 문자열이 만든 그대로인지를 본다.
  */
 SW_TEST_CASE( FileTest, CollectPreservesPathCase )
 {
@@ -304,7 +304,7 @@ SW_TEST_CASE( FileTest, CollectPreservesPathCase )
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listFile.size() ) );
     if ( listFile.empty() == false )
     {
-        // 수집한 경로를 **가공 없이** 다시 열 수 있어야 한다 — 이게 이 함수의 계약이다.
+        // 수집한 경로를 가공 없이 다시 열 수 있어야 한다 — 이게 이 함수의 계약이다.
         SW_EXPECT_EQUAL( filePath.str(), listFile[0].str() );
         sw::vector<uint8> readBuffer;
         SW_EXPECT_TRUE( sw::FileUtil::readFile( listFile[0], readBuffer ) );
@@ -333,11 +333,11 @@ SW_TEST_CASE( FileTest, WriteAndReadFile )
 }
 
 /**
- * @brief [FileTest] 실행 파일 경로는 **실제로 있는 파일**을 가리킨다
- * @details 윈도우의 `GetModuleFileNameW` 는 버퍼가 모자라면 **잘라서** 돌려주고 그 사실을
+ * @brief [FileTest] 실행 파일 경로는 실제로 있는 파일을 가리킨다
+ * @details 윈도우의 `GetModuleFileNameW` 는 버퍼가 모자라면 잘라서 돌려주고 그 사실을
  *          반환값으로만 알린다. 260자 고정 버퍼에 담고 반환값을 보지 않으면 그보다
  *          깊은 경로에 설치될 때 exe 위치가 조용히 틀려지고, 그 자리를 기준으로 찾는 모듈 DLL ·
- *          RHI 백엔드 · 셰이더 · 리소스가 **전부** "없다" 가 된다. 원인은 어디에도 남지 않는다.
+ *          RHI 백엔드 · 셰이더 · 리소스가 전부 "없다" 가 된다. 원인은 어디에도 남지 않는다.
  *
  *          260자를 넘는 설치 경로를 여기서 만들어 낼 수는 없으므로, 이 검사는 **정상 경로가
  *          여전히 온전한지**를 본다(잘림 처리를 잘못 넣으면 여기서 빈 문자열이나 깨진 경로가
@@ -363,7 +363,7 @@ SW_TEST_CASE( FileTest, ExecutablePathPointsAtARealFile )
 /**
  * @brief [FileTest] 디렉터리 순회가 재귀·비재귀 모두 같은 규칙으로 걷는지 검증
  * @details `collectFiles` · `collectFolders` 는 네 경우(파일/폴더 × 재귀/비재귀)를 헬퍼 하나로 걷는다.
- *          순회자를 `std::error_code` 없이 만들면 권한이 없는 폴더나 순회 중 지워진 폴더에서 **예외를 던지고**,
+ *          순회자를 `std::error_code` 없이 만들면 권한이 없는 폴더나 순회 중 지워진 폴더에서 예외를 던지고,
  *          `bool` 로 실패를 알리는 두 함수의 호출부를 뚫고 나간다. 여기서는 네 경우가 모두 같은 규칙으로 걷는지 본다.
  */
 SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )

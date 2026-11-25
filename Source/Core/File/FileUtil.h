@@ -21,7 +21,7 @@ namespace sw
 {
     /**
      * @brief 파일 하나의 크기와 마지막 쓰기 시각입니다. "지난번에 본 그 파일 그대로인가" 를 파일을 열지 않고 확인할 때 씁니다.
-     * @details 시각은 1601 기원 100 ns 눈금입니다(플랫폼이 같다). **같은지만** 비교합니다. `tryGetFileTimestamp` 는 초 단위라 1초 안에 일어난 편집을 놓칩니다.
+     * @details 시각은 1601 기원 100 ns 눈금입니다(플랫폼이 같다). 같은지만 비교합니다. `tryGetFileTimestamp` 는 초 단위라 1초 안에 일어난 편집을 놓칩니다.
      *          쓰기 시각은 시계 틱(Windows 약 16 ms) 단위로 오르므로 같은 틱 안에 같은 크기로 다시 쓴 파일은 도장이 같다. 도장으로 내용 값을 캐시하는 쪽은
      *          이 프로세스의 쓰기를 쓰기 관찰자(`IFileWriteObserver`)로 받고, 바깥 도구의 쓰기만 시간 창으로 거른다(`ContentHashCache`). "바뀌었나" 를 묻는 쪽은
      *          도장이 아니라 내용 해시(`ContentHash::computeFile`)를 비교한다.
@@ -42,7 +42,7 @@ namespace sw
 {
     /**
      * @brief 디렉터리 순회가 항목마다 넘기는 값입니다.
-     * @details `_path` 는 **콜백 안에서만** 유효합니다(순회가 버퍼 하나를 다시 씁니다). 남기려면 `string` 으로 복사하십시오.
+     * @details `_path` 는 콜백 안에서만 유효합니다(순회가 버퍼 하나를 다시 씁니다). 남기려면 `string` 으로 복사하십시오.
      */
     struct DirectoryEntry
     {
@@ -151,7 +151,7 @@ namespace sw
          * @details 상대 글을 절대로 올리는 입구라 받는 쪽은 글이다(형식으로 받을 수 없다). 기준 폴더를 부르는 쪽이 정할 수 있으면 `AbsolutePath::tryResolve` 를 쓴다.
          */
         [[nodiscard]] static bool makeAbsolutePath( string_view path, string& outResult );
-        /** @brief 비교 · 맵 키가 아니라 **실제** 경로를 만듭니다(링크 · `.` · `..` · 8.3 짧은 이름을 풀어서). 경로가 없으면 false 입니다. 구분자는 `/` 입니다. */
+        /** @brief 비교 · 맵 키가 아니라 실제 경로를 만듭니다(링크 · `.` · `..` · 8.3 짧은 이름을 풀어서). 경로가 없으면 false 입니다. 구분자는 `/` 입니다. */
         [[nodiscard]] static optional<AbsolutePath> makeCanonicalPath( const AbsolutePath& path );
         /** @brief 경로가 절대 경로인지 확인합니다. */
         static bool isAbsolutePath( string_view path );
@@ -162,7 +162,7 @@ namespace sw
         [[nodiscard]] static optional<AbsolutePath> requireAbsolutePath( string_view path );
         /**
          * @brief 문자열에서 디스크 경로(`AbsolutePath`)를 만드는 명시적 입구입니다 — 디스크 I/O(`exists` · `readTextFile` · `writeFile` …)는 이 형식만 받는다(R2).
-         * @details 리소스 id · `DataPath` · `PathKey` 같은 논리 경로를 글로 꺼내 I/O 에 넘기는 자리가 눈에 보이게 한다(예전에는 `string_view` 라 무엇이든 들어갔다).
+         * @details 리소스 id · `DataPath` · `PathKey` 같은 논리 경로를 글로 꺼내 I/O 에 넘기는 자리가 눈에 보이게 한다(`string_view` 라면 무엇이든 들어간다).
          *          엄격한 절대 경로면 구분자를 `/` 로 맞춘 값이다. 상대 · `C:foo` · `\foo` 는 OS 경계와 같은 오류(`File.RelativePath`)를 남기고 빈 경로 — 그 값을 받은 I/O 는 실패한다(폴백 없음).
          *          빈 글은 오류 없이 빈 경로다(없는 파일처럼 실패한다 — 예전 빈 글 인자와 같다). 실패를 갈라야 하면 `requireAbsolutePath`(빈 값을 돌려준다)를 쓴다.
          */
@@ -217,18 +217,18 @@ namespace sw
          */
         [[nodiscard]] static bool ensureDirectoryExists( const AbsolutePath& directoryPath );
         /**
-         * @brief `<basePath><extension>` 이 없으면 그것을, 있으면 `<basePath><numberSeparator>2<extension>` · `3` … 가운데 처음 빈 이름을 **원자적으로 만들어** 자리를 잡고 그 경로를 돌려줍니다.
+         * @brief `<basePath><extension>` 이 없으면 그것을, 있으면 `<basePath><numberSeparator>2<extension>` · `3` … 가운데 처음 빈 이름을 원자적으로 만들어 자리를 잡고 그 경로를 돌려줍니다.
          * @details @p bDirectory 면 빈 폴더를, 아니면 빈 파일을 만든다(파일은 부른 쪽이 나중에 내용을 덮어쓴다 — `writeFile` 의 바꿔치기).
          *          "있나 보고 만들기" 는 그 사이에 같은 이름을 고른 다른 프로세스 · 스레드와 겹친다 — 여기서는 만들기가 실패한 쪽이 다음 번호로 간다.
          *          부모 폴더는 만든다. @p maxAttempt 개를 다 써도 못 잡거나 쓰기 게이트가 막으면 이유를 남기고 빈 경로입니다.
          */
         [[nodiscard]] static AbsolutePath reserveUniquePath( const AbsolutePath& basePath, string_view extension, bool bDirectory, uint32 maxAttempt = 1000, string_view numberSeparator = "-" );
-        /** @brief 경로에 **항목(파일 또는 디렉터리)** 이 있는지 반환합니다. 디렉터리인지는 `isDirectory` 로 묻습니다. */
+        /** @brief 경로에 항목(파일 또는 디렉터리) 이 있는지 반환합니다. 디렉터리인지는 `isDirectory` 로 묻습니다. */
         static bool exists( const AbsolutePath& path );
         /** @brief 경로에 디렉터리가 있는지 반환합니다. */
         static bool isDirectory( const AbsolutePath& path );
         /**
-         * @brief 경로에 **일반 파일**이 있는지 반환합니다(디렉터리 · 없는 경로는 false, 링크는 가리키는 쪽 기준).
+         * @brief 경로에 일반 파일이 있는지 반환합니다(디렉터리 · 없는 경로는 false, 링크는 가리키는 쪽 기준).
          * @details 후보 경로 여럿 중 처음 있는 것을 골라 파일로 읽는 곳(설정 · 리소스 낱개 · 셰이더 include · 폰트 찾기)이 씁니다 — 같은 이름의 폴더가
          *          있으면 `exists` 는 그것을 골라 다음 후보로 넘어가지 못합니다.
          */
@@ -253,7 +253,7 @@ namespace sw
         /** @brief 파일의 수정 시각(초 - `getCurrentFileTimestamp` 와 같은 시계)을 @p outSeconds 에 담습니다. 없거나 읽을 수 없으면 false 입니다(0 을 시각으로 돌려주지 않는다). */
         [[nodiscard]] static bool tryGetFileTimestamp( const AbsolutePath& fileName, uint64& outSeconds );
         /**
-         * @brief 지금 시각을 `tryGetFileTimestamp` 와 **같은 시계 · 같은 단위**로 반환합니다.
+         * @brief 지금 시각을 `tryGetFileTimestamp` 와 같은 시계 · 같은 단위로 반환합니다.
          * @details 파일 시각은 파일 시계(Windows 1601 년 기준)로 나옵니다. `system_clock` 과 기준점이 다를 수 있어 그쪽의 `now()`
          *          와 비교하면 틀립니다. "이 시각 이후 바뀐 파일" 을 고를 때는 이 함수를 쓰십시오.
          */
@@ -269,7 +269,7 @@ namespace sw
         /** @brief 파일 크기를 @p outSize 에 담습니다. 없거나 파일이 아니면(폴더) false 입니다(0 을 크기로 돌려주지 않는다 - 빈 파일과 구별된다). */
         [[nodiscard]] static bool tryGetFileSize( const AbsolutePath& fileName, uint64& outSize );
         /**
-         * @brief 파일의 크기와 마지막 쓰기 시각을 **한 번의 조회**로 얻습니다. 파일이 없거나 읽을 수 없으면 false 입니다.
+         * @brief 파일의 크기와 마지막 쓰기 시각을 한 번의 조회로 얻습니다. 파일이 없거나 읽을 수 없으면 false 입니다.
          * @details 파일 내용에서 뽑은 값(해시 등)을 캐시해 두고 "그 뒤로 파일이 바뀌었나" 만 확인할 때 씁니다. 파일을 여는 것보다
          *          쌉니다(이 PC 에서 열기는 ~200 us, 이 조회는 ~75 us 입니다. 둘 다 필터 드라이버를 거칩니다).
          */
@@ -336,7 +336,7 @@ namespace sw
         /**
          * @brief @p path(파일, 폴더면 그 아래 모든 파일)에서 체크아웃 규칙 안의 읽기 전용 파일을 처음 만난 경로입니다. 규칙이 없거나 그런 파일이 없으면 빈 값입니다.
          * @details `isWriteAllowed` 가 이 답으로 거절하므로, 그것을 지나는 모든 입구(쓰기 · `removeFile` · `tryRemoveFile` · `removeDirectory` · `renamePath` · `copyFile` 의 대상 · `moveToRecycleBin`)와
-         *          경로를 스스로 여는 서드파티 저장(DDS 저장 · SQLite — 쓰기 전에 `isWriteAllowed` 를 직접 부른다)이 같은 확인을 지난다 —
+         *          경로를 스스로 여는 서드파티 저장(DDS 저장 · SQLite, 쓰기 전에 `isWriteAllowed` 를 직접 부른다)이 같은 확인을 지난다.
          *          POSIX 는 폴더 권한만으로 읽기 전용 파일을 지우고 옮기며, Windows 지우기(`removeEntry`)는 정리를 위해 속성을 풀고 지워 잠금이 뚫렸다.
          *          유니티 `AssetDatabase.IsOpenForEdit` 의 반대 질의이고, 언리얼 `IFileManager::Delete` 가 `EvenReadOnly` 없이 읽기 전용을 지우지 않는 자리다.
          */
@@ -378,7 +378,7 @@ namespace sw
         /** @brief 시스템 임시 디렉터리 경로를 반환합니다. 읽지 못하면 빈 경로입니다. */
         static AbsolutePath getTempDirectory();
         /**
-         * @brief 바이너리 데이터를 파일에 씁니다. **원자적입니다**: 같은 폴더의 임시 파일에 다 쓰고 결과를 확인한 뒤 원본과 바꿔 끼웁니다.
+         * @brief 바이너리 데이터를 파일에 씁니다. 원자적입니다: 같은 폴더의 임시 파일에 다 쓰고 결과를 확인한 뒤 원본과 바꿔 끼웁니다.
          * @details 실패하면(디스크 가득 · 잠김 · 도중 종료) false 이고 원본은 그대로 남습니다. 반쯤 쓴 파일이 남지 않습니다.
          */
         [[nodiscard]] static bool writeFile( const AbsolutePath& fileName, const uint8* pData, uint64 size );
@@ -414,7 +414,7 @@ namespace sw
         /** @brief `writeTextFile` 의 `FileSyncMode::Durable` 판입니다(`writeFileDurable` 의 설명). */
         [[nodiscard]] static bool writeTextFileDurable( const AbsolutePath& fileName, string_view text );
         /**
-         * @brief 크래시 보고 파일(@p pPath)을 통째로 씁니다. **할당 · 로그 · stdio · 쓰기 문이 없습니다** - 힙이 깨진 크래시 지점(시그널 처리기 포함)에서도 부를 수 있다.
+         * @brief 크래시 보고 파일(@p pPath)을 통째로 씁니다. 할당 · 로그 · stdio · 쓰기 문이 없습니다 - 힙이 깨진 크래시 지점(시그널 처리기 포함)에서도 부를 수 있다.
          * @details 원자적이지 않다(임시 파일이 없다). 크래시 경로 밖에서는 `writeFile` 을 쓴다.
          */
         [[nodiscard]] static bool writeCrashFile( const utf8* pPath, const void* pData, size_t size );
@@ -452,7 +452,7 @@ namespace sw
          */
         [[nodiscard]] static AbsolutePath findPathIgnoringCase( const AbsolutePath& root, string_view lowerRelative );
         /**
-         * @brief **쓰기용**입니다. @p relative 를 @p root 아래의 경로로 잇되, 이미 디스크에 있는 성분은 그 표기를 쓰고 없는 성분부터는 @p relative 의 표기를 그대로 씁니다.
+         * @brief 쓰기용입니다. @p relative 를 @p root 아래의 경로로 잇되, 이미 디스크에 있는 성분은 그 표기를 쓰고 없는 성분부터는 @p relative 의 표기를 그대로 씁니다.
          * @details 대소문자를 구분하는 파일 시스템에서 소문자 id 를 그대로 이으면 대소문자만 다른 새 폴더가 생긴다(`Saved/Automation` 이 있는데 `saved/automation` 을 만든다).
          *          `findPathIgnoringCase` 는 읽기용이라 다 있어야 답하고, 이 함수는 있는 데까지 풀고 나머지를 이어 새 파일 자리를 돌려준다. 이름만 대소문자가 다른 항목이 여럿이면
          *          정렬 순으로 앞선 것이다. 없는 성분 아래는 훑지 않는다.
@@ -463,7 +463,7 @@ namespace sw
         [[nodiscard]] static AbsolutePath makePathIgnoringCase( const AbsolutePath& root, string_view relative );
         /**
          * @brief 디렉터리에서 확장자 필터에 맞는 파일을 모읍니다.
-         * @details 실제 파일 시스템을 훑어 얻은 경로라 **대소문자를 그대로 돌려줍니다**(구분자만 `/` 로 바꿉니다). 그대로 열 수
+         * @details 실제 파일 시스템을 훑어 얻은 경로라 대소문자를 그대로 돌려줍니다(구분자만 `/` 로 바꿉니다). 그대로 열 수
          *          있는 경로여야 하기 때문입니다. 대소문자를 구분하는 파일 시스템에서는 소문자로 바꾼 경로가 곧 "파일 없음" 입니다.
          *          맵 키가 필요하면 받는 쪽에서 normalizePath 하십시오. 순서는 `forEachDirectoryEntry` 와 같다(폴더마다 이름의 바이트 순, 폴더를 만나면 그 안을 먼저).
          * @return 폴더가 없으면 알리지 않고 false(없으면 빈 목록이 맞는지는 부른 쪽이 정한다 — 맞으면 `(void)` 와 이유), 순회가 도중에 멈췄으면 경로를 알리고

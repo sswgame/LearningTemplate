@@ -1,9 +1,9 @@
 /**
  * @file LockedMulticastDelegate.h
  * @brief 여러 스레드가 등록 · 해제 · 방송하는 멀티캐스트입니다(로그 리스너 · 언어 바뀜 알림). 단일 스레드 `MulticastDelegate` 를 잠금 · 불변 사본 · 방송 세대로 감쌉니다.
- * @details - 방송은 잠금 안에서 불변 사본(`shared_ptr<const MulticastDelegate>`)의 참조만 잡고 **잠금 밖에서** 부릅니다 — 리스너가 다시 등록 · 해제 · 방송해도
+ * @details - 방송은 잠금 안에서 불변 사본(`shared_ptr<const MulticastDelegate>`)의 참조만 잡고 잠금 밖에서 부릅니다 — 리스너가 다시 등록 · 해제 · 방송해도
  *            잠금을 쥔 채 남의 코드로 들어가지 않습니다. 사본은 목록이 바뀔 때만 새로 짓습니다(방송마다 복사하지 않는다).
- *          - 해제는 해제 **전에** 시작한 방송이 끝날 때까지 기다린 뒤 돌아옵니다(방송 세대 두 칸). 그래야 해제가 돌아온 뒤 다른 스레드가 사라진 리스너를 부르지
+ *          - 해제는 해제 전에 시작한 방송이 끝날 때까지 기다린 뒤 돌아옵니다(방송 세대 두 칸). 그래야 해제가 돌아온 뒤 다른 스레드가 사라진 리스너를 부르지
  *            않습니다(편집기 콘솔 패널 파괴 · 모듈 언로드 뒤). 방송 중인 스레드가 해제하면 자기를 기다리게 되므로 기다리지 않습니다. 그 밖에는 끝날 때까지
  *            기다리고(포기하면 사라진 리스너를 앞선 방송이 부른다), 리스너가 멈춰 오래 걸리면 `kRetireWaitReportMs` 마다 경고합니다.
  *          - 소멸은 다른 스레드에서 진행 중인 해제(그 안의 방송 대기 포함)가 끝난 뒤 멤버를 지웁니다(`SubscriptionSource::closeSubscriptions`).
@@ -121,7 +121,7 @@ namespace sw
         static inline thread_local uint32 _s_broadcastDepth{ 0 };
 
     protected:
-        /** @brief 구독 @p id 가 풀렸습니다. 항목을 떼고, 떼기 **전에** 시작한 방송이 끝나기를 기다립니다. */
+        /** @brief 구독 @p id 가 풀렸습니다. 항목을 떼고, 떼기 전에 시작한 방송이 끝나기를 기다립니다. */
         void releaseSubscription( uint64 id ) override
         {
             uint32 retiredSlot{ 0 };

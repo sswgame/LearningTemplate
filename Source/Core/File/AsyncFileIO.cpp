@@ -443,7 +443,7 @@ namespace sw
     void AsyncFileIOQueue::finish( const shared_ptr<AsyncReadRequest>& pRequest, AsyncIOStatus status )
     {
         AsyncReadRequest& request = *pRequest;
-        // 취소 표시는 상태를 바꾸는 잠금 **안에서** 읽는다. 밖에서 읽으면 그 사이에 `cancel` 이 "진행 중" 을 보고 true 를 돌려준 요청이
+        // 취소 표시는 상태를 바꾸는 잠금 안에서 읽는다. 밖에서 읽으면 그 사이에 `cancel` 이 "진행 중" 을 보고 true 를 돌려준 요청이
         // 성공으로 끝난다.
         bool bCanceled{ false };
         {

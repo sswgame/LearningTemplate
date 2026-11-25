@@ -320,7 +320,7 @@ SW_TEST_CASE( CommandLineTest, UnprovidedFlagIsNotReadable )
  * @brief "실제로 적혔는가" 와 "값을 읽을 수 있는가" 는 다르다
  * @details 명령줄 표에는 기본값이 없다(기본값은 설정이 가진다, 셋째 칸은 형식 견본) — 안 적은 인자는 읽기가 false 이고 값을 건드리지 않는다.
  *          "설정 파일 기본값보다 커맨드라인이 우선" 은 `isArgumentProvided` 로 판단한다. 다르게 판단하면 설정 파일의 기본 백엔드가
- *          `-gv_rhiBackend` 를 조용히 덮어, **네 백엔드를 검증했다고 믿은 것이 전부 한 백엔드**가 된다.
+ *          `-gv_rhiBackend` 를 조용히 덮어, 네 백엔드를 검증했다고 믿은 것이 전부 한 백엔드가 된다.
  */
 SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
 {
@@ -394,7 +394,7 @@ SW_TEST_CASE( CommandLineTest, EnumLookupMatchesStringLookup )
  * @brief 값을 빠뜨린 비-bool 인자는 조용히 무시되지 않는다
  * @details 값 없이 적을 수 있는 것은 bool 뿐이고(`ArgumentInfo::isFlagArgument`), 나머지는 경고를 남기고 무시되므로
  *          적지 않은 것으로 남는다. "값 없이 적어도 되는가" 를 타입과 따로 정하면 값을 빠뜨린 `-gv_benchMeshes` 가
- *          int32 자리에 **bool `true` 를 밀어 넣어** 경고 한 줄 없이 **스위치가 아무 일도 안 한다.**
+ *          int32 자리에 bool `true` 를 밀어 넣어 경고 한 줄 없이 스위치가 아무 일도 안 한다.
  */
 SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
 {
@@ -413,7 +413,7 @@ SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
     cmdManager.parse( 4, argv, makeCommandLineTestBaseDirectory() );
     SW_EXPECT_EQUAL( size_t( 3 ), cmdManager.getParseErrors().size() ); // 값 없는 비-bool 인자는 거절 이유를 남기고 무시한다
 
-    // 값이 없었으므로 **적히지 않은 것으로** 남는다 — 표에는 기본값이 없고(기본값은 설정이 가진다, 셋째 칸은 형식 견본) 읽기는 false 이며 값을 건드리지 않는다.
+    // 값이 없었으므로 적히지 않은 것으로 남는다 — 표에는 기본값이 없고(기본값은 설정이 가진다, 셋째 칸은 형식 견본) 읽기는 false 이며 값을 건드리지 않는다.
     int32 meshCount{ -1 };
     SW_EXPECT_FALSE( cmdManager.getArgument( std::string_view( "gv_benchMeshes" ), meshCount ) );
     SW_EXPECT_EQUAL( -1, meshCount );
@@ -475,7 +475,7 @@ SW_TEST_CASE( CommandLineTest, BooleanArgumentAcceptsBothForms )
 
 /**
  * @brief initialize 는 앞서 넣은 인자에 밀려나지 않는다
- * @details 열거형 조회는 `_listArgument` 를 열거값으로 **바로 인덱싱**한다. 그 앞에 커스텀 인자가
+ * @details 열거형 조회는 `_listArgument` 를 열거값으로 바로 인덱싱한다. 그 앞에 커스텀 인자가
  *          하나라도 들어가 있으면 표 전체가 한 칸씩 밀려 `getArgument(WIDTH)` 가 **그 커스텀 인자를
  *          읽는다.** 줄마다 걸린 assert 는 Debug 에서만 산다 — Shipping 에서는 아무 말 없이 다른 인자의
  *          값이 나온다. 그래서 initialize 가 표를 먼저 비운다.

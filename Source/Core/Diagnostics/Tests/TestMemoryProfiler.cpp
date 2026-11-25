@@ -1,6 +1,6 @@
 // MemoryProfiler — 바이트 · 횟수 추적, 세부 추적의 스택 표, 태그 스코프 · 태그 이름 · 순서, 최고치, 예산 경고, 꺼진 추적, 센 블록만 빼는 해제, 기록기 번호,
 // 누수 창(태그 합계 · 스택 전수 · 다른 스레드 · 잘못 쓰기), 곡선 판정, 이름으로 태그 찾기, 스레드를 건너는 태그.
-// 지역 프로파일러는 할당기에 걸리지 않는다(엔진의 것이 먼저 걸려 있다 — `Memory::registerAllocationTracker`) — 케이스가 넣은 기록만 센다.
+// 지역 프로파일러는 할당기에 걸리지 않는다(엔진의 것이 먼저 걸려 있다, `Memory::registerAllocationTracker`). 그래서 케이스가 넣은 기록만 센다.
 #include "pch.h"
 
 #include "Core/Concurrency/thread.h"

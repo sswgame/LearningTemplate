@@ -79,7 +79,7 @@ namespace sw
             }
 
             /**
-             * @brief @p fileName 을 **원자적으로** 씁니다: 같은 폴더의 임시 파일에 다 쓰고, 쓰기 · 닫기 결과를 확인한 뒤 원본 경로로 교체합니다.
+             * @brief @p fileName 을 원자적으로 씁니다: 같은 폴더의 임시 파일에 다 쓰고, 쓰기 · 닫기 결과를 확인한 뒤 원본 경로로 교체합니다.
              * @details 주의: 원본을 "wb" 로 열면 그 순간 길이 0 이 됩니다. 그 파일에 바로 쓰면서 `fwrite` · `fclose` 결과를 보지 않으면, 디스크가
              *          차거나 백신이 파일을 잡거나 쓰는 도중 죽을 때 씬 · 에셋이 빈 파일로 남는데 저장은 성공으로 보입니다. 4 KB 보다
              *          작은 쓰기는 stdio 버퍼에 머물다 `fclose` 에서야 디스크로 가므로, 가득 찬 디스크는 `fclose` 만 알려 줍니다.
@@ -137,7 +137,7 @@ namespace sw
             }
 
             /**
-             * @brief 원자적 쓰기의 앞 절반입니다 — 쓰기 게이트 · 읽기 전용을 보고 같은 폴더의 임시 경로를 정합니다(로그 없음 — `beginAtomicWrite` 가 남긴다).
+             * @brief 원자적 쓰기의 앞 절반입니다. 쓰기 게이트 · 읽기 전용을 보고 같은 폴더의 임시 경로를 정합니다(로그는 `beginAtomicWrite` 가 남긴다).
              * @return 쓸 수 없는 대상이면 false 입니다(게이트 거절은 `isWriteAllowed` 가 남긴다).
              */
             [[nodiscard]] static bool prepareAtomicWrite( const AbsolutePath& filePath, AbsolutePath& outTempPath )
@@ -810,7 +810,7 @@ namespace sw
 
     AbsolutePath FileUtil::getExecutablePath()
     {
-        // 실행 파일 경로를 못 얻으면 어느 루트도 정할 수 없다 - 빈 글로 물러나지 않고 멈춘다(예전에는 빈 글을 받은 쪽마다 따로 실패했다).
+        // 실행 파일 경로를 못 얻으면 어느 루트도 정할 수 없다. 빈 글을 받은 쪽마다 따로 실패하지 않도록 빈 글로 물러나지 않고 멈춘다.
         string executablePath;
         if ( PlatformFileSystem::getExecutablePath( executablePath ) == false || executablePath.empty() )
             reportFatalError( "The executable path could not be queried from the OS" );
@@ -1231,7 +1231,7 @@ namespace sw
             return true;
 
         const AbsolutePath directory = directoryPath.join( {} );
-        // 새 폴더도 새 자리다 — 이름 규칙(리소스 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다(이미 있는 폴더에 흔히 부르는 입구다 — `bindWriteFilter`).
+        // 새 폴더도 새 자리라 이름 규칙(리소스 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다. 이미 있는 폴더에 흔히 부르는 입구다(`bindWriteFilter`).
         if ( isCreateAllowed( directory ) == false )
             return false;
         if ( FileUtilInternal::createDirectoryTree( directory ) )

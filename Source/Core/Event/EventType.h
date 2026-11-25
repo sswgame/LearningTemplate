@@ -41,7 +41,7 @@ namespace sw
 
 /**
  * @brief 고정된 EventTypeID 로 EventBase 를 등록합니다.
- * @warning **이 매크로 뒤는 `private:` 입니다.** 멤버를 더하려면 매크로 **위**에 적으십시오. 아래에 적으면 조용히
+ * @warning 이 매크로 뒤는 `private:` 입니다. 멤버를 더하려면 매크로 위에 적으십시오. 아래에 적으면 조용히
  *          private 이 됩니다(`struct` 라서 기본이 public 인 것과 어긋납니다).
  * @details 이름을 모두 `sw::` 로 한정합니다 — `namespace sw` 밖에서도 쓸 수 있게. 한정하지 않으면 `EventTypeID` 를 찾지 못하고,
  *          `friend class EventDispatcher` 는 전역에 새 클래스를 선언해 버려 진짜 디스패처가 `kType` 에 닿지 못합니다.
@@ -78,8 +78,8 @@ private:                                                      \
         EventBase& operator=( const EventBase& ) { return *this; }
         /**
          * @brief 큐 링크는 가져오지 않습니다.
-         * @note `noexcept` 가 **계약의 일부**입니다. 이동이 noexcept 가 아니면 `vector` 같은 컨테이너는 재할당 때 강한 예외
-         *       보장을 지키려고 **이동 대신 복사**를 씁니다. 본문이 비어 있어 예외를 던질 수 없어도 표시가 있어야 합니다.
+         * @note `noexcept` 가 계약의 일부입니다. 이동이 noexcept 가 아니면 `vector` 같은 컨테이너는 재할당 때 강한 예외
+         *       보장을 지키려고 이동 대신 복사를 씁니다. 본문이 비어 있어 예외를 던질 수 없어도 표시가 있어야 합니다.
          */
         EventBase( EventBase&& ) noexcept
             : _next{ nullptr }

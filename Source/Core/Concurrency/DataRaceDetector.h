@@ -46,7 +46,7 @@ namespace sw
         using ReportFunctionSuspension = ObserverSlot<DataRaceReportSignature>::Suspension;
 
         /**
-         * @brief 경합을 찾았을 때 부를 보고 함수를 겁니다. 보고기는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다(예전에는 말없이 덮어썼다).
+         * @brief 경합을 찾았을 때 부를 보고 함수를 겁니다. 보고기는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다.
          *        걸린 것이 없으면 멈추기만 합니다. 모든 구성에 있지만 검사 구성에서만 불립니다.
          */
         [[nodiscard]] static ReportFunctionRegistration bindReportFunction( DataRaceReportFunction pFunction );
@@ -120,11 +120,11 @@ namespace sw
          * @brief 지금 이 컨텍스트에 처음 들어온 스레드의 id 해시입니다. 아무도 없으면 0 입니다.
          *
          * @details 데이터 레이스는 정의상 두 스레드가 있어야 생깁니다. 스레드를 구분하지 않으면 한 스레드가 가드를 잡은 채
-         *          **같은 객체의 다른 가드 메서드를 부르기만 해도** 레이스로 보고합니다. 예를 들어
+         *          같은 객체의 다른 가드 메서드를 부르기만 해도 레이스로 보고합니다. 예를 들어
          *          `sw::set::operator=(initializer_list)` 는 쓰기 가드를 잡고 `clear()` · `insert()` 를 부르는데, 그 둘도 가드를 잡습니다.
          *
          *          `map` 에도 같은 곳이 있고, 쓰기 가드 안에서 const 메서드를 부르는 경우도 모두 같은 모양입니다. 즉 "가드 메서드가
-         *          가드 메서드를 부르지 않게 조심한다" 로는 막을 수 없는 **구조적인** 오탐입니다. 그래서 주인 스레드를 기억해
+         *          가드 메서드를 부르지 않게 조심한다" 로는 막을 수 없는 구조적인 오탐입니다. 그래서 주인 스레드를 기억해
          *          재진입을 구분합니다.
          *
          * @note 이것은 오탐만 줄입니다. 다른 스레드가 들어오면 id 가 다르므로 그대로 보고됩니다.

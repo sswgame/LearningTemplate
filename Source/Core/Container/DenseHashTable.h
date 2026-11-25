@@ -4,7 +4,7 @@
  * @details 두 컨테이너는 노드가 값을 드는 모양만 다르다(키 · 값 쌍 / 키). 노드 형식이 `getKey()` 로 키를 내주고 나머지를 여기 한 벌로 둔다
  *          (MSVC `_Hash` · Abseil `raw_hash_set` 이 map · set 을 한 표 위에 두는 것과 같다). 예전에는 두 헤더가 체인 검색 · 지우기의 다시 잇기 · 버킷 다시 만들기 ·
  *          버킷 번호 식을 따로 들어, 한쪽에만 생긴 기능(`shrink_to_fit`)과 "저쪽과 같음" 주석으로 맞춰야 했다.
- *          색인만 **여기 한 자리** 에서 구성(`SW_ENABLE_STL_CONTAINER`)으로 고른다: 기본은 버킷 표 + 노드 안 체인(`Native/NativeHashIndex.h`), 켜면 std::unordered_multimap 을 멤버로 든
+ *          색인만 여기 한 자리 에서 구성(`SW_ENABLE_STL_CONTAINER`)으로 고른다: 기본은 버킷 표 + 노드 안 체인(`Native/NativeHashIndex.h`), 켜면 std::unordered_multimap 을 멤버로 든
  *          `Std/StdHashIndex.h`. std::unordered_map 을 통째로 들지 않는 까닭: C++17 에는 이종 키 조회가 없어 `string_view` 로 찾을 때마다 키를 만들고, 순회 순서(넣은 순서)와
  *          무효화 규칙이 구성마다 달라진다 — 밀집 배열을 두고 색인만 바꾸면 계약이 하나다.
  *

@@ -341,7 +341,7 @@ SW_TEST_CASE( AsyncFileIOTest, ShutdownCancelsBacklogAndRejectsLateRequests )
         sw::AsyncReadHandle backlog = io.readRange( path, 16, 16, sw::AsyncIOPriority::Normal );
 
         // 내리는 스레드와 붙잡힌 IO 스레드를 함께 풀어 준다 — shutdown 은 걸린 요청(문 안의 것)이 끝나기를 기다린다.
-        // 문은 shutdown 이 밀린 요청을 취소한 **뒤에** 연다(그 사건을 기다린다). 예전에는 20 ms 를 자고 열어, shutdown 이 그보다 늦게 들어가면
+        // 문은 shutdown 이 밀린 요청을 취소한 뒤에 연다(그 사건을 기다린다). 예전에는 20 ms 를 자고 열어, shutdown 이 그보다 늦게 들어가면
         // IO 스레드가 밀린 요청을 읽어 버려 옳은 구현이 졌다. 취소가 오지 않으면 시한 뒤에 열고 아래 단언이 진다.
         sw::thread opener( sw::ThreadTestAccess::getKey(), [&filter, &backlog]()
         {

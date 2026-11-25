@@ -39,8 +39,8 @@ namespace sw
 
         /**
          * @brief 크래시 보고를 맡는 스레드입니다. 훅을 걸 때 미리 띄워 두고 신호를 기다립니다.
-         * @details **죽은 스레드에서 덤프를 쓰지 않는다.** 스택 오버플로는 넘친 스택의 보증 공간(64KB)만으로 필터를 돈다. 그 위에서
-         *          `MiniDumpWriteDump` 와 심볼 변환을 하면 크래시 자식 프로세스가 **간헐적으로 멈춘다**(하나씩은 드물고, 여럿을 겹쳐 돌리면 수백 번에
+         * @details 죽은 스레드에서 덤프를 쓰지 않는다. 스택 오버플로는 넘친 스택의 보증 공간(64KB)만으로 필터를 돈다. 그 위에서
+         *          `MiniDumpWriteDump` 와 심볼 변환을 하면 크래시 자식 프로세스가 간헐적으로 멈춘다(하나씩은 드물고, 여럿을 겹쳐 돌리면 수백 번에
          *          몇 번 정도). 브레이크패드와 언리얼(`FCrashReportingThread`)도 같은 이유로 미리 시작한 스레드에서 보고한다. 그 스레드는
          *          멀쩡한 스택을 가지고 있다.
          *          폴트 스레드는 진척이 멈출 때까지만(`CrashHandler::setReportDeadline`) 기다린다. 보고가 어디서 멈추든(힙이나 stdio 락)
@@ -65,8 +65,8 @@ namespace sw
         PendingCrash s_pendingCrash{};
 
         /**
-         * @brief 크래시 순간에 부를 `MiniDumpWriteDump` 입니다. **훅을 걸 때** 미리 찾아 둡니다.
-         * @details dbghelp 의 `MiniDumpWriteDump` 는 구현(dbgcore.dll)을 **처음 부를 때** `LoadLibrary` 로 로드한다. 크래시 순간에 할 일을 하나
+         * @brief 크래시 순간에 부를 `MiniDumpWriteDump` 입니다. 훅을 걸 때 미리 찾아 둡니다.
+         * @details dbghelp 의 `MiniDumpWriteDump` 는 구현(dbgcore.dll)을 처음 부를 때 `LoadLibrary` 로 로드한다. 크래시 순간에 할 일을 하나
          *          줄이려고 그 로드를 설치 시점으로 당겼다. 덤프 구현은 안에서 또 `LoadLibraryExA` 를 부르므로 이것만으로 로더 대기가
          *          사라지지는 않는다. 그 대기가 영영 풀리지 않는 원인(정지된 스레드)은 `kSnapshotFlags` 가 없앤다.
          */
@@ -97,10 +97,10 @@ namespace sw
 
             /**
              * @brief 덤프할 프로세스 스냅샷(`PssCaptureSnapshot`)에 담을 항목입니다. 주소 공간 복제, 스레드 컨텍스트, 핸들이 해당합니다.
-             * @details **살아 있는 프로세스를 덤프하면 `MiniDumpWriteDump` 가 다른 스레드를 모두 정지시킨다.** 정지된 스레드 하나가 막 시작하던
+             * @details 살아 있는 프로세스를 덤프하면 `MiniDumpWriteDump` 가 다른 스레드를 모두 정지시킨다. 정지된 스레드 하나가 막 시작하던
              *          중이라(`LdrInitializeThunk`) 로더를 쥐고 있으면, 덤프가 안에서 부르는 `LoadLibraryExA` 가 그 스레드를 영영 기다린다.
              *          dbgcore 를 미리 로드하거나 같은 종류의 덤프를 설치할 때 한 번 돌려 두어도 그 호출은 막지 못한다.
-             *          정지된 스레드에는 시한을 기다리던 폴트 스레드도 있어서, **시한도 듣지 않는다**. 스냅샷은
+             *          정지된 스레드에는 시한을 기다리던 폴트 스레드도 있어서, 시한도 듣지 않는다. 스냅샷은
              *          커널이 스레드 컨텍스트를 잠깐 저장하고 주소 공간을 복제한 것이라, 덤프는 복제본을 읽고 살아 있는 스레드는 정지시키지 않는다.
              *          로더를 쥔 스레드는 제 일을 마치고 놓는다. 마이크로소프트가 자기 프로세스를 덤프할 때 권하는 방법이다.
              */
@@ -159,7 +159,7 @@ namespace sw
                 const PfnMiniDumpWriteDump      pfnWrite   = ( s_pfnMiniDumpWriteDump != nullptr ) ? s_pfnMiniDumpWriteDump : &MiniDumpWriteDump;
                 PMINIDUMP_EXCEPTION_INFORMATION pException = ( pInfo != nullptr ) ? &exceptionInfo : nullptr;
 
-                // 살아 있는 프로세스가 아니라 **스냅샷**을 덤프한다(kSnapshotFlags 설명). 스냅샷을 만들지 못하면 살아 있는 프로세스를 덤프한다.
+                // 살아 있는 프로세스가 아니라 스냅샷을 덤프한다(kSnapshotFlags 설명). 스냅샷을 만들지 못하면 살아 있는 프로세스를 덤프한다.
                 // 어느 쪽이든 콜백이 항목마다 진척을 센다(스냅샷 질문은 스냅샷일 때만 온다).
                 MINIDUMP_CALLBACK_INFORMATION callbackInfo{};
                 callbackInfo.CallbackRoutine = &onDumpCallback;
@@ -197,21 +197,21 @@ namespace sw
              */
             static void writeReport( const PendingCrash& crash, HANDLE hFaultThread )
             {
-                // 덤프와 컨텍스트를 **먼저** 쓴다. 이 순서는 취향이 아니라 안전장치다.
+                // 덤프와 컨텍스트를 먼저 쓴다. 이 순서는 취향이 아니라 안전장치다.
                 //
                 // 크래시 지점에서 안전한 것과 그렇지 않은 것:
                 //  - formatstring : 호출하는 쪽의 버퍼에 쓰고 할당하지 않는다(noexcept). 안전하다.
                 //  - fixed_string : 크기가 고정이라 안전하다. 컨텍스트 값을 여기에 미리 담아 두는 이유다.
-                //  - StringBuilder: 스택 버퍼로 시작하지만 **넘치면 힙으로 늘어난다.** 스택이 깊으면 넘친다.
-                //  - symbolize()  : sw::string 을 값으로 반환하므로 **반드시 할당**한다. 가장 위험하다.
+                //  - StringBuilder: 스택 버퍼로 시작하지만 넘치면 힙으로 늘어난다. 스택이 깊으면 넘친다.
+                //  - symbolize()  : sw::string 을 값으로 반환하므로 반드시 할당한다. 가장 위험하다.
                 //
                 // 힙이 이미 깨져서 죽은 경우라면 아래 심볼 변환에서 다시 죽을 수 있다. 그래서 할당이 없는 덤프 · 컨텍스트를 먼저
                 // 확보한다. 심볼 변환이 실패해도 덤프는 남고, 덤프만 있어도 디버거로 그 순간을 열 수 있다.
-                // **덤프를 아래로 옮기지 말 것.**
+                // 덤프를 아래로 옮기지 말 것.
                 CrashHandler& handler          = *crash._pHandler;
                 const bool    bMiniDumpWritten = writeMiniDump( handler, crash._pExceptionInfo, crash._faultThreadID );
                 handler.recordProgress();
-                // 접근 위반의 자세한 이유는 덤프 **뒤에**, 이 스레드(시한이 지키는 쪽)에서 만든다 — 로더 락 · 힙을 건드려 막힐 수 있다(describeAccessViolation 설명).
+                // 접근 위반의 자세한 이유는 덤프 뒤에, 이 스레드(시한이 지키는 쪽)에서 만든다 — 로더 락 · 힙을 건드려 막힐 수 있다(describeAccessViolation 설명).
                 const utf8* const pReason = describeFault( crash, hFaultThread );
                 handler.recordProgress();
                 handler.writeContextFile( pReason, crash._pFaultAddress, GetCurrentProcessId(), crash._faultThreadID );
@@ -272,7 +272,7 @@ namespace sw
 
                 if ( s_hReportThread != nullptr )
                 {
-                    // 보고 스레드에 맡기고 기다린다(이 스레드의 스택과 예외 정보는 그동안 그대로다). 시한은 **진척이 멈춘 시간**이다 —
+                    // 보고 스레드에 맡기고 기다린다(이 스레드의 스택과 예외 정보는 그동안 그대로다). 시한은 진척이 멈춘 시간이다 —
                     // 시한마다 진척 수를 보고, 그동안 한 걸음도 나아가지 않았을 때만 버린다(바쁜 기계의 긴 덤프는 끝까지 쓴다).
                     s_pendingCrash = crash;
                     SetEvent( s_hReportRequested );
@@ -291,7 +291,7 @@ namespace sw
                     }
                     if ( bReportStalled )
                     {
-                        // **stdio 를 거치지 않는다.** 보고가 막힌 지점이 바로 stderr 의 락일 수 있다(CrashInjectionKind::StderrHeld). fputs 로
+                        // stdio 를 거치지 않는다. 보고가 막힌 지점이 바로 stderr 의 락일 수 있다(CrashInjectionKind::StderrHeld). fputs 로
                         // 쓰면 시한이 지나도 여기서 다시 막힌다. 그리고 이전 필터에 넘기지 않고 여기서 끝낸다. 그 필터도
                         // 같은 락에서 막힐 수 있고, 시한은 "여기서 끝난다"는 약속이어야 하기 때문이다.
                         constexpr utf8 kMessage[] = "\n[CrashHandler] crash report made no progress before its deadline - exiting without it\n";
@@ -345,10 +345,10 @@ namespace sw
             }
 
             /**
-             * @brief 접근 위반이면 이유 글에 **무엇을 어떻게 접근하려 했는지**(읽기 · 쓰기 · 실행과 대상 주소)와 폴트가 난 코드가 든 모듈(이름 + 오프셋)을 덧붙입니다.
-             * @details 보고의 "at address" 는 폴트가 난 **명령어**의 주소라서, 그 명령어가 건드리려던 데이터 주소와 모듈 없이는 "어느 포인터가 죽었나" · "해제된 이미지의 코드인가" 를
+             * @brief 접근 위반이면 이유 글에 무엇을 어떻게 접근하려 했는지(읽기 · 쓰기 · 실행과 대상 주소)와 폴트가 난 코드가 든 모듈(이름 + 오프셋)을 덧붙입니다.
+             * @details 보고의 "at address" 는 폴트가 난 명령어의 주소라서, 그 명령어가 건드리려던 데이터 주소와 모듈 없이는 "어느 포인터가 죽었나" · "해제된 이미지의 코드인가" 를
              *          알 수 없다. 결과는 정적 버퍼에 쓴다.
-             *          **폴트 스레드의 필터에서 부르지 않는다.** 모듈 이름 찾기(`GetModuleHandleExW` · `GetModuleFileNameW`)는 로더의 잠금을, 스레드 이름(`GetThreadDescription`)은
+             *          폴트 스레드의 필터에서 부르지 않는다. 모듈 이름 찾기(`GetModuleHandleExW` · `GetModuleFileNameW`)는 로더의 잠금을, 스레드 이름(`GetThreadDescription`)은
              *          프로세스 힙을 쓴다. 그 잠금을 쥔 채 죽은 스레드(DllMain 안 · 힙 안의 폴트)의 필터에서 부르면 보고 시한이 걸리기 전이라 프로세스가 영영 선다.
              *          보고 스레드가 덤프를 쓴 뒤 부른다 — 막히면 폴트 스레드의 시한이 끝낸다(덤프는 이미 남았다).
              * @param hThread 폴트 스레드의 핸들(이름을 읽는다, nullptr 이면 이름 없이). @param threadID 폴트 스레드의 번호.
@@ -444,7 +444,7 @@ namespace sw
         if ( s_hDumpModule != nullptr )
             s_pfnMiniDumpWriteDump = reinterpret_cast<PfnMiniDumpWriteDump>( ModuleLibraryUtil::getDynamicSymbol( s_hDumpModule, "MiniDumpWriteDump" ) );
 
-        // 보고 스레드는 **크래시 전에** 시작해 둔다. 크래시 순간에 스레드를 만들면 로더 락과 힙을 그 자리에서 쓰게 된다.
+        // 보고 스레드는 크래시 전에 시작해 둔다. 크래시 순간에 스레드를 만들면 로더 락과 힙을 그 자리에서 쓰게 된다.
         s_bStopReportThread.store( false );
         s_hReportRequested = CreateEventW( nullptr, FALSE, FALSE, nullptr );
         s_hReportFinished  = CreateEventW( nullptr, FALSE, FALSE, nullptr );

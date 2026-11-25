@@ -3,7 +3,7 @@
  * @brief 노드 번호와 "먼저 와야 하는 노드" 간선으로 된 의존 그래프와 그 위상 정렬 · 순환 찾기입니다.
  * @details 그래프 형식(머티리얼 그래프 · 오디오 그래프 · 믹서 버스 · 기믹 회로 · 장비 조건)과 기동 순서(서브시스템 · 모듈 적재 · 모듈 다시 읽기 · 에셋 다시 읽기 연쇄)가
  *          이 한 벌을 쓴다. 전에는 형식마다 Kahn · 깊이 우선 정렬과 순환 찾기를 따로 썼다. 언리얼도 머티리얼 · 메타사운드 · 모듈이 각자 정렬을 가진다(기억에 의존) —
- *          여기서는 알고리즘을 하나로 두고, 쓰는 쪽은 **동점을 무엇으로 깨는가**만 고른다(데이터 순서 · 이름 · 뿌리에서의 깊이 우선).
+ *          여기서는 알고리즘을 하나로 두고, 쓰는 쪽은 동점을 무엇으로 깨는가만 고른다(데이터 순서 · 이름 · 뿌리에서의 깊이 우선).
  *          - 실패는 로그가 아니라 값(`DependencyOrder::_listCycle`)이다. 편집기는 노드에 붙이고, 로더는 자기 오류 이름으로 경로를 남긴다.
  *          - 결과는 간선과 고른 규칙만으로 정해진다. 같은 데이터면 같은 순서다(결정성 — 소리 난수 · 기믹 스텝 · 생성 셰이더의 해시가 여기에 묶인다).
  */
@@ -44,15 +44,15 @@ namespace sw
         /** @brief @p node 가 기다리는 노드들입니다(더한 차례). */
         [[nodiscard]] const vector<uint32>& getDependencies( uint32 node ) const;
 
-        /** @brief Kahn 정렬 — 준비된 노드 가운데 **번호가 가장 작은** 것을 먼저 꺼냅니다. 결과가 데이터의 차례에 묶입니다(소리 그래프 · 믹서 · 기믹 회로). */
+        /** @brief Kahn 정렬 — 준비된 노드 가운데 번호가 가장 작은 것을 먼저 꺼냅니다. 결과가 데이터의 차례에 묶입니다(소리 그래프 · 믹서 · 기믹 회로). */
         [[nodiscard]] DependencyOrder sortInDataOrder() const;
         /**
-         * @brief Kahn 정렬 — 준비된 노드 가운데 **이름이 가장 앞인** 것을 먼저 꺼냅니다. 결과가 입력 차례와 무관합니다(서브시스템 · 모듈 적재 · `cmake/Modules/Build/ModuleManifest.cmake`).
+         * @brief Kahn 정렬 — 준비된 노드 가운데 이름이 가장 앞인 것을 먼저 꺼냅니다. 결과가 입력 차례와 무관합니다(서브시스템 · 모듈 적재 · `cmake/Modules/Build/ModuleManifest.cmake`).
          * @param listName 노드 이름. 노드 수와 같아야 합니다. 같은 이름이면 번호가 작은 쪽이 먼저다
          */
         [[nodiscard]] DependencyOrder sortByName( const vector<string_view>& listName ) const;
         /**
-         * @brief 깊이 우선 후위 정렬 — @p listRoot 차례로, 각 노드는 간선을 더한 차례로 내려갑니다. **뿌리에서 닿는 노드만** 담습니다(머티리얼 그래프의 쓰이지 않는 노드는 펼치지 않는다).
+         * @brief 깊이 우선 후위 정렬 — @p listRoot 차례로, 각 노드는 간선을 더한 차례로 내려갑니다. 뿌리에서 닿는 노드만 담습니다(머티리얼 그래프의 쓰이지 않는 노드는 펼치지 않는다).
          * @return 첫 순환을 만나면 거기서 멈추고 `_listCycle` 에 그 경로를 담습니다(`_listOrder` 는 비운다).
          */
         [[nodiscard]] DependencyOrder sortDepthFirst( const vector<uint32>& listRoot ) const;

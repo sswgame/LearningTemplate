@@ -60,7 +60,7 @@ namespace sw
     #error "Unsupported platform"
 #endif
 
-            /** @brief 실행 뿌리입니다 — 부모가 준 폴더(`kRunRootVariable`), 없으면 이 실행만의 이름(`<pid>-<시작 ns>` — Windows 가 pid 를 다시 써도 겹치지 않는다). */
+            /** @brief 실행 뿌리입니다. 부모가 준 폴더(`kRunRootVariable`)이고, 없으면 이 실행만의 이름(`<pid>-<시작 ns>`, Windows 가 pid 를 다시 써도 겹치지 않는다)이다. */
             static AbsolutePath findRunRoot( const AbsolutePath& binary, bool& bOutFromParent )
             {
                 string run;

@@ -1,9 +1,9 @@
 /**
  * @file SortedContainerBase.h
  * @brief 키 순서로 도는 컨테이너(`map` · `set`)의 공통 몸통입니다 — 공개 API · 레이스 검사 · 이터레이터 세대 검사.
- * @details 저장은 **여기 한 자리** 에서 구성(`SW_ENABLE_STL_CONTAINER`)으로 고른다: 기본은 정렬 벡터(`Native/NativeSortedStorage.h`), 켜면 std::map · std::set 을 멤버로 든 `Std/StdSortedStorage.h`.
+ * @details 저장은 여기 한 자리 에서 구성(`SW_ENABLE_STL_CONTAINER`)으로 고른다: 기본은 정렬 벡터(`Native/NativeSortedStorage.h`), 켜면 std::map · std::set 을 멤버로 든 `Std/StdSortedStorage.h`.
  *
- *          공통 계약은 두 저장 가운데 **약한 쪽** 이다: 원소 주소 · 이터레이터는 삽입 · 삭제 · 비우기 · 대입 · `reserve` 뒤 무효이고, 삽입 · 삭제는 O(n) 으로 본다(조회는 O(log n)).
+ *          공통 계약은 두 저장 가운데 약한 쪽 이다: 원소 주소 · 이터레이터는 삽입 · 삭제 · 비우기 · 대입 · `reserve` 뒤 무효이고, 삽입 · 삭제는 O(n) 으로 본다(조회는 O(log n)).
  *          이터레이터는 양방향이다(정렬 벡터의 임의 접근 · 포인터 산술을 쓰면 std 저장에서 컴파일되지 않으므로 아예 주지 않는다).
  *          무효화는 검사 구성에서 세대로 잡는다(`DenseHashTable` 과 같은 장치): 변경마다 세대를 올리고 이터레이터는 만들 때의 세대와 다르면 역참조 · 전진 · 비교에서 단언한다.
  *          배포 구성은 칸도 검사도 없어 저장의 반복자 그대로다.

@@ -25,8 +25,8 @@ namespace sw
     namespace
     {
         /**
-         * @brief 버퍼 뒤에 포맷한 한 줄을 이어 붙입니다. **할당하지 않습니다.** 문맥 파일과 빵부스러기 글이 함께 쓴다(주인 타입이 없다).
-         * @details formatstring 은 버퍼의 **처음부터** 쓰므로, 이어 붙이려면 남은 공간을 직접 넘겨야 합니다.
+         * @brief 버퍼 뒤에 포맷한 한 줄을 이어 붙입니다. 할당하지 않습니다. 문맥 파일과 빵부스러기 글이 함께 쓴다(주인 타입이 없다).
+         * @details formatstring 은 버퍼의 처음부터 쓰므로, 이어 붙이려면 남은 공간을 직접 넘겨야 합니다.
          * @param inOutLength 현재 길이. 쓴 만큼 늘려서 돌려줍니다.
          */
         template <typename... Args>
@@ -216,7 +216,7 @@ namespace sw
         utf8 arrPath[constant::buffer::kMax1024]{};
         makeReportPath( arrPath, constant::buffer::kMax1024, "txt" );
 
-        // 버퍼 하나에 모두 만든 뒤 **한 번에** 쓴다. 줄마다 fprintf 를 부르면 그때마다 스트림 락과 내부 버퍼가 걸리고,
+        // 버퍼 하나에 모두 만든 뒤 한 번에 쓴다. 줄마다 fprintf 를 부르면 그때마다 스트림 락과 내부 버퍼가 걸리고,
         // 도중에 죽으면 반쯤 쓰인 파일이 남는다.
         utf8   arrReport[constant::buffer::kMax8192]{};
         uint32 length{ 0 };
@@ -308,7 +308,7 @@ namespace sw
         }
         builder.append( "===============================================\n" );
 
-        // 배포 환경에서는 아무도 stderr 를 보지 않는다. 파일로 남겨야 사용자가 보내 줄 수 있다 — 그래서 **파일이 먼저다.** stderr 는
+        // 배포 환경에서는 아무도 stderr 를 보지 않는다. 파일로 남겨야 사용자가 보내 줄 수 있다 — 그래서 파일이 먼저다. stderr 는
         // 막힐 수 있다(읽는 쪽이 멈춘 파이프에 쓰다 그 락을 쥔 채 선 스레드 — CrashInjectionKind::StderrHeld). 순서가 반대면 거기서
         // 막혔을 때 스택 파일이 없다.
         writeStackFile( builder.c_str() );

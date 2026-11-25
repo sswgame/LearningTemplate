@@ -4,8 +4,8 @@
  * @details 등록 API(`MulticastDelegate::add` · `EventDispatcher::subscribe` · `NetMessageRouter::registerHandler` …)는 핸들 대신 `Subscription` 을
  *          돌려준다. 구독이 사라지면 등록이 풀리므로 해제를 잊을 수 없다(언리얼 `FDelegateHandle` 은 해제를 호출부가 기억해야 하는 형식이라 쓰지 않는다).
  *          출처가 먼저 사라지면 출처의 침입형 목록이 살아 있는 구독을 모두 무효화한다 — 그 뒤 구독의 소멸은 아무것도 하지 않는다.
- *          구독은 **[[nodiscard]]** 다. 반환값을 버리면 그 자리에서 풀리므로, 받지 않는 호출은 컴파일러가 막는다.
- *          목록 잠금 · 목록 머리 · 출처 포인터는 출처 밖 **제어 블록**(`SubscriptionControl`, 출처당 하나)에 있고 구독이 그 블록을 참조로 살려 둔다 —
+ *          구독은 [[nodiscard]] 다. 반환값을 버리면 그 자리에서 풀리므로, 받지 않는 호출은 컴파일러가 막는다.
+ *          목록 잠금 · 목록 머리 · 출처 포인터는 출처 밖 제어 블록(`SubscriptionControl`, 출처당 하나)에 있고 구독이 그 블록을 참조로 살려 둔다 —
  *          구독이 잡는 잠금은 출처가 사라져도 남는다(언리얼 `TSharedPtr` 의 `FReferenceControllerBase` 가 객체보다 오래 사는 것과 같은 자리).
  * @note 스레드: 목록(만들기 · 옮기기 · 풀기)은 제어 블록의 스핀 잠금이 지킨다 — 서로 다른 스레드가 같은 출처의 구독을 따로 만들고 풀어도 된다(로그 리스너).
  *       등록 내용 자체(`releaseSubscription`)는 출처가 자기 잠금으로 지킨다. 출처의 소멸과 다른 스레드의 구독 해제는 겹쳐도 된다 — 잠금은 블록에 있어
@@ -127,7 +127,7 @@ namespace sw
      * @details 파생 클래스는 등록할 때 `issueSubscription( id )` 로 구독을 만들어 돌려주고, 구독이 풀릴 때 불리는 `releaseSubscription( id )` 에서
      *          그 등록을 지웁니다. 복사본은 구독을 넘겨받지 않습니다(구독은 원본의 등록이다). 이동은 구독을 데려갑니다(구독이 새 자리를 가리킨다).
      *          `releaseSubscription` 은 목록 잠금을 놓은 뒤 부른다 — 파생 클래스가 자기 잠금을 잡아도 순서가 뒤집히지 않는다.
-     *          **파생 소멸자는 첫 줄에서 `closeSubscriptions()` 를 부릅니다** — 파생 멤버가 사라지기 전에 진행 중인 해제를 기다려야 하기 때문이다.
+     *          파생 소멸자는 첫 줄에서 `closeSubscriptions()` 를 부릅니다 — 파생 멤버가 사라지기 전에 진행 중인 해제를 기다려야 하기 때문이다.
      *          빠뜨리면 기반 소멸자가 멈춘다(그 형식을 지우는 첫 테스트에서 드러난다).
      */
     class SubscriptionSource

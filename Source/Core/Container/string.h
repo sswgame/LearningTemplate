@@ -1,7 +1,7 @@
 /**
  * @file string.h
  * @brief 글자 수를 아는 널 종료 문자열 sw::basic_string 입니다(std::basic_string(C++17)과 인터페이스 호환). 검사 구성에서는 RaceDetectContext 로 동시 접근을 잡아냅니다.
- * @details 공개 API · 레이스 검사 · 범위 밖 계약은 이 클래스 한 벌이고, 글자를 담는 일만 `internal::StringStorage` 가 한다. 저장 형식은 **여기 한 자리** 에서 구성(`SW_ENABLE_STL_CONTAINER`)으로 고른다:
+ * @details 공개 API · 레이스 검사 · 범위 밖 계약은 이 클래스 한 벌이고, 글자를 담는 일만 `internal::StringStorage` 가 한다. 저장 형식은 여기 한 자리 에서 구성(`SW_ENABLE_STL_CONTAINER`)으로 고른다:
  *          기본은 자체 구현(`Native/NativeStringStorage.h` — 세 칸 배치), 켜면 std::basic_string 을 멤버로 든 것(`Std/StdStringStorage.h`)이다. 쓰는 쪽 코드는 구성을 모른다.
  *          std 를 상속하지 않는 까닭: 다시 선언하지 않은 함수(`assign` · `resize` · `rfind` …)가 레이스 · 범위 검사 없이 기반 클래스로 샌다. 변경은 모두 저장 형식의 `openGap` 한 길을 지난다.
  */
@@ -875,7 +875,7 @@ namespace sw
     /**
      * @struct RuntimeStringHash
      * @brief 프로세스 안에서만 쓰는 바이트 해시입니다. 해시 컨테이너의 `std::hash<sw::string>` · `std::hash<sw::wstring>` · `std::hash<fixed_string>` 이 씁니다.
-     * @details **파일이나 네트워크에 남기지 마십시오.** 이 구현이 바뀌면 값도 달라집니다. 밖에 남는 해시(쿠킹 산출물 · intern
+     * @details 파일이나 네트워크에 남기지 마십시오. 이 구현이 바뀌면 값도 달라집니다. 밖에 남는 해시(쿠킹 산출물 · intern
      *          이름)의 기준은 `HashUtil::computeStringHash64`(FNV-1a)이고, 그쪽은 바꾸지 않습니다.
      *          `std::hash<std::string_view>` 로 넘기지 않습니다. MSVC STL 의 그 구현은 바이트마다 앞 결과를 기다리는 곱셈이
      *          하나씩 있는 FNV-1a 라서, 35자짜리 경로 키 하나에 곱셈 35번이 줄지어 이어집니다.

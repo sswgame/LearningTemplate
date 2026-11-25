@@ -1,8 +1,8 @@
 /**
  * @file NanDiagnostic.h
- * @brief 벡터 · 쿼터니언 · 행렬에 NaN · 무한대가 **처음 들어온 자리**를 알리는 개발 구성 검사입니다(언리얼 `ENABLE_NAN_DIAGNOSTIC` · `DiagnosticCheckNaN_All`).
+ * @brief 벡터 · 쿼터니언 · 행렬에 NaN · 무한대가 처음 들어온 자리를 알리는 개발 구성 검사입니다(언리얼 `ENABLE_NAN_DIAGNOSTIC` · `DiagnosticCheckNaN_All`).
  * @details NaN 은 한 번 들어오면 부모 → 자식 → 본 → 스키닝 팔레트로 번져, 화면에 보일 때는 어디서 왔는지 알 수 없다. 그래서 값이 들어오는 입구(트랜스폼 설정 ·
- *          애니메이션 포즈 · 본 행렬 · 팔레트 업로드 · 물리 결과 · 카메라 행렬)마다 검사하고, 객체 · 본 이름을 넣어 **이름마다 한 번** Error 를 남긴다(`SW_LOG_ERROR_ONCE_FOR_ID`).
+ *          애니메이션 포즈 · 본 행렬 · 팔레트 업로드 · 물리 결과 · 카메라 행렬)마다 검사하고, 객체 · 본 이름을 넣어 이름마다 한 번 Error 를 남긴다(`SW_LOG_ERROR_ONCE_FOR_ID`).
  *          검사는 `SW_DO_CHECKS` 구성에서만 컴파일된다 — 배포(Shipping)에서는 식도 평가하지 않는다. 텍스처 출력의 NaN 은 GPU 쪽 `GPUNanCheck` 가 본다.
  *          본 수천 개를 도는 배열은 `findFirstNonFinite` 로 한 번에 훑는다 — 지수 비트를 OR 로 모으는 분기 없는 첫 훑기라 벡터화되고, 걸렸을 때만 자리를 찾는다.
  */
@@ -49,7 +49,7 @@ namespace sw
         }
 
         /**
-         * @brief float32 성분만 든 형식(`float2` · `float3` · `float4` · `quaternion` · `float4x4`)의 배열에서 처음 유한하지 않은 **원소**의 번호입니다. 모두 유한하면 @p count 입니다.
+         * @brief float32 성분만 든 형식(`float2` · `float3` · `float4` · `quaternion` · `float4x4`)의 배열에서 처음 유한하지 않은 원소의 번호입니다. 모두 유한하면 @p count 입니다.
          */
         template <typename T>
         [[nodiscard]] static size_t findFirstNonFinite( const T* pElement, const size_t count ) noexcept

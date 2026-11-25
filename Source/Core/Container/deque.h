@@ -1,7 +1,7 @@
 /**
  * @file deque.h
  * @brief 양 끝에서 넣고 빼는 줄 sw::deque 입니다(std::deque 와 인터페이스 호환). 디버그 빌드에서는 RaceDetectContext 로 동시 접근을 잡아냅니다.
- * @details 공개 API · 레이스 검사 · 범위 밖 계약은 이 클래스 하나에 있고 저장만 **여기 한 자리** 에서 구성(`SW_ENABLE_STL_CONTAINER`)으로 고른다: 기본은 2 의 거듭제곱 연속 링
+ * @details 공개 API · 레이스 검사 · 범위 밖 계약은 이 클래스 하나에 있고 저장만 여기 한 자리 에서 구성(`SW_ENABLE_STL_CONTAINER`)으로 고른다: 기본은 2 의 거듭제곱 연속 링
  *          (`Native/NativeDequeStorage.h` — 언리얼 5 `TDeque` · Rust `VecDeque` 자리), 켜면 std::deque 를 멤버로 든 `Std/StdDequeStorage.h`.
  *          두 저장의 보장이 다른 곳(주소 안정)은 약한 쪽이 공통 계약이다 — 넣은 뒤에는 참조가 무효다.
  */

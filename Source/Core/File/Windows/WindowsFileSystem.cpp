@@ -250,7 +250,7 @@ namespace sw
 
     bool PlatformFileSystem::getExecutablePath( string& outResult )
     {
-        // `GetModuleFileNameW` 는 버퍼가 모자라면 **잘라서** 돌려주고, 그 사실을 반환값(= 버퍼 크기)으로만 알린다. 잘린 경로를 쓰면 exe 위치를 기준으로 찾는
+        // `GetModuleFileNameW` 는 버퍼가 모자라면 잘라서 돌려주고, 그 사실을 반환값(= 버퍼 크기)으로만 알린다. 잘린 경로를 쓰면 exe 위치를 기준으로 찾는
         // 모듈 DLL · RHI 백엔드 · 셰이더가 모두 "없다" 가 되고 원인은 남지 않는다. 그래서 다 담길 때까지 버퍼를 키운다(윈도우 경로 상한 32767 자까지).
         wstring buffer( constant::file::kMaxPathSize, L'\0' );
         while ( buffer.size() <= constant::file::kMaxExtendedPathSize )

@@ -139,7 +139,7 @@ namespace SW_NATIVE_VECTOR_NAMESPACE
         T*             do_allocate( size_t n );
         void           do_deallocate( T* p, size_t n );
         /**
-         * @brief 용량을 @p new_cap 으로 늘립니다(원소 옮기기와 옛 버퍼 해제까지 합니다). **인라인하지 않습니다.**
+         * @brief 용량을 @p new_cap 으로 늘립니다(원소 옮기기와 옛 버퍼 해제까지 합니다). 인라인하지 않습니다.
          * @details `push_back` · `emplace_back` 의 느린 경로는 이 함수 하나입니다. 이 본문(할당 · 원소 옮기기 루프)이 인라인되면
          *          `push_back` 이 커져서 호출하는 쪽에 인라인되지 않고, 빠른 경로(비교 · 저장 · 크기 증가)마저 함수 호출 한 번이
          *          됩니다(한 프레임에 수천 번 부르는 `PrimitiveRegistry::consumeDirty` · `SceneTransformHierarchy::queueWriteParallel` 같은 곳).
@@ -158,7 +158,7 @@ namespace SW_NATIVE_VECTOR_NAMESPACE
         void copyFromInternal( const T* pSource, size_t count );
         void clearInternal() noexcept;
         /**
-         * @brief [first, last) 의 원소를 소멸시킵니다. 소멸자가 할 일이 없는 타입이면 **루프 자체가 없습니다**(컴파일 시간 분기).
+         * @brief [first, last) 의 원소를 소멸시킵니다. 소멸자가 할 일이 없는 타입이면 루프 자체가 없습니다(컴파일 시간 분기).
          * @details 최적화된 빌드는 빈 소멸자 루프를 지우지만 Debug 와 퍼저(커버리지 계측) 빌드는 원소마다 돈다. 620 MB `vector<uint8>`
          *          하나를 비우는 데 퍼저의 10 초를 다 썼다(야간 퍼저 `Compression` 타임아웃). 소멸 루프는 모두 이 함수를 지난다.
          */
@@ -261,7 +261,7 @@ namespace SW_NATIVE_VECTOR_NAMESPACE
         }
         else
         {
-            // 1 · 3번 분기의 본문이 같지만 중복이 아니다. **순서가 규칙이다.** 이동이 예외를 던질 수 있으면 복사를 먼저 고른다
+            // 1 · 3번 분기의 본문이 같지만 중복이 아니다. 순서가 규칙이다. 이동이 예외를 던질 수 있으면 복사를 먼저 고른다
             // (복사는 실패해도 원본이 남아 있어 되돌릴 수 있다). 복사조차 안 될 때만 예외를 던지는 이동을 쓴다. 셋을 합치면 이
             // 우선순위가 사라진다.
             for ( size_t index = 0; index < count; ++index )
@@ -495,7 +495,7 @@ namespace SW_NATIVE_VECTOR_NAMESPACE
         {
             SW_SCOPED_RACE_WRITE();
             SW_SCOPED_RACE_READ_OTHER( other );
-            // 용량이 넉넉하면 겹치는 앞부분은 **대입**한다. 그래야 원소 안의 힙(문자열 · 벡터 · 맵)이 자기 용량을 유지한다.
+            // 용량이 넉넉하면 겹치는 앞부분은 대입한다. 그래야 원소 안의 힙(문자열 · 벡터 · 맵)이 자기 용량을 유지한다.
             // 모두 부수고 새로 만들면 프레임마다 다시 채우는 스냅샷의 그룹 목록이, 바깥 벡터는 용량을 유지하면서도 안쪽
             // 문자열은 매번 새로 할당한다(std::vector 의 대입과 같은 규칙이다).
             if constexpr ( std::is_copy_assignable_v<T> && is_bitwise_copyable_v<T> == false )
@@ -880,7 +880,7 @@ namespace SW_NATIVE_VECTOR_NAMESPACE
 
         // `value` 가 이 벡터 안의 원소일 수 있다. 형제 함수들(`push_back` 두 개 · `emplace_back` · `insert( pos, count, value )`)처럼
         // 손대기 전에 값을 떠 둔다. 여기서는 재할당이 없어도 위험하다. 아래 밀기 루프가
-        // `value` 가 가리키는 슬롯을 **먼저** 덮어쓰므로(`v.insert( v.begin(), std::move( v[2] ) )`) 엉뚱한 값이 들어간다.
+        // `value` 가 가리키는 슬롯을 먼저 덮어쓰므로(`v.insert( v.begin(), std::move( v[2] ) )`) 엉뚱한 값이 들어간다.
         // 재할당까지 겹치면 옛 버퍼가 해제된 뒤라 이미 해제된 메모리를 읽는다.
         T movedValue( std::move( value ) );
 
@@ -920,7 +920,7 @@ namespace SW_NATIVE_VECTOR_NAMESPACE
             return _pData + _size;
 
         // 0개를 끼워 넣으면 아무 일도 하지 않는다. 여기서 빠져나가지 않으면 아래 "뒤로 밀기" 루프의 종료 조건이
-        // `itemIndex >= offset + 0` 이 되고, offset 이 0 이면 그 조건이 **언제나 참**이라 인덱스가 0 에서 한 번 더 줄어 size_t
+        // `itemIndex >= offset + 0` 이 되고, offset 이 0 이면 그 조건이 언제나 참이라 인덱스가 0 에서 한 번 더 줄어 size_t
         // 언더플로가 난다(범위 밖에 계속 쓴다 — ASan: heap-buffer-overflow).
         if ( count == 0 )
             return _pData + offset;
@@ -929,7 +929,7 @@ namespace SW_NATIVE_VECTOR_NAMESPACE
         // 그 전에 reserveInternal 이 버퍼를 통째로 옮길 수도 있다. 그래서 손대기 전에 값으로 복사해 둔다.
         const T valueCopy = value;
 
-        // `_size + count` 가 오버플로하면 **더 작은** 값이 되어 용량 확보를 건너뛰고, 아래 밀기 루프가 `fromIndex + count`
+        // `_size + count` 가 오버플로하면 더 작은 값이 되어 용량 확보를 건너뛰고, 아래 밀기 루프가 `fromIndex + count`
         // 라는 범위 밖 주소에 쓴다. 담을 수 없는 개수는 여기서 거른다.
         if ( count > ( ~size_t{ 0 } ) - _size )
             return _pData + offset;
@@ -946,10 +946,10 @@ namespace SW_NATIVE_VECTOR_NAMESPACE
         }
         else
         {
-            // 1) 뒤쪽 원소들을 count 개 뒤로 민다. **뒤에서부터** 옮겨야 아직 읽지 않은 원소를 덮지 않는다.
+            // 1) 뒤쪽 원소들을 count 개 뒤로 민다. 뒤에서부터 옮겨야 아직 읽지 않은 원소를 덮지 않는다.
             //    목적지가 이미 살아 있는 슬롯이면 이동 대입, 초기화되지 않은 슬롯이면 placement new 다.
             //    주의: 이 구분을 `itemIndex - count >= offset` 으로 하면 `count > _size` 일 때 그 뺄셈이 언더플로해 조건이
-            //    언제나 참이 되고, **존재하지 않는 원소에서 이동해 온다**(`{10}` 에 `insert( begin, 2, 7 )` 이면 바로 걸린다).
+            //    언제나 참이 되고, 존재하지 않는 원소에서 이동해 온다(`{10}` 에 `insert( begin, 2, 7 )` 이면 바로 걸린다).
             const size_t tailCount = _size - offset;
             for ( size_t movedCount = 0; movedCount < tailCount; ++movedCount )
             {
@@ -1201,7 +1201,7 @@ namespace SW_NATIVE_VECTOR_NAMESPACE
         }
         else if ( count > _size )
         {
-            // 용량을 넘으면 **두 배 이상**으로 늘린다. 그래야 `resize( size() + 1 )` 을 되풀이해도 재할당이 로그 횟수로 끝난다.
+            // 용량을 넘으면 두 배 이상으로 늘린다. 그래야 `resize( size() + 1 )` 을 되풀이해도 재할당이 로그 횟수로 끝난다.
             // 딱 `count` 만큼만 잡으면 한 개 늘릴 때마다 통째로 옮겨서 N번에 O(N^2) 이 된다(std::vector 도 resize 에서 기하급수로 키운다).
             if ( count > _capacity )
                 reserveInternal( MathUtil::max( count, _capacity * 2 ) );
