@@ -1,26 +1,25 @@
 /**
  * @file IPhysicsScene.h
- * @brief 물리 씬 인터페이스입니다. 월드(고정 스텝, 중력, 레이어, 접촉 이벤트)를 다루고, 역할별 인터페이스(바디 · 관절 · 캐릭터 · 질의 · 바퀴 차)를 모두 상속합니다
+ * @brief 물리 씬 인터페이스입니다. 월드(고정 스텝, 중력, 레이어, 접촉 이벤트)와 관절을 다루고, 역할별 인터페이스(바디 · 캐릭터 · 질의 · 바퀴 차 · 소프트 바디 · 부력)를 모두 상속합니다
  *        (`IPhysicsScene3D`, `IPhysicsScene2D`).
  * @details 엔진 코드는 이 인터페이스들만 본다. 구현(Jolt, Box2D)은 백엔드 폴더(`Physics/Jolt`, `Physics/Box2D`) 안에 있고, 라이브러리 헤더는 거기서만
  *          include 한다. 백엔드를 바꾸려면 이 인터페이스를 구현한 씬 하나를 만들고 `PhysicsBackend` 를 정의하는 .cpp 를 그 백엔드 것으로 바꾼다
  *          (`PhysicsSystem` 은 백엔드 이름을 모른다 — `NavMeshBackend` 와 같은 모양).
  *          Godot 의 PhysicsServer3D 에 해당한다.
  *
- *          **역할 나눔.** 씬 하나가 역할 다섯을 함께 구현하지만, 한 역할만 쓰는 코드는 그 역할의 인터페이스만 받는다. 언리얼 Chaos 가 월드(`FPhysScene`),
+ *          **역할 나눔.** 씬 하나가 역할을 함께 구현하지만, 한 역할만 쓰는 코드는 그 역할의 인터페이스만 받는다(따로 받는 곳이 없는 관절은 이 인터페이스에 둔다). 언리얼 Chaos 가 월드(`FPhysScene`),
  *          바디(`FPhysicsInterface`), 구속(`FConstraintInstance`), 캐릭터 이동을 나누고, 유니티가 `Physics` 질의와 `Rigidbody` · `Joint` ·
  *          `CharacterController` 를 나누는 것과 같다.
  *
  *          | 역할 | 인터페이스 | 쓰는 곳 |
  *          |---|---|---|
  *          | 바디 · 셰이프 | `IPhysicsBodyScene` | 강체 컴포넌트, 파괴, 래그돌 빌더 |
- *          | 관절 | `IPhysicsJointScene` | 관절 컴포넌트, 래그돌 빌더 |
  *          | 캐릭터 | `IPhysicsCharacterScene` | 캐릭터 컨트롤러 |
  *          | 질의 | `IPhysicsQueryScene` | 맞힘 판정, 소리 가림, 발 IK, 탈것 |
  *          | 바퀴 차(3D 만) | `IPhysicsVehicleScene` | 바퀴 차 컴포넌트 |
  *          | 소프트 바디(3D 만) | `IPhysicsSoftBodyScene` | 천 컴포넌트 |
  *          | 부력(3D 만) | `IPhysicsBuoyancyScene` | 부력 부피 컴포넌트 |
- *          | 월드 | `IPhysicsScene` | `ScenePhysics`(스텝, 이벤트), 디버그 그리기 |
+ *          | 월드 · 관절 | `IPhysicsScene` | `ScenePhysics`(스텝, 이벤트), 디버그 그리기, 관절 컴포넌트, 래그돌 빌더 |
  *
  *          **스레드.** 씬 하나는 한 스레드(게임 스레드)에서 다룬다. `step` 안에서만 백엔드가 작업을 나눠 돌린다. step 중에 다른 스레드가 바디를
  *          만들거나 지우면 안 된다. 스텝 밖에서 워커가 질의만 함께 할 때는 `ScenePhysics::openReadScope` 의 질의 창을 쓰고, 닫아 받은 증표(`WorkerReadFence`)가 스텝을 연다.
@@ -40,7 +39,6 @@
 #include "Engine/Physics/IPhysicsBodyScene.h"
 #include "Engine/Physics/IPhysicsBuoyancyScene.h"
 #include "Engine/Physics/IPhysicsCharacterScene.h"
-#include "Engine/Physics/IPhysicsJointScene.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
 #include "Engine/Physics/IPhysicsSceneFwd.h"
 #include "Engine/Physics/IPhysicsSoftBodyScene.h"
@@ -65,7 +63,6 @@ namespace sw
      */
     template <typename TDimension>
     class alignas( kPhysicsSceneAlignment ) IPhysicsScene : public IPhysicsBodyScene<TDimension>,
-                                                            public IPhysicsJointScene<TDimension>,
                                                             public IPhysicsCharacterScene<TDimension>,
                                                             public IPhysicsQueryScene<TDimension>,
                                                             public std::conditional_t<TDimension::kSupportsVehicle, IPhysicsVehicleScene, PhysicsNoVehicleScene>,
@@ -109,6 +106,28 @@ namespace sw
         virtual const CollisionLayers& getLayerCollision() const = 0;
         /** @brief 바디마다 셰이프를 선으로 냅니다(`IPhysicsDebugRenderer`). */
         virtual void drawDebug( IPhysicsDebugRenderer& renderer ) const = 0;
+
+        // --- 관절 — 언리얼 Chaos 의 구속(`FConstraintInstance`), 유니티의 `Joint` 자리 ----------------------------------------
+
+        /**
+         * @brief 이 차원이 @p type 관절을 만들 수 있는지 봅니다(차원 트레이트가 정한다. 2D 는 Cone 을 만들지 않는다).
+         * @details `createJoint` 의 계약이다. 구현은 이 질의가 참인 종류를 모두 만들어야 하고, 거짓인 종류만 거절할 수 있다.
+         */
+        static constexpr bool supportsJoint( PhysicsJointType type ) { return TDimension::supportsJoint( type ); }
+        /** @brief 관절을 만듭니다. 바디가 무효이거나 `supportsJoint` 가 거짓인 종류면 오류를 남기고 무효 핸들입니다. */
+        virtual PhysicsJointHandle createJoint( const JointDesc& desc )           = 0;
+        virtual void               destroyJoint( PhysicsJointHandle joint )       = 0;
+        virtual bool               isJointValid( PhysicsJointHandle joint ) const = 0;
+        /** @brief 모터를 바꿉니다(Hinge, Slider, Distance). */
+        virtual void setJointMotor( PhysicsJointHandle joint, const PhysicsJointMotor& motor ) = 0;
+        /** @brief Hinge 면 현재 각(라디안), Slider 면 현재 거리, Distance 면 현재 길이를 반환합니다. 나머지는 0 입니다. */
+        virtual float32 getJointPosition( PhysicsJointHandle joint ) const = 0;
+        /**
+         * @brief Cone 관절의 스윙 · 비틀림 모터로 두 바디의 상대 자세를 목표(@p targetRotationA 에 대한 @p targetRotationB, 둘 다 월드)로 끕니다 — 파워드 래그돌.
+         * @details 언리얼 Physical Animation 의 각 구동 · 유니티 ConfigurableJoint 의 targetRotation 자리다. 상대 자세만 쓰므로 몸 전체의 자리는 중력 · 충돌이 정한다.
+         *          @p maxTorque(뉴턴미터)가 0 이하면 모터를 끈다(축 늘어진 래그돌). Cone 이 아닌 관절이면 오류를 남기고 아무것도 하지 않는다(2D 에는 Cone 이 없다).
+         */
+        virtual void driveJointToRotation( PhysicsJointHandle joint, const Rotation& targetRotationA, const Rotation& targetRotationB, float32 maxTorque ) = 0;
     };
 } // namespace sw
 
