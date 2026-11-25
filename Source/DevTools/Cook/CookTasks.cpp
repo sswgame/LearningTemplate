@@ -20,6 +20,7 @@
 #include "DevTools/Cook/VertexAnimationCooker.h"
 
 #include "Engine/Animation/Scene/AnimationCrowd.h"
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -160,7 +161,7 @@ namespace sw
              *          `-game=` 을 주면 그 게임 팩만 베이크한다(배포 패키지).
              */
             [[nodiscard]] static bool cookPackStage( const CommandLineManager& commandLine, bool bDedicatedServer, const AbsolutePath& cookedDir, const CookStore& cookStore,
-                                                     unordered_map<string, vector<vector<string>>>&& mapRequestedShaderBinary )
+                                                     unordered_map<string, vector<vector<string>>>&& mapRequestedShaderBinary, vector<string>&& listStoredExtension )
             {
                 const string shaderFolder = string( ShaderCooker::getSubfolderForFormat( resolveShaderTarget( commandLine ) ) );
 
@@ -172,11 +173,8 @@ namespace sw
                     return false;
                 }
 
-                PackStorageSettings storageSettings; // 모드 팩 빌더와 같은 파일이다 — 배포본에는 `Config/` 가 없어 엔진 데이터에 둔다
-                if ( storageSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._packStorage.get() } ) == false )
-                    return false;
                 PackCookParams params;
-                params._listStoredExtension = storageSettings._listStoredExtension;
+                params._listStoredExtension = std::move( listStoredExtension );
                 params._projectRoot         = ProcessRoots::get()._project; // 참조 칸 표(`Config/Dev/AssetReferenceFields*.json`) — 쓰는 것만 담는 고르기가 읽는다
                 params._resourceRoot        = engine::getSubsystem<AssetPaths>().getRootFolderPath();
                 params._cookedDir           = cookedDir;
@@ -365,6 +363,18 @@ namespace sw
                 unordered_map<string, vector<vector<string>>> mapRequestedShaderBinary;
                 if ( ( bCookPacks || bCookAll ) && cookShadersForPack( commandLine, cookedDir, mapRequestedShaderBinary ) == false )
                     return false;
+                // 팩 저장 방식은 세션 밖에서 읽는다 — 모드 팩 빌더와 같은 파일(배포본에는 `Config/` 가 없어 엔진 데이터에 둔다)이고, 값은 팩 작업 키의 설정 해시에 든다(`PackCooker` computeSettingsHash).
+                vector<string> listStoredExtension;
+                if ( bCookPacks || bCookAll )
+                {
+                    PackStorageSettings storageSettings;
+                    if ( storageSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._packStorage.get() } ) == false )
+                        return false;
+                    listStoredExtension = std::move( storageSettings._listStoredExtension );
+                }
+                // 정체성 규칙(원본 폴더 표)도 세션 밖에서 처음 읽는다 — 프로세스에 한 번 읽어 두는 프로젝트 설정이라, 개발 빌드는 에디터 · 임포터가 먼저 읽지만
+                // 배포 쿠킹은 팩 작업 키(`PackCooker` computeSettingsHash)가 세션 안에서 처음 닿아 읽기가 거절됐다.
+                (void)AssetIdentityRules::getProjectRules();
                 // 리플렉션 지문은 세션 밖에서 한 번 — 기본 인스턴스를 만들며 게임 설정의 `<Defaults>` 를 읽을 수 있다(그 값은 지문에 든다).
                 const bool   bCooksScenes          = bCookScenes || bCookAll;
                 const uint64 reflectionFingerprint = bCooksScenes ? CookReflectionFingerprint::compute( engine::getSubsystem<TypeRegistry>() ) : 0;
@@ -375,7 +385,7 @@ namespace sw
                     bSucceeded = cookSceneStage( cookedDir, cookStore, reflectionFingerprint, crowdSettings, bCrowdSettingsLoaded );
                 // 씬 단계가 실패하면 팩을 베이크하지 않는다 — 빠진 산출물로 베이크한 팩은 배포본에서야 실패가 드러난다.
                 if ( bSucceeded && ( bCookPacks || bCookAll ) )
-                    bSucceeded = cookPackStage( commandLine, context._bDedicatedServer, cookedDir, cookStore, std::move( mapRequestedShaderBinary ) );
+                    bSucceeded = cookPackStage( commandLine, context._bDedicatedServer, cookedDir, cookStore, std::move( mapRequestedShaderBinary ), std::move( listStoredExtension ) );
                 // 변경 없는 두 번째 쿠킹은 0 이어야 한다(도장만 본다 — `Pack.Scale` 측정의 입력 읽기 값).
                 SW_LOG_INFO_ID( "Headless.CookHashedBytes", "Cook hashed %# input bytes", hashCache.getHashedByteCount() - hashedBytesBefore );
                 return bSucceeded;
