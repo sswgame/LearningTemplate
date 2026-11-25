@@ -12,7 +12,6 @@
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
-#include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
@@ -1260,4 +1259,16 @@ namespace sw
         return issueCount;
     }
 
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// RenderPassAsset
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    bool RenderPassAsset::loadFromXMLFile( const AssetID& assetID )
+    {
+        _desc = {};
+        return ReflectedXMLFile::loadDesc( assetID, _desc );
+    }
 } // namespace sw
