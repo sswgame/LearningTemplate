@@ -104,17 +104,6 @@ def check_layer_cycles(project_root: Path, scope: LintScope) -> list[str]:
     return find_cycles(map_tier, read_pairs(project_root, "Engine", map_tier), set_allowed_tier)
 
 
-def print_census(project_root: Path, module: str) -> None:
-    map_tier: dict[str, int] = read_table(project_root, module)["tier"]
-    counter = read_pairs(project_root, module, map_tier)
-    for (source, target), count in sorted(counter.items(), key=lambda item: (map_tier[item[0][0]], item[0])):
-        back = counter.get((target, source), 0)
-        if back and source > target:
-            continue
-        arrow = f"<-> {target} {count}/{back}" if back else f"-> {target} {count}"
-        print(f"  층 {map_tier[source]}: {source} {arrow}")
-
-
 def run_self_check() -> None:
     map_tier = {"A": 6, "B": 6, "C": 7, "A/Low": 5}
     list_source = [("A/x.cpp", '#include "Engine/B/y.h"\n'), ("B/y.cpp", '#include "Engine/A/x.h"\n'),
@@ -129,14 +118,10 @@ def run_self_check() -> None:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="같은 엔진 층의 폴더끼리 서로 include 하는지 본다")
     parser.add_argument("--self-check", action="store_true")
-    parser.add_argument("--census", choices=("Engine", "Editor"), help="막지 않고 층 안 폴더 쌍 include 수를 찍는다")
     arguments = parser.parse_args(argv)
     if arguments.self_check:
         run_self_check()
         print("[layer-cycles] self-check OK")
-        return ExitCode.PASSED
-    if arguments.census:
-        print_census(get_project_root(), arguments.census)
         return ExitCode.PASSED
     list_problem = check_layer_cycles(get_project_root(), make_whole_scope(get_project_root()))
     for problem in list_problem:

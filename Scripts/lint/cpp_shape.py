@@ -35,16 +35,8 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
    문법 오류로 멈췄다(2026-11-09 — IDBFS 마운트 · URL 열기). 기능 옆 `Web/*.js` Emscripten 라이브러리(addToLibrary)에 두고 C++ 는 `extern "C"` 로 선언한다
    (Platform/Web.cmake 가 모두 링크에 넘긴다). 예외는 없다.
 12. 델리게이트는 `SW_DELEGATE_FUNCTION` · `SW_DELEGATE_METHOD` · `SW_DELEGATE_LAMBDA` 로 붙인다(사용자 2026-11-20): 맨 `X::create<&f>()` · `X::create( 람다 )` 는
-   종류마다 함수를 템플릿 인자로 주는지 생성자 인자로 주는지 달라 모양을 외워야 한다. 판정 · 바꾸기는 `dev/delegate_macros.py`(`py -3 -m Scripts delegate-macros`)와 같다.
+   종류마다 함수를 템플릿 인자로 주는지 생성자 인자로 주는지 달라 모양을 외워야 한다. 매크로가 그 공개 함수로 펼쳐지므로 접근 제어로 막지 못한다.
    `Core/Delegate/` (맨 API 의 정의 · 구현 · 그 테스트)만 뺀다.
-13. `ByteReader` · `Archive` · `BitReader` 는 값 읽기만(`x = reader.readPod<T>()` · `readString()` · `readCount( n )` · `readInt( lo, hi )` …): 출력 인자 꼴
-   `reader.readPod( x )` 는 반환 `bool` 을 버리면 실패를 잃었고 실패 때 출력 칸이 옛 값으로 남았다(2026-11-21 형식 이전, `Archive` · `BitReader` 는 같은 날 둘째).
-   형식에서 지웠지만 병합으로 들어온 옛 자리를 빌드 전에 잡는다. 판정 · 바꾸기는 `dev/byte_reader_values.py`(`py -3 -m Scripts byte-reader-values`)와 같다.
-14. `FileUtil` 디스크 I/O(`exists` · `readTextFile` · `writeFile` …)는 `AbsolutePath` 만 받는다 — 문자열은 `FileUtil::toDiskPath( … )` 로 올린다(R2, 2026-11-21 형식 이전).
-   리소스 id · `DataPath` · `PathKey` 에서 꺼낸 논리 경로 글이 I/O 로 새던 길이다. 문자열 판은 private 이라 컴파일 오류지만, 병합으로 들어온 옛 자리를
-   빌드 전에 잡는다 — 문자열이 틀림없는 인자(글 상수 · `.str()` · `joinPath(` …)만 센다. 판정 · 바꾸기는 `dev/disk_path_args.py`(`py -3 -m Scripts disk-path-args`)와 같다.
-   형식(`AbsolutePath` 지역 · 만드는 쪽 `DerivedDataCache::makePath` · `EditorPaths::resolveEditorStateFile` …)을 `.str()` · `joinPath` 로 글로 꺼내 `toDiskPath` 로 다시 올리는
-   왕복도 같은 규칙이다(복사 · 검사가 두 번이고 `..` 탈출 검사를 건너뛴다). 판정 · 바꾸기는 `dev/disk_path_join.py`(`py -3 -m Scripts disk-path-join`)와 같다.
 
 `py -3 -m Scripts lint cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`rules.py` 표)이 staged 파일에 돌린다.
 """
@@ -60,6 +52,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
+from common.git import run_git_or_raise  # noqa: E402
 from lint.lint_scope import LintScope, make_file_scope, make_whole_scope, read_text  # noqa: E402
 from lint.parallel import flat_map_in_processes  # noqa: E402
 from lint.rule_tables import ExceptionTable, get_table_path, read_rule_table  # noqa: E402
@@ -641,34 +634,30 @@ def check_net_message_table(code: str, relative: str) -> list[tuple[int, str]]:
     return list_problem
 
 
-def check_bare_delegate_create(raw: str, code: str, relative: str, names: frozenset[str] | None = None) -> list[tuple[int, str]]:
-    """델리게이트형의 맨 create 를 막는다(규칙 12). 이름 표는 맨 create 모양이 있는 파일에서만 모은다(git grep 한 번 — 프로세스 캐시)."""
-    from dev import delegate_macros   # 그쪽이 이 모듈의 strip_code 를 가져온다 — 순환 import 를 피해 여기서 연다
-    if delegate_macros.is_target(relative) is False or delegate_macros.CREATE_PATTERN.search(code) is None:
+DELEGATE_FOLDER = "Source/Core/Delegate/"   # 맨 API 의 정의 · 구현 · 그 테스트
+DELEGATE_CREATE = re.compile(r"(\w+)\s*(?:<[^;{}]*>)?\s*::\s*(?:template\s+)?create\s*[<(]")
+DELEGATE_ALIAS = re.compile(r"SW_DECLARE_DELEGATE\s*\(\s*[^,]+,\s*(\w+)|\busing\s+(\w+)\s*=\s*(?:\w+\s*::\s*)*(\w+)\s*(?:<[^;]*>)?\s*;")
+
+
+@functools.lru_cache(maxsize=1)
+def load_delegate_names(project_root: str) -> frozenset[str]:
+    """`Delegate` 와 그것을 가리키는 별칭(`SW_DECLARE_DELEGATE` · `using`) — 별칭의 별칭까지 닫는다(프로세스마다 git grep 한 번)."""
+    output = run_git_or_raise(["grep", "-h", "-E", r"SW_DECLARE_DELEGATE|using\s+\w+\s*=", "--", "Source/*.h", "Source/*.cpp", "Source/*.inl"], cwd=Path(project_root))
+    list_alias = [match.groups() for match in DELEGATE_ALIAS.finditer(output)]
+    names = {"Delegate", *(declared for declared, _, _ in list_alias if declared)}
+    while added := {alias for _, alias, target in list_alias if target in names and alias not in names}:
+        names |= added
+    return frozenset(names)
+
+
+def check_bare_delegate_create(code: str, relative: str, names: frozenset[str] | None = None) -> list[tuple[int, str]]:
+    """델리게이트형의 맨 create 를 막는다(규칙 12). 이름 표는 맨 create 모양이 있는 파일에서만 모은다."""
+    if relative.startswith(DELEGATE_FOLDER):
         return []
-    if names is None:
-        names = delegate_macros.load_delegate_names(str(Path(__file__).resolve().parents[2]))
-    return [(site.line, f"델리게이트는 SW_DELEGATE_{site.kind} 로 붙인다 — `py -3 -m Scripts delegate-macros {relative}`") for site in delegate_macros.find_sites(raw, code, names)]
-
-
-def check_byte_reader_out_params(raw: str, code: str, relative: str) -> list[tuple[int, str]]:
-    """규칙 13 — 받는 쪽이 ByteReader · Archive · BitReader 인 출력 인자 읽기."""
-    from dev import byte_reader_values   # 그쪽이 이 모듈의 strip_code 를 가져온다 — 순환 import 를 피해 여기서 연다
-    if byte_reader_values.is_target(relative) is False or byte_reader_values.CALL_PATTERN.search(code) is None:
-        return []
-    return [(site.line, byte_reader_values.describe_site(site, relative, True)) for site in byte_reader_values.find_sites(raw, code)]
-
-
-def check_disk_path_strings(raw: str, code: str, relative: str) -> list[tuple[int, str]]:
-    """규칙 14 — FileUtil 디스크 I/O 에 문자열이 틀림없는 경로 인자(글 상수 · `.str()` · `joinPath(` …)와, 형식을 글로 꺼내 다시 올리는 왕복 감싸기."""
-    from dev import disk_path_args, disk_path_join   # 그쪽이 이 모듈의 strip_code 를 가져온다 — 순환 import 를 피해 여기서 연다
-    list_problem: list[tuple[int, str]] = []
-    if disk_path_join.is_target(relative) and disk_path_join.WRAP_CALL.search(code) is not None:
-        list_problem += [(line, f"형식을 글로 꺼내 toDiskPath 로 다시 올린다 — 형식 조립(`join` · `getParent` · 만드는 쪽 그대로)으로: `py -3 -m Scripts disk-path-join {relative}`")
-                         for line in disk_path_join.find_left(raw)]
-    if disk_path_args.is_target(relative) is False or disk_path_args.CALL_PATTERN.search(code) is None:
-        return list_problem
-    return list_problem + [(site.line, disk_path_args.describe_site(site, relative)) for site in disk_path_args.find_sites(raw, code) if site.known_string]
+    list_match = list(DELEGATE_CREATE.finditer(code))
+    if list_match and names is None:
+        names = load_delegate_names(str(Path(__file__).resolve().parents[2]))
+    return [(get_line_of(code, match.start()), "델리게이트는 SW_DELEGATE_FUNCTION · SW_DELEGATE_METHOD · SW_DELEGATE_LAMBDA 로 붙인다") for match in list_match if match.group(1) in names]
 
 
 @functools.lru_cache(maxsize=1)
@@ -796,9 +785,7 @@ def inspect_file(path: Path, relative: str) -> list[str]:
     list_problem += check_inline_browser_js(code)
     list_problem += check_online_protocol_table(raw, code, relative)
     list_problem += check_net_message_table(code, relative)
-    list_problem += check_bare_delegate_create(raw, code, relative)
-    list_problem += check_byte_reader_out_params(raw, code, relative)
-    list_problem += check_disk_path_strings(raw, code, relative)
+    list_problem += check_bare_delegate_create(code, relative)
     return [f"{relative}:{line}: {message}" for line, message in sorted(set(list_problem))]
 
 
@@ -828,7 +815,7 @@ def check_cpp_shape(project_root: Path, scope: LintScope) -> list[str]:
 
 
 def run_self_check() -> int:
-    """규칙 10(.cpp 상태 · `…Internal` 변경자) · 규칙 12(델리게이트 매크로) · 규칙 13(ByteReader 값 읽기) · 규칙 14(디스크 경로 형식) · strip_code 의 자체 테스트입니다."""
+    """규칙 10(.cpp 상태 · `…Internal` 변경자) · 규칙 12(델리게이트 매크로) · strip_code 의 자체 테스트입니다."""
     failures = 0
 
     def expect(condition: bool, message: str) -> None:
@@ -854,35 +841,10 @@ def run_self_check() -> int:
              "struct FooInternal\n{\n    static void a( CapState& s ) { s._listGroup.clear(); }\n    static void b( CapState& s ) { s._listGroup.clear(); }\n};\n")
     expect(check_state_mutators(owned, "Source/Engine/Foo.cpp", 2, table) == [], "private fields are not counted")
     names = frozenset({"Delegate", "DoneDelegate"})
-    bare = "void f()\n{\n    auto d = DoneDelegate::create<&Foo::bar>( this );\n}\n"
-    expect(len(check_bare_delegate_create(bare, strip_code(bare), "Source/Engine/Foo.cpp", names)) == 1, "a bare delegate create is flagged")
+    bare = "void f()\n{\n    auto d = DoneDelegate::create<&Foo::bar>( this );\n    auto e = sw::Delegate<void( int32 )>::template create( []( int32 ) {} );\n}\n"
+    expect(len(check_bare_delegate_create(strip_code(bare), "Source/Engine/Foo.cpp", names)) == 2, "a bare delegate create is flagged")
     wrapped = "void f()\n{\n    auto d = SW_DELEGATE_METHOD( DoneDelegate, &Foo::bar, this );\n    auto m = Mesh::create( desc );\n}\n"
-    expect(check_bare_delegate_create(wrapped, strip_code(wrapped), "Source/Engine/Foo.cpp", names) == [], "the macro form and a non-delegate factory pass")
-    from dev import delegate_macros   # 바꾸기 도구의 변환 테스트도 린트 자체 테스트와 함께 돈다
-    expect(delegate_macros.run_self_check() == 0, "delegate-macros rewrite cases")
-    out_param = "void f( ByteReader& reader )\n{\n    uint32 count = 0;\n    if ( reader.readCount( 4, count ) == false )\n        return;\n}\n"
-    expect(len(check_byte_reader_out_params(out_param, strip_code(out_param), "Source/Engine/Foo.cpp")) == 1, "a ByteReader output-parameter read is flagged")
-    value_read = "void f( ByteReader& reader, Store& store )\n{\n    const uint32 count = reader.readCount( 4 );\n    (void)store.readCount( 4, n );\n}\n"
-    expect(check_byte_reader_out_params(value_read, strip_code(value_read), "Source/Engine/Foo.cpp") == [], "a value read and another type's read pass")
-    old_archive = "void f( Archive& arch, BitReader& bits )\n{\n    uint32 n = 0;\n    int32 s = 0;\n    (void)arch.readCount( 4, n );\n    (void)bits.readInt( 0, 3, s );\n}\n"
-    expect(len(check_byte_reader_out_params(old_archive, strip_code(old_archive), "Source/Engine/Foo.cpp")) == 2, "Archive and BitReader output-parameter reads are flagged")
-    new_archive = "void f( Archive& arch, BitReader& bits )\n{\n    const uint32 n = arch.readCount( 4 );\n    const int32 s = bits.readInt( 0, 3 );\n}\n"
-    expect(check_byte_reader_out_params(new_archive, strip_code(new_archive), "Source/Engine/Foo.cpp") == [], "Archive and BitReader value reads pass")
-    from dev import byte_reader_values
-    expect(byte_reader_values.run_self_check() == 0, "byte-reader-values rewrite cases")
-    raw_path = 'void f( const string& folder )\n{\n    (void)FileUtil::exists( FileUtil::joinPath( folder, "a.txt" ) );\n}\n'
-    expect(len(check_disk_path_strings(raw_path, strip_code(raw_path), "Source/Engine/Foo.cpp")) == 1, "a string path into FileUtil disk I/O is flagged")
-    typed_path = 'void f( const AbsolutePath& folder, const string& text )\n{\n    (void)FileUtil::exists( folder );\n    (void)FileUtil::exists( FileUtil::toDiskPath( text ) );\n}\n'
-    expect(check_disk_path_strings(typed_path, strip_code(typed_path), "Source/Engine/Foo.cpp") == [], "an AbsolutePath and a toDiskPath argument pass")
-    round_trip = ('void f( const DerivedDataCache& cache, const AbsolutePath& root )\n{\n    (void)FileUtil::exists( FileUtil::toDiskPath( cache.makePath( 0, 1 ).str() ) );\n'
-                  '    (void)FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( root.str(), "a" ) ) );\n}\n')
-    expect(len(check_disk_path_strings(round_trip, strip_code(round_trip), "Source/Engine/Foo.cpp")) == 2, "a typed path taken out as text and wrapped again is flagged")
-    string_entry = 'void f( const string& configured )\n{\n    (void)FileUtil::exists( FileUtil::toDiskPath( configured ) );\n}\n'
-    expect(check_disk_path_strings(string_entry, strip_code(string_entry), "Source/Engine/Foo.cpp") == [], "a real string entry (setting · parameter text) wrapped once passes")
-    from dev import disk_path_args
-    expect(disk_path_args.run_self_check() == 0, "disk-path-args rewrite cases")
-    from dev import disk_path_join
-    expect(disk_path_join.run_self_check() == 0, "disk-path-join rewrite cases")
+    expect(check_bare_delegate_create(strip_code(wrapped), "Source/Engine/Foo.cpp", names) == [], "the macro form and a non-delegate factory pass")
     stripped = {
         'a // c\nb': 'a     \nb', 'x /* c\nd */ y': 'x     \n     y', 's = "q\\"w";': 's = "    ";', "c = 'x'; it's": "c = ' '; it's",
         'r = R"d(a)"b\n)d";': 'r = R       \n   ;', 'fooR"x"': 'fooR" "', '#define A \\\n  B\nint q;': '           \n   \nint q;',

@@ -27,7 +27,6 @@ namespace sw
      * @brief 바이너리 아카이브를 읽고 씁니다. 리플렉션 직렬화는 선택입니다.
      * @details 한 값 읽기(`readString` · `readCount` · `readVarUint` …)는 값을 돌려준다(`[[nodiscard]]`, 실패면 0 · 빈 값) — 출력 인자 꼴은 반환 `bool` 을 버리면 실패를
      *          잃었고 실패 때 출력 칸이 옛 값으로 남았다. 실패는 끈적한 `isError()` 하나로 본다(`ByteReader::hasOverflowed` · 언리얼 `FArchive::IsError` 와 같은 자리).
-     *          되돌리는 도구 · 남은 옛 모양 검사는 `py -3 -m Scripts byte-reader-values`(린트 `cpp-shape` 규칙 13).
      */
     class SW_API Archive
     {

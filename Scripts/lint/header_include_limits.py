@@ -4,7 +4,8 @@
 Scripts/lint/header_include_limits.py
 
 헤더 포함 상한(래칫) — 다이어트한 헤더(docs/agents/CppStyle.md Includes and layers)가 pch 밖에서 (전이적으로) 끌어오는 헤더 수를
-표(`Config/Rules/Lint/HeaderIncludeLimits.json` 의 `_limits` — 헤더 → 상한 · 까닭)의 상한과 견준다. 수는 `header-fanin` 의 `non-pch` 칸과 같은 계산이다(`dev.header_fanin`).
+표(`Config/Rules/Lint/HeaderIncludeLimits.json` 의 `_limits` — 헤더 → 상한 · 까닭)의 상한과 견준다.
+pch(`Engine/pch.h` · `Core/pch.h`)가 끄는 헤더는 TU 마다 이미 읽히므로 세지 않고, include 는 `#include "..."` 만 본다(조건부 포함은 모두 포함한 것으로 센다).
 - 수가 상한보다 **늘면** 진다 — 전방 선언(`Engine/Object/ObjectFwd.h` · `Engine/Reflection/ReflectionFwd.h`)이나 `.inl` · .cpp 로 옮긴다.
 - 수가 **줄면** 표도 같이 낮춰야 선다 — 옮긴 자리에 포함이 다시 들어오지 못한다(`magic-literals` 래칫과 같은 꼴).
 
@@ -14,21 +15,82 @@ Scripts/lint/header_include_limits.py
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Iterable, Mapping, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
-from dev.header_fanin import SUFFIXES, find_includes, measure_non_pch, resolve_edges  # noqa: E402
 from lint.index_cache import open_facts  # noqa: E402
 from lint.lint_scope import LintScope, list_repo_files, make_whole_scope  # noqa: E402
 from lint.rule_tables import ExceptionTable  # noqa: E402
 
 RULE_ID = "header-include-limits"
 _HEADER_SUFFIXES = (".h", ".hpp", ".inl", ".xxx")
+_INCLUDE = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.M)
+SUFFIXES = (".h", ".hpp", ".inl", ".cpp")
+_PCH_HEADERS = ("Engine/pch.h", "Core/pch.h")
+
+
+def find_includes(text: str) -> list[str]:
+    """`#include "..."` 의 글(경로를 풀기 전)."""
+    return _INCLUDE.findall(text)
+
+
+def resolve_edges(map_include: dict[str, list[str]]) -> dict[str, list[str]]:
+    """Source 기준 상대 경로 → include 글 목록을 저장소 파일 목록으로 푼다(Source 기준 경로, 없으면 같은 폴더 기준 — 저장소 밖 헤더는 뺀다)."""
+    edges: dict[str, list[str]] = {}
+    for relative, list_include in map_include.items():
+        targets = []
+        for include in list_include:
+            sibling = (Path(relative).parent / include).as_posix()
+            if include in map_include:
+                targets.append(include)
+            elif sibling in map_include:
+                targets.append(sibling)
+        edges[relative] = targets
+    return edges
+
+
+def compute_closures(edges: dict[str, list[str]]) -> dict[str, frozenset[str]]:
+    """파일마다 전이적으로 포함하는 파일 집합(순환은 끊는다)."""
+    closures: dict[str, frozenset[str]] = {}
+
+    def visit(node: str, stack: frozenset[str]) -> frozenset[str]:
+        if node in closures:
+            return closures[node]
+        result: set[str] = set()
+        for target in edges.get(node, []):
+            if target in stack:
+                continue
+            result.add(target)
+            result |= visit(target, stack | {node})
+        closures[node] = frozenset(result)
+        return closures[node]
+
+    sys.setrecursionlimit(max(10000, sys.getrecursionlimit()))
+    for node in edges:
+        visit(node, frozenset())
+    return closures
+
+
+def collect_pch_closure(closures: dict[str, frozenset[str]]) -> set[str]:
+    """pch 가 끄는 헤더(pch 자신 포함) — TU 마다 이미 읽혀 세지 않는다."""
+    pch_closure: set[str] = set()
+    for pch in _PCH_HEADERS:
+        if pch in closures:
+            pch_closure |= closures[pch] | {pch}
+    return pch_closure
+
+
+def measure_non_pch(edges: dict[str, list[str]], headers: Iterable[str]) -> dict[str, int | None]:
+    """헤더마다 pch 밖에서 끌어오는 헤더 수(`non_pch` 칸) — 없는 헤더는 None."""
+    closures = compute_closures(edges)
+    pch_closure = collect_pch_closure(closures)
+    return {header: (len(closures[header] - pch_closure) if header in closures else None) for header in headers}
 
 
 def list_limits(table: ExceptionTable) -> dict[str, int]:
@@ -53,7 +115,7 @@ def read_edges(project_root: Path) -> dict[str, list[str]]:
     """Source 의 include 그래프 — 파일마다의 include 글은 색인(`index_cache`)에 두고, 판정은 저장소 전체 (파일, include) 요약으로 푼다."""
     head = "Source/"
     list_path = [path for path in list_repo_files(project_root) if path.startswith(head) and path.endswith(SUFFIXES) and "ThirdParty" not in path.split("/")]
-    facts = open_facts(project_root, "header-include-limits", [__file__, str(Path(__file__).resolve().parents[1] / "dev" / "header_fanin.py")], list_path,
+    facts = open_facts(project_root, "header-include-limits", [__file__], list_path,
                        lambda _, text: find_includes(text), errors="replace", contribute=lambda path, list_include: [f"{path[len(head):]}	{include}" for include in list_include])
     map_include: dict[str, list[str]] = {path[len(head):]: [] for path in list_path}
     for token in facts.summary:

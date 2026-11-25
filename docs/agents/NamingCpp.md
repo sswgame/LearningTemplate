@@ -197,7 +197,7 @@ Use a banned verb only when it is the domain's own term (`UUID::generate`, `Surf
 Lint `naming-words` enforces the function form.
 
 - **No `macro()`** — it leaks every local into the caller. Use `function()` + `set(<name> … PARENT_SCOPE)` (we require 3.24, so no `return(PROPAGATE)`). A body that must run in the caller's scope stays a macro with a one-line reason.
-- Renames go through a pair table: `py -3 -m Scripts rename-symbol --pairs Config/Rules/Renames/<table>.json --reapply` (`"scope": "cmake"` for locals, `"ban": false` to keep them off `_bannedNames`).
+- Renames go through a pair table: `py -3 -m Scripts rename-symbol --pairs Config/Rules/Renames/<table>.json --reapply` (`"scope": "cmake"` for locals, `"ban": false` to keep them off `_bannedNames`); delete the table once every branch is merged.
 
 ### Python
 

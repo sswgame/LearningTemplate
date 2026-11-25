@@ -103,7 +103,7 @@ RULES: tuple[Rule, ...] = (
     # --- 래칫(늘지 않게만, 줄이면 `--accept`) -----------------------------------------------------------------------------
     Rule("magic-literals", "래칫", "일반 코드의 이름 없는 숫자 리터럴이 파일마다 늘어남", "리터럴이 매직인지는 형식이 가르지 못한다", "lint.magic_literals:check_magic_literals", tables=("Baseline",)),
     Rule("result-types", "모양", "std::optional · string& outError 모양(어디서나 0 — 예외는 까닭과 함께 표에)", "언어가 주는 모양이다", "lint.result_types:check_result_types", tables=("",)),
-    Rule("header-include-limits", "래칫", "다이어트한 헤더가 pch 밖에서 끌어오는 헤더 수가 상한 표보다 늘어남(줄면 표를 낮춘다)", "포함 사슬이 다시 길어지는 것을 막는 형식이 C++17 에 없다 — 측정 숫자(`header-fanin`)의 문턱이다", "lint.header_include_limits:check_header_include_limits", tables=("",)),
+    Rule("header-include-limits", "래칫", "다이어트한 헤더가 pch 밖에서 끌어오는 헤더 수가 상한 표보다 늘어남(줄면 표를 낮춘다)", "포함 사슬이 다시 길어지는 것을 막는 형식이 C++17 에 없다", "lint.header_include_limits:check_header_include_limits", tables=("",)),
 )
 
 RULE_BY_ID: dict[str, Rule] = {rule.id: rule for rule in RULES}

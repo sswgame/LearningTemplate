@@ -7,7 +7,7 @@ clang-tidy 를 병렬로 돌리고 진단을 검사 이름별로 모아 센다. 
   py -3 -m Scripts tidy                      # Source 의 모든 TU
   py -3 -m Scripts tidy --changed [기준]     # 기준(기본 origin/main)과 작업 트리가 다른 파일만 — 묶음 검증이 부른다
   py -3 -m Scripts tidy --files a.cpp b.h    # 지정한 파일만
-  py -3 -m Scripts tidy --checks '-*,modernize-*' --out 진단.json   # 검사 바꿔 보기 · 진단 전체를 JSON 으로
+  py -3 -m Scripts tidy --out 진단.json      # 진단 전체를 JSON 으로
   py -3 -m Scripts tidy --files a.cpp -- --fix                       # `--` 뒤는 clang-tidy 에 그대로
 
 컴파일 DB 는 **본 트리** `build/<프리셋>/compile_commands.json` 을 읽기만 한다 — 빌드하지 않고 빌드 폴더에 쓰지도 않는다.
@@ -381,7 +381,6 @@ def main(argv: list[str] | None = None) -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--changed", nargs="?", const=DEFAULT_BASE, metavar="기준", help=f"기준(기본 {DEFAULT_BASE})과 다른 파일만")
     mode.add_argument("--files", nargs="+", type=Path, help="지정한 파일만")
-    parser.add_argument("--checks", help="`.clang-tidy` 의 Checks 대신 쓸 목록(검사 확대 실측용)")
     parser.add_argument("--out", type=Path, help="중복을 뺀 진단 전체를 JSON 으로 쓴다")
     args = parser.parse_args(list_argument)
 
@@ -398,10 +397,8 @@ def main(argv: list[str] | None = None) -> int:
         list_entry, list_skipped = select_entries(list_entry, [path if path.is_absolute() else tree_root / path for path in args.files], tree_root / "Source")
     for path in list_skipped:
         print(f"[tidy] 건너뜀(컴파일 DB 에 TU 가 없다): {path}")
-    # `--` 뒤 인자(--fix 등)는 부작용이 있어 캐시를 쓰지 않는다. --checks 는 키에 들어간다.
+    # `--` 뒤 인자(--fix 등)는 부작용이 있어 캐시를 쓰지 않는다.
     use_cache = not list_extra
-    if args.checks:
-        list_extra = [f"--checks={args.checks}", *list_extra]
 
     lower_priority()
     started = time.monotonic()

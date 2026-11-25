@@ -16,15 +16,12 @@ Scripts/lint/result_types.py
 **0** 이어야 하고, 예외는 `Config/Rules/Lint/ResultTypes.json` 의 `_exemptions`(`경로|종류` → 까닭)에만 둔다. 예전에는 Core 밖 파일마다 종류별 수를
 기준선에 두는 래칫이었다 — 옮김이 끝나 기준선이 비었으므로(2026-11-21) 기준선 · `--ratchet` · `--accept` 를 지우고 Core 와 같은 규칙 하나로 둔다.
 
-    py -3 -m Scripts lint result-types                    # 폴더별 남은 수
-    py -3 -m Scripts lint result-types --check [--all]    # 검사(커밋 훅은 staged 파일)
-    py -3 -m Scripts lint result-types --self-check
+    py -3 -m Scripts lint result-types [--self-check]
 """
 
 from __future__ import annotations
 
 import argparse
-import collections
 import re
 import sys
 from pathlib import Path
@@ -34,14 +31,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.exit_code import ExitCode  # noqa: E402
 from lint.cpp_shape import find_param_list_end, BODY_OPEN, match_brace, strip_code  # noqa: E402
-from lint.format import get_modified_cpp_files  # noqa: E402
-from lint.lint_scope import LintScope, read_text  # noqa: E402
-from lint.magic_literals import is_source_file, list_source_files  # noqa: E402
+from lint.lint_scope import LintScope, make_whole_scope, read_text  # noqa: E402
+from lint.magic_literals import is_source_file  # noqa: E402
 from lint.rule_tables import ExceptionTable  # noqa: E402
 
 
 RULE_ID = "result-types"
-KINDS = ("std-optional", "out-error", "out-error-pointer", "out-text-on-failure")
 PATTERN = {
     "std-optional": re.compile(r"\bstd\s*::\s*(?:optional\b|nullopt\b|nullopt_t\b)"),
     "out-error": re.compile(r"\b(?:sw\s*::\s*)?string\s*&\s*out\w*(?:Error|Reason)\w*\b"),
@@ -124,19 +119,6 @@ def check_result_types(project_root: Path, scope: LintScope) -> list[str]:
     return find_problems(count_files(project_root, [project_root / relative for relative in list_relative]), list_relative, load_exemptions(project_root))
 
 
-def print_summary(actual: dict[str, dict[str, int]]) -> None:
-    count_by_folder: collections.Counter[tuple[str, str]] = collections.Counter()
-    for path, counts in actual.items():
-        folder = "/".join(path.split("/")[:2])
-        for kind, count in counts.items():
-            count_by_folder[(folder, kind)] += count
-    list_folder = sorted({folder for folder, _ in count_by_folder})
-    print(f"{'folder':<28}" + "".join(f"{kind:>14}" for kind in KINDS))
-    for folder in list_folder:
-        print(f"{folder:<28}" + "".join(f"{count_by_folder[(folder, kind)]:>14}" for kind in KINDS))
-    print(f"{'total':<28}" + "".join(f"{sum(count for (_, k), count in count_by_folder.items() if k == kind):>14}" for kind in KINDS))
-
-
 def run_self_check() -> int:
     failures = 0
 
@@ -176,8 +158,6 @@ def run_self_check() -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="결과 형식 검사: std::optional · string& outError · string* pOutError · 실패 때만 쓰는 글 출력 인자 모양이 어디에도 없게")
-    parser.add_argument("--check", action="store_true", help="수정된 C++ 파일(작업 트리 대 HEAD)을 검사한다(--all 은 모든 파일)")
-    parser.add_argument("--all", action="store_true", help="--check 와 함께: 모든 Source 파일")
     parser.add_argument("--self-check", action="store_true", help="세기 · 판정의 자체 검사")
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
@@ -185,17 +165,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_self_check()
 
     project_root = Path(__file__).resolve().parents[2]
-    if args.check:
-        list_file = list_source_files(project_root) if args.all else get_modified_cpp_files(project_root)
-        list_relative = [path.relative_to(project_root).as_posix() for path in list_file]
-        list_source = [path for path, relative in zip(list_file, list_relative) if is_source_file(relative)]
-        list_problem = find_problems(count_files(project_root, list_source), [relative for relative in list_relative if is_source_file(relative)], load_exemptions(project_root))
-        for problem in list_problem:
-            print(f"  - {problem}")
-        print(f"[ResultTypes] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
-        return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
-    print_summary(count_files(project_root, list_source_files(project_root)))
-    return ExitCode.PASSED
+    list_problem = check_result_types(project_root, make_whole_scope(project_root))
+    for problem in list_problem:
+        print(f"  - {problem}")
+    print(f"[ResultTypes] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
+    return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
 
 
 if __name__ == "__main__":
