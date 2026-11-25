@@ -264,6 +264,7 @@ namespace sw
 
 namespace sw
 {
+    class ShaderCompileClaims;
     class ShaderCompileSession;
 
     /** @brief 묶음 컴파일의 결과 하나를 받습니다 — 요청 번호(목록의 자리)와 결과. */
@@ -282,8 +283,9 @@ namespace sw
          * @return 컴파일 결과(성공 여부와 바이트코드)
          * @details 스레드 계약: 워커에서 동시에 불린다(병렬 쿠킹). 공유 상태는 읽기 전용(`AssetPaths` 읽기)이거나 원자값이다.
          *          서로 다른 @p desc 만 동시에 넣는다 — 같은 셰이더 변형을 두 스레드가 동시에 컴파일하면 같은 캐시 파일을 함께 쓴다.
+         * @param pClaims 지금 컴파일하는 글의 표(실행 중 컴파일). 글이 같은 요청이 동시에 오면 한 스레드만 컴파일한다. nullptr 이면 기다리지 않는다
          */
-        static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc );
+        static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc, ShaderCompileClaims* pClaims = nullptr );
         /**
          * @brief 요청 묶음을 병렬로 컴파일하고 요청마다 결과를 @p onCompiled 에 한 번씩 넘깁니다(쿠킹 · 데우기).
          * @details 요청마다 DDC 를 보고, 없는 것만 **한 번** 전처리해 닿는 글이 서로 다른 것만 하나씩 컴파일한다 — 글이 같은 변형은 그 결과를 함께 받는다(지면 같은 오류를 받는다).

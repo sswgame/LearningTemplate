@@ -20,6 +20,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompileClaims.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompileSession.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompilerBackend.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -345,6 +346,17 @@ namespace sw
                 return pending;
             }
 
+            /** @brief 다른 요청이 컴파일한 바이트코드를 쓰는 요청의 기록을 씁니다. */
+            static void writeSharedRecord( const PendingCompile& pending, uint64 bytecodeHash, ShaderCompileResult& inoutResult )
+            {
+                CookJob job{ pending._setup._action._jobDesc };
+                for ( const CookInput& input : pending._listInput )
+                {
+                    job.recordInput( input );
+                }
+                writeRecord( pending._setup, job, bytecodeHash, inoutResult );
+            }
+
             /** @brief 요청을 컴파일해 바이트코드와 기록을 DDC 에 씁니다. */
             static void compilePending( PendingCompile& pending, ShaderCompileResult& outResult )
             {
@@ -489,12 +501,7 @@ namespace sw
                         ShaderCompileResult   result  = _listResult[_listFollower[follower]._resultIndex];
                         if ( result._bSuccess )
                         {
-                            CookJob job{ pending._setup._action._jobDesc };
-                            for ( const CookInput& input : pending._listInput )
-                            {
-                                job.recordInput( input );
-                            }
-                            writeRecord( pending._setup, job, result._record._outputHash, result );
+                            writeSharedRecord( pending, result._record._outputHash, result );
                         }
                         _onCompiled( static_cast<uint32>( _begin + _listFollower[follower]._index ), result );
                     }
@@ -621,13 +628,28 @@ namespace sw
         return result._record.isFresh( Internal::makeCompileAction( Internal::makeFullDesc( requestDesc ), 0 )._jobDesc );
     }
 
-    ShaderCompileResult ShaderCompiler::compileHLSL( const ShaderCompileDesc& requestDesc )
+    ShaderCompileResult ShaderCompiler::compileHLSL( const ShaderCompileDesc& requestDesc, ShaderCompileClaims* pClaims )
     {
         using Internal = ShaderCompilerInternal;
         ShaderCompileResult                result{};
         optional<Internal::PendingCompile> pending = Internal::prepare( requestDesc, nullptr, result );
-        if ( pending.has_value() )
+        if ( pending.has_value() == false )
+            return result;
+        const bool bShared = pClaims != nullptr && pending->_sourceKey._key != 0 && pending->_setup._action._bUseCache;
+        if ( bShared == false )
+        {
             Internal::compilePending( *pending, result );
+            return result;
+        }
+        // 맡은 뒤 한 번 더 찾는다 — 앞서 맡은 스레드가 이 글을 막 컴파일했을 수 있다.
+        const ShaderCompileClaims::Scope claim{ *pClaims, pending->_sourceKey._key };
+        if ( Internal::findBytecodeOfText( *pending->_setup._pCache, pending->_sourceKey, result._bytecode ) )
+        {
+            result._bSuccess = true;
+            Internal::writeSharedRecord( *pending, ContentHash::computeBytes( result._bytecode ), result );
+            return result;
+        }
+        Internal::compilePending( *pending, result );
         return result;
     }
 
