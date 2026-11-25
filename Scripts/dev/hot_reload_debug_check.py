@@ -18,8 +18,8 @@ from common.paths import get_bin_dir, get_build_dir
 from common.run_process import run_cmake, run_process
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-PROBE_H = REPO / 'Source/Games/Playground/Testing/HotReloadTestComponent.h'
-PROBE_CPP = REPO / 'Source/Games/Playground/Testing/HotReloadTestComponent.cpp'
+PROBE_H = REPO / 'Source/Games/Playground/Dev/ScenarioTest/HotReloadTestComponent.h'
+PROBE_CPP = REPO / 'Source/Games/Playground/Dev/ScenarioTest/HotReloadTestComponent.cpp'
 FUNCTION = 'sw::HotReloadTestComponent::computeVersion'
 
 # lldb 안에서 도는 쪽(lldb 의 Python — 임베드 3.10). 결과는 JSON 한 줄로 낸다.

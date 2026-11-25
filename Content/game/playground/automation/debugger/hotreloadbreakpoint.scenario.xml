@@ -6,7 +6,7 @@
   이어서 module.reload 가 새 모듈을 올리고, 디버거는 같은 브레이크포인트가 새 모듈에서 멈추는지 본다. 이 시나리오는 판이 바뀌었는지 · 씬 값이 건넜는지를 본다.
 -->
 <Scenario name="game.playground.debugger.hotreloadbreakpoint" fixedDelta="0.0166667" timeoutFrames="7200" startAfter="Immediately" input="exclusive">
-	<LoadScene path="game/playground/maps/hotreloadprobe.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="game/playground/automation/debugger/hotreloadprobe/hotreloadprobe.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="HotReload.TestKept" equals="42" timeoutFrames="30"/> <!-- 탐침이 값을 받았다 -->
 	<Expect watch="HotReload.TestKept" equals="42"/>
 	<Store watch="HotReload.TestVersion" as="before"/>

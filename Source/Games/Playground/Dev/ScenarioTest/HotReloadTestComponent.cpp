@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Playground/Testing/HotReloadTestComponent.h"
+#include "Games/Playground/Dev/ScenarioTest/HotReloadTestComponent.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 

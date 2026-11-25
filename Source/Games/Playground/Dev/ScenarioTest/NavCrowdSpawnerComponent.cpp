@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Playground/Testing/NavCrowdSpawnerComponent.h"
+#include "Games/Playground/Dev/ScenarioTest/NavCrowdSpawnerComponent.h"
 
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/MathUtil.h"
@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 
-#include "Games/Playground/Testing/NavWanderComponent.h"
+#include "Games/Playground/Dev/ScenarioTest/NavWanderComponent.h"
 
 namespace sw
 {

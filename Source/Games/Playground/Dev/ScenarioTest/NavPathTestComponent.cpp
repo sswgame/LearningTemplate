@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Playground/Testing/NavPathTestComponent.h"
+#include "Games/Playground/Dev/ScenarioTest/NavPathTestComponent.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"

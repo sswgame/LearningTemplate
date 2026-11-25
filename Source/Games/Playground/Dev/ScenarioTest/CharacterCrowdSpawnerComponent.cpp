@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Playground/Testing/CharacterCrowdSpawnerComponent.h"
+#include "Games/Playground/Dev/ScenarioTest/CharacterCrowdSpawnerComponent.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Name/hashed_string.h"
