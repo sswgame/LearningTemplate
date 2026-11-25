@@ -114,9 +114,9 @@ namespace sw
         _pRenderThread  = _renderThreadSubsystem.findRenderThread();
         _pFrameRenderer = &_frameRendererSubsystem.getFrameRenderer();
         _pPacketBuilder = &_frameRendererSubsystem.getPacketBuilder();
-        _pSceneManager  = locateSubsystem<SceneManager>( &_startupScope );
-        _pUISystem      = locateSubsystem<UISystem>( &_startupScope );
-        _pFontService   = locateSubsystem<FontService>( &_startupScope );
+        _pSceneManager  = findSubsystemFrom<SceneManager>( &_startupScope );
+        _pUISystem      = findSubsystemFrom<UISystem>( &_startupScope );
+        _pFontService   = findSubsystemFrom<FontService>( &_startupScope );
         // 렌더 스레드가 앞 패킷을 그리며 엔진 설정(`_render`)을 읽는다 — 설정을 제자리에서 덮는 길(품질 옵션 · 파일 다시 읽기)은 받은 패킷을 끝낸 뒤에 덮는다.
         if ( ConfigManager* const pConfigManager = engine::findSubsystem<ConfigManager>() )
             pConfigManager->setWriteFence( SW_DELEGATE_METHOD( ConfigWriteFenceDelegate, &EngineRenderDriver::flushSubmittedPackets, this ) );

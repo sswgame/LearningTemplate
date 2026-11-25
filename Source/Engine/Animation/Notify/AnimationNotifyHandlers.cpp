@@ -54,7 +54,7 @@ namespace sw
             static ISoundPlayer* findSoundPlayer( const AnimationNotifyContext& context )
             {
                 GameObjectManager* pManager = context._owner.getMutableManager();
-                return pManager != nullptr ? locateSubsystem<ISoundPlayer>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
+                return pManager != nullptr ? findSubsystemFrom<ISoundPlayer>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
             }
 
             /** @class PlaySoundHandler @brief 소켓 위치에서 소리를 냅니다(현재 오디오는 위치를 받지 않으므로, 위치는 기록에만 남깁니다). */

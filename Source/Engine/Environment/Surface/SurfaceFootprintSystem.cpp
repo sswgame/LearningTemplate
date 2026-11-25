@@ -280,7 +280,7 @@ namespace sw
 
     void SurfaceFootprintSystem::playSound( const hashed_string& sound, const float3& point ) const
     {
-        ISoundPlayer* pSound = locateSubsystem<ISoundPlayer>( _pManager->getSceneEngineServices()._pEngineSubsystems );
+        ISoundPlayer* pSound = findSubsystemFrom<ISoundPlayer>( _pManager->getSceneEngineServices()._pEngineSubsystems );
         if ( pSound != nullptr )
             (void)pSound->postEventAt( sound, point );
     }

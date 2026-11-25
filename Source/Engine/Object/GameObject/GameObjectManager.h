@@ -541,7 +541,7 @@ namespace sw
          */
         AssetManager* findAssetManager() const { return _services._pAssetManager; }
         /**
-         * @brief 이 씬의 범위입니다 — 씬 서비스를 소유하고, 부모가 엔진 범위라 엔진 서비스도 타입으로 찾는다(`locateSubsystem<T>( &scope )`).
+         * @brief 이 씬의 범위입니다 — 씬 서비스를 소유하고, 부모가 엔진 범위라 엔진 서비스도 타입으로 찾는다(`findSubsystemFrom<T>( &scope )`).
          * @details 언리얼 `UWorld` 의 서브시스템 컬렉션과 같은 자리입니다.
          */
         const SubsystemScope& getSceneScope() const;

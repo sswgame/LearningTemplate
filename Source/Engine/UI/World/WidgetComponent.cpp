@@ -64,7 +64,7 @@ namespace sw
                 const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
                 if ( pManager == nullptr )
                     return nullptr;
-                UIWidgetComponentService* pService = locateSubsystem<UIWidgetComponentService>( pManager->getSceneEngineServices()._pEngineSubsystems );
+                UIWidgetComponentService* pService = findSubsystemFrom<UIWidgetComponentService>( pManager->getSceneEngineServices()._pEngineSubsystems );
                 return pService != nullptr && pService->isActive() ? pService : nullptr;
             }
         };

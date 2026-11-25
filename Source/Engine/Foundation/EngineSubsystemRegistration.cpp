@@ -13,7 +13,7 @@ namespace sw::engine
     {
         struct EngineRegistrationListInternal
         {
-            /** @brief @p pScope 부터 상위로 올라가며 @p typeHash 를 찾습니다(`locateSubsystem` 의 해시 판). */
+            /** @brief @p pScope 부터 상위로 올라가며 @p typeHash 를 찾습니다(`findSubsystemFrom` 의 해시 판). */
             static void* locate( const ISubsystemLocator* pScope, uint64 typeHash )
             {
                 for ( ; pScope != nullptr; pScope = pScope->getParentScope() )

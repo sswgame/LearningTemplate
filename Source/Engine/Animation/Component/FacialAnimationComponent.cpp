@@ -349,7 +349,7 @@ namespace sw
         }
         // 소리는 이 오브젝트가 속한 씬이 받은 엔진 범위의 소리 창구로 낸다(`SceneEngineServices::_pEngineSubsystems` — 전역 표를 다시 찾지 않는다).
         const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
-        ISoundPlayer*            pSound   = pManager != nullptr ? locateSubsystem<ISoundPlayer>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
+        ISoundPlayer*            pSound   = pManager != nullptr ? findSubsystemFrom<ISoundPlayer>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
         if ( pSound != nullptr )
             (void)pSound->play( assetID, hashed_string{} );
         return true;

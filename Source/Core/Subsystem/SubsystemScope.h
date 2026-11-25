@@ -4,7 +4,7 @@
  * @details 언리얼의 서브시스템 범위(엔진 · 에디터 · 게임 인스턴스, `GetSubsystem<T>()`)와 같은 자리입니다. 범위 하나는
  *          - 소유하는 서브시스템(`addSubsystem`, `SubsystemCollection` 이 의존 순서로 세우고 내린다)과
  *          - 소유하지 않는 객체(`bind`, 게임 카탈로그 · 테스트의 스택 객체 — 건 쪽이 범위보다 오래 살아야 한다)를
- *          타입 해시로 찾게 합니다. 조회(`locateSubsystem`)는 그 범위에서 찾고 없으면 상위 범위로 올라갑니다.
+ *          타입 해시로 찾게 합니다. 조회(`findSubsystemFrom`)는 그 범위에서 찾고 없으면 상위 범위로 올라갑니다.
  *          범위는 그것을 든 객체(게임 인스턴스 · 에디터 컨텍스트)와 수명이 같아, 모듈 라이브러리가 내려갈 때 그 객체와 함께 사라진다 —
  *          "건 칸을 풀지 않고 내려간 이미지" 를 훑어 회수할 일이 없다.
  *          **매단 자식 범위**(`mountChildScope`): 범위가 이름 붙은 자식 범위를 소유하고, 자식이 **공개한**(`publish`) 칸은 이 범위의 조회에도 보인다.
@@ -90,7 +90,7 @@ namespace sw
 
     /** @brief @p pScope 부터 상위로 올라가며 @p T 를 찾습니다. 어느 범위에도 없으면 nullptr 입니다. */
     template <typename T>
-    T* locateSubsystem( const ISubsystemLocator* pScope )
+    T* findSubsystemFrom( const ISubsystemLocator* pScope )
     {
         for ( ; pScope != nullptr; pScope = pScope->getParentScope() )
         {
@@ -103,9 +103,9 @@ namespace sw
 
     /** @brief 범위 @p scope 부터 찾은, 반드시 있어야 하는 @p T 입니다. 없으면 그 실행의 잘못이라 모든 구성에서 멈춥니다. */
     template <typename T>
-    T& requireSubsystem( const ISubsystemLocator& scope )
+    T& getSubsystemFrom( const ISubsystemLocator& scope )
     {
-        T* const pFound = locateSubsystem<T>( &scope );
+        T* const pFound = findSubsystemFrom<T>( &scope );
         if ( pFound == nullptr )
             ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         return *pFound;
@@ -253,7 +253,7 @@ namespace sw
 
         /**
          * @brief 이 범위에 있어야 하는 @p T 입니다. 없으면 부른 쪽의 잘못이라 모든 구성에서 오류를 남기고 멈춥니다(`internal::reportMissingRequiredService`, 소유한 서브시스템을 초기화 뒤에 묻는 자리).
-         * @details 같은 목록의 서브시스템을 초기화 중에 찾으면(`find` · `get` · `locateSubsystem` 모두) 찾는 쪽이 그것을 의존으로 선언했어야 한다 — 아니면 그 초기화가 진다
+         * @details 같은 목록의 서브시스템을 초기화 중에 찾으면(`find` · `get` · `findSubsystemFrom` 모두) 찾는 쪽이 그것을 의존으로 선언했어야 한다 — 아니면 그 초기화가 진다
          *          (`SubsystemCollection::recordInitializeLookup`).
          */
         template <class T>

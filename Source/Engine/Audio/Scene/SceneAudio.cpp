@@ -176,7 +176,7 @@ namespace sw
         , _listZoneValue{}
         , _listZoneCurrent{}
         , _manager{ manager }
-        , _pAudioService{ locateSubsystem<AudioService>( manager.getSceneEngineServices()._pEngineSubsystems ) }
+        , _pAudioService{ findSubsystemFrom<AudioService>( manager.getSceneEngineServices()._pEngineSubsystems ) }
         , _pEngineOverride{ nullptr }
         , _pOcclusionOverride{ nullptr }
         , _primaryListenerPosition{}

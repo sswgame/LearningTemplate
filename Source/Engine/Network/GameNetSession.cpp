@@ -1158,6 +1158,6 @@ namespace sw
     {
         // 합성 기록은 코어 범위(리소스 루트)에 있다 — 서비스 표가 서기 전이라 범위 사슬에서 찾는다.
         (void)build;
-        (void)scope.emplaceSubsystem<GameNetSession>( requireSubsystem<const ResourceComposition>( scope.getScope() ) );
+        (void)scope.emplaceSubsystem<GameNetSession>( getSubsystemFrom<const ResourceComposition>( scope.getScope() ) );
     } );
 } // namespace sw

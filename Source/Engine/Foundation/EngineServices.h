@@ -122,7 +122,7 @@ namespace sw
             else
             {
                 const ISubsystemLocator* pEngineScope = getEngineSubsystems(); // 범위를 직접 올라가는 것은 이 창구뿐이다
-                return locateSubsystem<T>( pEngineScope );
+                return findSubsystemFrom<T>( pEngineScope );
             }
         }
     } // namespace engine

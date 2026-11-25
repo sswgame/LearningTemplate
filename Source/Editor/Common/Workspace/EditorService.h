@@ -83,10 +83,10 @@ namespace sw::editor
     [[nodiscard]] T* findSubsystem()
     {
         static_assert( kIsAccessorOnlySubsystem<T> == false, "this subsystem has several instances - use its named accessor (e.g. getMainSceneSelection / getFocusedSelection)" );
-        T* pScoped = locateSubsystem<T>( findEditorScope() );
+        T* pScoped = findSubsystemFrom<T>( findEditorScope() );
         if ( pScoped != nullptr )
             return pScoped;
-        return locateSubsystem<T>( internal::findHostServices() );
+        return findSubsystemFrom<T>( internal::findHostServices() );
     }
 
     /**

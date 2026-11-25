@@ -64,7 +64,7 @@ SW_TEST_CASE( GameServiceTest, FallsThroughToHostServices )
     SubsystemScope              emptyScope;
     const game::ScopedGameScope scoped{ emptyScope };
     // 엔진이 서 있으면 호스트 표에 무엇이든 있다 — 범위에 없는 타입을 범위가 막지 않는지만 본다.
-    SW_EXPECT_TRUE( game::findSubsystem<ScopeTestService>() == locateSubsystem<ScopeTestService>( pHost ) );
+    SW_EXPECT_TRUE( game::findSubsystem<ScopeTestService>() == findSubsystemFrom<ScopeTestService>( pHost ) );
 }
 
 /**

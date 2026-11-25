@@ -149,7 +149,7 @@ namespace sw
 
     ScenePhysics::ScenePhysics( GameObjectManager& manager )
         : _manager{ manager }
-        , _pPhysicsSystem{ locateSubsystem<PhysicsSystem>( manager.getSceneEngineServices()._pEngineSubsystems ) }
+        , _pPhysicsSystem{ findSubsystemFrom<PhysicsSystem>( manager.getSceneEngineServices()._pEngineSubsystems ) }
         , _listCollider2D{}
         , _listMovedCollider2D{}
         , _listSweptOverlap2D{}

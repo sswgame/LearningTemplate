@@ -57,7 +57,7 @@ namespace sw
     {
         (void)build;
         TaskManager&              taskManager = scope.emplaceSubsystem<TaskManager>();
-        const CommandLineManager& commandLine = requireSubsystem<CommandLineManager>( scope.getScope() );
+        const CommandLineManager& commandLine = getSubsystemFrom<CommandLineManager>( scope.getScope() );
         int32                     workerCount = 0;
         if ( commandLine.getArgument( CommandLineArgument::WORKERS, workerCount ) == false )
             return;

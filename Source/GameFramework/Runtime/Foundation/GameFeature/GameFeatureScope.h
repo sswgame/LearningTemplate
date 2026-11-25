@@ -87,7 +87,7 @@ namespace sw
         [[nodiscard]] bool bindService( T* pService )
         {
             using TPlain = std::remove_const_t<T>;
-            if ( pService == nullptr || locateSubsystem<const TPlain>( &_gameScope ) != nullptr || _gameScope.bind( pService ) == false )
+            if ( pService == nullptr || findSubsystemFrom<const TPlain>( &_gameScope ) != nullptr || _gameScope.bind( pService ) == false )
             {
                 reportServiceConflict( getSubsystemTypeHash<T>() );
                 return false;

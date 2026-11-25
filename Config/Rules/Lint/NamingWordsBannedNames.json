@@ -2221,6 +2221,8 @@
     "CheckpointPassed": "KartRacer::_nextCheckpoint — 지난 수의 사본이었다 (2026-11-25)",
     "SeriesWon": "PartyRoundSeries::getWinner — 우승의 사본이었다 (2026-11-25)",
     "EnemiesRespawned": "Rested · Died — 적은 쉬거나 죽을 때 늘 다시 나온다 (2026-11-25)",
-    "GoldGained": "WalletEvent — 골드는 지갑이 알린다 (2026-11-25)"
+    "GoldGained": "WalletEvent — 골드는 지갑이 알린다 (2026-11-25)",
+    "locateSubsystem": "findSubsystemFrom — 찾기 동사는 get(없으면 멈춤) · find(없으면 nullptr) 둘 — 상위 범위까지 찾는 자유 함수는 From 을 붙인다(2026-11-26)(2026-11-26)",
+    "requireSubsystem": "getSubsystemFrom — 찾기 동사는 get(없으면 멈춤) · find(없으면 nullptr) 둘 — 상위 범위까지 찾는 자유 함수는 From 을 붙인다(2026-11-26)(2026-11-26)"
   }
 }

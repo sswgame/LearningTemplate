@@ -40,10 +40,10 @@ namespace sw
         template <typename T>
         T* findSubsystem()
         {
-            T* pScoped = locateSubsystem<T>( findGameScope() );
+            T* pScoped = findSubsystemFrom<T>( findGameScope() );
             if ( pScoped != nullptr )
                 return pScoped;
-            return locateSubsystem<T>( internal::findHostServices() );
+            return findSubsystemFrom<T>( internal::findHostServices() );
         }
 
         /**

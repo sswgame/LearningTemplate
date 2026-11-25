@@ -7,7 +7,7 @@
  *          비어 있는 칸은 "그 서비스가 없다" 는 뜻이고, 받는 쪽은 그 일을 건너뜁니다(전역 표를 다시 찾아가지 않습니다).
  *          `EngineServices.h` 는 엔진 · 앱 · 테스트 전용이라 여기서는 전방 선언만 씁니다 — 게임 모듈도 이 헤더를 지나 `GameObjectManager.h` 를 읽습니다.
  *          칸은 이 층(월드 · 5 층) 이하의 서비스만 둔다. 기능 층(6 — 물리 · 오디오 …)의 서비스는 그 기능의 씬 서비스가 `_pEngineSubsystems` 에서 타입으로 찾는다
- *          (`locateSubsystem<T>`) — 아래 층이 위 층 타입을 칸으로 들면 층 표(`EngineLayers.toml`)를 전방 선언으로 우회하게 된다(언리얼 `UWorld::GetSubsystem<T>` 와 같은 타입 조회).
+ *          (`findSubsystemFrom<T>`) — 아래 층이 위 층 타입을 칸으로 들면 층 표(`EngineLayers.toml`)를 전방 선언으로 우회하게 된다(언리얼 `UWorld::GetSubsystem<T>` 와 같은 타입 조회).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

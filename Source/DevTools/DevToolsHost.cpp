@@ -111,7 +111,7 @@ namespace sw
         // RenderDoc — 그래픽 API 를 만들 때 끼어들므로 RHI 디바이스보다 먼저 올린다(기동 단계는 아직 초기화 전이다). `-renderdoc` 이면 설치 경로에서 로드한다.
         if ( pRenderDriver != nullptr ) // 렌더 드라이버는 RHI 와 같은 조건으로 선다
         {
-            const CommandLineManager* const pCommandLine = locateSubsystem<CommandLineManager>( &startup );
+            const CommandLineManager* const pCommandLine = findSubsystemFrom<CommandLineManager>( &startup );
             RenderDocCapture::initialize( pCommandLine != nullptr && pCommandLine->isArgumentProvided( CommandLineArgument::RENDERDOC ) );
         }
         // 오래된 실행 산출물(`Saved` — 자동화 실행 · 로그 · 스크린샷 · 트레이스 …)을 자기 스레드에서 지운다.
@@ -119,7 +119,7 @@ namespace sw
         // 리로드 결과 집계 — 설정 · 셰이더 · 에디터 에셋 리로드가 결과를 적는다(`reload.status`). 리로드 주인보다 먼저 선다(셰이더 라이브 리로드는 클라이언트 부분 `IDevToolsClientPart` 가 세운다).
         (void)startup.emplaceSubsystem<ReloadTracker>();
         // 설정 파일 리로드는 서버에도 선다. 헤드리스 작업은 프레임을 돌지 않아 리로드할 자리가 없다 — `Config/` 감시를 걸지 않는다.
-        const CommandLineManager* const pHeadlessCommandLine = locateSubsystem<CommandLineManager>( &startup );
+        const CommandLineManager* const pHeadlessCommandLine = findSubsystemFrom<CommandLineManager>( &startup );
         const bool                      bHeadless            = pHeadlessCommandLine != nullptr && HeadlessTaskRegistration::isAnyRequested( *pHeadlessCommandLine );
         ConfigManager* const            pConfigManager       = startup.find<ConfigManager>();
         if ( pConfigManager != nullptr && bHeadless == false )

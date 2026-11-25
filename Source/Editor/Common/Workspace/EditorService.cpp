@@ -101,7 +101,7 @@ namespace sw::editor
         EditorSelection* findMainSceneSelectionInScope()
         {
             // 타입 조회(`findSubsystem<EditorSelection>`)는 막혀 있다 — 범위를 직접 본다. 이 파일만 메인 선택이 어디 있는지 안다.
-            return locateSubsystem<EditorSelection>( s_editorScope._pScope );
+            return findSubsystemFrom<EditorSelection>( s_editorScope._pScope );
         }
     } // namespace
 

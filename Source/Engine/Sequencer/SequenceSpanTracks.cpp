@@ -76,7 +76,7 @@ namespace sw
             /** @brief 시퀀스가 도는 씬이 받은 소리 창구입니다. 없으면(전용 서버 — 오디오를 짓지 않는다 · 하네스) nullptr 입니다. */
             static ISoundPlayer* findSoundPlayer( const SequenceSpanContext& context )
             {
-                return context._pManager != nullptr ? locateSubsystem<ISoundPlayer>( context._pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
+                return context._pManager != nullptr ? findSubsystemFrom<ISoundPlayer>( context._pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
             }
 
             static void enterAudio( const SequenceSpanContext& context )
