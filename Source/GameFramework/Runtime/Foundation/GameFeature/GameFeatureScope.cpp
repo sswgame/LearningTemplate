@@ -74,7 +74,7 @@ namespace sw
         return true;
     }
 
-    bool GameFeatureScope::addComponentRule( const hashed_string& receiver, const hashed_string& componentType )
+    bool GameFeatureScope::addComponentRule( const hashed_string& receiver, const hashed_string& componentType, void ( *pConfigure )( Component& ) )
     {
         GameFeatureComponents* const pComponents = _gameScope.find<GameFeatureComponents>();
         if ( pComponents == nullptr || receiver.empty() )
@@ -83,7 +83,7 @@ namespace sw
                              _name.c_str(), componentType.c_str(), receiver.c_str() );
             return false;
         }
-        const uint32 ruleID = pComponents->addRule( receiver, componentType );
+        const uint32 ruleID = pComponents->addRule( receiver, componentType, pConfigure );
         addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [this, ruleID]()
         {
             GameFeatureComponents* const pBound = _gameScope.find<GameFeatureComponents>();

@@ -15,9 +15,10 @@
 	<!-- 룸 이벤트가 HUD 에 닿는다 — 싸우는 동안 문이 잠겼다 -->
 	<WaitUntil watch="ActionCombat.HUDGateLocked" equals="1" timeoutFrames="30"/>
 	<Expect watch="ActionCombat.HUDNotification" equals="0"/>
-	<!-- 게임 기능 ActionCombat 가 받는 이름 Combatant 의 허수아비에 키트의 체력 컴포넌트를 붙였다 -->
+	<!-- 게임 기능 ActionCombat 가 받는 이름 Combatant 의 허수아비에 어빌리티 시스템을 붙이고 전투 세트를 줬다 — 체력이 차 있고 쓰러지지 않았다 -->
 	<Expect watch="GameFeature.AddedComponents" equals="1"/>
-	<Expect watch="Object.Property" target="TrainingDummy" key="UnitStatsComponent._bIsDead" equals="0"/>
+	<Expect watch="Ability.Attribute" target="TrainingDummy" key="Health" equals="100"/>
+	<Expect watch="Ability.HasTag" target="TrainingDummy" key="State.Dead" equals="0"/>
 	<!-- 홀: 오른쪽 졸개를 두 번 친다(쿨다운 0.28 초) -->
 	<Action name="KitDemo.Attack"/>
 	<AdvanceSimulation frames="24"/> <!-- 공격 쿨다운(0.28 초)이 지나는 0.4 초(시간이 내용) -->

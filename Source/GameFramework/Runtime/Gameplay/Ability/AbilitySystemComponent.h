@@ -113,7 +113,7 @@ namespace sw
      *
      *          **스레드**: 컴포넌트 틱은 오브젝트마다 병렬 워커에서 돈다. 자기 상태(시간, 자기 이펙트, 자기 어빌리티)는 바로 바꾼다.
      *          **다른 오브젝트에** 이펙트를 걸거나 이벤트를 보내면(`applyGameplayEffectSpecToTarget`, `sendGameplayEventToTarget`) 틱이 끝난 직후로 미룬다.
-     *          `UnitStatsComponent::takeDamage` 도 같은 규칙을 따른다. 체력이 깎일 때 띄우는 피해 숫자도 틱 직후에 만든다.
+     *          맞음(`receiveHit`)도 같은 규칙을 따른다. 체력이 깎일 때 띄우는 피해 숫자도 틱 직후에 만든다.
      *
      *          **연결된 UI**: 이 컴포넌트는 체력 원천(`IHealthSource`)이다. 체력이나 최대 체력이 바뀔 때마다 같은 오브젝트의
      *          `IHealthListener`(HP 바)에 비율을 알리고, 체력이 0 이면 쓰러짐(`Died`)을 알린다. 이 컴포넌트는 HP 바의 존재를 알지 못한다.

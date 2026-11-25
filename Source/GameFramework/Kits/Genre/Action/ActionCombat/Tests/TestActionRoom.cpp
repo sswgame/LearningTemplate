@@ -12,11 +12,12 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
-#include "GameFramework/Runtime/Character/Combat/Health/UnitStatsComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
 
 #include <cstring>
 #include <limits>
@@ -736,12 +737,13 @@ SW_TEST_CASE( MonsterCatalogTest, ReadsAllSections )
     SW_EXPECT_TRUE( pBoss->_archetype == sw::MonsterArchetype::RangedShooter );
     SW_EXPECT_EQUAL( 220, pBoss->_stats._hp );
     SW_EXPECT_EQUAL( 300, pBoss->_stats._maxHP );
-    sw::GameObjectManager   manager;
-    sw::UnitStatsComponent* pUnit = manager.createGameObject( sw::hashed_string( "Boss" ) )->addComponent<sw::UnitStatsComponent>();
+    sw::GameObjectManager       manager;
+    sw::AbilitySystemComponent* pUnit = manager.createGameObject( sw::hashed_string( "Boss" ) )->addComponent<sw::AbilitySystemComponent>();
     SW_REQUIRE_NOT_NULL( pUnit );
-    pBoss->_stats.applyTo( *pUnit ); // 카탈로그의 스탯이 유닛에 그대로 옮는다
-    SW_EXPECT_EQUAL( 220, pUnit->getHP() );
-    SW_EXPECT_EQUAL( 300, pUnit->getMaxHP() );
+    SW_REQUIRE_NOT_NULL( pUnit->addAttributeSet( sw::test::makeCombatAttributeSet() ) );
+    SW_REQUIRE_TRUE( pBoss->_stats.applyTo( *pUnit ) ); // 카탈로그의 스탯이 전투 세트에 그대로 옮는다
+    SW_EXPECT_NEAR( 220.0f, pUnit->getAttributeValue( sw::CombatAttributes::health() ).value_or( 0.0f ), kRoomTolerance );
+    SW_EXPECT_NEAR( 300.0f, pUnit->getAttributeValue( sw::CombatAttributes::maxHealth() ).value_or( 0.0f ), kRoomTolerance );
     SW_EXPECT_NEAR( 1.25f, pBoss->_ai._firstAttackDelay, kRoomTolerance );
     SW_REQUIRE_EQUAL( size_t( 2 ), pBoss->_listShot.size() );
     SW_EXPECT_NEAR( 1.5f, pBoss->_listShot[1]._angle.radians(), kRoomTolerance );

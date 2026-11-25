@@ -8,15 +8,19 @@
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Runtime/Character/Combat/Health/UnitStatsComponent.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 
 namespace sw
 {
-    void MonsterStatsDef::applyTo( UnitStatsComponent& unit ) const
+    bool MonsterStatsDef::applyTo( AbilitySystemComponent& abilities ) const
     {
-        unit.setStats( _hp, _maxHP, _atk, _def, _speed, _invincibility );
+        // 최대 체력을 먼저 쓴다 — 체력은 최대 안으로 잘린다(`CombatAttributeSet::clampCombatValue`).
+        return abilities.setAttributeBaseValue( CombatAttributes::maxHealth(), static_cast<float32>( _maxHP ) ) &&
+               abilities.setAttributeBaseValue( CombatAttributes::health(), static_cast<float32>( _hp ) ) &&
+               abilities.setAttributeBaseValue( CombatAttributes::attackPower(), static_cast<float32>( _atk ) ) && abilities.setAttributeBaseValue( CombatAttributes::moveSpeed(), _speed );
     }
 
     MonsterCatalog::MonsterCatalog()

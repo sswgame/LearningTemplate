@@ -70,7 +70,7 @@ namespace sw
 
         /**
          * @brief 피해 숫자 하나를 @p position 에 띄웁니다. 떠오르며 흐려지다가 수명이 다하면 지워집니다.
-         * @details 피해를 내는 모든 곳(`UnitStatsComponent`, `AbilitySystemComponent`)이 이것 하나를 쓴다.
+         * @details 피해를 내는 곳(`AbilitySystemComponent` — 체력을 쥐는 유일한 컴포넌트)이 이것 하나를 쓴다.
          *          오브젝트에 씬 컴포넌트, 화면 마커(`WidgetComponent`, 가운데 피벗), 이 컴포넌트를 붙인다.
          *          틱 중이면 만들기를 틱 직후로 미룬다. 틱 안에서는 컴포넌트를 붙일 수 없기 때문이다.
          *          수명 · 빠르기 · 색은 컴포넌트 칸의 기본값이다 — 게임은 gamesettings `<Defaults>` 로 바꾼다(언리얼 클래스 기본값 자리).

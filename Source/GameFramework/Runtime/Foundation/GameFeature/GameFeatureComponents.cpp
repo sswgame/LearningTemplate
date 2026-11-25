@@ -43,12 +43,13 @@ namespace sw
         }
     }
 
-    uint32 GameFeatureComponents::addRule( const hashed_string& receiver, const hashed_string& componentType )
+    uint32 GameFeatureComponents::addRule( const hashed_string& receiver, const hashed_string& componentType, void ( *pConfigure )( Component& ) )
     {
         GameFeatureComponentRule rule;
         rule._ruleID        = _nextRuleID++;
         rule._receiver      = receiver;
         rule._componentType = componentType;
+        rule._pConfigure    = pConfigure;
         _listRule.push_back( rule );
         for ( GameFeatureReceiverComponent* pReceiver : _listReceiver )
         {
