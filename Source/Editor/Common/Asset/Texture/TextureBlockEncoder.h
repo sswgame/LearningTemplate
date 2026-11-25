@@ -12,6 +12,11 @@
 
 #include "Engine/Graphics/RHI/RHIEnums.h"
 
+namespace sw
+{
+    class TaskManager;
+} // namespace sw
+
 namespace sw::editor
 {
     /**
@@ -24,8 +29,9 @@ namespace sw::editor
         [[nodiscard]] static bool isEncodable( RHIFormat format );
         /**
          * @brief @p pRGBA(행 = 너비 × 4 바이트)를 @p format 으로 인코딩해 @p ioBytes 끝에 더합니다. 인코더가 모르는 형식이면 오류를 남기고 false 입니다.
-         * @details EAC R11 · RG11 은 R · RG 채널만 쓴다. 입력의 다른 채널은 버린다.
+         * @details EAC R11 · RG11 은 R · RG 채널만 쓴다. 입력의 다른 채널은 버린다. 블록은 4×4 화소마다 독립이라 가로 띠로 잘라 @p pTaskManager 와 나눠 인코딩한다(결과 바이트는 같다).
+         * @param pTaskManager 띠를 나눠 돌 작업 시스템(빌림, 워커에서 불려도 된다). nullptr 이면 이 스레드가 차례로 한다.
          */
-        [[nodiscard]] static bool encodeMip( RHIFormat format, const uint8* pRGBA, uint32 width, uint32 height, vector<uint8>& ioBytes );
+        [[nodiscard]] static bool encodeMip( RHIFormat format, const uint8* pRGBA, uint32 width, uint32 height, vector<uint8>& ioBytes, TaskManager* pTaskManager = nullptr );
     };
 } // namespace sw::editor

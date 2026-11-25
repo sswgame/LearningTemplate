@@ -599,7 +599,7 @@ namespace sw::editor
         for ( size_t mip = 0; mip < metadata.mipLevels; ++mip )
         {
             const DirectX::Image* pImage = mipChain.GetImage( mip, 0, 0 );
-            if ( pImage == nullptr || TextureBlockEncoder::encodeMip( format, pImage->pixels, static_cast<uint32>( pImage->width ), static_cast<uint32>( pImage->height ), payload ) == false )
+            if ( pImage == nullptr || TextureBlockEncoder::encodeMip( format, pImage->pixels, static_cast<uint32>( pImage->width ), static_cast<uint32>( pImage->height ), payload, pTaskManager ) == false )
                 return false;
         }
         if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false )
