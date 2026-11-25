@@ -61,6 +61,7 @@ namespace sw
                 SW_UI_STYLE_FIELD_ROW( FocusRingColor, 0 ),
                 SW_UI_STYLE_FIELD_ROW( Opacity, Table::kAffectsSubtree ),
                 SW_UI_STYLE_FIELD_ROW( Transition, 0 ),
+                SW_UI_STYLE_FIELD_ROW( Size, Table::kAffectsLayout ),
             } ); // UIStyleField 와 줄 수가 다르면 makeEnumTable 이 컴파일을 멈춘다
 #undef SW_UI_STYLE_FIELD_ROW
 

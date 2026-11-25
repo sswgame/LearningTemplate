@@ -16,6 +16,7 @@
 #include "Engine/UI/Input/UIClipboardService.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Service/UINotificationService.h"
+#include "Engine/UI/Style/UIWidgetSkin.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
@@ -27,8 +28,6 @@ namespace sw
     {
         struct TextInputWidgetInternal
         {
-            static constexpr float32 kCaretWidth         = 2.0f;
-            static constexpr float32 kUnderlineThickness = 1.0f;
             /** @brief 포인터로 가장 가까운 글자 사이를 찾을 때 살피는 최대 코드 포인트 수입니다(그보다 길면 끝으로 갑니다). */
             static constexpr uint32 kMaxPointerSearchCodepoints = 512;
 
@@ -123,16 +122,13 @@ namespace sw
         , _text{}
         , _hintText{}
         , _maxLength{ 0 }
-        , _textColor{ 1.0f, 1.0f, 1.0f, 1.0f }
-        , _hintColor{ 1.0f, 1.0f, 1.0f, 0.4f }
-        , _selectionColor{ 0.30f, 0.50f, 1.00f, 0.40f }
-        , _caretColor{ 1.0f, 1.0f, 1.0f, 0.9f }
+        , _textColor{ UIWidgetSkin::get()._textInput._textColor }
+        , _hintColor{ UIWidgetSkin::get()._textInput._hintColor }
+        , _selectionColor{ UIWidgetSkin::get()._textInput._selectionColor }
+        , _caretColor{ UIWidgetSkin::get()._textInput._caretColor }
     {
-        UIBrush background      = UIBrush::makeSolid( float4{ 0.06f, 0.07f, 0.09f, 0.95f }, 4.0f );
-        background._borderColor = float4{ 0.45f, 0.48f, 0.55f, 1.0f };
-        background._borderWidth = 1.0f;
-        setBackground( background );
-        setContentPadding( float4{ 8.0f, 6.0f, 8.0f, 6.0f } );
+        setBackground( UIWidgetSkin::get()._textInput._background );
+        setContentPadding( UIWidgetSkin::get()._textInput._padding );
         unique_ptr<TextWidget> display = make_unique<TextWidget>();
         TextLayoutStyle        style   = display->getTextStyle();
         style._bWrap                   = false;
@@ -565,14 +561,14 @@ namespace sw
             const float32 last  = computeEdgeX( _caretByte + static_cast<uint32>( _composition.size() ) );
             CanvasBrush   underline{};
             underline._color = _caretColor;
-            painter.fillRect( float2{ MathUtil::min( first, last ), top + display._size._y - Internal::kUnderlineThickness },
-                              float2{ MathUtil::abs( last - first ), Internal::kUnderlineThickness }, underline );
+            painter.fillRect( float2{ MathUtil::min( first, last ), top + display._size._y - UIWidgetSkin::get()._textInput._underlineThickness },
+                              float2{ MathUtil::abs( last - first ), UIWidgetSkin::get()._textInput._underlineThickness }, underline );
         }
         // 커서는 조합 중이면 조합 글 끝에 둔다.
         const uint32 caretDisplayByte = _caretByte + static_cast<uint32>( _composition.size() );
         CanvasBrush  caret{};
         caret._color = _caretColor;
-        painter.fillRect( float2{ computeEdgeX( caretDisplayByte ), top }, float2{ Internal::kCaretWidth, display._size._y }, caret );
+        painter.fillRect( float2{ computeEdgeX( caretDisplayByte ), top }, float2{ UIWidgetSkin::get()._textInput._caretWidth, display._size._y }, caret );
     }
 } // namespace sw
 

@@ -66,6 +66,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _uiThemes; ///< 런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UIThemeCatalog`, 팩 설정이 덮어쓴다)
         PROPERTY( Required )
+        DataPath _uiWidgetSkin; ///< 엔진 위젯의 기본 겉모습 스타일 시트(`UIWidgetSkin` — 칸이 빠지면 기동이 멈춘다)
+        PROPERTY( Required )
         DataPath _uiOptionsMenu; ///< 옵션 메뉴 문서. 설정 스키마에서 탭과 행을 만드는 화면(`OptionsMenuScreen`, 팩 설정이 덮어쓴다)
         PROPERTY( Required )
         DataPath _uiPauseMenu; ///< 일시정지 메뉴 문서 — 팩 설정이 `_bUIPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`)

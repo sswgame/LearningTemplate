@@ -19,6 +19,7 @@
 #include "Engine/UI/Style/UIStyleSheet.h"
 #include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/Style/UIThemeController.h"
+#include "Engine/UI/Style/UIWidgetSkin.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
@@ -32,6 +33,7 @@ namespace sw
         , _updateSubscription{}
         , _documentReloadedSubscription{}
         , _styleSheetReloadedSubscription{}
+        , _widgetSkinChangedSubscription{}
         , _themeChangedSubscription{}
     {
     }
@@ -45,6 +47,7 @@ namespace sw
         _updateSubscription             = _pUI->onUpdateAfterPaint().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UIOffscreenScreens::update, this ) );
         _documentReloadedSubscription   = engine::getSubsystem<UIDocumentCache>().onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UIOffscreenScreens::onDocumentReloaded, this ) );
         _styleSheetReloadedSubscription = engine::getSubsystem<UIStyleSheetCache>().onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UIOffscreenScreens::onStyleSheetReloaded, this ) );
+        _widgetSkinChangedSubscription  = engine::getSubsystem<UIWidgetSkinService>().onSkinChanged().add( SW_DELEGATE_METHOD( Delegate<void()>, &UIOffscreenScreens::onWidgetSkinChanged, this ) );
         _themeChangedSubscription       = _pThemes->onThemeChanged().add( SW_DELEGATE_METHOD( Delegate<void()>, &UIOffscreenScreens::onThemeChanged, this ) );
         return SubsystemInitResult::Succeeded;
     }
@@ -52,6 +55,7 @@ namespace sw
     void UIOffscreenScreens::shutdownSubsystem()
     {
         _themeChangedSubscription.reset();
+        _widgetSkinChangedSubscription.reset();
         _styleSheetReloadedSubscription.reset();
         _documentReloadedSubscription.reset();
         _updateSubscription.reset();
@@ -62,7 +66,7 @@ namespace sw
 
     span<const utf8* const> UIOffscreenScreens::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName, UIThemeController::kSubsystemName, UIDocumentCache::kSubsystemName, UIStyleSheetCache::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName, UIThemeController::kSubsystemName, UIDocumentCache::kSubsystemName, UIStyleSheetCache::kSubsystemName, UIWidgetSkinService::kSubsystemName };
         return kArrDependency;
     }
 
@@ -217,6 +221,15 @@ namespace sw
             }
             if ( bUses )
                 _pThemes->rebuildStyleSet( *offscreen._screen, offscreen._theme );
+        }
+    }
+
+    void UIOffscreenScreens::onWidgetSkinChanged()
+    {
+        for ( UIOffscreenScreen& offscreen : _listOffscreen )
+        {
+            if ( _pUI->rebuildScreenFromDocument( *offscreen._screen ) )
+                _pThemes->rebuildStyleSet( *offscreen._screen, offscreen._theme ); // 다시 짓기는 지금 테마로 맞췄다 — 이 화면의 테마로 되돌린다
         }
     }
 

@@ -28,10 +28,6 @@ namespace sw
         /** @brief 값이 바뀌었을 때의 알림입니다. */
         using ValueChangedDelegate = MulticastDelegate<void( float32 )>;
 
-        /** @brief 기본 원하는 크기(UI 단위)입니다. 슬롯 덮어쓰기로 바꿀 수 있습니다. */
-        static constexpr float32 kDefaultLength    = 200.0f;
-        static constexpr float32 kDefaultThickness = 24.0f;
-
         SliderWidget();
         ~SliderWidget() override;
 

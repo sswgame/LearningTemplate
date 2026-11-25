@@ -26,11 +26,6 @@ namespace sw
         /** @brief 바뀐 값 알림입니다. */
         using CheckedDelegate = MulticastDelegate<void( bool )>;
 
-        /** @brief 상자 한 변(UI 단위)입니다. */
-        static constexpr float32 kBoxSize = 20.0f;
-        /** @brief 상자와 글 사이 틈입니다. */
-        static constexpr float32 kBoxGap = 8.0f;
-
         CheckBoxWidget();
         ~CheckBoxWidget() override;
 

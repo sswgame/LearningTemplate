@@ -51,6 +51,7 @@
 #include "Engine/UI/Style/UIStyleSheet.h"
 #include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/Style/UIThemeController.h"
+#include "Engine/UI/Style/UIWidgetSkin.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
@@ -177,6 +178,7 @@ namespace sw
         , _pStyleSheetCache{ nullptr }
         , _documentReloadedSubscription{}
         , _styleSheetReloadedSubscription{}
+        , _widgetSkinChangedSubscription{}
         , _pThemes{ nullptr }
         , _themeChangedSubscription{}
         , _listReopenDocument{}
@@ -231,6 +233,7 @@ namespace sw
         _pStyleSheetCache               = &engine::getSubsystem<UIStyleSheetCache>();
         _documentReloadedSubscription   = _pDocumentCache->onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onDocumentReloaded, this ) );
         _styleSheetReloadedSubscription = _pStyleSheetCache->onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onStyleSheetReloaded, this ) );
+        _widgetSkinChangedSubscription  = engine::getSubsystem<UIWidgetSkinService>().onSkinChanged().add( SW_DELEGATE_METHOD( Delegate<void()>, &UISystem::onWidgetSkinChanged, this ) );
         _pThemes                        = &engine::getSubsystem<UIThemeController>();
         _themeChangedSubscription       = _pThemes->onThemeChanged().add( SW_DELEGATE_METHOD( Delegate<void()>, &UISystem::onThemeChanged, this ) );
         _textLayout                     = pFontService != nullptr ? make_unique<TextLayoutEngine>( *pFontService ) : nullptr;
@@ -253,6 +256,7 @@ namespace sw
         _listReopenDocument.clear();
         _documentReloadedSubscription.reset();
         _styleSheetReloadedSubscription.reset();
+        _widgetSkinChangedSubscription.reset();
         _themeChangedSubscription.reset();
         refreshActiveScreen();
         _input.shutdown();
@@ -265,7 +269,7 @@ namespace sw
     {
         static constexpr const utf8* kArrDependency[] = { FontService::kSubsystemName, InputManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName,
                                                           UserSettingsManager::kSubsystemName, UIBindingConverterRegistry::kSubsystemName,
-                                                          UIDocumentCache::kSubsystemName, UIStyleSheetCache::kSubsystemName, UIThemeController::kSubsystemName };
+                                                          UIDocumentCache::kSubsystemName, UIStyleSheetCache::kSubsystemName, UIThemeController::kSubsystemName, UIWidgetSkinService::kSubsystemName };
         return kArrDependency;
     }
 
@@ -519,6 +523,15 @@ namespace sw
             }
             if ( bUses )
                 rebuildStyleSet( *screen );
+        }
+    }
+
+    void UISystem::onWidgetSkinChanged()
+    {
+        for ( const unique_ptr<UIScreen>& screen : _listScreen )
+        {
+            if ( screen->_documentPath.empty() == false )
+                (void)rebuildScreenFromDocument( *screen ); // 못 지으면 오류를 남기고 옛 트리를 쓴다
         }
     }
 
