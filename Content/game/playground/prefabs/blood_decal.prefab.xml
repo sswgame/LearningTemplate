@@ -1,6 +1,6 @@
 <?asset guid="3b9e6f0d82c14a57b6d1f2908e4c7a15"?>
 <!-- 피 데칼(HitDecalComponent 가 세운다) — 어두운 빨강, 젖은 거칠기. 30 초 뒤 5 초 동안 흐려지고 비에 초당 4 % 씻긴다(DecalRainWashSystem, 지붕 아래는 씻기지 않는다). 텍스처는 Kenney 파티클 팩(CC0). -->
-<Prefab formatVersion="1" name="BloodDecal">
+<Prefab formatVersion="0" name="BloodDecal">
 	<GameObject _schemaVersion="0" _name="BloodDecal" _bActive="true">
 		<_listComponent>
 			<DecalComponent _localID="10502648713637692926" _localPosition="0,0,0"

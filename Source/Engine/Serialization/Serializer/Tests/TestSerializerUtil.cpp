@@ -560,6 +560,10 @@ SW_TEST_CASE( BinarySerializerTest, SchemaLayoutStreamMatchesTheTaggedValues )
         SW_EXPECT_LOG( "BinarySerializer.BinaryStreamWireVersion" );
         SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), layoutBytes.size(), SerializeContext::getDefault( purpose ) ) );
     }
+    // 0 으로 채워진 머리는 첫 버전(0)이 아니라 버전 없는 바이트다 — 빈 객체로 읽지 않는다.
+    const vector<uint8> zeroHeader( sizeof( uint32 ), uint8{ 0 } );
+    SW_EXPECT_LOG( "BinarySerializer.BinaryStreamWireVersion" );
+    SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, zeroHeader.data(), zeroHeader.size() ) );
     // 배치 해시가 다르면(다른 빌드의 쿠킹본) 값을 하나도 쓰지 않고 거절한다.
     vector<uint8> otherLayout = layoutBytes;
     otherLayout[sizeof( uint32 )] ^= 1;

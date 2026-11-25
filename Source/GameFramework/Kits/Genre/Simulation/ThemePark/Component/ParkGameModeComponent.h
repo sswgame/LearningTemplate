@@ -41,7 +41,7 @@ namespace sw
      * @details 시뮬레이션, 건설한 것, 열차 위치는 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드와 세이브를 넘긴다.
      *          코스터 트랙은 배치 데이터에서 다시 만든다.
      */
-    REFLECT( Version = 2, Category = "ThemePark", DisplayName = "Park Game Mode", Tooltip = "Runs the park simulation, the coaster trains and building; the park layout is placed at this object's scene component" )
+    REFLECT( Category = "ThemePark", DisplayName = "Park Game Mode", Tooltip = "Runs the park simulation, the coaster trains and building; the park layout is placed at this object's scene component" )
     class SW_KIT_API ParkGameModeComponent : public GameModeComponent
     {
     public:

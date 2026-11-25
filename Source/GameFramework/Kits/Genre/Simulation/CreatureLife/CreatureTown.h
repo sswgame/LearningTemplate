@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -14,6 +13,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -175,8 +175,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "CTWN" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 집이 리플렉션 상태 칸이다
+        static constexpr FormatDef kStateFormat{ "CTWN" };
 
         CreatureTown();
 

@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 from typing import Callable, Iterable
 
-CACHE_VERSION = 2
+CACHE_VERSION = 0
 
 
 class FileDigestCache:

@@ -43,9 +43,6 @@ namespace sw
     class SW_GF_API GameStateSnapshot
     {
     public:
-        /** @brief 판 올림 사슬의 종류 이름입니다(`FormatUpgradeDomain::SaveBytes`). 바꾸지 않는다 — 바꾸면 옛 세이브의 단계를 찾지 못한다. */
-        static constexpr const utf8* kFormatKind = "GameStateSnapshot";
-
         /** @brief 엔진 컴포넌트(지형)와 정적으로 등록된 프레임워크 컴포넌트를 올립니다. */
         GameStateSnapshot();
         ~GameStateSnapshot();
@@ -96,7 +93,7 @@ namespace sw
         [[nodiscard]] expected<void, SnapshotRestoreFailure> readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer,
                                                                            uint32 size );
         /**
-         * @brief 옛 판 봉투 @p inoutBytes 를 이 빌드의 판까지 제자리에서 올립니다(`SW_SAVE_FORMAT_UPGRADE`) — 슬롯에서 읽은 바이트를 풀기 전에 한 번 부른다. 이 판이면 할 일이 없다.
+         * @brief 옛 판 봉투 @p inoutBytes 를 이 빌드의 판까지 제자리에서 올립니다(형식의 단계 `FormatDef`) — 슬롯에서 읽은 바이트를 풀기 전에 한 번 부른다. 이 판이면 할 일이 없다.
          * @return 빠진 단계 · 단계 실패면 오류를 남기고 false 입니다. 머리가 없거나 새 판인 바이트는 true 다(읽기가 까닭을 남기고 거절한다).
          */
         [[nodiscard]] static bool upgradeEnvelope( vector<uint8>& inoutBytes );
@@ -112,7 +109,7 @@ namespace sw
         {
             string           _sceneID;         ///< 찍은 씬의 지금 리소스 id(씬 없이 찍었으면 빈 글)
             float64          _playTime{ 0.0 }; ///< 찍을 때까지의 플레이 시간(초)
-            UnixMilliseconds _savedTime{ 0 };  ///< 찍은 벽시계 시각(UTC). 머리에 시각이 없던 옛 판이면 0
+            UnixMilliseconds _savedTime{ 0 };  ///< 찍은 벽시계 시각(UTC)
         };
         /** @brief 봉투의 머리만 읽어 이 세이브의 정보를 돌려줍니다. 머리를 읽지 못하면 없음입니다(`readSceneID` 와 같은 길). */
         [[nodiscard]] static optional<SaveInfo> readSaveInfo( const void* pInBuffer, uint32 size );

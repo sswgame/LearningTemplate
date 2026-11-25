@@ -1174,7 +1174,7 @@ namespace
         static vector<uint8> encode( std::initializer_list<int64> listValue )
         {
             BitWriter writer;
-            writer.writeBits( 1, 8 ); // 서비스의 레코드 형식 판
+            writer.writeBits( 0, 8 ); // 서비스의 레코드 형식 판
             for ( const int64 value : listValue )
             {
                 writer.writeVarInt( value );

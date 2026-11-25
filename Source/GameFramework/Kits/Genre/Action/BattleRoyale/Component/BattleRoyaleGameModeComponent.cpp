@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Component/BattleRoyaleGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
@@ -13,6 +12,7 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -23,8 +23,7 @@ namespace sw
     {
         struct BattleRoyaleGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "BRGM" );
-            static constexpr uint32 kStateVersion = 3; ///< 2: 사람마다 든 총이 실린다. 3: 보급 상자가 판의 리플렉션 상태 칸이다
+            static constexpr FormatDef kStateFormat{ "BRGM" };
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
@@ -815,7 +814,7 @@ namespace sw
 
     void BattleRoyaleGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( BattleRoyaleGameModeComponentInternal::kStateTag, BattleRoyaleGameModeComponentInternal::kStateVersion );
+        io.header( BattleRoyaleGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 판은 같은 카탈로그 · 분대로 연 뒤에 읽는다(키트 계약). 비행 경로는 씨앗으로 `startGame` 이 이미 정했고, 입력 명령은 싣지 않는다.

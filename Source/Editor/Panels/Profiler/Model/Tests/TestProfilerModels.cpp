@@ -441,11 +441,11 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, BadFilesAreRefused )
     SW_EXPECT_FALSE( history.loadFromFile( Util::makeTempPath( "SwProfilerNoSuchFile.txt" ) ) );
     const utf8* const arrBad[] = {
         "NotACapture\nwindow 2\ncaptured 1\n",                         // 머리
-        "SWProfilerCapture 1\nwindow 0\ncaptured 1\n",                 // 창 0
-        "SWProfilerCapture 1\nwindow 200000\ncaptured 1\n",            // 창이 너무 크다
-        "SWProfilerCapture 1\nwindow 2\ncaptured 1\n0\tA\t1.0\n",      // 값 수가 창과 다르다
-        "SWProfilerCapture 1\nwindow 2\ncaptured 1\n9\tA\t1.0,2.0\n",  // 없는 종류
-        "SWProfilerCapture 1\nwindow 2\ncaptured 1\n0\tA\t1.0,oops\n", // 숫자가 아니다
+        "SWProfilerCapture 0\nwindow 0\ncaptured 1\n",                 // 창 0
+        "SWProfilerCapture 0\nwindow 200000\ncaptured 1\n",            // 창이 너무 크다
+        "SWProfilerCapture 0\nwindow 2\ncaptured 1\n0\tA\t1.0\n",      // 값 수가 창과 다르다
+        "SWProfilerCapture 0\nwindow 2\ncaptured 1\n9\tA\t1.0,2.0\n",  // 없는 종류
+        "SWProfilerCapture 0\nwindow 2\ncaptured 1\n0\tA\t1.0,oops\n", // 숫자가 아니다
     };
     for ( const utf8* pText : arrBad )
     {
@@ -464,7 +464,7 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, CapturingAfterALoadStartsANewRecording )
     unique_ptr<FrameProfiler> pProfiler = Util::makeProfiler();
     const uint32              slot      = pProfiler->registerScope( "Live" );
     const AbsolutePath        path      = Util::makeTempPath( "SwProfilerResume.txt" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "SWProfilerCapture 1\nwindow 3\ncaptured 3\n0\tOldRun\t7.0,7.0,7.0\n" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "SWProfilerCapture 0\nwindow 3\ncaptured 3\n0\tOldRun\t7.0,7.0,7.0\n" ) );
     ProfilerScopeHistory history( 3 );
     SW_REQUIRE_TRUE( history.loadFromFile( path ) );
     (void)FileUtil::removeFile( path );

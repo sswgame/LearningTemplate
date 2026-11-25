@@ -1,5 +1,5 @@
 <?asset guid="b70f2e95d3c84a61924ae6f1c8d07b52"?>
-<Scene formatVersion="3" name="WeatherGarden">
+<Scene formatVersion="0" name="WeatherGarden">
 	<!-- 환경 마당(automation/weathergarden) — 날씨 · 바람 · 풀베기 · 피 데칼을 한 자리에서 본다. 날씨는 Weather 의 판 상태가 data/weathergarden.weather.xml 로 연다.
 	     가운데(원점) 빈 마당: 바닥은 날씨 묶음을 따르는 환경 표면(젖음 · 웅덩이 · 눈). 왼쪽 풀밭(x -8 ~ 0): Fighter(스켈레톤 전사)가 휘두르면(HitWindow — foliage 0.9) 풀이 베이고 3 초 뒤 다시 자라며,
 	     둘레의 Target 이 맞아 피 데칼을 땅에 남긴다(HitDecalComponent, 비에 씻긴다). 앞 Flag: 바람에 날리는 천. 오른쪽(x 9 ~ 15) Shelter: 지붕과 뒤 벽 — 비가 들지 않고 빗소리가 먹먹하다.

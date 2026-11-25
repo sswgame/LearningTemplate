@@ -38,7 +38,7 @@ namespace sw
      * @brief UI 문서 하나입니다(`UIDocumentCache` 가 경로별로 나눠 줍니다). 루트 `UIDocument` 아래에 화면 서술, 스타일 시트 목록, 루트 위젯 하나가 있습니다.
      * @details 형식은 다음과 같다(유니티 UXML, UMG 위젯 블루프린트에 해당).
      *          ```xml
-     *          <UIDocument _schemaVersion="1">
+     *          <UIDocument _schemaVersion="0">
      *              <UIScreenDef _layer="Menu" _defaultFocus="Resume" />   (없으면 기본값)
      *              <_listStyleSheet><item>guid:…</item></_listStyleSheet>
      *              <_listAnimation><UIAnimation _name="Open"> … 트랙(_listTrack), 키(_listKey), 이벤트(_listEvent) … </UIAnimation></_listAnimation>
@@ -50,7 +50,7 @@ namespace sw
      */
     struct UIDocumentAsset
     {
-        static constexpr uint32 kVersion     = 1; ///< `_schemaVersion` 입니다. 이전 형식 리더는 두지 않습니다.
+        static constexpr uint32 kVersion     = 0;
         static constexpr utf8   kExtension[] = ".ui.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

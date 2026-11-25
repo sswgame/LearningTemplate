@@ -1,5 +1,5 @@
 <?asset guid="48cf4d1a09ee442fbf00c98996f28c63"?>
-<Scene formatVersion="3" name="MonsterCollectorGlade">
+<Scene formatVersion="0" name="MonsterCollectorGlade">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

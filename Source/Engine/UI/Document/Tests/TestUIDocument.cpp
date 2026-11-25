@@ -33,7 +33,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kDocumentXML = R"(<UIDocument _schemaVersion="1">
+    constexpr const utf8* kDocumentXML = R"(<UIDocument _schemaVersion="0">
   <UIScreenDef _bPausesGame="true"/>
   <_listStyleSheet><item>engine/ui/a.uss.xml</item></_listStyleSheet>
   <_listAnimation>
@@ -68,7 +68,7 @@ namespace
     string makeDocument( const utf8* pBody )
     {
         StringBuilder<constant::buffer::kMax1024> document;
-        document.appendFormat( "<UIDocument _schemaVersion=\"1\">%#</UIDocument>", pBody );
+        document.appendFormat( "<UIDocument _schemaVersion=\"0\">%#</UIDocument>", pBody );
         return string( document.view() );
     }
 
@@ -241,7 +241,7 @@ SW_TEST_CASE( UIDocumentTest, RefusesBadDocuments )
     expectRefused( "<Other/>", "root element" );
     expectRefused( "<UIDocument><BoxPanel/></UIDocument>", "needs _schemaVersion" );
     expectRefused( "<UIDocument _schemaVersion=\"99\"><BoxPanel/></UIDocument>", "not supported" );
-    expectRefused( "<UIDocument _schemaVersion=\"1\" odd=\"1\"><BoxPanel/></UIDocument>", "unknown attribute" );
+    expectRefused( "<UIDocument _schemaVersion=\"0\" odd=\"1\"><BoxPanel/></UIDocument>", "unknown attribute" );
     expectRefused( makeDocument( "" ).c_str(), "no root widget" );
     expectRefused( makeDocument( "<BoxPanel/><BoxPanel/>" ).c_str(), "more than one root widget" );
     expectRefused( makeDocument( "<UIScreenDef/><UIScreenDef/><BoxPanel/>" ).c_str(), "more than one UIScreenDef" );
@@ -262,7 +262,7 @@ SW_TEST_CASE( UIDocumentTest, ErrorsCarryPathAndLine )
 {
     UIDocumentAsset asset;
     string          error;
-    error = describeFailure( UIDocumentLoader::parse( "<UIDocument _schemaVersion=\"1\">\n<BoxPanel>\n<odd/>\n</BoxPanel>\n</UIDocument>", "engine/ui/lines.ui.xml", ResourceContext::forDocument(), asset ) );
+    error = describeFailure( UIDocumentLoader::parse( "<UIDocument _schemaVersion=\"0\">\n<BoxPanel>\n<odd/>\n</BoxPanel>\n</UIDocument>", "engine/ui/lines.ui.xml", ResourceContext::forDocument(), asset ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "engine/ui/lines.ui.xml:3:" ) != string::npos );
 }

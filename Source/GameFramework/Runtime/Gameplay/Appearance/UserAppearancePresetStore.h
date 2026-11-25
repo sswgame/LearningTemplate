@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveGame.h"
@@ -45,7 +46,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 외형 프리셋 세이브 본문(JSON)입니다. 판(`_formatVersion`)이 `UserAppearancePresetStore::kVersion` 이 아니면 읽지 않습니다. */
+    /** @brief 외형 프리셋 세이브 본문(JSON)입니다. 판(`_formatVersion`)이 `UserAppearancePresetStore::kFormat` 의 판이 아니면 읽지 않습니다. */
     REFLECT()
     struct SW_GF_API UserAppearancePresetFile
     {
@@ -65,13 +66,12 @@ namespace sw
      * @class UserAppearancePresetStore
      * @brief 플레이어 프리셋 목록을 리플렉션 JSON(`UserAppearancePresetFile`)으로 읽고 씁니다. 로컬 저장 슬롯의 본문에 해당합니다. 프리셋 내용은 공유 코드(`AppearanceSelection`) 한 줄로 싣습니다.
      *        세이브와 공유가 같은 코드이고 콘텐츠가 바뀌어도 읽힙니다. 펼칠 때 `AppearanceSelection::applySelection` 이 지워진 것을 보고합니다.
-     * @details 판 3 부터 JSON 이다. 판 1 · 2 의 `key=value` 세이브와 판 3(썸네일 경로)은 출시 전 데이터라 읽는 길을 두지 않았다 — 읽기가 실패로 알린다.
-     *          현재 판보다 새 파일도 읽지 않는다. 이 콘텐츠가 풀지 못하는 코드도 목록에 남고 그대로 다시 써진다(`decodePreset` 만 까닭과 함께 실패한다).
+     * @details 현재 판이 아닌 파일은 읽지 않는다. 이 콘텐츠가 풀지 못하는 코드도 목록에 남고 그대로 다시 써진다(`decodePreset` 만 까닭과 함께 실패한다).
      */
     class SW_GF_API UserAppearancePresetStore : public SaveGame
     {
     public:
-        static constexpr int32 kVersion = 4; ///< 3: 리플렉션 JSON, 4: 썸네일을 경로 대신 슬롯 이름으로(이전 판은 읽지 않는다)
+        static constexpr FormatDef kFormat{ "UAPP" };
 
         UserAppearancePresetStore();
 
@@ -91,9 +91,9 @@ namespace sw
         /** @brief 즐겨찾기만 저장한 순서대로 모읍니다. */
         void collectFavorites( vector<const UserAppearancePresetRecord*>& outListPreset ) const;
 
-        [[nodiscard]] const utf8* getFormatKind() const override { return "UserAppearancePresetStore"; }
-        [[nodiscard]] bool        writeBytes( vector<uint8>& outBytes ) const override;
-        [[nodiscard]] bool        readBytes( const uint8* pData, size_t size ) override;
+        [[nodiscard]] const FormatDef& getFormat() const override { return kFormat; }
+        [[nodiscard]] bool             writeBytes( vector<uint8>& outBytes ) const override;
+        [[nodiscard]] bool             readBytes( const uint8* pData, size_t size ) override;
         /** @brief 프리셋 파일 글을 만듭니다. 이름 · 코드에 잘못된 UTF-8 이 있으면 오류입니다(`JSONSerializer::serialize`). */
         [[nodiscard]] expected<string> saveToText() const;
         /** @brief 텍스트에서 읽습니다. JSON 이 아니거나 판이 지금과 다르면 false 이고 목록은 그대로입니다. */

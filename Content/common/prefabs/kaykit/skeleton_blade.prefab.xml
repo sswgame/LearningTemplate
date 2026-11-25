@@ -1,5 +1,5 @@
 <?asset guid="62da916a064a5fecdf3c07a888d5ecfb"?>
-<Prefab formatVersion="1" _base="guid:4069c4bdcc294bac6dade12803e675ae" name="SkeletonBlade">
+<Prefab formatVersion="0" _base="guid:4069c4bdcc294bac6dade12803e675ae" name="SkeletonBlade">
 	<PrefabOverrides>
 		<Override key="#0244d8c8807cd288">
 			<MeshComponent _meshID="guid:d2b584987a934d2ac14f864bef8e701b" />

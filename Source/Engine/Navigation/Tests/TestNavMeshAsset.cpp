@@ -108,7 +108,7 @@ SW_TEST_CASE( NavMeshAssetTest, EmptyAssetRoundTrips )
 /** @brief [NavMeshAssetTest] 파일 형식은 신뢰 경계다 — 어느 길이로 잘려도 false 이고 푼 앞부분을 남기지 않는다 */
 SW_TEST_CASE( NavMeshAssetTest, EveryTruncatedLengthIsRejected )
 {
-    SW_EXPECT_LOG( "NavMeshAsset.NotNavmeshFormat" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_LOG( "NavMeshAsset.Truncated" );
     const vector<uint8> listByte = Util::makeBytes();
     NavMeshAsset        asset;
@@ -123,7 +123,7 @@ SW_TEST_CASE( NavMeshAssetTest, EveryTruncatedLengthIsRejected )
 /** @brief [NavMeshAssetTest] 바이트가 없어도(nullptr) 오류일 뿐이다 */
 SW_TEST_CASE( NavMeshAssetTest, NullBytesAreRejected )
 {
-    SW_EXPECT_LOG( "NavMeshAsset.NotNavmeshFormat" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     NavMeshAsset asset;
     SW_EXPECT_FALSE( asset.readBytes( nullptr, 16, "test" ) );
 }
@@ -131,7 +131,7 @@ SW_TEST_CASE( NavMeshAssetTest, NullBytesAreRejected )
 /** @brief [NavMeshAssetTest] 매직과 형식 버전이 다르면 읽지 않는다 — 앞서 읽은 내용도 비운다 */
 SW_TEST_CASE( NavMeshAssetTest, WrongMagicOrVersionClearsTheAsset )
 {
-    SW_EXPECT_LOG( "NavMeshAsset.NotNavmeshFormat" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     const vector<uint8> listByte = Util::makeBytes();
     NavMeshAsset        asset;
     SW_REQUIRE_TRUE( asset.readBytes( listByte.data(), listByte.size(), "test" ) );
@@ -143,7 +143,7 @@ SW_TEST_CASE( NavMeshAssetTest, WrongMagicOrVersionClearsTheAsset )
 
     SW_REQUIRE_TRUE( asset.readBytes( listByte.data(), listByte.size(), "test" ) );
     vector<uint8> listVersion = listByte;
-    Util::patchUint32( listVersion, Util::kVersionOffset, NavMeshAsset::kVersion + 1u );
+    Util::patchUint32( listVersion, Util::kVersionOffset, NavMeshAsset::kFormat._version + 1u );
     SW_EXPECT_FALSE( asset.readBytes( listVersion.data(), listVersion.size(), "test" ) );
     SW_EXPECT_TRUE( asset.getEntries().empty() );
 }

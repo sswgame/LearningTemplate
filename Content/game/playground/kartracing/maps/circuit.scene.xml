@@ -1,5 +1,5 @@
 <?asset guid="4b0558723954958aeaa1ee3bc08eeb2c"?>
-<Scene formatVersion="3" name="KartCircuit">
+<Scene formatVersion="0" name="KartCircuit">
 	<!-- 카트 경기 한 판 — 트랙은 data/karttracks.xml 의 sunny_oval. 트랙 · 차 · 아이템은 뷰가 원시 도형 프리팹으로 세운다. 카메라는 사람 차를 위에서 따라간다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

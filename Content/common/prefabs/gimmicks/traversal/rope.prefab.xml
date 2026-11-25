@@ -1,5 +1,5 @@
 <?asset guid="71bab12868aa71f12b692901833399fc"?>
-<Prefab formatVersion="1" _base="guid:441e19d268913bbace4aed8c62ec799e" name="Rope">
+<Prefab formatVersion="0" _base="guid:441e19d268913bbace4aed8c62ec799e" name="Rope">
 	<PrefabOverrides>
 		<Override key="#edcbb43a3dfead50">
 			<BoxCollider2DComponent _offsetScale="0.5,6" />

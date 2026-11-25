@@ -282,7 +282,7 @@ namespace sw
         uint32                   _removedFieldCount{ 0 };
         uint32                   _aliasCount{ 0 };
         uint32                   _retiredTypeNameCount{ 0 };
-        uint32                   _version{ 0 }; ///< `REFLECT( Version = N )`. 적지 않았으면 0
+        uint32                   _version{ 0 }; ///< `REFLECT( Version = N )`. 적지 않았으면 첫 판(0)
         uint32                   _flags{ 0 };   ///< `TypeDescFlag` 비트
 
         /** @brief C++ 타입 @p T 의 서술자입니다 — 크기와 소멸 함수를 채운다. */

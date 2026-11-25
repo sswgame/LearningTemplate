@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -66,8 +65,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32      kStateTag       = FourCCUtil::make( "WINV" );
-        static constexpr uint32      kStateVersion   = 1;
         static constexpr const utf8* kClueNotifyKind = "Clue";
         static constexpr const utf8* kStepNotifyKind = "Investigate";
 
@@ -133,9 +130,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "WHAG" );
-        static constexpr uint32 kStateVersion = 1;
 
         MonsterHuntHaggle();
 

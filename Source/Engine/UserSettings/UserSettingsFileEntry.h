@@ -34,14 +34,13 @@ namespace sw
         string _rawJSON; ///< 파일에 적힌 값의 JSON 원문입니다. 올림 단계가 값을 바꾸면 비운다(그때는 `_value` 가 정본).
 
         // 사용자 파일의 글을 읽고 씁니다. 값의 검사 · 기본값과의 비교는 `UserSettingsManager` 가 합니다.
-        // 형식은 `{ "versions": { "<주인>": N }, "values": { "<설정 id>": 값 } }` 입니다. 사용자 파일은 배포된 플레이어 데이터라 이전 판을 읽어야 합니다
-        // (판 번호 하나 `"version": N` 를 쓰던 옛 파일 포함).
+        // 형식은 `{ "versions": { "<주인>": N }, "values": { "<설정 id>": 값 } }` 입니다. 사용자 파일은 배포된 플레이어 데이터라 이전 판을 읽어야 합니다.
         static constexpr utf8 kFileName[] = "usersettings.json";
 
         /**
          * @brief JSON 글을 읽고, 스키마 주인마다 파일의 판부터 스키마 판까지 그 주인의 올림 단계를 적힌 순서대로 적용합니다.
          * @details 숫자는 쓰인 그대로, 불리언은 `true` / `false` 글이 됩니다. null · 배열 · 오브젝트는 빈 글입니다(원문은 `_rawJSON`).
-         *          파일에 없는 주인은 판 0 이다. 이 빌드에 없는 주인의 판은 @p outContent 에 그대로 담아 다시 쓴다.
+         *          파일에 없는 주인은 지금 판이다(올릴 값이 없다). 이 빌드에 없는 주인의 판은 @p outContent 에 그대로 담아 다시 쓴다.
          */
         [[nodiscard]] static UserSettingsFileReadResult parseJSON( string_view jsonText, string_view sourceName, const UserSettingsSchema& schema,
                                                                    UserSettingsFileContent& outContent );

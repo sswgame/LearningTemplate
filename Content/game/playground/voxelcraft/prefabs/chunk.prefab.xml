@@ -1,5 +1,5 @@
 <?asset guid="333f65062919d2c3fff424c45f4b7986"?>
-<Prefab formatVersion="1" name="VoxelChunk">
+<Prefab formatVersion="0" name="VoxelChunk">
 	<GameObject _schemaVersion="0" _name="VoxelChunk" _bActive="true">
 		<_listComponent>
 			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"

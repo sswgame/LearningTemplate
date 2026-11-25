@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -15,6 +14,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -156,8 +156,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "CITY" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "CITY" };
 
         CitySimulation();
 

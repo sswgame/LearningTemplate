@@ -1,5 +1,5 @@
 <?asset guid="20efb6ef829f1a4cd67e363f34663c0e"?>
-<Prefab formatVersion="1" name="Conveyor">
+<Prefab formatVersion="0" name="Conveyor">
 	<GameObject _schemaVersion="0" _name="Conveyor" _bActive="true">
 		<_listComponent>
 			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"

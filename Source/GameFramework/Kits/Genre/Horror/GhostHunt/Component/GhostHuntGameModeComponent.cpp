@@ -2,13 +2,13 @@
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/Component/GhostHuntGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
@@ -21,12 +21,11 @@ namespace sw
     {
         struct GhostHuntGameModeComponentInternal
         {
-            static constexpr uint32  kStateTag         = FourCCUtil::make( "GHGM" );
-            static constexpr uint32  kStateVersion     = 1;
-            static constexpr float32 kFurnitureSpacing = 2.0f;  ///< 안쪽 벽을 따라 놓은 가구 사이(m)
-            static constexpr float32 kFurnitureWallGap = 1.0f;  ///< 안쪽 벽에서 가구까지(m)
-            static constexpr float32 kGhostDepthRatio  = 0.25f; ///< 유령이 처음 숨는 자리 — 방 가운데에서 방 깊이의 이 비율만큼 안쪽
-            static constexpr float32 kGhostWallGap     = 0.5f;  ///< 유령은 방의 벽에서 이만큼 안쪽에만 있다(m)
+            static constexpr FormatDef kStateFormat{ "GHGM" };
+            static constexpr float32   kFurnitureSpacing = 2.0f;  ///< 안쪽 벽을 따라 놓은 가구 사이(m)
+            static constexpr float32   kFurnitureWallGap = 1.0f;  ///< 안쪽 벽에서 가구까지(m)
+            static constexpr float32   kGhostDepthRatio  = 0.25f; ///< 유령이 처음 숨는 자리 — 방 가운데에서 방 깊이의 이 비율만큼 안쪽
+            static constexpr float32   kGhostWallGap     = 0.5f;  ///< 유령은 방의 벽에서 이만큼 안쪽에만 있다(m)
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventAppeared   = "GhostHuntAppeared";
@@ -495,7 +494,7 @@ namespace sw
     void GhostHuntGameModeComponent::serializeGameState( StateIO& io )
     {
         using Internal = GhostHuntGameModeComponentInternal;
-        io.header( Internal::kStateTag, Internal::kStateVersion );
+        io.header( Internal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 저택은 그래프 · 깃발 · 가방 · 지갑을 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 저택에 바로 읽고, 거절되면 `onStateRestored` 가 새 판을 연다.

@@ -175,7 +175,7 @@ SW_TEST_CASE( XMLBinaryTest, TooDeepDocumentsAreRefused )
 
     // 쿠킹본은 글에서 만들 수 없는 깊이라 손으로 잇는다 — 앞 순서 레코드마다 다음 레코드가 첫 자식이다.
     const uint32          nodeCount = XMLDocument::kMaxDepth + 1;
-    const XMLBinaryHeader header{ XMLBinary::kMagic, XMLBinary::kVersion, nodeCount, 0, 2 };
+    const XMLBinaryHeader header{ XMLBinary::kFormat._tag, XMLBinary::kFormat._version, nodeCount, 0, 2 };
     vector<uint8>         chain( sizeof( header ) + nodeCount * sizeof( XMLBinaryNode ) + header._stringBytes, uint8{ 0 } );
     std::memcpy( chain.data(), &header, sizeof( header ) );
     chain[chain.size() - 2] = 'a';

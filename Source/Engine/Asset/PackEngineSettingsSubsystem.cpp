@@ -8,7 +8,6 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Inherit/ResourceRemap.h"
 
@@ -40,10 +39,6 @@ namespace sw
             return SubsystemInitResult::Failed;
         ResourceRemap::clear();
         if ( _settings->_resourceRemap.isSet() && ResourceRemap::loadFromAsset( AssetID{ _settings->_resourceRemap.get() } ) == false )
-            return SubsystemInitResult::Failed;
-        // 저장된 기록의 옛 경로 표(도메인마다 `redirects.xml`) — 세이브를 읽기 전에 선다. 틀린 표는 기동을 멈춘다.
-        AssetRedirect::clear();
-        if ( AssetRedirect::loadFromSearchDomains() == false )
             return SubsystemInitResult::Failed;
         return SubsystemInitResult::Succeeded;
     }

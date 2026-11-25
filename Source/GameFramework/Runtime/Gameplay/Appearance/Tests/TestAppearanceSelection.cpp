@@ -499,46 +499,6 @@ SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeKeepsTheLookWhenADefaultChange
     SW_EXPECT_TRUE( decoded._customization.findValue( hashed_string( "Height" ) ) == nullptr );
 }
 
-/** @brief [AppearanceSelectionTest] 옛 판(1) 공유 코드도 읽는다 — 플레이어 프리셋 저장소가 이 문자열로 저장한다. 이 빌드보다 새 판은 거절한다 */
-SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeReadsTheOlderVersion )
-{
-    // 판 1 의 바이트를 손으로 쓴다: 판 · 기준 프리셋 · 시드 · 스키마 · 몸 셋 · 카테고리 0 · 값(Height 를 범위 0~2 의 16 비트 단계로) · 슬롯 0
-    const auto makeCode = []( uint32 version )
-    {
-        BitWriter writer;
-        writer.writeBits( version, 8 );
-        writer.writeUint32( static_cast<uint32>( hashed_string( "Base" ).getHash() ) );
-        writer.writeVarUint( 1 );
-        writer.writeUint32( static_cast<uint32>( hashed_string( "Human" ).getHash() ) );
-        writer.writeUint32( static_cast<uint32>( hashed_string( "Male" ).getHash() ) );
-        writer.writeUint32( static_cast<uint32>( hashed_string( "Average" ).getHash() ) );
-        writer.writeUint32( 0 );
-        writer.writeVarUint( 0 );
-        writer.writeVarUint( 1 );
-        writer.writeUint32( static_cast<uint32>( hashed_string( "Height" ).getHash() ) );
-        writer.writeBits( static_cast<uint32>( CustomizationKind::Slider ), 2 );
-        writer.writeBits( 49151u, 16 ); // 0~2 의 3/4 지점 = 1.5
-        writer.writeVarUint( 0 );
-        vector<uint8> bytes = writer.releaseBytes();
-        const uint32  crc   = HashUtil::computeCRC32( bytes.data(), bytes.size() );
-        for ( uint32 byteIndex = 0; byteIndex < 4; ++byteIndex )
-        {
-            bytes.push_back( static_cast<uint8>( ( crc >> ( byteIndex * 8 ) ) & 0xffu ) );
-        }
-        return Base64Util::encodeURL( bytes.data(), bytes.size() );
-    };
-    AppearanceSelection  decoded;
-    const expected<void> first = AppearanceSelection::decode( makeCode( 1 ), _database, decoded );
-    SW_REQUIRE_TRUE_MSG( first.has_value(), first.has_value() ? "" : first.error().message().data() );
-    SW_EXPECT_TRUE( decoded._basePresetID == hashed_string( "Base" ) );
-    SW_REQUIRE_TRUE( decoded._customization.findValue( hashed_string( "Height" ) ) != nullptr );
-    SW_EXPECT_NEAR( 1.5f, decoded._customization.findValue( hashed_string( "Height" ) )->_number._x, 1.0e-3f );
-
-    const expected<void> future = AppearanceSelection::decode( makeCode( AppearanceSelection::kShareCodeVersion + 1 ), _database, decoded );
-    SW_EXPECT_FALSE( future );
-    SW_EXPECT_EQUAL( string( "unsupported share code version" ), future.has_value() ? string{} : string( future.error().message() ) );
-}
-
 /** @brief [AppearanceSelectionTest] 아직 조립하지 않은 외형은 담을 선택이 없어 꾸미기 값을 바꾸지 않고 false 로 답한다(`exec` 명령도 실패다) */
 SW_TEST_CASE( AppearanceSelectionTest, ValueBeforeDressingIsRefused )
 {

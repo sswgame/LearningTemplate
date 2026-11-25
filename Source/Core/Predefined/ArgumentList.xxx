@@ -132,6 +132,9 @@ SW_REGISTER_ARGUMENT( SERVICE, Server, false, "service" )
 // 등록된 리플렉션 타입(엔진 · GameFramework · 킷 · 게임)으로 Markdown API 문서를 그 폴더에 쓰고 끝난다(헤드리스). 빌드 산출물이라 커밋하지 않는다.
 SW_REGISTER_ARGUMENT( WRITE_REFLECTION_DOCS, Dev, CommandLineDiskPath{}, "write-reflection-docs" )
 
+// 상태 칸(RuntimeState)이 있는 타입마다 판과 칸 배치를 그 JSON 파일에 쓰고 끝난다(헤드리스) — `py -3 -m Scripts format-release --layouts` 가 출시 스냅숏과 견준다.
+SW_REGISTER_ARGUMENT( WRITE_STATE_LAYOUTS, Dev, CommandLineDiskPath{}, "write-state-layouts" )
+
 // 텍스처 원본(`textures_raw/`)을 DDS 로 임포트한다 · 원본과 DDS 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
 SW_REGISTER_ARGUMENT( IMPORT_TEXTURES, Dev, false, "import-textures" )
 SW_REGISTER_ARGUMENT( CHECK_TEXTURES, Dev, false, "check-textures" )

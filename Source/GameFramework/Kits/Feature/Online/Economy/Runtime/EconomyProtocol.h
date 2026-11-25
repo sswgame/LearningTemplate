@@ -241,7 +241,7 @@ namespace sw
     struct SW_KIT_API EconomyBalanceChanged
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전
+        static constexpr uint32 kBusVersion = 0; ///< push 중계(`OnlinePushRelay`)의 의미 버전
         PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
         vector<LedgerBalance> _listBalance{}; ///< 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
     };

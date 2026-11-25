@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartGhost.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
@@ -17,7 +16,6 @@ namespace sw
         {
             static constexpr float32 kAxisScale  = 127.0f;
             static constexpr int32   kButtonBits = 4;
-            static constexpr uint32  kMagic      = FourCCUtil::make( "KGHT" );
 
             static int8 encodeAxis( float32 value )
             {
@@ -111,8 +109,7 @@ namespace sw
     bool KartGhost::serialize( vector<uint8>& outBuffer ) const
     {
         BitWriter writer{ std::move( outBuffer ) };
-        writer.writeUint32( KartGhostInternal::kMagic );
-        writer.writeBits( kVersion, 8 );
+        kFormat.write( writer );
         writer.writeFloat( _startPosition._x );
         writer.writeFloat( _startPosition._y );
         writer.writeFloat( _startPosition._z );
@@ -134,7 +131,7 @@ namespace sw
         if ( pData == nullptr || byteCount <= 0 )
             return false;
         BitReader reader( pData, byteCount );
-        if ( reader.readUint32() != KartGhostInternal::kMagic || reader.readBits( 8 ) != kVersion )
+        if ( kFormat.check( reader ).has_value() == false )
             return false;
         float3  startPosition;
         float32 startYaw{ 0.0f };

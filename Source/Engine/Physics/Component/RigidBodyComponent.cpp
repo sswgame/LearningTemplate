@@ -2,7 +2,6 @@
 
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
@@ -17,6 +16,7 @@
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -24,8 +24,7 @@ namespace sw
     {
         struct RigidBodyComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "RBST" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "RBST" };
         };
     } // namespace
 } // namespace sw
@@ -258,7 +257,7 @@ namespace sw
         float3 angular = getAngularVelocity();
         if ( io.isWriting() && ( _bodyType != PhysicsBodyType::Dynamic || ( linear.getLengthSquared() == 0.0f && angular.getLengthSquared() == 0.0f ) ) )
             return; // 멈춘 바디는 실을 것이 없다 — 큰 씬의 정적 바디마다 칸을 쓰지 않는다
-        io.header( RigidBodyComponentInternal::kStateTag, RigidBodyComponentInternal::kStateVersion );
+        io.header( RigidBodyComponentInternal::kStateFormat );
         io.value( linear );
         io.value( angular );
         if ( io.isWriting() )

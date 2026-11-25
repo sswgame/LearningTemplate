@@ -1,5 +1,5 @@
 <?asset guid="b6dbb74b9d2437334fd83a25e5904928"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<UIScreenDef _layer="Modal" _bModal="true" _defaultFocus="Swap" />
 	<_listStyleSheet>
 		<item>guid:d36bc0fca75bc70df406ac878b0e9a37</item>

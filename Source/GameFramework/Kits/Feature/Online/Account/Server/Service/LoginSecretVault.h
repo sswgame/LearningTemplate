@@ -26,7 +26,7 @@ namespace sw
     class SW_KIT_SERVER_API LoginSecretVault
     {
     public:
-        static constexpr uint8 kFormatVersion = 1;
+        static constexpr uint8 kFormatVersion = 0;
         static constexpr int32 kKeySize       = LoginTicketAuthority::kMasterKeySize;
 
         LoginSecretVault();

@@ -609,7 +609,7 @@ SW_TEST_CASE( UILayoutPanelsTest, MeasureHonoursOverrideMinAndMax )
 SW_TEST_CASE( UILayoutPanelsTest, StyleSizeFixesTheWidgetUnlessTheSlotOverrides )
 {
     shared_ptr<UIStyleSheetAsset> sheet = make_shared<UIStyleSheetAsset>();
-    SW_REQUIRE_TRUE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="1"><Rule _selector=".cell" _size="40,20" /></UIStyleSheet>)", "cell.uistyle.xml",
+    SW_REQUIRE_TRUE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="0"><Rule _selector=".cell" _size="40,20" /></UIStyleSheet>)", "cell.uistyle.xml",
                                                ResourceContext::forDocument(), *sheet )
                          .has_value() );
     UIStyleSet styleSet;

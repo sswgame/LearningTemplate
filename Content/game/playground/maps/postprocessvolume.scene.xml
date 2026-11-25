@@ -1,5 +1,5 @@
 <?asset guid="f9c1c17e7eb6184aca470f1a45f1be4a"?>
-<Scene formatVersion="3" name="PostProcessVolume">
+<Scene formatVersion="0" name="PostProcessVolume">
 	<!-- 후처리 시나리오(automation/postprocess_*)의 무대 — rendertest3d 와 같은 정적 장면(애니메이션 · 비동기 메시 없음)에 레이어마다 후처리 볼륨을 둔다.
 	     시나리오가 레이어를 켜고 끈 두 장을 같은 실행에서 견준다(scene.layer <이름> on). 카메라는 순간이동으로만 옮긴다(teleport GameCamera …).
 	     Volume: 카메라를 감싼 상자(채도 0, 우선순위 1) 위에 무한 볼륨(채도 2 · 비네트, 우선순위 0) — 상자 안은 회색, 블렌드 반경 밖은 짙은 색.

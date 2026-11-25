@@ -123,7 +123,7 @@ namespace sw
         /** @brief 머티리얼 그래프 에셋 종류입니다(등록은 `MaterialGraph.cpp` 의 `SW_ASSET_TYPE`). 판 0. */
         static constexpr AssetTypeDef kAssetType{ "MaterialGraph", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
-        PROPERTY( Name = "formatVersion", Tooltip = "Schema version of the file" )
+        PROPERTY( Name = "formatVersion", Required, Tooltip = "Schema version of the file" )
         uint32 _formatVersion{ 0 };
         PROPERTY( Tooltip = "Nodes of the graph" )
         vector<MaterialGraphNodeDef> _listNode{};

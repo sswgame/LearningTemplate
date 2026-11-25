@@ -190,7 +190,7 @@ SW_TEST_CASE( ServiceReportStoreTest, CorruptRecordIsInvalidNotSkipped )
     Util::open( database, Util::kNowMs, 1 );
     const string       brokenKey = ServiceReportStore::makeOpenKey( Util::kNowMs + 1, Util::kReporter, 2 );
     ServiceTransaction seed;
-    seed.put( ServiceReportStore::getTable(), brokenKey, vector<uint8>{ 1, 0, 0, 0 } ); // 버전 머리만 있고 몸이 없다
+    seed.put( ServiceReportStore::getTable(), brokenKey, vector<uint8>{ 0, 0, 0, 0 } ); // 버전 머리만 있고 몸이 없다
     SW_REQUIRE_TRUE( database.commit( seed ) == ServiceStoreResult::Ok );
 
     vector<ServiceReport> listReport;

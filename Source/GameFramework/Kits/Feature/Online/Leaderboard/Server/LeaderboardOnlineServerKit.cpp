@@ -53,10 +53,10 @@ namespace sw
                 const vector<LeaderboardDef> listCatalogBoard = _pCatalog != nullptr ? _pCatalog->getBoards() : vector<LeaderboardDef>{};
                 ServiceTTLRule               scoreRule        = LeaderboardService::makeScoreTTLRule( kitConfig._pastScoreTTL.getExpireAfterMs() );
                 scoreRule._pBackfillSource                    = LeaderboardService::makeScoreBackfillSource( listCatalogBoard );
-                scoreRule._backfillVersion                    = 1;
+                scoreRule._backfillVersion                    = 0;
                 ServiceTTLRule resultRule                     = LeaderboardService::makeSeasonResultTTLRule( kitConfig._seasonResultTTL.getExpireAfterMs() );
                 resultRule._pBackfillSource                   = LeaderboardService::makeSeasonResultBackfillSource( listCatalogBoard );
-                resultRule._backfillVersion                   = 1;
+                resultRule._backfillVersion                   = 0;
                 _service.setReadPolicy( kitConfig._maxAroundRadius, kitConfig._nameCacheTTLMs );
                 _service.setPastScoreRetentionMs( kitConfig._pastScoreTTL.getExpireAfterMs() ); // 탈퇴 정리가 지울 지난 기간 — TTL 규칙과 같은 값
                 // 매칭 키트가 실력 모드의 통계를 읽는다. 접속한 계정의 통계만 메모리에 있다.

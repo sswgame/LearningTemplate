@@ -1,5 +1,5 @@
 <?asset guid="a151ca7280eb4a118cef5eab9315acd2"?>
-<Scene formatVersion="3" name="CharacterMoveLoad">
+<Scene formatVersion="0" name="CharacterMoveLoad">
 	<!-- 캐릭터 이동 부하 시나리오(automation/load/charactermove)의 무대 — 70 m 바닥(Static 강체 + 메시). CrowdLoad 의 CharacterCrowdSpawnerComponent 가 플레이를 시작하면
 	     캐릭터 컨트롤러 500 을 40 m 상자에 격자로 세워 가운데로 걷게 한다(서로 밀어 캐릭터 대 캐릭터 충돌이 가장 무거운 꼴). 유니티 DOTS Character Controller 군중 샘플과 같은 크기. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">

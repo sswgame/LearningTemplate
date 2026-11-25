@@ -7,7 +7,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -110,9 +109,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "GHMN" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 동전을 준 유령의 번호
 
         GhostMansion();
 

@@ -1,5 +1,5 @@
 <?asset guid="5aa4e771b65db92f9b7dbe6b5ffa78a3"?>
-<UIStyleSheet _schemaVersion="1">
+<UIStyleSheet _schemaVersion="0">
 	<!-- 엔진 위젯의 기본 겉모습(UIWidgetSkin) - 문서 · 코드 · 테마 시트가 적지 않은 값이 여기서 온다. 칸이 하나라도 빠지면 기동이 멈춘다.
 	     부품은 클래스로 적는다(SliderWidget.thumb). 길이는 UI 단위이고 _size 는 부품 크기다. -->
 	<Rule _selector="ButtonWidget" _backgroundColor="0.16,0.176,0.216,0.95" _cornerRadius="6,6,6,6" _padding="16,8,16,8" />

@@ -20,7 +20,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 namespace sw
 {
@@ -478,7 +477,7 @@ namespace sw
         {
             string sceneReference;
             arch >> saved._name >> sceneReference >> saved._placement._position >> saved._placement._rotation;
-            expected<AssetReferenceTarget> scene = AssetRedirect::readSavedReference( sceneReference ); // 경로를 적던 때의 세이브도 여기서 한 번 풀린다
+            expected<AssetReferenceTarget> scene = AssetRegistry::readReferenceText( sceneReference );
             if ( scene.has_value() )
                 saved._scenePath = std::move( scene->_path );
             vector<uint8> bytes;

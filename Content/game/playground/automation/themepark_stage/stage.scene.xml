@@ -1,5 +1,5 @@
 <?asset guid="f947709c4342f28d37ed4bf6089d2700"?>
-<Scene formatVersion="3" name="ThemeParkStage">
+<Scene formatVersion="0" name="ThemeParkStage">
 	<!-- 테마파크 하위 레벨 시나리오(automation/themepark_guests · themepark_shadow · themepark_sublevel)의 바탕 — 해 · 바탕 카메라와 얹을 자리 둘뿐이다.
 	     ParkEntrance 는 원점(그림자 골든이 옛 공원 맵과 같은 자리에 선다), FarEntrance 는 옮기고 요 90 도로 돌린 자리다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">

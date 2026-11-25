@@ -1,6 +1,6 @@
 <?asset guid="035aa9cc6dce4590b4c25dd89d9d9e67"?>
 <!-- 월드에 떨어진 아이템 — 버리기(PickupComponent::spawn)가 세워 조각을 쥐인다. 모습(작은 상자)과 줍는 상호작용(PickUpItem)은 여기 있다. -->
-<Prefab formatVersion="1" name="Pickup">
+<Prefab formatVersion="0" name="Pickup">
 	<GameObject _schemaVersion="0" _name="Pickup" _bActive="true">
 		<_listComponent>
 			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.3,0.3,0.3" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Cube" _materialPath="" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />

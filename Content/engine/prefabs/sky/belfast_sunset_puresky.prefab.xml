@@ -1,6 +1,6 @@
 <?asset guid="e687674d7d474658b6ff0073be3f4e63"?>
 <!-- Scripts/dev/make_sky_hdri_prefabs.py 가 지었다 — 손으로 고치지 않는다. 그림은 텍스처, 간접 조명은 원본을 투영한 SH9 계수, 반사는 곁의 .radiancemap 을 거른 것이다. -->
-<Prefab formatVersion="1" name="Sky_belfast_sunset_puresky">
+<Prefab formatVersion="0" name="Sky_belfast_sunset_puresky">
 	<GameObject _schemaVersion="0" _name="Sky_belfast_sunset_puresky" _bActive="true">
 		<_listComponent>
 			<SkyComponent _localID="14376368575749838118" _intensity="1" _mode="Hdri" _hdriTexture="guid:5fceea740b9d17a7479ce287d5ca4db4" _hdriRotation="0" _hdriRadianceMap="guid:6516b2b781342804cb647b4b46b5b428">

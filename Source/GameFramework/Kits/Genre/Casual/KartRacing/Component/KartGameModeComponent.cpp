@@ -2,15 +2,13 @@
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Component/KartGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
-
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -19,18 +17,7 @@ namespace sw
     {
         struct KartGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "KRGM" );
-            static constexpr uint32 kStateVersion = 1;
-
-            /** @brief 상태 칸 판 1 → 2: 결과 유지 깃발을 뺀다 — 끝난 걸음에 `Countdown` 을 걸고 다 된 걸음에 한 번 끝내는 길은 깃발 없이 선다(다른 디렉터와 같은 꼴). */
-            [[nodiscard]] static bool dropHoldFlags( Archive& inOldBody, Archive& outNewBody )
-            {
-                uint8 bResultShown     = 0;
-                uint8 bFinishRequested = 0;
-                inOldBody >> bResultShown >> bFinishRequested;
-                (void)outNewBody; // 남은 칸이 없다 — 읽지 않은 꼬리(손 본문)는 그대로 붙는다
-                return inOldBody.isOk();
-            }
+            static constexpr FormatDef kStateFormat{ "KRGM" };
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
@@ -333,7 +320,7 @@ namespace sw
 
     void KartGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( KartGameModeComponentInternal::kStateTag, KartGameModeComponentInternal::kStateVersion );
+        io.header( KartGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 경기는 같은 트랙 · 같은 차 수로 연 뒤에 읽는다(키트 계약).
@@ -353,5 +340,4 @@ namespace sw
 
 namespace sw
 {
-    SW_TYPE_VERSION_PATCH( kartGameModeState1To2, "sw::KartGameModeComponent", 1, 2, &KartGameModeComponentInternal::dropHoldFlags );
 } // namespace sw

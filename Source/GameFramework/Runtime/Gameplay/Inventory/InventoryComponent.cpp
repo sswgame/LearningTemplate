@@ -106,7 +106,7 @@ namespace sw
 
     void InventoryComponent::serializeState( StateIO& io )
     {
-        _restore.serialize( io, kStateTag, kStateVersion, _inventory, "the inventory" );
+        _restore.serialize( io, kStateFormat, _inventory, "the inventory" );
     }
 
     void InventoryComponent::restoreState( vector<uint8>&& bytes )

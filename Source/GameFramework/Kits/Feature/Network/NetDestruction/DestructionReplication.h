@@ -166,9 +166,9 @@ namespace sw
      */
     struct NetDestructionMessage
     {
-        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableUnordered, 5>;                         ///< 판 5: 월드 세대가 표의 머리로 갔다. 3: 칸 선언으로 쓴다(2: 번호 64 비트). 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
+        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableUnordered>;                            ///< 칸 선언으로 쓴다. 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
         using Snapshot        = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionSnapshotBody>; ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지, 조각이 아니라 메시지 하나)
-        using Pose            = NetMessageSenderChannelDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 5>;                   ///< 판 5: 월드 세대가 표의 머리로 갔다. 3: 자세마다 이어짐 비트 · 칸 선언(2: 번호 64 비트). 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다(`beginMessage( channel )`)
+        using Pose            = NetMessageSenderChannelDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable>;                      ///< 자세마다 이어짐 비트 · 칸 선언. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다(`beginMessage( channel )`)
         using Hash            = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionHashBody>;
         using SnapshotRequest = NetMessageBodyDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, DestructionSnapshotRequestBody>;
         using Table           = NetWorldMessageTable<NetKitMessageRange::kDestruction, Event, Snapshot, Pose, Hash, SnapshotRequest>;

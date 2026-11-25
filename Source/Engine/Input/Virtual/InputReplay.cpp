@@ -9,28 +9,26 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
     namespace
     {
         /**
-         * @brief 리플레이 파일 머리말입니다.
-         * @details 읽는 쪽은 반드시 버전을 확인해야 한다. 매직 값만 보면 다른 버전의 파일도 지금 버전의 배치로 읽어 조용히 엉뚱한 프레임이 나온다.
+         * @brief 리플레이 파일의 머리(표 · 판) 뒤 칸입니다.
          */
         struct ReplayHeader
         {
-            uint8  _arrMagic[4]{ 'S', 'W', 'R', 'P' };
-            uint32 _version{ 0 };
             uint32 _nameLength{ 0 };
             uint32 _frameCount{ 0 };
         };
 
         /**
-         * @brief 지금 쓰는 리플레이 파일 버전입니다. 프레임마다 `deltaTime(float32)`, `eventCount(uint32)`, `RawInputEvent` n 개가 이어집니다.
+         * @brief 리플레이 파일 형식입니다. 프레임마다 `deltaTime(float32)`, `eventCount(uint32)`, `RawInputEvent` n 개가 이어집니다.
          * @details `RawInputEvent` 를 구조체째로 쓰므로 그 배치가 바뀌면 버전을 올린다(다른 버전은 읽지 않는다).
          */
-        constexpr uint32 kReplayVersion = 5; ///< 5: `RawInputEvent` 에 프레임 안 자리(`_frameFraction`)와 시각이 들었다
+        constexpr FormatDef kReplayFormat{ "SWIR" };
 
         struct InputReplayInternal
         {
@@ -123,9 +121,9 @@ namespace sw
     {
         vector<uint8> bytes;
         ReplayHeader  header{};
-        header._version    = kReplayVersion;
         header._nameLength = static_cast<uint32>( _replayName.size() );
         header._frameCount = static_cast<uint32>( _listFrame.size() );
+        kReplayFormat.write( bytes );
         InputReplayInternal::appendBytes( bytes, header );
 
         if ( header._nameLength > 0 )
@@ -153,21 +151,12 @@ namespace sw
         if ( FileUtil::readFile( filePath, bytes ) == false )
             return false;
 
-        ByteReader   reader{ bytes.data(), bytes.size() };
-        ReplayHeader header{};
-        header = reader.readPod<ReplayHeader>();
+        ByteReader reader{ bytes.data(), bytes.size() };
+        if ( kReplayFormat.read( reader, filePath.str() ) == false )
+            return false;
+        const ReplayHeader header = reader.readPod<ReplayHeader>();
         if ( reader.hasOverflowed() )
             return false;
-        const bool bBadMagic = header._arrMagic[0] != 'S' || header._arrMagic[1] != 'W' || header._arrMagic[2] != 'R' || header._arrMagic[3] != 'P';
-        if ( bBadMagic )
-            return false;
-
-        // 버전이 다르면 프레임 배치도 다르다. 읽어 봐야 엉뚱한 값이 나오므로 여기서 멈춘다.
-        if ( header._version != kReplayVersion )
-        {
-            SW_LOG_WARNING_ID( "InputReplay.InputReplayVersionNot", "Input replay version %# is not %# — refusing to load: %#", header._version, kReplayVersion, filePath.str() );
-            return false;
-        }
         const uint8* pName = nullptr;
         pName              = reader.readView( header._nameLength );
         if ( reader.hasOverflowed() )

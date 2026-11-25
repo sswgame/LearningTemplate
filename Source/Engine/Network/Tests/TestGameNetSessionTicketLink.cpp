@@ -19,6 +19,7 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, LinkFollowsTheServerConfig )
 {
     test::FakeNetSecurityProvider provider;
     GameNetSession                session{ engine::getSubsystem<ResourceComposition>() };
+    session.setRunWireContent( GameNetWireContent{} );
     session.getConnectSecurity().setProvider( &provider );
     ServerConfig config;
     config._listenAddress = "127.0.0.1";
@@ -43,6 +44,7 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, EncryptedSessionClosesBeforeModulesU
 {
     test::FakeNetSecurityProvider provider;
     GameNetSession                session{ engine::getSubsystem<ResourceComposition>() };
+    session.setRunWireContent( GameNetWireContent{} );
     session.getConnectSecurity().setProvider( &provider );
     ServerConfig config;
     config._listenAddress      = "127.0.0.1";
@@ -61,6 +63,7 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, EncryptedSessionClosesBeforeModulesU
 SW_TEST_CASE( GameNetSessionTicketLinkTest, RetiringProviderClosesTheSession )
 {
     GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
+    session.setRunWireContent( GameNetWireContent{} );
     {
         test::FakeNetSecurityProvider provider;
         session.getConnectSecurity().setProvider( &provider );
@@ -89,7 +92,8 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, RetiringProviderClosesTheSession )
 SW_TEST_CASE( GameNetSessionTicketLinkTest, ClosedSessionLinkStaysEmpty )
 {
     GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
-    ServerConfig   config;
+    session.setRunWireContent( GameNetWireContent{} );
+    ServerConfig config;
     config._listenAddress = "127.0.0.1";
     config._gamePort      = 0; // 운영체제가 고른다
     GameNetSessionParams params;
@@ -111,8 +115,10 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, LostServerLeavesItsReason, ._timeout
 {
     SW_EXPECT_LOG( SW_LOG_ID_NET_SESSION_LOST_SERVER );
     GameNetSession server{ engine::getSubsystem<ResourceComposition>() };
+    server.setRunWireContent( GameNetWireContent{} );
     GameNetSession client{ engine::getSubsystem<ResourceComposition>() };
-    ServerConfig   config;
+    client.setRunWireContent( GameNetWireContent{} );
+    ServerConfig config;
     config._listenAddress = "127.0.0.1";
     config._gamePort      = 0; // 운영체제가 고른다
     GameNetSessionParams serverParams;
@@ -156,8 +162,10 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, LostServerLeavesItsReason, ._timeout
 SW_TEST_CASE( GameNetSessionTicketLinkTest, ServerWorldOutlivesTheSession )
 {
     GameNetSession server{ engine::getSubsystem<ResourceComposition>() };
+    server.setRunWireContent( GameNetWireContent{} );
     GameNetSession client{ engine::getSubsystem<ResourceComposition>() };
-    ServerConfig   config;
+    client.setRunWireContent( GameNetWireContent{} );
+    ServerConfig config;
     config._listenAddress = "127.0.0.1";
     config._gamePort      = 0; // 운영체제가 고른다
     GameNetSessionParams serverParams;

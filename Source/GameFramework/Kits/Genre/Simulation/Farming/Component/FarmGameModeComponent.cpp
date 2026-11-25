@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
 
 #include "Core/Container/EnumArray.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -15,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmAutoFarmerAIComponent.h"
@@ -38,9 +38,8 @@ namespace sw
         struct FarmGameModeComponentInternal
         {
             /** @brief 이 길이보다 짧은 이동 의도는 걷지 않는다(스틱 떨림) — 걸음 판정과 이동이 같은 문턱을 쓴다. */
-            static constexpr float32 kMinMoveLength = 1.0e-4f;
-            static constexpr uint32  kStateTag      = FourCCUtil::make( "FARM" );
-            static constexpr uint32  kStateVersion  = 4; ///< 4: 비 · 날씨 난수를 판 상태 날씨로 옮겼다(이 칸에서 빠졌다)
+            static constexpr float32   kMinMoveLength = 1.0e-4f;
+            static constexpr FormatDef kStateFormat{ "FARM" };
 
             /** @brief 비를 정하는 날씨 값 이름입니다(날씨 카탈로그 `<Values wetness>` — 표면 젖음과 같은 값). 이 값이 반 이상이면 비다. */
             static constexpr const utf8* kWetnessValue     = "wetness";
@@ -205,7 +204,7 @@ namespace sw
 
     void FarmGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion );
+        io.header( FarmGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         FarmField       restoredField;
@@ -218,9 +217,9 @@ namespace sw
         }
         FarmField&       field    = io.isWriting() ? _field : restoredField;
         FarmShippingBin& shipment = io.isWriting() ? _shipment : restoredShipment;
-        io.section( FarmField::kStateTag, FarmField::kStateVersion, [&field]( StateIO& bodyIO )
+        io.section( FarmField::kStateFormat, [&field]( StateIO& bodyIO )
         { bodyIO.value( field ); } );
-        io.section( FarmShippingBin::kStateTag, FarmShippingBin::kStateVersion, [&shipment]( StateIO& bodyIO )
+        io.section( FarmShippingBin::kStateFormat, [&shipment]( StateIO& bodyIO )
         { bodyIO.value( shipment ); } );
         // 날씨(난수 · 지금 날씨)는 판 상태가 싣는다 — 판 4 부터 이 칸에 비 · 난수가 없다. 농부 자리 · 기력 · 도구 · 하루는 상태 칸이다(`GameModeComponent::serializeState`).
         io.end();

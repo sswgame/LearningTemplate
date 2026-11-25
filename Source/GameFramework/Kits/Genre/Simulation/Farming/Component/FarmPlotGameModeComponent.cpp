@@ -35,7 +35,7 @@ namespace sw
 
     void FarmPlotGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         if ( io.isOk() == false )
             return;
         FarmField restoredField;
@@ -46,7 +46,7 @@ namespace sw
             restoredField.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
         }
         FarmField& field = io.isWriting() ? _field : restoredField;
-        io.section( FarmField::kStateTag, FarmField::kStateVersion, [&field]( StateIO& bodyIO )
+        io.section( FarmField::kStateFormat, [&field]( StateIO& bodyIO )
         { bodyIO.value( field ); } );
         io.end();
         if ( io.isReading() && io.isOk() )

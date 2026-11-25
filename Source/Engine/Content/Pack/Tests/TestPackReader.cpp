@@ -29,8 +29,8 @@ namespace
 
         explicit PackImage( string_view domain = "game/test" )
         {
-            _header._magic         = kPackMagic;
-            _header._formatVersion = kPackFormatVersion;
+            _header._magic         = kPackFormat._tag;
+            _header._formatVersion = kPackFormat._version;
             _header._flags         = static_cast<uint16>( PackFlag::HasStringPool ) | static_cast<uint16>( PackFlag::HasCRC32 );
             _header._blockSize     = kPackMinBlockSize;
             _pool.assign( domain );
@@ -241,8 +241,8 @@ SW_TEST_CASE( PackReaderTest, MissingFileIsAnError )
 
 SW_TEST_CASE( PackReaderTest, WrongMagicAndVersionAreRefused )
 {
-    SW_EXPECT_LOG( "PackReader.InvalidPackMagicX" );
-    SW_EXPECT_LOG( "PackReader.UnsupportedPackFormatVersion" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     const PackTestFile file;
     PackReader         reader;
     PackImage          image = Util::makeValidImage();
@@ -250,7 +250,7 @@ SW_TEST_CASE( PackReaderTest, WrongMagicAndVersionAreRefused )
     SW_EXPECT_FALSE( file.open( image, reader ) );
     SW_EXPECT_FALSE( reader.isOpen() );
     image                        = Util::makeValidImage();
-    image._header._formatVersion = kPackFormatVersion + 1;
+    image._header._formatVersion = kPackFormat._version + 1;
     SW_EXPECT_FALSE( file.open( image, reader ) );
 }
 

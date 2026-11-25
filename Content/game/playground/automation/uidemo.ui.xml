@@ -1,5 +1,5 @@
 <?asset guid="c44f551b40a90ce3c1f2b5ee2c1a0117"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<!-- 개발용 UI 견본 화면(`-gv_uiDemo=1`, `UIDemoScreen.cpp`) — 글 · 버튼 · 슬라이더 · 체크 · 진행 막대 · 콤보 · 입력 칸과 그리기 견본. 글은 번역하지 않는다. -->
 	<UIScreenDef _layer="Menu" _defaultFocus="Start" />
 	<CanvasPanel>

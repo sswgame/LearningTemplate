@@ -6,7 +6,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/WeakRef.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -14,6 +13,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -47,8 +47,7 @@ namespace sw
         REFLECT_BODY();
         REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort );
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "CEQP" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 아이템 칸에 꾸미기 스키마 판(`Inventory::serializeSlot`). 판 1 은 `SW_STATE_FORMAT_UPGRADE` 가 올린다
+        static constexpr FormatDef kStateFormat{ "CEQP" };
 
         CharacterEquipmentComponent();
         virtual ~CharacterEquipmentComponent() override;

@@ -151,7 +151,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &TradeStoreLogicInternal::readClosedTimeMs;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&TradeStoreLogicInternal::readClosedTimeMs>(); // 열린 거래는 닫을 때 줄이 생긴다
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 

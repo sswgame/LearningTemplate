@@ -71,7 +71,7 @@ SW_TEST_CASE( UIStyleSheetVariantTest, ChildSheetMergesByKey )
     SW_REQUIRE_TRUE( DataCatalogInheritance::loadSchema( "UIStyleSheet", schema, bListed ) );
     SW_REQUIRE_TRUE( bListed );
 
-    SheetParentSource source{ R"(<UIStyleSheet _schemaVersion="1">
+    SheetParentSource source{ R"(<UIStyleSheet _schemaVersion="0">
         <Variable _name="accent" _value="0,0,1,1" />
         <Variable _name="text" _value="1,1,1,1" />
         <Rule _selector="ButtonWidget.primary" _backgroundColor="$accent" _borderWidth="1"><_font _weight="Bold" /></Rule>
@@ -100,7 +100,7 @@ SW_TEST_CASE( UIStyleSheetVariantTest, ChildSheetMergesByKey )
 SW_TEST_CASE( UIStyleSheetVariantTest, TypeVariationClonesRulesBeforeItsOwn )
 {
     UIStyleSheetAsset sheet;
-    SW_REQUIRE_TRUE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="1">
+    SW_REQUIRE_TRUE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="0">
         <TypeVariation _name="danger" _extends="primary" />
         <TypeVariation _name="dangerSmall" _extends="danger" />
         <Rule _selector="ButtonWidget.danger" _backgroundColor="1,0,0,1" />
@@ -135,9 +135,9 @@ SW_TEST_CASE( UIStyleSheetVariantTest, TypeVariationClonesRulesBeforeItsOwn )
 SW_TEST_CASE( UIStyleSheetVariantTest, TypeVariationErrors )
 {
     UIStyleSheetAsset    sheet;
-    const expected<void> unused = UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="1"><TypeVariation _name="a" _extends="nope" /><Rule _selector=".b" _borderWidth="1" /></UIStyleSheet>)", "s", ResourceContext::forDocument(), sheet );
+    const expected<void> unused = UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="0"><TypeVariation _name="a" _extends="nope" /><Rule _selector=".b" _borderWidth="1" /></UIStyleSheet>)", "s", ResourceContext::forDocument(), sheet );
     SW_REQUIRE_FALSE( unused.has_value() );
     SW_EXPECT_TRUE( unused.error().detail().find( "no rule uses" ) != string_view::npos );
-    SW_EXPECT_FALSE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="1"><TypeVariation _name="a" /></UIStyleSheet>)", "s", ResourceContext::forDocument(), sheet ).has_value() );
-    SW_EXPECT_FALSE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="1"><TypeVariation _name="a" _extends="a" /></UIStyleSheet>)", "s", ResourceContext::forDocument(), sheet ).has_value() );
+    SW_EXPECT_FALSE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="0"><TypeVariation _name="a" /></UIStyleSheet>)", "s", ResourceContext::forDocument(), sheet ).has_value() );
+    SW_EXPECT_FALSE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="0"><TypeVariation _name="a" _extends="a" /></UIStyleSheet>)", "s", ResourceContext::forDocument(), sheet ).has_value() );
 }

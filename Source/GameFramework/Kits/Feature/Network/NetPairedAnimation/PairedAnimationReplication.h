@@ -89,7 +89,7 @@ namespace sw
     struct NetPairedAnimationMessage
     {
         static constexpr uint32 kHoldMilliseconds = 5000;                                                                                                                                                      ///< 참가자가 클립을 읽는 동안 상태를 기다리는 시간. 끝은 같은 세션의 상태를 앞지르지 않는다
-        using SessionState                        = NetHeldMessageDef<NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 6>, kHoldMilliseconds>;                                 ///< 세션 상태(시작 · 늦은 참가). 판 6: 월드 세대가 표의 머리로 갔다. 5: 세션 번호(보류의 열쇠)가 온다. 4: 월드 세대가 앞에 온다. 3: 칸 선언(`PairedAnimationSessionStateBody`)으로 쓴다(2: 번호 64 비트)
+        using SessionState                        = NetHeldMessageDef<NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>, kHoldMilliseconds>;                                    ///< 세션 상태(시작 · 늦은 참가). 세션 번호(보류의 열쇠) 뒤를 칸 선언(`PairedAnimationSessionStateBody`)으로 쓴다
         using SessionEnd                          = NetHeldMessageDef<NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, PairedAnimationSessionEndBody>, kHoldMilliseconds>; ///< 세션 끝 — 상태 메시지 뒤에 닿아야 한다
         using Table                               = NetWorldMessageTable<NetKitMessageRange::kPairedAnimation, SessionState, SessionEnd>;
 

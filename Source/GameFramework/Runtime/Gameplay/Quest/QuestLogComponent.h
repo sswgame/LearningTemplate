@@ -5,13 +5,13 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -42,8 +42,7 @@ namespace sw
         REFLECT_BODY();
         SW_REGISTERED_COMPONENT( QuestLogComponent );
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "QLGC" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "QLGC" };
         /** @brief 자동으로 세는 목표 종류 — 퀘스트 데이터의 `<Objective kind="…">` 와 같은 글자다. */
         static constexpr const utf8* kDefeatKind   = "Defeat";
         static constexpr const utf8* kInteractKind = "Interact";

@@ -13,7 +13,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -94,9 +93,6 @@ namespace sw
     class SW_KIT_API AdventureElementGrid
     {
     public:
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "AELM" );
-        static constexpr uint32 kStateVersion = 1;
-
         AdventureElementGrid();
         /** @brief 격자는 규칙 테이블을 가리키므로, 복사하면 새 규칙 테이블을 가리키도록 다시 연결합니다. */
         AdventureElementGrid( const AdventureElementGrid& other );

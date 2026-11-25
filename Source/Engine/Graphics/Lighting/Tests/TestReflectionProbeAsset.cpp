@@ -250,7 +250,7 @@ SW_TEST_CASE( ReflectionProbeAssetTest, WrongMagicOrVersionIsRejected )
     Util::expectRejected( listMagic );
 
     vector<uint8> listVersion = Util::makeBytes();
-    Util::patchUint32( listVersion, Util::kVersionOffset, ReflectionProbeAsset::kVersion + 1u );
+    Util::patchUint32( listVersion, Util::kVersionOffset, 0xFFFFFFFFu );
     Util::expectRejected( listVersion );
 }
 

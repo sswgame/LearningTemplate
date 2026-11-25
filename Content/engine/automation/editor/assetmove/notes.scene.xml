@@ -1,5 +1,5 @@
 <?asset guid="3782c8d0feb97be78f89755659152dd8"?>
-<Scene formatVersion="3" name="AssetMoveNotes">
+<Scene formatVersion="0" name="AssetMoveNotes">
 	<!-- 경로 칸 밖(주석)에서 에셋을 적은 파일: engine/automation/editor/assetmove/refuse/noted.material — 옮기기는 이 글을 고치지 못하므로 refuse 폴더를 옮기지 않는다 -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

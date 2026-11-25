@@ -1,5 +1,5 @@
 <?asset guid="82c43d3474d23113b861339712e06a16"?>
-<Prefab formatVersion="1" name="PushBlock3D">
+<Prefab formatVersion="0" name="PushBlock3D">
 	<GameObject _schemaVersion="0" _name="PushBlock3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"

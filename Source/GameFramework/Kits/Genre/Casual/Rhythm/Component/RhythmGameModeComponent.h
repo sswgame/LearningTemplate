@@ -57,7 +57,7 @@ namespace sw
      * @class RhythmGameModeComponent
      * @brief 곡 열기 → 판정 → 깸(또는 실패) → 결과를 진행합니다.
      */
-    REFLECT( Version = 2, Category = "Rhythm", DisplayName = "Rhythm Game Mode", Tooltip = "Runs one Rhythm song: song time and lane presses arrive as commands, judged to a clear or a failure" )
+    REFLECT( Category = "Rhythm", DisplayName = "Rhythm Game Mode", Tooltip = "Runs one Rhythm song: song time and lane presses arrive as commands, judged to a clear or a failure" )
     class SW_KIT_API RhythmGameModeComponent : public GameModeComponent
     {
     public:

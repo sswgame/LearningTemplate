@@ -2,14 +2,13 @@
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Component/RhythmGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -18,19 +17,7 @@ namespace sw
     {
         struct RhythmGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "RHGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 등급 수가 판의 리플렉션 상태 칸이다
-
-            /** @brief 상태 칸 판 1 → 2: 결과 유지 깃발을 뺀다 — 끝난 걸음에 `Countdown` 을 걸고 다 된 걸음에 한 번 끝내는 길은 깃발 없이 선다(다른 디렉터와 같은 꼴). */
-            [[nodiscard]] static bool dropHoldFlags( Archive& inOldBody, Archive& outNewBody )
-            {
-                float32 musicTime        = 0.0f;
-                uint8   bResultShown     = 0;
-                uint8   bFinishRequested = 0;
-                inOldBody >> musicTime >> bResultShown >> bFinishRequested;
-                outNewBody << musicTime;
-                return inOldBody.isOk();
-            }
+            static constexpr FormatDef kStateFormat{ "RHGM" };
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
@@ -204,7 +191,7 @@ namespace sw
 
     void RhythmGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( RhythmGameModeComponentInternal::kStateTag, RhythmGameModeComponentInternal::kStateVersion );
+        io.header( RhythmGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 판은 같은 채보 · 같은 판정 창으로 연 뒤에 읽는다(키트 계약).
@@ -224,5 +211,4 @@ namespace sw
 
 namespace sw
 {
-    SW_TYPE_VERSION_PATCH( rhythmGameModeState1To2, "sw::RhythmGameModeComponent", 1, 2, &RhythmGameModeComponentInternal::dropHoldFlags );
 } // namespace sw

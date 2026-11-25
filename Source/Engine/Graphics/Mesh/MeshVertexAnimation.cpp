@@ -21,7 +21,6 @@ namespace sw
         struct MeshVertexAnimationInternal
         {
             /** @brief 쿠킹본 매직, 헤더 크기, 플래그입니다. */
-            static constexpr uint8  kArrMagic[4]    = { 'S', 'W', 'V', 'A' };
             static constexpr size_t kHeaderSize     = 52;
             static constexpr uint32 kFlagLoop       = 1u;
             static constexpr uint32 kFlagAnchorRoot = 2u;
@@ -114,10 +113,9 @@ namespace sw
     {
         outBytes.clear();
         outBytes.reserve( MeshVertexAnimationInternal::kHeaderSize + _listFrameVertex.size() * sizeof( MeshVertexAnimationElement ) );
-        outBytes.insert( outBytes.end(), std::begin( MeshVertexAnimationInternal::kArrMagic ), std::end( MeshVertexAnimationInternal::kArrMagic ) );
+        kFormat.write( outBytes );
         const uint32 flags = ( _bLoop == SW_TRUE ? MeshVertexAnimationInternal::kFlagLoop : 0u ) |
                              ( _bAnchorRootMotion == SW_TRUE ? MeshVertexAnimationInternal::kFlagAnchorRoot : 0u );
-        MeshVertexAnimationInternal::appendValue( outBytes, kVersion );
         MeshVertexAnimationInternal::appendValue( outBytes, _frameCount );
         MeshVertexAnimationInternal::appendValue( outBytes, _vertexCount );
         MeshVertexAnimationInternal::appendValue( outBytes, _framesPerSecond );
@@ -137,22 +135,10 @@ namespace sw
 
     bool MeshVertexAnimation::readFromBytes( const uint8* pData, size_t byteCount, string_view sourceLabel )
     {
-        *this                              = MeshVertexAnimation{};
-        const bool bNotVertexAnimationFile = pData == nullptr || byteCount < MeshVertexAnimationInternal::kHeaderSize ||
-                                             Memory::compare( pData, MeshVertexAnimationInternal::kArrMagic, sizeof( MeshVertexAnimationInternal::kArrMagic ) ) != 0;
-        if ( bNotVertexAnimationFile )
-        {
-            SW_LOG_ERROR_ID( "MeshVertexAnimation.VertexAnimationNotSWVA", "Vertex animation '%#' is not a SWVA file", sourceLabel );
+        *this = MeshVertexAnimation{};
+        ByteReader reader{ pData, pData != nullptr ? byteCount : 0 };
+        if ( kFormat.read( reader, sourceLabel, MeshVertexAnimationInternal::kHeaderSize ) == false )
             return false;
-        }
-        ByteReader reader{ pData, byteCount };
-        (void)reader.skipBytes( sizeof( MeshVertexAnimationInternal::kArrMagic ) ); // 위에서 길이와 매직을 봤다
-        const uint32 version = reader.readUint32();
-        if ( version != kVersion )
-        {
-            SW_LOG_ERROR_ID( "MeshVertexAnimation.VertexAnimationVersionNot", "Vertex animation '%#' is version %#, not the current %# - cook again", sourceLabel, version, kVersion );
-            return false;
-        }
         const uint32  frameCount  = reader.readUint32();
         const uint32  vertexCount = reader.readUint32();
         const float32 frameRate   = reader.readFloat32(); // NaN 은 `<= 0` 을 지나 샘플링에서 미정의 정수 변환이 된다 — 읽기가 거절한다.

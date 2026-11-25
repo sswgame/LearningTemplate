@@ -104,7 +104,7 @@ namespace
         {
             sw::BitWriter writer;
             writer.writeUint32( magic );
-            writer.writeBits( sw::KartGhost::kVersion, 8 );
+            writer.writeVarUint( sw::KartGhost::kFormat._version );
             writer.writeFloat( 0.0f );
             writer.writeFloat( 0.0f );
             writer.writeFloat( 0.0f );

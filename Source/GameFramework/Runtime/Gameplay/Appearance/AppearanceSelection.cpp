@@ -23,14 +23,13 @@ namespace sw
     {
         struct AppearanceSelectionInternal
         {
-            static constexpr uint32 kMaxCount         = 1024; ///< 읽을 때의 개수 상한. 망가진 입력이나 악의적인 입력이 큰 할당을 일으키지 않게 한다
-            static constexpr int32  kKindBits         = 2;
-            static constexpr int32  kLegacySliderBits = 16; ///< 판 1 의 슬라이더 — 그때 스키마 범위 안의 단계. 범위가 바뀐 뒤에는 뜻이 달라져 판 2 는 실제 값을 쓴다
-            static constexpr int32  kColorBits        = 8;
-            static constexpr int32  kDamageBits       = 8;
-            static constexpr int32  kFineBits         = 16; ///< 피부 층 이동 · 크기 · 회전(`SkinLayerValue::kFineSteps`)
-            static constexpr int32  kVersionBits      = 8;
-            static constexpr uint32 kChecksumBytes    = 4;
+            static constexpr uint32 kMaxCount      = 1024; ///< 읽을 때의 개수 상한. 망가진 입력이나 악의적인 입력이 큰 할당을 일으키지 않게 한다
+            static constexpr int32  kKindBits      = 2;
+            static constexpr int32  kColorBits     = 8;
+            static constexpr int32  kDamageBits    = 8;
+            static constexpr int32  kFineBits      = 16; ///< 피부 층 이동 · 크기 · 회전(`SkinLayerValue::kFineSteps`)
+            static constexpr int32  kVersionBits   = 8;
+            static constexpr uint32 kChecksumBytes = 4;
 
             static uint32 toHash32( const hashed_string& name ) { return CustomizationSchemaDef::toSavedHash( name ); }
 
@@ -148,7 +147,7 @@ namespace sw
                 CustomizationValueSet upgraded = values;
                 if ( const expected<void> result = migrateInPlace( pSchema, upgraded ); result.has_value() == false )
                 {
-                    SW_LOG_WARNING_ID( "AppearanceSelection.ValuesNotWritten", "Customization values of schema '%#' (version %#) cannot be written: %# - written as defaults", pSchema->_id.c_str(), values.getSchemaVersion(),
+                    SW_LOG_WARNING_ID( "AppearanceSelection.ValuesNotWritten", "Customization values of schema '%#' (version %#) cannot be written: %# - written as defaults", pSchema->_id.c_str(), values.getSchemaVersion().value_or( 0 ),
                                        result.error().message() );
                     return CustomizationValueSet{};
                 }
@@ -193,13 +192,11 @@ namespace sw
                 }
             }
 
-            /** @brief 스키마가 아는 값만 씁니다(아이템 인스턴스 값 — 정한 값만 싣는다). 판 4 부터 앞에 스키마 판을 쓴다. */
-            static void writeValues( BitWriter& writer, const CustomizationValueSet& values, const CustomizationSchemaDef* pSchema, uint32 formatVersion )
+            /** @brief 스키마가 아는 값만 씁니다(아이템 인스턴스 값 — 정한 값만 싣는다). 앞에 스키마 판을 쓴다. */
+            static void writeValues( BitWriter& writer, const CustomizationValueSet& values, const CustomizationSchemaDef* pSchema )
             {
                 const CustomizationValueSet upgraded = migrateForWrite( pSchema, values );
-                // 판 0(판을 찍지 않은 값)은 쓰지 않는다 — 읽는 때의 판으로 잘못 읽힌다. 스키마가 없으면 값도 쓰지 않으므로 판 1 이다
-                if ( formatVersion >= 4 )
-                    writer.writeVarUint( pSchema != nullptr ? pSchema->getVersion() : CustomizationValueSet::kFirstSchemaVersion );
+                writer.writeVarUint( pSchema != nullptr ? pSchema->getVersion() : 0u ); // 스키마가 없으면 값도 쓰지 않는다 — 읽는 쪽은 빈 묶음의 판을 보지 않는다
                 vector<const CustomizationValue*> listKnown;
                 for ( const CustomizationValue& value : upgraded.getValues() )
                 {
@@ -217,11 +214,10 @@ namespace sw
              * @brief 선택이 담은 카테고리의 **모든** 매개변수를 씁니다. 정하지 않은 값은 지금 기본값으로 적는다 — 쓴 모습이 그대로 남고, 뒤 판이 기본값을 바꿔도 저장된 캐릭터는
              *        바뀌지 않는다(뒤 판에 새로 생긴 매개변수만 그 판의 기본값을 따른다). 스키마가 모르는 값은 쓰지 않는다.
              */
-            static void writeAllValues( BitWriter& writer, const AppearanceSelection& selection, const CustomizationSchemaDef* pSchema, uint32 formatVersion )
+            static void writeAllValues( BitWriter& writer, const AppearanceSelection& selection, const CustomizationSchemaDef* pSchema )
             {
                 const CustomizationValueSet upgraded = migrateForWrite( pSchema, selection._customization );
-                if ( formatVersion >= 4 )
-                    writer.writeVarUint( pSchema != nullptr ? pSchema->getVersion() : CustomizationValueSet::kFirstSchemaVersion );
+                writer.writeVarUint( pSchema != nullptr ? pSchema->getVersion() : 0u ); // 스키마가 없으면 값도 쓰지 않는다 — 읽는 쪽은 빈 묶음의 판을 보지 않는다
                 vector<const CustomizationParamDef*> listParam;
                 if ( pSchema != nullptr )
                 {
@@ -240,13 +236,13 @@ namespace sw
             }
 
             /**
-             * @brief 값 묶음 하나를 읽습니다. 값은 쓴 스키마 판 그대로다(판 1 ~ 3 은 스키마 판 1) — 지금 스키마가 모르는 이름 · 종류는 해시 자리 이름(`#1a2b3c4d`)으로 두어
+             * @brief 값 묶음 하나를 읽습니다. 값은 쓴 스키마 판 그대로다 — 지금 스키마가 모르는 이름 · 종류는 해시 자리 이름(`#1a2b3c4d`)으로 두어
              *        스키마 판 올림(`CustomizationSchemaDef::migrate` — 자리 이름도 옛 이름으로 맞춘다)이 옮길 수 있게 한다.
              */
-            [[nodiscard]] static bool readValues( BitReader& reader, const CustomizationSchemaDef* pSchema, uint32 formatVersion, CustomizationValueSet& outValues )
+            [[nodiscard]] static bool readValues( BitReader& reader, const CustomizationSchemaDef* pSchema, CustomizationValueSet& outValues )
             {
-                outValues.setSchemaVersion( formatVersion >= 4 ? reader.readVarUint32() : CustomizationValueSet::kFirstSchemaVersion );
-                uint32 count = 0;
+                const uint32 schemaVersion = reader.readVarUint32();
+                uint32       count         = 0;
                 if ( readVarCount( reader, count ) == false )
                     return false;
                 for ( uint32 index = 0; index < count; ++index )
@@ -268,18 +264,9 @@ namespace sw
                     {
                         case CustomizationKind::Slider:
                         {
-                            if ( formatVersion == 1 )
-                            {
-                                // 판 1 은 그때 범위 안의 단계다. 그때 범위는 남지 않아 지금 범위로 푼다 — 범위를 바꾼 매개변수는 정확하지 않다(판 2 가 고친 까닭)
-                                const uint32 step = reader.readBits( kLegacySliderBits );
-                                value._number._x  = pParam != nullptr ? pParam->dequantizeSlider( step ) : 0.0f;
-                            }
-                            else
-                            {
-                                value._number._x = reader.readFiniteFloat();
-                                if ( reader.hasOverflowed() )
-                                    return false;
-                            }
+                            value._number._x = reader.readFiniteFloat();
+                            if ( reader.hasOverflowed() )
+                                return false;
                             break;
                         }
                         case CustomizationKind::Color:
@@ -308,6 +295,8 @@ namespace sw
                     }
                     outValues.setValue( value );
                 }
+                if ( count > 0 )
+                    outValues.setSchemaVersion( schemaVersion ); // 빈 묶음에는 판을 찍지 않는다
                 return reader.hasOverflowed() == false;
             }
 
@@ -340,7 +329,7 @@ namespace sw
                 }
                 if ( result.has_value() )
                     return;
-                SW_LOG_WARNING_ID( "AppearanceSelection.ValuesNotMigrated", "Customization values of schema '%#' (version %#) cannot be upgraded: %# - dropped", pSchema->_id.c_str(), inoutValues.getSchemaVersion(),
+                SW_LOG_WARNING_ID( "AppearanceSelection.ValuesNotMigrated", "Customization values of schema '%#' (version %#) cannot be upgraded: %# - dropped", pSchema->_id.c_str(), inoutValues.getSchemaVersion().value_or( 0 ),
                                    result.error().message() );
                 for ( const CustomizationValue& value : inoutValues.getValues() )
                 {
@@ -632,7 +621,7 @@ namespace sw
         ResolvedAppearance::resolve( database, previewSpec, outResolved );
     }
 
-    void AppearanceSelection::writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database, uint32 version )
+    void AppearanceSelection::writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database )
     {
         using Internal = AppearanceSelectionInternal;
         writer.writeUint32( Internal::toHash32( selection._basePresetID ) );
@@ -646,7 +635,7 @@ namespace sw
         {
             writer.writeUint32( Internal::toHash32( category ) );
         }
-        Internal::writeAllValues( writer, selection, database.getSchemas().findSchema( selection._schema ), version );
+        Internal::writeAllValues( writer, selection, database.getSchemas().findSchema( selection._schema ) );
         Internal::writeVarCount( writer, selection._listSlot.size() );
         for ( const AppearanceSlotRequest& request : selection._listSlot )
         {
@@ -656,19 +645,16 @@ namespace sw
             writer.writeUint32( Internal::toHash32( request._state ) );
             writer.writeBits( unorm8::fromFloat( request._damage ).getRaw(), Internal::kDamageBits );
             writer.writeBool( request._bSuppressed == SW_TRUE );
-            if ( version >= 3 )
-                writer.writeBool( request._bHiddenByPlayer == SW_TRUE );
+            writer.writeBool( request._bHiddenByPlayer == SW_TRUE );
             Internal::writeVarCount( writer, request._listDetachedPart.size() );
             for ( const hashed_string& part : request._listDetachedPart )
             {
                 writer.writeUint32( Internal::toHash32( part ) );
             }
             const ItemVisualDef* pShown = Internal::findShownVisual( database, request._itemID, request._visibleVisual );
-            Internal::writeValues( writer, request._customization, Internal::findVisualSchema( database, pShown ), version );
+            Internal::writeValues( writer, request._customization, Internal::findVisualSchema( database, pShown ) );
         }
-        // 판 3: 피부 층. 격자는 `SkinLayerValue::quantize` 와 같다 — 받는 쪽의 굽기 결과가 보낸 쪽과 같다.
-        if ( version < 3 )
-            return;
+        // 피부 층. 격자는 `SkinLayerValue::quantize` 와 같다 — 받는 쪽의 굽기 결과가 보낸 쪽과 같다.
         Internal::writeVarCount( writer, selection._listSkinLayer.size() );
         for ( const SkinLayerValue& layer : selection._listSkinLayer )
         {
@@ -688,7 +674,7 @@ namespace sw
         }
     }
 
-    bool AppearanceSelection::readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection, uint32 formatVersion )
+    bool AppearanceSelection::readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection )
     {
         using Internal = AppearanceSelectionInternal;
         outSelection   = AppearanceSelection{};
@@ -725,7 +711,7 @@ namespace sw
         {
             outSelection._listCategory.push_back( Internal::findByHash( reader.readUint32(), listCategory ) );
         }
-        if ( Internal::readValues( reader, database.getSchemas().findSchema( outSelection._schema ), formatVersion, outSelection._customization ) == false )
+        if ( Internal::readValues( reader, database.getSchemas().findSchema( outSelection._schema ), outSelection._customization ) == false )
             return false;
 
         vector<hashed_string> listSlotName;
@@ -758,7 +744,7 @@ namespace sw
             const uint32 stateHash       = reader.readUint32();
             request._damage              = unorm8::fromRaw( static_cast<uint8>( reader.readBits( Internal::kDamageBits ) ) ).toFloat();
             request._bSuppressed         = reader.readBool() ? SW_TRUE : SW_FALSE;
-            request._bHiddenByPlayer     = formatVersion >= 3 && reader.readBool() ? SW_TRUE : SW_FALSE; // 판 1 · 2 에는 없다
+            request._bHiddenByPlayer     = reader.readBool() ? SW_TRUE : SW_FALSE;
             const ItemVisualDef*  pShown = Internal::findShownVisual( database, request._itemID, request._visibleVisual );
             vector<hashed_string> listStateName;
             vector<hashed_string> listPartName;
@@ -781,36 +767,33 @@ namespace sw
             {
                 request._listDetachedPart.push_back( Internal::findByHash( reader.readUint32(), listPartName ) );
             }
-            if ( Internal::readValues( reader, Internal::findVisualSchema( database, pShown ), formatVersion, request._customization ) == false )
+            if ( Internal::readValues( reader, Internal::findVisualSchema( database, pShown ), request._customization ) == false )
                 return false;
             outSelection._listSlot.push_back( request );
         }
-        if ( formatVersion >= 3 )
+        vector<hashed_string> listLayerID;
+        for ( const SkinLayerDef& layer : database.getSkinLayers().getLayers() )
+            listLayerID.push_back( layer._id );
+        uint32 layerCount = 0;
+        if ( Internal::readVarCount( reader, layerCount ) == false )
+            return false;
+        for ( uint32 index = 0; index < layerCount; ++index )
         {
-            vector<hashed_string> listLayerID;
-            for ( const SkinLayerDef& layer : database.getSkinLayers().getLayers() )
-                listLayerID.push_back( layer._id );
-            uint32 layerCount = 0;
-            if ( Internal::readVarCount( reader, layerCount ) == false )
-                return false;
-            for ( uint32 index = 0; index < layerCount; ++index )
-            {
-                SkinLayerValue layer;
-                layer._layer     = Internal::findByHash( reader.readUint32(), listLayerID );
-                layer._color._x  = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
-                layer._color._y  = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
-                layer._color._z  = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
-                layer._color._w  = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
-                layer._opacity   = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
-                layer._offset._x = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), 0.0f, 1.0f );
-                layer._offset._y = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), 0.0f, 1.0f );
-                layer._scale._x  = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale );
-                layer._scale._y  = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale );
-                layer._rotation  = Radians::fromDegrees( SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation ) );
-                layer._bMirror   = reader.readBool() ? SW_TRUE : SW_FALSE;
-                layer._bHidden   = reader.readBool() ? SW_TRUE : SW_FALSE;
-                outSelection._listSkinLayer.push_back( layer );
-            }
+            SkinLayerValue layer;
+            layer._layer     = Internal::findByHash( reader.readUint32(), listLayerID );
+            layer._color._x  = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+            layer._color._y  = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+            layer._color._z  = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+            layer._color._w  = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+            layer._opacity   = CustomizationParamDef::dequantizeColorChannel( reader.readBits( Internal::kColorBits ) );
+            layer._offset._x = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), 0.0f, 1.0f );
+            layer._offset._y = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), 0.0f, 1.0f );
+            layer._scale._x  = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale );
+            layer._scale._y  = SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale );
+            layer._rotation  = Radians::fromDegrees( SkinLayerValue::decodeFine( reader.readBits( Internal::kFineBits ), -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation ) );
+            layer._bMirror   = reader.readBool() ? SW_TRUE : SW_FALSE;
+            layer._bHidden   = reader.readBool() ? SW_TRUE : SW_FALSE;
+            outSelection._listSkinLayer.push_back( layer );
         }
         return reader.hasOverflowed() == false;
     }
@@ -845,9 +828,9 @@ namespace sw
             return unexpected( Error{ ErrorKind::InvalidArgument, "checksum mismatch" } );
         BitReader    reader( bytes.data(), static_cast<int32>( payloadSize ) );
         const uint32 version = reader.readBits( Internal::kVersionBits );
-        if ( version < kOldestShareCodeVersion || version > kShareCodeVersion ) // 옛 판은 읽는다(저장된 프리셋이 공유 코드다) — 판을 올리는 커밋은 옛 판 읽기를 남긴다
+        if ( version != kShareCodeVersion ) // 저장된 프리셋이 공유 코드다 — 판을 올리는 커밋은 옛 판 읽기를 남긴다
             return unexpected( Error{ ErrorKind::Unsupported, "unsupported share code version" } );
-        if ( AppearanceSelection::readSelection( reader, database, outSelection, version ) == false )
+        if ( AppearanceSelection::readSelection( reader, database, outSelection ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "truncated share code" } );
         // 값을 지금 스키마 판으로 올린다 — 이 콘텐츠보다 새 판이면 거절한다(값을 기본값으로 바꿔 담지 않는다. 저장된 코드는 그대로 남는다)
         return Internal::migrateSelection( database, outSelection );

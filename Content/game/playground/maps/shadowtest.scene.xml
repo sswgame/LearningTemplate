@@ -1,5 +1,5 @@
 <?asset guid="921ab96a899c233cc3795e7d73dd2f90"?>
-<Scene formatVersion="3" name="ShadowTest">
+<Scene formatVersion="0" name="ShadowTest">
 	<!-- 그림자 기능 시나리오(automation/shadow_*)의 무대 — 애니메이션 · 비동기 메시가 없어 같은 프레임이 실행마다 같은 그림이다.
 	     해는 카메라에 맞춘 캐스케이드 둘(_shadowViewDistance), 점광은 아틀라스 칸 여섯을 쓴다. 원천 크기(_shadowSettings)는 PCSS(gv_shadowFilter 1)만 읽는다 —
 	     눈으로 보이게 해는 3°, 점광은 반지름 0.15 m 로 크게 잡았다. 기둥은 길쭉해 바닥에 반그림자가 길게 진다. -->

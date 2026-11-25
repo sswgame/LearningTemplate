@@ -308,7 +308,7 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         if ( io.isOk() == false )
             return;
         if ( io.isReading() )

@@ -45,8 +45,7 @@ namespace sw
     void LocalizationBinaryTable::toBytes( vector<uint8>& outBytes ) const
     {
         outBytes.clear();
-        LittleEndianUtil::appendUint32( outBytes, kMagic );
-        LittleEndianUtil::appendUint32( outBytes, kVersion );
+        kFormat.write( outBytes );
         LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( _culture.size() ) );
         outBytes.insert( outBytes.end(), _culture.begin(), _culture.end() );
         uint32 blobBytes = 0;
@@ -84,10 +83,8 @@ namespace sw
         const size_t checksumPos = size - Internal::kChecksumBytes;
         ByteReader   reader{ pData, checksumPos };
         ByteReader   checksumReader{ pData + checksumPos, Internal::kChecksumBytes };
-        if ( reader.readUint32() != kMagic )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "locres magic mismatch" } );
-        if ( reader.readUint32() != kVersion )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "locres version is not supported" } );
+        if ( expected<void> head = kFormat.check( reader ); head.has_value() == false )
+            return unexpected( std::move( head.error() ) );
 
         if ( checksumReader.readUint64() != Internal::computeChecksum( pData, checksumPos ) )
             return unexpected( Error{ ErrorKind::InvalidArgument, "locres checksum mismatch" } );

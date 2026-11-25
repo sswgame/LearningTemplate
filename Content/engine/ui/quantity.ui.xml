@@ -1,5 +1,5 @@
 <?asset guid="4c3ced86df99046f4f46c63ae2b2ddb8"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<!-- 수량 대화 상자(`QuantityDialogScreen`). 슬라이더 `Amount` 의 범위는 연 쪽이 정한다(1 ~ 최대). 단추 명령은 `Accept` · `Cancel`, 뒤로 가기는 취소다. -->
 	<UIScreenDef _layer="Modal" _bModal="true" _defaultFocus="Amount" />
 	<SafeZonePanel>

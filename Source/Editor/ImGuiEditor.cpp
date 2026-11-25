@@ -78,6 +78,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -242,7 +243,7 @@ namespace sw::editor
 
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션 상태의 키와 형식 판입니다. */
             static constexpr string_view kSessionStoreKey = "editor.session";
-            static constexpr uint32      kSessionVersion  = 1;
+            static constexpr FormatDef   kSessionFormat{ "EDSE" };
 
             /** @brief 인스턴스가 종료하기 전에 선택 · 미저장 표시를 호스트의 맡김 칸에 맡깁니다. 다음 인스턴스가 `resumeEditSession` 으로 찾아갑니다. */
             static void storeEditSession( EditorContext& context )
@@ -260,7 +261,8 @@ namespace sw::editor
                 }
                 // 워크스페이스가 아직 이 세대를 보지 못했으면 선택 · 표시는 옛 씬의 것이다 — 세대를 그대로 적어 다음 인스턴스가 버리게 한다.
                 Archive archive;
-                archive << kSessionVersion << workspace.getObservedSceneGeneration() << workspace.isSceneDirty();
+                kSessionFormat.write( archive );
+                archive << workspace.getObservedSceneGeneration() << workspace.isSceneDirty();
                 writeUndoArg( archive, listSelectedObjectID );
                 writeUndoArg( archive, selection.getSelectedAssets() );
                 pStore->store( kSessionStoreKey, vector<uint8>( archive.getData(), archive.getData() + archive.getSize() ) );
@@ -283,13 +285,11 @@ namespace sw::editor
                 if ( pStore == nullptr || pStore->take( kSessionStoreKey, bytes ) == false )
                     return false;
                 Archive        archive( bytes.data(), bytes.size() );
-                uint32         version{ 0 };
                 uint64         storedGeneration{ 0 };
                 bool           bSceneDirty{ false };
                 vector<uint64> listSelectedObjectID;
                 vector<string> listSelectedAsset;
-                archive >> version >> storedGeneration >> bSceneDirty;
-                const bool bRead = archive.isOk() && version == kSessionVersion && readUndoArg( archive, listSelectedObjectID ) && readUndoArg( archive, listSelectedAsset );
+                const bool     bRead = kSessionFormat.check( archive ).has_value() && ( archive >> storedGeneration >> bSceneDirty ).isOk() && readUndoArg( archive, listSelectedObjectID ) && readUndoArg( archive, listSelectedAsset );
                 if ( bRead == false || storedGeneration != generation )
                     return true; // 앞선 인스턴스는 있었다 — 씬이 바뀌었거나 형식이 달라 값만 버린다
                 if ( bSceneDirty )

@@ -5,6 +5,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 
@@ -17,7 +18,7 @@ namespace sw::editor
             /** @brief 맡김 칸의 키입니다. */
             static constexpr string_view kStoreKey = "editor.objectCopyBuffer";
             /** @brief 맡긴 형식의 판입니다. 항목 모양이 바뀌면 올린다(옛 판은 버린다). */
-            static constexpr uint32 kVersion = 1;
+            static constexpr FormatDef kFormat{ "EDCP" };
         };
     } // namespace
 
@@ -29,12 +30,10 @@ namespace sw::editor
         if ( pStore == nullptr || pStore->take( ObjectCopyBufferInternal::kStoreKey, bytes ) == false )
             return SubsystemInitResult::Succeeded;
         Archive archive( bytes.data(), bytes.size() );
-        uint32  version{ 0 };
         uint32  count{ 0 };
-        archive >> version;
         // 항목 하나는 적어도 글 셋의 길이 · id · 뿌리 표시다.
         constexpr uint32 kMinEntryBytes = sizeof( uint32 ) * 3 + sizeof( uint64 ) + sizeof( uint8 );
-        if ( archive.isOk() == false || version != ObjectCopyBufferInternal::kVersion )
+        if ( ObjectCopyBufferInternal::kFormat.check( archive ).has_value() == false )
             return SubsystemInitResult::Succeeded;
         count = archive.readCount( kMinEntryBytes );
         if ( archive.isError() )
@@ -58,7 +57,8 @@ namespace sw::editor
         if ( pStore == nullptr || _listEntry.empty() )
             return;
         Archive archive;
-        archive << ObjectCopyBufferInternal::kVersion << static_cast<uint32>( _listEntry.size() );
+        ObjectCopyBufferInternal::kFormat.write( archive );
+        archive << static_cast<uint32>( _listEntry.size() );
         for ( const ObjectCopyEntry& entry : _listEntry )
         {
             archive << string_view{ entry._name.c_str() } << entry._savedID << entry._stateBytes << string_view{ entry._prefabPath } << entry._bRoot;

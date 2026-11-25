@@ -35,17 +35,8 @@ namespace sw
         using Internal = HeightfieldAssetInternal;
         *this          = HeightfieldAsset{};
         ByteReader reader{ bytes.data(), bytes.size() };
-        if ( bytes.size() < Internal::kHeaderBytes || reader.readUint32() != kMagic )
-        {
-            SW_LOG_ERROR_ID( "HeightfieldAsset.NotHeightfieldMagicSWHF", "'%#' is not a heightfield (magic SWHF missing)", sourceName );
+        if ( kFormat.read( reader, sourceName, Internal::kHeaderBytes ) == false )
             return false;
-        }
-        const uint32 version = reader.readUint32();
-        if ( version != kVersion )
-        {
-            SW_LOG_ERROR_ID( "HeightfieldAsset.HeightfieldVersionBuildReads", "'%#' is heightfield version %# - this build reads version %# only (re-import it)", sourceName, version, kVersion );
-            return false;
-        }
         const uint32 resolution = reader.readUint32();
         const uint32 flags      = reader.readUint32();
         if ( resolution < 2 || resolution > kMaxResolution )
@@ -88,8 +79,7 @@ namespace sw
         outBytes.clear();
         const bool bHoles = _listHoleCell.empty() == false;
         outBytes.reserve( Internal::kHeaderBytes + _listHeight.size() * 2 + _listHoleCell.size() );
-        LittleEndianUtil::appendUint32( outBytes, kMagic );
-        LittleEndianUtil::appendUint32( outBytes, kVersion );
+        kFormat.write( outBytes );
         LittleEndianUtil::appendUint32( outBytes, _resolution );
         LittleEndianUtil::appendUint32( outBytes, bHoles ? kFlagHoleMask : 0u );
         for ( const uint16 height : _listHeight )

@@ -128,8 +128,8 @@ namespace sw
         int2 _cell{ 0, 0 };
     };
 
-    /** @brief 판 2 인 상태입니다. 판 1 은 체력 하나(int16)였고 `SW_TYPE_VERSION_PATCH` 가 올린다(테스트 .cpp). */
-    REFLECT( Version = 2 )
+    /** @brief 판 1 인 상태입니다. 판 0 은 체력 하나(int16)였고 `SW_TYPE_VERSION_PATCH` 가 올린다(테스트 .cpp). */
+    REFLECT( Version = 1 )
     struct StateIOReflectedTestVersioned
     {
         REFLECT_BODY();

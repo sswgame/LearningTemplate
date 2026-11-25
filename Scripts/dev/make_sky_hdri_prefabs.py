@@ -32,7 +32,7 @@ _OUTPUT = _ROOT / "Content/engine/prefabs/sky"
 _RADIANCE_RESOLUTION = 128
 # OctahedralRadianceMap 파일 머리말(매직 SWRM · 버전 · 한 변) — C++ kMagic(FourCCUtil::make 는 첫 글자가 낮은 바이트) · kVersion 과 같다.
 _RADIANCE_MAGIC = b"SWRM"
-_RADIANCE_VERSION = 1
+_RADIANCE_VERSION = 0
 
 
 def _read_hdr(path: Path) -> np.ndarray:
@@ -130,7 +130,7 @@ def _write_radiance_map(name: str, folded: np.ndarray, resolution: int) -> None:
 def _write_prefab(name: str, coefficients: np.ndarray) -> None:
     items = "\n".join(f"\t\t\t\t\t<item>{value:.6f}</item>" for value in coefficients.flatten())
     text = f"""<!-- Scripts/dev/make_sky_hdri_prefabs.py 가 지었다 — 손으로 고치지 않는다. 그림은 텍스처, 간접 조명은 원본을 투영한 SH9 계수, 반사는 곁의 .radiancemap 을 거른 것이다. -->
-<Prefab formatVersion="1" name="Sky_{name}">
+<Prefab formatVersion="0" name="Sky_{name}">
 	<GameObject _schemaVersion="0" _name="Sky_{name}" _bActive="true">
 		<_listComponent>
 			<SkyComponent _intensity="1" _mode="Hdri" _hdriTexture="engine/textures/sky/{name}.dds" _hdriRotation="0" _hdriRadianceMap="engine/prefabs/sky/{name}.radiancemap">

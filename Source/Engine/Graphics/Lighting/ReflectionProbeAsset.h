@@ -13,7 +13,6 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -39,8 +38,6 @@ namespace sw
      */
     struct SW_API OctahedralRadianceMap
     {
-        static constexpr uint32      kMagic     = FourCCUtil::make( "SWRM" );
-        static constexpr uint32      kVersion   = 1;
         static constexpr string_view kExtension = ".radiancemap";
         /** @brief 참조(`AssetRef<OctahedralRadianceMap>`)의 대상 종류입니다. 공유 캐시가 없어 표에 올리지 않고 참조의 검사에만 쓴다. */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
@@ -89,8 +86,6 @@ namespace sw
     /** @brief `.reflprobe` 하나의 내용입니다. 파일 머리말을 참고하세요. */
     struct SW_API ReflectionProbeAsset
     {
-        static constexpr uint32      kMagic     = FourCCUtil::make( "SWRP" );
-        static constexpr uint32      kVersion   = 1;
         static constexpr string_view kExtension = ".reflprobe";
         /** @brief 참조(`AssetRef<ReflectionProbeAsset>`)의 대상 종류입니다. 공유 캐시가 없어 표에 올리지 않고 참조의 검사에만 쓴다. */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

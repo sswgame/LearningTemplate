@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Component/ActionPlatformerGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -13,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerRespawnWorld.h"
@@ -24,8 +24,7 @@ namespace sw
     {
         struct ActionPlatformerGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "KDAP" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 부활 흐름(`RespawnFlow`)을 싣는다
+            static constexpr FormatDef kStateFormat{ "KDAP" };
 
             static constexpr const utf8* kStartPointID = "start";
 
@@ -305,7 +304,7 @@ namespace sw
 
     void ActionPlatformerGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( ActionPlatformerGameModeComponentInternal::kStateTag, ActionPlatformerGameModeComponentInternal::kStateVersion );
+        io.header( ActionPlatformerGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 지형 · 카탈로그는 씬 데이터에서 `startGame` 이 이미 세웠다. 몸과 진행만 싣는다(진행은 카탈로그를 빌려 id 로 스테이지를 찾는다).

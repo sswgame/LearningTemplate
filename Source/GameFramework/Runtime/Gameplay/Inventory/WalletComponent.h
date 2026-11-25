@@ -4,11 +4,11 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -32,8 +32,7 @@ namespace sw
         REFLECT_BODY();
         SW_REGISTERED_COMPONENT( WalletComponent );
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "WLTC" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "WLTC" };
 
         WalletComponent();
         ~WalletComponent() override;

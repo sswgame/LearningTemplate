@@ -73,7 +73,7 @@ SW_TEST_CASE( LightProbeGridTest, RejectsBrokenFiles )
     SW_EXPECT_FALSE( loaded.readFromBytes( wrongMagic.data(), wrongMagic.size() ) );
 
     sw::vector<uint8> wrongVersion = bytes;
-    wrongVersion[4]                = static_cast<uint8>( sw::LightProbeGrid::kVersion + 1 );
+    wrongVersion[4]                = uint8{ 0xFF };
     SW_EXPECT_FALSE( loaded.readFromBytes( wrongVersion.data(), wrongVersion.size() ) );
 }
 

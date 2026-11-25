@@ -65,7 +65,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &readClosedTimeMs;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readClosedTimeMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 

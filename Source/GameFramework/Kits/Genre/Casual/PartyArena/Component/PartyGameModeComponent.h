@@ -42,7 +42,7 @@ namespace sw
      * @class PartyGameModeComponent
      * @brief 라운드 열기 → 겨루기 → 순위 점수 → 다음 라운드 → 우승을 진행합니다.
      */
-    REFLECT( Version = 2, Category = "PartyArena", DisplayName = "Party Game Mode", Tooltip = "Runs one PartyArena round series on the trampoline arena: the player from input commands, the rivals by bots" )
+    REFLECT( Category = "PartyArena", DisplayName = "Party Game Mode", Tooltip = "Runs one PartyArena round series on the trampoline arena: the player from input commands, the rivals by bots" )
     class SW_KIT_API PartyGameModeComponent : public GameModeComponent
     {
     public:

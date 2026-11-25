@@ -1,5 +1,5 @@
 <?asset guid="11246c68729604007dabf7fece3cb095"?>
-<UIStyleSheet _schemaVersion="1">
+<UIStyleSheet _schemaVersion="0">
 	<!-- 시나리오 automation/uistylevariant 의 부모 시트 — 변수 하나가 색을 정한다. warm 은 swatch 의 형식 변형이라 배경을 물려받고 모서리만 다르다. -->
 	<Variable _name="accent" _value="0.1,0.3,0.9,1" />
 	<TypeVariation _name="warm" _extends="swatch" />

@@ -20,7 +20,7 @@ namespace sw
     {
         struct StateIOReflectedTestPatches
         {
-            /** @brief 판 1 → 2: 체력을 int16 에서 int32 로 넓히고 새 칸 속도를 데이터 규칙(1.5)으로 채운다. */
+            /** @brief 판 0 → 1: 체력을 int16 에서 int32 로 넓히고 새 칸 속도를 데이터 규칙(1.5)으로 채운다. */
             static bool convertHealthAndAddSpeed( Archive& inOldBody, Archive& outNewBody )
             {
                 int16 health = 0;
@@ -50,7 +50,7 @@ namespace sw
         }
     } // namespace
 
-    SW_TYPE_VERSION_PATCH( stateIOReflectedTest1To2, "sw::StateIOReflectedTestVersioned", 1, 2, &StateIOReflectedTestPatches::convertHealthAndAddSpeed );
+    SW_TYPE_VERSION_PATCH( stateIOReflectedTest0To1, "sw::StateIOReflectedTestVersioned", 0, 1, &StateIOReflectedTestPatches::convertHealthAndAddSpeed );
 } // namespace sw
 
 /**
@@ -110,19 +110,19 @@ SW_TEST_CASE( StateIOReflectedTest, SameVersionWithAnotherLayoutIsRefused )
     const auto body = []( sw::Archive& out )
     { out << int32{ 3 } << 2.0f; };
     SW_EXPECT_LOG( "StateIO.ReflectedLayoutChanged" );
-    SW_EXPECT_FALSE( sw::readCrafted( 2, now + 1, body, state ) );
+    SW_EXPECT_FALSE( sw::readCrafted( 1, now + 1, body, state ) );
     SW_EXPECT_EQUAL( 11, state._health );
-    SW_EXPECT_TRUE( sw::readCrafted( 2, now, body, state ) );
+    SW_EXPECT_TRUE( sw::readCrafted( 1, now, body, state ) );
     SW_EXPECT_EQUAL( 3, state._health );
 }
 
 /**
- * @brief [StateIOReflectedTest] 옛 판(1) 본문은 그 타입의 패치 사슬(`SW_TYPE_VERSION_PATCH`)로 올라 읽히고, 새 판(3)은 거절한다 — 판은 그릇이 아니라 타입에 있다
+ * @brief [StateIOReflectedTest] 첫 판(0) 본문은 그 타입의 패치 사슬(`SW_TYPE_VERSION_PATCH`)로 올라 읽히고, 새 판(2)은 거절한다 — 판은 그릇이 아니라 타입에 있다
  */
 SW_TEST_CASE( StateIOReflectedTest, OldVersionIsPatchedThroughTheTypeChain )
 {
     sw::StateIOReflectedTestVersioned state;
-    SW_REQUIRE_TRUE( sw::readCrafted( 1, 0, []( sw::Archive& out )
+    SW_REQUIRE_TRUE( sw::readCrafted( 0, 0, []( sw::Archive& out )
     { out << int16{ 7 }; }, state ) );
     SW_EXPECT_EQUAL( 7, state._health );
     SW_EXPECT_NEAR( 1.5f, state._speed, 1.0e-6f );
@@ -136,7 +136,7 @@ SW_TEST_CASE( StateIOReflectedTest, OldVersionIsPatchedThroughTheTypeChain )
     SW_EXPECT_EQUAL( 7, reread._health );
 
     SW_EXPECT_LOG( "FormatUpgrade.NewerThanSupported" );
-    SW_EXPECT_FALSE( sw::readCrafted( 3, 0, []( sw::Archive& out )
+    SW_EXPECT_FALSE( sw::readCrafted( 2, 0, []( sw::Archive& out )
     { out << int32{ 1 } << 1.0f; }, state ) );
     SW_EXPECT_EQUAL( 7, state._health );
 }

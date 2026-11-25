@@ -6,8 +6,6 @@
 
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
-#include "Engine/Serialization/Format/ReflectedStateUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
@@ -23,29 +21,7 @@ namespace sw
             return MathUtil::smoothstep( edge0, edge1, value );
         }
 
-        struct WorldClockInternal
-        {
-            /**
-             * @brief 판 1 → 2: 하루 안 시각이 float32 이던 칸을 float64 칸으로 다시 씁니다(머리 뒤 칸 — 머리는 `StateIO::header` 가 읽고 쓴다).
-             * @details 판 1 은 머리표가 없었다(`kStateHeaderlessVersion`) — 세션 상태 구간이든 바깥 형식(나일 시티) 안이든 머리가 그 바이트를 판 1 로 알아보고 이 단계로 올린다.
-             */
-            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
-            {
-                int32   day         = 0;
-                float32 secondOfDay = 0.0f;
-                float32 timeScale   = 0.0f;
-                uint8   bPaused     = SW_FALSE;
-                inOldBody >> day >> secondOfDay >> timeScale >> bPaused;
-                if ( inOldBody.isError() )
-                    return false;
-                outNewBody << day << static_cast<float64>( secondOfDay ) << timeScale << bPaused;
-                return true;
-            }
-        };
     } // namespace
-
-    SW_STATE_FORMAT_UPGRADE( worldClock1To2, "CLOK", 1, 2, &WorldClockInternal::upgradeStateFrom1 );
-    SW_STATE_FORMAT_UPGRADE( worldClock2To3, "CLOK", 2, 3, &ReflectedStateUpgrade::prependHead<WorldClock> ); // 판 2 손 본문은 칸 순서 · 폭이 같다
 
     WorldClock::WorldClock()
         : _settings{}
@@ -253,9 +229,8 @@ namespace sw
 
     void WorldClock::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion, kStateHeaderlessVersion ); // 판 1(float32 시각 · 머리표 없음)도 머리가 알아보고 올린다(WorldClockInternal::upgradeStateFrom1)
-        io.reflected( *this );                                          // 하한 · 깃발은 칸의 `PROPERTY( Min · Max )` 가 지킨다
-        io.check( _secondOfDay < _settings._secondsPerDay );            // 칸 사이 검사 — 하루 길이는 설정이다
+        io.reflected( *this );                               // 하한 · 깃발은 칸의 `PROPERTY( Min · Max )` 가 지킨다(판 · 칸 배치는 리플렉션 머리)
+        io.check( _secondOfDay < _settings._secondsPerDay ); // 칸 사이 검사 — 하루 길이는 설정이다
         if ( io.isReading() )
         {
             _eventBuffer.clear();

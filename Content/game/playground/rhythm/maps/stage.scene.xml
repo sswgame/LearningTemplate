@@ -1,5 +1,5 @@
 <?asset guid="7d738a1880e5b2df260d1294b782fd4e"?>
-<Scene formatVersion="3" name="RhythmStage">
+<Scene formatVersion="0" name="RhythmStage">
 	<!-- 리듬 한 곡 — 채보는 rhythm/data/stage1.chart.xml, 음악은 common/music 의 CC0 곡(rhythm/data/stage1.music.xml). 레인 · 노트는 뷰가 원시 도형 프리팹으로 세운다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

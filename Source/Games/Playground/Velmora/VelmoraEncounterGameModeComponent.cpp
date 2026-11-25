@@ -210,7 +210,7 @@ namespace sw
     void VelmoraEncounterGameModeComponent::serializeGameState( StateIO& io )
     {
         // 싸움은 싣지 않는다(클래스 설명) — 머리만 쓰고, 읽으면 싸움을 닫는다.
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;

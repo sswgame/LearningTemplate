@@ -1,5 +1,5 @@
 <?asset guid="75e20f04788a717f0f48de8da5c0fcd9"?>
-<Prefab formatVersion="1" _base="guid:038e5f36534add2ce05ecd56e01e2f89" name="RogueCape">
+<Prefab formatVersion="0" _base="guid:038e5f36534add2ce05ecd56e01e2f89" name="RogueCape">
 	<PrefabOverrides>
 		<Override key="#0244d8c8807cd288">
 			<MeshComponent _meshID="guid:b258ba4ceddc4eb3d8617be894c30db7" _materialPath="guid:eab2332dcf9f011cb2733c761c7a0cc5" />

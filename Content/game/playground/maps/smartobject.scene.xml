@@ -1,5 +1,5 @@
 <?asset guid="b4c8f610e90b8bdf47937581e352e433"?>
-<Scene formatVersion="3" name="SmartObject">
+<Scene formatVersion="0" name="SmartObject">
 	<!-- 스마트 오브젝트 시나리오(automation/smartobject)의 무대 — Bench(자리 둘: 왼쪽 0 · 오른쪽 1, Activity.Sit)를 anna · ben 의 일정(data/smartobject.schedules.xml)과 Player 가 함께 쓴다.
 	     anna 의 집은 왼쪽이라 왼쪽 자리를, ben 은 남은 오른쪽 자리를 예약한다. 시각은 개발 명령 schedule.advance 로만 흐른다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">

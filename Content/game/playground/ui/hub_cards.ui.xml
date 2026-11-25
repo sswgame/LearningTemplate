@@ -1,6 +1,6 @@
 <?asset guid="1733b889dcd67cbe0006cf21af50e437"?>
 <!-- 허브 카드 탁자 HUD — HubCardHUDViewModel. 앉기 전에는 통째로 접힌다. 카드 글(R5 · W+4)은 문자열 표 HubCard 의 메시지라 그릴 때 풀린다. -->
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
 	<SafeZonePanel _visibility="SelfHitTestInvisible">
 		<CanvasPanel _name="Table" _visibility="{bind:_tableVisibility}">

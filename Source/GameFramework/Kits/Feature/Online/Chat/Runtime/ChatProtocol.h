@@ -53,7 +53,7 @@ namespace sw
     struct SW_KIT_API ChatMemberRemoval
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전
+        static constexpr uint32 kBusVersion = 0; ///< 서버 버스의 의미 버전
         PROPERTY( MaxCount = ChatLimit::kMaxChannelIDSize )
         string _channelID{};
         PROPERTY()

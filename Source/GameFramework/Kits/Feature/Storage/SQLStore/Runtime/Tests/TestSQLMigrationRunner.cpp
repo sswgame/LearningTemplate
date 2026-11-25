@@ -376,10 +376,9 @@ SW_TEST_CASE( SQLMigrationRunnerTest, ShippedFoldersLoad )
         const auto result = SQLMigrationRunner::loadMigrations( "common/sql/servicestore", "postgres", listPostgres );
         SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
     }
-    SW_REQUIRE_EQUAL( size_t( 2 ), listSQLite.size() );
-    SW_REQUIRE_EQUAL( size_t( 2 ), listPostgres.size() );
-    SW_EXPECT_EQUAL( listSQLite[0]._sql, listPostgres[0]._sql );  // 공통 파일
-    SW_EXPECT_TRUE( listSQLite[1]._sql != listPostgres[1]._sql ); // 방언 분기
+    SW_REQUIRE_EQUAL( size_t( 1 ), listSQLite.size() ); // 첫 판 하나
+    SW_REQUIRE_EQUAL( size_t( 1 ), listPostgres.size() );
+    SW_EXPECT_TRUE( listSQLite[0]._sql != listPostgres[0]._sql ); // 방언 분기
 
     vector<SQLMigration> listLocal;
     SW_EXPECT_TRUE( SQLMigrationRunner::loadMigrations( "common/sql/localstore", "sqlite", listLocal ) );
@@ -394,10 +393,10 @@ SW_TEST_CASE( SQLMigrationRunnerTest, ShippedFoldersLoad )
 SW_TEST_CASE( SQLMigrationRunnerTest, ListPicksDialectFileAndNormalizesLineEnds )
 {
     MigrationFolderFixture fixture;
-    fixture.writeList( { "0001_a", "0002_b" } );
-    fixture.write( "0001_a.sql", "COMMON\r\nA" );
-    fixture.write( "0001_a.alpha.sql", "ALPHA A" );
-    fixture.write( "0002_b.sql", "COMMON B" );
+    fixture.writeList( { "0000_a", "0001_b" } );
+    fixture.write( "0000_a.sql", "COMMON\r\nA" );
+    fixture.write( "0000_a.alpha.sql", "ALPHA A" );
+    fixture.write( "0001_b.sql", "COMMON B" );
 
     string               error;
     vector<SQLMigration> listAlpha;
@@ -407,7 +406,7 @@ SW_TEST_CASE( SQLMigrationRunnerTest, ListPicksDialectFileAndNormalizesLineEnds 
     }
     SW_REQUIRE_EQUAL( size_t( 2 ), listAlpha.size() );
     SW_EXPECT_EQUAL( string( "ALPHA A" ), listAlpha[0]._sql );
-    SW_EXPECT_EQUAL( 1, listAlpha[0]._version );
+    SW_EXPECT_EQUAL( 0, listAlpha[0]._version );
     SW_EXPECT_EQUAL( string( "a" ), listAlpha[0]._name );
     SW_EXPECT_EQUAL( string( "COMMON B" ), listAlpha[1]._sql );
 
@@ -423,48 +422,48 @@ SW_TEST_CASE( SQLMigrationRunnerTest, ListPicksDialectFileAndNormalizesLineEnds 
 SW_TEST_CASE( SQLMigrationRunnerTest, ListRejectsBadShapes )
 {
     MigrationFolderFixture fixture;
-    fixture.write( "0001_a.sql", "A" );
+    fixture.write( "0000_a.sql", "A" );
     string               error;
     vector<SQLMigration> listMigration;
 
     fixture.write( SQLMigrationRunner::kListFileName, "<Other />" );
     error = describeError( fixture.load( "alpha", listMigration ) );
     SW_EXPECT_FALSE( error.empty() );
-    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList _extra=\"1\"><Migration _name=\"0001_a\" /></SQLMigrationList>" );
+    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList _extra=\"1\"><Migration _name=\"0000_a\" /></SQLMigrationList>" );
     error = describeError( fixture.load( "alpha", listMigration ) );
     SW_EXPECT_FALSE( error.empty() );
     fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList></SQLMigrationList>" );
     error = describeError( fixture.load( "alpha", listMigration ) );
     SW_EXPECT_FALSE( error.empty() );
-    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Other _name=\"0001_a\" /></SQLMigrationList>" );
+    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Other _name=\"0000_a\" /></SQLMigrationList>" );
     error = describeError( fixture.load( "alpha", listMigration ) );
     SW_EXPECT_FALSE( error.empty() );
-    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0001_a\" _more=\"x\" /></SQLMigrationList>" );
+    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0000_a\" _more=\"x\" /></SQLMigrationList>" );
     error = describeError( fixture.load( "alpha", listMigration ) );
     SW_EXPECT_FALSE( error.empty() );
     // 호환성은 기본값이 없다 — 빠지거나 모르는 값이면 오류다.
-    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0001_a\" /></SQLMigrationList>" );
+    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0000_a\" /></SQLMigrationList>" );
     error = describeError( fixture.load( "alpha", listMigration ) );
     SW_EXPECT_TRUE( error.find( "_compatibility" ) != string::npos );
-    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0001_a\" _compatibility=\"Maybe\" /></SQLMigrationList>" );
+    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0000_a\" _compatibility=\"Maybe\" /></SQLMigrationList>" );
     error = describeError( fixture.load( "alpha", listMigration ) );
     SW_EXPECT_FALSE( error.empty() );
-    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0001_a\" _compatibility=\"Backward\" _more=\"x\" /></SQLMigrationList>" );
+    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0000_a\" _compatibility=\"Backward\" _more=\"x\" /></SQLMigrationList>" );
     error = describeError( fixture.load( "alpha", listMigration ) );
     SW_EXPECT_FALSE( error.empty() );
     fixture.writeList( { "first" } ); // 번호가 없는 이름
     error = describeError( fixture.load( "alpha", listMigration ) );
     SW_EXPECT_FALSE( error.empty() );
-    fixture.writeList( { "0001_a.alpha" } ); // 목록에는 방언을 적지 않는다
+    fixture.writeList( { "0000_a.alpha" } ); // 목록에는 방언을 적지 않는다
     SW_EXPECT_FALSE( fixture.load( "alpha", listMigration ) );
 }
 
 SW_TEST_CASE( SQLMigrationRunnerTest, NumbersMustRunWithoutGaps )
 {
     MigrationFolderFixture fixture;
-    fixture.writeList( { "0001_a", "0003_c" } );
-    fixture.write( "0001_a.sql", "A" );
-    fixture.write( "0003_c.sql", "C" );
+    fixture.writeList( { "0000_a", "0002_c" } );
+    fixture.write( "0000_a.sql", "A" );
+    fixture.write( "0002_c.sql", "C" );
     string               error;
     vector<SQLMigration> listMigration;
     error = describeError( fixture.load( "alpha", listMigration ) );
@@ -476,22 +475,22 @@ SW_TEST_CASE( SQLMigrationRunnerTest, NumbersMustRunWithoutGaps )
 SW_TEST_CASE( SQLMigrationRunnerTest, FileMissingFromTheListIsRefused )
 {
     MigrationFolderFixture fixture;
-    fixture.writeList( { "0001_a" } );
-    fixture.write( "0001_a.sql", "A" );
-    fixture.write( "0002_forgotten.sql", "B" );
+    fixture.writeList( { "0000_a" } );
+    fixture.write( "0000_a.sql", "A" );
+    fixture.write( "0001_forgotten.sql", "B" );
     string               error;
     vector<SQLMigration> listMigration;
     error = describeError( fixture.load( "alpha", listMigration ) );
     SW_EXPECT_FALSE( error.empty() );
-    SW_EXPECT_TRUE( error.find( "0002_forgotten" ) != string::npos );
+    SW_EXPECT_TRUE( error.find( "0001_forgotten" ) != string::npos );
 }
 
 /** @brief 이름이 틀린 파일도 건너뛰지 않는다. */
 SW_TEST_CASE( SQLMigrationRunnerTest, BadlyNamedFileIsRefused )
 {
     MigrationFolderFixture fixture;
-    fixture.writeList( { "0001_a" } );
-    fixture.write( "0001_a.sql", "A" );
+    fixture.writeList( { "0000_a" } );
+    fixture.write( "0000_a.sql", "A" );
     fixture.write( "notes.sql", "B" );
     string               error;
     vector<SQLMigration> listMigration;
@@ -503,9 +502,9 @@ SW_TEST_CASE( SQLMigrationRunnerTest, BadlyNamedFileIsRefused )
 SW_TEST_CASE( SQLMigrationRunnerTest, DriverWithoutItsFileIsRefusedAndNamesAreCollected )
 {
     MigrationFolderFixture fixture;
-    fixture.writeList( { "0001_a" } );
-    fixture.write( "0001_a.alpha.sql", "ALPHA" );
-    fixture.write( "0001_a.beta.sql", "BETA" );
+    fixture.writeList( { "0000_a" } );
+    fixture.write( "0000_a.alpha.sql", "ALPHA" );
+    fixture.write( "0000_a.beta.sql", "BETA" );
     string               error;
     vector<SQLMigration> listMigration;
     error = describeError( fixture.load( "gamma", listMigration ) ); // 공통 파일도 없다 — 다른 방언으로 대신하지 않는다

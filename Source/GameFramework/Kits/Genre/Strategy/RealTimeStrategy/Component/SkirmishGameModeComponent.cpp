@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/SkirmishGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -19,6 +18,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
@@ -29,8 +29,7 @@ namespace sw
     {
         struct SkirmishGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "RTMS" );
-            static constexpr uint32 kStateVersion = 3; ///< 3: 판의 정체(`getMatchID`)를 싣고, 고른 유닛 · 부대가 클라이언트 구간(`RTSCommandInputComponent`)으로 나갔다(옛 판은 거절한다 — 출시 전)
+            static constexpr FormatDef kStateFormat{ "RTMS" };
         };
 
         /** @brief 감시 값 `Skirmish.UnitCount` 입니다. 두 진영의 유닛 · 건물 수의 합입니다(AI 가 일꾼 · 군대를 늘리는지 본다). */
@@ -193,7 +192,7 @@ namespace sw
 
     void SkirmishGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( SkirmishGameModeComponentInternal::kStateTag, SkirmishGameModeComponentInternal::kStateVersion );
+        io.header( SkirmishGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         if ( io.isReading() && findCatalog() != nullptr )

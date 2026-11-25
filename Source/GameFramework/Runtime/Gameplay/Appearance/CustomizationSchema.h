@@ -201,7 +201,7 @@ namespace sw
         vector<CustomizationMigrationOp> _listOp{};
         uint32                           _toVersion{ 0 };
 
-        static constexpr uint32 kFirstVersion = 2; ///< 첫 단계가 올리는 판(판 1 은 판을 두기 전의 값이다)
+        static constexpr uint32 kFirstVersion = 1; ///< 첫 단계가 올리는 판(첫 판은 0 이다)
     };
 } // namespace sw
 
@@ -253,7 +253,7 @@ namespace sw
 {
     /**
      * @brief 스키마 하나입니다. 캐릭터 종류 하나(사람)나 아이템 종류 하나(소총)의 꾸미기 매개변수를 담습니다. 이 순서가 정규화와 조건 판정의 순서입니다.
-     * @details **판**(`version`, 적지 않으면 1): 매개변수의 뜻이 바뀌면(이름 · 채널 나눔 · 팔레트 번호가 색으로) 판을 올리고 `<Migration toVersion>` 에 옛 값을 옮기는 단계를 적는다.
+     * @details **판**(`version`, 적지 않으면 0): 매개변수의 뜻이 바뀌면(이름 · 채널 나눔 · 팔레트 번호가 색으로) 판을 올리고 `<Migration toVersion>` 에 옛 값을 옮기는 단계를 적는다.
      *          세이브 · 공유 코드의 값은 쓴 판을 함께 싣고, 읽는 쪽이 `migrate` 로 지금 판까지 올린다 — 언리얼 `FCustomVersion`(데이터가 쓴 판을 싣고 읽는 쪽이 판으로 가른다) ·
      *          유니티 `ISerializationCallbackReceiver::OnAfterDeserialize`(읽은 뒤 옛 칸을 새 칸으로 옮긴다)와 같은 자리를, 분기 코드 대신 데이터 단계로 둔다.
      */
@@ -263,17 +263,17 @@ namespace sw
         REFLECT_BODY();
 
         vector<CustomizationParamDef>     _listParameter{};
-        vector<CustomizationMigrationDef> _listMigration{}; ///< 판 2..`_version` 의 단계(`_listMigration[n]` 은 판 n+2 로 올린다 — 읽기가 빈 판 없이 맞춘다)
+        vector<CustomizationMigrationDef> _listMigration{}; ///< 판 1..`_version` 의 단계(`_listMigration[n]` 은 판 n+1 로 올린다 — 읽기가 빈 판 없이 맞춘다)
         PROPERTY( Required )
         hashed_string _id{};
-        PROPERTY( Min = 1 )
-        int32 _version{ 1 };
+        PROPERTY( Min = 0 )
+        int32 _version{ 0 };
 
         uint32 getVersion() const { return static_cast<uint32>( _version ); }
         /**
-         * @brief @p values 를 이 스키마의 지금 판으로 올려 @p outValues 에 담습니다. 판을 찍지 않은 값(0)과 지금 판의 값은 단계 없이 옮기고, 결과에는 지금 판을 찍습니다.
+         * @brief @p values 를 이 스키마의 지금 판으로 올려 @p outValues 에 담습니다. 판을 찍지 않은 값과 지금 판의 값은 단계 없이 옮기고, 결과에는 지금 판을 찍습니다.
          * @details 지금 판에 뜻이 없는 값(단계를 지나고도 없는 이름 · 견본 밖 번호)은 그 값만 빼고 이름을 @p pOutListDropped 에 담는다 — 나머지는 읽는다(패치가 세이브 전체를 버리지 않게).
-         *          세이브 · 공유 코드를 읽는 쪽이 빠진 것을 오류 로그로 남긴다. 정상 콘텐츠에서는 생기지 않는다(쿠킹 검사 `customization-release`).
+         *          세이브 · 공유 코드를 읽는 쪽이 빠진 것을 오류 로그로 남긴다. 정상 콘텐츠에서는 생기지 않는다(쿠킹 검사 `format-release`).
          * @return 이 스키마보다 새 판(다른 빌드 · 더 새 콘텐츠가 쓴 값 — 다운그레이드)이면 까닭이고 @p outValues 는 그대로입니다. 원본을 덮지 않는다.
          */
         [[nodiscard]] expected<void> migrate( const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped = nullptr ) const;

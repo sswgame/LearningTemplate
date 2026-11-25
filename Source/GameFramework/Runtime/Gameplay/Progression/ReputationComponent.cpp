@@ -82,7 +82,7 @@ namespace sw
 
     void ReputationComponent::serializeState( StateIO& io )
     {
-        _restore.serialize( io, kStateTag, kStateVersion, _reputation, "the reputation" );
+        _restore.serialize( io, kStateFormat, _reputation, "the reputation" );
     }
 
     void ReputationComponent::restoreState( vector<uint8>&& bytes )

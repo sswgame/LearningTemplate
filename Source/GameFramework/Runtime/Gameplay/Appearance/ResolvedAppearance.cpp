@@ -800,7 +800,7 @@ namespace sw
             {
                 if ( result.has_value() == false )
                     addTrace( out, AppearanceTraceStep::Customization, owner, "values of schema '%#' version %# cannot be migrated to version %# (%#) - schema defaults used", schema._id.c_str(),
-                              values.getSchemaVersion(), schema.getVersion(), result.error().message() );
+                              values.getSchemaVersion().value_or( 0 ), schema.getVersion(), result.error().message() );
             }
 
             /** @brief 1 단계입니다. 몸 항목을 넣고 캐릭터 꾸미기를 적용합니다. */

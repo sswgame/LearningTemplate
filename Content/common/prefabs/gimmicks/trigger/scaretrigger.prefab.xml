@@ -1,5 +1,5 @@
 <?asset guid="90cbb4f05fdded45420b9d292fbd21b4"?>
-<Prefab formatVersion="1" name="CueTrigger">
+<Prefab formatVersion="0" name="CueTrigger">
 	<GameObject _schemaVersion="0" _name="CueTrigger" _bActive="true">
 		<_listComponent>
 			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"

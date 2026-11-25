@@ -30,7 +30,7 @@ namespace sw
      * @class ConquestGameModeComponent
      * @brief 시작 건물 → 훈련 · 진격 · 점령(명령) → 승패 → 결과를 진행합니다.
      */
-    REFLECT( Version = 2, Category = "SideScrollConquest", DisplayName = "Conquest Game Mode", Tooltip = "Runs one side scroll conquest: the commander, squad orders and training from commands, to victory or defeat" )
+    REFLECT( Category = "SideScrollConquest", DisplayName = "Conquest Game Mode", Tooltip = "Runs one side scroll conquest: the commander, squad orders and training from commands, to victory or defeat" )
     class SW_KIT_API ConquestGameModeComponent : public GameModeComponent
     {
     public:

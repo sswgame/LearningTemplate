@@ -1,5 +1,5 @@
 <?asset guid="772f4b6e6778e48befff7ce2c4c0b1ec"?>
-<Prefab formatVersion="1" name="CueTrigger3D">
+<Prefab formatVersion="0" name="CueTrigger3D">
 	<GameObject _schemaVersion="0" _name="CueTrigger3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"

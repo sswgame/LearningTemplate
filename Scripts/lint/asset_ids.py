@@ -79,8 +79,8 @@ class AssetIdsRule(LintRule):
         assert find_output_guid("common/models/a.facial.xml", map_source, rules.list_imported) is None   # glb 는 표정 표를 내지 않는다 — C++ `AssetReferenceFieldsTest.ImportedOutputsResolveFromTheirSource` 와 같은 사례
         assert find_output_guid("common/models/a/a.facial.xml", {"common/models_raw/a.vrm": sample}, rules.list_imported) == make_output_guid(sample, "/a.facial.xml")
         assert find_output_guid("common/models/a/clips", map_source, rules.list_imported) == make_output_guid(sample, "/clips")
-        table = add_identity_redirect('<?asset guid="x"?>\n<Redirects>\n\t<Redirect from="a/b.xml" to="a/c.xml" />\n</Redirects>\n', sample, other)
-        assert table == f'<?asset guid="x"?>\n<Redirects>\n\t<Redirect from="a/b.xml" to="a/c.xml" />\n\t<IdentityRedirect from="{sample}" to="{other}" />\n</Redirects>\n', table
+        table = add_identity_redirect('<?asset guid="x"?>\n<Redirects>\n</Redirects>\n', sample, other)
+        assert table == f'<?asset guid="x"?>\n<Redirects>\n\t<IdentityRedirect from="{sample}" to="{other}" />\n</Redirects>\n', table
         assert add_identity_redirect(table, sample, "0" * 31 + "1").count("IdentityRedirect") == 1   # 같은 옛 GUID 의 줄은 바꾼다
         list_issue, _ = collect_issues({"a/x.prefab.xml": write_header("<P/>", sample), "a/y.prefab.xml": write_header("<P/>", sample), "a/z.ogg": "",
                                       "a/w.ogg.meta": make_meta_text("a/w.ogg", other), "a/golden/q.ppm": ""}, rules)

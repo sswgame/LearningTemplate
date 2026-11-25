@@ -124,7 +124,7 @@ namespace sw
          * @details 저장된 상태(`GimmickNodeState::_stateVersion`)와 다르면 그 노드의 상태는 읽지 않고 컴포넌트가 오류로 멈춘다(`GimmickStateMatch::Mismatch`).
          *          슬롯 수만 대조하면 같은 수 안에서 뜻이 바뀐 변경(슬롯 둘의 순서를 바꿈)을 잡지 못한다.
          */
-        uint16              _stateVersion{ 1 };
+        uint16              _stateVersion{ 0 };
         GimmickNodeCategory _category{ GimmickNodeCategory::Operator };
 
         /** @brief 이름의 입력 포트 번호입니다. 없으면 비어 있습니다. */

@@ -19,6 +19,7 @@
 
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
 
@@ -129,16 +130,15 @@ namespace sw
 
     /**
      * @brief 계정 하나의 영속 진행입니다. 서버가 쓰고 읽는다(`HubProfileStore`) — 클라이언트는 받은 값을 보여 줄 뿐이다.
-     * @details 바이트는 판(`kFormatVersion`, 가변 정수) 뒤에 칸 선언(`Replicated` · 범위)이 곧 바이트다(`ReplicatedLayout`) — 예전에는 쓰기 · 읽기 짝을 손으로 맞추고
-     *          범위(음수 · 레벨 0)를 읽기에서 따로 봤다. 저장 레코드라 스키마 해시가 핸드셰이크를 지나지 않는다 — 칸을 바꾸면 판을 올리고 옛 판 읽기를 둔다
-     *          (판 1 손 배치 레코드는 `HubProfileStore::decodeRecord` 가 읽는다).
+     * @details 바이트는 판(`kFormat`, 가변 정수) 뒤에 칸 선언(`Replicated` · 범위)이 곧 바이트다(`ReplicatedLayout`). 저장 레코드라 스키마 해시가
+     *          핸드셰이크를 지나지 않는다 — 칸을 바꾸면 판을 올리고 옛 판 읽기를 둔다.
      */
     REFLECT()
     struct HubProfile
     {
         REFLECT_BODY();
 
-        static constexpr uint32 kFormatVersion = 2; ///< 판 2: 칸 선언으로 쓴다(1: 손 배치)
+        static constexpr FormatDef kFormat{ "HUBP" };
 
         PROPERTY( SaveGame, Replicated, Min = 1 )
         int32 _level{ 1 };

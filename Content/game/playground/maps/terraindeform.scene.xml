@@ -1,5 +1,5 @@
 <?asset guid="d476d0325bba5f04db8592d16a845ae4"?>
-<Scene formatVersion="3" name="TerrainDeform">
+<Scene formatVersion="0" name="TerrainDeform">
 	<!-- 지형 표면 변형(시나리오 automation/terraindeform) — 골짜기 높이장을 높이 0..0.01 m 로 눌러 평평하게 둔 지형(terrain.material, 같은 색 레이어 넷) 위, 카메라 바로 앞에
 	     깔때기 도장(Funnel 지름 3 m · 깊이 0.14 m · 홈 셋, 돌지 않는다)을 붙잡는 Stamper 를 레이어 Stamp 에 둔다. 레이어를 켜면 표면 변형 층에 도장이 찍히고
 	     지형 정점 셰이더(엔진 텍스처 칸 SurfaceDeform · g_SurfaceDeformParams)가 정점을 내리고 픽셀이 법선을 기울인다. 낮은 해가 홈의 그늘을 드러낸다. -->

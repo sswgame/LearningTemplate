@@ -9,13 +9,13 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -53,8 +53,7 @@ namespace sw
         REFLECT_BODY();
         SW_REGISTERED_COMPONENT( AdventureGameModeComponent );
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "VLDR" );
-        static constexpr uint32 kStateVersion = 2;
+        static constexpr FormatDef kStateFormat{ "VLDR" };
 
         AdventureGameModeComponent();
         virtual ~AdventureGameModeComponent() override;

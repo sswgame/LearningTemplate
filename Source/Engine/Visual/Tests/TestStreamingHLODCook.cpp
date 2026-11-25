@@ -41,7 +41,7 @@ namespace
         static void writeScene( const test::ScopedScratchDomain& domain, uint32 mergeMaxInstanceCount = 0 )
         {
             StringBuilder<constant::buffer::kMax4096> scene;
-            scene.appendFormat( "<Scene formatVersion=\"3\" name=\"HLODCook\"><SceneSettings _bStreaming=\"true\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"8\" _hlodMergeMaxInstanceCount=\"%#\" ", mergeMaxInstanceCount );
+            scene.appendFormat( "<Scene formatVersion=\"0\" name=\"HLODCook\"><SceneSettings _bStreaming=\"true\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"8\" _hlodMergeMaxInstanceCount=\"%#\" ", mergeMaxInstanceCount );
             scene.append( "_addToWorldBudgetMicroseconds=\"2000\"><_cellGrid _cellSize=\"10\" _loadingRadius=\"10\" /></SceneSettings><entities>" );
             for ( const string& entity : { makeMesh( "1", "Rock1", "Cube", "2,0,2", "1,1,1", "true" ), makeMesh( "2", "Rock2", "Cube", "5,0,5", "1,1,1", "true" ),
                                            makeMesh( "3", "Lamp", "Cube", "15,0,5", "1,1,1", "false" ), makeMesh( "4", "Ghost", "Cube", "16,0,5", "1,1,1", "true", "false" ),
@@ -219,7 +219,7 @@ SW_TEST_CASE( StreamingHLODCookTest, InstancedMeshesJoinTheProxy )
 {
     const test::ScopedScratchDomain           domain;
     StringBuilder<constant::buffer::kMax4096> text;
-    text.append( "<Scene formatVersion=\"3\" name=\"HLODInstanced\"><SceneSettings _bStreaming=\"true\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"8\" _addToWorldBudgetMicroseconds=\"2000\">"
+    text.append( "<Scene formatVersion=\"0\" name=\"HLODInstanced\"><SceneSettings _bStreaming=\"true\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"8\" _addToWorldBudgetMicroseconds=\"2000\">"
                  "<_cellGrid _cellSize=\"10\" _loadingRadius=\"10\" /></SceneSettings><entities>" );
     text.append( Util::makeMesh( "1", "Rock", "Cube", "2,0,2", "1,1,1", "true" ) );
     text.append( "<entity id=\"2\" name=\"Props\"><GameObject _schemaVersion=\"0\" _name=\"Props\" _bActive=\"true\"><_listComponent><InstancedMeshComponent _localPosition=\"4,0,4\" "

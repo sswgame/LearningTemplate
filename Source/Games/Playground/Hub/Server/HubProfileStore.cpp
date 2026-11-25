@@ -14,31 +14,6 @@ namespace sw
     {
         struct HubProfileStoreInternal
         {
-            static constexpr uint64 kFormat1 = 1; ///< 손 배치 판 — 레코드가 판을 두 번 실었다(저장소 · 진행이 따로 썼다)
-
-            /** @brief 판 1 레코드(판 · 판 · 레벨 · 경험 · 동전 · 약초 · 쓰러뜨린 수(가변 정수) · 자리(실수 셋))를 읽습니다. 옛 레코드를 잃지 않게 읽기만 둔다. */
-            [[nodiscard]] static bool decodeFormat1( const vector<uint8>& bytes, HubProfile& outProfile )
-            {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readVarUint() != kFormat1 || reader.readVarUint() != kFormat1 )
-                    return false;
-                HubProfile loaded;
-                loaded._level        = reader.readVarInt32();
-                loaded._experience   = reader.readVarInt32();
-                loaded._coins        = reader.readVarInt32();
-                loaded._herbCount    = reader.readVarInt32();
-                loaded._defeatCount  = reader.readVarInt32();
-                loaded._position._x  = reader.readFiniteFloat();
-                loaded._position._y  = reader.readFiniteFloat();
-                loaded._position._z  = reader.readFiniteFloat();
-                const bool bPosition = reader.hasOverflowed() == false;
-                const bool bInRange  = loaded._level >= 1 && loaded._experience >= 0 && loaded._coins >= 0 && loaded._herbCount >= 0 && loaded._defeatCount >= 0;
-                if ( reader.hasOverflowed() || bPosition == false || bInRange == false )
-                    return false;
-                outProfile = loaded;
-                return true;
-            }
-
             static const hashed_string& getTable()
             {
                 static const hashed_string table{ HubProfileStore::kTableName };
@@ -144,9 +119,6 @@ namespace sw
 
     bool HubProfileStore::decodeRecord( const vector<uint8>& bytes, HubProfile& outProfile )
     {
-        BitReader probe( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( probe.readVarUint() == HubProfileStoreInternal::kFormat1 )
-            return HubProfileStoreInternal::decodeFormat1( bytes, outProfile );
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
         return outProfile.read( reader );
     }

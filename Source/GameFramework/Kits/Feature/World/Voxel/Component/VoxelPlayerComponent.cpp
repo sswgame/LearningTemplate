@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelPlayerComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -12,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
@@ -31,8 +31,7 @@ namespace sw
     {
         struct VoxelPlayerComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "PLYR" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 부순 · 놓은 블록 수가 상태 칸으로 나갔다(옛 판은 거절한다 — 출시 전)
+            static constexpr FormatDef kStateFormat{ "PLYR" };
 
             // 사운드 이벤트 이름입니다. 클립, 범위, 동시 재생 상한은 게임의 사운드 이벤트 라이브러리(Playground 는 playground.audioevents.xml)가 정합니다.
             static constexpr const utf8* kEventLand  = "VoxelLand";
@@ -227,7 +226,7 @@ namespace sw
 
     void VoxelPlayerComponent::serializeState( StateIO& io )
     {
-        io.header( VoxelPlayerComponentInternal::kStateTag, VoxelPlayerComponentInternal::kStateVersion );
+        io.header( VoxelPlayerComponentInternal::kStateFormat );
         float3      position    = _body.getPosition();
         VoxelHotbar hotbar      = _hotbar;
         uint8       bBodyPlaced = static_cast<uint8>( _bBodyPlaced );

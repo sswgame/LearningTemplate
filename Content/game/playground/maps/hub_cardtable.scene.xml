@@ -1,5 +1,5 @@
 <?asset guid="cbc0674ef5fe44cbab0bb485c97e8107"?>
-<Scene formatVersion="3" name="HubCardTable">
+<Scene formatVersion="0" name="HubCardTable">
 	<!-- 마을의 카드 탁자 하위 레벨(minigames/cardtable, entry SubLevel) — 마을의 CardTableGate(월드 -6, 1, 0)의 변환에 얹으므로 그 입구 기준 좌표로 놓는다(입구 뒤 z 3, 바닥 y -1).
 	     하위 레벨은 스트리밍 · 데이터 레이어를 쓰지 않는다(SceneSubLevelSubsystem 이 받지 않는다). 카메라 · 해 · 플레이어는 마을의 것을 쓴다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">

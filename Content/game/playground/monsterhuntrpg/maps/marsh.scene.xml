@@ -1,5 +1,5 @@
 <?asset guid="6ed71988ebf5421cb0e417395c9699fd"?>
-<Scene formatVersion="3" name="MonsterHuntRPGMarsh">
+<Scene formatVersion="0" name="MonsterHuntRPGMarsh">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

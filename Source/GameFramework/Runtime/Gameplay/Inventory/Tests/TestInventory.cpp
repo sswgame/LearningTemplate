@@ -174,31 +174,6 @@ SW_TEST_CASE( InventoryTest, ShrunkSlotCountMovesExtraItemsToOverflow )
 }
 
 /**
- * @brief [InventoryTest] 판 1(넘침 목록 없음) 구간 본문을 판 올림 사슬(INVT 1 → 2 → 3)로 올려 읽는다 — 슬롯이 그대로다
- */
-SW_TEST_CASE( InventoryTest, UpgradesVersionOneSectionBody )
-{
-    sw::ItemCatalog catalog;
-    loadCatalog( catalog );
-    // 판 1 바이트를 손으로 쓴다: 최대 무게 · 슬롯 2(화살 7, 빈 칸) — 넘침 목록 개수와 슬롯의 꾸미기 스키마 판 칸이 없다
-    sw::Archive versionOne;
-    versionOne << 50.0f << uint32{ 2 };
-    sw::StateIO::writeName( versionOne, kArrow );
-    versionOne << int32{ 7 } << 0.0f << 0.0f << uint32{ 0 } << uint32{ 0 }; // 개수 · 내구도 · 피해 · 꾸미기 수 · 뗀 부품 수
-    sw::StateIO::writeName( versionOne, sw::hashed_string{} );
-    versionOne << int32{ 0 } << 0.0f << 0.0f << uint32{ 0 } << uint32{ 0 };
-    sw::Archive body( versionOne.getData(), versionOne.getSize() );
-    SW_REQUIRE_TRUE( sw::StateIO::upgradeSectionBody( sw::Inventory::kStateTag, 1, sw::Inventory::kStateVersion, body ) );
-
-    sw::Inventory restored;
-    SW_REQUIRE_TRUE( restored.initialize( catalog, 2 ) );
-    SW_REQUIRE_TRUE( restored.readState( body ) );
-    SW_EXPECT_EQUAL( 50.0f, restored.getMaxWeight() );
-    SW_EXPECT_EQUAL( 7, restored.getItemCount( kArrow ) );
-    SW_EXPECT_TRUE( restored.getOverflow().empty() );
-}
-
-/**
  * @brief [CraftingTest] 닳은 장비가 재료인 작업을 대기열에 넣었다 취소하면 같은 내구도로 돌아온다(새것이 되지 않는다, 감사 G-3). 저장 · 복원한 대기열도 같다
  */
 SW_TEST_CASE( CraftingTest, CancelReturnsWornInputWithSameDurability )

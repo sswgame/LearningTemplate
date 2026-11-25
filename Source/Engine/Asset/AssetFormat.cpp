@@ -103,21 +103,17 @@ namespace sw
         return string( builder.view() );
     }
 
-    AssetFormatVersion AssetXMLFormat::readXMLVersion( XMLNode root )
+    optional<AssetFormatVersion> AssetXMLFormat::readXMLVersion( XMLNode root )
     {
-        if ( root.isValid() == false )
-            return kUnversioned;
-        const utf8* pAttr = root.findAttribute( kXMLAttrName );
-        if ( StringUtil::isNullOrEmpty( pAttr ) == false )
-        {
-            // 읽지 못했거나 버전 타입에 담기지 않으면 **가장 큰 버전**으로 본다 — "지원하는 것보다 새 형식" 으로 거절된다. 잘라 담으면
-            // "4294967296" · "-1" 이 0(현재 버전)으로 읽혀 그 거절을 지나친다.
-            uint64 ver{ kUnversioned };
-            if ( StringUtil::parseUint64( pAttr, ver, 10 ) == false || ver > static_cast<uint64>( std::numeric_limits<AssetFormatVersion>::max() ) )
-                return std::numeric_limits<AssetFormatVersion>::max();
-            return static_cast<AssetFormatVersion>( ver );
-        }
-        return kUnversioned;
+        const utf8* pAttr = root.isValid() ? root.findAttribute( kXMLAttrName ) : nullptr;
+        if ( StringUtil::isNullOrEmpty( pAttr ) )
+            return nullopt;
+        // 읽지 못했거나 버전 타입에 담기지 않으면 **가장 큰 버전**으로 본다 — "지원하는 것보다 새 형식" 으로 거절된다. 잘라 담으면
+        // "4294967296" · "-1" 이 0(첫 버전)으로 읽혀 그 거절을 지나친다.
+        uint64 ver{ 0 };
+        if ( StringUtil::parseUint64( pAttr, ver, 10 ) == false || ver > static_cast<uint64>( std::numeric_limits<AssetFormatVersion>::max() ) )
+            return std::numeric_limits<AssetFormatVersion>::max();
+        return static_cast<AssetFormatVersion>( ver );
     }
 
     void AssetXMLFormat::writeXMLVersion( XMLNode root, AssetFormatVersion version )
@@ -139,14 +135,19 @@ namespace sw
     {
         if ( root.isValid() == false )
             return false;
-        const AssetFormatVersion version = readXMLVersion( root );
-        if ( version == type._formatVersion )
+        const optional<AssetFormatVersion> version = readXMLVersion( root );
+        if ( version.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "AssetFormat.AssetFormatVersionMissing", "%# asset has no '%#' - write the current version (%#) on the root", type._name, kXMLAttrName, type._formatVersion );
+            return false;
+        }
+        if ( *version == type._formatVersion )
             return true;
         FormatUpgradePayload payload;
         payload._root = root;
-        if ( FormatUpgradeStep::upgrade( FormatUpgradeDomain::AssetXML, type._name, version, type._formatVersion, payload ) == false )
+        if ( FormatUpgradeStep::upgrade( FormatUpgradeDomain::AssetXML, type._name, *version, type._formatVersion, payload ) == false )
         {
-            SW_LOG_ERROR_ID( "AssetFormat.AssetFormatVersionDoesNot", "%# asset formatVersion %# could not be raised to the supported %# - add the missing upgrade step or rewrite the data", type._name, version,
+            SW_LOG_ERROR_ID( "AssetFormat.AssetFormatVersionDoesNot", "%# asset formatVersion %# could not be raised to the supported %# - add the missing upgrade step or rewrite the data", type._name, *version,
                              type._formatVersion );
             return false;
         }

@@ -89,7 +89,7 @@ namespace sw
      * @brief 스타일 시트 하나입니다(`UIStyleSheetCache` 가 경로별로 나눠 줍니다).
      * @details 형식:
      *          ```xml
-     *          <UIStyleSheet _schemaVersion="1">
+     *          <UIStyleSheet _schemaVersion="0">
      *              <Variable _name="accent" _value="0.25,0.5,1,1" />
      *              <Rule _selector="ButtonWidget.primary:hover" _backgroundColor="$accent" _padding="16,8,16,8">
      *              <_font _weight="Bold" />                                  (구조체 필드는 자식 요소로 쓰며, 적은 안쪽 필드만 바꾼다)
@@ -106,7 +106,7 @@ namespace sw
      */
     struct UIStyleSheetAsset
     {
-        static constexpr uint32 kVersion = 1;
+        static constexpr uint32 kVersion = 0;
         /** @brief 이 에셋 종류입니다(정의는 `UIStyleSheetAssetKind`, 등록은 `UIStyleSheet.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr const AssetTypeDef& kAssetType         = UIStyleSheetAssetKind::kAssetType;
         static constexpr utf8                kRootElementName[] = "UIStyleSheet";

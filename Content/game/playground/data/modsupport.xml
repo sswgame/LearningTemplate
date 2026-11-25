@@ -4,7 +4,7 @@
   Playground 게임의 모드 정책(GF_ModSupport, ModSupportSettings). 모드는 이 판(contentVersion)을 받는 매니페스트만 켜고, 아래 접두 · 파일의 기본 리소스만 덮어쓴다(데이터 폴더를 통째로 열지 않는다 — 다른 미니게임의 표 · 게임 설정이 함께 열린다).
   한계는 바깥 입력(매니페스트 · 팩)을 읽기 전에 견주는 값이다 — 모드 팩 64 MiB, 항목 2048 개, 항목 하나 16 MiB, 매니페스트 16 KiB, 한 세션 16 개. 모드 팩을 묶을 때의 블록 크기는 128 KiB(배포 팩과 같은 값).
 -->
-<ModSupportSettings contentVersion="1" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216" packBlockSize="131072">
+<ModSupportSettings contentVersion="0" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216" packBlockSize="131072">
 	<Overridable prefix="game/playground/data/mods/"/>
 	<!-- 액션 어드벤처 미니게임(minigames/velmora)의 확장 팩이 층으로 항목을 더하는 표 셋(Test/Mods/velmora_tidecaves) -->
 	<Overridable path="guid:8059e7a6ebaa444e5fba17a13f2ee967"/>

@@ -1,5 +1,5 @@
 <?asset guid="914b72be0fdd4cce90ab230e1e8530fc"?>
-<Prefab formatVersion="1" name="PlayReloadProp">
+<Prefab formatVersion="0" name="PlayReloadProp">
 	<!-- probe.prefab.xml 에 덮는 고친 판 — 크기만 다르다(플레이 중 리로드 시나리오). -->
 	<GameObject _schemaVersion="0" _name="PlayReloadProp" _bActive="true">
 		<_listComponent>

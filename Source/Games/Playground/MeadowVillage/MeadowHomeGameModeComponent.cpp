@@ -28,7 +28,7 @@ namespace sw
 
     void MeadowHomeGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         io.check( _nextStep <= static_cast<int32>( _listStep.size() ) ); // 다음 단계는 상태 칸이다(이미 읽혔다) — 단계표와의 검사만 손으로, 거절하면 기반이 되돌린다
     }
 

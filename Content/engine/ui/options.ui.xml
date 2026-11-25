@@ -1,5 +1,5 @@
 <?asset guid="db7b591135294205db91782a0cbdc89f"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<UIScreenDef _bPausesGame="true" />
 	<_listStyleSheet>
 		<item>guid:d36bc0fca75bc70df406ac878b0e9a37</item>
