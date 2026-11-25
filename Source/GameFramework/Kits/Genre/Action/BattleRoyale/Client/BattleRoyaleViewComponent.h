@@ -81,8 +81,8 @@ namespace sw
         PROPERTY( Required, Category = "Prefabs", DisplayName = "Item Pool Size", Tooltip = "Item views kept switched off for reuse instead of being destroyed", Min = 1 )
         uint32 _itemPoolSize;
 
-        unique_ptr<BattleRoyaleHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
-        SW_TRANSIENT PrefabPool              _itemPool;
-        uint32                               _shownItemRevision; ///< 세운 무더기 목록의 번호(0 이면 세운 것이 없다 — 디렉터의 번호는 1 부터다)
+        SW_TRANSIENT unique_ptr<BattleRoyaleHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
+        SW_TRANSIENT PrefabPool                           _itemPool;
+        SW_TRANSIENT uint32                               _shownItemRevision; ///< 세운 무더기 목록의 번호(0 이면 세운 것이 없다 — 디렉터의 번호는 1 부터다)
     };
 } // namespace sw

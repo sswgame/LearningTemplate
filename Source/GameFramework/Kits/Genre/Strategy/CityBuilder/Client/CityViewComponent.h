@@ -124,17 +124,17 @@ namespace sw
         float4 _cartColor;
 
         SharedAssetRef<RuleViewCatalog>   _pBuildingViewCatalog;
-        shared_ptr<const RuleViewCatalog> _shownBuildingViews; ///< 세운 모습이 쓴 모델 표의 판 — 다시 읽히면 모습을 새 판으로 다시 세운다
-        AssetReadySet                     _buildingModels;     ///< 모든 건물 모델 — 판이 열리면 워커가 읽어 둔다(집 단계가 바뀔 때 뷰가 게임 스레드에서 디스크를 읽지 않게)
-        MaterialTintCache                 _tintCache;          ///< 땅, 도로, 건물, 일꾼 색(같은 색은 나눠 쓴다)
-        SimulationViewSync<BuildingView>  _buildingViews;      ///< 건물 번호 → 지금 건물(허물렸으면 없다)
-        SimulationViewSync<uint8>         _roadViews;          ///< 타일 번호(y × 너비 + x) → 도로(1)
+        shared_ptr<const RuleViewCatalog> _shownBuildingViews;        ///< 세운 모습이 쓴 모델 표의 판 — 다시 읽히면 모습을 새 판으로 다시 세운다
+        SW_TRANSIENT AssetReadySet        _buildingModels;            ///< 모든 건물 모델 — 판이 열리면 워커가 읽어 둔다(집 단계가 바뀔 때 뷰가 게임 스레드에서 디스크를 읽지 않게)
+        SW_TRANSIENT MaterialTintCache    _tintCache;                 ///< 땅, 도로, 건물, 일꾼 색(같은 색은 나눠 쓴다)
+        SW_TRANSIENT SimulationViewSync<BuildingView> _buildingViews; ///< 건물 번호 → 지금 건물(허물렸으면 없다)
+        SW_TRANSIENT SimulationViewSync<uint8> _roadViews;            ///< 타일 번호(y × 너비 + x) → 도로(1)
         SW_TRANSIENT vector<GameObjectHandle> _listGroundObject;
         SW_TRANSIENT vector<GameObjectHandle> _listWalkerObject;
         SW_TRANSIENT vector<shared_ptr<MaterialInstance>> _listWalkerLook;      ///< 일꾼 종류 × `_walkerLookStride` + 서비스 행 번호 + 1
         shared_ptr<const CityCatalog>                     _shownCatalog;        ///< 세운 모습이 색을 읽은 카탈로그의 판 — 도시가 새 판에 묶이면 모습을 다시 세운다
-        int32                                             _walkerLookStride;    ///< 서비스 행 수 + 1(서비스 없음)
-        uint32                                            _shownRevision;       ///< 맞춘 도시 배치 판(0 이면 아직 — 열린 디렉터의 판은 1 부터다)
+        SW_TRANSIENT int32                                _walkerLookStride;    ///< 서비스 행 수 + 1(서비스 없음)
+        SW_TRANSIENT uint32                               _shownRevision;       ///< 맞춘 도시 배치 판(0 이면 아직 — 열린 디렉터의 판은 1 부터다)
         SW_TRANSIENT uint8                                _bViewsValid     : 1; ///< 모델 표가 맞다 — 아니면 아무것도 세우지 않는다
         SW_TRANSIENT uint8                                _bTerrainSpawned : 1;
         [[maybe_unused]] uint8                            _reserved        : 6;

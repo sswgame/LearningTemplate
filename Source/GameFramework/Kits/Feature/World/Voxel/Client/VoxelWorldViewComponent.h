@@ -75,7 +75,7 @@ namespace sw
         int32 _chunkBuildsPerFrame;
 
         SW_TRANSIENT unordered_map<uint64, ChunkView> _mapChunkView;       ///< 세운 청크. 키는 `VoxelWorld::makeChunkKey` 이다
-        VoxelAtlasGridGate                            _atlasGate;          ///< 블록 머티리얼 아틀라스 칸 검사(월드당 한 번). 카탈로그가 정본이다
+        SW_TRANSIENT VoxelAtlasGridGate               _atlasGate;          ///< 블록 머티리얼 아틀라스 칸 검사(월드당 한 번). 카탈로그가 정본이다
         SW_TRANSIENT uint8                            _bPrefabInvalid : 1; ///< 청크 프리팹이 틀렸다고 이미 알렸다
         [[maybe_unused]] uint8                        _reserved       : 7;
     };

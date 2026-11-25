@@ -25,7 +25,7 @@ namespace sw
             static constexpr FormatDef kStateFormat{ "PICK" };
         };
 
-        const StatefulComponentRegistrar<PickupComponent> s_stateRegistration{ "PickupComponent" };
+        const StatefulComponentRegistrar<PickupComponent> s_pickupComponentStateRegistration{ "PickupComponent" };
     } // namespace
 } // namespace sw
 

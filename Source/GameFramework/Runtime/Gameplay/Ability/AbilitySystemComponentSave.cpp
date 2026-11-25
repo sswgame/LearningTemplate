@@ -27,7 +27,7 @@ namespace sw
     namespace
     {
         /** @brief 어트리뷰트를 바꾸는 이펙트 · 어빌리티 세트를 모든 게임의 상태 스냅샷에 싣습니다(게임마다 올리지 않는다 — 빠뜨린 게임만 불러오기로 회복된다). */
-        const StatefulComponentRegistrar<AbilitySystemComponent> s_stateRegistration{ "AbilitySystemComponent" };
+        const StatefulComponentRegistrar<AbilitySystemComponent> s_abilitySystemComponentStateRegistration{ "AbilitySystemComponent" };
 
         struct AbilityComponentSaveInternal
         {

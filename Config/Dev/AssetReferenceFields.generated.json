@@ -3,7 +3,6 @@
     {
       "owner": "",
       "listField": [
-        "_albedo",
         "_albedoTexture",
         "_animationCrowdSettings",
         "_animationGraphPath",
@@ -24,6 +23,7 @@
         "_cookieTexturePath",
         "_cultureTable",
         "_cutsceneInputMap",
+        "_dataPath",
         "_debugHUDSettingsSchema",
         "_debugKeyInputMap",
         "_defaultDeferredPipeline",
@@ -51,7 +51,9 @@
         "_interiorMaterialPath",
         "_layerWeightsPath",
         "_layoutPath",
+        "_lensFlarePath",
         "_lipSyncSettings",
+        "_listDataPath",
         "_listExtensionShader",
         "_listReference",
         "_listRenderPassRef",
@@ -80,12 +82,15 @@
         "_photoModeInputMap",
         "_physicsAssetPath",
         "_prefab",
+        "_probeDataPath",
         "_profilePath",
         "_reference",
         "_renderPipeline",
         "_resourceRemap",
         "_retarget",
+        "_retargetedClipFolder",
         "_rigPath",
+        "_scenario",
         "_scene",
         "_screen",
         "_sequencePath",
@@ -148,11 +153,15 @@
         "_shaderVFXSimulation",
         "_shaderVolumetricClouds",
         "_shaderVolumetricFog",
+        "_skeleton",
         "_skeletonPath",
         "_socketSetPath",
         "_spawnPrefab",
+        "_splashImage",
         "_spriteLibraryPath",
         "_spriteMaterial",
+        "_stinger",
+        "_subgraph",
         "_surfaceKinds",
         "_targetScene",
         "_telemetrySchema",
@@ -173,6 +182,7 @@
         "_uiMainMenu",
         "_uiNotificationEntry",
         "_uiNotifications",
+        "_uiObjectiveMarker",
         "_uiOptionsMenu",
         "_uiOptionsRowBool",
         "_uiOptionsRowEnum",
@@ -185,21 +195,23 @@
         "_uiQuantityDialog",
         "_uiResolutionPresets",
         "_uiScaleSettings",
+        "_uiScreenFade",
         "_uiSettingsConfirm",
         "_uiSettingsUnsaved",
         "_uiSubtitles",
         "_uiThemes",
         "_uiTooltip",
+        "_uiWidgetSkin",
         "_userSettingsSchema",
         "_waterMaterial",
         "_wetnessCollection",
         "_zoneProfile",
-        "albedo",
         "albedoTexture",
         "animationCrowdSettings",
         "animationGraphPath",
         "animationLODSettings",
         "animationSetPath",
+        "animation_set",
         "assetPath",
         "assetRoots",
         "atlas",
@@ -216,6 +228,7 @@
         "cookieTexturePath",
         "cultureTable",
         "cutsceneInputMap",
+        "dataPath",
         "debugHUDSettingsSchema",
         "debugKeyInputMap",
         "defaultDeferredPipeline",
@@ -243,7 +256,9 @@
         "interiorMaterialPath",
         "layerWeightsPath",
         "layoutPath",
+        "lensFlarePath",
         "lipSyncSettings",
+        "listDataPath",
         "listExtensionShader",
         "listReference",
         "listRenderPassRef",
@@ -273,12 +288,15 @@
         "photoModeInputMap",
         "physicsAssetPath",
         "prefab",
+        "probeDataPath",
         "profilePath",
         "reference",
         "renderPipeline",
         "resourceRemap",
         "retarget",
+        "retargetedClipFolder",
         "rigPath",
+        "scenario",
         "scene",
         "screen",
         "sequencePath",
@@ -346,8 +364,11 @@
         "socketSetPath",
         "source_skeleton",
         "spawnPrefab",
+        "splashImage",
         "spriteLibraryPath",
         "spriteMaterial",
+        "stinger",
+        "subgraph",
         "surfaceKinds",
         "targetScene",
         "target_skeleton",
@@ -369,6 +390,7 @@
         "uiMainMenu",
         "uiNotificationEntry",
         "uiNotifications",
+        "uiObjectiveMarker",
         "uiOptionsMenu",
         "uiOptionsRowBool",
         "uiOptionsRowEnum",
@@ -381,11 +403,13 @@
         "uiQuantityDialog",
         "uiResolutionPresets",
         "uiScaleSettings",
+        "uiScreenFade",
         "uiSettingsConfirm",
         "uiSettingsUnsaved",
         "uiSubtitles",
         "uiThemes",
         "uiTooltip",
+        "uiWidgetSkin",
         "userSettingsSchema",
         "waterMaterial",
         "wetnessCollection",
@@ -395,18 +419,32 @@
     {
       "owner": "EditorModule",
       "listField": [
+        "_componentIconTable",
+        "_contentBrowserFavorites",
         "_defaultMap",
         "_editorInputMap",
+        "_iconGlyphTable",
         "_inputReplayFile",
+        "_localizationProject",
         "_mesh",
+        "_panelNames",
         "_spriteAtlas",
+        "_startupScene",
+        "_texture",
         "_uiPreviewDocument",
         "_warpMap",
+        "componentIconTable",
+        "contentBrowserFavorites",
         "defaultMap",
         "editorInputMap",
+        "iconGlyphTable",
         "inputReplayFile",
+        "localizationProject",
         "mesh",
+        "panelNames",
         "spriteAtlas",
+        "startupScene",
+        "texture",
         "uiPreviewDocument",
         "warpMap"
       ]
@@ -722,9 +760,11 @@
       "owner": "GF_EditorPlugin_CharacterEditor",
       "listField": [
         "_animationSet",
+        "_mirrorNames",
         "animationSet",
         "appearance",
         "items",
+        "mirrorNames",
         "rig",
         "skeleton",
         "sockets"
@@ -743,6 +783,13 @@
         "scheduleDataPath",
         "villagerPrefab",
         "weatherPath"
+      ]
+    },
+    {
+      "owner": "GF_Fighting",
+      "listField": [
+        "_moves",
+        "moves"
       ]
     },
     {
@@ -790,6 +837,13 @@
       ]
     },
     {
+      "owner": "GF_ModSupport",
+      "listField": [
+        "_path",
+        "path"
+      ]
+    },
+    {
       "owner": "GF_MonsterCollector",
       "listField": [
         "_elementChart",
@@ -827,8 +881,10 @@
       "owner": "GF_RealTimeStrategy",
       "listField": [
         "_commanderTreePath",
+        "_tileMapPath",
         "_unitDataPath",
         "commanderTreePath",
+        "tileMapPath",
         "unitDataPath"
       ]
     },
@@ -846,6 +902,15 @@
       "listField": [
         "_chart",
         "chart"
+      ]
+    },
+    {
+      "owner": "GF_Server_Economy",
+      "listField": [
+        "_currencyCatalog",
+        "_offerCatalog",
+        "currencyCatalog",
+        "offerCatalog"
       ]
     },
     {
@@ -894,6 +959,7 @@
         "_catalogPath",
         "_decalPrefab",
         "_documentPath",
+        "_effect",
         "_entranceScene",
         "_fit",
         "_fitTables",
@@ -904,10 +970,13 @@
         "_map",
         "_mask",
         "_material",
+        "_materialCollection",
         "_materialPath",
         "_mesh",
         "_meshID",
         "_modulePath",
+        "_onlineOfferCatalog",
+        "_onlineShopDocument",
         "_packRoot",
         "_pickupPrefab",
         "_portalPrefab",
@@ -919,8 +988,10 @@
         "_soundAsset",
         "_startMap",
         "_statCatalog",
+        "_surfaceChannelsPath",
         "_tablePath",
         "_titleScene",
+        "_trackFile",
         "_tree",
         "_tuning",
         "_weatherDataPath",
@@ -933,6 +1004,7 @@
         "catalogPath",
         "decalPrefab",
         "documentPath",
+        "effect",
         "entranceScene",
         "fit",
         "fitTables",
@@ -943,10 +1015,13 @@
         "map",
         "mask",
         "material",
+        "materialCollection",
         "materialPath",
         "mesh",
         "meshID",
         "modulePath",
+        "onlineOfferCatalog",
+        "onlineShopDocument",
         "packRoot",
         "pickupPrefab",
         "portalPrefab",
@@ -960,10 +1035,13 @@
         "sprite",
         "startMap",
         "statCatalog",
+        "surfaceChannelsPath",
         "tablePath",
         "titleScene",
+        "trackFile",
         "tree",
         "tuning",
+        "ui",
         "weatherDataPath",
         "zoneProfile"
       ]
@@ -972,7 +1050,9 @@
       "owner": "game:NileCity",
       "listField": [
         "_autoPlanPath",
-        "autoPlanPath"
+        "_tileMapPath",
+        "autoPlanPath",
+        "tileMapPath"
       ]
     },
     {
@@ -990,6 +1070,8 @@
         "_combatSwordMaterial",
         "_combatSwordMesh",
         "_effectPrefab",
+        "_extensionDrawShader",
+        "_extensionTintShader",
         "_faceClips",
         "_faceMesh",
         "_faceRig",
@@ -1024,6 +1106,7 @@
         "_spawnTable",
         "_spherePrefab",
         "_tracerPrefab",
+        "_uiDemoDocument",
         "autoPlayPrefab",
         "bodyPrefab",
         "combatEnemyClips",
@@ -1036,6 +1119,8 @@
         "combatSwordMaterial",
         "combatSwordMesh",
         "effectPrefab",
+        "extensionDrawShader",
+        "extensionTintShader",
         "faceClips",
         "faceMesh",
         "faceRig",
@@ -1069,7 +1154,8 @@
         "spawnPrefab",
         "spawnTable",
         "spherePrefab",
-        "tracerPrefab"
+        "tracerPrefab",
+        "uiDemoDocument"
       ]
     }
   ]

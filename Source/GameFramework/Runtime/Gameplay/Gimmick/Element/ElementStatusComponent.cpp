@@ -21,7 +21,7 @@ namespace sw
             static constexpr FormatDef kStateFormat{ "ELST" };
         };
 
-        const StatefulComponentRegistrar<ElementStatusComponent> s_stateRegistration{ "ElementStatusComponent" };
+        const StatefulComponentRegistrar<ElementStatusComponent> s_elementStatusComponentStateRegistration{ "ElementStatusComponent" };
     } // namespace
 
     ElementStatusComponent::ElementStatusComponent()

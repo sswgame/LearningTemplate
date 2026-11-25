@@ -35,7 +35,7 @@ namespace sw
             }
         };
 
-        const StatefulComponentRegistrar<PawnComponent> s_stateRegistration{ "PawnComponent" };
+        const StatefulComponentRegistrar<PawnComponent> s_pawnComponentStateRegistration{ "PawnComponent" };
     } // namespace
 } // namespace sw
 

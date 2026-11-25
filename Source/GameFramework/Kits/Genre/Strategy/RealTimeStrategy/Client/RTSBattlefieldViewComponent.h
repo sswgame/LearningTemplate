@@ -98,15 +98,15 @@ namespace sw
 
         SharedAssetRef<RuleViewCatalog>   _pUnitModelCatalog;
         shared_ptr<const RuleViewCatalog> _shownUnitModels; ///< 세운 모습이 쓴 모델 표의 판 — 다시 읽히면 모습을 새 판으로 다시 세운다
-        AssetReadySet                     _unitModels;      ///< 모든 유닛 모델 — 판이 열리면 워커가 읽어 둔다(처음 짓는 건물 · 유닛이 게임 스레드에서 디스크를 읽지 않게). 집합이 핸들을 쥐어 약한 참조 캐시에 남긴다.
+        SW_TRANSIENT AssetReadySet        _unitModels;      ///< 모든 유닛 모델 — 판이 열리면 워커가 읽어 둔다(처음 짓는 건물 · 유닛이 게임 스레드에서 디스크를 읽지 않게). 집합이 핸들을 쥐어 약한 참조 캐시에 남긴다.
         SW_TRANSIENT optional<PrefabPool> _unitViewPool;
-        SimulationViewSync<RTSUnitID>     _unitViews; ///< 유닛 슬롯 번호 → 보일 유닛(죽음 · 안개면 없다)
+        SW_TRANSIENT SimulationViewSync<RTSUnitID> _unitViews; ///< 유닛 슬롯 번호 → 보일 유닛(죽음 · 안개면 없다)
         SW_TRANSIENT vector<GameObjectHandle> _listCliff;
-        MaterialTintCache                     _tintCache;    ///< 유닛 색(같은 색은 나눠 쓴다).
-        vector<shared_ptr<MaterialInstance>>  _listUnitLook; ///< (팀 또는 자원 종류) x 2 + 선택 여부로 만든 유닛 모습 인스턴스.
-        SW_TRANSIENT uint8                    _bModelsChecked : 1;
-        SW_TRANSIENT uint8                    _bModelsValid   : 1;
-        SW_TRANSIENT uint8                    _bCliffsSpawned : 1;
-        [[maybe_unused]] uint8                _reserved       : 5;
+        SW_TRANSIENT MaterialTintCache        _tintCache;                ///< 유닛 색(같은 색은 나눠 쓴다).
+        SW_TRANSIENT vector<shared_ptr<MaterialInstance>> _listUnitLook; ///< (팀 또는 자원 종류) x 2 + 선택 여부로 만든 유닛 모습 인스턴스.
+        SW_TRANSIENT uint8                                _bModelsChecked : 1;
+        SW_TRANSIENT uint8                                _bModelsValid   : 1;
+        SW_TRANSIENT uint8                                _bCliffsSpawned : 1;
+        [[maybe_unused]] uint8                            _reserved       : 5;
     };
 } // namespace sw

@@ -32,7 +32,7 @@ namespace sw
 {
     /** @brief 환불 · 지급 알림 · 보존 검사의 운영 값입니다. 코드 기본값이 없다. */
     REFLECT()
-    struct SW_KIT_API EconomyPolicy
+    struct SW_KIT_SERVER_API EconomyPolicy
     {
         REFLECT_BODY();
         PROPERTY( Required, Min = 0 )

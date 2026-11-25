@@ -11,7 +11,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
-#include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/Texture2DAssetKind.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"

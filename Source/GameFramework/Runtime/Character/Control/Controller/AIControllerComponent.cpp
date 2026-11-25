@@ -48,7 +48,7 @@ namespace sw
             }
         };
 
-        const StatefulComponentRegistrar<AIControllerComponent> s_stateRegistration{ "AIControllerComponent" };
+        const StatefulComponentRegistrar<AIControllerComponent> s_aIControllerComponentStateRegistration{ "AIControllerComponent" };
     } // namespace
 } // namespace sw
 

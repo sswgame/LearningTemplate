@@ -74,7 +74,7 @@ namespace
         /** @brief 씬 데이터(`kitdemo_actioncombat.scene.xml`)와 같은 플레이어 값입니다(코드에는 기본값이 없다). */
         static sw::ActionRoomSettings makeSettings()
         {
-            sw::ActionRoomSettings settings   = ActionRoomTestUtil::makeSettings();
+            sw::ActionRoomSettings settings{};
             settings._dashCooldownSeconds     = 0.85f;
             settings._dashInvulnerableSeconds = 0.22f;
             settings._hitInvulnerableSeconds  = 0.7f;

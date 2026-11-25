@@ -107,7 +107,7 @@ namespace
             settings._rubberBandMaxBonus    = 0.15f;
             settings._rubberBandLeadPenalty = 0.05f;
             settings._redShellLockDistance  = 120.0f;
-            settings._redShellLockAngle     = 75.0f;
+            settings._redShellLockAngle     = sw::Radians::fromDegrees( 75.0f );
             settings._seed                  = sw::GameRandom::kDefaultSeed;
             settings._bRubberBand           = true;
             settings._bItems                = true;

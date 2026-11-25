@@ -203,9 +203,9 @@ namespace sw
         SW_CODEC_STATE RTSSelection _selection;
         SW_TRANSIENT float3         _dragStart;
         SW_TRANSIENT float3         _dragPoint;
-        uint64                      _appliedMatchID;   ///< 맞춘 판(`SkirmishGameModeComponent::getMatchID`, 0 이면 아직)
-        uint64                      _selectionMatchID; ///< 고르기가 속한 판(되돌린 구간이 실은 것이거나 맞춘 판)
-        uint8                       _bInputLive;       ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다). 틱이 쓰므로 뷰가 읽는 비트와 나눈다
+        SW_TRANSIENT uint64         _appliedMatchID;   ///< 맞춘 판(`SkirmishGameModeComponent::getMatchID`, 0 이면 아직)
+        SW_TRANSIENT uint64         _selectionMatchID; ///< 고르기가 속한 판(되돌린 구간이 실은 것이거나 맞춘 판)
+        SW_TRANSIENT uint8          _bInputLive;       ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다). 틱이 쓰므로 뷰가 읽는 비트와 나눈다
         SW_TRANSIENT uint8          _bNamesValid        : 1;
         SW_TRANSIENT uint8          _bDragging          : 1;
         SW_TRANSIENT uint8          _bDragPointValid    : 1;

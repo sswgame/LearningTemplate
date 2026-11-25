@@ -21,6 +21,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
@@ -185,8 +186,8 @@ namespace sw
         float32 _rubberBandLeadPenalty{ 0.0f }; ///< 사람보다 앞선 AI 1등의 최고 속도 감소량
         PROPERTY( Required, Min = 0.0, Units = m )
         float32 _redShellLockDistance{ 0.0f };
-        PROPERTY( Required, Min = 0.0, Max = 180.0, Units = deg )
-        float32 _redShellLockAngle{ 0.0f };
+        PROPERTY( Required ) // 글은 도(Radians 칸)
+        Radians _redShellLockAngle{};
         PROPERTY( Required )
         uint32 _seed{ 0 };
         PROPERTY( Required )

@@ -29,7 +29,7 @@ namespace sw
             static constexpr FormatDef kStateFormat{ "DLGR" };
         };
 
-        const StatefulComponentRegistrar<DialogueRunnerComponent> s_stateRegistration{ "DialogueRunnerComponent" };
+        const StatefulComponentRegistrar<DialogueRunnerComponent> s_dialogueRunnerComponentStateRegistration{ "DialogueRunnerComponent" };
     } // namespace
 
     DialogueRunnerComponent::DialogueRunnerComponent()

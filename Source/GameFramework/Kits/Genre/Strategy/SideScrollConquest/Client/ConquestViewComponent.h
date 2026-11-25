@@ -81,9 +81,9 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Enemy Color" )
         float4 _enemyColor;
 
-        SW_TRANSIENT PrefabViewBatch     _siteViews;
-        SW_TRANSIENT PrefabViewBatch     _soldierViews;
-        SW_TRANSIENT PrefabViewBatch     _commanderViews;
-        unique_ptr<ConquestHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
+        SW_TRANSIENT PrefabViewBatch _siteViews;
+        SW_TRANSIENT PrefabViewBatch _soldierViews;
+        SW_TRANSIENT PrefabViewBatch _commanderViews;
+        SW_TRANSIENT unique_ptr<ConquestHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
     };
 } // namespace sw

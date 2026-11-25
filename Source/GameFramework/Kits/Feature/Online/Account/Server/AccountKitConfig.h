@@ -15,7 +15,7 @@ namespace sw
 {
     /** @brief 로그인 · 세션 · 탈퇴의 운영 값입니다. 코드 기본값이 없다. */
     REFLECT()
-    struct SW_KIT_API LoginPolicy
+    struct SW_KIT_SERVER_API LoginPolicy
     {
         REFLECT_BODY();
         PROPERTY( Required, Min = 1 )
@@ -42,7 +42,7 @@ namespace sw
 
     /** @brief 접속 상태 기록의 운영 값입니다. 코드 기본값이 없다. */
     REFLECT()
-    struct SW_KIT_API OnlinePresenceConfig
+    struct SW_KIT_SERVER_API OnlinePresenceConfig
     {
         REFLECT_BODY();
         PROPERTY( Required, Min = 1 )
@@ -53,7 +53,7 @@ namespace sw
 
     /** @brief 계정 서버가 도는 주기와 한 번에 다루는 수입니다. 코드 기본값이 없다. */
     REFLECT()
-    struct SW_KIT_API AccountServerPolicy
+    struct SW_KIT_SERVER_API AccountServerPolicy
     {
         REFLECT_BODY();
         PROPERTY( Required, Min = 1 )

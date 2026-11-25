@@ -87,6 +87,6 @@ namespace sw
         SW_TRANSIENT PrefabViewBatch _trackViews;
         SW_TRANSIENT PrefabViewBatch _kartViews;
         SW_TRANSIENT PrefabViewBatch _itemViews;
-        unique_ptr<KartHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
+        SW_TRANSIENT unique_ptr<KartHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
     };
 } // namespace sw

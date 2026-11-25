@@ -14,7 +14,7 @@ namespace sw
     namespace
     {
         /** @brief 플레이어마다의 진행 플래그를 모든 게임의 상태 스냅샷에 싣습니다(게임마다 올리지 않는다). */
-        const StatefulComponentRegistrar<PlayerStateComponent> s_stateRegistration{ "PlayerStateComponent" };
+        const StatefulComponentRegistrar<PlayerStateComponent> s_playerStateComponentStateRegistration{ "PlayerStateComponent" };
     } // namespace
 
     PlayerStateComponent::PlayerStateComponent()

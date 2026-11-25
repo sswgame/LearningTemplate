@@ -94,7 +94,7 @@ namespace sw
         SW_TRANSIENT PrefabViewBatch _cubeViews;
         SW_TRANSIENT PrefabViewBatch _unitViews;
         SW_TRANSIENT int2            _cursor;
-        int2                         _lastStep;          ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 칸을 옮긴다
+        SW_TRANSIENT int2            _lastStep;          ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 칸을 옮긴다
         SW_TRANSIENT uint8           _bCursorPlaced : 1; ///< 판이 열린 뒤 커서를 첫 아군 칸에 놓았다
         [[maybe_unused]] uint8       _reserved      : 7;
     };

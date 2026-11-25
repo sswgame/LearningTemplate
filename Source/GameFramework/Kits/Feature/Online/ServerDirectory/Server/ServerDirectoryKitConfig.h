@@ -15,7 +15,7 @@ namespace sw
 {
     /** @brief 서버 목록 · 공지를 읽는 주기와 하트비트 한도입니다. 코드 기본값이 없다. */
     REFLECT()
-    struct SW_KIT_API ServerDirectoryPolicy
+    struct SW_KIT_SERVER_API ServerDirectoryPolicy
     {
         REFLECT_BODY();
         PROPERTY( Required, Min = 1 )

@@ -699,7 +699,7 @@ namespace sw
         LockOnSettings lockSettings;
         lockSettings._maxDistance   = _settings._redShellLockDistance;
         lockSettings._breakDistance = _settings._redShellLockDistance;
-        lockSettings._maxAngle      = _settings._redShellLockAngle;
+        lockSettings._maxAngle      = _settings._redShellLockAngle.degrees(); // 잠금 고르기는 도를 받는다
         LockOnSelector selector;
         selector.setSettings( lockSettings );
         const uint64 picked = selector.pickBest( shooter._motor.getPosition(), shooter._motor.computeForward(), listCandidate );

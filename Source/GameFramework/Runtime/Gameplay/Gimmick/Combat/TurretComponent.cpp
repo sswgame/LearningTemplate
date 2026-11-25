@@ -34,7 +34,7 @@ namespace sw
             static constexpr FormatDef kStateFormat{ "TURT" };
         };
 
-        const StatefulComponentRegistrar<TurretComponent> s_stateRegistration{ "TurretComponent" };
+        const StatefulComponentRegistrar<TurretComponent> s_turretComponentStateRegistration{ "TurretComponent" };
     } // namespace
 
     TurretShotWorld::TurretShotWorld( const vector<TurretShotTarget>& listTarget, float32 hitRadius, const IWorldQuery& blockers, uint64 ownerID )

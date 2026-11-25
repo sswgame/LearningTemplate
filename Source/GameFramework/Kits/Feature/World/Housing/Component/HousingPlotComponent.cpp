@@ -347,7 +347,7 @@ namespace sw
         };
 
         /** @brief 배치 · 지갑을 모든 게임의 상태 스냅샷에 싣고, 저장 전에 부품 뷰 · 고스트를 걷는다(게임마다 올리지 않는다). */
-        const StatefulComponentRegistrar<HousingPlotComponent> s_stateRegistration{ "HousingPlotComponent" };
+        const StatefulComponentRegistrar<HousingPlotComponent> s_housingPlotComponentStateRegistration{ "HousingPlotComponent" };
     } // namespace
 
     SW_DEV_COMMAND( HousingPreview, "housing.preview", "housing.preview <plot> <part> <x> <z> <level> <yawDegrees> [free]", "Show the ghost of a part on a housing plot and why it can or cannot go there",

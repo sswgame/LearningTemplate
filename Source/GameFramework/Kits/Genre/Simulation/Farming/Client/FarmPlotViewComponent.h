@@ -72,7 +72,7 @@ namespace sw
         float32 _tileSpacing;
 
         SW_TRANSIENT MaterialTintCache _tintCache;
-        SimulationViewSync<uint8>      _tileViews;     ///< 칸 번호(y × 너비 + x) → 모습 번호(.cpp 의 TileLook, 0 은 칸 없음)
-        uint32                         _shownRevision; ///< 맞춘 밭의 판(0 이면 아직 — 열린 디렉터의 판은 1 부터다)
+        SW_TRANSIENT SimulationViewSync<uint8> _tileViews;     ///< 칸 번호(y × 너비 + x) → 모습 번호(.cpp 의 TileLook, 0 은 칸 없음)
+        SW_TRANSIENT uint32                    _shownRevision; ///< 맞춘 밭의 판(0 이면 아직 — 열린 디렉터의 판은 1 부터다)
     };
 } // namespace sw

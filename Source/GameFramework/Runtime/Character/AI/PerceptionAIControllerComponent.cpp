@@ -21,7 +21,7 @@ namespace sw
             static constexpr FormatDef kStateFormat{ "AIPC" };
         };
 
-        const StatefulComponentRegistrar<PerceptionAIControllerComponent> s_stateRegistration{ "PerceptionAIControllerComponent" };
+        const StatefulComponentRegistrar<PerceptionAIControllerComponent> s_perceptionAIControllerComponentStateRegistration{ "PerceptionAIControllerComponent" };
     } // namespace
 
     PerceptionAIControllerComponent::PerceptionAIControllerComponent()

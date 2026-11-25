@@ -101,9 +101,9 @@ namespace sw
         hashed_string _statusAction;
 
         SW_TRANSIENT int2      _cursorTile;
-        int32                  _cursorSize; ///< 고른 것의 크기(타일 수)
+        SW_TRANSIENT int32     _cursorSize; ///< 고른 것의 크기(타일 수)
         SW_CODEC_STATE int32   _selectedTool;
-        uint8                  _bInputLive; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다). 틱이 쓰므로 뷰가 읽는 비트와 나눈다
+        SW_TRANSIENT uint8     _bInputLive; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다). 틱이 쓰므로 뷰가 읽는 비트와 나눈다
         SW_TRANSIENT uint8     _bActionsValid : 1;
         SW_TRANSIENT uint8     _bCursorValid  : 1;
         [[maybe_unused]] uint8 _reserved      : 6;

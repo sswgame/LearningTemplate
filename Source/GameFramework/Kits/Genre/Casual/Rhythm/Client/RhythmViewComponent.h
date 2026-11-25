@@ -90,13 +90,13 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Note Color" )
         float4 _noteColor;
 
-        SW_TRANSIENT PrefabViewBatch   _laneViews;
-        SW_TRANSIENT PrefabViewBatch   _noteViews;
-        unique_ptr<RhythmHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
-        SW_TRANSIENT vector<uint8> _listLaneHeld;     ///< 레인마다 지난 프레임에 눌려 있었는가
-        float32                    _musicStart;       ///< 음악을 튼 때의 곡 시각(초) — 되살린 판은 그 자리부터 흐른다
-        SW_TRANSIENT MusicPhase    _musicPhase;       ///< 음악의 단계
-        SW_TRANSIENT uint8         _bMusicPaused : 1; ///< 게임이 멈춰 음악을 멈춰 두었다
+        SW_TRANSIENT PrefabViewBatch _laneViews;
+        SW_TRANSIENT PrefabViewBatch _noteViews;
+        SW_TRANSIENT unique_ptr<RhythmHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
+        SW_TRANSIENT vector<uint8> _listLaneHeld;                  ///< 레인마다 지난 프레임에 눌려 있었는가
+        SW_TRANSIENT float32       _musicStart;                    ///< 음악을 튼 때의 곡 시각(초) — 되살린 판은 그 자리부터 흐른다
+        SW_TRANSIENT MusicPhase    _musicPhase;                    ///< 음악의 단계
+        SW_TRANSIENT uint8         _bMusicPaused : 1;              ///< 게임이 멈춰 음악을 멈춰 두었다
         [[maybe_unused]] uint8     _reserved     : 7;
     };
 } // namespace sw

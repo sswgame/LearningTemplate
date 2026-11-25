@@ -166,6 +166,7 @@ namespace sw
 
     private:
         friend struct UIWidgetSkinTestAccess; // 테스트는 다른 시트의 겉모습을 잠깐 건다
+        friend struct UIWidgetSkin;           // 기동 단계 앞에서 만든 위젯이 시트를 그 자리에서 읽는다(`UIWidgetSkin::get`)
 
         void onSheetReloaded( string_view sheetPath );
         /** @brief 캐시의 시트를 `_skin` 에 겁니다. 실패하면 오류를 남기고 false 입니다(앞 겉모습은 그대로). */

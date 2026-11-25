@@ -87,7 +87,7 @@ namespace sw::editor
      *          언리얼 Details 패널은 상속한 UPROPERTY 를 모두 보이고, `IDetailCustomization` 이 하위 클래스에도 적용되며, 자기가 그린 것만 `HideProperty` 한다.
      *          유니티의 `CustomEditor( editorForChildClasses: true )` 와 `DrawDefaultInspector` 도 같은 구조다.
      */
-    struct InspectorPropertyLayout
+    struct SW_EDITOR_API InspectorPropertyLayout
     {
         /** @brief 타입 상속 사슬을 기반에서 파생 순서로 모읍니다. @p type 이 마지막입니다. 사슬이 순환하면 멈춥니다. */
         static void collectTypeChain( const TypeInfo& type, vector<const TypeInfo*>& outListType );

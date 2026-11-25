@@ -35,7 +35,7 @@ namespace sw
             static constexpr FormatDef kStateFormat{ "KVEH" };
         };
 
-        const StatefulComponentRegistrar<KinematicVehicleComponent> s_stateRegistration{ "KinematicVehicleComponent" };
+        const StatefulComponentRegistrar<KinematicVehicleComponent> s_kinematicVehicleComponentStateRegistration{ "KinematicVehicleComponent" };
     } // namespace
 } // namespace sw
 

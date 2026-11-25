@@ -158,7 +158,7 @@ namespace sw
         };
 
         /** @brief 켠 프리셋과 블렌드 스택을 모든 게임의 상태 스냅샷에 싣습니다(게임마다 올리지 않는다). */
-        const StatefulComponentRegistrar<CameraDirectorComponent> s_stateRegistration{ "CameraDirectorComponent" };
+        const StatefulComponentRegistrar<CameraDirectorComponent> s_cameraDirectorComponentStateRegistration{ "CameraDirectorComponent" };
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( cameraDirectorActivePreset, "CameraDirector.ActivePreset", "Preset the target's camera director shows (selected preset with contexts applied); none without one",

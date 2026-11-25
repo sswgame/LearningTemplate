@@ -56,6 +56,6 @@ namespace sw
         PROPERTY( Category = "HUD", DisplayName = "Low Core Warning", Min = 0.0, Max = 100.0, Tooltip = "The HUD warns when a core falls below this" )
         float32 _lowCoreWarning;
 
-        unique_ptr<WesternHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
+        SW_TRANSIENT unique_ptr<WesternHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
     };
 } // namespace sw

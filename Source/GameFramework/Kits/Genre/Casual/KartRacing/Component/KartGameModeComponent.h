@@ -83,7 +83,7 @@ namespace sw
     private:
         PROPERTY( Category = "Data", DisplayName = "Track", Required, Tooltip = "Track id in the catalog" )
         CatalogKey<KartTrackDef> _trackID;
-        PROPERTY( Category = "Data", DisplayName = "Items", Tooltip = "Item and rank table file (required while items are on)", EditCondition = "_raceSettings._bItems" )
+        PROPERTY( Category = "Data", DisplayName = "Items", Tooltip = "Item and rank table file (required while items are on)" )
         AssetRef<KartItemCatalog> _itemCatalog;
         PROPERTY( Category = "Data", DisplayName = "Vehicle", Required, Tooltip = "Vehicle tuning every kart drives (*.vehicle.xml)" )
         AssetRef<KinematicVehicleSettings> _vehicleSettings;

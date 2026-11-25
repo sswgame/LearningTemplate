@@ -241,7 +241,12 @@ namespace sw
 
     const UIWidgetSkin& UIWidgetSkin::get()
     {
-        return engine::getSubsystem<UIWidgetSkinService>().getSkin();
+        UIWidgetSkinService& service = engine::getSubsystem<UIWidgetSkinService>();
+        // 기동 단계보다 먼저 위젯을 만드는 길(헤드리스 작업 — 단위 테스트 · UI 문서 도구는 `Headless` 단계 안에서 돈다)은 같은 시트를 그 자리에서 읽는다.
+        // 읽지 못하면 아래 `getSkin` 이 멈춘다 — 대신 쓸 값은 없다.
+        if ( service._skin == nullptr )
+            (void)service.applySheet();
+        return service.getSkin();
     }
 } // namespace sw
 

@@ -32,7 +32,7 @@ namespace sw
     namespace
     {
         /** @brief 장비 칸과 가방을 게임 세이브에 싣습니다(모든 게임 — 게임마다 올리지 않는다). */
-        const StatefulComponentRegistrar<CharacterEquipmentComponent> s_stateRegistration{ "CharacterEquipmentComponent" };
+        const StatefulComponentRegistrar<CharacterEquipmentComponent> s_characterEquipmentComponentStateRegistration{ "CharacterEquipmentComponent" };
 
     } // namespace
 

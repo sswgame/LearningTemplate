@@ -133,7 +133,7 @@ namespace sw
         };
 
         /** @brief 몸의 위치 · 핫바를 모든 게임의 상태 스냅샷에 싣는다(게임마다 올리지 않는다). */
-        const StatefulComponentRegistrar<VoxelPlayerComponent> s_stateRegistration{ "VoxelPlayerComponent" };
+        const StatefulComponentRegistrar<VoxelPlayerComponent> s_voxelPlayerComponentStateRegistration{ "VoxelPlayerComponent" };
     } // namespace
 
     SW_AUTOMATION_COMPONENT_WATCH( voxelWalkedDistance, "Voxel.WalkedDistance", "Horizontal distance of the player body from where it was first placed", VoxelPlayerComponent, &VoxelPlayerComponentInternal::readWalkedDistance );

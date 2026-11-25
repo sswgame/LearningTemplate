@@ -15,7 +15,7 @@ namespace sw
 {
     /** @brief 우편 알림 · 캠페인 · 정리의 운영 값입니다. 코드 기본값이 없다. */
     REFLECT()
-    struct SW_KIT_API MailboxDeliveryPolicy
+    struct SW_KIT_SERVER_API MailboxDeliveryPolicy
     {
         REFLECT_BODY();
         PROPERTY( Required, Min = 1 )

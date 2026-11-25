@@ -30,7 +30,7 @@ namespace sw
     namespace
     {
         /** @brief 고른 유닛 · 부대를 모든 게임의 상태 스냅샷에 올립니다. */
-        const StatefulComponentRegistrar<RTSCommandInputComponent> s_stateRegistration{ "RTSCommandInputComponent" };
+        const StatefulComponentRegistrar<RTSCommandInputComponent> s_rTSCommandInputComponentStateRegistration{ "RTSCommandInputComponent" };
 
         struct RTSCommandInputComponentInternal
         {
