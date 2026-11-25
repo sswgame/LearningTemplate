@@ -120,9 +120,9 @@ namespace sw::editor
         void endTextEdit() { _state.endCoalescing(); }
 
         /** @brief 편집 한 단계를 되돌립니다(창 안 되돌리기 — 패널이 자기 명령 스택에서 부른다). 기록이 없으면 false 입니다. */
-        [[nodiscard]] bool undo() { return _state.undo( _listNode ); }
+        [[nodiscard]] bool undo() { return _state.undo(); }
         /** @brief 되돌린 단계를 다시 합니다. 기록이 없으면 false 입니다. */
-        [[nodiscard]] bool redo() { return _state.redo( _listNode ); }
+        [[nodiscard]] bool redo() { return _state.redo(); }
         /** @brief 지금까지 기록한 되돌리기 단계 수입니다(합친 편집은 세지 않고 되돌려도 줄지 않는다) — 패널이 단계마다 명령 하나를 올린다. */
         [[nodiscard]] uint32 getRecordedUndoStepCount() const { return _recordedUndoStepCount; }
         /**
@@ -148,6 +148,10 @@ namespace sw::editor
         [[nodiscard]] bool appendSerializedText( uint32 node, string_view lineIndent, string& inoutText ) const;
         /** @brief 편집 직전 트리를 되돌리기 기록에 올립니다. */
         void recordEdit( string_view coalesceKey = {} );
+
+    private:
+        using CaptureDelegate = EditorDocumentState<vector<ProjectSettingsJSONNode>>::CaptureDelegate;
+        using ApplyDelegate   = EditorDocumentState<vector<ProjectSettingsJSONNode>>::ApplyDelegate;
 
     private:
         vector<ProjectSettingsJSONNode> _listNode;

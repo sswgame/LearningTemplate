@@ -344,6 +344,10 @@ namespace sw::editor
         , _selectedControlPoint{ -1 }
         , _mirrorAxis{ 0 }
     {
+        _history.bind( SW_DELEGATE_LAMBDA( Delegate<string()>, [this]()
+        { return _stack.makeJSONText( -1 ).value_or( string{} ); } ),
+                       SW_DELEGATE_LAMBDA( Delegate<void( const string& )>, [this]( const string& text )
+        { applyStackText( text ); } ) );
     }
 
     expected<void> MeshModifierSession::setTarget( GameObject* pObject )
@@ -494,32 +498,21 @@ namespace sw::editor
         _history.record( *text );
     }
 
-    bool MeshModifierSession::undo()
+    void MeshModifierSession::applyStackText( const string& text )
     {
-        expected<string> current = _stack.makeJSONText( -1 );
-        if ( current.has_value() == false )
-            return false; // 지금 상태를 되돌리기 목록에 담을 수 없다(잘못된 UTF-8)
-        string text = std::move( *current );
-        if ( _history.undo( text ) == false )
-            return false;
         (void)_stack.readJSONText( text ); // 스스로 만든 글이라 실패하지 않는다. 실패해도 빈 스택이다
         _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
         markDirty();
-        return true;
+    }
+
+    bool MeshModifierSession::undo()
+    {
+        return _history.undo();
     }
 
     bool MeshModifierSession::redo()
     {
-        expected<string> current = _stack.makeJSONText( -1 );
-        if ( current.has_value() == false )
-            return false; // 지금 상태를 다시 하기 목록에 담을 수 없다(잘못된 UTF-8)
-        string text = std::move( *current );
-        if ( _history.redo( text ) == false )
-            return false;
-        (void)_stack.readJSONText( text ); // 스스로 만든 글이라 실패하지 않는다
-        _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
-        markDirty();
-        return true;
+        return _history.redo();
     }
 
     void MeshModifierSession::refreshPreview()

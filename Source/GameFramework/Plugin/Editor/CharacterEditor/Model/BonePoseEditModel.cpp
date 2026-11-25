@@ -37,6 +37,10 @@ namespace sw::editor
         , _override{}
         , _state{ _override.saveToXMLText() }
     {
+        _state.bind( SW_DELEGATE_LAMBDA( CaptureDelegate, [this]()
+        { return _override; } ),
+                     SW_DELEGATE_LAMBDA( ApplyDelegate, [this]( const ReferencePoseOverride& snapshot )
+        { _override = snapshot; } ) );
     }
 
     bool BonePoseEditModel::loadSkeleton( const AssetID& assetID )
@@ -223,11 +227,11 @@ namespace sw::editor
 
     bool BonePoseEditModel::undo()
     {
-        return _state.undo( _override );
+        return _state.undo();
     }
 
     bool BonePoseEditModel::redo()
     {
-        return _state.redo( _override );
+        return _state.redo();
     }
 } // namespace sw::editor

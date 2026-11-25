@@ -790,7 +790,7 @@
     "Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphSelfTest.cpp": {"float": 6, "integer": 2},
     "Source/GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleDebugPanel.cpp": {"float": 3, "integer": 1},
     "Source/GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleTimelineRows.cpp": {"integer": 4},
-    "Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.cpp": {"minus-one": 18, "integer": 1},
+    "Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.cpp": {"minus-one": 17, "integer": 1},
     "Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp": {"minus-one": 5, "float": 16, "integer": 1},
     "Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.h": {"float": 2},
     "Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp": {"float": 18, "integer": 2},

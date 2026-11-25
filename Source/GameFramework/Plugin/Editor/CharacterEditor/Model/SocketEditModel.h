@@ -126,6 +126,10 @@ namespace sw::editor
         [[nodiscard]] expected<SocketDef> beginFieldEdit( const hashed_string& name, uint16 fieldBit, bool bContinuous, string_view fieldName );
 
     private:
+        using CaptureDelegate = EditorDocumentState<SocketSet>::CaptureDelegate;
+        using ApplyDelegate   = EditorDocumentState<SocketSet>::ApplyDelegate;
+
+    private:
         SocketSet                      _sockets;
         SocketKindTable                _kinds;
         MirrorNameRules                _mirrorRules;

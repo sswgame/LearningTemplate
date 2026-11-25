@@ -129,6 +129,10 @@ namespace sw::editor
         [[nodiscard]] expected<void> validateNotifyIndex( uint32 notifyIndex ) const;
 
     private:
+        using CaptureDelegate = EditorDocumentState<PairedAnimationContentDef>::CaptureDelegate;
+        using ApplyDelegate   = EditorDocumentState<PairedAnimationContentDef>::ApplyDelegate;
+
+    private:
         PairedAnimationContentDef                      _content;
         EditorDocumentState<PairedAnimationContentDef> _state; ///< 저장한 글 · 되돌리기
         float32                                        _scrubTime;

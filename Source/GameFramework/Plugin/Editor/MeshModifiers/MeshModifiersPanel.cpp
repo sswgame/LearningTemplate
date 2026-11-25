@@ -269,6 +269,12 @@ namespace sw::editor
         return pSession != nullptr && pSession->saveSidecar( writer ); // 실패는 saveSidecar 가 알린다
     }
 
+    CommandStack* MeshModifiersPanel::findPanelCommandStack()
+    {
+        MeshModifierSession* pSession = MeshModifierSession::find();
+        return pSession != nullptr ? &pSession->getUndoStack() : nullptr;
+    }
+
     AssetWriter& MeshModifiersPanel::getAssetWriter()
     {
         MeshModifierSession* pSession = MeshModifierSession::find();

@@ -41,6 +41,10 @@ namespace sw::editor
         , _state{ PairedAnimationDef::makeXMLText( PairedAnimationContentDef{}, ResourceFieldWrite::OmitDefaults ) }
         , _scrubTime{ 0.0f }
     {
+        _state.bind( SW_DELEGATE_LAMBDA( CaptureDelegate, [this]()
+        { return _content; } ),
+                     SW_DELEGATE_LAMBDA( ApplyDelegate, [this]( const PairedAnimationContentDef& snapshot )
+        { _content = snapshot; } ) );
     }
 
     bool PairedAnimationEditModel::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -224,12 +228,12 @@ namespace sw::editor
 
     bool PairedAnimationEditModel::undo()
     {
-        return _state.undo( _content );
+        return _state.undo();
     }
 
     bool PairedAnimationEditModel::redo()
     {
-        return _state.redo( _content );
+        return _state.redo();
     }
 
     void PairedAnimationEditModel::setScrubTime( float32 seconds )

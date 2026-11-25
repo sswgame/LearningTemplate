@@ -64,6 +64,8 @@ namespace sw::editor
     private:
         /** @brief 세션 스택이 사이드카와 다르면 패널 dirty 를 올리고, 같아지면 내립니다(닫기 · 종료 확인 · 제목 표시가 이 값을 본다). 스택이 기준이다. */
         void syncDocumentDirty() override;
+        /** @brief 세션의 되돌리기 스택입니다 — Ctrl+Z · History 창이 창 단추와 같은 기록을 움직인다. 세션이 없으면 메인 스택입니다. */
+        CommandStack* findPanelCommandStack() override;
         /** @brief "Don't Save" — 스택을 마지막으로 읽거나 쓴 사이드카 상태로 돌립니다. */
         void revertDocument() override;
         void drawTargetRow( MeshModifierSession& session );

@@ -41,6 +41,10 @@ namespace sw::editor
         , _state{ _sockets.saveToXMLText() }
         , _mirrorAxis{ MirrorAxis::X }
     {
+        _state.bind( SW_DELEGATE_LAMBDA( CaptureDelegate, [this]()
+        { return _sockets; } ),
+                     SW_DELEGATE_LAMBDA( ApplyDelegate, [this]( const SocketSet& snapshot )
+        { _sockets = snapshot; } ) );
     }
 
     bool SocketEditModel::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -323,12 +327,12 @@ namespace sw::editor
 
     bool SocketEditModel::undo()
     {
-        return _state.undo( _sockets );
+        return _state.undo();
     }
 
     bool SocketEditModel::redo()
     {
-        return _state.redo( _sockets );
+        return _state.redo();
     }
 
     void SocketEditModel::recordUndo( string_view coalesceKey )

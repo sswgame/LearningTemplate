@@ -98,6 +98,10 @@ namespace sw::editor
         void recordUndo( const hashed_string& bone, string_view fieldName );
 
     private:
+        using CaptureDelegate = EditorDocumentState<ReferencePoseOverride>::CaptureDelegate;
+        using ApplyDelegate   = EditorDocumentState<ReferencePoseOverride>::ApplyDelegate;
+
+    private:
         Skeleton                                   _skeleton;
         ReferencePoseOverride                      _override;
         EditorDocumentState<ReferencePoseOverride> _state; ///< 저장한 글 · 되돌리기

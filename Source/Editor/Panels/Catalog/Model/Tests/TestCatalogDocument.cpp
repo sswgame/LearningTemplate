@@ -4,6 +4,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 #include "Editor/Panels/Catalog/Model/CatalogCurve.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 #include "Editor/Panels/Catalog/Model/CatalogFileList.h"
@@ -282,7 +284,7 @@ SW_TEST_CASE( CatalogDocumentTest, UndoHistoryIsBounded )
 {
     CatalogDocument document;
     SW_REQUIRE_TRUE( document.load( "<r x=\"0\"/>" ) );
-    for ( size_t index = 0; index < CatalogDocument::kMaxUndoCount + 5; ++index )
+    for ( size_t index = 0; index < static_cast<size_t>( EditorUndoHistory::readConfiguredLimit( getEditorToolDefaults() )._maxCommandCount ) + 5; ++index )
     {
         SW_REQUIRE_TRUE( document.setCell( 0, "x", to_string( static_cast<uint64>( index + 1 ) ) ) );
     }
@@ -292,7 +294,7 @@ SW_TEST_CASE( CatalogDocumentTest, UndoHistoryIsBounded )
         document.undo();
         ++undoCount;
     }
-    SW_EXPECT_EQUAL( static_cast<uint32>( CatalogDocument::kMaxUndoCount ), undoCount );
+    SW_EXPECT_EQUAL( EditorUndoHistory::readConfiguredLimit( getEditorToolDefaults() )._maxCommandCount, undoCount );
 }
 
 // 빈 값을 적으면 로더가 읽지 못하고, 같은 id 를 적으면 로더가 거절한다 — 새 행은 바로 검증을 통과하는 모양이어야 한다.

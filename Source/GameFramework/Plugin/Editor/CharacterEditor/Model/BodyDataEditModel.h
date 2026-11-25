@@ -87,6 +87,10 @@ namespace sw::editor
         static string      makeCoalesceKey( vector_reference<const BodyDataElementKey> path, const utf8* pAttribute );
 
     private:
+        using CaptureDelegate = EditorDocumentState<string>::CaptureDelegate;
+        using ApplyDelegate   = EditorDocumentState<string>::ApplyDelegate;
+
+    private:
         XMLDocument                 _doc;
         string                      _text;
         DiskPath                    _diskPath;

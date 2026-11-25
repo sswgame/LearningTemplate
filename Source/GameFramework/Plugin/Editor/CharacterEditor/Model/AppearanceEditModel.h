@@ -121,6 +121,10 @@ namespace sw::editor
         static string makeKey( string_view kind, const hashed_string& target );
 
     private:
+        using CaptureDelegate = EditorDocumentState<AppearanceSelection, AppearanceSelection>::CaptureDelegate;
+        using ApplyDelegate   = EditorDocumentState<AppearanceSelection, AppearanceSelection>::ApplyDelegate;
+
+    private:
         AppearanceSelection                                           _selection;
         EditorDocumentState<AppearanceSelection, AppearanceSelection> _state; ///< 저장한 선택 · 되돌리기
         uint32                                                        _revision;

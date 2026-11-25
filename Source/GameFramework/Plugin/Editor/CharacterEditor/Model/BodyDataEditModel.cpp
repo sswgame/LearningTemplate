@@ -17,6 +17,10 @@ namespace sw::editor
         , _state{}
         , _revision{ 0 }
     {
+        _state.bind( SW_DELEGATE_LAMBDA( CaptureDelegate, [this]()
+        { return _text; } ),
+                     SW_DELEGATE_LAMBDA( ApplyDelegate, [this]( const string& snapshot )
+        { _text = snapshot; (void)reparse( _text ); } ) );
     }
 
     bool BodyDataEditModel::openText( string_view text, const DiskPath& diskPath )
@@ -170,16 +174,12 @@ namespace sw::editor
 
     bool BodyDataEditModel::undo()
     {
-        if ( _state.undo( _text ) == false )
-            return false;
-        return reparse( _text );
+        return _state.undo();
     }
 
     bool BodyDataEditModel::redo()
     {
-        if ( _state.redo( _text ) == false )
-            return false;
-        return reparse( _text );
+        return _state.redo();
     }
 
     string BodyDataEditModel::makeCoalesceKey( vector_reference<const BodyDataElementKey> path, const utf8* pAttribute )

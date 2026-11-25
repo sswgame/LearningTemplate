@@ -91,8 +91,12 @@ namespace sw::editor
         /** @brief 되돌린 것을 다시 합니다. */
         [[nodiscard]] bool redo();
         bool               canUndo() const { return _history.canUndo(); }
-        bool               canRedo() const { return _history.canRedo(); }
+        /** @brief 되돌리기 명령이 쌓이는 스택입니다 — 창이 Ctrl+Z 를 이리 보낸다(`MeshModifiersPanel::findPanelCommandStack`). */
+        CommandStack& getUndoStack() { return _history.getStack(); }
+        bool          canRedo() const { return _history.canRedo(); }
 
+        /** @brief 되돌리기 · 다시 하기가 스택 글을 넣습니다. */
+        void applyStackText( const string& text );
         /** @brief 스택이 바뀌었다고 알립니다. 다음 `refreshPreview` 가 다시 겁니다. 다음 `isStackUnsaved` 도 저장 글을 다시 비교합니다. */
         void markDirty()
         {

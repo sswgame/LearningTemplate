@@ -319,6 +319,13 @@ namespace sw
         return true;
     }
 
+    void CommandStack::discardRedo()
+    {
+        if ( _bIsExecuting || _index >= _listCommand.size() )
+            return;
+        _listCommand.erase( _listCommand.begin() + static_cast<std::ptrdiff_t>( _index ), _listCommand.end() );
+    }
+
     bool CommandStack::redo()
     {
         if ( canRedo() == false || _bIsExecuting )

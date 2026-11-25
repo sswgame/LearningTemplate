@@ -168,6 +168,10 @@ namespace sw::editor
         , _readOnlyReason{ ProjectSettingsReadOnlyReason::None }
         , _bTrailingNewLine{ 0 }
     {
+        _state.bind( SW_DELEGATE_LAMBDA( CaptureDelegate, [this]()
+        { return _listNode; } ),
+                     SW_DELEGATE_LAMBDA( ApplyDelegate, [this]( const vector<ProjectSettingsJSONNode>& snapshot )
+        { _listNode = snapshot; } ) );
     }
 
     expected<void> ProjectSettingsJSONDocument::open( const DiskPath& absolutePath )
