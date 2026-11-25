@@ -55,8 +55,8 @@ class LintScope:
                 if is_under(path, roots) and (not tuple_suffix or path.endswith(tuple_suffix))
                 and not (skip_parts and any(part in skip_parts for part in path.split("/")))]
 
-    def touches(self, roots: Sequence[str] = ("",), suffixes: Sequence[str] = (), files: Iterable[str] = ()) -> bool:
-        """더하거나 고치거나 지운 파일 가운데 `roots` · `suffixes` 에 들거나 `files` 인 것이 있는가 — 색인 규칙이 돌지 정한다."""
+    def touches(self, roots: Sequence[str], suffixes: Sequence[str] = (), files: Iterable[str] = ()) -> bool:
+        """(`roots` 는 늘 적는다 — 기본이 저장소 전체이던 때 `files` 만 준 물음이 언제나 참이라, 커밋마다 저장소 전체에 clang-format 을 돌렸다.) 더하거나 고치거나 지운 파일 가운데 `roots` · `suffixes` 에 들거나 `files` 인 것이 있는가 — 색인 규칙이 돌지 정한다."""
         tuple_suffix = tuple(suffixes)
         set_file = set(files)
         return any(path in set_file or (is_under(path, roots) and (not tuple_suffix or path.endswith(tuple_suffix)))

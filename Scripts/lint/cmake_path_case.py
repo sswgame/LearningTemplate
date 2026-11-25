@@ -76,7 +76,7 @@ class CMakePathCaseRule(LintRule):
     def evaluate(self, scope: LintScope, found: Mapping[str, object]) -> list[str]:
         """대소문자만 다른 CMake 경로를 "파일: 적은 경로 → 실제 이름" 줄로 돌려준다.
         이름 바꾸기도 바뀌지 않은 CMake 파일의 참조를 깨므로 판정은 늘 저장소 전체 색인으로 낸다 — 커밋 훅은 CMake 파일이 바뀌었거나 파일을 지웠을(옮겼을) 때만 돈다."""
-        if not scope.whole_repo and not scope.list_removed and not scope.touches(suffixes=(".cmake", "CMakeLists.txt")):
+        if not scope.whole_repo and not scope.list_removed and not scope.touches(("",), suffixes=(".cmake", "CMakeLists.txt")):
             return []
         list_file = list_repo_files(self.root)
         list_cmake = [file for file in list_file if file.endswith(".cmake") or file.endswith("CMakeLists.txt")]

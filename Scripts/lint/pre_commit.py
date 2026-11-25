@@ -212,7 +212,7 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
                 print(f"  - {line}")
 
     # 포맷 설정(include 순서 포함)이 바뀌면 바뀌지 않은 파일의 판정도 바뀐다 — 전체를 본다.
-    format_scope = make_whole_scope(project_root) if scope.touches(files=(".clang-format",)) else scope
+    format_scope = make_whole_scope(project_root) if ".clang-format" in scope.list_file else scope
     list_format = [project_root / path for path in select_format_files(format_scope)]
     if list_format and run_clang_format_batch(list_format, check_only=True, cwd=project_root) != 0:
         has_errors = True
