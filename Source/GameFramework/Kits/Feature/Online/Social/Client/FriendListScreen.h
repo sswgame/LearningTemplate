@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Presentation/UIStatusViewModel.h"
 #include "Engine/UI/Screen/UIScreen.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -52,5 +53,6 @@ namespace sw
         WeakRef<FriendList> _model; ///< 모델은 게임 쪽이 소유한다 — 먼저 사라지면 화면이 닫힌다
         uint64              _shownRevision;
         bool                _bBuilt;
+        UIStatusViewModel   _viewModel; ///< 문서가 바인딩으로 읽는 글(`{bind:…}`) — 화면이 위젯 이름으로 찾아 쓰지 않는다
     };
 } // namespace sw

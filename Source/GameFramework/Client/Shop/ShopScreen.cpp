@@ -140,11 +140,14 @@ namespace sw
         , _finishedCount{ 0 }
         , _bBuilt{ SW_FALSE }
         , _bBusy{ SW_FALSE }
+        , _viewModel{}
     {
+        setViewModel( &_viewModel );
     }
 
     ShopScreen::~ShopScreen()
     {
+        setViewModel( nullptr );
         if ( _pProvider != nullptr )
             _pProvider->unbindScreen();
     }
@@ -272,21 +275,18 @@ namespace sw
 
     void ShopScreen::setStatus( const string& text )
     {
-        TextWidget* pStatus = getTree().findWidget<TextWidget>( hashed_string( kStatusName ) );
-        if ( pStatus != nullptr )
-            pStatus->setText( text );
+        _viewModel.setStatus( text );
     }
 
     void ShopScreen::rebuild()
     {
         if ( _pProvider == nullptr )
             return;
-        WidgetTree&     tree     = getTree();
-        ListViewWidget* pOffers  = tree.findWidget<ListViewWidget>( hashed_string( kOffersName ) );
-        TextWidget*     pBalance = tree.findWidget<TextWidget>( hashed_string( kBalanceName ) );
-        if ( pOffers == nullptr || pBalance == nullptr || tree.findWidget<TextWidget>( hashed_string( kStatusName ) ) == nullptr )
+        WidgetTree&     tree    = getTree();
+        ListViewWidget* pOffers = tree.findWidget<ListViewWidget>( hashed_string( kOffersName ) );
+        if ( pOffers == nullptr )
         {
-            SW_LOG_ERROR_ID( "ShopScreen.ShopDocumentNeeds", "Shop document %# needs a '%#' list view and '%#' and '%#' texts", getDocumentPath().c_str(), kOffersName, kBalanceName, kStatusName );
+            SW_LOG_ERROR_ID( "ShopScreen.ShopDocumentNeeds", "Shop document %# needs a '%#' list view", getDocumentPath().c_str(), kOffersName );
             _bBuilt = SW_TRUE; // 문서가 틀렸다 — 프레임마다 같은 오류를 되풀이하지 않는다
             return;
         }
@@ -321,7 +321,7 @@ namespace sw
             listShown.push_back( offer._currency );
             listBalance.push_back( SW_LOCALIZED_MESSAGE( "Shop", "BalanceLine" ).addInteger( "amount", _pProvider->getBalance( offer._currency ) ).addKey( "currency", offer._currency.c_str() ).str() );
         }
-        pBalance->setText( LocalizedMessage::join( "  ", listBalance ) );
+        _viewModel.setBalance( LocalizedMessage::join( "  ", listBalance ) );
         _shownRevision = _pProvider->getRevision();
         _bBuilt        = SW_TRUE;
     }

@@ -20,7 +20,6 @@ namespace sw
         struct ChatScreenInternal
         {
             static constexpr const utf8* kLinesName    = "Lines";
-            static constexpr const utf8* kStatusName   = "Status";
             static constexpr const utf8* kInputName    = "Input";
             static constexpr const utf8* kRowPrefix    = "Line.";
             static constexpr const utf8* kSendCommand  = "Send";
@@ -34,10 +33,15 @@ namespace sw
         , _model{}
         , _shownRevision{ 0 }
         , _bBuilt{ SW_FALSE }
+        , _viewModel{}
     {
+        setViewModel( &_viewModel );
     }
 
-    ChatScreen::~ChatScreen() = default;
+    ChatScreen::~ChatScreen()
+    {
+        setViewModel( nullptr );
+    }
 
     UIScreenHandle ChatScreen::open( UISystem& ui, string_view documentPath, ChatLog& model, string_view channelID )
     {
@@ -177,12 +181,11 @@ namespace sw
         const ChatLog* const pModel = _model.get();
         if ( pModel == nullptr )
             return;
-        WidgetTree&  tree    = getTree();
-        PanelWidget* pLines  = tree.findWidget<PanelWidget>( hashed_string( Internal::kLinesName ) );
-        TextWidget*  pStatus = tree.findWidget<TextWidget>( hashed_string( Internal::kStatusName ) );
-        if ( pLines == nullptr || pStatus == nullptr )
+        WidgetTree&  tree   = getTree();
+        PanelWidget* pLines = tree.findWidget<PanelWidget>( hashed_string( Internal::kLinesName ) );
+        if ( pLines == nullptr )
         {
-            SW_LOG_ERROR_ID( "ChatScreen.ChatDocumentNeedsPanel", "Chat document %# needs a '%#' panel and a '%#' text", getDocumentPath().c_str(), Internal::kLinesName, Internal::kStatusName );
+            SW_LOG_ERROR_ID( "ChatScreen.ChatDocumentNeedsPanel", "Chat document %# needs a '%#' panel", getDocumentPath().c_str(), Internal::kLinesName );
             _bBuilt = SW_TRUE; // 문서가 틀렸다 — 프레임마다 같은 오류를 되풀이하지 않는다
             return;
         }
@@ -215,7 +218,7 @@ namespace sw
             (void)pLines->addChild( std::move( row ) );
             ++rowIndex;
         }
-        pStatus->setText( makeStatusText( pModel->getLastResult(), pModel->getRetryAfterMs() ) );
+        _viewModel.setStatus( makeStatusText( pModel->getLastResult(), pModel->getRetryAfterMs() ) );
         _shownRevision = pModel->getRevision();
         _bBuilt        = SW_TRUE;
     }

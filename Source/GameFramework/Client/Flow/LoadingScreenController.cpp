@@ -15,8 +15,6 @@
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
-#include "Engine/UI/Widgets/SliderWidget.h"
-#include "Engine/UI/Widgets/TextWidget.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
@@ -95,6 +93,7 @@ namespace sw
         , _settings{}
         , _currentTip{}
         , _pUISystem{ nullptr }
+        , _viewModel{}
         , _loadingScreen{}
         , _fadeScreen{}
         , _loadFailureDialog{}
@@ -245,8 +244,10 @@ namespace sw
         }
         if ( pScreen->getDesc()._layer != UILayer::Loading )
             SW_LOG_WARNING_ID( "LoadingScreen.LoadingScreenNotLoading", "The loading screen '%#' is not on the Loading layer - it does not cover the other screens", _settings._documentPath.c_str() );
+        pScreen->setViewModel( &_viewModel );
+        _viewModel.setProgress( nullopt );
         _spinnerAngle = 0.0f;
-        applyTip( *pScreen );
+        applyTip();
         return true;
     }
 
@@ -256,7 +257,7 @@ namespace sw
         if ( pScreen != nullptr )
         {
             _shownSeconds += deltaSeconds;
-            applyProgress( *pScreen, loadProgress );
+            _viewModel.setProgress( loadProgress );
             const bool bSkipMinimum = game::getSubsystem<DeterministicRun>().getPolicy()._bSkipLoadingScreenMinimum == SW_TRUE;
             if ( bLoading || ( bSkipMinimum == false && _shownSeconds < _settings._minimumSeconds ) )
             {
@@ -278,21 +279,6 @@ namespace sw
             }
         }
         syncFadeOverlay( transition.fade().getOverlayAlpha() );
-    }
-
-    void LoadingScreenController::applyProgress( UIScreen& screen, optional<float32> loadProgress )
-    {
-        SliderWidget* pProgress = screen.getTree().findWidget<SliderWidget>( hashed_string( kProgressWidgetName ) );
-        if ( pProgress == nullptr )
-            return;
-        if ( loadProgress.has_value() == false )
-        {
-            pProgress->setVisibility( WidgetVisibility::Collapsed );
-            return;
-        }
-        pProgress->setRange( 0.0f, 1.0f, 0.0f );
-        pProgress->setValue( MathUtil::clamp( *loadProgress, 0.0f, 1.0f ) );
-        pProgress->setVisibility( WidgetVisibility::HitTestInvisible ); // 진행 막대는 입력을 받지 않는다
     }
 
     bool LoadingScreenController::loadTipsFromResource( const AssetID& assetID, vector<string>& outListTip )
@@ -369,23 +355,14 @@ namespace sw
             pPanel->setOpacity( MathUtil::saturate( alpha ) );
     }
 
-    void LoadingScreenController::applyTip( UIScreen& screen )
+    void LoadingScreenController::applyTip()
     {
-        TextWidget* pTip = screen.getTree().findWidget<TextWidget>( hashed_string( kTipWidgetName ) );
         _currentTip.clear();
         if ( _settings._listTip.empty() == false )
         {
             const int32 index = _tipRandom.nextInt( 0, static_cast<int32>( _settings._listTip.size() ) - 1 );
             _currentTip       = _settings._listTip[static_cast<size_t>( index )];
         }
-        if ( pTip == nullptr )
-            return;
-        if ( _currentTip.empty() )
-        {
-            pTip->setVisibility( WidgetVisibility::Collapsed );
-            return;
-        }
-        pTip->setText( _currentTip ); // 팁은 현지화 키(원문)다 — 글 위젯이 그릴 때 푼다(표에 없으면 원문 그대로)
-        pTip->setVisibility( WidgetVisibility::HitTestInvisible );
+        _viewModel.setTip( _currentTip );
     }
 } // namespace sw

@@ -20,7 +20,6 @@ namespace sw
         struct ServerPickerScreenInternal
         {
             static constexpr const utf8* kServersName    = "Servers";
-            static constexpr const utf8* kStatusName     = "Status";
             static constexpr const utf8* kPickCommand    = "Pick";
             static constexpr const utf8* kRefreshCommand = "Refresh";
             static constexpr const utf8* kCloseCommand   = "Close";
@@ -67,10 +66,15 @@ namespace sw
         , _model{}
         , _shownRevision{ 0 }
         , _bBuilt{ SW_FALSE }
+        , _viewModel{}
     {
+        setViewModel( &_viewModel );
     }
 
-    ServerPickerScreen::~ServerPickerScreen() = default;
+    ServerPickerScreen::~ServerPickerScreen()
+    {
+        setViewModel( nullptr );
+    }
 
     UIScreenHandle ServerPickerScreen::open( UISystem& ui, string_view documentPath, ServerList& model, string_view kind, const ServerPickedDelegate& onPicked )
     {
@@ -156,10 +160,9 @@ namespace sw
             return;
         WidgetTree&     tree     = getTree();
         ListViewWidget* pServers = tree.findWidget<ListViewWidget>( hashed_string( Internal::kServersName ) );
-        TextWidget*     pStatus  = tree.findWidget<TextWidget>( hashed_string( Internal::kStatusName ) );
-        if ( pServers == nullptr || pStatus == nullptr )
+        if ( pServers == nullptr )
         {
-            SW_LOG_ERROR_ID( "ServerPickerScreen.ServerPickerDocumentNeeds", "Server picker document %# needs a '%#' list view and a '%#' text", getDocumentPath().c_str(), Internal::kServersName, Internal::kStatusName );
+            SW_LOG_ERROR_ID( "ServerPickerScreen.ServerPickerDocumentNeeds", "Server picker document %# needs a '%#' list view", getDocumentPath().c_str(), Internal::kServersName );
             _bBuilt = SW_TRUE; // 문서가 틀렸다 — 프레임마다 같은 오류를 되풀이하지 않는다
             return;
         }
@@ -177,22 +180,22 @@ namespace sw
         {
             case ServerListState::Idle:
             {
-                pStatus->setText( SW_LOCKEYREF( "ServerPicker", "Idle" ) );
+                _viewModel.setStatus( SW_LOCKEYREF( "ServerPicker", "Idle" ) );
                 break;
             }
             case ServerListState::Loading:
             {
-                pStatus->setText( SW_LOCKEYREF( "ServerPicker", "Loading" ) );
+                _viewModel.setStatus( SW_LOCKEYREF( "ServerPicker", "Loading" ) );
                 break;
             }
             case ServerListState::Loaded:
             {
-                pStatus->setText( listEntry.empty() ? SW_LOCKEYREF( "ServerPicker", "None" ) : SW_LOCKEYREF( "ServerPicker", "Pick" ) );
+                _viewModel.setStatus( listEntry.empty() ? SW_LOCKEYREF( "ServerPicker", "None" ) : SW_LOCKEYREF( "ServerPicker", "Pick" ) );
                 break;
             }
             case ServerListState::Failed:
             {
-                pStatus->setText( SW_LOCALIZED_MESSAGE( "ServerPicker", "LoadFailed" ).addInteger( "error", static_cast<int64>( pModel->getErrorCode() ) ).str() );
+                _viewModel.setStatus( SW_LOCALIZED_MESSAGE( "ServerPicker", "LoadFailed" ).addInteger( "error", static_cast<int64>( pModel->getErrorCode() ) ).str() );
                 break;
             }
         }

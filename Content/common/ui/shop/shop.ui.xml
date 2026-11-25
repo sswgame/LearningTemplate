@@ -11,8 +11,8 @@
 				       _offsetMax="320,240" />
 				<BoxPanel _spacing="12" _orientation="Vertical">
 					<TextWidget _name="Title" _styleClass="title" _text="Shop" />
-					<TextWidget _name="Balance" _text="" />
-					<TextWidget _name="Status" _text="" />
+					<TextWidget _name="Balance" _text="{bind:_balance}" />
+					<TextWidget _name="Status" _text="{bind:_status}" />
 					<ListViewWidget _name="Offers" _rowHeight="36">
 						<_slot _sizeRule="Fill" />
 					</ListViewWidget>

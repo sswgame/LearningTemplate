@@ -13,8 +13,8 @@
 				<BoxPanel _spacing="12" _orientation="Vertical">
 					<TextWidget _name="Title" _styleClass="title" _text="Inventory" />
 					<BoxPanel _spacing="16">
-						<TextWidget _name="Stats" _text="" />
-						<TextWidget _name="Weight" _text="" />
+						<TextWidget _name="Stats" _text="{bind:_stats}" />
+						<TextWidget _name="Weight" _text="{bind:_weight}" />
 					</BoxPanel>
 					<BoxPanel _name="Equipment" _spacing="8" />
 					<WrapPanel _name="Grid" _itemSpacing="6" _lineSpacing="6">
@@ -37,8 +37,8 @@
 							<TextWidget _text="Cancel" />
 						</ButtonWidget>
 					</BoxPanel>
-					<TextWidget _name="Details" _text="" />
-					<TextWidget _name="Status" _text="" />
+					<TextWidget _name="Details" _text="{bind:_details}" />
+					<TextWidget _name="Status" _text="{bind:_status}" />
 					<BoxPanel _spacing="8">
 						<ButtonWidget _name="Sort" _command="Sort">
 							<TextWidget _text="Sort" />

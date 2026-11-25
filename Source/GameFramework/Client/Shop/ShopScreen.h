@@ -13,6 +13,7 @@
 #include "Engine/UI/Menu/ConfirmDialogScreen.h"
 #include "Engine/UI/Screen/UIScreen.h"
 
+#include "GameFramework/Client/Shop/ShopViewModel.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h"
 
@@ -36,8 +37,6 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr const utf8* kOffersName   = "Offers";
-        static constexpr const utf8* kBalanceName  = "Balance";
-        static constexpr const utf8* kStatusName   = "Status";
         static constexpr const utf8* kPickCommand  = "Pick";
         static constexpr const utf8* kCloseCommand = "Close";
 
@@ -79,6 +78,7 @@ namespace sw
         uint32                 _shownRevision;
         uint32                 _finishedCount;
         uint8                  _bBuilt;
-        uint8                  _bBusy; ///< 확인 창이 떠 있거나 구매 답을 기다린다 — 새 고르기를 버린다
+        uint8                  _bBusy;     ///< 확인 창이 떠 있거나 구매 답을 기다린다 — 새 고르기를 버린다
+        ShopViewModel          _viewModel; ///< 문서가 바인딩으로 읽는 글(`{bind:…}`) — 화면이 위젯 이름으로 찾아 쓰지 않는다
     };
 } // namespace sw

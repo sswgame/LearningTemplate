@@ -13,7 +13,7 @@
 				       _growVertical="Both" />
 				<BoxPanel _spacing="8" _orientation="Vertical">
 					<BoxPanel _name="Lines" _spacing="2" _orientation="Vertical" />
-					<TextWidget _name="Status" _text="" />
+					<TextWidget _name="Status" _text="{bind:_status}" />
 					<BoxPanel _spacing="8" _orientation="Horizontal">
 						<TextInputWidget _name="Input" />
 						<ButtonWidget _name="Send" _styleClass="primary" _command="Send">
