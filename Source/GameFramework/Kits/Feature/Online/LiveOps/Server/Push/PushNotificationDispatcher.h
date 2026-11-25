@@ -18,12 +18,30 @@
 #include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationProvider.h"
 #include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
+#include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
+
+namespace sw
+{
+    /** @brief 토큰 → 기기 레코드 역색인(`liveops_device_owner`, 키 `<제공자>.<토큰 해시>`)의 값 — 그 토큰을 가진 기기 레코드의 키입니다. */
+    REFLECT()
+    struct PushDeviceOwnerRecord
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
+        string _deviceKey{};
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -124,7 +142,8 @@ namespace sw
 
     private:
         /** @brief 기기 등록 · 해지(@p bytes 가 비었다) 일을 맡깁니다. */
-        void submitWrite( AccountID accountID, string&& key, string&& ownerKey, vector<uint8>&& bytes, uint64 requestTag );
+        /** @brief 기기 등록(@p registration 이 있다)이나 해지(없다)를 저장 일로 맡깁니다. */
+        void submitWrite( AccountID accountID, string&& key, string&& ownerKey, optional<PushDeviceRegistration>&& registration, uint64 requestTag );
         /** @brief 저장소 일의 완료입니다. */
         void applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, UnixMilliseconds nowMs );
         void applyWrite( uint64 requestTag, LiveOpsServiceResult result );

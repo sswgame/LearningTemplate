@@ -13,6 +13,7 @@
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -24,9 +25,9 @@ namespace sw
     {
         struct LiveOpsServiceInternal
         {
-            static const hashed_string& getEventTable()
+            static const ServiceRecordTable<LiveEventDef>& getEventTable()
             {
-                static const hashed_string s_table{ "liveops_event" };
+                static const ServiceRecordTable<LiveEventDef> s_table{ "liveops_event" };
                 return s_table;
             }
 
@@ -58,7 +59,7 @@ namespace sw
             for ( const ServiceRecord& record : listRecord )
             {
                 LiveEventDef definition;
-                if ( LiveOpsProtocol::decodeEvent( record._key, record._bytes, definition ) == false )
+                if ( LiveOpsServiceInternal::getEventTable().decode( record, definition ) == false )
                 {
                     read._result = ServiceStoreResult::Invalid;
                     return read;
@@ -307,12 +308,12 @@ namespace sw
             return;
         }
         ServiceAuditedWrite pendingJob;
-        if ( LiveOpsProtocol::encodeEvent( definition, pendingJob._bytes ) == false )
+        pendingJob._change.put( LiveOpsServiceInternal::getEventTable(), definition._eventID, definition );
+        if ( pendingJob._change.isWellFormed() == false )
         {
-            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
+            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 표가 오류 로그를 남겼다
             return;
         }
-        pendingJob._key = definition._eventID;
         StringBuilder<constant::buffer::kMax128> subject;
         subject.appendFormat( "liveops/%#", definition._eventID );
         pendingJob.setOperatorAudit( actor, "liveops.event.put", subject.view(), nowMs, memo );
@@ -374,16 +375,15 @@ namespace sw
             return;
         }
         ServiceAuditedWrite pendingJob;
-        pendingJob._key = string( eventID );
+        pendingJob._change.erase( LiveOpsServiceInternal::getEventTable(), eventID );
         StringBuilder<constant::buffer::kMax128> subject;
-        subject.appendFormat( "liveops/%#", pendingJob._key );
+        subject.appendFormat( "liveops/%#", eventID );
         pendingJob.setOperatorAudit( actor, "liveops.event.remove", subject.view(), nowMs, memo );
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
     void LiveOpsService::submitWrite( ServiceAuditedWrite&& pendingJob, uint64 requestTag )
     {
-        pendingJob._table = LiveOpsServiceInternal::getEventTable();
         _store.submit( [pendingJob = std::move( pendingJob )]( IServiceStoreConnection& connection )
         { return pendingJob.commit( connection ); },
                        [this, requestTag]( ServiceAuditedWriteResult result )

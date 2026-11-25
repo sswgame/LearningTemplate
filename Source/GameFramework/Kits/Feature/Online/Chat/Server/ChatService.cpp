@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -30,9 +31,9 @@ namespace sw
             static constexpr const utf8* kWhisperPrefix = "whisper.";
             static constexpr int64       kIndexDayMs    = constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond; ///< TTL 색인 줄 하나가 맡는 날짜 폭
 
-            static const hashed_string& getHistoryTable()
+            static const ServiceRecordTable<ChatMessage>& getHistoryTable()
             {
-                static const hashed_string s_table{ "chat_history" };
+                static const ServiceRecordTable<ChatMessage> s_table{ "chat_history" };
                 return s_table;
             }
 
@@ -174,14 +175,12 @@ namespace sw
                 vector<string>         listSenderIndexKey;
                 for ( const ChatMessage& message : listMessage )
                 {
-                    vector<uint8> bytes;
-                    if ( ChatProtocol::encodeRecord( message, bytes ) == false )
+                    const string historyKey = ChatServiceInternal::makeHistoryKey( message );
+                    if ( transaction.tryPut( ChatServiceInternal::getHistoryTable(), historyKey, message ) == false )
                     {
-                        ++write._rejectedCount; // 쓰기가 오류 로그를 남겼다. 이 기록만 빼고 나머지는 쓴다
+                        ++write._rejectedCount; // 표가 오류 로그를 남겼다. 이 기록만 빼고 나머지는 쓴다
                         continue;
                     }
-                    const string historyKey = ChatServiceInternal::makeHistoryKey( message );
-                    transaction.put( ChatServiceInternal::getHistoryTable(), historyKey, std::move( bytes ) );
                     if ( message._senderID == kInvalidAccountID )
                         continue; // 시스템 메시지다
                     transaction.put( ChatServiceInternal::getSenderTable(), ChatServiceInternal::makeSenderKey( message._senderID, message._sentMs, historyKey ) );
@@ -213,7 +212,7 @@ namespace sw
                 for ( const ServiceRecord& record : listRecord )
                 {
                     ChatMessage message;
-                    if ( ChatProtocol::decodeRecord( record._key, record._bytes, message ) == false )
+                    if ( ChatServiceInternal::getHistoryTable().decode( record, message ) == false )
                     {
                         read._listMessage.clear();
                         return read;
@@ -247,7 +246,7 @@ namespace sw
                 for ( auto recordIt = listRecord.rbegin(); recordIt != listRecord.rend(); ++recordIt )
                 {
                     ChatMessage message;
-                    if ( ChatProtocol::decodeRecord( recordIt->_key, recordIt->_bytes, message ) == false )
+                    if ( ChatServiceInternal::getHistoryTable().decode( *recordIt, message ) == false )
                         return ChatServiceResult::fail( OnlineError::kUnavailable ); // 손상된 영속 기록은 건너뛰지 않고 이 신고를 실패로 돌려준다
                     ServiceReportLine& line = report._listLine.emplace_back();
                     line._senderName        = std::move( message._senderName );

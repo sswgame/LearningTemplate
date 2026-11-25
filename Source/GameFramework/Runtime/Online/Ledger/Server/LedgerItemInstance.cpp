@@ -5,8 +5,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
-#include "GameFramework/Runtime/Online/Store/ServiceRecordUtil.h"
 
 namespace sw
 {
@@ -41,9 +41,9 @@ namespace sw
 
 namespace sw
 {
-    const hashed_string& LedgerItemInstance::getStateTable()
+    const ServiceRecordTable<LedgerItemState>& LedgerItemInstance::getStateTable()
     {
-        static const hashed_string s_table{ "item_state" };
+        static const ServiceRecordTable<LedgerItemState> s_table{ "item_state" };
         return s_table;
     }
 
@@ -91,15 +91,15 @@ namespace sw
             return LedgerResult::Invalid; // 같은 id 의 아이템이 이미 있다. 동시에 만들면 상태 레코드의 "없어야 함" 이 하나만 통과시킨다
         if ( existingRead != ServiceStoreResult::NotFound )
             return LedgerResult::Unavailable;
-        vector<uint8> bytes;
-        if ( ServiceRecordUtil::encode( state, bytes ) == false )
+        vector<uint8> probe; // 원장 이동을 붙이기 전에 상태를 표 형식으로 쓸 수 있는지 본다
+        if ( getStateTable().encode( state, probe ) == false )
             return LedgerResult::Invalid;
         const LedgerTransferRequest request = LedgerItemInstanceInternal::makeTransfer( LedgerHolder::makeMint(), ownerHolder, state._assetID, journalKey, reason, nowMs );
         LedgerTransferResult        result;
         const LedgerResult          staged = Ledger::stageTransfer( connection, request, inoutTransaction, result );
         if ( staged != LedgerResult::Ok || result._bReplayed == SW_TRUE )
             return staged; // 다시 온 만들기는 상태를 두 번 쓰지 않는다
-        inoutTransaction.put( getStateTable(), state._assetID, std::move( bytes ), ServiceRecord::kAbsentVersion );
+        inoutTransaction.put( getStateTable(), state._assetID, state, ServiceRecord::kAbsentVersion );
         return LedgerResult::Ok;
     }
 
@@ -124,14 +124,16 @@ namespace sw
 
     ServiceStoreResult LedgerItemInstance::readState( IServiceStoreConnection& connection, string_view assetID, LedgerItemState& outState, uint64& outVersion )
     {
-        outVersion = 0;
-        ServiceRecord            record;
-        const ServiceStoreResult read = connection.readRecord( getStateTable(), assetID, record );
+        outVersion                       = 0;
+        uint64                   version = ServiceRecord::kAbsentVersion;
+        const ServiceStoreResult read    = getStateTable().read( connection, assetID, outState, &version );
+        if ( read == ServiceStoreResult::Corrupt )
+            return ServiceStoreResult::Invalid;
         if ( read != ServiceStoreResult::Ok )
             return read;
-        if ( ServiceRecordUtil::readDurable( assetID, record._bytes, outState ) == false || isValidState( outState ) == false )
+        if ( isValidState( outState ) == false )
             return ServiceStoreResult::Invalid;
-        outVersion = record._version;
+        outVersion = version;
         return ServiceStoreResult::Ok;
     }
 
@@ -139,10 +141,6 @@ namespace sw
     {
         if ( isValidState( state ) == false || version == ServiceRecord::kAbsentVersion )
             return false;
-        vector<uint8> bytes;
-        if ( ServiceRecordUtil::encode( state, bytes ) == false )
-            return false;
-        inoutTransaction.put( getStateTable(), state._assetID, std::move( bytes ), version );
-        return true;
+        return inoutTransaction.tryPut( getStateTable(), state._assetID, state, version );
     }
 } // namespace sw

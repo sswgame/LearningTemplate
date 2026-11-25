@@ -6,6 +6,7 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 // ServiceMailTest — 우편 넣기(보상 · 플레이어 첨부 맡김), 멱등 키 재전송, 새 우편 알림이 한 번만 나가는지, 보낸 기록의 보존 기간 쓸기. (nogpu)
@@ -68,7 +69,7 @@ SW_TEST_CASE( ServiceMailTest, RewardMailIsSentOnce )
     sw::ServiceRecord stored;
     SW_REQUIRE_TRUE( database.readRecord( sw::ServiceMail::getMailTable(), mailKey, stored ) == sw::ServiceStoreResult::Ok );
     sw::ServiceMailRecord record;
-    SW_REQUIRE_TRUE( sw::ServiceMail::decodeRecord( stored._bytes, record ) );
+    SW_REQUIRE_TRUE( sw::ServiceMail::decodeRecord( stored, record ) );
     SW_EXPECT_EQUAL( reward._titleKey, record._message._titleKey );
     SW_REQUIRE_EQUAL( size_t( 1 ), record._message._listAttachment.size() );
     SW_EXPECT_EQUAL( int64( 50 ), record._message._listAttachment[0]._amount );

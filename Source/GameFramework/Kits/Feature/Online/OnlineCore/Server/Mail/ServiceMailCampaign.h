@@ -12,33 +12,52 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
 {
-    /** @brief 캠페인 하나입니다. */
+    template <typename TRecord>
+    class ServiceRecordTable;
+
+    /** @brief 캠페인 하나입니다. 캠페인 표(`mail_campaign`)의 레코드 형식이기도 하다. */
+    REFLECT()
     struct SW_KIT_SERVER_API ServiceMailCampaign
     {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxAttachmentCount )
         vector<ServiceMailAttachment> _listAttachment{};
-        string                        _titleKey{};
-        string                        _body{};
-        string                        _senderName{};
-        uint64                        _campaignID{ 0 };
-        uint64                        _actorID{ 0 }; ///< 만든 GM
-        int64                         _startMs{ 0 };
-        int64                         _endMs{ 0 }; ///< 이 시각부터 받을 수 없다(목록에서도 빠진다)
-        uint8                         _bLiteralText{ SW_FALSE };
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxTitleSize )
+        string _titleKey{};
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxBodySize )
+        string _body{};
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxSenderNameSize )
+        string _senderName{};
+        PROPERTY()
+        uint64 _campaignID{ 0 };
+        PROPERTY()
+        uint64 _actorID{ 0 }; ///< 만든 GM
+        PROPERTY()
+        int64 _startMs{ 0 };
+        PROPERTY()
+        int64 _endMs{ 0 }; ///< 이 시각부터 받을 수 없다(목록에서도 빠진다)
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bLiteralText{ SW_FALSE };
+
+        ServiceRecordUnknownFields _unknownProperties{};
 
         bool isActive( int64 nowMs ) const { return _startMs <= nowMs && nowMs < _endMs; }
 
         // 캠페인 레코드 · 수령 표식입니다(저장소 스레드). */
-        static const hashed_string&     getCampaignTable();       ///< "mail_campaign"
-        static const ServiceIndexTable& getClaimTable();          ///< "mail_campaign_claim"
-        static const ServiceIndexTable& getCampaignExpiryTable(); ///< "mail_campaign_expiry" — 캠페인의 TTL 색인(`<끝>/<id>`)
-        static const ServiceIndexTable& getClaimExpiryTable();    ///< "mail_campaign_claim_expiry" — 수령 표식 묶음의 TTL 색인(`<끝>/<id>/`)
+        static const ServiceRecordTable<ServiceMailCampaign>& getCampaignTable();       ///< "mail_campaign"
+        static const ServiceIndexTable&                       getClaimTable();          ///< "mail_campaign_claim"
+        static const ServiceIndexTable&                       getCampaignExpiryTable(); ///< "mail_campaign_expiry" — 캠페인의 TTL 색인(`<끝>/<id>`)
+        static const ServiceIndexTable&                       getClaimExpiryTable();    ///< "mail_campaign_claim_expiry" — 수령 표식 묶음의 TTL 색인(`<끝>/<id>/`)
         /** @brief 캠페인 레코드의 끝 시각을 읽습니다(TTL 쓸기 · 백필). */
         [[nodiscard]] static bool readEndTimeMs( const ServiceRecord& record, int64& outTimeMs );
         /** @brief 끝난 캠페인 레코드의 TTL 규칙입니다. 서비스가 주기마다 전부 읽는 표라 끝난 캠페인이 쌓이면 읽기도 커진다. */
@@ -51,7 +70,7 @@ namespace sw
         /** @brief 모든 캠페인(id 순)을 @p outListCampaign 뒤에 붙입니다. 서비스가 주기마다 읽어 둡니다. 읽지 못한 레코드는 오류 로그와 함께 건너뛴다. */
         [[nodiscard]] static ServiceStoreResult listCampaigns( IServiceStoreConnection& connection, vector<ServiceMailCampaign>& outListCampaign );
         static string                           makeClaimKey( uint64 campaignID, uint64 accountID );
-        static vector<uint8>                    encode( const ServiceMailCampaign& campaign );
-        [[nodiscard]] static bool               decode( const vector<uint8>& bytes, ServiceMailCampaign& outCampaign );
+        /** @brief 받은 캠페인 레코드를 읽습니다. 깨졌으면(표가 오류 로그를 남긴다) false 입니다. */
+        [[nodiscard]] static bool decode( const ServiceRecord& raw, ServiceMailCampaign& outCampaign );
     };
 } // namespace sw

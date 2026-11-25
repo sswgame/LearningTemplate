@@ -225,14 +225,6 @@ namespace sw
         static const OnlineProtocolEntry kOnlineEntry;         ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
         static constexpr int32           kMaxCursorSize = 128; ///< 기록 키의 상한이다. 채널 id 뒤에 `/` 와 16진 문자열 셋이 붙는다
 
-        /**
-         * @brief 기록 레코드를 읽고 씁니다. 저장소에 남는 영속 레코드이므로 자기 기술형(A)이며 레코드 버전을 머리에 둡니다.
-         * @details 이 빌드가 모르는 필드는 레코드의 `_unknownProperties` 에 담고(다시 쓸 때 그대로 싣는다), 다른 버전이거나 아는 필드를 읽지 못했거나 `ChatMessage` 에 선언된 범위를 벗어나면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
-         *          필드를 더하면 옛 레코드의 그 필드는 기본값으로 채워집니다. 필드를 빼거나 뜻을 바꾸면 버전을 올리고 데이터를 다시 씁니다.
-         */
-        [[nodiscard]] static bool encodeRecord( const ChatMessage& message, vector<uint8>& outBytes );
-        [[nodiscard]] static bool decodeRecord( string_view key, const vector<uint8>& bytes, ChatMessage& outMessage );
-
         static string makeChannelTopic( string_view channelID );
         static string makeServerTopic( uint64 serverID );
     };

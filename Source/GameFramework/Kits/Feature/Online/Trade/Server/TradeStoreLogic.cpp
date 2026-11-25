@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -33,14 +34,12 @@ namespace sw
             /** @brief 거래 레코드를 써 @p inoutTransaction 에 넣습니다. 못 쓰면 오류 로그를 남기고 false 이며 아무것도 넣지 않습니다. */
             [[nodiscard]] static bool stageSession( const TradeSnapshot& snapshot, uint64 ownerServerID, uint64 expectedVersion, ServiceTransaction& inoutTransaction )
             {
-                vector<uint8> bytes;
-                if ( TradeSessionRecord::encodeSession( TradeSessionRecord{ snapshot, ownerServerID }, bytes ) == false )
-                    return false;
                 const string sessionKey = ServiceKeyUtil::makeHex64( snapshot._tradeID );
+                if ( inoutTransaction.tryPut( TradeStoreLogic::getSessionTable(), sessionKey, TradeSessionRecord{ snapshot, ownerServerID }, expectedVersion ) == false )
+                    return false;
                 if ( snapshot.isClosed() ) // 닫는 모든 경로가 이 함수를 지나므로 색인 줄을 빠뜨리는 경로가 없다
                     inoutTransaction.put( TradeStoreLogic::getSessionExpiryTable(), ServiceTTLRule::makeTTLIndexKey( snapshot._updatedMs, sessionKey ),
                                           ServiceRecord::kAnyVersion );
-                inoutTransaction.put( TradeStoreLogic::getSessionTable(), sessionKey, std::move( bytes ), expectedVersion );
                 return true;
             }
 
@@ -49,16 +48,16 @@ namespace sw
             {
                 TradeSnapshot snapshot;
                 uint64        ownerServerID = 0;
-                if ( decodeSession( record._key, record._bytes, snapshot, ownerServerID ) == false || snapshot.isClosed() == false )
+                if ( decodeSession( record, snapshot, ownerServerID ) == false || snapshot.isClosed() == false )
                     return false;
                 outTimeMs = snapshot._updatedMs;
                 return true;
             }
 
-            [[nodiscard]] static bool decodeSession( const string_view key, const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID )
+            [[nodiscard]] static bool decodeSession( const ServiceRecord& raw, TradeSnapshot& outSnapshot, uint64& outOwnerServerID )
             {
                 TradeSessionRecord record;
-                if ( TradeSessionRecord::decodeSession( key, bytes, record ) == false )
+                if ( TradeStoreLogic::getSessionTable().decode( raw, record ) == false )
                     return false;
                 outSnapshot      = std::move( record._snapshot );
                 outOwnerServerID = record._ownerServerID;
@@ -126,9 +125,9 @@ namespace sw
     {
     }
 
-    const hashed_string& TradeStoreLogic::getSessionTable()
+    const ServiceRecordTable<TradeSessionRecord>& TradeStoreLogic::getSessionTable()
     {
-        static const hashed_string s_table{ "trade_session" };
+        static const ServiceRecordTable<TradeSessionRecord> s_table{ "trade_session" };
         return s_table;
     }
 
@@ -436,7 +435,7 @@ namespace sw
             return TradeResult::NotFound;
         if ( read != ServiceStoreResult::Ok )
             return TradeServiceResult::fail( OnlineError::kUnavailable );
-        if ( TradeStoreLogicInternal::decodeSession( ServiceKeyUtil::makeHex64( tradeID ), raw._bytes, outSession._snapshot, outSession._ownerServerID ) == false )
+        if ( TradeStoreLogicInternal::decodeSession( raw, outSession._snapshot, outSession._ownerServerID ) == false )
             return TradeServiceResult::fail( OnlineError::kUnavailable ); // 손상은 읽기가 오류 로그로 남겼다
         outSession._version = raw._version;
         return TradeResult::Ok;

@@ -4,6 +4,7 @@
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 
 // ServiceAuditLogTest — 감사 로그: 효과와 같은 트랜잭션(효과가 지면 줄도 없다), 같은 고유 값은 한 줄, 최근 것부터 · 커서, 상한을 넘는 줄은 효과까지 Invalid,
 // 키의 시각 읽기(형식이 틀리면 거절)(nogpu).
@@ -68,7 +69,7 @@ SW_TEST_CASE( ServiceAuditLogTest, ExpiresByTTLIndexAndBackfillsLegacyLines )
     SW_EXPECT_EQUAL( 1, database.countRecords( ServiceAuditLog::getExpiryTable() ) );
 
     ServiceTransaction legacy; // 색인보다 먼저 쓴 줄이다
-    legacy.put( ServiceAuditLog::getTable(), ServiceAuditLog::makeKey( makeEntry( "acct.02", 500 ), 0, 2 ), vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
+    legacy.put( ServiceAuditLog::getTable(), ServiceAuditLog::makeKey( makeEntry( "acct.02", 500 ), 0, 2 ), makeEntry( "acct.02", 500 ), ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( database.commit( legacy ) == ServiceStoreResult::Ok );
     ServiceTransaction fresh;
     ServiceAuditLog::stageEntry( fresh, makeEntry( "acct.03", 5000 ), 0, 3 );

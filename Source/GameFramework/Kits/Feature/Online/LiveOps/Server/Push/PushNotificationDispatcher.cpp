@@ -10,6 +10,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsProtocol.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -22,16 +23,16 @@ namespace sw
     {
         struct PushNotificationDispatcherInternal
         {
-            static const hashed_string& getDeviceTable()
+            static const ServiceRecordTable<PushDeviceRegistration>& getDeviceTable()
             {
-                static const hashed_string s_table{ "liveops_device" };
+                static const ServiceRecordTable<PushDeviceRegistration> s_table{ "liveops_device" };
                 return s_table;
             }
 
             /** @brief 토큰 → 그 토큰을 가진 기기 레코드 키의 역색인입니다. 키는 `<제공자>.<토큰 해시>`, 값은 기기 키(`makeDeviceKey`) 글이다. 한 토큰은 한 계정에만 있다(감사 O-15). */
-            static const hashed_string& getDeviceOwnerTable()
+            static const ServiceRecordTable<PushDeviceOwnerRecord>& getDeviceOwnerTable()
             {
-                static const hashed_string s_table{ "liveops_device_owner" };
+                static const ServiceRecordTable<PushDeviceOwnerRecord> s_table{ "liveops_device_owner" };
                 return s_table;
             }
 
@@ -46,20 +47,21 @@ namespace sw
             [[nodiscard]] static ServiceStoreResult stageOwnerErase( IServiceStoreConnection& connection, const string& ownerKey, const string& deviceKey,
                                                                      ServiceTransaction& inoutTransaction )
             {
-                ServiceRecord            owner;
-                const ServiceStoreResult found = connection.readRecord( getDeviceOwnerTable(), ownerKey, owner );
+                PushDeviceOwnerRecord    owner;
+                uint64                   ownerVersion = ServiceRecord::kAbsentVersion;
+                const ServiceStoreResult found        = getDeviceOwnerTable().read( connection, ownerKey, owner, &ownerVersion );
                 if ( found == ServiceStoreResult::NotFound )
                     return ServiceStoreResult::Ok;
                 if ( found != ServiceStoreResult::Ok )
                     return found;
-                if ( string_view( reinterpret_cast<const utf8*>( owner._bytes.data() ), owner._bytes.size() ) == deviceKey )
-                    inoutTransaction.erase( getDeviceOwnerTable(), ownerKey, owner._version );
+                if ( owner._deviceKey == deviceKey )
+                    inoutTransaction.erase( getDeviceOwnerTable(), ownerKey, ownerVersion );
                 return ServiceStoreResult::Ok;
             }
 
-            static const hashed_string& getTopicClaimTable()
+            static const ServiceIndexTable& getTopicClaimTable()
             {
-                static const hashed_string s_table{ "liveops_push" };
+                static const ServiceIndexTable s_table{ "liveops_push" };
                 return s_table;
             }
 
@@ -104,7 +106,7 @@ namespace sw
                 for ( const ServiceRecord& record : listRecord )
                 {
                     PushDeviceRegistration registration;
-                    if ( LiveOpsProtocol::decodeDevice( record._key, record._bytes, registration ) == false )
+                    if ( PushNotificationDispatcherInternal::getDeviceTable().decode( record, registration ) == false )
                     {
                         listDevice.clear();
                         return listDevice;
@@ -118,17 +120,17 @@ namespace sw
             static ServiceStoreResult claimTopic( IServiceStoreConnection& connection, const string& claimKey )
             {
                 ServiceTransaction transaction;
-                transaction.put( PushNotificationDispatcherInternal::getTopicClaimTable(), claimKey, vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
+                transaction.put( PushNotificationDispatcherInternal::getTopicClaimTable(), claimKey, ServiceRecord::kAbsentVersion );
                 return ServiceCommitRunner::commitOnce( connection, transaction );
             }
 
             /** @brief 기기 등록 · 해지의 쓰기를 @p outTransaction 에 붙입니다(`writeDevice` 의 시도 하나). */
             static LiveOpsServiceResult stageDevice( IServiceStoreConnection& connection, AccountID accountID, const string& key, const string& ownerKey,
-                                                     const vector<uint8>& bytes, ServiceTransaction& outTransaction )
+                                                     const PushDeviceRegistration* pRegistration, ServiceTransaction& outTransaction )
             {
-                using Internal             = PushNotificationDispatcherInternal;
-                const hashed_string& table = Internal::getDeviceTable();
-                if ( bytes.empty() )
+                using Internal                                          = PushNotificationDispatcherInternal;
+                const ServiceRecordTable<PushDeviceRegistration>& table = Internal::getDeviceTable();
+                if ( pRegistration == nullptr )
                 {
                     ServiceRecord            current;
                     const ServiceStoreResult readResult = connection.readRecord( table, key, current );
@@ -154,7 +156,7 @@ namespace sw
                         ++deviceCount;
                         bReplacing = bReplacing || record._key == key;
                         PushDeviceRegistration registration;
-                        if ( LiveOpsProtocol::decodeDevice( record._key, record._bytes, registration ) == false )
+                        if ( PushNotificationDispatcherInternal::getDeviceTable().decode( record, registration ) == false )
                             return LiveOpsServiceResult::fail( OnlineError::kUnavailable ); // 손상된 영속 레코드는 건너뛰지 않고 이 쓰기를 Unavailable 로 끝낸다
                         if ( record._key != key && ( pOldestKey == nullptr || registration._registeredMs < oldestMs ) )
                         {
@@ -169,19 +171,20 @@ namespace sw
                         for ( const ServiceRecord& record : listRecord )
                         {
                             PushDeviceRegistration evicted;
-                            const bool             bEvicted = record._key == *pOldestKey && LiveOpsProtocol::decodeDevice( record._key, record._bytes, evicted );
+                            const bool             bEvicted = record._key == *pOldestKey && PushNotificationDispatcherInternal::getDeviceTable().decode( record, evicted );
                             if ( bEvicted && Internal::stageOwnerErase( connection, Internal::makeOwnerKey( evicted._providerID, evicted._token ), record._key, outTransaction ) !=
                                                  ServiceStoreResult::Ok )
                                 return LiveOpsServiceResult::fail( OnlineError::kUnavailable );
                         }
                     }
-                    outTransaction.put( table, key, bytes );
+                    outTransaction.put( table, key, *pRegistration );
                     // 역색인 — 다른 계정이 이 토큰을 가졌으면 그 기기를 지우고 이 계정으로 옮긴다
-                    ServiceRecord            owner;
-                    const ServiceStoreResult ownerRead = connection.readRecord( Internal::getDeviceOwnerTable(), ownerKey, owner );
+                    PushDeviceOwnerRecord    owner;
+                    uint64                   ownerVersion = ServiceRecord::kAbsentVersion;
+                    const ServiceStoreResult ownerRead    = Internal::getDeviceOwnerTable().read( connection, ownerKey, owner, &ownerVersion );
                     if ( ownerRead != ServiceStoreResult::Ok && ownerRead != ServiceStoreResult::NotFound )
-                        return LiveOpsServiceResult::fail( OnlineError::kUnavailable );
-                    const string previousKey( reinterpret_cast<const utf8*>( owner._bytes.data() ), owner._bytes.size() );
+                        return LiveOpsServiceResult::fail( OnlineError::kUnavailable ); // 깨진 역색인(Corrupt)도 — 토큰이 두 계정에 남지 않게 고칠 때까지 등록하지 않는다
+                    const string& previousKey = owner._deviceKey;
                     if ( ownerRead == ServiceStoreResult::Ok && previousKey != key )
                     {
                         ServiceRecord            previous;
@@ -191,23 +194,23 @@ namespace sw
                         else if ( previousRead != ServiceStoreResult::NotFound )
                             return LiveOpsServiceResult::fail( OnlineError::kUnavailable );
                     }
-                    outTransaction.put( Internal::getDeviceOwnerTable(), ownerKey, vector<uint8>( key.begin(), key.end() ),
-                                        ownerRead == ServiceStoreResult::Ok ? owner._version : ServiceRecord::kAbsentVersion );
+                    outTransaction.put( Internal::getDeviceOwnerTable(), ownerKey, PushDeviceOwnerRecord{ key, {} }, ownerVersion );
                 }
                 return LiveOpsResult::Ok;
             }
 
             /**
-             * @brief 기기 등록(덮어쓰기와 넘친 가장 오래된 기기 지우기)이나 해지(@p bytes 가 비었다)를 한 트랜잭션으로 씁니다.
+             * @brief 기기 등록(덮어쓰기와 넘친 가장 오래된 기기 지우기)이나 해지(@p pRegistration 이 없다)를 한 트랜잭션으로 씁니다.
              * @details 등록은 토큰의 역색인(@p ownerKey)도 고친다 — 같은 토큰을 다른 계정이 가지고 있었으면 그 계정의 기기를 지운다. 기기를 넘겨받은 사람에게
              *          앞 계정의 알림이 가지 않게 한다(FCM · APNs 토큰은 기기 · 앱 설치에 붙고 계정을 모른다).
              */
-            static LiveOpsServiceResult writeDevice( IServiceStoreConnection& connection, AccountID accountID, const string& key, const string& ownerKey, const vector<uint8>& bytes )
+            static LiveOpsServiceResult writeDevice( IServiceStoreConnection& connection, AccountID accountID, const string& key, const string& ownerKey,
+                                                     const PushDeviceRegistration* pRegistration )
             {
                 return ServiceCommitRunner::run<LiveOpsServiceResult>( connection, "Push.WriteDevice", [&]( ServiceCommitAttempt& attempt ) -> optional<LiveOpsServiceResult>
                 {
                     ServiceTransaction         transaction;
-                    const LiveOpsServiceResult staged = stageDevice( attempt, accountID, key, ownerKey, bytes, transaction );
+                    const LiveOpsServiceResult staged = stageDevice( attempt, accountID, key, ownerKey, pRegistration, transaction );
                     if ( staged != LiveOpsResult::Ok )
                         return staged;
                     const ServiceStoreResult committed = attempt.commit( transaction );
@@ -279,7 +282,7 @@ namespace sw
         for ( const ServiceRecord& record : listRecord )
         {
             PushDeviceRegistration registration;
-            if ( LiveOpsProtocol::decodeDevice( record._key, record._bytes, registration ) == false )
+            if ( PushNotificationDispatcherInternal::getDeviceTable().decode( record, registration ) == false )
                 continue;
             const ServiceStoreResult staged = Internal::stageOwnerErase( connection, Internal::makeOwnerKey( registration._providerID, registration._token ), record._key, transaction );
             if ( staged != ServiceStoreResult::Ok )
@@ -462,7 +465,7 @@ namespace sw
 
     void PushNotificationDispatcher::registerDevice( AccountID accountID, const PushDeviceRegistration& registration, uint64 requestTag )
     {
-        // 길이 상한(토큰 · 언어)은 `PushDeviceRegistration` 의 `PROPERTY( MaxCount )` 가 원본이다. 요청 본문 읽기(고정 배치형)와 레코드 쓰기(`encodeDevice`)가 막으므로 여기 다시 적지 않는다.
+        // 길이 상한(토큰 · 언어)은 `PushDeviceRegistration` 의 `PROPERTY( MaxCount )` 가 원본이다. 요청 본문 읽기(고정 배치형)와 레코드 쓰기(기기 표의 형식)가 막으므로 여기 다시 적지 않는다.
         const bool bValid = accountID != kInvalidAccountID && PushLimit::isValidProviderID( registration._providerID ) && registration._token.empty() == false;
         if ( bValid == false || _store.hasStore() == false )
         {
@@ -470,15 +473,15 @@ namespace sw
                 _completionBuffer.push( PushDeviceCompletion{ requestTag, bValid ? LiveOpsServiceResult::fail( OnlineError::kUnavailable ) : LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        vector<uint8> bytes;
-        if ( LiveOpsProtocol::encodeDevice( registration, bytes ) == false )
+        vector<uint8> probe; // 쓰기 전에 표 형식(선언 범위)으로 쓸 수 있는지 본다 — 못 쓰는 등록을 저장 일까지 보내지 않는다
+        if ( PushNotificationDispatcherInternal::getDeviceTable().encode( registration, probe ) == false )
         {
             if ( requestTag != 0 )
                 _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
         submitWrite( accountID, makeDeviceKey( accountID, registration._providerID, registration._token ),
-                     PushNotificationDispatcherInternal::makeOwnerKey( registration._providerID, registration._token ), std::move( bytes ), requestTag );
+                     PushNotificationDispatcherInternal::makeOwnerKey( registration._providerID, registration._token ), optional<PushDeviceRegistration>{ registration }, requestTag );
     }
 
     void PushNotificationDispatcher::unregisterDevice( AccountID accountID, string_view providerID, string_view token, uint64 requestTag )
@@ -490,14 +493,13 @@ namespace sw
                 _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        submitWrite( accountID, makeDeviceKey( accountID, providerID, token ), PushNotificationDispatcherInternal::makeOwnerKey( providerID, token ), vector<uint8>{},
-                     requestTag ); // 빈 몸은 해지다
+        submitWrite( accountID, makeDeviceKey( accountID, providerID, token ), PushNotificationDispatcherInternal::makeOwnerKey( providerID, token ), nullopt, requestTag );
     }
 
-    void PushNotificationDispatcher::submitWrite( AccountID accountID, string&& key, string&& ownerKey, vector<uint8>&& bytes, uint64 requestTag )
+    void PushNotificationDispatcher::submitWrite( AccountID accountID, string&& key, string&& ownerKey, optional<PushDeviceRegistration>&& registration, uint64 requestTag )
     {
-        _store.submit( [accountID, key = std::move( key ), ownerKey = std::move( ownerKey ), bytes = std::move( bytes )]( IServiceStoreConnection& connection )
-        { return PushStoreRun::writeDevice( connection, accountID, key, ownerKey, bytes ); },
+        _store.submit( [accountID, key = std::move( key ), ownerKey = std::move( ownerKey ), registration = std::move( registration )]( IServiceStoreConnection& connection )
+        { return PushStoreRun::writeDevice( connection, accountID, key, ownerKey, registration.has_value() ? &*registration : nullptr ); },
                        [this, requestTag]( LiveOpsServiceResult result )
         { applyWrite( requestTag, result ); } );
     }

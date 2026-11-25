@@ -235,10 +235,8 @@ SW_TEST_CASE( AdminStoreLogicTest, OperatorWriteFailsWhenDemotedBeforeCommit )
 {
     Fixture             fixture;
     ServiceAuditedWrite write;
-    write._pGuard              = AdminStoreLogic::makeRoleGuard( kOperator, AdminRole::Operator );
-    write._table               = hashed_string( "liveops_event" );
-    write._key                 = "spring.sale";
-    write._bytes               = vector<uint8>{ 1 };
+    write._pGuard = AdminStoreLogic::makeRoleGuard( kOperator, AdminRole::Operator );
+    write._change.put( AdminStoreLogic::getRoleTable(), "spring.sale", AdminRoleRecord{ AdminRole::Viewer, {} } ); // 가드 판정만 본다 — 어느 표의 값이든 같다
     write._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( kOperator );
     write._auditEntry._action  = "liveops.event.put";
     write._auditEntry._subject = "liveops/spring.sale";

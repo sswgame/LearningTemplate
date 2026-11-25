@@ -18,9 +18,44 @@
 #include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
+
+namespace sw
+{
+    template <typename TRecord>
+    class ServiceRecordTable;
+
+    /** @brief 회차 하나의 상태입니다. */
+    ENUM()
+    enum class ServiceScheduleRunState : uint8
+    {
+        Running = 0,
+        Succeeded,
+        Failed
+    };
+
+    /** @brief 회차 하나의 차지 레코드(`service_schedule`, 키 `<작업 id>/<회차 시각 16 진>`)입니다. */
+    REFLECT()
+    struct ServiceScheduleRunRecord
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint64 _serverID{ 0 };
+        PROPERTY()
+        int64 _startMs{ 0 };
+        PROPERTY()
+        int64 _endMs{ 0 };
+        PROPERTY()
+        ServiceScheduleRunState _state{ ServiceScheduleRunState::Running };
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -100,9 +135,9 @@ namespace sw
         int32 getPendingJobCount() const { return _store.getOpenCount(); }
 
         /** @brief @p nowMs 직전(포함)의 회차 시각입니다(테스트 · 표시). 없으면 없음입니다. */
-        static optional<int64>      computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs );
-        static bool                 isValidDefinition( const ScheduleDef& definition );
-        static const hashed_string& getTable(); ///< "service_schedule"
+        static optional<int64>                                     computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs );
+        static bool                                                isValidDefinition( const ScheduleDef& definition );
+        static const ServiceRecordTable<ServiceScheduleRunRecord>& getTable(); ///< "service_schedule"
         /**
          * @brief 차지 레코드의 TTL 규칙입니다(TTL 색인 `service_schedule_expiry` + 옛 레코드 백필). 회차마다 하나씩 쌓이는 표다 — 1 분 간격 작업이면 해에 50 만 줄이다.
          * @details 지난 회차는 다시 차지하지 않으므로(가장 늦은 회차만 본다) 기간이 지난 레코드는 멱등의 근거가 아니다. 구간 작업은 `setRunTTLMs` 가 막는다.

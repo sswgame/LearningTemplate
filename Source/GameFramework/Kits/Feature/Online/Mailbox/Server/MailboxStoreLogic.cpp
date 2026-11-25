@@ -9,6 +9,7 @@
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -52,7 +53,7 @@ namespace sw
                 const ServiceStoreResult read = connection.readRecord( ServiceMail::getMailTable(), mailKey, record );
                 if ( read == ServiceStoreResult::NotFound )
                     return MailboxResult::NotFound;
-                if ( read != ServiceStoreResult::Ok || ServiceMail::decodeRecord( record._bytes, outRecord ) == false )
+                if ( read != ServiceStoreResult::Ok || ServiceMail::decodeRecord( record, outRecord ) == false )
                     return MailboxServiceResult::fail( OnlineError::kUnavailable );
                 outRecord._mailKey = string( mailKey );
                 outRecord._version = record._version;
@@ -112,7 +113,7 @@ namespace sw
                     if ( read == ServiceStoreResult::NotFound )
                         return MailboxResult::NotFound;
                     ServiceMailCampaign campaign;
-                    if ( read != ServiceStoreResult::Ok || ServiceMailCampaign::decode( campaignRecord._bytes, campaign ) == false )
+                    if ( read != ServiceStoreResult::Ok || ServiceMailCampaign::decode( campaignRecord, campaign ) == false )
                         return MailboxServiceResult::fail( OnlineError::kUnavailable );
                     if ( campaign.isActive( input._nowMs ) == false )
                         return MailboxResult::Expired;
@@ -172,7 +173,7 @@ namespace sw
                 if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
                     return false;
                 ServiceMailRecord mail;
-                if ( read == ServiceStoreResult::NotFound || ServiceMail::decodeRecord( record._bytes, mail ) == false )
+                if ( read == ServiceStoreResult::NotFound || ServiceMail::decodeRecord( record, mail ) == false )
                     return true; // 없는 우편이므로 인덱스만 지운다
                 if ( mail._state == ServiceMailState::Claimed )
                 {
@@ -228,7 +229,7 @@ namespace sw
             {
                 inoutTransaction.erase( ServiceMail::getMailTable(), record._key, record._version );
                 ServiceMailRecord mail;
-                if ( ServiceMail::decodeRecord( record._bytes, mail ) == false )
+                if ( ServiceMail::decodeRecord( record, mail ) == false )
                 {
                     SW_LOG_WARNING_ID( "MailboxStoreLogic.ErasedMailUnreadable", "The mail '%#' of a deleted account is unreadable - it is erased without its indexes", record._key.c_str() );
                     return true;
@@ -299,7 +300,7 @@ namespace sw
         for ( const ServiceRecord& record : listRecord )
         {
             ServiceMailRecord mail;
-            if ( ServiceMail::decodeRecord( record._bytes, mail ) == false )
+            if ( ServiceMail::decodeRecord( record, mail ) == false )
             {
                 SW_LOG_ERROR_ID( "MailboxStoreLogic.MailUnreadable", "Mail '%#' is unreadable", record._key );
                 continue;
@@ -454,7 +455,7 @@ namespace sw
                                       const ILedgerPolicy* pPolicy, MailboxClaimReply& inoutReply, MailboxServiceResult& inoutFirstFailure )
     {
         ServiceMailRecord mail;
-        const bool        bClaimable = ServiceMail::decodeRecord( record._bytes, mail ) && mail._state != ServiceMailState::Claimed && mail._message._listAttachment.empty() == false &&
+        const bool        bClaimable = ServiceMail::decodeRecord( record, mail ) && mail._state != ServiceMailState::Claimed && mail._message._listAttachment.empty() == false &&
                                 MailboxStoreLogicInternal::isExpired( mail._message, nowMs ) == false;
         if ( bClaimable == false )
             return;

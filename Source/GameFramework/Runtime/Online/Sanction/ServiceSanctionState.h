@@ -10,6 +10,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
+
 namespace sw
 {
     /** @brief 제재 종류입니다. 저장 값이라 순서를 바꾸지 않는다. */
@@ -37,7 +39,8 @@ namespace sw
         PROPERTY( MaxCount = kMaxReasonCodeSize )
         string _reasonCode{}; ///< 표시용 사유 코드(로컬라이제이션 키). 가장 최근 것이다
         PROPERTY()
-        EnumArray<ServiceSanctionKind, int64> _arrUntilMs{}; ///< 0 = 없음. 텍스트 키는 열거자 이름(`EnumArrayWrapper`), 고정 배치형 본문은 `int64[3]` 과 같다(스키마 해시는 칸 철자를 섞어 바뀐다 — 같은 빌드끼리의 바이트라 변환이 필요 없다)
-        uint64                                _version{ 0 }; ///< 레코드 판(0 = 레코드 없음)
+        EnumArray<ServiceSanctionKind, int64> _arrUntilMs{};        ///< 0 = 없음. 텍스트 키는 열거자 이름(`EnumArrayWrapper`), 고정 배치형 본문은 `int64[3]` 과 같다(스키마 해시는 칸 철자를 섞어 바뀐다 — 같은 빌드끼리의 바이트라 변환이 필요 없다)
+        uint64                                _version{ 0 };        ///< 레코드 판(0 = 레코드 없음). 저장하지 않는다
+        ServiceRecordUnknownFields            _unknownProperties{}; ///< 제재 표(`service_sanction`) 레코드가 이 빌드가 모르는 칸을 든다
     };
 } // namespace sw

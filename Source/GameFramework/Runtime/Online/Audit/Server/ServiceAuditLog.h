@@ -25,10 +25,16 @@
 
 namespace sw
 {
+    template <typename TRecord>
+    class ServiceRecordTable;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 감사 줄을 쓰고 읽습니다. 쓰기는 트랜잭션에 넣기만 하고, 읽기는 저장소 스레드(`ServiceStoreJob::run` 안)에서 합니다. */
     struct SW_GF_API ServiceAuditLog
     {
-        static const hashed_string& getTable(); ///< "service_audit"
+        static const ServiceRecordTable<ServiceAuditEntry>& getTable(); ///< "service_audit"
         /** @brief 행위자가 시스템(예약 작업 · 주기 리로드)일 때의 이름입니다. */
         static constexpr const utf8* kSystemActor = "system";
         /** @brief 계정 행위자 이름 `acct.<16 진>` 입니다. */
@@ -112,9 +118,7 @@ namespace sw
     {
         shared_ptr<const IServiceWriteGuard> _pGuard{}; ///< 필수. 같은 일 안에서 허락을 본다(`ServiceOperator::_pGuard`)
         ServiceAuditEntry                    _auditEntry{};
-        vector<uint8>                        _bytes{}; ///< 비어 있으면 지우기이다
-        string                               _key{};
-        hashed_string                        _table{};
+        ServiceTransaction                   _change{}; ///< 쓰기 하나(표 형식 `put` 또는 `erase`). 커밋이 그 레코드를 읽은 버전을 조건으로 건다
         NetIdempotencyKey                    _auditUnique{ NetIdempotencyKey::makeRandom() };
 
         /**

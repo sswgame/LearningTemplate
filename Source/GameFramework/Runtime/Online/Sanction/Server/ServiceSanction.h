@@ -17,10 +17,13 @@
 
 namespace sw
 {
+    template <typename TRecord>
+    class ServiceRecordTable;
+
     /** @brief 제재 레코드 읽기 · 쓰기입니다(저장소 스레드). */
     struct SW_GF_API ServiceSanction
     {
-        static const hashed_string& getTable();
+        static const ServiceRecordTable<ServiceSanctionState>& getTable();
         /** @brief 읽습니다. 레코드가 없으면 `Ok` 와 빈 상태(버전 0)입니다. */
         [[nodiscard]] static ServiceStoreResult readState( IServiceStoreConnection& connection, uint64 accountID, ServiceSanctionState& outState );
         /** @brief 지금(@p nowMs) @p kind 가 걸려 있는가입니다. */

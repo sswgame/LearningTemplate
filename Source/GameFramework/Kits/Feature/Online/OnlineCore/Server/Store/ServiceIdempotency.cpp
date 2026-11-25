@@ -7,9 +7,9 @@
 
 namespace sw
 {
-    const hashed_string& ServiceIdempotency::getTable()
+    const ServiceOpaqueTable& ServiceIdempotency::getTable()
     {
-        static const hashed_string s_table{ "service_idempotency" };
+        static const ServiceOpaqueTable s_table{ "service_idempotency" };
         return s_table;
     }
 
@@ -27,7 +27,7 @@ namespace sw
         ServiceRecord            record;
         const ServiceStoreResult result = connection.readRecord( getTable(), makeKey( scope, keyHigh, keyLow ), record );
         if ( result == ServiceStoreResult::Ok )
-            outReplyBytes = std::move( record._bytes );
+            outReplyBytes = ServiceOpaqueTable::takeBytes( record ); // 답 바이트는 그 키트의 응답 형식이다 — 여기서는 뜻을 읽지 않는다
         return result;
     }
 

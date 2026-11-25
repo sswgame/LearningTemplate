@@ -15,10 +15,16 @@
 
 namespace sw
 {
+    template <typename TRecord>
+    class ServiceRecordTable;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 신고 쓰기와 읽기입니다. 쓰기는 트랜잭션에 넣기만 하고, 읽기와 처리는 저장소 스레드(`ServiceStoreJob::run`)에서 부릅니다. */
     struct SW_GF_API ServiceReportStore
     {
-        static const hashed_string& getTable(); ///< "service_report"
+        static const ServiceRecordTable<ServiceReport>& getTable(); ///< "service_report"
         /** @brief 닫힌 신고(`closed/<만든 시각 16 진>/…`)의 만든 시각을 읽습니다(보존 기간 쓸기 `ServiceTTLRule` 용). 열린 신고와 틀린 키는 false 입니다. */
         [[nodiscard]] static bool       readClosedTimeMs( const ServiceRecord& record, int64& outTimeMs );
         static const ServiceIndexTable& getExpiryTable(); ///< "service_report_expiry" — 닫힌 신고의 TTL 색인(`<만든 시각>/<닫힌 키>`)

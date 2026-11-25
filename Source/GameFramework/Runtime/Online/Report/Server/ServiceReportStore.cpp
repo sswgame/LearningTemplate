@@ -5,8 +5,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
-#include "GameFramework/Runtime/Online/Store/ServiceRecordUtil.h"
 
 namespace sw
 {
@@ -32,9 +32,9 @@ namespace sw
 
 namespace sw
 {
-    const hashed_string& ServiceReportStore::getTable()
+    const ServiceRecordTable<ServiceReport>& ServiceReportStore::getTable()
     {
-        static const hashed_string s_table{ "service_report" };
+        static const ServiceRecordTable<ServiceReport> s_table{ "service_report" };
         return s_table;
     }
 
@@ -107,11 +107,7 @@ namespace sw
         inoutReport._resolverID     = kInvalidAccountID;
         inoutReport._resolvedMs     = 0;
         inoutReport._resolutionMemo = string{};
-        vector<uint8> bytes;
-        if ( ServiceRecordUtil::encode( inoutReport, bytes ) == false )
-            return false;
-        inoutTransaction.put( getTable(), inoutReport._reportKey, std::move( bytes ), ServiceRecord::kAbsentVersion );
-        return true;
+        return inoutTransaction.tryPut( getTable(), inoutReport._reportKey, inoutReport, ServiceRecord::kAbsentVersion );
     }
 
     ServiceStoreResult ServiceReportStore::listReports( IServiceStoreConnection& connection, bool bOpen, string_view cursor, int32 maxCount,
@@ -126,7 +122,7 @@ namespace sw
         for ( const ServiceRecord& record : listRecord )
         {
             ServiceReport& report = outListReport.emplace_back();
-            if ( ServiceRecordUtil::readDurable( record._key, record._bytes, report ) == false )
+            if ( getTable().decode( record, report ) == false )
                 return ServiceStoreResult::Invalid;
         }
         if ( listRecord.empty() == false && static_cast<int32>( listRecord.size() ) == maxCount )
@@ -146,23 +142,24 @@ namespace sw
         if ( readResult != ServiceStoreResult::Ok )
             return readResult;
         ServiceReport report;
-        if ( ServiceRecordUtil::readDurable( reportKey, record._bytes, report ) == false )
+        if ( getTable().decode( reportKey, record, report ) == false )
             return ServiceStoreResult::Invalid;
         report._reportKey      = closedKey;
         report._status         = status;
         report._resolverID     = resolverID;
         report._resolvedMs     = nowMs;
         report._resolutionMemo = string( memo );
-        vector<uint8> bytes;
-        if ( ServiceRecordUtil::encode( report, bytes ) == false )
-            return ServiceStoreResult::Invalid;
         inoutTransaction.erase( getTable(), reportKey, record._version ); // 그사이 다른 GM 이 처리했으면 Conflict
         ServiceRecord closedRecord;
         closedRecord._key  = closedKey;
         int64 closedTimeMs = 0;
         if ( readClosedTimeMs( closedRecord, closedTimeMs ) == false )
             return ServiceStoreResult::Invalid; // 열린 키 모양이 틀렸다 - 색인에 넣지 못하는 닫힌 신고는 만들지 않는다
-        inoutTransaction.put( getTable(), closedKey, std::move( bytes ), ServiceRecord::kAbsentVersion );
+        if ( inoutTransaction.tryPut( getTable(), closedKey, report, ServiceRecord::kAbsentVersion ) == false )
+        {
+            inoutTransaction.markMalformed(); // 지우기만 커밋되면 신고가 사라진다
+            return ServiceStoreResult::Invalid;
+        }
         inoutTransaction.put( getExpiryTable(), ServiceTTLRule::makeTTLIndexKey( closedTimeMs, closedKey ), ServiceRecord::kAnyVersion );
         outReport = std::move( report );
         return ServiceStoreResult::Ok;

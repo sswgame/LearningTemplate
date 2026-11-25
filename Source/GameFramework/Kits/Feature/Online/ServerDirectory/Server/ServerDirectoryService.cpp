@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -27,15 +28,15 @@ namespace sw
             static constexpr int32 kMaxMaintenanceRowRead = 1024; ///< 점검 표를 다 읽는 상한이다. 넘으면 이전 상태를 둔다(뒤의 점검을 조용히 버리면 그 범위가 열린다)
             static constexpr int32 kPercentScale          = 100;
 
-            static const hashed_string& getMaintenanceTable()
+            static const ServiceRecordTable<MaintenanceWindow>& getMaintenanceTable()
             {
-                static const hashed_string s_table{ "sd_maintenance" };
+                static const ServiceRecordTable<MaintenanceWindow> s_table{ "sd_maintenance" };
                 return s_table;
             }
 
-            static const hashed_string& getAnnouncementTable()
+            static const ServiceRecordTable<ServiceAnnouncement>& getAnnouncementTable()
             {
-                static const hashed_string s_table{ "sd_notice" };
+                static const ServiceRecordTable<ServiceAnnouncement> s_table{ "sd_notice" };
                 return s_table;
             }
 
@@ -43,7 +44,7 @@ namespace sw
             [[nodiscard]] static bool readAnnouncementEndMs( const ServiceRecord& record, int64& outTimeMs )
             {
                 ServiceAnnouncement announcement;
-                if ( ServerDirectoryProtocol::decodeAnnouncement( record._key, record._bytes, announcement ) == false || announcement._endMs == 0 )
+                if ( ServerDirectoryServiceInternal::getAnnouncementTable().decode( record, announcement ) == false || announcement._endMs == 0 )
                     return false;
                 outTimeMs = announcement._endMs;
                 return true;
@@ -53,7 +54,7 @@ namespace sw
             [[nodiscard]] static bool readMaintenanceEndMs( const ServiceRecord& record, int64& outTimeMs )
             {
                 MaintenanceWindow window;
-                if ( ServerDirectoryProtocol::decodeMaintenance( record._key, record._bytes, window ) == false || window._endMs == 0 )
+                if ( ServerDirectoryServiceInternal::getMaintenanceTable().decode( record, window ) == false || window._endMs == 0 )
                     return false;
                 outTimeMs = window._endMs;
                 return true;
@@ -127,7 +128,7 @@ namespace sw
             for ( const ServiceRecord& record : listRecord )
             {
                 MaintenanceWindow window;
-                const bool        bDecoded = ServerDirectoryProtocol::decodeMaintenance( record._key, record._bytes, window );
+                const bool        bDecoded = ServerDirectoryServiceInternal::getMaintenanceTable().decode( record, window );
                 if ( bDecoded && Internal::isValidWindow( window ) == false )
                     SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryMaintenanceRecord", "Server directory maintenance record '%#' breaks the write rules", record._key );
                 if ( bDecoded == false || Internal::isValidWindow( window ) == false )
@@ -154,7 +155,7 @@ namespace sw
             for ( const ServiceRecord& record : listRecord )
             {
                 ServiceAnnouncement announcement;
-                const bool          bDecoded = ServerDirectoryProtocol::decodeAnnouncement( record._key, record._bytes, announcement );
+                const bool          bDecoded = ServerDirectoryServiceInternal::getAnnouncementTable().decode( record, announcement );
                 if ( bDecoded && Internal::isValidAnnouncement( announcement ) == false )
                     SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryAnnouncementRecord", "Server directory notice record '%#' breaks the write rules", record._key );
                 if ( bDecoded == false || Internal::isValidAnnouncement( announcement ) == false )
@@ -421,13 +422,12 @@ namespace sw
             return;
         }
         ServiceAuditedWrite pendingJob;
-        if ( ServerDirectoryProtocol::encodeMaintenance( window, pendingJob._bytes ) == false )
+        pendingJob._change.put( Internal::getMaintenanceTable(), window._scope, window );
+        if ( pendingJob._change.isWellFormed() == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 표가 오류 로그를 남겼다
             return;
         }
-        pendingJob._table = Internal::getMaintenanceTable();
-        pendingJob._key   = window._scope;
         StringBuilder<constant::buffer::kMax128> subject;
         subject.appendFormat( "sd/%#", window._scope );
         pendingJob.setOperatorAudit( actor, "sd.maintenance.set", subject.view(), nowMs, memo );
@@ -443,8 +443,7 @@ namespace sw
             return;
         }
         ServiceAuditedWrite pendingJob;
-        pendingJob._table = Internal::getMaintenanceTable();
-        pendingJob._key   = string( scope );
+        pendingJob._change.erase( Internal::getMaintenanceTable(), scope );
         StringBuilder<constant::buffer::kMax128> subject;
         subject.appendFormat( "sd/%#", scope );
         pendingJob.setOperatorAudit( actor, "sd.maintenance.clear", subject.view(), nowMs, memo );
@@ -459,16 +458,16 @@ namespace sw
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
+        const string        announcementKey = ServiceKeyUtil::makeHex64( announcement._announcementID );
         ServiceAuditedWrite pendingJob;
-        if ( ServerDirectoryProtocol::encodeAnnouncement( announcement, pendingJob._bytes ) == false )
+        pendingJob._change.put( Internal::getAnnouncementTable(), announcementKey, announcement );
+        if ( pendingJob._change.isWellFormed() == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 표가 오류 로그를 남겼다
             return;
         }
-        pendingJob._table = Internal::getAnnouncementTable();
-        pendingJob._key   = ServiceKeyUtil::makeHex64( announcement._announcementID );
         StringBuilder<constant::buffer::kMax128> subject;
-        subject.appendFormat( "sd/notice/%#", pendingJob._key );
+        subject.appendFormat( "sd/notice/%#", announcementKey );
         pendingJob.setOperatorAudit( actor, "sd.notice.post", subject.view(), nowMs );
         pendingJob._auditEntry._after = announcement._text;
         submitWrite( std::move( pendingJob ), requestTag );
@@ -495,12 +494,12 @@ namespace sw
 
     void ServerDirectoryService::removeAnnouncement( uint64 announcementID, const ServiceOperator& actor, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        using Internal = ServerDirectoryServiceInternal;
+        using Internal                      = ServerDirectoryServiceInternal;
+        const string        announcementKey = ServiceKeyUtil::makeHex64( announcementID );
         ServiceAuditedWrite pendingJob;
-        pendingJob._table = Internal::getAnnouncementTable();
-        pendingJob._key   = ServiceKeyUtil::makeHex64( announcementID );
+        pendingJob._change.erase( Internal::getAnnouncementTable(), announcementKey );
         StringBuilder<constant::buffer::kMax128> subject;
-        subject.appendFormat( "sd/notice/%#", pendingJob._key );
+        subject.appendFormat( "sd/notice/%#", announcementKey );
         pendingJob.setOperatorAudit( actor, "sd.notice.remove", subject.view(), nowMs );
         submitWrite( std::move( pendingJob ), requestTag );
     }

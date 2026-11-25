@@ -24,8 +24,8 @@ namespace sw
     /** @brief 멱등 기록 도우미입니다. 저장소 스레드(`ServiceStoreJob::run` 안)에서 씁니다. */
     struct SW_KIT_SERVER_API ServiceIdempotency
     {
-        static const hashed_string& getTable();
-        static string               makeKey( string_view scope, uint64 keyHigh, uint64 keyLow );
+        static const ServiceOpaqueTable& getTable();
+        static string                    makeKey( string_view scope, uint64 keyHigh, uint64 keyLow );
         /** @brief 이미 처리한 요청이면 Ok 와 그때의 응답, 처음이면 NotFound 입니다. */
         [[nodiscard]] static ServiceStoreResult findReply( IServiceStoreConnection& connection, string_view scope, uint64 keyHigh, uint64 keyLow, vector<uint8>& outReplyBytes );
         /**

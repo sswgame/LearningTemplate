@@ -19,9 +19,9 @@
 
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
 {
@@ -130,15 +130,12 @@ namespace sw
 
     /**
      * @brief 계정 하나의 영속 진행입니다. 서버가 쓰고 읽는다(`HubProfileStore`) — 클라이언트는 받은 값을 보여 줄 뿐이다.
-     * @details 바이트는 판(`kFormat`, 가변 정수) 뒤에 칸 선언(`Replicated` · 범위)이 곧 바이트다(`ReplicatedLayout`). 저장 레코드라 스키마 해시가
-     *          핸드셰이크를 지나지 않는다 — 칸을 바꾸면 판을 올리고 옛 판 읽기를 둔다.
+     * @details 진행 표(`HubProfileStore`)의 레코드 형식이다 — 판은 이 형식의 `REFLECT( Version )`, 모르는 칸은 `_unknownProperties` 가 들고 다시 쓴다(`ServiceRecordTable`).
      */
     REFLECT()
     struct HubProfile
     {
         REFLECT_BODY();
-
-        static constexpr FormatDef kFormat{ "HUBP" };
 
         PROPERTY( SaveGame, Replicated, Min = 1 )
         int32 _level{ 1 };
@@ -153,10 +150,7 @@ namespace sw
         PROPERTY( SaveGame, Replicated, Min = -100000, Max = 100000 )
         float3 _position{}; ///< 범위는 NaN · 무한대를 거절하는 경계다
 
-        /** @brief 판과 칸을 씁니다. 칸이 선언 범위 밖이면 false 이고 @p writer 에 쓰다 만 비트가 남습니다. */
-        [[nodiscard]] bool write( BitWriter& writer ) const;
-        /** @brief 읽습니다. 판이 다르거나 깨졌거나 값이 선언 범위 밖(음수 · 레벨 0)이면 false 이고 그때 값은 쓰지 않습니다. */
-        [[nodiscard]] bool read( BitReader& reader );
+        ServiceRecordUnknownFields _unknownProperties{};
     };
 } // namespace sw
 

@@ -22,7 +22,8 @@ namespace sw
     class BitReader;
     class BitWriter;
 
-    /** @brief 원장 보유자의 종류입니다. 와이어와 저장에 쓰는 값이라 순서를 바꾸면 안 됩니다. */
+    /** @brief 원장 보유자의 종류입니다. 와이어와 저장에 쓰는 값이라 순서를 바꾸면 안 됩니다(저장 레코드는 열거자 이름으로 싣는다). */
+    ENUM()
     enum class LedgerHolderKind : uint8
     {
         Account = 0, ///< 플레이어 계정. 잔액이 음수가 되지 않는다(환불 회수 `_bAllowDebt` 만 예외로 빚을 허용한다)
@@ -36,11 +37,17 @@ namespace sw
 namespace sw
 {
     /** @brief 원장 보유자 하나입니다. 키는 `acct/<16 진 16>`, `esc/<도메인>/<토큰>`, `sys/mint`, `sys/sink` 중 하나입니다. */
+    REFLECT()
     struct SW_GF_API LedgerHolder
     {
-        string           _escrowDomain{}; ///< Escrow 만 쓴다. `[0-9a-z_]`, 16 자 이하("mail", "auction")
-        string           _escrowToken{};  ///< Escrow 만 쓴다. `[0-9a-z_.-]`, 64 자 이하
-        uint64           _accountID{ 0 }; ///< Account 만
+        REFLECT_BODY();
+        PROPERTY( MaxCount = LedgerConstant::kMaxStoredTextSize )
+        string _escrowDomain{}; ///< Escrow 만 쓴다. `[0-9a-z_]`, 16 자 이하("mail", "auction")
+        PROPERTY( MaxCount = LedgerConstant::kMaxStoredTextSize )
+        string _escrowToken{}; ///< Escrow 만 쓴다. `[0-9a-z_.-]`, 64 자 이하
+        PROPERTY()
+        uint64 _accountID{ 0 }; ///< Account 만
+        PROPERTY()
         LedgerHolderKind _kind{ LedgerHolderKind::Mint };
 
         static LedgerHolder makeAccount( uint64 accountID );
@@ -64,12 +71,18 @@ namespace sw
 namespace sw
 {
     /** @brief 이동 한 다리입니다. @p _from 에서 @p _to 로 @p _assetID 를 @p _amount(1 이상)만큼 옮깁니다. */
+    REFLECT()
     struct SW_GF_API LedgerPosting
     {
+        REFLECT_BODY();
+        PROPERTY()
         LedgerHolder _from{};
+        PROPERTY()
         LedgerHolder _to{};
-        string       _assetID{};
-        int64        _amount{ 0 };
+        PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
+        string _assetID{};
+        PROPERTY()
+        int64 _amount{ 0 };
 
         static void write( BitWriter& outWriter, const LedgerPosting& posting );
 

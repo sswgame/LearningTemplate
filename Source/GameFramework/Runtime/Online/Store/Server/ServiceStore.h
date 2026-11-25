@@ -123,6 +123,10 @@ namespace sw
         template <typename TRecord>
         void put( const ServiceRecordTable<TRecord>& table, string_view key, const typename ServiceRecordTable<TRecord>::Record& record,
                   uint64 expectedVersion = ServiceRecord::kAnyVersion );
+        /** @brief `put` 과 같되 값이 표 형식으로 쓰이지 않으면 아무것도 붙이지 않고 false 입니다(오류 로그는 표가 남긴다). 그 값만 빼고 나머지를 쓰는 일괄 쓰기가 씁니다. */
+        template <typename TRecord>
+        [[nodiscard]] bool tryPut( const ServiceRecordTable<TRecord>& table, string_view key, const typename ServiceRecordTable<TRecord>::Record& record,
+                                   uint64 expectedVersion = ServiceRecord::kAnyVersion );
         /** @brief 값 없는 색인 줄 하나를 씁니다(키가 곧 내용이다). */
         void put( const ServiceIndexTable& table, string_view key, uint64 expectedVersion = ServiceRecord::kAnyVersion );
         /** @brief 다른 레코드의 id 하나를 가리키는 연결을 씁니다. id 0 은 쓰지 않는다(오류 로그 · `Invalid`). */
@@ -297,6 +301,77 @@ namespace sw
         [[nodiscard]] virtual ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending,
                                                               vector<ServiceRecord>& outListRecord ) = 0;
     };
+} // namespace sw
+
+namespace sw
+{
+    template <typename TRecord>
+    struct ServiceRecordCodec; ///< `ServiceRecordTable.h` 가 정의한다 — 레코드를 쓰고 읽는 TU 만 무거운 코덱을 읽는다
+
+    /**
+     * @class ServiceRecordTable
+     * @brief 레코드 형식 @p TRecord 하나를 싣는 표입니다. 레코드 형식은 `REFLECT` 이고 `ServiceRecordUnknownFields _unknownProperties{};` 를 든다(`ServiceRecordUtil::readDurable`).
+     */
+    template <typename TRecord>
+    class ServiceRecordTable
+    {
+    public:
+        using Record = TRecord;
+
+        explicit ServiceRecordTable( const utf8* pName )
+            : _name{ pName }
+        {
+        }
+
+        const hashed_string& getName() const { return _name; }
+        /** @brief 표 이름이 필요한 곳(지우기 · 조건 · 목록 읽기 · TTL 규칙)에 그대로 넘긴다. 값은 이 이름으로 읽고 쓸 수 없다(바이트가 비공개다). */
+        operator const hashed_string&() const { return _name; }
+
+        /** @brief 목록 읽기 등으로 받은 레코드의 값을 읽습니다. 못 읽으면 오류 로그를 남기고 false 이며 @p outRecord 는 그대로입니다. */
+        [[nodiscard]] bool decode( string_view key, const ServiceRecord& record, TRecord& outRecord ) const { return ServiceRecordCodec<TRecord>::decode( key, record._bytes, outRecord ); }
+        /** @brief 목록 읽기로 받은 레코드(키가 채워져 있다)의 값을 읽습니다. */
+        [[nodiscard]] bool decode( const ServiceRecord& record, TRecord& outRecord ) const { return decode( record._key, record, outRecord ); }
+
+        /**
+         * @brief 레코드 하나를 읽습니다. 있으면 Ok 와 값 · 버전, 없으면 NotFound(@p outRecord 는 그대로, 버전은 `kAbsentVersion`), 값이 깨졌으면 Corrupt 입니다. 그 밖은 저장소 결과입니다.
+         * @param pOutVersion 있으면 읽은 버전(없으면 `kAbsentVersion`)을 담는다 — 같은 버전 조건으로 다시 쓸 때.
+         */
+        [[nodiscard]] ServiceStoreResult read( IServiceStoreConnection& connection, string_view key, TRecord& outRecord, uint64* pOutVersion = nullptr ) const
+        {
+            ServiceRecord            record;
+            const ServiceStoreResult result = connection.readRecord( _name, key, record );
+            if ( pOutVersion != nullptr )
+                *pOutVersion = record._version;
+            if ( result != ServiceStoreResult::Ok )
+                return result;
+            return decode( key, record, outRecord ) ? ServiceStoreResult::Ok : ServiceStoreResult::Corrupt;
+        }
+
+        /** @brief 값을 바이트로 씁니다(`ServiceTransaction::put` 이 부른다). 못 쓰면 오류 로그를 남기고 false 입니다. */
+        [[nodiscard]] bool encode( const TRecord& record, vector<uint8>& outBytes ) const { return ServiceRecordCodec<TRecord>::encode( record, outBytes ); }
+
+    private:
+        hashed_string _name;
+    };
+
+    template <typename TRecord>
+    void ServiceTransaction::put( const ServiceRecordTable<TRecord>& table, string_view key, const typename ServiceRecordTable<TRecord>::Record& record, uint64 expectedVersion )
+    {
+        vector<uint8> bytes;
+        if ( table.encode( record, bytes ) == false )
+            _bMalformed = SW_TRUE; // 쓰지 못한 값을 빈 값으로 싣지 않는다 — 커밋이 Invalid 다
+        putBytes( table.getName(), key, std::move( bytes ), expectedVersion );
+    }
+
+    template <typename TRecord>
+    bool ServiceTransaction::tryPut( const ServiceRecordTable<TRecord>& table, string_view key, const typename ServiceRecordTable<TRecord>::Record& record, uint64 expectedVersion )
+    {
+        vector<uint8> bytes;
+        if ( table.encode( record, bytes ) == false )
+            return false;
+        putBytes( table.getName(), key, std::move( bytes ), expectedVersion );
+        return true;
+    }
 } // namespace sw
 
 namespace sw

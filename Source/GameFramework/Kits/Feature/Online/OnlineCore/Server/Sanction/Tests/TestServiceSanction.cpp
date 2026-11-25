@@ -3,8 +3,12 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Format/BinarySerializer.h"
+
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 // ServiceSanctionTest — 제재 레코드의 왕복과 로그인 차단(정지 · 영구 정지는 막고 채팅 금지는 막지 않는다), 상한 그대로인 사유,
@@ -72,12 +76,13 @@ SW_TEST_CASE( ServiceSanctionTest, ReasonAtTheStateLimitRoundTrips )
 SW_TEST_CASE( ServiceSanctionTest, CorruptRecordIsNotReadAsNoSanction )
 {
     // 틀리면: 깨진 레코드를 "제재 없음" 으로 읽으면 정지된 계정이 들어온다 — 해당 Unavailable 단언이, 계정 0 검사를 빼면 Invalid 단언이 진다.
+    SW_EXPECT_LOG( "ServiceRecordUtil.DurableRecordVersionBytes" );
     sw::MemoryServiceDatabase database;
     const sw::string          key      = sw::ServiceKeyUtil::makeHex64( kAccount );
     auto                      readWith = [&]( sw::vector<uint8> bytes )
     {
         sw::ServiceTransaction transaction;
-        transaction.put( sw::ServiceSanction::getTable(), key, std::move( bytes ) );
+        sw::ServiceStoreTestAccess::putBytes( transaction, sw::ServiceSanction::getTable(), key, std::move( bytes ) );
         SW_EXPECT_TRUE( database.commit( transaction ) == sw::ServiceStoreResult::Ok );
         sw::ServiceSanctionState read;
         return sw::ServiceSanction::readState( database, kAccount, read );
@@ -85,12 +90,11 @@ SW_TEST_CASE( ServiceSanctionTest, CorruptRecordIsNotReadAsNoSanction )
     SW_EXPECT_TRUE( readWith( sw::vector<uint8>{ 9 } ) == sw::ServiceStoreResult::Unavailable ); // 이 빌드가 모르는 형식
     SW_EXPECT_TRUE( readWith( sw::vector<uint8>{ 0 } ) == sw::ServiceStoreResult::Unavailable ); // 형식 머리만 있고 몸이 잘렸다
 
-    sw::BitWriter writer; // 형식은 맞고 사유 길이만 상한 + 1
-    writer.writeVarUint( 0 );
-    for ( int32 kindIndex = 0; kindIndex < static_cast<int32>( sw::ServiceSanctionKind::Count ); ++kindIndex )
-        writer.writeVarInt( kNowMs + 1000 );
-    sw::ServiceKeyUtil::writeString( writer, sw::string( static_cast<size_t>( sw::ServiceSanctionState::kMaxReasonCodeSize ) + 1, 'r' ) );
-    SW_EXPECT_TRUE( readWith( writer.releaseBytes() ) == sw::ServiceStoreResult::Unavailable );
+    sw::ServiceSanctionState overlong; // 형식은 맞고 사유 길이만 상한 + 1 — 선언 범위(MaxCount)로 거절한다
+    overlong._reasonCode = sw::string( static_cast<size_t>( sw::ServiceSanctionState::kMaxReasonCodeSize ) + 1, 'r' );
+    sw::vector<uint8> overlongBytes;
+    SW_REQUIRE_TRUE( sw::BinarySerializer::serializeVersionedKeepingUnknown( 0, &overlong, *sw::ServiceSanctionState::StaticType(), {}, overlongBytes ) );
+    SW_EXPECT_TRUE( readWith( overlongBytes ) == sw::ServiceStoreResult::Unavailable );
 
     sw::ServiceSanctionState none;
     SW_EXPECT_TRUE( sw::ServiceSanction::readState( database, 0, none ) == sw::ServiceStoreResult::Invalid );

@@ -13,6 +13,7 @@
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -21,7 +22,6 @@ namespace sw
     {
         struct RemoteConfigInternal
         {
-            static constexpr FormatDef kRecordFormat{ "RCFG" };
             static constexpr FormatDef kFormat{ "RCFW" };
             static constexpr int32     kTypeBitCount    = 3;
             static constexpr int32     kMaxVariantCount = 16;
@@ -72,20 +72,14 @@ namespace sw
                 return ServiceKeyUtil::isTokenText( text, kMaxKeySize, "_" );
             }
 
-            static vector<uint8> encodeRecord( const RemoteConfigValue& value )
+            /** @brief 표의 레코드를 읽습니다. 깨졌거나(표가 오류 로그를 남긴다) 값 규칙 밖이면 false 입니다. */
+            [[nodiscard]] static bool decodeRecord( const ServiceRecord& raw, RemoteConfigValue& outValue )
             {
-                BitWriter writer;
-                kRecordFormat.writeVersion( writer );
-                writeValue( writer, value );
-                return writer.releaseBytes();
-            }
-
-            [[nodiscard]] static bool decodeRecord( const vector<uint8>& bytes, RemoteConfigValue& outValue )
-            {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kRecordFormat.readVersion( reader ) == false )
+                RemoteConfigValue value;
+                if ( RemoteConfig::getTable().decode( raw, value ) == false || isValidValue( value ) == false )
                     return false;
-                return readValue( reader, outValue );
+                outValue = std::move( value );
+                return true;
             }
         };
     } // namespace
@@ -144,7 +138,7 @@ namespace sw
             for ( const ServiceRecord& record : listRecord )
             {
                 Entry entry;
-                if ( RemoteConfigInternal::decodeRecord( record._bytes, entry._value ) == false )
+                if ( RemoteConfigInternal::decodeRecord( record, entry._value ) == false )
                     continue; // 깨진 줄은 없는 것으로 — 완료가 경고하지 않는다(저장소 스레드), 운영 도구가 본다
                 entry._version           = record._version;
                 read._value[record._key] = std::move( entry );
@@ -159,7 +153,7 @@ namespace sw
                                                        uint64 expectedVersion )
     {
         ServiceTransaction transaction;
-        transaction.put( getTable(), key, RemoteConfigInternal::encodeRecord( value ), expectedVersion );
+        transaction.put( getTable(), key, value, expectedVersion );
         // 같은 버전 위의 같은 키 바꾸기는 같은 감사 키 — 재시도가 줄을 둘 만들지 않는다
         ServiceAuditLog::stageEntry( transaction, audit, expectedVersion, HashUtil::computeStringHash64( key.data(), key.size(), false ) );
         ServiceCommitInfo        info;
@@ -293,9 +287,9 @@ namespace sw
         return true;
     }
 
-    const hashed_string& RemoteConfig::getTable()
+    const ServiceRecordTable<RemoteConfigValue>& RemoteConfig::getTable()
     {
-        static const hashed_string s_table{ "remote_config" };
+        static const ServiceRecordTable<RemoteConfigValue> s_table{ "remote_config" };
         return s_table;
     }
 
