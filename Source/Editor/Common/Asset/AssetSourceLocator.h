@@ -35,6 +35,9 @@ namespace sw::editor
         /** @brief 원본 @p sourcePath 의 바이트를 읽습니다(`resolve`). 풀지 못했거나 읽지 못했거나 비었으면 false 입니다 — 저장소 주소를 풀지 못한 까닭은 오류로 남기고, 없는 파일은 부르는 쪽이 알린다. */
         [[nodiscard]] static bool readBytes( const AbsolutePath& sourcePath, vector<uint8>& outBytes );
 
+        /** @brief `readBytes` 가 읽을 바이트의 해시입니다(`AssetImportStampUtil::computeFileHash`) — 바뀌지 않은 원본은 읽지 않는다. 풀지 못했거나 비었으면 0 이고 로그는 `readBytes` 와 같다. */
+        [[nodiscard]] static uint64 computeHash( const AbsolutePath& sourcePath );
+
         /** @brief @p folder(하위까지)에서 파일은 없고 서술이 저장소 주소를 적은 원본의 디스크 경로를 @p inoutListSourcePath(그 폴더에서 찾은 파일들) 끝에 더합니다 — 원본을 훑는 쪽이 파일 목록에 더한다. */
         static void collectStoredSources( const AbsolutePath& folder, vector<AbsolutePath>& inoutListSourcePath );
 

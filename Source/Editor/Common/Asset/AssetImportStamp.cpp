@@ -23,6 +23,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/Cook/CookRecord.h"
+#include "Engine/Content/ContentHash.h"
 
 namespace sw::editor
 {
@@ -849,10 +850,8 @@ namespace sw::editor
 
     uint64 AssetImportStampUtil::computeFileHash( const AbsolutePath& path )
     {
-        vector<uint8> bytes;
-        const bool    bUnreadableFile = FileUtil::exists( path ) == false || FileUtil::readFile( path, bytes ) == false || bytes.empty();
-        if ( bUnreadableFile )
-            return 0;
-        return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
+        FileStamp  stamp{};
+        const bool bMissingOrEmpty = FileUtil::getFileStamp( path, stamp ) == false || stamp._sizeBytes == 0;
+        return bMissingOrEmpty ? 0 : ContentHash::computeFile( path );
     }
 } // namespace sw::editor

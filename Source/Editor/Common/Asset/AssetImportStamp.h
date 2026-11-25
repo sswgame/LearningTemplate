@@ -185,7 +185,7 @@ namespace sw::editor
         /** @brief `makeImportedPath` 의 디스크 경로 판입니다 — 원본이 @p rawFolderName 아래가 아니면 빈 경로다. */
         static AbsolutePath makeImportedPath( const AbsolutePath& rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension );
 
-        /** @brief 파일 바이트 그대로 계산한 FNV-1a 64 해시입니다. 파일이 없거나 비어 있으면 0 입니다. */
+        /** @brief 파일 바이트 그대로 계산한 FNV-1a 64 해시입니다(`ContentHash::computeFile` — 크기 · 쓰기 시각이 그대로면 읽지 않는다). 파일이 없거나 비어 있으면 0 입니다. */
         static uint64 computeFileHash( const AbsolutePath& path );
     };
 } // namespace sw::editor

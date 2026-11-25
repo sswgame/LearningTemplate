@@ -332,11 +332,10 @@ namespace sw::editor
     uint64 HeightfieldImporter::computeSourceHash( const AbsolutePath& sourcePath )
     {
         using Internal = HeightfieldImporterInternal;
-        vector<uint8> bytes;
-        if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
+        uint64 hash    = AssetSourceLocator::computeHash( sourcePath );
+        if ( hash == 0 )
             return 0;
         StringBuilder<constant::buffer::kMax64> versionText;
-        uint64                                  hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
         if ( isSourceLayerWeights( sourcePath.str() ) )
         {
             versionText.appendFormat( "splat=%#;format=%#", Internal::kSplatImporterVersion, LayerWeightsAsset::kVersion );

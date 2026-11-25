@@ -228,3 +228,20 @@ SW_TEST_CASE( AssetImportStampTest, DifferentSettingsMiss )
     string text;
     SW_EXPECT_TRUE( FileUtil::readTextFile( secondRoot.join( "pack/things/a.out" ), text ) && text == "out:best" );
 }
+
+/**
+ * @brief [AssetImportStampTest] 파일 해시는 바이트의 FNV-1a 64 그대로이고(스탬프 · DDC 열쇠가 바뀌지 않는다), 같은 크기로 다시 써도 새 내용을 따르며 없거나 빈 파일은 0 이다
+ */
+SW_TEST_CASE( AssetImportStampTest, FileHashFollowsTheContent )
+{
+    const AbsolutePath path = test::makeScratchPath( "ImportFileHash.src" );
+    SW_EXPECT_EQUAL( uint64{ 0 }, AssetImportStampUtil::computeFileHash( path ) );
+    for ( const string_view text : { string_view{ "one" }, string_view{ "two" } } )
+    {
+        SW_REQUIRE_TRUE( writeText( path, text ) );
+        SW_EXPECT_EQUAL( HashUtil::computeStringHash64( text.data(), text.size(), false ), AssetImportStampUtil::computeFileHash( path ) );
+        SW_EXPECT_EQUAL( HashUtil::computeStringHash64( text.data(), text.size(), false ), AssetImportStampUtil::computeFileHash( path ) );
+    }
+    SW_REQUIRE_TRUE( writeText( path, "" ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, AssetImportStampUtil::computeFileHash( path ) );
+}

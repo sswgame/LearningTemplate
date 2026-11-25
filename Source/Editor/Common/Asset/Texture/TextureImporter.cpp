@@ -794,8 +794,8 @@ namespace sw::editor
 
     uint64 TextureImporter::computeSourceHash( const AbsolutePath& sourcePath, const TextureImportRule& rule )
     {
-        vector<uint8> bytes;
-        if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
+        const uint64 contentHash = AssetSourceLocator::computeHash( sourcePath );
+        if ( contentHash == 0 )
             return 0;
 
         // 규칙은 해석한 결과로 섞는다. "bc7" 과 "BC7_UNORM", BGRA 와 ARGB 처럼 같은 결과를 내는 표기는 같은 해시가 된다.
@@ -812,7 +812,6 @@ namespace sw::editor
         if ( rule._bQuickCompress == SW_TRUE )
             ruleText.append( ";quick=1" ); // 끈 값(기본)은 섞지 않는다 — 이 칸이 생기기 전의 스탬프가 그대로 맞는다
 
-        const uint64 contentHash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
         return HashUtil::computeStringHash64( ruleText.c_str(), ruleText.size(), false, contentHash );
     }
 
