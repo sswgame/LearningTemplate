@@ -23,7 +23,7 @@ namespace sw
     namespace
     {
         constexpr uint32 kGameModeStateTag     = FourCCUtil::make( "TOWN" ); // 게임에서 키트로 옮기기 전 태그 그대로(바꿀 까닭이 없다)
-        constexpr uint32 kGameModeStateVersion = 1;
+        constexpr uint32 kGameModeStateVersion = 0;
 
     } // namespace
 

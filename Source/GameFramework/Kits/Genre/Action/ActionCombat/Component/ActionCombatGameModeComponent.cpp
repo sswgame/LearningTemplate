@@ -18,7 +18,7 @@ namespace sw
         struct ActionCombatGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "KDAC" );
-            static constexpr uint32 kStateVersion = 3; ///< 2: 탄의 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다). 3: 결과 보여 주기 시간(`_resultHold`)
+            static constexpr uint32 kStateVersion = 0;
 
             static constexpr const utf8* kHealValue  = "heal"; ///< 승리 결과 값 이름 — 허브 캐릭터의 보상 표(`MinigameRewardComponent`)가 같은 이름을 적는다
             static constexpr const utf8* kWinResult  = "win";

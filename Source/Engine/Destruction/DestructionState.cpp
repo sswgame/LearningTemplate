@@ -29,7 +29,7 @@ namespace sw
         struct DestructionStateInternal
         {
             static constexpr uint32 kMagic        = FourCCUtil::make( "SWDS" );
-            static constexpr uint32 kVersion      = 1;
+            static constexpr uint32 kVersion      = 0;
             static constexpr uint32 kNoActiveNode = constant::invalid_index::kUint32;
 
             /** @brief 0 또는 1 인 바이트 목록을 비트로 씁니다. */

@@ -176,7 +176,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CTWN" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 집이 리플렉션 상태 칸이다
+        static constexpr uint32 kStateVersion = 0;
 
         CreatureTown();
 

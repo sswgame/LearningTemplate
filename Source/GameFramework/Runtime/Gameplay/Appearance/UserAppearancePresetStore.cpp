@@ -138,7 +138,7 @@ namespace sw
     bool UserAppearancePresetStore::loadFromXMLText( string_view text )
     {
         UserAppearancePresetFile file;
-        // 모르는 키 · 빠진 필수 칸 · 읽지 못한 값은 키 이름과 함께 오류로 남는다(옛 `key=value` 세이브도 여기서 진다).
+        // 모르는 키 · 빠진 필수 칸 · 읽지 못한 값은 키 이름과 함께 오류로 남는다.
         if ( ConfigManager::readConfigJSON( file, text, "appearance presets" ) == false )
             return false;
         if ( file._formatVersion != kVersion )

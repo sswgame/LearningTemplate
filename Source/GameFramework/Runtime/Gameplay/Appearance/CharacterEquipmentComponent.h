@@ -48,7 +48,7 @@ namespace sw
         REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CEQP" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 아이템 칸에 꾸미기 스키마 판(`Inventory::serializeSlot`). 판 1 은 `SW_STATE_FORMAT_UPGRADE` 가 올린다
+        static constexpr uint32 kStateVersion = 0;
 
         CharacterEquipmentComponent();
         virtual ~CharacterEquipmentComponent() override;

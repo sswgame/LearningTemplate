@@ -466,7 +466,7 @@ namespace sw
         vector<ParsedFunctionInfo>    _listMethod;
         vector<ParsedEventInfo>       _listEvent;
         vector<ParsedInterfaceExport> _listInterfaceExport; ///< `REFLECT_INTERFACE` 줄들(선언 차례)
-        uint32                        _version;             ///< `REFLECT( Version = N )` — 타입의 저장 판. 0 이면 적지 않았다(엔진은 1 로 본다, `TypeMetadata::getVersion`)
+        uint32                        _version;             ///< `REFLECT( Version = N )` — 타입의 저장 판. 적지 않았으면 첫 판(0)
         uint32                        _baseCount;           ///< 기반 클래스 수입니다. 둘 이상이면 `collectBase` 가 생성 오류로 멈추므로 코드젠에는 0 이나 1 만 옵니다
         uint8                         _bAbstract         : 1;
         uint8                         _bStatic           : 1;

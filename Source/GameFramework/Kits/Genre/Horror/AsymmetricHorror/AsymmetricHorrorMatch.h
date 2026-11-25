@@ -249,7 +249,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "HMAT" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 살인마 능력의 남은 시간
+        static constexpr uint32 kStateVersion = 0;
 
         AsymmetricHorrorMatch();
 

@@ -40,7 +40,7 @@ namespace sw
             /** @brief 이 길이보다 짧은 이동 의도는 걷지 않는다(스틱 떨림) — 걸음 판정과 이동이 같은 문턱을 쓴다. */
             static constexpr float32 kMinMoveLength = 1.0e-4f;
             static constexpr uint32  kStateTag      = FourCCUtil::make( "FARM" );
-            static constexpr uint32  kStateVersion  = 4; ///< 4: 비 · 날씨 난수를 판 상태 날씨로 옮겼다(이 칸에서 빠졌다)
+            static constexpr uint32  kStateVersion  = 0;
 
             /** @brief 비를 정하는 날씨 값 이름입니다(날씨 카탈로그 `<Values wetness>` — 표면 젖음과 같은 값). 이 값이 반 이상이면 비다. */
             static constexpr const utf8* kWetnessValue     = "wetness";

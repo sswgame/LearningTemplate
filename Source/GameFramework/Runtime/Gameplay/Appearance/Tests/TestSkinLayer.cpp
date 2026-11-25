@@ -61,12 +61,12 @@ namespace
             return selection;
         }
 
-        /** @brief 판 @p version 으로 쓴 공유 코드입니다(머리 판 · 선택 비트 · CRC32 — `encode` 와 같은 꼴). */
+        /** @brief 머리 판을 @p version 으로 적은 공유 코드입니다(머리 판 · 선택 비트 · CRC32 — `encode` 와 같은 꼴). */
         string encodeWithVersion( const AppearanceSelection& selection, uint32 version ) const
         {
             BitWriter writer;
             writer.writeBits( version, 8 );
-            AppearanceSelection::writeSelection( writer, selection, _database, version );
+            AppearanceSelection::writeSelection( writer, selection, _database );
             vector<uint8> bytes = writer.releaseBytes();
             const uint32  crc   = HashUtil::computeCRC32( bytes.data(), bytes.size() );
             for ( uint32 byteIndex = 0; byteIndex < 4; ++byteIndex )
@@ -181,7 +181,7 @@ SW_TEST_CASE( SkinLayerTest, SmearTransportsDilutesAndRespectsResistance )
 /**
  * @brief [SkinLayerTest] 공유 코드 판 3: 층 순서 · 색 · 배치 · 대칭과 플레이어 숨김이 되돌아오고, 해석은 립스틱 색을 견본으로 맞춘다
  */
-SW_TEST_CASE_F( SkinLayerSelectionTest, ShareCodeV2RoundTripsLayersAndHiddenSlots )
+SW_TEST_CASE_F( SkinLayerSelectionTest, ShareCodeRoundTripsLayersAndHiddenSlots )
 {
     const AppearanceSelection selection = makeSelection();
     const string              code      = AppearanceSelection::encode( selection, _database );
@@ -216,20 +216,14 @@ SW_TEST_CASE_F( SkinLayerSelectionTest, ShareCodeV2RoundTripsLayersAndHiddenSlot
 }
 
 /**
- * @brief [SkinLayerTest] 판 1 공유 코드(층 · 숨김이 없던 판)도 읽힌다 — 숨김 없음, 층 없음
+ * @brief [SkinLayerTest] 이 빌드의 판이 아닌 공유 코드는 거절한다
  */
-SW_TEST_CASE_F( SkinLayerSelectionTest, ShareCodeV1StillDecodes )
+SW_TEST_CASE_F( SkinLayerSelectionTest, ShareCodeOfANewerVersionIsRefused )
 {
-    const string        oldCode = encodeWithVersion( makeSelection(), AppearanceSelection::kOldestShareCodeVersion );
-    AppearanceSelection decoded;
-    SW_REQUIRE_TRUE( AppearanceSelection::decode( oldCode, _database, decoded ) );
-    SW_EXPECT_TRUE( decoded._basePresetID == hashed_string( "Base" ) );
-    SW_REQUIRE_EQUAL( size_t{ 1 }, decoded._listSlot.size() );
-    SW_EXPECT_EQUAL( SW_FALSE, decoded._listSlot[0]._bHiddenByPlayer );
-    SW_EXPECT_TRUE( decoded._listSkinLayer.empty() );
-
+    AppearanceSelection  decoded;
     const string         futureCode = encodeWithVersion( makeSelection(), AppearanceSelection::kShareCodeVersion + 1 );
     const expected<void> future     = AppearanceSelection::decode( futureCode, _database, decoded );
     SW_EXPECT_FALSE( future );
     SW_EXPECT_EQUAL( string( "unsupported share code version" ), future.has_value() ? string{} : string( future.error().message() ) );
+    SW_EXPECT_TRUE( AppearanceSelection::decode( encodeWithVersion( makeSelection(), AppearanceSelection::kShareCodeVersion ), _database, decoded ) );
 }

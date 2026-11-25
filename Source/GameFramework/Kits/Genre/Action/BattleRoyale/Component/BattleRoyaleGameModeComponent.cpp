@@ -24,7 +24,7 @@ namespace sw
         struct BattleRoyaleGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "BRGM" );
-            static constexpr uint32 kStateVersion = 3; ///< 2: 사람마다 든 총이 실린다. 3: 보급 상자가 판의 리플렉션 상태 칸이다
+            static constexpr uint32 kStateVersion = 0;
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";

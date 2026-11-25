@@ -76,7 +76,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WOTL" );
-        static constexpr uint32 kStateVersion = 2; // 2: 전리품 난수 · 지난 시계를 싣는다
+        static constexpr uint32 kStateVersion = 0;
 
         WesternOutlaw();
 

@@ -33,7 +33,7 @@ namespace sw
         struct GameSaveSlotsInternal
         {
             /** @brief 게임 상태 세이브 슬롯의 형식 버전입니다(봉투에 적힌다). 스냅샷 봉투(`GameStateSnapshot`)의 바이트 형식을 바꾸면 올린다. */
-            static constexpr uint32 kSaveSlotFormatVersion = 1;
+            static constexpr uint32 kSaveSlotFormatVersion = 0;
             /** @brief `game.save [슬롯]` · `game.load [슬롯]` 의 몸통입니다. 슬롯을 비우면 기본 슬롯입니다. 맡기기만 하고 끝은 감시 값 `Save.Written` · `Save.Loaded` 로 본다. */
             template <bool bSave>
             static bool runSlotCommand( const vector<string>& listArgument, string& outReply )

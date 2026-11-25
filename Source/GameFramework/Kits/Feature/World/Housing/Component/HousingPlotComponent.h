@@ -56,7 +56,7 @@ namespace sw
         friend class HousingNetSessionComponent; ///< 세션이 틱 뒤에 요청을 꺼내 보내고 판정 · 주인을 돌려준다
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "HPLT" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 앞에 주인 주체(`HousingOwnerID`)가 생겼다
+        static constexpr uint32 kStateVersion = 0;
 
         HousingPlotComponent();
         ~HousingPlotComponent() override;

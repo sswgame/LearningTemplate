@@ -28,14 +28,14 @@ namespace sw
      * @brief 바이너리 **값 인코딩**의 버전입니다. 스트림마다 머리에 실립니다. 태그 스트림의 프로퍼티 수(uint32) 위 8비트에 실립니다.
      * @details 스트림마다 실리므로 그 안의 컨테이너 원소와 맵 키도 같은 버전으로 읽고, 중첩 구조체와 소유 포인터 본문은 자기 머리의 버전을 읽는다.
      *          세이브, 플레이 스냅샷, 쿠킹 씬, 복사한 컴포넌트가 모두 같은 경로를 쓴다. 읽기는 현재 버전 하나만 받는다. 버전을 올리면 저장소의 데이터를
-     *          다시 쓰고 옛 버전을 읽는 분기는 두지 않는다. 0 은 enum 을 int64 값으로 싣던 버전이라 쓰지 않는다.
+     *          다시 쓰고 옛 버전을 읽는 분기는 두지 않는다.
      */
     enum class BinaryWireVersion : uint8
     {
-        EnumByName = 1, ///< enum 을 열거자 **이름 해시**로 싣는다(비트플래그는 켜진 이름들). 이름이 없는 값이나 비트만 값으로 싣는다.
+        EnumByName = 0, ///< enum 을 열거자 **이름 해시**로 싣는다(비트플래그는 켜진 이름들). 이름이 없는 값이나 비트만 값으로 싣는다.
     };
 
-    /** @brief 이 빌드가 쓰고 읽는 버전입니다. 다른 버전(앞선 빌드의 데이터, 버전이 없던 0)은 거절합니다. */
+    /** @brief 이 빌드가 쓰고 읽는 버전입니다. 다른 버전(앞선 빌드의 데이터)은 거절합니다. */
     inline constexpr BinaryWireVersion kCurrentBinaryWireVersion = BinaryWireVersion::EnumByName;
 
     struct SchemaOrphanValue

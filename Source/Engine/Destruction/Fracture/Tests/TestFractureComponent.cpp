@@ -55,7 +55,7 @@ SW_TEST_CASE( FractureComponentTest, RestoredStateWaitsForTheFirstPhysicsFrame )
     SW_EXPECT_FALSE( restored.hasPendingDamage() );
 
     sw::Archive broken;
-    sw::StateIO::writeHeader( broken, sw::FourCCUtil::make( "FRST" ), 1 );
+    sw::StateIO::writeHeader( broken, sw::FourCCUtil::make( "FRST" ), 0 );
     broken << sw::vector<uint8>{ 1, 2, 3 };
     sw::vector<uint8> snapshot;
     broken.writeData( snapshot );

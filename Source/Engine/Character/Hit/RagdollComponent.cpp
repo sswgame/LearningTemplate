@@ -28,7 +28,7 @@ namespace sw
         struct RagdollComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "RAGD" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
 
             static void decompose( const float4x4& matrix, float3& outPosition, quaternion& outRotation )
             {

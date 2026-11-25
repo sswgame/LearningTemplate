@@ -32,7 +32,7 @@ namespace sw
         struct VoxelPlayerComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "PLYR" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 부순 · 놓은 블록 수가 상태 칸으로 나갔다(옛 판은 거절한다 — 출시 전)
+            static constexpr uint32 kStateVersion = 0;
 
             // 사운드 이벤트 이름입니다. 클립, 범위, 동시 재생 상한은 게임의 사운드 이벤트 라이브러리(Playground 는 playground.audioevents.xml)가 정합니다.
             static constexpr const utf8* kEventLand  = "VoxelLand";

@@ -41,7 +41,7 @@ namespace sw
         static constexpr TickGroup kTickGroup = TickGroup::PostPhysics;
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "REPC" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 0;
 
         ReputationComponent();
         ~ReputationComponent() override;

@@ -19,7 +19,7 @@ namespace sw
         struct TurnOrderDemoComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "FDTO" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
 
             /** @brief 명령 인자 `<demo object> <actor> …` 의 앞 둘을 읽습니다. 시연이 없거나 없는 행위자면 까닭을 적고 nullptr 입니다. */
             [[nodiscard]] static TurnOrderDemoComponent* findActor( const vector<string>& listArgument, int32& outActorID, string& outReply )

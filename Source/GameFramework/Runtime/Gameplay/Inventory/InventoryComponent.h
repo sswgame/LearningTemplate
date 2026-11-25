@@ -50,7 +50,7 @@ namespace sw
         REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "INVC" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 0;
 
         InventoryComponent();
         ~InventoryComponent() override;

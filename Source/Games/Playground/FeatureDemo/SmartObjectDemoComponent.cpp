@@ -27,7 +27,7 @@ namespace sw
         struct SmartObjectDemoComponentInternal
         {
             static constexpr uint32  kStateTag       = FourCCUtil::make( "FDSO" );
-            static constexpr uint32  kStateVersion   = 1;
+            static constexpr uint32  kStateVersion   = 0;
             static constexpr int32   kMinutesPerHour = 60;
             static constexpr float32 kMaxHour        = 24.0f; ///< 첫날의 끝
 

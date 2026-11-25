@@ -95,7 +95,7 @@ namespace sw
     {
     public:
         static constexpr uint32 kStateTag     = FourCCUtil::make( "AELM" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 0;
 
         AdventureElementGrid();
         /** @brief 격자는 규칙 테이블을 가리키므로, 복사하면 새 규칙 테이블을 가리키도록 다시 연결합니다. */

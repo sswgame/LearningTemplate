@@ -245,7 +245,7 @@ namespace sw
             float32 _remaining{ 0.0f }; ///< 다시 자라기까지 남은 시간(초, `_regrowSeconds` 가 0 이면 쓰지 않는다)
         };
 
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 0;
 
         /** @brief 셀 @p cell 의 항목 보이기를 지금 벤 자리들에 맞춥니다. 새로 만든 셀과 다시 자란 뒤에 부릅니다. */
         void applyCuts( Cell& cell ) const;

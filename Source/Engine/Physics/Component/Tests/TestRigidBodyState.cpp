@@ -22,7 +22,7 @@ SW_TEST_CASE( RigidBodyStateTest, RestoredVelocityIsWrittenAgainBeforeTheBodyExi
     SW_EXPECT_EQUAL( uint64{ 0 }, static_cast<uint64>( resting.getSize() ) );
 
     Archive moving;
-    StateIO::writeHeader( moving, FourCCUtil::make( "RBST" ), 1 );
+    StateIO::writeHeader( moving, FourCCUtil::make( "RBST" ), 0 );
     moving << float3{ 1.0f, 2.0f, 3.0f } << float3{ 0.0f, 4.0f, 0.0f };
     vector<uint8> bytes;
     moving.writeData( bytes );

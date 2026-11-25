@@ -41,7 +41,7 @@ namespace sw
      */
     struct SW_KIT_API RTSCommand
     {
-        static constexpr uint32 kFormatVersion = 1;
+        static constexpr uint32 kFormatVersion = 0;
         static constexpr int32  kMaxUnitCount  = 64; ///< 명령 하나가 담는 유닛 상한(락스텝 입력 한 틱 상한 `NetLockstepMessage::kMaxInputBytes` 안에 든다)
 
         vector<RTSUnitID> _listUnit{};

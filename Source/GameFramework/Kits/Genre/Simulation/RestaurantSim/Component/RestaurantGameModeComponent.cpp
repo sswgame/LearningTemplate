@@ -20,7 +20,7 @@ namespace sw
         struct RestaurantGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "RSGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 평판
+            static constexpr uint32 kStateVersion = 0;
 
             static constexpr const utf8* kWinResult      = "win";
             static constexpr const utf8* kLoseResult     = "lose";

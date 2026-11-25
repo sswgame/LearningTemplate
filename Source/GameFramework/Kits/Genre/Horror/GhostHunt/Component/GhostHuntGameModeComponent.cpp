@@ -22,7 +22,7 @@ namespace sw
         struct GhostHuntGameModeComponentInternal
         {
             static constexpr uint32  kStateTag         = FourCCUtil::make( "GHGM" );
-            static constexpr uint32  kStateVersion     = 1;
+            static constexpr uint32  kStateVersion     = 0;
             static constexpr float32 kFurnitureSpacing = 2.0f;  ///< 안쪽 벽을 따라 놓은 가구 사이(m)
             static constexpr float32 kFurnitureWallGap = 1.0f;  ///< 안쪽 벽에서 가구까지(m)
             static constexpr float32 kGhostDepthRatio  = 0.25f; ///< 유령이 처음 숨는 자리 — 방 가운데에서 방 깊이의 이 비율만큼 안쪽

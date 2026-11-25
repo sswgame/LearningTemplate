@@ -114,7 +114,7 @@ namespace sw
 
         static constexpr int32  kMaxChainedStages = 32; ///< 한 번에 넘어가는 단계 수의 상한. 서로를 가리키는 단계에서 멈추게 한다
         static constexpr uint32 kStateTag         = FourCCUtil::make( "QLOG" );
-        static constexpr uint32 kStateVersion     = 2; ///< 2: 리플렉션 상태 칸(판 1 은 머리를 붙이고 상태를 int64 로 다시 써 올린다)
+        static constexpr uint32 kStateVersion     = 0;
 
         QuestLog();
 

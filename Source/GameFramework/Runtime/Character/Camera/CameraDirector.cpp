@@ -16,7 +16,7 @@ namespace sw
         struct CameraDirectorInternal
         {
             static constexpr uint32 kStateTag      = FourCCUtil::make( "CDIR" );
-            static constexpr uint32 kStateVersion  = 3;  ///< 3: 포즈의 후처리에 자동 노출 범위 · 속도가 붙었다
+            static constexpr uint32 kStateVersion  = 0;
             static constexpr uint32 kLayerMinBytes = 64; ///< 층 하나의 최소 바이트(이름 · 블렌드 · 진행 · 포즈 둘 · 상태)
 
             static bool isCut( const BlendCurveDef& blend ) { return blend._curve == BlendCurve::Cut || blend._duration <= 0.0f; }

@@ -131,7 +131,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "RHYP" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 0;
 
         RhythmPlaySession();
 

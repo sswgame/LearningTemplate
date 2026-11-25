@@ -16,7 +16,7 @@ namespace sw
         struct NileGameModeComponentInternal
         {
             static constexpr uint32  kStateTag     = FourCCUtil::make( "NILE" );
-            static constexpr uint32  kStateVersion = 4;
+            static constexpr uint32  kStateVersion = 0;
             static constexpr float32 kPercent      = 100.0f; ///< 비율 → 백분율(로그)
         };
     } // namespace

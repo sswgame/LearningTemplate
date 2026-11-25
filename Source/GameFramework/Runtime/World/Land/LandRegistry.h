@@ -35,7 +35,7 @@ namespace sw
     {
     public:
         static constexpr uint32 kStateTag     = FourCCUtil::make( "LAND" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 0;
         static constexpr uint16 kNoOwner      = 0;
 
         LandRegistry();

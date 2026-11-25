@@ -43,7 +43,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WWDR" );
-        static constexpr uint32 kStateVersion = 2;
+        static constexpr uint32 kStateVersion = 0;
 
         WesternGameModeComponent();
         virtual ~WesternGameModeComponent() override;

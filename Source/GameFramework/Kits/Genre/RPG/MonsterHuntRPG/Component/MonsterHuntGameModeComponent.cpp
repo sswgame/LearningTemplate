@@ -24,7 +24,7 @@ namespace sw
         struct MonsterHuntGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "MHGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 변이원 · 스킬
+            static constexpr uint32 kStateVersion = 0;
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";

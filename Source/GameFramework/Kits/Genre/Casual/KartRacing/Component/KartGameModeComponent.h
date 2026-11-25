@@ -35,7 +35,7 @@ namespace sw
      * @class KartGameModeComponent
      * @brief 출발 격자 → 카운트다운 → 바퀴 → 결승 순위 → 결과를 진행합니다.
      */
-    REFLECT( Version = 2, Category = "KartRacing", DisplayName = "Kart Race Game Mode", Tooltip = "Runs one KartRacing race: the player kart from driver commands, the rivals by the kart AI, to the finish places" )
+    REFLECT( Category = "KartRacing", DisplayName = "Kart Race Game Mode", Tooltip = "Runs one KartRacing race: the player kart from driver commands, the rivals by the kart AI, to the finish places" )
     class SW_KIT_API KartGameModeComponent : public GameModeComponent
     {
     public:

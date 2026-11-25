@@ -25,7 +25,7 @@ namespace sw
         struct CraftingDemoComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "FDCR" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
 
             static bool runEnqueue( const vector<string>& listArgument, string& outReply )
             {

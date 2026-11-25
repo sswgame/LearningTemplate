@@ -69,24 +69,3 @@ SW_TEST_CASE( GameStateOpenTest, SecondOpenFlagsOwnerIsAnError )
     SW_REQUIRE_TRUE( pLevel->removeComponent( pLoose ) );
     SW_EXPECT_TRUE( IGameFlagsOwner::findOpen( &manager ) == &pScene->getFlags() );
 }
-
-/** @brief [GameStateOpenTest] 판 1 세이브(플레이어 구간이 월드 상태 안에 있던 판)는 플레이어 구간을 버리고 경고하며 월드 구간(플래그)은 그대로 읽는다 */
-SW_TEST_CASE( GameStateOpenTest, VersionOneSaveDropsPlayerSections )
-{
-    SW_EXPECT_LOG( "GameState.PlayerSectionsDropped" );
-    Wallet wallet;
-    wallet.add( Wallet::getDefaultCurrency(), 50 );
-    GameFlags flags;
-    flags.setFlag( hashed_string( "town.gateOpen" ) );
-    Archive written;
-    StateIO::writeHeader( written, GameStateComponent::kStateTag, 1 );
-    written << uint32{ 2 };
-    StateSectionTableUtil::writeStateSection( written, wallet );
-    StateSectionTableUtil::writeStateSection( written, flags );
-
-    GameStateComponent state;
-    SW_REQUIRE_TRUE( state.initialize( GameStateSettings{} ) == GameStateInitResult::Fresh );
-    Archive reader( written.getData(), written.getSize() );
-    SW_EXPECT_TRUE( state.readState( reader ) );
-    SW_EXPECT_EQUAL( 1, state.getFlags().getFlag( hashed_string( "town.gateOpen" ) ) );
-}

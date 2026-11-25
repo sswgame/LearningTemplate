@@ -31,14 +31,14 @@ namespace sw
 
     SW_API const utf8* toString( TelemetryFieldKind type );
 
-    /** @brief 스키마 파일 루트(`<TelemetrySchema version>`)의 칸입니다. 적지 않으면 판 1 이다. */
+    /** @brief 스키마 파일 루트(`<TelemetrySchema version>`)의 칸입니다. 적지 않으면 첫 판(0)이다. */
     REFLECT()
     struct SW_API TelemetrySchemaRootParams
     {
         REFLECT_BODY();
 
         PROPERTY( Min = 1 )
-        int32 _version{ 1 };
+        int32 _version{ 0 };
     };
 } // namespace sw
 
@@ -117,7 +117,7 @@ namespace sw
      * @brief 읽은 스키마 파일들의 합입니다. 파일 하나를 읽다 모르는 원소 · 속성 · 타입, 겹친 사건 · 필드, 범위 밖 값이 나오면 그 파일 전체를 버리고
      *        false 입니다(이미 읽은 것은 그대로).
      * @code
-     *     <TelemetrySchema version="1">
+     *     <TelemetrySchema version="0">
      *       <Pipeline batchEvents="32" flushSeconds="30" maxFileBytes="262144" maxFiles="16" maxTotalBytes="2097152" sessionSample="1" breadcrumbs="32"/>
      *       <Event id="progression.waveReached" category="progression" sample="1">
      *         <Field name="wave" type="int" required="true"/>

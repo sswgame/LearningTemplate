@@ -150,7 +150,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag        = FourCCUtil::make( "MCBT" );
-        static constexpr uint32 kStateVersion    = 1;
+        static constexpr uint32 kStateVersion    = 0;
         static constexpr int32  kPlayerSide      = 0;
         static constexpr int32  kFoeSide         = 1;
         static constexpr int32  kSideCount       = 2;

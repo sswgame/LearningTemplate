@@ -43,7 +43,7 @@ namespace sw
         static constexpr int32  kSlotCount    = 9;
         static constexpr int32  kMaxStack     = 64;
         static constexpr uint32 kStateTag     = FourCCUtil::make( "VXHB" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 슬롯 블록을 카탈로그 순서 번호가 아니라 블록 id 로 적는다
+        static constexpr uint32 kStateVersion = 0;
 
         /** @brief 세이브의 블록 id ↔ 번호에 @p pCatalog 를 씁니다. 저장하지 않는 핫바(테스트)는 nullptr 이어도 됩니다 — 읽기는 카탈로그 없이 거절합니다. */
         explicit VoxelHotbar( const VoxelBlockCatalog* pCatalog );

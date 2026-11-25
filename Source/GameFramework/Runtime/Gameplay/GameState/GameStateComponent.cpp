@@ -36,38 +36,6 @@ namespace sw
         struct GameStateComponentInternal
         {
             static constexpr uint32 kSectionCount = 4;
-
-            /** @brief 판 1 의 플레이어 구간(지갑 · 일지 · 평판 · 가방)이면 true 입니다 — 판 2 부터 플레이어 상태 컴포넌트(`WalletComponent` 등)가 싣는다. */
-            static bool isPlayerSection( uint32 tag ) { return tag == Wallet::kStateTag || tag == QuestLog::kStateTag || tag == ReputationState::kStateTag || tag == Inventory::kStateTag; }
-
-            /**
-             * @brief 판 1 → 2: 플레이어 구간을 버리고 월드 구간(플래그 · 시계 · 날씨 · 땅)만 옮깁니다. 구간 본문은 그대로입니다.
-             * @details 플레이어 구간은 다른 컴포넌트(플레이어 상태 컴포넌트)의 상태라 이 컴포넌트의 바이트에서 옮겨 줄 수 없다 — 버린 것을 경고로 알린다.
-             */
-            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
-            {
-                uint32 sectionCount = 0;
-                inOldBody >> sectionCount;
-                vector<StateSectionTableUtil::Section> listKept;
-                uint32                                 droppedCount = 0;
-                for ( uint32 sectionIndex = 0; sectionIndex < sectionCount; ++sectionIndex )
-                {
-                    optional<StateSectionTableUtil::Section> section = StateIO::readSection( inOldBody );
-                    if ( section.has_value() == false )
-                        return false;
-                    if ( isPlayerSection( section->_tag ) )
-                        ++droppedCount;
-                    else
-                        listKept.push_back( std::move( *section ) );
-                }
-                if ( droppedCount > 0 )
-                    SW_LOG_WARNING_ID( "GameState.PlayerSectionsDropped", "GameState: an old save (version 1) held %# player section(s) (wallet, quest log, reputation, inventory) - they are not carried to the player components",
-                                       droppedCount );
-                outNewBody << static_cast<uint32>( listKept.size() );
-                for ( const StateSectionTableUtil::Section& section : listKept )
-                    StateIO::writeSection( outNewBody, section._tag, section._version, section._body );
-                return inOldBody.isOk();
-            }
         };
 
         struct GameStateWeatherWatchesInternal
@@ -143,8 +111,6 @@ namespace sw
             }
         };
     } // namespace
-
-    SW_STATE_FORMAT_UPGRADE( sessionState1To2, "GTST", 1, 2, &GameStateComponentInternal::upgradeStateFrom1 );
 
     SW_AUTOMATION_QUERY_WATCH( weatherSoundPlaying, "Weather.SoundPlaying", "1 while the weather sound event named key plays", &GameStateWeatherWatchesInternal::readSoundPlaying, false, true );
     SW_AUTOMATION_QUERY_WATCH( weatherSkyOpenness, "Weather.SkyOpenness", "Share of the sky open above the listener while a weather sound plays (0 indoors, 1 open)", &GameStateWeatherWatchesInternal::readSkyOpenness,

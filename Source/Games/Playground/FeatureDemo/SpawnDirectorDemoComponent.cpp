@@ -20,7 +20,7 @@ namespace sw
         struct SpawnDirectorDemoComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "FDSP" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
         };
     } // namespace
 

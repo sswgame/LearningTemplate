@@ -45,7 +45,7 @@ namespace sw
             /** @brief `findEditedArea` 가 바뀐 청크 둘레로 더 넓히는 칸 수입니다. 높이 질의는 셀의 두 샘플을, 노멀은 그 이웃 샘플을 읽는다. */
             static constexpr uint32 kEditedAreaMarginCells = 2;
             /** @brief `writeState` 형식 버전입니다. 형식을 바꾸면 올린다. */
-            static constexpr uint32 kStateVersion = 3; ///< 3: 스플랫이 텍셀마다 레이어 여덟 바이트다. 2: 구멍 마스크를 더했고, 높이의 해상도가 다시 읽은 것과 달라도 복원한다(크기 바꾸기)
+            static constexpr uint32 kStateVersion = 0;
 
             static const hashed_string& getLayerColorName( uint32 layerIndex )
             {

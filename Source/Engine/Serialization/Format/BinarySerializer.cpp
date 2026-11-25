@@ -31,7 +31,7 @@ namespace sw
 
             /**
              * @brief 태그 스트림 머리(uint32)의 구성입니다. 아래 24비트는 프로퍼티 수, 위 8비트는 값 인코딩의 버전(`BinaryWireVersion`)입니다.
-             * @details 위 8비트가 현재 버전이 아니면 읽지 않는다(버전이 없던 스트림은 0 이다. 프로퍼티가 1600만 개인 타입은 없다). 머리는 스트림마다 있어
+             * @details 위 8비트가 현재 버전이 아니면 읽지 않는다(프로퍼티가 1600만 개인 타입은 없다). 머리는 스트림마다 있어
              *          중첩 구조체와 소유 포인터 본문도 자기 버전을 말한다. 버전을 올리는 변경은 이 위치 하나만 고치면 모든 바이너리 경로(세이브, 스냅샷, 쿠킹 씬,
              *          복사, RPC)에 반영된다.
              */
@@ -39,6 +39,8 @@ namespace sw
             static constexpr uint32 kTaggedCountMask    = ( 1u << kTaggedVersionShift ) - 1;
             /** @brief 머리의 버전 바이트에서 배치 스트림(이름 · 형식 태그가 없고 머리 뒤에 배치 해시가 있다)을 나타내는 비트입니다. 값 인코딩의 버전은 나머지 비트다. */
             static constexpr uint32 kSchemaLayoutBit = 0x80u;
+            /** @brief 머리의 버전 바이트에 늘 켜는 비트입니다. 첫 버전이 0 이라, 이 비트가 없으면 0 으로 채워진 바이트가 "버전 0, 프로퍼티 없음" 으로 읽힌다. */
+            static constexpr uint32 kVersionedBit = 0x40u;
 
             /**
              * @brief 이 빌드가 읽을 수 있는 버전인지 확인합니다. 현재 버전 하나뿐입니다. 더 높은 버전은 앞선 빌드가 쓴 것이고, 낮은 버전을 올리는 단계는 없습니다
@@ -123,8 +125,8 @@ namespace sw
                     return false;
                 const uint32 versionByte       = header >> kTaggedVersionShift;
                 outbSchemaLayout               = context.usesSchemaLayout() && ( versionByte & kSchemaLayoutBit ) != 0;
-                const uint32 wireVersionNumber = outbSchemaLayout ? versionByte & ~kSchemaLayoutBit : versionByte;
-                if ( isReadableWireVersion( wireVersionNumber ) == false )
+                const uint32 wireVersionNumber = versionByte & ~( kVersionedBit | ( outbSchemaLayout ? kSchemaLayoutBit : 0u ) );
+                if ( ( versionByte & kVersionedBit ) == 0 || isReadableWireVersion( wireVersionNumber ) == false )
                 {
                     SW_LOG_WARNING_ID( "BinarySerializer.BinaryStreamWireVersion", "%#: binary stream is wire version %# but this build reads up to %# - not read", typeInfo._name.c_str(), wireVersionNumber,
                                        static_cast<uint32>( kCurrentBinaryWireVersion ) );
@@ -565,7 +567,7 @@ namespace sw
         outListBuffer.reserve( outListBuffer.size() + sizeof( uint32 ) + static_cast<size_t>( propCount ) * 32 );
         SW_ASSERT( propCount <= BinarySerializerInternal::kTaggedCountMask );
         // 머리의 위 8비트가 버전이다(`kTaggedVersionShift` 설명 참고). 읽는 쪽이 이 스트림의 enum 을 이름으로 읽을지 값으로 읽을지 여기서 안다.
-        const uint32 versionByte = static_cast<uint32>( kCurrentBinaryWireVersion ) | ( bSchemaLayout ? BinarySerializerInternal::kSchemaLayoutBit : 0u );
+        const uint32 versionByte = static_cast<uint32>( kCurrentBinaryWireVersion ) | BinarySerializerInternal::kVersionedBit | ( bSchemaLayout ? BinarySerializerInternal::kSchemaLayoutBit : 0u );
         writer.writePod( propCount | ( versionByte << BinarySerializerInternal::kTaggedVersionShift ) );
         if ( bSchemaLayout )
             writer.writePod( typeInfo.getSchemaLayoutHash() );

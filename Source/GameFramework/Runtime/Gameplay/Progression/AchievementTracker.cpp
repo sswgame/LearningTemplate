@@ -15,7 +15,7 @@ namespace sw
         struct AchievementTrackerInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "ACHV" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
 
             /** @brief @p value 가 그 통계 종류로 문턱에 닿았는가입니다. 최소 통계는 작을수록 좋은 기록이라 문턱 이하다. */
             static bool isPastThreshold( StatKind kind, float64 value, float64 threshold ) { return kind == StatKind::Min ? value <= threshold : value >= threshold; }

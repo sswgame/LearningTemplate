@@ -41,9 +41,7 @@ namespace sw
         [[nodiscard]] static bool applyStateSection( const Section& section, TState& inoutState, const utf8* pName )
         {
             Archive body = section._body;
-            // 머리로 판을 올리는 형식(`kStateHeaderlessVersion` — 세계 시계)은 안쪽 머리가 올린다 — 구간 판으로 또 올리면 두 번 오른다.
-            constexpr bool bVersionedByHeader = StateIOInternal::HasHeaderlessVersion<TState>::value;
-            if ( bVersionedByHeader == false && StateIO::upgradeSectionBody( TState::kStateTag, section._version, TState::kStateVersion, body ) == false )
+            if ( StateIO::upgradeSectionBody( TState::kStateTag, section._version, TState::kStateVersion, body ) == false )
             {
                 SW_LOG_WARNING_ID( "GameState.SectionVersionNot", "GameState: %# section version %# is not %# and has no upgrade chain to it", pName, section._version,
                                    TState::kStateVersion );

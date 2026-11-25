@@ -17,7 +17,7 @@ namespace sw::editor
             /** @brief 맡김 칸의 키입니다. */
             static constexpr string_view kStoreKey = "editor.objectCopyBuffer";
             /** @brief 맡긴 형식의 판입니다. 항목 모양이 바뀌면 올린다(옛 판은 버린다). */
-            static constexpr uint32 kVersion = 1;
+            static constexpr uint32 kVersion = 0;
         };
     } // namespace
 

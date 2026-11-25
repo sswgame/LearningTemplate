@@ -20,7 +20,7 @@ namespace sw
         struct SRPGGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "KDTS" );
-            static constexpr uint32 kStateVersion = 3; // 3: 커서가 클라이언트 모듈(`SRPGCursorComponent`)로 가 디렉터 상태 칸에서 빠졌다
+            static constexpr uint32 kStateVersion = 0;
             static constexpr int32  kNoSelection  = -1;
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.

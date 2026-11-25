@@ -15,7 +15,6 @@
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Component/RhythmGameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/GameMode/Tests/GameModeStateVersionTest.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
@@ -151,16 +150,5 @@ SW_TEST_CASE_F( RhythmGameModeTest, AutoPlayedSongIsClearedWithTheReward )
     SW_REQUIRE_EQUAL( size_t{ 1 }, listValue.size() );
     SW_EXPECT_EQUAL( int64{ 25 }, listValue[0]._amount );
     advance( 60 );
-    _manager.endPlay();
-}
-
-/** @brief [RhythmGameModeTest] 결과 유지 깃발이 있던 판 1 상태는 패치로 올라 읽히고 나머지 값이 그대로다(판 1 은 `_musicTime` 뒤에 깃발 둘이 있었다) */
-SW_TEST_CASE_F( RhythmGameModeTest, Version1StateIsPatchedAndReadsTheSame )
-{
-    _manager.beginPlay();
-    SW_REQUIRE_TRUE( _pGameMode->isStarted() );
-    advance( 30 );
-    constexpr uint8 kArrRemovedField[] = { 0, 0 };
-    test::GameModeStateVersionTest::expectVersion1ReadsTheSame( *_pGameMode, sizeof( float32 ), kArrRemovedField );
     _manager.endPlay();
 }

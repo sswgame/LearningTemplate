@@ -23,7 +23,7 @@ namespace sw
         struct PickupComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "PICK" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
         };
 
         const StatefulComponentRegistrar<PickupComponent> s_stateRegistration{ "PickupComponent" };

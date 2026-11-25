@@ -66,7 +66,7 @@ namespace sw::editor
 
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 바뀐 파일 목록의 키와 형식 판입니다. */
             static constexpr string_view kPendingStoreKey = "editor.assetHotReload.pending";
-            static constexpr uint32      kPendingVersion  = 1;
+            static constexpr uint32      kPendingVersion  = 0;
 
             /** @brief 에디터 컨텍스트가 없으면 nullptr 입니다(감시 값은 에디터 없는 호스트에도 등록돼 있다). 컨텍스트가 있는데 서비스가 없으면 버그라 멈춘다. */
             static AssetHotReload* findHotReload()

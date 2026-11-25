@@ -21,7 +21,7 @@ namespace sw
         struct SurvivalHorrorGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "SHGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventSanity        = "SurvivalHorrorSanity";

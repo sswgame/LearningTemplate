@@ -59,7 +59,7 @@ namespace sw
      *          사용 횟수는 씬 상태에 실린다. 가리키는 항목은 종류마다 다른 카탈로그라 칸을 종류마다 둔다(`CatalogKey` — 한 칸이 종류에 따라 다른 표를 가리키면 쿠커 · 인스펙터가
      *          어느 표인지 모른다). 예전 한 칸 `_id` 는 지웠다.
      */
-    REFLECT( RemovedField = "_id", Category = "Western", DisplayName = "Western Deed", Tooltip = "A spot where the player can do something: a crime, a hunt, a sale, a meal" )
+    REFLECT( Category = "Western", DisplayName = "Western Deed", Tooltip = "A spot where the player can do something: a crime, a hunt, a sale, a meal" )
     class SW_KIT_API WesternDeedComponent : public Component
     {
     public:

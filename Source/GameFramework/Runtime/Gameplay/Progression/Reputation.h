@@ -146,7 +146,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "REPU" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 리플렉션 상태 칸(판 1 손 본문은 머리를 붙여 올린다 — `ReflectedStateUpgrade::prependHead`)
+        static constexpr uint32 kStateVersion = 0;
 
         ReputationState();
 

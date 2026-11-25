@@ -25,7 +25,7 @@ namespace sw
         struct ActionPlatformerGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "KDAP" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 부활 흐름(`RespawnFlow`)을 싣는다
+            static constexpr uint32 kStateVersion = 0;
 
             static constexpr const utf8* kStartPointID = "start";
 

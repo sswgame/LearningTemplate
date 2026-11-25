@@ -19,7 +19,7 @@ namespace sw
         struct AsymmetricHorrorGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "AHGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
             static constexpr int32  kPlayer       = 0;  ///< 늘 사람이 잡는 생존자(카메라 · 감시 값의 주인)
             static constexpr int32  kMaxSurvivors = 32; ///< 사람 비트(`_humanMask`)에 들어가는 수
 

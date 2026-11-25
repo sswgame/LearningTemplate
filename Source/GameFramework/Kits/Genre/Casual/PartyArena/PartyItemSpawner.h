@@ -115,7 +115,7 @@ namespace sw
         static constexpr AssetTypeDef kAssetType{ "PartyItemSpawner", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "PISP" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 0;
 
         PartyItemSpawner();
 

@@ -51,7 +51,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "OPLC" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 0;
 
         /** @brief 타일 (1,1), 입력 허용으로 시작합니다. */
         OverworldTileMover();

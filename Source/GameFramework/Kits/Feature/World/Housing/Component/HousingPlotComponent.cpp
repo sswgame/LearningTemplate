@@ -22,7 +22,6 @@
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
 
 #include "GameFramework/Kits/Feature/World/Housing/Network/HousingNetSessionComponent.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
@@ -34,16 +33,6 @@ namespace sw
     {
         struct HousingPlotInternal
         {
-            /** @brief 부지 상태 판 1 → 2: 앞에 주인 주체(uint64)가 생겼다. 옛 세이브의 부지는 주인 없음이다. 옛 칸(레이아웃 · 지갑)은 그대로 뒤에 붙는다(`FormatUpgradeStep::runStateStep`). */
-            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
-            {
-                (void)inOldBody;
-                StateIO writer( outNewBody );
-                uint64  owner = HousingOwnerID::kNone;
-                writer.value( owner );
-                return writer.isOk();
-            }
-
             /** @brief 부지 둘이 칸 경계에서 맞닿는 것은 겹침이 아니다(m). */
             static constexpr float32 kTouchEpsilon = 1.0e-3f;
 
@@ -360,8 +349,6 @@ namespace sw
         /** @brief 배치 · 지갑을 모든 게임의 상태 스냅샷에 싣고, 저장 전에 부품 뷰 · 고스트를 걷는다(게임마다 올리지 않는다). */
         const StatefulComponentRegistrar<HousingPlotComponent> s_stateRegistration{ "HousingPlotComponent" };
     } // namespace
-
-    SW_STATE_FORMAT_UPGRADE( housingPlotState1To2, "HPLT", 1, 2, &HousingPlotInternal::upgradeStateFrom1 );
 
     SW_DEV_COMMAND( HousingPreview, "housing.preview", "housing.preview <plot> <part> <x> <z> <level> <yawDegrees> [free]", "Show the ghost of a part on a housing plot and why it can or cannot go there",
                     &HousingPlotInternal::runPreview );

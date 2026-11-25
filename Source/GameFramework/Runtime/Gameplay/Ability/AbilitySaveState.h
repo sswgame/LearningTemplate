@@ -92,7 +92,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "ABIL" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 리플렉션 상태 칸(판 1 손 본문은 옛 칸으로 읽어 다시 써 올린다)
+        static constexpr uint32 kStateVersion = 0;
 
         PROPERTY( RuntimeState )
         float32 _time{ 0.0f };

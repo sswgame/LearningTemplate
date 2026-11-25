@@ -23,7 +23,7 @@ namespace sw
         struct RigidBody2DComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "RB2S" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
         };
 
         /** @brief 지금 월드 회전에서 Z 축 둘레 각만 바꾼 회전입니다(다른 축 회전은 2D 물리가 모른다 — 그대로 둔다). */

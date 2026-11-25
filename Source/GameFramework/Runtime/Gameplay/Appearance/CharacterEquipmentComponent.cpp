@@ -2,7 +2,6 @@
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 
-#include "Core/Encoding/Base64Util.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
@@ -35,30 +34,7 @@ namespace sw
         /** @brief 장비 칸과 가방을 게임 세이브에 싣습니다(모든 게임 — 게임마다 올리지 않는다). */
         const StatefulComponentRegistrar<CharacterEquipmentComponent> s_stateRegistration{ "CharacterEquipmentComponent" };
 
-        struct CharacterEquipmentStateInternal
-        {
-            /** @brief 판 1 → 2: 낀 칸(칸 이름 + 슬롯)과 가방(인벤토리 판 2 본문)의 슬롯마다 꾸미기 스키마 판(1)을 넣는다. */
-            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
-            {
-                StateIO inOld( inOldBody );
-                StateIO outNew( outNewBody );
-                uint32  wornCount = 0;
-                inOld.count( 4 + Inventory::kUnversionedSlotMinBytes, wornCount );
-                outNew.count( 4 + Inventory::kSlotStateMinBytes, wornCount );
-                for ( uint32 index = 0; index < wornCount && inOld.isOk(); ++index )
-                {
-                    hashed_string slotName;
-                    inOld.value( slotName );
-                    outNew.value( slotName );
-                    Inventory::upgradeSlotFromUnversioned( inOld, outNew );
-                }
-                Inventory::upgradeStateFrom2( inOld, outNew );
-                return inOld.isOk() && outNew.isOk();
-            }
-        };
     } // namespace
-
-    SW_STATE_FORMAT_UPGRADE( characterEquipment1To2, "CEQP", 1, 2, &CharacterEquipmentStateInternal::upgradeStateFrom1 );
 
     CharacterEquipmentComponent::CharacterEquipmentComponent()
         : _character{}
@@ -235,7 +211,7 @@ namespace sw
         if ( result.has_value() == false )
         {
             SW_LOG_WARNING_ID( "CharacterEquipment.SavedItemFromNewerSchema", "Saved '%#' has customization of schema '%#' version %# newer than this content (%#) - the equipment state is not loaded", inoutItem._itemID.c_str(),
-                               pSchema->_id.c_str(), inoutItem.getCustomization().getSchemaVersion(), pSchema->getVersion() );
+                               pSchema->_id.c_str(), inoutItem.getCustomization().getSchemaVersion().value_or( 0 ), pSchema->getVersion() );
             return false;
         }
         for ( const hashed_string& dropped : listDropped )
@@ -485,30 +461,6 @@ namespace sw
                 return true;
             }
 
-            /**
-             * @brief `equipment.restore <object> <base64>` — 장비 상태 바이트(`serializeState` 가 쓴 것, base64)를 겁니다. 게임 세이브의 그 구간과 같은 길이다.
-             *        옛 판 세이브 표본(손으로 쓴 바이트)을 시나리오에서 불러 판 올림 사슬을 본다. 읽지 못하면 지금 장비를 그대로 두고 알린다.
-             */
-            static bool runRestore( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 2 )
-                    return false;
-                CharacterEquipmentComponent* pEquipment = findEquipment( listArgument[0], outReply );
-                if ( pEquipment == nullptr )
-                    return false;
-                vector<uint8> bytes;
-                if ( Base64Util::decode( listArgument[1], bytes ) == false || bytes.empty() )
-                {
-                    outReply = "the state is not base64 bytes";
-                    return false;
-                }
-                pEquipment->restoreState( std::move( bytes ) );
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "restored the equipment state of %#", listArgument[0] );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
             // ---- 감시 값(대상은 장비 컴포넌트를 가진 오브젝트) ----
 
             static const CharacterEquipmentComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
@@ -629,8 +581,6 @@ namespace sw
                     &CharacterEquipmentCommandsInternal::runEquip );
     SW_DEV_COMMAND( ItemPickUp, "item.pickup", "item.pickup <character> <worldItem>", "Pick a world item stack up into a character's equipment bag (refused when it does not all fit)",
                     &CharacterEquipmentCommandsInternal::runPickUp );
-    SW_DEV_COMMAND( EquipmentRestore, "equipment.restore", "equipment.restore <object> <base64>", "Apply saved equipment state bytes (an older save sample upgrades on read)",
-                    &CharacterEquipmentCommandsInternal::runRestore );
     SW_DEV_COMMAND( EquipmentDye, "equipment.dye", "equipment.dye <object> <slot> <parameter> <number | r g b [a] | option>",
                     "Change one customization value (dye) of the item instance worn in a slot", &CharacterEquipmentCommandsInternal::runDye );
     SW_AUTOMATION_QUERY_WATCH( equipmentWorn, "Equipment.Worn", "Item the character's equipment wears in the slot named by key ('(empty)' when empty)",

@@ -24,7 +24,7 @@ namespace sw
         struct PlayerStatsInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "STAT" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
         };
     } // namespace
 } // namespace sw

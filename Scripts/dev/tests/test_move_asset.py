@@ -1,23 +1,21 @@
 """
-move-asset 회귀 검사 — 팩 이름 바꾸기(`game/<옛>` → `game/<새>`)에서 골든 파일 이름 · 시나리오 이름 · 문자열 경로 접두를 함께 바꾸고,
-도메인 뿌리를 통째로 옮기면 파일마다가 아니라 새 도메인 표에 접두 리다이렉트 한 줄을 쓴다. 팩 흡수(`game/<옛>` → `game/<새>/<하위>`)는 경로 접두만 바꾼다.
+move-asset 회귀 검사 — 팩 이름 바꾸기(`game/<옛>` → `game/<새>`)에서 골든 파일 이름 · 시나리오 이름 · 문자열 경로 접두를 함께 바꾼다.
+팩 흡수(`game/<옛>` → `game/<새>/<하위>`)는 경로 접두만 바꾼다.
 
-실행: python -X utf8 Scripts/dev/tests/test_move_asset.py (CTest `Scripts.MoveAsset`). 저장소를 읽지 않는다(글 · 임시 git 저장소를 테스트가 만든다).
+실행: python -X utf8 Scripts/dev/tests/test_move_asset.py (CTest `Scripts.MoveAsset`). 저장소를 읽지 않는다.
 """
 
 from __future__ import annotations
 
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common.git import run_git_or_raise  # noqa: E402
 from dev.move_asset import (PackAbsorb, PackRename, ScenarioRename, get_pack_absorb, get_pack_rename, get_scenario_rename, is_domain_root, is_pack_string_file,  # noqa: E402
                             list_golden_renames, list_leftover_patterns, list_scenario_golden_renames, rewrite_absorbed_strings, rewrite_pack_strings,
-                            rewrite_redirect_tables, rewrite_scenario_name, rewrite_table_targets)
+                            rewrite_scenario_name)
 from lint.asset_identity import FOUND, read_header  # noqa: E402
 
 RENAME = PackRename("oldpack", "newpack")
@@ -107,11 +105,6 @@ class MoveAssetPackRenameTest(unittest.TestCase):
         self.assertFalse(is_pack_string_file("Content/game/oldpack/redirects.xml"))
         self.assertFalse(is_pack_string_file("docs/NEXT.md"))
 
-    def test_moved_table_keeps_old_ids_and_points_to_the_new_pack(self) -> None:
-        table = '<Redirects>\n\t<Redirect from="game/oldpack/a.xml" to="game/oldpack/b.xml" />\n</Redirects>\n'
-        self.assertEqual(rewrite_table_targets(table, [("game/oldpack", "game/newpack", True)]),
-                         '<Redirects>\n\t<Redirect from="game/oldpack/a.xml" to="game/newpack/b.xml" />\n</Redirects>\n')
-
 
 class MoveAssetPackAbsorbTest(unittest.TestCase):
     def test_only_a_pack_root_into_another_pack_folder_is_absorbed(self) -> None:
@@ -131,23 +124,6 @@ class MoveAssetPackAbsorbTest(unittest.TestCase):
         self.assertEqual(count, 3)
         self.assertEqual(list_leftover_patterns("game/oldpack", absorb), ["game/oldpack", "game.oldpack.", "scenario.oldpack"])
         self.assertEqual(list_leftover_patterns("game/oldpack", None), ["game/oldpack"])
-
-
-class MoveAssetRedirectTest(unittest.TestCase):
-    def test_moves_only_fix_where_saved_paths_point_and_add_no_lines(self) -> None:
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            run_git_or_raise(["init", "-q"], cwd=root)
-            table_path = root / "Content/game/pack/redirects.xml"
-            table_path.parent.mkdir(parents=True)
-            guid = "0123456789abcdef0123456789abcdef"
-            identity = '\t<IdentityRedirect from="00000000000000000000000000000001" to="00000000000000000000000000000002" />\n'
-            table_path.write_text(f'<?asset guid="{guid}"?>\n<Redirects>\n\t<Redirect from="game/old/a.xml" to="game/pack/a.xml" />\n{identity}</Redirects>\n', encoding="utf-8", newline="\n")
-            run_git_or_raise(["add", "Content"], cwd=root)
-            self.assertEqual(rewrite_redirect_tables(root, [("game/pack/a.xml", "game/pack/sub/b.xml", False)]), ["Content/game/pack/redirects.xml"])
-            self.assertEqual(table_path.read_text(encoding="utf-8"),
-                             f'<?asset guid="{guid}"?>\n<Redirects>\n\t<Redirect from="game/old/a.xml" to="game/pack/sub/b.xml" />\n{identity}</Redirects>\n')
-            self.assertEqual(rewrite_redirect_tables(root, [("game/pack/other.xml", "game/pack/x.xml", False)]), [])
 
 
 if __name__ == "__main__":

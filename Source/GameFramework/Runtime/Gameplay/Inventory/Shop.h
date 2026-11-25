@@ -218,7 +218,7 @@ namespace sw
     public:
         static constexpr uint32 kStateTag = FourCCUtil::make( "SHOP" );
         /// 2: 머리표와 가게마다 되사기 목록을 쓴다(판 1 은 머리표가 없어 거절한다). 3: 되사기 조각 슬롯에 꾸미기 스키마 판(`Inventory::serializeSlot` — 판 2 는 `SW_STATE_FORMAT_UPGRADE` 가 올린다)
-        static constexpr uint32 kStateVersion = 3;
+        static constexpr uint32 kStateVersion = 0;
 
         ShopManager();
 

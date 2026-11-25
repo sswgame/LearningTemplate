@@ -22,7 +22,7 @@ namespace sw
         struct MechArenaGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "MAGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";

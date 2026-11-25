@@ -19,8 +19,8 @@ Scripts/dev/shipping_check.py
 배포 실행 파일에 테스트용 전역 변수 이름(`SW_TEST_GLOBAL_VARIABLE` 의 `gv_…`)이 하나라도 남아 있으면 실패다 — 배포 구성에서 그 변수는 상수라
 등록(이름 글)도 읽는 분기도 접혀 사라져야 한다. 남았다면 상수 접기가 안 되는 자리(주소를 넘기는 곳 · 쓰는 곳)이니 그 자리를 배포 구성에서 뺀다.
 
-배포 도메인(engine · common · 활성 게임)의 리다이렉트 표(`Content/<도메인>/redirects.xml`)가 그 도메인의 팩에 들어 있는지도 본다 — 빠지면 옮긴 에셋의 옛 id 가 배포본에서만 풀리지 않고,
-런타임은 표가 없는 도메인을 정상으로 본다(`AssetRedirect::loadFromSearchDomains`).
+배포 도메인(engine · common · 활성 게임)의 리다이렉트 표(`Content/<도메인>/redirects.xml`)가 그 도메인의 팩에 들어 있는지도 본다 — 빠지면 다른 에셋으로 대신한 GUID 가
+배포본에서만 풀리지 않고, 색인은 표가 없는 도메인을 정상으로 본다.
 
 로그는 `build/<프리셋>/Testing/Logs/ShippingCheck.<이름>.log` 이다. 끝에 로그마다 [Error] · [Warning] 줄을 모아 찍는다 — 기대한 줄이 아닌 [Error] 가 있으면 실패다.
 

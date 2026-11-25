@@ -43,7 +43,7 @@ namespace sw
         SW_REGISTERED_COMPONENT( QuestLogComponent );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "QLGC" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 0;
         /** @brief 자동으로 세는 목표 종류 — 퀘스트 데이터의 `<Objective kind="…">` 와 같은 글자다. */
         static constexpr const utf8* kDefeatKind   = "Defeat";
         static constexpr const utf8* kInteractKind = "Interact";

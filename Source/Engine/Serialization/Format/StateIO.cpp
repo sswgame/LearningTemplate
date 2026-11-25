@@ -104,33 +104,24 @@ namespace sw
         (void)_pSourceArchive->setOffset( _pSourceArchive->getSize() - _pUpgradedArchive->getRemainingBytes() );
     }
 
-    void StateIO::header( uint32 tag, uint32 version, uint32 headerlessVersion )
+    void StateIO::header( uint32 tag, uint32 version )
     {
         if ( isWriting() )
         {
             writeHeader( *_pArchive, tag, version );
             return;
         }
-        const uint64 start       = _pArchive->getOffset();
-        uint32       readTag     = 0;
-        uint32       readVersion = 0;
+        uint32 readTag     = 0;
+        uint32 readVersion = 0;
         *_pArchive >> readTag;
         *_pArchive >> readVersion;
         if ( check( _pArchive->isOk() ) == false )
             return;
         if ( readTag != tag )
         {
-            if ( headerlessVersion == 0 )
-            {
-                SW_LOG_WARNING_ID( "StateIO.HeaderTagMismatch",
-                                   "State header tag %# is not the expected %# - the bytes are another format or a version from before this format had a header; that version cannot be known, so it is refused (no upgrade)",
-                                   readTag, tag );
-                fail();
-                return;
-            }
-            // 머리표가 없던 판이다 — 머리를 읽지 않은 자리로 돌아가 그 판의 칸으로 올린다.
-            (void)_pArchive->setOffset( start );
-            readVersion = headerlessVersion;
+            SW_LOG_WARNING_ID( "StateIO.HeaderTagMismatch", "State header tag %# is not the expected %# - the bytes are another format, so its version cannot be known and it is refused (no upgrade)", readTag, tag );
+            fail();
+            return;
         }
         if ( readVersion == version )
             return;

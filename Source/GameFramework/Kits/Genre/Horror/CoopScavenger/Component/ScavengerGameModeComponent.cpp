@@ -22,7 +22,7 @@ namespace sw
         struct ScavengerGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "SCGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
             static constexpr int32  kPlayer       = 0; ///< 늘 사람이 잡는 승무원(카메라 · 감시 값의 주인)
             /** @brief 축 방향과 이웃 방향이 이만큼은 맞아야 그 이웃으로 본다(내적). */
             static constexpr float32 kNeighborAlignment = 0.5f;

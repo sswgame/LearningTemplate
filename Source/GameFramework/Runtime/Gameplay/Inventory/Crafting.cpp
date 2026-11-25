@@ -94,41 +94,9 @@ namespace sw
         struct CraftingStateInternal
         {
             static constexpr uint32 kJobMinBytes = 12; ///< 작업 하나 — 이름(4) + 남은 시간(4) + 개수(4)
-
-            /** @brief 판 2 → 3: 꺼낸 재료 조각 슬롯마다 꾸미기 스키마 판(1)을 넣는다. 배운 레시피 · 작업 칸은 그대로 옮긴다. */
-            [[nodiscard]] static bool upgradeStateFrom2( Archive& inOldBody, Archive& outNewBody )
-            {
-                StateIO               inOld( inOldBody );
-                StateIO               outNew( outNewBody );
-                vector<hashed_string> listLearned;
-                inOld.list( listLearned );
-                outNew.list( listLearned );
-                uint32 jobCount = 0;
-                inOld.count( kJobMinBytes, jobCount );
-                outNew.count( kJobMinBytes, jobCount );
-                for ( uint32 jobIndex = 0; jobIndex < jobCount && inOld.isOk(); ++jobIndex )
-                {
-                    CraftJob job;
-                    inOld.value( job._recipeID );
-                    inOld.value( job._remaining );
-                    inOld.value( job._count );
-                    outNew.value( job._recipeID );
-                    outNew.value( job._remaining );
-                    outNew.value( job._count );
-                    uint32 unitCount = 0;
-                    inOld.count( sizeof( uint32 ), unitCount );
-                    outNew.count( sizeof( uint32 ), unitCount );
-                    for ( uint32 unitIndex = 0; unitIndex < unitCount && inOld.isOk(); ++unitIndex )
-                    {
-                        Inventory::upgradeSlotListFromUnversioned( inOld, outNew );
-                    }
-                }
-                return inOld.isOk() && outNew.isOk();
-            }
         };
     } // namespace
 
-    SW_STATE_FORMAT_UPGRADE( crafter2To3, "CRFT", 2, 3, &CraftingStateInternal::upgradeStateFrom2 );
 } // namespace sw
 
 namespace sw
@@ -161,7 +129,6 @@ namespace sw
 
     bool RecipeCatalog::loadRecipe( const XMLNode& node, string_view sourceName )
     {
-
         // 적지 않은 칸은 RecipeDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 레시피를 넣지 않는 오류다(자르지 않는다).
         RecipeDef         recipe;
         bool              bValid = XMLFields::readProperties( node, recipe, sourceName );

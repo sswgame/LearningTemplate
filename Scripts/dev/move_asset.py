@@ -3,16 +3,14 @@
 
   py -3 -m Scripts move-asset common/prefabs/props/bow.prefab.xml common/prefabs/weapons/bow.prefab.xml [--dry-run]
   py -3 -m Scripts move-asset game/playground/materials game/playground/surfaces
-  py -3 -m Scripts move-asset <옛1> <새1> <옛2> <새2> …   # 여러 쌍을 차례로 — 끊어진 참조 검사(5)는 끝에 한 번
+  py -3 -m Scripts move-asset <옛1> <새1> <옛2> <새2> …   # 여러 쌍을 차례로 — 끊어진 참조 검사(4)는 끝에 한 번
 
 경로는 리소스 id(`Content/` 뒤 — 앞에 `Content/` 를 붙여도 된다)다. 하는 일:
   1. `git mv` — 원본 곁의 정체성 서술(`<파일>.meta`)도 함께 옮기고 그 안의 원본 이름을 새 이름으로 쓴다(GUID 는 그대로 — 옮겨도 정체성은 같다).
   2. 참조 파일(Content 의 글 에셋 · 테스트 CMake)에서 경로 글(GUID 참조는 옮겨도 그대로다)을 담은 칸(`Config/Dev/AssetReferenceFields.json` — 커밋 전 검사 · `App --check-asset-refs` ·
      에디터 이름 바꾸기와 같은 목록)의 값만 새 경로로. 폴더면 그 아래 경로 전부, 원본(`models_raw/x.glb`)이면 그 임포트 산출물 경로(`models/x…`)도.
      칸 밖의 글(주석 · 문서 · 출처 표)은 고치지 않는다 — 끝에 남은 옛 경로를 찍는다.
-  3. 저장된 기록의 옛 경로 표(`Content/<도메인>/redirects.xml` 의 `<Redirect>` · `<PrefixRedirect>`)의 `to` 를 새 자리로 고친다. 줄은 더하지 않는다 — GUID 로 적은 참조는
-     옮겨도 그대로라 리다이렉트가 필요 없다(유니티 · Godot). 표는 경로를 적던 때의 세이브만 읽는다(C++ `AssetRedirect::readSavedReference`).
-  4. 팩 이름 바꾸기(`game/<옛>` → `game/<새>`)면 팩 이름이 든 이름도 함께: 골든 파일(`<Scenario name>.<이름>.<백엔드>…` — `AutomationGoldenUtil::makeGoldenID`)의
+  3. 팩 이름 바꾸기(`game/<옛>` → `game/<새>`)면 팩 이름이 든 이름도 함께: 골든 파일(`<Scenario name>.<이름>.<백엔드>…` — `AutomationGoldenUtil::makeGoldenID`)의
      `game.<옛>.` 접두, 글 파일(C++ · 파이썬 · CMake · JSON · XML) 속 시나리오 이름 `game.<옛>.`, 콘텐츠 경로 문자열 `game/<옛>/`, CTest 체인 이름
      `Scenario.<옛>`(`Test/Scenario/CMakeLists.txt` 가 팩 이름으로 짓는다 — 격리 표 · 로그 이름), 따옴표로 끝나는 도메인 `"game/<옛>"`(게임 프리셋 `_packRoot`), 팩 줄기 `game_<옛>`,
      씬 청크 이름 `scene_<옛>_`, 대소문자 · 구분자가 다른 경로 `Game/<Old>/` · `Game\\<Old>/`(옛 이름의 대소문자 꼴을 새 이름에 옮긴다).
@@ -21,7 +19,7 @@
      시나리오 이름 `game.<옛>.` · 체인 `Scenario.<옛>` 은 새 자리를 시나리오마다 고르므로 남은 목록에 찍는다.
      시나리오 파일 하나를 옮기면(`….scenario.xml` → `….scenario.xml`) 이름이 파일을 따라간다: `<Scenario name>` 의 끝 마디는 새 파일 이름, 팩 마디는 새 팩이고
      그 시나리오의 골든(`golden/<이름>.<골든>.<백엔드>…`)과 글 속 그 이름도 함께 바꾼다(골든은 이름만 — 그림은 다시 찍지 않는다).
-  5. 작업 트리 전체를 검사해 끊어진 참조가 남았으면 알린다(실패 코드).
+  4. 작업 트리 전체를 검사해 끊어진 참조가 남았으면 알린다(실패 코드).
 `--resume` 은 파일 옮기기를 건너뛰고 2–5 만 다시 돈다 — 규칙을 넓힌 뒤 이미 옮긴 자리에 적용한다(바꾸기는 모두 정확한 접두라 두 번 돌아도 같다).
 임포트 산출물은 커밋하지 않으므로 원본을 옮긴 뒤에는 `App --import-models` 등으로 다시 임포트한다.
 """
@@ -209,11 +207,6 @@ def list_golden_renames(list_index: list[str], rename: PackRename) -> list[tuple
     return list_rename
 
 
-def rewrite_table_targets(text: str, list_rule: list[tuple[str, str, bool]]) -> str:
-    """옛 경로 표의 `to` 를 새 자리로 — `from` 은 저장된 기록의 옛 경로라 그대로 둔다(정체성 대체 줄의 GUID 는 경로가 아니라 바뀌지 않는다)."""
-    return re.sub(r'(\bto=")([^"]*)(")', lambda match: match.group(1) + (rewrite_path(match.group(2), list_rule) or match.group(2)) + match.group(3), text)
-
-
 def to_asset_id(argument: str) -> str:
     normalized = argument.replace("\\", "/").strip("/")
     if normalized.lower().startswith(CONTENT_FOLDER.lower() + "/"):
@@ -290,25 +283,6 @@ def move_sidecar(root: Path, old_path: str, new_path: str) -> None:
         raise RuntimeError(f"git add {new_meta} 실패: {result.stderr.strip()}")
 
 
-def rewrite_redirect_tables(root: Path, list_rule: list[tuple[str, str, bool]]) -> list[str]:
-    """모든 도메인의 옛 경로 표에서 옮긴 자리를 가리키는 `to` 를 새 자리로 쓰고 `git add` 한다. 고친 표 경로 목록을 돌려준다."""
-    list_written = []
-    for relative_path in list_index_files(root):
-        table_path = root / relative_path
-        if not relative_path.startswith(CONTENT_FOLDER + "/") or not relative_path.endswith("/" + REDIRECT_FILE_NAME) or not table_path.is_file():
-            continue
-        text = table_path.read_text(encoding="utf-8")
-        rewritten = rewrite_table_targets(text, list_rule)
-        if rewritten == text:
-            continue
-        table_path.write_text(rewritten, encoding="utf-8", newline="\n")
-        result = run_git(["add", relative_path], cwd=root)
-        if not result.succeeded:
-            raise RuntimeError(f"git add {relative_path} 실패: {result.stderr.strip()}")
-        list_written.append(relative_path)
-    return list_written
-
-
 def report_leftovers(root: Path, list_pattern: list[str]) -> None:
     """칸 밖에 옛 경로 · 이름(@p list_pattern, 소문자)이 남은 추적 글 파일(주석 · 출처 표 · 문서)을 알립니다. 고치지 않는다 — 경로인지 사람이 읽고 정한다."""
     list_leftover = []
@@ -368,7 +342,7 @@ def move_one(root: Path, config: FieldConfig, old_id: str, new_id: str, dry_run:
     rename = get_pack_rename(old_id, new_id)
     absorb = get_pack_absorb(old_id, new_id)
     scenario = None if is_folder else get_scenario_rename(old_id, new_id, (root / moved_path).read_bytes().decode("utf-8", "surrogateescape"))
-    # 옛 도메인 뿌리를 통째로 옮기면 옛 도메인 폴더가 사라진다 — 그 표의 줄(옛 경로 · 정체성 대체)은 새 도메인 표에 있어야 읽힌다.
+    # 옛 도메인 뿌리를 통째로 옮기면 옛 도메인 폴더가 사라진다 — 그 표의 줄(정체성 대체)은 새 도메인 표에 있어야 읽힌다.
     is_root_move = is_folder and is_domain_root(old_id)
     if is_root_move and not is_domain_root(new_id) and (root / moved_path / REDIRECT_FILE_NAME).is_file():
         print(f"[move-asset] '{moved_path}/{REDIRECT_FILE_NAME}' 는 옮긴 뒤 아무 검색 순서도 읽지 않는다 — 그 줄을 {make_redirect_table_id(new_id)} 에 먼저 합친 뒤 지우고 다시 옮긴다")
@@ -430,7 +404,5 @@ def move_one(root: Path, config: FieldConfig, old_id: str, new_id: str, dry_run:
         print(f"[move-asset] 팩 흡수 {absorb.old_pack} -> {absorb.new_id}: 문자열 파일 {string_file_count} 개 — 경로 {string_count.path}"
               f"(시나리오 이름 game.{absorb.old_pack}. · 체인 Scenario.{absorb.old_pack} 은 남은 목록을 보고 고친다)")
     if not dry_run:
-        for table_path in rewrite_redirect_tables(root, list_rule):
-            print(f"  [옛 경로 표] {table_path}")
         report_leftovers(root, list_leftover_patterns(old_id, absorb) + ([scenario.old_name.lower()] if scenario is not None else []))
     return ExitCode.PASSED

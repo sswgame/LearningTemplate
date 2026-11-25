@@ -29,7 +29,7 @@ namespace sw
             /** @brief 스폰 감독의 씨앗을 감독 씨앗에서 떼어 낼 때 섞는 값입니다(같은 씨앗이 두 수열에서 같은 수를 내지 않게). */
             static constexpr uint32 kSpawnSeedSalt = 0x5bd1e995u;
             static constexpr uint32 kStateTag      = FourCCUtil::make( "AIDR" );
-            static constexpr uint32 kStateVersion  = 2; ///< 판 2 부터 리플렉션 상태 칸이다 — 판 1(손 칸)은 올림 단계 없이 거절한다
+            static constexpr uint32 kStateVersion  = 0;
 
             template <typename T>
             static uint64 hashValue( uint64 hash, const T& value )

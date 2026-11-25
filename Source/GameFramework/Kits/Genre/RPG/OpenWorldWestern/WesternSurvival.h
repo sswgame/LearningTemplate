@@ -44,7 +44,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32  kStateTag     = FourCCUtil::make( "WSRV" );
-        static constexpr uint32  kStateVersion = 1;
+        static constexpr uint32  kStateVersion = 0;
         static constexpr float32 kCoreMax      = 100.0f;
 
         WesternSurvival();

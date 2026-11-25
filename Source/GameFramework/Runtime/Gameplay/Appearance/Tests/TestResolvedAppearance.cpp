@@ -535,7 +535,7 @@ SW_TEST_CASE( AppearanceInputUtilTest, ApplyEquipmentCopiesTheInstanceState )
     item._listDetachedPart.push_back( hashed_string( "Visor" ) );
     CustomizationValueSet tint;
     tint.setNumber( hashed_string( "Tint" ), 0.5f );
-    tint.setSchemaVersion( CustomizationValueSet::kFirstSchemaVersion );
+    tint.setSchemaVersion( 0 );
     SW_REQUIRE_TRUE( item.setCustomization( tint ) );
     vector<InventorySlot> listRemoved;
     SW_REQUIRE_TRUE( equipment.equip( hashed_string( "Head" ), item, listRemoved ) == EquipResult::Ok );

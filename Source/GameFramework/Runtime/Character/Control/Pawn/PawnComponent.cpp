@@ -25,7 +25,7 @@ namespace sw
         struct PawnComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "PAWN" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
 
             /** @brief 조종 회전 오프셋 고정소수점의 한 라디안입니다(0.00001 rad 간격 — 프레임 사이에 쌓이는 반동은 수 라디안을 넘지 않는다). */
             static constexpr float32 kRotationOffsetUnitsPerRadian = 100000.0f;

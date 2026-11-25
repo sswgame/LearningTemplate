@@ -112,7 +112,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "GHMN" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 동전을 준 유령의 번호
+        static constexpr uint32 kStateVersion = 0;
 
         GhostMansion();
 

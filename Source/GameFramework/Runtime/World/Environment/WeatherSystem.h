@@ -216,7 +216,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WTHR" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 리플렉션 상태 칸(판 1 손 본문은 칸을 옮겨 써 올린다)
+        static constexpr uint32 kStateVersion = 0;
 
         WeatherSystem();
 

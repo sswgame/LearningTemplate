@@ -92,9 +92,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag               = FourCCUtil::make( "CLOK" );
-        static constexpr uint32 kStateVersion           = 3; ///< 2: 하루 안 시각이 float64 다. 3: 리플렉션 상태 칸(판 2 는 머리를 붙여 올린다 — `ReflectedStateUpgrade::prependHead`)
-        static constexpr uint32 kStateHeaderlessVersion = 1; ///< 판 1 까지는 머리표가 없었다 — 머리가 없는 바이트는 판 1 로 읽어 올린다(`StateIO::header`)
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "CLOK" );
+        static constexpr uint32 kStateVersion = 0;
 
         WorldClock();
 

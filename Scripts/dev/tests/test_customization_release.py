@@ -49,7 +49,7 @@ class CompareTest(unittest.TestCase):
         self.assertEqual("Clasp", issues[0].removable)
 
     def test_removal_with_step_passes(self):
-        text = catalog('    <Migration toVersion="2"><Remove parameter="Clasp"/></Migration>\n' + TINT + SHINE, '<Schema id="Cloak" version="2">')
+        text = catalog('    <Migration toVersion="1"><Remove parameter="Clasp"/></Migration>\n' + TINT + SHINE, '<Schema id="Cloak" version="1">')
         self.assertEqual([], self.issues(text))
 
     def test_rename_without_step_fails_not_fixable(self):
@@ -59,8 +59,8 @@ class CompareTest(unittest.TestCase):
         self.assertIn('<Rename from="Tint" to="Primary"/>', issues[0].message)
 
     def test_rename_with_step_passes(self):
-        text = catalog('    <Migration toVersion="2"><Rename from="Tint" to="Primary"/></Migration>\n    <Color name="Primary" default="1 1 1 1"/>\n' + SHINE + GEM,
-                       '<Schema id="Cloak" version="2">')
+        text = catalog('    <Migration toVersion="1"><Rename from="Tint" to="Primary"/></Migration>\n    <Color name="Primary" default="1 1 1 1"/>\n' + SHINE + GEM,
+                       '<Schema id="Cloak" version="1">')
         self.assertEqual([], self.issues(text))
 
     def test_kind_change_needs_step(self):
@@ -68,7 +68,7 @@ class CompareTest(unittest.TestCase):
         issues = self.issues(catalog(changed))
         self.assertEqual(1, len(issues))
         self.assertFalse(issues[0].fixable)
-        stepped = catalog('    <Migration toVersion="2"><PaletteIndexToColor parameter="Clasp" palette="Metals"/></Migration>\n' + changed, '<Schema id="Cloak" version="2">')
+        stepped = catalog('    <Migration toVersion="1"><PaletteIndexToColor parameter="Clasp" palette="Metals"/></Migration>\n' + changed, '<Schema id="Cloak" version="1">')
         self.assertEqual([], self.issues(stepped))
 
     def test_lower_version_fails(self):
@@ -95,13 +95,13 @@ class FixTest(unittest.TestCase):
     def test_fix_writes_remove_and_raises_version(self):
         code, text = self.run_in(catalog(TINT + SHINE), fix=True)
         self.assertEqual(0, code)
-        self.assertIn('<Schema id="Cloak" version="2">', text)
-        self.assertIn('<Migration toVersion="2"><Remove parameter="Clasp"/></Migration>', text)
+        self.assertIn('<Schema id="Cloak" version="1">', text)
+        self.assertIn('<Migration toVersion="1"><Remove parameter="Clasp"/></Migration>', text)
         self.assertEqual([], compare(parse_catalog(RELEASED), parse_catalog(text)))
 
     def test_fix_adds_to_pending_version(self):
-        pending = catalog('    <Migration toVersion="2"><Rename from="Tint" to="Primary"/></Migration>\n    <Color name="Primary" default="1 1 1 1"/>\n' + SHINE,
-                          '<Schema id="Cloak" version="2">')
+        pending = catalog('    <Migration toVersion="1"><Rename from="Tint" to="Primary"/></Migration>\n    <Color name="Primary" default="1 1 1 1"/>\n' + SHINE,
+                          '<Schema id="Cloak" version="1">')
         code, text = self.run_in(pending, fix=True)
         self.assertEqual(0, code)
         self.assertIn('<Rename from="Tint" to="Primary"/><Remove parameter="Clasp"/></Migration>', text)

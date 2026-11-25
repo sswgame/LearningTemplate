@@ -81,10 +81,10 @@ namespace sw
         int32 _cost{ 0 }; ///< 놓을 때 카탈로그 통화로 내는 값
         PROPERTY( Min = 0.0, Max = 1.0 )
         float32 _refundRatio{ 1.0f }; ///< 치울 때 돌려받는 비율(내림)
-        PROPERTY( Min = 1 )
-        int32 _version{ 1 };
-        PROPERTY( Min = 1 )
-        int32 _minLoadVersion{ 1 }; ///< 이 판 이상으로 저장한 배치만 읽는다(`_version` 이하)
+        PROPERTY( Min = 0 )
+        int32 _version{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _minLoadVersion{ 0 }; ///< 이 판 이상으로 저장한 배치만 읽는다(`_version` 이하)
         PROPERTY( Name = "replaces" )
         hashed_string _replacedID{}; ///< 이 부품이 이어받은 지운 부품의 id(아직 있는 부품이면 참조 표가 읽기를 막는다)
         PROPERTY( Name = "snapTo" )

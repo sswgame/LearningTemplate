@@ -40,7 +40,6 @@ SNAPSHOT_PATH = Path("Config/Build/Release/CustomizationSchemas.json")
 CONTENT_GLOB = "**/data/appearance/*.xml"
 CATALOG_TAG = "CustomizationSchemaCatalog"
 PARAMETER_KINDS = ("Slider", "Color", "Choice", "Attachment")
-FIRST_MIGRATION_VERSION = 2
 
 
 @dataclass
@@ -85,7 +84,7 @@ def parse_catalog(text: str) -> dict[str, SchemaInfo]:
                 elif op.tag in ("PaletteIndexToColor", "Remove"):
                     ops.append(MigrationOp(op.tag, op.get("parameter", "")))
             migrations.append((int(migration.get("toVersion", "0")), ops))
-        schemas[node.get("id", "")] = SchemaInfo(int(node.get("version", "1")), parameters, migrations)
+        schemas[node.get("id", "")] = SchemaInfo(int(node.get("version", "0")), parameters, migrations)
     return schemas
 
 

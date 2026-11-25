@@ -50,7 +50,7 @@ namespace sw::editor
             static constexpr const utf8* kMetaSuffix  = ".meta";
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션 id 의 키와 형식 판입니다. */
             static constexpr string_view kSessionStoreKey = "editor.autosaveSession";
-            static constexpr uint32      kSessionVersion  = 1;
+            static constexpr uint32      kSessionVersion  = 0;
 
             /** @brief 세션 하나의 자동 저장 상태입니다. 에디터 상태 저장소가 소유한다(UI 스레드만). */
             struct State

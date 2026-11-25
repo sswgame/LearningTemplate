@@ -83,7 +83,7 @@ namespace sw
         REFLECT_INTERFACE( IGameFlagsOwner, _gameFlagsOwnerPort );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "GTST" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 플레이어 구간(지갑 · 일지 · 평판 · 가방)이 플레이어 상태 컴포넌트로 갔다 — 판 1 은 그 구간을 버리고 올린다
+        static constexpr uint32 kStateVersion = 0;
 
         GameStateComponent();
         virtual ~GameStateComponent() override;

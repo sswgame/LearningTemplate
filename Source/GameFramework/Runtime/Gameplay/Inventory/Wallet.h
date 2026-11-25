@@ -56,7 +56,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WALT" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 리플렉션 상태 칸(판 1 손 본문은 머리를 붙여 올린다 — `ReflectedStateUpgrade::prependHead`)
+        static constexpr uint32 kStateVersion = 0;
 
         /** @brief 통화를 적지 않으면 쓰는 기본 통화 "Gold" 입니다. */
         static hashed_string getDefaultCurrency();

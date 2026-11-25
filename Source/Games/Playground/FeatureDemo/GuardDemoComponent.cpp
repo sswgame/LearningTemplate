@@ -26,7 +26,7 @@ namespace sw
         struct GuardDemoComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "FDGU" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
 
             static bool runLock( const vector<string>& listArgument, string& outReply )
             {

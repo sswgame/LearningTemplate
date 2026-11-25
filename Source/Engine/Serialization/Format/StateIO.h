@@ -38,15 +38,6 @@ namespace sw
         struct HasSerializeState : std::false_type
         {
         };
-        /** @brief @p T 가 머리표 없이 쓰던 판(`kStateHeaderlessVersion`)을 둔 형식인지 봅니다 — 그 형식은 안쪽 머리가 판을 올린다(`StateIO::header`). */
-        template <typename T, typename = void>
-        struct HasHeaderlessVersion : std::false_type
-        {
-        };
-        template <typename T>
-        struct HasHeaderlessVersion<T, std::void_t<decltype( T::kStateHeaderlessVersion )>> : std::true_type
-        {
-        };
         template <typename T>
         struct HasSerializeState<T, std::void_t<decltype( std::declval<T&>().serializeState( std::declval<StateIO&>() ) )>> : std::true_type
         {
@@ -142,7 +133,7 @@ namespace sw
 
         /**
          * @brief @p inoutObject 의 리플렉션 상태 칸(`PROPERTY( RuntimeState )`, 기반부터 선언 순서)을 씁니다 · 읽습니다. `serializeState` 의 기본 본문입니다.
-         * @details 머리는 타입의 판(`REFLECT( Version = N )`, 없으면 1)과 칸 배치 해시(`computeReflectedLayoutHash`)다. 읽을 때
+         * @details 머리는 타입의 판(`REFLECT( Version = N )`, 없으면 0)과 칸 배치 해시(`computeReflectedLayoutHash`)다. 읽을 때
          *          - 판이 옛것이면 그 타입의 패치 사슬(`SW_TYPE_VERSION_PATCH`)로 머리 뒤 바이트를 올리고 이어 읽는다(`header` 와 같은 길 — 올린 바이트에서 바깥 칸도 읽힌다).
          *          - 판이 같은데 배치 해시가 다르면 칸을 바꾸고 판을 올리지 않은 것이다 — 틀리게 읽지 않고 타입 이름과 함께 거절한다.
          *          - 새 판(내리기)이거나 단계가 빠졌으면 거절한다.
@@ -229,11 +220,9 @@ namespace sw
          * @details 읽은 판이 @p version 보다 옛것이면 판 올림 사슬(`SW_STATE_FORMAT_UPGRADE` — 표마다 n → n+1 단계)로 머리 뒤 바이트를 올린 뒤 이어 읽습니다.
          *          단계가 빠졌거나 실패하거나 새 판(내리기)이면 오류를 남기고 거절합니다(옛 판을 그대로 읽는 폴백은 없다). 올린 바이트는 이 입구가 들고,
          *          그 뒤의 칸(바깥 형식의 남은 칸 포함 — 단계가 그대로 옮긴다)은 거기서 읽힌다. 언리얼 `FCustomVersion` 의 판 분기를 등록된 순수 함수 사슬로 둔 자리다.
-         *          @p headerlessVersion 은 머리표 없이 쓰던 마지막 판이다(0 이면 처음부터 머리가 있었다). 주면 표가 다른 바이트를 그 판의 머리 없는 칸으로 읽어 올린다 —
-         *          형식에 `kStateHeaderlessVersion` 을 두고 넘긴다(구간은 이런 형식을 구간 판으로 올리지 않는다 — 안쪽 머리가 올린다). 주지 않았는데 표가 다르면
-         *          판을 알 수 없다는 경고(`StateIO.HeaderTagMismatch`)를 남기고 거절한다.
+         *          표가 다르면 판을 알 수 없다는 경고(`StateIO.HeaderTagMismatch`)를 남기고 거절합니다 — 표가 있어 첫 판(0)과 판 칸이 없는 바이트가 갈린다.
          */
-        void header( uint32 tag, uint32 version, uint32 headerlessVersion = 0 );
+        void header( uint32 tag, uint32 version );
 
         /** @brief 읽는 중이고 @p bCondition 이 거짓이면 거절합니다. 지금까지 맞으면 true 입니다. 쓰는 중에는 늘 true 입니다. */
         bool check( bool bCondition );

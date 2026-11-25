@@ -25,7 +25,7 @@ namespace sw
         struct MetroidvaniaGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "MVGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kDamageStat = "damage"; ///< 부적 능력치 이름 — 플레이어 공격력에 더한다(카탈로그 `<Charm><Stats damage>`)

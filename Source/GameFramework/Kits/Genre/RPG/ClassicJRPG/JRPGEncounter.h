@@ -27,7 +27,7 @@ namespace sw
     {
     public:
         static constexpr uint32 kStateTag       = FourCCUtil::make( "JENC" );
-        static constexpr uint32 kStateVersion   = 1;
+        static constexpr uint32 kStateVersion   = 0;
         static constexpr int32  kNoEncounterYet = StepEncounterCounter::kNoEncounterYet;
 
         JRPGEncounterWalker();

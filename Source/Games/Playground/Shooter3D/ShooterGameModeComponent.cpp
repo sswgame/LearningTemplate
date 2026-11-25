@@ -44,7 +44,7 @@ namespace sw
         struct ShooterGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "SHOT" );
-            static constexpr uint32 kStateVersion = 3;
+            static constexpr uint32 kStateVersion = 0;
             /** @brief 이 게임이 아는 조우, 보상, 스폰 ID 입니다. 프로필이 다른 이름을 쓰면 시작할 때 알립니다. */
             static constexpr const utf8* kArrKnownEncounter[] = { "swarm", "elite", "ammo", "repair" };
             static constexpr const utf8* kArrKnownSpawn[]     = { "skeleton" };

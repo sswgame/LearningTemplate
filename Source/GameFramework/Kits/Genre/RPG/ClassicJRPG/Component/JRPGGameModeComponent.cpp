@@ -22,7 +22,7 @@ namespace sw
         struct JRPGGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "JRGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 가방 · 타이밍
+            static constexpr uint32 kStateVersion = 0;
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";

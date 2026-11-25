@@ -5,7 +5,7 @@
   개발 도구라 글 키(text)를 두지 않는다 — 옵션 메뉴의 debug 탭 · HUD 설정 창은 id 와 선택지 값을 그대로 보인다.
   hudSections 는 공백으로 나눈 '이름'(켬) · '-이름'(끔) 목록이고, 적지 않은 섹션은 등록의 기본을 따른다(DebugHUDSectionState).
 -->
-<UserSettingsSchema owner="debughud" version="1">
+<UserSettingsSchema owner="debughud" version="0">
 	<Category id="debug" text="settings.category.debug"/>
 	<Setting id="debug.hud" category="debug" type="Bool" default="false" apply="Immediate" target="gv:gv_debugHUD"/>
 	<Setting id="debug.hudSections" category="debug" type="String" default="" apply="Immediate" target="gv:gv_debugHUDSections"/>

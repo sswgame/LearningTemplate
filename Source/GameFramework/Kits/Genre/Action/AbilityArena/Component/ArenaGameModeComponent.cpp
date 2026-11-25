@@ -35,7 +35,7 @@ namespace sw
         struct ArenaGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "ARNA" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 0;
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 팩의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventWave       = "ArenaWaveStart";

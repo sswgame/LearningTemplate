@@ -54,7 +54,7 @@ namespace sw
         SW_REGISTERED_COMPONENT( AdventureGameModeComponent );
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "VLDR" );
-        static constexpr uint32 kStateVersion = 2;
+        static constexpr uint32 kStateVersion = 0;
 
         AdventureGameModeComponent();
         virtual ~AdventureGameModeComponent() override;

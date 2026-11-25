@@ -65,13 +65,12 @@ namespace sw
      * @class UserAppearancePresetStore
      * @brief 플레이어 프리셋 목록을 리플렉션 JSON(`UserAppearancePresetFile`)으로 읽고 씁니다. 로컬 저장 슬롯의 본문에 해당합니다. 프리셋 내용은 공유 코드(`AppearanceSelection`) 한 줄로 싣습니다.
      *        세이브와 공유가 같은 코드이고 콘텐츠가 바뀌어도 읽힙니다. 펼칠 때 `AppearanceSelection::applySelection` 이 지워진 것을 보고합니다.
-     * @details 판 3 부터 JSON 이다. 판 1 · 2 의 `key=value` 세이브와 판 3(썸네일 경로)은 출시 전 데이터라 읽는 길을 두지 않았다 — 읽기가 실패로 알린다.
-     *          현재 판보다 새 파일도 읽지 않는다. 이 콘텐츠가 풀지 못하는 코드도 목록에 남고 그대로 다시 써진다(`decodePreset` 만 까닭과 함께 실패한다).
+     * @details 현재 판이 아닌 파일은 읽지 않는다. 이 콘텐츠가 풀지 못하는 코드도 목록에 남고 그대로 다시 써진다(`decodePreset` 만 까닭과 함께 실패한다).
      */
     class SW_GF_API UserAppearancePresetStore : public SaveGame
     {
     public:
-        static constexpr int32 kVersion = 4; ///< 3: 리플렉션 JSON, 4: 썸네일을 경로 대신 슬롯 이름으로(이전 판은 읽지 않는다)
+        static constexpr int32 kVersion = 0;
 
         UserAppearancePresetStore();
 

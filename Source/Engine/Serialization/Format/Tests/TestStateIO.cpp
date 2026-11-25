@@ -263,13 +263,13 @@ namespace sw
     namespace
     {
         /**
-         * @brief 판 올림을 시험하는 상태입니다. 판 1: 체력 int16, 판 2: 체력 int32, 판 3: 체력 int32 + 속도 float32.
-         * @details 판 0 에서 올리는 단계는 일부러 없다(빠진 단계는 거절).
+         * @brief 판 올림을 시험하는 상태입니다. 판 0: 체력 int16, 판 1: 체력 int32, 판 2: 체력 int32 + 속도 float32.
+         * @details 판 2 → 3 단계는 일부러 없다(빠진 단계는 거절).
          */
         struct StateUpgradeTestState
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "TUPG" );
-            static constexpr uint32 kStateVersion = 3;
+            static constexpr uint32 kStateVersion = 2;
 
             SW_DECLARE_STATE_IO();
 
@@ -301,7 +301,7 @@ namespace sw
 
         struct StateUpgradeTestSteps
         {
-            /** @brief 판 1 → 2: 체력을 int16 에서 int32 로 넓힌다. */
+            /** @brief 판 0 → 1: 체력을 int16 에서 int32 로 넓힌다. */
             static bool convertHealthToInt32( Archive& inOldBody, Archive& outNewBody )
             {
                 int16 health = 0;
@@ -309,7 +309,7 @@ namespace sw
                 outNewBody << static_cast<int32>( health );
                 return inOldBody.isOk();
             }
-            /** @brief 판 2 → 3: 새 칸 속도를 데이터 규칙(1.5)으로 채운다. */
+            /** @brief 판 1 → 2: 새 칸 속도를 데이터 규칙(1.5)으로 채운다. */
             static bool addSpeed( Archive& inOldBody, Archive& outNewBody )
             {
                 int32 health = 0;
@@ -320,17 +320,17 @@ namespace sw
         };
     } // namespace
 
-    SW_STATE_FORMAT_UPGRADE( stateUpgradeTest1, "TUPG", 1, 2, &StateUpgradeTestSteps::convertHealthToInt32 );
-    SW_STATE_FORMAT_UPGRADE( stateUpgradeTest2, "TUPG", 2, 3, &StateUpgradeTestSteps::addSpeed );
+    SW_STATE_FORMAT_UPGRADE( stateUpgradeTest0, "TUPG", 0, 1, &StateUpgradeTestSteps::convertHealthToInt32 );
+    SW_STATE_FORMAT_UPGRADE( stateUpgradeTest1, "TUPG", 1, 2, &StateUpgradeTestSteps::addSpeed );
 } // namespace sw
 
 /**
- * @brief [StateIOTest] 옛 판(1) 바이트를 머리가 단계 1 → 2 → 3 으로 올려 읽는다 — 값이 맞고, 머리 없는 바깥 형식의 뒤 칸도 그대로 읽히며 아카이브는 끝까지 소비된다(감사 A-6)
+ * @brief [StateIOTest] 첫 판(0) 바이트를 머리가 단계 0 → 1 → 2 로 올려 읽는다 — 값이 맞고, 머리 없는 바깥 형식의 뒤 칸도 그대로 읽히며 아카이브는 끝까지 소비된다(감사 A-6)
  */
 SW_TEST_CASE( StateIOTest, HeaderUpgradesOldVersionThroughTheChain )
 {
     sw::Archive written;
-    sw::StateIO::writeHeader( written, sw::StateUpgradeTestState::kStateTag, 1 );
+    sw::StateIO::writeHeader( written, sw::StateUpgradeTestState::kStateTag, 0 );
     written << int16{ 7 };
     written << int32{ 99 }; // 바깥 형식의 뒤 칸
 
@@ -354,7 +354,7 @@ SW_TEST_CASE( StateIOTest, HeaderUpgradesOldVersionThroughTheChain )
 }
 
 /**
- * @brief [StateIOTest] 단계가 없는 판(0)과 새 판(4)은 거절하고 상태는 그대로다 — 옛 판을 그대로 읽는 폴백은 없다
+ * @brief [StateIOTest] 단계가 빠진 판과 새 판(3)은 거절하고 상태는 그대로다 — 옛 판을 그대로 읽는 폴백은 없다
  */
 SW_TEST_CASE( StateIOTest, HeaderRefusesVersionWithoutChain )
 {
@@ -369,11 +369,14 @@ SW_TEST_CASE( StateIOTest, HeaderRefusesVersionWithoutChain )
     sw::StateUpgradeTestState state;
     state._health = 11;
     SW_EXPECT_LOG( "FormatUpgrade.StepMissing" );
-    SW_EXPECT_FALSE( readVersion( 0, state ) );
+    sw::Archive body;
+    body << int32{ 3 } << 2.0f;
+    body.setReadModeAndResetPosition( true );
+    SW_EXPECT_FALSE( sw::StateIO::upgradeSectionBody( sw::StateUpgradeTestState::kStateTag, 2, 3, body ) ); // 2 → 3 단계가 없다
     SW_EXPECT_LOG( "FormatUpgrade.NewerThanSupported" );
-    SW_EXPECT_FALSE( readVersion( 4, state ) );
+    SW_EXPECT_FALSE( readVersion( 3, state ) );
     SW_EXPECT_EQUAL( 11, state._health );
-    SW_EXPECT_TRUE( readVersion( 3, state ) );
+    SW_EXPECT_TRUE( readVersion( 2, state ) );
     SW_EXPECT_EQUAL( 3, state._health );
 }
 
@@ -385,7 +388,7 @@ SW_TEST_CASE( StateIOTest, SectionUpgradesOldVersionThroughTheChain )
     sw::Archive body;
     body << int16{ 21 };
     sw::Archive outer;
-    sw::StateIO::writeSection( outer, sw::StateUpgradeTestState::kStateTag, 1, body );
+    sw::StateIO::writeSection( outer, sw::StateUpgradeTestState::kStateTag, 0, body );
 
     sw::Archive reading( outer.getData(), outer.getSize() );
     sw::StateIO io( reading );
@@ -403,7 +406,7 @@ SW_TEST_CASE( StateIOTest, SectionUpgradesOldVersionThroughTheChain )
 }
 
 /**
- * @brief [StateIOTest] 머리표가 다른 바이트(다른 형식, 또는 머리표가 생기기 전의 판)는 판을 알 수 없다는 경고와 함께 거절하고 상태는 그대로다
+ * @brief [StateIOTest] 머리표가 다른 바이트(다른 형식, 머리 없는 바이트)는 판을 알 수 없다는 경고와 함께 거절하고 상태는 그대로다
  */
 SW_TEST_CASE( StateIOTest, HeaderTagMismatchSaysTheVersionIsUnknown )
 {

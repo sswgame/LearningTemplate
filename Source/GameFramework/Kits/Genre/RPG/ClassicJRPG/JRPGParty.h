@@ -134,7 +134,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag            = FourCCUtil::make( "JPTY" );
-        static constexpr uint32 kStateVersion        = 2; ///< 2: 장비를 아이템 인스턴스로
+        static constexpr uint32 kStateVersion        = 0;
         static constexpr int32  kMaxMembers          = 4;
         static constexpr int32  kInnerMax            = 100;
         static constexpr int32  kClassChangeMinLevel = 20; ///< DQ3 다마 신전의 최소 레벨

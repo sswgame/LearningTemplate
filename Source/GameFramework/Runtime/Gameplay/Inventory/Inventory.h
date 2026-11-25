@@ -41,13 +41,13 @@ namespace sw
         /** @brief 아이템 인스턴스의 꾸미기 값(염색, 부착물, 변형)입니다. 뜻은 외형 스키마가 정하고, 값이 있으면 쓴 스키마 판이 찍혀 있다. */
         const CustomizationValueSet& getCustomization() const { return _customization; }
         /**
-         * @brief 꾸미기 값을 바꿉니다. 값이 있는데 스키마 판을 찍지 않은 집합(0)은 받지 않고 false 입니다.
-         * @details 슬롯은 세이브 · 네트워크에 그대로 실린다 — 판 0 이 실리면 다음 실행은 "쓴 때의 판" 이 아니라 "읽는 때의 판" 으로 읽는다. 스키마를 아는 입구
-         *          (`CustomizationSchemaDef::applyValue` · `migrate` · `normalize`)가 찍은 집합만 들어오게 해, 쓰는 쪽(`Inventory::serializeSlot`)이 판 0 을 만날 수 없다.
+         * @brief 꾸미기 값을 바꿉니다. 값이 있는데 스키마 판을 찍지 않은 집합은 받지 않고 false 입니다.
+         * @details 슬롯은 세이브 · 네트워크에 그대로 실린다 — 판 없는 값이 실리면 다음 실행은 "쓴 때의 판" 이 아니라 "읽는 때의 판" 으로 읽는다. 스키마를 아는 입구
+         *          (`CustomizationSchemaDef::applyValue` · `migrate` · `normalize`)가 찍은 집합만 들어오게 해, 쓰는 쪽(`Inventory::serializeSlot`)이 판 없는 값을 만날 수 없다.
          */
         [[nodiscard]] bool setCustomization( const CustomizationValueSet& values )
         {
-            if ( values.isEmpty() == false && values.getSchemaVersion() == CustomizationValueSet::kUnversionedSchemaVersion )
+            if ( values.isEmpty() == false && values.getSchemaVersion().has_value() == false )
                 return false;
             _customization = values;
             return true;
@@ -71,9 +71,8 @@ namespace sw
     class SW_GF_API Inventory
     {
     public:
-        static constexpr uint32 kStateTag = FourCCUtil::make( "INVT" );
-        /// 2: 넘침 목록이 실리고 슬롯 수는 저장된 수로 읽어 맞춘다. 3: 슬롯마다 꾸미기 값의 스키마 판(`serializeSlot`). 옛 판은 `SW_STATE_FORMAT_UPGRADE` 가 올린다
-        static constexpr uint32 kStateVersion = 3;
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "INVT" );
+        static constexpr uint32 kStateVersion = 0;
 
         Inventory();
 
@@ -148,21 +147,11 @@ namespace sw
         /**
          * @brief 슬롯 하나의 상태(이름 · 개수 · 내구도 · 피해 · 꾸미기 스키마 판 · 꾸미기 · 뗀 부품)입니다. 인벤토리 · 장비 · 제작 대기열의 꺼낸 재료 · 가게의 되사기 · 바닥의 아이템이 같은 형식을 쓴다.
          *        읽다 깨지면 io 가 거절 상태다. 꾸미기 값은 쓴 판 그대로 싣고, 스키마를 아는 쪽(외형 해석 · 염색)이 지금 판으로 올린다(`CustomizationSchemaDef::migrate`).
-         * @details 이 모양을 바꾸면 이것을 품은 형식(INVT · CEQP · CRFT · SHOP · BRMT · PICK)의 판을 모두 올리고 옛 슬롯을 옮기는 단계를 둔다(`upgradeSlotFromUnversioned` 가 본보기).
+         * @details 이 모양을 바꾸면 이것을 품은 형식(INVT · CEQP · CRFT · SHOP · BRMT · PICK)의 판을 모두 올리고 옛 슬롯을 옮기는 단계(`SW_STATE_FORMAT_UPGRADE`)를 둔다.
          */
         static void serializeSlot( StateIO& io, InventorySlot& inoutSlot );
         /** @brief `serializeSlot` 하나의 최소 바이트입니다 — 이름(4) + 개수 · 내구도 · 피해(12) + 꾸미기 판(4) + 꾸미기 수 · 부품 수(8). 담은 개수를 읽을 때 남은 바이트로 거르는 데 쓴다. */
         static constexpr uint32 kSlotStateMinBytes = 28;
-
-        // ---- 판 올림 단계의 도구 — 꾸미기 스키마 판 칸이 없던 슬롯(INVT 판 2 · CEQP 판 1 · CRFT 판 2 · SHOP 판 2 · BRMT 판 1)을 지금 슬롯으로 옮긴다 ----
-        /** @brief 판 칸이 없던 슬롯의 최소 바이트입니다(`kSlotStateMinBytes` 에서 판 칸을 뺀 것). */
-        static constexpr uint32 kUnversionedSlotMinBytes = 24;
-        /** @brief 판 칸이 없던 슬롯 하나를 @p inOld 에서 읽어 지금 모양으로 @p outNew 에 씁니다. 그 값은 스키마 판을 두기 전에 쓴 것이라 판 1(`CustomizationValueSet::kFirstSchemaVersion`)이다. */
-        static void upgradeSlotFromUnversioned( StateIO& inOld, StateIO& outNew );
-        /** @brief 개수 + 판 칸이 없던 슬롯들입니다(`io.list` 모양). */
-        static void upgradeSlotListFromUnversioned( StateIO& inOld, StateIO& outNew );
-        /** @brief 인벤토리 판 2 본문을 판 3 본문으로 씁니다. 인벤토리를 품은 형식(장비 컴포넌트의 가방)의 단계도 쓴다. */
-        static void upgradeStateFrom2( StateIO& inOld, StateIO& outNew );
 
     private:
         bool isValidSlot( int32 slot ) const { return slot >= 0 && slot < static_cast<int32>( _listSlot.size() ); }

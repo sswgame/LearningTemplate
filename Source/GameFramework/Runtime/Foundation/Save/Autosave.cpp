@@ -33,8 +33,8 @@ namespace sw
         struct AutosaveInternal
         {
             static constexpr uint32      kInfoTag           = FourCCUtil::make( "ASAV" );
-            static constexpr uint32      kInfoVersion       = 1;
-            static constexpr uint32      kSlotFormatVersion = 1; ///< 상태 슬롯의 봉투 형식 버전 - 게임 상태 바이트(스냅샷 봉투)를 바꾸면 올린다
+            static constexpr uint32      kInfoVersion       = 0;
+            static constexpr uint32      kSlotFormatVersion = 0; ///< 상태 슬롯의 봉투 형식 버전 - 게임 상태 바이트(스냅샷 봉투)를 바꾸면 올린다
             static constexpr const utf8* kInfoExtension     = ".info";
         };
     } // namespace

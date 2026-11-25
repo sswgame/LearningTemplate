@@ -119,7 +119,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32  kStateTag     = FourCCUtil::make( "BRMT" );
-        static constexpr uint32  kStateVersion = 1;
+        static constexpr uint32  kStateVersion = 0;
         static constexpr float32 kFixedStep    = 0.1f;
 
         BattleRoyaleMatch();

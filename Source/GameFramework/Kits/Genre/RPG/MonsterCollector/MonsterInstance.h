@@ -181,7 +181,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "MCST" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 0;
         static constexpr int32  kPartySize    = 6;
 
         MonsterStorage();

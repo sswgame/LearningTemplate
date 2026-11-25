@@ -226,7 +226,7 @@ namespace sw
     {
     public:
         static constexpr uint32 kStateTag     = FourCCUtil::make( "ADGN" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 0;
 
         AdventureDungeonState();
 

@@ -84,7 +84,7 @@ namespace sw
 
         static constexpr int32  kMonsterActorID = 1000000; ///< 괴물의 차례 번호이다(조사자 번호와 겹치지 않게 큰 값을 쓴다)
         static constexpr uint32 kStateTag       = FourCCUtil::make( "HENC" );
-        static constexpr uint32 kStateVersion   = 1;
+        static constexpr uint32 kStateVersion   = 0;
 
         SurvivalHorrorEncounter();
 

@@ -13,7 +13,7 @@ namespace sw
         struct CommandStackInternal
         {
             /** @brief 기록 형식의 판입니다. 명령 · 단계의 모양이 바뀌면 올린다(옛 판의 기록은 버린다). */
-            static constexpr uint32 kSaveVersion = 1;
+            static constexpr uint32 kSaveVersion = 0;
 
             static void writeStep( Archive& archive, const editor::UndoStep& step )
             {

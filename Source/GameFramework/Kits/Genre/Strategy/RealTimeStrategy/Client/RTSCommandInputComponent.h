@@ -51,7 +51,7 @@ namespace sw
         /** @brief 고르기 · 끌기는 틱 뒤 게임 스레드에서만 바뀝니다 — 유닛 뷰 · 끌기 상자가 병렬 틱에서 읽어도 됩니다(자기 틱이 쓰는 것은 따로 둔 `_bInputLive` 뿐이다). */
         static constexpr bool   kTickReadSafe = true;
         static constexpr uint32 kStateTag     = FourCCUtil::make( "RTSI" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 0;
 
         RTSCommandInputComponent();
         virtual ~RTSCommandInputComponent() override;

@@ -112,7 +112,7 @@ namespace sw
         {
             string           _sceneID;         ///< 찍은 씬의 지금 리소스 id(씬 없이 찍었으면 빈 글)
             float64          _playTime{ 0.0 }; ///< 찍을 때까지의 플레이 시간(초)
-            UnixMilliseconds _savedTime{ 0 };  ///< 찍은 벽시계 시각(UTC). 머리에 시각이 없던 옛 판이면 0
+            UnixMilliseconds _savedTime{ 0 };  ///< 찍은 벽시계 시각(UTC)
         };
         /** @brief 봉투의 머리만 읽어 이 세이브의 정보를 돌려줍니다. 머리를 읽지 못하면 없음입니다(`readSceneID` 와 같은 길). */
         [[nodiscard]] static optional<SaveInfo> readSaveInfo( const void* pInBuffer, uint32 size );
