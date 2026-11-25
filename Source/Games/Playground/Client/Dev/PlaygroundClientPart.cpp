@@ -11,6 +11,7 @@
 
 #include "Games/Playground/Client/Dev/PlaygroundRenderDemo.h"
 #include "Games/Playground/Client/Dev/StressTestScene.h"
+#include "Games/Playground/Client/Dev/StressTestSceneSettings.h"
 
 namespace sw
 {
@@ -28,8 +29,9 @@ namespace sw
             // `game/playground/pipeline/extensionpasspipeline.xml` 의 `_listExtensionShader` 가 선언한다 — 확장 셰이더를 선언하지 않은 파이프라인에서는 확장이 쉰다(오류 아님).
             // 소멸(핫 리로드 · 종료)은 렌더 스레드의 모듈 구간이 끝나기를 기다린 뒤 등록을 푼다.
             RenderExtensionRegistry* pPassRegistry = game::findSubsystem<RenderExtensionRegistry>();
-            if ( pPassRegistry != nullptr )
-                _renderDemo = make_unique<PlaygroundRenderDemo>( *pPassRegistry );
+            StressTestSceneSettings  settings{};
+            if ( pPassRegistry != nullptr && StressTestSceneSettings::loadForGame( settings ) )
+                _renderDemo = make_unique<PlaygroundRenderDemo>( *pPassRegistry, settings );
 
             // 이 템플릿이 하는 일은 벤치 하네스를 시작하는 것뿐입니다. 새 게임을 시작할 때는 `Client/` 를 지우고 자기 씬을 만듭니다.
             _benchScene = make_unique<StressTestScene>();

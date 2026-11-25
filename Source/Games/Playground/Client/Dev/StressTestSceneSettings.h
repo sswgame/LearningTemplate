@@ -25,6 +25,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 #include "Engine/UI/Document/UIDocument.h"
 
 namespace sw
@@ -60,6 +61,12 @@ namespace sw
         // ---- 견본 화면 ----
         PROPERTY( Category = "UI", Tooltip = "Document of the UI demo screen (-gv_uiDemo=1)" )
         AssetRef<UIDocumentAsset> _uiDemoDocument{};
+
+        // ---- 렌더 확장 시연 ----
+        PROPERTY( Required, Tooltip = "Shader of the fullscreen tint pass of the render extension demo (declared in the pipeline's _listExtensionShader)" )
+        DataPath _extensionTintShader;
+        PROPERTY( Required, Tooltip = "Shader of the cube pass of the render extension demo (declared in the pipeline's _listExtensionShader)" )
+        DataPath _extensionDrawShader;
 
         // ---- 에셋 ----
         PROPERTY( Category = "Assets", Tooltip = "Skinned knight mesh used by the character and rig benches" )
