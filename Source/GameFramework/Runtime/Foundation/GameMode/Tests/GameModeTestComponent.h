@@ -32,6 +32,7 @@ namespace sw
             : _roundCount{ 0 }
             , _winner{ -1 }
             , _listScore{}
+            , _handValue{ 0 }
             , _viewPath{}
             , _pViews{}
             , _pBound{ nullptr }
@@ -50,6 +51,7 @@ namespace sw
         int32 _winner; ///< 우승자 번호(-1 없음)
         PROPERTY( RuntimeState )
         vector<int32>                  _listScore;
+        int32                          _handValue; ///< 손 본문이 멤버에 바로 읽는 값 — 음수는 읽은 뒤 거절한다
         string                         _viewPath;
         BoundAssetRef<RuleViewCatalog> _pViews;
         const RuleViewCatalog*         _pBound; ///< 규칙 객체가 빌린 판
@@ -86,6 +88,8 @@ namespace sw
         void serializeGameState( StateIO& io ) override
         {
             io.header( FourCCUtil::make( "TGMC" ), 1 );
+            io.value( _handValue );
+            io.check( _handValue >= 0 );
             io.end();
             if ( io.isWriting() || io.isOk() == false || _viewPath.empty() )
                 return;

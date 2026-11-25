@@ -184,10 +184,8 @@ namespace sw
 
     void SurvivalHorrorGameModeComponent::onStateRestored( bool bRestored )
     {
-        if ( bRestored )
-            return;
-        SW_LOG_WARNING_ID( "SurvivalHorror.StateRefused", "[SurvivalHorror] the saved game does not fit this build - a new game opens" );
-        (void)openGame(); // 새 판도 열지 못하면 startGame 이 이유를 남겼다
+        if ( bRestored == false )
+            SW_LOG_WARNING_ID( "SurvivalHorror.StateRefused", "[SurvivalHorror] the saved game does not fit this build - the current game goes on" );
     }
 
     bool SurvivalHorrorGameModeComponent::submitPlayerInput( const SurvivalHorrorCommand& command )
@@ -512,7 +510,7 @@ namespace sw
         io.header( Internal::kStateTag, Internal::kStateVersion );
         if ( io.isOk() == false )
             return;
-        // 세션은 그래프 · 깃발 · 가방 · 상자를 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 세션에 바로 읽고, 거절되면 `onStateRestored` 가 새 판을 연다.
+        // 세션은 그래프 · 깃발 · 가방 · 상자를 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 세션에 바로 읽는다(거절되면 베이스가 앞 상태로 되돌린다).
         const bool bBound = _pCatalog != nullptr && _pGraphAsset != nullptr && _pItemCatalog != nullptr;
         if ( io.isReading() && ( bBound == false || openSession() == false ) )
         {

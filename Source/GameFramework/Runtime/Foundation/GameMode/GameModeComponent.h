@@ -40,7 +40,7 @@ namespace sw
      * @details 파생 클래스는 규칙(시작, 틱, 상태 바이트)과 무엇을 스폰하는지만 적는다. 베이스는 다음을 맡는다.
      *          - **수명**: `PrePhysics` 에서 틱하고(`kTickGroup` — 뷰와 컨트롤러는 뒤 그룹에서 읽는다) `onBeginPlay` 의 `openGame` 이 상태 칸을 기본값으로 되돌린 뒤 `startGame` 을 부른다.
      *            그다음 보관하던 복원 바이트를 적용하고 첫 플러시를 예약한다. 시작하지 못하면 틱도 돌지 않는다.
-     *          - **상태 바이트**: `restoreState` 는 시작 전이면 바이트를 보관했다가 시작할 때 적용하고, 시작 뒤면 바로 `readState` 로 적용한다.
+     *          - **상태 바이트**: `restoreState` 는 시작 전이면 바이트를 보관했다가 시작할 때 적용하고, 시작 뒤면 바로 `readStateOrRevert` 로 적용한다.
      *            적용한 뒤에는 뷰 오브젝트를 정리해 다시 스폰하게 한다.
      *            `writeState` 와 `restoreState` 는 `ComponentStateCodec` 가 이름으로 부르는 계약이다.
      *            게임 인스턴스는 `GameStateSnapshot::registerGameMode<T>()`(게임 인스턴스의 `getStateSnapshot()`) 한 줄로 이 디렉터를 상태 스냅샷에 등록한다.
@@ -132,7 +132,7 @@ namespace sw
         /**
          * @brief 디렉터 상태의 입구입니다 — 리플렉션 상태 칸(`PROPERTY( RuntimeState )`, 동적 형식 기준 `StateIO::reflectedAs`)을 먼저 놓고 파생의 `serializeGameState` 를 잇습니다.
          * @details 상태 칸은 씬 스냅숏도 옮기지만 그 뒤 `onBeginPlay` 의 `openGame` 이 기본값으로 되돌리므로, 판을 연 뒤 적용하는 이 바이트가 싣는다(언리얼 `UPROPERTY( SaveGame )` 자리).
-         *          파생은 칸을 다시 적지 않는다 — 한 칸을 두 곳이 알지 않는다. 읽기는 사본 없이 돌아, 칸을 덮기 전에 지금 칸을 따로 써 두고 손 본문이 거절하면 되돌린다.
+         *          파생은 칸을 다시 적지 않는다 — 한 칸을 두 곳이 알지 않는다. 읽기는 사본 없이 제자리에서 돈다 — 끝까지 맞지 않으면 `readStateOrRevert` 가 앞 상태로 되돌린다.
          */
         void serializeState( StateIO& io );
         /**
@@ -182,7 +182,7 @@ namespace sw
     protected:
         /**
          * @brief 리플렉션 밖의 디렉터 상태(키트 시뮬레이션 · 포인터 ↔ id · `Countdown` · 난수)를 놓는 본문 하나입니다(`StateIO`). 첫 값은 `io.header` 의 표준 머리입니다.
-         * @details 상태 칸은 이미 읽혀 있어 칸 사이 검사에 쓸 수 있다. 읽기는 사본 없이 돌므로(컴포넌트는 복사하지 않는다) 지역 변수에 읽어 끝까지 맞으면 대입합니다.
+         * @details 상태 칸은 이미 읽혀 있어 칸 사이 검사에 쓸 수 있다. 멤버에 바로 읽습니다 — 거절하면 베이스(`readStateOrRevert`)가 앞 상태의 바이트로 되돌리므로 지역 사본을 두지 않는다(규칙 객체가 서로 빌린 주소도 그대로 맞는다).
          */
         virtual void serializeGameState( StateIO& io ) = 0;
         /**
@@ -192,9 +192,9 @@ namespace sw
         [[nodiscard]] virtual bool startGame() = 0;
         /** @brief 상태 칸을 모두 기본값으로 되돌리고 `startGame` 으로 새 판을 엽니다. 판을 여는 유일한 입구입니다(플레이 시작, 복원에 실패한 판을 새로 열 때). */
         [[nodiscard]] bool openGame();
-        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 입니다. */
-        [[nodiscard]] bool readState( Archive& archive ) { return StateIO::readInPlace( *this, archive ); }
-        /** @brief 복원 바이트를 적용한 뒤에 불립니다. 결과를 알리고, 실패했으면 반쯤 바뀐 판을 새 판으로 되돌립니다. */
+        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 읽기 전 상태의 바이트로 되돌리고 false 입니다 — 디렉터마다 되돌림을 적지 않는다. */
+        [[nodiscard]] bool readStateOrRevert( Archive& archive );
+        /** @brief 복원 바이트를 적용한 뒤에 불립니다. 결과를 알립니다 — 실패했으면 판은 읽기 전 그대로입니다. */
         virtual void onStateRestored( bool bRestored ) { (void)bRestored; }
         /** @brief 번 돈 @p profit 이 있으면(0 보다 크면) 결과 값 `MinigameResultValue::kMoneyName` 으로 더합니다 — 손해는 바탕 판으로 나가지 않는다. */
         static void addMoneyResult( vector<MinigameResultValue>& outListValue, int64 profit );

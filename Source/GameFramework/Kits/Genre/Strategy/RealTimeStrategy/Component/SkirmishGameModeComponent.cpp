@@ -208,10 +208,8 @@ namespace sw
         io.end();
         if ( io.isReading() && io.isOk() )
         {
-            GameSpeedControl restoredSpeed = _speed; // 같은 범위로 본다
-            if ( io.check( restoredSpeed.restore( timeScale, bPaused != SW_FALSE ) && matchID != 0 ) == false )
+            if ( io.check( _speed.restore( timeScale, bPaused != SW_FALSE ) && matchID != 0 ) == false )
                 return; // 범위 밖 배속 · 정체 없는 판(깨진 세이브)은 거절한다
-            _speed   = restoredSpeed;
             _matchID = matchID;
             _listStepEvent.clear();
         }
@@ -225,9 +223,7 @@ namespace sw
         }
         else
         {
-            // 판이 반쯤 바뀌었을 수 있다. 새 판으로 되돌린다.
-            SW_LOG_WARNING_ID( "SkirmishGameMode.SavedMatchStateDoes", "[Skirmish] the saved match state does not match this build - starting a new match" );
-            (void)openGame();
+            SW_LOG_WARNING_ID( "SkirmishGameMode.SavedMatchStateDoes", "[Skirmish] the saved match state does not match this build - the current match goes on" );
         }
     }
 

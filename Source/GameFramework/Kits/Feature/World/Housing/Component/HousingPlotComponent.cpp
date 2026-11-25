@@ -538,7 +538,7 @@ namespace sw
             return false;
         }
         Archive archive( bytes.data(), bytes.size() );
-        if ( readState( archive ) == false )
+        if ( readStateOrRevert( archive ) == false )
         {
             onStateRestored( false );
             return false;

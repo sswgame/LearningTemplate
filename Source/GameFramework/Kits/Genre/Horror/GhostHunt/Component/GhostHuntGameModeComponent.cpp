@@ -211,10 +211,8 @@ namespace sw
 
     void GhostHuntGameModeComponent::onStateRestored( bool bRestored )
     {
-        if ( bRestored )
-            return;
-        SW_LOG_WARNING_ID( "GhostHunt.StateRefused", "[GhostHunt] the saved hunt does not fit this build - a new hunt opens" );
-        (void)openGame(); // 새 판도 열지 못하면 startGame 이 이유를 남겼다
+        if ( bRestored == false )
+            SW_LOG_WARNING_ID( "GhostHunt.StateRefused", "[GhostHunt] the saved hunt does not fit this build - the current hunt goes on" );
     }
 
     bool GhostHuntGameModeComponent::submitPlayerInput( const GhostHuntCommand& command )
@@ -498,7 +496,7 @@ namespace sw
         io.header( Internal::kStateTag, Internal::kStateVersion );
         if ( io.isOk() == false )
             return;
-        // 저택은 그래프 · 깃발 · 가방 · 지갑을 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 저택에 바로 읽고, 거절되면 `onStateRestored` 가 새 판을 연다.
+        // 저택은 그래프 · 깃발 · 가방 · 지갑을 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 저택에 바로 읽는다(거절되면 베이스가 앞 상태로 되돌린다).
         const bool bBound = _pCatalog != nullptr && _pGraphAsset != nullptr && _pLoot != nullptr && _pItemCatalog != nullptr;
         if ( io.isReading() && ( bBound == false || openMansion() == false ) )
         {

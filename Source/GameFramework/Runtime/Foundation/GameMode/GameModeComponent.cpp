@@ -145,7 +145,7 @@ namespace sw
             pReloaded->_pBound = pReloaded->_listHeld.back();
         }
         state.setReadModeAndResetPosition( true );
-        const bool bRebound = readState( state );
+        const bool bRebound = StateIO::readInPlace( *this, state );
         if ( bRebound )
         {
             SW_LOG_INFO_ID( "GameMode.ReloadedAssetApplied", "GameMode '%#': a reloaded asset is applied - the running game is bound to it", getTypeName().c_str() );
@@ -159,7 +159,7 @@ namespace sw
             }
             // 제자리에서 여는 규칙 객체(지갑 · 격자를 빌린 쪽)는 새 판에 묶인 채로 남는다 — 앞 판으로 다시 읽어 묶는다.
             state.setReadModeAndResetPosition( true );
-            if ( readState( state ) == false )
+            if ( StateIO::readInPlace( *this, state ) == false )
                 SW_LOG_ERROR_ID( "GameMode.ReloadedAssetNotReverted", "GameMode '%#': the running game cannot go back to the previous asset either", getTypeName().c_str() );
         }
         onStateRestored( bRebound );
@@ -301,27 +301,21 @@ namespace sw
         const TypeInfo* const pType = findCachedTypeInfo();
         if ( pType == nullptr )
             reportFatalError( "GameModeComponent '%#' has no reflected type - its state fields cannot be carried", getTypeName().c_str() );
-        if ( io.isWriting() )
-        {
-            io.reflectedAs( *pType, *this );
-            serializeGameState( io );
-            return;
-        }
-        Archive backup;
-        {
-            StateIO backupIO( backup );
-            backupIO.reflectedAs( *pType, *this );
-        }
         io.reflectedAs( *pType, *this );
         if ( io.isOk() )
             serializeGameState( io );
-        if ( io.isOk() )
-            return;
-        // 칸이나 손 본문이 거절했다 — 덮은 상태 칸을 읽기 전 값으로 되돌린다(손 본문은 끝까지 맞을 때만 대입하므로 그대로다).
-        backup.setReadModeAndResetPosition( true );
-        StateIO restoreIO( backup );
-        restoreIO.reflectedAs( *pType, *this );
-        SW_ASSERT( restoreIO.isOk() );
+    }
+
+    bool GameModeComponent::readStateOrRevert( Archive& archive )
+    {
+        Archive previous;
+        writeState( previous );
+        if ( StateIO::readInPlace( *this, archive ) )
+            return true;
+        previous.setReadModeAndResetPosition( true );
+        if ( StateIO::readInPlace( *this, previous ) == false )
+            SW_LOG_ERROR_ID( "GameMode.StateNotReverted", "GameMode '%#': a refused state was read halfway and the state before it cannot be read back", getTypeName().c_str() );
+        return false;
     }
 
     void GameModeComponent::restoreState( vector<uint8>&& bytes )
@@ -364,7 +358,7 @@ namespace sw
     void GameModeComponent::applyPendingState()
     {
         Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
-        const bool bRestored = readState( archive );
+        const bool bRestored = readStateOrRevert( archive );
         _pendingStateBytes.clear();
         // 새 판을 열며 쌓은 소리(첫 짓기 · 웨이브)는 복원한 판의 것이 아니다.
         _soundQueue.clear();

@@ -222,11 +222,7 @@ namespace sw
         }
         else
         {
-            // 감독은 읽었는데 끝 바이트가 남은 경우도 여기로 온다. 새 판으로 되돌린다.
-            SW_LOG_WARNING_ID( "ShooterGameMode.SavedArenaStateDoes", "[Shooter] the saved arena state does not match this build - starting a new round" );
-            _killCount = 0;
-            if ( _bPacingReady == SW_TRUE )
-                _director.restart();
+            SW_LOG_WARNING_ID( "ShooterGameMode.SavedArenaStateDoes", "[Shooter] the saved arena state does not match this build - the current round goes on" );
         }
     }
 

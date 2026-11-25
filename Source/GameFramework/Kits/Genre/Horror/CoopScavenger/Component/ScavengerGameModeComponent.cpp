@@ -222,10 +222,8 @@ namespace sw
 
     void ScavengerGameModeComponent::onStateRestored( bool bRestored )
     {
-        if ( bRestored )
-            return;
-        SW_LOG_WARNING_ID( "Scavenger.StateRefused", "[Scavenger] the saved expedition does not fit this build - a new expedition opens" );
-        (void)openGame(); // 새 판도 열지 못하면 startGame 이 이유를 남겼다
+        if ( bRestored == false )
+            SW_LOG_WARNING_ID( "Scavenger.StateRefused", "[Scavenger] the saved expedition does not fit this build - the current expedition goes on" );
     }
 
     bool ScavengerGameModeComponent::submitCrewCommand( int32 player, const ScavengerCommand& command )
@@ -665,7 +663,7 @@ namespace sw
         io.header( Internal::kStateTag, Internal::kStateVersion );
         if ( io.isOk() == false )
             return;
-        // 원정은 지갑 · 깃발 · 창고를 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 원정에 바로 읽고, 거절되면 `onStateRestored` 가 새 판을 연다.
+        // 원정은 지갑 · 깃발 · 창고를 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 원정에 바로 읽는다(거절되면 베이스가 앞 상태로 되돌린다).
         if ( io.isReading() && ( _pCatalog == nullptr || openExpedition() == false ) )
         {
             SW_LOG_ERROR_ID( "Scavenger.StateNeedsCatalog", "Scavenger game mode: state read before the catalog is bound - refused" );

@@ -60,6 +60,29 @@ SW_TEST_CASE( GameModeTest, RestoredStateIsAppliedAfterTheReset )
     manager.endPlay();
 }
 
+/** @brief [GameModeTest] 멤버에 바로 읽다 거절한 상태는 베이스가 읽기 전 값으로 되돌린다 — 상태 칸도 손 본문도(디렉터마다 사본을 두지 않는다) */
+SW_TEST_CASE( GameModeTest, RefusedStateLeavesTheGameAsItWas )
+{
+    GameObjectManager      manager;
+    GameModeTestComponent* pGameMode = manager.createGameObject( hashed_string( "Director" ) )->addComponent<GameModeTestComponent>();
+    SW_REQUIRE_NOT_NULL( pGameMode );
+    manager.beginPlay();
+    SW_REQUIRE_TRUE( pGameMode->isStarted() );
+    pGameMode->_roundCount = 9;
+    pGameMode->_handValue  = -1;
+    Archive saved;
+    pGameMode->writeState( saved );
+    vector<uint8> bytes;
+    saved.writeData( bytes );
+    pGameMode->_roundCount = 2;
+    pGameMode->_handValue  = 5;
+    pGameMode->restoreState( std::move( bytes ) );
+    SW_EXPECT_EQUAL( 1u, pGameMode->_refusedCount );
+    SW_EXPECT_EQUAL( 2, pGameMode->_roundCount );
+    SW_EXPECT_EQUAL( 5, pGameMode->_handValue );
+    manager.endPlay();
+}
+
 /** @brief [GameModeTest] 플레이어 상태 오브젝트를 가리키지 않은 디렉터는 찾을 때 오류다 — 디렉터 오브젝트의 것으로 대신하지 않는다 */
 SW_TEST_CASE( GameModeTest, MissingPlayerStateIsAnError )
 {

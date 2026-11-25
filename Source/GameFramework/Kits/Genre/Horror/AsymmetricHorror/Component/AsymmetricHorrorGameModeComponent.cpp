@@ -247,10 +247,7 @@ namespace sw
     {
         _bot.initialize( _botSettings ); // 살인마의 기억은 저장하지 않는다 — 다시 감지한다
         if ( bRestored == false )
-        {
-            SW_LOG_WARNING_ID( "AsymmetricHorror.StateRefused", "[AsymmetricHorror] the saved match does not fit this build - a new match opens" );
-            (void)openGame(); // 새 판도 열지 못하면 startGame 이 이유를 남겼다
-        }
+            SW_LOG_WARNING_ID( "AsymmetricHorror.StateRefused", "[AsymmetricHorror] the saved match does not fit this build - the current match goes on" );
     }
 
     bool AsymmetricHorrorGameModeComponent::submitSurvivorInput( int32 survivor, const AsymmetricHorrorCommand& command )
