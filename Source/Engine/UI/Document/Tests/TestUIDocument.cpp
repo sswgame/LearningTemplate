@@ -139,7 +139,8 @@ SW_TEST_CASE( UIDocumentTest, SelectedOptionShowsItsText )
 /** @brief [UIDocumentTest] 문서에 적은 슬라이더 값 · 진행 비율 · 불투명도 · 줄 높이는 세터와 같은 범위로 제한된다 */
 SW_TEST_CASE( UIDocumentTest, WrittenValuesAreLimitedLikeTheSetters )
 {
-    UIDocumentWidgets        document( "<SliderWidget _name=\"Slider\" _minValue=\"0\" _maxValue=\"10\" _step=\"-1\" _value=\"25\" />"
+    // 음수 걸음(`_step`)은 칸의 `Min = 0` 이 읽기에서 거절한다(Serialization.ValueOutOfRange) — 세터처럼 제한되는 것은 범위가 칸 사이에 걸린 값뿐이다.
+    UIDocumentWidgets        document( "<SliderWidget _name=\"Slider\" _minValue=\"0\" _maxValue=\"10\" _value=\"25\" />"
                                               "<SliderWidget _name=\"Inverted\" _minValue=\"5\" _maxValue=\"1\" _value=\"3\" />"
                                               "<ProgressBarWidget _name=\"Progress\" _percent=\"1.5\" _opacity=\"2\" />"
                                               "<ListViewWidget _name=\"List\" _rowHeight=\"0\" />" );
@@ -153,6 +154,14 @@ SW_TEST_CASE( UIDocumentTest, WrittenValuesAreLimitedLikeTheSetters )
     SW_EXPECT_EQUAL( 1.0f, pProgress->getPercent() );
     SW_EXPECT_EQUAL( 1.0f, pProgress->getOpacity() );
     SW_EXPECT_EQUAL( 1.0f, pList->getRowHeight() );
+
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
+    UIDocumentAsset negativeStep;
+    SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<BoxPanel><SliderWidget _name=\"Slider\" _step=\"-1\" /></BoxPanel>" ), "engine/ui/test.ui.xml", ResourceContext::forDocument(), negativeStep )
+                         .has_value() );
+    UIDocumentCache      cache;
+    vector<UIBindingDef> listBinding;
+    SW_EXPECT_TRUE( UIDocumentLoader::instantiate( negativeStep, cache, ResourceTagSet{}, listBinding ).value_or( nullptr ) == nullptr );
 }
 
 /** @brief [UIDocumentTest] 문서에 적은 글 입력 칸은 글이 있으면 글(커서는 글 끝), 없으면 힌트를 보인다 */
