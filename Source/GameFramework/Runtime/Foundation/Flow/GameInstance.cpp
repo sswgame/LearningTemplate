@@ -647,7 +647,7 @@ namespace sw
         expected<void, SnapshotRestoreFailure> result = _stateSnapshot.readEnvelope( purpose, getStateTypeInfo(), getStateInstance(), pInBuffer, size );
         if ( result.has_value() == false )
         {
-            // 교체 중에 졌다 — 일부만 선 씬을 세이브에 쓰지 않는다. 검증에서 진 것(씬이 그대로)은 막지 않는다 — 간격 저장이 계속 마지막 좋은 상태를 남긴다.
+            // 교체 중에 졌으면 일부만 선 씬을 세이브에 쓰지 않는다. 검증에서 진 것(씬이 그대로)은 막지 않는다. 간격 저장이 계속 마지막 좋은 상태를 남긴다.
             if ( result.error() == SnapshotRestoreFailure::SceneBroken )
                 getSubsystem<GameSaveSlots>().notifySceneBroken( purpose );
             return result;

@@ -2,17 +2,17 @@
  * @file ServiceRecordUtil.h
  * @brief 저장소 레코드 값(`ServiceRecord::_bytes`)을 `REFLECT` 타입 하나에서 읽고 씁니다. 형식은 버전 헤더가 붙은 자기 기술형(A, `BinarySerializer`)입니다.
  * @details 저장소 레코드는 쓴 빌드와 다른 빌드가 읽으므로 고정 배치형(B)을 쓰지 않습니다.
- *          **판은 레코드 타입 한 곳이다** — `REFLECT( Version = N )`(없으면 0, `TypeMetadata::getVersion`). 호출부가 판 상수를 따로 넘기지 않는다(그릇마다 판을 두면
+ *          판은 레코드 타입 한 곳이다 — `REFLECT( Version = N )`(없으면 0, `TypeMetadata::getVersion`). 호출부가 판 상수를 따로 넘기지 않는다(그릇마다 판을 두면
  *          같은 타입을 싣는 두 곳이 판을 따로 올려 한쪽이 옛 판을 새 판으로 읽는다).
  *          A 는 필드를 이름으로 짝짓습니다. 필드를 더하면 옛 레코드의 그 필드는 타입의 기본값으로 채워집니다. 필드를 빼면 옛 레코드에 남은 그 필드는 이 빌드가 모르는 칸이 되고,
- *          영속 레코드는 그 칸을 들어(`_unknownProperties`) 다시 쓸 때 그대로 싣는다 — 판을 올리지 않아도 읽힌다. 칸의 **뜻**을 바꿀 때만 판을 올리고,
+ *          영속 레코드는 그 칸을 들어(`_unknownProperties`) 다시 쓸 때 그대로 싣는다 — 판을 올리지 않아도 읽힌다. 칸의 뜻을 바꿀 때만 판을 올리고,
  *          옛 판 레코드는 그 타입에 등록한 패치 사슬(`SW_TYPE_VERSION_PATCH` — 상태 바이트의 `StateIO::reflected` 와 같은 사슬)이 올린 뒤 읽는다.
  *          패치는 옛 모양 타입에서 새 모양 타입으로 옮기는 함수 하나로 쓴다(`upgradeRecordBody`). 단계가 빠졌거나 새 판(내리기)이면 손상이다.
  *          못 읽은 레코드를 어떻게 할지는 레코드마다 손으로 정하지 않고 읽기 함수가 정합니다. 영속 레코드는 `readDurable` 로 읽어 손상이면
  *          오류 로그를 남기고 호출부가 실패를 돌려줍니다. 다시 만들 수 있는 캐시는 `readCache` 로 읽어 없는 것으로 봅니다(판이 다르면 사슬 없이 버리고 다시 만든다).
  *          캐시는 배포 중에 빌드가 다른 서버가 읽으므로 서버 버스와 같은 읽기(`MixedBuildCodec::decode`)입니다. 버전이 같으면 모르는 이름의 필드는 건너뛰고,
  *          읽지 못한 아는 필드(모르는 열거자)와 다른 버전은 없는 것으로 봅니다. 영속 레코드는 옛 빌드가 모르는 필드를 버리고 다시 쓰면 새 빌드의 값이 지워지므로
- *          **레코드가 모르는 칸을 든다**: 영속 레코드 타입은 `ServiceRecordUnknownFields _unknownProperties{};`(PROPERTY 가 아닌 칸)를 가져야 하고(`readDurable` 의 static_assert),
+ *          레코드가 모르는 칸을 든다: 영속 레코드 타입은 `ServiceRecordUnknownFields _unknownProperties{};`(PROPERTY 가 아닌 칸)를 가져야 하고(`readDurable` 의 static_assert),
  *          `readDurable` 이 같은 버전의 모르는 칸을 거기 담고 `encode` 가 그대로 다시 싣는다. 레코드를 복사해 고쳐 쓰는 서비스 코드는 손대지 않아도 칸이 따라간다.
  *          A 는 `MaxCount` 를 보지 않으므로 쓰기와 두 읽기는 고정 배치형 코덱이 있는 타입이면 언제나 선언된 범위(`Min`, `Max`, `MaxCount`)도 확인합니다.
  *          코덱이 없는 타입(지역 목록 같은 문자열 목록)은 서비스가 쓰기 때와 같은 규칙으로 확인합니다.

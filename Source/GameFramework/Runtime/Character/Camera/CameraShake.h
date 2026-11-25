@@ -3,7 +3,7 @@
  * @brief 카메라 흔들림을 정의합니다.
  * @details 손떨림 잡음(펄린, `CameraNoiseDef`)과 충격(진폭, 감쇠, 거리 감쇠, `CameraImpulse`)의 순수 계산과, 충격을 모아 듣는 `CameraImpulseListener` 가 있다.
  *          Cinemachine 의 Noise, Impulse 와 언리얼의 CameraShake 에 해당한다.
- *          흔들림은 포즈 위에 더하는 **오프셋**(`CameraShakeOffset`: 카메라 축 기준 위치, 피치, 요, 롤)이라서 블렌드와 감쇠가 흔들림을 섞지 않는다.
+ *          흔들림은 포즈 위에 더하는 오프셋(`CameraShakeOffset`: 카메라 축 기준 위치, 피치, 요, 롤)이라서 블렌드와 감쇠가 흔들림을 섞지 않는다.
  *          `applyCameraShake` 가 마지막에 더한다. 같은 시드와 같은 시간이면 같은 값이 나온다.
  */
 #pragma once
@@ -57,7 +57,7 @@ namespace sw
     /**
      * @brief 충격 하나의 모양입니다. 크기, 길이, 진동수, 감쇠 시간, 거리 감쇠 반지름을 담습니다.
      * @details 크기는 `amplitude × 남은 비율 × e^(-t/decayTime)` 으로 줄어 길이 끝에서 정확히 0 이 된다. 그래서 툭 끊기지 않는다.
-     *          위상은 **흐른 시간**으로 간다. 남은 시간으로 가면 끝나기 직전이 가장 크게 튄다.
+     *          위상은 흐른 시간으로 간다. 남은 시간으로 가면 끝나기 직전이 가장 크게 튄다.
      *          듣는 쪽이 원점에서 `falloffRadius` 이상 멀면 0 이고, 그 안은 거리에 따라 선형으로 줄인다. 반지름이 0 이면 거리와 상관없다.
      */
     struct CameraImpulseDef

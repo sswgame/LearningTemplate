@@ -65,7 +65,7 @@ namespace sw
     /**
      * @brief 사용자 파일(외형 프리셋, 키 바인딩, 옵션)의 베이스입니다. 직접 만들 수 없는 기반이라 `REFLECT( Abstract )` 로 등록합니다.
      * @details 저장은 로컬 저장 슬롯(`ILocalStore`) 위에서 한다. `saveToSlot` 이 요청하고, 회수한 완료를 `loadFromCompletion` 이 읽는다. 게임 스레드는 디스크를 기다리지 않는다.
-     *          바이트 형식은 파생 타입이 정한다. 리플렉션 세이브는 `SaveGameSerializer::writeBytes( *this, out )` 처럼 **자기 타입**으로 불러야 한다.
+     *          바이트 형식은 파생 타입이 정한다. 리플렉션 세이브는 `SaveGameSerializer::writeBytes( *this, out )` 처럼 자기 타입으로 불러야 한다.
      *          여기서 `*this` 로 부르면 템플릿 인자가 `SaveGame` 이 되어, 이 타입의 TypeInfo(프로퍼티 0)로 빈 페이로드를 쓰고도 성공을 반환한다.
      *          그래서 기본 구현을 두지 않고 순수 가상으로 둔다.
      *          게임 상태(진행과 세계)는 이것이 아니라 스냅샷 봉투(`GameSaveSlots::save`)에 저장한다.

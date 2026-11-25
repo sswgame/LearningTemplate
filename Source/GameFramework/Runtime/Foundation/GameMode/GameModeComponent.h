@@ -39,30 +39,30 @@ namespace sw
      * @class GameModeComponent
      * @brief 씬에 하나 두는 디렉터의 공통 골격입니다.
      * @details 파생 클래스는 규칙(시작, 틱, 상태 바이트)과 무엇을 스폰하는지만 적는다. 베이스는 다음을 맡는다.
-     *          - **수명**: `PrePhysics` 에서 틱하고(`kTickGroup` — 뷰와 컨트롤러는 뒤 그룹에서 읽는다) `onBeginPlay` 의 `openGame` 이 상태 칸을 기본값으로 되돌린 뒤 `startGame` 을 부른다.
+     *          - 수명: `PrePhysics` 에서 틱하고(`kTickGroup` — 뷰와 컨트롤러는 뒤 그룹에서 읽는다) `onBeginPlay` 의 `openGame` 이 상태 칸을 기본값으로 되돌린 뒤 `startGame` 을 부른다.
      *            그다음 보관하던 복원 바이트를 적용하고 첫 플러시를 예약한다. 시작하지 못하면 틱도 돌지 않는다.
-     *          - **상태 바이트**: `restoreState` 는 시작 전이면 바이트를 보관했다가 시작할 때 적용하고, 시작 뒤면 바로 `readStateOrRevert` 로 적용한다.
+     *          - 상태 바이트: `restoreState` 는 시작 전이면 바이트를 보관했다가 시작할 때 적용하고, 시작 뒤면 바로 `readStateOrRevert` 로 적용한다.
      *            적용한 뒤에는 뷰 오브젝트를 정리해 다시 스폰하게 한다.
      *            `writeState` 와 `restoreState` 는 `ComponentStateCodec` 가 이름으로 부르는 계약이다.
      *            게임 인스턴스는 `GameStateSnapshot::registerGameMode<T>()`(게임 인스턴스의 `getStateSnapshot()`) 한 줄로 이 디렉터를 상태 스냅샷에 등록한다.
-     *          - **틱 뒤 플러시**: 틱(워커) 안에서는 구조를 바꾸지 못하므로 `scheduleFlush` 가 `executeOrDeferPostTick` 한 번으로 `onFlush` 를 게임 스레드에서 부른다.
+     *          - 틱 뒤 플러시: 틱(워커) 안에서는 구조를 바꾸지 못하므로 `scheduleFlush` 가 `executeOrDeferPostTick` 한 번으로 `onFlush` 를 게임 스레드에서 부른다.
      *            이때 쌓인 소리(`getSoundQueue`)도 낸다.
      *            뷰 오브젝트가 정리돼 있으면 다음 틱이 스스로 플러시를 예약하고, `onFlush` 가 다시 스폰한다.
-     *          - **스폰한 오브젝트**: `spawnPrefab` 이 핸들을 보관하고, `despawnViews` 가 모두 정리한다(상태 저장 전과 플레이 끝). 스스로 사라지는 오브젝트의 핸들은 플러시가 가끔 정리한다.
+     *          - 스폰한 오브젝트: `spawnPrefab` 이 핸들을 보관하고, `despawnViews` 가 모두 정리한다(상태 저장 전과 플레이 끝). 스스로 사라지는 오브젝트의 핸들은 플러시가 가끔 정리한다.
      *            풀 정책(`PrefabPoolPolicy`, 데이터)을 받은 스폰은 프리팹 경로마다 풀 하나에서 꺼내고 `releaseSpawned` 로 돌려받는다(Lyra · Boss Room 의 풀).
-     *          - **자동 플레이**: PROPERTY `_bAutoPlay` 로 켠다. 개발 구성에서는 게임이 `Dev/` 에서 `SW_GAME_AUTOPLAY` 로 등록한 전역 변수도 켠다(런타임 칸 `IGameAutoplayQuery` 로 읽는다 — 배포본에는 없다).
-     *          - **다른 오브젝트 디렉터 뒤에 돌리기**: 키트 디렉터 사이의 순서는 보통 한 오브젝트에 붙인 순서이다(`GameStateComponent`).
+     *          - 자동 플레이: PROPERTY `_bAutoPlay` 로 켠다. 개발 구성에서는 게임이 `Dev/` 에서 `SW_GAME_AUTOPLAY` 로 등록한 전역 변수도 켠다(런타임 칸 `IGameAutoplayQuery` 로 읽는다 — 배포본에는 없다).
+     *          - 다른 오브젝트 디렉터 뒤에 돌리기: 키트 디렉터 사이의 순서는 보통 한 오브젝트에 붙인 순서이다(`GameStateComponent`).
      *            씬을 나눠 디렉터를 다른 오브젝트에 두면 PROPERTY `_tickAfter` 로 그 오브젝트의 첫 디렉터 뒤에 규칙을 돌린다.
      *            주 틱은 선행 조건을 받지 못하므로 그때만 규칙을 서브틱(`kRuleSubTick`)으로 옮기고, 그 디렉터의 규칙 틱(`getRuleTickHandle`)을 선행 조건으로 등록한다.
      *            걸지 않은 디렉터는 주 틱 그대로이다.
-     *          - **플레이어 상태**: 지갑 · 가방 · 평판 · 퀘스트 일지는 조종자 오브젝트에 있다(`PlayerComponentUtil`). 그것을 여는 디렉터는 PROPERTY `_playerState` 로 그 오브젝트를 가리킨다
+     *          - 플레이어 상태: 지갑 · 가방 · 평판 · 퀘스트 일지는 조종자 오브젝트에 있다(`PlayerComponentUtil`). 그것을 여는 디렉터는 PROPERTY `_playerState` 로 그 오브젝트를 가리킨다
      *            (`requirePlayerState` — 없으면 판을 열지 않는다). 디렉터 오브젝트에 두지 않는다.
-     *          - **다시 읽힌 카탈로그**: 규칙 객체는 카탈로그를 날 포인터로 빌린다. `acquireRequired` · `acquireBoundCatalog` 로 받은 에셋은 베이스가 연 판부터 쥐어 끊기지 않고,
+     *          - 다시 읽힌 카탈로그: 규칙 객체는 카탈로그를 날 포인터로 빌린다. `acquireRequired` · `acquireBoundCatalog` 로 받은 에셋은 베이스가 연 판부터 쥐어 끊기지 않고,
      *            다시 읽히면 규칙 틱 앞에서 상태를 왕복(`writeState` → `readState`)시켜 규칙 객체를 새 판에 다시 묶는다(세이브를 읽는 길 하나 — 항목은 id 로 다시 찾는다).
      *            언리얼 DataTable 행 핸들이 다시 읽힌 표에서 행 이름으로 찾는 자리이다. 왕복이 지면(새 판에 없는 항목) 앞 판에 묶인 상태로 되돌리고 디렉터의 복원 실패 처리(`onStateRestored( false )`)를 따르고 알린다.
      *            멤버는 `BoundAssetRef` 라 디렉터 · 뷰 · 입력은 규칙 객체가 묶인 판만 본다 — 다시 읽힌 뒤 묶기 전에 새 판에서 옛 행 번호를 찾지 않는다.
      *
-     *          - **디렉터 계약 셋**(모든 미니게임 · 허브 디렉터가 같은 셋만 적는다 — 키트 규칙 객체에는 계약을 더하지 않는다):
+     *          - 디렉터 계약 셋(모든 미니게임 · 허브 디렉터가 같은 셋만 적는다 — 키트 규칙 객체에는 계약을 더하지 않는다):
      *            ① 걸음 `updateGame`(틱 뒤 게임 스레드) — 베이스가 프로파일러 구간(`kStepScopeName`)으로 감싸 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 가 그 구간을 읽는다(줄 추가 없이 모든 미니게임이 값을 낸다).
      *            ② 세이브 `serializeGameState`(리플렉션 상태 칸 뒤에 잇는 손 본문 하나).
      *            ③ 결과 `MatchGameModeComponent::endMatch`(스스로 끝난다) 또는 플레이어의 나가기 → `collectMinigameResult` — 한 판 임시 상태(미니게임 지갑 · 창고 · 점수)는 디렉터가 소유하고
@@ -138,7 +138,7 @@ namespace sw
         /**
          * @brief 디렉터 상태의 입구입니다 — 리플렉션 상태 칸(`PROPERTY( RuntimeState )`, 동적 형식 기준 `StateIO::reflectedAs`)을 먼저 놓고 파생의 `serializeGameState` 를 잇습니다.
          * @details 상태 칸은 씬 스냅숏도 옮기지만 그 뒤 `onBeginPlay` 의 `openGame` 이 기본값으로 되돌리므로, 판을 연 뒤 적용하는 이 바이트가 싣는다(언리얼 `UPROPERTY( SaveGame )` 자리).
-         *          파생은 칸을 다시 적지 않는다 — 한 칸을 두 곳이 알지 않는다. 읽기는 사본 없이 제자리에서 돈다 — 끝까지 맞지 않으면 `readStateOrRevert` 가 앞 상태로 되돌린다.
+         *          파생은 칸을 다시 적지 않는다. 한 칸을 두 곳이 알지 않는다. 읽기는 사본 없이 제자리에서 돌고, 끝까지 맞지 않으면 `readStateOrRevert` 가 앞 상태로 되돌린다.
          */
         void serializeState( StateIO& io );
         /**

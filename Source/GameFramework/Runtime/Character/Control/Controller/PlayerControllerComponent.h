@@ -1,7 +1,7 @@
 /**
  * @file PlayerControllerComponent.h
  * @brief 로컬 플레이어 조종자를 정의합니다.
- * @details 입력을 매핑(InputMap)으로 의도로 바꾼다. 매핑 층을 읽는 **유일한** 조종자이다.
+ * @details 입력을 매핑(InputMap)으로 의도로 바꾼다. 매핑 층을 읽는 유일한 조종자이다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -33,14 +33,14 @@ namespace sw
      *          시선(폰의 `Look Action`, 2D)은 감도를 곱해 조종 회전에 더하고, 피치를 폰의 상한에서 자른다. 화면 아래(+y)로 끌면 아래를 본다.
      *          폰 스키마에 있는데 입력 맵에 없는 버튼과 아날로그는 처음 쥘 때 한 번 경고한다. 조용히 안 눌리면 안 되기 때문이다.
      *
-     *          **마우스 잠금**: 폰이 바라면(`PawnComponent::needsMouseLock`, 1인칭) 쥘 때 커서를 창 가운데에 잠그고 숨긴다.
+     *          마우스 잠금: 폰이 바라면(`PawnComponent::needsMouseLock`, 1인칭) 쥘 때 커서를 창 가운데에 잠그고 숨긴다.
      *          잠금 토글 액션(`_mouseLockAction`, 기본 `ToggleMouseLock`, Esc)이 해제하고 다시 적용한다. 빙의를 풀거나 지워질 때 적용한 잠금을 해제한다.
      *          그런 폰의 시선은 잠금이 실제로 적용된 동안만 쌓는다(`InputManager::isMouseLockActive`).
      *          포커스 밖, Alt, 개발 콘솔, 클릭 전에는 풀린 커서를 움직여도 화면이 돌지 않는다.
      *          배타 가상 입력은 OS 포인터를 쥐지 않으므로 잠금 요청만 본다.
      *          이 모두를 조종 시스템 단계(게임 스레드)에서 바꾼다.
      *
-     *          **UI 와의 경계는 이 조종자 한 곳이다.**
+     *          UI 와의 경계는 이 조종자 한 곳이다.
      *          런타임 UI 가 먹은 입력(`GameInputView` 가 거른다, 메뉴에서 누른 패드 A, 위젯이 받은 클릭)은 뗄 때까지 의도에 넣지 않는다.
      *          모달이나 로딩 화면이 떠 있으면(`IInputCaptureQuery::isGameInputCaptured`) 의도가 0 이고 잠금 토글도 받지 않는다. 조종 회전은 남는다.
      *          활성 화면이 커서를 바라면(`needsCursor`) 마우스 잠금을 쉬고 시선을 쌓지 않는다. 화면이 닫히면 요청해 둔 잠금으로 돌아간다.

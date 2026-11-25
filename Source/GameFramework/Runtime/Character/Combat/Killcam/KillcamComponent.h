@@ -1,7 +1,7 @@
 /**
  * @file KillcamComponent.h
  * @brief 킬캠 — 판정이 끝낸 발을 고정 용량으로 기록하고, 고른 발을 그 오브젝트의 카메라로 연출 재생합니다(탄 따라가기 → 명중 클로즈업 → 게임 카메라로 돌아감).
- * @details **연출 전용 재생**이다: 기록(`KillcamShot`)만 읽고 피해 · 물리 · 입력 · 네트워크를 다시 돌리지 않는다. 화면은 엔진 카메라 레지스트리의 컷 카메라(`CameraRegistry::setCutCamera`)로 덮고,
+ * @details 연출 전용 재생이다: 기록(`KillcamShot`)만 읽고 피해 · 물리 · 입력 · 네트워크를 다시 돌리지 않는다. 화면은 엔진 카메라 레지스트리의 컷 카메라(`CameraRegistry::setCutCamera`)로 덮고,
  *          끝나거나 건너뛰면(`skip`) 푼다 — 시퀀서 카메라 컷과 같은 길이라 게임 카메라가 원래 규칙으로 돌아간다. 길이는 설정의 상한에서 자른다(`KillcamSettings::_maxSeconds`).
  *          서버 권위 게임은 서버가 정한 명중을 받아 `recordShot` 에 넣고, 관전 · 재접속은 기록이 고정 용량이라 마지막 몇 발만 남는다(오래된 발은 덮인다).
  *          배치: 씬에 카메라(`CameraComponent`, 역할 Custom)와 이 컴포넌트를 단 오브젝트 하나 — 카메라가 없으면 재생은 오류로 멈춘다.
@@ -54,7 +54,7 @@ namespace sw
         KillcamPhase           getPhase() const { return _pose._phase; }
         const KillcamSettings& getSettings() const { return _settings; }
 
-        /** @brief 씬의 킬캠(씬에 하나 — 쏘는 쪽이 기록을 넣을 곳)입니다. 없으면 nullptr 입니다 — 킬캠이 없는 씬은 기록하지 않는다. 둘 이상이면 오류를 남기고 nullptr 이다(어느 쪽에 기록할지 등록 순서로 고르지 않는다). 레지스트리를 읽어 씬을 훑지 않는다. */
+        /** @brief 씬의 킬캠(씬에 하나, 쏘는 쪽이 기록을 넣을 곳)입니다. 없으면 nullptr 입니다. 킬캠이 없는 씬은 기록하지 않는다. 둘 이상이면 오류를 남기고 nullptr 이다(어느 쪽에 기록할지 등록 순서로 고르지 않는다). 레지스트리를 읽어 씬을 훑지 않는다. */
         static KillcamComponent* findInScene( const GameObjectManager& manager );
 
     private:

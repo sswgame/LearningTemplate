@@ -8,7 +8,7 @@
  *          물리 바디가 있는 탈것은 `WheeledVehicleComponent`(Jolt 바퀴) 몫이고 두 모터를 섞지 않는다 — 표면 마찰만 같은 표면 종류에서 읽는다.
  *          언리얼 Chaos Vehicle(바디) 대 단순 이동 컴포넌트, 유니티 Rigidbody 대 CharacterController 의 경계와 같다.
  *          좌표는 +Y 가 위이고, 진행 방향(yaw) 0 이 +Z 이며, 양의 yaw 가 오른쪽(+X) 회전이다.
- *          **벽이나 차끼리의 충돌은 하지 않는다.** 게임(또는 물리)이 위치와 속도를 고쳐 넣는다(`setPosition`, `setVelocity`, `addImpulse`).
+ *          벽이나 차끼리의 충돌은 하지 않는다. 게임(또는 물리)이 위치와 속도를 고쳐 넣는다(`setPosition`, `setVelocity`, `addImpulse`).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -125,7 +125,7 @@ namespace sw
         bool _bIgnoresOffroad{ true };
     };
 
-    /** @brief 공중 제어 모듈 — 점프와 공중 조향, 공중에서의 낙하 중력(게임 손맛 — 경사 중력과 따로)입니다. 끄면 점프가 없고 공중 조향이 0 이며 낙하는 몸의 중력입니다. */
+    /** @brief 공중 제어 모듈: 점프와 공중 조향, 공중에서의 낙하 중력(게임 손맛용, 경사 중력과 따로)입니다. 끄면 점프가 없고 공중 조향이 0 이며 낙하는 몸의 중력입니다. */
     REFLECT()
     struct VehicleAirControlModule
     {

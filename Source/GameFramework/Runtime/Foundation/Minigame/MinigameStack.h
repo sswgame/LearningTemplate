@@ -1,7 +1,7 @@
 /**
  * @file MinigameStack.h
  * @brief 미니게임 칸의 스택입니다 — 칸 하나는 켜진(또는 덮인) 미니게임과 그 미니게임을 덮기 전으로 돌아가는 길(돌아올 자리)입니다.
- * @details `MinigameFlow` 가 든다. 쌓기(`enter` — 미니게임 안에서 또 미니게임, 용과 같이의 가게 안 오락기)와 맨 위 교체(`switchTo` — 마리오 파티식 연속)를 같은 칸 모양으로 푼다.
+ * @details `MinigameFlow` 가 든다. 쌓기(`enter`: 미니게임 안에서 또 미니게임, 용과 같이의 가게 안 오락기)와 맨 위 교체(`switchTo`: 마리오 파티식 연속)를 같은 칸 모양으로 푼다.
  *          돌아올 자리는 들어간 방식마다 다른 값이라 한 형식(`std::variant`)으로 둔다 — 씬 전환은 찍은 씬, 하위 레벨은 얹은 씬 · 하위 레벨 이름, 첫 진입은 입구 씬.
  *          나중에 "세션 이동"(넷 세션의 서버 이동) 갈래를 더할 자리다. 덮인 미니게임의 정의는 그 아래 칸이 든다 — 돌아올 때 다시 켤 정의를 따로 적지 않는다.
  *          세이브(`writeSaveState`)는 칸마다 미니게임 이름과 돌아올 자리를 담는다 — 언리얼 Lyra 가 여행 URL 의 `?Experience=` 로 어느 경험인지 싣는 자리에, 덮인 바탕 씬까지 더한 것이다.
@@ -44,7 +44,7 @@ namespace sw
         hashed_string _subLevelName; ///< 하위 레벨 이름(미니게임 이름)
     };
 
-    /** @brief 돌아올 씬 없이 들어간 칸입니다(첫 진입이 미니게임 — `gv_firstMinigame`) — 나가면 gamesettings 입구 씬으로 간다. */
+    /** @brief 돌아올 씬 없이 들어간 칸입니다(첫 진입이 미니게임, `gv_firstMinigame`). 나가면 gamesettings 입구 씬으로 간다. */
     struct MinigameEntranceReturn
     {
     };

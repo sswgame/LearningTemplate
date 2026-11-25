@@ -4,7 +4,7 @@
  * @details 운동(중력 · 저항 · 유도) · 사거리 · 수명 · 관통 · 튕김 · 반사(패리)를 여기서 한 벌로 다룬다. 무엇에 맞는지는 쓰는 쪽이 `IProjectileWorld::sweep` 으로 답하고,
  *          맞은 뒤의 반응(피해 · 다운 · 넉백 · 폭발 범위 · 아이템 효과)은 쓰는 쪽이 사건(`ProjectileEvent`)을 받아 한다 — 키트는 데이터와 반응만 가진다.
  *
- *          **2D 는 평면 제약이다.** 2D 키트(액션 플랫포머 · 액션 룸)와 평면 위를 도는 카트도 같은 3D 계산에 평면 법선(`setPlaneNormal`)을 준다. 언리얼 ProjectileMovement 의
+ *          2D 는 평면 제약이다. 2D 키트(액션 플랫포머 · 액션 룸)와 평면 위를 도는 카트도 같은 3D 계산에 평면 법선(`setPlaneNormal`)을 준다. 언리얼 ProjectileMovement 의
  *          평면 제약(`bConstrainToPlane`)과 같은 길이다. 유니티 · Godot 는 2D 물리를 따로 두지만, 발사체 규칙(관통 · 튕김 · 유도)을 차원마다 두 벌로 쓰게 되므로 택하지 않았다(기억에 의존한 비교).
  *          결정성: 이 TU 는 `sw_mark_deterministic_sources` 에 있고 삼각함수는 `DeterministicMathUtil` 이다. 중력은 쓰는 쪽이 값(가속의 크기)으로 넘긴다 — 물리 설정을 읽지 않는다.
  */

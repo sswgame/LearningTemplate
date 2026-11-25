@@ -114,7 +114,7 @@ namespace sw
      * @brief 살아 있는 일정 시스템 목록입니다. 에디터 디버그 창 · 감시 값(`collectLiveSystems`)만 읽습니다.
      * @details GameFramework 의 모듈 서브시스템이다(`SW_MODULE_SUBSYSTEM( Engine, … )`) — 엔진 범위 아래 GameFramework 의 자식 범위에 서고 `game::findSubsystem` 으로 찾힌다.
      *          일정 시스템은 게임 컴포넌트의 값 멤버이거나 테스트의 지역 객체라 서비스 범위 없이도 선다. 그래서 생성자가 찾은 목록에 오르고 그 목록을 들어 소멸자가 빠진다
-     *          (목록이 없으면 — 게임 서비스 없는 테스트 — 오르지 않는다). 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이 들었다. 언리얼 `UWorldSubsystem` 의 등록 목록 자리.
+     *          (게임 서비스 없는 테스트처럼 목록이 없으면 오르지 않는다). 언리얼 `UWorldSubsystem` 의 등록 목록 자리.
      */
     class ScheduleSystemRegistry final : public Subsystem
     {

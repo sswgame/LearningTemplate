@@ -40,19 +40,19 @@ namespace sw
     /**
      * @class FirstPersonCameraComponent
      * @brief 같은 오브젝트의 `CameraComponent` 를 1인칭 원근 시점으로 둡니다. 슈터, 복셀 샌드박스, 걷는 시뮬레이터가 함께 씁니다.
-     * @details **시점은 폰의 조종 회전이다.** 같은 오브젝트에 `PawnComponent` 가 있으면 `TickGroup::PrePhysics` 에서 그 의도의 조종 요와 피치를 시점으로 둔다.
+     * @details 시점은 폰의 조종 회전이다. 같은 오브젝트에 `PawnComponent` 가 있으면 `TickGroup::PrePhysics` 에서 그 의도의 조종 요와 피치를 시점으로 둔다.
      *          마우스와 스틱은 플레이어 조종자가, 바라볼 곳은 AI 조종자가 조종 회전으로 낸다. 이 컴포넌트는 입력을 읽지 않는다.
      *          폰이 없으면(관전 카메라) `setAngles` 로 정한 시점을 지킨다.
      *          마우스 잠금과 Esc 는 플레이어 조종자의 일이다(`PawnComponent::needsMouseLock`).
-     *          몸을 움직이는 게임 컴포넌트는 **같은 오브젝트**에서 뒤 그룹에 돈다. 이 시점(`getLook`)으로 걷고 쏜 뒤 `setEyePosition` 으로 눈 위치를 넣으면,
+     *          몸을 움직이는 게임 컴포넌트는 같은 오브젝트에서 뒤 그룹에 돈다. 이 시점(`getLook`)으로 걷고 쏜 뒤 `setEyePosition` 으로 눈 위치를 넣으면,
      *          카메라와 뷰 모델이 그 위치에 바로 다시 놓인다.
      *          코드가 시점을 정할 때(시작 시점, 반동)는 `setAngles` 와 `addRecoil` 을 쓴다. 폰이 있으면 그 값이 조종 회전 요청과 오프셋으로 넘어가서 다음 틱부터 조종자의 값이 된다.
      *
-     *          **뷰 모델**: 같은 오브젝트의 메시 컴포넌트 중 컴포넌트 이름이 `_viewModelName` 인 것(손에 든 총)을 카메라의 자식으로 둔다.
+     *          뷰 모델: 같은 오브젝트의 메시 컴포넌트 중 컴포넌트 이름이 `_viewModelName` 인 것(손에 든 총)을 카메라의 자식으로 둔다.
      *          위치는 로컬 `_viewModelOffset`(오른쪽, 위, 앞)이고 요는 `_viewModelYawOffset` 이다. 시점을 따라 도는 것은 계층이 한다(피치까지).
      *          같은 오브젝트의 씬 컴포넌트는 기본으로 첫 씬 컴포넌트(카메라)에 붙는다. 붙어 있지 않으면 틱 밖에서 붙인다. 이름을 비우면 뷰 모델이 없다.
      *
-     *          **사용자 설정**: 옵션 메뉴의 시야각은 `_fieldOfViewY` 를 기본 시야각 대비 비율로 넓히고 좁히며, 머리 흔들림(`_headBob`, 진폭 0 이면 없음)은
+     *          사용자 설정: 옵션 메뉴의 시야각은 `_fieldOfViewY` 를 기본 시야각 대비 비율로 넓히고 좁히며, 머리 흔들림(`_headBob`, 진폭 0 이면 없음)은
      *          `gameplay.headBob` 이 끄면 멈춘다(`CameraUserSettings`). 흔들림의 위상은 눈 위치가 간 거리로 정하므로 `setEyePosition` 이 틱 밖에서 불려도 맞는다.
      */
     REFLECT( Category = "Camera", DisplayName = "First Person Camera", Tooltip = "First-person camera: follows the pawn's control rotation, pitch limit, eye position and a view-model slot" )

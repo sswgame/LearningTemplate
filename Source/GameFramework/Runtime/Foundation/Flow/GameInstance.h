@@ -45,7 +45,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief IGame 수명주기를 고정하고 팩 설정 및 런타임 상태 스냅샷 직렬화를 지원합니다.
-     * @details **프로세스당 하나만 돈다.** 게임 범위의 지금 범위(`game::findGameScope`)와 서비스 창구는 프로세스에 하나라, 인스턴스 둘이 함께 서면 뒤의 것이 앞의 조회를
+     * @details 프로세스당 하나만 돈다. 게임 범위의 지금 범위(`game::findGameScope`)와 서비스 창구는 프로세스에 하나라, 인스턴스 둘이 함께 서면 뒤의 것이 앞의 조회를
      *          덮는다. 호스트는 옛 인스턴스를 내린 뒤 새 것을 세우고(리로드 · 재시작), 이미 하나가 돌 때 `initialize` 는 아무것도 걸지 않고 거절한다(언리얼 `UGameInstance` 하나와 같은 자리).
      *          여러 월드 · 병렬 게임 테스트가 실제로 필요해지면 그때 게임 컨텍스트를 호출 경계로 넘기도록 바꾼다.
      */
@@ -64,8 +64,8 @@ namespace sw
          *          게임플레이 입력 맵 묶음(`InputMapBundle`)도 여기서 적용한다. 묶음이 깨졌으면 게임을 띄우지 않는다.
          *          커스텀 칸을 읽는 킷 코드는 이 서비스로 읽는다. 서비스로 등록하지 않으면 제품에서 늘 기본값을 쓴다.
          *          사운드 이벤트 라이브러리(`_audioEvents`)도 `onInitialize` 앞에 올리고 `shutdown` 이 내린다. 적었는데 못 읽거나 `onInitialize` 가 false 면 false 다
-         *          (필수 데이터 — `loadRequiredData` — 를 못 읽은 게임은 뜨지 않는다).
-         *          **실패는 한 길로 되감는다**: 어느 단계에서 멈추든 그때까지 세운 것을 `shutdown` 이 거둔다(게임 범위 · 서브시스템 · 보안 제공자 · 사운드 이벤트 · 외형 · 자동 저장,
+         *          (필수 데이터(`loadRequiredData`)를 못 읽은 게임은 뜨지 않는다).
+         *          실패는 한 길로 되감는다: 어느 단계에서 멈추든 그때까지 세운 것을 `shutdown` 이 거둔다(게임 범위 · 서브시스템 · 보안 제공자 · 사운드 이벤트 · 외형 · 자동 저장,
          *          `onInitialize` 에 들어갔으면 `onShutdown`). 호스트의 모듈 절차는 실패한 인스턴스에 `shutdown` 을 부르지 않으므로(`ModuleInstanceUtil::createInstance`)
          *          되감기는 인스턴스의 일이다. 이미 다른 인스턴스가 돌면(프로세스당 하나) 아무것도 걸지 않고 false 다.
          */
@@ -121,7 +121,7 @@ namespace sw
         /**
          * @brief 지금 도는 인스턴스입니다(없으면 nullptr). 게임 스레드에서만 부른다.
          * @details 기동이 이미 도는 인스턴스가 있는지 보는 자리다. 프로세스당 하나라 뜻이 하나다.
-         *          인스턴스는 기동 때 자기 게임 범위에 자신을 건다 — 지금 게임 범위에서 찾는다(정적 칸을 두지 않는다 — 언리얼 `UGameInstance` 도 월드 문맥이 든다).
+         *          인스턴스는 기동 때 자기 게임 범위에 자신을 걸고, 지금 게임 범위에서 찾는다(정적 칸을 두지 않는다. 언리얼 `UGameInstance` 도 월드 문맥이 든다).
          */
         static GameInstance* findRunningInstance();
 
@@ -207,7 +207,7 @@ namespace sw
         virtual void onAfterStateDeserialize() {}
 
         /**
-         * @brief 상태 스냅샷 봉투입니다 — 파생 생성자가 PROPERTY 밖의 상태를 가진 컴포넌트 타입을 올린다(`registerStatefulComponent` · `registerGameMode` — 세운 것만 가진 타입은 정의한 .cpp 의 `StatefulComponentRegistrar`).
+         * @brief 상태 스냅샷 봉투입니다. 파생 생성자가 PROPERTY 밖의 상태를 가진 컴포넌트 타입을 올린다(`registerStatefulComponent` · `registerGameMode`. 세운 것만 가진 타입은 정의한 .cpp 의 `StatefulComponentRegistrar`).
          */
         GameStateSnapshot& getStateSnapshot() { return _stateSnapshot; }
         /**
@@ -246,7 +246,7 @@ namespace sw
         }
         /**
          * @brief 카탈로그(종류 `TCatalog::kDataKind`)를 공유 캐시에서 받아 @p outCatalog 에 쥐고 게임 범위에 겁니다. 실패는 `loadRequiredData` 와 같습니다.
-         * @details 사본을 읽지 않는다 — 같은 파일을 쥔 컴포넌트 · 에디터와 한 벌을 나눈다. 받은 때의 판(스냅숏)을 쥔다 — 번호를 지어 두어 일부러 옛 판을 쥐는 종류(떼어 내는 카탈로그)만 쓴다.
+         * @details 사본을 읽지 않고 같은 파일을 쥔 컴포넌트 · 에디터와 한 벌을 나눈다. 받은 때의 판(스냅숏)을 쥔다. 번호를 지어 두어 일부러 옛 판을 쥐는 종류(떼어 내는 카탈로그)만 쓴다.
          *          다시 읽힌 판을 따라가야 하면 `loadRequiredCatalog`(`SharedAssetRef`)를 쓴다.
          */
         template <class TCatalog>

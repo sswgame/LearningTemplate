@@ -51,11 +51,11 @@ namespace sw
 
     bool StepEncounterCounter::isPeriodicEncounter( float32 rate, uint32 stepCount )
     {
-        // 0이면 **조우가 나지 않는다**. 야생 조우를 끄려고 rate 0 을 넣는 경우가 이에 해당한다.
+        // 0이면 조우가 나지 않는다. 야생 조우를 끄려고 rate 0 을 넣는 경우가 이에 해당한다.
         if ( rate <= 0.0f )
             return false;
         // 1 이상이면 매 걸음 조우한다. 1/rate 를 uint32 로 자르면 그 구간이 통째로 0이 되어
-        // "주기 0" 이 된다. 이것을 다른 주기로 바꾸면 **높은 확률이 낮은 빈도**가 되어 버린다.
+        // "주기 0" 이 된다. 이것을 다른 주기로 바꾸면 높은 확률이 낮은 빈도가 되어 버린다.
         if ( rate >= 1.0f )
             return true;
 

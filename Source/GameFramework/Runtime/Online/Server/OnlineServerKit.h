@@ -4,14 +4,14 @@
  * @details - 키트끼리는 서로 모르므로(include 금지) 서버 조립도 키트 하나가 다른 키트를 부르지 않습니다. 런타임이 공통 기반(호스트, 저장소, 캐시, 버스, 예약 작업)을 만들어
  *            문맥(`OnlineServerKitContext`)에 넣고, 키트는 자기 담당을 만든 뒤 다른 키트가 쓸 기반 인터페이스(신원, 접속 상태, 차단, 원장 정책)를 문맥의 지역 범위에
  *            타입으로 겁니다(`exposeInterface`).
- *          - 받는 쪽은 받을 인터페이스 **형식 목록 하나**만 적습니다(`OnlineServerKit<OnlineKitRequired<…>, OnlineKitOptional<…>, OnlineKitUnordered<…>>`).
+ *          - 받는 쪽은 받을 인터페이스 형식 목록 하나만 적습니다(`OnlineServerKit<OnlineKitRequired<…>, OnlineKitOptional<…>, OnlineKitUnordered<…>>`).
  *            의존 키트 이름은 그 형식들의 제공 키트 상수(`kProviderKit`)에서 폴드 식으로 나오고, 꺼내기는 그 목록 묶음(`Dependencies` · `UnorderedDependencies`)으로만
  *            합니다 — 지역 범위는 키트에 보이지 않아(`OnlineServerKitContext::_kits` 가 비공개) 이름 목록과 찾기가 어긋날 자리가 없습니다.
  *          - 순서는 숫자가 아니라 이름 의존입니다. 필수(설정에 없으면 기동 오류) · 선택(설정에 있을 때만 먼저 선다)의 제공 키트가 이 키트보다 먼저 서도록 런타임이 키트를
  *            지역 `SubsystemCollection` 노드로 두어 위상 정렬합니다(준비된 것이 여럿이면 이름 순). 순서 없는 목록(`OnlineKitUnordered`)은 의존에 넣지 않습니다 —
  *            서로 찾는 두 키트(친구 ↔ 채팅)가 순환을 만들지 않게, 모든 키트의 `initialize` 뒤인 `start` 에서만 받습니다.
  *          - 단계는 네 개입니다. `initialize`(호스트를 띄우기 전 — 객체를 만들고 바인딩을 등록하고 인터페이스를 내놓는다), `start`(모든 키트의 `initialize` 와
- *            호스트 기동 뒤 — 라우터와 다른 키트의 인터페이스로 로직을 시작한다), `stop`(호스트를 내리기 전 — 캐시 요청 취소, 구독 해제, 저장 일 회수),
+ *            호스트 기동 뒤, 라우터와 다른 키트의 인터페이스로 로직을 시작한다), `stop`(호스트를 내리기 전, 캐시 요청 취소, 구독 해제, 저장 일 회수),
  *            `shutdown`(호스트와 저장소를 내린 뒤 — 마지막 정리). `stop` · `shutdown` 은 `initialize` 에 성공한 키트만 역순으로 받습니다.
  *            언리얼 Online Services 의 인터페이스 조립, Nakama 런타임의 `InitModule` 등록에 해당합니다.
  */

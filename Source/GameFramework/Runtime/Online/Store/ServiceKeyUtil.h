@@ -28,7 +28,7 @@ namespace sw
 
         /**
          * @brief 키 · 토픽 · 코드에 쓰는 토큰 글인지 봅니다 — 길이 1..@p maxSize, 글자는 모두 `[0-9a-z]` 이거나 @p extraCharacters 에 든 것(`"_."` 처럼).
-         * @details 허용 목록 검사다(그 밖의 바이트 — 대문자 · 공백 · 널 · 비 ASCII — 는 모두 거절). 대문자를 받지 않는 것은 같은 값이 두 키가 되지 않게 하려는 것이다.
+         * @details 허용 목록 검사다(그 밖의 바이트인 대문자 · 공백 · 널 · 비 ASCII 는 모두 거절). 대문자를 받지 않는 것은 같은 값이 두 키가 되지 않게 하려는 것이다.
          *          저장소 키 · 버스 토픽 · 원격 설정 키 · 작업 id · 감사 동작 · 원장 토큰이 이 하나를 쓴다 — 신뢰하지 않는 글이 키에 드는 경계마다 같은 규칙이 돈다.
          */
         [[nodiscard]] static bool isTokenText( string_view text, int32 maxSize, string_view extraCharacters );

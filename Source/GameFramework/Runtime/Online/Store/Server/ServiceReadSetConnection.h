@@ -33,7 +33,7 @@ namespace sw
     class SW_GF_API ServiceReadSetConnection final : public IServiceStoreConnection
     {
     public:
-        /** @brief @p pStats 가 있으면 커밋 · 충돌을 거기에 센다 — 일의 입구(`ServiceStoreJob::execute`)만 넘긴다(겹쳐 둔 포장은 null — 한 커밋을 두 번 세지 않는다). */
+        /** @brief @p pStats 가 있으면 커밋 · 충돌을 거기에 센다. 일의 입구(`ServiceStoreJob::execute`)만 넘긴다(겹쳐 둔 포장은 null, 한 커밋을 두 번 세지 않는다). */
         explicit ServiceReadSetConnection( IServiceStoreConnection& inner, ServiceStoreCommitStats* pStats = nullptr );
 
         [[nodiscard]] ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) override;

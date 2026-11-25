@@ -52,7 +52,7 @@ namespace sw
      *          루트 읽기는 읽은 항목 수(`uint32`, 0 이면 실패)나 성공 여부(`bool`)를 반환한다.
      *          둘 다 비공개로 두고 베이스를 friend 로 연다.
      *          다른 카탈로그를 함께 받는 루트 읽기(기술, 코스터 설계)는 `GameDataXML::loadFromAsset` 의 문맥 버전을 그대로 쓴다.
-     *          **사본을 만들지 않는다.** 파일에서 읽는 길은 공유 캐시 하나다 — 그 카탈로그의 .cpp 가 캐시를 인스턴스화하고(`SW_MODULE_SHARED_ASSET_CACHE`, 헤더에 `extern template`) 쓰는 쪽은
+     *          사본을 만들지 않는다. 파일에서 읽는 길은 공유 캐시 하나다 — 그 카탈로그의 .cpp 가 캐시를 인스턴스화하고(`SW_MODULE_SHARED_ASSET_CACHE`, 헤더에 `extern template`) 쓰는 쪽은
      *          `SharedAssetCache<카탈로그>::acquire` · `request` 로 같은 경로의 한 벌을 쥔다. 그래서 `loadFromAsset` 은 비공개이고 종류의 로더(`AssetTypeLoader`)만 friend 다 —
      *          쓰는 쪽이 멤버 · 지역 변수로 사본을 읽으면 다시 읽기가 닿지 않고 같은 파일을 여러 번 읽는다(언리얼 `UDataTable` · 유니티 `ScriptableObject` 처럼 에셋 한 벌을 참조한다).
      *          창구를 이 베이스에 두지 않는다 — 내보내는 카탈로그가 베이스 멤버를 모두 인스턴스화해 캐시가 없는 카탈로그에서 링크가 깨진다.

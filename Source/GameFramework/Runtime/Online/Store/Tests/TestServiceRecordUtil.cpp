@@ -8,7 +8,7 @@
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUtil.h"
 #include "GameFramework/Runtime/Online/Store/Tests/ServiceRecordUtilTestTypes.h"
 
-// ServiceRecordUtilTest — 레코드 판은 타입(`REFLECT( Version )`)에 있고, 옛 판 영속 레코드는 그 타입의 패치 사슬로 올라 읽힌다(감사 11 — 이관 계층이 없어
+// ServiceRecordUtilTest: 레코드 판은 타입(`REFLECT( Version )`)에 있고, 옛 판 영속 레코드는 그 타입의 패치 사슬로 올라 읽힌다(감사 11 — 이관 계층이 없어
 // 판을 올리면 옛 레코드 전부가 읽기 실패였다). 새 판 · 단계가 빠진 판은 손상이다.
 
 namespace sw

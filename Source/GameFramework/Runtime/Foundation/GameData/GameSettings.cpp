@@ -33,9 +33,9 @@ namespace sw
         if ( AssetIO::hasAsset( assetID ) == false )
             return false;
 
-        // **먼저 비운다.**
+        // 먼저 비운다.
         // 주의: 안 비우면 팩을 바꿔 다시 읽을 때 앞 팩의 커스텀 프로퍼티가 그대로 남아,
-        // 새 팩에 없는 키를 물으면 **없어진 팩의 값**이 나온다.
+        // 새 팩에 없는 키를 물으면 없어진 팩의 값이 나온다.
         *this = GameSettings{};
         return GameDataXML::loadFromAsset( *this, &GameSettings::loadRoot, assetID, "GameSettings" );
     }

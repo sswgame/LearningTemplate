@@ -61,7 +61,7 @@ namespace sw
 
     /**
      * @brief 메서드 서술자의 호출 규칙입니다. 규칙은 와이어의 뜻이므로 표의 해시에 섞입니다(`OnlineProtocolTable::computeMessageHash`).
-     * @details 메서드는 호출 종류를 **꼭 하나** 적는다 — 읽기(`ReadOnly`), 상태 변경(`RequiresIdempotencyKey`), 상태 변경이지만 본래 멱등(`Idempotent*`, 깃발 이름이 까닭).
+     * @details 메서드는 호출 종류를 꼭 하나 적는다 — 읽기(`ReadOnly`), 상태 변경(`RequiresIdempotencyKey`), 상태 변경이지만 본래 멱등(`Idempotent*`, 깃발 이름이 까닭).
      *          기본값이 없어(`Method` 의 마지막 인자) 빠뜨리면 컴파일 오류이고, 둘을 적거나 종류 없이 `Anonymous` 만 적으면 `static_assert` 가 멈춘다.
      *          "읽기라서 없음" 과 "빠뜨려서 없음" 이 형식으로 갈린다(Stripe · AWS 는 상태 변경 API 마다 멱등 토큰을 받는다).
      */

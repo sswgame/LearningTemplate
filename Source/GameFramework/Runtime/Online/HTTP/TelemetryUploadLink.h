@@ -8,7 +8,7 @@
  *            루프백 수신기를 가리킨다(`Scripts/net/telemetry_local_run.py`).
  *          - 동의 · 표본 · 묶음 · 상한은 엔진 서비스가 지킨다. 텔레메트리는 서비스의 스풀 워커 스레드(`TelemetrySpool`)가 보내고, 크래시 보고는 기동 때 전용 스레드 하나가
  *            보낼 줄의 묶음을 올린다(`CrashReportService::runReporter`). 묶음은 지난 실행의 크래시를 이번 기동이 묶은 것이라 크래시 난 프로세스가 보낼 일이 없다.
- *          - 종료 때 텔레메트리 업로더를 떼며 지금 스풀 파일을 닫아 보낸다(`TelemetryService::releaseUploader` — 워커가 그 업로더로 보내는 중인 것이 끝날 때까지 기다린다) — 빌린 참조가 엔진 서비스에 남지 않는다.
+ *          - 종료 때 텔레메트리 업로더를 떼며 지금 스풀 파일을 닫아 보낸다(`TelemetryService::releaseUploader`. 워커가 그 업로더로 보내는 중인 것이 끝날 때까지 기다린다). 빌린 참조가 엔진 서비스에 남지 않는다.
  *          언리얼은 `IAnalyticsProvider` 를 설정(`[Analytics]`)으로 고르고 크래시는 `CrashReportClient` 가 `DataRouterUrl` 로 보낸다(기억에 의존). 끝점이 설정인 것은 같다.
  */
 #pragma once

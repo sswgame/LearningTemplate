@@ -7,16 +7,16 @@
  *
  *          - 서비스 스레드 하나(`tick` 을 부르는 스레드)에서 돈다. 서비스의 콜백은 모두 그 스레드에서 불린다.
  *            계정과 연결의 테이블을 갖고 알림(`sendPush`)을 보낸다.
- *          - **캐시 앞과 서버 버스의 소비자는 호스트 하나이다.**
+ *          - 캐시 앞과 서버 버스의 소비자는 호스트 하나이다.
  *            캐시 답과 채널 메시지는 `getEphemeralRouter()` 가 요청 id 와 채널로, 버스 메시지는 `subscribeServerBus` 한 서비스에 나눠 준다.
  *            서비스가 `pollReplies` 나 `pollMessages` 를 직접 부르면 서로의 답을 가져간다.
  *          - 메서드 영역이 겹치는 서비스는 `registerServerService` 가 거절한다.
- *          - **GM 리슨**(`_pAdminTransport`)을 주면 리슨이 둘이 된다. 호스트 안의 묶음 전송(`ListenerTransport`)이 연결 핸들에 리슨 번호를 섞어 두 전송을 전송 하나로 보이므로
+ *          - GM 리슨(`_pAdminTransport`)을 주면 리슨이 둘이 된다. 호스트 안의 묶음 전송(`ListenerTransport`)이 연결 핸들에 리슨 번호를 섞어 두 전송을 전송 하나로 보이므로
  *            엔드포인트 · 요청 서버 · 계정 표는 하나다(GM 이 GM 포트에서 로그인해도 같은 계정 표). 서비스의 노출(`getExposure`)과 연결이 들어온 리슨이 맞지 않는 요청은
  *            없는 메서드와 같은 `kInvalidRequest` 로 답한다(영역이 있는지 드러내지 않는다). Hello · Ping 은 두 리슨 모두 받는다(OnlineKits I6).
- *          - **Hello 는 다른 어떤 바이트보다 먼저 온라인 스키마 해시(`OnlineProtocolRegistry`)를 비교한다.** 다르면 `kVersionMismatch` 와 서버 해시로 답하고 연결을 닫는다.
+ *          - Hello 는 다른 어떤 바이트보다 먼저 온라인 스키마 해시(`OnlineProtocolRegistry`)를 비교한다. 다르면 `kVersionMismatch` 와 서버 해시로 답하고 연결을 닫는다.
  *            해시는 `initialize` 때 한 번 정한다. 이 비교는 B 형식이 아니라 고정된 작은 형식이라 스키마가 바뀌어도 늘 읽힌다.
- *          - **수명 계약**: 서비스는 빌려 쓴다. 호스트 `shutdown` 이 서비스마다 `onHostShutdown` 을 한 번 불러 호스트 포인터와 구독을 떼게 한다.
+ *          - 수명 계약: 서비스는 빌려 쓴다. 호스트 `shutdown` 이 서비스마다 `onHostShutdown` 을 한 번 불러 호스트 포인터와 구독을 떼게 한다.
  *            버스 구독은 `subscribeServerBus` 가 돌려준 구독(`Subscription`)이 소유한다 — 서비스가 먼저 사라지면 구독이 풀리고, 호스트가 먼저 내려가면 무효가 된다.
  *            그래서 서비스 객체는 호스트보다 먼저 종료돼도 늦게 종료돼도 된다.
  *            서비스 쪽에서 맡긴 비동기 일(캐시 라우터, 접속 상태 찾기)은 서비스 `shutdown` 이 `cancel` 한다.
