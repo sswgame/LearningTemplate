@@ -15,7 +15,6 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 #include "Core/Task/TaskNode.h"
-#include "Core/Task/TaskNodePool.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace sw
