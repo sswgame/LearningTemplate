@@ -55,7 +55,7 @@ namespace sw::editor
         [[nodiscard]] bool clearOverride( string_view key );
 
         /** @brief 되돌리기 · 다시 하기의 데이터 단계입니다 — 원본 @p assetID 의 서술을 글 @p metaText 로 되돌리고 그 원본을 다시 임포트합니다. */
-        static void restoreMetaText( string assetID, string metaText );
+        static void restoreMetaText( string assetID, string expectedText, string metaText );
 
     private:
         /** @brief 원본 종류입니다(규칙 파일이 다르다). */

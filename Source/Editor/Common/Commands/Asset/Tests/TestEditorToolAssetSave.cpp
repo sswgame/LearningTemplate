@@ -5,6 +5,7 @@
 #include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -16,9 +17,10 @@ using namespace sw::editor;
 SW_TEST_CASE( EditorToolAssetSaveTest, GoodDocumentIsSaved )
 {
     const AbsolutePath path = test::makeScratchPath( "good.seq.xml" );
+    AssetWriter        writer;
     SequenceAsset      asset;
     asset._note = "written";
-    SW_REQUIRE_TRUE( EditorToolAssetCommands::saveSequence( asset, path.str() ) );
+    SW_REQUIRE_TRUE( EditorToolAssetCommands::saveSequence( writer, asset, path.str() ) );
     fixed_string<constant::buffer::kMax512> checkPath;
     formatstring( checkPath.data(), checkPath.capacity(), "%#.savecheck", path.str() );
     SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( checkPath ) ) );
@@ -34,15 +36,16 @@ SW_TEST_CASE( EditorToolAssetSaveTest, DocumentThatCannotBeReadBackKeepsTheSaved
     SW_EXPECT_LOG( "SequenceAsset.SequenceItemField" );
     SW_EXPECT_LOG( "EditorToolAssetCommands.WouldNotReadBack" );
     const AbsolutePath path = test::makeScratchPath( "kept.seq.xml" );
+    AssetWriter        writer;
     SequenceAsset      good;
     good._note = "kept";
-    SW_REQUIRE_TRUE( EditorToolAssetCommands::saveSequence( good, path.str() ) );
+    SW_REQUIRE_TRUE( EditorToolAssetCommands::saveSequence( writer, good, path.str() ) );
 
     SequenceAsset     broken;
     SequenceTrackItem item{};
     item._kind = SequenceItemKind::Spawn; // 프리팹이 없어 다시 읽지 못한다
     broken._listItem.push_back( item );
-    SW_EXPECT_FALSE( EditorToolAssetCommands::saveSequence( broken, path.str() ) );
+    SW_EXPECT_FALSE( EditorToolAssetCommands::saveSequence( writer, broken, path.str() ) );
     fixed_string<constant::buffer::kMax512> checkPath;
     formatstring( checkPath.data(), checkPath.capacity(), "%#.savecheck", path.str() );
     SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( checkPath ) ) );

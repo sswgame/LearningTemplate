@@ -49,7 +49,7 @@ namespace sw::editor
         void             drawDocumentContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 109.0f, 27.0f ); }
         /** @brief 고치는 라이브러리 사본을 파일에 씁니다(닫기 · 종료 확인의 Save). 검사를 통과하지 못하면 쓰지 않고 false 입니다. */
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         /** @brief 읽은 라이브러리를 고치는 중일 때만 저장합니다("고치기 그만" 뒤에는 쓸 사본이 없다). */
         bool canSaveDocument() const override { return EditorDocumentPanel::canSaveDocument() && _edit.isEditingAny(); }
         /** @brief 엔진에서 모은 이벤트 이름 수입니다(감시 값 `Editor.AudioEventCount`). */

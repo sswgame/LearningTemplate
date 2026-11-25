@@ -48,7 +48,7 @@ namespace sw::editor
         , _copiedComponentXML{}
         , _copiedComponentTypeName{}
         , _pendingSceneMutex{}
-        , _sceneDiskBaseline{}
+        , _sceneWriter{}
         , _arrCameraBookmark{}
         , _uniqueLockedObjectID{}
         , _gizmoOperation{ 0 }
@@ -153,14 +153,9 @@ namespace sw::editor
         const Scene* const pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getSourcePath().empty() )
             return;
-        const optional<AbsolutePath> path = editor::getSubsystem<AssetPaths>().toDiskPath( pScene->getSourcePath() );
+        const optional<DiskPath> path = editor::getSubsystem<AssetPaths>().toDiskPath( pScene->getSourcePath() );
         if ( path.has_value() )
-            _sceneDiskBaseline.capture( span<const AbsolutePath>( &*path, 1 ) );
-    }
-
-    bool EditorWorkspace::validateSceneDiskOverwrite( const AbsolutePath& path )
-    {
-        return _sceneDiskBaseline.validateOverwrite( span<const AbsolutePath>( &path, 1 ) );
+            _sceneWriter.capture( *path );
     }
 
     void EditorWorkspace::refreshSelectionAfterRestore()

@@ -44,7 +44,7 @@ namespace sw::editor
         EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 147.0f, 37.0f ); }
         void               shutdown() override;
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
 
     private:
         /** @brief 자동 배치 결과 노드 하나의 캔버스 좌표입니다. */

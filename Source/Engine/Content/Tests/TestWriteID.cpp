@@ -13,7 +13,7 @@ using namespace sw;
 
 SW_TEST_CASE( WriteIDTest, GlobalIDKeepsItsDomain )
 {
-    const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "common/materials/new_not_yet.material" );
+    const optional<DiskPath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "common/materials/new_not_yet.material" );
     SW_REQUIRE_TRUE( path.has_value() );
     SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( *path ), string( "common/materials/new_not_yet.material" ) );
 }
@@ -25,9 +25,9 @@ SW_TEST_CASE( WriteIDTest, GlobalIDKeepsItsDomain )
  */
 SW_TEST_CASE( WriteIDTest, MixedCaseIDWritesLowercaseInTheResourceTree )
 {
-    const AssetPaths&            assetPaths = engine::getSubsystem<AssetPaths>();
-    const optional<AbsolutePath> domainRoot = assetPaths.toDiskPath( "engine" );
-    const optional<AbsolutePath> path       = assetPaths.toDiskPath( "engine/Write_ID_Test_Not_Yet/MixedCase.XML" );
+    const AssetPaths&        assetPaths = engine::getSubsystem<AssetPaths>();
+    const optional<DiskPath> domainRoot = assetPaths.toDiskPath( "engine" );
+    const optional<DiskPath> path       = assetPaths.toDiskPath( "engine/Write_ID_Test_Not_Yet/MixedCase.XML" );
     SW_REQUIRE_TRUE( domainRoot.has_value() && path.has_value() );
     string relative;
     SW_REQUIRE_TRUE( FileUtil::tryMakePathUnderRoot( domainRoot->str(), path->str(), relative ) );
@@ -78,7 +78,7 @@ SW_TEST_CASE( WriteIDTest, NewNamesUnderContentMustBeLowercase )
 SW_TEST_CASE( WriteIDTest, RelativeKeyWritesTheFileReadingPicked )
 {
     // engine 에만 있는 상대 키 — 읽기가 고른 그 파일에 쓴다(검색 순서의 앞 도메인에 새로 만들지 않는다).
-    const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "shaders/forward_lit.hlsl" );
+    const optional<DiskPath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "shaders/forward_lit.hlsl" );
     SW_REQUIRE_TRUE( path.has_value() );
     SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( *path ), string( "engine/shaders/forward_lit.hlsl" ) );
 }
@@ -86,7 +86,7 @@ SW_TEST_CASE( WriteIDTest, RelativeKeyWritesTheFileReadingPicked )
 // 작업 도메인은 폴더가 아직 없어도 도메인이다(빈 트리의 첫 쓰기) — 상대 키로 거절하지 않는다.
 SW_TEST_CASE( WriteIDTest, ScratchDomainNeedsNoFolderYet )
 {
-    const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "scratch/write_id_test_not_yet/new.appearance.xml" );
+    const optional<DiskPath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "scratch/write_id_test_not_yet/new.appearance.xml" );
     SW_REQUIRE_TRUE( path.has_value() );
     SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( *path ), string( "scratch/write_id_test_not_yet/new.appearance.xml" ) );
 }
@@ -114,7 +114,7 @@ SW_TEST_CASE( WriteIDTest, DiskPathIsNotAResourceID )
 SW_TEST_CASE( WriteIDTest, BareDomainIsTheDomainRoot )
 {
     // 도메인 이름만인 id 는 그 도메인 루트다(에디터의 도메인 폴더 - 콘텐츠 브라우저 루트). `game` 은 팩 이름까지가 도메인이다.
-    const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "engine" );
+    const optional<DiskPath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "engine" );
     SW_REQUIRE_TRUE( path.has_value() );
     SW_EXPECT_TRUE( FileUtil::isDirectory( *path ) );
     SW_EXPECT_EQUAL( ProcessRoots::get()._content.join( "engine" ).str(), path->str() );

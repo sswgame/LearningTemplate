@@ -345,7 +345,7 @@ namespace sw
         [[nodiscard]] bool loadResourceAs( const AssetID& assetID, const ResourceContext& context, string* pOutAbsPath = nullptr, string* pOutBaseID = nullptr );
 
         /** @brief 디스크의 절대 경로를 그대로 읽고 파싱합니다. 팩을 보지 않습니다(도구 · 설정 · Saved 파일용). */
-        [[nodiscard]] bool loadFromFile( const AbsolutePath& absPath );
+        [[nodiscard]] bool loadFromFile( const DiskPath& absPath );
         /** @brief `loadFromFile` 의 데이터 문서 판입니다(`parseData`). 리소스 id 가 아니라 디스크 경로로 고른 데이터 파일을 리소스 읽기와 같은 길로 읽습니다. */
         [[nodiscard]] bool loadDataFile( const AbsolutePath& absPath );
         /** @brief `loadDataFile` 과 같되 합치기 규칙을 읽는 쪽이 고릅니다(`loadResourceAs` 의 디스크 판). @p pOutBaseID 는 펼치기 전 원문의 `_base` 입니다. */

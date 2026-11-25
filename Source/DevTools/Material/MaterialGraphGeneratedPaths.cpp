@@ -16,6 +16,7 @@
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetWriteAccess.h"
 #include "Engine/Graphics/Shader/Compile/ShaderSourceGenerator.h"
 
 namespace sw
@@ -42,9 +43,8 @@ namespace sw
             }
 
             /** @brief 디스크의 글이 @p text 와 다르면 씁니다. */
-            [[nodiscard]] static bool writeIfChanged( const AssetPaths& assetPaths, string_view assetID, string_view text, uint32* pOutWrittenCount )
+            [[nodiscard]] static bool writeIfChanged( const optional<AbsolutePath>& diskPath, string_view assetID, string_view text, uint32* pOutWrittenCount )
             {
-                const optional<AbsolutePath> diskPath = assetPaths.toDiskPath( assetID );
                 if ( diskPath.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "MaterialGraph.GeneratedPathUnresolved", "Generated material graph file '%#' has no disk path", assetID );
@@ -96,7 +96,7 @@ namespace sw
                     string                    metaText;
                     AssetMeta                 meta;
                     const optional<AssetGUID> guid = FileUtil::readTextFile( staleMetaPath, metaText ) ? meta.parseXML( metaText, staleMetaPath.str() ) : nullopt;
-                    if ( guid.has_value() == false || FileUtil::writeTextFile( currentMetaPath, AssetMeta::makeText( currentShaderPath.str(), *guid, meta._listImportOverride ) ) == false )
+                    if ( guid.has_value() == false || AssetMeta::saveBeside( currentShaderPath, *guid, meta._listImportOverride ) == false )
                     {
                         SW_LOG_WARNING_ID( "MaterialGraph.ShaderMetaNotCarried", "Could not carry '%#' to the new generated shader '%#' - it keeps a new identity", staleMetaPath.str(), currentShaderPath.str() );
                         return; // 옛 서술을 남겨 손으로 옮길 수 있게 한다
@@ -107,9 +107,8 @@ namespace sw
             }
 
             /** @brief 같은 줄기의 옛 해시 셰이더를 지웁니다. 남겨 두면 그 내용을 아무도 안 쓰는데 쿠킹 입력과 저장소에 쌓인다. 곁의 서술은 지금 셰이더로 옮긴다(`carryStaleMeta`). */
-            static void removeStaleShaders( const AssetPaths& assetPaths, const MaterialGraphGeneratedPaths& paths, string_view currentShaderPath )
+            static void removeStaleShaders( const optional<AbsolutePath>& folder, const MaterialGraphGeneratedPaths& paths, string_view currentShaderPath )
             {
-                const optional<AbsolutePath> folder = assetPaths.toDiskPath( paths._shadersFolder );
                 if ( folder.has_value() == false || FileUtil::isDirectory( *folder ) == false )
                     return;
                 vector<AbsolutePath> listFile;
@@ -189,17 +188,23 @@ namespace sw
         return path;
     }
 
+    optional<AbsolutePath> MaterialGraphGeneratedPaths::openForWrite( const AssetPaths& assetPaths, string_view assetID )
+    {
+        const optional<DiskPath> diskPath = assetPaths.toDiskPath( assetID );
+        return diskPath.has_value() ? optional<AbsolutePath>{ AssetWriteAccess::toWritablePath( *diskPath ) } : nullopt;
+    }
+
     bool MaterialGraphGeneratedPaths::writeGenerated( const AssetPaths& assetPaths, string_view graphID, const MaterialGraphGeneratedPaths& paths, const MaterialGraphCompileResult& result, uint32* pOutWrittenCount )
     {
         using Internal          = MaterialGraphCookInternal;
         const string shaderPath = makeShaderPath( paths, result );
         // 셰이더를 먼저 쓴다 — 머티리얼이 가리키는 파일이 늘 있어야 감시가 먼저 머티리얼을 다시 읽어도 컴파일이 된다.
-        if ( Internal::writeIfChanged( assetPaths, shaderPath, result._hlsl, pOutWrittenCount ) == false )
+        if ( Internal::writeIfChanged( openForWrite( assetPaths, shaderPath ), shaderPath, result._hlsl, pOutWrittenCount ) == false )
             return false;
         const string materialText = MaterialGraphCompileResult::makeMaterialText( result, paths._stem, shaderPath, graphID );
-        if ( Internal::writeIfChanged( assetPaths, paths._materialPath, materialText, pOutWrittenCount ) == false )
+        if ( Internal::writeIfChanged( openForWrite( assetPaths, paths._materialPath ), paths._materialPath, materialText, pOutWrittenCount ) == false )
             return false;
-        Internal::removeStaleShaders( assetPaths, paths, shaderPath );
+        Internal::removeStaleShaders( openForWrite( assetPaths, paths._shadersFolder ), paths, shaderPath );
         return true;
     }
 

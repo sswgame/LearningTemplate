@@ -6,6 +6,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 #include "Editor/Common/Commands/Scene/ReflectionProbeBaker.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
@@ -112,7 +113,7 @@ namespace sw::editor
     struct EditorReflectionProbeFilterInput
     {
         shared_ptr<const ReflectionProbeCapture> _pCapture{};
-        optional<AbsolutePath>                   _dataPath{}; ///< 쓸 파일(UI 스레드가 `AssetPaths` 로 정했다)
+        optional<DiskPath>                       _dataPath{}; ///< 쓸 파일(UI 스레드가 `AssetPaths` 로 정했다)
         string                                   _assetPath{};
         uint64                                   _objectID{ 0 };
     };
@@ -162,7 +163,8 @@ namespace sw::editor
                 result._bSucceeded = false;
                 result._error      = "the baker produced no reflection data";
             }
-            if ( result._bSucceeded && ( input._dataPath.has_value() == false || result._data.saveToFile( *input._dataPath ) == false ) )
+            AssetWriter writer;
+            if ( result._bSucceeded && ( input._dataPath.has_value() == false || writer.saveAsset( *input._dataPath, result._data ) == false ) )
             {
                 result._bSucceeded = false;
                 result._error      = EditorReflectionProbeBakeSessionInternal::makeWriteError( input._assetPath );
@@ -335,7 +337,7 @@ namespace sw::editor
             reportFailure( string( failureBuilder.view() ) );
             return;
         }
-        optional<AbsolutePath> dataPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
+        optional<DiskPath> dataPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
         if ( dataPath.has_value() == false )
         {
             reportFailure( EditorReflectionProbeBakeSessionInternal::makeWriteError( assetPath ) );

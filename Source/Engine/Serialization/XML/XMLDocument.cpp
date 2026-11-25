@@ -1005,7 +1005,7 @@ namespace sw
         return true;
     }
 
-    bool XMLDocument::loadFromFile( const AbsolutePath& absPath )
+    bool XMLDocument::loadFromFile( const DiskPath& absPath )
     {
         // 경로로 읽은 파일도 쿠킹 작업의 입력이다 — `FileUtil` 로 바로 읽으면 기록에서 빠진다(`AssetIO::readTextFile`).
         string text;

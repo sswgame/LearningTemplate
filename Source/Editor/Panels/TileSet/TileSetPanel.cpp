@@ -129,12 +129,9 @@ namespace sw::editor
         return _model.loadDocument( getLoadedAssetPath() );
     }
 
-    bool TileSetPanel::saveDocument()
+    bool TileSetPanel::saveDocument( AssetWriter& writer )
     {
-        if ( _model.saveDocument( getLoadedAssetPath() ) == false )
-            return false; // 까닭은 상태 줄에 있다
-        syncDocumentUndoBaseline();
-        return true;
+        return _model.saveDocument( writer, getLoadedAssetPath() ); // 까닭은 상태 줄에 있다
     }
 
     void TileSetPanel::shutdown()

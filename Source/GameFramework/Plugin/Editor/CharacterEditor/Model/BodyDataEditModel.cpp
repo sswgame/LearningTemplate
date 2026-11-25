@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
+
 namespace sw::editor
 {
     BodyDataEditModel::BodyDataEditModel()
@@ -17,7 +19,7 @@ namespace sw::editor
     {
     }
 
-    bool BodyDataEditModel::openText( string_view text, const AbsolutePath& diskPath )
+    bool BodyDataEditModel::openText( string_view text, const DiskPath& diskPath )
     {
         if ( _doc.parseKeepingComments( text, diskPath.str() ) == false )
         {
@@ -33,7 +35,7 @@ namespace sw::editor
         return true;
     }
 
-    bool BodyDataEditModel::openFile( const AbsolutePath& diskPath )
+    bool BodyDataEditModel::openFile( const DiskPath& diskPath )
     {
         if ( isOpen() && _diskPath == diskPath && isDirty() == false )
             return true;
@@ -49,11 +51,11 @@ namespace sw::editor
         return openText( text, diskPath );
     }
 
-    bool BodyDataEditModel::save()
+    bool BodyDataEditModel::save( AssetWriter& writer )
     {
         if ( isOpen() == false || _diskPath.empty() )
             return false;
-        if ( FileUtil::writeTextFile( _diskPath, _text ) == false )
+        if ( writer.writeText( _diskPath, _text ) == false )
         {
             StringBuilder<constant::buffer::kMax512> error;
             error.appendFormat( "%#: cannot write the file", _diskPath.str() );

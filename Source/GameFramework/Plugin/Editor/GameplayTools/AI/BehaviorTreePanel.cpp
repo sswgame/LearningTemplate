@@ -137,7 +137,7 @@ namespace sw::editor
         return ToolAssetLoadResult::Loaded;
     }
 
-    bool BehaviorTreePanel::saveDocument()
+    bool BehaviorTreePanel::saveDocument( AssetWriter& writer )
     {
         const string& path = getLoadedAssetPath();
         if ( path.empty() )
@@ -156,14 +156,14 @@ namespace sw::editor
             return false;
         }
         const string completeText = _model.write(); // 차이(`_base`)면 부모와 같은 칸을 뺐다 — 펼친 글이 짝이다
-        if ( ResourceComposer::saveText( *diskPath, ResourceSaveText::makeWithComplete( *saveText, completeText ) ) == false )
+        const bool   bSaved       = writer.save( *diskPath, [&saveText, &completeText]( const AbsolutePath& writable )
+                { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( *saveText, completeText ) ); } );
+        if ( bSaved == false )
         {
             _statusText = "The file could not be written";
             SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould3", "Behavior tree file '%#' could not be written", diskPath->c_str() );
             return false;
         }
-        clearDocumentDirty();
-        syncDocumentUndoBaseline();
         _statusText = _listIssue.empty() ? "Saved" : "Saved with problems - the game will not load this tree";
         return true;
     }
@@ -219,7 +219,7 @@ namespace sw::editor
             drawDocumentOpenBar( "behaviorTree" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Save" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Save" ) ) )
-                (void)saveDocument(); // 실패는 상태 줄과 로그가 알린다
+                (void)saveDocumentAndClearDirty(); // 실패는 상태 줄과 로그가 알린다
             EditorSelfTestMarks::record( "behaviorTree.save" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Reload" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Reload" ) ) )

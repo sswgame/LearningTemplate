@@ -20,11 +20,11 @@ namespace sw::editor
         struct AssetSourceLocatorInternal
         {
             /** @brief 원본 @p sourcePath 곁 서술이 적은 저장소 주소입니다. 서술이 없거나 읽지 못했거나 곁의 파일을 적었으면 없음입니다. */
-            static optional<AssetSourceAddress> findStoredAddress( const AbsolutePath& sourcePath )
+            static optional<AssetSourceAddress> findStoredAddress( const DiskPath& sourcePath )
             {
-                const AbsolutePath metaPath = AssetMeta::makePath( sourcePath );
-                string             text;
-                AssetMeta          meta;
+                const DiskPath metaPath = AssetMeta::makePath( sourcePath );
+                string         text;
+                AssetMeta      meta;
                 if ( FileUtil::readOptionalTextFile( metaPath, text ) != OptionalFileRead::Read || meta.parseXML( text, metaPath.str() ).has_value() == false )
                     return nullopt;
                 const optional<AssetSourceAddress> address = AssetSourceAddress::tryParse( meta._source );
@@ -32,9 +32,9 @@ namespace sw::editor
             }
 
             /** @brief 원본의 바이트가 있는 파일입니다. 저장소 주소를 풀지 못한 까닭은 오류로 남기고, 없는 파일은 부르는 쪽이 알린다. */
-            static optional<AbsolutePath> resolveOrReport( const AbsolutePath& sourcePath )
+            static optional<DiskPath> resolveOrReport( const DiskPath& sourcePath )
             {
-                const expected<AbsolutePath> contentPath = AssetSourceLocator::resolve( sourcePath );
+                const expected<DiskPath> contentPath = AssetSourceLocator::resolve( sourcePath );
                 if ( contentPath.has_value() )
                     return *contentPath;
                 if ( findStoredAddress( sourcePath ).has_value() )
@@ -44,9 +44,9 @@ namespace sw::editor
         };
     } // namespace
 
-    expected<AbsolutePath> AssetSourceLocator::resolve( const AbsolutePath& sourcePath )
+    expected<DiskPath> AssetSourceLocator::resolve( const DiskPath& sourcePath )
     {
-        const AbsolutePath diskPath = sourcePath;
+        const DiskPath diskPath = sourcePath;
         if ( FileUtil::isRegularFile( diskPath ) )
             return diskPath;
         const expected<AbsolutePath> storeRoot = loadStoreRoot();
@@ -55,9 +55,9 @@ namespace sw::editor
         return resolveInStore( sourcePath, *storeRoot );
     }
 
-    expected<AbsolutePath> AssetSourceLocator::resolveInStore( const AbsolutePath& sourcePath, const AbsolutePath& storeRoot )
+    expected<DiskPath> AssetSourceLocator::resolveInStore( const DiskPath& sourcePath, const AbsolutePath& storeRoot )
     {
-        const AbsolutePath diskPath = sourcePath;
+        const DiskPath diskPath = sourcePath;
         if ( FileUtil::isRegularFile( diskPath ) )
             return diskPath;
         const optional<AssetSourceAddress> address = AssetSourceLocatorInternal::findStoredAddress( diskPath );
@@ -69,15 +69,15 @@ namespace sw::editor
         return unexpected( Error{ ErrorKind::NotFound, "the source is not in the local source store - fetch it first", storePath.str() } );
     }
 
-    bool AssetSourceLocator::readBytes( const AbsolutePath& sourcePath, vector<uint8>& outBytes )
+    bool AssetSourceLocator::readBytes( const DiskPath& sourcePath, vector<uint8>& outBytes )
     {
-        const optional<AbsolutePath> contentPath = AssetSourceLocatorInternal::resolveOrReport( sourcePath );
+        const optional<DiskPath> contentPath = AssetSourceLocatorInternal::resolveOrReport( sourcePath );
         return contentPath.has_value() && FileUtil::readFile( *contentPath, outBytes ) && outBytes.empty() == false;
     }
 
-    uint64 AssetSourceLocator::computeHash( const AbsolutePath& sourcePath )
+    uint64 AssetSourceLocator::computeHash( const DiskPath& sourcePath )
     {
-        const optional<AbsolutePath> contentPath = AssetSourceLocatorInternal::resolveOrReport( sourcePath );
+        const optional<DiskPath> contentPath = AssetSourceLocatorInternal::resolveOrReport( sourcePath );
         return contentPath.has_value() ? AssetImportStampUtil::computeFileHash( *contentPath ) : 0;
     }
 

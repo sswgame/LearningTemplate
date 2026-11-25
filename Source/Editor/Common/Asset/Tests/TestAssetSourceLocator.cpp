@@ -45,19 +45,19 @@ SW_TEST_CASE( AssetSourceLocatorTest, BesideFileThenStoreThenError )
 
     const AbsolutePath beside = root.join( "models_raw/beside.glb" );
     Util::write( beside, "beside" );
-    const expected<AbsolutePath> besidePath = AssetSourceLocator::resolve( beside );
+    const expected<DiskPath> besidePath = AssetSourceLocator::resolve( beside );
     SW_REQUIRE_TRUE( besidePath.has_value() );
     SW_EXPECT_TRUE( *besidePath == beside );
 
     const AbsolutePath stored = root.join( "models_raw/stored.glb" );
     Util::write( AssetMeta::makePath( stored ), Util::makeStoredMeta( "stored.glb" ) );
-    const expected<AbsolutePath> notFetched = AssetSourceLocator::resolveInStore( stored, storeRoot );
+    const expected<DiskPath> notFetched = AssetSourceLocator::resolveInStore( stored, storeRoot );
     SW_REQUIRE_FALSE( notFetched.has_value() );
     SW_EXPECT_TRUE( notFetched.error().kind() == ErrorKind::NotFound );
 
     const AbsolutePath storeFile = storeRoot.join( "01" ).join( "23" ).join( Util::kHash );
     Util::write( storeFile, "stored" );
-    const expected<AbsolutePath> storePath = AssetSourceLocator::resolveInStore( stored, storeRoot );
+    const expected<DiskPath> storePath = AssetSourceLocator::resolveInStore( stored, storeRoot );
     SW_REQUIRE_TRUE( storePath.has_value() );
     SW_EXPECT_TRUE( *storePath == storeFile );
 

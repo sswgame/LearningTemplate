@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/AudioGraph/Model/AudioGraphEditUtil.h"
@@ -58,9 +59,10 @@ namespace sw::editor
         _editGraph       = std::move( restored );
     }
 
-    bool AudioGraphViewModel::saveDocument( const AbsolutePath& diskPath ) const
+    bool AudioGraphViewModel::saveDocument( AssetWriter& writer, const DiskPath& diskPath ) const
     {
-        return _editGraph.saveToAsset( diskPath );
+        return writer.save( diskPath, [this]( const AbsolutePath& writable )
+        { return _editGraph.saveToAsset( writable ); } );
     }
 
     void AudioGraphViewModel::publishEdit()

@@ -101,7 +101,7 @@ namespace sw
         return AbsolutePath{ std::move( normalized ) };
     }
 
-    optional<AbsolutePath> AbsolutePath::tryResolve( string_view text, const AbsolutePath& baseDirectory )
+    optional<AbsolutePath> AbsolutePath::tryResolve( string_view text, const DiskPath& baseDirectory )
     {
         if ( text.empty() )
             return nullopt;
@@ -127,10 +127,10 @@ namespace sw
         return AbsolutePath{ std::move( collapsed ) };
     }
 
-    AbsolutePath AbsolutePath::join( string_view relative ) const
+    string DiskPath::makeJoinedText( string_view relative ) const
     {
         if ( _path.empty() || relative.find( '\0' ) != string_view::npos )
-            return AbsolutePath{ string{} };
+            return {};
         const size_t rootLength = getRootLength( _path );
         string       joined     = _path;
         while ( joined.size() > rootLength && joined.back() == '/' )
@@ -151,7 +151,7 @@ namespace sw
             if ( component == ".." )
             {
                 if ( joined.size() <= floorLength )
-                    return AbsolutePath{ string{} };
+                    return {};
                 const size_t slash = joined.rfind( '/' );
                 joined.resize( slash < floorLength ? floorLength : slash );
                 continue;
@@ -160,13 +160,13 @@ namespace sw
                 joined.push_back( '/' );
             joined.append( component.data(), component.size() );
         }
-        return AbsolutePath{ std::move( joined ) };
+        return joined;
     }
 
-    AbsolutePath AbsolutePath::getParent() const
+    string DiskPath::makeParentText() const
     {
         if ( _path.empty() )
-            return AbsolutePath{ string{} };
+            return {};
         const size_t rootLength = getRootLength( _path );
         size_t       end        = _path.size();
         while ( end > rootLength && _path[end - 1] == '/' )
@@ -174,28 +174,28 @@ namespace sw
             --end;
         }
         if ( end <= rootLength )
-            return AbsolutePath{ string{} }; // 뿌리의 부모는 없다
+            return {}; // 뿌리의 부모는 없다
         const size_t slash = _path.rfind( '/', end - 1 );
-        return AbsolutePath{ _path.substr( 0, slash + 1 <= rootLength ? rootLength : slash ) };
+        return _path.substr( 0, slash + 1 <= rootLength ? rootLength : slash );
     }
 
-    AbsolutePath AbsolutePath::appendSuffix( string_view suffix ) const
+    string DiskPath::makeTextWithSuffix( string_view suffix ) const
     {
         if ( _path.empty() || _path.back() == '/' || suffix.find_first_of( string_view( "/\\\0", 3 ) ) != string_view::npos )
-            return AbsolutePath{ string{} }; // 빈 경로 · 끝이 구분자(뿌리 · 폴더 표기 — 이름이 없다) · 성분을 바꾸는 접미사
+            return {}; // 빈 경로 · 끝이 구분자(뿌리 · 폴더 표기 — 이름이 없다) · 성분을 바꾸는 접미사
         string appended;
         appended.reserve( _path.size() + suffix.size() );
         appended.append( _path ).append( suffix.data(), suffix.size() );
-        return AbsolutePath{ std::move( appended ) };
+        return appended;
     }
 
-    AbsolutePath AbsolutePath::removeExtension() const
+    string DiskPath::makeTextWithoutExtension() const
     {
         const size_t slash     = _path.rfind( '/' );
         const size_t nameStart = slash == string::npos ? 0 : slash + 1;
         const size_t dot       = _path.rfind( '.' );
         if ( dot == string::npos || dot <= nameStart )
-            return *this;
-        return AbsolutePath{ _path.substr( 0, dot ) };
+            return _path;
+        return _path.substr( 0, dot );
     }
 } // namespace sw

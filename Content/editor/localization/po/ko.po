@@ -749,12 +749,12 @@ msgctxt "EdCommon.ComponentCardOptions"
 msgid "More options for this component, including removing it."
 msgstr "컴포넌트 추가 옵션 및 삭제"
 
-#: Source/Editor/Common/Workspace/Asset/EditorDiskBaseline.cpp
+#: Source/Editor/Common/Asset/AssetWriter.cpp
 msgctxt "EdCommon.ContentChangedOnDisk"
 msgid "{path} changed on disk after it was opened - reopen it to keep that version, or save again to overwrite it"
 msgstr "{path} 이(가) 연 뒤 디스크에서 바뀌었습니다. 그 내용을 쓰려면 다시 열고, 덮어쓰려면 다시 저장하십시오."
 
-#: Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp
+#: Source/Editor/Common/Asset/AssetWriter.cpp
 msgctxt "EdCommon.ContentReadOnly"
 msgid "{path} is read-only - Check Out (lock) it in the Content Browser first"
 msgstr "{path} 은(는) 읽기 전용입니다. 먼저 콘텐츠 브라우저에서 Check Out(잠금)하십시오."
@@ -804,8 +804,8 @@ msgctxt "EdCommon.DeleteLayout"
 msgid "Delete this saved layout."
 msgstr "저장된 레이아웃을 지웁니다."
 
+#: Source/Editor/Common/Asset/AssetWriter.cpp
 #: Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp
-#: Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp
 msgctxt "EdCommon.DeleteRefusedTitle"
 msgid "Delete refused"
 msgstr "삭제 거절"
@@ -986,7 +986,7 @@ msgctxt "EdCommon.LiveCodingSucceededTitle"
 msgid "Live Coding Succeeded"
 msgstr "라이브 코딩 성공"
 
-#: Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp
+#: Source/Editor/Common/Asset/AssetWriter.cpp
 msgctxt "EdCommon.MoveRefusedTitle"
 msgid "Move refused"
 msgstr "옮기기 거절"
@@ -1438,7 +1438,7 @@ msgctxt "EdCommon.SaveLayout"
 msgid "Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only)."
 msgstr "지금 도킹 배치와 패널 가시성을 이 이름으로 저장합니다 (Saved/Editor/Layouts, 영숫자 · 공백 · _ · -)"
 
-#: Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp
+#: Source/Editor/Common/Asset/AssetWriter.cpp
 msgctxt "EdCommon.SaveRefusedTitle"
 msgid "Save refused"
 msgstr "저장 거절"

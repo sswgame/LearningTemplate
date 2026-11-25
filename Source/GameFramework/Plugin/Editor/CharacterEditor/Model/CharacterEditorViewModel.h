@@ -16,7 +16,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Workspace/Asset/EditorDiskBaseline.h"
+#include "Editor/Common/Asset/AssetWriter.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 
@@ -36,13 +36,10 @@ namespace sw
     struct LocalStoreCompletion;
 
     class SocketSet;
-} // namespace sw
 
-namespace sw::editor
-{
     template <typename TAsset>
-    class SaveReloadGuard;
-} // namespace sw::editor
+    class AssetReloadWatch;
+} // namespace sw
 
 namespace sw::editor
 {
@@ -121,10 +118,10 @@ namespace sw::editor
         /** @brief 소켓 파일을 경로 칸에서 읽습니다. 성공하면 true 이고 고른 소켓 · 외부 변경 표시를 비웁니다. */
         [[nodiscard]] bool loadSocketFile();
         /**
-         * @brief 소켓 파일이 디스크에서 바뀌었는지 봅니다(@p nowSeconds 는 저장 직후 우리 쓰기를 거르는 시계). 고치지 않은 모델은 바로 다시 읽습니다.
+         * @brief 소켓 파일이 디스크에서 바뀌었는지 봅니다 — 공유 캐시가 소켓을 다시 읽었고 그 파일이 읽은(쓴) 때의 내용과 다를 때다(우리 저장은 같은 내용이다). 고치지 않은 모델은 바로 다시 읽습니다.
          * @details 고친 것이 있으면 버릴지 사람이 정한다(`hasExternalChange` 를 보고 화면이 단추를 낸다) — 말없이 덮지 않는다.
          */
-        void pollExternalChange( float64 nowSeconds );
+        void pollExternalChange();
         /** @brief 고친 것이 있는 채로 소켓 파일이 디스크에서 바뀌었으면 true 입니다. */
         bool hasExternalChange() const { return _bExternalChange; }
         /**
@@ -133,8 +130,10 @@ namespace sw::editor
          *          외형 선택은 파일이 아니라 사용자 프리셋 저장소에 쓰므로 여기에 들지 않는다(프리셋 저장 단추가 따로 표시한다).
          */
         bool isDirty() const { return _sockets.isDirty() || _pose.isDirty() || isBodyDataDirty(); }
-        /** @brief 미저장인 파일(`isDirty` 의 목록)을 씁니다. 하나라도 못 쓰면(연 뒤 밖에서 바뀐 파일의 첫 저장 포함 — `EditorDiskBaseline`) false 이고 까닭은 상태 줄에 남습니다. */
-        [[nodiscard]] bool saveFiles( float64 nowSeconds );
+        /** @brief 미저장인 파일(`isDirty` 의 목록)을 씁니다. 하나라도 못 쓰면(연 뒤 밖에서 바뀐 파일의 첫 저장 포함 — `AssetWriter`) false 이고 까닭은 상태 줄에 남습니다. */
+        [[nodiscard]] bool saveFiles( AssetWriter& writer );
+        /** @brief 이 문서가 읽은(쓴) 파일의 기준을 든 쓰기 문입니다(`EditorDocumentPanelBase::getAssetWriter`). */
+        AssetWriter& getAssetWriter() { return _writer; }
         /** @brief `saveFiles` 가 쓸 파일입니다(소켓 · 포즈는 리소스 id, 몸 데이터는 디스크 경로). */
         void collectFilesToSave( vector<string>& outListAssetID ) const;
         /** @brief 두 모델을 마지막으로 읽거나 저장한 상태로 돌립니다. 외형 선택은 파일 문서가 아니라 건드리지 않습니다. */
@@ -252,7 +251,7 @@ namespace sw::editor
          */
         void openBodyData( const hashed_string& bodyShapesAsset );
         /** @brief 고친 몸 데이터 파일을 쓰고 외형 데이터를 다시 읽습니다(미리보기 몸이 새 값으로 다시 입는다). 하나라도 못 쓰면 false 이고 상태 줄에 까닭이 있다. */
-        [[nodiscard]] bool saveBodyData();
+        [[nodiscard]] bool saveBodyData( AssetWriter& writer );
         bool               isBodyDataDirty() const { return _bodyShapes.isDirty() || _bodyProfiles.isDirty() || _visuals.isDirty(); }
 
     private:
@@ -271,48 +270,48 @@ namespace sw::editor
         void onThumbnailWritten( const LocalStoreCompletion& completion );
 
     private:
-        SocketEditModel                        _sockets;
-        BonePoseEditModel                      _pose;
-        AppearanceEditModel                    _appearance;
-        BodyDataEditModel                      _bodyShapes;   ///< 몸 부품의 채널 매핑(`*.bodyshape.xml`)
-        BodyDataEditModel                      _bodyProfiles; ///< 외형 폴더의 `bodyprofiles.xml`(지글 · 주름 · 체액)
-        BodyDataEditModel                      _visuals;      ///< 외형 폴더의 `itemvisuals.xml`(구간 별칭 · 묶음 · 염색 여부)
-        unique_ptr<SaveReloadGuard<SocketSet>> _pReloadGuard; ///< 포인터라 헤더가 작업 공간 헤더(`SaveReloadGuard.h`)를 끌지 않는다(MVVM View include 계약 — 창 View 가 이 헤더를 본다)
-        FitCheckSummary                        _fit;
-        SharedAssetRef<ItemCatalog>            _pItems; ///< 공유 캐시의 한 벌(게임이 쥔 아이템 카탈로그와 같은 객체)
-        AppearanceDatabase                     _database;
-        UserAppearancePresetStore              _presetStore;
-        UserAppearancePresetStore              _stagedPresetStore;   ///< 쓰는 중인 프리셋 목록 - 쓰기가 끝나면 `_presetStore` 가 된다
-        AppearanceSelection                    _stagedSelection;     ///< 쓰는 중인 저장의 선택(`_bStagedSelection` 일 때) - 끝나면 "저장된 상태"
-        string                                 _thumbnailPresetName; ///< 썸네일을 쓰는 중인 프리셋
-        string                                 _thumbnailSlot;       ///< 그 썸네일 슬롯
-        EditorDiskBaseline                     _diskBaseline;        ///< 소켓 · 포즈 · 몸 데이터 파일을 읽은(쓴) 때의 내용
-        Subscription                           _presetRequest;       ///< 프리셋 슬롯 읽기 · 쓰기(하나씩)
-        Subscription                           _thumbnailRequest;    ///< 썸네일 슬롯 쓰기
-        CharacterEditorPaths                   _paths;
-        string                                 _status;
-        hashed_string                          _selectedSocket;
-        hashed_string                          _selectedBone;
-        vector<hashed_string>                  _listClipName;     ///< 클립 폴더의 클립 이름들(콤보 목록, 이름순)
-        hashed_string                          _selectedClip;     ///< 콤보에서 고른 클립
-        ResolvedAppearance                     _preview;          ///< 입혀 본 결과(규칙 설명). 선택이 바뀔 때만 다시 푼다
-        AppearanceSelectionReport              _previewReport;    ///< `_preview` 와 같이 푼 보고
-        uint32                                 _previewRevision;  ///< `_preview` 를 푼 외형 선택의 세대
-        string                                 _packRoot;         ///< 경로 칸을 채운 활성 게임 팩 루트 — 바뀌면 다시 읽는다
-        string                                 _packDataPath;     ///< 활성 팩의 캐릭터 편집 데이터 파일
-        string                                 _packDataMessage;  ///< `Invalid` 의 이유
-        hashed_string                          _previewPresetID;  ///< 팩 데이터의 미리보기 몸 프리셋(선택에 기준 프리셋이 없을 때)
-        hashed_string                          _previewWipeEvent; ///< 팩 데이터의 미리보기 몸 닦기 이벤트(비면 닦지 않는다)
-        PackDataState                          _packDataState;
-        CharacterGizmoTarget                   _gizmoTarget;          ///< 마지막에 고른 쪽(`selectSocket` · `selectBone`)
-        uint8                                  _bClipNamesLoaded : 1; ///< 클립 이름을 한 번 모았다(팩 데이터가 바뀌면 다시 모은다)
-        uint8                                  _bKindTableReady  : 1;
-        uint8                                  _bDatabaseLoaded  : 1;
-        uint8                                  _bHasFit          : 1;
-        uint8                                  _bExternalChange  : 1;
-        uint8                                  _bPreviewValid    : 1;
-        uint8                                  _bStagedSelection : 1;
-        uint8                                  _bPresetsRead     : 1; ///< 목록이 슬롯의 내용이다(읽었거나 슬롯이 없다). 아니면 쓰기가 저장된 프리셋을 덮는다
-        uint8                                  _bSaveAfterRead   : 1; ///< 읽기가 끝나면 저장을 잇는다(`savePreset`)
+        SocketEditModel                         _sockets;
+        BonePoseEditModel                       _pose;
+        AppearanceEditModel                     _appearance;
+        BodyDataEditModel                       _bodyShapes;   ///< 몸 부품의 채널 매핑(`*.bodyshape.xml`)
+        BodyDataEditModel                       _bodyProfiles; ///< 외형 폴더의 `bodyprofiles.xml`(지글 · 주름 · 체액)
+        BodyDataEditModel                       _visuals;      ///< 외형 폴더의 `itemvisuals.xml`(구간 별칭 · 묶음 · 염색 여부)
+        unique_ptr<AssetReloadWatch<SocketSet>> _pReloadWatch; ///< 소켓 셋이 다시 읽혔는지 본다(`pollExternalChange`)
+        FitCheckSummary                         _fit;
+        SharedAssetRef<ItemCatalog>             _pItems; ///< 공유 캐시의 한 벌(게임이 쥔 아이템 카탈로그와 같은 객체)
+        AppearanceDatabase                      _database;
+        UserAppearancePresetStore               _presetStore;
+        UserAppearancePresetStore               _stagedPresetStore;   ///< 쓰는 중인 프리셋 목록 - 쓰기가 끝나면 `_presetStore` 가 된다
+        AppearanceSelection                     _stagedSelection;     ///< 쓰는 중인 저장의 선택(`_bStagedSelection` 일 때) - 끝나면 "저장된 상태"
+        string                                  _thumbnailPresetName; ///< 썸네일을 쓰는 중인 프리셋
+        string                                  _thumbnailSlot;       ///< 그 썸네일 슬롯
+        AssetWriter                             _writer;              ///< 소켓 · 포즈 · 몸 데이터 파일을 읽은(쓴) 때의 내용
+        Subscription                            _presetRequest;       ///< 프리셋 슬롯 읽기 · 쓰기(하나씩)
+        Subscription                            _thumbnailRequest;    ///< 썸네일 슬롯 쓰기
+        CharacterEditorPaths                    _paths;
+        string                                  _status;
+        hashed_string                           _selectedSocket;
+        hashed_string                           _selectedBone;
+        vector<hashed_string>                   _listClipName;     ///< 클립 폴더의 클립 이름들(콤보 목록, 이름순)
+        hashed_string                           _selectedClip;     ///< 콤보에서 고른 클립
+        ResolvedAppearance                      _preview;          ///< 입혀 본 결과(규칙 설명). 선택이 바뀔 때만 다시 푼다
+        AppearanceSelectionReport               _previewReport;    ///< `_preview` 와 같이 푼 보고
+        uint32                                  _previewRevision;  ///< `_preview` 를 푼 외형 선택의 세대
+        string                                  _packRoot;         ///< 경로 칸을 채운 활성 게임 팩 루트 — 바뀌면 다시 읽는다
+        string                                  _packDataPath;     ///< 활성 팩의 캐릭터 편집 데이터 파일
+        string                                  _packDataMessage;  ///< `Invalid` 의 이유
+        hashed_string                           _previewPresetID;  ///< 팩 데이터의 미리보기 몸 프리셋(선택에 기준 프리셋이 없을 때)
+        hashed_string                           _previewWipeEvent; ///< 팩 데이터의 미리보기 몸 닦기 이벤트(비면 닦지 않는다)
+        PackDataState                           _packDataState;
+        CharacterGizmoTarget                    _gizmoTarget;          ///< 마지막에 고른 쪽(`selectSocket` · `selectBone`)
+        uint8                                   _bClipNamesLoaded : 1; ///< 클립 이름을 한 번 모았다(팩 데이터가 바뀌면 다시 모은다)
+        uint8                                   _bKindTableReady  : 1;
+        uint8                                   _bDatabaseLoaded  : 1;
+        uint8                                   _bHasFit          : 1;
+        uint8                                   _bExternalChange  : 1;
+        uint8                                   _bPreviewValid    : 1;
+        uint8                                   _bStagedSelection : 1;
+        uint8                                   _bPresetsRead     : 1; ///< 목록이 슬롯의 내용이다(읽었거나 슬롯이 없다). 아니면 쓰기가 저장된 프리셋을 덮는다
+        uint8                                   _bSaveAfterRead   : 1; ///< 읽기가 끝나면 저장을 잇는다(`savePreset`)
     };
 } // namespace sw::editor

@@ -135,6 +135,8 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 에셋 @p assetPath(리소스 id 또는 디스크 경로)를 그 종류의 도구로 엽니다. 열지 못하면 false 이고 이유는 알림 · 로그에 남는다. */
         static bool openAsset( string_view assetPath );
+        /** @brief 리소스 id 가 가리키는 있는 파일 · 폴더의 자리입니다(`EditorAssetFileCommands::findOperationPath`). 없으면 빈 경로입니다. */
+        [[nodiscard]] static AbsolutePath findAssetFile( string_view resourceID );
         /** @brief OS 파일 탐색기에서 @p absolutePath 를 보입니다. */
         static void showInFileExplorer( string_view absolutePath );
         /** @brief 버전 관리 창구입니다(잠금 배지 · 체크아웃 메뉴). */

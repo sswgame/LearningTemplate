@@ -10,6 +10,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Diagnostics/EditorModuleOverrides.h"
 #include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -226,18 +227,14 @@ namespace sw::editor
         const ModuleManifest* pManifest = _catalog.findManifest( _pendingModule );
         string                text;
         string                rewritten;
-        if ( pManifest == nullptr || FileUtil::readTextFile( path, text ) == false )
+        AssetWriter           writer;
+        if ( pManifest == nullptr || writer.readText( path, text ) == false )
         {
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesProjectManifestCould", "Modules: the project manifest %# could not be read", path.c_str() );
             return false;
         }
-        if ( FileUtil::isReadOnlyFile( path ) )
-        {
-            SW_LOG_WARNING_ID( "ModulesPanel.ModulesReadOnlyCheck", "Modules: %# is read-only - check it out first", path.c_str() );
-            return false;
-        }
         if ( EditorModuleOverrideUtil::setOverride( text, _pendingModule, _bPendingEnabled, pManifest->_bEnabledByDefault, rewritten ) == false ||
-             FileUtil::writeTextFile( path, rewritten ) == false )
+             writer.writeText( path, rewritten ) == false )
         {
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesProjectManifestCould2", "Modules: the project manifest %# could not be rewritten", path.c_str() );
             return false;

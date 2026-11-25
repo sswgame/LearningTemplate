@@ -176,8 +176,7 @@ namespace sw::editor
                 string resourceID;
                 if ( EditorWidgets::findAssetPayload( assetID, resourceID ) == false )
                     return {};
-                const optional<AbsolutePath> diskPath = EditorPaths::getAssetPaths().findLooseFile( resourceID );
-                return diskPath.value_or( AbsolutePath{} );
+                return ContentBrowserViewModel::findAssetFile( resourceID );
             }
 
             [[nodiscard]] static bool readSavedSearchCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -698,17 +697,10 @@ namespace sw::editor
         if ( EditorWidgets::acceptAssetDrop( assetID ) == false )
             return;
         // 파일이면 그 파일, 폴더(폴더 타일도 끌기 원본이다)면 그 폴더 — 옮기기 전에 확인 대화상자가 계획을 보인다(언리얼 Move Here)
-        const AssetPaths&      assetPaths = EditorPaths::getAssetPaths();
-        optional<AbsolutePath> sourcePath = assetPaths.findLooseFile( assetID );
-        if ( sourcePath.has_value() == false )
-        {
-            const optional<AbsolutePath> folderPath = assetPaths.toDiskPath( assetID );
-            if ( folderPath.has_value() && FileUtil::isDirectory( *folderPath ) )
-                sourcePath = folderPath;
-        }
-        if ( sourcePath.has_value() == false )
+        const AbsolutePath sourcePath = ContentBrowserViewModel::findAssetFile( assetID );
+        if ( sourcePath.empty() )
             return;
-        _model.requestMoveToFolder( *sourcePath, folderAbs );
+        _model.requestMoveToFolder( sourcePath, folderAbs );
         _bOpenMoveConfirm = SW_TRUE;
     }
 

@@ -28,6 +28,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetWriteAccess.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/IInputDevice.h"
@@ -709,10 +710,15 @@ namespace sw
         meta._height                  = image._height;
         vector<uint8> listEncoded;
         AutomationImage::encodePpm( image, listEncoded );
-        const optional<AbsolutePath> imagePath = engine::getSubsystem<AssetPaths>().toDiskPath( goldenID );
-        const optional<AbsolutePath> metaPath  = engine::getSubsystem<AssetPaths>().toDiskPath( AutomationGoldenUtil::makeMetaID( goldenID ) );
-        const bool                   bWritten  = imagePath.has_value() && metaPath.has_value() && FileUtil::ensureParentDirectoryExists( *imagePath ) &&
-                              FileUtil::writeFile( *imagePath, listEncoded.data(), listEncoded.size() ) && FileUtil::writeTextFile( *metaPath, AutomationGoldenUtil::makeMetaText( meta ) );
+        const optional<DiskPath> imagePath = engine::getSubsystem<AssetPaths>().toDiskPath( goldenID );
+        const optional<DiskPath> metaPath  = engine::getSubsystem<AssetPaths>().toDiskPath( AutomationGoldenUtil::makeMetaID( goldenID ) );
+        bool                     bWritten  = imagePath.has_value() && metaPath.has_value();
+        if ( bWritten )
+        {
+            const AbsolutePath writableImage = AssetWriteAccess::toWritablePath( *imagePath );
+            bWritten                         = FileUtil::ensureParentDirectoryExists( writableImage ) && FileUtil::writeFile( writableImage, listEncoded.data(), listEncoded.size() ) &&
+                       FileUtil::writeTextFile( AssetWriteAccess::toWritablePath( *metaPath ), AutomationGoldenUtil::makeMetaText( meta ) );
+        }
         if ( bWritten == false )
         {
             StringBuilder<constant::buffer::kMax256> text;

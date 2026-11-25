@@ -1022,8 +1022,8 @@ namespace sw::editor
         (void)_document.applyText( text ); // 읽지 못하면 모델이 파일에서 다시 읽고 이유를 남겼다
     }
 
-    bool InputMapPanel::saveDocument()
+    bool InputMapPanel::saveDocument( AssetWriter& writer )
     {
-        return _document.saveDocument();
+        return _document.saveDocument( writer );
     }
 } // namespace sw::editor

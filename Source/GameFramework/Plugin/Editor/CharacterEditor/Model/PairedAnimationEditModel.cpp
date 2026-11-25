@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
+
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 namespace sw::editor
@@ -52,7 +54,7 @@ namespace sw::editor
         return true;
     }
 
-    bool PairedAnimationEditModel::loadFromFile( const AbsolutePath& absolutePath )
+    bool PairedAnimationEditModel::loadFromFile( const DiskPath& absolutePath )
     {
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
@@ -63,14 +65,16 @@ namespace sw::editor
         return loadFromXMLText( text, absolutePath.str() );
     }
 
-    expected<void> PairedAnimationEditModel::saveDocument( const AbsolutePath& absPath )
+    expected<void> PairedAnimationEditModel::saveDocument( AssetWriter& writer, const DiskPath& path )
     {
         if ( isValid() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "The paired animation breaks a rule (see the log) - fix it before saving" } );
         const string text         = saveToXMLText();
         const string completeText = PairedAnimationDef::makeXMLText( _content, ResourceFieldWrite::WriteAll );
-        if ( ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( text, completeText ) ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "The file could not be written", absPath.str() } );
+        const bool   bSaved       = writer.save( path, [&text, &completeText]( const AbsolutePath& writable )
+                { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( text, completeText ) ); } );
+        if ( bSaved == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "The file could not be written", path.str() } );
         _state.markSaved( text );
         return {};
     }

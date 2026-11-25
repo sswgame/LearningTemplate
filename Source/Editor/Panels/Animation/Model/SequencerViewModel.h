@@ -25,6 +25,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     /** @brief 시퀀서 창이 한 프레임 그릴 씬 쪽 값입니다. 포인터 · 참조를 두지 않는다(MVVM 계약). */
     struct SequencerSceneViewState
     {
@@ -70,7 +72,7 @@ namespace sw::editor
         /** @brief 시퀀스 파일 @p path 를 @p outAsset 에 읽습니다. */
         [[nodiscard]] static ToolAssetLoadResult loadSequence( SequenceAsset& outAsset, string_view path );
         /** @brief @p asset 을 시퀀스 파일 @p path 에 씁니다. 썼으면 true 입니다(실패는 로그). */
-        [[nodiscard]] static bool saveSequence( const SequenceAsset& asset, string_view path );
+        [[nodiscard]] static bool saveSequence( AssetWriter& writer, const SequenceAsset& asset, string_view path );
 
     private:
         /** @brief 이 시퀀스를 트는 지금 씬의 플레이어입니다(고른 것이 사라졌으면 첫 것). 없으면 nullptr 입니다. */

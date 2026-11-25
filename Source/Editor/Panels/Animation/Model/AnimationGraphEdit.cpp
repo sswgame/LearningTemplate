@@ -16,9 +16,9 @@ namespace sw::editor
         return EditorToolAssetCommands::loadAnimationGraph( outGraph, path );
     }
 
-    bool AnimationGraphEdit::saveGraph( const AnimationGraphAsset& graph, const string_view path )
+    bool AnimationGraphEdit::saveGraph( AssetWriter& writer, const AnimationGraphAsset& graph, const string_view path )
     {
-        return EditorToolAssetCommands::saveAnimationGraph( graph, path );
+        return EditorToolAssetCommands::saveAnimationGraph( writer, graph, path );
     }
 
     vector<hashed_string> AnimationGraphEdit::getPoseNodeTypeNames()

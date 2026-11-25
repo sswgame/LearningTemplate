@@ -14,6 +14,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorPaths.h"
@@ -53,12 +54,12 @@ namespace sw
              * @details 예전에는 작업 폴더에 그 이름이 있는지 먼저 보고, 리소스로 찾아보고, 그래도 없으면 받은 글을 그대로 돌려줬다(작업 폴더 상대 경로로 읽혔다).
              *          전역 id(`game/playground/…`)는 활성 게임과 상관없이 그 위치다. 도구는 모든 팩을 다룬다 — 붙인 도메인도 같은 입구로 푼다.
              */
-            static AbsolutePath resolveAbsolutePath( string_view path )
+            static DiskPath resolveAbsolutePath( string_view path )
             {
                 if ( AbsolutePath::isStrictAbsolute( path ) )
                     return FileUtil::toDiskPath( FileUtil::normalizeSeparators( path ) );
-                const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( path );
-                return diskPath.has_value() ? *diskPath : AbsolutePath{};
+                const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( path );
+                return diskPath.has_value() ? *diskPath : DiskPath{};
             }
 
             /** @brief 글자 수를 UTF-8 코드 포인트 단위로 셉니다. */
@@ -128,7 +129,7 @@ namespace sw
             }
 
             /** @brief 번역 메모리 경로(`<프로젝트 폴더>/tm/<culture>.tm.xml`)입니다. */
-            static AbsolutePath makeMemoryPath( const AbsolutePath& projectPath, string_view culture )
+            static DiskPath makeMemoryPath( const DiskPath& projectPath, string_view culture )
             {
                 StringBuilder<constant::buffer::kMax256> fileNameBuilder;
                 fileNameBuilder.appendFormat( "%#/%#%#", TranslationMemory::kFolderName, CultureTable::normalizeCode( culture ), TranslationMemory::kExtension );
@@ -136,7 +137,7 @@ namespace sw
             }
 
             /** @brief 번역 메모리를 읽습니다. 없으면 빈 메모리입니다. 읽지 못하면 문제로 알리고 false 를 반환합니다. */
-            [[nodiscard]] static bool loadMemory( const AbsolutePath& path, string_view culture, TranslationMemory& outMemory, TextGatherReport& inoutReport )
+            [[nodiscard]] static bool loadMemory( const DiskPath& path, string_view culture, TranslationMemory& outMemory, TextGatherReport& inoutReport )
             {
                 outMemory = TranslationMemory{};
                 outMemory.setCulture( culture );
@@ -248,14 +249,14 @@ namespace sw
              * @brief 문화권 번역 테이블 하나를 수집 결과에 맞춥니다. 해시가 없는 번역에 해시를 기록하고, 현재 번역을 번역 메모리에 쌓고, 원문 테이블에 없는 키의 번역을 빼고,
              *        없거나 오래된 번역을 메모리로 미리 채운 뒤 상태를 세고 검사합니다.
              */
-            static void updateTranslation( const AbsolutePath& projectPath, const string& culture, const map<string, const SourceTextEntry*>& mapSource, bool bWrite,
+            static void updateTranslation( const DiskPath& projectPath, const string& culture, const map<string, const SourceTextEntry*>& mapSource, bool bWrite,
                                            LocalizationGatherResult& inoutResult )
             {
                 LocalizationCultureReport& cultureReport = inoutResult._listCulture.emplace_back();
                 cultureReport._culture                   = culture;
-                const AbsolutePath path                  = LocalizationProject::makeTranslationPath( projectPath, culture );
-                const AbsolutePath memoryPath            = makeMemoryPath( projectPath, culture );
-                TranslationTable   translation;
+                const DiskPath   path                    = LocalizationProject::makeTranslationPath( projectPath, culture );
+                const DiskPath   memoryPath              = makeMemoryPath( projectPath, culture );
+                TranslationTable translation;
                 translation.setCulture( culture );
                 if ( const expected<void> read = FileUtil::exists( path ) ? translation.loadFromFile( path ) : expected<void>{}; read.has_value() == false )
                 {
@@ -280,10 +281,11 @@ namespace sw
                     inoutResult._bOutOfDate = true;
                     return;
                 }
-                const bool bHasTranslations = translation.getEntries().empty() == false || FileUtil::exists( path );
-                if ( bHasTranslations && ( translation.saveToFile( path ) == false ) )
+                const bool          bHasTranslations = translation.getEntries().empty() == false || FileUtil::exists( path );
+                editor::AssetWriter writer;
+                if ( bHasTranslations && writer.saveAsset( path, translation ) == false )
                     inoutResult._report._listIssue.push_back( { path.str(), "translation table could not be written", true } );
-                if ( bMemoryChanged && memory.saveToFile( memoryPath ) == false )
+                if ( bMemoryChanged && writer.saveAsset( memoryPath, memory ) == false )
                     inoutResult._report._listIssue.push_back( { memoryPath.str(), "translation memory could not be written", true } );
             }
 
@@ -339,7 +341,7 @@ namespace sw
 
             /** @brief 프로젝트와 원문 테이블들을 읽어 키에서 원문 테이블 행으로의 대응을 만듭니다. */
             [[nodiscard]] static bool loadProjectSources( string_view projectPath, LocalizationProject& outProject, vector<SourceStringTable>& outListTable,
-                                                          map<string, const SourceTextEntry*>& outMapSource, AbsolutePath& outAbsolutePath )
+                                                          map<string, const SourceTextEntry*>& outMapSource, DiskPath& outAbsolutePath )
             {
                 outAbsolutePath = resolveAbsolutePath( projectPath );
                 if ( const expected<void> read = outProject.loadFromFile( outAbsolutePath ); read.has_value() == false )
@@ -350,7 +352,7 @@ namespace sw
                 outListTable.assign( outProject._listStringTable.size(), SourceStringTable{} );
                 for ( size_t tableIndex = 0; tableIndex < outListTable.size(); ++tableIndex )
                 {
-                    const AbsolutePath tablePath = LocalizationProject::makeSiblingPath( outAbsolutePath, outProject._listStringTable[tableIndex] );
+                    const DiskPath tablePath = LocalizationProject::makeSiblingPath( outAbsolutePath, outProject._listStringTable[tableIndex] );
                     if ( const expected<void> read = outListTable[tableIndex].loadFromFile( tablePath ); read.has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "LocalizationTools.StringTableNotLoaded", "String table is not loaded: %# (%#)", read.error().message(), read.error().detail() );
@@ -375,12 +377,12 @@ namespace sw
             }
 
             /** @brief 수집이 쓰는 원문 테이블들을 읽습니다. 아직 없는 테이블은 원문 문화권의 빈 테이블입니다(첫 수집이 만든다). 읽지 못하면 false 입니다. */
-            [[nodiscard]] static bool loadGatherTables( const AbsolutePath& absoluteProjectPath, const LocalizationProject& project, vector<SourceStringTable>& outListTable )
+            [[nodiscard]] static bool loadGatherTables( const DiskPath& absoluteProjectPath, const LocalizationProject& project, vector<SourceStringTable>& outListTable )
             {
                 outListTable.assign( project._listStringTable.size(), SourceStringTable{} );
                 for ( size_t tableIndex = 0; tableIndex < outListTable.size(); ++tableIndex )
                 {
-                    const AbsolutePath tablePath = LocalizationProject::makeSiblingPath( absoluteProjectPath, project._listStringTable[tableIndex] );
+                    const DiskPath tablePath = LocalizationProject::makeSiblingPath( absoluteProjectPath, project._listStringTable[tableIndex] );
                     if ( FileUtil::exists( tablePath ) == false )
                     {
                         outListTable[tableIndex].setCulture( project._sourceCulture );
@@ -396,19 +398,19 @@ namespace sw
             }
 
             /** @brief 코드 루트 아래의 소스 파일(`kArrCodeExtension`)에서 문구를 모읍니다. 출처는 저장소 기준 상대 경로입니다. */
-            static void gatherCodeRoots( const LocalizationProject& project, const AbsolutePath& repositoryRoot, TextGatherer& gatherer )
+            static void gatherCodeRoots( const LocalizationProject& project, const DiskPath& repositoryRoot, TextGatherer& gatherer )
             {
                 for ( const string& codeRoot : project._listCodeRoot )
                 {
-                    const AbsolutePath   codeFolder = repositoryRoot.join( codeRoot );
-                    vector<AbsolutePath> listFile;
+                    const DiskPath   codeFolder = repositoryRoot.join( codeRoot );
+                    vector<DiskPath> listFile;
                     if ( FileUtil::isDirectory( codeFolder ) == false || FileUtil::collectFiles( codeFolder, "", listFile, true ) == false )
                     {
                         gatherer.addIssue( codeRoot, "code root does not exist", true );
                         continue;
                     }
                     VectorUtil::sort( listFile );
-                    for ( const AbsolutePath& filePath : listFile )
+                    for ( const DiskPath& filePath : listFile )
                     {
                         // 테스트 소스는 배포 문구가 아니다(빌드도 `/Tests/` 를 개발 전용으로 뺀다 — SW_DEV_ONLY_SOURCE_PATTERNS). 테스트가 쓰는 키가 엔진 표에 오르지 않게 한다.
                         if ( StringUtil::contains( FileUtil::normalizeSeparators( filePath.str() ), "/Tests/" ) )
@@ -435,8 +437,8 @@ namespace sw
             {
                 for ( const string& assetRoot : project._listAssetRoot )
                 {
-                    const AbsolutePath   assetFolder = resolveAbsolutePath( assetRoot );
-                    vector<AbsolutePath> listFile;
+                    const DiskPath   assetFolder = resolveAbsolutePath( assetRoot );
+                    vector<DiskPath> listFile;
                     // 에셋 루트가 리소스 루트면 옛 작업 도메인 자리의 찌꺼기가 섞인다 — EditorContentScan 이 뺀다
                     const bool bListed = FileUtil::isDirectory( assetFolder ) && editor::EditorContentScan::collectFiles( assetFolder, "", listFile, true );
                     if ( bListed == false )
@@ -445,7 +447,7 @@ namespace sw
                         continue;
                     }
                     VectorUtil::sort( listFile );
-                    for ( const AbsolutePath& filePath : listFile )
+                    for ( const DiskPath& filePath : listFile )
                     {
                         const bool bCandidate = FileUtil::hasExtension( filePath.str(), ".xml" ); // 대화 그래프(`.dialogue.xml`)도 XML 이다
                         string     text;
@@ -479,8 +481,8 @@ namespace sw
         else
             SW_LOG_ERROR_ID( "LocalizationTools.EditorDefaultAssetsNot", "Editor default assets are not loaded - the editor localization project is left out" );
 
-        const string         localizationFolder = FileUtil::joinPath( constant::path::kDataFolder, constant::path::kLocalizationFolder );
-        vector<AbsolutePath> listGameFolder;
+        const string     localizationFolder = FileUtil::joinPath( constant::path::kDataFolder, constant::path::kLocalizationFolder );
+        vector<DiskPath> listGameFolder;
         if ( bAllGames )
         {
             vector<string> listPackDomain;
@@ -493,13 +495,13 @@ namespace sw
         else
             listGameFolder.push_back( editor::EditorPaths::findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), localizationFolder ) ) );
 
-        for ( const AbsolutePath& gameFolder : listGameFolder )
+        for ( const DiskPath& gameFolder : listGameFolder )
         {
-            vector<AbsolutePath> listFile;
-            const bool           bSkipGameFolder = gameFolder.empty() || FileUtil::isDirectory( gameFolder ) == false || FileUtil::collectFiles( gameFolder, ".xml", listFile, false ) == false;
+            vector<DiskPath> listFile;
+            const bool       bSkipGameFolder = gameFolder.empty() || FileUtil::isDirectory( gameFolder ) == false || FileUtil::collectFiles( gameFolder, ".xml", listFile, false ) == false;
             if ( bSkipGameFolder )
                 continue;
-            for ( const AbsolutePath& filePath : listFile )
+            for ( const DiskPath& filePath : listFile )
             {
                 if ( StringUtil::endsWith( filePath.str(), LocalizationProject::kExtension, true ) )
                     outListProjectPath.push_back( FileUtil::normalizeSeparators( filePath.str() ) );
@@ -554,11 +556,11 @@ namespace sw
         gatherer.gatherReflectedXML( fileText, origin );
     }
 
-    bool LocalizationTools::gatherProject( string_view projectPath, const AbsolutePath& repositoryRoot, bool bWrite, LocalizationGatherResult& outResult )
+    bool LocalizationTools::gatherProject( string_view projectPath, const DiskPath& repositoryRoot, bool bWrite, LocalizationGatherResult& outResult )
     {
         using Internal               = LocalizationToolsInternal;
         outResult                    = LocalizationGatherResult{};
-        const AbsolutePath  absolute = Internal::resolveAbsolutePath( projectPath );
+        const DiskPath      absolute = Internal::resolveAbsolutePath( projectPath );
         LocalizationProject project;
         if ( const expected<void> read = project.loadFromFile( absolute ); read.has_value() == false )
         {
@@ -593,7 +595,8 @@ namespace sw
         {
             if ( bWrite )
             {
-                outResult._bWritten = gatherTable.saveToFile( outResult._gatherTablePath );
+                editor::AssetWriter writer;
+                outResult._bWritten = writer.saveAsset( outResult._gatherTablePath, gatherTable );
             }
             else
                 outResult._bOutOfDate = true;
@@ -685,8 +688,8 @@ namespace sw
             return false;
         }
 
-        const AbsolutePath repositoryRoot = ProcessRoots::get()._project;
-        bool               bSucceeded{ true };
+        const DiskPath repositoryRoot = ProcessRoots::get()._project;
+        bool           bSucceeded{ true };
         for ( const string& projectPath : listProjectPath )
         {
             LocalizationGatherResult result;
@@ -707,7 +710,7 @@ namespace sw
         LocalizationProject                 project;
         vector<SourceStringTable>           listTable;
         map<string, const SourceTextEntry*> mapSource;
-        AbsolutePath                        absolute;
+        DiskPath                            absolute;
         if ( LocalizationToolsInternal::loadProjectSources( projectPath, project, listTable, mapSource, absolute ) == false )
             return false;
 
@@ -718,9 +721,9 @@ namespace sw
             result._culture                    = culture;
             StringBuilder<constant::buffer::kMax256> fileNameBuilder;
             fileNameBuilder.appendFormat( "%#/%#%#", PortableObjectFile::kFolderName, culture, PortableObjectFile::kExtension );
-            result._path                       = LocalizationProject::makeSiblingPath( absolute, fileNameBuilder.view() );
-            const AbsolutePath translationPath = LocalizationProject::makeTranslationPath( absolute, culture );
-            TranslationTable   translation;
+            result._path                     = LocalizationProject::makeSiblingPath( absolute, fileNameBuilder.view() );
+            const DiskPath   translationPath = LocalizationProject::makeTranslationPath( absolute, culture );
+            TranslationTable translation;
             translation.setCulture( culture );
             if ( const expected<void> read = FileUtil::exists( translationPath ) ? translation.loadFromFile( translationPath ) : expected<void>{}; read.has_value() == false )
             {
@@ -744,7 +747,8 @@ namespace sw
             const string             text = file.toText();
             string                   existing;
             const bool               bSame = FileUtil::readOptionalTextFile( result._path, existing ) == OptionalFileRead::Read && existing == text;
-            if ( bSame == false && ( FileUtil::ensureParentDirectoryExists( result._path ) == false || FileUtil::writeTextFile( result._path, text ) == false ) )
+            editor::AssetWriter      writer;
+            if ( bSame == false && writer.writeText( result._path, text ) == false )
             {
                 SW_LOG_ERROR_ID( "LocalizationTools.CouldNotWritten", "[ExportPo] '%#' could not be written", result._path.c_str() );
                 bAllWritten = false;
@@ -753,14 +757,14 @@ namespace sw
         return bAllWritten;
     }
 
-    bool LocalizationTools::importPo( string_view projectPath, const AbsolutePath& poPath, LocalizationExchangeResult& outResult )
+    bool LocalizationTools::importPo( string_view projectPath, const DiskPath& poPath, LocalizationExchangeResult& outResult )
     {
         outResult       = LocalizationExchangeResult{};
         outResult._path = poPath;
         LocalizationProject                 project;
         vector<SourceStringTable>           listTable;
         map<string, const SourceTextEntry*> mapSource;
-        AbsolutePath                        absolute;
+        DiskPath                            absolute;
         if ( LocalizationToolsInternal::loadProjectSources( projectPath, project, listTable, mapSource, absolute ) == false )
             return false;
 
@@ -794,17 +798,17 @@ namespace sw
         }
         outResult._culture = culture;
 
-        const AbsolutePath translationPath = LocalizationProject::makeTranslationPath( absolute, culture );
-        TranslationTable   translation;
+        const DiskPath   translationPath = LocalizationProject::makeTranslationPath( absolute, culture );
+        TranslationTable translation;
         translation.setCulture( culture );
         if ( const expected<void> read = FileUtil::exists( translationPath ) ? translation.loadFromFile( translationPath ) : expected<void>{}; read.has_value() == false )
         {
             SW_LOG_ERROR_ID( "LocalizationTools.ImportPoFailed", "[ImportPo] %# (%#)", read.error().message(), read.error().detail() );
             return false;
         }
-        TextGatherReport   memoryReport;
-        TranslationMemory  memory;
-        const AbsolutePath memoryPath = LocalizationToolsInternal::makeMemoryPath( absolute, culture );
+        TextGatherReport  memoryReport;
+        TranslationMemory memory;
+        const DiskPath    memoryPath = LocalizationToolsInternal::makeMemoryPath( absolute, culture );
         if ( LocalizationToolsInternal::loadMemory( memoryPath, culture, memory, memoryReport ) == false )
         {
             for ( const TextGatherIssue& issue : memoryReport._listIssue )
@@ -838,7 +842,8 @@ namespace sw
             if ( bStale == false && poEntry._bFuzzy == false )
                 (void)memory.addPair( poEntry._source, poEntry._translation );
         }
-        if ( translation.saveToFile( translationPath ) == false || memory.saveToFile( memoryPath ) == false )
+        editor::AssetWriter writer;
+        if ( writer.saveAsset( translationPath, translation ) == false || writer.saveAsset( memoryPath, memory ) == false )
         {
             SW_LOG_ERROR_ID( "LocalizationTools.TranslationTableCouldNot", "[ImportPo] translation table '%#' could not be written", translationPath.c_str() );
             return false;
@@ -870,7 +875,7 @@ namespace sw
         return bSucceeded;
     }
 
-    bool LocalizationTools::runImportCommand( const AbsolutePath& poPath, string_view projectArgument )
+    bool LocalizationTools::runImportCommand( const DiskPath& poPath, string_view projectArgument )
     {
         string projectPath( projectArgument );
         if ( projectPath.empty() )

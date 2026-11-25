@@ -91,11 +91,11 @@ namespace sw::editor
         /** @brief 외형 탭은 데이터 줄 · 내보내기 · 선택 · 슬롯 · 꾸미기 값을 한 화면에 둔다 — 기본 크기(640x420)는 슬롯 줄이 창 밖에 남는다. */
         EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 101.0f, 47.0f ); }
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         /** @brief 연 캐릭터가 아니라 미저장인 소켓 · 포즈 파일에 쓴다(`CharacterEditorViewModel::collectFilesToSave`). */
-        void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
-        /** @brief 파일마다 여는 때가 달라 모델이 읽을 때 기준을 적고 쓸 때 본다(`CharacterEditorViewModel::saveFiles`). */
-        [[nodiscard]] bool validateDiskBeforeSave( const vector<AbsolutePath>& /*listPath*/ ) override { return true; }
+        void collectFilesToSave( vector<DiskPath>& outListPath ) const override;
+        /** @brief 파일마다 여는 때가 달라 모델이 읽을 때 기준을 적는다 — 저장도 모델의 문을 지난다. */
+        AssetWriter& getAssetWriter() override { return _document.getAssetWriter(); }
         /** @brief 다시 읽기는 소켓 경로 칸에서 읽는다 — 연 문서를 가리키던 칸을 새 자리로 고친다. */
         void onAssetMoved( string_view oldPath, string_view newPath ) override;
         bool canSaveDocument() const override { return isDocumentLoadFailed() == false && _document.isDirty(); }

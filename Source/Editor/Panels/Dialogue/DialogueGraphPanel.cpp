@@ -167,7 +167,7 @@ namespace sw::editor
             ImGui::SameLine();
             EditorWidgets::drawToolbarSeparator();
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
-                (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
+                (void)saveDocumentAndClearDirty(); // 실패는 저장 커맨드가 알린다
             EditorSelfTestMarks::record( "dialogueGraph.save" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SaveTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) );
@@ -366,21 +366,9 @@ namespace sw::editor
         return result;
     }
 
-    bool DialogueGraphPanel::saveGraphData()
+    bool DialogueGraphPanel::saveDocument( AssetWriter& writer )
     {
-        DialogueGraphAsset data = captureGraphData();
-        // 실패하면 아무것도 지우지 않는다. AnimationGraphPanel 쪽 주석을 참고한다.
-        if ( DialogueGraphEdit::saveGraph( data, getLoadedAssetPath() ) == false )
-            return false;
-
-        clearDocumentDirty();
-        syncDocumentUndoBaseline();
-        return true;
-    }
-
-    bool DialogueGraphPanel::saveDocument()
-    {
-        return saveGraphData();
+        return DialogueGraphEdit::saveGraph( writer, captureGraphData(), getLoadedAssetPath() );
     }
 
     void DialogueGraphPanel::drawPreviewToolbar()

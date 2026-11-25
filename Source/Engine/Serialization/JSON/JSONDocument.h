@@ -301,7 +301,7 @@ namespace sw
         [[nodiscard]] bool tryParse( string_view jsonText );
 
         /** @brief 디스크의 절대 경로를 그대로 읽고 파싱합니다. 팩을 보지 않습니다(도구 · 설정 · Saved 파일용). */
-        [[nodiscard]] bool loadFromFile( const AbsolutePath& absPath );
+        [[nodiscard]] bool loadFromFile( const DiskPath& absPath );
 
         /**
          * @brief 리소스 id · OS 절대 경로 · 작업 경로를 `AssetIO::readTextAsset` 로 읽고 파싱합니다(낱개 파일 · 팩).

@@ -495,7 +495,7 @@ namespace sw::editor
     void InspectorViewModel::gatherPresets( const EditorCommandTarget& target, vector<InspectorPresetRow>& outListPreset )
     {
         outListPreset.clear();
-        vector<AbsolutePath> listNewPresetFile;
+        vector<DiskPath>     listNewPresetFile;
         const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
         if ( presetPoll == EditorTaskPoll::Ready )
         {
@@ -509,7 +509,7 @@ namespace sw::editor
         Component* pComp = InspectorViewModelInternal::findTargetComponent( target );
         if ( pComp == nullptr )
             return;
-        for ( const AbsolutePath& presetFile : _listPresetFile )
+        for ( const DiskPath& presetFile : _listPresetFile )
         {
             string displayName = EditorTransformCommands::getComponentPresetName( pComp, presetFile.str() );
             if ( displayName.empty() == false )
@@ -529,7 +529,7 @@ namespace sw::editor
         return true;
     }
 
-    void InspectorViewModel::loadComponentPreset( const EditorCommandTarget& target, const AbsolutePath& presetFile )
+    void InspectorViewModel::loadComponentPreset( const EditorCommandTarget& target, const DiskPath& presetFile )
     {
         Component*        pComp = InspectorViewModelInternal::findTargetComponent( target );
         EditorTransaction transaction; // 하위 메뉴(`inspector.component.presets`)가 고른 끝 — 씬을 바꾸는 여기서 거래를 연다

@@ -228,15 +228,15 @@ namespace sw::editor
     {
     }
 
-    bool CharacterEditorPanel::saveDocument()
+    bool CharacterEditorPanel::saveDocument( AssetWriter& writer )
     {
-        if ( _document.saveFiles( MonotonicClock::nowSeconds() ) == false )
+        if ( _document.saveFiles( writer ) == false )
             return false; // 까닭은 상태 줄에 남았다
         acknowledgePreviewEdits();
         return true;
     }
 
-    void CharacterEditorPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
+    void CharacterEditorPanel::collectFilesToSave( vector<DiskPath>& outListPath ) const
     {
         vector<string> listAssetID;
         _document.collectFilesToSave( listAssetID );

@@ -153,9 +153,9 @@ namespace sw::editor
         return _edit.begin( library, eventName ) ? ToolAssetLoadResult::Loaded : ToolAssetLoadResult::Malformed;
     }
 
-    bool AudioEventBrowserPanel::saveDocument()
+    bool AudioEventBrowserPanel::saveDocument( AssetWriter& writer )
     {
-        return _edit.saveDocument();
+        return _edit.saveDocument( writer );
     }
 
     void AudioEventBrowserPanel::drawLibraryEditor()

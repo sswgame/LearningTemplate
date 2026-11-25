@@ -57,16 +57,16 @@ namespace sw
             }
 
             /** @brief @p shadersDir(`<도메인>/shaders`)의 `.hlsli` 가 include 루트 도메인의 `.hlsli` 와 같은 상대 경로이면 그 쌍을 적습니다. 문제가 없으면 true 입니다. */
-            [[nodiscard]] static bool findShadowedInDir( const vector<ShaderIncludeRootDomain>& listRootDomain, const AbsolutePath& shadersDir, vector<string>& outListProblem )
+            [[nodiscard]] static bool findShadowedInDir( const vector<ShaderIncludeRootDomain>& listRootDomain, const DiskPath& shadersDir, vector<string>& outListProblem )
             {
-                vector<AbsolutePath> listOwn;
+                vector<DiskPath> listOwn;
                 if ( FileUtil::isDirectory( shadersDir ) && FileUtil::collectFiles( shadersDir, ".hlsli", listOwn, true ) == false )
                 {
                     appendProblem( outListProblem, "%#: the headers could not all be listed - shadowing is not known", shadersDir.str() );
                     return false;
                 }
                 unordered_set<string> setOwnKey;
-                for ( const AbsolutePath& ownPath : listOwn )
+                for ( const DiskPath& ownPath : listOwn )
                 {
                     const string normOwn = FileUtil::normalizeSeparators( ownPath.str() );
                     if ( normOwn.find( "/bin/" ) == string::npos )
@@ -77,17 +77,17 @@ namespace sw
                 bool         bClean      = true;
                 for ( const ShaderIncludeRootDomain& rootDomain : listRootDomain )
                 {
-                    const AbsolutePath rootDir = rootDomain._shadersFolder;
+                    const DiskPath rootDir = rootDomain._shadersFolder;
                     if ( StringUtil::toLower( rootDir.c_str() ) == ownDirLower )
                         continue;
-                    vector<AbsolutePath> listRootHeader;
+                    vector<DiskPath> listRootHeader;
                     if ( FileUtil::collectFiles( rootDir, ".hlsli", listRootHeader, true ) == false )
                     {
                         appendProblem( outListProblem, "%#: the headers could not all be listed - shadowing is not known", rootDir.str() );
                         bClean = false;
                         continue;
                     }
-                    for ( const AbsolutePath& headerPath : listRootHeader )
+                    for ( const DiskPath& headerPath : listRootHeader )
                     {
                         const string normHeader = FileUtil::normalizeSeparators( headerPath.str() );
                         const string key        = normHeader.find( "/bin/" ) == string::npos ? makeRelativeKey( normHeader, rootDir.str() ) : string{};
@@ -166,20 +166,20 @@ namespace sw
     {
     }
 
-    optional<AbsolutePath> ShaderIncludeResolver::findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes ) const
+    optional<DiskPath> ShaderIncludeResolver::findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes ) const
     {
-        for ( const AbsolutePath& root : input._listIncludeRoot )
+        for ( const DiskPath& root : input._listIncludeRoot )
         {
             const optional<AbsolutePath> candidate = AbsolutePath::isStrictAbsolute( includeName ) ? nullopt : AbsolutePath::tryResolve( includeName, root );
             if ( candidate.has_value() == false )
                 continue;
-            if ( const optional<AbsolutePath> found = readInclude( *candidate, outBytes ); found.has_value() )
+            if ( const optional<DiskPath> found = readInclude( *candidate, outBytes ); found.has_value() )
                 return found;
         }
         return nullopt;
     }
 
-    optional<AbsolutePath> ShaderIncludeResolver::readInclude( const AbsolutePath& candidate, vector<uint8>& outBytes ) const
+    optional<DiskPath> ShaderIncludeResolver::readInclude( const DiskPath& candidate, vector<uint8>& outBytes ) const
     {
         outBytes.clear();
         if ( FileUtil::isRegularFile( candidate ) == false )
@@ -193,7 +193,7 @@ namespace sw
         return candidate;
     }
 
-    bool ShaderIncludeResolver::findShadowedHeaders( const AbsolutePath& shadersFolder, vector<string>& outListProblem ) const
+    bool ShaderIncludeResolver::findShadowedHeaders( const DiskPath& shadersFolder, vector<string>& outListProblem ) const
     {
         return ShaderSourceInternal::findShadowedInDir( _listRootDomain, shadersFolder, outListProblem );
     }
@@ -222,7 +222,7 @@ namespace sw
         vector<ShaderIncludeRootDomain> listRootDomain;
         for ( string& domain : listDomain )
         {
-            const optional<AbsolutePath> folder = assetPaths.toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
+            const optional<DiskPath> folder = assetPaths.toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
             if ( folder.has_value() == false || FileUtil::isDirectory( *folder ) == false )
             {
                 SW_LOG_ERROR_ID( "ShaderSource.ShaderIncludeRootNo", "Shader include root '%#/%#' has no folder on disk - the engine headers cannot be found", domain, constant::path::kShaderFolder );
@@ -238,11 +238,11 @@ namespace sw
         const optional<string_view> shadersFolderID = source.getShadersFolder();
         if ( shadersFolderID.has_value() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "Shader source id has no domain 'shaders' folder", source.str() } );
-        const optional<AbsolutePath> sourceFile = _pAssetPaths->findLooseFile( source.str() );
+        const optional<DiskPath> sourceFile = _pAssetPaths->findLooseFile( source.str() );
         if ( sourceFile.has_value() == false || FileUtil::isRegularFile( *sourceFile ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "Shader source file not found", source.str() } );
-        const optional<AbsolutePath> shadersFolder = _pAssetPaths->toDiskPath( *shadersFolderID );
-        const bool                   bInsideFolder = shadersFolder.has_value() &&
+        const optional<DiskPath> shadersFolder = _pAssetPaths->toDiskPath( *shadersFolderID );
+        const bool               bInsideFolder = shadersFolder.has_value() &&
                                    FileUtil::isPathAtOrUnderRoot( shadersFolder->str(), sourceFile->str() );
         if ( bInsideFolder == false )
         {
@@ -253,7 +253,7 @@ namespace sw
         const optional<AbsolutePath> sourceDir = AbsolutePath::tryMake( FileUtil::getDirectoryPart( sourceFile->str() ) );
         if ( sourceDir.has_value() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "Shader source folder cannot be resolved", sourceFile->str() } );
-        vector<AbsolutePath> listIncludeRoot{ *sourceDir };
+        vector<DiskPath> listIncludeRoot{ *sourceDir };
         for ( const ShaderIncludeRootDomain& rootDomain : _includeResolver.getRootDomains() )
         {
             listIncludeRoot.push_back( rootDomain._shadersFolder );
@@ -261,9 +261,9 @@ namespace sw
         return ShaderCompileInput{ *sourceFile, *shadersFolder, std::move( listIncludeRoot ) };
     }
 
-    optional<AbsolutePath> ShaderSourceResolver::findDomainShadersFolder( string_view domain ) const
+    optional<DiskPath> ShaderSourceResolver::findDomainShadersFolder( string_view domain ) const
     {
-        const optional<AbsolutePath> folder = _pAssetPaths->toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
+        const optional<DiskPath> folder = _pAssetPaths->toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
         return folder.has_value() && FileUtil::isDirectory( *folder ) ? folder : nullopt;
     }
 } // namespace sw

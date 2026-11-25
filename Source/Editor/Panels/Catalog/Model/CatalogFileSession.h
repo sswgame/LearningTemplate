@@ -46,13 +46,8 @@ namespace sw::editor
         ValidationState        getValidationState() const { return _validationState; }
         const vector<string>&  getWarnings() const { return _listWarning; }
 
-        /**
-         * @brief 저장 직전에 부릅니다. 지금 디스크의 글을 넘깁니다.
-         * @return 써도 되면 true 입니다. 파일이 연 뒤 밖에서 바뀌었으면 첫 번에는 false 이고 상태 줄이 알립니다. 같은 글로 다시 부르면 true 입니다.
-         */
-        [[nodiscard]] bool validateDiskBeforeSave( string_view diskText );
-        /** @brief 쓰기에 성공한 뒤 부릅니다. 저장 직전 디스크의 글을 "이전 파일" 로 남깁니다. */
-        void onSaved();
+        /** @brief 쓰기에 성공한 뒤 부릅니다. 저장 직전 디스크의 글 @p replacedText 를 "이전 파일" 로 남깁니다. */
+        void onSaved( string replacedText );
         /** @brief 저장 직전 글이 지금 디스크와 달라 되돌릴 것이 있으면 true 입니다. */
         bool          canRestorePrevious() const { return _previousText != _document.getSavedText(); }
         const string& getPreviousText() const { return _previousText; }
@@ -70,9 +65,7 @@ namespace sw::editor
         string          _assetID;
         string          _kindLabel;
         string          _previousText;
-        string          _conflictDiskText;
         string          _status;
         ValidationState _validationState;
-        uint8           _bConflictPending : 1; ///< 밖에서 바뀐 글(`_conflictDiskText`)을 알렸다 — 같은 글이면 다음 저장은 덮어쓴다
     };
 } // namespace sw::editor

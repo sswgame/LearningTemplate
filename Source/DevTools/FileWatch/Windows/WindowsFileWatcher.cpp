@@ -57,7 +57,7 @@ namespace sw
         stopWatching();
     }
 
-    bool WindowsFileWatcher::startWatching( const AbsolutePath& directoryPath, bool bRecursive )
+    bool WindowsFileWatcher::startWatching( const DiskPath& directoryPath, bool bRecursive )
     {
         if ( _bIsWatching )
         {

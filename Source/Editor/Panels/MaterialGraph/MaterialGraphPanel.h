@@ -27,7 +27,7 @@ namespace sw::editor
         MaterialGraphPanel();
 
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
 
     protected:
         ToolAssetLoadResult loadDocument() override;

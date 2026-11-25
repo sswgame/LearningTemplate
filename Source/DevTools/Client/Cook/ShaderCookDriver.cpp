@@ -648,7 +648,7 @@ namespace sw
         const ShaderEnginePolicy enginePolicy = ShaderEnginePolicy::capture();
         for ( const string& domain : listDomain )
         {
-            const optional<AbsolutePath> shadersFolder = resolver->findDomainShadersFolder( domain );
+            const optional<DiskPath> shadersFolder = resolver->findDomainShadersFolder( domain );
             if ( shadersFolder.has_value() )
                 (void)resolver->getIncludeResolver().findShadowedHeaders( *shadersFolder, outListProblem ); // 가려진 헤더는 문제로 적힌다
             const string binDirectory = ShaderBinaryLocation::makeForDomain( domain, targetFormat )._binDirectory;

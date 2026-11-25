@@ -116,10 +116,10 @@ namespace sw::editor
         return result;
     }
 
-    bool SpriteClipViewModel::saveDocument( string_view path )
+    bool SpriteClipViewModel::saveDocument( AssetWriter& writer, string_view path )
     {
         // 패널은 `computeClipPath` 를 거쳐 부른다 - 여기가 이미지를 덮는 마지막 관문이다.
-        const bool bSaved = SpriteClipViewModelInternal::isImagePath( path ) == false && EditorToolAssetCommands::saveSpriteClip( captureClipData(), path );
+        const bool bSaved = SpriteClipViewModelInternal::isImagePath( path ) == false && EditorToolAssetCommands::saveSpriteClip( writer, captureClipData(), path );
         if ( bSaved == false )
         {
             _status = SW_LOCKEY( "EditorSpriteClip", "SaveFailedStatus" );

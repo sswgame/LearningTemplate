@@ -48,15 +48,15 @@ namespace sw::editor
             }
 
             /** @brief 벌 하나를 `_base` 사슬 끝까지 읽어 합칩니다(자식의 키가 이긴다). 없는 부모 · 순환 · 깊이 초과 · 틀린 파일이면 그 파일이 대상인 오류입니다. */
-            [[nodiscard]] static expected<EditorThemeDef> readThemeChain( const AbsolutePath& absolutePath )
+            [[nodiscard]] static expected<EditorThemeDef> readThemeChain( const DiskPath& absolutePath )
             {
                 // 깊이 상한은 데이터 상속과 같은 사본이다(`ResourceComposition::findInheritanceMaxDepth`) — 없으면 대신 설정을 읽지 않고 진다.
                 const optional<uint32> maxDepth = editor::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
                 if ( maxDepth.has_value() == false )
                     return unexpected( Error{ ErrorKind::Unsupported, "the inheritance depth limit is not set yet", absolutePath.str() } );
-                vector<AbsolutePath>   listPath;
+                vector<DiskPath>       listPath;
                 vector<EditorThemeDef> listLayer; // 자식부터
-                AbsolutePath           path = absolutePath;
+                DiskPath               path = absolutePath;
                 while ( path.empty() == false )
                 {
                     if ( VectorUtil::contains( listPath, path ) || listPath.size() >= *maxDepth )
@@ -97,7 +97,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    AbsolutePath EditorThemeTokens::getFolderPath()
+    DiskPath EditorThemeTokens::getFolderPath()
     {
         return EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEditorPack, kFolderName ) );
     }
@@ -105,7 +105,7 @@ namespace sw::editor
     void EditorThemeTokens::listThemeNames( vector<string>& outListName )
     {
         outListName.clear();
-        const AbsolutePath folder = getFolderPath();
+        const DiskPath folder = getFolderPath();
         if ( folder.empty() )
             return;
         // 폴더가 없으면 목록이 비고, 부르는 쪽이 기본 벌을 찾다 실패를 남긴다.
@@ -115,7 +115,7 @@ namespace sw::editor
 
     expected<EditorThemeConfig> EditorThemeTokens::loadTheme( string_view name )
     {
-        const AbsolutePath folder = getFolderPath();
+        const DiskPath folder = getFolderPath();
         if ( folder.empty() )
             return unexpected( Error{ ErrorKind::NotFound, "the content root is not mounted" } );
         expected<EditorThemeConfig> config = loadThemeFile( folder.join( name ).appendSuffix( kExtension ) );
@@ -137,8 +137,8 @@ namespace sw::editor
 
     bool EditorThemeTokens::loadThemeResource( const AssetID& id, EditorThemeConfig& outConfig )
     {
-        const string&                assetID   = id.str();
-        const optional<AbsolutePath> themeFile = editor::getSubsystem<AssetPaths>().findLooseFile( assetID );
+        const string&            assetID   = id.str();
+        const optional<DiskPath> themeFile = editor::getSubsystem<AssetPaths>().findLooseFile( assetID );
         if ( themeFile.has_value() == false )
         {
             SW_LOG_ERROR_ID( "EditorThemeTokens.ThemeTokensNotLoaded", "Theme tokens were not loaded: %# is not a loose file", assetID.c_str() );
@@ -154,7 +154,7 @@ namespace sw::editor
         return true;
     }
 
-    expected<EditorThemeConfig> EditorThemeTokens::loadThemeFile( const AbsolutePath& absolutePath )
+    expected<EditorThemeConfig> EditorThemeTokens::loadThemeFile( const DiskPath& absolutePath )
     {
         const expected<EditorThemeDef> def = EditorThemeTokensInternal::readThemeChain( absolutePath );
         if ( def.has_value() == false )

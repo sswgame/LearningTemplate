@@ -16,9 +16,9 @@ namespace sw::editor
         return EditorToolAssetCommands::loadDialogueGraph( outGraph, path );
     }
 
-    bool DialogueGraphEdit::saveGraph( const DialogueGraphAsset& graph, const string_view path )
+    bool DialogueGraphEdit::saveGraph( AssetWriter& writer, const DialogueGraphAsset& graph, const string_view path )
     {
-        return EditorToolAssetCommands::saveDialogueGraph( graph, path );
+        return EditorToolAssetCommands::saveDialogueGraph( writer, graph, path );
     }
 
     void DialogueGraphEdit::makeDefaultGraph( DialogueGraphAsset& outGraph )

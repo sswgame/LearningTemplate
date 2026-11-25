@@ -10,10 +10,8 @@ namespace sw::editor
         , _assetID{}
         , _kindLabel{}
         , _previousText{}
-        , _conflictDiskText{}
         , _status{}
         , _validationState{ ValidationState::None }
-        , _bConflictPending{ SW_FALSE }
     {
     }
 
@@ -24,36 +22,18 @@ namespace sw::editor
         _document.setInheritanceSource( pInheritanceSource );
         (void)_document.load( text );
         _previousText = string( text );
-        _conflictDiskText.clear();
-        _bConflictPending = SW_FALSE;
         _status.clear();
         clearValidation();
     }
 
-    bool CatalogFileSession::validateDiskBeforeSave( string_view diskText )
+    void CatalogFileSession::onSaved( string replacedText )
     {
-        if ( diskText == string_view( _document.getSavedText() ) )
-            return true;
-        if ( _bConflictPending == SW_TRUE && diskText == string_view( _conflictDiskText ) )
-            return true;
-        _conflictDiskText = string( diskText );
-        _bConflictPending = SW_TRUE;
-        _status           = "The file changed on disk since it was opened - save again to overwrite it";
-        return false;
-    }
-
-    void CatalogFileSession::onSaved()
-    {
-        _previousText = _bConflictPending == SW_TRUE ? _conflictDiskText : _document.getSavedText(); // 저장 직전에 디스크에 있던 글
-        _conflictDiskText.clear();
-        _bConflictPending = SW_FALSE;
+        _previousText = std::move( replacedText );
         _document.markSaved();
     }
 
     void CatalogFileSession::onRestored()
     {
-        _conflictDiskText.clear();
-        _bConflictPending = SW_FALSE;
         _document.replaceSavedText( _previousText ); // 되돌린 글이 디스크와 문서의 새 기준이다
     }
 

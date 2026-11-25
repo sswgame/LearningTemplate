@@ -516,19 +516,18 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationLoopTip" ) );
     }
 
-    bool SpriteClipPanel::saveDocument()
+    bool SpriteClipPanel::saveDocument( AssetWriter& writer )
     {
         // 포커스한 이미지로 연 클립은 이미지 옆의 새 클립 파일로 저장하고 그 파일을 연다 - 이미지를 덮어쓰면 안 된다.
         const string clipPath = SpriteClipViewModel::computeClipPath( getLoadedAssetPath() );
-        if ( _model.saveDocument( clipPath ) == false )
+        if ( _model.saveDocument( writer, clipPath ) == false )
             return false;
-        syncDocumentUndoBaseline();
         if ( clipPath != getLoadedAssetPath() )
             requestOpenDocument( clipPath );
         return true;
     }
 
-    void SpriteClipPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
+    void SpriteClipPanel::collectFilesToSave( vector<DiskPath>& outListPath ) const
     {
         appendFileToSave( SpriteClipViewModel::computeClipPath( getLoadedAssetPath() ), outListPath );
     }

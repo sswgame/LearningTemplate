@@ -13,6 +13,7 @@
 #include "DevTools/Material/MaterialGraphGeneratedPaths.h"
 #include "DevTools/Material/MaterialGraphNodeRegistry.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
@@ -78,7 +79,7 @@ namespace sw::editor
         rebuildPins();
     }
 
-    bool MaterialGraphViewModel::saveDocument( const AbsolutePath& diskPath )
+    bool MaterialGraphViewModel::saveDocument( AssetWriter& writer, const DiskPath& diskPath )
     {
         if ( MaterialGraphCompileResult::isSubgraph( _graph ) == false )
         {
@@ -92,7 +93,8 @@ namespace sw::editor
                 return false;
             }
         }
-        return _graph.saveToFile( diskPath, AssetID{ _basePath } );
+        return writer.save( diskPath, [this]( const AbsolutePath& writable )
+        { return _graph.saveToFile( writable, AssetID{ _basePath } ); } );
     }
 
     void MaterialGraphViewModel::publishEdit()

@@ -133,7 +133,7 @@ namespace sw
          * @brief 디스크 파일 @p absPath(리소스 id @p assetID — 경로는 id 로 끝난다)의 GUID 입니다 — 우리 형식 글은 머리, 원본은 곁의 `.meta`, 임포트 산출물은 원본의 `.meta` 와 산출물 이름.
          * @return 정체성이 없거나 읽지 못하면 없음입니다.
          */
-        [[nodiscard]] optional<AssetGUID> readIdentity( const AbsolutePath& absPath, string_view assetID ) const;
+        [[nodiscard]] optional<AssetGUID> readIdentity( const DiskPath& absPath, string_view assetID ) const;
         /**
          * @brief 막 생긴 파일 @p absPath(리소스 id @p assetID)에 새 GUID 를 줍니다. 베낀 글이 든 머리 · 베낀 원본의 옛 서술은 새 것으로 바꾼다(복사본은 새 에셋이다).
          * @return 읽거나 쓰지 못하면 오류를 남기고 false 입니다. 정체성이 없는 파일(건너뛰는 파일 · `.meta` 자신)은 할 일이 없어 true 입니다.
@@ -221,8 +221,11 @@ namespace sw
         static string makePath( string_view sourcePath );
         /** @brief 원본 디스크 경로 @p sourcePath 의 서술 디스크 경로(`<경로>.meta`)입니다 — 글로 잇고 다시 올리지 않는다(`AbsolutePath::appendSuffix`). */
         [[nodiscard]] static AbsolutePath makePath( const AbsolutePath& sourcePath ) { return sourcePath.appendSuffix( kExtension ); }
+        [[nodiscard]] static DiskPath     makePath( const DiskPath& sourcePath ) { return sourcePath.appendSuffix( kExtension ); }
         /** @brief 곁의 원본 @p sourcePath 에 @p guid 를 주는 서술 글입니다. 임포트 예외 @p listOverride 를 함께 든다(복사는 예외를 지킨다 — 옮기기는 `renameSource`). */
         static string makeText( string_view sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride = {} );
+        /** @brief 디스크의 원본 @p sourcePath 곁에 @p guid · @p listOverride 의 서술을 씁니다 — 새 서술을 쓰는 곳은 이 함수 하나다. 지면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool saveBeside( const AbsolutePath& sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride = {} );
     };
 
     /** @brief 색인을 짓다 만난 결함의 종류입니다. */

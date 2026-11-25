@@ -396,7 +396,7 @@ namespace sw
 
         /** @brief 파일을 `readConfigJSON` 으로 읽습니다. 없으면 `Missing`(로그 없음)입니다. @p absolutePath 는 그대로 씁니다. */
         template <typename T>
-        [[nodiscard]] static ConfigReadResult readConfigFile( T& outConfig, const AbsolutePath& absolutePath )
+        [[nodiscard]] static ConfigReadResult readConfigFile( T& outConfig, const DiskPath& absolutePath )
         {
             if ( FileUtil::isRegularFile( absolutePath ) == false )
                 return ConfigReadResult::Missing;

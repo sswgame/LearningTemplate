@@ -7,6 +7,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -172,21 +173,23 @@ namespace sw::editor
         return true;
     }
 
-    bool InputMapViewModel::saveDocument()
+    bool InputMapViewModel::saveDocument( AssetWriter& writer )
     {
         // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다. 다시 읽기(`reload`)와 같은 형식, 같은 위치에 쓴다.
         // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 보관한다.
         if ( isBundlePath() )
         {
-            if ( saveBundle() == false )
+            if ( saveBundle( writer ) == false )
             {
                 SW_LOG_WARNING_ID( "InputMapViewModel.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
                 return false;
             }
             return true;
         }
-        const optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.get() );
-        if ( inputMapFile.has_value() == false || _inputMap.saveToAsset( *inputMapFile ) == false )
+        const optional<DiskPath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.get() );
+        const bool               bSaved       = inputMapFile.has_value() && writer.save( *inputMapFile, [this]( const AbsolutePath& writable )
+                            { return _inputMap.saveToAsset( writable ); } );
+        if ( bSaved == false )
         {
             SW_LOG_WARNING_ID( "InputMapViewModel.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
             return false;
@@ -200,7 +203,7 @@ namespace sw::editor
         return InputMapBundle::isSettingsFile( string_view{ _inputMapPath.c_str() } );
     }
 
-    bool InputMapViewModel::saveBundle() const
+    bool InputMapViewModel::saveBundle( AssetWriter& writer ) const
     {
         // 파일마다 원래 몫을 돌려보낸다. 편집이 건드리지 않은 파일은 쓰지 않는다 — 다른 게임과 함께 쓰는 공통 파일의 주석과 차례를 지키고, 함께 쓰는 파일을 말없이 바꾸지 않는다.
         vector<AssetID> listAsset;
@@ -214,9 +217,11 @@ namespace sw::editor
                 return false;
             if ( bHasDisk && onDisk.writeSourceText( sourceIndex, diskText ) && editedText == diskText )
                 continue;
-            const string&                assetPath = _inputMap.getSourceAssetPath( sourceIndex );
-            const optional<AbsolutePath> filePath  = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
-            if ( filePath.has_value() == false || _inputMap.saveSourceToAsset( sourceIndex, *filePath ) == false )
+            const string&            assetPath = _inputMap.getSourceAssetPath( sourceIndex );
+            const optional<DiskPath> filePath  = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
+            const bool               bSaved    = filePath.has_value() && writer.save( *filePath, [this, sourceIndex]( const AbsolutePath& writable )
+                             { return _inputMap.saveSourceToAsset( sourceIndex, writable ); } );
+            if ( bSaved == false )
                 return false;
             SW_LOG_INFO_ID( "InputMapViewModel.SavedInputMap", "Saved InputMap to %#", assetPath.c_str() );
         }
@@ -646,8 +651,9 @@ namespace sw::editor
 
     void InputMapViewModel::saveReplay() const
     {
-        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( _replayFilePath.get() );
-        if ( diskPath.has_value() == false || _replay.saveToFile( *diskPath ) == false )
+        const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( _replayFilePath.get() );
+        AssetWriter              writer;
+        if ( diskPath.has_value() == false || writer.saveAsset( *diskPath, _replay ) == false )
             SW_LOG_ERROR_ID( "InputMapViewModel.CouldNotSaveInput", "Could not save input replay '%#'", _replayFilePath.c_str() );
     }
 
@@ -655,7 +661,7 @@ namespace sw::editor
     {
         _replayPlayback.reset();
         _replay.stopRecording(); // 녹화 중이면 읽은 프레임 뒤에 이어 적는다
-        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() );
+        const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() );
         if ( diskPath.has_value() == false )
             SW_LOG_ERROR_ID( "InputMapViewModel.CouldNotLoadInput", "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
         else if ( _replay.loadFromFile( *diskPath ) == false )

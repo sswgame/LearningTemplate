@@ -36,6 +36,8 @@ namespace sw::editor
         [[nodiscard]] static bool isListedFile( string_view assetID );
         /** @brief @p folder(디스크 경로) 아래 파일입니다. 확장자 @p extension 이 비면 모두입니다. */
         [[nodiscard]] static bool collectFiles( const AbsolutePath& folder, string_view extension, vector<AbsolutePath>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
+        /** @brief 읽기 경로 폴더의 판입니다. */
+        [[nodiscard]] static bool collectFiles( const DiskPath& folder, string_view extension, vector<DiskPath>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
         /** @brief @p folder(디스크 경로, 하위까지) 아래 원본 곁 서술(`.meta`)입니다 — 파일 없이 서술만 있는 원본을 찾는 쪽(`AssetSourceLocator`)이 쓴다. */
         [[nodiscard]] static bool collectSidecarFiles( const AbsolutePath& folder, vector<AbsolutePath>& outListFilePath );
         /** @brief @p folder(디스크 경로) 아래 폴더입니다. */

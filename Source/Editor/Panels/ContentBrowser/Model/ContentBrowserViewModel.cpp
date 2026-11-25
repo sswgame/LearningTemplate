@@ -293,7 +293,7 @@ namespace sw::editor
         }
         const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         if ( packRoot.empty() == false )
-            addRoot( packRoot, EditorPaths::findContentFolder( packRoot ) );
+            addRoot( packRoot, findAssetFile( packRoot ) );
         if ( _bShowAllPacks || packRoot.empty() )
         {
             vector<string> listPackDomain;
@@ -302,17 +302,17 @@ namespace sw::editor
             {
                 const string packName = FileUtil::normalizePath( packDomain ).str();
                 if ( packName != FileUtil::normalizePath( packRoot ).str() )
-                    addRoot( packName, EditorPaths::findContentFolder( packDomain ) );
+                    addRoot( packName, findAssetFile( packDomain ) );
             }
         }
-        addRoot( constant::path::kEnginePack, EditorPaths::findContentFolder( constant::path::kEnginePack ) );
-        addRoot( constant::path::kCommonPack, EditorPaths::findContentFolder( constant::path::kCommonPack ) );
-        addRoot( constant::path::kEditorPack, EditorPaths::findContentFolder( constant::path::kEditorPack ) );
+        addRoot( constant::path::kEnginePack, findAssetFile( constant::path::kEnginePack ) );
+        addRoot( constant::path::kCommonPack, findAssetFile( constant::path::kCommonPack ) );
+        addRoot( constant::path::kEditorPack, findAssetFile( constant::path::kEditorPack ) );
 
         // 처음이거나 지금 폴더가 숨긴 게임 팩 안에 있으면 첫 루트로 이동한다. 루트가 아닌 다른 도메인(자동화 사본 `scratch/` - `content.open` 이 연다)은 그대로 둔다 -
         // 예전에는 "어느 루트 아래도 아니면" 이동해, 루트를 다시 만드는 순간(시나리오 단계 초기화 뒤) 연 사본 폴더에서 쫓겨났다.
         const ComparableDiskPath selectedFolder       = FileUtil::makeComparableDiskPath( _selectedFolderAbs.str() );
-        const string             gamePacksFolder      = EditorPaths::findContentFolder( constant::path::kGamePack ).str();
+        const string             gamePacksFolder      = findAssetFile( constant::path::kGamePack ).str();
         const bool               bSelectedIsUnderRoot = VectorUtil::containsIf( _listRoot, [&]( const ContentBrowserRoot& root )
                       { return FileUtil::startsWithPathComponent( selectedFolder, FileUtil::makeComparableDiskPath( root._absolutePath.str() ) ); } );
         const bool               bInHiddenGamePack =
@@ -456,9 +456,14 @@ namespace sw::editor
             pSync->publish( EditorSelectionContext::ContentBrowser, entry._relativePath, 0 );
     }
 
+    AbsolutePath ContentBrowserViewModel::findAssetFile( string_view resourceID )
+    {
+        return EditorAssetFileCommands::findOperationPath( resourceID ).value_or( AbsolutePath{} );
+    }
+
     bool ContentBrowserViewModel::revealAsset( string_view assetID )
     {
-        const auto filePath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( assetID ).str() ); // 디스크 파일(없으면 비어 있다)
+        const optional<AbsolutePath> filePath = EditorAssetFileCommands::findOperationPath( FileUtil::normalizePath( assetID ).str() ); // 디스크 파일(없으면 비어 있다)
         if ( filePath.has_value() == false )
             return false; // 쿠킹 묶음에만 있는 애셋 — 보일 폴더가 없다
         openFolder( filePath->getParent() );

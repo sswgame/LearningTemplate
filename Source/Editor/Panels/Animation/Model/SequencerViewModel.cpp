@@ -163,8 +163,8 @@ namespace sw::editor
         return EditorToolAssetCommands::loadSequence( outAsset, path );
     }
 
-    bool SequencerViewModel::saveSequence( const SequenceAsset& asset, string_view path )
+    bool SequencerViewModel::saveSequence( AssetWriter& writer, const SequenceAsset& asset, string_view path )
     {
-        return EditorToolAssetCommands::saveSequence( asset, path );
+        return EditorToolAssetCommands::saveSequence( writer, asset, path );
     }
 } // namespace sw::editor

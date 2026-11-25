@@ -33,7 +33,7 @@ namespace sw
 
     Subscription ContentFolderWatchService::watchAssetFolder( string_view folderID, const vector<string>& listExtension, const ChangedDelegate& onChanged )
     {
-        vector<AbsolutePath> listDiskFolder;
+        vector<DiskPath> listDiskFolder;
         engine::getSubsystem<AssetPaths>().collectLooseFolders( folderID, listDiskFolder );
         if ( listDiskFolder.empty() )
         {
@@ -41,7 +41,7 @@ namespace sw
             return {};
         }
         unique_ptr<Watch> watch = make_unique<Watch>();
-        for ( const AbsolutePath& diskFolder : listDiskFolder )
+        for ( const DiskPath& diskFolder : listDiskFolder )
         {
             Subscription match = _fileWatch.watch( diskFolder, FileWatchDepth::Tree, listExtension, SW_DELEGATE_METHOD( FileChangeDelegate, &Watch::onFileChanged, watch.get() ) );
             if ( match.isActive() == false )

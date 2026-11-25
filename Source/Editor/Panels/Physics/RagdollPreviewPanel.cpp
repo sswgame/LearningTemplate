@@ -150,12 +150,9 @@ namespace sw::editor
         _model.bindDocumentEditRecorder( getDocumentEditRecorder() );
     }
 
-    bool RagdollPreviewPanel::saveDocument()
+    bool RagdollPreviewPanel::saveDocument( AssetWriter& writer )
     {
-        if ( _model.saveDocument() == false )
-            return false;
-        syncDocumentUndoBaseline(); // 저장한 글이 새 기준이다
-        return true;
+        return _model.saveDocument( writer );
     }
 
     void RagdollPreviewPanel::onBodyPropertyEdited( const PropertyInfo& property )

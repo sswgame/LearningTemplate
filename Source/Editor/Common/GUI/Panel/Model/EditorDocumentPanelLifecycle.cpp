@@ -111,12 +111,12 @@ namespace sw::editor
         }
     }
 
-    void EditorDocumentPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
+    void EditorDocumentPanel::collectFilesToSave( vector<DiskPath>& outListPath ) const
     {
         appendFileToSave( _loadedAssetPath, outListPath );
     }
 
-    void EditorDocumentPanel::appendFileToSave( string_view path, vector<AbsolutePath>& outListPath )
+    void EditorDocumentPanel::appendFileToSave( string_view path, vector<DiskPath>& outListPath )
     {
         if ( path.empty() )
             return;
@@ -125,7 +125,7 @@ namespace sw::editor
             outListPath.push_back( FileUtil::toDiskPath( path ) );
             return;
         }
-        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( path );
+        const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( path );
         if ( diskPath.has_value() )
             outListPath.push_back( *diskPath );
     }
@@ -136,8 +136,16 @@ namespace sw::editor
             ensureDocumentLoaded();
     }
 
+    bool EditorDocumentPanel::saveDocument( AssetWriter& writer )
+    {
+        const optional<DiskPath> diskPath = getDocumentDiskPath();
+        const string             text     = captureDocumentText();
+        return diskPath.has_value() && text.empty() == false && writer.writeText( *diskPath, text );
+    }
+
     void EditorDocumentPanel::onDocumentSaved()
     {
+        syncDocumentUndoBaseline(); // 저장한 글이 새 기준이다 — 안 그러면 앞 글로 되돌렸을 때 디스크와 달라도 "저장됨" 으로 보인다
         // 저장한 원본이 사본보다 새것이다 — 남기면 다음 기동이 이미 저장한 일을 복구하라고 묻는다(씬 자동 저장의 `onSceneSaved` 와 같다)
         EditorDocumentAutosaveEntry::remove( EditorAutosaveCommands::getSessionFolder(), _loadedAssetPath );
         _lastCopyTextHash       = 0;
@@ -151,7 +159,7 @@ namespace sw::editor
         *_pUndoTarget = nullptr; // Ctrl+Z 의 스택은 패널 id 로 찾으므로 사라질 스택을 풀 일이 없다(`setFocusedPanel`)
     }
 
-    optional<AbsolutePath> EditorDocumentPanel::getDocumentDiskPath() const
+    optional<DiskPath> EditorDocumentPanel::getDocumentDiskPath() const
     {
         if ( _loadedAssetPath.empty() )
             return nullopt;

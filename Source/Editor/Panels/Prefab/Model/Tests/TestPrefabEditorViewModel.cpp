@@ -3,6 +3,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Scene/EditorPrefabIsolation.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Panels/Prefab/Model/PrefabEditorViewModel.h"
@@ -54,9 +55,10 @@ SW_TEST_CASE( PrefabEditorViewModelTest, WithoutASceneNothingIsGathered )
 {
     EditorSelection       selection;
     PrefabEditorViewModel model;
-    SW_EXPECT_TRUE( model.exitFrame( nullptr, selection, false ) == PrefabFrameExit::Failed );
+    AssetWriter           writer;
+    SW_EXPECT_TRUE( model.exitFrame( writer, nullptr, selection, false ) == PrefabFrameExit::Failed );
     model.selectObject( nullptr, selection, 1 );
-    SW_EXPECT_FALSE( model.saveFrame( nullptr ) );
+    SW_EXPECT_FALSE( model.saveFrame( writer, nullptr ) );
     SW_EXPECT_FALSE( model.getStatus().empty() );
 
     PrefabEditorViewState state;

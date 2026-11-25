@@ -341,9 +341,9 @@ namespace sw::editor
         return EditorDocumentPanel::canSaveDocument() && _model.canSaveDocument();
     }
 
-    bool UIPreviewPanel::saveDocument()
+    bool UIPreviewPanel::saveDocument( AssetWriter& writer )
     {
-        return _model.saveDocument();
+        return _model.saveDocument( writer );
     }
 
     ToolAssetLoadResult UIPreviewPanel::loadDocument()

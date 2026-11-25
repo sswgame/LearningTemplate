@@ -47,7 +47,7 @@ namespace sw::editor
         /** @brief 떠 있는 도구 창입니다(문서 기반의 기본인 가운데 탭이 아니다 — 옮기기 전 자리를 지킨다). */
         EditorDockSlot     getDefaultDockSlot() const override { return EditorDockSlot::Floating; }
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
 
         const AbilityCatalogEditModel& getModel() const { return _model; }
         ValidationState                getValidationState() const { return _validation; }

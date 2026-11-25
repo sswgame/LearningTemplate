@@ -9,6 +9,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Asset/OutfitAtlas.h"
 #include "Editor/Common/Asset/Texture/RawImageData.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -134,9 +135,9 @@ namespace sw::editor
                 outListImage.clear();
                 for ( const OutfitAtlasPartSpec& part : spec._listPart )
                 {
-                    const string&                texture = findTexture( map, part._name );
-                    RawImageData                 image;
-                    const optional<AbsolutePath> textureFile = editor::getSubsystem<AssetPaths>().toDiskPath( texture );
+                    const string&            texture = findTexture( map, part._name );
+                    RawImageData             image;
+                    const optional<DiskPath> textureFile = editor::getSubsystem<AssetPaths>().toDiskPath( texture );
                     if ( textureFile.has_value() == false || RawImageData::loadImage( *textureFile, image ) == false || image.isValid() == false )
                     {
                         SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMapTexture", "Outfit atlas map '%#': texture '%#' of part '%#' could not be read", map._name.c_str(), texture.c_str(), part._name.c_str() );
@@ -258,18 +259,23 @@ namespace sw::editor
             [[nodiscard]] static bool writeOutputs( const OutfitAtlasSpec& spec, uint32 atlasSize, const vector<vector<uint8>>& listAtlas, const MeshMergeResult& merged,
                                                     OutfitAtlasBakeResult& outResult )
             {
+                AssetWriter writer;
                 for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
                 {
-                    const optional<AbsolutePath> imageFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._listMap[mapIndex]._output );
-                    if ( imageFile.has_value() == false || ImageFileWriter::writePNGRGBA8( *imageFile, listAtlas[mapIndex], atlasSize, atlasSize ) == false )
+                    const optional<DiskPath> imageFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._listMap[mapIndex]._output );
+                    const bool               bWritten  = imageFile.has_value() && writer.save( *imageFile, [&]( const AbsolutePath& writable )
+                                   { return ImageFileWriter::writePNGRGBA8( writable, listAtlas[mapIndex], atlasSize, atlasSize ); } );
+                    if ( bWritten == false )
                     {
                         SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasImageCould", "Outfit atlas image '%#' could not be written", spec._listMap[mapIndex]._output.c_str() );
                         return false;
                     }
                     outResult._listTexturePath.push_back( spec._listMap[mapIndex]._output );
                 }
-                const optional<AbsolutePath> meshFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._outputMesh );
-                if ( meshFile.has_value() == false || MeshAssetFormat::saveToFile( *meshFile, makeAssetData( *merged._mesh ) ) == false )
+                const optional<DiskPath> meshFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._outputMesh );
+                const bool               bWritten = meshFile.has_value() && writer.save( *meshFile, [&]( const AbsolutePath& writable )
+                              { return MeshAssetFormat::saveToFile( writable, makeAssetData( *merged._mesh ) ); } );
+                if ( bWritten == false )
                 {
                     SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMeshCould", "Outfit atlas mesh '%#' could not be written", spec._outputMesh.c_str() );
                     return false;

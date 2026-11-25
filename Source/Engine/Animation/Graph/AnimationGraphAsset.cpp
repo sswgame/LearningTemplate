@@ -132,7 +132,7 @@ namespace sw
         return parseText( text, path, ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
-    bool AnimationGraphAsset::loadFromDiskFile( const AbsolutePath& diskPath )
+    bool AnimationGraphAsset::loadFromDiskFile( const DiskPath& diskPath )
     {
         const ScopedMemoryTag memoryScope{ kMemoryTag };
         clear();

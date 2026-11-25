@@ -23,6 +23,8 @@
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     /**
      * @class BonePoseEditModel
      * @brief 스켈레톤 하나(읽기 전용)와 레퍼런스 포즈 덮어쓰기 하나(편집 대상), 그 편집 기록입니다.
@@ -74,12 +76,12 @@ namespace sw::editor
 
         /** @brief XML 에서 읽어 덮어쓰기를 바꿉니다. 실패하면 그대로 두고 false 입니다. 성공하면 기록을 지우고 "저장된 상태" 로 맞춥니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
-        [[nodiscard]] bool loadFromFile( const AbsolutePath& absolutePath );
+        [[nodiscard]] bool loadFromFile( const DiskPath& absolutePath );
         /** @brief 덮어쓰기를 비웁니다. 기록을 지우고 "저장된 상태" 로 맞춥니다. */
         void   clear();
         string saveToXMLText() const { return _override.saveToXMLText(); }
         /** @brief 파일에 씁니다. 성공하면 "저장된 상태" 로 맞춥니다. */
-        [[nodiscard]] bool saveDocument( const AbsolutePath& absPath );
+        [[nodiscard]] bool saveDocument( AssetWriter& writer, const DiskPath& path );
         bool               isDirty() const { return _state.isDirty( _override.saveToXMLText() ); }
         /** @brief 편집을 버리고 마지막으로 읽거나 저장한 상태로 돌아갑니다(창의 "Don't Save"). 기록을 지웁니다. 그 글을 다시 읽지 못하면 그대로 두고 false 입니다. */
         [[nodiscard]] bool revertToSaved() { return loadFromXMLText( string( _state.getSaved() ), "(saved reference pose state)" ); }

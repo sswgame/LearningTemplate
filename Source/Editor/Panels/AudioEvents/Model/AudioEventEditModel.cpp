@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/AudioEvents/Model/AudioEventEditModel.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.h"
@@ -61,14 +62,13 @@ namespace sw::editor
         _eventName   = hashed_string{};
     }
 
-    bool AudioEventEditModel::saveDocument()
+    bool AudioEventEditModel::saveDocument( AssetWriter& writer )
     {
         // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(고친 사본은 그대로 남아 계속 고칠 수 있다).
         // 고치지 않았어도 쓴다 — 언제 저장할지는 문서 패널이 정한다(Ctrl+S 는 dirty 일 때만, 저장 왕복 시나리오는 고치지 않고 저장해 정규 꼴을 만든다).
-        const optional<AbsolutePath> libraryFile = getSubsystem<AssetPaths>().toDiskPath( _libraryName.view() );
-        if ( libraryFile.has_value() == false || _library.saveToAsset( *libraryFile ) == false )
-            return false;
-        return true;
+        const optional<DiskPath> libraryFile = getSubsystem<AssetPaths>().toDiskPath( _libraryName.view() );
+        return libraryFile.has_value() && writer.save( *libraryFile, [this]( const AbsolutePath& writable )
+        { return _library.saveToAsset( writable ); } );
     }
 
     void AudioEventEditModel::duplicateEvent()

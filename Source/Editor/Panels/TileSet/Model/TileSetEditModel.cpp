@@ -50,7 +50,7 @@ namespace sw::editor
         return result;
     }
 
-    bool TileSetEditModel::saveDocument( string_view path )
+    bool TileSetEditModel::saveDocument( AssetWriter& writer, string_view path )
     {
         vector<TileSetIssue> listIssue;
         collectIssues( listIssue );
@@ -61,7 +61,7 @@ namespace sw::editor
             _status = string( statusBuilder.view() );
             return false;
         }
-        if ( EditorToolAssetCommands::saveTileSet( path, _content ) == false )
+        if ( EditorToolAssetCommands::saveTileSet( writer, path, _content ) == false )
         {
             StringBuilder<constant::buffer::kMax256> statusBuilder;
             statusBuilder.appendFormat( "Failed to save %# (see the log)", path );

@@ -29,7 +29,7 @@ namespace sw::editor
         /** @brief 디코드한 이미지 한 장입니다. 픽셀은 만든 뒤 바뀌지 않고, 다시 읽으면 새 항목으로 바꿔 끼웁니다. */
         struct DecodedTexture
         {
-            AbsolutePath   _resolvedPath;               ///< 실제로 읽은 파일 경로(못 찾았으면 빈 문자열)
+            DiskPath       _resolvedPath;               ///< 실제로 읽은 파일 경로(못 찾았으면 빈 문자열)
             uint64         _contentHash = 0;            ///< 디코드한 바이트의 내용 해시(`ContentHash`) — 다시 읽기는 쓰기 시각이 아니라 내용으로 판정한다
             int32          _width       = 0;            ///< 가로 텍셀 수
             int32          _height      = 0;            ///< 세로 텍셀 수
@@ -57,10 +57,10 @@ namespace sw::editor
              * @brief 텍스처 리소스 id 를 디스크의 낱개 파일로 풉니다(다시 읽기가 파일 내용을 본다 - 원본 트리에서 도는 에디터 도구다). 못 찾으면 빈 문자열입니다.
              * @details 예전에는 작업 폴더에 그 이름이 있는지 먼저 봤다(같은 글이 작업 폴더에 따라 다른 파일).
              */
-            static AbsolutePath resolvePath( const AssetPaths& assetPaths, string_view assetPath )
+            static DiskPath resolvePath( const AssetPaths& assetPaths, string_view assetPath )
             {
                 const auto found = assetPaths.findLooseFile( assetPath );
-                return found.has_value() ? *found : AbsolutePath{};
+                return found.has_value() ? *found : DiskPath{};
             }
 
             /** @brief 파일을 읽어 float4 텍셀로 디코드합니다. 실패해도 경로 · 시각이 든 (무효) 항목을 돌려줘 같은 실패를 정점마다 되풀이하지 않습니다. */

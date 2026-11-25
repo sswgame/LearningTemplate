@@ -47,10 +47,10 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    AbsolutePath EditorPaths::findContentFolder( string_view folderID )
+    DiskPath EditorPaths::findContentFolder( string_view folderID )
     {
-        const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( folderID );
-        return folder.has_value() && FileUtil::isDirectory( *folder ) ? *folder : AbsolutePath{};
+        const optional<DiskPath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( folderID );
+        return folder.has_value() && FileUtil::isDirectory( *folder ) ? *folder : DiskPath{};
     }
 
     string EditorPaths::getSceneDialogFolderPath()

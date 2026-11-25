@@ -42,6 +42,8 @@ SelfTest = 7
 # 어느 층에서 include 해도 되는 잎 헤더(위 층을 include 하지 않는다) → 이유. 위 층 껍데기를 놓지 않는다.
 [prelude]
 "Editor/Common/Workspace/EditorService.h" = "호스트(엔진) 서비스 창구와 활성 씬 바로가기 — Core · ModuleAPI 만 include 하는 잎 헤더라 어느 층에서나 쓴다"
+"Editor/Common/Workspace/EditorNotificationManager.h" = "토스트 알림 목록 — Core · EditorSubsystem · 알림 값만 include 하는 잎 헤더라 UI 없는 도구 층의 쓰기 문(AssetWriter)이 저장 거절을 알린다"
+"Editor/Common/Workspace/EditorNotificationItem.h" = "알림 하나의 값 — Core 만 include(알림 목록이 품는다)"
 "Editor/Common/Workspace/EditorStateStore.h" = "에디터 범위 상태 저장소(getEditorState<T>) — Core · EditorSubsystem · EditorService 만 include 하는 잎 헤더라 토대 층(ImGui 백엔드)의 정적 칸 소유자가 쓴다"
 "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h" = "프로퍼티 표시 이름 규칙(makeDisplayName · chooseLabel) — Core 만 include 하는 잎 헤더라 프리팹 오버라이드 목록(커맨드 층)도 쓴다"
 "Editor/Viewport/EditorOrbitMath.h" = "궤도 카메라 수식(dolly · panWorldPerPixel) — Core 만 include 하는 순수 수학 잎 헤더라 미리보기 뷰포트(4층)와 씬 뷰가 함께 쓴다"
@@ -126,7 +128,7 @@ defaultBan = [
 "Editor/Common/Workspace/Play/EditorSessionPolicy.h" = "미저장 · 플레이 중 편집 판정 값(EditorPanel 이 쓴다)"
 "Editor/Common/Workspace/Asset/EditorAssetType.h" = "에셋 종류 서술(EditorPanel 이 쓴다)"
 "Editor/Common/Workspace/Asset/EditorAssetTypeID.h" = "에셋 종류를 가리키는 값과 에디터 전용 종류 id(EditorPanel · 패널 열기 요청이 값으로 든다 — 등록 표 EditorAssetType.h 에서 나눈 잎)"
-"Editor/Common/Workspace/Asset/EditorDiskBaseline.h" = "연 파일의 디스크 내용 해시를 드는 값 형식(문서 패널 바탕이 든다 — Core 와 내보내기만 include)"
+"Editor/Common/Asset/AssetWriter.h" = "연 파일의 디스크 내용 해시를 드는 값 형식(문서 패널 바탕이 든다 — Core 와 내보내기만 include)"
 "Editor/Common/Commands/EditorCommandText.h" = "명령의 표시 · 배치 데이터(라벨 · 아이콘 · 메뉴) — 값이고, 허용한 EditorCommandRegistry.h 가 include 한다"
 "Engine/Object/GameObject/Service/ScenePreviewPolicy.h" = "미리보기 씬 틱 정책 값(집합체) — 미리보기 패널이 getPreviewPolicy 로 돌려준다"
 "Editor/Common/Commands/Diagnostics/EditorModuleDetail.h" = "모듈 창 상세 한 모듈의 값(집합체) — makeDetail 이 채우고 View 가 그린다"

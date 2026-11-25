@@ -56,7 +56,7 @@ namespace sw::editor
         };
     } // namespace
 
-    expected<void> EditorSaveFileLock::lock( const vector<AbsolutePath>& listPath )
+    expected<void> EditorSaveFileLock::lock( const vector<DiskPath>& listSavePath )
     {
         using Internal = EditorSaveFileLockInternal;
         releaseStaleLocks();
@@ -64,15 +64,16 @@ namespace sw::editor
         Internal::releaseAll( state );
         // 장부를 먼저 적는다 — 잠근 뒤 프로세스가 죽어도 다음 실행이 무엇을 풀지 안다.
         StringBuilder<constant::buffer::kMax1024> ledger;
-        for ( const AbsolutePath& path : listPath )
+        for ( const DiskPath& path : listSavePath )
             ledger.appendFormat( "%#\n", path.str() );
         const AbsolutePath ledgerPath = Internal::getLedgerPath();
         if ( FileUtil::ensureParentDirectoryExists( ledgerPath ) == false || FileUtil::writeTextFile( ledgerPath, ledger.view() ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the lock ledger", ledgerPath.str() } );
-        for ( const AbsolutePath& path : listPath )
+        for ( const DiskPath& savePath : listSavePath )
         {
-            string     text;
-            const bool bExists = FileUtil::isRegularFile( path );
+            const AbsolutePath path = FileUtil::toDiskPath( savePath.str() ); // 버전 관리의 잠금 흉내다 — 내용은 쓰지 않고 속성만 바꾼다
+            string             text;
+            const bool         bExists = FileUtil::isRegularFile( path );
             if ( bExists && FileUtil::readTextFile( path, text ) == false )
             {
                 Internal::releaseAll( state );

@@ -30,7 +30,7 @@ namespace
             }
         }
 
-        [[nodiscard]] bool startWatching( const AbsolutePath& directoryPath, bool /*bRecursive*/ ) override
+        [[nodiscard]] bool startWatching( const DiskPath& directoryPath, bool /*bRecursive*/ ) override
         {
             _directoryPath = directoryPath;
             _listOpen.push_back( this );

@@ -679,8 +679,7 @@ SW_TEST_CASE( CatalogFileSessionTest, RestoreBringsBackTheTextBeforeTheSaveAndKe
     SW_EXPECT_FALSE( session.canRestorePrevious() );
 
     SW_REQUIRE_TRUE( session.editDocument().setCell( 0, "x", "2" ) );
-    SW_REQUIRE_TRUE( session.validateDiskBeforeSave( "<r x=\"1\"/>" ) );
-    session.onSaved();
+    session.onSaved( "<r x=\"1\"/>" );
     SW_EXPECT_FALSE( session.getDocument().isDirty() );
     SW_REQUIRE_TRUE( session.canRestorePrevious() );
     SW_EXPECT_TRUE( session.getPreviousText() == "<r x=\"1\"/>" );
@@ -694,21 +693,15 @@ SW_TEST_CASE( CatalogFileSessionTest, RestoreBringsBackTheTextBeforeTheSaveAndKe
     SW_EXPECT_TRUE( session.getDocument().getText() == "<r x=\"3\"/>" ); // 잃지 않았다
 }
 
-// 밖에서 바뀐 파일은 첫 저장에서 멈추고 알린다. 다시 저장하면 덮어쓰되 밖의 글이 "이전 파일" 로 남는다.
-SW_TEST_CASE( CatalogFileSessionTest, ASaveOverAnOutsideChangeStopsOnceAndKeepsThatText )
+// 밖에서 바뀐 파일을 알고 덮어도(거절과 알림은 `AssetWriter`) 밖의 글이 "이전 파일" 로 남는다.
+SW_TEST_CASE( CatalogFileSessionTest, ASaveOverAnOutsideChangeKeepsThatText )
 {
     CatalogFileSession session;
     session.open( "game/a.xml", "Items", "<r/>" );
-    SW_EXPECT_TRUE( session.validateDiskBeforeSave( "<r/>" ) );
-    SW_EXPECT_FALSE( session.validateDiskBeforeSave( "<outside/>" ) );
-    SW_EXPECT_FALSE( session.getStatus().empty() );
-    SW_EXPECT_FALSE( session.validateDiskBeforeSave( "<outside again/>" ) ); // 또 바뀌었으면 또 알린다
-    SW_EXPECT_TRUE( session.validateDiskBeforeSave( "<outside again/>" ) );
     SW_REQUIRE_TRUE( session.editDocument().setCell( 0, "x", "1" ) );
-    session.onSaved();
+    session.onSaved( "<outside again/>" );
+    SW_EXPECT_TRUE( session.canRestorePrevious() );
     SW_EXPECT_TRUE( session.getPreviousText() == "<outside again/>" );
-    SW_EXPECT_TRUE( session.validateDiskBeforeSave( session.getDocument().getSavedText() ) );
-    SW_EXPECT_FALSE( session.validateDiskBeforeSave( "<other/>" ) ); // 덮어쓴 뒤의 새 변경은 다시 알린다
 }
 
 SW_TEST_CASE( CatalogFileSessionTest, ValidationNeedsALoadWithoutWarningsAndSaysWhatItSaw )

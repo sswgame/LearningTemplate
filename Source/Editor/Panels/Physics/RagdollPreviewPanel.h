@@ -36,7 +36,7 @@ namespace sw::editor
         const utf8* getPanelTitle() const override { return "Ragdoll Preview"; }
         void        drawDocumentContent() override;
         /** @brief 고친 물리 에셋 원문을 씁니다. 저장한 파일을 공유 캐시가 다시 읽고(`onDocumentSaved`) 몸을 다시 놓는다. */
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         /** @brief 지난 그리기에 세운 셰이프 크기 손잡이 수입니다(감시 값 `Editor.RagdollShapeHandleCount`). */
         uint32 getShapeHandleCount() const { return static_cast<uint32>( _listShapeHandle.size() ); }
 

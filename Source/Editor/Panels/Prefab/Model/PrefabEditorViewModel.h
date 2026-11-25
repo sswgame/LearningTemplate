@@ -22,6 +22,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class EditorPrefabIsolation;
     class EditorSelection;
 
@@ -109,9 +111,9 @@ namespace sw::editor
          * @brief 지금 단계를 나갑니다. @p bSaveToPrefab 이면 먼저 지금 단계의 루트를 프리팹 파일에 씁니다. 쓰지 못하면 나가지 않습니다.
          * @details 중첩 단계면 한 단계 내려가고(저장하지 않고 나가면 이 단계가 스폰한 루트를 지운다) 아래 단계 루트를 고른다. 문서 단계면 스택을 두고 `DocumentStep` 을 돌려준다.
          */
-        PrefabFrameExit exitFrame( Scene* pScene, EditorSelection& selection, bool bSaveToPrefab );
+        PrefabFrameExit exitFrame( AssetWriter& writer, Scene* pScene, EditorSelection& selection, bool bSaveToPrefab );
         /** @brief 지금 단계의 루트를 그 단계의 프리팹 파일에 씁니다. 결과는 상태 줄에 남는다. 썼으면 true 입니다. */
-        [[nodiscard]] bool saveFrame( Scene* pScene );
+        [[nodiscard]] bool saveFrame( AssetWriter& writer, Scene* pScene );
         /** @brief 자식 목록에서 고른 오브젝트 @p objectID 를 창 선택으로 삼습니다. 보기만 바꾸므로 되돌리기에 남지 않는다. 없으면 아무것도 하지 않습니다. */
         void selectObject( Scene* pScene, EditorSelection& selection, uint64 objectID ) const;
 

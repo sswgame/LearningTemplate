@@ -7,6 +7,7 @@
 #include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
@@ -243,8 +244,9 @@ namespace sw::editor
             reportFailure( string( failureBuilder.view() ) );
             return;
         }
-        const optional<AbsolutePath> gridPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
-        if ( gridPath.has_value() == false || grid.saveToFile( *gridPath ) == false )
+        const optional<DiskPath> gridPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
+        AssetWriter              writer;
+        if ( gridPath.has_value() == false || writer.saveAsset( *gridPath, grid ) == false )
         {
             StringBuilder<constant::buffer::kMax512> failureBuilder;
             failureBuilder.appendFormat( "could not write %#", assetPath );

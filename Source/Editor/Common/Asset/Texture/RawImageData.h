@@ -41,7 +41,7 @@ namespace sw::editor
         /**
          * @brief 파일 경로의 이미지를 읽어 4채널(RGBA) 버퍼로 디코딩합니다. 원본 채널 수는 `RawImageData::_sourceChannelCount` 에 채웁니다.
          */
-        [[nodiscard]] static bool loadImage( const AbsolutePath& filePath, RawImageData& outImage );
+        [[nodiscard]] static bool loadImage( const DiskPath& filePath, RawImageData& outImage );
 
         /**
          * @brief 메모리 버퍼의 이미지를 4채널(RGBA) 버퍼로 디코딩합니다. 원본 채널 수는 `RawImageData::_sourceChannelCount` 에 채웁니다.

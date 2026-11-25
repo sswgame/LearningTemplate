@@ -319,6 +319,14 @@ namespace sw
         return meta.toXML();
     }
 
+    bool AssetMeta::saveBeside( const AbsolutePath& sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride )
+    {
+        if ( FileUtil::writeTextFile( makePath( sourcePath ), makeText( sourcePath.str(), guid, listOverride ) ) )
+            return true;
+        SW_LOG_ERROR_ID( "AssetMeta.WriteFailed", "Could not write the asset identity beside '%#'", sourcePath.str() );
+        return false;
+    }
+
     bool AssetIdentityRules::assignNewIdentity( const AbsolutePath& absPath, string_view assetID ) const
     {
         const AssetGUID guid = AssetGUID::create();
@@ -345,7 +353,7 @@ namespace sw
                 AssetMeta          copied;
                 string             copiedText;
                 const bool         bCopied = FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, copiedText ) && copied.parseXML( copiedText, AssetMeta::makePath( assetID ) ).has_value();
-                if ( FileUtil::writeTextFile( metaPath, AssetMeta::makeText( assetID, guid, bCopied ? copied._listImportOverride : vector<AssetImportOverride>{} ) ) )
+                if ( AssetMeta::saveBeside( absPath, guid, bCopied ? copied._listImportOverride : vector<AssetImportOverride>{} ) )
                 {
                     AssetRegistry::record( guid, assetID );
                     return true;
@@ -596,7 +604,7 @@ namespace sw
         return build( listFile, rules, outListIssue );
     }
 
-    optional<AssetGUID> AssetIdentityRules::readIdentity( const AbsolutePath& absPath, string_view assetID ) const
+    optional<AssetGUID> AssetIdentityRules::readIdentity( const DiskPath& absPath, string_view assetID ) const
     {
         const AssetIdentityKind kind = classify( assetID );
         string                  text;
@@ -609,7 +617,7 @@ namespace sw
             if ( headerGUID.has_value() )
                 return headerGUID;
         }
-        const AbsolutePath metaPath = AssetMeta::makePath( absPath );
+        const DiskPath metaPath = AssetMeta::makePath( absPath );
         if ( bHeader == false && FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, text ) )
         {
             AssetMeta meta;

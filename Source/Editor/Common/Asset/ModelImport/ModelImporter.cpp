@@ -24,6 +24,7 @@
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/AssetSourceLocator.h"
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/ModelImport/MeshFracture.h"
@@ -1120,7 +1121,7 @@ namespace sw::editor
             {
                 if ( entry._retargetProfile.empty() )
                     continue;
-                const optional<AbsolutePath> outFile = assetPaths.toDiskPath( entry._clipPath );
+                const optional<DiskPath> outFile = assetPaths.toDiskPath( entry._clipPath );
                 if ( outFile.has_value() == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
@@ -1138,8 +1139,9 @@ namespace sw::editor
                     }
                     continue;
                 }
-                const bool bBaked = FileUtil::ensureDirectoryExists( outFile->getParent() ) &&
-                                    PoseRetargeter::bakeClipFile( AssetID{ entry._retargetProfile }, AssetID{ entry._retargetSourceClip }, outFile->str() );
+                AssetWriter writer;
+                const bool  bBaked = writer.save( *outFile, [&entry]( const AbsolutePath& writable )
+                 { return PoseRetargeter::bakeClipFile( AssetID{ entry._retargetProfile }, AssetID{ entry._retargetSourceClip }, writable.str() ); } );
                 if ( bBaked == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;

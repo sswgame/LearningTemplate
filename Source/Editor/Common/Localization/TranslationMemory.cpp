@@ -70,7 +70,7 @@ namespace sw
         return {};
     }
 
-    expected<void> TranslationMemory::loadFromFile( const AbsolutePath& absolutePath )
+    expected<void> TranslationMemory::loadFromFile( const DiskPath& absolutePath )
     {
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )

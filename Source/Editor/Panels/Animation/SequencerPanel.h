@@ -49,7 +49,7 @@ namespace sw::editor
         ~SequencerPanel() override;
 
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
 
         /** @brief 고른 키 트랙의 키 프레임 수입니다(채널마다 같은 프레임의 키는 하나로 센다). 고른 트랙이 없으면 false 입니다. */
         [[nodiscard]] bool findSelectedTrackKeyFrameCount( uint32& outCount ) const;
@@ -69,7 +69,6 @@ namespace sw::editor
         void   applyDocumentText( string_view text ) override;
         /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
         ToolAssetLoadResult loadDocument() override;
-        void                saveToLoadedPath();
         void                applyAsset( const SequenceAsset& asset );
         SequenceAsset       captureAsset() const;
         void                syncPreviewPlayer();
