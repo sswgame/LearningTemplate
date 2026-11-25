@@ -35,11 +35,16 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 정확도(%)가 이 값 이상이면 이 등급입니다. */
+    /** @brief 정확도(%)가 이 값 이상이면 이 등급입니다. 디렉터의 `_listRank` 칸(씬 데이터)이 이 형식으로 적힙니다. */
+    REFLECT()
     struct RhythmRankThreshold
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _rank{};
-        float32       _minAccuracy{ 0.0f };
+        PROPERTY( Min = 0.0, Max = 100.0, Tooltip = "Accuracy (%) at or above which the song gets this rank" )
+        float32 _minAccuracy{ 0.0f };
     };
 } // namespace sw
 
@@ -49,7 +54,7 @@ namespace sw
     struct RhythmPlaySettings
     {
         vector<RhythmGradeRule>     _listGradeRule{};
-        vector<RhythmRankThreshold> _listRankThreshold{}; ///< 비어 있으면 S 95, A 90, B 80, C 70, D 0 을 쓴다
+        vector<RhythmRankThreshold> _listRankThreshold{}; ///< 필수 — 비어 있으면 `initialize` 가 거절한다(등급 표는 데이터가 정한다)
         hashed_string               _failedRank{ "F" };
         float32                     _missLifeDelta{ -10.0f };
         float32                     _maxLife{ 100.0f };

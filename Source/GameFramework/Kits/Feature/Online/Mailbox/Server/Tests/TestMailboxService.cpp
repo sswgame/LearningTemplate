@@ -122,6 +122,8 @@ namespace
             MailboxServiceConfig settings;
             settings._notificationIntervalMs = 0;
             settings._claimedRetentionMs     = kClaimedRetentionMs;
+            settings._maxClaimAllCount       = 16;
+            settings._maxClaimAllScanCount   = 500;
             return settings;
         }
 
@@ -427,7 +429,7 @@ SW_TEST_CASE( MailboxServiceTest, MetricsCountKitResultsAndCommonCategories )
 SW_TEST_CASE( MailboxServiceTest, ServerAssembledFromConfigServesTheClient )
 {
     constexpr const utf8* kServerJSON = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })";
-    constexpr const utf8* kOnlineJSON = R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "testLogin" }, { "_name": "mailbox", "_settings": { "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 } } } ] })";
+    constexpr const utf8* kOnlineJSON = R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "testLogin" }, { "_name": "mailbox", "_settings": { "_sweepIntervalMs": 60000, "_claimedRetentionDays": 30, "_maxClaimAllCount": 16, "_maxClaimAllScanCount": 500, "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 } } } ] })";
 
     MailboxClient              client; // 묶음보다 먼저 선언해 나중에 지운다 - 지울 때 스스로 등록을 푼다
     test::OnlineRuntimeFixture rig;
@@ -451,7 +453,7 @@ SW_TEST_CASE( MailboxServiceTest, ServerAssembledFromConfigServesTheClient )
     SW_EXPECT_TRUE( bReplied );
 
     test::OnlineRuntimeFixture unnamed;
-    const auto                 failed1 = unnamed.fromConfig( kServerJSON, test::OnlineRuntimeFixture::withBaseTTL( R"({ "_listKit": [ { "_name": "mailbox", "_settings": { "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 } } } ] })" ), kNowMs );
+    const auto                 failed1 = unnamed.fromConfig( kServerJSON, test::OnlineRuntimeFixture::withBaseTTL( R"({ "_listKit": [ { "_name": "mailbox", "_settings": { "_sweepIntervalMs": 60000, "_claimedRetentionDays": 30, "_maxClaimAllCount": 16, "_maxClaimAllScanCount": 500, "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 } } } ] })" ), kNowMs );
     SW_REQUIRE_FALSE( failed1.has_value() );
     StringBuilder<constant::buffer::kMax512> error1Builder;
     error1Builder.appendFormat( "%# %#", failed1.error().message(), failed1.error().detail() );

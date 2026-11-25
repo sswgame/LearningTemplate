@@ -223,6 +223,31 @@ namespace sw
         return _opacity;
     }
 
+    Widget* Widget::findDescendant( const hashed_string& name )
+    {
+        if ( _name == name )
+            return this;
+        for ( const unique_ptr<Widget>& child : getChildren() )
+        {
+            if ( Widget* pFound = child->findDescendant( name ); pFound != nullptr )
+                return pFound;
+        }
+        return nullptr;
+    }
+
+    float2 Widget::computeFixedSize() const
+    {
+        float2                 fixedSize{ _slot._widthOverride, _slot._heightOverride };
+        const UIComputedStyle* pStyle = getComputedStyle();
+        if ( pStyle == nullptr || pStyle->has( UIStyleField::Size ) == false )
+            return fixedSize;
+        if ( fixedSize._x <= 0.0f )
+            fixedSize._x = pStyle->_value._size._x;
+        if ( fixedSize._y <= 0.0f )
+            fixedSize._y = pStyle->_value._size._y;
+        return fixedSize;
+    }
+
     UIReply Widget::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )
     {
         (void)event;
@@ -284,10 +309,27 @@ namespace sw
     {
     }
 
+    void Widget::synchronizeProperties()
+    {
+        _opacity = MathUtil::clamp( _opacity, 0.0f, 1.0f );
+    }
+
+    void Widget::notifyPropertyWritten( const PropertyInfo& property )
+    {
+        if ( _pTree != nullptr && isIdentityProperty( property ) )
+            _pTree->refreshName( *this ); // 편집기가 세터를 거치지 않고 이름을 썼다 — 옛 이름으로 찾히지 않게 한다
+        synchronizeProperties();
+        onBoundPropertyChanged( property );
+    }
+
+    bool Widget::isIdentityProperty( const PropertyInfo& property )
+    {
+        return &property == StaticType()->findPropertyInHierarchy( hashed_string( "_name" ) );
+    }
+
     void Widget::onBoundPropertyChanged( const PropertyInfo& property )
     {
         const hashed_string& name = property._name;
-        _opacity                  = MathUtil::clamp( _opacity, 0.0f, 1.0f ); // 세터와 같은 제한을 적용한다(불투명도 필드가 아니면 그대로다)
         if ( name == hashed_string( "_opacity" ) )
             invalidate( WidgetDirty::kTransform );
         else if ( name == hashed_string( "_renderTransform" ) )

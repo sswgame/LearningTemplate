@@ -5,6 +5,9 @@
 #include "Core/CommandLine/CommandLineManager.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Config/EngineConfig.h"
+#include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -13,8 +16,11 @@ namespace sw
 {
     SubsystemInitResult SplashSubsystem::initializeSubsystem()
     {
-        if ( engine::getSubsystem<CommandLineManager>().isArgumentProvided( CommandLineArgument::UNATTENDED ) == false )
-            (void)_splash.initialize( "SW Engine", "Initializing Engine Subsystems..." ); // 스플래시 없이 기동하는 것도 정상 경로다(SplashWindow::initialize 설명)
+        // 이미지는 에디터 도메인 에셋이고 에디터 팩은 만들지 않는다 — 팩만 읽는 실행(배포 · `-cooked-content`)은 띄우지 않는다. 무인 실행도 보는 사람이 없어 띄우지 않는다.
+        const bool bCookedContent = AssetIO::getContentSource() == ContentSource::Cooked;
+        const bool bUnattended    = engine::getSubsystem<CommandLineManager>().isArgumentProvided( CommandLineArgument::UNATTENDED );
+        if ( bCookedContent == false && bUnattended == false )
+            (void)_splash.initialize( AssetID{ engine::getSubsystem<EngineConfig>()._splashImage.get() }, "SW Engine", "Initializing Engine Subsystems..." ); // 스플래시 없이 기동하는 것도 정상 경로다(SplashWindow::initialize 설명)
         _splash.setProgress( 0.05f );
         return SubsystemInitResult::Succeeded;
     }

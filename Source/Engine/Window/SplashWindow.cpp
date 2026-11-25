@@ -2,8 +2,9 @@
 
 #include "Engine/Window/SplashWindow.h"
 
-#include "Core/Foundation/BuildInfo.h"
+#include "Core/Log/Logger.h"
 
+#include "Engine/Content/AssetID.h"
 #include "Engine/Window/SplashWindowBase.h"
 
 namespace sw
@@ -18,13 +19,8 @@ namespace sw
         dismiss();
     }
 
-    bool SplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
+    bool SplashWindow::initialize( const AssetID& imageID, const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
     {
-        // 스플래시는 에디터 초기화 표시용이고 이미지도 editor 도메인 에셋(Content/editor/textures/splash.dds)이다. 배포는 editor.pack 을 만들지 않으므로
-        // 띄우지 않는다. _pImpl 이 널로 남아 이후 updateStatus · setProgress · dismiss 는 아무것도 하지 않는다.
-        if constexpr ( build::kShipping )
-            return false;
-
         // 스플래시가 없는 세션은 폴백 없이 스플래시 없이 기동하는 것이 정상 경로이지만 조용히 지나가지 않고 한 번 알린다.
         if ( SplashWindowBase::isPlatformSupported() == false )
         {
@@ -35,8 +31,8 @@ namespace sw
         if ( _pImpl == nullptr )
             return false;
 
-        if ( _pImpl->loadSplashImage() == false )
-            SW_LOG_INFO_ID( "SplashWindow.SplashWindowNoImage", "Splash window: no splash image - the status text and progress bar are drawn on the plain background" ); // 로드가 이유를 알렸다
+        if ( _pImpl->loadSplashImage( imageID ) == false )
+            SW_LOG_WARNING_ID( "SplashWindow.SplashWindowNoImage", "Splash window: the image '%#' could not be used - the status text and progress bar are drawn on the plain background", imageID.view() ); // 로드가 이유를 오류로 알렸다
         const bool bOpened = _pImpl->initialize( pTitle, pInitialStatus, width, height );
         if ( bOpened == false )
             SW_LOG_INFO_ID( "SplashWindow.SplashWindowCouldNot", "Splash window: could not be opened (no display connection) - starting without it" );

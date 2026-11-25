@@ -1,0 +1,11 @@
+<?asset guid="0a0875637433fc573242bcef5add189e"?>
+<!-- 콘텐츠 브라우저의 즐겨찾기 폴더(ContentBrowserFavorite.h) — _label 은 보일 영어 원문(현지화 키), _folder 는 팩 안 폴더, _pack 은 Game(돌리는 게임) · Engine. -->
+<ContentBrowserFavoriteTable>
+	<_listFavorite>
+		<ContentBrowserFavorite _label="Scenes" _folder="maps" />
+		<ContentBrowserFavorite _label="Prefabs" _folder="prefabs" />
+		<ContentBrowserFavorite _label="Textures" _folder="textures" />
+		<ContentBrowserFavorite _label="Shaders" _folder="shaders" _pack="Engine" />
+		<ContentBrowserFavorite _label="Data" _folder="data" />
+	</_listFavorite>
+</ContentBrowserFavoriteTable>

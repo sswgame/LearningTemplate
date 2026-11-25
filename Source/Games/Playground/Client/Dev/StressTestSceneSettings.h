@@ -1,6 +1,6 @@
 /**
  * @file StressTestSceneSettings.h
- * @brief 벤치 씬의 배치 값, 튜닝 값, 에셋 경로입니다. 값의 원본은 `Content/game/playground/automation/benchscene.xml` 입니다(자동화 전용 폴더 — 벤치 코드가 개발 전용이라 배포 쿡에 담지 않는다).
+ * @brief 벤치 씬의 배치 값, 튜닝 값, 에셋 경로와 개발 견본 화면의 문서입니다. 값의 원본은 `Content/game/playground/automation/benchscene.xml` 입니다(자동화 전용 폴더 — 벤치 코드가 개발 전용이라 배포 쿡에 담지 않는다).
  * @details 어떤 벤치를 켤지(`-gv_stressTest*`)는 Test/Load 시나리오와 실행기가 명령줄로 넘기는 인터페이스이므로 그대로 두었습니다.
  *          켠 벤치가 **어떻게 배치되는지**를 정하는 값만 이 데이터로 옮겼습니다. 간격, 높이, 카메라 여백, 색, 크기, 에셋 경로, 클립 이름이 해당합니다.
  *          생성자가 없고 필드는 빈 값입니다. 코드에는 기본값이 없으므로 파일을 읽지 못하면 벤치를 시작하지 않습니다.
@@ -25,6 +25,8 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/UI/Document/UIDocument.h"
 
 namespace sw
 {
@@ -50,6 +52,21 @@ namespace sw
     struct StressTestSceneSettings
     {
         REFLECT_BODY();
+
+        static constexpr const utf8* kDataKind = "benchscene"; ///< 데이터 종류 이름(`SW_ASSET_TYPE`) — 경로는 종류의 팩 안 규칙과 게임 팩이 정한다
+
+        /** @brief 지금 게임 팩의 설정을 @p outSettings 에 읽습니다. 못 읽으면 오류를 남기고 false 입니다(코드에 있는 값으로 대신하지 않는다). */
+        [[nodiscard]] static bool loadForGame( StressTestSceneSettings& outSettings );
+
+        // ---- 견본 화면 ----
+        PROPERTY( Category = "UI", Tooltip = "Document of the UI demo screen (-gv_uiDemo=1)" )
+        AssetRef<UIDocumentAsset> _uiDemoDocument{};
+
+        // ---- 렌더 확장 시연 ----
+        PROPERTY( Required, Tooltip = "Shader of the fullscreen tint pass of the render extension demo (declared in the pipeline's _listExtensionShader)" )
+        DataPath _extensionTintShader;
+        PROPERTY( Required, Tooltip = "Shader of the cube pass of the render extension demo (declared in the pipeline's _listExtensionShader)" )
+        DataPath _extensionDrawShader;
 
         // ---- 에셋 ----
         PROPERTY( Category = "Assets", Tooltip = "Skinned knight mesh used by the character and rig benches" )

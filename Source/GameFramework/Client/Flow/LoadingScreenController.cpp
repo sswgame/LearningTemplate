@@ -14,7 +14,6 @@
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
-#include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
@@ -382,16 +381,8 @@ namespace sw
         {
             if ( _pUISystem == nullptr || _pUISystem->isInitialized() == false )
                 return;
-            // 뷰포트 전체를 덮는 검은 패널 — Overlay 층은 포커스 · 포인터를 받지 않는다(아래 화면 · 게임 입력이 그대로).
-            unique_ptr<BorderPanel> panel = sw::make_unique<BorderPanel>();
-            panel->setBackground( UIBrush::makeSolid( float4{ 0.0f, 0.0f, 0.0f, 1.0f } ) );
-            panel->setVisibility( WidgetVisibility::HitTestInvisible );
-            UIScreenDef desc{};
-            desc._layer       = UILayer::Overlay;
-            desc._bTakesFocus = false;
-            desc._bShowCursor = false;
-            _fadeScreen       = _pUISystem->pushScreen( sw::make_unique<UIScreen>( desc, std::move( panel ) ) );
-            pScreen           = findFadeScreen();
+            _fadeScreen = _pUISystem->openScreen( _pUISystem->getEngineDocuments()._screenFade );
+            pScreen     = findFadeScreen();
             if ( pScreen == nullptr )
                 return;
         }

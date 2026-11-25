@@ -1,6 +1,7 @@
 <?asset guid="94d1d680033e5fa136c9db863a9729c2"?>
 <TranslationMemory culture="ko">
 	<entries>
+		<entry source="+2" text="+2" />
 		<entry source="/" text="/" />
 		<entry source=">" text=">" />
 		<entry source="Accuracy (%)" text="정확도(%)" />
@@ -15,6 +16,7 @@
 		<entry source="Attack (J)   Spell (K)   Defend (L)   Flee (R)"
 		       text="공격 (J)   주문 (K)   방어 (L)   도망 (R)" />
 		<entry source="Attack power" text="공격력" />
+		<entry source="B" text="파랑" />
 		<entry source="Balls" text="볼" />
 		<entry source="Balm" text="연고" />
 		<entry source="Bone Axe" text="뼈 도끼" />
@@ -70,6 +72,7 @@
 		<entry source="Flasks" text="물약" />
 		<entry source="Follow the lantern path to the old bridge." text="등불 길을 따라 옛 다리로 가세요." />
 		<entry source="Follow the lantern trail to its end" text="등불 길의 끝까지 가세요" />
+		<entry source="G" text="초록" />
 		<entry source="Gate locked" text="문 잠김" />
 		<entry source="GateCut" text="문 컷" />
 		<entry source="Generators left" text="남은 발전기" />
@@ -150,6 +153,7 @@
 		<entry source="Quota left" text="남은 할당량" />
 		<entry source="Quota met" text="할당량을 채웠습니다" />
 		<entry source="Quota missed" text="할당량을 채우지 못했습니다" />
+		<entry source="R" text="빨강" />
 		<entry source="Recon Boots" text="정찰 부츠" />
 		<entry source="Recon Helmet" text="정찰 헬멧" />
 		<entry source="Recon Patch" text="정찰 패치" />
@@ -167,6 +171,7 @@
 		<entry source="Round Shield (Merged)" text="둥근 방패(병합)" />
 		<entry source="Round score" text="라운드 점수" />
 		<entry source="Rusted Helm" text="녹슨 투구" />
+		<entry source="S" text="스킵" />
 		<entry source="Sacrificed" text="희생되었습니다" />
 		<entry source="Score" text="점수" />
 		<entry source="Scout" text="정찰병" />
@@ -226,6 +231,9 @@
 		       text="쓰기: 수리 · 문 열기 · 구출 · 치료 - 누르고 있으면 몸부림" />
 		<entry source="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix"
 		       text="쓰기: 줍기 · 읽기 · 풀기 · 싸우기 - 손전등 - 회복: 쓰거나 섞기" />
+		<entry source="V" text="리버스" />
+		<entry source="W" text="와일드" />
+		<entry source="W+4" text="와일드+4" />
 		<entry source="Walk the glade to meet wild monsters" text="풀밭을 걸어 야생 몬스터를 만나세요" />
 		<entry source="Wear gear (Q)" text="장비 끼기 (Q)" />
 		<entry source="Welcome to Dry Gulch." text="드라이 걸치에 온 것을 환영하네." />
@@ -236,6 +244,7 @@
 		<entry source="Wild Herb" text="들풀" />
 		<entry source="Wood Log" text="통나무" />
 		<entry source="Wrong way!" text="역주행!" />
+		<entry source="Y" text="노랑" />
 		<entry source="You are down - wait for your squad" text="기절했습니다 - 동료를 기다리세요" />
 		<entry source="You died" text="죽었습니다" />
 		<entry source="You fell - your geo lies where you died"
@@ -249,5 +258,6 @@
 		<entry source="Your home is lost" text="본진을 잃었다" />
 		<entry source="Your squad is out" text="분대가 탈락했습니다" />
 		<entry source="Zone" text="구역" />
+		<entry source="{color}{value}" text="{color}{value}" />
 	</entries>
 </TranslationMemory>

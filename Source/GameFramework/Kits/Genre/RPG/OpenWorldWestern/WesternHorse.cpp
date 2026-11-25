@@ -51,14 +51,14 @@ namespace sw
             return false;
         ResourceGaugeSettings healthSettings;
         healthSettings._max        = _pDef->_health;
-        healthSettings._regenRate  = _pDef->_health * 0.02f;
-        healthSettings._regenDelay = 3.0f;
+        healthSettings._regenRate  = _pDef->_health * _pDef->_healthRegenRatio;
+        healthSettings._regenDelay = _pDef->_healthRegenDelay;
         ResourceGaugeSettings staminaSettings;
         staminaSettings._max              = _pDef->_stamina;
-        staminaSettings._regenRate        = _pDef->_stamina * 0.1f;
-        staminaSettings._regenDelay       = 1.0f;
+        staminaSettings._regenRate        = _pDef->_stamina * _pDef->_staminaRegenRatio;
+        staminaSettings._regenDelay       = _pDef->_staminaRegenDelay;
         staminaSettings._drainPerSecond   = _pDef->_gallopDrain;
-        staminaSettings._exhaustThreshold = _pDef->_stamina * 0.25f; // 바닥나면 4분의 1까지 쉬어야 다시 달릴 수 있다
+        staminaSettings._exhaustThreshold = _pDef->_stamina * _pDef->_exhaustRatio; // 바닥나면 이 비율까지 쉬어야 다시 달릴 수 있다
         if ( _health.initialize( healthSettings ) == false || _stamina.initialize( staminaSettings ) == false )
         {
             _pDef = nullptr; // 게이지 설정이 거절된 말은 서지 않는다(update 가 _pDef 없음으로 멈춘다)
@@ -190,8 +190,8 @@ namespace sw
 
     float32 WesternHorse::computeRegenScale( float32 core ) const
     {
-        const float32 minScale = _pCatalog != nullptr ? _pCatalog->getSurvival()._minRegenScale : 0.2f;
-        return MathUtil::lerp( minScale, 1.0f, MathUtil::saturate( core / kCoreMax ) );
+        // `update` 가 말 정의(`_pDef`)가 있을 때만 부른다 — 정의는 카탈로그에서 나오므로 카탈로그도 있다.
+        return MathUtil::lerp( _pCatalog->getSurvival()._minRegenScale, 1.0f, MathUtil::saturate( core / kCoreMax ) );
     }
 
     void WesternHorse::pollEvents( vector<WesternHorseEvent>& outListEvent )

@@ -314,6 +314,8 @@ namespace sw
                         return widget;
                     }
 
+                    widget->synchronizeProperties(); // 세터를 거치지 않았다 — 값의 제한과 보이는 글을 여기서 맞춘다
+
                     if ( namePrefix.empty() == false && widget->getName().empty() == false )
                     {
                         StringBuilder<constant::buffer::kMax256> name;

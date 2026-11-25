@@ -56,6 +56,10 @@ namespace sw
         float32 _comboHeightStep{ 0.75f };
         PROPERTY( Min = 0.0 )
         float32 _contactTime{ 0.12f }; ///< 면에 눌려 있는 시간이다. 늦은 판정 창은 이보다 길 수 없다
+        PROPERTY( Min = 0.001, Max = 1.0, Units = s, Tooltip = "A bounce pressed this close to the landing is Perfect" )
+        float32 _perfectWindow{ 0.05f };
+        PROPERTY( Min = 0.001, Max = 1.0, Units = s, Tooltip = "A bounce pressed this close to the landing is Good - not narrower than the Perfect window" )
+        float32 _goodWindow{ 0.1f };
         PROPERTY( Min = 0.0 )
         float32 _spawnHeight{ 3.0f };
         PROPERTY( Min = 0.0 )
@@ -203,9 +207,7 @@ namespace sw
          * @brief 2~4명으로 라운드를 준비합니다. @p roundTime 이 0 이면 시간 제한이 없고, @p scoreLimit 이 0 이면 점수 제한이 없습니다.
          * @details 사람 수가 범위 밖이거나, 설정이 범위 밖이거나, @p roundTime · @p scoreLimit 가 음수이면 오류를 남기고 false 를 반환합니다(0 으로 올려 받지 않는다).
          */
-        [[nodiscard]] bool initialize( const TrampolineSettings& settings, int32 playerCount, float32 roundTime, int32 scoreLimit, uint32 seed );
-        /** @brief 튕김 판정 창을 정합니다(기본은 Perfect ±0.05, Good ±0.1). 콤보를 깨는 창(`_bBreaksCombo`)은 실패로 칩니다. */
-        void                    setTimingWindows( const vector<TimingWindow>& listWindow ) { _judge.setWindows( listWindow ); }
+        [[nodiscard]] bool      initialize( const TrampolineSettings& settings, int32 playerCount, float32 roundTime, int32 scoreLimit, uint32 seed );
         PartyItemSpawner&       getItemSpawner() { return _itemSpawner; }
         const PartyItemSpawner& getItemSpawner() const { return _itemSpawner; }
         void                    start();

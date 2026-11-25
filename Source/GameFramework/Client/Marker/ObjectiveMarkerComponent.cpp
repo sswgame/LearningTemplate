@@ -6,7 +6,8 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/UI/Layout/BoxPanel.h"
+#include "Engine/UI/UIEngineDocuments.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
@@ -16,22 +17,16 @@ namespace sw
     {
         struct ObjectiveMarkerComponentInternal
         {
-            static constexpr uint32  kArrowIndex    = 0;
-            static constexpr uint32  kDistanceIndex = 2;
-            static constexpr float32 kArrowWidth    = 6.0f;
-            static constexpr float32 kArrowLength   = 20.0f;
-            static constexpr float32 kFontSize      = 16.0f;
+            static constexpr int32       kNoMeters     = -1; ///< 아직 거리를 쓰지 않았다
+            static constexpr const utf8* kArrowName    = "Arrow";
+            static constexpr const utf8* kLabelName    = "Label";
+            static constexpr const utf8* kDistanceName = "Distance";
 
-            static unique_ptr<TextWidget> makeText( string_view text, bool bLocalized )
+            static void setFontSize( TextWidget& widget, float32 fontSize )
             {
-                unique_ptr<TextWidget> widget = make_unique<TextWidget>();
-                TextLayoutStyle        style  = widget->getTextStyle();
-                style._fontSize               = kFontSize;
-                style._alignment              = TextAlignment::Center;
-                widget->setTextStyle( style );
-                widget->setLocalized( bLocalized );
-                widget->setText( text );
-                return widget;
+                TextLayoutStyle style = widget.getTextStyle();
+                style._fontSize       = fontSize;
+                widget.setTextStyle( style );
             }
         };
     } // namespace
@@ -39,7 +34,12 @@ namespace sw
     ObjectiveMarkerComponent::ObjectiveMarkerComponent()
         : WidgetComponent{}
         , _label{}
-        , _shownMeters{ -1 }
+        , _arrowColor{ 1.0f, 0.82f, 0.25f, 1.0f }
+        , _arrowSize{ 6.0f, 20.0f }
+        , _fontSize{ 16.0f }
+        , _arrowWidget{ kInvalidWidgetID }
+        , _distanceWidget{ kInvalidWidgetID }
+        , _shownMeters{ ObjectiveMarkerComponentInternal::kNoMeters }
     {
         setClampToScreenEdge( true );
         setPivot( float2{ 0.5f, 1.0f } );
@@ -47,11 +47,37 @@ namespace sw
 
     ObjectiveMarkerComponent::~ObjectiveMarkerComponent() = default;
 
-    void ObjectiveMarkerComponent::onBeginPlay()
+    string_view ObjectiveMarkerComponent::getDefaultDocument( const UIEngineDocuments& documents ) const
     {
-        if ( getContent() == nullptr )
-            setContent( createContent() );
-        WidgetComponent::onBeginPlay();
+        return documents._objectiveMarker;
+    }
+
+    bool ObjectiveMarkerComponent::onDocumentCreated( Widget& content )
+    {
+        using Internal         = ObjectiveMarkerComponentInternal;
+        BorderPanel* pArrow    = castTo<BorderPanel>( content.findDescendant( hashed_string( Internal::kArrowName ) ) );
+        TextWidget*  pLabel    = castTo<TextWidget>( content.findDescendant( hashed_string( Internal::kLabelName ) ) );
+        TextWidget*  pDistance = castTo<TextWidget>( content.findDescendant( hashed_string( Internal::kDistanceName ) ) );
+        if ( pArrow == nullptr || pLabel == nullptr || pDistance == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ObjectiveMarkerComponent.DocumentNeeds", "Objective marker document needs a BorderPanel '%#' and TextWidgets '%#' and '%#' - the marker is not shown", Internal::kArrowName, Internal::kLabelName,
+                             Internal::kDistanceName );
+            return false;
+        }
+        UIBrush brush = pArrow->getBackground();
+        brush._color  = _arrowColor;
+        pArrow->setBackground( brush );
+        WidgetLayoutSlot arrowSlot = pArrow->getLayoutSlot();
+        arrowSlot._widthOverride   = _arrowSize._x;
+        arrowSlot._heightOverride  = _arrowSize._y;
+        pArrow->setLayoutSlot( arrowSlot );
+        pLabel->setText( _label );
+        Internal::setFontSize( *pLabel, _fontSize );
+        Internal::setFontSize( *pDistance, _fontSize );
+        _arrowWidget    = pArrow->getID();
+        _distanceWidget = pDistance->getID();
+        _shownMeters    = Internal::kNoMeters;
+        return true;
     }
 
     bool ObjectiveMarkerComponent::needsMarkerPlacement() const
@@ -61,47 +87,26 @@ namespace sw
 
     void ObjectiveMarkerComponent::onMarkerPlaced( Widget& marker, const WidgetMarkerPlacement& placement )
     {
-        using Internal      = ObjectiveMarkerComponentInternal;
-        PanelWidget* pPanel = castTo<PanelWidget>( &marker );
-        if ( pPanel == nullptr || pPanel->getChildCount() <= Internal::kDistanceIndex )
-            return;
+        const WidgetTree* pTree  = marker.getTree();
+        Widget*           pArrow = pTree != nullptr ? pTree->findWidgetByID( _arrowWidget ) : nullptr;
+        if ( pArrow == nullptr )
+            return; // 코드가 다른 내용을 넘겼다
         // 방향 막대 — 가장자리에 붙었을 때만, 화면 가운데에서 목표 쪽으로 돈다.
-        Widget& arrow = *pPanel->getChild( Internal::kArrowIndex );
-        arrow.setVisibility( placement._bClamped == SW_TRUE ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Hidden );
-        WidgetRenderTransform transform = arrow.getRenderTransform();
+        pArrow->setVisibility( placement._bClamped == SW_TRUE ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Hidden );
+        WidgetRenderTransform transform = pArrow->getRenderTransform();
         transform._angle                = Radians::fromRadians( placement._edgeAngle );
         transform._pivot                = float2{ 0.5f, 0.5f };
-        arrow.setRenderTransform( transform );
+        pArrow->setRenderTransform( transform );
         // 거리 — 1 m 단위가 바뀔 때만 글을 쓴다(글 배치는 비싸다).
         const int32 meters = static_cast<int32>( MathUtil::round( placement._distance ) );
         if ( meters == _shownMeters )
             return;
         _shownMeters = meters;
-        if ( TextWidget* pDistance = castTo<TextWidget>( pPanel->getChild( Internal::kDistanceIndex ) ); pDistance != nullptr )
+        if ( TextWidget* pDistance = castTo<TextWidget>( pTree->findWidgetByID( _distanceWidget ) ); pDistance != nullptr )
         {
             StringBuilder<constant::buffer::kMax256> textBuilder;
             textBuilder.appendFormat( "%# m", meters );
             pDistance->setText( string( textBuilder.view() ) );
         }
-    }
-
-    unique_ptr<Widget> ObjectiveMarkerComponent::createContent() const
-    {
-        using Internal              = ObjectiveMarkerComponentInternal;
-        unique_ptr<BoxPanel> column = make_unique<BoxPanel>();
-        column->setOrientation( UIOrientation::Vertical );
-        column->setSpacing( 2.0f );
-        unique_ptr<BorderPanel> arrow = make_unique<BorderPanel>();
-        arrow->setBackground( UIBrush::makeSolid( float4{ 1.0f, 0.82f, 0.25f, 1.0f }, 2.0f ) );
-        WidgetLayoutSlot arrowSlot     = arrow->getLayoutSlot();
-        arrowSlot._widthOverride       = Internal::kArrowWidth;
-        arrowSlot._heightOverride      = Internal::kArrowLength;
-        arrowSlot._horizontalAlignment = UIAlignment::Center;
-        arrow->setLayoutSlot( arrowSlot );
-        arrow->setVisibility( WidgetVisibility::Hidden );
-        (void)column->addChild( std::move( arrow ) );
-        (void)column->addChild( Internal::makeText( _label, true ) );
-        (void)column->addChild( Internal::makeText( "", false ) );
-        return column;
     }
 } // namespace sw

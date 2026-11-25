@@ -114,6 +114,8 @@ namespace sw
         void onDocumentReloaded( string_view documentPath );
         /** @brief 시트 @p sheetPath 를 쓰는 화면의 스타일 시트를 자기 테마로 다시 적용합니다(스타일 시트 캐시의 다시 읽기 알림). */
         void onStyleSheetReloaded( string_view sheetPath );
+        /** @brief 엔진 위젯 기본 겉모습이 바뀌었을 때 문서로 연 화면을 새로 짓습니다. */
+        void onWidgetSkinChanged();
         /** @brief 지금 테마가 바뀌었습니다 — 화면마다 자기 테마(빈 이름이면 지금 테마)로 다시 맞춥니다. */
         void onThemeChanged();
 
@@ -124,6 +126,7 @@ namespace sw
         Subscription              _updateSubscription;             ///< UI 갱신의 그리기 뒤 칸(`UISystem::onUpdateAfterPaint`) 구독
         Subscription              _documentReloadedSubscription;   ///< 문서 캐시의 다시 읽기 알림 구독
         Subscription              _styleSheetReloadedSubscription; ///< 스타일 시트 캐시의 다시 읽기 알림 구독
+        Subscription              _widgetSkinChangedSubscription;  ///< 위젯 기본 겉모습이 바뀐 알림 구독
         Subscription              _themeChangedSubscription;       ///< 테마가 바뀐 알림 구독
 
         SW_SERVICE_SLOT( UIOffscreenScreens, Required );

@@ -64,6 +64,8 @@ namespace sw
                 , _socialServer{}
                 , _blockList{ &_socialService }
                 , _afterDeleteAccount{}
+                , _linkPolicy{}
+                , _guildPolicy{}
                 , _pGroupChannels{ nullptr }
             {
             }
@@ -73,6 +75,11 @@ namespace sw
                 SocialKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
                     return result;
+                // 관계 줄 전부가 목록 응답 하나에 담겨야 한다 — 넘는 설정으로 서면 목록이 잘려 클라이언트가 관계를 잃는다.
+                if ( kitConfig._links.isWithinWireLimits() == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the social kit setting _links adds up to more than one link page can carry (SocialLimit::kMaxLinkPage)" } );
+                _linkPolicy  = kitConfig._links;
+                _guildPolicy = kitConfig._guild;
                 if ( expected<void> table = _guildService.setLevelTable( kitConfig._listGuildLevelExperience ); table.has_value() == false )
                 {
                     Error error{ table.error().kind(), table.error().message().data(), "_listGuildLevelExperience: " };
@@ -95,8 +102,9 @@ namespace sw
                 dependencies._pRouter    = context._pRouter;
                 dependencies._pBus       = context._pBus;
                 dependencies._pNameIndex = interfaces.find<const IAccountNameIndex>();
+                dependencies._linkPolicy = _linkPolicy;
                 _socialService.initialize( dependencies );
-                _guildService.initialize( context._pStore );
+                _guildService.initialize( context._pStore, _guildPolicy );
                 _guildService.setLedgerPolicy( interfaces.find<const ILedgerPolicy>() ); // 창고에서 꺼낼 때 화폐 상한을 본다. 경제 키트가 없으면 원장 상한만 본다
                 // 채팅 키트는 순서 없는 목록(`OnlineKitUnordered`)에 적는다 — 채팅이 이 키트의 차단 목록에 의존해 순환이 된다. 채팅의 멤버 창은 채팅 서비스가 서기 전과 내린 뒤의 호출을 무시하므로
                 // 순서가 없어도 되고, 찾기는 모든 키트의 `initialize` 뒤인 여기서 한다.
@@ -147,6 +155,8 @@ namespace sw
             SocialServer             _socialServer;
             SocialBlockList          _blockList;
             SocialAfterDeleteAccount _afterDeleteAccount;
+            SocialLinkPolicy         _linkPolicy;             ///< 관계 수 상한(`initialize` 가 설정에서 읽어 `start` 가 서비스에 넘긴다)
+            GuildPolicy              _guildPolicy;            ///< 길드 운영 값(같다)
             IGroupChannelMembership* _pGroupChannels;         ///< 채팅 키트가 없으면 null 이고 길드 이벤트를 받지 않는다
             Subscription             _guildEventSubscription; ///< 길드 이벤트 칸 구독(`start` 가 걸고 `shutdown` 이 놓는다)
         };

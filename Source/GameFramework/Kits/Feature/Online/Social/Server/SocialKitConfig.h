@@ -9,6 +9,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 
 namespace sw
@@ -27,5 +29,11 @@ namespace sw
         /** @brief 만료된 가입 신청의 TTL 입니다. 만료 뒤 이 기간이 지나면 TTL 쓸기가 지웁니다. */
         PROPERTY( Required )
         ServiceTTLConfig _expiredApplicationTTL{};
+        /** @brief 한 계정의 관계 수 상한입니다(친구 · 받은 신청 · 보낸 신청 · 막음). */
+        PROPERTY( Required )
+        SocialLinkPolicy _links{};
+        /** @brief 길드의 정원 · 신청 수 · 허용 수와 초대 · 신청의 수명입니다. */
+        PROPERTY( Required )
+        GuildPolicy _guild{};
     };
 } // namespace sw

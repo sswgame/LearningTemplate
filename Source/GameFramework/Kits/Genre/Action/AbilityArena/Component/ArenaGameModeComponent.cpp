@@ -114,6 +114,7 @@ namespace sw
         , _baseGruntCount{ 2u }
         , _wavesPerCaster{ 2u }
         , _wavesPerLevel{ 2u }
+        , _statScalePerLevel{ 0.15f }
         , _deathLifeSpan{ 0.8f }
         , _playerRespawnDelay{ 2.5f }
         , _statusLogInterval{ 5.0f }
@@ -432,7 +433,7 @@ namespace sw
         // 웨이브가 오르면 적의 체력과 공격력이 오른다(이펙트의 perLevel 이 붙은 값만 커진다).
         if ( request._level > 1 )
         {
-            const float32           levelScale  = 1.0f + 0.15f * static_cast<float32>( request._level - 1 );
+            const float32           levelScale  = 1.0f + _statScalePerLevel * static_cast<float32>( request._level - 1 );
             const optional<float32> maxHealth   = pAbilitySystem->getAttributeBaseValue( CombatAttributes::maxHealth() );
             const optional<float32> attackPower = pAbilitySystem->getAttributeBaseValue( CombatAttributes::attackPower() );
             if ( maxHealth.has_value() == false || attackPower.has_value() == false )

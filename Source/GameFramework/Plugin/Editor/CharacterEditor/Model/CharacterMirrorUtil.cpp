@@ -19,7 +19,7 @@ namespace sw::editor
             static bool isLower( utf8 character ) { return 'a' <= character && character <= 'z'; }
             static bool isDigit( utf8 character ) { return '0' <= character && character <= '9'; }
 
-            /** @brief ?좏겙???대쫫 ?덉뿉???⑥뼱 寃쎄퀎???볦??붿? 遊낅땲??遺꾨━ 臾몄옄 ?먮뒗 CamelCase 寃쎄퀎). */
+            /** @brief 토큰이 이름 안에서 단어 경계에 놓였는지 봅니다(분리 문자 또는 CamelCase 경계). */
             static bool isTokenBoundary( string_view name, size_t position, string_view token )
             {
                 const size_t end = position + token.size();
@@ -30,7 +30,7 @@ namespace sw::editor
                 return bLeftOK && bRightOK;
             }
 
-            /** @brief @p token ??寃쎄퀎??留욊쾶 ?볦씤 泥??먮━瑜?@p token ??吏앹쑝濡?諛붽퓭 @p outMirrorName ???댁뒿?덈떎. */
+            /** @brief @p token 이 경계에 맞게 놓인 첫 자리를 @p token 의 짝으로 바꿔 @p outMirrorName 에 담습니다. */
             static bool replaceToken( string_view name, string_view token, string_view replacement, string& outMirrorName )
             {
                 size_t position = name.find( token );
@@ -50,7 +50,7 @@ namespace sw::editor
                 return false;
             }
 
-            /** @brief `<Pair>` ?먯냼留덈떎 ?띿쓣 ?쎌뼱 @p inoutRules ???뷀빀?덈떎. ?섎せ???띿? ?ㅻ쪟濡??④퉩?덈떎. */
+            /** @brief `<Pair>` 원소마다 쌍을 읽어 @p inoutRules 에 더합니다. 잘못된 쌍은 오류로 남깁니다. */
             static void readRoot( const XMLNode& root, CharacterDataReader& reader, MirrorNameRules& inoutRules )
             {
                 reader.reportUnexpectedAttributes( root );

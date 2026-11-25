@@ -19,9 +19,30 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/ConnectAdmission.h"
+
+namespace sw
+{
+    /** @brief 게임 서버가 배정 명단을 받는 운영 값입니다(서버 설정 `MatchmakingKitConfig::_agent` — 값이 없으면 기동 오류). */
+    REFLECT()
+    struct MatchServerAgentPolicy
+    {
+        REFLECT_BODY();
+        /** @brief 버스로만 받은 명단의 수명(밀리초)입니다. 기록을 읽으면 경기 시한까지 늘어납니다. */
+        PROPERTY( Required, Min = 1000 )
+        int64 _expectTTLMs{ 0 };
+        /** @brief 명단 기록 목록을 다시 읽는 주기(밀리초)입니다. */
+        PROPERTY( Required, Min = 100 )
+        int64 _recordRefreshMs{ 0 };
+        /** @brief 한 번에 읽는 목록 멤버 수입니다. 끝나는 시각이 늦은(새) 기록부터 나옵니다. */
+        PROPERTY( Required, Min = 1, Max = 4096 )
+        int32 _maxRecordCount{ 0 };
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -54,10 +75,6 @@ namespace sw
     class SW_KIT_SERVER_API MatchServerAgent final : public IConnectAdmission
     {
     public:
-        static constexpr int64 kExpectTTLMs     = 120000; ///< 버스로만 받은 명단의 수명이다. 기록을 읽으면 경기 시한까지 늘어난다
-        static constexpr int64 kRecordRefreshMs = 1000;   ///< 명단 기록 목록을 다시 읽는 주기이다
-        static constexpr int32 kMaxRecordCount  = 256;    ///< 한 번에 읽는 목록 멤버 수이다. 끝나는 시각이 늦은(새) 기록부터 나온다
-
         MatchServerAgent();
         ~MatchServerAgent();
 
@@ -65,7 +82,7 @@ namespace sw
         MatchServerAgent& operator=( const MatchServerAgent& ) = delete;
 
         /** @brief 이 게임 서버의 id 와 정원(받을 사람 수)을 받습니다. 받아들이기 정책으로 내놓기 전(조립의 `initialize`)에 부릅니다. */
-        void initialize( uint64 serverID, int32 seatCapacity );
+        void initialize( uint64 serverID, int32 seatCapacity, const MatchServerAgentPolicy& policy );
         /** @brief 정원을 바꿉니다. 넘친 명단은 오래된 경기부터 받지 않습니다. 서버 루프에서 부릅니다. */
         void setSeatCapacity( int32 seatCapacity );
         /** @brief 명단 기록을 읽을 캐시 라우터를 받습니다(빌려 쓴다, 필수). 라우터보다 먼저 `shutdown` 해야 합니다. */
@@ -104,6 +121,7 @@ namespace sw
         EphemeralStoreRouter*                                  _pRouter;
         Subscription                                           _replyOwner; ///< 라우터 답의 주인 몫(`startReading` 이 열고 `shutdown` 이 놓는다)
         uint64                                                 _serverID;
+        MatchServerAgentPolicy                                 _policy;        ///< 운영 값(`initialize`)
         uint64                                                 _listRequestID; ///< 기다리는 목록 읽기이다. 0 이면 없다
         int64                                                  _nextListReadMs;
         int64                                                  _nowMs;

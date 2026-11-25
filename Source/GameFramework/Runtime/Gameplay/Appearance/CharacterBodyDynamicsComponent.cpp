@@ -364,7 +364,7 @@ namespace sw
         // 방울은 줄기가 턱에 닿은 뒤 잠시, 가닥은 방아쇠가 켜진 동안이다.
         if ( arrivedCount > 0 )
             stream._dripRemaining = def._dripSeconds;
-        const bool bWanted    = def._bStrand == SW_TRUE ? amount > 0.0f : stream._dripRemaining > 0.0f;
+        const bool bWanted    = def._bStrand ? amount > 0.0f : stream._dripRemaining > 0.0f;
         stream._dripRemaining = MathUtil::max( 0.0f, stream._dripRemaining - seconds );
 
         GameObject*        pOwner   = getOwner();

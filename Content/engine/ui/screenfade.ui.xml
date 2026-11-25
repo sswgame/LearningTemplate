@@ -1,0 +1,8 @@
+<?asset guid="59a44fe7bde09b8d79b617296cac77a1"?>
+<UIDocument _schemaVersion="1">
+	<!-- 씬 이동 페이드 판 — LoadingScreenController 가 열고 루트의 불투명도만 정한다. 로딩 화면 아래에 깔리며 포커스와 포인터를 받지 않는다(아래 화면 · 게임 입력이 그대로). -->
+	<UIScreenDef _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
+	<BorderPanel _name="Fade" _visibility="HitTestInvisible">
+		<_background _color="0,0,0,1" />
+	</BorderPanel>
+</UIDocument>

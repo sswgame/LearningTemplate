@@ -429,12 +429,13 @@ namespace sw
         const SceneComponent* pScene = target.getPrimarySceneComponent();
         if ( pScene == nullptr )
             return 0.0f;
-        const float4x4 world     = pScene->getWorldMatrix();
-        const float3   origin    = pScene->getWorldPosition();
-        const float3   direction = float3::transformVector( _circuit.readParamVector( node, "direction" ), world ).normalize();
-        const float32  range     = _circuit.readParamNumber( node, "range" ).value_or( 10.0f );
-        WorldRayHit    hit;
-        return WorldQuery::raycast( manager, origin, origin + direction * range, target.getObjectID(), hit ) ? 1.0f : 0.0f;
+        const float4x4          world     = pScene->getWorldMatrix();
+        const float3            origin    = pScene->getWorldPosition();
+        const float3            direction = float3::transformVector( _circuit.readParamVector( node, "direction" ), world ).normalize();
+        const optional<float32> range     = _circuit.readParamNumber( node, "range" );
+        SW_ASSERT( range.has_value() ); // Laser 종류가 `range` 를 선언한다(기본값도 그 선언의 것 — `GimmickNodeRegistry`)
+        WorldRayHit hit;
+        return WorldQuery::raycast( manager, origin, origin + direction * *range, target.getObjectID(), hit ) ? 1.0f : 0.0f;
     }
 
     float32 GimmickCircuitComponent::readSensorImpulse( const GimmickSensorComponent& sensor, Binding binding, bool bFirstStep )

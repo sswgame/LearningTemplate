@@ -7,6 +7,7 @@
 #include "Engine/Config/IConfig.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 #include "sw/config/CookContract.gen.h"
 
@@ -118,6 +119,10 @@ namespace sw
          */
         PROPERTY( Min = 1, Meta = "Units=MB" )
         uint32 _clipCacheMegabytes{};
+
+        /** @brief 음악을 다른 곡으로 바꿀 때 앞 곡이 사라지고 새 곡이 들어오는 시간(초)입니다. 0 이면 바로 끊고 바꾼다. */
+        PROPERTY( Required, Min = 0.0, Max = 60.0, Units = s )
+        float32 _musicCrossfadeSeconds{};
     };
 
     /**
@@ -709,6 +714,18 @@ namespace sw
 
         PROPERTY()
         vector<string> _listResourcePriority{}; ///< 리소스 팩 탐색 우선순위(앞이 먼저)
+
+        /**
+         * @brief 기동 스플래시 이미지(압축 없는 32bpp `.dds`, 도메인을 포함한 리소스 경로)입니다.
+         * @details 스플래시는 엔진 기본 에셋 표(`EngineDefaultAssets`)와 에셋 색인보다 먼저 떠서 GUID 로 적지 못한다 — 엔진 설정의 경로다. 에디터 도메인은 팩에 담기지 않으므로
+         *          낱개 파일을 읽지 않는 실행(배포 · `-cooked-content`)은 스플래시를 띄우지 않는다(`SplashSubsystem`).
+         */
+        PROPERTY( Required )
+        DataPath _splashImage;
+
+        /** @brief 원본 클립을 리타깃 프로필로 구운 클립의 폴더입니다(`<폴더>/<프로필 이름>/<원본 클립 파일 이름>`). 가져오기가 쓰고 애니메이션 셋이 읽는다(`AnimationSet::makeRetargetedClipPath`). */
+        PROPERTY( Required )
+        DataPath _retargetedClipFolder;
 
         /** @brief 데이터 상속(`_base`, `DataInheritance`) 사슬의 깊이 상한입니다. 넘으면 그 파일은 로드 오류입니다. */
         PROPERTY( Min = 1 )

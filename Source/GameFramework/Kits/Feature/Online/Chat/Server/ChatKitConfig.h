@@ -10,6 +10,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
+#include "GameFramework/Runtime/Online/Report/ServiceReport.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 
 namespace sw
@@ -31,5 +32,20 @@ namespace sw
         /** @brief 도배 방지(토큰 버킷 · 같은 글 반복)의 한도입니다. 코드 기본값이 없다. */
         PROPERTY( Required )
         ChatSpamConfig _spam{};
+        /** @brief 한 계정이 들어가 있을 수 있는 채널 수입니다. */
+        PROPERTY( Required, Min = 1, Max = 1024 )
+        int32 _maxChannelPerMember{ 0 };
+        /** @brief 신고 스냅숏에 담는 메시지 수(신고한 메시지와 그 앞)입니다. 신고 레코드의 줄 상한(`ServiceReportConstant::kMaxLineCount`) 이하입니다. */
+        PROPERTY( Required, Min = 1, Max = ServiceReportConstant::kMaxLineCount )
+        int32 _reportContextCount{ 0 };
+        /** @brief 계정마다 한꺼번에 낼 수 있는 신고 수입니다. */
+        PROPERTY( Required, Min = 1, Max = 1000 )
+        int32 _reportBurst{ 0 };
+        /** @brief 계정마다 신고 하나가 다시 차는 간격(밀리초)입니다. */
+        PROPERTY( Required, Min = 1000 )
+        int64 _reportRefillIntervalMs{ 0 };
+        /** @brief 계정의 제재 조회를 기억하는 밀리초입니다. 이 시간 안에는 저장소를 다시 읽지 않습니다. */
+        PROPERTY( Required, Min = 1000 )
+        int64 _sanctionCacheMs{ 0 };
     };
 } // namespace sw

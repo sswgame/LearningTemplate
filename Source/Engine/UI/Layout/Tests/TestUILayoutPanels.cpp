@@ -2,6 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/GridPanel.h"
@@ -10,6 +11,9 @@
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Layout/WrapPanel.h"
+#include "Engine/UI/Style/UIStylePass.h"
+#include "Engine/UI/Style/UIStyleSet.h"
+#include "Engine/UI/Style/UIStyleSheet.h"
 #include "Engine/UI/WidgetTree/Tests/UITestWidgets.h"
 
 namespace sw
@@ -599,6 +603,39 @@ SW_TEST_CASE( UILayoutPanelsTest, MeasureHonoursOverrideMinAndMax )
     SW_EXPECT_EQUAL( 40.0f, fixed.getDesiredSize()._x );
     SW_EXPECT_EQUAL( 25.0f, fixed.getDesiredSize()._y );
     SW_EXPECT_EQUAL( 5.0f, small.getDesiredSize()._x );
+}
+
+/** @brief [UILayoutPanelsTest] 스타일의 크기가 위젯 크기를 정하고, 슬롯 덮어쓰기가 축마다 이기며, 클래스가 바뀌면 다시 잰다 */
+SW_TEST_CASE( UILayoutPanelsTest, StyleSizeFixesTheWidgetUnlessTheSlotOverrides )
+{
+    shared_ptr<UIStyleSheetAsset> sheet = make_shared<UIStyleSheetAsset>();
+    SW_REQUIRE_TRUE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="1"><Rule _selector=".cell" _size="40,20" /></UIStyleSheet>)", "cell.uistyle.xml",
+                                               ResourceContext::forDocument(), *sheet )
+                         .has_value() );
+    UIStyleSet styleSet;
+    styleSet.setSheets( vector<shared_ptr<const UIStyleSheetAsset>>{ sheet } );
+
+    WidgetTree       tree;
+    BoxPanel&        box = UITestUtil::setRoot<BoxPanel>( tree );
+    WidgetLayoutSlot slot;
+    slot._verticalAlignment = UIAlignment::Start;
+    UITestLeaf& cell        = UITestUtil::addLeaf( box, float2{ 10.0f, 10.0f }, slot );
+    slot._widthOverride     = 30.0f;
+    UITestLeaf& slotSized   = UITestUtil::addLeaf( box, float2{ 10.0f, 10.0f }, slot );
+    cell.setStyleClass( "cell" );
+    slotSized.setStyleClass( "cell" );
+    (void)UIStylePass::update( tree, styleSet, false );
+    (void)UITestUtil::layout( tree, float2{ 200.0f, 100.0f } );
+    SW_EXPECT_EQUAL( 40.0f, cell.getGeometry()._size._x );
+    SW_EXPECT_EQUAL( 20.0f, cell.getGeometry()._size._y );
+    SW_EXPECT_EQUAL( 30.0f, slotSized.getGeometry()._size._x );
+    SW_EXPECT_EQUAL( 20.0f, slotSized.getGeometry()._size._y );
+
+    cell.setStyleClass( "" );
+    (void)UIStylePass::update( tree, styleSet, false );
+    (void)UITestUtil::layout( tree, float2{ 200.0f, 100.0f } );
+    SW_EXPECT_EQUAL( 10.0f, cell.getGeometry()._size._x );
+    SW_EXPECT_EQUAL( 10.0f, cell.getGeometry()._size._y );
 }
 
 namespace

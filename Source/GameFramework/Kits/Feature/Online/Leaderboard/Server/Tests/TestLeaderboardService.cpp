@@ -7,6 +7,7 @@
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardScoreSender.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
@@ -23,11 +24,13 @@ using namespace sw;
 
 namespace
 {
-    constexpr int64 kNowMs         = 1700000000000ll;
-    constexpr int64 kDayMs         = 86400000ll;
-    constexpr int64 kSeasonStartMs = 1000;
-    constexpr int64 kSeasonEndMs   = 2000;
-    constexpr int64 kInSeasonMs    = 1500;
+    constexpr int64 kNowMs           = 1700000000000ll;
+    constexpr int32 kMaxAroundRadius = 25;           ///< 서버 설정 `_maxAroundRadius` 와 같은 값
+    constexpr int64 kNameCacheTTLMs  = 2592000000ll; ///< 서버 설정 `_nameCacheTTLMs` 와 같은 값(30 일)
+    constexpr int64 kDayMs           = 86400000ll;
+    constexpr int64 kSeasonStartMs   = 1000;
+    constexpr int64 kSeasonEndMs     = 2000;
+    constexpr int64 kInSeasonMs      = 1500;
 
     /** @brief 정산 완료를 받습니다. */
     struct SettlementSink
@@ -81,6 +84,7 @@ namespace
             dependencies._pRouter    = &_router;
             dependencies._pNameIndex = pNameIndex;
             _service.initialize( dependencies );
+            _service.setReadPolicy( kMaxAroundRadius, kNameCacheTTLMs );
         }
 
         ~LeaderboardFixture()
@@ -528,7 +532,7 @@ SW_TEST_CASE( LeaderboardServiceTest, AroundReadsNeighbours )
     SW_EXPECT_EQUAL( 1, topEdge._listEntry[0]._rank );
 
     SW_EXPECT_TRUE( rig.around( "best", 99, 1 )._result == LeaderboardResult::NotRanked );
-    SW_EXPECT_TRUE( rig.around( "best", 3, LeaderboardLimit::kMaxAround + 1 )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.around( "best", 3, kMaxAroundRadius + 1 )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.around( "best", 3, -1 )._result.hasError( OnlineError::kInvalidRequest ) );
 }
 
@@ -1120,4 +1124,16 @@ SW_TEST_CASE( LeaderboardServiceTest, AchievementsPageWithACursor )
     const LeaderboardCompletion last = rig.take( 79 );
     SW_EXPECT_TRUE( last._listAchievement.empty() );
     SW_EXPECT_TRUE( last._nextCursor.empty() );
+}
+
+/** @brief [LeaderboardServiceTest] 둘레 읽기의 반지름 상한은 설정이 정한다 — 운영 값(`_maxAroundRadius` · `_nameCacheTTLMs`)을 적지 않은 키트 설정은 읽지 못한다 */
+SW_TEST_CASE( LeaderboardServiceTest, KitConfigRequiresTheReadPolicy )
+{
+    SW_EXPECT_LOG( "Config.KeyMissing" );
+    OnlineServerKitEntry entry;
+    entry._name     = "leaderboard";
+    entry._settings = R"({ "_pastScoreTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 },
+"_seasonResultTTL": { "_expireAfterDays": 365, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 } })";
+    LeaderboardKitConfig kitConfig;
+    SW_EXPECT_FALSE( entry.readSettings( kitConfig ) );
 }

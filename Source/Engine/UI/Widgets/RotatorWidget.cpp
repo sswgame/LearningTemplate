@@ -10,6 +10,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
+#include "Engine/UI/Style/UIWidgetSkin.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
@@ -19,15 +20,10 @@ namespace sw
     {
         struct RotatorWidgetInternal
         {
-            /** @brief 양쪽 화살표 영역의 너비(안쪽 여백)입니다. */
-            static constexpr float32 kArrowSpace = 32.0f;
             /** @brief 화살표 삼각형의 높이(가로 막대 수), 막대 하나의 두께, 가운데 막대의 길이(막대마다 둘씩 줄어든다)입니다. */
             static constexpr uint32  kArrowSteps     = 5;
             static constexpr float32 kArrowThickness = 2.0f;
             static constexpr float32 kArrowBaseWidth = 6.0f;
-            /** @brief 고를 것이 없거나 꺼진 화살표가 넘지 않는 불투명도와 위아래 안쪽 여백입니다. */
-            static constexpr float32 kInactiveAlpha   = 0.35f;
-            static constexpr float32 kContentPaddingY = 8.0f;
         };
     } // namespace
 } // namespace sw
@@ -42,10 +38,9 @@ namespace sw
         , _bHasReleasePoint{ false }
         , _listOption{}
         , _selectedIndex{ constant::invalid_index::kUint32 }
-        , _arrowColor{ 0.85f, 0.88f, 0.95f, 1.0f }
+        , _arrowColor{ UIWidgetSkin::get()._rotator._arrow._color }
     {
-        using Internal = RotatorWidgetInternal;
-        setContentPadding( float4{ Internal::kArrowSpace, Internal::kContentPaddingY, Internal::kArrowSpace, Internal::kContentPaddingY } );
+        setContentPadding( UIWidgetSkin::get()._rotator._padding );
         unique_ptr<TextWidget> label = make_unique<TextWidget>();
         TextLayoutStyle        style = label->getTextStyle();
         style._bWrap                 = false;
@@ -76,16 +71,12 @@ namespace sw
         refreshLabel();
     }
 
-    void RotatorWidget::onBoundPropertyChanged( const PropertyInfo& property )
+    void RotatorWidget::synchronizeProperties()
     {
-        if ( property._name == hashed_string( "_listOption" ) || property._name == hashed_string( "_selectedIndex" ) )
-        {
-            if ( _selectedIndex != constant::invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
-                _selectedIndex = constant::invalid_index::kUint32;
-            refreshLabel();
-            return;
-        }
-        ButtonWidget::onBoundPropertyChanged( property );
+        ButtonWidget::synchronizeProperties();
+        if ( _selectedIndex != constant::invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
+            _selectedIndex = constant::invalid_index::kUint32;
+        refreshLabel();
     }
 
     void RotatorWidget::refreshLabel()
@@ -148,8 +139,8 @@ namespace sw
         bool bPrevious = false;
         if ( _bHasReleasePoint )
         {
-            const bool bOnLeftArrow = _releaseLocalX < RotatorWidgetInternal::kArrowSpace;
-            bPrevious               = isRightToLeft() ? ( _releaseLocalX > getGeometry()._size._x - RotatorWidgetInternal::kArrowSpace ) : bOnLeftArrow;
+            const bool bOnLeftArrow = _releaseLocalX < UIWidgetSkin::get()._rotator._arrow._areaWidth;
+            bPrevious               = isRightToLeft() ? ( _releaseLocalX > getGeometry()._size._x - UIWidgetSkin::get()._rotator._arrow._areaWidth ) : bOnLeftArrow;
         }
         (void)stepSelection( bPrevious ? -1 : 1 );
     }
@@ -158,20 +149,21 @@ namespace sw
     {
         (void)context;
         // 양옆 화살표: 가로 막대를 줄여 쌓은 삼각형이다. 항목이 둘보다 적거나 꺼져 있으면 흐리게 그린다.
-        using Internal        = RotatorWidgetInternal;
-        const float2& size    = getGeometry()._size;
-        const bool    bActive = _listOption.size() >= 2 && isEnabledInHierarchy();
-        CanvasBrush   arrow{};
+        using Internal                     = RotatorWidgetInternal;
+        const UIWidgetSkin::Arrow& skin    = UIWidgetSkin::get()._rotator._arrow;
+        const float2&              size    = getGeometry()._size;
+        const bool                 bActive = _listOption.size() >= 2 && isEnabledInHierarchy();
+        CanvasBrush                arrow{};
         arrow._color = _arrowColor;
         if ( bActive == false )
-            arrow._color._w = MathUtil::min( _arrowColor._w, Internal::kInactiveAlpha );
+            arrow._color._w = MathUtil::min( _arrowColor._w, skin._disabledAlpha );
         const float32 center = static_cast<float32>( Internal::kArrowSteps - 1 ) * 0.5f;
         const float32 top    = size._y * 0.5f - static_cast<float32>( Internal::kArrowSteps ) * 0.5f * Internal::kArrowThickness;
         for ( uint32 side = 0; side < 2; ++side )
         {
             // 가운데 막대가 가장 길고 위아래로 둘씩 줄어든다. 왼쪽 화살표(◀)는 막대의 오른쪽 끝을, 오른쪽 화살표(▶)는 왼쪽 끝을 맞춘다.
             const bool    bLeftSide = side == 0;
-            const float32 alignX    = bLeftSide ? Internal::kArrowSpace * 0.5f + Internal::kArrowBaseWidth * 0.5f : size._x - Internal::kArrowSpace * 0.5f - Internal::kArrowBaseWidth * 0.5f;
+            const float32 alignX    = bLeftSide ? skin._areaWidth * 0.5f + Internal::kArrowBaseWidth * 0.5f : size._x - skin._areaWidth * 0.5f - Internal::kArrowBaseWidth * 0.5f;
             for ( uint32 step = 0; step < Internal::kArrowSteps; ++step )
             {
                 const float32 distance = static_cast<float32>( step ) < center ? center - static_cast<float32>( step ) : static_cast<float32>( step ) - center;

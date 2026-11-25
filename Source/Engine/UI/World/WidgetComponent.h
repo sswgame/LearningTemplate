@@ -23,6 +23,7 @@
 namespace sw
 {
     struct UIDocumentAsset;
+    struct UIEngineDocuments;
     struct UILayoutContext;
     struct UIPaintContext;
 
@@ -89,7 +90,7 @@ namespace sw
      *          다시 배치 · 칠하지 않고 사각형 버퍼도 다시 올리지 않는다(RTS 이름 2,000 개 기준). 마커 내용은 자르기를 쓸 수 없다.
      *          **World**: 위젯 트리를 렌더 텍스처에 그려 사각형 메시에 붙인다(렌더 텍스처 경로는 `getRenderTargetPath`).
      *
-     *          위젯은 `setContent` 로 코드가 넘긴다(문서 `_documentPath` 를 해석하는 것은 5-1 단계에서 한다). 화면 마커는 `_drawSize` 가 있으면 그 크기로 고정해 레이아웃 경계가 되고,
+     *          위젯은 시작할 때 문서(`_documentPath`, 없으면 파생 클래스의 `getDefaultDocument`)로 만들거나 `setContent` 로 코드가 넘긴다(넘긴 것이 있으면 문서를 읽지 않는다). 화면 마커는 `_drawSize` 가 있으면 그 크기로 고정해 레이아웃 경계가 되고,
      *          없으면 위젯의 원하는 크기를 쓴다. 기준점은 주 씬 컴포넌트의 위치 + `_worldOffset`(월드 축, 머리 위 HP 바)이다(씬 컴포넌트가 없으면 시작할 때 오류를 남긴다).
      *          카메라 뒤나 화면 밖은 숨기고(`_bClampToScreenEdge` 면 가장자리에 붙인다), `_maxDistance` 밖도 숨긴다. 코드가 `setHidden` 으로 숨길 수도 있다
      *          (HP 바의 "맞으면 보임" 정책이며 저장하지 않는다). 2D(직교 카메라)도 같은 코드로 처리한다. 서버처럼 UI 가 없으면 아무것도 하지 않는다.
@@ -218,6 +219,14 @@ namespace sw
         bool isWorldPointerCaptured() const { return _worldPointer.getCaptureTree() != nullptr; }
 
     protected:
+        /** @brief 문서 칸(`_documentPath`)을 적지 않았을 때 쓸 엔진 문서입니다. 비면 문서 없이 시작합니다(내용은 코드가 넘긴다). */
+        virtual string_view getDefaultDocument( const UIEngineDocuments& documents ) const;
+        /**
+         * @brief 문서로 만든 내용이 붙기 전에 부릅니다. 파생 클래스가 자기 칸을 이름으로 찾은 위젯에 옮기고 위젯 번호를 기억합니다.
+         * @details 화면 마커들은 한 트리를 나눠 쓰므로 이름은 이 호출 뒤에 지워진다(World 는 남는다) — 뒤에는 번호로 찾는다.
+         * @return 문서가 필요한 위젯을 갖추지 못했으면 이유를 로그에 남기고 false 입니다(내용을 붙이지 않는다).
+         */
+        [[nodiscard]] virtual bool onDocumentCreated( Widget& content );
         /** @brief 화면 마커를 이번 프레임 위치에 놓았을 때 부릅니다(보일 때만). 파생 클래스(목표 마커)가 방향 화살표와 거리 텍스트를 쓰는 곳입니다. 기본은 아무것도 하지 않습니다. */
         virtual void onMarkerPlaced( Widget& marker, const WidgetMarkerPlacement& placement );
         /**
@@ -231,6 +240,8 @@ namespace sw
         virtual bool shouldShowMarker();
 
     private:
+        /** @brief 문서로 내용을 만들어 넘깁니다. 문서가 없으면 아무것도 하지 않습니다. */
+        void createDocumentContent( UIWidgetComponentService& service );
         /** @brief 콘텐츠를 UI 시스템의 마커 화면에 붙입니다(등록과 콘텐츠가 모두 있을 때). */
         void attachMarker();
         /** @brief 마커 위젯을 떼어 지웁니다. */
@@ -264,7 +275,7 @@ namespace sw
         uint8                     _bHidden;        ///< 코드가 숨겼는지 나타냅니다(`setHidden`, 저장하지 않습니다).
         uint8                     _gpuState;       ///< GPU 투영의 위젯 쪽 상태입니다(0 꺼짐 · 1 접힘 · 2 보임). 상태가 바뀔 때만 위젯을 만진다.
         uint8                     _bGPUSlotDirty;  ///< GPU 투영 마커의 슬롯을 다시 정해야 합니다(그리기 크기 · 피벗이 바뀌었거나 처음).
-        PROPERTY( DisplayName = "Document", Tooltip = "UI document to show (document loading is a later stage; code uses setContent)" )
+        PROPERTY( DisplayName = "Document", Tooltip = "UI document to show; empty = the component's own default (or content set by code)" )
         AssetRef<UIDocumentAsset> _documentPath;
         PROPERTY( DisplayName = "Space" )
         WidgetSpace _space;

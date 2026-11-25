@@ -49,7 +49,6 @@
   "_cookRules": {
     "_listAlwaysCook": [
       { "_name": "EngineLocalizationTables_NamedRelativeToTheProject", "_listPattern": [ "engine/localization/*" ], "_bAutomationOnly": false },
-      { "_name": "GameCodeLiterals_EngineAssets", "_listPattern": [ "engine/textures/test/checker.dds", "engine/shaders/extension_pass_demo.hlsl", "engine/shaders/extension_draw_demo.hlsl" ], "_bAutomationOnly": false },
       { "_name": "GameData_FoundByKindPathRule", "_listPattern": [ "game/*/data/**" ], "_bAutomationOnly": false },
       { "_name": "GameMaps_OpenedByName", "_listPattern": [ "game/*/maps/**" ], "_bAutomationOnly": false },
       { "_name": "GameMinigames_ReadByName", "_listPattern": [ "game/*/minigames/**" ], "_bAutomationOnly": false },

@@ -139,7 +139,12 @@ namespace sw::editor
         // 프리셋 내보내기 폴더는 외형 폴더에서 파생한다(기준은 팩 데이터의 외형 폴더 하나).
         const string exportFolder = FileUtil::joinPath( data._appearanceFolder, AppearanceDatabase::kPresetFolder );
         _paths._exportFolder      = string_view( exportFolder );
-        _packDataState            = PackDataState::Ready;
+        MirrorNameRules rules;
+        if ( rules.loadFromAsset( AssetID{ data._mirrorNames.get() } ) )
+            _sockets.setMirrorRules( rules );
+        else
+            SW_LOG_ERROR_ID( "CharacterEditorViewModel.MirrorNamesUnreadable", "Mirror name table '%#' could not be loaded - left/right pairs are not found", data._mirrorNames.get() );
+        _packDataState = PackDataState::Ready;
     }
 
     void CharacterEditorViewModel::ensureKindTable()
@@ -153,12 +158,6 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "CharacterEditorViewModel.DefaultSocketKindTable", "Default socket kind table could not be loaded - kinds are not validated" );
         else
             _sockets.setKindTable( kinds );
-
-        MirrorNameRules rules;
-        if ( rules.loadFromAsset( AssetID{ MirrorNameRules::kDefaultPath } ) == false )
-            SW_LOG_WARNING_ID( "CharacterEditorViewModel.DefaultMirrorNameTable", "Default mirror name table could not be loaded - left/right pairs are not found" );
-        else
-            _sockets.setMirrorRules( rules );
     }
 
     bool CharacterEditorViewModel::loadSocketFile()

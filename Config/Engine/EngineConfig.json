@@ -9,6 +9,8 @@
     "_fixedDeltaTime": 0.016666668,
     "_maxFixedStepPerFrame": 6,
     "_listResourcePriority": [ "game", "common", "engine", "editor" ],
+    "_splashImage": "editor/textures/splash.dds",
+    "_retargetedClipFolder": "common/models/_retargeted",
     "_dataInheritanceMaxDepth": 8,
     "_patchTrustPublicKeyXHex": "",
     "_patchTrustPublicKeyYHex": "",
@@ -27,7 +29,8 @@
     "_audio": {
         "_reopenFirstDelayMs": 1000,
         "_reopenMaxDelayMs": 30000,
-        "_clipCacheMegabytes": 192
+        "_clipCacheMegabytes": 192,
+        "_musicCrossfadeSeconds": 0.25
     },
     "_subtitles": {
         "_maxVisibleLineCount": 2,

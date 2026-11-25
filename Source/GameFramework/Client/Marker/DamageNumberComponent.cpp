@@ -20,9 +20,9 @@ namespace sw
 {
     DamageNumberComponent::DamageNumberComponent()
         : _damageValue{ 0 }
-        , _lifeTime{ 0.0f }
+        , _lifeTime{ 0.9f }
         , _currentLife{ 0.0f }
-        , _floatSpeed{ 0.0f }
+        , _floatSpeed{ 1.2f }
         , _alpha{ 0.0f }
         , _color{ 1.0f, 0.85f, 0.25f, 1.0f }
         , _bWarnedNoWidgetComponent{ false }
@@ -126,8 +126,6 @@ namespace sw
             DamageNumberComponent* pNumberUI = pNumber->addComponent<DamageNumberComponent>();
             if ( pNumberUI == nullptr )
                 return;
-            pNumberUI->setLifeTime( kSpawnedLifeTime );
-            pNumberUI->setFloatSpeed( kSpawnedFloatSpeed );
             pNumberUI->setDamageValue( value );
         } ) );
     }

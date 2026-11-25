@@ -8,6 +8,7 @@
 
 namespace sw
 {
+    class AssetID;
     class SplashWindowBase;
 
     /**
@@ -25,12 +26,13 @@ namespace sw
 
         /**
          * @brief 스플래시 창을 만들어 화면 가운데에 바로 띄웁니다.
+         * @param imageID 배경 이미지(압축 없는 32bpp `.dds`)입니다. 읽지 못하면 이유를 남기고 빈 배경에 글과 진행 막대를 그립니다.
          * @param pTitle 위쪽 제목 텍스트(예: "SW Engine")
          * @param pInitialStatus 아래쪽 상태 텍스트(예: "Initializing Engine...")
          * @param width 창 가로 크기(기본 480)
          * @param height 창 세로 크기(기본 280)
          */
-        [[nodiscard]] bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width = 480, uint32 height = 280 );
+        [[nodiscard]] bool initialize( const AssetID& imageID, const utf8* pTitle, const utf8* pInitialStatus, uint32 width = 480, uint32 height = 280 );
 
         /** @brief 현재 진행 상황 텍스트와 진행률(0.0f ~ 1.0f)을 갱신하고 화면을 바로 다시 그립니다. */
         void updateStatus( const utf8* pStatus, float32 progress = -1.0f );

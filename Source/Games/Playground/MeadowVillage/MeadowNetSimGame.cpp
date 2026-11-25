@@ -1,7 +1,7 @@
 /**
  * @file MeadowNetSimGame.cpp
  * @brief 초원 마을 미니게임(`minigames/meadowvillage`)의 맵을 한 프로세스 가상 서버(`NetSimHarness`, 에디터 Multiplayer 창의 In process 탭)에서 돌리는 `INetSimGame` 입니다 — 하우징 서버 권위 배치를 둘 이상의 월드로 본다.
- * @details 월드마다 마을 씬(`game/playground/meadowvillage/maps/meadow.scene.xml`)을 그 월드의 씬에 풀어 넣는다. 씬의 하우징 부지와 `HousingNetSessionComponent` 는 월드의 넷 링크로
+ * @details 월드마다 마을 씬(미니게임 `meadowvillage` 의 맵)을 그 월드의 씬에 풀어 넣는다. 씬의 하우징 부지와 `HousingNetSessionComponent` 는 월드의 넷 링크로
  *          역할을 받으므로 서버 월드는 판정 · 방송하고 클라이언트 월드는 요청을 보낸다(자동 플레이의 집 디렉터가 짓는다). 늦게 붙은 클라이언트 월드도 같은 길로 서고
  *          다음 서버 틱에 부지 상태를 받는다. 이 게임의 세션은 가진 메시지가 없다 — 복제는 하우징 키트의 처리기가 넷 링크의 라우터에 직접 단다.
  *          게임 모듈이 올라오면 `NetSimGameRegistry` 에 등록하고, 내려가기 전에 뺀다.
@@ -12,6 +12,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
@@ -21,6 +22,10 @@
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 #include "GameFramework/Kits/Feature/World/Housing/Component/HousingPlotComponent.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameDefinition.h"
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
@@ -29,9 +34,9 @@ namespace sw
     {
     public:
         static constexpr const utf8* kName         = "MeadowVillage: housing"; ///< `NetSimGameRegistry` 에 등록하는 이름
-        static constexpr const utf8* kScenePath    = "game/playground/meadowvillage/maps/meadow.scene.xml";
-        static constexpr float32     kViewTargetX  = 4.0f;  ///< 밭과 집 부지 사이(m)
-        static constexpr float32     kViewTargetZ  = -2.0f; ///< 집 부지(z -7 ~ -1)와 밭(z 0 ~ 2) 사이(m)
+        static constexpr const utf8* kMinigame     = "meadowvillage";          ///< 맵을 가진 미니게임(`minigames/meadowvillage.minigame.xml`)
+        static constexpr float32     kViewTargetX  = 4.0f;                     ///< 밭과 집 부지 사이(m)
+        static constexpr float32     kViewTargetZ  = -2.0f;                    ///< 집 부지(z -7 ~ -1)와 밭(z 0 ~ 2) 사이(m)
         static constexpr float32     kViewDistance = 24.0f;
         static constexpr float32     kViewPitch    = 0.9f; ///< 씬의 게임 카메라와 비슷한 내려다보기(라디안)
 
@@ -111,15 +116,21 @@ namespace sw
 
     unique_ptr<INetSimSession> MeadowNetSimGame::createSession( NetSimWorld& world )
     {
+        GamePackConfig packConfig{};
+        packConfig._packRoot = game::getSubsystem<const GameConfig>()._packRoot;
+        MinigameDefinition definition{};
+        if ( MinigameFlow::loadDefinitionFile( packConfig, kMinigame, definition ) == false )
+            return nullptr; // 이유는 읽기가 남겼다
+        const string& scenePath = definition._map.get();
         SceneDocument document{};
-        if ( document.load( AssetID{ kScenePath } ) == false )
+        if ( document.load( AssetID{ scenePath } ) == false )
         {
-            SW_LOG_ERROR_ID( "MeadowNetSimGame.SceneNotLoaded", "Meadow net sim: the village scene '%#' could not be loaded - the world stays empty", kScenePath );
+            SW_LOG_ERROR_ID( "MeadowNetSimGame.SceneNotLoaded", "Meadow net sim: the village scene '%#' could not be loaded - the world stays empty", scenePath );
             return nullptr;
         }
         if ( world.getScene().instantiate( document ) == false )
         {
-            SW_LOG_ERROR_ID( "MeadowNetSimGame.SceneNotInstantiated", "Meadow net sim: the village scene '%#' could not be instantiated - the world stays incomplete", kScenePath );
+            SW_LOG_ERROR_ID( "MeadowNetSimGame.SceneNotInstantiated", "Meadow net sim: the village scene '%#' could not be instantiated - the world stays incomplete", scenePath );
             return nullptr;
         }
         return make_unique<MeadowNetSimSession>( world.getObjectManager() );

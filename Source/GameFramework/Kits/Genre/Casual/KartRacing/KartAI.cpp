@@ -37,7 +37,7 @@ namespace sw
 
         // 2) 페달: 아주 급한 곡선에서만 늦춘다.
         const float32 absCorner = MathUtil::abs( corner );
-        input._throttle         = absCorner > _settings._brakeAngle ? 0.4f : 1.0f;
+        input._throttle         = absCorner > _settings._brakeAngle ? _settings._brakeThrottle : 1.0f;
 
         // 3) 드리프트: 큰 곡선 앞에서 그쪽으로 걸고, 곡선이 펴지면 놓는다(미니터보를 받는다).
         const float32 driftMinSpeed = motor.getSettings()._drift._minSpeed;

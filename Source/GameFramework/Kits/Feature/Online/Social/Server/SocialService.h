@@ -27,6 +27,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 
@@ -50,6 +51,7 @@ namespace sw
         EphemeralStoreRouter*    _pRouter{ nullptr };    ///< 접속 상태에 쓴다. null 이면 이 서버의 계정만 다룬다
         ServerBus*               _pBus{ nullptr };       ///< null 이면 서버가 한 대이다
         const IAccountNameIndex* _pNameIndex{ nullptr }; ///< 이름으로 친구 신청할 때 쓴다. null 이면 NotFound 로 끝낸다
+        SocialLinkPolicy         _linkPolicy{};          ///< 필수이다 — 관계 수 상한(서버 설정 `SocialKitConfig::_links`)
     };
 } // namespace sw
 

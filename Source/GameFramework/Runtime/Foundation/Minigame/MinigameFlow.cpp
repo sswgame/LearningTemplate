@@ -406,9 +406,9 @@ namespace sw
         return false;
     }
 
-    bool MinigameFlow::loadDefinition( string_view name, MinigameDefinition& outDefinition ) const
+    bool MinigameFlow::loadDefinitionFile( const GamePackConfig& packConfig, string_view name, MinigameDefinition& outDefinition )
     {
-        const string assetPath = makeAssetPath( _packConfig, name );
+        const string assetPath = makeAssetPath( packConfig, name );
         if ( MinigameDefinition::loadFromAsset( AssetID{ assetPath }, outDefinition ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.NotLoaded", "Minigame '%#' (%#) could not be read (see the messages above)", name, assetPath.c_str() );
@@ -419,6 +419,14 @@ namespace sw
             SW_LOG_ERROR_ID( "MinigameFlow.NameMismatch", "%#: name=\"%#\" differs from the file name '%#'", assetPath.c_str(), outDefinition._name.c_str(), name );
             return false;
         }
+        return true;
+    }
+
+    bool MinigameFlow::loadDefinition( string_view name, MinigameDefinition& outDefinition ) const
+    {
+        if ( loadDefinitionFile( _packConfig, name, outDefinition ) == false )
+            return false;
+        const string assetPath = makeAssetPath( _packConfig, name );
         // 등록부는 GameFramework 의 모듈 서브시스템이다 — 없으면 호스트가 모듈을 올리지 않은 것이라 멈춘다.
         if ( outDefinition.validate( game::getSubsystem<GameFeatureRegistry>(), assetPath ) == false )
             return false;

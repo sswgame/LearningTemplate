@@ -2,16 +2,10 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 
-#include "Engine/Content/AssetIO.h"
-#include "Engine/Content/AssetPaths.h"
+#include "Engine/Config/DefaultAssetTable.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
-#include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Foundation/EngineServices.h"
-#include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Reflection/ReflectionMetadata.h"
-#include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -28,50 +22,7 @@ namespace sw
         const string_view assetRelativePath = assetID.view();
         const string      path              = assetRelativePath.empty() ? string( constant::path::kEngineDefaultAssets ) : string( assetRelativePath );
 
-        // REFLECT_BODY() 가 헤더에 StaticType() 을 선언해 둔다. 그래서 레지스트리를 이름으로 뒤질
-        // 필요가 없고, Engine 내부 서비스에 접근할 수 없는 모듈에서도 그대로 쓸 수 있다.
-        const TypeInfo* pTypeInfo = EngineDefaultAssets::StaticType();
-        if ( pTypeInfo == nullptr )
-        {
-            SW_LOG_ERROR_ID( "EngineDefaultAssets.EngineDefaultAssetsTypeInfoMissingCannot", "EngineDefaultAssets TypeInfo is missing - cannot read %#", path );
-            return false;
-        }
-
-        // 파일에 없는 선택 칸은 멤버 초기값(스키마 기본값)이 그대로 남는다. 필수 칸은 초기값이 없으므로 아래에서 막는다.
-        if ( XMLSerializer::loadFromAsset( AssetID{ path }, this, *pTypeInfo ) == false )
-        {
-            SW_LOG_ERROR_ID( "EngineDefaultAssets.EngineDefaultAssetsCouldNotRead", "EngineDefaultAssets could not be read or has mismatched fields: %#", path );
-            return false;
-        }
-
-        // 필수 칸(셰이더 · 파이프라인 · 렌더 패스 경로)은 헤더에 값이 없다 — 데이터가 기준이다. 빠졌거나 가리키는 파일이 없으면
-        // 다른 경로로 대신하지 않고 읽기를 실패로 끝낸다(기동 · 쿠킹이 멈춘다). 팩에는 셰이더 원본이 없다(`PackConfig::isRawShaderSource`) —
-        // 그 칸은 쿠킹 판정(`--verify-shaders`)이 소스와 바이너리의 짝을 지키므로 쿠킹본을 읽을 때(배포 · 개발 구성의 `-cooked-content`)는 보지 않는다. 나머지 에셋은 배포도 본다(팩에 빠진 기본 에셋을 기동에서 잡는다).
-        bool bComplete = true;
-        for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
-        {
-            if ( prop._metadata->_bRequired == SW_FALSE )
-                continue;
-            const DataPath* pValue = prop.getValuePtr<DataPath>( this );
-            if ( pValue == nullptr || pValue->isSet() == false )
-            {
-                SW_LOG_ERROR_ID( "EngineDefaultAssets.RequiredFieldMissing", "%#: required field <%#> is missing", path, prop._name.c_str() );
-                bComplete = false;
-                continue;
-            }
-            // 이 호스트가 읽지 않는 에셋 종류(전용 서버의 텍스처 · 셰이더 · 글꼴)는 팩에 없다 — 그 칸은 쓰는 쪽도 없으므로 보지 않는다.
-            const bool bNotInThisPackage = engine::getSubsystem<AssetPaths>().isExcludedForHost( pValue->get() ) || ( AssetIO::getContentSource() == ContentSource::Cooked && PackConfig::isRawShaderSource( pValue->get() ) );
-            if ( bNotInThisPackage == false && AssetIO::hasAsset( AssetID{ pValue->get() } ) == false )
-            {
-                SW_LOG_ERROR_ID( "EngineDefaultAssets.PointsWhichDoesNot", "%#: <%#> points to '%#', which does not exist", path, prop._name.c_str(), pValue->c_str() );
-                bComplete = false;
-            }
-        }
-        if ( bComplete == false )
-            return false;
-
-        SW_LOG_INFO_ID( "EngineDefaultAssets.Loaded", "Loaded from %#", path );
-        return true;
+        return DefaultAssetTable::load( AssetID{ path }, this, *EngineDefaultAssets::StaticType() );
     }
 } // namespace sw
 

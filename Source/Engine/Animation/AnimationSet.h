@@ -82,7 +82,7 @@ namespace sw
 
         /** @brief 이름의 클립 경로입니다(대소문자 무시). 없으면 nullptr 입니다. */
         [[nodiscard]] const string* findClipPath( const hashed_string& name ) const;
-        /** @brief 원본 클립을 프로필로 구운 클립의 자원 경로입니다(`common/models/_retargeted/<프로필 이름>/<원본 클립 파일 이름>`). 가져오기가 쓰고 셋이 읽는다 — 두 쪽이 이 하나로 맞춘다. */
+        /** @brief 원본 클립을 프로필로 구운 클립의 자원 경로입니다(`EngineConfig::_retargetedClipFolder/<프로필 이름>/<원본 클립 파일 이름>`). 가져오기가 쓰고 셋이 읽는다 — 두 쪽이 이 하나로 맞춘다. */
         [[nodiscard]] static string makeRetargetedClipPath( string_view profilePath, string_view sourceClipPath );
         /** @brief 이름순 표입니다. */
         [[nodiscard]] const vector<AnimationSetEntry>& getEntries() const { return _listEntry; }

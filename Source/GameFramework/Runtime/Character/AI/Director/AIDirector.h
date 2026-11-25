@@ -63,6 +63,7 @@ namespace sw
     struct AIDirectorEvent
     {
         hashed_string       _id{};
+        hashed_string       _effect{}; ///< 고른 항목의 `effect`(게임이 무엇을 할지 — 게임의 낱말). 조우 · 보상 사건에만 있다
         hashed_string       _source{};
         float32             _time{ 0.0f };
         float32             _intensity{ 0.0f };

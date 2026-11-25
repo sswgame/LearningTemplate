@@ -104,10 +104,10 @@ namespace sw
         }
     }
 
-    bool SplashWindowBase::loadSplashImage()
+    bool SplashWindowBase::loadSplashImage( const AssetID& imageID )
     {
-        if ( DDSLoader::loadFromAsset( AssetID{ "textures/splash.dds" }, _splashData ) == false || _splashData.isValid() == false )
-            return false;
+        if ( DDSLoader::loadFromAsset( imageID, _splashData ) == false || _splashData.isValid() == false )
+            return false; // 이유는 로더가 오류로 남겼다
 
         // 스플래시를 그리는 두 경로는 **압축 없는 32bpp** 를 전제한다. Win32 는 StretchDIBits 에
         // biBitCount=32 로, X11 은 XCreateImage 에 depth 32 로 넘기고, 그 전에 아래

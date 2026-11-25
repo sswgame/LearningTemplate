@@ -7,10 +7,12 @@
 #include "Core/Network/Tests/FakeNetPeers.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
+#include "Games/Playground/Hub/HubCardHUDViewModel.h"
 #include "Games/Playground/Hub/HubCardTableComponent.h"
 
 using namespace sw;
@@ -251,4 +253,26 @@ SW_TEST_CASE( HubCardTableTest, TwoClientsPlayOnViewsDealtByTheServer )
     poll();
     SW_EXPECT_EQUAL( 0, arrTable[0]->getSeat() );
     SW_EXPECT_EQUAL( 0, arrTable[0]->getStartedValue() );
+}
+
+/** @brief [HubCardHUDTest] 카드 글은 문자열 표의 키 · 메시지다 — 색 있는 카드는 메시지, 와일드는 값의 키이고, 손은 카드 글을 이은 메시지다 */
+SW_TEST_CASE( HubCardHUDTest, CardsAreShownAsStringTableText )
+{
+    CardPile deck;
+    SheddingCardGame::makeDeck( deck );
+    HubCardSeatView view;
+    uint16          wildID = 0;
+    for ( uint16 cardID = 0; cardID < SheddingCardGame::kDeckCardCount; ++cardID )
+    {
+        if ( deck.getAt( cardID )._rank == static_cast<uint8>( SheddingCardValue::WildDrawFour ) )
+            wildID = cardID;
+    }
+    view._topCardID      = wildID;
+    view._listHandCardID = { uint16{ 0 }, wildID };
+    HubCardHUDViewModel viewModel;
+    viewModel.setTable( true, view, true );
+    SW_EXPECT_EQUAL( string( "HubCard.WildDrawFour" ), viewModel.getTopCard() );
+    SW_EXPECT_TRUE( LocalizedMessage::isMessage( viewModel.getHand() ) );
+    SW_EXPECT_TRUE( viewModel.getHand().find( "HubCard.Card" ) != string::npos );
+    SW_EXPECT_TRUE( viewModel.getHand().find( "HubCard.WildDrawFour" ) != string::npos );
 }

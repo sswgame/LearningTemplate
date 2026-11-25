@@ -144,6 +144,16 @@ namespace sw
         /** @brief 지난 기간 점수를 남기는 기간입니다. 키트 조립이 보존 규칙과 같은 값을 넣습니다(탈퇴 정리가 지울 기간을 정한다). */
         void setPastScoreRetentionMs( int64 retentionMs ) { _pastScoreRetentionMs = retentionMs; }
         /**
+         * @brief 읽기 운영 값을 정합니다(키트 설정 `_maxAroundRadius` · `_nameCacheTTLMs` — 설정 읽기가 범위를 봤다). 정하지 않은 서비스는 반지름 0(자기 줄)만 읽습니다.
+         * @param maxAroundRadius 둘레 읽기(`around`)의 반지름 상한. 와이어 상한(`LeaderboardLimit::kMaxPage`) 안이다
+         * @param nameCacheTTLMs 표시 이름 캐시의 시한(밀리초)
+         */
+        void setReadPolicy( int32 maxAroundRadius, int64 nameCacheTTLMs )
+        {
+            _maxAroundRadius = maxAroundRadius;
+            _nameCacheTTLMs  = nameCacheTTLMs;
+        }
+        /**
          * @brief 탈퇴한 계정의 통계 · 업적 · 점수 · 시즌 결과를 지웁니다(키트 조립이 `AfterDeleteAccountMember` 로 훅에 건다). 저장소 스레드에서 부르며 `start` 뒤 바뀌지 않는 보드 정의만 읽습니다.
          * @details 통계 · 업적은 계정 접두어로, 점수는 보드마다 남아 있을 수 있는 기간(초기화 없음 · 시즌 전부 · 일간/주간은 보존 기간 안)의 키로, 시즌 결과는 시즌마다 키로 지운다.
          *          캐시 층의 순위(정렬 집합)는 서비스 스레드 것이라 여기서 지우지 않는다 — 기간이 바뀌거나 다시 채울 때 영속 표에서 사라진다.
@@ -303,6 +313,8 @@ namespace sw
     private:
         unordered_map<string, LeaderboardDef>              _mapBoard;
         int64                                              _pastScoreRetentionMs;    ///< `setPastScoreRetentionMs`
+        int64                                              _nameCacheTTLMs;          ///< `setReadPolicy`
+        int32                                              _maxAroundRadius;         ///< `setReadPolicy`
         unordered_map<string, vector<PendingRead>>         _mapRankKeyToWaitingRead; ///< 다시 채우는 동안 대기 중인 읽기이다
         unordered_map<string, vector<LeaderboardScoreRow>> _mapRankKeyToLateWrite;   ///< 다시 채우는 동안 쓴 점수(캐시 점수)이다. 채운 뒤 한 번 더 싣는다
         unordered_map<uint64, PendingRead>                 _mapReadyRequestToRead;

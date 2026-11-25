@@ -39,7 +39,7 @@ namespace sw
         WidgetVisibility getTurnVisibility() const { return _turnVisibility; }
 
     private:
-        PROPERTY( DisplayName = "Hand", Tooltip = "Cards in hand as colour and value (R5 is red 5, W is wild)" )
+        PROPERTY( DisplayName = "Hand", Tooltip = "Cards in hand as a localized message (string table HubCard)" )
         string _hand;
         PROPERTY( DisplayName = "Top Card" )
         string _topCard;

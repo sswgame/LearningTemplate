@@ -14,6 +14,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/UI/WidgetTree/Widget.h"
 
 namespace sw
 {
@@ -444,6 +445,18 @@ namespace sw
         }
         const PropertyInfo& leaf = outPath.getLeafProperty();
         outPath._kind            = leaf._bIsContainer == SW_TRUE ? UIBindingValueKind::Other : classifyType( leaf.resolveValueFacts( engine::getSubsystem<TypeRegistry>() )._builtinIndex );
+        return {};
+    }
+
+    expected<void> UIBindingValue::resolveWidgetTarget( const TypeInfo& type, string_view path, UIPropertyPath& outPath )
+    {
+        if ( expected<void> resolved = resolvePath( type, path, outPath ); resolved.has_value() == false )
+            return resolved;
+        if ( Widget::isIdentityProperty( outPath.getRootProperty() ) )
+        {
+            outPath = UIPropertyPath{};
+            return unexpected( Error{ ErrorKind::Unsupported, "a widget's name identifies it in the tree and cannot be bound or animated", path } );
+        }
         return {};
     }
 
