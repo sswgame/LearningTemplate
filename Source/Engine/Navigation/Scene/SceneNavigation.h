@@ -5,7 +5,7 @@
  *          DuringPhysics 틱 결과 적용 뒤, 애니메이션 · 물리 앞 — 에이전트가 캐릭터 컨트롤러에 넘긴 속도가 이번 물리에 든다)에서 `update` 만 부릅니다.
  *          얻기는 `manager.getSubsystem<SceneNavigation>()` 입니다. 언리얼 `UNavigationSystemV1` + `ARecastNavMesh` + `UCrowdManager` 를 씬 단위로 묶은 자리입니다.
  *
- *          **갱신 한 번**(게임 스레드, `Navigation` 단계): ⓪ 지난 프레임에 넘긴 비동기 경로 질의를 수확한다(결과가 칸에 든다 — 이것이 내비메시 쓰기 증표
+ *          갱신 한 번(게임 스레드, `Navigation` 단계): ⓪ 지난 프레임에 넘긴 비동기 경로 질의를 수확한다(결과가 칸에 든다 — 이것이 내비메시 쓰기 증표
  *          `NavMeshWriteAccess` 를 낸다) ① 플레이 중이면 표면 · 에이전트가 쓰는 에이전트 종류의 내비메시를 마련한다(쿠킹본이 맞으면 읽고, 아니면 모든 타일을
  *          워커로 베이크한다) ② 장애물이 움직였으면 옛 · 새 자리를, 파괴 · 수정자가 알린 자리를(`invalidateArea`) 타일로 바꿔 재베이크 줄에 넣는다 ③ 끝난 재베이크
  *          결과를 끼우고(증표가 있어야 한다), 줄의 타일을 워커에 넘긴다(동시에 `_maxConcurrentTileBakeCount` 개까지, 같은 타일은 하나씩) ④ 에이전트 요청(목적지 · 멈춤 ·
@@ -14,9 +14,9 @@
  *          군중과 겹쳐 돈다. 군중 일이 읽고 쓰는 것은 군중 자신과 내비메시(읽기)뿐이다(등록 줄의 접근 `Navigation` 쓰기). 군중 결과는 일 하나가 종류 하나를
  *          통째로 진행해 스레드 · 일의 수와 상관없이 같다(결정적).
  *
- *          **질의**: 대상 수에 비례해 도는 경로는 `requestPath` 로 줄에 세우고 다음 갱신 뒤에 `takePathResult` 로 받는다(⓪ 이 수확한다 — 요청한 틱이 PrePhysics 면 다음
+ *          질의: 대상 수에 비례해 도는 경로는 `requestPath` 로 줄에 세우고 다음 갱신 뒤에 `takePathResult` 로 받는다(⓪ 이 수확한다 — 요청한 틱이 PrePhysics 면 다음
  *          프레임, PostPhysics 면 그다음 프레임의 PostPhysics 틱부터 보인다). 한 번 묻는 질의(`findPath` · `findNearestPoint` · `raycast` — 감시 값 · 도구 · 이벤트 하나)는
- *          동기로 어느 틱에서든 부를 수 있다(스레드마다 질의 객체, 타일 교체는 ③ 에서만 — 틱과 겹치지 않는다). 아직 베이크하지 않은 종류면 실패한다 — 베이크는 갱신이
+ *          동기로 어느 틱에서든 부를 수 있다(스레드마다 질의 객체, 타일 교체는 ③ 에서만 하므로 틱과 겹치지 않는다). 아직 베이크하지 않은 종류면 실패한다. 베이크는 갱신이
  *          한다(`ensureNavMesh` 는 게임 스레드에서 지금 베이크한다). 에이전트(`NavMeshAgentComponent`)의 경로는 군중이 자기 경로 줄(Detour `dtPathQueue`)로 ⑤ 안에서
  *          구한다 — 군중 진행이 워커로 가면서 그 경로 찾기도 게임 스레드를 떠났다.
  *
@@ -235,7 +235,7 @@ namespace sw
         /** @brief 수확한 경로 요청 수(누적, 진단)입니다. */
         uint64 getCompletedPathRequestCount() const { return _pathQueue.getCompletedCount(); }
 
-        /** @brief 경로 — 에이전트 종류의 기본 거름(표의 영역 비용)입니다. 찾는 범위는 종류의 몸 크기입니다. 동기 질의 — 대상 수만큼 매 프레임 묻는 곳은 `requestPath` 를 쓴다. */
+        /** @brief 경로: 에이전트 종류의 기본 거름(표의 영역 비용)입니다. 찾는 범위는 종류의 몸 크기입니다. 동기 질의라 대상 수만큼 매 프레임 묻는 곳은 `requestPath` 를 쓴다. */
         NavPathStatus findPath( const hashed_string& agentType, const float3& start, const float3& end, NavPath& outPath ) const;
         /** @brief 경로 — 거름을 줍니다. */
         NavPathStatus findPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter, NavPath& outPath ) const;

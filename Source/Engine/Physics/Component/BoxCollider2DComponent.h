@@ -30,14 +30,14 @@ namespace sw
     /**
      * @class BoxCollider2DComponent
      * @brief 축 정렬 상자 하나의 2D 콜라이더입니다(유니티 `BoxCollider2D` 의 트리거 쪽, Godot `Area2D`).
-     * @details 플레이 중에는 씬의 2D 물리 씬에 **키네마틱 센서 바디**를 하나 둡니다. 막는 콜라이더도 트리거도 센서입니다(`PhysicsBodyDesc::_bOverlapOnly`) —
+     * @details 플레이 중에는 씬의 2D 물리 씬에 키네마틱 센서 바디를 하나 둡니다. 막는 콜라이더도 트리거도 센서입니다(`PhysicsBodyDesc::_bOverlapOnly`) —
      *          Box2D 는 키네마틱끼리 접촉을 만들지 않으므로, 센서여야 콜라이더끼리 겹침이 납니다. 그래서 이 콜라이더는 강체를 막지 않고 겹침만 냅니다
      *          (겹침 사건 `GameObjectEvents::_overlapBegin` · `_overlapEnd`, `OverlapInfo::_bOtherTrigger` 로 트리거를 가린다). 질의(광선 · 쓸기)에서는 트리거가 아닌 콜라이더가 막는 것으로 보입니다.
      *
      *          바디는 상자(`getBounds`)를 그대로 따릅니다 — 매 물리 프레임 처음(`onPhysicsFrameBegin`)에 자리를 옮기고, 크기 · 레이어 · 트리거가 바뀌면
      *          다시 만듭니다. 상자는 축 정렬이라 바디는 돌지 않습니다.
      *
-     *          **연속 판정**(`_bContinuous`, 투사체): Box2D 센서는 연속 충돌이 없으므로, 지난 자리에서 지금 자리까지 상자를 쓸어 지나친 것을
+     *          연속 판정(`_bContinuous`, 투사체): Box2D 센서는 연속 충돌이 없으므로, 지난 자리에서 지금 자리까지 상자를 쓸어 지나친 것을
      *          닿은 시점 순서로 알립니다(`ScenePhysics::queueSweptOverlap2D`, 시작과 끝을 함께). 지금 자리에서도 겹친 것은 센서가 시작을 냅니다.
      *          가만히 있던 상대는 Box2D 쓸기(`shapeCastAll`)로, 같은 프레임에 움직인 상대는 두 이동의 차이(상대 운동, Box2D 총알 TOI)로 측정합니다.
      *          첫 프레임의 출발점은 시작할 때(`onBeginPlay`)의 자리입니다 — 바디가 첫 물리 프레임에 생겨도 시작 뒤 첫 틱의 이동이 쓸립니다.

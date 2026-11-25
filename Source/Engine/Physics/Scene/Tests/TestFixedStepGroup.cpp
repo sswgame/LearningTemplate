@@ -111,7 +111,7 @@ SW_TEST_CASE( FixedStepGroupTest, ZeroStepFrameRunsOnlyFrameGroups )
 
 /**
  * @brief [FixedStepGroupTest] 도는 중 켜고 끄기 — 스텝 앞 그룹에서 끈 구성원은 그 그룹의 이번 구간을 끝까지 돌고 다음 그룹부터 빠지며, 다시 켜면 다음 그룹부터 돈다
- * @details 0 번 스텝 PreStep 에서 캐릭터 쪽을 끄고(같은 구간 — 이번 PreStep 은 불린다) 1 번 스텝 PreStep 에서 켠다(같은 구간 — 이번 PreStep 은 빠진다).
+ * @details 0 번 스텝 PreStep 에서 캐릭터 쪽을 끄고(같은 구간이라 이번 PreStep 은 불린다) 1 번 스텝 PreStep 에서 켠다(같은 구간이라 이번 PreStep 은 빠진다).
  *          값으로 다루므로 끄고 곧바로 켜도 마지막 값이 이긴다.
  */
 SW_TEST_CASE( FixedStepGroupTest, ToggleDuringRunAppliesFromNextGroup )

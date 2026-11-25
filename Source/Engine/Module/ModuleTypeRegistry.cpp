@@ -130,7 +130,7 @@ namespace sw
             setGlobalRegistrarHeads( ModuleRegistrarHeads{} );
             if ( verifyModuleRegistrars( moduleName, heads ) == false )
                 return false;
-            // **캐시 병합은 아래 오버로드가 한 자리에서 한다.**
+            // 캐시 병합은 아래 오버로드가 한 자리에서 한다.
             registerModuleTypes( moduleName, heads );
             return true;
         }
@@ -184,7 +184,7 @@ namespace sw
             // 전역 변수는 새로 뗀 것만 올린다(아래 캐시에 넣지 않는다) — 각자 찍힌 모듈 이름으로. 모듈이 자기 변수를 읽기 전에 커맨드라인 보류값이 여기서 적용된다.
             if ( heads._pVariable != nullptr )
                 getSubsystem<GlobalVariableManager>().registerPendingVariables( heads._pVariable );
-            // 캐시와 인자를 합치는 **유일한 자리**다. 새로 받은 머리가 있으면 캐시를 갱신하고,
+            // 캐시와 인자를 합치는 유일한 자리다. 새로 받은 머리가 있으면 캐시를 갱신하고,
             // 없으면 캐시에 남아 있던 것을 쓴다(리로드로 같은 모듈이 다시 올 때의 경로다).
             auto&        cache           = getModuleHeadCache();
             const string ownedModuleName = string{ moduleName };
@@ -275,7 +275,7 @@ namespace sw
             detachModuleObjects( moduleName );
             getSubsystem<SceneManager>().waitForPendingLoad(); // 해제도 상속 캐시를 비운다(등록과 같은 이유)
             // 씬은 엔진이 소유해 모듈보다 오래 산다. 이 모듈 타입의 인스턴스가 남아 있으면 vtable 이 사라진 객체가 된다.
-            // 타입(생성 함수 포함)을 걷기 **전에** 인스턴스부터 지운다(소멸자가 아직 있는 동안).
+            // 타입(생성 함수 포함)을 걷기 전에 인스턴스부터 지운다(소멸자가 아직 있는 동안).
             // 미리보기 씬(열린 프리팹 · 캐릭터 창)도 같다 — 창은 자기 상태를 위 알림에서 맡아 두고 새 이미지로 되돌린다(`EditorPreviewPanel`).
             vector<Scene*> listScene;
             getSubsystem<SceneManager>().collectAllScenes( listScene );

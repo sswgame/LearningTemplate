@@ -34,7 +34,7 @@ namespace sw
         virtual bool shapeCast( const ShapeDesc& shape, const Vector& position, const Rotation& rotation, const Vector& direction, float32 maxDistance,
                                 const PhysicsQueryFilter& filter, CastHit& outHit ) const = 0;
         /**
-         * @brief `raycast` 와 같은 광선이 닿는 바디를 **모두** @p outListHit 끝에 붙이고 그 수를 돌려줍니다.
+         * @brief `raycast` 와 같은 광선이 닿는 바디를 모두 @p outListHit 끝에 붙이고 그 수를 돌려줍니다.
          * @details 바디마다 가장 가까운 닿음 하나이고(컴파운드의 서브 셰이프가 여럿 닿아도 하나), 가까운 순서다(`PhysicsQueryUtil::keepNearestHitPerBody`).
          *          관통 사격, 시야를 가린 것 모두 찾기에 쓴다. 언리얼 `LineTraceMultiByChannel`(막는 닿음에서 멈추지 않는 형태), 유니티 `RaycastAll` 에 해당한다.
          *          재질 이름은 `raycast` 처럼 채운다.
@@ -42,7 +42,7 @@ namespace sw
         virtual uint32 raycastAll( const Vector& origin, const Vector& direction, float32 maxDistance, const PhysicsQueryFilter& filter,
                                    vector<CastHit>& outListHit ) const = 0;
         /**
-         * @brief `shapeCast` 와 같은 스윕이 닿는 바디를 **모두** @p outListHit 끝에 붙이고 그 수를 돌려줍니다(바디마다 가장 가까운 하나, 가까운 순서).
+         * @brief `shapeCast` 와 같은 스윕이 닿는 바디를 모두 @p outListHit 끝에 붙이고 그 수를 돌려줍니다(바디마다 가장 가까운 하나, 가까운 순서).
          * @details 출발점에서 이미 겹친 바디는 `_fraction = 0` 으로 들어온다(언리얼 `SweepMulti` 의 초기 겹침과 같다). 재질 이름은 비어 있다.
          */
         virtual uint32 shapeCastAll( const ShapeDesc& shape, const Vector& position, const Rotation& rotation, const Vector& direction, float32 maxDistance,

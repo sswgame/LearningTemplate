@@ -188,7 +188,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_CornerGrazingAndParallelMiss )
 /**
  * @brief [PhysicsTest] 빗나간 스윕이 결과 구조체에 이전 충돌을 남기지 않는지 검증
  * @details 결과 구조체를 재사용해 여러 대상을 훑는 것은 자연스러운 쓰임이다. `sweepAABB` 가 시작할 때 결과를
- *          비우지 않으면 빗나가고도 **이전 호출의 `_bHit` 이 그대로 남는다** — 형제 함수 `sweepSphere` 와 같은
+ *          비우지 않으면 빗나가고도 이전 호출의 `_bHit` 이 그대로 남는다 — 형제 함수 `sweepSphere` 와 같은
  *          약속이어야 호출자마다 관례가 갈리지 않는다.
  */
 SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
@@ -208,7 +208,7 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
     SW_EXPECT_TRUE( sw::SweepHit::sweepAABB( hittingBox, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_TRUE( hit._bHit );
 
-    // 2) **같은 구조체로** 완전히 빗나가는 스윕을 한다.
+    // 2) 같은 구조체로 완전히 빗나가는 스윕을 한다.
     const sw::AABB missingBox{
         sw::float3{-100.0f, -100.0f, -100.0f},
         sw::float3{ -99.0f,  -99.0f,  -99.0f}

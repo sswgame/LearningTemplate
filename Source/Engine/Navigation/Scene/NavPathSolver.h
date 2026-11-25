@@ -2,7 +2,7 @@
  * @file NavPathSolver.h
  * @brief 비동기 내비메시 경로 요청(`SceneNavigation::requestPath`)의 일(`NavPathJob`)과 그 풀이(`NavPathSolver`)입니다 — `PathRequestQueue<NavPathSolver>` 의 변형 부분.
  * @details 풀이는 게임 스레드에서 에이전트 종류를 내비메시 · 찾는 범위 · 거름으로 풀어 일에 적고(`prepareBatch`), 워커는 그 내비메시에 질의만 합니다(`solve` — 스레드마다 질의 객체).
- *          일은 거름을 **사본**으로 들어, 워커가 도는 동안 게임 스레드가 종류의 거름을 바꿔도(`setAgentAreaCost`) 이 질의는 넘길 때의 값으로 끝난다.
+ *          일은 거름을 사본으로 들어, 워커가 도는 동안 게임 스레드가 종류의 거름을 바꿔도(`setAgentAreaCost`) 이 질의는 넘길 때의 값으로 끝난다.
  */
 #pragma once
 #include "Core/Container/vector.h"

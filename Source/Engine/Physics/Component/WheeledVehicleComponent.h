@@ -32,7 +32,7 @@ namespace sw
 {
     /**
      * @class WheeledVehicleComponent
-     * @brief 물리 차입니다(언리얼 Chaos Vehicle · 유니티 WheelCollider 의 자리). 바퀴는 넷 — 앞 왼쪽 · 앞 오른쪽 · 뒤 왼쪽 · 뒤 오른쪽 — 이고 자리는
+     * @brief 물리 차입니다(언리얼 Chaos Vehicle · 유니티 WheelCollider 의 자리). 바퀴는 넷(앞 왼쪽 · 앞 오른쪽 · 뒤 왼쪽 · 뒤 오른쪽)이고 자리는
      *        차축 앞뒤(`_frontAxle` · `_rearAxle`) · 반 폭(`_halfTrack`) · 붙는 높이(`_wheelMountHeight`)로 정합니다(차체 기준, 앞 +Z). 앞바퀴만 조향하고
      *        핸드브레이크는 뒷바퀴에 겁니다.
      * @details 차체 바디가 생긴 뒤 첫 물리 프레임에 차를 만들고, 바디가 다시 지어지면 차도 다시 짓습니다. 운전 입력(`setDriverInput`)은 어느 틱에서든

@@ -88,7 +88,7 @@ namespace sw
 {
     bool SweepHit::sweepAABB( const AABB& movingBox, const float3& displacement, const AABB& targetBox, SweepHit& outHit )
     {
-        // **빗나가면 outHit 은 비어 있다**(형제 `sweepSphere` 와 같은 약속). 결과 구조체를 재사용하는 쪽이 false 를 받고도
+        // 빗나가면 outHit 은 비어 있다(형제 `sweepSphere` 와 같은 약속). 결과 구조체를 재사용하는 쪽이 false 를 받고도
         // 이전 호출의 `_bHit` 을 읽지 않게 하려는 것이다.
         outHit = SweepHit{};
 

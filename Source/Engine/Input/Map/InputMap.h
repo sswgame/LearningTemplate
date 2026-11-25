@@ -192,7 +192,7 @@ namespace sw
         void bindChord( const hashed_string& action, Key modifierKey, Key triggerKey, ActionTrigger trigger = ActionTrigger::Pressed, const hashed_string& layer = {} );
         /**
          * @brief 수정 키 마스크 + 키 바인딩을 등록합니다(예: Ctrl + Shift + S).
-         * @details 수정 키는 **정확히** 그 조합이어야 한다 — 마스크에 없는 수정 키(Ctrl · Shift · Alt · Super)가 눌려 있으면 발화하지 않는다.
+         * @details 수정 키는 정확히 그 조합이어야 한다 — 마스크에 없는 수정 키(Ctrl · Shift · Alt · Super)가 눌려 있으면 발화하지 않는다.
          *          요구한 키만 보면 Ctrl+Shift+Z 가 Ctrl+Z 도 함께 발화시킨다. 방아쇠 키 자신이 수정 키면 그 수정 키는 비교에서 뺀다.
          */
         void bindShortcut( const hashed_string& action, Key key, uint8 modifierMask, ActionTrigger trigger = ActionTrigger::Pressed, const hashed_string& layer = {} );

@@ -66,13 +66,13 @@ namespace sw
      *          (그 프레임의 PrePhysics · DuringPhysics 틱 뒤, 애니메이션 · 물리 앞)에 군중에 넣습니다. 경로 찾기 · 조향(군중 진행)은 워커에서 애니메이션과 겹쳐 돌고,
      *          상태 · 속도 · 자리는 물리 앞(`FlushPostAnimation` 단계 앞)에 써 둔 것을 읽습니다 — 같은 프레임의 물리 · PostPhysics 틱이 그 값을 봅니다.
      *
-     *          **움직이는 쪽**은 `_driveMode` 하나가 정합니다. `Transform` 이면 이 컴포넌트가 오브젝트 자리를 직접 옮기고(바깥이 멀리 옮기면 순간이동으로 본다),
+     *          움직이는 쪽은 `_driveMode` 하나가 정합니다. `Transform` 이면 이 컴포넌트가 오브젝트 자리를 직접 옮기고(바깥이 멀리 옮기면 순간이동으로 본다),
      *          `CharacterController` 면 군중이 원한 속도를 같은 오브젝트의 컨트롤러에 넘기고(`setMoveVelocity`) 컨트롤러가 실제로 간 자리를 다음 갱신에서
      *          받습니다. `SteerOnly` 면 아무것도 옮기지 않고 속도만 내며, 바깥(폰 이동)이 옮긴 자리를 다음 갱신에서 받습니다 — 플레이어와 NPC 가 같은
      *          이동 컴포넌트로 걷는 길입니다(언리얼 `RequestDirectMove` · 유니티 "에이전트로 조향 · 컨트롤러로 이동"). 진행 방향으로 몸을 돌리는 것은
      *          `_bUpdateRotation` 입니다.
      *
-     *          **자리는 모두 로컬 월드**(오브젝트와 같은 원점 기준)입니다. 내비메시 · 군중은 절대 자리라 주고받는 곳에서만 옮긴다(`WorldOrigin`).
+     *          자리는 모두 로컬 월드(오브젝트와 같은 원점 기준)입니다. 내비메시 · 군중은 절대 자리라 주고받는 곳에서만 옮긴다(`WorldOrigin`).
      */
     REFLECT( Category = "Navigation", DisplayName = "NavMesh Agent", Tooltip = "Walks the navmesh to a destination with crowd avoidance; drives the transform or a character controller", Meta = "Icon=Navigation, IconColor=Navigation" )
     class SW_API NavMeshAgentComponent : public Component

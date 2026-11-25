@@ -43,7 +43,7 @@ namespace sw
              * @brief X11 창이면 서버 연결과 창 ID 를 담고 true 입니다. X11 호출(`XQueryPointer` 등)은 이 함수로 얻은 값으로만 한다.
              * @details Wayland 창의 `getNativeDisplay` 는 wl_display* 라 `Display*` 로 읽으면 죽는다(`GenericWindow::tryGetX11Surface`). X11 창이 아니거나 연결이 아직 없으면 false 이고 출력은 비어 있다.
              *          이 입력 관리자는 창 종류를 가르지 않는다 — X11 서버 호출(보조 폴링 · 가운데 되돌리기 · 포인터 잡기 · AccessX 억제)은 이 함수가 true 일 때만 하고, false 인 창(Wayland)에는
-             *          그 동작이 해당 없음이라 건너뛰는 것이 정상이다. 창이 스스로 하는 동작(커서 모양 · 커서 숨기기 — 두 창 모두, 포인터 묶기 — Wayland)은 `GenericWindow` 의 질의로 가르고 안 되면 한 번 오류로 알린다.
+             *          그 동작이 해당 없음이라 건너뛰는 것이 정상이다. 창이 스스로 하는 동작(커서 모양 · 커서 숨기기는 두 창 모두, 포인터 묶기는 Wayland)은 `GenericWindow` 의 질의로 가르고 안 되면 한 번 오류로 알린다.
              */
             [[nodiscard]] static bool tryGetX11( const GenericWindow* pWindow, Display*& pOutDisplay, Window& outWindow )
             {

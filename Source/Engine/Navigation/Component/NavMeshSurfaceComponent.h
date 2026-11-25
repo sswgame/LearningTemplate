@@ -4,7 +4,7 @@
  * @details 유니티 `NavMeshSurface` · 언리얼 `NavMeshBoundsVolume` 의 자리입니다. 씬에 이것이 있으면 쿠킹이 그 씬의 `.navmesh` 를 쓰고, Dev 는 플레이를
  *          시작한 첫 내비게이션 갱신에서 베이크합니다. 한 에이전트 종류는 표면 하나가 맡습니다(둘이면 처음 것만 쓰고 경고).
  *
- *          **모으는 규칙**(`SceneNavigation::collectGeometry`): 켜진 오브젝트의 보이는 `MeshComponent`(스킨드 메시 제외)와 Static `RigidBodyComponent` 의
+ *          모으는 규칙(`SceneNavigation::collectGeometry`): 켜진 오브젝트의 보이는 `MeshComponent`(스킨드 메시 제외)와 Static `RigidBodyComponent` 의
  *          셰이프. 다음은 빼고 그 자식도 뺀다 — `NavMeshModifierComponent` 의 `_bIgnoreFromBuild`, `_listExcludeTag` 의 태그, 움직이는 것(에이전트 ·
  *          캐릭터 컨트롤러 · Static 이 아닌 강체 · 스킨드 메시가 든 오브젝트의 계층). 파괴 오브젝트는 자기 기하를 따로 낸다(`INavGeometrySource`).
  */

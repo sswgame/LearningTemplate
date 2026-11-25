@@ -178,7 +178,7 @@ namespace sw
             return;
         }
         const float2 position{ _worldPosition._x, _worldPosition._y };
-        // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 캐릭터는 두고 크기만 간다(이동 상태 · 세로 속도가 이어진다 — 3D 컨트롤러와 같다).
+        // 캡슐은 지을 때 배율을 굽는다. 배율이 바뀌면 캐릭터는 두고 크기만 간다(이동 상태 · 세로 속도가 이어진다. 3D 컨트롤러와 같다).
         if ( bCreate == false && isShapeScaleStale( _worldScale ) )
         {
             const PhysicsShapeDesc2D capsule = getScaledCapsule();

@@ -2,10 +2,10 @@
  * @file JoltPhysicsScene.h
  * @brief `IPhysicsScene3D` 의 Jolt 구현입니다. Jolt 헤더를 include 하므로 `Physics/Jolt` 밖에서는 보지 않습니다(`JoltPhysicsBackend::createScene` 으로만 만듭니다).
  * @details
- *  - **레이어.** 엔진 레이어 n 은 Jolt 오브젝트 레이어 2n(움직이지 않는 바디)과 2n+1(움직이는 바디)이고, 넓은 단계 레이어는 정적과 움직임 둘이다.
+ *  - 레이어. 엔진 레이어 n 은 Jolt 오브젝트 레이어 2n(움직이지 않는 바디)과 2n+1(움직이는 바디)이고, 넓은 단계 레이어는 정적과 움직임 둘이다.
  *    레이어끼리의 충돌은 `CollisionLayers` 행렬 하나가 정한다. 바디 쌍의 예외는 `PhysicsPairFilter` 를 접촉 검증(`JoltContactListener::OnContactValidate`)에서 확인한다.
- *  - **재질.** 셰이프마다 Jolt 재질(마찰, 반발)을 붙이고, 접촉이 생길 때 서브 셰이프의 재질로 섞는다(마찰은 기하 평균, 반발은 큰 쪽). 밀도는 셰이프에 베이크한다.
- *  - **이벤트.** Jolt 의 접촉 콜백(`JoltContactListener`)은 잡 스레드에서 온다. 잠근 목록에 모았다가 스텝 뒤 정렬해 `PhysicsContactTracker` 에 넣는다(결정적 순서).
+ *  - 재질. 셰이프마다 Jolt 재질(마찰, 반발)을 붙이고, 접촉이 생길 때 서브 셰이프의 재질로 섞는다(마찰은 기하 평균, 반발은 큰 쪽). 밀도는 셰이프에 베이크한다.
+ *  - 이벤트. Jolt 의 접촉 콜백(`JoltContactListener`)은 잡 스레드에서 온다. 잠근 목록에 모았다가 스텝 뒤 정렬해 `PhysicsContactTracker` 에 넣는다(결정적 순서).
  *    충격량은 접촉이 생길 때 `EstimateCollisionResponse` 로 어림하고, 접촉이 유지되는 동안에는 그 스텝의 어림값을 쓴다.
  */
 #pragma once
@@ -214,7 +214,7 @@ namespace sw
 {
     /**
      * @class JoltCharacterSnapshotCollision
-     * @brief 캐릭터끼리 막기를 캐릭터마다 둔 **사본**(속 바디 없는 `CharacterVirtual`)으로 봅니다 — 일괄 이동이 캐릭터를 청크로 나눠 돌게 하는 자리입니다(감사 S-8).
+     * @brief 캐릭터끼리 막기를 캐릭터마다 둔 사본(속 바디 없는 `CharacterVirtual`)으로 봅니다 — 일괄 이동이 캐릭터를 청크로 나눠 돌게 하는 자리입니다(감사 S-8).
      * @details Jolt 의 `CharacterVsCharacterCollisionSimple` 은 다른 캐릭터의 자리 · 속도를 살아 있는 객체에서 읽어 한 번에 한 캐릭터만 돌 수 있다(그쪽 주석).
      *          사본은 씬이 캐릭터의 이동을 확정할 때(`JoltPhysicsScene::commitCharacterMove`)만 옮겨, 이동 중에는 얼어 있다 — 여러 청크가 함께 읽어도 된다.
      *          일괄 이동은 모든 캐릭터가 단계 앞 사본을 보고(유니티 DOTS Character Controller 가 앞 스텝 충돌 월드를 읽는 것과 같다), 하나씩 옮기면 앞에 옮긴 캐릭터의 새 자리를 본다.

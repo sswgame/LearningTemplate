@@ -4,10 +4,10 @@
  * @details 두 끝은 오브젝트 기준 오프셋(`_startOffset` · `_endOffset`)이고, 베이크할 때 월드로 옮겨 기하(`NavMeshGeometry::addOffMeshLink`)에 들어갑니다 —
  *          정적 기하와 같이 쿠킹본에 포함되고, 속성을 바꾸거나 생기고 사라지면 그 위치의 타일을 다시 베이크합니다. 오브젝트를 옮긴 것은 따라가지 않습니다.
  *
- *          **애니메이션 신호.** 에이전트가 링크를 건너는 동안 `NavMeshAgentComponent::isOnOffMeshLink` 가 참이고, `getOffMeshLinkType` 이 이 링크의
+ *          애니메이션 신호. 에이전트가 링크를 건너는 동안 `NavMeshAgentComponent::isOnOffMeshLink` 가 참이고, `getOffMeshLinkType` 이 이 링크의
  *          `_linkType`(예: `Ladder` · `Jump` · `Door`)을 돌려줍니다. 게임은 그 이름으로 동작을 고르고 진행률로 맞춥니다.
  *
- *          **막기.** `setLinkEnabled( false )` 면 경로가 이 링크를 지나지 않습니다(닫힌 문). 다음 내비게이션 갱신에 모든 에이전트 종류의 내비메시에 적용됩니다.
+ *          막기. `setLinkEnabled( false )` 면 경로가 이 링크를 지나지 않습니다(닫힌 문). 다음 내비게이션 갱신에 모든 에이전트 종류의 내비메시에 적용됩니다.
  *          링크 번호(`computeLinkID`)는 두 끝의 월드 위치와 종류 이름에서 나오므로 쿠킹본과 런타임 베이크가 같은 번호를 씁니다.
  */
 #pragma once

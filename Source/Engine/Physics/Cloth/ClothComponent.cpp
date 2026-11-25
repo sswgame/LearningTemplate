@@ -502,7 +502,7 @@ namespace sw
                 const uint32 bottomLeft  = topLeft + _columnCount;
                 const uint32 topRight    = topLeft + 1;
                 const uint32 bottomRight = bottomLeft + 1;
-                // 앞면 — 격자 삼각형 그대로(정면에서 바깥을 향한 감김). 뒷면 — 감김과 노멀을 뒤집는다.
+                // 앞면은 격자 삼각형 그대로(정면에서 바깥을 향한 감김). 뒷면은 감김과 노멀을 뒤집는다.
                 const uint32 arrFaceIndex[2][6] = {
                     {topLeft, bottomLeft,   topRight, topRight,  bottomLeft, bottomRight},
                     {topLeft,   topRight, bottomLeft, topRight, bottomRight,  bottomLeft}

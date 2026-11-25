@@ -15,10 +15,10 @@ namespace sw
 {
     /**
      * @class LocalizedTextArena
-     * @brief 번역 문자열의 저장소입니다. **추가만 하고 주인(`LocalizationManager`)이 소멸할 때까지 해제하지 않습니다.** 같은 내용은 한 번만 둡니다.
+     * @brief 번역 문자열의 저장소입니다. 추가만 하고 주인(`LocalizationManager`)이 소멸할 때까지 해제하지 않습니다. 같은 내용은 한 번만 둡니다.
      * @details `StringTable` 과 `LocalizationManager` 의 조회는 `const utf8*` 를 돌려주고 UI 와 워커가 그것을 가지고 있다. 테이블이 문자열을
      *          값으로 가지면 락을 놓은 뒤 `setString`, 다시 읽기, 언어 언로드가 그 저장소를 바꿀 때 가지고 있던 포인터가 해제된 메모리를
-     *          가리킨다(조밀 해시 테이블이라 **다른 키를 넣기만 해도** 짧은 문자열이 옮겨진다). 언리얼 FText 가 공유 문자열을 가지고
+     *          가리킨다(조밀 해시 테이블이라 다른 키를 넣기만 해도 짧은 문자열이 옮겨진다). 언리얼 FText 가 공유 문자열을 가지고
      *          있는 것과 같은 보장을, 여기서는 문자열이 사라지지 않게 해서 준다. 같은 파일을 다시 읽으면 내용이 같으니 늘지 않는다.
      *          예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다 — 이제 테이블을 만드는 관리자가 값으로 들고 테이블이 생성자에서 받는다.
      */
@@ -45,7 +45,7 @@ namespace sw
     /**
      * @class LocalizationKeyIndex
      * @brief 현지화 키의 해시(64 비트, 대소문자 무시 FNV-1a)를 정하고, 같은 해시에 다른 키가 오면 오류로 멈추게 하는 색인입니다.
-     * @details 실행 표 · 쿠킹된 `.locres` 는 키 글을 버리고 해시만 쓴다. 그래서 해시는 **밖으로 나가는 키**다 — 32 비트(`hashed_string::getHash`)면
+     * @details 실행 표 · 쿠킹된 `.locres` 는 키 글을 버리고 해시만 쓴다. 그래서 해시는 밖으로 나가는 키다 — 32 비트(`hashed_string::getHash`)면
      *          키 3 만 개에 충돌 약 10 % 이고 나중 것이 조용히 이겼다. 64 비트로 올리고, 키 글이 보이는 곳(프로젝트 읽기 · 쿠킹)에서는 이 색인으로 "같은 해시, 다른 키" 를 거절한다.
      *          언리얼 `FTextKey` 는 해시로 버킷만 고르고 키 글을 비교한다 — 여기는 키 글을 들지 않는 대신 글이 있는 단계에서 충돌을 막는다(Godot `StringName` 도 글 비교).
      *          대소문자만 다른 철자는 같은 키다(`hashed_string` 과 같은 FName 규칙).
@@ -88,15 +88,15 @@ namespace sw
          */
         [[nodiscard]] const utf8* findString( const hashed_string& key ) const;
         /**
-         * @brief 키를 **intern 하지 않고** 조회합니다. 없으면 nullptr 입니다.
+         * @brief 키를 intern 하지 않고 조회합니다. 없으면 nullptr 입니다.
          * @details 테이블은 해시로만 열리므로 조회에 intern 이 필요 없다. 키가 아닐 수도 있는 텍스트로
          *          물어보는 곳(대사 원문 등)은 반드시 이쪽을 쓴다. `hashed_string` 을 만들면
-         *          그 텍스트가 intern 아레나에 **영구히** 남는다.
+         *          그 텍스트가 intern 아레나에 영구히 남는다.
          */
         [[nodiscard]] const utf8* findStringByText( string_view keyText ) const;
         /**
          * @brief 미리 구한 해시로 곧바로 조회합니다. 없으면 nullptr 입니다.
-         * @details `LocalizationManager` 가 활성 언어와 폴백 언어를 훑을 때 **해시를 한 번만**
+         * @details `LocalizationManager` 가 활성 언어와 폴백 언어를 훑을 때 해시를 한 번만
          *          구하려고 이것을 씁니다. 두 테이블에 같은 문자열을 두 번 해싱할 이유가 없습니다.
          */
         [[nodiscard]] const utf8* findByHash( uint64 keyHash ) const;

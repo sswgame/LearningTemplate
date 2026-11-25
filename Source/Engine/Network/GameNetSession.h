@@ -278,7 +278,7 @@ namespace sw
         void setRunWireContent( const GameNetWireContent& wireContent ) { _runWireContent = wireContent; }
         /**
          * @brief 와이어 버전 @p wireVersion 에 @p wireContent 의 칸을 차례로 섞습니다. 0 인 칸은 섞지 않는다 — 모드 · 복제 타입이 없는 실행의 와이어 버전은 바뀌지 않는다.
-         * @details 언리얼이 콘텐츠 해시를 넷 버전에 섞는 자리(`FNetworkVersion::GetLocalNetworkVersionOverride`)와 같다(기억에 의존). **섞는 규칙은 이 함수 하나다** —
+         * @details 언리얼이 콘텐츠 해시를 넷 버전에 섞는 자리(`FNetworkVersion::GetLocalNetworkVersionOverride`)와 같다(기억에 의존). 섞는 규칙은 이 함수 하나다 —
          *          모드 요약(`ModSetDigest::foldWireVersion`)도 이것을 부른다.
          */
         static uint32 combineWireContent( uint32 wireVersion, const GameNetWireContent& wireContent );
@@ -342,7 +342,7 @@ namespace sw
         const NetAddress& getServerAddress() const { return _serverAddress; }
         /** @brief 클라이언트가 접속 티켓으로 붙은 세션이면 true 입니다 — 돌아올 때 새 티켓이 있어야 한다(티켓은 되쓰지 않는다). */
         bool isTicketBound() const { return _bTicketBound == SW_TRUE; }
-        /** @brief 클라이언트의 접속 시도가 한 번이라도 실패했으면 true 입니다(시간 초과 — 뒤에서 다시 시도한다 — 또는 거절). 붙은 뒤에도 남으므로 `getConnectedCount` 를 먼저 본다. 세션을 다시 열면 지워진다. */
+        /** @brief 클라이언트의 접속 시도가 한 번이라도 실패했으면 true 입니다(시간 초과로 뒤에서 다시 시도하거나 거절). 붙은 뒤에도 남으므로 `getConnectedCount` 를 먼저 본다. 세션을 다시 열면 지워진다. */
         bool hasConnectFailed() const { return _bConnectFailureReported == SW_TRUE; }
         /**
          * @brief 서버가 없어진 까닭입니다 — 붙어 있던 서버를 잃었거나 서버가 거절했다. 붙는 중이거나(시간 초과는 다시 시도한다) 붙어 있으면 비어 있습니다.
@@ -422,7 +422,7 @@ namespace sw
          * @brief 복제 키트가 이름 붙인 누적 셈(갱신 수 · 바이트)을 올립니다 — 스냅숏 크기 · 오브젝트별 복제 빈도처럼 공통 원천이 없는 값의 창구입니다.
          *        같은 이름을 다시 올리면 값을 덮고(누적값이므로 키트가 자기 합을 올린다), `makeStatsReport` 가 `replicas=` 칸에 상한(`NetStatsReport::kMaxReplicaEntry`) 안에서 싣는다.
          *        싣는 이름은 앞 절반이 "지난 보고 뒤 늘어난 바이트"가 큰 순서(Profiler 표의 초당 바이트와 같은 기준 — 총량이 작아도 지금 활발한 이름이 밀리지 않는다), 나머지가 누적 바이트가 큰 순서이다.
-         * @details 읽는 쪽(에디터 Profiler 표 — `EditorNetProfilerSample::computeReplicaRates`)과의 약속: 올린 값을 그대로 싣는다(키트가 다시 시작해 줄어든 값도 덮는다 — 표는 줄어듦을 0 으로 읽는다).
+         * @details 읽는 쪽(에디터 Profiler 표, `EditorNetProfilerSample::computeReplicaRates`)과의 약속: 올린 값을 그대로 싣는다(키트가 다시 시작해 줄어든 값도 덮는다. 표는 줄어듦을 0 으로 읽는다).
          *          상위 상한 밖으로 밀렸다 돌아온 이름이나 처음 오른 이름은 표에서 한 번 0 이다(앞 보고에 없으면 기준선이 없다). 누적 값을 대신 눌러 앉히지 않는다.
          * @return 이름이 형식(`NetStatsReport::isValidReplicaName`)에 맞지 않거나, 올린 이름이 상한(`kMaxReplicaSources`)을 넘으면 false 입니다(조용히 버리지 않고 경고를 남긴다).
          */

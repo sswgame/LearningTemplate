@@ -1,4 +1,4 @@
-// PhysicsSoftBodyTest — 3D 씬의 소프트 바디(`IPhysicsSoftBodyScene` — 천 · 헤어 카드): 서술 거절, 고정 정점은 움직이지 않고 자세를 따르고 나머지는 떨어진다, 늘어나지 않는 변,
+// PhysicsSoftBodyTest: 3D 씬의 소프트 바디(`IPhysicsSoftBodyScene`: 천 · 헤어 카드): 서술 거절, 고정 정점은 움직이지 않고 자세를 따르고 나머지는 떨어진다, 늘어나지 않는 변,
 // 바닥 충돌, 뼈 스킨 구속, 지운 핸들. 디바이스 없음(nogpu).
 #include "pch.h"
 

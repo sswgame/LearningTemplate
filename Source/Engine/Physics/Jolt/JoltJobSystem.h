@@ -1,7 +1,7 @@
 /**
  * @file JoltJobSystem.h
  * @brief Jolt 의 잡을 엔진 태스크 시스템(`TaskManager`)으로 실행하는 잡 시스템입니다. Jolt 헤더를 include 하므로 `Physics/Jolt` 밖에서는 보지 않습니다.
- * @details Jolt 는 스텝 하나를 의존 관계가 있는 잡 그래프로 나누고, 스텝을 호출한 스레드는 장벽(`Barrier`)에서 **남은 잡을 직접 실행하며** 기다린다
+ * @details Jolt 는 스텝 하나를 의존 관계가 있는 잡 그래프로 나누고, 스텝을 호출한 스레드는 장벽(`Barrier`)에서 남은 잡을 직접 실행하며 기다린다
  *          (`JobSystemWithBarrier`). 잡끼리 서로를 바쁘게 기다리지 않으므로(`JobSystemSingleThreaded` 로도 돈다) 엔진의 공유 워커 풀에 잡을 넘겨도
  *          교착이 없다. 워커가 모두 다른 일을 해도 호출한 스레드가 혼자 끝낸다. 그래서 물리 전용 스레드를 따로 띄우지 않는다.
  *

@@ -7,7 +7,7 @@
  *          (`PhysicsSystem` 은 백엔드 이름을 모른다 — `NavMeshBackend` 와 같은 모양).
  *          Godot 의 PhysicsServer3D 에 해당한다.
  *
- *          **역할 나눔.** 씬 하나가 역할 다섯을 함께 구현하지만, 한 역할만 쓰는 코드는 그 역할의 인터페이스만 받는다. 언리얼 Chaos 가 월드(`FPhysScene`),
+ *          역할 나눔. 씬 하나가 역할 다섯을 함께 구현하지만, 한 역할만 쓰는 코드는 그 역할의 인터페이스만 받는다. 언리얼 Chaos 가 월드(`FPhysScene`),
  *          바디(`FPhysicsInterface`), 구속(`FConstraintInstance`), 캐릭터 이동을 나누고, 유니티가 `Physics` 질의와 `Rigidbody` · `Joint` ·
  *          `CharacterController` 를 나누는 것과 같다.
  *
@@ -22,12 +22,12 @@
  *          | 부력(3D 만) | `IPhysicsBuoyancyScene` | 부력 부피 컴포넌트 |
  *          | 월드 | `IPhysicsScene` | `ScenePhysics`(스텝, 이벤트), 디버그 그리기 |
  *
- *          **스레드.** 씬 하나는 한 스레드(게임 스레드)에서 다룬다. `step` 안에서만 백엔드가 작업을 나눠 돌린다. step 중에 다른 스레드가 바디를
+ *          스레드. 씬 하나는 한 스레드(게임 스레드)에서 다룬다. `step` 안에서만 백엔드가 작업을 나눠 돌린다. step 중에 다른 스레드가 바디를
  *          만들거나 지우면 안 된다. 스텝 밖에서 워커가 질의만 함께 할 때는 `ScenePhysics::openReadScope` 의 질의 창을 쓰고, 닫아 받은 증표(`WorkerReadFence`)가 스텝을 연다.
  *
- *          **핸들.** 무효 핸들이나 지워진 핸들을 받은 함수는 아무것도 하지 않고 false, 0, 기본값을 반환한다(세대가 다르면 지워진 핸들이다).
+ *          핸들. 무효 핸들이나 지워진 핸들을 받은 함수는 아무것도 하지 않고 false, 0, 기본값을 반환한다(세대가 다르면 지워진 핸들이다).
  *
- *          **단위.** 미터, 킬로그램, 초, 라디안을 쓴다. 3D 는 +Y 가 위이고, 2D 는 XY 평면에서 각이 Z 축 둘레(반시계가 +)다.
+ *          단위. 미터, 킬로그램, 초, 라디안을 쓴다. 3D 는 +Y 가 위이고, 2D 는 XY 평면에서 각이 Z 축 둘레(반시계가 +)다.
  */
 #pragma once
 #include "Core/Container/vector.h"

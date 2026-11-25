@@ -6,10 +6,10 @@
  *          매니저의 서비스 묶음(`SceneEngineServices`)에서 받습니다. 2D 콜라이더(`BoxCollider2DComponent`)도 같은 2D 씬의 Box2D 센서 바디이고(유니티 트리거 ·
  *          Godot Area2D 처럼 물리 월드 하나), 에디터 시각화가 훑을 콜라이더 목록(`getColliders2D`)과 연속 콜라이더가 쓸어 낸 겹침(`queueSweptOverlap2D`)을 이 서비스가 듭니다.
  *
- *          프레임 하나: 누적기가 스텝 수 n 을 정한다 → 고정 스텝 그룹 `FrameBegin`(컴포넌트 `onPhysicsFrameBegin` — 틱 스케줄러 `tickFixedStepGroup`) → 연속 콜라이더 쓸기(`sweepContinuousColliders2D` — 모든 콜라이더가
+ *          프레임 하나: 누적기가 스텝 수 n 을 정한다 → 고정 스텝 그룹 `FrameBegin`(컴포넌트 `onPhysicsFrameBegin`, 틱 스케줄러 `tickFixedStepGroup`) → 연속 콜라이더 쓸기(`sweepContinuousColliders2D`: 모든 콜라이더가
  *          이번 자리로 옮겨진 뒤라 상대의 이동을 안다) → n 번(`onPrePhysicsStep` → 3D · 2D 씬 step → 그 스텝에 깨어 있던 바디의 주인 강체만
  *          자세를 읽는다(`getMovedBodies` · `bindBodyOwner` — 백엔드 일괄 읽기 `readBodyStates` 를 워커 구간으로 나눠 부른다) → `onPostPhysicsStep`,
- *          이벤트를 모은다) → `onPhysicsFrameEnd`(보간 비 `FixedStepContext::getAlpha` — 보간한 자세 — 루트 바디는 `queuePoseWrite` 로 모아 `applyTransformBatch` 한 번에 쓴다).
+ *          이벤트를 모은다) → `onPhysicsFrameEnd`(보간 비 `FixedStepContext::getAlpha` 로 보간한 자세. 루트 바디는 `queuePoseWrite` 로 모아 `applyTransformBatch` 한 번에 쓴다).
  *          모은 이벤트는 이 단계에서 나눠 주지 않는다 — `FlushPostPhysics` 단계의 `ScenePhysicsEvents` 가 트랜스폼을 펼친 뒤 두 오브젝트의 켜진 컴포넌트에
  *          나눠 준다(막는 접촉은 바디 쌍마다 `onCollision*`, 트리거나 겹침 전용 바디가 낀 겹침은 `PhysicsOverlapTracker` 가 오브젝트 쌍으로 모은 진입 · 이탈만 `onOverlap*` — 이탈 먼저; 언리얼 Chaos 의
  *          지연 충돌 알림 `DispatchPendingCollisionNotifies` · 유니티 `OnCollision*` 이 시뮬레이션 뒤 한 자리에서 도는 것과 같다). 이벤트의 사용자 값은 오브젝트 id 입니다 — 컴포넌트가 아닌 코드(래그돌 빌더)가
