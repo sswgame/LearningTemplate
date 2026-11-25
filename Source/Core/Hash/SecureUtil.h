@@ -1,6 +1,6 @@
 /**
  * @file SecureUtil.h
- * @brief 비밀 값을 다루는 작은 도구입니다 — 길이에만 시간이 드는 비교(`equalsConstantTime`)와 키 있는 PRF(SipHash-2-4).
+ * @brief 비밀 값을 다루는 작은 도구입니다. 길이에만 시간이 드는 비교(`equalsConstantTime`)와 키 있는 PRF(SipHash-2-4)를 둡니다.
  * @details 토큰 · 다이제스트 · MAC 비교는 여기 하나를 쓴다. 번역 단위마다 사본을 두면 한 곳만 고쳐지고 나머지가 앞부분이 맞는 만큼 빨리 거절하는 비교로 남는다.
  *          SipHash 는 64 비트 출력의 키 있는 PRF 다(Aumasson · Bernstein 2012). 짧은 입력의 위조 방지(챌린지 값)에 쓰고, 긴 메시지 인증은 보안 제공자의 HMAC 을 쓴다.
  */

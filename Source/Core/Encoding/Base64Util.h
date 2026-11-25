@@ -1,6 +1,6 @@
 /**
  * @file Base64Util.h
- * @brief Base64(RFC 4648) 쓰기 · 읽기 — 표준(`+/`, 채움 `=`)과 URL 안전(`-_`, 채움 없음 — JWT · PKCE · 공유 코드)입니다.
+ * @brief Base64(RFC 4648) 쓰기 · 읽기입니다. 표준(`+/`, 채움 `=`)과 URL 안전(`-_`, 채움 없음: JWT · PKCE · 공유 코드) 둘을 지원합니다.
  */
 #pragma once
 #include "Core/Container/string.h"

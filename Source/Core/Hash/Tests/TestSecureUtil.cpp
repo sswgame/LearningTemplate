@@ -20,7 +20,7 @@ SW_TEST_CASE( SecureUtilTest, SipHashMatchesReferenceVectors )
 }
 
 /**
- * @brief [SecureUtilTest] 상수 시간 비교 — 같은 바이트는 참, 한 바이트라도 다르거나 길이가 다르면 거짓
+ * @brief [SecureUtilTest] 상수 시간 비교: 같은 바이트는 참, 한 바이트라도 다르거나 길이가 다르면 거짓
  */
 SW_TEST_CASE( SecureUtilTest, ConstantTimeEqualityMatchesPlainEquality )
 {

@@ -6,7 +6,7 @@
  *          `<` 를 `>` 로 잘못 적어도 컴파일되고, 여러 키 비교에서 "앞 키가 같을 때만 다음 키" 를 빠뜨리기 쉽습니다.
  *          키는 데이터 멤버(`&T::_x`)나 인자 없는 const 멤버 함수(`&T::getX`)이고 `std::invoke` 로 읽으므로 원소가 값 · 원시 포인터 ·
  *          `unique_ptr` 어느 것이어도 같은 비교자를 씁니다.
- *          `operator<` 가 없는 키(`hashed_string`)는 컴파일되지 않습니다 — 그 키는 `HashedStringLexicalLess` 를 씁니다.
+ *          `operator<` 가 없는 키(`hashed_string`)는 컴파일되지 않습니다. 그런 키는 `HashedStringLexicalLess` 를 씁니다.
  *
  * @code
  *   VectorUtil::sort( listItem, Ascending<&Item::_order>{} );

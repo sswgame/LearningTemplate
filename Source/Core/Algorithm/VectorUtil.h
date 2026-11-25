@@ -7,8 +7,8 @@
  *
  * @details 멤버 기준 찾기(`findBy<&T::_member>`)는 "원소를 돌며 멤버를 비교하고 맞으면 주소를 돌려준다" 는 손 루프를 대신합니다. 키는 데이터
  *          멤버나 인자 없는 const 멤버 함수이고 `std::invoke` 로 읽으므로, 원소가 값 · 원시 포인터 · `unique_ptr` 어느 것이어도 됩니다.
- *          찾은 결과는 **키를 가진 객체의 포인터**입니다(원소가 값이면 원소의 주소, 포인터 · `unique_ptr` 이면 가리키는 객체).
- *          배열은 lvalue 로만 받습니다 — 임시 배열 안을 가리키는 포인터는 컴파일되지 않습니다.
+ *          찾은 결과는 키를 가진 객체의 포인터입니다(원소가 값이면 원소의 주소, 포인터 · `unique_ptr` 이면 가리키는 객체).
+ *          배열은 lvalue 로만 받습니다. 임시 배열 안을 가리키는 포인터는 컴파일되지 않습니다.
  *          정렬 비교자는 `CompareUtil.h`(`Ascending<&T::_member>`)에 있습니다.
  */
 #pragma once
@@ -24,7 +24,7 @@ namespace sw
      */
     struct VectorUtil
     {
-        // `findBy` 의 반환 타입(뒤따르는 반환 타입)이 쓰므로 공개 함수보다 먼저 선언한다 — 반환 타입에서는 뒤에 선언한 멤버가 보이지 않는다.
+        // `findBy` 의 뒤따르는 반환 타입이 이것을 쓰므로 공개 함수보다 먼저 선언한다. 반환 타입에서는 뒤에 선언한 멤버가 보이지 않는다.
     private:
         /** @brief 멤버 포인터 `M C::*` 의 클래스 `C` 입니다(데이터 멤버 · 멤버 함수 둘 다). */
         template <typename TMember>
@@ -91,7 +91,7 @@ namespace sw
 
         /**
          * @brief `value` 와 같은 첫 원소의 인덱스입니다. 없으면 빈 값입니다(언리얼 `TArray::Find`). `findIndexBy` 는 멤버 키로 찾고, 이것은 원소 값 자체로 찾습니다.
-         * @details 번호를 `uint32` 로 들고 다니는 표(본 · 채널 번호)는 `findIndex<uint32>( list, value )` 로 그 형식을 바로 받습니다 — 손 루프와 `static_cast` 를 호출부마다 두지 않는다.
+         * @details 번호를 `uint32` 로 들고 다니는 표(본 · 채널 번호)는 `findIndex<uint32>( list, value )` 로 그 형식을 바로 받습니다. 호출부마다 손 루프와 `static_cast` 를 두지 않는다.
          */
         template <typename TIndex = size_t, typename TVector, typename TValue>
         [[nodiscard]] static optional<TIndex> findIndex( const TVector& list, const TValue& value )
@@ -151,7 +151,7 @@ namespace sw
         /**
          * @brief `value` 와 같은 원소가 없을 때만 끝에 더합니다(언리얼 `TArray::AddUnique`). 더했으면 true 입니다.
          * @details "`contains` 가 아니면 `push_back`" 손 코드를 대신합니다. 앞에서부터 선형으로 찾으므로 짧은 목록에 씁니다(길면 집합을 쓴다).
-         *          원소는 `value` 에서 만듭니다(`emplace_back`) — `vector<string>` 에 `string_view` 를 넣을 때 임시 문자열을 따로 만들지 않습니다.
+         *          원소는 `value` 에서 만듭니다(`emplace_back`). 그래서 `vector<string>` 에 `string_view` 를 넣을 때 임시 문자열을 따로 만들지 않습니다.
          *          더했는지는 알림이라 버려도 됩니다(`[[nodiscard]]` 가 아닙니다).
          */
         template <typename TVector, typename TValue>
@@ -298,7 +298,7 @@ namespace sw
             std::stable_sort( std::begin( list ), std::end( list ), compare );
         }
         /**
-         * @brief [@p first, @p last) 부분만 오름차순으로 정렬합니다(앞에 쌓인 몫은 두고 이번에 덧붙인 꼬리만 — `outList` 계약).
+         * @brief [@p first, @p last) 부분만 오름차순으로 정렬합니다. 앞에 쌓인 몫은 두고 이번에 덧붙인 꼬리만 정렬한다(`outList` 계약).
          * @details 목록 판(`sort( list )`)과 이름을 나눈 이유: 인자 둘인 `sort( first, last )` 는 `sort( list, compare )` 와 모호하다.
          */
         template <typename TIterator>

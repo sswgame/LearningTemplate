@@ -3,7 +3,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
-// 엄격한 절대 경로 판정 — 드라이브 상대 · 드라이브 없는 루트 · 상대 경로는 거절한다.
+// 엄격한 절대 경로 판정: 드라이브 상대 · 드라이브 없는 루트 · 상대 경로는 거절한다.
 
 using namespace sw;
 
@@ -113,7 +113,7 @@ SW_TEST_CASE( AbsolutePathTest, JoinNormalizesAndRejectsEscapingAboveTheBase )
     SW_EXPECT_EQUAL( concat( baseText, "/out/a/c" ), base->join( "/a//./b/../c/" ).str() );
     SW_EXPECT_EQUAL( concat( baseText, "/out" ), base->join( "" ).str() );
     SW_EXPECT_EQUAL( concat( baseText, "/out/x/y" ), base->join( "x" ).join( "y" ).str() );
-    // 이 경로 위로 올라가면 빈 경로다 — 그 값을 받은 I/O 는 실패한다
+    // 이 경로 위로 올라가면 빈 경로이고, 그 값을 받은 I/O 는 실패한다
     SW_EXPECT_TRUE( base->join( ".." ).empty() );
     SW_EXPECT_TRUE( base->join( "a/../../b" ).empty() );
     SW_EXPECT_TRUE( base->join( "a/../.." ).empty() );
@@ -166,7 +166,7 @@ SW_TEST_CASE( AbsolutePathTest, AppendSuffixNamesASidecarAndRejectsComponentChan
     SW_REQUIRE_TRUE( rootPath.has_value() );
     SW_EXPECT_TRUE( rootPath->appendSuffix( ".meta" ).empty() ); // 뿌리는 이름이 없다
 
-    // 확장자 떼기 — 마지막 성분의 점만 보고, 폴더 이름의 점 · 점으로 시작하는 이름은 확장자가 아니다.
+    // 확장자 떼기는 마지막 성분의 점만 본다. 폴더 이름의 점 · 점으로 시작하는 이름은 확장자가 아니다.
     SW_EXPECT_EQUAL( concat( root, "baseText/hit" ), file->removeExtension().str() );
     const AbsolutePath dottedFolder = file->getParent().join( "v1.2/tool" );
     SW_EXPECT_TRUE( dottedFolder.removeExtension() == dottedFolder );

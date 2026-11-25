@@ -1,4 +1,4 @@
-// HashUtil — splitmix64 · boost 결합 · FNV-1a 상수와 알려진 값, makeHash 순서, DefaultHash 의 computeHash · 이종 조회, 넓은 문자 · 비-ASCII 바이트.
+// HashUtil: splitmix64 · boost 결합 · FNV-1a 상수와 알려진 값, makeHash 순서, DefaultHash 의 computeHash · 이종 조회, 넓은 문자 · 비-ASCII 바이트.
 #include "pch.h"
 
 #include "Core/Container/string.h"
@@ -20,7 +20,7 @@ namespace
     };
 } // namespace
 
-// splitmix64 · boost 결합 · FNV 는 파일마다 복사돼 있던 식이다 — 모은 함수가 옛 식과 같은 값을 내야 네트워크 비교 · 결정적 시뮬레이션이 그대로다.
+// splitmix64 · boost 결합 · FNV 는 파일마다 복사돼 있던 식이다. 모은 함수가 옛 식과 같은 값을 내야 네트워크 비교 · 결정적 시뮬레이션이 그대로다.
 
 /**
  * @brief [HashUtilTest] mix64 는 splitmix64 참고 구현(Vigna)의 마무리와 같은 값을 낸다(씨앗 0 의 첫 두 값)
@@ -121,8 +121,8 @@ SW_TEST_CASE( HashUtilTest, StringHashMatchesFNVKnownValues )
 
 /**
  * @brief [HashUtilTest] 넓은 문자가 하위 한 바이트로 잘리지 않는다
- * @details 부호 확장을 막으려고 `uint8` 로 **고정**하면 안 된다. 이 해시 템플릿은 `utf16` 으로도 불리는데(`std::hash<fixed_wstring>`), 그러면 넓은 문자가
- *          하위 한 바이트만 남는다 — 한글처럼 상위 바이트가 의미를 갖는 문자열이 통째로 한 버킷에 뭉친다. 부호 없는 타입은 맞되 **폭은 CharT 를 따라야** 한다.
+ * @details 부호 확장을 막으려고 `uint8` 로 고정하면 안 된다. 이 해시 템플릿은 `utf16` 으로도 불리는데(`std::hash<fixed_wstring>`), 그러면 넓은 문자가
+ *          하위 한 바이트만 남고, 한글처럼 상위 바이트가 의미를 갖는 문자열이 통째로 한 버킷에 뭉친다. 부호 없는 타입은 맞되 폭은 CharT 를 따라야 한다.
  */
 SW_TEST_CASE( HashUtilTest, WideCharStringHashIsNotTruncatedToOneByte )
 {
@@ -141,7 +141,7 @@ SW_TEST_CASE( HashUtilTest, WideCharStringHashIsNotTruncatedToOneByte )
  */
 SW_TEST_CASE( HashUtilTest, NonASCIIBytesAreHashedAsUnsigned )
 {
-    // "가" = EA B0 80 — 모든 바이트가 signed char 에서 음수다. 비-ASCII 에는 대소문자가 없으므로 두 해시 경로가 같은 값을 내야 한다.
+    // "가" = EA B0 80 은 모든 바이트가 signed char 에서 음수다. 비-ASCII 에는 대소문자가 없으므로 두 해시 경로가 같은 값을 내야 한다.
     const sw::string korean{ "\xEA\xB0\x80" };
     SW_EXPECT_EQUAL( sw::HashUtil::computeStringHash64( korean.c_str(), korean.size(), false ), sw::HashUtil::computeStringHash64( korean.c_str(), korean.size(), true ) );
     SW_EXPECT_EQUAL( sw::HashUtil::computeStringHash32( korean.c_str(), korean.size(), false ), sw::HashUtil::computeStringHash32( korean.c_str(), korean.size(), true ) );
