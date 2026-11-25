@@ -6,7 +6,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxRenderState.h"
@@ -22,15 +21,8 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-    RHIBufferHandle D3D11RHIResourceFactory::createConstantBuffer( uint32 size )
+    RHIBufferHandle D3D11RHIResourceFactory::createConstantBufferNative( uint32 size )
     {
-        const bool bInvalidConstantBufferRequest = _pDevice == nullptr || _pDevice->_device == nullptr || size == 0;
-        if ( bInvalidConstantBufferRequest )
-        {
-            SW_LOG_ERROR_ID( "D3D11.CreateConstantBufferInvalidDeviceSize", "createConstantBuffer: invalid device or size=%#", size );
-            return 0;
-        }
-
         const UINT alignedSize = MathUtil::max( MathUtil::align( size, 16u ), 16u );
 
         D3D11_BUFFER_DESC bufferDesc{};
@@ -54,13 +46,12 @@ namespace sw
         return handle;
     }
 
-    RHIBufferHandle D3D11RHIResourceFactory::createConstantBufferPage( uint32 size )
+    RHIBufferHandle D3D11RHIResourceFactory::createConstantBufferPageNative( uint32 size )
     {
         // 기본 용도 상수 버퍼다 — 구간마다 `UpdateSubresource1` 로 부분 갱신하고, 진행 중 프레임과의 순서는 즉시 컨텍스트가 지킨다(동적 버퍼의 WRITE_DISCARD 는 페이지 전체를 버린다).
-        const bool bCannotCreatePage = _pDevice == nullptr || _pDevice->_device == nullptr || size == 0 || _pDevice->_bConstantBufferSlices == SW_FALSE;
-        if ( bCannotCreatePage )
+        if ( _pDevice->_bConstantBufferSlices == SW_FALSE )
         {
-            SW_LOG_ERROR_ID( "D3D11.CreateConstantBufferPageUnsupported", "createConstantBufferPage: no device, size=%# or no D3D11.1 constant buffer slices", size );
+            SW_LOG_ERROR_ID( "D3D11.CreateConstantBufferPageUnsupported", "createConstantBufferPage: no D3D11.1 constant buffer slices (%# bytes)", size );
             return 0;
         }
         D3D11_BUFFER_DESC bufferDesc{};
@@ -74,7 +65,7 @@ namespace sw
         return _pDevice->storeBuffer( std::move( buffer ) );
     }
 
-    void D3D11RHIResourceFactory::writeConstantBufferSlice( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    void D3D11RHIResourceFactory::writeConstantBufferSliceNative( const RHIBufferSlice& slice, const void* pData, uint32 size )
     {
         const bool bInvalidSliceUpdate = slice._buffer == 0 || pData == nullptr || size == 0 || _pDevice->_immediateContext1 == nullptr;
         if ( bInvalidSliceUpdate )
@@ -106,19 +97,11 @@ namespace sw
         }
     }
 
-    RHIBufferHandle D3D11RHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
+    RHIBufferHandle D3D11RHIResourceFactory::createStructuredBufferNative( uint32 elementSize, uint32 elementCount )
     {
-        if ( elementSize == 0 || elementCount == 0 )
-            return 0;
-
-        // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSizeUtil 가 세 백엔드의 규칙 하나).
-        uint32 totalBytes{ 0 };
-        if ( RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
-            return 0;
-
         D3D11_BUFFER_DESC bufferDesc{};
         bufferDesc.Usage               = D3D11_USAGE_DEFAULT;
-        bufferDesc.ByteWidth           = static_cast<UINT>( totalBytes );
+        bufferDesc.ByteWidth           = elementSize * elementCount; // 32비트에 담긴다(앞단이 봤다)
         bufferDesc.BindFlags           = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
         bufferDesc.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
         bufferDesc.StructureByteStride = elementSize;
@@ -136,17 +119,15 @@ namespace sw
         return _pDevice->storeBufferWithSRV( std::move( buffer ), srvDesc );
     }
 
-    RHIBufferHandle D3D11RHIResourceFactory::createBuffer( const RHIBufferDesc& desc )
+    RHIBufferHandle D3D11RHIResourceFactory::createBufferNative( const RHIBufferDesc& desc )
     {
         // 인다이렉트 인자 버퍼만 따로 만든다. D3D11 은 `DRAWINDIRECT_ARGS` 를 `BUFFER_STRUCTURED` 와
         // **함께 쓸 수 없다.** 기본 경로(createStructuredBuffer)는 항상 STRUCTURED 로 만들므로, 간접 인자
         // 버퍼가 그리로 가면 DrawInstancedIndirect 가 조용히 아무것도 하지 않는다(디버그 레이어를 켜지
         // 않으면 흔적도 없다).
         if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::IndirectArgs ) == false )
-            return IRHIResourceFactory::createBuffer( desc );
+            return IRHIResourceFactory::createBufferNative( desc );
 
-        if ( isValidBufferDesc( desc, "createBuffer" ) == false || _pDevice->_device == nullptr )
-            return 0;
         const uint32 sizeBytes = desc._sizeBytes;
 
         D3D11_BUFFER_DESC bufferDesc{};
@@ -224,16 +205,14 @@ namespace sw
         }
     }
 
-    RHIBufferHandle D3D11RHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
+    RHIBufferHandle D3D11RHIResourceFactory::createVertexBufferNative( const void* pData, uint32 sizeBytes )
     {
         return createFilledBuffer( pData, sizeBytes, D3D11_BIND_VERTEX_BUFFER );
     }
 
-    RHIBufferHandle D3D11RHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    RHIBufferHandle D3D11RHIResourceFactory::createGPUVertexBufferNative( uint32 sizeBytes )
     {
         // DX11 의 정점 버퍼는 원래 DEFAULT 사용이라 복사(`CopySubresourceRegion`)의 도착이 된다 — 0 으로 채워 만든다(채움 함수가 내용을 요구한다).
-        if ( sizeBytes == 0 )
-            return 0;
         const vector<uint8> listZero( sizeBytes, uint8{ 0 } );
         return createFilledBuffer( listZero.data(), sizeBytes, D3D11_BIND_VERTEX_BUFFER );
     }
@@ -259,7 +238,7 @@ namespace sw
         }
     }
 
-    RHIBufferHandle D3D11RHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes )
+    RHIBufferHandle D3D11RHIResourceFactory::createIndexBufferNative( const void* pData, uint32 sizeBytes )
     {
         // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. D3D11 규칙상 인덱스 버퍼는 BIND_INDEX_BUFFER 로 만들어야 하고
         // 구조버퍼(BUFFER_STRUCTURED)에는 그 플래그를 붙일 수 없다. 주의: 구조버퍼로 만들어도 드라이버가 받아 줘 그려지므로 틀려도 티가 안 난다.
@@ -268,10 +247,6 @@ namespace sw
 
     RHIBufferHandle D3D11RHIResourceFactory::createFilledBuffer( const void* pData, uint32 sizeBytes, uint32 bindFlags )
     {
-        const bool bInvalidFilledBufferRequest = _pDevice == nullptr || pData == nullptr || sizeBytes == 0;
-        if ( bInvalidFilledBufferRequest )
-            return 0;
-
         D3D11_BUFFER_DESC bufferDesc{};
         bufferDesc.Usage          = D3D11_USAGE_DEFAULT;
         bufferDesc.ByteWidth      = sizeBytes;
@@ -292,7 +267,6 @@ namespace sw
     {
         if ( buffer == 0 )
             return false;
-        _pDevice->requireRegistryMutableNow( "destroyBuffer" );
 
         D3D11RHIDevice::BufferRecord owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
@@ -308,17 +282,12 @@ namespace sw
         return true;
     }
 
-    RHIBufferHandle D3D11RHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
+    RHIBufferHandle D3D11RHIResourceFactory::createReadbackBufferNative( uint32 elementSize, uint32 elementCount )
     {
-        uint32     totalBytes{ 0 };
-        const bool bInvalidReadbackRequest = _pDevice->_device == nullptr || elementSize == 0 || elementCount == 0 || RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
-        if ( bInvalidReadbackRequest )
-            return 0;
-
         // 원본이 구조화 버퍼라 같은 모양(구조화 · 원소 크기)의 스테이징 버퍼여야 CopySubresourceRegion 이 받는다.
         D3D11_BUFFER_DESC bufferDesc{};
         bufferDesc.Usage               = D3D11_USAGE_STAGING;
-        bufferDesc.ByteWidth           = static_cast<UINT>( totalBytes );
+        bufferDesc.ByteWidth           = elementSize * elementCount;
         bufferDesc.BindFlags           = 0;
         bufferDesc.CPUAccessFlags      = D3D11_CPU_ACCESS_READ;
         bufferDesc.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -330,10 +299,10 @@ namespace sw
         return _pDevice->storeBuffer( std::move( buffer ) );
     }
 
-    bool D3D11RHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
+    bool D3D11RHIResourceFactory::readReadbackBufferNative( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
     {
         ID3D11Buffer* pBuffer     = _pDevice->resolveBuffer( readback );
-        const bool    bUnreadable = pBuffer == nullptr || pDestination == nullptr || sizeBytes == 0 || _pDevice->_immediateContext.isValid() == false;
+        const bool    bUnreadable = pBuffer == nullptr || _pDevice->_immediateContext.isValid() == false;
         if ( bUnreadable )
             return false;
         D3D11_BUFFER_DESC bufferDesc{};
@@ -615,36 +584,19 @@ namespace sw
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
-    void D3D11RHIResourceFactory::setTextureDebugName( RHITextureHandle texture, const utf8* pName )
+    void D3D11RHIResourceFactory::setTextureDebugNameNative( RHITextureHandle texture, const utf8* pName )
     {
         const D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_texture == nullptr || pName == nullptr )
+        if ( pRecord == nullptr || pRecord->_texture == nullptr )
             return;
-        _pDevice->getMemoryTracker().setLabel( RHIMemoryKey::makeTexture( texture ), pName ); // 메모리 스냅숏 · RT 목록이 같은 이름을 보인다
         // WKPDID_D3DDebugObjectName(d3dcommon.h, dxguid.lib — sw_graphics_dx11_libs 가 링크한다). 그래픽스 디버거 · 디버그 레이어 메시지가 이 이름을 보인다.
         const string_view name = pName;
         pRecord->_texture->SetPrivateData( WKPDID_D3DDebugObjectName, static_cast<UINT>( name.size() ), name.data() );
     }
 
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 리소스 생성 · 뷰의 순서가 곧 의미라 나누지 않는다.
-    RHITextureHandle D3D11RHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
+    RHITextureHandle D3D11RHIResourceFactory::createTexture2DNative( const RHITextureDesc& desc )
     {
-        const bool bInvalidTextureRequest = _pDevice == nullptr || desc._width == 0 || desc._height == 0;
-        if ( bInvalidTextureRequest )
-            return 0;
-        if ( isRHITextureShapeValid( desc ) == false )
-        {
-            SW_LOG_ERROR_ID( "D3D11.CreateTexture2DDimensionSlicesX", "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
-                             desc._arraySize, desc._width, desc._height );
-            return 0;
-        }
-        // 이 장치가 샘플링하지 못하는 압축 형식(데스크톱의 ASTC · ETC2)은 드라이버에 넘기지 않는다 — 넘기면 D3D12 는 실패, Vulkan 드라이버는 0 나누기로 죽었다.
-        if ( RHIFormatUtil::isBlockCompressed( desc._format ) && _pDevice->supportsTextureFormat( desc._format ) == false )
-        {
-            SW_LOG_ERROR_ID( "D3D11.CreateTexture2DFormatUnsupported", "createTexture2D: this device cannot sample format %# (%#x%#) - the texture is not created", static_cast<uint32>( desc._format ), desc._width, desc._height );
-            return 0;
-        }
-
         const bool bDepth  = desc._bIsDepthStencil != SW_FALSE;
         const bool bCube   = desc._dimension == RHITextureDimension::TextureCube;
         const bool bSliced = desc._dimension != RHITextureDimension::Texture2D;
@@ -681,7 +633,7 @@ namespace sw
         record._width     = desc._width;
         record._height    = desc._height;
         record._arraySize = desc._arraySize;
-        record._mipLevels = texDesc.MipLevels > 0 ? texDesc.MipLevels : 1u;
+        record._mipLevels = texDesc.MipLevels;
         record._dimension = desc._dimension;
         record._bDepth    = bDepth ? 1 : 0;
         record._reserved  = 0;
@@ -808,117 +760,85 @@ namespace sw
         return true;
     }
 
-    bool D3D11RHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
+    bool D3D11RHIResourceFactory::describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo )
     {
-        const D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_transferSerials );
+        const D3D11RHIDevice::TextureRecord* const pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_texture == nullptr )
+            return false;
+        D3D11_TEXTURE2D_DESC texDesc{};
+        pRecord->_texture->GetDesc( &texDesc );
+        outInfo._dimension            = pRecord->_dimension;
+        outInfo._bShaderResource      = pRecord->_srv != nullptr ? SW_TRUE : SW_FALSE;
+        outInfo._bUnorderedAccess     = ( texDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS ) != 0 ? SW_TRUE : SW_FALSE;
+        outInfo._bFirstUploadComplete = _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_transferSerials ) ? SW_TRUE : SW_FALSE;
+        return true;
     }
 
-    RHITextureSRVIndex D3D11RHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    uint32 D3D11RHIResourceFactory::findConstantPageBytesNative( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );
-        if ( texture == 0 )
-            return kInvalidDescriptorIndex;
+        // `*SetConstantBuffers1`(D3D11.1)이 없는 장치는 구간을 걸 수 없다.
+        ID3D11Buffer* const pResource = _pDevice->_bConstantBufferSlices != SW_FALSE ? _pDevice->resolveBuffer( buffer ) : nullptr;
+        if ( pResource == nullptr )
+            return 0;
+        D3D11_BUFFER_DESC bufferDesc{};
+        pResource->GetDesc( &bufferDesc );
+        return ( bufferDesc.BindFlags & D3D11_BIND_CONSTANT_BUFFER ) != 0 ? bufferDesc.ByteWidth : 0u;
+    }
 
-        D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_srv == nullptr )
-            return kInvalidDescriptorIndex;
-        // 끝나지 않은 업로드가 남은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
-        if ( _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_transferSerials, texture ) == false )
-            return kInvalidDescriptorIndex;
-        // 셰이더의 텍스처 슬롯은 Texture2D 로 선언돼 있다. 배열이나 큐브 뷰를 바인딩하면 셰이더가 읽지 못한다(RHITextureDimension 참고).
-        if ( pRecord->_dimension != RHITextureDimension::Texture2D )
-        {
-            SW_LOG_ERROR_ID( "D3D11.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture slots yet", texture.getPacked(),
-                             static_cast<uint32>( pRecord->_dimension ) );
-            return kInvalidDescriptorIndex;
-        }
-
+    RHITextureSRVIndex D3D11RHIResourceFactory::registerBindlessTextureNative( RHITextureHandle texture )
+    {
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHITextureSRVIndex{ _pDevice->_textureRegistry.allocate( texture ) };
     }
 
-    RHIBufferSRVIndex D3D11RHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    RHIBufferSRVIndex D3D11RHIResourceFactory::registerBindlessBufferSRVNative( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV" );
-        if ( buffer == 0 )
-            return kInvalidDescriptorIndex;
-
-        ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
-        if ( pResource == nullptr )
+        if ( _pDevice->resolveBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHIBufferSRVIndex{ _pDevice->_bufferRegistry.allocate( D3D11RHIDevice::BufferEntry{ buffer } ) };
     }
 
-    RHIBufferSRVIndex D3D11RHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    RHIBufferSRVIndex D3D11RHIResourceFactory::registerBindlessBufferSRVNative( const RHIBufferSlice& slice )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
-        if ( slice._buffer == 0 || _pDevice->resolveBuffer( slice._buffer ) == nullptr )
-            return kInvalidDescriptorIndex;
-        // `*SetConstantBuffers1` 의 첫 상수 · 상수 수는 16 상수(256 B)의 배수다 — 구간은 256 B 배수다.
-        const bool bBadSlice = _pDevice->_bConstantBufferSlices == SW_FALSE || slice._size == 0 || slice._offset % constant::render::kConstantBufferAlignment != 0;
-        if ( bBadSlice )
-        {
-            SW_LOG_ERROR_ID( "D3D11.BadConstantBufferSlice", "registerBindlessBufferSRV: slice (offset %#, size %#) is not a 256-aligned constant buffer page slice", slice._offset, slice._size );
-            return kInvalidDescriptorIndex;
-        }
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHIBufferSRVIndex{ _pDevice->_bufferRegistry.allocate( D3D11RHIDevice::BufferEntry{ slice._buffer, slice._offset, slice._size } ) };
     }
 
-    void D3D11RHIResourceFactory::unregisterBindlessResource( RHIBufferSRVIndex index )
+    bool D3D11RHIResourceFactory::unregisterBindlessResourceNative( RHIBufferSRVIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        // 이중 해제 · 다른 공간 번호는 `RHIBindlessRegistry::release` 가 거절한다.
-        (void)_pDevice->_bufferRegistry.release( index, RHIBindlessReuse::Immediately );
+        return _pDevice->_bufferRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
-    bool D3D11RHIResourceFactory::rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
+    bool D3D11RHIResourceFactory::rebindBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "rebindBindlessTexture" );
-        D3D11RHIDevice::TextureRecord* pRecord       = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
-        const bool                     bCannotRebind = pRecord == nullptr || pRecord->_srv == nullptr || pRecord->_dimension != RHITextureDimension::Texture2D ||
-                                   _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_transferSerials, texture ) == false;
-        if ( bCannotRebind )
-            return false;
         // 기록 때 번호를 자원으로 풀므로 등록표 값만 바꾼다(다음 바인딩부터 새 텍스처).
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return _pDevice->_textureRegistry.rebind( index, texture );
     }
 
-    RHITextureSRVIndex D3D11RHIResourceFactory::reserveBindlessTextureIndex()
+    RHITextureSRVIndex D3D11RHIResourceFactory::reserveBindlessTextureIndexNative()
     {
         // 번호 발급기만 건드린다 — 칸 값은 그대로라 기록 경로의 풀이에 닿지 않는다(어느 스레드든).
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHITextureSRVIndex{ _pDevice->_textureRegistry.reserveIndex() };
     }
 
-    bool D3D11RHIResourceFactory::activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
+    bool D3D11RHIResourceFactory::activateReservedBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "activateReservedBindlessTexture" );
-        D3D11RHIDevice::TextureRecord* pRecord         = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
-        const bool                     bCannotActivate = pRecord == nullptr || pRecord->_srv == nullptr || pRecord->_dimension != RHITextureDimension::Texture2D ||
-                                     _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_transferSerials, texture ) == false;
-        if ( bCannotActivate )
-            return false;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return _pDevice->_textureRegistry.assign( index, texture, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽(텍스처 캐시)의 것이다
     }
 
-    void D3D11RHIResourceFactory::unregisterBindlessTexture( RHITextureSRVIndex index )
+    bool D3D11RHIResourceFactory::unregisterBindlessTextureNative( RHITextureSRVIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        (void)_pDevice->_textureRegistry.release( index, RHIBindlessReuse::Immediately );
+        return _pDevice->_textureRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
-    RHIUnorderedAccessIndex D3D11RHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    RHIUnorderedAccessIndex D3D11RHIResourceFactory::registerBindlessBufferUAVNative( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUAV" );
-        if ( buffer == 0 )
-            return kInvalidDescriptorIndex;
         ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
         if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
@@ -950,13 +870,10 @@ namespace sw
         return registerUAVView( uav.Get(), RHIBindlessOwner{ buffer, 0 } );
     }
 
-    RHIUnorderedAccessIndex D3D11RHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIUnorderedAccessIndex D3D11RHIResourceFactory::registerBindlessTextureUAVNative( RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUAV" );
-        if ( texture == 0 )
-            return kInvalidDescriptorIndex;
-        D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_texture == nullptr )
+        const D3D11RHIDevice::TextureRecord* const pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr )
             return kInvalidDescriptorIndex;
 
         // 텍스처 UAV: bindComputeUAV( index, kComputeTextureUAV0 + 서수 ) 가 CSSetUnorderedAccessViews 로 바인딩한다.
@@ -977,11 +894,10 @@ namespace sw
         return RHIUnorderedAccessIndex{ _pDevice->_uavRegistry.allocate( entry ) };
     }
 
-    void D3D11RHIResourceFactory::unregisterBindlessUAV( RHIUnorderedAccessIndex index )
+    bool D3D11RHIResourceFactory::unregisterBindlessUAVNative( RHIUnorderedAccessIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "unregisterBindlessUAV" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        (void)_pDevice->_uavRegistry.release( index, RHIBindlessReuse::Immediately );
+        return _pDevice->_uavRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
     RHIPipelineStateHandle D3D11RHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages )
@@ -1113,7 +1029,6 @@ namespace sw
     {
         if ( pso == 0 )
             return false;
-        _pDevice->requireRegistryMutableNow( "destroyPipelineState" );
         return _pDevice->_pipelineStates.erase( pso ); // 건 채인 기록 스트림은 세대가 달라 풀리지 않는다 — 그 드로우 · 디스패치가 멈춘다
     }
 } // namespace sw

@@ -935,6 +935,7 @@ namespace sw
             SW_LOG_ERROR_ID( "WebGPU.DefaultResourcesFailed", "WebGPU: static samplers or default slot resources could not be created" );
             return false;
         }
+        getMemoryTracker().setSizeBasis( RHIMemorySizeBasis::Logical ); // 할당 크기를 물을 API 가 없다
         _resourceFactory    = make_unique<WebGPURHIResourceFactory>( this );
         _frameStreamContext = make_unique<WebGPURHICommandContext>( this, false );
         _bInitialized       = SW_TRUE;

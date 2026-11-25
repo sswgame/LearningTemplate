@@ -67,33 +67,40 @@ namespace
         }
         void discardTextureReadback( RHITransferTicket ) override { ++_discardCount; }
 
-        RHIPipelineStateHandle  createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
-        RHIPipelineStateHandle  createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
-        RHIBufferHandle         createConstantBuffer( uint32 ) override { return 0; }
-        RHIBufferHandle         createConstantBufferPage( uint32 ) override { return 0; }
-        void                    writeConstantBufferSlice( const RHIBufferSlice&, const void*, uint32 ) override {}
-        RHIBufferHandle         createStructuredBuffer( uint32, uint32 ) override { return 0; }
-        void                    updateStructuredBufferRegionsNative( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
-        RHIBufferHandle         createVertexBuffer( const void*, uint32 ) override { return 0; }
-        RHIBufferHandle         createGPUVertexBuffer( uint32 ) override { return 0; }
-        void                    updateGeometryBufferRegionsNative( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
-        RHIBufferHandle         createIndexBuffer( const void*, uint32 ) override { return 0; }
-        RHIBufferHandle         createReadbackBuffer( uint32, uint32 ) override { return 0; }
-        [[nodiscard]] bool      readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
-        RHITextureHandle        createTexture2D( const RHITextureDesc& ) override { return 0; }
-        RHIFormat               getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
-        RHITextureSRVIndex      registerBindlessTexture( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
-        bool                    rebindBindlessTexture( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
-        RHITextureSRVIndex      reserveBindlessTextureIndex() override { return kInvalidDescriptorIndex; }
-        bool                    activateReservedBindlessTexture( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
-        bool                    isTextureReadyToSample( RHITextureHandle ) override { return false; }
-        void                    unregisterBindlessTexture( RHITextureSRVIndex ) override {}
-        RHIBufferSRVIndex       registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
-        RHIBufferSRVIndex       registerBindlessBufferSRV( const RHIBufferSlice& ) override { return kInvalidDescriptorIndex; }
-        void                    unregisterBindlessResource( RHIBufferSRVIndex ) override {}
-        RHIUnorderedAccessIndex registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
-        RHIUnorderedAccessIndex registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
-        void                    unregisterBindlessUAV( RHIUnorderedAccessIndex ) override {}
+        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
+        RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
+        RHIBufferHandle        createConstantBufferNative( uint32 ) override { return 0; }
+        RHIBufferHandle        createConstantBufferPageNative( uint32 ) override { return 0; }
+        void                   writeConstantBufferSliceNative( const RHIBufferSlice&, const void*, uint32 ) override {}
+        RHIBufferHandle        createStructuredBufferNative( uint32, uint32 ) override { return 0; }
+        void                   updateStructuredBufferRegionsNative( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
+        RHIBufferHandle        createVertexBufferNative( const void*, uint32 ) override { return 0; }
+        RHIBufferHandle        createGPUVertexBufferNative( uint32 ) override { return 0; }
+        void                   updateGeometryBufferRegionsNative( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
+        RHIBufferHandle        createIndexBufferNative( const void*, uint32 ) override { return 0; }
+        RHIBufferHandle        createReadbackBufferNative( uint32, uint32 ) override { return 0; }
+        [[nodiscard]] bool     readReadbackBufferNative( RHIBufferHandle, uint32, void* ) override { return false; }
+        RHITextureHandle       createTexture2DNative( const RHITextureDesc& ) override { return 0; }
+        RHIFormat              getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
+        RHITextureSRVIndex     registerBindlessTextureNative( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
+        bool                   rebindBindlessTextureNative( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
+        RHITextureSRVIndex     reserveBindlessTextureIndexNative() override { return kInvalidDescriptorIndex; }
+        bool                   activateReservedBindlessTextureNative( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
+        bool                   describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo ) override
+        {
+            outInfo._bShaderResource      = SW_TRUE;
+            outInfo._bUnorderedAccess     = SW_TRUE;
+            outInfo._bFirstUploadComplete = SW_TRUE;
+            return texture != 0;
+        }
+        uint32                  findConstantPageBytesNative( RHIBufferHandle ) override { return 0; }
+        bool                    unregisterBindlessTextureNative( RHITextureSRVIndex ) override { return true; }
+        RHIBufferSRVIndex       registerBindlessBufferSRVNative( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
+        RHIBufferSRVIndex       registerBindlessBufferSRVNative( const RHIBufferSlice& ) override { return kInvalidDescriptorIndex; }
+        bool                    unregisterBindlessResourceNative( RHIBufferSRVIndex ) override { return true; }
+        RHIUnorderedAccessIndex registerBindlessBufferUAVNative( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
+        RHIUnorderedAccessIndex registerBindlessTextureUAVNative( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
+        bool                    unregisterBindlessUAVNative( RHIUnorderedAccessIndex ) override { return true; }
 
     protected:
         [[nodiscard]] bool destroyBufferNative( RHIBufferHandle ) override { return true; }
@@ -259,7 +266,6 @@ SW_TEST_CASE( RHITransferTest, SubmitWhileBusyRetriesBusyButNotRejected )
  */
 SW_TEST_CASE( RHITransferTest, SerialsClassifyTicketsByWatermarkAndGeneration )
 {
-    SW_EXPECT_LOG( "RHI.RegisterBeforeTransferDone" );
     SW_EXPECT_LOG( "RHI.TransferTicketInvalid" );
     RHITransferSerials serials{ 1 };
     const uint64       first  = serials.issue();
@@ -279,19 +285,19 @@ SW_TEST_CASE( RHITransferTest, SerialsClassifyTicketsByWatermarkAndGeneration )
     serials.advanceWatermark( 0 ); // 워터마크는 내려가지 않는다
     SW_EXPECT_EQUAL( first, serials.getWatermark() );
 
-    // bindless 등록 보호: 전송한 적 없거나 첫 업로드가 끝났으면 통과하고(뒤의 구간 갱신이 남아도), 첫 업로드가 남은 텍스처는 오류와 함께 거절한다.
+    // bindless 등록 보호: 전송한 적 없거나 첫 업로드가 끝났으면 통과하고(뒤의 구간 갱신이 남아도), 첫 업로드가 남은 텍스처는 거절한다(입구가 알린다 — RHIResourceFrontTest).
     RHITextureTransferSerials neverUploaded;
-    SW_EXPECT_TRUE( serials.isTextureReadyToRegister( neverUploaded, RHITextureHandle{ 11 } ) );
+    SW_EXPECT_TRUE( serials.isFirstUploadComplete( neverUploaded ) );
     RHITextureTransferSerials updatedAfterFirst;
     updatedAfterFirst.recordWrite( first );
     updatedAfterFirst.recordWrite( second );
-    SW_EXPECT_TRUE( serials.isTextureReadyToRegister( updatedAfterFirst, RHITextureHandle{ 11 } ) );
+    SW_EXPECT_TRUE( serials.isFirstUploadComplete( updatedAfterFirst ) );
     SW_EXPECT_EQUAL( second, updatedAfterFirst._lastSerial.load() ); // 파괴 미루기는 마지막 전송을 기다린다
     RHITextureTransferSerials firstPending;
     firstPending.recordWrite( second );
     firstPending.recordWrite( first ); // 늦게 적은 작은 시리얼은 마지막을 덮지 않는다
     SW_EXPECT_EQUAL( second, firstPending._lastSerial.load() );
-    SW_EXPECT_FALSE( serials.isTextureReadyToRegister( firstPending, RHITextureHandle{ 11 } ) );
+    SW_EXPECT_FALSE( serials.isFirstUploadComplete( firstPending ) );
 
     serials.markLost();
     SW_EXPECT_TRUE( serials.classify( firstTicket ) == RHITransferStatus::Complete ); // 이미 끝난 일은 그대로다

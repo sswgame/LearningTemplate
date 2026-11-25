@@ -466,13 +466,8 @@ namespace sw
         uint32 _height;     ///< 높이 (4 bytes)
         uint32 _arraySize;  ///< 면 수 (4 bytes). Texture2D 는 1, TextureCube 는 6(`kCubeFaceCount`), Texture2DArray 는 1 이상
         /**
-         * @brief 밉 레벨 수 (4 bytes)입니다. **1 이상을 주세요. 0 은 백엔드마다 뜻이 다릅니다.**
-         * @details 바로 아래 `RHITextureUploadDesc::_mipLevels` 는 0 을 "텍스처가 가진 밉 전부" 로
-         *          정의하지만 **이쪽에는 그런 약속이 없다.** D3D11 은 0 을 "전체 밉 체인을 만들어라"
-         *          로 읽고, GL 은 `mipLevels > 0 ? mipLevels : 1` 로 접어 **1단계만** 만든다.
-         *          같은 값이 백엔드마다 다른 텍스처를 만든다. 기본 생성자가 1 을 넣고 호출하는 쪽도
-         *          모두 1 이상을 주므로 지금은 문제가 없다. 하지만 두 필드의 이름이 같아서 한쪽 규약을
-         *          다른 쪽에 잘못 옮겨 적기 쉽다.
+         * @brief 밉 레벨 수 (4 bytes)입니다. 1 부터 전체 밉 체인까지입니다(`isRHITextureShapeValid` — 0 은 거절한다).
+         * @details 아래 `RHITextureUploadDesc::_mipLevels` 는 0 을 "텍스처가 가진 밉 전부" 로 정의하지만 이쪽에는 그런 약속이 없다.
          */
         uint32                 _mipLevels;
         RHIFormat              _format;                 ///< 텍스처 포맷 (4 bytes)
@@ -495,11 +490,19 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 서술체의 형태와 면 수가 맞는지 확인합니다. Texture2D 는 1, TextureCube 는 6 이면서 정사각형, Texture2DArray 는 1 이상이어야 합니다.
-     * @details 네 백엔드의 `createTexture2D` 가 이 판정 하나로 거부한다. 맞지 않는 값을 그대로 두면 백엔드마다 다르게 깨진다.
+     * @brief 서술체의 크기 · 밉 수 · 면 수가 맞는지 확인합니다. 크기는 1 이상, 밉은 1 부터 전체 체인까지, Texture2D 는 면 1, TextureCube 는 6 이면서 정사각형, Texture2DArray 는 1 이상이어야 합니다.
+     * @details 생성의 공통 입구(`IRHIResourceFactory::createTexture2D`)가 이 판정 하나로 거부한다. 맞지 않는 값을 그대로 두면 백엔드마다 다르게 깨진다(밉 0 을 D3D11 은 전체 체인, GL 은 1 로 읽었다).
      */
     inline constexpr bool isRHITextureShapeValid( const RHITextureDesc& desc )
     {
+        uint32 fullMipLevels = 0;
+        for ( uint32 extent = desc._width > desc._height ? desc._width : desc._height; extent != 0; extent >>= 1 )
+        {
+            ++fullMipLevels;
+        }
+        const bool bSized = desc._width != 0 && desc._height != 0 && desc._mipLevels != 0 && desc._mipLevels <= fullMipLevels;
+        if ( bSized == false )
+            return false;
         switch ( desc._dimension )
         {
             case RHITextureDimension::Texture2D:

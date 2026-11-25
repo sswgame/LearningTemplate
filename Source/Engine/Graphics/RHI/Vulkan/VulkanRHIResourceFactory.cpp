@@ -9,7 +9,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
@@ -92,7 +91,7 @@ namespace sw
         }
     } // namespace
 
-    RHIBufferHandle VulkanRHIResourceFactory::createConstantBuffer( uint32 size )
+    RHIBufferHandle VulkanRHIResourceFactory::createConstantBufferNative( uint32 size )
     {
         const uint32 aligned = MathUtil::align( size, constant::render::kConstantBufferAlignment );
         const uint32 total   = aligned * constant::render::kMaxFrameCountInFlight;
@@ -128,13 +127,13 @@ namespace sw
         { _pDevice->writeConstantBufferSlot( target, slot, offset, pBytes, byteCount ); } );
     }
 
-    RHIBufferHandle VulkanRHIResourceFactory::createConstantBufferPage( uint32 size )
+    RHIBufferHandle VulkanRHIResourceFactory::createConstantBufferPageNative( uint32 size )
     {
         // 버퍼 하나(프레임 칸 × 페이지 크기)를 구간이 나눠 쓴다 — 상수 버퍼마다 버퍼 하나이던 것을 페이지당 하나로 줄인다(감사 R-4).
-        return createConstantBuffer( size );
+        return createConstantBufferNative( size );
     }
 
-    void VulkanRHIResourceFactory::writeConstantBufferSlice( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    void VulkanRHIResourceFactory::writeConstantBufferSliceNative( const RHIBufferSlice& slice, const void* pData, uint32 size )
     {
         if ( slice._buffer == 0 || pData == nullptr || size == 0 )
             return;
@@ -148,21 +147,13 @@ namespace sw
         { _pDevice->writeConstantBufferSlot( target, slot, offset, pBytes, byteCount ); } );
     }
 
-    RHIBufferHandle VulkanRHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
+    RHIBufferHandle VulkanRHIResourceFactory::createStructuredBufferNative( uint32 elementSize, uint32 elementCount )
     {
-        if ( elementSize == 0 || elementCount == 0 )
-            return 0;
-
-        // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSizeUtil 가 세 백엔드의 규칙 하나).
-        uint32 totalBytes{ 0 };
-        if ( RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
-            return 0;
-
         // TRANSFER_SRC: 어느 구조 버퍼든 비동기 되읽기(`copyBufferToReadback`)의 원본이 될 수 있다 — IRHICommandList 계약이 원본을 가리지 않는다(다른 백엔드는 복사 원본 제한이 없다).
         constexpr uint32 usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         // 구조 버퍼는 GPU 가 읽고 쓴다(인스턴스 · 컬링 · 라이트 그리드) — 기기 로컬이다. 갱신은 늘 스테이징 복사다(`updateStructuredBufferRegions`).
-        return _pDevice->createVulkanBuffer( totalBytes, usage, 0, VulkanBufferMemory::DeviceLocal, "StructuredBuffer" );
+        return _pDevice->createVulkanBuffer( elementSize * elementCount, usage, 0, VulkanBufferMemory::DeviceLocal, "StructuredBuffer" ); // 곱은 32비트에 담긴다(앞단이 봤다)
     }
 
     bool VulkanRHIResourceFactory::acquireStructuredUploadStaging( uint64 sizeBytes, uint64& outOffset, VkBuffer& outBuffer )
@@ -352,29 +343,25 @@ namespace sw
         return handle;
     }
 
-    RHIBufferHandle VulkanRHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes )
+    RHIBufferHandle VulkanRHIResourceFactory::createIndexBufferNative( const void* pData, uint32 sizeBytes )
     {
         // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 구조버퍼에는 VK_BUFFER_USAGE_INDEX_BUFFER_BIT 가 없어
         // vkCmdBindIndexBuffer 에 거는 것이 용도 위반이므로 인덱스 용도로 따로 만든다.
-        if ( pData == nullptr )
-            return 0;
         // 정적 인덱스는 기기 로컬 + 스테이징 복사다(호스트 메모리에서 그리지 않는다).
         const RHIBufferHandle handle = _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VulkanBufferMemory::DeviceLocal, "IndexBuffer" );
         return uploadDeviceLocal( handle, pData, sizeBytes );
     }
 
-    RHIBufferHandle VulkanRHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
+    RHIBufferHandle VulkanRHIResourceFactory::createVertexBufferNative( const void* pData, uint32 sizeBytes )
     {
         // 인덱스 버퍼와 같은 경로다(디바이스의 `createVulkanBuffer` 가 용도 `_usage` 까지 기록에 남긴다).
-        if ( pData == nullptr )
-            return 0;
         // TRANSFER_SRC: 렌더 프록시 정점 버퍼가 정점 풀 복사의 원본이 된다(R-15 — copyBufferRegion). 정적 정점은 기기 로컬 + 스테이징 복사다.
         const RHIBufferHandle handle =
             _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VulkanBufferMemory::DeviceLocal, "VertexBuffer" );
         return uploadDeviceLocal( handle, pData, sizeBytes );
     }
 
-    RHIBufferHandle VulkanRHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    RHIBufferHandle VulkanRHIResourceFactory::createGPUVertexBufferNative( uint32 sizeBytes )
     {
         // 복사의 도착 · 원본(풀을 다시 꾸릴 때 옛 풀이 원본이다). 기기 로컬이다.
         constexpr uint32 usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -442,12 +429,11 @@ namespace sw
         return true;
     }
 
-    void VulkanRHIResourceFactory::setTextureDebugName( RHITextureHandle texture, const utf8* pName )
+    void VulkanRHIResourceFactory::setTextureDebugNameNative( RHITextureHandle texture, const utf8* pName )
     {
         const VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || pName == nullptr )
+        if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE )
             return;
-        _pDevice->getMemoryTracker().setLabel( RHIMemoryKey::makeTexture( texture ), pName ); // 메모리 스냅숏 · RT 목록이 같은 이름을 보인다
         _pDevice->_memoryAllocator.setName( pRecord->_memory, pName );
         if ( _pDevice->_instance == VK_NULL_HANDLE )
             return;
@@ -471,21 +457,6 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 이미지 생성 · 메모리 · 뷰 · 초기 데이터 업로드의 순서가 곧 의미라 나누지 않는다.
     bool VulkanRHIResourceFactory::populateImageCreateInfo( const RHITextureDesc& desc, VkImageCreateInfo& outInfo )
     {
-        const bool bInvalidTextureRequest = _pDevice->_device == nullptr || desc._width == 0 || desc._height == 0;
-        if ( bInvalidTextureRequest )
-            return false;
-        if ( isRHITextureShapeValid( desc ) == false )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateTexture2DDimensionSlicesX", "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
-                             desc._arraySize, desc._width, desc._height );
-            return false;
-        }
-        // 이 장치가 샘플링하지 못하는 압축 형식(데스크톱의 ASTC · ETC2)은 드라이버에 넘기지 않는다 — 넘기면 D3D12 는 실패, Vulkan 드라이버는 0 나누기로 죽었다.
-        if ( RHIFormatUtil::isBlockCompressed( desc._format ) && _pDevice->supportsTextureFormat( desc._format ) == false )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateTexture2DFormatUnsupported", "createTexture2D: this device cannot sample format %# (%#x%#) - the texture is not created", static_cast<uint32>( desc._format ), desc._width, desc._height );
-            return false;
-        }
         VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         if ( desc._bIsRenderTarget )
             usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -513,7 +484,7 @@ namespace sw
         imageInfo.extent.width       = desc._width;
         imageInfo.extent.height      = desc._height;
         imageInfo.extent.depth       = 1;
-        imageInfo.mipLevels          = desc._mipLevels > 0 ? desc._mipLevels : 1;
+        imageInfo.mipLevels          = desc._mipLevels;
         imageInfo.arrayLayers        = desc._arraySize;
         imageInfo.flags              = ( desc._dimension == RHITextureDimension::TextureCube ) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0u;
         imageInfo.format             = format;
@@ -525,7 +496,7 @@ namespace sw
         return true;
     }
 
-    RHITextureAllocationInfo VulkanRHIResourceFactory::getTextureAllocationInfo( const RHITextureDesc& desc )
+    RHITextureAllocationInfo VulkanRHIResourceFactory::getTextureAllocationInfoNative( const RHITextureDesc& desc )
     {
         // 1.2 에는 서술만으로 요구를 묻는 함수(vkGetDeviceImageMemoryRequirements, 1.3 · maintenance4)가 없다 — 임시 이미지를 만들어 묻고 지운다(셋업 단계에서 첨부마다 한 번).
         VkImageCreateInfo imageInfo{};
@@ -540,10 +511,8 @@ namespace sw
         return RHITextureAllocationInfo{ requirements.size, requirements.alignment };
     }
 
-    RHITransientHeapHandle VulkanRHIResourceFactory::createTransientHeap( uint64 sizeBytes )
+    RHITransientHeapHandle VulkanRHIResourceFactory::createTransientHeapNative( uint64 sizeBytes )
     {
-        if ( sizeBytes == 0 || _pDevice->_device == VK_NULL_HANDLE )
-            return 0;
         // 메모리 종류는 힙에 놓일 첨부(렌더 타깃 · 샘플 — `TransientAttachmentPool::allocatePlaced`)의 이미지가 받는 종류에서 고른다. 놓을 때 그 이미지의 memoryTypeBits 가
         // 이 종류를 받는지 다시 본다(VUID-VkBindImageMemoryInfo-memory-01612) — 받지 않으면 그 첨부는 만들지 않는다.
         constexpr uint32 kProbeExtent = 64; // 메모리 종류만 묻는 이미지다 — 크기는 종류에 상관없다
@@ -579,7 +548,7 @@ namespace sw
         return _pDevice->_mapTransientHeap.erase( heap ) != 0;
     }
 
-    RHITextureHandle VulkanRHIResourceFactory::createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
+    RHITextureHandle VulkanRHIResourceFactory::createPlacedTexture2DNative( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
     {
         const auto it = _pDevice->_mapTransientHeap.find( heap );
         if ( it == _pDevice->_mapTransientHeap.end() )
@@ -590,7 +559,7 @@ namespace sw
         return createTextureResource( desc, it->second, offsetBytes );
     }
 
-    RHITextureHandle VulkanRHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
+    RHITextureHandle VulkanRHIResourceFactory::createTexture2DNative( const RHITextureDesc& desc )
     {
         return createTextureResource( desc, nullptr, 0 );
     }
@@ -612,8 +581,10 @@ namespace sw
         record._arrayLayers = desc._arraySize;
         record._dimension   = desc._dimension;
         record._layout.initialize( static_cast<uint16>( imageInfo.mipLevels ), static_cast<uint16>( desc._arraySize ), static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED ) );
-        record._bRenderTarget = desc._bIsRenderTarget ? 1 : 0;
-        record._bDepthStencil = desc._bIsDepthStencil ? 1 : 0;
+        record._bRenderTarget    = desc._bIsRenderTarget ? 1 : 0;
+        record._bDepthStencil    = desc._bIsDepthStencil ? 1 : 0;
+        record._bShaderResource  = desc._bIsShaderResource;
+        record._bUnorderedAccess = desc._bIsUnorderedAccess;
 
         uint64 allocationBytes{ 0 };
         if ( pHeap != nullptr )
@@ -932,20 +903,16 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 스테이징 생성 · 전이 · 복사 · 대기 · 매핑의 순서가 곧 의미라 나누지 않는다.
-    RHIBufferHandle VulkanRHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
+    RHIBufferHandle VulkanRHIResourceFactory::createReadbackBufferNative( uint32 elementSize, uint32 elementCount )
     {
-        uint32     totalBytes{ 0 };
-        const bool bInvalidReadbackRequest = elementSize == 0 || elementCount == 0 || RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
-        if ( bInvalidReadbackRequest )
-            return 0;
         // 읽기 버퍼는 CPU 가 맵해 읽는다 — 호스트 보임이다.
-        return _pDevice->createVulkanBuffer( totalBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VulkanBufferMemory::HostRead, "ReadbackBuffer" );
+        return _pDevice->createVulkanBuffer( elementSize * elementCount, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VulkanBufferMemory::HostRead, "ReadbackBuffer" );
     }
 
-    bool VulkanRHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
+    bool VulkanRHIResourceFactory::readReadbackBufferNative( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
     {
         VulkanRHIDevice::VulkanBufferRecord* pRecord     = _pDevice->resolveAllocatedBuffer( readback );
-        const bool                           bUnreadable = pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE || pDestination == nullptr || sizeBytes == 0 || sizeBytes > pRecord->_sizeBytes;
+        const bool                           bUnreadable = pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE || sizeBytes > pRecord->_sizeBytes;
         if ( bUnreadable )
             return false;
         // 읽기 버퍼는 복사 도착지 용도 하나로만 만든다(createReadbackBuffer). 다른 용도의 버퍼는 매핑되더라도 읽기 버퍼가 아니다. 네 백엔드가 같이 거절한다.
@@ -1148,126 +1115,82 @@ namespace sw
         return true;
     }
 
-    bool VulkanRHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
+    bool VulkanRHIResourceFactory::describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo )
     {
-        const VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_transferSerials );
+        const VulkanRHIDevice::VulkanTextureRecord* const pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_imageView == VK_NULL_HANDLE )
+            return false;
+        outInfo._dimension            = pRecord->_dimension;
+        outInfo._bShaderResource      = pRecord->_bShaderResource;
+        outInfo._bUnorderedAccess     = pRecord->_bUnorderedAccess;
+        outInfo._bFirstUploadComplete = _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_transferSerials ) ? SW_TRUE : SW_FALSE;
+        return true;
     }
 
-    RHITextureSRVIndex VulkanRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    uint32 VulkanRHIResourceFactory::findConstantPageBytesNative( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );
-        const bool bCannotRegisterTexture = texture == 0 || _pDevice->hasTextureSet() == false || _pDevice->_defaultSampler == VK_NULL_HANDLE;
-        if ( bCannotRegisterTexture )
+        const VulkanRHIDevice::VulkanBufferRecord* const pRecord = _pDevice->resolveAllocatedBuffer( buffer );
+        return pRecord != nullptr ? static_cast<uint32>( pRecord->_cbSlotSize ) : 0u;
+    }
+
+    RHITextureSRVIndex VulkanRHIResourceFactory::registerBindlessTextureNative( RHITextureHandle texture )
+    {
+        // 깊이 텍스처는 DEPTH|STENCIL 두 aspect 뷰로는 샘플 디스크립터를 못 만든다 — `findBindlessSampleView` 가 DEPTH 단일 aspect 뷰와 샘플 시점 레이아웃
+        // (prepareTextureForShaderRead 가 옮기는 DEPTH_STENCIL_READ_ONLY_OPTIMAL)을 준다. 주의: 여기서 거부하면 g_ShadowMapIndex 가 INVALID 가 되고 bindless 배열 범위 밖
+        // 읽기가 0 을 반환해, Vulkan 만 모든 픽셀이 "완전 그림자"(x0.56) 로 어두워진다(검증 에러 없음, 큐브는 다 보인다).
+        VkImageView sampleView{ VK_NULL_HANDLE };
+        uint32      sampleLayout{ 0 };
+        const bool  bCannotRegister = _pDevice->hasTextureSet() == false || _pDevice->_defaultSampler == VK_NULL_HANDLE || _pDevice->findBindlessSampleView( texture, sampleView, sampleLayout ) == false;
+        if ( bCannotRegister )
             return kInvalidDescriptorIndex;
 
-        VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
-        if ( pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE )
-            return kInvalidDescriptorIndex;
-        // 텍스처 배열 세트(set 1 binding 0)는 sampler2D[] 다 — 배열 · 큐브 뷰는 넣을 수 없다(RHITextureDimension 참고).
-        if ( pResolved->_dimension != RHITextureDimension::Texture2D )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture set yet", texture.getPacked(),
-                             static_cast<uint32>( pResolved->_dimension ) );
-            return kInvalidDescriptorIndex;
-        }
-
-        // 깊이 텍스처는 DEPTH|STENCIL 두 aspect 뷰로는 샘플 디스크립터를 못 만든다. DEPTH 단일 aspect 뷰
-        // (_sampleView) 를 쓰고, 샘플 시점 레이아웃(prepareTextureForShaderRead 가 옮기는
-        // DEPTH_STENCIL_READ_ONLY_OPTIMAL) 을 디스크립터에도 같이 적는다. 주의: 여기서 거부하면 g_ShadowMapIndex 가
-        // INVALID 가 되고 bindless 배열 범위 밖 읽기가 0 을 반환해, Vulkan 만 모든 픽셀이 "완전 그림자"(x0.56) 로
-        // 어두워진다(검증 에러 없음, 큐브는 다 보인다).
-        const bool        bDepth       = pResolved->_bDepthStencil != SW_FALSE;
-        const VkImageView sampleView   = bDepth ? pResolved->_sampleView : pResolved->_imageView;
-        const uint32      sampleLayout = static_cast<uint32>( bDepth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
-                                                                     : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-        if ( sampleView == VK_NULL_HANDLE )
-            return kInvalidDescriptorIndex;
-
-        VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
         // 등록마다 새 번호다(DX11 · DX12 · GL 과 같다). 같은 텍스처의 번호를 나눠 주면 한쪽의 해제(에디터의 ImGui 등록)가 다른 쪽(엔진)이 쓰는 번호를 놓는다.
-        // 첫 업로드가 끝나지 않은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — RHITextureTransferSerials). 뒤의 구간 갱신은 막지 않는다.
-        if ( _pDevice->_transferSerials.isTextureReadyToRegister( record._transferSerials, texture ) == false )
-            return kInvalidDescriptorIndex;
-
         const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        VulkanRHIDevice* const   pDevice         = _pDevice;
-        const RHIDescriptorIndex descriptorIndex = _pDevice->_textureRegistry.allocate( texture, [pDevice, sampleView, sampleLayout]( RHIDescriptorIndex index )
+        VulkanRHIDevice* const   pDevice = _pDevice;
+        return RHITextureSRVIndex{ _pDevice->_textureRegistry.allocate( texture, [pDevice, sampleView, sampleLayout]( RHIDescriptorIndex index )
         {
             pDevice->writeBindlessTextureSlot( index, sampleView, sampleLayout );
             return true;
-        } );
-        if ( descriptorIndex == kInvalidDescriptorIndex )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessTextureTableFull", "Bindless texture table full." );
-            return kInvalidDescriptorIndex;
-        }
-        return RHITextureSRVIndex{ descriptorIndex };
+        } ) };
     }
 
-    RHIBufferSRVIndex VulkanRHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    RHIBufferSRVIndex VulkanRHIResourceFactory::registerBindlessBufferSRVNative( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
 
         // 버퍼는 인덱스 → 핸들 표에만 올린다. 실제 VkBuffer · 오프셋은 슬롯 세트를 쓰는 순간(flushBindings)에 푼다.
         // 링 상수버퍼의 프레임 오프셋도 그때 더한다.
-        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         const RHIDescriptorIndex index = _pDevice->_bufferRegistry.allocate( buffer );
         if ( index == kInvalidDescriptorIndex )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessBufferTableFull", "The bindless buffer table (%#) is full.", VulkanRHIDevice::kBindlessBufferCapacity );
             return kInvalidDescriptorIndex;
-        }
         _pDevice->publishBufferReadSlot( index, false, buffer );
         return RHIBufferSRVIndex{ index };
     }
 
-    RHIBufferSRVIndex VulkanRHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    RHIBufferSRVIndex VulkanRHIResourceFactory::registerBindlessBufferSRVNative( const RHIBufferSlice& slice )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
-        const VulkanRHIDevice::VulkanBufferRecord* const pRecord = _pDevice->resolveAllocatedBuffer( slice._buffer );
-        if ( pRecord == nullptr )
-            return kInvalidDescriptorIndex;
-        // 디스크립터 offset 은 minUniformBufferOffsetAlignment(명세 상한 256)의 배수여야 한다 — 구간은 256 B 배수다. 링 페이지 칸을 넘는 구간은 부르는 쪽의 결함이다.
-        const bool bBadSlice = pRecord->_cbSlotSize == 0 || slice._size == 0 || slice._offset % constant::render::kConstantBufferAlignment != 0 ||
-                               static_cast<uint64>( slice._offset ) + slice._size > pRecord->_cbSlotSize;
-        if ( bBadSlice )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BadConstantBufferSlice", "registerBindlessBufferSRV: slice (offset %#, size %#) is not a 256-aligned slice of a constant buffer page",
-                             slice._offset, slice._size );
-            return kInvalidDescriptorIndex;
-        }
-        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         const RHIDescriptorIndex index = _pDevice->_bufferRegistry.allocate( slice._buffer );
         if ( index == kInvalidDescriptorIndex )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessBufferTableFull", "The bindless buffer table (%#) is full.", VulkanRHIDevice::kBindlessBufferCapacity );
             return kInvalidDescriptorIndex;
-        }
         // 슬롯 세트를 쓰는 순간(resolveSlot)에 프레임 칸 오프셋 + 구간 오프셋, range = 구간 크기로 푼다.
         _pDevice->publishBufferReadSlot( index, false, slice._buffer, slice._offset, slice._size );
         return RHIBufferSRVIndex{ index };
     }
 
-    void VulkanRHIResourceFactory::unregisterBindlessResource( RHIBufferSRVIndex index )
+    bool VulkanRHIResourceFactory::unregisterBindlessResourceNative( RHIBufferSRVIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
-        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         // 버퍼가 소유하지 않는 인덱스(텍스처 SRV 인덱스가 잘못 넘어왔거나 이중 해제)를 프리리스트에
         // 넣으면 다음 registerBindlessBufferSRV 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다. 실제로
         // 트랜지언트 텍스처 인덱스 0 · 1 · 2 가 여기로 와서 패스 CB 슬롯 2 에 인스턴스 버퍼가 들어갔다.
         if ( _pDevice->_bufferRegistry.release( index, RHIBindlessReuse::AfterFence ) == false )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessBufferIndexNot", "Bindless buffer index %# is not owned by any buffer; ignoring the release.", index.getValue() );
-            return;
-        }
+            return false;
         deferFreeBufferIndex( index, false );
+        return true;
     }
 
     void VulkanRHIResourceFactory::deferFreeBufferIndex( RHIDescriptorIndex index, bool bUAV )
@@ -1287,16 +1210,11 @@ namespace sw
                                                    _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
-    bool VulkanRHIResourceFactory::rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
+    bool VulkanRHIResourceFactory::rebindBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "rebindBindlessTexture" );
-        VulkanRHIDevice::VulkanTextureRecord* const pResolved = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
-        VkImageView                                 view{ VK_NULL_HANDLE };
-        uint32                                      layout{ 0 };
-        const bool                                  bCannotRebind = pResolved == nullptr || _pDevice->hasTextureSet() == false ||
-                                   _pDevice->_transferSerials.isTextureReadyToRegister( pResolved->_transferSerials, texture ) == false ||
-                                   _pDevice->findBindlessSampleView( texture, view, layout ) == false;
-        if ( bCannotRebind )
+        VkImageView view{ VK_NULL_HANDLE };
+        uint32      layout{ 0 };
+        if ( _pDevice->hasTextureSet() == false || _pDevice->findBindlessSampleView( texture, view, layout ) == false )
             return false;
         // 등록표 값만 바꾸고 세트 쓰기는 링 슬롯마다 그 차례에 한다(`flushBindlessRingSlot`) — 진행 중 커맨드가 쓰는 원소를 덮지 않는다. 늦어도 다음 프레임부터 새 텍스처다.
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
@@ -1306,23 +1224,18 @@ namespace sw
         return true;
     }
 
-    RHITextureSRVIndex VulkanRHIResourceFactory::reserveBindlessTextureIndex()
+    RHITextureSRVIndex VulkanRHIResourceFactory::reserveBindlessTextureIndexNative()
     {
         // 번호 발급기만 건드린다 — 세트 원소는 쓰지 않는다(활성화가 렌더 스레드에서 쓴다). 어느 스레드든.
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         return RHITextureSRVIndex{ _pDevice->_textureRegistry.reserveIndex() };
     }
 
-    bool VulkanRHIResourceFactory::activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
+    bool VulkanRHIResourceFactory::activateReservedBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "activateReservedBindlessTexture" );
-        VulkanRHIDevice::VulkanTextureRecord* const pResolved = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
-        VkImageView                                 view{ VK_NULL_HANDLE };
-        uint32                                      layout{ 0 };
-        const bool                                  bCannotActivate = pResolved == nullptr || _pDevice->hasTextureSet() == false ||
-                                     _pDevice->_transferSerials.isTextureReadyToRegister( pResolved->_transferSerials, texture ) == false ||
-                                     _pDevice->findBindlessSampleView( texture, view, layout ) == false;
-        if ( bCannotActivate )
+        VkImageView view{ VK_NULL_HANDLE };
+        uint32      layout{ 0 };
+        if ( _pDevice->hasTextureSet() == false || _pDevice->findBindlessSampleView( texture, view, layout ) == false )
             return false;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         if ( _pDevice->_textureRegistry.isLive( index ) )
@@ -1332,20 +1245,14 @@ namespace sw
         return _pDevice->_textureRegistry.assign( index, texture, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽(텍스처 캐시)의 것이다
     }
 
-    void VulkanRHIResourceFactory::unregisterBindlessTexture( RHITextureSRVIndex index )
+    bool VulkanRHIResourceFactory::unregisterBindlessTextureNative( RHITextureSRVIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
-        if ( index == kInvalidDescriptorIndex )
-            return;
         // 주인 텍스처의 번호 목록은 등록표가 든다 — `release` 가 목록에서도 지우므로 나중의 destroyTexture 가 같은 번호를 두 번 반납하지 않는다.
-        const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         if ( _pDevice->_textureRegistry.release( index, RHIBindlessReuse::AfterFence ) == false )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessTextureIndexNot", "Bindless texture index %# is not owned by any texture; ignoring the release.", index.getValue() );
-            return;
-        }
+            return false;
         scheduleTextureBindlessIndexFree( index );
+        return true;
     }
 
     void VulkanRHIResourceFactory::scheduleTextureBindlessIndexFree( RHIDescriptorIndex index )
@@ -1363,33 +1270,24 @@ namespace sw
                                                    _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
-    RHIUnorderedAccessIndex VulkanRHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    RHIUnorderedAccessIndex VulkanRHIResourceFactory::registerBindlessBufferUAVNative( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUAV" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
-        const ScopedDeferredLog   deferredLog;
         UniqueLock<shared_mutex>  registryLock{ _pDevice->_bindlessMutex };
         VulkanRHIDevice::UAVEntry entry{};
         entry._buffer                  = buffer;
         const RHIDescriptorIndex index = _pDevice->_uavRegistry.allocate( entry );
         if ( index == kInvalidDescriptorIndex )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessUAVTableFull", "The bindless UAV table (%#) is full.", VulkanRHIDevice::kBindlessBufferCapacity );
             return kInvalidDescriptorIndex;
-        }
         _pDevice->publishBufferReadSlot( index, true, buffer );
         return RHIUnorderedAccessIndex{ index };
     }
 
-    RHIUnorderedAccessIndex VulkanRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIUnorderedAccessIndex VulkanRHIResourceFactory::registerBindlessTextureUAVNative( RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUAV" );
-        if ( texture == 0 || _pDevice->hasTextureSet() == false )
-            return kInvalidDescriptorIndex;
-        VulkanRHIDevice::VulkanTextureRecord* pResolved                 = _pDevice->resolveTexture( texture );
-        const bool                            bTextureNotStorageCapable = pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE || pResolved->_bDepthStencil != SW_FALSE;
-        if ( bTextureNotStorageCapable )
+        const VulkanRHIDevice::VulkanTextureRecord* const pResolved = _pDevice->hasTextureSet() ? _pDevice->resolveTexture( texture ) : nullptr;
+        if ( pResolved == nullptr )
             return kInvalidDescriptorIndex;
 
         // 버퍼 UAV 와 같은 인덱스 공간이다. 인덱스가 곧 RW 텍스처 배열(set 1 binding 3)의 원소다.
@@ -1407,17 +1305,16 @@ namespace sw
             pDevice->writeBindlessStorageImageSlot( slot, view );
             return true;
         } );
-        if ( index == kInvalidDescriptorIndex )
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.RWTextureArrayFull", "The RW texture array (%#) is full.", _pDevice->kBindlessStorageImageCount );
         return RHIUnorderedAccessIndex{ index };
     }
 
-    void VulkanRHIResourceFactory::unregisterBindlessUAV( RHIUnorderedAccessIndex index )
+    bool VulkanRHIResourceFactory::unregisterBindlessUAVNative( RHIUnorderedAccessIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "unregisterBindlessUAV" );
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        if ( _pDevice->_uavRegistry.release( index, RHIBindlessReuse::AfterFence ) )
-            deferFreeBufferIndex( index, true );
+        if ( _pDevice->_uavRegistry.release( index, RHIBindlessReuse::AfterFence ) == false )
+            return false;
+        deferFreeBufferIndex( index, true );
+        return true;
     }
 
     // 길이 유지(긴 함수 정리 기준): 파이프라인 상태 서술을 단계 순서로 채운 뒤 만드는 선형 목록이라 나누지 않는다.

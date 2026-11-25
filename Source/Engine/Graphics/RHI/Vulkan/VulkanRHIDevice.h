@@ -413,11 +413,13 @@ namespace sw
             uint32                             _mipLevels{ 1 };
             uint32                             _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
             RHITextureDimension                _dimension{ RHITextureDimension::Texture2D };
-            /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
+            /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isFirstUploadComplete`).
             RHITextureTransferSerials _transferSerials;
-            uint8                     _bRenderTarget : 1;
-            uint8                     _bDepthStencil : 1;
-            [[maybe_unused]] uint8    _reserved      : 6;
+            uint8                     _bRenderTarget    : 1;
+            uint8                     _bDepthStencil    : 1;
+            uint8                     _bShaderResource  : 1;
+            uint8                     _bUnorderedAccess : 1;
+            [[maybe_unused]] uint8    _reserved         : 4;
             /// @brief 면이 여럿이거나 밉이 여럿일 때 (밉, 면) 마다의 2D 뷰(렌더 패스 첨부용 — 밉 하나 · 면 하나)와 단일 RT 프레임버퍼입니다. 칸은 `mip * _arrayLayers + slice` 다.
             ///        이때 `_imageView` 는 셰이더가 보는 전체 뷰입니다(첨부는 밉 하나여야 한다 — R-10).
             vector<VkImageView>   _listSliceView;

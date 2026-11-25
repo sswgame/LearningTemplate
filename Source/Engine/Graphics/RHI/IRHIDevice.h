@@ -663,15 +663,6 @@ namespace sw
         };
 
         /**
-         * @brief 지금 리소스 테이블(bindless 레지스트리, 텍스처 레코드)을 바꿔도 되는 시점인지 **모든 구성에서** 확인하고, 어기면 오류를 남기고 멈춥니다.
-         * @details 모든 백엔드의 register/unregister · create/destroy 진입부에서 부른다. 어긴 호출이 곧 다른 스레드의 기록 상태를 쓰는 데이터 경쟁이라(DX11 `forget*InRecordingStates`,
-         *          bindless 표의 디스크립터 참조) 한 프레임 낡은 바인딩으로 그리거나 GPU 가 쓰레기 디스크립터를 읽고 죽는다. 비용은 원자 읽기 한 번이라 Release 에서도 확인한다.
-         *          디버그에서만 멈추는 단언 변형은 두지 않는다 — 강도가 둘이면 Release 에서만 어긋나는 경로가 생긴다.
-         * @param pWhat 로그에 남길 호출 지점 이름입니다.
-         */
-        void requireRegistryMutableNow( const utf8* pWhat ) const;
-
-        /**
          * @brief 버퍼 갱신 하나가 기록하는 프레임과 순서가 맞는 자리인지 봅니다(다섯 백엔드가 같다). 갱신의 공통 입구(`IRHIResourceFactory::updateStructuredBufferRegions` · `updateGeometryBufferRegions`)가 부릅니다.
          * @details **렌더 스레드**의 갱신은 패스 밖이어야 한다(전송 계약 3 — 업로드는 그리기 기록 전). 렌더 그래프를 기록하는 동안(`PassRecordingScope`)의 갱신이면 개발 구성에서 멈춘다 — 패스는 자기 리스트에 기록하고 갱신은 프레임 스트림에 기록해 그 리스트 **앞에**
          *          실행된다. 그래프가 이미 기록한 전이(추적 상태)와 어긋나고(D3D12 상태 오류), 앞 패스가 새 내용을 읽는다. 그래프 앞(준비 단계)에서 올린다.
@@ -815,6 +806,7 @@ namespace sw
         void markInitPhase( const utf8* pPhaseName ) { _initPhaseTimings.mark( pPhaseName ); }
 
     private:
+        friend class IRHIResourceFactory;  ///< 자원 표 감시(`requireRegistryMutableNow`)는 팩토리의 공통 입구만 부른다 — 백엔드는 따로 감시하지 않는다
         friend struct RHIDeviceTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /** @brief 아직 해제하지 않고 미뤄 둔 핸들 수입니다(테스트 — 줄의 형식이 cpp 안이라 본문도 cpp 에 있다). */
         size_t getDeferredHandleCount() const;
@@ -822,6 +814,14 @@ namespace sw
         void releaseHandleInternal( RHIHandleKind kind, uint64 packed );
         /** @brief 핸들 하나를 지금 그 종류의 백엔드 파괴 함수로 내립니다. 백엔드가 산 핸들이 아니었다고 하면 단언한다(같은 핸들 두 번 해제). */
         void releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 packed );
+        /**
+         * @brief 지금 리소스 테이블(bindless 레지스트리 · 자원 해제)을 바꿔도 되는 시점인지 **모든 구성에서** 확인하고, 어기면 오류를 남기고 멈춥니다.
+         * @details 등록 · 해제의 공통 입구(`IRHIResourceFactory`)와 핸들 해제(`releaseNow`)가 부른다. 어긴 호출이 곧 다른 스레드의 기록이 읽는 표를 바꾸는 데이터 경쟁이라
+         *          한 프레임 낡은 바인딩으로 그리거나 GPU 가 쓰레기 디스크립터를 읽고 죽는다. 비용은 원자 읽기 한 번이라 Release 에서도 확인한다.
+         *          디버그에서만 멈추는 단언 변형은 두지 않는다 — 강도가 둘이면 Release 에서만 어긋나는 경로가 생긴다.
+         * @param pWhat 로그에 남길 호출 지점 이름입니다.
+         */
+        void requireRegistryMutableNow( const utf8* pWhat ) const;
         /** @brief 미룬 핸들 중 기다리던 프레임이 끝난 것만 해제합니다(`notifyRenderFrameRetired`). */
         void releaseRetiredHandles();
         /** @brief 렌더 스레드의 갱신이 패스 밖인지 봅니다(`beginBufferUpload` 의 렌더 스레드 몫). */

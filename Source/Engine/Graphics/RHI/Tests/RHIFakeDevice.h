@@ -348,14 +348,27 @@ namespace sw::test
         uint32                         _lastStructuredElementCount{ 0 };      /**< 마지막으로 만든 구조 버퍼의 원소 수 */
         uint32                         _readbackReadCount{ 0 };               /**< `readReadbackBuffer` 호출 수 */
         bool                           _bReadbackReadable{ true };            /**< `readReadbackBuffer` 가 돌려줄 값(내용은 건드리지 않는다) */
-        RHIBufferSRVIndex              _bufferSRV{ kInvalidDescriptorIndex }; /**< `registerBindlessBufferSRV` 가 낼 번호 */
+        RHIBufferSRVIndex              _bufferSRV{ kInvalidDescriptorIndex }; /**< `registerBindlessBufferSRV` 가 낼 번호(무효면 새 번호) */
         vector<RHIPipelineStateHandle> _listDestroyedPipelineState;           /**< `destroyPipelineStateNative` 로 받은 PSO(받은 순서) */
 
-        uint64              _nextTexture{ 0 };         /**< 다음에 낼 텍스처 핸들의 packed 값 — 0 이면 텍스처를 만들지 못한다 */
-        uint32              _nextTextureView{ 1 };     /**< 다음에 낼 텍스처 뷰 번호 */
-        bool                _bFailTextureUAV{ false }; /**< 텍스처 UAV 등록이 실패한다 */
-        vector<const utf8*> _listReleaseStep;          /**< 텍스처 뷰 해제("srv" · "uav")와 텍스처 파괴("texture")의 차례 */
+        uint64                _nextTexture{ 0 };                         /**< 다음에 낼 텍스처 핸들의 packed 값 — 0 이면 텍스처를 만들지 못한다 */
+        uint32                _nextTextureView{ 1 };                     /**< 다음에 낼 텍스처 뷰 번호 */
+        bool                  _bFailTextureUAV{ false };                 /**< 텍스처 UAV 등록이 실패한다 */
+        uint32                _nextBufferView{ 1 };                      /**< 다음에 낼 버퍼 뷰 번호 */
+        RHIBufferSRVIndex     _releasedIndex{ kInvalidDescriptorIndex }; /**< 해제할 때 산 번호가 아니었다고 답할 버퍼 번호 */
+        uint32                _constantPageBytes{ 0 };                   /**< 상수 버퍼 페이지의 바이트(0 이면 구간으로 나눌 수 없다) */
+        RHITextureBindingInfo _textureInfo{ makeTextureInfo() };         /**< 산 텍스처가 답할 등록 조건 */
+        vector<const utf8*>   _listReleaseStep;                          /**< 텍스처 뷰 해제("srv" · "uav")와 텍스처 파괴("texture")의 차례 */
 
+        /** @brief 등록할 수 있는 텍스처의 조건입니다. */
+        static RHITextureBindingInfo makeTextureInfo()
+        {
+            RHITextureBindingInfo info{};
+            info._bShaderResource      = SW_TRUE;
+            info._bUnorderedAccess     = SW_TRUE;
+            info._bFirstUploadComplete = SW_TRUE;
+            return info;
+        }
         /** @brief 새 텍스처 뷰 번호를 냅니다(@p bUAV 이고 실패로 두었으면 무효). */
         RHIDescriptorIndex makeTextureView( bool bUAV ) { return bUAV && _bFailTextureUAV ? kInvalidDescriptorIndex : RHIDescriptorIndex{ _nextTextureView++ }; }
 
@@ -367,13 +380,13 @@ namespace sw::test
             return buffer;
         }
 
-        RHIBufferHandle createVertexBuffer( const void*, uint32 ) override { return makeBuffer(); }
-        RHIBufferHandle createGPUVertexBuffer( uint32 ) override
+        RHIBufferHandle createVertexBufferNative( const void*, uint32 ) override { return makeBuffer(); }
+        RHIBufferHandle createGPUVertexBufferNative( uint32 ) override
         {
             ++_gpuVertexBufferCount;
             return makeBuffer();
         }
-        RHIBufferHandle createIndexBuffer( const void*, uint32 ) override { return makeBuffer(); }
+        RHIBufferHandle createIndexBufferNative( const void*, uint32 ) override { return makeBuffer(); }
         void            updateGeometryBufferRegionsNative( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
         void            updateStructuredBufferRegionsNative( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override { ++_structuredUpdateCount; }
 
@@ -385,36 +398,49 @@ namespace sw::test
         void                   discardTextureReadback( RHITransferTicket ) override {}
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
-        using IRHIResourceFactory::createBuffer; // 백엔드 구현 판(보호)을 테스트가 직접 부른다
-        RHIBufferHandle createConstantBuffer( uint32 ) override { return 0; }
-        RHIBufferHandle createConstantBufferPage( uint32 ) override { return 0; }
-        void            writeConstantBufferSlice( const RHIBufferSlice&, const void*, uint32 ) override {}
-        RHIBufferHandle createStructuredBuffer( uint32, uint32 elementCount ) override
+        using IRHIResourceFactory::createBufferNative; // 백엔드 구현 판(보호)을 테스트가 직접 부른다
+        RHIBufferHandle createConstantBufferNative( uint32 ) override { return 0; }
+        RHIBufferHandle createConstantBufferPageNative( uint32 ) override { return 0; }
+        void            writeConstantBufferSliceNative( const RHIBufferSlice&, const void*, uint32 ) override {}
+        RHIBufferHandle createStructuredBufferNative( uint32, uint32 elementCount ) override
         {
             ++_structuredCreateCount;
             _lastStructuredElementCount = elementCount;
             return makeBuffer();
         }
-        RHIBufferHandle    createReadbackBuffer( uint32, uint32 ) override { return makeBuffer(); }
-        [[nodiscard]] bool readReadbackBuffer( RHIBufferHandle, uint32, void* ) override
+        RHIBufferHandle    createReadbackBufferNative( uint32, uint32 ) override { return makeBuffer(); }
+        [[nodiscard]] bool readReadbackBufferNative( RHIBufferHandle, uint32, void* ) override
         {
             ++_readbackReadCount;
             return _bReadbackReadable;
         }
-        RHITextureHandle        createTexture2D( const RHITextureDesc& ) override { return RHITextureHandle{ _nextTexture != 0 ? _nextTexture++ : 0 }; }
-        RHIFormat               getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
-        RHITextureSRVIndex      registerBindlessTexture( RHITextureHandle ) override { return RHITextureSRVIndex{ makeTextureView( false ) }; }
-        bool                    rebindBindlessTexture( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
-        RHITextureSRVIndex      reserveBindlessTextureIndex() override { return kInvalidDescriptorIndex; }
-        bool                    activateReservedBindlessTexture( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
-        bool                    isTextureReadyToSample( RHITextureHandle ) override { return false; }
-        void                    unregisterBindlessTexture( RHITextureSRVIndex ) override { _listReleaseStep.push_back( "srv" ); }
-        RHIBufferSRVIndex       registerBindlessBufferSRV( RHIBufferHandle ) override { return _bufferSRV; }
-        RHIBufferSRVIndex       registerBindlessBufferSRV( const RHIBufferSlice& ) override { return kInvalidDescriptorIndex; }
-        void                    unregisterBindlessResource( RHIBufferSRVIndex ) override {}
-        RHIUnorderedAccessIndex registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
-        RHIUnorderedAccessIndex registerBindlessTextureUAV( RHITextureHandle ) override { return RHIUnorderedAccessIndex{ makeTextureView( true ) }; }
-        void                    unregisterBindlessUAV( RHIUnorderedAccessIndex ) override { _listReleaseStep.push_back( "uav" ); }
+        RHITextureHandle   createTexture2DNative( const RHITextureDesc& ) override { return RHITextureHandle{ _nextTexture != 0 ? _nextTexture++ : 0 }; }
+        RHIFormat          getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
+        RHITextureSRVIndex registerBindlessTextureNative( RHITextureHandle ) override { return RHITextureSRVIndex{ makeTextureView( false ) }; }
+        bool               rebindBindlessTextureNative( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
+        RHITextureSRVIndex reserveBindlessTextureIndexNative() override { return kInvalidDescriptorIndex; }
+        bool               activateReservedBindlessTextureNative( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
+        bool               describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo ) override
+        {
+            outInfo = _textureInfo;
+            return texture != 0;
+        }
+        uint32 findConstantPageBytesNative( RHIBufferHandle ) override { return _constantPageBytes; }
+        bool   unregisterBindlessTextureNative( RHITextureSRVIndex ) override
+        {
+            _listReleaseStep.push_back( "srv" );
+            return true;
+        }
+        RHIBufferSRVIndex       registerBindlessBufferSRVNative( RHIBufferHandle ) override { return _bufferSRV != kInvalidDescriptorIndex ? _bufferSRV : RHIBufferSRVIndex{ _nextBufferView++ }; }
+        RHIBufferSRVIndex       registerBindlessBufferSRVNative( const RHIBufferSlice& ) override { return RHIBufferSRVIndex{ _nextBufferView++ }; }
+        bool                    unregisterBindlessResourceNative( RHIBufferSRVIndex index ) override { return index != _releasedIndex; }
+        RHIUnorderedAccessIndex registerBindlessBufferUAVNative( RHIBufferHandle ) override { return RHIUnorderedAccessIndex{ _nextBufferView++ }; }
+        RHIUnorderedAccessIndex registerBindlessTextureUAVNative( RHITextureHandle ) override { return RHIUnorderedAccessIndex{ makeTextureView( true ) }; }
+        bool                    unregisterBindlessUAVNative( RHIUnorderedAccessIndex ) override
+        {
+            _listReleaseStep.push_back( "uav" );
+            return true;
+        }
 
     protected:
         [[nodiscard]] bool destroyBufferNative( RHIBufferHandle buffer ) override

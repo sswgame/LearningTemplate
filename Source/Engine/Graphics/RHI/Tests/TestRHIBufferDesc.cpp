@@ -12,30 +12,28 @@
 using namespace sw;
 
 /**
- * @brief [RHIBufferDescTest] 빈 서술 · 곱이 맞지 않는 크기 · 다른 종류(정점 · 인덱스 · 상수)는 거절하고 구조 버퍼를 만들지 않는다
- * @details 변이: 옛 기본 구현(원소 0 → 4 바이트 · 1 개)으로 되돌리면 빈 서술이 구조 버퍼 하나를 만들어 첫 단언이 진다.
+ * @brief [RHIBufferDescTest] 빈 서술 · 곱이 맞지 않는 크기 · 다른 종류(정점 · 인덱스 · 상수)는 거절한다
+ * @details 변이: 옛 기본 구현(원소 0 → 4 바이트 · 1 개)으로 되돌리면 빈 서술이 맞는 서술이 되어 첫 단언이 진다.
  */
 SW_TEST_CASE( RHIBufferDescTest, InvalidDescIsRejectedWithoutInventingValues )
 {
     SW_EXPECT_LOG( "RHI.BufferDescSize" );
     SW_EXPECT_LOG( "RHI.BufferDescOtherKind" );
-    test::FakeRHIBufferFactory factory;
-    SW_EXPECT_EQUAL( RHIBufferHandle{ 0 }, factory.createBuffer( RHIBufferDesc{} ) );
+    SW_EXPECT_FALSE( IRHIResourceFactory::isValidBufferDesc( RHIBufferDesc{}, "createBuffer" ) );
 
     RHIBufferDesc mismatched{};
     mismatched._elementSize  = 16;
     mismatched._elementCount = 4;
     mismatched._sizeBytes    = 60;
     mismatched._usage        = RHIBufferUsage::Structured;
-    SW_EXPECT_EQUAL( RHIBufferHandle{ 0 }, factory.createBuffer( mismatched ) );
+    SW_EXPECT_FALSE( IRHIResourceFactory::isValidBufferDesc( mismatched, "createBuffer" ) );
 
     RHIBufferDesc constant{};
     constant._elementSize  = 16;
     constant._elementCount = 4;
     constant._sizeBytes    = 64;
     constant._usage        = RHIBufferUsage::Constant;
-    SW_EXPECT_EQUAL( RHIBufferHandle{ 0 }, factory.createBuffer( constant ) );
-    SW_EXPECT_EQUAL( 0u, factory._structuredCreateCount );
+    SW_EXPECT_FALSE( IRHIResourceFactory::isValidBufferDesc( constant, "createBuffer" ) );
 }
 
 /**
@@ -49,7 +47,7 @@ SW_TEST_CASE( RHIBufferDescTest, ValidDescCreatesTheExactStructuredBuffer )
     desc._elementCount = 4;
     desc._sizeBytes    = 64;
     desc._usage        = RHIBufferUsage::Structured | RHIBufferUsage::UnorderedAccess;
-    SW_EXPECT_NOT_EQUAL( RHIBufferHandle{ 0 }, factory.createBuffer( desc ) );
+    SW_EXPECT_NOT_EQUAL( RHIBufferHandle{ 0 }, factory.createBufferNative( desc ) );
     SW_EXPECT_EQUAL( 1u, factory._structuredCreateCount );
     SW_EXPECT_EQUAL( 4u, factory._lastStructuredElementCount );
 }

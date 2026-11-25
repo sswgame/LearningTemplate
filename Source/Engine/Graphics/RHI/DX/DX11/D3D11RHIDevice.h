@@ -367,7 +367,7 @@ namespace sw
             uint32                                                 _arraySize; ///< 면 수
             uint32                                                 _mipLevels; ///< 밉 수
             RHITextureDimension                                    _dimension;
-            /// @brief 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
+            /// @brief 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isFirstUploadComplete`).
             RHITextureTransferSerials _transferSerials;
             uint8                     _bDepth   : 1;
             [[maybe_unused]] uint8    _reserved : 7;

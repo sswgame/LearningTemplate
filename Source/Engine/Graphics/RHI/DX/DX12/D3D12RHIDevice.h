@@ -400,9 +400,11 @@ namespace sw
             vector<D3D12_CPU_DESCRIPTOR_HANDLE> _listExtraDSVHandle;
             uint32                              _arraySize{ 1 };
             RHITextureDimension                 _dimension{ RHITextureDimension::Texture2D };
-            uint8                               _bHasRTV  : 1;
-            uint8                               _bHasDSV  : 1;
-            [[maybe_unused]] uint8              _reserved : 6;
+            uint8                               _bHasRTV          : 1;
+            uint8                               _bHasDSV          : 1;
+            uint8                               _bShaderResource  : 1; ///< `RHITextureDesc::_bIsShaderResource` — SRV 를 막지 않는 리소스라 깃발에서 되읽을 수 없다
+            uint8                               _bUnorderedAccess : 1;
+            [[maybe_unused]] uint8              _reserved         : 4;
         };
 
         /// @brief 텍스처 · 버퍼 레코드의 추적 상태입니다(`RHITrackedState` — Vulkan 이미지 레이아웃과 같은 형식).
@@ -827,9 +829,7 @@ namespace sw
         void recordTextureTransfer( RHITextureHandle texture, uint64 serial );
         /** @brief 이 텍스처에 마지막으로 제출한 전송의 시리얼입니다. 없으면 0 입니다. */
         [[nodiscard]] uint64 findTextureTransferSerial( RHITextureHandle texture );
-        /** @brief 텍스처의 첫 업로드가 끝나 bindless 에 등록해도 되는지 봅니다(아니면 오류를 남긴다 — `RHITransferSerials::isTextureReadyToRegister`). */
-        [[nodiscard]] bool isTextureReadyToRegister( RHITextureHandle texture );
-        /** @brief 텍스처의 첫 업로드가 끝났는지(또는 올린 적이 없는지)만 봅니다 — 오류를 남기지 않는다(`IRHIResourceFactory::isTextureReadyToSample`). */
+        /** @brief 텍스처의 첫 업로드가 끝났는지(또는 올린 적이 없는지) 봅니다(`IRHIResourceFactory::describeTextureNative`). */
         [[nodiscard]] bool isTextureFirstUploadComplete( RHITextureHandle texture );
         /** @brief 텍스처를 파괴할 때 전송 시리얼 칸을 지웁니다. */
         void eraseTextureTransfer( RHITextureHandle texture );

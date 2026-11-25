@@ -482,7 +482,7 @@ SW_TEST_CASE( RHIReleaseHandleTest, SecondReleaseOfTheSameHandleAsserts )
     test::FakeRHIBufferFactory factory;
     test::FakeRHIDevice        device;
     device._pResourceFactory     = &factory;
-    const RHIBufferHandle buffer = factory.createVertexBuffer( nullptr, 16 );
+    const RHIBufferHandle buffer = factory.createVertexBufferNative( nullptr, 16 );
     {
         test::ScopedAssertCapture assertCapture;
         device.releaseHandle( buffer ); // 든 프레임이 없다 — 바로 백엔드에 닿는다
@@ -503,7 +503,7 @@ SW_TEST_CASE( RHIReleaseHandleTest, DeferredReleaseWaitsForTheFrameFence )
     test::FakeRHIBufferFactory factory;
     test::FakeRHIDevice        device;
     device._pResourceFactory         = &factory;
-    const RHIBufferHandle     buffer = factory.createVertexBuffer( nullptr, 16 );
+    const RHIBufferHandle     buffer = factory.createVertexBufferNative( nullptr, 16 );
     test::ScopedAssertCapture assertCapture;
 
     device.notifyRenderFrameQueued(); // 프레임 1 이 GPU 로 갔다 — 게임 스레드는 패킷 2 를 짓는 중이다

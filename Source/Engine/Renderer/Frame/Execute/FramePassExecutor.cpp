@@ -342,7 +342,7 @@ namespace sw
 
     void FramePassExecutor::prepareShadowCacheLayerResource()
     {
-        // 그림자 캐시 층은 기록 **전에** 만든다 — 패스 기록(병렬 레벨) 안에서 텍스처를 만들면 자원 표를 바꿔 디바이스가 멈춘다(`requireRegistryMutableNow`).
+        // 그림자 캐시 층은 기록 **전에** 만든다 — 패스 기록(병렬 레벨) 안에서 텍스처를 등록하면 자원 표를 바꿔 디바이스가 멈춘다(`requireRegistryMutableNow`).
         // 아틀라스는 점광 · 스폿 그림자 패스(깊이 첨부가 LocalShadowMap 역할)의 깊이 첨부다(첨부 풀이 이미 잡았다). 같은 형식 · 크기면 아무것도 하지 않는다.
         ShadowCache& cache = _state._shadowCache;
         if ( cache.usesCacheLayer() == false )

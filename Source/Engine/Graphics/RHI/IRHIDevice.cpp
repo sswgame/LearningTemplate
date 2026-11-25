@@ -57,6 +57,7 @@ namespace sw
      */
     void IRHIDevice::releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 packed )
     {
+        requireRegistryMutableNow( "releaseHandle" );
         bool bLive = true;
         switch ( kind )
         {
