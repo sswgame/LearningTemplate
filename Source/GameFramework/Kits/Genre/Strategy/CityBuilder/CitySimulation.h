@@ -261,24 +261,24 @@ namespace sw
         int32           getRoadComponent( const int2& tile ) const;
 
     private:
-        vector<CityTile>              _listTile;
-        vector<CityBuilding>          _listBuilding;
-        vector<CityWalker>            _listWalker;
-        NotificationBuffer<CityEvent> _eventBuffer;
-        mutable GridSearchScratch     _roadSearch; ///< 일꾼 길 찾기(`findRoadPath`)가 호출마다 재사용하는 스크래치이다
-        const CityCatalog*            _pCatalog;
-        Wallet*                       _pWallet; ///< 빌린 지갑
-        CitySettings                  _settings;
-        FixedStepTimer                _stepTimer;
-        GameRandom                    _random;
+        SW_CODEC_STATE vector<CityTile> _listTile;
+        SW_CODEC_STATE vector<CityBuilding> _listBuilding;
+        SW_CODEC_STATE vector<CityWalker> _listWalker;
+        SW_TRANSIENT NotificationBuffer<CityEvent> _eventBuffer;
+        SW_TRANSIENT mutable GridSearchScratch     _roadSearch; ///< 일꾼 길 찾기(`findRoadPath`)가 호출마다 재사용하는 스크래치이다
+        const CityCatalog*                         _pCatalog;
+        Wallet*                                    _pWallet; ///< 빌린 지갑
+        SW_TRANSIENT CitySettings                  _settings;
+        SW_CODEC_STATE FixedStepTimer              _stepTimer;
+        SW_CODEC_STATE GameRandom                  _random;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _time;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
         float32 _floodFertility;
         PROPERTY( RuntimeState, Min = 0 )
-        float32      _wageDebt;
-        GridTopology _topology;
-        LandBinding  _land; ///< 빌린 공유 땅(없으면 단독 동작)
+        float32                     _wageDebt;
+        SW_CODEC_STATE GridTopology _topology;
+        SW_TRANSIENT LandBinding    _land; ///< 빌린 공유 땅(없으면 단독 동작)
         PROPERTY( RuntimeState )
         int32 _monthIncome;
         PROPERTY( RuntimeState, Min = 0 )

@@ -116,13 +116,13 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<SurvivalHorrorInvestigator> _listInvestigator;
-        SurvivalHorrorMonsterDef           _monster;
-        TurnOrder                          _turnOrder;
-        GameRandom                         _random;
+        vector<SurvivalHorrorInvestigator>      _listInvestigator;
+        SW_CODEC_STATE SurvivalHorrorMonsterDef _monster;
+        SW_CODEC_STATE TurnOrder                _turnOrder;
+        SW_CODEC_STATE GameRandom               _random;
         PROPERTY( RuntimeState )
-        int32 _monsterToughness;
-        int32 _successFace;
+        int32              _monsterToughness;
+        SW_TRANSIENT int32 _successFace;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _turnCount;
         PROPERTY( RuntimeState )

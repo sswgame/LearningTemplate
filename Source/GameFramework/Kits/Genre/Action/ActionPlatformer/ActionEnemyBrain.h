@@ -78,7 +78,7 @@ namespace sw
     private:
         const ActionPatternDef*        _pPattern;
         const ActionPlatformerCatalog* _pCatalog;   ///< `readState` 가 패턴을 찾는 카탈로그(빌려 온 것)
-        optional<int32>                _stateIndex; ///< 패턴의 지금 상태(비면 상태가 없다). 상태는 id 로 저장한다(`serializeState`)
+        SW_CODEC_STATE optional<int32> _stateIndex; ///< 패턴의 지금 상태(비면 상태가 없다). 상태는 id 로 저장한다(`serializeState`)
         PROPERTY( RuntimeState, Min = 0 )
         int32 _stateFrame; ///< 지금 상태에서 지난 프레임(들어선 프레임이 0)
         PROPERTY( RuntimeState, Min = -1, Max = 1 )

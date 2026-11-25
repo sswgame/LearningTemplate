@@ -105,7 +105,7 @@ namespace sw
         void bindCatalog( const ScavengerCatalog* pCatalog ) { _pCatalog = pCatalog; }
 
     private:
-        AreaGraph _graph;
+        SW_CODEC_STATE AreaGraph _graph;
         PROPERTY( RuntimeState )
         vector<ScavengerScrap> _listGroundScrap;
         PROPERTY( RuntimeState )

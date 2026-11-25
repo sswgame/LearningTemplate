@@ -258,29 +258,29 @@ namespace sw
         void            pushEvent( KartRaceEvent::Kind kind, optional<int32> racer, optional<int32> other, int32 value, float32 time );
 
     private:
-        vector<KartRacer>                 _listRacer;
-        ProjectileSimulation              _projectiles;
-        NotificationBuffer<KartRaceEvent> _eventBuffer;
-        vector<KinematicVehicleEvent>     _listVehicleEvent; ///< `pushVehicleEvents` 의 임시 목록(용량만 넘긴다)
-        vector<Countdown>                 _listItemBoxTimer; ///< 끝나 있으면 상자가 놓여 있는 것이다
-        vector<int32>                     _listPlaceOrder;   ///< 순위 순서로 나열한 차 번호
-        KartRaceSettings                  _settings;
-        GameRandom                        _random;
-        FixedStepTimer                    _timer;
-        const KartTrack*                  _pTrack;
-        const KartItemCatalog*            _pItemCatalog;
-        const ProjectileCatalog*          _pProjectileCatalog;
-        KartGhost*                        _pGhost;
+        SW_CODEC_STATE vector<KartRacer>    _listRacer;
+        SW_CODEC_STATE ProjectileSimulation _projectiles;
+        SW_TRANSIENT NotificationBuffer<KartRaceEvent> _eventBuffer;
+        SW_TRANSIENT vector<KinematicVehicleEvent> _listVehicleEvent; ///< `pushVehicleEvents` 의 임시 목록(용량만 넘긴다)
+        SW_CODEC_STATE vector<Countdown> _listItemBoxTimer;           ///< 끝나 있으면 상자가 놓여 있는 것이다
+        SW_CODEC_STATE vector<int32>  _listPlaceOrder;                ///< 순위 순서로 나열한 차 번호
+        SW_TRANSIENT KartRaceSettings _settings;
+        SW_CODEC_STATE GameRandom     _random;
+        SW_CODEC_STATE FixedStepTimer _timer;
+        const KartTrack*              _pTrack;
+        const KartItemCatalog*        _pItemCatalog;
+        const ProjectileCatalog*      _pProjectileCatalog;
+        KartGhost*                    _pGhost;
         PROPERTY( RuntimeState, Min = 0 )
-        float32   _raceTime;
-        Countdown _countdown;
+        float32                  _raceTime;
+        SW_CODEC_STATE Countdown _countdown;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _bestLapTime;
         PROPERTY( RuntimeState )
-        float32 _firstFinishTime; ///< 0 보다 작으면 아직 아무도 들어오지 않은 것이다
-        int32   _ghostRacer;
+        float32            _firstFinishTime; ///< 0 보다 작으면 아직 아무도 들어오지 않은 것이다
+        SW_TRANSIENT int32 _ghostRacer;
         PROPERTY( RuntimeState, Min = 0 )
-        int32      _finishedCount;
-        MatchPhase _phase;
+        int32                     _finishedCount;
+        SW_CODEC_STATE MatchPhase _phase;
     };
 } // namespace sw

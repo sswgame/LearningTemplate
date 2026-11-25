@@ -82,12 +82,12 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Invulnerable Color", Tooltip = "Player color while a dash makes it invulnerable" )
         float4 _invulnerableColor;
 
-        TComponentHandle<ActionCombatGameModeComponent> _director;
-        PrefabViewBatch                                 _sphereViews;
-        uint8                                           _bInputLive         : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않고 그리기만 한다)
-        uint8                                           _bActionsValid      : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        uint8                                           _bViewReset         : 1; ///< 이 판에서 HP 바 스냅숏을 연출 없이 다시 두었다
-        uint8                                           _bPlayerViewMissing : 1; ///< 가리킨 뷰 오브젝트에 체력 뷰가 없다고 이미 알렸다(매 프레임 되풀이하지 않는다)
-        [[maybe_unused]] uint8                          _reserved           : 4;
+        SW_TRANSIENT TComponentHandle<ActionCombatGameModeComponent> _director;
+        SW_TRANSIENT PrefabViewBatch                                 _sphereViews;
+        SW_TRANSIENT uint8                                           _bInputLive         : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않고 그리기만 한다)
+        SW_TRANSIENT uint8                                           _bActionsValid      : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
+        SW_TRANSIENT uint8                                           _bViewReset         : 1; ///< 이 판에서 HP 바 스냅숏을 연출 없이 다시 두었다
+        SW_TRANSIENT uint8                                           _bPlayerViewMissing : 1; ///< 가리킨 뷰 오브젝트에 체력 뷰가 없다고 이미 알렸다(매 프레임 되풀이하지 않는다)
+        [[maybe_unused]] uint8                                       _reserved           : 4;
     };
 } // namespace sw

@@ -65,7 +65,7 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<ScavengerScrap> _listScrap;
-        ScavengerCarryDef      _settings;
+        vector<ScavengerScrap>           _listScrap;
+        SW_CODEC_STATE ScavengerCarryDef _settings;
     };
 } // namespace sw

@@ -209,6 +209,6 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<MonsterInstance>        _listBox;
         const MonsterCollectorCatalog* _pCatalog;
-        int32                          _boxCapacity;
+        SW_CODEC_STATE int32           _boxCapacity;
     };
 } // namespace sw

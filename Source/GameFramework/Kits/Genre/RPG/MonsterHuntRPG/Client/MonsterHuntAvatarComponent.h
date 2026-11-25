@@ -93,12 +93,12 @@ namespace sw
         PROPERTY( Required, Category = "View", DisplayName = "Marker Prefab", Tooltip = "One-metre cube prefab, spawned for every marker the view shows" )
         AssetRef<PrefabAsset> _markerPrefab;
 
-        TComponentHandle<MonsterHuntGameModeComponent> _director;
-        PrefabViewBatch                                _bodies;
-        PrefabViewBatch                                _markers;
-        unique_ptr<MonsterHuntHUDViewModel>            _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
-        uint8                                          _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않고 그리기만 한다)
-        uint8                                          _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                         _reserved      : 6;
+        SW_TRANSIENT TComponentHandle<MonsterHuntGameModeComponent> _director;
+        SW_TRANSIENT PrefabViewBatch                                _bodies;
+        SW_TRANSIENT PrefabViewBatch                                _markers;
+        SW_TRANSIENT unique_ptr<MonsterHuntHUDViewModel> _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
+        SW_TRANSIENT uint8                               _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않고 그리기만 한다)
+        SW_TRANSIENT uint8                               _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
+        [[maybe_unused]] uint8                           _reserved      : 6;
     };
 } // namespace sw

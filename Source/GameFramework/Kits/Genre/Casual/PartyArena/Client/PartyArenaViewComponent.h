@@ -84,13 +84,13 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Item Color" )
         float4 _itemColor;
 
-        TComponentHandle<PartyGameModeComponent> _director;
-        PrefabViewBatch                          _floorViews;
-        PrefabViewBatch                          _playerViews;
-        PrefabViewBatch                          _itemViews;
-        unique_ptr<PartyHUDViewModel>            _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
-        uint8                                    _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않는다)
-        uint8                                    _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                   _reserved      : 6;
+        SW_TRANSIENT TComponentHandle<PartyGameModeComponent> _director;
+        SW_TRANSIENT PrefabViewBatch                          _floorViews;
+        SW_TRANSIENT PrefabViewBatch                          _playerViews;
+        SW_TRANSIENT PrefabViewBatch                          _itemViews;
+        SW_TRANSIENT unique_ptr<PartyHUDViewModel> _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
+        SW_TRANSIENT uint8                         _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않는다)
+        SW_TRANSIENT uint8                         _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
+        [[maybe_unused]] uint8                     _reserved      : 6;
     };
 } // namespace sw

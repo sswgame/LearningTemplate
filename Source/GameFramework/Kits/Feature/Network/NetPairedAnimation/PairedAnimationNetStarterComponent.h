@@ -42,7 +42,7 @@ namespace sw
         PROPERTY( Category = "Network", DisplayName = "Restart Delay", Min = 0.0, Units = s, Tooltip = "Seconds the session may stay ended before the next one starts" )
         float32 _restartDelay;
 
-        float32 _endedSeconds; ///< 세션이 재생 중이 아니었던 시간
-        uint8   _bStarts;      ///< 이 프로세스가 시작한다(클라이언트가 아니고 데이터 결함으로 멈추지 않았다)
+        SW_TRANSIENT float32 _endedSeconds; ///< 세션이 재생 중이 아니었던 시간
+        SW_TRANSIENT uint8   _bStarts;      ///< 이 프로세스가 시작한다(클라이언트가 아니고 데이터 결함으로 멈추지 않았다)
     };
 } // namespace sw

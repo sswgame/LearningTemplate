@@ -252,14 +252,14 @@ namespace sw
         void                          pushEvent( ConquestEvent::Kind kind, const hashed_string& id, int32 value = 0, ConquestTeam team = ConquestTeam::Neutral );
 
     private:
-        vector<ConquestSite>              _listSite;
-        vector<ConquestBuilding>          _listBuilding;
-        vector<ConquestUnit>              _listUnit;
-        NotificationBuffer<ConquestEvent> _eventBuffer;
-        StatBlock                         _resource;
-        ConquestCommander                 _commander;
-        FixedStepTimer                    _timer;
-        const ConquestCatalog*            _pCatalog;
+        SW_CODEC_STATE vector<ConquestSite> _listSite;
+        SW_CODEC_STATE vector<ConquestBuilding> _listBuilding;
+        SW_CODEC_STATE vector<ConquestUnit> _listUnit;
+        SW_TRANSIENT NotificationBuffer<ConquestEvent> _eventBuffer;
+        SW_CODEC_STATE StatBlock                       _resource;
+        SW_CODEC_STATE ConquestCommander               _commander;
+        SW_CODEC_STATE FixedStepTimer                  _timer;
+        const ConquestCatalog*                         _pCatalog;
         PROPERTY( RuntimeState )
         float32 _elapsed;
         PROPERTY( RuntimeState )

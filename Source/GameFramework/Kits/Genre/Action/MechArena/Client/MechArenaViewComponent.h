@@ -89,12 +89,12 @@ namespace sw
         PROPERTY( Required, Category = "Prefabs", DisplayName = "Projectile Pool Size", Tooltip = "Projectile views kept switched off for reuse instead of being destroyed", Min = 1 )
         uint32 _projectilePoolSize;
 
-        TComponentHandle<MechArenaGameModeComponent> _director;
-        unique_ptr<MechArenaHUDViewModel>            _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
-        PrefabPool                                   _projectilePool;
-        vector<GameObjectHandle>                     _listProjectileView; ///< 꺼낸 탄 모습(판의 탄 목록 순서)
-        uint8                                        _bInputLive    : 1;  ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
-        uint8                                        _bActionsValid : 1;  ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                       _reserved      : 6;
+        SW_TRANSIENT TComponentHandle<MechArenaGameModeComponent> _director;
+        SW_TRANSIENT unique_ptr<MechArenaHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
+        SW_TRANSIENT PrefabPool                        _projectilePool;
+        SW_TRANSIENT vector<GameObjectHandle> _listProjectileView; ///< 꺼낸 탄 모습(판의 탄 목록 순서)
+        SW_TRANSIENT uint8                    _bInputLive    : 1;  ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
+        SW_TRANSIENT uint8                    _bActionsValid : 1;  ///< 액션 이름이 모두 있다(`onBeginPlay`)
+        [[maybe_unused]] uint8                _reserved      : 6;
     };
 } // namespace sw

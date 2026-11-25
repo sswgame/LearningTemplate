@@ -84,14 +84,14 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Enemy Color" )
         float4 _enemyColor;
 
-        TComponentHandle<CardBattleGameModeComponent> _director;
-        PrefabViewBatch                               _cardViews;
-        PrefabViewBatch                               _enemyViews;
-        unique_ptr<CardBattleHUDViewModel>            _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
-        int32                                         _selectedCard;      ///< 고른 손패 자리
-        int32                                         _lastStep;          ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 장으로 옮긴다
-        uint8                                         _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않는다)
-        uint8                                         _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                        _reserved      : 6;
+        SW_TRANSIENT TComponentHandle<CardBattleGameModeComponent> _director;
+        SW_TRANSIENT PrefabViewBatch                               _cardViews;
+        SW_TRANSIENT PrefabViewBatch                               _enemyViews;
+        SW_TRANSIENT unique_ptr<CardBattleHUDViewModel> _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
+        SW_TRANSIENT int32                              _selectedCard;      ///< 고른 손패 자리
+        SW_TRANSIENT int32                              _lastStep;          ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 장으로 옮긴다
+        SW_TRANSIENT uint8                              _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않는다)
+        SW_TRANSIENT uint8                              _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
+        [[maybe_unused]] uint8                          _reserved      : 6;
     };
 } // namespace sw

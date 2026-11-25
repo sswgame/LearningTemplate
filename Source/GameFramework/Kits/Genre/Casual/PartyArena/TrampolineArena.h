@@ -261,13 +261,13 @@ namespace sw
         void               pushEvent( TrampolineEvent::Kind kind, int32 player, optional<int32> other, int32 value );
 
     private:
-        vector<TrampolinePlayer>            _listPlayer;
-        NotificationBuffer<TrampolineEvent> _eventBuffer;
-        TrampolineSettings                  _settings;
-        TimingJudge                         _judge;
-        PartyItemSpawner                    _itemSpawner;
-        MatchState                          _match;
-        FixedStepTimer                      _timer;
+        SW_CODEC_STATE vector<TrampolinePlayer> _listPlayer;
+        SW_TRANSIENT NotificationBuffer<TrampolineEvent> _eventBuffer;
+        SW_TRANSIENT TrampolineSettings                  _settings;
+        SW_TRANSIENT TimingJudge                         _judge;
+        SW_CODEC_STATE PartyItemSpawner                  _itemSpawner;
+        SW_CODEC_STATE MatchState                        _match;
+        SW_CODEC_STATE FixedStepTimer                    _timer;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _time;
     };

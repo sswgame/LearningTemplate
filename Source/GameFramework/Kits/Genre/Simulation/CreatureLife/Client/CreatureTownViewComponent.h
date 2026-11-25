@@ -127,14 +127,14 @@ namespace sw
         PROPERTY( Category = "Input", DisplayName = "Talk Species", Tooltip = "Creature the talk action talks to (required)" )
         CatalogKey<CreatureSpeciesDef> _talkSpecies;
 
-        TComponentHandle<CreatureTownGameModeComponent> _director;
-        SimulationViewSync<hashed_string>               _objectViews;        ///< 타일 번호(y × 너비 + x) → 오브젝트 id(빈 셀이면 빈 id)
-        SimulationViewSync<CreatureView>                _creatureViews;      ///< 온 순서 → 생물
-        shared_ptr<const CreatureLifeCatalog>           _pValidatedCatalog;  ///< 뷰 표를 견준 카탈로그의 판 — 마을이 새 판에 묶이면 다시 견준다
-        uint32                                          _shownRevision;      ///< 맞춘 마을 판(0 이면 아직 — 열린 디렉터의 판은 1 부터다)
-        uint8                                           _bInputLive     : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
-        uint8                                           _bActionsValid  : 1; ///< 액션 이름 · 종이 있다(`onBeginPlay`)
-        uint8                                           _bViewsRejected : 1; ///< 뷰 표에 빠진 줄이 있어 모습을 세우지 않는다
-        [[maybe_unused]] uint8                          _reserved       : 5;
+        SW_TRANSIENT TComponentHandle<CreatureTownGameModeComponent> _director;
+        SW_TRANSIENT SimulationViewSync<hashed_string> _objectViews;       ///< 타일 번호(y × 너비 + x) → 오브젝트 id(빈 셀이면 빈 id)
+        SW_TRANSIENT SimulationViewSync<CreatureView> _creatureViews;      ///< 온 순서 → 생물
+        shared_ptr<const CreatureLifeCatalog>         _pValidatedCatalog;  ///< 뷰 표를 견준 카탈로그의 판 — 마을이 새 판에 묶이면 다시 견준다
+        SW_TRANSIENT uint32                           _shownRevision;      ///< 맞춘 마을 판(0 이면 아직 — 열린 디렉터의 판은 1 부터다)
+        SW_TRANSIENT uint8                            _bInputLive     : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
+        SW_TRANSIENT uint8                            _bActionsValid  : 1; ///< 액션 이름 · 종이 있다(`onBeginPlay`)
+        SW_TRANSIENT uint8                            _bViewsRejected : 1; ///< 뷰 표에 빠진 줄이 있어 모습을 세우지 않는다
+        [[maybe_unused]] uint8                        _reserved       : 5;
     };
 } // namespace sw

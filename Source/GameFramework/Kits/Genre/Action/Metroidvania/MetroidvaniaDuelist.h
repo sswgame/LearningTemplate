@@ -101,14 +101,14 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        const MetroidvaniaCatalog* _pCatalog;
-        HealthStateMachine         _healthMachine;
-        ResourceGauge              _stamina;
+        const MetroidvaniaCatalog*        _pCatalog;
+        SW_CODEC_STATE HealthStateMachine _healthMachine;
+        SW_CODEC_STATE ResourceGauge      _stamina;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _time;
         PROPERTY( RuntimeState )
-        float32   _parryPressTime; ///< 마지막으로 패리를 누른 시각(쓰고 나면 아주 먼 과거로 돌린다)
-        Countdown _riposteWindow;
+        float32                  _parryPressTime; ///< 마지막으로 패리를 누른 시각(쓰고 나면 아주 먼 과거로 돌린다)
+        SW_CODEC_STATE Countdown _riposteWindow;
         PROPERTY( RuntimeState )
         float32 _damageTakenScale;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

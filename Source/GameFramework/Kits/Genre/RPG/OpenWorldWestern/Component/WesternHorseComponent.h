@@ -75,10 +75,10 @@ namespace sw
         PROPERTY( Category = "Horse", DisplayName = "Game Hours Per Second", Min = 0.0, Tooltip = "Game time that passes per real second (core drain, brush cooldown)" )
         float32 _gameHoursPerSecond;
 
-        WesternHorse           _horse;
-        vector<uint8>          _pendingStateBytes; ///< 말을 열기 전에 받은 복원 바이트
-        uint8                  _bOpened  : 1;      ///< 말을 열고 탈것 컴포넌트에 빌려 주었다
-        uint8                  _bFailed  : 1;      ///< 열지 못했다(오류를 남겼다 — 다시 시도하지 않는다)
-        [[maybe_unused]] uint8 _reserved : 6;
+        SW_CODEC_STATE WesternHorse _horse;
+        SW_TRANSIENT vector<uint8> _pendingStateBytes; ///< 말을 열기 전에 받은 복원 바이트
+        SW_CODEC_STATE uint8       _bOpened  : 1;      ///< 말을 열고 탈것 컴포넌트에 빌려 주었다
+        SW_TRANSIENT uint8         _bFailed  : 1;      ///< 열지 못했다(오류를 남겼다 — 다시 시도하지 않는다)
+        [[maybe_unused]] uint8     _reserved : 6;
     };
 } // namespace sw

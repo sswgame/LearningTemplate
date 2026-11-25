@@ -181,17 +181,17 @@ namespace sw
         void               pushEvent( BattleRoyaleEvent::Kind kind, optional<int32> player, optional<int32> other, optional<int32> team, int32 value );
 
     private:
-        vector<BattleRoyalePlayer> _listPlayer;
+        SW_CODEC_STATE vector<BattleRoyalePlayer> _listPlayer;
         PROPERTY( RuntimeState )
-        vector<BattleRoyaleSupplyDrop>        _listSupplyDrop;
-        NotificationBuffer<BattleRoyaleEvent> _eventBuffer;
-        MatchState                            _matchState;
-        BattleRoyaleZone                      _zone;
-        GameRandom                            _random;
-        FixedStepTimer                        _stepTimer;
-        const BattleRoyaleCatalog*            _pCatalog;
-        const ItemCatalog*                    _pItemCatalog;
-        const LootCatalog*                    _pLootCatalog;
+        vector<BattleRoyaleSupplyDrop> _listSupplyDrop;
+        SW_TRANSIENT NotificationBuffer<BattleRoyaleEvent> _eventBuffer;
+        SW_CODEC_STATE MatchState                          _matchState;
+        SW_CODEC_STATE BattleRoyaleZone                    _zone;
+        SW_CODEC_STATE GameRandom                          _random;
+        SW_CODEC_STATE FixedStepTimer                      _stepTimer;
+        const BattleRoyaleCatalog*                         _pCatalog;
+        const ItemCatalog*                                 _pItemCatalog;
+        const LootCatalog*                                 _pLootCatalog;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _time;
         PROPERTY( RuntimeState, Min = 0 )

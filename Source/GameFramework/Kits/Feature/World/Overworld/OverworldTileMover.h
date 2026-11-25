@@ -112,12 +112,12 @@ namespace sw
     private:
         TileMap* _pTileMap;
         PROPERTY( RuntimeState )
-        string                     _pendingWarpMap;
-        PlayerLocomotion           _loco;
-        int2                       _tile;             ///< 현재 타일 좌표
-        int2                       _pendingWarpSpawn; ///< 워프 후 배치될 타일 좌표
-        OverworldTileMoverSettings _settings;
-        StepEncounterCounter       _encounterSteps; ///< 조우 칸 걸음만 센다
+        string                                  _pendingWarpMap;
+        SW_CODEC_STATE PlayerLocomotion         _loco;
+        SW_CODEC_STATE int2                     _tile;             ///< 현재 타일 좌표
+        SW_CODEC_STATE int2                     _pendingWarpSpawn; ///< 워프 후 배치될 타일 좌표
+        SW_TRANSIENT OverworldTileMoverSettings _settings;
+        SW_CODEC_STATE StepEncounterCounter     _encounterSteps; ///< 조우 칸 걸음만 센다
         PROPERTY( RuntimeState )
         uint8 _bMoved : 1;
         PROPERTY( RuntimeState )

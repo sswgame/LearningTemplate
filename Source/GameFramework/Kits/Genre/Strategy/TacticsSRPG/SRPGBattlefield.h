@@ -239,16 +239,16 @@ namespace sw
         bool isPhaseFinished() const;
 
     private:
-        vector<const SRPGTerrainDef*> _listTerrain; ///< 셀마다의 지형이다
-        vector<SRPGUnit>              _listUnit;
-        NotificationBuffer<SRPGEvent> _eventBuffer;
-        mutable GridSearchScratch     _cellMarks; ///< `collectThreatCells` 가 "한 셀은 한 번만" 처리하려고 쓰는 표시이다
-        SRPGSettings                  _settings;
-        TurnOrder                     _turnOrder;
-        GameRandom                    _random;
-        const SRPGCatalog*            _pCatalog;
-        GridTopology                  _topology;
-        LandBinding                   _land; ///< 전투 동안 빌린 공유 땅(없으면 단독 동작)
+        SW_CODEC_STATE vector<const SRPGTerrainDef*> _listTerrain; ///< 셀마다의 지형이다
+        SW_CODEC_STATE vector<SRPGUnit> _listUnit;
+        SW_TRANSIENT NotificationBuffer<SRPGEvent> _eventBuffer;
+        SW_TRANSIENT mutable GridSearchScratch     _cellMarks; ///< `collectThreatCells` 가 "한 셀은 한 번만" 처리하려고 쓰는 표시이다
+        SW_TRANSIENT SRPGSettings                  _settings;
+        SW_CODEC_STATE TurnOrder                   _turnOrder;
+        SW_CODEC_STATE GameRandom                  _random;
+        const SRPGCatalog*                         _pCatalog;
+        SW_CODEC_STATE GridTopology                _topology;
+        SW_TRANSIENT LandBinding                   _land; ///< 전투 동안 빌린 공유 땅(없으면 단독 동작)
         PROPERTY( RuntimeState, Min = 0 )
         int32 _turn;
         PROPERTY( RuntimeState, Min = -1 )

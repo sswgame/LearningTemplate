@@ -79,13 +79,13 @@ namespace sw
         PROPERTY( Category = "Camera", DisplayName = "Shake Seconds", Min = 0.01, Units = s )
         float32 _shakeSeconds;
 
-        unique_ptr<ActionRoomHUDViewModel> _viewModel;
-        Subscription                       _gateSubscription;
-        Subscription                       _clearedSubscription;
-        Subscription                       _defeatedSubscription;
-        Subscription                       _damageSubscription;
-        float32                            _notificationLeft;
-        Notification                       _notification;
-        uint8                              _bGateLocked;
+        SW_TRANSIENT unique_ptr<ActionRoomHUDViewModel> _viewModel;
+        Subscription                                    _gateSubscription;
+        Subscription                                    _clearedSubscription;
+        Subscription                                    _defeatedSubscription;
+        Subscription                                    _damageSubscription;
+        SW_TRANSIENT float32                            _notificationLeft;
+        SW_TRANSIENT Notification                       _notification;
+        SW_TRANSIENT uint8                              _bGateLocked;
     };
 } // namespace sw

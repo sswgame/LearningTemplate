@@ -171,16 +171,16 @@ namespace sw
         PROPERTY( RuntimeState )
         int32 _selectedPlacement;
 
-        TComponentHandle<ParkGameModeComponent> _director;
-        vector<GameObjectHandle>                _listViewObject; ///< 세운 모습(걷을 목록)
-        vector<uint8>                           _listRideShown;  ///< 배치 번호 → 모습을 세웠으면 SW_TRUE
-        MaterialTintCache                       _tintCache;      ///< 손님 · 평지 놀이기구 색(같은 색은 나눠 쓴다. 배치 키가 인스턴스다)
-        shared_ptr<MaterialInstance>            _arrGuestLook[3];
-        uint32                                  _shownRevision;     ///< 모습을 세운 공원의 번호(0 이면 아직 — 열린 디렉터는 1 부터다)
-        int32                                   _ridingCoaster;     ///< 0 이상이면 그 코스터에 타고 있다
-        uint8                                   _bWasRiding    : 1; ///< 앞 프레임에 카메라를 덮었다
-        uint8                                   _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
-        uint8                                   _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                  _reserved      : 5;
+        SW_TRANSIENT TComponentHandle<ParkGameModeComponent> _director;
+        SW_TRANSIENT vector<GameObjectHandle> _listViewObject; ///< 세운 모습(걷을 목록)
+        SW_TRANSIENT vector<uint8>     _listRideShown;         ///< 배치 번호 → 모습을 세웠으면 SW_TRUE
+        SW_TRANSIENT MaterialTintCache _tintCache;             ///< 손님 · 평지 놀이기구 색(같은 색은 나눠 쓴다. 배치 키가 인스턴스다)
+        SW_TRANSIENT shared_ptr<MaterialInstance> _arrGuestLook[3];
+        SW_TRANSIENT uint32                       _shownRevision;     ///< 모습을 세운 공원의 번호(0 이면 아직 — 열린 디렉터는 1 부터다)
+        SW_TRANSIENT int32                        _ridingCoaster;     ///< 0 이상이면 그 코스터에 타고 있다
+        SW_TRANSIENT uint8                        _bWasRiding    : 1; ///< 앞 프레임에 카메라를 덮었다
+        SW_TRANSIENT uint8                        _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
+        SW_TRANSIENT uint8                        _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
+        [[maybe_unused]] uint8                    _reserved      : 5;
     };
 } // namespace sw

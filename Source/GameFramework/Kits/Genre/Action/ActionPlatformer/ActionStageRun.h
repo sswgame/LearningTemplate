@@ -116,8 +116,8 @@ namespace sw
     private:
         const ActionPlatformerCatalog* _pCatalog;
         const ActionStageDef*          _pStage;
-        vector<hashed_string>          _listSecretCommitted; ///< 체크포인트나 클리어로 확정된 것
-        vector<hashed_string>          _listSecretPending;   ///< 주웠지만 아직 확정되지 않은 것
+        SW_CODEC_STATE vector<hashed_string> _listSecretCommitted; ///< 체크포인트나 클리어로 확정된 것
+        SW_CODEC_STATE vector<hashed_string> _listSecretPending;   ///< 주웠지만 아직 확정되지 않은 것
         PROPERTY( RuntimeState, Min = 0 )
         float32 _elapsed;
         PROPERTY( RuntimeState, Min = 0 )

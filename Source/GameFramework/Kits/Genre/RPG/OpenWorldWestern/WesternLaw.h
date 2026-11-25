@@ -200,10 +200,10 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<RegionRecord>                _listRecord;
-        vector<PendingReport>               _listPending;
-        NotificationBuffer<WesternLawEvent> _eventBuffer;
-        const WesternCatalog*               _pCatalog;
+        vector<RegionRecord> _listRecord;
+        SW_CODEC_STATE vector<PendingReport> _listPending;
+        SW_TRANSIENT NotificationBuffer<WesternLawEvent> _eventBuffer;
+        const WesternCatalog*                            _pCatalog;
         PROPERTY( RuntimeState, Min = 1 )
         uint32 _nextIncidentID;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

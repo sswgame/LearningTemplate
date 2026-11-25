@@ -57,16 +57,16 @@ namespace sw
         PROPERTY( Category = "Housing", DisplayName = "Max Requests Per Tick", Min = 1, Tooltip = "Edit requests one connection may queue per server tick; the rest are answered RateLimited" )
         int32 _maxRequestsPerTick;
 
-        HousingReplicationServer      _server;
-        HousingReplicationClient      _client;
-        HousingCallerLocator          _locateCaller;
-        vector<HousingNetPlotRef>     _listPlot;          ///< 틱 뒤 한 번 동안만 쓰는 부지(빌린 것)
-        vector<HousingPlotComponent*> _listPlotComponent; ///< `_listPlot` 과 같은 자리의 부지 컴포넌트
-        vector<HousingEditRequest>    _listRequest;
-        vector<HousingEditReply>      _listReply;
-        Subscription                  _routerSubscription; ///< 라우터에 단 처리기(`_server` 또는 `_client`)의 등록. 처리기보다 뒤에 선언한다 — 먼저 풀린다
-        uint8                         _bServer  : 1;
-        uint8                         _bStarted : 1; ///< 처리기를 걸고 시작했다 — 그 뒤 구독이 풀리면 세션이 닫힌 것이다
-        [[maybe_unused]] uint8        _reserved : 6;
+        SW_TRANSIENT HousingReplicationServer _server;
+        SW_TRANSIENT HousingReplicationClient _client;
+        HousingCallerLocator                  _locateCaller;
+        SW_TRANSIENT vector<HousingNetPlotRef> _listPlot;              ///< 틱 뒤 한 번 동안만 쓰는 부지(빌린 것)
+        SW_TRANSIENT vector<HousingPlotComponent*> _listPlotComponent; ///< `_listPlot` 과 같은 자리의 부지 컴포넌트
+        SW_TRANSIENT vector<HousingEditRequest> _listRequest;
+        SW_TRANSIENT vector<HousingEditReply> _listReply;
+        Subscription                          _routerSubscription; ///< 라우터에 단 처리기(`_server` 또는 `_client`)의 등록. 처리기보다 뒤에 선언한다 — 먼저 풀린다
+        SW_TRANSIENT uint8                    _bServer  : 1;
+        SW_TRANSIENT uint8                    _bStarted : 1; ///< 처리기를 걸고 시작했다 — 그 뒤 구독이 풀리면 세션이 닫힌 것이다
+        [[maybe_unused]] uint8                _reserved : 6;
     };
 } // namespace sw

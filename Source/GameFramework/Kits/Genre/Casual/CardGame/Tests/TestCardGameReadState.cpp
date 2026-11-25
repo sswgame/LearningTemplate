@@ -102,6 +102,8 @@ namespace
         {
             sw::Archive written;
             CardGameReadStateTestUtil::writeHeader( written, inoutGame );
+            written << uint64{ 0 }; // 비밀 섞기의 판 번호 · 섞은 횟수
+            written << uint32{ 0 };
             written << _currentPlayer;
             written << _direction;
             written << _pendingDraw;

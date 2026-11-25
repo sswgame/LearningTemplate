@@ -90,11 +90,11 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Player Color" )
         float4 _playerColor;
 
-        TComponentHandle<AdventureGameModeComponent> _director;
-        PrefabViewBatch                              _cubeViews;
-        PrefabViewBatch                              _sphereViews;
-        uint8                                        _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않고 그리기만 한다)
-        uint8                                        _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                       _reserved      : 6;
+        SW_TRANSIENT TComponentHandle<AdventureGameModeComponent> _director;
+        SW_TRANSIENT PrefabViewBatch                              _cubeViews;
+        SW_TRANSIENT PrefabViewBatch                              _sphereViews;
+        SW_TRANSIENT uint8                                        _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않고 그리기만 한다)
+        SW_TRANSIENT uint8                                        _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
+        [[maybe_unused]] uint8                                    _reserved      : 6;
     };
 } // namespace sw

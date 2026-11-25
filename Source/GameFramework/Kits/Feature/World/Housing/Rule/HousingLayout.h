@@ -260,17 +260,17 @@ namespace sw
         [[nodiscard]] bool validatePlacements();
 
     private:
-        HousingPlotSettings       _settings;
-        const HousingPartCatalog* _pCatalog;
-        Wallet*                   _pWallet;
-        LandBinding               _land; ///< 빌린 공유 땅(없으면 단독 부지) — 상태에 싣지 않는다(땅은 판 상태가 싣는다)
+        SW_CODEC_STATE HousingPlotSettings _settings;
+        const HousingPartCatalog*          _pCatalog;
+        Wallet*                            _pWallet;
+        SW_TRANSIENT LandBinding           _land; ///< 빌린 공유 땅(없으면 단독 부지) — 상태에 싣지 않는다(땅은 판 상태가 싣는다)
         PROPERTY( RuntimeState )
-        vector<HousingPlacement> _listPlacement; ///< id 오름차순
-        vector<uint32>           _listCellOwner; ///< [층(바닥 · 구조물 · 가구)][층수][z][x] 의 배치 id(0 은 빈 칸)
-        vector<Edit>             _listEdit;
-        uint32                   _editCursor; ///< [0, 이것) 은 되돌릴 수 있고 [이것, 끝) 은 다시 할 수 있다
+        vector<HousingPlacement> _listPlacement;    ///< id 오름차순
+        SW_TRANSIENT vector<uint32> _listCellOwner; ///< [층(바닥 · 구조물 · 가구)][층수][z][x] 의 배치 id(0 은 빈 칸)
+        SW_TRANSIENT vector<Edit> _listEdit;
+        SW_TRANSIENT uint32       _editCursor; ///< [0, 이것) 은 되돌릴 수 있고 [이것, 끝) 은 다시 할 수 있다
         PROPERTY( RuntimeState, Min = 1 )
-        uint32 _nextPlacementID;
-        uint32 _revision;
+        uint32              _nextPlacementID;
+        SW_TRANSIENT uint32 _revision;
     };
 } // namespace sw

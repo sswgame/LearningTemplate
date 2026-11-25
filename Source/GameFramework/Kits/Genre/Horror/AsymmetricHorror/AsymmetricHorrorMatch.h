@@ -403,25 +403,25 @@ namespace sw
         void               pushEvent( AsymmetricHorrorEvent::Kind kind, optional<int32> actor, optional<int32> target, float32 value, const float3& position );
 
     private:
-        AsymmetricHorrorMatchSettings             _settings;
-        AsymmetricHorrorKiller                    _killer;
-        vector<AsymmetricHorrorSurvivor>          _listSurvivor;
-        vector<AsymmetricHorrorGenerator>         _listGenerator;
-        vector<AsymmetricHorrorGate>              _listGate;
-        vector<AsymmetricHorrorWindow>            _listWindow;
-        vector<float3>                            _listHook;
-        vector<float3>                            _listPallet;
-        vector<PalletState>                       _listPalletState;
-        vector<float3>                            _listLocker;
-        vector<int32>                             _listLockerOccupant;
-        NotificationBuffer<AsymmetricHorrorEvent> _eventBuffer;
-        vector<InteractionEvent>                  _listInteractionScratch;
-        MatchState                                _match;
-        FixedStepTimer                            _timer;
+        SW_CODEC_STATE AsymmetricHorrorMatchSettings _settings;
+        SW_CODEC_STATE AsymmetricHorrorKiller        _killer;
+        SW_CODEC_STATE vector<AsymmetricHorrorSurvivor> _listSurvivor;
+        SW_CODEC_STATE vector<AsymmetricHorrorGenerator> _listGenerator;
+        SW_CODEC_STATE vector<AsymmetricHorrorGate> _listGate;
+        SW_CODEC_STATE vector<AsymmetricHorrorWindow> _listWindow;
+        SW_CODEC_STATE vector<float3> _listHook;
+        SW_CODEC_STATE vector<float3> _listPallet;
+        SW_CODEC_STATE vector<PalletState> _listPalletState;
+        SW_CODEC_STATE vector<float3> _listLocker;
+        SW_CODEC_STATE vector<int32> _listLockerOccupant;
+        SW_TRANSIENT NotificationBuffer<AsymmetricHorrorEvent> _eventBuffer;
+        SW_TRANSIENT vector<InteractionEvent> _listInteractionScratch;
+        SW_CODEC_STATE MatchState             _match;
+        SW_CODEC_STATE FixedStepTimer         _timer;
         PROPERTY( RuntimeState )
         float3                              _hatchPosition;
         const AsymmetricHorrorRulesCatalog* _pCatalog;
-        Countdown                           _collapseRemaining;
+        SW_CODEC_STATE Countdown            _collapseRemaining;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _completedGeneratorCount;
         PROPERTY( RuntimeState )
@@ -429,8 +429,8 @@ namespace sw
         PROPERTY( RuntimeState )
         int32 _killerTeam;
         PROPERTY( RuntimeState )
-        uint32 _tick;
-        uint8  _bStarted;
+        uint32               _tick;
+        SW_CODEC_STATE uint8 _bStarted;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
         uint8 _bGatesPowered;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

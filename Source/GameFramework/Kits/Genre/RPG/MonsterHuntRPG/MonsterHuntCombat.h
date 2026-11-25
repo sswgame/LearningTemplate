@@ -100,9 +100,9 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        ResourceGauge             _stamina;
-        GameRandom                _random;
-        const MonsterHuntCatalog* _pCatalog;
+        SW_CODEC_STATE ResourceGauge _stamina;
+        SW_CODEC_STATE GameRandom    _random;
+        const MonsterHuntCatalog*    _pCatalog;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _adrenaline;
     };

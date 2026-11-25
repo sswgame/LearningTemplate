@@ -188,17 +188,17 @@ namespace sw
         [[nodiscard]] bool isStateConsistent() const;
 
     private:
-        ResourceGauge                       _sanity;
-        ResourceGauge                       _battery;
-        unordered_set<hashed_string>        _uniqueSeenMonster;
-        unordered_set<hashed_string>        _uniqueReadDocument;
-        unordered_set<hashed_string>        _uniqueClue;
-        unordered_set<hashed_string>        _uniqueSolvedPuzzle;
-        unordered_map<hashed_string, int32> _mapDialAttempt;      ///< 다이얼 자물쇠별 틀린 횟수
-        unordered_map<hashed_string, int32> _mapSequenceProgress; ///< 순서 퍼즐별로 맞힌 걸음 수
+        SW_CODEC_STATE ResourceGauge _sanity;
+        SW_CODEC_STATE ResourceGauge _battery;
+        SW_CODEC_STATE unordered_set<hashed_string> _uniqueSeenMonster;
+        SW_CODEC_STATE unordered_set<hashed_string> _uniqueReadDocument;
+        SW_CODEC_STATE unordered_set<hashed_string> _uniqueClue;
+        SW_CODEC_STATE unordered_set<hashed_string> _uniqueSolvedPuzzle;
+        SW_CODEC_STATE unordered_map<hashed_string, int32> _mapDialAttempt;      ///< 다이얼 자물쇠별 틀린 횟수
+        SW_CODEC_STATE unordered_map<hashed_string, int32> _mapSequenceProgress; ///< 순서 퍼즐별로 맞힌 걸음 수
         PROPERTY( RuntimeState )
-        vector<SurvivalHorrorClueLink>          _listClueLink;
-        NotificationBuffer<SurvivalHorrorEvent> _eventBuffer;
+        vector<SurvivalHorrorClueLink> _listClueLink;
+        SW_TRANSIENT NotificationBuffer<SurvivalHorrorEvent> _eventBuffer;
         PROPERTY( RuntimeState )
         hashed_string                _currentArea;
         const SurvivalHorrorCatalog* _pCatalog;

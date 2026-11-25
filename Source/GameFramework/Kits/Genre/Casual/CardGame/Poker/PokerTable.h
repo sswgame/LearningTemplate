@@ -210,11 +210,11 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<PokerSeat> _listSeat;
         PROPERTY( RuntimeState )
-        vector<PokerPot>               _listLastPot;
-        NotificationBuffer<PokerEvent> _eventBuffer;
-        CardPile                       _deck;
-        CardPile                       _board;
-        PokerSettings                  _settings;
+        vector<PokerPot> _listLastPot;
+        SW_TRANSIENT NotificationBuffer<PokerEvent> _eventBuffer;
+        SW_CODEC_STATE CardPile                     _deck;
+        SW_CODEC_STATE CardPile                     _board;
+        SW_CODEC_STATE PokerSettings                _settings;
         PROPERTY( RuntimeState, Min = -1 )
         int32 _button;
         PROPERTY( RuntimeState, Min = -1 )

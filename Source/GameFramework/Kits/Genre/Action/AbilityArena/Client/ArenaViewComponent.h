@@ -83,9 +83,9 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Projectile Color", Meta = "Color", Tooltip = "Colour of the projectile sphere" )
         float4 _projectileTint;
 
-        TComponentHandle<ArenaGameModeComponent> _director;
-        MaterialTintCache                        _tintCache;
-        PrefabPool                               _projectilePool;   ///< 투사체의 모습. 탄 자체는 디렉터의 시뮬레이션이다
-        uint32                                   _nextProjectileID; ///< 이 id 부터는 처음 보는 탄이다
+        SW_TRANSIENT TComponentHandle<ArenaGameModeComponent> _director;
+        SW_TRANSIENT MaterialTintCache                        _tintCache;
+        SW_TRANSIENT PrefabPool                               _projectilePool;   ///< 투사체의 모습. 탄 자체는 디렉터의 시뮬레이션이다
+        SW_TRANSIENT uint32                                   _nextProjectileID; ///< 이 id 부터는 처음 보는 탄이다
     };
 } // namespace sw

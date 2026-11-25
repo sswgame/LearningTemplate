@@ -161,10 +161,10 @@ namespace sw
         void           pushEvent( GhostEventKind type, uint32 ghostID, float32 amount = 0.0f, int32 coins = 0 );
 
     private:
-        const GhostCatalog*            _pCatalog;
-        GameRandom                     _random;
-        vector<GhostInstance>          _listGhost;
-        NotificationBuffer<GhostEvent> _eventBuffer;
+        const GhostCatalog*       _pCatalog;
+        SW_CODEC_STATE GameRandom _random;
+        SW_CODEC_STATE vector<GhostInstance> _listGhost;
+        SW_TRANSIENT NotificationBuffer<GhostEvent> _eventBuffer;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _strobeCharge;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

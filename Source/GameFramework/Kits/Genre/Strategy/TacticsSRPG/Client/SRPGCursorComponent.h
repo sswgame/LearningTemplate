@@ -96,14 +96,14 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Cursor Color" )
         float4 _cursorColor;
 
-        TComponentHandle<SRPGGameModeComponent> _director;
-        PrefabViewBatch                         _cubeViews;
-        PrefabViewBatch                         _unitViews;
-        int2                                    _cursor;
-        int2                                    _lastStep;          ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 칸을 옮긴다
-        uint8                                   _bCursorPlaced : 1; ///< 판이 열린 뒤 커서를 첫 아군 칸에 놓았다
-        uint8                                   _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않고 그리기만 한다)
-        uint8                                   _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                  _reserved      : 5;
+        SW_TRANSIENT TComponentHandle<SRPGGameModeComponent> _director;
+        SW_TRANSIENT PrefabViewBatch                         _cubeViews;
+        SW_TRANSIENT PrefabViewBatch                         _unitViews;
+        SW_TRANSIENT int2                                    _cursor;
+        SW_TRANSIENT int2                                    _lastStep;          ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 칸을 옮긴다
+        SW_TRANSIENT uint8                                   _bCursorPlaced : 1; ///< 판이 열린 뒤 커서를 첫 아군 칸에 놓았다
+        SW_TRANSIENT uint8                                   _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않고 그리기만 한다)
+        SW_TRANSIENT uint8                                   _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
+        [[maybe_unused]] uint8                               _reserved      : 5;
     };
 } // namespace sw

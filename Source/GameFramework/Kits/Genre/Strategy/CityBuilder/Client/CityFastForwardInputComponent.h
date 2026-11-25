@@ -49,9 +49,9 @@ namespace sw
         PROPERTY( Category = "Input", DisplayName = "Fast Forward Action", Tooltip = "InputMap action held to fast-forward the city (required)" )
         hashed_string _fastForwardAction;
 
-        TComponentHandle<CityGameModeComponent> _director;
-        uint8                                   _bInputLive   : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
-        uint8                                   _bActionValid : 1; ///< 액션 이름이 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                  _reserved     : 6;
+        SW_TRANSIENT TComponentHandle<CityGameModeComponent> _director;
+        SW_TRANSIENT uint8                                   _bInputLive   : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
+        SW_TRANSIENT uint8                                   _bActionValid : 1; ///< 액션 이름이 있다(`onBeginPlay`)
+        [[maybe_unused]] uint8                               _reserved     : 6;
     };
 } // namespace sw

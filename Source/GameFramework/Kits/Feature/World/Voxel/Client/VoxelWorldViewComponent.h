@@ -80,10 +80,10 @@ namespace sw
         PROPERTY( Category = "World", DisplayName = "Chunk Builds Per Frame", Tooltip = "Changed chunks handed out for meshing each frame, nearest to the body first", Min = 1 )
         int32 _chunkBuildsPerFrame;
 
-        TComponentHandle<VoxelGameModeComponent> _director;
-        unordered_map<uint64, ChunkView>         _mapChunkView;       ///< 세운 청크. 키는 `VoxelWorld::makeChunkKey` 이다
-        VoxelAtlasGridGate                       _atlasGate;          ///< 블록 머티리얼 아틀라스 칸 검사(월드당 한 번). 카탈로그가 정본이다
-        uint8                                    _bPrefabInvalid : 1; ///< 청크 프리팹이 틀렸다고 이미 알렸다
-        [[maybe_unused]] uint8                   _reserved       : 7;
+        SW_TRANSIENT TComponentHandle<VoxelGameModeComponent> _director;
+        SW_TRANSIENT unordered_map<uint64, ChunkView> _mapChunkView;       ///< 세운 청크. 키는 `VoxelWorld::makeChunkKey` 이다
+        SW_TRANSIENT VoxelAtlasGridGate               _atlasGate;          ///< 블록 머티리얼 아틀라스 칸 검사(월드당 한 번). 카탈로그가 정본이다
+        SW_TRANSIENT uint8                            _bPrefabInvalid : 1; ///< 청크 프리팹이 틀렸다고 이미 알렸다
+        [[maybe_unused]] uint8                        _reserved       : 7;
     };
 } // namespace sw
