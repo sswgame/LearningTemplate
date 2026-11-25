@@ -89,7 +89,7 @@ namespace sw
     {
         static constexpr int32 kMaxNameSize    = 16;
         static constexpr int32 kMaxAddressSize = 128;
-        static constexpr uint8 kFormatVersion  = 2; ///< 2: 설명에 게임 포트 수(`ServerDescriptor::_portCount`)
+        static constexpr uint8 kFormatVersion  = 0;
 
         static string makeRecordKey( uint64 serverID );
         /**

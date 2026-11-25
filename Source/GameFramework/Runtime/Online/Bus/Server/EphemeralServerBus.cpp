@@ -14,7 +14,7 @@ namespace sw
     {
         struct EphemeralServerBusInternal
         {
-            static constexpr uint8  kEnvelopeVersion = 1;
+            static constexpr uint8  kEnvelopeVersion = 0;
             static constexpr size_t kEnvelopeSize    = 1 + 8 + 8;
             static constexpr utf8   kChannelPrefix[] = "bus:";
 

@@ -246,7 +246,7 @@ namespace sw
     struct SW_KIT_API AchievementState
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전
+        static constexpr uint32 kBusVersion = 0; ///< push 중계(`OnlinePushRelay`)의 의미 버전
         PROPERTY( MaxCount = LeaderboardLimit::kMaxIDSize )
         string _achievementID{};
         PROPERTY()

@@ -110,7 +110,7 @@ namespace sw
     struct SW_KIT_API SocialPresence
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 서버 버스(`SocialBus::kPresenceTopic`)의 의미 버전. 캐시 레코드의 판과 따로다
+        static constexpr uint32 kBusVersion = 0; ///< 서버 버스(`SocialBus::kPresenceTopic`)의 의미 버전. 캐시 레코드의 판과 따로다
         PROPERTY( MaxCount = SocialLimit::kMaxActivitySize )
         string _activity{}; ///< 활동 문구이다(예: "던전 3층"). 상한은 `SocialLimit::kMaxActivitySize` 와 같다
         PROPERTY()
@@ -143,7 +143,7 @@ namespace sw
     struct SW_KIT_API SocialNotification
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전
+        static constexpr uint32 kBusVersion = 0; ///< push 중계(`OnlinePushRelay`)의 의미 버전
         PROPERTY()
         SocialPresence _presence{}; ///< PresenceChanged
         AccountID      _recipientID{ kInvalidAccountID };

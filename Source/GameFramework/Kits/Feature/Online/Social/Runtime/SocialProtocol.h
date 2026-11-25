@@ -260,7 +260,7 @@ namespace sw
     struct SW_KIT_API SocialLinkChanged
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 의미 버전
+        static constexpr uint32 kBusVersion = 0; ///< 의미 버전
         PROPERTY()
         AccountID _firstID{ kInvalidAccountID };
         PROPERTY()

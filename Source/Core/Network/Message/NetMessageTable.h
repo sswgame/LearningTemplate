@@ -31,7 +31,7 @@ namespace sw
      * @tparam BodyRevision 본문 판. 본문의 형식이나 뜻을 바꾸면 올린다
      * @details 손으로 쓰는 비트 본문의 서술자다. 본문이 고정 배치형으로 적히는 메시지는 Engine 의 `NetMessageBodyDef` 를 쓴다(판이 스키마 해시라 손으로 올리지 않는다).
      */
-    template <uint8 Offset, NetMessageDirection Direction, NetChannelKind Channel, uint32 BodyRevision = 1>
+    template <uint8 Offset, NetMessageDirection Direction, NetChannelKind Channel, uint32 BodyRevision = 0>
     struct NetMessageDef
     {
         static constexpr uint8               kOffset        = Offset;
@@ -49,7 +49,7 @@ namespace sw
      * @brief 보내는 쪽이 상태에 따라 채널을 고르는 손 본문 메시지의 서술자입니다(원격 호출의 신뢰 여부, 멈춘 덩어리 자세). @p DefaultChannel 은 평소 채널이다.
      * @details 고르는 자리는 `NetMessageWriter::beginMessage( channel )` 하나다 — 이 서술자가 아니면 채널을 고르는 시작이 컴파일되지 않는다.
      */
-    template <uint8 Offset, NetMessageDirection Direction, NetChannelKind DefaultChannel, uint32 BodyRevision = 1>
+    template <uint8 Offset, NetMessageDirection Direction, NetChannelKind DefaultChannel, uint32 BodyRevision = 0>
     struct NetMessageSenderChannelDef : NetMessageDef<Offset, Direction, DefaultChannel, BodyRevision>
     {
         static constexpr NetChannelPolicy kChannelPolicy = NetChannelPolicy::SenderChooses;

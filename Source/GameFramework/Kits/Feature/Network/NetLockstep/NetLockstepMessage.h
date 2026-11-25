@@ -73,7 +73,7 @@ namespace sw
     {
         using Input         = NetMessageBodyDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepInputBody>;
         using Checksum      = NetMessageBodyDef<1, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepChecksumBody>;
-        using RollbackInput = NetMessageDef<2, NetMessageDirection::Both, NetChannelKind::Unreliable, 2>;                              ///< 판 2: 판 번호(`RollbackConfig::_matchID`)를 앞에 싣는다
+        using RollbackInput = NetMessageDef<2, NetMessageDirection::Both, NetChannelKind::Unreliable>;                                 ///< 판 번호(`RollbackConfig::_matchID`)를 앞에 싣는다
         using Leave         = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, LockstepLeaveBody>; ///< 서버 → 모두
         using Table         = NetMessageTable<NetKitMessageRange::kLockstep, Input, Checksum, RollbackInput, Leave>;
 
