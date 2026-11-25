@@ -597,7 +597,7 @@ namespace sw
         // 메시지 처리 · 화면 설정이 모은 크기 변경을 여기서 마지막 크기로 한 번 적용한다(스왑체인 resize — 감사 P-2). 멈춘 틱은 이 함수에 오지 않아 표면이 없는 동안은 미룬 채 둔다.
         _pWindow->applyPendingResize();
 
-        _launch.getEngine().beginFrame( frameTime._deltaTime, frameTime._unscaledDeltaTime ); // 정지 메뉴와 페이드는 게임이 멈춰도 돈다.
+        _launch.getEngine().beginFrame( GameSeconds{ frameTime._deltaTime }, RealSeconds{ frameTime._unscaledDeltaTime } ); // 정지 메뉴와 페이드는 게임이 멈춰도 돈다.
         // 에디터 Play/Pause 상태를 여기서 한 번 고정한다. 아래 고정 스텝이 여러 번 돌아도 DLL 경계를 넘어 다시 묻지 않고,
         // 모든 단계가 같은 답을 본다.
         getModuleManager()->beginFrame();

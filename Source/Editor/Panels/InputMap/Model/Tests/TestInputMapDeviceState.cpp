@@ -24,7 +24,7 @@ SW_TEST_CASE( InputMapDeviceStateTest, GathersHeldKeysAndMouse )
 
     SW_EXPECT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::A ) ) );
     SW_EXPECT_TRUE( input.postRawEvent( RawInputEvent::makeMouseMove( 10, 20 ) ) );
-    input.beginFrame( 0.016f );
+    input.beginFrame( RealSeconds{ 0.016f } );
 
     InputMapDeviceState state;
     InputMapViewModel::gatherDeviceState( input, state );
@@ -37,7 +37,7 @@ SW_TEST_CASE( InputMapDeviceStateTest, GathersHeldKeysAndMouse )
     input.endFrame();
 
     SW_EXPECT_TRUE( input.postRawEvent( RawInputEvent::makeKeyUp( Key::A ) ) );
-    input.beginFrame( 0.016f );
+    input.beginFrame( RealSeconds{ 0.016f } );
     InputMapViewModel::gatherDeviceState( input, state );
     SW_EXPECT_TRUE( state._listHeldKey.empty() ); // 재사용 버퍼 — 앞 프레임의 키가 남지 않는다
     input.endFrame();

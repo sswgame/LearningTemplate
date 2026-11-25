@@ -60,7 +60,7 @@ namespace sw
     void BuoyancyComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics& physics        = context.getPhysics();
-        const float32 fixedDeltaTime = context.getFixedDeltaTime();
+        const float32 fixedDeltaTime = context.getFixedDeltaTime().count();
         _submergedPontoonCount       = 0;
         if ( isSimulated() == false )
             return;

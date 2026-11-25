@@ -222,7 +222,7 @@ namespace sw
     void CharacterController2DComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics&    physics        = context.getPhysics();
-        const float32    fixedDeltaTime = context.getFixedDeltaTime();
+        const float32    fixedDeltaTime = context.getFixedDeltaTime().count();
         IPhysicsScene2D* pScene         = physics.findScene2D();
         if ( pScene == nullptr || _character.isValid() == false )
             return;

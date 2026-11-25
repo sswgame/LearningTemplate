@@ -119,7 +119,7 @@ namespace sw::editor
 
     float32 SceneViewModel::getUnscaledDeltaTime()
     {
-        return editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
+        return editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count();
     }
 
     void SceneViewModel::gatherDebugCategories( vector<SceneViewDebugCategoryRow>& outListRow )

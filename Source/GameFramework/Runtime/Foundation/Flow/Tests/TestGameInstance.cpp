@@ -303,7 +303,7 @@ SW_TEST_CASE( GameInstanceTest, NetSessionRefusesLocalRestoreAndClientSaves )
     SW_EXPECT_LOG( "GameSaveSlots.LoadInNetSession" );
     SW_EXPECT_LOG( "GameSaveSlots.SaveSlotCouldNot2" ); // 세션이 닫힌 뒤의 불러오기는 없는 칸까지 간다
     GameTimeScale timeScale;
-    timeScale.setUnscaledDeltaTime( 1.0f / 60.0f );
+    timeScale.setUnscaledDeltaTime( RealSeconds{ 1.0f / 60.0f } );
     GameNetSession server{ engine::getSubsystem<ResourceComposition>() };
     GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
     ServerConfig   config;
@@ -350,7 +350,7 @@ SW_TEST_CASE( GameInstanceTest, UpdateOrder )
     vector<string>          order;
     RecordingDevPartFactory devFactory{ order };
     GameTimeScale           timeScale; // 프레임의 실제 경과는 엔진이 적는다 — 프레임 없이 부르는 테스트는 제 것을 적는다
-    timeScale.setUnscaledDeltaTime( 1.0f / 60.0f );
+    timeScale.setUnscaledDeltaTime( RealSeconds{ 1.0f / 60.0f } );
     SubsystemScope testScope;
     SW_REQUIRE_TRUE( testScope.bind<IGameDevPartFactory>( &devFactory ) );
     SW_REQUIRE_TRUE( testScope.bind( &timeScale ) );

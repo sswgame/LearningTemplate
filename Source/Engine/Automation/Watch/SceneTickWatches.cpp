@@ -52,7 +52,7 @@ namespace sw
                 const GameTimeScale* pTimeScale = engine::findSubsystem<GameTimeScale>();
                 if ( pTimeScale == nullptr )
                     return false;
-                const float64 frameSeconds = static_cast<float64>( pTimeScale->getUnscaledDeltaTime() );
+                const float64 frameSeconds = static_cast<float64>( pTimeScale->getUnscaledDeltaTime().count() );
                 float64       tickSeconds{ 0 };
                 if ( frameSeconds <= 0.0 || readTickSeconds( tickSeconds ) == false )
                     return false;

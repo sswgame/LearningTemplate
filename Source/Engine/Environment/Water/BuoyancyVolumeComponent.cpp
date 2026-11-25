@@ -46,7 +46,7 @@ namespace sw
     void BuoyancyVolumeComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics& physics         = context.getPhysics();
-        const float32 fixedDeltaTime  = context.getFixedDeltaTime();
+        const float32 fixedDeltaTime  = context.getFixedDeltaTime().count();
         _submergedBodyCount           = 0;
         IPhysicsScene3D* const pScene = physics.getScene3D();
         if ( isSimulated() == false || pScene == nullptr )

@@ -21,7 +21,7 @@ SW_TEST_CASE( InputFrameQueueTest, AppliesEventsInPostOrder )
     SW_EXPECT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::B ) ) );
     SW_EXPECT_TRUE( input.postRawEvent( RawInputEvent::makeMouseMove( 10, 20 ) ) );
     SW_EXPECT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::A ) ) );
-    input.beginFrame( 0.016f );
+    input.beginFrame( RealSeconds{ 0.016f } );
 
     const vector<RawInputEvent>& listEvent = input.getLastFrameEvents();
     SW_REQUIRE_EQUAL( size_t{ 3 }, listEvent.size() );
@@ -44,7 +44,7 @@ SW_TEST_CASE( InputFrameQueueTest, AppliesEachEventAtItsInputFrame )
     SW_EXPECT_TRUE( input.postRawEventAt( RawInputEvent::makeKeyDown( Key::A ), firstFrame + 1 ) ); // 다음 프레임 몫
     SW_EXPECT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::B ) ) );                   // 이번 프레임 몫
 
-    input.beginFrame( 0.016f );
+    input.beginFrame( RealSeconds{ 0.016f } );
     SW_EXPECT_EQUAL( firstFrame + 1, input.getCollectingInputFrame() );
     SW_EXPECT_TRUE( pKeyboard->isKeyDown( Key::B ) );
     SW_EXPECT_FALSE( pKeyboard->isKeyDown( Key::A ) );
@@ -52,7 +52,7 @@ SW_TEST_CASE( InputFrameQueueTest, AppliesEachEventAtItsInputFrame )
     input.endFrame();
 
     SW_EXPECT_TRUE( input.postRawEventAt( RawInputEvent::makeKeyDown( Key::C ), firstFrame ) ); // 이미 지난 번호 — 다음 프레임에 적용
-    input.beginFrame( 0.016f );
+    input.beginFrame( RealSeconds{ 0.016f } );
     SW_EXPECT_TRUE( pKeyboard->wasKeyPressed( Key::A ) );
     SW_EXPECT_TRUE( pKeyboard->wasKeyPressed( Key::C ) );
     const vector<RawInputEvent>& listEvent = input.getLastFrameEvents();
@@ -69,14 +69,14 @@ SW_TEST_CASE( InputFrameQueueTest, VirtualInputTakesTheSamePathAsRealInput )
     InputManager realInput;
     SW_REQUIRE_TRUE( realInput.initialize() );
     SW_EXPECT_TRUE( realInput.postRawEvent( RawInputEvent::makeKeyDown( Key::A ) ) );
-    realInput.beginFrame( 0.016f );
+    realInput.beginFrame( RealSeconds{ 0.016f } );
 
     InputManager       virtualInput;
     VirtualInputScript script;
     SW_REQUIRE_TRUE( virtualInput.initialize() );
     script.addEvent( 0, RawInputEvent::makeKeyDown( Key::A ) );
     Subscription attachment = virtualInput.attachVirtualInput( script, VirtualInputMode::Exclusive );
-    virtualInput.beginFrame( 0.016f );
+    virtualInput.beginFrame( RealSeconds{ 0.016f } );
 
     SW_EXPECT_TRUE( realInput.getKeyboard()->isKeyDown( Key::A ) && virtualInput.getKeyboard()->isKeyDown( Key::A ) );
     SW_EXPECT_TRUE( realInput.getKeyboard()->wasKeyPressed( Key::A ) && virtualInput.getKeyboard()->wasKeyPressed( Key::A ) );

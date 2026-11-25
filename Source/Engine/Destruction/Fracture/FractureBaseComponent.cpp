@@ -602,7 +602,7 @@ namespace sw
 
     void FractureBaseComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
-        const float32 fixedDeltaTime = context.getFixedDeltaTime();
+        const float32 fixedDeltaTime = context.getFixedDeltaTime().count();
         if ( _physics == nullptr )
             return;
         for ( const FractureGroupRuntime& runtime : _listRuntime )

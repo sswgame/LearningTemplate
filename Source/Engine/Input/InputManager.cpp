@@ -394,8 +394,9 @@ namespace sw
     }
 
     // 프레임 단계(폴링 → 큐 비우기 → 가상 입력 → 적용 → 마무리 → 글리프 감지 → 맵 갱신)의 순서가 곧 의미인 선형 본문이라 나누지 않는다.
-    void InputManager::beginFrame( float32 unscaledDeltaSeconds )
+    void InputManager::beginFrame( RealSeconds unscaledDeltaTime )
     {
+        const float32         unscaledDeltaSeconds = unscaledDeltaTime.count();
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         ++_beginFrameCount;
         const uint32 droppedCount = _droppedRawEventCount.exchange( 0, std::memory_order_relaxed );
@@ -1361,7 +1362,7 @@ namespace sw
             return;
         for ( const float32 deltaSeconds : listDeltaSeconds )
         {
-            beginFrame( deltaSeconds );
+            beginFrame( RealSeconds{ deltaSeconds } ); // 가상 입력의 프레임도 실제 시간이다
             endFrame();
         }
         popVirtualInputs( index, false );
