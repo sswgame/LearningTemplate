@@ -50,7 +50,7 @@ namespace sw
 
     uint32 CityCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류이며 파일째 실패다(readProperties 가 남긴다).
         CityCatalogRootDef rootDef;
         if ( root.readProperties( rootDef, sourceName ) )
             _roadCost = rootDef._roadCost;
@@ -87,7 +87,8 @@ namespace sw
         }
         if ( findHouseBuilding() == nullptr )
             SW_LOG_ERROR_ID( "CityCatalog.NoBuildingKindHouse", "%#: no building has kind=\"House\" - nobody can live in this city", sourceName );
-        return result._loadedCount;
+        // 틀린 행 하나(빠진 필수 색 · 모르는 땅)는 파일째 실패다 — 그 행만 빼고 열면 건물 하나가 조용히 사라진 도시가 선다. 까닭은 행 읽기가 이미 남겼다.
+        return result.isClean() ? result._loadedCount : 0;
     }
 
     bool CityCatalog::loadBuilding( const XMLNode& node, string_view sourceName )
