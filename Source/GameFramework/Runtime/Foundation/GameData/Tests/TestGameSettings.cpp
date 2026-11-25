@@ -62,7 +62,10 @@ SW_TEST_CASE( GameSettingsTest, SkipsTheEngineElement )
 SW_TEST_CASE( GameSettingsTest, OnlineIdentifiersComeFromData )
 {
     sw::GameSettings written;
+    // 시작 맵 · 기본 언어는 필수 칸이라 두 글 모두 적는다 — 이 테스트는 온라인 칸만 본다.
     SW_REQUIRE_TRUE( written.loadFromXMLText( "<GameSettings>"
+                                              "<startMap>game/probe/maps/start.scene.xml</startMap>"
+                                              "<defaultLanguage>ko_kr</defaultLanguage>"
                                               "<onlineRegion>kr</onlineRegion>"
                                               "<onlineOfferCatalog>game/probe/data/probe.offers.xml</onlineOfferCatalog>"
                                               "<onlineSoftCurrency>cur.coin</onlineSoftCurrency>"
@@ -79,7 +82,11 @@ SW_TEST_CASE( GameSettingsTest, OnlineIdentifiersComeFromData )
     SW_EXPECT_EQUAL( 7, written._onlineLeaderboardTopCount );
 
     sw::GameSettings bare;
-    SW_REQUIRE_TRUE( bare.loadFromXMLText( "<GameSettings></GameSettings>", "probe" ) );
+    SW_REQUIRE_TRUE( bare.loadFromXMLText( "<GameSettings>"
+                                           "<startMap>game/probe/maps/start.scene.xml</startMap>"
+                                           "<defaultLanguage>ko_kr</defaultLanguage>"
+                                           "</GameSettings>",
+                                           "probe" ) );
     SW_EXPECT_TRUE( bare._onlineRegion.empty() && bare._onlineSoftCurrency.empty() && bare._onlineHardCurrency.empty() && bare._onlineLeaderboard.empty() );
     SW_EXPECT_FALSE( bare._onlineOfferCatalog.isSet() );
     SW_EXPECT_EQUAL( 0, bare._onlineLeaderboardTopCount );
