@@ -4,6 +4,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
@@ -11,7 +12,6 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
-    #include "Core/Log/ScopedDeferredLog.h"
 
     #include <dpapi.h>
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
