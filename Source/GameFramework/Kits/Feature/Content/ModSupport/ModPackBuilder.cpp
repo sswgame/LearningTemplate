@@ -9,6 +9,7 @@
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetPackIndex.h"
+#include "Engine/Config/PackStorageSettings.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Content/Pack/PackWriter.h"
@@ -32,7 +33,7 @@ namespace sw
             inoutIndex._listEntry.push_back( AssetPackIndexEntry{ *header._guid, relativePath } );
     }
 
-    bool ModPackBuilder::buildFromFolder( const AbsolutePath& contentFolder, const AbsolutePath& packPath, const ModSupportSettings& settings )
+    bool ModPackBuilder::buildFromFolder( const AbsolutePath& contentFolder, const AbsolutePath& packPath, const ModSupportSettings& settings, const PackStorageSettings& storage )
     {
         vector<AbsolutePath> listFilePath;
         if ( FileUtil::collectFiles( contentFolder, {}, listFilePath, true ) == false )
@@ -113,10 +114,10 @@ namespace sw
             const AbsolutePath& filePath = listOrdered[index].second;
             if ( filePath.empty() )
             {
-                const expected<PackEntryStorage> storage = PackEntryStorageRule::select( AssetPackIndex::kFileName, settings._listStoredExtension );
-                if ( storage.has_value() == false )
+                const expected<PackEntryStorage> entryStorage = PackEntryStorageRule::select( AssetPackIndex::kFileName, storage._listStoredExtension );
+                if ( entryStorage.has_value() == false )
                     return false;
-                step = writer.append( AssetPackIndex::kFileName, *storage, std::move( indexBytes ) );
+                step = writer.append( AssetPackIndex::kFileName, *entryStorage, std::move( indexBytes ) );
                 continue;
             }
             string        relativePath;
@@ -126,11 +127,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "ModPackBuilder.CannotRead", "Mod source file '%#' could not be read", filePath.str() );
                 return false;
             }
-            const string                     entryPath = FileUtil::normalizeSeparators( relativePath );
-            const expected<PackEntryStorage> storage   = PackEntryStorageRule::select( entryPath, settings._listStoredExtension ); // 쿠커와 같은 규칙
-            if ( storage.has_value() == false )
+            const string                     entryPath    = FileUtil::normalizeSeparators( relativePath );
+            const expected<PackEntryStorage> entryStorage = PackEntryStorageRule::select( entryPath, storage._listStoredExtension ); // 쿠커와 같은 규칙
+            if ( entryStorage.has_value() == false )
                 return false; // 규칙이 이유를 남겼다
-            step = writer.append( entryPath, *storage, std::move( bytes ) );
+            step = writer.append( entryPath, *entryStorage, std::move( bytes ) );
         }
         const expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
         if ( closed.has_value() == false )

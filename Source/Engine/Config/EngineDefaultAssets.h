@@ -54,6 +54,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _telemetrySchema; ///< 엔진 텔레메트리 사건 스키마(`TelemetryService`)
         PROPERTY( Required )
+        DataPath _packStorage; ///< 팩 항목의 저장 방식 — 압축하지 않고 담는 확장자(`PackStorageSettings`, 쿠커 · 모드 팩 빌더)
+        PROPERTY( Required )
         DataPath _cultureTable; ///< 문화권 표 — 복수형 규칙 · 숫자 · 날짜 형식 · 쓰기 방향 · 글꼴 대체(`LocalizationManager`)
         PROPERTY( Required )
         DataPath _timeZoneTable; ///< 시간대 표 — IANA 이름 → 표준 오프셋 · 일광 절약 규칙(`LocalizationManager::findTimeZone`)

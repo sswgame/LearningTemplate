@@ -12,6 +12,7 @@
                      _cutsceneInputMap="engine/input/cutscene.input.xml"
                      _userSettingsSchema="engine/settings/engine.settings.xml"
                      _telemetrySchema="engine/telemetry/engine.telemetry.xml"
+                     _packStorage="guid:1f2cab28c215d3e7d2599c0130a09ecc"
                      _cultureTable="engine/localization/engine.cultures.xml"
                      _timeZoneTable="engine/localization/timezones.xml"
                      _localizationProject="engine/localization/engine.locproject.xml"

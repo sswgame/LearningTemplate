@@ -144,7 +144,7 @@ namespace sw::editor
         IRawAssetImporter( const IRawAssetImporter& )            = delete;
         IRawAssetImporter& operator=( const IRawAssetImporter& ) = delete;
 
-        /** @brief 원본을 두는 폴더 이름입니다("textures_raw"). 쿠킹이 팩에서 뺍니다(`Config/Engine/PackConfig.json`). */
+        /** @brief 원본을 두는 폴더 이름입니다("textures_raw"). 쿠킹이 팩에서 뺍니다(정체성 규칙 `AssetIdentity.json` 의 원본 폴더). */
         virtual string_view getRawFolderName() const = 0;
         /** @brief 스탬프의 헤더 줄입니다. 형식이나 판정이 바뀌면 올립니다. 이전 스탬프는 모두 어긋남이 되어 한 번 다시 임포트합니다. */
         virtual string_view getStampHeader() const = 0;

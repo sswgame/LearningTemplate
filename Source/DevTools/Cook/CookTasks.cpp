@@ -25,6 +25,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/PackStorageSettings.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Content/Pack/PackConfig.h"
@@ -171,10 +172,14 @@ namespace sw
                     return false;
                 }
 
+                PackStorageSettings storageSettings; // 모드 팩 빌더와 같은 파일이다 — 배포본에는 `Config/` 가 없어 엔진 데이터에 둔다
+                if ( storageSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._packStorage.get() } ) == false )
+                    return false;
                 PackCookParams params;
-                params._projectRoot  = ProcessRoots::get()._project; // 참조 칸 표(`Config/Dev/AssetReferenceFields*.json`) — 쓰는 것만 담는 고르기가 읽는다
-                params._resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
-                params._cookedDir    = cookedDir;
+                params._listStoredExtension = storageSettings._listStoredExtension;
+                params._projectRoot         = ProcessRoots::get()._project; // 참조 칸 표(`Config/Dev/AssetReferenceFields*.json`) — 쓰는 것만 담는 고르기가 읽는다
+                params._resourceRoot        = engine::getSubsystem<AssetPaths>().getRootFolderPath();
+                params._cookedDir           = cookedDir;
                 (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packOutputDir ); // 비면 cookAllPacks 가 오류로 멈춘다
                 params._shaderFolder = shaderFolder;
                 params._buildTarget  = bDedicatedServer ? "Server" : "Client";

@@ -67,7 +67,7 @@ namespace sw::editor
      */
     struct TextureImporter
     {
-        /** @brief 원본 이미지를 두는 폴더 이름입니다. 쿠킹은 이 폴더를 팩에서 뺍니다(`Config/Engine/PackConfig.json`). 원본 확장자는 `AssetIdentityRules::isImportSource( kRawFolder, … )` 가 답한다. */
+        /** @brief 원본 이미지를 두는 폴더 이름입니다. 쿠킹은 이 폴더를 팩에서 뺍니다(정체성 규칙 `AssetIdentity.json` 의 원본 폴더). 원본 확장자는 `AssetIdentityRules::isImportSource( kRawFolder, … )` 가 답한다. */
         static constexpr string_view kRawFolder = "textures_raw";
 
         /**
