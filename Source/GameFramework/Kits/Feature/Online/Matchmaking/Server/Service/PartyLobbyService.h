@@ -170,7 +170,7 @@ namespace sw
         /** @brief 멤버가 바뀌어 대기열에서 빠져야 할 파티 티켓입니다. */
         void pollBrokenTickets( vector<uint64>& outListTicketID ) { _brokenTicketBuffer.moveAllTo( outListTicketID ); }
 
-        int32 getPendingCount() const { return _updater.getPendingCount() + static_cast<int32>( _mapRequestToStep.size() ); }
+        int32 getPendingCount() const;
 
         static string makePartyKey( uint64 partyID );
         static string makeAccountPartyKey( AccountID accountID );
@@ -213,7 +213,7 @@ namespace sw
 
         void   submitStep( const EphemeralRequest& cacheRequest, StepKind kind, const Request& request, uint64 listID = 0, int32 slot = 0 );
         void   submitFireAndForget( const EphemeralRequest& cacheRequest );
-        void   onStepReply( const EphemeralReply& reply );
+        void   onStepReply( const PendingStep& step, const EphemeralReply& reply );
         void   handleIndexRead( const Request& request, const EphemeralReply& reply );
         void   handleListGet( uint64 listID, int32 slot, const EphemeralReply& reply );
         void   startPartyMutation( const Request& request );
@@ -229,7 +229,6 @@ namespace sw
 
     private:
         CacheRecordUpdater                  _updater;
-        unordered_map<uint64, PendingStep>  _mapRequestToStep;
         unordered_map<uint64, PendingList>  _mapListIDToList;
         unordered_map<AccountID, uint64>    _mapAccountToLobby; ///< 이 서버가 들여보낸 로비이다
         EventBuffer<PartyLobbyCompletion>   _completionBuffer;

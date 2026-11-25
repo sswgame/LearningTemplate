@@ -638,8 +638,9 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, GameServerIsInTheDirectoryBeforeTheFirs
     EphemeralStoreRouter& router = *runtime.getContext()._pRouter;
     const Subscription    owner  = router.openReplyOwner();
     DirectoryIndexProbe   probe;
-    (void)router.submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( settings._config._serverKind ), 0, 16 ),
-                         SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &DirectoryIndexProbe::onReply, &probe ), owner );
+    router.submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( settings._config._serverKind ), 0, 16 ),
+                   owner, [&probe]( const EphemeralReply& reply )
+    { probe.onReply( reply ); } );
     for ( int64 tick = 0; tick < 10 && probe._replyCount == 0; ++tick )
     {
         runtime.update( UnixMilliseconds{ 1000 + tick } );
@@ -661,8 +662,9 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, DirectoryLoadIsTheGameConnectionCount )
     EphemeralStoreRouter& router = *runtime.getContext()._pRouter;
     const Subscription    owner  = router.openReplyOwner();
     DirectoryRecordProbe  probe;
-    (void)router.submit( EphemeralRequest::makeGet( ServerRecord::makeRecordKey( runtime.getContext()._serverID ) ),
-                         SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &DirectoryRecordProbe::onReply, &probe ), owner );
+    router.submit( EphemeralRequest::makeGet( ServerRecord::makeRecordKey( runtime.getContext()._serverID ) ),
+                   owner, [&probe]( const EphemeralReply& reply )
+    { probe.onReply( reply ); } );
     for ( int64 tick = 0; tick < 10 && probe._replyCount == 0; ++tick )
     {
         runtime.update( UnixMilliseconds{ 1002 + tick } );

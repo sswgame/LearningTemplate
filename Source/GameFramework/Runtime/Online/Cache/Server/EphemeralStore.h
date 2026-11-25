@@ -127,6 +127,14 @@ namespace sw
         int64                         _score{ 0 };
         EphemeralResult               _result{ EphemeralResult::Ok };
         EphemeralOperation            _operation{ EphemeralOperation::Get };
+
+        /** @brief 앞에 닿지 못한 답입니다(라우터가 내려갔거나 맡기지 못했다). */
+        static EphemeralReply makeUnavailable()
+        {
+            EphemeralReply reply;
+            reply._result = EphemeralResult::Unavailable;
+            return reply;
+        }
     };
 } // namespace sw
 

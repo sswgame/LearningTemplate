@@ -24,7 +24,7 @@ namespace sw
 namespace sw
 {
     AccountServer::AccountServer()
-        : _mapCallToPending{}
+        : _logins{}
         , _mapAccountToSession{}
         , _mapAccountToReasonCode{}
         , _uniqueSetLoginConnection{}
@@ -35,6 +35,7 @@ namespace sw
         , _sessionControl{ *this }
         , _settings{}
         , _pLoginService{ nullptr }
+        , _pHost{ nullptr }
         , _nowMs{ 0 }
         , _nextPurgeMs{ 0 }
         , _nextRefreshMs{ 0 }
@@ -54,7 +55,7 @@ namespace sw
 
     void AccountServer::shutdown()
     {
-        _mapCallToPending.clear();
+        _logins.discardAll();
         _calls.clear();
         setReady( false );
         _mapAccountToSession.clear();
@@ -71,6 +72,7 @@ namespace sw
         _listBusSubscription.clear(); // attachHost 가 건 구독을 같은 짝에서 푼다(다른 키트 서버와 같이)
         _presence.detach();           // 캐시 응답은 호스트가 이미 Unavailable 로 회수했다
         _bHostAttached = SW_FALSE;
+        _pHost         = nullptr;
     }
 
     uint16 AccountServer::validateRequest( OnlineServiceHost& host, const OnlineCallContext& context )
@@ -89,7 +91,7 @@ namespace sw
             (void)fail( call, OnlineError::kInvalidRequest );
             return false;
         }
-        _mapCallToPending[call._callID] = PendingCall{ context._connection, SW_TRUE };
+        trackLogin( call._callID, PendingCall{ context._connection, SW_TRUE } );
         _uniqueSetLoginConnection.insert( context._connection.packed() );
         return true;
     }
@@ -103,20 +105,20 @@ namespace sw
             (void)fail( call, OnlineError::kUnauthenticated );
             return nullptr;
         }
-        _mapCallToPending[call._callID] = PendingCall{ context._connection, SW_FALSE };
+        trackLogin( call._callID, PendingCall{ context._connection, SW_FALSE } );
         return &sessionIt->second._token;
     }
 
     void AccountServer::handleCall( OnlineServerCall<AccountMethod::IssueLoginNonce> call, const OnlineCallContext& context, const OnlineNoBody& request )
     {
         (void)request;
-        _mapCallToPending[call._callID] = PendingCall{ context._connection, SW_FALSE };
+        trackLogin( call._callID, PendingCall{ context._connection, SW_FALSE } );
         _pLoginService->issueLoginNonce( context._remoteKey, context._nowMs, call._callID );
     }
 
     void AccountServer::handleCall( OnlineServerCall<AccountMethod::Register> call, const OnlineCallContext& context, const AccountCredentialRequest& request )
     {
-        _mapCallToPending[call._callID] = PendingCall{ context._connection, SW_FALSE };
+        trackLogin( call._callID, PendingCall{ context._connection, SW_FALSE } );
         _pLoginService->registerAccount( LoginCredential{ request._loginName, request._password }, context._remoteKey, context._nowMs, call._callID );
     }
 
@@ -212,7 +214,7 @@ namespace sw
         _pLoginService->takeCompletions( _listCompletionScratch );
         for ( const LoginCompletion& completion : _listCompletionScratch )
         {
-            handleCompletion( host, completion );
+            (void)_logins.answer( completion._requestTag, completion ); // 모르는 번호는 짝이 되는 호출이 없는 완료다(운영 끊기 · 세션 정리)
         }
         // 이벤트는 완료 뒤에 처리한다. 로그인 응답과 탈퇴 응답을 먼저 보내고, 밀려난 세션은 그 뒤에 끊는다.
         _listEventScratch.clear();
@@ -276,14 +278,18 @@ namespace sw
         return sessionIt == _mapAccountToSession.end() ? 0 : sessionIt->second._token._sessionID;
     }
 
-    void AccountServer::handleCompletion( OnlineServiceHost& host, const LoginCompletion& completion )
+    void AccountServer::trackLogin( uint64 callID, const PendingCall& call )
+    {
+        (void)_logins.track( callID, 0, [this, call]( const LoginCompletion& completion )
+        {
+            if ( _pHost != nullptr )
+                handleCompletion( *_pHost, call, completion );
+        } ); // 호출 번호는 겹치지 않는다
+    }
+
+    void AccountServer::handleCompletion( OnlineServiceHost& host, const PendingCall& call, const LoginCompletion& completion )
     {
         const uint64 callID = completion._requestTag;
-        const auto   callIt = _mapCallToPending.find( callID );
-        if ( callIt == _mapCallToPending.end() )
-            return;
-        const PendingCall call = callIt->second;
-        _mapCallToPending.erase( callIt );
         if ( call._bLogin == SW_TRUE )
             _uniqueSetLoginConnection.erase( call._connection.packed() );
         if ( respondCommonError( callID, completion._result, completion._grant ) )
@@ -432,6 +438,7 @@ namespace sw
     void AccountServer::attachHost( OnlineServiceHost& host )
     {
         _bHostAttached = SW_TRUE;
+        _pHost         = &host;
         _presence.attach( &host );
         if ( _presence.isEnabled() == false )
             return; // 서버가 한 대이다

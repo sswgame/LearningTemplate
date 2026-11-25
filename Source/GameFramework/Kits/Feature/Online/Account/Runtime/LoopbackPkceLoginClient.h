@@ -18,6 +18,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/PlatformLoginClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
+#include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
 
 namespace sw
 {
@@ -77,24 +78,26 @@ namespace sw
             string                _state{};
             string                _nonce{};
             uint64                _requestID{ 0 };
-            uint64                _tokenRequestID{ 0 }; ///< 토큰 교환 중이면 0이 아니다
             MonotonicMilliseconds _deadlineMs{ 0 };
         };
 
         const PkceLoginProviderConfig* findSettings( string_view provider ) const;
         [[nodiscard]] bool             makeRandomText( int32 byteCount, string& outText );
-        void                           finish( PendingLogin& pending, bool bSucceeded, bool bCancelled, string_view failureText, vector<uint8> ticketBytes );
-        string                         makeRedirectURI() const;
+        /** @brief 토큰 끝점의 답으로 로그인을 끝냅니다. */
+        void   finishExchange( const PendingLogin& login, const HTTPClientResponse& response );
+        void   finish( const PendingLogin& pending, bool bSucceeded, bool bCancelled, string_view failureText, vector<uint8> ticketBytes );
+        string makeRedirectURI() const;
 
     private:
-        HTTPServer                             _redirectServer;
-        HTTPClient                             _httpClient;
-        vector<PkceLoginProviderConfig>        _listProviderSettings;
-        vector<PendingLogin>                   _listPending;
-        EventBuffer<PlatformLoginClientResult> _resultBuffer;
-        INetSecurityProvider*                  _pProvider;
-        IExternalBrowser*                      _pBrowser;
-        MonotonicMilliseconds                  _nowMs;
-        IDAllocator<uint64>                    _requestIDAllocator;
+        HTTPServer                                      _redirectServer;
+        HTTPClient                                      _httpClient;
+        vector<PkceLoginProviderConfig>                 _listProviderSettings;
+        vector<PendingLogin>                            _listPending;   ///< 브라우저의 되돌아옴을 기다리는 로그인(시한이 있다)이다
+        PendingRequestTable<uint64, HTTPClientResponse> _exchangeTable; ///< 토큰 교환을 기다리는 로그인이다
+        EventBuffer<PlatformLoginClientResult>          _resultBuffer;
+        INetSecurityProvider*                           _pProvider;
+        IExternalBrowser*                               _pBrowser;
+        MonotonicMilliseconds                           _nowMs;
+        IDAllocator<uint64>                             _requestIDAllocator;
     };
 } // namespace sw

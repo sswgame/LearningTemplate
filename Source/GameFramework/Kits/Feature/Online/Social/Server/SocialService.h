@@ -148,12 +148,6 @@ namespace sw
             int32                  _outstandingCount{ 0 };
         };
 
-        struct PresenceRead
-        {
-            uint64    _queryID{ 0 };
-            AccountID _friendID{ kInvalidAccountID };
-        };
-
         LocalAccount& ensureLocal( AccountID accountID );
         void          startLoad( AccountID accountID, uint64 requestTag );
         void          reloadIfLocal( AccountID accountID );
@@ -166,7 +160,7 @@ namespace sw
         void notifyFriendsOfPresence( const SocialPresence& presence );
         /** @brief 접속 상태 캐시 값을 씁니다. 값을 못 쓰면 오류 로그를 남기고 false 이며 캐시에 아무것도 보내지 않습니다. */
         [[nodiscard]] bool writePresenceRecord( const SocialPresence& presence );
-        void               onPresenceReply( const EphemeralReply& reply );
+        void               onPresenceReply( uint64 queryID, AccountID friendID, const EphemeralReply& reply );
         void               pushCompletion( uint64 requestTag, SocialServiceResult result );
 
     private:
@@ -174,7 +168,6 @@ namespace sw
         /// 친구 id → 그를 친구(`Friend`)로 둔 이 서버 계정들이다. 접속 상태 한 건의 전달 비용을 그 계정의 관계 수에 맞춘다(Nakama status follow · EOS Presence 의 구독자 역색인).
         /// 집합이라 관계 하나를 뺄 때 지켜보는 계정 수와 무관하다(유명한 계정 하나를 수천이 친구로 둬도 떠날 때마다 훑지 않는다)
         unordered_map<AccountID, unordered_set<AccountID>> _mapFriendToWatchers;
-        unordered_map<uint64, PresenceRead>                _mapCacheRequestToRead;
         unordered_map<uint64, PresenceQuery>               _mapQuery;
         EventBuffer<SocialCompletion>                      _completionBuffer;
         EventBuffer<SocialNotification>                    _notificationBuffer;

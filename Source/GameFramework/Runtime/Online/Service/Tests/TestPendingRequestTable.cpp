@@ -55,3 +55,31 @@ SW_TEST_CASE( PendingRequestTableTest, CompletionMayTrackANewRequest )
     SW_EXPECT_TRUE( table.answer( 1, 0 ) );
     SW_EXPECT_EQUAL( 1, table.getOpenCount() );
 }
+
+/** @brief [PendingRequestTableTest] 버리기는 완료를 부르지 않고, 모두 답하기는 열린 요청마다 한 번 부른다 */
+SW_TEST_CASE( PendingRequestTableTest, DiscardIsSilentAndAnswerAllReachesEveryRequest )
+{
+    PendingRequestTable<uint64, int32> table;
+    int32                              answeredSum    = 0;
+    int32                              cancelledCount = 0;
+    const auto                         complete       = [&answeredSum, &cancelledCount]( const int32& result, PendingRequestEnd end )
+    {
+        answeredSum += result;
+        cancelledCount += end == PendingRequestEnd::Cancelled ? 1 : 0;
+    };
+    SW_EXPECT_TRUE( table.track( 1, 7, complete ) );
+    SW_EXPECT_TRUE( table.track( 2, 8, complete ) );
+    SW_EXPECT_TRUE( table.track( 3, 8, complete ) );
+    SW_EXPECT_EQUAL( 2, table.getOpenCountOf( 8 ) );
+    table.discardOwnedBy( 7 );
+    SW_EXPECT_FALSE( table.hasOwnedBy( 7 ) );
+    SW_EXPECT_EQUAL( 2, table.getOpenCount() );
+    table.answerAll( 5 );
+    SW_EXPECT_EQUAL( 10, answeredSum );
+    SW_EXPECT_EQUAL( 0, cancelledCount );
+    SW_EXPECT_TRUE( table.isIdle() );
+    SW_EXPECT_TRUE( table.track( 4, 0, complete ) );
+    table.discardAll();
+    SW_EXPECT_TRUE( table.isIdle() );
+    SW_EXPECT_EQUAL( 10, answeredSum );
+}

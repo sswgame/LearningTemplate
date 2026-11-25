@@ -253,8 +253,8 @@ SW_TEST_CASE( RESPEndToEndTest, ConfigSelectsRESPAndReachesTheEndpoint )
             readBack.assign( reply._value.begin(), reply._value.end() );
     };
 
-    (void)router.submit( EphemeralRequest::makeSet( "e2e:key", StringUtil::toBytes( "value" ), 0 ), SW_DELEGATE_LAMBDA( EphemeralStoreRouter::ReplyDelegate, onReply ), owner );
-    (void)router.submit( EphemeralRequest::makeGet( "e2e:key" ), SW_DELEGATE_LAMBDA( EphemeralStoreRouter::ReplyDelegate, onReply ), owner );
+    router.submit( EphemeralRequest::makeSet( "e2e:key", StringUtil::toBytes( "value" ), 0 ), owner, onReply );
+    router.submit( EphemeralRequest::makeGet( "e2e:key" ), owner, onReply );
     SW_REQUIRE_TRUE( test::pollUntil( poll, [&repliedCount]()
     { return repliedCount == 2; } ) );
     SW_EXPECT_EQUAL( string( "value" ), readBack );

@@ -375,7 +375,6 @@ namespace sw
     SocialService::SocialService()
         : _mapAccountToLocal{}
         , _mapFriendToWatchers{}
-        , _mapCacheRequestToRead{}
         , _mapQuery{}
         , _completionBuffer{}
         , _notificationBuffer{}
@@ -401,7 +400,6 @@ namespace sw
     void SocialService::shutdown()
     {
         _replyOwner.reset(); // 기다리던 접속 상태 답이 이 객체를 부르지 않게 지운다
-        _mapCacheRequestToRead.clear();
         _mapQuery.clear();
         _mapAccountToLocal.clear();
         _mapFriendToWatchers.clear();
@@ -614,6 +612,7 @@ namespace sw
         const uint64        queryID = _queryIDAllocator.allocate();
         PresenceQuery       query;
         query._requestTag = requestTag;
+        vector<AccountID> listCachedFriend;
         for ( const SocialLink& link : local._listLink )
         {
             if ( link._state != SocialLinkState::Friend )
@@ -629,14 +628,17 @@ namespace sw
                 query._listPresence.push_back( SocialPresence{ string{}, link._otherID, SocialPresenceStatus::Offline } );
                 continue;
             }
-            const uint64 cacheRequestID            = _dependencies._pRouter->submit( EphemeralRequest::makeGet( SocialServiceInternal::makePresenceKey( link._otherID ) ),
-                                                                                     SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &SocialService::onPresenceReply, this ), _replyOwner );
-            _mapCacheRequestToRead[cacheRequestID] = PresenceRead{ queryID, link._otherID };
-            ++query._outstandingCount;
+            listCachedFriend.push_back( link._otherID );
         }
-        if ( query._outstandingCount > 0 )
+        if ( listCachedFriend.empty() == false )
         {
-            _mapQuery[queryID] = std::move( query );
+            query._outstandingCount = static_cast<int32>( listCachedFriend.size() ); // 먼저 다 세고 표에 올려 둔다 — 맡기지 못한 요청은 그 자리에서 끝난다
+            _mapQuery[queryID]      = std::move( query );
+            for ( const AccountID friendID : listCachedFriend )
+            {
+                _dependencies._pRouter->submit( EphemeralRequest::makeGet( SocialServiceInternal::makePresenceKey( friendID ) ), _replyOwner, [this, queryID, friendID]( const EphemeralReply& reply )
+                { onPresenceReply( queryID, friendID, reply ); } );
+            }
             return;
         }
         SocialCompletion completion;
@@ -769,22 +771,17 @@ namespace sw
         }
     }
 
-    void SocialService::onPresenceReply( const EphemeralReply& reply )
+    void SocialService::onPresenceReply( uint64 queryID, AccountID friendID, const EphemeralReply& reply )
     {
-        const auto readIt = _mapCacheRequestToRead.find( reply._requestID );
-        if ( readIt == _mapCacheRequestToRead.end() )
-            return;
-        const PresenceRead read = readIt->second;
-        _mapCacheRequestToRead.erase( readIt );
-        const auto queryIt = _mapQuery.find( read._queryID );
+        const auto queryIt = _mapQuery.find( queryID );
         if ( queryIt == _mapQuery.end() )
             return;
         PresenceQuery& query = queryIt->second;
-        SocialPresence presence{ string{}, read._friendID, SocialPresenceStatus::Offline };
+        SocialPresence presence{ string{}, friendID, SocialPresenceStatus::Offline };
         if ( reply._result == EphemeralResult::Ok )
         {
-            if ( SocialProtocol::decodePresenceRecord( reply._value, presence ) == false || presence._accountID != read._friendID )
-                presence = SocialPresence{ string{}, read._friendID, SocialPresenceStatus::Offline };
+            if ( SocialProtocol::decodePresenceRecord( reply._value, presence ) == false || presence._accountID != friendID )
+                presence = SocialPresence{ string{}, friendID, SocialPresenceStatus::Offline };
         }
         query._listPresence.push_back( std::move( presence ) );
         if ( --query._outstandingCount > 0 )

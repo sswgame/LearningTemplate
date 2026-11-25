@@ -62,25 +62,22 @@ namespace sw
     private:
         void startRefresh( UnixMilliseconds nowMs );
         void onIndexReply( const EphemeralReply& reply );
-        void onRecordReply( const EphemeralReply& reply );
-        void onSeatReply( const EphemeralReply& reply );
+        void onRecordReply( uint64 serverID, const EphemeralReply& reply );
+        void onSeatReply( uint64 serverID, const EphemeralReply& reply );
         void finishRefresh();
 
     private:
-        vector<ServerStatus>          _listSnapshot;
-        vector<ServerStatus>          _listBuilding;
-        unordered_map<uint64, uint64> _mapRequestToServer;  ///< 기록 읽기 요청 id → 서버 id
-        unordered_map<uint64, uint64> _mapRequestToSeat;    ///< 예약 셈 읽기 요청 id → 서버 id
-        unordered_map<uint64, int32>  _mapServerToReserved; ///< 이번 읽기에서 본 서버마다의 예약 좌석 수
-        string                        _kind;
-        EphemeralStoreRouter*         _pRouter;
-        Subscription                  _replyOwner;     ///< 라우터 답의 주인 몫(`openReplyOwner`). 놓으면 기다리던 답이 지워진다
-        uint64                        _indexRequestID; ///< 기다리는 색인 읽기(0 = 없음)
-        int64                         _refreshPeriodMs;
-        int64                         _seatReservationTTLMs;
-        UnixMilliseconds              _lastRefreshStartMs;
-        DevCounter                    _refreshCount;
-        int32                         _outstandingCount;
-        uint8                         _bRefreshRequested;
+        vector<ServerStatus>         _listSnapshot;
+        vector<ServerStatus>         _listBuilding;
+        unordered_map<uint64, int32> _mapServerToReserved; ///< 이번 읽기에서 본 서버마다의 예약 좌석 수
+        string                       _kind;
+        EphemeralStoreRouter*        _pRouter;
+        Subscription                 _replyOwner; ///< 라우터 답의 주인 몫(`openReplyOwner`). 놓으면 기다리던 답이 지워진다
+        int64                        _refreshPeriodMs;
+        int64                        _seatReservationTTLMs;
+        UnixMilliseconds             _lastRefreshStartMs;
+        DevCounter                   _refreshCount;
+        int32                        _outstandingCount;
+        uint8                        _bRefreshRequested;
     };
 } // namespace sw

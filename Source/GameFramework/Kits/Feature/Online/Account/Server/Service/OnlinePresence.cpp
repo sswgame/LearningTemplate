@@ -38,9 +38,9 @@ namespace sw
 namespace sw
 {
     OnlinePresence::OnlinePresence()
-        : _mapRequestToPending{}
+        : _lookupTable{}
         , _mapAccountToIdentity{}
-        , _listDeferred{}
+        , _listDeferredLookup{}
         , _settings{}
         , _pHost{ nullptr }
         , _serverID{ 0 }
@@ -75,24 +75,13 @@ namespace sw
     {
         _replyOwner.reset(); // 라우터에 맡긴 요청의 답이 이 객체를 부르지 않게 한다
         _pHost = nullptr;
-        _mapRequestToPending.clear();
-        _listDeferred.clear();
+        _lookupTable.discardAll();
+        _listDeferredLookup.clear();
     }
 
     void OnlinePresence::releaseSubscription( uint64 ownerID )
     {
-        for ( auto& [routerRequestID, pending] : _mapRequestToPending )
-        {
-            if ( pending._ownerID == ownerID )
-                pending._onFound = AccountPresenceDelegate{}; // 캐시 응답은 그대로 받아서 버린다
-        }
-        for ( size_t index = 0; index < _listDeferred.size(); )
-        {
-            if ( _listDeferred[index]._ownerID == ownerID )
-                _listDeferred.erase( _listDeferred.begin() + static_cast<ptrdiff_t>( index ) );
-            else
-                ++index;
-        }
+        _lookupTable.discardOwnedBy( ownerID ); // 캐시 응답은 그대로 받아서 버린다
     }
 
     void OnlinePresence::recordOnline( const AccountIdentity& identity )
@@ -167,14 +156,21 @@ namespace sw
         return string( key.view() );
     }
 
-    uint64 OnlinePresence::deferNotFound( const AccountPresenceDelegate& onFound, uint64 ownerID )
+    uint64 OnlinePresence::openLookup( const AccountPresenceDelegate& onFound, uint64 ownerID )
     {
         const uint64 lookupID = _lookupIDAllocator.allocate();
-        _listDeferred.push_back( DeferredFound{
-            AccountPresenceResult{ AccountIdentity{}, lookupID, 0 },
-            onFound, ownerID
-        } );
+        (void)_lookupTable.track( lookupID, ownerID, [onFound]( const AccountPresenceResult& result )
+        {
+            if ( onFound.isBound() )
+                onFound( result );
+        } ); // 번호는 방금 냈다
         return lookupID;
+    }
+
+    template <typename TComplete>
+    void OnlinePresence::submitCache( const EphemeralRequest& request, TComplete&& complete )
+    {
+        _pHost->getEphemeralRouter()->submit( request, _replyOwner, std::forward<TComplete>( complete ) );
     }
 
     uint64 OnlinePresence::submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound, const Subscription& owner )
@@ -185,16 +181,14 @@ namespace sw
             SW_LOG_ERROR_ID( "OnlinePresence.OnlinePresenceFindWithoutLive", "OnlinePresence: find without a live find owner of this presence - nothing is submitted" );
             return 0;
         }
+        const uint64 lookupID = openLookup( onFound, ownerID );
         if ( _pHost == nullptr )
-            return deferNotFound( onFound, ownerID );
-        const uint64     lookupID = _lookupIDAllocator.allocate();
-        PendingOperation pending;
-        pending._nameKey     = StringUtil::toLower( displayName );
-        pending._onFound     = onFound;
-        pending._lookupID    = lookupID;
-        pending._ownerID     = ownerID;
-        pending._pendingKind = PendingKind::FindName;
-        submitPending( EphemeralRequest::makeGet( makeNameKey( displayName ) ), std::move( pending ) );
+        {
+            _listDeferredLookup.push_back( lookupID );
+            return lookupID;
+        }
+        submitCache( EphemeralRequest::makeGet( makeNameKey( displayName ) ), [this, lookupID, nameKey = StringUtil::toLower( displayName )]( const EphemeralReply& reply )
+        { finishFindName( lookupID, nameKey, reply ); } );
         return lookupID;
     }
 
@@ -206,16 +200,14 @@ namespace sw
             SW_LOG_ERROR_ID( "OnlinePresence.OnlinePresenceFindWithoutLive", "OnlinePresence: find without a live find owner of this presence - nothing is submitted" );
             return 0;
         }
+        const uint64 lookupID = openLookup( onFound, ownerID );
         if ( _pHost == nullptr || accountID == kInvalidAccountID )
-            return deferNotFound( onFound, ownerID );
-        const uint64     lookupID = _lookupIDAllocator.allocate();
-        PendingOperation pending;
-        pending._onFound     = onFound;
-        pending._accountID   = accountID;
-        pending._lookupID    = lookupID;
-        pending._ownerID     = ownerID;
-        pending._pendingKind = PendingKind::FindAccount;
-        submitPending( EphemeralRequest::makeGet( makeAccountKey( accountID ) ), std::move( pending ) );
+        {
+            _listDeferredLookup.push_back( lookupID );
+            return lookupID;
+        }
+        submitCache( EphemeralRequest::makeGet( makeAccountKey( accountID ) ), [this, lookupID, accountID]( const EphemeralReply& reply )
+        { finishFindAccount( lookupID, accountID, reply ); } );
         return lookupID;
     }
 
@@ -223,11 +215,8 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return false;
-        PendingOperation pending;
-        pending._relay       = relay;
-        pending._accountID   = relay._accountID;
-        pending._pendingKind = PendingKind::Push;
-        submitPending( EphemeralRequest::makeGet( makeAccountKey( relay._accountID ) ), std::move( pending ) );
+        submitCache( EphemeralRequest::makeGet( makeAccountKey( relay._accountID ) ), [this, relay]( const EphemeralReply& reply )
+        { finishPush( relay, reply ); } );
         return true;
     }
 
@@ -237,45 +226,6 @@ namespace sw
         BitWriter body;
         if ( OnlinePushRelayRegistry::convert( relay, kind, body ) )
             (void)_pHost->sendPush( relay._accountID, kind, body ); // 그사이 떠났으면 버린다. 배달은 최대 한 번이다
-    }
-
-    void OnlinePresence::onCacheReply( const EphemeralReply& reply )
-    {
-        const auto pendingIt = _mapRequestToPending.find( reply._requestID );
-        if ( pendingIt == _mapRequestToPending.end() )
-            return;
-        const PendingOperation pending = std::move( pendingIt->second );
-        _mapRequestToPending.erase( pendingIt );
-        switch ( pending._pendingKind )
-        {
-            case PendingKind::FindName:
-            {
-                finishFindName( pending, reply );
-                break;
-            }
-            case PendingKind::FindAccount:
-            {
-                finishFindAccount( pending, reply );
-                break;
-            }
-            case PendingKind::Push:
-            {
-                finishPush( pending, reply );
-                break;
-            }
-            case PendingKind::RefreshAccount:
-            case PendingKind::RefreshName:
-            {
-                finishRefresh( pending, reply );
-                break;
-            }
-        }
-    }
-
-    void OnlinePresence::submitPending( const EphemeralRequest& request, PendingOperation&& pending )
-    {
-        const uint64 requestID = _pHost->getEphemeralRouter()->submit( request, SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &OnlinePresence::onCacheReply, this ), _replyOwner );
-        _mapRequestToPending.emplace( requestID, std::move( pending ) );
     }
 
     void OnlinePresence::writeAccountEntries( const AccountIdentity& identity, bool bRefresh )
@@ -292,20 +242,22 @@ namespace sw
             pRouter->submit( EphemeralRequest::makeSet( nameKey, nameBytes, _settings._ttlMs ) );
             return;
         }
-        PendingOperation accountPending;
-        accountPending._accountID   = identity._accountID;
-        accountPending._pendingKind = PendingKind::RefreshAccount;
-        submitPending( EphemeralRequest::makeCompareAndSet( accountKey, serverBytes, serverBytes, _settings._ttlMs ), std::move( accountPending ) );
-        PendingOperation namePending;
-        namePending._accountID   = identity._accountID;
-        namePending._nameKey     = nameKey;
-        namePending._pendingKind = PendingKind::RefreshName;
-        submitPending( EphemeralRequest::makeCompareAndSet( nameKey, nameBytes, nameBytes, _settings._ttlMs ), std::move( namePending ) );
+        // 비교가 어긋나면(키가 없거나 다른 서버의 값이다) "없을 때만" 다시 기록해서 다른 서버의 값은 덮지 않는다.
+        submitCache( EphemeralRequest::makeCompareAndSet( accountKey, serverBytes, serverBytes, _settings._ttlMs ), [this, accountID = identity._accountID]( const EphemeralReply& reply )
+        {
+            if ( const AccountIdentity* pIdentity = findLostEntry( accountID, reply ); pIdentity != nullptr )
+                _pHost->getEphemeralRouter()->submit( EphemeralRequest::makeSet( makeAccountKey( pIdentity->_accountID ), makeServerBytes(), _settings._ttlMs, EphemeralCondition::IfAbsent ) );
+        } );
+        submitCache( EphemeralRequest::makeCompareAndSet( nameKey, nameBytes, nameBytes, _settings._ttlMs ), [this, accountID = identity._accountID]( const EphemeralReply& reply )
+        {
+            if ( const AccountIdentity* pIdentity = findLostEntry( accountID, reply ); pIdentity != nullptr )
+                _pHost->getEphemeralRouter()->submit( EphemeralRequest::makeSet( makeNameKey( pIdentity->_displayName ), makeNameBytes( *pIdentity ), _settings._ttlMs, EphemeralCondition::IfAbsent ) );
+        } );
     }
 
-    void OnlinePresence::finishFindName( const PendingOperation& pending, const EphemeralReply& reply )
+    void OnlinePresence::finishFindName( uint64 lookupID, const string& nameKey, const EphemeralReply& reply )
     {
-        AccountPresenceResult found{ AccountIdentity{}, pending._lookupID, 0 };
+        AccountPresenceResult found{ AccountIdentity{}, lookupID, 0 };
         if ( reply._result == EphemeralResult::Ok )
         {
             BitReader       reader( reply._value.data(), static_cast<int32>( reply._value.size() ) );
@@ -315,42 +267,37 @@ namespace sw
             identity._bGuest    = reader.readBool() ? SW_TRUE : SW_FALSE;
             const bool bNameOk  = ServiceKeyUtil::readString( reader, LoginConstant::kMaxDisplayNameSize, identity._displayName );
             // 해시는 같지만 다른 이름이면 없는 것으로 본다.
-            const bool bNameMatchesLookup = bNameOk && reader.hasOverflowed() == false && StringUtil::toLower( identity._displayName.c_str() ) == pending._nameKey;
+            const bool bNameMatchesLookup = bNameOk && reader.hasOverflowed() == false && StringUtil::toLower( identity._displayName.c_str() ) == nameKey;
             if ( bNameMatchesLookup )
-                found = AccountPresenceResult{ std::move( identity ), pending._lookupID, server };
+                found = AccountPresenceResult{ std::move( identity ), lookupID, server };
         }
-        if ( pending._onFound.isBound() )
-            pending._onFound( found );
+        (void)_lookupTable.answer( lookupID, found ); // 모르는 번호는 주인이 몫을 놓은 찾기다
     }
 
-    void OnlinePresence::finishFindAccount( const PendingOperation& pending, const EphemeralReply& reply )
+    void OnlinePresence::finishFindAccount( uint64 lookupID, AccountID accountID, const EphemeralReply& reply )
     {
-        AccountPresenceResult found{ AccountIdentity{}, pending._lookupID, 0 };
+        AccountPresenceResult found{ AccountIdentity{}, lookupID, 0 };
         uint64                serverID = 0;
         if ( reply._result == EphemeralResult::Ok && OnlinePresenceInternal::readServerID( reply._value, serverID ) )
         {
-            found._identity._accountID = pending._accountID;
+            found._identity._accountID = accountID;
             found._serverID            = serverID;
         }
-        if ( pending._onFound.isBound() )
-            pending._onFound( found );
+        (void)_lookupTable.answer( lookupID, found ); // 모르는 번호는 주인이 몫을 놓은 찾기다
     }
 
     void OnlinePresence::deliverDeferred()
     {
-        if ( _listDeferred.empty() )
-            return;
-        // 델리게이트 안에서 다시 찾기를 맡길 수 있다. 그래서 지금 목록을 분리한 뒤 델리게이트를 부른다.
-        vector<DeferredFound> listDeferred = std::move( _listDeferred );
-        _listDeferred.clear();
-        for ( const DeferredFound& deferred : listDeferred )
+        // 델리게이트 안에서 다시 찾기를 맡길 수 있다. 그래서 지금 목록을 분리한 뒤 답한다.
+        const vector<uint64> listLookup = std::move( _listDeferredLookup );
+        _listDeferredLookup.clear();
+        for ( const uint64 lookupID : listLookup )
         {
-            if ( deferred._onFound.isBound() )
-                deferred._onFound( deferred._result );
+            (void)_lookupTable.answer( lookupID, AccountPresenceResult{ AccountIdentity{}, lookupID, 0 } ); // 모르는 번호는 주인이 몫을 놓은 찾기다
         }
     }
 
-    void OnlinePresence::finishPush( const PendingOperation& pending, const EphemeralReply& reply )
+    void OnlinePresence::finishPush( const OnlinePushRelay& relay, const EphemeralReply& reply )
     {
         uint64     serverID          = 0;
         const bool bDropNotification = reply._result != EphemeralResult::Ok || OnlinePresenceInternal::readServerID( reply._value, serverID ) == false || _pHost == nullptr;
@@ -358,28 +305,19 @@ namespace sw
             return; // 접속해 있지 않으므로 알림은 버린다. 다시 접속하면 저장소에서 다시 읽는다
         if ( serverID == _serverID )
         {
-            deliverRelay( pending._relay ); // 그사이 이 서버로 옮겨 왔다
+            deliverRelay( relay ); // 그사이 이 서버로 옮겨 왔다
             return;
         }
-        (void)OnlinePresenceBus::kPushTopic.publish( *_pHost->getServerBus(), ServiceKeyUtil::makeHex64( serverID ), pending._relay ); // 실패는 발행이 로그로 남겼다
+        (void)OnlinePresenceBus::kPushTopic.publish( *_pHost->getServerBus(), ServiceKeyUtil::makeHex64( serverID ), relay ); // 실패는 발행이 로그로 남겼다
     }
 
-    void OnlinePresence::finishRefresh( const PendingOperation& pending, const EphemeralReply& reply )
+    const AccountIdentity* OnlinePresence::findLostEntry( AccountID accountID, const EphemeralReply& reply ) const
     {
         const bool bMissingOrMoved = reply._result == EphemeralResult::NotFound || reply._result == EphemeralResult::Conflict;
         if ( bMissingOrMoved == false || _pHost == nullptr )
-            return; // Ok 이므로 시한을 늘린 것이다
-        const auto identityIt = _mapAccountToIdentity.find( pending._accountID );
-        if ( identityIt == _mapAccountToIdentity.end() )
-            return;
-        // 비교가 어긋났다. 키가 없거나(캐시가 비었거나 시한이 지났다) 다른 서버의 값이다. "없을 때만" 다시 기록해서 다른 서버의 값은 덮지 않는다.
-        const AccountIdentity& identity = identityIt->second;
-        if ( pending._pendingKind == PendingKind::RefreshAccount )
-            _pHost->getEphemeralRouter()->submit(
-                EphemeralRequest::makeSet( makeAccountKey( identity._accountID ), makeServerBytes(), _settings._ttlMs, EphemeralCondition::IfAbsent ) );
-        else
-            _pHost->getEphemeralRouter()->submit(
-                EphemeralRequest::makeSet( makeNameKey( identity._displayName ), makeNameBytes( identity ), _settings._ttlMs, EphemeralCondition::IfAbsent ) );
+            return nullptr; // Ok 이므로 시한을 늘린 것이다
+        const auto identityIt = _mapAccountToIdentity.find( accountID );
+        return identityIt != _mapAccountToIdentity.end() ? &identityIt->second : nullptr;
     }
 
     vector<uint8> OnlinePresence::makeServerBytes() const

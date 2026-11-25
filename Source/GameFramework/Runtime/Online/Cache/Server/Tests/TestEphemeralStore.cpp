@@ -382,20 +382,19 @@ SW_TEST_CASE( EphemeralStoreTest, RouterDispatchesRepliesToLiveOwnersOnly )
     int32             callCount = 0;
     sw::vector<uint8> listGotValue;
     sw::Subscription  owner = router.openReplyOwner();
-    const uint64      setID = router.submit( sw::EphemeralRequest::makeSet( "k", makeBytes( "v" ), 0 ),
-                                             [&callCount]( const sw::EphemeralReply& reply )
-         {
+    router.submit( sw::EphemeralRequest::makeSet( "k", makeBytes( "v" ), 0 ), owner, [&callCount]( const sw::EphemeralReply& reply )
+    {
         ++callCount;
         SW_EXPECT_TRUE( reply._result == sw::EphemeralResult::Ok );
-    }, owner );
-    SW_EXPECT_EQUAL( uint64( 1 ), setID );
+    } );
     router.submit( sw::EphemeralRequest::makeErase( "nobody.waits" ) ); // 답을 보지 않는 쓰기
-    (void)router.submit( sw::EphemeralRequest::makeGet( "k" ), [&callCount, &listGotValue]( const sw::EphemeralReply& reply )
+    router.submit( sw::EphemeralRequest::makeGet( "k" ), owner, [&callCount, &listGotValue]( const sw::EphemeralReply& reply )
     {
         ++callCount;
         listGotValue = reply._value;
-    }, owner );
+    } );
     SW_EXPECT_EQUAL( 2, router.getPendingCount() );
+    SW_EXPECT_EQUAL( 2, router.getPendingCount( owner ) );
     SW_EXPECT_EQUAL( 2, router.poll() );
     SW_EXPECT_EQUAL( 2, callCount );
     SW_EXPECT_TRUE( listGotValue == makeBytes( "v" ) );
@@ -403,8 +402,8 @@ SW_TEST_CASE( EphemeralStoreTest, RouterDispatchesRepliesToLiveOwnersOnly )
     SW_EXPECT_EQUAL( 0, router.poll() ); // 같은 답이 두 번 오지 않는다
 
     // 주인이 몫을 놓으면 맡긴 답은 버린다(요청 자체는 이미 실행됐다)
-    (void)router.submit( sw::EphemeralRequest::makeSet( "k", makeBytes( "w" ), 0 ), [&callCount]( const sw::EphemeralReply& )
-    { ++callCount; }, owner );
+    router.submit( sw::EphemeralRequest::makeSet( "k", makeBytes( "w" ), 0 ), owner, [&callCount]( const sw::EphemeralReply& )
+    { ++callCount; } );
     owner.reset();
     SW_EXPECT_EQUAL( 0, router.getPendingCount() );
     SW_EXPECT_EQUAL( 0, router.poll() );
@@ -413,7 +412,7 @@ SW_TEST_CASE( EphemeralStoreTest, RouterDispatchesRepliesToLiveOwnersOnly )
 }
 
 /**
- * @brief [EphemeralStoreTest] 라우터의 거절: 죽은 주인 몫 · 빈 델리게이트로 맡기면 0 이고 아무것도 맡기지 않으며, 초기화 전 · 빈 델리게이트 구독은 빈 구독이다
+ * @brief [EphemeralStoreTest] 라우터의 거절: 죽은 주인 몫 · 다른 라우터의 몫으로 맡기면 아무것도 맡기지 않고 그 자리에서 Unavailable 로 끝나며, 초기화 전 · 빈 델리게이트 구독은 빈 구독이다
  */
 SW_TEST_CASE( EphemeralStoreTest, RouterRefusesDeadOwnerEmptyDelegateAndEarlySubscribe )
 {
@@ -428,10 +427,13 @@ SW_TEST_CASE( EphemeralStoreTest, RouterRefusesDeadOwnerEmptyDelegateAndEarlySub
     sw::EphemeralStoreRouter otherRouter;
     const sw::Subscription   foreignOwner = otherRouter.openReplyOwner(); // 다른 라우터의 몫
     sw::Subscription         deadOwner;
-    SW_EXPECT_EQUAL( uint64( 0 ), router.submit( sw::EphemeralRequest::makeGet( "k" ), []( const sw::EphemeralReply& ) {}, deadOwner ) );
-    SW_EXPECT_EQUAL( uint64( 0 ), router.submit( sw::EphemeralRequest::makeGet( "k" ), []( const sw::EphemeralReply& ) {}, foreignOwner ) );
-    const sw::Subscription owner = router.openReplyOwner();
-    SW_EXPECT_EQUAL( uint64( 0 ), router.submit( sw::EphemeralRequest::makeGet( "k" ), sw::EphemeralStoreRouter::ReplyDelegate{}, owner ) );
+    int32                    unavailableCount = 0;
+    for ( const sw::Subscription* pOwner : { static_cast<const sw::Subscription*>( &deadOwner ), &foreignOwner } )
+    {
+        router.submit( sw::EphemeralRequest::makeGet( "k" ), *pOwner, [&unavailableCount]( const sw::EphemeralReply& reply )
+        { unavailableCount += reply._result == sw::EphemeralResult::Unavailable ? 1 : 0; } );
+    }
+    SW_EXPECT_EQUAL( 2, unavailableCount );
     SW_EXPECT_FALSE( router.subscribe( "chan", sw::EphemeralStoreRouter::MessageDelegate{} ).isActive() );
     SW_EXPECT_EQUAL( 0, rig._store.getPendingCount() ); // 앞에 아무것도 맡기지 않았다
     SW_EXPECT_EQUAL( 0, router.getPendingCount() );
@@ -494,13 +496,13 @@ SW_TEST_CASE( EphemeralStoreTest, RouterShutdownAnswersPendingExactlyOnce )
     int32 otherCount       = 0;
     for ( int32 index = 0; index < 3; ++index )
     {
-        (void)router.submit( sw::EphemeralRequest::makeGet( "k" ), [&unavailableCount, &otherCount]( const sw::EphemeralReply& reply )
+        router.submit( sw::EphemeralRequest::makeGet( "k" ), owner, [&unavailableCount, &otherCount]( const sw::EphemeralReply& reply )
         {
             if ( reply._result == sw::EphemeralResult::Unavailable )
                 ++unavailableCount;
             else
                 ++otherCount;
-        }, owner );
+        } );
     }
     router.shutdown();
     router.shutdown();

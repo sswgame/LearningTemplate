@@ -34,11 +34,9 @@ namespace sw
         , _mapModeState{}
         , _mapLocalTicket{}
         , _mapAccountToTicket{}
-        , _mapLookupToJoin{}
-        , _mapLookupToLeave{}
+        , _partyLookupTable{}
         , _listRatingWait{}
         , _mapTicketToReservation{}
-        , _mapLeaseRequestToMode{}
         , _completionBuffer{}
         , _notificationBuffer{}
         , _topicBuffer{}
@@ -115,54 +113,29 @@ namespace sw
             failPlacement( placement ); // encode 가 오류 로그를 남겼다
             return;
         }
-        const int64 ttlMs      = modeIt->second._matchTimeLimitMs;
-        placement._expiresMs   = placement._match._placedMs + ttlMs;
-        const uint64 requestID = _dependencies._pRouter->submit( EphemeralRequest::makeSet( makeMatchRecordKey( placement._serverID, placement._recordName ), std::move( bytes ), ttlMs ),
-                                                                 SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchQueueService::onMatchRecordReply, this ), _replyOwner );
-        if ( requestID == 0 )
+        const int64 ttlMs            = modeIt->second._matchTimeLimitMs;
+        placement._expiresMs         = placement._match._placedMs + ttlMs;
+        const EphemeralRequest write = EphemeralRequest::makeSet( makeMatchRecordKey( placement._serverID, placement._recordName ), std::move( bytes ), ttlMs );
+        _dependencies._pRouter->submit( write, _replyOwner, [this, placement = std::move( placement )]( const EphemeralReply& reply ) mutable
         {
-            failPlacement( placement ); // 맡기지 못했다(라우터가 오류 로그를 남겼다)
-            return;
-        }
-        _mapRecordWrite[requestID] = std::move( placement );
+            if ( reply._result == EphemeralResult::Ok )
+                listMatchRecord( std::move( placement ) );
+            else
+                failPlacement( placement );
+        } );
     }
 
-    void MatchQueueService::onMatchRecordReply( const EphemeralReply& reply )
+    void MatchQueueService::listMatchRecord( PendingPlacement placement )
     {
-        const auto writeIt = _mapRecordWrite.find( reply._requestID );
-        if ( writeIt == _mapRecordWrite.end() )
-            return;
-        PendingPlacement placement = std::move( writeIt->second );
-        _mapRecordWrite.erase( writeIt );
-        if ( reply._result != EphemeralResult::Ok )
-        {
-            failPlacement( placement );
-            return;
-        }
         // 목록에 올라야 게임 서버가 기록을 찾는다. 목록 쓰기의 답까지 본 뒤에 Found 를 낸다
-        const uint64 requestID = _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( makeMatchListKey( placement._serverID ), placement._recordName, placement._expiresMs ),
-                                                                 SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchQueueService::onMatchListReply, this ), _replyOwner );
-        if ( requestID == 0 )
+        const EphemeralRequest write = EphemeralRequest::makeScoreSet( makeMatchListKey( placement._serverID ), placement._recordName, placement._expiresMs );
+        _dependencies._pRouter->submit( write, _replyOwner, [this, placement = std::move( placement )]( const EphemeralReply& reply )
         {
-            failPlacement( placement );
-            return;
-        }
-        _mapListWrite[requestID] = std::move( placement );
-    }
-
-    void MatchQueueService::onMatchListReply( const EphemeralReply& reply )
-    {
-        const auto writeIt = _mapListWrite.find( reply._requestID );
-        if ( writeIt == _mapListWrite.end() )
-            return;
-        const PendingPlacement placement = std::move( writeIt->second );
-        _mapListWrite.erase( writeIt );
-        if ( reply._result != EphemeralResult::Ok )
-        {
-            failPlacement( placement ); // 남은 기록은 게임 서버가 찾지 못한 채 수명으로 사라진다
-            return;
-        }
-        completePlacement( placement );
+            if ( reply._result == EphemeralResult::Ok )
+                completePlacement( placement );
+            else
+                failPlacement( placement ); // 남은 기록은 게임 서버가 찾지 못한 채 수명으로 사라진다
+        } );
     }
 
     void MatchQueueService::completePlacement( const PendingPlacement& placement )
@@ -258,20 +231,16 @@ namespace sw
 
     void MatchQueueService::shutdown()
     {
-        _replyOwner.reset(); // 기다리던 임대 답이 이 객체를 부르지 않게 지운다
-        _mapLeaseRequestToMode.clear();
-        _mapRecordWrite.clear(); // 답이 오지 않으므로 기다리던 배정은 결과 없이 끝난다. 티켓을 낸 서버의 시한이 Timeout 을 알린다
-        _mapListWrite.clear();
+        _replyOwner.reset(); // 기다리던 임대 · 기록 쓰기의 답을 버린다. 기다리던 배정은 결과 없이 끝나고 티켓을 낸 서버의 시한이 Timeout 을 알린다
         for ( auto& [modeID, state] : _mapModeState )
         {
             if ( state._reader != nullptr )
                 state._reader->shutdown();
         }
         _mapModeState.clear();
-        _mapLookupToJoin.clear();
-        _mapLookupToLeave.clear();
+        _partyLookupTable.discardAll();
         _listRatingWait.clear();         // 통계 창은 내리지 않는다 — 먼저 내려갔을 수 있고, 내려갈 때 메모리를 비운다
-        _mapTicketToReservation.clear(); // 늦게 온 잡기 답은 찾지 못하고 버려진다. 기록의 티켓은 멤버가 빠지기로 푼다(`onLeavePartyFound`)
+        _mapTicketToReservation.clear(); // 늦게 온 잡기 답은 찾지 못하고 버려진다. 기록의 티켓은 멤버가 빠지기로 푼다(`applyLeaveParty`)
         _dependencies._pRouter = nullptr;
         _dependencies._pBus    = nullptr;
     }
@@ -353,31 +322,27 @@ namespace sw
 
     void MatchQueueService::updateLease( const string& modeID, ModeState& state, UnixMilliseconds nowMs )
     {
-        if ( state._leaseRequestID != 0 )
+        if ( state._bLeasePending != SW_FALSE )
             return; // 응답을 기다린다
         if ( state._bLeaseAttempted != SW_FALSE && nowMs.count() - state._leaseAttemptMs < MatchQueueLimit::kLeaseRenewMs )
             return;
-        const vector<uint8>    selfValue              = MatchmakingProtocol::encodeID( _dependencies._serverID );
-        const EphemeralRequest request                = state._bAuthority != SW_FALSE
-                                                          ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, MatchQueueLimit::kLeaseTTLMs )
-                                                          : EphemeralRequest::makeSet( makeLeaseKey( modeID ), selfValue, MatchQueueLimit::kLeaseTTLMs, EphemeralCondition::IfAbsent );
-        state._leaseRequestID                         = _dependencies._pRouter->submit( request, SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchQueueService::onLeaseReply, this ), _replyOwner );
-        state._leaseAttemptMs                         = nowMs.count();
-        state._bLeaseAttempted                        = SW_TRUE;
-        _mapLeaseRequestToMode[state._leaseRequestID] = modeID;
+        const vector<uint8>    selfValue = MatchmakingProtocol::encodeID( _dependencies._serverID );
+        const EphemeralRequest request   = state._bAuthority != SW_FALSE
+                                             ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, MatchQueueLimit::kLeaseTTLMs )
+                                             : EphemeralRequest::makeSet( makeLeaseKey( modeID ), selfValue, MatchQueueLimit::kLeaseTTLMs, EphemeralCondition::IfAbsent );
+        state._leaseAttemptMs            = nowMs.count();
+        state._bLeaseAttempted           = SW_TRUE;
+        state._bLeasePending             = SW_TRUE;
+        _dependencies._pRouter->submit( request, _replyOwner, [this, modeID]( const EphemeralReply& reply )
+        { onLeaseReply( modeID, reply ); } );
     }
 
-    void MatchQueueService::onLeaseReply( const EphemeralReply& reply )
+    void MatchQueueService::onLeaseReply( const string& modeID, const EphemeralReply& reply )
     {
-        const auto modeIt = _mapLeaseRequestToMode.find( reply._requestID );
-        if ( modeIt == _mapLeaseRequestToMode.end() )
-            return;
-        const string modeID = modeIt->second;
-        _mapLeaseRequestToMode.erase( modeIt );
         ModeState* pState = findModeState( modeID );
         if ( pState == nullptr )
             return;
-        pState->_leaseRequestID = 0;
+        pState->_bLeasePending = SW_FALSE;
         if ( reply._result == EphemeralResult::Unavailable || reply._result == EphemeralResult::Invalid )
             return; // 캐시에 문제가 있으므로 지금 상태로 두고 다음 주기에 다시 시도한다
         const bool bHold = reply._result == EphemeralResult::Ok;
@@ -425,18 +390,24 @@ namespace sw
             return;
         }
         // 파티장이면 파티 전체를 넣는다. 파티 기록을 읽은 뒤(onPartyFound)에 처리한다
-        const uint64 lookupTag      = _nextLookupTag++;
-        _mapLookupToJoin[lookupTag] = join;
+        const uint64 lookupTag = _nextLookupTag++;
+        (void)_partyLookupTable.track( lookupTag, accountID, [this, join]( const PartyLookup& lookup, PendingRequestEnd end )
+        {
+            if ( end == PendingRequestEnd::Answered )
+                applyJoinParty( join, lookup._result, lookup._party );
+            else
+                _completionBuffer.push( MatchQueueCompletion{ join._requestTag, 0, MatchmakingResult::NotQueued } ); // 찾는 동안 빠졌다
+        } );                                                                                                         // 표는 방금 낸 번호다
         _dependencies._pPartyLobby->findPartyOfAccount( accountID, lookupTag, SW_DELEGATE_METHOD( PartyLobbyService::PartyFoundDelegate, &MatchQueueService::onPartyFound, this ) );
     }
 
     void MatchQueueService::onPartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party )
     {
-        const auto joinIt = _mapLookupToJoin.find( lookupTag );
-        if ( joinIt == _mapLookupToJoin.end() )
-            return;
-        const PendingJoin join = joinIt->second;
-        _mapLookupToJoin.erase( joinIt );
+        (void)_partyLookupTable.answer( lookupTag, PartyLookup{ result, party } ); // 모르는 표는 빠진 줄 서기의 늦은 답이다
+    }
+
+    void MatchQueueService::applyJoinParty( const PendingJoin& join, MatchmakingServiceResult result, const PartySnapshot& party )
+    {
         if ( result == MatchmakingResult::NotInParty )
         {
             prepareTicket( join, vector<AccountID>{ join._accountID }, 0 );
@@ -467,11 +438,8 @@ namespace sw
 
     bool MatchQueueService::isJoinPending( AccountID accountID ) const
     {
-        for ( const auto& [lookupTag, join] : _mapLookupToJoin )
-        {
-            if ( join._accountID == accountID )
-                return true;
-        }
+        if ( _partyLookupTable.hasOwnedBy( accountID ) )
+            return true;
         for ( const RatingWait& wait : _listRatingWait )
         {
             if ( VectorUtil::contains( wait._listAccount, accountID ) )
@@ -968,12 +936,9 @@ namespace sw
 
     bool MatchQueueService::dropPendingJoin( AccountID accountID )
     {
-        for ( auto joinIt = _mapLookupToJoin.begin(); joinIt != _mapLookupToJoin.end(); ++joinIt )
+        if ( _partyLookupTable.hasOwnedBy( accountID ) )
         {
-            if ( joinIt->second._accountID != accountID )
-                continue;
-            _completionBuffer.push( MatchQueueCompletion{ joinIt->second._requestTag, 0, MatchmakingResult::NotQueued } );
-            _mapLookupToJoin.erase( joinIt ); // 늦게 온 파티 답(`onPartyFound`)은 찾지 못하고 버려진다
+            _partyLookupTable.cancelOwnedBy( accountID );
             return true;
         }
         for ( size_t index = 0; index < _listRatingWait.size(); ++index )
@@ -1015,18 +980,14 @@ namespace sw
             return;
         }
         // 이 서버의 티켓이 없다. 다른 서버(죽었을 수 있다)가 낸 파티 티켓이 파티 기록에 남아 있으면 그것을 푼다
-        const uint64 lookupTag       = _nextLookupTag++;
-        _mapLookupToLeave[lookupTag] = LeaveRequest{ accountID, requestTag };
-        _dependencies._pPartyLobby->findPartyOfAccount( accountID, lookupTag, SW_DELEGATE_METHOD( PartyLobbyService::PartyFoundDelegate, &MatchQueueService::onLeavePartyFound, this ) );
+        const uint64 lookupTag = _nextLookupTag++;
+        (void)_partyLookupTable.track( lookupTag, 0, [this, leave = LeaveRequest{ accountID, requestTag }]( const PartyLookup& lookup )
+        { applyLeaveParty( leave, lookup._result, lookup._party ); } ); // 표는 방금 낸 번호다
+        _dependencies._pPartyLobby->findPartyOfAccount( accountID, lookupTag, SW_DELEGATE_METHOD( PartyLobbyService::PartyFoundDelegate, &MatchQueueService::onPartyFound, this ) );
     }
 
-    void MatchQueueService::onLeavePartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party )
+    void MatchQueueService::applyLeaveParty( const LeaveRequest& leave, MatchmakingServiceResult result, const PartySnapshot& party )
     {
-        const auto leaveIt = _mapLookupToLeave.find( lookupTag );
-        if ( leaveIt == _mapLookupToLeave.end() )
-            return;
-        const LeaveRequest leave = leaveIt->second;
-        _mapLookupToLeave.erase( leaveIt );
         if ( result != MatchmakingResult::Ok && result != MatchmakingResult::NotInParty )
         {
             _completionBuffer.push( MatchQueueCompletion{ leave._requestTag, 0, result } );

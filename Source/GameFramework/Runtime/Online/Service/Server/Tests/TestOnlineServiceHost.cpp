@@ -145,8 +145,9 @@ namespace
             {
                 _bReadCacheOnTick = SW_FALSE;
                 _cacheReplyOwner  = host.getEphemeralRouter()->openReplyOwner();
-                (void)host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( _cacheKeyToRead ),
-                                                         SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &FakeOnlineService::onCacheReply, this ), _cacheReplyOwner );
+                host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( _cacheKeyToRead ),
+                                                   _cacheReplyOwner, [this]( const EphemeralReply& reply )
+                { onCacheReply( reply ); } );
             }
         }
 
@@ -1006,8 +1007,9 @@ SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCa
     HostFixture        rig( settings );
     const Subscription subscription    = rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
     const Subscription cacheReplyOwner = rig._host.getEphemeralRouter()->openReplyOwner();
-    (void)rig._host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( "never.pumped" ),
-                                                  SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &FakeOnlineService::onCacheReply, &rig._serviceA ), cacheReplyOwner );
+    rig._host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( "never.pumped" ),
+                                            cacheReplyOwner, [&rig]( const EphemeralReply& reply )
+    { rig._serviceA.onCacheReply( reply ); } );
     rig._host.shutdown();
     SW_EXPECT_EQUAL( 1, rig._serviceA._hostShutdownCount );
     SW_EXPECT_EQUAL( 1, rig._serviceB._hostShutdownCount );

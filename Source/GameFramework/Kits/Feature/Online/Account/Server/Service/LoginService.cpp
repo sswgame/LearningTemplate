@@ -384,7 +384,6 @@ namespace sw
         _mapNameKeyToAccount.clear();
         _verifications.cancelAll(); // 답을 기다리던 요청은 버린다 — 연결이 닫히며 호스트가 답 없는 요청을 끝낸다
         _cacheReplyOwner.reset();   // 기다리던 캐시 답이 이 객체를 부르지 않게 한다
-        _cacheRequests.cancelAll();
         _pRouter = nullptr;
         _revocations.cancelAll(); // 철회 대기열 항목은 저장소에 남아 다음 기동이 다시 한다
         _registeredPlatformProvider.clear();
@@ -491,16 +490,17 @@ namespace sw
         }
     }
 
+    int32 LoginService::getPendingCount() const
+    {
+        const int32 cacheCount = _pRouter != nullptr ? _pRouter->getPendingCount( _cacheReplyOwner ) : 0;
+        return _store.getOpenCount() + _verifications.getOpenCount() + cacheCount + _hashQueue.getOpenCount();
+    }
+
     void LoginService::attachCache( EphemeralStoreRouter* pRouter )
     {
         SW_ASSERT( pRouter != nullptr );
         _pRouter         = pRouter;
         _cacheReplyOwner = pRouter->openReplyOwner();
-    }
-
-    void LoginService::onCacheReply( const EphemeralReply& reply )
-    {
-        (void)_cacheRequests.answer( reply._requestID, reply ); // 모르는 번호는 취소한 일의 늦은 답이다
     }
 
     template <typename TContinue>
@@ -513,27 +513,18 @@ namespace sw
         }
         StringBuilder<constant::buffer::kMax64> key;
         key.appendFormat( "%#%#", LoginServiceInternal::kAttemptKeyPrefix, ServiceKeyUtil::makeHex64( clientKey ) );
-        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeIncrement( key.view(), 1, _settings._sharedAttemptWindowMs ),
-                                                   SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LoginService::onCacheReply, this ), _cacheReplyOwner );
-        if ( requestID == 0 )
-        {
-            onAllowed(); // 맡기지 못했다(라우터가 오류 로그를 남겼다) — 이 서버의 버킷은 이미 지났다
-            return;
-        }
-        const bool bTracked = _cacheRequests.track( requestID, 0, [this, operation, requestTag, grant, onAllowed = std::forward<TContinue>( onAllowed )]( const EphemeralReply& reply ) mutable
+        _pRouter->submit( EphemeralRequest::makeIncrement( key.view(), 1, _settings._sharedAttemptWindowMs ), _cacheReplyOwner, [this, operation, requestTag, grant, onAllowed = std::forward<TContinue>( onAllowed )]( const EphemeralReply& reply ) mutable
         {
             const bool bOverLimit = reply._result == EphemeralResult::Ok && reply._integer > _settings._sharedAttemptLimit;
             if ( bOverLimit == false )
             {
-                onAllowed(); // 캐시에 닿지 못했으면(Unavailable) 이 서버의 버킷만으로 막는다
+                onAllowed(); // 캐시에 닿지 못했거나 맡기지 못했으면(Unavailable) 이 서버의 버킷만으로 막는다
                 return;
             }
             LoginGrant limited    = grant;
             limited._retryAfterMs = _settings._sharedAttemptWindowMs; // 창이 끝날 때까지 — 위 끝이다
             pushImmediate( operation, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), limited );
         } );
-        SW_ASSERT( bTracked ); // 라우터 요청 번호는 겹치지 않는다
-        (void)bTracked;
     }
 
     void LoginService::issueLoginNonce( uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
@@ -562,15 +553,7 @@ namespace sw
         Memory::wipe( arrNonce, sizeof( arrNonce ) );
         StringBuilder<constant::buffer::kMax128> nonceKey;
         nonceKey.appendFormat( "%#%#", LoginServiceInternal::kNonceKeyPrefix, nonce );
-        const uint64 requestID =
-            _pRouter->submit( EphemeralRequest::makeSet( nonceKey.view(), vector<uint8>{ 1 }, _settings._loginNonceLifetimeMs, EphemeralCondition::IfAbsent ),
-                              SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LoginService::onCacheReply, this ), _cacheReplyOwner );
-        if ( requestID == 0 )
-        {
-            pushImmediate( LoginOperation::IssueLoginNonce, requestTag, LoginServiceResult::fail( OnlineError::kUnavailable ), LoginGrant{} );
-            return;
-        }
-        (void)_cacheRequests.track( requestID, 0, [this, requestTag, nonce = std::move( nonce )]( const EphemeralReply& reply )
+        _pRouter->submit( EphemeralRequest::makeSet( nonceKey.view(), vector<uint8>{ 1 }, _settings._loginNonceLifetimeMs, EphemeralCondition::IfAbsent ), _cacheReplyOwner, [this, requestTag, nonce = std::move( nonce )]( const EphemeralReply& reply )
         {
             LoginCompletion completion;
             completion._operation  = LoginOperation::IssueLoginNonce;
@@ -1186,14 +1169,7 @@ namespace sw
         }
         StringBuilder<constant::buffer::kMax128> nonceKey;
         nonceKey.appendFormat( "%#%#", LoginServiceInternal::kNonceKeyPrefix, nonce );
-        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeErase( nonceKey.view() ),
-                                                   SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LoginService::onCacheReply, this ), _cacheReplyOwner );
-        if ( requestID == 0 )
-        {
-            pushImmediate( operation, requestTag, LoginResult::ProviderUnavailable, LoginGrant{} );
-            return;
-        }
-        (void)_cacheRequests.track( requestID, 0, [this, operation, provider = string( provider ), ticketBytes, token, buildGrant, nowMs, requestTag]( const EphemeralReply& reply )
+        _pRouter->submit( EphemeralRequest::makeErase( nonceKey.view() ), _cacheReplyOwner, [this, operation, provider = string( provider ), ticketBytes, token, buildGrant, nowMs, requestTag]( const EphemeralReply& reply )
         {
             if ( reply._result == EphemeralResult::Ok )
                 startVerification( operation, provider, ticketBytes, token, buildGrant, nowMs, requestTag );

@@ -827,9 +827,6 @@ namespace sw
         , _pastScoreRetentionMs{ 0 }
         , _mapRankKeyToWaitingRead{}
         , _mapRankKeyToLateWrite{}
-        , _mapReadyRequestToRead{}
-        , _mapRequestToQuery{}
-        , _mapNameRequestToIndex{}
         , _mapQuery{}
         , _mapAchievement{}
         , _mapAccountStats{}
@@ -862,9 +859,6 @@ namespace sw
     void LeaderboardService::shutdown()
     {
         _replyOwner.reset(); // 기다리던 캐시 답이 이 객체를 부르지 않게 지운다
-        _mapReadyRequestToRead.clear();
-        _mapRequestToQuery.clear();
-        _mapNameRequestToIndex.clear();
         _mapQuery.clear();
         _mapRankKeyToWaitingRead.clear();
         _mapRankKeyToLateWrite.clear();
@@ -1292,18 +1286,12 @@ namespace sw
             waitIt->second.push_back( read ); // 다시 채우는 중이므로 대기시킨다
             return;
         }
-        const uint64 requestID            = _dependencies._pRouter->submit( EphemeralRequest::makeGet( LeaderboardServiceInternal::makeReadyKey( rankKey ) ),
-                                                                            SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LeaderboardService::onReadyReply, this ), _replyOwner );
-        _mapReadyRequestToRead[requestID] = read;
+        _dependencies._pRouter->submit( EphemeralRequest::makeGet( LeaderboardServiceInternal::makeReadyKey( rankKey ) ), _replyOwner, [this, read]( const EphemeralReply& reply )
+        { onReadyReply( read, reply ); } );
     }
 
-    void LeaderboardService::onReadyReply( const EphemeralReply& reply )
+    void LeaderboardService::onReadyReply( const PendingRead& read, const EphemeralReply& reply )
     {
-        const auto readIt = _mapReadyRequestToRead.find( reply._requestID );
-        if ( readIt == _mapReadyRequestToRead.end() )
-            return;
-        const PendingRead read = readIt->second;
-        _mapReadyRequestToRead.erase( readIt );
         if ( reply._result == EphemeralResult::Unavailable || reply._result == EphemeralResult::Invalid )
         {
             completeRead( read, LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
@@ -1332,14 +1320,12 @@ namespace sw
         query._read          = read;
         if ( read._operation == LeaderboardOperation::Top )
         {
-            const uint64 requestID        = _dependencies._pRouter->submit( EphemeralRequest::makeScoreRange( rankKey, read._offset, read._count ),
-                                                                            SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LeaderboardService::onRangeReply, this ), _replyOwner );
-            _mapRequestToQuery[requestID] = queryID;
+            _dependencies._pRouter->submit( EphemeralRequest::makeScoreRange( rankKey, read._offset, read._count ), _replyOwner, [this, queryID]( const EphemeralReply& rangeReply )
+            { onRangeReply( queryID, rangeReply ); } );
             return;
         }
-        const uint64 requestID        = _dependencies._pRouter->submit( EphemeralRequest::makeScoreRank( rankKey, LeaderboardServiceInternal::makeRankMember( read._accountID ) ),
-                                                                        SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LeaderboardService::onRankReply, this ), _replyOwner );
-        _mapRequestToQuery[requestID] = queryID;
+        _dependencies._pRouter->submit( EphemeralRequest::makeScoreRank( rankKey, LeaderboardServiceInternal::makeRankMember( read._accountID ) ), _replyOwner, [this, queryID]( const EphemeralReply& rankReply )
+        { onRankReply( queryID, rankReply ); } );
     }
 
     void LeaderboardService::applyRebuildRead( const string& rankKey, vector<LeaderboardScoreRow>&& listScore, bool bReadOk )
@@ -1388,13 +1374,8 @@ namespace sw
         }
     }
 
-    void LeaderboardService::onRankReply( const EphemeralReply& reply )
+    void LeaderboardService::onRankReply( uint64 queryID, const EphemeralReply& reply )
     {
-        const auto queryIDIt = _mapRequestToQuery.find( reply._requestID );
-        if ( queryIDIt == _mapRequestToQuery.end() )
-            return;
-        const uint64 queryID = queryIDIt->second;
-        _mapRequestToQuery.erase( queryIDIt );
         const auto queryIt = _mapQuery.find( queryID );
         if ( queryIt == _mapQuery.end() )
             return;
@@ -1405,23 +1386,17 @@ namespace sw
             _mapQuery.erase( queryIt );
             return;
         }
-        const int32 myIndex           = static_cast<int32>( reply._integer );
-        const int32 radius            = query._read._count;
-        const int32 offset            = MathUtil::max( 0, myIndex - radius );
-        const int32 count             = myIndex + radius + 1 - offset;
-        query._read._offset           = offset;
-        const uint64 requestID        = _dependencies._pRouter->submit( EphemeralRequest::makeScoreRange( makeRankKey( query._read._boardID, query._read._periodID ), offset, count ),
-                                                                        SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LeaderboardService::onRangeReply, this ), _replyOwner );
-        _mapRequestToQuery[requestID] = queryID;
+        const int32 myIndex = static_cast<int32>( reply._integer );
+        const int32 radius  = query._read._count;
+        const int32 offset  = MathUtil::max( 0, myIndex - radius );
+        const int32 count   = myIndex + radius + 1 - offset;
+        query._read._offset = offset;
+        _dependencies._pRouter->submit( EphemeralRequest::makeScoreRange( makeRankKey( query._read._boardID, query._read._periodID ), offset, count ), _replyOwner, [this, queryID]( const EphemeralReply& rangeReply )
+        { onRangeReply( queryID, rangeReply ); } );
     }
 
-    void LeaderboardService::onRangeReply( const EphemeralReply& reply )
+    void LeaderboardService::onRangeReply( uint64 queryID, const EphemeralReply& reply )
     {
-        const auto queryIDIt = _mapRequestToQuery.find( reply._requestID );
-        if ( queryIDIt == _mapRequestToQuery.end() )
-            return;
-        const uint64 queryID = queryIDIt->second;
-        _mapRequestToQuery.erase( queryIDIt );
         const auto queryIt = _mapQuery.find( queryID );
         if ( queryIt == _mapQuery.end() )
             return;
@@ -1443,35 +1418,32 @@ namespace sw
             entry._rank  = query._read._offset + static_cast<int32>( memberIndex ) + 1;
             query._listEntry.push_back( std::move( entry ) );
         }
-        for ( int32 entryIndex = 0; entryIndex < static_cast<int32>( query._listEntry.size() ); ++entryIndex )
+        if ( query._listEntry.empty() )
         {
-            const uint64 requestID = _dependencies._pRouter->submit(
-                EphemeralRequest::makeGet( LeaderboardServiceInternal::makeNameKey( query._listEntry[static_cast<size_t>( entryIndex )]._accountID ) ),
-                SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LeaderboardService::onNameReply, this ), _replyOwner );
-            _mapRequestToQuery[requestID]     = queryID;
-            _mapNameRequestToIndex[requestID] = entryIndex;
-            ++query._outstandingNameCount;
-        }
-        if ( query._outstandingNameCount == 0 )
             finishQuery( queryID );
+            return;
+        }
+        vector<AccountID> listAccount;
+        for ( const LeaderboardEntry& entry : query._listEntry )
+        {
+            listAccount.push_back( entry._accountID );
+        }
+        query._outstandingNameCount = static_cast<int32>( listAccount.size() ); // 먼저 다 세 둔다 — 맡기지 못한 요청은 그 자리에서 끝나 질의를 마칠 수 있다
+        for ( size_t entryIndex = 0; entryIndex < listAccount.size(); ++entryIndex )
+        {
+            _dependencies._pRouter->submit( EphemeralRequest::makeGet( LeaderboardServiceInternal::makeNameKey( listAccount[entryIndex] ) ), _replyOwner, [this, queryID, entryIndex]( const EphemeralReply& nameReply )
+            { onNameReply( queryID, entryIndex, nameReply ); } );
+        }
     }
 
-    void LeaderboardService::onNameReply( const EphemeralReply& reply )
+    void LeaderboardService::onNameReply( uint64 queryID, size_t entryIndex, const EphemeralReply& reply )
     {
-        const auto queryIDIt = _mapRequestToQuery.find( reply._requestID );
-        const auto indexIt   = _mapNameRequestToIndex.find( reply._requestID );
-        if ( queryIDIt == _mapRequestToQuery.end() || indexIt == _mapNameRequestToIndex.end() )
-            return;
-        const uint64 queryID    = queryIDIt->second;
-        const int32  entryIndex = indexIt->second;
-        _mapRequestToQuery.erase( queryIDIt );
-        _mapNameRequestToIndex.erase( indexIt );
         const auto queryIt = _mapQuery.find( queryID );
         if ( queryIt == _mapQuery.end() )
             return;
         RankQuery& query = queryIt->second;
         if ( reply._result == EphemeralResult::Ok )
-            query._listEntry[static_cast<size_t>( entryIndex )]._displayName.assign( reply._value.begin(), reply._value.end() );
+            query._listEntry[entryIndex]._displayName.assign( reply._value.begin(), reply._value.end() );
         if ( --query._outstandingNameCount == 0 )
             finishQuery( queryID );
     }

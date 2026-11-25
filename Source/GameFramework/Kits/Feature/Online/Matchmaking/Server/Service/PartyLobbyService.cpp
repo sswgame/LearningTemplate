@@ -325,7 +325,6 @@ namespace sw
 {
     PartyLobbyService::PartyLobbyService()
         : _updater{}
-        , _mapRequestToStep{}
         , _mapListIDToList{}
         , _mapAccountToLobby{}
         , _completionBuffer{}
@@ -369,9 +368,13 @@ namespace sw
     {
         _updater.shutdown();
         _replyOwner.reset(); // 기다리던 캐시 답이 이 객체를 부르지 않게 지운다
-        _mapRequestToStep.clear();
         _mapListIDToList.clear();
         _pRouter = nullptr;
+    }
+
+    int32 PartyLobbyService::getPendingCount() const
+    {
+        return _updater.getPendingCount() + ( _pRouter != nullptr ? _pRouter->getPendingCount( _replyOwner ) : 0 );
     }
 
     string PartyLobbyService::makePartyKey( uint64 partyID )
@@ -413,12 +416,13 @@ namespace sw
     {
         if ( _pRouter == nullptr )
             return;
-        const uint64 requestID = _pRouter->submit( cacheRequest, SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &PartyLobbyService::onStepReply, this ), _replyOwner );
-        PendingStep& step      = _mapRequestToStep[requestID];
-        step._request          = request;
-        step._kind             = kind;
-        step._listID           = listID;
-        step._slot             = slot;
+        PendingStep step;
+        step._request = request;
+        step._kind    = kind;
+        step._listID  = listID;
+        step._slot    = slot;
+        _pRouter->submit( cacheRequest, _replyOwner, [this, step = std::move( step )]( const EphemeralReply& reply )
+        { onStepReply( step, reply ); } );
     }
 
     void PartyLobbyService::submitFireAndForget( const EphemeralRequest& cacheRequest )
@@ -618,13 +622,8 @@ namespace sw
         _updater.update( makeLobbyKey( request._lobbyID ), PartyLobbyLimit::kLobbyTTLMs, make_unique<LobbyMutation>( this, request ) );
     }
 
-    void PartyLobbyService::onStepReply( const EphemeralReply& reply )
+    void PartyLobbyService::onStepReply( const PendingStep& step, const EphemeralReply& reply )
     {
-        const auto stepIt = _mapRequestToStep.find( reply._requestID );
-        if ( stepIt == _mapRequestToStep.end() )
-            return;
-        const PendingStep step = std::move( stepIt->second );
-        _mapRequestToStep.erase( stepIt );
         const bool bUnavailable = reply._result != EphemeralResult::Ok && reply._result != EphemeralResult::NotFound && reply._result != EphemeralResult::Conflict;
         switch ( step._kind )
         {
@@ -705,10 +704,15 @@ namespace sw
                         lobbyID = 0;
                     list._listLobby[index]._lobbyID = lobbyID;
                 }
-                for ( size_t index = 0; index < reply._listMember.size(); ++index )
+                vector<uint64> listLobbyID;
+                for ( const LobbySnapshot& lobby : list._listLobby )
+                {
+                    listLobbyID.push_back( lobby._lobbyID );
+                }
+                for ( size_t index = 0; index < listLobbyID.size(); ++index ) // 맡기지 못한 요청은 그 자리에서 끝나 목록을 지울 수 있다 — 목록을 다시 보지 않는다
                 {
                     Request getRequest  = step._request;
-                    getRequest._lobbyID = list._listLobby[index]._lobbyID;
+                    getRequest._lobbyID = listLobbyID[index];
                     submitStep( EphemeralRequest::makeGet( makeLobbyKey( getRequest._lobbyID ) ), StepKind::ListGet, getRequest, listID, static_cast<int32>( index ) );
                 }
                 break;

@@ -8,8 +8,7 @@
 namespace sw
 {
     CacheRecordUpdater::CacheRecordUpdater()
-        : _mapRequestToOperation{}
-        , _pRouter{ nullptr }
+        : _pRouter{ nullptr }
     {
     }
 
@@ -27,8 +26,12 @@ namespace sw
     void CacheRecordUpdater::shutdown()
     {
         _replyOwner.reset(); // 기다리던 캐시 답이 이 객체를 부르지 않게 지운다
-        _mapRequestToOperation.clear();
         _pRouter = nullptr;
+    }
+
+    int32 CacheRecordUpdater::getPendingCount() const
+    {
+        return _pRouter != nullptr ? _pRouter->getPendingCount( _replyOwner ) : 0;
     }
 
     void CacheRecordUpdater::update( string_view key, int64 ttlMs, unique_ptr<ICacheRecordMutation> mutation )
@@ -47,18 +50,13 @@ namespace sw
 
     void CacheRecordUpdater::startRead( unique_ptr<Operation> operation )
     {
-        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeGet( operation->_key ),
-                                                   SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &CacheRecordUpdater::onReadReply, this ), _replyOwner );
-        _mapRequestToOperation.emplace( requestID, std::move( operation ) );
+        const EphemeralRequest read = EphemeralRequest::makeGet( operation->_key );
+        _pRouter->submit( read, _replyOwner, [this, operation = std::move( operation )]( const EphemeralReply& reply ) mutable
+        { onReadReply( std::move( operation ), reply ); } );
     }
 
-    void CacheRecordUpdater::onReadReply( const EphemeralReply& reply )
+    void CacheRecordUpdater::onReadReply( unique_ptr<Operation> operation, const EphemeralReply& reply )
     {
-        const auto operationIt = _mapRequestToOperation.find( reply._requestID );
-        if ( operationIt == _mapRequestToOperation.end() )
-            return;
-        unique_ptr<Operation> operation = std::move( operationIt->second );
-        _mapRequestToOperation.erase( operationIt );
         if ( reply._result != EphemeralResult::Ok && reply._result != EphemeralResult::NotFound )
         {
             operation->_mutation->onFinished( MatchmakingServiceResult::fail( OnlineError::kUnavailable ), {} );
@@ -87,17 +85,12 @@ namespace sw
             write = EphemeralRequest::makeCompareAndSet( operation->_key, operation->_oldBytes, operation->_newBytes, operation->_ttlMs );
         else
             write = EphemeralRequest::makeSet( operation->_key, operation->_newBytes, operation->_ttlMs, EphemeralCondition::IfAbsent );
-        const uint64 requestID = _pRouter->submit( write, SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &CacheRecordUpdater::onWriteReply, this ), _replyOwner );
-        _mapRequestToOperation.emplace( requestID, std::move( operation ) );
+        _pRouter->submit( write, _replyOwner, [this, operation = std::move( operation )]( const EphemeralReply& writeReply ) mutable
+        { onWriteReply( std::move( operation ), writeReply ); } );
     }
 
-    void CacheRecordUpdater::onWriteReply( const EphemeralReply& reply )
+    void CacheRecordUpdater::onWriteReply( unique_ptr<Operation> operation, const EphemeralReply& reply )
     {
-        const auto operationIt = _mapRequestToOperation.find( reply._requestID );
-        if ( operationIt == _mapRequestToOperation.end() )
-            return;
-        unique_ptr<Operation> operation = std::move( operationIt->second );
-        _mapRequestToOperation.erase( operationIt );
         if ( reply._result == EphemeralResult::Ok )
         {
             operation->_mutation->onFinished( MatchmakingResult::Ok, operation->_bErase != SW_FALSE ? vector<uint8>{} : operation->_newBytes );

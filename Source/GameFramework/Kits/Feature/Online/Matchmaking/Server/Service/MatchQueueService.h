@@ -33,6 +33,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchMaker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
 
 namespace sw
 {
@@ -179,9 +180,9 @@ namespace sw
             unique_ptr<ServerRegistryReader> _reader{};
             vector<UnplacedMatch>            _listUnplaced{}; ///< 배정할 서버가 없어 기다리는 경기이다
             int64                            _leaseAttemptMs{ 0 };
-            uint64                           _leaseRequestID{ 0 };
             uint8                            _bAuthority{ SW_FALSE };
             uint8                            _bLeaseAttempted{ SW_FALSE };
+            uint8                            _bLeasePending{ SW_FALSE }; ///< 임대 요청의 답을 기다린다
         };
 
         struct LocalTicket
@@ -216,6 +217,13 @@ namespace sw
         {
             AccountID _accountID{ kInvalidAccountID };
             uint64    _requestTag{ 0 };
+        };
+
+        /** @brief 파티 찾기의 답입니다. */
+        struct PartyLookup
+        {
+            MatchmakingServiceResult _result{ MatchmakingResult::Ok };
+            PartySnapshot            _party{};
         };
 
         /** @brief 통계를 읽기를 기다리는 줄 서기입니다. 다른 서버의 파티원은 이 서버 메모리에 통계가 없습니다. */
@@ -257,8 +265,9 @@ namespace sw
         /** @brief 티켓과 경기(모드 · 로비 모두)의 새 id 입니다. 위 32 비트가 이 서버, 아래가 순번 하나라 모드 · 로비끼리, 재시작 앞뒤로 겹치지 않는다(명단 기록의 이름이 경기 id 다). */
         uint64 allocateID();
         void   onPartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
+        void   applyJoinParty( const PendingJoin& join, MatchmakingServiceResult result, const PartySnapshot& party );
         /** @brief 파티 기록에 남은 다른 서버의 티켓을 권한 매처와 낸 서버에서 빼고 기록에서 지웁니다. */
-        void onLeavePartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
+        void applyLeaveParty( const LeaveRequest& leave, MatchmakingServiceResult result, const PartySnapshot& party );
         /** @brief 통계가 모두 있으면 티켓을 내고, 아니면 올려 달라고 한 뒤 기다립니다. */
         void prepareTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
         /** @brief 다 읽었거나 시한이 지난 줄 서기의 티켓을 냅니다. 시한이 지났으면 `submitTicket` 이 RatingUnavailable 로 끝냅니다. */
@@ -281,15 +290,15 @@ namespace sw
          * @details 게임 서버는 기록으로 수락을 판정하므로, 쓰지 못한 배정에 Found 를 내면 그 사람은 접속에서 거절된다. 쓰기가 지면 모두 NoServer 를 받고 다시 줄을 선다.
          */
         void storeMatchRecord( PendingPlacement placement );
-        void onMatchRecordReply( const EphemeralReply& reply );
-        void onMatchListReply( const EphemeralReply& reply );
+        /** @brief 기록이 남은 배정을 게임 서버의 목록에 올립니다. */
+        void listMatchRecord( PendingPlacement placement );
         /** @brief 기록이 남은 배정의 버스 배정과 Found 를 냅니다. */
         void completePlacement( const PendingPlacement& placement );
         /** @brief 기록을 남기지 못한 배정을 NoServer 로 끝냅니다. 로비 경기이면 로비를 다시 엽니다. */
         void               failPlacement( const PendingPlacement& placement );
         void               deliverPending( const PendingDelivery& delivery );
         void               updateLease( const string& modeID, ModeState& state, UnixMilliseconds nowMs );
-        void               onLeaseReply( const EphemeralReply& reply );
+        void               onLeaseReply( const string& modeID, const EphemeralReply& reply );
         void               placeMatches( ModeState& state, UnixMilliseconds nowMs );
         [[nodiscard]] bool placeMatch( ModeState& state, const MatchFormed& match, MatchQueueResult failResult, UnixMilliseconds nowMs );
         void               deliverToTicket( uint64 originServerID, const MatchAssignment& assignment );
@@ -301,25 +310,21 @@ namespace sw
         static void        fillTeam( const MatchFormed& match, AccountID accountID, MatchAssignment& inoutAssignment );
 
     private:
-        unordered_map<string, MatchModeDef>     _mapMode;
-        unordered_map<string, ModeState>        _mapModeState;
-        unordered_map<uint64, LocalTicket>      _mapLocalTicket; ///< 이 서버가 낸 티켓이다
-        unordered_map<AccountID, uint64>        _mapAccountToTicket;
-        unordered_map<uint64, PendingJoin>      _mapLookupToJoin;  ///< 파티 찾기를 기다리는 줄 서기 요청이다
-        unordered_map<uint64, LeaveRequest>     _mapLookupToLeave; ///< 파티 찾기를 기다리는 빠지기 요청이다
-        vector<RatingWait>                      _listRatingWait;
-        unordered_map<uint64, PartyReservation> _mapTicketToReservation; ///< 파티 기록에 잡히기를 기다리는 티켓이다
-        unordered_map<uint64, string>           _mapLeaseRequestToMode;
-        unordered_map<uint64, PendingPlacement> _mapRecordWrite; ///< 명단 기록 쓰기의 답을 기다리는 배정이다(요청 id 열쇠)
-        unordered_map<uint64, PendingPlacement> _mapListWrite;   ///< 기록은 남았고 목록 쓰기의 답을 기다리는 배정이다(요청 id 열쇠)
-        EventBuffer<MatchQueueCompletion>       _completionBuffer;
-        EventBuffer<MatchQueueNotification>     _notificationBuffer;
-        EventBuffer<MatchQueueTopicChange>      _topicBuffer;
-        MatchQueueDependencies                  _dependencies;
-        Subscription                            _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
-        uint64                                  _nextLookupTag;
-        int64                                   _nowMs;    ///< 마지막 `update` 의 시각이다(빠지기의 확인 시한을 센다)
-        uint32                                  _sequence; ///< `allocateID` 의 순번이다
+        unordered_map<string, MatchModeDef>      _mapMode;
+        unordered_map<string, ModeState>         _mapModeState;
+        unordered_map<uint64, LocalTicket>       _mapLocalTicket; ///< 이 서버가 낸 티켓이다
+        unordered_map<AccountID, uint64>         _mapAccountToTicket;
+        PendingRequestTable<uint64, PartyLookup> _partyLookupTable; ///< 파티 찾기를 기다리는 줄 서기(주인은 계정) · 빠지기(주인 없음)이다
+        vector<RatingWait>                       _listRatingWait;
+        unordered_map<uint64, PartyReservation>  _mapTicketToReservation; ///< 파티 기록에 잡히기를 기다리는 티켓이다
+        EventBuffer<MatchQueueCompletion>        _completionBuffer;
+        EventBuffer<MatchQueueNotification>      _notificationBuffer;
+        EventBuffer<MatchQueueTopicChange>       _topicBuffer;
+        MatchQueueDependencies                   _dependencies;
+        Subscription                             _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        uint64                                   _nextLookupTag;
+        int64                                    _nowMs;    ///< 마지막 `update` 의 시각이다(빠지기의 확인 시한을 센다)
+        uint32                                   _sequence; ///< `allocateID` 의 순번이다
     };
 } // namespace sw
 

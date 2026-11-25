@@ -9,7 +9,6 @@
  */
 #pragma once
 #include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
@@ -67,7 +66,7 @@ namespace sw
         /** @brief @p key 의 기록을 @p mutation 으로 바꿉니다. 새로 쓰는 값의 만료 시간은 @p ttlMs 입니다. */
         void update( string_view key, int64 ttlMs, unique_ptr<ICacheRecordMutation> mutation );
 
-        int32 getPendingCount() const { return static_cast<int32>( _mapRequestToOperation.size() ); }
+        int32 getPendingCount() const;
 
     private:
         struct Operation
@@ -83,12 +82,11 @@ namespace sw
         };
 
         void startRead( unique_ptr<Operation> operation );
-        void onReadReply( const EphemeralReply& reply );
-        void onWriteReply( const EphemeralReply& reply );
+        void onReadReply( unique_ptr<Operation> operation, const EphemeralReply& reply );
+        void onWriteReply( unique_ptr<Operation> operation, const EphemeralReply& reply );
 
     private:
-        unordered_map<uint64, unique_ptr<Operation>> _mapRequestToOperation;
-        EphemeralStoreRouter*                        _pRouter;
-        Subscription                                 _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        EphemeralStoreRouter* _pRouter;
+        Subscription          _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
     };
 } // namespace sw

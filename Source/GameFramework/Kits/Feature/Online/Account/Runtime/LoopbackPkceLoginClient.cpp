@@ -41,6 +41,7 @@ namespace sw
         , _httpClient{ clock }
         , _listProviderSettings{}
         , _listPending{}
+        , _exchangeTable{}
         , _resultBuffer{}
         , _pProvider{ nullptr }
         , _pBrowser{ nullptr }
@@ -76,6 +77,7 @@ namespace sw
             finish( pending, false, true, "client shut down", vector<uint8>{} );
         }
         _listPending.clear();
+        _exchangeTable.cancelAll();
         _redirectServer.shutdown();
         _httpClient.shutdown();
     }
@@ -129,37 +131,12 @@ namespace sw
         (void)_httpClient.pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
         {
-            for ( size_t pendingIndex = 0; pendingIndex < _listPending.size(); ++pendingIndex )
-            {
-                PendingLogin& pending = _listPending[pendingIndex];
-                if ( pending._tokenRequestID != response._requestID )
-                    continue;
-                const PkceLoginProviderConfig* pSettings = findSettings( pending._provider );
-                JSONDocument                   document;
-                const bool                     bParsed = response.isSuccess() && document.tryParse( response.getBodyText() ) && document.getRoot().isObject();
-                const JSONValue                token   = bParsed ? document.getRoot().get( pSettings->_bUseIDToken == SW_TRUE ? "id_token" : "access_token" )
-                                                                 : JSONValue{};
-                if ( token.isString() == false || token.asString().empty() )
-                {
-                    finish( pending, false, false, response.getKind() == HTTPResponseKind::TransportFailed ? response.getFailureText() : string( "token endpoint refused the code" ), vector<uint8>{} );
-                }
-                else
-                {
-                    StringBuilder<constant::buffer::kMax2048> ticketText;
-                    ticketText.appendFormat( "%#", token.asString() );
-                    if ( pSettings->_bUseIDToken == SW_TRUE )
-                        ticketText.appendFormat( "|%#", pending._nonce );
-                    const string_view ticketView = ticketText.view();
-                    finish( pending, true, false, "", vector<uint8>( reinterpret_cast<const uint8*>( ticketView.data() ), reinterpret_cast<const uint8*>( ticketView.data() ) + ticketView.size() ) );
-                }
-                _listPending.erase( _listPending.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
-                break;
-            }
+            (void)_exchangeTable.answer( response._requestID, response );
         }
         for ( size_t pendingIndex = 0; pendingIndex < _listPending.size(); )
         {
             PendingLogin& pending = _listPending[pendingIndex];
-            if ( nowMs < pending._deadlineMs || pending._tokenRequestID != 0 )
+            if ( nowMs < pending._deadlineMs )
             {
                 ++pendingIndex;
                 continue;
@@ -188,7 +165,7 @@ namespace sw
         PendingLogin*     pFound = nullptr;
         for ( PendingLogin& pending : _listPending )
         {
-            const bool bMatchingPending = pState != nullptr && pending._tokenRequestID == 0 && pending._state == pState->_value;
+            const bool bMatchingPending = pState != nullptr && pending._state == pState->_value;
             if ( bMatchingPending )
                 pFound = &pending;
         }
@@ -198,10 +175,12 @@ namespace sw
             outResponse._statusCode = 400;
             return;
         }
+        const PendingLogin login = std::move( *pFound ); // 한 번 돌아온 로그인은 기다리지 않는다 — 같은 state 의 둘째 되돌아옴은 모르는 state 다
+        _listPending.erase( _listPending.begin() + ( pFound - _listPending.data() ) );
         Internal::setPage( outResponse, HTTPConstant::kStatusOk );
         const HTTPHeader*              pError       = request.findQuery( "error" );
         const HTTPHeader*              pCode        = request.findQuery( "code" );
-        const PkceLoginProviderConfig* pSettings    = findSettings( pFound->_provider );
+        const PkceLoginProviderConfig* pSettings    = findSettings( login._provider );
         const bool                     bLoginDenied = pError != nullptr || pCode == nullptr || pCode->_value.empty() || pSettings == nullptr;
         if ( bLoginDenied )
         {
@@ -211,14 +190,7 @@ namespace sw
                 reason.appendFormat( "provider returned %#", pError->_value );
             else
                 reason.append( "redirect carried no code" );
-            for ( size_t pendingIndex = 0; pendingIndex < _listPending.size(); ++pendingIndex )
-            {
-                if ( &_listPending[pendingIndex] != pFound )
-                    continue;
-                finish( *pFound, false, bDenied, reason.view(), vector<uint8>{} );
-                _listPending.erase( _listPending.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
-                break;
-            }
+            finish( login, false, bDenied, reason.view(), vector<uint8>{} );
             return;
         }
         vector<HTTPHeader> listForm;
@@ -226,7 +198,7 @@ namespace sw
         listForm.push_back( HTTPHeader{ "code", pCode->_value } );
         listForm.push_back( HTTPHeader{ "redirect_uri", makeRedirectURI() } );
         listForm.push_back( HTTPHeader{ "client_id", pSettings->_clientID } );
-        listForm.push_back( HTTPHeader{ "code_verifier", pFound->_codeVerifier } );
+        listForm.push_back( HTTPHeader{ "code_verifier", login._codeVerifier } );
         HTTPClientRequest tokenRequest;
         tokenRequest._method = HTTPMethod::Post;
         tokenRequest._url    = pSettings->_tokenURL;
@@ -234,7 +206,33 @@ namespace sw
         tokenRequest._bodyBytes.assign( reinterpret_cast<const uint8*>( body.data() ), reinterpret_cast<const uint8*>( body.data() ) + body.size() );
         tokenRequest._listHeader.push_back( HTTPHeader{ "Content-Type", "application/x-www-form-urlencoded" } );
         tokenRequest._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        pFound->_tokenRequestID = _httpClient.submitRequest( tokenRequest );
+        (void)_exchangeTable.track( _httpClient.submitRequest( tokenRequest ), 0, [this, login]( const HTTPClientResponse& response, PendingRequestEnd end )
+        {
+            if ( end == PendingRequestEnd::Answered )
+                finishExchange( login, response );
+            else
+                finish( login, false, true, "client shut down", vector<uint8>{} );
+        } ); // 요청 번호는 겹치지 않는다
+    }
+
+    void LoopbackPkceLoginClient::finishExchange( const PendingLogin& login, const HTTPClientResponse& response )
+    {
+        const PkceLoginProviderConfig* pSettings = findSettings( login._provider );
+        JSONDocument                   document;
+        const bool                     bParsed = response.isSuccess() && document.tryParse( response.getBodyText() ) && document.getRoot().isObject();
+        const JSONValue                token   = bParsed ? document.getRoot().get( pSettings->_bUseIDToken == SW_TRUE ? "id_token" : "access_token" )
+                                                         : JSONValue{};
+        if ( token.isString() == false || token.asString().empty() )
+        {
+            finish( login, false, false, response.getKind() == HTTPResponseKind::TransportFailed ? response.getFailureText() : string( "token endpoint refused the code" ), vector<uint8>{} );
+            return;
+        }
+        StringBuilder<constant::buffer::kMax2048> ticketText;
+        ticketText.appendFormat( "%#", token.asString() );
+        if ( pSettings->_bUseIDToken == SW_TRUE )
+            ticketText.appendFormat( "|%#", login._nonce );
+        const string_view ticketView = ticketText.view();
+        finish( login, true, false, "", vector<uint8>( reinterpret_cast<const uint8*>( ticketView.data() ), reinterpret_cast<const uint8*>( ticketView.data() ) + ticketView.size() ) );
     }
 
     const PkceLoginProviderConfig* LoopbackPkceLoginClient::findSettings( string_view provider ) const
@@ -251,7 +249,7 @@ namespace sw
         return true;
     }
 
-    void LoopbackPkceLoginClient::finish( PendingLogin& pending, bool bSucceeded, bool bCancelled, string_view failureText, vector<uint8> ticketBytes )
+    void LoopbackPkceLoginClient::finish( const PendingLogin& pending, bool bSucceeded, bool bCancelled, string_view failureText, vector<uint8> ticketBytes )
     {
         _resultBuffer.push( PlatformLoginClientResult{} );
         PlatformLoginClientResult& result = _resultBuffer.getLast();
