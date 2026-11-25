@@ -57,6 +57,8 @@ namespace sw
         void choosePopupOption( uint32 index );
 
     protected:
+        /** @brief 문서가 세터 없이 쓴 항목 · 고른 인덱스를 보이는 글로 옮깁니다. */
+        void onAttachedToTree() override;
         void handleClick() override;
         void paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const override;
 

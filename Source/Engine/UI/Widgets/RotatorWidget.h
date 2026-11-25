@@ -61,6 +61,8 @@ namespace sw
         UIReply onActionEvent( const UIActionEvent& event, UIRoutePhase phase ) override;
 
     protected:
+        /** @brief 문서가 세터 없이 쓴 항목 · 고른 인덱스를 보이는 글로 옮깁니다. */
+        void onAttachedToTree() override;
         void handleClick() override;
         void paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const override;
 

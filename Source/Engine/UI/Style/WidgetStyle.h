@@ -59,7 +59,7 @@ namespace sw
         float32 _opacity{ 1.0f };
         PROPERTY( DisplayName = "Transition", Tooltip = "Property Seconds Curve, ... (style transitions)" )
         string _transition{};
-        PROPERTY( DisplayName = "Size", Tooltip = "Width, height of a widget part (check box, slider thumb) or the default size of a fixed-size widget; used by the engine widget skin", Meta = "Units=ui" )
+        PROPERTY( DisplayName = "Size", Tooltip = "Width, height of the widget (0 = sized by its content; the slot override wins) or of a widget part in the engine widget skin (check box, slider thumb)", Meta = "Units=ui" )
         float2 _size{};
     };
 } // namespace sw

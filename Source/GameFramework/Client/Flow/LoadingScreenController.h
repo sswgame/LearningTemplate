@@ -57,7 +57,7 @@ namespace sw
      *            진행률은 부르는 쪽이 넘긴다(`update` 의 `loadProgress` — 씬 매니저의 프리로드 진행 `SceneManager::tryGetLoadProgress`). 문서에 `Progress` 슬라이더가 있으면
      *            값이 있을 때 보이고(입력은 받지 않는다) 없으면 접는다.
      *            팁 목록은 gamesettings 의 `_loadingTips` 파일(`loadTipsFromResource`)이 채운다.
-     *          - **페이드**: `ScreenFade::getOverlayAlpha` 가 0 보다 크면 Overlay 층(입력 없음, 로딩 화면 아래)에 전체 화면 검은 패널을 띄우고 불투명도를 그 알파로 둔다.
+     *          - **페이드**: `ScreenFade::getOverlayAlpha` 가 0 보다 크면 Overlay 층(입력 없음, 로딩 화면 아래)에 페이드 판 문서(`UIEngineDocuments::_screenFade`)를 띄우고 불투명도를 그 알파로 둔다.
      *            0 이 되면 닫는다.
      *          - **실패 알림**: 게임 이동 씬 로드가 실패하면(`SceneLoadCompletedEvent` — 앞 씬에 남는다) 엔진 확인 대화 상자로 알리고 다시 시도할지 묻는다. 뒤 요청에 밀린 로드는
      *            실패가 아니라 알리지 않고, 그 뒤 로드가 서면 떠 있던 알림을 닫는다. 저장 · 불러오기의 실패(`SaveGameSavedEvent` · `SaveGameLoadedEvent`)도 같은 대화 상자로 알리고

@@ -138,6 +138,13 @@ namespace sw
         refreshLabel();
     }
 
+    void ComboBoxWidget::onAttachedToTree()
+    {
+        ButtonWidget::onAttachedToTree();
+        if ( _selectedIndex < _listOption.size() )
+            refreshLabel();
+    }
+
     void ComboBoxWidget::onBoundPropertyChanged( const PropertyInfo& property )
     {
         if ( property._name == hashed_string( "_listOption" ) || property._name == hashed_string( "_selectedIndex" ) )

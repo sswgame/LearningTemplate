@@ -94,6 +94,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _uiConfirmDialog; ///< 공통 확인 대화 상자(`ConfirmDialogScreen` — 제목 · 본문 · 확인 · 취소)
         PROPERTY( Required )
+        DataPath _uiScreenFade; ///< 씬 이동 페이드가 덮는 전체 화면 판(`LoadingScreenController` — 불투명도만 코드가 정한다)
+        PROPERTY( Required )
         DataPath _uiQuantityDialog; ///< 수량 대화 상자(`QuantityDialogScreen` — 나누기 · 여러 개 사기)
         PROPERTY( Required )
         DataPath _uiMainMenu; ///< 타이틀 씬의 메인 메뉴(`MainMenuScreen` — 시작 · 옵션 · 끝내기, `TitleMenuComponent` 가 연다)

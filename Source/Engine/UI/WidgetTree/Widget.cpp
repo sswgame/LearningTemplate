@@ -223,6 +223,19 @@ namespace sw
         return _opacity;
     }
 
+    float2 Widget::computeFixedSize() const
+    {
+        float2                 fixedSize{ _slot._widthOverride, _slot._heightOverride };
+        const UIComputedStyle* pStyle = getComputedStyle();
+        if ( pStyle == nullptr || pStyle->has( UIStyleField::Size ) == false )
+            return fixedSize;
+        if ( fixedSize._x <= 0.0f )
+            fixedSize._x = pStyle->_value._size._x;
+        if ( fixedSize._y <= 0.0f )
+            fixedSize._y = pStyle->_value._size._y;
+        return fixedSize;
+    }
+
     UIReply Widget::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )
     {
         (void)event;

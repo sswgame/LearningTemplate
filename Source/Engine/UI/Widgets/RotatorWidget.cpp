@@ -71,6 +71,13 @@ namespace sw
         refreshLabel();
     }
 
+    void RotatorWidget::onAttachedToTree()
+    {
+        ButtonWidget::onAttachedToTree();
+        if ( _selectedIndex < _listOption.size() )
+            refreshLabel();
+    }
+
     void RotatorWidget::onBoundPropertyChanged( const PropertyInfo& property )
     {
         if ( property._name == hashed_string( "_listOption" ) || property._name == hashed_string( "_selectedIndex" ) )

@@ -89,11 +89,12 @@ namespace sw
         /** @brief 가용 길이에서 @p used 를 뺍니다. 무한은 무한으로 남고, 음수는 0 입니다. */
         static float32 computeRemaining( float32 available, float32 used );
         /**
-         * @brief 슬롯 사각형 안에서 위젯 사각형을 정합니다(여백, 정렬, 크기 덮어쓰기, 최대).
+         * @brief 슬롯 사각형 안에서 위젯 사각형을 정합니다(여백, 정렬, 정해진 크기, 최대).
+         * @param fixedSize 위젯의 정해진 크기입니다(`Widget::computeFixedSize`, 0 인 축은 정해지지 않음).
          * @param desired 위젯의 원하는 크기입니다(measure 결과). Fill 정렬이면 쓰지 않습니다.
          */
-        static void applySlot( const WidgetLayoutSlot& slot, const float2& desired, const float2& slotPosition, const float2& slotSize, float2& outPosition,
-                               float2& outSize );
+        static void applySlot( const WidgetLayoutSlot& slot, const float2& fixedSize, const float2& desired, const float2& slotPosition, const float2& slotSize,
+                               float2& outPosition, float2& outSize );
         /** @brief 정렬이 남은 공간 @p freeSpace 에서 앞쪽으로 띄우는 길이입니다(Fill 과 Start 는 0, Center 는 절반, End 는 전부). */
         static float32 computeAlignmentOffset( UIAlignment alignment, float32 freeSpace );
 

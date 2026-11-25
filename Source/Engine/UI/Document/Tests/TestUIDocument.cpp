@@ -14,7 +14,9 @@
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
+#include "Engine/UI/Widgets/ComboBoxWidget.h"
 #include "Engine/UI/Widgets/ImageWidget.h"
+#include "Engine/UI/Widgets/RotatorWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 using namespace sw;
@@ -77,6 +79,31 @@ SW_TEST_CASE( UIDocumentTest, ParsesEverything )
     SW_REQUIRE_EQUAL( size_t( 1 ), asset._listNode[2]._listBinding.size() );
     SW_EXPECT_EQUAL( string( "_text" ), asset._listNode[2]._listBinding[0]._propertyPath );
     SW_EXPECT_EQUAL( uint32( 9 ), asset._listNode[2]._sourceLine );
+}
+
+/** @brief [UIDocumentTest] 문서에 적은 항목 · 고른 인덱스가 콤보 · 넘김 상자의 보이는 글이 된다(세터를 거치지 않아도) */
+SW_TEST_CASE( UIDocumentTest, SelectedOptionShowsItsText )
+{
+    UIDocumentAsset asset;
+    const string    document = makeDocument( "<BoxPanel>"
+                                                "<ComboBoxWidget _name=\"Combo\" _selectedIndex=\"1\"><_listOption><item>Low</item><item>High</item></_listOption></ComboBoxWidget>"
+                                                "<RotatorWidget _name=\"Rotator\" _selectedIndex=\"0\"><_listOption><item>Near</item><item>Far</item></_listOption></RotatorWidget>"
+                                                "</BoxPanel>" );
+    SW_REQUIRE_TRUE( UIDocumentLoader::parse( document.c_str(), "engine/ui/test.ui.xml", ResourceContext::forDocument(), asset ).has_value() );
+    UIDocumentCache      cache;
+    vector<UIBindingDef> listBinding;
+    unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, ResourceTagSet{}, listBinding ).value_or( nullptr );
+    SW_REQUIRE_NOT_NULL( root.get() );
+    WidgetTree tree;
+    tree.setRoot( std::move( root ) );
+    const ComboBoxWidget* pCombo   = tree.findWidget<ComboBoxWidget>( hashed_string( "Combo" ) );
+    const RotatorWidget*  pRotator = tree.findWidget<RotatorWidget>( hashed_string( "Rotator" ) );
+    SW_REQUIRE_TRUE( pCombo != nullptr && pRotator != nullptr );
+    const TextWidget* pComboLabel   = castTo<TextWidget>( pCombo->getChild( 0 ) );
+    const TextWidget* pRotatorLabel = castTo<TextWidget>( pRotator->getChild( 0 ) );
+    SW_REQUIRE_TRUE( pComboLabel != nullptr && pRotatorLabel != nullptr );
+    SW_EXPECT_EQUAL( string( "High" ), string( pComboLabel->getText() ) );
+    SW_EXPECT_EQUAL( string( "Near" ), string( pRotatorLabel->getText() ) );
 }
 
 /** @brief [UIDocumentTest] 거절: 문법 · 루트 · 버전 · 모르는 요소와 속성 · 패널 아닌 부모 · 루트 위젯 수 · 빈 목록 항목 · 겹친 애니메이션 이름 */

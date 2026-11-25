@@ -110,6 +110,12 @@ namespace sw
         virtual bool isLayoutBoundary() const { return _slot.hasFixedSize(); }
 
         // --- 레이아웃 ---------------------------------------------------------------
+        /**
+         * @brief 정해진 크기입니다. 축마다 슬롯의 크기 덮어쓰기가 먼저이고, 없으면 계산된 스타일의 크기(`_size`)입니다(0 = 그 축은 내용이 정한다).
+         * @details 유니티 USS 의 인라인 스타일과 시트 규칙(`width` · `height`)의 순서다. 레이아웃 경계(`isLayoutBoundary`)는 슬롯만 본다 —
+         *          스타일 크기는 상태에 따라 바뀌므로 부모까지 다시 재야 한다.
+         */
+        float2 computeFixedSize() const;
         /** @brief 원하는 크기입니다(마지막 measure 결과, UI 단위). */
         const float2&         getDesiredSize() const { return _desiredSize; }
         const WidgetGeometry& getGeometry() const { return _geometry; }
