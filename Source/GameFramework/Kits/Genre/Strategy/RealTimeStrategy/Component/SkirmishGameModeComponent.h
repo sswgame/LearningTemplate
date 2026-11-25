@@ -119,13 +119,13 @@ namespace sw
         PROPERTY( Category = "Time", DisplayName = "Speed Range", Tooltip = "Slowest and fastest time scale and the factor of one step; required" )
         GameSpeedRange _speedRange;
 
-        BoundAssetRef<BehaviorTreeAsset> _pCommanderTree;
-        CommanderDebugSource             _commanderDebugSource;
-        SkirmishMatch                    _match;
-        vector<RTSEvent>                 _listStepEvent;
-        GameSpeedControl                 _speed;                       ///< 배속 · 일시정지(2 인 대전에서는 쓰지 않는다)
-        uint64                           _matchID;                     ///< `getMatchID`
-        uint8                            _bAutoPlayChangeReported : 1; ///< 판이 열린 뒤 자동 플레이가 바뀐 것을 한 번 알렸다
-        [[maybe_unused]] uint8           _reserved                : 7;
+        BoundAssetRef<BehaviorTreeAsset>  _pCommanderTree;
+        SW_TRANSIENT CommanderDebugSource _commanderDebugSource;
+        SW_CODEC_STATE SkirmishMatch      _match;
+        SW_CODEC_STATE vector<RTSEvent> _listStepEvent;
+        SW_CODEC_STATE GameSpeedControl _speed;                       ///< 배속 · 일시정지(2 인 대전에서는 쓰지 않는다)
+        SW_CODEC_STATE uint64           _matchID;                     ///< `getMatchID`
+        SW_TRANSIENT uint8              _bAutoPlayChangeReported : 1; ///< 판이 열린 뒤 자동 플레이가 바뀐 것을 한 번 알렸다
+        [[maybe_unused]] uint8          _reserved                : 7;
     };
 } // namespace sw

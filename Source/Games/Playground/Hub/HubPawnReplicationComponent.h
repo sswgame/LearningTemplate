@@ -286,36 +286,36 @@ namespace sw
         PROPERTY( Category = "Network", DisplayName = "Interest Leave Radius", Min = 0.0, Units = m, Tooltip = "They stop replicating once outside this radius (not smaller than the enter radius)" )
         float32 _interestLeaveRadius;
 
-        ReplicationServer                            _server;
-        ReplicationClient                            _client;
-        InterestReplicationPolicy                    _interest;
-        Subscription                                 _routerSubscription;  ///< 라우터에 단 `_server` 또는 `_client` 의 등록(처리기보다 뒤에 선언 — 먼저 풀린다)
-        Subscription                                 _localBodySuspension; ///< 서버 — 아무도 조종하지 않는 씬의 플레이어 몸의 멈춤
-        ClientPrediction<HubPawnState, HubPawnInput> _prediction;
-        PredictionSmoother                           _smoother;
-        vector<ServerPawn>                           _listServerPawn;
-        vector<RemotePawn>                           _listRemotePawn;
-        vector<HubAvatarSession>                     _listSession;       ///< 서버 — 이번 프레임의 들인 아바타(다시 쓴다)
-        vector<MeleeHitClaim>                        _listClaimScratch;  ///< 서버 — 허브에는 근접 주장이 없다(꺼내는 형식이 요구한다)
-        vector<uint32>                               _listEntityScratch; ///< 클라이언트 — 보이는 엔티티
-        vector<uint8>                                _bytesScratch;
-        TickedFloorStep*                             _pFloorStep;           ///< 이번 넷 프레임의 바닥 장치(프레임 동안만, 소유하지 않음)
-        float3                                       _floorLocalPosition;   ///< 클라이언트 — 디딘 바닥 기준의 자리(밀림 감시)
-        float32                                      _floorSlip;            ///< 클라이언트 — 디딘 바닥에서 밀린 거리
-        int32                                        _floorTickOffset;      ///< 클라이언트 — 서버가 정해 준 바닥 틱 차이
-        AbsolutePosition                             _previousPosition;     ///< 클라이언트 — 자기 폰의 지난 틱 자리(절대, 그리기 보간)
-        int64                                        _lastFrameNanoseconds; ///< 지난 넷 걸음 프레임의 실제 시각(0 이면 아직 없다)
-        float32                                      _accumulator;
-        vector<ControlTrigger>                       _listPendingTrigger;  ///< 클라이언트 — 다음 입력 틱에 실을 발동 사건
-        uint32                                       _pendingPawnEntityID; ///< 클라이언트 — 모은 발동을 낸 폰(폰이 바뀌면 모은 것을 버린다)
-        uint32                                       _stride;              ///< 이 컴포넌트의 틱 하나가 월드의 서버 틱 몇 개인지
-        uint32                                       _tick;                ///< 서버 — 월드의 서버 시계에서 낸 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
-        uint32                                       _reconciledTick;      ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
-        uint32                                       _localAvatarID;       ///< 클라이언트 — 예측하는 자기 아바타(0 이면 아직 없다)
-        Role                                         _role;
-        uint8                                        _floorNumber;     ///< 클라이언트 — 디딘 바닥(밀림 감시)
-        uint8                                        _bFloorTickKnown; ///< 클라이언트 — `_floorTickOffset` 을 받았다
-        uint8                                        _bStartTried : 1; ///< 지금 링크로 복제기를 세워 봤다(실패해도 다시 하지 않는다 — 오류는 한 번 알린다)
-        [[maybe_unused]] uint8                       _reserved    : 7;
+        SW_TRANSIENT ReplicationServer         _server;
+        SW_TRANSIENT ReplicationClient         _client;
+        SW_TRANSIENT InterestReplicationPolicy _interest;
+        Subscription                           _routerSubscription;  ///< 라우터에 단 `_server` 또는 `_client` 의 등록(처리기보다 뒤에 선언 — 먼저 풀린다)
+        Subscription                           _localBodySuspension; ///< 서버 — 아무도 조종하지 않는 씬의 플레이어 몸의 멈춤
+        SW_TRANSIENT ClientPrediction<HubPawnState, HubPawnInput> _prediction;
+        SW_TRANSIENT PredictionSmoother                           _smoother;
+        SW_TRANSIENT vector<ServerPawn> _listServerPawn;
+        SW_TRANSIENT vector<RemotePawn> _listRemotePawn;
+        SW_TRANSIENT vector<HubAvatarSession> _listSession;   ///< 서버 — 이번 프레임의 들인 아바타(다시 쓴다)
+        SW_TRANSIENT vector<MeleeHitClaim> _listClaimScratch; ///< 서버 — 허브에는 근접 주장이 없다(꺼내는 형식이 요구한다)
+        SW_TRANSIENT vector<uint32> _listEntityScratch;       ///< 클라이언트 — 보이는 엔티티
+        SW_TRANSIENT vector<uint8>    _bytesScratch;
+        TickedFloorStep*              _pFloorStep;           ///< 이번 넷 프레임의 바닥 장치(프레임 동안만, 소유하지 않음)
+        SW_TRANSIENT float3           _floorLocalPosition;   ///< 클라이언트 — 디딘 바닥 기준의 자리(밀림 감시)
+        SW_TRANSIENT float32          _floorSlip;            ///< 클라이언트 — 디딘 바닥에서 밀린 거리
+        SW_TRANSIENT int32            _floorTickOffset;      ///< 클라이언트 — 서버가 정해 준 바닥 틱 차이
+        SW_TRANSIENT AbsolutePosition _previousPosition;     ///< 클라이언트 — 자기 폰의 지난 틱 자리(절대, 그리기 보간)
+        SW_TRANSIENT int64            _lastFrameNanoseconds; ///< 지난 넷 걸음 프레임의 실제 시각(0 이면 아직 없다)
+        SW_TRANSIENT float32          _accumulator;
+        SW_TRANSIENT vector<ControlTrigger> _listPendingTrigger;  ///< 클라이언트 — 다음 입력 틱에 실을 발동 사건
+        SW_TRANSIENT uint32                 _pendingPawnEntityID; ///< 클라이언트 — 모은 발동을 낸 폰(폰이 바뀌면 모은 것을 버린다)
+        SW_TRANSIENT uint32                 _stride;              ///< 이 컴포넌트의 틱 하나가 월드의 서버 틱 몇 개인지
+        SW_TRANSIENT uint32                 _tick;                ///< 서버 — 월드의 서버 시계에서 낸 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
+        SW_TRANSIENT uint32                 _reconciledTick;      ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
+        SW_TRANSIENT uint32                 _localAvatarID;       ///< 클라이언트 — 예측하는 자기 아바타(0 이면 아직 없다)
+        SW_TRANSIENT Role                   _role;
+        SW_TRANSIENT uint8                  _floorNumber;     ///< 클라이언트 — 디딘 바닥(밀림 감시)
+        SW_TRANSIENT uint8                  _bFloorTickKnown; ///< 클라이언트 — `_floorTickOffset` 을 받았다
+        SW_TRANSIENT uint8                  _bStartTried : 1; ///< 지금 링크로 복제기를 세워 봤다(실패해도 다시 하지 않는다 — 오류는 한 번 알린다)
+        [[maybe_unused]] uint8              _reserved    : 7;
     };
 } // namespace sw

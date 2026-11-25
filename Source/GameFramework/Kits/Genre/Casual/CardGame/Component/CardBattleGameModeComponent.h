@@ -91,7 +91,7 @@ namespace sw
         int32 _winReward;
 
         BoundAssetRef<CardBattleCatalog> _pCatalog;
-        CardBattle                       _battle;
-        Countdown                        _autoPlayTimer; ///< 자동 플레이의 다음 수
+        SW_CODEC_STATE CardBattle        _battle;
+        SW_CODEC_STATE Countdown         _autoPlayTimer; ///< 자동 플레이의 다음 수
     };
 } // namespace sw

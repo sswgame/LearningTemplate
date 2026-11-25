@@ -114,12 +114,12 @@ namespace sw
 
         BoundAssetRef<PartyRoundSeries> _pCatalog;
         BoundAssetRef<PartyItemSpawner> _pItems; ///< 아이템 없는 판이면 비었다
-        PartyRoundSeries                _series;
-        TrampolineArena                 _arena;
-        vector<TrampolineEvent>         _listArenaEvent;
-        vector<PartyItemEvent>          _listItemEvent;
-        vector<PartySeriesEvent>        _listSeriesEvent;
-        Countdown                       _phaseTimer; ///< 쉬는 시간
+        SW_CODEC_STATE PartyRoundSeries _series;
+        SW_CODEC_STATE TrampolineArena  _arena;
+        SW_TRANSIENT vector<TrampolineEvent> _listArenaEvent;
+        SW_TRANSIENT vector<PartyItemEvent> _listItemEvent;
+        SW_TRANSIENT vector<PartySeriesEvent> _listSeriesEvent;
+        SW_CODEC_STATE Countdown              _phaseTimer; ///< 쉬는 시간
         PROPERTY( RuntimeState )
         PartyGamePhase _phase;
         PROPERTY( RuntimeState, Min = -1 )

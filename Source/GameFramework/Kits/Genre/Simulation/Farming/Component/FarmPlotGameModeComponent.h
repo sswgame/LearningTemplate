@@ -88,11 +88,11 @@ namespace sw
         PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (within the speed range)", Min = 1.0 )
         float32 _fastTimeScale;
 
-        BoundAssetRef<CropCatalog> _pCropCatalog;
-        FarmField                  _field;
-        GameSpeedControl           _speed; ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
-        uint32                     _fieldRevision;
-        uint8                      _bFastForward : 1; ///< 마지막 빨리 감기 명령 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
-        [[maybe_unused]] uint8     _reserved     : 7;
+        BoundAssetRef<CropCatalog>    _pCropCatalog;
+        SW_CODEC_STATE FarmField      _field;
+        SW_TRANSIENT GameSpeedControl _speed; ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
+        SW_CODEC_STATE uint32         _fieldRevision;
+        SW_TRANSIENT uint8            _bFastForward : 1; ///< 마지막 빨리 감기 명령 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
+        [[maybe_unused]] uint8        _reserved     : 7;
     };
 } // namespace sw

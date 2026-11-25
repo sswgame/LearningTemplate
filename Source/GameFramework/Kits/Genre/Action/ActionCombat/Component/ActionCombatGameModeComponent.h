@@ -108,18 +108,18 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Victory Heal", Tooltip = "Result value 'heal' reported on victory (the hub turns it into an effect)", Min = 0 )
         int32 _victoryHeal;
 
-        ActionRoom _room;
-        Countdown  _bossDelay;
+        SW_CODEC_STATE ActionRoom _room;
+        SW_CODEC_STATE Countdown  _bossDelay;
         PROPERTY( RuntimeState )
-        float2          _playerPosition;
-        FacingDirection _facing; ///< 리플렉션 열거가 아니다 — 손 본문이 싣는다
+        float2                         _playerPosition;
+        SW_CODEC_STATE FacingDirection _facing; ///< 리플렉션 열거가 아니다 — 손 본문이 싣는다
         PROPERTY( RuntimeState )
         int32 _playerHP;
         PROPERTY( RuntimeState )
         ActionCombatPhase      _phase;
-        float2                 _commandMove;       ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
-        uint8                  _bAttackQueued : 1; ///< 다음 걸음이 쓸 공격 누름
-        uint8                  _bDashQueued   : 1; ///< 다음 걸음이 쓸 대시 누름
+        SW_TRANSIENT float2    _commandMove;       ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
+        SW_TRANSIENT uint8     _bAttackQueued : 1; ///< 다음 걸음이 쓸 공격 누름
+        SW_TRANSIENT uint8     _bDashQueued   : 1; ///< 다음 걸음이 쓸 대시 누름
         [[maybe_unused]] uint8 _reserved      : 6;
     };
 } // namespace sw

@@ -69,8 +69,8 @@ namespace sw
         PROPERTY( RuntimeState, Min = 0 )
         float32 _budget;
 
-        BoundAssetRef<SpawnTable> _pTable; ///< 감독이 빌려 쓴다
-        SpawnDirector             _director;
-        vector<SpawnedView>       _listView;
+        BoundAssetRef<SpawnTable>    _pTable; ///< 감독이 빌려 쓴다
+        SW_CODEC_STATE SpawnDirector _director;
+        SW_TRANSIENT vector<SpawnedView> _listView;
     };
 } // namespace sw

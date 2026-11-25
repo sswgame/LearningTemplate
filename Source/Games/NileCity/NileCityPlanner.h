@@ -136,7 +136,7 @@ namespace sw
         void addBuilding( const utf8* pBuildingID, int32 x, int32 y, int32 minPopulation );
 
     private:
-        vector<PlanStep> _listStep;
+        SW_CODEC_STATE vector<PlanStep> _listStep;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _nextStep;
         PROPERTY( RuntimeState, Min = 0 )

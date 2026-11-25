@@ -258,23 +258,23 @@ namespace sw
         PROPERTY( Category = "Combat", DisplayName = "Unit Radius", Tooltip = "Body radius of a unit: projectiles start outside it and hit within it plus their own radius", Min = 0.0, Units = m )
         float32 _unitRadius;
 
-        vector<ArenaUnit>       _listUnit;
-        vector<ArenaUnitView>   _listUnitView;
-        ProjectileSimulation    _projectiles;
-        vector<ProjectileCargo> _listProjectileCargo; ///< 나는 탄(`_projectiles`)과 함께 싣지 않는다 — 불러온 판은 웨이브를 처음부터 다시 세운다
-        vector<SpawnRequest>    _listPendingUnit;
-        float3                  _playerFocus;
-        GameObjectHandle        _playerObject;     ///< 이번 프레임 스냅샷의 플레이어(`getPlayerObject`).
-        GameObjectHandle        _autoBattleObject; ///< 자동 전투 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
-        optional<Countdown>     _playerRespawn;    ///< 플레이어가 없으면 다시 등장하기까지 남은 시간
+        SW_TRANSIENT vector<ArenaUnit> _listUnit;
+        SW_TRANSIENT vector<ArenaUnitView> _listUnitView;
+        SW_TRANSIENT ProjectileSimulation  _projectiles;
+        SW_TRANSIENT vector<ProjectileCargo> _listProjectileCargo; ///< 나는 탄(`_projectiles`)과 함께 싣지 않는다 — 불러온 판은 웨이브를 처음부터 다시 세운다
+        SW_TRANSIENT vector<SpawnRequest> _listPendingUnit;
+        SW_TRANSIENT float3               _playerFocus;
+        SW_TRANSIENT GameObjectHandle     _playerObject;     ///< 이번 프레임 스냅샷의 플레이어(`getPlayerObject`).
+        SW_TRANSIENT GameObjectHandle     _autoBattleObject; ///< 자동 전투 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
+        SW_TRANSIENT optional<Countdown> _playerRespawn;     ///< 플레이어가 없으면 다시 등장하기까지 남은 시간
         PROPERTY( RuntimeState )
         uint32 _wave;
         PROPERTY( RuntimeState )
         uint32                 _killCount;
-        uint32                 _playerShotCount;
-        int32                  _nextUnitID;           ///< 다음 유닛 번호 — 정리해도 되돌리지 않는다(정리 전에 쏜 탄이 새 유닛을 이미 맞힌 것으로 보지 않게)
-        uint8                  _bUnitsRequested  : 1; ///< 플레이어와 웨이브를 스폰하라고 요청했다(정리하면 다음 틱이 다시 요청한다).
-        uint8                  _bPossessionDirty : 1; ///< 플레이어 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
+        SW_TRANSIENT uint32    _playerShotCount;
+        SW_TRANSIENT int32     _nextUnitID;           ///< 다음 유닛 번호 — 정리해도 되돌리지 않는다(정리 전에 쏜 탄이 새 유닛을 이미 맞힌 것으로 보지 않게)
+        SW_TRANSIENT uint8     _bUnitsRequested  : 1; ///< 플레이어와 웨이브를 스폰하라고 요청했다(정리하면 다음 틱이 다시 요청한다).
+        SW_TRANSIENT uint8     _bPossessionDirty : 1; ///< 플레이어 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
         [[maybe_unused]] uint8 _reserved         : 6;
     };
 } // namespace sw

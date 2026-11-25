@@ -56,13 +56,13 @@ namespace sw
         /** @brief 초가 바뀌면 발소리 수 · 래그돌 상태 · 칼 자리를 한 줄 남깁니다. 틱 뒤(게임 스레드)에 부른다. */
         void logEverySecond( const GameObject& enemy, const GameObject& sword );
 
-        GameObjectHandle _enemy;
-        GameObjectHandle _sword;
-        float32          _elapsed;
-        uint32           _frame;
-        uint32           _stage;
-        uint32           _footstepCount;
-        uint32           _loggedSecond;
-        float32          _shooterRange; ///< 적 앞 몇 m 에서 쏘는지입니다. 원본은 벤치 설정의 `_combatShooterRange` 이고 `spawnScene` 이 넣어 줍니다.
+        SW_TRANSIENT GameObjectHandle _enemy;
+        SW_TRANSIENT GameObjectHandle _sword;
+        SW_TRANSIENT float32          _elapsed;
+        SW_TRANSIENT uint32           _frame;
+        SW_TRANSIENT uint32           _stage;
+        SW_TRANSIENT uint32           _footstepCount;
+        SW_TRANSIENT uint32           _loggedSecond;
+        SW_TRANSIENT float32          _shooterRange; ///< 적 앞 몇 m 에서 쏘는지입니다. 원본은 벤치 설정의 `_combatShooterRange` 이고 `spawnScene` 이 넣어 줍니다.
     };
 } // namespace sw

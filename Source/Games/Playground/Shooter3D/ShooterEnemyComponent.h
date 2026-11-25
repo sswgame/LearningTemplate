@@ -165,24 +165,24 @@ namespace sw
         PROPERTY( Category = "Enemy", DisplayName = "Walk Clip Speed", Tooltip = "Below this speed the standing clip plays", Min = 0.0, Units = "m/s" )
         float32 _walkClipSpeed;
 
-        float3                 _position; ///< 발(절대)
-        float32                _yaw;
-        float3                 _replicaVelocity; ///< 복제 모습 — 두 스냅샷에서 낸 속도(걷기 클립을 고르는 빠르기)
-        HealthStateMachine     _healthMachine;   ///< 체력(플레이어와 같은 Base 체력 — 실드 · 회복 · 기절은 쓰지 않는다)
-        float32                _speed;
-        float32                _phaseTime;
-        Countdown              _attackCooldown; ///< 휘두르기 간격(늦음을 잇는다)
-        uint32                 _netEntityID;    ///< 복제 엔티티 번호(0 은 아직 없음)
-        ShooterEnemyPhase      _phase;
-        PawnAutoPossess        _autoPossessBeforeReplica; ///< 복제 모습이 끄기 전의 폰 자동 빙의(`launchReplica` — 풀 반환이 되돌린다)
-        uint8                  _bLaunched                : 1;
-        uint8                  _bHitPending              : 1; ///< 다음 틱에 애니메이터에 Hit 트리거를 건다
-        uint8                  _bAttackLanded            : 1; ///< 이번 휘두름이 이미 맞았다
-        uint8                  _bAttackStarting          : 1; ///< 다음 틱에 애니메이터에 Attack 트리거를 건다
-        uint8                  _bAttackHitEvent          : 1; ///< 이번 휘두름의 맞는 알림을 받았다(다음 틱이 맞힘을 처리한다)
-        uint8                  _bHitEventMissingReported : 1; ///< 맞는 알림 없이 끝난 휘두름을 이미 오류로 알렸다(한 번만)
-        uint8                  _bReplica                 : 1; ///< 네트 클라이언트의 복제 모습이다(규칙이 돌지 않는다)
-        [[maybe_unused]] uint8 _reserved                 : 1;
+        SW_TRANSIENT float3             _position; ///< 발(절대)
+        SW_TRANSIENT float32            _yaw;
+        SW_TRANSIENT float3             _replicaVelocity; ///< 복제 모습 — 두 스냅샷에서 낸 속도(걷기 클립을 고르는 빠르기)
+        SW_TRANSIENT HealthStateMachine _healthMachine;   ///< 체력(플레이어와 같은 Base 체력 — 실드 · 회복 · 기절은 쓰지 않는다)
+        SW_TRANSIENT float32            _speed;
+        SW_TRANSIENT float32            _phaseTime;
+        SW_TRANSIENT Countdown          _attackCooldown; ///< 휘두르기 간격(늦음을 잇는다)
+        SW_TRANSIENT uint32             _netEntityID;    ///< 복제 엔티티 번호(0 은 아직 없음)
+        SW_TRANSIENT ShooterEnemyPhase  _phase;
+        SW_TRANSIENT PawnAutoPossess    _autoPossessBeforeReplica; ///< 복제 모습이 끄기 전의 폰 자동 빙의(`launchReplica` — 풀 반환이 되돌린다)
+        SW_TRANSIENT uint8              _bLaunched                : 1;
+        SW_TRANSIENT uint8              _bHitPending              : 1; ///< 다음 틱에 애니메이터에 Hit 트리거를 건다
+        SW_TRANSIENT uint8              _bAttackLanded            : 1; ///< 이번 휘두름이 이미 맞았다
+        SW_TRANSIENT uint8              _bAttackStarting          : 1; ///< 다음 틱에 애니메이터에 Attack 트리거를 건다
+        SW_TRANSIENT uint8              _bAttackHitEvent          : 1; ///< 이번 휘두름의 맞는 알림을 받았다(다음 틱이 맞힘을 처리한다)
+        SW_TRANSIENT uint8              _bHitEventMissingReported : 1; ///< 맞는 알림 없이 끝난 휘두름을 이미 오류로 알렸다(한 번만)
+        SW_TRANSIENT uint8              _bReplica                 : 1; ///< 네트 클라이언트의 복제 모습이다(규칙이 돌지 않는다)
+        [[maybe_unused]] uint8          _reserved                 : 1;
 
     private:
         /** @brief 체력 읽기 계약을 주인의 `getHealthReading` 으로 넘기는 포트입니다(`REFLECT_INTERFACE`). */

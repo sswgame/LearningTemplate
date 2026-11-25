@@ -40,8 +40,8 @@ namespace sw
         void hide();
 
     private:
-        Countdown              _remaining;
-        uint8                  _bShowing : 1;
+        SW_TRANSIENT Countdown _remaining;
+        SW_TRANSIENT uint8     _bShowing : 1;
         [[maybe_unused]] uint8 _reserved : 7;
     };
 } // namespace sw

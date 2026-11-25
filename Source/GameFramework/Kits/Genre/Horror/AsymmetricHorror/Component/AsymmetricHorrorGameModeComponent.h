@@ -122,11 +122,11 @@ namespace sw
         int32 _escapeReward;
 
         BoundAssetRef<AsymmetricHorrorRulesCatalog> _pCatalog;
-        AsymmetricHorrorMatch                       _match;
-        AsymmetricHorrorBot                         _bot;         ///< 살인마의 기억(본 자리)은 싣지 않는다 — 불러온 판은 다시 감지한다
-        vector<AsymmetricHorrorCommand>             _listCommand; ///< 생존자마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
-        vector<AsymmetricHorrorEvent>               _listEvent;   ///< 걸음마다 비워 다시 쓰는 알림 그릇
-        Countdown                                   _killerRelease;
+        SW_CODEC_STATE AsymmetricHorrorMatch        _match;
+        SW_TRANSIENT AsymmetricHorrorBot            _bot;            ///< 살인마의 기억(본 자리)은 싣지 않는다 — 불러온 판은 다시 감지한다
+        SW_CODEC_STATE vector<AsymmetricHorrorCommand> _listCommand; ///< 생존자마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
+        SW_TRANSIENT vector<AsymmetricHorrorEvent> _listEvent;       ///< 걸음마다 비워 다시 쓰는 알림 그릇
+        SW_CODEC_STATE Countdown                   _killerRelease;
         PROPERTY( RuntimeState )
         uint32 _humanMask; ///< 사람이 잡은 생존자의 비트(생존자 0 은 늘 사람이라 넣지 않는다)
         PROPERTY( RuntimeState )

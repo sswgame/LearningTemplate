@@ -81,11 +81,11 @@ namespace sw
         PROPERTY( Category = "Combat", DisplayName = "Boss Delay", Tooltip = "Seconds between clearing the hall (or entering a boss region) and the boss fight", Min = 0.1, Units = s )
         float32 _bossDelaySeconds;
 
-        ActionRoom             _room;
-        Countdown              _bossDelay;
-        VelmoraPhase           _phase;
-        uint8                  _bAttackQueued : 1; ///< 다음 걸음이 쓸 공격 누름
-        uint8                  _bDashQueued   : 1; ///< 다음 걸음이 쓸 대시 누름
-        [[maybe_unused]] uint8 _reserved      : 6;
+        SW_TRANSIENT ActionRoom   _room;
+        SW_TRANSIENT Countdown    _bossDelay;
+        SW_TRANSIENT VelmoraPhase _phase;
+        SW_TRANSIENT uint8        _bAttackQueued : 1; ///< 다음 걸음이 쓸 공격 누름
+        SW_TRANSIENT uint8        _bDashQueued   : 1; ///< 다음 걸음이 쓸 대시 누름
+        [[maybe_unused]] uint8    _reserved      : 6;
     };
 } // namespace sw

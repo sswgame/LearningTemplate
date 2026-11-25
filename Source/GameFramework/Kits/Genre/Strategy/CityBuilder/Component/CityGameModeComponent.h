@@ -87,7 +87,7 @@ namespace sw
 
         PROPERTY( RuntimeState )
         uint8                  _bLaidOut     : 1;
-        uint8                  _bFastForward : 1; ///< 지금 빨리 감기 명령(`submitFastForward`)
+        SW_TRANSIENT uint8     _bFastForward : 1; ///< 지금 빨리 감기 명령(`submitFastForward`)
         [[maybe_unused]] uint8 _reserved     : 6;
     };
 } // namespace sw

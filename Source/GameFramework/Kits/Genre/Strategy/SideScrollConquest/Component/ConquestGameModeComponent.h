@@ -89,8 +89,8 @@ namespace sw
         int32 _winReward;
 
         BoundAssetRef<ConquestCatalog> _pCatalog;
-        ConquestWorld                  _world;
+        SW_CODEC_STATE ConquestWorld   _world;
         ConsumerLease                  _eventLease;
-        vector<ConquestEvent>          _listEvent;
+        SW_TRANSIENT vector<ConquestEvent> _listEvent;
     };
 } // namespace sw

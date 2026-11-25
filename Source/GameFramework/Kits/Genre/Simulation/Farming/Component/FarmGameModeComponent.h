@@ -225,33 +225,33 @@ namespace sw
         PROPERTY( Category = "Economy", DisplayName = "Item Stack Size", Tooltip = "Most seeds or produce one bag slot holds", Min = 1 )
         int32 _itemStackSize;
 
-        BoundAssetRef<CropCatalog> _pCropCatalog;
-        ItemCatalog                _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
-        FarmField                  _field;
-        FarmShippingBin            _shipment; ///< 출하함에 든 것(하루 끝에 팔린다).
-        vector<hashed_string>      _listSeed; ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
+        BoundAssetRef<CropCatalog>     _pCropCatalog;
+        SW_TRANSIENT ItemCatalog       _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
+        SW_CODEC_STATE FarmField       _field;
+        SW_CODEC_STATE FarmShippingBin _shipment;       ///< 출하함에 든 것(하루 끝에 팔린다).
+        SW_CODEC_STATE vector<hashed_string> _listSeed; ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
         PROPERTY( RuntimeState )
         float3 _playerPosition;
         PROPERTY( RuntimeState )
-        float3           _facing;
-        AbsolutePosition _shippingBinPosition;
-        AbsolutePosition _shopPosition;
-        GameObjectHandle _autoFarmerObject; ///< 자동 농부 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
+        float3                        _facing;
+        SW_TRANSIENT AbsolutePosition _shippingBinPosition;
+        SW_TRANSIENT AbsolutePosition _shopPosition;
+        SW_TRANSIENT GameObjectHandle _autoFarmerObject; ///< 자동 농부 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
         PROPERTY( RuntimeState )
         int32 _stamina;
         PROPERTY( RuntimeState )
-        int32 _selectedSeedIndex;
-        int32 _lastLoggedHour;
+        int32              _selectedSeedIndex;
+        SW_TRANSIENT int32 _lastLoggedHour;
         PROPERTY( RuntimeState )
-        int32   _dayStarted; ///< 농부의 하루가 시작된 공유 시계의 날(쓰러짐 판정에 쓴다).
-        float32 _hourOfDay;  ///< 뷰가 읽는 시각.
+        int32                _dayStarted; ///< 농부의 하루가 시작된 공유 시계의 날(쓰러짐 판정에 쓴다).
+        SW_TRANSIENT float32 _hourOfDay;  ///< 뷰가 읽는 시각.
         PROPERTY( RuntimeState )
         FarmTool               _tool;
-        FarmTool               _lastUsedTool;
-        uint32                 _toolUseCount;
-        uint8                  _bRaining         : 1; ///< 판 상태 날씨의 비를 디렉터가 틱마다 옮겨 적은 것(뷰가 읽는다 — 저장하지 않는다, 날씨는 판 상태가 싣는다)
-        uint8                  _bPossessionDirty : 1; ///< 농부 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
-        uint8                  _bFarmerWalking   : 1; ///< 지난 틱에 이동 의도가 있었다(`isFarmerWalking` — 저장하지 않는다)
+        SW_TRANSIENT FarmTool  _lastUsedTool;
+        SW_TRANSIENT uint32    _toolUseCount;
+        SW_TRANSIENT uint8     _bRaining         : 1; ///< 판 상태 날씨의 비를 디렉터가 틱마다 옮겨 적은 것(뷰가 읽는다 — 저장하지 않는다, 날씨는 판 상태가 싣는다)
+        SW_TRANSIENT uint8     _bPossessionDirty : 1; ///< 농부 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
+        SW_TRANSIENT uint8     _bFarmerWalking   : 1; ///< 지난 틱에 이동 의도가 있었다(`isFarmerWalking` — 저장하지 않는다)
         [[maybe_unused]] uint8 _reserved         : 5;
     };
 } // namespace sw

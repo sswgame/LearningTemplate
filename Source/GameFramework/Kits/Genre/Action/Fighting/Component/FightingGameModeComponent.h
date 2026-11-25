@@ -116,12 +116,12 @@ namespace sw
         int32 _victoryMoney;
 
         BoundAssetRef<FighterCatalog> _pCatalog;
-        FightingMatch                 _match;
-        FixedStepTimer                _timer; ///< 걸음 하나가 격투 프레임 하나(1/60 초)다
-        GameRandom                    _random;
-        CPUHand                       _arrCPUHand[FightingMatch::kPlayerCount];
-        vector<FightingEvent>         _listEvent;
-        uint16                        _queuedButtons;    ///< 다음 걸음이 쓸 버튼 누름 — 클라이언트 입력이라 싣지 않는다
-        uint8                         _commandDirection; ///< 마지막 입력 명령의 방향(넘패드) — 클라이언트 입력이라 싣지 않는다
+        SW_CODEC_STATE FightingMatch  _match;
+        SW_CODEC_STATE FixedStepTimer _timer; ///< 걸음 하나가 격투 프레임 하나(1/60 초)다
+        SW_CODEC_STATE GameRandom     _random;
+        SW_CODEC_STATE CPUHand        _arrCPUHand[FightingMatch::kPlayerCount];
+        SW_TRANSIENT vector<FightingEvent> _listEvent;
+        SW_TRANSIENT uint16                _queuedButtons;    ///< 다음 걸음이 쓸 버튼 누름 — 클라이언트 입력이라 싣지 않는다
+        SW_TRANSIENT uint8                 _commandDirection; ///< 마지막 입력 명령의 방향(넘패드) — 클라이언트 입력이라 싣지 않는다
     };
 } // namespace sw

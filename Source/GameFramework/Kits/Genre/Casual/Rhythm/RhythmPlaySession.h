@@ -247,7 +247,7 @@ namespace sw
         PROPERTY( RuntimeState )
         int32 _judgedCount;
         PROPERTY( RuntimeState )
-        RhythmPlayState _state;
-        uint8           _bAutoPlay; ///< 판정 시각에 정확히 누르고 롱노트는 끝까지 누른다(자동 플레이)
+        RhythmPlayState    _state;
+        SW_TRANSIENT uint8 _bAutoPlay; ///< 판정 시각에 정확히 누르고 롱노트는 끝까지 누른다(자동 플레이)
     };
 } // namespace sw

@@ -346,50 +346,50 @@ namespace sw
         PROPERTY( Category = "Effects", DisplayName = "Muzzle Flash Color", Tooltip = "HDR colour of the muzzle flash (above 1 glows)" )
         float4 _muzzleFlashColor;
 
-        WeaponState                     _arrWeapon[kWeaponCount];
-        HealthStateMachine              _healthMachine;
-        AppearanceSocketSetCache        _weaponSockets; ///< 1인칭 총구. 무기 외형의 소켓 에셋.
-        vector<PendingShot>             _listPendingShot;
-        vector<PendingSwing>            _listPendingSwing;
-        vector<float3>                  _listMeleePrevious;  ///< 지난 프레임의 칼날(근접 창의 첫 프레임은 비었다)
-        vector<float3>                  _listMeleeCurrent;   ///< 이번 프레임의 칼날
-        vector<GameObjectHandle>        _listMeleeHitTarget; ///< 이번 근접 창에서 이미 맞힌 오브젝트
-        vector<EffectRequest>           _listPendingEffect;
-        vector<TracerRequest>           _listPendingTracer;
-        GameSoundQueue                  _soundQueue; ///< 낼 소리(틱이 끝난 뒤 처리한다. 오디오는 게임 스레드에서 다룬다).
-        GameObjectHandle                _body;
-        Countdown                       _hitMarkerTimer;
-        float32                         _timeSinceShot;
-        float32                         _downTimer;     ///< 쓰러진 뒤 지난 시간(쓰러졌을 때만).
-        float32                         _bodyEyeHeight; ///< 몸 소켓 Eyes 의 높이(0은 아직 모른다는 뜻).
-        float32                         _bodyLegLift;   ///< 체형의 다리 길이가 몸을 올린 높이(몸 리그 `rest_leg_lift`) — 눈높이가 몸을 따른다
-        float3                          _bodyMuzzle;    ///< 몸 외형의 총구 소켓 월드 위치(지난 틱 뒤 사본, `_bBodyMuzzleFound` 일 때만 뜻이 있다)
-        float32                         _lookYaw;
-        float32                         _lastTracerWidth;      ///< 마지막 탄도선 두께(감시 값 `Shooter.TracerWidth`)
-        float32                         _lastTracerStartAhead; ///< 마지막 탄도선 시작점의 눈 앞 거리(감시 값 `Shooter.TracerStartAhead`)
-        float32                         _serverHealth;         ///< 서버가 알려 준 체력(`_bServerHealth` 일 때 HUD 가 이 값을 보인다)
-        unique_ptr<ShooterHUDViewModel> _hudViewModel;         ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다). 처음 `updateHUD` 에 만든다
-        float32                         _meleeElapsed;         ///< 근접 창이 시작하고 지난 시간
-        int32                           _weaponIndex;
-        uint32                          _shotCount;
-        uint32                          _hitCount;
-        uint32                          _hitReactionCount;
-        uint32                          _killCount;               ///< 이 사람의 처치 수
-        int32                           _downCount;               ///< 매치에서 쓰러진 횟수(서버)
-        uint32                          _serverKillCount;         ///< 서버가 알려 준 이 판의 처치 수(`_bServerHealth` 일 때만 뜻이 있다 — 접속한 매치의 결과)
-        uint8                           _bWeaponModelDirty   : 1; ///< 틱이 끝난 뒤 몸의 무기(MainHand 칸)를 바꾼다.
-        uint8                           _bViewWeaponSynced   : 1; ///< 1인칭 총이 몸의 MainHand 부품을 따랐다. 아니면 틱이 끝날 때마다 다시 본다(몸 조립은 틱 뒤에 미뤄진다)
-        uint8                           _bFlushScheduled     : 1;
-        uint8                           _bRoundJustRestarted : 1; ///< 쓰러져 다시 시작한 프레임. 같은 틱이 끝난 뒤에 남은 공격은 무시한다.
-        uint8                           _bFirstPerson        : 1;
-        uint8                           _bViewModeDirty      : 1; ///< 틱이 끝난 뒤 1인칭 여부에 따른 가시성을 맞춘다.
-        uint8                           _bBodyRequested      : 1; ///< 틱이 끝난 뒤 몸을 스폰한다.
-        uint8                           _bServerHealth       : 1; ///< 네트 클라이언트 — 체력은 서버의 값이다
-        uint8                           _bMeleeActive        : 1; ///< 근접 창이 열려 있다
-        uint8                           _bBodyMuzzleFound    : 1; ///< 지난 틱 뒤에 몸 외형의 총구 소켓을 찾았다(`refreshBodySnapshot`)
-        uint8                           _bServerOut          : 1; ///< 네트 클라이언트 — 매치 서버가 이 사람의 판을 끝냈다
-        uint8                           _bOut                : 1; ///< 서버 — 매치에서 정해진 횟수만큼 쓰러졌다
-        uint8                           _bRemoteBody         : 1; ///< 서버가 접속에 세운 몸이다 — 이 화면의 플레이어가 아니다(1인칭 · HUD · 총구 연출이 없다)
-        [[maybe_unused]] uint8          _reserved            : 2;
+        SW_TRANSIENT WeaponState              _arrWeapon[kWeaponCount];
+        SW_TRANSIENT HealthStateMachine       _healthMachine;
+        SW_TRANSIENT AppearanceSocketSetCache _weaponSockets; ///< 1인칭 총구. 무기 외형의 소켓 에셋.
+        SW_TRANSIENT vector<PendingShot> _listPendingShot;
+        SW_TRANSIENT vector<PendingSwing> _listPendingSwing;
+        SW_TRANSIENT vector<float3> _listMeleePrevious;            ///< 지난 프레임의 칼날(근접 창의 첫 프레임은 비었다)
+        SW_TRANSIENT vector<float3> _listMeleeCurrent;             ///< 이번 프레임의 칼날
+        SW_TRANSIENT vector<GameObjectHandle> _listMeleeHitTarget; ///< 이번 근접 창에서 이미 맞힌 오브젝트
+        SW_TRANSIENT vector<EffectRequest> _listPendingEffect;
+        SW_TRANSIENT vector<TracerRequest> _listPendingTracer;
+        SW_TRANSIENT GameSoundQueue        _soundQueue; ///< 낼 소리(틱이 끝난 뒤 처리한다. 오디오는 게임 스레드에서 다룬다).
+        SW_TRANSIENT GameObjectHandle      _body;
+        SW_TRANSIENT Countdown             _hitMarkerTimer;
+        SW_TRANSIENT float32               _timeSinceShot;
+        SW_TRANSIENT float32               _downTimer;     ///< 쓰러진 뒤 지난 시간(쓰러졌을 때만).
+        SW_TRANSIENT float32               _bodyEyeHeight; ///< 몸 소켓 Eyes 의 높이(0은 아직 모른다는 뜻).
+        SW_TRANSIENT float32               _bodyLegLift;   ///< 체형의 다리 길이가 몸을 올린 높이(몸 리그 `rest_leg_lift`) — 눈높이가 몸을 따른다
+        SW_TRANSIENT float3                _bodyMuzzle;    ///< 몸 외형의 총구 소켓 월드 위치(지난 틱 뒤 사본, `_bBodyMuzzleFound` 일 때만 뜻이 있다)
+        SW_TRANSIENT float32               _lookYaw;
+        SW_TRANSIENT float32               _lastTracerWidth;        ///< 마지막 탄도선 두께(감시 값 `Shooter.TracerWidth`)
+        SW_TRANSIENT float32               _lastTracerStartAhead;   ///< 마지막 탄도선 시작점의 눈 앞 거리(감시 값 `Shooter.TracerStartAhead`)
+        SW_TRANSIENT float32               _serverHealth;           ///< 서버가 알려 준 체력(`_bServerHealth` 일 때 HUD 가 이 값을 보인다)
+        SW_TRANSIENT unique_ptr<ShooterHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다). 처음 `updateHUD` 에 만든다
+        SW_TRANSIENT float32                         _meleeElapsed; ///< 근접 창이 시작하고 지난 시간
+        SW_TRANSIENT int32                           _weaponIndex;
+        SW_TRANSIENT uint32                          _shotCount;
+        SW_TRANSIENT uint32                          _hitCount;
+        SW_TRANSIENT uint32                          _hitReactionCount;
+        SW_TRANSIENT uint32                          _killCount;               ///< 이 사람의 처치 수
+        SW_TRANSIENT int32                           _downCount;               ///< 매치에서 쓰러진 횟수(서버)
+        SW_TRANSIENT uint32                          _serverKillCount;         ///< 서버가 알려 준 이 판의 처치 수(`_bServerHealth` 일 때만 뜻이 있다 — 접속한 매치의 결과)
+        SW_TRANSIENT uint8                           _bWeaponModelDirty   : 1; ///< 틱이 끝난 뒤 몸의 무기(MainHand 칸)를 바꾼다.
+        SW_TRANSIENT uint8                           _bViewWeaponSynced   : 1; ///< 1인칭 총이 몸의 MainHand 부품을 따랐다. 아니면 틱이 끝날 때마다 다시 본다(몸 조립은 틱 뒤에 미뤄진다)
+        SW_TRANSIENT uint8                           _bFlushScheduled     : 1;
+        SW_TRANSIENT uint8                           _bRoundJustRestarted : 1; ///< 쓰러져 다시 시작한 프레임. 같은 틱이 끝난 뒤에 남은 공격은 무시한다.
+        SW_TRANSIENT uint8                           _bFirstPerson        : 1;
+        SW_TRANSIENT uint8                           _bViewModeDirty      : 1; ///< 틱이 끝난 뒤 1인칭 여부에 따른 가시성을 맞춘다.
+        SW_TRANSIENT uint8                           _bBodyRequested      : 1; ///< 틱이 끝난 뒤 몸을 스폰한다.
+        SW_TRANSIENT uint8                           _bServerHealth       : 1; ///< 네트 클라이언트 — 체력은 서버의 값이다
+        SW_TRANSIENT uint8                           _bMeleeActive        : 1; ///< 근접 창이 열려 있다
+        SW_TRANSIENT uint8                           _bBodyMuzzleFound    : 1; ///< 지난 틱 뒤에 몸 외형의 총구 소켓을 찾았다(`refreshBodySnapshot`)
+        SW_TRANSIENT uint8                           _bServerOut          : 1; ///< 네트 클라이언트 — 매치 서버가 이 사람의 판을 끝냈다
+        SW_TRANSIENT uint8                           _bOut                : 1; ///< 서버 — 매치에서 정해진 횟수만큼 쓰러졌다
+        SW_TRANSIENT uint8                           _bRemoteBody         : 1; ///< 서버가 접속에 세운 몸이다 — 이 화면의 플레이어가 아니다(1인칭 · HUD · 총구 연출이 없다)
+        [[maybe_unused]] uint8                       _reserved            : 2;
     };
 } // namespace sw

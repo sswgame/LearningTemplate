@@ -112,22 +112,22 @@ namespace sw
         float32 _pickupRadius;
 
         BoundAssetRef<ActionPlatformerCatalog> _pCatalog;
-        PlatformTileMap                        _map;
-        ActionTerrainGrid                      _terrain;
-        ActionPlatformerBody                   _body;
-        ActionStageRun                         _run;
-        RespawnFlow                            _respawn;        ///< 규칙은 스테이지의 `<Respawn>`
-        vector<RespawnSpawnPoint>              _listSpawnPoint; ///< 시작 지점 하나(`start`)
+        SW_TRANSIENT PlatformTileMap           _map;
+        SW_TRANSIENT ActionTerrainGrid         _terrain;
+        SW_CODEC_STATE ActionPlatformerBody    _body;
+        SW_CODEC_STATE ActionStageRun          _run;
+        SW_CODEC_STATE RespawnFlow             _respawn;        ///< 규칙은 스테이지의 `<Respawn>`
+        SW_TRANSIENT vector<RespawnSpawnPoint> _listSpawnPoint; ///< 시작 지점 하나(`start`)
         PROPERTY( RuntimeState )
         int32 _respawnCount;
         PROPERTY( RuntimeState )
         int32 _lastRespawnPolicy; ///< 마지막 부활의 정책(`RespawnPolicyKind`, −1 이면 아직 없음)
         PROPERTY( RuntimeState )
-        float32 _lastRespawnShift; ///< 마지막 부활에서 죽은 자리와 선 자리의 거리(m)
-        float32 _commandMoveX;     ///< 마지막 입력 명령의 가로 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
+        float32              _lastRespawnShift; ///< 마지막 부활에서 죽은 자리와 선 자리의 거리(m)
+        SW_TRANSIENT float32 _commandMoveX;     ///< 마지막 입력 명령의 가로 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
         PROPERTY( RuntimeState )
         uint8                  _bJumpHeldLastFrame : 1;
-        uint8                  _bCommandJumpHeld   : 1; ///< 마지막 입력 명령의 점프 키 누른 채(싣지 않는다 — `_commandMoveX` 와 같은 까닭)
+        SW_TRANSIENT uint8     _bCommandJumpHeld   : 1; ///< 마지막 입력 명령의 점프 키 누른 채(싣지 않는다 — `_commandMoveX` 와 같은 까닭)
         [[maybe_unused]] uint8 _reserved           : 6;
     };
 } // namespace sw

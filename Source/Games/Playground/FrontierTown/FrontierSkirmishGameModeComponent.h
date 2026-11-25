@@ -74,9 +74,9 @@ namespace sw
         PROPERTY( Category = "Layout", DisplayName = "Patrol B", Units = m )
         float3 _patrolB;
 
-        RTSWorld  _world;
-        RTSUnitID _worker;
-        RTSUnitID _soldier;
+        SW_CODEC_STATE RTSWorld  _world;
+        SW_CODEC_STATE RTSUnitID _worker;
+        SW_CODEC_STATE RTSUnitID _soldier;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _tickCount;
         PROPERTY( RuntimeState )

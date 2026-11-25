@@ -255,32 +255,32 @@ namespace sw
         PROPERTY( Category = "Contract", DisplayName = "Seed", Min = 1 )
         uint32 _seed;
 
-        BoundAssetRef<MonsterHuntCatalog>     _pCatalog;
-        BoundAssetRef<ElementChart>           _pChart;
-        BoundAssetRef<RecipeCatalog>          _pRecipes;
-        BoundAssetRef<ItemCatalog>            _pItemCatalog;
-        BoundAssetRef<QuestCatalog>           _pQuests;  ///< 퀘스트를 적지 않은 계약이면 비었다
-        QuestLog                              _questLog; ///< 계약 퀘스트(`MonsterHuntContractDef::_questID`)만 진행한다 — 조사가 빌린다
-        vector<QuestEvent>                    _listQuestEvent;
-        BoundAssetRef<SkillTreeCatalog>       _pSkillTreeCatalog; ///< 트리를 적지 않은 판이면 비었다
-        MonsterHuntMutagens                   _mutagens;
-        SkillTreeState                        _skills; ///< 배운 차례(`_listLearnedSkill`)가 상태다 — 복원은 차례대로 다시 배운다
-        MonsterHuntHaggle                     _haggle;
-        MonsterHuntInvestigation              _investigation;
-        MonsterHuntBestiary                   _bestiary;
-        MonsterHuntCombat                     _combat;
-        MonsterHuntAlchemy                    _alchemy;
-        Inventory                             _bag;
-        vector<MonsterHuntInvestigationEvent> _listInvestigationEvent;
-        vector<MonsterHuntBestiaryEvent>      _listBestiaryEvent;
-        Countdown                             _attackCooldown;
-        Countdown                             _dodge;
-        Countdown                             _monsterAttack;
+        BoundAssetRef<MonsterHuntCatalog> _pCatalog;
+        BoundAssetRef<ElementChart>       _pChart;
+        BoundAssetRef<RecipeCatalog>      _pRecipes;
+        BoundAssetRef<ItemCatalog>        _pItemCatalog;
+        BoundAssetRef<QuestCatalog>       _pQuests;  ///< 퀘스트를 적지 않은 계약이면 비었다
+        SW_CODEC_STATE QuestLog           _questLog; ///< 계약 퀘스트(`MonsterHuntContractDef::_questID`)만 진행한다 — 조사가 빌린다
+        SW_TRANSIENT vector<QuestEvent>         _listQuestEvent;
+        BoundAssetRef<SkillTreeCatalog>         _pSkillTreeCatalog; ///< 트리를 적지 않은 판이면 비었다
+        SW_CODEC_STATE MonsterHuntMutagens      _mutagens;
+        SW_CODEC_STATE SkillTreeState           _skills; ///< 배운 차례(`_listLearnedSkill`)가 상태다 — 복원은 차례대로 다시 배운다
+        SW_CODEC_STATE MonsterHuntHaggle        _haggle;
+        SW_CODEC_STATE MonsterHuntInvestigation _investigation;
+        SW_CODEC_STATE MonsterHuntBestiary      _bestiary;
+        SW_CODEC_STATE MonsterHuntCombat        _combat;
+        SW_CODEC_STATE MonsterHuntAlchemy       _alchemy;
+        SW_CODEC_STATE Inventory                _bag;
+        SW_TRANSIENT vector<MonsterHuntInvestigationEvent> _listInvestigationEvent;
+        SW_TRANSIENT vector<MonsterHuntBestiaryEvent> _listBestiaryEvent;
+        SW_CODEC_STATE Countdown                      _attackCooldown;
+        SW_CODEC_STATE Countdown                      _dodge;
+        SW_CODEC_STATE Countdown                      _monsterAttack;
         PROPERTY( RuntimeState )
         float2 _playerPosition;
         PROPERTY( RuntimeState )
-        float2 _monsterPosition;
-        float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
+        float2              _monsterPosition;
+        SW_TRANSIENT float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
         PROPERTY( RuntimeState )
         vector<hashed_string> _listLearnedSkill; ///< 랭크를 올린 스킬(차례대로)
         PROPERTY( RuntimeState, Min = 0 )

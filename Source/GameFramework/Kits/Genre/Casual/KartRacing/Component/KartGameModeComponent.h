@@ -100,8 +100,8 @@ namespace sw
         BoundAssetRef<KartItemCatalog>          _pItemCatalog;       ///< 아이템을 끈 경기면 비었다
         BoundAssetRef<ProjectileCatalog>        _pProjectileCatalog; ///< 아이템이 쏘는 탄(아이템을 끈 경기면 비었다)
         BoundAssetRef<KinematicVehicleSettings> _pVehicle;
-        KartTrack                               _track; ///< 경기 · 차가 빌려 쓴다 — 경기보다 먼저 선언한다
-        KartRace                                _race;
-        vector<KartRaceEvent>                   _listEvent;
+        SW_TRANSIENT KartTrack                  _track; ///< 경기 · 차가 빌려 쓴다 — 경기보다 먼저 선언한다
+        SW_CODEC_STATE KartRace                 _race;
+        SW_TRANSIENT vector<KartRaceEvent> _listEvent;
     };
 } // namespace sw

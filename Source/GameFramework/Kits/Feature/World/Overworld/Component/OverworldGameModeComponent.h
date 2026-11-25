@@ -123,18 +123,18 @@ namespace sw
         PROPERTY( Required, Category = "Overworld", DisplayName = "Mover", Tooltip = "Dead zone, step time and encounter rate of the hero; every value is required" )
         OverworldTileMoverSettings _moverSettings;
 
-        TileMap            _tileMap;
-        OverworldTileMover _mover;
-        vector<Villager>   _listVillager;
-        float3             _mapOrigin;     ///< 땅 레이어의 왼위 모서리(월드)
-        float3             _heroPosition;  ///< 뷰가 읽는 주인공 발 자리
-        int2               _stepFromTile;  ///< 걷는 중인 걸음의 출발 칸
-        float32            _tileSize;      ///< 땅 타일셋의 한 칸 크기
-        float32            _stepElapsed;   ///< 걷는 중인 걸음의 지난 시간
-        GameObjectHandle   _talkTarget;    ///< 열린 대화의 주민(없으면 무효)
-        GameObjectHandle   _pendingTarget; ///< `TalkRequest::Start` 의 주민
-        int32              _shownLineCount;
-        int32              _finishedTalkCount;
-        TalkRequest        _pendingTalk;
+        SW_CODEC_STATE TileMap            _tileMap;
+        SW_CODEC_STATE OverworldTileMover _mover;
+        SW_TRANSIENT vector<Villager> _listVillager;
+        SW_TRANSIENT float3           _mapOrigin;     ///< 땅 레이어의 왼위 모서리(월드)
+        SW_TRANSIENT float3           _heroPosition;  ///< 뷰가 읽는 주인공 발 자리
+        SW_TRANSIENT int2             _stepFromTile;  ///< 걷는 중인 걸음의 출발 칸
+        SW_TRANSIENT float32          _tileSize;      ///< 땅 타일셋의 한 칸 크기
+        SW_TRANSIENT float32          _stepElapsed;   ///< 걷는 중인 걸음의 지난 시간
+        SW_TRANSIENT GameObjectHandle _talkTarget;    ///< 열린 대화의 주민(없으면 무효)
+        SW_TRANSIENT GameObjectHandle _pendingTarget; ///< `TalkRequest::Start` 의 주민
+        SW_TRANSIENT int32            _shownLineCount;
+        SW_TRANSIENT int32            _finishedTalkCount;
+        SW_TRANSIENT TalkRequest      _pendingTalk;
     };
 } // namespace sw

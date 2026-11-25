@@ -118,15 +118,15 @@ namespace sw
         PROPERTY( Required, Category = "AI", DisplayName = "Commander AI", Tooltip = "Score weights of the computer commander; every value is required" )
         SRPGCommanderAISettings _aiSettings;
 
-        BoundAssetRef<SRPGCatalog> _pCatalog;
-        SRPGBattlefield            _field;
-        SRPGCommanderAI            _ai; ///< 설정뿐이라 실을 상태가 없다(계획은 부를 때마다 전장에서 세운다)
-        ConsumerLease              _eventLease;
-        vector<SRPGEvent>          _listEvent;
+        BoundAssetRef<SRPGCatalog>     _pCatalog;
+        SW_CODEC_STATE SRPGBattlefield _field;
+        SW_TRANSIENT SRPGCommanderAI   _ai; ///< 설정뿐이라 실을 상태가 없다(계획은 부를 때마다 전장에서 세운다)
+        ConsumerLease                  _eventLease;
+        SW_TRANSIENT vector<SRPGEvent> _listEvent;
         PROPERTY( RuntimeState, Min = -1 )
         int32 _selectedUnit;
         PROPERTY( RuntimeState )
-        SRPGBattleResult _result;
-        GrowthLog        _growthLog; ///< 레벨 오름과 그 출처(명중 · 격파) — 표시용이라 저장하지 않는다
+        SRPGBattleResult       _result;
+        SW_TRANSIENT GrowthLog _growthLog; ///< 레벨 오름과 그 출처(명중 · 격파) — 표시용이라 저장하지 않는다
     };
 } // namespace sw

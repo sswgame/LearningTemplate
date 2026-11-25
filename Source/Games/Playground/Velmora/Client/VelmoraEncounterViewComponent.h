@@ -62,6 +62,6 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Invulnerable Color" )
         float4 _invulnerableColor;
 
-        PrefabViewBatch _sphereViews;
+        SW_TRANSIENT PrefabViewBatch _sphereViews;
     };
 } // namespace sw

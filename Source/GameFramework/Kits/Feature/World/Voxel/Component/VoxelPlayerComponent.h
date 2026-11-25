@@ -150,12 +150,12 @@ namespace sw
         SW_CODEC_STATE VoxelHotbar _hotbar;
         SW_TRANSIENT VoxelRayHit   _target;
         SW_TRANSIENT vector<BlockEdit> _listPendingEdit;
-        SW_TRANSIENT GameSoundQueue    _soundQueue;        ///< 재생할 소리입니다. 오디오는 게임 스레드에서 틱이 끝난 뒤 재생합니다.
-        vector<uint8>                  _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트입니다(`restoreState`).
-        SW_TRANSIENT IntentSlots       _intentSlots;
-        AbsolutePosition               _startPosition; ///< 몸을 처음 놓은 절대 자리(복셀 월드 좌표)
-        SW_TRANSIENT float32           _breakProgress;
-        Countdown                      _placeCooldown; ///< 버튼을 누르고 있을 때의 놓기 간격입니다(늦은 만큼 이어서 셉니다).
+        SW_TRANSIENT GameSoundQueue    _soundQueue;       ///< 재생할 소리입니다. 오디오는 게임 스레드에서 틱이 끝난 뒤 재생합니다.
+        SW_TRANSIENT vector<uint8>    _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트입니다(`restoreState`).
+        SW_TRANSIENT IntentSlots      _intentSlots;
+        SW_TRANSIENT AbsolutePosition _startPosition; ///< 몸을 처음 놓은 절대 자리(복셀 월드 좌표)
+        SW_TRANSIENT float32          _breakProgress;
+        SW_TRANSIENT Countdown        _placeCooldown; ///< 버튼을 누르고 있을 때의 놓기 간격입니다(늦은 만큼 이어서 셉니다).
         PROPERTY( RuntimeState )
         uint32 _brokenCount;
         PROPERTY( RuntimeState )

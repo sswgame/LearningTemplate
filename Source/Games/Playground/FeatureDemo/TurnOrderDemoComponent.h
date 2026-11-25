@@ -68,6 +68,6 @@ namespace sw
         PROPERTY( RuntimeState )
         string _orderText; ///< 앞으로의 차례
 
-        TurnOrder _order;
+        SW_CODEC_STATE TurnOrder _order;
     };
 } // namespace sw

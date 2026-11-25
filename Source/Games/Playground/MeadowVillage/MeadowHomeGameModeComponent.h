@@ -69,11 +69,11 @@ namespace sw
         PROPERTY( Category = "Home", DisplayName = "Step Interval", Min = 0.0, Units = s, Tooltip = "Time between two autoplay build steps" )
         float32 _stepInterval;
 
-        float32 _stepTimer;
+        SW_TRANSIENT float32 _stepTimer;
         PROPERTY( RuntimeState, Min = 0 )
         int32                  _nextStep;
-        uint8                  _bClaimSent : 1; ///< 네트워크 클라이언트 — 차지 요청을 보냈다(실행 동안만)
-        uint8                  _bGaveUp    : 1; ///< 차지가 거절됐다 — 짓지 않는다
+        SW_TRANSIENT uint8     _bClaimSent : 1; ///< 네트워크 클라이언트 — 차지 요청을 보냈다(실행 동안만)
+        SW_TRANSIENT uint8     _bGaveUp    : 1; ///< 차지가 거절됐다 — 짓지 않는다
         [[maybe_unused]] uint8 _reserved   : 6;
     };
 } // namespace sw

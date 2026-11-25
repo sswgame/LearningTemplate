@@ -91,8 +91,8 @@ namespace sw
         PROPERTY( RuntimeState, Min = 0 )
         int32 _rememberedCount; ///< 기억하는 대상 수(보이지 않아도 기억 시간 안이면 센다)
 
-        AIPerception   _perception;
-        LockOnSelector _lockOn;
-        NavGrid        _sightGrid;
+        SW_TRANSIENT AIPerception   _perception;
+        SW_TRANSIENT LockOnSelector _lockOn;
+        SW_TRANSIENT NavGrid        _sightGrid;
     };
 } // namespace sw

@@ -67,9 +67,9 @@ namespace sw
         PROPERTY( RuntimeState, Min = 0 )
         int32 _releaseCount;
 
-        BoundAssetRef<ScheduleCatalog> _pCatalog; ///< 일정이 빌려 쓴다
-        SmartObjectScheduleLocator     _locator;  ///< 일정이 빌려 쓴다(`_schedule` 앞에 선언 — 뒤에 사라진다)
-        ScheduleSystem                 _schedule;
-        vector<uint32>                 _listClaim; ///< NPC 마다 점유 중인 예약 번호(0 은 없음)
+        BoundAssetRef<ScheduleCatalog>            _pCatalog; ///< 일정이 빌려 쓴다
+        SW_CODEC_STATE SmartObjectScheduleLocator _locator;  ///< 일정이 빌려 쓴다(`_schedule` 앞에 선언 — 뒤에 사라진다)
+        SW_CODEC_STATE ScheduleSystem             _schedule;
+        SW_CODEC_STATE vector<uint32> _listClaim; ///< NPC 마다 점유 중인 예약 번호(0 은 없음)
     };
 } // namespace sw

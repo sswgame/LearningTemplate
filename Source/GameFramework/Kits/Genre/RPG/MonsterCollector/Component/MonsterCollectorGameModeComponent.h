@@ -178,14 +178,14 @@ namespace sw
 
         BoundAssetRef<MonsterCollectorCatalog> _pCatalog;
         BoundAssetRef<ElementChart>            _pChart;
-        MonsterStorage                         _storage;
-        MonsterBattle                          _battle;
-        StepEncounterCounter                   _encounterCounter;
-        GameRandom                             _random;
-        vector<MonsterBattleEvent>             _listBattleEvent;
+        SW_CODEC_STATE MonsterStorage          _storage;
+        SW_CODEC_STATE MonsterBattle           _battle;
+        SW_CODEC_STATE StepEncounterCounter    _encounterCounter;
+        SW_CODEC_STATE GameRandom              _random;
+        SW_TRANSIENT vector<MonsterBattleEvent> _listBattleEvent;
         PROPERTY( RuntimeState )
-        float2 _playerPosition;
-        float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
+        float2              _playerPosition;
+        SW_TRANSIENT float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
         PROPERTY( RuntimeState, Min = 0 )
         float32 _strideProgress; ///< 다음 걸음까지 걸은 거리(m)
         PROPERTY( RuntimeState, Min = 0 )

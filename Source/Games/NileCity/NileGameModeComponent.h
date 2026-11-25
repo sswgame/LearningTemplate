@@ -86,10 +86,10 @@ namespace sw
         PROPERTY( Category = "Auto Plan", DisplayName = "Third Block Population", Tooltip = "Population at which the auto plan starts the third block", Min = 0 )
         int32 _thirdBlockPeople;
 
-        Wallet                  _wallet; ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
-        WorldClock              _clock;  ///< 달력. 하루가 한 달이다(계절 열둘 x 하루). 디렉터가 보관하고 시간을 흘린다.
-        NileCityPlanner         _planner;
-        vector<WorldClockEvent> _listClockEvent; ///< 이번 틱의 달력 알림(스크래치).
+        SW_CODEC_STATE Wallet          _wallet; ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
+        SW_CODEC_STATE WorldClock      _clock;  ///< 달력. 하루가 한 달이다(계절 열둘 x 하루). 디렉터가 보관하고 시간을 흘린다.
+        SW_CODEC_STATE NileCityPlanner _planner;
+        SW_TRANSIENT vector<WorldClockEvent> _listClockEvent; ///< 이번 틱의 달력 알림(스크래치).
         PROPERTY( RuntimeState )
         int32 _monthCount;
         PROPERTY( RuntimeState )

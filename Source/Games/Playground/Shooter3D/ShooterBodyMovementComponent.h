@@ -144,16 +144,16 @@ namespace sw
         PROPERTY( Category = "Movement", DisplayName = "Radius", Tooltip = "Body radius against the blockers", Min = 0.0, Units = m )
         float32 _radius;
 
-        float3                 _position;      ///< 발(절대)
-        float3                 _moveVelocity;  ///< 지난 걸음의 수평 속도
-        float3                 _displayOffset; ///< 그릴 때만 더하는 오프셋(예측 보정 녹이기)
-        float32                _verticalSpeed;
-        uint8                  _teleportCount; ///< 순간 이동마다 오른다
-        uint8                  _bOnGround  : 1;
-        uint8                  _bNetDriven : 1;
+        SW_TRANSIENT float3    _position;      ///< 발(절대)
+        SW_TRANSIENT float3    _moveVelocity;  ///< 지난 걸음의 수평 속도
+        SW_TRANSIENT float3    _displayOffset; ///< 그릴 때만 더하는 오프셋(예측 보정 녹이기)
+        SW_TRANSIENT float32   _verticalSpeed;
+        SW_TRANSIENT uint8     _teleportCount; ///< 순간 이동마다 오른다
+        SW_TRANSIENT uint8     _bOnGround  : 1;
+        SW_TRANSIENT uint8     _bNetDriven : 1;
         [[maybe_unused]] uint8 _reserved   : 6;
-        atomic<uint32>         _suspendCount; ///< 살아 있는 `suspend` 구독 수
-        uint64                 _nextSuspensionID;
-        SubscriptionList       _suspensionSubscriptions; ///< `suspend` 가 낸 구독 — 맨 끝이라 먼저 닫힌다
+        SW_TRANSIENT atomic<uint32> _suspendCount; ///< 살아 있는 `suspend` 구독 수
+        SW_TRANSIENT uint64         _nextSuspensionID;
+        SubscriptionList            _suspensionSubscriptions; ///< `suspend` 가 낸 구독 — 맨 끝이라 먼저 닫힌다
     };
 } // namespace sw

@@ -134,23 +134,23 @@ namespace sw
 
         BoundAssetRef<AdventureRegionCatalog> _pRegions;
         shared_ptr<const QuestCatalog>        _pQuests; ///< 일지가 처음 열 때의 판을 계속 빌린다(`QuestLogComponent::initialize` 는 첫 호출만 듣는다) — 그 판을 쥔다
-        AdventureCampaign                     _campaign;
+        SW_CODEC_STATE AdventureCampaign      _campaign;
         PROPERTY( RuntimeState )
-        float2              _playerPosition;
-        float2              _commandMove;       ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
-        FacingDirection     _facing;            ///< 리플렉션 열거가 아니다 — 손 본문이 싣는다
-        hashed_string       _currentRegion;     ///< 지금 서 있는 지역(비면 다음 틱이 진입을 처리한다)
-        hashed_string       _pendingEncounter;  ///< 지금 지역에 들어서며 기다리게 된 전투(열리면 비운다)
-        hashed_string       _encounterRegion;   ///< 전투가 열린 지역(탐험 중이면 비었다)
-        hashed_string       _pendingArea;       ///< 게임 스레드에서 자동 저장에 알릴 지역 이동 — 아래 둘과 함께 같은 프레임의 `onFlush` 가 비우는 알림이라 싣지 않는다
-        hashed_string       _pendingBoss;       ///< 보스 앞
-        hashed_string       _pendingCheckpoint; ///< 체크포인트(야영지)
-        vector<QuestEvent>  _listQuestEvent;    ///< 프레임마다 비워 다시 쓰는 알림 그릇(할당을 되풀이하지 않는다)
-        vector<WalletEvent> _listWalletEvent;
-        vector<HealthEvent> _listHealthEvent;
+        float2                         _playerPosition;
+        SW_CODEC_STATE float2          _commandMove;       ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
+        SW_CODEC_STATE FacingDirection _facing;            ///< 리플렉션 열거가 아니다 — 손 본문이 싣는다
+        SW_CODEC_STATE hashed_string   _currentRegion;     ///< 지금 서 있는 지역(비면 다음 틱이 진입을 처리한다)
+        SW_CODEC_STATE hashed_string   _pendingEncounter;  ///< 지금 지역에 들어서며 기다리게 된 전투(열리면 비운다)
+        SW_CODEC_STATE hashed_string   _encounterRegion;   ///< 전투가 열린 지역(탐험 중이면 비었다)
+        SW_CODEC_STATE hashed_string   _pendingArea;       ///< 게임 스레드에서 자동 저장에 알릴 지역 이동 — 아래 둘과 함께 같은 프레임의 `onFlush` 가 비우는 알림이라 싣지 않는다
+        SW_CODEC_STATE hashed_string   _pendingBoss;       ///< 보스 앞
+        SW_CODEC_STATE hashed_string   _pendingCheckpoint; ///< 체크포인트(야영지)
+        SW_TRANSIENT vector<QuestEvent> _listQuestEvent;   ///< 프레임마다 비워 다시 쓰는 알림 그릇(할당을 되풀이하지 않는다)
+        SW_TRANSIENT vector<WalletEvent> _listWalletEvent;
+        SW_TRANSIENT vector<HealthEvent> _listHealthEvent;
         PROPERTY( RuntimeState, Min = 0 )
         int32                  _fallCount;
-        uint8                  _bUseQueued : 1; ///< 다음 걸음이 쓸 쓰기 누름
+        SW_CODEC_STATE uint8   _bUseQueued : 1; ///< 다음 걸음이 쓸 쓰기 누름
         [[maybe_unused]] uint8 _reserved   : 7;
     };
 } // namespace sw

@@ -74,6 +74,6 @@ namespace sw
         hashed_string _lastResult; ///< 마지막 명령의 `CraftResult` 이름
 
         BoundAssetRef<RecipeCatalog> _pRecipes; ///< 제작이 빌려 쓴다
-        Crafter                      _crafter;
+        SW_CODEC_STATE Crafter       _crafter;
     };
 } // namespace sw

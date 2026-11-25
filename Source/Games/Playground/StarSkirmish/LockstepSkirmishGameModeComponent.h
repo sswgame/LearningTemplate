@@ -44,6 +44,6 @@ namespace sw
         void                          stepMatch( float32 deltaTime ) override;
 
     private:
-        SkirmishLockstepLink _lockstep; ///< 2 인 대전(넷 세션이 열렸을 때)의 락스텝. 판 상태가 아니라 세이브에 싣지 않는다
+        SW_TRANSIENT SkirmishLockstepLink _lockstep; ///< 2 인 대전(넷 세션이 열렸을 때)의 락스텝. 판 상태가 아니라 세이브에 싣지 않는다
     };
 } // namespace sw

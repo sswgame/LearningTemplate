@@ -221,18 +221,18 @@ namespace sw
         PROPERTY( Category = "Threat", DisplayName = "Threat Damage", Tooltip = "Health a crew member loses when a threat steps into the same area", Min = 0.0 )
         float32 _threatDamage;
 
-        BoundAssetRef<ScavengerCatalog>  _pCatalog;
-        BoundAssetRef<SpawnTable>        _pThreatTable;
-        BoundAssetRef<ShopCatalog>       _pShopCatalog;
-        BoundAssetRef<ItemCatalog>       _pItemCatalog;    ///< 게임 범위의 아이템 카탈로그
-        shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 월드 상태가 쥔 것과 같은 판(스냅숏 — 날씨 상태가 그 판의 항목을 가리킨다)
-        Wallet                           _wallet;          ///< 한 판의 회사 돈(원정이 빌린다)
-        GameFlags                        _flags;           ///< 한 판의 문 잠금(원정이 빌린다)
-        Inventory                        _storage;         ///< 우주선 창고(원정이 빌린다)
-        ScavengerExpedition              _expedition;
-        vector<ScavengerCommand>         _listCommand; ///< 승무원마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
-        vector<Countdown>                _listStep;    ///< 승무원마다 다음 걸음까지
-        vector<ScavengerEvent>           _listEvent;   ///< 걸음마다 비워 다시 쓰는 알림 그릇
+        BoundAssetRef<ScavengerCatalog>    _pCatalog;
+        BoundAssetRef<SpawnTable>          _pThreatTable;
+        BoundAssetRef<ShopCatalog>         _pShopCatalog;
+        BoundAssetRef<ItemCatalog>         _pItemCatalog;    ///< 게임 범위의 아이템 카탈로그
+        shared_ptr<const WeatherCatalog>   _pWeatherCatalog; ///< 월드 상태가 쥔 것과 같은 판(스냅숏 — 날씨 상태가 그 판의 항목을 가리킨다)
+        SW_CODEC_STATE Wallet              _wallet;          ///< 한 판의 회사 돈(원정이 빌린다)
+        SW_CODEC_STATE GameFlags           _flags;           ///< 한 판의 문 잠금(원정이 빌린다)
+        SW_CODEC_STATE Inventory           _storage;         ///< 우주선 창고(원정이 빌린다)
+        SW_CODEC_STATE ScavengerExpedition _expedition;
+        SW_TRANSIENT vector<ScavengerCommand> _listCommand; ///< 승무원마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
+        SW_CODEC_STATE vector<Countdown> _listStep;         ///< 승무원마다 다음 걸음까지
+        SW_TRANSIENT vector<ScavengerEvent> _listEvent;     ///< 걸음마다 비워 다시 쓰는 알림 그릇
         PROPERTY( RuntimeState )
         vector<ScavengerThreat> _listThreat;
         PROPERTY( RuntimeState )

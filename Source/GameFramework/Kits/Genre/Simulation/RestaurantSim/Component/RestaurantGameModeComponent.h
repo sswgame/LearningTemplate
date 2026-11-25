@@ -155,17 +155,17 @@ namespace sw
         PROPERTY( Category = "Business", DisplayName = "Target Profit", Min = 0 )
         int32 _targetProfit;
 
-        BoundAssetRef<RestaurantCatalog> _pCatalog;
-        BoundAssetRef<RecipeCatalog>     _pRecipes;
-        BoundAssetRef<ShopCatalog>       _pShops;
-        BoundAssetRef<ItemCatalog>       _pItemCatalog;
-        WorldClock                       _clock;              ///< 이 판의 날(식당이 빌린다 — 시세의 시드). 하루를 덮을 때 다음 날로 넘긴다
-        BoundAssetRef<ReputationCatalog> _pReputationCatalog; ///< 단계를 적지 않은 판이면 비었다
-        ReputationState                  _reputation;         ///< 손님 평판(식당이 빌린다)
-        Wallet                           _wallet;             ///< 이 판의 돈(식당이 빌린다) — 결과 값으로만 바탕 판에 나간다
-        Inventory                        _pantry;             ///< 이 판의 창고(식당이 빌린다)
-        RestaurantSimulation             _simulation;
-        vector<RestaurantEvent>          _listEvent;
+        BoundAssetRef<RestaurantCatalog>    _pCatalog;
+        BoundAssetRef<RecipeCatalog>        _pRecipes;
+        BoundAssetRef<ShopCatalog>          _pShops;
+        BoundAssetRef<ItemCatalog>          _pItemCatalog;
+        SW_CODEC_STATE WorldClock           _clock;              ///< 이 판의 날(식당이 빌린다 — 시세의 시드). 하루를 덮을 때 다음 날로 넘긴다
+        BoundAssetRef<ReputationCatalog>    _pReputationCatalog; ///< 단계를 적지 않은 판이면 비었다
+        SW_CODEC_STATE ReputationState      _reputation;         ///< 손님 평판(식당이 빌린다)
+        SW_CODEC_STATE Wallet               _wallet;             ///< 이 판의 돈(식당이 빌린다) — 결과 값으로만 바탕 판에 나간다
+        SW_CODEC_STATE Inventory            _pantry;             ///< 이 판의 창고(식당이 빌린다)
+        SW_CODEC_STATE RestaurantSimulation _simulation;
+        SW_TRANSIENT vector<RestaurantEvent> _listEvent;
         PROPERTY( RuntimeState )
         int64 _totalProfit;
         PROPERTY( RuntimeState, Min = 1 )

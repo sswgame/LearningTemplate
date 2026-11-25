@@ -375,41 +375,41 @@ namespace sw
         PROPERTY( Category = "Network", DisplayName = "Pawn Hit Height", Min = 0.001, Units = m, Tooltip = "Top of a player's hit capsule above the feet (server rewind)" )
         float32 _pawnHitHeight;
 
-        ReplicationServer                                 _server;
-        ReplicationClient                                 _client;
-        InterestReplicationPolicy                         _interest;
-        Subscription                                      _routerSubscription; ///< 세션 라우터에 단 `_server` 또는 `_client` 의 등록(처리기보다 뒤에 선언 — 먼저 풀린다)
-        ClientPrediction<ShooterMoveState, ControlIntent> _prediction;
-        PredictionSmoother                                _smoother;
-        vector<uint8>                                     _bytesScratch;
-        vector<MeleeHitClaim>                             _listClaim;      ///< 클라이언트 — 다음 입력에 실을 주장, 서버 — 이번 입력에서 꺼낸 주장
-        vector<ServerPawn>                                _listServerPawn; ///< 서버 — 자리마다 하나(자리 0 이 씬의 몸)
-        vector<RemotePawn>                                _listRemotePawn; ///< 클라이언트 — 보이는 남의 몸
-        vector<int32>                                     _listConnectionScratch;
-        vector<LagRecord>                                 _listLagScratch;
-        vector<ShooterFloorStep>                          _listFloorScratch;
-        vector<uint32>                                    _listEnemyEntityID; ///< 서버 — 지난 틱에 복제한 적(사라지면 관심 영역에서도 뺀다)
-        vector<uint32>                                    _listEntityScratch;
-        LagCompensationHistory                            _lagHistory; ///< 서버 — 틱마다 산 적 · 산 플레이어의 자리
-        float32                                           _accumulator;
-        vector<ControlTrigger>                            _listPendingTrigger;  ///< 클라이언트 — 다음 입력 틱에 실을 발동 사건
-        uint32                                            _stride;              ///< 이 컴포넌트의 틱 하나가 월드의 서버 틱 몇 개인지
-        uint32                                            _tick;                ///< 서버 — 월드의 서버 시계에서 낸 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
-        uint32                                            _pawnEntityID;        ///< 클라이언트 — 서버가 알려 준 내 몸의 엔티티(0 이면 아직)
-        uint32                                            _reconciledTick;      ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
-        uint32                                            _rewoundShotCount;    ///< 서버 — 랙 보정으로 판정한 광선 수
-        uint32                                            _rewoundHitCount;     ///< 서버 — 되감아 맞힌 광선 수
-        float64                                           _lastRewindTicks;     ///< 서버 — 마지막 판정이 되감은 틱 수
-        uint32                                            _sentClaimCount;      ///< 클라이언트 — 보낸 주장 수
-        uint32                                            _confirmedClaimCount; ///< 서버 — 인정한 주장 수
-        uint32                                            _rejectedClaimCount;  ///< 서버 — 거절한 주장 수
-        float3                                            _floorLocalPosition;  ///< 클라이언트 — 디딘 바닥 기준의 자리
-        int32                                             _floorTickOffset;     ///< 클라이언트 — 서버가 정해 준 바닥 틱 차이
-        int32                                             _pendingStepCount;    ///< 클라이언트 — 이번 프레임 틱 뒤에 돌 입력 틱 수
-        Role                                              _role;
-        uint8                                             _bFloorTickKnown;
-        uint8                                             _floorNumber;        ///< 클라이언트 — 디딘 바닥의 번호
-        uint8                                             _bSeatsReported : 1; ///< 서버 — 자리 수를 매칭에 알렸다
-        [[maybe_unused]] uint8                            _reserved       : 7;
+        SW_TRANSIENT ReplicationServer         _server;
+        SW_TRANSIENT ReplicationClient         _client;
+        SW_TRANSIENT InterestReplicationPolicy _interest;
+        Subscription                           _routerSubscription; ///< 세션 라우터에 단 `_server` 또는 `_client` 의 등록(처리기보다 뒤에 선언 — 먼저 풀린다)
+        SW_TRANSIENT ClientPrediction<ShooterMoveState, ControlIntent> _prediction;
+        SW_TRANSIENT PredictionSmoother                                _smoother;
+        SW_TRANSIENT vector<uint8> _bytesScratch;
+        SW_TRANSIENT vector<MeleeHitClaim> _listClaim;   ///< 클라이언트 — 다음 입력에 실을 주장, 서버 — 이번 입력에서 꺼낸 주장
+        SW_TRANSIENT vector<ServerPawn> _listServerPawn; ///< 서버 — 자리마다 하나(자리 0 이 씬의 몸)
+        SW_TRANSIENT vector<RemotePawn> _listRemotePawn; ///< 클라이언트 — 보이는 남의 몸
+        SW_TRANSIENT vector<int32> _listConnectionScratch;
+        SW_TRANSIENT vector<LagRecord> _listLagScratch;
+        SW_TRANSIENT vector<ShooterFloorStep> _listFloorScratch;
+        SW_TRANSIENT vector<uint32> _listEnemyEntityID; ///< 서버 — 지난 틱에 복제한 적(사라지면 관심 영역에서도 뺀다)
+        SW_TRANSIENT vector<uint32>         _listEntityScratch;
+        SW_TRANSIENT LagCompensationHistory _lagHistory; ///< 서버 — 틱마다 산 적 · 산 플레이어의 자리
+        SW_TRANSIENT float32                _accumulator;
+        SW_TRANSIENT vector<ControlTrigger> _listPendingTrigger;  ///< 클라이언트 — 다음 입력 틱에 실을 발동 사건
+        SW_TRANSIENT uint32                 _stride;              ///< 이 컴포넌트의 틱 하나가 월드의 서버 틱 몇 개인지
+        SW_TRANSIENT uint32                 _tick;                ///< 서버 — 월드의 서버 시계에서 낸 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
+        SW_TRANSIENT uint32                 _pawnEntityID;        ///< 클라이언트 — 서버가 알려 준 내 몸의 엔티티(0 이면 아직)
+        SW_TRANSIENT uint32                 _reconciledTick;      ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
+        SW_TRANSIENT uint32                 _rewoundShotCount;    ///< 서버 — 랙 보정으로 판정한 광선 수
+        SW_TRANSIENT uint32                 _rewoundHitCount;     ///< 서버 — 되감아 맞힌 광선 수
+        SW_TRANSIENT float64                _lastRewindTicks;     ///< 서버 — 마지막 판정이 되감은 틱 수
+        SW_TRANSIENT uint32                 _sentClaimCount;      ///< 클라이언트 — 보낸 주장 수
+        SW_TRANSIENT uint32                 _confirmedClaimCount; ///< 서버 — 인정한 주장 수
+        SW_TRANSIENT uint32                 _rejectedClaimCount;  ///< 서버 — 거절한 주장 수
+        SW_TRANSIENT float3                 _floorLocalPosition;  ///< 클라이언트 — 디딘 바닥 기준의 자리
+        SW_TRANSIENT int32                  _floorTickOffset;     ///< 클라이언트 — 서버가 정해 준 바닥 틱 차이
+        SW_TRANSIENT int32                  _pendingStepCount;    ///< 클라이언트 — 이번 프레임 틱 뒤에 돌 입력 틱 수
+        SW_TRANSIENT Role                   _role;
+        SW_TRANSIENT uint8                  _bFloorTickKnown;
+        SW_TRANSIENT uint8                  _floorNumber;        ///< 클라이언트 — 디딘 바닥의 번호
+        SW_TRANSIENT uint8                  _bSeatsReported : 1; ///< 서버 — 자리 수를 매칭에 알렸다
+        [[maybe_unused]] uint8              _reserved       : 7;
     };
 } // namespace sw

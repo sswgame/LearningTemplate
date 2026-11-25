@@ -70,13 +70,13 @@ namespace sw
         PROPERTY( Category = "UI", DisplayName = "Shop Document" )
         AssetRef<UIDocumentAsset> _shopDocument;
 
-        BoundAssetRef<ShopCatalog>            _pShops;
-        ShopManager                           _shop;
-        vector<ShopEvent>                     _listShopEvent; ///< 이번 프레임의 가게 알림(용량만 넘긴다)
-        Wallet                                _wallet;
-        hashed_string                         _currency;
-        unique_ptr<LocalShopPurchaseProvider> _provider;
-        UIOwnedScreen                         _inventoryScreen;
-        UIOwnedScreen                         _shopScreen;
+        BoundAssetRef<ShopCatalog> _pShops;
+        SW_CODEC_STATE ShopManager _shop;
+        SW_TRANSIENT vector<ShopEvent> _listShopEvent; ///< 이번 프레임의 가게 알림(용량만 넘긴다)
+        SW_CODEC_STATE Wallet          _wallet;
+        SW_TRANSIENT hashed_string     _currency;
+        SW_TRANSIENT unique_ptr<LocalShopPurchaseProvider> _provider;
+        SW_TRANSIENT UIOwnedScreen                         _inventoryScreen;
+        SW_TRANSIENT UIOwnedScreen                         _shopScreen;
     };
 } // namespace sw

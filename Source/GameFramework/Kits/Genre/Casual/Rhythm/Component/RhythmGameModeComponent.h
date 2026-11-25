@@ -98,10 +98,10 @@ namespace sw
         PROPERTY( Category = "Match", DisplayName = "Clear Reward", Tooltip = "Money for clearing the song", Min = 0 )
         int32 _clearReward;
 
-        BoundAssetRef<RhythmChart> _pChart;
-        TimingJudge                _judge; ///< 판이 빌려 쓴다 — 판보다 먼저 선언한다
-        RhythmPlaySession          _session;
-        vector<RhythmEvent>        _listEvent;
+        BoundAssetRef<RhythmChart>       _pChart;
+        SW_TRANSIENT TimingJudge         _judge; ///< 판이 빌려 쓴다 — 판보다 먼저 선언한다
+        SW_CODEC_STATE RhythmPlaySession _session;
+        SW_TRANSIENT vector<RhythmEvent> _listEvent;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _musicTime; ///< 지금 곡 시각(초)
     };

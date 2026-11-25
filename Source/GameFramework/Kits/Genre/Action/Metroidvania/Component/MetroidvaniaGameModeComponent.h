@@ -208,25 +208,25 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Seed", Tooltip = "Seed of the loot rolls (not 0)", Min = 1 )
         uint32 _seed;
 
-        BoundAssetRef<MetroidvaniaCatalog> _pCatalog;
-        BoundAssetRef<AreaGraph>           _pAreas; ///< 방 정의(탐색 상태는 `_graph` 사본이 가진다)
-        AreaGraph                          _graph;  ///< 방문 · 발견
-        PlatformTileMap                    _terrain;
-        PlatformerMotor2D                  _motor;
-        MetroidvaniaAbilitySet             _abilities;
-        MetroidvaniaMapState               _mapState;  ///< `_graph` 를 빌린다
-        MetroidvaniaDeathRestState         _deathRest; ///< `_wallet` 을 빌린다
-        MetroidvaniaTrinketLoadout         _loadout;
-        MetroidvaniaDuelist                _player;
-        Wallet                             _wallet;
-        GameFlags                          _flags;
-        GameRandom                         _random;
-        FixedStepTimer                     _timer;
-        Countdown                          _attackCooldown;
-        Countdown                          _respawnDelay;
-        vector<MetroidvaniaEnemy>          _listEnemy;
-        vector<MetroidvaniaDeathRestEvent> _listEvent;
-        MetroidvaniaPlayerCommand          _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다
+        BoundAssetRef<MetroidvaniaCatalog>        _pCatalog;
+        BoundAssetRef<AreaGraph>                  _pAreas; ///< 방 정의(탐색 상태는 `_graph` 사본이 가진다)
+        SW_CODEC_STATE AreaGraph                  _graph;  ///< 방문 · 발견
+        SW_TRANSIENT PlatformTileMap              _terrain;
+        SW_CODEC_STATE PlatformerMotor2D          _motor;
+        SW_CODEC_STATE MetroidvaniaAbilitySet     _abilities;
+        SW_CODEC_STATE MetroidvaniaMapState       _mapState;  ///< `_graph` 를 빌린다
+        SW_CODEC_STATE MetroidvaniaDeathRestState _deathRest; ///< `_wallet` 을 빌린다
+        SW_CODEC_STATE MetroidvaniaTrinketLoadout _loadout;
+        SW_CODEC_STATE MetroidvaniaDuelist        _player;
+        SW_CODEC_STATE Wallet                     _wallet;
+        SW_CODEC_STATE GameFlags                  _flags;
+        SW_CODEC_STATE GameRandom                 _random;
+        SW_CODEC_STATE FixedStepTimer             _timer;
+        SW_CODEC_STATE Countdown                  _attackCooldown;
+        SW_CODEC_STATE Countdown                  _respawnDelay;
+        SW_CODEC_STATE vector<MetroidvaniaEnemy> _listEnemy;
+        SW_TRANSIENT vector<MetroidvaniaDeathRestEvent> _listEvent;
+        SW_TRANSIENT MetroidvaniaPlayerCommand          _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다
         PROPERTY( RuntimeState )
         hashed_string _area; ///< 지금 방(어느 방도 아니면 마지막 방)
         PROPERTY( RuntimeState )

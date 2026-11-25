@@ -94,13 +94,13 @@ namespace sw
         PROPERTY( Category = "Time", DisplayName = "Speed Range", Tooltip = "Slowest and fastest time scale and the factor of one step; required" )
         GameSpeedRange _speedRange;
 
-        BoundAssetRef<CityCatalog> _pCatalog;
-        CitySimulation             _city;
-        ConsumerLease              _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다)
-        vector<CityEvent>          _listStepEvent;  ///< `getStepEvents`
-        GameSpeedControl           _speed;          ///< 배속 · 일시정지(디렉터가 쥐고 도시 · 달력이 받는다)
-        uint32                     _layoutRevision; ///< `getLayoutRevision`
-        DevCounter                 _buildCount;     ///< 감시 값 `City.BuildCount` — 저장하지 않는 이번 판 수
-        DevCounter                 _demolishCount;  ///< 감시 값 `City.DemolishCount` — 저장하지 않는 이번 판 수
+        BoundAssetRef<CityCatalog>  _pCatalog;
+        SW_TRANSIENT CitySimulation _city;
+        ConsumerLease               _cityEventLease;    ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다)
+        SW_TRANSIENT vector<CityEvent> _listStepEvent;  ///< `getStepEvents`
+        SW_TRANSIENT GameSpeedControl  _speed;          ///< 배속 · 일시정지(디렉터가 쥐고 도시 · 달력이 받는다)
+        SW_TRANSIENT uint32            _layoutRevision; ///< `getLayoutRevision`
+        DevCounter                     _buildCount;     ///< 감시 값 `City.BuildCount` — 저장하지 않는 이번 판 수
+        DevCounter                     _demolishCount;  ///< 감시 값 `City.DemolishCount` — 저장하지 않는 이번 판 수
     };
 } // namespace sw

@@ -219,19 +219,19 @@ namespace sw
         PROPERTY( Category = "Class", DisplayName = "Class Change Level", Tooltip = "Lowest level that may change class", Min = 1 )
         int32 _classChangeLevel;
 
-        BoundAssetRef<JRPGCatalog> _pCatalog;
-        BoundAssetRef<ItemCatalog> _pItemCatalog;
-        Inventory                  _bag;   ///< 이 판의 가방(파티가 빌린다)
-        TimingJudge                _judge; ///< 판정 창(전투가 빌린다)
-        JRPGParty                  _party;
-        Wallet                     _wallet; ///< 이 판의 돈(파티가 빌린다) — 결과 값으로만 바탕 판에 나간다
-        JRPGEncounterWalker        _walker;
-        JRPGBattle                 _battle;
-        vector<JRPGBattleEvent>    _listBattleEvent;
-        vector<JRPGPartyEvent>     _listPartyEvent;
+        BoundAssetRef<JRPGCatalog>         _pCatalog;
+        BoundAssetRef<ItemCatalog>         _pItemCatalog;
+        SW_CODEC_STATE Inventory           _bag;   ///< 이 판의 가방(파티가 빌린다)
+        SW_CODEC_STATE TimingJudge         _judge; ///< 판정 창(전투가 빌린다)
+        SW_CODEC_STATE JRPGParty           _party;
+        SW_CODEC_STATE Wallet              _wallet; ///< 이 판의 돈(파티가 빌린다) — 결과 값으로만 바탕 판에 나간다
+        SW_CODEC_STATE JRPGEncounterWalker _walker;
+        SW_CODEC_STATE JRPGBattle          _battle;
+        SW_TRANSIENT vector<JRPGBattleEvent> _listBattleEvent;
+        SW_TRANSIENT vector<JRPGPartyEvent> _listPartyEvent;
         PROPERTY( RuntimeState )
-        float2 _playerPosition;
-        float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
+        float2              _playerPosition;
+        SW_TRANSIENT float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
         PROPERTY( RuntimeState, Min = 0 )
         float32 _strideProgress; ///< 다음 걸음까지 걸은 거리(m)
         PROPERTY( RuntimeState, Min = 0 )

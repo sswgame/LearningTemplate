@@ -109,10 +109,10 @@ namespace sw
         float32 _statusLogInterval;
 
         BoundAssetRef<VoxelBlockCatalog> _pCatalog; ///< 게임 기능 Voxel 이 건 블록 카탈로그 — 월드가 빌린다
-        VoxelWorld                       _world;
-        GameObjectHandle                 _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트입니다. 스폰한 오브젝트라 정리 목록에 들어갑니다.
-        int32                            _centerChunkX;       ///< 상주 범위의 가운데 청크입니다(몸이 든 청크).
-        int32                            _centerChunkZ;
-        int8                             _appliedAutoPlay; ///< 플레이어 폰에 적용한 자동 플레이 상태입니다(−1 아직 없음, 0 끔, 1 켬).
+        SW_CODEC_STATE VoxelWorld        _world;
+        SW_TRANSIENT GameObjectHandle    _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트입니다. 스폰한 오브젝트라 정리 목록에 들어갑니다.
+        SW_TRANSIENT int32               _centerChunkX;       ///< 상주 범위의 가운데 청크입니다(몸이 든 청크).
+        SW_TRANSIENT int32               _centerChunkZ;
+        SW_TRANSIENT int8                _appliedAutoPlay; ///< 플레이어 폰에 적용한 자동 플레이 상태입니다(−1 아직 없음, 0 끔, 1 켬).
     };
 } // namespace sw

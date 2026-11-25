@@ -138,17 +138,17 @@ namespace sw
         void updateHUD();
 
     private:
-        TurnRelayServer                 _server;
-        TurnRelayClient                 _client;
-        HubCardTurnPolicy               _policy;
-        Subscription                    _routerSubscription; ///< 라우터에 단 `_server` 또는 `_client` 의 등록(처리기보다 뒤에 선언 — 먼저 풀린다)
-        vector<TurnRelayEvent>          _listEventScratch;
-        HubCardSeatView                 _view; ///< 클라이언트 — 서버가 마지막으로 보낸 내 자리의 모습
-        unique_ptr<HubCardHUDViewModel> _hudViewModel;
-        uint32                          _roomID;
-        int32                           _rejectedCount;
-        Role                            _role;
-        uint8                           _bStartTried; ///< 걸린 링크로 세워 봤다(실패해도 다시 하지 않는다)
-        uint8                           _bHUDShown;   ///< HUD 에 뷰모델이 걸렸고 탁자가 보인다
+        SW_TRANSIENT TurnRelayServer   _server;
+        SW_TRANSIENT TurnRelayClient   _client;
+        SW_TRANSIENT HubCardTurnPolicy _policy;
+        Subscription                   _routerSubscription; ///< 라우터에 단 `_server` 또는 `_client` 의 등록(처리기보다 뒤에 선언 — 먼저 풀린다)
+        SW_TRANSIENT vector<TurnRelayEvent> _listEventScratch;
+        SW_TRANSIENT HubCardSeatView        _view; ///< 클라이언트 — 서버가 마지막으로 보낸 내 자리의 모습
+        SW_TRANSIENT unique_ptr<HubCardHUDViewModel> _hudViewModel;
+        SW_TRANSIENT uint32                          _roomID;
+        SW_TRANSIENT int32                           _rejectedCount;
+        SW_TRANSIENT Role                            _role;
+        SW_TRANSIENT uint8                           _bStartTried; ///< 걸린 링크로 세워 봤다(실패해도 다시 하지 않는다)
+        SW_TRANSIENT uint8                           _bHUDShown;   ///< HUD 에 뷰모델이 걸렸고 탁자가 보인다
     };
 } // namespace sw

@@ -363,17 +363,17 @@ namespace sw
                   Tooltip = "Object that holds the player's wallet, inventory, reputation and quest log (the player controller object); game modes that open one of them do not start without it" )
         GameObjectHandle _playerState;
 
-        vector<GameObjectHandle>       _listSpawned;
-        vector<PrefabPool>             _listPool;             ///< 풀 정책으로 꺼낸 프리팹의 풀(경로마다 하나). 꺼낸 것은 `_listSpawned` 밖이라 `despawnViews` 가 풀째 지운다
-        vector<shared_ptr<BoundAsset>> _listFollowedAsset;    ///< 이 판을 열며 받은 에셋(`followAsset`)
-        vector<uint8>                  _pendingStateBytes;    ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
-        GameSoundQueue                 _soundQueue;           ///< 낼 소리. 오디오는 게임 스레드에서 다루므로 틱 뒤에 낸다
-        uint32                         _compactThreshold;     ///< 이 수를 넘으면 사라진 핸들을 덜어 낸다
-        float32                        _pendingRuleDeltaTime; ///< 틱이 쌓고 틱 뒤 `runPendingRules` 가 쓰는 시간
-        uint8                          _bStarted        : 1;
-        uint8                          _bViewsSpawned   : 1; ///< 지금 상태의 뷰 오브젝트가 스폰돼 있다(정리하면 다음 틱이 다시 스폰한다)
-        uint8                          _bFlushScheduled : 1;
-        uint8                          _bRuleOnSubTick  : 1; ///< 규칙이 서브틱에서 돈다(`_tickAfter`)
-        [[maybe_unused]] uint8         _reserved        : 4;
+        SW_TRANSIENT vector<GameObjectHandle> _listSpawned;
+        SW_TRANSIENT vector<PrefabPool> _listPool;                      ///< 풀 정책으로 꺼낸 프리팹의 풀(경로마다 하나). 꺼낸 것은 `_listSpawned` 밖이라 `despawnViews` 가 풀째 지운다
+        SW_TRANSIENT vector<shared_ptr<BoundAsset>> _listFollowedAsset; ///< 이 판을 열며 받은 에셋(`followAsset`)
+        SW_TRANSIENT vector<uint8>  _pendingStateBytes;                 ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
+        SW_TRANSIENT GameSoundQueue _soundQueue;                        ///< 낼 소리. 오디오는 게임 스레드에서 다루므로 틱 뒤에 낸다
+        SW_TRANSIENT uint32         _compactThreshold;                  ///< 이 수를 넘으면 사라진 핸들을 덜어 낸다
+        SW_TRANSIENT float32        _pendingRuleDeltaTime;              ///< 틱이 쌓고 틱 뒤 `runPendingRules` 가 쓰는 시간
+        SW_TRANSIENT uint8          _bStarted        : 1;
+        SW_TRANSIENT uint8          _bViewsSpawned   : 1; ///< 지금 상태의 뷰 오브젝트가 스폰돼 있다(정리하면 다음 틱이 다시 스폰한다)
+        SW_TRANSIENT uint8          _bFlushScheduled : 1;
+        SW_TRANSIENT uint8          _bRuleOnSubTick  : 1; ///< 규칙이 서브틱에서 돈다(`_tickAfter`)
+        [[maybe_unused]] uint8      _reserved        : 4;
     };
 } // namespace sw

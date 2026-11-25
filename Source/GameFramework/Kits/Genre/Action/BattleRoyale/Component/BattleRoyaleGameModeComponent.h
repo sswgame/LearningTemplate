@@ -183,8 +183,8 @@ namespace sw
         PROPERTY( Category = "Squads", DisplayName = "Squad Size", Min = 1 )
         int32 _squadSize;
         PROPERTY( Category = "Match", DisplayName = "Seed", Tooltip = "Seed of the zone, the flight, the loot and the computer people (not 0)", Min = 1 )
-        uint32 _seed;
-        uint32 _matchSeed; ///< 이 판의 씨앗(`startGame` 이 `_seed` 에서 정한다 — 서버 월드는 난수)
+        uint32              _seed;
+        SW_TRANSIENT uint32 _matchSeed; ///< 이 판의 씨앗(`startGame` 이 `_seed` 에서 정한다 — 서버 월드는 난수)
         PROPERTY( Category = "Match", DisplayName = "Ground Height", Units = m )
         float32 _groundHeight;
         PROPERTY( Category = "People", DisplayName = "Player Speed", Min = 0.1, Units = "m/s" )
@@ -224,30 +224,30 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Victory Money", Tooltip = "Result value 'money' reported on victory", Min = 0 )
         int32 _victoryMoney;
 
-        BoundAssetRef<BattleRoyaleCatalog> _pCatalog;
-        BoundAssetRef<WeaponCatalog>       _pWeaponCatalog;
-        BoundAssetRef<ProjectileCatalog>   _pProjectileCatalog;
-        BoundAssetRef<ItemCatalog>         _pItemCatalog;
-        BoundAssetRef<LootCatalog>         _pLootCatalog; ///< 전리품 지점 · 보급 상자가 있을 때만 있다
-        BattleRoyaleSceneTerrain           _terrain;      ///< 판(`_match`)이 빌린다 — 먼저 만들고 나중에 사라진다
-        BattleRoyaleMatch                  _match;
-        BattleRoyaleFlightPath             _flightPath; ///< 씨앗과 카탈로그로 정해진다 — 싣지 않는다
-        FixedStepTimer                     _timer;
-        GameRandom                         _random;
-        vector<Person>                     _listPerson;
-        vector<BattleRoyaleGroundItem>     _listGroundItem;
-        vector<BattleRoyaleEvent>          _listEvent;
-        vector<BattleRoyaleZoneEvent>      _listZoneEvent;
+        BoundAssetRef<BattleRoyaleCatalog>    _pCatalog;
+        BoundAssetRef<WeaponCatalog>          _pWeaponCatalog;
+        BoundAssetRef<ProjectileCatalog>      _pProjectileCatalog;
+        BoundAssetRef<ItemCatalog>            _pItemCatalog;
+        BoundAssetRef<LootCatalog>            _pLootCatalog; ///< 전리품 지점 · 보급 상자가 있을 때만 있다
+        SW_TRANSIENT BattleRoyaleSceneTerrain _terrain;      ///< 판(`_match`)이 빌린다 — 먼저 만들고 나중에 사라진다
+        SW_CODEC_STATE BattleRoyaleMatch      _match;
+        SW_TRANSIENT BattleRoyaleFlightPath   _flightPath; ///< 씨앗과 카탈로그로 정해진다 — 싣지 않는다
+        SW_CODEC_STATE FixedStepTimer         _timer;
+        SW_CODEC_STATE GameRandom             _random;
+        SW_CODEC_STATE vector<Person> _listPerson;
+        SW_CODEC_STATE vector<BattleRoyaleGroundItem> _listGroundItem;
+        SW_TRANSIENT vector<BattleRoyaleEvent> _listEvent;
+        SW_TRANSIENT vector<BattleRoyaleZoneEvent> _listZoneEvent;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _flightTime;
         PROPERTY( RuntimeState )
         BattleRoyalePhase      _phase;
-        uint32                 _groundItemRevision;
-        float2                 _commandMove; ///< 마지막 입력 명령 — 클라이언트 입력이라 싣지 않는다(아래 깃발도)
-        uint8                  _bFireHeld   : 1;
-        uint8                  _bUseHeld    : 1;
-        uint8                  _bUseQueued  : 1; ///< 다음 걸음이 쓸 쓰기 누름
-        uint8                  _bFireQueued : 1; ///< 다음 걸음이 쓸 사격 누름(반자동 총)
+        SW_CODEC_STATE uint32  _groundItemRevision;
+        SW_TRANSIENT float2    _commandMove; ///< 마지막 입력 명령 — 클라이언트 입력이라 싣지 않는다(아래 깃발도)
+        SW_TRANSIENT uint8     _bFireHeld   : 1;
+        SW_TRANSIENT uint8     _bUseHeld    : 1;
+        SW_TRANSIENT uint8     _bUseQueued  : 1; ///< 다음 걸음이 쓸 쓰기 누름
+        SW_TRANSIENT uint8     _bFireQueued : 1; ///< 다음 걸음이 쓸 사격 누름(반자동 총)
         [[maybe_unused]] uint8 _reserved    : 4;
     };
 } // namespace sw

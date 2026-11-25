@@ -145,11 +145,11 @@ namespace sw
         BoundAssetRef<WeaponCatalog>     _pWeapons;
         BoundAssetRef<ProjectileCatalog> _pProjectiles;
         BoundAssetRef<MoveCatalog>       _pMoves;
-        MechArenaWorld                   _world;
-        FixedStepTimer                   _timer; ///< 걸음 하나가 판의 고정 걸음 하나다 — 누름은 걸음에 한 번만 든다
-        GameRandom                       _random;
-        vector<BotHand>                  _listBotHand;
-        vector<MechArenaEvent>           _listEvent;
-        MechInput                        _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다
+        SW_CODEC_STATE MechArenaWorld    _world;
+        SW_CODEC_STATE FixedStepTimer    _timer; ///< 걸음 하나가 판의 고정 걸음 하나다 — 누름은 걸음에 한 번만 든다
+        SW_CODEC_STATE GameRandom        _random;
+        SW_CODEC_STATE vector<BotHand> _listBotHand;
+        SW_TRANSIENT vector<MechArenaEvent> _listEvent;
+        SW_TRANSIENT MechInput              _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다
     };
 } // namespace sw

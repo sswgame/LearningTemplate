@@ -64,13 +64,13 @@ namespace sw
         PROPERTY( Category = "Wander", Tooltip = "Every Nth new destination also asks an async path query (0 = never)" )
         uint32 _probeInterval;
 
-        DeterministicRandom32 _random;
-        SceneNavigation*      _pSceneNavigation; ///< 등록한 씬의 내비게이션(등록 동안)
-        NavPathTicket         _probe;            ///< 결과를 기다리는 질의
-        NavPathTicket         _cancelPending;    ///< 다음 프레임에 버릴 질의(그 사이 워커에 넘어간다)
-        uint32                _retargetCount;
-        uint32                _arrivalCount;
-        uint32                _probeResultCount;
-        uint32                _cancelLeakCount;
+        SW_TRANSIENT DeterministicRandom32 _random;
+        SceneNavigation*                   _pSceneNavigation; ///< 등록한 씬의 내비게이션(등록 동안)
+        SW_TRANSIENT NavPathTicket         _probe;            ///< 결과를 기다리는 질의
+        SW_TRANSIENT NavPathTicket         _cancelPending;    ///< 다음 프레임에 버릴 질의(그 사이 워커에 넘어간다)
+        SW_TRANSIENT uint32                _retargetCount;
+        SW_TRANSIENT uint32                _arrivalCount;
+        SW_TRANSIENT uint32                _probeResultCount;
+        SW_TRANSIENT uint32                _cancelLeakCount;
     };
 } // namespace sw

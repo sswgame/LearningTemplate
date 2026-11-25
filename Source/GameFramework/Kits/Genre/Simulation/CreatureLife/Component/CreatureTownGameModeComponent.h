@@ -118,8 +118,8 @@ namespace sw
         BoundAssetRef<CreatureLifeCatalog>  _pCatalog;           ///< 마을이 빌린다 — 다시 읽히면 베이스가 상태를 왕복시켜 새 판에 다시 묶는다(`acquireRequired`)
         shared_ptr<const QuestCatalog>      _pQuestCatalog;      ///< 처음 연 때의 판 — 부탁 일지가 빌린다(일지는 첫 카탈로그만 쓴다)
         shared_ptr<const ReputationCatalog> _pFriendshipCatalog; ///< 처음 연 때의 판 — 평판이 빌린다(평판은 첫 카탈로그만 쓴다)
-        CreatureTown                        _town;
-        vector<CreatureTownEvent>           _listTownEvent; ///< `reportTownEvents` 의 임시 목록(용량만 넘긴다)
-        uint32                              _townRevision;  ///< `getTownRevision`
+        SW_CODEC_STATE CreatureTown         _town;
+        SW_TRANSIENT vector<CreatureTownEvent> _listTownEvent; ///< `reportTownEvents` 의 임시 목록(용량만 넘긴다)
+        SW_CODEC_STATE uint32                  _townRevision;  ///< `getTownRevision`
     };
 } // namespace sw

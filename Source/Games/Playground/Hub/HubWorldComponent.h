@@ -63,11 +63,11 @@ namespace sw
         PROPERTY( Category = "Hub", DisplayName = "Rules", Tooltip = "Combat, gathering, growth and party numbers of the hub" )
         HubRules _rules;
         PROPERTY( Category = "Hub", DisplayName = "Interest Grid", Tooltip = "Cells the MMO replication uses to find what each player sees" )
-        StreamingCellGridDef   _interestGrid;
-        unique_ptr<IHubServer> _pServer; ///< 서버 역할일 때 세운 서버 링크(공장 `IHubServerFactory` — 서버 구성에만 있다)
-        HubClientLink          _client;
-        uint32                 _linkSessionSerial; ///< 링크를 세운 세션의 번호(`NetLinkValue::_sessionSerial`). 달라졌으면 그 세션은 닫혔다
-        uint8                  _bRulesValid;
-        uint8                  _bLinkTried; ///< 걸린 넷 링크로 링크를 세워 봤다(실패해도 다시 하지 않는다 — 오류는 한 번 알린다)
+        StreamingCellGridDef _interestGrid;
+        SW_TRANSIENT unique_ptr<IHubServer> _pServer; ///< 서버 역할일 때 세운 서버 링크(공장 `IHubServerFactory` — 서버 구성에만 있다)
+        SW_TRANSIENT HubClientLink          _client;
+        SW_TRANSIENT uint32                 _linkSessionSerial; ///< 링크를 세운 세션의 번호(`NetLinkValue::_sessionSerial`). 달라졌으면 그 세션은 닫혔다
+        SW_TRANSIENT uint8                  _bRulesValid;
+        SW_TRANSIENT uint8                  _bLinkTried; ///< 걸린 넷 링크로 링크를 세워 봤다(실패해도 다시 하지 않는다 — 오류는 한 번 알린다)
     };
 } // namespace sw
