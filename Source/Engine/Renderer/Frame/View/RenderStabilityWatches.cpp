@@ -3,7 +3,7 @@
  * @brief 렌더 정착의 진단 감시 값 `Render.StillFrames` · `Render.ExposureErrorEv` · `Render.PresentedFrames` · `Render.ExposureAdaptation` · `Render.GIError` 입니다.
  * @details 주 렌더러가 올린 값(`RenderStabilitySample::publish`)을 그대로 낸다. 사진 앞 정착은 감시 값이 아니라 사진 단계가 기다리는 정착 조건이다(`RenderStability.cpp` 의
  *          `RenderTemporalAccumulation` · `RenderAutoExposure` · `RenderRealtimeGI` — 예전 합성 0/1 감시 값은 "해당 없음" 과 "아직" 을 같은 0 으로 냈다).
- *          값의 주인(`RenderStability`) 곁에서 등록한다 — 전용 서버는 `Renderer/` 를 짓지 않아 이 감시 값도 없다(예전에는 자동화 폴더의 `Client/` 에 따로 두었다).
+ *          값의 주인(`RenderStability`) 곁에서 등록한다 — 전용 서버는 `Renderer/` 를 짓지 않아 이 감시 값도 없다.
  */
 #include "pch.h"
 

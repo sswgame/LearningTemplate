@@ -52,7 +52,7 @@ namespace sw
                     { return listKey[left] < listKey[right]; } );
                     return;
                 }
-                // 아래 자리부터 세 번 흩는다 — 키와 번호를 함께 옮긴다(번호로 키를 다시 찾으면 캐시를 놓친다). 홀수 번이라 끝은 건너편이다 — 마지막에 되옮긴다.
+                // 아래 자리부터 세 번 흩는다. 키와 번호를 함께 옮긴다(번호로 키를 다시 찾으면 캐시를 놓친다). 홀수 번이라 끝은 건너편이라 마지막에 되옮긴다.
                 scratch._listKeySwap.resize( count );
                 scratch._listOrderSwap.resize( count );
                 uint32* pKeyFrom   = scratch._listKey.data();

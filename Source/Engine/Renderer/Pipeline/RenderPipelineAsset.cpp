@@ -82,7 +82,7 @@ namespace sw
                 listAccess.push_back( RenderGraphResourceAccess{ hashed_string( name.c_str() ), access, viewable } );
             }
         };
-        // 컴퓨트 종류의 텍스처 입력은 RW 텍스처로 읽는다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다 — 깊이 히스토리를 읽는 HZB 짓기 · GPU 입자) — UAV 읽기다.
+        // 컴퓨트 종류의 텍스처 입력은 RW 텍스처로 읽는다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다. 깊이 히스토리를 읽는 HZB 짓기 · GPU 입자). UAV 읽기다.
         const RenderGraphAccess textureInputAccess = getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kCompute ) ? RenderGraphAccess::UnorderedAccessRead : RenderGraphAccess::ShaderRead;
         append( pass._listInput, RenderGraphAccess::ShaderRead, textureInputAccess );
         append( pass._listOutput, RenderGraphAccess::UnorderedAccess, RenderGraphAccess::RenderTarget );
@@ -827,7 +827,7 @@ namespace sw
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
                     // 컬러를 그리는 패스(표의 kDrawsDeclaredColor — 지오메트리 · 하늘 · 외곽선 껍질 · TAA · 일반 풀스크린)는 선언한 컬러 출력에 그린다.
-                    // 실행은 이름으로 타깃을 짐작하지 않으므로 선언이 없으면 그릴 곳이 없다(옛 짐작은 없는 첨부의 핸들 0 — 그때는 백버퍼 — 를 열었다).
+                    // 실행은 이름으로 타깃을 짐작하지 않으므로 선언이 없으면 그릴 곳이 없다(짐작하면 없는 첨부의 핸들 0, 곧 백버퍼를 연다).
                     const bool bDrawsColor = isViewPassType( pass._type ) &&
                                              getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kDrawsDeclaredColor );
                     if ( bDrawsColor && pass._listResolvedColorOutput.empty() )
@@ -972,7 +972,7 @@ namespace sw
             }
 
             /**
-             * @brief 3-3 · 3-4) Canvas(화면 2D)는 주 출력(Swapchain)에 그리고 Swapchain 을 쓰는 **마지막** 패스여야 하며, 하늘은 뎁스 첨부가 있어야 한다.
+             * @brief 3-3 · 3-4) Canvas(화면 2D)는 주 출력(Swapchain)에 그리고 Swapchain 을 쓰는 마지막 패스여야 하며, 하늘은 뎁스 첨부가 있어야 한다.
              * @details 뒤에 Swapchain 을 쓰는 패스가 있으면 UI 가 덮이고, 스크린샷 캡처 → 백버퍼 복사(마지막 Swapchain 쓰기 패스 끝)가 UI 앞에서 일어난다.
              *          UI 가 없는 파이프라인(Canvas 없음)은 허용한다. 하늘은 깊이 테스트로 빈 곳만 칠한다 — 뎁스 첨부가 없으면 장면 위를 통째로 덮는다.
              */

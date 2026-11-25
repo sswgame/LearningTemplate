@@ -641,7 +641,7 @@ namespace sw
         Internal::appendRow( _listParamWord, poolSize, 0u, BitUtil::floatToBits( emitter._meshRadius ), BitUtil::floatToBits( emitter._sizeScale ) );
         Internal::appendMatrixRows( _listParamWord, emitter._world );
         static_assert( SW_VFX_MESH_ROW_FIRST_SLOT == 5u, "the mesh header rows above must match vfx_simulate.hlsli" );
-        // 입자 인스턴스 칸(0 ~ 풀 - 1, 입자가 수명 내내 쥔다 — vfx_simulate.hlsl 의 빈 칸 스택)마다 GPUScene 칸 — 행 하나에 넷. 배치 항목 수는 풀 크기와 같다(`VFXComponent::rebuildMeshEmitters`). 모자란 칸은 쓰지 않는다.
+        // 입자 인스턴스 칸(0 ~ 풀 - 1, 입자가 수명 내내 쥔다, vfx_simulate.hlsl 의 빈 칸 스택)마다 GPUScene 칸이 있고 행 하나에 넷. 배치 항목 수는 풀 크기와 같다(`VFXComponent::rebuildMeshEmitters`). 모자란 칸은 쓰지 않는다.
         const uint32 slotRowCount = ( poolSize + Internal::kWordsPerRow - 1u ) / Internal::kWordsPerRow;
         for ( uint32 slotRow = 0; slotRow < slotRowCount; ++slotRow )
         {

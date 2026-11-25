@@ -3,19 +3,19 @@
  * @brief 모듈(게임 · 키트)이 렌더러를 확장하는 계약입니다 — 확장 객체(`IRenderExtension`), 패스 빌더(`ExtensionPassBuilder`), 패스 실행 컨텍스트(`ExtensionPassContext`),
  *        씬 프록시(`IExtensionSceneProxy`)입니다.
  * @details 언리얼의 `ISceneViewExtension` + `FRDGBuilder::AddPass` + `FPrimitiveSceneProxy` 와 같은 선입니다.
- *          - **확장 훅**: 모듈이 `IRenderExtension` 을 `RenderExtensionRegistration` 으로 등록하면 그 자리에서 한 번 `declarePasses` 를 부릅니다.
- *          - **패스 추가**: `declarePasses` 안에서 `ExtensionPassBuilder::addPass( 이름 · 읽는 첨부 · 쓰는 첨부 · 프로그램, 실행 콜백 )` 로 패스를 넣습니다. 패스는 파이프라인 XML 의 패스와
- *            **같은 `RenderGraph` 에 들어가** 같은 위상 정렬 · 배리어 추론을 탑니다 — 읽기 · 쓰기 선언이 곧 의존성이고, 상태 전이는 엔진이 넣습니다. 임시 텍스처는
+ *          - 확장 훅: 모듈이 `IRenderExtension` 을 `RenderExtensionRegistration` 으로 등록하면 그 자리에서 한 번 `declarePasses` 를 부릅니다.
+ *          - 패스 추가: `declarePasses` 안에서 `ExtensionPassBuilder::addPass( 이름 · 읽는 첨부 · 쓰는 첨부 · 프로그램, 실행 콜백 )` 로 패스를 넣습니다. 패스는 파이프라인 XML 의 패스와
+ *            같은 `RenderGraph` 에 들어가 같은 위상 정렬 · 배리어 추론을 탑니다 — 읽기 · 쓰기 선언이 곧 의존성이고, 상태 전이는 엔진이 넣습니다. 임시 텍스처는
  *            `createTexture` 로 요청하면 엔진이 뷰의 트랜지언트 풀에 만듭니다.
- *          - **기하**: 게임 스레드의 컴포넌트와 렌더 스레드의 `IExtensionSceneProxy` 가 갈립니다. 게임 스레드는 값을 담은 갱신 함수를 올리고(`ExtensionSceneProxyRegistration::update`),
+ *          - 기하: 게임 스레드의 컴포넌트와 렌더 스레드의 `IExtensionSceneProxy` 가 갈립니다. 게임 스레드는 값을 담은 갱신 함수를 올리고(`ExtensionSceneProxyRegistration::update`),
  *            렌더 스레드가 프레임 시작에 그것을 프록시에 적용합니다. 프록시는 `collectDrawElements` 로 메시 배치(`ExtensionDrawElement`)를 내고, 그리는 것은 렌더러입니다.
- *          - **핫 리로드**: 등록을 푸는 함수는 먼저 렌더 스레드의 모듈 구간(`RenderExtensionRegistry::RenderScope`)이 끝나기를 기다린다(flush). 그 뒤에는 렌더 스레드가 모듈 코드를
+ *          - 핫 리로드: 등록을 푸는 함수는 먼저 렌더 스레드의 모듈 구간(`RenderExtensionRegistry::RenderScope`)이 끝나기를 기다린다(flush). 그 뒤에는 렌더 스레드가 모듈 코드를
  *            다시 부르지 않는다. 프레임이 끝나면 엔진이 모듈이 넣은 콜백을 모두 버린다(람다의 소멸 코드도 모듈에 있다).
  *
  *          다른 상용 엔진과의 차이 — 유니티 SRP `ScriptableRendererFeature` · 고도 `CompositorEffect` 도 같은 방향(렌더 스레드 훅 + 선언 + 실행 콜백)이다. 이 엔진의 패스 목록은 XML 이
  *          정하므로 훅 위치(`ExtensionHookStage`)는 XML 패스에 붙인 고정 지점 셋이다(언리얼은 후처리 패스 열거자마다 구독 지점이 있다).
  *
- *          모듈 코드는 **렌더 스레드(병렬 기록 워커)에서 돈다.** `ExtensionPassContext` 는 커맨드 리스트 · 풀 · 상태를 내주지 않고 검사한 연산(풀스크린 · 요소 그리기)만 연다.
+ *          모듈 코드는 렌더 스레드(병렬 기록 워커)에서 돈다. `ExtensionPassContext` 는 커맨드 리스트 · 풀 · 상태를 내주지 않고 검사한 연산(풀스크린 · 요소 그리기)만 연다.
  */
 #pragma once
 #include "Core/Container/span.h"
@@ -213,7 +213,7 @@ namespace sw
 
     /**
      * @class IExtensionSceneProxy
-     * @brief 렌더 스레드 쪽 기하 프록시입니다(언리얼 `FPrimitiveSceneProxy`). 게임 스레드의 컴포넌트가 가진 값을 **복사해** 이 객체에 넘기고, 렌더 스레드는 이 객체만 읽습니다.
+     * @brief 렌더 스레드 쪽 기하 프록시입니다(언리얼 `FPrimitiveSceneProxy`). 게임 스레드의 컴포넌트가 가진 값을 복사해 이 객체에 넘기고, 렌더 스레드는 이 객체만 읽습니다.
      * @details 프록시는 모듈이 만들고(`ExtensionSceneProxyRegistration`) 레지스트리가 소유합니다. `collectDrawElements` 는 렌더 스레드에서 프레임당 한 번 불리고, 프록시 상태는
      *          `update` 로 올린 함수만 바꿉니다(프레임 시작에 렌더 스레드가 적용 — 렌더 스레드가 읽는 동안 게임 스레드가 쓰는 일이 없다).
      */

@@ -1,7 +1,7 @@
 /**
  * @file GPUSceneSlotBuffer.h
  * @brief GPUScene 인스턴스 버퍼의 칸 순 CPU 사본과 바뀐 칸 목록입니다(렌더 스레드).
- * @details GPU 의 인스턴스 버퍼는 **칸 순**이다 — 원소 번호가 GPUScene 칸(= 레지스트리 칸 = 빌더의 후보 번호)이고, 빈 칸은 배치 번호가 무효인 구멍이다
+ * @details GPU 의 인스턴스 버퍼는 칸 순이다 — 원소 번호가 GPUScene 칸(= 레지스트리 칸 = 빌더의 후보 번호)이고, 빈 칸은 배치 번호가 무효인 구멍이다
  *          (언리얼 GPUScene 의 영속 프리미티브 · 인스턴스 칸, 유니티 GPU Resident Drawer 의 인스턴스 칸). 그리는 순서(배치 순)는 따로 든 번호 목록
  *          (차례 → 칸, `GPUSceneSnapshot::_pListInstanceSlot`)이 정한다. 그래서 배치를 다시 나눠 그리는 순서가 바뀌어도 칸의 내용은 그대로라 올리지 않고,
  *          내용이 바뀐 칸만 흩어 올린다(scatter).

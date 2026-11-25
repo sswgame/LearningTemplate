@@ -3,7 +3,7 @@
  * @brief 그래프 밖에서 사는 자원(이름 · 뷰 칸) → RHI 핸들 · 처음 접근 표입니다. 프레임 그래프의 레벨 콜백이 전이를, 패스 몸통이 핸들을 여기서 찾는다.
  * @details 언리얼 RDG 의 `RegisterExternalBuffer` 가 돌려주는 버퍼 참조, 유니티 RenderGraph `ImportBuffer` 자리다. 주인(HZB · 컬링 인자 · 라이트 그리드 · 입자)이
  *          프레임 시작에 등록하고, 패스는 선언한 접근 핸들로만 핸들을 받는다(`RenderGraphPassContext::getBuffer`). 프레임 패스 하나가 모든 뷰를 도므로 한 이름은
- *          뷰마다 칸(`slot` — 주 시점 0, 추가 뷰 1 부터)을 가진다. 등록하지 않은 이름은 그래프가 전이를 추론해도 아무것도 내지 않는다 — 그 프레임에 일하지 않는 자원이다
+ *          뷰마다 칸(`slot`: 주 시점 0, 추가 뷰 1 부터)을 가진다. 등록하지 않은 이름은 그래프가 전이를 추론해도 아무것도 내지 않는다. 그 프레임에 일하지 않는 자원이다
  *          (등록 조건이 곧 실행 조건 — 패스 몸통은 `RenderGraphPassContext::isRegistered` 로 본다). 뷰 그래프도 같은 표 한 벌을 뷰마다 다시 채워 쓴다
  *          (`FramePassExecutor::registerViewResources` — 칸 0 이 지금 뷰, 이름은 `ViewGraphResource`).
  */

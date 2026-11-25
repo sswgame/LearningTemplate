@@ -79,7 +79,7 @@ namespace sw
 
             /**
              * @brief 프리미티브가 드나들거나 움직인 뒤의 복셀 장면입니다 — 그 사이 바뀐 메시 칸만 다시 모으고(`SceneVoxelizer::updateScene`), 기록이 모자라면 다시 만듭니다.
-             * @details 움직인 칸은 GPUScene 빌더가 지난 프레임에 가져간 더티다(빛을 빌더보다 먼저 모은다) — 격자는 한 프레임 늦게 따라간다. 가리개가 아니거나 격자 밖인 칸의 변화(움직이는 투사체 스폰 · 소멸, 반투명, 먼 곳)는 장면을 그대로 둔다 — 같은 포인터라 GPU 가 다시 칠하지도 않는다.
+             * @details 움직인 칸은 GPUScene 빌더가 지난 프레임에 가져간 더티다(빛을 빌더보다 먼저 모은다). 격자는 한 프레임 늦게 따라간다. 가리개가 아니거나 격자 밖인 칸의 변화(움직이는 투사체 스폰 · 소멸, 반투명, 먼 곳)는 장면을 그대로 둔다 — 같은 포인터라 GPU 가 다시 칠하지도 않는다.
              *          모은 것이 바뀌면 사본을 고쳐 새 포인터로 넣는다(지난 장면은 렌더 스레드가 칠한 장면으로 들고 있다).
              */
             static shared_ptr<const SceneVoxelScene> refreshVoxelScene( shared_ptr<const SceneVoxelScene> pCached, const PrimitiveRegistry& primitives, Material* pSceneDefault,
@@ -312,7 +312,7 @@ namespace sw
         }
 
         const ComponentRegistry& registry = pScene->getObjectManager()->getComponentRegistry();
-        // 그림자 플래그는 그림자 행렬을 만드는 쪽(Engine, FrameRenderer)과 **같은 빛**에 붙어야 한다. 고르는 규칙은 씬의 한 함수다.
+        // 그림자 플래그는 그림자 행렬을 만드는 쪽(Engine, FrameRenderer)과 같은 빛에 붙어야 한다. 고르는 규칙은 씬의 한 함수다.
         const DirectionalLightComponent* pShadowLight = DirectionalLightComponent::findShadowCasting( pScene->getObjectManager() );
 
         // 종류 순서로 돈다. 방향광이 0 이라 앞에 온다(상한을 넘으면 뒤에서부터 잘린다). 원소의 필드는 빛이 스스로 쓴다
@@ -375,7 +375,7 @@ namespace sw
             pOutProbeElement->finish();
         }
 
-        // 2D 그림자 가림막 세그먼트는 빛 **뒤에** 붙는다. 상한을 넘으면 뒤에서부터 잘리므로 빛보다 가림막이 먼저 빠진다(lighting_2d.hlsli).
+        // 2D 그림자 가림막 세그먼트는 빛 뒤에 붙는다. 상한을 넘으면 뒤에서부터 잘리므로 빛보다 가림막이 먼저 빠진다(lighting_2d.hlsli).
         pScene->getObjectManager()->collectServiceLights( SceneLightPhase::ShadowOccluders, outList );
     }
 
@@ -505,7 +505,7 @@ namespace sw
                 const bool    bProbe  = lightType == shaderslot::kLightTypeProbeVolume || lightType == shaderslot::kLightTypeReflectionProbe;
                 const float32 power   = bProbe ? 1.0f : MathUtil::max( head._colorIntensity._w, 0.0f ) * MathUtil::max( head._colorIntensity._x, MathUtil::max( head._colorIntensity._y, head._colorIntensity._z ) );
                 const float32 minimum = MathUtil::max( radius * GPULightBufferInternal::kCullMinDepthFraction, MathUtil::kEpsilon );
-                // 뷰가 없으면 깊이 1 — 세기 × 반경이다. 있으면 닿는 뷰 가운데 가장 가까운 깊이(클립 w — 원근에서 뷰 깊이, 직교에서 1)로 화면 크기를 어림한다.
+                // 뷰가 없으면 깊이 1 이라 세기 × 반경이다. 있으면 닿는 뷰 가운데 가장 가까운 깊이(클립 w: 원근에서 뷰 깊이, 직교에서 1)로 화면 크기를 어림한다.
                 float32 depth = listFrustum.empty() ? 1.0f : -1.0f;
                 for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( listFrustum.size() ); ++viewIndex )
                 {
@@ -540,7 +540,7 @@ namespace sw
             keptCount += unit._count;
         }
 
-        // 남은 단위를 원래 순서로 앞으로 당긴다(종류별 순서 — 빛 · 프로브 · 가림막 — 를 셰이더가 그대로 본다).
+        // 남은 단위를 원래 순서로 앞으로 당긴다(종류별 순서인 빛 · 프로브 · 가림막을 셰이더가 그대로 본다).
         outListSourceToKept.assign( sourceCount, constant::invalid_index::kUint32 );
         uint32 writeIndex = 0;
         for ( uint32 unitIndex = 0; unitIndex < static_cast<uint32>( listUnit.size() ); ++unitIndex )
@@ -568,7 +568,7 @@ namespace sw
 
     bool GPULightBuffer::uploadLightList( IRHIDevice* pDevice, uint32 cpuCount )
     {
-        // 업로드 목록: [CPU 라이트][GPU 구간 — 죽은 라이트][그림자 타일]. 점광과 스폿 그림자 타일 원소는 구간 뒤에 붙는다 — 셰이더는 g_SwLightCount(= 둘의 합) + 라이트의
+        // 업로드 목록: [CPU 라이트][GPU 구간: 죽은 라이트][그림자 타일]. 점광과 스폿 그림자 타일 원소는 구간 뒤에 붙는다. 셰이더는 g_SwLightCount(= 둘의 합) + 라이트의
         // params.w 로 찾는다. 죽은 라이트는 반경 0 의 점광이라 그리드에 들지 않는다(light_grid.hlsl classifyLight) — 컴퓨트가 이번 프레임에 쓰지 못한 슬롯이 낡은 값으로 남지 않는다.
         _listUploadScratch.assign( _listLightScratch.begin(), _listLightScratch.begin() + cpuCount );
         GPULight deadLight{};

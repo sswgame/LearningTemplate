@@ -54,7 +54,7 @@ namespace sw
             _listPendingCopy.push_back( PendingCopy{ _vertexBuffer._buffer, dstAttribute, source, mesh.getAttributeStreamOffset(), static_cast<uint64>( count ) * attributeStride, firstVertex } );
             return true;
         }
-        // 프록시가 없는 동적 메시(프레임마다 새 메시 — 천) — CPU 정점을 쥔 메시만 여기 온다(절차 메시는 CPU 정점을 놓지 않는다). GPU 전용 버퍼라 스테이징으로 올린다.
+        // 프록시가 없는 동적 메시(프레임마다 새 메시, 예: 천). CPU 정점을 쥔 메시만 여기 온다(절차 메시는 CPU 정점을 놓지 않는다). GPU 전용 버퍼라 스테이징으로 올린다.
         const MeshCPUView cpu = mesh.getCPUView();
         if ( cpu.isAvailable() == false || cpu.getVertices().empty() )
             return false;

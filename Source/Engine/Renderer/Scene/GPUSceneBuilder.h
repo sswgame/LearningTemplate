@@ -2,7 +2,7 @@
  * @file GPUSceneBuilder.h
  * @brief 게임 스레드가 씬의 프리미티브(MeshComponent, 인스턴스 배치 항목)를 모아 `GPUSceneSnapshot` 을 만듭니다.
  * @details 렌더 스레드 쪽(`GPUScene`)과는 스냅샷 타입으로만 만난다. 여기에는 GPU 핸들이 하나도 없고, 저쪽에는 씬이 없다.
- *          프레임 간에 유지되는 것은 재구축 여부를 판단하는 캐시(후보 집합, 카메라, 세대)와 **머티리얼 원소 레지스트리**
+ *          프레임 간에 유지되는 것은 재구축 여부를 판단하는 캐시(후보 집합, 카메라, 세대)와 머티리얼 원소 레지스트리
  *          (언리얼 GPUScene 의 영속 ID 에 해당, `GPUMaterialRegistry`)다. 스냅샷은 매 프레임 복사해 내보내고, 기준 데이터는 여기에 남는다.
  *          투명 정렬 규칙(`GPUTransparentSorter`), 머티리얼 레지스트리, 스킨 팔레트 옮기기(`GPUSkinPaletteCollector`)는 값 멤버 클래스로 두고 직접 부른다.
  */
@@ -110,7 +110,7 @@ namespace sw
          * @brief 프리미티브(MeshComponent, 인스턴스 배치 항목)를 모아 CPU 스냅샷을 만듭니다(게임 스레드).
          * @details 내용과 카메라가 이전과 같으면 재구축을 건너뛴다. 카메라만 바뀌면
          *          투명 재정렬과 배치 재구성만 한다. 입자 그리기(`populateParticleBatches`)는 건너뛰기와 무관하게 매번 다시 모은다.
-         * @note 인스턴스 채우기(`GT.GPUScene.build.fill`)는 이 스레드에서 한다. 워커로 나눠 봤지만 **모든 크기에서 졌다**.
+         * @note 인스턴스 채우기(`GT.GPUScene.build.fill`)는 이 스레드에서 한다. 워커로 나눠 봤지만 모든 크기에서 졌다.
          *       원소당 일이 필드 몇 개 복사라서 디스패치와 대기 비용이 일 자체보다 훨씬 크다
          *       (400개 358µs → 1µs, 20,000개 219µs → 99µs). 다시 나누자고 제안하기 전에 이 측정값을 확인한다.
          *       수집과 전체 제자리 갱신은 임계값을 넘으면 병렬로 돈다(`kParallelCollectPrimitiveCount`, `refreshInstancesInPlace`).
@@ -123,7 +123,7 @@ namespace sw
          */
         void setTransparentSortAxis( const float3& axis );
         /**
-         * @brief 추가 뷰마다 투명 꼬리를 그 뷰의 시점으로 다시 정렬해 스냅샷에 싣습니다. `populateFromScene` **뒤**, 내보내기 전에 부릅니다.
+         * @brief 추가 뷰마다 투명 꼬리를 그 뷰의 시점으로 다시 정렬해 스냅샷에 싣습니다. `populateFromScene` 뒤, 내보내기 전에 부릅니다.
          * @details 씬이 그대로인 프레임에도 부른다. 뷰 카메라만 움직여도 순서가 바뀌기 때문이다. 그리지 않는 뷰(`_bRender` 0)는 건너뛴다.
          *          정렬 키는 주 뷰와 같은 규칙(`GPUTransparentSorter::makeTransparentSortKey`, `isDrawnBefore`)을 쓴다. 입자 그리기도 그 뷰의 시점으로 정렬해
          *          그 뷰의 배치 순서 안에 자리를 준다(`GPUViewTransparentOrder::_listParticleSlot`). 메시 투명이 없으면 입자 자리만 싣는다.
@@ -139,13 +139,13 @@ namespace sw
         void exportCPUSnapshot( GPUSceneSnapshot& outSnapshot );
         /**
          * @brief 이번 빌드가 그릴 메시 중 아직 업로드되지 않은 것을 업로드 큐에 올립니다(게임 스레드).
-         * @details 렌더 스레드가 처음 그릴 때 만들 것을 **그리기 전에** 만들어 두려는 것이다. 큐가 미리
+         * @details 렌더 스레드가 처음 그릴 때 만들 것을 그리기 전에 만들어 두려는 것이다. 큐가 미리
          *          만들어 두면 RT 의 `Mesh::initRHI` 호출은 핸들을 읽는 일이 되고, 큐가 처리하지 못한 것은 RT 가
          *          그 자리에서 만든다. 앞당기는 장치일 뿐 유일한 경로가 아니다.
          */
         void requestGPUUploads( GPUUploadQueue& queue ) const;
         /**
-         * @brief 불투명 배치를 머티리얼이 아니라 **셰이더 퍼뮤테이션**(셰이더 경로 + 정적 define)으로 묶을지 정합니다(언리얼 GPUScene 방식).
+         * @brief 불투명 배치를 머티리얼이 아니라 셰이더 퍼뮤테이션(셰이더 경로 + 정적 define)으로 묶을지 정합니다(언리얼 GPUScene 방식).
          * @details 머티리얼 파라미터는 인스턴스의 materialIndex 로 버퍼에서 읽는다. 그래서 텍스처를 인덱스로 고를 수 있는 백엔드
          *          (DX12, Vulkan 의 네이티브 bindless)에서는 같은 메시와 같은 퍼뮤테이션이면 머티리얼이 달라도 드로우 하나로 그린다.
          *          DX11 과 GL 은 머티리얼 텍스처를 t16..t31 슬롯에 바인딩해야 해서 배치가 머티리얼 단위로 남는다. FrameRenderer 와 Engine 가
@@ -171,7 +171,7 @@ namespace sw
         /** @brief 칸 순 인스턴스 목록을 반환합니다(원소 번호 = 후보 번호, 실리지 않은 칸은 구멍). */
         const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
         /**
-         * @brief 렌더 프리미티브 번호(`PrimitiveComponent::getPrimitiveIndex`)가 지금 스냅샷에서 차지한 **불투명** 인스턴스 칸을 돌려줍니다. 없으면 비어 있습니다.
+         * @brief 렌더 프리미티브 번호(`PrimitiveComponent::getPrimitiveIndex`)가 지금 스냅샷에서 차지한 불투명 인스턴스 칸을 돌려줍니다. 없으면 비어 있습니다.
          * @details 화면 마커 투영 컴퓨트가 GPUScene 인스턴스 변환을 읽는 대응입니다(`CanvasMarkerRecord::_instanceSlot`). 이번 프레임 수집(`populateFromScene`) 뒤 · 다음 수집 전에만 쓴다.
          *          프리미티브 → 후보 → 인스턴스 칸의 두 표를 따라가고, 역표(`_listInstanceSrcIndex`)가 같은 후보를 가리키는지 되짚어 어긋난 표(수집 중 · 걸러짐)를 거른다.
          *          투명 꼬리는 프레임마다 다시 정렬되어 칸이 흔들리므로 풀지 않는다(그 마커는 월드 점을 쓴다).
@@ -232,7 +232,7 @@ namespace sw
             float32  _localBoundsRadius{ 1.0f }; ///< 메시 공간 반지름. 트랜스폼만 바뀐 프레임에는 이 값으로 월드 반지름을 다시 만든다.
             float3   _localBoundsCenter{};       ///< 메시 공간 구 중심(메시 상자 중심). 트랜스폼만 바뀐 프레임에는 이 점으로 월드 중심을 다시 만든다.
             /**
-             * @brief 그리는 메시 구간(`MeshSection`)의 첫 인덱스와 인덱스 수입니다. 수가 0 이면 메시 전체입니다. **배치 키**입니다 — 같은 메시의 다른 구간은
+             * @brief 그리는 메시 구간(`MeshSection`)의 첫 인덱스와 인덱스 수입니다. 수가 0 이면 메시 전체입니다. 배치 키입니다 — 같은 메시의 다른 구간은
              *        머티리얼이 같아도 다른 배치(다른 인덱스 범위)다(`MeshComponent::findDrawSection`).
              */
             uint32                       _sectionFirstIndex{ 0 };
@@ -245,7 +245,7 @@ namespace sw
             /// @brief GPU 회전 애니메이션 시드입니다(0이면 없음). MeshComponent 가 주고 GPUInstance::_spinSeed 로 전달됩니다.
             uint32 _spinSeed{ 0 };
             /**
-             * @brief 투명 큐의 정렬 키입니다(`Render2DSettings::makeSortKey`: 정렬 레이어와 레이어 안 순서, 0이면 기본). **내용**이며 배치 키가 아닙니다.
+             * @brief 투명 큐의 정렬 키입니다(`Render2DSettings::makeSortKey`: 정렬 레이어와 레이어 안 순서, 0이면 기본). 내용이며 배치 키가 아닙니다.
              * @details 투명 정렬(`sortTransparent`)의 첫 번째 키다. 바뀌면 그 프레임의 정렬이 순서를 바꾸고 투명 꼬리를 다시 방출한다.
              */
             uint32 _sortKey{ 0 };
@@ -259,23 +259,23 @@ namespace sw
              */
             float32 _appearance{ 1.0f };
             /**
-             * @brief 스프라이트 프레임과 색입니다(GPUInstance::_sprite 로 전달됩니다). **내용**이며 배치 키가 아닙니다.
+             * @brief 스프라이트 프레임과 색입니다(GPUInstance::_sprite 로 전달됩니다). 내용이며 배치 키가 아닙니다.
              * @details `operator==` 에는 포함되고 `hasSameBatchKey` 에는 포함되지 않는다. 프레임만 넘긴 스프라이트는 배치를 다시 나누지 않고
              *          제자리 갱신(더티 구간 하나)으로 끝난다. 키에 넣으면 프레임마다 정렬과 나누기를 다시 하게 된다.
              */
             GPUSpriteInstanceData _sprite{};
-            /** @brief 인스턴스 사용자 값입니다(GPUInstance::_customData 로 전달됩니다). 스프라이트 칸과 같이 **내용**이며 배치 키가 아닙니다. */
+            /** @brief 인스턴스 사용자 값입니다(GPUInstance::_customData 로 전달됩니다). 스프라이트 칸과 같이 내용이며 배치 키가 아닙니다. */
             InstanceCustomData _customData{};
             /**
-             * @brief (셰이더 경로 + define) 해시입니다. **어느 PSO 로 그릴지**를 정하는 값입니다.
-             * @details 배치 키에 들어가야 한다. 머티리얼과 인스턴스 **포인터가 그대로여도** 인스턴스의
+             * @brief (셰이더 경로 + define) 해시입니다. 어느 PSO 로 그릴지를 정하는 값입니다.
+             * @details 배치 키에 들어가야 한다. 머티리얼과 인스턴스 포인터가 그대로여도 인스턴스의
              *          키워드, 멀티컴파일, 품질을 바꾸면 이 값이 바뀌고, 그러면 다른 셰이더로 그려야 한다.
              *          이 값이 키에 없으면 `hasSameBatchKey` 가 "그대로" 라고 답해 배치가 다시 나뉘지 않고,
-             *          **바뀐 퍼뮤테이션이 화면에 반영되지 않는다**(런타임에 정적 스위치를 바꾸는 경로가 조용히 죽는다). 수집에서 한 번 구해 두면 나누기와 정렬도 다시 구하지 않는다.
+             *          바뀐 퍼뮤테이션이 화면에 반영되지 않는다(런타임에 정적 스위치를 바꾸는 경로가 조용히 죽는다). 수집에서 한 번 구해 두면 나누기와 정렬도 다시 구하지 않는다.
              */
             uint64 _permutationHash{ 0 };
             /**
-             * @brief 이 후보를 GPU 인스턴스 LOD 그룹(`GPUMeshBatch::_lodLevelCount`)으로 그리면 그 메시의 내용 토큰(`Mesh::getContentID`), 아니면 빈 토큰입니다. **배치 키**입니다.
+             * @brief 이 후보를 GPU 인스턴스 LOD 그룹(`GPUMeshBatch::_lodLevelCount`)으로 그리면 그 메시의 내용 토큰(`Mesh::getContentID`), 아니면 빈 토큰입니다. 배치 키입니다.
              * @details 그룹이면 구간은 LOD 0(메시 전체)이고 단계는 컬링이 고른다. 메시가 제자리에서 다시 읽혀 단계가 바뀌면(`Mesh::setLODs`) 내용 토큰이 달라 배치를 다시 나눈다(후보가 토큰을 들어 주소 재사용이 없다).
              *          메시만 바뀐 교체(`hasSameBatchKeyExceptMesh`)는 그룹을 받지 않는다 — 단계 배치가 메시의 정점 구간을 굳히기 때문이다.
              */
@@ -307,9 +307,9 @@ namespace sw
              *          (1) 바이트마다 곱셈이 들어가 비교 자체가 수집 비용에 맞먹는다.
              *          (2) 해시가 충돌하면 바뀐 씬을 "그대로" 로 보고 화면이 멈추는데, 재현이 사실상 불가능한 버그가 된다.
              *          어차피 같은 바이트를 다 읽어야 한다면 지문을 만들지 말고
-             *          **그냥 비교**하는 것이 더 싸고 정확하다. 다르면 즉시 빠져나올 수도 있다.
+             *          그냥 비교하는 것이 더 싸고 정확하다. 다르면 즉시 빠져나올 수도 있다.
              * @note 부동소수는 float3 와 float4x4 의 `operator==` (nearEqual, 엡실론 비교)가 아니라
-             *       **비트 단위로** 비교한다. 엡실론 비교는 매 프레임 엡실론 미만으로 움직이는 물체를
+             *       비트 단위로 비교한다. 엡실론 비교는 매 프레임 엡실론 미만으로 움직이는 물체를
              *       영원히 "안 바뀜" 으로 보고 화면에 오차를 누적시킨다. 반대로 비트 비교가 틀리는
              *       경우(-0.0 과 0.0 을 다르게 봄)는 불필요한 재구축일 뿐이라 안전하다.
              *       비교 대상 블록은 모두 float 이 연속이라 패딩이 끼지 않는다.
@@ -333,7 +333,7 @@ namespace sw
 
             /**
              * @brief 배치가 묶이는 기준(메시, 머티리얼, 인스턴스, 블렌드, 퍼뮤테이션 해시, 컬 반전)이 같은지 확인합니다. 트랜스폼은 보지 않습니다.
-             * @details 불투명 배치는 이 여섯 가지로만 나뉘고 정렬된다. 컬 반전은 월드 행렬식의 부호뿐이라 이동, 회전, 양수 스케일로는 바뀌지 않는다. 물체가 **움직이기만** 했다면
+             * @details 불투명 배치는 이 여섯 가지로만 나뉘고 정렬된다. 컬 반전은 월드 행렬식의 부호뿐이라 이동, 회전, 양수 스케일로는 바뀌지 않는다. 물체가 움직이기만 했다면
              *          배치 구성은 한 글자도 바뀌지 않으므로 다시 나누고 다시 정렬할 이유가 없다.
              *          움직이는 씬에서 남는 유일한 O(N log N) 이 그 정렬이다.
              */
@@ -359,7 +359,7 @@ namespace sw
 
         /**
          * @brief 전체 수집이 프리미티브 슬롯마다 남기는 표시(비트)입니다.
-         * @details 워커가 자기 슬롯을 채우면서 **지난 후보와의 비교까지** 한 번에 끝낸다. 직렬 패스로
+         * @details 워커가 자기 슬롯을 채우면서 지난 후보와의 비교까지 한 번에 끝낸다. 직렬 패스로
          *          해시 기록과 배치 키 비교를 하려고 같은 슬롯들을 다시 지나가지 않는다.
          *          해시는 (머티리얼, 인스턴스, 퍼뮤테이션 세대)의 함수라 셋이 같으면 지난 값이 그대로 맞다.
          *          Release 에서 큐브 8000개가 모두 이동하는 300프레임을 2회 측정한 결과, 빌드 p50 이 786/851 → 720/720µs, 배치 키 비교가
@@ -393,8 +393,8 @@ namespace sw
             MaterialInstance* _pInstance{ nullptr };
             /**
              * @brief (셰이더 경로 + define) 해시입니다. 배치가 쓸 PSO 를 정합니다.
-             * @details **대표 머티리얼 포인터로는 대신할 수 없다.** 합치기가 켜지면 대표는 "이 퍼뮤테이션을
-             *          처음 가져온 머티리얼" 인데, 퍼뮤테이션이 **인스턴스**에서 오면 부모가 같아 대표도
+             * @details 대표 머티리얼 포인터로는 대신할 수 없다. 합치기가 켜지면 대표는 "이 퍼뮤테이션을
+             *          처음 가져온 머티리얼" 인데, 퍼뮤테이션이 인스턴스에서 오면 부모가 같아 대표도
              *          같아진다. 서로 다른 셰이더로 그려야 할 것들이 한 배치로 합쳐진다. 해시를 키에 직접
              *          넣어야 갈라진다(그렇지 않으면 런타임에 인스턴스의 정적 스위치를 바꾸는 경로가 조용히 죽는다).
              */
@@ -499,7 +499,7 @@ namespace sw
         /**
          * @brief 부분 업로드로 나눌 구간 수의 상한입니다. 넘으면 전체를 올립니다.
          *
-         * @details 구간들은 **한 번의 호출**로 올라가므로(`updateStructuredBufferRegions`) 비용이 구간
+         * @details 구간들은 한 번의 호출로 올라가므로(`updateStructuredBufferRegions`) 비용이 구간
          *          수에 비례하지 않는다. 그래도 상한을 두는 이유는 두 가지다. 구간 목록 자체가 스냅샷에
          *          실려 복사되고, 변경이 배열 전체에 고르게 흩어졌다면 통째로 올리는 것이 단순하고 싸다.
          */
@@ -527,7 +527,7 @@ namespace sw
         /**
          * @class BatchElementTable
          * @brief 배치마다 그 배치의 인스턴스가 쓰는 머티리얼 원소 인덱스(중복 없음)입니다. 배치 하나에 구간 하나이며 스냅샷의 배치 목록과 나란하다.
-         * @details 회수 시계 스탬프는 **원소**에 찍는 것이라 인스턴스 8000개가 아니라 (배치, 원소) 쌍만 돌면 된다.
+         * @details 회수 시계 스탬프는 원소에 찍는 것이라 인스턴스 8000개가 아니라 (배치, 원소) 쌍만 돌면 된다.
          *          합치기가 꺼져 있으면 배치당 원소 하나이고, 켜져 있어도 배치당 머티리얼 종류 수만큼이다.
          *          항목과 구간을 함께 고치는 길은 아래 함수뿐이다. 자르는 위치는 배치 수로만 받고 항목 수는 구간에서 끌어내므로
          *          두 목록이 어긋날 수 없다(전에는 불투명 항목 수를 따로 기록해 두고 그 값으로 잘랐다).
@@ -605,15 +605,15 @@ namespace sw
         void populateBatches();
         /**
          * @brief 정렬된 투명 후보를 배치로 방출합니다(populateBatches 의 뒷부분). 불투명 배치 뒤에 이어 붙입니다.
-         * @details 전체 재구축과 **투명 꼬리만 다시 만드는 경로**(`rebuildTransparentTail`)가 이 함수를 함께 쓴다.
+         * @details 전체 재구축과 투명 꼬리만 다시 만드는 경로(`rebuildTransparentTail`)가 이 함수를 함께 쓴다.
          */
         void emitTransparentBatches();
         /**
          * @brief 투명 정렬 순서만 바뀐 프레임에 불투명 접두부는 그대로 두고 투명 꼬리만 다시 방출합니다.
          * @details 투명 인스턴스는 불투명 인스턴스 뒤에 연속으로 놓인다(`GPUSceneSnapshot::getOpaqueInstanceCount`). 접두부는 제자리 갱신이 맡고,
          *          여기서는 꼬리를 잘라 내고 새 순서로 다시 붙인다. 투명 순서만 바뀐 프레임(투명 물체가 흔들리는 씬에서는 거의
-         *          매 프레임)에 **불투명까지** 통째로 다시 만들지 않으려는 것이다.
-         * @note **접두부 갱신과 같은 병렬 구간에서 돈다**(`refreshInstancesInPlace` 의 블록 0). 워커에서 실행될 수도 있다.
+         *          매 프레임)에 불투명까지 통째로 다시 만들지 않으려는 것이다.
+         * @note 접두부 갱신과 같은 병렬 구간에서 돈다(`refreshInstancesInPlace` 의 블록 0). 워커에서 실행될 수도 있다.
          *       쓰기 슬롯의 [0, 불투명 인스턴스 수) 는 워커들이 포인터로 쓰는 중이라 건드리지 않는다. 자르고 뒤에 붙일 뿐이고,
          *       붙일 공간은 호출하는 쪽이 미리 확보해 둔다(재할당이 없다). 접두부 청크가 읽는 것(발행본, raw, 원천 인덱스의 접두부)도
          *       쓰지 않는다. 여기에 접두부를 건드리는 코드를 추가하면 레이스가 생긴다.
@@ -623,7 +623,7 @@ namespace sw
          * @brief 배치 키에 쓸 머티리얼입니다. 합치기가 켜져 있으면 같은 퍼뮤테이션의 대표 머티리얼을, 아니면 그 머티리얼 자신을 반환합니다.
          * @details 대표는 재구축할 때마다 처음 만난 머티리얼이다(_mapShaderRepresentative). 재구축 여부는 후보 자체를 비교해 판단하므로 대표가 바뀌어도 상관없다.
          *          불투명 나누기만 이 함수를 부른다. 투명 방출은 해시가 같다는 것까지 확인한 뒤라 맵 없이 같은 답을 낸다(`emitTransparentBatches`).
-         *          대표는 **퍼뮤테이션 단위**다. 같은 .hlsl 이라도 정적 스위치가 다르면 다른 셰이더이므로 합칠 수 없다.
+         *          대표는 퍼뮤테이션 단위다. 같은 .hlsl 이라도 정적 스위치가 다르면 다른 셰이더이므로 합칠 수 없다.
          */
         Material* batchKeyMaterial( Material* pMaterial, uint64 permutationHash );
         /**
@@ -638,7 +638,7 @@ namespace sw
         /**
          * @brief 씬 서비스가 낸 입자(`ISceneParticleSink`, VFX 는 `SceneVFXProvider`)로 방출기마다 그리기 하나(`GPUParticleBatch`)를 채우고 주 시점에서 먼 것부터 놓습니다.
          * @details 정렬 규칙은 메시 투명 후보와 같다(`GPUTransparentSorter::makeTransparentSortKey` · `isDrawnBefore`, 깊이는 방출기 위치). 입자가 없는 방출기는 싣지 않는다.
-         *          메시 투명 배치(발행된 꼬리)와 비교해 입자마다 주 투명 순서 안의 자리(`GPUSceneSnapshot::_listParticleSlot`)도 정한다. 메시 쪽이 끝난 **뒤** 부른다.
+         *          메시 투명 배치(발행된 꼬리)와 비교해 입자마다 주 투명 순서 안의 자리(`GPUSceneSnapshot::_listParticleSlot`)도 정한다. 메시 쪽이 끝난 뒤 부른다.
          */
         void populateParticleBatches( const GameObjectManager& objects, const float3& cameraPos );
         /**
@@ -700,7 +700,7 @@ namespace sw
 
         /**
          * @brief 프리미티브 하나를 후보로 채웁니다. 그릴 수 없으면(안 보임, 비활성, 메시 없음) `Excluded`, 머티리얼이 초기화 전이면 `MaterialPending` 입니다.
-         * @details **전체 수집과 부분 수집이 이 함수를 함께 쓴다.** 채우는 규칙이 두 곳으로 갈리면
+         * @details 전체 수집과 부분 수집이 이 함수를 함께 쓴다. 채우는 규칙이 두 곳으로 갈리면
          *          부분 갱신만 낡은 필드를 남기는데, 그 화면은 대부분의 프레임에서 멀쩡해 보인다.
          */
         CandidateFillResult fillCandidateFromPrimitive( PrimitiveComponent* pPrimitive, Scene* pScene, DrawCandidate& candidate );
@@ -711,7 +711,7 @@ namespace sw
          * @details 머티리얼이 없으면 인스턴스의 부모 머티리얼을, 그것도 없으면 씬 기본 머티리얼을 쓴다(언리얼의 기본 머티리얼).
          *          인스턴스의 원소 바이트와 퍼뮤테이션은 부모의 레이아웃을 따르므로, 배치의 머티리얼, 그룹, 텍스처, stride 도 부모의
          *          것이어야 한다(씬 기본이 먼저면 인스턴스만 붙은 메시가 두 머티리얼이 섞인 배치가 된다).
-         *          **블렌드 모드는 머티리얼의 속성이다.** 언리얼도 블렌드 모드가 머티리얼 에셋에 있고, 그 값이 셰이더
+         *          블렌드 모드는 머티리얼의 속성이다. 언리얼도 블렌드 모드가 머티리얼 에셋에 있고, 그 값이 셰이더
          *          퍼뮤테이션(불투명, 반투명)을 가른다. 메시가 값을 뒤집을 수 있게 두면 불투명으로 컴파일된 머티리얼을 블렌딩으로
          *          그리는 어긋난 상태가 만들어진다. 그래서 메시 컴포넌트에는 블렌드 칸이 없고, 머티리얼(자기 · 인스턴스 부모 · 씬 기본)이 없는 후보는 싣지 않는다.
          */
@@ -752,7 +752,7 @@ namespace sw
         void moveTransformSlotsWithoutCandidate( uint32 meshCount );
         /**
          * @brief 후보 [begin,end) 를 배치 하나로 방출하고 인스턴스를 작업 배열에 붙입니다(populateBatches 안에서 부릅니다).
-         * @details 불투명과 투명이 **같은 함수**를 쓴다. 따로 두면 한쪽에 넣은 수정(역매핑, 회전 수, 머티리얼 원소)이
+         * @details 불투명과 투명이 같은 함수를 쓴다. 따로 두면 한쪽에 넣은 수정(역매핑, 회전 수, 머티리얼 원소)이
          *          다른 쪽에 반영되지 않는다. 다른 점은 인자로 받는다.
          *          머티리얼 그룹을 정할 머티리얼(불투명은 합치기 대표, 투명은 머리 후보의 것)과 블렌드 모드가 그것이다.
          */
@@ -804,8 +804,8 @@ namespace sw
         /** @brief 변경 기록에서 꺼낸 주인의 작업 배열입니다(정렬 · 중복 없음). */
         vector<const void*> _listChangedOwnerScratch;
         /**
-         * @brief 재구축 중 **퍼뮤테이션 해시**에서 대표 머티리얼을 찾는 맵입니다(배치 키 합치기용).
-         * @details 셰이더 **경로**를 키로 쓰면 forward_lit.hlsl 을 쓰는 유리 머티리얼과 불투명 머티리얼이 한 대표로 합쳐져
+         * @brief 재구축 중 퍼뮤테이션 해시에서 대표 머티리얼을 찾는 맵입니다(배치 키 합치기용).
+         * @details 셰이더 경로를 키로 쓰면 forward_lit.hlsl 을 쓰는 유리 머티리얼과 불투명 머티리얼이 한 대표로 합쳐져
          *          같은 배치가 된다. 배치는 PSO 하나로 그리므로 한쪽 퍼뮤테이션이 통째로 사라진다.
          */
         unordered_map<uint64, Material*> _mapShaderRepresentative;
@@ -818,12 +818,12 @@ namespace sw
         vector<uint32> _listCandidateMaterialElement;
         /**
          * @brief 이번 프레임에 "바뀌었다" 고 표시된 프리미티브의 레지스트리 인덱스입니다.
-         * @details 레지스트리에서 받을 때는 **렌더 상태가** 바뀐 것만 들어 있고(다시 모은다), 부분 수집이 끝나면 `_listTransformDirtyPrimitive` 를
+         * @details 레지스트리에서 받을 때는 렌더 상태가 바뀐 것만 들어 있고(다시 모은다), 부분 수집이 끝나면 `_listTransformDirtyPrimitive` 를
          *          뒤에 이어 붙인다. 채우기와 제자리 갱신은 둘을 구분하지 않는다.
          */
         vector<uint32> _listDirtyPrimitive;
         /**
-         * @brief 이번 프레임에 **월드 행렬만** 바뀐 프리미티브의 레지스트리 인덱스입니다(`PrimitiveRegistry::markTransformDirty`).
+         * @brief 이번 프레임에 월드 행렬만 바뀐 프리미티브의 레지스트리 인덱스입니다(`PrimitiveRegistry::markTransformDirty`).
          * @details 이 프리미티브들은 후보를 다시 채우지 않고 트랜스폼 저장소의 행렬만 옮긴다(`copyCandidateTransforms`). 부분 수집의 임계값(더티가
          *          번호 공간의 4분의 1 미만)에도 이들은 세지 않는다. 큐브 8000개가 모두 움직이는 프레임도 부분 수집이다.
          */
@@ -844,7 +844,7 @@ namespace sw
         vector<uint32> _listScratchBatchCount;
         vector<uint32> _listScratchDirtySlot;
         /**
-         * @brief 레지스트리 칸에서 후보 번호를 찾는 배열입니다. 실린 칸은 **자기 칸 번호**, 실리지 않은 칸은 `kInvalidCandidateIndex` 입니다.
+         * @brief 레지스트리 칸에서 후보 번호를 찾는 배열입니다. 실린 칸은 자기 칸 번호, 실리지 않은 칸은 `kInvalidCandidateIndex` 입니다.
          * @details 후보 배열은 칸 번호로 줄 세운다(구멍 있음). 레지스트리 칸이 고정(프리리스트)이라 하나를 더하거나 지워도 다른 후보의 번호가 그대로이고,
          *          부분 수집이 그 칸 하나만 고친다(언리얼 `FScene` 의 영속 프리미티브 칸, 유니티 GPU Resident Drawer 의 인스턴스 칸). 전체 수집은 처음과 배치 세대
          *          변경(영역 늘리기) · 퍼뮤테이션 세대 · 캐시 무효화(장치 잃음 · 합치기 토글) 때만 한다.
@@ -913,7 +913,7 @@ namespace sw
         /**
          * @brief 그리는 차례(배치 순) → 후보 번호(= 칸 순 인스턴스 배열의 원소 번호)입니다(populateBatches 가 채운다). 발행하면 차례 → 칸 목록으로 실린다.
          * @details 배치 구성이 그대로면 이 매핑도 그대로다. 그러면 배치를 다시 나눌 필요 없이 인스턴스
-         *          값만 **제자리에서** 갱신하면 된다. 언리얼 GPUScene 이 프리미티브가 움직였을 때
+         *          값만 제자리에서 갱신하면 된다. 언리얼 GPUScene 이 프리미티브가 움직였을 때
          *          자료구조를 다시 만들지 않고 그 원소만 갱신하는 것과 같은 방식이다.
          */
         vector<uint32> _listInstanceSrcIndex;

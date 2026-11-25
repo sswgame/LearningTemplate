@@ -256,7 +256,7 @@ namespace sw
             return;
         }
         {
-            // 멈춤 표시는 **대기 쪽과 같은 락 안에서** 설정한다. 렌더 스레드는 `_mutex` 를 잡은 채 조건(_stop, 새 패킷)을 보고 잠드는데, 락 밖에서
+            // 멈춤 표시는 대기 쪽과 같은 락 안에서 설정한다. 렌더 스레드는 `_mutex` 를 잡은 채 조건(_stop, 새 패킷)을 보고 잠드는데, 락 밖에서
             // 설정하고 알리면 "조건을 거짓으로 본 뒤, 실제로 잠들기 전" 틈에 알림이 끼어 사라지고, 렌더 스레드는 영영 자고 아래 join 이 멈춘다
             // (백엔드 교체와 gv_useRenderThread 토글에서 가장 잘 드러났다).
             ScopedLock<mutex> lock{ _mutex };
@@ -618,7 +618,7 @@ namespace sw
 
         // 렌더 스레드 전체다. `GT.Packet.submit` 이 크면 GT 가 여기를 기다린다는 뜻이다.
         //
-        // **무엇을 기다리는지는 아래 스코프들이 알려 준다.** `RT.BeginFrame`(GPU 백프레셔),
+        // 무엇을 기다리는지는 아래 스코프들이 알려 준다. `RT.BeginFrame`(GPU 백프레셔),
         // `RT.ExecutePacket`(기록), `RT.PresentHook`(에디터 UI), `RT.Present`(제출)가 있다.
         // 주의: "RT.Frame - RT.Present = 기록 시간" 이 아니다. GPU 대기의 대부분은 Present 가 아니라 `beginFrame` 에
         // 있다(이번 프레임 얼로케이터가 풀릴 때까지 펜스를 기다린다). 그 대기는 **씬 복잡도가 아니라 GPU 와 프레임
@@ -653,7 +653,7 @@ namespace sw
         }
         _pDevice->setImmediateSubmit( bImmediateSubmit );
         {
-            // **여기가 GPU 백프레셔다.** 백엔드의 `beginFrame` 은 이번 프레임이 쓸 커맨드
+            // 여기가 GPU 백프레셔다. 백엔드의 `beginFrame` 은 이번 프레임이 쓸 커맨드
             // 얼로케이터와 프레임 리소스가 풀릴 때까지 펜스를 기다린다.
             SW_PROFILE_SCOPE( "RT.BeginFrame" );
             // 건 훅(개발 도구의 장치 손실 흉내 — 실제 TDR 이 막히는 펜스 대기 자리)을 부른다.
@@ -737,7 +737,7 @@ namespace sw
         {
             // 제출과 Present 다. GPU 가 밀리면 여기서 기다린다.
             SW_PROFILE_SCOPE( "RT.Present" );
-            // VSync 는 **디바이스가 채택한 값**이다. 여기 true 를 고정해 두면 EngineConfig 의
+            // VSync 는 디바이스가 채택한 값이다. 여기 true 를 고정해 두면 EngineConfig 의
             // `_window._bVSync` 와 CLI `-vsync` 가 둘 다 무시되고 프레임이 모니터 주사율에 묶인다.
             const uint32 presentInterval = _presentInterval.load( std::memory_order_acquire );
             _presentFrameCounter         = presentInterval == 0 ? 0 : ( _presentFrameCounter + 1 ) % presentInterval;

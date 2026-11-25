@@ -367,7 +367,7 @@ namespace sw
         }
         else if ( MeshAssetFormat::isMeshAssetPath( meshID.view() ) )
         {
-            // 철자는 `MeshComponent::_meshID` 와 같다 — `.mesh` 경로는 워커가 읽고, 다 읽을 때까지 그 요소는 그리지 않는다(렌더 스레드가 디스크를 기다리지 않게 —
+            // 철자는 `MeshComponent::_meshID` 와 같다. `.mesh` 경로는 워커가 읽고, 다 읽을 때까지 그 요소는 그리지 않는다(렌더 스레드가 디스크를 기다리지 않게 —
             // 언리얼 · 유니티도 메시 스트리밍이 끝나기 전 프레임은 그 드로를 빼거나 낮은 LOD 로 둔다). 메시 캐시는 약한 참조라 렌더러가 쥔다.
             auto loadIt = _mapMeshLoad.find( meshID );
             if ( loadIt == _mapMeshLoad.end() )

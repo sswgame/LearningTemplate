@@ -39,7 +39,7 @@ namespace sw
         [[nodiscard]] static ShadowFilterMode getActiveMode( int32 value );
 
         /**
-         * @brief 방향광 반그림자 배율입니다 — 받는 점과 가리개의 NDC 깊이 차 1 이 기준 볼륨 텍셀 몇 개의 반그림자 **폭**이 되는가.
+         * @brief 방향광 반그림자 배율입니다 — 받는 점과 가리개의 NDC 깊이 차 1 이 기준 볼륨 텍셀 몇 개의 반그림자 폭이 되는가.
          * @param depthRange     기준 볼륨 깊이 구간(m, `DirectionalShadowProjection::_depthRange`)
          * @param sourceAngle    원천 시직경(라디안)
          * @param texelWorldSize 기준 볼륨 텍셀 하나의 월드 길이(m)

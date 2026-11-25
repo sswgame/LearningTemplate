@@ -114,7 +114,7 @@ namespace sw
             vector<uint64> _listEntryLastUsedBuild;
             /// @brief 원소별 게임 쪽 소유입니다(`_listEntry` 와 같은 인덱스). 회수하면 비운다.
             vector<MaterialElementOwner> _listEntryOwner;
-            /// @brief 회수된 원소 슬롯입니다. **인덱스를 옮기지 않고** 재사용합니다. 옮기면 영속 ID 가 아니게 됩니다.
+            /// @brief 회수된 원소 슬롯입니다. 인덱스를 옮기지 않고 재사용합니다. 옮기면 영속 ID 가 아니게 됩니다.
             IndexFreeList _freeEntry;
             /// @brief 직전 조회 결과입니다. 배치 안의 인스턴스는 정렬되어 있어 대부분 같은 원소를 연속으로 조회합니다.
             GPUMaterialElementKey _lastKey{};

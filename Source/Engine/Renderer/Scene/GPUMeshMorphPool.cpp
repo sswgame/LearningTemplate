@@ -245,7 +245,7 @@ namespace sw
     {
         const Mesh&      mesh    = *source._pMesh;
         constexpr uint32 kStride = static_cast<uint32>( sizeof( GPUMorphVertex ) );
-        // 레스트 구간 — LOD 0 뒤에 낮은 상세 단계 정점이 이어진다(그릴 정점 흐름과 같은 순서 — 단계의 범위가 그대로 변형 결과의 범위다).
+        // 레스트 구간: LOD 0 뒤에 낮은 상세 단계 정점이 이어진다(그릴 정점 흐름과 같은 순서라 단계의 범위가 그대로 변형 결과의 범위다).
         RHIBufferCopyRegion restRegion{};
         restRegion._srcOffset = static_cast<uint32>( _listScratchSkinRest.size() ) * kStride;
         restRegion._dstOffset = source._restBase * kStride;
@@ -418,7 +418,7 @@ namespace sw
         _skinRestAllocator.retireDeferred( completedFenceValue );
         _skinWeightAllocator.retireDeferred( completedFenceValue );
 
-        // 모프 구간은 바뀐 메시만 올린다. 레스트 포즈 · 스킨 가중치는 변하지 않으므로 **한 번만** 올린다 — 매 프레임 올리면 이 클래스가 없애려던
+        // 모프 구간은 바뀐 메시만 올린다. 레스트 포즈 · 스킨 가중치는 변하지 않으므로 한 번만 올린다 — 매 프레임 올리면 이 클래스가 없애려던
         // 바로 그 비용(정점 재업로드)을 다시 치르게 된다.
         const bool bMorphChanged = updateMorphMeshes( pDevice, listMorphMesh );
         const bool bSameSkin     = isSameList( listSkinMesh, _listBuiltSkinContentID ) && listSkinSlot == _listBuiltSkinSlot && listSkinLOD == _listBuiltSkinLOD;
@@ -434,7 +434,7 @@ namespace sw
             _listBuiltSkinContentID.push_back( pMesh != nullptr ? pMesh->getContentID() : IdentityToken{} );
         }
 
-        // 스킨 구간은 모프 **용량** 뒤에서 시작한다 — 모프 메시가 들고 나도 용량이 그대로면 스킨 인스턴스의 시작이 그대로다.
+        // 스킨 구간은 모프 용량 뒤에서 시작한다 — 모프 메시가 들고 나도 용량이 그대로면 스킨 인스턴스의 시작이 그대로다.
         _skinVertexBase = _morphAllocator.getCapacity();
 
         rebuildSkinInstanceRows( pDevice, listSkinMesh, listSkinSlot, listSkinLOD );
@@ -530,7 +530,7 @@ namespace sw
 
     void GPUMeshMorphPool::ensureDeformBuffers( IRHIDevice* pDevice )
     {
-        // 결과는 컴퓨트가 채우므로 초기값이 필요 없다 — 구간이 바뀌어도 올릴 것이 없다(용량만 맞춘다). 스킨 구간은 두 벌이다(지난 프레임 결과 — 머리말).
+        // 결과는 컴퓨트가 채우므로 초기값이 필요 없어 구간이 바뀌어도 올릴 것이 없다(용량만 맞춘다). 스킨 구간은 두 벌이다(지난 프레임 결과, 머리말 참고).
         const bool bMorphBuffer = _morph.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), getResultVertexCapacity() * shaderslot::kMorphResultWordsPerVertex,
                                                          GPUMeshMorphPoolInternal::kWriteUsage, true, true, nullptr );
         GPUMeshMorphPoolInternal::uploadAll( pDevice, _skinInstance, _listSkinRow.data(), static_cast<uint32>( _listSkinRow.size() ) * shaderslot::kSkinUint4PerInstance );

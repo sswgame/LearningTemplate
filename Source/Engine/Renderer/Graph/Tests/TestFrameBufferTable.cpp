@@ -186,7 +186,7 @@ SW_TEST_CASE( FrameBufferTableTest, StructuredRegistrationCarriesSize )
 }
 
 /**
- * @brief [FrameBufferTableTest] 그래프는 등록 접근과 다른 접근에 둔 이름만 끝에 되돌린다(이름마다 전이 하나 — 레벨 콜백이 모든 칸에 낸다) — 같은 접근으로 끝난 이름 · 그래프가 보지 않은 이름은 아니다
+ * @brief [FrameBufferTableTest] 그래프는 등록 접근과 다른 접근에 둔 이름만 끝에 되돌린다(이름마다 전이 하나, 레벨 콜백이 모든 칸에 낸다). 같은 접근으로 끝난 이름 · 그래프가 보지 않은 이름은 아니다
  * @details 결함이면 정렬 · 메시 쓰기가 셰이더 읽기로 남긴 입자 인자를 투명 패스가 간접 인자로 읽거나(DX12 · Vulkan 검증 오류), 이미 맞는 버퍼에 전이를 다시 낸다.
  *          입자 패스 셋(시뮬레이션 UAV → 정렬 · 메시 쓰기 셰이더 읽기)의 모양을 그대로 쓴다.
  */

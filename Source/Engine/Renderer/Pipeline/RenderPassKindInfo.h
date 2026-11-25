@@ -29,13 +29,13 @@ namespace sw
      * @brief G버퍼 패스가 머티리얼 셰이더에 추가하는 define 입니다. 픽셀 출력 서명을 MRT 로 바꿉니다.
      * @details 머티리얼이 셰이더 경로를 정하므로 디퍼드의 G버퍼 패스도 머티리얼의 `.hlsl` 로 그립니다. 그 셰이더가
      *          `SV_TARGET` 하나만 내면 노멀 타깃이 클리어 값 그대로 남고, 디퍼드 조명은 화면 전체를 같은 노멀로 계산합니다.
-     *          언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 역할을 이 엔진에서는 define 이 맡습니다.
+     *          언리얼이 같은 머티리얼을 패스별 셰이더 타입으로 감싸는 역할을 이 엔진에서는 define 이 맡습니다.
      * @note 이 문자열과 `binding.hlsli` 의 `#if defined( SW_PASS_GBUFFER )` 가 어긋나면 컴파일은 되고 화면만 틀린다.
      */
     inline constexpr const utf8* kPassGBufferDefine = "SW_PASS_GBUFFER=1";
 
     /**
-     * @brief 깊이 프리패스가 그림자와 같은 셰이더 파일(shadow_depth.hlsl)을 **카메라** 행렬로 그리게 하는 define 입니다.
+     * @brief 깊이 프리패스가 그림자와 같은 셰이더 파일(shadow_depth.hlsl)을 카메라 행렬로 그리게 하는 define 입니다.
      * @details 이 define 이 없으면 프리패스가 광원 행렬(`g_LightViewProj`)로 그려 장면 깊이에 광원 공간의 깊이가 들어갑니다.
      *          언리얼의 EarlyZ 패스, 유니티 URP 의 Depth Priming 에 해당합니다.
      */
@@ -223,7 +223,7 @@ namespace sw
          */
         static constexpr uint32 kComputeImplementation = BitUtil::bit( 28 );
         /**
-         * @brief 화면 회전 출력 패스다(`RenderPassKind::ScreenRotation`) — `kOutputPass` 와 함께 붙고, 대상은 스왑체인 이미지 하나라 PSO 를 **백버퍼 포맷으로만** 만들며
+         * @brief 화면 회전 출력 패스다(`RenderPassKind::ScreenRotation`) — `kOutputPass` 와 함께 붙고, 대상은 스왑체인 이미지 하나라 PSO 를 백버퍼 포맷으로만 만들며
          *        서피스를 돌릴 수 있는 장치(`RHICapabilities::_bSurfacePreRotation`)에서만 만든다(`FramePSOManager::collectOutputPSOJobs`).
          */
         static constexpr uint32 kSurfaceRotation = BitUtil::bit( 29 );
@@ -319,8 +319,8 @@ namespace sw
         constexpr bool shouldDrawSceneMeshes() const { return hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes ); }
 
         /**
-         * @brief 이 패스가 **머티리얼의 셰이더**로 그리는지(아니면 패스 자신의 셰이더인지) 반환합니다.
-         * @details 언리얼에서는 패스가 셰이더 **타입**(TShadowDepthVS 같은)을 정하고 머티리얼이 그 타입의
+         * @brief 이 패스가 머티리얼의 셰이더로 그리는지(아니면 패스 자신의 셰이더인지) 반환합니다.
+         * @details 언리얼에서는 패스가 셰이더 타입(TShadowDepthVS 같은)을 정하고 머티리얼이 그 타입의
          *          퍼뮤테이션을 준다. 그림자와 뎁스 패스는 지오메트리만 그리므로 자기 셰이더가 기준이고, 머티리얼은
          *          define 만 적용한다. 여기서 true 인 패스만 머티리얼이 선언한 .hlsl 로 교체한다.
          */
@@ -328,7 +328,7 @@ namespace sw
 
         /**
          * @brief 이 패스에 뷰 모드(Unlit, Wireframe, Normals, Depth, Overdraw)를 적용하는지 반환합니다.
-         * @details 화면 색을 만드는 지오메트리 패스만 해당한다. 그림자와 뎁스 프리패스는 **제외한다**.
+         * @details 화면 색을 만드는 지오메트리 패스만 해당한다. 그림자와 뎁스 프리패스는 제외한다.
          *          와이어프레임으로 그림자를 구우면 그림자가 선 몇 개로 남고, 뎁스 프리패스를
          *          와이어프레임으로 채우면 이후 패스의 뎁스 테스트가 삼각형 내부를 모두 버려 화면이 빈다.
          *          둘 다 "보기 방식" 이 아니라 다음 패스의 입력이므로 항상 Solid, Lit 로 둔다.
@@ -370,7 +370,7 @@ namespace sw
         }
 
         /**
-         * @brief 깊이만 쓰는 패스(그림자 · 깊이 프리패스)가 이 머티리얼의 배치를 패스 셰이더 대신 **머티리얼의 셰이더**로 그리는지 반환합니다.
+         * @brief 깊이만 쓰는 패스(그림자 · 깊이 프리패스)가 이 머티리얼의 배치를 패스 셰이더 대신 머티리얼의 셰이더로 그리는지 반환합니다.
          * @details 깊이 패스는 지오메트리만 그리므로 보통 자기 셰이더(shadow_depth.hlsl)가 기준이다. 덮는 모양이나 정점 자리를 머티리얼 코드가 정하면
          *          그 셰이더는 같은 모양을 못 만든다 — 알파 컷오프(머리카락 카드가 사각형 그림자를 드리운다)와 정점 변형(흔드는 식생의 그림자가 서 있다).
          *          언리얼이 Masked · World Position Offset 머티리얼만 자기 깊이 · 그림자 셰이더를 컴파일하고 나머지는 기본 머티리얼의 것을 나눠 쓰는 것과 같다.

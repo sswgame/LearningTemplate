@@ -64,7 +64,7 @@ namespace sw
     private:
         /**
          * @brief 아틀라스 페이지 하나입니다. CPU 미러(SDF 는 R8, MSDF 는 RGBA8, 페이지 크기²)와 그 텍스처, SRV, 아직 올리지 못한 구간을 담습니다.
-         * @details 상태는 셋입니다: 첫 업로드 중(`_registerTicket` 유효, SRV 없음 — 그리지 않는다), 그릴 수 있음(SRV 있음), 멈춤(`_bFailed` — 그리지도 올리지도 않는다).
+         * @details 상태는 셋입니다: 첫 업로드 중(`_registerTicket` 유효, SRV 없음, 그리지 않는다), 그릴 수 있음(SRV 있음), 멈춤(`_bFailed`, 그리지도 올리지도 않는다).
          */
         struct AtlasPage
         {

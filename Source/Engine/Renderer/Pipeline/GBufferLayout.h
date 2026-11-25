@@ -1,7 +1,7 @@
 /**
  * @file GBufferLayout.h
  * @brief G버퍼 명세 한 벌(판 번호 있음) — 첨부마다 이름 · 역할 · 포맷 · 클리어 값 · 채널의 뜻과 인코딩. C++ 패스 계약(PSO 포맷), 파이프라인 XML 검증, 디버그 표시(렌더 타깃 창의 값 풀이)가 이 표 하나를 읽는다.
- * @details 셰이더 쪽 쓰기(`SurfaceOutput::pack` — binding_output.hlsli)와 읽기(`PassTexture::loadGbuffer*` — binding_texture.hlsli)는 HLSL 이라 이 표를 include 하지 못한다.
+ * @details 셰이더 쪽 쓰기(`SurfaceOutput::pack`, binding_output.hlsli)와 읽기(`PassTexture::loadGbuffer*`, binding_texture.hlsli)는 HLSL 이라 이 표를 include 하지 못한다.
  *          그래서 셰이더는 같은 판 번호(`SW_GBUFFER_LAYOUT_VERSION`, binding_output.hlsli)를 적고 단위 테스트(`GBufferLayoutTest`)가 두 번호를 맞춘다 — 한쪽만 바꾸면 테스트가 진다.
  *          언리얼의 GBuffer 정의(`FGBufferInfo` · ShadingModelID · CustomData)와 같은 자리다. 바꾸려면 이 표의 판을 올리고 셰이더 · 검증 · 표시를 함께 바꾼다.
  *          판 3(이 표): 알베도 알파 = 셰이딩 모델 번호(0 = 그리지 않음 — 옛 그려짐 표시를 대신한다), 머티리얼 = 금속도 · 거칠기 · 반사율 · 가림, 사용자 칸 RGBA8 한 장

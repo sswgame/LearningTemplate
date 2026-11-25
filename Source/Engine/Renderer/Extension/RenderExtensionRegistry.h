@@ -2,12 +2,12 @@
  * @file RenderExtensionRegistry.h
  * @brief 모듈(게임 · 키트)이 렌더 스레드 확장(`IRenderExtension`)과 씬 프록시(`IExtensionSceneProxy`)를 등록하는 창구입니다.
  * @details 계약은 `RenderExtension.h` 에 있습니다. 이 레지스트리는 다음을 맡습니다.
- *          - **등록 목록**: 확장 객체(소유하지 않음), 프록시(소유함), 프록시 갱신 대기열.
- *          - **flush**: 등록을 푸는 함수(`unregisterExtension` · `removeProxy`)는 렌더 스레드의 모듈 구간(`RenderScope`)이 끝나기를 기다린 뒤에야 목록을 바꾼다. 그래서 풀린 뒤에는 렌더 스레드가
+ *          - 등록 목록: 확장 객체(소유하지 않음), 프록시(소유함), 프록시 갱신 대기열.
+ *          - flush: 등록을 푸는 함수(`unregisterExtension` · `removeProxy`)는 렌더 스레드의 모듈 구간(`RenderScope`)이 끝나기를 기다린 뒤에야 목록을 바꾼다. 그래서 풀린 뒤에는 렌더 스레드가
  *            그 모듈 코드를 다시 부르지 않고, 모듈이 내려가기 전(등록 객체의 소멸자)에 프록시가 모듈 안에서 소멸한다(언리얼 Live Coding 이 모듈을 내리기 전에 렌더링을 flush 하는 것과 같다).
  *          잠금 순서는 늘 `_runMutex` → `_mutex` 입니다. 렌더 스레드는 `RenderScope` 로 `_runMutex` 를 프레임의 모듈 구간 내내 쥐고 목록은 `_mutex` 로 잠깐만 읽습니다 —
  *          그래서 게임 스레드의 등록 · 갱신 올리기(`_mutex` 만)는 렌더 스레드를 막지 않는다.
- *          **모듈 구간 안(확장 · 프록시 · 실행 콜백)에서 이 레지스트리의 등록 해제 함수를 부르면 교착합니다.**
+ *          모듈 구간 안(확장 · 프록시 · 실행 콜백)에서 이 레지스트리의 등록 해제 함수를 부르면 교착합니다.
  */
 #pragma once
 #include "Core/Concurrency/ScopedLock.h"

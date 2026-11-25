@@ -145,7 +145,7 @@ namespace sw
                         }
                         outGraph.addEdge( producerIndex, consumerIndex );
 
-                        // 이 읽기가 본 버전(생산자) **다음에** 같은 자원을 덮어쓰는 패스는 이 읽기 뒤에 와야 한다(Write-after-Read). 이
+                        // 이 읽기가 본 버전(생산자) 다음에 같은 자원을 덮어쓰는 패스는 이 읽기 뒤에 와야 한다(Write-after-Read). 이
                         // 간선이 없으면 W 가 쓰고 A 가 읽고 B 가 다시 쓸 때 A 와 B 가 같은 레벨에 들어간다. 직렬로는 B 가 먼저 돌아 A 가 B 의 출력을
                         // 읽고, 병렬로는 둘이 경합한다. 기준은 선언 순서가 아니라 **쓰기 사슬에서 생산자
                         // 다음**이다. 소비자를 생산자보다 먼저 선언해도 되는 그래프라(앞에 쓰는 이가 없으면 첫 쓰기가 생산자), 선언 순서로 고르면
@@ -813,7 +813,7 @@ namespace sw
             return false;
         }
 
-        // 수명은 실행 순서가 정해진 **뒤에야** 의미가 있다. "몇 번째 패스에서 처음 또는 마지막으로 쓰이나" 이기 때문이다.
+        // 수명은 실행 순서가 정해진 뒤에야 의미가 있다. "몇 번째 패스에서 처음 또는 마지막으로 쓰이나" 이기 때문이다.
         computeResourceLifetimes();
         computeQueuePlan( graph._adjacency );
 
@@ -1017,9 +1017,9 @@ namespace sw
             for ( const PlanPass& pass : listLevelPass )
             {
                 RenderGraphNode& node = _listNode[pass._nodeIndex];
-                // 직렬 경로도 **같은 추론**을 쓴다. 상태만 기록하고 배리어를 내지 않으면 전이가 패스 콜백 안 여기저기에서
+                // 직렬 경로도 같은 추론을 쓴다. 상태만 기록하고 배리어를 내지 않으면 전이가 패스 콜백 안 여기저기에서
                 // 즉흥적으로 일어난다. 경로가 둘이면 한쪽에만 수정이 들어간다.
-                // 배리어는 이 패스가 기록하는 것과 **같은 리스트**에 들어가야 한다(레벨처럼 앞으로 몰 수 없다).
+                // 배리어는 이 패스가 기록하는 것과 같은 리스트에 들어가야 한다(레벨처럼 앞으로 몰 수 없다).
                 _listLevelBarrier.clear();
                 _mapLevelBarrierIndex.clear();
                 appendPassBarriers( context, node, pass._listAccess );
@@ -1149,8 +1149,8 @@ namespace sw
         if ( scratch._listNodeCmdList.size() < _listNode.size() )
             scratch._listNodeCmdList.resize( _listNode.size() );
 
-        // 모든 레벨의 커맨드 리스트를 **기록과 제출 전에** 마련한다. 만들 수 없으면 아무것도 내지 않고 이 프레임을 실패로 돌려준다.
-        // 주의: 레벨을 돌며 만들다 실패했을 때 직렬 `execute` 로 넘어가면, 앞 레벨이 이미 기록과 제출을 마친 뒤라 그 패스들이 **두 번** 돌고
+        // 모든 레벨의 커맨드 리스트를 기록과 제출 전에 마련한다. 만들 수 없으면 아무것도 내지 않고 이 프레임을 실패로 돌려준다.
+        // 주의: 레벨을 돌며 만들다 실패했을 때 직렬 `execute` 로 넘어가면, 앞 레벨이 이미 기록과 제출을 마친 뒤라 그 패스들이 두 번 돌고
         // 직렬 경로는 커맨드 리스트 없이 기록한다(호출하는 쪽 `FrameRenderer` 가 병렬로 오기 전에 프레임 리스트를 닫아 제출했다).
         for ( const vector<PlanPass>& level : _listPlan[_activePlanIndex]._listLevel )
         {
@@ -1212,7 +1212,7 @@ namespace sw
     {
         vector<ParallelPassEntry>& listPassEntry = _pParallelScratch->_listPassEntry;
 
-        // 이 레벨이 만질 자원의 배리어를 **여기서 미리**, 레벨 **첫 패스 리스트의 앞머리**에 발행한다
+        // 이 레벨이 만질 자원의 배리어를 여기서 미리, 레벨 첫 패스 리스트의 앞머리에 발행한다
         // (언리얼 RDG 가 패스 리스트 앞머리에 배리어를 두는 방식이다). 판단과 기록 모두 렌더 스레드가 병렬 기록
         // 전에 끝내므로 패스 콜백은 이미 맞는 상태를 보고, 기록 중에 리소스 상태를 바꾸지 않는다. 배리어를
         // 병렬 기록 스레드가 정하던 구조는 실제로 여러 번 깨졌다. 같은 레벨의 다른 리스트는 큐 순서상 첫
@@ -1248,7 +1248,7 @@ namespace sw
                 else
                 {
                     // 작업을 넣지 못했다(풀이 바닥났거나 종료 중이다). 여기서(렌더 스레드) 직접 기록한다. 그냥 넘어가면 그 리스트가 기록 없이
-                    // 아래에서 제출된다. 레벨의 첫 리스트는 **열린 채로**, 나머지는 지난 프레임의 명령 그대로 제출된다.
+                    // 아래에서 제출된다. 레벨의 첫 리스트는 열린 채로, 나머지는 지난 프레임의 명령 그대로 제출된다.
                     entry.record();
                 }
             }
@@ -1361,7 +1361,7 @@ namespace sw
 
     void RenderGraph::requestBarrier( RenderGraphExecutionContext& context, const RenderGraphResourceAccess& access, RHIQueueKind queue )
     {
-        // 같은 자원을 여러 패스가 요구하면 **한 번만** 낸다(SceneDepth 처럼 여러 패스가 읽는 자원이 레벨마다 읽기 전이를
+        // 같은 자원을 여러 패스가 요구하면 한 번만 낸다(SceneDepth 처럼 여러 패스가 읽는 자원이 레벨마다 읽기 전이를
         // 여러 번 받지 않게 한다).
         const RenderGraphExecutionContext::TrackedAccess before = context.transitionTo( access._resource, access._access );
         const bool                                       bKnown = before._state != RenderGraphResourceState::Undefined;
@@ -1494,7 +1494,7 @@ namespace sw
             life._lastLevel      = lastLevel;
         }
 
-        // 아무도 쓰지 않은 것을 읽는 패스는 **지난 프레임 내용이나 0** 을 읽는다. 이미지는 그럴듯하게 나오고
+        // 아무도 쓰지 않은 것을 읽는 패스는 지난 프레임 내용이나 0 을 읽는다. 이미지는 그럴듯하게 나오고
         // 로그는 조용하다. 파이프라인 XML 과 코드가 어긋났을 때 실제로 이렇게 조용히 틀렸다.
         // 그래프 밖에서 채우는 자원(External)과 지난 프레임 값을 읽는 자원(Persistent)은 선언이 그 읽기를 말한다 — 경고하지 않는다.
         for ( const RenderGraphResourceLifetime& life : _listResourceLifetime )

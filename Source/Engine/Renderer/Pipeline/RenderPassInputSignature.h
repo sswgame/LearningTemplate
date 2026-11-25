@@ -1,6 +1,6 @@
 /**
  * @file RenderPassInputSignature.h
- * @brief 풀스크린 패스 타입이 **읽는 입력의 역할**입니다. 로드 시점 검증과 프레임 실행이 같은 테이블을 봅니다.
+ * @brief 풀스크린 패스 타입이 읽는 입력의 역할입니다. 로드 시점 검증과 프레임 실행이 같은 테이블을 봅니다.
  * @details 선언이 곧 바인딩이 되려면 "이 패스 타입은 어떤 역할의 입력을 읽는가"가 한 곳에 있어야 합니다. 역할과
  *          계약의 구조는 이 파일에, 타입마다의 계약은 패스 종류 테이블(`RenderPassKindInfo::_inputContract`)에 있습니다.
  *          계약이 없으면 XML 이 선언한 입력을 아무도 바인딩하지 않아도 오류 없이 지나가고, 그 입력을 만드는 패스(SSAO 등)만 헛돕니다.
@@ -20,7 +20,7 @@ namespace sw
     /**
      * @enum RenderPassInputRole
      * @brief 첨부가 패스 안에서 맡는 역할입니다. 셰이더는 역할 이름(`g_<Role>Index`)으로 읽습니다.
-     * @details 첨부 **이름**은 파이프라인이 정하고(LitColor, BloomColor …) 역할은 패스가 정합니다. 같은
+     * @details 첨부 이름은 파이프라인이 정하고(LitColor, BloomColor …) 역할은 패스가 정합니다. 같은
      *          첨부가 Bloom 에서는 SourceColor 이고 Transparent 에서는 렌더 타깃입니다.
      */
     enum class RenderPassInputRole : uint8
@@ -56,7 +56,7 @@ namespace sw
         DBufferA,
         DBufferB,  ///< DBuffer 데칼 노멀(rgb 덮인 월드 노멀 × 0.5 + 0.5 의 합, a 남은 비율 — 언리얼 DBufferB). `g_DBufferBIndex`
         DBufferC,  ///< DBuffer 데칼 거칠기 · 금속도(r · g 덮인 값의 합, a 남은 비율 — 언리얼 DBufferC). `g_DBufferCIndex`
-        SkyClouds, ///< 볼륨 구름(VolumetricClouds 패스의 저해상도 출력 — 산란 rgb, 불투명도 a). 스카이 패스가 하늘 위에 얹는다(`g_SkyCloudsIndex`) — 없으면 구름이 없다
+        SkyClouds, ///< 볼륨 구름(VolumetricClouds 패스의 저해상도 출력: 산란 rgb, 불투명도 a). 스카이 패스가 하늘 위에 얹는다(`g_SkyCloudsIndex`). 없으면 구름이 없다
         Count,
     };
 

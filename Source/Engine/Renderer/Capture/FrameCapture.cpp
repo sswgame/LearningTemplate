@@ -46,7 +46,7 @@ namespace sw
         const uint32 width  = outputWidth != 0 ? outputWidth : FrameRendererUtil::kDefaultTransientSize;
         const uint32 height = outputHeight != 0 ? outputHeight : FrameRendererUtil::kDefaultTransientSize;
 
-        // 포맷은 **계약값**이다. 백버퍼가 실제로 무엇을 채택했든(Vulkan 은 서피스 협상 결과) 캡처는
+        // 포맷은 계약값이다. 백버퍼가 실제로 무엇을 채택했든(Vulkan 은 서피스 협상 결과) 캡처는
         // 늘 같은 포맷이라 PPM 으로 푸는 쪽이 한 가지만 알면 된다. Present PSO 변종에도 이 포맷이 있다.
         RHITextureDesc captureDesc{};
         captureDesc._width             = width;

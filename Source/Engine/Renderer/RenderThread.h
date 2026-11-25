@@ -78,7 +78,7 @@ namespace sw
 
         /**
          * @brief 워커가 있으면 링에 넣고, 없으면 executeInline 합니다.
-         * @details 패킷은 **맞바꾸기**로 들어갑니다. 호출하는 쪽의 패킷은 링에 있던 지난 패킷(저장소 포함)을 돌려받습니다.
+         * @details 패킷은 맞바꾸기로 들어갑니다. 호출하는 쪽의 패킷은 링에 있던 지난 패킷(저장소 포함)을 돌려받습니다.
          *          그래서 호출하는 쪽이 패킷 하나를 스크래치로 가지고 매 프레임 다시 채우면 프레임당 할당이 없습니다. 주의: 옮겨
          *          넣기(move)로 받으면 링 슬롯의 저장소가 프레임마다 버려집니다.
          */
@@ -128,7 +128,7 @@ namespace sw
         IRHIDevice* getDevice() const { return _pDevice; }
         /** @brief 패킷을 그리는 주 렌더러입니다(없으면 nullptr). 렌더 스레드 객체 — `executeAndWait` 의 명령 안에서만 만진다. */
         FrameRenderer* getFrameRenderer() const { return _pFrameRenderer; }
-        /** @brief 화면 밖 씬 렌더러입니다(없으면 nullptr — 미리보기를 그리지 않는다). 소유는 `FrameRendererSubsystem`. 렌더 스레드 객체 — `executeAndWait` 의 명령 안에서만 만진다. */
+        /** @brief 화면 밖 씬 렌더러입니다(없으면 nullptr 이고 미리보기를 그리지 않는다). 소유는 `FrameRendererSubsystem`. 렌더 스레드 객체라 `executeAndWait` 의 명령 안에서만 만진다. */
         OffscreenSceneRenderers* getOffscreenRenderers() const { return _pOffscreenRenderers; }
         /**
          * @brief 지난 프레임에 씬 키 @p sceneKey(0 = 주 화면, 미리보기 씬 키)를 그린 렌더러가 머티리얼 PSO 를 아직 만드는 중이라 빠뜨린 배치 묶음 수를 @p outCount 에 담습니다.
@@ -252,7 +252,7 @@ namespace sw
         static constexpr uint32 _s_kRingCapacity{ constant::render::kRenderFrameQueueDepth };
         /// @brief 드라이버 GPU 메모리 값(`IRHIDevice::refreshGPUMemoryBudget`)을 묻는 간격입니다. DXGI 질의는 커널을 거치므로 프레임마다 묻지 않습니다.
         static constexpr uint32 _s_kBudgetRefreshFrames{ 30 };
-        // 게임 스레드와 렌더 스레드가 이 링을 **동시에** 만진다. 그래서 레이스 탐지기가 붙은
+        // 게임 스레드와 렌더 스레드가 이 링을 동시에 만진다. 그래서 레이스 탐지기가 붙은
         // sw::array 를 쓰지 않는다. 이유는 Core/Container/array.h 머리말에 있다.
         std::array<RenderFramePacket, _s_kRingCapacity> _arrRingBuffer;
         atomic<uint32>                                  _head; ///< 생산자(GT)가 쓴다.

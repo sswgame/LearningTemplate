@@ -28,7 +28,7 @@ namespace sw
             /**
              * @brief 배치마다 머리 원소의 프록시에 사본을 올리고(바뀐 것만), 그 상수 버퍼 인덱스와 텍스처 슬롯을 배치에 덧씁니다.
              * @details 머티리얼의 GPU 자원은 렌더 스레드만 만든다 — 게임 스레드는 불변 사본만 실어 보낸다(`MaterialRenderProxy`). 원소 업로드(g_SwMaterials)는
-             *          사본의 바이트를 직접 읽으므로 원소마다 상수 버퍼를 만들지 않는다. 상수 버퍼는 원소 배열이 없는 셰이더(MaterialCB — stride 0)의 배치만, 머리 원소의 것을 쓴다 —
+             *          사본의 바이트를 직접 읽으므로 원소마다 상수 버퍼를 만들지 않는다. 상수 버퍼는 원소 배열이 없는 셰이더(MaterialCB, stride 0)의 배치만, 머리 원소의 것을 쓴다 —
              *          원소 셰이더는 그 슬롯을 선언하지 않는다. 예전에는 원소 셰이더의 배치도 읽히지 않는 상수 버퍼를 만들고 값이 바뀔 때마다 같은 바이트를 두 번 올렸다.
              */
             static void bindBatchMaterialResources( IRHIDevice* pDevice, const vector<GPUMeshBatch>& listBatch, vector<GPUMeshBatchBinding>& inoutListBinding,
@@ -165,7 +165,7 @@ namespace sw
 
         SW_PROFILE_SCOPE( "RT.GPUScene.batchTables" );
         uploadBatchTable( pDevice, argsCount );
-        // 컴퓨트가 개수를 만들려면 **가시 목록과 배치 구간이 둘 다** 있어야 한다. 하나라도 없으면 개수를
+        // 컴퓨트가 개수를 만들려면 가시 목록과 배치 구간이 둘 다 있어야 한다. 하나라도 없으면 개수를
         // 0 으로 올리면 안 된다. 컬링이 못 도는데 개수가 0 이면 그 프레임은 아무것도 안 그려진다.
         // 그래서 "요청했다"(_bGPUIndirectCountsRequested)와 "실제로 된다"(_bGPUFillsIndirectCounts)를 나눠 둔다.
         _bGPUFillsIndirectCounts =
@@ -193,7 +193,7 @@ namespace sw
     {
         // 정점 풀: 배치 메시 모두를 한 정점 버퍼 · 한 인덱스 버퍼에 모은다. 집합이 같으면 아무것도 하지 않고, 바뀌면 들어오고 나간 메시의 구간만 고친다(CPU 사본에서 올린다).
         // 풀에 든 배치는 풀 버퍼와 시작으로 그리고(같은 버퍼 → 멀티 드로우로 묶인다), 못 든 배치만 자기 정점 · 인덱스 버퍼(시작 0)를 만들어 그린다.
-        // 동적 메시(프레임마다 새 메시 — 천)도 풀에 든다 — 풀은 바뀐 메시를 "나감 + 들어옴" 으로 보고 그 구간만 올리고, 구간 반납 지연이 앞 프레임이 읽는
+        // 동적 메시(프레임마다 새 메시, 예: 천)도 풀에 든다. 풀은 바뀐 메시를 "나감 + 들어옴" 으로 보고 그 구간만 올리고, 구간 반납 지연이 앞 프레임이 읽는
         // 위치를 지킨다. 그래서 프레임마다의 정점 버퍼 생성 · 반납이 없다(게임 스레드도 동적 메시를 업로드 큐에 넣지 않는다).
         // 이 구간의 시간이 C-43 의 전/후 측정값이다.
         {
@@ -331,9 +331,9 @@ namespace sw
         }
         uploadInstanceOrder( pDevice );
 
-        // 가시 인스턴스 ID 버퍼. 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해
+        // 가시 인스턴스 ID 버퍼. 컬링 컴퓨트가 살아남은 인스턴스의 원본 인덱스를 배치 구간에 압축해
         // 넣고(언리얼 FInstanceCullingContext 의 InstanceIDBuffer), 정점 셰이더가 그 순서로 읽는다.
-        // **뷰마다 하나씩**이다. 목록은 절두체에 종속이라 메인 카메라로 거른 것을 그림자가 쓰면 안 된다.
+        // 뷰마다 하나씩이다. 목록은 절두체에 종속이라 메인 카메라로 거른 것을 그림자가 쓰면 안 된다.
         constexpr RHIBufferUsage kVisibleUsage =
             RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
         // 가시 목록은 인스턴스 수가 아니라 가시 구간의 합만큼이다(LOD 그룹의 낮은 단계 배치가 구간을 더 가진다).
@@ -632,7 +632,7 @@ namespace sw
         {
             RHIDrawIndexedIndirectCommand& cmd = _listScratchIndirectCmd[argIndex];
             cmd._indexCountPerInstance         = _snapshot.getAllBatches()[argIndex]._indexCount;
-            // 컬링 컴퓨트가 개수를 만드는 배치는 **0 에서 시작**해야 한다. InterlockedAdd 로 보이는 것만 센다.
+            // 컬링 컴퓨트가 개수를 만드는 배치는 0 에서 시작해야 한다. InterlockedAdd 로 보이는 것만 센다.
             // 컬링이 아예 없을 때는 CPU 가 센 개수를 그대로 쓴다.
             cmd._instanceCount = _bGPUFillsIndirectCounts != SW_FALSE ? 0u : _snapshot.getAllBatches()[argIndex]._instanceCount;
             // 인덱스 풀 안의 시작과 메시의 정점 풀 시작. 인덱스는 메시 안 번호다(SV_VertexID 가 baseVertex 를 포함하는지는 API 마다 다르다: binding.hlsli).
@@ -665,7 +665,7 @@ namespace sw
 
     void GPUScene::uploadIndirectArgs( IRHIDevice* pDevice, uint32 argsCount )
     {
-        // 간접 인자도 **뷰마다** 하나다. 뷰별로 개수가 다르게 나오기 때문이다.
+        // 간접 인자도 뷰마다 하나다. 뷰별로 개수가 다르게 나오기 때문이다.
         constexpr RHIBufferUsage kArgsUsage =
             RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
         SW_ASSERT( _listScratchIndirectCmd.size() >= argsCount );
@@ -861,7 +861,7 @@ namespace sw
         const uint32            elementCount = static_cast<uint32>( group._listEntry.size() );
         const uint32            needBytes    = stride * elementCount;
         GPUMaterialGroupBuffer& gpu          = _mapMaterialGroupBuffer[group._shaderPath];
-        // 모자랄 때만 두 배로 키운다. 주의: "원소 수 × 2" 를 **매번** 요구하면 16 개를 넘은 뒤로는 머티리얼이 하나 늘 때마다 다시
+        // 모자랄 때만 두 배로 키운다. 주의: "원소 수 × 2" 를 매번 요구하면 16 개를 넘은 뒤로는 머티리얼이 하나 늘 때마다 다시
         // 만든다(용량 34 < 요구 36 → 36, 다음엔 38 …). stride 가 달라지면 슬롯이 알아서 다시 만든다. 구조버퍼의 stride 는 뷰에 박혀 있어
         // 셰이더 선언과 달라지면 안 된다.
         const bool   bFits            = ( gpu._slot._buffer != 0 ) && ( gpu._slot._elementSize == stride ) && ( gpu._slot._capacityElements >= elementCount );
@@ -934,8 +934,8 @@ namespace sw
 
     void GPUScene::bindBatchMaterials()
     {
-        // **그룹당 한 번 풀어 두고, 배치는 인덱스로 집는다.**
-        // 배치마다 셰이더 **경로 문자열**로 해시 조회를 하면 그룹은 한둘인데 배치는 수백이라 같은 답을 배치 수만큼
+        // 그룹당 한 번 풀어 두고, 배치는 인덱스로 집는다.
+        // 배치마다 셰이더 경로 문자열로 해시 조회를 하면 그룹은 한둘인데 배치는 수백이라 같은 답을 배치 수만큼
         // 다시 구한다(Release 실측 프레임당 86us, RT 렌더 시간의 12%).
         // 그룹 수만큼만 조회해 표로 만들어 두면 배치 루프는 저장 몇 번으로 끝난다. 표는 멤버라 프레임마다 힙을 만지지 않는다.
         const vector<GPUMaterialGroup>& listGroup    = _snapshot.getMaterialGroups();
