@@ -290,8 +290,8 @@ namespace sw
          * @brief 엔진이 모든 컴파일에 넣는 define(엔진 텍스처 칸 표 `SW_EMU_SLOT_<이름>=<칸>` · `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index`, 렌더 정책 `SW_TAA_*` · `SW_PROBE_*` · `SW_AUTO_EXPOSURE_*`)을 @p inoutList 뒤에 더합니다.
          * @details 렌더 정책 값은 `EngineConfig::_render`(Config/Engine/EngineConfig.json)가 정본이다 — 셰이더가 읽는 정책 값은 이 한 경로로만 간다(셰이더에 기본값이 없다).
          *          값은 요청이 실어 온 사본 @p enginePolicy 다 — 컴파일 워커에서 불리므로 설정을 직접 읽지 않는다.
-         * @details 요청에 없고 엔진 바이너리가 정하는 컴파일 입력이라 도구 지문(`getToolchainFingerprint`)이 이 목록을 섞는다 —
-         *          그래야 표가 바뀌면 모든 셰이더 캐시(실행 캐시 · 컴파일 캐시 · 쿠킹본)가 함께 낡는다. 요청 desc 로 키를 만드는 캐시가 이 값을 몰라
+         * @details 요청에 없고 엔진 바이너리가 정하는 컴파일 입력이라 작업 키의 설정 해시(동작의 define 목록)에 이 목록이 든다 —
+         *          그래야 표가 바뀌면 모든 셰이더 캐시(실행 캐시 · 컴파일 기록 · 쿠킹본)가 함께 낡는다. 요청 desc 로 키를 만드는 캐시가 이 값을 몰라
          *          옛 칸 번호의 바이트를 새것으로 돌려준 결함(DX11 · GL 검정 화면)이 있었다.
          */
         static void appendEngineDefines( vector<ShaderMacroDefine>& inoutList, const ShaderEnginePolicy& enginePolicy );
@@ -307,9 +307,9 @@ namespace sw
         /**
          * @brief 컴파일러 도구의 지문입니다. 컴파일러를 부르는 코드의 지문(`CookCodeFingerprint` "ShaderCompiler" — 인자 · 플래그를 고치면 저절로 바뀐다), Vulkan 타깃 버전, 설치된 컴파일러 버전(vcpkg 설치 기록)을 섞는다.
          * @details 소스 내용 해시만 보면 DXC 를 바꾸거나 옵션을 고쳐도 아무것도 다시 쿠킹하지 않는다. 슬롯 계약 숫자(시프트 포함)는 `binding_slots.hlsli` 에 있고 그 파일은 입력이다.
-         *          엔진 define(`appendEngineDefines`)도 섞는다 — 그 값은 요청이 실어 온 사본 @p enginePolicy 다(워커가 설정을 직접 읽지 않는다). 작업 키의 코드 지문 칸이다.
+         *          엔진 define(`appendEngineDefines`)은 섞지 않는다 — 동작 키의 define 에 이미 들고, 글 키는 값이 글에 나온 셰이더만 갈라야 한다(정책 값 하나를 고쳐 모두 다시 컴파일하지 않는다).
          */
-        static uint64 getToolchainFingerprint( const ShaderEnginePolicy& enginePolicy );
+        static uint64 getToolchainFingerprint();
         /** @brief 지문 계산의 본체입니다. 입력만으로 정해집니다(테스트가 상수만으로 같은 값이 나오는지 확인합니다). */
         static uint64 makeToolchainFingerprint( uint64 compilerCodeFingerprint, uint32 vulkanTargetVersion, string_view compilerVersion );
 
