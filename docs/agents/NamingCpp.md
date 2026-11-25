@@ -1,6 +1,6 @@
 # NamingCpp
 
-> 결론: 이름 규칙 전부 — C++ · 용어 · CMake · Python · HLSL. C++ 타입은 `PascalCase`, 함수와 지역은 `camelCase`, 멤버는 `_camelCase`, 상수는 `kPascalCase`, 전역은 `gv_camelCase`, 컨테이너는 접두어 + 단수(`_listItem`). 함수 첫 단어 · 금지 이름 · 약어 · 모든 낱말과 스크립트 이름 꼴은 린트 `naming-words` 강제(표 `Config/Rules/Lint/NamingWords.json`). 콘텐츠 파일 이름은 [FolderLayout](FolderLayout.md) "콘텐츠".
+이름 규칙 전부 — C++ · 용어 · CMake · Python · HLSL. C++ 타입은 `PascalCase`, 함수와 지역은 `camelCase`, 멤버는 `_camelCase`, 상수는 `kPascalCase`, 전역은 `gv_camelCase`, 컨테이너는 접두어 + 단수(`_listItem`). 함수 첫 단어 · 금지 이름 · 약어 · 모든 낱말과 스크립트 이름 꼴은 린트 `naming-words` 강제(표 `Config/Rules/Lint/NamingWords.json`). 콘텐츠 파일 이름은 [FolderLayout](FolderLayout.md) "콘텐츠".
 
 ## Naming
 
@@ -68,7 +68,7 @@ Never loop `releaseRHI` / `clearRHI` / `initRHI` from outside: `IRHIDevice` broa
 | `…API` | A C function table |
 
 - Spell `Anim` out as `Animation`, except outside terms (`AnimInstance`).
-- A boolean variable or member keeps the `b` prefix (`_bOpen`); a function returning a boolean starts with `is` / `has` / `can` / `should`.
+- A boolean variable or member keeps the `b` prefix (`_bOpen`); a function returning a boolean follows [Predicates](#predicates-callbacks-results).
 - Name a graphics type as a game programmer would in Unreal or Unity. `Slot` is only a shader binding slot or a position in a ring; a type owning a buffer is named after the buffer. No bookkeeping metaphors (`Ledger`): `…Tracker`, `…Registry`, `…Allocator`.
 - `Scene` owns one scene's data; `GameObjectManager` manages its objects' lifetime; `GameObjectStore` is the storage.
 

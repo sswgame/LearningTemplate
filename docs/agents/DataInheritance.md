@@ -1,6 +1,6 @@
 # DataInheritance
 
-> 결론: 데이터 · 리소스 파일과 경로의 규칙. 상속은 루트에 `_base="<리소스 id>"`(카탈로그 항목은 `_base="<id>"`)를 적고 다른 칸만 쓴다 — 형식마다 합치기 코드를 쓰지 않는다(리플렉션 형식 `PROPERTY( InheritKey )`, 손 XML 형식은 스키마, 카탈로그는 설정 표 한 줄). 모든 리소스 글은 `ResourceComposer::compose` 한 길(부모 → 조건 → 덮어쓰기 층)을 지나고 런타임은 쿠킹이 펼친 결과만 읽는다. 경로는 R1 ~ R9, 다른 에셋을 가리키는 칸은 `AssetRef<T>`.
+데이터 · 리소스 파일과 경로의 규칙. 상속은 루트에 `_base="<리소스 id>"`(카탈로그 항목은 `_base="<id>"`)를 적고 다른 칸만 쓴다 — 형식마다 합치기 코드를 쓰지 않는다(리플렉션 형식 `PROPERTY( InheritKey )`, 손 XML 형식은 스키마, 카탈로그는 설정 표 한 줄). 모든 리소스 글은 `ResourceComposer::compose` 한 길(부모 → 조건 → 덮어쓰기 층)을 지나고 런타임은 쿠킹이 펼친 결과만 읽는다. 경로는 R1 ~ R9, 다른 에셋을 가리키는 칸은 `AssetRef<T>`.
 
 ## 파일에 적는 법
 
@@ -135,7 +135,6 @@
 ## 리소스 읽기 입구
 
 - **종류 등록**은 `SW_ASSET_TYPE( id, 정의.withPathRule( … ).withLoader( AssetTypeLoader::of<T>( 메모리 태그 ) ) )` 한 줄, 공유 캐시는 `SW_SHARED_ASSET_CACHE`(Engine) · `SW_MODULE_SHARED_ASSET_CACHE`(모듈) 한 줄. 검증 전용 로더를 두지 않는다 — 스키마 테스트도 진짜 로더를 부른다.
-- 쿠킹이 알아야 하는 합성 규칙은 데이터(`datacataloginheritance.xml`)에 둔다 — 팩 쿠킹은 게임 모듈 전에 돈다.
 - `request( 경로 )` 는 핸들, `acquire( 경로 )` 는 `SharedAssetRef<T>`. `XMLCatalog` 에 감싸개를 두지 않는다. 다시 읽은 횟수는 `AssetReloadWatch<T>` 로만 본다(`_seen…ReloadCount` 칸 금지).
 - 새 에셋 캐시의 `reload` 는 `ReloadResult` 를 돌려준다(`void` 는 등록이 컴파일되지 않는다 — 강제). 실패면 옛 판을 둔다.
 - 다시 읽으면 새 판이 생긴다. 진행 중 세션 · 워커 일감 · 번호를 지어 둔 쪽은 `shared_ptr<const T>`(`.snapshot()`)로 쥐고, 지어 둔 것은 `AssetReloadWatch` 로 다시 짓는다.

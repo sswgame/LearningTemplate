@@ -1,6 +1,6 @@
 # Gameplay
 
-> 결론: 틱은 자기 오브젝트만 읽고 쓴다. 찾기는 `ComponentRegistry`, 오브젝트 사이 순서는 서브틱 선행 조건, 씬 전체를 한 번 봐야 하는 일은 프레임 시스템, 구조 변경 · 남의 오브젝트 쓰기만 틱 뒤 큐다. 씬 전체 순회는 `SceneIterationKey` 가 있어야 해 틱 코드에서 컴파일되지 않는다(형식 강제). 아래 절은 트리거 · 스트리밍 · 네트워크 · 게임 기능의 정한 계약이다.
+틱은 자기 오브젝트만 읽고 쓴다. 찾기는 `ComponentRegistry`, 오브젝트 사이 순서는 서브틱 선행 조건, 씬 전체를 한 번 봐야 하는 일은 프레임 시스템, 구조 변경 · 남의 오브젝트 쓰기만 틱 뒤 큐다. 씬 전체 순회는 `SceneIterationKey` 가 있어야 해 틱 코드에서 컴파일되지 않는다(형식 강제). 아래 절은 트리거 · 스트리밍 · 네트워크 · 게임 기능의 정한 계약이다.
 
 ## Frame order
 
@@ -51,7 +51,7 @@ Stop at the first yes.
 
 - **필수 일대일 효과**(주는 쪽이 결과를 알아야 하는 것 — 부스트 · 아이템 지급 · 피해)는 받는 쪽 리플렉션 인터페이스(`REFLECT( Interface )` + 포트 멤버, `findInterface<I>()`)로 부른다. 받는 쪽이 없거나 거절하면 결과로 돌려주고 경고한다(조용히 사라지지 않는다). 언리얼 `IAbilitySystemInterface` · `TakeDamage`, 유니티 `GetComponent<IDamageable>()` 자리. 예외: 반경 · 점유자 전체에 거는 지역 피해(폭발 · 용암)는 받는 쪽 없는 대상을 조용히 건너뛴다(언리얼 `ApplyRadialDamage`) — 경고는 지정한 한 대상에만.
 - **같은 오브젝트 · 아는 상대의 알림**은 컴포넌트 델리게이트(`MulticastDelegate`, `SW_DELEGATE_*`). Godot 시그널 · 언리얼 컴포넌트 델리게이트 자리.
-- **선택적 일대다 전역 알림**(보내는 쪽이 받는 쪽을 모르고, 받는 쪽이 없어도 정상 — 세이브 완료 · 씬 로드 · 상호작용 완료 · 방 클리어 · 쓰러짐 → UI · 퀘스트 · 점수)은 "game" 채널 이벤트 버스(`GameEventUtil::send`). Lyra `UGameplayMessageSubsystem` 자리. 효과가 필수인 일을 버스에만 실으면 안 된다 — 받는 쪽이 없을 때 효과가 빠진다(2026-11-21 기믹 발사 · 부스트 · 아이템이 그랬다).
+- **선택적 일대다 전역 알림**(보내는 쪽이 받는 쪽을 모르고, 받는 쪽이 없어도 정상 — 세이브 완료 · 씬 로드 · 상호작용 완료 · 방 클리어 · 쓰러짐 → UI · 퀘스트 · 점수)은 "game" 채널 이벤트 버스(`GameEventUtil::send`). Lyra `UGameplayMessageSubsystem` 자리. 효과가 필수인 일을 버스에만 싣지 않는다 — 받는 쪽이 없을 때 효과가 빠진다.
 
 ## 스트리밍 · 네트워크
 
@@ -62,6 +62,6 @@ Stop at the first yes.
 
 ## 게임 기능 · 미니게임
 
-- 시험용 게임을 새로 만들지 않는다 — 기능은 Playground 장소 · 미니게임과 시나리오로 확인한다. 키트는 모두 링크하고 게임 기능(`GameFeatureRegistry`)이 등록 · 서비스 바인딩 · 컴포넌트(받는 이름 — `GameFeatureReceiverComponent`)만 켜고 끈다(런타임 모듈 로드 · 언로드 금지).
+- 기능은 Playground 장소 · 미니게임과 시나리오로 확인한다(게임 범위는 [NEXT](../NEXT.md) "지킬 결정"). 키트는 모두 링크하고 게임 기능(`GameFeatureRegistry`)이 등록 · 서비스 바인딩 · 컴포넌트(받는 이름 — `GameFeatureReceiverComponent`)만 켜고 끈다(런타임 모듈 로드 · 언로드 금지).
 - 미니게임 카탈로그는 `GameFeatureScope::loadCatalog<T>()` 로 받는다(키트 등록 · `catalogs` 검사 안에 들게).
 - 범용 스크립트 VM 대신 `BehaviorTreeAsset` · `ConditionExpr` · `DialogueGraphAsset` · `AnimationGraphPlayer` 에 노드 · 식을 더한다.

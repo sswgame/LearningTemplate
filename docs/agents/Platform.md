@@ -1,6 +1,6 @@
 # 플랫폼 대상: Android · 웹(WebGPU)
 
-> 결론: Android 는 Vulkan 1.2 + 디스크립터 인덱싱 필수(없으면 장치를 고르지 않는다). 웹은 WebGPU 하나, bindless 가 없어 DX11 과 같은 고정 슬롯 모델. 대상이 못 주는 것은 능력 깃발(`RHICapabilities`) · 형식 대체 · 쿠킹 변형으로 가르고, 필수인데 없으면 오류로 멈춘다. 외부 API 는 `source-driven-development` 로 그 판의 명세를 먼저 본다.
+Android 는 Vulkan 1.2 + 디스크립터 인덱싱 필수(없으면 장치를 고르지 않는다). 웹은 WebGPU 하나, bindless 가 없어 DX11 과 같은 고정 슬롯 모델. 대상이 못 주는 것은 능력 깃발(`RHICapabilities`) · 형식 대체 · 쿠킹 변형으로 가르고, 필수인데 없으면 오류로 멈춘다. 외부 API 는 `source-driven-development` 로 그 판의 명세를 먼저 본다.
 
 범위: Android 지원, iOS 제외, 웹은 최신 브라우저 WebGPU 만(WebGL2 없음), 콘솔은 갈래를 만들지도 막지도 않는다.
 

@@ -1,6 +1,6 @@
 # EditorUI
 
-> 결론: 패널은 MVVM(View 는 ImGui 와 ViewState 만, 모델 접근은 ViewModel 하나)으로 짓는다. 색 · 간격은 토큰 키로만, 결함은 공용 위젯 · 토큰에서 고치고, 화면은 `uiaudit` · `uicapture` 캡처를 아래 체크리스트로 직접 본다. 입력 · 맥락 메뉴는 입력 맵과 `EditorInputGUI` 하나가 정한다.
+패널은 MVVM(View 는 ImGui 와 ViewState 만, 모델 접근은 ViewModel 하나)으로 짓는다. 색 · 간격은 토큰 키로만, 결함은 공용 위젯 · 토큰에서 고치고, 화면은 `uiaudit` · `uicapture` 캡처를 아래 체크리스트로 직접 본다. 입력 · 맥락 메뉴는 입력 맵과 `EditorInputGUI` 하나가 정한다.
 
 ## MVVM: View, ViewModel, model
 
@@ -17,9 +17,9 @@
 - **Commands are methods named for the intent** (`setLayerInitiallyActive( name, bOn )`), taking ids and values, never pointers — the only mutation path from the View. A command changing engine state the game thread owns (render target size, play session) posts an `EditorUICommand` to `EditorUICommandQueue` instead of calling the engine.
 - **Registered commands live outside the View**: `SW_EDITOR_COMMAND` · `SW_EDITOR_CONTEXT_COMMAND` · `SW_DEV_COMMAND` do not compile in a view TU — put them in `Model/` or `Common/Commands`. A view registers only `SW_EDITOR_SUBMENU_COMMAND` and `SW_EDITOR_PANEL_OPEN_COMMAND`. A command whose result the window must show posts a request value to the ViewModel (`postRequest`).
 - **Document edits go through the undo stack** (`SW_UNDO_STEP`, mark the scene dirty). Scene settings through `EditorSceneSettingsCommands::apply`; objects through `EditorSceneCommands` · `EditorTransaction`. A view-only command records nothing and says so in a comment.
-- **Headless test** for every data-editing ViewModel command: `Panels/<Panel>/Model/Tests/Test<Name>ViewModel.cpp` with a local `CommandStack` (`ScopedEditorScope`) — run, check one undo step, undo, redo. Run via `App -EnableEditor -scenario=engine/automation/editor/selftests.scenario.xml`, not `App --test`.
+- **Headless test** for every data-editing ViewModel command: `Panels/<Panel>/Model/Tests/Test<Name>ViewModel.cpp` with a local `CommandStack` (`ScopedEditorScope`) — run, check one undo step, undo, redo. It runs under `App --test-editor -unattended`, not `App --test` ([Test/README](../../Test/README.md)).
 - **Document panels**: a panel editing one asset file derives from `EditorDocumentPanel`; one without a document path from `EditorStateDocumentPanel`.
-- **Names**: a window's state-and-commands class is `…ViewModel`, never a bare `…Model`. The editing copy of one document owned by a ViewModel is `…EditModel`; a data structure is named for what it is; shared pure rules keep their own name (`…Util`, `…Rules`).
+- **Names**: `…ViewModel` · `…EditModel` follow [NamingCpp](NamingCpp.md) 용어 table; never a bare `…Model`. Shared pure rules keep their own name (`…Util`, `…Rules`).
 - **Shared windows a View may use**: `EditorPanelManager` · `EditorCommandRegistry` · `EditorInputActions::findInEditorContext`, `EditorPanel::areSceneEditsAllowed`, `EditorPaths::getAssetPaths`, `EditorViewSurface` for viewport images. An engine service one panel needs is found by a **private** static on its ViewModel; the View never sees the service.
 - **ViewModel headers stay light**: value headers only; an owner object from undo plumbing is a forward-declared `unique_ptr`. The shared GUI headers (`EditorPanel.h` · `EditorPanelManager.h` · `EditorPreviewPanel.h` · `EditorDocumentPanel.h`) reach no banned folder — keep them that way.
 - **Trees and long lists**: the ViewModel owns expansion state (`SetNextItemOpen` in, `TreeNodeEx` result back as a command), caches flattened rows until the structure changes, and fills details only for on-screen rows (`HierarchyViewModel`). An unbounded flat list draws through `EditorVirtualList` — never a bare `ImGuiListClipper`, never every row.

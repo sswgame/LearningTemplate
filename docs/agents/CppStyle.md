@@ -1,6 +1,6 @@
 # CppStyle
 
-> 결론: C++ 를 쓸 때의 규칙 — 모양, 상수, 실패 값, 도우미 자리, 헤더 · 층 · 서비스, 구성 차이, 있는 장치, 리플렉션, 병렬 · 소유, 되풀이 결함. 린트 · 컴파일이 강제하는 줄은 "강제" 로 표시한다. 틱 · 게임플레이는 [Gameplay](Gameplay.md), 이름은 [NamingCpp](NamingCpp.md), 테스트는 [Testing](Testing.md).
+C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" 로 표시한다. 틱 · 게임플레이는 [Gameplay](Gameplay.md), 이름은 [NamingCpp](NamingCpp.md), 테스트는 [Testing](Testing.md).
 
 ## C++ style
 
@@ -17,8 +17,7 @@
 - 초기값은 한 곳에: with a constructor, initialize every field there in declaration order, braces, one per line, leading `,`. An iterator pair takes parentheses.
 - Header defaults only for a `= default` / inline default constructor, a delegating constructor, or a type with no constructor.
 - A field default-initialization leaves indeterminate gets a value in every constructor (copy · move included) or a header default; byte buffers are exempt.
-- **Bit packing**: order fields to minimize padding; a flag is `uint8 _bX : 1`, kept together per access section (린트 `cpp-shape` 강제). A type with no constructor (an aggregate) keeps `bool _bX{ false }` — a C++17 bit-field cannot have a default member initializer; the lint skips such types. In a type with a constructor, `bool` + `NOLINT(sw-bool-flag): <reason>` only when its address is taken or it is atomic.
-- An aggregate (built by braces, no constructor) keeps `bool _bX{ false }`; any other type with a flag writes the constructor.
+- **Bit packing**: order fields to minimize padding; a flag is `uint8 _bX : 1`, kept together per access section (린트 `cpp-shape` 강제). An aggregate (built by braces, no constructor) keeps `bool _bX{ false }` — a C++17 bit-field cannot have a default member initializer; any other type with a flag writes the constructor. In a type with a constructor, `bool` + `NOLINT(sw-bool-flag): <reason>` only when its address is taken or it is atomic.
 - Declaration order: public fields; constructors; `initialize`/`shutdown`; `process`; getters/setters; private functions; private fields last (린트 `cpp-shape` 강제).
 
 ### Types, strings, functions
@@ -50,7 +49,7 @@
 | A contract between modules or backends | `sw::constant::<category>` in its layer's file (`Constants.h`, `EngineDefines.h`, `RHIDescriptors.h`, `ReflectionConstants.h`); shader ↔ C++ in `binding_slots.hlsli`. A per-side copy is the bug |
 
 - One home: math constants `MathUtil`; gravity `PhysicsSystem::getConfiguredGravity`; hashes `HashUtil`; FourCC `FourCCUtil::make`; units `constant::time::` · `constant::memory::` (never `1e9`, `1024 * 1024`); buffer sizes `constant::buffer::kMax*`, `constant::file::kMaxPathSize`.
-- **Sentinels:** "not found" is `constant::invalid_index::*` or a domain name from it, a value never stored is `sw::optional`; "unlimited / default" is a named constant plus a predicate on the owning type. Naming a sentinel never changes saved or replicated bytes.
+- **Sentinels:** "none" follows [Errors](#errors); a stored or wire "none" is `constant::invalid_index::*` or a domain name from it; "unlimited / default" is a named constant plus a predicate on the owning type. Naming a sentinel never changes saved or replicated bytes.
 - No aliases of another constant; a local name only when it adds meaning.
 - **Tuning values are data** (`PROPERTY` defaulted in the constructor, or the kit's settings · catalog); performance thresholds are named constants next to their use (`gv_*` if they must change without a rebuild); asset paths are data. Format, protocol and math tables stay in code.
 - A missing required value stops with an error — no fallback (`*OrDefault`, `fallback` parameters, discarded load results).
@@ -73,7 +72,7 @@
 - Branch on `kind()`, never on text. `message()` is a fixed English literal; log where reported with `SW_LOG_ERROR_ID`; add context with `prependDetail`.
 - No output parameter for the reason (`string& outError`); a multi-problem check fills a caller's list or returns a report. A reply text written on success and failure (`outReply`) stays.
 - No sentinel for "none": lookups return `sw::optional<uint32>`; closed slot sets are scoped enums with a none enumerator. Only a stored or wire format keeps `-1`, named and written with `value_or`.
-- No `std::optional`; no `value_or` fallback for a required value.
+- No `std::optional`; no `value_or` fallback for a required value ([Constants](#constants)).
 - Inside `namespace sw` write `unexpected( … )`; with only `using namespace sw;` write `sw::unexpected( … )` (MSVC `<eh.h>`).
 
 ## Helpers
