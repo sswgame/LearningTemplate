@@ -8,6 +8,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Time/TimeSeconds.h"
 
 namespace sw
 {
@@ -19,7 +20,7 @@ namespace sw
      * @code
      *     const int32 stepCount = _timer.consume( deltaTime );
      *     for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
-     *         integrate( _timer.getStep() );
+     *         integrate( _timer.getStep().count() );
      * @endcode
      */
     struct FixedStepTimer
@@ -42,6 +43,8 @@ namespace sw
          *          2 · 4 스텝이 번갈아 나오지 않게 합니다.
          */
         constexpr int32 consume( float32 deltaTime ) { return consumeScaled( deltaTime, 1.0f ); }
+        /** @brief 게임 시간(정지 · 배율이 곱해진 프레임 시간) @p deltaTime 을 쌓습니다(`consume( float32 )` 와 같다). */
+        constexpr int32 consume( GameSeconds deltaTime ) { return consume( deltaTime.count() ); }
 
         /**
          * @brief 배속 @p timeScale 을 걸음 수로 냅니다. 한 프레임 상한(`_maxFrameTime`)은 실제 프레임 시간에 걸고 배속은 그 뒤에 곱한다.
@@ -72,8 +75,9 @@ namespace sw
             return MathUtil::max( minSteps, static_cast<int32>( MathUtil::round( seconds / _step ) ) );
         }
 
-        constexpr void    reset() { _accumulator = 0.0f; }
-        constexpr float32 getStep() const { return _step; }
+        constexpr void reset() { _accumulator = 0.0f; }
+        /** @brief 한 스텝의 길이입니다 — 스텝 안에서 흘리는 시간은 이 형식이라 프레임 시간(`GameSeconds`)과 섞이지 않습니다. */
+        constexpr StepSeconds getStep() const { return StepSeconds{ _step }; }
         /** @brief 다음 스텝까지 찬 비율(0..1)입니다. 마지막 스텝과 다음 스텝 사이 어디를 그릴지 정합니다. */
         constexpr float32 getAlpha() const
         {

@@ -615,7 +615,7 @@ namespace sw
     void FractureBaseComponent::onPostPhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();
-        _frameSimulatedTime += physics.getStepTimer().getStep();
+        _frameSimulatedTime += physics.getStepTimer().getStep().count();
     }
 
     void FractureBaseComponent::onPhysicsFrameEnd( const FixedStepContext& context )

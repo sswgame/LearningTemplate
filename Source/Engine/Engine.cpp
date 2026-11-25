@@ -448,7 +448,7 @@ namespace sw
             _pInputManager->beginFrame( unscaledDeltaTime ); // 장치는 게임 시간과 무관하다 — 배율을 곱하면 정지 동안 진동이 꺼지지 않고 가상 커서가 서며, 슬로 모션에서 길게 누르기 · 누른 순간이 늘어난다
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
         if ( _pUIDriver != nullptr )
-            _pUIDriver->processFrameInput( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count() ); // 정지 메뉴의 탐색 반복은 실제 시간
+            _pUIDriver->processFrameInput( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 정지 메뉴의 탐색 반복은 실제 시간
     }
 
     void Engine::updateFrameServices()
@@ -496,7 +496,7 @@ namespace sw
             {
                 SW_PROFILE_SCOPE( "GT.Audio.update" );
                 _pAudioDriver->setGamePaused( _bGamePaused != SW_FALSE );
-                _pAudioDriver->update( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count() ); // 장치는 게임이 멈춰도 돈다 — 장치 없는 렌더도 같아야 정지 · 에디터에서 오디오 상태가 움직인다
+                _pAudioDriver->update( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 장치는 게임이 멈춰도 돈다 — 장치 없는 렌더도 같아야 정지 · 에디터에서 오디오 상태가 움직인다
             }
         }
     }
@@ -543,7 +543,7 @@ namespace sw
                 }
                 // 시간은 실제 경과다 — 게임 시간 배율 · 정지(멈춘 편집기에서는 게임의 로딩 화면이 정지를 쥐어 0)를 곱하면 미리보기가 멈췄다(VFX 미리보기의 입자 0).
                 // 미리보기마다의 배율은 정책(`ScenePreviewPolicy::_timeScale`)이 곱한다.
-                _pSceneManager->updatePreviewScenes( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count(), vector_reference<const uint32>( arrDrawnSceneKey, drawnSceneCount ) );
+                _pSceneManager->updatePreviewScenes( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime(), vector_reference<const uint32>( arrDrawnSceneKey, drawnSceneCount ) );
             }
         }
     }
@@ -559,10 +559,10 @@ namespace sw
         frame._pointerOrigin = int2{ mainOutput._windowX, mainOutput._windowY };
         frame._contentScale  = pMainWindow != nullptr ? pMainWindow->getContentScale() : 1.0f;
         // 플랫폼 안전 여백(노치 · 시스템 바)은 창 전체에 그릴 때만 맞다 — 에디터 게임 뷰(창 안의 이미지)는 창의 여백과 무관하다.
-        const bool bWholeWindow     = pMainWindow != nullptr && pMainWindow->getWidth() == vpWidth && pMainWindow->getHeight() == vpHeight;
-        frame._safeInsets           = bWholeWindow ? pMainWindow->getSafeAreaInsets() : float4{};
-        frame._unscaledDeltaSeconds = engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count();
-        frame._bGamePaused          = _bGamePaused != SW_FALSE;
+        const bool bWholeWindow  = pMainWindow != nullptr && pMainWindow->getWidth() == vpWidth && pMainWindow->getHeight() == vpHeight;
+        frame._safeInsets        = bWholeWindow ? pMainWindow->getSafeAreaInsets() : float4{};
+        frame._unscaledDeltaTime = engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
+        frame._bGamePaused       = _bGamePaused != SW_FALSE;
         _pUIDriver->updateFrame( frame );
     }
 

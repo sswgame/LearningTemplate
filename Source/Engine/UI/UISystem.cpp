@@ -312,8 +312,9 @@ namespace sw
         setUserSettings( nullptr );
     }
 
-    void UISystem::processInput( float32 deltaSeconds )
+    void UISystem::processInput( const RealSeconds unscaledDeltaTime )
     {
+        const float32         deltaSeconds = unscaledDeltaTime.count();
         const ScopedMemoryTag uiMemoryTag{ MemoryTag::UI };
         if ( _input.getInputManager() == nullptr )
             return;
@@ -324,7 +325,7 @@ namespace sw
         if ( _bOnScreenSuppressed == SW_FALSE )
         {
             _input.processPointer( _listScreen, _viewport );
-            _onPointerProcessed.broadcast( deltaSeconds ); // World 위젯 광선(위젯 컴포넌트 서비스)
+            _onPointerProcessed.broadcast( unscaledDeltaTime ); // World 위젯 광선(위젯 컴포넌트 서비스)
         }
         // 액션: 화면이 없으면 일시정지 메뉴를 먼저 연다. 활성 화면은 여기서 한 번 정하며, 방금 연 메뉴는 다음 프레임부터 액션을 받는다.
         UIScreen* pActive = getActiveScreen();
@@ -335,17 +336,18 @@ namespace sw
         _input.updateKeyboardFocus( _viewport );
     }
 
-    void UISystem::update( float32 deltaSeconds, const UIViewport& viewport )
+    void UISystem::update( const RealSeconds unscaledDeltaTime, const UIViewport& viewport )
     {
+        const float32         deltaSeconds = unscaledDeltaTime.count();
         const ScopedMemoryTag uiMemoryTag{ MemoryTag::UI }; // 그리기 캐시, 그리기 목록, 텍스트 배치, 글리프 아틀라스가 프레임 안에서 커진다
         _viewport = viewport;
         syncScreenTags( viewport );
         _pThemes->syncSetting(); // 사용자 설정의 테마를 따라간다 — 바뀌면 `onThemeChanged` 가 모든 화면을 다시 맞춘다
         syncScreenSwitches();
         reopenClosedScreens();
-        _onUpdateBeforeScreens.broadcast( deltaSeconds ); // 자막 · 툴팁(서브시스템 — 기동에서 건 순서)
+        _onUpdateBeforeScreens.broadcast( unscaledDeltaTime ); // 자막 · 툴팁(서브시스템 — 기동에서 건 순서)
         updateScreens( deltaSeconds );
-        _onUpdateAfterScreens.broadcast( deltaSeconds ); // 알림
+        _onUpdateAfterScreens.broadcast( unscaledDeltaTime ); // 알림
         applyPendingCloses();
         updateBindings();
         // 애니메이션: 문서 애니메이션과 트윈이 프로퍼티를 쓴다(스타일과 레이아웃 앞이라, 쓴 필드의 무효화를 이번 프레임에 처리한다). 실제 프레임 시간을 쓴다(일시정지 메뉴도 움직인다).
@@ -372,7 +374,7 @@ namespace sw
             SW_PROFILE_COUNT( "UI.StyleWidgets", restyledCount );
         }
         // 레이아웃 앞 칸: 화면 마커가 게임 틱과 트랜스폼 적용 뒤의 월드 점을 이번 뷰포트로 투영한다(같은 프레임에 배치된다).
-        _onUpdateBeforeLayout.broadcast( deltaSeconds );
+        _onUpdateBeforeLayout.broadcast( unscaledDeltaTime );
         // 레이아웃: 화면 트리마다 더티한 루트만 다시 측정한다. 화면마다 뷰포트 전체가 루트 사각형이다.
         {
             SW_PROFILE_SCOPE( "GT.UI.Layout" );
@@ -386,7 +388,7 @@ namespace sw
         }
         // 그리기: 더티한 위젯만 다시 칠하고 화면마다 캐시를 이어 붙인다(스타일 순회(5-2) 전까지는 그리기가 kStyle 도 비운다).
         paintScreens();
-        _onUpdateAfterPaint.broadcast( deltaSeconds ); // 화면 마커 앵커 · World 위젯 렌더 텍스처 · 스택 밖 화면(오프스크린 — 에디터 미리보기)
+        _onUpdateAfterPaint.broadcast( unscaledDeltaTime ); // 화면 마커 앵커 · World 위젯 렌더 텍스처 · 스택 밖 화면(오프스크린 — 에디터 미리보기)
     }
 
     UIScreenHandle UISystem::openScreen( string_view documentPath )
@@ -999,10 +1001,10 @@ namespace sw
         return _pUserSettings;
     }
 
-    void UISystem::processFrameInput( const float32 unscaledDeltaSeconds )
+    void UISystem::processFrameInput( const RealSeconds unscaledDeltaTime )
     {
         if ( isInitialized() )
-            processInput( unscaledDeltaSeconds ); // 정지 메뉴의 탐색 반복은 실제 시간
+            processInput( unscaledDeltaTime ); // 정지 메뉴의 탐색 반복은 실제 시간
     }
 
     void UISystem::updateFrame( const EngineUIFrame& frame )
@@ -1025,7 +1027,7 @@ namespace sw
         // 음성이 낸 줄은 그 음성이 끝날 때까지 남는다 — 오디오가 내려갔으면 모두 끝난 것으로 본다(줄이 영원히 남지 않는다).
         subtitles.refreshVoiceState( bAudioReady ? &pAudio->getEngine() : nullptr );
         subtitles.setGamePaused( frame._bGamePaused );
-        update( frame._unscaledDeltaSeconds, viewport ); // 애니메이션 · 알림은 정지 메뉴 아래서도 흐른다. 자막은 게임 소리와 같이 선다
+        update( frame._unscaledDeltaTime, viewport ); // 애니메이션 · 알림은 정지 메뉴 아래서도 흐른다. 자막은 게임 소리와 같이 선다
     }
 
     Subscription UISystem::addLayerHideRequest( UILayerMask layers )

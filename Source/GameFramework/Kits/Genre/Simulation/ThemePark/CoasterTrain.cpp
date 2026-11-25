@@ -127,7 +127,7 @@ namespace sw
         const int32 stepCount = _stepTimer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            integrate( _stepTimer.getStep() );
+            integrate( _stepTimer.getStep().count() );
         }
     }
 

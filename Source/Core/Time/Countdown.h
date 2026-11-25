@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 namespace sw
 {
@@ -93,6 +94,15 @@ namespace sw
             _remaining = 0.0f;
             return false;
         }
+
+        /** @brief 게임 시간 @p deltaTime 만큼 흘립니다(`update( float32 )` 와 같다). 씬 틱 · 게임 규칙의 쿨다운 · 지속 시간이 받는다 — 실제 시간(`RealSeconds`)은 컴파일되지 않는다. */
+        constexpr bool update( GameSeconds deltaTime ) { return update( deltaTime.count() ); }
+        /** @brief 고정 스텝 하나 @p step 만큼 흘립니다(결정적 시뮬레이션의 한 걸음). */
+        constexpr bool update( StepSeconds step ) { return update( step.count() ); }
+        /** @brief `updateRepeat( float32, … )` 의 게임 시간 판입니다. */
+        constexpr bool updateRepeat( GameSeconds deltaTime, float32 interval, bool bWant ) { return updateRepeat( deltaTime.count(), interval, bWant ); }
+        /** @brief `updateRepeat( float32, … )` 의 고정 스텝 판입니다. */
+        constexpr bool updateRepeat( StepSeconds step, float32 interval, bool bWant ) { return updateRepeat( step.count(), interval, bWant ); }
 
         /** @brief 아직 남아 있으면(쿨다운 중이거나 지속 중이면) true 입니다. */
         constexpr bool isActive() const { return _remaining > 0.0f; }

@@ -218,7 +218,7 @@ namespace sw
 
     float32 FightingGameModeComponent::computeSecondsRemaining() const
     {
-        return static_cast<float32>( _match.getRoundFramesRemaining() ) * _timer.getStep();
+        return static_cast<float32>( _match.getRoundFramesRemaining() ) * _timer.getStep().count();
     }
 
     InputFrame FightingGameModeComponent::consumePlayerInput()

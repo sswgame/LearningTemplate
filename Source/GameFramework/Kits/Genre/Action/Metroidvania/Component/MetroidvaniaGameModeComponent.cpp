@@ -587,7 +587,7 @@ namespace sw
         for ( int32 step = 0; step < stepCount && _phase != MetroidvaniaPhase::Won; ++step )
         {
             if ( _phase == MetroidvaniaPhase::Explore )
-                stepExplore( _timer.getStep() );
+                stepExplore( _timer.getStep().count() );
             else if ( _respawnDelay.update( _timer.getStep() ) )
                 respawnPlayer();
             MetroidvaniaPlayerCommand held; // 누름은 걸음 하나가 쓴다

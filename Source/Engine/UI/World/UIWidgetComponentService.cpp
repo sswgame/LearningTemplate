@@ -38,9 +38,9 @@ namespace sw
     SubsystemInitResult UIWidgetComponentService::initializeSubsystem()
     {
         _pUI                      = &engine::getSubsystem<UISystem>();
-        _pointerSubscription      = _pUI->onPointerProcessed().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UIWidgetComponentService::processWorldPointer, this ) );
-        _beforeLayoutSubscription = _pUI->onUpdateBeforeLayout().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UIWidgetComponentService::updateScreenMarkers, this ) );
-        _afterPaintSubscription   = _pUI->onUpdateAfterPaint().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UIWidgetComponentService::updateAfterPaint, this ) );
+        _pointerSubscription      = _pUI->onPointerProcessed().add( SW_DELEGATE_METHOD( Delegate<void( RealSeconds )>, &UIWidgetComponentService::processWorldPointer, this ) );
+        _beforeLayoutSubscription = _pUI->onUpdateBeforeLayout().add( SW_DELEGATE_METHOD( Delegate<void( RealSeconds )>, &UIWidgetComponentService::updateScreenMarkers, this ) );
+        _afterPaintSubscription   = _pUI->onUpdateAfterPaint().add( SW_DELEGATE_METHOD( Delegate<void( RealSeconds )>, &UIWidgetComponentService::updateAfterPaint, this ) );
         return SubsystemInitResult::Succeeded;
     }
 
@@ -151,7 +151,7 @@ namespace sw
         }
     }
 
-    void UIWidgetComponentService::processWorldPointer( [[maybe_unused]] float32 deltaSeconds )
+    void UIWidgetComponentService::processWorldPointer( [[maybe_unused]] RealSeconds unscaledDeltaTime )
     {
         // 입력을 켠 World 위젯이 하나도 없으면 광선을 만들 필요가 없다. 호버가 남아 있으면 푼다.
         const WidgetComponent* pAnchorComponent = nullptr;
@@ -201,7 +201,7 @@ namespace sw
         }
     }
 
-    void UIWidgetComponentService::updateScreenMarkers( [[maybe_unused]] float32 deltaSeconds )
+    void UIWidgetComponentService::updateScreenMarkers( [[maybe_unused]] RealSeconds unscaledDeltaTime )
     {
         SW_PROFILE_SCOPE( "GT.UI.Markers" );
         const UIViewport& viewport = _pUI->getViewport();
@@ -219,7 +219,7 @@ namespace sw
         }
     }
 
-    void UIWidgetComponentService::updateAfterPaint( [[maybe_unused]] float32 deltaSeconds )
+    void UIWidgetComponentService::updateAfterPaint( [[maybe_unused]] RealSeconds unscaledDeltaTime )
     {
         // 앵커는 사각형과 따로 프레임마다 낸다(움직인 마커가 그리기 목록 번호를 올리지 않는다). 배율은 그리기와 같은 값이다(`UISystem::makePaintContext`).
         const float32 uiScale = _pUI->getViewport()._uiScale;

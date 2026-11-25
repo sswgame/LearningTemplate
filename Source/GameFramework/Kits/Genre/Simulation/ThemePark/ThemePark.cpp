@@ -140,7 +140,7 @@ namespace sw
         const int32 stepCount = _stepTimer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            stepFixed( _stepTimer.getStep() );
+            stepFixed( _stepTimer.getStep().count() );
         }
     }
 

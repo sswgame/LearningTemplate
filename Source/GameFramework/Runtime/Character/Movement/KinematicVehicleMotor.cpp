@@ -239,7 +239,7 @@ namespace sw
         _bJumpQueued             = SW_FALSE;
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            update( stepInput, _timer.getStep() );
+            update( stepInput, _timer.getStep().count() );
             stepInput._bBoostPressed = SW_FALSE;
             stepInput._bJumpPressed  = SW_FALSE;
         }

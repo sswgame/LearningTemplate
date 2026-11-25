@@ -817,7 +817,7 @@ namespace sw
         sweepContinuousColliders2D();
 
         const uint32  stepCount = static_cast<uint32>( _stepTimer.consume( deltaTime ) );
-        const float32 fixedStep = _stepTimer.getStep();
+        const float32 fixedStep = _stepTimer.getStep().count();
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             const FixedStepContext stepContext{ *this, deltaTime, fixedStep, stepIndex, stepCount, 0.0f };

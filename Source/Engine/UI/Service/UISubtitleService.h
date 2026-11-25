@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -111,7 +112,7 @@ namespace sw
         /** @brief 줄을 모두 지우고 화면을 닫습니다(종료 `shutdownSubsystem` 과 시나리오 단계 되돌리기가 부릅니다). */
         void clear();
         /** @brief 시간을 흘리고(꺼져 있어도 — 게임이 멈췄으면 선다) 대기열을 당긴 뒤, 설정을 따라 화면을 열고 닫고 줄 위젯을 맞춥니다. UI 갱신의 화면 틱 앞 칸이 부릅니다. */
-        void update( float32 deltaSeconds );
+        void update( RealSeconds unscaledDeltaTime );
 
         /** @brief 텍스트 @p text 의 읽기 시간입니다. max( 최소 표시 시간, 글자(코드 포인트) 수 × 글자당 시간 ) 입니다. */
         float32 computeReadingSeconds( string_view text ) const;

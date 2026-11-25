@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
@@ -90,11 +91,11 @@ namespace sw
 
     private:
         /** @brief 포인터 처리 뒤 칸입니다 — 이번 프레임의 마우스 이벤트 중 화면 위젯 아래가 아닌 것을 게임 카메라 광선으로 바꿔 World 위젯으로 보냅니다. */
-        void processWorldPointer( float32 deltaSeconds );
+        void processWorldPointer( RealSeconds unscaledDeltaTime );
         /** @brief 레이아웃 앞 칸입니다 — 게임 틱과 트랜스폼 적용 뒤의 월드 점을 이번 뷰포트로 투영해 마커를 옮깁니다(같은 프레임에 배치된다). */
-        void updateScreenMarkers( float32 deltaSeconds );
+        void updateScreenMarkers( RealSeconds unscaledDeltaTime );
         /** @brief 그리기 뒤 칸입니다 — 앵커 표를 이번 배율의 물리 픽셀로 내고, World 컴포넌트마다 자기 트리를 렌더 텍스처 크기(배율 1)로 배치하고 칠합니다. */
-        void updateAfterPaint( float32 deltaSeconds );
+        void updateAfterPaint( RealSeconds unscaledDeltaTime );
 
     private:
         UISystem*                _pUI;                      ///< 화면 스택(기동이 찾는다, 그 전 · 종료 뒤에는 nullptr)

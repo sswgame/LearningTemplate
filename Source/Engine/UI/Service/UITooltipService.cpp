@@ -43,7 +43,7 @@ namespace sw
     SubsystemInitResult UITooltipService::initializeSubsystem()
     {
         _pUI                = &engine::getSubsystem<UISystem>();
-        _updateSubscription = _pUI->onUpdateBeforeScreens().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UITooltipService::update, this ) );
+        _updateSubscription = _pUI->onUpdateBeforeScreens().add( SW_DELEGATE_METHOD( Delegate<void( RealSeconds )>, &UITooltipService::update, this ) );
         return SubsystemInitResult::Succeeded;
     }
 
@@ -120,7 +120,7 @@ namespace sw
         return nullptr;
     }
 
-    void UITooltipService::update( float32 deltaSeconds )
+    void UITooltipService::update( RealSeconds unscaledDeltaTime )
     {
         // 화면 그리기를 막는 동안(에디터 멈춤)은 포인터도 막혀 있다 — 툴팁과 커서를 건드리지 않는다.
         if ( _pUI->isOnScreenSuppressed() )
@@ -150,7 +150,7 @@ namespace sw
         }
         if ( pOwner == nullptr )
             return;
-        _hoverSeconds += deltaSeconds;
+        _hoverSeconds += unscaledDeltaTime.count();
         if ( _hoverSeconds >= static_cast<float32>( gv_uiTooltipDelay ) )
             show( *pOwner );
     }

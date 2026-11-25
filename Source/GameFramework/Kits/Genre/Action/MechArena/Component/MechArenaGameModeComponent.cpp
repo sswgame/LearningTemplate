@@ -419,9 +419,9 @@ namespace sw
             for ( int32 pilot = 0; pilot < _world.getPilotCount(); ++pilot )
             {
                 const bool bHuman = pilot == kPlayer && bAutoPlay == false;
-                _world.setInput( pilot, bHuman ? consumePlayerInput() : makeBotInput( pilot, _timer.getStep() ) );
+                _world.setInput( pilot, bHuman ? consumePlayerInput() : makeBotInput( pilot, _timer.getStep().count() ) );
             }
-            _world.update( _timer.getStep() );
+            _world.update( _timer.getStep().count() );
         }
         settle();
     }

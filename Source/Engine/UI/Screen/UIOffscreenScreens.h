@@ -12,6 +12,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
@@ -102,7 +103,7 @@ namespace sw
 
     private:
         /** @brief UI 갱신의 그리기 뒤 칸입니다 — 미리보기가 튼 애니메이션을 진행하고(스택 밖 화면은 `Open` 을 틀지 않는다) 화면마다 스타일, 레이아웃, 그리기를 돌립니다. */
-        void update( float32 deltaSeconds );
+        void update( RealSeconds unscaledDeltaTime );
         /** @brief 재생 중인 애니메이션이 있는 화면의 애니메이션을 @p deltaSeconds 만큼 진행합니다(미리보기의 애니메이션 재생). */
         void updateAnimations( float32 deltaSeconds );
         /**

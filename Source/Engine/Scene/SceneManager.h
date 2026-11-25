@@ -14,6 +14,7 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
@@ -331,7 +332,7 @@ namespace sw
          * @details 활성 씬 틱과 별개로 프레임마다 한 번 부릅니다(`Engine::updateScenes` 가 호스트의 미리보기 뷰 요청에서 키를 모아 넘긴다).
          *          정책이 `ScenePreviewTick::External` 이거나 키가 목록에 없는 씬은 건너뜁니다. 틱 중에 미리보기 씬을 만들거나 내리지 마십시오.
          */
-        void updatePreviewScenes( float32 deltaTime, vector_reference<const uint32> listDrawnSceneKey );
+        void updatePreviewScenes( RealSeconds unscaledDeltaTime, vector_reference<const uint32> listDrawnSceneKey );
         /** @brief 로드된 씬을 내리고 종료합니다(`shutdownSubsystem` 과 소멸자가 부른다). */
         void shutdown();
         /**

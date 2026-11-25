@@ -503,9 +503,9 @@ namespace sw
         const int32 stepCount = _stepTimer.consumeScaled( deltaTime, timeScale );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            stepFixed( _stepTimer.getStep() );
+            stepFixed( _stepTimer.getStep().count() );
         }
-        return static_cast<float32>( stepCount ) * _stepTimer.getStep();
+        return static_cast<float32>( stepCount ) * _stepTimer.getStep().count();
     }
 
     void CitySimulation::pollEvents( const ConsumerLease& lease, vector<CityEvent>& outListEvent )

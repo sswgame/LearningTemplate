@@ -270,7 +270,7 @@ namespace sw
             {
             }
 
-            void update( float32 unscaledDeltaSeconds ) override { _owner.update( unscaledDeltaSeconds ); }
+            void update( RealSeconds unscaledDeltaTime ) override { _owner.update( unscaledDeltaTime.count() ); }
             void setGamePaused( bool bPaused ) override { _owner.setGamePaused( bPaused ); }
 
         private:

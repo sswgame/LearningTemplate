@@ -793,9 +793,9 @@ namespace sw
         for ( int32 step = 0; step < stepCount && _phase != BattleRoyalePhase::Ended; ++step )
         {
             if ( _phase == BattleRoyalePhase::Drop )
-                stepDrop( _timer.getStep() );
+                stepDrop( _timer.getStep().count() );
             else
-                stepBattle( _timer.getStep() );
+                stepBattle( _timer.getStep().count() );
             settle();
         }
     }

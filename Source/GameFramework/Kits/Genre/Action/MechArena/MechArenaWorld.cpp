@@ -416,7 +416,7 @@ namespace sw
         const int32 stepCount = _timer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            step( _timer.getStep() );
+            step( _timer.getStep().count() );
         }
     }
 

@@ -41,7 +41,7 @@ namespace
         {
             getPhysics().step( 0.0f );
             _listLog.clear();
-            return getPhysics().getStepTimer().getStep();
+            return getPhysics().getStepTimer().getStep().count();
         }
 
         /** @brief @p group 기록 수입니다(@p pComponent 가 있으면 그 구성원만). */

@@ -14,6 +14,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -51,8 +52,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief UI 갱신(`UISystem::update`)의 정해진 자리에서 도는 UI 서비스의 함수 칸입니다. 인자는 실제 프레임 시간(초)입니다. */
-    using UIUpdateDelegate = MulticastDelegate<void( float32 deltaSeconds )>;
+    /** @brief UI 갱신(`UISystem::update`)의 정해진 자리에서 도는 UI 서비스의 함수 칸입니다. 인자는 실제 프레임 시간입니다 — 정지 메뉴 아래서도 흐르며, 게임과 같이 서야 하는 서비스(자막)는 정지 여부를 따로 받습니다. */
+    using UIUpdateDelegate = MulticastDelegate<void( RealSeconds unscaledDeltaTime )>;
 
     /**
      * @class UISystem
@@ -120,16 +121,16 @@ namespace sw
         span<const utf8* const> getSubsystemDependencies() const override;
         SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
         /** @brief 입력을 UI 이벤트로 처리합니다(게임 틱 앞). 순서는 뗀 입력 해제, UI 맵 갱신, 입력 방식 결정, 포인터, 액션, 텍스트 포커스, 닫기 요청 적용입니다. */
-        void processInput( float32 deltaSeconds );
+        void processInput( RealSeconds unscaledDeltaTime );
         // 엔진 루프가 UI 헤더 없이 부르는 프레임 단계다(`IEngineUIDriver` — `getEngineUIDriver`). 서지 않았으면 아무 일도 하지 않는다.
-        void processFrameInput( float32 unscaledDeltaSeconds );
+        void processFrameInput( RealSeconds unscaledDeltaTime );
         void updateFrame( const EngineUIFrame& frame );
         /**
          * @brief 애니메이션, 바인딩, 스타일, 레이아웃, 그리기를 순서대로 처리합니다(게임 틱 뒤). @p viewport 는 이번 프레임에 UI 를 그릴 화면입니다.
          * @details 레이아웃은 화면 트리마다 `UILayoutPass::update( 트리, makeLayoutContext() )` 로 돌린다. 화면마다 뷰포트(UI 단위) 전체가 루트 사각형이다.
          *          포인터 위치는 다음 `processInput` 이 이 뷰포트의 배율로 UI 단위로 바꾼다.
          */
-        void update( float32 deltaSeconds, const UIViewport& viewport );
+        void update( RealSeconds unscaledDeltaTime, const UIViewport& viewport );
 
         // --- 화면 스택 ---------------------------------------------------------------
         /** @brief 화면을 해당 레이어의 맨 위에 올립니다. 활성 화면이 바뀌면 포커스를 옮깁니다(탐색 방식이면 기본 포커스). */
@@ -453,7 +454,7 @@ namespace sw
             {
             }
 
-            void processFrameInput( float32 unscaledDeltaSeconds ) override { _owner.processFrameInput( unscaledDeltaSeconds ); }
+            void processFrameInput( RealSeconds unscaledDeltaTime ) override { _owner.processFrameInput( unscaledDeltaTime ); }
             void updateFrame( const EngineUIFrame& frame ) override { _owner.updateFrame( frame ); }
             void setOnScreenSuppressed( bool bSuppressed ) override { _owner.setOnScreenSuppressed( bSuppressed ); }
 
