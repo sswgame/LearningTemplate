@@ -19,6 +19,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
 #include "Engine/Graphics/RHI/ConstantBufferPagePool.h"
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIBufferUploadLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIComputeBindingLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
@@ -71,6 +72,8 @@ namespace sw
             }
             case RHIHandleKind::Buffer:
             {
+                if constexpr ( build::kShipping == false )
+                    _pBufferUploadLog->remove( RHIBufferHandle{ packed } );
                 bLive = factory.destroyBufferNative( RHIBufferHandle{ packed } );
                 break;
             }
@@ -233,12 +236,42 @@ namespace sw
                           pWhat );
     }
 
+    void IRHIDevice::beginFrame()
+    {
+        assumeRenderThreadRole(); // 프레임 진행 상태는 렌더 스레드의 것이다 — 다른 스레드의 그리기는 `RenderThread::executeAndWait` 로 넘긴다
+        _handleReuseCount.fetch_add( 1, std::memory_order_acq_rel );
+        activateReservedBindlessTextures(); // 예약한 번호를 그려지기 전에 살린다(R-6)
+        reportResourceCounts();
+        beginFrameInternal();
+        if constexpr ( build::kShipping == false )
+        {
+            _constantBufferWriteLog.beginFrame();
+            if ( isFrameStarted() )
+                _pBufferUploadLog->beginFrame();
+        }
+    }
+
     void IRHIDevice::endFrame( bool vsync, bool bPresent )
     {
         assumeRenderThreadRole();
         if ( IRHICommandContext* const pFrameStream = getFrameStreamContext() )
             pFrameStream->endRenderPass();
         endFrameInternal( vsync, bPresent );
+        if constexpr ( build::kShipping == false )
+            _pBufferUploadLog->endFrame();
+    }
+
+    void IRHIDevice::beginBufferUpload( RHIBufferHandle buffer, const utf8* pWhat )
+    {
+        if constexpr ( build::kShipping == false )
+        {
+            if ( _pBufferUploadLog->isUsedByFrameOnOtherThread( buffer ) )
+                reportFatalError( "%# of buffer %# from another thread while the render thread records a frame that uses it - the copy has no order against that frame's reads and transitions. "
+                                  "Send the update to the render thread",
+                                  pWhat, buffer.getPacked() );
+            _pBufferUploadLog->recordContent( buffer );
+        }
+        requireUploadOutsidePass( pWhat );
     }
 
     void IRHIDevice::requireUploadOutsidePass( const utf8* pWhat )
@@ -560,11 +593,12 @@ namespace sw
         , _parallelBarrierReportCount{ 0 }
         , _initResult{ RHIInitResult::NotStarted }
         , _memoryTracker{ make_unique<RHIMemoryTracker>() }
-        , _pConstantBufferPagePool{ make_unique<ConstantBufferPagePool>() }
+        , _pConstantBufferPagePool{ make_unique<ConstantBufferPagePool>( _handleReuseCount ) }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
         , _pBindlessReservationQueue{ make_unique<RHIBindlessReservationQueue>() }
         , _pBindlessIndexReportLog{ make_unique<BindlessIndexReportLog>() }
         , _pComputeBindingLog{ make_unique<RHIComputeBindingLog>() }
+        , _pBufferUploadLog{ make_unique<RHIBufferUploadLog>() }
         , _initPhaseTimings{}
         , _drawDiagnostics{ *this }
     {
@@ -683,10 +717,10 @@ namespace sw
         _initPhaseTimings.begin();
         if ( initializeInternal( deviceDesc ) == false )
             return false;
-        // PSO 앞단은 셰이더 형식과 능력을 기동 때 한 번 받는다 — 백엔드 초기화가 끝나 런타임 능력(네이티브 bindless · 선택 스테이지)이 정해진 뒤다.
+        // 팩토리의 공통 앞단(버퍼 갱신 순서 · PSO)은 장치와 셰이더 형식 · 능력을 기동 때 한 번 받는다 — 백엔드 초기화가 끝나 런타임 능력(네이티브 bindless · 선택 스테이지)이 정해진 뒤다.
         _startupCapabilities = getCapabilities();
         if ( IRHIResourceFactory* const pFactory = getResourceFactory() )
-            pFactory->bindPipelineFront( getShaderTargetFormat(), _startupCapabilities );
+            pFactory->bindDevice( *this, getShaderTargetFormat(), _startupCapabilities );
         _initResult          = RHIInitResult::Succeeded;
         _sdrBackBufferFormat = getBackBufferFormat(); // 주 스왑체인은 SDR 로 선다 — UI 포맷의 첫 값
         // 기동 요약(`App.StartupPhasesHostScopeMs`)의 RHI 몫을 단계로 나눈 줄이다. 로그 중앙값을 시나리오 전체에서 모아 비교한다.

@@ -153,11 +153,12 @@ namespace sw
 
         /**
          * @brief 기록 중에 상수 버퍼 내용을 갱신합니다. 이 리스트의 드로우와 디스패치가 이 값을 봅니다(언리얼 `RHIUpdateUniformBuffer( RHICmdList, … )`).
-         * @details 프레임 밖(에셋 로드, 머티리얼 파라미터)에서 쓰는 것은 `IRHIResourceFactory::updateConstantBuffer` 이고, 기록 경로(패스 CB,
+         * @details 기록 밖(머티리얼 파라미터)에서 쓰는 값은 페이지 구간(`ConstantBufferPagePool::write` — 쓸 때마다 새 구간)이고, 기록 경로(패스 CB,
          *          컴퓨트 CB)는 이 함수를 쓴다. DX11 은 이 리스트의 Deferred Context 에 `Map(WRITE_DISCARD)` 해서 런타임이 리스트 단위로 버퍼를
-         *          버저닝하고, DX12, Vulkan, GL 은 버퍼의 이번 프레임 슬롯에 쓴다. 그래서 **한 버퍼는 프레임에 한 번만** 쓴다
-         *          (드로우마다 다른 값이면 슬롯을 나눈다. `PassConstantRing` 참고). 두 번째 쓰기는 네 백엔드가 `IRHICommandContext::updateConstantBuffer` 에서
-         *          진단 오류로 알린다(`RHI.ConstantBufferRewrittenInFrame`). 크기 상한은 `IRHIResourceFactory::updateConstantBuffer` 와 같다.
+         *          버저닝하고 WebGPU 는 상수 링의 새 칸을 받지만, DX12, Vulkan, GL 은 버퍼의 이번 프레임 슬롯에 쓴다. 그래서 **한 버퍼는 프레임에 한 번만** 쓴다
+         *          (드로우마다 다른 값이면 슬롯을 나눈다. `PassConstantRing` 참고). 두 번째 쓰기는 다섯 백엔드가 `IRHICommandContext::updateConstantBuffer` 에서
+         *          진단 오류로 알린다(`RHI.ConstantBufferRewrittenInFrame` — 개발 구성). @p size 는 **`createConstantBuffer` 에 준 크기를 넘으면 안 된다** — 백엔드가 검사하지 않고 그대로 복사한다
+         *          (GL 만 `glBufferSubData` 가 거절한다).
          */
         virtual void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
 

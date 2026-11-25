@@ -378,8 +378,8 @@ namespace sw::test
             return makeBuffer();
         }
         RHIBufferHandle createIndexBuffer( const void*, uint32 ) override { return makeBuffer(); }
-        void            updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
-        void            updateStructuredBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override { ++_structuredUpdateCount; }
+        void            updateGeometryBufferRegionsNative( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
+        void            updateStructuredBufferRegionsNative( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override { ++_structuredUpdateCount; }
 
         RHITransferSubmit      submitTextureUpload( RHITextureHandle, const RHITextureUploadDesc& ) override { return RHITransferSubmit::rejected(); }
         RHITransferSubmit      submitTextureRegionUpload( RHITextureHandle, const RHITextureRegionUploadDesc& ) override { return RHITransferSubmit::rejected(); }
@@ -391,9 +391,8 @@ namespace sw::test
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
         using IRHIResourceFactory::createBuffer; // 백엔드 구현 판(보호)을 테스트가 직접 부른다
         RHIBufferHandle createConstantBuffer( uint32 ) override { return 0; }
-        void            updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
         RHIBufferHandle createConstantBufferPage( uint32 ) override { return 0; }
-        void            updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 ) override {}
+        void            writeConstantBufferSlice( const RHIBufferSlice&, const void*, uint32 ) override {}
         RHIBufferHandle createStructuredBuffer( uint32, uint32 elementCount ) override
         {
             ++_structuredCreateCount;

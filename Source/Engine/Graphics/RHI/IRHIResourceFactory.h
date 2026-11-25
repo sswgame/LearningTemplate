@@ -13,6 +13,7 @@ namespace sw
     class AsyncBufferReadback;
     class CanvasGlyphAtlasTexture;
     class ConstantBufferPagePool;
+    class IRHIDevice;
     class MeshRenderData;
     class Texture2D;
     class TransientAttachmentPool;
@@ -87,26 +88,14 @@ namespace sw
         RHIThreadGroupSize getThreadGroupSize( RHIPipelineStateHandle pso ) const;
 
         /**
-         * @brief PSO 앞단이 읽을 셰이더 형식과 능력을 묶습니다. 장치 기동이 백엔드 초기화 뒤 한 번 부른다(`IRHIDevice::initialize`).
+         * @brief 공통 앞단이 쓸 장치(버퍼 갱신 순서 검사)와 PSO 앞단이 읽을 셰이더 형식 · 능력을 묶습니다. 장치 기동이 백엔드 초기화 뒤 한 번 부른다(`IRHIDevice::initialize`).
          * @details 능력은 장치가 기동 때 채워 든 값(`IRHIDevice` 의 기동 능력)을 참조로 든다 — PSO 마다 값 반환 가상(`IRHIDevice::getCapabilities`)을 부르지 않는다.
-         *          장치가 팩토리를 소유하므로 참조가 팩토리보다 오래 산다. 묶기 전의 PSO 생성은 오류다.
+         *          장치가 팩토리를 소유하므로 참조가 팩토리보다 오래 산다. 묶기 전의 PSO 생성은 오류다. 묶기 전의 버퍼 갱신(백엔드 기동)은 프레임이 없어 볼 순서가 없다.
          */
-        void bindPipelineFront( ShaderTargetFormat shaderTargetFormat, const RHICapabilities& startupCapabilities );
+        void bindDevice( IRHIDevice& device, ShaderTargetFormat shaderTargetFormat, const RHICapabilities& startupCapabilities );
 
-        /** @brief 상수 버퍼를 만듭니다. */
+        /** @brief 상수 버퍼를 만듭니다. 쓰는 길은 기록 경로(`IRHICommandList::updateConstantBuffer`) 하나다 — 기록 밖에서 쓰는 값은 페이지 구간(`writeConstantBufferSlice`)이다. */
         [[nodiscard]] RHIBufferHandle createConstantBuffer( RHIResourceCreateKey, uint32 size ) { return createConstantBuffer( size ); }
-
-        /**
-         * @brief 상수 버퍼 데이터를 갱신합니다.
-         * @param size 보낼 바이트 수입니다. **`createConstantBuffer` 에 준 크기를 넘으면 안 됩니다.**
-         * @warning 이 전제는 **백엔드가 검사해 주지 않는다.** DX12, Vulkan, DX11 은 받은 크기를 그대로
-         *          복사하므로, 넘기면 프레임 슬롯 밖(또는 버퍼 밖)까지 쓴다. GL 만 `glBufferSubData`
-         *          가 `GL_INVALID_VALUE` 로 막아 준다. 즉 **한 백엔드에서만 조용히 안전하다.**
-         *          버퍼가 작아졌다면 갱신하지 말고 **다시 만들어야 한다**
-         *          (머티리얼은 페이지 구간이라 `ConstantBufferPagePool::fit` 이 레이아웃이 커지면 큰 등급으로
-         *          옮긴다).
-         */
-        virtual void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
 
         /**
          * @brief 구간(`RHIBufferSlice`)으로 나눠 쓰는 상수 버퍼 페이지를 만듭니다(감사 R-4).
@@ -115,10 +104,12 @@ namespace sw
          */
         [[nodiscard]] RHIBufferHandle createConstantBufferPage( RHIResourceCreateKey, uint32 size ) { return createConstantBufferPage( size ); }
         /**
-         * @brief 페이지 구간 @p slice 의 이번 프레임 칸에 씁니다. 나머지 칸은 링이 그 칸으로 돌아올 때 같은 오프셋에 채웁니다(`RHIConstantBufferMirror`).
-         * @param size `slice._size` 이하여야 합니다 — 부르는 쪽(`ConstantBufferPagePool::update`)이 지킨다.
+         * @brief **새로 받은** 페이지 구간 @p slice 에 내용을 씁니다(이번 프레임 칸 — 나머지 칸은 링이 그 칸으로 돌아올 때 같은 오프셋에 채운다, `RHIConstantBufferMirror`).
+         * @details 쓴 구간은 놓을 때까지 고치지 않는다 — 값이 바뀌면 새 구간을 받아 쓴다(`ConstantBufferPagePool::write`, 키를 받는 곳이 그 풀이다). 그래서 이미 기록한 드로우 · GPU 가 읽는 중인
+         *          구간을 덮지 않고, 쓰기는 기록과 순서를 맞추지 않아도 된다(WebGPU 큐 쓰기 · DX11 `D3D11_COPY_NO_OVERWRITE` 가 이 규칙에 기댄다).
+         * @param size `slice._size` 이하여야 합니다 — 풀이 크기로 구간을 고른다.
          */
-        virtual void updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size ) = 0;
+        void writeConstantBufferSlice( RHIResourceCreateKey, const RHIBufferSlice& slice, const void* pData, uint32 size ) { writeConstantBufferSlice( slice, pData, size ); }
 
         /** @brief 구조화(Structured) 버퍼나 스토리지(Storage) 버퍼를 만듭니다. */
         [[nodiscard]] RHIBufferHandle createStructuredBuffer( RHIResourceCreateKey, uint32 elementSize, uint32 elementCount ) { return createStructuredBuffer( elementSize, elementCount ); }
@@ -132,13 +123,13 @@ namespace sw
          *
          *          **순서.** 프레임을 기록하는 스레드의 갱신은 기록 순서대로 실행된다 — 앞서 낸 리스트의 읽기 뒤, 뒤에 내는 리스트 앞이다(DX12 · Vulkan 은 프레임 스트림의 복사, DX11 · GL 은
          *          즉시 컨텍스트, WebGPU 는 앞 기록을 먼저 낸 큐 쓰기). 언리얼 RHI 도 명령 리스트 안의 `UpdateBuffer` 로 순서를 지킨다. 다른 스레드 · 프레임 밖의 갱신과 새 버퍼의 첫 내용은
-         *          다음 제출의 맨 앞에 실행된다. 패스를 기록하는 동안은 부르지 않는다(`IRHIDevice::requireUploadOutsidePass`).
+         *          다음 제출의 맨 앞에 실행된다. 패스를 기록하는 동안은 부르지 않는다. 다른 스레드는
+         *          그 프레임이 쓰는 버퍼를 갱신하지 않는다(둘 다 `IRHIDevice::beginBufferUpload`).
          *
          * @warning 크기와 마찬가지로 **범위를 백엔드가 검사해 주지 않는다.** `byteOffset + size` 가
          *          버퍼를 넘으면 버퍼 밖까지 쓴다. 호출하는 쪽이 지켜야 한다.
          */
-        virtual void updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
-                                                    const RHIBufferCopyRegion* pRegions, uint32 regionCount ) = 0;
+        void updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount );
 
         /** @brief 한 조각만 갱신합니다(`updateStructuredBufferRegions` 의 영역 1개). */
         void updateStructuredBufferRange( RHIBufferHandle buffer, const void* pData, uint32 size, uint32 byteOffset )
@@ -154,7 +145,7 @@ namespace sw
         }
 
         /** @brief 내용을 담아 정점 버퍼를 만듭니다. 레이아웃은 PSO 의 입력 레이아웃(`constant::render::getMeshVertexAttributes`)이 정합니다. */
-        [[nodiscard]] RHIBufferHandle createVertexBuffer( RHIResourceCreateKey, const void* pData, uint32 sizeBytes ) { return createVertexBuffer( pData, sizeBytes ); }
+        [[nodiscard]] RHIBufferHandle createVertexBuffer( RHIResourceCreateKey, const void* pData, uint32 sizeBytes ) { return recordContent( createVertexBuffer( pData, sizeBytes ), pData ); }
         /**
          * @brief 내용 없이 GPU 쪽에만 있는 정점 버퍼를 만듭니다 — GPU 복사(`IRHICommandList::copyBufferRegion`)의 도착이 되는 버퍼다(감사 R-15 — 정점 풀이 CPU 정점 대신 GPU 원본에서 채운다).
          * @details `createVertexBuffer` 의 버퍼는 DX12 업로드 힙이라 복사 도착이 될 수 없다. 이 버퍼는 CPU 가 쓰지 않는다(`updateGeometryBufferRegions` 를 받지 않는다) — 내용은 복사로만 들어온다.
@@ -166,21 +157,20 @@ namespace sw
         /**
          * @brief `createVertexBuffer` · `createIndexBuffer` 로 만든 정점 · 인덱스 버퍼의 **여러 조각**을 갱신합니다. 메시 풀(`GPUMeshVertexPool`)의 부분 갱신용입니다.
          * @param pBaseSource 조각들의 `_srcOffset` 이 가리키는 원본 블롭입니다.
-         * @details 정점 · 인덱스 버퍼는 같은 메모리에 살고 그 메모리는 백엔드마다 다르다. DX12 와 Vulkan 은 CPU 가 볼 수 있는 메모리(업로드 힙, HOST_VISIBLE)라 매핑해서
-         *          직접 쓰고, DX11 과 GL 은 즉시 컨텍스트의 갱신(UpdateSubresource, glBufferSubData)으로 쓴다. 업로드 힙은 복사의 목적지가 될 수
-         *          없어 구조화 버퍼의 경로(`updateStructuredBufferRegions`)를 그대로 쓸 수 없다.
+         * @details 정점 · 인덱스 버퍼는 같은 메모리에 살고 그 메모리는 백엔드마다 다르다. DX12 와 Vulkan 은 기기 로컬이라 스테이징
+         *          복사로 쓰고, DX11 과 GL 은 즉시 컨텍스트의 갱신(UpdateSubresource, glBufferSubData), WebGPU 는 큐 쓰기다. 순서는 `updateStructuredBufferRegions` 와 같다.
          * @warning **아직 끝나지 않은 프레임이 읽는 조각을 쓰면 안 된다.** 직접 쓰는 백엔드는 GPU 와 순서를 맞추지 않는다. 그래서 부르는 쪽이
          *          돌려받은 구간을 그 구간을 읽던 프레임의 GPU 펜스가 끝난 뒤에야 다시 쓴다(`RHIFence` 값을 키로 `SpanAllocator::freeDeferred`).
          *          범위는 백엔드가 검사해 넘는 조각을 버리고 알린다.
          */
-        virtual void updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) = 0;
+        void updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount );
 
         /**
          * @brief 범용 GPU 버퍼(구조화 · UAV · 인다이렉트 인자 · raw)를 만듭니다. 정점 · 인덱스 · 상수 버퍼는 각자의 생성 함수(`createVertexBuffer` · `createIndexBuffer` · `createConstantBuffer`)다.
          * @details 서술체는 `isValidBufferDesc` 를 지켜야 한다 — 원소 크기 · 원소 수가 0 이 아니고 바이트 수가 그 곱이다. 예전 기본 구현은 비면 값을 지어냈다(바이트 0 → 256, 원소 0 → 4 바이트 · 1 개).
          *          기본 구현은 구조 버퍼(`createStructuredBuffer`)로 만들고 처음 내용을 올린다. 다른 버퍼 종류가 필요한 백엔드(DX11 인다이렉트 인자 · GL SSBO)가 덮는다.
          */
-        [[nodiscard]] RHIBufferHandle createBuffer( RHIResourceCreateKey, const RHIBufferDesc& desc ) { return createBuffer( desc ); }
+        [[nodiscard]] RHIBufferHandle createBuffer( RHIResourceCreateKey, const RHIBufferDesc& desc ) { return recordContent( createBuffer( desc ), desc._pInitialData ); }
         /** @brief @p desc 가 범용 버퍼 서술로 맞으면 true, 아니면 무엇이 틀렸는지 @p pCaller 와 함께 오류로 남기고 false 입니다. 값을 대신 채우지 않는다. */
         [[nodiscard]] static bool isValidBufferDesc( const RHIBufferDesc& desc, const utf8* pCaller );
 
@@ -190,7 +180,7 @@ namespace sw
          *          주의: 구조화 버퍼로 대신하면 안 된다(D3D11 은 BUFFER_STRUCTURED 에 BIND_INDEX_BUFFER 를 붙일 수 없고, Vulkan 은
          *          검증 레이어가 용도 위반으로 잡는다). 드라이버가 받아 줘서 그려지는 백엔드도 있어 이미지만으로는 드러나지 않는다.
          */
-        [[nodiscard]] RHIBufferHandle createIndexBuffer( RHIResourceCreateKey, const void* pData, uint32 sizeBytes ) { return createIndexBuffer( pData, sizeBytes ); }
+        [[nodiscard]] RHIBufferHandle createIndexBuffer( RHIResourceCreateKey, const void* pData, uint32 sizeBytes ) { return recordContent( createIndexBuffer( pData, sizeBytes ), pData ); }
 
         /**
          * @brief GPU 에서 CPU 로 되읽을 읽기 전용 버퍼(@p elementSize x @p elementCount 바이트)를 만듭니다. 만들지 못하면 0 입니다.
@@ -439,6 +429,13 @@ namespace sw
         }
 
         // ------------------------------------------------------------------------------
+        // 버퍼 쓰기 — 백엔드 구현. 부르는 쪽은 공통 입구(키를 받는 `writeConstantBufferSlice` · `update…BufferRegions`)이고, 순서 검사는 거기서 했다
+        // ------------------------------------------------------------------------------
+        virtual void writeConstantBufferSlice( const RHIBufferSlice& slice, const void* pData, uint32 size )                                                         = 0;
+        virtual void updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) = 0;
+        virtual void updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )   = 0;
+
+        // ------------------------------------------------------------------------------
         // 자원 해제 — 백엔드 구현. 부르는 쪽은 `IRHIDevice::releaseHandle( 핸들 )` 하나다(종류는 핸들 형식이 고른다).
         // 장치가 해제 시점(렌더 스레드 · 넘긴 프레임)을 정하고, 백엔드는 GPU 펜스가 지난 뒤 네이티브 객체를 놓는다(`RHIReleaseQueue`).
         // 반환은 "산 핸들이었다" 다 — 거짓이면 이미 놓았거나 모르는 핸들이라 장치가 검사 구성에서 단언한다(같은 핸들 두 번 해제).
@@ -471,13 +468,18 @@ namespace sw
         [[nodiscard]] virtual RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) = 0;
 
     private:
+        /** @brief 버퍼 갱신의 순서를 봅니다(`IRHIDevice::beginBufferUpload`). 장치를 묶기 전이면 프레임이 없다. */
+        void beginBufferUpload( RHIBufferHandle buffer, const utf8* pWhat );
+        /** @brief (개발 구성) 첫 내용 @p pContent 와 함께 만든 @p buffer 를 장치의 갱신 기록에 적고 그대로 돌려줍니다. @p pContent 가 nullptr 이면 적지 않는다. */
+        RHIBufferHandle recordContent( RHIBufferHandle buffer, const void* pContent );
         /** @brief 만든 컴퓨트 PSO 의 스레드 그룹 크기를 적습니다(핸들 0 은 적지 않는다). */
         void recordThreadGroupSize( RHIPipelineStateHandle pso, const RHIThreadGroupSize& groupSize );
 
     private:
         mutable mutex                             _groupSizeMutex;                  ///< 만드는 스레드(PSO 워커)와 기록 스레드가 함께 본다
         unordered_map<uint64, RHIThreadGroupSize> _mapGroupSize;                    ///< 컴퓨트 PSO 핸들(packed) → 셰이더의 그룹 크기
-        const RHICapabilities*                    _pStartupCapabilities{ nullptr }; ///< 장치가 기동 때 채운 능력(`bindPipelineFront`) — null 이면 아직 묶지 않았다
+        IRHIDevice*                               _pUploadDevice{ nullptr };        ///< 버퍼 갱신 순서를 보는 장치(`bindDevice`) — 장치가 팩토리를 소유한다
+        const RHICapabilities*                    _pStartupCapabilities{ nullptr }; ///< 장치가 기동 때 채운 능력(`bindDevice`) — null 이면 아직 묶지 않았다
         ShaderTargetFormat                        _shaderTargetFormat{};            ///< 기동 때 묶은 셰이더 형식
     };
 } // namespace sw

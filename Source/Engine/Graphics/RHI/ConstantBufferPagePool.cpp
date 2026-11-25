@@ -40,7 +40,7 @@ namespace sw
     void ConstantBufferPoolSlice::reset()
     {
         if ( isValid() && _pDevice != nullptr )
-            _pDevice->getConstantBufferPagePool().releaseSlice( *_pDevice, *this );
+            _pDevice->getConstantBufferPagePool().retireSlice( *this );
         detach();
     }
 
@@ -52,89 +52,89 @@ namespace sw
         _descriptorIndex = kInvalidDescriptorIndex;
     }
 
-    bool ConstantBufferPagePool::fit( IRHIDevice& device, const uint32 sizeBytes, ConstantBufferPoolSlice& inoutSlice )
+    bool ConstantBufferPagePool::write( IRHIDevice& device, const void* pData, const uint32 size, ConstantBufferPoolSlice& inoutSlice )
     {
-        if ( inoutSlice.isValid() && inoutSlice._pDevice != &device )
-            inoutSlice.reset(); // 백엔드가 바뀌었다 — 옛 디바이스의 구간이다
-        const uint32 slotBytes = ConstantBufferSlotAllocator::findSlotBytes( sizeBytes );
-        // 같은 등급의 칸이거나, 등급 밖인데 지금 전용 버퍼에 담기면 그대로다(셰이더를 다시 쿠킹해 레이아웃이 바뀌어도 등급 안이면 칸이 맞는다).
-        const bool bSlotFits      = inoutSlice._slot.isValid() && slotBytes == inoutSlice._slot._sizeBytes;
-        const bool bDedicatedFits = inoutSlice.isValid() && inoutSlice._slot.isValid() == false && slotBytes == 0 && sizeBytes <= inoutSlice._range._size;
-        if ( bSlotFits || bDedicatedFits )
-            return true;
-
-        // 옮긴다 — 지금의 "커지면 다시 만든다" 자리. 칸은 새 칸을 먼저 잡은 뒤 놓는다(`reallocate` — 닫힌 옛 번호를 이번 새 칸이 받지 않는다).
-        const ConstantBufferSlot oldSlot       = inoutSlice._slot;
-        const RHIBufferSlice     oldRange      = inoutSlice._range;
-        const RHIBufferSRVIndex  oldDescriptor = inoutSlice._descriptorIndex;
-        inoutSlice.detach();
-        bool               bNewPage   = false;
-        RHIBufferHandle    closedPage = 0;
+        if ( pData == nullptr || size == 0 )
+        {
+            SW_LOG_ERROR_ID( "ConstantBufferPagePool.WriteInvalid", "Constant buffer slice write without data (%# bytes)", size );
+            return false;
+        }
+        releaseReadySlices( device );
+        bool               bNewPage = false;
         ConstantBufferSlot slot;
         {
             ScopedLock<mutex> lock{ _mutex };
-            bool              bOldPageClosed = false;
-            slot                             = _allocator.reallocate( oldSlot, sizeBytes, bNewPage, bOldPageClosed );
-            if ( bOldPageClosed )
-            {
-                closedPage                          = _listPageBuffer[oldSlot._pageIndex];
-                _listPageBuffer[oldSlot._pageIndex] = 0;
-            }
+            slot = _allocator.allocate( size, bNewPage );
         }
-        // 옛 구간의 디스크립터 → 전용 버퍼 → 닫힌 페이지 차례로 잠금 밖에서 돌려준다(구간이 바뀌어 디스크립터도 새로 난다).
-        if ( oldDescriptor != kInvalidDescriptorIndex )
-            device.releaseBindlessIndex( oldDescriptor );
-        if ( oldRange._buffer != 0 && oldSlot.isValid() == false )
-            device.releaseHandle( oldRange._buffer );
-        if ( closedPage != 0 )
-            device.releaseHandle( closedPage );
-
-        const bool bOpened = slot.isValid() ? openSlice( device, slot, bNewPage, inoutSlice ) : openDedicated( device, sizeBytes, inoutSlice );
-        if ( bOpened )
-            inoutSlice._pDevice = &device;
-        return bOpened;
-    }
-
-    bool ConstantBufferPagePool::update( const ConstantBufferPoolSlice& slice, const void* pData, const uint32 size )
-    {
-        if ( slice.isValid() == false || slice._pDevice == nullptr || pData == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ConstantBufferPagePool.UpdateInvalid", "Constant buffer slice update without a slice, device or data (%# bytes)", size );
+        ConstantBufferPoolSlice written;
+        const bool              bOpened = slot.isValid() ? openSlice( device, slot, bNewPage, written ) : openDedicated( device, size, written );
+        if ( bOpened == false )
             return false;
-        }
-        // 자르지 않는다 — 잘라 쓰면 `fit` 을 거치지 않고 커진 레이아웃의 뒤쪽이 조용히 0 으로 남는다.
-        if ( size > slice._range._size )
+        written._pDevice = &device;
+        if constexpr ( build::kShipping == false )
         {
-            SW_LOG_ERROR_ID( "ConstantBufferPagePool.UpdateOverflow", "Constant buffer update of %# bytes does not fit the %#-byte slice (call fit first)", size, slice._range._size );
-            return false;
+            if ( device.getConstantBufferWriteLog().recordWrite( written._range._buffer, written._range._offset ) == false )
+                device.getDrawDiagnostics().reportConstantBufferRewrite( written._range._buffer, written._range._offset );
         }
-        slice._pDevice->getResourceFactory()->updateConstantBuffer( slice._range, pData, size );
+        device.getResourceFactory()->writeConstantBufferSlice( RHIResourceCreateKey{}, written._range, pData, size );
+        inoutSlice = std::move( written ); // 옛 구간은 준 디바이스의 풀로 돌아간다 — 이번 프레임이 이미 기록한 드로우가 읽으므로 칸 · 디스크립터는 나중에 다시 쓴다
         return true;
     }
 
-    void ConstantBufferPagePool::releaseSlice( IRHIDevice& device, const ConstantBufferPoolSlice& slice )
+    void ConstantBufferPagePool::retireSlice( const ConstantBufferPoolSlice& slice )
     {
-        if ( slice._descriptorIndex != kInvalidDescriptorIndex )
-            device.releaseBindlessIndex( slice._descriptorIndex );
-        if ( slice._slot.isValid() )
-            releaseSlot( device, slice._slot );
-        else if ( slice.isValid() )
-            device.releaseHandle( slice._range._buffer );
+        const RetiredSlice retired{ slice._slot, slice._range, slice._descriptorIndex };
+        ScopedLock<mutex>  lock{ _mutex };
+        _listRetired.push( retired, _handleReuseCount.load( std::memory_order_acquire ) + kReuseDelayCount );
     }
 
-    void ConstantBufferPagePool::releaseAllPages( IRHIDevice& device )
+    void ConstantBufferPagePool::releaseReadySlices( IRHIDevice& device )
     {
-        vector<RHIBufferHandle> listPage;
+        vector<RetiredSlice>    listReady;
+        vector<RHIBufferHandle> listClosedPage;
         {
             ScopedLock<mutex> lock{ _mutex };
-            listPage.swap( _listPageBuffer );
-            _allocator = ConstantBufferSlotAllocator{};
+            const uint64      reuseCount = _handleReuseCount.load( std::memory_order_acquire );
+            if ( _listRetired.countReady( reuseCount ) == 0 )
+                return;
+            _listRetired.extractReady( reuseCount, listReady );
+            for ( const RetiredSlice& retired : listReady )
+            {
+                const RHIBufferHandle closedPage = retired._slot.isValid() ? releaseSlotLocked( retired._slot ) : RHIBufferHandle{ 0 };
+                if ( closedPage != 0 )
+                    listClosedPage.push_back( closedPage );
+            }
+        }
+        releaseRHI( device, listReady, listClosedPage );
+    }
+
+    void ConstantBufferPagePool::releaseRHI( IRHIDevice& device, const vector<RetiredSlice>& listRetired, const vector<RHIBufferHandle>& listPage )
+    {
+        for ( const RetiredSlice& retired : listRetired )
+        {
+            if ( retired._descriptorIndex != kInvalidDescriptorIndex )
+                device.releaseBindlessIndex( retired._descriptorIndex );
+            if ( retired._slot.isValid() == false )
+                device.releaseHandle( retired._range._buffer );
         }
         for ( const RHIBufferHandle page : listPage )
         {
             if ( page != 0 )
                 device.releaseHandle( page );
         }
+    }
+
+    void ConstantBufferPagePool::releaseAllPages( IRHIDevice& device )
+    {
+        vector<RetiredSlice>    listRetired;
+        vector<RHIBufferHandle> listPage;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _listRetired.extractAll( listRetired );
+            listPage.swap( _listPageBuffer );
+            _allocator = ConstantBufferSlotAllocator{};
+        }
+        releaseRHI( device, listRetired, listPage );
     }
 
     uint32 ConstantBufferPagePool::getOpenPageCount() const

@@ -17,17 +17,18 @@ namespace sw
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
         [[nodiscard]] bool     destroyPipelineStateNative( RHIPipelineStateHandle pso ) override;
         RHIBufferHandle        createConstantBuffer( uint32 size ) override;
-        void                   updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        RHIBufferHandle        createConstantBufferPage( uint32 size ) override;
-        void                   updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size ) override;
-        RHIBufferHandle        createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
-        void                   updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
-                                                              const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
-        RHIBufferHandle        createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
+        /** @brief 기록 경로의 상수 버퍼 쓰기입니다(커맨드 컨텍스트만 부른다 — 두 번째 쓰기 진단은 `IRHICommandContext::updateConstantBuffer` 가 했다). */
+        void            writeConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size );
+        RHIBufferHandle createConstantBufferPage( uint32 size ) override;
+        void            writeConstantBufferSlice( const RHIBufferSlice& slice, const void* pData, uint32 size ) override;
+        RHIBufferHandle createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
+        void            updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource,
+                                                             const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        RHIBufferHandle createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
         /** @brief 기기 로컬 버퍼 @p handle 에 첫 내용 @p pData 를 스테이징 복사로 올립니다(기다리지 않는다 — 렌더 스레드가 그 버퍼를 읽는 리스트보다 앞에 기록한다). 실패하면 버퍼를 놓고 0 입니다. */
         RHIBufferHandle          uploadDeviceLocal( RHIBufferHandle handle, const void* pData, uint32 sizeBytes );
         RHIBufferHandle          createGPUVertexBuffer( uint32 sizeBytes ) override;
-        void                     updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        void                     updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle          createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
         [[nodiscard]] bool       destroyBufferNative( RHIBufferHandle buffer ) override;
         RHIBufferHandle          createReadbackBuffer( uint32 elementSize, uint32 elementCount ) override;

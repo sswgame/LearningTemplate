@@ -311,32 +311,19 @@ namespace sw
         return createBufferWithUsage( aligned, 0, WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst, nullptr, "SW Constant Buffer" );
     }
 
-    void WebGPURHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
-    {
-        WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( buffer );
-        if ( pRecord == nullptr || pData == nullptr || size == 0 )
-            return;
-        _pDevice->requireUploadOutsidePass( "WebGPU.updateConstantBuffer" );
-        // 프레임 밖 갱신은 버퍼 자체에 쓴다 — 기록 중의 이름 바꾼 칸은 이제 낡았다(다음 그리기는 버퍼를 읽는다).
-        const uint64  alignedSize = MathUtil::align( static_cast<uint64>( size ), WebGPURHIResourceFactoryInternal::kCopyAlignment );
-        vector<uint8> padded( static_cast<size_t>( MathUtil::min( alignedSize, pRecord->_sizeBytes ) ), 0 );
-        Memory::copy( padded.data(), pData, MathUtil::min<size_t>( size, padded.size() ) );
-        wgpuQueueWriteBuffer( _pDevice->_queue, pRecord->_buffer, 0, padded.data(), padded.size() );
-        pRecord->_overrideSerial = 0;
-    }
-
     RHIBufferHandle WebGPURHIResourceFactory::createConstantBufferPage( uint32 size )
     {
-        // 균일 버퍼 하나를 구간이 나눠 쓴다(감사 R-4). 큐 쓰기는 큐 순서라 진행 중 프레임과 겹치지 않는다(`createConstantBuffer` 와 같다).
+        // 균일 버퍼 하나를 구간이 나눠 쓴다(감사 R-4). 구간은 새로 받았을 때 한 번만 쓴다(`writeConstantBufferSlice`).
         return createConstantBuffer( size );
     }
 
-    void WebGPURHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    void WebGPURHIResourceFactory::writeConstantBufferSlice( const RHIBufferSlice& slice, const void* pData, uint32 size )
     {
         WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( slice._buffer );
         if ( pRecord == nullptr || pData == nullptr || size == 0 )
             return;
-        _pDevice->requireUploadOutsidePass( "WebGPU.updateConstantBuffer(slice)" );
+        // 큐 쓰기는 이번 프레임이 기록했지만 아직 내지 않은 명령보다 먼저 실행된다 — 새로 받은 구간이라 그 명령이 읽지 않으므로 앞 기록을 먼저 낼 까닭이 없다(`submitRecordedBeforeQueueWrite` 는
+        // 같은 버퍼를 다시 쓰는 구조 버퍼 갱신의 것이다). https://www.w3.org/TR/webgpu/#dom-gpuqueue-writebuffer
         // 큐 쓰기 크기는 4 의 배수다 — 4 B 배수 앞부분은 원본에서 바로 쓰고, 남는 꼬리(머티리얼 바이트는 256 B 정렬이라 보통 없다)만 스택의 0 채운 4 B 로 쓴다(구간 오프셋은 256 배수).
         constexpr uint32 kCopyBytes = static_cast<uint32>( WebGPURHIResourceFactoryInternal::kCopyAlignment );
         const uint32     writeBytes = MathUtil::min( size, slice._size );
@@ -385,9 +372,8 @@ namespace sw
         }
     }
 
-    void WebGPURHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void WebGPURHIResourceFactory::updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireUploadOutsidePass( "WebGPU.updateStructuredBufferRegions" );
         writeBufferRegions( buffer, pBaseSource, pRegions, regionCount );
     }
 
@@ -404,9 +390,8 @@ namespace sw
         return createBufferWithUsage( sizeBytes, 0, WGPUBufferUsage_Vertex | WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc, nullptr, "SW GPU Vertex Buffer" );
     }
 
-    void WebGPURHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void WebGPURHIResourceFactory::updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireUploadOutsidePass( "WebGPU.updateGeometryBufferRegions" );
         writeBufferRegions( buffer, pBaseSource, pRegions, regionCount );
     }
 

@@ -54,26 +54,6 @@ namespace sw
         return handle;
     }
 
-    void D3D11RHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
-    {
-        const bool bInvalidConstantBufferUpdate = buffer == 0 || pData == nullptr || _pDevice->_immediateContext.isValid() == false;
-        if ( bInvalidConstantBufferUpdate )
-            return;
-        ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
-        if ( pResource == nullptr )
-            return;
-        // 기록 밖(에셋 · 머티리얼 파라미터)의 갱신이다 — 즉시 컨텍스트에 쓴다. Map 과 Unmap 사이에 렌더 스레드의 드로우가 끼지 않게 잠근다.
-        // 기록 중의 갱신은 리스트의 Deferred Context 로 가는 `IRHICommandList::updateConstantBuffer` 다.
-        D3D11_MAPPED_SUBRESOURCE                mapped{};
-        const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
-        // Map 실패는 오류로 남긴다 — 조용히 건너뛰면 머티리얼 파라미터가 옛 값으로 남는다(장치 제거는 다음 Present 가 분실로 처리한다).
-        if ( isHrSuccess( context->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ), "ID3D11DeviceContext::Map (constant buffer, factory)" ) )
-        {
-            Memory::copy( mapped.pData, pData, size );
-            context->Unmap( pResource, 0 );
-        }
-    }
-
     RHIBufferHandle D3D11RHIResourceFactory::createConstantBufferPage( uint32 size )
     {
         // 기본 용도 상수 버퍼다 — 구간마다 `UpdateSubresource1` 로 부분 갱신하고, 진행 중 프레임과의 순서는 즉시 컨텍스트가 지킨다(동적 버퍼의 WRITE_DISCARD 는 페이지 전체를 버린다).
@@ -94,7 +74,7 @@ namespace sw
         return _pDevice->storeBuffer( std::move( buffer ) );
     }
 
-    void D3D11RHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    void D3D11RHIResourceFactory::writeConstantBufferSlice( const RHIBufferSlice& slice, const void* pData, uint32 size )
     {
         const bool bInvalidSliceUpdate = slice._buffer == 0 || pData == nullptr || size == 0 || _pDevice->_immediateContext1 == nullptr;
         if ( bInvalidSliceUpdate )
@@ -109,8 +89,9 @@ namespace sw
         const uint32     tailBytes      = writeBytes - bodyBytes;
         uint8            arrTail[kConstantBytes]{};
         Memory::copy( arrTail, static_cast<const uint8*>( pData ) + bodyBytes, tailBytes );
-        // 상수 버퍼의 부분 갱신은 CopyFlags 가 NO_OVERWRITE · DISCARD 여야 한다(디버그 층 — 0 이면 드라이버가 상자를 버린다). DISCARD 는 리소스 내용 전체를 버릴 수 있어 다른 구간이 깨진다 —
-        // 구간은 서로 겹치지 않고 그 구간만 쓰므로 "다른 내용을 덮지 않는다" 인 NO_OVERWRITE 다.
+        // 상수 버퍼의 부분 갱신은 CopyFlags 가 NO_OVERWRITE · DISCARD 여야 한다(디버그 층 — 0 이면 드라이버가 상자를 버린다). DISCARD 는 리소스 내용 전체를 버릴 수 있어 다른 구간이 깨진다.
+        // NO_OVERWRITE 는 "있던 내용을 덮지 않는다" 는 약속이다 — 새로 받은 구간에만 쓰고 놓은 칸은 GPU 가 다 읽은 뒤에만 다시 받으므로(`ConstantBufferPagePool::write`) 지켜진다.
+        // https://learn.microsoft.com/en-us/windows/win32/api/d3d11_1/ne-d3d11_1-d3d11_copy_flags
         constexpr UINT                          kPartialUpdateFlags = D3D11_COPY_NO_OVERWRITE;
         const D3D11ImmediateContext::ScopedLock context             = _pDevice->_immediateContext.lock();
         if ( bodyBytes != 0 )
@@ -200,10 +181,9 @@ namespace sw
         return _pDevice->storeBufferWithSRV( std::move( buffer ), srvDesc );
     }
 
-    void D3D11RHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
-                                                                 const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void D3D11RHIResourceFactory::updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource,
+                                                                       const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireUploadOutsidePass( "updateStructuredBufferRegions" );
         const bool bInvalidBufferRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 || _pDevice->_immediateContext.isValid() == false;
         if ( bInvalidBufferRegionUpdate )
             return;
@@ -258,9 +238,8 @@ namespace sw
         return createFilledBuffer( listZero.data(), sizeBytes, D3D11_BIND_VERTEX_BUFFER );
     }
 
-    void D3D11RHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void D3D11RHIResourceFactory::updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireUploadOutsidePass( "updateGeometryBufferRegions" );
         // 정점 버퍼도 DEFAULT 사용 버퍼다(createFilledBuffer) — 즉시 컨텍스트의 UpdateSubresource 상자 갱신이 그대로 맞고, 순서는 드라이버가 맞춘다.
         // 범위는 여기서 본다. 상자가 버퍼를 넘으면 D3D11 은 호출을 조용히 버린다.
         ID3D11Buffer* pResource = ( buffer != 0 && _pDevice->_immediateContext.isValid() ) ? _pDevice->resolveBuffer( buffer ) : nullptr;
@@ -276,7 +255,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "D3D11.UpdateGeometryBufferRegionsRegionOutsideByte", "updateGeometryBufferRegions: region [%#, +%#) is outside the %#-byte vertex or index buffer; skipped", region._dstOffset, region._sizeBytes, desc.ByteWidth );
                 continue;
             }
-            updateStructuredBufferRegions( buffer, pBaseSource, &region, 1 );
+            updateStructuredBufferRegionsNative( buffer, pBaseSource, &region, 1 );
         }
     }
 

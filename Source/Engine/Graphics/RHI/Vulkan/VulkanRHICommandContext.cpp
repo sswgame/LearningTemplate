@@ -9,6 +9,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -965,7 +966,7 @@ namespace sw
     void VulkanRHICommandContext::updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         if ( _pDevice != nullptr )
-            _pDevice->getResourceFactory()->updateConstantBuffer( buffer, pData, size );
+            _pDevice->_resourceImpl->writeConstantBuffer( buffer, pData, size );
     }
 
     void VulkanRHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )

@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/RHIBufferUploadLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIComputeBindingLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -87,8 +88,11 @@ namespace sw
 
     void IRHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
-        if ( buffer != 0 && getContextDevice().getConstantBufferWriteLog().recordWrite( buffer ) == false )
-            getContextDevice().getDrawDiagnostics().reportConstantBufferRewrite( buffer );
+        if constexpr ( build::kShipping == false )
+        {
+            if ( buffer != 0 && getContextDevice().getConstantBufferWriteLog().recordWrite( buffer, 0 ) == false )
+                getContextDevice().getDrawDiagnostics().reportConstantBufferRewrite( buffer, 0 );
+        }
         updateConstantBufferNative( buffer, pData, size );
     }
 
@@ -261,9 +265,16 @@ namespace sw
         blitTextureNative( src, dst );
     }
 
+    void IRHICommandContext::recordBufferUse( RHIBufferHandle buffer )
+    {
+        if constexpr ( build::kShipping == false )
+            getContextDevice().getBufferUploadLog().recordUse( buffer );
+    }
+
     void IRHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
     {
         endRenderPassBefore( "transitionBuffer" );
+        recordBufferUse( buffer );
         transitionBufferNative( buffer, newState );
     }
 
@@ -272,6 +283,10 @@ namespace sw
         if ( pTransition == nullptr || count == 0 )
             return;
         endRenderPassBefore( "transitionBuffers" );
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            recordBufferUse( pTransition[index]._buffer );
+        }
         transitionBuffersNative( pTransition, count );
     }
 
@@ -295,6 +310,7 @@ namespace sw
             return;
         }
         endRenderPassBefore( "copyBufferToReadback" );
+        recordBufferUse( source );
         copyBufferToReadbackNative( source, readback, sizeBytes );
     }
 
@@ -318,6 +334,8 @@ namespace sw
             return;
         }
         endRenderPassBefore( "copyBufferRegion" );
+        recordBufferUse( destination );
+        recordBufferUse( source );
         copyBufferRegionNative( destination, destinationOffset, source, sourceOffset, sizeBytes );
     }
 

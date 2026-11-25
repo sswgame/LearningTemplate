@@ -41,12 +41,12 @@ namespace sw
         void reportDestroyedVertexBuffer( RHIBufferHandle handle ) const;
         /** @brief 렌더 패스가 열려 있지 않아 그 드로우를 버렸음을 알립니다(패스 밖 드로우가 없는 백엔드 — Vulkan). 열린 패스를 무언가가 닫았거나 패스를 열지 않고 그렸다. */
         void reportDrawWithoutRenderPass() const;
-        /** @brief 렌더 스레드가 렌더 패스를 연 채로 버퍼를 갱신했음을 알립니다(`IRHIDevice::requireUploadOutsidePass` — 업로드는 그리기 기록 전에). */
+        /** @brief 렌더 스레드가 렌더 패스를 연 채로 버퍼를 갱신했음을 알립니다(`IRHIDevice::beginBufferUpload` — 업로드는 그리기 기록 전에). */
         void reportBufferUpdateInsideRenderPass( const utf8* pWhat ) const;
         /** @brief 패스 밖의 일(@p pOperation — 전이 · 복사 · 디스패치 · 새 패스 열기)이 열린 렌더 패스를 닫았음을 알립니다(`IRHICommandContext::endRenderPassBefore`). 그 패스의 남은 드로우는 빠진다. */
         void reportRenderPassInterrupted( const utf8* pOperation ) const;
-        /** @brief 기록 경로가 이번 프레임에 이미 쓴 상수 버퍼를 다시 썼음을 알립니다(앞 드로우도 마지막 값을 읽는다 — 드로우마다 다른 값이면 버퍼를 나눈다, `PassConstantRing`). */
-        void reportConstantBufferRewrite( RHIBufferHandle handle ) const;
+        /** @brief 이번 프레임에 이미 쓴 상수 버퍼 구간(@p offset 에서 시작)을 다시 썼음을 알립니다(앞 드로우도 마지막 값을 읽는다 — 드로우마다 다른 값이면 버퍼를 나눈다, `PassConstantRing`). */
+        void reportConstantBufferRewrite( RHIBufferHandle handle, uint32 offset ) const;
         /**
          * @brief 텍스처를 받는 호출(@p pOperation — 렌더 패스 컬러 타깃 · 전이 · 블릿)이 핸들 0 을 받아 그 일을 버렸음을 알립니다(`IRHICommandContext` 가 판정한다).
          * @details 0 은 무효 핸들이다 — 백버퍼는 `kRHIBackBufferTexture` 로 따로 적는다. 0 이 오는 길은 만들지 못한 첨부 · 선언하지 않은 그래프 접근 같은 부르는 쪽의 결함이라

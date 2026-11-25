@@ -12,20 +12,21 @@ namespace sw
     public:
         explicit OpenGLRHIResourceFactory( OpenGLRHIDevice* pDevice )
             : _pDevice{ pDevice } {}
-        RHIPipelineStateHandle          createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) override;
-        RHIPipelineStateHandle          createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
-        [[nodiscard]] bool              destroyPipelineStateNative( RHIPipelineStateHandle pso ) override;
-        RHIBufferHandle                 createConstantBuffer( uint32 size ) override;
-        void                            updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
+        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) override;
+        RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
+        [[nodiscard]] bool     destroyPipelineStateNative( RHIPipelineStateHandle pso ) override;
+        RHIBufferHandle        createConstantBuffer( uint32 size ) override;
+        /** @brief 기록 경로의 상수 버퍼 쓰기입니다(커맨드 컨텍스트만 부른다 — 두 번째 쓰기 진단은 `IRHICommandContext::updateConstantBuffer` 가 했다). */
+        void                            writeConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size );
         RHIBufferHandle                 createConstantBufferPage( uint32 size ) override;
-        void                            updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size ) override;
+        void                            writeConstantBufferSlice( const RHIBufferSlice& slice, const void* pData, uint32 size ) override;
         RHIBufferHandle                 createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
-        void                            updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
-                                                                       const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        void                            updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource,
+                                                                             const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle                 createBuffer( const RHIBufferDesc& desc ) override;
         RHIBufferHandle                 createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
         RHIBufferHandle                 createGPUVertexBuffer( uint32 sizeBytes ) override;
-        void                            updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        void                            updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle                 createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
         [[nodiscard]] bool              destroyBufferNative( RHIBufferHandle buffer ) override;
         RHIBufferHandle                 createReadbackBuffer( uint32 elementSize, uint32 elementCount ) override;

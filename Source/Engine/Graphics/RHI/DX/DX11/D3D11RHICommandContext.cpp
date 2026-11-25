@@ -485,7 +485,7 @@ namespace sw
             return;
         D3D11_MAPPED_SUBRESOURCE mapped{};
         // 리스트의 Deferred Context 는 이 리스트만 쓰므로 잠그지 않는다. 프레임 스트림(즉시 컨텍스트)은 다른 스레드의
-        // `IRHIResourceFactory::updateConstantBuffer` 가 같은 버퍼를 Map 할 수 있어 Map · Unmap 짝을 같은 가드로 묶는다.
+        // 전송 제출이 같은 컨텍스트를 쓸 수 있어 Map · Unmap 짝을 같은 가드로 묶는다.
         const bool bFrameStream = _pState == &_pDevice->_recordingState;
         if ( bFrameStream == false )
         {

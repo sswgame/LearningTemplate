@@ -6,6 +6,8 @@
 #include "Core/Time/BusyClock.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIBufferUploadLog.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
@@ -62,17 +64,46 @@ namespace sw
         return buffer;
     }
 
-    void IRHIResourceFactory::bindPipelineFront( ShaderTargetFormat shaderTargetFormat, const RHICapabilities& startupCapabilities )
+    void IRHIResourceFactory::bindDevice( IRHIDevice& device, ShaderTargetFormat shaderTargetFormat, const RHICapabilities& startupCapabilities )
     {
+        _pUploadDevice        = &device;
         _shaderTargetFormat   = shaderTargetFormat;
         _pStartupCapabilities = &startupCapabilities;
+    }
+
+    void IRHIResourceFactory::beginBufferUpload( RHIBufferHandle buffer, const utf8* pWhat )
+    {
+        if ( _pUploadDevice != nullptr )
+            _pUploadDevice->beginBufferUpload( buffer, pWhat );
+    }
+
+    RHIBufferHandle IRHIResourceFactory::recordContent( RHIBufferHandle buffer, const void* pContent )
+    {
+        if constexpr ( build::kShipping == false )
+        {
+            if ( _pUploadDevice != nullptr && pContent != nullptr )
+                _pUploadDevice->getBufferUploadLog().recordContent( buffer );
+        }
+        return buffer;
+    }
+
+    void IRHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    {
+        beginBufferUpload( buffer, "updateStructuredBufferRegions" );
+        updateStructuredBufferRegionsNative( buffer, pBaseSource, pRegions, regionCount );
+    }
+
+    void IRHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    {
+        beginBufferUpload( buffer, "updateGeometryBufferRegions" );
+        updateGeometryBufferRegionsNative( buffer, pBaseSource, pRegions, regionCount );
     }
 
     RHIPipelineStateHandle IRHIResourceFactory::createPipelineState( RHIResourceCreateKey, const RHIPipelineStateDesc& desc )
     {
         if ( _pStartupCapabilities == nullptr )
         {
-            SW_LOG_ERROR_ID( "RHI.PipelineFrontUnbound", "createPipelineState before the device bound the pipeline front (IRHIDevice::initialize) - '%#'", desc._vertexShaderPath );
+            SW_LOG_ERROR_ID( "RHI.PipelineFrontUnbound", "createPipelineState before the device bound the factory (IRHIDevice::initialize) - '%#'", desc._vertexShaderPath );
             return 0;
         }
         BusyScope                 busy{ engine::getSubsystem<ShaderCache>().getCompileBusyClock() };
@@ -89,7 +120,7 @@ namespace sw
     {
         if ( _pStartupCapabilities == nullptr )
         {
-            SW_LOG_ERROR_ID( "RHI.PipelineFrontUnbound", "createComputePipelineState before the device bound the pipeline front (IRHIDevice::initialize) - '%#'", shaderPath );
+            SW_LOG_ERROR_ID( "RHI.PipelineFrontUnbound", "createComputePipelineState before the device bound the factory (IRHIDevice::initialize) - '%#'", shaderPath );
             return 0;
         }
         if ( shaderPath.empty() ) // 빈 레코드를 등록하지 않는다(예전 다섯 백엔드와 같은 답)

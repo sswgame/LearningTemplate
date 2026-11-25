@@ -47,13 +47,6 @@ namespace sw
          * @brief 칸을 돌려줍니다. 그 페이지의 칸이 모두 비면 페이지를 닫고 true 입니다(부르는 쪽이 그 번호의 RHI 버퍼를 놓는다 — 번호는 다음 새 페이지가 다시 쓴다).
          */
         [[nodiscard]] bool release( const ConstantBufferSlot& slot );
-        /**
-         * @brief 칸 @p slot 을 @p sizeBytes 를 담는 등급으로 옮깁니다(머티리얼 레이아웃이 커지거나 줄었다). 등급이 같으면 그 칸 그대로입니다.
-         * @details 새 칸을 먼저 잡고 옛 칸을 놓는다 — 옛 페이지가 닫혀도(@p outbOldPageClosed) 그 번호가 이번 새 칸에 다시 쓰이지 않아, 부르는 쪽이 옛 RHI 버퍼를 놓고
-         *          새 RHI 버퍼를 만드는 순서가 엇갈리지 않는다. 새 크기가 등급보다 크면 무효 칸을 돌려준다(옛 칸은 놓았다 — 부르는 쪽이 전용 버퍼를 만든다).
-         */
-        [[nodiscard]] ConstantBufferSlot reallocate( const ConstantBufferSlot& slot, uint32 sizeBytes, bool& outbNewPage, bool& outbOldPageClosed );
-
         /** @brief 열린 페이지 수입니다(백엔드 할당 수 — 측정 · 테스트). */
         uint32 getOpenPageCount() const;
         /** @brief @p sizeBytes 를 담는 등급의 칸 크기입니다. 등급보다 크면 0 입니다. */

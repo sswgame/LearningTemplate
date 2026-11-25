@@ -35,6 +35,7 @@ namespace sw
     class IRHIResourceFactory;
     class IRHISwapChain;
     class IRHITimestampProvider;
+    class RHIBufferUploadLog;
     class RHIMemoryTracker;
     class RHITransferSerials;
     class BindlessIndexReportLog;
@@ -364,15 +365,7 @@ namespace sw
          * @note 스왑체인 자체(백버퍼, 이미지 인덱스, 동기화, present)는 `IRHISwapChain` 의 백엔드 구현이 소유합니다. 메인 창도 그 가운데 하나이고,
          *       `endFrame` 은 그 프레임에 그린 스왑체인을 모두 표시합니다(`createSwapChain`).
          */
-        void beginFrame()
-        {
-            assumeRenderThreadRole(); // 프레임 진행 상태는 렌더 스레드의 것이다 — 다른 스레드의 그리기는 `RenderThread::executeAndWait` 로 넘긴다
-            _handleReuseCount.fetch_add( 1, std::memory_order_acq_rel );
-            _constantBufferWriteLog.beginFrame();
-            activateReservedBindlessTextures(); // 예약한 번호를 그려지기 전에 살린다(R-6)
-            reportResourceCounts();
-            beginFrameInternal();
-        }
+        void beginFrame();
         /**
          * @brief `beginFrame` 이 이번 프레임의 기록을 실제로 열었는지입니다. 렌더 스레드에서만 부른다.
          * @details 스왑체인 이미지를 얻지 못한 프레임(서피스 손실 · 크기 0 · 다시 만들기 실패)은 기록해도 제출되지 않는다 — 한 번만 기록하는 일(정점 풀 복사)은 이것을 보고 다음 프레임으로 미룬다.
@@ -486,8 +479,10 @@ namespace sw
         virtual const utf8* getBackendName() const = 0;
         /** @brief 이 디바이스의 드로우 기록 진단입니다(잘못된 바인딩 알림과 그 횟수 — 문맥 · 지오메트리 바인딩이 여기로 알린다). */
         const RHIDrawDiagnostics& getDrawDiagnostics() const { return _drawDiagnostics; }
-        /** @brief 이번 프레임에 기록 경로가 쓴 상수 버퍼입니다(`IRHICommandContext::updateConstantBuffer` 가 두 번째 쓰기를 알린다). `beginFrame` 이 비운다. */
+        /** @brief 이번 프레임에 쓴 상수 버퍼 구간입니다(`IRHICommandContext::updateConstantBuffer` · `ConstantBufferPagePool::write` 가 두 번째 쓰기를 알린다 — 개발 구성). `beginFrame` 이 비운다. */
         RHIConstantBufferWriteLog& getConstantBufferWriteLog() { return _constantBufferWriteLog; }
+        /** @brief 지금 기록하는 프레임이 쓰는 버퍼입니다(`beginBufferUpload` 가 다른 스레드의 갱신을 본다 — 개발 구성). */
+        RHIBufferUploadLog& getBufferUploadLog() { return *_pBufferUploadLog; }
 
         // ------------------------------------------------------------------------------
         // 3) 네이티브 핸들: 디바이스, 컨텍스트, 스왑체인, 큐
@@ -644,7 +639,7 @@ namespace sw
          */
         void setParallelRecording( bool bEnable ) { _bParallelRecording.store( bEnable, std::memory_order_relaxed ); }
 
-        /** @class PassRecordingScope @brief 렌더 스레드가 렌더 그래프(패스 몸통)를 기록하는 구간입니다 — 이 안의 버퍼 갱신을 `requireUploadOutsidePass` 가 잡는다. 겹치지 않는다. */
+        /** @class PassRecordingScope @brief 렌더 스레드가 렌더 그래프(패스 몸통)를 기록하는 구간입니다 — 이 안의 버퍼 갱신을 `beginBufferUpload` 가 잡는다. 겹치지 않는다. */
         class PassRecordingScope
         {
         public:
@@ -671,15 +666,17 @@ namespace sw
         void requireRegistryMutableNow( const utf8* pWhat ) const;
 
         /**
-         * @brief 렌더 스레드의 버퍼 갱신이 패스 밖(전송 계약 3 — 업로드는 그리기 기록 전)인지 봅니다(다섯 백엔드가 같다). 백엔드의 버퍼 갱신이 들어올 때 부릅니다.
-         * @details 렌더 그래프를 기록하는 동안(`PassRecordingScope`)의 갱신이면 개발 구성에서 멈춘다 — 패스는 자기 리스트에 기록하고 갱신은 프레임 스트림에 기록해 그 리스트 **앞에**
+         * @brief 버퍼 갱신 하나가 기록하는 프레임과 순서가 맞는 자리인지 봅니다(다섯 백엔드가 같다). 갱신의 공통 입구(`IRHIResourceFactory::updateStructuredBufferRegions` · `updateGeometryBufferRegions`)가 부릅니다.
+         * @details **렌더 스레드**의 갱신은 패스 밖이어야 한다(전송 계약 3 — 업로드는 그리기 기록 전). 렌더 그래프를 기록하는 동안(`PassRecordingScope`)의 갱신이면 개발 구성에서 멈춘다 — 패스는 자기 리스트에 기록하고 갱신은 프레임 스트림에 기록해 그 리스트 **앞에**
          *          실행된다. 그래프가 이미 기록한 전이(추적 상태)와 어긋나고(D3D12 상태 오류), 앞 패스가 새 내용을 읽는다. 그래프 앞(준비 단계)에서 올린다.
          *          프레임 스트림에 렌더 패스를 연 채면 알리고(`RHI.BufferUpdateInsideRenderPass`) 그 패스를 닫는다 — Vulkan 은 패스 안에 복사를 기록할 수 없다. 어느 백엔드에서든 같은
          *          오류로 드러나게 하고, 패스를 닫아 그 뒤의 드로우도 같게 버린다. 에디터 UI 가 열린 백버퍼 패스 안에서 올려 Vulkan 화면에서만 사라졌던 결함이 이 모양이다.
-         *          다른 스레드의 갱신은 렌더 스레드가 기록하는 패스와 순서가 없어 보지 않는다(렌더 스레드가 없으면 보지 않는다).
-         * @param pWhat 로그에 남길 호출 지점 이름입니다.
+         *          **다른 스레드**의 갱신은 다음 제출의 맨 앞에 실행되어 지금 기록하는 프레임과 순서가 없다. 그 프레임이 쓰는 버퍼(`RHIBufferUploadLog`)면 개발 구성에서 멈춘다 — 갱신을
+         *          렌더 스레드(패킷)로 보낸다. 새 버퍼의 첫 내용은 지나간다.
+         * @param buffer 갱신할 버퍼입니다.
+         * @param pWhat  로그에 남길 호출 지점 이름입니다.
          */
-        void requireUploadOutsidePass( const utf8* pWhat );
+        void beginBufferUpload( RHIBufferHandle buffer, const utf8* pWhat );
 
         /**
          * @brief 병렬 기록 중에 배리어가 나왔음을 **진단으로만** 남깁니다(디버그 전용, 8회까지).
@@ -806,9 +803,11 @@ namespace sw
         /** @brief 모든 해제 오버로드의 본문입니다 — 지금 놓을지 다음에 넘길 프레임 뒤로 미룰지 정한다. 0 은 무시한다. */
         void releaseHandleInternal( RHIHandleKind kind, uint64 packed );
         /** @brief 핸들 하나를 지금 그 종류의 백엔드 파괴 함수로 내립니다. 백엔드가 산 핸들이 아니었다고 하면 단언한다(같은 핸들 두 번 해제). */
-        static void releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 packed );
+        void releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 packed );
         /** @brief 미룬 핸들 중 기다리던 프레임이 끝난 것만 해제합니다(`notifyRenderFrameRetired`). */
         void releaseRetiredHandles();
+        /** @brief 렌더 스레드의 갱신이 패스 밖인지 봅니다(`beginBufferUpload` 의 렌더 스레드 몫). */
+        void requireUploadOutsidePass( const utf8* pWhat );
         /** @brief 할당 수 지표(`RT.RHI.liveBuffers` · `RT.RHI.constantBufferPages`)를 냅니다. `beginFrame` 이 프레임에 한 번 부른다. */
         void reportResourceCounts() const;
 
@@ -819,7 +818,7 @@ namespace sw
         ThreadRole _renderThread;
         /// @brief SDR 이던 마지막 백버퍼 포맷입니다 — HDR 인 동안의 `getUITargetFormat` 이다(`initialize` 와 `setBackBufferColorSpace` 가 SDR 을 떠나기 전에 적는다).
         RHIFormat _sdrBackBufferFormat{ constant::render::kBackBufferFormat };
-        /// @brief 기동 끝(`initialize`)에 채운 능력입니다 — PSO 앞단이 참조로 읽는다(`IRHIResourceFactory::bindPipelineFront`). 화면 출력 칸처럼 실행 중 바뀌는 값은 `getCapabilities` 로 묻는다.
+        /// @brief 기동 끝(`initialize`)에 채운 능력입니다 — PSO 앞단이 참조로 읽는다(`IRHIResourceFactory::bindDevice`). 화면 출력 칸처럼 실행 중 바뀌는 값은 `getCapabilities` 로 묻는다.
         RHICapabilities _startupCapabilities{};
         /// @brief 타임스탬프 계측 능력입니다(findTimestampProvider 참고). 능력을 가진 백엔드가 생성자에서 자기를 적습니다.
         IRHITimestampProvider* _pTimestampProvider;
@@ -860,11 +859,13 @@ namespace sw
         unique_ptr<BindlessIndexReportLog> _pBindlessIndexReportLog;
         /// @brief 컴퓨트 디스패치가 건 버퍼의 기록입니다(getComputeBindingLog 참고).
         unique_ptr<RHIComputeBindingLog> _pComputeBindingLog;
+        /// @brief 지금 기록하는 프레임이 쓰는 버퍼입니다(`getBufferUploadLog`).
+        unique_ptr<RHIBufferUploadLog> _pBufferUploadLog;
         /// @brief 마지막 `initialize` 의 단계별 시간입니다(`markInitPhase`).
         RHIInitPhaseTimings _initPhaseTimings;
         /// @brief 드로우 기록 진단입니다(`getDrawDiagnostics`). 장치와 함께 생기고 사라진다 — 백엔드를 바꾸면 횟수가 다시 시작한다.
         RHIDrawDiagnostics _drawDiagnostics;
-        /// @brief 이번 프레임의 기록 경로 상수 버퍼 쓰기입니다(`getConstantBufferWriteLog`).
+        /// @brief 이번 프레임의 상수 버퍼 쓰기입니다(`getConstantBufferWriteLog`).
         RHIConstantBufferWriteLog _constantBufferWriteLog;
         /// @brief 지난 경계 수입니다(`getHandleReuseCount`).
         atomic<uint64> _handleReuseCount{ 0 };

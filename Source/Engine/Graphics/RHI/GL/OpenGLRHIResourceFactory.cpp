@@ -205,7 +205,7 @@ namespace sw
         return _pDevice->storeGlBuffer( ubo, alignedSize );
     }
 
-    void OpenGLRHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void OpenGLRHIResourceFactory::writeConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         if ( buffer == 0 || pData == nullptr )
             return;
@@ -224,7 +224,7 @@ namespace sw
         return createConstantBuffer( size );
     }
 
-    void OpenGLRHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    void OpenGLRHIResourceFactory::writeConstantBufferSlice( const RHIBufferSlice& slice, const void* pData, uint32 size )
     {
         if ( slice._buffer == 0 || pData == nullptr )
             return;
@@ -256,10 +256,9 @@ namespace sw
         return createBuffer( desc );
     }
 
-    void OpenGLRHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
-                                                                  const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void OpenGLRHIResourceFactory::updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource,
+                                                                        const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireUploadOutsidePass( "updateStructuredBufferRegions" );
         const bool bInvalidBufferRegionUpdate = _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidBufferRegionUpdate )
             return;
@@ -352,9 +351,8 @@ namespace sw
         return _pDevice->storeGlBuffer( vbo, sizeBytes );
     }
 
-    void OpenGLRHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void OpenGLRHIResourceFactory::updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireUploadOutsidePass( "updateGeometryBufferRegions" );
         const bool bInvalidVertexRegionUpdate = _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidVertexRegionUpdate )
             return;

@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
+#include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -602,7 +603,7 @@ namespace sw
     void D3D12RHICommandContext::updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         if ( _pDevice != nullptr )
-            _pDevice->getResourceFactory()->updateConstantBuffer( buffer, pData, size );
+            _pDevice->_resourceImpl->writeConstantBuffer( buffer, pData, size );
     }
 
     void D3D12RHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )

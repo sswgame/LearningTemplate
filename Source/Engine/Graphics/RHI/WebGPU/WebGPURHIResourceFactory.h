@@ -27,14 +27,13 @@ namespace sw
         [[nodiscard]] bool     destroyPipelineStateNative( RHIPipelineStateHandle pso ) override;
 
         RHIBufferHandle               createConstantBuffer( uint32 size ) override;
-        void                          updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         RHIBufferHandle               createConstantBufferPage( uint32 size ) override;
-        void                          updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size ) override;
+        void                          writeConstantBufferSlice( const RHIBufferSlice& slice, const void* pData, uint32 size ) override;
         RHIBufferHandle               createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
-        void                          updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        void                          updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle               createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
         RHIBufferHandle               createGPUVertexBuffer( uint32 sizeBytes ) override;
-        void                          updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        void                          updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle               createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
         [[nodiscard]] bool            destroyBufferNative( RHIBufferHandle buffer ) override;
         [[nodiscard]] RHIBufferHandle createReadbackBuffer( uint32 elementSize, uint32 elementCount ) override;

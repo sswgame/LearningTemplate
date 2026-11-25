@@ -81,7 +81,7 @@ namespace sw
         return handle;
     }
 
-    void D3D12RHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void D3D12RHIResourceFactory::writeConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         if ( buffer == 0 || pData == nullptr )
             return;
@@ -103,7 +103,7 @@ namespace sw
         return createConstantBuffer( size );
     }
 
-    void D3D12RHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    void D3D12RHIResourceFactory::writeConstantBufferSlice( const RHIBufferSlice& slice, const void* pData, uint32 size )
     {
         if ( slice._buffer == 0 || pData == nullptr )
             return;
@@ -279,10 +279,9 @@ namespace sw
         return true;
     }
 
-    void D3D12RHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
-                                                                 const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void D3D12RHIResourceFactory::updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource,
+                                                                       const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireUploadOutsidePass( "updateStructuredBufferRegions" );
         recordBufferCopies( buffer, pBaseSource, pRegions, regionCount, _pDevice->isRecordingFrameOnThisThread() ? UploadOrder::FrameStream : UploadOrder::BeforeFrame );
     }
 
@@ -350,16 +349,6 @@ namespace sw
         D3D12RHIDevice::BufferRecord* const pBufferRecord = _pDevice->findBufferRecord( buffer );
         const bool                          bTracked      = pBufferRecord != nullptr && pBufferRecord->_bTrackedState != SW_FALSE;
         const D3D12_RESOURCE_STATES         stateBefore   = bTracked ? pBufferRecord->_state.load() : D3D12_RESOURCE_STATE_COMMON;
-        if constexpr ( build::kShipping == false )
-        {
-            // 업로드 리스트는 제출 맨 앞에 실행된다 — 다른 스레드가 프레임을 기록하는 동안 이미 쓰는 버퍼(상태가 COMMON 이 아니다)를 여기로 갱신하면 그 프레임이 기록한 전이와 순서가 없다.
-            // 새 버퍼의 첫 내용은 아무도 아직 쓰지 않아 안전하다. 갱신은 프레임을 기록하는 스레드(패킷)로 보낸다.
-            if ( order == UploadOrder::BeforeFrame && stateBefore != D3D12_RESOURCE_STATE_COMMON && _pDevice->isRecordingFrameOnOtherThread() )
-                reportFatalError( "updateStructuredBufferRegions: buffer %# (state 0x%#) is updated from another thread while the render thread records a frame - the copy has no order against that frame's "
-                                  "transitions. Send the update to the render thread",
-                                  buffer.getPacked(), static_cast<uint32>( stateBefore ) );
-        }
-
         // 끝낸 뒤 둘 읽기 상태는 버퍼 종류가 정한다(정점 · 인덱스 · 구조 — `BufferRecord::_uploadReadState`). 추적하지 않는 버퍼는 셰이더 읽기다.
         constexpr D3D12_RESOURCE_STATES kShaderReadState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         const D3D12_RESOURCE_STATES     readState        = bTracked ? pBufferRecord->_uploadReadState : kShaderReadState;
@@ -773,9 +762,8 @@ namespace sw
         return handle;
     }
 
-    void D3D12RHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void D3D12RHIResourceFactory::updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireUploadOutsidePass( "updateGeometryBufferRegions" );
         const bool bInvalidVertexRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidVertexRegionUpdate )
             return;
@@ -793,7 +781,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.UpdateGeometryBufferRegionsRegionOutsideByte", "updateGeometryBufferRegions: region [%#, +%#) is outside the %#-byte vertex or index buffer; skipped", region._dstOffset, region._sizeBytes, bufferBytes );
                 continue;
             }
-            updateStructuredBufferRegions( buffer, pBaseSource, &region, 1 );
+            updateStructuredBufferRegionsNative( buffer, pBaseSource, &region, 1 );
         }
     }
 

@@ -46,7 +46,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) final;
         void endRenderPass() final;
-        /** @brief 지금 렌더 패스가 열려 있으면 true 입니다(패스 안의 업로드 판정 — `IRHIDevice::requireUploadOutsidePass`). */
+        /** @brief 지금 렌더 패스가 열려 있으면 true 입니다(패스 안의 업로드 판정 — `IRHIDevice::beginBufferUpload`). */
         bool isRenderPassOpen() const { return _bRenderPassOpen; }
 
         // ------------------------------------------------------------------------------
@@ -132,6 +132,9 @@ namespace sw
         [[nodiscard]] bool isDrawAllowed() const;
         /** @brief 텍스처 핸들이 0 이 아니면 true 입니다. 0 이면 @p pOperation 이름으로 알리고 false 입니다(백버퍼는 `kRHIBackBufferTexture`). */
         [[nodiscard]] bool isTextureHandleValid( RHITextureHandle texture, const utf8* pOperation ) const;
+
+        /** @brief (개발 구성) 이번 프레임이 @p buffer 의 전이 · 복사를 기록한다고 적습니다 — 다른 스레드의 갱신 판정(`IRHIDevice::beginBufferUpload`)이 읽는다. */
+        void recordBufferUse( RHIBufferHandle buffer );
 
     private:
         static constexpr uint32 kTrackedComputeSlotCount = 8; ///< 슬롯 종류마다 기억하는 칸(binding_slots.hlsli 의 컴퓨트 슬롯보다 넉넉하다)

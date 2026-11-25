@@ -766,12 +766,6 @@ namespace sw
         void flushPendingUploads( bool bExecuteNow );
         /** @brief 이 스레드가 프레임 스트림을 기록하는 중이면 true 입니다. */
         bool isRecordingFrameOnThisThread() const { return _frameThreadID.load( std::memory_order_relaxed ) == std::this_thread::get_id() && _pActiveFrameList != nullptr; }
-        /** @brief 다른 스레드가 프레임을 기록하는 중이면 true 입니다. */
-        bool isRecordingFrameOnOtherThread() const
-        {
-            const std::thread::id frameThread = _frameThreadID.load( std::memory_order_relaxed );
-            return frameThread != std::thread::id{} && frameThread != std::this_thread::get_id();
-        }
         /** @brief 프레임을 냈다 — 프레임 스트림 복사가 읽은 스테이징은 지금 펜스 구간의 것이다. 부르는 쪽이 `_uploadSlotMutex` 를 쥡니다. */
         void retireFrameCopies();
 

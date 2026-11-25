@@ -80,7 +80,7 @@ namespace sw
                          getBackendName(), pOperation, CallStackCapture::symbolize( stack ).c_str() );
     }
 
-    void RHIDrawDiagnostics::reportConstantBufferRewrite( RHIBufferHandle handle ) const
+    void RHIDrawDiagnostics::reportConstantBufferRewrite( RHIBufferHandle handle, uint32 offset ) const
     {
         const uint32 count = countReport();
         if ( count >= kMaxReportedDraw )
@@ -88,8 +88,8 @@ namespace sw
         // 부른 자리를 함께 남긴다 — 버퍼를 나눌 곳이 곧 그 호출자다.
         CallStack stack{};
         CallStackCapture::capture( stack, 2 );
-        SW_LOG_ERROR_ID( "RHI.ConstantBufferRewrittenInFrame", "%# constant buffer %# was written twice in one frame - earlier draws read the last value. Give each value its own buffer (PassConstantRing)\n%#",
-                         getBackendName(), handle.getPacked(), CallStackCapture::symbolize( stack ).c_str() );
+        SW_LOG_ERROR_ID( "RHI.ConstantBufferRewrittenInFrame", "%# constant buffer %# (offset %#) was written twice in one frame - earlier draws read the last value. Give each value its own buffer (PassConstantRing)\n%#",
+                         getBackendName(), handle.getPacked(), offset, CallStackCapture::symbolize( stack ).c_str() );
     }
 
     void RHIDrawDiagnostics::reportIndexBufferUnbound() const
