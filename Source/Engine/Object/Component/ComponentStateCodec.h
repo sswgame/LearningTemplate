@@ -2,7 +2,7 @@
  * @file ComponentStateCodec.h
  * @brief PROPERTY 밖의 컴포넌트 런타임 상태(`serializeState` · `restoreState`)를 오브젝트 하나씩 뜨고 되돌리는 형식마다의 코덱과 그 등록입니다.
  * @details 리플렉션 PROPERTY 는 오브젝트 상태가 이미 옮긴다. 보통 클래스로 든 시뮬레이션(지형 편집 · 부지 배치 · 디렉터)은 그 밖이라, 오브젝트를 내렸다 다시 짓는 길(스트리밍 셀 ·
- *          데이터 레이어 묶음 · 하위 레벨), 씬을 넘는 오브젝트(`SceneManager::markPersistent`), 세이브 · 핫 리로드 봉투(`GameStateSnapshot`)가 **모두 이 코덱 하나로** 싣는다 —
+ *          데이터 레이어 묶음 · 하위 레벨), 씬을 넘는 오브젝트(`SceneManager::markPersistent`), 세이브 · 핫 리로드 봉투(`GameStateSnapshot`)가 모두 이 코덱 하나로 싣는다 —
  *          길마다 다른 목록을 두면 한 길만 빠진 상태가 생긴다. 언리얼 `UObject::Serialize` 재정의가 레벨 스트리밍 · 세이브에 함께 실리는 자리다.
  *          등록: 게임 형식은 `StatefulComponentRegistrar` · `GameStateSnapshot::registerStatefulComponent`, 엔진 형식은 `SW_COMPONENT_STATE_CODEC`.
  *

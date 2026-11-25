@@ -95,7 +95,7 @@ namespace sw
         /** @brief JSON 에서 프리팹을 로드합니다(GameObject 상태 JSON 에 중첩 인스턴스 배열 `_listPrefabInstance` 를 더한 것이며, `saveToJSONFile` 이 쓰는 형태 하나만 받습니다). */
         [[nodiscard]] bool loadFromJSONFile( const AssetID& assetID );
         /**
-         * @brief **디스크 파일**에서 프리팹 원본을 로드합니다(형식은 확장자 `.prefab.xml` · `.prefab.json`). 리소스 id 로 풀지 않고 팩을 보지 않습니다.
+         * @brief 디스크 파일에서 프리팹 원본을 로드합니다(형식은 확장자 `.prefab.xml` · `.prefab.json`). 리소스 id 로 풀지 않고 팩을 보지 않습니다.
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
          *          게임 런타임 코드는 쓰지 않습니다.
          */
@@ -200,7 +200,7 @@ namespace sw
 
         /**
          * @brief 상태를 다른 형식의 텍스트로 옮깁니다(XML ↔ JSON). 매니저가 있는 임시 오브젝트를 거칩니다.
-         * @details 매니저 없는 `GameObject` 를 거치면 컴포넌트를 만들 팩토리가 없어 **컴포넌트를 모두 버린** 본문이 나온다.
+         * @details 매니저 없는 `GameObject` 를 거치면 컴포넌트를 만들 팩토리가 없어 컴포넌트를 모두 버린 본문이 나온다.
          */
         string convertState( PrefabStateFormat targetFormat ) const;
 
@@ -221,9 +221,9 @@ namespace sw
         vector<uint8>              _spawnTemplate;           ///< 루트 상태의 스폰 원형(`createSpawnTemplate`). 캐시 밖 자산과 상태가 빈 자산은 비어 있다
         vector<vector<uint8>>      _listNestedSpawnTemplate; ///< 중첩 노드마다의 스폰 원형(`_listNestedInstance` 와 같은 순서). 펼친 노드만 찬다
         PrefabStateFormat          _stateFormat;
-        // `_bValid` 라는 이름은 이 저장소에서 **두 가지**다. 여기와 `RenderFramePacket` 은
+        // `_bValid` 라는 이름은 이 저장소에서 두 가지다. 여기와 `RenderFramePacket` 은
         // `uint8 : 1` 비트필드이고, `EditorWorkspace` 와 `SceneDocument` 는 진짜 `bool` 이다.
-        // `Style/BitfieldBoolean` 린트는 이름으로만 판정하므로 그런 이름은 **일부러 건너뛴다**
+        // `Style/BitfieldBoolean` 린트는 이름으로만 판정하므로 그런 이름은 일부러 건너뛴다
         // (오탐보다 누락이 낫다는 판단). 그래서 여기서는 `SW_TRUE`/`SW_FALSE` 를 손으로 지킨다.
         uint8                  _bValid   : 1;
         [[maybe_unused]] uint8 _reserved : 7;

@@ -43,7 +43,7 @@ namespace sw
     /**
      * @class GameObject
      * @brief 수명 주기(beginPlay), 태그, 컴포넌트 목록을 가진 월드 액터입니다.
-     * @details **이 헤더는 `GameObjectManager` 를 include 하지 않는다.** include 하면 GameObject 를 아는 모든 TU 가 매니저(물리 월드,
+     * @details 이 헤더는 `GameObjectManager` 를 include 하지 않는다. include 하면 GameObject 를 아는 모든 TU 가 매니저(물리 월드,
      *          레지스트리 세 개, 풀)까지 알게 되기 때문이다. 매니저가 필요한 동작(동결 확인, 저장소, 붙이기, 미루기)은 템플릿이 아닌 멤버 함수 네 개이고,
      *          템플릿은 `T` 만 다룬다.
      */
@@ -130,7 +130,7 @@ namespace sw
 
         /**
          * @brief 삭제 예정인지 확인합니다.
-         * @details **삭제 예정 오브젝트의 컴포넌트는 항상 삭제 예정이다**(불변식). 표시는 `tryMarkPendingDestroy` 하나뿐이고 그 함수가 컴포넌트를 먼저
+         * @details 삭제 예정 오브젝트의 컴포넌트는 항상 삭제 예정이다(불변식). 표시는 `tryMarkPendingDestroy` 하나뿐이고 그 함수가 컴포넌트를 먼저
          *          표시하며, 삭제 예정 오브젝트에 새로 붙는 컴포넌트는 삭제 예정으로 시작한다(`attachCreatedComponent`). 그래서 컴포넌트 목록을 도는 곳은
          *          `pComp->isPendingDestroy()` 하나만 보면 되고, 소유 오브젝트(다른 메모리)를 다시 읽지 않는다.
          */
@@ -207,7 +207,7 @@ namespace sw
         /** @brief 형제 사이의 정렬 키를 정하고, 바뀌었으면 매니저의 구조 세대를 올립니다. 되돌리기 기록은 부르는 쪽(`EditorSiblingOrder`)이 합니다. */
         void setSiblingOrder( uint32 siblingOrder );
         /**
-         * @brief 이 오브젝트(자식 오브젝트는 제외)의 켜진 씬 컴포넌트들이 그리거나 부딪히는 것을 덮는 **월드** 상자입니다. 크기가 있는 것이 없으면 false 를 반환합니다.
+         * @brief 이 오브젝트(자식 오브젝트는 제외)의 켜진 씬 컴포넌트들이 그리거나 부딪히는 것을 덮는 월드 상자입니다. 크기가 있는 것이 없으면 false 를 반환합니다.
          * @details 에디터의 바닥과 표면 붙이기, 프레이밍이 크기를 이 함수 하나로 측정한다(`SceneComponent::getWorldBox`).
          */
         bool getWorldBox( AABB& outBox ) const;
@@ -245,7 +245,7 @@ namespace sw
         /** @brief TagQuery(불리언 복합 질의)를 만족하는지 검사합니다. */
         bool matchesTagQuery( const TagQuery& query ) const;
         /**
-         * @brief TagComponent 의 태그 컨테이너입니다. 없으면 빈 컨테이너입니다. **읽기 전용**이며, 쓰기는 `addTag`, `removeTag`, `clearTags` 로만 합니다.
+         * @brief TagComponent 의 태그 컨테이너입니다. 없으면 빈 컨테이너입니다. 읽기 전용이며, 쓰기는 `addTag`, `removeTag`, `clearTags` 로만 합니다.
          * @details 컨테이너를 쓰기용으로 내주지 않는다. 내주면 미루기 규칙을 거치지 않고 살아 있는 컨테이너에 쓰게 된다.
          *          쓰기는 미루기 규칙을 지키는 함수로만 한다.
          */
@@ -484,12 +484,12 @@ namespace sw
         };
 
         /**
-         * @brief 삭제 예정 표시를 **이 호출이 처음으로 했는지** 반환합니다. 표시하기 전에 모든 컴포넌트를 삭제 예정으로 표시합니다.
+         * @brief 삭제 예정 표시를 이 호출이 처음으로 했는지 반환합니다. 표시하기 전에 모든 컴포넌트를 삭제 예정으로 표시합니다.
          * @details `isPendingDestroy()` 로 확인한 뒤 표시하는 두 단계는 원자적이지 않다. 두 스레드가 그 사이를 동시에 통과하면 파괴 목록에 같은
-         *          포인터가 **두 번** 들어가고, 풀이 같은 블록을 두 번 반납한다. `onTick` 은 병렬로 실행되므로(총알 둘이 같은 적을 같은 프레임에
-         *          맞히는 경우처럼) 흔히 일어난다. 없애는 쪽은 반드시 이 함수가 `true` 를 반환한 스레드 **하나만** 진행해야 한다.
+         *          포인터가 두 번 들어가고, 풀이 같은 블록을 두 번 반납한다. `onTick` 은 병렬로 실행되므로(총알 둘이 같은 적을 같은 프레임에
+         *          맞히는 경우처럼) 흔히 일어난다. 없애는 쪽은 반드시 이 함수가 `true` 를 반환한 스레드 하나만 진행해야 한다.
          *
-         *          **컴포넌트가 먼저다.** 컴포넌트 표시(release)가 오브젝트 표시보다 먼저라, 오브젝트가 삭제 예정인 것을 본(acquire) 스레드는 그
+         *          컴포넌트가 먼저다. 컴포넌트 표시(release)가 오브젝트 표시보다 먼저라, 오브젝트가 삭제 예정인 것을 본(acquire) 스레드는 그
          *          컴포넌트들이 삭제 예정인 것도 본다. 반대 순서면 그 사이에 다른 스레드의 순회(`GameObjectStore::forEachComponentOfType`)가
          *          "오브젝트는 삭제 예정, 컴포넌트는 아님" 을 보게 되어 소유 오브젝트를 다시 읽어야 했다. 컴포넌트 표시는 몇 번 해도 같으므로
          *          선점에 진 스레드가 먼저 표시해도 해가 없다. 저장소(`GameObjectStore::destroyGameObject`)만 부른다. 표시만 하고 파괴 목록에 넣지 않으면
@@ -500,7 +500,7 @@ namespace sw
         bool isComponentMutationFrozen() const;
         /**
          * @brief 타입 `pTypeInfo` 의 풀(없으면 만듭니다)에서 슬롯 하나를, 풀을 만들 수 없으면 힙에서 `typeSize` 바이트를 잡습니다. 실패하면 빈 슬롯을 반환합니다.
-         * @details **해체 중인 오브젝트(소멸자 안)에는 잡지 않는다.** 오류를 남기고 빈 슬롯을 돌려 `addComponent` 가 nullptr 를 반환한다. 해체가 부르는
+         * @details 해체 중인 오브젝트(소멸자 안)에는 잡지 않는다. 오류를 남기고 빈 슬롯을 돌려 `addComponent` 가 nullptr 를 반환한다. 해체가 부르는
          *          `onEndPlay` · `onUnregister` · `onDestroy` 에서 붙인 컴포넌트는 이미 비운 목록에 남아 파괴되지 않고, 버킷에 해제된 소유자를 가리킨 채
          *          남는다(유니티 "game object is being destroyed" 와 같은 거절). 모든 붙이기(`addComponent`, 이름으로 붙이는 `addComponentTo`)가 생성 전에
          *          이 함수를 지나므로 여기 하나에서 막는다.
@@ -508,7 +508,7 @@ namespace sw
         ComponentStorage allocateComponentStorage( const TypeInfo* pTypeInfo, size_t typeSize );
         /**
          * @brief 막 만든 컴포넌트를 이 오브젝트에 붙입니다. 소유자, 풀, 이름, 기본값, 목록, primary 캐시, 등록, 틱 표시를 처리합니다.
-         * @details 이 오브젝트가 삭제 예정이면 컴포넌트를 **삭제 예정으로 시작한다**(목록과 버킷에 넣기 전에). 오브젝트와 함께 파괴되며, 순회에 보이지 않는다
+         * @details 이 오브젝트가 삭제 예정이면 컴포넌트를 삭제 예정으로 시작한다(목록과 버킷에 넣기 전에). 오브젝트와 함께 파괴되며, 순회에 보이지 않는다
          *          (유니티에서 `Destroy` 를 부른 같은 프레임의 `AddComponent` 와 같다). `isPendingDestroy` 의 불변식이 이것으로 성립한다.
          * @param bOverridesTick 타입이 `onTick` 을 오버라이드했는지 나타냅니다(`HasOnTickOverride_v`). 아니면 실행할 것이 없으므로 주 틱을 끕니다.
          * @param tickGroup 타입이 선언한 주 틱의 그룹(`T::kTickGroup`)입니다.
@@ -517,7 +517,7 @@ namespace sw
         void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick, TickGroup tickGroup, float32 tickInterval );
         /**
          * @brief `addComponent` 의 본체입니다. @p bFreshLocalID 면 붙인 뒤 오브젝트 안에서 겹치지 않는 새 지역 id 를 준다(게임 코드가 붙인 컴포넌트 — 세이브가 그 id 로 가리킨다).
-         * @details 이름으로 만드는 길(`addComponentTo` — 직렬화 · 에디터)은 주지 않는다 — 곧 읽을 상태의 id 가 맞고, 로드 중에 형제 id 를 굳히면 뒤 형제의 적힌 id 와 겹칠 수 있다.
+         * @details 이름으로 만드는 길(`addComponentTo`: 직렬화 · 에디터)은 주지 않는다. 곧 읽을 상태의 id 가 맞고, 로드 중에 형제 id 를 굳히면 뒤 형제의 적힌 id 와 겹칠 수 있다.
          */
         template <typename T, typename... Args>
         T* addComponentWithLocalID( bool bFreshLocalID, Args&&... args );
@@ -536,7 +536,7 @@ namespace sw
         /** @brief 이 오브젝트의 씬 컴포넌트에 붙은 @p pChildComp 가 자식 오브젝트의 primary 이면 그 오브젝트를, 아니면(같은 오브젝트 안의 부착이거나 다른 컴포넌트) nullptr 를 반환합니다. */
         GameObject* findChildObjectAttachedTo( const SceneComponent* pChildComp ) const;
         /**
-         * @brief 부모 활성 상태를 반영해 `_bIsActiveInHierarchy` 를 다시 계산하고, **바뀌었을 때만** 자기 컴포넌트에 알리고 자식에 전파합니다.
+         * @brief 부모 활성 상태를 반영해 `_bIsActiveInHierarchy` 를 다시 계산하고, 바뀌었을 때만 자기 컴포넌트에 알리고 자식에 전파합니다.
          * @details 자식의 값은 부모의 값과 자기 비트로만 정해지므로, 값이 그대로면 자손도 그대로다. 부모가 바뀌는 모든 곳
          *          (`SceneComponent` 의 붙이기, 떼기, primary 교체)이 그 자리에서 이 함수를 부르는 것이 전제다.
          */

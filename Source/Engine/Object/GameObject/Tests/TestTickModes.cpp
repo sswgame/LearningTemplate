@@ -189,7 +189,7 @@ SW_TEST_CASE( TickModesTest, DeclaredModesRunWhereDeclared )
 /**
  * @brief [TickModesTest] 미룬 일은 (디스패치 순번, 쓴 오브젝트, 넣은 순서) 순으로 돈다 — 틱 밖의 일이 맨 앞, 같은 디스패치 안은 쓴 오브젝트 id 순(워커 순이 아니다)
  */
-// 모드를 적지 않은 컴포넌트의 일괄 등록은 틱 함수를 **직접 선언한** 형식만이다 — 판정은 생성기의 메서드 이름 · 인자 수가 아니라 컴파일(`ReflectAccess<TickAccessTag>::hasDeclaredTick`).
+// 모드를 적지 않은 컴포넌트의 일괄 등록은 틱 함수를 직접 선언한 형식만이다 — 판정은 생성기의 메서드 이름 · 인자 수가 아니라 컴파일(`ReflectAccess<TickAccessTag>::hasDeclaredTick`).
 // 물려받은 형식(팔로워 파생 · Main 파생)은 등록하지 않아 가까운 등록 조상의 모드로 가상 호출한다(Main 기반의 파생이 Batch 로 새지 않게).
 static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<TickModeMoverTestComponent>() );
 static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<TickModeFollowerTestComponent>() );
@@ -319,7 +319,7 @@ SW_TEST_CASE( TickModesTest, ParallelFrameSystemRunsThroughJobContext )
 }
 
 /**
- * @brief [TickModesTest] 선행 조건 스테이지는 같은 (타입, 서브틱) 이웃을 한 일괄 목록으로 묶고 옛 순서(순서 키, 오브젝트 id — 기준 길)와 같은 상태를 낸다 —
+ * @brief [TickModesTest] 선행 조건 스테이지는 같은 (타입, 서브틱) 이웃을 한 일괄 목록으로 묶고 옛 순서(순서 키, 오브젝트 id, 기준 길)와 같은 상태를 낸다.
  *        전체 재구축 뒤에도, 플레이 중 스폰한 팔로워를 증분으로 끼운 뒤(`flushStageEdits`)에도 같은 규칙이다
  */
 SW_TEST_CASE( TickModesTest, StageNeighborBatchesMatchOldOrder )

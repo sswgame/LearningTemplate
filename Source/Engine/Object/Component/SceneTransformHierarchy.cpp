@@ -38,7 +38,7 @@ namespace sw
 
             /**
              * @brief 배치 건이 갈 버킷입니다. 같은 대상(componentID)은 늘 같은 버킷이라 한 워커가 배열 순서대로 씁니다.
-             * @details componentID 를 256 개씩 묶은 **연속 구간**을 돌려 가며 버킷에 줍니다. 이웃한 컴포넌트(이웃한 칸)가 같은 버킷이라 워커끼리
+             * @details componentID 를 256 개씩 묶은 연속 구간을 돌려 가며 버킷에 줍니다. 이웃한 컴포넌트(이웃한 칸)가 같은 버킷이라 워커끼리
              *          칸의 캐시 라인을 나눠 쓰지 않습니다. 주의: 나머지(`id % 버킷 수`)로 나누면 이웃한 칸을 서로 다른 워커가 써(캐시 라인
              *          핑퐁) 잎 루트 8000 건이 150 → 450 us 가 된다(Release p50). 최솟값 · 최댓값으로 구간을 나누면 한 번 더 훑어야 합니다.
              */
@@ -476,7 +476,7 @@ namespace sw
             return 0;
         SW_PROFILE_COUNT( "GT.Scene.tick.queuedWrites", totalCount );
 
-        // **대상 단위로 정렬한다.** 같은 대상의 건이 연속하고, 그 안은 (쓴 오브젝트, 순번) 순이다 — 이기는 값이 스레드 배정과 무관하다.
+        // 대상 단위로 정렬한다. 같은 대상의 건이 연속하고, 그 안은 (쓴 오브젝트, 순번) 순이다 — 이기는 값이 스레드 배정과 무관하다.
         // 다른 오브젝트에 쓰는 건만 여기 오므로(자기 오브젝트는 대기 칸) 수가 작다.
         VectorUtil::sort( _listOrderedWrite, &SceneTransformHierarchyInternal::isWriteOrderedBefore<OrderedTickWrite> );
         if ( totalCount < kParallelWriteCount )
@@ -583,7 +583,7 @@ namespace sw
 
     uint32 SceneTransformHierarchy::applyBatchByBucket( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 count )
     {
-        // **대상 버킷으로 나눈다**(`computeBatchBucket`). 같은 핸들은 늘 같은 버킷이라 한 워커가 배열 순서대로 쓴다 — 뒤의 건이 이긴다.
+        // 대상 버킷으로 나눈다(`computeBatchBucket`). 같은 핸들은 늘 같은 버킷이라 한 워커가 배열 순서대로 쓴다 — 뒤의 건이 이긴다.
         // 배열을 연속 구간으로 자르면 같은 핸들이 두 구간에 있을 때 두 워커가 한 칸을 동시에 쓴다. 나누기는 한 번 훑으며 건 번호를
         // 버킷 목록에 넣는 것뿐이다(버킷 목록은 프레임마다 재사용한다).
         const uint32 bucketCount = MathUtil::min( SceneTransformHierarchyInternal::kMaxBatchBucketCount, count / ( kParallelWriteCount / 4 ) );
@@ -668,9 +668,9 @@ namespace sw
         if ( _listScratchStack.size() < slotCount )
             _listScratchStack.resize( slotCount );
 
-        // **루트 서브트리 단위로 병렬이다.** 서브트리끼리는 트리라 겹치지 않고, 부모의 월드 행렬을 읽는 것은 같은
+        // 루트 서브트리 단위로 병렬이다. 서브트리끼리는 트리라 겹치지 않고, 부모의 월드 행렬을 읽는 것은 같은
         // 잡 안에서 순서대로 일어난다. 워커는 컨테이너를 만지지 않는다. 포인터만 넘긴다(컨테이너 레이스 탐지기가
-        // 워커의 인덱싱을 잡는다). 스택은 자기 슬롯의 것을 쓴다. 도는 것은 **더티 루트 목록**뿐이다.
+        // 워커의 인덱싱을 잡는다). 스택은 자기 슬롯의 것을 쓴다. 도는 것은 더티 루트 목록뿐이다.
         struct RootFlushJob
         {
             SceneComponent* const* _ppRoot{ nullptr };

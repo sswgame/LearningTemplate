@@ -469,7 +469,7 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         if ( hasDirty() == false )
             return;
-        // "하나라도" 를 훑기 **전에** 내린다. 훑는 동안 워커가 새로 찍으면 다시 서서 다음 프레임에 잡힌다.
+        // "하나라도" 를 훑기 전에 내린다. 훑는 동안 워커가 새로 찍으면 다시 서서 다음 프레임에 잡힌다.
         // (이미 지난 칸이면 그 프레임에는 헛훑기 한 번, 아직 안 지난 칸이면 이번에 잡힌다. 어느 쪽도 잃지 않는다.)
         _bAnyDirty.store( 0u, std::memory_order_release );
         // 워드를 훑는다. 8000 칸이 워드 125 개다. 빈 워드는 읽기만, 선 워드만 exchange 한 번 하고 켜진 비트를 골라 돈다.

@@ -5,17 +5,17 @@
  *          돌 프레임 단계를 올리고, 매니저는 생성자에서 표를 훑어 서비스를 만들고 소유합니다 — 의존은 기능 → 코어 한 방향입니다.
  *          언리얼 `UWorldSubsystem`(모듈이 타입을 올리고 월드가 인스턴스를 만든다, `GetSubsystem<T>()`)과 같은 모양입니다.
  *
- *          서비스는 서브시스템(`Subsystem`)이고 매니저의 **씬 범위**(`SubsystemScope`)가 소유한다 — 엔진 범위가 부모라 씬 범위에서 엔진 서비스도 찾는다.
- *          - **순서**: 서비스가 선언한 의존(`getSubsystemDependencies`)으로 위상 정렬한 순서로 세우고(초기화), 같은 단계의 갱신도 그 순서로 돈다.
+ *          서비스는 서브시스템(`Subsystem`)이고 매니저의 씬 범위(`SubsystemScope`)가 소유한다 — 엔진 범위가 부모라 씬 범위에서 엔진 서비스도 찾는다.
+ *          - 순서: 서비스가 선언한 의존(`getSubsystemDependencies`)으로 위상 정렬한 순서로 세우고(초기화), 같은 단계의 갱신도 그 순서로 돈다.
  *            매니저가 소멸하면 역순으로 내리고 지운다.
- *          - **갱신**: 매니저가 등록 줄의 단계(`SceneFrameStepList.xxx` 의 한 줄)에서 `update` 를 부릅니다(게임 스레드). 등록 줄은 `update` 가 읽고 쓰는 씬 데이터
+ *          - 갱신: 매니저가 등록 줄의 단계(`SceneFrameStepList.xxx` 의 한 줄)에서 `update` 를 부릅니다(게임 스레드). 등록 줄은 `update` 가 읽고 쓰는 씬 데이터
  *            (`SceneFrameAccess`)를 반드시 적는다 — 매니저는 그 선언을 다른 서비스의 넘긴 일(아래)과 견주어, 일이 도는 사이에 겹치는 데이터를 고치는 갱신을 만들 때 오류로 알린다.
- *          - **프레임 일**: `update` 가 워커에 넘긴 일(`SW_SCENE_SERVICE_WITH_FRAME_JOB`)은 등록 줄의 마치는 단계 **본문 앞**에서 `completeFrameJob` 이 기다리고 결과를 씁니다.
+ *          - 프레임 일: `update` 가 워커에 넘긴 일(`SW_SCENE_SERVICE_WITH_FRAME_JOB`)은 등록 줄의 마치는 단계 본문 앞에서 `completeFrameJob` 이 기다리고 결과를 씁니다.
  *            그 사이 단계들(`update` 단계 끝 ~ 마치는 단계 앞)은 일과 겹쳐 돕니다. 일이 그 사이에 읽고 쓰는 씬 데이터는 등록 줄의 접근(`SceneFrameAccess`)이 말하고,
  *            매니저는 사이가 겹치는 두 서비스의 일이 겹치는 접근을 선언했거나 마치는 단계가 넘기는 단계 뒤가 아니면 만들 때 오류로 알립니다.
  *            언리얼 `FTickFunction` 의 `bRunOnAnyThread` + 끝 그룹(`EndTickGroup`) · 유니티 `JobHandle.Complete` 를 정한 자리에서 부르는 것과 같은 모양입니다.
- *          - **비우기**: `GameObjectManager::clear` 가 `onSceneCleared` 를 부릅니다. 서비스는 남고 다음 씬에서 다시 씁니다.
- *          - **얻기**: `manager.getSubsystem<T>()` 입니다(씬 범위에서 타입으로 찾는다).
+ *          - 비우기: `GameObjectManager::clear` 가 `onSceneCleared` 를 부릅니다. 서비스는 남고 다음 씬에서 다시 씁니다.
+ *          - 얻기: `manager.getSubsystem<T>()` 입니다(씬 범위에서 타입으로 찾는다).
  *
  * @note 표는 Engine 이미지 안에서만 채웁니다. 표의 항목은 내리지 않으므로, 핫 리로드 되는 모듈(게임 · 키트)이 쓰면 언로드 뒤 죽은 함수를 가리킵니다.
  */

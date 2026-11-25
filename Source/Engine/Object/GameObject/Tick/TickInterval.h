@@ -1,7 +1,7 @@
 /**
  * @file TickInterval.h
  * @brief 컴포넌트 틱의 주기입니다 — 형식이 선언한 주기(`Component::kTickInterval`) · 서브틱 주기(`Component::registerSubTick`)가 이번 프레임에 몇 번 찼는지 셉니다.
- * @details 언리얼 `FTickFunction::TickInterval` 자리다. 언리얼은 틱 함수마다 남은 시간을 들고 식은 목록에서 깨우지만, 여기서는 **남은 시간을 들지 않는다** —
+ * @details 언리얼 `FTickFunction::TickInterval` 자리다. 언리얼은 틱 함수마다 남은 시간을 들고 식은 목록에서 깨우지만, 여기서는 남은 시간을 들지 않는다 —
  *          씬이 지나온 시간(`SceneTickScheduler`)과 컴포넌트 id 의 위상에서 바로 센다. 그래서 저장 · 상태 해시 · 워커 사이에 옮길 칸이 없고, 같은 시간 · 같은 id 면 어느 실행 ·
  *          어느 모드(파도 · 태스크 · 메인 · 스테이지)에서나 같은 프레임에 돈다. 위상은 id 로 흩어 같은 주기의 컴포넌트들이 한 프레임에 몰리지 않는다.
  *          꺼져 있거나 멈춘 동안 찬 주기는 세지 않는다(다시 켜진 뒤 몰아 돌지 않는다).

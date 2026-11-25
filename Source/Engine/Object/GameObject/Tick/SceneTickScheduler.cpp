@@ -71,7 +71,7 @@ namespace sw
 
             /**
              * @brief 레지스트리 칸 하나(오브젝트 하나의 그룹 항목)를 순서대로 틱합니다. 워커에서 불립니다.
-             * @details **게임 오브젝트를 읽지 않습니다.** 계층에서 꺼진 오브젝트는 칸이 없고(목록 소속이 곧 활성), 틱 중의 `setActive` 는 틱
+             * @details 게임 오브젝트를 읽지 않습니다. 계층에서 꺼진 오브젝트는 칸이 없고(목록 소속이 곧 활성), 틱 중의 `setActive` 는 틱
              *          뒤로 미뤄지며, 파괴는 컴포넌트마다 삭제 표시를 세웁니다 — 그래서 컴포넌트의 표시만 보면 됩니다. 언리얼 틱 함수가 대상
              *          컴포넌트만 보고 액터는 보지 않는 것과 같습니다(오브젝트를 읽으면 큐브 8000 개 프로파일에서 틱 CPU 의 절반이 이 루프다).
              */
@@ -88,7 +88,7 @@ namespace sw
             }
 
             /**
-             * @brief 청크 하나의 틱 상태 구간입니다 — 이 스레드의 틱 상태에 대기 칸 목록 · 디스패치 순번을 넣고, 끝날 때 **들어올 때의 상태로 되돌립니다.**
+             * @brief 청크 하나의 틱 상태 구간입니다 — 이 스레드의 틱 상태에 대기 칸 목록 · 디스패치 순번을 넣고, 끝날 때 들어올 때의 상태로 되돌립니다.
              * @details 틱 본문 안의 중첩 `runParallel` 이 기다리며 다른 틱 청크를 도울 수 있다. 예전에는 그 청크의 끝이 상태를 비워, 돌아온 바깥 틱의 남은
              *          세터가 주인 없는 쓰기(writerID 0)가 되어 순서 키가 틀어졌다. 되돌리기로 중첩이 바깥 상태를 지우는 모양 자체를 없앤다.
              */
@@ -232,8 +232,8 @@ namespace sw
         _pStructuralChangeBuffer->freeze();
 
         {
-            // **씬 틱은 자기가 낸 일만 기다린다.** 틱의 병렬 일은 `runParallel` 이 합류까지, Task 모드는 자기 스테이지(`waitStage`)를 기다린다.
-            // 주의: `TaskManager::waitAll()` 은 엔진 **전체의** 태스크 — 렌더 스레드의 패스 기록, 에셋 스트리밍, 비동기 씬 로드, 오디오 재생 — 가 빌 때까지
+            // 씬 틱은 자기가 낸 일만 기다린다. 틱의 병렬 일은 `runParallel` 이 합류까지, Task 모드는 자기 스테이지(`waitStage`)를 기다린다.
+            // 주의: `TaskManager::waitAll()` 은 엔진 전체의 태스크(렌더 스레드의 패스 기록, 에셋 스트리밍, 비동기 씬 로드, 오디오 재생)가 빌 때까지
             // 게임 스레드를 세운다. onTick 이 낸 태스크가 틱 뒤 단계 전에 끝나야 하면 자기 스테이지를 만들어 `waitStage` 로 기다린다.
             // 두 단계가 같은 구간에 쌓여 프레임 합이 된다 — 감시 값 `Scene.ComponentTickMs` 의 재료(`kComponentTickScopeName`).
             SW_PROFILE_SCOPE( kComponentTickScopeName );
@@ -518,7 +518,7 @@ namespace sw
 
     void SceneTickScheduler::applyStageTransforms()
     {
-        // 부른 순서: 계층 변경(attach · detach)이 이번 단계에서 미뤄졌으면 그 뒤에 부른 쓰기는 그 변경 **뒤에** 적용돼야 한다(`KeepWorld` 는
+        // 부른 순서: 계층 변경(attach · detach)이 이번 단계에서 미뤄졌으면 그 뒤에 부른 쓰기는 그 변경 뒤에 적용돼야 한다(`KeepWorld` 는
         // 붙이기 전 월드에서 로컬을 다시 구한다). 구조 변경은 단계 끝에서만 돌므로, 그때부터는 쓰기도 단계 끝까지 둔다.
         if ( _pStructuralChangeBuffer->hasDeferredHierarchyChange() )
             return;

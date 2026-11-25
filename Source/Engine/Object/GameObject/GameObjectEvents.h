@@ -72,7 +72,7 @@ namespace sw
          */
         MulticastDelegate<void( const SkeletalMeshComponent& )> _skinnedMeshResolved;
         /**
-         * @brief 이 오브젝트가 셀 · 데이터 레이어 묶음과 함께 내려간다 — 상태를 뜨기 **앞**이다(`Scene::captureNodesForUnload`, 게임 스레드의 틱 밖). 세이브에 싣는 뜨기는 내지 않는다.
+         * @brief 이 오브젝트가 셀 · 데이터 레이어 묶음과 함께 내려간다 — 상태를 뜨기 앞이다(`Scene::captureNodesForUnload`, 게임 스레드의 틱 밖). 세이브에 싣는 뜨기는 내지 않는다.
          * @details 함께 내려가지 않는 오브젝트와 맺은 관계(탑승 · 쥠)를 여기서 푼다 — 뜬 뒤에 풀면 떠 둔 상태는 "맺어져 있다" 로 남아, 다시 오를 때 그 사이 떠난 상대를 되잡는다.
          */
         MulticastDelegate<void( const GameObjectUnloadInfo& )> _unloading;

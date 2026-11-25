@@ -154,7 +154,7 @@ namespace sw
                 inoutListPath.push_back( path );
             }
 
-            /** @brief 형식을 모르는 본문(쿠킹한 바이너리 · 직접 준 텍스트)의 형식입니다. 읽을 때 **한 번만** 부릅니다. */
+            /** @brief 형식을 모르는 본문(쿠킹한 바이너리 · 직접 준 텍스트)의 형식입니다. 읽을 때 한 번만 부릅니다. */
             static PrefabStateFormat detectStateFormat( string_view stateData )
             {
                 const string_view trimmed = StringUtil::trim( stateData );

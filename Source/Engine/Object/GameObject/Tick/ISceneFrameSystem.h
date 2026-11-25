@@ -1,7 +1,7 @@
 /**
  * @file ISceneFrameSystem.h
  * @brief 씬 한 프레임의 정해진 자리(`FrameSystems` 단계)에서 한 번 도는 시스템의 계약입니다. 매니저가 소유합니다.
- * @details 시스템은 둘 중 하나입니다 — **서명이 곧 실행 자리입니다**(5-3 2 단계, 예전의 `_bLaneSafe` 선언 대신).
+ * @details 시스템은 둘 중 하나입니다 — 서명이 곧 실행 자리입니다(5-3 2 단계, 예전의 `_bLaneSafe` 선언 대신).
  *          - `ISceneMainFrameSystem::runMain( GameObjectManager&, dt )`: 게임 스레드. 오브젝트를 만들고 지우고, 입력 · UI · 싱글턴을 만져도 된다.
  *          - `ISceneParallelFrameSystem::runOnAnyThread( SceneJobContext& )`: 워커 스레드. 매니저는 읽기 전용으로만 보이고 쓰기는 컨텍스트의 명령 버퍼(틱 뒤 큐)뿐이라,
  *            남의 컴포넌트를 바꾸거나 구조를 바꾸는 코드는 컴파일되지 않는다. 자기 멤버(색인 · 장부)만 바꾼다.
@@ -53,10 +53,10 @@ namespace sw
      * @class ISceneFrameSystem
      * @brief `SceneFrameStepList.xxx` 의 `FrameSystems` 단계(BeginPlay 뒤 · PrePhysics 틱 앞)에서 붙인 순서대로 불리는 시스템의 공통 바탕입니다.
      * @details 틱 밖이라 구조가 얼어 있지 않습니다. 컴포넌트 틱 그룹으로는 "병렬 틱보다 먼저" 를 말할 수 없어서 있는 자리입니다.
-     *          **핫 리로드 되는 모듈(게임 · 키트)의 타입은 붙이지 않습니다** — 매니저가 소유한 객체의 vtable 이 모듈과 함께 사라집니다.
+     *          핫 리로드 되는 모듈(게임 · 키트)의 타입은 붙이지 않습니다 — 매니저가 소유한 객체의 vtable 이 모듈과 함께 사라집니다.
      *          엔진 · GameFramework 기반의 것만 붙이고, 그것도 자기 컴포넌트가 모두 빠지면 뗍니다(모듈을 내리면 컴포넌트가 먼저 지워진다).
      *
-     *          **붙인 순서가 의미입니다.** 그 의미를 말하는 것이 `getFrameAccess` 입니다 — 매니저는 읽는 시스템 뒤에 쓰는 시스템을 붙이는 등록을 거절합니다
+     *          붙인 순서가 의미입니다. 그 의미를 말하는 것이 `getFrameAccess` 입니다 — 매니저는 읽는 시스템 뒤에 쓰는 시스템을 붙이는 등록을 거절합니다
      *          (`addFrameSystem`). 접근이 겹치지 않는 병렬 시스템끼리는 워커에서 같이 돌고(`FrameSystemParallelPlan`), 겹치는 것은 붙인 순서의 파도로 차례로 돕니다.
      *          이 바탕을 바로 상속하지 않고 `ISceneMainFrameSystem` · `ISceneParallelFrameSystem` 중 하나를 상속합니다.
      */

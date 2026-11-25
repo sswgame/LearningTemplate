@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tests/TickModeTestComponents.h"
 
-// DeferredSettersTest — 틱 중(구조가 얼었을 때) 미뤄지는 세터가 지금 값과 견주기 **전에** 미루는지 본다. 견주기가 먼저면 앞서 미룬 반대 요청
+// DeferredSettersTest — 틱 중(구조가 얼었을 때) 미뤄지는 세터가 지금 값과 견주기 전에 미루는지 본다. 견주기가 먼저면 앞서 미룬 반대 요청
 // (끄기 → 다시 켜기, A → B → A)이 큐에 있는데 지금 값과 같다고 버려, 틱 뒤에는 마지막 요청이 아니라 앞 요청이 남는다(nogpu).
 
 using namespace sw;

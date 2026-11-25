@@ -29,7 +29,7 @@ namespace sw
 
     void CameraRegistry::releaseCamera( CameraComponent* pCamera )
     {
-        // 순서를 지키며 뺀다(목록을 보여 주는 쪽 — 프러스텀 시각화 · 벤치 — 이 순서를 본다). 카메라는 몇 개뿐이다.
+        // 순서를 지키며 뺀다(목록을 보여 주는 프러스텀 시각화 · 벤치가 이 순서를 본다). 카메라는 몇 개뿐이다.
         ScopedLock<mutex> lock{ _mutex };
         if ( _registeredCamera.remove( pCamera ) )
             _registrySerial.fetch_add( 1, std::memory_order_relaxed );
@@ -104,7 +104,7 @@ namespace sw
             {
                 if ( priority < bestPriority )
                     continue;
-                // 우선순위가 같으면 **컴포넌트 id 가 큰 쪽**(나중에 만든 쪽)이 이긴다. 등록 순서로 가르면 되돌리기 · 플레이 종료 복원이
+                // 우선순위가 같으면 컴포넌트 id 가 큰 쪽(나중에 만든 쪽)이 이긴다. 등록 순서로 가르면 되돌리기 · 플레이 종료 복원이
                 // 카메라를 다시 등록할 때마다 순서가 바뀌어 활성 카메라가 편집 이력에 따라 뒤집힌다. id 는 그 복원이 복원한다.
                 if ( priority == bestPriority && pCamera->getComponentID() < pBest->getComponentID() )
                     continue;

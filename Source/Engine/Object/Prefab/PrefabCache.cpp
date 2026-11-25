@@ -291,7 +291,7 @@ namespace sw
     {
         _pAsset = _pCache->loadAndCache( getPath() );
         {
-            // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 로드 작업이나 캐시 둘 중 하나를 반드시 본다.
+            // 결과가 캐시에 든 뒤에 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 로드 작업이나 캐시 둘 중 하나를 반드시 본다.
             // 이 로드 작업의 칸일 때만 뺀다(다시 읽기가 표를 비운 뒤 새 요청이 새 로드 작업을 넣었을 수 있다).
             UniqueLock<shared_mutex> writeLock{ _pCache->_mapCacheMutex };
             const auto               it = _pCache->_mapLoading.find( _cacheKey );
@@ -504,7 +504,7 @@ namespace sw
         pGameObject->setTransient( lifetime == SpawnLifetime::Derived );
 
         // 컴포넌트 틱 중이면 오브젝트는 지금 만들어 돌려주고(부르는 쪽이 핸들을 든다), 상태는 틱 직후 구조 변경 큐에서 채운다. 그 자리에서
-        // 상태를 읽으면 컴포넌트 추가가 모두 미뤄져(nullptr) **프리팹의 값이 버려지고** 빈 오브젝트만 남는다.
+        // 상태를 읽으면 컴포넌트 추가가 모두 미뤄져(nullptr) 프리팹의 값이 버려지고 빈 오브젝트만 남는다.
         if ( pGameObjectManager->isStructuralMutationFrozen() )
         {
             const uint64 objectID = pGameObject->getObjectID();

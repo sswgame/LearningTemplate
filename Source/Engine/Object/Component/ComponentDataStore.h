@@ -18,7 +18,7 @@ namespace sw
     /**
      * @class ComponentDataStore
      * @brief 페이지 @p TPage 를 칸 번호로 나눠 주는 저장소입니다(트랜스폼 · 물리 바디 자세 · 명령이 같은 틀을 쓴다).
-     * @details **페이지 계약.** `TPage` 는 다음을 가진다:
+     * @details 페이지 계약. `TPage` 는 다음을 가진다:
      *          - `kSlotShift` · `kSlotCount`(= 1 << kSlotShift) · `kSlotMask` — 페이지 안 칸 수.
      *          - `using Owner = ...;` — 칸을 받는 컴포넌트 형식.
      *          - `void initializeSlot( uint32 pageIndex, Owner* pOwner )` — 받은 칸을 기본값으로(칸을 받은 호출자 스레드에서, 잠금 밖).
@@ -26,7 +26,7 @@ namespace sw
      *
      *          페이지는 한 번 만들면 옮기지도 해제하지도 않는다(저장소가 소멸할 때까지) — 컴포넌트는 자기 페이지 포인터를 들고 표 없이 찾는다.
      *          칸 받기 · 놓기는 뮤텍스 안이고(씬 로드 워커와 게임 스레드가 함께 만든다), 페이지 표는 고정 크기 + release 발행이라 `findPage` 는 잠금이 없다.
-     *          칸 **내용**의 동기화는 쓰는 쪽(씬의 틱 · 물리 단계)이 맡는다.
+     *          칸 내용의 동기화는 쓰는 쪽(씬의 틱 · 물리 단계)이 맡는다.
      *
      *          유니티 `TransformHierarchy` · Entities 청크와 언리얼 Mass 프래그먼트 배열 자리다 — 오브젝트 모델(GameObject · 컴포넌트)은 그대로 두고
      *          프레임마다 도는 값만 종류별 배열로 옮긴다(5-3 하이브리드). 칸 번호가 컴포넌트 수명 동안 바뀌지 않아야 대기 목록 · 레지스트리가 번호만 들 수 있어

@@ -2,7 +2,7 @@
  * @file TagSystem.h
  * @brief 태그 집합 · 질의 API 입니다(`TagID` 자체는 `Core/Name/TagID.h`).
  *
- * @details 여기 남은 것은 **리플렉션이 필요한 것들**입니다. `PROPERTY` 로 직렬화되는 태그 집합
+ * @details 여기 남은 것은 리플렉션이 필요한 것들입니다. `PROPERTY` 로 직렬화되는 태그 집합
  *          (`TagContainer`)과 질의(`TagQuery`)입니다. `TagID` 는 Core 기능만 쓰는 값 타입이라
  *          `Core/Name/TagID.h` 로 내렸습니다(이유는 그 파일의 @note 참고).
  */

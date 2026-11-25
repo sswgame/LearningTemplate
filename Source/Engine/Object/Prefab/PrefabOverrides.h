@@ -33,7 +33,7 @@ namespace sw
 {
     /**
      * @class PrefabOverrides
-     * @brief 씬이 프리팹 인스턴스를 저장하는 형식입니다 — 프리팹 경로와 **덮어쓴 것만** 적습니다(언리얼 레벨의 블루프린트 인스턴스 ·
+     * @brief 씬이 프리팹 인스턴스를 저장하는 형식입니다 — 프리팹 경로와 덮어쓴 것만 적습니다(언리얼 레벨의 블루프린트 인스턴스 ·
      *        유니티 `PrefabInstance` 의 `m_Modifications` 와 같은 모양).
      * @details 그래서 프리팹을 고치면 다음 로드에서 놓인 인스턴스에 퍼지고, 인스턴스가 덮어쓴 값은 그대로 남습니다.
      *
@@ -46,7 +46,7 @@ namespace sw
      *          - `<Part path="#<노드 id>/#<노드 id>"><PrefabOverrides>…</PrefabOverrides></Part>` — 인스턴스 안 중첩 부품에 덮어쓴 것(`PrefabPartOverride`). 루트 상태를 만드는
      *            `makeInstanceState` 는 읽지 않고, 부품을 스폰하는 `PrefabCache::spawnNestedInstances` 가 읽습니다. 씬 엔티티와 프리팹의 중첩 노드가 같은 형식을 씁니다.
      *
-     *          키는 **프리팹 쪽** 컴포넌트의 지역 id 키(`#<16진>` — `ComponentStableKey`)입니다. 옛 순번 키(`이름#n`)는 오류로 남기고 받지 않습니다. 프리팹 컴포넌트의
+     *          키는 프리팹 쪽 컴포넌트의 지역 id 키(`#<16진>` — `ComponentStableKey`)입니다. 옛 순번 키(`이름#n`)는 오류로 남기고 받지 않습니다. 프리팹 컴포넌트의
      *          이름을 바꾼 인스턴스는 그 컴포넌트를 지우고 새로 더한 것으로 적힙니다(언리얼도 상속한 컴포넌트의 이름은 바꾸지 못한다).
      *          비교는 같은 직렬화기가 쓴 두 상태 XML 의 칸 글(속성 값 · 자식 원소)을 비교합니다 — 저장될 값 그대로를 비교하므로 부착 · 핸들 PROPERTY 도
      *          저장할 id 로 비교합니다(`ObjectSaveOptions`).

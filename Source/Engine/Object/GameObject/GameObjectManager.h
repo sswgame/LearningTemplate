@@ -158,7 +158,7 @@ namespace sw
 
         /**
          * @brief 이름으로 GameObject 를 찾습니다.
-         * @details **찾기 · 순회는 매니저의 상수성을 따른다.** const 매니저(틱의 `TickContext::getManager` · `GameObject::getManager`)에서는 const 포인터만 나오고,
+         * @details 찾기 · 순회는 매니저의 상수성을 따른다. const 매니저(틱의 `TickContext::getManager` · `GameObject::getManager`)에서는 const 포인터만 나오고,
          *          쓰기 가능한 포인터는 쓰기 가능한 매니저(`GameObject::getMutableManager` · 틱 뒤 작업의 인자)에서만 나온다 — 읽기 전용으로 받은 씬에서 남의 오브젝트를
          *          바꾸는 길이 형식으로 없다(언리얼 Mass 의 읽기 전용 조각 접근 · 유니티 Jobs `[ReadOnly]` 자리).
          */
@@ -214,7 +214,7 @@ namespace sw
 
         /**
          * @brief 힙 할당 없이 씬에서 TComponent 와 그 파생 컴포넌트를 순회합니다. 오브젝트를 훑지 않고 타입별 버킷을 돕니다(`GameObjectStore::forEachComponentOfType`).
-         * @details 비용은 씬의 정확한 타입 수와 맞는 컴포넌트 수의 합입니다. **방문 순서는 약속하지 않습니다** — 순서가 결과에 나오는 곳은 모은 뒤 정렬합니다.
+         * @details 비용은 씬의 정확한 타입 수와 맞는 컴포넌트 수의 합입니다. 방문 순서는 약속하지 않습니다 — 순서가 결과에 나오는 곳은 모은 뒤 정렬합니다.
          *          버킷에서 꺼낸 포인터를 `static_cast` 로 바꿉니다. REFLECT 타입은 가상이 아닌 단일 상속만 받으므로(파서 7-b) 보정이 맞습니다.
          * @note 공유 잠금 안에서 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`IterationScope`).
          *       콜백은 매니저의 상수성대로 `TComponent*` · `const TComponent*` 를 받는다.
@@ -342,7 +342,7 @@ namespace sw
          * @details 세터를 컴포넌트마다 부르는 것과 결과가 같습니다(값이 같으면 건너뛰고, 바뀌면 더티 표시). 다른 것은
          *          (1) 핸들 해석 · 필드 쓰기 · 더티 표시가 워커에서 나란히 돌고 (2) 세대는 배치 끝에 한 번 오른다는 것입니다.
          *          핸들이 씬 컴포넌트가 아니거나 죽었으면 그 건은 건너뜁니다.
-         *          **틱 중에는 부를 수 없습니다.** 워커가 트랜스폼을 읽는 구간이라 쓰면 안 되고, 구조 변경이 미뤄지는 구간이라
+         *          틱 중에는 부를 수 없습니다. 워커가 트랜스폼을 읽는 구간이라 쓰면 안 되고, 구조 변경이 미뤄지는 구간이라
          *          부모 사슬이 흔들립니다. 그때는 건마다 세터로 돌립니다(세터가 틱 중 쓰기 길을 탑니다). 알고리즘은
          *          `SceneTransformHierarchy::applyBatch` 에 있습니다.
          * @return 실제로 값이 바뀐 건수입니다.
@@ -360,7 +360,7 @@ namespace sw
         using PostTickDelegate         = StructuralChangeBuffer::Callback;
 
         /**
-         * @brief 틱 중의 구조 변경(컴포넌트 추가 · 부착 · 떼기 · 태그 · 활성)을 **부른 순서대로** 지연 큐에 넣습니다. 틱 직후 가장 먼저 돕니다.
+         * @brief 틱 중의 구조 변경(컴포넌트 추가 · 부착 · 떼기 · 태그 · 활성)을 부른 순서대로 지연 큐에 넣습니다. 틱 직후 가장 먼저 돕니다.
          * @details 구조 변경은 이 큐 하나다(`StructuralChangeBuffer` 머리말의 주의).
          */
         void deferStructuralChange( StructuralChangeDelegate func ) { _structuralChangeBuffer.deferStructuralChange( std::move( func ) ); }
@@ -399,11 +399,11 @@ namespace sw
         /**
          * @brief 컴포넌트 @p self 에 대한 일을 executeOrDeferPostTick 으로 넘깁니다. 실행할 때 타입 핸들로 다시 찾고, 사라졌거나 삭제 대기면 부르지 않습니다.
          * @details 틱 중이면 틱 뒤로 미루고 아니면 바로 실행하는 의미는 executeOrDeferPostTick 과 같습니다.
-         *          **핸들을 받지 않고 컴포넌트를 받습니다.** 타입(`TComponent`)은 @p self 에서 추론하고 핸들은 여기서 만들므로, 다른 컴포넌트의 핸들에
+         *          핸들을 받지 않고 컴포넌트를 받습니다. 타입(`TComponent`)은 @p self 에서 추론하고 핸들은 여기서 만들므로, 다른 컴포넌트의 핸들에
          *          이 타입의 일을 거는 실수(핸들과 템플릿 인자가 어긋나는 것)가 형식으로 없습니다. `const` 멤버 함수 안의 `*this` 도 받습니다.
          *          func 는 붙잡은 값이 없는 람다여야 하며(델리게이트 인라인 버퍼를 넘지 않게) `func( TComponent& )` 또는
          *          `func( TComponent&, GameObjectManager& )` 로 부릅니다.
-         *          **const 매니저에서도 부릅니다(명령 버퍼).** 일을 거는 것은 씬을 바꾸지 않는다 — 틱 중에는 늘 큐로 가고, 쓰기 가능한 매니저는 틱 밖 · 틱 뒤에
+         *          const 매니저에서도 부릅니다(명령 버퍼). 일을 거는 것은 씬을 바꾸지 않는다 — 틱 중에는 늘 큐로 가고, 쓰기 가능한 매니저는 틱 밖 · 틱 뒤에
          *          도는 @p func 만 받는다(언리얼 Mass 의 읽기 전용 처리기도 `Defer()` 명령 버퍼는 연다). 그래서 틱에서 부르는 예약 도우미가 쓰기 가능한 매니저를 꺼내지 않는다.
          */
         template <typename TComponent, typename TFunc>
@@ -454,7 +454,7 @@ namespace sw
 
         /**
          * @brief 타입별 컴포넌트 레지스트리입니다(빛 · 2D 그림자 가림막 · 상호작용 대상 · 환경 질의 대상 …).
-         * @details 프리미티브와 같은 이유로 있습니다. 매 프레임 씬을 뒤져 **찾지** 않고, 컴포넌트가 붙을 때 **등록받습니다** —
+         * @details 프리미티브와 같은 이유로 있습니다. 매 프레임 씬을 뒤져 찾지 않고, 컴포넌트가 붙을 때 등록받습니다 —
          *          `forEachComponentOfType` 은 타입별 버킷을 돌지만 공유 잠금을 잡고 순서를 약속하지 않으므로, 등록 순서 · 채널 · 잠금 없는 읽기가 필요한
          *          프레임 경로는 이 레지스트리를 씁니다. 자세한 사연은 ComponentRegistry.h 에 있습니다.
          */
@@ -505,7 +505,7 @@ namespace sw
         /**
          * @brief 타입 핸들이 가리키는 컴포넌트를 `T*` 로 찾습니다. 삭제 예정이면 nullptr 입니다.
          * @details 타입 없는 찾기 뒤에 `static_cast` 합니다(REFLECT 타입은 가상이 아닌 단일 상속뿐이라 보정이 맞습니다).
-         *          **Shipping 이 아닌 모든 구성에서 대상의 타입을 확인합니다.** 핸들은 id 만 담으므로, id 를 다른 타입이 받으면(핫 리로드, 되돌리기의 id 복원)
+         *          Shipping 이 아닌 모든 구성에서 대상의 타입을 확인합니다. 핸들은 id 만 담으므로, id 를 다른 타입이 받으면(핫 리로드, 되돌리기의 id 복원)
          *          캐스트가 다른 타입의 칸을 읽습니다. 어긋나면 오류 로그와 Debug 단언을 남기고 nullptr 을 반환합니다. 그런 길이 없는 Shipping 만 확인을 뺍니다.
          *          상수성은 `findGameObjectByName` 과 같다 — const 매니저에서는 `const T*` 다.
          */
@@ -621,7 +621,7 @@ namespace sw
         void appendDeferredRegistration( const vector<ComponentHandle>& listRegister, const vector<ComponentHandle>& listPostLoad );
 
         /**
-         * @brief 모듈이 내려가기 전에, 그 모듈이 정의한 컴포넌트 타입의 **살아 있는 인스턴스**를 모두 지웁니다.
+         * @brief 모듈이 내려가기 전에, 그 모듈이 정의한 컴포넌트 타입의 살아 있는 인스턴스를 모두 지웁니다.
          * @details 팩토리 · 타입 · 전역 변수는 등록 해제되지만 씬은 엔진이 소유해 모듈보다 오래 삽니다. 인스턴스가 남으면
          *          vtable 이 사라진 객체가 씬에 남아 다음 틱 · 소멸에서 없는 코드로 뛰어듭니다. 지연 파괴 목록에 남은 것도
          *          그 소멸이 모듈 코드이므로 먼저 지금 처리합니다. 틱 밖에서만 부릅니다(구조 변경이 얼려 있으면 미뤄질 뿐입니다).
@@ -671,7 +671,7 @@ namespace sw
 
         /** @brief 등록 줄의 단계가 @p step 인 서비스를 씬 범위의 초기화 순서(의존 순서)로 갱신합니다. `update` 가 모든 단계 끝에 부른다 — 본문은 부르지 않는다. */
         void updateSceneServices( SceneFrameStep step, float32 deltaTime );
-        /** @brief 등록 줄의 마치는 단계가 @p step 인 서비스의 프레임 일을 마칩니다(`completeFrameJob`). `update` 가 모든 단계 본문 **앞**에 부른다. */
+        /** @brief 등록 줄의 마치는 단계가 @p step 인 서비스의 프레임 일을 마칩니다(`completeFrameJob`). `update` 가 모든 단계 본문 앞에 부른다. */
         void completeSceneServiceJobs( SceneFrameStep step );
         /**
          * @brief 프레임 일의 등록 줄이 맞는지 봅니다(만들 때 한 번) — 마치는 단계가 넘기는 단계 뒤인가, 사이가 겹치는 두 서비스의 일이 겹치는 접근을 선언하지 않았는가.
