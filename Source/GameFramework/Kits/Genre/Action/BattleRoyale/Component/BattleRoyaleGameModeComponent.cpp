@@ -24,10 +24,7 @@ namespace sw
         struct BattleRoyaleGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "BRGM" );
-            static constexpr uint32 kStateVersion = 3; ///< 2: 사람마다 든 총이 실린다. 3: 보급 상자가 판의 리플렉션 상태 칸이다
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
+            static constexpr uint32 kStateVersion = 4; ///< 2: 사람마다 든 총이 실린다. 3: 보급 상자가 판의 리플렉션 상태 칸이다. 4: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
 
             // 한 씨앗에서 갈래마다 다른 수열을 뽑는 소금이다.
             static constexpr uint32 kFlightSalt = 1;
@@ -133,7 +130,6 @@ namespace sw
         , _lootDataPath{}
         , _lootSpotKind{}
         , _listLootPosition{}
-        , _resultHoldSeconds{ 3.0f }
         , _victoryMoney{ 60 }
         , _pCatalog{}
         , _pWeaponCatalog{}
@@ -145,7 +141,6 @@ namespace sw
         , _flightPath{}
         , _timer{}
         , _random{}
-        , _resultHold{}
         , _listPerson{}
         , _listGroundItem{}
         , _listEvent{}
@@ -238,7 +233,6 @@ namespace sw
         if ( openMatch( _match ) == false || prepareDrop() == false )
             return false;
         _timer.reset();
-        _resultHold.clear();
         _commandMove = float2{ 0.0f, 0.0f };
         _bFireHeld   = SW_FALSE;
         _bUseHeld    = SW_FALSE;
@@ -703,7 +697,7 @@ namespace sw
         if ( _phase == BattleRoyalePhase::Ended )
             return;
         _phase = BattleRoyalePhase::Ended;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( hasWon() ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( hasWon() ? BattleRoyaleGameModeComponentInternal::kEventWon : BattleRoyaleGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "BattleRoyale.Ended", "[BattleRoyale] the match ends for squad %# - winning team %# (-1 = still fought or draw), %# people left", kPlayerSquad,
                         _match.getMatchState().getWinningTeam(), _match.countRemainingPlayers() );
@@ -779,16 +773,8 @@ namespace sw
             endGame();
     }
 
-    void BattleRoyaleGameModeComponent::updateGame( float32 deltaTime )
+    void BattleRoyaleGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _phase == BattleRoyalePhase::Ended )
-        {
-            if ( _resultHold.update( deltaTime ) )
-                (void)finishMinigame( hashed_string( hasWon() ? BattleRoyaleGameModeComponentInternal::kWinResult : BattleRoyaleGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-            return;
-        }
         const int32 stepCount = _timer.consume( deltaTime );
         for ( int32 step = 0; step < stepCount && _phase != BattleRoyalePhase::Ended; ++step )
         {
@@ -822,7 +808,6 @@ namespace sw
         BattleRoyaleMatch              restoredMatch;
         FixedStepTimer                 timer          = _timer;
         GameRandom                     random         = _random;
-        Countdown                      resultHold     = _resultHold;
         vector<Person>                 listPerson     = _listPerson;
         vector<BattleRoyaleGroundItem> listGroundItem = _listGroundItem;
         if ( io.isReading() && io.check( _pCatalog != nullptr && openMatch( restoredMatch ) ) == false )
@@ -830,7 +815,6 @@ namespace sw
         io.value( io.isWriting() ? _match : restoredMatch );
         io.value( timer );
         io.value( random );
-        io.value( resultHold );
         io.list( listPerson, BattleRoyaleGameModeComponentInternal::kMinPersonBytes, [&]( Person& person )
         {
             float3                position = person._skydiver.getPosition();
@@ -867,7 +851,6 @@ namespace sw
         _match          = std::move( restoredMatch );
         _timer          = timer;
         _random         = random;
-        _resultHold     = resultHold;
         _listPerson     = std::move( listPerson );
         _listGroundItem = std::move( listGroundItem );
         ++_groundItemRevision;

@@ -27,7 +27,7 @@
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -97,9 +97,9 @@ namespace sw
      * @class ScavengerGameModeComponent
      * @brief 궤도 → 착륙 → 고철 나르기 → 이륙 → 회사 매입 → 할당량 판정을 승무원 명령과 봇으로 진행합니다.
      */
-    REFLECT( Category = "CoopScavenger", DisplayName = "Scavenger Game Mode",
+    REFLECT( Version = 2, Category = "CoopScavenger", DisplayName = "Scavenger Game Mode",
              Tooltip = "Runs a coop scavenger expedition: crew from input commands or bots hauls scrap, threats roam, the company buys and the quota decides" )
-    class SW_KIT_API ScavengerGameModeComponent : public GameModeComponent
+    class SW_KIT_API ScavengerGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -164,7 +164,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -221,8 +221,6 @@ namespace sw
         float32 _threatLifeSeconds;
         PROPERTY( Category = "Threat", DisplayName = "Threat Damage", Tooltip = "Health a crew member loses when a threat steps into the same area", Min = 0.0 )
         float32 _threatDamage;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "How long the result stays on screen before the minigame ends", Min = 0.0, Units = s )
-        float32 _resultHoldSeconds;
 
         BoundAssetRef<ScavengerCatalog>  _pCatalog;
         BoundAssetRef<SpawnTable>        _pThreatTable;
@@ -236,7 +234,6 @@ namespace sw
         vector<ScavengerCommand>         _listCommand; ///< 승무원마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
         vector<Countdown>                _listStep;    ///< 승무원마다 다음 걸음까지
         vector<ScavengerEvent>           _listEvent;   ///< 걸음마다 비워 다시 쓰는 알림 그릇
-        Countdown                        _resultHold;
         PROPERTY( RuntimeState )
         vector<ScavengerThreat> _listThreat;
         PROPERTY( RuntimeState )

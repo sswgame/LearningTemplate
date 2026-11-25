@@ -26,7 +26,7 @@
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorStage.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -72,9 +72,9 @@ namespace sw
      * @class SurvivalHorrorGameModeComponent
      * @brief 열쇠 · 단서 · 자물쇠 · 어둠 · 괴물을 지나 목표 방까지 가는 판을 입력 명령으로 진행합니다.
      */
-    REFLECT( Category = "SurvivalHorror", DisplayName = "Survival Horror Game Mode",
+    REFLECT( Version = 2, Category = "SurvivalHorror", DisplayName = "Survival Horror Game Mode",
              Tooltip = "Runs one survival horror house: rooms of the area graph, items, keys, clues, puzzles, darkness and turn based fights, until the goal room" )
-    class SW_KIT_API SurvivalHorrorGameModeComponent : public GameModeComponent
+    class SW_KIT_API SurvivalHorrorGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -131,7 +131,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -183,8 +183,6 @@ namespace sw
         float32 _damagePerPoint;
         PROPERTY( Category = "Fight", DisplayName = "Turn Interval", Min = 0.01, Units = s )
         float32 _turnSeconds;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "How long the result stays on screen before the minigame ends", Min = 0.0, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Result", DisplayName = "Win Reward", Tooltip = "Money the base game gets for getting out", Min = 0 )
         int32 _winReward;
 
@@ -201,7 +199,6 @@ namespace sw
         vector<SurvivalHorrorEvent>          _listEvent;    ///< 걸음마다 비워 다시 쓰는 알림 그릇
         vector<uint8>                        _listUsedSpot; ///< 자리마다 줍거나 쓰러뜨렸는지(씬 데이터 순서)
         Countdown                            _turn;
-        Countdown                            _resultHold;
         PROPERTY( RuntimeState )
         float2 _playerPosition;
         PROPERTY( RuntimeState, Min = -1 )

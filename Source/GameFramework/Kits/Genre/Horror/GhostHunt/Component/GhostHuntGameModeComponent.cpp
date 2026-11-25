@@ -22,7 +22,7 @@ namespace sw
         struct GhostHuntGameModeComponentInternal
         {
             static constexpr uint32  kStateTag         = FourCCUtil::make( "GHGM" );
-            static constexpr uint32  kStateVersion     = 1;
+            static constexpr uint32  kStateVersion     = 2;     ///< 2: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
             static constexpr float32 kFurnitureSpacing = 2.0f;  ///< 안쪽 벽을 따라 놓은 가구 사이(m)
             static constexpr float32 kFurnitureWallGap = 1.0f;  ///< 안쪽 벽에서 가구까지(m)
             static constexpr float32 kGhostDepthRatio  = 0.25f; ///< 유령이 처음 숨는 자리 — 방 가운데에서 방 깊이의 이 비율만큼 안쪽
@@ -116,9 +116,6 @@ namespace sw
                 return nullptr;
             }
 
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
-
             /** @brief 카탈로그에 유령 · 불이 정해진 방이면 true 입니다(복도는 그래프에만 있다). */
             static bool isHaunted( const GhostCatalog& catalog, const AreaDef& area ) { return catalog.findRoom( area._id ) != nullptr; }
         };
@@ -146,7 +143,6 @@ namespace sw
         , _ghostSpeed{ 0.6f }
         , _ghostReach{ 1.5f }
         , _ghostSpacing{ 1.5f }
-        , _resultHoldSeconds{ 3.0f }
         , _pCatalog{}
         , _pGraphAsset{}
         , _pLoot{}
@@ -159,7 +155,6 @@ namespace sw
         , _command{}
         , _listGhostEvent{}
         , _listMansionEvent{}
-        , _resultHold{}
         , _playerPosition{ 0.0f, 0.0f }
         , _facing{ 0.0f, 1.0f }
         , _health{ 0.0f }
@@ -199,7 +194,6 @@ namespace sw
         _command        = GhostHuntCommand{};
         _health         = _maxHealth;
         _playerPosition = pStart->getCenter();
-        _resultHold.clear();
         enterRoom( _startRoom );
         return true;
     }
@@ -379,17 +373,8 @@ namespace sw
         }
     }
 
-    void GhostHuntGameModeComponent::updateGame( float32 deltaTime )
+    void GhostHuntGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _result != GhostHuntResult::Ongoing )
-        {
-            using Internal = GhostHuntGameModeComponentInternal;
-            if ( _resultHold.update( deltaTime ) )
-                (void)finishMinigame( hashed_string( _result == GhostHuntResult::Win ? Internal::kWinResult : Internal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-            return;
-        }
         const GhostHuntCommand command = _command;
         _command._bUseTriggered        = SW_FALSE; // 쓴 누름이다
         const float32 moveLength       = command._move.getLength();
@@ -437,7 +422,7 @@ namespace sw
             _result = GhostHuntResult::Win;
         if ( _result == GhostHuntResult::Ongoing )
             return;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( _result == GhostHuntResult::Win ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( _result == GhostHuntResult::Win ? GhostHuntGameModeComponentInternal::kEventWon : GhostHuntGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "GhostHunt.Ended", "[GhostHunt] %# - %# coins", _result == GhostHuntResult::Win ? "every room is lit" : "the hunter fell", getCoins() );
     }
@@ -514,7 +499,6 @@ namespace sw
         io.list( listVisited );
         io.list( listDiscovered );
         io.value( _mansion ); // 자리 · 체력 · 결과는 상태 칸이다(`GameModeComponent::serializeState`)
-        io.value( _resultHold );
         io.check( io.isWriting() || _graph.findArea( _mansion.getCurrentRoom() ) != nullptr );
         io.end();
         if ( io.isWriting() || io.isOk() == false )

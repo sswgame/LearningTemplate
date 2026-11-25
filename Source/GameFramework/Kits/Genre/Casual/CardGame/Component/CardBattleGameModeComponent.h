@@ -17,7 +17,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle/CardBattle.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw
 {
@@ -25,8 +25,8 @@ namespace sw
      * @class CardBattleGameModeComponent
      * @brief 덱 섞기 → 내 턴(카드 내기) ↔ 상대 턴 → 승패 → 결과를 진행합니다.
      */
-    REFLECT( Version = 2, Category = "CardGame", DisplayName = "Card Battle Game Mode", Tooltip = "Runs one deck battle of the card kit from play card and end turn commands, to victory or defeat" )
-    class SW_KIT_API CardBattleGameModeComponent : public GameModeComponent
+    REFLECT( Version = 3, Category = "CardGame", DisplayName = "Card Battle Game Mode", Tooltip = "Runs one deck battle of the card kit from play card and end turn commands, to victory or defeat" )
+    class SW_KIT_API CardBattleGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -61,7 +61,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -91,13 +91,11 @@ namespace sw
         uint32 _seed;
         PROPERTY( Category = "Match", DisplayName = "Auto Play Interval", Tooltip = "Time between two auto play moves", Min = 0.01, Units = s )
         float32 _autoPlayInterval;
-        PROPERTY( Category = "Match", DisplayName = "Result Hold", Tooltip = "Time the result stays on screen before the minigame ends", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Match", DisplayName = "Win Reward", Tooltip = "Money for winning the battle", Min = 0 )
         int32 _winReward;
 
         BoundAssetRef<CardBattleCatalog> _pCatalog;
         CardBattle                       _battle;
-        Countdown                        _timer; ///< 자동 플레이의 다음 수 · 결과를 보이는 시간
+        Countdown                        _autoPlayTimer; ///< 자동 플레이의 다음 수
     };
 } // namespace sw

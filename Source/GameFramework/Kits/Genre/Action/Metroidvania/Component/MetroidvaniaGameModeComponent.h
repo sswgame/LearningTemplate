@@ -34,7 +34,7 @@
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
@@ -83,8 +83,8 @@ namespace sw
      * @class MetroidvaniaGameModeComponent
      * @brief 탐험 → 능력 · 부적 줍기 → 쉬기 · 지도 → 전투 → 보스를 플레이어 입력 명령으로 진행합니다.
      */
-    REFLECT( Category = "Metroidvania", DisplayName = "Metroidvania Game Mode", Tooltip = "Runs one Metroidvania exploration (rooms, abilities, rest, duels, boss) from player input commands" )
-    class SW_KIT_API MetroidvaniaGameModeComponent : public GameModeComponent
+    REFLECT( Version = 2, Category = "Metroidvania", DisplayName = "Metroidvania Game Mode", Tooltip = "Runs one Metroidvania exploration (rooms, abilities, rest, duels, boss) from player input commands" )
+    class SW_KIT_API MetroidvaniaGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -126,7 +126,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 가진 통화를 결과 값 `money` 로 냅니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
@@ -206,8 +206,6 @@ namespace sw
         float32 _enemyInterval;
         PROPERTY( Category = "Result", DisplayName = "Respawn Delay", Min = 0.05, Units = s )
         float32 _respawnDelaySeconds;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Result", DisplayName = "Seed", Tooltip = "Seed of the loot rolls (not 0)", Min = 1 )
         uint32 _seed;
 
@@ -227,7 +225,6 @@ namespace sw
         FixedStepTimer                     _timer;
         Countdown                          _attackCooldown;
         Countdown                          _respawnDelay;
-        Countdown                          _resultHold;
         vector<MetroidvaniaEnemy>          _listEnemy;
         vector<MetroidvaniaDeathRestEvent> _listEvent;
         MetroidvaniaPlayerCommand          _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다

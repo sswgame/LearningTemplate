@@ -19,7 +19,7 @@ namespace sw
         struct AsymmetricHorrorGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "AHGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2;  ///< 2: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
             static constexpr int32  kPlayer       = 0;  ///< 늘 사람이 잡는 생존자(카메라 · 감시 값의 주인)
             static constexpr int32  kMaxSurvivors = 32; ///< 사람 비트(`_humanMask`)에 들어가는 수
 
@@ -153,15 +153,11 @@ namespace sw
                 return nullptr;
             }
 
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kDrawResult = "draw";
-            static constexpr const utf8* kLoseResult = "lose";
-
             static const utf8* findResultName( AsymmetricHorrorResult result )
             {
                 if ( result == AsymmetricHorrorResult::Win )
-                    return kWinResult;
-                return result == AsymmetricHorrorResult::Draw ? kDrawResult : kLoseResult;
+                    return MatchGameModeComponent::kWinResult;
+                return result == AsymmetricHorrorResult::Draw ? MatchGameModeComponent::kDrawResult : MatchGameModeComponent::kLoseResult;
             }
         };
     } // namespace
@@ -188,7 +184,6 @@ namespace sw
         , _killerReleaseSeconds{ 0.0f }
         , _stage{}
         , _botSettings{}
-        , _resultHoldSeconds{ 3.0f }
         , _escapeReward{ 0 }
         , _pCatalog{}
         , _match{}
@@ -196,7 +191,6 @@ namespace sw
         , _listCommand{}
         , _listEvent{}
         , _killerRelease{}
-        , _resultHold{}
         , _humanMask{ 0 }
         , _result{ AsymmetricHorrorResult::Ongoing }
     {
@@ -234,7 +228,6 @@ namespace sw
         _bot.initialize( _botSettings );
         _listCommand.assign( _stage._listSurvivorStart.size(), AsymmetricHorrorCommand{} );
         _killerRelease.start( _killerReleaseSeconds );
-        _resultHold.clear();
         return true;
     }
 
@@ -334,16 +327,8 @@ namespace sw
             interact( survivor );
     }
 
-    void AsymmetricHorrorGameModeComponent::updateGame( float32 deltaTime )
+    void AsymmetricHorrorGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _result != AsymmetricHorrorResult::Ongoing )
-        {
-            if ( _resultHold.update( deltaTime ) )
-                (void)finishMinigame( hashed_string( AsymmetricHorrorGameModeComponentInternal::findResultName( _result ) ) ); // 흐름이 없으면 베이스가 알린다
-            return;
-        }
         for ( int32 survivor = 0; survivor < _match.getSurvivorCount(); ++survivor )
         {
             AsymmetricHorrorCommand& pending = _listCommand[static_cast<size_t>( survivor )];
@@ -388,7 +373,7 @@ namespace sw
             _result = AsymmetricHorrorResult::Win;
         else
             _result = winner < 0 ? AsymmetricHorrorResult::Draw : AsymmetricHorrorResult::Lose;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( AsymmetricHorrorGameModeComponentInternal::findResultName( _result ) ) );
         getSoundQueue().queueEvent( _result == AsymmetricHorrorResult::Win ? AsymmetricHorrorGameModeComponentInternal::kEventWon : AsymmetricHorrorGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "AsymmetricHorror.Ended", "[AsymmetricHorror] %# - %# escaped, %# sacrificed", AsymmetricHorrorGameModeComponentInternal::findResultName( _result ), countEscaped(),
                         countSacrificed() );
@@ -473,16 +458,13 @@ namespace sw
             }
         }
         Countdown killerRelease = _killerRelease;
-        Countdown resultHold    = _resultHold;
         io.value( io.isWriting() ? _match : restoredMatch ); // 사람 비트 · 결과는 상태 칸이다(`GameModeComponent::serializeState`)
         io.value( killerRelease );
-        io.value( resultHold );
         io.check( io.isWriting() || restoredMatch.getSurvivorCount() == static_cast<int32>( _listCommand.size() ) );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
         _match         = std::move( restoredMatch );
         _killerRelease = killerRelease;
-        _resultHold    = resultHold;
     }
 } // namespace sw

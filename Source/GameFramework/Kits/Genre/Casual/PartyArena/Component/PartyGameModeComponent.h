@@ -20,7 +20,7 @@
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyRoundSeries.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineArena.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw
 {
@@ -42,8 +42,8 @@ namespace sw
      * @class PartyGameModeComponent
      * @brief 라운드 열기 → 겨루기 → 순위 점수 → 다음 라운드 → 우승을 진행합니다.
      */
-    REFLECT( Version = 2, Category = "PartyArena", DisplayName = "Party Game Mode", Tooltip = "Runs one PartyArena round series on the trampoline arena: the player from input commands, the rivals by bots" )
-    class SW_KIT_API PartyGameModeComponent : public GameModeComponent
+    REFLECT( Version = 3, Category = "PartyArena", DisplayName = "Party Game Mode", Tooltip = "Runs one PartyArena round series on the trampoline arena: the player from input commands, the rivals by bots" )
+    class SW_KIT_API PartyGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -80,7 +80,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -106,8 +106,6 @@ namespace sw
         int32 _roundLimit;
         PROPERTY( Category = "Match", DisplayName = "Intermission", Min = 0.1, Units = s )
         float32 _intermissionSeconds;
-        PROPERTY( Category = "Match", DisplayName = "Result Hold", Tooltip = "Time the result stays on screen before the minigame ends", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Match", DisplayName = "Seed" )
         uint32 _seed;
         PROPERTY( Category = "Match", DisplayName = "Win Reward", Tooltip = "Money for winning the series", Min = 0 )
@@ -122,7 +120,7 @@ namespace sw
         vector<TrampolineEvent>         _listArenaEvent;
         vector<PartyItemEvent>          _listItemEvent;
         vector<PartySeriesEvent>        _listSeriesEvent;
-        Countdown                       _phaseTimer; ///< 쉬는 시간 · 결과를 보이는 시간
+        Countdown                       _phaseTimer; ///< 쉬는 시간
         PROPERTY( RuntimeState )
         PartyGamePhase _phase;
         PROPERTY( RuntimeState, Min = -1 )

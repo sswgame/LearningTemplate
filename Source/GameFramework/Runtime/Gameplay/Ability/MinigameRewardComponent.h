@@ -1,7 +1,7 @@
 /**
  * @file MinigameRewardComponent.h
  * @brief 허브 캐릭터가 미니게임 결과 값(`MinigameResultValue`)을 받아 몸(어빌리티 이펙트)과 경제 · 진행(지갑 · 평판 · 퀘스트)에 넘기는 컴포넌트입니다 — 결과 값 이름 → 보상은 데이터(PROPERTY)입니다.
- * @details 미니게임 디렉터는 허브 캐릭터를 직접 고치지 않고 결과 값으로만 내보낸다(디렉터 계약 ③ `GameModeComponent::finishMinigame`). 받는 쪽은 허브 캐릭터이고,
+ * @details 미니게임 디렉터는 허브 캐릭터를 직접 고치지 않고 결과 값으로만 내보낸다(디렉터 계약 ③ `MatchGameModeComponent::endMatch`). 받는 쪽은 허브 캐릭터이고,
  *          `MinigameFlow::onFinished`(돌아올 자리를 복원한 뒤)를 구독해 값마다 표의 이펙트를 건다 — 복원이 들어갈 때 찍은 체력으로 되감은 뒤에 얹으므로 보상이 지워지지 않는다.
  *          값의 수(`_amount`)는 이펙트 스펙의 SetByCaller `Data.Amount`(회복량 · 버프 세기) · 통화 액수 · 평판 변화 · 퀘스트 목표 수로 넘긴다. 같은 값 이름을 여러 표에 적으면 모두 준다.
  *          어느 표에도 없는 이름 · 카탈로그에 없는 이펙트 · 없는 받는 쪽은 오류다(조용히 버리지 않는다).

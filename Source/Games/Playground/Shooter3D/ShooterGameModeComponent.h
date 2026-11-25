@@ -29,7 +29,7 @@
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
@@ -161,8 +161,8 @@ namespace sw
      *          **네트 클라이언트의 월드**(넷 링크 역할이 Client)는 판을 돌리지 않는다 — 페이싱 감독 · 적 규칙은 서버 몫이고, 스냅샷의 적을 복제 모습으로 세워(`ShooterEnemyComponent::launchReplica`)
      *          적 목록(`getEnemyViews`)을 그 자리로 채운다. 그래서 자동 플레이 AI · 사격 예측 · 근접 예측이 혼자 하는 게임과 같은 목록을 본다. 역할은 프로세스 구성(한 프로세스 재생 · 전용 서버 + 앱)을 가리지 않고 링크가 정한다.
      */
-    REFLECT( Category = "Shooter", DisplayName = "Shooter Game Mode", Tooltip = "Runs the skeleton waves, kills, blockers, the effect pools and the runtime spawns" )
-    class ShooterGameModeComponent : public GameModeComponent
+    REFLECT( Version = 2, Category = "Shooter", DisplayName = "Shooter Game Mode", Tooltip = "Runs the skeleton waves, kills, blockers, the effect pools and the runtime spawns" )
+    class ShooterGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -194,7 +194,7 @@ namespace sw
          * @brief 매치형 미니게임의 판이면 처치 수 @p killCount 로 판을 끝내고 돌아가기를 맡깁니다(틱이 끝난 뒤 게임 스레드에서 부릅니다).
          * @return 매치를 끝냈으면(또는 이미 끝냈으면) true 입니다. 매치가 아니거나 매치 서버의 판이면 false 이고 부르는 쪽이 판을 다시 시작합니다.
          */
-        [[nodiscard]] bool endMatch( uint32 killCount );
+        [[nodiscard]] bool requestMatchEnd( uint32 killCount );
         /** @brief 플레이어가 맞았습니다. 감독의 긴장도 신호로 넣습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
         void reportPlayerDamage( float32 amount );
         /** @brief 탄착과 총구 섬광 구 하나를 풀에서 꺼내 보입니다(게임 스레드). */
@@ -240,9 +240,11 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
-        void               onViewsDespawned() override;
+        /** @brief 시간이 멈춘 프레임 · 끝난 판에서도 플레이어 보기 · 바닥 걸음을 잇고 판의 걸음은 베이스에 맡깁니다. */
+        void updateGame( float32 deltaTime ) override;
+        void updateMatch( float32 deltaTime ) override;
+        void onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void onViewsDespawned() override;
         /** @brief 스폰 요청이 쌓였거나 자동 플레이 스위치와 플레이어 폰의 조종자가 어긋났으면 true 를 반환합니다. 베이스가 틱 끝에 플러시를 잡습니다. */
         bool hasPendingSpawn() const override;
         /** @brief 매치 결과로 낼 처치 수(`kills`)입니다 — 매치를 끝낼 때만 모은다. */
@@ -387,7 +389,6 @@ namespace sw
         uint8                  _bAmmoPending  : 1; ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
         uint8                  _bPacingReady  : 1; ///< 프로필과 스폰 테이블을 읽었다.
         uint8                  _bReplica      : 1; ///< 네트 클라이언트의 월드다(판을 돌리지 않고 스냅샷의 적을 그린다)
-        uint8                  _bMatchEnded   : 1; ///< 매치를 끝내고 돌아갈 맵을 기다린다(`endMatch`)
-        [[maybe_unused]] uint8 _reserved      : 3;
+        [[maybe_unused]] uint8 _reserved      : 4;
     };
 } // namespace sw

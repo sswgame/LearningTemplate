@@ -118,7 +118,8 @@ namespace sw
     }
 
     ShooterGameModeComponent::ShooterGameModeComponent()
-        : _effectPrefab{}
+        : MatchGameModeComponent( 0.0f ) // 결과를 보이지 않고 바로 끝낸다 — 매치 결과는 돌아간 맵이 보인다
+        , _effectPrefab{}
         , _tracerPrefab{}
         , _autoPlayPrefab{}
         , _listEnemyKind{}
@@ -167,7 +168,6 @@ namespace sw
         , _bAmmoPending{ SW_FALSE }
         , _bPacingReady{ SW_FALSE }
         , _bReplica{ SW_FALSE }
-        , _bMatchEnded{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -246,10 +246,15 @@ namespace sw
 
     void ShooterGameModeComponent::updateGame( float32 deltaTime )
     {
-        const float32 step = MathUtil::min( deltaTime, 0.1f );
         updatePlayerView();
         updateFloorSteps();
-        if ( step > 0.0f && _bReplica == SW_TRUE )
+        MatchGameModeComponent::updateGame( deltaTime );
+    }
+
+    void ShooterGameModeComponent::updateMatch( float32 deltaTime )
+    {
+        const float32 step = MathUtil::min( deltaTime, 0.1f );
+        if ( _bReplica == SW_TRUE )
         {
             updateReplicaEnemies();
             // 복제 쪽도 자동 플레이 조종자를 세운다 — 그 의도가 서버로 가는 입력이다.
@@ -258,15 +263,12 @@ namespace sw
                 syncAutoPlayPossession( *pManager );
             return;
         }
-        if ( step > 0.0f )
+        updateEnemies();
+        if ( _bPacingReady == SW_TRUE )
         {
-            updateEnemies();
-            if ( _bPacingReady == SW_TRUE )
-            {
-                applyReloadedProfile();
-                _director.update( step );
-                applyDirectorEvents();
-            }
+            applyReloadedProfile();
+            _director.update( step );
+            applyDirectorEvents();
         }
     }
 
@@ -314,19 +316,19 @@ namespace sw
         _listDirectorEvent.clear();
     }
 
-    bool ShooterGameModeComponent::endMatch( uint32 killCount )
+    bool ShooterGameModeComponent::requestMatchEnd( uint32 killCount )
     {
-        if ( _bMatchEnded == SW_TRUE )
+        if ( isMatchEnded() )
             return true; // 돌아갈 맵을 기다린다
         const NetLinkValue* const       pLink   = SceneNetLink::findBoundFor( *this );
         const MinigameFlow* const       pFlow   = game::findSubsystem<MinigameFlow>();
         const MinigameDefinition* const pActive = pFlow != nullptr ? pFlow->findActiveDefinition() : nullptr;
         const bool                      bServer = pLink != nullptr && pLink->_role == NetLinkRole::Server; // 매치 서버의 판은 다음에 배정받은 사람이 잇는다
-        if ( bServer || pActive == nullptr || pActive->isMatch() == false )
+        if ( bServer || pActive == nullptr || pActive->isMatch() == false || pFlow->isObserving() )
             return false;
         setResultKillCount( killCount );
-        _bMatchEnded = finishMinigame( hashed_string( ShooterGameModeComponentInternal::kResultDown ) ) ? SW_TRUE : SW_FALSE;
-        return _bMatchEnded == SW_TRUE;
+        endMatch( hashed_string( ShooterGameModeComponentInternal::kResultDown ) );
+        return true;
     }
 
     void ShooterGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const

@@ -1288,7 +1288,7 @@ namespace sw
         ShooterNetPawnComponent* const pNetPawn = findNetPawn( manager );
         if ( pNetPawn == nullptr || pNetPawn->isServer() == false )
         {
-            if ( pGameMode == nullptr || pGameMode->endMatch( pGameMode->getKillCount() ) == false ) // 매치는 쓰러지면 끝난다 — 결과를 내고 돌아간다
+            if ( pGameMode == nullptr || pGameMode->requestMatchEnd( pGameMode->getKillCount() ) == false ) // 매치는 쓰러지면 끝난다 — 결과를 내고 돌아간다
                 restartRound();
             return;
         }
@@ -1410,7 +1410,7 @@ namespace sw
             finishDown( *pManager, pGameMode );
         // 접속한 매치의 끝은 서버가 정한다 — 서버가 센 처치 수로 끝내고 돌아간다.
         if ( _bServerOut == SW_TRUE && pGameMode != nullptr )
-            (void)pGameMode->endMatch( _serverKillCount );
+            (void)pGameMode->requestMatchEnd( _serverKillCount );
     }
 
     void ShooterPlayerComponent::spawnBody()

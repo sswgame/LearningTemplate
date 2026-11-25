@@ -23,7 +23,7 @@
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorStage.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw
 {
@@ -44,9 +44,9 @@ namespace sw
      * @class AsymmetricHorrorGameModeComponent
      * @brief 수리 → 전원 → 탈출구(또는 해치) → 탈출 · 희생까지 한 판을 생존자 입력 명령과 봇으로 진행합니다.
      */
-    REFLECT( Category = "AsymmetricHorror", DisplayName = "Asymmetric Horror Game Mode",
+    REFLECT( Version = 2, Category = "AsymmetricHorror", DisplayName = "Asymmetric Horror Game Mode",
              Tooltip = "Runs one asymmetric horror match: survivors from input commands or bots against a killer bot, to escape or sacrifice" )
-    class SW_KIT_API AsymmetricHorrorGameModeComponent : public GameModeComponent
+    class SW_KIT_API AsymmetricHorrorGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -92,7 +92,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -119,8 +119,6 @@ namespace sw
         AsymmetricHorrorStage _stage;
         PROPERTY( Category = "Bot", DisplayName = "Bot" )
         AsymmetricHorrorBotSettings _botSettings;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "How long the result stays on screen before the minigame ends", Min = 0.0, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Result", DisplayName = "Escape Reward", Tooltip = "Money the base game gets per escaped survivor", Min = 0 )
         int32 _escapeReward;
 
@@ -130,7 +128,6 @@ namespace sw
         vector<AsymmetricHorrorCommand>             _listCommand; ///< 생존자마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
         vector<AsymmetricHorrorEvent>               _listEvent;   ///< 걸음마다 비워 다시 쓰는 알림 그릇
         Countdown                                   _killerRelease;
-        Countdown                                   _resultHold;
         PROPERTY( RuntimeState )
         uint32 _humanMask; ///< 사람이 잡은 생존자의 비트(생존자 0 은 늘 사람이라 넣지 않는다)
         PROPERTY( RuntimeState )

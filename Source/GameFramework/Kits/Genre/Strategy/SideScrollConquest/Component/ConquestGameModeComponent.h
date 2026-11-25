@@ -11,7 +11,6 @@
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -20,7 +19,7 @@
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestWorld.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw
 {
@@ -30,8 +29,8 @@ namespace sw
      * @class ConquestGameModeComponent
      * @brief 시작 건물 → 훈련 · 진격 · 점령(명령) → 승패 → 결과를 진행합니다.
      */
-    REFLECT( Version = 2, Category = "SideScrollConquest", DisplayName = "Conquest Game Mode", Tooltip = "Runs one side scroll conquest: the commander, squad orders and training from commands, to victory or defeat" )
-    class SW_KIT_API ConquestGameModeComponent : public GameModeComponent
+    REFLECT( Version = 3, Category = "SideScrollConquest", DisplayName = "Conquest Game Mode", Tooltip = "Runs one side scroll conquest: the commander, squad orders and training from commands, to victory or defeat" )
+    class SW_KIT_API ConquestGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -68,7 +67,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -86,8 +85,6 @@ namespace sw
         CatalogKey<ConquestSiteDef> _startSite;
         PROPERTY( Category = "Start", DisplayName = "Trained Unit", Required, Tooltip = "Unit the training command trains" )
         CatalogKey<ConquestUnitDef> _trainUnit;
-        PROPERTY( Category = "Match", DisplayName = "Result Hold", Tooltip = "Time the result stays on screen before the minigame ends", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Match", DisplayName = "Win Reward", Tooltip = "Money for taking every site", Min = 0 )
         int32 _winReward;
 
@@ -95,6 +92,5 @@ namespace sw
         ConquestWorld                  _world;
         ConsumerLease                  _eventLease;
         vector<ConquestEvent>          _listEvent;
-        Countdown                      _resultHold;
     };
 } // namespace sw

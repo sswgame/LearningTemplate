@@ -10,7 +10,6 @@
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineBot.h"
@@ -24,21 +23,6 @@ namespace sw
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "PTGM" );
             static constexpr uint32 kStateVersion = 1;
-
-            /** @brief 상태 칸 판 1 → 2: 결과 유지 깃발을 뺀다 — 끝난 걸음에 `Countdown` 을 걸고 다 된 걸음에 한 번 끝내는 길은 깃발 없이 선다(다른 디렉터와 같은 꼴). */
-            [[nodiscard]] static bool dropHoldFlags( Archive& inOldBody, Archive& outNewBody )
-            {
-                int64 phase              = 0; // 열거 칸은 int64 로 실린다(`StateIO::reflectedProperties`)
-                int32 winner             = 0;
-                int32 playerRingOutCount = 0;
-                uint8 bFinishRequested   = 0;
-                inOldBody >> phase >> winner >> playerRingOutCount >> bFinishRequested;
-                outNewBody << phase << winner << playerRingOutCount;
-                return inOldBody.isOk();
-            }
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventBounce      = "PartyArenaBounce";
@@ -113,7 +97,6 @@ namespace sw
         , _botCount{ 2 }
         , _roundLimit{ 5 }
         , _intermissionSeconds{ 2.0f }
-        , _resultHoldSeconds{ 3.0f }
         , _seed{ GameRandom::kDefaultSeed }
         , _winReward{ 0 }
         , _arenaSettings{}
@@ -273,7 +256,7 @@ namespace sw
     {
         _winner = winner;
         _phase  = PartyGamePhase::Finished;
-        _phaseTimer.start( _resultHoldSeconds );
+        endMatch( hashed_string( _winner == kLocalPlayer ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( _winner == kLocalPlayer ? PartyGameModeComponentInternal::kEventWon : PartyGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "PartyArena.Finished", "[PartyArena] the series is over - winner %#", _winner );
     }
@@ -303,10 +286,8 @@ namespace sw
         _phaseTimer.start( _intermissionSeconds );
     }
 
-    void PartyGameModeComponent::updateGame( float32 deltaTime )
+    void PartyGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
         switch ( _phase )
         {
             case PartyGamePhase::Round:
@@ -339,10 +320,7 @@ namespace sw
             }
             case PartyGamePhase::Finished:
             {
-                if ( _phaseTimer.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
-                    return;
-                (void)finishMinigame( hashed_string( _winner == kLocalPlayer ? PartyGameModeComponentInternal::kWinResult : PartyGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-                return;
+                return; // 끝난 판에는 걸음이 오지 않는다(`endMatch`)
             }
         }
     }
@@ -383,9 +361,4 @@ namespace sw
         _arena      = std::move( restoredArena );
         _phaseTimer = phaseTimer;
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_TYPE_VERSION_PATCH( partyGameModeState1To2, "sw::PartyGameModeComponent", 1, 2, &PartyGameModeComponentInternal::dropHoldFlags );
 } // namespace sw

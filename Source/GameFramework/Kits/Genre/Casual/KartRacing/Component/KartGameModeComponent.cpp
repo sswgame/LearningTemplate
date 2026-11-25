@@ -10,7 +10,6 @@
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -20,21 +19,9 @@ namespace sw
         struct KartGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "KRGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
 
-            /** @brief 상태 칸 판 1 → 2: 결과 유지 깃발을 뺀다 — 끝난 걸음에 `Countdown` 을 걸고 다 된 걸음에 한 번 끝내는 길은 깃발 없이 선다(다른 디렉터와 같은 꼴). */
-            [[nodiscard]] static bool dropHoldFlags( Archive& inOldBody, Archive& outNewBody )
-            {
-                uint8 bResultShown     = 0;
-                uint8 bFinishRequested = 0;
-                inOldBody >> bResultShown >> bFinishRequested;
-                (void)outNewBody; // 남은 칸이 없다 — 읽지 않은 꼬리(손 본문)는 그대로 붙는다
-                return inOldBody.isOk();
-            }
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
-            static constexpr int32       kFirstPlace = 1;
+            static constexpr int32 kFirstPlace = 1;
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventGo            = "KartRacingGo";
@@ -140,7 +127,6 @@ namespace sw
         , _botAI{}
         , _countdownSeconds{ 3.0f }
         , _finishTimeoutSeconds{ 10.0f }
-        , _resultHoldSeconds{ 3.0f }
         , _seed{ GameRandom::kDefaultSeed }
         , _firstReward{ 0 }
         , _rewardStep{ 0 }
@@ -151,7 +137,6 @@ namespace sw
         , _track{}
         , _race{}
         , _listEvent{}
-        , _resultHold{}
     {
     }
 
@@ -195,7 +180,6 @@ namespace sw
         if ( openRace( _race ) == false )
             return false;
         _race.start();
-        _resultHold.clear();
         return true;
     }
 
@@ -297,24 +281,14 @@ namespace sw
         }
     }
 
-    void KartGameModeComponent::updateGame( float32 deltaTime )
+    void KartGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        const bool bWasEnded = _race.getPhase() == MatchPhase::Ended;
         (void)_race.update( deltaTime ); // 걸음 수는 쓰지 않는다
         reportEvents();
         if ( _race.getPhase() != MatchPhase::Ended )
             return;
-        if ( bWasEnded == false )
-        {
-            _resultHold.start( _resultHoldSeconds ); // 끝난 걸음 — 결과를 보이기 시작한다
-            return;
-        }
-        if ( _resultHold.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
-            return;
         const bool bWon = getPlayerFinishPlace() == KartGameModeComponentInternal::kFirstPlace;
-        (void)finishMinigame( hashed_string( bWon ? KartGameModeComponentInternal::kWinResult : KartGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
+        endMatch( hashed_string( bWon ? kWinResult : kLoseResult ) );
     }
 
     void KartGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
@@ -337,21 +311,13 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 경기는 같은 트랙 · 같은 차 수로 연 뒤에 읽는다(키트 계약).
-        KartRace  restoredRace;
-        Countdown resultHold = _resultHold;
+        KartRace restoredRace;
         if ( io.isReading() && io.check( _pTrackCatalog != nullptr && _pVehicle != nullptr && openRace( restoredRace ) ) == false )
             return;
         io.value( io.isWriting() ? _race : restoredRace );
-        io.value( resultHold );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _race       = std::move( restoredRace );
-        _resultHold = resultHold;
+        _race = std::move( restoredRace );
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_TYPE_VERSION_PATCH( kartGameModeState1To2, "sw::KartGameModeComponent", 1, 2, &KartGameModeComponentInternal::dropHoldFlags );
 } // namespace sw

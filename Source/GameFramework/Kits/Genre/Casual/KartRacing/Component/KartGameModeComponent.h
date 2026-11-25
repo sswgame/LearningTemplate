@@ -12,7 +12,6 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -25,7 +24,7 @@
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw
 {
@@ -35,8 +34,8 @@ namespace sw
      * @class KartGameModeComponent
      * @brief 출발 격자 → 카운트다운 → 바퀴 → 결승 순위 → 결과를 진행합니다.
      */
-    REFLECT( Version = 2, Category = "KartRacing", DisplayName = "Kart Race Game Mode", Tooltip = "Runs one KartRacing race: the player kart from driver commands, the rivals by the kart AI, to the finish places" )
-    class SW_KIT_API KartGameModeComponent : public GameModeComponent
+    REFLECT( Version = 3, Category = "KartRacing", DisplayName = "Kart Race Game Mode", Tooltip = "Runs one KartRacing race: the player kart from driver commands, the rivals by the kart AI, to the finish places" )
+    class SW_KIT_API KartGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -71,7 +70,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -99,8 +98,6 @@ namespace sw
         float32 _countdownSeconds;
         PROPERTY( Category = "Race", DisplayName = "Finish Timeout", Tooltip = "Time after the first finish before the rest is ranked as it stands", Min = 0.0, Units = s )
         float32 _finishTimeoutSeconds;
-        PROPERTY( Category = "Race", DisplayName = "Result Hold", Tooltip = "Time the places stay on screen before the minigame ends", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Race", DisplayName = "Seed" )
         uint32 _seed;
         PROPERTY( Category = "Race", DisplayName = "First Reward", Tooltip = "Money for first place", Min = 0 )
@@ -115,6 +112,5 @@ namespace sw
         KartTrack                               _track; ///< 경기 · 차가 빌려 쓴다 — 경기보다 먼저 선언한다
         KartRace                                _race;
         vector<KartRaceEvent>                   _listEvent;
-        Countdown                               _resultHold; ///< 순위가 정해진 뒤 결과를 보이는 시간
     };
 } // namespace sw

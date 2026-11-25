@@ -64,7 +64,7 @@ namespace sw
      *          - **디렉터 계약 셋**(모든 미니게임 · 허브 디렉터가 같은 셋만 적는다 — 키트 규칙 객체에는 계약을 더하지 않는다):
      *            ① 걸음 `updateGame`(틱 뒤 게임 스레드) — 베이스가 프로파일러 구간(`kStepScopeName`)으로 감싸 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 가 그 구간을 읽는다(줄 추가 없이 모든 미니게임이 값을 낸다).
      *            ② 세이브 `serializeGameState`(리플렉션 상태 칸 뒤에 잇는 손 본문 하나).
-     *            ③ 결과 `finishMinigame`(스스로 끝난다) 또는 플레이어의 나가기 → `collectMinigameResult` — 한 판 임시 상태(미니게임 지갑 · 창고 · 점수)는 디렉터가 소유하고
+     *            ③ 결과 `MatchGameModeComponent::endMatch`(스스로 끝난다) 또는 플레이어의 나가기 → `collectMinigameResult` — 한 판 임시 상태(미니게임 지갑 · 창고 · 점수)는 디렉터가 소유하고
      *            바탕 판(플레이어 진행 · 월드 상태)에 직접 쓰지 않으며 `MinigameResult` 의 값 목록으로만 내보낸다(`MinigameFlow::requestLeave`).
      *
      *          디렉터의 시뮬레이션은 키트의 보통 클래스이고 PROPERTY 가 아니다.
@@ -146,13 +146,7 @@ namespace sw
         void despawnViews();
 
         /**
-         * @brief 디렉터 계약 ③ — 이 디렉터가 도는 미니게임을 결과 @p resultName(예: `win` · `lose`)으로 끝냅니다. 넘길 값은 `collectMinigameResult` 가 모은다.
-         * @details 나가기는 다음 게임 인스턴스 갱신(틱 밖)이 한다(`MinigameFlow::requestLeave`) — 하위 레벨 나가기가 이 디렉터를 지우므로 규칙 안에서 바로 나가지 않는다.
-         * @return 미니게임 흐름이 없거나 켜진 미니게임이 없으면 오류를 남기고 false 입니다(허브 판에서 부르면 계약 위반이다).
-         */
-        [[nodiscard]] bool finishMinigame( const hashed_string& resultName );
-        /**
-         * @brief `finishMinigame` · 플레이어의 나가기(`MinigameFlow::requestQuit`)가 결과에 실을 값(번 돈 · 얻은 물건 · 점수)을 @p outListValue 에 더합니다. 한 판 임시 상태를 쥔 미니게임 디렉터가 덮는다.
+         * @brief 디렉터 계약 ③ — 스스로 끝난 판(`MatchGameModeComponent::endMatch`) · 플레이어의 나가기(`MinigameFlow::requestQuit`)가 결과에 실을 값(번 돈 · 얻은 물건 · 점수)을 @p outListValue 에 더합니다. 한 판 임시 상태를 쥔 미니게임 디렉터가 덮는다.
          * @details 바탕 판에 쓰는 것은 결과를 받는 쪽(`MinigameFlow::onFinished` 구독 — 허브 디렉터)이다. 미니게임 디렉터가 플레이어 진행을 직접 고치면
          *          씬 전환 복원(들어갈 때 찍은 스냅숏)이 그 값을 되감는다.
          */

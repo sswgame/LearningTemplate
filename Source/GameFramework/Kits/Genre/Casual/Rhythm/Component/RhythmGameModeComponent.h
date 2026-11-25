@@ -10,7 +10,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -20,7 +19,7 @@
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmPlaySession.h"
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw
 {
@@ -57,8 +56,8 @@ namespace sw
      * @class RhythmGameModeComponent
      * @brief 곡 열기 → 판정 → 깸(또는 실패) → 결과를 진행합니다.
      */
-    REFLECT( Version = 2, Category = "Rhythm", DisplayName = "Rhythm Game Mode", Tooltip = "Runs one Rhythm song: song time and lane presses arrive as commands, judged to a clear or a failure" )
-    class SW_KIT_API RhythmGameModeComponent : public GameModeComponent
+    REFLECT( Version = 3, Category = "Rhythm", DisplayName = "Rhythm Game Mode", Tooltip = "Runs one Rhythm song: song time and lane presses arrive as commands, judged to a clear or a failure" )
+    class SW_KIT_API RhythmGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -98,7 +97,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -120,8 +119,6 @@ namespace sw
         float32 _missLifeDelta;
         PROPERTY( Category = "Judge", DisplayName = "Max Life", Min = 1.0 )
         float32 _maxLife;
-        PROPERTY( Category = "Match", DisplayName = "Result Hold", Tooltip = "Time the result stays on screen before the minigame ends", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Match", DisplayName = "Clear Reward", Tooltip = "Money for clearing the song", Min = 0 )
         int32 _clearReward;
 
@@ -129,7 +126,6 @@ namespace sw
         TimingJudge                _judge; ///< 판이 빌려 쓴다 — 판보다 먼저 선언한다
         RhythmPlaySession          _session;
         vector<RhythmEvent>        _listEvent;
-        Countdown                  _resultHold;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _musicTime; ///< 지금 곡 시각(초)
     };

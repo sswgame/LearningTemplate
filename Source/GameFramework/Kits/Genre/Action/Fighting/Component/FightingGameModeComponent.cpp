@@ -19,11 +19,7 @@ namespace sw
         struct FightingGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "FGHT" );
-            static constexpr uint32 kStateVersion = 1;
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
-            static constexpr const utf8* kDrawResult = "draw";
+            static constexpr uint32 kStateVersion = 2; ///< 2: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
 
             // 넘패드 방향 표기다(격투 게임 공용).
             static constexpr uint8 kNeutral = 5;
@@ -139,13 +135,11 @@ namespace sw
         , _cpuAttackRange{ 1.1f }
         , _cpuAttackChance{ 0.6f }
         , _seed{ 7 }
-        , _resultHoldSeconds{ 3.0f }
         , _victoryMoney{ 30 }
         , _pCatalog{}
         , _match{}
         , _timer{}
         , _random{}
-        , _resultHold{}
         , _arrCPUHand{}
         , _listEvent{}
         , _queuedButtons{ 0 }
@@ -173,7 +167,6 @@ namespace sw
             return false;
         _timer.reset();
         _random = GameRandom( _seed );
-        _resultHold.clear();
         for ( CPUHand& hand : _arrCPUHand )
         {
             hand = CPUHand{};
@@ -290,28 +283,19 @@ namespace sw
                 SW_LOG_INFO_ID( "Fighting.RoundEnd", "[Fighting] round %# ends - winner %# (2 = draw)", _match.getRound(), event._value );
             if ( event._kind != FightingEvent::Kind::MatchEnd )
                 continue;
-            _resultHold.start( _resultHoldSeconds );
+            const utf8* pResult = kDrawResult;
+            if ( event._value == kPlayer )
+                pResult = kWinResult;
+            else if ( event._value == kOpponent )
+                pResult = kLoseResult;
+            endMatch( hashed_string( pResult ) );
             getSoundQueue().queueEvent( event._value == kPlayer ? FightingGameModeComponentInternal::kEventWon : FightingGameModeComponentInternal::kEventLost );
             SW_LOG_INFO_ID( "Fighting.MatchEnd", "[Fighting] the match ends - winner %# (2 = draw), rounds %# to %#", event._value, getPlayerRounds(), getOpponentRounds() );
         }
     }
 
-    void FightingGameModeComponent::updateGame( float32 deltaTime )
+    void FightingGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _match.getSeries().isFinished() )
-        {
-            if ( _resultHold.update( deltaTime ) == false )
-                return;
-            const utf8* pResult = FightingGameModeComponentInternal::kDrawResult;
-            if ( getMatchWinner() == kPlayer )
-                pResult = FightingGameModeComponentInternal::kWinResult;
-            else if ( getMatchWinner() == kOpponent )
-                pResult = FightingGameModeComponentInternal::kLoseResult;
-            (void)finishMinigame( hashed_string( pResult ) ); // 흐름이 없으면 베이스가 알린다
-            return;
-        }
         const bool  bAutoPlay = isAutoPlayOn();
         const int32 stepCount = _timer.consume( deltaTime );
         for ( int32 step = 0; step < stepCount; ++step )
@@ -342,16 +326,14 @@ namespace sw
             return;
         // 대전은 같은 캐릭터로 연 뒤에 읽는다(키트 계약). 입력 명령은 싣지 않는다.
         FightingMatch  restoredMatch;
-        FixedStepTimer timer      = _timer;
-        GameRandom     random     = _random;
-        Countdown      resultHold = _resultHold;
+        FixedStepTimer timer  = _timer;
+        GameRandom     random = _random;
         CPUHand        arrHand[FightingMatch::kPlayerCount]{};
         if ( io.isReading() && io.check( _pCatalog != nullptr && openMatch( restoredMatch ) ) == false )
             return;
         io.value( io.isWriting() ? _match : restoredMatch );
         io.value( timer );
         io.value( random );
-        io.value( resultHold );
         for ( int32 player = 0; player < FightingMatch::kPlayerCount; ++player )
         {
             arrHand[player] = _arrCPUHand[player];
@@ -362,10 +344,9 @@ namespace sw
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _match      = std::move( restoredMatch );
-        _timer      = timer;
-        _random     = random;
-        _resultHold = resultHold;
+        _match  = std::move( restoredMatch );
+        _timer  = timer;
+        _random = random;
         for ( int32 player = 0; player < FightingMatch::kPlayerCount; ++player )
         {
             _arrCPUHand[player] = arrHand[player];

@@ -25,9 +25,8 @@ namespace sw
         struct MetroidvaniaGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "MVGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
 
-            static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kDamageStat = "damage"; ///< 부적 능력치 이름 — 플레이어 공격력에 더한다(카탈로그 `<Charm><Stats damage>`)
 
             /** @brief 칸 한 변(m)입니다. 씬의 자리와 방 사각형이 이 격자의 월드 좌표다. */
@@ -148,7 +147,6 @@ namespace sw
         , _enemyStartup{ 0.5f }
         , _enemyInterval{ 1.0f }
         , _respawnDelaySeconds{ 1.0f }
-        , _resultHoldSeconds{ 3.0f }
         , _seed{ 7 }
         , _pCatalog{}
         , _pAreas{}
@@ -166,7 +164,6 @@ namespace sw
         , _timer{}
         , _attackCooldown{}
         , _respawnDelay{}
-        , _resultHold{}
         , _listEnemy{}
         , _listEvent{}
         , _command{}
@@ -272,7 +269,6 @@ namespace sw
         _timer.reset();
         _attackCooldown.clear();
         _respawnDelay.clear();
-        _resultHold.clear();
         _command = MetroidvaniaPlayerCommand{};
         stepMarkers();
         return true;
@@ -545,7 +541,7 @@ namespace sw
         if ( _flags.hasFlag( _goalFlag ) == false )
             return;
         _phase = MetroidvaniaPhase::Won;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( kWinResult ) );
         getSoundQueue().queueEvent( MetroidvaniaGameModeComponentInternal::kEventWon );
         SW_LOG_INFO_ID( "Metroidvania.Won", "[Metroidvania] '%#' is set - won with %# currency, completion %# percent", _goalFlag.c_str(), getCurrency(), _mapState.computeCompletionPercent() );
     }
@@ -573,16 +569,8 @@ namespace sw
         }
     }
 
-    void MetroidvaniaGameModeComponent::updateGame( float32 deltaTime )
+    void MetroidvaniaGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _phase == MetroidvaniaPhase::Won )
-        {
-            if ( _resultHold.update( deltaTime ) )
-                (void)finishMinigame( hashed_string( MetroidvaniaGameModeComponentInternal::kWinResult ) ); // 흐름이 없으면 베이스가 알린다
-            return;
-        }
         const int32 stepCount = _timer.consume( deltaTime );
         for ( int32 step = 0; step < stepCount && _phase != MetroidvaniaPhase::Won; ++step )
         {
@@ -647,7 +635,6 @@ namespace sw
         }
         Countdown attackCooldown = _attackCooldown;
         Countdown respawnDelay   = _respawnDelay;
-        Countdown resultHold     = _resultHold;
         io.value( motor );
         io.value( abilities );
         io.value( mapState );
@@ -660,7 +647,6 @@ namespace sw
         io.value( timer );
         io.value( attackCooldown );
         io.value( respawnDelay );
-        io.value( resultHold );
         io.list( listVisited );
         io.list( listDiscovered );
         io.expect( static_cast<uint32>( listEnemy.size() ) ); // 적은 씬 배치가 정한다
@@ -690,7 +676,6 @@ namespace sw
         _timer          = timer;
         _attackCooldown = attackCooldown;
         _respawnDelay   = respawnDelay;
-        _resultHold     = resultHold;
         _listEnemy      = std::move( listEnemy );
     }
 } // namespace sw

@@ -20,7 +20,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw
 {
@@ -42,8 +42,8 @@ namespace sw
      * @class ActionCombatGameModeComponent
      * @brief 홀(적 여럿) → 보스 → 승리 · 패배를 플레이어 입력 명령으로 진행합니다.
      */
-    REFLECT( Category = "ActionCombat", DisplayName = "Action Combat Game Mode", Tooltip = "Runs one ActionCombat room run (hall, boss, result) from player input commands" )
-    class SW_KIT_API ActionCombatGameModeComponent : public GameModeComponent
+    REFLECT( Version = 2, Category = "ActionCombat", DisplayName = "Action Combat Game Mode", Tooltip = "Runs one ActionCombat room run (hall, boss, result) from player input commands" )
+    class SW_KIT_API ActionCombatGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -76,7 +76,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 승리면 결과 값 `heal`(`_victoryHeal`)을 냅니다. 패배는 넘길 값이 없다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
@@ -104,14 +104,11 @@ namespace sw
         float32 _playerSpeed;
         PROPERTY( Category = "Room", DisplayName = "Boss Delay", Tooltip = "Seconds between clearing the hall and the boss fight", Min = 0.1, Units = s )
         float32 _bossDelaySeconds;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Result", DisplayName = "Victory Heal", Tooltip = "Result value 'heal' reported on victory (the hub turns it into an effect)", Min = 0 )
         int32 _victoryHeal;
 
         ActionRoom _room;
         Countdown  _bossDelay;
-        Countdown  _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
         PROPERTY( RuntimeState )
         float2          _playerPosition;
         FacingDirection _facing; ///< 리플렉션 열거가 아니다 — 손 본문이 싣는다

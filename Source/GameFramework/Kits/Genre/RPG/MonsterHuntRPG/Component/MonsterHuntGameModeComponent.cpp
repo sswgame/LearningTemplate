@@ -24,10 +24,7 @@ namespace sw
         struct MonsterHuntGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "MHGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 변이원 · 스킬
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
+            static constexpr uint32 kStateVersion = 3; ///< 2: 변이원 · 스킬. 3: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventContract  = "MonsterHuntContract";
@@ -110,7 +107,6 @@ namespace sw
         , _monsterSpeed{ 3.0f }
         , _monsterAttackSeconds{ 2.0f }
         , _seed{ 7 }
-        , _resultHoldSeconds{ 3.0f }
         , _pCatalog{}
         , _pChart{}
         , _pRecipes{}
@@ -132,7 +128,6 @@ namespace sw
         , _attackCooldown{}
         , _dodge{}
         , _monsterAttack{}
-        , _resultHold{}
         , _playerPosition{ 0.0f, 0.0f }
         , _monsterPosition{ 0.0f, 0.0f }
         , _commandMove{ 0.0f, 0.0f }
@@ -311,7 +306,6 @@ namespace sw
         _attackCooldown.clear();
         _dodge.clear();
         _monsterAttack.clear();
-        _resultHold.clear();
         _playerPosition  = _startPosition;
         _monsterPosition = _spawnPosition;
         _commandMove     = float2{ 0.0f, 0.0f };
@@ -585,7 +579,7 @@ namespace sw
     void MonsterHuntGameModeComponent::finishGame( MonsterHuntPhase phase )
     {
         _phase = phase;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( phase == MonsterHuntPhase::Victory ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( phase == MonsterHuntPhase::Victory ? MonsterHuntGameModeComponentInternal::kEventWon : MonsterHuntGameModeComponentInternal::kEventLost );
         if ( phase == MonsterHuntPhase::Victory )
             SW_LOG_INFO_ID( "MonsterHunt.Victory", "[MonsterHunt] '%#' is slain - the reward is %#", _monster.c_str(), _haggle.getFinalReward() );
@@ -593,24 +587,15 @@ namespace sw
             SW_LOG_INFO_ID( "MonsterHunt.Defeat", "[MonsterHunt] the hunter fell" );
     }
 
-    void MonsterHuntGameModeComponent::updateGame( float32 deltaTime )
+    void MonsterHuntGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f || _phase == MonsterHuntPhase::Haggle )
+        if ( isAlive() == false )
             return; // 흥정은 명령이 진행한다
-        if ( isAlive() )
-        {
-            const float2 step  = WalkSweep::walkOnGround( getObjectManager(), getPlayerPosition(), _commandMove * ( _moveSpeed * deltaTime ), _bodyRadius );
-            _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, _fieldMin._x, _fieldMax._x );
-            _playerPosition._y = MathUtil::clamp( _playerPosition._y + step._y, _fieldMin._y, _fieldMax._y );
-            if ( _phase == MonsterHuntPhase::Hunt )
-                updateHunt( deltaTime );
-            return;
-        }
-        if ( _resultHold.update( deltaTime ) )
-        {
-            const bool bWon = _phase == MonsterHuntPhase::Victory;
-            (void)finishMinigame( hashed_string( bWon ? MonsterHuntGameModeComponentInternal::kWinResult : MonsterHuntGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-        }
+        const float2 step  = WalkSweep::walkOnGround( getObjectManager(), getPlayerPosition(), _commandMove * ( _moveSpeed * deltaTime ), _bodyRadius );
+        _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, _fieldMin._x, _fieldMax._x );
+        _playerPosition._y = MathUtil::clamp( _playerPosition._y + step._y, _fieldMin._y, _fieldMax._y );
+        if ( _phase == MonsterHuntPhase::Hunt )
+            updateHunt( deltaTime );
     }
 
     void MonsterHuntGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
@@ -644,7 +629,6 @@ namespace sw
         Countdown                attackCooldown = _attackCooldown;
         Countdown                dodge          = _dodge;
         Countdown                monsterAttack  = _monsterAttack;
-        Countdown                resultHold     = _resultHold;
         if ( io.isReading() )
         {
             const bool bReady = _pCatalog != nullptr && _pChart != nullptr && _pRecipes != nullptr && _pItemCatalog != nullptr && restoredHaggle.initialize( _pCatalog.get(), _contract.key() ) &&
@@ -675,7 +659,6 @@ namespace sw
         io.value( attackCooldown );
         io.value( dodge );
         io.value( monsterAttack );
-        io.value( resultHold );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
@@ -700,6 +683,5 @@ namespace sw
         _attackCooldown = attackCooldown;
         _dodge          = dodge;
         _monsterAttack  = monsterAttack;
-        _resultHold     = resultHold;
     }
 } // namespace sw

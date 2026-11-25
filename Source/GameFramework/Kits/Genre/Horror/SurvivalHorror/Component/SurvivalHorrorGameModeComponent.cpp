@@ -21,7 +21,7 @@ namespace sw
         struct SurvivalHorrorGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "SHGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventSanity        = "SurvivalHorrorSanity";
@@ -100,9 +100,6 @@ namespace sw
                 }
                 return nullptr;
             }
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
         };
     } // namespace
 
@@ -129,7 +126,6 @@ namespace sw
         , _ammoStrength{ 0 }
         , _damagePerPoint{ 10.0f }
         , _turnSeconds{ 0.5f }
-        , _resultHoldSeconds{ 3.0f }
         , _winReward{ 0 }
         , _pCatalog{}
         , _pGraphAsset{}
@@ -144,7 +140,6 @@ namespace sw
         , _listEvent{}
         , _listUsedSpot{}
         , _turn{}
-        , _resultHold{}
         , _playerPosition{ 0.0f, 0.0f }
         , _encounterSpot{ constant::invalid_index::kInt32 }
         , _bArmed{ SW_FALSE }
@@ -172,7 +167,6 @@ namespace sw
         _listUsedSpot.assign( _stage._listSpot.size(), SW_FALSE );
         _playerPosition = _graph.findArea( _stage._startArea )->getCenter(); // 있는 방인지는 `validate` 가 보았다
         _turn.clear();
-        _resultHold.clear();
         witnessMonsters();
         return true;
     }
@@ -420,17 +414,8 @@ namespace sw
         _bArmed        = SW_FALSE;
     }
 
-    void SurvivalHorrorGameModeComponent::updateGame( float32 deltaTime )
+    void SurvivalHorrorGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _result != SurvivalHorrorResult::Ongoing )
-        {
-            using Internal = SurvivalHorrorGameModeComponentInternal;
-            if ( _resultHold.update( deltaTime ) )
-                (void)finishMinigame( hashed_string( _result == SurvivalHorrorResult::Win ? Internal::kWinResult : Internal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-            return;
-        }
         const SurvivalHorrorCommand command = _command;
         _command                            = SurvivalHorrorCommand{}; // 쓴 명령이다(이동은 클라이언트가 다음 프레임에 다시 넣는다)
         if ( isFighting() )
@@ -477,7 +462,7 @@ namespace sw
             _result = SurvivalHorrorResult::Win;
         if ( _result == SurvivalHorrorResult::Ongoing )
             return;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( _result == SurvivalHorrorResult::Win ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( _result == SurvivalHorrorResult::Win ? SurvivalHorrorGameModeComponentInternal::kEventWon : SurvivalHorrorGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "SurvivalHorror.Ended", "[SurvivalHorror] %# - health %#, sanity %#", _result == SurvivalHorrorResult::Win ? "got out" : "died", getHealth(), getSanity() );
     }
@@ -536,7 +521,6 @@ namespace sw
             io.flag( bUsed );
         }
         io.value( _turn );
-        io.value( _resultHold );
         if ( isFighting() )
         {
             // 전투는 같은 괴물 · 조사자로 연 뒤에 읽는다(키트 계약).

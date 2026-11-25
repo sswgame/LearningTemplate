@@ -30,7 +30,7 @@
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
@@ -53,8 +53,8 @@ namespace sw
      * @class BattleRoyaleGameModeComponent
      * @brief 낙하 → 전투 → 결과를 플레이어 입력 명령과 컴퓨터 분대로 진행합니다.
      */
-    REFLECT( Category = "BattleRoyale", DisplayName = "Battle Royale Game Mode", Tooltip = "Runs one BattleRoyale match: drop, shrinking zone fight and result; person 0 from input commands, the rest by the computer" )
-    class SW_KIT_API BattleRoyaleGameModeComponent : public GameModeComponent
+    REFLECT( Version = 2, Category = "BattleRoyale", DisplayName = "Battle Royale Game Mode", Tooltip = "Runs one BattleRoyale match: drop, shrinking zone fight and result; person 0 from input commands, the rest by the computer" )
+    class SW_KIT_API BattleRoyaleGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -108,7 +108,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 이겼으면 결과 값 `money`(`_victoryMoney`)를 냅니다. 지면 넘길 값이 없다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
@@ -222,8 +222,6 @@ namespace sw
         hashed_string _lootSpotKind;
         PROPERTY( Category = "Loot", DisplayName = "Loot Positions", Tooltip = "Map positions of the loot spots", Units = m )
         vector<float2> _listLootPosition;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Result", DisplayName = "Victory Money", Tooltip = "Result value 'money' reported on victory", Min = 0 )
         int32 _victoryMoney;
 
@@ -237,7 +235,6 @@ namespace sw
         BattleRoyaleFlightPath             _flightPath; ///< 씨앗과 카탈로그로 정해진다 — 싣지 않는다
         FixedStepTimer                     _timer;
         GameRandom                         _random;
-        Countdown                          _resultHold;
         vector<Person>                     _listPerson;
         vector<BattleRoyaleGroundItem>     _listGroundItem;
         vector<BattleRoyaleEvent>          _listEvent;

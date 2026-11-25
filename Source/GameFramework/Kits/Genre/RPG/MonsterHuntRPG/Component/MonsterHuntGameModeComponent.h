@@ -29,7 +29,7 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntMutagens.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -57,8 +57,8 @@ namespace sw
      * @class MonsterHuntGameModeComponent
      * @brief 흥정(올리기 · 받기) → 조사(걷기 · 단서) → 사냥(공격 · 회피 · 표식 · 오일 · 물약) → 승리 · 패배를 명령으로 진행합니다.
      */
-    REFLECT( Category = "MonsterHuntRPG", DisplayName = "Monster Hunt Game Mode", Tooltip = "Runs one MonsterHuntRPG contract: haggling, clue investigation and the hunt from commands" )
-    class SW_KIT_API MonsterHuntGameModeComponent : public GameModeComponent
+    REFLECT( Version = 2, Category = "MonsterHuntRPG", DisplayName = "Monster Hunt Game Mode", Tooltip = "Runs one MonsterHuntRPG contract: haggling, clue investigation and the hunt from commands" )
+    class SW_KIT_API MonsterHuntGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -141,7 +141,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 승리면 흥정한 보상을 돈으로 냅니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
@@ -255,8 +255,6 @@ namespace sw
         float32 _monsterAttackSeconds;
         PROPERTY( Category = "Contract", DisplayName = "Seed", Min = 1 )
         uint32 _seed;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
 
         BoundAssetRef<MonsterHuntCatalog>     _pCatalog;
         BoundAssetRef<ElementChart>           _pChart;
@@ -279,7 +277,6 @@ namespace sw
         Countdown                             _attackCooldown;
         Countdown                             _dodge;
         Countdown                             _monsterAttack;
-        Countdown                             _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
         PROPERTY( RuntimeState )
         float2 _playerPosition;
         PROPERTY( RuntimeState )

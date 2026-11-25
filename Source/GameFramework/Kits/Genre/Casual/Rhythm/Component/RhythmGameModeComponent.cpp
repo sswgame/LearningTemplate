@@ -9,7 +9,6 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -19,21 +18,7 @@ namespace sw
         struct RhythmGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "RHGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 등급 수가 판의 리플렉션 상태 칸이다
-
-            /** @brief 상태 칸 판 1 → 2: 결과 유지 깃발을 뺀다 — 끝난 걸음에 `Countdown` 을 걸고 다 된 걸음에 한 번 끝내는 길은 깃발 없이 선다(다른 디렉터와 같은 꼴). */
-            [[nodiscard]] static bool dropHoldFlags( Archive& inOldBody, Archive& outNewBody )
-            {
-                float32 musicTime        = 0.0f;
-                uint8   bResultShown     = 0;
-                uint8   bFinishRequested = 0;
-                inOldBody >> musicTime >> bResultShown >> bFinishRequested;
-                outNewBody << musicTime;
-                return inOldBody.isOk();
-            }
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
+            static constexpr uint32 kStateVersion = 3; ///< 2: 등급 수가 판의 리플렉션 상태 칸이다. 3: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventJudged     = "RhythmJudged";
@@ -56,13 +41,11 @@ namespace sw
         , _listRank{}
         , _missLifeDelta{ -5.0f }
         , _maxLife{ 100.0f }
-        , _resultHoldSeconds{ 3.0f }
         , _clearReward{ 0 }
         , _pChart{}
         , _judge{}
         , _session{}
         , _listEvent{}
-        , _resultHold{}
         , _musicTime{ 0.0f }
     {
     }
@@ -107,7 +90,6 @@ namespace sw
         if ( openSession( session ) == false )
             return false;
         _session = std::move( session );
-        _resultHold.clear();
         return true;
     }
 
@@ -164,29 +146,14 @@ namespace sw
         }
     }
 
-    void RhythmGameModeComponent::updateGame( float32 deltaTime )
+    void RhythmGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        const bool bWasFinished = _session.isFinished();
-        if ( bWasFinished == false )
-        {
-            if ( _clock == RhythmClock::Simulation )
-                _musicTime += deltaTime;
-            _session.update( _musicTime );
-        }
+        if ( _clock == RhythmClock::Simulation )
+            _musicTime += deltaTime;
+        _session.update( _musicTime );
         reportEvents();
-        if ( _session.isFinished() == false )
-            return;
-        if ( bWasFinished == false )
-        {
-            _resultHold.start( _resultHoldSeconds ); // 끝난 걸음 — 결과를 보이기 시작한다
-            return;
-        }
-        if ( _resultHold.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
-            return;
-        const bool bCleared = _session.getState() == RhythmPlayState::Cleared;
-        (void)finishMinigame( hashed_string( bCleared ? RhythmGameModeComponentInternal::kWinResult : RhythmGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
+        if ( _session.isFinished() )
+            endMatch( hashed_string( _session.getState() == RhythmPlayState::Cleared ? kWinResult : kLoseResult ) );
     }
 
     void RhythmGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
@@ -209,20 +176,12 @@ namespace sw
             return;
         // 판은 같은 채보 · 같은 판정 창으로 연 뒤에 읽는다(키트 계약).
         RhythmPlaySession restoredSession;
-        Countdown         resultHold = _resultHold;
         if ( io.isReading() && io.check( _pChart != nullptr && openSession( restoredSession ) ) == false )
             return;
         io.value( io.isWriting() ? _session : restoredSession );
-        io.value( resultHold );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _session    = std::move( restoredSession );
-        _resultHold = resultHold;
+        _session = std::move( restoredSession );
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_TYPE_VERSION_PATCH( rhythmGameModeState1To2, "sw::RhythmGameModeComponent", 1, 2, &RhythmGameModeComponentInternal::dropHoldFlags );
 } // namespace sw

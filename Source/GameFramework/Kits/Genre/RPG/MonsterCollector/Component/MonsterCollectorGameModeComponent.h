@@ -13,7 +13,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -26,7 +25,7 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterInstance.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/World/Encounter/StepEncounter.h"
 
@@ -49,8 +48,8 @@ namespace sw
      * @class MonsterCollectorGameModeComponent
      * @brief 걷기(걸음 조우) ↔ 야생 전투(기술 · 볼 · 교체 · 도망) → 정한 수 포획 · 전멸을 명령으로 진행합니다.
      */
-    REFLECT( Category = "MonsterCollector", DisplayName = "Monster Collector Game Mode", Tooltip = "Runs one MonsterCollector outing: step encounters, wild battles from commands and a capture goal" )
-    class SW_KIT_API MonsterCollectorGameModeComponent : public GameModeComponent
+    REFLECT( Version = 2, Category = "MonsterCollector", DisplayName = "Monster Collector Game Mode", Tooltip = "Runs one MonsterCollector outing: step encounters, wild battles from commands and a capture goal" )
+    class SW_KIT_API MonsterCollectorGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -106,7 +105,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 잡은 수 × `_captureReward` 를 돈으로 냅니다. 패배한 판은 내지 않습니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
@@ -177,8 +176,6 @@ namespace sw
         float32 _stepLength;
         PROPERTY( Category = "Rules", DisplayName = "Seed", Min = 1 )
         uint32 _seed;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
 
         BoundAssetRef<MonsterCollectorCatalog> _pCatalog;
         BoundAssetRef<ElementChart>            _pChart;
@@ -187,7 +184,6 @@ namespace sw
         StepEncounterCounter                   _encounterCounter;
         GameRandom                             _random;
         vector<MonsterBattleEvent>             _listBattleEvent;
-        Countdown                              _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
         PROPERTY( RuntimeState )
         float2 _playerPosition;
         float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다

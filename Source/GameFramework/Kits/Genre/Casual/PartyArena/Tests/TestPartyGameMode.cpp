@@ -12,7 +12,6 @@
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/Component/PartyGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineBot.h"
-#include "GameFramework/Runtime/Foundation/GameMode/Tests/GameModeStateVersionTest.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
@@ -152,15 +151,4 @@ SW_TEST_CASE( PartyGameModeTest, BotReturnsFromTheEdge )
     SW_REQUIRE_TRUE( arena.findPlayer( 0 )->_position._x >= 6.5f );
     SW_EXPECT_TRUE( TrampolineBot::computeInput( arena, 0 )._moveX < 0.0f );
     SW_EXPECT_NEAR( 0.0f, TrampolineBot::computeInput( arena, 7 )._moveX, 1.0e-6f );
-}
-
-/** @brief [PartyGameModeTest] 결과 유지 깃발이 있던 판 1 상태는 패치로 올라 읽히고 나머지 값이 그대로다(판 1 은 `_phase` · `_winner` · `_playerRingOutCount` 뒤에 `_bFinishRequested` 가 있었다) */
-SW_TEST_CASE_F( PartyGameModeTest, Version1StateIsPatchedAndReadsTheSame )
-{
-    _manager.beginPlay();
-    SW_REQUIRE_TRUE( _pGameMode->isStarted() );
-    advance( 30 );
-    constexpr uint8 kArrRemovedField[] = { 0 };
-    test::GameModeStateVersionTest::expectVersion1ReadsTheSame( *_pGameMode, sizeof( int64 ) + sizeof( int32 ) + sizeof( int32 ), kArrRemovedField );
-    _manager.endPlay();
 }

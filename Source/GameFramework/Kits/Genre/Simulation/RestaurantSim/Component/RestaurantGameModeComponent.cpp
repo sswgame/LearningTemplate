@@ -20,10 +20,8 @@ namespace sw
         struct RestaurantGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "RSGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 평판
+            static constexpr uint32 kStateVersion = 3; ///< 2: 평판. 3: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
 
-            static constexpr const utf8* kWinResult      = "win";
-            static constexpr const utf8* kLoseResult     = "lose";
             static constexpr const utf8* kCookName       = "cook"; ///< 직원 이름(레벨 오름 알림의 id)
             static constexpr const utf8* kServerName     = "server";
             static constexpr float32     kMinutesPerHour = 60.0f;
@@ -119,7 +117,6 @@ namespace sw
         , _minutesPerSecond{ 10.0f }
         , _dayCount{ 2 }
         , _targetProfit{ 100 }
-        , _resultHoldSeconds{ 3.0f }
         , _pCatalog{}
         , _pRecipes{}
         , _pShops{}
@@ -131,7 +128,6 @@ namespace sw
         , _pantry{}
         , _simulation{}
         , _listEvent{}
-        , _resultHold{}
         , _totalProfit{ 0 }
         , _day{ 1 }
         , _phase{ RestaurantPhase::Prepare }
@@ -179,7 +175,6 @@ namespace sw
         {
             (void)_simulation.hireStaff( hashed_string( RestaurantGameModeComponentInternal::kServerName ), StaffRole::Server, _dailyWage );
         }
-        _resultHold.clear();
         return true;
     }
 
@@ -296,7 +291,7 @@ namespace sw
             getSoundQueue().queueEvent( RestaurantGameModeComponentInternal::kEventClose );
             return;
         }
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( _targetProfit <= _totalProfit ? kWinResult : kLoseResult ) );
         if ( _targetProfit <= _totalProfit )
         {
             _phase = RestaurantPhase::Victory;
@@ -326,23 +321,14 @@ namespace sw
         }
     }
 
-    void RestaurantGameModeComponent::updateGame( float32 deltaTime )
+    void RestaurantGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f || _phase == RestaurantPhase::Prepare || _phase == RestaurantPhase::Closed )
+        if ( _phase != RestaurantPhase::Open )
             return; // 준비 · 결산은 명령이 진행한다
-        if ( _phase == RestaurantPhase::Open )
-        {
-            _simulation.update( deltaTime * _minutesPerSecond );
-            reportEvents();
-            if ( isDayOver() )
-                closeDay();
-            return;
-        }
-        if ( _resultHold.update( deltaTime ) )
-        {
-            const bool bWon = _phase == RestaurantPhase::Victory;
-            (void)finishMinigame( hashed_string( bWon ? RestaurantGameModeComponentInternal::kWinResult : RestaurantGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-        }
+        _simulation.update( deltaTime * _minutesPerSecond );
+        reportEvents();
+        if ( isDayOver() )
+            closeDay();
     }
 
     void RestaurantGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
@@ -368,7 +354,6 @@ namespace sw
         ReputationState      restoredReputation;
         WorldClock           restoredClock = _clock; // 설정은 이 판의 것이다
         RestaurantSimulation restoredSimulation;
-        Countdown            resultHold = _resultHold;
         if ( io.isReading() )
         {
             if ( _pCatalog == nullptr || _pRecipes == nullptr || _pShops == nullptr || _pItemCatalog == nullptr || restoredPantry.initialize( *_pItemCatalog, _pantrySlotCount ) == false )
@@ -385,7 +370,6 @@ namespace sw
         io.value( io.isWriting() ? _reputation : restoredReputation );
         io.value( restoredClock );
         io.value( io.isWriting() ? _simulation : restoredSimulation );
-        io.value( resultHold );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
@@ -396,6 +380,5 @@ namespace sw
         _reputation = std::move( restoredReputation );
         _clock      = restoredClock;
         _simulation = std::move( restoredSimulation );
-        _resultHold = resultHold;
     }
 } // namespace sw

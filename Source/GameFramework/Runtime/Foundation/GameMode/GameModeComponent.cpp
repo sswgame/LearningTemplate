@@ -22,7 +22,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
-#include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
@@ -185,23 +185,6 @@ namespace sw
                 reportFatalError( "state field '%#::%#' cannot be reset to its default before a game opens", pType->_fullyQualifiedName.c_str(), field._property._name.c_str() );
             return ReflectVisitFlow::Continue;
         } );
-    }
-
-    bool GameModeComponent::finishMinigame( const hashed_string& resultName )
-    {
-        MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
-        if ( pFlow != nullptr && pFlow->isObserving() )
-            return false; // 서버의 판을 보는 클라이언트다 — 끝내는 것은 서버가 정한다
-        if ( pFlow == nullptr || pFlow->findActiveDefinition() == nullptr )
-        {
-            SW_LOG_ERROR_ID( "GameMode.FinishWithoutMinigame", "GameMode '%#' finishes with result '%#' but no minigame is active - only a minigame director ends a minigame",
-                             getTypeName().c_str(), resultName.c_str() );
-            return false;
-        }
-        vector<MinigameResultValue> listValue;
-        collectMinigameResult( listValue );
-        pFlow->requestLeave( resultName, std::move( listValue ) );
-        return true;
     }
 
     void GameModeComponent::addMoneyResult( vector<MinigameResultValue>& outListValue, int64 profit )

@@ -22,7 +22,7 @@ namespace sw
         struct ScavengerGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "SCGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
             static constexpr int32  kPlayer       = 0; ///< 늘 사람이 잡는 승무원(카메라 · 감시 값의 주인)
             /** @brief 축 방향과 이웃 방향이 이만큼은 맞아야 그 이웃으로 본다(내적). */
             static constexpr float32 kNeighborAlignment = 0.5f;
@@ -100,9 +100,6 @@ namespace sw
                 }
                 return nullptr;
             }
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
         };
     } // namespace
 
@@ -137,7 +134,6 @@ namespace sw
         , _threatStepSeconds{ 2.0f }
         , _threatLifeSeconds{ 60.0f }
         , _threatDamage{ 25.0f }
-        , _resultHoldSeconds{ 3.0f }
         , _pCatalog{}
         , _pThreatTable{}
         , _pShopCatalog{}
@@ -150,7 +146,6 @@ namespace sw
         , _listCommand{}
         , _listStep{}
         , _listEvent{}
-        , _resultHold{}
         , _listThreat{}
         , _humanMask{ 0 }
         , _result{ ScavengerResult::Ongoing }
@@ -211,7 +206,6 @@ namespace sw
         updateClock();
         _listCommand.assign( static_cast<size_t>( _crewCount ), ScavengerCommand{} );
         _listStep.assign( static_cast<size_t>( _crewCount ), Countdown{} );
-        _resultHold.clear();
         return true;
     }
 
@@ -493,17 +487,8 @@ namespace sw
         { return threat._lifeRemaining <= 0.0f; } );
     }
 
-    void ScavengerGameModeComponent::updateGame( float32 deltaTime )
+    void ScavengerGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _result != ScavengerResult::Ongoing )
-        {
-            using Internal = ScavengerGameModeComponentInternal;
-            if ( _resultHold.update( deltaTime ) )
-                (void)finishMinigame( hashed_string( _result == ScavengerResult::Win ? Internal::kWinResult : Internal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-            return;
-        }
         for ( int32 player = 0; player < _expedition.getCrewCount(); ++player )
         {
             const ScavengerCommand command              = isHuman( player ) ? _listCommand[static_cast<size_t>( player )] : decideBot( player );
@@ -581,7 +566,7 @@ namespace sw
         }
         if ( _result == ScavengerResult::Ongoing )
             return;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( _result == ScavengerResult::Win ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( _result == ScavengerResult::Win ? ScavengerGameModeComponentInternal::kEventWon : ScavengerGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "Scavenger.Ended", "[Scavenger] %# - credits %#", _result == ScavengerResult::Win ? "quota met" : "quota missed", getCredits() );
     }
@@ -678,7 +663,6 @@ namespace sw
         {
             io.value( step );
         }
-        io.value( _resultHold );
         io.end();
     }
 } // namespace sw

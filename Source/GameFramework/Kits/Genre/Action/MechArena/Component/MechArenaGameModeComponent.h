@@ -26,7 +26,7 @@
 #include "GameFramework/Kits/Genre/Action/MechArena/MechCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/FrameData.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
@@ -35,8 +35,8 @@ namespace sw
      * @class MechArenaGameModeComponent
      * @brief 출격 → 전투(격추 · 리스폰 · 기체 교체) → 팀 게이지나 시간으로 결과를 진행합니다.
      */
-    REFLECT( Category = "MechArena", DisplayName = "Mech Arena Game Mode", Tooltip = "Runs one MechArena team match: pilot 0 from input commands (or the computer on auto play), the rest by the computer" )
-    class SW_KIT_API MechArenaGameModeComponent : public GameModeComponent
+    REFLECT( Version = 2, Category = "MechArena", DisplayName = "Mech Arena Game Mode", Tooltip = "Runs one MechArena team match: pilot 0 from input commands (or the computer on auto play), the rest by the computer" )
+    class SW_KIT_API MechArenaGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -82,7 +82,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 이겼으면 결과 값 `money`(`_victoryMoney`)를 냅니다. 지거나 비기면 넘길 값이 없다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
@@ -139,8 +139,6 @@ namespace sw
         float32 _botDashChance;
         PROPERTY( Category = "Computer", DisplayName = "Special Chance", Tooltip = "Chance to use the special weapon at a decision", Min = 0.0, Max = 1.0 )
         float32 _botSpecialChance;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Result", DisplayName = "Victory Money", Tooltip = "Result value 'money' reported on victory", Min = 0 )
         int32 _victoryMoney;
 
@@ -151,7 +149,6 @@ namespace sw
         MechArenaWorld                   _world;
         FixedStepTimer                   _timer; ///< 걸음 하나가 판의 고정 걸음 하나다 — 누름은 걸음에 한 번만 든다
         GameRandom                       _random;
-        Countdown                        _resultHold;
         vector<BotHand>                  _listBotHand;
         vector<MechArenaEvent>           _listEvent;
         MechInput                        _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다

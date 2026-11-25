@@ -12,7 +12,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -23,7 +22,7 @@
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostMansion.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
@@ -72,9 +71,9 @@ namespace sw
      * @class GhostHuntGameModeComponent
      * @brief 방마다 유령을 기절시켜 빨아들이고 불을 켜며 열쇠로 다음 방을 여는 저택 한 채를 입력 명령으로 진행합니다.
      */
-    REFLECT( Category = "GhostHunt", DisplayName = "Ghost Hunt Game Mode",
+    REFLECT( Version = 2, Category = "GhostHunt", DisplayName = "Ghost Hunt Game Mode",
              Tooltip = "Runs one ghost mansion: rooms of the area graph, ghosts stunned by light and caught by the vacuum, keys and doors, until every room is lit" )
-    class SW_KIT_API GhostHuntGameModeComponent : public GameModeComponent
+    class SW_KIT_API GhostHuntGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -132,7 +131,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateMatch( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -176,8 +175,6 @@ namespace sw
         float32 _ghostReach;
         PROPERTY( Category = "Ghost", DisplayName = "Ghost Spacing", Tooltip = "Distance between the ghosts of a room where they first hide", Min = 0.0, Units = m )
         float32 _ghostSpacing;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "How long the result stays on screen before the minigame ends", Min = 0.0, Units = s )
-        float32 _resultHoldSeconds;
 
         BoundAssetRef<GhostCatalog> _pCatalog;
         BoundAssetRef<AreaGraph>    _pGraphAsset;
@@ -191,7 +188,6 @@ namespace sw
         GhostHuntCommand            _command;        ///< 마지막 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
         vector<GhostEvent>          _listGhostEvent; ///< 걸음마다 비워 다시 쓰는 알림 그릇
         vector<GhostMansionEvent>   _listMansionEvent;
-        Countdown                   _resultHold;
         PROPERTY( RuntimeState )
         float2 _playerPosition;
         PROPERTY( RuntimeState )

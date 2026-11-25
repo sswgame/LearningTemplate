@@ -125,7 +125,7 @@ namespace sw
         /** @brief @p scenePath 를 이 흐름의 요청으로 맡깁니다 — 칸 스택을 둔 채 씬을 다시 연다(받아들임 알림이 장치 밖 이동으로 보지 않게). */
         [[nodiscard]] bool requestScene( const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded, uint32 sessionTravel );
         /**
-         * @brief 틱 뒤 작업(디렉터의 `finishMinigame`)에서 나가기를 맡깁니다 — 다음 `update`(틱 밖)가 `leave` 합니다. 맡긴 나가기가 이미 있으면 경고하고 이것을 버립니다.
+         * @brief 틱 뒤 작업(디렉터의 `MatchGameModeComponent::endMatch`)에서 나가기를 맡깁니다 — 다음 `update`(틱 밖)가 `leave` 합니다. 맡긴 나가기가 이미 있으면 경고하고 이것을 버립니다.
          * @details 하위 레벨 나가기는 그 자리에서 하위 레벨을 빼므로 그 안 디렉터의 규칙 중에 부르면 자기를 지운다 — 진입(`requestEnter`)과 같은 줄로 미룬다.
          */
         void requestLeave( const hashed_string& resultName, vector<MinigameResultValue> listValue );
