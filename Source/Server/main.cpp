@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Server/ServerApp.h"
+#include "Server/ServerEntry.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Server/Windows/WindowsServiceHost.h"
@@ -14,5 +14,5 @@ int32 main( int32 argc, utf8* pArgv[] )
     if ( serviceExitCode >= 0 )
         return serviceExitCode;
 #endif
-    return sw::ServerApp::runMain( argc, pArgv, nullptr );
+    return sw::ServerEntry::run( argc, pArgv, nullptr );
 }
