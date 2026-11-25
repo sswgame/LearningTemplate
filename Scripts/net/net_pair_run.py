@@ -1,25 +1,25 @@
 """
-두 프로세스 온라인 접속 시나리오 — 전용 서버와 클라이언트를 띄워 로그인 → 게임 접속 티켓 → 암호화 UDP 게임 접속을 끝까지 돌린다(OnlineKits F5).
+여러 프로세스 온라인 접속 시나리오 — 전용 서버와 클라이언트를 띄워 로그인 → 게임 접속 티켓 → 암호화 UDP 게임 접속을 끝까지 돌린다(OnlineKits F5, ctest `Net.mmo` · `Net.match` · `Net.floor` · `Net.respawn`).
 
-  py -3 -m Scripts net-pair run --preset Ninja-Release      # 서버 · 클라이언트를 띄워 접속이 열리는지 본다
-  py -3 -m Scripts net-pair check <서버 로그> <클라이언트 로그>   # 이미 있는 두 로그만 판정한다
   py -3 -m Scripts net-pair mmo --preset Ninja-Release      # 허브 서버(Playground): 첫 접속 → 나감(서버 저장) → 재접속(같은 진행) → 두 클라이언트 함께(폰 복제 · 예측, 회선 흉내)
   py -3 -m Scripts net-pair match --preset Ninja-Release    # 접속한 허브 → 매칭 배정 → 매치 서버 → 서버가 점수 제출 → 허브 재접속(서버 둘 · 클라이언트 하나)
+  py -3 -m Scripts net-pair floor --preset Ninja-Release    # 두 사람이 움직이는 바닥 맵의 매치에서 서로 보고 쏜다(서버 둘 · 클라이언트 둘)
   py -3 -m Scripts net-pair respawn --preset Ninja-Release  # 두 사람이 한 매치 서버에서 동시에 둔다: 서로 쏘아(서버 판정) 쓰러짐 → 같은 매치에서 다시 태어남(서버 둘 · 클라이언트 둘)
 
-준비(`run` 이 `Saved/NetPairRun/` 아래에 쓴다): 서버 설정(`NetPair.json` — 게임 포트 · 서비스 포트 · `_bGameConnectTicket`)과 옆 온라인 설정(`NetPair.online.json` —
-계정 키트의 개발용 시드 계정 설정 `_listSeedTestAccount`, 게임 접속 조립 `gameConnect`). 서버는 `-server-config=<경로>` 로 그 설정을 읽는다.
+준비(`Saved/NetPairRun/` 아래에 쓴다): 서버 설정(빈 게임 포트 · 서비스 포트 · `_bGameConnectTicket`)과 옆 온라인 설정(계정 키트의 개발용 시드 계정 설정 `_listSeedTestAccount`, 게임 접속 조립 `gameConnect`).
+서버는 `-server-config=<경로>` 로 그 설정을 읽고, 클라이언트 시나리오는 주소를 `{gv_onlineServerAddress}`(로그인) · `{gv_gameServerAddress}`(게임)로 받는다.
 계정 시드는 서버 명령줄 인자가 아니라 온라인 설정의 옵션이다(설정이 정본 — 인자를 하나 더 두면 같은 값이 둘이 된다). Shipping 은 그 옵션을 거절하므로 시드 시설은 Dev 에만 있다.
 
-판정: 서버 로그에 `Net session client <n> connected`(암호화 UDP 접속이 열림)가 있고, 두 로그에 `[Error]` · `[Warning]` 가 없고(종료 코드 0 이어도 경고는 실패), 서버가 종료 코드 0 으로 끝난다.
+판정: 값은 클라이언트 시나리오(`game/playground/automation/netpair/`)가 감시 값으로 보고, 두 프로세스를 견줄 값은 시나리오의 `<Record>`(보고 JSON)다.
+여기는 종료 코드, 서버 사건의 수(로그 id), 모든 로그에 Error · Warning 이 없는지(종료 코드 0 이어도 경고는 실패)를 본다.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import re
 import shutil
+import socket
 import socketserver
 import threading
 import time
@@ -27,29 +27,28 @@ from pathlib import Path
 
 from common import app_arguments
 from common.exit_code import ExitCode
-from common.process_group import USER_DATA_ROOT_ENVIRONMENT, CheckResult, ChildProcess, ProcessGroup, problem_lines, read_log, report
+from common.log_lines import problem_lines
+from common.process_group import DEFAULT_PRESET, NET_LISTENING_ID, USER_DATA_ROOT_ENVIRONMENT, ChildProcess, ProcessGroup, free_port, report
+from net.ctest_items import CtestItem
 
 _GAME = "Playground"
-_SERVER_NAME = "netpair"
-_ACCOUNT = "netpair_bot"
-_PASSWORD = "netpair_pw_1"
 _TICKET_KEY_ENVIRONMENT = "SW_NETPAIR_TICKET_KEY"
 _TICKET_KEY = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"  # 시나리오 전용 임시 키(32 B) — 개발용 키 경고를 피한다
-_CONNECTED = re.compile(r"Net session client \d+ connected")
-_LISTENING = re.compile(r"Net session listening on UDP port")
-_GAME_PORT = 17777  # 서버 게임(UDP) 포트
-_SERVICE_PORT = 17780  # 서버 서비스(TCP · 로그인) 포트
-_CLIENT_DELAY_SECONDS = 5.0  # 클라이언트를 띄운 뒤 명령을 보낼 때까지
-_TIMEOUT_SECONDS = 60.0  # 서버 기동 · 접속을 기다리는 최대 초(mmo 의 클라이언트 하나는 이 네 배까지)
+_FOLDER = "game/playground/automation/netpair"
+_TIMEOUT_SECONDS = 60.0  # 서버 기동 · 사건을 기다리는 최대 초
+_SCENARIO_TIMEOUT_SECONDS = 400.0  # 시나리오 하나가 끝나기를 기다리는 최대 초
+_FLOOR_TOLERANCE = 0.3  # 바닥 위에 선 자리(m) - 절대 자리로 보내면 보간 지연만큼 어긋난다
+# 서버 사건의 로그 id
+_CONNECTED_ID = "Net.ClientConnected"
+_DISCONNECTED_ID = "GameNetSession.NetSessionClientDisconnected"
+_HUB_ENTERED_ID = "Hub.Admitted"
+_HUB_SAVED_ID = "Hub.ProfileSaved"
+_DOWNED_ID = "ShooterPlayer.YouOverrunWaveAfter"
+_BORN_AGAIN_ID = "ShooterPlayer.BornAgain"
 
 
-def check_logs(server_text: str, client_text: str) -> CheckResult:
-    """서버 · 클라이언트 로그를 판정한다. 규칙은 파일 머리말을 본다."""
-    result = CheckResult()
-    if _CONNECTED.search(server_text) is None:
-        result.problems.append("the server log has no 'Net session client <n> connected' line - the ticket connection never opened")
-    result.problems += problem_lines("server", server_text) + problem_lines("client", client_text)
-    return result
+def _scenario(name: str) -> str:
+    return f"{_FOLDER}/{name}.scenario.xml"
 
 
 def make_online_config(list_kit: list[dict], server_id: int = 1, topology: str = "SingleServer") -> dict:
@@ -107,89 +106,43 @@ def write_server(out_dir: Path, name: str, game_port: int, service_port: int, on
     return server_path
 
 
-def write_configs(out_dir: Path, game_port: int, service_port: int, accounts: tuple[tuple[str, str], ...] = ((_ACCOUNT, _PASSWORD),),
-                 server_name: str = _SERVER_NAME) -> Path:
-    """메모리 저장소 하나짜리 서버 설정과 온라인 설정을 쓴다(@p accounts 는 시드 계정의 이름 · 비밀번호). 서버 설정 경로를 돌려준다."""
-    online_config = make_online_config([make_account_kit(accounts), make_game_connect_kit(server_name)])
-    return write_server(out_dir, "NetPair", game_port, service_port, online_config, {"_driver": "memory"}, {"_driver": "memory"})
+def _check_counts(process: ChildProcess, *expected: tuple[str, int]) -> list[str]:
+    """@p process 의 로그에 id 마다 정한 수만큼 줄이 있는지."""
+    return [f"the {process.name} log has {process.count_log(log_id)} '{log_id}' line(s) - expected {count}" for log_id, count in expected if process.count_log(log_id) != count]
 
 
-def _run(argument: argparse.Namespace) -> int:
-    with ProcessGroup("net-pair", argument.preset, "NetPairRun") as group:
-        list_exe = group.require("Server", "App")
-        if list_exe is None:
-            return int(ExitCode.CHECK_INVALID)
-        server_exe, client_exe = list_exe
-        server_config = write_configs(group.out_dir, _GAME_PORT, _SERVICE_PORT)
-        server = group.start("server", [server_exe, app_arguments.option("game", _GAME), app_arguments.option("server-config", server_config)],
-                             environment={_TICKET_KEY_ENVIRONMENT: _TICKET_KEY})
-        if not server.wait_for(_LISTENING, _TIMEOUT_SECONDS):
-            return group.fail(f"the server never opened its game port (log: {server.log})")
-        client = group.start("client", [client_exe, app_arguments.option("game", _GAME), app_arguments.variable("gv_standardInputCommands", "1")])
-        time.sleep(_CLIENT_DELAY_SECONDS)  # 클라이언트가 게임 인스턴스를 세우고 표준 입력 명령을 받을 때까지
-        try:
-            client.send(f"net.ticketconnect 127.0.0.1:{_SERVICE_PORT} {_ACCOUNT} {_PASSWORD} {_SERVER_NAME} 127.0.0.1:{_GAME_PORT}")
-        except OSError:
-            server.stop(timeout_seconds=10)
-            return group.fail(f"the client exited before it took the command (log: {client.log})")
-        if server.wait_for(_CONNECTED, _TIMEOUT_SECONDS):
-            time.sleep(1.0)  # 접속 뒤 잠깐 두어 늦게 나는 경고도 잡는다
-        client.stop(timeout_seconds=10)
-        server.stop(timeout_seconds=20)
-    if server.return_code != 0:
-        return group.fail(f"the server exited with code {server.return_code} (log: {server.log})")
-    return _print(check_logs(server.text(), client.text()), server.log, client.log)
+def _check_same_spot(rider: ChildProcess, rider_watches: tuple[str, str], viewer: ChildProcess, viewer_watches: tuple[str, str]) -> list[str]:
+    """움직이는 바닥 위에 선 쪽의 자기 자리와 다른 쪽이 본 자리(둘 다 바닥 기준 X · Z)가 같은지."""
+    own, seen = rider.records(), viewer.records()
+    if any(name not in own for name in rider_watches) or any(name not in seen for name in viewer_watches):
+        return []  # 기록 앞에서 진 시나리오는 종료 코드가 까닭을 낸다
+    own_spot = tuple(own[name] for name in rider_watches)
+    seen_spot = tuple(seen[name] for name in viewer_watches)
+    if max(abs(a - b) for a, b in zip(own_spot, seen_spot)) > _FLOOR_TOLERANCE:
+        return [f"{rider.name} stands at {own_spot} on the moving floor but {viewer.name} shows it at {seen_spot}"]
+    return []
 
 
-# Playground 허브 서버 두 프로세스(T10) — 시작 맵이 허브(maps/hub)다. 계정 · 서버 이름 · 포트는 클라이언트 시나리오의 `net.ticketconnect` 줄과 같아야 한다(game/playground/automation/netpair/).
-_MMO_GAME = _GAME
-_MMO_ACCOUNT = "hub_netpair"
-_MMO_PASSWORD = "hub_netpair_pw_1"
+def _finish(list_server: list[ChildProcess], list_client: list[ChildProcess], problems: list[str], ok_message: str) -> int:
+    for client in list_client:
+        problems += client.scenario_problems()
+    for server in list_server:
+        if server.return_code != 0:
+            problems.append(f"the {server.name} server exited with code {server.return_code} (log: {server.log})")
+    for process in (*list_server, *list_client):
+        problems += problem_lines(process.name, process.text())
+    return report("net-pair", problems, [process.log for process in (*list_server, *list_client)], ok_message)
+
+
+# Playground 허브 서버와 클라이언트(T10) — 시작 맵이 허브(maps/hub)다. 계정 · 서버 이름은 클라이언트 시나리오의 `net.ticketconnect` 줄과 같아야 한다.
 _MMO_SERVER_NAME = "playground_hub"
-_MMO_GAME_PORT = 17877
-_MMO_SERVICE_PORT = 17880
-_MMO_SCENARIOS = ("game/playground/automation/netpair/hub_first.scenario.xml", "game/playground/automation/netpair/hub_return.scenario.xml")
-# 두 클라이언트를 함께 띄워 폰 복제 · 예측을 보는 시나리오(이름, 계정) — 계정 비밀번호는 `<계정>_pw_1` 이다. 회선 흉내(보내는 쪽)는 두 클라이언트 모두에 건다.
-_MMO_PAWN_SCENARIOS = (("game/playground/automation/netpair/hub_walk_north.scenario.xml", "hub_north"),
-                       ("game/playground/automation/netpair/hub_walk_south.scenario.xml", "hub_south"))
-_MMO_PAWN_EMULATION = {"gv_netEmulationLatencyMs": "60", "gv_netEmulationJitterMs": "10", "gv_netEmulationLossPercent": "3"}
-_MMO_ACCEPTED = re.compile(r"entered the hub as avatar \d+ on connection \d+ \(level (\d+), (new account|stored progress)\)")
-# 0 에 가까운 좌표는 지수로 적힌다(-1.4305115e-06)
-_COORD = r"(-?[\d.]+(?:e[+-]?\d+)?)"
-_MMO_FLOOR = re.compile(rf"\[Hub\] floor self=(\d+) x={_COORD} z={_COORD} seen=(\d+) x={_COORD} z={_COORD}")
-_MMO_FLOOR_TOLERANCE = 0.3  # 바닥 위에 선 자리(m) - 절대 자리로 보내면 보간 지연만큼 어긋난다
-_MMO_STATUS = r"-> hub: avatar \d+ level"  # 시나리오의 `hub.status` 답 — 첫 줄은 서버가 하위 레벨에 들어갈 차례, 둘째 줄은 나올 차례다
+_MMO_ACCOUNT = ("hub_netpair", "hub_netpair_pw_1")
+_MMO_SCENARIOS = (_scenario("hub_first"), _scenario("hub_return"))
+# 두 클라이언트를 함께 띄워 폰 복제 · 예측을 보는 시나리오(시나리오, 계정) — 계정 비밀번호는 `<계정>_pw_1` 이다. 회선 흉내(보내는 쪽)는 두 클라이언트 모두에 건다.
+_MMO_PAWN_CLIENTS = ((_scenario("hub_walk_north"), "hub_north"), (_scenario("hub_walk_south"), "hub_south"))
+_MMO_EMULATION = {"gv_netEmulationLatencyMs": "60", "gv_netEmulationJitterMs": "10", "gv_netEmulationLossPercent": "3"}
+_MMO_STATUS_ID = "Hub.Status"  # 첫 시나리오의 `hub.status` — 첫 줄은 서버가 하위 레벨에 들어갈 차례, 둘째 줄은 나올 차례다
 _MMO_SUBLEVEL_ENTER, _MMO_SUBLEVEL_LEAVE = "minigame.enter cardtable CardTableGate", "minigame.leave"  # 들어가는 것은 서버뿐이다(클라이언트 월드의 진입은 거절된다)
-_MMO_SAVED = re.compile(r"\[Hub\] profile of account \d+ saved")
-
-
-def check_mmo_logs(server_text: str, list_client_text: list[str]) -> CheckResult:
-    """MMO 두 프로세스 로그를 판정한다 — 서버가 첫 접속을 새 계정으로, 재접속을 저장된 진행(레벨 2)으로 들였고 그 사이 진행을 저장했으며, 어느 로그에도 오류 · 경고가 없다."""
-    result = CheckResult()
-    list_admitted = _MMO_ACCEPTED.findall(server_text)
-    expected = 2 + len(_MMO_PAWN_SCENARIOS)
-    if len(list_admitted) != expected:
-        result.problems.append(f"the server admitted {len(list_admitted)} sessions - expected {expected} (the first login, the return and the walkers)")
-    else:
-        if list_admitted[0][1] != "new account":
-            result.problems.append(f"the first session was admitted with '{list_admitted[0][1]}' - the run must start from a fresh in-memory profile")
-        if list_admitted[1] != ("2", "stored progress"):
-            result.problems.append(f"the return was admitted at level {list_admitted[1][0]} with '{list_admitted[1][1]}' - expected level 2 from the stored progress")
-        result.problems += [f"a walker was admitted with '{entry[1]}' - expected a new account" for entry in list_admitted[2:] if entry[1] != "new account"]
-    if _MMO_SAVED.search(server_text) is None:
-        result.problems.append("the server log has no 'profile of account N saved' line - the session end did not save")
-    # 남쪽 클라이언트가 바닥 위에 선 자기 자리와 북쪽 클라이언트가 본 그 폰의 자리(둘 다 바닥 기준).
-    list_floor = [match for text in list_client_text for match in _MMO_FLOOR.findall(text)]
-    own = [(float(x), float(z)) for floor, x, z, *_ in list_floor if floor != "0"]
-    seen = [(float(x), float(z)) for _, _, _, floor, x, z in list_floor if floor != "0"]
-    if len(own) != 1 or len(seen) != 1:
-        result.problems.append(f"expected one rider and one viewer of the moving floor - found {len(own)} and {len(seen)} 'floor self=' lines")
-    elif max(abs(own[0][0] - seen[0][0]), abs(own[0][1] - seen[0][1])) > _MMO_FLOOR_TOLERANCE:
-        result.problems.append(f"the rider stands at {own[0]} on the moving floor but the other client shows it at {seen[0]}")
-    result.problems += problem_lines("server", server_text)
-    for index, text in enumerate(list_client_text):
-        result.problems += problem_lines(f"client {index + 1}", text)
-    return result
 
 
 def _run_mmo(argument: argparse.Namespace) -> int:
@@ -198,71 +151,66 @@ def _run_mmo(argument: argparse.Namespace) -> int:
         if list_exe is None:
             return int(ExitCode.CHECK_INVALID)
         server_exe, client_exe = list_exe
-        accounts = ((_MMO_ACCOUNT, _MMO_PASSWORD), *((account, f"{account}_pw_1") for _, account in _MMO_PAWN_SCENARIOS))
-        server_config = write_configs(group.out_dir, _MMO_GAME_PORT, _MMO_SERVICE_PORT, accounts, _MMO_SERVER_NAME)
+        game_port, service_port = free_port(socket.SOCK_DGRAM), free_port(socket.SOCK_STREAM)
+        accounts = (_MMO_ACCOUNT, *((account, f"{account}_pw_1") for _, account in _MMO_PAWN_CLIENTS))
+        online_config = make_online_config([make_account_kit(accounts), make_game_connect_kit(_MMO_SERVER_NAME)])
+        server_config = write_server(group.out_dir, "Hub", game_port, service_port, online_config, {"_driver": "memory"}, {"_driver": "memory"})
         # 서버 진행 저장소는 서버 설정의 온라인 저장소(`_listStore` 의 memory — 저장소 계약 `ServiceStore`)라 실행마다 새 진행으로 시작한다
         # (한 서버 실행 안의 저장 → 재접속 읽기는 같은 저장소를 지난다). 사용자 데이터 폴더도 실행마다 빈 폴더로 옮겨 다른 서버 파일이 섞이지 않게 한다.
         server_user_data = group.out_dir / "server_userdata"
         shutil.rmtree(server_user_data, ignore_errors=True)
         server_user_data.mkdir(parents=True)
-        server = group.start("server", [server_exe, app_arguments.option("game", _MMO_GAME), app_arguments.option("server-config", server_config)],
+        server = group.start("server", [server_exe, app_arguments.option("game", _GAME), app_arguments.option("server-config", server_config)],
                              environment={_TICKET_KEY_ENVIRONMENT: _TICKET_KEY, USER_DATA_ROOT_ENVIRONMENT: str(server_user_data)})
-        if not server.wait_for(_LISTENING, _TIMEOUT_SECONDS):
+        if not server.wait_for_log(NET_LISTENING_ID, _TIMEOUT_SECONDS):
             return group.fail(f"the server never opened its game port (log: {server.log})")
+        addresses = {"gv_onlineServerAddress": f"127.0.0.1:{service_port}", "gv_gameServerAddress": f"127.0.0.1:{game_port}"}
         list_client = []
         for index, scenario in enumerate(_MMO_SCENARIOS):
-            client = group.start(f"client{index + 1}", [client_exe, app_arguments.option("game", _MMO_GAME), app_arguments.option("scenario", scenario),
-                                                        app_arguments.flag("unattended")], stdin=False)
+            client = group.start_scenario(f"client{index + 1}", client_exe, _GAME, scenario, addresses)
             list_client.append(client)
             if index == 0:
-                # 하위 레벨은 서버가 들어가고, 클라이언트가 같은 것을 세웠다고 답한 뒤 나온다. 줄이 나오지 않으면 시나리오가 져서 아래 종료 코드가 알린다.
-                for pattern, line in ((_MMO_STATUS, _MMO_SUBLEVEL_ENTER), (f"{_MMO_STATUS}.*{_MMO_STATUS}", _MMO_SUBLEVEL_LEAVE)):
-                    if client.wait_for(re.compile(pattern, re.DOTALL), _TIMEOUT_SECONDS * 4):
-                        server.send(line)
-            client.wait(_TIMEOUT_SECONDS * 4)
+                # 하위 레벨은 서버가 들어가고, 클라이언트가 같은 것을 세웠다고 답한 뒤 나온다. 줄이 나오지 않으면 시나리오가 져서 종료 코드가 알린다.
+                for count, line in ((1, _MMO_SUBLEVEL_ENTER), (2, _MMO_SUBLEVEL_LEAVE)):
+                    if client.wait_for_log(_MMO_STATUS_ID, _SCENARIO_TIMEOUT_SECONDS, count):
+                        server.send_if_running(line)
+            client.wait(_SCENARIO_TIMEOUT_SECONDS)
             if client.return_code != 0:
                 server.stop()
-                return group.fail(f"client {index + 1} ({scenario}) exited with code {client.return_code} (log: {client.log})")
-            time.sleep(1.0)  # 서버가 나간 연결을 알아채고 진행을 저장할 틈
-        # 두 클라이언트를 함께 — 서로의 폰이 걷는 것을 보고, 회선 흉내 아래에서 어긋난 예측이 되돌아온다. 무인 실행의 사용자 데이터는 프로세스마다 제 폴더다(`AutomationUserDataRoot`).
-        list_walker = []
-        for scenario, account in _MMO_PAWN_SCENARIOS:
-            list_walker.append(group.start(account, [client_exe, app_arguments.option("game", _MMO_GAME), app_arguments.option("scenario", scenario), app_arguments.flag("unattended"),
-                                                     *app_arguments.variables(_MMO_PAWN_EMULATION)], stdin=False))
-        for walker in list_walker:
-            walker.wait(_TIMEOUT_SECONDS * 4)
-            if walker.return_code != 0:
+                return _finish([server], list_client, [], "")
+            # 재접속은 앞 진행이 저장된 뒤에 읽는다 — 서버가 나간 연결을 알아채고 저장한 사건을 기다린다.
+            if not server.wait_for_log(_HUB_SAVED_ID, _TIMEOUT_SECONDS, index + 1):
                 server.stop()
-                return group.fail(f"{walker.name} exited with code {walker.return_code} (log: {walker.log})")
-        list_client += list_walker
+                return _finish([server], list_client, [f"the server did not save the profile after {client.name} left"], "")
+        # 두 클라이언트를 함께 — 서로의 폰이 걷는 것을 보고, 회선 흉내 아래에서 어긋난 예측이 되돌아온다.
+        north, south = (group.start_scenario(account, client_exe, _GAME, scenario, {**addresses, **_MMO_EMULATION}) for scenario, account in _MMO_PAWN_CLIENTS)
+        for client in (north, south):
+            client.wait(_SCENARIO_TIMEOUT_SECONDS)
         server.stop()
-    if server.return_code != 0:
-        return group.fail(f"the server exited with code {server.return_code} (log: {server.log})")
-    result = check_mmo_logs(server.text(), [client.text() for client in list_client])
-    return report("net-pair", result.problems, [server.log, *(client.log for client in list_client)],
-                  "hub server login -> combat/gathering -> level 2 -> leave (saved) -> return with the same progress -> two predicted pawns see each other, no errors or warnings")
+    # 접속 넷(처음 · 재접속 · 걷는 둘) — 첫 접속이 새 계정이고 재접속이 저장된 진행이라는 것은 시나리오가 값(레벨 · 경험)으로 본다.
+    problems = _check_counts(server, (_HUB_ENTERED_ID, 2 + len(_MMO_PAWN_CLIENTS)))
+    problems += _check_same_spot(south, ("Hub.PawnFloorX", "Hub.PawnFloorZ"), north, ("Hub.RemotePawnFloorX", "Hub.RemotePawnFloorZ"))
+    return _finish([server], [*list_client, north, south], problems,
+                   "hub server login -> combat/gathering -> level 2 -> leave (saved) -> return with the same progress -> two predicted pawns see each other, no errors or warnings")
 
 
 # 접속한 허브 → 매치 서버 → 허브(서버 둘). 두 서버는 저장소(SQLite 파일 하나)와 캐시(아래 RESP 서버)를 나눠 가진다 - 배정 명단 · 서버 디렉터리 · 순위가 캐시를 지난다.
-# 계정 · 포트 · 허브 이름은 클라이언트 시나리오(game/playground/automation/netpair/match_roundtrip) · 온라인 흐름의 개발 계정 · gamesettings onlineHubServerID 와 같아야 한다.
-_MATCH_ACCOUNT = ("playground_dev", "playground_dev_pw")
-_MATCH_HUB_GAME_PORT, _MATCH_HUB_SERVICE_PORT = 17977, 17980
-_MATCH_GAME_PORT, _MATCH_SERVICE_PORT = 17987, 17990
+# 계정 · 허브 이름은 온라인 흐름의 개발 계정 · gamesettings onlineHubServerID 와 같아야 한다.
+_MATCH_ACCOUNTS = (("playground_dev", "playground_dev_pw"), ("playground_dev2", "playground_dev2_pw"))
 _MATCH_SERVER_ID = 2
 _MATCH_MINIGAME = "shooter3d_match"
-_MATCH_SCENARIO = "game/playground/automation/netpair/match_roundtrip.scenario.xml"
-_MATCH_HUB_ENTERED = re.compile(r"entered the hub as avatar \d+ on connection \d+")
-_MATCH_SCORE_REPORTED = re.compile(r"match score of account \d+ reported: arena_kills = [1-9]\d*")
-_MATCH_SCORE_STORED = re.compile(r"the game server's score is stored")
-_MATCH_RESPAWN_ACCOUNTS = (_MATCH_ACCOUNT, ("playground_dev2", "playground_dev2_pw"))  # 온라인 흐름의 개발 계정 둘
-_MATCH_ENTERED = re.compile(r"Minigame 'shooter3d_match' is entered")
-_MATCH_DOWNED = re.compile(r"\[Shooter\] you were overrun")
+_MATCH_SCENARIO = _scenario("match_roundtrip")
 _FLOOR_MINIGAME = "shooter3d_floormatch"  # 움직이는 바닥 맵의 매치 - 매칭 모드(floor_solo)의 서버 종류가 아레나와 다르다
 _FLOOR_SERVER_KIND = "floor"
-_FLOOR_ENTERED = re.compile(r"Minigame 'shooter3d_floormatch' is entered")
-_FLOOR_STATUS = re.compile(rf"\[Shooter\] floor self=(\d+) x={_COORD} z={_COORD} seen=(\d+) x={_COORD} z={_COORD}")
-_FLOOR_TOLERANCE = 0.3  # 바닥 위에 선 자리(m) - 절대 자리로 보내면 보간 지연만큼 어긋난다
-_MATCH_BORN_AGAIN = re.compile(r"\[Shooter\] a player is born again")
+_RESPAWN_SCENARIOS = (_scenario("match_respawn_first"), _scenario("match_respawn_second"))
+_FLOOR_SCENARIOS = (_scenario("match_floor_first"), _scenario("match_floor_second"))
+
+CTEST_ITEMS = (
+    CtestItem("mmo", ("net-pair", "mmo"), 1500, (*_MMO_SCENARIOS, *(scenario for scenario, _ in _MMO_PAWN_CLIENTS))),
+    CtestItem("match", ("net-pair", "match"), 900, (_MATCH_SCENARIO,)),
+    CtestItem("floor", ("net-pair", "floor"), 1200, _FLOOR_SCENARIOS),
+    CtestItem("respawn", ("net-pair", "respawn"), 1200, _RESPAWN_SCENARIOS),
+)
 
 
 class _CacheState:
@@ -454,22 +402,9 @@ class _CacheServer(socketserver.ThreadingTCPServer):
         super().__exit__(*exc)
 
 
-def check_match_logs(hub_text: str, match_text: str, client_text: str) -> CheckResult:
-    """매치 왕복 로그를 판정한다 - 허브가 같은 계정을 두 번 들였고(처음 · 돌아옴), 매치 서버가 처치가 있는 점수를 내 저장했으며, 어느 로그에도 오류 · 경고가 없다."""
-    result = CheckResult()
-    if len(_MATCH_HUB_ENTERED.findall(hub_text)) != 2:
-        result.problems.append(f"the hub admitted {len(_MATCH_HUB_ENTERED.findall(hub_text))} sessions - expected 2 (the first join and the return from the match)")
-    if _CONNECTED.search(match_text) is None:
-        result.problems.append("the match server log has no 'Net session client <n> connected' line - the assigned ticket connection never opened")
-    if _MATCH_SCORE_REPORTED.search(match_text) is None or _MATCH_SCORE_STORED.search(match_text) is None:
-        result.problems.append("the match server log has no reported and stored score with a kill - the server did not submit the player's score")
-    result.problems += problem_lines("hub", hub_text) + problem_lines("match", match_text) + problem_lines("client", client_text)
-    return result
-
-
-def _start_match_servers(group: ProcessGroup, server_exe: Path, cache_server: _CacheServer, accounts: tuple[tuple[str, str], ...],
-                         match_arguments: tuple[str, ...] = (), minigame: str = _MATCH_MINIGAME, server_kind: str = "game") -> list[ChildProcess] | None:
-    """허브 서버와 매치 서버를 띄운다(저장소 SQLite 파일 하나 · 캐시 하나를 나눠 가진다). 게임 포트를 열지 못하면 까닭을 찍고 None."""
+def _start_match_servers(group: ProcessGroup, server_exe: Path, cache_server: _CacheServer, accounts: tuple[tuple[str, str], ...], match_arguments: tuple[str, ...] = (),
+                         minigame: str = _MATCH_MINIGAME, server_kind: str = "game") -> tuple[list[ChildProcess], dict[str, str]] | None:
+    """허브 서버와 매치 서버를 띄운다(저장소 SQLite 파일 하나 · 캐시 하나를 나눠 가진다). (서버들, 클라이언트에 줄 주소 변수)이고, 게임 포트를 열지 못하면 까닭을 찍고 None."""
     store = {"_driver": "sqlite", "_connection": (group.out_dir / "match.sqlite").as_posix()}
     cache = {"_driver": "resp", "_endpoint": f"127.0.0.1:{cache_server.server_address[1]}?prefix=netpair:"}
     content = "game/playground/data/playground"
@@ -482,111 +417,31 @@ def _start_match_servers(group: ProcessGroup, server_exe: Path, cache_server: _C
     def matchmaking(game_server: bool) -> dict:
         return {"_name": "matchmaking", "_settings": {"_catalog": f"{content}.matchmodes.xml", "_reconnectGraceMs": 60000, "_cancelConfirmWaitMs": 3000, "_bGameServer": game_server}}
 
+    hub_port, hub_service_port = free_port(socket.SOCK_DGRAM), free_port(socket.SOCK_STREAM)
     # 허브는 배정받는 서버가 아니다(`_publicAddress` 없음) - 매치 서버만 디렉터리에 선다.
     hub_online = make_online_config([make_account_kit(accounts), make_game_connect_kit(_MMO_SERVER_NAME), directory, leaderboard, matchmaking(False)], topology="MultiServer")
-    hub_config = write_server(group.out_dir, "Hub", _MATCH_HUB_GAME_PORT, _MATCH_HUB_SERVICE_PORT, hub_online, store, cache)
+    hub_config = write_server(group.out_dir, "Hub", hub_port, hub_service_port, hub_online, store, cache)
     match_online = make_online_config([make_account_kit(()), make_game_connect_kit(f"{_MATCH_SERVER_ID:016x}"), directory, leaderboard, matchmaking(True)], _MATCH_SERVER_ID, "MultiServer")
     match_online.update({"_publicAddress": "127.0.0.1", "_serverKind": server_kind})
-    match_config = write_server(group.out_dir, "Match", _MATCH_GAME_PORT, _MATCH_SERVICE_PORT, match_online, store, cache)
+    match_config = write_server(group.out_dir, "Match", free_port(socket.SOCK_DGRAM), free_port(socket.SOCK_STREAM), match_online, store, cache)
     list_server = []
     for name, config, list_extra in (("hub", hub_config, []), ("match", match_config, [app_arguments.variable("gv_firstMinigame", minigame), *match_arguments])):
         user_data = group.out_dir / f"{name}_userdata"
         user_data.mkdir()
         server = group.start(name, [server_exe, app_arguments.option("game", _GAME), app_arguments.option("server-config", config), *list_extra],
                              environment={_TICKET_KEY_ENVIRONMENT: _TICKET_KEY, USER_DATA_ROOT_ENVIRONMENT: str(user_data)})
-        if not server.wait_for(_LISTENING, _TIMEOUT_SECONDS):
+        if not server.wait_for_log(NET_LISTENING_ID, _TIMEOUT_SECONDS):
             group.fail(f"the {name} server never opened its game port (log: {server.log})")
             return None
         list_server.append(server)
-    return list_server
+    return list_server, {"gv_onlineServerAddress": f"127.0.0.1:{hub_service_port}", "gv_gameServerAddress": f"127.0.0.1:{hub_port}"}
 
 
-def check_respawn_logs(hub_text: str, match_text: str, list_client_text: list[str]) -> CheckResult:
-    """두 사람 대전 로그를 판정한다 - 매치 서버에 둘이 붙어 한 번씩 쓰러지고 한 번씩 다시 태어났고, 허브가 네 번(들어옴 · 돌아옴) 들였으며, 어느 로그에도 오류 · 경고가 없다."""
-    result = CheckResult()
-    counts = (("match server connections", len(_CONNECTED.findall(match_text)), 2), ("downed players", len(_MATCH_DOWNED.findall(match_text)), 2),
-              ("players born again", len(_MATCH_BORN_AGAIN.findall(match_text)), 2), ("hub admissions", len(_MATCH_HUB_ENTERED.findall(hub_text)), 4))
-    result.problems += [f"{name}: {count} - expected {expected}" for name, count, expected in counts if count != expected]
-    result.problems += problem_lines("hub", hub_text) + problem_lines("match", match_text)
-    for index, text in enumerate(list_client_text):
-        result.problems += problem_lines(f"client {index + 1}", text)
-    return result
-
-
-def _run_two_players(group: ProcessGroup, argument_name: str, entered: re.Pattern, minigame: str, server_kind: str, match_arguments: tuple[str, ...]) -> tuple[list[ChildProcess], list[ChildProcess]] | None:
-    """허브 · 매치 서버와 두 클라이언트(`match_<이름>_first` · `_second`)를 돌린다. (클라이언트, 서버)이고, 서버를 못 띄웠거나 첫 사람이 들어가지 못했으면 까닭을 찍고 None."""
-    list_exe = group.require("Server", "App")
-    if list_exe is None:
-        return None
-    server_exe, client_exe = list_exe
-    with _CacheServer() as cache_server:
-        list_server = _start_match_servers(group, server_exe, cache_server, _MATCH_RESPAWN_ACCOUNTS, match_arguments, minigame, server_kind)
-        if list_server is None:
-            return None
-
-        def start_client(name: str) -> ChildProcess:
-            # 무인 실행의 사용자 데이터는 프로세스마다 Saved/Automation 아래 제 폴더다 — 밖을 가리키면 App 이 시작을 거절한다(`AutomationUserDataRoot`).
-            scenario = f"game/playground/automation/netpair/match_{argument_name}_{name}.scenario.xml"
-            return group.start(name, [client_exe, app_arguments.option("game", _GAME), app_arguments.option("scenario", scenario), app_arguments.flag("unattended"),
-                                      app_arguments.variable("gv_onlineServerAddress", f"127.0.0.1:{_MATCH_HUB_SERVICE_PORT}")], stdin=False)
-
-        first = start_client("first")
-        steps_done = first.wait_for(entered, _TIMEOUT_SECONDS * 3)
-        list_client = [first]
-        if steps_done:
-            second = start_client("second")  # 첫 사람이 자리를 쥔 채 둘째가 같은 서버의 빈 자리로 들어간다
-            list_client.append(second)
-            first.wait(_TIMEOUT_SECONDS * 4)
-            second.wait(_TIMEOUT_SECONDS * 4)
-            time.sleep(1.0)  # 서버가 나간 연결을 알아챌 틈
-        for server in list_server:
-            server.stop()
-    if not steps_done:
-        group.fail(f"the first player did not enter the match server (logs: {group.out_dir})")
-        return None
-    for process in (*list_client, *list_server):
-        if process.return_code != 0:
-            group.fail(f"{process.name} exited with code {process.return_code} (log: {process.log})")
-            return None
-    return list_client, list_server
-
-
-def _run_respawn(argument: argparse.Namespace) -> int:
-    with ProcessGroup("net-pair", argument.preset, "NetPairRun/respawn", clean=True) as group:
-        ran = _run_two_players(group, "respawn", _MATCH_ENTERED, _MATCH_MINIGAME, "game", (app_arguments.variable("gv_shooterNoEnemies", "1"),))
-        if ran is None:
-            return int(ExitCode.VIOLATION)
-    (first, second), (hub, match) = ran
-    result = check_respawn_logs(hub.text(), match.text(), [first.text(), second.text()])
-    return report("net-pair", result.problems, [hub.log, match.log, first.log, second.log],
-                  "two players in one match server shoot each other down -> born again in the same match -> hub, no errors or warnings")
-
-
-def check_floor_logs(hub_text: str, match_text: str, first_text: str, second_text: str) -> CheckResult:
-    """움직이는 바닥 대전 로그를 판정한다 - 첫 사람이 바닥 위에 선 자기 자리와 둘째가 본 그 자리가 같고, 실려 가며 쏜 탄에 첫 사람이 쓰러졌다 다시 태어났으며, 어느 로그에도 오류 · 경고가 없다."""
-    result = CheckResult()
-    own = [(float(x), float(z)) for floor, x, z, *_ in _FLOOR_STATUS.findall(first_text) if floor != "0"]
-    seen = [(float(x), float(z)) for _, _, _, floor, x, z in _FLOOR_STATUS.findall(second_text) if floor != "0"]
-    if len(own) != 1 or len(seen) != 1:
-        result.problems.append(f"expected one rider and one viewer of the moving floor - found {len(own)} and {len(seen)} 'floor self=' lines")
-    elif max(abs(own[0][0] - seen[0][0]), abs(own[0][1] - seen[0][1])) > _FLOOR_TOLERANCE:
-        result.problems.append(f"the first player stands at {own[0]} on the moving floor but the second client shows it at {seen[0]}")
-    counts = (("downed players", len(_MATCH_DOWNED.findall(match_text)), 1), ("players born again", len(_MATCH_BORN_AGAIN.findall(match_text)), 1))
-    result.problems += [f"{name}: {count} - expected {expected}" for name, count, expected in counts if count != expected]
-    for name, text in (("hub", hub_text), ("match", match_text), ("first", first_text), ("second", second_text)):
-        result.problems += problem_lines(name, text)
-    return result
-
-
-def _run_floor(argument: argparse.Namespace) -> int:
-    with ProcessGroup("net-pair", argument.preset, "NetPairRun/floor", clean=True) as group:
-        ran = _run_two_players(group, "floor", _FLOOR_ENTERED, _FLOOR_MINIGAME, _FLOOR_SERVER_KIND, ())
-        if ran is None:
-            return int(ExitCode.VIOLATION)
-    (first, second), (hub, match) = ran
-    result = check_floor_logs(hub.text(), match.text(), first.text(), second.text())
-    return report("net-pair", result.problems, [hub.log, match.log, first.log, second.log],
-                  "two players ride a moving floor, see each other at the same spot on it, and one shoots the other down while riding, no errors or warnings")
+def _stop_servers(list_server: list[ChildProcess]) -> None:
+    """모든 클라이언트가 나간 뒤 부른다 — 서버가 접속마다 끊김을 알아챈(진행 · 점수를 저장하는 자리) 뒤에 멈춘다."""
+    for server in list_server:
+        server.wait_for_log(_DISCONNECTED_ID, _TIMEOUT_SECONDS, server.count_log(_CONNECTED_ID))
+        server.stop()
 
 
 def _run_match(argument: argparse.Namespace) -> int:
@@ -594,54 +449,65 @@ def _run_match(argument: argparse.Namespace) -> int:
         list_exe = group.require("Server", "App")
         if list_exe is None:
             return int(ExitCode.CHECK_INVALID)
-        server_exe, client_exe = list_exe
-        list_server = _start_match_servers(group, server_exe, cache_server, (_MATCH_ACCOUNT,))
-        if list_server is None:
+        started = _start_match_servers(group, list_exe[0], cache_server, _MATCH_ACCOUNTS[:1])
+        if started is None:
             return int(ExitCode.VIOLATION)
-        client = group.start("client", [client_exe, app_arguments.option("game", _GAME), app_arguments.option("scenario", _MATCH_SCENARIO), app_arguments.flag("unattended"),
-                                        app_arguments.variable("gv_onlineServerAddress", f"127.0.0.1:{_MATCH_HUB_SERVICE_PORT}")], stdin=False)
-        client.wait(_TIMEOUT_SECONDS * 6)
-        time.sleep(1.0)  # 서버가 나간 연결을 알아채고 저장할 틈
-        for server in list_server:
-            server.stop()
-    if client.return_code != 0:
-        return group.fail(f"the client exited with code {client.return_code} (log: {client.log})")
-    for server in list_server:
-        if server.return_code != 0:
-            return group.fail(f"the {server.name} server exited with code {server.return_code} (log: {server.log})")
+        list_server, addresses = started
+        client = group.start_scenario("client", list_exe[1], _GAME, _MATCH_SCENARIO, addresses)
+        client.wait(_SCENARIO_TIMEOUT_SECONDS)
+        _stop_servers(list_server)
     hub, match = list_server
-    result = check_match_logs(hub.text(), match.text(), client.text())
-    return report("net-pair", result.problems, [hub.log, match.log, client.log],
-                  "hub join -> queue -> match server -> server-submitted score -> back in the hub, no errors or warnings")
+    problems = _check_counts(hub, (_HUB_ENTERED_ID, 2))  # 처음 · 매치에서 돌아옴
+    problems += _check_counts(match, (_CONNECTED_ID, 1))
+    problems += [f"the match server log has no '{log_id}' line" for log_id in ("Shooter.MatchScoreReported", "Leaderboard.ServerScoreStored") if match.count_log(log_id) == 0]  # 점수의 값(처치 1 이상)은 시나리오가 순위표에서 본다
+    return _finish(list_server, [client], problems, "hub join -> queue -> match server -> server-submitted score -> back in the hub, no errors or warnings")
 
 
-def _print(result: CheckResult, server_log: Path, client_log: Path) -> int:
-    return report("net-pair", result.problems, [server_log, client_log], "login -> game ticket -> encrypted UDP connection opened with no errors or warnings")
+def _run_two_players(argument: argparse.Namespace, mode: str, scenarios: tuple[str, str], minigame: str, server_kind: str, match_arguments: tuple[str, ...],
+                     match_counts: tuple[tuple[str, int], ...], first_watches: tuple[str, str] | None, second_watches: tuple[str, str] | None, ok_message: str) -> int:
+    """허브 · 매치 서버와 두 클라이언트를 돌린다 — 첫 사람이 매치에 들어간 뒤 둘째가 같은 서버의 빈 자리로 들어간다. 바닥 감시 값을 주면 첫 사람의 자기 자리와 둘째가 본 자리를 견준다."""
+    with _CacheServer() as cache_server, ProcessGroup("net-pair", argument.preset, f"NetPairRun/{mode}", clean=True) as group:
+        list_exe = group.require("Server", "App")
+        if list_exe is None:
+            return int(ExitCode.CHECK_INVALID)
+        started = _start_match_servers(group, list_exe[0], cache_server, _MATCH_ACCOUNTS, match_arguments, minigame, server_kind)
+        if started is None:
+            return int(ExitCode.VIOLATION)
+        list_server, addresses = started
+        first = group.start_scenario("first", list_exe[1], _GAME, scenarios[0], addresses)
+        list_client = [first]
+        if first.wait_for_log("MinigameFlow.Entered", _SCENARIO_TIMEOUT_SECONDS):
+            list_client.append(group.start_scenario("second", list_exe[1], _GAME, scenarios[1], addresses))
+        for client in list_client:
+            client.wait(_SCENARIO_TIMEOUT_SECONDS)
+        _stop_servers(list_server)
+    if len(list_client) == 1:
+        return _finish(list_server, list_client, ["the first player did not enter the match server"], "")
+    hub, match = list_server
+    problems = _check_counts(hub, (_HUB_ENTERED_ID, 4)) + _check_counts(match, (_CONNECTED_ID, 2), *match_counts)  # 허브: 두 사람의 들어옴 · 돌아옴
+    if first_watches is not None and second_watches is not None:
+        problems += _check_same_spot(list_client[0], first_watches, list_client[1], second_watches)
+    return _finish(list_server, list_client, problems, ok_message)
+
+
+def _run_respawn(argument: argparse.Namespace) -> int:
+    return _run_two_players(argument, "respawn", _RESPAWN_SCENARIOS, _MATCH_MINIGAME, "game", (app_arguments.variable("gv_shooterNoEnemies", 1),),
+                            ((_DOWNED_ID, 2), (_BORN_AGAIN_ID, 2)), None, None,
+                            "two players in one match server shoot each other down -> born again in the same match -> hub, no errors or warnings")
+
+
+def _run_floor(argument: argparse.Namespace) -> int:
+    return _run_two_players(argument, "floor", _FLOOR_SCENARIOS, _FLOOR_MINIGAME, _FLOOR_SERVER_KIND, (),
+                            ((_DOWNED_ID, 1), (_BORN_AGAIN_ID, 1)), ("Shooter.FloorX", "Shooter.FloorZ"), ("Shooter.RemoteFloorX", "Shooter.RemoteFloorZ"),
+                            "two players ride a moving floor, see each other at the same spot on it, and one shoots the other down while riding, no errors or warnings")
+
+
+_MODES = {"mmo": _run_mmo, "match": _run_match, "floor": _run_floor, "respawn": _run_respawn}
 
 
 def main(list_argument: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts net-pair", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    sub = parser.add_subparsers(dest="mode", required=True)
-    run_parser = sub.add_parser("run", help="서버와 클라이언트를 띄워 로그인 → 티켓 → 게임 접속을 돈다")
-    run_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    mmo_parser = sub.add_parser("mmo", help="허브 서버(Playground)와 클라이언트(첫 접속 → 재접속 → 둘 함께)를 띄워 서버 권위 행동 · 저장 후 재접속 · 폰 복제와 예측을 본다")
-    mmo_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    match_parser = sub.add_parser("match", help="허브 서버 · 매치 서버 · 클라이언트를 띄워 접속한 허브 → 매치 → 서버 점수 제출 → 허브 재접속, 이어 두 사람이 움직이는 바닥 맵의 매치에서 서로 보고 쏘는 것을 본다")
-    match_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    respawn_parser = sub.add_parser("respawn", help="허브 서버 · 매치 서버 · 클라이언트 둘을 띄워 동시 대전의 쓰러짐 → 다시 태어남을 본다")
-    respawn_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    check_parser = sub.add_parser("check", help="이미 있는 서버 · 클라이언트 로그를 판정한다")
-    check_parser.add_argument("server_log")
-    check_parser.add_argument("client_log")
+    parser.add_argument("mode", choices=tuple(_MODES))
+    parser.add_argument("--preset", default=DEFAULT_PRESET, help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     argument = parser.parse_args(list_argument)
-    if argument.mode == "check":
-        server_log, client_log = Path(argument.server_log), Path(argument.client_log)
-        return _print(check_logs(read_log(server_log), read_log(client_log)), server_log, client_log)
-    if argument.mode == "mmo":
-        return _run_mmo(argument)
-    if argument.mode == "match":
-        code = _run_match(argument)
-        return code if code != 0 else _run_floor(argument)
-    if argument.mode == "respawn":
-        return _run_respawn(argument)
-    return _run(argument)
+    return _MODES[argument.mode](argument)

@@ -1405,6 +1405,38 @@ namespace sw
         return delta.getLength() <= _reconcileTolerance && left._bOnGround == right._bOnGround;
     }
 
+    namespace
+    {
+        // 바닥 기준의 자리 — 두 클라이언트 시나리오가 `<Record>` 로 보고에 남기고 `Scripts net-pair match` 가 견준다. 바닥 위가 아니면 값이 없다.
+        struct ShooterNetPawnWatches
+        {
+            [[nodiscard]] static bool readFloorX( const ShooterNetPawnComponent& component, float64& outValue )
+            {
+                outValue = static_cast<float64>( component.getFloorLocalPosition()._x );
+                return component.getFloorNumber() != 0;
+            }
+            [[nodiscard]] static bool readFloorZ( const ShooterNetPawnComponent& component, float64& outValue )
+            {
+                outValue = static_cast<float64>( component.getFloorLocalPosition()._z );
+                return component.getFloorNumber() != 0;
+            }
+            [[nodiscard]] static bool readRemoteFloorX( const ShooterNetPawnComponent& component, float64& outValue )
+            {
+                outValue = static_cast<float64>( component.getRemoteFloorLocalPosition()._x );
+                return component.getRemoteFloorNumber() != 0;
+            }
+            [[nodiscard]] static bool readRemoteFloorZ( const ShooterNetPawnComponent& component, float64& outValue )
+            {
+                outValue = static_cast<float64>( component.getRemoteFloorLocalPosition()._z );
+                return component.getRemoteFloorNumber() != 0;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_COMPONENT_WATCH( shooterFloorX, "Shooter.FloorX", "Own body's X on the moving floor it stands on (floor space; no value off the floor)", ShooterNetPawnComponent, &ShooterNetPawnWatches::readFloorX );
+    SW_AUTOMATION_COMPONENT_WATCH( shooterFloorZ, "Shooter.FloorZ", "Own body's Z on the moving floor it stands on (floor space; no value off the floor)", ShooterNetPawnComponent, &ShooterNetPawnWatches::readFloorZ );
+    SW_AUTOMATION_COMPONENT_WATCH( shooterRemoteFloorX, "Shooter.RemoteFloorX", "Another player's shown X on the moving floor (floor space; no value off the floor)", ShooterNetPawnComponent, &ShooterNetPawnWatches::readRemoteFloorX );
+    SW_AUTOMATION_COMPONENT_WATCH( shooterRemoteFloorZ, "Shooter.RemoteFloorZ", "Another player's shown Z on the moving floor (floor space; no value off the floor)", ShooterNetPawnComponent, &ShooterNetPawnWatches::readRemoteFloorZ );
     SW_AUTOMATION_GETTER_WATCH( shooterFloorNumber, "Shooter.FloorNumber", "Number of the moving floor the own body stands on (0 none)", ShooterNetPawnComponent, &ShooterNetPawnComponent::getFloorNumber );
     SW_AUTOMATION_GETTER_WATCH( shooterRemoteFloorNumber, "Shooter.RemoteFloorNumber", "Number of the moving floor another player is shown standing on (0 none)", ShooterNetPawnComponent, &ShooterNetPawnComponent::getRemoteFloorNumber );
     SW_AUTOMATION_GETTER_WATCH( shooterRemotePawnCount, "Shooter.RemotePawnCount", "Other players' bodies this client sees", ShooterNetPawnComponent, &ShooterNetPawnComponent::getRemotePawnCount );

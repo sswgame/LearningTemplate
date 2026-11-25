@@ -8,6 +8,7 @@
 
 #include "DevTools/Client/Automation/Scenario/AutomationEnvironmentSteps.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -49,9 +50,14 @@ namespace sw
             static bool runDevCommand( IAutomationStepContext& runner, const AutomationStep& step )
             {
 #if !defined( SW_SHIPPING )
-                vector<string> listToken;
-                listToken                              = StringUtil::splitQuotedTokens( step.readValidatedProperties<AutomationDevCommandParams>()._line );
-                const DevCommandRegistration* pCommand = listToken.empty() ? nullptr : engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] );
+                const expected<string> line = AutomationEnvironmentSteps::expandVariables( step.readValidatedProperties<AutomationDevCommandParams>()._line );
+                if ( line.has_value() == false )
+                {
+                    runner.recordFailure( step, AutomationStep::describeReason( line.error() ) );
+                    return true;
+                }
+                const vector<string>          listToken = StringUtil::splitQuotedTokens( *line );
+                const DevCommandRegistration* pCommand  = listToken.empty() ? nullptr : engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] );
                 if ( pCommand == nullptr )
                 {
                     // 검사 뒤에 모듈이 언로드됐다(핫 리로드). 실패로 적고 이어 간다.
@@ -111,6 +117,28 @@ namespace sw
             }
         };
     } // namespace
+
+    expected<string> AutomationEnvironmentSteps::expandVariables( string_view line )
+    {
+        static constexpr string_view kOpen = "{gv_";
+        string                       expanded;
+        size_t                       position = 0;
+        for ( size_t open = line.find( kOpen ); open != string_view::npos; open = line.find( kOpen, position ) )
+        {
+            const size_t close = line.find( '}', open );
+            if ( close == string_view::npos )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the {gv_...} token is not closed", line } );
+            const string_view         name  = line.substr( open + 1, close - open - 1 );
+            const GlobalVariableInfo* pInfo = engine::getSubsystem<GlobalVariableManager>().findVariable( name );
+            if ( pInfo == nullptr )
+                return unexpected( Error{ ErrorKind::NotFound, "unknown global variable", name } );
+            expanded.append( line.substr( position, open - position ) );
+            expanded.append( pInfo->getValueAsString() );
+            position = close + 1;
+        }
+        expanded.append( line.substr( position ) );
+        return expanded;
+    }
 
     bool AutomationEnvironmentSteps::isWindowResizeApplied()
     {

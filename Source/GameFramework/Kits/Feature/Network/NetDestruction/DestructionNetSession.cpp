@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/String/JSONStringUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Destruction/Fracture/FractureComponent.h"
@@ -195,8 +196,10 @@ namespace sw
     string DestructionNetSession::formatHashLine( DestructionNetSide side, const DestructionHashRecord& record, string_view objectName )
     {
         StringBuilder<constant::buffer::kMax256> text;
-        text.appendFormat( "[DestructionHash] side=%# id=%# events=%# hash=%# name=%#", side == DestructionNetSide::Server ? "server" : "client", record._netID, record._eventCount,
-                           Fmt( record._hash, Format( 16, Format::Padding::Zero ).hex() ), objectName );
+        string                                   escapedName;
+        JSONStringUtil::appendEscaped( escapedName, objectName );
+        text.appendFormat( "{\"side\":\"%#\",\"id\":%#,\"events\":%#,\"hash\":\"%#\",\"name\":\"%#\"}", side == DestructionNetSide::Server ? "server" : "client", record._netID, record._eventCount,
+                           Fmt( record._hash, Format( 16, Format::Padding::Zero ).hex() ), escapedName );
         return string( text.c_str(), text.size() );
     }
 
