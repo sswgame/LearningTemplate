@@ -166,15 +166,15 @@ namespace sw
         PROPERTY( Category = "Interaction", DisplayName = "Enabled" )
         bool _bEnabled;
 
-        shared_ptr<const InteractionDef>             _pOverrideDef;
-        shared_ptr<const InteractionCatalog>         _pCatalog; ///< `_pDef` 가 든 공유 테이블(쥔 동안 산다)
-        const InteractionDef*                        _pDef;
-        AssetReloadWatch<InteractionCatalog>         _catalogReload;    ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
-        InstanceHighlight                            _appliedHighlight; ///< 메시에 마지막으로 옮긴 강조(강조가 있는 동안은 나중에 붙은 메시에도 다시 옮긴다)
-        MulticastDelegate<void( const GameObject& )> _completed;        ///< 끝남 알림(`listenCompleted`)
-        atomic<uint32>                               _completedCount;   ///< 끝난 횟수. 같은 오브젝트의 기믹 센서가 읽어 간다
-        atomic<uint8>                                _bHighlightRequested;
-        uint8                                        _bHasOverride;
-        SlotHandle                                   _arrSpatialEntry[2]; ///< 공간(3D · 2D)마다의 색인 항목(등록 ~ 해제)
+        shared_ptr<const InteractionDef>     _pOverrideDef;
+        shared_ptr<const InteractionCatalog> _pCatalog; ///< `_pDef` 가 든 공유 테이블(쥔 동안 산다)
+        const InteractionDef*                _pDef;
+        SW_TRANSIENT AssetReloadWatch<InteractionCatalog> _catalogReload;    ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
+        SW_TRANSIENT InstanceHighlight                    _appliedHighlight; ///< 메시에 마지막으로 옮긴 강조(강조가 있는 동안은 나중에 붙은 메시에도 다시 옮긴다)
+        MulticastDelegate<void( const GameObject& )>      _completed;        ///< 끝남 알림(`listenCompleted`)
+        SW_TRANSIENT atomic<uint32> _completedCount;                         ///< 끝난 횟수. 같은 오브젝트의 기믹 센서가 읽어 간다
+        SW_TRANSIENT atomic<uint8> _bHighlightRequested;
+        SW_TRANSIENT uint8         _bHasOverride;
+        SW_TRANSIENT SlotHandle    _arrSpatialEntry[2]; ///< 공간(3D · 2D)마다의 색인 항목(등록 ~ 해제)
     };
 } // namespace sw

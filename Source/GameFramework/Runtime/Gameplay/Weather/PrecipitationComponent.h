@@ -41,6 +41,6 @@ namespace sw
         PROPERTY( Category = "Weather", DisplayName = "Height", Min = 0.0, Units = m, Tooltip = "Height above the main view where the effect sits" )
         float32 _height;
 
-        float32 _writtenIntensity; ///< 지난번에 건 세기 — 바뀔 때만 건다
+        SW_TRANSIENT float32 _writtenIntensity; ///< 지난번에 건 세기 — 바뀔 때만 건다
     };
 } // namespace sw

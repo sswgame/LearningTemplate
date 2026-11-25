@@ -14,6 +14,7 @@
 #include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
@@ -60,7 +61,7 @@ namespace sw
      *        `_aimTolerance` 안에 들어오면 `_fireInterval` 마다 쏩니다. `_projectileSpeed` 가 0 이면 히트스캔이고(시야 광선이 대상에 닿으면 피해), 0 보다 크면 날아가는 탄입니다.
      * @details 회로의 Enable 노드로 켜고 끈다(오브젝트 켜기). 요는 소유자 로컬 회전의 Y 이다(3D). 스텝은 60 Hz 이다.
      *          날아가는 탄은 대상의 속도(스텝 사이 자리 차이)로 앞을 겨눈다(`computeAim` → `Ballistics`). 언리얼 `SuggestProjectileVelocity` 의 자리다(기억에 의존한 비교).
-     *          따라잡을 수 없거나 닿지 않는 대상에는 쏘지 않는다. 날아가는 중인 탄은 값 목록(`ProjectileSimulation`)이고 세이브에 싣지 않는다 — 불러온 뒤 다음 발부터 쏜다.
+     *          따라잡을 수 없거나 닿지 않는 대상에는 쏘지 않는다. 날아가는 중인 탄은 값 목록(`ProjectileSimulation`)이고 상태로 싣는다(자리는 절대) — 불러온 뒤에도 날아와 맞는다.
      *          날아가는 탄은 걸음마다 막는 것을 본다(`TurretShotWorld`) — 쏜 뒤 끼어든 벽에 맞아 끝난다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Turret", Tooltip = "Picks the nearest visible tagged target, turns, fires hitscan shots" )
@@ -77,6 +78,9 @@ namespace sw
         void onTick( TickContext& context ) override;
         /** @brief 지난 스텝의 대상 자리와 날아가는 탄을 옮깁니다. */
         void onWorldOriginShifted( const float3& delta ) override;
+        /** @brief 날아가는 탄입니다(대상 · 쿨다운 · 쏜 수는 상태 칸). 탄이 없으면 쓰는 것이 없다. */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        void restoreState( vector<uint8>&& bytes );
         void stepOnce();
 
         /**
@@ -127,12 +131,12 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Turret", DisplayName = "Hit Count", Tooltip = "Runtime" )
         int32 _hitCount;
 
-        vector<InteractionCandidate> _listCandidate;          ///< 스텝마다 대상 후보를 모으는 버퍼(용량 재사용)
-        vector<GameObject*>          _listTagged;             ///< 스텝마다 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
-        vector<TurretShotTarget>     _listShotTarget;         ///< 날아가는 탄이 이번 스텝에 맞힐 대상(용량 재사용)
-        ProjectileSimulation         _projectiles;            ///< 날아가는 탄
-        GameObjectHandle             _previousTarget;         ///< 지난 스텝의 대상(속도를 잴 때 같은 대상인지 본다)
-        SceneTeleportCursor          _targetTeleport;         ///< 대상이 순간이동하면 그 스텝의 속도를 세지 않는다
-        float3                       _previousTargetPosition; ///< 지난 스텝의 대상 자리
+        SW_TRANSIENT vector<InteractionCandidate> _listCandidate;      ///< 스텝마다 대상 후보를 모으는 버퍼(용량 재사용)
+        SW_TRANSIENT vector<GameObject*> _listTagged;                  ///< 스텝마다 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
+        SW_TRANSIENT vector<TurretShotTarget> _listShotTarget;         ///< 날아가는 탄이 이번 스텝에 맞힐 대상(용량 재사용)
+        SW_CODEC_STATE ProjectileSimulation   _projectiles;            ///< 날아가는 탄
+        SW_TRANSIENT GameObjectHandle         _previousTarget;         ///< 지난 스텝의 대상(속도를 잴 때 같은 대상인지 본다)
+        SW_TRANSIENT SceneTeleportCursor      _targetTeleport;         ///< 대상이 순간이동하면 그 스텝의 속도를 세지 않는다
+        SW_TRANSIENT float3                   _previousTargetPosition; ///< 지난 스텝의 대상 자리
     };
 } // namespace sw

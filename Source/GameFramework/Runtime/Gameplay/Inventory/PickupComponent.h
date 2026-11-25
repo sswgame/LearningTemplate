@@ -75,9 +75,9 @@ namespace sw
         /** @brief 조각을 비우고 오브젝트를 없앱니다. */
         void consume();
 
-        Subscription  _overlapSubscription; ///< 겹침 진입 구독(`handleOverlapBegin`)
-        Subscription  _usedSubscription;    ///< 같은 오브젝트의 상호작용 완료 구독
-        InventorySlot _item;                ///< 든 조각(개체 상태째)
+        Subscription                 _overlapSubscription; ///< 겹침 진입 구독(`handleOverlapBegin`)
+        Subscription                 _usedSubscription;    ///< 같은 오브젝트의 상호작용 완료 구독
+        SW_CODEC_STATE InventorySlot _item;                ///< 든 조각(개체 상태째)
         PROPERTY( DisplayName = "Item", Tooltip = "Item id of the stack (scene data; a dropped stack keeps its own instance)" )
         hashed_string _itemID;
         PROPERTY( DisplayName = "Count", Min = 1 )

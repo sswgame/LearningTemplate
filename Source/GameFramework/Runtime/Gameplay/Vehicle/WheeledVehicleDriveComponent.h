@@ -62,6 +62,6 @@ namespace sw
         PROPERTY( Category = "Vehicle", DisplayName = "Reverse Speed", Min = 0.0, Tooltip = "Backward intent brakes above this forward speed and reverses below it", Units = "m/s" )
         float32 _reverseSpeed;
 
-        optional<int32> _handBrakeIndex;
+        SW_TRANSIENT optional<int32> _handBrakeIndex;
     };
 } // namespace sw

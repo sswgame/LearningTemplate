@@ -7,11 +7,23 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {
+    namespace
+    {
+        struct PerceptionAIControllerComponentInternal
+        {
+            static constexpr FormatDef kStateFormat{ "AIPC" };
+        };
+
+        const StatefulComponentRegistrar<PerceptionAIControllerComponent> s_stateRegistration{ "PerceptionAIControllerComponent" };
+    } // namespace
+
     PerceptionAIControllerComponent::PerceptionAIControllerComponent()
         : _team{ 1 }
         , _eyeHeight{ 1.6f }
@@ -30,6 +42,20 @@ namespace sw
     {
         _perception.clearAll();
         return AIControllerComponent::resetToSpawnState();
+    }
+
+    void PerceptionAIControllerComponent::serializeState( StateIO& io )
+    {
+        io.header( PerceptionAIControllerComponentInternal::kStateFormat );
+        io.valueAtomic( _perception );
+        io.end();
+    }
+
+    void PerceptionAIControllerComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), bytes.size() );
+        if ( readState( archive ) == false )
+            SW_LOG_WARNING_ID( "PerceptionAIController.SavedMemoryUnreadable", "'%#': the saved perception memory did not read - it remembers nothing", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
     }
 
     void PerceptionAIControllerComponent::updateBlackboard( const ControlFrameContext& context, const PawnComponent& pawn )

@@ -137,15 +137,15 @@ namespace sw
         PROPERTY( Category = "Camera", DisplayName = "Cycle Role", Tooltip = "Role of the cameras the cycle key steps through" )
         CameraRole _cycleRole;
 
-        GameObjectHandle                                    _previousTarget; ///< 살아 있는 나가는 쪽(블렌드가 없던 때 바꿨을 때)
-        CameraPendingView                                   _pendingView;
+        SW_TRANSIENT GameObjectHandle                       _previousTarget; ///< 살아 있는 나가는 쪽(블렌드가 없던 때 바꿨을 때)
+        SW_TRANSIENT CameraPendingView                      _pendingView;
         MulticastDelegate<void( const CameraPendingView& )> _pendingViewMulticast;
-        uint64                                              _pendingViewID; ///< 지금 대기 뷰의 구독 id
+        SW_TRANSIENT uint64                                 _pendingViewID; ///< 지금 대기 뷰의 구독 id
         SubscriptionList                                    _pendingViewSubscriptions;
-        CameraPoseBlender                                   _blender;
-        CameraImpulseListener                               _impulseListener;
+        SW_TRANSIENT CameraPoseBlender                      _blender;
+        SW_TRANSIENT CameraImpulseListener                  _impulseListener;
         Subscription                                        _shakeSubscription; ///< 알림의 카메라 흔들림 요청 구독(플레이 동안)
-        float32                                             _pendingDeltaTime;
-        bool                                                _bResolvePending; ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
+        SW_TRANSIENT float32                                _pendingDeltaTime;
+        SW_TRANSIENT bool                                   _bResolvePending; ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
     };
 } // namespace sw

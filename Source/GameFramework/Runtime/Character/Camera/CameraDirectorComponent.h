@@ -273,32 +273,32 @@ namespace sw
         PROPERTY( Category = "Sequencer", DisplayName = "Exposure Offset", Tooltip = "Exposure compensation a sequencer value track adds to the preset's", Meta = "Units=EV" )
         float32 _exposureOffset;
 
-        CameraPresetDef _overrideDef;          ///< 덮어쓴 시점의 고정 프리셋
-        hashed_string   _presetBeforeOverride; ///< 덮어쓰기를 풀 때 돌아갈 프리셋
-        bool            _bViewOverride;
+        SW_TRANSIENT CameraPresetDef _overrideDef;          ///< 덮어쓴 시점의 고정 프리셋
+        SW_TRANSIENT hashed_string   _presetBeforeOverride; ///< 덮어쓰기를 풀 때 돌아갈 프리셋
+        SW_TRANSIENT bool            _bViewOverride;
 
-        PhotoModeCamera      _photoMode;
-        unique_ptr<InputMap> _photoInputMap;   ///< 포토 모드 동안만 있는 엔진 포토 모드 입력 맵(`enterPhotoMode` 가 읽고 `exitPhotoMode` 가 버린다)
-        bool                 _bPhotoModeCut;   ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
-        Subscription         _photoPause;      ///< 포토 모드가 건 게임 시간 정지 요청
-        Subscription         _photoLayerHide;  ///< 포토 모드가 건 UI 레이어 숨김 요청(`IUILayerVisibility`)
-        Subscription         _photoCut;        ///< 포토 모드가 시퀀스 컷 · 킬캠 위에 쥔 컷 자리(`CameraRegistry::setCutCamera`)
-        Subscription         _photoInputBlock; ///< 포토 모드 동안 게임 입력 레이어를 막는 칸(`InputManager::pushSharedLayer`)
+        SW_TRANSIENT PhotoModeCamera _photoMode;
+        SW_TRANSIENT unique_ptr<InputMap> _photoInputMap;   ///< 포토 모드 동안만 있는 엔진 포토 모드 입력 맵(`enterPhotoMode` 가 읽고 `exitPhotoMode` 가 버린다)
+        SW_TRANSIENT bool                 _bPhotoModeCut;   ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
+        Subscription                      _photoPause;      ///< 포토 모드가 건 게임 시간 정지 요청
+        Subscription                      _photoLayerHide;  ///< 포토 모드가 건 UI 레이어 숨김 요청(`IUILayerVisibility`)
+        Subscription                      _photoCut;        ///< 포토 모드가 시퀀스 컷 · 킬캠 위에 쥔 컷 자리(`CameraRegistry::setCutCamera`)
+        Subscription                      _photoInputBlock; ///< 포토 모드 동안 게임 입력 레이어를 막는 칸(`InputManager::pushSharedLayer`)
 
         SharedAssetRef<CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(`SharedAssetCache<CameraPresetCatalog>`). 경로가 없으면 빈 표다
-        CameraDirector                      _director;
-        CameraImpulseListener               _channelImpulse;    ///< 흔들림 채널의 충격. 이 카메라를 뷰 타깃으로 읽는 매니저가 있으면 매니저가 더하므로 쓰지 않는다(두 번 더하지 않는다)
+        SW_CODEC_STATE CameraDirector       _director;
+        SW_TRANSIENT CameraImpulseListener  _channelImpulse;    ///< 흔들림 채널의 충격. 이 카메라를 뷰 타깃으로 읽는 매니저가 있으면 매니저가 더하므로 쓰지 않는다(두 번 더하지 않는다)
         Subscription                        _shakeSubscription; ///< 흔들림 채널 구독(플레이 동안)
-        vector<uint8>                       _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`). 카탈로그를 읽은 뒤 적용한다
-        const ICameraCollisionProbe*        _pExternalProbe;
-        hashed_string                       _inputCheckedPresetID; ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)
-        hashed_string                       _selectedPreset;       ///< 플레이어 · 코드가 고른 프리셋(상황 적용 전)
-        hashed_string                       _contextPreset;        ///< 상황을 적용해 마지막으로 켠 프리셋. 바뀔 때만 켠다(직접 켠 프리셋과 다투지 않는다)
-        vector<hashed_string>               _listContext;          ///< 코드가 켠 상황(`setContext`)
-        vector<hashed_string>               _listHeldContext;      ///< 이번 프레임 액션을 누르고 있는 상황
-        GameObjectHandle                    _teleportTarget;       ///< `_targetTeleport` 이 마지막에 본 대상
-        SceneTeleportCursor                 _targetTeleport;       ///< 대상이 순간이동했는지 읽는 자리
-        float32                             _pendingDeltaTime;     ///< 틱이 모은 시간. 미룬 계산이 쓴다
-        bool                                _bResolvePending;      ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
+        SW_TRANSIENT vector<uint8>   _pendingStateBytes;        ///< 시작 전에 받은 상태(`restoreState`). 카탈로그를 읽은 뒤 적용한다
+        const ICameraCollisionProbe* _pExternalProbe;
+        SW_TRANSIENT hashed_string   _inputCheckedPresetID;   ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)
+        SW_CODEC_STATE hashed_string _selectedPreset;         ///< 플레이어 · 코드가 고른 프리셋(상황 적용 전)
+        SW_TRANSIENT hashed_string   _contextPreset;          ///< 상황을 적용해 마지막으로 켠 프리셋. 바뀔 때만 켠다(직접 켠 프리셋과 다투지 않는다)
+        SW_CODEC_STATE vector<hashed_string> _listContext;    ///< 코드가 켠 상황(`setContext`)
+        SW_TRANSIENT vector<hashed_string> _listHeldContext;  ///< 이번 프레임 액션을 누르고 있는 상황
+        SW_TRANSIENT GameObjectHandle      _teleportTarget;   ///< `_targetTeleport` 이 마지막에 본 대상
+        SW_TRANSIENT SceneTeleportCursor   _targetTeleport;   ///< 대상이 순간이동했는지 읽는 자리
+        SW_TRANSIENT float32               _pendingDeltaTime; ///< 틱이 모은 시간. 미룬 계산이 쓴다
+        SW_TRANSIENT bool                  _bResolvePending;  ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
     };
 } // namespace sw

@@ -51,7 +51,7 @@ namespace sw
         float32 _health;
         PROPERTY( Category = "Health", DisplayName = "Max Health", Tooltip = "Rule max health of the last snapshot", Transient, ReadOnly )
         float32                _maxHealth;
-        uint8                  _bHasSnapshot : 1; ///< 스냅숏을 받았다(전이면 체력이 없는 주인으로 읽힌다)
+        SW_TRANSIENT uint8     _bHasSnapshot : 1; ///< 스냅숏을 받았다(전이면 체력이 없는 주인으로 읽힌다)
         [[maybe_unused]] uint8 _reserved     : 7;
 
     private:

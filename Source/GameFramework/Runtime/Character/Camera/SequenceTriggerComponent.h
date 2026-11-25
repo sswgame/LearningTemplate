@@ -97,9 +97,9 @@ namespace sw
         PROPERTY( Category = "Sequence", DisplayName = "Sequence", Tooltip = "Object with the SequencePlayerComponent to play" )
         GameObjectHandle _sequence;
         PROPERTY( Category = "Sequence", DisplayName = "Audience", Tooltip = "Everyone: play for all players, progress flag in the session state; Activator: play only for the player who entered, progress flag in that player's state" )
-        SequenceTriggerAudience     _audience;
-        vector<SequenceTriggerPlay> _listPlay;            ///< 튼 재생(끝난 것은 다음 발동이 거둔다)
-        vector<GameObjectHandle>    _listPrivateDirector; ///< 세워 둔 플레이어만의 디렉터(쉬면 다시 쓴다, 저장하지 않는 파생 오브젝트)
-        uint32                      _activationCount;     ///< 이번 실행에서 튼 횟수(넷 키트가 오른 것을 본다)
+        SequenceTriggerAudience _audience;
+        SW_TRANSIENT vector<SequenceTriggerPlay> _listPlay;         ///< 튼 재생(끝난 것은 다음 발동이 거둔다)
+        SW_TRANSIENT vector<GameObjectHandle> _listPrivateDirector; ///< 세워 둔 플레이어만의 디렉터(쉬면 다시 쓴다, 저장하지 않는 파생 오브젝트)
+        SW_TRANSIENT uint32                   _activationCount;     ///< 이번 실행에서 튼 횟수(넷 키트가 오른 것을 본다)
     };
 } // namespace sw

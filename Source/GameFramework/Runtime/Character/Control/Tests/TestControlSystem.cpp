@@ -630,3 +630,34 @@ SW_TEST_CASE( ControlSystemTest, RestoredPawnKeepsTheControlRotation )
     SW_EXPECT_NEAR( 1.25f, rig._pFirst->getControlYaw(), 1.0e-3f );
     SW_EXPECT_NEAR( -0.5f, rig._pFirst->getControlPitch(), 1.0e-3f );
 }
+
+/** @brief [ControlSystemTest] AI 의 판단 상태(블랙보드 · 상태 이름 · 목적지 · 초점)는 상태로 남는다 — 월드 원점이 옮겨진 뒤에 되살려도 같은 절대 자리다 */
+SW_TEST_CASE( ControlSystemTest, AIStateSurvivesRestore )
+{
+    GameObjectManager      manager;
+    AIControllerComponent* pAI = manager.createGameObject( hashed_string( "AI" ) )->addComponent<AIControllerComponent>();
+    pAI->moveTo( float3{ 1010.0f, 2.0f, 5.0f } );
+    pAI->setStateName( hashed_string( "Chase" ) );
+    pAI->getBlackboard().setVector( "Goal", float3{ 1010.0f, 2.0f, 5.0f } );
+    pAI->getBlackboard().setFloat( "Distance", 7.0f );
+    pAI->getBlackboard().setBool( "Alert", true );
+    Archive archive;
+    pAI->writeState( archive );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+
+    GameObjectManager      restoredManager;
+    AIControllerComponent* pRestored = restoredManager.createGameObject( hashed_string( "AI" ) )->addComponent<AIControllerComponent>();
+    restoredManager.setWorldOrigin( double3{ 1000.0, 0.0, 0.0 } );
+    pRestored->getBlackboard().setFloat( "Stale", 1.0f );
+    pRestored->restoreState( std::move( bytes ) );
+    SW_EXPECT_TRUE( pRestored->hasDestination() );
+    SW_EXPECT_NEAR( 10.0f, pRestored->getDestination()._x, 1.0e-3f );
+    SW_EXPECT_TRUE( pRestored->getStateName() == hashed_string( "Chase" ) );
+    SW_EXPECT_TRUE( pRestored->getMoveStatus() == NavMoveStatus::Moving );
+    const Blackboard& blackboard = pRestored->getBlackboard();
+    SW_EXPECT_NEAR( 10.0f, blackboard.getVector( "Goal" ).value_or( float3{} )._x, 1.0e-3f );
+    SW_EXPECT_TRUE( blackboard.getFloat( "Distance" ) == sw::optional<float32>( 7.0f ) );
+    SW_EXPECT_TRUE( blackboard.isSet( "Alert" ) );
+    SW_EXPECT_FALSE( blackboard.isSet( "Stale" ) ); // 읽기는 통째로 바꾼다
+}

@@ -116,9 +116,9 @@ namespace sw
         PROPERTY( Category = "Smart Object", DisplayName = "Claimants", Tooltip = "Who holds each slot (runtime)" )
         vector<GameObjectHandle> _listClaimant SW_GUARDED_BY( _mutex );
 
-        SmartObjectSlots                     _slots;
-        mutable mutex                        _mutex;
-        AssetReloadWatch<InteractionCatalog> _catalogReload; ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
-        uint8                                _bHasOverride;
+        SW_TRANSIENT SmartObjectSlots _slots;
+        mutable mutex                 _mutex;
+        SW_TRANSIENT AssetReloadWatch<InteractionCatalog> _catalogReload; ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
+        SW_TRANSIENT uint8                                _bHasOverride;
     };
 } // namespace sw

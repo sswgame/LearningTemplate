@@ -89,13 +89,13 @@ namespace sw
         /** @brief @p actor 가 이 일지 주인(조종자 오브젝트)이 조종하는 폰이면 true 입니다 — 다른 플레이어 · AI 가 한 일은 세지 않는다. */
         bool isOwnedPawn( GameObjectHandle actor ) const;
 
-        SharedAssetRef<QuestCatalog>   _catalog;       ///< 연 카탈로그(다시 읽히면 새 판을 가리킨다). 카탈로그 없이 열었으면 비었다
-        shared_ptr<const QuestCatalog> _pBoundCatalog; ///< 일지가 가리키는 판
-        QuestLog                       _questLog;
-        DeferredStateRestore           _restore;
-        Subscription                   _ownerDiedSubscription;            ///< "game" 채널 쓰러짐 구독(`onRegister` 가 걸고 `onUnregister` 가 푼다)
-        Subscription                   _interactionCompletedSubscription; ///< "game" 채널 상호작용 완료 구독
-        Subscription                   _cueSubscription;                  ///< "game" 채널 연출 신호 구독
+        SharedAssetRef<QuestCatalog>        _catalog;       ///< 연 카탈로그(다시 읽히면 새 판을 가리킨다). 카탈로그 없이 열었으면 비었다
+        shared_ptr<const QuestCatalog>      _pBoundCatalog; ///< 일지가 가리키는 판
+        SW_CODEC_STATE QuestLog             _questLog;
+        SW_CODEC_STATE DeferredStateRestore _restore;
+        Subscription                        _ownerDiedSubscription;            ///< "game" 채널 쓰러짐 구독(`onRegister` 가 걸고 `onUnregister` 가 푼다)
+        Subscription                        _interactionCompletedSubscription; ///< "game" 채널 상호작용 완료 구독
+        Subscription                        _cueSubscription;                  ///< "game" 채널 연출 신호 구독
         PROPERTY( Tooltip = "Open without a quest catalog at begin play - only for scenes without a kit director (the hub); a director opens it with its own catalog" )
         uint8                  _bOpenAtBeginPlay : 1;
         [[maybe_unused]] uint8 _reserved         : 7;

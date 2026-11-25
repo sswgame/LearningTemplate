@@ -8,14 +8,17 @@
 #include "Core/Math/OrientationUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
@@ -25,7 +28,8 @@ namespace sw
         struct AIControllerComponentInternal
         {
             /** @brief 이보다 짧은 이동 방향은 "서 있다" 로 봅니다(바라보기를 바꾸지 않는다). */
-            static constexpr float32 kMinMoveLength = 1.0e-3f;
+            static constexpr float32   kMinMoveLength = 1.0e-3f;
+            static constexpr FormatDef kStateFormat{ "AICS" };
 
             /** @brief 방금 한 판단(상태 이름 · 행동 트리의 머문 잎)을 비주얼 로거에 적습니다. 로거가 꺼져 있으면 하는 일이 없다. */
             static void logDecision( const AIControllerComponent& controller, const PawnComponent& pawn )
@@ -43,6 +47,8 @@ namespace sw
                                   AbsolutePosition{ pPawnOwner->getManager()->getWorldOrigin().toAbsolute( pScene->getWorldPosition() ) }, text.view(), float4( 1.0f, 1.0f, 1.0f, 1.0f ) );
             }
         };
+
+        const StatefulComponentRegistrar<AIControllerComponent> s_stateRegistration{ "AIControllerComponent" };
     } // namespace
 } // namespace sw
 
@@ -266,6 +272,58 @@ namespace sw
         if ( length > 1.0f )
             direction = float3{ direction._x / length, 0.0f, direction._z / length };
         return direction;
+    }
+
+    void AIControllerComponent::serializeState( StateIO& io )
+    {
+        const GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr || pOwner->getManager() == nullptr )
+            return;
+        // 쓸 값으로 채운 사본을 놓고, 읽을 때는 끝까지 맞으면 옮긴다.
+        const WorldOrigin& origin          = pOwner->getManager()->getWorldOrigin();
+        Blackboard         blackboard      = _blackboard;
+        hashed_string      stateName       = _stateName;
+        float3             destination     = origin.toAbsolute( _destination );
+        float3             focusPoint      = origin.toAbsolute( _focusPoint );
+        uint32             heldButtonMask  = _heldButtonMask;
+        NavMoveStatus      moveStatus      = _moveStatus;
+        uint8              bHasDestination = static_cast<uint8>( _bHasDestination );
+        uint8              bHasFocus       = static_cast<uint8>( _bHasFocus );
+        io.header( AIControllerComponentInternal::kStateFormat );
+        blackboard.serializeState( io, origin );
+        io.value( stateName );
+        io.value( destination );
+        io.value( focusPoint );
+        io.value( heldButtonMask );
+        io.enumValue( moveStatus, NavMoveStatus::Failed );
+        io.flag( bHasDestination );
+        io.flag( bHasFocus );
+        if ( io.isWriting() )
+            return;
+        io.end();
+        if ( io.isOk() == false )
+            return;
+        _blackboard        = std::move( blackboard );
+        _stateName         = stateName;
+        _destination       = origin.toLocal( destination );
+        _focusPoint        = origin.toLocal( focusPoint );
+        _heldButtonMask    = heldButtonMask;
+        _moveStatus        = moveStatus;
+        _bHasDestination   = bHasDestination;
+        _bHasFocus         = bHasFocus;
+        _bDestinationSent  = SW_FALSE; // 내비 에이전트에 다시 건다
+        _bStopPending      = bHasDestination == SW_FALSE ? SW_TRUE : SW_FALSE;
+        _pending           = ControlIntent{};
+        _pressedButtonMask = 0;
+        _runner.reset();
+        _thinkSchedule = ControlFrameInterval{};
+    }
+
+    void AIControllerComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), bytes.size() );
+        if ( readState( archive ) == false )
+            SW_LOG_WARNING_ID( "AIControllerComponent.SavedStateUnreadable", "'%#': the saved AI state did not read - it decides afresh", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
     }
 
     void AIControllerComponent::onWorldOriginShifted( const float3& delta )

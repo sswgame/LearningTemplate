@@ -102,7 +102,7 @@ namespace sw
         PROPERTY( Category = "Animation", DisplayName = "Alpha", Tooltip = "Current fade (1 to 0)", Min = 0.0, Max = 1.0, ReadOnly )
         float32 _alpha;
         PROPERTY( Category = "Style", DisplayName = "Color", Meta = "Color", Tooltip = "Text color; alpha is multiplied by the fade" )
-        float4 _color;
-        bool   _bWarnedNoWidgetComponent; ///< 같은 오브젝트에 WidgetComponent 가 없다고 한 번 알렸다
+        float4            _color;
+        SW_TRANSIENT bool _bWarnedNoWidgetComponent; ///< 같은 오브젝트에 WidgetComponent 가 없다고 한 번 알렸다
     };
 } // namespace sw

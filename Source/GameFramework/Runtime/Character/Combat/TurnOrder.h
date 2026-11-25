@@ -105,8 +105,8 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<Combatant> _listCombatant;
         PROPERTY( RuntimeState )
-        vector<int32> _listRoundQueue; ///< 라운드제에서 이번 라운드에 남은 차례(앞부터)
-        GameRandom    _random;
+        vector<int32>             _listRoundQueue; ///< 라운드제에서 이번 라운드에 남은 차례(앞부터)
+        SW_CODEC_STATE GameRandom _random;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _round;
         PROPERTY( RuntimeState )

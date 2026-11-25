@@ -110,9 +110,9 @@ namespace sw
         PROPERTY( Category = "Head Bob", DisplayName = "Head Bob", Tooltip = "Walking bob of the view; zero amplitude turns it off" )
         CameraHeadBobDef _headBob;
 
-        FirstPersonLook _look;
-        float3          _eyePosition;
-        CameraModeState _modeState;        ///< 머리 흔들림의 위상 · 크기
-        float32         _pendingDeltaTime; ///< 틱이 흘린 시간. 다음 `applyToCamera` 가 머리 흔들림에 쓰고 비운다
+        SW_TRANSIENT FirstPersonLook _look;
+        SW_TRANSIENT float3          _eyePosition;
+        SW_TRANSIENT CameraModeState _modeState;        ///< 머리 흔들림의 위상 · 크기
+        SW_TRANSIENT float32         _pendingDeltaTime; ///< 틱이 흘린 시간. 다음 `applyToCamera` 가 머리 흔들림에 쓰고 비운다
     };
 } // namespace sw

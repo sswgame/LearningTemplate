@@ -66,9 +66,9 @@ namespace sw
         PROPERTY( Category = "Track", DisplayName = "Release When Done", Tooltip = "Give the pawn back to its previous controller when the track ends" )
         bool _bReleaseWhenDone;
 
-        vector<ControlIntent>                 _listIntent;
-        TComponentHandle<ControllerComponent> _returnController; ///< 끝나면 폰을 돌려줄 조종자(무효면 놓기만)
-        size_t                                _cursor;           ///< 다음에 낼 의도
-        bool                                  _bReturnPending;   ///< 목록이 끝나면 폰 돌려주기를 한 번 요청해야 한다
+        SW_TRANSIENT vector<ControlIntent> _listIntent;
+        SW_TRANSIENT TComponentHandle<ControllerComponent> _returnController; ///< 끝나면 폰을 돌려줄 조종자(무효면 놓기만)
+        SW_TRANSIENT size_t                                _cursor;           ///< 다음에 낼 의도
+        SW_TRANSIENT bool                                  _bReturnPending;   ///< 목록이 끝나면 폰 돌려주기를 한 번 요청해야 한다
     };
 } // namespace sw

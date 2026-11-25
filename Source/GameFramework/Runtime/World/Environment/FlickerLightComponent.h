@@ -43,7 +43,7 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Flicker", DisplayName = "Step", Tooltip = "Runtime" )
         int32 _step;
 
-        float32 _baseIntensity;
-        float32 _appliedScale;
+        SW_TRANSIENT float32 _baseIntensity;
+        SW_TRANSIENT float32 _appliedScale;
     };
 } // namespace sw

@@ -1,11 +1,18 @@
 #include "pch.h"
 
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
@@ -108,4 +115,47 @@ SW_TEST_CASE( CameraSystemTest, DirectorAloneHearsTheShakeChannel )
     manager.getCameraRegistry().getShakeChannel().broadcast( request );
     pDirector->updateCamera( 0.05f );
     SW_EXPECT_NEAR( 0.0f, ( CameraPose::makePoseFromCamera( *pCamera )._position - restPosition ).getLength(), 1.0e-4f );
+}
+
+/** @brief [CameraSystemTest] 상황(조준) 중에 뜬 카메라를 되살려도 고른 프리셋과 켜진 상황이 남는다 — 상황을 끄면 고른 프리셋으로 돌아온다(예전에는 조준 프리셋이 고른 것이 되어 남았다) */
+SW_TEST_CASE( CameraSystemTest, SelectedPresetSurvivesRestoreInsideAContext )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "aim.cameras.xml" ), R"(<CameraPresetCatalog>
+    <DefaultBlend curve="SmoothStep" duration="0.5"/>
+    <Context name="Aim" priority="10" action="Aim"><Map from="orbit" to="orbit_aim"/></Context>
+    <Preset id="orbit"><View mode="Orbit" pitch="24.999867" yaw="0" distance="12" offset="0,1.5,0"/></Preset>
+    <Preset id="orbit_aim"><View mode="Orbit" pitch="10.000004" yaw="0" distance="4" offset="0,1.5,0"/></Preset>
+</CameraPresetCatalog>)" ) );
+    StringBuilder<constant::buffer::kMax512> text;
+    text.appendFormat( "<CameraDirectorComponent _catalogPath=\"%#\" _initialPreset=\"orbit\"/>", test::ScopedScratchDomain::makeID( "aim.cameras.xml" ).str() );
+    const auto addDirector = [&text]( GameObjectManager& manager )
+    {
+        GameObject* pRig = manager.createGameObject( hashed_string( "Rig" ) );
+        (void)pRig->addComponent<CameraComponent>();
+        CameraDirectorComponent* pDirector = pRig->addComponent<CameraDirectorComponent>();
+        SW_EXPECT_TRUE( XMLSerializer::deserialize( pDirector, *CameraDirectorComponent::StaticType(), text.view() ) );
+        return pDirector;
+    };
+    GameObjectManager        manager;
+    CameraDirectorComponent* pDirector = addDirector( manager );
+    manager.beginPlay();
+    SW_REQUIRE_TRUE( pDirector->setContext( hashed_string( "Aim" ), true ) );
+    SW_REQUIRE_TRUE( pDirector->getActivePresetID() == hashed_string( "orbit_aim" ) );
+    Archive archive;
+    StateIO::writeObject( *pDirector, archive );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+
+    GameObjectManager        restoredManager;
+    CameraDirectorComponent* pRestored = addDirector( restoredManager );
+    pRestored->restoreState( std::move( bytes ) );
+    restoredManager.beginPlay();
+    SW_EXPECT_TRUE( pRestored->getActivePresetID() == hashed_string( "orbit_aim" ) );
+    SW_EXPECT_TRUE( pRestored->getSelectedPresetID() == hashed_string( "orbit" ) );
+    SW_EXPECT_TRUE( pRestored->isContextActive( hashed_string( "Aim" ) ) );
+    SW_REQUIRE_TRUE( pRestored->setContext( hashed_string( "Aim" ), false ) );
+    SW_EXPECT_TRUE( pRestored->getActivePresetID() == hashed_string( "orbit" ) );
+    manager.endPlay();
+    restoredManager.endPlay();
 }

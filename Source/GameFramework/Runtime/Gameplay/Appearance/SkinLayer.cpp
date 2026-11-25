@@ -157,6 +157,25 @@ namespace sw
         ++_revision;
     }
 
+    void SkinLayerSmearState::serializeState( StateIO& io )
+    {
+        io.expect( _resolution );
+        io.flag( _bDirty );
+        if ( io.isReading() )
+        {
+            std::fill( _listOffset.begin(), _listOffset.end(), float2{} );
+            std::fill( _listDilution.begin(), _listDilution.end(), 0.0f );
+            ++_revision;
+        }
+        if ( _bDirty == SW_FALSE )
+            return;
+        for ( size_t cell = 0; cell < _listOffset.size() && io.isOk(); ++cell )
+        {
+            io.value( _listOffset[cell] );
+            io.value( _listDilution[cell] );
+        }
+    }
+
     uint32 SkinLayerSmearState::findCell( const float2& uv ) const
     {
         const float32 last = static_cast<float32>( _resolution - 1 );

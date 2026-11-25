@@ -12,8 +12,10 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/GameState/DeferredStateRestore.h"
 
 namespace sw
 {
@@ -108,6 +110,9 @@ namespace sw
         void onPostLoad() override;
         /** @brief `_graphPath` 가 바뀌면 그 그래프를 다시 엽니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
+        /** @brief 대화의 진행(상태 · 지금 노드 · 진행 번호)입니다. 줄 · 선택지는 노드에서 다시 선다. 그래프를 연 뒤(`onBeginPlay`)에 되돌린다. */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        void restoreState( vector<uint8>&& bytes );
 
         [[nodiscard]] bool loadGraphFile( const AssetID& assetID );
         [[nodiscard]] bool loadGraphXML( string_view xmlContent );
@@ -169,6 +174,8 @@ namespace sw
          * @details 모르는 타입은 경고하고 대화를 끝낸다. 대화가 멈춘 채 남지 않게 하려는 것이다.
          */
         [[nodiscard]] bool runNode( optional<int32> nodeID, optional<int32>& outNextNodeID );
+        /** @brief 사람을 기다리는 노드(대사 · 선택)의 줄을 보이고 알립니다. 실행과 복원이 함께 쓴다. */
+        void showNode( const DialogueAssetNode& node );
         /** @brief 노드를 지나 다음 노드의 id 입니다. 노드가 그새 사라졌거나 다음이 없으면 비어 있습니다. */
         optional<int32> findNextNode( int32 nodeID, const DialogueStepInput& input ) const;
         /** @brief 상태를 Finished 로 두고 `_onFinished` 를 부릅니다. */
@@ -188,23 +195,24 @@ namespace sw
         /** @brief 이 러너가 올린 자막 줄이 있으면 내립니다 — 다음 줄 · 대화 끝 · 건너뛰기에서 앞 줄이 읽기 시간만큼 남지 않게 한다(언리얼 대화의 자막 종료). */
         void removePostedSubtitle();
 
-        DialogueGraphAsset                   _graph;
-        vector<DialogueCompiledNode>         _listCompiled;
-        GameFlags*                           _pFlags;
-        GameplayContext                      _world;
-        ISubtitleSink*                       _pSubtitleSinkOverride; ///< 자막을 보낼 곳(테스트), nullptr 이면 엔진 서비스
-        string                               _currentSpeaker;
-        string                               _currentText;
-        vector<string>                       _listCurrentChoice;
+        SW_TRANSIENT DialogueGraphAsset _graph;
+        SW_TRANSIENT vector<DialogueCompiledNode> _listCompiled;
+        GameFlags*                                _pFlags;
+        SW_TRANSIENT GameplayContext              _world;
+        ISubtitleSink*                            _pSubtitleSinkOverride; ///< 자막을 보낼 곳(테스트), nullptr 이면 엔진 서비스
+        SW_TRANSIENT string                       _currentSpeaker;
+        SW_TRANSIENT string                       _currentText;
+        SW_TRANSIENT vector<string>          _listCurrentChoice;
         DelegateSlot<OnDialogueLineFunc>     _onLine;
         DelegateSlot<OnDialogueChoicesFunc>  _onChoices;
         DelegateSlot<OnDialogueEventFunc>    _onEvent;
         DelegateSlot<OnDialogueFinishedFunc> _onFinished;
-        DialogueRunnerState                  _state;
-        int32                                _currentNodeID;
-        uint32                               _currentSpeakerID;
+        SW_CODEC_STATE DeferredStateRestore  _restore; ///< 그래프를 열기 전에 받은 복원 바이트
+        SW_CODEC_STATE DialogueRunnerState   _state;
+        SW_CODEC_STATE int32                 _currentNodeID;
+        SW_TRANSIENT uint32                  _currentSpeakerID;
         /** @brief 노드에 들어가거나 대화를 멈출 때마다 늘어납니다. Action 핸들러가 그 안에서 대화를 옮겼는지 봅니다. */
-        uint32 _transitionSerial;
-        uint32 _postedSubtitleID; ///< 이 러너가 올려 아직 내리지 않은 자막 줄 번호(`ISubtitleSink::postSubtitle`). 0 이면 없다
+        SW_CODEC_STATE uint32 _transitionSerial;
+        SW_TRANSIENT uint32   _postedSubtitleID; ///< 이 러너가 올려 아직 내리지 않은 자막 줄 번호(`ISubtitleSink::postSubtitle`). 0 이면 없다
     };
 } // namespace sw

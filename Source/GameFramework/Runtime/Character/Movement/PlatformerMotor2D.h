@@ -233,17 +233,17 @@ namespace sw
         void tryJump( bool bWallLeft, bool bWallRight );
 
     private:
-        PlatformerSettings _settings;
+        SW_TRANSIENT PlatformerSettings _settings;
         PROPERTY( RuntimeState )
         float2 _position;
         PROPERTY( RuntimeState )
-        float2    _velocity;
-        Countdown _coyote;
-        Countdown _jumpBuffer;
-        Countdown _wallLock;
-        Countdown _dash;
-        Countdown _dashCooldown;
-        Countdown _dropThrough;
+        float2                   _velocity;
+        SW_CODEC_STATE Countdown _coyote;
+        SW_CODEC_STATE Countdown _jumpBuffer;
+        SW_CODEC_STATE Countdown _wallLock;
+        SW_CODEC_STATE Countdown _dash;
+        SW_CODEC_STATE Countdown _dashCooldown;
+        SW_CODEC_STATE Countdown _dropThrough;
         PROPERTY( RuntimeState )
         int32 _extraJumpsLeft;
         PROPERTY( RuntimeState )
@@ -251,8 +251,8 @@ namespace sw
         PROPERTY( RuntimeState )
         int32 _wallSide;
         PROPERTY( RuntimeState )
-        int32  _facing;
-        uint32 _events;
+        int32               _facing;
+        SW_TRANSIENT uint32 _events;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
         uint8 _bGrounded;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

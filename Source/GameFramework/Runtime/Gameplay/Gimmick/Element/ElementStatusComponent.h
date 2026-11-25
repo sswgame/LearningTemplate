@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
@@ -12,8 +13,10 @@
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/GameState/DeferredStateRestore.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementGrid.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementRuleCatalog.h"
 
@@ -47,6 +50,10 @@ namespace sw
         /** @brief 원소 규칙 테이블 경로를 바꾸고 다시 만듭니다. 비우면 테이블이 없어 자극이 듣지 않는다(오류로 알린다). */
         void setTablePath( string_view path );
 
+        /** @brief 원소 상태(재질 · 걸린 상태와 남은 값 · 스텝 시각)입니다. 테이블을 읽은 뒤(`onBeginPlay`)에 되돌린다. */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        void restoreState( vector<uint8>&& bytes );
+
     private:
         void rebuild();
         void publishSignal();
@@ -61,8 +68,9 @@ namespace sw
         PROPERTY( Category = "Element", DisplayName = "Start Status", Tooltip = "Stimulus applied at play start (Fire for a lit torch)" )
         hashed_string _startStimulus;
 
-        ElementGrid                          _grid;
-        shared_ptr<const ElementRuleCatalog> _pTable;      ///< `_grid` 가 가리키는 공유 테이블(쥔 동안 산다)
-        AssetReloadWatch<ElementRuleCatalog> _tableReload; ///< 테이블을 찾았을 때의 `SharedAssetCache<ElementRuleCatalog>::getReloadCount` 값. 달라지면 다시 만든다
+        SW_CODEC_STATE ElementGrid           _grid;
+        SW_CODEC_STATE DeferredStateRestore  _restore;                  ///< 테이블을 읽기 전에 받은 복원 바이트
+        shared_ptr<const ElementRuleCatalog> _pTable;                   ///< `_grid` 가 가리키는 공유 테이블(쥔 동안 산다)
+        SW_TRANSIENT AssetReloadWatch<ElementRuleCatalog> _tableReload; ///< 테이블을 찾았을 때의 `SharedAssetCache<ElementRuleCatalog>::getReloadCount` 값. 달라지면 다시 만든다
     };
 } // namespace sw

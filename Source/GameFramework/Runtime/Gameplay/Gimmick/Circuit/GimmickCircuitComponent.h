@@ -198,15 +198,15 @@ namespace sw
         PROPERTY( Category = "Circuit", DisplayName = "Step Time", Min = 0.001, Tooltip = "Fixed simulation step", Units = s )
         float32 _stepTime;
 
-        GimmickCircuit        _circuit;
-        vector<Binding>       _listBinding;
-        vector<TagContainer>  _listNodeTag;      ///< 노드마다 근접 센서의 태그(`bindNodes` 가 `tag` 매개변수에서 한 번 만든다). 근접 노드가 아니거나 태그가 없으면 비어 있다
-        vector<GameObject*>   _listTagged;       ///< 근접 노드가 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
-        vector<hashed_string> _listPulsePort;    ///< 노드마다 펄스 작동기의 출력 이름(피해 틱 · 스폰 · 재생). 상태 작동기 · 센서는 비어 있다
-        vector<int32>         _listPendingPulse; ///< 이번 틱 스텝들이 켠 펄스 노드((스텝, 노드) 순서). 틱 뒤 `applyPendingActuators` 가 돌리고 비운다
-        vector<SensorRead>    _listSensorRead;   ///< 이번 틱에 읽은 충격 센서 몫. 틱 뒤에 그만큼 비운다
-        vector<float32>       _listPlateWeight;  ///< 노드마다 압력판의 겹친 무게 사본(`refreshPlateWeights`, 틱 밖 · 틱 뒤에 받는다). 압력판이 아니면 0
-        vector<string>        _listError;
-        GimmickCircuitState   _checkpoint; ///< 비어 있으면 잡은 체크포인트가 없다
+        SW_TRANSIENT GimmickCircuit _circuit;
+        SW_TRANSIENT vector<Binding> _listBinding;
+        SW_TRANSIENT vector<TagContainer> _listNodeTag;    ///< 노드마다 근접 센서의 태그(`bindNodes` 가 `tag` 매개변수에서 한 번 만든다). 근접 노드가 아니거나 태그가 없으면 비어 있다
+        SW_TRANSIENT vector<GameObject*> _listTagged;      ///< 근접 노드가 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
+        SW_TRANSIENT vector<hashed_string> _listPulsePort; ///< 노드마다 펄스 작동기의 출력 이름(피해 틱 · 스폰 · 재생). 상태 작동기 · 센서는 비어 있다
+        SW_TRANSIENT vector<int32> _listPendingPulse;      ///< 이번 틱 스텝들이 켠 펄스 노드((스텝, 노드) 순서). 틱 뒤 `applyPendingActuators` 가 돌리고 비운다
+        SW_TRANSIENT vector<SensorRead> _listSensorRead;   ///< 이번 틱에 읽은 충격 센서 몫. 틱 뒤에 그만큼 비운다
+        SW_TRANSIENT vector<float32> _listPlateWeight;     ///< 노드마다 압력판의 겹친 무게 사본(`refreshPlateWeights`, 틱 밖 · 틱 뒤에 받는다). 압력판이 아니면 0
+        SW_TRANSIENT vector<string>      _listError;
+        SW_TRANSIENT GimmickCircuitState _checkpoint; ///< 비어 있으면 잡은 체크포인트가 없다
     };
 } // namespace sw

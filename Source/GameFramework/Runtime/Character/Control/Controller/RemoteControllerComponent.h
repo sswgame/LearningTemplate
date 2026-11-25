@@ -65,10 +65,10 @@ namespace sw
         const DevCounter& getMissingTickCount() const { return _missingTickCount; }
 
     private:
-        TickRingBuffer<ControlIntent> _received;   ///< 받은 의도(사본). 읽은 틱은 지운다
-        ControlIntent                 _lastIntent; ///< 마지막으로 받은 의도(발동 비트는 지운 채)
-        uint32                        _nextInputTick;
-        DevCounter                    _missingTickCount;
-        bool                          _bHasLastIntent;
+        SW_TRANSIENT TickRingBuffer<ControlIntent> _received;   ///< 받은 의도(사본). 읽은 틱은 지운다
+        SW_TRANSIENT ControlIntent                 _lastIntent; ///< 마지막으로 받은 의도(발동 비트는 지운 채)
+        SW_TRANSIENT uint32                        _nextInputTick;
+        DevCounter                                 _missingTickCount;
+        SW_TRANSIENT bool                          _bHasLastIntent;
     };
 } // namespace sw

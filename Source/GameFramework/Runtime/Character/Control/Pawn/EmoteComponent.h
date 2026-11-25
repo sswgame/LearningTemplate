@@ -68,7 +68,7 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Emote", DisplayName = "Active State", Tooltip = "Runtime" )
         hashed_string _activeState;
         PROPERTY( RuntimeState, Category = "Emote", DisplayName = "Resume State", Tooltip = "Animator state to return to (runtime)" )
-        hashed_string           _resumeState;
-        vector<optional<int32>> _listButtonIndex; ///< `_listEmote` 와 같은 차례의 버튼 번호
+        hashed_string _resumeState;
+        SW_TRANSIENT vector<optional<int32>> _listButtonIndex; ///< `_listEmote` 와 같은 차례의 버튼 번호
     };
 } // namespace sw

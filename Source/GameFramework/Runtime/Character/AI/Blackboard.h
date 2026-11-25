@@ -13,6 +13,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -46,6 +48,8 @@ namespace sw
 
 namespace sw
 {
+    struct WorldOrigin;
+
     class Blackboard;
 
     /** @brief 조건(`blackboard` · `hasBlackboard`)이 읽는 칸입니다. */
@@ -86,6 +90,8 @@ namespace sw
         void clear();
         /** @brief 월드 원점이 옮겨졌습니다 — 벡터 값(모두 위치다)을 @p delta 만큼 옮깁니다. 위치가 바뀐 것이 아니라 기준이 바뀐 것이라 리비전은 오르지 않습니다. */
         void shiftWorldOrigin( const float3& delta );
+        /** @brief 값들을 쓰거나 읽습니다(읽기는 통째로 바꾼다). 벡터는 위치라 @p origin 으로 절대 자리로 싣는다 — 뜬 때와 되돌릴 때의 월드 원점이 다를 수 있다. */
+        void serializeState( StateIO& io, const WorldOrigin& origin );
 
         bool isSet( const hashed_string& key ) const;
         /** @brief 수치로 읽습니다(실수 · 정수 · 참거짓 · 오브젝트). 없으면 비어 있습니다. */

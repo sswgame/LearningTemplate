@@ -97,11 +97,11 @@ namespace sw
         PROPERTY( Category = "Player", DisplayName = "Mouse Lock Action", Tooltip = "InputMap action that releases and re-locks the cursor of a pawn that wants mouse lock (Esc)" )
         hashed_string _mouseLockAction;
 
-        vector<Subscription>            _listPawnLayer;           ///< 빙의한 폰의 입력 레이어(`InputMap::pushLayer`)
-        Subscription                    _mouseLock;               ///< 이 조종자가 쥔 마우스 잠금(`InputManager::claimMouseLock`)
-        GameObjectHandle                _previousPawn;            ///< 마지막으로 놓은 폰의 오브젝트(이벤트의 앞 폰)
-        TComponentHandle<PawnComponent> _warnedPawn;              ///< 빠진 액션을 이미 경고한 폰
-        uint8                           _bMouseLockRequested : 1; ///< 빙의한 폰을 위해 잠금을 유지하려 한다(토글 액션이 뒤집는다)
-        [[maybe_unused]] uint8          _reserved            : 7;
+        SW_TRANSIENT vector<Subscription> _listPawnLayer;                      ///< 빙의한 폰의 입력 레이어(`InputMap::pushLayer`)
+        Subscription                      _mouseLock;                          ///< 이 조종자가 쥔 마우스 잠금(`InputManager::claimMouseLock`)
+        SW_TRANSIENT GameObjectHandle     _previousPawn;                       ///< 마지막으로 놓은 폰의 오브젝트(이벤트의 앞 폰)
+        SW_TRANSIENT TComponentHandle<PawnComponent> _warnedPawn;              ///< 빠진 액션을 이미 경고한 폰
+        SW_TRANSIENT uint8                           _bMouseLockRequested : 1; ///< 빙의한 폰을 위해 잠금을 유지하려 한다(토글 액션이 뒤집는다)
+        [[maybe_unused]] uint8                       _reserved            : 7;
     };
 } // namespace sw

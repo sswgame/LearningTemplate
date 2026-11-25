@@ -367,11 +367,11 @@ namespace sw
         void           pushEvent( KinematicVehicleEvent::Kind kind, int32 value );
 
     private:
-        KinematicVehicleSettings                  _settings;
-        NotificationBuffer<KinematicVehicleEvent> _eventBuffer;
-        FixedStepTimer                            _timer;
-        const IVehicleGround*                     _pGround;
-        const SplinePath*                         _pRail;
+        SW_TRANSIENT KinematicVehicleSettings _settings;
+        SW_TRANSIENT NotificationBuffer<KinematicVehicleEvent> _eventBuffer;
+        SW_CODEC_STATE FixedStepTimer                          _timer;
+        const IVehicleGround*                                  _pGround;
+        const SplinePath*                                      _pRail;
         PROPERTY( RuntimeState )
         float3 _position;
         PROPERTY( RuntimeState )
@@ -379,8 +379,8 @@ namespace sw
         PROPERTY( RuntimeState )
         float32 _yaw;
         PROPERTY( RuntimeState )
-        float32   _driftCharge; ///< 이번 드리프트의 시간
-        Countdown _boost;
+        float32                  _driftCharge; ///< 이번 드리프트의 시간
+        SW_CODEC_STATE Countdown _boost;
         PROPERTY( RuntimeState )
         float32 _nitroGauge; ///< 0..1
         PROPERTY( RuntimeState, Min = 0 )
@@ -391,8 +391,8 @@ namespace sw
         int32 _driftDirection; ///< -1 은 왼쪽, 1 은 오른쪽, 0 은 드리프트 아님
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
         uint8                  _bAirborne;
-        uint8                  _bBoostQueued : 1; ///< `advance` 가 걸음 없는 프레임에 받은 부스트 눌림
-        uint8                  _bJumpQueued  : 1; ///< `advance` 가 걸음 없는 프레임에 받은 점프 눌림
+        SW_TRANSIENT uint8     _bBoostQueued : 1; ///< `advance` 가 걸음 없는 프레임에 받은 부스트 눌림
+        SW_TRANSIENT uint8     _bJumpQueued  : 1; ///< `advance` 가 걸음 없는 프레임에 받은 점프 눌림
         [[maybe_unused]] uint8 _reserved     : 6;
     };
 } // namespace sw

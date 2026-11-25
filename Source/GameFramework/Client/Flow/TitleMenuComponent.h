@@ -35,7 +35,7 @@ namespace sw
         void closeMenu();
 
     private:
-        UISystem*      _pUISystem; ///< 메뉴를 연 UI 시스템(없으면 nullptr)
-        UIScreenHandle _menu;
+        UISystem*                   _pUISystem; ///< 메뉴를 연 UI 시스템(없으면 nullptr)
+        SW_TRANSIENT UIScreenHandle _menu;
     };
 } // namespace sw

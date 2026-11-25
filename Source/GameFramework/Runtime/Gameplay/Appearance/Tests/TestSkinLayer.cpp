@@ -7,6 +7,8 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
@@ -226,4 +228,29 @@ SW_TEST_CASE_F( SkinLayerSelectionTest, ShareCodeOfANewerVersionIsRefused )
     SW_EXPECT_FALSE( future );
     SW_EXPECT_EQUAL( string( "unsupported share code version" ), future.has_value() ? string{} : string( future.error().message() ) );
     SW_EXPECT_TRUE( AppearanceSelection::decode( encodeWithVersion( makeSelection(), AppearanceSelection::kShareCodeVersion ), _database, decoded ) );
+}
+
+/** @brief [SkinLayerTest] 번짐은 상태로 남는다 — 되살린 격자가 같은 값을 내고, 해상도가 다르면 거절하고 그대로 둔다 */
+SW_TEST_CASE( SkinLayerTest, SmearStateRoundTrips )
+{
+    const float2        eye{ 0.4f, 0.4f };
+    SkinLayerSmearState smear;
+    smear.initialize( 64 );
+    smear.advect( eye, float2{ 0.0f, 1.0f }, 0.05f, 0.8f, 0.0f, 0.5f );
+    Archive written;
+    smear.writeState( written );
+
+    SkinLayerSmearState restored;
+    restored.initialize( 64 );
+    Archive reading( written.getData(), written.getSize() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_FALSE( restored.isClean() );
+    SW_EXPECT_TRUE( restored.sampleOffset( eye ) == smear.sampleOffset( eye ) );
+    SW_EXPECT_TRUE( restored.sampleDilution( eye ) == smear.sampleDilution( eye ) );
+
+    SkinLayerSmearState coarse;
+    coarse.initialize( 32 );
+    Archive forCoarse( written.getData(), written.getSize() );
+    SW_EXPECT_FALSE( coarse.readState( forCoarse ) );
+    SW_EXPECT_TRUE( coarse.isClean() );
 }

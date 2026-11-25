@@ -69,7 +69,7 @@ namespace sw
         PROPERTY( Category = "AI", DisplayName = "Visible", Tooltip = "Registers the body for sight; turn off for sources that are only heard" )
         bool _bVisible;
 
-        float32    _noiseRadius;
-        SlotHandle _arrEntry[static_cast<size_t>( AIStimulusKind::Count )];
+        SW_TRANSIENT float32    _noiseRadius;
+        SW_TRANSIENT SlotHandle _arrEntry[static_cast<size_t>( AIStimulusKind::Count )];
     };
 } // namespace sw

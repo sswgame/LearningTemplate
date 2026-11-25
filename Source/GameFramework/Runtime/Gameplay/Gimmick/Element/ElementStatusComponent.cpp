@@ -6,18 +6,31 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementRuleCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 
 namespace sw
 {
+    namespace
+    {
+        struct ElementStatusComponentInternal
+        {
+            static constexpr FormatDef kStateFormat{ "ELST" };
+        };
+
+        const StatefulComponentRegistrar<ElementStatusComponent> s_stateRegistration{ "ElementStatusComponent" };
+    } // namespace
+
     ElementStatusComponent::ElementStatusComponent()
         : _tablePath{}
         , _elementMaterial{}
         , _signalStatus{}
         , _startStimulus{}
         , _grid{}
+        , _restore{}
         , _pTable{}
         , _tableReload{}
     {
@@ -63,6 +76,23 @@ namespace sw
             rebuild();
         if ( _startStimulus.empty() == false )
             (void)applyStimulus( _startStimulus ); // 바뀐 것이 없거나 알 수 없는 자극이면 false 이고, 이때는 시작 상태 그대로 둔다
+        (void)_restore.open( *this );              // 들고 있던 상태가 있으면 시작 상태를 덮는다
+        publishSignal();
+    }
+
+    void ElementStatusComponent::serializeState( StateIO& io )
+    {
+        const bool bNothingToWrite = io.isWriting() && ( _restore.writeHeldBytes( io ) || _restore.isOpen() == false );
+        if ( bNothingToWrite )
+            return; // 들고 있던 바이트를 썼거나, 아직 테이블을 읽지 않았다
+        io.header( ElementStatusComponentInternal::kStateFormat );
+        io.valueAtomic( _grid );
+        io.end();
+    }
+
+    void ElementStatusComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _restore.receive( *this, std::move( bytes ) );
         publishSignal();
     }
 

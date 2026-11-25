@@ -67,7 +67,7 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Teleport", DisplayName = "Arrivals", Tooltip = "Objects that arrived here and have not left yet; their entry is ignored (runtime)" )
         vector<GameObjectHandle> _listArrival;
 
-        vector<PendingArrival> _listPendingArrival; ///< `_listArrival` 가운데 겹침을 아직 기다리는 것
-        Subscription           _overlapEndSubscription;
+        SW_TRANSIENT vector<PendingArrival> _listPendingArrival; ///< `_listArrival` 가운데 겹침을 아직 기다리는 것
+        Subscription                        _overlapEndSubscription;
     };
 } // namespace sw

@@ -134,11 +134,11 @@ namespace sw
         PROPERTY( Category = "Layout", DisplayName = "Show When Hurt", Tooltip = "Show the bar the first time health drops" )
         bool _bShowWhenHurt;
         PROPERTY( Category = "Layout", DisplayName = "Hide When Dead", Tooltip = "Hide the bar when the owner dies" )
-        bool    _bHideWhenDead;
-        bool    _bWarnedNoWidgetComponent; ///< 같은 오브젝트에 WidgetComponent 가 없다고 한 번 알렸다
-        float32 _spawnRatio;               ///< 체력 원천이 없을 때 시작한 비율(저장된 칸)
-        bool    _bSpawnVisible;            ///< 시작할 때의 보임(풀 반환이 되돌린다)
-        bool    _bRatioResyncPending;      ///< 풀 반환 뒤 첫 틱이 비율을 체력 원천에서 다시 읽는다
+        bool                 _bHideWhenDead;
+        SW_TRANSIENT bool    _bWarnedNoWidgetComponent; ///< 같은 오브젝트에 WidgetComponent 가 없다고 한 번 알렸다
+        SW_TRANSIENT float32 _spawnRatio;               ///< 체력 원천이 없을 때 시작한 비율(저장된 칸)
+        SW_TRANSIENT bool    _bSpawnVisible;            ///< 시작할 때의 보임(풀 반환이 되돌린다)
+        SW_TRANSIENT bool    _bRatioResyncPending;      ///< 풀 반환 뒤 첫 틱이 비율을 체력 원천에서 다시 읽는다
 
     private:
         /** @brief 체력 변화 계약을 주인의 `onHealthChanged` 로 넘기는 포트입니다(`REFLECT_INTERFACE`). */

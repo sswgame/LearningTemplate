@@ -48,6 +48,6 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Gate", DisplayName = "Open", Tooltip = "Runtime / progress" )
         bool _bOpen; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
 
-        vector<GameObject*> _listTagged; ///< 스텝마다 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
+        SW_TRANSIENT vector<GameObject*> _listTagged; ///< 스텝마다 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
     };
 } // namespace sw

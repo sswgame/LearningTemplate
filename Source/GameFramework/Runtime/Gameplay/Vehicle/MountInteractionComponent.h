@@ -44,6 +44,6 @@ namespace sw
         PROPERTY( Required, Category = "Vehicle", DisplayName = "Interact Button", Tooltip = "Intent button that gets on or off" )
         hashed_string _interactButton;
 
-        optional<int32> _interactIndex;
+        SW_TRANSIENT optional<int32> _interactIndex;
     };
 } // namespace sw

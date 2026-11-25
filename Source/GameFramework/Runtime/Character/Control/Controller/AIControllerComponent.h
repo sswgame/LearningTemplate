@@ -3,6 +3,7 @@
  * @brief AI 조종자입니다. 감각(`updateBlackboard`)이 블랙보드를 채우고 행동 트리가 판단해 의도를 만들고, 플레이어와 같은 폰 이동으로 움직입니다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -14,6 +15,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Navigation/INavMover.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
@@ -76,6 +78,12 @@ namespace sw
         void setAnalog( const hashed_string& name, float32 value );
         /** @brief 목적지 · 초점 · 블랙보드의 위치 · 트리가 요청한 목적지를 @p delta 만큼 옮깁니다. */
         void onWorldOriginShifted( const float3& delta ) override;
+        /**
+         * @brief 판단의 상태(블랙보드 · 상태 이름 · 목적지 · 초점 · 누르고 있는 버튼 · 이동 상태)입니다. 자리는 절대로 싣는다.
+         * @details 행동 트리의 도는 잎은 싣지 않는다 — 되살린 블랙보드로 다음 판단이 처음부터 고른다(언리얼 행동 트리도 블랙보드만 되살린다).
+         */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        void restoreState( vector<uint8>&& bytes );
         /** @brief 이동 상태입니다. 내비 에이전트가 있으면 그 상태이고, 없으면 목적지가 있을 때 Moving, 닿았을 때 Arrived 입니다. */
         NavMoveStatus getMoveStatus() const;
         bool          hasDestination() const { return _bHasDestination == SW_TRUE; }
@@ -138,23 +146,23 @@ namespace sw
         uint32 _thinkInterval;
 
         SharedAssetRef<BehaviorTreeAsset> _pBehaviorTree; ///< 읽은 트리(공유 캐시의 한 벌). 실행기가 그 트리를 가리킨다
-        BehaviorTreeRunner                _runner;
-        ControlFrameInterval              _thinkSchedule; ///< 판단 차례와 그 사이 모은 시간
-        Blackboard                        _blackboard;
-        hashed_string                     _stateName; ///< 판단의 지금 상태(`setStateName`)
-        ControlIntent                     _pending;   ///< 이번 틱에 쌓인 버튼 발동 · 아날로그
-        float3                            _destination;
-        float3                            _focusPoint;
-        uint32                            _pressedButtonMask; ///< `pressButton` 으로 이번 틱에 누른 버튼
-        uint32                            _heldButtonMask;    ///< `holdButton` 으로 누르고 있는 버튼
-        NavMoveStatus                     _moveStatus;        ///< 내비 에이전트가 없을 때의 상태
-        uint8                             _bHasDestination  : 1;
-        uint8                             _bHasFocus        : 1;
-        uint8                             _bDestinationSent : 1; ///< 지금 목적지를 내비 에이전트에 걸었다
-        uint8                             _bStopPending     : 1; ///< 다음 틱에 내비 에이전트를 멈춘다
-        uint8                             _bWarnedDriveMode : 1; ///< 내비 에이전트가 SteerOnly 가 아니라고 경고했다
-        uint8                             _bTreeRequired    : 1; ///< 트리 없이 판단하지 못한다(`requireBehaviorTree`)
-        uint8                             _bTreePrepared    : 1; ///< 트리 읽기를 한 번 해 봤다(성공이든 실패든)
+        SW_TRANSIENT BehaviorTreeRunner   _runner;
+        SW_TRANSIENT ControlFrameInterval _thinkSchedule; ///< 판단 차례와 그 사이 모은 시간
+        SW_CODEC_STATE Blackboard         _blackboard;
+        SW_CODEC_STATE hashed_string      _stateName; ///< 판단의 지금 상태(`setStateName`)
+        SW_TRANSIENT ControlIntent        _pending;   ///< 이번 틱에 쌓인 버튼 발동 · 아날로그
+        SW_CODEC_STATE float3             _destination;
+        SW_CODEC_STATE float3             _focusPoint;
+        SW_TRANSIENT uint32               _pressedButtonMask; ///< `pressButton` 으로 이번 틱에 누른 버튼
+        SW_CODEC_STATE uint32             _heldButtonMask;    ///< `holdButton` 으로 누르고 있는 버튼
+        SW_CODEC_STATE NavMoveStatus      _moveStatus;        ///< 내비 에이전트가 없을 때의 상태
+        SW_CODEC_STATE uint8              _bHasDestination  : 1;
+        SW_CODEC_STATE uint8              _bHasFocus        : 1;
+        SW_TRANSIENT uint8                _bDestinationSent : 1; ///< 지금 목적지를 내비 에이전트에 걸었다
+        SW_TRANSIENT uint8                _bStopPending     : 1; ///< 다음 틱에 내비 에이전트를 멈춘다
+        SW_TRANSIENT uint8                _bWarnedDriveMode : 1; ///< 내비 에이전트가 SteerOnly 가 아니라고 경고했다
+        SW_TRANSIENT uint8                _bTreeRequired    : 1; ///< 트리 없이 판단하지 못한다(`requireBehaviorTree`)
+        SW_TRANSIENT uint8                _bTreePrepared    : 1; ///< 트리 읽기를 한 번 해 봤다(성공이든 실패든)
         [[maybe_unused]] uint8            _reserved         : 1;
     };
 } // namespace sw

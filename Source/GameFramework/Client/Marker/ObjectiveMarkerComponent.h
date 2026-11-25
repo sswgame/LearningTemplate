@@ -52,9 +52,9 @@ namespace sw
         PROPERTY( Category = "Style", DisplayName = "Arrow Size", Tooltip = "Width and length of the arrow in UI units", Min = 0.0 )
         float2 _arrowSize;
         PROPERTY( Category = "Style", DisplayName = "Font Size", Tooltip = "Font size of the label and the distance", Min = 1.0 )
-        float32  _fontSize;
-        WidgetID _arrowWidget;    ///< 방향 막대(`onDocumentCreated` 가 찾는다)
-        WidgetID _distanceWidget; ///< 거리 글
-        int32    _shownMeters;    ///< 마지막으로 쓴 거리(m). 같으면 글을 다시 쓰지 않는다
+        float32            _fontSize;
+        WidgetID           _arrowWidget;    ///< 방향 막대(`onDocumentCreated` 가 찾는다)
+        WidgetID           _distanceWidget; ///< 거리 글
+        SW_TRANSIENT int32 _shownMeters;    ///< 마지막으로 쓴 거리(m). 같으면 글을 다시 쓰지 않는다
     };
 } // namespace sw

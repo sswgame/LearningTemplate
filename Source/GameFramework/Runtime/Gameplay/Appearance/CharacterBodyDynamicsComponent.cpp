@@ -26,10 +26,12 @@
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/VFX/VFXComponent.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 #include "Engine/Visual/Component/LightComponent.h"
 
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/BodyProfile.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
@@ -41,10 +43,11 @@ namespace sw
     {
         struct CharacterBodyDynamicsInternal
         {
-            static constexpr uint32  kAllLayers       = 0xFFFFFFFFu;
-            static constexpr uint16  kSmearResolution = 64;    ///< 번짐 격자(굽기 텍스처보다 성기다 — 번짐은 부드럽다)
-            static constexpr float32 kSmearDilution   = 0.5f;  ///< 흐름 한 번이 세기 대비 묽히는 비율
-            static constexpr float32 kWipeRadius      = 0.08f; ///< 닦기가 끄는 UV 반지름
+            static constexpr uint32    kAllLayers = 0xFFFFFFFFu;
+            static constexpr FormatDef kStateFormat{ "BDYN" };
+            static constexpr uint16    kSmearResolution = 64;    ///< 번짐 격자(굽기 텍스처보다 성기다 — 번짐은 부드럽다)
+            static constexpr float32   kSmearDilution   = 0.5f;  ///< 흐름 한 번이 세기 대비 묽히는 비율
+            static constexpr float32   kWipeRadius      = 0.08f; ///< 닦기가 끄는 UV 반지름
 
             static const CharacterBodyDynamicsComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -89,6 +92,7 @@ namespace sw
         , _listFluid{}
         , _listManualTrigger{}
         , _listSmear{}
+        , _pendingStateBytes{}
         , _listSmearResistance{}
         , _pendingImpulse{}
         , _appliedHash{ 0 }
@@ -183,7 +187,7 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "BodyDynamics.WrinkleWithoutFace", "'%#': body profile '%#' maps wrinkles but the object has no FacialAnimationComponent - no wrinkles", pOwner->getName().c_str(),
                                   pProfile->_id.c_str() );
 
-        // 번짐 상태는 해석의 피부 층마다 하나 — 층 목록이 바뀌면 새로 시작한다(번짐은 일시 상태다).
+        // 번짐 상태는 해석의 피부 층마다 하나 — 층 목록이 바뀌면 새로 시작한다.
         const vector<ResolvedSkinLayer>& listLayer = appearance.getResolvedAppearance()._listSkinLayer;
         _listSmear.assign( listLayer.size(), SkinLayerSmearState{} );
         _listSmearResistance.clear();
@@ -192,12 +196,57 @@ namespace sw
             _listSmear[index].initialize( CharacterBodyDynamicsInternal::kSmearResolution );
             _listSmearResistance.push_back( listLayer[index]._smearResistance );
         }
+        applyPendingState();
         removeFluidEffects();
         _listFluid.clear();
         if ( pProfile == nullptr )
             return;
         for ( const BodyFluidDef& fluid : pProfile->_listFluid )
             _listFluid.push_back( FluidStream{ {}, fluid._name, {}, 0.0f } );
+    }
+
+    void CharacterBodyDynamicsComponent::serializeState( StateIO& io )
+    {
+        if ( io.isWriting() && VectorUtil::containsIf( _listSmear, []( const SkinLayerSmearState& smear )
+        { return smear.isClean() == false; } ) == false )
+            return; // 번지지 않은 피부는 외형에서 그대로 선다
+        uint64 resolvedHash = _appliedHash;
+        io.header( CharacterBodyDynamicsInternal::kStateFormat );
+        io.value( resolvedHash );
+        if ( io.check( resolvedHash == _appliedHash ) == false )
+            return; // 외형이 바뀌었다 — 층이 달라 번짐을 옮길 자리가 없다
+        uint32 layerCount = static_cast<uint32>( _listSmear.size() );
+        io.count( sizeof( uint16 ) + sizeof( uint8 ), layerCount );
+        if ( io.check( layerCount == _listSmear.size() ) == false )
+            return;
+        vector<SkinLayerSmearState> listSmear = _listSmear;
+        for ( SkinLayerSmearState& smear : listSmear )
+        {
+            io.value( smear );
+        }
+        if ( io.isWriting() )
+            return;
+        io.end();
+        if ( io.isOk() )
+            _listSmear = std::move( listSmear );
+    }
+
+    void CharacterBodyDynamicsComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _pendingStateBytes = std::move( bytes );
+        if ( _appliedHash != 0 )
+            applyPendingState();
+    }
+
+    void CharacterBodyDynamicsComponent::applyPendingState()
+    {
+        if ( _pendingStateBytes.empty() )
+            return;
+        Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
+        const bool bRead = readState( archive );
+        _pendingStateBytes.clear();
+        if ( bRead == false )
+            SW_LOG_WARNING_ID( "BodyDynamics.SavedSmearUnreadable", "'%#': the saved skin smear does not fit this appearance - the skin starts clean", getOwner()->getName().c_str() );
     }
 
     void CharacterBodyDynamicsComponent::update( GameObjectManager& manager )

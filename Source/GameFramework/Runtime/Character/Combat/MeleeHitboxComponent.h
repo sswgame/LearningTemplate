@@ -65,10 +65,10 @@ namespace sw
          * @brief 지난 스윕의 칼날 표본점(월드)입니다. 비었으면 지금 칼날만 씁니다.
          * @details 저장하지 않는다. 다시 연 판정은 지금 칼날부터 다시 쓸고, 이미 맞은 목록이 같은 오브젝트를 다시 맞히지 않게 한다.
          */
-        vector<float3> _listPreviousPoint;
-        vector<float3> _listBladeScratch; ///< 이번 스윕의 표본점을 모으는 버퍼 — 끝나면 지난 표본점과 맞바꾼다(틱마다 새 벡터를 만들지 않는다)
+        SW_TRANSIENT vector<float3> _listPreviousPoint;
+        SW_TRANSIENT vector<float3> _listBladeScratch; ///< 이번 스윕의 표본점을 모으는 버퍼 — 끝나면 지난 표본점과 맞바꾼다(틱마다 새 벡터를 만들지 않는다)
         /** @brief 순간이동하면 지난 칼날을 잊는다 — 지나가지 않은 길을 쓸지 않는다. */
-        SceneTeleportCursor _teleport;
+        SW_TRANSIENT SceneTeleportCursor _teleport;
         PROPERTY()
         float3 _bladeStart;
         PROPERTY()

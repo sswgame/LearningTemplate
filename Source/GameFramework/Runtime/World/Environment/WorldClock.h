@@ -145,8 +145,8 @@ namespace sw
         bool validateInitialized( const utf8* pAction ) const;
 
     private:
-        WorldClockSettings                  _settings;
-        NotificationBuffer<WorldClockEvent> _eventBuffer;
+        SW_CODEC_STATE WorldClockSettings _settings;
+        SW_TRANSIENT NotificationBuffer<WorldClockEvent> _eventBuffer;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _day;
         PROPERTY( RuntimeState, Min = 0 )

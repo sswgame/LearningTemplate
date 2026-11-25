@@ -124,12 +124,12 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<GridItem> _listItem; ///< 놓은 순서
-        vector<int32>    _listCell; ///< 셀마다 차지한 번호(-1 이면 빔), 줄 단위로 나열. 아이템에서 나오는 값이라 싣지 않는다
-        ShapeDelegate    _shapeLookup;
-        GridTopology     _topology; ///< 격자의 너비, 높이, 셀 번호 계산
+        vector<GridItem> _listItem;            ///< 놓은 순서
+        SW_TRANSIENT vector<int32>  _listCell; ///< 셀마다 차지한 번호(-1 이면 빔), 줄 단위로 나열. 아이템에서 나오는 값이라 싣지 않는다
+        ShapeDelegate               _shapeLookup;
+        SW_CODEC_STATE GridTopology _topology; ///< 격자의 너비, 높이, 셀 번호 계산
         PROPERTY( RuntimeState, Min = 0 )
-        int32  _nextInstanceID;
-        uint32 _revision;
+        int32               _nextInstanceID;
+        SW_TRANSIENT uint32 _revision;
     };
 } // namespace sw

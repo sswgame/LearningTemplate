@@ -58,7 +58,7 @@ namespace sw
         PROPERTY( Category = "Quest", DisplayName = "Kind", Tooltip = "Objective kind as notified to the quest log (Kill, Collect, Talk, Reach)" )
         hashed_string _kind;
         PROPERTY( Category = "Quest", DisplayName = "Target", Tooltip = "Objective target as notified to the quest log (wolf, elder, gate)" )
-        hashed_string _target;
-        uint8         _bQuestLogMissingReported; ///< 일지를 찾지 못한 오류를 남겼다(프레임마다 남기지 않는다)
+        hashed_string      _target;
+        SW_TRANSIENT uint8 _bQuestLogMissingReported; ///< 일지를 찾지 못한 오류를 남겼다(프레임마다 남기지 않는다)
     };
 } // namespace sw

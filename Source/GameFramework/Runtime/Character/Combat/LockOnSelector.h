@@ -78,7 +78,7 @@ namespace sw
         /** @brief 앞 방향 기준 가로 각(도, 오른쪽 +)입니다. */
         static float32 computeYawOffset( const float3& eye, const float3& forward, const float3& position );
 
-        LockOnSettings _settings{};
+        SW_TRANSIENT LockOnSettings _settings{};
         PROPERTY( RuntimeState )
         uint64 _target{ 0 };
         PROPERTY( RuntimeState, Min = 0 )

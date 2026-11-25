@@ -519,59 +519,59 @@ namespace sw
         uint8                  _bMergeParts      : 1;
         [[maybe_unused]] uint8 _reservedProperty : 7;
 
-        CharacterAppearanceSocketTask     _socketTask;
-        CharacterAppearanceProportionTask _proportionTask;
+        SW_TRANSIENT CharacterAppearanceSocketTask     _socketTask;
+        SW_TRANSIENT CharacterAppearanceProportionTask _proportionTask;
         // 작업보다 뒤에 선언한다 — 먼저 사라지며 풀리고, 풀릴 때 작업에 `onAnimationMeshDetached` 를 알린다.
-        Subscription                                   _socketTaskRegistration;     ///< 소켓 작업의 유닛 등록 구독
-        Subscription                                   _proportionTaskRegistration; ///< 비율 작업의 유닛 등록 구독
-        Subscription                                   _socketBoneRequirement;      ///< 몸 소켓의 부모 본을 몸 유닛 본 LOD 의 핵심 본으로 지키는 구독(장비가 바뀌면 다시 낸다)
-        BoneProportion                                 _bodyProportion;             ///< 체형 축이 정한 본 비율(`applyBodyShapes`)
-        vector<BodyMorphWeight>                        _listShapeMorph;             ///< 체형 축이 정한 몸 모프 가중치 — 구울 때 해석의 모프에 더한다
-        SharedAssetRef<BodyShapeSet>                   _bodyShapeSet;               ///< 쥐고 있는 체형 축 데이터(핫 리로드 판정)
-        float32                                        _footLift;                   ///< 발 들림 축 값(m, `applyBodyShapes`)
-        string                                         _dynamicsBodyMesh;           ///< 부품 리그가 지난 조립에 붙은 몸 메시(바뀌면 남긴 부품의 시뮬레이션을 다시 시작한다)
-        vector<BoneProportionEntry>                    _listDynamicsProportion;     ///< 부품 리그가 지난 조립에 붙은 몸의 본 비율
-        AssetReloadWatch<BodyShapeSet>                 _shapeReload;                ///< `applyBodyShapes` 가 본 `SharedAssetCache<BodyShapeSet>` 의 다시 읽은 횟수
-        AppearanceSocketRig                            _rig;
-        AppearanceSocketSetCache                       _socketCache;
-        CharacterAppearanceState                       _state;      ///< 펼친 프리셋과 해석 결과. 장비 · 데이터 · 입력의 버전으로 다시 해석할지 정한다
-        const Equipment*                               _pEquipment; ///< 빌린 장비(`setEquipment`). 없으면 프리셋의 장비 구성 그대로
-        CharacterBoneArray                             _bodyBindBones;
-        CharacterBoneArray                             _bodyBones; ///< 지난 포즈(모델 공간). 소켓 질의가 읽는다
-        vector<SpawnedPart>                            _listSpawnedPart;
-        vector<SlotOverride>                           _listSlotOverride;
-        vector<hashed_string>                          _listHiddenSlot;       ///< 보임과 따로 숨기는 슬롯(`setHiddenSlots`)
-        vector<hashed_string>                          _listRigUnit;          ///< 후처리 리그에 강체 유닛으로 이은 칸(`bindRigUnits`)
-        TComponentHandle<SkeletalMeshComponent>        _taskUnit;             ///< 단계 작업을 등록한 몸 유닛
-        AppearanceSelection                            _selection;            ///< 선택 입히기의 선택(`applySelection` · `previewSelection` — `_bSelectionSet` 일 때만 쓴다)
-        const AppearanceDatabase*                      _pPreviewDatabase;     ///< 미리보기 입히기의 데이터(빌린 것). 있으면 게임 서비스를 보지 않고 구운 메시 캐시를 건너뛴다
-        vector<uint8>                                  _pendingStateBytes;    ///< 시작 전에 받은 세이브 상태(`restoreState`)
-        Subscription                                   _reloadSubscription;   ///< 외형 데이터 다시 읽기의 구독(플레이 중에만). 데이터 서비스가 먼저 사라지면 무효가 된다
-        vector<MeshAssemblyLoad>                       _listMeshAssemblyLoad; ///< 베이크한 메시의 부품 로드(몸이 먼저)
-        SharedAssetHandle<FitTables>                   _fitTablesLoad;        ///< 몸의 피팅 표 로드. 표가 없으면 요청이 없다
-        shared_ptr<CharacterAppearanceMeshBuild>       _meshBuild;            ///< 워커에서 짓는(또는 다 지어 걸기를 기다리는) 조립. 새 요청이 버린다
-        shared_ptr<FitResult>                          _lastFitResult;        ///< 지난 미리보기 조립이 푼 피팅 결과(`getLastFitResult`)
-        uint32                                         _fitResultRevision;
-        uint32                                         _assembleCount;
-        AssetReloadWatch<FitTables>                    _fitTablesReload; ///< 마지막으로 구울 때 본 피팅 표 캐시의 다시 읽기(굽기 키에 든다)
-        AssetReloadWatch<FitPartDef>                   _fitPartReload;   ///< 마지막으로 구울 때 본 피팅 데이터 캐시의 다시 읽기(굽기 키에 든다)
-        int32                                          _bodyPart;
-        bool                                           _bPartsVisible;
-        uint8                                          _bAssembleScheduled   : 1;
-        uint8                                          _bStarted             : 1;
-        uint8                                          _bMeshAssemblyPending : 1; ///< 요청한 것을 아직 걸지 않았다(씬의 에셋 대기 목록에 걸려 있다)
-        uint8                                          _bMeshAssembled       : 1; ///< 유닛이 베이크한 메시를 그린다 — 구울 것이 없어져도 원본으로 되돌려야 한다
-        uint8                                          _bProportionTask      : 1; ///< 본 비율 단계 작업을 몸 유닛에 등록했다(비율이 있을 때만 등록해 군중 공유를 막지 않는다)
-        uint8                                          _bMeshMerged          : 1; ///< 몸 유닛이 합친 메시를 그리고 구간 이름을 가졌다 — 합치지 않게 되면 되돌려야 한다
-        uint8                                          _bMeshApplyQueued     : 1; ///< 다 읽은 조립의 걸기를 틱 뒤로 미뤄 두었다 — 그동안 원본 내용 id 가 아직 없어 낡음 판정을 하지 않는다
-        uint8                                          _bPartsStripped       : 1; ///< 풀 반환이 부품을 걷었다 — 다음 조립까지 다시 켜진 틱이 입힌다
-        uint8                                          _bSelectionSet        : 1; ///< 프리셋 id 대신 `_selection` 으로 입힌다(`applySelection` · `previewSelection`, `setPreset` 이 푼다)
-        vector<TComponentHandle<MeshSectionComponent>> _listBodySection;          ///< 몸 부품의 `<Section>` 중 둘째부터를 그리는 구간 컴포넌트(몸 오브젝트에 붙는다 — `applyBodyPart`)
-        CharacterSurfaceState                          _surface;                  ///< 표면 상태(`_surfaceChannelsPath` 가 있을 때만 채널을 가진다)
-        CharacterSurfaceBinding                        _surfaceBinding;           ///< 표면 상태를 부품 머티리얼에 올리고 마스크 텍스처를 쥔다
-        string                                         _loadedSurfaceChannels;    ///< 지금 상태가 읽은 채널 파일 경로(바뀌었는지 가른다)
-        uint64                                         _surfaceAppliedRevision;   ///< 머티리얼에 마지막으로 올린 상태 번호(같은 번호는 다시 올리지 않는다)
-        uint32                                         _surfaceRegionCount;       ///< 상태가 가진 영역 수(피팅 표의 영역 수)
-        SkinLayerBakeBinding                           _skinBake;                 ///< 피부 층 굽기와 몸 머티리얼 걸기(번짐 텍스처 · 결과 핸들을 쥔다)
+        Subscription                _socketTaskRegistration;              ///< 소켓 작업의 유닛 등록 구독
+        Subscription                _proportionTaskRegistration;          ///< 비율 작업의 유닛 등록 구독
+        Subscription                _socketBoneRequirement;               ///< 몸 소켓의 부모 본을 몸 유닛 본 LOD 의 핵심 본으로 지키는 구독(장비가 바뀌면 다시 낸다)
+        SW_TRANSIENT BoneProportion _bodyProportion;                      ///< 체형 축이 정한 본 비율(`applyBodyShapes`)
+        SW_TRANSIENT vector<BodyMorphWeight> _listShapeMorph;             ///< 체형 축이 정한 몸 모프 가중치 — 구울 때 해석의 모프에 더한다
+        SharedAssetRef<BodyShapeSet>         _bodyShapeSet;               ///< 쥐고 있는 체형 축 데이터(핫 리로드 판정)
+        SW_TRANSIENT float32                 _footLift;                   ///< 발 들림 축 값(m, `applyBodyShapes`)
+        SW_TRANSIENT string                  _dynamicsBodyMesh;           ///< 부품 리그가 지난 조립에 붙은 몸 메시(바뀌면 남긴 부품의 시뮬레이션을 다시 시작한다)
+        SW_TRANSIENT vector<BoneProportionEntry> _listDynamicsProportion; ///< 부품 리그가 지난 조립에 붙은 몸의 본 비율
+        SW_TRANSIENT AssetReloadWatch<BodyShapeSet> _shapeReload;         ///< `applyBodyShapes` 가 본 `SharedAssetCache<BodyShapeSet>` 의 다시 읽은 횟수
+        SW_TRANSIENT AppearanceSocketRig            _rig;
+        SW_TRANSIENT AppearanceSocketSetCache       _socketCache;
+        SW_TRANSIENT CharacterAppearanceState       _state;      ///< 펼친 프리셋과 해석 결과. 장비 · 데이터 · 입력의 버전으로 다시 해석할지 정한다
+        const Equipment*                            _pEquipment; ///< 빌린 장비(`setEquipment`). 없으면 프리셋의 장비 구성 그대로
+        SW_TRANSIENT CharacterBoneArray             _bodyBindBones;
+        SW_TRANSIENT CharacterBoneArray             _bodyBones; ///< 지난 포즈(모델 공간). 소켓 질의가 읽는다
+        SW_TRANSIENT vector<SpawnedPart> _listSpawnedPart;
+        SW_CODEC_STATE vector<SlotOverride> _listSlotOverride;
+        SW_TRANSIENT vector<hashed_string> _listHiddenSlot;                     ///< 보임과 따로 숨기는 슬롯(`setHiddenSlots`)
+        SW_TRANSIENT vector<hashed_string> _listRigUnit;                        ///< 후처리 리그에 강체 유닛으로 이은 칸(`bindRigUnits`)
+        SW_TRANSIENT TComponentHandle<SkeletalMeshComponent> _taskUnit;         ///< 단계 작업을 등록한 몸 유닛
+        SW_CODEC_STATE AppearanceSelection                   _selection;        ///< 선택 입히기의 선택(`applySelection` · `previewSelection` — `_bSelectionSet` 일 때만 쓴다)
+        const AppearanceDatabase*                            _pPreviewDatabase; ///< 미리보기 입히기의 데이터(빌린 것). 있으면 게임 서비스를 보지 않고 구운 메시 캐시를 건너뛴다
+        SW_TRANSIENT vector<uint8> _pendingStateBytes;                          ///< 시작 전에 받은 세이브 상태(`restoreState`)
+        Subscription               _reloadSubscription;                         ///< 외형 데이터 다시 읽기의 구독(플레이 중에만). 데이터 서비스가 먼저 사라지면 무효가 된다
+        SW_TRANSIENT vector<MeshAssemblyLoad> _listMeshAssemblyLoad;            ///< 베이크한 메시의 부품 로드(몸이 먼저)
+        SharedAssetHandle<FitTables>          _fitTablesLoad;                   ///< 몸의 피팅 표 로드. 표가 없으면 요청이 없다
+        SW_TRANSIENT shared_ptr<CharacterAppearanceMeshBuild> _meshBuild;       ///< 워커에서 짓는(또는 다 지어 걸기를 기다리는) 조립. 새 요청이 버린다
+        SW_TRANSIENT shared_ptr<FitResult> _lastFitResult;                      ///< 지난 미리보기 조립이 푼 피팅 결과(`getLastFitResult`)
+        SW_TRANSIENT uint32                _fitResultRevision;
+        SW_TRANSIENT uint32                _assembleCount;
+        SW_TRANSIENT AssetReloadWatch<FitTables> _fitTablesReload; ///< 마지막으로 구울 때 본 피팅 표 캐시의 다시 읽기(굽기 키에 든다)
+        SW_TRANSIENT AssetReloadWatch<FitPartDef> _fitPartReload;  ///< 마지막으로 구울 때 본 피팅 데이터 캐시의 다시 읽기(굽기 키에 든다)
+        SW_TRANSIENT int32                        _bodyPart;
+        SW_TRANSIENT bool                         _bPartsVisible;
+        SW_TRANSIENT uint8                        _bAssembleScheduled   : 1;
+        SW_TRANSIENT uint8                        _bStarted             : 1;
+        SW_TRANSIENT uint8                        _bMeshAssemblyPending : 1;                 ///< 요청한 것을 아직 걸지 않았다(씬의 에셋 대기 목록에 걸려 있다)
+        SW_TRANSIENT uint8                        _bMeshAssembled       : 1;                 ///< 유닛이 베이크한 메시를 그린다 — 구울 것이 없어져도 원본으로 되돌려야 한다
+        SW_TRANSIENT uint8                        _bProportionTask      : 1;                 ///< 본 비율 단계 작업을 몸 유닛에 등록했다(비율이 있을 때만 등록해 군중 공유를 막지 않는다)
+        SW_TRANSIENT uint8                        _bMeshMerged          : 1;                 ///< 몸 유닛이 합친 메시를 그리고 구간 이름을 가졌다 — 합치지 않게 되면 되돌려야 한다
+        SW_TRANSIENT uint8                        _bMeshApplyQueued     : 1;                 ///< 다 읽은 조립의 걸기를 틱 뒤로 미뤄 두었다 — 그동안 원본 내용 id 가 아직 없어 낡음 판정을 하지 않는다
+        SW_TRANSIENT uint8                        _bPartsStripped       : 1;                 ///< 풀 반환이 부품을 걷었다 — 다음 조립까지 다시 켜진 틱이 입힌다
+        SW_CODEC_STATE uint8                      _bSelectionSet        : 1;                 ///< 프리셋 id 대신 `_selection` 으로 입힌다(`applySelection` · `previewSelection`, `setPreset` 이 푼다)
+        SW_TRANSIENT vector<TComponentHandle<MeshSectionComponent>> _listBodySection;        ///< 몸 부품의 `<Section>` 중 둘째부터를 그리는 구간 컴포넌트(몸 오브젝트에 붙는다 — `applyBodyPart`)
+        SW_TRANSIENT CharacterSurfaceState                          _surface;                ///< 표면 상태(`_surfaceChannelsPath` 가 있을 때만 채널을 가진다)
+        SW_TRANSIENT CharacterSurfaceBinding                        _surfaceBinding;         ///< 표면 상태를 부품 머티리얼에 올리고 마스크 텍스처를 쥔다
+        SW_TRANSIENT string                                         _loadedSurfaceChannels;  ///< 지금 상태가 읽은 채널 파일 경로(바뀌었는지 가른다)
+        SW_TRANSIENT uint64                                         _surfaceAppliedRevision; ///< 머티리얼에 마지막으로 올린 상태 번호(같은 번호는 다시 올리지 않는다)
+        SW_TRANSIENT uint32                                         _surfaceRegionCount;     ///< 상태가 가진 영역 수(피팅 표의 영역 수)
+        SW_TRANSIENT SkinLayerBakeBinding                           _skinBake;               ///< 피부 층 굽기와 몸 머티리얼 걸기(번짐 텍스처 · 결과 핸들을 쥔다)
     };
 } // namespace sw

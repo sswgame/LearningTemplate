@@ -74,9 +74,9 @@ namespace sw
         PROPERTY( Category = "Decal", DisplayName = "Seed", Min = 1, Tooltip = "Seed of the size and angle sequence" )
         uint32 _seed;
 
-        GameRandom               _random;
-        vector<GameObjectHandle> _listDecal; ///< 세운 데칼(오래된 것부터 — 스스로 사라진 것은 다음에 세울 때 뺀다)
-        uint32                   _spawnedCount;
-        Subscription             _hitSubscription; ///< 맞음 사건 구독(`handleHit`)
+        SW_TRANSIENT GameRandom _random;
+        SW_TRANSIENT vector<GameObjectHandle> _listDecal; ///< 세운 데칼(오래된 것부터 — 스스로 사라진 것은 다음에 세울 때 뺀다)
+        SW_TRANSIENT uint32                   _spawnedCount;
+        Subscription                          _hitSubscription; ///< 맞음 사건 구독(`handleHit`)
     };
 } // namespace sw

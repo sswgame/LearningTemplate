@@ -69,9 +69,9 @@ namespace sw
         PROPERTY( Category = "Water", DisplayName = "Body Height", Min = 0.1, Units = m, Tooltip = "Height that counts as fully submerged (water depth at the feet / this = submerged fraction)" )
         float32 _bodyHeight;
 
-        float32 _pendingSeconds; ///< 틱이 쌓고 틱 뒤 적용이 쓰는 게임 초
-        float32 _submersion;
-        float32 _rainExposure;
-        float32 _waterDepth;
+        SW_TRANSIENT float32 _pendingSeconds; ///< 틱이 쌓고 틱 뒤 적용이 쓰는 게임 초
+        SW_TRANSIENT float32 _submersion;
+        SW_TRANSIENT float32 _rainExposure;
+        SW_TRANSIENT float32 _waterDepth;
     };
 } // namespace sw

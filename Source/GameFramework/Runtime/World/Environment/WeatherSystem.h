@@ -250,10 +250,10 @@ namespace sw
         float32           pickDuration( const WeatherDef& weather, GameRandom& random ) const;
 
     private:
-        const WeatherCatalog* _pCatalog;
-        const WeatherDef*     _pCurrent;
-        const WeatherDef*     _pPrevious;
-        GameRandom            _random;
+        const WeatherCatalog*     _pCatalog;
+        const WeatherDef*         _pCurrent;
+        const WeatherDef*         _pPrevious;
+        SW_CODEC_STATE GameRandom _random;
         PROPERTY( RuntimeState )
         float32 _remaining;
         PROPERTY( RuntimeState )
