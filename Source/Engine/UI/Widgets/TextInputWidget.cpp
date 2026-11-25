@@ -193,23 +193,15 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
-    void TextInputWidget::onBoundPropertyChanged( const PropertyInfo& property )
+    void TextInputWidget::synchronizeProperties()
     {
-        if ( property._name == hashed_string( "_text" ) )
-        {
-            // 바인딩이 되쓴 값(우리가 방금 편집한 글)은 커서를 그대로 두고, 더 짧은 글로 바뀌었으면 글 안으로 물린다.
-            _caretByte  = TextInputWidgetInternal::snapToBoundary( _text, _caretByte );
-            _anchorByte = TextInputWidgetInternal::snapToBoundary( _text, _anchorByte );
-            refreshDisplay();
-            return;
-        }
-        const bool bDisplayProperty = property._name == hashed_string( "_hintText" ) || property._name == hashed_string( "_textColor" ) || property._name == hashed_string( "_hintColor" );
-        if ( bDisplayProperty )
-        {
-            refreshDisplay();
-            return;
-        }
-        BorderPanel::onBoundPropertyChanged( property );
+        BorderPanel::synchronizeProperties();
+        // 바인딩이 되쓴 값(우리가 방금 편집한 글)은 커서를 그대로 두고, 더 짧은 글로 바뀌었으면 글 안으로 물린다.
+        // 힌트를 보이던(빈) 칸에 글이 들어왔으면 세터처럼 글 끝이다.
+        const bool bWasEmpty = _pDisplay->isLocalized();
+        _caretByte           = bWasEmpty ? static_cast<uint32>( _text.size() ) : TextInputWidgetInternal::snapToBoundary( _text, _caretByte );
+        _anchorByte          = bWasEmpty ? _caretByte : TextInputWidgetInternal::snapToBoundary( _text, _anchorByte );
+        refreshDisplay();
     }
 
     void TextInputWidget::refreshDisplay()

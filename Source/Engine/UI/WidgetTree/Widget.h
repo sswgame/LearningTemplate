@@ -147,12 +147,14 @@ namespace sw
 
         // --- 바인딩과 애니메이션 ---------------------------------------------------------------
         /**
-         * @brief 바인딩이나 애니메이션이 필드 @p property(경로의 맨 위 필드)에 리플렉션으로 값을 썼을 때 부릅니다. 세터를 거치지 않았으므로 그 필드의 세터와 같은 무효화를 합니다.
-         * @details 기본 구현은 `Widget` 의 필드(불투명도 → kTransform, 렌더 변환 → kTransform | kArrange, 보임 → kVisibility, 슬롯 → kLayout 등)를 알고, 모르는 필드는
-         *          kLayout | kPaint(보수적)로 처리한다. 파생 클래스는 그리기만 바뀌는 필드(색)와 캐시를 가진 필드(텍스트, 범위)를 재정의한다.
-         *          필드 종류를 PROPERTY 메타로 적지 않는 이유는 커스텀 메타가 Shipping 에서 지워지기 때문이다.
+         * @brief 리플렉션으로 쓴 필드 값에서 파생 상태를 맞춥니다 — 값의 제한(범위 · 비율)과 보이는 글(고른 항목 · 힌트)처럼 세터가 함께 만드는 것입니다.
+         *        무효화는 `onBoundPropertyChanged` 의 몫입니다(언리얼 `UWidget::SynchronizeProperties` 자리).
+         * @details 부르는 자리는 둘뿐이다 — 문서의 값을 모두 읽은 뒤(`UIDocumentLoader`)와 필드 하나를 쓴 뒤(`notifyPropertyWritten`). 몇 번을 불러도 결과가 같아야 한다.
+         *          재정의는 부모의 것을 먼저 부른다.
          */
-        virtual void onBoundPropertyChanged( const PropertyInfo& property );
+        virtual void synchronizeProperties();
+        /** @brief 바인딩 · 애니메이션 · 편집기가 필드 @p property(경로의 맨 위 필드)에 리플렉션으로 값을 쓴 뒤 부릅니다. 파생 상태를 맞추고 무효화합니다. */
+        void notifyPropertyWritten( const PropertyInfo& property );
         /** @brief 텍스트 버전(현지화: 언어 변경, 테이블 다시 읽기)이 바뀌었을 때 부릅니다. 텍스트 위젯은 키를 다시 찾고 kLayout 으로 무효화합니다. 기본은 아무것도 하지 않습니다. */
         virtual void onTextRevisionChanged();
         /** @brief 입력 장치 종류(글리프: 키보드, 패드)가 바뀌었을 때 부릅니다. 액션 태그(`[action=이름]`)를 가진 텍스트 위젯은 다시 해석하고 kLayout 으로 무효화합니다. 기본은 아무것도 하지 않습니다. */
@@ -252,6 +254,13 @@ namespace sw
         virtual void paint( CanvasPainter& painter, const UIPaintContext& context ) const;
         /** @brief 자식 위에 칠합니다(스크롤 막대, 패널 테두리). 자르기 영역 밖에 그립니다. 기본은 아무것도 칠하지 않습니다. */
         virtual void paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const;
+        /**
+         * @brief 필드 @p property 에 리플렉션으로 값이 쓰였을 때 그 필드의 세터와 같은 무효화를 합니다(`notifyPropertyWritten` 이 부릅니다 — 값의 제한은 `synchronizeProperties`).
+         * @details 기본 구현은 `Widget` 의 필드(불투명도 → kTransform, 렌더 변환 → kTransform | kArrange, 보임 → kVisibility, 슬롯 → kLayout 등)를 알고, 모르는 필드는
+         *          kLayout | kPaint(보수적)로 처리한다. 파생 클래스는 그리기만 바뀌는 필드(색)와 캐시를 가진 필드(텍스트, 범위)를 재정의한다.
+         *          필드 종류를 PROPERTY 메타로 적지 않는 이유는 커스텀 메타가 Shipping 에서 지워지기 때문이다.
+         */
+        virtual void onBoundPropertyChanged( const PropertyInfo& property );
         /** @brief 트리에 붙었을 때 부릅니다(바인딩과 애니메이션이 여기서 붙습니다). 자손은 부모 다음에 불립니다. */
         virtual void onAttachedToTree();
         /** @brief 트리에서 떨어지기 직전에 부릅니다(바인딩과 애니메이션을 뗍니다). */

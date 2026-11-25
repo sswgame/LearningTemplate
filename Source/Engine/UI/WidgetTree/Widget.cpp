@@ -297,10 +297,20 @@ namespace sw
     {
     }
 
+    void Widget::synchronizeProperties()
+    {
+        _opacity = MathUtil::clamp( _opacity, 0.0f, 1.0f );
+    }
+
+    void Widget::notifyPropertyWritten( const PropertyInfo& property )
+    {
+        synchronizeProperties();
+        onBoundPropertyChanged( property );
+    }
+
     void Widget::onBoundPropertyChanged( const PropertyInfo& property )
     {
         const hashed_string& name = property._name;
-        _opacity                  = MathUtil::clamp( _opacity, 0.0f, 1.0f ); // 세터와 같은 제한을 적용한다(불투명도 필드가 아니면 그대로다)
         if ( name == hashed_string( "_opacity" ) )
             invalidate( WidgetDirty::kTransform );
         else if ( name == hashed_string( "_renderTransform" ) )

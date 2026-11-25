@@ -62,7 +62,7 @@ namespace sw
     {
         if ( property._name == hashed_string( "_bChecked" ) )
         {
-            invalidate( WidgetDirty::kPaint );
+            invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint ); // 세터와 같다(:checked)
             return;
         }
         ButtonWidget::onBoundPropertyChanged( property );

@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
@@ -11,12 +12,19 @@
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Document/UIDocumentWriter.h"
+#include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Style/UIStylePass.h"
+#include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
+#include "Engine/UI/Widgets/CheckBoxWidget.h"
 #include "Engine/UI/Widgets/ComboBoxWidget.h"
 #include "Engine/UI/Widgets/ImageWidget.h"
+#include "Engine/UI/Widgets/ListViewWidget.h"
 #include "Engine/UI/Widgets/RotatorWidget.h"
+#include "Engine/UI/Widgets/SliderWidget.h"
+#include "Engine/UI/Widgets/TextInputWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 using namespace sw;
@@ -61,6 +69,33 @@ namespace
         document.appendFormat( "<UIDocument _schemaVersion=\"1\">%#</UIDocument>", pBody );
         return string( document.view() );
     }
+
+    /** @brief 세로 상자 안의 위젯들 @p pWidgets 를 문서로 읽어 트리에 붙인 것입니다. */
+    struct UIDocumentWidgets
+    {
+        WidgetTree _tree;
+
+        explicit UIDocumentWidgets( const utf8* pWidgets )
+            : _tree{}
+        {
+            StringBuilder<constant::buffer::kMax1024> body;
+            body.appendFormat( "<BoxPanel>%#</BoxPanel>", pWidgets );
+            UIDocumentAsset asset;
+            SW_EXPECT_TRUE( UIDocumentLoader::parse( makeDocument( body.c_str() ), "engine/ui/test.ui.xml", ResourceContext::forDocument(), asset ).has_value() );
+            UIDocumentCache      cache;
+            vector<UIBindingDef> listBinding;
+            unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, ResourceTagSet{}, listBinding ).value_or( nullptr );
+            SW_EXPECT_NOT_NULL( root.get() );
+            if ( root != nullptr )
+                _tree.setRoot( std::move( root ) );
+        }
+
+        template <typename T>
+        T* find( const utf8* pName )
+        {
+            return _tree.findWidget<T>( hashed_string( pName ) );
+        }
+    };
 } // namespace
 
 /** @brief [UIDocumentTest] 읽기: 화면 서술 · 스타일 시트 · 애니메이션 · 노드 트리가 담기고 바인딩 식은 값이 아니라 따로 분리된다 */
@@ -81,29 +116,83 @@ SW_TEST_CASE( UIDocumentTest, ParsesEverything )
     SW_EXPECT_EQUAL( uint32( 9 ), asset._listNode[2]._sourceLine );
 }
 
-/** @brief [UIDocumentTest] 문서에 적은 항목 · 고른 인덱스가 콤보 · 넘김 상자의 보이는 글이 된다(세터를 거치지 않아도) */
+/** @brief [UIDocumentTest] 문서에 적은 항목 · 고른 인덱스가 콤보 · 넘김 상자의 보이는 글이 되고, 항목 밖의 인덱스는 세터처럼 없음이 된다 */
 SW_TEST_CASE( UIDocumentTest, SelectedOptionShowsItsText )
 {
-    UIDocumentAsset asset;
-    const string    document = makeDocument( "<BoxPanel>"
-                                                "<ComboBoxWidget _name=\"Combo\" _selectedIndex=\"1\"><_listOption><item>Low</item><item>High</item></_listOption></ComboBoxWidget>"
-                                                "<RotatorWidget _name=\"Rotator\" _selectedIndex=\"0\"><_listOption><item>Near</item><item>Far</item></_listOption></RotatorWidget>"
-                                                "</BoxPanel>" );
-    SW_REQUIRE_TRUE( UIDocumentLoader::parse( document.c_str(), "engine/ui/test.ui.xml", ResourceContext::forDocument(), asset ).has_value() );
-    UIDocumentCache      cache;
-    vector<UIBindingDef> listBinding;
-    unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, ResourceTagSet{}, listBinding ).value_or( nullptr );
-    SW_REQUIRE_NOT_NULL( root.get() );
-    WidgetTree tree;
-    tree.setRoot( std::move( root ) );
-    const ComboBoxWidget* pCombo   = tree.findWidget<ComboBoxWidget>( hashed_string( "Combo" ) );
-    const RotatorWidget*  pRotator = tree.findWidget<RotatorWidget>( hashed_string( "Rotator" ) );
-    SW_REQUIRE_TRUE( pCombo != nullptr && pRotator != nullptr );
+    UIDocumentWidgets     document( "<ComboBoxWidget _name=\"Combo\" _selectedIndex=\"1\"><_listOption><item>Low</item><item>High</item></_listOption></ComboBoxWidget>"
+                                        "<RotatorWidget _name=\"Rotator\" _selectedIndex=\"0\"><_listOption><item>Near</item><item>Far</item></_listOption></RotatorWidget>"
+                                        "<ComboBoxWidget _name=\"OutOfRange\" _selectedIndex=\"5\"><_listOption><item>Low</item></_listOption></ComboBoxWidget>" );
+    const ComboBoxWidget* pCombo      = document.find<ComboBoxWidget>( "Combo" );
+    const RotatorWidget*  pRotator    = document.find<RotatorWidget>( "Rotator" );
+    const ComboBoxWidget* pOutOfRange = document.find<ComboBoxWidget>( "OutOfRange" );
+    SW_REQUIRE_TRUE( pCombo != nullptr && pRotator != nullptr && pOutOfRange != nullptr );
     const TextWidget* pComboLabel   = castTo<TextWidget>( pCombo->getChild( 0 ) );
     const TextWidget* pRotatorLabel = castTo<TextWidget>( pRotator->getChild( 0 ) );
     SW_REQUIRE_TRUE( pComboLabel != nullptr && pRotatorLabel != nullptr );
-    SW_EXPECT_EQUAL( string( "High" ), string( pComboLabel->getText() ) );
-    SW_EXPECT_EQUAL( string( "Near" ), string( pRotatorLabel->getText() ) );
+    SW_EXPECT_EQUAL( string( "High" ), pComboLabel->getText() );
+    SW_EXPECT_EQUAL( string( "Near" ), pRotatorLabel->getText() );
+    SW_EXPECT_EQUAL( constant::invalid_index::kUint32, pOutOfRange->getSelectedIndex() );
+}
+
+/** @brief [UIDocumentTest] 문서에 적은 슬라이더 값 · 진행 비율 · 불투명도 · 줄 높이는 세터와 같은 범위로 제한된다 */
+SW_TEST_CASE( UIDocumentTest, WrittenValuesAreLimitedLikeTheSetters )
+{
+    UIDocumentWidgets        document( "<SliderWidget _name=\"Slider\" _minValue=\"0\" _maxValue=\"10\" _step=\"-1\" _value=\"25\" />"
+                                              "<SliderWidget _name=\"Inverted\" _minValue=\"5\" _maxValue=\"1\" _value=\"3\" />"
+                                              "<ProgressBarWidget _name=\"Progress\" _percent=\"1.5\" _opacity=\"2\" />"
+                                              "<ListViewWidget _name=\"List\" _rowHeight=\"0\" />" );
+    const SliderWidget*      pSlider   = document.find<SliderWidget>( "Slider" );
+    const SliderWidget*      pInverted = document.find<SliderWidget>( "Inverted" );
+    const ProgressBarWidget* pProgress = document.find<ProgressBarWidget>( "Progress" );
+    const ListViewWidget*    pList     = document.find<ListViewWidget>( "List" );
+    SW_REQUIRE_TRUE( pSlider != nullptr && pInverted != nullptr && pProgress != nullptr && pList != nullptr );
+    SW_EXPECT_EQUAL( 10.0f, pSlider->getValue() );
+    SW_EXPECT_EQUAL( 5.0f, pInverted->getValue() );
+    SW_EXPECT_EQUAL( 1.0f, pProgress->getPercent() );
+    SW_EXPECT_EQUAL( 1.0f, pProgress->getOpacity() );
+    SW_EXPECT_EQUAL( 1.0f, pList->getRowHeight() );
+}
+
+/** @brief [UIDocumentTest] 문서에 적은 글 입력 칸은 글이 있으면 글(커서는 글 끝), 없으면 힌트를 보인다 */
+SW_TEST_CASE( UIDocumentTest, TextInputShowsItsTextOrHint )
+{
+    UIDocumentWidgets      document( "<TextInputWidget _name=\"Empty\" _hintText=\"Player name\" />"
+                                          "<TextInputWidget _name=\"Filled\" _hintText=\"Player name\" _text=\"Ann\" />" );
+    const TextInputWidget* pEmpty  = document.find<TextInputWidget>( "Empty" );
+    TextInputWidget*       pFilled = document.find<TextInputWidget>( "Filled" );
+    SW_REQUIRE_TRUE( pEmpty != nullptr && pFilled != nullptr );
+    const TextWidget* pEmptyText  = castTo<TextWidget>( pEmpty->getChild( 0 ) );
+    const TextWidget* pFilledText = castTo<TextWidget>( pFilled->getChild( 0 ) );
+    SW_REQUIRE_TRUE( pEmptyText != nullptr && pFilledText != nullptr );
+    SW_EXPECT_EQUAL( string( "Player name" ), pEmptyText->getText() );
+    SW_EXPECT_EQUAL( string( "Ann" ), pFilledText->getText() );
+    SW_EXPECT_FALSE( pFilledText->isLocalized() );
+    SW_EXPECT_EQUAL( 3u, pFilled->getCaretByte() );
+
+    // 글이 있는 칸에 다른 글이 쓰이면 커서는 자리를 지키고 글 안으로만 물린다.
+    const PropertyInfo* pTextProperty = TextInputWidget::StaticType()->findPropertyInHierarchy( hashed_string( "_text" ) );
+    SW_REQUIRE_NOT_NULL( pTextProperty );
+    pFilled->setCaretByte( 2, false );
+    pFilled->notifyPropertyWritten( *pTextProperty );
+    SW_EXPECT_EQUAL( 2u, pFilled->getCaretByte() );
+}
+
+/** @brief [UIDocumentTest] 필드 하나를 쓴 뒤의 알림이 파생 상태와 무효화를 함께 한다 — 체크는 스타일(:checked)까지 다시 맞춘다 */
+SW_TEST_CASE( UIDocumentTest, WritingOnePropertySynchronizesAndInvalidates )
+{
+    UIDocumentWidgets document( "<CheckBoxWidget _name=\"Check\" />" );
+    CheckBoxWidget*   pCheck = document.find<CheckBoxWidget>( "Check" );
+    SW_REQUIRE_NOT_NULL( pCheck );
+    const PropertyInfo* pChecked = CheckBoxWidget::StaticType()->findPropertyInHierarchy( hashed_string( "_bChecked" ) );
+    SW_REQUIRE_NOT_NULL( pChecked );
+    UILayoutContext context{};
+    context._viewportSize = float2{ 100.0f, 100.0f };
+    UIStyleSet styleSet;
+    (void)UIStylePass::update( document._tree, styleSet, false );
+    (void)UILayoutPass::update( document._tree, context );
+    SW_REQUIRE_TRUE( ( pCheck->getDirtyFlags() & WidgetDirty::kStyle ) == 0 );
+    pCheck->notifyPropertyWritten( *pChecked );
+    SW_EXPECT_TRUE( ( pCheck->getDirtyFlags() & WidgetDirty::kStyle ) != 0 );
 }
 
 /** @brief [UIDocumentTest] 거절: 문법 · 루트 · 버전 · 모르는 요소와 속성 · 패널 아닌 부모 · 루트 위젯 수 · 빈 목록 항목 · 겹친 애니메이션 이름 */

@@ -214,7 +214,7 @@ namespace sw::editor
         /** @brief 프로퍼티의 지금 값을 문서에 쓰는 텍스트(XML 속성 값과 같은 형태)로 돌려줍니다. */
         static string formatWidgetProperty( const Widget& widget, const PropertyInfo& prop );
         /**
-         * @brief 텍스트 @p text 를 프로퍼티 값으로 쓰고 위젯에 알립니다(`Widget::onBoundPropertyChanged` — 세터와 같은 무효화). 읽지 못하면 false 이고 값은 그대로입니다.
+         * @brief 텍스트 @p text 를 프로퍼티 값으로 쓰고 위젯에 알립니다(`Widget::notifyPropertyWritten` — 세터와 같은 제한 · 무효화). 읽지 못하면 false 이고 값은 그대로입니다.
          * @details 되돌리기와 다시 하기가 이 함수로 값을 되돌린다. 그리드의 편집도 같은 알림을 거치므로 화면은 어느 쪽이든 같은 경로로 다시 그려진다.
          */
         [[nodiscard]] static bool applyWidgetProperty( Widget& widget, const PropertyInfo& prop, string_view text );

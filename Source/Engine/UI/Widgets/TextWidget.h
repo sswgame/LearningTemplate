@@ -43,8 +43,6 @@ namespace sw
         ~TextWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
-        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(색과 외곽선은 그리기만, 텍스트와 스타일은 배치 캐시를 버리고 레이아웃). */
-        void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
         /**
          * @brief 텍스트를 바꿉니다. 현지화 키 · 인자가 있는 현지화 메시지(`SW_LOCALIZED_MESSAGE( … ).str()`)이거나 텍스트 그대로여야 합니다(`Menu.Pause.Title`, `Paused`). 바뀌면 kLayout 입니다.
@@ -87,6 +85,8 @@ namespace sw
         static float32 computeSnapSlack( float32 width, float32 uiScale ) { return width > 0.0f && uiScale > 0.0f ? 1.0f / uiScale : 0.0f; }
 
     protected:
+        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(색과 외곽선은 그리기만, 텍스트와 스타일은 배치 캐시를 버리고 레이아웃). */
+        void   onBoundPropertyChanged( const PropertyInfo& property ) override;
         float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
         void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;
 

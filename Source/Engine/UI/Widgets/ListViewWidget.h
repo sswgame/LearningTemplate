@@ -38,6 +38,8 @@ namespace sw
         ~ListViewWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
+        /** @brief 줄 높이의 하한을 지킵니다. */
+        void synchronizeProperties() override;
 
         void setRowFactory( RowFactoryDelegate factory ) { _rowFactory = std::move( factory ); }
         void setRowBinder( RowBinderDelegate binder ) { _rowBinder = std::move( binder ); }
@@ -74,6 +76,8 @@ namespace sw
         float32 getMaxScrollOffset() const;
 
     private:
+        static constexpr float32 kMinRowHeight = 1.0f; ///< 줄 높이의 하한(UI 단위) — 보이는 줄 수를 나누는 값이라 0 이 될 수 없다
+
         RowFactoryDelegate _rowFactory;
         RowBinderDelegate  _rowBinder;
         vector<uint32>     _listRowItem; ///< 줄 위젯 인덱스마다 지금 맡은 항목입니다(없으면 invalid).

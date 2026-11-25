@@ -360,7 +360,7 @@ namespace sw::editor
     {
         if ( SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ &widget }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
             return false;
-        widget.onBoundPropertyChanged( prop );
+        widget.notifyPropertyWritten( prop );
         return true;
     }
 

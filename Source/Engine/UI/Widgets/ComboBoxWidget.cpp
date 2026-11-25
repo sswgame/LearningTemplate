@@ -138,23 +138,12 @@ namespace sw
         refreshLabel();
     }
 
-    void ComboBoxWidget::onAttachedToTree()
+    void ComboBoxWidget::synchronizeProperties()
     {
-        ButtonWidget::onAttachedToTree();
-        if ( _selectedIndex < _listOption.size() )
-            refreshLabel();
-    }
-
-    void ComboBoxWidget::onBoundPropertyChanged( const PropertyInfo& property )
-    {
-        if ( property._name == hashed_string( "_listOption" ) || property._name == hashed_string( "_selectedIndex" ) )
-        {
-            if ( _selectedIndex != constant::invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
-                _selectedIndex = constant::invalid_index::kUint32;
-            refreshLabel();
-            return;
-        }
-        ButtonWidget::onBoundPropertyChanged( property );
+        ButtonWidget::synchronizeProperties();
+        if ( _selectedIndex != constant::invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
+            _selectedIndex = constant::invalid_index::kUint32;
+        refreshLabel();
     }
 
     void ComboBoxWidget::refreshLabel()

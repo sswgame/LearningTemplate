@@ -213,7 +213,7 @@ namespace sw
             bChanged = SerializerUtil::formatPropertyText( leaf, ObjectAddress{ pOwner }, context ) != before;
         }
         if ( bChanged )
-            widget.onBoundPropertyChanged( _path.getRootProperty() );
+            widget.notifyPropertyWritten( _path.getRootProperty() );
         return bChanged;
     }
 

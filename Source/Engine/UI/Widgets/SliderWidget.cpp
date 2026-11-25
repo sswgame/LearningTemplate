@@ -75,16 +75,21 @@ namespace sw
             notifyValueEdited( "_value" );
     }
 
+    void SliderWidget::synchronizeProperties()
+    {
+        Widget::synchronizeProperties();
+        // 세터(`setRange`, `setValue`)와 같은 제한이다. 알림은 부르지 않는다(문서 · 바인딩이 쓴 값이다).
+        _maxValue = MathUtil::max( _minValue, _maxValue );
+        _step     = MathUtil::max( 0.0f, _step );
+        _value    = MathUtil::isFinite( _value ) ? MathUtil::clamp( _value, _minValue, _maxValue ) : _minValue;
+    }
+
     void SliderWidget::onBoundPropertyChanged( const PropertyInfo& property )
     {
         const hashed_string& name           = property._name;
         const bool           bRangeProperty = name == hashed_string( "_value" ) || name == hashed_string( "_minValue" ) || name == hashed_string( "_maxValue" ) || name == hashed_string( "_step" );
         if ( bRangeProperty )
         {
-            // 세터(`setRange`, `setValue`)와 같은 제한을 적용한다. 알림은 부르지 않는다(바인딩이 쓴 값이다).
-            _maxValue = MathUtil::max( _minValue, _maxValue );
-            _step     = MathUtil::max( 0.0f, _step );
-            _value    = MathUtil::clamp( _value, _minValue, _maxValue );
             invalidate( WidgetDirty::kPaint );
             return;
         }
@@ -224,13 +229,18 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
+    void ProgressBarWidget::synchronizeProperties()
+    {
+        Widget::synchronizeProperties();
+        _percent = MathUtil::saturate( _percent );
+    }
+
     void ProgressBarWidget::onBoundPropertyChanged( const PropertyInfo& property )
     {
         const hashed_string& name          = property._name;
         const bool           bFillProperty = name == hashed_string( "_percent" ) || name == hashed_string( "_fillColor" ) || name == hashed_string( "_backgroundColor" );
         if ( bFillProperty )
         {
-            _percent = MathUtil::saturate( _percent );
             invalidate( WidgetDirty::kPaint );
             return;
         }
