@@ -8,14 +8,14 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -189,7 +189,7 @@ namespace sw
     private:
         AssetRedirectInternal::State _state;
 
-        SW_SERVICE_SLOT( AssetRedirectTable, Required );
+        SW_SUBSYSTEM_SLOT( AssetRedirectTable, Required );
     };
 } // namespace sw
 
@@ -301,5 +301,5 @@ namespace sw
 namespace sw
 {
     // 옛 경로 표 — 팩 설정(`PackEngineSettingsSubsystem`)이 채우고 저장된 기록을 읽는 쪽(`readSavedReference`)이 묻는다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( AssetRedirectTable, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( AssetRedirectTable ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( AssetRedirectTable, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( AssetRedirectTable ) );
 } // namespace sw

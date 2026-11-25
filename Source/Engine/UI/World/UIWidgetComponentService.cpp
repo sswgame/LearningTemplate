@@ -4,8 +4,8 @@
 
 #include "Core/Math/Ray.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -239,5 +239,5 @@ namespace sw
 namespace sw
 {
     // 위젯 컴포넌트(화면 마커 · World 위젯) — 포인터 뒤 · 레이아웃 앞 · 그리기 뒤 칸에 건다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIWidgetComponentService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIWidgetComponentService ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( UIWidgetComponentService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIWidgetComponentService ) );
 } // namespace sw

@@ -2,7 +2,7 @@
 
 #include "Engine/UserSettings/UserSettingsHost.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
@@ -36,7 +36,7 @@ namespace sw
 
     void UserSettingsHost::update( float32 deltaSeconds )
     {
-        if ( _bInitialized == SW_FALSE || engine::areEngineServicesBound() == false )
+        if ( _bInitialized == SW_FALSE || engine::areEngineSubsystemsBound() == false )
             return;
         UserSettingsManager& settings = engine::getSubsystem<UserSettingsManager>();
         settings.update( deltaSeconds );

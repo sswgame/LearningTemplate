@@ -1,6 +1,6 @@
 /**
  * @file Engine/Audio/AudioSoundPlayer.h
- * @brief 소리 창구(`ISoundPlayer`)를 오디오 서비스로 잇는 구현입니다. 오디오 서비스가 멤버로 하나 들고 기동 단계가 엔진 서비스 칸으로 겁니다.
+ * @brief 소리 창구(`ISoundPlayer`)를 오디오 서비스로 잇는 구현입니다. 오디오 서비스가 멤버로 하나 들고 기동 단계가 엔진 서브시스템 칸으로 겁니다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"

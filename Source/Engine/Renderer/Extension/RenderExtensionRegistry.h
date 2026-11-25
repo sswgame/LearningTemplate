@@ -21,8 +21,8 @@
 #include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Renderer/Extension/RenderExtension.h"
 
@@ -118,7 +118,7 @@ namespace sw
         ExtensionSceneProxyID _nextProxyID       SW_GUARDED_BY( _mutex ) = 1;
         OnceKeySet                               _failureLogged; ///< 실패를 알린 키(`recordFailureOnce`)
 
-        SW_SERVICE_SLOT( RenderExtensionRegistry, Optional );
+        SW_SUBSYSTEM_SLOT( RenderExtensionRegistry, Optional );
     };
 } // namespace sw
 

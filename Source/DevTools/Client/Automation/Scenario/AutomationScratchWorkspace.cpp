@@ -17,7 +17,7 @@
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -119,7 +119,7 @@ namespace sw
                 // 그 실행이 하는 일이 바로 그것이고, 쓴 파일은 보고에 남아 리뷰한다. 무엇을 덮을지는 판정(`AutomationGoldenUtil::decide`)이 가른다. 폴더 이름은 판정이 쓰는 것과 같은 상수다.
                 bool bUpdateGolden        = false;
                 bool bRecordMissingGolden = false;
-                if ( engine::areEngineServicesBound() )
+                if ( engine::areEngineSubsystemsBound() )
                 {
                     const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
                     (void)commandLine.getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, bUpdateGolden );

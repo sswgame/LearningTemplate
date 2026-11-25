@@ -68,7 +68,7 @@ namespace sw
         GlyphCache& operator=( const GlyphCache& ) = delete;
 
         /**
-         * @brief 프레임 시계를 하나 올립니다. 엔진이 게임 프레임마다 정확히 한 번 부릅니다(`Engine::updateFrameServices`).
+         * @brief 프레임 시계를 하나 올립니다. 엔진이 게임 프레임마다 정확히 한 번 부릅니다(`Engine::updateFrameSubsystems`).
          * @details 래스터화 예산과 아틀라스 페이지 사용 표시가 쓰는 프레임 번호의 유일한 출처다. 프로파일러의 프레임 수는 프로파일러가 꺼지면 늘 0 이라
          *          예산이 되살아나지 않아 새 글리프가 영영 안 만들어졌다 — 켜고 끄는 시계에서 번호를 가져오지 않는다.
          *          지난 프레임에 아틀라스가 찼으면 여기서 압축한다(파일 머리 참고).

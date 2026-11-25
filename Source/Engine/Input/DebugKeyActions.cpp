@@ -7,8 +7,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -207,5 +207,5 @@ namespace sw
 namespace sw
 {
     // 셸 디버그 키 맵 — 호스트 루프가 프레임마다 돌리고 개발 도구 · 개발 명령이 읽는다. 맵은 처음 돌 때 만든다(기동 단계의 입력 매니저에 붙는다).
-    SW_ENGINE_SERVICE_SUBSYSTEM( DebugKeyActions, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugKeyActions ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( DebugKeyActions, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( DebugKeyActions ) );
 } // namespace sw

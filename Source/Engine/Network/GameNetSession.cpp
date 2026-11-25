@@ -25,8 +25,8 @@
 #include "Engine/Config/NetSendThrottleSettings.h"
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/EngineFrameHooks.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Network/GameConnectSecurity.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Observability/MetricRegistry.h"
@@ -259,7 +259,7 @@ namespace sw
         {
             // 덮어쓰기가 없으면 전용 서버는 서버 설정의 게임 포트를 연다. 리슨 호스트(App) · 테스트는 서버 설정이 걸려 있지 않아 열지 않는다.
             // 공유 형식(`ServerConfig`)만 찾는다 — 서버 서비스 문맥(`Engine/Server/`)은 클라이언트 구성에 없다.
-            const ServerConfig* pServerConfig = engine::areEngineServicesBound() ? engine::findSubsystem<const ServerConfig>() : nullptr;
+            const ServerConfig* pServerConfig = engine::areEngineSubsystemsBound() ? engine::findSubsystem<const ServerConfig>() : nullptr;
             if ( pServerConfig == nullptr )
                 return GameNetLaunch::None;
             return makeServerParams( *pServerConfig, outParams ) ? GameNetLaunch::Open : GameNetLaunch::Invalid;
@@ -834,7 +834,7 @@ namespace sw
 
     EngineFrameExit GameNetSession::onClientHostFrameEnd( const EngineFrameContext& /*context*/ )
     {
-        StateHashHistory* pStateHashHistory = engine::areEngineServicesBound() ? engine::findSubsystem<StateHashHistory>() : nullptr;
+        StateHashHistory* pStateHashHistory = engine::areEngineSubsystemsBound() ? engine::findSubsystem<StateHashHistory>() : nullptr;
         uint64            serverTick        = 0;
         if ( pStateHashHistory != nullptr && pStateHashHistory->isRecording() && tryGetServerTick( serverTick ) )
             pStateHashHistory->recordActiveScene( serverTick );
@@ -1154,7 +1154,7 @@ namespace sw
 namespace sw
 {
     // 게임 네트워크 세션 — 게임 모듈 리로드를 넘어 연결을 지킨다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( GameNetSession, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( GameNetSession, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         // 합성 기록은 코어 범위(리소스 루트)에 있다 — 서비스 표가 서기 전이라 범위 사슬에서 찾는다.
         (void)build;

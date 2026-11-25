@@ -7,7 +7,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -298,6 +298,6 @@ namespace sw
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID = {} );
 
-        SW_SERVICE_SLOT_CONST( EngineDefaultAssets, Required );
+        SW_SUBSYSTEM_SLOT_CONST( EngineDefaultAssets, Required );
     };
 } // namespace sw

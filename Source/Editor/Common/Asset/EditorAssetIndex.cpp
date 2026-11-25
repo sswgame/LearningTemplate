@@ -12,7 +12,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetPaths.h"

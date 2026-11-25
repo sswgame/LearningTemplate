@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -16,7 +16,7 @@ namespace sw
         if ( pCache == nullptr )
         {
             SW_LOG_ERROR_ID( "SharedAssetCache.NotRegistered", "Shared asset cache '%#' is not registered - its .cpp needs SW_SHARED_ASSET_CACHE or SW_MODULE_SHARED_ASSET_CACHE, and a module cache lives only while its module is up", pKindName );
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE ); // 위 오류가 어느 종류인지 남겼다 — Release 에서도 멈춘다
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE ); // 위 오류가 어느 종류인지 남겼다 — Release 에서도 멈춘다
         }
         return *pCache;
     }
@@ -24,7 +24,7 @@ namespace sw
     AssetCacheBase* SharedAssetCacheLookup::findCache( const utf8* pKindName )
     {
         // 엔진 서비스가 서기 전 · 내려간 뒤(정적 객체 · 서비스 없는 테스트가 지은 컴포넌트)에도 부른다 — 그때는 캐시가 없다.
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return nullptr;
         AssetManager* const pAssetManager = engine::findSubsystem<AssetManager>();
         return pAssetManager != nullptr ? pAssetManager->findAssetCache( pKindName ) : nullptr;

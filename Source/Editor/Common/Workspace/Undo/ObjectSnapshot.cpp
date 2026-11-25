@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/Undo/ObjectSnapshot.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

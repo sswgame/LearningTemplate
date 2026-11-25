@@ -16,8 +16,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 #include "Core/Task/DedicatedWorker.h"
 #include "Core/Time/ExponentialBackoff.h"
 
@@ -294,6 +294,6 @@ namespace sw
         uint32 _currentFileEvents            SW_GUARDED_BY( _spoolMutex );
         DedicatedWorker<TelemetrySpoolJob>   _spoolWorker; ///< 맨 뒤 — 생성자가 띄우고 소멸자가 멈춘다(처리 함수가 위 멤버를 쓴다)
 
-        SW_SERVICE_SLOT( TelemetryService, Required );
+        SW_SUBSYSTEM_SLOT( TelemetryService, Required );
     };
 } // namespace sw

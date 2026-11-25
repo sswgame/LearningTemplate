@@ -32,18 +32,18 @@ namespace
     };
 
     /** @brief 테스트 동안만 등록 줄을 올립니다. */
-    struct ScopedServiceRegistration
+    struct ScopedSubsystemRegistration
     {
         const SceneServiceRegistration* _pRegistration;
 
-        explicit ScopedServiceRegistration( const SceneServiceRegistration& registration )
+        explicit ScopedSubsystemRegistration( const SceneServiceRegistration& registration )
             : _pRegistration{ &registration }
         {
             const bool bAdded = SceneServiceRegistry::add( _pRegistration );
             SW_ASSERT( bAdded );
             (void)bAdded;
         }
-        ~ScopedServiceRegistration() { SceneServiceRegistry::remove( _pRegistration ); }
+        ~ScopedSubsystemRegistration() { SceneServiceRegistry::remove( _pRegistration ); }
     };
 } // namespace
 
@@ -51,19 +51,19 @@ namespace
 SW_TEST_CASE( SceneServiceAccessTest, UpdateInsideFrameJobWindowIsChecked )
 {
     // 일: Navigation 단계 끝에 넘겨 FlushPostAnimation 앞에서 마친다(그 사이 Animation 단계가 돈다). 일은 HitRecord 를 쓴다.
-    const SceneServiceRegistration  jobLine{ &createSceneService<AccessProbeJobService>, SceneFrameStep::Navigation, SceneFrameAccess{}, SceneFrameStep::FlushPostAnimation,
+    const SceneServiceRegistration    jobLine{ &createSceneService<AccessProbeJobService>, SceneFrameStep::Navigation, SceneFrameAccess{}, SceneFrameStep::FlushPostAnimation,
                                             makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::HitRecord }, SceneDataKindSet{}, SceneDataKindSet{} ) };
-    const ScopedServiceRegistration jobScope{ jobLine };
+    const ScopedSubsystemRegistration jobScope{ jobLine };
     {
-        const SceneServiceRegistration  quietLine{ &createSceneService<AccessProbeService>, SceneFrameStep::Animation,
+        const SceneServiceRegistration    quietLine{ &createSceneService<AccessProbeService>, SceneFrameStep::Animation,
                                                   makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::AnimatorState }, SceneDataKindSet{}, SceneDataKindSet{} ), SceneFrameStep::Count, SceneFrameAccess{} };
-        const ScopedServiceRegistration quietScope{ quietLine };
-        GameObjectManager               manager; // 겹치지 않는다 — 로그가 없다
+        const ScopedSubsystemRegistration quietScope{ quietLine };
+        GameObjectManager                 manager; // 겹치지 않는다 — 로그가 없다
     }
     {
-        const SceneServiceRegistration  racingLine{ &createSceneService<AccessProbeService>, SceneFrameStep::Animation,
+        const SceneServiceRegistration    racingLine{ &createSceneService<AccessProbeService>, SceneFrameStep::Animation,
                                                    makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::HitRecord } ), SceneFrameStep::Count, SceneFrameAccess{} };
-        const ScopedServiceRegistration racingScope{ racingLine };
+        const ScopedSubsystemRegistration racingScope{ racingLine };
         SW_EXPECT_LOG( "GameObjectManager.ServiceUpdateDuringFrameJob" );
         GameObjectManager manager; // 일이 쓰는 것을 창 안에서 읽는다
     }

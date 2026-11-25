@@ -10,8 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
@@ -126,6 +126,6 @@ namespace sw
         Subscription              _styleSheetReloadedSubscription; ///< 스타일 시트 캐시의 다시 읽기 알림 구독
         Subscription              _themeChangedSubscription;       ///< 테마가 바뀐 알림 구독
 
-        SW_SERVICE_SLOT( UIOffscreenScreens, Required );
+        SW_SUBSYSTEM_SLOT( UIOffscreenScreens, Required );
     };
 } // namespace sw

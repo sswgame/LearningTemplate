@@ -5,7 +5,7 @@
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Time/BusyClock.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"

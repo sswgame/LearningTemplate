@@ -34,7 +34,7 @@
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModPackBuilder.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModResolver.h"
 #include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {

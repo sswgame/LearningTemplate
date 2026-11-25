@@ -12,9 +12,9 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -168,7 +168,7 @@ namespace sw
             /** @brief 감시 값 `Texture.FormatVariantActive` 입니다. 이 장치가 임포트한 DDS 가 아닌 쿠킹 변형을 읽으면 1 입니다(데스크톱 대상은 0 — 그림이 바뀌지 않는다는 뜻이다). */
             [[nodiscard]] static bool readFormatVariantActive( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                if ( engine::areEngineServicesBound() == false )
+                if ( engine::areEngineSubsystemsBound() == false )
                     return false;
                 outValue = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().getFormatVariantSuffix().empty() ? 0.0 : 1.0;
                 return true;

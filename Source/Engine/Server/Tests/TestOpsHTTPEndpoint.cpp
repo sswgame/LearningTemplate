@@ -10,7 +10,7 @@
 #include "Core/Testing/TestWait.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"

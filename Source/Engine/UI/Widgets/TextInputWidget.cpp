@@ -7,7 +7,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/TypeInfo.h"

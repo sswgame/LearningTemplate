@@ -9,8 +9,8 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -45,7 +45,7 @@ namespace sw
         }
     }
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( InputMapExtensionRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( InputMapExtensionRegistry ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( InputMapExtensionRegistry, GameVisible, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( InputMapExtensionRegistry ) );
 } // namespace sw
 
 namespace sw

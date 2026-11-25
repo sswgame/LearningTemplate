@@ -24,7 +24,7 @@
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Engine.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Network/GameConnectSecurity.h"
@@ -170,7 +170,7 @@ namespace sw
             server._serverServiceContext._pKitDirectory    = &server._kitDirectory;
             // 게임 쪽(네트워크 세션)에는 공유 형식인 설정과 지표 레지스트리만 건다 — 서버 서비스 문맥은 `Engine/Server/` 형식이라 클라이언트와 함께 짓는 코드가 알면 안 된다.
             engine::getSubsystem<GameNetSession>().bindMetricRegistry( server._observability.getMetricRegistry() ); // 게임 포트 지표(감사 N-7) — 게임이 포트를 열 때 샤드마다 올린다
-            // 키트 창구는 게임 모듈 범위에도 걸린다(`GameModuleManager::fillModuleServiceScope`) — 게임 서버 코드가 백필 같은 키트 인터페이스를 찾는다.
+            // 키트 창구는 게임 모듈 범위에도 걸린다(`GameModuleManager::fillModuleSubsystemScope`) — 게임 서버 코드가 백필 같은 키트 인터페이스를 찾는다.
             // 설정은 `engine::findSubsystem<const ServerConfig>()` 로 찾는다.
             return ( server._launch.getHostScope().bind( server._pServerConfig ) && server._launch.getHostScope().bind<IServerKitLocator>( &server._kitLocator ) ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
         }
@@ -541,7 +541,7 @@ namespace sw
     bool ServerApp::collectPreviousCrashes()
     {
         const AbsolutePath crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
-        if ( crashFolder.empty() || engine::areEngineServicesBound() == false )
+        if ( crashFolder.empty() || engine::areEngineSubsystemsBound() == false )
             return true;
         CrashReportService& crashReports  = engine::getSubsystem<CrashReportService>();
         const AbsolutePath  reportsFolder = crashFolder.getParent().join( CrashReportService::kReportsFolderName );
@@ -578,7 +578,7 @@ namespace sw
         // 서비스 연결(로그인 · 채팅 …) + 게임 UDP 접속(복제 키트의 플레이어) + 키트가 끝내야 하는 진행 중인 일(매치 · 거래). 셋이 모두 0 이어야 조용히 내려갈 수 있다.
         const int32           serviceConnections = getServiceConnectionCount();
         const int32           openJob            = _serverServices != nullptr ? _serverServices->getOpenJobCount() : 0;
-        const GameNetSession* pNetSession        = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
+        const GameNetSession* pNetSession        = engine::areEngineSubsystemsBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         const int32           gameConnections    = pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server ? pNetSession->getConnectedCount() : 0;
         return serviceConnections + gameConnections + openJob;
     }
@@ -596,7 +596,7 @@ namespace sw
         notification._graceSeconds = static_cast<uint32>( waitMs / constant::time::kMillisecondsPerSecond );
         if ( _serverServices != nullptr )
             _serverServices->beginShutdown( notification );
-        GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
+        GameNetSession* pNetSession = engine::areEngineSubsystemsBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         if ( pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server )
             pNetSession->sendShutdownNotice( GameShutdownNotice{ bWait ? GameShutdownReason::ServerRestart : GameShutdownReason::ServerStopped, notification._graceSeconds } );
         if ( waitMs > 0 )
@@ -678,7 +678,7 @@ namespace sw
             // 틱 지표 · 상태 박동 · 프레임 이력(O1) · 느린 틱 덤프 · 사용률 창(O5)은 관측이 든다.
             _observability.recordTick( tickTime, _tickCount, getServiceConnectionCount(), _droppedTickCount, ServerAppInternal::nowMonotonicMs() );
             // 이력은 `-gv_stateHashHistory=N` 이 켤 때만 남는다(배포에는 그 인자가 없어 늘 꺼져 있다).
-            StateHashHistory* pStateHashHistory = engine::areEngineServicesBound() ? engine::findSubsystem<StateHashHistory>() : nullptr;
+            StateHashHistory* pStateHashHistory = engine::areEngineSubsystemsBound() ? engine::findSubsystem<StateHashHistory>() : nullptr;
             if ( pStateHashHistory != nullptr && pStateHashHistory->isRecording() )
             {
                 pStateHashHistory->recordActiveScene( _tickCount );

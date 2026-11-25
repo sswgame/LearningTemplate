@@ -23,7 +23,7 @@
 #include "DevTools/ModuleReload/LiveReload/ModuleLibraryPatch.h"
 #include "DevTools/ModuleReload/LiveReload/ShadowCopyName.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Module/EngineABIStamp.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -365,7 +365,7 @@ namespace sw
             if ( event._bSucceeded == false )
             {
                 // 빌드 실패도 모듈 리로드 실패다 — 옛 이미지로 계속 돈다(집계가 낡음으로 보인다). 이 프로세스가 시작한 빌드만 여기에 온다.
-                if ( ReloadTracker* const pTracker = engine::areEngineServicesBound() ? engine::findSubsystem<ReloadTracker>() : nullptr )
+                if ( ReloadTracker* const pTracker = engine::areEngineSubsystemsBound() ? engine::findSubsystem<ReloadTracker>() : nullptr )
                     pTracker->record( ReloadSource::Module, event._moduleName, ReloadResult::Failed, "the module build failed - the previous image runs" );
                 // 실패한 빌드가 다시 쓴 모듈은 반쯤 완성된 집합일 수 있으므로 로드하지 않는다. 파일은 그대로라 다음에 성공한 빌드의 변경과 함께 로드된다.
                 for ( auto& [name, pContext] : _mapModule )
@@ -917,7 +917,7 @@ namespace sw
         if ( _listSharedModule.empty() )
             return;
         // 서비스가 이미 내려갔으면 등록을 제 이름으로 해제할 곳이 없다 — 라이브러리를 두면 정적 등록이 남은 채로 프로세스가 끝난다(예전 동작).
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
         {
             _listSharedModule.clear();
             return;
@@ -938,7 +938,7 @@ namespace sw
         const bool bFlushed = flushWorkersBeforeUnload();
         // 큐에 든 이벤트는 그것을 넣은 모듈의 vtable(소멸자 · 타입)을 가진다 — 워커를 비운 지금 배달하고 비워, 내려간 코드를 가리키는 이벤트가 남지 않게 한다.
         // 그 모듈의 구독자는 인스턴스와 함께 이미 풀렸으므로 남은 구독자(엔진 · 다른 모듈)만 받는다.
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             if ( EventDispatcher* const pEventDispatcher = engine::findSubsystem<EventDispatcher>() )
                 pEventDispatcher->processEvents();
@@ -955,7 +955,7 @@ namespace sw
         // clear() 는 부르지 않는다. 그러면 관계없는 GPUScene · 씬 로드 작업까지 버리고 onTaskFinished 정리를 건너뛴다.
         // 도는 씬 로드는 취소하지 않고 멈춰 둔다 — 지은 씬만 코드가 있을 때 없애고, 같은 약속으로 다시 띄운다. 약속을 쥔 모듈 코드(씬 흐름)는 값으로 물어보기만 하고
         // 이어 부르기(`then`)를 걸지 않으므로 내려간 코드를 부르지 않는다. 새로 선 쪽은 `replayPendingLoadRequests` 로 이어받는다.
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<SceneManager>().suspendPendingLoad();
 
         // 렌더 스레드는 TaskManager 밖에서 돈다. Present 훅이 모듈 코드를 실행 중일 수 있으므로 먼저 비운다.
@@ -968,7 +968,7 @@ namespace sw
         }
 
         // 엔진 전체 대기가 맞다 — 모듈 코드는 어떤 태스크든 가상 함수 · 델리게이트로 들어올 수 있어 낸 쪽으로 가를 수 없다(`GameModuleManager::flushRenderWorkers` 의 같은 주석).
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             engine::getSubsystem<TaskManager>().waitAll( "LiveReloadManager::pollBeforeUnload" );
         }
@@ -1042,7 +1042,7 @@ namespace sw
         _buildFinishedSeconds         = 0.0;
         if ( runCascade( listSubgraphName ) == false )
             return;
-        ReloadTracker* const pTracker = engine::areEngineServicesBound() ? engine::findSubsystem<ReloadTracker>() : nullptr;
+        ReloadTracker* const pTracker = engine::areEngineSubsystemsBound() ? engine::findSubsystem<ReloadTracker>() : nullptr;
         if ( pTracker == nullptr )
             return;
         const bool bSucceeded = _completedReloadCount > completedBefore;

@@ -6,8 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/UI/Accessibility/UIAccessibilityService.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
@@ -338,7 +338,7 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( UINotificationService, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( UINotificationService, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         UINotificationService& service  = scope.emplaceSubsystem<UINotificationService>();

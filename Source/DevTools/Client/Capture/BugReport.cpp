@@ -21,7 +21,7 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Input/InputManager.h"
@@ -161,7 +161,7 @@ namespace sw
                     outReply = string( reply.view() );
                     return false;
                 }
-                if ( engine::areEngineServicesBound() == false )
+                if ( engine::areEngineSubsystemsBound() == false )
                 {
                     outReply = "bugreport.input.start: engine services are not bound";
                     return false;
@@ -176,7 +176,7 @@ namespace sw
             /** @brief `bugreport.input.stop` — 세션 입력 기록을 멈춘다. 담은 프레임은 다음 bugreport 가 담는다. */
             static bool runInputStop( const vector<string>& listArgument, string& outReply )
             {
-                if ( listArgument.empty() == false || engine::areEngineServicesBound() == false )
+                if ( listArgument.empty() == false || engine::areEngineSubsystemsBound() == false )
                     return false;
                 InputManager& input = engine::getSubsystem<InputManager>();
                 input.stopSessionRecording();
@@ -192,7 +192,7 @@ namespace sw
              */
             static bool runReplay( const vector<string>& listArgument, string& outReply )
             {
-                if ( listArgument.size() > 1 || engine::areEngineServicesBound() == false )
+                if ( listArgument.size() > 1 || engine::areEngineSubsystemsBound() == false )
                     return false;
                 const AbsolutePath folder = listArgument.empty() ? BugReport::findLatestDirectory( BugReport::getRoot() ) : FileUtil::toDiskPath( listArgument[0] );
                 if ( BugReport::goTo( engine::getSubsystem<SceneManager>(), folder.str(), outReply ) == false )
@@ -223,7 +223,7 @@ namespace sw
             {
                 if ( listArgument.size() > 1 )
                     return false;
-                if ( engine::areEngineServicesBound() == false )
+                if ( engine::areEngineSubsystemsBound() == false )
                 {
                     outReply = "bugreport.goto: engine services are not bound";
                     return false;
@@ -408,7 +408,7 @@ namespace sw
         if ( ILogSink* pSink = Logger::getGlobalSink(); pSink != nullptr )
             inputs._logFilePath = FileUtil::toDiskPath( pSink->getLogFilePath() );
 
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return inputs;
         inputs._report._game           = engine::getSubsystem<PackEngineSettings>()._windowTitle;
         const FrameRenderer* pRenderer = engine::findSubsystem<FrameRenderer>();

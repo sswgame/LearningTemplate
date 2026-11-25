@@ -1,14 +1,14 @@
 /**
- * @file GameService.h
+ * @file GameSubsystems.h
  * @brief GameFramework 가 제공하고 게임 모듈과 키트가 쓰는 서비스 API 입니다. 게임 범위(`SubsystemScope`)에서 찾고, 없으면 호스트(엔진) 서비스 테이블을 봅니다.
  * @details 게임 범위는 게임 인스턴스(`GameInstance`)가 소유하고 기동 때 "지금 범위" 로 설정한다. 언리얼에서 게임 인스턴스가 `UGameInstanceSubsystem` 을 소유하는 것에 해당한다.
- *          게임이 쓰는 카탈로그와 설정은 그 범위에 등록한다(`GameInstance::bindScopedService`). 범위는 인스턴스와 함께 사라지므로 게임 모듈을 언로드할 때
+ *          게임이 쓰는 카탈로그와 설정은 그 범위에 등록한다(`GameInstance::bindScopedSubsystem`). 범위는 인스턴스와 함께 사라지므로 게임 모듈을 언로드할 때
  *          남는 항목이 없다. 테스트는 자기 범위를 만들어 `ScopedGameScope` 로 잠시 "지금 범위" 로 설정한다.
  */
 #pragma once
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "ModuleAPI/Service/GameServiceBinding.h"
+#include "ModuleAPI/Service/GameSubsystemBinding.h"
 
 namespace sw
 {
@@ -16,11 +16,11 @@ namespace sw
     {
         namespace internal
         {
-            /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindGameService`). 묶이지 않았으면 엔진 범위를 `HostOnly` 칸을 거른 창구로 보이고, 엔진도 없으면 nullptr 입니다. */
-            SW_GAMESERVICE_API const ISubsystemLocator* findHostServices();
+            /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindGameSubsystems`). 묶이지 않았으면 엔진 범위를 `HostOnly` 칸을 거른 창구로 보이고, 엔진도 없으면 nullptr 입니다. */
+            SW_GAMESERVICE_API const ISubsystemLocator* findHostSubsystems();
         } // namespace internal
 
-        // bindGameService · unbindGameService 는 ModuleAPI/Service/GameServiceBinding.h 가 선언한다(진입점 매크로가 ModuleAPI 안에서 부른다).
+        // bindGameSubsystems · unbindGameSubsystems 는 ModuleAPI/Service/GameSubsystemBinding.h 가 선언한다(진입점 매크로가 ModuleAPI 안에서 부른다).
 
         /** @brief 지금 게임 범위입니다. 게임 인스턴스가 서기 전이나 내려간 뒤에는 nullptr 입니다. */
         SW_GAMESERVICE_API SubsystemScope* findGameScope();
@@ -43,11 +43,11 @@ namespace sw
             T* pScoped = findSubsystemFrom<T>( findGameScope() );
             if ( pScoped != nullptr )
                 return pScoped;
-            return findSubsystemFrom<T>( internal::findHostServices() );
+            return findSubsystemFrom<T>( internal::findHostSubsystems() );
         }
 
         /**
-         * @brief 반드시 있어야 하는 게임 서비스 @p T 입니다(`findSubsystem<T>()` 와 같은 순서로 찾는다). 없으면 부른 쪽의 잘못이라 모든 구성에서 오류를 남기고 멈춥니다(`sw::internal::reportMissingRequiredService`).
+         * @brief 반드시 있어야 하는 게임 서비스 @p T 입니다(`findSubsystem<T>()` 와 같은 순서로 찾는다). 없으면 부른 쪽의 잘못이라 모든 구성에서 오류를 남기고 멈춥니다(`sw::internal::reportMissingRequiredSubsystem`).
          * @details 서비스가 바인딩된 뒤에만 도는 경로(카탈로그 읽기, 타입 조회)가 쓴다. 없을 수 있는 곳에서는 `findSubsystem<T>()` 를 쓴다.
          */
         template <typename T>
@@ -55,7 +55,7 @@ namespace sw
         {
             T* pFound = findSubsystem<T>();
             if ( pFound == nullptr )
-                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
             return *pFound;
         }
 

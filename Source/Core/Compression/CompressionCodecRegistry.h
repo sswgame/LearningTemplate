@@ -10,8 +10,8 @@
 #include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -95,6 +95,6 @@ namespace sw
         /** @brief 이 객체가 내준 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         SubscriptionList _subscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &CompressionCodecRegistry::releaseSubscription, this ) };
 
-        SW_SERVICE_SLOT( CompressionCodecRegistry, Required );
+        SW_SUBSYSTEM_SLOT( CompressionCodecRegistry, Required );
     };
 } // namespace sw

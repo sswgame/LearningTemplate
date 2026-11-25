@@ -99,14 +99,14 @@ namespace sw
     void EphemeralStoreRouter::submit( const EphemeralRequest& request )
     {
         if ( _pStore == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
         (void)_pStore->submit( request ); // 답은 poll 가 주인 없는 id 로 보고 버린다
     }
 
     uint64 EphemeralStoreRouter::submit( const EphemeralRequest& request, ReplyDelegate onReply, const Subscription& owner )
     {
         if ( _pStore == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
         const uint64 ownerID = _subscriptions.findIssued( owner );
         if ( ownerID == 0 || onReply.isBound() == false )
         {

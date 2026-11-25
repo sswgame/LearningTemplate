@@ -9,7 +9,7 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEvent.h"

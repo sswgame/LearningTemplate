@@ -14,7 +14,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Object/Component/Component.h"
@@ -271,7 +271,7 @@ namespace sw
         sources._pProfiler           = MemoryProfiler::getActive();
         sources._allocationSiteLimit = allocationSiteLimit;
         CacheStats::collect( sources._listCacheStats );
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return sources;
         if ( const AssetManager* pAssets = engine::findSubsystem<AssetManager>(); pAssets != nullptr )
         {

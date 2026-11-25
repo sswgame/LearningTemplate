@@ -27,5 +27,5 @@ namespace sw
 namespace sw
 {
     // 종료 요청 · 코드 — 호스트 · 엔진 · 모듈이 건다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( QuitRequest, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( QuitRequest ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( QuitRequest, GameVisible, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( QuitRequest ) );
 } // namespace sw

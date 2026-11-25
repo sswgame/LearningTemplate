@@ -6,12 +6,12 @@
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -112,7 +112,7 @@ namespace sw
         optional<float32> _maxExposureErrorEv; ///< 노출 조건의 문턱(`_conditions.RenderAutoExposure._maxExposureErrorEv`)
         atomic<uint32>    _maxGIErrorBits;     ///< 실시간 GI 조건의 문턱(`_conditions.RenderRealtimeGI._maxGIError`)의 `float32` 비트. 싣지 않았으면 0
 
-        SW_SERVICE_SLOT( RenderStabilityStatusHolder, Required );
+        SW_SUBSYSTEM_SLOT( RenderStabilityStatusHolder, Required );
     };
 
     uint32 RenderStabilityUtil::advanceStillFrames( uint32 previous, bool bTAAHistoryReset, bool bCameraStill, bool bObjectMotion )
@@ -189,7 +189,7 @@ namespace sw
         return engine::getSubsystem<RenderStabilityStatusHolder>().loadPresentedFrames();
     }
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( RenderStabilityStatusHolder, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderStabilityStatusHolder ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( RenderStabilityStatusHolder, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( RenderStabilityStatusHolder ) );
 } // namespace sw
 
 namespace sw

@@ -12,7 +12,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/Component/Component.h"
@@ -799,7 +799,7 @@ namespace sw
     {
         if ( pGameObject == nullptr )
             return nullptr;
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
         {
             if ( bLogWarning )
                 SW_LOG_WARNING_ID( "GameObjectManager.CannotCreateComponentName", "Cannot create component '%#' by name - engine services (TypeRegistry) are not bound", typeName.c_str() );
@@ -825,7 +825,7 @@ namespace sw
     vector<hashed_string> GameObjectManager::getRegisteredComponentTypeNames()
     {
         vector<hashed_string> listName;
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return listName;
         engine::getSubsystem<TypeRegistry>().forEachType( [&listName]( const TypeInfo& info )
         {
@@ -889,7 +889,7 @@ namespace sw
 
     void GameObjectManager::runFrameStepMainThreadTasks( float32 /*deltaTime*/ )
     {
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<TaskManager>().dispatchMainThreadTasks();
     }
 

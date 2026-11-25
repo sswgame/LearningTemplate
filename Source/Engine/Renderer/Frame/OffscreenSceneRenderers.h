@@ -13,7 +13,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -77,6 +77,6 @@ namespace sw
         atomic<uint32> _count;          ///< `_listEntry` 의 크기를 렌더 스레드가 공개한 값
         atomic<uint32> _nextCaptureKey; ///< `allocateCaptureSceneKey` 의 다음 번호(표시 비트 밖)
 
-        SW_SERVICE_SLOT( OffscreenSceneRenderers, Optional );
+        SW_SUBSYSTEM_SLOT( OffscreenSceneRenderers, Optional );
     };
 } // namespace sw

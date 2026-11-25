@@ -7,8 +7,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/WorldOrigin.h"
 
 namespace sw
@@ -396,5 +396,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( DebugDrawQueue, GameVisible, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugDrawQueue ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( DebugDrawQueue, GameVisible, GameInstance, Shared, (), SW_ENGINE_DEFAULT_FACTORY( DebugDrawQueue ) );
 } // namespace sw

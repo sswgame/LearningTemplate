@@ -7,7 +7,7 @@
 #include "Engine/Foundation/EngineScope.h"
 #include "Engine/Scene/SceneObjectHash.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace
 {
@@ -59,7 +59,7 @@ SW_TEST_CASE( GameServiceTest, NestedScopesShadowAndRestore )
 /** @brief [GameServiceTest] 게임 범위에 없는 서비스는 호스트(엔진) 서비스에서 찾는다 — 지금 범위가 있든 없든 같다 */
 SW_TEST_CASE( GameServiceTest, FallsThroughToHostServices )
 {
-    const ISubsystemLocator* const pHost = game::internal::findHostServices();
+    const ISubsystemLocator* const pHost = game::internal::findHostSubsystems();
     SW_REQUIRE_NOT_NULL( pHost );
     SubsystemScope              emptyScope;
     const game::ScopedGameScope scoped{ emptyScope };
@@ -74,8 +74,8 @@ SW_TEST_CASE( GameServiceTest, FallsThroughToHostServices )
  */
 SW_TEST_CASE( GameServiceTest, HostOnlyServicesStayHiddenWithoutAHostBinding )
 {
-    SW_EXPECT_TRUE( engine::isHostOnlyService( getSubsystemTypeHash<AsyncFileIO>() ) );
-    SW_EXPECT_FALSE( engine::isHostOnlyService( getSubsystemTypeHash<StateHashHistory>() ) );
-    SW_EXPECT_FALSE( engine::isHostOnlyService( getSubsystemTypeHash<ScopeTestService>() ) ); // 등록이 없는 타입은 거르지 않는다
+    SW_EXPECT_TRUE( engine::isHostOnlySubsystem( getSubsystemTypeHash<AsyncFileIO>() ) );
+    SW_EXPECT_FALSE( engine::isHostOnlySubsystem( getSubsystemTypeHash<StateHashHistory>() ) );
+    SW_EXPECT_FALSE( engine::isHostOnlySubsystem( getSubsystemTypeHash<ScopeTestService>() ) ); // 등록이 없는 타입은 거르지 않는다
     SW_EXPECT_NULL( game::findSubsystem<AsyncFileIO>() );
 }

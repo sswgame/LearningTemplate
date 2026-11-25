@@ -13,12 +13,12 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Environment/Fog/FogSettings.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -97,7 +97,7 @@ namespace sw
     private:
         std::atomic<uint8> _state;
 
-        SW_SERVICE_SLOT( FrameFogVolumeStatus, Required );
+        SW_SUBSYSTEM_SLOT( FrameFogVolumeStatus, Required );
     };
 
     std::atomic<uint8>& FrameFogInternal::lastMainVolumeState()
@@ -265,5 +265,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( FrameFogVolumeStatus, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( FrameFogVolumeStatus ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( FrameFogVolumeStatus, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( FrameFogVolumeStatus ) );
 } // namespace sw

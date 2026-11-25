@@ -2,8 +2,8 @@
 
 #include "Engine/UI/Accessibility/UIAccessibilityService.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
@@ -127,5 +127,5 @@ namespace sw
 namespace sw
 {
     // 스크린 리더 — 알림이 이것으로 읽힌다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIAccessibilityService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIAccessibilityService ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( UIAccessibilityService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIAccessibilityService ) );
 } // namespace sw

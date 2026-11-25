@@ -22,7 +22,7 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/InspectorPanel.h"
@@ -881,7 +881,7 @@ namespace sw::editor
                     EditorSelfTestContext* pContext = EditorSelfTestRunner::findRunningContext();
                     const DPITestState*    pProbe   = pContext != nullptr ? pContext->findTestState<DPITestState>() : nullptr;
                     if ( pProbe == nullptr ) // 프로브가 사라지면 소멸자가 콜백을 되돌리므로, 걸려 있는 동안에는 항상 있다
-                        ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                        ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
                     return pProbe->_fakeScale;
                 }
                 static EditorSelfTestStep runDPIMonitorScaleFollows( EditorSelfTestContext& context )

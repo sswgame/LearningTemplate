@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"

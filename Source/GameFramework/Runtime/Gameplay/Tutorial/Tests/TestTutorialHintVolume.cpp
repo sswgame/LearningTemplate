@@ -11,7 +11,7 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Foundation/Service/Tests/SceneNetLinkTestBinding.h"
 #include "GameFramework/Runtime/Gameplay/Tutorial/TutorialHintTriggerComponent.h"
 

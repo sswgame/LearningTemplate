@@ -15,7 +15,7 @@
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Reflection/TypeRegistry.h"
 

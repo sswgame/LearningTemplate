@@ -263,5 +263,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( RenderTargetRegistry, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderTargetRegistry ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( RenderTargetRegistry, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( RenderTargetRegistry ) );
 } // namespace sw

@@ -3,7 +3,7 @@
 #include "Engine/Renderer/Frame/Resource/PathTextureSet.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
 
@@ -18,14 +18,14 @@ namespace sw
 
     void PathTextureSet::request( const hashed_string& path )
     {
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return;
         (void)getOrCreateEntry( path );
     }
 
     const Texture2D* PathTextureSet::requestReady( const DataPath& path, const utf8* pKind )
     {
-        if ( path.isSet() == false || engine::areEngineServicesBound() == false )
+        if ( path.isSet() == false || engine::areEngineSubsystemsBound() == false )
             return nullptr;
         const hashed_string key( path.get().c_str() );
         Entry&              entry = getOrCreateEntry( key );

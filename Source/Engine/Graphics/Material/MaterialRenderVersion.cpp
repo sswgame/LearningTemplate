@@ -3,7 +3,7 @@
 #include "Engine/Graphics/Material/MaterialRenderVersion.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
@@ -21,7 +21,7 @@ namespace sw
     {
         MaterialRenderInputs inputs{};
         inputs._shaderReflectionGeneration = ShaderReflectionLibrary::getCacheGeneration();
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return inputs; // 머티리얼 · 텍스처 캐시를 볼 수 없다 — 모르는 값이다(건너뛰지 않는다)
         AssetManager& assets     = engine::getSubsystem<AssetManager>();
         inputs._materialRevision = assets.getAssetCache<MaterialCache>().getRenderValueLog().getGeneration();

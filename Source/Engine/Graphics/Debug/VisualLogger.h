@@ -21,8 +21,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -137,6 +137,6 @@ namespace sw
         uint64 _frame                    SW_GUARDED_BY( _mutex );
         uint32 _capacity                 SW_GUARDED_BY( _mutex );
 
-        SW_SERVICE_SLOT( VisualLogger, Required );
+        SW_SUBSYSTEM_SLOT( VisualLogger, Required );
     };
 } // namespace sw

@@ -17,8 +17,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 #include "Core/Time/ExponentialBackoff.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
@@ -305,7 +305,7 @@ namespace sw
         uint8                          _bInitialized     : 1; /**< initialize 가 끝났는지입니다. */
         uint8                          _bOutputSuspended : 1; /**< 앱 멈춤으로 출력을 닫아 두었는지입니다(`suspendOutput`). */
 
-        SW_SERVICE_SLOT( AudioService, Optional );
+        SW_SUBSYSTEM_SLOT( AudioService, Optional );
     };
 } // namespace sw
 

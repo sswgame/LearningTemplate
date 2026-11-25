@@ -18,7 +18,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Localization/PortableObjectFile.h"
 #include "Editor/Common/Localization/TranslationMemory.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"

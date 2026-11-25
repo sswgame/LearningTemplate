@@ -7,8 +7,8 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -105,14 +105,14 @@ namespace sw
 
     float3 PhysicsSystem::getConfiguredGravity()
     {
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             return engine::getSubsystem<PhysicsSystem>().getSettings()._gravity;
         return PhysicsSettings{}._gravity;
     }
 
     uint32 PhysicsSystem::getGroundQueryLayerMask()
     {
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             return engine::getSubsystem<PhysicsSystem>().getSettings().makeGroundQueryLayerMask();
         return MathUtil::kMaxUInt32;
     }
@@ -133,7 +133,7 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( PhysicsSystem, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( PhysicsSystem ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( PhysicsSystem, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( PhysicsSystem ) );
 } // namespace sw
 
 // 물리 설정은 상수로 읽는다(이름 검증은 서비스 없이도) - 쓰는 것만 담는 팩 쿠킹의 뿌리다(`AssetCookRoot.h`).

@@ -2,7 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Model/MeshModifiersViewModel.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Content/AssetPaths.h"
 

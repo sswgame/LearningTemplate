@@ -21,8 +21,8 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -1301,5 +1301,5 @@ namespace sw
 namespace sw
 {
     // 씬 매니저가 서브시스템이다 — 씬이 바뀌면 되돌리기 기록을 비우는 구독도 그것이 건다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( SceneManager, GameVisible, GameInstance, Startup, (), SW_ENGINE_DEFAULT_FACTORY( SceneManager ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( SceneManager, GameVisible, GameInstance, Startup, (), SW_ENGINE_DEFAULT_FACTORY( SceneManager ) );
 } // namespace sw

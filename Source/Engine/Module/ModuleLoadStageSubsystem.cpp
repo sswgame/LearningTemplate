@@ -3,8 +3,8 @@
 #include "Engine/Module/ModuleLoadStageSubsystem.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 #include "Engine/Reflection/TypeRegistry.h"

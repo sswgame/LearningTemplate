@@ -2,7 +2,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Config/RHIBackendType.h"
@@ -187,7 +187,7 @@ namespace sw
         PROPERTY( Min = 1, Meta = "Units=MB" )
         uint32 _budgetMegabytes{}; ///< 캐시 예산(MB). 0 이면(키가 없다) 캐시가 처음 남길 때 오류로 멈춘다
 
-        SW_SERVICE_SLOT_CONST( CharacterMeshCacheConfig, Required );
+        SW_SUBSYSTEM_SLOT_CONST( CharacterMeshCacheConfig, Required );
     };
 } // namespace sw
 
@@ -209,7 +209,7 @@ namespace sw
         PROPERTY( Min = 0.1, Units = s )
         float32 _subLevelReadySeconds{}; ///< 넷 세션의 서버가 하위 레벨 미니게임을 짓기 전에 클라이언트가 맵을 다 읽기를 기다리는 한도(초) — 답하지 않는 연결 하나가 서버를 붙잡지 못한다. 0 이면(키가 없다) 세션 중 진입이 오류로 진다
 
-        SW_SERVICE_SLOT_CONST( MinigameConfig, Required );
+        SW_SUBSYSTEM_SLOT_CONST( MinigameConfig, Required );
     };
 } // namespace sw
 
@@ -769,6 +769,6 @@ namespace sw
         PROPERTY( Min = 1, Units = s )
         float64 _shaderTimeRolloverSeconds{};
 
-        SW_SERVICE_SLOT_CONST( EngineConfig, Required );
+        SW_SUBSYSTEM_SLOT_CONST( EngineConfig, Required );
     };
 } // namespace sw

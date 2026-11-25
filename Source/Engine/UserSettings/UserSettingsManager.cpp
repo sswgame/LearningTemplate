@@ -17,8 +17,8 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"
@@ -317,7 +317,7 @@ namespace sw
         // 교체 재시도 sleep 이 이 안에 있다(`FileUtil::writeAtomically`, Core 라 프로파일러를 못 쓴다). 서비스가 묶이기 전 호출은 계측 없이 쓴다.
         const bool bWritten = [&]()
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return FileUtil::writeTextFileDurable( filePath, *text );
             SW_PROFILE_SCOPE( "GT.Settings.save" );
             return FileUtil::writeTextFileDurable( filePath, *text );
@@ -1251,5 +1251,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( UserSettingsManager, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UserSettingsManager ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( UserSettingsManager, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UserSettingsManager ) );
 } // namespace sw

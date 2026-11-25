@@ -21,8 +21,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Asset/AssetFormat.h"
@@ -253,6 +253,6 @@ namespace sw
         vector<AssetRegistryLayer>       _listBaseRegistryLayer;        ///< 마지막으로 지은 바닥 층(`buildBaseRegistryLayers`) — 다시 짓기가 패치 층을 뒤에 쌓는다
         uint8                            _bSourceRegistryBaseReady : 1; ///< 소스 바닥 층(콘텐츠 스캔)을 지었으면 1 — 다시 짓기가 스캔을 건너뛴다
 
-        SW_SERVICE_SLOT( AssetManager, Required );
+        SW_SUBSYSTEM_SLOT( AssetManager, Required );
     };
 } // namespace sw

@@ -12,7 +12,7 @@
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -606,7 +606,7 @@ namespace sw
         {
             if ( path.empty() )
                 continue;
-            if ( engine::areEngineServicesBound() )
+            if ( engine::areEngineSubsystemsBound() )
                 engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().releaseCPUTexture( path );
             path.clear();
         }
@@ -769,7 +769,7 @@ namespace sw
         }
         _heightfield.setSplat( data._width, data._height, data._bytes );
         // 그리는 호스트는 이 바이트로 자기 GPU 텍스처를 만든다(칠하기도 이 텍스처를 고친다). 엔진 서비스가 없으면(CPU 테스트) CPU 값만 둔다.
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return true;
         // RGBA8 한 장에 레이어 넷이다 - 평면마다 텍스처 하나를 만든다.
         TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();

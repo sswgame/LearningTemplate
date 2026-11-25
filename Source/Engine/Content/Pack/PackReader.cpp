@@ -19,7 +19,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Content/Pack/PackCompressionUtil.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include <algorithm>
@@ -195,7 +195,7 @@ namespace sw
 #endif
         lock.unlock(); // 잠금은 잎이다 — 안내 로그는 놓은 뒤에 쓴다
 #if defined( SW_DO_CHECKS )
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             const utf8* pCompressionName = engine::getSubsystem<TypeRegistry>().enumToString( compression );
             const utf8* pEncryptionName  = engine::getSubsystem<TypeRegistry>().enumToString( encryption );

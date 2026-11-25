@@ -24,8 +24,8 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
@@ -701,7 +701,7 @@ namespace sw
 namespace sw
 {
     // 전용 서버 역할(클라이언트 · 게임 구성의 `-server`)과 헤드리스 작업(단위 테스트 · 쿠킹 · 도구)은 장치를 열지 않는다 — 들을 사람이 없고, 소리 요청은 장치 없이 받는다. 전용 서버 구성은 이 폴더를 짓지 않는다(`SW_EXCLUDED_ENGINE_FOLDERS`).
-    SW_ENGINE_SERVICE_SUBSYSTEM( AudioService, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( AudioService, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         const bool    bNoDevice = build._pStartupSetup->_bDedicatedServer || build._pStartupSetup->_bHeadlessRequested;
         AudioService& audio     = scope.addSubsystem( bNoDevice ? AudioService::createNull() : AudioService::create() );

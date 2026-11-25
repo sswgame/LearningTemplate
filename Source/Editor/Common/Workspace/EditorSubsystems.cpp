@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
@@ -71,7 +71,7 @@ namespace sw::editor
             atomic<std::thread::id> _ownerThreadID{};
         };
 
-        const ISubsystemLocator* s_pHostServices{ nullptr }; ///< App 이 넘긴 호스트 서비스 범위
+        const ISubsystemLocator* s_pHostSubsystems{ nullptr }; ///< App 이 넘긴 호스트 서비스 범위
         EditorScopeSlot          s_editorScope{};
 
         /**
@@ -105,14 +105,14 @@ namespace sw::editor
         }
     } // namespace
 
-    void bindEditorService( const ISubsystemLocator& hostServices )
+    void bindEditorSubsystems( const ISubsystemLocator& hostServices )
     {
-        s_pHostServices = &hostServices;
+        s_pHostSubsystems = &hostServices;
     }
 
-    void unbindEditorService()
+    void unbindEditorSubsystems()
     {
-        s_pHostServices = nullptr;
+        s_pHostSubsystems = nullptr;
     }
 
     SubsystemScope* findEditorScope()
@@ -129,9 +129,9 @@ namespace sw::editor
 
     namespace internal
     {
-        const ISubsystemLocator* findHostServices()
+        const ISubsystemLocator* findHostSubsystems()
         {
-            return s_pHostServices;
+            return s_pHostSubsystems;
         }
     } // namespace internal
 
@@ -199,7 +199,7 @@ namespace sw::editor
     {
         EditorSelection* pSelection = findMainSceneSelectionInScope();
         if ( pSelection == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE ); // Release 에서도 멈춘다
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE ); // Release 에서도 멈춘다
         return *pSelection;
     }
 

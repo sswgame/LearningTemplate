@@ -1,8 +1,8 @@
 /**
- * @file EngineServices.h
- * @brief 엔진 범위의 서비스 창구입니다 — `engine::getSubsystem<T>()`(반드시 있음) · `engine::findSubsystem<T>()`(없을 수 있음).
+ * @file EngineSubsystems.h
+ * @brief 엔진 범위의 서브시스템 창구입니다 — `engine::getSubsystem<T>()`(반드시 있음) · `engine::findSubsystem<T>()`(없을 수 있음).
  *
- * @details 서비스 접근은 **소유 수명마다 한 창구, 한 어휘**입니다. `get` 은 `T&` 를 돌려주고 비었으면 멈추며, `find` 는 `T*` 를 돌려준다.
+ * @details 서브시스템 접근은 **소유 수명마다 한 창구, 한 어휘**입니다. `get` 은 `T&` 를 돌려주고 비었으면 멈추며, `find` 는 `T*` 를 돌려준다.
  *          | 수명 | 창구 |
  *          | --- | --- |
  *          | 엔진(프로세스) | `engine::getSubsystem<T>()` · `engine::findSubsystem<T>()` — 이 헤더 |
@@ -10,7 +10,7 @@
  *          | 게임 인스턴스 | `game::findSubsystem<T>()`(게임 범위 → 호스트), 인스턴스 멤버 `getSubsystem<T>()` |
  *          | 에디터 | `editor::findSubsystem<T>()`(에디터 범위 → 호스트), 컨텍스트 멤버 `getSubsystem<T>()` · `findSubsystem<T>()` |
  *          언리얼 `GEngine->GetEngineSubsystem<T>()` · `UWorld::GetSubsystem<T>()` 와 같은 자리입니다. 언리얼은 부를 때마다 맵을 찾는 것으로 알고 있고(기억),
- *          여기서는 타입마다 가진 칸(`T::s_serviceSlot`, `Core/Subsystem/ServiceSlot.h`)을 바인딩 때 한 번 채우고 창구는 그 칸만 읽는다 —
+ *          여기서는 타입마다 가진 칸(`T::s_subsystemSlot`, `Core/Subsystem/SubsystemSlot.h`)을 바인딩 때 한 번 채우고 창구는 그 칸만 읽는다 —
  *          캐스트마다 타입 레지스트리를 묻는 자리가 이름 조회를 하지 않는다. 중앙 목록은 없다: 칸은 타입 헤더가 선언하고, 그 객체를 범위에 넣는 .cpp 의
  *          등록 줄(`Engine/Foundation/EngineSubsystemRegistration.h`)이 정의한다. 칸을 선언하지 않은 타입은 `findSubsystem<T>()` 가 범위를 올라가며 찾고
  *          (선형 검색 — 핫 패스면 칸을 선언한다), `getSubsystem<T>()` 는 컴파일 오류다. 소유는 범위(`SubsystemScope`)이고 칸은 아무것도 소유하지 않습니다.
@@ -18,8 +18,8 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/SubsystemScope.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Foundation/EngineScope.h"
 
@@ -33,7 +33,7 @@ namespace sw
 {
     namespace engine
     {
-        struct EngineServiceBindResult; // 묶기 결과는 호스트(엔진 시작)만 읽는다 — 서비스를 얻기만 하는 TU 가 등록 표 헤더(EngineSubsystemRegistration.h)를 읽지 않게 앞 선언한다
+        struct EngineSubsystemBindResult; // 묶기 결과는 호스트(엔진 시작)만 읽는다 — 서브시스템을 얻기만 하는 TU 가 등록 표 헤더(EngineSubsystemRegistration.h)를 읽지 않게 앞 선언한다
 
         // ------------------------------------------------------------------------------
         // 1) 바인딩 — 호스트가 범위를 세운 뒤 묶고, 그 범위를 내리기 전에 끊는다
@@ -45,34 +45,34 @@ namespace sw
          *         묶였다는 뜻이다 — **프로세스당 엔진 하나**가 계약이라(칸은 타입마다 하나) 앞 엔진의 칸을 덮지 않고 거절한다.
          * @note 로케이터는 끊을 때까지 살아 있어야 합니다(`getEngineSubsystems` 가 돌려준다).
          */
-        [[nodiscard]] SW_API EngineServiceBindResult bindEngineServices( const ISubsystemLocator& subsystems );
-        /** @brief @p subsystems 로 묶은 바인딩을 끊습니다. 찾아 둔 서비스가 소멸하기 전에 부릅니다. 다른 범위(묶지 못한 엔진)면 아무것도 하지 않는다. */
-        SW_API void unbindEngineServices( const ISubsystemLocator& subsystems );
+        [[nodiscard]] SW_API EngineSubsystemBindResult bindEngineSubsystems( const ISubsystemLocator& subsystems );
+        /** @brief @p subsystems 로 묶은 바인딩을 끊습니다. 찾아 둔 서브시스템이 소멸하기 전에 부릅니다. 다른 범위(묶지 못한 엔진)면 아무것도 하지 않는다. */
+        SW_API void unbindEngineSubsystems( const ISubsystemLocator& subsystems );
         /**
-         * @brief 필수 칸(`SW_SERVICE_SLOT( T, Required )`)을 모두 찾았는지 반환합니다. bind/unbind 때 한 번 센 플래그입니다.
+         * @brief 필수 칸(`SW_SUBSYSTEM_SLOT( T, Required )`)을 모두 찾았는지 반환합니다. bind/unbind 때 한 번 센 플래그입니다.
          * @details `Component::getTypeInfo()` 가 캐스트마다 이것을 부르므로 부를 때마다 칸을 훑지 않는다.
          */
-        SW_API bool areEngineServicesBound();
+        SW_API bool areEngineSubsystemsBound();
         /**
-         * @brief 모듈(게임 · 에디터)에 넘길 범위 @p outScope 에 지금 찾아 둔 서비스를 그 타입으로 겁니다(빌려 건다 — 서비스가 범위보다 오래 산다).
-         * @param bGameModuleOnly true 면 `GameVisible` 로 등록한 칸만 겁니다 — 게임 모듈은 호스트 전용 서비스를 찾지 못한다.
-         * @param bSkipAlreadyBound true 면 @p outScope 에 이미 걸린 타입은 건너뜁니다 — 테스트가 자기 서비스(예: 씬 매니저)를 먼저 걸고 나머지를 채울 때만 쓴다. false 면 겹침은 결함이라 멈춘다.
-         * @note 빈 칸은 걸지 않는다. 호스트 전용 서비스(모듈 컴파일러)는 호스트가 그 뒤에 더 건다.
+         * @brief 모듈(게임 · 에디터)에 넘길 범위 @p outScope 에 지금 찾아 둔 서브시스템을 그 타입으로 겁니다(빌려 건다 — 서브시스템이 범위보다 오래 산다).
+         * @param bGameModuleOnly true 면 `GameVisible` 로 등록한 칸만 겁니다 — 게임 모듈은 호스트 전용 서브시스템을 찾지 못한다.
+         * @param bSkipAlreadyBound true 면 @p outScope 에 이미 걸린 타입은 건너뜁니다 — 테스트가 자기 서브시스템(예: 씬 매니저)을 먼저 걸고 나머지를 채울 때만 쓴다. false 면 겹침은 결함이라 멈춘다.
+         * @note 빈 칸은 걸지 않는다. 호스트 전용 서브시스템(모듈 컴파일러)은 호스트가 그 뒤에 더 건다.
          */
-        SW_API void bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly, bool bSkipAlreadyBound = false );
+        SW_API void bindModuleSubsystems( SubsystemScope& outScope, bool bGameModuleOnly, bool bSkipAlreadyBound = false );
 
         /** @brief 묶인 범위(모듈이 매단 자식 · 상위 범위까지)의 초기화된 서브시스템을 낮은 범위(먼저 서는 쪽)부터 채웁니다. 엔진이 묶이지 않았으면 비운다. */
         SW_API void collectInitializedSubsystems( vector<Subsystem*>& outListSubsystem );
 
         // ------------------------------------------------------------------------------
-        // 2) 서비스 창구
+        // 2) 서브시스템 창구
         // ------------------------------------------------------------------------------
         /**
          * @brief 칸 @p slot 을 읽었음을 초기화 중 의존 검사(`SubsystemCollection::recordInitializeLookup`)에 알립니다 — 칸 길도 범위 조회와 같은 검사를 지난다.
          * @details 칸은 `initializeAll` 앞에 묶여 아직 서지 않은 서브시스템을 줄 수 있다. 초기화 밖에서는 스레드 지역 값 하나를 읽고 끝나고(범위 길과 같다),
          *          창구는 프레임마다 많이 불리므로 배포(Shipping)에서는 통째로 빠진다(`SW_DO_CHECKS` — 언리얼 `DO_CHECK` 자리). 빌려 건 객체(`_pOwner` 없음)는 볼 것이 없다.
          */
-        SW_INLINE void recordServiceSlotLookup( const ServiceSlot& slot )
+        SW_INLINE void recordSubsystemSlotLookup( const SubsystemSlot& slot )
         {
 #if defined( SW_DO_CHECKS )
             if ( slot._pOwner != nullptr )
@@ -83,40 +83,40 @@ namespace sw
         }
 
         /**
-         * @brief 엔진 서비스 @p T 입니다. 바인딩 뒤에는 늘 있다 — 비었으면 부른 쪽의 잘못이라 멈춥니다.
-         * @details 필수 칸(`SW_SERVICE_SLOT( T, Required )`)만 됩니다. 비어 있을 수 있는 칸(`Optional`)과 칸이 없는 타입은 컴파일 오류이고 `findSubsystem<T>()` 를 씁니다.
+         * @brief 엔진 서브시스템 @p T 입니다. 바인딩 뒤에는 늘 있다 — 비었으면 부른 쪽의 잘못이라 멈춥니다.
+         * @details 필수 칸(`SW_SUBSYSTEM_SLOT( T, Required )`)만 됩니다. 비어 있을 수 있는 칸(`Optional`)과 칸이 없는 타입은 컴파일 오류이고 `findSubsystem<T>()` 를 씁니다.
          *          칸 선언은 타입 헤더에 있으므로 그 헤더를 include 해야 한다(앞으로 선언만으로는 칸이 보이지 않는다).
          */
         template <class T>
-        typename ServiceSlotOf<std::remove_const_t<T>>::Access& getSubsystem()
+        typename SubsystemSlotOf<std::remove_const_t<T>>::Access& getSubsystem()
         {
-            using Slot = ServiceSlotOf<std::remove_const_t<T>>;
-            static_assert( Slot::kRegistered, "engine::getSubsystem<T>: T has no service slot - declare SW_SERVICE_SLOT in its class (and include its header), register it with SW_ENGINE_SERVICE*, or use engine::findSubsystem<T>()" );
+            using Slot = SubsystemSlotOf<std::remove_const_t<T>>;
+            static_assert( Slot::kRegistered, "engine::getSubsystem<T>: T has no subsystem slot - declare SW_SUBSYSTEM_SLOT in its class (and include its header), register it with SW_ENGINE_SUBSYSTEM_SLOT or SW_ENGINE_SUBSYSTEM_WITH_SLOT, or use engine::findSubsystem<T>()" );
             if constexpr ( Slot::kRegistered )
             {
-                static_assert( Slot::kRequirement == ServiceRequirement::Required, "engine::getSubsystem<T>: this slot may be empty (Optional) - use engine::findSubsystem<T>()" );
-                const ServiceSlot& slot     = Slot::getSlot();
-                void* const        pService = slot._pBound;
-                recordServiceSlotLookup( slot );
+                static_assert( Slot::kRequirement == SubsystemRequirement::Required, "engine::getSubsystem<T>: this slot may be empty (Optional) - use engine::findSubsystem<T>()" );
+                const SubsystemSlot& slot     = Slot::getSlot();
+                void* const          pService = slot._pBound;
+                recordSubsystemSlotLookup( slot );
                 if ( pService == nullptr )
-                    ::sw::internal::reportMissingRequiredService( Slot::kTypeName ); // 모든 구성에서 멈춘다 — `SW_LOG_ASSERT` 는 Release 에서 로그만 남기고 널을 역참조했다
+                    ::sw::internal::reportMissingRequiredSubsystem( Slot::kTypeName ); // 모든 구성에서 멈춘다 — `SW_LOG_ASSERT` 는 Release 에서 로그만 남기고 널을 역참조했다
                 return *static_cast<typename Slot::Access*>( pService );
             }
         }
 
         /**
-         * @brief 엔진 서비스 @p T 입니다. **없으면 nullptr 이므로** 받는 쪽이 확인해야 합니다(바인딩 전 · 선택 칸 · 하네스가 넣지 않은 서비스).
+         * @brief 엔진 서브시스템 @p T 입니다. **없으면 nullptr 이므로** 받는 쪽이 확인해야 합니다(바인딩 전 · 선택 칸 · 하네스가 넣지 않은 서브시스템).
          * @details 칸이 있는 타입은 그 칸을 읽고, 칸이 없는 타입은 바인딩한 범위에서 상위로 올라가며 찾는다(선형 검색 — 핫 패스면 칸을 선언한다).
          *          `const T` 로 찾으면 const 로 건 객체(전용 서버의 `const ServerConfig`)도 찾고 const 포인터를 돌려준다(`findInLocator` 와 같은 규칙).
          */
         template <class T>
-        std::conditional_t<std::is_const_v<T>, const typename ServiceSlotOf<std::remove_const_t<T>>::Access, typename ServiceSlotOf<std::remove_const_t<T>>::Access>* findSubsystem()
+        std::conditional_t<std::is_const_v<T>, const typename SubsystemSlotOf<std::remove_const_t<T>>::Access, typename SubsystemSlotOf<std::remove_const_t<T>>::Access>* findSubsystem()
         {
-            using Slot = ServiceSlotOf<std::remove_const_t<T>>;
+            using Slot = SubsystemSlotOf<std::remove_const_t<T>>;
             if constexpr ( Slot::kRegistered )
             {
-                const ServiceSlot& slot = Slot::getSlot();
-                recordServiceSlotLookup( slot );
+                const SubsystemSlot& slot = Slot::getSlot();
+                recordSubsystemSlotLookup( slot );
                 return static_cast<typename Slot::Access*>( slot._pBound );
             }
             else

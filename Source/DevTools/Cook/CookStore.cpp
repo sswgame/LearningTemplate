@@ -10,7 +10,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 
 namespace sw

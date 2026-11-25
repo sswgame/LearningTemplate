@@ -5,8 +5,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 

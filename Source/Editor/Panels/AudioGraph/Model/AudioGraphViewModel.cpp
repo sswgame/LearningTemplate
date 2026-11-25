@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/AudioGraph/Model/AudioGraphEditUtil.h"
 

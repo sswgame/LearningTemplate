@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Settings/Model/UserSettingsViewModel.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/UserSettings/UserSettingsManager.h"
 

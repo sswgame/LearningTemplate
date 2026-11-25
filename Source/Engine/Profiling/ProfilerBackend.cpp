@@ -17,7 +17,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
@@ -181,7 +181,7 @@ namespace sw
         if ( bObserveAllocations )
             ProfilerBackendInternal::s_allocationObserverRegistration = Memory::registerAllocationObserver( &ProfilerBackendInternal::kObserver );
         // 카운터 그래프 · GPU 타임스탬프는 엔진 프로파일러 경로를 탄다. 켜 두지 않으면 외부 출력에 GPU 줄이 없다.
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<FrameProfiler>().setEnabled( true );
         return true;
 #else

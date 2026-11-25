@@ -19,7 +19,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavClusterGraph.h"
 #include "Engine/Navigation/NavMeshAsset.h"

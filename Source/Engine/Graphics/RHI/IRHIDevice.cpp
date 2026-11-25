@@ -14,7 +14,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
 #include "Engine/Graphics/RHI/ConstantBufferPagePool.h"
@@ -623,7 +623,7 @@ namespace sw
             // 검증 층 · DRED · GPU 브레드크럼은 장치를 만들기 전에만 걸 수 있어 여기서 한 번 정한다(설정 기본값, 시작 인자가 이긴다). 배포 구성은 검증 층을 짓지 않아 늘 끈다.
             constexpr RHIDiagnosticBuild kBuild       = build::kShipping ? RHIDiagnosticBuild::Shipping : build::kDebug ? RHIDiagnosticBuild::Debug
                                                                                                                         : RHIDiagnosticBuild::Release;
-            const CommandLineManager*    pCommandLine = engine::areEngineServicesBound() ? &engine::getSubsystem<CommandLineManager>() : nullptr;
+            const CommandLineManager*    pCommandLine = engine::areEngineSubsystemsBound() ? &engine::getSubsystem<CommandLineManager>() : nullptr;
             const expected<bool>         validation   = resolveRHIDiagnosticSwitch( rhiConfig._validationLayer, CommandLineArgument::RHI_VALIDATION, pCommandLine, kBuild );
             const expected<bool>         dred         = resolveRHIDiagnosticSwitch( rhiConfig._dred, CommandLineArgument::RHI_DRED, pCommandLine, kBuild );
             const expected<bool>         breadcrumbs  = resolveRHIDiagnosticSwitch( rhiConfig._gpuBreadcrumbs, CommandLineArgument::RHI_BREADCRUMBS, pCommandLine, kBuild );
@@ -658,7 +658,7 @@ namespace sw
             deviceDesc._bPreferMinimumPower = rhiConfig._bPreferMinimumPower;
         }
         _bSoftwareAdapter = SW_FALSE;
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
             bool                      bCLIVSync{ false };

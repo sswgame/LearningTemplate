@@ -9,8 +9,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Presentation/IPlayerNotificationSink.h"
@@ -165,6 +165,6 @@ namespace sw
         uint64              _nextOrder;
         UIScreenHandle      _screen;
 
-        SW_SERVICE_SLOT( UINotificationService, Required );
+        SW_SUBSYSTEM_SLOT( UINotificationService, Required );
     };
 } // namespace sw

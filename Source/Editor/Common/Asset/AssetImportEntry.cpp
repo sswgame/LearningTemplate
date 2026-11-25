@@ -15,7 +15,7 @@
 #include "Editor/Common/Asset/Texture/HeightfieldImporter.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetPaths.h"
@@ -123,9 +123,9 @@ extern "C" SW_MODULE_API int32 importEditorAssets( uint32 kind, uint32 checkOnly
 {
     // 인스턴스가 없는 헤드리스 호출이라 서비스 범위를 이 호출 동안만 묶는다(작업 시스템 · 로거 같은 엔진 서비스).
     if ( pService != nullptr )
-        sw::editor::bindEditorService( *pService );
+        sw::editor::bindEditorSubsystems( *pService );
     const int32 result = sw::editor::AssetImportEntryInternal::importAssets( static_cast<sw::EditorImportKind>( kind ), checkOnly != 0 );
     if ( pService != nullptr )
-        sw::editor::unbindEditorService();
+        sw::editor::unbindEditorSubsystems();
     return result;
 }

@@ -8,8 +8,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Time/WallClock.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -301,5 +301,5 @@ namespace sw
 namespace sw
 {
     // 파일 내용 해시 캐시 — 셰이더 컴파일 · 쿠킹이 워커에서 묻는다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( ContentHashCache, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( ContentHashCache ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( ContentHashCache, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( ContentHashCache ) );
 } // namespace sw

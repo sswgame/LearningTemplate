@@ -306,7 +306,7 @@ namespace sw::internal
      *          검사 구성에서 테스트가 단언 가로채기(`test::ScopedAssertCapture`)를 걸었을 때만 멈추지 않고 개수를 세고 반환한다 — 가로채기는 검사 구성(SW_DO_CHECKS)에만 있으므로
      *          멈춤을 프로세스 안에서 확인하는 테스트는 `ScopedAssertCapture::kAssertsAreActive` 인 구성에서만 부른다. 반환 뒤의 결과는 읽지 않는다.
      */
-    SW_API void reportMissingRequiredService( const utf8* pLookup ) noexcept;
+    SW_API void reportMissingRequiredSubsystem( const utf8* pLookup ) noexcept;
     /**
      * @brief 치명 오류 한 줄을 남기고 프로세스를 멈춥니다. 엔진에서 `std::abort` 를 부르는 **유일한** 자리입니다(`reportFatalError` · `SW_LOW_LEVEL_FATAL` 이 부른다).
      * @details stderr 에 먼저 동기로 쓰고(로거 이전 · 정적 초기화 중에도 남는다) 로그 보고자에게 넘긴다. 보고자는 줄을 쓰고 비동기 싱크를 비운다

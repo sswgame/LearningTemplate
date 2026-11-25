@@ -10,8 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -413,7 +413,7 @@ namespace sw
         SceneLoadLeakCheck            _leakCheck;         ///< 씬 로드 누수 곡선 감시 값(`startLoadLeakCheck`)
         unique_ptr<ScenePlaySnapshot> _heldPlaySnapshot;  ///< 에디터 모듈 리로드 동안 맡은 롤백 스냅샷(`holdPlaySnapshot`). 없으면 nullptr
 
-        SW_SERVICE_SLOT( SceneManager, Required );
+        SW_SUBSYSTEM_SLOT( SceneManager, Required );
     };
 } // namespace sw
 

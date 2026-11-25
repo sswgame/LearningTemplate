@@ -2,7 +2,7 @@
  * @file Engine/CoreServices/EngineCoreServiceSubsystems.cpp
  * @brief Core 층 형식의 서브시스템(이벤트 · 압축 코덱 · 태스크 · 비동기 파일 IO) 등록입니다.
  * @details Core 는 엔진의 등록 틀(`EngineSubsystemRegistration.h`)을 볼 수 없으므로(층이 아래다) 그 형식의 등록은 Core 서비스의 서브시스템 곁(`Engine/CoreServices`)인 이 파일에 둔다.
- *          서비스 칸 선언(`SW_SERVICE_SLOT`)은 Core 헤더에 있고 칸 정의 · 등록이 여기 있다. 다른 서브시스템은 제 .cpp 에 등록한다.
+ *          서브시스템 칸 선언(`SW_SUBSYSTEM_SLOT`)은 Core 헤더에 있고 칸 정의 · 등록이 여기 있다. 다른 서브시스템은 제 .cpp 에 등록한다.
  */
 #include "pch.h"
 
@@ -43,9 +43,9 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( EventDispatcher, GameVisible, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( EventDispatcher ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( EventDispatcher, GameVisible, GameInstance, Shared, (), SW_ENGINE_DEFAULT_FACTORY( EventDispatcher ) );
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( CompressionCodecRegistry, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( CompressionCodecRegistry, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         (void)scope.emplaceSubsystem<EngineCompressionCodecs>( scope.emplaceSubsystem<CompressionCodecRegistry>() );
@@ -53,7 +53,7 @@ namespace sw
 
     // 워커 수는 명령줄 `-workers=N` 이 정한다(없으면 코어 수). 명령줄은 코어 범위에 있어 상위 범위로 올라가며 찾는다 — 공장 범위의 먼저 만들 타입이 아니다.
     // 게임 모듈에도 보인다 — 키트(계정 서버의 비밀번호 해시 줄 · RTS 길찾기)가 작업 풀을 쓴다(언리얼 게임 모듈도 태스크 그래프를 그대로 쓴다).
-    SW_ENGINE_SERVICE_SUBSYSTEM( TaskManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( TaskManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         TaskManager&              taskManager = scope.emplaceSubsystem<TaskManager>();
@@ -67,7 +67,7 @@ namespace sw
     } );
 
     // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다. 공장이 태스크 매니저를 찾으므로 그것을 먼저 만든다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( AsyncFileIO, HostOnly, Process, Startup, ( TaskManager ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( AsyncFileIO, HostOnly, Process, Startup, ( TaskManager ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         AsyncFileIOConfig fileIOSettings{};

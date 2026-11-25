@@ -132,7 +132,7 @@ namespace sw
         [[nodiscard]] static expected<SubsystemGraph> computeGraph( const vector<SubsystemNode>& listNode );
 
         /**
-         * @brief 이 스레드에서 초기화 중인 서브시스템이 범위 조회 · 엔진 서비스 칸으로 @p target 을 얻었음을 알립니다(`SubsystemScope` 의 조회가 소유한 칸을 돌려줄 때, `engine::getSubsystem` · `findSubsystem` 이 소유자가 있는 칸을 읽을 때 부른다).
+         * @brief 이 스레드에서 초기화 중인 서브시스템이 범위 조회 · 엔진 서브시스템 칸으로 @p target 을 얻었음을 알립니다(`SubsystemScope` 의 조회가 소유한 칸을 돌려줄 때, `engine::getSubsystem` · `findSubsystem` 이 소유자가 있는 칸을 읽을 때 부른다).
          * @details @p target 이 지금 초기화 중인 목록(가장 안쪽)의 것인데 그 서브시스템 자신도, 선언한 의존(간접 포함 — 역방향 의존 칸으로 생긴 것도)도 아니면 그 초기화는 진다:
          *          `initializeAt` 이 종료를 부르고 `Failed` 로 바꾸며 `getError` 에 두 이름을 적는다. 의존을 빼먹은 조회는 이름 순서가 우연히 맞으면 지나가다가
          *          서브시스템 하나를 더하는 순간 아직 서지 않은 객체를 읽는다 — 그 모양을 기동에서 바로 멈춘다(언리얼 `InitializeDependency` 가 맡는 자리).

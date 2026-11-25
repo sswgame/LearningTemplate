@@ -14,7 +14,7 @@
 #include "Core/Registry/RegistrationSlot.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 
 namespace sw
@@ -77,7 +77,7 @@ namespace sw
     {
         using Internal = RenderFrameSettingsInternal;
         // 엔진 서비스가 묶이기 전(렌더러 기동)은 게임 스레드 하나뿐이라 확인할 주인이 아직 없다.
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<TaskManager>().ensureMainThread();
         RenderDiagnostics::publish(); // 패킷 밖 소비자(bindless 검사 · 셰이더 컴파일)의 원자 사본도 같은 자리에서 내보낸다
         RenderFrameSettings settings;

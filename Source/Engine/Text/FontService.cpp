@@ -10,8 +10,8 @@
 #include "Engine/Asset/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Text/SystemFontLocator.h"
 #include "Engine/Text/TextItemizer.h"
@@ -394,5 +394,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( FontService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( FontService ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( FontService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( FontService ) );
 } // namespace sw

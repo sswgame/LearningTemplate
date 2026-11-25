@@ -12,9 +12,9 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -54,7 +54,7 @@ namespace sw
             /** @brief 감시 값 `Display.SDRFallback` 입니다 — 마지막 화면 출력 요청이 HDR 인데 백엔드 · 모니터가 받지 않아 SDR 로 떨어졌으면 1 입니다. */
             [[nodiscard]] static bool readDisplaySDRFallback( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EngineRenderDriverSubsystem* const pSubsystem = engine::areEngineServicesBound() ? engine::findSubsystem<EngineRenderDriverSubsystem>() : nullptr;
+                EngineRenderDriverSubsystem* const pSubsystem = engine::areEngineSubsystemsBound() ? engine::findSubsystem<EngineRenderDriverSubsystem>() : nullptr;
                 if ( pSubsystem == nullptr )
                     return false;
                 outValue = pSubsystem->getRenderDriver().isDisplayOutputFallenBackToSDR() ? 1.0 : 0.0;

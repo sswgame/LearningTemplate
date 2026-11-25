@@ -14,8 +14,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include <thread>
 
@@ -262,6 +262,6 @@ namespace sw
         atomic<int32>       _activeAllocatorIndex;
 
     private:
-        SW_SERVICE_SLOT( EventDispatcher, Required );
+        SW_SUBSYSTEM_SLOT( EventDispatcher, Required );
     };
 } // namespace sw

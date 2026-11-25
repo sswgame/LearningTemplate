@@ -11,7 +11,7 @@
 
 #include "Editor/Common/Asset/OutfitAtlas.h"
 #include "Editor/Common/Asset/Texture/RawImageData.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Character/CharacterDataReader.h"

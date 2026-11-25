@@ -11,9 +11,9 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/OcclusionCullingConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -212,7 +212,7 @@ namespace sw
         (void)scope.exposeMember( frameRendererSubsystem, frameRendererSubsystem.getOffscreenRenderers() ); // 화면 밖 씬 렌더러(진단 감시 값이 수를 읽는다)
     } );
 
-    // 위 공장이 건 렌더러 둘의 서비스 칸. 비어 있을 수 있다 — 렌더러를 두지 않는 호스트(헤드리스 · 테스트 하네스)는 만들지 않는다.
-    SW_ENGINE_SERVICE( FrameRenderer, HostOnly );
-    SW_ENGINE_SERVICE( OffscreenSceneRenderers, HostOnly );
+    // 위 공장이 건 렌더러 둘의 서브시스템 칸. 비어 있을 수 있다 — 렌더러를 두지 않는 호스트(헤드리스 · 테스트 하네스)는 만들지 않는다.
+    SW_ENGINE_SUBSYSTEM_SLOT( FrameRenderer, HostOnly );
+    SW_ENGINE_SUBSYSTEM_SLOT( OffscreenSceneRenderers, HostOnly );
 } // namespace sw

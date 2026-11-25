@@ -7,7 +7,7 @@
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Text/FontService.h"
 

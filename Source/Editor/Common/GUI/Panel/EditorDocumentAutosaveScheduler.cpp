@@ -11,8 +11,8 @@
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanelBase.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"

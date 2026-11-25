@@ -20,7 +20,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HPACK.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HTTP2Frame.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPLink.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"

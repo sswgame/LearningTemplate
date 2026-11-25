@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Localization/EditorDataText.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Localization/LocalizationManager.h"
 

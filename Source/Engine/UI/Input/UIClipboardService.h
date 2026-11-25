@@ -6,8 +6,8 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -55,6 +55,6 @@ namespace sw
         UIClipboardAPI _api;
         string         _text; ///< 엔진 안 클립보드입니다(운영체제 연결이 없을 때만 씁니다).
 
-        SW_SERVICE_SLOT( UIClipboardService, Required );
+        SW_SUBSYSTEM_SLOT( UIClipboardService, Required );
     };
 } // namespace sw

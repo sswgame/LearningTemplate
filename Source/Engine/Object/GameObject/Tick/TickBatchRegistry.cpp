@@ -9,8 +9,8 @@
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/ScopedDeferredLog.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/TypeInfo.h"
 
@@ -101,5 +101,5 @@ namespace sw
 namespace sw
 {
     // 일괄 틱 함수 표 — 데이터 종류와 같이 모듈을 올리는 길이 정적 등록자를 붙인다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( TickBatchRegistry, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( TickBatchRegistry ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( TickBatchRegistry, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( TickBatchRegistry ) );
 } // namespace sw

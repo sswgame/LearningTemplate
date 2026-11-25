@@ -1,5 +1,5 @@
 /**
- * @file EditorService.h
+ * @file EditorSubsystems.h
  * @brief 에디터 모듈 안에서 서비스를 찾는 함수와 활성 씬 바로가기입니다. 에디터 범위(`SubsystemScope`)에서 먼저 찾고, 없으면 호스트(엔진) 서비스 테이블을 봅니다.
  * @details 에디터 범위는 에디터 컨텍스트(`EditorContext`)가 소유하고, 컨텍스트가 활성이 될 때 "지금 범위" 로 등록한다.
  *          언리얼에서 에디터가 `UEditorSubsystem` 을 보관하는 방식에 해당한다. 에디터 컨텍스트 없이 도는 테스트는 자기 범위를 만들어
@@ -32,8 +32,8 @@ namespace sw::editor
 
     namespace internal
     {
-        /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindEditorService`). 없으면 nullptr 입니다. */
-        SW_EDITOR_API const ISubsystemLocator* findHostServices();
+        /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindEditorSubsystems`). 없으면 nullptr 입니다. */
+        SW_EDITOR_API const ISubsystemLocator* findHostSubsystems();
     } // namespace internal
 
     /**
@@ -58,9 +58,9 @@ namespace sw::editor
     template <typename T>
     inline constexpr bool kIsAccessorOnlySubsystem = IsAccessorOnlySubsystem<std::remove_cv_t<T>>::value;
 
-    /** @brief App 이 넘긴 호스트 서비스 범위를 연결합니다. 범위는 `unbindEditorService` 까지 살아 있어야 합니다(호스트가 소유). */
-    void bindEditorService( const ISubsystemLocator& hostServices );
-    void unbindEditorService();
+    /** @brief App 이 넘긴 호스트 서비스 범위를 연결합니다. 범위는 `unbindEditorSubsystems` 까지 살아 있어야 합니다(호스트가 소유). */
+    void bindEditorSubsystems( const ISubsystemLocator& hostServices );
+    void unbindEditorSubsystems();
 
     /**
      * @brief 지금 에디터 범위입니다. 에디터 컨텍스트가 활성이 아니고 테스트가 건 범위도 없으면 nullptr 입니다.
@@ -86,7 +86,7 @@ namespace sw::editor
         T* pScoped = findSubsystemFrom<T>( findEditorScope() );
         if ( pScoped != nullptr )
             return pScoped;
-        return findSubsystemFrom<T>( internal::findHostServices() );
+        return findSubsystemFrom<T>( internal::findHostSubsystems() );
     }
 
     /**
@@ -99,7 +99,7 @@ namespace sw::editor
     {
         T* pFound = findSubsystem<T>();
         if ( pFound == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE ); // Core 의 공용 보고 — 모든 구성에서 오류 로그 후 멈춘다(Debug 가로채기 테스트만 세고 반환)
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE ); // Core 의 공용 보고 — 모든 구성에서 오류 로그 후 멈춘다(Debug 가로채기 테스트만 세고 반환)
         return *pFound;
     }
 

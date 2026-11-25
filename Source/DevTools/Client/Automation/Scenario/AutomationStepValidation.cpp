@@ -11,7 +11,7 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include <algorithm>
@@ -51,7 +51,7 @@ namespace sw
         const bool    bNeedsVariable = step._kind == "Variable" || step._kind == "ExpectVariable";
         const string* pVariable      = bNeedsVariable ? step.findAttribute( "name" ) : nullptr;
         const bool    bUnknownVariable =
-            pVariable != nullptr && ( engine::areEngineServicesBound() == false || engine::getSubsystem<GlobalVariableManager>().findVariable( *pVariable ) == nullptr );
+            pVariable != nullptr && ( engine::areEngineSubsystemsBound() == false || engine::getSubsystem<GlobalVariableManager>().findVariable( *pVariable ) == nullptr );
         if ( bUnknownVariable )
         {
             outName = *pVariable;
@@ -60,7 +60,7 @@ namespace sw
 
         // 입력 단계(`Tap` · `Press` · `Release`)의 검사 함수가 `slot` 의 키 · 버튼 이름을 리플렉션 enum 표(`KeyCodeUtil::fromName` — 엔진 서비스의 TypeRegistry)에 묻는다.
         const string* pSlot = step.findAttribute( "slot" );
-        if ( pSlot != nullptr && engine::areEngineServicesBound() == false )
+        if ( pSlot != nullptr && engine::areEngineSubsystemsBound() == false )
         {
             outName = *pSlot;
             return AutomationStepDependency::InputSlot;

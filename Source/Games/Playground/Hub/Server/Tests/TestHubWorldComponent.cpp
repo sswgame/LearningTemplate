@@ -10,7 +10,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Foundation/Service/Tests/SceneNetLinkTestBinding.h"
 
 #include "Games/Playground/Hub/HubWorldComponent.h"

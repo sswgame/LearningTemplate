@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditStep.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 

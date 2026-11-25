@@ -36,7 +36,7 @@
 #include "Editor/Common/Asset/ModelImport/ToonMaterialDef.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/AnimationSet.h"

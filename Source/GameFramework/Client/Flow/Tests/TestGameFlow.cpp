@@ -9,7 +9,7 @@
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)와 엔진 서비스를 직접 쓴다
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 
@@ -21,7 +21,7 @@
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
 #include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 using namespace sw;
 

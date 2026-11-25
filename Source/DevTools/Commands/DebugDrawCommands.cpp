@@ -6,7 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -21,7 +21,7 @@ namespace sw
         {
             static bool runDebugDrawCategory( const vector<string>& listArgument, string& outReply )
             {
-                if ( engine::areEngineServicesBound() == false )
+                if ( engine::areEngineSubsystemsBound() == false )
                     return false;
                 DebugDrawQueue& queue = engine::getSubsystem<DebugDrawQueue>();
                 if ( listArgument.empty() )
@@ -52,7 +52,7 @@ namespace sw
             /** @brief 개발 명령 `visuallog.*` 가 쓰는 로거입니다. 엔진 서비스가 묶이지 않았으면 답을 적고 nullptr 입니다. */
             static VisualLogger* findLogger( string& outReply )
             {
-                VisualLogger* pLogger = engine::areEngineServicesBound() ? engine::findSubsystem<VisualLogger>() : nullptr;
+                VisualLogger* pLogger = engine::areEngineSubsystemsBound() ? engine::findSubsystem<VisualLogger>() : nullptr;
                 if ( pLogger == nullptr )
                     outReply = "vlog: the visual logger is not available";
                 return pLogger;
@@ -136,7 +136,7 @@ namespace sw
                 if ( StringUtil::parseInt( string_view( listArgument[0].c_str(), listArgument[0].size() ), frame ) == false || frame < 0 )
                     return false;
                 VisualLogger*   pLogger = findLogger( outReply );
-                DebugDrawQueue* pQueue  = engine::areEngineServicesBound() ? engine::findSubsystem<DebugDrawQueue>() : nullptr;
+                DebugDrawQueue* pQueue  = engine::areEngineSubsystemsBound() ? engine::findSubsystem<DebugDrawQueue>() : nullptr;
                 if ( pLogger == nullptr )
                     return true;
                 if ( pQueue == nullptr )

@@ -10,7 +10,7 @@
 #include "DevTools/Profiling/Tracy/TracyProfilerBackend.h"
 
 #include "Engine/Asset/AssetLoadProfiler.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw

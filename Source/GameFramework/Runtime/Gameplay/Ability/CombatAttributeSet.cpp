@@ -23,7 +23,7 @@ namespace sw
             {
                 const AttributeData* pData = set.findAttribute( name );
                 if ( pData == nullptr )
-                    ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                    ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
                 return pData->_baseValue;
             }
 
@@ -32,7 +32,7 @@ namespace sw
             {
                 const AttributeData* pData = set.findAttribute( name );
                 if ( pData == nullptr )
-                    ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                    ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
                 return pData->_currentValue;
             }
         };

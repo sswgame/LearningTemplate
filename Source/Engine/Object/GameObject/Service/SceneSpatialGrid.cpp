@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
@@ -362,7 +362,7 @@ namespace sw
         // 넘긴 일은 이 배열만 본다 — 일이 도는 동안 층 벡터의 구조는 바뀌지 않고(새 층은 `getOrCreateLayer` 가 일을 기다린 뒤 더한다), 일은 층마다 뒤 버퍼 칸만 쓴다.
         _pJobLayer     = _listLayer.data();
         _jobLayerCount = static_cast<uint32>( _listLayer.size() );
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
         {
             rebuildBackBuffer(); // 워커가 없으면(테스트 · 도구) 지금 맞춘다 — 앞뒤를 바꾸는 것은 그래도 `completeFrameJob` 이다
             return;

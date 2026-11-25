@@ -11,7 +11,7 @@
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Localization/LocalizationManager.h"
 
 namespace sw
@@ -37,13 +37,13 @@ namespace sw
             /** @brief 그 경로가 로드한 프로젝트의 파일이면 true 입니다. */
             bool isCached( string_view relativePath ) const override
             {
-                return engine::areEngineServicesBound() && engine::getSubsystem<LocalizationManager>().isProjectFile( relativePath );
+                return engine::areEngineSubsystemsBound() && engine::getSubsystem<LocalizationManager>().isProjectFile( relativePath );
             }
 
             /** @brief 그 파일이 든 프로젝트를 다시 읽습니다(`LocalizationManager::reloadChangedFile`). Failed 는 관리자가 오류로 남기고 지금 표를 지킨다. */
             [[nodiscard]] ReloadResult reload( const AssetID& assetID )
             {
-                if ( engine::areEngineServicesBound() == false )
+                if ( engine::areEngineSubsystemsBound() == false )
                     return ReloadResult::NotTracked;
                 return engine::getSubsystem<LocalizationManager>().reloadChangedFile( assetID.view() );
             }
@@ -51,7 +51,7 @@ namespace sw
             /** @brief 로드한 프로젝트 개수입니다. */
             size_t getCachedCount() const override
             {
-                return engine::areEngineServicesBound() ? engine::getSubsystem<LocalizationManager>().getMountedProjectNames().size() : 0u;
+                return engine::areEngineSubsystemsBound() ? engine::getSubsystem<LocalizationManager>().getMountedProjectNames().size() : 0u;
             }
 
             /** @brief 데이터는 `LocalizationManager` 가 쥐어 덧붙일 줄이 없습니다(그 몫은 메모리 태그 표에 있다). */

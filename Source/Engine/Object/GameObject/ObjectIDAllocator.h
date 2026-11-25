@@ -6,8 +6,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -49,6 +49,6 @@ namespace sw
         atomic<uint64> _nextObjectID;    ///< 다음 오브젝트 id
         atomic<uint64> _nextComponentID; ///< 다음 컴포넌트 id
 
-        SW_SERVICE_SLOT( ObjectIDAllocator, Required );
+        SW_SUBSYSTEM_SLOT( ObjectIDAllocator, Required );
     };
 } // namespace sw

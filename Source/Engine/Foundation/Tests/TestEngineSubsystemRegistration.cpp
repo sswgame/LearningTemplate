@@ -6,13 +6,13 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/QuitRequest.h"
 
 // 칸을 가진 타입은 외부 연결이어야 한다(칸이 형식의 정적 멤버다) — 익명 namespace 에 둘 수 없다.
@@ -23,7 +23,7 @@ namespace sw::engine_registration_test
     {
         int32 _value;
 
-        SW_SERVICE_SLOT( RequiredValue, Required );
+        SW_SUBSYSTEM_SLOT( RequiredValue, Required );
     };
 
     /** @brief 선택 칸 · 호스트 전용으로 등록하는 값입니다. */
@@ -31,7 +31,7 @@ namespace sw::engine_registration_test
     {
         int32 _value;
 
-        SW_SERVICE_SLOT( OptionalValue, Optional );
+        SW_SUBSYSTEM_SLOT( OptionalValue, Optional );
     };
 
     /** @brief 번호 @p id 의 서브시스템 이름입니다(없는 번호는 nullptr). */
@@ -86,7 +86,7 @@ namespace sw::engine_registration_test
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return "SlotProbe"; }
 
-        SW_SERVICE_SLOT( SlotProbeSubsystem, Required );
+        SW_SUBSYSTEM_SLOT( SlotProbeSubsystem, Required );
     };
 
     /**
@@ -121,9 +121,9 @@ namespace sw::engine_registration_test
 
 namespace sw
 {
-    ServiceSlot engine_registration_test::RequiredValue::s_serviceSlot{ nullptr, nullptr };
-    ServiceSlot engine_registration_test::OptionalValue::s_serviceSlot{ nullptr, nullptr };
-    ServiceSlot engine_registration_test::SlotProbeSubsystem::s_serviceSlot{ nullptr, nullptr };
+    SubsystemSlot engine_registration_test::RequiredValue::s_subsystemSlot{ nullptr, nullptr };
+    SubsystemSlot engine_registration_test::OptionalValue::s_subsystemSlot{ nullptr, nullptr };
+    SubsystemSlot engine_registration_test::SlotProbeSubsystem::s_subsystemSlot{ nullptr, nullptr };
 } // namespace sw
 
 using namespace sw;
@@ -131,18 +131,18 @@ using namespace sw::engine_registration_test;
 
 namespace
 {
-    /** @brief 테스트 목록에 단 서비스 칸 등록입니다(엔진의 `SW_ENGINE_SERVICE` 와 같은 값). */
+    /** @brief 테스트 목록에 단 서브시스템 칸 등록입니다(엔진의 `SW_ENGINE_SUBSYSTEM_SLOT` 와 같은 값). */
     template <class T>
-    struct TestServiceRecord : engine::EngineServiceRecord
+    struct TestServiceRecord : engine::EngineSubsystemSlotRegistration
     {
-        TestServiceRecord( engine::EngineRegistrationList& list, engine::EngineServiceVisibility visibility )
-            : engine::EngineServiceRecord{ list,
-                                           ServiceSlotOf<T>::kTypeName,
-                                           getSubsystemTypeHash<T>(),
-                                           ServiceSlotOf<T>::getSlot(),
-                                           &engine::EngineRegistrationOps<T>::bind,
-                                           ServiceSlotOf<T>::kRequirement,
-                                           visibility }
+        TestServiceRecord( engine::EngineRegistrationList& list, engine::EngineSubsystemVisibility visibility )
+            : engine::EngineSubsystemSlotRegistration{ list,
+                                                       SubsystemSlotOf<T>::kTypeName,
+                                                       getSubsystemTypeHash<T>(),
+                                                       SubsystemSlotOf<T>::getSlot(),
+                                                       &engine::EngineRegistrationOps<T>::bind,
+                                                       SubsystemSlotOf<T>::kRequirement,
+                                                       visibility }
         {
         }
     };
@@ -166,8 +166,8 @@ namespace
 
     struct EngineRegistrationTestUtil
     {
-        static constexpr engine::EngineSubsystemStage kStartup  = engine::EngineSubsystemStage::Startup;
-        static constexpr engine::EngineSubsystemStage kServices = engine::EngineSubsystemStage::Services;
+        static constexpr engine::EngineSubsystemStage kStartup = engine::EngineSubsystemStage::Startup;
+        static constexpr engine::EngineSubsystemStage kShared  = engine::EngineSubsystemStage::Shared;
 
         /** @brief 오류를 `문장 (대상)` 글로 잇습니다(문장 · 대상 어느 쪽의 낱말이든 찾게). */
         static string describe( const Error& error )
@@ -210,8 +210,8 @@ namespace
 SW_TEST_CASE( EngineRegistrationTest, BindFillsSlotAndAccessReadsIt )
 {
     engine::EngineRegistrationList         list;
-    const TestServiceRecord<RequiredValue> requiredRecord{ list, engine::EngineServiceVisibility::GameVisible };
-    const TestServiceRecord<OptionalValue> optionalRecord{ list, engine::EngineServiceVisibility::HostOnly };
+    const TestServiceRecord<RequiredValue> requiredRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
+    const TestServiceRecord<OptionalValue> optionalRecord{ list, engine::EngineSubsystemVisibility::HostOnly };
     RequiredValue                          required{ 7 };
     OptionalValue                          optional{ 9 };
     SubsystemScope                         parentScope;
@@ -219,13 +219,13 @@ SW_TEST_CASE( EngineRegistrationTest, BindFillsSlotAndAccessReadsIt )
     SW_REQUIRE_TRUE( parentScope.bind( &required ) ); // 부모 범위까지 찾는다
     SW_REQUIRE_TRUE( scope.bind( &optional ) );
 
-    SW_EXPECT_TRUE( list.bindServices( scope ).isBound() );
+    SW_EXPECT_TRUE( list.bindSubsystemSlots( scope ).isBound() );
     SW_EXPECT_TRUE( &engine::getSubsystem<RequiredValue>() == &required );
     SW_EXPECT_EQUAL( 7, engine::getSubsystem<RequiredValue>()._value );
     SW_EXPECT_TRUE( engine::findSubsystem<OptionalValue>() == &optional );
     SW_EXPECT_TRUE( engine::findSubsystem<RequiredValue>() == &required );
 
-    list.unbindServices( scope );
+    list.unbindSubsystemSlots( scope );
     SW_EXPECT_NULL( engine::findSubsystem<RequiredValue>() );
     SW_EXPECT_NULL( engine::findSubsystem<OptionalValue>() );
 }
@@ -237,77 +237,77 @@ SW_TEST_CASE( EngineRegistrationTest, BindFillsSlotAndAccessReadsIt )
 SW_TEST_CASE( EngineRegistrationTest, UndeclaredSlotLookupDuringInitializeFailsStartup )
 {
     engine::EngineRegistrationList              list;
-    const TestServiceRecord<SlotProbeSubsystem> probeRecord{ list, engine::EngineServiceVisibility::GameVisible };
+    const TestServiceRecord<SlotProbeSubsystem> probeRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
     SubsystemScope                              scope;
     (void)scope.emplaceSubsystem<SlotProbeSubsystem>();
     (void)scope.emplaceSubsystem<SlotLookupSubsystem<0>>( "ZLookup", vector<const utf8*>{} );
-    SW_REQUIRE_TRUE( list.bindServices( scope ).isBound() );
+    SW_REQUIRE_TRUE( list.bindSubsystemSlots( scope ).isBound() );
 
     const bool    bInitialized = scope.getCollection().initializeAll( SubsystemHostMask::All );
     const string& error        = scope.getCollection().getError();
     SW_EXPECT_FALSE( bInitialized );
     SW_EXPECT_TRUE_MSG( StringUtil::contains( error, "'ZLookup' failed to initialize" ), error.c_str() );
     SW_EXPECT_TRUE_MSG( StringUtil::contains( error, "looked up 'SlotProbe' without declaring it as a dependency" ), error.c_str() );
-    list.unbindServices( scope );
+    list.unbindSubsystemSlots( scope );
 }
 
 /** @brief [EngineRegistrationTest] 칸 길 조회도 선언한 의존이면 초기화 중에 찾아도 된다 */
 SW_TEST_CASE( EngineRegistrationTest, DeclaredSlotLookupDuringInitializeIsAllowed )
 {
     engine::EngineRegistrationList              list;
-    const TestServiceRecord<SlotProbeSubsystem> probeRecord{ list, engine::EngineServiceVisibility::GameVisible };
+    const TestServiceRecord<SlotProbeSubsystem> probeRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
     SubsystemScope                              scope;
     (void)scope.emplaceSubsystem<SlotProbeSubsystem>();
     (void)scope.emplaceSubsystem<SlotLookupSubsystem<0>>( "ZLookup", vector<const utf8*>{ "SlotProbe" } );
-    SW_REQUIRE_TRUE( list.bindServices( scope ).isBound() );
+    SW_REQUIRE_TRUE( list.bindSubsystemSlots( scope ).isBound() );
 
     SW_EXPECT_TRUE_MSG( scope.getCollection().initializeAll( SubsystemHostMask::All ), scope.getCollection().getError().c_str() );
-    list.unbindServices( scope );
+    list.unbindSubsystemSlots( scope );
 }
 
 /** @brief [EngineRegistrationTest] 필수 칸이 비면 그 타입 이름으로 알린다. 선택 칸은 비어도 알리지 않는다 */
 SW_TEST_CASE( EngineRegistrationTest, MissingRequiredSlotIsReportedByName )
 {
-    engine::EngineRegistrationList         list;
-    const TestServiceRecord<RequiredValue> requiredRecord{ list, engine::EngineServiceVisibility::GameVisible };
-    const TestServiceRecord<OptionalValue> optionalRecord{ list, engine::EngineServiceVisibility::HostOnly };
-    SubsystemScope                         emptyScope;
-    const engine::EngineServiceBindResult  missing = list.bindServices( emptyScope );
-    SW_REQUIRE_TRUE( missing._kind == engine::EngineServiceBindKind::MissingRequired );
+    engine::EngineRegistrationList          list;
+    const TestServiceRecord<RequiredValue>  requiredRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
+    const TestServiceRecord<OptionalValue>  optionalRecord{ list, engine::EngineSubsystemVisibility::HostOnly };
+    SubsystemScope                          emptyScope;
+    const engine::EngineSubsystemBindResult missing = list.bindSubsystemSlots( emptyScope );
+    SW_REQUIRE_TRUE( missing._kind == engine::EngineSubsystemBindKind::MissingRequired );
     SW_REQUIRE_NOT_NULL( missing._pTypeName );
     SW_EXPECT_EQUAL( string( "RequiredValue" ), string( missing._pTypeName ) );
     SW_EXPECT_NULL( engine::findSubsystem<RequiredValue>() );
-    list.unbindServices( emptyScope ); // 서지 못한 호스트도 끊는다 — 다음 바인딩이 거절되지 않게
+    list.unbindSubsystemSlots( emptyScope ); // 서지 못한 호스트도 끊는다 — 다음 바인딩이 거절되지 않게
 
     RequiredValue  required{ 1 };
     SubsystemScope scope;
     SW_REQUIRE_TRUE( scope.bind( &required ) );
-    SW_EXPECT_TRUE( list.bindServices( scope ).isBound() ); // 선택 칸(OptionalValue)은 비었다
-    SW_EXPECT_NULL( list.findMissingRequiredService() );
-    list.unbindServices( scope );
-    SW_EXPECT_NOT_NULL( list.findMissingRequiredService() );
+    SW_EXPECT_TRUE( list.bindSubsystemSlots( scope ).isBound() ); // 선택 칸(OptionalValue)은 비었다
+    SW_EXPECT_NULL( list.findMissingRequiredSubsystem() );
+    list.unbindSubsystemSlots( scope );
+    SW_EXPECT_NOT_NULL( list.findMissingRequiredSubsystem() );
 }
 
 /** @brief [EngineRegistrationTest] 게임 모듈 범위에는 게임 노출 칸만 걸리고, 호스트 · 에디터 범위에는 모두 걸린다. 빈 칸은 걸지 않는다 */
 SW_TEST_CASE( EngineRegistrationTest, ModuleScopeFiltersByVisibility )
 {
     engine::EngineRegistrationList         list;
-    const TestServiceRecord<RequiredValue> requiredRecord{ list, engine::EngineServiceVisibility::GameVisible };
-    const TestServiceRecord<OptionalValue> optionalRecord{ list, engine::EngineServiceVisibility::HostOnly };
+    const TestServiceRecord<RequiredValue> requiredRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
+    const TestServiceRecord<OptionalValue> optionalRecord{ list, engine::EngineSubsystemVisibility::HostOnly };
     RequiredValue                          required{ 1 };
     OptionalValue                          optional{ 2 };
     SubsystemScope                         scope;
     SW_REQUIRE_TRUE( scope.bind( &required ) );
     SW_REQUIRE_TRUE( scope.bind( &optional ) );
-    SW_REQUIRE_TRUE( list.bindServices( scope ).isBound() );
+    SW_REQUIRE_TRUE( list.bindSubsystemSlots( scope ).isBound() );
 
     SubsystemScope gameScope;
-    list.bindModuleServices( gameScope, true, false );
+    list.bindModuleSubsystems( gameScope, true, false );
     SW_EXPECT_TRUE( gameScope.find<RequiredValue>() == &required );
     SW_EXPECT_NULL( gameScope.find<OptionalValue>() );
 
     SubsystemScope hostScope;
-    list.bindModuleServices( hostScope, false, false );
+    list.bindModuleSubsystems( hostScope, false, false );
     SW_EXPECT_TRUE( hostScope.find<RequiredValue>() == &required );
     SW_EXPECT_TRUE( hostScope.find<OptionalValue>() == &optional );
 
@@ -315,13 +315,13 @@ SW_TEST_CASE( EngineRegistrationTest, ModuleScopeFiltersByVisibility )
     RequiredValue  own{ 3 };
     SubsystemScope prefilledScope;
     SW_REQUIRE_TRUE( prefilledScope.bind( &own ) );
-    list.bindModuleServices( prefilledScope, false, true );
+    list.bindModuleSubsystems( prefilledScope, false, true );
     SW_EXPECT_TRUE( prefilledScope.find<RequiredValue>() == &own );
     SW_EXPECT_TRUE( prefilledScope.find<OptionalValue>() == &optional );
 
-    list.unbindServices( scope );
+    list.unbindSubsystemSlots( scope );
     SubsystemScope unboundScope;
-    list.bindModuleServices( unboundScope, false, false );
+    list.bindModuleSubsystems( unboundScope, false, false );
     SW_EXPECT_NULL( unboundScope.find<RequiredValue>() );
 }
 
@@ -333,11 +333,11 @@ SW_TEST_CASE( EngineRegistrationTest, BuildOrderFollowsDeclaredDependenciesThenN
     const TestSubsystemRecord<Delta, Alpha>      deltaRecord{ list, Util::kStartup }; // Delta 는 Alpha 뒤
     const TestSubsystemRecord<Charlie>           charlieRecord{ list, Util::kStartup };
     const TestSubsystemRecord<Alpha>             alphaRecord{ list, Util::kStartup };
-    const TestSubsystemRecord<Bravo>             bravoRecord{ list, Util::kServices }; // 다른 단계는 끼지 않는다
+    const TestSubsystemRecord<Bravo>             bravoRecord{ list, Util::kShared }; // 다른 단계는 끼지 않는다
     vector<const engine::EngineSubsystemRecord*> listOrder;
     SW_REQUIRE_TRUE( list.orderSubsystems( Util::kStartup, listOrder ).has_value() );
     SW_EXPECT_EQUAL( string( "Alpha Charlie Delta Echo" ), Util::joinNames( listOrder ) );
-    SW_REQUIRE_TRUE( list.orderSubsystems( Util::kServices, listOrder ).has_value() );
+    SW_REQUIRE_TRUE( list.orderSubsystems( Util::kShared, listOrder ).has_value() );
     SW_EXPECT_EQUAL( string( "Bravo" ), Util::joinNames( listOrder ) );
 
     // 공장이 그 순서로 불려 범위에 더해진다.
@@ -374,7 +374,7 @@ SW_TEST_CASE( EngineRegistrationTest, BuildOrderRejectsCycleUnknownAndOtherStage
     {
         engine::EngineRegistrationList               list;
         const TestSubsystemRecord<Alpha, Bravo>      alphaRecord{ list, Util::kStartup };
-        const TestSubsystemRecord<Bravo>             bravoRecord{ list, Util::kServices }; // 범위가 다르면 공장이 찾지 못한다
+        const TestSubsystemRecord<Bravo>             bravoRecord{ list, Util::kShared }; // 범위가 다르면 공장이 찾지 못한다
         vector<const engine::EngineSubsystemRecord*> listOrder;
         const expected<void>                         ordered = list.orderSubsystems( Util::kStartup, listOrder );
         SW_REQUIRE_FALSE( ordered.has_value() );
@@ -387,7 +387,7 @@ SW_TEST_CASE( EngineRegistrationTest, BuildOrderRejectsCycleUnknownAndOtherStage
 SW_TEST_CASE( EngineRegistrationTest, SecondBindIsRejectedAndKeepsTheFirst )
 {
     engine::EngineRegistrationList         list;
-    const TestServiceRecord<RequiredValue> requiredRecord{ list, engine::EngineServiceVisibility::GameVisible };
+    const TestServiceRecord<RequiredValue> requiredRecord{ list, engine::EngineSubsystemVisibility::GameVisible };
     RequiredValue                          first{ 1 };
     RequiredValue                          second{ 2 };
     SubsystemScope                         firstScope;
@@ -395,33 +395,33 @@ SW_TEST_CASE( EngineRegistrationTest, SecondBindIsRejectedAndKeepsTheFirst )
     SW_REQUIRE_TRUE( firstScope.bind( &first ) );
     SW_REQUIRE_TRUE( secondScope.bind( &second ) );
 
-    SW_REQUIRE_TRUE( list.bindServices( firstScope ).isBound() );
-    const engine::EngineServiceBindResult again = list.bindServices( secondScope );
-    SW_EXPECT_TRUE( again._kind == engine::EngineServiceBindKind::AlreadyBound );
+    SW_REQUIRE_TRUE( list.bindSubsystemSlots( firstScope ).isBound() );
+    const engine::EngineSubsystemBindResult again = list.bindSubsystemSlots( secondScope );
+    SW_EXPECT_TRUE( again._kind == engine::EngineSubsystemBindKind::AlreadyBound );
     SW_EXPECT_NULL( again._pTypeName );
     SW_EXPECT_TRUE( &engine::getSubsystem<RequiredValue>() == &first ); // 앞 엔진의 조회가 그대로다
     SW_EXPECT_TRUE( list.findBoundScope() == &firstScope );
 
-    list.unbindServices( secondScope ); // 묶지 못한 쪽의 종료 — 아무것도 하지 않는다
+    list.unbindSubsystemSlots( secondScope ); // 묶지 못한 쪽의 종료 — 아무것도 하지 않는다
     SW_EXPECT_TRUE( engine::findSubsystem<RequiredValue>() == &first );
-    list.unbindServices( firstScope );
+    list.unbindSubsystemSlots( firstScope );
     SW_EXPECT_NULL( engine::findSubsystem<RequiredValue>() );
     SW_EXPECT_NULL( list.findBoundScope() );
-    SW_EXPECT_TRUE( list.bindServices( secondScope ).isBound() ); // 끊은 뒤에는 다시 묶인다
+    SW_EXPECT_TRUE( list.bindSubsystemSlots( secondScope ).isBound() ); // 끊은 뒤에는 다시 묶인다
     SW_EXPECT_TRUE( &engine::getSubsystem<RequiredValue>() == &second );
-    list.unbindServices( secondScope );
+    list.unbindSubsystemSlots( secondScope );
 }
 
 /** @brief [EngineRegistrationTest] 하네스의 엔진이 선 프로세스에서 엔진 서비스를 또 묶으면 거절되고 지금 엔진의 서비스가 그대로다(프로세스당 엔진 하나) */
 SW_TEST_CASE( EngineRegistrationTest, RunningEngineRejectsASecondEngineBinding )
 {
-    SW_REQUIRE_TRUE( engine::areEngineServicesBound() );
-    QuitRequest* const                    pBefore = &engine::getSubsystem<QuitRequest>();
-    SubsystemScope                        otherScope;
-    const engine::EngineServiceBindResult result = engine::bindEngineServices( otherScope );
-    SW_EXPECT_TRUE( result._kind == engine::EngineServiceBindKind::AlreadyBound );
-    engine::unbindEngineServices( otherScope ); // 두 번째 엔진의 종료 길 — 지금 엔진의 칸을 비우지 않는다
-    SW_EXPECT_TRUE( engine::areEngineServicesBound() );
+    SW_REQUIRE_TRUE( engine::areEngineSubsystemsBound() );
+    QuitRequest* const                      pBefore = &engine::getSubsystem<QuitRequest>();
+    SubsystemScope                          otherScope;
+    const engine::EngineSubsystemBindResult result = engine::bindEngineSubsystems( otherScope );
+    SW_EXPECT_TRUE( result._kind == engine::EngineSubsystemBindKind::AlreadyBound );
+    engine::unbindEngineSubsystems( otherScope ); // 두 번째 엔진의 종료 길 — 지금 엔진의 칸을 비우지 않는다
+    SW_EXPECT_TRUE( engine::areEngineSubsystemsBound() );
     SW_EXPECT_TRUE( &engine::getSubsystem<QuitRequest>() == pBefore );
     SW_EXPECT_TRUE( engine::getEngineSubsystems() != &otherScope );
 }
@@ -477,8 +477,8 @@ SW_TEST_CASE( EngineRegistrationTest, LifetimeDependencyMustFollowTheAfterList )
  */
 SW_TEST_CASE( EngineRegistrationTest, CommandLineSlotsKnowTheirOwner )
 {
-    SW_REQUIRE_TRUE( ServiceSlotOf<CommandLineManager>::getSlot()._pBound != nullptr );
-    SW_EXPECT_TRUE( ServiceSlotOf<CommandLineManager>::getSlot()._pOwner != nullptr );
-    SW_REQUIRE_TRUE( ServiceSlotOf<GlobalVariableManager>::getSlot()._pBound != nullptr );
-    SW_EXPECT_TRUE( ServiceSlotOf<GlobalVariableManager>::getSlot()._pOwner == ServiceSlotOf<CommandLineManager>::getSlot()._pOwner );
+    SW_REQUIRE_TRUE( SubsystemSlotOf<CommandLineManager>::getSlot()._pBound != nullptr );
+    SW_EXPECT_TRUE( SubsystemSlotOf<CommandLineManager>::getSlot()._pOwner != nullptr );
+    SW_REQUIRE_TRUE( SubsystemSlotOf<GlobalVariableManager>::getSlot()._pBound != nullptr );
+    SW_EXPECT_TRUE( SubsystemSlotOf<GlobalVariableManager>::getSlot()._pOwner == SubsystemSlotOf<CommandLineManager>::getSlot()._pOwner );
 }

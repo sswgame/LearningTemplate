@@ -20,7 +20,7 @@
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
 #include "DevTools/DevToolsClientPart.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/UI/UISystem.h"

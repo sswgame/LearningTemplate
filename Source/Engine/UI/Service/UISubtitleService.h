@@ -9,8 +9,8 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -173,6 +173,6 @@ namespace sw
         uint8                  _bGamePaused     : 1; ///< 게임이 멈췄다(`setGamePaused`)
         uint8                  _bDocumentFailed : 1; ///< 문서를 만들지 못했는지 나타냅니다. 같은 오류를 매 프레임 내지 않기 위한 값입니다.
 
-        SW_SERVICE_SLOT( UISubtitleService, Required );
+        SW_SUBSYSTEM_SLOT( UISubtitleService, Required );
     };
 } // namespace sw

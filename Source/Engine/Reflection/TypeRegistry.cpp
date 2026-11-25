@@ -14,7 +14,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/GameTimer.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
@@ -1028,7 +1028,7 @@ namespace sw
     const TypeInfo* TypeLookupCache::findSlow( const hashed_string& fqn ) const
     {
         // 레지스트리가 아직 없으면 칸을 건드리지 않고 nullptr 를 반환한다(다음 호출이 다시 본다).
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return nullptr;
         // 세대는 찾기 **전에** 읽는다. 찾는 사이 등록이 끼면 옛 세대가 남아 다음 호출이 다시 찾는다(그 반대는 없다).
         _pGenerationCounter.store( &s_typeTableGeneration, std::memory_order_release );

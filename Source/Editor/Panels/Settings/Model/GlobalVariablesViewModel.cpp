@@ -12,7 +12,7 @@
 
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/EditorStateTextHistory.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 

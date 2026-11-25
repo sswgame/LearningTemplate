@@ -191,7 +191,7 @@ namespace sw
     template <typename AssetType>
     void SharedAssetCache<AssetType>::clear()
     {
-        _pTable->clear(); // 자기 표를 비운다 — 매니저 종료 때도 불려 서비스 칸을 거치지 않는다
+        _pTable->clear(); // 자기 표를 비운다 — 매니저 종료 때도 불려 서브시스템 칸을 거치지 않는다
         getSharedAssetCacheStats<AssetType>().recordClear();
     }
 

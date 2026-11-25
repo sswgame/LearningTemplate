@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Scene/SceneObjectHash.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {

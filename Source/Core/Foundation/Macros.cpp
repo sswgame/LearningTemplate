@@ -261,7 +261,7 @@ namespace sw::internal
 
 namespace sw::internal
 {
-    void reportMissingRequiredService( const utf8* pLookup ) noexcept
+    void reportMissingRequiredSubsystem( const utf8* pLookup ) noexcept
     {
         utf8 arrText[kLowLevelMessageCapacity];
         formatLowLevelMessage( arrText, kLowLevelMessageCapacity, "Required lookup is missing: %s", pLookup );

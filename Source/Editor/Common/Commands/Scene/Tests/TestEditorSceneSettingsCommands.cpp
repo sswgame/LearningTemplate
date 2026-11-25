@@ -4,7 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneSettingsCommands.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 #include "Engine/Scene/Scene.h"

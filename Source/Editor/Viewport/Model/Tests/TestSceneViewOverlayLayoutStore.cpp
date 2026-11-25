@@ -5,7 +5,7 @@
 #include "Core/Testing/ScopedGlobalVariableValue.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Viewport/Model/SceneViewOverlayLayoutStore.h"
 
 using namespace sw;

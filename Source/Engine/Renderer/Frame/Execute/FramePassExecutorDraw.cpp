@@ -20,7 +20,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
@@ -1106,7 +1106,7 @@ namespace sw
 
     void FramePassExecutor::drawTextureLayerBakes()
     {
-        if ( _pDevice == nullptr || _pCmd == nullptr || engine::areEngineServicesBound() == false )
+        if ( _pDevice == nullptr || _pCmd == nullptr || engine::areEngineSubsystemsBound() == false )
             return;
         TextureCache&                   textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
         vector<TextureLayerBakeRequest> listRequest;

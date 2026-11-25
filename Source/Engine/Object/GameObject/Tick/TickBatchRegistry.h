@@ -38,8 +38,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Module/ModuleEntryRegistrar.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
@@ -104,7 +104,7 @@ namespace sw
         RegistrationList<Entry> _listEntry SW_GUARDED_BY( _mutex ){ "TickBatchRegistry" };
         atomic<uint32>                     _generation{ 0 };
 
-        SW_SERVICE_SLOT( TickBatchRegistry, Required );
+        SW_SUBSYSTEM_SLOT( TickBatchRegistry, Required );
     };
 
     /**

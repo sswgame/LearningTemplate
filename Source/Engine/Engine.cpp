@@ -44,9 +44,9 @@
 #include "Engine/CoreServices/NamePoolSubsystem.h"
 #include "Engine/CoreServices/StaticStorageSubsystem.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
@@ -102,7 +102,7 @@ namespace sw
 {
     Engine::Engine()
         : _coreScope{}
-        , _services{}
+        , _sharedScope{}
         , _pCommandLineSubsystem{ nullptr }
         , _pEventDispatcher{ nullptr }
         , _pConfigManager{ nullptr }
@@ -138,20 +138,20 @@ namespace sw
         return _pCommandLineSubsystem != nullptr ? &_pCommandLineSubsystem->getCommandLine() : nullptr;
     }
 
-    // 길이를 나누지 않는다: 기동 순서(코어 → 역할 → 서비스 범위 → 기동 단계 구성 → 서비스 표 → 기동 → 관찰자)가 곧 뜻인 기동 열이다. 단계 사이를 지역값
+    // 길이를 나누지 않는다: 기동 순서(코어 → 역할 → 공용 범위 → 기동 단계 구성 → 서브시스템 칸 표 → 기동 → 관찰자)가 곧 뜻인 기동 열이다. 단계 사이를 지역값
     // (`hostMask` · `startupParts` · `bDedicatedServer`)이 이어 주고 단계마다 실패하면 바로 나가므로, 함수로 가르면 같은 값을 넘기는 매개변수 묶음만 늘고
-    // 순서가 호출자 한 곳에서 안 보인다. 서비스 · 기동 단계에 무엇이 서는지는 서브시스템마다 제 .cpp 의 등록 줄이 말한다(`EngineSubsystemRegistration.h`).
+    // 순서가 호출자 한 곳에서 안 보인다. 공용 · 기동 단계에 무엇이 서는지는 서브시스템마다 제 .cpp 의 등록 줄이 말한다(`EngineSubsystemRegistration.h`).
     bool Engine::initialize( int32 argc, utf8* pArgv[], EngineHostRole role, SubsystemScope* pHostScope )
     {
         // 범위는 호스트 아래 셋이다. 호스트(엔진을 띄운 쪽이 들고, 엔진보다 먼저 서서 나중에 사라진다 — 모듈 라이브러리 창구 · 자동화 구동기) 아래로
-        // 코어(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소) → 서비스(엔진 범위의 모든 것보다 오래 사는
-        // 공용 서비스) → 엔진(기동 단계). 아래 범위가 모두 선 뒤에 위 범위를 세우고, 위 범위가 모두 사라진 뒤에 아래 범위를 내린다 — 범위 사이의
-        // 순서는 의존으로 적지 않는다. 서비스 범위의 객체는 이름 풀 · 로거가 선 뒤에 만든다(생성자가 이름 · 블록을 잡는다). 테스트 하네스도 같은 세 범위다(호스트 범위는 없다).
+        // 코어(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소) → 공용(엔진 범위의 모든 것보다 오래 사는
+        // 공용 서브시스템) → 엔진(기동 단계). 아래 범위가 모두 선 뒤에 위 범위를 세우고, 위 범위가 모두 사라진 뒤에 아래 범위를 내린다 — 범위 사이의
+        // 순서는 의존으로 적지 않는다. 공용 범위의 객체는 이름 풀 · 로거가 선 뒤에 만든다(생성자가 이름 · 블록을 잡는다). 테스트 하네스도 같은 세 범위다(호스트 범위는 없다).
         _coreScope.setParentScope( pHostScope );
         // 진단(CRT 누수 검사 · 메모리 태그 추적 · 누수 창)은 Debug 만 — 할당마다 추적 비용이 붙는다. ASan 구성(Ninja-Release-ASan)도 끈다: Windows ASan 은 CRT 디버그 힙을
         // 쓸 수 없고(MemoryProfiler.cpp) 힙 오용은 ASan 이 직접 잡는다(언리얼 -EnableASan 도 메모리 추적을 더하지 않는다).
         constexpr bool kDiagnostics = build::kDebug;
-        // 코어 범위는 호스트 값(명령줄 인자)을 서로 넘겨 만들고 수가 적어 등록 줄 없이 여기서 채운다. 안의 객체를 묶는 서비스 칸은 주인 서브시스템의 .cpp 가 등록한다(`SW_ENGINE_SERVICE`).
+        // 코어 범위는 호스트 값(명령줄 인자)을 서로 넘겨 만들고 수가 적어 등록 줄 없이 여기서 채운다. 안의 객체를 묶는 서브시스템 칸은 주인 서브시스템의 .cpp 가 등록한다(`SW_ENGINE_SUBSYSTEM_SLOT`).
         // 교착 탐지(`-deadlock-detection`)는 명령줄 표가 서기 전에 읽는다 — 진단 서브시스템이 코어 범위의 첫째라, 잠금 추적을 그보다 늦게 켜면 이미 쥔 잠금을 놓친다.
         const bool            bDeadlockDetection = build::kShipping == false && CommandLineManager::isFlagGivenBeforeParse( argc, pArgv, CommandLineArgument::DEADLOCK_DETECTION );
         DiagnosticsSubsystem& diagnostics        = _coreScope.emplaceSubsystem<DiagnosticsSubsystem>( kDiagnostics, bDeadlockDetection );
@@ -163,7 +163,7 @@ namespace sw
         ContentRootSubsystem&  contentRoot  = _coreScope.emplaceSubsystem<ContentRootSubsystem>( commandLine, crashHandler );
         _coreScope.emplaceSubsystem<StaticStorageSubsystem>();
         _pMemoryBudget = &_coreScope.emplaceSubsystem<MemoryBudgetSubsystem>( crashHandler );
-        // 서브시스템 안의 객체도 서비스 칸이다 — 그 타입으로 건다(새 범위라 겹치지 않는다).
+        // 서브시스템 안의 객체도 서브시스템 칸이다 — 그 타입으로 건다(새 범위라 겹치지 않는다).
         (void)_coreScope.exposeMember( commandLine, commandLine.getCommandLine() );         // 명령줄 — 주인은 명령줄 서브시스템이다(초기화 중 조회는 그 의존을 선언해야 한다)
         (void)_coreScope.exposeMember( commandLine, commandLine.getGlobalVariables() );     // 전역 변수 표 — 같은 주인
         (void)_coreScope.exposeMember( contentRoot, contentRoot.getAssetPaths() );          // 리소스 경로 상태 — 주인은 리소스 루트 서브시스템 하나다
@@ -179,7 +179,7 @@ namespace sw
         (void)_coreScope.bind( diagnostics.findMemoryProfiler() ); // 진단 도구를 껐으면(배포본) 없어(nullptr) 걸지 않는다 — 선택 칸이다
         // 렌더 진단 정책을 명령줄(`-gv_…`, 코어 범위의 명령줄이 막 적용했다)이 든 값으로 내보낸다 — 기동 단계(셰이더 캐시 · 렌더러 초기화)가 이 사본을 읽는다.
         RenderDiagnostics::publish();
-        // 크래시 보고 프로세스(`-crash-reporter=<폴더>`)는 헤드리스다 — 서비스 · 기동 단계를 세우지 않고 App 이 묶음을 보내고 끝낸다.
+        // 크래시 보고 프로세스(`-crash-reporter=<폴더>`)는 헤드리스다 — 공용 · 기동 단계를 세우지 않고 App 이 묶음을 보내고 끝낸다.
         // 이 모드에서는 크래시 핸들러(죽으면 보고 프로세스를 또 띄운다) · 리소스 루트를 세우지 않았다.
         if ( crashHandler.isCrashReporterRun() )
         {
@@ -187,7 +187,7 @@ namespace sw
             _headlessState.enterHeadless();
             return true;
         }
-        // 역할은 서비스를 만들기 전에 정한다 — 오디오 장치 · 기동 표 대상 · 읽지 않는 에셋 종류가 이것을 본다. 빌드에 없는 역할로는 서지 않는다.
+        // 역할은 공용 서브시스템을 만들기 전에 정한다 — 오디오 장치 · 기동 표 대상 · 읽지 않는 에셋 종류가 이것을 본다. 빌드에 없는 역할로는 서지 않는다.
         _hostRole                   = role;
         const bool bDedicatedServer = role == EngineHostRole::DedicatedServer;
         if ( ( bDedicatedServer && build::kWithServerCode == false ) || ( bDedicatedServer == false && build::kWithClientCode == false ) )
@@ -197,34 +197,34 @@ namespace sw
         }
         const SubsystemHostMask hostMask = bDedicatedServer ? EngineSubsystemHost::kServer : EngineSubsystemHost::kClient;
         // 서버 패키지에 없는 에셋 종류(텍스처 · 셰이더 바이너리 · 오디오 — 쿠킹 표의 target_excluded_asset_kinds)는 서버가 읽지 않는다.
-        // 서비스 표가 서기 전이라 경로 상태의 주인(코어 범위의 리소스 루트)에게 직접 건넨다.
+        // 서브시스템 칸 표가 서기 전이라 경로 상태의 주인(코어 범위의 리소스 루트)에게 직접 건넨다.
         contentRoot.getAssetPaths().setHostTarget( bDedicatedServer ? "Server" : "Client" );
         // 리소스 조건의 쿠킹 축(`ResourceTags`) — 쿠커와 런타임이 같은 자리에서 같은 값을 넣는다. 그래서 쿠킹본에 남은 쿠킹 축 조건도 런타임이 쿠커와 같은 답을 낸다.
-        // 서비스 표가 서기 전이라 태그의 주인(코어 범위의 리소스 루트)에게 직접 건넨다.
+        // 서브시스템 칸 표가 서기 전이라 태그의 주인(코어 범위의 리소스 루트)에게 직접 건넨다.
         ResourceTags& resourceTags    = contentRoot.getResourceTags();
         const bool    bPlatformTagged = resourceTags.setAxisValue( "platform", StringUtil::toLower( build::kPlatformName ) );
         const bool    bTargetTagged   = resourceTags.setAxisValue( "target", bDedicatedServer ? "server" : "client" );
         if ( bPlatformTagged == false || bTargetTagged == false )
             return false; // 플랫폼 이름이 축의 값 목록에 없다(`ResourceTagsInternal::kArrPlatformValue` 에 한 줄 — 오류는 위에서 남겼다)
-        // 외부 프로파일러(서비스 범위의 `ProfilerBackend`)의 스레드 이름 — 서비스 범위가 서기 전에 둔다.
+        // 외부 프로파일러(공용 범위의 `ProfilerBackend`)의 스레드 이름 — 공용 범위가 서기 전에 둔다.
         ThreadName::setCurrentThreadName( "GameThread" );
 
-        BLOCK( "서비스 범위" )
+        BLOCK( "공용 범위" )
         {
-            // 초기화 · 종료할 것이 없고 수명만 있는 공용 서비스다 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다(누가 소멸자에서 부르든 살아 있다).
-            _services.setParentScope( &_coreScope );
+            // 초기화 · 종료할 것이 없고 수명만 있는 공용 서브시스템다 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다(누가 소멸자에서 부르든 살아 있다).
+            _sharedScope.setParentScope( &_coreScope );
             // 무엇을 만드는지와 만드는 법 · 먼저 만들 것은 서브시스템마다 제 .cpp 의 등록 줄이다(중앙 목록이 없다). 호스트가 직접 쓰는 것은 범위에서 타입으로 찾는다.
             engine::EngineSubsystemBuild serviceBuild;
-            engine::EngineRegistrationList::getGlobal().buildSubsystems( engine::EngineSubsystemStage::Services, _services, serviceBuild );
-            _pEventDispatcher = _services.find<EventDispatcher>();
-            _pDebugKeyActions = _services.find<DebugKeyActions>(); // 셸 디버그 키 맵 — 엔진 종료가 입력 매니저보다 먼저 맵을 놓는다
-            // 모듈 서브시스템의 자식 범위를 매다는 자리 — 기동 단계(모듈을 올리고 내리는 단계)보다 오래 살아야 해 서비스 범위에 둔다. 프로세스 범위는 범위 사슬의
+            engine::EngineRegistrationList::getGlobal().buildSubsystems( engine::EngineSubsystemStage::Shared, _sharedScope, serviceBuild );
+            _pEventDispatcher = _sharedScope.find<EventDispatcher>();
+            _pDebugKeyActions = _sharedScope.find<DebugKeyActions>(); // 셸 디버그 키 맵 — 엔진 종료가 입력 매니저보다 먼저 맵을 놓는다
+            // 모듈 서브시스템의 자식 범위를 매다는 자리 — 기동 단계(모듈을 올리고 내리는 단계)보다 오래 살아야 해 공용 범위에 둔다. 프로세스 범위는 범위 사슬의
             // 뿌리다: 호스트가 범위를 넘겼으면 그것, 넘기지 않은 실행(테스트 하네스)은 코어 범위가 뿌리다.
-            _services.emplaceSubsystem<ModuleRegistrationHost>( pHostScope != nullptr ? *pHostScope : _coreScope, _startup, hostMask );
-            SubsystemTimingReport::enableTiming( _services.getCollection() ); // 시동 요약 로그의 서브시스템별 시간
-            if ( _services.getCollection().initializeAll( hostMask ) == false )
+            _sharedScope.emplaceSubsystem<ModuleRegistrationHost>( pHostScope != nullptr ? *pHostScope : _coreScope, _startup, hostMask );
+            SubsystemTimingReport::enableTiming( _sharedScope.getCollection() ); // 시동 요약 로그의 서브시스템별 시간
+            if ( _sharedScope.getCollection().initializeAll( hostMask ) == false )
             {
-                SW_LOG_ERROR_ID( "Engine.EngineServicesFailed", "Engine services failed: %#", _services.getCollection().getError().c_str() );
+                SW_LOG_ERROR_ID( "Engine.EngineServicesFailed", "Engine services failed: %#", _sharedScope.getCollection().getError().c_str() );
                 return false;
             }
         }
@@ -232,7 +232,7 @@ namespace sw
         // 기동 단계는 서브시스템이다 — 서브시스템이 스스로 이름 · 의존 · 호스트를 선언한다. 추가 순서는 뜻이 없다(의존이 정한다). 해제는 그 역순이다.
         BLOCK( "기동 단계 구성" )
         {
-            _startup.setParentScope( &_services );
+            _startup.setParentScope( &_sharedScope );
             // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil). 레지스트리는 만들 때 내장 코덱을 갖추므로 기동 전에 붙여도 된다.
             // 전용 서버 역할은 창 · RHI · 렌더러를 두지 않는다(그 구성은 렌더러를 짓지도 않는다) — 그 공장들이 `_bDedicatedServer` 를 보고 만들지 않는다.
             engine::StartupSetup         startupSetup{ _headlessState, bDedicatedServer, HeadlessTaskRegistration::isAnyRequested( commandLine.getCommandLine() ) };
@@ -253,15 +253,15 @@ namespace sw
             _pUIDriver                  = _startup.find<IEngineUIDriver>();
             _pRenderDriver              = _startup.find<IEngineRenderDriver>();
         }
-        // 서비스 표는 엔진 범위(부모 범위까지)에서 행마다 한 번 찾아 둔다. 필수 행이 비면 서지 않는다 — 넣지 않은 서브시스템이다.
+        // 서브시스템 칸 표는 엔진 범위(부모 범위까지)에서 행마다 한 번 찾아 둔다. 필수 행이 비면 서지 않는다 — 넣지 않은 서브시스템이다.
         // 칸은 타입마다 프로세스에 하나다 — 이미 엔진이 묶였으면 서지 않는다(프로세스당 엔진 하나가 계약이다).
-        const engine::EngineServiceBindResult bindResult = engine::bindEngineServices( _startup );
-        if ( bindResult._kind == engine::EngineServiceBindKind::AlreadyBound )
+        const engine::EngineSubsystemBindResult bindResult = engine::bindEngineSubsystems( _startup );
+        if ( bindResult._kind == engine::EngineSubsystemBindKind::AlreadyBound )
         {
             SW_LOG_ERROR_ID( "Engine.SecondEngineInProcess", "Another Engine already bound the engine services in this process - one Engine per process is the contract" );
             return false;
         }
-        if ( bindResult._kind == engine::EngineServiceBindKind::MissingRequired )
+        if ( bindResult._kind == engine::EngineSubsystemBindKind::MissingRequired )
         {
             SW_LOG_ERROR_ID( "Engine.RequiredEngineServiceNot", "Required engine service '%#' is not in any subsystem scope", bindResult._pTypeName );
             return false;
@@ -328,7 +328,7 @@ namespace sw
 
     string Engine::describeSubsystemInitTimings() const
     {
-        vector<SubsystemCollection::SubsystemTiming>        listTiming  = _services.getCollection().getInitTimings();
+        vector<SubsystemCollection::SubsystemTiming>        listTiming  = _sharedScope.getCollection().getInitTimings();
         const vector<SubsystemCollection::SubsystemTiming>& listStartup = _startup.getCollection().getInitTimings();
         listTiming.insert( listTiming.end(), listStartup.begin(), listStartup.end() );
         return SubsystemTimingReport::describe( std::move( listTiming ) );
@@ -336,7 +336,7 @@ namespace sw
 
     void Engine::shutdown( SubsystemScope& hostScope )
     {
-        // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
+        // 프레임 관찰자는 붙인 쪽이 서브시스템보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
         _frameHooks.clear(); // 남은 구독을 무효화하고 저장소를 놓는다
         if ( _pRenderDriver != nullptr )
@@ -344,16 +344,16 @@ namespace sw
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 라이브러리 → 태스크 → 셰이더 캐시.
         // 범위째 내린다 — 모듈 서브시스템의 자식 범위(배포는 정적 링크한 모듈이 여기 남아 있다)가 기동 단계보다 먼저 내려간다.
         _startup.shutdownAll();
-        // 서브시스템마다의 종료 시간 — 로그 없이 오래 걸린 종료가 어느 것인지 보인다(시동 줄 `App.StartupPhasesHostScopeMs` 의 짝). 서비스 범위는 아래 소멸이 내린다.
+        // 서브시스템마다의 종료 시간 — 로그 없이 오래 걸린 종료가 어느 것인지 보인다(시동 줄 `App.StartupPhasesHostScopeMs` 의 짝). 공용 범위는 아래 소멸이 내린다.
         SW_LOG_INFO_ID( "Engine.ShutdownSubsystemsMs", "Shutdown subsystems (ms): %#", SubsystemTimingReport::describe( _startup.getCollection().getShutdownTimings() ).c_str() );
         // 디버그 키 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(호스트 루프가 처음 돌릴 때 만든다).
-        // 기동이 서비스 범위 전에 멈췄으면(크래시 보고 프로세스 · 코어 실패) 맵이 없다.
+        // 기동이 공용 범위 전에 멈췄으면(크래시 보고 프로세스 · 코어 실패) 맵이 없다.
         if ( _pDebugKeyActions != nullptr )
             _pDebugKeyActions->reset();
         // 단계가 소유한 객체를 초기화 순서의 역순으로 소멸시킨다: UI → 텔레메트리 → 렌더러 쪽 → RHI →
         // 글꼴 → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 → 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _configReloadedSubscription.reset();
-        // 종료 코드는 서비스가 내려간 뒤에도 읽는다 — 요청을 엔진 칸으로 옮기고 빌린 포인터를 놓는다.
+        // 종료 코드는 서브시스템이 내려간 뒤에도 읽는다 — 요청을 엔진 칸으로 옮기고 빌린 포인터를 놓는다.
         if ( _bQuitRequested == false && _pQuitRequest != nullptr && _pQuitRequest->isRequested() )
         {
             _bQuitRequested = SW_TRUE;
@@ -369,11 +369,11 @@ namespace sw
         _pAudioDriver   = nullptr;
         _pSceneManager  = nullptr;
         _pConfigManager = nullptr;
-        // 서비스 범위 → (표 끊기) → 코어 범위. 테스트 하네스와 같은 끝 정리다.
-        _services.destroyAll();
+        // 공용 범위 → (표 끊기) → 코어 범위. 테스트 하네스와 같은 끝 정리다.
+        _sharedScope.destroyAll();
         _pEventDispatcher = nullptr;
         _pDebugKeyActions = nullptr;
-        engine::unbindEngineServices( _startup );
+        engine::unbindEngineSubsystems( _startup );
         // 호스트 범위는 엔진 범위가 사라진 뒤(모듈 라이브러리 창구는 위 기동 단계 종료가 마지막으로 썼다), 종료 누수 창을 닫는 코어보다 먼저 비운다.
         hostScope.destroyAll();
         // 남은 렌더 리소스는 누수다(레지스트리 저장소는 마지막 리소스가 사라질 때 스스로 돌아간다 — 남았으면 돌아가지 않은 채로 보고에 보인다).
@@ -390,7 +390,7 @@ namespace sw
 
     void Engine::onConfigReloaded( const hashed_string& configTypeName )
     {
-        // 엔진 설정 · 게임 프리셋은 Config 가 든 자리(서비스 표가 가리키는 칸)에서 제자리로 바뀌었다 - 읽는 쪽이 다음에 읽을 때 보므로 옮겨 적을 사본이 없다.
+        // 엔진 설정 · 게임 프리셋은 Config 가 든 자리(서브시스템 칸 표가 가리키는 칸)에서 제자리로 바뀌었다 - 읽는 쪽이 다음에 읽을 때 보므로 옮겨 적을 사본이 없다.
         // 이 알림에서 따로 할 일은 엔진 설정이 바꾼 값을 이미 만들어 둔 장치에 다시 알리는 것뿐이다.
         if ( configTypeName != EngineConfig::StaticType()->_fullyQualifiedName )
             return;
@@ -406,7 +406,7 @@ namespace sw
             _pQuitRequest->request( exitCode );
             return;
         }
-        // 서비스가 서기 전(기동 실패 경로)이다.
+        // 서브시스템이 서기 전(기동 실패 경로)이다.
         if ( _bQuitRequested )
             return;
         _bQuitRequested = SW_TRUE;
@@ -451,7 +451,7 @@ namespace sw
             _pUIDriver->processFrameInput( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 정지 메뉴의 탐색 반복은 실제 시간
     }
 
-    void Engine::updateFrameServices()
+    void Engine::updateFrameSubsystems()
     {
         // 다른 스레드가 읽는 개발 변수의 사본을 게임 스레드에서 다시 뜬다(콘솔이 바꾼 값이 이번 프레임의 로드 기록부터 든다).
         if ( AssetLoadProfiler* const pLoadProfiler = engine::findSubsystem<AssetLoadProfiler>() )
@@ -591,8 +591,8 @@ namespace sw
         // 답할 수 없다. 그 답이 없으면 다음 최적화 대상을 고르는 근거도 없다.
         SW_PROFILE_SCOPE( "GT.Frame" );
 
-        // 프레임 순서가 곧 의미다: 서비스 → 씬 틱 → 관찰자 → 런타임 UI → 렌더 패킷.
-        updateFrameServices();
+        // 프레임 순서가 곧 의미다: 공용 서브시스템 → 씬 틱 → 관찰자 → 런타임 UI → 렌더 패킷.
+        updateFrameSubsystems();
         updateScenes( deltaTime, views, vpWidth, vpHeight, sceneTick );
 
         // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간,

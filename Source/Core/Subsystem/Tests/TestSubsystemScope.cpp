@@ -199,7 +199,7 @@ SW_TEST_CASE( SubsystemScopeTest, UndeclaredMemberLookupDuringInitializeFailsSta
     ScopeCatalogOwnerSubsystem& owner = scope.emplaceSubsystem<ScopeCatalogOwnerSubsystem>();
     SW_REQUIRE_TRUE( scope.exposeMember( owner, owner.getCatalog() ) );
     SW_EXPECT_FALSE( scope.exposeMember( owner, owner.getCatalog() ) );                         // 같은 타입을 두 번 걸지 않는다
-    SW_EXPECT_TRUE( scope.findOwnerInScope( getSubsystemTypeHash<ScopeCatalog>() ) == &owner ); // 서비스 칸이 바인딩 때 묻는 주인
+    SW_EXPECT_TRUE( scope.findOwnerInScope( getSubsystemTypeHash<ScopeCatalog>() ) == &owner ); // 서브시스템 칸이 바인딩 때 묻는 주인
     (void)scope.emplaceSubsystem<ScopeLookupSubsystem<0, ScopeCatalog>>( scope, "ZLookup", vector<const utf8*>{}, &bShutDown );
     SW_EXPECT_FALSE( scope.getCollection().initializeAll( SubsystemHostMask::All ) );
     const string& error = scope.getCollection().getError();

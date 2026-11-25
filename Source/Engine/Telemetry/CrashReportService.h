@@ -13,8 +13,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -150,6 +150,6 @@ namespace sw
         CrashReportConsent   _consent;
         uint8                _bInitialized;
 
-        SW_SERVICE_SLOT( CrashReportService, Required );
+        SW_SUBSYSTEM_SLOT( CrashReportService, Required );
     };
 } // namespace sw

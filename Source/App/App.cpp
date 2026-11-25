@@ -21,7 +21,7 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
@@ -565,7 +565,7 @@ namespace sw
 
     FramePacingInputs App::makeFramePacingInputs() const
     {
-        const GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
+        const GameNetSession* pNetSession = engine::areEngineSubsystemsBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         FramePacingInputs     inputs;
         inputs._bAutomationRun = _pAutomation != nullptr && _pAutomation->isBusy();
         if ( inputs._bAutomationRun )
@@ -741,7 +741,7 @@ namespace sw
     bool App::onWindowMessage( const NativeWindowEvent& event )
     {
         // 사람 입력은 버리기 전에 센다(데모 재생의 "손대면 멈춤"). 무인 자동화는 사람의 마우스와 키보드 입력을 여기서 버린다. 에디터(ImGui)와 게임 입력 둘 다에 닿지 않는다.
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             InputManager& inputManager = engine::getSubsystem<InputManager>();
             inputManager.recordNativeEvent( event );
@@ -754,7 +754,7 @@ namespace sw
         const bool                 bConsumedByEditor = ( pModuleManager != nullptr && pModuleManager->onWindowMessage( event ) );
 
         // 에디터가 가로채지 않았을 때만 게임 InputManager 로 전달한다.
-        if ( bConsumedByEditor == false && engine::areEngineServicesBound() )
+        if ( bConsumedByEditor == false && engine::areEngineSubsystemsBound() )
             engine::getSubsystem<InputManager>().processNativeEvent( event );
 
         // Win32 OS 수준의 포커스와 활성화(DefWindowProc)가 정상적으로 동작하도록 false 를 반환한다.

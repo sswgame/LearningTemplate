@@ -9,7 +9,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Content/ContentHash.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
@@ -146,7 +146,7 @@ namespace sw
                 if ( pfnEntry == nullptr )
                     return false;
                 SubsystemScope service;
-                engine::bindModuleServices( service, false );
+                engine::bindModuleSubsystems( service, false );
                 return call( pfnEntry, static_cast<const ISubsystemLocator&>( service ) );
             }
         };
@@ -196,9 +196,9 @@ namespace sw
         const PFN_ExportEditorAPI pfnExport = reinterpret_cast<PFN_ExportEditorAPI>( session.findEntry( kEditorModuleSymbols._pExportSymbol, "Editor unit tests" ) );
         if ( pfnExport == nullptr || pfnExport( &api ) == false || session.loadExtensions() == false )
             return false;
-        // 에디터 모듈이 보는 범위는 보통 실행(`GameModuleManager::fillModuleServiceScope`)과 같다 — 엔진 서비스, 모듈이 드러낸 서브시스템, 맡김 칸.
+        // 에디터 모듈이 보는 범위는 보통 실행(`GameModuleManager::fillModuleSubsystemScope`)과 같다 — 엔진 서비스, 모듈이 드러낸 서브시스템, 맡김 칸.
         SubsystemScope services;
-        engine::bindModuleServices( services, false );
+        engine::bindModuleSubsystems( services, false );
         if ( const ModuleRegistrationHost* const pRegistrationHost = engine::findSubsystem<ModuleRegistrationHost>() )
             services.setParentScope( &pRegistrationHost->getHostModuleLocator() );
         if ( IModuleStateStore* const pStateStore = engine::findSubsystem<IModuleStateStore>() )

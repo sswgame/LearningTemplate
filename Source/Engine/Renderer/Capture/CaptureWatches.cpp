@@ -9,7 +9,7 @@
 #include "Engine/Automation/Scenario/AutomationCaptureUtil.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 
 namespace sw

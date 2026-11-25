@@ -21,7 +21,7 @@
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 #include "Games/Playground/Hub/HubCardHUDViewModel.h"
 

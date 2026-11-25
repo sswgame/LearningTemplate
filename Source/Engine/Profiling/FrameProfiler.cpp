@@ -13,8 +13,8 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 
 #include <chrono>
@@ -131,7 +131,7 @@ namespace sw
 
     ProfileScopeID FrameProfiler::registerEngineNamedScope( const utf8* pPrefix, const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line )
     {
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return ProfileScopeID{};
         fixed_string<constant::buffer::kMax128> scopeName;
         scopeName.append( pPrefix );
@@ -408,5 +408,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( FrameProfiler, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( FrameProfiler ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( FrameProfiler, GameVisible, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( FrameProfiler ) );
 } // namespace sw

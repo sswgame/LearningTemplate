@@ -215,7 +215,7 @@
     "Source/Editor/Common/Workspace/EditorContext.cpp": {"integer": 1},
     "Source/Editor/Common/Workspace/EditorDefaultObjects.cpp": {"float": 1},
     "Source/Editor/Common/Workspace/EditorNotificationManager.h": {"float": 2},
-    "Source/Editor/Common/Workspace/EditorService.cpp": {"integer": 1},
+    "Source/Editor/Common/Workspace/EditorSubsystems.cpp": {"integer": 1},
     "Source/Editor/Common/Workspace/NetPlay/EditorStateHashCompare.cpp": {"minus-one": 5},
     "Source/Editor/EditorFrameSteps.cpp": {"integer": 1},
     "Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp": {"integer": 1},

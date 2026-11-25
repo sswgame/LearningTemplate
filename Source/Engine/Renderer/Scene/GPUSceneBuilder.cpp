@@ -15,7 +15,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -1522,7 +1522,7 @@ namespace sw
 
     void GPUSceneBuilder::updateTextureArrivals()
     {
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return; // 도구 · 테스트 — 텍스처 캐시가 없다
         const uint64 arrivalCount = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().getArrivalCount();
         if ( arrivalCount == _textureArrivalCount )

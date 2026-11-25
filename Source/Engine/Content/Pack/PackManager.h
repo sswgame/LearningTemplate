@@ -8,7 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Content/ContentSource.h"
 #include "Engine/Content/Pack/PackChunkManifest.h"
@@ -237,7 +237,7 @@ namespace sw
         PackChunkManifest                    _chunkManifest;  ///< 기동 스레드가 `scanAndMountPacks` 에서 한 번 읽는다 — 그 뒤로는 읽기만 한다
         string                               _packsDirectory; ///< 같다
 
-        SW_SERVICE_SLOT( PackManager, Optional );
+        SW_SUBSYSTEM_SLOT( PackManager, Optional );
     };
 
 } // namespace sw

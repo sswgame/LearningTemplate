@@ -23,7 +23,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Config/EngineDefaultAssets.h"
     #include "Engine/Foundation/EnginePlatformHeaders.h"
-    #include "Engine/Foundation/EngineServices.h"
+    #include "Engine/Foundation/EngineSubsystems.h"
     #include "Engine/Graphics/RHI/Backend/RHIAllocationLeakUtil.h"
     #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
     #include "Engine/Graphics/RHI/DX/DXGIAdapter.h"

@@ -9,7 +9,7 @@
 #include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Texture/Texture2D.h"

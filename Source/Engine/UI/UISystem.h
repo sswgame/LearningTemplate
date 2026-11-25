@@ -12,8 +12,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -516,6 +516,6 @@ namespace sw
         Subscription                 _pauseRequest;            ///< 정지 화면이 하나라도 있는 동안 건 게임 시간 정지 요청입니다(`syncPauseRequest`).
         unique_ptr<SubscriptionList> _layerHideSubscriptions;  ///< 레이어 숨김 요청의 구독입니다(`addLayerHideRequest`).
 
-        SW_SERVICE_SLOT( UISystem, Required );
+        SW_SUBSYSTEM_SLOT( UISystem, Required );
     };
 } // namespace sw

@@ -20,8 +20,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -144,7 +144,7 @@ namespace sw
         WriteObserver                               _writeObserver;             ///< 파일 계층에 건 쓰기 관찰자
         PlatformFileUtil::WriteObserverRegistration _writeObserverRegistration; ///< 쓰기 관찰자 등록 — 내릴 때 뗀다(관찰자는 하나라 둘째는 단언)
 
-        SW_SERVICE_SLOT( ContentHashCache, Required );
+        SW_SUBSYSTEM_SLOT( ContentHashCache, Required );
     };
 } // namespace sw
 

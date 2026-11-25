@@ -5,7 +5,7 @@
 #include "Core/Testing/ScopedGlobalVariableValue.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/UI/Screen/UIScreenSwitch.h"
 #include "Engine/UI/UISystem.h"
 

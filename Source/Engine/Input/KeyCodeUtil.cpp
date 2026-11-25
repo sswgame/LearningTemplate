@@ -2,7 +2,7 @@
 
 #include "Engine/Input/KeyCodeUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -15,7 +15,7 @@ namespace sw
 
     const utf8* KeyCodeUtil::toName( Key key )
     {
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             return engine::getSubsystem<TypeRegistry>().enumToString( key );
         return "Unknown";
     }
@@ -27,7 +27,7 @@ namespace sw
 
     const utf8* MouseButtonUtil::toName( MouseButton button )
     {
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             return engine::getSubsystem<TypeRegistry>().enumToString( button );
         return "Unknown";
     }

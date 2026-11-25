@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include <variant>
 
@@ -358,7 +358,7 @@ namespace sw
         /** @brief `initialize` 가 받은 정책입니다 — 도움말(`makeUsageText`)이 받지 않는 줄을 뺀다. */
         CommandLineBuildPolicy _buildPolicy{};
 
-        SW_SERVICE_SLOT( CommandLineManager, Required );
+        SW_SUBSYSTEM_SLOT( CommandLineManager, Required );
     };
 
     template <typename T>

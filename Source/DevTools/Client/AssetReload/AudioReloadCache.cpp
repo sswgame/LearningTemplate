@@ -11,7 +11,7 @@
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Audio/AudioService.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw

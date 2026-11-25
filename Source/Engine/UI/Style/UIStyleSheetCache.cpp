@@ -4,8 +4,8 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 
 namespace sw
@@ -64,5 +64,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIStyleSheetCache, HostOnly, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIStyleSheetCache ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( UIStyleSheetCache, HostOnly, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIStyleSheetCache ) );
 } // namespace sw

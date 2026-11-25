@@ -7,7 +7,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureReceiverComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {

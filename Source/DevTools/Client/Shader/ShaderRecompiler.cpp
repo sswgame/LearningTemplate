@@ -14,7 +14,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
@@ -71,7 +71,7 @@ namespace sw
 
     void ShaderRecompiler::triggerReloadAll()
     {
-        if ( _bInitialized.load( std::memory_order_acquire ) == false || engine::areEngineServicesBound() == false )
+        if ( _bInitialized.load( std::memory_order_acquire ) == false || engine::areEngineSubsystemsBound() == false )
             return;
 
         // 파일 내용 해시 캐시와 경로 캐시를 한 번 버린다("전부 다시 본다" 는 약속). 컴파일 캐시는 항목마다 연 헤더의 내용을 직접 보고 낡음을 아니 이것이 없어도 편집은 반영되지만,

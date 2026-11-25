@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminLoginBridge.h"
 
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolSession.h"
 

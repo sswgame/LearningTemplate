@@ -46,5 +46,5 @@ namespace sw
 namespace sw
 {
     // 화면 스택에 매이지 않는 UI 서비스는 따로 선 서브시스템이다 — UI 를 위한 범위를 따로 두지 않는다(언리얼 UEngineSubsystem · Godot DisplayServer 의 클립보드).
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIClipboardService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIClipboardService ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( UIClipboardService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIClipboardService ) );
 } // namespace sw

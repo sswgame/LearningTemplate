@@ -9,8 +9,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -68,6 +68,6 @@ namespace sw
          */
         void collectRows( vector<DebugOverlayRow>& outListRow ) const;
 
-        SW_SERVICE_SLOT( DebugOverlayState, Required );
+        SW_SUBSYSTEM_SLOT( DebugOverlayState, Required );
     };
 } // namespace sw

@@ -6,7 +6,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/SceneComponent.h"

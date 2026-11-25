@@ -18,8 +18,8 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
@@ -924,5 +924,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( TelemetryService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( TelemetryService ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( TelemetryService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( TelemetryService ) );
 } // namespace sw

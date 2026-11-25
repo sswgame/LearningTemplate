@@ -10,7 +10,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Graphics/Material/MaterialParameterCollection.h"
@@ -172,7 +172,7 @@ namespace sw
 
     bool Material::resolveTextureAssets( IRHIDevice* pRHI )
     {
-        if ( pRHI == nullptr || engine::areEngineServicesBound() == false )
+        if ( pRHI == nullptr || engine::areEngineSubsystemsBound() == false )
             return true; // 엔진 서비스 없이 도는 도구 · 테스트는 텍스처를 풀지 않는다(텍스처 캐시가 없다)
 
         // DX12 · Vulkan 은 셰이더가 전역 bindless 인덱스로 힙 · 배열을 직접 읽는다. DX11 · GL 은 그게 안 되므로
@@ -273,7 +273,7 @@ namespace sw
     {
         if ( _listAcquiredTexturePath.empty() )
             return;
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
             for ( const string& path : _listBorrowedTexturePath )

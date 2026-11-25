@@ -16,7 +16,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {

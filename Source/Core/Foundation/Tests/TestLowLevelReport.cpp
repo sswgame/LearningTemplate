@@ -338,7 +338,7 @@ SW_TEST_CASE( LowLevelReportTest, MissingRequiredServiceReportsOneErrorBeforeSto
     const ScopedLowLevelCapture capture( &LowLevelReportTestInternal::reporter );
     SW_REQUIRE_TRUE( capture.isValid() );
     test::ScopedAssertCapture assertCapture;
-    internal::reportMissingRequiredService( "MissingProbeService" );
+    internal::reportMissingRequiredSubsystem( "MissingProbeService" );
     SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
 
     const LowLevelReceived& received = LowLevelReportTestInternal::_s_received;
