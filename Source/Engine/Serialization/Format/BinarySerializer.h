@@ -36,7 +36,7 @@ namespace sw
      * @class BinarySerializer
      * @brief TypeInfo 로 객체를 콤팩트 바이너리 버퍼에 쓰고 읽습니다(압축 직렬화도 함께 지원합니다).
      * @details 스트림은 프로퍼티마다 이름 해시와 기록 타입을 싣는 자기 기술형이라 스키마가 바뀐 뒤에도 읽습니다.
-     *          쿠킹 상태(`SerializeContext::setSchemaLayout`)만 태그를 뺀 **배치 스트림**입니다 — 머리에 배치 해시(`TypeInfo::getSchemaLayoutHash`)를 싣고 프로퍼티 차례로
+     *          쿠킹 상태(`SerializeContext::setSchemaLayout`)만 태그를 뺀 배치 스트림입니다 — 머리에 배치 해시(`TypeInfo::getSchemaLayoutHash`)를 싣고 프로퍼티 차례로
      *          크기와 값만 잇습니다. 해시가 다르면 읽지 않고 오류입니다(다시 쿠킹한다). 예전의 컴팩트 모드는 이 확인 없이 엉뚱한 필드에 읽혀 지웠습니다. 읽기는 배치를 켠 문맥(쿠킹 상태를 읽는 오브젝트 상태)에서만 머리로 두 꼴을 가리고,
      *          중첩 객체는 자기 머리를 가집니다. 같은 빌드끼리 주고받는 짧은 바이트는 고정 배치형(`FixedLayout`)을 씁니다.
      *          빌드가 섞인 서버끼리의 메시지와 캐시도 이 형식이므로, 인코딩 버전(`kCurrentBinaryWireVersion`)을 올릴 때는
@@ -60,7 +60,7 @@ namespace sw
                                              const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /**
-         * @brief 바이너리에서 객체를 역직렬화합니다. **실패해도 되돌리지 않습니다.** 실패하기 전까지 읽은 프로퍼티는 이미 써진 채로 남습니다.
+         * @brief 바이너리에서 객체를 역직렬화합니다. 실패해도 되돌리지 않습니다. 실패하기 전까지 읽은 프로퍼티는 이미 써진 채로 남습니다.
          * @details 맨 바깥 객체를 읽는 쪽이 부릅니다. 바깥에 이어 읽을 읽기가 없으므로 필드 실패와 객체 실패는 같은 false 입니다.
          *          다른 객체의 필드(구조체 칸, 소유 포인터 본문)를 읽을 때는 둘을 가르는 `deserializeNested` 를 씁니다.
          */
@@ -107,7 +107,7 @@ namespace sw
                                                       const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /**
-         * @brief `serialize` 와 같고, 읽을 때 담아 둔 **이 빌드가 모르는 칸**(@p listUnknown, `deserializeSoft` 의 orphan 중 이름이 빈 것)을 받은 바이트 그대로 뒤에 싣습니다.
+         * @brief `serialize` 와 같고, 읽을 때 담아 둔 이 빌드가 모르는 칸(@p listUnknown, `deserializeSoft` 의 orphan 중 이름이 빈 것)을 받은 바이트 그대로 뒤에 싣습니다.
          * @details 영속 레코드를 옛 빌드가 고쳐 다시 써도 새 빌드가 더한 칸의 값이 남는다(언리얼 `FPropertyTag` 보관, protobuf unknown params 와 같은 자리).
          *          아는 이름의 칸 · 읽지 못한 아는 칸(이름이 있다) · 다른 와이어 버전의 값은 싣지 않고 오류 로그와 false 입니다.
          */
@@ -137,7 +137,7 @@ namespace sw
                                                         const SerializeContext& context        = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /**
-         * @brief `serializeVersioned` 가 쓴 바이트를 버전 머리가 @p expectedVersion 과 같을 때만 **엄격하게** 읽습니다. orphan 수집을 지나지 않습니다.
+         * @brief `serializeVersioned` 가 쓴 바이트를 버전 머리가 @p expectedVersion 과 같을 때만 엄격하게 읽습니다. orphan 수집을 지나지 않습니다.
          * @details 혼합 빌드 사이의 메시지와 캐시가 씁니다. 모르는 이름 · 읽지 못한 필드의 처리는 @p context 의 두 플래그
          *          (`setSkipUnknownProperties` · `setSkipUnreadableProperties`)가 정하고, 중첩 구조체까지 같은 정책입니다. 기본 컨텍스트를 받지 않습니다 —
          *          부르는 쪽이 정책을 고릅니다. 실패해도 이미 쓴 프로퍼티는 되돌리지 않으므로 임시 객체에 읽습니다.

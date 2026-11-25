@@ -3,7 +3,7 @@
  * @brief 씬의 데이터 레이어를 켜고 끄는 씬 서비스입니다(언리얼 Data Layers 의 런타임 상태 · `UDataLayerManager` 자리). 계절 · 이벤트 · 야간 변형을 씬 복사 없이 만듭니다.
  *
  * [모델]
- * 켜진 레이어는 이름 집합이다. 엔티티는 붙은 레이어가 **모두** 켜졌을 때 오른다. 언리얼은 기본이 "하나라도"(Or)이고 And 를 고를 수 있다(기억에 의존). 여기는 And 만 둔다 —
+ * 켜진 레이어는 이름 집합이다. 엔티티는 붙은 레이어가 모두 켜졌을 때 오른다. 언리얼은 기본이 "하나라도"(Or)이고 And 를 고를 수 있다(기억에 의존). 여기는 And 만 둔다 —
  * 인스턴스 멤버가 앵커의 레이어를 더해 가지므로("겨울 앵커 안의 야간 등") 합집합이 곧 조건이 된다. "겨울이나 가을" 은 그 뜻의 레이어를 따로 선언한다.
  * 이름 집합이라 리소스 조건의 문맥 태그(`ResourceTags` 의 `layer` 축)로 그대로 넣는다 — 켜고 끌 때마다 넣고, 리소스는 `<_when _if="layer.Winter">` 로 값을 바꾼다.
  * 태그는 씬마다의 몫이다(`ResourceTags::addAxisValues` 의 구독을 이 서비스가 든다) — 씬이 여럿이면(로드 중인 다음 씬 · 에디터 세계와 플레이 세계) 합집합이고, 내린 씬은 제 몫만 거둔다.
@@ -132,7 +132,7 @@ namespace sw
         void applyGroups();
         /** @brief 묶음 오브젝트 표(`_mapObjectGroup`)를 묶음의 id 목록으로 다시 만듭니다. */
         void rebuildObjectGroupMap();
-        /** @brief 켜진 레이어 집합을 바꾼 뒤 부릅니다 — 번호(`getActiveSerial`)를 올리고 리소스 태그 `layer` 축으로 넣습니다 — 리소스의 `<_when _if="layer.Winter">` 가 읽고, 그 태그에 기댄 리소스는 다음 프레임에 다시 읽힌다. */
+        /** @brief 켜진 레이어 집합을 바꾼 뒤 부릅니다. 번호(`getActiveSerial`)를 올리고 리소스 태그 `layer` 축으로 넣습니다. 리소스의 `<_when _if="layer.Winter">` 가 읽고, 그 태그에 기댄 리소스는 다음 프레임에 다시 읽힌다. */
         void publishActiveLayers();
 
     private:

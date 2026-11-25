@@ -631,7 +631,7 @@ namespace sw
         unordered_set<uint32>  uniqueMatched;
         bool                   bFieldError{ false };
         bool                   bForbiddenField{ false };
-        // 소프트 읽기(orphan 목록이 있음)는 읽지 못한 필드를 orphan 으로 넘기고 이어 읽는다. 그 필드는 **읽기 전 값**이다(바이너리 · XML 과 같다).
+        // 소프트 읽기(orphan 목록이 있음)는 읽지 못한 필드를 orphan 으로 넘기고 이어 읽는다. 그 필드는 읽기 전 값이다(바이너리 · XML 과 같다).
         const bool           bContinuesAfterUnreadable = pOutListOrphan != nullptr;
         PropertyReadRollback rollback;
 
@@ -749,7 +749,7 @@ namespace sw
                                                string_view jsonStr, uint32 currentVersion, const SerializeContext& context )
     {
         // 절차는 JSON · XML · Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다.
-        // **버전이 어디서 오는가**(본문 안의 `_schemaVersion`)와 **orphan 만 있을 때의 정책**이다.
+        // 버전이 어디서 오는가(본문 안의 `_schemaVersion`)와 orphan 만 있을 때의 정책이다.
         return runVersionedDeserialize(
             0, MutableObjectAddress{ pInstance }, typeInfo, currentVersion,
             SchemaVersionSource::Payload, SchemaOrphanPolicy::Ignore,

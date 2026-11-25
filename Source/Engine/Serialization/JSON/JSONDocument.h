@@ -34,8 +34,8 @@ namespace sw
     /**
      * @class JSONValue
      * @brief JSONDocument 안의 가벼운 핸들입니다. clear 나 destroy 이후에는 무효가 됩니다.
-     * @warning **같은 부모에 항목을 추가하면 앞서 받은 핸들이 무효가 됩니다.** 이 핸들은 문서 안의
-     *          노드를 가리키는 **빌린 포인터**이고, 객체도 배열도 연속 저장(`std::vector`)이라
+     * @warning 같은 부모에 항목을 추가하면 앞서 받은 핸들이 무효가 됩니다. 이 핸들은 문서 안의
+     *          노드를 가리키는 빌린 포인터이고, 객체도 배열도 연속 저장(`std::vector`)이라
      *          `set( 새 키 )` 나 `pushBack()` 이 재할당을 일으키면 그 부모에서 앞서 꺼낸 핸들이
      *          해제된 메모리를 가리킵니다. 안전한 쓰기 순서는 **하나를 받아 다 채운 뒤 다음 것을
      *          받는 것**입니다. 형제 핸들을 여럿 보관해 번갈아 쓰지 마십시오. 읽기(`get`/`at`)만
@@ -232,13 +232,13 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `parent` 안의 이름 붙은 배열을 돌며 **객체 원소만** 넘겨줍니다.
+     * @brief `parent` 안의 이름 붙은 배열을 돌며 객체 원소만 넘겨줍니다.
      * @param pArrayName 배열 멤버 이름("nodes", "links" 등). 없거나 배열이 아니면 아무것도 하지 않습니다.
      * @param visit `(const JSONValue& element, size_t index)` 를 받는 호출 가능 객체입니다.
      * @details 손으로 읽는 JSON 에셋이 함께 쓴다. 배열을 얻고, 배열인지 묻고, 개수를 세고, 원소가 객체가 아니면
-     *          건너뛰는 일을 한 곳에 모았다. `isObject` 검사를 빠뜨리면 **망가진 파일 하나로 그 에셋이 통째로 깨지므로**, 검사를
+     *          건너뛰는 일을 한 곳에 모았다. `isObject` 검사를 빠뜨리면 망가진 파일 하나로 그 에셋이 통째로 깨지므로, 검사를
      *          여기 한 번만 둔다.
-     * @note 인덱스를 함께 넘기는 이유는 id 가 없는 원소에 **순번을 기본값으로** 쓰는 에셋이 있기 때문입니다.
+     * @note 인덱스를 함께 넘기는 이유는 id 가 없는 원소에 순번을 기본값으로 쓰는 에셋이 있기 때문입니다.
      */
     template <typename VisitFn>
     void forEachObjectInArray( const JSONValue& parent, const utf8* pArrayName, VisitFn&& visit )
@@ -295,7 +295,7 @@ namespace sw
          */
         [[nodiscard]] bool parse( string_view jsonText, string_view sourceName = {} );
         /**
-         * @brief JSON 인지 **알아보려고** 파싱합니다. `parse` 와 같지만 실패를 로그로 남기지 않습니다(오류 텍스트는 비어 있습니다).
+         * @brief JSON 인지 알아보려고 파싱합니다. `parse` 와 같지만 실패를 로그로 남기지 않습니다(오류 텍스트는 비어 있습니다).
          * @details 값이 JSON 스칼라인지 확인하는 쪽(`JSONSerializer` 쓰기)이 `parse` 를 쓰면, `"0,0,0"` 같은 정상 값을 쓸 때마다 `[Error]` 가 찍힌다.
          */
         [[nodiscard]] bool tryParse( string_view jsonText );

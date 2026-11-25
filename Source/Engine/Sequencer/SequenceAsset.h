@@ -1,7 +1,7 @@
 /**
  * @file SequenceAsset.h
  * @brief 에디터와 런타임이 함께 쓰는 시퀀서 타임라인 XML 에셋입니다.
- * @details **바인딩**: 항목과 키 트랙은 씬 오브젝트를 이름이 아니라 에셋 안의 바인딩 id(`SequenceBinding::_id`)로 가리킨다. 어느 오브젝트가 그 id 인지는
+ * @details 바인딩: 항목과 키 트랙은 씬 오브젝트를 이름이 아니라 에셋 안의 바인딩 id(`SequenceBinding::_id`)로 가리킨다. 어느 오브젝트가 그 id 인지는
  *          시퀀스를 재생하는 쪽(씬의 `SequencePlayerComponent::_listBinding`)이 정한다 — 유니티 Timeline 의 에셋 · PlayableDirector 바인딩 나눔과 같다.
  *          그래서 같은 시퀀스를 다른 씬 · 다른 캐릭터에 다시 쓰고, 오브젝트 이름을 바꿔도 연결이 끊기지 않는다. 바인딩 이름은 표시용이다(찾는 데 쓰지 않는다).
  */
@@ -33,7 +33,7 @@ namespace sw
     /**
      * @brief 프레임 번호가 가질 수 있는 절댓값 상한입니다.
      * @details 프레임 번호는 파일에서 오므로 그대로 믿으면 안 된다. 타임라인 코드는 두 프레임의
-     *          **차**를 그냥 빼기로 구하는데(`_frameMax - _frameMin`, `_end - _start`), int32 의
+     *          차를 그냥 빼기로 구하는데(`_frameMax - _frameMin`, `_end - _start`), int32 의
      *          양 끝값이 쌍으로 들어오면 그 빼기가 부호 있는 오버플로(UB)가 된다. 범위를 절반으로
      *          묶으면 어떤 두 값의 차도 반드시 int32 안에 들어오므로, 빼는 곳마다 넓은 타입으로
      *          올리지 않아도 된다. 30fps 기준 1,000만 일이 넘는 길이라 실사용을 막지 않는다. 밖의 값은 읽기 오류다.
@@ -54,7 +54,7 @@ namespace sw
         Event       = 1, /**< 시작 프레임을 지날 때 한 번 알립니다(`SequencePlayerComponent::registerSequenceEvent`). */
         CameraCut   = 2, /**< 구간 동안 대상의 카메라가 게임 카메라입니다(언리얼 Camera Cut 트랙, `CameraRegistry::setCutCamera`). `_preset` 이 있으면 대상의 카메라 디렉터가 그 프리셋을 켭니다. */
         CameraShake = 3, /**< 구간 동안 대상 카메라를 흔듭니다(언리얼 Camera Shake 트랙). 세기는 `_amplitude`, 길이는 구간입니다. */
-        Spawn       = 4, /**< 프리팹 `_spawnPrefab` 을 구간 시작 `_prerollFrames` 프레임 앞에 **꺼 둔 채** 스폰해 첫 포즈 · 머티리얼 · PSO 를 준비하고, 구간 동안 켜고, 끝나면 지웁니다(언리얼 Spawnable). 스폰한 오브젝트가 그 바인딩이다. */
+        Spawn       = 4, /**< 프리팹 `_spawnPrefab` 을 구간 시작 `_prerollFrames` 프레임 앞에 꺼 둔 채 스폰해 첫 포즈 · 머티리얼 · PSO 를 준비하고, 구간 동안 켜고, 끝나면 지웁니다(언리얼 Spawnable). 스폰한 오브젝트가 그 바인딩이다. */
         Appearance  = 5, /**< 시작 프레임을 지날 때 대상 오브젝트의 외형 프리셋을 `_preset` 으로 바꿉니다. 엔진은 외형을 모르므로 이벤트(`registerSequenceEvent`)로 알리고, 듣는 쪽(게임 프레임워크의 `SequenceAppearanceComponent`)이 바꿉니다. */
         Scenario    = 6, /**< 시작 프레임을 지날 때 시나리오 `_scenario` 를 재생합니다(`ScenarioPlayback::play` — 연출 안에 게임 행동 · 입력을 끼운다, 언리얼 시퀀서 이벤트 트랙이 블루프린트를 부르는 자리). */
         Animation   = 7, /**< 구간 동안 대상 애니메이터의 시퀀서 슬롯에 클립 `_clip` 을 구간 시작부터의 시간으로 섞습니다(언리얼 Skeletal Animation 트랙). 세기는 `_amplitude`(0..1)입니다. */
@@ -384,13 +384,13 @@ namespace sw
 
         /** @brief 리소스 id 의 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 실패하면 빈 에셋이 남습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief **디스크 파일**의 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패하면 빈 에셋이 남습니다. */
+        /** @brief 디스크 파일의 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패하면 빈 에셋이 남습니다. */
         [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief XML 파일을 씁니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /**
          * @brief XML 본문을 파싱합니다.
-         * @details **실패하면 빈 에셋이 남는다.** 일부만 비우면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아, 트랙 없는 이전
+         * @details 실패하면 빈 에셋이 남는다. 일부만 비우면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아, 트랙 없는 이전
          *          시퀀스가 새 시퀀스인 척한다.
          */
         [[nodiscard]] bool loadFromXMLText( string_view xml );

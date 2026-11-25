@@ -25,14 +25,14 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @enum BinaryWireVersion
-     * @brief 바이너리 **값 인코딩**의 버전입니다. 스트림마다 머리에 실립니다. 태그 스트림의 프로퍼티 수(uint32) 위 8비트에 실립니다.
+     * @brief 바이너리 값 인코딩의 버전입니다. 스트림마다 머리에 실립니다. 태그 스트림의 프로퍼티 수(uint32) 위 8비트에 실립니다.
      * @details 스트림마다 실리므로 그 안의 컨테이너 원소와 맵 키도 같은 버전으로 읽고, 중첩 구조체와 소유 포인터 본문은 자기 머리의 버전을 읽는다.
      *          세이브, 플레이 스냅샷, 쿠킹 씬, 복사한 컴포넌트가 모두 같은 경로를 쓴다. 읽기는 현재 버전 하나만 받는다. 버전을 올리면 저장소의 데이터를
      *          다시 쓰고 옛 버전을 읽는 분기는 두지 않는다.
      */
     enum class BinaryWireVersion : uint8
     {
-        EnumByName = 0, ///< enum 을 열거자 **이름 해시**로 싣는다(비트플래그는 켜진 이름들). 이름이 없는 값이나 비트만 값으로 싣는다.
+        EnumByName = 0, ///< enum 을 열거자 이름 해시로 싣는다(비트플래그는 켜진 이름들). 이름이 없는 값이나 비트만 값으로 싣는다.
     };
 
     /** @brief 이 빌드가 쓰고 읽는 버전입니다. 다른 버전(앞선 빌드의 데이터)은 거절합니다. */
@@ -91,13 +91,13 @@ namespace sw
 
     /**
      * @enum SchemaOrphanPolicy
-     * @brief 버전은 같은데 **모르는 필드(orphan)만** 있을 때 통과시킬지 정합니다. 포맷마다 답이 다르고, 그것이 계약입니다.
+     * @brief 버전은 같은데 모르는 필드(orphan)만 있을 때 통과시킬지 정합니다. 포맷마다 답이 다르고, 그것이 계약입니다.
      *
-     * @details - **텍스트(XML, JSON)는 `Ignore`** 다. 모르는 필드를 건너뛰고 아는 필드는 읽어 성공한다. 손으로 고치고 버전 관리에서
+     * @details - 텍스트(XML, JSON)는 `Ignore` 다. 모르는 필드를 건너뛰고 아는 필드는 읽어 성공한다. 손으로 고치고 버전 관리에서
      *            병합하는 저작 파일이라, 지운 PROPERTY 하나나 오타 하나로 씬, 프리팹, 머티리얼이 통째로 안 읽히면 안 된다. 언리얼의 태그
      *            직렬화(`FPropertyTag` 는 이름으로 찾고 모르는 태그는 크기만큼 건너뛴다)와 유니티 YAML(모르는 필드는 버린다)이 같은 규칙이다.
      *            건너뛴 필드는 조용히 넘어가지 않는다. `finishVersionedRead` 가 타입과 필드 이름을 담아 로드마다 한 번 경고한다.
-     *          - **바이너리는 `Reject`** 다. 쿠커나 같은 빌드가 쓴 산출물이라, 모르는 필드가 있다는 것은 스키마가 바뀌었다는 뜻이다. 모르는
+     *          - 바이너리는 `Reject` 다. 쿠커나 같은 빌드가 쓴 산출물이라, 모르는 필드가 있다는 것은 스키마가 바뀌었다는 뜻이다. 모르는
      *            필드가 있으면 실패한다. 언리얼 쿠킹 패키지가 버전(`FPackageFileSummary` 의 버전)이 다르면 로드를
      *            거절하는 것과 같다. 오브젝트 상태처럼 지운 필드를 버려도 되는 호출부는 컨텍스트로 그렇게 말한다
      *            (`SerializeContext::setAllowUnknownProperties`, 그때 바이너리도 `Ignore`). 버전이 다르면 그래도 거절한다.
@@ -110,11 +110,11 @@ namespace sw
     };
 
     /**
-     * @brief `deserializeVersioned` 의 마지막 단계입니다. 읽은 판이 현재 판과 **정확히 같은지**, orphan 이 정책(@p orphanPolicy)에 맞는지 판정합니다.
+     * @brief `deserializeVersioned` 의 마지막 단계입니다. 읽은 판이 현재 판과 정확히 같은지, orphan 이 정책(@p orphanPolicy)에 맞는지 판정합니다.
      * @details soft 역직렬화가 끝난 뒤의 공통 로직이다. 세 포맷 모두 `runVersionedDeserialize` 를 거쳐 여기로 온다. 판이 다르면 이관하지 않고
      *          오류를 알린 뒤 false 이다(첫 출시 전이라 옛 판 리더가 없다). 판이 같을 때 `Reject` 정책이면 orphan 이 하나라도 있으면 false 이다.
-     *          **orphan 의 운명이 정해지는 유일한 곳**이기도 하다. 로드가 성공으로 끝나는데 남은 orphan(읽지 못한 값, 타입에 없는 필드)은
-     *          버려진 것이므로, 타입 이름과 필드 이름을 담아 **로드마다 한 번** 경고한다. JSON 과 XML 의 Ignore 정책도 여기서 알린다
+     *          orphan 의 운명이 정해지는 유일한 곳이기도 하다. 로드가 성공으로 끝나는데 남은 orphan(읽지 못한 값, 타입에 없는 필드)은
+     *          버려진 것이므로, 타입 이름과 필드 이름을 담아 로드마다 한 번 경고한다. JSON 과 XML 의 Ignore 정책도 여기서 알린다
      *          (숫자 필드의 "abc" 가 말없이 기본값으로 남지 않게 하려는 것이다).
      */
     [[nodiscard]] SW_API bool finishVersionedRead( uint32 fromVersion, uint32 currentVersion, const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listOrphan,
@@ -136,7 +136,7 @@ namespace sw
     // 3) 강제 변환: 바이너리와 텍스트 강제 변환
     // ------------------------------------------------------------------------------
     /**
-     * @brief 기록 타입과 대상 타입이 **값으로만** 옮기는 쌍인지 확인합니다. 기록 타입을 아는 스칼라에서 다른 스칼라나 문자열로, 또는 기록 타입이 **다른** enum 인 경우입니다.
+     * @brief 기록 타입과 대상 타입이 값으로만 옮기는 쌍인지 확인합니다. 기록 타입을 아는 스칼라에서 다른 스칼라나 문자열로, 또는 기록 타입이 다른 enum 인 경우입니다.
      * @details 이 쌍은 `tryCoerceBinaryPayload` 가 기록 값의 텍스트(스칼라는 수, enum 은 열거자 이름)를 대상 타입으로 다시 읽어 옮기고, 못 옮기면 실패한다.
      *          부르는 쪽은 그 실패 뒤에 제 타입으로 다시 읽으면 안 된다. 크기가 같은 스칼라는 비트가 그대로 재해석되고, enum 의 이름 해시는 수로 읽힌다.
      * @param wireTypeName 기록 타입. 비어 있으면(모름) false 입니다.
@@ -145,13 +145,13 @@ namespace sw
 
     /**
      * @brief 바이너리 페이로드를 대상 타입으로 강제 변환해 봅니다(int32↔string 등).
-     * @details 기록 타입을 아는 스칼라(정수, 실수, bool)를 다른 스칼라나 문자열로 바꿀 때는 **값으로** 옮긴다
+     * @details 기록 타입을 아는 스칼라(정수, 실수, bool)를 다른 스칼라나 문자열로 바꿀 때는 값으로 옮긴다
      *          (`isValueOnlyCoercion`). 기록 타입의 텍스트를 대상 타입으로 다시 읽으므로 JSON, XML 과 같은 규칙이고,
-     *          float32 1.5 → int32 처럼 텍스트가 맞지 않으면 실패한다. 기록 타입이 **다른 enum** 이면 그 enum 으로 읽어 열거자 이름(문자열)으로
+     *          float32 1.5 → int32 처럼 텍스트가 맞지 않으면 실패한다. 기록 타입이 다른 enum 이면 그 enum 으로 읽어 열거자 이름(문자열)으로
      *          옮긴다. XML 이 이름을 적어 두는 것과 같은 결과다(문자열이면 이름, 같은 이름을 가진 enum 이면 그 열거자, 정수면 실패).
      *          그 밖에는 제 타입으로 끝까지 읽히는지부터 보고, 숫자와 문자열 변환, 마지막으로 크기가 같은 POD 재해석을 시도한다.
      * @param value 값 하나 자체의 주소입니다(프로퍼티 값 위치 — 객체 주소가 아니다). 객체 주소(`MutableObjectAddress`)는 컴파일되지 않습니다.
-     * @param wireTypeName 그 payload 를 **쓸 때의** 타입입니다. 알면 넘기십시오(`findWireTypeName`). 비워 두면 크기로 짐작하는데, 크기만으로는
+     * @param wireTypeName 그 payload 를 쓸 때의 타입입니다. 알면 넘기십시오(`findWireTypeName`). 비워 두면 크기로 짐작하는데, 크기만으로는
      *                     정수와 실수를 가를 수 없습니다(`sizeof(float32) == sizeof(int32)`).
      * @param wireVersion 그 payload 를 적은 버전입니다(스트림 머리나 orphan 이 가지고 있습니다).
      * @return 적용에 성공하면 `Read`, 옮기지 못하면 `FieldFailed` 입니다. 대상이 구조체이고 그 안에 객체째 실패여야 할 것(금지된 필드)이 있으면
@@ -165,7 +165,7 @@ namespace sw
                                                                  BinaryWireVersion       wireVersion  = kCurrentBinaryWireVersion );
 
     /**
-     * @brief 기록 타입이 다른 바이너리 페이로드를 프로퍼티 하나에 강제 변환해 씁니다(`tryCoerceBinaryPayload` 의 프로퍼티 판). @p instance 는 프로퍼티를 가진 **객체**의 주소입니다.
+     * @brief 기록 타입이 다른 바이너리 페이로드를 프로퍼티 하나에 강제 변환해 씁니다(`tryCoerceBinaryPayload` 의 프로퍼티 판). @p instance 는 프로퍼티를 가진 객체의 주소입니다.
      * @details 비트필드는 주소를 가질 수 없어 임시 bool 에 옮긴 뒤 그 비트만 씁니다(`SerializerUtil::applyPropertyBinary` 와 같다). 예전에는 태그 스트림
      *          읽기가 `getRawPtr` 로 그 바이트 주소를 꺼내 bool 을 통째로 써, 같은 바이트의 다른 비트필드가 지워졌다.
      * @return `tryCoerceBinaryPayload` 와 같습니다.
@@ -191,7 +191,7 @@ namespace sw
                                                      const SerializeContext& context );
 
     /**
-     * @brief 텍스트를 프로퍼티 하나에 강제 변환해 씁니다(`parseTextValueCoerced` 의 프로퍼티 판). @p instance 는 프로퍼티를 가진 **객체**의 주소입니다.
+     * @brief 텍스트를 프로퍼티 하나에 강제 변환해 씁니다(`parseTextValueCoerced` 의 프로퍼티 판). @p instance 는 프로퍼티를 가진 객체의 주소입니다.
      * @details 비트필드는 값 주소가 없어(`PropertyInfo::getRawPtr`) 임시 bool 에 읽은 뒤 그 비트만 씁니다.
      * @return 읽지 못하거나 값 주소가 없으면 false 이고 값은 그대로입니다.
      */

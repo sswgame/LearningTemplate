@@ -6,12 +6,12 @@
  * 쿠커가 스트리밍하는 씬(`SceneSettings::_bStreaming`)의 엔티티를 셀로 나눠 쿠킹본에 싣는다(`SceneDocument::_listStreamingCell`). 씬이 그 문서를 지을 때
  * 늘 올라 있는 엔티티만 짓고 셀은 이 서비스에 넘긴다(`Scene::instantiate` → `beginWorld`). XML 로 연 씬(에디터 · Dev)에는 셀이 없어 모든 엔티티가 늘 올라 있다.
  *
- * [갱신 — 씬 프레임의 `DestroyPost` 단계, 게임 스레드] 언리얼 World Partition 의 셀 스트리밍과 같은 단계다 — 색인만 상주, 내용은 비동기 로드, 오브젝트 짓기는 시간 예산.
+ * [갱신: 씬 프레임의 `DestroyPost` 단계, 게임 스레드] 언리얼 World Partition 의 셀 스트리밍과 같은 단계다. 색인만 상주, 내용은 비동기 로드, 오브젝트 짓기는 시간 예산.
  * 1. 내리기: 올라 있거나 올리는 중인 셀 중 모든 원점에서 로딩 반경 + 여유(`SceneSettings::_unloadMargin`)보다 멀거나 레이어가 꺼진 셀을 되돌린다 — 경계에서 올림 · 내림이 번갈지 않게.
  *    읽는 중이면 읽기를 취소하고, 지어 있으면 오브젝트의 지금 상태를 셀 엔티티로 떠 둔 뒤(`Scene::captureCellNodes`) 내린다 — 다시 올리면 그 상태로 짓는다(상태 보존).
  * 2. 읽기: 원점마다 로딩 반경 안의 셀(`StreamingCellGrid::computeCellsInRange`, 합집합) 중 내용이 없는 셀을 가까운 순으로 프레임당 `_maxCellLoadsPerFrame` 개까지
  *    쿠킹본의 구간으로 비동기로 읽는다(`AssetIO::readBinaryAssetRangeAsync` — IO 스레드가 읽고 태스크 워커가 엔티티 목록으로 푼다, `SceneDocument::readStreamingCellContent`).
- * 3. 짓기: 내용이 온 셀을 가까운 순으로 게임 스레드에서 **엔티티 단위로** 짓는다(`Scene::beginCellBuild` · `continueCellBuild`). 시간 예산(`_addToWorldBudgetMicroseconds`, 언리얼 AddToWorld 시간 예산)에
+ * 3. 짓기: 내용이 온 셀을 가까운 순으로 게임 스레드에서 엔티티 단위로 짓는다(`Scene::beginCellBuild` · `continueCellBuild`). 시간 예산(`_addToWorldBudgetMicroseconds`, 언리얼 AddToWorld 시간 예산)에
  *    닿으면 셀 한가운데서도 멈추고 다음 프레임에 잇는다 — 짓는 중인 셀을 먼저 잇고, 프레임마다 엔티티 하나는 짓는다. 다 짓기 전의 오브젝트는 드러나지 않고(병합 · 틱 · 시작 · 등록 밖)
  *    다 지은 뒤 배치를 잇고 한 번에 드러난다(언리얼 레벨 가시성 단계). 셀의 엔티티는 같은 셀이나 늘 올라 있는 엔티티만 가리키므로(쿠커가 검사했다) 셀 하나를 따로 지어도 참조가 끊기지 않는다.
  * 셀의 오브젝트는 셀마다 id 목록으로 묶어 함께 내린다(`Scene::unloadCell`). 이 단계에서 만든 오브젝트는 다음 프레임의 병합 단계에서 틱에 든다.
@@ -35,7 +35,7 @@
  * 문서의 조각이 없는 셀(늘 올라 있는 지형만)은 바닥이 있다고 본다.
  *
  * [세이브] 떠 둔 상태는 목적 `Snapshot` 이다(런타임 칸까지 — `Scene::captureCellNodes`). 세이브 봉투(`GameStateSnapshot`)는 셀이 든 오브젝트를 씬 섹션에서 빼고(`isCellObject`)
- * 조각마다 문서 내용에서 달라진 상태를 따로 싣는다(`writeSaveState` — 올라 있으면 지금 떠서). 복원은 매니저를 비우면 조각을 문서 내용으로 되돌리고(`onSceneCleared` — 월드는 놓지 않는다)
+ * 조각마다 문서 내용에서 달라진 상태를 따로 싣는다(`writeSaveState`, 올라 있으면 지금 떠서). 복원은 매니저를 비우면 조각을 문서 내용으로 되돌리고(`onSceneCleared`, 월드는 놓지 않는다)
  * 세이브의 상태를 얹는다(`applySaveState`) — 다음 갱신이 원점 둘레를 그 상태로 짓는다. 짓기는 엔티티를 모두 숨긴 채 만들고 배치를 이은 뒤 한 번에 드러내 등록하므로
  * 물리 · 내비 · AI 는 서로가 모두 선 뒤에 찾는다.
  * 결정적 실행(`DeterministicRunPolicy::_bFinishAssetJobsEachFrame`)은 읽기를 그 프레임에 기다리고 예산 없이 짓는다 — 도착이 워커 순서에 달리지 않게.
@@ -58,7 +58,7 @@
  * [우선순위 공유] 셀 읽기 차례 · IO 우선순위와 텍스처 밉 차례 · IO 우선순위가 같은 값이다(`computePriorityAt` — 그 자리 셀을 덮는 원점 중 가장 급한 것, `toAsyncIOPriority`).
  * 메시는 셀을 지을 때 컴포넌트가 읽기를 거므로 셀 짓기 차례(같은 키)를 따른다 — 메시 LOD 스트리밍은 없다.
  *
- * [로드 큐 디버그] 지난 갱신의 올릴 셀 줄(`_listScratchLoadKey` — 우선순위 → 거리 차례)을 개발 도구가 읽는다(개발 명령 `world.streamqueue` · 감시 값 `Scene.PendingCellCount` — DevTools 의 `DevSceneStreamingAccess`).
+ * [로드 큐 디버그] 지난 갱신의 올릴 셀 줄(`_listScratchLoadKey`: 우선순위 → 거리 차례)을 개발 도구가 읽는다(개발 명령 `world.streamqueue` · 감시 값 `Scene.PendingCellCount`, DevTools 의 `DevSceneStreamingAccess`).
  *
  * [셀 내용]
  * 쿠킹본에서 읽은 셀은 색인(좌표 · 레이어 · 내용 구간)만 들고(`SceneDocument::StreamingCell::hasFileContent`), 지은 뒤에는 읽은 엔티티를 버린다 — 다시 올리면 다시 읽는다.

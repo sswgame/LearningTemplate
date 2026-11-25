@@ -1,7 +1,7 @@
 /**
  * @file ReflectionDesc.h
  * @brief 생성 코드(.gen.cpp)가 형식마다 내는 상수 서술자 표입니다. 등록(`TypeRegistry::registerType` · `registerEnum`)이 표를 한 번 돌아 리플렉션 정보를 짓습니다.
- * @details 언리얼 UHT 의 `FClassParams` · `FPropertyParams` · `FMetaDataPairParam`(정적 서술자 + 엔진의 공용 생성 함수 하나)과 같은 자리다. 형식마다 등록 **코드**를 펼치면
+ * @details 언리얼 UHT 의 `FClassParams` · `FPropertyParams` · `FMetaDataPairParam`(정적 서술자 + 엔진의 공용 생성 함수 하나)과 같은 자리다. 형식마다 등록 코드를 펼치면
  *          생성 단위 수백 개가 같은 대입 · 소멸 사슬을 다시 최적화한다 — 생성 단위에는 상수와, 형식이 있어야 하는 호출(값 접근 · 호출 · 생성)만 남긴다.
  *          칸 차례가 곧 생성기(`CodeGenerator`)가 내는 차례다. 뒤쪽 칸은 기본값이 있어 적지 않은 만큼 글이 짧다 — 칸을 더하면 생성기와 함께 고친다.
  *          생성 코드와 리플렉션 구현만 include 한다(형식 정보 헤더 `TypeInfo.h` 를 읽는 단위는 표를 모른다). 거꾸로 이 헤더도 형식 정보(`TypeInfo` · `PropertyInfo` · `EnumInfo` ·

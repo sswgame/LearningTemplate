@@ -177,7 +177,7 @@ namespace sw
             }
 
             /**
-             * @brief 엔티티 하나의 오브젝트를 만듭니다. 프리팹 엔티티는 **원형에 덮어쓴 것을 얹은 상태**로 한 번에 만든다(@p outPrefabInstanceState). 프리팹을 고치면 놓인 인스턴스에 퍼진다(언리얼과 유니티의
+             * @brief 엔티티 하나의 오브젝트를 만듭니다. 프리팹 엔티티는 원형에 덮어쓴 것을 얹은 상태로 한 번에 만든다(@p outPrefabInstanceState). 프리팹을 고치면 놓인 인스턴스에 퍼진다(언리얼과 유니티의
              *        프리팹 인스턴스). 전체 상태가 실린 엔티티는 그 상태가 기준이라 원형을 만들지 않는다(원형은 버려지고, 만드는 동안 컴포넌트가 한 벌 더 생긴다) — 프리팹이 있는지만 본다.
              * @return 만든 오브젝트입니다. 프리팹을 찾지 못하면 nullptr 이고, 버리지 않는다 — 버리면 다음 저장이 파일에서 지운다(덮어쓴 값과 프리팹 경로까지).
              *         문서 그대로 @p inoutListUnresolved 에 보관했다가 저장할 때 다시 써 넣는다(유니티의 "Missing Prefab" 과 같다). 스트리밍 셀의 엔티티는 보관하지 않는다.
@@ -234,7 +234,7 @@ namespace sw
             }
 
             /**
-             * @brief 엔티티의 상태를 오브젝트에 얹습니다. **쿠킹된 바이너리 상태가 있으면 그것이 기준이다.** 쿠커가 왕복 검증에 성공한 엔티티만 이쪽에 담고 XML 을 비우므로, 둘 다 차 있는 문서는 없다.
+             * @brief 엔티티의 상태를 오브젝트에 얹습니다. 쿠킹된 바이너리 상태가 있으면 그것이 기준이다. 쿠커가 왕복 검증에 성공한 엔티티만 이쪽에 담고 XML 을 비우므로, 둘 다 차 있는 문서는 없다.
              *        상태가 없으면 빈 엔티티라 다른 엔티티가 파일 id 로 가리킬 수 있게 배치에 기록만 한다.
              * @return 바이너리 상태를 읽지 못하면(쿠킹본의 배치가 이 빌드와 다름 · 깨짐) false 입니다. 글 상태의 실패는 경고하고 이어 간다(저작 파일을 에디터에서 고칠 수 있게).
              */
@@ -274,7 +274,7 @@ namespace sw
 
             /**
              * @brief 프리팹의 중첩 인스턴스를 부품으로 다시 스폰합니다. 중첩 인스턴스는 씬 파일에 없다 — 원본에서 부품으로 다시 스폰한다(원본을 고치면 퍼진다).
-             * @details 엔티티를 모두 만든 **뒤에** 스폰한다. 부품이 먼저 이름을 가져가면 같은 이름의 엔티티가 로드마다 번호 붙은 이름으로 바뀐다. 프리팹은 앞에서 이미 읽어 캐시에 있다.
+             * @details 엔티티를 모두 만든 뒤에 스폰한다. 부품이 먼저 이름을 가져가면 같은 이름의 엔티티가 로드마다 번호 붙은 이름으로 바뀐다. 프리팹은 앞에서 이미 읽어 캐시에 있다.
              *          씬에서 부품을 고친 것은 엔티티의 덮어쓴 것 안 `<Part>` 로 실려 스폰하는 부품에 얹는다(유니티 nested override).
              */
             static void spawnNestedInstances( AssetManager& assetManager, const ObjectStateBatch& batch, const vector<PrefabEntity>& listPrefabEntity )
@@ -314,7 +314,7 @@ namespace sw
                 }
             }
 
-            /** @brief 문서로 쓸 때 오브젝트 순회 **밖에서** 미리 정해 두는 입력입니다(순회 안에서는 어느 매니저에도 오브젝트를 만들 수 없다 — `GameObjectManager::IterationScope`). */
+            /** @brief 문서로 쓸 때 오브젝트 순회 밖에서 미리 정해 두는 입력입니다(순회 안에서는 어느 매니저에도 오브젝트를 만들 수 없다 — `GameObjectManager::IterationScope`). */
             struct SaveInputs
             {
                 ObjectSavedIDMap                                  _mapSavedID;            ///< 파일 id 를 먼저 모두 정한다. 자식의 부착이 부모의 파일 id 를 적으므로, 쓰는 동안 부모의 id 가 이미 있어야 한다.
@@ -488,7 +488,7 @@ namespace sw
     /** @brief 짓는 배치 하나 — 엔티티를 모두 하나의 배치로 읽고 끝에서 잇는다(`instantiateNodes` · `continueCellBuild`). */
     struct Scene::NodeBuildContext
     {
-        // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 해석할 수 있다. 부착은 부모를 그 엔티티의 **파일 id** 로 가리킨다(파일 안에서만 의미가 있는 값이라 배치 안에서만 해석한다).
+        // 오브젝트 사이의 부착은 모든 엔티티가 생긴 뒤라야 해석할 수 있다. 부착은 부모를 그 엔티티의 파일 id 로 가리킨다(파일 안에서만 의미가 있는 값이라 배치 안에서만 해석한다).
         // 이름으로 찾으면 이름이 겹친 엔티티(병합)에서 자식이 앞의 것에 붙는다.
         ObjectStateBatch                              _batch{ ObjectIDSpace::Saved };
         unordered_map<string, string>                 _mapPrefabBaseState;    ///< 프리팹마다 원형 상태를 한 번만 만든다(같은 프리팹을 여럿 놓은 씬)
@@ -554,7 +554,7 @@ namespace sw
             return CellBuildResult::InProgress;
         }
 
-        // 다 지었다 — 앞 프레임에 숨긴 것을 대기 목록으로 되돌리고 잇는다. 늘 올라 있는 오브젝트는 이을 때 씬에 묻는다 — 짓는 사이에 지워진 오브젝트를 배치가 들지 않는다.
+        // 다 지었으면 앞 프레임에 숨긴 것을 대기 목록으로 되돌리고 잇는다. 늘 올라 있는 오브젝트는 이을 때 씬에 묻는다. 짓는 사이에 지워진 오브젝트를 배치가 들지 않는다.
         manager.releaseStagedGameObjects( span<const uint64>( inoutListObjectID.data(), firstObjectIndex ) );
         bindReferenceResolver( build._context );
         const bool bFinished = finishNodeBuild( listNode, build._context );
@@ -692,7 +692,7 @@ namespace sw
             if ( prefabIt != _mapPrefabSource.end() && _services._pAssetManager != nullptr )
                 (void)SceneInternal::findPrefabBaseState( *_services._pAssetManager, inputs._mapPrefabBaseState, prefabIt->second ); // 캐시를 채운다 — 못 만든 원형은 쓰는 쪽이 전체 상태로 적는다
         }
-        // 런타임 칸(`RuntimeState` — 볼륨 발동 수 · AI 블랙보드)까지 뜬다 — 저작 목적이면 내렸다 올린 셀이 처음 상태로 돌아간다. 파생 칸(`Transient`)은 뜨지 않는다.
+        // 런타임 칸(`RuntimeState`: 볼륨 발동 수 · AI 블랙보드)까지 뜬다. 저작 목적이면 내렸다 올린 셀이 처음 상태로 돌아간다. 파생 칸(`Transient`)은 뜨지 않는다.
         ObjectSaveOptions saveOptions{ SerializePurpose::Snapshot };
         saveOptions._pSavedIDMap = &_fileIDTable.getFileIDs();
 
@@ -965,7 +965,7 @@ namespace sw
         collectSceneInstanceParts( inputs._mapPartOverride, inputs._mapAnchorPart );
         const SceneSubLevelSubsystem& subLevels = _objectManager->getSubsystem<SceneSubLevelSubsystem>();
 
-        // **자식 오브젝트도 자기 엔티티로 적는다.** 오브젝트 상태에는 자식 목록이 없고, 자식은 자기 씬 컴포넌트의 부착 필드(부모의 파일 id)로
+        // 자식 오브젝트도 자기 엔티티로 적는다. 오브젝트 상태에는 자식 목록이 없고, 자식은 자기 씬 컴포넌트의 부착 필드(부모의 파일 id)로
         // 읽은 뒤 다시 붙는다(`instantiate` 의 배치이므로 순서는 상관없다). 부모가 있는 오브젝트를 건너뛰면 계층 아래의 오브젝트가
         // 저장할 때마다 파일에서 사라진다.
         _objectManager->forEachGameObject( SceneIterationKey{}, [&]( GameObject* pGo )
@@ -1491,7 +1491,7 @@ namespace sw
             pCamera = resolveCamera( _activeGameCamera );
         if ( pCamera == nullptr || pCamera->isPendingDestroy() )
         {
-            // 기본 GameCamera 다. 이미 있으면 **그대로** 쓴다. `getOrCreateNamed` 는 있는 것의 위치와 렌즈를 기본값으로 되돌린다.
+            // 기본 GameCamera 다. 이미 있으면 그대로 쓴다. `getOrCreateNamed` 는 있는 것의 위치와 렌즈를 기본값으로 되돌린다.
             GameObject*      pNamed       = _objectManager->findGameObjectByName( hashed_string( "GameCamera" ) );
             CameraComponent* pNamedCamera = ( pNamed != nullptr ) ? pNamed->getComponent<CameraComponent>() : nullptr;
             if ( pNamedCamera != nullptr && pNamedCamera->isPendingDestroy() == false )

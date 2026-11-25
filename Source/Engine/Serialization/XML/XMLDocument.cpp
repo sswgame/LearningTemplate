@@ -163,7 +163,7 @@ namespace sw
 
         /**
          * @brief 시작 태그의 끝(따옴표 밖의 첫 `>`) 위치입니다. 없으면 npos 입니다.
-         * @details 접는 것은 **시작 태그의 속성뿐**이다. 그 뒤는 요소 텍스트인데, pugixml 은 텍스트 안의 `"` 를 이스케이프하지 않는다 —
+         * @details 접는 것은 시작 태그의 속성뿐이다. 그 뒤는 요소 텍스트인데, pugixml 은 텍스트 안의 `"` 를 이스케이프하지 않는다 —
          *          줄 끝까지 따옴표를 세면 `<item>The "Fire" and "Ice" …</item>` 같은 텍스트 속 공백에서 줄을 접게 되고, 읽을 때는
          *          양 끝만 다듬으므로 그 줄바꿈 · 들여쓰기가 값에 영영 남는다(씬 · 직렬화한 문자열 목록 · 맵 값이 모두 이 길로 저장된다).
          */
@@ -181,7 +181,7 @@ namespace sw
         }
 
         /**
-         * @brief 한 줄에 담긴 속성들의 끝 위치를 모읍니다. 부르는 쪽이 줄을 **시작 태그까지** 잘라 넘깁니다(`findStartTagEnd`).
+         * @brief 한 줄에 담긴 속성들의 끝 위치를 모읍니다. 부르는 쪽이 줄을 시작 태그까지 잘라 넘깁니다(`findStartTagEnd`).
          * @details 속성 값 안에도 공백이 있으므로 따옴표 밖의 공백만 경계로 셉니다. 값 안의 따옴표는
          *          XML 이 `&quot;` 로 이스케이프하므로 따옴표 쌍만 세면 안전합니다 — 속성 안에서는. 요소 텍스트의 따옴표는
          *          이스케이프되지 않으므로 거기까지 세면 안 됩니다.
@@ -208,7 +208,7 @@ namespace sw
          *
          *          pugixml 의 `format_indent_attributes` 는 태그 이름만 남기고 속성을 모두 아래로
          *          내려서, 짧은 요소까지 여러 줄로 흩어지고 무슨 요소인지 눈에 덜 들어옵니다.
-         *          그래서 직접 접습니다. **짧은 줄은 그대로 두고**, 긴 줄만 첫 속성을 태그 옆에
+         *          그래서 직접 접습니다. 짧은 줄은 그대로 두고, 긴 줄만 첫 속성을 태그 옆에
          *          남긴 채 나머지를 한 줄에 하나씩 내립니다.
          *
          *              <RenderGraphPassDesc _name="Shadow"
@@ -271,7 +271,7 @@ namespace sw
                 // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
                 result.append( line.data(), listAttrEnd[0] );
 
-                // 이어지는 속성은 **첫 속성과 같은 열**에 세운다. `<TagName ` 만큼의 폭을 들여쓰기
+                // 이어지는 속성은 첫 속성과 같은 열에 세운다. `<TagName ` 만큼의 폭을 들여쓰기
                 // 뒤부터 측정해서 공백으로 메우므로, 탭 폭이 몇이든 세로줄이 맞는다.
                 const size_t alignColumn = firstSpace + 1 - indentLen;
 

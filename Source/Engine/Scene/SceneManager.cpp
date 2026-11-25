@@ -198,7 +198,7 @@ namespace sw
             (void)destroyPreviewScene( _listPreviewScene.back()._scene.get() );
         }
         _pFocusedScene = nullptr;
-        // 활성을 **씬을 내리기 전에** 비운다 — 플레이 중이면 여기서 활성 씬의 플레이가 끝난다(onEndPlay 가 살아 있는 씬을 본다).
+        // 활성을 씬을 내리기 전에 비운다 — 플레이 중이면 여기서 활성 씬의 플레이가 끝난다(onEndPlay 가 살아 있는 씬을 본다).
         activateScene( nullptr );
         _bWorldPlaying = SW_FALSE;
         // 씬 정리는 소멸자 한 곳이 한다. 자리를 먼저 비운 채 소멸시켜, 소멸 중의 조회가 지우는 중인 목록을 보지 않게 한다.
@@ -305,7 +305,7 @@ namespace sw
         bool expected{ false };
         if ( _bLoadInFlight.compare_exchange_strong( expected, true ) == false )
         {
-            // 대기열은 **한 자리**다. 앞에 있던 요청은 여기서 밀려나므로 그 요청자에게
+            // 대기열은 한 자리다. 앞에 있던 요청은 여기서 밀려나므로 그 요청자에게
             // 실패를 알린다. `_queuedPath` 만 덮어쓰면 밀려난 쪽이 쥔 future 는
             // 아무도 채우지 않은 채로 남는다(영원히 끝나지 않는다).
             if ( _queuedPath.empty() == false )
@@ -477,7 +477,7 @@ namespace sw
         if ( slot == nullptr || slot->_bAccepting.load( std::memory_order_acquire ) == false )
             return;
 
-        // **로드는 프레임 밖에서 한 번 일어난다.** 그래서 `SW_PROFILE_SCOPE` 의 프레임 집계에는
+        // 로드는 프레임 밖에서 한 번 일어난다. 그래서 `SW_PROFILE_SCOPE` 의 프레임 집계에는
         // 잡히지 않으므로 여기서 따로 측정한다.
         //
         // 측정하는 것은 `ScopedTimer` 가 한다. 스코프 동안 재고 소멸할 때 남긴다. 로그가
@@ -762,9 +762,9 @@ namespace sw
         _bLoadInFlight.store( false, std::memory_order_release );
         _loadHandle = {};
 
-        // 짓는 동안 타입 표가 바뀌었으면(핫 리로드가 키트 · SWGame 을 내렸다 다시 올렸다) 그 씬은 **워커가 지을 때의**
+        // 짓는 동안 타입 표가 바뀌었으면(핫 리로드가 키트 · SWGame 을 내렸다 다시 올렸다) 그 씬은 워커가 지을 때의
         // 표로 지어져, 아직 오르지 않은 모듈의 컴포넌트가 빠진다(못 만든 컴포넌트는 `MissingComponent` 로 남는다). 버리고 같은 경로를 다시
-        // 띄운다. 대기열이 **다른** 경로면 어차피 이 결과를 버리므로 아래에 맡긴다. 대기열이 **같은** 경로면 아래는 이 결과를 그대로 쓰므로
+        // 띄운다. 대기열이 다른 경로면 어차피 이 결과를 버리므로 아래에 맡긴다. 대기열이 같은 경로면 아래는 이 결과를 그대로 쓰므로
         // 여기서 다시 짓는다. 대기열은 그대로 두어, 다시 지은 결과가 두 요청자를 함께 채운다.
         // 리로드가 멈춰 둔 로드(`suspendPendingLoad`)도 같은 길이다 — 지은 것은 코드가 있을 때 이미 없앴다.
         const bool bSuspended             = _bRestartLoad == SW_TRUE;
@@ -798,7 +798,7 @@ namespace sw
                 if ( _asyncLoad != nullptr )
                     _asyncLoad->_promise.setValue( SceneHandle{} );
                 pendingScene.reset();
-                // 대기열 요청자의 약속을 **그대로 들고 간다.** `requestLoadFuture` 를 다시 불러 약속을 새로 만들면
+                // 대기열 요청자의 약속을 그대로 들고 간다. `requestLoadFuture` 를 다시 불러 약속을 새로 만들면
                 // 대기열에 넣은 쪽이 쥔 future 는 바로 위에서 nullptr 로 닫힌 것이 되어, 자기 씬이 활성이 되는데도 실패를 받는다.
                 dispatchLoad( nextPath, std::move( _queuedPromise ), _queuedKind );
                 return;
@@ -1139,7 +1139,7 @@ namespace sw
                     carried._bytes.clear(); // 아래 로드가 실패로 알린다
                 ComponentStateCodec::captureObject( *carried._pSource, carried._componentStateBytes );
             }
-            // 옮겨 심은 것끼리의 부착(부모 · 소켓 · 오브젝트 안)은 묶음이 **원래 id** 로 잇는다. 이름으로 찾지 않는다 — 들어오는 씬에 같은
+            // 옮겨 심은 것끼리의 부착(부모 · 소켓 · 오브젝트 안)은 묶음이 원래 id 로 잇는다. 이름으로 찾지 않는다 — 들어오는 씬에 같은
             // 이름이 있으면 옮긴 오브젝트의 이름이 바뀌어(`MusicPlayer_2`), 이름으로 찾으면 들어오는 씬의 것에 붙는다.
             ObjectStateBatch batch( ObjectIDSpace::Live );
             for ( CarriedObject& carried : listCarried )

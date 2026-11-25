@@ -40,7 +40,7 @@ namespace sw
             Binary
         };
         /**
-         * @brief 등록되지 않은 타입의 다형 원소 하나의 **원문**입니다(모듈이 안 뜬 컴포넌트 · 지운 타입).
+         * @brief 등록되지 않은 타입의 다형 원소 하나의 원문입니다(모듈이 안 뜬 컴포넌트 · 지운 타입).
          * @details 읽을 때 맡기고(`keepOpaqueElement`), 쓸 때 같은 형식이면 원문 그대로 다시 쓴다(`queryOpaqueElement`) — 건너뛰면 다음 저장에서
          *          영영 사라진다(유니티는 "Missing Script" 로 들고 있다 그대로 쓴다).
          */
@@ -90,7 +90,7 @@ namespace sw
         void registerTextHandler( hashed_string typeName, TextWriteFn writeFn, TextReadFn readFn );
 
         /**
-         * @brief 바이너리 엄격 읽기가 **타입에 없는 이름**의 필드를 건너뛰고 계속할지 설정합니다. 켜면 (타입, 이름)마다 한 번 경고하고, 끄면(기본) 읽기가 실패합니다.
+         * @brief 바이너리 엄격 읽기가 타입에 없는 이름의 필드를 건너뛰고 계속할지 설정합니다. 켜면 (타입, 이름)마다 한 번 경고하고, 끄면(기본) 읽기가 실패합니다.
          * @details 같은 컨텍스트가 중첩 구조체 · 컨테이너 원소 · 맵 키까지 내려가므로 모든 깊이에서 같은 정책입니다. 혼합 빌드 사이의 메시지와 캐시는 이것만 켭니다
          *          (`MixedBuildCodec::getReadContext`).
          */
@@ -101,7 +101,7 @@ namespace sw
         }
 
         /**
-         * @brief 바이너리 엄격 읽기가 **타입에 있는데 값을 읽지 못한** 필드(모르는 열거자, 변환할 수 없게 바뀐 타입)를 건너뛰고 계속할지 설정합니다.
+         * @brief 바이너리 엄격 읽기가 타입에 있는데 값을 읽지 못한 필드(모르는 열거자, 변환할 수 없게 바뀐 타입)를 건너뛰고 계속할지 설정합니다.
          * @details 켜면 그 필드는 지금 값 그대로 두고 (타입, 필드)마다 한 번 경고합니다. 끄면(기본) 읽기가 실패합니다. 값이 기본값으로 조용히 남으므로
          *          지운 필드를 버려도 되는 저장 상태(오브젝트 상태)만 켭니다. 혼합 빌드 사이의 메시지는 켜지 않습니다(모르는 열거자를 기본값으로 받게 됩니다).
          */
@@ -123,7 +123,7 @@ namespace sw
 
         /**
          * @brief 읽기 실패 되돌리기(`PropertyReadRollback::restoreValueBeforeRead`) 전용 문맥으로 만듭니다 — 구조체 칸의 읽기 공통 끝이 `Min` · `Max` 를 보지 않는다.
-         * @details 되돌리는 바이트는 방금 같은 객체에서 쓴 **읽기 전 값**이다. 파일 값이 아니라 검사한 적이 없고, 기본값 없이 파일에만 값이 있는 형식(`EngineConfig::_render`)의
+         * @details 되돌리는 바이트는 방금 같은 객체에서 쓴 읽기 전 값이다. 파일 값이 아니라 검사한 적이 없고, 기본값 없이 파일에만 값이 있는 형식(`EngineConfig::_render`)의
          *          새 객체는 0 이라 범위 밖이다 — 검사하면 되돌리기가 실패해 모르는 키 하나가 "범위 밖 · 되돌리지 못함" 으로 바뀌어 알려졌다.
          */
         SerializeContext& setRestoringValueBeforeRead()
@@ -266,7 +266,7 @@ namespace sw
         static const SerializeContext& getDefault( SerializePurpose purpose );
 
         /**
-         * @brief 목적 @p purpose 의 기본 컨텍스트의 **핸들러를 빌려 쓰는** 빈 컨텍스트를 만듭니다.
+         * @brief 목적 @p purpose 의 기본 컨텍스트의 핸들러를 빌려 쓰는 빈 컨텍스트를 만듭니다.
          *
          * `SerializeContext context = getDefault( purpose );` 는 등록된 핸들러 표 네 벌(`unordered_map`)을 통째로
          * 복사합니다. 객체 하나당 659 ns 였고, 씬 로드는 그것을 엔티티마다 합니다(4000 개면 2.6 ms).
@@ -314,10 +314,10 @@ namespace sw
  * `ReflectedAny` 의 직렬화입니다. 인코딩은 Serialization 이 압니다.
  *
  * `ReflectedAny` 자체(타입 태그 + 바이트 버퍼)는 Reflection 의 타입이지만, 그 바이트를
- *          **어떻게 채우는지는 BinarySerializer 의 규약**입니다. 그래서 `makeFrom` / `tryGetFrom` 의
+ *          어떻게 채우는지는 BinarySerializer 의 규약입니다. 그래서 `makeFrom` / `tryGetFrom` 의
  *          정의와 컨텍스트 핸들러 등록이 모두 이쪽(`SerializeReflectAny.cpp`)에 있습니다.
  *
- * @note 이 코드를 Reflection 쪽에 두면 **Reflection 이 Serialization 을 참조**해 두 티어가 서로를 참조하는
+ * @note 이 코드를 Reflection 쪽에 두면 Reflection 이 Serialization 을 참조해 두 티어가 서로를 참조하는
  *       순환이 됩니다. 핸들러는 "둘 다 아는 쪽" 이 갖습니다. 그쪽이 Serialization 입니다.
  */
 namespace sw

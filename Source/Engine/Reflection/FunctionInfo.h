@@ -52,7 +52,7 @@ namespace sw
         ReflectMetadataBox<FunctionMetadata> _metadata;       ///< `FUNCTION()` 에 적은 메타데이터(`ReflectionMetadata.h`)
         /**
          * @brief 인자 묶음을 받아 메서드를 부르는 함수입니다.
-         * @details 인자는 **그 C++ 타입 그대로**(`args.get<T>`) 넣어야 한다. 타입이 다르면 Debug 는 단언하고 Release 는 잘못 읽는다.
+         * @details 인자는 그 C++ 타입 그대로(`args.get<T>`) 넣어야 한다. 타입이 다르면 Debug 는 단언하고 Release 는 잘못 읽는다.
          *          타입을 모르는 쪽(콘솔, 비주얼 스크립팅)은 `ReflectionInvoke::call` 로 부른다. 이 함수는 인자를 바꿔 넣어 준다.
          */
         Delegate<TaskValue( void*, const TaskArgs& )> _invoker;

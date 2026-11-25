@@ -4,7 +4,7 @@
  * @details 직렬화는 이 형식 하나만 안다. `AssetRef<T>` 는 칸을 더하지 않으므로 어떤 `T` 든 처리기 "AssetRef" 하나가 읽고 쓴다(파서가 `TComponentHandle<T>` 를 `ComponentHandle`
  *          하나로 모으는 것과 같은 길이다). 대상 종류를 프로퍼티 메타가 아니라 값이 품는 까닭은 글 처리기가 값 주소만 받기 때문이다 — `vector<AssetRef<T>>` 의 원소, 중첩 구조체,
  *          덮어쓰기 패치, 인스펙터가 모두 같은 검사를 지난다.
- *          **저장 꼴은 정체성이다** — `guid:<32자>`(`AssetRegistry::makeReferenceText`). 경로는 옮기면 바뀌어 리다이렉트 줄이 영구히 쌓이므로, 파일에는 GUID 를 적고 읽을 때
+ *          저장 꼴은 정체성이다 — `guid:<32자>`(`AssetRegistry::makeReferenceText`). 경로는 옮기면 바뀌어 리다이렉트 줄이 영구히 쌓이므로, 파일에는 GUID 를 적고 읽을 때
  *          런타임 색인(`AssetRegistry`)으로 지금 경로를 푼다(유니티 직렬화 참조의 guid, Godot 4 `uid://` 와 같다. 언리얼 `FSoftObjectPath` 의 경로 + 리다이렉터를 버린 자리다).
  *          값은 경로와 GUID 를 함께 든다 — 경로를 받는 쓰는 쪽(`path` · `string_view`)은 그대로이고, 쓰기는 GUID 가 있으면 GUID 를 적는다.
  *          읽기는 경로 글도 받아 색인으로 GUID 를 찾아 둔다(코드의 대입 · 사람이 적은 값 · 시나리오 — Godot 의 ext_resource 도 path 와 uid 를 다 읽는다). 다시 저장하면 GUID 로 바뀐다.

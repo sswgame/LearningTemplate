@@ -3,7 +3,7 @@
  * @brief 복제 스키마입니다 — 타입의 `PROPERTY( Replicated )` 칸만 고정 배치형(B) 해석기로 쓰고 읽습니다. 생성기가 낸 두 번째 표(`FixedCodec::_pReplicated`)를 씁니다.
  * @details 언리얼 `UPROPERTY( Replicated )` + `FRepLayout`, Iris `FReplicationStateDescriptor`, 유니티 Netcode `[GhostField]` 자리다.
  *          - 같은 칸을 컴포넌트와 손 스냅샷 두 곳이 알지 않게 한다: 칸 선언(`Replicated` · `Min` · `Max` · `Step` · `MaxCount`)이 곧 와이어다. 양자화 키는 따로 없다.
- *          - **스키마 해시는 스트림에 싣지 않는다.** 핸드셰이크가 확인한다(`NetMessageChannel::registerReplicatedType` 이 와이어 버전에 섞는다) — 칸 순서 · 범위가
+ *          - 스키마 해시는 스트림에 싣지 않는다. 핸드셰이크가 확인한다(`NetMessageChannel::registerReplicatedType` 이 와이어 버전에 섞는다) — 칸 순서 · 범위가
  *            다른 빌드는 연결 때 `VersionMismatch` 로 갈린다. 그래서 이 바이트는 그 채널로 확인한 연결 안에서만 오간다.
  *          - 여기는 통째 쓰기다(`writeFull`). 바뀐 칸만 싣는 일은 바깥(`NetSnapshot` 의 조각 델타)이 한다 — 조각마다 바뀐 판으로 골라 연결마다 기준 바이트를 두지 않고, 손 상태 바이트도 같은 길이다.
  *          - 스키마는 그 타입이 선언한 칸만이다. 기반 타입에 `Replicated` 칸이 있으면 찾기(`findSchema`)가 오류다 — 조용히 빼면 그 칸이 복제되지 않는다.

@@ -34,7 +34,7 @@ namespace sw
         /**
          * @brief 이 타입(또는 조상)이 틱 함수 · 상태 함수를 가졌는지입니다. 생성 코드가 컴파일 타임 트레이트로 대입한다 — 엔진의 판정과 같은 답이다.
          * @details `onTick` 은 `HasOnTickOverride_v`(주 틱을 켜는 판정과 같다), `onSubTick` 은 `HasOnSubTickOverride_v` 이고 컴포넌트만 켠다.
-         *          `serializeState` 는 `generated::HasSerializeState`(상태 해시 · 롤백 대상, W-R4)다. 일괄 틱 등록은 **직접 선언** 여부를 따로 컴파일에서 본다(`makeDeclaredTickEntry`).
+         *          `serializeState` 는 `generated::HasSerializeState`(상태 해시 · 롤백 대상, W-R4)다. 일괄 틱 등록은 직접 선언 여부를 따로 컴파일에서 본다(`makeDeclaredTickEntry`).
          */
         uint8                  _bOverridesTick           : 1;
         uint8                  _bOverridesSubTick        : 1;
@@ -101,7 +101,7 @@ namespace sw
         hashed_string _validate;
         /**
          * @brief 필드 이름 꼴 허용 범위(`PROPERTY( Min = "-_halfSize", Max = "_halfSize" )`)의 아래 · 위 경계를 인스턴스에서 읽는 함수입니다. 없으면 nullptr 입니다.
-         * @details 경계가 실행 시간에 정해지므로 숫자(`_minRange`) 하나로는 담지 못한다. 생성기가 **같은 타입의 필드 하나**를 가리키는 경계에만 만든다.
+         * @details 경계가 실행 시간에 정해지므로 숫자(`_minRange`) 하나로는 담지 못한다. 생성기가 같은 타입의 필드 하나를 가리키는 경계에만 만든다.
          *          이름을 실행 시간에 찾지 않고 컴파일된 멤버 읽기라, 이름이 틀리면 생성된 코드가 컴파일되지 않는다. 숫자 경계(`_bHasMinRange`)와 함께 있지 않다.
          *          읽기 공통 끝도 이 경계를 지키므로 Shipping 에도 있다(`computeAllowedRange`).
          *          바깥 타입의 필드를 가리키는 경계와 성분 목록(`"-_a, 0, -_a"`)은 고정 배치형 코덱만 쓴다(인스펙터는 바깥 인스턴스를 모르고 벡터 성분에 범위를 두지 않는다).
@@ -138,7 +138,7 @@ namespace sw
         /** @brief 직렬화(JSON, XML, 바이너리, Diff)의 저장과 로드 대상에서 뺍니다(`Transient`, `NonSerialized`). */
         uint8 _bTransient : 1;
         /**
-         * @brief 값이 비어 있으면 **쓸 때 생략**합니다(`PROPERTY( SkipIfEmpty )`).
+         * @brief 값이 비어 있으면 쓸 때 생략합니다(`PROPERTY( SkipIfEmpty )`).
          * @details 리플렉션 직렬화는 기본적으로 모든 PROPERTY 를 쓴다. 그래야 "파일에 없음"과 "명시적으로 비어 있음"을 구분할 수 있기 때문이다.
          *          그런데 선택적 필드(쓰지 않는 셰이더 스테이지의 진입점 같은 것)까지 모두 쓰면 파일을 읽기 어려워진다.
          *          이 플래그를 쓰면 스키마가 생략 여부를 직접 선언한다. 생략해도 된다고 선언한 필드만 생략하므로 모호함이 생기지 않는다.

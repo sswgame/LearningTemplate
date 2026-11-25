@@ -205,7 +205,7 @@ namespace sw
         static void applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, Subscription& inoutCameraCut );
         /**
          * @brief 플레이어의 갱신 하나를 적용합니다 — 지금 프레임의 상태(`applyFrame`)를 쓰고, 지난 구간마다(`PlaybackSegment::hasCrossed`) 문턱을 넘은 이벤트를 구간 순서대로 모읍니다.
-         * @param pOutListCrossedEvent nullptr 가 아니면 이번에 지난 이벤트 항목들로 **채웁니다**(먼저 비웁니다). 가리키는 항목은 @p asset 의 원소라 에셋보다 오래 살지 않습니다.
+         * @param pOutListCrossedEvent nullptr 가 아니면 이번에 지난 이벤트 항목들로 채웁니다(먼저 비웁니다). 가리키는 항목은 @p asset 의 원소라 에셋보다 오래 살지 않습니다.
          * @details 역방향 구간도 쏜다(언리얼 이벤트 트랙의 기본). 점프 갱신(구간 없음)은 쏘지 않는다.
          */
         static void applyPlayback( GameObjectManager* pManager, const SequenceAsset& asset, const SequencePlaybackStep& step, const SequenceBindingView& bindings, Subscription& inoutCameraCut,
@@ -237,7 +237,7 @@ namespace sw
          */
         static float32 sampleRigSlotWeight( const SequenceKeyTrack& track, float32 frame );
         /**
-         * @brief 스폰 항목(`SequenceItemKind::Spawn`)을 @p frame 에 맞춥니다 — 구간 시작 `getPrerollFrames` 프레임 앞부터 프리팹을 **꺼 둔 채** 스폰하고, 구간 동안 켜고, 구간(끝)이 지나거나 되감아
+         * @brief 스폰 항목(`SequenceItemKind::Spawn`)을 @p frame 에 맞춥니다 — 구간 시작 `getPrerollFrames` 프레임 앞부터 프리팹을 꺼 둔 채 스폰하고, 구간 동안 켜고, 구간(끝)이 지나거나 되감아
          *        창을 벗어나면 지웁니다. 스폰한 오브젝트는 @p inoutListSpawned 가 기억하고 그 항목의 바인딩이 된다(`SequenceBindingView`). 오브젝트 이름은 바인딩 이름이다.
          * @details 프리롤 동안 꺼 둔 채 두는 까닭: 프리팹의 메시 · 머티리얼 · 애니메이션 에셋이 읽히고 PSO 가 만들어져(`FrameRenderer` 가 씬의 머티리얼마다 만든다) 컷의 첫 프레임이
          *          튀지 않는다. 스폰은 컴포넌트 틱 중이면 상태가 틱 뒤에 채워지므로(`PrefabCache::spawn`) 끄기도 틱 뒤로 미룬다. 프리팹 캐시가 없는 매니저는 오류를 남기고 아무것도 하지 않는다.
@@ -260,7 +260,7 @@ namespace sw
         /** @brief `captureRestoreState` 가 기억한 상태로 대상을 되돌립니다(기억한 순서의 반대로 — 같은 대상의 두 기록은 처음 값이 남는다). */
         static void applyRestoreState( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, const vector<SequenceRestoreEntry>& listRestore );
         /**
-         * @brief 플레이어의 갱신 하나 동안의 카메라 신호를 @p outListSignal 에 **덧붙입니다**.
+         * @brief 플레이어의 갱신 하나 동안의 카메라 신호를 @p outListSignal 에 덧붙입니다.
          * @details 순서는 컷 바뀜, 시네마틱 시작 · 끝, 대기 뷰, 흔들림이다(구간이 둘이면 구간마다). 듣는 쪽은 컷의 프리셋을 먼저 켜고 그 위에 게임 화면에서 섞는다.
          *          앞에 덮던 컷은 시작 갱신이면 없고, 아니면 갱신 전 프레임의 컷이다 — 구간이 둘이면 첫 구간 끝의 컷을 지나 이어진다(같은 컷이 끝과 처음을 덮으면 시네마틱이 끊기지 않는다).
          *          대기 뷰는 정방향 구간만(곧 볼 컷은 앞으로 갈 때의 말이다), 흔들림은 양방향으로 시작 문턱을 지날 때 낸다. 점프 갱신은 컷만 견준다.
@@ -268,7 +268,7 @@ namespace sw
         static void collectPlaybackCameraSignals( const SequenceAsset& asset, const SequencePlaybackStep& step, vector<SequenceCameraSignal>& outListSignal );
 
     private:
-        /** @brief 구간 @p segment 에서 문턱을 넘은 이벤트를 @p pOutListCrossedEvent 에 **덧붙입니다**(비우지 않는다). */
+        /** @brief 구간 @p segment 에서 문턱을 넘은 이벤트를 @p pOutListCrossedEvent 에 덧붙입니다(비우지 않는다). */
         static void appendCrossedEvents( const SequenceAsset& asset, const PlaybackSegment<int32>& segment, vector<const SequenceTrackItem*>* pOutListCrossedEvent );
         /** @brief 덮는 컷이 @p pPreviousCut 에서 @p pCut 으로 바뀐 신호(컷 바뀜 · 시네마틱 시작 · 끝)를 덧붙입니다. @p bForward 는 컷 사이 섞임에 구간 머리 · 꼬리 중 어느 쪽을 쓸지입니다. */
         static void appendCutSignals( const SequenceAsset& asset, const SequenceTrackItem* pCut, const SequenceTrackItem* pPreviousCut, bool bForward,

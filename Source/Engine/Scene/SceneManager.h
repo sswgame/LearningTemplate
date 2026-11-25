@@ -93,7 +93,7 @@ namespace sw
         static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Scene;
         /**
          * @brief 빈 매니저로 만듭니다. 엔진 서비스 묶음은 바인딩된 표에서 한 번 읽어 둡니다(`SceneEngineServices::makeFromBoundEngine`).
-         * @details 서비스 저장소(`EngineServiceCollection`)는 표를 묶기 **전에** 이것을 만든다 — 그래서 `initializeSubsystem` 이 묶인 뒤의 표를 다시 읽습니다.
+         * @details 서비스 저장소(`EngineServiceCollection`)는 표를 묶기 전에 이것을 만든다 — 그래서 `initializeSubsystem` 이 묶인 뒤의 표를 다시 읽습니다.
          */
         SceneManager();
         /** @brief 매니저를 해제합니다(`shutdownSubsystem` 을 부르지 않았으면 여기서 내린다). */
@@ -125,9 +125,9 @@ namespace sw
         void closeLoadedScenes();
         /**
          * @brief 씬 파일의 비동기 로드를 요청하고, 끝나면 활성이 된 씬의 핸들을 주는 TaskFuture 를 반환합니다(`resolveScene` 으로 푼다).
-         * @details **대기열에 들어가도 자기 답을 받습니다.** 이미 로드가 도는 중이면 이 요청은
-         *          대기열로 가고, 반환하는 future 는 **이 요청의 것**입니다. 돌던 로드의 것이
-         *          아닙니다. 대기열은 **한 자리**이므로 새 요청은 앞의 것을 밀어내고, 밀려난 쪽의
+         * @details 대기열에 들어가도 자기 답을 받습니다. 이미 로드가 도는 중이면 이 요청은
+         *          대기열로 가고, 반환하는 future 는 이 요청의 것입니다. 돌던 로드의 것이
+         *          아닙니다. 대기열은 한 자리이므로 새 요청은 앞의 것을 밀어내고, 밀려난 쪽의
          *          future 는 빈 핸들로 끝납니다(영원히 끝나지 않는 future 는 없습니다).
          */
         TaskFuture<SceneHandle> requestLoadFuture( string_view path, SceneLoadKind kind );
@@ -290,7 +290,7 @@ namespace sw
 
         /**
          * @brief 루트 오브젝트를 플레이 중 씬 전환 너머로 가져갑니다 — 유니티 `Object.PersistAcrossScenes` · 언리얼 심리스 트래블의 액터 목록 자리입니다.
-         * @details 활성 씬이 바뀔 때 표시된 루트와 그 자손을 새 씬에 **같은 오브젝트 · 컴포넌트 id** 로 다시 만듭니다(반사 상태 · 이름 · 소켓 부착이
+         * @details 활성 씬이 바뀔 때 표시된 루트와 그 자손을 새 씬에 같은 오브젝트 · 컴포넌트 id 로 다시 만듭니다(반사 상태 · 이름 · 소켓 부착이
          *          따라가고 핸들이 이어집니다). PROPERTY 밖 상태는 코덱이 있는 컴포넌트(`ComponentStateCodec` — 가방 · 지갑 · 퀘스트 일지 …)만 옮깁니다. 다시 만드는 것이라 포인터는 새것이고 `onBeginPlay` 가 다시 불립니다
          *          (되돌리기 · 핫 리로드와 같은 계약). 루트가 아니거나 플레이 중이 아니면 경고하고 무시합니다(유니티도 루트만 · 플레이 모드에서만 받는다). 플레이를 멈추면 표시를 잊습니다.
          */
@@ -353,7 +353,7 @@ namespace sw
         void garbageCollectUnusedAssets();
         /**
          * @brief 워커에 로드를 실제로 띄웁니다. 이 로드의 결과를 받을 약속을 함께 넘깁니다.
-         * @details 요청 경로와 대기열 경로가 **같은 자리**로 모입니다 — 대기열에 넣은 요청자가 쥔 future 와 실제 로드의 약속이
+         * @details 요청 경로와 대기열 경로가 같은 자리로 모입니다 — 대기열에 넣은 요청자가 쥔 future 와 실제 로드의 약속이
          *          갈리지 않게.
          */
         bool dispatchLoad( string_view path, TaskPromise<SceneHandle> promise, SceneLoadKind kind );

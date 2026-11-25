@@ -22,7 +22,7 @@ namespace sw
         struct BinarySerializerInternal
         {
             /**
-             * @brief 프로퍼티 중복 검사를 **비트마스크로 할 수 있는 한계**입니다. `uint64` 의 비트 수입니다.
+             * @brief 프로퍼티 중복 검사를 비트마스크로 할 수 있는 한계입니다. `uint64` 의 비트 수입니다.
              * @details 이보다 많으면 해시 집합으로 넘어간다. 엄격 역직렬화와 소프트 역직렬화 경로가 **같은 값을
              *          써야 한다.** 한쪽만 바꾸면 그 경로만 다른 자료구조로 중복을 세게 되고, 프로퍼티가
              *          64개 언저리인 타입에서만 갈리는 재현하기 어려운 차이가 된다.
@@ -67,7 +67,7 @@ namespace sw
             /**
              * @brief 엄격한 읽기가 읽지 못한 필드를 건너뛸 때(`shouldSkipUnreadableProperties`) 알립니다. 타입과 필드마다 한 번만 알립니다.
              * @details 현재 타입에 있는 필드인데 값을 읽지 못한 경우다(모르는 열거자 이름, 바뀐 타입). XML, JSON 과 같이 그 필드만 남기고 나머지를 읽는다.
-             *          컴포넌트째 실패하면 소유 포인터 목록의 **뒤 컴포넌트까지** 버린다.
+             *          컴포넌트째 실패하면 소유 포인터 목록의 뒤 컴포넌트까지 버린다.
              */
             static void warnUnreadableFieldOnce( const TypeInfo& typeInfo, const PropertyInfo& prop )
             {
@@ -138,7 +138,7 @@ namespace sw
             }
 
             /**
-             * @brief 필드 하나의 페이로드를 프로퍼티에 읽어 넣습니다. **기록 타입을 같이 넘긴다.** 태그가 그것을 가지고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
+             * @brief 필드 하나의 페이로드를 프로퍼티에 읽어 넣습니다. 기록 타입을 같이 넘긴다. 태그가 그것을 가지고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
              *        타입을 짐작한다(정수와 실수를 가르지 못한다).
              */
             [[nodiscard]] static FieldReadResult readTaggedPayload( const PropertyInfo& prop, void* pInstance, const uint8* pPayload, uint32 payloadSize, uint32 wireTypeHash,
@@ -186,7 +186,7 @@ namespace sw
                 const SerializeContext&    _context;
                 vector<SchemaOrphanValue>* _pOutListOrphan;
                 bool                       _bStrict;
-                /// 읽지 못한 필드를 넘기고 이어 읽는 읽기(소프트, 오브젝트 상태의 엄격)는 그 필드를 **읽기 전 값**으로 남긴다. 컨테이너 · 구조체는 원소와 필드를
+                /// 읽지 못한 필드를 넘기고 이어 읽는 읽기(소프트, 오브젝트 상태의 엄격)는 그 필드를 읽기 전 값으로 남긴다. 컨테이너 · 구조체는 원소와 필드를
                 /// 채운 뒤 끝에서 실패하므로 읽다 만 값이 남는다. 그래서 읽기 전에 값을 바이트로 담아 두고 실패하면 되돌린다. 실패하면 객체째 버리는 엄격 읽기는 담지 않는다.
                 bool                  _bContinuesAfterUnreadable;
                 BinaryWireVersion     _wireVersion;
@@ -271,7 +271,7 @@ namespace sw
                     }
                     case FieldReadResult::FieldFailed:
                     {
-                        // 엄격한 읽기도 읽지 못한 필드를 받는 컨텍스트(오브젝트 상태)이면 **이 필드만** 건너뛴다. 크기를 알아 다음 필드 위치는 맞다. 모르는 열거자 하나가
+                        // 엄격한 읽기도 읽지 못한 필드를 받는 컨텍스트(오브젝트 상태)이면 이 필드만 건너뛴다. 크기를 알아 다음 필드 위치는 맞다. 모르는 열거자 하나가
                         // 컴포넌트를, 그래서 그 뒤 컴포넌트까지 버리던 경로다. 혼합 빌드 사이의 메시지는 받지 않는다(그 필드가 읽기 전 값으로 남는다).
                         if ( state._bContinuesAfterUnreadable == false )
                             return FieldReadResult::FieldFailed;
@@ -336,11 +336,11 @@ namespace sw
             }
 
             /**
-             * @brief 태그 스트림(개수, [태그 해시, 기록 타입 해시, 크기, 페이로드]…)을 읽어 인스턴스에 쓰는 **하나의** 루프입니다. 배치 스트림이면 `readSchemaLayout` 이 읽는다.
+             * @brief 태그 스트림(개수, [태그 해시, 기록 타입 해시, 크기, 페이로드]…)을 읽어 인스턴스에 쓰는 하나의 루프입니다. 배치 스트림이면 `readSchemaLayout` 이 읽는다.
              * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 함께 쓴다. 둘이 다른 것은 정책 두 가지뿐이다.
              *          (1) 모르는 프로퍼티: 엄격은 `shouldSkipUnknownProperties` 이면 건너뛰고 아니면 실패하며, 소프트는 orphan 으로 담는다.
              *          (2) 읽지 못한 프로퍼티(페이로드를 끝까지 읽지 못한 것 포함): 엄격은 `shouldSkipUnreadableProperties` 이면 그 필드만 건너뛰고(XML, JSON 과 같다)
-             *          아니면 실패하며, 소프트는 orphan 으로 담는다. 건너뛰거나 orphan 으로 담은 필드는 **읽기 전 값**이다(읽다 만 컨테이너 · 구조체를 되돌린다).
+             *          아니면 실패하며, 소프트는 orphan 으로 담는다. 건너뛰거나 orphan 으로 담은 필드는 읽기 전 값이다(읽다 만 컨테이너 · 구조체를 되돌린다).
              *          되돌릴 수 없는 소유 포인터 목록(되돌리면 컴포넌트를 새로 만든다)이 읽다 말면 객체째 실패한다.
              *          두 플래그는 따로다. 혼합 빌드 사이의 메시지는 (1) 만 켜서 새 빌드가 더한 필드는 건너뛰고 모르는 열거자는 거절한다. 중첩 구조체도
              *          같은 컨텍스트로 이 루프를 다시 지나므로(`SerializerUtil::deserializeValueBinary`) 모든 깊이에서 정책이 같다.
@@ -695,7 +695,7 @@ namespace sw
         const size_t bodySize = dataSize - reader.getOffset();
 
         // 절차는 JSON, XML 과 공통이다(`runVersionedDeserialize`). 바이너리만 다른 것은 두 가지다.
-        // 버전을 **본문 앞에서 이미 읽었고**(위 `reader.read`), orphan 이 하나라도 있으면 이관 없이는
+        // 버전을 본문 앞에서 이미 읽었고(위 `reader.read`), orphan 이 하나라도 있으면 이관 없이는
         // 거절한다. 바이너리는 손으로 고치는 포맷이 아니라, 모르는 필드가 있다는 것은 스키마가 바뀌었다는 뜻이기 때문이다.
         // 지운 필드를 버려도 되는 호출부는 컨텍스트로 그렇게 말한다(`setAllowUnknownProperties`, 오브젝트 상태). 버전이 다르면 그래도 거절한다.
         // orphan 은 모르는 이름과 읽지 못한 아는 필드를 함께 담으므로 두 플래그가 모두 켜졌을 때만 버린다. 모르는 이름만 버리는 읽기는 `deserializeExactVersion` 이다.

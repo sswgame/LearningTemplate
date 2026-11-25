@@ -148,7 +148,7 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, DerivedFlagsAreBuiltByRegistrationNotB
 }
 
 /**
- * @brief [ReflectionPropertyRoleTest] 대입은 지어 둔 파생 캐시(이름 맵 · 판정 · 상속 판)를 한 번에 비운다(`TypeDerivedCache` — `_derived = {}`) — 다시 지으면 같은 답이다
+ * @brief [ReflectionPropertyRoleTest] 대입은 지어 둔 파생 캐시(이름 맵 · 판정 · 상속 판)를 한 번에 비운다(`TypeDerivedCache`, `_derived = {}`). 다시 지으면 같은 답이다
  */
 SW_TEST_CASE( ReflectionPropertyRoleTest, AssignmentClearsEveryDerivedCache )
 {

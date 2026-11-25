@@ -57,7 +57,7 @@ namespace sw
 
             /**
              * @brief 이름 해시가 같은데 값이 다른 열거자 둘을 찾습니다. 없으면 false 입니다.
-             * @details 바이너리는 enum 을 열거자 **이름 해시**로 싣는다(대소문자 무시). 같은 해시의 두 이름(`Red` 와 `RED`, 드물게 FNV 충돌)이 다른 값을
+             * @details 바이너리는 enum 을 열거자 이름 해시로 싣는다(대소문자 무시). 같은 해시의 두 이름(`Red` 와 `RED`, 드물게 FNV 충돌)이 다른 값을
              *          가리키면 저장된 데이터가 어느 쪽으로 읽힐지 정해지지 않는다. 텍스트 읽기도 대소문자를 무시하므로 같은 모호함이다.
              *          같은 값을 가리키는 별칭은 괜찮다. 세 테이블(값 → 이름, 이름 → 값, 옛 이름 리다이렉트)을 모두 본다. 대소문자만 다른 두 이름은 intern 에서 한 이름이 되어 이름 → 값 테이블에는
              *          하나만 남고(뒤의 값이 이긴다), 값 → 이름 테이블에서만 두 값이 같은 이름을 가리킨다.
@@ -200,7 +200,7 @@ namespace sw
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
         const hashed_string shortName     = stored._name; // 아래에서 `stored` 를 옮긴다
 
-        // 같은 FQN 이 있으면(핫 리로드 · 묘비) **새 객체로 판을 바꾼다**. 옛 객체를 제자리에서 덮으면(`operator=`) 잠금 없이 든 포인터로 목록을 읽던
+        // 같은 FQN 이 있으면(핫 리로드 · 묘비) 새 객체로 판을 바꾼다. 옛 객체를 제자리에서 덮으면(`operator=`) 잠금 없이 든 포인터로 목록을 읽던
         // 스레드가 반쯤 옮겨진 벡터를 본다. 옛 객체는 죽은 채(`isAlive` false) 내용 그대로 레지스트리가 사는 동안 남는다 — 든 포인터의 읽기는 온전한
         // 옛 내용을 끝까지 보고, 낡음은 살아 있음 · 내용 세대(`PropertyHandle`)로 안다. 이름 조회 · 세대를 담은 캐시(`TypeLookupCache`)는 세대가 올라
         // 새 객체를 찾고, 자손의 부모 링크는 아래에서 이 타입과 자손을 다시 이을 때 새 객체로 바뀐다(배치 안이면 배치 끝이).
@@ -223,7 +223,7 @@ namespace sw
         hashed_string         shadowedFqn;
         if ( shortName.empty() == false && shortName != canonicalKey )
         {
-            // 짧은 이름이 이미 **다른 살아 있는** 타입을 가리키면 그 타입을 가린다. 씬, 프리팹, `addComponentByName` 은 짧은 이름으로
+            // 짧은 이름이 이미 다른 살아 있는 타입을 가리키면 그 타입을 가린다. 씬, 프리팹, `addComponentByName` 은 짧은 이름으로
             // 찾으므로 그 뒤로는 다른 타입이 만들어진다. 나중 것이 이기되 알린다.
             const auto previousIt = _mapAliasToFqn.find( shortName );
             if ( previousIt != _mapAliasToFqn.end() && previousIt->second != canonicalKey )
@@ -240,7 +240,7 @@ namespace sw
         const uint32 contentGeneration                                      = s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel ) + 1;
         _mapFqnToClassType.find( canonicalKey )->second->_contentGeneration = contentGeneration;
 
-        // 사슬이 바뀌었을 수 있다 — 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다. 그 타입과 **자손만** 비우고 다시 짓는다.
+        // 사슬이 바뀌었을 수 있다 — 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다. 그 타입과 자손만 비우고 다시 짓는다.
         // 배치 안이면 모아 두고 배치 끝이 한 번에 찾는다(등록마다 찾으면 배치가 O(타입²) 이다).
         vector<TypeInfo*> listAffected;
         if ( _batchDepth != 0 )
@@ -500,7 +500,7 @@ namespace sw
 
     void TypeRegistry::relinkAffectedLocked( const vector<TypeInfo*>& listType ) const
     {
-        // 부모 링크와 조상 표는 **이 독점 잠금 안에서** 새 값으로 바로 바꾼다 — 비웠다가 잠금 밖에서 다시 찾던 틈에 읽기가 끊긴 사슬을 보거나,
+        // 부모 링크와 조상 표는 이 독점 잠금 안에서 새 값으로 바로 바꾼다 — 비웠다가 잠금 밖에서 다시 찾던 틈에 읽기가 끊긴 사슬을 보거나,
         // 읽기가 표를 함께 지어 낡은 사슬로 덮을 수 있었다. 쓰는 쪽이 잠금으로 하나뿐이고 읽기(캐스트)는 원자값만 본다.
         // 언리얼(`UStruct::ReinitializeBaseChainArray` 는 링크 때 쓰기 쪽이 짓고 `IsChildOf` 는 읽기만) · Godot(`ClassDB` 쓰기 잠금 안에서 상속 기록)과 같은 자리다.
         for ( TypeInfo* pType : listType )
@@ -508,20 +508,20 @@ namespace sw
             const TypeInfo* pParent = pType->_parentFQN.empty() ? nullptr : findTypeLocked( pType->_parentFQN, false );
             pType->linkParentType( pParent );
         }
-        // 표는 부모 링크가 **모두** 바뀐 뒤에 짓는다. 표는 사슬 끝까지 따라가고, 사슬 걷기(`getParentType`)는 레지스트리 타입에서 잠그지 않는다.
+        // 표는 부모 링크가 모두 바뀐 뒤에 짓는다. 표는 사슬 끝까지 따라가고, 사슬 걷기(`getParentType`)는 레지스트리 타입에서 잠그지 않는다.
         for ( const TypeInfo* pType : listType )
         {
             pType->clearAncestorDisplay();
             (void)pType->computeAncestorDisplay();
         }
-        // 상속 목록도 **이 잠금 안에서** 새 판으로 바꿔 끼운다(`TypeInheritedPropertySlot`) — 해제하는 모듈의 프로퍼티를 가리키던 옛 판은 모듈이 살아 있는 지금 물러난다.
+        // 상속 목록도 이 잠금 안에서 새 판으로 바꿔 끼운다(`TypeInheritedPropertySlot`) — 해제하는 모듈의 프로퍼티를 가리키던 옛 판은 모듈이 살아 있는 지금 물러난다.
         // 예전에는 여기서 비우고 잠금 밖에서 같은 벡터를 다시 채워, 그 틈에 다른 스레드의 조회가 "짓지 않았다" 로 멈추거나 반쯤 찬 목록을 읽었다(모듈 로드가
         // 단일 스레드라는 가정에 기댔다). 짓기는 레지스트리를 다시 잠그지 않는다 — 사슬 걷기는 위에서 바꾼 링크만 읽는다.
         for ( TypeInfo* pType : listType )
         {
             pType->rebuildDerivedCaches();
         }
-        // 판정(세이브 옵트인, 검증 함수 유무, POD)도 **이 잠금 안에서** 모든 상속 목록을 지은 뒤 구한다 — 검증 판정이 칸 타입의 목록을 재귀로 읽는다.
+        // 판정(세이브 옵트인, 검증 함수 유무, POD)도 이 잠금 안에서 모든 상속 목록을 지은 뒤 구한다 — 검증 판정이 칸 타입의 목록을 재귀로 읽는다.
         // 예전에는 잠금 밖에서 구해 새로 올라온 타입이 판정 없이 보이는 틈이 있었고, 두 쓰기가 같은 타입의 판정 비트를 겹쳐 썼다. 칸 타입은 잠그지 않는 조회로 찾는다.
         const TypeResolver resolver{ this, &TypeRegistry::findAliveTypeLocked };
         for ( TypeInfo* pType : listType )
@@ -770,7 +770,7 @@ namespace sw
             }
             relinkAffectedLocked( listType );
         }
-        // 로그는 **잠금 밖에서** 남긴다(링크 · 상속 목록 · 판정은 위 잠금 안에서 바꿨다) — 리스너가 레지스트리를 다시 물어도 멈추지 않게.
+        // 로그는 잠금 밖에서 남긴다(링크 · 상속 목록 · 판정은 위 잠금 안에서 바꿨다) — 리스너가 레지스트리를 다시 물어도 멈추지 않게.
         rebuildAffected( listType );
     }
 
@@ -799,7 +799,7 @@ namespace sw
         UniqueLock<shared_mutex> lock{ _mutex };
         hashed_string            hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
 
-        // 내려가는 타입의 자손(다른 모듈)을 묘비로 바꾸기 **전에** 찾는다 — 그 자손만 상속 캐시(내려가는 모듈의 접근자를 가리킨다)를 버리고 다시 짓는다.
+        // 내려가는 타입의 자손(다른 모듈)을 묘비로 바꾸기 전에 찾는다 — 그 자손만 상속 캐시(내려가는 모듈의 접근자를 가리킨다)를 버리고 다시 짓는다.
         unordered_set<const TypeInfo*> uniqueUnloading;
         for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
         {
@@ -812,7 +812,7 @@ namespace sw
         (void)VectorUtil::removeIf( listAffected, [&]( const TypeInfo* pType )
         { return uniqueUnloading.contains( pType ); } );
 
-        // 지우지 않고 **묘비**를 남긴다. 밖에서 가진 포인터(`TypeLookupCache` 의 정적 슬롯, 다른 모듈 타입의 부모 포인터)가
+        // 지우지 않고 묘비를 남긴다. 밖에서 가진 포인터(`TypeLookupCache` 의 정적 슬롯, 다른 모듈 타입의 부모 포인터)가
         // 허공을 가리키지 않도록 객체는 그 자리에 둔다. `findType` 은 해제된 타입을 nullptr 로 답하고, 같은 FQN 이
         // 다시 로드되면 새 객체가 서고 묘비는 물러난 판으로 남는다(`registerClass`).
         for ( auto& [fqn, pInfo] : _mapFqnToClassType )
@@ -880,7 +880,7 @@ namespace sw
         {
             assignWireTypeNameLocked( retiredName, hashed_string{}, WireTypeKind::Retired, wireNameClash );
         }
-        // 자손의 부모 포인터는 **해제된 부모**를 가리킨다. 이름으로 다시 찾아 바꾼다(해제된 타입은 찾지 못해 사슬은 거기서 끝난다).
+        // 자손의 부모 포인터는 해제된 부모를 가리킨다. 이름으로 다시 찾아 바꾼다(해제된 타입은 찾지 못해 사슬은 거기서 끝난다).
         // 상속 목록은 내려가는 모듈의 프로퍼티를 가리킨다 — 모듈이 아직 살아 있는 지금 버린다(`clearContent` 와 같은 이유).
         relinkAffectedLocked( listAffected );
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
@@ -918,7 +918,7 @@ namespace sw
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
         const hashed_string aliasHash{ pAliasName };
 
-        // 별칭이 이미 **다른 살아 있는** 타입을 가리키면 덮지 않는다 — 예전에는 조용히 덮어, 그 옛 이름으로 저장된 씬 · 세이브가 다른 타입으로 풀렸다.
+        // 별칭이 이미 다른 살아 있는 타입을 가리키면 덮지 않는다 — 예전에는 조용히 덮어, 그 옛 이름으로 저장된 씬 · 세이브가 다른 타입으로 풀렸다.
         // 같은 타입으로 다시 거는 것(핫 리로드)과 내려간 타입(묘비)의 이름을 이어받는 것은 그대로 받는다.
         const auto previousAliasIt = _mapAliasToFqn.find( aliasHash );
         if ( previousAliasIt != _mapAliasToFqn.end() && previousAliasIt->second != canonicalKey )
@@ -1030,7 +1030,7 @@ namespace sw
         // 레지스트리가 아직 없으면 칸을 건드리지 않고 nullptr 를 반환한다(다음 호출이 다시 본다).
         if ( engine::areEngineServicesBound() == false )
             return nullptr;
-        // 세대는 찾기 **전에** 읽는다. 찾는 사이 등록이 끼면 옛 세대가 남아 다음 호출이 다시 찾는다(그 반대는 없다).
+        // 세대는 찾기 전에 읽는다. 찾는 사이 등록이 끼면 옛 세대가 남아 다음 호출이 다시 찾는다(그 반대는 없다).
         _pGenerationCounter.store( &s_typeTableGeneration, std::memory_order_release );
         const uint32    generation = s_typeTableGeneration.load( std::memory_order_acquire );
         const TypeInfo* pFound     = engine::getSubsystem<TypeRegistry>().findType( fqn );

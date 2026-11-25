@@ -55,13 +55,13 @@ namespace sw
         void registerPendingTypes( TypeRegistrar* pClassHead, EnumRegistrar* pEnumHead );
         /**
          * @brief 해당 모듈이 등록한 타입을 모두 해제합니다.
-         * @details 엔진에서는 핫 리로드(개발 빌드)만 부르지만 **모든 구성에서 컴파일한다**. 구성마다 있고 없는 API 는 부르는 쪽(테스트)마다
+         * @details 엔진에서는 핫 리로드(개발 빌드)만 부르지만 모든 구성에서 컴파일한다. 구성마다 있고 없는 API 는 부르는 쪽(테스트)마다
          *          `SW_SHIPPING` 가드를 기억해야 하고, 잊은 곳은 Shipping 빌드에서야 깨진다(`b206e2a26`). 레지스트리 연산이라 구성과 무관하게 맞다.
          */
         void unregisterTypesByModule( string_view moduleName );
         /**
          * @brief 모듈을 내리기 직전(그 모듈의 타입 · 코드가 아직 살아 있을 때)의 알림을 받습니다. 구독이 사라지면 뗍니다.
-         * @details 모듈 타입의 인스턴스를 든 쪽(UI 화면 · 어빌리티 · 편집기 기본값)이 **타입의 모듈 이름**(데이터)으로 자기 것을 골라 놓는다 —
+         * @details 모듈 타입의 인스턴스를 든 쪽(UI 화면 · 어빌리티 · 편집기 기본값)이 타입의 모듈 이름(데이터)으로 자기 것을 골라 놓는다 —
          *          컴포넌트를 지우는 `destroyComponentsOfModule` 과 같은 규칙이다(언리얼은 클래스의 패키지로 다시 만든다). 코드 주소로 고르지 않는다.
          *          `engine::unregisterModuleTypes` 가 타입을 걷기 전에 부른다(`publishModuleUnloading`). 모듈을 올리고 내리는 스레드에서만 불린다.
          */
@@ -133,7 +133,7 @@ namespace sw
         const EnumInfo* findEnum( const hashed_string& nameOrFqn ) const;
 
         /**
-         * @brief 이 타입이 **실제로 무엇으로 등록됐는지** 사람이 읽을 수 있는 텍스트로 반환합니다(진단용).
+         * @brief 이 타입이 실제로 무엇으로 등록됐는지 사람이 읽을 수 있는 텍스트로 반환합니다(진단용).
          * @details 모듈, 크기, 부모 체인을 보여 주고, 체인의 단계마다 선언된 프로퍼티(타입, 이 빌드의 실제 오프셋, 비트필드의 바이트와
          *          마스크, 접근자, 컨테이너, 범위, 플래그, 별칭)와 함수를 보여 준다. "왜 인스펙터에 없나", "왜 씬이 이 값을 못 읽나", "부모가 왜
          *          안 붙나"를 확인할 때 쓴다. 파서 쪽의 짝은 `ReflectionParser --dump` 이다.
@@ -161,7 +161,7 @@ namespace sw
         }
 
         /**
-         * @brief 살아 있는 **모든** 타입의 파생 캐시(이름 맵 · 상속 병합 목록 · 부모 포인터 · 조상 표 · 판정)를 다시 짓습니다.
+         * @brief 살아 있는 모든 타입의 파생 캐시(이름 맵 · 상속 병합 목록 · 부모 포인터 · 조상 표 · 판정)를 다시 짓습니다.
          * @details 등록 · 별칭 · 해제는 바뀐 타입과 그 자손만 스스로 다시 짓는다(배치 안이면 배치 끝이 한 번에) — 이 함수는 전체를 다시 지을 때
          *          (테스트, 진단)만 쓴다. 조회는 지어 둔 것을 읽기만 한다.
          * @note 부모 링크 · 조상 표 · 상속 목록은 독점 잠금 안에서(`relinkAffectedLocked`), 판정은 잠금을 푼 뒤 짓는다 — 판정이 레지스트리를 다시 잠그는데
@@ -275,25 +275,25 @@ namespace sw
         static const TypeInfo* findAliveTypeLocked( const void* pContext, const hashed_string& name ) SW_NO_THREAD_SAFETY_ANALYSIS;
         /**
          * @brief @p uniqueRoot 의 타입이거나 그 자손인 살아 있는 타입을 @p outListType 에 더합니다(잠금 안). 부모 이름을 걸어 올라가 본다 — 타입 수 × 사슬 깊이.
-         * @details 상속 캐시를 비우고 다시 짓는 범위다. 예전에는 등록 한 번마다 **모든** 타입을 비워 무관한 키트 하나가 오를 때도 모든 상속 목록이
+         * @details 상속 캐시를 비우고 다시 짓는 범위다. 예전에는 등록 한 번마다 모든 타입을 비워 무관한 키트 하나가 오를 때도 모든 상속 목록이
          *          다시 지어졌다(밖에서 든 `const PropertyInfo*` 가 매달리고 등록이 O(타입²)). 언리얼도 클래스를 다시 올릴 때 그 자식 클래스만 다시 잇는다.
          */
         void collectAffectedLocked( const unordered_set<const TypeInfo*>& uniqueRoot, vector<TypeInfo*>& outListType ) const SW_REQUIRES_LOCK( _mutex );
         /**
-         * @brief @p listType 의 부모 포인터 · 조상 표 · 상속 목록을 **독점 잠금 안에서** 새 값으로 바꿉니다(상속 목록은 새 판을 지어 원자 교체 — `TypeInheritedPropertySlot`).
+         * @brief @p listType 의 부모 포인터 · 조상 표 · 상속 목록을 독점 잠금 안에서 새 값으로 바꿉니다(상속 목록은 새 판을 지어 원자 교체 — `TypeInheritedPropertySlot`).
          * @details 이것들을 쓰는 쪽은 이 함수 하나다(레지스트리 타입). 읽기(캐스트 · 사슬 걷기 · 상속 목록)는 잠금 없이 원자값만 보고, 비는 틈이 없다.
          */
         void relinkAffectedLocked( const vector<TypeInfo*>& listType ) const SW_REQUIRES_LOCK( _mutex );
-        /** @brief @p listType 의 사슬 순환 · 필드 해시 충돌을 알립니다(**잠금 밖** — 로그 리스너가 레지스트리를 다시 잠근다). 링크 · 표 · 상속 목록 · 판정은 `relinkAffectedLocked` 가 이미 바꿨다. */
+        /** @brief @p listType 의 사슬 순환 · 필드 해시 충돌을 알립니다(잠금 밖 — 로그 리스너가 레지스트리를 다시 잠근다). 링크 · 표 · 상속 목록 · 판정은 `relinkAffectedLocked` 가 이미 바꿨다. */
         void rebuildAffected( const vector<TypeInfo*>& listType ) const SW_EXCLUDES_LOCK( _mutex );
         /**
          * @brief 타입 · enum 이름 하나를 해시 표(`_wireTypeNameIndex`)에 넣습니다(잠금 안). 같은 해시에 다른 이름이 있으면 넣지 않고 처음 충돌을 @p inoutClash 에 적습니다.
          * @details 로그는 잠금 밖에서 남긴다(`reportWireTypeNameClash`) — 리스너가 레지스트리를 다시 물어도 멈추지 않게.
          */
         void assignWireTypeNameLocked( const hashed_string& name, const hashed_string& wireName, WireTypeKind kind, string& inoutClash ) SW_REQUIRES_LOCK( _mutex );
-        /** @brief 해시 표 충돌을 오류로 남깁니다(**잠금 밖**). 비어 있으면 아무것도 하지 않습니다. */
+        /** @brief 해시 표 충돌을 오류로 남깁니다(잠금 밖). 비어 있으면 아무것도 하지 않습니다. */
         static void reportWireTypeNameClash( string_view clash );
-        /** @brief @p listType 마다 상속 포함 필드 이름 · 옛 이름의 32 비트 해시가 겹치는지 보고 겹치면 오류를 남깁니다(**잠금 밖**, 상속 목록을 지은 뒤). */
+        /** @brief @p listType 마다 상속 포함 필드 이름 · 옛 이름의 32 비트 해시가 겹치는지 보고 겹치면 오류를 남깁니다(잠금 밖, 상속 목록을 지은 뒤). */
         static void reportFieldNameHashClashes( const vector<TypeInfo*>& listType );
         /**
          * @brief 사슬(조상 포함)에서 같은 인터페이스를 두 번 내보내거나 인터페이스가 상한(`kMaxInterfaceCount`)을 넘는 형식을 오류로 알립니다(`Reflection.InterfaceExportedTwice` · `Reflection.InterfaceTableFull`).
@@ -315,7 +315,7 @@ namespace sw
     private:
         mutable shared_mutex _mutex;
         /**
-         * @brief FQN 하나당 살아 있는 TypeInfo **하나**입니다. 짧은 이름과 별칭은 값을 복사하지 않고 `_mapAliasToFqn`
+         * @brief FQN 하나당 살아 있는 TypeInfo 하나입니다. 짧은 이름과 별칭은 값을 복사하지 않고 `_mapAliasToFqn`
          *        으로 이 항목을 가리킵니다. `const TypeInfo*` 를 키로 쓰는 쪽(컴포넌트 풀 등)이
          *        이름을 무엇으로 조회했느냐에 따라 다른 포인터를 받으면 안 됩니다. 값은 커져도 옮기지 않고, 모듈을 해제해도 지우지 않고
          *        `_castHeader._bAlive` 를 내립니다(묘비). 같은 FQN 을 다시 등록하면 새 객체로 바꾸고 옛 것은 `_listRetiredClassType` 으로 물린다.
@@ -329,8 +329,8 @@ namespace sw
         /** @brief 짧은 이름과 별칭에서 FQN 으로 가는 맵입니다. 조회는 여기를 거쳐 `_mapFqnToClassType` 한 곳으로 모입니다. */
         unordered_map<hashed_string, hashed_string> _mapAliasToFqn SW_GUARDED_BY( _mutex );
         /**
-         * @brief FQN 하나당 살아 있는 EnumInfo **하나**입니다(옮기지 않음, 지우지 않음. TypeInfo 와 같은 규칙 — 다시 등록하면 새 객체, 옛 것은 `_listRetiredEnum`).
-         * @details 이 맵은 밀집 배열이라 값으로 보관하면 enum 이 하나 더 등록되어 배열이 커질 때 **모든 EnumInfo 가 옮겨져** `findEnum` 이 반환한
+         * @brief FQN 하나당 살아 있는 EnumInfo 하나입니다(옮기지 않음, 지우지 않음. TypeInfo 와 같은 규칙 — 다시 등록하면 새 객체, 옛 것은 `_listRetiredEnum`).
+         * @details 이 맵은 밀집 배열이라 값으로 보관하면 enum 이 하나 더 등록되어 배열이 커질 때 모든 EnumInfo 가 옮겨져 `findEnum` 이 반환한
          *          포인터가 죽는다(워커가 씬을 만드는 동안 모듈이 로드되는 경우). 짧은 이름과 별칭도 복사본이 아니라 같은 객체를 가리킨다.
          *          복사본이면 핫 리로드로 열거자가 늘어도 별칭 쪽이 이전 목록으로 답한다.
          */

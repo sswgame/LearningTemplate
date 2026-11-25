@@ -25,7 +25,7 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() == false )
             return nullptr;
-        // 세대는 찾기 **전에** 읽는다. 찾는 사이 등록이나 해제가 끼면 옛 세대가 남아 다음 호출이 다시 찾는다.
+        // 세대는 찾기 전에 읽는다. 찾는 사이 등록이나 해제가 끼면 옛 세대가 남아 다음 호출이 다시 찾는다.
         const uint32    generation = TypeRegistry::getGeneration();
         const EnumInfo* pCached    = nullptr;
         if ( _slot.tryGet( generation, pCached ) )

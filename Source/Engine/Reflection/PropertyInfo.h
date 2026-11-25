@@ -55,7 +55,7 @@ namespace sw
     struct SW_API PropertyInfo
     {
         /**
-         * @brief 값이 객체 **밖**에 있는 프로퍼티의 값 주소를 반환하는 함수입니다. 참조를 반환하는 메서드에 `PROPERTY` 를 붙이면 생성됩니다.
+         * @brief 값이 객체 밖에 있는 프로퍼티의 값 주소를 반환하는 함수입니다. 참조를 반환하는 메서드에 `PROPERTY` 를 붙이면 생성됩니다.
          * @details 인자는 오프셋의 기준이 되는 객체 주소(`getRawPtr` 의 인자와 같다)이고, 반환값은 그 인스턴스의 값 주소다.
          *          씬 컴포넌트의 로컬 TRS 가 첫 번째 예다. 값은 트랜스폼 저장소의 슬롯에 있지만 이름(`_localPosition`)은 그대로라서,
          *          직렬화기, 인스펙터, 비교 도구가 코드를 바꾸지 않고 그 위치를 읽고 쓴다.
@@ -144,7 +144,7 @@ namespace sw
         }
 
         /**
-         * @brief 글 @p text 가 지금 이름이나 옛 이름(`PROPERTY( Alias = … )`)과 **철자 그대로** 같으면 true 입니다.
+         * @brief 글 @p text 가 지금 이름이나 옛 이름(`PROPERTY( Alias = … )`)과 철자 그대로 같으면 true 입니다.
          * @details XML · JSON 의 태그 · 속성 이름을 프로퍼티에 맞출 때 쓴다. 이름 해시(`matchesNameHash`)는 `hashed_string` 규칙이라 대소문자를 무시해
          *          `_Width` 같은 철자가 조용히 같은 칸이 된다(별칭). 해시는 엔진이 쓴 바이너리 태그에만 쓴다.
          */
@@ -198,7 +198,7 @@ namespace sw
         using SetBitFunction = void ( * )( void* pInstance );
 
         /**
-         * @brief 비트필드의 바이트와 마스크를 **이 빌드 구성의 실제 레이아웃에서** 찾아 이 프로퍼티를 비트필드로 만듭니다.
+         * @brief 비트필드의 바이트와 마스크를 이 빌드 구성의 실제 레이아웃에서 찾아 이 프로퍼티를 비트필드로 만듭니다.
          * @details 0 으로 채운 메모리에서 그 비트만 세우는 함수를 부르고, 바뀐 바이트와 비트를 읽는다. 언리얼의 `FBoolProperty` 가 UHT 가 만든 SetBit 함수로 하는 것과 같은 방식이다.
          *          파서가 libclang 으로 측정한 바이트는 쓰면 안 된다. 파서는 Debug 정의(`SW_DEBUG`, `_DEBUG`)를 모른 채 크기를 재기 때문이다.
          *          Debug 에서 커지는 멤버(`sw::string` 의 경쟁 검사 필드나 반복자 디버그) 뒤에 비트필드가 있으면 엉뚱한 바이트를 가리키고,
@@ -290,7 +290,7 @@ namespace sw
         bool hasValueAccessor() const noexcept { return _pValueAccessor != nullptr; }
 
         /**
-         * @brief 인스턴스 기준 프로퍼티 값의 원시 메모리 시작 포인터를 반환합니다. **비트필드는 nullptr 입니다.**
+         * @brief 인스턴스 기준 프로퍼티 값의 원시 메모리 시작 포인터를 반환합니다. 비트필드는 nullptr 입니다.
          * @details 보통은 `인스턴스 + _offset` 이다. 값이 객체 밖에 있는 프로퍼티는 `_pValueAccessor` 가 찾은 주소다.
          *          `getValue`, `setValue`, `getValuePtr`, 직렬화기는 모두 이 함수를 거쳐 값에 접근한다.
          *          비트필드는 값 주소가 없다. 예전에는 그 비트가 든 바이트 주소를 줘서, 그 주소를 값 주소로 받은 쓰기(스키마 이관의 점 경로,

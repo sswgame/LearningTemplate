@@ -843,11 +843,11 @@ SW_TEST_CASE( ReflectionMetadataTest, TransientPropertySerialization )
 
 /**
  * @brief [ReflectionTypeRegistryTest] 배치 등록 뒤 조회 캐시가 전부 만들어져 있는지 검증
- * @details `TypeInfo` 의 이름→프로퍼티 맵과 상속 병합 목록은 첫 조회 때 `mutable` 로, **잠금 없이**
+ * @details `TypeInfo` 의 이름→프로퍼티 맵과 상속 병합 목록은 첫 조회 때 `mutable` 로, 잠금 없이
  *          채워진다. 워커 둘이 같은 타입을 처음 조회하면 같은 맵에 동시에 삽입한다.
  *          `TypeRegistry::populateLookupCaches()` 가 등록 배치 직후 단일 스레드에서 만들어 그 창을 없앤다.
  *
- *          **등록하는 자리에서 하나씩 만들 수 없다는 것이 이 테스트의 핵심이다.** 타입 표는 밀집
+ *          등록하는 자리에서 하나씩 만들 수 없다는 것이 이 테스트의 핵심이다. 타입 표는 밀집
  *          배열이라 커질 때 원소를 옮기고, 그때 `TypeInfo` 이동 생성자가 캐시를 비운다 — 뒤이은
  *          등록 하나가 앞서 만든 것을 전부 날린다. 그래서 "배치 뒤에 한 번" 이 유일하게 성립한다.
  */
@@ -877,7 +877,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, LookupCachesAreBuiltAfterRegistrationB
  * @details `_parentFQN` 은 코드젠이 적는 값이지만 `registerClass` 는 **공개 API 이고 그 값을
  *          검사하지 않는다.** 모듈이 따로따로 등록되는 핫리로드에서는 A→B→A 가 만들어질 수
  *          있으므로, 부모 체인을 거는 곳은 모두 그것을 대비해야 한다:
- *          `isDerivedFrom`(루프 — **행**), `findPropertyInHierarchy`(재귀 — 스택 오버플로),
+ *          `isDerivedFrom`(루프, 행), `findPropertyInHierarchy`(재귀, 스택 오버플로),
  *          `getPropertiesWithBase`(재귀 — 스택 오버플로).
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, ParentChainLoopDoesNotHang )
@@ -994,7 +994,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentTypePointerIsResolvedAfterBatch 
  * @brief [ReflectionTypeRegistryTest] 조상 표 — 배치 끝에 세워지고, 걷기와 같은 답을 내며, 사슬이 바뀌면 따라온다
  * @details 캐스트의 핫패스는 `isDerivedFrom( const TypeInfo* )` 다. 등록 배치 끝에 타입마다 루트부터의 `_typeID` 표를
  *          적어 두고, 검사는 로드 둘과 비교 하나다(HotSpot 의 primary supers display). 지켜야 할 것 넷:
- *          (1) 표의 답은 걷기의 답과 같다 (2) 표가 없는 쪽 — 레지스트리 밖 사본·표보다 깊은 사슬 — 은 걷기로
+ *          (1) 표의 답은 걷기의 답과 같다 (2) 표가 없는 쪽(레지스트리 밖 사본 · 표보다 깊은 사슬)은 걷기로
  *          폴백해 같은 답을 낸다 (3) 재등록으로 부모가 바뀌면 옛 표로 답하지 않는다 (4) 모듈 해제 뒤 남은
  *          타입은 표를 다시 세워 답한다.
  */
@@ -1059,7 +1059,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesTraversalAndFoll
     SW_EXPECT_FALSE( pLeaf->isDerivedFrom( static_cast<const sw::TypeInfo*>( nullptr ) ) );
 
     // (2a) 레지스트리 밖 사본 — 손으로 만든 같은 이름의 TypeInfo(테스트 목의 `StaticType()` 이 이렇다. 자기 `_typeID`
-    //      를 따로 가진다)는 **이름**으로 같은 타입이다. 표가 이름을 적는 이유. 표 쪽에서도, 걷기 쪽에서도 같은 답.
+    //      를 따로 가진다)는 이름으로 같은 타입이다. 표가 이름을 적는 이유. 표 쪽에서도, 걷기 쪽에서도 같은 답.
     sw::TypeInfo midCopy;
     midCopy._name               = sw::hashed_string( "DispMid" );
     midCopy._fullyQualifiedName = sw::hashed_string( "swtest::DispMid" );
@@ -1102,7 +1102,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesTraversalAndFoll
     SW_EXPECT_FALSE( pDeep9->isDerivedFrom( pRoot ) );
 
     // (3) 재등록으로 Mid 의 부모가 Root → Other 로 바뀐다. 배치 밖 등록은 그 타입과 자손의 표를 그 자리에서 새 사슬로 다시 짓는다(W-R1) —
-    //     배치 끝을 부르기 **전**에도 옛 표로 답하지 않는다. 등록으로 포인터가 옮겨질 수 있어 다시 찾는다.
+    //     배치 끝을 부르기 전에도 옛 표로 답하지 않는다. 등록으로 포인터가 옮겨질 수 있어 다시 찾는다.
     registry.registerClass( makeType( "DispMid", "swtest::DispMid", "swtest::DispOther" ) );
     pRoot  = find( "swtest::DispRoot" );
     pMid   = find( "swtest::DispMid" );
@@ -1118,7 +1118,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesTraversalAndFoll
     SW_EXPECT_FALSE( pLeaf->isDerivedFrom( pRoot ) );
     SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pOther ) );
 
-    // (3b) 부모가 **아직 등록되지 않은** 타입 — `Component` 처럼 REFLECT 가 아닌 기반이거나 아직 안 올라온 모듈.
+    // (3b) 부모가 아직 등록되지 않은 타입 — `Component` 처럼 REFLECT 가 아닌 기반이거나 아직 안 올라온 모듈.
     //      안 풀리는 부모는 사슬의 끝이라 표는 선다(걷기가 매번 그 이름을 잠금 잡고 찾던 것이 사라진다). 부모가
     //      뒤늦게 등록되면 등록이 표를 비우고, 다음 조회가 이어진 사슬로 다시 세운다.
     registry.registerClass( makeType( "DispOrphan", "swtest::DispOrphan", "swtest::DispLateParent" ) );
@@ -1196,7 +1196,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyMatchesMergedList )
 }
 
 /**
- * @brief [ReflectionTypeInfoTest] 병합 목록이 선형 임계(4)를 넘는 타입은 **맵**으로 답한다 — 이름 · 별칭 · 파생 우선 · 실패
+ * @brief [ReflectionTypeInfoTest] 병합 목록이 선형 임계(4)를 넘는 타입은 맵으로 답한다 — 이름 · 별칭 · 파생 우선 · 실패
  * @details 위 테스트의 픽스처는 병합 목록이 작아 선형 경로만 지난다. 여기서는 손으로 만든 사슬(기반 3 · 파생 3, 파생이
  *          기반 이름 하나를 다시 적는다)로 맵 경로를 지나게 한다. 파생이 다시 적은 이름은 파생의 항목(오프셋이 다르다)이
  *          나와야 한다 — 병합 규칙과 같다.
@@ -1285,7 +1285,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeLookupCacheFollowsRegistryGenerati
     registry.unregisterTypesByModule( "TestLookupCache" );
     SW_EXPECT_NULL( cache.find( fqn ) );
     SW_EXPECT_NULL( registry.findType( fqn ) );
-    // 같은 판 교체: 같은 FQN 을 다시 등록하면 **새 객체**가 서고(묘비는 죽은 채 남는다), 세대가 올라 칸도 새 객체를 낸다.
+    // 같은 판 교체: 같은 FQN 을 다시 등록하면 새 객체가 서고(묘비는 죽은 채 남는다), 세대가 올라 칸도 새 객체를 낸다.
     registry.registerClass( typeProbe );
     const sw::TypeInfo* const pRevived = registry.findType( fqn );
     SW_REQUIRE_NOT_NULL( pRevived );
@@ -1438,7 +1438,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeInfoAddressIsStableAcrossRegistrat
 }
 
 /**
- * @brief [ReflectionTypeInfoTest] 등록된 모든 비트필드는 **이 빌드 구성의 실제 레이아웃에서** 앞뒤의 보통 프로퍼티 사이에 있다
+ * @brief [ReflectionTypeInfoTest] 등록된 모든 비트필드는 이 빌드 구성의 실제 레이아웃에서 앞뒤의 보통 프로퍼티 사이에 있다
  * @details 보통 프로퍼티의 오프셋은 생성 코드가 `offsetof` 로 적어 그 구성의 레이아웃을 따른다. 비트필드는 `offsetof` 를 쓸 수 없어
  *          파서가 libclang 으로 측정한 숫자를 박는데, 파서는 Debug 정의(`SW_DEBUG` · `_DEBUG`)를 모른 채 측정한다 — Debug 에서 커지는 멤버
  *          (`sw::string` 의 경쟁 검사 자리 · 반복자 디버그) 뒤의 비트필드가 엉뚱한 바이트를 가리킬 수 있다 — 씬 로드 · 인스펙터가
@@ -1578,7 +1578,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryReflectedParentIsRegistered )
 
 /**
  * @brief [ReflectionTypeRegistryTest] 기반을 다시 등록 · 해제하면 파생 타입의 상속 포함 목록이 따라 바뀐다
- * @details 파생 타입의 `getPropertiesWithBase` 는 부모 프로퍼티를 **복사해** 캐시한다. 재등록 · 해제가 그 타입 자신의 캐시나 부모 포인터 · 조상 표만
+ * @details 파생 타입의 `getPropertiesWithBase` 는 부모 프로퍼티를 복사해 캐시한다. 재등록 · 해제가 그 타입 자신의 캐시나 부모 포인터 · 조상 표만
  *          비우면, 다른 모듈의 파생 타입은 핫 리로드 뒤에도 옛 기반의 프로퍼티(옛 오프셋 · 내려간 모듈의 접근자)로 직렬화한다.
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )

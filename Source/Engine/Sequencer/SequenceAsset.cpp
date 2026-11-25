@@ -28,7 +28,7 @@ namespace sw
         constexpr uint16 kFieldText     = makeSequenceFieldBit( SequenceItemField::Text );
 
         /**
-         * @brief 항목 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceItemKind` 값 순서입니다.** 종류의 칸 · 재생 동작 · 색은 이 줄이 전부다.
+         * @brief 항목 종류 표입니다. 종류마다 한 줄이고 순서는 `SequenceItemKind` 값 순서입니다. 종류의 칸 · 재생 동작 · 색은 이 줄이 전부다.
          * @details 칸: 필수(`_requiredProperties`)는 비면 읽기 오류, 허용(`_allowedProperties`) 밖의 칸이 차 있어도 읽기 오류다 — 다른 종류의 칸이 남은 파일은 무엇을 뜻하는지 모른다.
          *          이벤트 · 시나리오는 대상이 없어도 된다(알림만 한다). 소리는 대상이 없으면 화면 소리다. 자막은 대상 바인딩의 표시 이름이 화자다(없으면 화자 없이).
          *          구간 처리기가 있는 종류는 재생 · 미리보기가 들어가기 · 머물기 · 나가기를 그 처리기로 돈다(`SequenceTimelineUtil::applySpans`) — 새 구간 종류는 처리기 하나와 이 줄 하나다.
@@ -61,7 +61,7 @@ namespace sw
 
         static_assert( isKindTableOrdered(), "kArrSequenceItemKindInfo must be ordered by SequenceItemKind and its required fields must be allowed" );
 
-        /** @brief 키 트랙 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceTrackKind` 값 순서입니다**(언리얼 Sequencer 의 트랙 에디터 등록 한 줄에 해당). */
+        /** @brief 키 트랙 종류 표입니다. 종류마다 한 줄이고 순서는 `SequenceTrackKind` 값 순서입니다(언리얼 Sequencer 의 트랙 에디터 등록 한 줄에 해당). */
         constexpr auto kArrSequenceTrackKindInfo = makeEnumTable<SequenceTrackKind, SequenceTrackKindInfo>( {
             // 종류, 채널 수, 새 이름 머리, 대상 경로를 쓴다
             { SequenceTrackKind::Transform, kSequenceTransformChannelCount, "Transform", false},

@@ -157,7 +157,7 @@ namespace sw
 
             /**
              * @brief 엔티티 목록을 읽습니다(`writeEntities` 의 짝). 실패하면 오류를 남기고 false 입니다.
-             * @details **파일이 말한 개수를 그대로 잡아 두지 않는다.** 남은 바이트를 엔티티 최소 크기로 나눈 것보다 많은 엔티티는 있을 수 없다 —
+             * @details 파일이 말한 개수를 그대로 잡아 두지 않는다. 남은 바이트를 엔티티 최소 크기로 나눈 것보다 많은 엔티티는 있을 수 없다 —
              *          손상된 씬 하나가 수백 기가짜리 `reserve` 가 되는 것을 여기서 막는다.
              */
             [[nodiscard]] static bool readEntities( Archive& arch, vector<SceneDocument::SceneObjectNode>& outListNode, string_view absPath )

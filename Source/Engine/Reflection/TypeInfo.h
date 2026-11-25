@@ -15,7 +15,7 @@
 namespace sw
 {
     /**
-     * @brief 상속 포함 프로퍼티 목록의 읽기 뷰입니다(`TypeInfo::getPropertiesWithBase`). 원소는 그 프로퍼티를 **선언한 타입**의 `_listProperty` 에 있습니다.
+     * @brief 상속 포함 프로퍼티 목록의 읽기 뷰입니다(`TypeInfo::getPropertiesWithBase`). 원소는 그 프로퍼티를 선언한 타입의 `_listProperty` 에 있습니다.
      * @details 예전에는 부모 목록을 값으로 복사해 들어, 무관한 타입이 하나 등록될 때마다 모든 타입이 사본을 비우고 다시 지었다 — 밖에서 든
      *          `const PropertyInfo*`(UI 바인딩 · 시퀀서 트랙)가 매달렸다. 지금은 선언한 타입의 원소를 가리키는 포인터 배열이라, 그 타입 자신이
      *          다시 등록되거나 내려가기 전까지 포인터가 산다(언리얼 `FProperty` 사슬이 선언 클래스의 것을 가리키는 것과 같은 자리).
@@ -87,7 +87,7 @@ namespace sw
     };
 
     // ── 리플렉션 인터페이스 표(`REFLECT_INTERFACE( I, _port )`) ────────────────────────
-    // 언리얼 `UClass::Interfaces`(`FImplementedInterface` — 인터페이스 클래스 + 포인터 오프셋)와 같은 자리다. 다른 점은 다중 상속 대신 포트 멤버라는 것 —
+    // 언리얼 `UClass::Interfaces`(`FImplementedInterface`: 인터페이스 클래스 + 포인터 오프셋)와 같은 자리다. 다른 점은 다중 상속 대신 포트 멤버라는 것 —
     // "기반 하나" 규칙(CppStyle)을 지키고, 포트가 주인을 찾는 길도 오프셋 하나다(`getPortOwner`). 이름은 정규 FQN 이다 — 조상 표(`TypeCastHeader`)처럼
     // 포인터가 아니라 이름을 견줘 모듈을 다시 올려도 같은 칸이다. 이 헤더의 pch 밖 포함 상한(header-include-limits) 때문에 따로 떼지 않는다.
     /** @brief 표의 한 칸입니다. */
@@ -192,7 +192,7 @@ namespace sw
 
     /**
      * @class TypeInheritedPropertySlot
-     * @brief 상속 병합 목록과 그 이름 맵의 **발행된 판**입니다(RCU). 읽고 쓰는 것은 `TypeInfo` 만이다(friend — `TypeParentLink` 와 같은 이유).
+     * @brief 상속 병합 목록과 그 이름 맵의 발행된 판입니다(RCU). 읽고 쓰는 것은 `TypeInfo` 만이다(friend — `TypeParentLink` 와 같은 이유).
      * @details 쓰는 쪽(`TypeRegistry` 의 독점 잠금 안 `TypeInfo::rebuildDerivedCaches`)은 새 판을 다 지은 뒤 원자 포인터 하나로 바꿔 끼우고, 옛 판은 지우지 않고
      *          이 칸이 사는 동안(레지스트리 수명) 들고 있다 — 잠금 없이 판을 든 읽기(`getPropertiesWithBase` · `findPropertyInHierarchy`)가 끝까지 산 배열을 본다.
      *          예전에는 같은 벡터를 잠금 밖에서 비우고 다시 채워(`clearInheritedProperties` → `rebuildDerivedCaches`), 별칭 · 모듈 등록이 자손을 다시 잇는 동안
@@ -256,9 +256,9 @@ namespace sw
 
     /**
      * @struct TypeDerivedCache
-     * @brief `TypeInfo` 의 선언에서 **파생된** 캐시(상속 병합 목록, 자기 이름 맵, 부모 포인터, 판정)를 한 칸에 묶습니다.
+     * @brief `TypeInfo` 의 선언에서 파생된 캐시(상속 병합 목록, 자기 이름 맵, 부모 포인터, 판정)를 한 칸에 묶습니다.
      * @details 비우기는 `_derived = {}` 한 줄입니다(`TypeInfo::invalidateDerivedCaches`) — 칸마다 손으로 비우던 목록은 캐시를 더하고 비우기를 빠뜨리면
-     *          대입된 타입이 **이전 타입의 캐시**로 답했다(이름 조회가 다른 오프셋). 새 캐시는 이 구조체에 기본값과 함께 두면 저절로 비워진다.
+     *          대입된 타입이 이전 타입의 캐시로 답했다(이름 조회가 다른 오프셋). 새 캐시는 이 구조체에 기본값과 함께 두면 저절로 비워진다.
      *          원자 칸(`sw::reflected_atomic`)은 대입이 값을 옮기고, 상속 판 칸은 대입이 옛 판을 지우지 않는다(`TypeInheritedPropertySlot`).
      *          조상 테이블(`TypeInfo::_castHeader`)은 캐스트가 맨 앞 주소로 읽어 이 묶음 밖에 둔다.
      */
@@ -266,7 +266,7 @@ namespace sw
     {
         /**
          * @brief 상속 병합 목록과 그 이름 맵의 발행된 판입니다 — 원소는 선언한 타입의 `_listProperty` 를 가리킨다(`PropertyListView`).
-         * @details `TypeRegistry` 가 등록 · 해제 때 **그 타입과 자손만** 독점 잠금 안에서 새 판으로 바꾼다(`rebuildDerivedCaches`). 조회는 잠금 없이 판 하나를 읽는다
+         * @details `TypeRegistry` 가 등록 · 해제 때 그 타입과 자손만 독점 잠금 안에서 새 판으로 바꾼다(`rebuildDerivedCaches`). 조회는 잠금 없이 판 하나를 읽는다
          *          (`TypeInheritedPropertySlot`) — `mutable` 지연 캐시가, 다음에는 잠금 밖 제자리 다시 짓기가 워커의 조회와 경합하던 자리다.
          */
         TypeInheritedPropertySlot                         _inheritedProperties;
@@ -277,7 +277,7 @@ namespace sw
          * @details `isDerivedFrom` 이 조상마다 `findType(_parentFQN)`(shared_mutex 잠금과 해시맵 조회)을 부르지 않도록,
          *          등록 배치가 끝날 때(`TypeRegistry::populateLookupCaches`) 한 번 찾아 둔다. 그러면 조상을 따라가는 비용은 포인터 역참조 몇 번이다.
          *
-         *          **레지스트리에 든 타입은 쓰기 쪽만 이 값을 바꾼다.** 등록 · 별칭 · 해제가 바뀐 타입과 자손의 부모를 독점 잠금 안에서 이름으로 다시 찾아
+         *          레지스트리에 든 타입은 쓰기 쪽만 이 값을 바꾼다. 등록 · 별칭 · 해제가 바뀐 타입과 자손의 부모를 독점 잠금 안에서 이름으로 다시 찾아
          *          새 값으로 바로 바꾼다(`TypeRegistry::relinkAffectedLocked` — 비웠다가 잠금 밖에서 다시 찾던 틈이 없다). 그래서 읽기(`getParentType`)는
          *          레지스트리를 잠그지 않는다 — 예전에는 세대가 오를 때마다 부모가 미등록인 타입마다 `findType` 을 잠가, 별칭을 쉬지 않고 거는 쓰기와
          *          `getDerivedTypes` 가 잠금을 다투다 시한에 걸렸다. 레지스트리 밖 사본만 첫 조회가 이름으로 찾는다(여러 스레드가 같은 값을 써 relaxed 로 충분하다).
@@ -291,7 +291,7 @@ namespace sw
         mutable atomic<uint32> _parentMissGeneration{ 0 };
         /**
          * @brief 판정(POD · 세이브 · 검증)과 "구했다" 표시의 비트(`TypeInfo::kDerived*`)입니다. `TypeInfo::computeDerivedFlags` 가 한 번에 구한다 — 조회는 읽기만 한다.
-         * @details 레지스트리는 등록 · 별칭 · 해제 때 바뀐 타입의 상속 목록을 **모두** 다시 지은 뒤 **같은 독점 잠금 안에서** 판정을 구한다(`TypeRegistry::relinkAffectedLocked`)
+         * @details 레지스트리는 등록 · 별칭 · 해제 때 바뀐 타입의 상속 목록을 모두 다시 지은 뒤 같은 독점 잠금 안에서 판정을 구한다(`TypeRegistry::relinkAffectedLocked`)
          *          — 발행 전에 끝나 다른 스레드가 "구하지 않은" 타입을 보지 않는다. 검증 판정이 칸 타입의 상속 목록을 재귀로 읽어 모두 지은 뒤다.
          *          원자값인 까닭: 자손을 다시 이을 때 잠금 없이 읽는 스레드(`canConstruct` 등)와 겹쳐 쓴다 — 비트필드였을 때는 쓰기의 읽고-고쳐-쓰기가
          *          같은 바이트의 다른 비트를 옛 값으로 되돌릴 수 있었다. 레지스트리 밖 사본(테스트)은 `rebuildDerivedCaches` → `computeDerivedFlags` 를 직접 부른다.
@@ -323,14 +323,14 @@ namespace sw
     struct SW_API TypeInfo
     {
         /**
-         * @brief 루트부터 자기까지의 **이름(FQN 의 intern 인덱스)** 을 깊이 순서로 적은 조상 테이블과 자기 깊이입니다. **맨 앞 멤버다** — `castTo` 가
+         * @brief 루트부터 자기까지의 이름(FQN 의 intern 인덱스) 을 깊이 순서로 적은 조상 테이블과 자기 깊이입니다. 맨 앞 멤버다 — `castTo` 가
          *        이 타입을 전방 선언만 보고 그 주소에서 읽는다(`TypeCastHeader::of`, Reflection.cpp 의 `static_assert` 가 지킨다).
          * @details 캐스트의 핫패스는 이 테이블만 본다. `테이블[pTarget 의 깊이] == pTarget 의 이름` 이면 파생 관계다.
          *          포인터가 아니라 이름을 비교하므로, 레지스트리 밖 사본(테스트 목이 손으로 만든 `StaticType()`)도 이름이 같으면 같은 타입으로 본다.
          *          이 규칙은 부모를 따라가는 `isSameTypeName` 과 같다. `_typeID` 를 쓰지 않는 이유도 그 사본이다. 사본은 자기 id 를 따로 가진다.
          *          등록이나 해제로 부모 체인이 바뀔 수 있으면 `TypeRegistry` 가 깊이를 `kAncestorDepthUnknown` 으로 비우고,
          *          등록 배치가 끝날 때(`populateLookupCaches`)나 첫 상속 검사가 테이블을 다시 만든다.
-         *          레지스트리에 든 타입의 표는 **쓰기 쪽만** 짓는다 — `TypeRegistry` 가 독점 잠금 안에서(`relinkAffectedLocked`). 읽기는 잠금 없이 원자값만 본다.
+         *          레지스트리에 든 타입의 표는 쓰기 쪽만 짓는다 — `TypeRegistry` 가 독점 잠금 안에서(`relinkAffectedLocked`). 읽기는 잠금 없이 원자값만 본다.
          *          예전에는 첫 상속 검사(읽기)도 표를 지어, 등록이 비운 표를 읽기가 낡은 사슬로 다시 적을 수 있었다. 레지스트리 밖 사본만 첫 검사가 짓는다.
          */
         TypeCastHeader _castHeader;
@@ -363,7 +363,7 @@ namespace sw
         ///        (`TypeRegistry::reportFieldNameHashClashes`, 언리얼 CoreRedirects 의 지운 프로퍼티 기록과 같은 자리).
         vector<hashed_string> _listRemovedField;
         /**
-         * @brief 이 형식이 **선언한** 인터페이스 표입니다(`REFLECT_INTERFACE( I, _port )` 한 줄 = 한 칸, 생성 코드가 채운다). 조상까지 합친 표는 `getInterfacesWithBase`.
+         * @brief 이 형식이 선언한 인터페이스 표입니다(`REFLECT_INTERFACE( I, _port )` 한 줄 = 한 칸, 생성 코드가 채운다). 조상까지 합친 표는 `getInterfacesWithBase`.
          * @details 직렬화하지 않는다 — 형식의 성질이다(언리얼 `UClass::Interfaces` 와 같은 자리).
          */
         TypeInterfaceTable               _ownInterfaces;
@@ -504,13 +504,13 @@ namespace sw
             _castHeader._ancestorDepth.store( constant::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
         }
         /**
-         * @brief 부모에게서 **물려받은** 캐시(상속 포함 목록 · 그 이름 맵의 발행, POD · 세이브 · 검증 판정)를 거둡니다. 다시 지을 때까지 상속 목록을 물으면 멈춥니다.
+         * @brief 부모에게서 물려받은 캐시(상속 포함 목록 · 그 이름 맵의 발행, POD · 세이브 · 검증 판정)를 거둡니다. 다시 지을 때까지 상속 목록을 물으면 멈춥니다.
          * @details 자기 내용이 바뀌는 대입 · 묘비만 부른다. 자손을 다시 잇는 일(`TypeRegistry::relinkAffectedLocked`)은 거두지 않고 새 판으로 바로 바꾼다 — 거둔 틈에 다른
          *          스레드의 조회가 멈췄다. 옛 판은 지우지 않는다(`TypeInheritedPropertySlot`).
          */
         void clearInheritedProperties();
         /**
-         * @brief 선언에서 **파생된** 캐시(이름 맵, 상속 포함 목록, 부모 포인터, 조상 테이블, POD 판정)를 모두 비웁니다.
+         * @brief 선언에서 파생된 캐시(이름 맵, 상속 포함 목록, 부모 포인터, 조상 테이블, POD 판정)를 모두 비웁니다.
          * @details 복사 대입과 이동 대입이 함께 쓴다. 파생 캐시는 `_derived` 한 칸이라 `_derived = {}` 로 모두 비워진다 — 새 캐시는 `TypeDerivedCache` 에 둔다
          *          (예전의 손 목록은 빠뜨리면 대입된 타입이 이전 타입의 캐시로 답했다). 조상 테이블만 맨 앞 `_castHeader` 에 있어 따로 비운다.
          */
@@ -518,7 +518,7 @@ namespace sw
         /**
          * @brief 자기 이름 맵(아직 없을 때만)을 짓고, 상속 병합 목록 · 그 이름 맵을 지금의 부모 사슬로 새 판으로 지어 발행합니다.
          * @details 레지스트리에 든 타입은 `TypeRegistry` 가 독점 잠금 안에서 부른다(`relinkAffectedLocked` — 사슬 걷기는 레지스트리 타입에서 잠그지 않는다). 레지스트리를
-         *          다시 잠그거나 로그를 남기지 않는다. 사슬의 단계마다 **자기 선언 목록**만 접어 넣으므로(부모의 병합 목록을 읽지 않는다) 같은 배치에서 부모가 아직
+         *          다시 잠그거나 로그를 남기지 않는다. 사슬의 단계마다 자기 선언 목록만 접어 넣으므로(부모의 병합 목록을 읽지 않는다) 같은 배치에서 부모가 아직
          *          다시 지어지지 않았어도 답이 같다. 사슬이 순환하면(`_parentFQN` 이 자손을 가리키는 핫 리로드) 자기 목록만 둔다 — 오류 로그는 잠금 밖
          *          `TypeRegistry::rebuildAffected` 가 남긴다. 판정(POD · 세이브 · 검증)은 부르는 쪽이 이어서 구한다.
          */
@@ -529,7 +529,7 @@ namespace sw
          * @brief 묘비로 남길 때 모듈이 가지고 있던 내용을 비웁니다. 이름, id, 모듈만 남습니다.
          * @details 프로퍼티와 메서드 목록은 그 모듈의 코드(델리게이트, `$ctor`, 소멸 함수)를 가리킨다. 모듈이 언로드된 뒤에
          *          이 목록을 파괴하면(재등록 대입이나 레지스트리 소멸) 사라진 코드를 부른다. 그래서 해제 시점에,
-         *          **모듈이 아직 살아 있을 때** 여기서 비운다.
+         *          모듈이 아직 살아 있을 때 여기서 비운다.
          */
         void clearContent();
 
@@ -591,12 +591,12 @@ namespace sw
 
         /**
          * @brief 프로퍼티를 순회합니다. bIncludeBase 가 true 이면 상속 체인을 포함합니다.
-         * @details **직렬화는 true 를 써야 합니다.** 기본값 false 로 부르면 **상속된 PROPERTY 를 저장도 로드도 하지
+         * @details 직렬화는 true 를 써야 합니다. 기본값 false 로 부르면 **상속된 PROPERTY 를 저장도 로드도 하지
          *          않는다.** 컴포넌트에서는 그것이 곧 `SceneComponent` 의 트랜스폼이라, 씬, 프리팹, Undo 스냅샷에서
          *          메시, 스프라이트, 카메라의 위치가 사라진다.
-         *          `getPropertiesWithBase()` 는 기반 타입 먼저, 파생 타입이 같은 이름을 **덮어쓰는** 순서로
+         *          `getPropertiesWithBase()` 는 기반 타입 먼저, 파생 타입이 같은 이름을 덮어쓰는 순서로
          *          평탄화하고 캐시하므로 중복으로 방출하지 않는다.
-         * @note 상속 체인을 **부르는 쪽이 직접 순회하는** 코드(`ComponentDefaults` 가 레벨마다 자기 XML
+         * @note 상속 체인을 부르는 쪽이 직접 순회하는 코드(`ComponentDefaults` 가 레벨마다 자기 XML
          *       노드를 찾아 적용한다)는 false 가 맞다. true 를 주면 같은 값을 여러 노드에서
          *       중복 적용한다.
          */

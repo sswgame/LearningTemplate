@@ -77,7 +77,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 기록 타입이 대상과 **다른** enum 이면 그 EnumInfo 를 반환합니다. 같은 enum 을 다른 이름(FQN, 짧은 이름, 별칭)으로 부른 것이면 nullptr 입니다. */
+            /** @brief 기록 타입이 대상과 다른 enum 이면 그 EnumInfo 를 반환합니다. 같은 enum 을 다른 이름(FQN, 짧은 이름, 별칭)으로 부른 것이면 nullptr 입니다. */
             static const EnumInfo* findOtherWireEnum( hashed_string targetTypeName, hashed_string wireTypeName )
             {
                 if ( wireTypeName.empty() )
@@ -138,8 +138,8 @@ namespace sw
             }
 
             /**
-             * @brief 기록 타입(wire type)을 아는 POD payload 를 **그 타입의** 텍스트로 만듭니다.
-             * @details **크기만으로는 타입을 가를 수 없다.** `sizeof(float32) == sizeof(int32)` 이고
+             * @brief 기록 타입(wire type)을 아는 POD payload 를 그 타입의 텍스트로 만듭니다.
+             * @details 크기만으로는 타입을 가를 수 없다. `sizeof(float32) == sizeof(int32)` 이고
              *          `sizeof(float64) == sizeof(int64)` 이다. 크기로만 고르면 `float32` 분기가 돌지 않아(앞의 int32 분기가
              *          먼저 걸린다) `float32` 프로퍼티를 문자열로 바꾸는 강제 변환이 `1.5f` 를 비트값 `"1069547520"` 으로 적는다.
              *          기록 타입은 바이너리 태그(`wireTypeHash`)와 `SchemaOrphanValue._wireTypeHash` 가 가지고 있다.
@@ -184,7 +184,7 @@ namespace sw
 
             /**
              * @brief 기록 타입을 모를 때 크기로 짐작합니다.
-             * @warning 정수와 실수를 **가를 수 없습니다**(크기가 같습니다). 정수로 읽습니다. 기록 타입을 아는
+             * @warning 정수와 실수를 가를 수 없습니다(크기가 같습니다). 정수로 읽습니다. 기록 타입을 아는
              *          스칼라는 `formatWirePODToString` 이 먼저 처리하므로, 여기까지 오는 것은 기록 타입을 모르거나
              *          스칼라가 아닌(열거형 등) payload 뿐입니다.
              */
@@ -219,7 +219,7 @@ namespace sw
             }
 
             /**
-             * @brief 로드가 성공으로 끝난 뒤 아무 데도 쓰이지 않은 orphan(읽지 못한 값, 타입에 없는 필드)을 **로드마다 한 번** 알립니다.
+             * @brief 로드가 성공으로 끝난 뒤 아무 데도 쓰이지 않은 orphan(읽지 못한 값, 타입에 없는 필드)을 로드마다 한 번 알립니다.
              * @details 이름은 필드마다 한 번만 적는다(컨테이너 원소가 여럿 실패해도 필드 하나로 센다).
              *          JSON, XML 의 Ignore 정책도 여기서 알린다. 숫자 필드의 "abc" 가 말없이 기본값으로 남지 않게 하려는 것이다.
              */

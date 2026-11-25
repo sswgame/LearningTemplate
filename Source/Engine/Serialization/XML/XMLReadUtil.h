@@ -1,6 +1,6 @@
 /**
  * @file XMLReadUtil.h
- * @brief 손으로 읽는 데이터 XML 의 공통 읽기 — 문서 · 루트 찾기, 이름 · 이름 목록, 실수 묶음, 범위 있는 숫자 · 불리언 속성입니다(커브는 `GameDataXML::readFloatCurve` — 같은 티어인 Utility 를 못 본다).
+ * @brief 손으로 읽는 데이터 XML 의 공통 읽기: 문서 · 루트 찾기, 이름 · 이름 목록, 실수 묶음, 범위 있는 숫자 · 불리언 속성입니다(커브는 `GameDataXML::readFloatCurve`, 같은 티어인 Utility 를 못 본다).
  * @details 캐릭터 데이터(`CharacterDataReader`), 게임 데이터 표(`GameDataXML`), 키트 데이터가 같은 몸통을 각자 적던 것을 한 곳에 둡니다.
  *          앞 묶음(`loadRoot` · `parseRoot` · `readOptionalName` · `readFloatList`)은 무엇이 실패했는지만 돌려주고 알리지 않습니다(오류 모음에 담는 쪽용).
  *          뒤 묶음(`…OrWarn` · `readRequired…` · `readOptional…`)은 원소 · 속성 이름과 함께 로그로 알리고 bool 을 돌려줍니다.
@@ -64,7 +64,7 @@ namespace sw
         [[nodiscard]] static XMLRootStatus parseResourceRoot( XMLDocument& outDocument, string_view xmlText, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot );
 
         /**
-         * @brief **선택** 이름 속성을 앞뒤 공백을 뺀 이름으로 읽습니다. 없거나 비었으면(공백뿐이어도) 빈 이름입니다.
+         * @brief 선택 이름 속성을 앞뒤 공백을 뺀 이름으로 읽습니다. 없거나 비었으면(공백뿐이어도) 빈 이름입니다.
          * @details 필수 이름은 이 함수로 읽지 않는다 — 빈 이름이 "적지 않음"과 "잘못 적음"을 가르지 못해, 부르는 쪽이 비었는지 보는 것을 잊으면 조용히 지나간다.
          *          필수는 오류를 남기는 읽기(`readRequiredName` · `AppearanceXMLUtil::readRequiredName` · `CharacterDataReader::readName( …, true )`)를 쓴다.
          *          글이 빈 이름의 철자(`none`, 대소문자 무시)이면 오류를 알리고 빈 이름을 돌려준다 — 이름은 "적지 않음"과 값 "none" 을 가를 수 없다.
@@ -87,7 +87,7 @@ namespace sw
 
         /**
          * @brief 리소스 @p assetID 를 XML 글로 읽습니다. 팩의 이진 쿠킹본(`XMLBinary`)이면 글로 되살리고, 깨진 쿠킹본이면 오류를 남기고 false 입니다.
-         * @details 문서로 읽기만 하면 `XMLDocument::loadResource` 다(쿠킹본을 그대로 읽는다). 이것은 글을 고쳐 합치는 자리 — 부모 · 덮어쓰기 층 — 의 입구다. 쿠킹본은 고쳐 쓸 수 없어
+         * @details 문서로 읽기만 하면 `XMLDocument::loadResource` 다(쿠킹본을 그대로 읽는다). 이것은 글을 고쳐 합치는 자리(부모 · 덮어쓰기 층)의 입구다. 쿠킹본은 고쳐 쓸 수 없어
          *          글로 되살리지 않은 층은 부모를 적지 못하고 원본을 통째로 갈아 끼운다.
          */
         [[nodiscard]] static bool readText( const AssetID& assetID, string& outText );
@@ -101,7 +101,7 @@ namespace sw
         /** @brief `id` 속성을 반환합니다. 없거나 비면 "<원소> without an id - skipped" 를 경고하고 nullptr 를 반환합니다. */
         static const utf8* findRequiredID( const XMLNode& node, string_view sourceName );
         /**
-         * @brief **필수** 이름 속성 @p pAttribute 를 읽어 @p outName 에 넣습니다. 속성이 없거나 비었거나 글 `none` 이면 원소 · 속성 이름과 함께 오류를 알리고 false 입니다.
+         * @brief 필수 이름 속성 @p pAttribute 를 읽어 @p outName 에 넣습니다. 속성이 없거나 비었거나 글 `none` 이면 원소 · 속성 이름과 함께 오류를 알리고 false 입니다.
          * @details 반환값을 버릴 수 없다(`[[nodiscard]]`) — 호출부가 "이 원소를 넣을지"를 정한다. @p outName 은 실패하면 빈 이름이다.
          */
         [[nodiscard]] static bool readRequiredName( const XMLNode& node, const utf8* pAttribute, string_view sourceName, hashed_string& outName );

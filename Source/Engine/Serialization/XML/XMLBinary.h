@@ -1,7 +1,7 @@
 /**
  * @file XMLBinary.h
  * @brief 데이터 XML 문서의 쿠킹본(이진 나무)입니다 — 팩 쿠커가 카탈로그를 이 꼴로 굽고, `XMLDocument` 가 글자 해석 없이 그대로 읽습니다.
- * @details 언리얼 DataTable(uasset 이진) · 유니티 ScriptableObject(이진) · Godot 의 내보내기(글 `.tres` → 이진 `.res`)와 같은 자리다. Godot 처럼 **형식을 모르는 속성 나무**다 —
+ * @details 언리얼 DataTable(uasset 이진) · 유니티 ScriptableObject(이진) · Godot 의 내보내기(글 `.tres` → 이진 `.res`)와 같은 자리다. Godot 처럼 형식을 모르는 속성 나무다 —
  *          팩 쿠킹은 게임 · 키트 모듈을 올리기 전에 돌아 카탈로그의 행 형식을 보지 못한다(`DataCatalogInheritance.h`). 그래서 카탈로그 코드는 그대로이고(읽는 길 `XMLNode` 하나)
  *          글자 해석 · 주석 · 엔티티 · 조건(`_when`) 찾기 · 참조 규칙 검사가 배포 읽기에서 빠진다(쿠커가 이미 했다).
  *          - 리소스 id · 파일 이름은 원본과 같다 — 팩 안의 내용만 이진이다. 글로 다루는 자리(덮어쓰기 층 · 모드가 부모로 삼을 때)는 `decodeText` 로 글을 되살린다.

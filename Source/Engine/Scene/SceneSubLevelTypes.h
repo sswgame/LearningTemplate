@@ -28,7 +28,7 @@ namespace sw
         OnRelease, ///< `SceneSubLevelSubsystem::releaseBuild` 뒤 — 다른 프로세스가 다 읽기를 기다렸다가 함께 짓는다(그동안 `Queued`)
     };
 
-    /** @brief 하위 레벨을 놓을 자리입니다(앵커의 절대 위치 — 월드 원점과 무관, `Scene::getWorldOrigin` · 오일러 회전 — `SceneComponent::setLocalRotation` 과 같은 규칙, 라디안). */
+    /** @brief 하위 레벨을 놓을 자리입니다(앵커의 절대 위치는 월드 원점과 무관, `Scene::getWorldOrigin` · 오일러 회전은 `SceneComponent::setLocalRotation` 과 같은 규칙, 라디안). */
     struct SubLevelPlacement
     {
         float3 _position{};

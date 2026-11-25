@@ -400,7 +400,7 @@ SW_TEST_CASE( DataCatalogReferencesTest, ElementRowFindsCatalogDefinitionKeys )
  *          - `CatalogKey<Tag>` 칸마다 `<Field>` 줄이 있고 종류 이름이 같다. 줄마다 그 칸이 있다.
  *          - 키를 든 구조체가 칸 하나로 들면(원소 이름이 칸 이름) `<Struct owner field type>` 줄이 있다.
  *          - 칸 줄의 주인은 쿠커가 원소 이름으로 찾을 수 있다 — 컴포넌트, 목록 원소 구조체, `<Struct>` 형식, 또는 `<Element>` 줄이 이은 카탈로그 정의다.
- *          - 키를 든 형식을 물려받은 형식마다 `<Derived type base>` 줄이 있다(쿠커는 원소 이름 — 가장 아래 형식 — 에서 이 줄로 바탕의 칸 줄을 따라간다).
+ *          - 키를 든 형식을 물려받은 형식마다 `<Derived type base>` 줄이 있다(쿠커는 가장 아래 형식인 원소 이름에서 이 줄로 바탕의 칸 줄을 따라간다).
  *          - 카탈로그 정의의 칸 줄 속성 이름은 `XMLFields::getAttributeName` 과 같다.
  *          타입 표는 잠근 채 다시 물을 수 없어(공유 잠금은 재귀가 아니다) 먼저 칸을 모으고 잠금 밖에서 본다.
  */

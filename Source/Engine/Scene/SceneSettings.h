@@ -3,7 +3,7 @@
  * @brief 씬 하나의 월드 설정입니다(언리얼 `ASceneSettings` · World Partition 의 런타임 격자 설정 자리). 지금은 월드 스트리밍 여부와 그 격자 · 예산을 담습니다.
  *
  * [씬 파일]
- * 씬 루트의 `<SceneSettings>` 자식으로 리플렉션이 적고 읽습니다(`SceneDocument`). 씬 형식 판 2부터 **필수**입니다 — 없는 씬 파일은 읽지 않습니다.
+ * 씬 루트의 `<SceneSettings>` 자식으로 리플렉션이 적고 읽습니다(`SceneDocument`). 씬 형식 판 2부터 필수입니다 — 없는 씬 파일은 읽지 않습니다.
  * 기본값으로 메우지 않는다: 스트리밍하지 않는 씬도 `_bStreaming="false"` 를 적는다.
  *
  * [스트리밍하는 씬]
@@ -77,7 +77,7 @@ namespace sw
 
         /**
          * @brief 게임 카메라가 월드 원점에서 이만큼(XZ, m) 멀어지면 원점을 카메라 쪽으로 옮깁니다(언리얼 World Origin Rebasing · 유니티 floating origin). 0 이면 옮기지 않는다.
-         * @details 옮기는 거리는 이 값의 배수다 — 셀 격자 · 정적 그림자 캐시가 덜 흔들린다. 바깥 원점으로 스트리밍하는 씬(서버 — 관찰자가 여럿)은 옮기지 않는다(서버 좌표는 절대).
+         * @details 옮기는 거리는 이 값의 배수라 셀 격자 · 정적 그림자 캐시가 덜 흔들린다. 바깥 원점으로 스트리밍하는 씬(관찰자가 여럿인 서버)은 옮기지 않는다(서버 좌표는 절대).
          *          월드 설정에 두는 까닭: 월드 크기마다 맞는 거리가 다르다(격자 · 여유 반경과 같은 자리).
          */
         PROPERTY( Min = 0.0, Units = m, Tooltip = "The world origin moves to the game camera once it is this far away (XZ); 0 never moves it" )

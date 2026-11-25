@@ -27,7 +27,7 @@ namespace sw
         /** @brief 상속분까지 `Replicated` 프로퍼티를 기반부터 모읍니다. */
         static void collectReplicatedProperties( const TypeInfo& type, vector<const PropertyInfo*>& outListProperty );
         /**
-         * @brief 받은 값으로 프로퍼티를 바꾼 **뒤에** 부릅니다 — `RepNotify` 함수를 부릅니다(받는 쪽 콜백).
+         * @brief 받은 값으로 프로퍼티를 바꾼 뒤에 부릅니다 — `RepNotify` 함수를 부릅니다(받는 쪽 콜백).
          * @param instance 프로퍼티를 가진 객체의 주소입니다.
          * @param oldValue 바뀌기 전 값 자체의 주소(프로퍼티의 선언 타입 — 비트필드면 `uint8` 0/1). 함수가 이전 값을 받지 않으면 쓰지 않습니다.
          * @return `RepNotify` 가 없으면 false

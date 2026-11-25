@@ -102,7 +102,7 @@ namespace sw
             string _prefab;
             string _embeddedXML;
             /**
-             * @brief 쿠킹된 리플렉션 바이너리 상태입니다. **비어 있지 않으면 XML 대신 이것을 씁니다.**
+             * @brief 쿠킹된 리플렉션 바이너리 상태입니다. 비어 있지 않으면 XML 대신 이것을 씁니다.
              *
              * XML 은 사람이 고치는 원본이고 이것은 그것을 쿠킹한 것입니다. 둘 다 실리는 일은 없습니다.
              * 쿠커가 왕복 검증에 성공한 엔티티만 이쪽에 담고, 실패하면 XML 을 그대로 남깁니다.
@@ -117,7 +117,7 @@ namespace sw
             string _prefabOverrideXML;
             /** @brief 이 엔티티가 붙은 데이터 레이어 이름(정렬, 겹침 없음)입니다. 모두 켜졌을 때 오릅니다(`SceneDataLayerSubsystem`). 인스턴스 멤버는 앵커의 레이어를 더해 가집니다. */
             vector<string> _listDataLayer;
-            /** @brief 씬 인스턴스의 앵커면 넣은 씬의 리소스 id 입니다. **저작 칸** — 쿠킹본은 펼친 결과만 싣고 이 칸을 비웁니다. */
+            /** @brief 씬 인스턴스의 앵커면 넣은 씬의 리소스 id 입니다. 저작 칸 — 쿠킹본은 펼친 결과만 싣고 이 칸을 비웁니다. */
             string _sceneInstance;
             /**
              * @brief 씬 인스턴스의 멤버면 그 자리의 앵커(가장 가까운)의 파일 id 입니다. 0 이면 멤버가 아닙니다.
@@ -131,49 +131,49 @@ namespace sw
              */
             uint64 _idScope{ 0 };
             /**
-             * @brief **런타임 칸.** 쿠킹된 바이너리 상태(`_embeddedStateBytes`)의 참조 id 에 XOR 하는 값입니다. 씬 파일 · 쿠킹본에서 읽은 엔티티는 0 이다(바이너리 상태는 이미 평평한 id).
+             * @brief 런타임 칸. 쿠킹된 바이너리 상태(`_embeddedStateBytes`)의 참조 id 에 XOR 하는 값입니다. 씬 파일 · 쿠킹본에서 읽은 엔티티는 0 이다(바이너리 상태는 이미 평평한 id).
              * @details 런타임 하위 레벨이 쿠킹본을 자기 앵커 범위로 옮길 때 이 칸에 그 범위를 얹는다(`SceneSubLevelSubsystem::makeMemberNodes`) — 글 상태는 `_idScope` 가 같은 일을 한다. 파일에는 쓰지 않는다.
              */
             uint64 _cookedStateIDScope{ 0 };
             /**
-             * @brief **런타임 칸.** 씬 인스턴스 앵커면 넣은 씬이 쿠킹에서 정적 메시를 묶는지입니다(내부 씬의 `SceneSettings::_packing`, 펼칠 때 정한다 — `expandSceneInstances`).
+             * @brief 런타임 칸. 씬 인스턴스 앵커면 넣은 씬이 쿠킹에서 정적 메시를 묶는지입니다(내부 씬의 `SceneSettings::_packing`, 펼칠 때 정한다 — `expandSceneInstances`).
              * @details 쿠커만 읽는다(`SceneCooker::packStaticMeshes`). 파일에는 쓰지 않는다 — 정하는 곳은 내부 씬 하나다.
              */
             SceneInstancePacking _instancePacking{ SceneInstancePacking::Separate };
             /**
-             * @brief **런타임 칸.** 상태에 적힌 자리가 어느 월드 원점 기준인지입니다(절대 = 로컬 + 원점, `Scene::getWorldOrigin`). 씬 파일 · 쿠킹본의 엔티티는 0 이다.
+             * @brief 런타임 칸. 상태에 적힌 자리가 어느 월드 원점 기준인지입니다(절대 = 로컬 + 원점, `Scene::getWorldOrigin`). 씬 파일 · 쿠킹본의 엔티티는 0 이다.
              * @details 떠 둔 상태(`Scene::captureCellNodes`)는 뜬 때의 원점을 적는다. 지을 때 루트 오브젝트를 (이 값 − 지금 원점)만큼 옮겨 지금 원점 기준으로 맞춘다(`Scene::finishNodeBuild`) —
              *          목록이 섞여도(셀에 들어온 엔티티) 엔티티마다 맞는다. 세이브에 싣는다(`writeSavedNodes`).
              */
             double3 _worldOrigin{};
             /** @brief 멤버가 위에서부터 차례로 받은 덮어쓰기(`<PrefabOverrides>`)입니다. 안쪽 인스턴스의 것이 먼저입니다. 프리팹 상태 · 글 상태 위에 차례로 얹습니다. */
             vector<string> _listInstanceOverrideXML;
-            /** @brief **저작 칸.** 문서 뿌리에서 멤버까지의 경로입니다(`5/7/3` — 앵커 파일 id 들 / 내부 파일 id). 앞 칸이 이 문서의 앵커이고 나머지가 그 앵커의 `<Part path>` 입니다. */
+            /** @brief 저작 칸. 문서 뿌리에서 멤버까지의 경로입니다(`5/7/3` — 앵커 파일 id 들 / 내부 파일 id). 앞 칸이 이 문서의 앵커이고 나머지가 그 앵커의 `<Part path>` 입니다. */
             string _instancePartPath;
-            /** @brief **저작 칸.** 맨 위 앵커의 `<Part>` 가 이 멤버에 적은 것입니다. 안 올린 레이어의 멤버는 살아 있는 값이 없어 저장이 이것을 그대로 다시 적습니다. */
+            /** @brief 저작 칸. 맨 위 앵커의 `<Part>` 가 이 멤버에 적은 것입니다. 안 올린 레이어의 멤버는 살아 있는 값이 없어 저장이 이것을 그대로 다시 적습니다. */
             string _instanceTopOverrideXML;
             /**
-             * @brief **런타임 칸.** 글 · 바이너리 상태를 읽을 목적입니다. 씬 파일 · 쿠킹본에서 읽은 엔티티는 `Authoring` 이고 파일에는 쓰지 않습니다.
+             * @brief 런타임 칸. 글 · 바이너리 상태를 읽을 목적입니다. 씬 파일 · 쿠킹본에서 읽은 엔티티는 `Authoring` 이고 파일에는 쓰지 않습니다.
              * @details 스트리밍이 셀을 내릴 때 떠 둔 엔티티(`Scene::captureCellNodes`)는 `Snapshot` 이다 — 런타임 칸(`RuntimeState`)까지 실려 있어 저작 목적으로 읽으면 로드 오류다.
              *          세이브에 실을 때는 스트리밍이 엔티티마다 따로 적는다(`SceneStreamingSubsystem::writeSaveState`).
              */
             SerializePurpose _statePurpose{ SerializePurpose::Authoring };
             /**
-             * @brief **런타임 칸.** 컴포넌트의 PROPERTY 밖 상태(지형 편집 · 시뮬레이션)를 뜬 바이트입니다(`ComponentStateCodec::captureObject`) — 떠 둔 엔티티(`Scene::captureCellNodes`)에만 있고 다시 지은 뒤 컴포넌트에 돌려준다.
+             * @brief 런타임 칸. 컴포넌트의 PROPERTY 밖 상태(지형 편집 · 시뮬레이션)를 뜬 바이트입니다(`ComponentStateCodec::captureObject`) — 떠 둔 엔티티(`Scene::captureCellNodes`)에만 있고 다시 지은 뒤 컴포넌트에 돌려준다.
              * @details 파일에는 쓰지 않고 세이브에 싣는다(`writeSavedNodes`).
              */
             vector<uint8> _componentStateBytes;
             /**
-             * @brief **런타임 칸.** 떠 둔 중첩 프리팹 부품이면 그것을 스폰한 인스턴스의 파일 id 입니다(0 이면 부품이 아니다). `_nestedPrefab` · `_nestedPartKey` 와 함께 부품 기록(`PrefabNestedPart`)을 다시 세운다.
+             * @brief 런타임 칸. 떠 둔 중첩 프리팹 부품이면 그것을 스폰한 인스턴스의 파일 id 입니다(0 이면 부품이 아니다). `_nestedPrefab` · `_nestedPartKey` 와 함께 부품 기록(`PrefabNestedPart`)을 다시 세운다.
              * @details 떠 둔 프리팹 엔티티는 부품을 다시 스폰하지 않는다 — 부품도 엔티티로 떠 두었다(런타임 칸 · PROPERTY 밖 상태 · 지운 부품이 그대로다). 세이브에 싣는다(`writeSavedNodes`).
              */
             uint64 _nestedOwnerFileID{ 0 };
-            string _nestedPrefab;  ///< **런타임 칸.** 떠 둔 부품의 원본 프리팹 경로(`PrefabNestedPart::_prefabPath`)
-            string _nestedPartKey; ///< **런타임 칸.** 떠 둔 부품의 노드 키(`PrefabNestedPart::_partKey`)
+            string _nestedPrefab;  ///< 런타임 칸. 떠 둔 부품의 원본 프리팹 경로(`PrefabNestedPart::_prefabPath`)
+            string _nestedPartKey; ///< 런타임 칸. 떠 둔 부품의 노드 키(`PrefabNestedPart::_partKey`)
         };
 
         /**
-         * @brief 스트리밍하는 씬의 셀 하나와 그 셀에 놓인 엔티티입니다. **쿠킹본에만 있습니다**(`SceneCooker` 가 나눈다).
+         * @brief 스트리밍하는 씬의 셀 하나와 그 셀에 놓인 엔티티입니다. 쿠킹본에만 있습니다(`SceneCooker` 가 나눈다).
          * @details 셀의 엔티티는 같은 셀의 엔티티나 기본 목록(`_listSceneObjectNode`, 늘 올라 있다)의 엔티티만 파일 id 로 가리킨다 — 쿠커가 그 밖의 참조를
          *          쿠킹 오류로 멈춘다(`StreamingCellGrid::findCrossCellReferences`).
          */
@@ -213,7 +213,7 @@ namespace sw
         /** @brief 리소스 id 의 XML 을 로드합니다. OS 경로는 받지 않습니다(디스크 파일은 `loadXMLFromDiskFile`). */
         [[nodiscard]] SW_API bool loadXML( const AssetID& assetID );
         /**
-         * @brief **디스크 파일**에서 XML 을 로드합니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다.
+         * @brief 디스크 파일에서 XML 을 로드합니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다.
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — OS 경로를 `loadXML` 에 넣으면 모든 구성에서 오류로 거절합니다.
          *          게임 런타임 코드는 쓰지 않습니다.
          */
@@ -235,7 +235,7 @@ namespace sw
          */
         [[nodiscard]] SW_API static bool splitInstancePartPath( string_view partPath, uint64& outAnchorFileID, string_view& outRelativePath );
         /**
-         * @brief 리소스 id 의 바이너리(SCN1)를 로드합니다(OS 경로는 받지 않습니다). 월드 설정 · 늘 올라 있는 엔티티 · 셀 **색인**(좌표 · 레이어 · 내용 구간)을 읽습니다.
+         * @brief 리소스 id 의 바이너리(SCN1)를 로드합니다(OS 경로는 받지 않습니다). 월드 설정 · 늘 올라 있는 엔티티 · 셀 색인(좌표 · 레이어 · 내용 구간)을 읽습니다.
          * @details 셀 내용은 풀지 않는다 — 스트리밍이 셀을 올릴 때 그 구간만 비동기로 읽어 워커에서 푼다(`readStreamingCellContent`, 언리얼 World Partition 의 셀 패키지 비동기 로드).
          */
         [[nodiscard]] SW_API bool loadBinary( const AssetID& assetID );

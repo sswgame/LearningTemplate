@@ -307,7 +307,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
 
 /**
  * @brief [ReflectionEnumInfoTest] `findEnum` 이 준 포인터는 enum 이 더 등록돼도 그대로이고, 이름 · FQN · 별칭이 같은 객체를 가리킨다
- * @details 레지스트리가 EnumInfo 를 밀집 배열 해시맵에 **값으로** 들면, enum 이 하나 더 올라 배열이 커질 때 모든 EnumInfo 가 옮겨져 워커가 씬을
+ * @details 레지스트리가 EnumInfo 를 밀집 배열 해시맵에 값으로 들면, enum 이 하나 더 올라 배열이 커질 때 모든 EnumInfo 가 옮겨져 워커가 씬을
  *          읽으며 들고 있던 포인터가 그 자리에서 죽는다. 짧은 이름 · 별칭이 각자 복사본이면, 다시 등록돼 열거자가 늘어도 별칭으로 찾을 때 옛 목록이 나온다.
  */
 SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )

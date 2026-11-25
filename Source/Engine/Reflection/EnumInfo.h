@@ -211,10 +211,10 @@ namespace sw
 
         /**
          * @brief 비트플래그 값에서 켜진 열거자의 이름을 모으고, 이름이 덮지 못한 비트를 반환합니다.
-         * @details **단일 비트 열거자의 이름만** 쓴다 — 조합 열거자(`All = A | B`)는 `A | B` 로 풀어 적는다(magic_enum 플래그 글과 같은 규칙). 조합 이름을 겹쳐 적으면
+         * @details 단일 비트 열거자의 이름만 쓴다 — 조합 열거자(`All = A | B`)는 `A | B` 로 풀어 적는다(magic_enum 플래그 글과 같은 규칙). 조합 이름을 겹쳐 적으면
          *          같은 값이 `A | B | All` 처럼 길어지고, 조합을 바꾸면 옛 글의 뜻이 바뀐다. 단일 비트 이름이 없는 비트만 그 비트를 덮는 조합 이름으로 적는다(값을 잃지 않는다).
          *          `_mapValueToName` 만 쓰고 ValueAlias 는 겹쳐 적지 않는다. 텍스트(`toStringFlags`)와 바이너리(`SerializerUtil` 의 열거자 식별 인코딩)가
-         *          **같은 이름**을 적도록 이 규칙을 한 곳에 둔다. 읽기(`tryParseFlags`)는 `A | B` 의 토큰마다 이름을 받는다 — 조합 이름(`All`)도 받는다(손으로 쓴 데이터).
+         *          같은 이름을 적도록 이 규칙을 한 곳에 둔다. 읽기(`tryParseFlags`)는 `A | B` 의 토큰마다 이름을 받는다 — 조합 이름(`All`)도 받는다(손으로 쓴 데이터).
          */
         int64 collectFlagNames( int64 value, vector<hashed_string>& outListName ) const
         {

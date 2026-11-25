@@ -59,7 +59,7 @@ namespace sw
         bool           _bNamed{ false };    ///< 값이 `id:수` 꼴이다(콜론 앞이 id)
         bool           _bOptional{ false }; ///< 깨져도 경고만 한다
         bool           _bInEntry{ false };  ///< 가리키는 원소를 루트가 아니라 같은 항목(owner 경로의 첫 원소)의 자식에서 찾는다(퀘스트 안의 단계 · 트리 안의 스킬)
-        bool           _bAbsent{ false };   ///< 값이 가리키는 원소가 **없어야** 한다(`absent="true"` — 지운 항목의 id 를 이어받는 칸, 부품의 `replaces`)
+        bool           _bAbsent{ false };   ///< 값이 가리키는 원소가 없어야 한다(`absent="true"` — 지운 항목의 id 를 이어받는 칸, 부품의 `replaces`)
         bool           _bUnique{ false };   ///< 겹침 규칙(`<Unique owner attribute>`) — owner 원소의 attribute 값이 한 파일 안에서 겹치면 오류다
     };
 
