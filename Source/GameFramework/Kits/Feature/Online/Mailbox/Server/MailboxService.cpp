@@ -108,9 +108,9 @@ namespace sw
             return false;
         }
         const string rangeError = ConfigRangeUtil::describeRangeErrors( static_cast<const MailboxDeliveryPolicy&>( settings ) );
-        if ( rangeError.empty() == false || settings._sweepIntervalMs <= 0 )
+        if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR_ID( "MailboxService.PolicyRefused", "MailboxService refused its operating values (mailbox kit _sweepIntervalMs, _delivery): %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "MailboxService.PolicyRefused", "MailboxService refused its operating values (mailbox kit _delivery): %#", rangeError.c_str() );
             return false;
         }
         if ( settings._claimedRetentionMs <= 0 )
