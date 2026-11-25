@@ -1,10 +1,8 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Network/Connection/NetPacketSealer.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/Network/Security/NetReplayWindow.h"
-#include "Core/Network/Security/NetSessionKeys.h"
+#include "Core/Network/Security/NetPacketSealer.h"
 #include "Core/Testing/TestFramework.h"
 
 #include <cstring>

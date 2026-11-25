@@ -1,6 +1,6 @@
 /**
  * @file NetPacketSealer.h
- * @brief UDP 연결의 AEAD 봉인과 열기, 핸드셰이크의 키 유도와 증명 태그, 키 확인 태그를 맡습니다.
+ * @brief UDP 연결의 AEAD 봉인과 열기, 핸드셰이크의 키 유도와 증명 태그, 키 확인 태그, 재전송 방지 창을 맡습니다(언리얼 AESGCMHandlerComponent 처럼 패킷 봉인 한 단위).
  * @details 데이터 패킷과 끊기 패킷의 본문은 `[종류][연결 값 4바이트, 리틀 엔디언][패킷 번호 8바이트, 빅 엔디언][AEAD + 태그]` 형식이다.
  *          AAD는 프로토콜 ID(리틀 엔디언 4바이트)와 이 본문 헤더를 이은 값이고, nonce 는 방향 IV XOR 패킷 번호다(`NetSessionKeys::makeNonce`).
  *          열 때는 재전송 방지 윈도우를 먼저 보고, **복호가 성공한 뒤에만** 번호를 표시한다. 먼저 표시하면 위조 패킷이 진짜 번호를 소모시킨다.
@@ -8,22 +8,93 @@
  *          패킷 형식(체크섬 헤더, 패킷 종류)과 연결 상태는 `NetEndpoint` 가 맡고, 이 클래스는 바이트와 키만 다룬다.
  *          **스레드**: 잠금이 없다. 봉인(`seal`)은 `NetEndpoint` 의 잠금 안에서 그 값 멤버로 한다(아무 스레드나 끊기 패킷을 봉인한다).
  *          열기(`open`)는 받는 방향 상태(`NetReceiveCryptContext`)만 만지는 static 이라, 그 상태를 쥔 `update` 스레드가 잠금 밖에서 연다(감사 N-8).
+ *
+ *          재전송 방지 창(`NetReplayWindow`): 가장 높은 번호에서 1024 안쪽의 처음 보는 번호만 받습니다(IPsec · DTLS · WireGuard 의 슬라이딩 창).
+ *          순서는 `isAcceptable`(복호 전에 싸게 거른다) → 복호 · 검증 → `markReceived`. 검증 전에 표시하면 위조 패킷이 진짜 번호를 미리 태워 진짜를 거절하게 만든다.
+ *          세션 키(`NetSessionKeys`): X25519 공유 비밀을 HKDF-SHA256 으로 방향마다 키 32 + IV 12 로 펴고, nonce 는 IV XOR 패킷 번호입니다(TLS 1.3 · QUIC 과 같은 모양).
+ *          소금 = 로그인 키트가 준 세션 비밀(없으면 0 32 바이트) — 세션 비밀을 모르는 중간자는 같은 키를 못 만든다. 정보 = "sw-net-v1" ‖ 클라이언트 소금 ‖ 서버 소금 ‖ 프로토콜 id
+ *          (모두 LE) — 같은 공유 비밀이라도 다른 연결 · 다른 판에서는 다른 키다.
  */
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/Security/NetReplayWindow.h"
 #include "Core/Network/Security/NetSecurityTypes.h"
-#include "Core/Network/Security/NetSessionKeys.h"
 
 namespace sw
 {
     class BitWriter;
     class INetAEAD;
     class INetSecurityProvider;
+} // namespace sw
 
+namespace sw
+{
+    class SW_API NetReplayWindow
+    {
+    public:
+        static constexpr uint64 kWindowSize = 1024;
+
+        NetReplayWindow();
+
+        /** @brief 처음 보는 번호이고 창보다 옛것이 아니면 true 입니다. */
+        bool isAcceptable( uint64 packetNumber ) const;
+        /** @brief 검증이 통과한 번호를 표시합니다. 더 높은 번호면 창이 앞으로 간다. */
+        void markReceived( uint64 packetNumber );
+        void reset();
+
+        uint64 getHighest() const { return _highest; }
+        bool   hasReceived() const { return _bHasReceived == SW_TRUE; }
+
+    private:
+        static constexpr uint64 kBitsPerWord = 64; ///< `_arrBit` 한 칸의 비트 수
+        static constexpr int32  kWordCount   = static_cast<int32>( kWindowSize / kBitsPerWord );
+
+        bool isMarked( uint64 packetNumber ) const;
+
+    private:
+        uint64 _arrBit[kWordCount];
+        uint64 _highest;
+        uint8  _bHasReceived;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 한 방향(보내는 쪽 기준)의 키와 IV 입니다. */
+    struct NetDirectionKeys
+    {
+        uint8 _arrKey[NetSecurityConstant::kAEADKeySize]{};
+        uint8 _arrIv[NetSecurityConstant::kAEADNonceSize]{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 한 연결의 두 방향 키입니다. 연결이 끝나면 `wipe`. */
+    struct SW_API NetSessionKeys
+    {
+        NetDirectionKeys _clientToServer{};
+        NetDirectionKeys _serverToClient{};
+
+        void wipe();
+
+        /** @brief 키 확인 태그에 쓰는 패킷 번호입니다 — 데이터 패킷은 0 부터 오르므로 겹치지 않는다. */
+        static constexpr uint64 kKeyConfirmPacketNumber = ~0ull;
+
+        /** @brief 공유 비밀(kX25519KeySize 바이트) → 방향별 키 · IV 입니다. @p pSessionSecret 이 없으면 소금은 0 32 바이트. */
+        [[nodiscard]] static bool computeSessionKeys( INetSecurityProvider& provider, const uint8* pSharedSecret, const NetSessionSecret* pSessionSecret, uint64 clientSalt,
+                                                      uint64 serverSalt, uint32 protocolID, NetSessionKeys& outKeys );
+        /** @brief 세션 비밀을 가졌음을 증명하는 키(연결 응답의 증명 태그)입니다 — HKDF( 비밀, 소금 없음, "sw-net-proof-v1" ) → kAEADKeySize 바이트. */
+        [[nodiscard]] static bool computeProofKey( INetSecurityProvider& provider, const NetSessionSecret& secret, uint8* pOutKey );
+        /** @brief nonce = IV XOR (패킷 번호를 빅엔디언 8 바이트로 IV 뒤 8 바이트에)입니다. */
+        static void makeNonce( const uint8* pIv, uint64 packetNumber, uint8* pOutNonce );
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @brief 연결 하나의 받는 방향 암호 상태입니다 — 받는 키로 초기화한 AEAD, 받는 방향 IV, 재전송 방지 윈도우.
      * @details 보내는 방향과 나눈 까닭: 복호를 엔드포인트 잠금 밖에서 하려면 받는 쪽 상태를 `update` 스레드 하나가 쥐어야 한다(`NetEndpoint` 가 키 유도 뒤 옮겨 간다).
