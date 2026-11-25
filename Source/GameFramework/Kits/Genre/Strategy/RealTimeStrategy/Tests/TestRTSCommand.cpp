@@ -58,7 +58,7 @@ SW_TEST_CASE( RTSCommandTest, ListRoundTripKeepsEveryField )
     SW_EXPECT_TRUE( listRead.empty() );
 }
 
-/** @brief [RTSCommandTest] 잘린 바이트와 다른 판의 바이트는 거절하고 목록을 비운다 */
+/** @brief [RTSCommandTest] 잘린 바이트, 다른 형식의 바이트, 새 판의 바이트는 거절하고 목록을 비운다 */
 SW_TEST_CASE( RTSCommandTest, ReadListRefusesDamagedBytes )
 {
     sw::vector<uint8> bytes;
@@ -67,9 +67,19 @@ SW_TEST_CASE( RTSCommandTest, ReadListRefusesDamagedBytes )
     sw::vector<sw::RTSCommand> listRead = { makeSample() };
     SW_EXPECT_FALSE( sw::RTSCommand::readList( truncated, listRead ) );
     SW_EXPECT_TRUE( listRead.empty() );
-    sw::vector<uint8> otherVersion = bytes;
-    otherVersion[0] ^= 0x7Fu; // 첫 칸이 판 번호다
-    SW_EXPECT_FALSE( sw::RTSCommand::readList( otherVersion, listRead ) );
+    // 머리는 형식 꼬리표(uint32) 뒤에 판(uint32, 리틀 엔디언)이다.
+    SW_EXPECT_LOG( "StateIO.HeaderTagMismatch" );
+    sw::vector<uint8> otherFormat = bytes;
+    otherFormat[0] ^= 0x7Fu;
+    listRead = { makeSample() };
+    SW_EXPECT_FALSE( sw::RTSCommand::readList( otherFormat, listRead ) );
+    SW_EXPECT_TRUE( listRead.empty() );
+    SW_EXPECT_LOG( "FormatUpgrade.NewerThanSupported" );
+    sw::vector<uint8> newerVersion = bytes;
+    newerVersion[4]                = static_cast<uint8>( newerVersion[4] + 1u ); // 지금 판보다 하나 새 판 — 이 빌드는 내릴 수 없다
+    listRead                       = { makeSample() };
+    SW_EXPECT_FALSE( sw::RTSCommand::readList( newerVersion, listRead ) );
+    SW_EXPECT_TRUE( listRead.empty() );
 }
 
 /** @brief [RTSCommandTest] 적용은 명령을 낸 플레이어의 유닛만 받는다 - 남의 유닛을 섞은 명령은 내 유닛에만 걸린다 */
