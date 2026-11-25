@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/Diagnostics/EditorTracyLauncher.h"
+#include "Editor/Panels/Profiler/Model/EditorTracyLauncher.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"

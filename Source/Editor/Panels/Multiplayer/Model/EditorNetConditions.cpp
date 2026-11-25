@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/Play/EditorNetConditions.h"
+#include "Editor/Panels/Multiplayer/Model/EditorNetConditions.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"

@@ -12,7 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Commands/Play/EditorNetConditions.h"
+#include "Editor/Panels/Multiplayer/Model/EditorNetConditions.h"
 
 #include "Engine/Config/NetEmulationPresetTable.h"
 

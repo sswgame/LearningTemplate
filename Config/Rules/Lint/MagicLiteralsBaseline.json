@@ -171,7 +171,7 @@
     "Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp": {"integer": 1},
     "Source/Editor/Common/Commands/Diagnostics/EditorAssertControl.cpp": {"integer": 1},
     "Source/Editor/Common/Commands/EditorDragPayload.h": {"integer": 1},
-    "Source/Editor/Common/Commands/Play/EditorNetConditions.cpp": {"minus-one": 1},
+    "Source/Editor/Panels/Multiplayer/Model/EditorNetConditions.cpp": {"minus-one": 1},
     "Source/Editor/Common/Commands/Play/EditorScenarioRecordCommands.cpp": {"integer": 1},
     "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp": {"float": 1, "integer": 1},
     "Source/Editor/Common/Commands/Scene/EditorLightProbeBakeSession.cpp": {"integer": 1},

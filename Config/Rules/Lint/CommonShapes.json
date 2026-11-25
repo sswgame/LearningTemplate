@@ -37,7 +37,7 @@
         "Source/Engine/Telemetry/CrashReportService.cpp": "크래시 보고 업로더(보고 폴더 하나만 받는 업로드 전용 실행)다 — 게임 · 에디터 실행이 아니라 사용자 설정 · 품질을 읽지 않는다",
         "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp": "엔진이 아닌 도구(tint — SPIR-V 를 WGSL 로)다",
         "Source/Editor/Panels/Console/Model/EditorSourceLocation.cpp": "엔진이 아닌 도구(사람이 고른 소스 편집기)다",
-        "Source/Editor/Common/Commands/Diagnostics/EditorTracyLauncher.cpp": "엔진이 아닌 도구(Tracy 프로파일러)다"
+        "Source/Editor/Panels/Profiler/Model/EditorTracyLauncher.cpp": "엔진이 아닌 도구(Tracy 프로파일러)다"
     },
     "_editorContentScan": {
         "Source/Editor/Common/Asset/EditorContentScan.cpp|folder": "입구 자신이다(훑은 뒤 남의 시나리오 사본을 뺀다)",
