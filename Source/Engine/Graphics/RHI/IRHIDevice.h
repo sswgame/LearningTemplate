@@ -35,13 +35,15 @@ namespace sw
     class IRHIResourceFactory;
     class IRHISwapChain;
     class IRHITimestampProvider;
-    class RHIBufferUploadLog;
     class RHIMemoryTracker;
     class RHITransferSerials;
     class BindlessIndexReportLog;
     class RHIComputeBindingLog;
     class ConstantBufferPagePool;
     enum class ShaderTargetFormat : uint8;
+
+    template <typename THandle>
+    class RHIUploadLog;
 
     enum class RHIHandleKind : uint8; // 미룬 해제 줄의 칸 종류(IRHIDevice.cpp 안 — 부르는 쪽은 핸들 형식으로 오버로드를 고른다)
 
@@ -482,7 +484,9 @@ namespace sw
         /** @brief 이번 프레임에 쓴 상수 버퍼 구간입니다(`IRHICommandContext::updateConstantBuffer` · `ConstantBufferPagePool::write` 가 두 번째 쓰기를 알린다 — 개발 구성). `beginFrame` 이 비운다. */
         RHIConstantBufferWriteLog& getConstantBufferWriteLog() { return _constantBufferWriteLog; }
         /** @brief 지금 기록하는 프레임이 쓰는 버퍼입니다(`beginBufferUpload` 가 다른 스레드의 갱신을 본다 — 개발 구성). */
-        RHIBufferUploadLog& getBufferUploadLog() { return *_pBufferUploadLog; }
+        RHIUploadLog<RHIBufferHandle>& getBufferUploadLog() { return *_pBufferUploadLog; }
+        /** @brief 지금 기록하는 프레임이 쓰는 텍스처입니다(`beginTextureUpload` · `beginTextureReadback` 이 본다 — 개발 구성). */
+        RHIUploadLog<RHITextureHandle>& getTextureUploadLog() { return *_pTextureUploadLog; }
 
         // ------------------------------------------------------------------------------
         // 3) 네이티브 핸들: 디바이스, 컨텍스트, 스왑체인, 큐
@@ -671,12 +675,24 @@ namespace sw
          *          실행된다. 그래프가 이미 기록한 전이(추적 상태)와 어긋나고(D3D12 상태 오류), 앞 패스가 새 내용을 읽는다. 그래프 앞(준비 단계)에서 올린다.
          *          프레임 스트림에 렌더 패스를 연 채면 알리고(`RHI.BufferUpdateInsideRenderPass`) 그 패스를 닫는다 — Vulkan 은 패스 안에 복사를 기록할 수 없다. 어느 백엔드에서든 같은
          *          오류로 드러나게 하고, 패스를 닫아 그 뒤의 드로우도 같게 버린다. 에디터 UI 가 열린 백버퍼 패스 안에서 올려 Vulkan 화면에서만 사라졌던 결함이 이 모양이다.
-         *          **다른 스레드**의 갱신은 다음 제출의 맨 앞에 실행되어 지금 기록하는 프레임과 순서가 없다. 그 프레임이 쓰는 버퍼(`RHIBufferUploadLog`)면 개발 구성에서 멈춘다 — 갱신을
+         *          **다른 스레드**의 갱신은 다음 제출의 맨 앞에 실행되어 지금 기록하는 프레임과 순서가 없다. 그 프레임이 쓰는 버퍼(`RHIUploadLog`)면 개발 구성에서 멈춘다 — 갱신을
          *          렌더 스레드(패킷)로 보낸다. 새 버퍼의 첫 내용은 지나간다.
          * @param buffer 갱신할 버퍼입니다.
          * @param pWhat  로그에 남길 호출 지점 이름입니다.
          */
         void beginBufferUpload( RHIBufferHandle buffer, const utf8* pWhat );
+        /**
+         * @brief 텍스처 쓰기 전송 하나가 기록하는 프레임과 순서가 맞는 자리인지 봅니다(다섯 백엔드가 같다). 전송의 공통 입구(`IRHIResourceFactory::submitTextureUpload` · `submitTextureRegionUpload`)가 부릅니다.
+         * @details 전송은 이번 프레임이 기록한 것보다 먼저 실행된다(전송 계약 3). 개발 구성에서 멈추는 자리:
+         *          - 이번 프레임이 그 텍스처의 전이 · 렌더 타깃을 기록했다 — 전송의 앞 상태(추적 값)가 실행 때의 상태와 다르다.
+         *          - 다른 스레드가 기록하는 프레임이 읽을 수 있는 텍스처다(첫 내용이 그 프레임보다 먼저 올라갔다). 새 텍스처의 첫 내용은 지나간다.
+         *          - 렌더 스레드가 렌더 그래프를 기록하는 동안(`PassRecordingScope`) 내용이 있던 텍스처를 고친다 — 그래프 앞(준비 단계)에서 올린다.
+         * @param texture 쓸 텍스처입니다.
+         * @param pWhat   로그에 남길 호출 지점 이름입니다.
+         */
+        void beginTextureUpload( RHITextureHandle texture, const utf8* pWhat );
+        /** @brief 텍스처 되읽기 하나의 자리를 봅니다(`submitTextureReadback`). 이번 프레임이 전이 · 렌더 타깃을 기록한 텍스처면 개발 구성에서 멈춘다 — 되읽기도 그 기록보다 먼저 실행되어 앞 상태가 어긋나고 지난 내용을 읽는다(프레임 끝 뒤에 낸다). */
+        void beginTextureReadback( RHITextureHandle texture, const utf8* pWhat );
 
         /**
          * @brief 병렬 기록 중에 배리어가 나왔음을 **진단으로만** 남깁니다(디버그 전용, 8회까지).
@@ -860,7 +876,9 @@ namespace sw
         /// @brief 컴퓨트 디스패치가 건 버퍼의 기록입니다(getComputeBindingLog 참고).
         unique_ptr<RHIComputeBindingLog> _pComputeBindingLog;
         /// @brief 지금 기록하는 프레임이 쓰는 버퍼입니다(`getBufferUploadLog`).
-        unique_ptr<RHIBufferUploadLog> _pBufferUploadLog;
+        unique_ptr<RHIUploadLog<RHIBufferHandle>> _pBufferUploadLog;
+        /// @brief 지금 기록하는 프레임이 쓰는 텍스처입니다(`getTextureUploadLog`).
+        unique_ptr<RHIUploadLog<RHITextureHandle>> _pTextureUploadLog;
         /// @brief 마지막 `initialize` 의 단계별 시간입니다(`markInitPhase`).
         RHIInitPhaseTimings _initPhaseTimings;
         /// @brief 드로우 기록 진단입니다(`getDrawDiagnostics`). 장치와 함께 생기고 사라진다 — 백엔드를 바꾸면 횟수가 다시 시작한다.

@@ -64,7 +64,7 @@ namespace
         }
 
         RHITextureHandle  createTexture2D( const RHITextureDesc& ) override { return RHITextureHandle{ _nextTexture++ }; }
-        RHITransferSubmit submitTextureUpload( RHITextureHandle, const RHITextureUploadDesc& ) override { return RHITransferSubmit::accepted( _nextSerial++, kFakeDeviceGeneration ); }
+        RHITransferSubmit submitTextureUploadNative( RHITextureHandle, const RHITextureUploadDesc& ) override { return RHITransferSubmit::accepted( _nextSerial++, kFakeDeviceGeneration ); }
         RHITransferStatus pollTransfer( RHITransferTicket ) override { return _finalStatus; }
 
         RHITextureSRVIndex registerBindlessTexture( RHITextureHandle texture ) override
@@ -114,8 +114,8 @@ namespace
             }
         }
 
-        RHITransferSubmit       submitTextureRegionUpload( RHITextureHandle, const RHITextureRegionUploadDesc& ) override { return RHITransferSubmit::rejected(); }
-        RHITransferSubmit       submitTextureReadback( RHITextureHandle, uint32, uint32, RHITextureMipSpan& ) override { return RHITransferSubmit::rejected(); }
+        RHITransferSubmit       submitTextureRegionUploadNative( RHITextureHandle, const RHITextureRegionUploadDesc& ) override { return RHITransferSubmit::rejected(); }
+        RHITransferSubmit       submitTextureReadbackNative( RHITextureHandle, uint32, uint32, RHITextureMipSpan& ) override { return RHITransferSubmit::rejected(); }
         bool                    takeTextureReadback( RHITransferTicket, vector<uint8>& ) override { return false; }
         void                    discardTextureReadback( RHITransferTicket ) override {}
         RHIPipelineStateHandle  createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }

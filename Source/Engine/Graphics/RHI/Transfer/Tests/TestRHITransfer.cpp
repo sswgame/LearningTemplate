@@ -51,9 +51,9 @@ namespace
             return RHITransferSubmit::accepted( _submitCount, kFakeDeviceGeneration );
         }
 
-        RHITransferSubmit submitTextureUpload( RHITextureHandle, const RHITextureUploadDesc& ) override { return submit(); }
-        RHITransferSubmit submitTextureRegionUpload( RHITextureHandle, const RHITextureRegionUploadDesc& ) override { return submit(); }
-        RHITransferSubmit submitTextureReadback( RHITextureHandle, uint32, uint32, RHITextureMipSpan& ) override { return submit(); }
+        RHITransferSubmit submitTextureUploadNative( RHITextureHandle, const RHITextureUploadDesc& ) override { return submit(); }
+        RHITransferSubmit submitTextureRegionUploadNative( RHITextureHandle, const RHITextureRegionUploadDesc& ) override { return submit(); }
+        RHITransferSubmit submitTextureReadbackNative( RHITextureHandle, uint32, uint32, RHITextureMipSpan& ) override { return submit(); }
         RHITransferStatus pollTransfer( RHITransferTicket ) override
         {
             ++_pollCount;

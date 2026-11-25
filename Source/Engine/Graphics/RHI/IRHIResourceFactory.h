@@ -257,6 +257,8 @@ namespace sw
         //      전송이 그 앞에 끼고, DX11 · GL 은 곧바로 실행한다. 아직 제출하지 않고 기록 중인 커맨드 리스트가 어느 내용을 보는지도 백엔드마다 달라 정해져 있지 않으므로
         //      호출자는 전송을 그리기 기록 전에 제출한다.
         //      **렌더 타깃처럼 프레임 커맨드가 상태(레이아웃 · 리소스 상태)를 바꾸는 텍스처의 전송은 RT 기록 밖 구간에서만** 제출한다. 기록 중인 프레임과 같은 텍스처의 상태를 두 곳에서 바꾸지 않게 하는 규칙이다.
+        //      공통 입구가 개발 구성에서 판정한다(`IRHIDevice::beginTextureUpload` · `beginTextureReadback`). 이미 낸 프레임이 읽는 내용은 덮지 않는다 — 다섯 백엔드 모두 전송을 그래픽스 큐에
+        //      순서대로 내고(DX12 배리어 · Vulkan ALL_COMMANDS 배리어 · WebGPU 큐 순서 · DX11 · GL 은 드라이버), 비동기 컴퓨트 큐의 일은 `endFrame` 이 그래픽스 큐에서 기다린다.
         //   4. 스레드: 제출 함수는 **어느 스레드에서나** 부를 수 있다. DX12 · Vulkan 은 자기 락으로, DX11 은 렌더 스레드의 프레임 스트림도 지나는 즉시 컨텍스트의
         //      런타임 임계 구역(`D3D11ImmediateContext::lock()`)으로 직렬화하고, GL 은 제출 함수가 `ScopedOpenGLContext` 로 컨텍스트를 빌린다
         //      (렌더 스레드가 쥐고 있으면 프레임 끝에 놓을 때까지 기다린다). GL 의 비 RT 스레드 제출은 컨텍스트를 두고 RT 와 겨루므로 프레임 경로 밖(동기 `acquire`, 도구)에서만 쓴다.
@@ -273,7 +275,7 @@ namespace sw
          *          매 프레임 갱신하는 용도가 아니다.
          * @return `Accepted` 면 티켓으로 `pollTransfer` 한다. 포맷이 업로드할 수 없는 것이거나 데이터가 모자라면 `Rejected` 다.
          */
-        [[nodiscard]] virtual RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) = 0;
+        [[nodiscard]] RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc );
 
         /**
          * @brief 2D 텍스처의 밉 하나, 면 하나의 사각형 구간에 픽셀을 올리도록 제출합니다(비압축 컬러 포맷만). 나머지 픽셀은 그대로 둡니다.
@@ -281,7 +283,7 @@ namespace sw
          *          검사(포맷, 범위, 데이터 크기)는 validateTextureRegionUpload 한 곳이 한다.
          * @return 검사에 걸리면 `Rejected` 입니다(이유는 로그에 남깁니다).
          */
-        [[nodiscard]] virtual RHITransferSubmit submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) = 0;
+        [[nodiscard]] RHITransferSubmit submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc );
 
         /**
          * @brief 텍스처의 면(`arraySlice`: 배열 원소 또는 큐브 면, 2D 는 0) 하나의 밉 하나를 CPU 로 읽도록 요청합니다. 행은 빈틈없이(업로드와 같은 배치,
@@ -291,7 +293,7 @@ namespace sw
          *          요청 시점까지 제출된 이 텍스처의 쓰기가 읽기에 보인다(순서 규칙 3).
          * @return 포맷이 대상이 아니거나 밉이나 면이 범위 밖이면 `Rejected` 다.
          */
-        [[nodiscard]] virtual RHITransferSubmit submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout ) = 0;
+        [[nodiscard]] RHITransferSubmit submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout );
 
         /**
          * @brief 제출한 전송의 진행 상태를 값싸게 묻습니다. 기다리지 않습니다.
@@ -434,6 +436,13 @@ namespace sw
         virtual void writeConstantBufferSlice( const RHIBufferSlice& slice, const void* pData, uint32 size )                                                         = 0;
         virtual void updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) = 0;
         virtual void updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )   = 0;
+
+        // ------------------------------------------------------------------------------
+        // 텍스처 전송 — 백엔드 구현. 부르는 쪽은 공통 입구(`submitTextureUpload` · `submitTextureRegionUpload` · `submitTextureReadback`)이고, 순서 검사는 거기서 했다
+        // ------------------------------------------------------------------------------
+        [[nodiscard]] virtual RHITransferSubmit submitTextureUploadNative( RHITextureHandle texture, const RHITextureUploadDesc& desc )                              = 0;
+        [[nodiscard]] virtual RHITransferSubmit submitTextureRegionUploadNative( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )                  = 0;
+        [[nodiscard]] virtual RHITransferSubmit submitTextureReadbackNative( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout ) = 0;
 
         // ------------------------------------------------------------------------------
         // 자원 해제 — 백엔드 구현. 부르는 쪽은 `IRHIDevice::releaseHandle( 핸들 )` 하나다(종류는 핸들 형식이 고른다).

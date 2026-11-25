@@ -181,10 +181,17 @@ namespace sw
          */
         [[nodiscard]] bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
         /**
-         * @brief 그리지 않는 패킷(`FrameDrawMode::SimulationOnly`)을 받습니다 — 텍스처 업로드와 GPU 장면 사본 · 고친 구간만 받고, 뷰마다 시간 누적 기록을 다음에 그릴 때 버리게 표시한다.
+         * @brief 그리지 않는 패킷(`FrameDrawMode::SimulationOnly`)을 받습니다 — GPU 장면 사본 · 고친 구간만 받고, 뷰마다 시간 누적 기록을 다음에 그릴 때 버리게 표시한다.
          * @details 기록 · 제출하지 않는다(렌더 스레드가 Present 도 하지 않는다). 그 밖의 패킷 값(라이트 · 캔버스 · 추가 뷰)은 다음 패킷이 통째로 다시 싣는다.
          */
         void executePacketWithoutDrawing( IRHIDevice* pDevice, RenderFramePacket& packet );
+        /**
+         * @brief 텍스처 구간 업로드 · 비동기 로드 마무리 · 밉 스트리밍입니다. **프레임을 연 쪽**(`RenderThread` · `SceneCapture`)이 `beginFrame` 바로 뒤, 아무것도 기록하기 전에 한 번 부릅니다.
+         * @param viewHeightPixels 밉 스트리밍이 화면 크기를 재는 출력 높이입니다.
+         */
+        static void updateTextureUploads( IRHIDevice* pDevice, uint32 viewHeightPixels );
+        /** @brief 이번 프레임의 출력 높이입니다(`updateTextureUploads`). 아직 그린 적이 없으면 0 입니다. */
+        uint32 getOutputHeight() const { return _state._outputHeight; }
         // ------------------------------------------------------------------------------
         // 3) 조회
         // ------------------------------------------------------------------------------
@@ -473,8 +480,6 @@ namespace sw
         void prepareFrameDecals();
         /** @brief (셋업) 그리기 목록의 데칼 원소를 데칼 구조 버퍼(`FrameRenderState::_decalBuffer`)에 한 번 올립니다. 버퍼를 못 만들면 그리기 목록을 비운다. */
         void uploadFrameDecals();
-        /** @brief 텍스처 구간 업로드 · 비동기 로드 마무리 · 밉 스트리밍입니다(그리는 패킷 · 그리지 않는 패킷 공통). */
-        void updateTextureUploads( IRHIDevice* pDevice );
         /** @brief GPU 장면(인스턴스 · 배치 표)을 올립니다 — 간접 인자 방식 · 모프 풀 · 정점 풀을 먼저 맞춘다(그리는 패킷 · 그리지 않는 패킷 공통). */
         void uploadGPUScene( IRHIDevice* pDevice );
         /**

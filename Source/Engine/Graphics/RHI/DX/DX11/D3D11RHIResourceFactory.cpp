@@ -358,7 +358,7 @@ namespace sw
         return true;
     }
 
-    RHITransferSubmit D3D11RHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    RHITransferSubmit D3D11RHIResourceFactory::submitTextureUploadNative( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         D3D11RHIDevice::TextureRecord* pRecord               = _pDevice->resolveTexture( texture );
         const bool                     bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_immediateContext.isValid() == false;
@@ -434,7 +434,7 @@ namespace sw
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
-    RHITransferSubmit D3D11RHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    RHITransferSubmit D3D11RHIResourceFactory::submitTextureRegionUploadNative( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         D3D11RHIDevice::TextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
         const bool                     bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_immediateContext.isValid() == false || pRecord->_bDepth != SW_FALSE;
@@ -559,7 +559,7 @@ namespace sw
         return fromDXGIFormat( texDesc.Format );
     }
 
-    RHITransferSubmit D3D11RHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
+    RHITransferSubmit D3D11RHIResourceFactory::submitTextureReadbackNative( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         D3D11RHIDevice::TextureRecord* pRecord             = _pDevice->resolveTexture( texture );
         const bool                     bTextureNotReadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_immediateContext.isValid() == false;

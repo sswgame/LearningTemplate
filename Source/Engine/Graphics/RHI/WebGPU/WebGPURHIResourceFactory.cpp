@@ -596,7 +596,7 @@ namespace sw
         return serial;
     }
 
-    RHITransferSubmit WebGPURHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    RHITransferSubmit WebGPURHIResourceFactory::submitTextureUploadNative( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
         if ( pRecord == nullptr || _pDevice->isDeviceLost() )
@@ -632,7 +632,7 @@ namespace sw
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
-    RHITransferSubmit WebGPURHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    RHITransferSubmit WebGPURHIResourceFactory::submitTextureRegionUploadNative( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
         if ( pRecord == nullptr || _pDevice->isDeviceLost() )
@@ -658,7 +658,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 검사 · 배치 · 읽기 버퍼 · 복사 제출 · 매핑 요청의 순서가 곧 의미라 나누지 않는다.
-    RHITransferSubmit WebGPURHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
+    RHITransferSubmit WebGPURHIResourceFactory::submitTextureReadbackNative( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         using Internal                     = WebGPURHIResourceFactoryInternal;
         WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );

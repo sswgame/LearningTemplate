@@ -135,6 +135,8 @@ namespace sw
 
         /** @brief (개발 구성) 이번 프레임이 @p buffer 의 전이 · 복사를 기록한다고 적습니다 — 다른 스레드의 갱신 판정(`IRHIDevice::beginBufferUpload`)이 읽는다. */
         void recordBufferUse( RHIBufferHandle buffer );
+        /** @brief (개발 구성) 이번 프레임이 @p texture 의 전이 · 복사 · 렌더 타깃을 기록한다고 적습니다 — 전송 판정(`IRHIDevice::beginTextureUpload`)이 읽는다. */
+        void recordTextureUse( RHITextureHandle texture );
 
     private:
         static constexpr uint32 kTrackedComputeSlotCount = 8; ///< 슬롯 종류마다 기억하는 칸(binding_slots.hlsli 의 컴퓨트 슬롯보다 넉넉하다)

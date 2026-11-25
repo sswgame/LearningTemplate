@@ -521,7 +521,10 @@ namespace sw
             _pDevice->beginFrame();
         }
         if ( _pFrameRenderer != nullptr && _pFrameRenderer->isReady() )
+        {
+            FrameRenderer::updateTextureUploads( _pDevice, _pFrameRenderer->getOutputHeight() );
             _pFrameRenderer->executePacketWithoutDrawing( _pDevice, packet );
+        }
         // 제출만 하고 Present 하지 않는다(수직 동기도 기다리지 않는다) — Present 간격으로 건너뛰는 프레임과 같은 길이다.
         _pDevice->endFrame( false, false );
         return false;
@@ -658,6 +661,9 @@ namespace sw
                 _beginFrameHook( *_pDevice );
             _pDevice->beginFrame();
         }
+        // 텍스처 전송은 이번 프레임이 기록한 것보다 먼저 실행된다 — 게임 뷰를 지우는 기록보다도 앞에서, 렌더러(주 화면 · 미리보기) 수와 상관없이 한 번 낸다.
+        if ( _pFrameRenderer != nullptr && _pFrameRenderer->isReady() )
+            FrameRenderer::updateTextureUploads( _pDevice, _pFrameRenderer->getOutputHeight() );
         // 열지 못한 프레임(스왑체인 이미지를 얻지 못함 · 크기 0)은 기록해도 제출되지 않는다 — 그린 척하면 한 번뿐인 일(정점 풀 · 프로브 칠하기 · 층 굽기 · 쿠키)과 지난 깊이 ·
         // 노출 기록이 없는 그림을 있다고 믿는다. 그리지 않고 진행하는 프레임과 같은 길로 상태만 받고, 다음에 그리는 프레임이 시간 누적을 버린다.
         if ( _pDevice->isFrameStarted() == false )

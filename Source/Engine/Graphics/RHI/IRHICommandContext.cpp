@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/RHI/Diagnostics/RHIBufferUploadLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIComputeBindingLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIUploadLog.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -81,6 +81,15 @@ namespace sw
             _bRenderPassNoBackBuffer = SW_FALSE;
             return;
         }
+        if ( beginInfo._bBindColor != SW_FALSE )
+        {
+            const uint32 colorCount = beginInfo._colorTargetCount > 0 ? MathUtil::min( beginInfo._colorTargetCount, kMaxColorAttachments ) : 1u;
+            for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
+            {
+                recordTextureUse( beginInfo._arrColorTarget[colorIndex] );
+            }
+        }
+        recordTextureUse( beginInfo._depthTarget );
         const RHIRenderPassBeginResult result = beginRenderPassNative( beginInfo );
         _bRenderPassOpen                      = result == RHIRenderPassBeginResult::Begun;
         _bRenderPassNoBackBuffer              = result == RHIRenderPassBeginResult::NoBackBuffer;
@@ -199,6 +208,7 @@ namespace sw
         if ( isTextureHandleValid( texture, "prepareTextureForShaderRead" ) == false )
             return;
         endRenderPassBefore( "prepareTextureForShaderRead" );
+        recordTextureUse( texture );
         prepareTextureForShaderReadNative( texture );
     }
 
@@ -207,6 +217,7 @@ namespace sw
         if ( isTextureHandleValid( texture, "prepareTextureForRenderTarget" ) == false )
             return;
         endRenderPassBefore( "prepareTextureForRenderTarget" );
+        recordTextureUse( texture );
         prepareTextureForRenderTargetNative( texture );
     }
 
@@ -215,6 +226,7 @@ namespace sw
         if ( isTextureHandleValid( texture, "prepareTextureForUnorderedAccess" ) == false )
             return;
         endRenderPassBefore( "prepareTextureForUnorderedAccess" );
+        recordTextureUse( texture );
         prepareTextureForUnorderedAccessNative( texture );
     }
 
@@ -223,6 +235,10 @@ namespace sw
         if ( pTransition == nullptr || count == 0 )
             return;
         endRenderPassBefore( "transitionTextures" );
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            recordTextureUse( pTransition[index]._texture );
+        }
         // 핸들 0 원소는 알리고 그 원소만 뺀다 — 앞뒤의 정상 원소는 원래 차례대로 묶음째 낸다(복사 없이 0 사이 구간마다).
         uint32 runBegin = 0;
         for ( uint32 index = 0; index < count; ++index )
@@ -262,6 +278,8 @@ namespace sw
         if ( isTextureHandleValid( src, "blitTexture(src)" ) == false || isTextureHandleValid( dst, "blitTexture(dst)" ) == false )
             return;
         endRenderPassBefore( "blitTexture" );
+        recordTextureUse( src );
+        recordTextureUse( dst );
         blitTextureNative( src, dst );
     }
 
@@ -269,6 +287,12 @@ namespace sw
     {
         if constexpr ( build::kShipping == false )
             getContextDevice().getBufferUploadLog().recordUse( buffer );
+    }
+
+    void IRHICommandContext::recordTextureUse( RHITextureHandle texture )
+    {
+        if constexpr ( build::kShipping == false )
+            getContextDevice().getTextureUploadLog().recordUse( texture );
     }
 
     void IRHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
@@ -350,6 +374,7 @@ namespace sw
         if ( isTextureHandleValid( texture, "uavBarrierTexture" ) == false )
             return;
         endRenderPassBefore( "uavBarrierTexture" );
+        recordTextureUse( texture );
         uavBarrierTextureNative( texture );
     }
 } // namespace sw

@@ -6,7 +6,7 @@
 #include "Core/Time/BusyClock.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIBufferUploadLog.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIUploadLog.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
@@ -97,6 +97,27 @@ namespace sw
     {
         beginBufferUpload( buffer, "updateGeometryBufferRegions" );
         updateGeometryBufferRegionsNative( buffer, pBaseSource, pRegions, regionCount );
+    }
+
+    RHITransferSubmit IRHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    {
+        if ( _pUploadDevice != nullptr )
+            _pUploadDevice->beginTextureUpload( texture, "submitTextureUpload" );
+        return submitTextureUploadNative( texture, desc );
+    }
+
+    RHITransferSubmit IRHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    {
+        if ( _pUploadDevice != nullptr )
+            _pUploadDevice->beginTextureUpload( texture, "submitTextureRegionUpload" );
+        return submitTextureRegionUploadNative( texture, desc );
+    }
+
+    RHITransferSubmit IRHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
+    {
+        if ( _pUploadDevice != nullptr )
+            _pUploadDevice->beginTextureReadback( texture, "submitTextureReadback" );
+        return submitTextureReadbackNative( texture, mip, arraySlice, outLayout );
     }
 
     RHIPipelineStateHandle IRHIResourceFactory::createPipelineState( RHIResourceCreateKey, const RHIPipelineStateDesc& desc )

@@ -19,10 +19,10 @@
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
 #include "Engine/Graphics/RHI/ConstantBufferPagePool.h"
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIBufferUploadLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIComputeBindingLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIUploadLog.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -79,6 +79,8 @@ namespace sw
             }
             case RHIHandleKind::Texture:
             {
+                if constexpr ( build::kShipping == false )
+                    _pTextureUploadLog->remove( RHITextureHandle{ packed } );
                 bLive = factory.destroyTextureNative( RHITextureHandle{ packed } );
                 break;
             }
@@ -247,7 +249,10 @@ namespace sw
         {
             _constantBufferWriteLog.beginFrame();
             if ( isFrameStarted() )
+            {
                 _pBufferUploadLog->beginFrame();
+                _pTextureUploadLog->beginFrame();
+            }
         }
     }
 
@@ -258,7 +263,10 @@ namespace sw
             pFrameStream->endRenderPass();
         endFrameInternal( vsync, bPresent );
         if constexpr ( build::kShipping == false )
+        {
             _pBufferUploadLog->endFrame();
+            _pTextureUploadLog->endFrame();
+        }
     }
 
     void IRHIDevice::beginBufferUpload( RHIBufferHandle buffer, const utf8* pWhat )
@@ -272,6 +280,36 @@ namespace sw
             _pBufferUploadLog->recordContent( buffer );
         }
         requireUploadOutsidePass( pWhat );
+    }
+
+    void IRHIDevice::beginTextureUpload( RHITextureHandle texture, const utf8* pWhat )
+    {
+        if constexpr ( build::kShipping == false )
+        {
+            if ( _pTextureUploadLog->hasRecordedUse( texture ) )
+                reportFatalError( "%# of texture %# after this frame recorded a transition or a render pass of it - the transfer runs before those commands, against a state they have not set. "
+                                  "Upload before the frame records (FrameRenderer::updateTextureUploads)",
+                                  pWhat, texture.getPacked() );
+            if ( _pTextureUploadLog->isUsedByFrameOnOtherThread( texture ) )
+                reportFatalError( "%# of texture %# from another thread while the render thread records a frame that can read it - the transfer has no order against that frame. "
+                                  "Queue the update for the render thread (TextureCache::requestRegionUpdate)",
+                                  pWhat, texture.getPacked() );
+            const bool bRecordingPasses = _bPassRecording.load( std::memory_order_relaxed ) && std::this_thread::get_id() == _renderThreadID.load( std::memory_order_relaxed );
+            if ( bRecordingPasses && _pTextureUploadLog->hasEarlierContent( texture ) )
+                reportFatalError( "%# of texture %# on the render thread while it records the render graph - the transfer runs before the pass lists already recorded. Upload before the graph (a prepare step)",
+                                  pWhat, texture.getPacked() );
+            _pTextureUploadLog->recordContent( texture );
+        }
+    }
+
+    void IRHIDevice::beginTextureReadback( RHITextureHandle texture, const utf8* pWhat )
+    {
+        if constexpr ( build::kShipping == false )
+        {
+            if ( _pTextureUploadLog->hasRecordedUse( texture ) )
+                reportFatalError( "%# of texture %# after this frame recorded a transition or a render pass of it - the copy runs before those commands and reads the previous content. Read back after endFrame",
+                                  pWhat, texture.getPacked() );
+        }
     }
 
     void IRHIDevice::requireUploadOutsidePass( const utf8* pWhat )
@@ -598,7 +636,8 @@ namespace sw
         , _pBindlessReservationQueue{ make_unique<RHIBindlessReservationQueue>() }
         , _pBindlessIndexReportLog{ make_unique<BindlessIndexReportLog>() }
         , _pComputeBindingLog{ make_unique<RHIComputeBindingLog>() }
-        , _pBufferUploadLog{ make_unique<RHIBufferUploadLog>() }
+        , _pBufferUploadLog{ make_unique<RHIUploadLog<RHIBufferHandle>>() }
+        , _pTextureUploadLog{ make_unique<RHIUploadLog<RHITextureHandle>>() }
         , _initPhaseTimings{}
         , _drawDiagnostics{ *this }
     {

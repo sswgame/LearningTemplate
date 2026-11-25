@@ -709,7 +709,7 @@ namespace sw
 
     // 전송(RHIAsyncUploads U6): 소스를 업로드 링에 복사하고, 전송 작업 하나에 기록해 펜스와 함께 낸 뒤 기다리지 않고 티켓을 준다. 완료는 pollTransfer 가 펜스로 본다.
     // 길이 유지(긴 함수 정리 기준): 검사 · 링 복사 · 기록 · 제출 · 레코드 갱신의 순서가 곧 의미라 나누지 않는다.
-    RHITransferSubmit VulkanRHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    RHITransferSubmit VulkanRHIResourceFactory::submitTextureUploadNative( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         VulkanRHIDevice::VulkanTextureRecord* pRecord                   = _pDevice->resolveTexture( texture );
         const bool                            bTextureUploadUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
@@ -810,7 +810,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 전체 업로드와 같은 순서(검사 · 링 복사 · 기록 · 제출 · 레코드 갱신)라 나누지 않는다.
-    RHITransferSubmit VulkanRHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    RHITransferSubmit VulkanRHIResourceFactory::submitTextureRegionUploadNative( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         VulkanRHIDevice::VulkanTextureRecord* pRecord                         = _pDevice->resolveTexture( texture );
         const bool                            bTextureRegionUploadUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
@@ -968,7 +968,7 @@ namespace sw
 
     // 전송(RHIAsyncUploads U6): 되읽기 링의 구간에 복사를 기록해 펜스와 함께 내고 기다리지 않는다. 결과는 takeTextureReadback 이 링에서 복사해 간다.
     // 길이 유지(긴 함수 정리 기준): 검사 · 링 할당 · 기록 · 제출 · 보관의 순서가 곧 의미라 나누지 않는다.
-    RHITransferSubmit VulkanRHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
+    RHITransferSubmit VulkanRHIResourceFactory::submitTextureReadbackNative( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         // **여기의 실패는 모두 소리를 낸다**(형제인 submitTextureUpload 와 같다). 리드백은 오프스크린 렌더 문제가
         // 드러나는 경로라 "거절인데 이유가 없다" 가 곧 긴 추적이 된다.

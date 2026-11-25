@@ -462,7 +462,7 @@ namespace sw
     }
 
     // 길이를 나누지 않는다: 검사 · 링 복사 · 컨텍스트 빌려 올리기 · 펜스의 순서가 곧 뜻이다(전송 계약 1 · 2 · 4).
-    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureUploadNative( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         // 장치를 잃었으면 진입에서 Rejected 다(계약 2) — 잃은 뒤에는 워터마크가 멈춰 링이 비지 않으므로 아래 할당까지 가면 Busy 로 끝없이 되풀이된다.
@@ -567,7 +567,7 @@ namespace sw
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
-    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureRegionUploadNative( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
         const bool                            bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || pRecord->_bDepthStencil != SW_FALSE ||
@@ -670,7 +670,7 @@ namespace sw
         return pRecord != nullptr ? pRecord->_format : RHIFormat::Unknown;
     }
 
-    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
+    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureReadbackNative( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord             = _pDevice->resolveTexture( texture );
         const bool                            bTextureNotReadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || _pDevice->_transferSerials.isLost();

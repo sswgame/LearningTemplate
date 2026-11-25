@@ -161,7 +161,7 @@ namespace sw
          */
         Texture2D* acquire( string_view relativePath );
         /**
-         * @brief 워커가 읽기를 마친 텍스처를 @p pDevice 에 올립니다(렌더 스레드, 프레임 기록 전, `FrameRenderer::executePacket`). 끝낸(bindless 에 등록해 공개한) 수를 반환합니다.
+         * @brief 워커가 읽기를 마친 텍스처를 @p pDevice 에 올립니다(렌더 스레드, 프레임 기록 전 한 번, `FrameRenderer::updateTextureUploads`). 끝낸(bindless 에 등록해 공개한) 수를 반환합니다.
          * @details 업로드는 세 단계다(RHIAsyncUploads U8) — 워커 읽기 → 이 함수가 `beginUpload`(텍스처 생성 · 제출, 기다리지 않는다) → 이후 프레임의 이 함수가 `finishUpload`
          *          (`pollTransfer` 가 `Complete` 면 bindless 등록과 공개). 같은 호출이 이미 제출한 로드의 끝남 확인을 먼저 하고, @p maxCount 는 **새로 제출하는 수**에 적용한다
          *          (확인은 값싸다). `Busy` 면 그 프레임의 나머지 제출을 미루고 다음 프레임에 다시 낸다. 블로킹이 아닌 길이라 `wait()` 한 쪽이 있으면 그쪽이 먼저 끝낸다.
@@ -268,7 +268,7 @@ namespace sw
          */
         void requestRegionUpdate( string_view relativePath, uint32 x, uint32 y, uint32 width, uint32 height, vector<uint8> rgbaBytes );
         /**
-         * @brief 맡겨 둔 구간 업로드를 냅니다(렌더 스레드, 프레임 기록 전, `FrameRenderer::executePacket`). GPU 완료를 기다리지 않습니다.
+         * @brief 맡겨 둔 구간 업로드를 냅니다(렌더 스레드, 프레임 기록 전 한 번, `FrameRenderer::updateTextureUploads`). GPU 완료를 기다리지 않습니다.
          * @details @p pDevice 가 nullptr 이면 CPU 텍스처의 원본만 고치고 나머지는 버립니다(GPU 없는 테스트).
          *          RHI 가 `Busy` 를 돌려주면 그 구간부터 이번 차례의 나머지를 다음 프레임으로 미루고(순서 유지), `Rejected` 는 오류를 남기고 버립니다.
          * @return 반영한 구간 수입니다(원본만 고친 것과 받아들여진 제출).
