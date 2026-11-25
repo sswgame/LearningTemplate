@@ -32,7 +32,6 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorPanelEntry;
 
         /**
          * @struct EditorDocumentAutosaveScheduler
