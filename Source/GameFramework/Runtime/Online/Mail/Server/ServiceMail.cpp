@@ -81,9 +81,9 @@ namespace sw
         return true;
     }
 
-    const hashed_string& ServiceMail::getSentExpiryTable()
+    const ServiceIndexTable& ServiceMail::getSentExpiryTable()
     {
-        static const hashed_string s_table{ "mail_sent_expiry" };
+        static const ServiceIndexTable s_table{ "mail_sent_expiry" };
         return s_table;
     }
 
@@ -99,9 +99,9 @@ namespace sw
         return rule;
     }
 
-    const hashed_string& ServiceMail::getExpiryTable()
+    const ServiceIndexTable& ServiceMail::getExpiryTable()
     {
-        static const hashed_string s_table{ "mail_expiry" };
+        static const ServiceIndexTable s_table{ "mail_expiry" };
         return s_table;
     }
 
@@ -186,9 +186,9 @@ namespace sw
         record._state   = ServiceMailState::Unread;
         pending.put( getMailTable(), mailKey, encodeRecord( record ), ServiceRecord::kAbsentVersion );
         pending.put( getSentTable(), sentKey, vector<uint8>( reinterpret_cast<const uint8*>( mailKey.data() ), reinterpret_cast<const uint8*>( mailKey.data() ) + mailKey.size() ), ServiceRecord::kAbsentVersion );
-        pending.put( getSentExpiryTable(), ServiceTTLRule::makeTTLIndexKey( message._createdMs, sentKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+        pending.put( getSentExpiryTable(), ServiceTTLRule::makeTTLIndexKey( message._createdMs, sentKey ), ServiceRecord::kAnyVersion );
         if ( message._expiresMs > 0 )
-            pending.put( getExpiryTable(), makeExpiryKey( message._expiresMs, mailKey ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+            pending.put( getExpiryTable(), makeExpiryKey( message._expiresMs, mailKey ), ServiceRecord::kAbsentVersion );
         pending.put( getNotificationTable(), makeExpiryKey( message._createdMs, mailKey ), // 키 모양(시각 16 진 + 우편 키)이 TTL 색인과 같다
                      vector<uint8>( reinterpret_cast<const uint8*>( message._titleKey.data() ), reinterpret_cast<const uint8*>( message._titleKey.data() ) + message._titleKey.size() ),
                      ServiceRecord::kAbsentVersion );

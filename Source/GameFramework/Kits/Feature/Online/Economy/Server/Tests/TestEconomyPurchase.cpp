@@ -7,8 +7,10 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreRecords.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 
 using namespace sw;
 
@@ -115,7 +117,7 @@ SW_TEST_CASE( EconomyPurchaseTest, RetryIsIdempotentAndLimitHolds )
 /** @brief [EconomyPurchaseTest] 결함: 깨진 구매 수 레코드를 0 으로 읽어 계정 한도가 다시 열렸다. 거절하고 아무것도 바꾸지 않는다 */
 SW_TEST_CASE( EconomyPurchaseTest, UnreadablePurchaseCountRefusesPurchase )
 {
-    SW_EXPECT_LOG( "EconomyStoreLogic.PurchaseCountUnreadable" );
+    SW_EXPECT_LOG( "ServiceRecordUtil.DurableRecordVersionBytes" );
     Fixture fixture;
     SW_REQUIRE_TRUE( buy( fixture.database, fixture.currencies, fixture.offers, "starter_pack", 1 ) == EconomyResult::Ok );
     grant( fixture.database, "cur.gem_paid", 1000 );

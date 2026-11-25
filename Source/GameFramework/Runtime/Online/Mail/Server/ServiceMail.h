@@ -88,11 +88,11 @@ namespace sw
     /** @brief 우편 넣기와 레코드 형식 함수 모음입니다. 저장소 스레드에서 부릅니다. */
     struct SW_GF_API ServiceMail
     {
-        static const hashed_string& getMailTable();
-        static const hashed_string& getSentTable();
-        static const hashed_string& getExpiryTable();
-        static const hashed_string& getNotificationTable(); ///< "mail_notice"
-        static const hashed_string& getSentExpiryTable();   ///< "mail_sent_expiry" — 보낸 기록의 TTL 색인(`<만든 시각>/<보낸 키>`)
+        static const hashed_string&     getMailTable();
+        static const hashed_string&     getSentTable();
+        static const ServiceIndexTable& getExpiryTable();
+        static const hashed_string&     getNotificationTable(); ///< "mail_notice"
+        static const ServiceIndexTable& getSentExpiryTable();   ///< "mail_sent_expiry" — 보낸 기록의 TTL 색인(`<만든 시각>/<보낸 키>`)
         /** @brief 보낸 기록의 TTL 규칙입니다(TTL 색인 + 색인 없는 옛 기록의 백필). 기간은 운영 설정 `_mailSentTTL` 이 정한다. */
         static ServiceTTLRule makeSentTTLRule( int64 expireAfterMs );
 

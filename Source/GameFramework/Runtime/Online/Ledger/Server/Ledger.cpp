@@ -182,9 +182,9 @@ namespace sw
                 return true;
             }
 
-            static const hashed_string& getJournalExpiryTable()
+            static const ServiceIndexTable& getJournalExpiryTable()
             {
-                static const hashed_string s_table{ "ledger_journal_expiry" };
+                static const ServiceIndexTable s_table{ "ledger_journal_expiry" };
                 return s_table;
             }
 
@@ -461,14 +461,14 @@ namespace sw
                 pending.put( Ledger::getJournalTable(), request._journalKey, encodeJournal( request, contentHash, outResult._listHolderBalance ),
                              ServiceRecord::kAbsentVersion );
                 // 소각 분개(`burnAccount`)도 이 길을 지나 같은 TTL 색인 줄을 넣는다 - 기간 뒤 분개 쓸기가 이월 · 내역과 함께 지운다
-                pending.put( getJournalExpiryTable(), ServiceTTLRule::makeTTLIndexKey( request._timeMs, request._journalKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+                pending.put( getJournalExpiryTable(), ServiceTTLRule::makeTTLIndexKey( request._timeMs, request._journalKey ), ServiceRecord::kAnyVersion );
                 const string* pLastHolderKey = nullptr;
                 for ( const Delta& delta : listDelta )
                 {
                     const bool bSameHolder = pLastHolderKey != nullptr && *pLastHolderKey == delta._holderKey;
                     if ( bSameHolder )
                         continue;
-                    pending.put( Ledger::getHistoryTable(), makeHistoryKey( delta._holderKey, request._timeMs, request._journalKey ), vector<uint8>{},
+                    pending.put( Ledger::getHistoryTable(), makeHistoryKey( delta._holderKey, request._timeMs, request._journalKey ),
                                  ServiceRecord::kAbsentVersion );
                     pLastHolderKey = &delta._holderKey;
                 }
@@ -595,9 +595,9 @@ namespace sw
         return s_table;
     }
 
-    const hashed_string& Ledger::getDeletionQueueTable()
+    const ServiceIndexTable& Ledger::getDeletionQueueTable()
     {
-        static const hashed_string s_table{ "ledger_deletion_queue" };
+        static const ServiceIndexTable s_table{ "ledger_deletion_queue" };
         return s_table;
     }
 
@@ -608,7 +608,7 @@ namespace sw
         LedgerInternal::kTombstoneFormat.writeVersion( writer );
         writer.writeVarInt( timeMs );
         inoutTransaction.put( getTombstoneTable(), key, writer.releaseBytes() );
-        inoutTransaction.put( getDeletionQueueTable(), key, vector<uint8>{} );
+        inoutTransaction.put( getDeletionQueueTable(), key );
     }
 
     void Ledger::requireNoTombstone( uint64 accountID, ServiceTransaction& inoutTransaction )
@@ -700,9 +700,9 @@ namespace sw
         }
     }
 
-    const hashed_string& Ledger::getHistoryTable()
+    const ServiceIndexTable& Ledger::getHistoryTable()
     {
-        static const hashed_string s_table{ "ledger_history" };
+        static const ServiceIndexTable s_table{ "ledger_history" };
         return s_table;
     }
 

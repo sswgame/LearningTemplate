@@ -57,27 +57,27 @@ namespace sw
                 return s_table;
             }
 
-            static const hashed_string& getSessionExpiryTable()
+            static const ServiceIndexTable& getSessionExpiryTable()
             {
-                static const hashed_string s_table{ "login_session_expiry" };
+                static const ServiceIndexTable s_table{ "login_session_expiry" };
                 return s_table;
             }
 
-            static const hashed_string& getAccountSessionTable()
+            static const ServiceLinkTable& getAccountSessionTable()
             {
-                static const hashed_string s_table{ "login_account_session" };
+                static const ServiceLinkTable s_table{ "login_account_session" };
                 return s_table;
             }
 
-            static const hashed_string& getGuestTable()
+            static const ServiceLinkTable& getGuestTable()
             {
-                static const hashed_string s_table{ "account_guest" };
+                static const ServiceLinkTable s_table{ "account_guest" };
                 return s_table;
             }
 
-            static const hashed_string& getExternalTable()
+            static const ServiceLinkTable& getExternalTable()
             {
-                static const hashed_string s_table{ "login_external" };
+                static const ServiceLinkTable s_table{ "login_external" };
                 return s_table;
             }
 
@@ -87,15 +87,15 @@ namespace sw
                 return s_table;
             }
 
-            static const hashed_string& getAfterDeleteTable()
+            static const ServiceIndexTable& getAfterDeleteTable()
             {
-                static const hashed_string s_table{ "account_after_delete" };
+                static const ServiceIndexTable s_table{ "account_after_delete" };
                 return s_table;
             }
 
-            static const hashed_string& getDeletionTable()
+            static const ServiceIndexTable& getDeletionTable()
             {
-                static const hashed_string s_table{ "account_deletion" };
+                static const ServiceIndexTable s_table{ "account_deletion" };
                 return s_table;
             }
 
@@ -269,7 +269,7 @@ namespace sw
             static void stageSession( ServiceTransaction& inoutTransaction, string_view sessionKey, const SessionRecord& session, uint64 expectedVersion )
             {
                 inoutTransaction.put( getSessionTable(), sessionKey, session.encodeSession(), expectedVersion );
-                inoutTransaction.put( getSessionExpiryTable(), ServiceTTLRule::makeTTLIndexKey( session._expiresAtMs, sessionKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+                inoutTransaction.put( getSessionExpiryTable(), ServiceTTLRule::makeTTLIndexKey( session._expiresAtMs, sessionKey ), ServiceRecord::kAnyVersion );
             }
 
             /** @brief 세션 레코드의 만료 시각을 읽습니다(TTL 쓸기). 읽지 못하면 지우지 않는다. */
@@ -705,13 +705,13 @@ namespace sw
                 profile._displayName    = Internal::makeGuestDisplayName( accountID );
                 profile._guestDigestHex = digestHex;
                 profile._bGuest         = SW_TRUE;
-                transaction.put( Internal::getGuestTable(), digestHex, ServiceKeyUtil::encodeVarID( accountID ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getGuestTable(), digestHex, accountID, ServiceRecord::kAbsentVersion );
                 transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( accountID ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
                 Ledger::requireNoTombstone( accountID, transaction ); // 지운 계정의 id 는 다시 쓰지 않는다
             }
             else
             {
-                if ( ServiceKeyUtil::decodeVarID( digestHex, guestRaw._bytes, accountID ) == false || Internal::readProfile( _connection, accountID, profile ) != ServiceStoreResult::Ok )
+                if ( Internal::getGuestTable().decode( digestHex, guestRaw, accountID ) == false || Internal::readProfile( _connection, accountID, profile ) != ServiceStoreResult::Ok )
                     return LoginServiceResult::fail( OnlineError::kUnavailable );
                 const LoginServiceResult sanction = evaluateSanction( accountID, nowMs, outGrant );
                 if ( sanction != LoginResult::Ok )
@@ -765,7 +765,7 @@ namespace sw
                 if ( Internal::makeNonZeroID( _crypto, accountID ) == false )
                     return LoginServiceResult::fail( OnlineError::kUnavailable );
                 profile._displayName = Internal::makePlatformDisplayName( displayNameHint, accountID );
-                transaction.put( Internal::getExternalTable(), externalKey, ServiceKeyUtil::encodeVarID( accountID ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getExternalTable(), externalKey, accountID, ServiceRecord::kAbsentVersion );
                 transaction.put( Internal::getAccountExternalTable(), Internal::makeAccountExternalKey( accountID, provider ), vector<uint8>( reinterpret_cast<const uint8*>( digestHex.data() ), reinterpret_cast<const uint8*>( digestHex.data() ) + digestHex.size() ),
                                  ServiceRecord::kAbsentVersion );
                 transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( accountID ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
@@ -773,7 +773,7 @@ namespace sw
             }
             else
             {
-                if ( ServiceKeyUtil::decodeVarID( externalKey, externalRaw._bytes, accountID ) == false || Internal::readProfile( _connection, accountID, profile ) != ServiceStoreResult::Ok )
+                if ( Internal::getExternalTable().decode( externalKey, externalRaw, accountID ) == false || Internal::readProfile( _connection, accountID, profile ) != ServiceStoreResult::Ok )
                     return LoginServiceResult::fail( OnlineError::kUnavailable );
                 const LoginServiceResult sanction = evaluateSanction( accountID, nowMs, outGrant );
                 if ( sanction != LoginResult::Ok )
@@ -902,7 +902,7 @@ namespace sw
             transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( token._sessionID ) );
             const ServiceStoreResult readResult      = attempt.readRecord( Internal::getAccountSessionTable(), accountKey, linkRaw );
             uint64                   linkedSessionID = 0;
-            if ( readResult == ServiceStoreResult::Ok && ServiceKeyUtil::decodeVarID( accountKey, linkRaw._bytes, linkedSessionID ) == false )
+            if ( readResult == ServiceStoreResult::Ok && Internal::getAccountSessionTable().decode( accountKey, linkRaw, linkedSessionID ) == false )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
             if ( linkedSessionID == token._sessionID )
                 transaction.erase( Internal::getAccountSessionTable(), accountKey, linkRaw._version );
@@ -1078,7 +1078,7 @@ namespace sw
             const uint64 profileVersion = profile._version;
             profile._bGuest             = SW_FALSE;
             ServiceTransaction transaction;
-            transaction.put( Internal::getExternalTable(), Internal::makeExternalKey( provider, digestHex ), ServiceKeyUtil::encodeVarID( identity._accountID ),
+            transaction.put( Internal::getExternalTable(), Internal::makeExternalKey( provider, digestHex ), identity._accountID,
                              ServiceRecord::kAbsentVersion );
             transaction.put( Internal::getAccountExternalTable(), Internal::makeAccountExternalKey( identity._accountID, provider ),
                              vector<uint8>( reinterpret_cast<const uint8*>( digestHex.data() ), reinterpret_cast<const uint8*>( digestHex.data() ) + digestHex.size() ), ServiceRecord::kAbsentVersion );
@@ -1187,7 +1187,7 @@ namespace sw
                 profile._deletionDueMs = nowMs + _settings._deletionGraceMs;
             ServiceTransaction transaction;
             transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( identity._accountID ), Internal::encodeProfile( profile ), profileVersion );
-            transaction.put( Internal::getDeletionTable(), Internal::makeDeletionKey( profile._deletionDueMs, identity._accountID ), vector<uint8>{} );
+            transaction.put( Internal::getDeletionTable(), Internal::makeDeletionKey( profile._deletionDueMs, identity._accountID ) );
             uint64                   sessionID = 0;
             const LoginServiceResult staged    = stageSessionRevoke( identity._accountID, LoginRevokeReason::AccountDeleted, nowMs, transaction, sessionID );
             if ( staged != LoginResult::Ok )
@@ -1343,14 +1343,14 @@ namespace sw
         if ( linkRead == ServiceStoreResult::Ok )
         {
             uint64 sessionID = 0;
-            if ( ServiceKeyUtil::decodeVarID( accountKey, linkRaw._bytes, sessionID ) == false )
+            if ( Internal::getAccountSessionTable().decode( accountKey, linkRaw, sessionID ) == false )
                 return LoginServiceResult::fail( OnlineError::kUnavailable ); // 세션을 놓친 채 계정을 지우지 않는다
             transaction.erase( Internal::getAccountSessionTable(), accountKey );
             transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( sessionID ) );
         }
         // 원장 묘비와 소각 대기를 계정 지우기와 한 트랜잭션에 넣는다 — 탈퇴가 그사이 취소돼 이 커밋이 지면 잔액도 그대로다(Nakama DeleteAccount 의 지갑 · user_tombstone)
         Ledger::stageAccountDeletion( accountID, nowMs, transaction );
-        transaction.put( Internal::getAfterDeleteTable(), accountKey, vector<uint8>{} ); // 키트 훅은 커밋 뒤 대기열로 돈다(`runAfterDeleteAccount`)
+        transaction.put( Internal::getAfterDeleteTable(), accountKey ); // 키트 훅은 커밋 뒤 대기열로 돈다(`runAfterDeleteAccount`)
         ServiceAuditEntry audit = Internal::makeAuditEntry( accountID, "account.delete", nowMs );
         audit._actor            = ServiceAuditLog::kSystemActor;
         ServiceAuditLog::stageEntry( transaction, audit, accountID, static_cast<uint64>( profile._deletionDueMs ) );
@@ -1517,7 +1517,7 @@ namespace sw
         if ( readResult != ServiceStoreResult::Ok && readResult != ServiceStoreResult::NotFound )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
         uint64 oldSessionID = 0;
-        if ( readResult == ServiceStoreResult::Ok && ServiceKeyUtil::decodeVarID( accountKey, linkRaw._bytes, oldSessionID ) == false )
+        if ( readResult == ServiceStoreResult::Ok && Internal::getAccountSessionTable().decode( accountKey, linkRaw, oldSessionID ) == false )
             return LoginServiceResult::fail( OnlineError::kUnavailable ); // 깨진 연결을 없음으로 보면 앞 세션이 산 채로 새 세션이 열린다
         if ( oldSessionID != 0 )
         {
@@ -1551,7 +1551,7 @@ namespace sw
         if ( Internal::computeTokenDigest( _crypto, outToken._secret.reveal(), session._arrTokenDigest ) == false )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
         Internal::stageSession( inoutTransaction, ServiceKeyUtil::makeHex64( outToken._sessionID ), session, ServiceRecord::kAbsentVersion );
-        inoutTransaction.put( Internal::getAccountSessionTable(), accountKey, ServiceKeyUtil::encodeVarID( outToken._sessionID ), linkRaw._version );
+        inoutTransaction.put( Internal::getAccountSessionTable(), accountKey, outToken._sessionID, linkRaw._version );
         outExpiresAtMs = session._expiresAtMs;
         return LoginResult::Ok;
     }
@@ -1576,7 +1576,7 @@ namespace sw
         if ( readResult != ServiceStoreResult::Ok )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
         uint64 sessionID = 0;
-        if ( ServiceKeyUtil::decodeVarID( accountKey, linkRaw._bytes, sessionID ) == false )
+        if ( Internal::getAccountSessionTable().decode( accountKey, linkRaw, sessionID ) == false )
             return LoginServiceResult::fail( OnlineError::kUnavailable ); // 없는 세션을 지운 셈 치면 정지 · 강제 종료가 산 세션을 남긴다
         const string  sessionKey = ServiceKeyUtil::makeHex64( sessionID );
         ServiceRecord sessionRaw;

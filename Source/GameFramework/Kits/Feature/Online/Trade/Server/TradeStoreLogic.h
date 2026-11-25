@@ -52,10 +52,10 @@ namespace sw
     public:
         TradeStoreLogic( IServiceStoreConnection& connection, const ITradePolicy& policy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings );
 
-        static const hashed_string& getSessionTable();
-        static const hashed_string& getActiveTable();
-        static const hashed_string& getOwnerTable();
-        static const hashed_string& getSessionExpiryTable(); ///< "trade_session_expiry"
+        static const hashed_string&     getSessionTable();
+        static const ServiceLinkTable&  getActiveTable();
+        static const ServiceIndexTable& getOwnerTable();
+        static const ServiceIndexTable& getSessionExpiryTable(); ///< "trade_session_expiry"
 
         /** @brief 닫힌 거래 레코드의 TTL 규칙입니다(TTL 색인 규칙). 키트 조립이 `IOnlineServerKit::addTTLRule` 로 올립니다. */
         static ServiceTTLRule makeTTLRule( int64 expireAfterMs );

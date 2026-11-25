@@ -20,8 +20,8 @@ namespace sw
     {
         static const hashed_string& getTable(); ///< "service_report"
         /** @brief 닫힌 신고(`closed/<만든 시각 16 진>/…`)의 만든 시각을 읽습니다(보존 기간 쓸기 `ServiceTTLRule` 용). 열린 신고와 틀린 키는 false 입니다. */
-        [[nodiscard]] static bool   readClosedTimeMs( const ServiceRecord& record, int64& outTimeMs );
-        static const hashed_string& getExpiryTable(); ///< "service_report_expiry" — 닫힌 신고의 TTL 색인(`<만든 시각>/<닫힌 키>`)
+        [[nodiscard]] static bool       readClosedTimeMs( const ServiceRecord& record, int64& outTimeMs );
+        static const ServiceIndexTable& getExpiryTable(); ///< "service_report_expiry" — 닫힌 신고의 TTL 색인(`<만든 시각>/<닫힌 키>`)
         /** @brief 닫힌 신고의 TTL 규칙입니다(TTL 색인 + 색인 없는 옛 닫힌 신고의 백필, 백필은 `closed/` 아래만). 열린 신고는 지우지 않는다. */
         static ServiceTTLRule makeClosedTTLRule( int64 expireAfterMs );
         /** @brief 열린 신고의 키를 만듭니다. @p uniqueID 는 같은 신고자가 같은 밀리초에 낸 신고를 가릅니다. */

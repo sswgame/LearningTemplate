@@ -136,7 +136,7 @@ namespace sw
                         return toResult( staged );
                     if ( serviceResult._bReplayed == SW_TRUE )
                         return MailboxResult::AlreadyClaimed;
-                    transaction.put( ServiceMailCampaign::getClaimTable(), claimKey, vector<uint8>{}, ServiceRecord::kAbsentVersion );
+                    transaction.put( ServiceMailCampaign::getClaimTable(), claimKey, ServiceRecord::kAbsentVersion );
                     const LedgerResult committed = Ledger::commitTransfer( attempt, transaction, request, serviceResult );
                     if ( committed == LedgerResult::Conflict )
                         return nullopt;
@@ -388,7 +388,7 @@ namespace sw
             {
                 if ( mail._message._expiresMs > 0 )
                     transaction.erase( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( mail._message._expiresMs, mailKey ) );
-                transaction.put( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( purgeMs, mailKey ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+                transaction.put( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( purgeMs, mailKey ), ServiceRecord::kAbsentVersion );
             }
             mail._state              = ServiceMailState::Claimed;
             mail._message._expiresMs = purgeMs;

@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -221,7 +222,7 @@ namespace sw
                 }
                 else
                 {
-                    inoutTransaction.put( AdminStoreLogic::getRoleTable(), key, vector<uint8>{ static_cast<uint8>( request._role ) }, version );
+                    inoutTransaction.put( AdminStoreLogic::getRoleTable(), key, AdminRoleRecord{ request._role, {} }, version );
                 }
                 inoutAudit._action = "admin.role";
                 inoutAudit._before = toString( current );
@@ -495,9 +496,9 @@ namespace sw
         return ServiceCommitRunner::commitOnce( connection, transaction );
     }
 
-    const hashed_string& AdminStoreLogic::getRoleTable()
+    const ServiceRecordTable<AdminRoleRecord>& AdminStoreLogic::getRoleTable()
     {
-        static const hashed_string s_table{ "admin_role" };
+        static const ServiceRecordTable<AdminRoleRecord> s_table{ "admin_role" };
         return s_table;
     }
 
@@ -539,15 +540,15 @@ namespace sw
     {
         outRole    = AdminRole::None;
         outVersion = 0;
-        ServiceRecord            record;
-        const ServiceStoreResult read = connection.readRecord( getRoleTable(), ServiceKeyUtil::makeHex64( accountID ), record );
+        AdminRoleRecord          record;
+        const ServiceStoreResult read = getRoleTable().read( connection, ServiceKeyUtil::makeHex64( accountID ), record, &outVersion );
         if ( read == ServiceStoreResult::NotFound )
             return ServiceStoreResult::Ok;
         if ( read != ServiceStoreResult::Ok )
-            return read;
-        const bool bValid = record._bytes.size() == 1 && record._bytes[0] < static_cast<uint8>( AdminRole::Count );
-        outRole           = bValid ? static_cast<AdminRole>( record._bytes[0] ) : AdminRole::None;
-        outVersion        = record._version;
+            return read; // 깨진 등급은 없음(None)이 아니라 실패다 — 부르는 쪽은 Unavailable 로 거절한다
+        if ( record._role == AdminRole::Count )
+            return ServiceStoreResult::Corrupt; // 누구도 가질 수 없는 등급이다
+        outRole = record._role;
         return ServiceStoreResult::Ok;
     }
 
@@ -633,7 +634,7 @@ namespace sw
         if ( version != 0 )
             return AdminResult::Ok; // 이미 있으므로 설정 파일이 운영 중에 바뀐 등급을 덮어쓰지 않는다
         ServiceTransaction transaction;
-        transaction.put( getRoleTable(), ServiceKeyUtil::makeHex64( accountID ), vector<uint8>{ static_cast<uint8>( role ) }, ServiceRecord::kAbsentVersion );
+        transaction.put( getRoleTable(), ServiceKeyUtil::makeHex64( accountID ), AdminRoleRecord{ role, {} }, ServiceRecord::kAbsentVersion );
         ServiceAuditEntry audit;
         audit._actor   = "system.bootstrap";
         audit._action  = "admin.role";

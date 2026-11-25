@@ -49,12 +49,12 @@ namespace sw
     /** @brief 원장 함수 모음입니다. 저장소 스레드에서 부릅니다. */
     struct SW_GF_API Ledger
     {
-        static const hashed_string& getBalanceTable();
-        static const hashed_string& getJournalTable();
-        static const hashed_string& getHistoryTable();
-        static const hashed_string& getCarryTable();         ///< "ledger_carry" — 키 `<자산>`, 값 `[판][발행 합][소각 합]`. 지운 분개의 공급 합이며 지우지 않는다
-        static const hashed_string& getTombstoneTable();     ///< "ledger_tombstone" — 키 `acct/<16 진>`, 값 `[판][삭제 시각]`. 지운 계정이며 지우지 않는다
-        static const hashed_string& getDeletionQueueTable(); ///< "ledger_deletion_queue" — 키 `acct/<16 진>`, 값 없음. 잔액을 아직 다 소각하지 않은 지운 계정
+        static const hashed_string&     getBalanceTable();
+        static const hashed_string&     getJournalTable();
+        static const ServiceIndexTable& getHistoryTable();
+        static const hashed_string&     getCarryTable();         ///< "ledger_carry" — 키 `<자산>`, 값 `[판][발행 합][소각 합]`. 지운 분개의 공급 합이며 지우지 않는다
+        static const hashed_string&     getTombstoneTable();     ///< "ledger_tombstone" — 키 `acct/<16 진>`, 값 `[판][삭제 시각]`. 지운 계정이며 지우지 않는다
+        static const ServiceIndexTable& getDeletionQueueTable(); ///< "ledger_deletion_queue" — 키 `acct/<16 진>`, 값 없음. 잔액을 아직 다 소각하지 않은 지운 계정
         /**
          * @brief 계정 @p accountID 를 지우는 쓰기(묘비와 소각 대기)를 @p inoutTransaction 에 붙입니다. 탈퇴 정리가 계정 레코드를 지우는 트랜잭션에 넣습니다.
          * @details 함께 커밋되므로 탈퇴가 취소돼 계정 커밋이 지면 묘비도 서지 않는다. 잔액은 커밋 뒤 `burnDeletedAccounts` 가 소각한다.

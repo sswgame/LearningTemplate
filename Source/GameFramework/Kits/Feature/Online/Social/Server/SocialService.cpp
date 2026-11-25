@@ -45,9 +45,9 @@ namespace sw
             }
 
             /** @brief 막음의 역색인 `<막힌 사람>/<막은 사람>`(값 없음)입니다. 막힌 쪽 줄은 없으므로 탈퇴 정리가 "나를 막은 사람" 을 여기서 찾는다. */
-            static const hashed_string& getBlockedByTable()
+            static const ServiceIndexTable& getBlockedByTable()
             {
-                static const hashed_string s_table{ "social_blocked_by" };
+                static const ServiceIndexTable s_table{ "social_blocked_by" };
                 return s_table;
             }
 
@@ -145,7 +145,7 @@ namespace sw
                 if ( bWasBlocked != bBlocked ) // 막음이 서거나 풀릴 때 역색인을 같은 트랜잭션에서 맞춘다
                 {
                     if ( bBlocked )
-                        inoutTransaction.put( getBlockedByTable(), makeReverseKey( key ), vector<uint8>{} );
+                        inoutTransaction.put( getBlockedByTable(), makeReverseKey( key ) );
                     else
                         inoutTransaction.erase( getBlockedByTable(), makeReverseKey( key ) );
                 }

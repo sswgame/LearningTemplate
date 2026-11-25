@@ -69,9 +69,9 @@ namespace sw
                 return reader.hasOverflowed() == false;
             }
 
-            static const hashed_string& getExpiryTable()
+            static const ServiceIndexTable& getExpiryTable()
             {
-                static const hashed_string s_table{ "service_schedule_expiry" };
+                static const ServiceIndexTable s_table{ "service_schedule_expiry" };
                 return s_table;
             }
 
@@ -82,7 +82,7 @@ namespace sw
             static void stageRun( ServiceTransaction& inoutTransaction, string_view key, const RunRecord& record, uint64 expectedVersion )
             {
                 inoutTransaction.put( ServiceScheduler::getTable(), key, encode( record ), expectedVersion );
-                inoutTransaction.put( getExpiryTable(), ServiceTTLRule::makeTTLIndexKey( computeRunTimeMs( record ), key ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+                inoutTransaction.put( getExpiryTable(), ServiceTTLRule::makeTTLIndexKey( computeRunTimeMs( record ), key ), ServiceRecord::kAnyVersion );
             }
 
             [[nodiscard]] static bool readRunTimeMs( const ServiceRecord& record, int64& outTimeMs )

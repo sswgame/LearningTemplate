@@ -50,9 +50,9 @@ namespace sw
         return true;
     }
 
-    const hashed_string& ServiceReportStore::getExpiryTable()
+    const ServiceIndexTable& ServiceReportStore::getExpiryTable()
     {
-        static const hashed_string s_table{ "service_report_expiry" };
+        static const ServiceIndexTable s_table{ "service_report_expiry" };
         return s_table;
     }
 
@@ -163,7 +163,7 @@ namespace sw
         if ( readClosedTimeMs( closedRecord, closedTimeMs ) == false )
             return ServiceStoreResult::Invalid; // 열린 키 모양이 틀렸다 - 색인에 넣지 못하는 닫힌 신고는 만들지 않는다
         inoutTransaction.put( getTable(), closedKey, std::move( bytes ), ServiceRecord::kAbsentVersion );
-        inoutTransaction.put( getExpiryTable(), ServiceTTLRule::makeTTLIndexKey( closedTimeMs, closedKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+        inoutTransaction.put( getExpiryTable(), ServiceTTLRule::makeTTLIndexKey( closedTimeMs, closedKey ), ServiceRecord::kAnyVersion );
         outReport = std::move( report );
         return ServiceStoreResult::Ok;
     }

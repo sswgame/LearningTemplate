@@ -141,6 +141,8 @@ namespace sw
          * @details 저장소는 같은 트랜잭션 안에서 범위를 다시 읽어 견준다(이 트랜잭션의 쓰기 전에). 버전 조건 상한(`kMaxConditionCount`)에 든다.
          */
         void requireRange( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, uint64 fingerprint );
+        /** @brief 이 트랜잭션을 커밋하지 못하게 합니다(`Invalid`). 넣으려던 값이 규칙을 어겨 일부만 쓰면 안 될 때 — 빈 키 같은 가짜 쓰기로 대신하지 않는다. */
+        void markMalformed() { _bMalformed = SW_TRUE; }
         /** @brief 쓰기 하나를 그대로 덧붙입니다(다른 트랜잭션에서 짠 쓰기를 옮길 때). */
         void addWrite( const ServiceWrite& write ) { _listWrite.push_back( write ); }
         void clear()
@@ -168,6 +170,76 @@ namespace sw
         vector<ServiceWrite> _listWrite;
         uint8                _bMalformed{ SW_FALSE }; ///< 표 형식으로 쓰지 못한 값이 있었다 — 커밋은 `Invalid` 다
     };
+} // namespace sw
+
+namespace sw
+{
+    /** @class ServiceIndexTable @brief 값 없는 줄의 표입니다(키가 곧 내용이다). */
+    class SW_GF_API ServiceIndexTable
+    {
+    public:
+        /** @brief 표가 없음입니다(규칙의 고르는 칸 — `ServiceTTLRule::_ttlIndexTable`). */
+        ServiceIndexTable() = default;
+        explicit ServiceIndexTable( const utf8* pName )
+            : _name{ pName }
+        {
+        }
+
+        const hashed_string& getName() const { return _name; }
+        operator const hashed_string&() const { return _name; }
+        bool empty() const { return _name.empty(); }
+
+    private:
+        hashed_string _name{};
+    };
+
+    /** @class ServiceLinkTable @brief 다른 레코드의 id 하나를 가리키는 표입니다(가변 정수). 서비스 id(계정 · 세션 · 거래 · 길드)는 0 을 내지 않는다 — 0 은 깨진 값이다. */
+    class SW_GF_API ServiceLinkTable
+    {
+    public:
+        explicit ServiceLinkTable( const utf8* pName )
+            : _name{ pName }
+        {
+        }
+
+        const hashed_string& getName() const { return _name; }
+        operator const hashed_string&() const { return _name; }
+
+        /**
+         * @brief 받은 레코드의 id 를 읽습니다. 깨졌거나 0 이면 오류 로그를 남기고 false 이며 @p outID 는 그대로입니다.
+         * @details 깨진 연결을 "연결 없음" 으로 보면 세션 폐기 · 중복 로그인 검사가 살아 있는 세션을 놓친 채 성공한다 — 부르는 쪽은 요청을 실패로 돌려준다.
+         */
+        [[nodiscard]] bool decode( string_view key, const ServiceRecord& record, uint64& outID ) const;
+        /** @brief 연결 하나를 읽습니다. 있으면 Ok 와 id, 없으면 NotFound, 깨졌으면 Corrupt 입니다. */
+        [[nodiscard]] ServiceStoreResult read( IServiceStoreConnection& connection, string_view key, uint64& outID, uint64* pOutVersion = nullptr ) const;
+        /** @brief id 를 바이트로 씁니다(`ServiceTransaction::put` 이 부른다). 0 이면 오류 로그와 false 입니다. */
+        [[nodiscard]] bool encode( string_view key, uint64 id, vector<uint8>& outBytes ) const;
+
+    private:
+        hashed_string _name;
+    };
+
+    /** @class ServiceOpaqueTable @brief 이 서버가 뜻을 읽지 않는 바이트의 표입니다(봉인된 비밀 · 저장해 둔 응답). 바이트를 해석하는 코드는 다른 표 형식을 쓴다. */
+    class SW_GF_API ServiceOpaqueTable
+    {
+    public:
+        explicit ServiceOpaqueTable( const utf8* pName )
+            : _name{ pName }
+        {
+        }
+
+        const hashed_string& getName() const { return _name; }
+        operator const hashed_string&() const { return _name; }
+
+        /** @brief 받은 레코드의 바이트입니다. */
+        static const vector<uint8>& getBytes( const ServiceRecord& record ) { return record._bytes; }
+        /** @brief 받은 레코드의 바이트를 옮겨 갑니다. */
+        static vector<uint8> takeBytes( ServiceRecord& record ) { return std::move( record._bytes ); }
+
+    private:
+        hashed_string _name;
+    };
+
 } // namespace sw
 
 namespace sw

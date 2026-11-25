@@ -87,9 +87,9 @@ namespace sw
         return true;
     }
 
-    const hashed_string& ServiceAuditLog::getExpiryTable()
+    const ServiceIndexTable& ServiceAuditLog::getExpiryTable()
     {
-        static const hashed_string s_table{ "service_audit_expiry" };
+        static const ServiceIndexTable s_table{ "service_audit_expiry" };
         return s_table;
     }
 
@@ -151,18 +151,18 @@ namespace sw
     {
         if ( isValidEntry( entry ) == false )
         {
-            inoutTransaction.put( getTable(), string_view{}, vector<uint8>{}, ServiceRecord::kAbsentVersion ); // 빈 키 — 트랜잭션 전체가 Invalid
+            inoutTransaction.markMalformed(); // 트랜잭션 전체가 Invalid
             return;
         }
         const string key      = makeKey( entry, uniqueHigh, uniqueLow );
         const string indexKey = ServiceTTLRule::makeTTLIndexKey( entry._timeMs, key );
         if ( ServiceTransaction::isValidKey( indexKey ) == false )
         {
-            inoutTransaction.put( getTable(), string_view{}, vector<uint8>{}, ServiceRecord::kAbsentVersion ); // 색인에 들지 않는 긴 대상이다 — 쓸기가 못 지우는 줄을 남기지 않는다
+            inoutTransaction.markMalformed(); // 색인에 들지 않는 긴 대상이다 — 쓸기가 못 지우는 줄을 남기지 않는다
             return;
         }
         inoutTransaction.put( getTable(), key, ServiceAuditLogInternal::encode( entry ), ServiceRecord::kAbsentVersion );
-        inoutTransaction.put( getExpiryTable(), indexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
+        inoutTransaction.put( getExpiryTable(), indexKey, ServiceRecord::kAnyVersion );
     }
 
     void ServiceAuditLog::commitRejection( IServiceStoreConnection& connection, const ServiceAuditEntry& requestedEntry )

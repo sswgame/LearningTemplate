@@ -36,23 +36,23 @@ namespace sw
                 return s_table;
             }
 
-            static const hashed_string& getHistoryIndexTable()
+            static const ServiceIndexTable& getHistoryIndexTable()
             {
-                static const hashed_string s_table{ "chat_history_expiry" };
+                static const ServiceIndexTable s_table{ "chat_history_expiry" };
                 return s_table;
             }
 
             /** @brief 보낸 사람 색인 `<보낸 계정 16진>/<보낸 시각 16진>/<기록 키>`(값 없음)입니다. 탈퇴 정리가 계정의 기록을 찾는다. 접두어 아래가 시각 순서다. */
-            static const hashed_string& getSenderTable()
+            static const ServiceIndexTable& getSenderTable()
             {
-                static const hashed_string s_table{ "chat_history_sender" };
+                static const ServiceIndexTable s_table{ "chat_history_sender" };
                 return s_table;
             }
 
             /** @brief 보낸 사람 색인의 TTL 색인 `<날짜 끝 16진>/<보낸 계정 16진>/`(보낸 사람 · 날짜마다 한 줄)입니다. */
-            static const hashed_string& getSenderIndexTable()
+            static const ServiceIndexTable& getSenderIndexTable()
             {
-                static const hashed_string s_table{ "chat_history_sender_expiry" };
+                static const ServiceIndexTable s_table{ "chat_history_sender_expiry" };
                 return s_table;
             }
 
@@ -184,17 +184,17 @@ namespace sw
                     transaction.put( ChatServiceInternal::getHistoryTable(), historyKey, std::move( bytes ) );
                     if ( message._senderID == kInvalidAccountID )
                         continue; // 시스템 메시지다
-                    transaction.put( ChatServiceInternal::getSenderTable(), ChatServiceInternal::makeSenderKey( message._senderID, message._sentMs, historyKey ), vector<uint8>{} );
+                    transaction.put( ChatServiceInternal::getSenderTable(), ChatServiceInternal::makeSenderKey( message._senderID, message._sentMs, historyKey ) );
                     const string senderIndexKey = ChatServiceInternal::makeSenderIndexKey( message._senderID, message._sentMs );
                     VectorUtil::addUnique( listSenderIndexKey, senderIndexKey );
                 }
                 for ( const string& senderIndexKey : listSenderIndexKey )
                 {
-                    transaction.put( ChatServiceInternal::getSenderIndexTable(), senderIndexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
+                    transaction.put( ChatServiceInternal::getSenderIndexTable(), senderIndexKey, ServiceRecord::kAnyVersion );
                 }
                 for ( const string& indexKey : listIndexKey )
                 {
-                    transaction.put( ChatServiceInternal::getHistoryIndexTable(), indexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
+                    transaction.put( ChatServiceInternal::getHistoryIndexTable(), indexKey, ServiceRecord::kAnyVersion );
                 }
                 const bool bCommitted = transaction.isEmpty() || ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok;
                 write._bCommitted     = bCommitted ? SW_TRUE : SW_FALSE;

@@ -12,12 +12,14 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/ReceiptBuyerToken.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreRecords.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Fake/FakeReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Steam/SteamReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 using namespace sw;
@@ -846,7 +848,7 @@ SW_TEST_CASE( EconomyReceiptsTest, UnspentRecoveryTakesOnlyWhatIsLeft )
 /** @brief [EconomyReceiptsTest] 영수증 상태 레코드가 깨지면 지급 · 환불 · 철회 모두 오류 로그와 Unavailable 이고 아무것도 움직이지 않는다 */
 SW_TEST_CASE( EconomyReceiptsTest, UnreadableReceiptRecordHoldsTheTransaction )
 {
-    SW_EXPECT_LOG( "EconomyStoreLogic.ReceiptRecordUnreadable" );
+    SW_EXPECT_LOG( "ServiceRecordUtil.DurableRecordVersionBytes" );
     ReceiptFixture rig;
     SW_REQUIRE_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
     vector<ServiceRecord> listMark;
@@ -1118,7 +1120,7 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryNearTheDeadlineAlarmsOnce )
 /** @brief [EconomyReceiptsTest] 지급 알림 레코드: 판 번호가 다르거나 깨진 레코드는 오류와 함께 건너뛰고 나머지를 읽는다. 알림 키가 없는 결과는 일감을 만들지 않는다 */
 SW_TEST_CASE( EconomyReceiptsTest, DeliveryRecordRules )
 {
-    SW_EXPECT_LOG( "EconomyStoreLogic.DeliveryRecordUnreadable" );
+    SW_EXPECT_LOG( "ServiceRecordUtil.DurableRecordVersionBytes" );
     ReceiptFixture          rig;
     ReceiptValidationResult receipt;
     receipt._storeName     = "fake";
@@ -1226,7 +1228,7 @@ SW_TEST_CASE( EconomyReceiptsTest, UnreadableRefundCursorHoldsThePolling )
 /** @brief [EconomyReceiptsTest] 기준 시각의 저장 규칙: 없으면 0, 쓴 값을 읽고, 깨진 값은 오류와 Invalid 다 */
 SW_TEST_CASE( EconomyReceiptsTest, RefundCursorRecord )
 {
-    SW_EXPECT_LOG( "EconomyStoreLogic.RefundCursorUnreadable" );
+    SW_EXPECT_LOG( "ServiceRecordUtil.DurableRecordVersionBytes" );
     ReceiptFixture rig;
     int64          lastReadMs = 7;
     SW_EXPECT_TRUE( EconomyStoreLogic::readRefundCursor( rig._database, "google", lastReadMs ) == ServiceStoreResult::Ok );

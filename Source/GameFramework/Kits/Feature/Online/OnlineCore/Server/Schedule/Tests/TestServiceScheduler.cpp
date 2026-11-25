@@ -7,6 +7,7 @@
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceTTLMonitor.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -94,7 +95,7 @@ namespace
     {
         MemoryServiceDatabase _database;
         hashed_string         _table{ "ttl_test" };
-        hashed_string         _ttlIndexTable{ "ttl_test_index" }; ///< TTL 색인 규칙용이다
+        ServiceIndexTable     _ttlIndexTable{ "ttl_test_index" }; ///< TTL 색인 규칙용이다
 
         void put( string_view key, int64 timeMs )
         {
@@ -121,7 +122,7 @@ namespace
         void putIndex( int64 timeMs, string_view target )
         {
             ServiceTransaction transaction;
-            transaction.put( _ttlIndexTable, ServiceTTLRule::makeTTLIndexKey( timeMs, target ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+            transaction.put( _ttlIndexTable, ServiceTTLRule::makeTTLIndexKey( timeMs, target ), ServiceRecord::kAnyVersion );
             SW_REQUIRE_TRUE( _database.commit( transaction ) == ServiceStoreResult::Ok );
         }
 

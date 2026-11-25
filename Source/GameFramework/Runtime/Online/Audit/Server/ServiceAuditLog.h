@@ -37,8 +37,8 @@ namespace sw
         static string makeOperatorActor( uint64 operatorID );
         static string makeKey( const ServiceAuditEntry& entry, uint64 uniqueHigh, uint64 uniqueLow );
         /** @brief 줄의 키 `<대상>/<시각 16 진 16>/<고유 16 진 32>` 에서 기록 시각을 읽습니다(보존 기간 쓸기 `ServiceTTLRule` 용). 형식이 틀리면 false 입니다. */
-        [[nodiscard]] static bool   readTimeMs( const ServiceRecord& record, int64& outTimeMs );
-        static const hashed_string& getExpiryTable(); ///< "service_audit_expiry" — TTL 색인
+        [[nodiscard]] static bool       readTimeMs( const ServiceRecord& record, int64& outTimeMs );
+        static const ServiceIndexTable& getExpiryTable(); ///< "service_audit_expiry" — TTL 색인
         /** @brief 감사 표의 TTL 규칙입니다(TTL 색인 + 색인 없는 옛 줄의 백필). 기간은 운영 설정 `_auditRetention` 이 정한다. */
         static ServiceTTLRule makeTTLRule( int64 expireAfterMs );
         /** @brief 상한, 키 규칙, 동작 코드 문자를 지키는지입니다. */

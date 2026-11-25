@@ -4,7 +4,6 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Encoding/HexUtil.h"
-#include "Core/Log/Logger.h"
 #include "Core/Serialization/BitStream.h"
 
 namespace sw
@@ -50,27 +49,6 @@ namespace sw
         key.reserve( kHexWidth );
         appendHex64( key, value );
         return key;
-    }
-
-    vector<uint8> ServiceKeyUtil::encodeVarID( uint64 id )
-    {
-        BitWriter writer;
-        writer.writeVarUint( id );
-        return writer.releaseBytes();
-    }
-
-    bool ServiceKeyUtil::decodeVarID( string_view key, const vector<uint8>& bytes, uint64& outID )
-    {
-        BitReader    reader{ bytes.data(), static_cast<int32>( bytes.size() ) };
-        const uint64 id = reader.readVarUint();
-        if ( reader.hasOverflowed() || id == 0 )
-        {
-            SW_LOG_ERROR_ID( "ServiceKeyUtil.LinkRecordUnreadable", "The link record '%#' holds no id (%# bytes) - requests that follow it fail until the record is fixed", key,
-                             static_cast<uint64>( bytes.size() ) );
-            return false;
-        }
-        outID = id;
-        return true;
     }
 
     void ServiceKeyUtil::writeString( BitWriter& outWriter, string_view text )

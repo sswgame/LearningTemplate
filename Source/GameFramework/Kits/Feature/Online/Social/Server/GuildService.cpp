@@ -124,9 +124,9 @@ namespace sw
                 return s_table;
             }
 
-            static const hashed_string& getInviteExpiryTable()
+            static const ServiceIndexTable& getInviteExpiryTable()
             {
-                static const hashed_string s_table{ "social_guild_invite_expiry" };
+                static const ServiceIndexTable s_table{ "social_guild_invite_expiry" };
                 return s_table;
             }
 
@@ -136,17 +136,17 @@ namespace sw
                 return s_table;
             }
 
-            static const hashed_string& getApplicationExpiryTable()
+            static const ServiceIndexTable& getApplicationExpiryTable()
             {
-                static const hashed_string s_table{ "social_guild_application_expiry" };
+                static const ServiceIndexTable s_table{ "social_guild_application_expiry" };
                 return s_table;
             }
 
             /** @brief 이전 불가 자산을 맡긴 사람(`<길드>/<계정>`)입니다. 원장은 보유자를 열거하지 못하므로 해산 확인과 창고 목록이 이것으로 몫을 찾습니다. */
             /** @brief 신청의 역색인 `<계정>/<길드>`(값 없음)입니다. 신청 키가 길드 앞이라 탈퇴 정리가 계정의 신청을 여기서 찾는다. 신청을 쓰고 지우는 트랜잭션이 함께 맞춘다. */
-            static const hashed_string& getAccountApplicationTable()
+            static const ServiceIndexTable& getAccountApplicationTable()
             {
-                static const hashed_string s_table{ "social_account_application" };
+                static const ServiceIndexTable s_table{ "social_account_application" };
                 return s_table;
             }
 
@@ -521,8 +521,8 @@ namespace sw
                 const int64 expiresMs = _request._nowMs.count() + GuildLimit::kApplicationLifetimeMs;
                 transaction.put( Internal::getApplicationTable(), selfKey, Internal::encodeApplication( _request._nowMs.count(), expiresMs ) );
                 // 해산한 길드 · 다시 오지 않는 신청자의 신청은 이 함수가 다시 돌지 않아 남는다 - TTL 색인 줄이 기간 뒤에 지운다. 다시 낸 신청은 새 줄이 맡는다
-                transaction.put( Internal::getApplicationExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, selfKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
-                transaction.put( Internal::getAccountApplicationTable(), Internal::makeApplicationReverseKey( selfKey ), vector<uint8>{} );
+                transaction.put( Internal::getApplicationExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, selfKey ), ServiceRecord::kAnyVersion );
+                transaction.put( Internal::getAccountApplicationTable(), Internal::makeApplicationReverseKey( selfKey ) );
                 return connection.commit( transaction );
             }
 
@@ -695,7 +695,7 @@ namespace sw
                 const string       inviteKey = Internal::makePairKey( _request._targetID, guildID );
                 const int64        expiresMs = _request._nowMs.count() + GuildLimit::kInviteLifetimeMs;
                 transaction.put( Internal::getInviteTable(), inviteKey, Internal::encodeInvite( _request._accountID, expiresMs ) ); // 다시 보내면 덮어쓴다
-                transaction.put( Internal::getInviteExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, inviteKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+                transaction.put( Internal::getInviteExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, inviteKey ), ServiceRecord::kAnyVersion );
                 _serviceResult._invitedID = _request._targetID;
                 return connection.commit( transaction );
             }

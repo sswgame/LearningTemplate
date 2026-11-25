@@ -54,21 +54,21 @@ namespace sw
         return s_table;
     }
 
-    const hashed_string& ServiceMailCampaign::getClaimTable()
+    const ServiceIndexTable& ServiceMailCampaign::getClaimTable()
     {
-        static const hashed_string s_table{ "mail_campaign_claim" };
+        static const ServiceIndexTable s_table{ "mail_campaign_claim" };
         return s_table;
     }
 
-    const hashed_string& ServiceMailCampaign::getCampaignExpiryTable()
+    const ServiceIndexTable& ServiceMailCampaign::getCampaignExpiryTable()
     {
-        static const hashed_string s_table{ "mail_campaign_expiry" };
+        static const ServiceIndexTable s_table{ "mail_campaign_expiry" };
         return s_table;
     }
 
-    const hashed_string& ServiceMailCampaign::getClaimExpiryTable()
+    const ServiceIndexTable& ServiceMailCampaign::getClaimExpiryTable()
     {
-        static const hashed_string s_table{ "mail_campaign_claim_expiry" };
+        static const ServiceIndexTable s_table{ "mail_campaign_claim_expiry" };
         return s_table;
     }
 
@@ -123,10 +123,10 @@ namespace sw
         const string campaignKey = ServiceKeyUtil::makeHex64( campaign._campaignID );
         inoutTransaction.put( getCampaignTable(), campaignKey, encode( campaign ), ServiceRecord::kAbsentVersion );
         // 끝난 캠페인은 받을 수 없다 - 레코드와 계정마다의 수령 표식(접두어 `<id>/` 묶음)을 끝난 뒤 TTL 쓸기가 지운다. 표식이 수십만이어도 줄은 하나다
-        inoutTransaction.put( getCampaignExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, campaignKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+        inoutTransaction.put( getCampaignExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, campaignKey ), ServiceRecord::kAnyVersion );
         StringBuilder<constant::buffer::kMax128> claimPrefix;
         claimPrefix.appendFormat( "%#/", campaignKey );
-        inoutTransaction.put( getClaimExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, claimPrefix.view() ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+        inoutTransaction.put( getClaimExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, claimPrefix.view() ), ServiceRecord::kAnyVersion );
         return true;
     }
 

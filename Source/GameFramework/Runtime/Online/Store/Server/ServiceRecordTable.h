@@ -74,69 +74,6 @@ namespace sw
         hashed_string _name;
     };
 
-    /** @class ServiceIndexTable @brief 값 없는 줄의 표입니다(키가 곧 내용이다). */
-    class SW_GF_API ServiceIndexTable
-    {
-    public:
-        explicit ServiceIndexTable( const utf8* pName )
-            : _name{ pName }
-        {
-        }
-
-        const hashed_string& getName() const { return _name; }
-        operator const hashed_string&() const { return _name; }
-
-    private:
-        hashed_string _name;
-    };
-
-    /** @class ServiceLinkTable @brief 다른 레코드의 id 하나를 가리키는 표입니다(가변 정수). 서비스 id(계정 · 세션 · 거래 · 길드)는 0 을 내지 않는다 — 0 은 깨진 값이다. */
-    class SW_GF_API ServiceLinkTable
-    {
-    public:
-        explicit ServiceLinkTable( const utf8* pName )
-            : _name{ pName }
-        {
-        }
-
-        const hashed_string& getName() const { return _name; }
-        operator const hashed_string&() const { return _name; }
-
-        /**
-         * @brief 받은 레코드의 id 를 읽습니다. 깨졌거나 0 이면 오류 로그를 남기고 false 이며 @p outID 는 그대로입니다.
-         * @details 깨진 연결을 "연결 없음" 으로 보면 세션 폐기 · 중복 로그인 검사가 살아 있는 세션을 놓친 채 성공한다 — 부르는 쪽은 요청을 실패로 돌려준다.
-         */
-        [[nodiscard]] bool decode( string_view key, const ServiceRecord& record, uint64& outID ) const;
-        /** @brief 연결 하나를 읽습니다. 있으면 Ok 와 id, 없으면 NotFound, 깨졌으면 Corrupt 입니다. */
-        [[nodiscard]] ServiceStoreResult read( IServiceStoreConnection& connection, string_view key, uint64& outID, uint64* pOutVersion = nullptr ) const;
-        /** @brief id 를 바이트로 씁니다(`ServiceTransaction::put` 이 부른다). 0 이면 오류 로그와 false 입니다. */
-        [[nodiscard]] bool encode( string_view key, uint64 id, vector<uint8>& outBytes ) const;
-
-    private:
-        hashed_string _name;
-    };
-
-    /** @class ServiceOpaqueTable @brief 이 서버가 뜻을 읽지 않는 바이트의 표입니다(봉인된 비밀 · 저장해 둔 응답). 바이트를 해석하는 코드는 다른 표 형식을 쓴다. */
-    class SW_GF_API ServiceOpaqueTable
-    {
-    public:
-        explicit ServiceOpaqueTable( const utf8* pName )
-            : _name{ pName }
-        {
-        }
-
-        const hashed_string& getName() const { return _name; }
-        operator const hashed_string&() const { return _name; }
-
-        /** @brief 받은 레코드의 바이트입니다. */
-        static const vector<uint8>& getBytes( const ServiceRecord& record ) { return record._bytes; }
-        /** @brief 받은 레코드의 바이트를 옮겨 갑니다. */
-        static vector<uint8> takeBytes( ServiceRecord& record ) { return std::move( record._bytes ); }
-
-    private:
-        hashed_string _name;
-    };
-
     template <typename TRecord>
     void ServiceTransaction::put( const ServiceRecordTable<TRecord>& table, string_view key, const typename ServiceRecordTable<TRecord>::Record& record, uint64 expectedVersion )
     {

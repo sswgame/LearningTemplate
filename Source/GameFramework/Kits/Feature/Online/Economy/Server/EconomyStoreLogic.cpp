@@ -5,15 +5,15 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/ReceiptBuyerToken.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreRecords.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -31,16 +31,7 @@ namespace sw
                                string_view( kWithdrawScopePrefix ).size() <= EconomyProtocol::kLongestScopePrefixSize,
                            "스토어 이름 상한(kMaxStoreNameSize)은 가장 긴 범위 접두로 셈한다 — 더 긴 접두를 더하면 kLongestScopePrefixSize 를 올린다" );
 
-            /** @brief 거래 하나의 상태입니다(영수증 상태 레코드의 값 — 저장 형식이라 번호를 바꾸지 않는다). */
-            enum class ReceiptState : uint8
-            {
-                None = 0,      ///< 레코드가 없다 — 지급도 환불도 오지 않았다
-                Redeemed,      ///< 지급했다(받은 계정은 지급 분개의 다리에만 있다)
-                RefundedFirst, ///< 지급 전에 환불이 왔다 — 뒤에 온 지급을 막는다
-                Revoked,       ///< 지급 뒤 환불로 회수했다
-                Withdrawn,     ///< 청약철회로 돌려받았다
-                Count
-            };
+            using ReceiptState = EconomyReceiptState;
 
             /** @brief 읽은 영수증 상태와 그 버전입니다. 쓰기는 이 버전을 커밋 조건으로 건다. */
             struct ReceiptRecord
@@ -49,46 +40,31 @@ namespace sw
                 ReceiptState _state{ ReceiptState::None };
             };
 
-            static constexpr FormatDef kReceiptFormat{ "RCPT" };
-
             [[nodiscard]] static bool isRefunded( ReceiptState state )
             {
                 return state == ReceiptState::RefundedFirst || state == ReceiptState::Revoked || state == ReceiptState::Withdrawn;
             }
 
-            /**
-             * @brief 영수증 상태 값 `[판][상태]` 를 만듭니다. 사람과 이어지는 값(계정 id)은 담지 않는다 — 이 레코드는 지우지 않으므로 탈퇴 뒤에도 남는다(감사 P0-7).
-             * @details 받은 계정은 지급 분개의 다리에 있고 분개는 보존 기간 뒤 지워진다. 청약철회 · 환불 회수는 분개를 읽으므로 이 값이 필요 없다.
-             *          PlayFab DeletePlayer · Steam 계정 삭제도 거래 기록은 회계 · 분쟁 근거로 남기되 개인과 떼어 두며, GDPR 17 조 3 항 (b) · (e) 의 보존 예외가 이 자리다.
-             */
-            static vector<uint8> encodeReceipt( ReceiptState state )
+            static EconomyReceiptRecord makeReceipt( ReceiptState state )
             {
-                BitWriter writer;
-                kReceiptFormat.writeVersion( writer );
-                writer.writeVarUint( static_cast<uint64>( state ) );
-                return writer.releaseBytes();
+                EconomyReceiptRecord record;
+                record._state = state;
+                return record;
             }
 
-            /** @brief 영수증 상태를 읽습니다. 레코드가 없으면 `Ok` 와 `None` 입니다. 값을 읽을 수 없으면 오류 로그와 `Invalid` 입니다. */
+            /** @brief 영수증 상태를 읽습니다. 레코드가 없으면 `Ok` 와 `None` 입니다. 값이 깨졌으면(표가 오류 로그를 남긴다) `Invalid` 입니다 — 지급 · 환불 · 철회는 고칠 때까지 기다린다. */
             [[nodiscard]] static ServiceStoreResult readReceipt( IServiceStoreConnection& connection, string_view redeemKey, ReceiptRecord& outRecord )
             {
                 outRecord = ReceiptRecord{};
-                ServiceRecord            record;
-                const ServiceStoreResult read = connection.readRecord( EconomyStoreLogic::getReceiptTable(), redeemKey, record );
+                EconomyReceiptRecord     record;
+                const ServiceStoreResult read = EconomyStoreLogic::getReceiptTable().read( connection, redeemKey, record, &outRecord._version );
                 if ( read == ServiceStoreResult::NotFound )
                     return ServiceStoreResult::Ok;
+                if ( read == ServiceStoreResult::Ok && record._state == ReceiptState::None )
+                    return ServiceStoreResult::Invalid; // 없음은 저장하지 않는다
                 if ( read != ServiceStoreResult::Ok )
-                    return read;
-                BitReader    reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
-                const bool   bKnown = kReceiptFormat.readVersion( reader );
-                const uint64 state  = reader.readVarUint();
-                if ( bKnown == false || reader.hasOverflowed() || state == 0 || state >= static_cast<uint64>( ReceiptState::Count ) )
-                {
-                    SW_LOG_ERROR_ID( "EconomyStoreLogic.ReceiptRecordUnreadable", "The receipt record '%#' is unreadable - grants, refunds and withdrawals of that transaction wait until the record is fixed", redeemKey );
-                    return ServiceStoreResult::Invalid;
-                }
-                outRecord._version = record._version;
-                outRecord._state   = static_cast<ReceiptState>( state );
+                    return read == ServiceStoreResult::Corrupt ? ServiceStoreResult::Invalid : read;
+                outRecord._state = record._state;
                 return ServiceStoreResult::Ok;
             }
 
@@ -201,42 +177,13 @@ namespace sw
                 return EconomyResult::Ok;
             }
 
-            static constexpr FormatDef kDeliveryFormat{ "DLVR" };
-
-            static void writeText( BitWriter& writer, string_view text )
+            static EconomyDeliveryRecord makeDeliveryRecord( const ReceiptDeliveryTask& task )
             {
-                writer.writeBlob( reinterpret_cast<const uint8*>( text.data() ), static_cast<int32>( text.size() ) );
-            }
-
-            [[nodiscard]] static bool readText( BitReader& reader, int32 maxSize, string& outText )
-            {
-                vector<uint8> listByte;
-                if ( reader.readBlob( listByte, maxSize ) == false )
-                    return false;
-                outText.assign( listByte.begin(), listByte.end() );
-                return true;
-            }
-
-            static vector<uint8> encodeDelivery( const ReceiptDeliveryTask& task )
-            {
-                BitWriter writer;
-                kDeliveryFormat.writeVersion( writer );
-                writeText( writer, task._storeName );
-                writeText( writer, task._deliveryKey );
-                writer.writeVarInt( task._deadlineMs );
-                return writer.releaseBytes();
-            }
-
-            [[nodiscard]] static bool decodeDelivery( const ServiceRecord& record, ReceiptDeliveryTask& outTask )
-            {
-                BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
-                if ( kDeliveryFormat.readVersion( reader ) == false )
-                    return false;
-                if ( readText( reader, EconomyProtocol::kMaxStoreNameSize, outTask._storeName ) == false || readText( reader, EconomyProtocol::kMaxReceiptPayloadSize, outTask._deliveryKey ) == false )
-                    return false;
-                outTask._deadlineMs = reader.readVarInt();
-                outTask._recordKey  = record._key;
-                return reader.hasOverflowed() == false && outTask._storeName.empty() == false; // 스토어 이름이 없는 알림은 없다(0 으로 채워진 값을 첫 판으로 읽지 않는다)
+                EconomyDeliveryRecord record;
+                record._storeName   = task._storeName;
+                record._deliveryKey = task._deliveryKey;
+                record._deadlineMs  = task._deadlineMs;
+                return record;
             }
 
             /**
@@ -249,11 +196,11 @@ namespace sw
             [[nodiscard]] static EconomyServiceResult commitRedeem( IServiceStoreConnection& connection, const LedgerTransferRequest& request, const ReceiptValidationResult& receipt,
                                                                     LedgerTransferResult& outServiceResult )
             {
-                const hashed_string& receiptTable = EconomyStoreLogic::getReceiptTable();
-                const vector<uint8>  redeemed     = encodeReceipt( ReceiptState::Redeemed );
-                ReceiptDeliveryTask  task;
-                const bool           bDelivery   = EconomyStoreLogic::makeDeliveryTask( receipt, task );
-                const vector<uint8>  recordBytes = bDelivery ? encodeDelivery( task ) : vector<uint8>{};
+                const ServiceRecordTable<EconomyReceiptRecord>& receiptTable = EconomyStoreLogic::getReceiptTable();
+                const EconomyReceiptRecord                      redeemed     = makeReceipt( ReceiptState::Redeemed );
+                ReceiptDeliveryTask                             task;
+                const bool                                      bDelivery      = EconomyStoreLogic::makeDeliveryTask( receipt, task );
+                const EconomyDeliveryRecord                     deliveryRecord = makeDeliveryRecord( task );
                 return ServiceCommitRunner::run<EconomyServiceResult>( connection, "Economy.CommitRedeem", [&]( ServiceCommitAttempt& attempt ) -> optional<EconomyServiceResult>
                 {
                     ReceiptRecord mark;
@@ -276,7 +223,7 @@ namespace sw
                     if ( bReplayed && bDelivery == false )
                         return EconomyResult::Ok; // 분개가 남은 다시 보내기 — 쓸 것이 없다
                     if ( bDelivery )
-                        transaction.put( EconomyStoreLogic::getDeliveryTable(), task._recordKey, recordBytes );
+                        transaction.put( EconomyStoreLogic::getDeliveryTable(), task._recordKey, deliveryRecord );
                     if ( bReplayed )
                     {
                         const ServiceStoreResult committed = attempt.commit( transaction ); // 이동은 이미 들어갔다 — 알림 레코드만 다시 쓴다
@@ -416,29 +363,19 @@ namespace sw
             {
                 if ( offer._limitPerAccount <= 0 )
                     return nullopt;
-                const int64              count    = input._count;
-                const string             countKey = makePurchaseCountKey( input._accountID, offer._id );
-                ServiceRecord            countRecord;
-                const ServiceStoreResult read = connection.readRecord( EconomyStoreLogic::getPurchaseCountTable(), countKey, countRecord );
+                const int64                count    = input._count;
+                const string               countKey = makePurchaseCountKey( input._accountID, offer._id );
+                EconomyPurchaseCountRecord countRecord;
+                uint64                     countVersion = ServiceRecord::kAbsentVersion;
+                const ServiceStoreResult   read         = EconomyStoreLogic::getPurchaseCountTable().read( connection, countKey, countRecord, &countVersion );
                 if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
                     return EconomyServiceResult::fail( OnlineError::kUnavailable );
-                int64 bought = 0;
-                if ( read == ServiceStoreResult::Ok )
-                {
-                    BitReader reader( countRecord._bytes.data(), static_cast<int32>( countRecord._bytes.size() ) );
-                    bought = reader.readVarInt();
-                    // 깨진 수를 0 으로 읽으면 계정 한도가 다시 열린다
-                    if ( reader.hasOverflowed() || bought < 0 )
-                    {
-                        SW_LOG_ERROR_ID( "EconomyStoreLogic.PurchaseCountUnreadable", "The purchase count record '%#' is unreadable - purchases of that offer wait until the record is fixed", countKey );
-                        return EconomyServiceResult::fail( OnlineError::kUnavailable );
-                    }
-                }
+                const int64 bought = read == ServiceStoreResult::Ok ? countRecord._count : 0; // 깨진 수(Corrupt)는 위에서 거절했다 — 0 으로 읽으면 계정 한도가 다시 열린다
                 if ( bought + count > offer._limitPerAccount )
                     return EconomyResult::LimitReached;
-                BitWriter writer;
-                writer.writeVarInt( bought + count );
-                inoutTransaction.put( EconomyStoreLogic::getPurchaseCountTable(), countKey, writer.getBytes(), countRecord._version );
+                EconomyPurchaseCountRecord next;
+                next._count = bought + count;
+                inoutTransaction.put( EconomyStoreLogic::getPurchaseCountTable(), countKey, next, countVersion );
                 return nullopt;
             }
         };
@@ -447,9 +384,9 @@ namespace sw
 
 namespace sw
 {
-    const hashed_string& EconomyStoreLogic::getPurchaseCountTable()
+    const ServiceRecordTable<EconomyPurchaseCountRecord>& EconomyStoreLogic::getPurchaseCountTable()
     {
-        static const hashed_string s_table{ "econ_purchase" };
+        static const ServiceRecordTable<EconomyPurchaseCountRecord> s_table{ "econ_purchase" };
         return s_table;
     }
 
@@ -589,15 +526,15 @@ namespace sw
         return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Ok );
     }
 
-    const hashed_string& EconomyStoreLogic::getReceiptTable()
+    const ServiceRecordTable<EconomyReceiptRecord>& EconomyStoreLogic::getReceiptTable()
     {
-        static const hashed_string s_table{ "econ_receipt" };
+        static const ServiceRecordTable<EconomyReceiptRecord> s_table{ "econ_receipt" };
         return s_table;
     }
 
-    const hashed_string& EconomyStoreLogic::getDeliveryTable()
+    const ServiceRecordTable<EconomyDeliveryRecord>& EconomyStoreLogic::getDeliveryTable()
     {
-        static const hashed_string s_table{ "econ_delivery" };
+        static const ServiceRecordTable<EconomyDeliveryRecord> s_table{ "econ_delivery" };
         return s_table;
     }
 
@@ -619,11 +556,16 @@ namespace sw
             return read;
         for ( const ServiceRecord& record : listRecord )
         {
+            // 읽을 수 없는 레코드는 표가 오류 로그를 남긴다 — 건너뛰면 스토어가 기한 뒤 그 구매를 환불한다
+            EconomyDeliveryRecord delivery;
+            if ( getDeliveryTable().decode( record, delivery ) == false || delivery._storeName.empty() )
+                continue;
             ReceiptDeliveryTask task;
-            if ( EconomyStoreLogicInternal::decodeDelivery( record, task ) )
-                outListTask.push_back( std::move( task ) );
-            else
-                SW_LOG_ERROR_ID( "EconomyStoreLogic.DeliveryRecordUnreadable", "The delivery record '%#' is unreadable - the store refunds that purchase when its deadline passes", record._key.c_str() );
+            task._storeName   = std::move( delivery._storeName );
+            task._deliveryKey = std::move( delivery._deliveryKey );
+            task._deadlineMs  = delivery._deadlineMs;
+            task._recordKey   = record._key;
+            outListTask.push_back( std::move( task ) );
         }
         return ServiceStoreResult::Ok;
     }
@@ -635,38 +577,31 @@ namespace sw
         return ServiceCommitRunner::commitOnce( connection, transaction );
     }
 
-    const hashed_string& EconomyStoreLogic::getRefundCursorTable()
+    const ServiceRecordTable<EconomyRefundCursorRecord>& EconomyStoreLogic::getRefundCursorTable()
     {
-        static const hashed_string s_table{ "econ_refund_cursor" };
+        static const ServiceRecordTable<EconomyRefundCursorRecord> s_table{ "econ_refund_cursor" };
         return s_table;
     }
 
     ServiceStoreResult EconomyStoreLogic::readRefundCursor( IServiceStoreConnection& connection, string_view storeName, int64& outLastReadMs )
     {
         outLastReadMs = 0;
-        ServiceRecord            record;
-        const ServiceStoreResult read = connection.readRecord( getRefundCursorTable(), storeName, record );
+        EconomyRefundCursorRecord record;
+        const ServiceStoreResult  read = getRefundCursorTable().read( connection, storeName, record );
         if ( read == ServiceStoreResult::NotFound )
             return ServiceStoreResult::Ok;
         if ( read != ServiceStoreResult::Ok )
-            return read;
-        BitReader   reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
-        const int64 lastReadMs = reader.readVarInt();
-        if ( reader.hasOverflowed() || lastReadMs < 0 )
-        {
-            SW_LOG_ERROR_ID( "EconomyStoreLogic.RefundCursorUnreadable", "The refund cursor of store '%#' is unreadable - refund polling for that store waits until the record is fixed", storeName );
-            return ServiceStoreResult::Invalid;
-        }
-        outLastReadMs = lastReadMs;
+            return read == ServiceStoreResult::Corrupt ? ServiceStoreResult::Invalid : read; // 깨졌으면 그 스토어의 환불 조회는 고칠 때까지 기다린다
+        outLastReadMs = record._lastReadMs;
         return ServiceStoreResult::Ok;
     }
 
     ServiceStoreResult EconomyStoreLogic::writeRefundCursor( IServiceStoreConnection& connection, string_view storeName, int64 lastReadMs )
     {
-        BitWriter writer;
-        writer.writeVarInt( lastReadMs );
+        EconomyRefundCursorRecord record;
+        record._lastReadMs = lastReadMs;
         ServiceTransaction transaction;
-        transaction.put( getRefundCursorTable(), storeName, writer.getBytes() );
+        transaction.put( getRefundCursorTable(), storeName, record );
         return ServiceCommitRunner::commitOnce( connection, transaction );
     }
 
@@ -691,13 +626,13 @@ namespace sw
             if ( mark._state == Internal::ReceiptState::None )
             {
                 // 지급 전에 환불이 왔다. 상태만 남겨 뒤에 온 지급을 막는다 — 지급도 이 레코드를 "없어야 함" 으로 쓰므로 먼저 커밋한 쪽이 이기고 다른 쪽은 다시 읽는다
-                transaction.put( getReceiptTable(), redeemKey, Internal::encodeReceipt( Internal::ReceiptState::RefundedFirst ), ServiceRecord::kAbsentVersion );
+                transaction.put( getReceiptTable(), redeemKey, Internal::makeReceipt( Internal::ReceiptState::RefundedFirst ), ServiceRecord::kAbsentVersion );
                 const ServiceStoreResult committed = attempt.commit( transaction );
                 if ( committed == ServiceStoreResult::Conflict )
                     return nullopt;
                 return committed == ServiceStoreResult::Ok ? EconomyResult::Ok : EconomyServiceResult::fail( OnlineError::kUnavailable );
             }
-            transaction.put( getReceiptTable(), redeemKey, Internal::encodeReceipt( Internal::ReceiptState::Revoked ), mark._version );
+            transaction.put( getReceiptTable(), redeemKey, Internal::makeReceipt( Internal::ReceiptState::Revoked ), mark._version );
             LedgerJournalEntry       redeem;
             const ServiceStoreResult found = Ledger::findJournal( attempt, redeemKey, redeem );
             if ( found == ServiceStoreResult::NotFound )
@@ -818,7 +753,7 @@ namespace sw
             if ( request._listPosting.empty() )
                 return Internal::finish( outReply, EconomyResult::NothingToWithdraw );
             ServiceTransaction transaction;
-            transaction.put( getReceiptTable(), redeemKey, Internal::encodeReceipt( Internal::ReceiptState::Withdrawn ), mark._version ); // 그사이 온 환불과 같은 레코드를 다툰다
+            transaction.put( getReceiptTable(), redeemKey, Internal::makeReceipt( Internal::ReceiptState::Withdrawn ), mark._version ); // 그사이 온 환불과 같은 레코드를 다툰다
             LedgerTransferResult serviceResult;
             const LedgerResult   staged = Ledger::stageTransfer( attempt, request, transaction, serviceResult );
             if ( staged != LedgerResult::Ok )

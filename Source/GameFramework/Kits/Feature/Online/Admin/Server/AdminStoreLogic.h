@@ -10,15 +10,31 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
 {
     class IAccountNameIndex;
     class ILedgerPolicy;
+    template <typename TRecord>
+    class ServiceRecordTable;
+
+    /** @brief 계정 하나의 GM 등급 레코드(`admin_role`)입니다. `None` 은 레코드를 지워 나타낸다. */
+    REFLECT()
+    struct AdminRoleRecord
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        AdminRole _role{ AdminRole::None };
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
 
     /** @brief 명령 하나의 입력입니다. 값으로 담으며 작업이 들고 저장소 스레드로 갑니다. */
     /**
@@ -53,7 +69,7 @@ namespace sw
     /** @brief GM 명령 저장 함수 모음입니다. 저장소 스레드에서 부릅니다. */
     struct SW_KIT_SERVER_API AdminStoreLogic
     {
-        static const hashed_string& getRoleTable(); ///< "admin_role" 이다. 키는 계정 16진 문자열이고 값은 등급 1바이트이다
+        static const ServiceRecordTable<AdminRoleRecord>& getRoleTable(); ///< "admin_role" 이다. 키는 계정 16진 문자열이다
         /** @brief 탈퇴한 계정의 GM 등급(`admin_role`)을 지웁니다(`IAfterDeleteAccount`). GM 감사 기록은 감사 보존 기간까지 남긴다. */
         [[nodiscard]] static ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs );
 

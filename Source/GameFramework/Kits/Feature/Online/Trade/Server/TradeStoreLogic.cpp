@@ -38,7 +38,7 @@ namespace sw
                     return false;
                 const string sessionKey = ServiceKeyUtil::makeHex64( snapshot._tradeID );
                 if ( snapshot.isClosed() ) // 닫는 모든 경로가 이 함수를 지나므로 색인 줄을 빠뜨리는 경로가 없다
-                    inoutTransaction.put( TradeStoreLogic::getSessionExpiryTable(), ServiceTTLRule::makeTTLIndexKey( snapshot._updatedMs, sessionKey ), vector<uint8>{},
+                    inoutTransaction.put( TradeStoreLogic::getSessionExpiryTable(), ServiceTTLRule::makeTTLIndexKey( snapshot._updatedMs, sessionKey ),
                                           ServiceRecord::kAnyVersion );
                 inoutTransaction.put( TradeStoreLogic::getSessionTable(), sessionKey, std::move( bytes ), expectedVersion );
                 return true;
@@ -132,15 +132,15 @@ namespace sw
         return s_table;
     }
 
-    const hashed_string& TradeStoreLogic::getActiveTable()
+    const ServiceLinkTable& TradeStoreLogic::getActiveTable()
     {
-        static const hashed_string s_table{ "trade_active" };
+        static const ServiceLinkTable s_table{ "trade_active" };
         return s_table;
     }
 
-    const hashed_string& TradeStoreLogic::getSessionExpiryTable()
+    const ServiceIndexTable& TradeStoreLogic::getSessionExpiryTable()
     {
-        static const hashed_string s_table{ "trade_session_expiry" };
+        static const ServiceIndexTable s_table{ "trade_session_expiry" };
         return s_table;
     }
 
@@ -156,9 +156,9 @@ namespace sw
         return rule;
     }
 
-    const hashed_string& TradeStoreLogic::getOwnerTable()
+    const ServiceIndexTable& TradeStoreLogic::getOwnerTable()
     {
-        static const hashed_string s_table{ "trade_owner" };
+        static const ServiceIndexTable s_table{ "trade_owner" };
         return s_table;
     }
 
@@ -195,7 +195,7 @@ namespace sw
                     return TradeServiceResult::fail( OnlineError::kUnavailable );
                 // 남은 링크가 있고 그 거래가 닫혔거나 시한이 지났으면 정리하고 이어 간다. 지연 만료이다.
                 uint64 linkedTradeID = 0;
-                if ( ServiceKeyUtil::decodeVarID( ServiceKeyUtil::makeHex64( arrParty[sideIndex] ), linkRaw._bytes, linkedTradeID ) == false )
+                if ( getActiveTable().decode( ServiceKeyUtil::makeHex64( arrParty[sideIndex] ), linkRaw, linkedTradeID ) == false )
                     return TradeServiceResult::fail( OnlineError::kUnavailable );
                 SessionRead              stale;
                 const TradeServiceResult staleRead = readSession( linkedTradeID, stale );
@@ -224,11 +224,11 @@ namespace sw
             trade._arrSide[0]._accountID = fromID;
             trade._arrSide[1]._accountID = toID;
             // 쓰기 번호 0과 1이 두 활성 링크이다. Conflict 번호로 누가 바쁜지 구분한다
-            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( fromID ), ServiceKeyUtil::encodeVarID( tradeID ), arrLinkVersion[0] );
-            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( toID ), ServiceKeyUtil::encodeVarID( tradeID ), arrLinkVersion[1] );
+            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( fromID ), tradeID, arrLinkVersion[0] );
+            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( toID ), tradeID, arrLinkVersion[1] );
             if ( Internal::stageSession( trade, _serverID, ServiceRecord::kAbsentVersion, transaction ) == false )
                 return TradeServiceResult::fail( OnlineError::kInvalidRequest );
-            transaction.put( getOwnerTable(), Internal::makeOwnerKey( _serverID, tradeID ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+            transaction.put( getOwnerTable(), Internal::makeOwnerKey( _serverID, tradeID ), ServiceRecord::kAbsentVersion );
             ServiceCommitInfo        info;
             const ServiceStoreResult committed = attempt.commit( transaction, &info );
             if ( committed == ServiceStoreResult::Ok )
@@ -356,7 +356,7 @@ namespace sw
             if ( linkRead != ServiceStoreResult::Ok )
                 return TradeServiceResult::fail( OnlineError::kUnavailable );
             uint64 linkedTradeID = 0;
-            if ( ServiceKeyUtil::decodeVarID( ServiceKeyUtil::makeHex64( accountID ), linkRaw._bytes, linkedTradeID ) == false )
+            if ( getActiveTable().decode( ServiceKeyUtil::makeHex64( accountID ), linkRaw, linkedTradeID ) == false )
                 return TradeServiceResult::fail( OnlineError::kUnavailable );
             SessionRead              session;
             const TradeServiceResult read = readSession( linkedTradeID, session );

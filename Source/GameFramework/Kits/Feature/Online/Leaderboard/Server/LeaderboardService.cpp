@@ -56,15 +56,15 @@ namespace sw
                 return s_table;
             }
 
-            static const hashed_string& getSeasonResultExpiryTable()
+            static const ServiceIndexTable& getSeasonResultExpiryTable()
             {
-                static const hashed_string s_table{ "lb_season_result_expiry" };
+                static const ServiceIndexTable s_table{ "lb_season_result_expiry" };
                 return s_table;
             }
 
-            static const hashed_string& getScoreExpiryTable()
+            static const ServiceIndexTable& getScoreExpiryTable()
             {
-                static const hashed_string s_table{ "lb_score_expiry" };
+                static const ServiceIndexTable s_table{ "lb_score_expiry" };
                 return s_table;
             }
 
@@ -483,7 +483,7 @@ namespace sw
                     ServiceTransaction transaction;
                     transaction.put( input._table, input._key, Internal::encodeScore( write._finalValue, input._nowMs.count(), input._displayName ), record._version );
                     if ( readResult == ServiceStoreResult::NotFound && input._expiryBaseMs > 0 ) // 계정 · 기간마다 한 번이다(같은 줄을 여럿이 쓰지 않는다)
-                        transaction.put( Internal::getScoreExpiryTable(), ServiceTTLRule::makeTTLIndexKey( input._expiryBaseMs, input._key ), vector<uint8>{},
+                        transaction.put( Internal::getScoreExpiryTable(), ServiceTTLRule::makeTTLIndexKey( input._expiryBaseMs, input._key ),
                                                 ServiceRecord::kAnyVersion );
                     ServiceStoreResult committed = ServiceStoreResult::Ok;
                     if ( bRecorded )
@@ -796,7 +796,7 @@ namespace sw
                     return false;
                 inoutTransaction.put( Internal::getSeasonResultTable(), key, Internal::encodeScore( row._score, rank, string_view{} ), ServiceRecord::kAbsentVersion );
                 inoutTransaction.put( Internal::getSeasonResultExpiryTable(), ServiceTTLRule::makeTTLIndexKey( season._endMs + Internal::kSettlementWindowMs, key ),
-                                      vector<uint8>{}, ServiceRecord::kAnyVersion ); // 정산 창이 닫힌 뒤부터 잰다 - 창 안에서는 이 결과가 다시 돌기의 멱등이다
+                                      ServiceRecord::kAnyVersion ); // 정산 창이 닫힌 뒤부터 잰다 - 창 안에서는 이 결과가 다시 돌기의 멱등이다
                 const LeaderboardRewardTier* pTier = findTier( season, rank );
                 if ( pTier == nullptr )
                     return true;
