@@ -70,7 +70,7 @@ class TestHistoryTest(unittest.TestCase):
             {"name": "UnitTests.Rpg", "command": ["App.exe", "--test", "-game=Rpg", "--test-source=Source/GameFramework/Kits/Feature/Inv/,Source/Games/Rpg/"]},
             {"name": "UnitTests.OnlineKits", "command": ["Bot.exe", "-test", "-test-source=Source/GameFramework/Kits/Online/"]},
             {"name": "Scenario.g", "command": ["App.exe", "-scenario=game/g/automation/first.scenario.xml,game/g/automation/new.scenario.xml", "-scenario-keep-going",
-                                               "-scenario-backends=all", "-scenario-backend-split=independent", "-unattended", "-log-file=L/Scenario.g.log", "-gv_first=1"]},
+                                               "-scenario-backends=all", "-scenario-backend-split=independent", "-unattended", "-log-file=L/Scenario.g.log"]},
             {"name": "Scenario.g.sequence.pair", "command": ["cmake", "-DAPP=App.exe", "-DPAIR=game/g/automation/sequence/pair", "-P", "Run.cmake"],
              "properties": [{"name": "TIMEOUT", "value": 600}]},
             {"name": "Disabled"}]})
@@ -86,30 +86,25 @@ class TestHistoryTest(unittest.TestCase):
         assert f"-log-file={Path('O') / 'UnitTests.log'}" in unit_command and "-log-file=L/UnitTests.log" not in unit_command
         assert set_argument(["Bot.exe", "-test", "-test-source=A/"], "test-source", "B/", find_dash(["Bot.exe", "-test"], "test"))[-1] == "-test-source=B/", "봇은 대시 하나"
 
-        with tempfile.TemporaryDirectory() as temporary:
-            content_root = Path(temporary)
-            (content_root / "game/g/automation").mkdir(parents=True)
-            (content_root / "game/g/automation/first.scenario.xml").write_text('<Scenario>\n  <Launch variable="gv_first" value="1"/>\n</Scenario>\n', encoding="utf-8")
-            (content_root / "game/g/automation/new.scenario.xml").write_text('<Scenario>\n\t<Launch variable="gv_new" value="two words"/>\n</Scenario>\n', encoding="utf-8")
-            list_scenario_run, list_row = make_scenario_runs(list_item, {key: value for key, value in map_scenario.items() if "old.view" not in key}, content_root,
-                                                             Path("B"), Path("O"), lambda path: "w-x", map_manual={"engine/automation/rhiswap/x.scenario.xml": "까닭"})
-            _, list_lost_row = make_scenario_runs(list_item, {"engine/automation/rhiswap/x.scenario.xml": map_scenario["engine/automation/rhiswap/x.scenario.xml"]}, content_root,
-                                                  Path("B"), Path("O"), lambda path: "w-x")
-            assert [row.kind for row in list_lost_row] == ["NotRun"], "어느 항목도 띄우지 않는 시나리오는 실패다"
-            net_item = CtestItem("Net.x", ("py",), "", 30)
-            list_net_run, list_net_row = make_scenario_runs([net_item], {key: map_scenario["engine/automation/rhiswap/x.scenario.xml"] for key in ("a.scenario.xml", "b.scenario.xml")}, content_root,
-                                                            Path("B"), Path("O"), lambda path: "w-x", map_net={"a.scenario.xml": "Net.x", "b.scenario.xml": "Net.x"})
-            assert [run.item for run in list_net_run] == ["Net.x"] and not list_net_row, "여러 프로세스 항목은 한 번만 돈다"
+        list_scenario_run, list_row = make_scenario_runs(list_item, {key: value for key, value in map_scenario.items() if "old.view" not in key},
+                                                         Path("B"), Path("O"), lambda path: "w-x", map_manual={"engine/automation/rhiswap/x.scenario.xml": "까닭"})
+        _, list_lost_row = make_scenario_runs(list_item, {"engine/automation/rhiswap/x.scenario.xml": map_scenario["engine/automation/rhiswap/x.scenario.xml"]},
+                                              Path("B"), Path("O"), lambda path: "w-x")
+        assert [row.kind for row in list_lost_row] == ["NotRun"], "어느 항목도 띄우지 않는 시나리오는 실패다"
+        net_item = CtestItem("Net.x", ("py",), "", 30)
+        list_net_run, list_net_row = make_scenario_runs([net_item], {key: map_scenario["engine/automation/rhiswap/x.scenario.xml"] for key in ("a.scenario.xml", "b.scenario.xml")},
+                                                        Path("B"), Path("O"), lambda path: "w-x", map_net={"a.scenario.xml": "Net.x", "b.scenario.xml": "Net.x"})
+        assert [run.item for run in list_net_run] == ["Net.x"] and not list_net_row, "여러 프로세스 항목은 한 번만 돈다"
         command = next(run.command for run in list_scenario_run if run.item == "game/g/automation/new.scenario.xml")
         assert get_argument(command, "scenario") == "game/g/automation/new.scenario.xml" and get_argument(command, "scenario-backends") == "all"
         assert get_argument(command, "scenario-backend-split") is None and get_argument(command, "scenario-keep-going") is None, "모든 백엔드에서 혼자"
-        assert "-gv_first=1" not in command and command[-1] == "-gv_new=two words" and "-scenario-record-missing-golden" in command, command
+        assert "-scenario-record-missing-golden" in command, command
         assert any(run.command[0] == "ctest" and "^Scenario\\.g\\.sequence\\.pair$" in run.command and run.timeout_seconds == 600 for run in list_scenario_run), "쌍은 ctest 항목 그대로"
         assert next(run.timeout_seconds for run in list_scenario_run if run.item == "game/g/automation/new.scenario.xml") == SINGLE_SCENARIO_TIMEOUT_SECONDS, "체인에서 꺼낸 하나"
         assert [row.item for row in list_row] == ["engine/automation/rhiswap/x.scenario.xml"] and list_row[0].kind == "", "까닭이 적힌 것은 실패가 아니다"
         chain_item = next(item for item in list_item if "game/g/automation/new.scenario.xml" in (get_argument(item.command, "scenario") or "").split(","))
         quarantined = {chain_item.name: QuarantineEntry(chain_item.name, "흔들림", datetime.date(2099, 1, 1))}
-        list_scenario_run_q, list_row_q = make_scenario_runs(list_item, {key: value for key, value in map_scenario.items() if key == "game/g/automation/new.scenario.xml"}, Path("C"),
+        list_scenario_run_q, list_row_q = make_scenario_runs(list_item, {key: value for key, value in map_scenario.items() if key == "game/g/automation/new.scenario.xml"},
                                                              Path("B"), Path("O"), lambda path: "w-x", quarantined)
         assert not list_scenario_run_q and len(list_row_q) == 1 and list_row_q[0].kind == "" and "격리" in list_row_q[0].reason, "격리한 항목은 돌지 않고 표에 사유를 남긴다"
 

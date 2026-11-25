@@ -41,7 +41,7 @@ namespace sw
         AbsolutePath           _executablePath{};                      ///< 자식으로 띄울 App(이 프로세스의 실행 파일)
         string                 _scenarioPath{};                        ///< `-scenario` 의 값 그대로
         vector<string>         _listBackend{};                         ///< 명령줄 이름(`dx11` · `vk` …) — 쿠킹 표 순서
-        vector<string>         _listPassThroughArgument{};             ///< 자식에 그대로 넘길 원본 인자(`<Launch>` 값 · `-unattended` …) — 백엔드 목록 · 로그 · 보고 · 백엔드 인자는 뺐다
+        vector<string>         _listPassThroughArgument{};             ///< 자식에 그대로 넘길 원본 인자(`-unattended` · `-game=` …) — 백엔드 목록 · 로그 · 보고 · 백엔드 인자는 뺐다
         AbsolutePath           _logFilePath{};                         ///< 부모의 `-log-file`(비면 기본 폴더)
         AbsolutePath           _reportPath{};                          ///< 부모의 `-scenario-report`(비면 쓰지 않는다)
         AbsolutePath           _shaderRequestLogPath{};                ///< 부모의 `-shader-request-log`(비면 기록하지 않는다) — 자식마다 `.<백엔드>` 를 붙여 넘긴다(자식이 한 파일을 덮지 않게)
@@ -86,6 +86,13 @@ namespace sw
          *          읽지 못하는 시나리오도 모두에게 준다 — 자식마다 읽기 오류를 낸다.
          */
         static vector<string> assignScenarios( const AutomationPerBackendOptions& options );
+
+        /**
+         * @brief 자식이 맡은 목록(@p scenarioList)의 첫 시나리오가 적은 `<Launch>` 값의 인자(`-gv_이름=값`)입니다. 게임이 기동하며 읽는 값이라 명령줄로 주고, 다음 단계의 값은 세션이 건다.
+         * @details 자식마다 첫 시나리오가 다르다(나누기). 예전에는 ctest 가 체인의 첫 시나리오 값을 적어 모든 자식이 물려받아, 그 시나리오를 맡지 않은 자식이 남의 미니게임으로 섰다.
+         *          @p listGivenArgument 에 이미 있는 이름(사람이 준 값)은 내지 않는다.
+         */
+        static vector<string> makeLaunchArguments( string_view scenarioList, const vector<string>& listGivenArgument );
 
         /** @brief 원본 인자에서 부모가 자식마다 다시 정하는 인자(백엔드 목록 · 로그 파일 · 보고 · 백엔드 선택)를 뺀 목록입니다. */
         static vector<string> filterPassThroughArguments( const vector<string>& listOriginalArgument );

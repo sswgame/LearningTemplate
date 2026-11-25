@@ -41,7 +41,6 @@ UNIT_ITEM_PATTERN = re.compile(r"^UnitTests(\.[A-Za-z0-9_]+)?$")
 SOURCE_SUFFIXES = (".cpp", ".h", ".hpp", ".inl")
 SCENARIO_SUFFIX = ".scenario.xml"
 PAIR_SUFFIX = re.compile(r"\.[12]\.scenario\.xml$")   # 두 번 기동 쌍(`sequence/` · `statedir/`)은 ctest 가 cmake -P 로 돈다(`-DPAIR=<앞머리>`)
-LAUNCH_VALUE = re.compile(r'variable="([^"]+)"[ \t]+value="([^"]*)"')   # Test/Scenario/CMakeLists.txt 의 sw_read_scenario_launch 와 같은 꼴
 MERGE_SUBJECT = re.compile(r"^Merge (?:remote-tracking )?branch '(?:origin/)?([^']+)'")
 SOURCE_PATH = re.compile(r"(?:^|/)(Source/.+)$")
 # 시한은 ctest 항목의 TIMEOUT 속성이다(없으면 ctest 의 기본 1500 초). 단계가 여럿인 체인에서 꺼낸 시나리오 하나만 체인 시한(단계 초 × 단계 수 × 물결)을 나눠 쓸 수 없어
@@ -247,25 +246,9 @@ def make_unit_runs(list_item: Sequence[CtestItem], map_folder: dict[str, list[Ch
     return list_run
 
 
-def read_launch_arguments(scenario_file: Path) -> list[str]:
-    """시나리오의 `<Launch variable value>` 를 명령줄 인자(`-이름=값`)로 — ctest 체인은 첫 단계의 것만 명령줄로 주므로 바꿔 끼운다."""
-    list_argument: list[str] = []
-    for line in scenario_file.read_text(encoding="utf-8").splitlines():
-        if line.lstrip().startswith("<Launch "):
-            match = LAUNCH_VALUE.search(line)
-            if match:
-                list_argument.append(f"-{match.group(1)}={match.group(2)}")
-    return list_argument
-
-
-def make_scenario_command(item: CtestItem, scenario: str, content_root: Path, output: Path) -> list[str]:
-    """체인 항목의 명령을 시나리오 하나로 — 나누기 · 이어 가기를 빼 모든 백엔드에서 혼자 돌고, 첫 단계의 `<Launch>` 대신 이 시나리오의 것을 준다."""
-    list_path = (get_argument(item.command, "scenario") or "").split(",")
-    command = list(item.command)
-    for argument in read_launch_arguments(content_root / list_path[0]):
-        if argument in command:
-            command.remove(argument)
-    command = set_argument(command, "scenario", scenario)
+def make_scenario_command(item: CtestItem, scenario: str, output: Path) -> list[str]:
+    """체인 항목의 명령을 시나리오 하나로 — 나누기 · 이어 가기를 빼 모든 백엔드에서 혼자 돈다. `<Launch>` 값은 App 이 시나리오에서 읽는다."""
+    command = set_argument(item.command, "scenario", scenario)
     command = set_argument(command, "scenario-backend-split", None)
     command = set_argument(command, "scenario-backend-split-offset", None)
     command = set_argument(command, "scenario-keep-going", None)
@@ -274,7 +257,6 @@ def make_scenario_command(item: CtestItem, scenario: str, content_root: Path, ou
     command = set_argument(command, "shader-request-log", None)
     command = set_argument(command, "scenario-report", str(output / (scenario.rpartition("/")[2][: -len(SCENARIO_SUFFIX)] + ".json")))
     command.append("-scenario-record-missing-golden")
-    command += read_launch_arguments(content_root / scenario)
     return command
 
 
@@ -284,7 +266,7 @@ def read_manual_scenarios(project_root: Path) -> dict[str, str]:
     return {entry["path"]: f"손으로 돈다: {entry['reason']} — `{entry['command']}`" for entry in table["_scenarios"]}
 
 
-def make_scenario_runs(list_item: Sequence[CtestItem], map_scenario: dict[str, list[ChangedFile]], content_root: Path, build_dir: Path,
+def make_scenario_runs(list_item: Sequence[CtestItem], map_scenario: dict[str, list[ChangedFile]], build_dir: Path,
                        output: Path, find_branch: Callable[[str], str],
                        map_quarantine: dict[str, QuarantineEntry] | None = None, map_net: dict[str, str] | None = None,
                        map_manual: dict[str, str] | None = None) -> tuple[list[ChangedRun], list[ChangedRow]]:
@@ -305,7 +287,7 @@ def make_scenario_runs(list_item: Sequence[CtestItem], map_scenario: dict[str, l
             continue
         if item is not None:
             alone = len((get_argument(item.command, "scenario") or "").split(",")) == 1   # 시나리오 하나짜리 항목(부하 등)은 제 시한 그대로다
-            list_run.append(ChangedRun(scenario, list_changed, make_scenario_command(item, scenario, content_root, folder), item.working_directory, folder,
+            list_run.append(ChangedRun(scenario, list_changed, make_scenario_command(item, scenario, folder), item.working_directory, folder,
                                        item.timeout_seconds if alone else SINGLE_SCENARIO_TIMEOUT_SECONDS, is_scenario=True))
             continue
         pair = PAIR_SUFFIX.sub("", scenario)
@@ -494,7 +476,7 @@ def run_new_scenario_determinism(list_item: Sequence[CtestItem], map_scenario: d
         list_path = (get_argument(item.command, "scenario") or "").split(",")
         name = read_scenario_name(scenario)
         working = Path(item.working_directory) if item.working_directory else build_dir
-        runner = make_runner(item.command, name, content_root, DETERMINISM_BACKEND, build_dir, working)
+        runner = make_runner(item.command, name, DETERMINISM_BACKEND, build_dir, working)
         print(f"[Changed] run {scenario}: determinism ({DETERMINISM_BACKEND})", flush=True)
         list_problem = check_determinism(list_path, list_path.index(scenario), name, working / "Saved" / "Automation", runner)
         list_row.append(ChangedRow(f"{scenario} (결정성)", describe_change(list_changed), "Determinism" if list_problem else "",
@@ -554,7 +536,7 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
         return ExitCode.VIOLATION
     map_quarantine = {entry.test: entry for entry in list_quarantine}
     map_net = {scenario: item.test_name for item in read_net_items() for scenario in item.scenarios}
-    list_scenario_run, list_row = make_scenario_runs(list_item, map_scenario, project_root / "Content", build_dir, output, find_branch, map_quarantine, map_net,
+    list_scenario_run, list_row = make_scenario_runs(list_item, map_scenario, build_dir, output, find_branch, map_quarantine, map_net,
                                                      read_manual_scenarios(project_root))
     editor_unit_run = make_editor_unit_run(list_item, list_editor_file, output)
     if editor_unit_run is not None:

@@ -42,7 +42,7 @@ function(sw_read_scenario_launch scenario_path out)
 endfunction()
 
 # 체인 항목 하나 — 시나리오 모두를 백엔드마다 한 프로세스로. 모듈 리로드(이름 `*modulereload`)는 코드 이미지를 갈아 끼우므로 맨 뒤에 둔다 — 그 단계가 무엇을 남겨도 다른 단계에 닿지 않는다.
-# 첫 단계의 `<Launch>` 는 명령줄로 준다(게임이 기동하며 그 값을 읽는다). 다음 단계의 값은 세션이 단계를 시작할 때 건다. ARGS 는 App 에 더 줄 인자(`-game=` · `-EnableEditor` …)다.
+# 첫 단계의 `<Launch>` 는 부모 App 이 자식마다 그 자식의 첫 시나리오에서 읽어 명령줄로 준다(`AutomationPerBackend::makeLaunchArguments` — 게임이 기동하며 그 값을 읽는다). 다음 단계의 값은 세션이 단계를 시작할 때 건다. ARGS 는 App 에 더 줄 인자(`-game=` · `-EnableEditor` …)다.
 function(sw_add_scenario_chain test_name stage_seconds)
 	cmake_parse_arguments(PARSE_ARGV 2 ARG "" "SLOTS;SPLIT" "SCENARIOS;ARGS")
 	set(list_scenario ${ARG_SCENARIOS})
@@ -56,8 +56,6 @@ function(sw_add_scenario_chain test_name stage_seconds)
 	list(APPEND list_scenario ${list_reload_scenario})
 	sw_register_scenarios(${list_scenario})
 	list(LENGTH list_scenario stage_count)
-	list(GET list_scenario 0 first_path)
-	sw_read_scenario_launch("${first_path}" list_launch_argument)
 	list(JOIN list_scenario "," scenario_list)
 	# SLOTS: 동시에 도는 백엔드 수(`-scenario-backend-slots`). 비우면 모두 함께. 슬롯이 적으면 자식이 차례로 돌아 시한 · 쓰는 코어도 그만큼이다.
 	set(slot_count ${scenario_backend_count})
@@ -88,7 +86,7 @@ function(sw_add_scenario_chain test_name stage_seconds)
 	add_test(NAME ${test_name}
 		COMMAND $<TARGET_FILE:App> ${ARG_ARGS} -scenario=${scenario_list} -scenario-keep-going -scenario-backends=all ${list_split_argument} ${list_slot_argument} -unattended
 			-gv_validateBindlessIndex=DeadIndex -rhi-validation -deadlock-detection -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${test_name}.log
-			-shader-request-log=${CMAKE_BINARY_DIR}/Testing/ShaderRequests/${test_name}.shaderrequests ${list_launch_argument}
+			-shader-request-log=${CMAKE_BINARY_DIR}/Testing/ShaderRequests/${test_name}.shaderrequests
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(${test_name} PROPERTIES LABELS hostgpu TIMEOUT ${chain_timeout} SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped} PROCESSORS ${slot_count})
 	message(STATUS "[Scenario] ${test_name}: ${stage_count} scenario(s)")

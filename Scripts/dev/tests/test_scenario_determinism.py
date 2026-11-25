@@ -61,17 +61,11 @@ class ScenarioDeterminismTest(unittest.TestCase):
     def test_scenario_without_images_is_not_a_pass(self) -> None:
         self.assertEqual(len(self.check([None, None, None, None])), 1)
 
-    def test_command_runs_one_backend_with_the_first_stage_launch_values(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            for name in ("first", "second"):
-                (root / f"{name}.scenario.xml").write_text(f'<Scenario>\n  <Launch variable="gv_{name}" value="1"/>\n</Scenario>\n', encoding="utf-8")
-            chain = ["App.exe", "-scenario=first.scenario.xml,second.scenario.xml", "-scenario-backends=all", "-scenario-backend-split=independent", "-scenario-keep-going", "-gv_first=1"]
-            command = make_sequence_command(chain, ["second.scenario.xml", "second.scenario.xml"], root, "dx12", root / "r.json", root / "p.log")
+    def test_command_runs_one_backend(self) -> None:
+        chain = ["App.exe", "-scenario=first.scenario.xml,second.scenario.xml", "-scenario-backends=all", "-scenario-backend-split=independent", "-scenario-keep-going"]
+        command = make_sequence_command(chain, ["second.scenario.xml", "second.scenario.xml"], "dx12", Path("r.json"), Path("p.log"))
         self.assertIn("-scenario=second.scenario.xml,second.scenario.xml", command)
         self.assertIn("-scenario-backends=dx12", command)
-        self.assertNotIn("-gv_first=1", command)
-        self.assertEqual(command[-1], "-gv_second=1")
         self.assertFalse(any("split" in part for part in command))
 
     def test_failed_run_is_not_compared(self) -> None:

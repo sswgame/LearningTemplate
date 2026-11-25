@@ -1,7 +1,7 @@
 """체인에서만 지는 단계의 범인(앞 단계)을 이분 탐색한다 — Windows · Linux 공용(py -3 Scripts/dev/scenario_bisect.py <체인> <단계> [옵션]).
 
 체인을 처음부터 다시 돌리지 않고, 진 단계 앞의 단계들 중 뒤쪽 구간만 붙여 부분 체인을 돌려 가며 "어느 단계부터 붙이면 지는가" 를 찾는다.
-단계 목록 · 나머지 인자(게임 체인의 <Launch> 값 등)는 `Scenario.<체인>` 의 ctest 명령에서 그대로 가져오고(`common/AppArguments`) `-scenario=` 만 바꾼다 —
+단계 목록 · 나머지 인자(게임 체인의 `-game=` 등)는 `Scenario.<체인>` 의 ctest 명령에서 그대로 가져오고(`common/AppArguments`) `-scenario=` 만 바꾼다 —
 단계 이름은 시나리오 파일의 `name` 속성이고, 판정은 로그 문구가 아니라 실행마다 비운 보고 폴더(`build/<프리셋>/Saved/Culprit/run<N>` 에
 `-scenario-report=<폴더>/report.json` — 체인 단계마다 `report[.<백엔드>].<단계>.json`)의 JSON `result` 다. 보고가 없는 단계(크래시 · 행)는 짐이다.
 
@@ -124,7 +124,7 @@ class ScenarioBisectCommand(Command):
         # 단계 이름은 시나리오 파일의 name 속성이 정본이다(로그 문구를 읽지 않는다 — 체인을 먼저 돌려 둘 필요도 없다).
         target_index, target_name = resolve_target({index: read_scenario_name(path) for index, path in enumerate(paths)}, args.stage)
         if args.determinism:
-            runner = make_runner(command, target_name, REPO / 'Content', args.backend, build_dir, build_dir / 'Bin')
+            runner = make_runner(command, target_name, args.backend, build_dir, build_dir / 'Bin')
             list_problem = check_determinism(paths, target_index, target_name, build_dir / 'Bin' / 'Saved' / 'Automation', runner)
             for problem in list_problem:
                 print(f'{args.backend} {target_name}: {problem}')

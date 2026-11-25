@@ -109,3 +109,20 @@ SW_TEST_CASE( AutomationPerBackendTest, IndependentSplitKeepsRendererWatchesOnEv
     SW_EXPECT_EQUAL( sw::string( "engine/automation/windowpresent.scenario.xml" ), listAssigned[0] );
     SW_EXPECT_EQUAL( options._scenarioPath, listAssigned[1] );
 }
+
+/**
+ * @brief [AutomationPerBackendTest] 자식은 자기가 맡은 목록의 첫 시나리오 `<Launch>` 값만 받는다 — 체인의 첫 시나리오 값을 물려받으면 남의 미니게임으로 선다
+ */
+SW_TEST_CASE( AutomationPerBackendTest, EachChildStartsWithItsOwnFirstScenario )
+{
+    const sw::vector<sw::string> listNone;
+    const sw::vector<sw::string> listFirst = sw::AutomationPerBackend::makeLaunchArguments(
+        "engine/automation/render/hdroutput.scenario.xml,engine/automation/runner.scenario.xml", listNone );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listFirst.size() );
+    SW_EXPECT_EQUAL( sw::string( "-gv_displayOutput=HDR10" ), listFirst[1] );
+    const sw::vector<sw::string> listSecond = sw::AutomationPerBackend::makeLaunchArguments( "engine/automation/runner.scenario.xml", listNone );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listSecond.size() );
+    SW_EXPECT_TRUE( listSecond[0].find( "-gv_firstScene=" ) == 0 );
+    SW_EXPECT_TRUE( sw::AutomationPerBackend::makeLaunchArguments( "engine/automation/runner.scenario.xml", { "-gv_firstScene=x" } ).empty() );
+    SW_EXPECT_TRUE( sw::AutomationPerBackend::makeLaunchArguments( "engine/automation/isolation.scenario.xml", listNone ).empty() );
+}

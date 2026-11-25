@@ -67,28 +67,25 @@ def describe_differences(list_run: Iterable[tuple[str, dict[str, str]]]) -> list
     return list_difference
 
 
-def make_sequence_command(chain_command: Sequence[str], list_stage: Sequence[str], content_root: Path, backend: str, report: Path, log_file: Path) -> list[str]:
-    """체인 명령을 단계 묶음 하나로 — 나누기를 빼고 백엔드 하나에서 돌며, 첫 단계의 `<Launch>` 값은 이 묶음의 첫 단계 것으로 바꾼다."""
-    from dev.changed_tests import get_argument, read_launch_arguments, set_argument
+def make_sequence_command(chain_command: Sequence[str], list_stage: Sequence[str], backend: str, report: Path, log_file: Path) -> list[str]:
+    """체인 명령을 단계 묶음 하나로 — 나누기를 빼고 백엔드 하나에서 돈다. `<Launch>` 값은 App 이 첫 시나리오에서 읽는다."""
+    from dev.changed_tests import set_argument
     command = list(chain_command)
-    for argument in read_launch_arguments(content_root / (get_argument(command, "scenario") or "").split(",")[0]):
-        if argument in command:
-            command.remove(argument)
     for key in ("scenario-backend-split", "scenario-backend-split-offset", "scenario-keep-going", "shader-request-log"):
         command = set_argument(command, key, None)
     for key, value in (("scenario", ",".join(list_stage)), ("scenario-backends", backend), ("scenario-report", str(report)), ("log-file", str(log_file))):
         command = set_argument(command, key, value)
-    return command + read_launch_arguments(content_root / list_stage[0])
+    return command
 
 
-def make_runner(chain_command: Sequence[str], target_name: str, content_root: Path, backend: str, build_dir: Path, working_directory: Path) -> SequenceRunner:
+def make_runner(chain_command: Sequence[str], target_name: str, backend: str, build_dir: Path, working_directory: Path) -> SequenceRunner:
     """실제 앱으로 묶음을 돌리는 실행기 — 판정은 실행마다 비운 보고 폴더의 단계 보고다(`scenario_bisect` 와 같다)."""
     from common.run_process import run_process
     from dev.scenario_runs import describe_stage_failures, make_run_report_folder, read_run_reports, stage_failed_in_reports
 
     def run(list_stage: Sequence[str]) -> str:
         run_dir = make_run_report_folder(build_dir, len(list_stage))
-        command = make_sequence_command(chain_command, list_stage, content_root, backend, run_dir / "report.json", run_dir / "parent.log")
+        command = make_sequence_command(chain_command, list_stage, backend, run_dir / "report.json", run_dir / "parent.log")
         run_process(command, cwd=working_directory, timeout_seconds=SEQUENCE_TIMEOUT_SECONDS)
         list_report = read_run_reports(run_dir)
         return describe_stage_failures(list_report, target_name) if stage_failed_in_reports(list_report, target_name) else ""

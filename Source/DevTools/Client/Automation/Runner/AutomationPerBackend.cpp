@@ -394,6 +394,25 @@ namespace sw
         return listArgument;
     }
 
+    vector<string> AutomationPerBackend::makeLaunchArguments( string_view scenarioList, const vector<string>& listGivenArgument )
+    {
+        vector<string>       listArgument;
+        const vector<string> listPath = AutomationScenarioChain::splitList( scenarioList );
+        AutomationScenario   scenario;
+        if ( listPath.empty() || scenario.loadFromPath( AssetID{ listPath.front() } ).has_value() == false )
+            return listArgument; // 읽지 못한 시나리오는 자식이 읽기 오류로 끝낸다
+        for ( const AutomationAttribute& variable : scenario.getTestOptions()._listLaunchVariable )
+        {
+            if ( std::any_of( listGivenArgument.begin(), listGivenArgument.end(), [&variable]( const string& given )
+            { return CommandLineManager::getArgumentName( given ) == string_view{ variable._name }; } ) )
+                continue;
+            StringBuilder<constant::buffer::kMax256> argument;
+            argument.appendFormat( "-%#=%#", variable._name, variable._value );
+            listArgument.push_back( string( argument.view() ) );
+        }
+        return listArgument;
+    }
+
     vector<string> AutomationPerBackend::assignScenarios( const AutomationPerBackendOptions& options )
     {
         using Internal = AutomationPerBackendInternal;
@@ -599,6 +618,8 @@ namespace sw
                 listArgument.push_back( string( requestLogArgument.view() ) );
             }
             listArgument.insert( listArgument.end(), options._listPassThroughArgument.begin(), options._listPassThroughArgument.end() );
+            for ( string& launchArgument : makeLaunchArguments( scenarioList, options._listPassThroughArgument ) )
+                listArgument.push_back( std::move( launchArgument ) );
 
             pChild->_command = options._executablePath.empty() ? ProcessCommand{} : ProcessCommand::at( options._executablePath, std::move( listArgument ) );
             // 자식마다 제 실행 뿌리(`<이 실행 뿌리>/<백엔드>`) — 사용자 데이터 · 에디터 상태 · 시나리오 사본이 그 아래라 자식끼리 한 폴더를 다투지 않는다

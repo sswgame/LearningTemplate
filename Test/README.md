@@ -104,7 +104,7 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 
 ```xml
 <Scenario name="engine.debughud" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Launch variable="gv_firstScene" value="game/playground/maps/fogshowcase.scene.xml"/>  <!-- 기동 때만 정해지는 값(ctest 가 명령줄로 옮긴다) -->
+	<Launch variable="gv_firstScene" value="game/playground/maps/fogshowcase.scene.xml"/>  <!-- 기동 때만 정해지는 값(체인은 부모 App 이 첫 시나리오에서 읽어 자식 명령줄로 옮긴다) -->
 	<AllowLog id="Audio.DeviceLost" reason="CI 러너에 오디오 장치가 없다"/>           <!-- 이 시나리오에서 나와도 되는 로그 id -->
 	<DevCommand line="hud off"/>
 	<WaitUntil watch="DebugHUD.Shown" equals="0" timeoutFrames="60"/>                  <!-- 조건이 설 때까지 -->
