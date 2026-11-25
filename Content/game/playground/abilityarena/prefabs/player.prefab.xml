@@ -66,7 +66,14 @@
 			                    _gameMode="0"
 			                    _kind="Player"
 			                    _facingMode="MoveDirection"
-			                    _unitRadius="0.5" />
+			                    _unitRadius="0.5">
+				<_listAbilityButton>
+					<ArenaAbilityButton _button="Arena.Melee" _inputID="1" />
+					<ArenaAbilityButton _button="Arena.Fireball" _inputID="2" />
+					<ArenaAbilityButton _button="Arena.Heal" _inputID="3" />
+					<ArenaAbilityButton _button="Arena.Dash" _inputID="4" />
+				</_listAbilityButton>
+			</ArenaUnitComponent>
 			<ArenaDeathSquashComponent _localID="13332575997216625941" _componentName="ArenaDeathSquashComponent"
 			                           _bActive="true"
 			                           _minSquashRatio="0.05" />
