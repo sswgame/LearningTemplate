@@ -70,8 +70,8 @@ SW_TEST_CASE( BuiltinAssetTypesTest, ReloadRoutesNameTheCacheAndImporter )
     for ( const string_view path : { string_view{ "common/textures_raw/rock.png" }, string_view{ "common/models_raw/rock.glb" } } )
     {
         const AssetReloadRoute source = EditorAssetTypeRegistry::findReloadRoute( path );
-        SW_EXPECT_TRUE( source._pfnImportSource != nullptr );
-        SW_EXPECT_TRUE( source._importThread == AssetImportThread::WorkerParallel );
+        SW_EXPECT_TRUE( source._pfnImportSource == nullptr );
+        SW_EXPECT_TRUE( source._pfnImportBatch != nullptr );
     }
 }
 

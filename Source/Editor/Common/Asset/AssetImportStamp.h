@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    class AssetPaths;
     class DerivedDataCache;
     class TaskManager;
 } // namespace sw
@@ -82,6 +83,38 @@ namespace sw::editor
             if ( _pFinishedCount != nullptr )
                 _pFinishedCount->fetch_add( 1, std::memory_order_relaxed );
         }
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 바뀐 원본 하나와 그 결과입니다(`AssetSourceBatch`). */
+    struct AssetSourceBatchItem
+    {
+        string _relativePath;      ///< 리소스 루트 기준 원본 경로
+        bool   _bRan{ false };     ///< 임포터가 보았다(취소로 건너뛰었으면 false — 부른 쪽이 다시 요청한다)
+        bool   _bHandled{ false }; ///< 임포터가 원본으로 처리했다 — 임포트했거나 임포트하지 않는다고 알렸다(false 면 부른 쪽이 캐시를 다시 읽어야 한다)
+    };
+
+    /**
+     * @struct AssetSourceBatch
+     * @brief 에디터 핫 리로드가 한 임포터에 한 번에 넘기는 바뀐 원본들입니다(`TextureImporter::importChangedSources` 등). 워커에서 불린다.
+     * @details 원본마다 따로 부르지 않는다 — 한 묶음이라야 같은 원본 폴더의 스탬프를 한 번에 쓰고, 다른 원본의 결과를 읽는 원본(장비 메시 → 몸 메시)이 그 원본 뒤에 임포트된다(`AssetImportStampUtil::importSources`).
+     *          예전에는 폴더 묶음마다 동시에 따로 불러 같은 `import.stamp` 를 서로 덮었고, 몸과 장비를 함께 고치면 장비가 옛 몸을 읽을 수 있었다.
+     */
+    struct AssetSourceBatch
+    {
+        vector<AssetSourceBatchItem> _listItem;
+        const AssetPaths*            _pAssetPaths{ nullptr };  ///< 경로 상태(엔진 수명) — 워커는 찾지 않고 요청한 스레드가 넣는다
+        TaskManager*                 _pTaskManager{ nullptr }; ///< 원본을 나눠 돌 작업 시스템(빌림 — 요청한 스레드가 찾는다). nullptr 이면 차례로 돈다
+        AssetImportControl           _control{};
+    };
+
+    /** @brief 바뀐 파일 하나가 다시 임포트해야 하는 원본들입니다 — 곁 파일(구멍 마스크)은 그것을 쓰는 원본으로 옮긴다. */
+    struct AssetSourceBatchEntry
+    {
+        size_t         _itemIndex{ 0 }; ///< `AssetSourceBatch::_listItem` 의 번호
+        vector<string> _listSourcePath; ///< 리소스 루트 기준
     };
 } // namespace sw::editor
 
@@ -201,6 +234,12 @@ namespace sw::editor
          */
         [[nodiscard]] static AssetImportSummary importSources( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
                                                                TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache, const AssetImportControl* pControl = nullptr );
+
+        /**
+         * @brief 핫 리로드 묶음의 @p listEntry 원본을 한 번에 임포트하고(`importSources`) 항목마다 결과를 적습니다. 문제는 오류로 남깁니다. 워커에서 불린다.
+         * @details 원본이 든 루트(`Content/` · 작업 도메인)마다 한 번 돈다. DDC 설정을 읽지 못하면 오류를 남기고 처리한 것으로 적는다(다시 읽을 결과가 없다).
+         */
+        static void importChangedSources( AssetSourceBatch& batch, const vector<AssetSourceBatchEntry>& listEntry, const IRawAssetImporter& importer );
 
         /** @brief @p path 가 @p rawFolderName 폴더 아래의 파일인지입니다. 에셋 경로 · 디스크 경로 글을 모두 받는다(에셋 종류를 가리는 자리가 둘을 다 묻는다). */
         [[nodiscard]] static bool isUnderRawFolder( string_view path, string_view rawFolderName );

@@ -300,27 +300,20 @@ namespace sw::editor
         return AssetImportStampUtil::isUnderRawFolder( path, HeightfieldImporterInternal::kRawFolder );
     }
 
-    bool HeightfieldImporter::importChangedSourceHeightfield( const AssetPaths& assetPaths, string_view relativePath )
+    void HeightfieldImporter::importChangedSources( AssetSourceBatch& batch )
     {
-        if ( isRawHeightfieldPath( relativePath ) == false )
-            return false;
         // 바뀐 파일이 영향을 주는 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 적는 길은 명령줄 임포트와 같은 한 곳이다. 구멍 마스크 · 곁 스플랫도 원본 해시에 들어간다.
-        const HeightfieldRawImporter     importer;
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
-        if ( derivedDataCache.has_value() == false )
+        vector<AssetSourceBatchEntry> listEntry;
+        for ( size_t itemIndex = 0; itemIndex < batch._listItem.size(); ++itemIndex )
         {
-            SW_LOG_ERROR_ID( "HeightfieldImporter.DerivedDataConfigUnreadable", "Heightfield import skipped: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
-            return true;
+            AssetSourceBatchItem& item = batch._listItem[itemIndex];
+            item._bRan                 = true;
+            item._bHandled             = isRawHeightfieldPath( item._relativePath );
+            if ( item._bHandled )
+                listEntry.push_back( AssetSourceBatchEntry{ itemIndex, HeightfieldImporterInternal::findAffectedSources( item._relativePath ) } );
         }
-        // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않고 직렬로 돈다(워커는 에디터 서비스 범위를 읽지 않는다).
-        const AssetImportSummary summary = AssetImportStampUtil::importSources( assetPaths.getRootFolderPathFor( relativePath ), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ),
-                                                                                nullptr, *derivedDataCache );
-        for ( const string& problem : summary._listProblem )
-        {
-            SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldImportFailed", "Heightfield import failed: %#", problem.c_str() );
-        }
-        SW_LOG_INFO_ID( "HeightfieldImporter.HeightfieldImportChangedImported", "Heightfield import: %# changed -> %# imported", relativePath, summary._importedCount );
-        return true;
+        const HeightfieldRawImporter importer;
+        AssetImportStampUtil::importChangedSources( batch, listEntry, importer );
     }
 
     AbsolutePath HeightfieldImporter::makeImportedHeightfieldPath( const AbsolutePath& rawPath )

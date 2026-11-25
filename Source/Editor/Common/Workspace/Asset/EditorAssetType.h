@@ -32,6 +32,8 @@ namespace sw::editor
 {
     class IEditorAssetTypeActions;
 
+    struct AssetSourceBatch;
+
     /**
      * @brief 도구 문서를 읽은 결과입니다. "새 문서" 와 "읽지 못한 파일" 을 구분하며, 문서 패널은 이 값으로 저장을 막습니다(`EditorDocumentPanel::reloadDocument`).
      * @details 타입에 `[[nodiscard]]` 가 붙어 있어 이 값을 반환하는 로드의 결과를 버리면 컴파일러가 경고한다. bool 로는 "없음" 과 "깨짐" 이
@@ -45,25 +47,15 @@ namespace sw::editor
     };
 
     /**
-     * @brief 소스 파일을 임포트하는 임포터입니다. 처리했으면 true 를 반환하며, 임포트했거나 임포트하지 않는다고 알린 경우가 모두 해당합니다. 이때는 그 파일의 캐시 리로드를 하지 않습니다.
-     * @details 경로 상태 @p assetPaths 는 부른 쪽(에디터 스레드)이 찾아 넘긴다 — 워커 임포터는 에디터 서비스 범위를 읽지 않는다.
+     * @brief 소스 파일 하나를 에디터 스레드에서 바로 임포트하는 임포터입니다 — 에디터 서브시스템을 건드리는 짧은 일(테마 토큰 표시 · 머티리얼 그래프)만 여기에 둡니다.
+     *        처리했으면 true 를 반환하며, 임포트했거나 임포트하지 않는다고 알린 경우가 모두 해당합니다. 이때는 그 파일의 캐시 리로드를 하지 않습니다.
      */
     using AssetSourceImporterFunc = bool ( * )( const AssetPaths& assetPaths, string_view relativePath );
-
     /**
-     * @enum AssetImportThread
-     * @brief 소스 임포터(`AssetSourceImporterFunc`)가 도는 스레드입니다. 긴 일은 에디터 스레드에서 동기로 돌지 않는다.
+     * @brief 바뀐 원본들을 백그라운드 잡(`EditorAssetImportJob`)의 워커에서 한 번에 임포트하는 임포터입니다(`AssetSourceBatch`) — 긴 일은 에디터 스레드에서 동기로 돌지 않는다.
+     * @details UI 와 공유 상태를 건드리지 않고 에디터 서비스 범위를 읽지 않습니다. 원본을 나눠 도는 일 · 순서 의존 · 스탬프는 일괄 임포트(`AssetImportStampUtil`)가 합니다. 결과 적용(캐시 리로드 · 씬 알림)은 에디터 스레드가 합니다.
      */
-    enum class AssetImportThread : uint8
-    {
-        Editor, ///< 에디터 스레드에서 바로 부릅니다. 에디터 서브시스템을 건드리는 짧은 일(테마 토큰 표시)만 여기에 둡니다.
-        Worker, ///< 백그라운드 잡(`EditorAssetImportJob`)이 워커에서 부릅니다. 임포터는 UI 와 공유 상태를 건드리지 않습니다. 결과 적용(캐시 리로드 · 씬 알림)은 에디터 스레드가 합니다.
-        /**
-         * 워커에서 부르고, **다른 폴더 묶음의 원본 임포트와 동시에 돌아도 됩니다** — 함수 정적 · 전역 상태가 없고(스레드마다의 상태는 `thread_local`), 결과 · 스탬프(`import.stamp`)가
-         * 원본 폴더 안에만 쓰인다. 같은 폴더(와 그 아래) 원본은 잡이 한 사슬로 차례로 돈다(스탬프 읽고 쓰기 · 옆 폴더 지우기가 겹치지 않게). 일괄 임포트(`App --import-*`)가 같은 원본을 이미 병렬로 돈다.
-         */
-        WorkerParallel,
-    };
+    using AssetSourceBatchImporterFunc = void ( * )( AssetSourceBatch& batch );
 
     /**
      * @enum AssetReferenceUse
@@ -89,10 +81,10 @@ namespace sw::editor
          */
         static constexpr const utf8* kAnyCacheHoldingPath = "";
 
-        const utf8*             _pCacheKindName{ nullptr };                        ///< 다시 읽을 엔진 캐시(`AssetCacheBase::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아니고, 빈 문자열이면 `kAnyCacheHoldingPath` 이다
-        AssetSourceImporterFunc _pfnImportSource{ nullptr };                       ///< 캐시가 다시 읽기 전에 실행하는 임포터. nullptr 이면 바로 캐시가 다시 읽는다
-        AssetImportThread       _importThread{ AssetImportThread::Editor };        ///< 임포터가 도는 스레드. 임포터가 있을 때만 뜻이 있다
-        AssetReferenceUse       _referenceUse{ AssetReferenceUse::ResolvedAtUse }; ///< 참조 대상이 바뀌었을 때 이 종류도 다시 읽는지(`AssetReloadCascade`). 캐시가 있는 종류에서만 뜻이 있다
+        const utf8*                  _pCacheKindName{ nullptr };                        ///< 다시 읽을 엔진 캐시(`AssetCacheBase::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아니고, 빈 문자열이면 `kAnyCacheHoldingPath` 이다
+        AssetSourceImporterFunc      _pfnImportSource{ nullptr };                       ///< 캐시가 다시 읽기 전에 에디터 스레드에서 실행하는 임포터. 두 임포터가 모두 nullptr 이면 바로 캐시가 다시 읽는다
+        AssetSourceBatchImporterFunc _pfnImportBatch{ nullptr };                        ///< 워커에서 실행하는 임포터(둘 가운데 하나만 채운다)
+        AssetReferenceUse            _referenceUse{ AssetReferenceUse::ResolvedAtUse }; ///< 참조 대상이 바뀌었을 때 이 종류도 다시 읽는지(`AssetReloadCascade`). 캐시가 있는 종류에서만 뜻이 있다
 
         /**
          * @brief 공유 캐시 종류 @p def 의 캐시가 다시 읽는 길입니다. 캐시의 종류 이름은 정의의 이름이라(`SW_SHARED_ASSET_CACHE`) 에디터가 이름을 따로 적지 않는다 —
@@ -100,7 +92,7 @@ namespace sw::editor
          */
         static AssetReloadRoute sharedCache( const AssetTypeDef& def, AssetReferenceUse referenceUse = AssetReferenceUse::ResolvedAtUse )
         {
-            return AssetReloadRoute{ def._name.data(), nullptr, AssetImportThread::Editor, referenceUse };
+            return AssetReloadRoute{ def._name.data(), nullptr, nullptr, referenceUse };
         }
     };
 } // namespace sw::editor

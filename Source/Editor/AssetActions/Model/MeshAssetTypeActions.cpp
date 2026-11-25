@@ -36,7 +36,7 @@ namespace sw::editor
         const EditorAssetMatchRule kArrMeshRule[] = {
             EditorAssetMatchRule::engineType( MeshAssetFormat::kAssetType, { "Mesh" } ),
             EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, kArrModelSourceExt, SW_COUNT_OF( kArrModelSourceExt ), EditorAssetMatchPriority::Suffix,
-                                            { "Mesh", &ModelImporter::importChangedSourceModel, AssetImportThread::WorkerParallel } ),
+                                            { "Mesh", nullptr, &ModelImporter::importChangedSources } ),
         };
     } // namespace
 

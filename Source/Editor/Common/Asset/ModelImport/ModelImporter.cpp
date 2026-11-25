@@ -1035,43 +1035,33 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImporter::importChangedSourceModel( const AssetPaths& assetPaths, string_view relativePath )
+    void ModelImporter::importChangedSources( AssetSourceBatch& batch )
     {
-        if ( MeshAssetFormat::isMeshAssetPath( relativePath ) )
-            return false;
-
-        const AbsolutePath& resourceRoot = assetPaths.getRootFolderPathFor( relativePath ); // 작업 도메인 사본은 실행 뿌리 아래다
-        const AbsolutePath  normalized   = resourceRoot.join( relativePath );
-        if ( makeImportedModelPath( normalized ).empty() )
+        // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 쓰는 길은 `importAllModels` 와 같은 `AssetImportStampUtil` 한 곳이라
+        // 에디터에서 임포트한 것과 `App --import-models` 로 임포트한 것이 같은 판정을 받는다.
+        vector<AssetSourceBatchEntry> listEntry;
+        for ( size_t itemIndex = 0; itemIndex < batch._listItem.size(); ++itemIndex )
         {
-            SW_LOG_WARNING_ID( "ModelImporter.ModelSourcesMustUnder", "Model sources must be under `%#` to be imported: %#", ModelImportUtil::kRawModelFolder, relativePath );
-            return true;
+            AssetSourceBatchItem& item = batch._listItem[itemIndex];
+            item._bRan                 = true;
+            if ( MeshAssetFormat::isMeshAssetPath( item._relativePath ) )
+                continue; // 원본이 아니다 — 캐시가 다시 읽는다
+            item._bHandled                = true;
+            const AbsolutePath sourcePath = batch._pAssetPaths->getRootFolderPathFor( item._relativePath ).join( item._relativePath ); // 작업 도메인 사본은 실행 뿌리 아래다
+            if ( makeImportedModelPath( sourcePath ).empty() )
+                SW_LOG_WARNING_ID( "ModelImporter.ModelSourcesMustUnder", "Model sources must be under `%#` to be imported: %#", ModelImportUtil::kRawModelFolder, item._relativePath );
+            else
+                listEntry.push_back( AssetSourceBatchEntry{ itemIndex, vector<string>{ item._relativePath } } );
         }
-
-        // 스탬프를 기록하는 경로가 하나여야 에디터에서 임포트한 것과 `App --import-models` 로 임포트한 것이 같은 판정을 받는다.
         // 규칙 파일이 없거나 깨졌으면 규칙 없이 임포트하지 않는다(결과가 말없이 바뀐다) — 로드가 오류를 남겼다.
-        ModelImportConfig config{};
-        if ( config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) == false )
-            return true;
-        // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 쓰는 길은 `importAllModels` 와 같은 `AssetImportStampUtil` 한 곳이다.
+        ModelImportConfig   config{};
         TextureImportConfig textureConfig{};
-        if ( textureConfig.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == false )
-            return true;
-        const ModelRawImporter           importer{ assetPaths, config, textureConfig, nullptr };
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
-        if ( derivedDataCache.has_value() == false )
-        {
-            SW_LOG_ERROR_ID( "ModelImporter.DerivedDataConfigUnreadable", "Model import skipped: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
-            return true;
-        }
-        // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 원본 하나라 직렬과 같다.
-        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr, *derivedDataCache );
-        for ( const string& problem : summary._listProblem )
-        {
-            SW_LOG_ERROR_ID( "ModelImporter.ModelImportFailed", "Model import failed: %#", problem.c_str() );
-        }
-        SW_LOG_INFO_ID( "ModelImporter.ModelImportChangedImported", "Model import: %# changed -> %# imported", relativePath, summary._importedCount );
-        return true;
+        const bool          bReady = listEntry.empty() == false && config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) &&
+                            textureConfig.loadFromFile( TextureImporter::makeDefaultImportConfigPath() );
+        if ( bReady == false )
+            return;
+        const ModelRawImporter importer{ *batch._pAssetPaths, config, textureConfig, batch._pTaskManager };
+        AssetImportStampUtil::importChangedSources( batch, listEntry, importer );
     }
 
     AssetImportSummary ModelImporter::importAllModels( const AssetPaths& assetPaths, const AbsolutePath& resourceRoot, const ModelImportConfig& config, AssetImportMode mode )

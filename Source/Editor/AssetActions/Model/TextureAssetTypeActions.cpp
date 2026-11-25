@@ -46,7 +46,7 @@ namespace sw::editor
 
         const EditorAssetMatchRule kArrTextureRule[] = {
             EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, kArrTextureSourceExt, SW_COUNT_OF( kArrTextureSourceExt ), EditorAssetMatchPriority::Suffix,
-                                            { "Texture", &TextureImporter::importChangedSourceImage, AssetImportThread::WorkerParallel } ),
+                                            { "Texture", nullptr, &TextureImporter::importChangedSources } ),
             EditorAssetMatchRule::engineType( Texture2D::kAssetType, { "Texture" } ),
         };
     } // namespace

@@ -706,41 +706,30 @@ namespace sw::editor
         }
     }
 
-    bool TextureImporter::importChangedSourceImage( const AssetPaths& assetPaths, string_view relativePath )
+    void TextureImporter::importChangedSources( AssetSourceBatch& batch )
     {
-        if ( FileUtil::hasExtension( relativePath, ".dds" ) )
-            return false;
-
-        const AbsolutePath& resourceRoot = assetPaths.getRootFolderPathFor( relativePath ); // 워커다 — 잡을 올린 에디터 스레드가 넘긴 경로 상태를 쓴다. 작업 도메인 사본은 실행 뿌리 아래다
-        const AbsolutePath  normalized   = resourceRoot.join( relativePath );
-        if ( makeImportedTexturePath( normalized ).empty() )
-        {
-            SW_LOG_WARNING_ID( "TextureImporter.SourceImagesMustUnder", "Source images must be under `%#` to be imported: %#", TextureImporterInternal::kRawTextureFolder, relativePath );
-            return true;
-        }
-
-        // 바뀐 원본 하나만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 기록하는 길은 `importAllTextures` 와 같은 `AssetImportStampUtil` 한 곳이라
+        // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 기록하는 길은 `importAllTextures` 와 같은 `AssetImportStampUtil` 한 곳이라
         // 에디터에서 임포트한 것과 `App --import-textures` 로 임포트한 것이 같은 판정을 받는다. 내용이 그대로이면(저장만 다시 했다) 임포트하지 않는다.
+        vector<AssetSourceBatchEntry> listEntry;
+        for ( size_t itemIndex = 0; itemIndex < batch._listItem.size(); ++itemIndex )
+        {
+            AssetSourceBatchItem& item = batch._listItem[itemIndex];
+            item._bRan                 = true;
+            if ( FileUtil::hasExtension( item._relativePath, ".dds" ) )
+                continue; // 원본이 아니다 — 캐시가 다시 읽는다
+            item._bHandled                = true;
+            const AbsolutePath sourcePath = batch._pAssetPaths->getRootFolderPathFor( item._relativePath ).join( item._relativePath ); // 워커다 — 잡을 올린 에디터 스레드가 넘긴 경로 상태를 쓴다. 작업 도메인 사본은 실행 뿌리 아래다
+            if ( makeImportedTexturePath( sourcePath ).empty() )
+                SW_LOG_WARNING_ID( "TextureImporter.SourceImagesMustUnder", "Source images must be under `%#` to be imported: %#", TextureImporterInternal::kRawTextureFolder, item._relativePath );
+            else
+                listEntry.push_back( AssetSourceBatchEntry{ itemIndex, vector<string>{ item._relativePath } } );
+        }
         // 규칙 파일이 없거나 깨졌으면 기본 규칙으로 임포트하지 않는다(결과가 말없이 바뀐다) — 로드가 오류를 남겼다.
         TextureImportConfig config{};
-        if ( config.loadFromFile( makeDefaultImportConfigPath() ) == false )
-            return true;
-        // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 밴드 압축도 이 워커가 차례로 한다.
-        const TextureRawImporter         importer{ config, nullptr };
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
-        if ( derivedDataCache.has_value() == false )
-        {
-            SW_LOG_ERROR_ID( "TextureImporter.DerivedDataConfigUnreadable", "Texture import skipped: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
-            return true;
-        }
-        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr, *derivedDataCache );
-        for ( const string& problem : summary._listProblem )
-        {
-            SW_LOG_ERROR_ID( "TextureImporter.TextureImportFailed", "Texture import failed: %#", problem.c_str() );
-        }
-
-        SW_LOG_INFO_ID( "TextureImporter.TextureImportChangedImported", "Texture import: %# changed -> %# imported", relativePath, summary._importedCount );
-        return true;
+        if ( listEntry.empty() || config.loadFromFile( makeDefaultImportConfigPath() ) == false )
+            return;
+        const TextureRawImporter importer{ config, batch._pTaskManager };
+        AssetImportStampUtil::importChangedSources( batch, listEntry, importer );
     }
 
     AssetImportSummary TextureImporter::importAllTextures( const AbsolutePath& resourceRoot, const TextureImportConfig& config, AssetImportMode mode )

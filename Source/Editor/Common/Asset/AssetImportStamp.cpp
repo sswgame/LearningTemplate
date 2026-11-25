@@ -23,6 +23,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/Cook/CookRecord.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 
 namespace sw::editor
@@ -907,6 +908,56 @@ namespace sw::editor
                                                             TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache, const AssetImportControl* pControl )
     {
         return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &listAssetPath, pTaskManager, &derivedDataCache, pControl );
+    }
+
+    void AssetImportStampUtil::importChangedSources( AssetSourceBatch& batch, const vector<AssetSourceBatchEntry>& listEntry, const IRawAssetImporter& importer )
+    {
+        using Internal = AssetImportStampInternal;
+        if ( listEntry.empty() )
+            return;
+        vector<AbsolutePath> listRoot;
+        for ( const AssetSourceBatchEntry& entry : listEntry )
+        {
+            AssetSourceBatchItem& item = batch._listItem[entry._itemIndex];
+            item._bRan                 = true;
+            item._bHandled             = true;
+            VectorUtil::addUnique( listRoot, batch._pAssetPaths->getRootFolderPathFor( item._relativePath ) );
+        }
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
+        if ( derivedDataCache.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "AssetImportStamp.DerivedDataConfigUnreadable", "Import of '%#' skipped: %# (%#)", importer.getRawFolderName(), derivedDataCache.error().message(), derivedDataCache.error().detail() );
+            return;
+        }
+        for ( const AbsolutePath& root : listRoot )
+        {
+            vector<string> listSourcePath;
+            for ( const AssetSourceBatchEntry& entry : listEntry )
+            {
+                if ( batch._pAssetPaths->getRootFolderPathFor( batch._listItem[entry._itemIndex]._relativePath ) == root )
+                    listSourcePath.insert( listSourcePath.end(), entry._listSourcePath.begin(), entry._listSourcePath.end() );
+            }
+            const AssetImportSummary summary = importSources( root, importer, listSourcePath, batch._pTaskManager, *derivedDataCache, &batch._control );
+            for ( const string& problem : summary._listProblem )
+            {
+                SW_LOG_ERROR_ID( "AssetImportStamp.ChangedSourceNotImported", "Import failed: %#", problem.c_str() );
+            }
+            unordered_set<string> uniqueSkipped;
+            for ( const string& skippedPath : summary._listSkippedPath )
+                uniqueSkipped.insert( Internal::makeScopeKey( skippedPath ) );
+            for ( const AssetSourceBatchEntry& entry : listEntry )
+            {
+                AssetSourceBatchItem& item = batch._listItem[entry._itemIndex];
+                for ( const string& sourcePath : entry._listSourcePath )
+                {
+                    if ( uniqueSkipped.contains( Internal::makeScopeKey( sourcePath ) ) == false )
+                        continue;
+                    item._bRan     = false;
+                    item._bHandled = false;
+                }
+            }
+            SW_LOG_INFO_ID( "AssetImportStamp.ChangedSourcesImported", "Import of '%#': %# changed -> %# imported", importer.getRawFolderName(), static_cast<uint32>( listSourcePath.size() ), summary._importedCount );
+        }
     }
 
     bool AssetImportStampUtil::isUnderRawFolder( string_view path, string_view rawFolderName )

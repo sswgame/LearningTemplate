@@ -9,7 +9,6 @@ namespace sw
 {
     struct TextureFormatFamily;
 
-    class AssetPaths;
     class TaskManager;
 } // namespace sw
 
@@ -18,6 +17,7 @@ namespace sw::editor
     enum class AssetImportMode : uint8;
 
     struct AssetImportSummary;
+    struct AssetSourceBatch;
     struct RawImageData;
     struct TextureImportRule;
 
@@ -84,15 +84,14 @@ namespace sw::editor
         static void applyChannelManipulations( RawImageData& rawImage, const TextureImportRule& rule, size_t totalPixels );
 
         /**
-         * @brief 핫 리로드가 넘긴 텍스처 파일이 소스 이미지이면 임포트합니다. `textures_raw/` 아래의 소스 이미지를 옆 `textures/` 의 DDS 로 만듭니다.
+         * @brief 핫 리로드가 넘긴 텍스처 파일 가운데 소스 이미지를 임포트합니다. `textures_raw/` 아래의 소스 이미지를 옆 `textures/` 의 DDS 로 만듭니다.
          * @details 런타임은 DDS 만 읽으므로 소스 이미지는 임포트하는 것이 리로드다. 임포트한 DDS 를 쓰면 다음 감시 이벤트로 들어오고,
          *          텍스처 캐시가 다시 읽는다. 임포트 설정은 매번 읽으므로 규칙을 고치면 재시작 없이 반영된다.
          *          `.hdr` 는 부동소수점으로 읽어 BC6H 와 RGBA16F 로만 임포트한다. 규칙의 포맷이 8비트이면 실패한다. `textures_raw/` 밖의 소스 이미지는 경고만 한다.
-         *          **바뀐 원본 하나만** 임포트한다(`AssetImportStampUtil::importSources`). 루트 전체의 대조는 `importAllTextures`(`App --import-textures`)가 한다.
-         *          워커에서 불린다(`AssetHotReload` 의 임포트 잡) — UI 서브시스템을 건드리지 않고 공유 상태를 두지 않는다.
-         * @return 소스 이미지였으면 true 입니다. 임포트했든 경고만 했든 같으며, 호출하는 쪽은 캐시를 다시 읽지 않습니다. `.dds` 이면 false 입니다.
+         *          **바뀐 원본만** 임포트한다(`AssetImportStampUtil::importSources`). 루트 전체의 대조는 `importAllTextures`(`App --import-textures`)가 한다.
+         *          워커에서 불린다(`AssetHotReload` 의 임포트 잡) — UI 서브시스템을 건드리지 않고 공유 상태를 두지 않는다. 소스 이미지는 임포트했든 경고만 했든 처리한 것이고 `.dds` 는 처리하지 않은 것이다.
          */
-        [[nodiscard]] static bool importChangedSourceImage( const AssetPaths& assetPaths, string_view relativePath );
+        static void importChangedSources( AssetSourceBatch& batch );
 
         /**
          * @brief 리소스 루트 아래 모든 `textures_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면 어긋난 것을 임포트합니다.
@@ -132,7 +131,7 @@ namespace sw::editor
 
         /**
          * @brief 에디터 설정을 거치지 않은 기본 임포트 설정 경로(`<프로젝트>/Config/Editor/TextureImportConfig.json`)를 반환합니다.
-         * @details 헤드리스 임포트와 테스트가 쓴다. 에디터가 떠 있을 때는 `EditorToolDefaults` 가 정한 경로를 쓴다(`importChangedSourceImage`).
+         * @details 헤드리스 임포트와 테스트가 쓴다. 에디터가 떠 있을 때는 `EditorToolDefaults` 가 정한 경로를 쓴다(`importChangedSources`).
          *          프로젝트 루트(`ProcessRoots`)는 기동 때 정한 값이라 워커에서 불러도 된다.
          */
         static AbsolutePath makeDefaultImportConfigPath();

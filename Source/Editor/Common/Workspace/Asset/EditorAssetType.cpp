@@ -147,7 +147,7 @@ namespace sw::editor
             }
 
             /** @brief 핫 리로드 대상 규칙(캐시나 임포터가 있다)이면 true 입니다. */
-            static bool isReloadable( const EditorAssetMatchRule& rule ) { return rule._reload._pCacheKindName != nullptr || rule._reload._pfnImportSource != nullptr; }
+            static bool isReloadable( const EditorAssetMatchRule& rule ) { return rule._reload._pCacheKindName != nullptr || rule._reload._pfnImportSource != nullptr || rule._reload._pfnImportBatch != nullptr; }
         };
     } // namespace
 } // namespace sw::editor

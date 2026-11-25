@@ -29,6 +29,7 @@ namespace sw::editor
     enum class AssetImportMode : uint8;
 
     struct AssetImportSummary;
+    struct AssetSourceBatch;
     struct ModelImportRule;
 
     class ModelImportConfig;
@@ -218,14 +219,12 @@ namespace sw::editor
         [[nodiscard]] static bool transferBodySurface( string_view sourcePath, const ModelImportRule& rule, MeshAssetData& inoutMesh );
 
         /**
-         * @brief 핫 리로드가 넘긴 파일이 모델 원본이면 임포트합니다. `models_raw/` 아래의 원본을 옆 `models/` 의 `.mesh` 로 만듭니다.
+         * @brief 핫 리로드가 넘긴 파일 가운데 모델 원본을 임포트합니다. `models_raw/` 아래의 원본을 옆 `models/` 의 `.mesh` 로 만듭니다.
          * @details 임포트한 `.mesh` 를 쓰면 다음 감시 이벤트로 들어오고, 메시 캐시가 그 즉시 다시 읽는다. `models_raw/` 밖의 원본은 경고만 한다.
-         *          **바뀐 원본 하나만** 임포트한다(`AssetImportStampUtil::importSources`). 루트 전체의 대조는 `importAllModels`(`App --import-models`)가 한다.
-         *          워커에서 불린다(`AssetHotReload` 의 임포트 잡) — UI 서브시스템을 건드리지 않고 공유 상태를 두지 않는다.
-         *          경로 상태 @p assetPaths 는 잡을 올린 에디터 스레드가 찾아 넘긴다(`AssetSourceImporterFunc`).
-         * @return 모델 원본이었으면 true 입니다. 임포트했든 경고만 했든 같으며, 호출자는 캐시를 다시 읽지 않습니다. `.mesh` 이면 false 입니다.
+         *          **바뀐 원본만** 임포트한다(`AssetImportStampUtil::importSources`). 루트 전체의 대조는 `importAllModels`(`App --import-models`)가 한다.
+         *          워커에서 불린다(`AssetHotReload` 의 임포트 잡) — UI 서브시스템을 건드리지 않고 공유 상태를 두지 않는다. 모델 원본은 임포트했든 경고만 했든 처리한 것이고 `.mesh` 는 처리하지 않은 것이다.
          */
-        [[nodiscard]] static bool importChangedSourceModel( const AssetPaths& assetPaths, string_view relativePath );
+        static void importChangedSources( AssetSourceBatch& batch );
 
         /**
          * @brief 리소스 루트 아래 모든 `models_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면 어긋난 원본을 임포트합니다.

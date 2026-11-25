@@ -57,7 +57,7 @@ namespace sw::editor
             static EditorAssetMatchRule makeRawHeightfieldRule()
             {
                 EditorAssetMatchRule rule = EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, kArrHeightfieldRawExt, SW_COUNT_OF( kArrHeightfieldRawExt ), EditorAssetMatchPriority::Path,
-                                                                            { nullptr, &HeightfieldImporter::importChangedSourceHeightfield, AssetImportThread::WorkerParallel } );
+                                                                            { nullptr, nullptr, &HeightfieldImporter::importChangedSources } );
                 rule._pfnAcceptPath       = &HeightfieldImporter::isRawHeightfieldPath;
                 return rule;
             }
@@ -100,11 +100,11 @@ namespace sw::editor
             EditorAssetMatchRule::engineType( LocalizationProject::kAssetType, { "StringTable" } ),
             EditorAssetMatchRule::engineType( UIStyleSheetAsset::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::suffixes( EditorAssetMatchMode::EndsWith, BuiltinAssetTypesInternal::kArrModuleDataSuffix, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrModuleDataSuffix ),
-                                            EditorAssetMatchPriority::Suffix, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ),
+                                            EditorAssetMatchPriority::Suffix, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, nullptr, AssetReferenceUse::InlinedAtLoad } ),
             EditorAssetMatchRule::engineType( AudioMixerDef::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::engineType( AudioEventLibrary::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrDataXMLExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrDataXMLExt ),
-                                            EditorAssetMatchPriority::Catchall, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ),
+                                            EditorAssetMatchPriority::Catchall, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, nullptr, AssetReferenceUse::InlinedAtLoad } ),
             EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrDataJSONExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrDataJSONExt ),
                                             EditorAssetMatchPriority::Catchall ),
         };
