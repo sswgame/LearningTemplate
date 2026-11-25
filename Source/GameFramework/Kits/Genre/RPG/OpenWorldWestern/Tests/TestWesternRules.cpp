@@ -38,10 +38,10 @@ namespace
     <Action id="help" delta="300"/>
     <Action id="brand" delta="-900"/>
   </Honor>
-  <Horse id="steady" health="100" stamina="100" courage="0.5" gallopDrain="12" coreDrain="2" gallopCoreDrain="6" fearDecay="0.25" buckChance="0"/>
-  <Horse id="wild" courage="0" buckChance="1"/>
-  <Horse id="coin" courage="0" buckChance="0.5"/>
-  <Horse id="slowmend" health="100" stamina="100" gallopDrain="12" staminaRegenRatio="0.01" exhaustRatio="1"/>
+  <Horse id="steady" health="100" stamina="100" courage="0.5" gallopDrain="12" coreDrain="2" gallopCoreDrain="6" fearDecay="0.25" buckChance="0" healthRegenRatio="0.02" healthRegenDelay="3" staminaRegenRatio="0.1" staminaRegenDelay="1" exhaustRatio="0.25"/>
+  <Horse id="wild" courage="0" buckChance="1" healthRegenRatio="0.02" healthRegenDelay="3" staminaRegenRatio="0.1" staminaRegenDelay="1" exhaustRatio="0.25"/>
+  <Horse id="coin" courage="0" buckChance="0.5" healthRegenRatio="0.02" healthRegenDelay="3" staminaRegenRatio="0.1" staminaRegenDelay="1" exhaustRatio="0.25"/>
+  <Horse id="slowmend" health="100" stamina="100" gallopDrain="12" staminaRegenRatio="0.01" exhaustRatio="1" healthRegenRatio="0.02" healthRegenDelay="3" staminaRegenDelay="1"/>
   <Bond level="1" xp="0"/>
   <Bond level="2" xp="10" unlocks="rear" stamina="10" fearResist="0.1"/>
   <Bond level="3" xp="30" unlocks="drift,piaffe" stamina="20" health="5" fearResist="0.3"/>
@@ -50,7 +50,7 @@ namespace
   <Food id="apple" healthCore="5"/>
   <Food id="stew" healthCore="30" staminaCore="40" deadEyeCore="50" health="10" stamina="20"/>
   <Clothing id="coat" warmth="15"/>
-  <Survival comfortMin="5" comfortMax="30" coreDrain="1.5" temperatureDrain="0.5" minRegenScale="0.2" staminaRegen="15" deadEyeDrain="20" deadEyeMinimum="10"/>
+  <Survival comfortMin="5" comfortMax="30" coreDrain="1.5" temperatureDrain="0.5" minRegenScale="0.2" staminaRegen="15" deadEyeDrain="20" deadEyeMinimum="10" healthRegenDelay="4" staminaRegenDelay="1" deadEyeRegenDelay="2" exhaustRatio="0.2"/>
   <DeadEye level="2" timeScale="0.4" marks="3"/>
   <DeadEye level="1" timeScale="0.5" marks="0"/>
   <Animal id="deer" size="Medium" quality="3" pelt="1.5" carcass="3" decayHours="48" loot="deer_parts"/>

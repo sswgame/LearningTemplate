@@ -2,12 +2,12 @@
 <?asset guid="7339dc8b0e2e455adadbf6caa677bfb2"?>
 <!--
   서부 평원의 서부극 카탈로그(GF_OpenWorldWestern `WesternCatalog`) — 디렉터 `_westernDataPath` 가 가리킨다.
-  말: 품종 둘, 말 먹이(시나리오 `<FeedHorse>`), 유대. 말 오브젝트의 `WesternHorseComponent::_breed` 가 `<Horse id>` 다.
+  말: 품종 둘, 말 먹이(시나리오 `<FeedHorse>`), 유대. 말 오브젝트의 `WesternHorseComponent::_breed` 가 `<Horse id healthRegenRatio="0.02" healthRegenDelay="3" staminaRegenRatio="0.1" staminaRegenDelay="1" exhaustRatio="0.25">` 다.
   플레이어(`WesternOutlaw`): 범죄 · 지역 · 추적 · 명예 · 생존 · 음식 · 옷 · 사냥. 평원 동쪽 마을(prairie 씬의 `WesternDeedComponent`)이 id 로 쓴다. 빠른 반응을 보이려 신고 · 식는 시간을 짧게 잡았다.
 -->
 <WesternCatalog currency="Dollar" extraHitPenalty="1">
-	<Horse id="morgan" health="110" stamina="100" speed="1.0" courage="0.6" gallopDrain="14" coreDrain="2" gallopCoreDrain="6"/>
-	<Horse id="mustang" health="90" stamina="80" speed="1.1" courage="0.4" gallopDrain="18" coreDrain="2" gallopCoreDrain="8"/>
+	<Horse id="morgan" health="110" stamina="100" speed="1.0" courage="0.6" gallopDrain="14" coreDrain="2" gallopCoreDrain="6" healthRegenRatio="0.02" healthRegenDelay="3" staminaRegenRatio="0.1" staminaRegenDelay="1" exhaustRatio="0.25"/>
+	<Horse id="mustang" health="90" stamina="80" speed="1.1" courage="0.4" gallopDrain="18" coreDrain="2" gallopCoreDrain="8" healthRegenRatio="0.02" healthRegenDelay="3" staminaRegenRatio="0.1" staminaRegenDelay="1" exhaustRatio="0.25"/>
 	<Food id="oats" stamina="100" staminaCore="10"/>
 	<Food id="jerky" healthCore="25" staminaCore="25" health="20"/>
 	<Crime id="theft" reportTime="1" bounty="25" wanted="1" honor="-20"/>

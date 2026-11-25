@@ -32,8 +32,8 @@ namespace
   <Move id="toxin" name="Toxin" type="Normal" category="Status" status="Toxic" statusChance="100" accuracy="0"/>
   <Move id="burnup" name="Burnup" type="Fire" category="Status" status="Burn" statusChance="100" accuracy="0"/>
   <Move id="rainfall" name="Rainfall" type="Water" category="Status" weather="Rain"/>
-  <Nature id="Adamant" up="Attack" down="SpecialAttack"/>
-  <Nature id="Plain"/>
+  <Nature id="Adamant" up="Attack" down="SpecialAttack" upPercent="110" downPercent="90"/>
+  <Nature id="Plain" upPercent="110" downPercent="90"/>
   <Nature id="Fierce" up="Attack" down="Speed" upPercent="125" downPercent="80"/>
   <Weather id="Rain" boost="Water" weaken="Fire" turns="2"/>
   <Weather id="Sand" chip="16" immune="Rock" turns="5"/>
@@ -1453,7 +1453,7 @@ SW_TEST_CASE( MonsterCollectorTest, DuplicateIDKeepsTheFirstDefinition )
   <Move id="m" name="First" power="1"/><Move id="m" name="Second" power="2"/>
   <Species id="s" name="First" types="Fire" stats="1 1 1 1 1 1"/><Species id="s" name="Second" types="Fire" stats="2 2 2 2 2 2"/>
   <Weather id="w" turns="1"/><Weather id="w" turns="2"/>
-  <Nature id="n" up="Speed"/><Nature id="n" up="Defense"/>
+  <Nature id="n" up="Speed" upPercent="110" downPercent="90"/><Nature id="n" up="Defense" upPercent="110" downPercent="90"/>
 </MonsterCollectorCatalog>)",
                                               "MonsterTest" ) );
     SW_EXPECT_EQUAL( 1, catalog.findMove( "m" )->_power );
