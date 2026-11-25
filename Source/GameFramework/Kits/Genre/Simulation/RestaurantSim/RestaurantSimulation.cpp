@@ -406,7 +406,8 @@ namespace sw
         }
         const bool bRepeatedLine = VectorUtil::findDuplicateBy<&MenuEntry::_dishID>( _listMenu ) != nullptr || VectorUtil::findDuplicateBy<&StationSlot::_station>( _listStation ) != nullptr;
         // 별점 창보다 많은 만족도는 `pushSatisfaction` 이 남기지 않는다.
-        const size_t ratingWindow = static_cast<size_t>( _pCatalog != nullptr ? _pCatalog->getRatingWindow() : 10 );
+        // 카탈로그 없는 판은 손님 · 주문이 없어야 하듯(위) 만족도도 없어야 한다 — 창 0.
+        const size_t ratingWindow = _pCatalog != nullptr ? static_cast<size_t>( _pCatalog->getRatingWindow() ) : size_t{ 0 };
         if ( bRepeatedLine || _listSatisfaction.size() > ratingWindow || VectorUtil::findDuplicateBy<&RestaurantCustomer::_id>( _listCustomer ) != nullptr )
             return false;
 
@@ -849,7 +850,7 @@ namespace sw
     void RestaurantSimulation::pushSatisfaction( float32 satisfaction )
     {
         _listSatisfaction.push_back( satisfaction );
-        const size_t window = static_cast<size_t>( _pCatalog != nullptr ? _pCatalog->getRatingWindow() : 10 );
+        const size_t window = static_cast<size_t>( _pCatalog->getRatingWindow() ); // 손님이 떠날 때만 부른다 — 손님은 카탈로그가 있는 판에만 있다
         if ( _listSatisfaction.size() > window )
             _listSatisfaction.erase( _listSatisfaction.begin(), _listSatisfaction.begin() + static_cast<ptrdiff_t>( _listSatisfaction.size() - window ) );
     }

@@ -1076,3 +1076,18 @@ SW_TEST_CASE_F( PartyArenaRulesTest, ArenaDeterminism )
     };
     SW_EXPECT_TRUE( StateBytesTestUtil::isDeterministic<TrampolineArena>( setup, step, 240 ) );
 }
+
+/** @brief [PartyArenaRulesTest] 튕김 판정 창은 설정 칸이다 — Good 창이 Perfect 창보다 좁은 설정은 거절하고 넓은 설정은 받는다 */
+SW_TEST_CASE_F( PartyArenaRulesTest, BounceWindowsComeFromTheSettings )
+{
+    SW_EXPECT_LOG( "TrampolineArena.TrampolineArenaRefusedWindows" );
+    TrampolineSettings inverted = _settings;
+    inverted._perfectWindow     = 0.2f;
+    inverted._goodWindow        = 0.1f;
+    SW_EXPECT_FALSE( _arena.initialize( inverted, 2, 0.0f, 0, 5u ) );
+
+    TrampolineSettings wide = _settings;
+    wide._perfectWindow     = 0.08f;
+    wide._goodWindow        = 0.3f;
+    SW_EXPECT_TRUE( _arena.initialize( wide, 2, 0.0f, 0, 5u ) );
+}

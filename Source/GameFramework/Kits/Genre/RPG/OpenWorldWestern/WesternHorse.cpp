@@ -190,8 +190,8 @@ namespace sw
 
     float32 WesternHorse::computeRegenScale( float32 core ) const
     {
-        const float32 minScale = _pCatalog != nullptr ? _pCatalog->getSurvival()._minRegenScale : 0.2f;
-        return MathUtil::lerp( minScale, 1.0f, MathUtil::saturate( core / kCoreMax ) );
+        // `update` 가 말 정의(`_pDef`)가 있을 때만 부른다 — 정의는 카탈로그에서 나오므로 카탈로그도 있다.
+        return MathUtil::lerp( _pCatalog->getSurvival()._minRegenScale, 1.0f, MathUtil::saturate( core / kCoreMax ) );
     }
 
     void WesternHorse::pollEvents( vector<WesternHorseEvent>& outListEvent )

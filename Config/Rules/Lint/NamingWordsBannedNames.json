@@ -2224,6 +2224,7 @@
     "kNameTTLMs": "LeaderboardKitConfig::_nameCacheTTLMs — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
     "kReportContextCount": "ChatKitConfig::_reportContextCount — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
     "kMaxClaimAllCount": "MailboxKitConfig::_maxClaimAllCount — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
-    "kMaxClaimAllScanCount": "MailboxKitConfig::_maxClaimAllScanCount — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)"
+    "kMaxClaimAllScanCount": "MailboxKitConfig::_maxClaimAllScanCount — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
+    "setTimingWindows": "TrampolineSettings::_perfectWindow · _goodWindow — 판정 창은 설정 칸이 정한다 (2026-11-25)"
   }
 }

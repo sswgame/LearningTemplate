@@ -203,8 +203,8 @@ namespace sw
 
     float32 WesternSurvival::computeRegenScale( WesternCore core ) const
     {
-        const float32 minScale = _pCatalog != nullptr ? _pCatalog->getSurvival()._minRegenScale : 0.2f;
-        return MathUtil::lerp( minScale, 1.0f, MathUtil::saturate( getCore( core ) / kCoreMax ) );
+        // `update` 가 카탈로그가 있을 때만 부른다.
+        return MathUtil::lerp( _pCatalog->getSurvival()._minRegenScale, 1.0f, MathUtil::saturate( getCore( core ) / kCoreMax ) );
     }
 
     void WesternSurvival::serializeState( StateIO& io )
