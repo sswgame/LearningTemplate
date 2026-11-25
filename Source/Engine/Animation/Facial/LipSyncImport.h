@@ -25,7 +25,7 @@ namespace sw
         static string makeCompanionTrackPath( string_view assetID );
         /**
          * @brief `Content/` 아래 음성마다 트랙을 씁니다.
-         * @param outputRoot 비면 음성 곁(소스 트리 — 에디터 · 사람이 쓰는 길)에, 아니면 이 폴더 아래 같은 리소스 상대 경로에 쓴다(`-lipsync-dir` — 테스트가 소스 트리를 건드리지 않게,
+         * @param outputRoot 비면 음성 곁(소스 트리, 에디터 · 사람이 쓰는 길)에, 아니면 이 폴더 아래 같은 리소스 상대 경로에 쓴다(`-lipsync-dir`. 테스트가 소스 트리를 건드리지 않게,
          *                   언리얼 커맨들릿이 출력 경로를 인자로 받는 것과 같다).
          * @return 쓴 트랙 수입니다. 읽거나 쓰지 못한 음성은 @p outFailedCount 에 셉니다.
          */

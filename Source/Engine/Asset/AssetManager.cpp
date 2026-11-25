@@ -141,7 +141,7 @@ namespace sw
 
     bool AssetManager::mountContent( const vector<string>& listSearchPriority, ContentSource source )
     {
-        // 우선순위 적용과 마운트를 **여기서 붙여 둔다.** 둘을 호출자에게 맡기면 순서를 뒤집거나
+        // 우선순위 적용과 마운트를 여기서 붙여 둔다. 둘을 호출자에게 맡기면 순서를 뒤집거나
         // 사이에 다른 것을 끼워 넣을 수 있고, 실제로 그래서 팩이 게임 도메인 없이 실린 적이 있다.
         if ( listSearchPriority.empty() == false )
             engine::getSubsystem<AssetPaths>().setSearchPriority( listSearchPriority );
@@ -201,7 +201,7 @@ namespace sw
             _pPackManager->unmountAll();
 
         clearAssetCaches();
-        // 비운 **뒤에** 말한다. 여기까지 왔다는 것은 죽은 포인터를 아직 밟지 않았다는 뜻이고,
+        // 비운 뒤에 말한다. 여기까지 왔다는 것은 죽은 포인터를 아직 밟지 않았다는 뜻이고,
         // 다음 실행에서 같은 일이 반복되지 않게 이름을 남겨야 한다.
         warnAboutRemainingModuleCaches();
     }
@@ -345,7 +345,7 @@ namespace sw
             if ( isBuiltInAssetCache( _registeredAssetCache.getAt( index ) ) )
                 continue;
 
-            // 이름은 사본이라 안전하다. 포인터는 이미 죽었을 수도 있어 **역참조하지 않는다.**
+            // 이름은 사본이라 안전하다. 포인터는 이미 죽었을 수도 있어 역참조하지 않는다.
             SW_LOG_WARNING_ID( "AssetManager.AssetCacheStillRegistered", "Asset cache '%#' is still registered - the registering side (module) must call "
                                                                          "release its registerAssetCache subscription before it goes down. Otherwise the next clear jumps into dead code.",
                                _registeredAssetCache.getNameAt( index ).c_str() );

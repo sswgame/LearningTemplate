@@ -51,7 +51,7 @@ namespace sw
 {
     /**
      * @struct SkeletonAttachment
-     * @brief 원본(glTF)에서 본 아래에 붙어 있던 스킨 없는 메시 하나입니다. **임포트가 기록하는 읽기 전용 데이터**입니다.
+     * @brief 원본(glTF)에서 본 아래에 붙어 있던 스킨 없는 메시 하나입니다. 임포트가 기록하는 읽기 전용 데이터입니다.
      * @details 소켓은 이 테이블이 아니라 따로 둔 소켓 에셋(`*.sockets.xml`)이 정한다. 재임포트가 이 파일을 다시 쓰기 때문이다.
      *          이 테이블은 그 소켓 파일을 처음 만들 때(무기나 투구가 어느 본의 어디에 있었는지) 읽는 근거다.
      */
@@ -95,7 +95,7 @@ namespace sw
      * @struct SkeletonBoneOverride
      * @brief 변형이 부모의 본 하나를 고치는 차이입니다 — 기준 포즈와, 비율이 달라진 이 본에 클립을 재생하는 규칙입니다.
      * @details 기준 포즈는 `이동 * _translationScale + _translationOffset`, `_rotation * 회전`, `크기 * _scale` 이다. 클립의 회전과 크기 트랙에는 같은 차이를 곱하고,
-     *          이동 트랙은 `_translationMode` 로 옮긴다 — 리타깃과 같은 뜻이다(`RetargetTranslationMode`): None 은 이 스켈레톤의 기준 이동(뼈 길이를 지킨다 — 언리얼 Translation Retargeting 의
+     *          이동 트랙은 `_translationMode` 로 옮긴다. 리타깃과 같은 뜻이다(`RetargetTranslationMode`): None 은 이 스켈레톤의 기준 이동(뼈 길이를 지킨다, 언리얼 Translation Retargeting 의
      *          Skeleton 과 같고 기본값이다), Copy 는 클립 값, ScaleByPelvisHeight 는 부모 기준에서 움직인 양을 골반 높이 비로 옮긴 값(골반 · 루트에 쓴다).
      */
     REFLECT()
@@ -135,7 +135,7 @@ namespace sw
      * @struct SkeletonVariant
      * @brief 부모 스켈레톤을 가리키고 차이만 적는 `.skeleton.xml` 의 내용입니다(루트 요소 `<SkeletonVariant>`). 읽으면 부모와 합친 `Skeleton` 이 됩니다(`Skeleton::applyVariant`).
      * @details 언리얼 USkeleton 은 뼈가 메시를 따라 합쳐지고 Virtual Bone 이 그 위에 더해지며, Godot SkeletonProfile · 유니티 Avatar 는 매핑표다 — 여기서는 파일 하나가 차이를 적어 데이터로 쌓는다(변형의 변형도 된다).
-     *          차이는 뒤에 붙이는 본 · 본 고치기 · 소켓뿐이다. **본 삭제는 받지 않는다** — 번호가 밀리면 부모의 메시(`MeshSkinVertex`) · 클립 지문 · 본 배치 지문(`getHierarchyHash`)이 모두 깨진다.
+     *          차이는 뒤에 붙이는 본 · 본 고치기 · 소켓뿐이다. 본 삭제는 받지 않는다 — 번호가 밀리면 부모의 메시(`MeshSkinVertex`) · 클립 지문 · 본 배치 지문(`getHierarchyHash`)이 모두 깨진다.
      *          평가를 빼려면 본 LOD(`SkeletonBoneLOD`), 섞기에서 빼려면 마스크(`AnimationBoneMaskDef`), 보이지 않게 하려면 `_scale` 0 을 쓴다.
      *          `_base` 의 사슬(순환 · 깊이 · 없는 부모)은 공통 데이터 상속의 것이다(`DataInheritance::collectChain`). 칸 합치기만 칸별 덮어쓰기로 풀리지 않아(본을 뒤에 붙이고 비율 · 클립 규칙을 쌓는다) `applyVariant` 한 함수에 있다.
      *          합친 결과는 부모와 같은 평평한 `<Skeleton>` 글이다(`Skeleton::mergeVariantText`, `SW_DATA_INHERITANCE_MERGE`) — 읽기와 팩 쿠커가 같은 함수를 지나므로 쿠킹본에 `_base` 가 남지 않는다. "부모의 본 번호를 바꾸지 않는다" 는 합친 뒤에 본다.
@@ -242,7 +242,7 @@ namespace sw
 
         /**
          * @brief 본 하나를 끝에 붙이고 그 인덱스를 반환합니다.
-         * @param parentIndex 부모 본 인덱스(저장 형식 그대로 루트는 -1). **이미 추가된 본만 가리킬 수 있습니다** — 아니면 아무것도 추가하지 않고 그 이유(대상은 본 이름)입니다.
+         * @param parentIndex 부모 본 인덱스(저장 형식 그대로 루트는 -1). 이미 추가된 본만 가리킬 수 있습니다 — 아니면 아무것도 추가하지 않고 그 이유(대상은 본 이름)입니다.
          */
         [[nodiscard]] expected<int32> addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose );
         /** @brief 레퍼런스 포즈를 바인드로 삼은 메시의 역 바인드를 본마다 구합니다(코드가 지은 메시와 테스트용 — 임포트한 메시는 원본의 값을 싣는다). */

@@ -30,7 +30,7 @@ namespace sw
         constexpr uint32 kFourCC_ATI2 = FourCCUtil::make( "ATI2" );
         constexpr uint32 kFourCC_BC5U = FourCCUtil::make( "BC5U" );
 
-        // D3DFMT 열거값이 그대로 들어앉은 FourCC — **네 글자 코드가 아니다.**
+        // D3DFMT 열거값이 그대로 들어앉은 FourCC — 네 글자 코드가 아니다.
         // D3D9 시절 DDS 라이터는 부동소수점 포맷에 네 글자 이름을 주지 않고 `D3DFORMAT` 의 정수를
         // dwFourCC 에 밀어 넣었다. 그래서 값이 0x71 같은 작은 수로 보인다. 이 저장소의 임포터는 DX10 머리를 쓰므로
         // 이 모양은 밖에서 들여온 DDS 에만 있다(`DDSLoaderTest.LegacyHeadersMapToDXGIFormats`).
@@ -259,8 +259,8 @@ namespace sw
 
     bool DDSLoader::loadFromMemory( const uint8* pBuffer, size_t bufferSize, DDSImageData& outImage )
     {
-        // **실패는 출력에 아무것도 남기지 않는다.** 나가는 길이 여섯 군데인데 그중 넷은 크기를
-        // 이미 채운 뒤에 있다. 그래서 여기서 비우고, 파싱은 지역 변수에 한 뒤 **성공했을 때만**
+        // 실패는 출력에 아무것도 남기지 않는다. 나가는 길이 여섯 군데인데 그중 넷은 크기를
+        // 이미 채운 뒤에 있다. 그래서 여기서 비우고, 파싱은 지역 변수에 한 뒤 성공했을 때만
         // 옮긴다. "실패 경로마다 잊지 말고 비우기" 를 사람이 지키는 대신 구조로 못 박는다.
         outImage = DDSImageData{};
 
@@ -378,7 +378,7 @@ namespace sw
         if ( bBgraFormat )
             image._bIsBgra = 1;
 
-        // **못 알아본 포맷은 실패다.** `_dxgiFormat == 0` 인 채로 true 를 돌려주면 알아보지 못한 이미지가
+        // 못 알아본 포맷은 실패다. `_dxgiFormat == 0` 인 채로 true 를 돌려주면 알아보지 못한 이미지가
         // "성공적으로 로드된 이미지" 로 흘러 나간다(`isValid()` 도 포맷을 본다).
         if ( image._dxgiFormat == kDXGIFormatUnknown )
         {

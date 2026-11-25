@@ -2,11 +2,11 @@
  * @file AudioService.h
  * @brief 오디오 서비스입니다. 엔진(`AudioEngine`: 믹서 그래프, 보이스, 이벤트, 음악)과 출력 장치(`IAudioOutputDevice`, 합성)를 하나씩 가집니다.
  *
- * @note **볼륨과 음소거는 이 서비스가 관리합니다.** 값 범위(0~1 클램프)와 "음소거는 master 버스에만 건다"는 규칙은 여기에만 적습니다.
+ * @note 볼륨과 음소거는 이 서비스가 관리합니다. 값 범위(0~1 클램프)와 "음소거는 master 버스에만 건다"는 규칙은 여기에만 적습니다.
  *       값은 같은 이름의 믹서 버스 사용자 볼륨으로 엔진에 전달됩니다.
- * @note **장치가 없으면**(Null 백엔드, 장치를 열지 못한 Windows, 테스트) `update` 가 흐른 시간만큼 엔진을 버퍼에 렌더합니다.
+ * @note 장치가 없으면(Null 백엔드, 장치를 열지 못한 Windows, 테스트) `update` 가 흐른 시간만큼 엔진을 버퍼에 렌더합니다.
  *       재생 상태(끝남, 음악 박자, 가상 보이스)는 장치가 있을 때와 같이 진행합니다. 렌더한 블록은 리스너 등록(`AudioRenderListener.h` — 개발 덤프 `DevTools/Client/Audio/AudioDumpListener.cpp` 가 붙는다)에 넘깁니다.
- * @note **출력 형식은 협상합니다.** 백엔드가 장치를 열어 채널 수와 마스크를 알려 주면(`openDevice`), 스피커 모드(`audio.speakerMode` → `setSpeakerMode`)로 레이아웃을
+ * @note 출력 형식은 협상합니다. 백엔드가 장치를 열어 채널 수와 마스크를 알려 주면(`openDevice`), 스피커 모드(`audio.speakerMode` → `setSpeakerMode`)로 레이아웃을
  *       정하고(`resolveLayout`) 엔진을 그 레이아웃으로 만든 뒤 장치가 엔진을 당기기 시작합니다(`startOutput`). 장치가 그만큼의 채널을 갖지 않는 명시 모드는 오류로 멈춥니다.
  */
 #pragma once
@@ -153,7 +153,7 @@ namespace sw
         bool play( const AssetID& assetID, const hashed_string& bus = hashed_string{} );
 
         /**
-         * @brief 소리를 **지금** 디코드해 캐시에 올립니다. 언리얼의 사운드 프리캐시, 유니티의 `AudioClip.LoadAudioData` 에 해당합니다.
+         * @brief 소리를 지금 디코드해 캐시에 올립니다. 언리얼의 사운드 프리캐시, 유니티의 `AudioClip.LoadAudioData` 에 해당합니다.
          * @details 디코드할 수 없는 형식이거나 파일이 없으면 false 를 반환한다.
          */
         bool preload( string_view path );
@@ -220,7 +220,7 @@ namespace sw
 
         /**
          * @brief 전체 음소거 여부를 설정합니다.
-         * @details 음소거는 **master 버스에만** 건다. 다른 버스는 자기 볼륨만 가지고 있으므로, 음소거 중에 볼륨을 바꿔도 음소거를 풀면
+         * @details 음소거는 master 버스에만 건다. 다른 버스는 자기 볼륨만 가지고 있으므로, 음소거 중에 볼륨을 바꿔도 음소거를 풀면
          *          그 값으로 돌아온다.
          */
         void setMute( bool bMute );

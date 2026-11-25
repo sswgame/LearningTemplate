@@ -474,7 +474,7 @@ namespace sw
             return false;
         if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingID ) )
             return true;
-        // 있는 곡인지 **멈추기 전에** 확인한다. 없는 곡을 요청했다가 재생 중이던 BGM 만 꺼지면 안 된다.
+        // 있는 곡인지 멈추기 전에 확인한다. 없는 곡을 요청했다가 재생 중이던 BGM 만 꺼지면 안 된다.
         if ( AssetIO::hasAsset( assetID ) == false )
         {
             SW_LOG_ERROR_ID( "AudioService.AudioResourceNotFound", "Audio resource not found: %#", path );

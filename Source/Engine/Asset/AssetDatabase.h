@@ -50,7 +50,7 @@ namespace sw
         PROPERTY( Required )
         vector<string> _listOutputSuffix; ///< 그 원본에서 나오는 산출물의 접미사 — 나오지 않는 종류(손으로 적은 글)는 이 폴더에서 풀리지 않는다
         PROPERTY( Required )
-        bool _bGeneratedReferrers{ false }; ///< 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bGeneratedReferrers{ false }; ///< 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다. 임포터의 몫이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /** @brief 임포트 산출물 자리 하나가 가리킬 수 있는 원본 하나입니다(`AssetIdentityRules::collectImportedSources`). */
@@ -130,7 +130,7 @@ namespace sw
         // 디스크의 에셋 파일 하나의 정체성 — 에디터 새로 만들기 · 복제 · 가져오기(새 GUID)와 내용 바꾸기(GUID 유지)가 함께 지난다. 자리는 `classify` 가 정한다.
         // ------------------------------------------------------------------------------
         /**
-         * @brief 디스크 파일 @p absPath(리소스 id @p assetID — 경로는 id 로 끝난다)의 GUID 입니다 — 우리 형식 글은 머리, 원본은 곁의 `.meta`, 임포트 산출물은 원본의 `.meta` 와 산출물 이름.
+         * @brief 디스크 파일 @p absPath(리소스 id @p assetID, 경로는 id 로 끝난다)의 GUID 입니다. 우리 형식 글은 머리, 원본은 곁의 `.meta`, 임포트 산출물은 원본의 `.meta` 와 산출물 이름.
          * @return 정체성이 없거나 읽지 못하면 없음입니다.
          */
         [[nodiscard]] optional<AssetGUID> readIdentity( const AbsolutePath& absPath, string_view assetID ) const;

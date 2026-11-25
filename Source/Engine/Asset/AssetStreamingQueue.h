@@ -16,7 +16,7 @@ namespace sw
      * @enum StreamingPriority
      * @brief 에셋 비동기 스트리밍 우선순위입니다. 요청 태스크의 `TaskPriority` 로 변환됩니다(`AssetStreamingQueue::toTaskPriority`).
      * @details Low 와 Normal 은 백그라운드 I/O 큐(`TaskPriority::Low`. 워커가 다른 일이 없을 때 가져간다)를 쓰고, High 와 Immediate 는 일반 큐
-     *          (`TaskPriority::Normal`)를 쓴다. **`TaskPriority::High` 는 쓰지 않는다.** 그 큐는 렌더 기록과 물리 전용이고 병렬 그룹의 청크 사이에서도
+     *          (`TaskPriority::Normal`)를 쓴다. `TaskPriority::High` 는 쓰지 않는다. 그 큐는 렌더 기록과 물리 전용이고 병렬 그룹의 청크 사이에서도
      *          비우므로, 거기 놓인 파일 읽기는 프레임 잡을 멈춘다. 이미 진행 중인 같은 경로의 요청에 붙은 요청은 그 태스크의 우선순위를 따른다.
      */
     enum class StreamingPriority : uint8
@@ -102,7 +102,7 @@ namespace sw
         bool isStreaming( string_view assetPath ) const;
 
         /**
-         * @brief **성공적으로** 끝난 요청인지 반환합니다. 실패한 적이 있는 경로는 false 입니다.
+         * @brief 성공적으로 끝난 요청인지 반환합니다. 실패한 적이 있는 경로는 false 입니다.
          * @details 결과 기록에 경로가 있다는 것과 그 에셋을 읽었다는 것은 다른 말이다. 실패도
          *          기록되기 때문이다. 키만 보면 없는 파일을 한 번 요청한 뒤로 영원히 "로드됨"이라고 답한다.
          */
@@ -110,7 +110,7 @@ namespace sw
 
         size_t getPendingCount() const;
 
-        /** @brief 끝난 요청의 수입니다. **실패한 것도 셉니다**(끝나기는 했습니다). */
+        /** @brief 끝난 요청의 수입니다. 실패한 것도 셉니다(끝나기는 했습니다). */
         size_t getCompletedCount() const;
 
         /** @brief 스트리밍 우선순위에 대응하는 태스크 우선순위입니다(`StreamingPriority` 설명의 테이블). */
@@ -155,7 +155,7 @@ namespace sw
          * @param bytes 데이터 콜백에 넘길 바이트. 마지막 콜백이 가져가고 나머지는 사본을 받습니다.
          */
         void completeRequestLocked( const string& pathStr, bool bSuccess, vector<uint8>&& bytes );
-        /** @brief 리소스를 찾아 바이트 읽기를 비동기 IO 에 요청합니다(찾기 태스크, 워커). **`_mutex` 를 쥐지 않고** 부릅니다(IO 에 제출한 뒤에는 완료가 이 스레드에서 바로 올 수 있습니다). */
+        /** @brief 리소스를 찾아 바이트 읽기를 비동기 IO 에 요청합니다(찾기 태스크, 워커). `_mutex` 를 쥐지 않고 부릅니다(IO 에 제출한 뒤에는 완료가 이 스레드에서 바로 올 수 있습니다). */
         void issueDataRead( const string& pathStr, uint64 generation, StreamingPriority priority );
         /** @brief 비동기 IO 가 끝났을 때 부릅니다(태스크 워커). 세대가 맞으면 요청을 끝냅니다. */
         void onDataRead( const string& pathStr, uint64 generation, bool bSuccess, vector<uint8>& bytes );
@@ -170,17 +170,17 @@ namespace sw
         mutable mutex _mutex;
         /**
          * @brief 끝난 요청의 결과입니다(경로 → 성공 여부).
-         * @warning **키가 있다는 것은 "끝났다"는 뜻이지 "읽었다"는 뜻이 아닙니다.** 실패도 여기 들어옵니다.
-         *          그래서 이 테이블을 읽는 쪽은 **값까지** 보아야 합니다.
+         * @warning 키가 있다는 것은 "끝났다"는 뜻이지 "읽었다"는 뜻이 아닙니다. 실패도 여기 들어옵니다.
+         *          그래서 이 테이블을 읽는 쪽은 값까지 보아야 합니다.
          */
         unordered_map<string, bool> _mapAssetResult;
         unordered_set<string>       _uniqueActiveRequest;
         /**
-         * @brief 진행 중인 요청 가운데 **바이트까지 읽는** 것들입니다.
+         * @brief 진행 중인 요청 가운데 바이트까지 읽는 것들입니다.
          * @details `requestAsset`(있는지만 봅니다)과 `requestAssetData`(바이트를 읽습니다)가 같은
          *          `_uniqueActiveRequest` 를 함께 쓴다. 존재 확인이 진행 중일 때 들어온 데이터 요청이
-         *          **그 태스크에 편승**하면, 그 태스크는 파일을 읽지 않으므로 데이터 콜백이 `bSuccess = true` 와
-         *          **빈 버퍼**를 받는다. 그래서 바이트까지 읽는 요청을 따로 센다.
+         *          그 태스크에 편승하면, 그 태스크는 파일을 읽지 않으므로 데이터 콜백이 `bSuccess = true` 와
+         *          빈 버퍼를 받는다. 그래서 바이트까지 읽는 요청을 따로 센다.
          *
          *          진행 중인 것이 어느 쪽인지 알아야 "편승해도 되는가"를 가릴 수 있다.
          */
@@ -204,7 +204,7 @@ namespace sw
         /** @brief 이 큐가 낸 태스크(찾기 · 존재 확인)만 든다. `shutdown` 은 엔진 전체(`TaskManager::waitAll`)가 아니라 이것만 기다린다 — 영구 태스크가 종료를 막지 않게. */
         TaskStageHandle _taskStage SW_GUARDED_BY( _mutex ); ///< 이 큐가 낸 태스크의 스테이지(처음 낼 때 만든다 — 종료가 이것만 기다린다)
         /**
-         * @brief `update` 가 부를 완료 목록입니다. **크기 상한이 없다.** 고정 용량 큐는 같은 경로에 콜백이 몰리면(편승 1024 개 초과) 넘친 완료를
+         * @brief `update` 가 부를 완료 목록입니다. 크기 상한이 없다. 고정 용량 큐는 같은 경로에 콜백이 몰리면(편승 1024 개 초과) 넘친 완료를
          *        말없이 버린다.
          */
         mutable mutex        _completedMutex;

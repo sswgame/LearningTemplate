@@ -191,15 +191,15 @@ namespace sw
     /**
      * @class SkeletalAnimatorComponent
      * @brief 같은 오브젝트의 `SkeletalMeshComponent`(유닛)에 단계 작업으로 붙어 포즈를 냅니다. 자기 onTick 에서 평가하지 않습니다.
-     * @details - **클립**: 상태 이름이 곧 클립 이름이고, 파일은 `_animationSetPath` 의 셋이 정합니다(`AnimationSet` — 임포트가 모델 옆에 쓰고, 묶음을 섞는 셋은 손으로 쓴다).
+     * @details - 클립: 상태 이름이 곧 클립 이름이고, 파일은 `_animationSetPath` 의 셋이 정합니다(`AnimationSet` — 임포트가 모델 옆에 쓰고, 묶음을 섞는 셋은 손으로 쓴다).
      *            이름에 '/' 가 있으면 클립 파일의 콘텐츠 경로(확장자 없이)다 — 미리보기 창이 고른 파일 하나를 재생할 때 쓴다.
-     *          - **그래프**: `_animationGraphPath` 의 노드가 상태, 링크가 전이입니다(`AnimationGraphPlayer`). 그래프가 없으면 `play( 이름 )` 이 바로 재생합니다.
-     *          - **연결 레이어**: 그래프의 `<layer slot>` 을 `_listLinkedLayer` 의 그래프로 채웁니다(언리얼 Linked Anim Layers). 채운 그래프는 자기 상태 기계로 돌고, 파라미터와 셋은 이 애니메이터의 것을 함께 씁니다.
+     *          - 그래프: `_animationGraphPath` 의 노드가 상태, 링크가 전이입니다(`AnimationGraphPlayer`). 그래프가 없으면 `play( 이름 )` 이 바로 재생합니다.
+     *          - 연결 레이어: 그래프의 `<layer slot>` 을 `_listLinkedLayer` 의 그래프로 채웁니다(언리얼 Linked Anim Layers). 채운 그래프는 자기 상태 기계로 돌고, 파라미터와 셋은 이 애니메이터의 것을 함께 씁니다.
      *            같은 트리거를 주 그래프와 함께 쓰면 먼저 도는 주 그래프가 끕니다. 언리얼은 인스턴스가 따로 변수를 들지만, 여기는 게임 코드가 레이어를 몰라도 되도록 한 벌로 둡니다.
-     *          - **단계**: 시간(상태 기계, 알림, 루트 모션, 커브. 매 프레임) → 기본 포즈(샘플, 크로스페이드, 레이어, 시퀀서 덮어쓰기. LOD 가
+     *          - 단계: 시간(상태 기계, 알림, 루트 모션, 커브. 매 프레임) → 기본 포즈(샘플, 크로스페이드, 레이어, 시퀀서 덮어쓰기. LOD 가
      *            허락한 프레임) → 게임 스레드에서 루트 모션을 오브젝트 트랜스폼에 씁니다.
-     *          - **핫 리로드**: 현재 상태와 시간을 PROPERTY(`_currentState`, `_stateTime`)로 보관해 모듈이 바뀌어도 그 자리에서 이어 갑니다.
-     *          - **루트 모션**: `_bExtractRootMotion` 이면 클립의 루트 모션 트랙 움직임을 오브젝트에 옮기고, 그 본은 클립 시작 위치에 고정합니다.
+     *          - 핫 리로드: 현재 상태와 시간을 PROPERTY(`_currentState`, `_stateTime`)로 보관해 모듈이 바뀌어도 그 자리에서 이어 갑니다.
+     *          - 루트 모션: `_bExtractRootMotion` 이면 클립의 루트 모션 트랙 움직임을 오브젝트에 옮기고, 그 본은 클립 시작 위치에 고정합니다.
      *            옮기기 전에 고치는 쪽(`IRootMotionModifier`. 모션 워핑)이 월드 이동과 회전을 바꿀 수 있고, 같은 오브젝트에 캐릭터 컨트롤러가 있으면
      *            이동은 컨트롤러가 질의로 처리합니다(`_bRootMotionThroughController`. 중력은 컨트롤러가 더합니다). 회전은 트랜스폼에 씁니다.
      */

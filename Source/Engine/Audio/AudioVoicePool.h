@@ -70,7 +70,7 @@ namespace sw
         void clear() { _listSlot.clear(); }
 
         /**
-         * @brief 우선순위 @p priority 의 새 보이스에 슬롯을 비운 채로 잡습니다. 빈 슬롯이 없으면 그보다 우선순위가 **낮은** 보이스 하나를 뺏습니다
+         * @brief 우선순위 @p priority 의 새 보이스에 슬롯을 비운 채로 잡습니다. 빈 슬롯이 없으면 그보다 우선순위가 낮은 보이스 하나를 뺏습니다
          *        (같은 우선순위 안에서는 가상 → 덜 들리는 것 → 나중에 낸 것 순서로 고른다). 뺏을 것도 없으면 nullptr 이고 버린 수를 셉니다.
          * @details 풀이 차면 우선순위와 상관없이 새 소리를 버렸다 — 총소리가 발소리 때문에 빠졌다(감사 S-10). 언리얼 `MaxConcurrentStreams` 의 낮은 우선순위 뺏기 ·
          *          유니티 `AudioSource.priority`(낮은 쪽이 먼저 빠진다)와 같은 규칙이다. 오디오 스레드는 로그를 남기지 않는다 — 수는 게시 상태(`AudioEngineStats`)로 나간다.

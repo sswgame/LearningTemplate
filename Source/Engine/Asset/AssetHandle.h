@@ -3,9 +3,9 @@
  * @brief 로드 상태(`Loading` · `Ready` · `Failed`)를 드러내는 에셋 핸들과, 핸들 여럿을 모아 준비를 묻는 준비 집합(`AssetReadySet`)입니다.
  * @details 언리얼 `FStreamableHandle` · 유니티 Addressables `AsyncOperationHandle` 과 같은 모양입니다. 종류별 캐시(`MeshCache` · `TextureCache` · `AudioClipCache`)가
  *          `request( path )` 로 핸들을 내고, 동기 API(`acquire` · `loadPrefab` · `getOrCompile`)는 같은 진행 중 표에서 로드 작업을 받아 `wait()` 합니다 — 비동기와 동기가
- *          **같은 로드 작업**을 탑니다. 다른 점은 새 로드를 어디서 시작하는가(`AssetLoadStart`) 하나입니다.
+ *          같은 로드 작업을 탑니다. 다른 점은 새 로드를 어디서 시작하는가(`AssetLoadStart`) 하나입니다.
  *
- *          한 로드는 두 단계입니다. **로드**(디스크 읽기 · 디코드, 어느 스레드든)와, 필요한 종류만 **완료**(GPU 업로드처럼 정해진 스레드에서만 되는 일)입니다.
+ *          한 로드는 두 단계입니다. 로드(디스크 읽기 · 디코드, 어느 스레드든)와, 필요한 종류만 완료(GPU 업로드처럼 정해진 스레드에서만 되는 일)입니다.
  *          각 단계는 먼저 집은(`claim`) 스레드 하나가 실행합니다. 워커 태스크가 아직 집지 않은 로드를 기다리는 쪽(`wait`)이 집으면 그 자리에서 실행하므로,
  *          워커가 모두 바쁜 때 워커 안에서 `wait` 해도 자기 일을 기다리며 멈추지 않습니다(태스크 풀 교착 없음).
  *
@@ -61,7 +61,7 @@ namespace sw
     /**
      * @class AssetLoadOperation
      * @brief 로드 하나의 공유 상태입니다. 핸들 · 캐시 · 워커 태스크가 `shared_ptr` 로 나눠 가집니다. 종류별 캐시가 이것을 상속해 단계 본문을 채웁니다.
-     * @details 단계 상태는 원자 워드 하나(`_phase`)이고, 기다리는 쪽은 그 워드에서 잠듭니다(`Futex`). 상태와 오류 문자열은 단계를 `Done` 으로 바꾸기 **전에** 쓰므로
+     * @details 단계 상태는 원자 워드 하나(`_phase`)이고, 기다리는 쪽은 그 워드에서 잠듭니다(`Futex`). 상태와 오류 문자열은 단계를 `Done` 으로 바꾸기 전에 쓰므로
      *          `getState()` 가 `Ready` · `Failed` 를 본 스레드는 결과와 오류를 읽을 수 있습니다(release · acquire).
      *          TaskManager 스테이지로 바꾸지 않는다 — 단계 워드는 "아직 아무도 집지 않은 단계를 기다리는 쪽이 집는다"와 정해진 스레드의 완료 단계를 함께 담는다(스테이지는 남은 수만 센다, 언리얼 FAsyncPackage 의 단계 상태와 같은 자리).
      */
@@ -101,7 +101,7 @@ namespace sw
         bool runCompletionIfPending();
         /**
          * @brief 완료 단계를 내 둔(업로드 중) 로드의 끝남 확인을 아무도 집지 않았으면 이 스레드가 한 걸음 실행합니다(펌프, 막지 않는다). 실행했으면 true 입니다.
-         * @details 끝나지 않았으면 단계는 업로드 중으로 남고 `onUploadSubmitted` 가 다시 불립니다. 다른 스레드의 `wait()` 가 같은 로드 작업의 완료를 집지 않도록 **집은 스레드 하나만** 실행합니다.
+         * @details 끝나지 않았으면 단계는 업로드 중으로 남고 `onUploadSubmitted` 가 다시 불립니다. 다른 스레드의 `wait()` 가 같은 로드 작업의 완료를 집지 않도록 집은 스레드 하나만 실행합니다.
          */
         bool runUploadPollIfPending( bool bBlocking = false );
 
@@ -139,7 +139,7 @@ namespace sw
         bool isUploading() const { return _phase.load( std::memory_order_acquire ) == kPhaseUploading; }
         /**
          * @brief 로드 단계가 성공해 완료를 기다리게 된 순간 불립니다(로드한 스레드). 완료 단계를 펌프에 맡기는 종류가 덮어씁니다.
-         * @warning 단계를 `AwaitingCompletion` 으로 알린 **뒤에** 불리므로, 기다리던 다른 스레드가 이미 완료를 집었을 수 있습니다. 펌프 목록에 넣는 쪽은
+         * @warning 단계를 `AwaitingCompletion` 으로 알린 뒤에 불리므로, 기다리던 다른 스레드가 이미 완료를 집었을 수 있습니다. 펌프 목록에 넣는 쪽은
          *          완료 본문이 목록에서 빼는 잠금 안에서 `isAwaitingCompletion()` 을 보고 넣어야 합니다 — 아니면 끝난 로드 작업이 목록에 남아 참조를 쥡니다.
          */
         virtual void onAwaitingCompletion() {}

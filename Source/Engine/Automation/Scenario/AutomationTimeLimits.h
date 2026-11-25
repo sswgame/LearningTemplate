@@ -62,7 +62,7 @@ namespace sw
         static constexpr uint32 kChainStageSeconds = 5;
 
         /**
-         * @brief 단계가 @p stageCount 개인 체인의 프로세스 시한(초)입니다 — 단일 시나리오 시한에 단계 몫을 **더한다**.
+         * @brief 단계가 @p stageCount 개인 체인의 프로세스 시한(초)입니다 — 단일 시나리오 시한에 단계 몫을 더한다.
          * @details 앞 단계들이 쓴 시간 뒤에 마지막 단계가 행에 걸려도 그 단계의 감시 + 유예가 프로세스 시한보다 먼저 닿아야 보고가 남는다(옛 `max(단계 몫 합, 단일 시한)` 은 짧은 체인에서 못 미쳤다).
          */
         static constexpr uint32 getChainKillSeconds( uint32 stageCount ) { return stageCount * kChainStageSeconds + kProcessKillSeconds; }

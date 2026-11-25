@@ -44,7 +44,7 @@ namespace sw
          */
         float4 _border{ 0.0f, 0.0f, 0.0f, 0.0f };
         /**
-         * @brief 9-슬라이스 테두리 (왼쪽, 아래, 오른쪽, 위)를 아틀라스 **픽셀**로 적은 값입니다. 모두 0 이면 테두리가 없습니다.
+         * @brief 9-슬라이스 테두리 (왼쪽, 아래, 오른쪽, 위)를 아틀라스 픽셀로 적은 값입니다. 모두 0 이면 테두리가 없습니다.
          * @details 픽셀을 비율로 바꾸려면 아틀라스 크기(`SpriteClipAsset::_atlasPixelSize`)가 있어야 한다. 유니티의 Sprite Border, Godot 의 patch margin 처럼 픽셀이다.
          */
         PROPERTY( Tooltip = "Nine-slice border (left, bottom, right, top) in atlas pixels; all zero is no border" )
@@ -76,9 +76,9 @@ namespace sw
     /**
      * @struct SpriteClipKey
      * @brief 클립의 트랜스폼 키입니다. 위치와 회전을 시간에 따라 움직이는 선택 트랙입니다.
-     * @details `_time` 은 **클립 타임라인**의 초다. 프레임 0 이 0 초에 시작하고 프레임마다 그 프레임의 시간만큼 흐른다
+     * @details `_time` 은 클립 타임라인의 초다. 프레임 0 이 0 초에 시작하고 프레임마다 그 프레임의 시간만큼 흐른다
      *          (`computeFrameStartSeconds`). 이름 붙은 애니메이션은 그 구간의 시각에서 트랙을 읽는다. 값은 애니메이터가 움직이는
-     *          스프라이트의 **로컬** 위치(x, y)와 Z 축 회전(라디안, 엔진의 각도 단위)이다(`SpriteAnimatorComponent`).
+     *          스프라이트의 로컬 위치(x, y)와 Z 축 회전(라디안, 엔진의 각도 단위)이다(`SpriteAnimatorComponent`).
      */
     REFLECT()
     struct SW_API SpriteClipKey
@@ -123,10 +123,10 @@ namespace sw
 {
     /**
      * @class SpriteClipAsset
-     * @brief `.sprite.xml` 하나입니다. 에디터(SpriteClipPanel)가 쓰고 런타임(SpriteComponent, SpriteAnimatorComponent)이 읽는 **하나의 파서**입니다.
+     * @brief `.sprite.xml` 하나입니다. 에디터(SpriteClipPanel)가 쓰고 런타임(SpriteComponent, SpriteAnimatorComponent)이 읽는 하나의 파서입니다.
      * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLDocument` — 모르는 속성 · 자식 · 읽지 못한 값은 오류). 키는 PROPERTY 이름이 기준이다
      *          (`_atlasPath`, `_atlasPixelSize`, `_listFrame`, `_listKey`, `_listAnimation`). 적지 않은 칸은 구조체 초기값이다.
-     *          `_listAnimation` 이 빈 클립은 **프레임 전체가 이름 없는 애니메이션 하나**다(`findFrameRange`).
+     *          `_listAnimation` 이 빈 클립은 프레임 전체가 이름 없는 애니메이션 하나다(`findFrameRange`).
      *          읽은 뒤 의미만 따로 본다: 프레임 밖 구간은 자르고 알리며, 이름이 비거나 길이가 0 인 구간과 이름이 빈 알림은 버린다.
      */
     REFLECT()
@@ -149,7 +149,7 @@ namespace sw
 
         /** @brief 리소스 id 의 클립을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 읽지 못하면 false 를 반환하고 내용은 비어 있습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief **디스크 파일**의 클립을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패 규칙은 `loadFromAsset` 과 같습니다. */
+        /** @brief 디스크 파일의 클립을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패 규칙은 `loadFromAsset` 과 같습니다. */
         [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
@@ -172,7 +172,7 @@ namespace sw
         const SpriteClipAnimation* findAnimation( string_view name ) const;
         /**
          * @brief 이름의 프레임 구간(시작, 개수, 반복)을 찾습니다. 찾으면 true 를 반환하고 @p outRange 를 채웁니다(이름 필드는 건드리지 않습니다).
-         * @details 이름 붙은 애니메이션이 하나도 없는 클립은 **어떤 이름이든 프레임 전체**를 반복 구간으로 반환한다. 클립 하나가 곧
+         * @details 이름 붙은 애니메이션이 하나도 없는 클립은 어떤 이름이든 프레임 전체를 반복 구간으로 반환한다. 클립 하나가 곧
          *          애니메이션 하나다. 이름 붙은 것이 있는데 그 이름이 없으면 false 를 반환한다.
          */
         [[nodiscard]] bool findFrameRange( string_view name, SpriteClipAnimation& outRange ) const;

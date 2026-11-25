@@ -73,10 +73,10 @@ namespace sw
      *          프레임에 시간이 없으면(0) `_frameRate` 로 넘긴다. 그래프(`_animationGraphPath`)는 애니메이션 이름과 "끝나면 다음"을 정한다.
      *          넘긴 프레임은 스프라이트의 프레임 번호(`SpriteComponent::setClipFrame`)로 간다.
      *
-     *          **트랜스폼 키(`SpriteClipAsset::_listKey`).** 클립에 키가 있으면 재생 중 스프라이트의 로컬 위치 x, y 와 Z 축 회전을 키 값으로 정한다
+     *          트랜스폼 키(`SpriteClipAsset::_listKey`). 클립에 키가 있으면 재생 중 스프라이트의 로컬 위치 x, y 와 Z 축 회전을 키 값으로 정한다
      *          (z 위치, 다른 축 회전, 스케일은 그대로). 키 시간은 클립 타임라인의 초이고, 현재 구간의 프레임 시작 시간에 그 프레임 안에서 흐른
      *          시간을 더한 값에서 읽는다(`SpriteClipAsset::sampleTransformKey`). 키가 없는 클립은 트랜스폼에 손대지 않는다.
-     *          **오브젝트의 루트(primary 씬 컴포넌트)는 움직이지 않는다.** 스프라이트가 루트면 키를 적용하지 않고 재생마다 한 번 알린다.
+     *          오브젝트의 루트(primary 씬 컴포넌트)는 움직이지 않는다. 스프라이트가 루트면 키를 적용하지 않고 재생마다 한 번 알린다.
      *          루트를 덮어쓰면 게임 코드와 물리가 옮긴 오브젝트 위치가 매 틱 키 값으로 되돌아간다. 키로 움직일 스프라이트는 루트 아래에 둔다
      *          (언리얼은 루트 모션을 켜지 않으면 애니메이션이 액터 루트를 옮기지 않고, 유니티 2D 도 움직이는 스프라이트를 자식에 둔다).
      */
@@ -190,7 +190,7 @@ namespace sw
         int32 _currentFrame;
         PROPERTY( Category = "Playback", DisplayName = "Total Frames", Tooltip = "Frame count of the active animation, taken from the sprite clip", ReadOnly )
         int32 _totalFrames;
-        /// @brief 구간을 잡을 때 본 클립입니다. **동일성 비교만** 하고 역참조하지 않습니다. 스프라이트의 클립이 바뀌면 구간을 다시 잡습니다.
+        /// @brief 구간을 잡을 때 본 클립입니다. 동일성 비교만 하고 역참조하지 않습니다. 스프라이트의 클립이 바뀌면 구간을 다시 잡습니다.
         const SpriteClipAsset* _pRangeClip;
         AnimationSystem*       _pAnimationSystem; ///< 등록한 애니메이션 시스템(등록된 동안만 유효하다)
         SW_TRANSIENT int32     _firstClipFrame;   ///< 현재 구간이 시작하는 클립 프레임이다. 저장하지 않으며 클립에서 다시 잡는다

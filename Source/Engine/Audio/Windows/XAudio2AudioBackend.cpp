@@ -72,7 +72,7 @@ namespace sw
 
             /**
              * @brief Media Foundation · XAudio2 함수 표입니다. 처음 쓸 때 시스템 DLL 을 올려 한 번 채우고 프로세스 끝까지 둡니다.
-             * @details **수명.** 표는 DLL 마다 참조 하나(`LoadLibraryExW`)를 가지고(`_hMfPlat` …) 프로세스 끝까지 놓지 않는다. 함수 포인터가 그 참조에 기대므로
+             * @details 수명. 표는 DLL 마다 참조 하나(`LoadLibraryExW`)를 가지고(`_hMfPlat` …) 프로세스 끝까지 놓지 않는다. 함수 포인터가 그 참조에 기대므로
              *          `GetModuleHandleW`(참조를 늘리지 않는다)로 빌린 모듈은 쓰지 않는다 — 다른 코드가 같은 DLL 을 내리면 포인터가 허공을 가리킨다.
              *          백엔드를 닫을 때 내리지 않는 이유: 대체 디코더(`decodeWithMediaFoundation`)는 클립 캐시의 워커 태스크가 백엔드와 무관하게 부르고,
              *          정적 소멸자 · `DllMain` 에서의 `FreeLibrary` 는 로더 잠금 아래라 금지다. 라이브러리 안의 전역 상태(Media Foundation 플랫폼 · COM)는

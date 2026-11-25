@@ -60,7 +60,7 @@ namespace sw
 {
     /**
      * @class AssetLoadProfiler
-     * @brief 에셋 로드 기록부입니다 — 엔진 서비스(`engine::findSubsystem<AssetLoadProfiler>()`)로, 서비스 범위가 소유합니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않는다). 스레드 안전합니다.
+     * @brief 에셋 로드 기록부입니다. 엔진 서비스(`engine::findSubsystem<AssetLoadProfiler>()`)로, 서비스 범위가 소유합니다(Engine.dll 안이라 모듈 핫 리로드에 사라지지 않는다). 스레드 안전합니다.
      * @details 엔진 범위를 세우지 않는 호스트(도구)에는 이 서비스가 없고, 그때 `AssetLoadScope` 는 아무것도 재지 않는다.
      *          로더가 `AssetLoadScope` 를 열면 단계마다 시간이 측정되고, 닫힐 때 여기 넘어온다. 여기서:
      *          - 종류별 누적(수 · 바이트 · 단계별 시간 · 가장 긴 로드 · 비동기 수 · 실패 수)
@@ -86,7 +86,7 @@ namespace sw
         bool isEnabled() const;
         /** @brief 기록을 켜거나 끕니다(`-gv_assetLoadProfile` 을 바꾸고 사본도 다시 뜬다). 게임 스레드 전용입니다. */
         void setEnabled( bool bEnabled );
-        /** @brief 사본을 지금 변수 값으로 다시 뜹니다. **게임 스레드 전용**(Debug 단언) — 기동 때와 프레임마다 엔진이 부른다(`Engine::updateFrameServices`). */
+        /** @brief 사본을 지금 변수 값으로 다시 뜹니다. 게임 스레드 전용(Debug 단언) — 기동 때와 프레임마다 엔진이 부른다(`Engine::updateFrameServices`). */
         void refreshEnabled();
         /** @brief 로드 한 번을 더합니다. 꺼져 있으면 버립니다. */
         void submit( const AssetLoadRecord& record );

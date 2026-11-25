@@ -1,4 +1,4 @@
-// RagdollSpawnStateResetTest — 풀 반환(`RagdollComponent::resetToSpawnState`): 쓰러진 래그돌이 갓 스폰한 래그돌과 같은 애니메이션 히트박스로 돌아온다(nogpu, 에셋 없음 — 바디를 세우기 전).
+// RagdollSpawnStateResetTest: 풀 반환(`RagdollComponent::resetToSpawnState`): 쓰러진 래그돌이 갓 스폰한 래그돌과 같은 애니메이션 히트박스로 돌아온다(nogpu, 에셋 없음. 바디를 세우기 전).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

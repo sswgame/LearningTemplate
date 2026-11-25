@@ -1,7 +1,7 @@
 /**
  * @file WeakInternTable.h
  * @brief 키 → 약한 참조 값 표 하나입니다. "같은 키면 같은 객체를 나눠 주고, 마지막 사용자가 놓으면 사라지는" 캐시가 모두 이 구현을 씁니다.
- * @details 경로로 읽는 에셋 표(`SharedAssetTable` — 스켈레톤 · 클립 · 리그 · 스프라이트 클립 · 캐릭터 데이터)와 코드로 짓는 값 표(`WeakInternCache` —
+ * @details 경로로 읽는 에셋 표(`SharedAssetTable`: 스켈레톤 · 클립 · 리그 · 스프라이트 클립 · 캐릭터 데이터)와 코드로 짓는 값 표(`WeakInternCache`:
  *          내장 도형 · 9-슬라이스 메시 · 스프라이트 텍스처 인스턴스)가 같은 표를 씁니다. 값을 짓는 일(파일 IO · 메시 생성)은 잠금 밖에서 하고,
  *          둘이 같은 키를 동시에 지으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받습니다. 마지막 사용자가 놓으면 그 값의 삭제자가 자기 칸을 지웁니다 —
  *          표에 만료 칸이 쌓이지 않으므로 넣기 · 찾기는 해시 조회 하나입니다(언리얼 · 유니티의 에셋 표도 해시 조회이고, 표 전체를 훑는 수거를 넣기 길에 두지 않는다).
@@ -30,7 +30,7 @@ namespace sw
     /**
      * @struct WeakInternVersion
      * @brief 표가 나눠 준 값 한 판입니다. 다시 읽기가 새 판을 넣으면 `_pNext` 가 새 판을 가리킵니다(한 번만 적는다).
-     * @details `_pNextValue` 는 새 판을 살려 두는 소유이고 `_pNext` 를 적기 **전에** 한 번 적는다 — 읽는 쪽은 `_pNext` 만 원자로 읽는다.
+     * @details `_pNextValue` 는 새 판을 살려 두는 소유이고 `_pNext` 를 적기 전에 한 번 적는다 — 읽는 쪽은 `_pNext` 만 원자로 읽는다.
      *          `_pSelf` · `_pFollowers` 는 판을 지을 때(`makeLive`) 한 번 적고 바꾸지 않는다.
      */
     template <typename ValueType>

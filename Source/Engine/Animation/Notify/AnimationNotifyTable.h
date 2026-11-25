@@ -1,8 +1,8 @@
 /**
  * @file AnimationNotifyTable.h
  * @brief 애니메이션 알림 테이블(`*.notifies.xml`)입니다. 클립의 알림 이름에서 처리기(이름으로 고름)와 인자로 가는 매핑을 담습니다. 처리기 레지스트리와 처리기 인터페이스도 여기에 있습니다.
- * @details 클립은 알림의 **이름, 시각, 길이**만 가진다(임포트 옆 데이터 `<모델>.clips.json`). 그 이름이 무엇을 하는지(발소리, 이펙트, 칼 궤적 판정,
- *          카메라 흔들림, 게임플레이 이벤트, 모션 워핑 창)는 캐릭터마다 이 테이블의 한 항목이 정하고, 코드에는 처리기 **종류**만 있다(언리얼의 AnimationNotify 클래스,
+ * @details 클립은 알림의 이름, 시각, 길이만 가진다(임포트 옆 데이터 `<모델>.clips.json`). 그 이름이 무엇을 하는지(발소리, 이펙트, 칼 궤적 판정,
+ *          카메라 흔들림, 게임플레이 이벤트, 모션 워핑 창)는 캐릭터마다 이 테이블의 한 항목이 정하고, 코드에는 처리기 종류만 있다(언리얼의 AnimationNotify 클래스,
  *          유니티의 Animation Event 함수 이름에 해당한다). 모르는 처리기나 인자, 숫자가 아닌 값, 겹친 알림 이름은 읽기 오류다.
  *          `<FootContact>` 는 그 알림을 클립 대신 발 닿음 감지(`AnimationFootContactDef`, 3D 만)가 내게 한다. 없는 알림 이름, 겹친 알림, 높이 순서가 틀린 값은 읽기 오류다.
  *          @code
@@ -270,7 +270,7 @@ namespace sw
  *          |---|---|---|
  *          | `PlaySound` | 소켓 위치에서 소리를 낸다 | sound(필수), socket |
  *          | `SpawnPrefab` | 소켓 변환에 프리팹(이펙트, 탄피)을 만든다 | prefab(필수), socket, offset, attach |
- *          | `Footstep` | 소켓 아래를 표면 질의(`SurfaceSample` — 콜라이더 재질 · 지형 레이어 · 물, 땅의 젖음)로 읽어 씬의 발걸음 반응(`SurfaceFootprintSystem` — 그 종류의 마른 · 젖은 반응: 소리 · 튀는 효과 · 발자국 · 젖은 자국)에 알린다 | socket(필수), distance |
+ *          | `Footstep` | 소켓 아래를 표면 질의(`SurfaceSample`: 콜라이더 재질 · 지형 레이어 · 물, 땅의 젖음)로 읽어 씬의 발걸음 반응(`SurfaceFootprintSystem`, 그 종류의 마른 · 젖은 반응: 소리 · 튀는 효과 · 발자국 · 젖은 자국)에 알린다 | socket(필수), distance |
  *          | `HitWindow` | 구간 알림이다. 두 소켓 사이 칼날을 프레임마다 쓸어(지난 위치에서 현재 위치까지, `MeleeHit::sweep`) 맞은 오브젝트에 한 번씩 맞음 사건(`GameObjectEvents::_hitReceived`)을 낸다. 클라이언트는 기록만 한다. `foliage`(m)가 0 보다 크면 칼날이 지난 벨 수 있는 풀(`FoliageComponent::cut`)도 벤다 | socketA, socketB(필수), radius, damage, impulse, samples, foliage |
  *          | `CameraShake` | 카메라 충격을 요청한다(같은 씬의 `CameraRegistry::getShakeChannel` 을 듣는 카메라가 받는다) | amplitude, duration, frequency, radius, socket |
  *          | `AbilityEvent` | 같은 오브젝트의 알림 사건(`GameObjectEvents::_animationNotify`)을 낸다(구간이면 시작과 끝) | event(필수) |

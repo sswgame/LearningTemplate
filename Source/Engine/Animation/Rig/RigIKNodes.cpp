@@ -575,7 +575,7 @@ namespace sw
             /**
              * @brief 출력: `pelvis_offset`(땅 보정으로 골반을 옮긴 높이, 미터 · 음수면 내림 · 굽 제외), `foot_lift`(골반 · 발에 더 올린 굽 높이, 미터),
              *        `foot_offset_<번호>`(`feet` 순서의 발 높이 보정), `ground_hits`(땅에 닿은 발 수), `leg_lift`(체형의 다리 길이로 골반을 옮긴 높이), `rest_leg_lift`(같은 비를 쉬는 자세 엉덩 높이에 건 값 — 흔들리지 않는다, 1인칭 눈높이),
-             *        `sole_gap`(가장 낮은 발목 - (땅 + 레퍼런스 발목 높이 + 굽), 미터 — 음수면 땅에 묻힘), `sole_gap_peak`(최근 1 ~ 2 초 `sole_gap` 절댓값의 최댓값 — 걷기 한 주기를 덮는다).
+             *        `sole_gap`(가장 낮은 발목 - (땅 + 레퍼런스 발목 높이 + 굽), 미터, 음수면 땅에 묻힘), `sole_gap_peak`(최근 1 ~ 2 초 `sole_gap` 절댓값의 최댓값으로 걷기 한 주기를 덮는다).
              */
             [[nodiscard]] bool getOutputValue( const hashed_string& output, float32& outValue ) const override
             {

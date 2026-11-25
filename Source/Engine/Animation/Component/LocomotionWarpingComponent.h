@@ -2,10 +2,10 @@
  * @file LocomotionWarpingComponent.h
  * @brief 이동 보정 — 보폭(실제 속도 ÷ 클립이 적은 속도로 재생 배율)과 방향(이동 방향과 몸 방향의 차이만큼 하체 뼈를 위 축으로 돌림)을 맞춥니다.
  * @details 언리얼 Stride Warping · Orientation Warping 의 단순형입니다. 모두 데이터(PROPERTY)입니다:
- *          - **보폭**: 클립 커브 `_speedCurve`(임포트 곁 데이터가 적은 클립의 이동 속도, m/s)와 실제 수평 속도(캐릭터 컨트롤러 → 없으면 트랜스폼 변화)로
+ *          - 보폭: 클립 커브 `_speedCurve`(임포트 곁 데이터가 적은 클립의 이동 속도, m/s)와 실제 수평 속도(캐릭터 컨트롤러 → 없으면 트랜스폼 변화)로
  *            애니메이터 재생 배율을 [`_minPlayRate`, `_maxPlayRate`] 안에서 고릅니다. 배율로 못 맞춘 나머지는 `getStrideScale()` — 발 IK(PoseModifier)가
  *            보폭을 늘리고 줄일 자리입니다(여기서는 값만 낸다).
- *          - **방향**: 이동 방향과 몸 앞의 요 차이(뒤로 가면 반대로 접고, ±`_maxOrientationAngle`)를 `_listOrientationBone` 의 뼈마다 가중치만큼 캐릭터 위 축으로
+ *          - 방향: 이동 방향과 몸 앞의 요 차이(뒤로 가면 반대로 접고, ±`_maxOrientationAngle`)를 `_listOrientationBone` 의 뼈마다 가중치만큼 캐릭터 위 축으로
  *            돌립니다(골반 +1, 가슴 -0.5 처럼 — 다리는 이동 방향을, 상체는 몸 방향을 본다). 후처리 단계(PostProcess)에서 돕니다.
  */
 #pragma once

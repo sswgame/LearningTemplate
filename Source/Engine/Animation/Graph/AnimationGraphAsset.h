@@ -34,7 +34,7 @@ namespace sw
         Override = 0, ///< 마스크 안의 본을 가중치만큼 레이어 포즈로 섞습니다(상체만 조준).
         Additive,     ///< 레이어 클립의 시각 0 포즈 기준 차이를 가중치만큼 더합니다(숨쉬기, 맞음 움찔).
         /**
-         * Override 와 같되 마스크의 맨 위 뼈(부모가 마스크 밖인 뼈)는 레이어 클립의 **메시 공간** 방향을 따릅니다. 엉덩이째 몸을 돌려 선 클립(두 손 사격 자세)을
+         * Override 와 같되 마스크의 맨 위 뼈(부모가 마스크 밖인 뼈)는 레이어 클립의 메시 공간 방향을 따릅니다. 엉덩이째 몸을 돌려 선 클립(두 손 사격 자세)을
          * 다른 하체 위에 얹으면 부모 기준 덮기는 팔이 옆을 향한다 — 언리얼 Layered blend per bone 의 Mesh Space Rotation Blend 와 같은 자리다.
          */
         OverrideMeshSpace,
@@ -122,7 +122,7 @@ namespace sw
     /**
      * @struct AnimationMontageSection
      * @brief `Montage` 포즈 노드의 섹션 하나입니다(XML `<sections><section name="Loop" start="0.4" next="Loop" branch_param="Release" branch="End" />`).
-     * @details 언리얼 AnimMontage 섹션과 같다 — 섹션은 시작 시각만 적고 다음 섹션의 시작(마지막은 입력 클립 끝)에서 끝난다. 끝에 닿으면 `next` 로 간다(비면 그 자리에서 멈춘다 — 노드의 끝).
+     * @details 언리얼 AnimMontage 섹션과 같다. 섹션은 시작 시각만 적고 다음 섹션의 시작(마지막은 입력 클립 끝)에서 끝난다. 끝에 닿으면 `next` 로 간다(비면 그 자리에서 멈춘다 — 노드의 끝).
      *          분기: `branch_param` 의 불 파라미터가 켜져 있으면 `next` 대신 `branch` 로 간다(언리얼에서 게임 코드가 `Montage_SetNextSection` 으로 바꾸는 자리를 그래프 파라미터로 둔다).
      */
     struct AnimationMontageSection
@@ -281,7 +281,7 @@ namespace sw
 
         /** @brief 리소스 id 의 XML 을 읽습니다(낱개 파일 또는 팩). OS 경로는 받지 않습니다 — 디스크 파일은 `loadFromDiskFile` 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief **디스크 파일**의 XML 을 읽습니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(에디터 문서 · 도구 · 테스트용). */
+        /** @brief 디스크 파일의 XML 을 읽습니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief XML 파일을 씁니다. `_baseID` 가 있으면 차이만 쓰고, 차이로 같은 그래프가 나오지 않으면(칸을 형식 기본값으로 되돌렸다) 쓰지 않고 오류입니다(부모를 끊지 않는다). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;

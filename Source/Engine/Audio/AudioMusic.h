@@ -2,8 +2,8 @@
  * @file AudioMusic.h
  * @brief 적응형 음악 데이터입니다(`*.music.xml`). 템포와 박자, 구간(세그먼트)마다의 세로 레이어(파라미터로 페이드), 구간 사이의 전환 규칙(박, 마디, 구간 끝에 맞춤, 스팅어)을 담습니다.
  * @details Wwise Interactive Music(Music Segment, Music Playlist, Transition Matrix, Stinger)과 FMOD 의 timeline, transition marker 에 해당한다.
- *          **세로(vertical)**: 한 구간의 레이어들은 함께 돌고, 레이어마다 게임 파라미터 곡선이 볼륨을 정한다(긴장도가 오르면 드럼이 들어온다).
- *          **가로(horizontal)**: `AudioEngine::setMusicSegment` 는 전환 규칙의 맞춤 지점(다음 박, 다음 마디, 구간 끝)까지 기다렸다가 샘플 단위로 정확히
+ *          세로(vertical): 한 구간의 레이어들은 함께 돌고, 레이어마다 게임 파라미터 곡선이 볼륨을 정한다(긴장도가 오르면 드럼이 들어온다).
+ *          가로(horizontal): `AudioEngine::setMusicSegment` 는 전환 규칙의 맞춤 지점(다음 박, 다음 마디, 구간 끝)까지 기다렸다가 샘플 단위로 정확히
  *          바꾸고, 그 위치에서 스팅어를 낸다. 클립은 구간 길이(마디 × 박자 × 박 길이)에 맞춰 만든다.
  */
 #pragma once

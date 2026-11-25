@@ -1,4 +1,4 @@
-// AudioServiceTest — 장치 출력을 잃으면 서비스가 오프라인 렌더로 넘기고 백오프 간격으로 기본 장치를 다시 연다(감사 P0-13). 가짜 출력 장치 — 장치 스레드 없음.
+// AudioServiceTest — 장치 출력을 잃으면 서비스가 오프라인 렌더로 넘기고 백오프 간격으로 기본 장치를 다시 연다(감사 P0-13). 가짜 출력 장치, 장치 스레드 없음.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

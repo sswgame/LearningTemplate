@@ -17,7 +17,7 @@ namespace sw
 {
     /**
      * @brief 삼각형 표면 BVH 입니다. 표면(부품)마다 위치와 인덱스를 복사해서 가지고, 삼각형 하나가 잎 하나입니다.
-     * @details 질의는 const 지만 후보 목록을 멤버 스크래치에 받으므로 **한 인스턴스를 여러 스레드가 동시에 묻지 않습니다**.
+     * @details 질의는 const 지만 후보 목록을 멤버 스크래치에 받으므로 한 인스턴스를 여러 스레드가 동시에 묻지 않습니다.
      *          위치가 바뀌면(`setSurfacePositions`) `build` 를 다시 부릅니다.
      */
     class SW_API SurfaceBVH
