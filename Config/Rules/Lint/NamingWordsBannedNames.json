@@ -1,7 +1,6 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
-    "ServiceServerCallTableBase": "OnlineServerCallTableBase — 파생 OnlineServerCallTable 과 같은 머리말, OnlineProtocolService.h 로 합쳤다(2026-11-26)",
     "CityTerrain": "CityTerrainDef — 땅은 도시 카탈로그의 <Terrain> 행이다(2026-11-25)",
     "CityService": "CityServiceDef — 서비스는 도시 카탈로그의 <Service> 행이다(2026-11-25)",
     "makeCityServiceBit": "CityHouseLevelDef::_listServiceIndex — 서비스는 행 번호다(2026-11-25)",
@@ -1976,6 +1975,7 @@
     "rewrite_python_code": "dev.rename_symbol.rename_in_text — 지킬 구간 방식(Scripts 감사, 2026-11-21)",
     "rewrite_code": "dev.rename_symbol.rename_in_text(Scripts 감사, 2026-11-21)",
     "NAMING_PATH": "dev.rename_scope.BANNED_NAMES_PATH — 이름 이력 표 경로는 한 곳(Scripts 감사, 2026-11-21)",
+    "ServiceServerCallTableBase": "OnlineServerCallTableBase — 파생 OnlineServerCallTable 과 같은 머리말, OnlineProtocolService.h 로 합쳤다(2026-11-26)",
     "NAMING_WORDS_PATH": "dev.rename_scope.BANNED_NAMES_PATH — _bannedNames 는 NamingWordsBannedNames.json 으로 옮겼다(Scripts 감사, 2026-11-21)",
     "NameBaseline": "이름 기준선 래칫은 0 에 닿아 은퇴 — 이름 하나의 예외는 NamingWords.json _keep(2026-11-21)",
     "NAMING_BASELINE_PATH": "이름 기준선 표 폐지(2026-11-21)",
