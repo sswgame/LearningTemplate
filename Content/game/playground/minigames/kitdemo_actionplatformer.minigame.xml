@@ -4,4 +4,4 @@
   장르 키트 시연 미니게임 — ActionPlatformer 키트. 맵의 디렉터(GameModeComponent 파생)가 읽는 스테이지(data/actionplatformer.xml)를 게임 기능 ActionPlatformer 가 미니게임 범위에 건다.
   시나리오 automation/kitdemo_actionplatformer.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="kitdemo_actionplatformer" map="game/playground/maps/kitdemo_actionplatformer.scene.xml" entry="SceneSwitch" features="ActionPlatformer" catalogs="ActionPlatformerCatalog"/>
+<Minigame name="kitdemo_actionplatformer" map="guid:b25acce7eff70951bf40ed3fd3e1813a" entry="SceneSwitch" features="ActionPlatformer" catalogs="ActionPlatformerCatalog"/>

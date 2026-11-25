@@ -7,4 +7,4 @@
   입력은 확대 · 이동 · 현황 · 속도 공통 레이어와 Skirmish 레이어(starskirmish/data/skirmish.input.xml — 패드 가상 커서를 켠다)만 켠다. 걷기(왼쪽 스틱) · 시연(패드 A · B) 레이어는 꺼진다.
   시나리오 automation/starskirmish_* · automation/load/starskirmish_aiskirmish 와 lockstep-pair 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="starskirmish" map="game/playground/starskirmish/maps/skirmish.scene.xml" entry="SceneSwitch" portalSlot="8" inputContexts="Camera,CameraPan,Menu,Time,Skirmish"/>
+<Minigame name="starskirmish" map="guid:6187b6628a0c77f66ec7c2e24502e5dd" entry="SceneSwitch" portalSlot="8" inputContexts="Camera,CameraPan,Menu,Time,Skirmish"/>

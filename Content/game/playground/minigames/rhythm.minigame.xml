@@ -5,4 +5,4 @@
   판은 맵의 RhythmGameModeComponent 가 돌리고 음악 · 음악 시계 · 입력 · 모습 · HUD 는 같은 오브젝트의 RhythmViewComponent(GF_Client_Rhythm)다. 소리와 함께 흐르는 판이라 저장을 막는다(되살린 판은 음악 위치가 맞지 않는다).
   시나리오 automation/rhythm 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="rhythm" map="game/playground/rhythm/maps/stage.scene.xml" entry="SceneSwitch" portalSlot="17" save="Blocked" inputContexts="Rhythm"/>
+<Minigame name="rhythm" map="guid:7d738a1880e5b2df260d1294b782fd4e" entry="SceneSwitch" portalSlot="17" save="Blocked" inputContexts="Rhythm"/>

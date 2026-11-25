@@ -10,13 +10,13 @@
     </_mapUserSettingDefault>
   </Engine>
   <startMap>guid:d932e3ef88a4803989db8766b6130464</startMap>
-  <inputMap path="common/input/base.input.xml"/>
-  <inputMap path="common/input/virtualcursor.input.xml"/>
-  <inputMap path="common/input/camera.input.xml"/>
-  <inputMap path="common/input/camerapan.input.xml"/>
-  <inputMap path="common/input/menu.input.xml"/>
-  <inputMap path="common/input/time.input.xml"/>
-  <inputMap path="game/nilecity/data/nile.input.xml"/>
+  <inputMap path="guid:ea15272d6f5bbf0f7477d016bf1eec84"/>
+  <inputMap path="guid:06c20e248c7e2c349aa46c509905cb85"/>
+  <inputMap path="guid:7c0b760a7298e015942786e642d03eaa"/>
+  <inputMap path="guid:81403123e7b7787d7f8e69b8ec08209c"/>
+  <inputMap path="guid:06c8634f2342d055ce8367ab05a04cf1"/>
+  <inputMap path="guid:c8fd0b4facf3656e888ac4df13a1c625"/>
+  <inputMap path="guid:c3b4f331a76d76f13f2af9360fe458f8"/>
   <loadingScreen>guid:8685b6809ad8bd0cc6672017781c4f1f</loadingScreen>
   <audioEvents>guid:fc5d7a305a5b9ff04b45023c58334531</audioEvents>
   <defaultLanguage>ko_kr</defaultLanguage>

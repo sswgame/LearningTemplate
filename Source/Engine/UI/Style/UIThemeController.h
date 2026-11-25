@@ -11,9 +11,11 @@
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/UI/Style/UIStyleSheet.h"
 
 namespace sw
 {
@@ -25,8 +27,8 @@ namespace sw
 
         PROPERTY( DisplayName = "Name" )
         hashed_string _name{};
-        PROPERTY( DisplayName = "Style Sheets", AssetType = "UIStyleSheet" )
-        vector<string> _listStyleSheet{};
+        PROPERTY( DisplayName = "Style Sheets" )
+        vector<AssetRef<UIStyleSheetAsset>> _listStyleSheet{};
     };
 } // namespace sw
 

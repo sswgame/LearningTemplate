@@ -6,4 +6,4 @@
   맵의 Mansion 오브젝트에 GhostHuntGameModeComponent → GhostHuntAvatarComponent(GF_Client_GhostHunt) → HUDControllerComponent 가 그 순서로 붙는다.
   여러 방을 잇는 탐험이라 안에서 저장한다. 입력은 걷기 공통 레이어와 GhostHunt 레이어(ghosthunt/data/ghosthunt.input.xml)만 켠다. 시나리오 automation/ghosthunt_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="ghosthunt" map="game/playground/ghosthunt/maps/mansion.scene.xml" entry="SceneSwitch" portalSlot="22" save="Allowed" features="GhostHunt" inputContexts="Movement,GhostHunt" catalogs="GhostCatalog"/>
+<Minigame name="ghosthunt" map="guid:7ac46e6a34064c9480b66e88ea711ee1" entry="SceneSwitch" portalSlot="22" save="Allowed" features="GhostHunt" inputContexts="Movement,GhostHunt" catalogs="GhostCatalog"/>

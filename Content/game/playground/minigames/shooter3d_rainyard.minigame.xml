@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="b46a73a464de4574908a24e79ee79182"?>
 <!-- 사격장 조작으로 도는 시나리오 무대 — 비 오는 흙 마당. 허브 입구는 없고 시나리오 automation/shooter3d_rainyard 가 gv_firstMinigame 로 들어간다(사격장과 같은 입력 레이어를 켠다). -->
-<Minigame name="shooter3d_rainyard" map="game/playground/shooter3d/maps/rainyard.scene.xml" entry="SceneSwitch" inputContexts="Movement,Traversal,Look,Camera,CameraOrbit,Shooter"/>
+<Minigame name="shooter3d_rainyard" map="guid:9a17abe1c4944db38b1aaa554d43869f" entry="SceneSwitch" inputContexts="Movement,Traversal,Look,Camera,CameraOrbit,Shooter"/>

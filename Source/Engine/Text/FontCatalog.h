@@ -11,16 +11,28 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Text/TextTypes.h"
 
 namespace sw
 {
+    /** @brief 글꼴 파일을 가리키는 참조(`AssetRef<FontFileAsset>`)의 대상 종류입니다. 글꼴은 공유 캐시에 올리지 않아(`FontService` 가 연다) 표에 올리지 않고 참조의 검사에만 쓴다. */
+    struct FontFileAsset
+    {
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            {".ttf", AssetSuffixRole::Plain},
+            {".otf", AssetSuffixRole::Plain},
+            {".ttc", AssetSuffixRole::Plain},
+        };
+        static constexpr AssetTypeDef kAssetType{ "FontFile", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
+    };
+
     /**
      * @brief 저장소 폰트 면 하나입니다. 굵기, 기울기, 파일을 가집니다.
      * @code
-     *     <FontFaceDef _weight="Regular" _slant="Upright" _path="engine/fonts/kenney_future.ttf" />
+     *     <FontFaceDef _weight="Regular" _slant="Upright" _path="guid:…" />
      * @endcode
      */
     REFLECT()
@@ -31,8 +43,8 @@ namespace sw
         FontWeight _weight{ FontWeight::Regular };
         PROPERTY( Tooltip = "Slant this face draws" )
         FontSlant _slant{ FontSlant::Upright };
-        PROPERTY( AssetPath, Tooltip = "Resource path of the font file (.ttf, .otf, .ttc)" )
-        string _path{};
+        PROPERTY( Tooltip = "Font file (.ttf, .otf, .ttc)" )
+        AssetRef<FontFileAsset> _path;
         PROPERTY( Min = 0, Tooltip = "Face index inside a collection file (.ttc); 0 otherwise" )
         uint32 _faceIndex{ 0 };
     };

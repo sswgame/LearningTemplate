@@ -1,7 +1,7 @@
 <?asset guid="d7c6d3e97d8ff713e3657b8ccf26dedf"?>
 <UIDocument _schemaVersion="1">
 	<_listStyleSheet>
-		<item>game/playground/ui/stylevariant_child.uistyle.xml</item>
+		<item>guid:d26738e2a352b1787a32613957483500</item>
 	</_listStyleSheet>
 	<!-- stylevariant_base.ui.xml 과 같고 자식 시트를 건다. -->
 	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />

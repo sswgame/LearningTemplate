@@ -7,4 +7,4 @@
   입력은 내려다보는 카메라(Camera · CameraPan)와 공원 레이어(ThemePark, themepark/data/park.input.xml)만 켠다 — 바탕 플레이어는 움직이지 않는다.
   안에서 저장하면 공원(시뮬레이션 · 건설한 것 · 열차 · 금고)이 하위 레벨의 엔티티 상태로 실리고, 불러오면 그 공원으로 이어진다. 나가면 공원은 사라진다. 시나리오 automation/themepark_guests · themepark_shadow · themepark_sublevel 이 개발 명령 minigame.enter 로 들어간다.
 -->
-<Minigame name="themepark" map="game/playground/themepark/maps/park.scene.xml" entry="SubLevel" portalSlot="5" portalOffset="-20,0,46" inputContexts="Camera,CameraPan,ThemePark"/>
+<Minigame name="themepark" map="guid:d23c8112e4cd8e4e73bdbb3575df4281" entry="SubLevel" portalSlot="5" portalOffset="-20,0,46" inputContexts="Camera,CameraPan,ThemePark"/>

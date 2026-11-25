@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="0db17e55920a4917961e6f513b1334b5"?>
 <!-- 사격장 조작으로 도는 시나리오 무대 — 발 디딤 계단(아레나 + 계단 두 칸). 허브 입구는 없고 시나리오 automation/shooter3d_footplacement 가 gv_firstMinigame 로 들어간다(사격장과 같은 입력 레이어를 켠다). -->
-<Minigame name="shooter3d_footplacement" map="game/playground/shooter3d/maps/footplacement.scene.xml" entry="SceneSwitch" inputContexts="Movement,Traversal,Look,Camera,CameraOrbit,Shooter"/>
+<Minigame name="shooter3d_footplacement" map="guid:8094b8697e31b33891695eebcf54540e" entry="SceneSwitch" inputContexts="Movement,Traversal,Look,Camera,CameraOrbit,Shooter"/>

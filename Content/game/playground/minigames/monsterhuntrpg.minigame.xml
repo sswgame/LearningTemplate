@@ -6,4 +6,4 @@
   입력은 걷기 공통 레이어와 MonsterHunt 레이어(monsterhuntrpg/data/hunt.input.xml)만 켠다. 흥정을 되돌려 다시 하면 안 되는 짧은 판이라 안에서 저장하지 않는다.
   시나리오 automation/monsterhuntrpg_slice.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="monsterhuntrpg" map="game/playground/monsterhuntrpg/maps/marsh.scene.xml" entry="SceneSwitch" portalSlot="26" save="Blocked" features="MonsterHuntRPG" inputContexts="Movement,MonsterHunt" catalogs="MonsterHuntCatalog,RecipeCatalog"/>
+<Minigame name="monsterhuntrpg" map="guid:6ed71988ebf5421cb0e417395c9699fd" entry="SceneSwitch" portalSlot="26" save="Blocked" features="MonsterHuntRPG" inputContexts="Movement,MonsterHunt" catalogs="MonsterHuntCatalog,RecipeCatalog"/>

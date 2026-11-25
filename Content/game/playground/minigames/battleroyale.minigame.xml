@@ -6,4 +6,4 @@
   입력은 걷기 공통 레이어와 BattleRoyale 레이어(battleroyale/data/battleroyale.input.xml)만 켠다. 짧은 대전이라 안에서 저장하지 않는다.
   시나리오 automation/battleroyale_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="battleroyale" map="game/playground/battleroyale/maps/island.scene.xml" entry="SceneSwitch" portalSlot="12" save="Blocked" features="BattleRoyale" inputContexts="Movement,BattleRoyale" catalogs="BattleRoyaleCatalog"/>
+<Minigame name="battleroyale" map="guid:dd141af2a6a34c3eaa6f49ad9b679a5c" entry="SceneSwitch" portalSlot="12" save="Blocked" features="BattleRoyale" inputContexts="Movement,BattleRoyale" catalogs="BattleRoyaleCatalog"/>

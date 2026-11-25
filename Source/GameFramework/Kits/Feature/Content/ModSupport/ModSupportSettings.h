@@ -5,7 +5,7 @@
  *
  *          <ModSupportSettings contentVersion="1" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216" packBlockSize="131072">
  *              <Overridable prefix="game/playground/data/mods/"/>
- *              <Overridable path="game/playground/data/quests.xml"/>
+ *              <Overridable path="guid:…"/>
  *          </ModSupportSettings>
  */
 #pragma once
@@ -15,6 +15,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -22,6 +23,18 @@ namespace sw
 {
     class XMLDocument;
     class XMLNode;
+
+    /** @brief `<Overridable prefix>` · `<Overridable path>` 한 줄의 칸입니다 — 둘 중 하나만 적는다(`ModSupportSettings::readOverridable` 이 본다). */
+    REFLECT()
+    struct SW_KIT_API ModOverridableLine
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _prefix{}; ///< 기본 리소스 폴더(끝 `/`) — 폴더는 정체성이 없어 글이다
+        PROPERTY()
+        DataPath _path; ///< 기본 리소스 파일 하나
+    };
 
     /**
      * @struct ModSupportSettings

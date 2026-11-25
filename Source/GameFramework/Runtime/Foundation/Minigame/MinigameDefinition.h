@@ -76,7 +76,7 @@ namespace sw
         PROPERTY( Name = "inputContexts" )
         vector<hashed_string> _listInputContext{}; ///< 켤 입력 맵 레이어(게임 입력 맵 묶음에 있어야 한다 — 켤 때 본다)
         PROPERTY( Name = "ui" )
-        vector<string> _listUI{}; ///< 열 UI 문서(리소스 id). DataPath 목록은 리플렉션 글 처리기가 없어 글 목록이다 — 있는지는 `validate` 가 본다
+        vector<DataPath> _listUI{}; ///< 열 UI 문서(리소스 id) — 있는지는 `validate` 가 본다
         PROPERTY( Name = "catalogs" )
         vector<hashed_string> _listCatalog{}; ///< 기능이 읽을 데이터 종류(`kDataKind`). 기능이 적지 않은 종류를 읽거나 적은 종류를 아무도 읽지 않으면 켜기가 진다
         PROPERTY( Name = "save" )

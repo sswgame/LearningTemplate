@@ -97,11 +97,11 @@ namespace sw
             SW_LOG_ERROR_ID( "MinigameDefinition.MapMissing", "%#: map '%#' does not exist", sourceName, _map.isSet() ? _map.c_str() : "" );
             bValid = false;
         }
-        for ( const string& document : _listUI )
+        for ( const DataPath& document : _listUI )
         {
-            if ( AssetIO::hasAsset( AssetID{ document } ) )
+            if ( document.isSet() && AssetIO::hasAsset( AssetID{ document.get() } ) )
                 continue;
-            SW_LOG_ERROR_ID( "MinigameDefinition.UIMissing", "%#: UI document '%#' does not exist", sourceName, document.c_str() );
+            SW_LOG_ERROR_ID( "MinigameDefinition.UIMissing", "%#: UI document '%#' does not exist", sourceName, document.isSet() ? document.c_str() : "" );
             bValid = false;
         }
         return bValid;

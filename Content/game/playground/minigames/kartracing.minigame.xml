@@ -5,4 +5,4 @@
   판은 맵의 KartGameModeComponent 가 돌리고 입력 · 모습 · HUD 는 같은 오브젝트의 KartRaceViewComponent(GF_Client_KartRacing)다. 짧은 대전이라 판이 끝날 때까지 저장을 막는다.
   시나리오 automation/kartracing 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="kartracing" map="game/playground/kartracing/maps/circuit.scene.xml" entry="SceneSwitch" portalSlot="15" save="Blocked" features="KartRacing" inputContexts="Movement,KartRacing" catalogs="KartTrackCatalog"/>
+<Minigame name="kartracing" map="guid:4b0558723954958aeaa1ee3bc08eeb2c" entry="SceneSwitch" portalSlot="15" save="Blocked" features="KartRacing" inputContexts="Movement,KartRacing" catalogs="KartTrackCatalog"/>

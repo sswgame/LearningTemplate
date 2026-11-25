@@ -308,7 +308,7 @@ namespace sw
             }
             if ( pBest != nullptr )
             {
-                opened._face        = openFontFile( AssetID{ pBest->_path }, pBest->_faceIndex, true );
+                opened._face        = openFontFile( pBest->_path.id(), pBest->_faceIndex, true );
                 opened._bFauxBold   = FontServiceInternal::needsFauxBold( weight, pBest->_weight ) ? SW_TRUE : SW_FALSE;
                 opened._bFauxItalic = slant == FontSlant::Italic && pBest->_slant != FontSlant::Italic ? SW_TRUE : SW_FALSE;
             }

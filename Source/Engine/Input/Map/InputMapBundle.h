@@ -19,6 +19,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Module/ModuleEntryRegistrar.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw
 {
@@ -62,7 +63,7 @@ namespace sw
     using InputMapExtensionRegistrar = ModuleEntryRegistrar<InputMapExtensionRegistry, const InputMapExtension*>;
 
     /**
-     * @brief `gamesettings.xml` 의 묶음 줄(`<inputMap path="common/input/base.input.xml"/>`) 하나입니다.
+     * @brief `gamesettings.xml` 의 묶음 줄(`<inputMap path="guid:…"/>`) 하나입니다.
      * @details 예전에는 요소 글(`<inputMap>경로</inputMap>`)을 손으로 읽어 경로 칸을 이름 손 표가 따로 적었다 — 리플렉션 칸이라 참조 검사 · 옮기기가 칸을 안다.
      */
     REFLECT()
@@ -70,8 +71,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath, Required )
-        string _path{};
+        PROPERTY( Required )
+        DataPath _path;
     };
 
     /**

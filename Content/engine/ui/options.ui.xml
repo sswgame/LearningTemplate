@@ -2,7 +2,7 @@
 <UIDocument _schemaVersion="1">
 	<UIScreenDef _bPausesGame="true" />
 	<_listStyleSheet>
-		<item>engine/ui/styles/options.uistyle.xml</item>
+		<item>guid:d36bc0fca75bc70df406ac878b0e9a37</item>
 	</_listStyleSheet>
 	<SafeZonePanel>
 		<CanvasPanel>

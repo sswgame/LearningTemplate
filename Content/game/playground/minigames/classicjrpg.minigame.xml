@@ -6,4 +6,4 @@
   입력은 걷기 공통 레이어와 JRPG 레이어(classicjrpg/data/jrpg.input.xml)만 켠다. 길게 걷는 판이라 안에서 저장한다(전투 중에도 파티 · 전투가 실린다).
   시나리오 automation/classicjrpg_slice.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="classicjrpg" map="game/playground/classicjrpg/maps/trail.scene.xml" entry="SceneSwitch" portalSlot="24" save="Allowed" features="ClassicJRPG" inputContexts="Movement,JRPG" catalogs="JRPGCatalog"/>
+<Minigame name="classicjrpg" map="guid:d185c9cce307440db4b4bf465d325c38" entry="SceneSwitch" portalSlot="24" save="Allowed" features="ClassicJRPG" inputContexts="Movement,JRPG" catalogs="JRPGCatalog"/>

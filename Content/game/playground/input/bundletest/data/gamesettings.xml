@@ -3,8 +3,8 @@
 <!-- InputMapBundleTest 의 묶음 — 기본 맵, 공통 맵, 게임 차이 차례다. -->
 <GameSettings>
   <startMap>guid:3fcd0f83c113a08accb7a73b7f3ca1bc</startMap>
-  <inputMap path="game/playground/input/bundletest/base.input.xml"/>
-  <inputMap path="game/playground/input/bundletest/common.input.xml"/>
-  <inputMap path="game/playground/input/bundletest/diff.input.xml"/>
+  <inputMap path="guid:ddf1977de9a3ba0302e8eed932aaee1b"/>
+  <inputMap path="guid:57301c319cb069c3cce0247d667d4dd5"/>
+  <inputMap path="guid:1ab17931478ac0b02affeb3d742fb595"/>
   <defaultLanguage>ko_kr</defaultLanguage>
 </GameSettings>

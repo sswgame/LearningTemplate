@@ -71,12 +71,12 @@ namespace sw
         for ( XMLNode line = root.findChild( kSettingsElement ); line.isValid(); line = line.findNextSibling( kSettingsElement ) )
         {
             InputMapBundleLine params;
-            if ( XMLFields::readProperties( line, params, absPath ) == false )
+            if ( XMLFields::readProperties( line, params, absPath ) == false || params._path.isSet() == false )
             {
                 SW_LOG_ERROR_ID( "InputMapBundle.LineInvalid", "Input map bundle %#: an <%#> line needs path=\"<input map>\" and nothing else", absPath, kSettingsElement );
                 return false;
             }
-            listListed.push_back( AssetID{ string_view{ params._path } } );
+            listListed.push_back( AssetID{ params._path.get() } );
         }
 
         vector<AssetID> listKit;
