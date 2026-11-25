@@ -20,6 +20,7 @@
 namespace sw
 {
     class AssetPaths;
+    class TaskManager;
     struct RHIVertex;
 } // namespace sw
 
@@ -31,6 +32,21 @@ namespace sw::editor
     struct ModelImportRule;
 
     class ModelImportConfig;
+    class TextureImportConfig;
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 원본 해시에 섞는, 원본마다 같은 재료입니다(`ModelImporter::computeSourceHash`). 한 실행에 한 번 읽는다 - 예전에는 모델마다 기본 에셋 표와 견본을 다시 읽었다. */
+    struct ModelImportHashInput
+    {
+        string _imageRuleText;    ///< 꺼낼 이미지의 텍스처 규칙을 고르는 글(`TextureImportConfig::makeSelectionText`) - 이미지를 꺼내는 모델에만 섞는다
+        string _toonTemplateText; ///< VRM 머티리얼의 견본 글. 못 읽었으면 빈 글이다
+        string _pbrTemplateText;  ///< 그 밖의 머티리얼 견본 글. 못 읽었으면 빈 글이다
+
+        /** @brief 재료를 모읍니다. 견본을 못 읽으면 그 칸이 비고, 그 견본을 쓰는 원본의 해시가 오류(0)가 됩니다. */
+        [[nodiscard]] static ModelImportHashInput collect( const TextureImportConfig& textureConfig );
+    };
 } // namespace sw::editor
 
 namespace sw::editor
@@ -188,13 +204,13 @@ namespace sw::editor
     struct ModelImporter
     {
         /** @brief glTF 파일 하나를 메시, 스켈레톤, 부착 메시, 클립으로 읽습니다. 파일은 쓰지 않습니다. 규칙이나 부가 데이터가 잘못되었으면 false 입니다. */
-        [[nodiscard]] static bool readModelAsset( const AbsolutePath& sourcePath, const ModelImportRule& rule, ModelImportResult& outResult );
+        [[nodiscard]] static bool readModelAsset( const AbsolutePath& sourcePath, const ModelImportRule& rule, ModelImportResult& outResult, TaskManager* pTaskManager = nullptr );
 
         /**
          * @brief glTF 파일 하나를 @p rule 로 `.mesh` 로 임포트합니다. 스킨드 모델이면 옆 폴더에도 씁니다.
          * @param assetPaths 산출물 경로를 리소스 id 로 바꿀 경로 상태 — 워커에서 불리므로 서비스를 찾지 않고 부른 쪽이 넘긴다.
          */
-        [[nodiscard]] static bool importModel( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const ModelImportRule& rule, const AbsolutePath& outputPath );
+        [[nodiscard]] static bool importModel( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const ModelImportRule& rule, const AbsolutePath& outputPath, TaskManager* pTaskManager = nullptr );
         /**
          * @brief 규칙의 몸 메시(`body_surface`)에서 스킨 · 체형 모프를 장비 메시 @p inoutMesh 로 옮깁니다(`CharacterMeshUtil::transferBodySurface`).
          * @return 몸 메시를 읽지 못했거나 몸 표면에서 `body_surface_distance` 보다 먼 정점이 있으면 오류를 남기고 false 입니다(메시는 그대로).
@@ -239,9 +255,9 @@ namespace sw::editor
 
         /**
          * @brief 원본 바이트, 부가 데이터, 적용한 규칙, 임포터 버전을 섞어 FNV-1a 64 해시를 계산합니다. `.gltf` 이면 그것이 가리키는 외부 버퍼 파일도 포함합니다. 읽지 못하면 0 입니다.
-         * @param imageRuleText 꺼낼 이미지의 텍스처 규칙을 고르는 글(`TextureImportConfig::makeSelectionText`)입니다. 이미지를 꺼내는 모델에만 섞는다.
+         * @param input 원본마다 같은 재료입니다(`ModelImportHashInput::collect` — 한 실행에 한 번 읽는다).
          */
-        static uint64 computeSourceHash( const AbsolutePath& sourcePath, const ModelImportRule& rule, string_view imageRuleText );
+        static uint64 computeSourceHash( const AbsolutePath& sourcePath, const ModelImportRule& rule, const ModelImportHashInput& input );
         /** @brief 임포트 결과 전체(`.mesh` 와 옆 폴더의 파일들)의 해시를 계산합니다. `.mesh` 가 없으면 0 입니다. */
         static uint64 computeImportedHash( const AbsolutePath& importedMeshPath );
         /** @brief `computeImportedHash` 가 섞는 결과 파일(`.mesh` · `.fracture` · 옆 폴더 파일 · 그것이 가리키는 공유 파일)을 모읍니다(DDC 덩어리). `.mesh` 가 없으면 아무것도 더하지 않습니다. */
