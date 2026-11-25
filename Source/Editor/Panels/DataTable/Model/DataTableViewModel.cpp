@@ -14,8 +14,8 @@
 
 #include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
+#include "Editor/Common/Job/EditorExternalToolJob.h"
 #include "Editor/Common/Localization/LocalizationTools.h"
-#include "Editor/Common/Task/EditorExternalToolJob.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
@@ -219,7 +219,7 @@ namespace sw::editor
     void DataTableViewModel::collectLocalizationToolResult()
     {
         EditorExternalToolResult result{};
-        if ( _pLocalizationToolJob->take( result ) != EditorTaskPoll::Ready )
+        if ( _pLocalizationToolJob->take( result ) != EditorJobPoll::Ready )
             return;
         const bool bSucceeded = result._exitCode.has_value() && *result._exitCode == 0;
         string     lastLine;
@@ -243,13 +243,13 @@ namespace sw::editor
     void DataTableViewModel::pollBackgroundJobs()
     {
         collectLocalizationToolResult();
-        LocalizationSheet    loadedSheet;
-        const EditorTaskPoll localizationPoll = _localizationJob.take( loadedSheet );
-        if ( localizationPoll == EditorTaskPoll::Ready )
+        LocalizationSheet   loadedSheet;
+        const EditorJobPoll localizationPoll = _localizationJob.take( loadedSheet );
+        if ( localizationPoll == EditorJobPoll::Ready )
         {
             (void)acceptLoadedSheet( _requestedProjectIndex, std::move( loadedSheet ) ); // 버렸으면 아직 읽지 않은 상태라 다음 그리기가 고른 프로젝트를 다시 읽는다
         }
-        else if ( _bLocalizationLoaded == false && localizationPoll == EditorTaskPoll::Idle )
+        else if ( _bLocalizationLoaded == false && localizationPoll == EditorJobPoll::Idle )
         {
             vector<string> listProject;
             LocalizationTools::collectProjectPaths( listProject ); // 현지화 도구와 같은 목록(엔진 · 에디터 UI · 활성 게임)
@@ -264,12 +264,12 @@ namespace sw::editor
         }
 
         vector<GameDataFileEntry> listGameData;
-        const EditorTaskPoll      gameDataPoll = _gameDataJob.take( listGameData );
-        if ( gameDataPoll == EditorTaskPoll::Ready )
+        const EditorJobPoll       gameDataPoll = _gameDataJob.take( listGameData );
+        if ( gameDataPoll == EditorJobPoll::Ready )
         {
             setGameDataFiles( std::move( listGameData ) );
         }
-        else if ( _bGameDataLoaded == false && gameDataPoll == EditorTaskPoll::Idle )
+        else if ( _bGameDataLoaded == false && gameDataPoll == EditorJobPoll::Idle )
             _gameDataJob.request();
     }
 

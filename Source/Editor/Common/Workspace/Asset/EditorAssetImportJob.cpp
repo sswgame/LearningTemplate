@@ -14,7 +14,7 @@ namespace sw::editor
     // ======================================================================
 
     EditorAssetImportJob::EditorAssetImportJob()
-        : EditorBackgroundTask{}
+        : EditorBackgroundJob{}
         , _cancel{}
     {
     }

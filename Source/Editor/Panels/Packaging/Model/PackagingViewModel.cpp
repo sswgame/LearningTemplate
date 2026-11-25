@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
-#include "Editor/Common/Task/EditorExternalToolJob.h"
+#include "Editor/Common/Job/EditorExternalToolJob.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/GameConfig.h"
@@ -180,7 +180,7 @@ namespace sw::editor
     void PackagingViewModel::collectResult()
     {
         EditorExternalToolResult result{};
-        if ( _pJob->take( result ) != EditorTaskPoll::Ready )
+        if ( _pJob->take( result ) != EditorJobPoll::Ready )
         {
             // 도는 동안의 줄을 바로 보인다(감사 E-15) — 단계 줄(`[package] step k/n`)이 오면 진행도도 따라간다. 끝난 결과가 모든 줄과 판정으로 바꾼다.
             if ( _progress._state != PackagingState::Running )

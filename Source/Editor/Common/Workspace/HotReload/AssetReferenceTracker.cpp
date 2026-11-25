@@ -27,8 +27,8 @@ namespace sw::editor
     void AssetReferenceTracker::update( uint64 contentChangeSerial, AssetHotReload& changeSource )
     {
         EditorAssetIndexData data{};
-        const EditorTaskPoll poll = _job.take( data );
-        if ( poll == EditorTaskPoll::Ready )
+        const EditorJobPoll  poll = _job.take( data );
+        if ( poll == EditorJobPoll::Ready )
         {
             SW_LOG_INFO_ID( "AssetReferenceTracker.ReferenceIndexReady", "Asset index ready: %# file(s), %# text asset(s), %# referenced target(s) in %# ms", data._mapEntry.size(), data._scannedFileCount,
                             data._mapReferrer.size(), data._scanMilliseconds );
@@ -36,7 +36,7 @@ namespace sw::editor
             _bScanInFlight = SW_FALSE;
         }
         // 스캔하는 동안 바뀐 것은 스캔이 끝난 뒤 번호가 달라지므로 다시 스캔한다. 저장이 몰려도 스캔은 하나씩 실행한다.
-        if ( poll == EditorTaskPoll::Running )
+        if ( poll == EditorJobPoll::Running )
             return;
         if ( _bScanRequested == SW_TRUE && contentChangeSerial == _scanSerial )
             return;
@@ -64,7 +64,7 @@ namespace sw::editor
     {
         // 대기 여부를 따로 읽지 않고 꺼내 본다 — 막 끝난 낡은 결과는 여기서 버려지고, 아직 도는 스캔은 새 요청이 그 세대를 버린다.
         EditorAssetIndexData staleData{};
-        if ( _job.take( staleData ) != EditorTaskPoll::Idle )
+        if ( _job.take( staleData ) != EditorJobPoll::Idle )
             requestScan( contentChangeSerial, changeSource );
     }
 

@@ -41,7 +41,7 @@
 #include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Input/EditorFileDrop.h"
 #include "Editor/Common/Input/EditorInputActions.h"
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"

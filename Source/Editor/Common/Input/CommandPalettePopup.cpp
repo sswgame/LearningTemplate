@@ -74,7 +74,7 @@ namespace sw::editor
         constexpr float32 kDetailColumnCount = 24.0f; ///< 오른쪽 끝의 설명 열이 차지하는 글자 칸 수
 
         vector<EditorAssetIndexEntry> listAssetEntry;
-        if ( _assetIndexJob.take( listAssetEntry ) == EditorTaskPoll::Ready )
+        if ( _assetIndexJob.take( listAssetEntry ) == EditorJobPoll::Ready )
             EditorSearchItem::appendAssets( listAssetEntry, _listItem );
 
         editor::EditorSearchOverlayDesc overlayDesc{};

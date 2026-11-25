@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
@@ -14,7 +14,7 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorBackgroundTaskInternal
+        struct EditorBackgroundJobInternal
         {
             /** @brief 잡 하나를 내고 에디터 전체 스테이지(와 있으면 잡 객체의 스테이지)에 넣습니다. 작업 시스템이 없으면 이 스레드에서 바로 돈다. */
             static void submitJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args, TaskStageHandle* pJobStage )
@@ -30,7 +30,7 @@ namespace sw::editor
                 TaskHandle handle = pTaskManager->emplaceTask( name, delegate, args );
                 // 스테이지는 에디터 컨텍스트가 만든 상태 저장소에 산다(게임 스레드에서만 낸다). 컨텍스트가 없으면(테스트) 종료에서 기다릴 주인도 없으므로 넣지 않는다.
                 if ( EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>() )
-                    pTaskManager->addToStage( pStore->get<EditorBackgroundJob>()._stage, handle, "EditorBackgroundJobs" );
+                    pTaskManager->addToStage( pStore->get<EditorBackgroundJobGroup>()._stage, handle, "EditorBackgroundJobs" );
                 // 태스크는 스테이지 하나에만 완료를 알린다(`TaskStageHandle::addTask`) — 잡 객체의 스테이지에는 잡 뒤에 도는 빈 태스크를 넣는다.
                 // 예전에는 같은 태스크를 두 스테이지에 넣어 뒤 등록이 앞을 덮었고, 전역 스테이지가 영영 끝나지 않아 에디터 정지 대기가 멈췄다.
                 if ( pJobStage != nullptr )
@@ -49,12 +49,12 @@ namespace sw::editor
 
     void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
     {
-        EditorBackgroundTaskInternal::submitJob( name, delegate, args, nullptr );
+        EditorBackgroundJobInternal::submitJob( name, delegate, args, nullptr );
     }
 
     void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args, TaskStageHandle& inoutJobStage )
     {
-        EditorBackgroundTaskInternal::submitJob( name, delegate, args, &inoutJobStage );
+        EditorBackgroundJobInternal::submitJob( name, delegate, args, &inoutJobStage );
     }
 
     void waitEditorBackgroundJob( const TaskStageHandle& jobStage, string_view owner )
@@ -67,13 +67,13 @@ namespace sw::editor
     void requestEditorBackgroundStop()
     {
         if ( EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>() )
-            pStore->get<EditorBackgroundJob>()._stop.requestStop();
+            pStore->get<EditorBackgroundJobGroup>()._stop.requestStop();
     }
 
     StopToken acquireEditorBackgroundStopSignal()
     {
         EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>();
-        return pStore != nullptr ? pStore->get<EditorBackgroundJob>()._stop.getToken() : StopToken{};
+        return pStore != nullptr ? pStore->get<EditorBackgroundJobGroup>()._stop.getToken() : StopToken{};
     }
 } // namespace sw::editor
 
@@ -90,7 +90,7 @@ namespace sw::editor
         TaskManager*      pTaskManager = editor::findSubsystem<TaskManager>();
         if ( pStore == nullptr || pTaskManager == nullptr )
             return AutomationReadiness::notApplicable();
-        const TaskStageHandle& stage = pStore->get<EditorBackgroundJob>()._stage;
+        const TaskStageHandle& stage = pStore->get<EditorBackgroundJobGroup>()._stage;
         if ( pTaskManager->isStageComplete( stage ) )
             return AutomationReadiness::ready();
         // 남은 잡 수가 진척이다(오래 기다리면 `AutomationStepRegistry::describeActiveBlockers` 가 그 수를 찍는다).

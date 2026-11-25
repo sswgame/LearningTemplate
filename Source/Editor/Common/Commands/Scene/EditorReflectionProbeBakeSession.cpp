@@ -8,7 +8,7 @@
 
 #include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 #include "Editor/Common/Commands/Scene/ReflectionProbeBaker.h"
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
@@ -131,7 +131,7 @@ namespace sw::editor
      * @class EditorReflectionProbeFilterJob
      * @brief 찍은 면을 풀고(half → float) 접고 거르고 `.reflprobe` 로 쓰는 에디터 백그라운드 잡입니다. 프로브에 넘기기(컴포넌트)는 결과를 받은 UI 스레드가 한다.
      */
-    class EditorReflectionProbeFilterJob final : public EditorBackgroundTask<EditorReflectionProbeFilterInput, EditorReflectionProbeFilterResult>
+    class EditorReflectionProbeFilterJob final : public EditorBackgroundJob<EditorReflectionProbeFilterInput, EditorReflectionProbeFilterResult>
     {
     public:
         /** @brief 잡을 냅니다(UI 스레드). */
@@ -265,10 +265,10 @@ namespace sw::editor
         }
         // 앞 프로브의 접기 · 쓰기(워커)가 끝났으면 넘기고, 아직이면 이 프레임은 기다린다 - 잡은 한 번에 하나다.
         EditorReflectionProbeFilterResult result;
-        const EditorTaskPoll              poll = _pFilterJob->take( result );
-        if ( poll == EditorTaskPoll::Running )
+        const EditorJobPoll               poll = _pFilterJob->take( result );
+        if ( poll == EditorJobPoll::Running )
             return;
-        if ( poll == EditorTaskPoll::Ready )
+        if ( poll == EditorJobPoll::Ready )
             applyResult( result );
         if ( _nextProbeIndex >= _listObjectID.size() )
         {

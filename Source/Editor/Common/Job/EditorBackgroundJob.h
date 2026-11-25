@@ -1,5 +1,5 @@
 /**
- * @file EditorBackgroundTask.h
+ * @file EditorBackgroundJob.h
  * @brief 워커가 만들고 게임 스레드가 가져가는 에디터 백그라운드 잡의 공통 뼈대입니다.
  *
  * @details 에디터의 파일 스캔과 로컬라이즈 로드 같은 잡은 모두 같은 규약을 쓴다. 게임 스레드가 `request()` 로 입력을
@@ -23,10 +23,10 @@
 namespace sw::editor
 {
     /**
-     * @struct EditorBackgroundJob
+     * @struct EditorBackgroundJobGroup
      * @brief 에디터가 낸 백그라운드 잡의 스테이지와 협조 중단 신호입니다. 에디터 상태 저장소(`EditorStateStore`)에 하나 — 컨텍스트 종료가 이 스테이지만 기다린다.
      */
-    struct EditorBackgroundJob
+    struct EditorBackgroundJobGroup
     {
         TaskStageHandle _stage; ///< 낸 잡(게임 스레드에서 낸다 — `TaskManager::addToStage`)
         StopSource      _stop;  ///< `requestEditorBackgroundStop` 이 올린다(내리지 않는다)
@@ -52,7 +52,7 @@ namespace sw::editor
     void requestEditorBackgroundStop();
     /** @brief 에디터 잡 하나가 제출 때 잡아 둔 중단 신호입니다(`beginRequest` 가 채운다). 에디터 컨텍스트가 없으면 nullptr — 멈출 일이 없다. */
     [[nodiscard]] StopToken acquireEditorBackgroundStopSignal();
-    // 낸 잡은 에디터 범위의 태스크 단계(`EditorBackgroundJob::_stage`, `getEditorState`)에 들고, `EditorContext::shutdown` 이 그것만 기다린다(엔진 전체 대기는 영구 태스크까지 기다린다).
+    // 낸 잡은 에디터 범위의 태스크 단계(`EditorBackgroundJobGroup::_stage`, `getEditorState`)에 들고, `EditorContext::shutdown` 이 그것만 기다린다(엔진 전체 대기는 영구 태스크까지 기다린다).
 } // namespace sw::editor
 
 namespace sw::editor
@@ -62,8 +62,8 @@ namespace sw::editor
     {
     };
 
-    /** @brief `EditorBackgroundTask::take` 가 한 번에 돌려주는 잡 상태입니다. */
-    enum class EditorTaskPoll : uint8
+    /** @brief `EditorBackgroundJob::take` 가 한 번에 돌려주는 잡 상태입니다. */
+    enum class EditorJobPoll : uint8
     {
         Idle,    ///< 요청이 없거나 결과를 이미 가져갔습니다.
         Running, ///< 워커가 아직 실행 중입니다.
@@ -74,7 +74,7 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @class EditorBackgroundTask
+     * @class EditorBackgroundJob
      * @brief 워커가 만들고 게임 스레드가 가져가는 잡의 공통 뼈대입니다. 락, 세대, 완료 플래그를 담당합니다.
      * @details 상태를 `shared_ptr` 로 보관해 워커에 넘긴다. 잡 객체(패널 멤버)가 먼저 사라져도 워커는 유효한 메모리에 쓰고
      *          끝난다. 세대 번호는 "요청이 갱신되었으니 오래된 워커의 결과는 버린다" 는 뜻이다.
@@ -82,11 +82,11 @@ namespace sw::editor
      * @tparam TResult 워커가 만들어 낼 결과입니다.
      */
     template <typename TInput, typename TResult>
-    class EditorBackgroundTask
+    class EditorBackgroundJob
     {
     public:
         /** @brief 빈 잡을 만듭니다. */
-        EditorBackgroundTask()
+        EditorBackgroundJob()
             : _pState{ sw::make_shared<State>() }
         {
         }
@@ -99,29 +99,29 @@ namespace sw::editor
          *          `Ready` 이면 @p outResult 에 결과가 들어 있고 완료 플래그가 해제된다(같은 결과를 두 번 주지 않는다).
          *          `Running` 이면 워커가 아직 실행 중이고, `Idle` 이면 요청이 없거나 결과를 이미 가져갔다. 이 둘이면 @p outResult 는 그대로다.
          */
-        EditorTaskPoll take( TResult& outResult )
+        EditorJobPoll take( TResult& outResult )
         {
             if ( _pState == nullptr )
-                return EditorTaskPoll::Idle;
+                return EditorJobPoll::Idle;
 
             ScopedLock<mutex> lock{ _pState->_mutex };
             if ( _pState->_bReady == SW_FALSE )
-                return _pState->_bPending == SW_TRUE ? EditorTaskPoll::Running : EditorTaskPoll::Idle;
+                return _pState->_bPending == SW_TRUE ? EditorJobPoll::Running : EditorJobPoll::Idle;
 
             outResult          = std::move( _pState->_result );
             _pState->_result   = TResult{};
             _pState->_bReady   = SW_FALSE;
             _pState->_bPending = SW_FALSE;
-            return EditorTaskPoll::Ready;
+            return EditorJobPoll::Ready;
         }
 
         /**
          * @brief 낸 잡이 끝날 때까지 기다린 뒤 `take` 합니다. 종료 · 정지처럼 결과가 나야 다음으로 가는 자리가 씁니다 — 프레임 루프는 `take` 로 묻는다.
          * @details 잡이 결과를 싣지 않고 끝났으면(중단 신호 · 낡은 세대) `Running` 이 그대로 돌아온다 — 다시 기다려도 바뀌지 않으므로 부르는 쪽은 그때 멈춘다.
          */
-        EditorTaskPoll waitAndTake( TResult& outResult )
+        EditorJobPoll waitAndTake( TResult& outResult )
         {
-            waitEditorBackgroundJob( _jobStage, "EditorBackgroundTask::waitAndTake" );
+            waitEditorBackgroundJob( _jobStage, "EditorBackgroundJob::waitAndTake" );
             return take( outResult );
         }
 

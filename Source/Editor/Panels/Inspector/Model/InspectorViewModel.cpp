@@ -496,13 +496,13 @@ namespace sw::editor
     {
         outListPreset.clear();
         vector<AbsolutePath> listNewPresetFile;
-        const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
-        if ( presetPoll == EditorTaskPoll::Ready )
+        const EditorJobPoll  presetPoll = _presetJob.take( listNewPresetFile );
+        if ( presetPoll == EditorJobPoll::Ready )
         {
             _listPresetFile = std::move( listNewPresetFile );
             _bPresetDirty   = SW_FALSE;
         }
-        else if ( _bPresetDirty == SW_TRUE && presetPoll == EditorTaskPoll::Idle )
+        else if ( _bPresetDirty == SW_TRUE && presetPoll == EditorJobPoll::Idle )
         {
             _presetJob.request( EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
         }

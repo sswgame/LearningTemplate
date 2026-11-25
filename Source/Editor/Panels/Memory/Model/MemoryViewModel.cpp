@@ -314,8 +314,8 @@ namespace sw::editor
     void MemoryViewModel::gather( MemoryViewState& outState )
     {
         MemoryPanelExportResult jobResult;
-        const EditorTaskPoll    poll = _exportJob.take( jobResult );
-        if ( poll == EditorTaskPoll::Ready )
+        const EditorJobPoll     poll = _exportJob.take( jobResult );
+        if ( poll == EditorJobPoll::Ready )
         {
             ++_finishedExportCount;
             if ( jobResult._error.empty() )
@@ -329,7 +329,7 @@ namespace sw::editor
                 _statusLine = SW_LOCKEYFORMAT( "EditorMemory", "ExportFailedStatus", TextArgumentList().addText( "reason", jobResult._error ) );
             }
         }
-        outState._bExportPending = poll == EditorTaskPoll::Running ? SW_TRUE : SW_FALSE;
+        outState._bExportPending = poll == EditorJobPoll::Running ? SW_TRUE : SW_FALSE;
 
         outState._listSnapshotLabel.clear();
         for ( const shared_ptr<const MemorySnapshot>& pSnapshot : _listSnapshot )

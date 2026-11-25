@@ -256,7 +256,7 @@ namespace sw::editor
     void QuickLauncherPopup::pollFileIndex()
     {
         vector<EditorAssetIndexEntry> listFileEntry;
-        if ( _fileIndexJob.take( listFileEntry ) != EditorTaskPoll::Ready )
+        if ( _fileIndexJob.take( listFileEntry ) != EditorJobPoll::Ready )
             return;
         EditorSearchItem::appendAssets( listFileEntry, _listItem ); // 배지 폭은 그대로다 — 에셋 종류는 미리 다 쟀다(`getWidestBadgeWidth`)
     }

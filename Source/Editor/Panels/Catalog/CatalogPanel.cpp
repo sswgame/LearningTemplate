@@ -123,8 +123,8 @@ namespace sw::editor
     void CatalogPanel::pollIndexJob()
     {
         vector<EditorAssetIndexEntry> listEntry;
-        const EditorTaskPoll          poll = _indexJob.take( listEntry );
-        if ( poll == EditorTaskPoll::Ready )
+        const EditorJobPoll           poll = _indexJob.take( listEntry );
+        if ( poll == EditorJobPoll::Ready )
         {
             rebuildFileList( listEntry );
             _bIndexLoaded = SW_TRUE;
