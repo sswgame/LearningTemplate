@@ -13,6 +13,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MinigameRewardComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
+#include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/ReputationComponent.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
@@ -36,7 +37,7 @@ namespace
             _pAbility               = pHero->addComponent<AbilitySystemComponent>();
             _pReward                = pHero->addComponent<MinigameRewardComponent>();
             _pAbility->setCatalog( &_catalog );
-            (void)_pAbility->addAttributeSet<CombatAttributeSet>();
+            (void)_pAbility->addAttributeSet( test::makeCombatAttributeSet() );
 
             AbilityEffectDef heal;
             heal._id             = hashed_string( "GE_RewardHeal" );

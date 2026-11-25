@@ -51,7 +51,7 @@ namespace sw
      *            취소한 뒤, `Event.Death` 게임플레이 이벤트와 `AbilityOwnerDiedEvent`("game" 채널)를 낸다. 쓰러진 뒤의 피해와 회복은 무시한다.
      *          - 쓰러짐은 체력 current 의 전이(> 0 → ≤ 0) 한 곳에서 판정한다 — 메타 피해 · 체력 직접 수정자 · 최대 체력 디버프 · 코드가 쓴 base · 즉사 어느 길이든 같다(Lyra `ULyraHealthSet` 의 OutOfHealth 자리).
      *          - 맞을 때마다 주인에게 `Event.Hit` 게임플레이 이벤트를 보낸다. 이벤트의 크기는 깎인 체력이고, 피격 반응 어빌리티가 이 이벤트로 발동한다.
-     *          기본값은 체력과 최대 체력 100, 마나와 최대 마나 100, 공격력 10, 방어 0, 이동 속도 5 이다. 카탈로그 XML 이 이 값을 덮어쓴다.
+     *          값은 데이터(`AbilityCatalog` 의 `<AttributeSet class="Combat">`)가 일곱 어트리뷰트를 모두 적는다 — 빠지면 세트를 붙이지 않는다(메타 둘은 0).
      */
     REFLECT( Abstract )
     class SW_GF_API CombatAttributeSet : public AttributeSet

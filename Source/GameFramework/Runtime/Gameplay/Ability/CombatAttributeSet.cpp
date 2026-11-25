@@ -95,13 +95,13 @@ namespace sw
     CombatAttributeSet::CombatAttributeSet()
         : _bApplyingDamage{ 0 }
     {
-        defineAttribute( CombatAttributes::health(), 100.0f );
-        defineAttribute( CombatAttributes::maxHealth(), 100.0f );
-        defineAttribute( CombatAttributes::mana(), 100.0f );
-        defineAttribute( CombatAttributes::maxMana(), 100.0f );
-        defineAttribute( CombatAttributes::attackPower(), 10.0f );
-        defineAttribute( CombatAttributes::armor(), 0.0f );
-        defineAttribute( CombatAttributes::moveSpeed(), 5.0f );
+        requireAttribute( CombatAttributes::health() );
+        requireAttribute( CombatAttributes::maxHealth() );
+        requireAttribute( CombatAttributes::mana() );
+        requireAttribute( CombatAttributes::maxMana() );
+        requireAttribute( CombatAttributes::attackPower() );
+        requireAttribute( CombatAttributes::armor() );
+        requireAttribute( CombatAttributes::moveSpeed() );
         defineAttribute( CombatAttributes::incomingDamage(), 0.0f );
         defineAttribute( CombatAttributes::incomingHealing(), 0.0f );
     }

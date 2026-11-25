@@ -283,7 +283,11 @@ namespace sw
                 if ( attributeEntry._bHasRange == SW_TRUE )
                     pAttributeSet->setAttributeRange( attributeEntry._attribute, attributeEntry._minValue, attributeEntry._maxValue );
             }
-            (void)addAttributeSet( std::move( pAttributeSet ) ); // 방금 만든 세트이므로 nullptr 이 아니다
+            if ( addAttributeSet( std::move( pAttributeSet ) ) == nullptr )
+            {
+                SW_LOG_ERROR_ID( "AbilitySystemComponent.GrantAbilitySetIncomplete", "grantAbilitySet '%#': the attribute set '%#' lacks values - the ability set is not granted", setID.c_str(), setEntry._className.c_str() );
+                return false;
+            }
         }
 
         for ( const TagID& tag : pSet->_looseTags.getTags() )

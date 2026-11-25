@@ -898,7 +898,6 @@
     "Source/GameFramework/Runtime/Gameplay/Ability/Ability.cpp": {"minus-one": 1},
     "Source/GameFramework/Runtime/Gameplay/Ability/AbilityDebugSections.cpp": {"integer": 1},
     "Source/GameFramework/Runtime/Gameplay/Ability/AbilityEffect.cpp": {"float": 2},
-    "Source/GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.cpp": {"float": 6},
     "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.cpp": {"hex": 1},
     "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.cpp": {"minus-one": 1},
     "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterSurfaceBinding.cpp": {"float": 2, "integer": 1},

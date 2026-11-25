@@ -81,6 +81,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     AttributeSet* AbilitySystemComponent::addAttributeSet( unique_ptr<AttributeSet> pAttributeSet )
     {
+        if ( pAttributeSet != nullptr && pAttributeSet->getUndefinedAttributes().empty() == false )
+        {
+            SW_LOG_ERROR_ID( "AbilitySystemComponent.AttributeValueMissing", "addAttributeSet: %# attributes have no value in the data (first '%#') - the attribute set is not added",
+                             static_cast<uint32>( pAttributeSet->getUndefinedAttributes().size() ), pAttributeSet->getUndefinedAttributes().front().c_str() );
+            return nullptr;
+        }
         if ( pAttributeSet == nullptr )
             return nullptr;
 

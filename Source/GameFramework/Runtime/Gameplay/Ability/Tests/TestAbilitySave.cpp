@@ -14,6 +14,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
+#include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
 
 using namespace sw;
 
@@ -37,7 +38,7 @@ namespace
         {
             AbilitySystemComponent* pAbilities = _manager.createGameObject( hashed_string( pName ) )->addComponent<AbilitySystemComponent>();
             pAbilities->setCatalog( &_catalog );
-            (void)pAbilities->addAttributeSet<CombatAttributeSet>();
+            (void)pAbilities->addAttributeSet( test::makeCombatAttributeSet() );
             return pAbilities;
         }
 

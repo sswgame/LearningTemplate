@@ -100,7 +100,7 @@ namespace sw
      * @class AbilitySystemComponent
      * @brief 오브젝트 하나의 어빌리티 시스템으로, 어트리뷰트 세트와 적용된 이펙트, 부여된 어빌리티, 태그 개수를 보관하고 시간을 진행합니다.
      * @details **쓰는 법**(언리얼 GAS 와 같은 순서):
-     *          1. 오브젝트에 붙이고 어트리뷰트 세트를 추가한다. 코드(`addAttributeSet<CombatAttributeSet>()`)로 하거나 데이터로 할 수 있다.
+     *          1. 오브젝트에 붙이고 어트리뷰트 세트를 추가한다. 코드(`addAttributeSet`)로 하거나 데이터로 할 수 있다.
      *             데이터로 하면 `_abilitySetID` 가 가리키는 카탈로그의 `<AbilitySet>` 이 플레이 시작에 어트리뷰트 세트, 어빌리티, 시작 이펙트, 태그를 한 번에 준다.
      *          2. 어빌리티를 준다(`giveAbility`, `giveAbilityByID`). 입력 번호를 주면 `abilityInputPressed( 번호 )` 가 어빌리티를 발동한다.
      *          3. 어빌리티는 이펙트 스펙(`makeOutgoingSpec`)을 만들어 자기 자신이나 다른 오브젝트에 적용한다(`applyGameplayEffectSpecToTarget`).
@@ -209,9 +209,9 @@ namespace sw
         // --------------------------------------------------------------------------
         // 2) 어트리뷰트
         // --------------------------------------------------------------------------
-        /** @brief 어트리뷰트 세트를 붙입니다. 다른 세트와 이름이 겹치는 어트리뷰트는 먼저 붙은 쪽이 우선하고, 경고를 남깁니다. */
+        /** @brief 어트리뷰트 세트를 붙입니다. 다른 세트와 이름이 겹치는 어트리뷰트는 먼저 붙은 쪽이 우선하고, 경고를 남깁니다. 값이 빠진 세트면 오류를 남기고 nullptr 입니다. */
         AttributeSet* addAttributeSet( unique_ptr<AttributeSet> pAttributeSet );
-        /** @brief T 를 만들어 붙이고 반환합니다. */
+        /** @brief T 를 만들어 붙이고 반환합니다. 값을 데이터가 정해야 하는 세트(`AttributeSet::requireAttribute`)면 붙이지 않고 nullptr 입니다 — 값을 정한 세트를 넘긴다. */
         template <typename T>
         T* addAttributeSet()
         {

@@ -93,6 +93,10 @@
       <Attribute name="Health" base="100"/>
       <Attribute name="MaxHealth" base="100"/>
       <Attribute name="MoveSpeed" base="4"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
+      <Attribute name="AttackPower" base="10"/>
+      <Attribute name="Armor" base="0"/>
     </AttributeSet>
     <AttributeSet class="Generic">
       <Attribute name="SinkDepth" base="0"/>
@@ -107,6 +111,10 @@
       <Attribute name="Health" base="100"/>
       <Attribute name="MaxHealth" base="100"/>
       <Attribute name="MoveSpeed" base="4"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
+      <Attribute name="AttackPower" base="10"/>
+      <Attribute name="Armor" base="0"/>
     </AttributeSet>
     <AttributeSet class="Generic">
       <Attribute name="SinkDepth" base="0"/>
@@ -121,6 +129,10 @@
       <Attribute name="Health" base="100"/>
       <Attribute name="MaxHealth" base="100"/>
       <Attribute name="MoveSpeed" base="4"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
+      <Attribute name="AttackPower" base="10"/>
+      <Attribute name="Armor" base="0"/>
     </AttributeSet>
     <AttributeSet class="Generic">
       <Attribute name="SinkDepth" base="0"/>
@@ -157,6 +169,10 @@
       <Attribute name="Health" base="100"/>
       <Attribute name="MaxHealth" base="100"/>
       <Attribute name="MoveSpeed" base="3.5"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
+      <Attribute name="AttackPower" base="10"/>
+      <Attribute name="Armor" base="0"/>
     </AttributeSet>
     <AttributeSet class="Generic">
       <Attribute name="MoveSpeedScale" base="1"/>
@@ -333,6 +349,8 @@
       <Attribute name="AttackPower" base="4"/>
       <Attribute name="Armor" base="20"/>
       <Attribute name="MoveSpeed" base="3"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
     </AttributeSet>
     <Ability id="GA_EnemyMelee" input="1"/>
     <Ability id="GA_Thorns"/>
@@ -346,6 +364,8 @@
       <Attribute name="AttackPower" base="6"/>
       <Attribute name="Armor" base="0"/>
       <Attribute name="MoveSpeed" base="2.2"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
     </AttributeSet>
     <Ability id="GA_EnemyBolt" input="2"/>
     <Tag tag="Team.Enemy"/>
