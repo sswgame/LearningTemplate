@@ -408,6 +408,12 @@ msgctxt "Cutscene Debugger"
 msgid "Cutscene Debugger"
 msgstr "컷씬 디버거"
 
+#. Context: ContentBrowserFavorite._label
+#: editor/panels/contentbrowser.favorites.xml
+msgctxt "Data"
+msgid "Data"
+msgstr "데이터"
+
 #. Context: EditorPanelText._label
 #: editor/panels/editor.panels.xml
 msgctxt "Data Layers"
@@ -1439,6 +1445,7 @@ msgid "Save the current dock layout and panel visibility under this name (Saved/
 msgstr "지금 도킹 배치와 패널 가시성을 이 이름으로 저장합니다 (Saved/Editor/Layouts, 영숫자 · 공백 · _ · -)"
 
 #: Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp
+#: Source/Editor/Common/Workspace/Asset/EditorDiskBaseline.cpp
 msgctxt "EdCommon.SaveRefusedTitle"
 msgid "Save refused"
 msgstr "저장 거절"
@@ -10760,6 +10767,12 @@ msgctxt "Prefab Window"
 msgid "Prefab Window"
 msgstr "프리팹 창"
 
+#. Context: ContentBrowserFavorite._label
+#: editor/panels/contentbrowser.favorites.xml
+msgctxt "Prefabs"
+msgid "Prefabs"
+msgstr "프리팹"
+
 #. Context: EditorPanelText._label
 #: editor/panels/editor.panels.xml
 msgctxt "Preferences"
@@ -11024,6 +11037,12 @@ msgctxt "Scene"
 msgid "Scene"
 msgstr "씬"
 
+#. Context: ContentBrowserFavorite._label
+#: editor/panels/contentbrowser.favorites.xml
+msgctxt "Scenes"
+msgid "Scenes"
+msgstr "씬"
+
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
 msgctxt "Screenshot"
@@ -11071,6 +11090,12 @@ msgstr "시퀀서"
 msgctxt "Sets the editor theme preset, accent color and corner rounding"
 msgid "Sets the editor theme preset, accent color and corner rounding"
 msgstr "에디터 테마 프리셋, 액센트 색상 및 모서리 라운딩을 설정합니다"
+
+#. Context: ContentBrowserFavorite._label
+#: editor/panels/contentbrowser.favorites.xml
+msgctxt "Shaders"
+msgid "Shaders"
+msgstr "셰이더"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
@@ -11125,6 +11150,12 @@ msgstr "스트리밍 셀"
 msgctxt "Test Runner"
 msgid "Test Runner"
 msgstr "테스트 실행기"
+
+#. Context: ContentBrowserFavorite._label
+#: editor/panels/contentbrowser.favorites.xml
+msgctxt "Textures"
+msgid "Textures"
+msgstr "텍스처"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml

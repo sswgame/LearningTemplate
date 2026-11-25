@@ -111,23 +111,10 @@ msgid "Update the game to chat"
 msgstr "채팅하려면 게임을 업데이트하세요"
 
 #. Context: TextWidget._text
-#: engine/ui/debughud.ui.xml
 #: engine/ui/options.ui.xml
 msgctxt "Close"
 msgid "Close"
 msgstr "닫기"
-
-#. Context: TextWidget._text
-#: engine/ui/debughud.ui.xml
-msgctxt "Corner"
-msgid "Corner"
-msgstr "모서리"
-
-#. Context: TextWidget._text
-#: engine/ui/debughud.ui.xml
-msgctxt "Debug HUD"
-msgid "Debug HUD"
-msgstr "디버그 HUD"
 
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
@@ -2486,12 +2473,6 @@ msgid "OK"
 msgstr "확인"
 
 #. Context: TextWidget._text
-#: engine/ui/debughud.ui.xml
-msgctxt "Opacity"
-msgid "Opacity"
-msgstr "불투명도"
-
-#. Context: TextWidget._text
 #: engine/ui/mainmenu.ui.xml
 #: engine/ui/options.ui.xml
 #: engine/ui/pause.ui.xml
@@ -2587,12 +2568,6 @@ msgstr "불러오기 실패"
 msgctxt "SceneLoad.Retry"
 msgid "Try Again"
 msgstr "다시 시도"
-
-#. Context: TextWidget._text
-#: engine/ui/debughud.ui.xml
-msgctxt "Sections"
-msgid "Sections"
-msgstr "섹션"
 
 #: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
 msgctxt "ServerPicker.Idle"
@@ -2733,12 +2708,6 @@ msgstr "상점에 연결하지 못했습니다. 지갑에는 서버가 가진 �
 msgctxt "Shop.Unverified"
 msgid "The purchase reply did not match; your wallet was refreshed."
 msgstr "구매 응답이 맞지 않아 지갑을 새로 고쳤습니다."
-
-#. Context: TextWidget._text
-#: engine/ui/debughud.ui.xml
-msgctxt "Show HUD (Ctrl+F3)"
-msgid "Show HUD (Ctrl+F3)"
-msgstr "HUD 표시 (Ctrl+F3)"
 
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml

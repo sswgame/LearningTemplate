@@ -33,8 +33,6 @@
 		       text="チャットするにはゲームを更新してください"
 		       sourceHash="42ac26bc346890e2" />
 		<entry key="Close" text="閉じる" sourceHash="5e8250fb85d64c23" />
-		<entry key="Corner" text="位置" sourceHash="d66afae9aedadcf0" />
-		<entry key="Debug HUD" text="デバッグ HUD" sourceHash="e7b16707c98cf071" />
 		<entry key="Defaults" text="初期設定" sourceHash="48022f6d5501d677" />
 		<entry key="Discard" text="破棄" sourceHash="c00a88b90cd60661" />
 		<entry key="EdAbilityCatalog.Abilities" text="アビリティ" sourceHash="9c5c6645f6238fcd" />
@@ -730,7 +728,6 @@
 		       text="一部の変更は再起動後に反映されます。"
 		       sourceHash="14441b823018dda4" />
 		<entry key="OK" text="OK" sourceHash="091d3d07b5b3076f" />
-		<entry key="Opacity" text="不透明度" sourceHash="ba64d8954d027206" />
 		<entry key="Options" text="オプション" sourceHash="463b8c4e92751ba5" />
 		<entry key="Paused" text="一時停止中" sourceHash="95bc8722b2708f8b" />
 		<entry key="Press a key. Escape cancels; hold Escape for one second to bind it."
@@ -756,7 +753,6 @@
 		       sourceHash="2422111a96377ee9" />
 		<entry key="SceneLoad.FailedTitle" text="読み込み失敗" sourceHash="3b0d43abf06f4ac4" />
 		<entry key="SceneLoad.Retry" text="もう一度試す" sourceHash="8cdcbe65c5e46f7a" />
-		<entry key="Sections" text="セクション" sourceHash="0337d90cf703df0d" />
 		<entry key="ServerPicker.Idle"
 		       text="更新を押すとサーバー一覧を表示します"
 		       sourceHash="90268a2738feb664" />
@@ -797,7 +793,6 @@
 		<entry key="Shop.Unverified"
 		       text="購入の応答が一致しなかったため、ウォレットを更新しました。"
 		       sourceHash="ccfce3ecd112ddfe" />
-		<entry key="Show HUD (Ctrl+F3)" text="HUD を表示 (Ctrl+F3)" sourceHash="8f553b077c9a458d" />
 		<entry key="Some changes take effect after a restart."
 		       text="一部の変更は再起動後に反映されます。"
 		       sourceHash="14441b823018dda4" />

@@ -1,20 +1,6 @@
 <?asset guid="23267bc32729c612b7d0ab7681cded9a"?>
 <SourceStringTable culture="en">
 	<entries>
-		<entry key="/" source="/" context="TextWidget._text">
-			<origins>
-				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
-				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
-				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
-				<item>game/playground/shooter3d/ui/hud.ui.xml</item>
-				<item>game/playground/ui/hub_cards.ui.xml</item>
-			</origins>
-		</entry>
-		<entry key=">" source=">" context="TextWidget._text">
-			<origins>
-				<item>game/playground/ui/hub_cards.ui.xml</item>
-			</origins>
-		</entry>
 		<entry key="Accuracy (%)" source="Accuracy (%)" context="TextWidget._text">
 			<origins>
 				<item>game/playground/rhythm/ui/hud.ui.xml</item>
@@ -909,7 +895,6 @@
 		<entry key="Stamina" source="Stamina" context="TextWidget._text">
 			<origins>
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
-				<item>game/playground/wildwest/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Stock" source="Stock" context="TextWidget._text">

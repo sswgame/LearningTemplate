@@ -31,8 +31,6 @@
 		<entry key="Chat.Unavailable" text="지금은 채팅할 수 없습니다" sourceHash="97824550bff00311" />
 		<entry key="Chat.UpdateGame" text="채팅하려면 게임을 업데이트하세요" sourceHash="42ac26bc346890e2" />
 		<entry key="Close" text="닫기" sourceHash="5e8250fb85d64c23" />
-		<entry key="Corner" text="모서리" sourceHash="d66afae9aedadcf0" />
-		<entry key="Debug HUD" text="디버그 HUD" sourceHash="e7b16707c98cf071" />
 		<entry key="Defaults" text="기본값" sourceHash="48022f6d5501d677" />
 		<entry key="Discard" text="버리기" sourceHash="c00a88b90cd60661" />
 		<entry key="EdAbilityCatalog.Abilities" text="어빌리티" sourceHash="9c5c6645f6238fcd" />
@@ -712,7 +710,6 @@
 		       text="일부 변경은 다시 시작한 뒤 적용됩니다."
 		       sourceHash="14441b823018dda4" />
 		<entry key="OK" text="확인" sourceHash="091d3d07b5b3076f" />
-		<entry key="Opacity" text="불투명도" sourceHash="ba64d8954d027206" />
 		<entry key="Options" text="옵션" sourceHash="463b8c4e92751ba5" />
 		<entry key="Paused" text="일시 정지" sourceHash="95bc8722b2708f8b" />
 		<entry key="Press a key. Escape cancels; hold Escape for one second to bind it."
@@ -738,7 +735,6 @@
 		       sourceHash="2422111a96377ee9" />
 		<entry key="SceneLoad.FailedTitle" text="불러오기 실패" sourceHash="3b0d43abf06f4ac4" />
 		<entry key="SceneLoad.Retry" text="다시 시도" sourceHash="8cdcbe65c5e46f7a" />
-		<entry key="Sections" text="섹션" sourceHash="0337d90cf703df0d" />
 		<entry key="ServerPicker.Idle"
 		       text="새로 고침을 누르면 서버 목록을 보입니다"
 		       sourceHash="90268a2738feb664" />
@@ -779,7 +775,6 @@
 		<entry key="Shop.Unverified"
 		       text="구매 응답이 맞지 않아 지갑을 새로 고쳤습니다."
 		       sourceHash="ccfce3ecd112ddfe" />
-		<entry key="Show HUD (Ctrl+F3)" text="HUD 표시 (Ctrl+F3)" sourceHash="8f553b077c9a458d" />
 		<entry key="Some changes take effect after a restart."
 		       text="일부 변경은 다시 시작한 뒤 적용됩니다."
 		       sourceHash="14441b823018dda4" />

@@ -9,22 +9,6 @@ msgstr ""
 "X-Generator: SWEngine LocalizationTools\n"
 
 #. Context: TextWidget._text
-#: game/playground/classicjrpg/ui/hud.ui.xml
-#: game/playground/monstercollector/ui/hud.ui.xml
-#: game/playground/restaurantsim/ui/hud.ui.xml
-#: game/playground/shooter3d/ui/hud.ui.xml
-#: game/playground/ui/hub_cards.ui.xml
-msgctxt "/"
-msgid "/"
-msgstr "/"
-
-#. Context: TextWidget._text
-#: game/playground/ui/hub_cards.ui.xml
-msgctxt ">"
-msgid ">"
-msgstr ">"
-
-#. Context: TextWidget._text
 #: game/playground/rhythm/ui/hud.ui.xml
 msgctxt "Accuracy (%)"
 msgid "Accuracy (%)"
@@ -1060,7 +1044,6 @@ msgstr "부대"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
-#: game/playground/wildwest/ui/hud.ui.xml
 msgctxt "Stamina"
 msgid "Stamina"
 msgstr "기력"

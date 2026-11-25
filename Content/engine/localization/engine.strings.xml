@@ -101,18 +101,7 @@
 		</entry>
 		<entry key="Close" source="Close" context="TextWidget._text">
 			<origins>
-				<item>engine/ui/debughud.ui.xml</item>
 				<item>engine/ui/options.ui.xml</item>
-			</origins>
-		</entry>
-		<entry key="Corner" source="Corner" context="TextWidget._text">
-			<origins>
-				<item>engine/ui/debughud.ui.xml</item>
-			</origins>
-		</entry>
-		<entry key="Debug HUD" source="Debug HUD" context="TextWidget._text">
-			<origins>
-				<item>engine/ui/debughud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Defaults" source="Defaults" context="TextWidget._text">
@@ -2522,11 +2511,6 @@
 				<item>engine/ui/quantity.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Opacity" source="Opacity" context="TextWidget._text">
-			<origins>
-				<item>engine/ui/debughud.ui.xml</item>
-			</origins>
-		</entry>
 		<entry key="Options" source="Options" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/mainmenu.ui.xml</item>
@@ -2617,11 +2601,6 @@
 		<entry key="SceneLoad.Retry" source="Try Again">
 			<origins>
 				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Sections" source="Sections" context="TextWidget._text">
-			<origins>
-				<item>engine/ui/debughud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="ServerPicker.Idle" source="Press Refresh to list servers">
@@ -2762,11 +2741,6 @@
 		<entry key="Shop.Unverified" source="The purchase reply did not match; your wallet was refreshed.">
 			<origins>
 				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Show HUD (Ctrl+F3)" source="Show HUD (Ctrl+F3)" context="TextWidget._text">
-			<origins>
-				<item>engine/ui/debughud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Some changes take effect after a restart."

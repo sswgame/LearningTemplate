@@ -109,6 +109,7 @@
 		       text="고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다"
 		       sourceHash="788f45ec38d1c127" />
 		<entry key="Cutscene Debugger" text="컷씬 디버거" sourceHash="6bc219e759f91cdc" />
+		<entry key="Data" text="데이터" sourceHash="ac8256732f2ee1e5" />
 		<entry key="Data Layers" text="데이터 레이어" sourceHash="b47513221d8a31b9" />
 		<entry key="Data Table Editor" text="데이터 테이블 편집기" sourceHash="9fa50cb618dc4886" />
 		<entry key="Delete" text="삭제" sourceHash="dc673e73b5c13aea" />
@@ -4079,6 +4080,7 @@
 		<entry key="Play in New Window" text="새 창에서 플레이" sourceHash="630e98fc6320e934" />
 		<entry key="Prefab Overrides" text="프리팹 덮어쓰기" sourceHash="f80890149d01970e" />
 		<entry key="Prefab Window" text="프리팹 창" sourceHash="0877f07c1eefb1c9" />
+		<entry key="Prefabs" text="프리팹" sourceHash="2960140cef8709d0" />
 		<entry key="Preferences" text="환경설정" sourceHash="2b5047d39b9baf3d" />
 		<entry key="Preferences..." text="환경설정..." sourceHash="ad5301f4af2eab11" />
 		<entry key="Presets" text="프리셋" sourceHash="e7ce04baa8200e17" />
@@ -4157,6 +4159,7 @@
 		       text="포커스가 있는 뷰(게임 뷰 · 씬 뷰)를 PNG 로 저장합니다"
 		       sourceHash="a4cdf6b9fab8f053" />
 		<entry key="Scene" text="씬" sourceHash="4a9a31623ab5f213" />
+		<entry key="Scenes" text="씬" sourceHash="79f449e9c32ad920" />
 		<entry key="Screenshot" text="스크린샷" sourceHash="12e9c9d9d9b94cf1" />
 		<entry key="Search and run editor commands"
 		       text="에디터 명령을 찾아 실행합니다"
@@ -4171,6 +4174,7 @@
 		<entry key="Sets the editor theme preset, accent color and corner rounding"
 		       text="에디터 테마 프리셋, 액센트 색상 및 모서리 라운딩을 설정합니다"
 		       sourceHash="7080e1da8d9c257b" />
+		<entry key="Shaders" text="셰이더" sourceHash="03621f774d435e61" />
 		<entry key="Show Dependencies" text="의존 보기" sourceHash="177ed66a13428561" />
 		<entry key="Show in Explorer" text="탐색기에서 보기" sourceHash="7582a6273577e9c6" />
 		<entry key="Show the asset in the Content Browser"
@@ -4184,6 +4188,7 @@
 		<entry key="Start play-in-editor" text="에디터 안 플레이를 시작합니다" sourceHash="53d30c8e8bd48c09" />
 		<entry key="Streaming Cells" text="스트리밍 셀" sourceHash="cf45f7e5f679d89e" />
 		<entry key="Test Runner" text="테스트 실행기" sourceHash="b609ba8e16775cd5" />
+		<entry key="Textures" text="텍스처" sourceHash="06eaee20d025f545" />
 		<entry key="Theme &amp; Look and Feel..." text="테마 · 모양..." sourceHash="118e3cb7b4f93874" />
 		<entry key="Tile Map Tool" text="타일 맵 도구" sourceHash="5f89ed1b3d4f9fa3" />
 		<entry key="Tile Set Editor" text="타일셋 편집기" sourceHash="eafe8f61c53d2a3e" />

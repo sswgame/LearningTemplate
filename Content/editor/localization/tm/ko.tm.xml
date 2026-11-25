@@ -529,6 +529,7 @@
 		<entry source="Curve" text="커브" />
 		<entry source="Curves" text="커브" />
 		<entry source="Cutscene Debugger" text="컷씬 디버거" />
+		<entry source="Data" text="데이터" />
 		<entry source="Data Layers" text="데이터 레이어" />
 		<entry source="Data Table Editor" text="데이터 테이블 편집기" />
 		<entry source="Data layer not added: the name is empty or already used"
@@ -1652,6 +1653,7 @@
 		       text="움직이는 캐릭터의 프리팹입니다. 효과가 가슴 높이에 붙어 원을 따라 걸어, 꼬리 · 잔상이 움직임을 보입니다." />
 		<entry source="Prefab spawned for this span. Type its resource id or drop it from the content browser."
 		       text="이 구간 동안 스폰할 프리팹입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다." />
+		<entry source="Prefabs" text="프리팹" />
 		<entry source="Preferences" text="환경설정" />
 		<entry source="Preferences..." text="환경설정..." />
 		<entry source="Preset" text="프리셋" />
@@ -2092,6 +2094,7 @@
 		       text="씬에 저장하지 않은 변경이 있습니다. 그래도 플레이할까요?" />
 		<entry source="Scene view mode: Lit / Unlit / Wireframe / Normals / Depth / Overdraw (the game view always draws Lit)"
 		       text="씬 뷰 보기 모드 — Lit / Unlit / Wireframe / Normals / Depth / Overdraw (게임 뷰는 늘 Lit)" />
+		<entry source="Scenes" text="씬" />
 		<entry source="Screen Anchor Position" text="화면 기준 위치" />
 		<entry source="Screen size to lay the document out for. Check layouts at several aspect ratios before shipping."
 		       text="문서를 배치할 화면 크기입니다. 출시 전에 여러 화면비에서 레이아웃을 확인합니다." />
@@ -2200,6 +2203,7 @@
 		       text="에디터 테마 프리셋, 액센트 색상 및 모서리 라운딩을 설정합니다" />
 		<entry source="Shaded Wireframe" text="셰이드 와이어프레임" />
 		<entry source="Shader" text="셰이더" />
+		<entry source="Shaders" text="셰이더" />
 		<entry source="Shading Path" text="셰이딩 경로" />
 		<entry source="Shapes" text="모양" />
 		<entry source="Shared entries are written to Config/Editor/ContentCollections.txt and committed with the project; the others stay on this machine"
@@ -2443,6 +2447,7 @@
 		<entry source="Text" text="글" />
 		<entry source="Text scale" text="글자 크기" />
 		<entry source="Texture streaming" text="텍스처 스트리밍" />
+		<entry source="Textures" text="텍스처" />
 		<entry source="The Inspector reads a dedicated server through its debug channel. Start a Dedicated Server session, or attach by address"
 		       text="인스펙터는 전용 서버를 디버그 채널로 읽습니다. 전용 서버 세션을 시작하거나 주소로 붙으세요" />
 		<entry source="The Render Targets panel and the game view show the frame up to the stop draw."
@@ -2932,9 +2937,9 @@
 		<entry source="{passed} ({frameCount} frames){reason}{reason2}"
 		       text="{passed}({frameCount}프레임){reason}{reason2}" />
 		<entry source="{pass} #{draw}" text="{pass} #{draw}" />
-		<entry source="{path} is open - close it first" text="{path} 이(가) 열려 있습니다. 먼저 닫으십시오." />
 		<entry source="{path} changed on disk after it was opened - reopen it to keep that version, or save again to overwrite it"
 		       text="{path} 이(가) 연 뒤 디스크에서 바뀌었습니다. 그 내용을 쓰려면 다시 열고, 덮어쓰려면 다시 저장하십시오." />
+		<entry source="{path} is open - close it first" text="{path} 이(가) 열려 있습니다. 먼저 닫으십시오." />
 		<entry source="{path} is read-only - Check Out (lock) it in the Content Browser first"
 		       text="{path} 은(는) 읽기 전용입니다. 먼저 콘텐츠 브라우저에서 Check Out(잠금)하십시오." />
 		<entry source="{referrerCount} referencing file(s) are fixed in the same step. If a write fails, everything is put back"

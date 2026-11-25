@@ -369,6 +369,11 @@
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
+		<entry key="Data" source="Data" context="ContentBrowserFavorite._label">
+			<origins>
+				<item>editor/panels/contentbrowser.favorites.xml</item>
+			</origins>
+		</entry>
 		<entry key="Data Layers" source="Data Layers" context="EditorPanelText._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
@@ -11136,6 +11141,11 @@
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
+		<entry key="Prefabs" source="Prefabs" context="ContentBrowserFavorite._label">
+			<origins>
+				<item>editor/panels/contentbrowser.favorites.xml</item>
+			</origins>
+		</entry>
 		<entry key="Preferences" source="Preferences" context="EditorPanelText._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
@@ -11386,6 +11396,11 @@
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
+		<entry key="Scenes" source="Scenes" context="ContentBrowserFavorite._label">
+			<origins>
+				<item>editor/panels/contentbrowser.favorites.xml</item>
+			</origins>
+		</entry>
 		<entry key="Screenshot" source="Screenshot" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
@@ -11430,6 +11445,11 @@
 		       context="Editor command tooltip">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Shaders" source="Shaders" context="ContentBrowserFavorite._label">
+			<origins>
+				<item>editor/panels/contentbrowser.favorites.xml</item>
 			</origins>
 		</entry>
 		<entry key="Show Dependencies" source="Show Dependencies" context="Editor command name">
@@ -11479,6 +11499,11 @@
 		<entry key="Test Runner" source="Test Runner" context="EditorPanelText._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Textures" source="Textures" context="ContentBrowserFavorite._label">
+			<origins>
+				<item>editor/panels/contentbrowser.favorites.xml</item>
 			</origins>
 		</entry>
 		<entry key="Theme &amp; Look and Feel..." source="Theme &amp; Look and Feel..." context="Editor command name">

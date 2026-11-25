@@ -1,8 +1,6 @@
 <?asset guid="1ad0b842f94e1274f15b0da02f9a66fc"?>
 <TranslationTable culture="ko">
 	<entries>
-		<entry key="/" text="/" sourceHash="af63a24c860189fe" />
-		<entry key=">" text=">" sourceHash="af63b34c8601a6e1" />
 		<entry key="Accuracy (%)" text="정확도(%)" sourceHash="67e78eeed325a546" />
 		<entry key="Actor" text="배우" sourceHash="f865a44470a1eb3a" />
 		<entry key="All sites" text="모든 거점" sourceHash="2942d2349667a12c" />

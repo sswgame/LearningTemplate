@@ -111,23 +111,10 @@ msgid "Update the game to chat"
 msgstr "チャットするにはゲームを更新してください"
 
 #. Context: TextWidget._text
-#: engine/ui/debughud.ui.xml
 #: engine/ui/options.ui.xml
 msgctxt "Close"
 msgid "Close"
 msgstr "閉じる"
-
-#. Context: TextWidget._text
-#: engine/ui/debughud.ui.xml
-msgctxt "Corner"
-msgid "Corner"
-msgstr "位置"
-
-#. Context: TextWidget._text
-#: engine/ui/debughud.ui.xml
-msgctxt "Debug HUD"
-msgid "Debug HUD"
-msgstr "デバッグ HUD"
 
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
@@ -2486,12 +2473,6 @@ msgid "OK"
 msgstr "OK"
 
 #. Context: TextWidget._text
-#: engine/ui/debughud.ui.xml
-msgctxt "Opacity"
-msgid "Opacity"
-msgstr "不透明度"
-
-#. Context: TextWidget._text
 #: engine/ui/mainmenu.ui.xml
 #: engine/ui/options.ui.xml
 #: engine/ui/pause.ui.xml
@@ -2587,12 +2568,6 @@ msgstr "読み込み失敗"
 msgctxt "SceneLoad.Retry"
 msgid "Try Again"
 msgstr "もう一度試す"
-
-#. Context: TextWidget._text
-#: engine/ui/debughud.ui.xml
-msgctxt "Sections"
-msgid "Sections"
-msgstr "セクション"
 
 #: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
 msgctxt "ServerPicker.Idle"
@@ -2733,12 +2708,6 @@ msgstr "ストアに接続できませんでした。ウォレットにはサー
 msgctxt "Shop.Unverified"
 msgid "The purchase reply did not match; your wallet was refreshed."
 msgstr "購入の応答が一致しなかったため、ウォレットを更新しました。"
-
-#. Context: TextWidget._text
-#: engine/ui/debughud.ui.xml
-msgctxt "Show HUD (Ctrl+F3)"
-msgid "Show HUD (Ctrl+F3)"
-msgstr "HUD を表示 (Ctrl+F3)"
 
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
