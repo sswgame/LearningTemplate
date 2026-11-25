@@ -195,7 +195,7 @@ namespace sw
          * @brief 스냅샷을 GPU 에 올립니다(RT). 인스턴스 버퍼, 배치 테이블, 간접 인자, 머티리얼 그룹 버퍼, 정점 풀을 맞춥니다.
          *        인스턴스 버퍼와 메인 뷰 간접 인자가 모두 있으면 true 를 반환합니다.
          */
-        bool upload( IRHIDevice* pDevice );
+        bool upload( IRHIDevice* pDevice, uint32 meshPoolMaxVertices );
         /**
          * @brief 프레임 업로드 단계 — 정점 풀이 쌓은 GPU 복사(렌더 프록시 → 풀, 옛 풀 → 새 풀)를 @p cmd 에 기록합니다(R-15). 실행기가 파이프라인과 무관하게 첫 리스트 앞에서 부른다(`FramePassExecutor::submitGraph`).
          */
@@ -427,7 +427,7 @@ namespace sw
         /** @brief 그룹당 한 번 푼 버퍼와 SRV 를 배치에 기록합니다. */
         void bindBatchMaterials();
         /** @brief 배치 메시를 정점 풀에 모으고(동적 메시 포함) 배치에 풀 버퍼와 시작 정점을 적습니다. 풀 밖 배치는 자기 정점 버퍼를 만듭니다. 풀이 바뀌면 배치 테이블을 더티로 둡니다. */
-        void updateVertexPool( IRHIDevice* pDevice );
+        void updateVertexPool( IRHIDevice* pDevice, uint32 meshPoolMaxVertices );
         /** @brief 칸 순 인스턴스 버퍼를 확보해 바뀐 칸만(처음 · 다시 만든 버퍼는 전체) 올리고, 차례 → 칸 목록과 뷰마다의 가시 인스턴스 ID 버퍼를 확보합니다. */
         void uploadInstanceAndVisibleBuffers( IRHIDevice* pDevice );
         /** @brief 스냅샷의 바뀐 칸을 칸 순 사본에 받습니다(CPU 만 — 올리기는 `uploadInstanceAndVisibleBuffers`). 새 스냅샷마다 한 번 부른다. */

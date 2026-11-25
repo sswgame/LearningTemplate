@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/Scene/SceneAudio.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -14,6 +15,7 @@
 #include "Engine/Audio/Scene/Physics2DAudioOcclusionQuery.h"
 #include "Engine/Audio/Scene/PhysicsAudioOcclusionQuery.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -182,10 +184,14 @@ namespace sw
         , _primaryListenerPosition{}
         , _lastCameraPosition{}
         , _mutex{}
+        , _occlusionChecksPerFrame{ 0 }
         , _occlusionCursor{ 0 }
         , _activeListenerMask{ 0 }
         , _bUpdateEnabled{ SW_TRUE }
     {
+        const EngineConfig* const pConfig = locateSubsystem<EngineConfig>( manager.getSceneEngineServices()._pEngineSubsystems );
+        if ( pConfig != nullptr )
+            _occlusionChecksPerFrame = pConfig->_audio._occlusionChecksPerFrame;
     }
 
     SceneAudio::~SceneAudio()
@@ -445,7 +451,9 @@ namespace sw
         const uint32 emitterCount = static_cast<uint32>( _listEmitterSnapshot.size() );
         if ( pQuery != nullptr && emitterCount > 0 )
         {
-            const uint32 checkCount = MathUtil::min( emitterCount, kOcclusionChecksPerFrame );
+            if ( _occlusionChecksPerFrame == 0 )
+                SW_LOG_ERROR_ONCE_ID( "SceneAudio.NoOcclusionBudget", "Scene audio: the scene has no EngineConfig (_audio._occlusionChecksPerFrame) - sound occlusion is not measured" );
+            const uint32 checkCount = MathUtil::min( emitterCount, _occlusionChecksPerFrame );
             for ( uint32 validateIndex = 0; validateIndex < checkCount; ++validateIndex )
             {
                 AudioEmitterComponent* pEmitter = _listEmitterSnapshot[( _occlusionCursor + validateIndex ) % emitterCount];

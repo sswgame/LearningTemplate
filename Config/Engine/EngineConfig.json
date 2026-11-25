@@ -28,7 +28,11 @@
         "_reopenFirstDelayMs": 1000,
         "_reopenMaxDelayMs": 30000,
         "_clipCacheMegabytes": 192,
-        "_musicCrossfadeSeconds": 0.25
+        "_musicCrossfadeSeconds": 0.25,
+        "_occlusionChecksPerFrame": 16
+    },
+    "_terrain": {
+        "_maxChunkMeshRebuildsPerFrame": 4
     },
     "_subtitles": {
         "_maxVisibleLineCount": 2,
@@ -64,6 +68,8 @@
         "_autoExposureHistogramLogMin": -10.0,
         "_autoExposureHistogramLogMax": 6.0,
         "_maxExtraViewCount": 8,
+        "_meshPoolMaxVertices": 4194304,
+        "_meshDeformPoolMaxVertices": 4194304,
         "_textureStreaming": {
             "_uploadsPerFrame": 8,
             "_upgradesPerFrame": 2,

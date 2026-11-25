@@ -164,11 +164,11 @@ namespace sw
         /**
          * @brief 이번 프레임에 모프할 메시 목록을 받아 풀을 맞춥니다(스킨드 메시 없음). 프레임마다 **한 번** 부릅니다.
          * @details 목록이 지난 프레임과 같으면 아무것도 하지 않는다. 바뀌면 들어온 메시의 레스트만 올린다.
-         *          예산(`kMaxPoolVertices`)을 넘는 메시는 **들어가지 못하고** 오류를 남기며 그리지 않는다(레스트 포즈로 대신 그리지 않는다 — GPUMeshBatchBinding::_bDeformRefused).
+         *          예산(@p maxVertexCount — `RenderConfig::_meshDeformPoolMaxVertices`)을 넘는 메시는 **들어가지 못하고** 오류를 남기며 그리지 않는다(레스트 포즈로 대신 그리지 않는다 — GPUMeshBatchBinding::_bDeformRefused).
          *          언리얼 스킨 캐시가 가득 차면 일반 경로로 되돌리는 것과 같다.
          * @param listMesh 소유하지 않는 포인터들입니다. 스냅샷 배치가 소유권을 가지고 있는 동안에만 유효합니다.
          */
-        void update( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
+        void update( IRHIDevice* pDevice, const vector<Mesh*>& listMesh, uint32 maxVertexCount );
         /**
          * @brief 모프 메시와 스킨드 메시를 함께 받아 풀을 맞춥니다. 모프가 앞 구간, 스킨 인스턴스가 뒤 구간입니다. 프레임마다 **한 번** 부릅니다
          *        (돌려받은 모프 구간의 대기 번호가 이 호출 수입니다).
@@ -180,7 +180,7 @@ namespace sw
          *          표의 시작은 그 단계 첫 정점만큼 앞당긴 값이라(부호 없는 덧셈으로 감긴다) 정점 셰이더의 정점 흐름 번호를 그대로 더한다. 낮은 단계는 모프를 걸지 않는다.
          */
         void update( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh, const vector<AnimationSkinSlotKey>& listSkinSlot,
-                     const vector<uint32>& listSkinLOD );
+                     const vector<uint32>& listSkinLOD, uint32 maxVertexCount );
         /**
          * @brief 모프 메시의 변형 프로그램(`Mesh::setGPUDeformProgram`)을 프로그램 버퍼에 맞춥니다. 어느 메시의 프로그램 번호도 그대로면 아무것도 하지 않습니다.
          * @details 버퍼 = [모프 메시 칸마다 float4 하나(x = 그 메시 프로그램의 시작 원소, 없으면 -1)][프로그램들]. 레스트 노멀의 w 가 칸 번호 + 1 이라
@@ -280,8 +280,6 @@ namespace sw
             uint32      _weightBase{ 0 }; ///< 가중치 구간 시작(가중치 버퍼의 정점)
         };
 
-        /// @brief 풀 상한(결과 정점 수)입니다. 언리얼의 `r.SkinCache.SceneMemoryLimitInMB` 에 해당하며, 여기서는 고정값입니다.
-        static constexpr uint32 kMaxPoolVertices = 4u * 1024u * 1024u;
         /// @brief 모프 구간의 최소 용량(정점 수)입니다. 미리보기 메시 하나가 들어올 때마다 다시 채우지 않게 합니다.
         static constexpr uint32 kMinMorphVertices = 4u * 1024u;
         /// @brief 스킨 원본 버퍼 상한과 최소 용량(원소 수, 하나 = 48바이트)입니다. 상한을 넘는 원본은 오류를 남기고 그 메시는 그리지 않습니다.
@@ -372,6 +370,7 @@ namespace sw
         vector<float4> _listScratchPaletteRow;
         uint32         _vertexCount{ 0 };
         uint32         _skinVertexBase{ 0 };
+        uint32         _maxVertexCount{ 0 }; ///< 마지막 `update` 가 받은 결과 정점 상한(`RenderConfig::_meshDeformPoolMaxVertices`)
         uint32         _skinBoneCount{ 0 };
         uint32         _skinSourceVertexCount{ 0 };
         uint32         _skinFrameValueCount{ 0 };                ///< 인스턴스 프레임 값(머리 + 모프 가중치)의 합(팔레트 뒤에 float4 로 싣는다)

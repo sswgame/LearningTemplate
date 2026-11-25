@@ -8,7 +8,7 @@
  *
  *          **2D 게임**: 리스너 컴포넌트가 없고 게임 카메라가 직교면 리스너를 `Screen2D`(화면 평면 팬, 반폭 = 직교 높이 × 16/9 ÷ 2)로 둡니다.
  *          **가림**: 3D 물리 씬이 있으면 `PhysicsAudioOcclusionQuery`(레이 셋)로, 없고 2D 물리 씬이 있으면 `Physics2DAudioOcclusionQuery`(월드 XY)로,
- *          프레임마다 에미터 `kOcclusionChecksPerFrame` 개씩 돌아가며 측정합니다.
+ *          프레임마다 에미터 `AudioConfig::_occlusionChecksPerFrame` 개씩 돌아가며 측정합니다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -40,8 +40,6 @@ namespace sw
     class SW_API SceneAudio final : public ISceneService
     {
     public:
-        /** @brief 한 프레임에 가림을 다시 측정하는 에미터 수입니다(레이 셋씩). */
-        static constexpr uint32 kOcclusionChecksPerFrame = 16;
         /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "SceneAudio";
 
@@ -158,6 +156,7 @@ namespace sw
         float3                                             _primaryListenerPosition; /**< 첫 리스너 자리입니다. */
         optional<float3>                                   _lastCameraPosition;      /**< 카메라 리스너의 지난 자리입니다(속도). 카메라 리스너를 쓴 적이 없거나 비웠으면 비어 있습니다. */
         mutable mutex                                      _mutex;                   /**< 등록 목록을 지킵니다(비동기 씬 로드는 워커에서 등록한다). */
+        uint32                                             _occlusionChecksPerFrame; /**< 한 프레임에 가림을 측정하는 에미터 수입니다(`EngineConfig::_audio`). 0 이면 엔진 설정 없는 씬이라 측정하지 않습니다. */
         uint32                                             _occlusionCursor;         /**< 가림을 측정할 다음 에미터 자리입니다. */
         uint32                                             _activeListenerMask;      /**< 지난 프레임에 켠 리스너 칸입니다. */
         uint8                                              _bUpdateEnabled : 1;      /**< 미리보기 정책이 끄면 false 입니다(`applyPreviewPolicy`). */

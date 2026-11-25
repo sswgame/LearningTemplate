@@ -441,7 +441,7 @@ namespace sw
         // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
         _passExecutor.getFrameGraphExecutor().prepareMeshMorphPool();
         _state._gpuScene.setVertexPoolEnabled( _state._settings._bVertexPool != SW_FALSE );
-        _state._gpuScene.upload( pDevice );
+        _state._gpuScene.upload( pDevice, engine::getSubsystem<EngineConfig>()._render._meshPoolMaxVertices );
     }
 
     void FrameRenderer::updateTextureUploads( IRHIDevice* pDevice )

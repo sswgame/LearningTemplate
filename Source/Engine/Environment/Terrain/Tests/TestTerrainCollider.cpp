@@ -10,6 +10,7 @@
 #include "Engine/Environment/Terrain/TerrainColliderComponent.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
+#include "Engine/Environment/Terrain/Tests/TerrainTestServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsContact.h"
@@ -62,7 +63,8 @@ SW_TEST_CASE( TerrainColliderTest, HeightEditKeepsContact )
     using Internal = TestTerrainColliderInternal;
     const test::ScopedScratchDomain domain;
     const string                    heightfieldID = Internal::writeFlatHeightfield( domain );
-    GameObjectManager               manager;
+    const test::TerrainTestServices services;
+    GameObjectManager               manager{ services.makeServices() };
     GameObject*                     pGround = manager.createGameObject( hashed_string( "Ground" ) );
     SW_REQUIRE_NOT_NULL( pGround );
     TerrainComponent* pTerrain = pGround->addComponent<TerrainComponent>();
