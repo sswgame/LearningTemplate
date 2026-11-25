@@ -118,7 +118,7 @@ namespace sw
 
         /**
          * @brief GPU 인스턴스 회전의 기준 각속도와 편차 폭(라디안/초)입니다.
-         * @details 편차가 기준보다 **커야** 인스턴스마다 속도가 확연히 갈린다. 폭이 기준보다 작으면
+         * @details 편차가 기준보다 커야 인스턴스마다 속도가 확연히 갈린다. 폭이 기준보다 작으면
          *          속도 차이가 눈에 띄지 않아 결국 "다 같은 속도" 로 보인다. 그것이 이 패스를 만든 이유다.
          *          instance_animation.hlsl 이 시드 해시로 [기준, 기준+폭) 에서 속도를 고르고 방향도 정한다.
          */
@@ -227,7 +227,7 @@ namespace sw
         /**
          * @brief IEEE half(16비트) 한 채널을 [0,1] 로 자른 8비트 값으로 바꿉니다.
          * @details HDR 첨부를 PPM 으로 덤프할 때만 쓴다. 톤매핑하지 않고 그냥 자른다. 이 덤프는
-         *          이미지를 예쁘게 보려는 것이 아니라 그 단계에 **무엇이 들어 있나** 를 보려는 것이다.
+         *          이미지를 예쁘게 보려는 것이 아니라 그 단계에 무엇이 들어 있나 를 보려는 것이다.
          */
         static uint8 halfToUnorm8( uint16 bits )
         {
@@ -241,7 +241,7 @@ namespace sw
 
         /**
          * @brief 패스의 `_listOutput` 에서 컬러 어태치먼트 포맷을 순서대로 모읍니다. 반환값은 컬러 RT 수입니다.
-         * @details PSO 생성(FramePSOManager::makePassPSODesc)과 셰이더 쿠커가 **같은 답**을 내야 하는 규칙이다. 컬러
+         * @details PSO 생성(FramePSOManager::makePassPSODesc)과 셰이더 쿠커가 같은 답을 내야 하는 규칙이다. 컬러
          *          출력이 하나도 없으면 뎁스만 쓰는 패스이고, 그 패스에는 픽셀 스테이지가 없다. 출력 선언이
          *          아예 없으면 여기서는 알 수 없으므로 fallbackCount 를 반환한다(호출하는 쪽이 패스 타입으로 정한 값).
          *          Swapchain 출력은 컬러 하나로 세고 포맷은 Unknown 이다(대상 포맷은 출력 패스가 정한다). 첨부에 없는 다른 이름은
@@ -293,7 +293,7 @@ namespace sw
          *          FramePSOManager::makePassPSODesc 이 RT 수로 적용한다(RT 가 0개면 PS 경로를 비운다). 주의: 쿠커와 런타임이
          *          다른 규칙을 쓰면 그림자 패스에 머티리얼 define 을 적용한 변형이 PS 리플렉션을 요구하는데 매니페스트에는
          *          그 조합이 없다(Shipping 의 `리플렉션 매니페스트에 'shadow_depth.hlsl' 가 없습니다`).
-         * @note 언리얼은 그림자 깊이에도 **마스크드 머티리얼일 때만** PS 를 붙인다(clip 을 위해). 알파 마스크가
+         * @note 언리얼은 그림자 깊이에도 마스크드 머티리얼일 때만 PS 를 붙인다(clip 을 위해). 알파 마스크가
          *       들어오면 이 규칙에 "머티리얼이 픽셀 폐기를 요구하는가" 축이 더해져야 한다. 쿠커도 이 함수를
          *       보므로 그때도 고칠 곳은 여기 하나다.
          */
@@ -315,7 +315,7 @@ namespace sw
      * @details PassConstantNames 와 같은 이유로 둔다. hashed_string 생성은 전역 레지스트리 intern
      *          (FNV 해시, 32-way 샤드 뮤텍스, 조회)이다. 이 이름들은 모두 코드 리터럴이라
      *          값이 고정이므로 한 번만 intern 한다. 특히 `bindEngineTextures` 는 DX11 과 GL 경로에서
-     *          **드로우 호출마다** 불리므로 이름을 그 자리에서 만들면 안 된다.
+     *          드로우 호출마다 불리므로 이름을 그 자리에서 만들면 안 된다.
      * @note 문자열이 필요한 곳에는 `view()` 를 씁니다. 락 없는 O(1) 포인터 역참조입니다.
      */
     struct AttachmentNames
@@ -345,7 +345,7 @@ namespace sw
         hashed_string _sceneColorCopy{ "SceneColorCopy" };
         /// 반투명 앞에 떠 둔 장면 깊이 사본(SceneDepthCopy 패스의 출력, R32 실수) — 반투명 패스가 선언한 입력을 역할로 건다(물의 화면 공간 두께).
         hashed_string _sceneDepthCopy{ "SceneDepthCopy" };
-        /// 화면 속도(SceneVelocity — 불투명 지오메트리 패스의 출력) — TAA · 모션 블러가 선언한 입력을 역할로 건다(`g_VelocityIndex`).
+        /// 화면 속도(SceneVelocity, 불투명 지오메트리 패스의 출력). TAA · 모션 블러가 선언한 입력을 역할로 건다(`g_VelocityIndex`).
         hashed_string _velocity{ "Velocity" };
         /// 모션 블러 이웃 최대 속도(MotionBlurNeighborMax 출력) — 모션 블러가 `g_VelocityNeighborMaxIndex` 로 읽는다.
         hashed_string _velocityNeighborMax{ "VelocityNeighborMax" };
@@ -355,7 +355,7 @@ namespace sw
         hashed_string _dbufferC{ "DBufferC" };
         /// 볼륨 구름(VolumetricClouds 패스의 저해상도 출력) — 스카이 패스가 선언한 입력을 역할로 건다(`g_SkyCloudsIndex`).
         hashed_string _skyClouds{ "SkyClouds" };
-        /// 화면 왜곡 오프셋(SceneDistortion — 왜곡 누적 패스의 출력) — 왜곡 적용 패스가 선언한 입력을 역할로 건다(`g_DistortionIndex`).
+        /// 화면 왜곡 오프셋(SceneDistortion, 왜곡 누적 패스의 출력). 왜곡 적용 패스가 선언한 입력을 역할로 건다(`g_DistortionIndex`).
         hashed_string _distortion{ "Distortion" };
         /// 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷) — 조명 · 포워드 불투명 패스가 선언한 입력을 역할로 건다(`g_ContactShadowIndex`).
         hashed_string _contactShadow{ "ContactShadow" };

@@ -102,7 +102,7 @@ namespace sw
         const RenderPacketMainView  mainView = _views.populateMainView( packet, views, sceneViewCameraProvider, *pActiveScene, pFrameRenderer );
         if ( mainView._pCamera != nullptr )
             _scene.applyMainCamera( packet, *pActiveScene, *mainView._pCamera );
-        // 그림자 배치는 카메라가 정해진 **뒤에** 만든다 — 볼륨을 카메라가 보는 곳에 맞추는 빛이 있다.
+        // 그림자 배치는 카메라가 정해진 뒤에 만든다 — 볼륨을 카메라가 보는 곳에 맞추는 빛이 있다.
         _scene.populateShadows( packet, lights );
         _views.collectExtraViews( packet, views, *pActiveScene, mainView, deltaTime, pFrameRenderer );
         _scene.populateViewShadows( packet, lights );

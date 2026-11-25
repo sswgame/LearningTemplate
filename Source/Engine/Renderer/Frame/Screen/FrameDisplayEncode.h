@@ -34,7 +34,7 @@ namespace sw
         /**
          * @brief 셋업(프레임마다)에서 두 RT 를 맞춥니다. 주 스왑체인이 SDR 이거나 화면이 없으면(@p width · @p height 가 0) 놓습니다.
          * @param output 이번 프레임의 출력 장치 값(패킷이 실은 — 능력에 맞춘 값)입니다. 종이 흰색 · 최대 휘도를 쓴다. HDR 인지는 장치의 색 공간이 정한다.
-         * @details 만들지 못하면 멈춘다 — RT 없이 HDR 백버퍼에 SDR 신호를 그대로 쓰면 그림이 깨진다. 새로 만든 프레임부터 쓴다 — 스왑체인에 SDR PSO(에디터 UI)로 그리는 프레임이 없게 한다
+         * @details 만들지 못하면 멈춘다. RT 없이 HDR 백버퍼에 SDR 신호를 그대로 쓰면 그림이 깨진다. 새로 만든 프레임부터 써서 스왑체인에 SDR PSO(에디터 UI)로 그리는 프레임이 없게 한다
          *          (막 만든 UI RT 의 첫 내용은 정해지지 않았다 — HDR 을 켠 그 한 프레임만이고, 끝의 비우기부터 투명하다).
          */
         void prepare( uint32 width, uint32 height, const DisplayOutputDesc& output );

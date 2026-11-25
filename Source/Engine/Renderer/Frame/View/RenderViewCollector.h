@@ -28,7 +28,7 @@ namespace sw
 
     /**
      * @struct RenderViewCollector
-     * @brief 패킷 경로(Engine)와 씬 직접 경로(`FrameRenderer::execute( scene )`)가 **같은 규칙**으로 뷰를 고르게 하는 한 자리입니다.
+     * @brief 패킷 경로(Engine)와 씬 직접 경로(`FrameRenderer::execute( scene )`)가 같은 규칙으로 뷰를 고르게 하는 한 자리입니다.
      * @details 추가 뷰는 레지스트리의 켜진 카메라 중 출력이 화면 사각형이나 렌더 텍스처인 것입니다(주 시점 카메라와 에디터 카메라 제외).
      *          자리는 `RenderConfig::_maxExtraViewCount` 개이고, 넘치면 스케줄러가 보이는 뷰 · 늦은 뷰 먼저 자리를 준다(`RenderViewScheduler::schedule`) — 빠진 수는 `_overflowCount`.
      *          보이는가는 카메라 출력의 `_visibilityObject`(모니터)가 사람이 보는 화면(주 시점과 화면 사각형 뷰) 어디엔가 `_minScreenSize` 이상으로 보이는가입니다

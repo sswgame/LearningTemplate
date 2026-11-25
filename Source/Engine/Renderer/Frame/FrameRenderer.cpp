@@ -171,7 +171,7 @@ namespace sw
         if ( bAlreadyShutDown )
             return;
 
-        // 스냅샷이 가진 머티리얼과 인스턴스의 소유권을 **디바이스가 살아 있을 때** 해제한다. 스냅샷은 소유권을 함께
+        // 스냅샷이 가진 머티리얼과 인스턴스의 소유권을 디바이스가 살아 있을 때 해제한다. 스냅샷은 소유권을 함께
         // 싣고 있으므로(GPUScene.h) 여기서 비우지 않으면 렌더러가 소멸할 때까지 그것들이 살아 있어, 디바이스가 먼저
         // 사라진 뒤 소멸자가 사라진 디바이스에 GPU 자원을 반환하려 한다(해제 후 사용).
         _state._graph.releaseDeviceResources();
@@ -294,7 +294,7 @@ namespace sw
             return false;
         }
 
-        // 셰이더 메시지 요구(진단 정책 — 실행 중에 바뀐다: 시나리오 <Launch> · 콘솔)와 링이 어긋나면 패스 자원을 다시 짓는다 — 링과 메시지 변형 PSO 는 패스 자원과 함께 선다.
+        // 셰이더 메시지 요구(진단 정책. 실행 중에 바뀐다: 시나리오 <Launch> · 콘솔)와 링이 어긋나면 패스 자원을 다시 짓는다. 링과 메시지 변형 PSO 는 패스 자원과 함께 선다.
         // 기동 때 한 번만 만들면 뒤에 켠 요구는 링 없이 조용히 무시됐다(gpumessages 시나리오가 RingReady 를 못 봤다). 파이프라인을 바꿀 때와 같은 길이다.
         if ( GPUMessageChannel::isRequested() != _state._gpuMessages.isActive() )
             releasePassResources();
@@ -432,7 +432,7 @@ namespace sw
 
     void FrameRenderer::uploadGPUScene( IRHIDevice* pDevice )
     {
-        // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
+        // 컬링 컴퓨트가 개수를 만들지 업로드 전에 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 되었는지는 upload 뒤에 areIndirectCountsGPUFilled() 가 알려 준다.
         _state._gpuScene.setIndirectCountsFilledByGPU( _passExecutor.getFrameGraphExecutor().usesGPUGeneratedCommands() );
         // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
@@ -443,7 +443,7 @@ namespace sw
 
     void FrameRenderer::updateTextureUploads( IRHIDevice* pDevice, uint32 viewHeightPixels )
     {
-        // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 전송은 이번 프레임이 기록한 것보다 먼저 실행되므로(전송 계약 3) **아무것도 기록하기 전에 한 번** 부른다.
+        // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 전송은 이번 프레임이 기록한 것보다 먼저 실행되므로(전송 계약 3) 아무것도 기록하기 전에 한 번 부른다.
         // 렌더러마다 부르면 미리보기가 주 화면을 기록한 뒤에 전송을 내고(주 화면이 전이를 기록한 텍스처의 앞 상태가 어긋나고 백엔드마다 보는 내용이 다르다), 프레임당 상한 · 프레임 수를 여러 번 센다.
         // 그리지 않는 프레임도 같은 길이다 — 결정적 실행은 상한 없이 끝내므로 그리는 프레임이 따라잡을 몫이 남지 않는다.
         if ( engine::areEngineServicesBound() == false )
@@ -607,7 +607,7 @@ namespace sw
                 applyViewTransparentOrder( view );
         }
 
-        // 상수 버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다.
+        // 상수 버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 기록 시작 전에 늘려 둔다.
         ensurePassCbCapacityForFrame();
 
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 정한다. 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
@@ -750,7 +750,7 @@ namespace sw
 
     void FrameRenderer::updatePassConstants( FramePassContext& context, const float4x4& mainViewProj, const FrameViewResources::ViewPassSceneState& sceneState )
     {
-        // **프레임당 한 번** 프레임 시드(_state._frameContext)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
+        // 프레임당 한 번 프레임 시드(_state._frameContext)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
         // 가므로(onGraphPassExecute) 패스마다 다시 계산할 필요가 없고, 드로우마다는 더더욱 없다.
         //
         // 주 시점 뷰-투영은 호출자가 카메라에서 만들어 넘긴다(씬 직접 경로는 씬의 게임 카메라, 패킷 경로는 패킷의 주 시점).
@@ -945,7 +945,7 @@ namespace sw
         const uint32 shadowTileCount = MathUtil::max( _passExecutor.computeShadowTileCountPerView(), 1u ) + ( _state._rainOcclusion.isActive() ? 1u : 0u ); // 비 가림 맵도 씬 한 번이다
         // 모듈 프록시의 요소는 요소마다 슬롯을 하나씩 쓴다(`drawExtensionElements`) — 그리는 패스 · 뷰 수를 모르므로 넉넉히 네 배로 어림한다(모자라면 링이 알리고 다음 프레임이 키운다).
         const uint32 moduleElementCount = static_cast<uint32>( _extensionHost.getDrawElements().size() ) * 4u;
-        // 데칼은 텍스처가 같은 이웃 묶음마다 슬롯 하나다(에뮬 백엔드 — 네이티브 bindless 는 패스에 하나, `executeDecalPass`). 묶음 수 상한은 데칼 수다 — 그리는 뷰 수를 모르므로 두 배로 어림한다.
+        // 데칼은 텍스처가 같은 이웃 묶음마다 슬롯 하나다(에뮬 백엔드. 네이티브 bindless 는 패스에 하나, `executeDecalPass`). 묶음 수 상한은 데칼 수인데, 그리는 뷰 수를 모르므로 두 배로 어림한다.
         const uint32 decalCount = static_cast<uint32>( _state._listFrameDecalDraw.size() ) * 2u;
         const uint32 estimate   = batchCount * ( _s_kDrawCbPassEstimate - 1u + shadowTileCount ) + PassConstantRing::kInitialSlotCount + moduleElementCount + decalCount;
         _state._passCbRing.ensureCapacity( _pDevice, MathUtil::max( estimate, _state._passCbRing.getHighWater() + PassConstantRing::kInitialSlotCount ) );
@@ -966,7 +966,7 @@ namespace sw
         if ( listShaderPath.empty() || _pDevice == nullptr )
             return;
 
-        // **바뀐 셰이더를 쓰는 PSO 만 놓고 다시 만든다**(언리얼 셰이더 핫 리로드와 같은 범위). PSO 는 바이트코드를 박아 넣은 객체라 레이아웃만 새로 만들면
+        // 바뀐 셰이더를 쓰는 PSO 만 놓고 다시 만든다(언리얼 셰이더 핫 리로드와 같은 범위). PSO 는 바이트코드를 박아 넣은 객체라 레이아웃만 새로 만들면
         // 화면이 옛 셰이더 그대로다. 패스 자원(상수 버퍼 · 풀 · 라이트 버퍼 · 그래프)은 셰이더와 무관해 그대로 둔다 — 예전에는 셰이더 하나에 모두 놓고 동기로 다시 만들었다.
         //
         // ShaderRecompiler 가 바뀐 ShaderCache 항목을 새 바이트로 바꾼 뒤에 알렸고(그래야 새 바이트코드를 집는다), 이 함수는 렌더 스레드가
@@ -996,7 +996,7 @@ namespace sw
         }
         else
         {
-            // 창이 아니라 **스왑체인**의 크기다. 렌더러는 OS 창을 모른다(IRHIDevice::resize 참고).
+            // 창이 아니라 스왑체인의 크기다. 렌더러는 OS 창을 모른다(IRHIDevice::resize 참고).
             if ( _pDevice->getBackBufferWidth() > 0 )
                 width = _pDevice->getBackBufferWidth();
             if ( _pDevice->getBackBufferHeight() > 0 )
@@ -1110,7 +1110,7 @@ namespace sw
         if ( pRegistry == nullptr )
             return;
 
-        // 화면에 나가는 것이 무엇인지 함께 실어 준다. 패널이 열리자마자 **지금 보이는 그림**을
+        // 화면에 나가는 것이 무엇인지 함께 실어 준다. 패널이 열리자마자 지금 보이는 그림을
         // 고를 수 있어야 쓸모가 있다(이름순 첫 번째는 AOColor 라 아무 의미가 없다).
         // 꺼진 효과의 출력이면 그것이 가리키는 원본이 화면에 나간다(`TransientAttachmentPool::forward`).
         const hashed_string presented = _state.getMainView()._transientPool.resolveName( hashed_string::findInterned( getPresentedAttachmentName() ) );

@@ -62,7 +62,7 @@ namespace sw
 
         /**
          * @brief 렌더러의 디바이스 변수 · 파이프라인 에셋 · GPUScene 을 읽는 관리자를 만듭니다. 셋은 이 관리자보다 오래 산다(렌더러의 멤버).
-         * @details 디바이스는 렌더러의 `_pDevice` **변수**를 참조한다(`FrameCapture` 와 같다) — 렌더러가 디바이스를 바꿀 때 따로 알릴 일이 없다.
+         * @details 디바이스는 렌더러의 `_pDevice` 변수를 참조한다(`FrameCapture` 와 같다) — 렌더러가 디바이스를 바꿀 때 따로 알릴 일이 없다.
          */
         FramePSOManager( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const GPUScene& gpuScene, const RenderFrameSettings& frameSettings );
         ~FramePSOManager();
@@ -102,12 +102,12 @@ namespace sw
         ComputePipeline findPipelineComputePSO( const hashed_string& passName ) const;
         /**
          * @brief 디퍼드 조명 타일 종류 @p tileClass 의 PSO(조명 패스 서술 + 그 종류의 엽만 — deferred_lighting.hlsl VSTile)입니다. 없으면 0 입니다.
-         * @details **조회만 한다.** 셋업(`createPassPSOs`)이 분류를 쓸 수 있는 백엔드(네이티브 bindless · 간접 인자)와 조명 패스가 있는 파이프라인에서 만든다.
+         * @details 조회만 한다. 셋업(`createPassPSOs`)이 분류를 쓸 수 있는 백엔드(네이티브 bindless · 간접 인자)와 조명 패스가 있는 파이프라인에서 만든다.
          */
         RHIPipelineStateHandle findDeferredTilePSO( uint32 tileClass ) const;
         /**
-         * @brief 주 출력에 그리는 패스(Present, Canvas, RCAS)의 PSO 를 **대상 포맷별로** 찾습니다.
-         * @details **조회만 한다.** 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 된다. 셋업에 없는 포맷이면 대신 그리지 않고 멈춘다(`reportFatalError`) —
+         * @brief 주 출력에 그리는 패스(Present, Canvas, RCAS)의 PSO 를 대상 포맷별로 찾습니다.
+         * @details 조회만 한다. 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 된다. 셋업에 없는 포맷이면 대신 그리지 않고 멈춘다(`reportFatalError`) —
          *          돌려준 PSO 는 0 이 아니다. 언리얼이 PSO 초기화자의 RenderTargetFormats 를 바인딩된 타깃에서 뽑아 PSO 캐시 키로 삼는 것과 같다.
          */
         RHIPipelineStateHandle findOutputPSO( RenderPassKind passType, RHIFormat targetFormat ) const;
@@ -143,12 +143,12 @@ namespace sw
         RHIPipelineStateHandle getOrCreateLayerBakePSO( RHIFormat targetFormat );
 
         /**
-         * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 모두 만들어 둡니다.
+         * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 기록 시작 전에 모두 만들어 둡니다.
          * @param viewModeMask 이번 프레임에 그리는 뷰들의 보기 모드 비트 집합(`FrameRenderer::collectFrameViewModeMask`)
          */
         void ensureMaterialPSOs( uint32 viewModeMask );
         /**
-         * @brief 고정한 머티리얼(`MaterialCache::pinAsset` — 프리로드 세트)의 PSO 를 **기록 시작 전에** 미리 만듭니다(계획 PreloadAndLOD P6). 주 렌더러만 부릅니다.
+         * @brief 고정한 머티리얼(`MaterialCache::pinAsset` — 프리로드 세트)의 PSO 를 기록 시작 전에 미리 만듭니다(계획 PreloadAndLOD P6). 주 렌더러만 부릅니다.
          * @details 아직 씬에 없는 머티리얼(다음 레벨 · 컷에 나올 것)만 이 길로 데운다 — 그 머티리얼이 씬에 들어오는 프레임에 DX12 PSO 생성 히치가 없게.
          */
         void warmPinnedMaterialPSOs( MaterialCache& pinnedMaterials, uint32 viewModeMask );
@@ -159,7 +159,7 @@ namespace sw
         [[nodiscard]] bool usesAsyncMaterialPSOBuilder() const;
         /** @brief 빌더가 끝낸 머티리얼 변형을 저장소에 합치고(스레드를 쓰지 않으면 이 자리에서 만들고), 새로 `Ready` 가 된 것이 있으면 폴백 버퍼를 점검합니다. 셋업 구간에서만 부릅니다. */
         void pollMaterialPSOBuilds();
-        /** @brief 입자 그리기가 있는 프레임에 입자 PSO 를 **기록 시작 전에** 만들어 둡니다(투명 패스 PSO 의 렌더 상태를 물려받고 셰이더만 바꾼다). */
+        /** @brief 입자 그리기가 있는 프레임에 입자 PSO 를 기록 시작 전에 만들어 둡니다(투명 패스 PSO 의 렌더 상태를 물려받고 셰이더만 바꾼다). */
         void ensureParticlePSO();
         /** @brief 입자 PSO 입니다. 투명 패스 PSO 가 없거나 만들지 못했으면 0 입니다. */
         RHIPipelineStateHandle findParticlePSO() const;
@@ -181,7 +181,7 @@ namespace sw
             RHIMeshVertexFormat _vertexFormat{ RHIMeshVertexFormat::Packed }; ///< 배치 메시의 정점 형식(입력 레이아웃이 다른 변형)
         };
         /**
-         * @brief 머티리얼이 없는 배치에 바인딩하는 원소 하나짜리 구조 버퍼입니다. **내용이 다른 원소마다 하나**씩 있습니다.
+         * @brief 머티리얼이 없는 배치에 바인딩하는 원소 하나짜리 구조 버퍼입니다. 내용이 다른 원소마다 하나씩 있습니다.
          * @details DX12 에서 아무것도 바인딩하지 않은 t5 를 읽으면 GPU 폴트(디바이스 제거)가 난다. 어떤 드로우도 빈 슬롯으로 나가지 않도록 항상 유효한 버퍼를 바인딩한다
          *          (언리얼의 기본 머티리얼 · RDG 더미 버퍼 `CreateStructuredDesc( sizeof( FElement ), 1 )`). 원소 하나를 모든 셰이더에 공용으로 걸면 셰이더의 `MaterialData`
          *          stride 와 어긋나 DX11 디버그 레이어가 드로우마다 경고를 낸다. 원소는 0 이지만 텍스처 인덱스 필드만 `kInvalidDescriptorIndex` 다(`MaterialPacking::makeFallbackElement`).

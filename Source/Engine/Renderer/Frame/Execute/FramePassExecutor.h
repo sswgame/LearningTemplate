@@ -95,7 +95,7 @@ namespace sw
         /** @brief 이번 프레임 한 뷰의 그림자 패스가 그리는 타일 수입니다(상수 버퍼 링 용량 산정). */
         uint32 computeShadowTileCountPerView() const;
         /**
-         * @brief 풀스크린 패스가 이 역할의 입력을 바인딩하지 **않게** 합니다. 언리얼의 r.AmbientOcclusion.Levels=0 같은 쇼 플래그입니다.
+         * @brief 풀스크린 패스가 이 역할의 입력을 바인딩하지 않게 합니다. 언리얼의 r.AmbientOcclusion.Levels=0 같은 쇼 플래그입니다.
          * @details 셰이더는 그 인덱스를 kInvalidIndex 로 읽고 폴백한다(AO 는 1). 같은 프레임 안에서 "이 입력이 실제로 이미지를 바꾸는가" 를 비교할 수 있다.
          *          입력을 매 프레임 계산하기만 하고 화면에는 쓰지 않는 결함을 픽셀로 잡는다.
          */
@@ -125,7 +125,7 @@ namespace sw
         /** @brief 뷰 @p view 에 따라 달라지는 패스 상수를 채웁니다. 외곽선 텍셀 크기, 카메라 후처리 · 렌즈 값, 패스 플래그(후처리 끄기)가 해당합니다. */
         void applyViewPassConstants( FramePassContext& context, FrameViewTarget& view );
         /**
-         * @brief 뷰 @p view 의 뷰-투영 행렬과 **그 역행렬**을 함께 적용합니다. 그 뷰의 컬링 입력과 지난 뷰-투영(`_prevViewProj`)도 함께 바꿉니다.
+         * @brief 뷰 @p view 의 뷰-투영 행렬과 그 역행렬을 함께 적용합니다. 그 뷰의 컬링 입력과 지난 뷰-투영(`_prevViewProj`)도 함께 바꿉니다.
          * @details 둘을 따로 채우면 언젠가 한쪽만 갱신된다. 그러면 디퍼드가 복원한 월드 위치가
          *          지난 프레임의 카메라를 가리키고, 증상은 "빛이 한 프레임 늦게 따라온다" 로 나타난다.
          */
@@ -246,8 +246,8 @@ namespace sw
         /** @brief 프레임 그래프를 프리패스 리스트(`_pCmd`)에 기록합니다. 뷰 그래프보다 먼저 큐에 내는 리스트다. */
         void recordFrameGraph( IRHIDevice* pDevice );
         /**
-         * @brief 레벨을 기록하기 **직전에** 그 레벨이 만질 자원의 배리어를 미리 발행합니다. 직렬 경로에서는 패스마다 발행합니다.
-         * @details 등록한 프레임 자원(`FrameBufferTable` — 이름의 모든 뷰 칸)의 버퍼 전이는 `transitionBuffers` 한 번, UAV → UAV 는 UAV 배리어로 낸다. 이것은 뷰 그래프 판이다(등록 자원 = 지금 뷰의 `_viewResourceTable`) — 프레임 그래프는 `onFrameGraphLevelPrologue`.
+         * @brief 레벨을 기록하기 직전에 그 레벨이 만질 자원의 배리어를 미리 발행합니다. 직렬 경로에서는 패스마다 발행합니다.
+         * @details 등록한 프레임 자원(`FrameBufferTable`, 이름의 모든 뷰 칸)의 버퍼 전이는 `transitionBuffers` 한 번, UAV → UAV 는 UAV 배리어로 낸다. 이것은 뷰 그래프 판이다(등록 자원 = 지금 뷰의 `_viewResourceTable`). 프레임 그래프는 `onFrameGraphLevelPrologue`.
          *          자원 이름으로 실제 텍스처를 찾아 읽기 · 렌더 타깃 전이를 한 묶음(`IRHICommandList::transitionTextures`)으로
          *          레벨 첫 패스 리스트의 앞머리에 기록한다(직렬 경로에서는
          *          그 패스의 리스트). 같은 레벨의 다른 리스트는 큐 순서상 그 뒤에 실행되므로 GPU 타임라인에서도 배리어가 앞선다.
@@ -331,14 +331,14 @@ namespace sw
         /** @brief 화면 2D 를 주 출력에 그립니다. 주 출력에 마지막으로 그리는 뷰만 그립니다. */
         void executeCanvasPass( const PassExecuteInput& input );
         /**
-         * @brief 개발 겹치기 목록(`CanvasFrameData::getDevOverlay` — 디버그 HUD)을 **사진 캡처를 읽은 뒤** 화면에 나가는 대상에 그립니다. 주 출력의 마지막 쓰기 패스 끝에서만 부른다.
+         * @brief 개발 겹치기 목록(`CanvasFrameData::getDevOverlay` — 디버그 HUD)을 사진 캡처를 읽은 뒤 화면에 나가는 대상에 그립니다. 주 출력의 마지막 쓰기 패스 끝에서만 부른다.
          * @details 캡처 실행이면 캡처를 백버퍼로 옮긴 뒤 백버퍼(`kRHIBackBufferTexture`)에, 아니면 출력(백버퍼)에 그린다 — 캡처 텍스처에는 쓰지 않으므로 스크린샷 · `<ExpectImage>` 골든에 들지 않는다.
          *          출력이 호스트 렌더 타깃(에디터 게임 뷰)이면 그리지 않는다 — 그 타깃은 사진이 읽고 에디터 UI 캡처에 든다(수집기가 겹치기를 자기 렌더 텍스처로 실었다).
          *          화면에 나가지 않는 캡처(크기를 덮어쓴 출력)와 렌더 텍스처 · 호스트 타깃 뷰도 그리지 않는다. 언리얼이 디버그 캔버스를 하이레스 스크린샷 뒤 뷰포트에 그리는 순서와 같다.
          */
         void drawDevOverlay( FramePassContext& context, const RenderGraphPassDesc& passDesc, const PresentTarget& target );
         /**
-         * @brief XML 이 선언한 입력을 **역할 이름으로** 모두 바인딩합니다. 풀스크린 패스가 공통으로 씁니다.
+         * @brief XML 이 선언한 입력을 역할 이름으로 모두 바인딩합니다. 풀스크린 패스가 공통으로 씁니다.
          * @details 역할은 로드 시점에 해석해 둔다(`_listResolvedInput`). 여기서 바인딩하는 목록과 검증이 대조한 목록이 같으므로
          *          "선언은 했는데 바인딩되지 않는 입력" 이 생기지 않는다. 쇼 플래그로 끈 역할은 건너뛴다.
          */
@@ -372,7 +372,7 @@ namespace sw
                              RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );
         /**
          * @brief MRT 컬러 패스를 시작합니다.
-         * @return 열었으면 true 입니다. 컬러 타깃 이름 중 이번 프레임에 없는 것이 있으면 **열지 않고** false 를 반환하며 오류를 한 번 남깁니다.
+         * @return 열었으면 true 입니다. 컬러 타깃 이름 중 이번 프레임에 없는 것이 있으면 열지 않고 false 를 반환하며 오류를 한 번 남깁니다.
          *         없는 첨부의 핸들 0 은 무효라 RHI 가 패스를 열지 않고 알리지만, 어느 첨부가 없는지는 여기서 알린다.
          */
         bool beginColorPassMrt( FramePassContext& context, const hashed_string* pColorNames, const float4* pTargetClearColor,
@@ -388,7 +388,7 @@ namespace sw
         RenderResolutionSpace findPassResolutionSpace( RenderPassKind type ) const;
         /**
          * @brief 트랜지언트 텍스처를 리소스 레지스트리에 canonicalName 으로 등록합니다(bindless SRV 자동 매칭).
-         * @param canonicalName **미리 intern 해 둔** 이름입니다. 문자열을 받으면 패스마다 다시 intern 하게 되므로
+         * @param canonicalName 미리 intern 해 둔 이름입니다. 문자열을 받으면 패스마다 다시 intern 하게 되므로
          *        attachmentNames() 의 캐시를 넘기세요.
          */
         void registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, const hashed_string& attachmentName );
@@ -420,13 +420,13 @@ namespace sw
         /** @brief GPUScene 인스턴스 구조 버퍼를 리소스 레지스트리에 "SwInstances" 이름으로 등록합니다. */
         void registerInstanceBuffer( FramePassContext& context );
         /**
-         * @brief 씬 라이트 구조 버퍼를 "SwLights" 이름으로 등록합니다. **모든 패스**에 등록합니다.
+         * @brief 씬 라이트 구조 버퍼를 "SwLights" 이름으로 등록합니다. 모든 패스에 등록합니다.
          * @details 인스턴스 버퍼와 달리 지오메트리 패스 전용이 아니다. 디퍼드 조명은 풀스크린
          *          패스라 `registerInstanceBuffer` 를 거치지 않는데, 라이트는 바로 거기서 필요하다.
          */
         void registerLightBuffer( FramePassContext& context );
         /**
-         * @brief 표면 변형 층의 높이 텍스처를 "SurfaceDeform" 이름으로 겁니다. **모든 패스**에 겁니다(창 `g_SurfaceDeformParams` 가 프레임 시드로 모든 패스에 가므로 칸도 같이 간다).
+         * @brief 표면 변형 층의 높이 텍스처를 "SurfaceDeform" 이름으로 겁니다. 모든 패스에 겁니다(창 `g_SurfaceDeformParams` 가 프레임 시드로 모든 패스에 가므로 칸도 같이 간다).
          * @details 인스턴스 버퍼 등록에 두었을 때 DX11 · GL 에서 칸이 비었다 — 그 등록은 인스턴스 그리기에서만 불리고 에뮬 칸을 거는 `bindEngineTextures`
          *          보다 뒤였다. 창만 켜지고 칸이 빈 채 지형 · 지면이 평평했다. 텍스처가 올라가기 전에는 걸지 않는다(창도 0 — `FrameRenderer::updatePassConstants`).
          */
@@ -610,9 +610,9 @@ namespace sw
         unique_ptr<IRHICommandList> _asyncComputeCmd;
         IRHICommandList*            _pCmd;
         /**
-         * @brief 패스 슬롯별 컨텍스트입니다. 프레임마다 `_frameContext` 를 **대입**해 씁니다. 용량이 남아 있어 힙을 건드리지 않습니다.
+         * @brief 패스 슬롯별 컨텍스트입니다. 프레임마다 `_frameContext` 를 대입해 씁니다. 용량이 남아 있어 힙을 건드리지 않습니다.
          * @details 패스마다 지역 복사본을 만들면 상수 값 목록과 레지스트리 맵이 프레임마다 패스 수만큼 새로
-         *          늘어난다. 크기는 병렬 기록 **전**(`submitGraph`)에 맞춘다. 기록 중에 늘리면 워커끼리 경합한다.
+         *          늘어난다. 크기는 병렬 기록 전(`submitGraph`)에 맞춘다. 기록 중에 늘리면 워커끼리 경합한다.
          *          칸 번호는 그래프 패스 번호(`RenderGraphPassContext::_payload`)다 — 파이프라인 패스 차례, 그 뒤가 모듈 확장 패스다.
          */
         vector<FramePassContext> _listPassContext;

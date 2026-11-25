@@ -113,7 +113,7 @@ namespace sw
     bool HZBOcclusion::record( const RenderGraphPassContext& graphContext, uint32 viewSlot, IRHIDevice& device, const ComputePipeline& pipeline, uint32 depthWidth, uint32 depthHeight,
                                const float4x4& viewProj, bool bWriteTiles, FrameViewTarget& target ) const
     {
-        // 버퍼가 없는 뷰는 등록하지 않았다(`registerFrameResources`) — 짓지 않는다. 있는데 선언 · 등록이 없으면 그래프가 전이를 내지 않았다 — 짓지 않는다(오류는 문맥이 남겼다).
+        // 버퍼가 없는 뷰는 등록하지 않았다(`registerFrameResources`) 짓지 않는다. 있는데 선언 · 등록이 없으면 그래프가 전이를 내지 않았으므로 짓지 않는다(오류는 문맥이 남겼다).
         // 파이프라인 XML 의 `HZBBuild` 가 두 이름을 출력으로 적어야 한다.
         const bool bHasBuffers = target._hzb.isValid() && target._occlusionTiles.isValid();
         const bool bDeclared   = bHasBuffers && graphContext.getBuffer( getPyramidUAV(), viewSlot ) != 0 && graphContext.getBuffer( getTilesUAV(), viewSlot ) != 0;
@@ -257,7 +257,7 @@ namespace sw
         meta._depthWidth   = static_cast<float32>( view._hzbLayout._depthWidth ); // 타일을 지은 사각형과 같다(지난 사각형)
         meta._depthHeight  = static_cast<float32>( view._hzbLayout._depthHeight );
         meta._bValid       = view._bHistoryReset == SW_FALSE ? SW_TRUE : SW_FALSE;
-        // 프레임 그래프가 끝나 타일은 등록 접근(셰이더 읽기 — `registerFrameResources`)이다 — 복사 뒤에도 그 상태로 되돌린다.
+        // 프레임 그래프가 끝나 타일은 등록 접근(셰이더 읽기, `registerFrameResources`)이다. 복사 뒤에도 그 상태로 되돌린다.
         if ( _readback.request( cmd, view._occlusionTiles._buffer, RHIBufferState::ShaderResource, next ) )
             _readbackSerial = next;
     }

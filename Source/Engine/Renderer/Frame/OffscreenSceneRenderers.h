@@ -1,7 +1,7 @@
 /**
  * @file Engine/Renderer/Frame/OffscreenSceneRenderers.h
  * @brief 화면 밖 씬(에디터 미리보기 씬 · 씬 캡처)마다 하나씩 둔 렌더러를 씬 키로 소유합니다.
- * @details 언리얼에서 미리보기 월드 · 씬 캡처가 자기 `FScene` 을 갖는 자리다 — 렌더러의 수명은 **씬의 수명**이다. 예전에는 주 렌더러가 하위 렌더러 목록을 들고
+ * @details 언리얼에서 미리보기 월드 · 씬 캡처가 자기 `FScene` 을 갖는 자리다 — 렌더러의 수명은 씬의 수명이다. 예전에는 주 렌더러가 하위 렌더러 목록을 들고
  *          "이번 프레임 패킷에 없으면 내린다" 로 수명을 정해, 창을 가리거나 닫기만 해도 파이프라인 · 그래프 · 트랜지언트를 처음부터 다시 지었다.
  *          이제 미리보기 씬이 파괴되면(패킷 차분의 `RenderFramePacketDeltas::_listRetiredSceneKey`) · 캡처가 끝나면(`SceneCapture::shutdown`) 내린다.
  *          렌더 스레드 객체다 — 렌더 스레드(또는 렌더 스레드를 재운 뒤의 호출)만 만진다. 수(`getCount`)만 다른 스레드가 읽는다.
@@ -52,7 +52,7 @@ namespace sw
         [[nodiscard]] uint32 allocateCaptureSceneKey();
         /** @brief 씬 @p sceneKey 의 렌더러를 모두 내립니다(그 씬이 사라졌다). 디바이스의 해제는 GPU 완료 뒤로 미뤄진다 — 이미 낸 프레임이 쓰는 자원을 지금 파괴하지 않는다. */
         void retire( uint32 sceneKey );
-        /** @brief 셰이더 핫 리로드를 렌더러마다 알립니다. 주 렌더러가 PSO 캐시를 다시 채운 **뒤에** 부른다(함께 쓰는 캐시의 새 PSO 를 집는다). */
+        /** @brief 셰이더 핫 리로드를 렌더러마다 알립니다. 주 렌더러가 PSO 캐시를 다시 채운 뒤에 부른다(함께 쓰는 캐시의 새 PSO 를 집는다). */
         void onShaderRecompiled( const vector<string>& listShaderPath );
         /** @brief 렌더러마다 뷰 대상을 버립니다(`FrameRenderer::discardViewTargets` — 자동화 단계 시작). 렌더러 · 파이프라인은 그대로 둔다. */
         void discardViewTargets();

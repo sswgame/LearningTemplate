@@ -220,7 +220,7 @@ namespace sw
 
     bool FramePassExecutor::submitGraph( IRHIDevice* pDevice )
     {
-        // 패스 컨텍스트 슬롯은 병렬 기록 **전에** 맞춘다. 기록 중에 늘리면 워커끼리 경합한다.
+        // 패스 컨텍스트 슬롯은 병렬 기록 전에 맞춘다. 기록 중에 늘리면 워커끼리 경합한다.
         const size_t passCount = _pipelineResource.getGraphPass().size() + _extensionHost.getPasses().size(); // XML 패스 + 모듈 확장 패스(칸 = 그래프 패스 번호)
         if ( _listPassContext.size() < passCount )
             _listPassContext.resize( passCount );
@@ -262,7 +262,7 @@ namespace sw
             _pCmd->writeTimestamp( GPUTimestampSlotLayout::kComputeBegin );
 #endif
 
-        // 프레임 그래프(파이프라인 XML 의 `_listFramePass`) — 깊이 히스토리 · 입자 · 변형 · 컬링 · 라이트 그리드 등, 이번 프레임에 그리는 **모든 뷰**의 몫이다.
+        // 프레임 그래프(파이프라인 XML 의 `_listFramePass`) — 깊이 히스토리 · 입자 · 변형 · 컬링 · 라이트 그리드 등, 이번 프레임에 그리는 모든 뷰의 몫이다.
         // 순서는 XML 의 자원 읽기 · 쓰기가 정한다. 앞 프레임들의 셰이더 assert · NaN 기록이 도착했으면 로그로 낸다(몇 프레임 늦다).
         _nanCheck.poll();
         recordFrameGraph( pDevice );
@@ -348,7 +348,7 @@ namespace sw
 
     void FramePassExecutor::prepareShadowCacheLayerResource()
     {
-        // 그림자 캐시 층은 기록 **전에** 만든다 — 패스 기록(병렬 레벨) 안에서 텍스처를 등록하면 자원 표를 바꿔 디바이스가 멈춘다(`requireRegistryMutableNow`).
+        // 그림자 캐시 층은 기록 전에 만든다 — 패스 기록(병렬 레벨) 안에서 텍스처를 등록하면 자원 표를 바꿔 디바이스가 멈춘다(`requireRegistryMutableNow`).
         // 아틀라스는 점광 · 스폿 그림자 패스(깊이 첨부가 LocalShadowMap 역할)의 깊이 첨부다(첨부 풀이 이미 잡았다). 같은 형식 · 크기면 아무것도 하지 않는다.
         ShadowCache& cache = _state._shadowCache;
         if ( cache.usesCacheLayer() == false )
@@ -377,7 +377,7 @@ namespace sw
         if ( bCanRunParallel )
             return _state._graph.executeParallel( _graphContext, *_state._pTaskManager, *pDevice );
 
-        // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 **같은 것**을 넘긴다.
+        // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 같은 것을 넘긴다.
         if ( _state.getMainView()._commandList == nullptr )
             _state.getMainView()._commandList = pDevice->createCommandList();
         IRHICommandList* pMainCmd = _state.getMainView()._commandList.get();
@@ -616,7 +616,7 @@ namespace sw
         const float2   ndcJitter   = bJitter ? view._temporalJitter.advance( pool.getWidth(), pool.getHeight(), TemporalJitterSequence::computePhaseCount( renderScale ) ) : float2{};
         const float4x4 raster      = TemporalJitterSequence::applyToViewProjection( viewProj, ndcJitter );
         context._passValues.setMatrix( passConstantNames()._viewProj, raster );
-        // 역행렬은 **여기서만** 만든다. 디퍼드 조명이 깊이에서 월드 위치를 복원하는 데 쓰는데,
+        // 역행렬은 여기서만 만든다. 디퍼드 조명이 깊이에서 월드 위치를 복원하는 데 쓰는데,
         // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고, 그 증상은 "빛이 한 프레임 늦게 따라온다"이다. 깊이는 지터 든 행렬로 그렸으므로 역행렬도 그것이다.
         context._passValues.setMatrix( passConstantNames()._invViewProj, raster.invert() );
         context._passValues.setFloat4( passConstantNames()._temporalJitter, float4{ ndcJitter._x, ndcJitter._y, 0.0f, 0.0f } );
@@ -855,8 +855,8 @@ namespace sw
             // 깊이 첨부도 그래프가 아는 접근이다. 깊이를 쓰지 않는 패스(투명)도 그것을 DSV 로 바인딩하므로 "첨부" 상태가 필요하다. 입력에만 적었어도
             // 여기서 쓰기로 적는다. 그래야 레벨 프롤로그가 첨부 전이(prepareTextureForRenderTarget)를 미리 내고, 앞 패스가 SRV 로 바인딩해 둔 깊이를
             // D3D11 이 해제하며(OMSetRenderTargets 해저드), 뒤에서 깊이를 읽는 패스가 다시 읽기 전이를 받는다(언리얼 RDG 의 깊이 첨부 접근).
-            // 순서는 쓰기 사슬을 따른다. 이 패스보다 **먼저 선언한** 읽는 패스는 앞 버전을 읽고 이 패스 앞에 온다.
-            // 컴퓨트로 쓰는 패스는 그 첨부를 UAV 로 선언한다 — 패스 몸통이 전이하지 않고 레벨 콜백이 RW 텍스처 상태로 옮긴다(Compute 패스는 입력을 RW 텍스처로 읽기만 한다 — UAV 읽기).
+            // 순서는 쓰기 사슬을 따른다. 이 패스보다 먼저 선언한 읽는 패스는 앞 버전을 읽고 이 패스 앞에 온다.
+            // 컴퓨트로 쓰는 패스는 그 첨부를 UAV 로 선언한다. 패스 몸통이 전이하지 않고 레벨 콜백이 RW 텍스처 상태로 옮긴다(Compute 패스는 입력을 RW 텍스처로 읽기만 한다, UAV 읽기).
             // 앞 컴퓨트의 쓰기 뒤에 오는 UAV 접근은 레벨 콜백이 텍스처 UAV 배리어를 낸다(`RenderGraphBarrier::_bUAVBarrier`).
             const bool                        bComputePass   = pass._type == RenderPassKind::Compute;
             const bool                        bComputeOutput = bComputePass || ( pass._implementation == RenderPassExecutionMode::Compute && bNativeBindless );
@@ -943,7 +943,7 @@ namespace sw
         }
         else if ( pass._type == RenderPassKind::LateOcclusion )
         {
-            // 2 단계 가림의 뒤 단계 — 장면 깊이를 깊이 쓰기로 선언한다(패스 안에서 복사 동안만 셰이더 읽기로 옮기고 되돌린다 — 돌지 않는 프레임에는 전이가 없다).
+            // 2 단계 가림의 뒤 단계: 장면 깊이를 깊이 쓰기로 선언한다(패스 안에서 복사 동안만 셰이더 읽기로 옮기고 되돌린다. 돌지 않는 프레임에는 전이가 없다).
             addAttachmentAccess( inoutListAccess, attachmentNames()._sceneDepth, RenderGraphAccess::DepthWrite );
             inoutListAccess.push_back( ViewGraphResource::depthHistory() );
             inoutListAccess.push_back( ViewGraphResource::hzb() );
@@ -1149,7 +1149,7 @@ namespace sw
         if ( levelContext._pListBarrier == nullptr )
             return;
 
-        // 그래프가 **실제로 바뀌는 전이만** 추려서 준다. 여기서는 이름으로 텍스처를 찾아 레벨의 전이를 한 묶음으로 낸다(`IRHICommandList::transitionTextures` —
+        // 그래프가 실제로 바뀌는 전이만 추려서 준다. 여기서는 이름으로 텍스처를 찾아 레벨의 전이를 한 묶음으로 낸다(`IRHICommandList::transitionTextures` —
         // DX12 ResourceBarrier · Vulkan vkCmdPipelineBarrier 한 번, 언리얼 RDG 의 패스 앞 전이 배치와 같은 자리). 같은 자원을 여러 패스가 읽어도, 이미 맞는 상태여도 다시 내지 않는다.
         // 이 뷰에서 빠진 패스는 실행 계획에 없고 꺼진 효과의 출력을 읽는 접근은 계획이 원본 이름으로 바꿨다(`selectGraphPlan`) — 이름은 늘 그 이름으로 만든 텍스처다.
         // 등록 자원(프레임 그래프는 `_frameBufferTable`, 뷰 그래프는 지금 뷰의 `_viewResourceTable`)은 이름의 모든 칸을 버퍼는 `transitionBuffers` 한 번으로, UAV → UAV 는 UAV 배리어로 낸다.
@@ -1265,8 +1265,8 @@ namespace sw
         SW_ASSERT( bModulePass || isPassDisabledInView( passIndex ) == false );
 
         // 패스 로컬 상태를 새로 만든다. 주의: 멤버 _pCmd 를 저장하고 복원하는 방식은 "한 번에 한 패스만 돈다" 는 전제라 병렬 기록에서 서로를 덮어쓴다.
-        // 패스 슬롯(= 패스 번호)의 컨텍스트에 프레임 시드를 **대입**한다. 복사본을 새로 만들면 값 목록과 레지스트리가 프레임마다 다시 늘어난다.
-        // 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다 — 벡터 **자체**는 병렬 기록 중 읽기만 한다(슬롯은 패스마다 다르다). 비-const 인덱싱이나 data() 는 컨테이너 레이스
+        // 패스 슬롯(= 패스 번호)의 컨텍스트에 프레임 시드를 대입한다. 복사본을 새로 만들면 값 목록과 레지스트리가 프레임마다 다시 늘어난다.
+        // 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다 — 벡터 자체는 병렬 기록 중 읽기만 한다(슬롯은 패스마다 다르다). 비-const 인덱싱이나 data() 는 컨테이너 레이스
         // 탐지기가 벡터에 대한 쓰기로 잡아 워커 둘이 동시에 들어오면 울린다. const 로 읽고 슬롯만 고쳐 쓴다.
         SW_ASSERT( passIndex < _listPassContext.size() );
         if ( passIndex >= _listPassContext.size() )
@@ -1298,10 +1298,10 @@ namespace sw
             prepareVisualizedAttachment( *graphContext._pCmdList );
 
 #if SW_PROFILE_COMPILED
-        // **GPU 시간은 패스 인덱스로 고정된 슬롯 쌍에 기록한다.** 패스는 병렬로 기록될 수 있어
+        // GPU 시간은 패스 인덱스로 고정된 슬롯 쌍에 기록한다. 패스는 병렬로 기록될 수 있어
         // 흐르는 카운터를 쓰면 경쟁이 된다. 인덱스로 고정하면 각 패스가 자기 슬롯 두 개만 건드린다.
         //
-        // **계측에는 비용이 든다.** 타임스탬프 하나가 GPU 파이프라인에 표식을 넣고 프레임 끝에
+        // 계측에는 비용이 든다. 타임스탬프 하나가 GPU 파이프라인에 표식을 넣고 프레임 끝에
         // resolve 와 읽기가 붙는다. 그래서 (1) Shipping 에서는 이 블록이 통째로 사라지고,
         // (2) Dev 에서도 프로파일러가 켜져 있을 때만 기록한다(`-gv_profileFrames`).
         const uint32 timestampBegin = passIndex * 2u;

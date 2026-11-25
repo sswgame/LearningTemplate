@@ -3,7 +3,7 @@
  * @brief 프레임 패스 종류마다의 실행입니다 — 깊이 히스토리 · HZB · GPU 입자 · 인스턴스 애니메이션 · 메시 모프 · 메시 스킨 · GPU 컬링(+ 정렬 · 2 단계 가림) · 라이트 그리드 ·
  *        볼륨 안개 · 실시간 프로브 · 화면 마커 투영.
  * @details 순서는 여기에 없다. 파이프라인 XML 의 `_listFramePass` 가 자원(`_listResource`)의 읽기 · 쓰기로 선언하고 프레임 그래프가 정한다
- *          (애니메이션 · 모프 · 스킨이 컬링보다 앞 — 컬링이 이번 프레임 바운드로 판정한다 — 은 `InstanceBuffer` · `DeformVertices` 의 쓰기 · 읽기다).
+ *          (애니메이션 · 모프 · 스킨이 컬링보다 앞인 것(컬링이 이번 프레임 바운드로 판정한다)은 `InstanceBuffer` · `DeformVertices` 의 쓰기 · 읽기다).
  *          각 패스는 자기가 쓰는 버퍼의 배리어를 스스로 건다(쓰기 전 UAV, 끝나면 읽기 상태) — 그래프 자원 이름은 순서만 정하고 버퍼를 모른다.
  *          상수 버퍼는 `RHIConstantBuffer` 이고 프레임 데이터(`FrameRenderState::_deform` · 뷰)에 있다.
  */
@@ -286,7 +286,7 @@ namespace sw
             }
             case RenderPassKind::VolumetricFog:
             {
-                // 볼륨은 도는 프레임에만 등록했다(`beginFrame` — 등록 조건이 곧 실행 조건). 등록이 없으면 그래프가 볼륨 전이를 내지 않았다 — 기록하지 않는다.
+                // 볼륨은 도는 프레임에만 등록했다(`beginFrame`. 등록 조건이 곧 실행 조건). 등록이 없으면 그래프가 볼륨 전이를 내지 않았으므로 기록하지 않는다.
                 if ( graphContext.isRegistered( RenderGraphBufferUAV{ FrameResource::fogVolume() } ) )
                     _fog.dispatchVolumetricFog( *_pCmd, _state._lightBuffer, _transparentRankPlaceholder._srv );
                 break;
@@ -374,7 +374,7 @@ namespace sw
     void FrameGraphExecutor::dispatchInstanceAnimation( const RenderGraphPassContext& graphContext )
     {
         // 인스턴스 애니메이션이 컬링보다 먼저다(XML 의 `InstanceBuffer` 쓰기 · 읽기). 순서가 뒤집히면 컬링이
-        // **이번 프레임에 회전하기 전의** 바운드로 판정한다. 애니메이션이 회전만 바꾸므로 지금 씬에서는
+        // 이번 프레임에 회전하기 전의 바운드로 판정한다. 애니메이션이 회전만 바꾸므로 지금 씬에서는
         // 결과가 같지만, 이동을 넣는 순간 한 프레임 늦은 컬링이 된다.
         // 쓰기 앞 UAV · 읽는 쪽(컬링 · 정점 셰이더) 앞 셰이더 읽기는 그래프가 낸다(`beginFrame` 이 같은 판정 `shouldAnimateInstances` 로 등록했다).
         // 등록은 인스턴스 칸을 쓰는 패스(애니메이션 · 메시 입자) 어느 하나가 도는 프레임이다 — 이 패스의 판정은 그중 애니메이션 몫이다.
@@ -435,7 +435,7 @@ namespace sw
         if ( isDeformPassDeclared() == false )
             return;
 
-        // 풀은 **배치가 가진 메시**에서 만든다. 스냅샷 배치가 소유권을 가지고 있으므로 이 프레임 동안 살아 있다.
+        // 풀은 배치가 가진 메시에서 만든다. 스냅샷 배치가 소유권을 가지고 있으므로 이 프레임 동안 살아 있다.
         // 스킨드 메시는 스킨 구간(뒤)으로, 모프를 켠 메시는 모프 구간(앞)으로 간다.
         SW_PROFILE_SCOPE( "RT.Deform.preparePool" );
         _state._deform._listScratchMorphMesh.clear();
@@ -653,7 +653,7 @@ namespace sw
         // 컬링은 GPUScene 이 "개수를 컴퓨트에 맡겼다" 고 답할 때만 돈다. 그래야 인자의 초기 개수(0)와
         // 디스패치 여부가 절대 어긋나지 않는다. 어긋나면 한쪽은 빈 화면, 다른 쪽은 낡은 목록이다.
         //
-        // **뷰마다 한 번씩** 돈다. 컬링 결과는 절두체에 종속이라, 메인 카메라로 거른 목록을 그림자 패스가
+        // 뷰마다 한 번씩 돈다. 컬링 결과는 절두체에 종속이라, 메인 카메라로 거른 목록을 그림자 패스가
         // 쓰면 화면 밖에서 화면 안으로 그림자를 드리우는 물체가 사라진다. 언리얼이 뷰마다
         // FInstanceCullingContext 를 두는 것과 같은 이유다. 이번 프레임에 그리는 추가 뷰(CCTV, PiP)도 자기 슬롯을 돈다.
         if ( _state._gpuScene.isUploaded() == false || _state._gpuScene.areIndirectCountsGPUFilled() == false )
@@ -706,7 +706,7 @@ namespace sw
         if ( _state._rainOcclusion.isActive() )
             bAllViewsCulled = enqueueCullView( _state._rainOcclusion.getCullSlot(), _state._rainOcclusion.getCullInput(), nullptr ) && bAllViewsCulled;
 
-        // 2 단계 가림의 차례 표시 — 주 시점 앞 단계가 쓰고 프리패스 뒤 뒤 단계가 읽는다. 차례 수만큼(만들지 못하면 한 단계로 돈다 — dispatchCullView 가 본다).
+        // 2 단계 가림의 차례 표시: 주 시점 앞 단계가 쓰고 프리패스 뒤 뒤 단계가 읽는다. 차례 수만큼(만들지 못하면 한 단계로 돈다, dispatchCullView 가 본다).
         _lateInstanceCount = instanceCount;
         const bool bOrdersReady =
             isTwoPhaseOcclusionEnabled() &&
@@ -789,7 +789,7 @@ namespace sw
     {
         if ( _pCmd == nullptr || _pDevice == nullptr )
             return;
-        // 주 시점과 추가 뷰 — 장면 깊이 첨부는 프레임 사이에 그대로 남아 있다(이번 프레임 뷰 그래프가 쓰기 전이다). 칸은 HZB 와 같다(뷰 번호 — 주 시점이 0).
+        // 주 시점과 추가 뷰: 장면 깊이 첨부는 프레임 사이에 그대로 남아 있다(이번 프레임 뷰 그래프가 쓰기 전이다). 칸은 HZB 와 같다(뷰 번호, 주 시점이 0).
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( _state._listView.size() ); ++viewIndex )
         {
             recordDepthHistory( graphContext, *_state._listView[viewIndex], viewIndex );
@@ -870,7 +870,7 @@ namespace sw
         if ( canCopyDepthHistory( target ) == false || graphContext.isRegistered( FrameResource::depthHistory(), slot ) == false )
             return;
         drawSceneDepthCopy( *_pCmd, target );
-        // 읽는 쪽(HZB 짓기 · GPU 입자 — UAV 읽기로 선언)의 상태로 넘겨 둔다 — 함수 머리말 참고. 이 패스가 쓰기로 선언한 자원이라 패스 안에서 옮긴다.
+        // 읽는 쪽(HZB 짓기 · GPU 입자, UAV 읽기로 선언)의 상태로 넘겨 둔다. 함수 머리말 참고. 이 패스가 쓰기로 선언한 자원이라 패스 안에서 옮긴다.
         graphContext.transition( FrameResource::depthHistory(), RenderGraphAccess::UnorderedAccessRead, slot );
     }
 
@@ -974,7 +974,7 @@ namespace sw
             _bLatePhasePending = bEarly ? 1u : 0u;
             _bLateLODReset     = bResetState ? 1u : 0u;
         }
-        // 상수 버퍼는 **뷰마다 자기 것**이다. 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치가 읽을 내용을 덮어쓴다.
+        // 상수 버퍼는 뷰마다 자기 것이다. 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치가 읽을 내용을 덮어쓴다.
         renderView._cullCb.update( *_pCmd, &cullParams, sizeof( cullParams ) );
 
         // 컬링이 쓰는 버퍼(인자 · 가시 목록 · 전환 상태 · 차례 표시)는 그래프 레벨 콜백이 모든 슬롯을 묶어 UAV 로 옮겨 두었다(`registerCullResources`).
@@ -987,7 +987,7 @@ namespace sw
         if ( resetParameters.apply( *_pCmd, _psoManager.getComputePSO( RenderPassKind::IndirectArgsReset ) ) )
             _pCmd->dispatchThreads( cullParams._batchCount, 1, 1 );
         graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::cullArgs() }, cullViewIndex ); // 되돌린 개수 위에서 컬링이 InterlockedAdd 로 센다
-        // PSO 와 매개변수는 **뷰마다** 다시 건다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
+        // PSO 와 매개변수는 뷰마다 다시 건다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
         // 인스턴스(칸 순) · 배치 구간 · 차례 → 칸 목록은 뷰가 공유한다(절두체와 HZB 만 다르다).
         ComputeShaderParameters<GPUCullShader> cullParameters;
         cullParameters.set( GPUCullShader::CullParams, renderView._cullCb._index );
@@ -1002,13 +1002,13 @@ namespace sw
         // 차례 표시는 앞 단계만 쓴다. 한 단계는 자리만 채운다 — 셰이더가 단계 0 이면 건드리지 않는다(같은 uint 버퍼라 형식이 맞다).
         cullParameters.set( GPUCullShader::OccludedOrders, bEarly ? _occludedOrders._uav : view._visibleInstances._uav );
         cullParameters.set( GPUCullShader::GPUMessages, _state._gpuMessages.getComputeUAV() ); // 메시지 변형 PSO 일 때만 셰이더가 읽는다
-        // **그리는 차례마다** 스레드 하나를 쓴다(차례의 칸은 차례 목록에서 읽는다). 그래야 보이는 것을 골라 압축할 수 있다.
+        // 그리는 차례마다 스레드 하나를 쓴다(차례의 칸은 차례 목록에서 읽는다). 그래야 보이는 것을 골라 압축할 수 있다.
         if ( cullParameters.apply( *_pCmd, _psoManager.getComputePSO( RenderPassKind::GPUCull ) ) )
             _pCmd->dispatchThreads( cullParams._instanceCount, 1, 1 );
         // 압축이 끝났으면 투명 배치의 순서를 CPU 가 정한 순서(인스턴스 번호 오름차순)로 되돌린다. 원자 연산이 준 슬롯 번호는
         // 완료 순서라 그대로 두면 블렌딩이 틀린다. 되돌리기가 GPU 에서 돌므로 투명도 압축과 컬링 이득을 받는다(instance_sort.hlsl).
         // 컬링이 채운 목록을 정렬이 바로 읽는다. 상태가 그대로라 전이로는 알 수 없으므로
-        // 선언한 UAV 핸들의 **UAV 배리어**를 따로 건다. 없으면 정렬이 아직
+        // 선언한 UAV 핸들의 UAV 배리어를 따로 건다. 없으면 정렬이 아직
         // 채워지지 않은 목록을 읽는다(백엔드마다 결과가 달라 재현이 어렵다).
         graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::cullArgs() }, cullViewIndex );
         graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::cullVisibleInstances() }, cullViewIndex );
@@ -1029,7 +1029,7 @@ namespace sw
             sortParams._bUseViewRank        = bViewRank ? 1u : 0u;
             sortParams._transparentTailBase = bViewRank ? pView->_transparentTailBase : 0u;
             const RHIBufferSRVIndex rankSRV = bViewRank ? pView->_transparentRank._srv : _transparentRankPlaceholder._srv;
-            // 정렬 상수 버퍼도 **뷰마다 자기 것**이다. 뷰마다 다른 값(눈 위치)을 싣으므로 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
+            // 정렬 상수 버퍼도 뷰마다 자기 것이다. 뷰마다 다른 값(눈 위치)을 싣으므로 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
             renderView._sortCb.update( *_pCmd, &sortParams, sizeof( sortParams ) );
 
             // 배치마다 워크그룹 하나를 쓴다. 그 배치의 목록을 그룹 공유 메모리 안에서 정렬한다.
@@ -1085,7 +1085,7 @@ namespace sw
     void FrameGraphExecutor::fillCullParams( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pView, bool bResetLODState,
                                              FrameRendererUtil::GPUCullParams& outParams ) const
     {
-        // 절두체는 **뷰가 이미 가지고 있다.** setViewProjection 이 행렬과 함께 갱신한다.
+        // 절두체는 뷰가 이미 가지고 있다. setViewProjection 이 행렬과 함께 갱신한다.
         // 여기서 다시 뽑으면 행렬만 바뀌고 평면이 바뀌지 않는 상태가 생길 수 있다.
         Memory::copy( outParams._arrPlane, renderView._frustum._arrPlane, sizeof( outParams._arrPlane ) );
         outParams._instanceCount     = instanceCount;
@@ -1156,7 +1156,7 @@ namespace sw
 
     bool FrameGraphExecutor::recordCurrentDepthHZB( const RenderGraphPassContext& graphContext, FrameViewTarget& view ) const
     {
-        // 깊이 사본 · 피라미드는 부르는 패스가 선언했고 짓는 뷰만 등록했다(`registerViewGraphResources`) — 등록이 없으면 짓지 않는다(뒤 단계는 판정 없이 돈다 — 발자국 0).
+        // 깊이 사본 · 피라미드는 부르는 패스가 선언했고 짓는 뷰만 등록했다(`registerViewGraphResources`). 등록이 없으면 짓지 않는다(뒤 단계는 판정 없이 돈다, 발자국 0).
         const bool bRegistered = graphContext.isRegistered( ViewGraphResource::depthHistory() ) && graphContext.isRegistered( ViewGraphResource::hzb() ) &&
                                  graphContext.isRegistered( ViewGraphResource::occlusionTiles() );
         if ( graphContext.getCommandList() == nullptr || _pDevice == nullptr || bRegistered == false )

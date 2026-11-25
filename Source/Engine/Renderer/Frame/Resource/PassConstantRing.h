@@ -1,13 +1,13 @@
 /**
  * @file PassConstantRing.h
  * @brief 프레임마다 되감는 패스 상수버퍼 슬롯 링입니다. 드로우마다 하나씩 나눠 줍니다.
- * @details `updateConstantBuffer` 는 버퍼의 **프레임 슬롯 하나**에 쓰고 GPU 는 제출 뒤에 읽습니다. 그래서 여러 드로우가
+ * @details `updateConstantBuffer` 는 버퍼의 프레임 슬롯 하나에 쓰고 GPU 는 제출 뒤에 읽습니다. 그래서 여러 드로우가
  *          같은 버퍼를 쓰면 모두 마지막에 쓴 값을 봅니다. 한 패스의 드로우들이 서로를 덮어쓰는 문제이며,
  *          RenderPassGPUTest.MultiBatchPassKeepsPerBatchConstants 가 검증합니다. 언리얼도 드로우별 느슨한 파라미터는 드로우마다
  *          유니폼 버퍼를 따로 잡습니다. 여기서는 슬롯을 미리 만들어 두고 원자 커서로 나눠 줍니다. 패스가 병렬로
  *          기록되므로 락 없이 분배해야 합니다.
  *
- *          0 번 슬롯은 **프레임 시드 전용**입니다(직렬 경로의 `FramePassContext` 가 듭니다). 패스와 드로우는 1 번부터 받습니다.
+ *          0 번 슬롯은 프레임 시드 전용입니다(직렬 경로의 `FramePassContext` 가 듭니다). 패스와 드로우는 1 번부터 받습니다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -44,7 +44,7 @@ namespace sw
 
         /** @brief 초기 슬롯(kInitialSlotCount)을 만듭니다. 이미 있으면 그대로 true 입니다. */
         [[nodiscard]] bool initialize( IRHIDevice* pDevice );
-        /** @brief 슬롯을 디바이스에 돌려주고 비웁니다. 디바이스가 **살아 있을 때** 부릅니다. */
+        /** @brief 슬롯을 디바이스에 돌려주고 비웁니다. 디바이스가 살아 있을 때 부릅니다. */
         void release( IRHIDevice* pDevice );
         /** @brief 디바이스가 이미 사라졌을 때 부릅니다. 핸들만 잊습니다(destroy 를 부르면 해제 후 사용입니다). */
         void clear();
@@ -52,13 +52,13 @@ namespace sw
         /** @brief 프레임 시작: 커서를 1번 슬롯으로 되돌리고 고갈 경고 래치를 해제합니다. */
         void beginFrame();
         /**
-         * @brief 슬롯을 하나 빌립니다. **드로우마다** 하나씩입니다. 슬롯이 없거나 이번 프레임 몫이 다 나갔으면 false 입니다.
+         * @brief 슬롯을 하나 빌립니다. 드로우마다 하나씩입니다. 슬롯이 없거나 이번 프레임 몫이 다 나갔으면 false 입니다.
          * @details 커서는 원자적이라 병렬 기록에서도 안전합니다. 슬롯 배열은 기록 시작 전에 잡아 두고 병렬 구간에서
          *          크기가 변하지 않습니다. 모자라면 앞 슬롯을 공유하지 않고 false 를 돌려주며 프레임당 한 번 오류를 남깁니다(다음 프레임이 키운다).
          */
         [[nodiscard]] bool acquire( RHIBufferHandle& outBuffer, RHIBufferSRVIndex& outIndex );
         /**
-         * @brief 슬롯 수를 `needed` 이상으로 늘립니다. **기록 시작 전에만** 부릅니다.
+         * @brief 슬롯 수를 `needed` 이상으로 늘립니다. 기록 시작 전에만 부릅니다.
          * @details 버퍼 생성과 bindless 등록은 레지스트리를 바꾸므로 병렬 기록 중에는 할 수 없습니다
          *          (IRHIDevice::setParallelRecording). 배치 수를 아는 프레임 시작 지점에서 미리 키웁니다.
          */

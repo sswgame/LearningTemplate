@@ -27,7 +27,7 @@ namespace sw
         if ( bInvalidValueBytes )
             return;
 
-        // **값이 실제로 달라질 때만** 버전을 올린다. 같은 값을 다시 넣는 호출이 흔한데(드로우마다 g_World 를
+        // 값이 실제로 달라질 때만 버전을 올린다. 같은 값을 다시 넣는 호출이 흔한데(드로우마다 g_World 를
         // 같은 항등 행렬로 다시 넣는다), 그때마다 버전을 올리면 상수버퍼를 드로우마다 새로 만들게 된다.
         const uint32 found = findIndex( name );
         if ( found != constant::invalid_index::kUint32 )
@@ -216,7 +216,7 @@ namespace sw
             }
 
             /**
-             * @brief 2) 예약 CB 를 **기준 슬롯 번호로** 겁니다(b0 = PassCB, b1 = MaterialCB — binding_slots.hlsli).
+             * @brief 2) 예약 CB 를 기준 슬롯 번호로 겁니다(b0 = PassCB, b1 = MaterialCB — binding_slots.hlsli).
              * @details 리플렉션이 주는 `_registerIndex` 는 백엔드마다 뜻이 다를 수 있다(세트 · 시프트 규약). 그대로 넘기면 한 CB 가 다른 CB 자리를
              *          덮어쓰거나 어느 슬롯에도 안 걸리는데, 같은 UNIFORM_BUFFER 라 검증 에러도 안 난다. 텍스처 · 구조버퍼는 3) 의 표가 맡는다.
              */

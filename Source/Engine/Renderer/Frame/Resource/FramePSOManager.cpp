@@ -81,7 +81,7 @@ namespace sw
                 bChanged                             = true;
             }
 
-            // 셰이딩을 바꾸는 모드(Unlit, Normals, Depth, Overdraw)는 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이다.
+            // 셰이딩을 바꾸는 모드(Unlit, Normals, Depth, Overdraw)는 조명 항을 셰이더에서 컴파일 아웃한다. 런타임 분기가 아니라 퍼뮤테이션이다.
             // define 은 쿠커와 같은 원본(findViewModeDefine)에서 얻는다. 쿠커가 쿠킹하지 않은 define 은 Shipping 에서 PSO 를 만들 수 없다.
             const utf8* pViewModeDefine = RenderViewModeUtil::getInfo( viewMode )._pShaderDefine;
             if ( pViewModeDefine == nullptr )
@@ -370,7 +370,7 @@ namespace sw
             ComputePipeline existingCompute{};
             if ( _pCache->findPipelineComputePSO( hashed_string( pass._name.c_str() ), existingCompute ) )
                 continue;
-            // 일반 풀스크린 패스의 컴퓨트 구현 — 네이티브 bindless 에서만 만든다(에뮬 백엔드는 픽셀 구현이 돈다 — 그 PSO 는 위의 표 단계가 늘 만든다). 키는 패스 이름이다.
+            // 일반 풀스크린 패스의 컴퓨트 구현은 네이티브 bindless 에서만 만든다(에뮬 백엔드는 픽셀 구현이 돌고 그 PSO 는 위의 표 단계가 늘 만든다). 키는 패스 이름이다.
             if ( pass._implementation == RenderPassExecutionMode::Compute && _pDevice->supportsNativeBindlessSampling() )
             {
                 RenderPassShaderSelection computeShader = selectRenderPassComputeShader( pass, engineDefaultAssets );
@@ -437,7 +437,7 @@ namespace sw
         }
         if ( listJob.empty() == false )
         {
-            // 아틀라스 포맷은 셰이더 바이트코드에 들지 않는다(RT 수만 든다 — `RHIShaderRequest::resolveGraphics`) — 아틀라스와 같은 RGBA8 로 데운다.
+            // 아틀라스 포맷은 셰이더 바이트코드에 들지 않는다(RT 수만 든다, `RHIShaderRequest::resolveGraphics`). 그래서 아틀라스와 같은 RGBA8 로 데운다.
             appendShaderWarm( makeCookieAtlasPSODesc( engineDefaultAssets._shaderFullscreenBlit.get(), RHIFormat::R8G8B8A8_UNORM ), listShader );
             appendShaderWarm( makeLayerBakePSODesc( engineDefaultAssets._shaderLayerBake.get(), constant::render::kOffscreenColorFormat ), listShader );
         }
@@ -573,7 +573,7 @@ namespace sw
 
     RHIPipelineStateHandle FramePSOManager::findOutputPSO( RenderPassKind passType, RHIFormat targetFormat ) const
     {
-        // **조회만 한다.** 없다고 여기서 만들면 안 된다 — 이 함수는 패스 실행 중 = 태스크 워커에서
+        // 조회만 한다. 없다고 여기서 만들면 안 된다 — 이 함수는 패스 실행 중 = 태스크 워커에서
         // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더 패스 캐시(락 없음)를 건드리므로, 같은
         // 레벨의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. requireRegistryMutableNow 는 bindless
         // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 collectOutputPSOJobs 가 셋업에서 만든다.
@@ -729,7 +729,7 @@ namespace sw
     void FramePSOManager::collectOutputPSOJobs( vector<PassPSOJob>& inoutListJob )
     {
         // 주 출력에 그리는 패스(Present · Canvas · Present 를 대신하는 FSR 의 RCAS)의 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 씬 뷰 · 게임 뷰 등,
-        // 계약값 kOffscreenColorFormat), 스크린샷 캡처 텍스처(계약값 kBackBufferFormat)다. 모두 **셋업에서** 만들어 둔다.
+        // 계약값 kOffscreenColorFormat), 스크린샷 캡처 텍스처(계약값 kBackBufferFormat)다. 모두 셋업에서 만들어 둔다.
         // 출력 패스는 표의 kOutputPass 가 정한다.
         // 화면 회전 출력(kSurfaceRotation)은 스왑체인 이미지에만 그려 백버퍼 포맷 하나이고, 서피스를 돌릴 수 있는 장치에서만 만든다(데스크톱은 없다).
         // HDR 을 받는 모니터면 장면 출력 RT(`FrameDisplayEncode` — Present · RCAS 가 그린다)의 포맷도 더한다. 실행 중 HDR 을 켜도 셋업의 이 PSO 를 쓴다. 받지 않으면 Unknown(건너뛴다).
@@ -838,7 +838,7 @@ namespace sw
     bool FramePSOManager::makePassPSODesc( RenderPassKind passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride, RHIPipelineStateDesc& outDesc ) const
     {
         // 파이프라인 패스는 XML 의 값(셰이더 · 진입점 · 렌더 상태 · 퍼뮤테이션 · 타깃)이 그대로 들어간다. 표는 XML 이 비운 셰이더의 기본값, 패스 define, XML 에 없는 내부 슬롯의 값이다.
-        // 셰이더와 define 은 쿠커와 **같은 함수**(selectRenderPassShader)로 정한다. 어긋나면 Shipping 에서 매니페스트 미스가 난다.
+        // 셰이더와 define 은 쿠커와 같은 함수(selectRenderPassShader)로 정한다. 어긋나면 Shipping 에서 매니페스트 미스가 난다.
         const RenderPassKindInfo& info = getRenderPassKindInfo( passType );
         // 내부 슬롯은 대신 그리는 파이프라인 패스의 출력 선언으로 포맷 · 화면 속도 쓰기를 정한다(`_targetSourceType`).
         const RenderGraphPassDesc* pTargetDesc =
@@ -896,7 +896,7 @@ namespace sw
         }
         if ( pPassDesc != nullptr && pPassDesc->_listOutput.empty() == false )
         {
-            // 출력 선언에서 컬러 RT 를 센다. 쿠커가 픽셀 스테이지 유무를 판정하는 것과 **같은 함수**다. Swapchain 출력은 포맷을 모른다(Unknown) —
+            // 출력 선언에서 컬러 RT 를 센다. 쿠커가 픽셀 스테이지 유무를 판정하는 것과 같은 함수다. Swapchain 출력은 포맷을 모른다(Unknown) —
             // 그 포맷은 출력 패스의 대상 포맷(pRTVFormats)으로만 정하므로 여기까지 오면 근거가 없다.
             desc._numRenderTargets = FrameRendererUtil::collectColorOutputFormats( *pPassDesc, _pipeline.getDesc()._listAttachment, desc._arrRTVFormat,
                                                                                    kMaxColorAttachments, numRenderTargets );
@@ -1001,7 +1001,7 @@ namespace sw
             bChanged               = true;
         }
 
-        // 뷰 모드는 머티리얼 퍼뮤테이션 **뒤에** 적용한다. 순서가 반대면 머티리얼이 셰이더 경로를
+        // 뷰 모드는 머티리얼 퍼뮤테이션 뒤에 적용한다. 순서가 반대면 머티리얼이 셰이더 경로를
         // 교체할 때 방금 넣은 define 이 다른 셰이더로 넘어가 의미가 달라진다.
         if ( passInfo.shouldApplyViewMode() && applyViewModeToDesc( desc, viewMode ) )
             bChanged = true;
@@ -1186,8 +1186,8 @@ namespace sw
         const uint32 budgetMicroseconds = bBuildAll ? 0u : engine::getSubsystem<EngineConfig>()._render._psoBuildBudgetMicroseconds;
         (void)_pCache->pollMaterialPSOBuilds( _pDevice, usesAsyncMaterialPSOBuilder(), budgetMicroseconds );
         // 새 변형의 레이아웃은 폴백 stride 를 모으던 시점에는 없었다. 그 셰이더가 다른 크기의 MaterialData 를 선언하면 그 stride 의 폴백이 없고, 머티리얼 없는 배치가
-        // 그 PSO 로 그려질 때 registerMaterialBuffer 가 t5 를 **비운 채** 드로우를 낸다. Vulkan 이 초기화되지 않은 디스크립터를 읽어 디바이스를 잃는 그 경로다.
-        // 저장소는 렌더러가 함께 쓰므로 새 레이아웃은 **다른 렌더러의 호출이 먼저 합쳤을 수 있다** — 이 호출이 합친 수가 아니라 등록 번호로 안다. 기록 앞이라 버퍼를 만들 수 있다.
+        // 그 PSO 로 그려질 때 registerMaterialBuffer 가 t5 를 비운 채 드로우를 낸다. Vulkan 이 초기화되지 않은 디스크립터를 읽어 디바이스를 잃는 그 경로다.
+        // 저장소는 렌더러가 함께 쓰므로 새 레이아웃은 다른 렌더러의 호출이 먼저 합쳤을 수 있다 — 이 호출이 합친 수가 아니라 등록 번호로 안다. 기록 앞이라 버퍼를 만들 수 있다.
         if ( _fallbackLayoutSerial != _pCache->getLayoutSerial() )
             ensureMaterialFallbackBuffers();
     }

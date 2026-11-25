@@ -163,7 +163,7 @@ namespace sw
              * @details 꺼진 효과(`kSkipsWithoutPostProcess` — 후처리를 끈 뷰 · 품질 · DOF · 모션 블러 · 접촉 그림자 · 후처리 머티리얼)와 그릴 것이 없는 덧그리는 패스(SSR · 왜곡)가 false 다.
              *          결과를 어떻게 쓰는지는 패스 성격이 정한다 — 고를 수 있는 효과는 출력이 원본을 가리키거나(`kBypassesToSource`) 없고, 덧그리는 패스는 출력이 그대로다. 둘 다 실행 입구가 기록하지 않는다.
              *          예전에는 같은 뜻을 `isEffectOff`(꺼짐)와 `shouldRenderPass`(그림)가 반대 극성으로 따로 말했다.
-             * @param bMotionStill 기록을 버리는 프레임(컷 — 언리얼도 컷에서 모션 블러를 끈다)이거나, 이번 뷰-투영이 지난번 것과 같고 물체도 움직이지 않았다 — 화면 속도가 모두 0 이다.
+             * @param bMotionStill 기록을 버리는 프레임(컷. 언리얼도 컷에서 모션 블러를 끈다)이거나, 이번 뷰-투영이 지난번 것과 같고 물체도 움직이지 않아 화면 속도가 모두 0 이다.
              */
             static bool isPassEnabledInView( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, const RenderFrameSettings& frameSettings, const FrameViewResources::ViewPassSceneState& sceneState,
                                              bool bMotionStill )
@@ -515,7 +515,7 @@ namespace sw
         view._listPassDisabled.assign( listPass.size(), SW_FALSE );
         _listScratchWrittenAttachment.clear();
         bool bForwardSet = false;
-        // TAA 가 이번 프레임에 기록을 쓰는지는 이 고르기 하나가 정한다(실행은 같은 결과 — 출력이 이어졌는지 — 를 본다). 다음 프레임의 `beginViewHistory` 가 읽는다.
+        // TAA 가 이번 프레임에 기록을 쓰는지는 이 고르기 하나가 정한다(실행은 같은 결과, 곧 출력이 이어졌는지를 본다). 다음 프레임의 `beginViewHistory` 가 읽는다.
         hashed_string cloudOutput;
         hashed_string taaOutput;
         // 모듈 확장 패스는 늘 돈다 — 읽는 첨부의 쓰는 쪽이 빠지지 않고, 쓰는 첨부 · 깊이 첨부가 있다. 선언에 없는 이름(모듈 임시 텍스처)은 `FrameExtensionHost::allocateTextures` 가 만든다.
@@ -603,7 +603,7 @@ namespace sw
         updateOutputHistory( pool, cloudOutput, "SkyCloudHistory", view._skyCloudHistory );
         if ( view._skyCloudHistory.isWritten() )
             view._skyCloudSample = view._skyCloudHistory.isReset() ? 0u : view._skyCloudSample + 1u;
-        // 사진 앞 정착(조건 `RenderTemporalAccumulation`) — 시간 누적이 쌓인 정지 프레임 수. TAA 를 이번 프레임에 돌리는지는 위 고르기가 정했다(`_taaHistory`) —
+        // 사진 앞 정착(조건 `RenderTemporalAccumulation`): 시간 누적이 쌓인 정지 프레임 수. TAA 를 이번 프레임에 돌리는지는 위 고르기가 정했다(`_taaHistory`) —
         // TAA 가 없는 뷰는 TAA 기록 버림을 보지 않는다(그것만 보면 Forward 뷰의 정지 프레임이 늘 0 이었다).
         // 볼륨 구름의 기록도 같은 규칙이다(Forward 뷰는 TAA 없이 구름만 쌓는다).
         const bool bHistoryReset      = view._bHistoryReset == SW_TRUE;

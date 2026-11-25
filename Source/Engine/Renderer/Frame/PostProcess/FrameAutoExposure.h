@@ -62,7 +62,7 @@ namespace sw
          */
         [[nodiscard]] static float32 computeHistogramPercentileMeanLog( vector_reference<const uint32> listBinCount, float32 logMin, float32 logMax, float32 lowPercent, float32 highPercent );
 
-        /** @brief 뷰의 자동 노출 기록 둘(1x1 R32 실수 RT + SRV)을 **셋업 단계에서** 만들어 둡니다. 톤맵하는 패스가 없으면 만들지 않습니다. */
+        /** @brief 뷰의 자동 노출 기록 둘(1x1 R32 실수 RT + SRV)을 셋업 단계에서 만들어 둡니다. 톤맵하는 패스가 없으면 만들지 않습니다. */
         void ensureAutoExposureHistory( FrameViewTarget& view );
         /** @brief 뷰의 자동 노출 기록을 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseAutoExposureHistory( FrameViewTarget& view );

@@ -13,7 +13,7 @@ namespace sw
      * @brief 타임스탬프 슬롯 번호의 배치입니다 — 쓰는 쪽(`FramePassExecutor` · `GPUFrameClock`)과 읽는 쪽(`GPUPassTimeline` · `GPUTimelineExporter`)이 같은 번호를 본다.
      * @details [뷰 패스 쌍 × kTimedPassCapacity][프레임 패스 쌍 × kTimedFramePassCapacity][빈 칸][예약 넷]. 뷰 패스는 앞에서부터 인덱스 × 2 쌍,
      *          프레임 패스(`_listFramePass`)는 그 뒤에서부터 인덱스 × 2 쌍을 쓴다(병렬 기록이라 흐르는 카운터가 아니라 고정 슬롯).
-     *          프레임 전체와 프레임 그래프는 **뒤쪽 네 슬롯**을 쓴다. 백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 슬롯이 먼저 기록되어도 값이 잘리지 않는다.
+     *          프레임 전체와 프레임 그래프는 뒤쪽 네 슬롯을 쓴다. 백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 슬롯이 먼저 기록되어도 값이 잘리지 않는다.
      *          프레임 시작 · 끝 쌍은 `GPUFrameClock` 이 늘(Shipping 포함) 쓰고, 프레임 그래프 쌍은 프로파일러가 기록 중일 때만 쓴다.
      */
     struct GPUTimestampSlotLayout

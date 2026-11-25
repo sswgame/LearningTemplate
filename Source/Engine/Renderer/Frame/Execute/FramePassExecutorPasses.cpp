@@ -185,7 +185,7 @@ namespace sw
         const GPUPassScope passScope{ *context._pCmd, passName };
         context._resourceRegistry.reset();
         context._passType = passType;
-        // 라이트는 **패스 종류를 가리지 않는다.** 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
+        // 라이트는 패스 종류를 가리지 않는다. 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
         // 그래서 인스턴스 버퍼(지오메트리 패스 전용)와 달리 여기서 모든 패스에 바인딩한다.
         registerLightBuffer( context );
         registerSurfaceDeformLayer( context );
@@ -400,9 +400,9 @@ namespace sw
 
     RHIRenderPassLoadOp FramePassExecutor::getColorLoadFor( const hashed_string& name )
     {
-        // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받으면 패스마다 여기서 다시 intern 하게
+        // 이름은 이미 intern 된 것만 받는다. string_view 를 받으면 패스마다 여기서 다시 intern 하게
         // 된다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 모두 코드 리터럴이라 attachmentNames() 캐시로 충분하다.
-        // 프레임의 첫 사용만 선언의 로드 동작을 따르고(풀에 없는 이름 — 백버퍼 — 은 Clear), 그 뒤의 패스는 앞 패스가 쓴 것을 읽는다.
+        // 프레임의 첫 사용만 선언의 로드 동작을 따르고(풀에 없는 이름인 백버퍼는 Clear), 그 뒤의 패스는 앞 패스가 쓴 것을 읽는다.
         return markAttachmentCleared( name ) ? findTransientAttachment( name )._ops._loadOp : RHIRenderPassLoadOp::Load;
     }
 
@@ -416,7 +416,7 @@ namespace sw
 
     void FramePassExecutor::executeGenericFullscreenPass( const PassExecuteInput& input )
     {
-        // 일반 풀스크린 패스(테이블의 kGenericFullscreen: Lighting, SSAO, Bloom, BloomDownsample, Outline, Tonemap)다. **선언이 곧 바인딩**이다.
+        // 일반 풀스크린 패스(테이블의 kGenericFullscreen: Lighting, SSAO, Bloom, BloomDownsample, Outline, Tonemap)다. 선언이 곧 바인딩이다.
         // 입력은 역할 이름으로 모두 바인딩하고, 타깃은 선언한 첫 컬러 출력이다. 계약(RenderPassInputSignature)이
         // 로드 시점에 같은 목록을 검사했다. 새 포스트 패스는 테이블의 한 줄로 여기를 탄다.
         FramePassContext&          context  = input._context;
@@ -683,7 +683,7 @@ namespace sw
         const RenderGraphPassDesc::ResolvedAttachment* pContactInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ContactShadow );
         if ( pContactInput != nullptr )
             registerPassTexture( context, attachmentNames()._contactShadow, pContactInput->_attachment );
-        // DBuffer 셋도 같다 — 데칼 패스가 이 뷰에서 돌았을 때만 건다(데칼이 없으면 출력이 없다 — 셰이더는 "덮지 않음").
+        // DBuffer 셋도 같다. 데칼 패스가 이 뷰에서 돌았을 때만 건다(데칼이 없으면 출력이 없고 셰이더는 "덮지 않음").
         for ( const RenderPassInputRole dbufferRole : { RenderPassInputRole::DBufferA, RenderPassInputRole::DBufferB, RenderPassInputRole::DBufferC } )
         {
             const RenderGraphPassDesc::ResolvedAttachment* pDBufferInput = Internal::findInputByRole( input._passDesc, dbufferRole );
@@ -1072,7 +1072,7 @@ namespace sw
             {
                 context._pCmd->endRenderPass();
                 context._pCmd->blitTexture( targetTexture, draw._pChainSource->_texture );
-                // 사본은 이 패스가 복사 대상으로 선언했다(`ViewGraphResource` — 이어 그리는 머티리얼이 있는 뷰만 등록) — 다음 머티리얼이 읽도록 셰이더 읽기로 옮긴다.
+                // 사본은 이 패스가 복사 대상으로 선언했다(`ViewGraphResource`, 이어 그리는 머티리얼이 있는 뷰만 등록). 다음 머티리얼이 읽도록 셰이더 읽기로 옮긴다.
                 context._pGraphPass->transition( location == PostProcessBlendableLocation::BeforeTonemap ? ViewGraphResource::postProcessChainBeforeTonemap()
                                                                                                          : ViewGraphResource::postProcessChainAfterTonemap(),
                                                  RenderGraphAccess::ShaderRead );
@@ -1211,7 +1211,7 @@ namespace sw
         // 히스토리 생성과 bindless 등록은 updateOutputHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
         // 병렬 기록에서 태스크 스레드가 실행하므로 여기서 레지스트리를 건드리면 안 된다. 히스토리는 뷰마다 하나다.
         const FrameViewTarget& activeView = *_pActiveView;
-        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `FrameViewHistory::isReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
+        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `FrameViewHistory::isReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 이번 원본을
         // 바인딩해 섞어도 이번 이미지만 남게 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며
         // D3D 의 복사는 같은 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
         const bool bCut = activeView._taaHistory.isReset() && pSrcName != nullptr;
@@ -1268,7 +1268,7 @@ namespace sw
         if ( src != 0 )
         {
             registerPassTexture( context, attachmentNames()._sourceColor, srcName );
-            // 선언한 입력을 **모두** 바인딩한다. Present 가 후처리 체인을 겸하면 깊이(외곽선)와 AO 가 필요하고,
+            // 선언한 입력을 모두 바인딩한다. Present 가 후처리 체인을 겸하면 깊이(외곽선)와 AO 가 필요하고,
             // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
             registerDeclaredInputs( context, passDesc );
             // 개발 보기 `gpu.show <첨부>` — 주 시점이 화면에 낼 원본을 그 첨부로 바꾼다(언리얼 Buffer Visualization). 선언한 입력 등록 뒤라 그것을 덮는다.
@@ -1324,7 +1324,7 @@ namespace sw
 
     void FramePassExecutor::executeCanvasPass( const PassExecuteInput& input )
     {
-        // 화면 2D 를 주 출력(Present 가 그린 것)에 기존 내용을 유지한 채(Load) 그린다. 주 출력에 **마지막으로 그리는 뷰**만 그린다
+        // 화면 2D 를 주 출력(Present 가 그린 것)에 기존 내용을 유지한 채(Load) 그린다. 주 출력에 마지막으로 그리는 뷰만 그린다
         // (`_pMainOutputCanvasView` — 화면 사각형 뷰가 있으면 그 마지막 것, 없으면 주 시점). 그래야 PiP · 분할 화면이 UI 를 덮지 않는다.
         // 렌더 텍스처 · 호스트 타깃 뷰에는 그리지 않는다. 그릴 것이 없으면 렌더 패스를 열지 않는다. 대상 전체가 뷰포트다(화면 사각형 설정과 무관).
         FramePassContext&   context = input._context;

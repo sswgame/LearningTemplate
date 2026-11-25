@@ -1,7 +1,7 @@
 /**
  * @file RenderPSOCache.h
  * @brief FrameRenderer 가 만든 PSO 의 저장소입니다: 엔진 패스 PSO, 출력 포맷별 PSO(Present, Canvas), 머티리얼 퍼뮤테이션 변형과 그 바인딩 레이아웃.
- * @details **만드는 일은 하지 않습니다.** PSO 를 만드는 데는 파이프라인 XML, 디바이스, 씬 배치가 필요하고 그것은 FrameRenderer 의
+ * @details 만드는 일은 하지 않습니다. PSO 를 만드는 데는 파이프라인 XML, 디바이스, 씬 배치가 필요하고 그것은 FrameRenderer 의
  *          일입니다(`FramePSOManager`). 여기는 "만든 것을 어디에 두고, 누가 소유하고, 어떤 순서로 해제하는가"만 압니다.
  *          해제 순서(변형 → 패스 PSO)도 이 타입이 지킵니다.
  *
@@ -142,7 +142,7 @@ namespace sw
 
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다. 부르는 쪽이 폴백으로 갑니다. 덮어쓴 옛 핸들은 `setEnginePSO` 와 같이 해제한다. */
         void setOutputPSO( IRHIDevice* pDevice, RenderPassKind passType, RHIFormat targetFormat, RHIPipelineState&& pso );
-        /** @brief 그 패스와 대상 포맷의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
+        /** @brief 그 패스와 대상 포맷의 PSO 가 등록돼 있으면 true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
         [[nodiscard]] bool findOutputPSO( RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const;
 
         /**
@@ -150,11 +150,11 @@ namespace sw
          * @details 부르는 쪽이 키를 고르지 않는다 — 서술 전체가 키라 포맷 · 상태를 키에서 빠뜨릴 수 없다. 머티리얼 변형 키 공간을 빌리지 않는다.
          */
         void setGlobalPSO( IRHIDevice* pDevice, uint64 descHash, RHIPipelineState&& pso );
-        /** @brief 그 지문의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
+        /** @brief 그 지문의 PSO 가 등록돼 있으면 true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
         [[nodiscard]] bool findGlobalPSO( uint64 descHash, RHIPipelineStateHandle& outPipelineState ) const;
         /** @brief 렌더 파이프라인의 컴퓨트 패스 PSO 와 그 PSO 에서 푼 매개변수 표를 패스 이름으로 둡니다(XML 패스 하나에 PSO 하나). 실패(0)도 기록합니다. */
         void setPipelineComputePSO( IRHIDevice* pDevice, const hashed_string& passName, RHIPipelineState&& pso, const ComputeShaderBindings& computeBindings );
-        /** @brief 그 컴퓨트 패스의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
+        /** @brief 그 컴퓨트 패스의 PSO 가 등록돼 있으면 true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
         [[nodiscard]] bool findPipelineComputePSO( const hashed_string& passName, ComputePipeline& outPipeline ) const;
 
         // ------------------------------------------------------------------------------
@@ -185,7 +185,7 @@ namespace sw
         void requestMaterialPSO( IRHIDevice* pDevice, const MaterialPSOKey& key, RHIPipelineStateDesc&& desc, bool bUrgent, bool bAsync );
         /**
          * @brief 빌더가 끝낸 결과를 캐시에 합칩니다(`Building` → `Ready` · `Failed`, 레이아웃 등록 포함). 렌더 스레드가 셋업 구간(기록 전)에만 부릅니다.
-         * @details 저장소는 렌더러(주 화면 · 미리보기)가 함께 쓰고 렌더러마다 두 번 부른다 — 예산은 **장치 프레임에 하나**라 부른 횟수만큼 늘지 않는다(`IRHIDevice::getFrameNumber`).
+         * @details 저장소는 렌더러(주 화면 · 미리보기)가 함께 쓰고 렌더러마다 두 번 부른다 — 예산은 장치 프레임에 하나라 부른 횟수만큼 늘지 않는다(`IRHIDevice::getFrameNumber`).
          * @param bAsync false 이면 먼저 줄의 작업을 이 프레임에 남은 예산(@p budgetMicroseconds — 0 이면 전부) 안에서 이 스레드가 만듭니다.
          * @return 이번에 `Ready` 로 합친 항목 수입니다. 레이아웃을 보는 쪽은 이 수가 아니라 `getLayoutSerial` 로 안다 — 다른 렌더러의 호출이 먼저 합쳤을 수 있다.
          */
@@ -199,7 +199,7 @@ namespace sw
         // 4) 수명
         // ------------------------------------------------------------------------------
         /**
-         * @brief 모두 파괴하고 비웁니다. 디바이스가 **살아 있을 때** 부릅니다.
+         * @brief 모두 파괴하고 비웁니다. 디바이스가 살아 있을 때 부릅니다.
          * @details 순서가 규칙입니다: 머티리얼 변형(소유한 것만) → 엔진 PSO → 출력 포맷별 PSO → 레이아웃 테이블.
          *          `_owned` 가 빈 변형은 패스 PSO 를 그대로 가리킬 뿐이라 놓을 것이 없습니다.
          */

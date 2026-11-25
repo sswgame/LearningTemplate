@@ -68,7 +68,7 @@ namespace sw
 
         /** @brief 스냅샷 빌더가 없으면 만들고, 디바이스에 매인 설정(배치 합치기, GPU 인스턴스 LOD 능력)을 @p device 로 정합니다. */
         void initialize( IRHIDevice& device );
-        /** @brief 스냅샷 빌더가 보관한 머티리얼과 인스턴스를 놓습니다. **디바이스가 살아 있을 때** 부릅니다. */
+        /** @brief 스냅샷 빌더가 보관한 머티리얼과 인스턴스를 놓습니다. 디바이스가 살아 있을 때 부릅니다. */
         void shutdown();
         /** @brief 스냅샷 빌더를 없앱니다. */
         void destroy();
@@ -83,7 +83,7 @@ namespace sw
          * @details 주광은 씬이 갖고, 렌더 스레드는 패킷으로만 받는다(렌더 스레드에서 씬을 조회할 수 없다).
          */
         static RenderPacketKeyLights writeKeyLight( RenderFramePacket& packet, Scene& scene );
-        /** @brief 키라이트와 씬의 **모든** 라이트(방향광 · 점광 · 스폿, 프로브 · 쿠키 · 실시간 프로브 요청), 하늘을 싣습니다. 그림자를 켠 점광 · 스폿의 번호는 그림자 배치를 위해 남깁니다. */
+        /** @brief 키라이트와 씬의 모든 라이트(방향광 · 점광 · 스폿, 프로브 · 쿠키 · 실시간 프로브 요청), 하늘을 싣습니다. 그림자를 켠 점광 · 스폿의 번호는 그림자 배치를 위해 남깁니다. */
         RenderPacketKeyLights collectLights( RenderFramePacket& packet, Scene& activeScene );
         /** @brief 주 시점 카메라에 매인 씬 내용입니다 — 안개(카메라가 물속이면 물의 안개)와 투명 정렬 축(render2d.xml). */
         void applyMainCamera( RenderFramePacket& packet, Scene& activeScene, CameraComponent& camera );
@@ -96,7 +96,7 @@ namespace sw
         /** @brief 켜진 데칼(`DecalComponent`)의 그리기 값을 그리는 차례(`_sortOrder`)로 패킷에 싣습니다. */
         static void collectDecals( RenderFramePacket& packet, const Scene& activeScene );
         /**
-         * @brief 그림자 배치(아틀라스 칸 · 캐스케이드 · 점광 · 스폿 타일)를 만듭니다. 카메라가 정해진 **뒤에** 부릅니다 — `_shadowViewDistance` 를 준 빛은 볼륨을 카메라가 보는 곳에 맞춘다.
+         * @brief 그림자 배치(아틀라스 칸 · 캐스케이드 · 점광 · 스폿 타일)를 만듭니다. 카메라가 정해진 뒤에 부릅니다 — `_shadowViewDistance` 를 준 빛은 볼륨을 카메라가 보는 곳에 맞춘다.
          * @details 텍셀 스냅 · 바이어스는 렌더 스레드가 그릴 캐스케이드 칸과 같은 해상도로 측정한다.
          */
         void populateShadows( RenderFramePacket& packet, const RenderPacketKeyLights& lights );

@@ -51,7 +51,7 @@ namespace sw
          * @details 백엔드 교체로 다시 시작할 때는 있는 객체를 그대로 쓰고 디바이스에 매인 설정만 새로 설정합니다.
          */
         void initialize( IRHIDevice& device, TaskManager* pTaskManager );
-        /** @brief 씬 스냅샷 빌더가 보관한 머티리얼과 인스턴스를 놓습니다. **디바이스가 살아 있을 때** 부릅니다(렌더러 종료와 같은 시점). */
+        /** @brief 씬 스냅샷 빌더가 보관한 머티리얼과 인스턴스를 놓습니다. 디바이스가 살아 있을 때 부릅니다(렌더러 종료와 같은 시점). */
         void shutdown();
         /** @brief 객체를 모두 없앱니다. 기동이 어디서 멈췄든 불리므로 null 안전합니다. */
         void destroy();
@@ -74,7 +74,7 @@ namespace sw
         /**
          * @brief 주 출력, 주 광원, 라이트, 카메라, 그림자, 추가 뷰, 애니메이션 LOD 뷰를 싣고 씬 스냅샷을 내보냅니다(GPU 업로드 요청 포함).
          * @param pActiveScene 활성 씬입니다. null 이면 주 출력만 싣습니다.
-         * @param sceneViewCameraProvider 씬 뷰 카메라 조회입니다. 씬 뷰가 있을 때만, 씬 틱과 기본 카메라 보장 **뒤에** 부릅니다.
+         * @param sceneViewCameraProvider 씬 뷰 카메라 조회입니다. 씬 뷰가 있을 때만, 씬 틱과 기본 카메라 보장 뒤에 부릅니다.
          * @param rhi 주 출력 크기가 0 일 때(백버퍼 경로) 스왑체인 크기를 읽습니다.
          */
         void populateScene( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, Scene* pActiveScene,

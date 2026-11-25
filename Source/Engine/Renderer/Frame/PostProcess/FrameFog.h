@@ -74,7 +74,7 @@ namespace sw
         /** @brief 이번 프레임의 안개를 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
         void applyFrameFog( bool bHasFog, const FogSettings& fog );
         /**
-         * @brief 볼륨 안개의 버퍼(froxel 출력, 갱신 입력)를 갖추고 주 시점의 입력을 올립니다. **기록 전에** 부릅니다(라이트 그리드와 주 시점이 정해진 뒤).
+         * @brief 볼륨 안개의 버퍼(froxel 출력, 갱신 입력)를 갖추고 주 시점의 입력을 올립니다. 기록 전에 부릅니다(라이트 그리드와 주 시점이 정해진 뒤).
          * @details 설정이 볼륨 안개를 켰고 컴퓨트 PSO 가 있을 때만 켠다. 못 만들면 오류를 한 번 남기고 볼륨 없이 평범한 안개로 그린다 — 같은 패스의 꺼진 상태다.
          * @param keyLightDirIntensity · keyLightColorAmbient 이번 프레임의 주 광원 값(`g_KeyLightDirIntensity` · `g_KeyLightColor`)
          * @param mainLightGridIndex 주 시점의 라이트 그리드 번호(`FrameViewTarget::_lightGridIndex`)

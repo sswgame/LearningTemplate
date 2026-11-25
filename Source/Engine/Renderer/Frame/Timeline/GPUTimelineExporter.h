@@ -8,7 +8,7 @@
  *
  * [왜 기록 때가 아니라 읽을 때 내는가]
  * 구간 시작과 끝을 패스를 기록하는 워커가 내면 병렬 기록의 워커마다 컨텍스트와 쿼리 번호를 나눠야 하고, 읽기를 놓친 프레임의 구간이 뷰어에서
- * 영영 열린 채 남습니다. 여기서는 렌더 스레드가 **이미 읽힌** 한 프레임을 열고 닫기 짝을 맞춰 한 번에 냅니다. 대가는 뷰어의 "CPU 쪽 발행 시각"
+ * 영영 열린 채 남습니다. 여기서는 렌더 스레드가 이미 읽힌 한 프레임을 열고 닫기 짝을 맞춰 한 번에 냅니다. 대가는 뷰어의 "CPU 쪽 발행 시각"
  * 이 기록 시각이 아니라 읽은 시각이라는 것 하나입니다(GPU 타임라인의 위치와 길이는 정확합니다).
  */
 #pragma once
@@ -37,7 +37,7 @@ namespace sw
         /** @brief @p pDeviceIdentity 디바이스와 @p pBackend 출력의 컨텍스트가 열려 있으면 true 입니다. 둘 중 하나가 바뀌면 다시 엽니다. */
         bool isContextOpenFor( const void* pDeviceIdentity, const IProfilerGPUTimeline* pBackend ) const;
         /**
-         * @brief 컨텍스트를 엽니다. @p gpuNowNanos 는 **지금** GPU 시계(타임스탬프와 같은 영역)입니다.
+         * @brief 컨텍스트를 엽니다. @p gpuNowNanos 는 지금 GPU 시계(타임스탬프와 같은 영역)입니다.
          * @param pComputeQueueName 비동기 컴퓨트 큐 줄의 이름입니다. nullptr 이면 그 줄을 열지 않습니다(컴퓨트 큐 슬롯은 내지 않는다).
          * @return 출력이 컨텍스트를 만들었으면 true 입니다.
          */
@@ -57,7 +57,7 @@ namespace sw
          * @param listFramePassSite 프레임 패스 번호 → 지점(`GPUTimestampSlotLayout::findFramePassSlot`). 프레임 패스는 프레임 그래프(`computeSite`) 안이라 그 구간의 자식으로 낸다.
          * @return 낸 구간 수(프레임 구간 포함)입니다. 컨텍스트가 없거나 기록된 슬롯이 없으면 0 입니다.
          * @details 형제 구간이 겹치거나(같은 큐라 실제로는 순서대로이며, 슬롯 해상도 차이로 겹칩니다) 부모 밖으로 나가면 뷰어의 트리가 깨지므로 시작 순으로
-         *          정렬하고 앞 형제의 끝과 부모의 범위로 자릅니다. 비동기 컴퓨트 큐의 구간(`RHITimestampFrame::_computeQueueMask`)은 그래픽스 큐와 **실제로** 겹치므로
+         *          정렬하고 앞 형제의 끝과 부모의 범위로 자릅니다. 비동기 컴퓨트 큐의 구간(`RHITimestampFrame::_computeQueueMask`)은 그래픽스 큐와 실제로 겹치므로
          *          같은 트리에 넣지 않고 따로 연 컴퓨트 큐 컨텍스트(뷰어의 다른 줄)로 냅니다 — 같은 트리에서 자르면 뒤에 시작한 그래픽스 패스가 길이 0 으로 접힌다.
          */
         uint32 exportFrame( IProfilerGPUTimeline& backend, const RHITimestampFrame& frame, const ProfileZoneSite& frameSite,

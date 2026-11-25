@@ -53,7 +53,7 @@ namespace sw
         SW_GLOBAL_VARIABLE( sw::GlobalString, gv_renderPipeline, "", "이 파이프라인 XML 로 그린다 (비우면 gv_deferredShading · 팩 설정 · 기본 포워드)" );
         /**
          * @brief `-gv_viewMode=<이름>` 은 주 출력(게임 창)의 보기 모드입니다. 에디터 씬 뷰 툴바와 같은 값을 가리킨다(`RenderViewMode`).
-         * @details 여기 있는 이유는 **검증**이다 — 뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고 모드를 고를 수 있어야 한다.
+         * @details 여기 있는 이유는 검증이다 — 뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고 모드를 고를 수 있어야 한다.
          *          명령줄은 열거자 이름만 받는다(숫자는 오류). 렌더러 기동 때 한 번 읽는다.
          */
         SW_GLOBAL_VARIABLE( RenderViewMode, gv_viewMode, RenderViewMode::Lit, "주 출력 보기 모드 (Lit / Unlit / Wireframe / Normals / Depth / Overdraw / LightingOnly / Roughness / Metallic / Mipmaps / LightComplexity / ShadedWireframe / LODLevel / LODFadeCode / MarkerSlots / ShadingPath)" );
