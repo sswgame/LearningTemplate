@@ -1396,7 +1396,7 @@ SW_TEST_CASE( MonsterCollectorTest, CatalogReadsDefinitions )
     SW_EXPECT_FALSE( catalog.findMove( "growl" )->isDamaging() );
     SW_EXPECT_EQUAL( -1, catalog.findMove( "growl" )->_statStages );
     SW_EXPECT_EQUAL( 16, catalog.findWeather( "Sand" )->_chipDivisor );
-    SW_EXPECT_EQUAL( 2u, catalog.getNatures().size() );
+    SW_EXPECT_EQUAL( 3u, catalog.getNatures().size() ); // Adamant · Plain · Fierce
 
     sw::vector<sw::hashed_string> listFire;
     listFire.push_back( "Fire" );
