@@ -13,9 +13,9 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Viewport/EditorOrbitMath.h"
 #include "Editor/Viewport/EditorViewportCamera.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/Model/EditorOrbitMath.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
