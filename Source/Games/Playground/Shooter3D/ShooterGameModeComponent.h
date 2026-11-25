@@ -98,6 +98,8 @@ namespace sw
         AssetRef<PrefabAsset> _prefab{};
         PROPERTY( Required, Tooltip = "Appearance preset of the body (presets.xml)" )
         CatalogKey<CharacterAppearanceDef> _preset{};
+        PROPERTY( Tooltip = "Entry id of the spawn table this kind stands for (several kinds may share one; the elite kind is called by the director's effect and names none)" )
+        hashed_string _spawnEntryID{};
         PROPERTY( Tooltip = "Pool of this kind's prefab (kinds sharing a prefab share its pool; 0 spawns every time)" )
         PrefabPoolPolicy _pool{};
     };
@@ -175,6 +177,11 @@ namespace sw
          * @details 모르는 낱말마다 `ShooterGameMode.PacingProfileUnknownEffect` 를 남긴다. `startPacing` 이 거짓이면 감독을 세우지 않는다.
          */
         [[nodiscard]] static bool hasKnownEffects( const AIDirectorProfile& profile, string_view profileName );
+        /**
+         * @brief 스폰 표의 항목 id 와 적 종류의 `_spawnEntryID` 가 서로 빠짐없이 맞는지 봅니다 — 표의 항목마다 종류가 하나는 있고, 종류는 모두 표에 있는 항목을 적는다.
+         * @details 어긋난 것마다 `ShooterGameMode.SpawnEntryUnknown` 을 남긴다. `startPacing` 이 거짓이면 감독을 세우지 않는다. 어느 종류가 나오는지는 자리 순서(목록 차례)다.
+         */
+        [[nodiscard]] static bool matchesSpawnTable( const SpawnTable& table, const vector<ShooterEnemyKind>& listKind, string_view tableName );
 
         ShooterGameModeComponent();
         virtual ~ShooterGameModeComponent() override;
