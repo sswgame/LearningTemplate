@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 using namespace sw;
 
@@ -125,7 +126,7 @@ SW_TEST_CASE( EconomyPurchaseTest, UnreadablePurchaseCountRefusesPurchase )
     SW_REQUIRE_TRUE( fixture.database.listRecords( EconomyStoreLogic::getPurchaseCountTable(), "", "", 1, false, listCount ) == ServiceStoreResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), listCount.size() );
     ServiceTransaction broken;
-    broken.put( EconomyStoreLogic::getPurchaseCountTable(), listCount[0]._key, vector<uint8>{ uint8( 0xFF ) } ); // 끝나지 않은 가변 정수
+    ServiceStoreTestAccess::putBytes( broken, EconomyStoreLogic::getPurchaseCountTable(), listCount[0]._key, vector<uint8>{ uint8( 0xFF ) } ); // 끝나지 않은 가변 정수
     SW_REQUIRE_TRUE( fixture.database.commit( broken ) == ServiceStoreResult::Ok );
     const uint64 hashBroken = fixture.database.computeContentHash();
     SW_EXPECT_FALSE( buy( fixture.database, fixture.currencies, fixture.offers, "starter_pack", 2 ) == EconomyResult::Ok );

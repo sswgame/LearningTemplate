@@ -67,7 +67,15 @@ namespace sw
         string _key{}; ///< `listRecords` 만 채운다
         uint64 _version{ kAbsentVersion };
 
-        vector<uint8> _bytes{}; // ⓕ 에서 비공개로 닫는다
+    private:
+        template <typename TRecord>
+        friend class ServiceRecordTable;
+        friend class ServiceLinkTable;
+        friend class ServiceOpaqueTable;
+        friend class IServiceStoreConnection;
+        friend struct ServiceStoreTestAccess;
+
+        vector<uint8> _bytes{};
     };
 } // namespace sw
 
@@ -99,7 +107,12 @@ namespace sw
         uint64        _expectedVersion{ ServiceRecord::kAnyVersion };
         Kind          _kind{ Kind::Put };
 
-        vector<uint8> _bytes{}; // ⓕ 에서 비공개로 닫는다
+    private:
+        friend class ServiceTransaction;
+        friend class IServiceStoreConnection;
+        friend struct ServiceStoreTestAccess;
+
+        vector<uint8> _bytes{};
     };
 } // namespace sw
 
@@ -131,11 +144,6 @@ namespace sw
         void put( const ServiceIndexTable& table, string_view key, uint64 expectedVersion = ServiceRecord::kAnyVersion );
         /** @brief 다른 레코드의 id 하나를 가리키는 연결을 씁니다. id 0 은 쓰지 않는다(오류 로그 · `Invalid`). */
         void put( const ServiceLinkTable& table, string_view key, uint64 linkedID, uint64 expectedVersion = ServiceRecord::kAnyVersion );
-        /** @brief 옛 길 — 표 형식으로 옮기는 동안만 남는다(ⓕ 에서 지운다). */
-        void put( const hashed_string& table, string_view key, vector<uint8> bytes, uint64 expectedVersion = ServiceRecord::kAnyVersion )
-        {
-            putBytes( table, key, std::move( bytes ), expectedVersion );
-        }
         /** @brief 이 서버가 뜻을 읽지 않는 바이트(봉인된 비밀 · 저장해 둔 응답)를 씁니다. */
         void put( const ServiceOpaqueTable& table, string_view key, vector<uint8> bytes, uint64 expectedVersion = ServiceRecord::kAnyVersion );
         void erase( const hashed_string& table, string_view key, uint64 expectedVersion = ServiceRecord::kAnyVersion );

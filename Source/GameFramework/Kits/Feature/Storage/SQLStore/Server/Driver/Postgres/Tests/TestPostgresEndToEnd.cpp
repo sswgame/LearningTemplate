@@ -18,6 +18,7 @@
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 namespace
 {
@@ -788,12 +789,12 @@ SW_TEST_CASE( PostgresEndToEndTest, ConfigSelectsPostgresAndReachesTheEndpoint )
     SW_REQUIRE_TRUE( PostgresEndToEndTestUtil::run( rig, [&]( IServiceStoreConnection& connection )
     {
         ServiceTransaction first;
-        first.put( table, "a/1", vector<uint8>{ 0, 1, 2, 0xFF }, ServiceRecord::kAbsentVersion ); // NUL 이 든 바이트 - bytea 는 이진으로 간다
+        ServiceStoreTestAccess::putBytes( first, table, "a/1", vector<uint8>{ 0, 1, 2, 0xFF }, ServiceRecord::kAbsentVersion ); // NUL 이 든 바이트 - bytea 는 이진으로 간다
         ServiceCommitInfo info;
         firstResult  = ServiceCommitRunner::commitOnce( connection, first, &info );
         firstVersion = info._commitVersion;
         ServiceTransaction again;
-        again.put( table, "a/1", vector<uint8>{ 9 }, ServiceRecord::kAbsentVersion );
+        ServiceStoreTestAccess::putBytes( again, table, "a/1", vector<uint8>{ 9 }, ServiceRecord::kAbsentVersion );
         conflictResult = ServiceCommitRunner::commitOnce( connection, again );
     } ) );
     SW_EXPECT_TRUE( server.getAuthenticatedCount() >= 2 ); // 마이그레이션 연결과 워커 연결
@@ -820,7 +821,7 @@ SW_TEST_CASE( PostgresEndToEndTest, ConfigSelectsPostgresAndReachesTheEndpoint )
         eraseResult = ServiceCommitRunner::commitOnce( connection, erase );
     } ) );
     SW_EXPECT_TRUE( readResult == ServiceStoreResult::Ok );
-    SW_EXPECT_TRUE( record._bytes == ( vector<uint8>{ 0, 1, 2, 0xFF } ) );
+    SW_EXPECT_TRUE( ServiceStoreTestAccess::getBytes( record ) == ( vector<uint8>{ 0, 1, 2, 0xFF } ) );
     SW_EXPECT_EQUAL( firstVersion, record._version );
     SW_EXPECT_TRUE( missResult == ServiceStoreResult::NotFound );
     SW_REQUIRE_EQUAL( size_t( 1 ), listRecord.size() );

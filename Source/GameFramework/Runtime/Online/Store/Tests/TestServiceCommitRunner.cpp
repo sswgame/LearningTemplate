@@ -32,9 +32,10 @@ namespace
             ServiceRecord record;
             if ( attempt.readRecord( kTable, "row", record ) == ServiceStoreResult::Unavailable )
                 return ProbeServiceResult::fail( OnlineError::kUnavailable );
-            record._bytes.push_back( 1 );
+            vector<uint8> grown = ServiceStoreTestAccess::getBytes( record );
+            grown.push_back( 1 );
             ServiceTransaction transaction;
-            transaction.put( kTable, "row", record._bytes ); // 조건을 적지 않아도 시도의 읽기 집합이 읽은 버전을 건다
+            ServiceStoreTestAccess::putBytes( transaction, kTable, "row", std::move( grown ) ); // 조건을 적지 않아도 시도의 읽기 집합이 읽은 버전을 건다
             const ServiceStoreResult committed = attempt.commit( transaction );
             if ( committed == ServiceStoreResult::Conflict )
                 return nullopt;
@@ -45,7 +46,7 @@ namespace
     size_t readRowSize( MemoryServiceDatabase& database )
     {
         ServiceRecord record;
-        return database.readRecord( kTable, "row", record ) == ServiceStoreResult::Ok ? record._bytes.size() : 0;
+        return database.readRecord( kTable, "row", record ) == ServiceStoreResult::Ok ? ServiceStoreTestAccess::getBytes( record ).size() : 0;
     }
 } // namespace
 
@@ -100,12 +101,13 @@ SW_TEST_CASE( ServiceCommitRunnerTest, EveryAttemptReadsAgain )
         if ( ++attemptCount == 1 ) // 읽은 뒤 커밋 앞에 다른 서버가 쓴다
         {
             ServiceTransaction other;
-            other.put( kTable, "row", vector<uint8>{ 7, 7 } );
+            ServiceStoreTestAccess::putBytes( other, kTable, "row", vector<uint8>{ 7, 7 } );
             SW_EXPECT_TRUE( database.commit( other ) == ServiceStoreResult::Ok );
         }
-        record._bytes.push_back( 1 );
+        vector<uint8> grown = ServiceStoreTestAccess::getBytes( record );
+        grown.push_back( 1 );
         ServiceTransaction transaction;
-        transaction.put( kTable, "row", record._bytes );
+        ServiceStoreTestAccess::putBytes( transaction, kTable, "row", std::move( grown ) );
         const ServiceStoreResult committed = attempt.commit( transaction );
         if ( committed == ServiceStoreResult::Conflict )
             return nullopt;

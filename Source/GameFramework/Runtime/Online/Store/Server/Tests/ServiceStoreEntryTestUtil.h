@@ -64,6 +64,7 @@ namespace sw
             inoutTransaction.putBytes( table, key, std::move( bytes ), expectedVersion );
         }
         static const vector<uint8>& getBytes( const ServiceRecord& record ) { return record._bytes; }
+        static const vector<uint8>& getBytes( const ServiceWrite& write ) { return write._bytes; }
     };
 
     /** @brief 함수 하나를 저장 일로 감쌉니다. 완료는 쓰지 않습니다. */

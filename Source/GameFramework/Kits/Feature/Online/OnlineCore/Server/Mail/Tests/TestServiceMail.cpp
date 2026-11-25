@@ -8,6 +8,7 @@
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 // ServiceMailTest — 우편 넣기(보상 · 플레이어 첨부 맡김), 멱등 키 재전송, 새 우편 알림이 한 번만 나가는지, 보낸 기록의 보존 기간 쓸기. (nogpu)
 
@@ -152,7 +153,7 @@ SW_TEST_CASE( ServiceMailTest, SentRecordExpiresByRetentionRule )
     SW_EXPECT_EQUAL( kNowMs, sentMs );
 
     sw::ServiceTransaction broken; // 값이 우편 키 모양이 아닌 기록은 시각을 읽지 못해 지우지 않는다
-    broken.put( sw::ServiceMail::getSentTable(), "0000000000000016/broken", sw::vector<uint8>{ 'x' }, sw::ServiceRecord::kAbsentVersion );
+    sw::ServiceStoreTestAccess::putBytes( broken, sw::ServiceMail::getSentTable(), "0000000000000016/broken", sw::vector<uint8>{ 'x' }, sw::ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( database.commit( broken ) == sw::ServiceStoreResult::Ok );
 
     sw::ServiceTTLRule        rule = sw::ServiceMail::makeSentTTLRule( kRetentionMs ); // 운영과 같은 TTL 색인 규칙

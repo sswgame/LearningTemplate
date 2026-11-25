@@ -9,6 +9,7 @@
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -85,9 +86,9 @@ namespace
 
     bool readLeadingTime( const ServiceRecord& record, int64& outTimeMs )
     {
-        if ( record._bytes.size() < sizeof( int64 ) )
+        if ( ServiceStoreTestAccess::getBytes( record ).size() < sizeof( int64 ) )
             return false;
-        Memory::copy( &outTimeMs, record._bytes.data(), sizeof( int64 ) );
+        Memory::copy( &outTimeMs, ServiceStoreTestAccess::getBytes( record ).data(), sizeof( int64 ) );
         return true;
     }
 
@@ -102,7 +103,7 @@ namespace
             vector<uint8> bytes( sizeof( int64 ) );
             Memory::copy( bytes.data(), &timeMs, sizeof( int64 ) );
             ServiceTransaction transaction;
-            transaction.put( _table, key, bytes, ServiceRecord::kAbsentVersion );
+            ServiceStoreTestAccess::putBytes( transaction, _table, key, bytes, ServiceRecord::kAbsentVersion );
             SW_REQUIRE_TRUE( _database.commit( transaction ) == ServiceStoreResult::Ok );
         }
 
@@ -364,7 +365,7 @@ SW_TEST_CASE( ServiceTTLTest, DeletesOnlyExpired )
     rig.put( "b.edge", kNowMs - 1000 );
     rig.put( "c.new", kNowMs - 999 );
     ServiceTransaction unreadable;
-    unreadable.put( rig._table, "d.bad", vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
+    ServiceStoreTestAccess::putBytes( unreadable, rig._table, "d.bad", vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( rig._database.commit( unreadable ) == ServiceStoreResult::Ok );
 
     ServiceTTLRule        rule = rig.makeRule();

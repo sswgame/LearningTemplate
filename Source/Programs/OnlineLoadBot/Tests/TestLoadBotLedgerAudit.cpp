@@ -10,6 +10,7 @@
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 #include "Programs/OnlineLoadBot/LoadBotLocalServer.h"
 
@@ -173,7 +174,7 @@ SW_TEST_CASE( LoadBotLedgerAuditTest, StoreCountsCommitsAndConflicts )
         tracker.submit( []( IServiceStoreConnection& connection )
         {
             ServiceTransaction transaction;
-            transaction.put( kTable, "key", vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
+            ServiceStoreTestAccess::putBytes( transaction, kTable, "key", vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
             return ServiceCommitRunner::commitOnce( connection, transaction );
         }, [&slot]( ServiceStoreResult committed )
         { slot = committed; } );

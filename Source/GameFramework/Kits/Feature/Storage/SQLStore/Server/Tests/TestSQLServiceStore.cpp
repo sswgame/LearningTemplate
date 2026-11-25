@@ -18,6 +18,7 @@
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 namespace
 {
@@ -179,7 +180,7 @@ namespace
         static void recordRead( vector<string>& inoutListLine, IServiceStoreConnection& connection, string_view step, const hashed_string& table, string_view key, ServiceRecord& outRecord )
         {
             const ServiceStoreResult result = connection.readRecord( table, key, outRecord );
-            addLine( inoutListLine, step, result, static_cast<int32>( outRecord._bytes.size() ) );
+            addLine( inoutListLine, step, result, static_cast<int32>( ServiceStoreTestAccess::getBytes( outRecord ).size() ) );
         }
 
         static vector<string> runScenario( IServiceStoreConnection& connection )
@@ -192,7 +193,7 @@ namespace
             listLine.push_back( record._version == ServiceRecord::kAbsentVersion ? "absent version" : "some version" );
 
             ServiceTransaction create;
-            create.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ), ServiceRecord::kAbsentVersion );
+            ServiceStoreTestAccess::putBytes( create, kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ), ServiceRecord::kAbsentVersion );
             recordCommit( listLine, connection, "create", create, info );
             const uint64 firstVersion = info._commitVersion;
             listLine.push_back( firstVersion > 0 ? "version given" : "no version" );
@@ -200,24 +201,24 @@ namespace
 
             recordRead( listLine, connection, "read", kTable, "a", record );
             listLine.push_back( record._version == firstVersion ? "read the commit version" : "read another version" );
-            listLine.push_back( string( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() ) );
+            listLine.push_back( string( reinterpret_cast<const utf8*>( ServiceStoreTestAccess::getBytes( record ).data() ), ServiceStoreTestAccess::getBytes( record ).size() ) );
 
             ServiceTransaction update;
-            update.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "2" ), firstVersion );
+            ServiceStoreTestAccess::putBytes( update, kTable, "a", SQLServiceStoreTestUtil::makeBytes( "2" ), firstVersion );
             recordCommit( listLine, connection, "update", update, info );
             const uint64 secondVersion = info._commitVersion;
             listLine.push_back( secondVersion > firstVersion ? "version rose" : "version did not rise" );
             recordCommit( listLine, connection, "stale update", update, info );
 
             ServiceTransaction mixed;
-            mixed.put( kTable, "fresh", SQLServiceStoreTestUtil::makeBytes( "x" ) );
-            mixed.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "3" ), firstVersion );
+            ServiceStoreTestAccess::putBytes( mixed, kTable, "fresh", SQLServiceStoreTestUtil::makeBytes( "x" ) );
+            ServiceStoreTestAccess::putBytes( mixed, kTable, "a", SQLServiceStoreTestUtil::makeBytes( "3" ), firstVersion );
             recordCommit( listLine, connection, "mixed", mixed, info );
             recordRead( listLine, connection, "mixed left nothing", kTable, "fresh", record );
 
             ServiceTransaction require;
             require.requireVersion( kTable, "a", secondVersion );
-            require.put( kTable, "b", SQLServiceStoreTestUtil::makeBytes( "b" ) );
+            ServiceStoreTestAccess::putBytes( require, kTable, "b", SQLServiceStoreTestUtil::makeBytes( "b" ) );
             recordCommit( listLine, connection, "require", require, info );
             ServiceTransaction staleRequire;
             staleRequire.requireVersion( kTable, "a", firstVersion );
@@ -242,19 +243,19 @@ namespace
 
             // 지웠다 다시 만들어도 옛 버전을 받지 않는다(ABA 없음).
             ServiceTransaction recreate;
-            recreate.put( kTable, "b", SQLServiceStoreTestUtil::makeBytes( "again" ), ServiceRecord::kAbsentVersion );
+            ServiceStoreTestAccess::putBytes( recreate, kTable, "b", SQLServiceStoreTestUtil::makeBytes( "again" ), ServiceRecord::kAbsentVersion );
             recordCommit( listLine, connection, "recreate", recreate, info );
             listLine.push_back( info._commitVersion > secondVersion ? "new version" : "old version" );
 
             ServiceTransaction empty;
-            empty.put( kTable, "emptybytes", vector<uint8>{} );
+            ServiceStoreTestAccess::putBytes( empty, kTable, "emptybytes", vector<uint8>{} );
             recordCommit( listLine, connection, "empty bytes", empty, info );
             recordRead( listLine, connection, "read empty bytes", kTable, "emptybytes", record );
 
             for ( const utf8* pKey : { "k/1", "k/2", "k/3", "l/1", "k0" } )
             {
                 ServiceTransaction seed;
-                seed.put( kTable, pKey, SQLServiceStoreTestUtil::makeBytes( pKey ) );
+                ServiceStoreTestAccess::putBytes( seed, kTable, pKey, SQLServiceStoreTestUtil::makeBytes( pKey ) );
                 recordCommit( listLine, connection, pKey, seed, info );
             }
             noteList( listLine, connection, "first page", "k/", "", 2, false );
@@ -269,11 +270,11 @@ namespace
             recordRead( listLine, connection, "bad key read", kTable, "Bad Key'; DROP TABLE sw_record; --", record );
             recordRead( listLine, connection, "empty table read", hashed_string{}, "a", record );
             ServiceTransaction badKey;
-            badKey.put( kTable, "Bad Key'; DROP TABLE sw_record; --", SQLServiceStoreTestUtil::makeBytes( "x" ) );
+            ServiceStoreTestAccess::putBytes( badKey, kTable, "Bad Key'; DROP TABLE sw_record; --", SQLServiceStoreTestUtil::makeBytes( "x" ) );
             recordCommit( listLine, connection, "bad key commit", badKey, info );
             ServiceTransaction twice;
-            twice.put( kTable, "dup", SQLServiceStoreTestUtil::makeBytes( "1" ) );
-            twice.put( kTable, "dup", SQLServiceStoreTestUtil::makeBytes( "2" ) );
+            ServiceStoreTestAccess::putBytes( twice, kTable, "dup", SQLServiceStoreTestUtil::makeBytes( "1" ) );
+            ServiceStoreTestAccess::putBytes( twice, kTable, "dup", SQLServiceStoreTestUtil::makeBytes( "2" ) );
             recordCommit( listLine, connection, "same key twice", twice, info );
             recordCommit( listLine, connection, "empty transaction", ServiceTransaction{}, info );
             vector<ServiceRecord> listRecord;
@@ -292,7 +293,7 @@ namespace
             for ( const ServiceRecord& record : listRecord )
             {
                 lineBuilder.appendFormat( " %#=", record._key );
-                lineBuilder.append( string_view( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() ) );
+                lineBuilder.append( string_view( reinterpret_cast<const utf8*>( ServiceStoreTestAccess::getBytes( record ).data() ), ServiceStoreTestAccess::getBytes( record ).size() ) );
             }
             inoutListLine.push_back( string( lineBuilder.view() ) );
         }
@@ -336,7 +337,7 @@ SW_TEST_CASE( ServiceStoreParityTest, ConcurrentCreatesHaveOneWinner, ._timeoutS
         auto function = [&result]( IServiceStoreConnection& connection )
         {
             ServiceTransaction transaction;
-            transaction.put( kTable, "only", SQLServiceStoreTestUtil::makeBytes( "x" ), ServiceRecord::kAbsentVersion );
+            ServiceStoreTestAccess::putBytes( transaction, kTable, "only", SQLServiceStoreTestUtil::makeBytes( "x" ), ServiceRecord::kAbsentVersion );
             result = ServiceCommitRunner::commitOnce( connection, transaction );
         };
         fixture._store.submit( sw::make_unique<ServiceStoreTestJob<decltype( function )>>( std::move( function ), completeCount, cancelledCount ) );
@@ -375,7 +376,7 @@ namespace
         static void put( IServiceStoreConnection& connection, string_view key, string_view text )
         {
             ServiceTransaction transaction;
-            transaction.put( kRangeTable, key, SQLServiceStoreTestUtil::makeBytes( text ) );
+            ServiceStoreTestAccess::putBytes( transaction, kRangeTable, key, SQLServiceStoreTestUtil::makeBytes( text ) );
             SW_EXPECT_TRUE( ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok );
         }
 
@@ -386,7 +387,7 @@ namespace
             ServiceTransaction transaction;
             transaction.requireRange( kRangeTable, "q/", cursor, maxCount, bDescending, fingerprint );
             if ( writeKey.empty() == false )
-                transaction.put( kRangeTable, writeKey, SQLServiceStoreTestUtil::makeBytes( "w" ) );
+                ServiceStoreTestAccess::putBytes( transaction, kRangeTable, writeKey, SQLServiceStoreTestUtil::makeBytes( "w" ) );
             ServiceCommitInfo        info;
             const ServiceStoreResult result = ServiceCommitRunner::commitOnce( connection, transaction, &info ); // 인자 자리에 두면 info 를 커밋 앞에 읽을 수 있다(인자 평가 순서는 정해지지 않는다)
             ServiceStoreParity::addLine( inoutListLine, step, result, info._conflictIndex );
@@ -479,7 +480,7 @@ SW_TEST_CASE( ServiceStoreParityTest, ReadSetConditionsTheListedRange )
     SW_REQUIRE_TRUE( ServiceRecordReader::readPage( readSet, kRangeTable, "q/", "", 10, false, listRecord )._result == ServiceStoreResult::Ok );
     ServiceRangeParity::put( database, "q/2", "2" ); // 다른 서버의 삽입
     ServiceTransaction transaction;
-    transaction.put( kRangeTable, "z/a", SQLServiceStoreTestUtil::makeBytes( "a" ) );
+    ServiceStoreTestAccess::putBytes( transaction, kRangeTable, "z/a", SQLServiceStoreTestUtil::makeBytes( "a" ) );
     SW_EXPECT_TRUE( ServiceCommitRunner::commitOnce( readSet, transaction ) == ServiceStoreResult::Conflict );
     ServiceRecord record;
     SW_EXPECT_TRUE( database.readRecord( kRangeTable, "z/a", record ) == ServiceStoreResult::NotFound );
@@ -494,8 +495,8 @@ SW_TEST_CASE( SQLServiceStoreTest, CommitWrapsWritesInOneTransaction )
 {
     FakeStoreFixture   fixture;
     ServiceTransaction transaction;
-    transaction.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
-    transaction.put( kTable, "b", SQLServiceStoreTestUtil::makeBytes( "2" ), ServiceRecord::kAbsentVersion );
+    ServiceStoreTestAccess::putBytes( transaction, kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
+    ServiceStoreTestAccess::putBytes( transaction, kTable, "b", SQLServiceStoreTestUtil::makeBytes( "2" ), ServiceRecord::kAbsentVersion );
     transaction.erase( kTable, "c" );
     ServiceCommitInfo info;
     SW_EXPECT_TRUE( SQLServiceStoreTestUtil::commit( fixture._store, transaction, &info ) == ServiceStoreResult::Ok );
@@ -542,7 +543,7 @@ SW_TEST_CASE( SQLServiceStoreTest, InvalidKeysNeverReachTheDatabase )
 {
     FakeStoreFixture   fixture;
     ServiceTransaction badKey;
-    badKey.put( kTable, "Bad'; DROP TABLE sw_record; --", SQLServiceStoreTestUtil::makeBytes( "x" ) );
+    ServiceStoreTestAccess::putBytes( badKey, kTable, "Bad'; DROP TABLE sw_record; --", SQLServiceStoreTestUtil::makeBytes( "x" ) );
     SW_EXPECT_TRUE( SQLServiceStoreTestUtil::commit( fixture._store, badKey ) == ServiceStoreResult::Invalid );
     ServiceRecord record;
     SW_EXPECT_TRUE( SQLServiceStoreTestUtil::read( fixture._store, "Bad'; DROP TABLE sw_record; --", record ) == ServiceStoreResult::Invalid );
@@ -568,7 +569,7 @@ SW_TEST_CASE( SQLServiceStoreTest, FailedWriteRollsBackAndNeverCommits )
         FakeStoreFixture fixture;
         fixture._driver.addResult( "INSERT INTO sw_record", failure._driverResult );
         ServiceTransaction transaction;
-        transaction.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
+        ServiceStoreTestAccess::putBytes( transaction, kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
         ServiceCommitInfo info;
         SW_EXPECT_TRUE( SQLServiceStoreTestUtil::commit( fixture._store, transaction, &info ) == failure._storeResult );
         SW_EXPECT_EQUAL( -1, info._conflictIndex ); // 어느 쓰기인지 모른다
@@ -584,8 +585,8 @@ SW_TEST_CASE( SQLServiceStoreTest, UnmatchedConditionReportsTheWriteIndex )
     FakeStoreFixture fixture;
     fixture._driver.addRows( "UPDATE sw_record", {}, 0 );
     ServiceTransaction transaction;
-    transaction.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
-    transaction.put( kTable, "b", SQLServiceStoreTestUtil::makeBytes( "2" ), 5 );
+    ServiceStoreTestAccess::putBytes( transaction, kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
+    ServiceStoreTestAccess::putBytes( transaction, kTable, "b", SQLServiceStoreTestUtil::makeBytes( "2" ), 5 );
     ServiceCommitInfo info;
     SW_EXPECT_TRUE( SQLServiceStoreTestUtil::commit( fixture._store, transaction, &info ) == ServiceStoreResult::Conflict );
     SW_EXPECT_EQUAL( 1, info._conflictIndex );
@@ -606,7 +607,7 @@ SW_TEST_CASE( SQLServiceStoreTest, CommitVersionFailuresRollBack )
         {SQLResult::SerializationFailure,    ServiceStoreResult::Conflict},
     };
     ServiceTransaction transaction;
-    transaction.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
+    ServiceStoreTestAccess::putBytes( transaction, kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
     for ( const FailureCase& failure : arrCase )
     {
         FakeStoreFixture fixture;
@@ -632,7 +633,7 @@ SW_TEST_CASE( SQLServiceStoreTest, FailedCommitClosesTheTransaction )
     FakeStoreFixture fixture;
     fixture._driver.addResult( "COMMIT", SQLResult::Busy, 1 );
     ServiceTransaction transaction;
-    transaction.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
+    ServiceStoreTestAccess::putBytes( transaction, kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
     ServiceCommitInfo info;
     SW_EXPECT_TRUE( SQLServiceStoreTestUtil::commit( fixture._store, transaction, &info ) == ServiceStoreResult::Unavailable );
     SW_EXPECT_EQUAL( uint64( 0 ), info._commitVersion ); // 결함: 적용됐는지 모르는 커밋이 버전을 알렸다
@@ -646,7 +647,7 @@ SW_TEST_CASE( SQLServiceStoreTest, SerializationFailureAtCommitIsConflict )
     FakeStoreFixture fixture;
     fixture._driver.addResult( "COMMIT", SQLResult::SerializationFailure, 1 );
     ServiceTransaction transaction;
-    transaction.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
+    ServiceStoreTestAccess::putBytes( transaction, kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
     ServiceCommitInfo info;
     SW_EXPECT_TRUE( SQLServiceStoreTestUtil::commit( fixture._store, transaction, &info ) == ServiceStoreResult::Conflict );
     SW_EXPECT_EQUAL( -1, info._conflictIndex );
@@ -658,7 +659,7 @@ SW_TEST_CASE( SQLServiceStoreTest, FailedBeginHasNothingToRollBack )
     FakeStoreFixture fixture;
     fixture._driver.addResult( "BEGIN WRITE", SQLResult::Busy, 1 );
     ServiceTransaction transaction;
-    transaction.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
+    ServiceStoreTestAccess::putBytes( transaction, kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ) );
     SW_EXPECT_TRUE( SQLServiceStoreTestUtil::commit( fixture._store, transaction ) == ServiceStoreResult::Unavailable );
     SW_EXPECT_EQUAL( 0, fixture._driver.countSQL( "ROLLBACK" ) );
 }
@@ -778,7 +779,7 @@ SW_TEST_CASE( SQLServiceStoreTest, StoreDriverSubsystemMakesStores )
     unique_ptr<ServiceStore> second = pDriver->createServiceStore( "memory", "", "", 1, UnixMilliseconds{ 1 } ).value_or( nullptr );
     SW_REQUIRE_NOT_NULL( second );
     ServiceTransaction transaction;
-    transaction.put( kTable, "factorytestshared", SQLServiceStoreTestUtil::makeBytes( "1" ) );
+    ServiceStoreTestAccess::putBytes( transaction, kTable, "factorytestshared", SQLServiceStoreTestUtil::makeBytes( "1" ) );
     SW_EXPECT_TRUE( SQLServiceStoreTestUtil::commit( *first, transaction ) == ServiceStoreResult::Ok );
     ServiceRecord record;
     SW_EXPECT_TRUE( SQLServiceStoreTestUtil::read( *second, "factorytestshared", record ) == ServiceStoreResult::Ok );

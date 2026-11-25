@@ -637,7 +637,7 @@ SW_TEST_CASE( EconomyReceiptsTest, AccountDeletionKeepsAuditBalancedAndReceiptAn
     BitWriter expected;
     expected.writeVarUint( 0 ); // 판
     expected.writeVarUint( 1 ); // Redeemed
-    SW_EXPECT_TRUE( listMark[0]._bytes == expected.getBytes() );
+    SW_EXPECT_TRUE( ServiceStoreTestAccess::getBytes( listMark[0] ) == expected.getBytes() );
     SW_EXPECT_TRUE( rig.redeem( kOther )._result == EconomyResult::AlreadyRedeemed );
 
     // 지운 계정의 환불: 거둘 이가 없어 회수하지 않고 영수증만 환불로 바꾼다 — 지운 계정에 빚 레코드가 생기지 않는다
@@ -855,7 +855,7 @@ SW_TEST_CASE( EconomyReceiptsTest, UnreadableReceiptRecordHoldsTheTransaction )
     SW_REQUIRE_TRUE( rig._database.listRecords( EconomyStoreLogic::getReceiptTable(), "", "", 10, false, listMark ) == ServiceStoreResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), listMark.size() );
     ServiceTransaction broken;
-    broken.put( EconomyStoreLogic::getReceiptTable(), listMark[0]._key, vector<uint8>{ 9 } );
+    ServiceStoreTestAccess::putBytes( broken, EconomyStoreLogic::getReceiptTable(), listMark[0]._key, vector<uint8>{ 9 } );
     SW_REQUIRE_TRUE( rig._database.commit( broken ) == ServiceStoreResult::Ok );
 
     SW_EXPECT_TRUE( rig.refund().hasError( OnlineError::kUnavailable ) );
@@ -1132,7 +1132,7 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryRecordRules )
     SW_EXPECT_FALSE( task._recordKey.empty() );
 
     ServiceTransaction broken;
-    broken.put( EconomyStoreLogic::getDeliveryTable(), "a", vector<uint8>{ 0xFF } );
+    ServiceStoreTestAccess::putBytes( broken, EconomyStoreLogic::getDeliveryTable(), "a", vector<uint8>{ 0xFF } );
     SW_EXPECT_TRUE( rig._database.commit( broken ) == ServiceStoreResult::Ok );
     vector<ReceiptDeliveryTask> listTask;
     SW_EXPECT_TRUE( EconomyStoreLogic::listDeliveries( rig._database, 10, listTask ) == ServiceStoreResult::Ok );
@@ -1238,7 +1238,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorRecord )
     SW_EXPECT_EQUAL( kNowMs, lastReadMs );
 
     ServiceTransaction broken;
-    broken.put( EconomyStoreLogic::getRefundCursorTable(), "apple", vector<uint8>{} );
+    ServiceStoreTestAccess::putBytes( broken, EconomyStoreLogic::getRefundCursorTable(), "apple", vector<uint8>{} );
     SW_EXPECT_TRUE( rig._database.commit( broken ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( EconomyStoreLogic::readRefundCursor( rig._database, "apple", lastReadMs ) == ServiceStoreResult::Invalid );
 }
