@@ -34,6 +34,7 @@ namespace
   <Move id="rainfall" name="Rainfall" type="Water" category="Status" weather="Rain"/>
   <Nature id="Adamant" up="Attack" down="SpecialAttack"/>
   <Nature id="Plain"/>
+  <Nature id="Fierce" up="Attack" down="Speed" upPercent="125" downPercent="80"/>
   <Weather id="Rain" boost="Water" weaken="Fire" turns="2"/>
   <Weather id="Sand" chip="16" immune="Rock" turns="5"/>
   <StatusImmunity status="Burn" types="Fire"/>
@@ -251,6 +252,11 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, StatFormula )
     SW_EXPECT_EQUAL( 110, pAdamant->computePercent( sw::MonsterStat::Attack ) );
     SW_EXPECT_EQUAL( 90, pAdamant->computePercent( sw::MonsterStat::SpecialAttack ) );
     SW_EXPECT_EQUAL( 100, pAdamant->computePercent( sw::MonsterStat::Speed ) );
+    // 보정 폭은 성격 데이터다 — 적지 않으면 110 / 90, 적으면 그 값.
+    const sw::MonsterNatureDef* pCustom = _catalog.findNature( "Fierce" );
+    SW_REQUIRE_NOT_NULL( pCustom );
+    SW_EXPECT_EQUAL( 125, pCustom->computePercent( sw::MonsterStat::Attack ) );
+    SW_EXPECT_EQUAL( 80, pCustom->computePercent( sw::MonsterStat::Speed ) );
     SW_EXPECT_EQUAL( 100, pAdamant->computePercent( sw::MonsterStat::HP ) );
     SW_EXPECT_EQUAL( 100, _catalog.findNature( "Plain" )->computePercent( sw::MonsterStat::Attack ) );
 

@@ -204,8 +204,12 @@ namespace sw
         MonsterStat _raised{ MonsterStat::Attack };
         PROPERTY( Name = "down" )
         MonsterStat _lowered{ MonsterStat::Attack };
+        PROPERTY( Name = "upPercent", Min = 100, Max = 200 )
+        int32 _raisedPercent{ 110 }; ///< 올리는 능력치의 보정(%)
+        PROPERTY( Name = "downPercent", Min = 1, Max = 100 )
+        int32 _loweredPercent{ 90 }; ///< 내리는 능력치의 보정(%)
 
-        /** @brief 이 능력치의 성격 보정(%)입니다. 110, 100, 90 중 하나입니다. */
+        /** @brief 이 능력치의 성격 보정(%)입니다. 올리는 값 · 100 · 내리는 값 중 하나입니다. */
         int32 computePercent( MonsterStat stat ) const;
     };
 } // namespace sw
