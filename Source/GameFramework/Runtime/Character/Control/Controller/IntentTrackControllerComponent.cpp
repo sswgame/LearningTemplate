@@ -25,13 +25,13 @@ namespace sw
     void IntentTrackControllerComponent::onBeginPlay()
     {
         ControllerComponent::onBeginPlay();
-        if ( _trackFile.empty() )
+        if ( _trackFile.isSet() == false )
             return;
         const PawnComponent* pPawn       = findPawn();
         const GameObject*    pPawnObject = pPawn != nullptr ? pPawn->getOwner() : nullptr;
         const hashed_string  trackName   = _trackName.empty() == false ? _trackName : ( pPawnObject != nullptr ? pPawnObject->getName() : hashed_string{} );
         ControlIntentHistory history;
-        if ( const expected<void> loaded = history.loadFromAsset( AssetID{ _trackFile } ); loaded.has_value() == false ) // 씬 데이터의 칸은 리소스다(작업 폴더 기준 디스크 경로가 아니다)
+        if ( const expected<void> loaded = history.loadFromAsset( AssetID{ _trackFile.get() } ); loaded.has_value() == false ) // 씬 데이터의 칸은 리소스다(작업 폴더 기준 디스크 경로가 아니다)
         {
             SW_LOG_ERROR_ID( "IntentTrackControllerComponent.IntentTrackControllerCould", "Intent track controller could not load %# (%#)", loaded.error().message(), loaded.error().detail() );
             return;

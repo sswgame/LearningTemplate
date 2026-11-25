@@ -11,6 +11,7 @@
 #include "Core/Math/Radians.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw::editor
 {
@@ -21,7 +22,7 @@ namespace sw::editor
         REFLECT_BODY();
 
         PROPERTY( Tooltip = "Scene opened when the editor starts (empty: the game's first scene). -gv_editorStartupScene wins when given" )
-        string _startupScene{};
+        DataPath _startupScene;
 
         PROPERTY( Tooltip = "Command that opens a log line in an IDE ({file}, {line}). Empty: VS Code (code -g)" )
         string _ideOpenCommand{};

@@ -11,6 +11,7 @@
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
@@ -59,7 +60,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Track", DisplayName = "Track File", Tooltip = "Intent recording (.swintent) to play when play starts; empty: a script or scenario fills the track" )
-        string _trackFile;
+        DataPath _trackFile;
         PROPERTY( Category = "Track", DisplayName = "Track Name", Tooltip = "Pawn name of the track to play; empty: the possessed pawn's object name" )
         hashed_string _trackName;
         PROPERTY( Category = "Track", DisplayName = "Release When Done", Tooltip = "Give the pawn back to its previous controller when the track ends" )

@@ -771,8 +771,9 @@ namespace sw::editor
         // `-gv_editorStartupScene=<경로>` 는 검증용이다. 기동 검증이 오브젝트를 순회하는 코드까지 실행하게 한다. 정의는 이 파일 위쪽에 있다.
         // 스위치가 있으면 그 값을 쓰고, 없으면 환경설정(General 의 시작 씬)을 쓴다.
         // 앞선 인스턴스를 이어받았으면(백엔드 교체 · 에디터 모듈 리로드) 시작 씬을 열지 않는다 — 열면 편집 중인 씬과 미저장 편집을 버린다.
-        const string sceneArgument = gv_editorStartupScene.get();
-        const string startupScene  = sceneArgument.empty() == false ? sceneArgument : getPreferences<EditorGeneralPreferences>()._startupScene;
+        const string    sceneArgument   = gv_editorStartupScene.get();
+        const DataPath& scenePreference = getPreferences<EditorGeneralPreferences>()._startupScene;
+        const string    startupScene    = sceneArgument.empty() && scenePreference.isSet() ? scenePreference.get() : sceneArgument;
         if ( startupScene.empty() == false && bResumedSession == false )
         {
             SW_LOG_INFO_ID( "ImGuiEditor.OpeningStartupScene", "Opening the startup scene: %#", startupScene.c_str() );

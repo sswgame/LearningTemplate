@@ -109,8 +109,8 @@ namespace sw::editor
                 static const string s_empty;
                 for ( const OutfitAtlasSourceSpec& source : map._listSource )
                 {
-                    if ( source._part == part )
-                        return source._texture;
+                    if ( source._part == part && source._texture.isSet() )
+                        return source._texture.get();
                 }
                 return s_empty;
             }

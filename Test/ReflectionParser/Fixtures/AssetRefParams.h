@@ -3,10 +3,9 @@
 // EXPECT-GEN: kContainer1{ sw::ContainerKind::Sequence, "AssetRef", nullptr,
 // EXPECT-ASSET-FIELD: _single FixtureAsset
 // EXPECT-ASSET-FIELD: _listMany FixtureAsset
-// EXPECT-ASSET-FIELD: _annotated -
 // EXPECT-ASSET-FIELD: single FixtureAsset
-// EXPECT-ASSET-FIELD: annotated -
 // EXPECT-ASSET-FIELD: _dataPath -
+// EXPECT-ASSET-FIELD: _listDataPath -
 // EXPECT-NOT-ASSET-FIELD: _notAPath -
 // EXPECT-NOT-ASSET-FIELD: _namedBySource -
 // EXPECT-NOT-GEN: AssetRef<FixtureAsset>"
@@ -29,7 +28,7 @@ namespace sw::fixture
         static constexpr AssetTypeDef kAssetType{ "FixtureAsset", kArrAssetSuffix, 1, {}, 0, {} };
     };
 
-    /** @brief 값 하나 · 한 겹 시퀀스 · 형식 없는 경로 칸 · 데이터 경로 칸이 모두 생성 목록에 든다. 경로가 아닌 글 칸 · 이름 칸은 들지 않는다. */
+    /** @brief 값 하나 · 한 겹 시퀀스 · 데이터 경로 칸과 그 시퀀스가 모두 생성 목록에 든다. 경로가 아닌 글 칸 · 이름 칸은 들지 않는다. */
     REFLECT()
     struct FixtureAssetUser
     {
@@ -39,10 +38,10 @@ namespace sw::fixture
         AssetRef<FixtureAsset> _single;
         PROPERTY()
         vector<AssetRef<FixtureAsset>> _listMany;
-        PROPERTY( AssetPath )
-        string _annotated;
         PROPERTY()
         DataPath _dataPath;
+        PROPERTY()
+        vector<DataPath> _listDataPath;
         PROPERTY()
         string _notAPath;
         PROPERTY( Meta = "NameSource=PhysicsMaterial" )
