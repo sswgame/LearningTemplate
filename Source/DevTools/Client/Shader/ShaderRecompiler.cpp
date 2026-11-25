@@ -132,7 +132,7 @@ namespace sw
         }
         ShaderRecompilerInternal::BatchReceiver receiver;
         receiver._listResult.resize( listLiveDesc.size() );
-        ShaderCompiler::compileBatch( listLiveDesc, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &ShaderRecompilerInternal::BatchReceiver::recordResult, &receiver ) );
+        ShaderCompiler::compileBatch( listLiveDesc, ShaderRecordScope::Request, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &ShaderRecompilerInternal::BatchReceiver::recordResult, &receiver ) );
         for ( size_t index = 0; index < listToCompile.size(); ++index )
         {
             const ShaderCompileDesc&   desc      = listToCompile[index];

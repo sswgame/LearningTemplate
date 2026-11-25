@@ -55,9 +55,14 @@ namespace sw
 
     bool ShaderCompileSession::isRecordFresh( const CookRecord& record, const CookJobDesc& desc )
     {
-        const bool bChanged = VectorUtil::findIf( record._listInput, [this]( const CookInput& input )
-        { return computeInputHash( input ) != input._contentHash; } ) != nullptr;
-        return bChanged == false && CookJob::computeKey( desc, record._listInput ) == record._key;
+        return areInputsFresh( record._listInput ) && CookJob::computeKey( desc, record._listInput ) == record._key;
+    }
+
+    bool ShaderCompileSession::areInputsFresh( const vector<CookInput>& listInput )
+    {
+        const CookInput* const pChanged = VectorUtil::findIf( listInput, [this]( const CookInput& input )
+        { return computeInputHash( input ) != input._contentHash; } );
+        return pChanged == nullptr;
     }
 
     uint64 ShaderCompileSession::computeInputHash( const CookInput& input )

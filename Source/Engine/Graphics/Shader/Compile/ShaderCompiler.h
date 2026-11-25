@@ -267,6 +267,13 @@ namespace sw
     class ShaderCompileClaims;
     class ShaderCompileSession;
 
+    /** @brief 묶음 컴파일이 컴파일 기록을 두는 단위입니다. */
+    enum class ShaderRecordScope : uint8
+    {
+        Request, ///< 요청마다 파일 하나 — 뒤이은 실행 중 컴파일이 요청 하나로 찾는다(데우기 · 핫 리로드)
+        Source,  ///< 소스 · 형식마다 파일 하나(`ShaderBatchRecord`) — 쿠킹이 같은 묶음으로 다시 온다
+    };
+
     /** @brief 묶음 컴파일의 결과 하나를 받습니다 — 요청 번호(목록의 자리)와 결과. */
     using ShaderCompiledDelegate = Delegate<void( uint32 requestIndex, const ShaderCompileResult& result )>;
 
@@ -291,9 +298,10 @@ namespace sw
          * @details 요청마다 DDC 를 보고, 없는 것만 **한 번** 전처리해 닿는 글이 서로 다른 것만 하나씩 컴파일한다 — 글이 같은 변형은 그 결과를 함께 받는다(지면 같은 오류를 받는다).
          *          같은 글 가운데 목록에서 가장 앞선 요청이 컴파일하므로 워커 수와 무관하게 같은 바이트다. 소스는 묶음 동안 한 번만 읽는다(`ShaderCompileSession`).
          *          언리얼 `FShaderCompilingManager` 의 작업 묶음 · 중복 작업 합치기(`FShaderJobCache`) 자리다.
+         * @param recordScope 기록을 요청마다 쓸지 소스마다 한 번 쓸지
          * @param onCompiled 워커에서 동시에 불린다(요청 번호 순서가 아니다)
          */
-        static void compileBatch( const vector<ShaderCompileDesc>& listDesc, const ShaderCompiledDelegate& onCompiled );
+        static void compileBatch( const vector<ShaderCompileDesc>& listDesc, ShaderRecordScope recordScope, const ShaderCompiledDelegate& onCompiled );
 
         /**
          * @brief 엔진이 모든 컴파일에 넣는 define(엔진 텍스처 칸 표 `SW_EMU_SLOT_<이름>=<칸>` · `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index`, 렌더 정책 `SW_TAA_*` · `SW_PROBE_*` · `SW_AUTO_EXPOSURE_*`)을 @p inoutList 뒤에 더합니다.
@@ -306,10 +314,10 @@ namespace sw
         static void appendEngineDefines( vector<ShaderMacroDefine>& inoutList, const ShaderEnginePolicy& enginePolicy );
 
         /**
-         * @brief 요청 @p desc 의 컴파일 기록이 지금 소스 · 헤더 · 도구와 맞으면 그 기록입니다 — 없거나 낡았으면 빈 값입니다. 컴파일하지 않습니다(쿠킹본 판정).
-         * @details @p desc 는 `compileHLSL` 에 넣는 것과 같다(엔진 define 은 안에서 더한다). @p session 은 판정 한 번의 표다.
+         * @brief 요청마다 컴파일한 바이트코드의 해시입니다 — 컴파일 기록이 지금 소스 · 헤더 · 도구와 맞는 것만, 없거나 낡았으면 빈 값입니다. 컴파일하지 않습니다(쿠킹본 판정).
+         * @details @p listDesc 는 `compileBatch` 에 넣은 묶음과 같은 요청이다(소스마다의 기록은 그 소스의 요청 전부가 열쇠다).
          */
-        [[nodiscard]] static optional<CookRecord> findCurrentRecord( const ShaderCompileDesc& desc, ShaderCompileSession& session );
+        [[nodiscard]] static vector<optional<uint64>> findCurrentBytecodeHashes( const vector<ShaderCompileDesc>& listDesc );
         /** @brief 컴파일 결과 @p result 가 요청 @p desc 에 지금도 맞으면 true 입니다(메모리 캐시). 입력을 기록하지 않은 결과는 맞을 수 없습니다. */
         [[nodiscard]] static bool isResultCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc );
 

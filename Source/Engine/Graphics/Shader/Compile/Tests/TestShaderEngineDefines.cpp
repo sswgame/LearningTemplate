@@ -128,7 +128,7 @@ SW_TEST_CASE( ShaderEngineDefinesTest, BatchReportsEveryRequestOnce )
     const vector<ShaderCompileDesc>           listDesc( 3, desc );
     ShaderEngineDefinesTestUtil::BatchCounter counter;
     SW_EXPECT_LOG( "ShaderCompiler.EnginePolicyMissing" );
-    ShaderCompiler::compileBatch( listDesc, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &ShaderEngineDefinesTestUtil::BatchCounter::recordResult, &counter ) );
+    ShaderCompiler::compileBatch( listDesc, ShaderRecordScope::Source, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &ShaderEngineDefinesTestUtil::BatchCounter::recordResult, &counter ) );
     for ( const atomic<uint32>& count : counter._arrFailedCount )
     {
         SW_EXPECT_EQUAL( 1u, count.load() );

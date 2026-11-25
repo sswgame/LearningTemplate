@@ -20,11 +20,14 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Compile/ShaderBatchRecord.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompileClaims.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompileSession.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompilerBackend.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderReachableText.h"
+
+#include <algorithm>
 
 namespace sw
 {
@@ -67,6 +70,7 @@ namespace sw
                 const DerivedDataCache*                _pCache;
                 uint64                                 _sourceHash; ///< 주 소스의 내용 해시 — 못 읽으면 0(컴파일도 같은 파일을 읽다 실패한다)
                 CompileAction                          _action;
+                bool                                   _bWriteRecord{ true }; ///< 요청마다의 기록을 쓴다 — 소스마다 한 파일에 쓰는 묶음(`ShaderRecordScope::Source`)은 쓰지 않는다
             };
 
             /** @brief `compileHLSL` 이 실제로 컴파일하는 요청입니다 — 엔진 define 과 단계 매크로를 더한다. */
@@ -239,7 +243,7 @@ namespace sw
             static void writeRecord( const CompileSetup& setup, const CookJob& job, uint64 bytecodeHash, ShaderCompileResult& inoutResult )
             {
                 inoutResult._record = CookRecord::make( job, bytecodeHash );
-                if ( setup._action._bUseCache && setup._pCache->writeRecord( setup._action._actionKey, inoutResult._record ) == false )
+                if ( setup._action._bUseCache && setup._bWriteRecord && setup._pCache->writeRecord( setup._action._actionKey, inoutResult._record ) == false )
                     SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader", "Could not write the shader DDC entry or record of key %#", setup._action._actionKey );
             }
 
@@ -278,17 +282,22 @@ namespace sw
                 SW_LOG_ERROR_ID( "ShaderCompiler.Path", "%# (Path: %#)", inoutResult._errorMessage.c_str(), setup._call._desc._source.c_str() );
             }
 
-            /** @brief DDC 적중이면 @p outResult 를 채우고, 컴파일해야 하면 그 재료를 돌려줍니다. 빈 값인데 성공이 아니면 실패다(오류 글을 담았다). */
-            [[nodiscard]] static optional<PendingCompile> prepare( const ShaderCompileDesc& requestDesc, ShaderCompileSession* pSession, ShaderCompileResult& outResult )
+            /** @brief 요청을 풀고 준비합니다(`prepare`). */
+            [[nodiscard]] static optional<PendingCompile> openAndPrepare( const ShaderCompileDesc& requestDesc, ShaderCompileResult& outResult )
             {
                 outResult                     = ShaderCompileResult{};
-                expected<CompileSetup> opened = setUp( requestDesc, pSession );
-                if ( opened.has_value() == false )
-                {
-                    setError( opened.error(), outResult );
-                    return nullopt;
-                }
-                PendingCompile      pending{ std::move( *opened ), {}, {}, {} };
+                expected<CompileSetup> opened = setUp( requestDesc, nullptr );
+                if ( opened.has_value() )
+                    return prepare( std::move( *opened ), nullptr, outResult );
+                setError( opened.error(), outResult );
+                return nullopt;
+            }
+
+            /** @brief DDC 적중이면 @p outResult 를 채우고, 컴파일해야 하면 그 재료를 돌려줍니다. 빈 값인데 성공이 아니면 실패다(오류 글을 담았다). */
+            [[nodiscard]] static optional<PendingCompile> prepare( CompileSetup opened, ShaderCompileSession* pSession, ShaderCompileResult& outResult )
+            {
+                outResult = ShaderCompileResult{};
+                PendingCompile      pending{ std::move( opened ), {}, {}, {} };
                 const CompileSetup& setup = pending._setup;
                 if ( findCached( setup, pSession, outResult ) )
                 {
@@ -394,51 +403,135 @@ namespace sw
                                 ( MonotonicClock::nowNanoseconds() - compileStartNanos ) / constant::time::kNanosecondsPerMillisecond );
             }
 
+            /** @brief 같은 소스 · 형식의 요청이 이어지게 세운 요청 번호입니다. 같은 무리 안은 목록의 차례다. */
+            static vector<uint32> makeGroupedOrder( const vector<ShaderCompileDesc>& listDesc )
+            {
+                vector<uint32> listOrder( listDesc.size() );
+                for ( uint32 index = 0; index < static_cast<uint32>( listOrder.size() ); ++index )
+                {
+                    listOrder[index] = index;
+                }
+                std::stable_sort( listOrder.begin(), listOrder.end(), [&listDesc]( uint32 left, uint32 right )
+                {
+                    if ( listDesc[left]._targetFormat != listDesc[right]._targetFormat )
+                        return listDesc[left]._targetFormat < listDesc[right]._targetFormat;
+                    return listDesc[left]._source.str() < listDesc[right]._source.str();
+                } );
+                return listOrder;
+            }
+
+            /** @brief 세운 순서 @p listOrder 의 @p begin 에서 시작하는 무리(같은 소스 · 형식)의 끝입니다. */
+            static size_t findGroupEnd( const vector<ShaderCompileDesc>& listDesc, const vector<uint32>& listOrder, size_t begin )
+            {
+                const ShaderCompileDesc& first = listDesc[listOrder[begin]];
+                size_t                   end   = begin + 1;
+                while ( end < listOrder.size() && listDesc[listOrder[end]]._targetFormat == first._targetFormat && listDesc[listOrder[end]]._source.str() == first._source.str() )
+                    ++end;
+                return end;
+            }
+
+            /** @brief 소스 하나의 기록(`ShaderBatchRecord`)과 입력 목록마다 지금도 맞는지입니다. */
+            struct SourceRecord
+            {
+                string            _description; ///< DDC 항목 서술
+                ShaderBatchRecord _record;
+                vector<uint8>     _listFresh; ///< 입력 목록마다 1 이면 지금도 맞다
+
+                uint64 getKey() const { return HashUtil::computeStringHash64( _description, false ); }
+                /** @brief 동작의 결과입니다. 없거나 입력이 낡았으면 nullptr 입니다. */
+                const ShaderBatchRecord::Entry* findFresh( uint64 actionKey ) const
+                {
+                    const ShaderBatchRecord::Entry* const pEntry = _record.find( actionKey );
+                    return pEntry != nullptr && _listFresh[pEntry->_inputListIndex] != 0 ? pEntry : nullptr;
+                }
+            };
+
+            /** @brief 동작 키 목록의 소스 기록을 DDC 에서 찾습니다. 없으면 빈 기록입니다(서술은 채운다). */
+            static SourceRecord findSourceRecord( const DerivedDataCache& cache, vector<uint64> listActionKey, ShaderCompileSession& session )
+            {
+                SourceRecord source;
+                source._description = ShaderBatchRecord::makeKeyDescription( std::move( listActionKey ) );
+                vector<uint8> bytes;
+                if ( cache.find( source.getKey(), source._description, bytes ) == false || source._record.read( bytes ) == false )
+                    source._record = ShaderBatchRecord{};
+                for ( const vector<CookInput>& listInput : source._record.getInputLists() )
+                {
+                    source._listFresh.push_back( session.areInputsFresh( listInput ) ? 1 : 0 );
+                }
+                return source;
+            }
+
+            /** @brief 동작의 지금 맞는 바이트코드 해시입니다 — 소스 기록, 없으면 요청마다의 기록(실행 중 컴파일 · 데우기가 쓴 것). */
+            static optional<uint64> findCurrentHash( const DerivedDataCache& cache, const SourceRecord& source, const CompileAction& action, ShaderCompileSession& session )
+            {
+                const ShaderBatchRecord::Entry* const pEntry = source.findFresh( action._actionKey );
+                if ( pEntry != nullptr )
+                    return pEntry->_bytecodeHash;
+                CookRecord record;
+                if ( cache.readRecord( action._actionKey, record ) && session.isRecordFresh( record, action._jobDesc ) )
+                    return record._outputHash;
+                return nullopt;
+            }
+
+            /** @brief 요청마다 동작을 만드는 일의 입력입니다(`findCurrentBytecodeHashes`) — 워커는 제 칸에만 쓴다. */
+            struct ActionJob
+            {
+                const vector<ShaderCompileDesc>* _pListDesc{ nullptr };
+                ShaderCompileSession*            _pSession{ nullptr };
+
+                void operator()( uint32 index, optional<CompileAction>& outAction ) const
+                {
+                    const ShaderCompileDesc& desc = ( *_pListDesc )[index];
+                    if ( desc._enginePolicy.has_value() == false )
+                        return;
+                    const expected<ShaderCompileInput> input = _pSession->resolve( desc._source );
+                    if ( input.has_value() )
+                        outAction = makeCompileAction( makeFullDesc( desc ), ContentHash::computeFile( input->_source ) );
+                }
+            };
+
             /**
-             * @brief 묶음 컴파일 한 토막(`kChunkSize` 요청)의 상태입니다. 단계마다 병렬로 돌고 단계 사이에서 모인다.
-             * @details 토막으로 나누는 것은 컴파일을 기다리는 글(변형마다 ~160 KB)의 상한을 두려는 것이다.
+             * @brief 묶음 컴파일 한 토막(소스 무리 여럿, `kChunkSize` 요청 남짓)의 상태입니다. 단계마다 병렬로 돌고 단계 사이에서 모인다.
+             * @details 토막으로 나누는 것은 컴파일을 기다리는 글(변형마다 ~160 KB)의 상한을 두려는 것이다. 무리는 나누지 않는다 — 소스의 기록 하나가 무리 하나다.
              */
             class BatchChunk
             {
             public:
                 static constexpr size_t kChunkSize = 4096;
 
-                BatchChunk( const vector<ShaderCompileDesc>& listDesc, size_t begin, ShaderCompileSession& session, const ShaderCompiledDelegate& onCompiled )
+                /** @param listOrder 세운 요청 번호 가운데 이 토막의 [@p begin, @p end) */
+                BatchChunk( const vector<ShaderCompileDesc>& listDesc, const vector<uint32>& listOrder, size_t begin, size_t end, ShaderRecordScope recordScope, ShaderCompileSession& session,
+                            const ShaderCompiledDelegate& onCompiled )
                     : _listDesc{ listDesc }
-                    , _begin{ begin }
+                    , _listRequest( listOrder.begin() + static_cast<ptrdiff_t>( begin ), listOrder.begin() + static_cast<ptrdiff_t>( end ) )
                     , _session{ session }
                     , _onCompiled{ onCompiled }
-                    , _listPending{}
+                    , _listSetup( end - begin )
+                    , _listActionKey( end - begin, 0 )
+                    , _listPending( end - begin )
+                    , _listWritten( end - begin )
+                    , _listGroup{}
+                    , _listGroupIndex( end - begin, 0 )
                     , _listWinner{}
                     , _listFollower{}
                     , _listResult{}
                     , _mapWinner{}
                     , _mutex{}
+                    , _recordScope{ recordScope }
                 {
-                    _listPending.resize( std::min( kChunkSize, listDesc.size() - begin ) );
                 }
 
                 void run()
                 {
-                    engine::runParallel( static_cast<uint32>( _listPending.size() ), 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &BatchChunk::prepareRange, this ) );
-                    unordered_map<uint64, uint32> mapResultIndex; // 글 키 → `_listResult` 자리
-                    for ( uint32 index = 0; index < static_cast<uint32>( _listPending.size() ); ++index )
-                    {
-                        if ( _listPending[index].has_value() && _mapWinner[_listPending[index]->_sourceKey._key] == index )
-                        {
-                            mapResultIndex.emplace( _listPending[index]->_sourceKey._key, static_cast<uint32>( _listWinner.size() ) );
-                            _listWinner.push_back( index );
-                        }
-                    }
-                    for ( uint32 index = 0; index < static_cast<uint32>( _listPending.size() ); ++index )
-                    {
-                        const bool bFollower = _listPending[index].has_value() && _mapWinner[_listPending[index]->_sourceKey._key] != index;
-                        if ( bFollower )
-                            _listFollower.push_back( Follower{ index, mapResultIndex[_listPending[index]->_sourceKey._key] } );
-                    }
-                    _listResult.resize( _listWinner.size() );
-                    engine::runParallel( static_cast<uint32>( _listWinner.size() ), 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &BatchChunk::compileRange, this ) );
-                    engine::runParallel( static_cast<uint32>( _listFollower.size() ), 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &BatchChunk::finishRange, this ) );
+                    runStage( _listRequest.size(), SW_DELEGATE_METHOD( ParallelBlockDelegate, &BatchChunk::openRange, this ) );
+                    if ( _recordScope == ShaderRecordScope::Source )
+                        findSourceRecords();
+                    runStage( _listRequest.size(), SW_DELEGATE_METHOD( ParallelBlockDelegate, &BatchChunk::prepareRange, this ) );
+                    splitPending();
+                    runStage( _listWinner.size(), SW_DELEGATE_METHOD( ParallelBlockDelegate, &BatchChunk::compileRange, this ) );
+                    runStage( _listFollower.size(), SW_DELEGATE_METHOD( ParallelBlockDelegate, &BatchChunk::finishRange, this ) );
+                    if ( _recordScope == ShaderRecordScope::Source )
+                        writeSourceRecords();
                 }
 
             private:
@@ -448,20 +541,113 @@ namespace sw
                     uint32 _index;       ///< 토막 안 번호
                     uint32 _resultIndex; ///< 글을 컴파일한 요청의 `_listResult` 자리
                 };
+                /** @brief 소스 기록에 적을 요청 하나의 결과입니다. 해시가 0 이면 없다(실패 · 캐시하지 않는 요청). */
+                struct WrittenResult
+                {
+                    vector<CookInput> _listInput;
+                    uint64            _actionKey{ 0 };
+                    uint64            _bytecodeHash{ 0 };
+                    bool              _bFromRecord{ false }; ///< 소스 기록에서 왔다
+                };
+                /** @brief 소스 무리 하나입니다(토막 안 [_begin, _end)). */
+                struct Group
+                {
+                    size_t       _begin{ 0 };
+                    size_t       _end{ 0 };
+                    SourceRecord _source;
+                };
+
+                static void runStage( size_t count, const ParallelBlockDelegate& body ) { engine::runParallel( static_cast<uint32>( count ), 1, body ); }
+
+                /** @brief 요청을 풉니다. 풀지 못한 요청은 여기서 끝난다. */
+                void openRange( uint32 start, uint32 end )
+                {
+                    for ( uint32 index = start; index < end; ++index )
+                    {
+                        expected<CompileSetup> opened = setUp( _listDesc[_listRequest[index]], &_session );
+                        if ( opened.has_value() )
+                        {
+                            opened->_bWriteRecord = _recordScope == ShaderRecordScope::Request;
+                            _listActionKey[index] = opened->_action._actionKey;
+                            _listSetup[index]     = std::move( *opened );
+                            continue;
+                        }
+                        ShaderCompileResult result;
+                        setError( opened.error(), result );
+                        _onCompiled( _listRequest[index], result );
+                    }
+                }
+
+                void findSourceRecords()
+                {
+                    for ( size_t begin = 0; begin < _listRequest.size(); begin = findGroupEnd( _listDesc, _listRequest, begin ) )
+                    {
+                        Group group;
+                        group._begin = begin;
+                        group._end   = findGroupEnd( _listDesc, _listRequest, begin );
+                        vector<uint64>          listActionKey;
+                        const DerivedDataCache* pCache = nullptr;
+                        for ( size_t index = group._begin; index < group._end; ++index )
+                        {
+                            _listGroupIndex[index] = static_cast<uint32>( _listGroup.size() );
+                            if ( _listSetup[index].has_value() == false || _listSetup[index]->_action._bUseCache == false )
+                                continue;
+                            listActionKey.push_back( _listSetup[index]->_action._actionKey );
+                            pCache = _listSetup[index]->_pCache;
+                        }
+                        if ( pCache != nullptr )
+                            group._source = findSourceRecord( *pCache, std::move( listActionKey ), _session );
+                        _listGroup.push_back( std::move( group ) );
+                    }
+                }
+
+                /** @brief 요청 @p index 의 결과를 소스 기록에서 찾습니다. */
+                [[nodiscard]] bool findInSourceRecord( uint32 index, ShaderCompileResult& outResult )
+                {
+                    if ( _recordScope != ShaderRecordScope::Source || _listSetup[index]->_action._bUseCache == false )
+                        return false;
+                    const SourceRecord&                   source = _listGroup[_listGroupIndex[index]]._source;
+                    const ShaderBatchRecord::Entry* const pEntry = source.findFresh( _listSetup[index]->_action._actionKey );
+                    if ( pEntry == nullptr || findBytecode( *_listSetup[index]->_pCache, pEntry->_bytecodeHash, outResult._bytecode ) == false )
+                        return false;
+                    outResult._record._listInput  = source._record.getInputLists()[pEntry->_inputListIndex];
+                    outResult._record._outputHash = pEntry->_bytecodeHash;
+                    outResult._record._key        = CookJob::computeKey( _listSetup[index]->_action._jobDesc, outResult._record._listInput );
+                    outResult._bSuccess           = true;
+                    _listWritten[index]           = WrittenResult{ outResult._record._listInput, _listSetup[index]->_action._actionKey, pEntry->_bytecodeHash, true };
+                    return true;
+                }
+
+                /** @brief 결과를 소스 기록에 적을 칸에 두고 부른 쪽에 넘깁니다. */
+                void deliver( uint32 index, const ShaderCompileResult& result )
+                {
+                    const bool bRecorded = _recordScope == ShaderRecordScope::Source && result._bSuccess && result._record._listInput.empty() == false;
+                    if ( bRecorded )
+                        _listWritten[index] = WrittenResult{ result._record._listInput, _listActionKey[index], result._record._outputHash, false };
+                    _onCompiled( _listRequest[index], result );
+                }
 
                 /** @brief 요청마다 DDC 를 보고, 없으면 전처리해 글 키를 구합니다. 글로 겹치지 않는 요청은 여기서 컴파일합니다. */
                 void prepareRange( uint32 start, uint32 end )
                 {
                     for ( uint32 index = start; index < end; ++index )
                     {
-                        ShaderCompileResult      result;
-                        optional<PendingCompile> pending = prepare( _listDesc[_begin + index], &_session, result );
-                        const bool               bShared = pending.has_value() && pending->_sourceKey._key != 0 && pending->_setup._action._bUseCache;
+                        if ( _listSetup[index].has_value() == false )
+                            continue;
+                        ShaderCompileResult result;
+                        if ( findInSourceRecord( index, result ) )
+                        {
+                            _onCompiled( _listRequest[index], result );
+                            continue;
+                        }
+                        optional<PendingCompile> pending = prepare( std::move( *_listSetup[index] ), &_session, result );
+                        _listSetup[index].reset();
+                        const bool bShared = pending.has_value() && pending->_sourceKey._key != 0 && pending->_setup._action._bUseCache;
                         if ( pending.has_value() && bShared == false )
                             compilePending( *pending, result );
                         if ( bShared == false )
                         {
-                            _onCompiled( static_cast<uint32>( _begin + index ), result );
+                            deliver( index, result );
                             continue;
                         }
                         _listPending[index] = std::move( pending );
@@ -481,6 +667,23 @@ namespace sw
                     _listPending[loser]->releaseCompileInput(); // 앞서 넣은 쪽도 자기 준비를 마친 뒤다
                 }
 
+                /** @brief 글마다 컴파일할 요청과 그 결과를 함께 받을 요청을 가릅니다. */
+                void splitPending()
+                {
+                    unordered_map<uint64, uint32> mapResultIndex; // 글 키 → `_listResult` 자리. 컴파일할 요청이 같은 글의 나머지보다 앞선 번호다
+                    for ( uint32 index = 0; index < static_cast<uint32>( _listPending.size() ); ++index )
+                    {
+                        if ( _listPending[index].has_value() == false )
+                            continue;
+                        const auto [iter, bWinner] = mapResultIndex.emplace( _listPending[index]->_sourceKey._key, static_cast<uint32>( _listWinner.size() ) );
+                        if ( bWinner )
+                            _listWinner.push_back( index );
+                        else
+                            _listFollower.push_back( Follower{ index, iter->second } );
+                    }
+                    _listResult.resize( _listWinner.size() );
+                }
+
                 void compileRange( uint32 start, uint32 end )
                 {
                     for ( uint32 winner = start; winner < end; ++winner )
@@ -488,7 +691,7 @@ namespace sw
                         PendingCompile& pending = *_listPending[_listWinner[winner]];
                         compilePending( pending, _listResult[winner] );
                         pending.releaseCompileInput();
-                        _onCompiled( static_cast<uint32>( _begin + _listWinner[winner] ), _listResult[winner] );
+                        deliver( _listWinner[winner], _listResult[winner] );
                     }
                 }
 
@@ -500,24 +703,51 @@ namespace sw
                         const PendingCompile& pending = *_listPending[_listFollower[follower]._index];
                         ShaderCompileResult   result  = _listResult[_listFollower[follower]._resultIndex];
                         if ( result._bSuccess )
-                        {
                             writeSharedRecord( pending, result._record._outputHash, result );
+                        deliver( _listFollower[follower]._index, result );
+                    }
+                }
+
+                /** @brief 소스 기록에서 오지 않은 결과가 하나라도 있는 무리의 기록을 씁니다. 실패한 요청은 빠진다(다음에 다시 전처리한다). */
+                void writeSourceRecords()
+                {
+                    const expected<DerivedDataCache>& cache = getDerivedDataCache();
+                    for ( const Group& group : _listGroup )
+                    {
+                        ShaderBatchRecord record;
+                        bool              bChanged = false;
+                        for ( size_t index = group._begin; index < group._end; ++index )
+                        {
+                            const WrittenResult& written = _listWritten[index];
+                            if ( written._bytecodeHash == 0 )
+                                continue;
+                            record.add( written._actionKey, written._bytecodeHash, written._listInput );
+                            bChanged = bChanged || written._bFromRecord == false;
                         }
-                        _onCompiled( static_cast<uint32>( _begin + _listFollower[follower]._index ), result );
+                        vector<uint8> bytes;
+                        record.write( bytes );
+                        if ( bChanged && group._source._description.empty() == false && cache.has_value() && cache->store( group._source.getKey(), group._source._description, bytes ) == false )
+                            SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader", "Could not write the shader DDC entry or record of key %#", group._source.getKey() );
                     }
                 }
 
             private:
                 const vector<ShaderCompileDesc>& _listDesc;
-                size_t                           _begin; ///< 토막의 첫 요청 번호
+                vector<uint32>                   _listRequest; ///< 토막 안 번호 → 요청 번호
                 ShaderCompileSession&            _session;
                 const ShaderCompiledDelegate&    _onCompiled;
-                vector<optional<PendingCompile>> _listPending;  ///< 요청마다 한 칸(토막 안 번호). 적중 · 실패 · 바로 컴파일한 요청은 비어 있다
-                vector<uint32>                   _listWinner;   ///< 컴파일하는 요청(토막 안 번호)
-                vector<Follower>                 _listFollower; ///< 같은 글의 나머지 요청
-                vector<ShaderCompileResult>      _listResult;   ///< `_listWinner` 와 짝
-                unordered_map<uint64, uint32>    _mapWinner;    ///< 글 키 → 컴파일하는 요청
-                mutex                            _mutex;        ///< `_mapWinner` 와 진 요청의 글
+                vector<optional<CompileSetup>>   _listSetup;      ///< 요청마다 한 칸. 준비에 들어가면 비운다
+                vector<uint64>                   _listActionKey;  ///< 요청마다 동작 키
+                vector<optional<PendingCompile>> _listPending;    ///< 요청마다 한 칸. 적중 · 실패 · 바로 컴파일한 요청은 비어 있다
+                vector<WrittenResult>            _listWritten;    ///< 요청마다 한 칸(소스 기록을 쓰는 묶음만)
+                vector<Group>                    _listGroup;      ///< 소스 무리(소스 기록을 쓰는 묶음만)
+                vector<uint32>                   _listGroupIndex; ///< 요청마다 `_listGroup` 자리
+                vector<uint32>                   _listWinner;     ///< 컴파일하는 요청(토막 안 번호)
+                vector<Follower>                 _listFollower;   ///< 같은 글의 나머지 요청
+                vector<ShaderCompileResult>      _listResult;     ///< `_listWinner` 와 짝
+                unordered_map<uint64, uint32>    _mapWinner;      ///< 글 키 → 컴파일하는 요청
+                mutex                            _mutex;          ///< `_mapWinner` 와 진 요청의 글
+                ShaderRecordScope                _recordScope;
             };
         };
     } // namespace
@@ -603,20 +833,36 @@ namespace sw
         return HashUtil::computeStringHash64( string( compilerVersion ), false, hash );
     }
 
-    optional<CookRecord> ShaderCompiler::findCurrentRecord( const ShaderCompileDesc& requestDesc, ShaderCompileSession& session )
+    vector<optional<uint64>> ShaderCompiler::findCurrentBytecodeHashes( const vector<ShaderCompileDesc>& listDesc )
     {
         using Internal = ShaderCompilerInternal;
-        if ( requestDesc._enginePolicy.has_value() == false || session.getResolver() == nullptr )
-            return nullopt;
-        const expected<ShaderCompileInput> input = session.resolve( requestDesc._source );
-        const expected<DerivedDataCache>&  cache = Internal::getDerivedDataCache();
-        if ( input.has_value() == false || cache.has_value() == false )
-            return nullopt;
-        const Internal::CompileAction action = Internal::makeCompileAction( Internal::makeFullDesc( requestDesc ), ContentHash::computeFile( input->_source ) );
-        CookRecord                    record;
-        if ( cache->readRecord( action._actionKey, record ) == false || session.isRecordFresh( record, action._jobDesc ) == false )
-            return nullopt;
-        return record;
+        vector<optional<uint64>>          listHash( listDesc.size() );
+        ShaderCompileSession              session{ engine::getSubsystem<AssetPaths>() };
+        const expected<DerivedDataCache>& cache = Internal::getDerivedDataCache();
+        if ( session.getResolver() == nullptr || cache.has_value() == false )
+            return listHash;
+        vector<optional<Internal::CompileAction>> listAction( listDesc.size() );
+        const Internal::ActionJob                 actionJob{ &listDesc, &session };
+        engine::runParallelInto<optional<Internal::CompileAction>>( listAction, 1, actionJob );
+        const vector<uint32> listOrder = Internal::makeGroupedOrder( listDesc );
+        for ( size_t begin = 0; begin < listOrder.size(); )
+        {
+            const size_t   end = Internal::findGroupEnd( listDesc, listOrder, begin );
+            vector<uint64> listActionKey;
+            for ( size_t index = begin; index < end; ++index )
+            {
+                if ( listAction[listOrder[index]].has_value() && listAction[listOrder[index]]->_bUseCache )
+                    listActionKey.push_back( listAction[listOrder[index]]->_actionKey );
+            }
+            const Internal::SourceRecord source = Internal::findSourceRecord( *cache, std::move( listActionKey ), session );
+            for ( ; begin < end; ++begin )
+            {
+                const uint32 request = listOrder[begin];
+                if ( listAction[request].has_value() )
+                    listHash[request] = Internal::findCurrentHash( *cache, source, *listAction[request], session );
+            }
+        }
+        return listHash;
     }
 
     bool ShaderCompiler::isResultCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& requestDesc )
@@ -632,7 +878,7 @@ namespace sw
     {
         using Internal = ShaderCompilerInternal;
         ShaderCompileResult                result{};
-        optional<Internal::PendingCompile> pending = Internal::prepare( requestDesc, nullptr, result );
+        optional<Internal::PendingCompile> pending = Internal::openAndPrepare( requestDesc, result );
         if ( pending.has_value() == false )
             return result;
         const bool bShared = pClaims != nullptr && pending->_sourceKey._key != 0 && pending->_setup._action._bUseCache;
@@ -653,14 +899,19 @@ namespace sw
         return result;
     }
 
-    void ShaderCompiler::compileBatch( const vector<ShaderCompileDesc>& listDesc, const ShaderCompiledDelegate& onCompiled )
+    void ShaderCompiler::compileBatch( const vector<ShaderCompileDesc>& listDesc, ShaderRecordScope recordScope, const ShaderCompiledDelegate& onCompiled )
     {
-        using Chunk = ShaderCompilerInternal::BatchChunk;
+        using Internal = ShaderCompilerInternal;
         ShaderCompileSession session{ engine::getSubsystem<AssetPaths>() };
-        for ( size_t begin = 0; begin < listDesc.size(); begin += Chunk::kChunkSize )
+        const vector<uint32> listOrder = Internal::makeGroupedOrder( listDesc );
+        for ( size_t begin = 0; begin < listOrder.size(); )
         {
-            Chunk chunk{ listDesc, begin, session, onCompiled };
+            size_t end = begin;
+            while ( end < listOrder.size() && end - begin < Internal::BatchChunk::kChunkSize )
+                end = Internal::findGroupEnd( listDesc, listOrder, end );
+            Internal::BatchChunk chunk{ listDesc, listOrder, begin, end, recordScope, session, onCompiled };
             chunk.run();
+            begin = end;
         }
     }
 } // namespace sw

@@ -38,7 +38,6 @@
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.h"
-#include "Engine/Graphics/Shader/Compile/ShaderCompileSession.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderSourceGenerator.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
@@ -232,8 +231,8 @@ namespace sw
              *        요청의 소스마다 바이너리가 하나라도 있는지.
              * @param mapRequest 그 폴더의 바이너리 파일 이름 → 요청
              */
-            static void verifyFolder( const AbsolutePath& binDirectory, string_view label, const unordered_map<string, const ShaderCookRequest*>& mapRequest, ShaderTargetFormat format,
-                                      const ShaderEnginePolicy& enginePolicy, ShaderCompileSession& session, vector<string>& outListProblem )
+            static void verifyFolder( const AbsolutePath& binDirectory, string_view label, const unordered_map<string, const ShaderCookRequest*>& mapRequest, const unordered_map<const ShaderCookRequest*, uint64>& mapBytecodeHash,
+                                      vector<string>& outListProblem )
             {
                 vector<AbsolutePath> listFile;
                 if ( FileUtil::isDirectory( binDirectory ) == false || FileUtil::collectFiles( binDirectory, "", listFile, false ) == false )
@@ -265,12 +264,10 @@ namespace sw
                     // 리플렉션 없이 바인딩한 DX12 가 DEVICE_HUNG 으로 죽었다 — 매니페스트 키는 바이너리 파일 이름이다.
                     if ( mapManifest.find( fileName ) == mapManifest.end() )
                         appendProblem( outListProblem, "%#: the manifest misses '%#' - cook again", label, fileName );
-                    const ShaderCompileDesc desc =
-                        ShaderCooker::makeCompileDesc( ShaderSourceID{ request._shaderPath }, request._entryPoint, request._stage, format, enginePolicy, request._listPermutation );
-                    const optional<CookRecord> record = ShaderCompiler::findCurrentRecord( desc, session );
-                    if ( record.has_value() == false )
+                    const auto hashIt = mapBytecodeHash.find( &request );
+                    if ( hashIt == mapBytecodeHash.end() )
                         appendProblem( outListProblem, "%#: '%#' (%#) was not cooked again after its source, a header or the toolchain changed", label, fileName, request._shaderPath );
-                    else if ( ContentHash::computeFile( filePath ) != record->_outputHash )
+                    else if ( ContentHash::computeFile( filePath ) != hashIt->second )
                         appendProblem( outListProblem, "%#: '%#' is not the bytecode of its compile record - cook again", label, fileName );
                 }
                 unordered_set<string> uniqueMissingSource;
@@ -389,7 +386,7 @@ namespace sw
                     listDesc.push_back( makeCompileDesc( listTask[listTaskIndex.front()], state._enginePolicy ) );
                 }
                 BatchReceiver receiver{ &listTask, &listChain, &listDesc, outListResult.data() };
-                ShaderCompiler::compileBatch( listDesc, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &BatchReceiver::finishChain, &receiver ) );
+                ShaderCompiler::compileBatch( listDesc, ShaderRecordScope::Source, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &BatchReceiver::finishChain, &receiver ) );
             }
 
             /**
@@ -644,9 +641,8 @@ namespace sw
             outListProblem.emplace_back( "shader cook requests could not be collected - cannot tell which domains are cooked" );
             return;
         }
-        ShaderCompileSession                          session{ assetPaths };
-        const shared_ptr<const ShaderSourceResolver>& resolver = session.getResolver();
-        if ( resolver == nullptr )
+        const optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( assetPaths );
+        if ( resolver.has_value() == false )
         {
             outListProblem.emplace_back( "the shader include roots cannot be resolved (see the error above)" );
             return;
@@ -659,16 +655,34 @@ namespace sw
             if ( slot.has_value() )
                 mapFolder[slot->_binDirectory].emplace( std::move( slot->_fileName ), &request );
         }
+        // 요청마다 지금 맞는 바이트코드 해시 — 굽는 것(`cookRequests`)과 같은 묶음으로 기록을 찾는다.
+        const ShaderEnginePolicy         enginePolicy = ShaderEnginePolicy::capture();
+        vector<const ShaderCookRequest*> listPlanned;
+        vector<ShaderCompileDesc>        listDesc;
+        for ( const auto& [binDirectory, mapRequest] : mapFolder )
+        {
+            for ( const auto& [fileName, pRequest] : mapRequest )
+            {
+                listPlanned.push_back( pRequest );
+                listDesc.push_back( ShaderCooker::makeCompileDesc( ShaderSourceID{ pRequest->_shaderPath }, pRequest->_entryPoint, pRequest->_stage, targetFormat, enginePolicy, pRequest->_listPermutation ) );
+            }
+        }
+        const vector<optional<uint64>>                  listHash = ShaderCompiler::findCurrentBytecodeHashes( listDesc );
+        unordered_map<const ShaderCookRequest*, uint64> mapBytecodeHash;
+        for ( size_t index = 0; index < listPlanned.size(); ++index )
+        {
+            if ( listHash[index].has_value() )
+                mapBytecodeHash.emplace( listPlanned[index], *listHash[index] );
+        }
         vector<string> listDomain;
         collectCookedDomains( listRequest, listDomain );
-        const ShaderEnginePolicy enginePolicy = ShaderEnginePolicy::capture();
         for ( const string& domain : listDomain )
         {
             const optional<AbsolutePath> shadersFolder = resolver->findDomainShadersFolder( domain );
             if ( shadersFolder.has_value() )
                 (void)resolver->getIncludeResolver().findShadowedHeaders( *shadersFolder, outListProblem ); // 가려진 헤더는 문제로 적힌다
             const string binDirectory = ShaderBinaryLocation::makeForDomain( domain, targetFormat )._binDirectory;
-            Internal::verifyFolder( cookedDir.join( binDirectory ), binDirectory, mapFolder[binDirectory], targetFormat, enginePolicy, session, outListProblem );
+            Internal::verifyFolder( cookedDir.join( binDirectory ), binDirectory, mapFolder[binDirectory], mapBytecodeHash, outListProblem );
         }
     }
 

@@ -233,7 +233,7 @@ namespace sw
         }
 
         Internal::FailureCounter counter;
-        ShaderCompiler::compileBatch( listDesc, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &Internal::FailureCounter::recordResult, &counter ) );
+        ShaderCompiler::compileBatch( listDesc, ShaderRecordScope::Request, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &Internal::FailureCounter::recordResult, &counter ) );
         summary._failedCount = counter._failedCount.load();
         return summary;
     }

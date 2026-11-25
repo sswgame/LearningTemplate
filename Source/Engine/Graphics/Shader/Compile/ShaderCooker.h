@@ -84,7 +84,7 @@ namespace sw
         [[nodiscard]] static bool writeBinary( const ShaderCompileDesc& desc, const ShaderCompileResult& compileResult, const AbsolutePath& outputPath, bool& outWritten );
 
         // "무엇을 쿠킹할지"와 "모두 쿠킹"은 여기 없다. 파이프라인 XML 과 패스 종류를 아는 렌더러의 정책이라 `Renderer/Cook/ShaderCookDriver` 에 있다.
-        // 산출물이 최신인지는 컴파일의 쿠킹 기록(`ShaderCompiler::findCurrentRecord`) 하나로 본다 — 최신이면 컴파일은 DDC 적중이라 쿠커가 따로 판정하지 않는다.
+        // 산출물이 최신인지는 컴파일의 쿠킹 기록(`ShaderCompiler::findCurrentBytecodeHashes`) 하나로 본다 — 최신이면 컴파일은 DDC 적중이라 쿠커가 따로 판정하지 않는다.
 
         /** @brief 셰이더 파일의 스템을 소문자로 반환합니다. 쿠킹된 파일 이름의 앞부분입니다(`computeBinaryFileName` 의 짝). */
         static string getStemLower( string_view filePath );
