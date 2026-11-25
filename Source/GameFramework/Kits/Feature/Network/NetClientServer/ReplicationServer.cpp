@@ -318,8 +318,6 @@ namespace sw
 
     NetHandleResult ReplicationServer::receive( NetClientServerMessage::SnapshotAck, const NetMessageContext& context, const NetSnapshotAckBody& body )
     {
-        if ( context._connectionID < 0 )
-            return NetHandleResult::Malformed;
         ClientState& client = acquireClient( context._connectionID );
         const uint32 tick   = body._tick;
         if ( ( client._bHasAck == SW_FALSE || tick > client._ackedTick ) && tick <= _world._tick )
@@ -332,8 +330,6 @@ namespace sw
 
     NetHandleResult ReplicationServer::receive( NetClientServerMessage::Input, const NetMessageContext& context, BitReader& body )
     {
-        if ( context._connectionID < 0 )
-            return NetHandleResult::Malformed;
         ClientState& client = acquireClient( context._connectionID );
         return handleInput( client, body ) ? NetHandleResult::Handled : NetHandleResult::Malformed;
     }

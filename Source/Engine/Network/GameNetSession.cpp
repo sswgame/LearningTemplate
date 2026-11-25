@@ -934,6 +934,7 @@ namespace sw
 
     NetHandleResult GameNetSession::receive( GameNetSessionMessage::ResourceDigest, const NetMessageContext& context, const GameResourceDigestBody& body )
     {
+        static_assert( GameNetSessionLimit::kMaxDigestPerPoll == ResourceDigestComparer::kMaxLinesPerPeer, "a client may send every line it has right after it connects" );
         ResourceDigestEntry entry;
         entry._assetID = body._assetID;
         entry._hash    = body._hash;

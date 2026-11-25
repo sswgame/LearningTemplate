@@ -16,20 +16,18 @@ namespace
     {
         static constexpr int64 kDeadline = 1000;
 
-        static NetMessageContext makeContext( uint8 kind, int32 connectionID )
+        /** @brief 손으로 쓴 본문 앞에 종류 · 월드 세대를 붙입니다. */
+        static vector<uint8> makeMessage( uint8 kind, const BitWriter& body )
         {
-            NetMessageContext context;
-            context._connectionID = connectionID;
-            context._kind         = kind;
-            return context;
+            vector<uint8> bytes{ kind, uint8{ 0 } };
+            bytes.insert( bytes.end(), body.getBytes().begin(), body.getBytes().begin() + body.getByteCount() );
+            return bytes;
         }
 
         /** @brief 서버가 보낸 메시지(종류 · 월드 세대 · 본문)를 클라이언트 처리기에 넘깁니다. */
         static NetHandleResult deliver( MinigameReplicationClient& client, const test::FakeNetPeers::Sent& sent )
         {
-            constexpr int32 kHeaderBytes = 2;
-            BitReader       body{ sent._bytes.data() + kHeaderBytes, static_cast<int32>( sent._bytes.size() ) - kHeaderBytes };
-            return client.handleNetMessage( makeContext( sent._bytes[0], 0 ), body );
+            return client.handleMessage( 0, sent._bytes );
         }
 
         static NetHandleResult sendReady( MinigameReplicationServer& server, int32 connectionID, uint32 entryID, bool bLoaded )
@@ -37,8 +35,7 @@ namespace
             BitWriter writer;
             writer.writeVarUint( entryID );
             writer.writeBool( bLoaded );
-            BitReader body{ writer.getBytes().data(), writer.getByteCount() };
-            return server.handleNetMessage( makeContext( MinigameNetMessage::Table::getKindOf<MinigameNetMessage::Ready>(), connectionID ), body );
+            return server.handleMessage( connectionID, makeMessage( MinigameNetMessage::Table::getKindOf<MinigameNetMessage::Ready>(), writer ) );
         }
 
         /** @brief 항목 하나짜리 목록 본문을 손으로 씁니다. */
@@ -53,8 +50,7 @@ namespace
             {
                 writer.writeFloat( value );
             }
-            BitReader body{ writer.getBytes().data(), writer.getByteCount() };
-            return client.handleNetMessage( makeContext( MinigameNetMessage::Table::getKindOf<MinigameNetMessage::State>(), 0 ), body );
+            return client.handleMessage( 0, makeMessage( MinigameNetMessage::Table::getKindOf<MinigameNetMessage::State>(), writer ) );
         }
     };
     using Util = MinigameReplicationTestUtil;

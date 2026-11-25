@@ -30,9 +30,12 @@ namespace
         class CountingHandler : public INetMessageHandler
         {
         public:
+            static constexpr uint32 kDefaultMaxPerPoll = 1024;
+
             CountingHandler( uint8 rangeBase, uint8 acceptedKind, uint32 wireVersion = kNoMessageTable, NetMessageDirection direction = NetMessageDirection::Both )
                 : _wireVersion{ wireVersion }
                 , _direction{ direction }
+                , _maxPerPoll{ kDefaultMaxPerPoll }
                 , _rangeBase{ rangeBase }
                 , _acceptedKind{ acceptedKind }
                 , _handledCount{ 0 }
@@ -49,7 +52,9 @@ namespace
                 mask._toClientMask = _direction != NetMessageDirection::ToServer ? getMessageKindMask() : uint16{ 0 };
                 return mask;
             }
+            uint32          getMaxPerPoll( uint8 kind ) const override { return kind == _acceptedKind ? _maxPerPoll : 0u; }
             uint32          getWireVersion() const override { return _wireVersion; }
+            void            setMaxPerPoll( uint32 maxPerPoll ) { _maxPerPoll = maxPerPoll; }
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
             {
                 (void)body.readVarUint(); // 값은 쓰지 않는다 — 넘침은 바로 아래에서 본다
@@ -66,6 +71,7 @@ namespace
         private:
             uint32              _wireVersion;
             NetMessageDirection _direction;
+            uint32              _maxPerPoll;
             uint8               _rangeBase;
             uint8               _acceptedKind;
             int32               _handledCount;
@@ -211,7 +217,7 @@ SW_TEST_CASE( NetMessageRouterTest, MessageRouterRefusesAHandlerThatOverlapsACla
     SW_EXPECT_FALSE( router.registerHandler( nullptr ).isActive() );
 
     const uint8 arrMessage[] = { NetMessageRouterTestInternal::kGameKind1, 0x01 };
-    SW_EXPECT_TRUE( NetHandleResult::Handled == router.dispatch( NetPeerRole::Server, NetMessageContext{}, arrMessage, static_cast<int32>( sizeof( arrMessage ) ) ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == router.dispatch( NetPeerRole::Server, NetMessageContext{ nullptr, 0, 1 }, arrMessage, static_cast<int32>( sizeof( arrMessage ) ) ) );
     SW_EXPECT_EQUAL( 1, first.getHandledCount() );
     SW_EXPECT_EQUAL( 0, overlapping.getHandledCount() );
 
@@ -299,6 +305,7 @@ SW_TEST_CASE( NetMessageRouterTest, RouterTellsHandlersAboutConnectionsBeforeThe
         uint8                   getMessageRangeBase() const override { return NetMessageRange::kGame; }
         uint32                  getWireVersion() const override { return kNoMessageTable; }
         NetMessageDirectionMask getMessageDirectionMask() const override { return NetMessageDirectionMask{ 0xFFFFu, 0xFFFFu }; } // 맡는 종류(기본 0xFFFF) 모두 양쪽
+        uint32                  getMaxPerPoll( uint8 ) const override { return 64u; }
         NetHandleResult         handleNetMessage( const NetMessageContext& context, BitReader& body ) override
         {
             (void)context;
@@ -495,9 +502,9 @@ SW_TEST_CASE( NetMessageRouterTest, WorldGenerationReachesEveryClient )
  */
 SW_TEST_CASE( NetMessageRouterTest, TableBuildsDirectionMaskFromMessageDefs )
 {
-    using Up                                = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>;
+    using Up                                = NetLimitedMessageDef<NetMessageDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>, 8>;
     using Down                              = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
-    using Both                              = NetMessageDef<2, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
+    using Both                              = NetLimitedMessageDef<NetMessageDef<2, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 8>;
     using Table                             = NetMessageTable<NetMessageRange::kGame, Up, Down, Both>;
     constexpr NetMessageDirectionMask kMask = Table::makeDirectionMask<Up, Down, Both>();
     static_assert( kMask._toServerMask == 0x5u, "ToServer and Both travel to the server" );
@@ -534,6 +541,68 @@ SW_TEST_CASE( NetMessageRouterTest, HandlerWithoutDirectionIsRefused )
 }
 
 /**
+ * @brief [NetMessageRouterTest] 서버로 갈 수 있는 종류에 수신 상한이 없는 처리기는 등록을 받지 않고, 연결 번호가 없는 메시지는 처리기에 닿지 않는다
+ */
+SW_TEST_CASE( NetMessageRouterTest, ServerKindWithoutLimitIsRefused )
+{
+    NetMessageRouterTestInternal::CountingHandler up{ NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind1, INetMessageHandler::kNoMessageTable, NetMessageDirection::ToServer };
+    NetMessageRouterTestInternal::CountingHandler down{ NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind2, INetMessageHandler::kNoMessageTable, NetMessageDirection::ToClient };
+    up.setMaxPerPoll( 0 );
+    down.setMaxPerPoll( 0 );
+    NetMessageRouter router;
+    SW_EXPECT_LOG( "Net.RouterKindWithoutLimit" );
+    SW_EXPECT_FALSE( router.registerHandler( &up ).isActive() );
+    const Subscription downSubscription = router.registerHandler( &down ); // 서버로 가지 않는 종류는 상한이 없다
+    SW_EXPECT_TRUE( downSubscription.isActive() );
+    const uint8 arrDown[] = { NetMessageRouterTestInternal::kGameKind2, 0x01 };
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == router.dispatch( NetPeerRole::Client, NetMessageContext{}, arrDown, static_cast<int32>( sizeof( arrDown ) ) ) );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == down.handleMessage( -1, arrDown, static_cast<int32>( sizeof( arrDown ) ) ) );
+    SW_EXPECT_EQUAL( 0, down.getHandledCount() );
+}
+
+/**
+ * @brief [NetMessageRouterTest] 한 연결이 `poll` 한 번에 상한보다 많이 보내면 비신뢰는 남는 것을 버리고 세며, 신뢰는 연결을 끊는다. 다음 `poll` 은 처음부터 센다
+ */
+SW_TEST_CASE( NetMessageRouterTest, RequestsOverTheLimitAreDroppedOrDisconnect )
+{
+    constexpr uint32      kLimit = 3;
+    test::LoopbackCluster pair( 83u );
+    NetTestUtil::addServerAndClient( pair, NetEndpointConfig{} );
+    SW_REQUIRE_TRUE( pair.getServer().listen() );
+    SW_REQUIRE_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
+    pair.run( 0.3 );
+    SW_REQUIRE_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
+    NetMessageRouterTestInternal::CountingHandler up{ NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind1, INetMessageHandler::kNoMessageTable, NetMessageDirection::ToServer };
+    up.setMaxPerPoll( kLimit );
+    NetMessageRouter   serverRouter;
+    const Subscription subscription = serverRouter.registerHandler( &up );
+    SW_REQUIRE_TRUE( subscription.isActive() );
+    NetMessageWriter writer;
+    const auto       sendMany = [&]( NetChannelKind channel )
+    {
+        for ( uint32 index = 0; index < kLimit + 2; ++index )
+        {
+            writer.begin( NetMessageRouterTestInternal::kGameKind1 ).writeVarUint( index );
+            SW_EXPECT_TRUE( writer.send( pair.getClient( 0 ), 0, channel ) );
+        }
+        pair.run( 0.2 );
+        (void)serverRouter.poll( pair.getServer() );
+    };
+    sendMany( NetChannelKind::Unreliable );
+    SW_EXPECT_EQUAL( static_cast<int32>( kLimit ), up.getHandledCount() );
+    SW_EXPECT_EQUAL( uint64{ 2 }, serverRouter.getOverLimitCount().get() );
+    sendMany( NetChannelKind::Unreliable );
+    SW_EXPECT_EQUAL( static_cast<int32>( kLimit ) * 2, up.getHandledCount() ); // 다음 `poll` 은 처음부터
+    SW_EXPECT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
+
+    SW_EXPECT_LOG( "Net.RouterRequestLimit" );
+    sendMany( NetChannelKind::ReliableOrdered );
+    SW_EXPECT_EQUAL( static_cast<int32>( kLimit ) * 3, up.getHandledCount() );
+    pair.run( 0.3 );
+    SW_EXPECT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) != NetConnectionState::Connected );
+}
+
+/**
  * @brief [NetMessageRouterTest] 받는 쪽 역할의 반대 방향 종류는 처리기에 가지 않고 Malformed 로 세며, `poll` 은 보낸 연결을 끊는다
  * @details 클라이언트가 서버 → 클라이언트 종류(`ToClient`)를 서버에 보내면 서버 처리기가 그 본문을 믿고 읽던 틈이다(XMachinaServer 의 방향 표 자리).
  */
@@ -549,10 +618,10 @@ SW_TEST_CASE( NetMessageRouterTest, WrongDirectionMessageIsMalformedAndDisconnec
         SW_REQUIRE_TRUE( downSubscription.isActive() && upSubscription.isActive() );
         const uint8 arrDown[] = { NetMessageRouterTestInternal::kGameKind1, 0x01 };
         const uint8 arrUp[]   = { NetMessageRouterTestInternal::kGameKind2, 0x01 };
-        SW_EXPECT_TRUE( NetHandleResult::Malformed == router.dispatch( NetPeerRole::Server, NetMessageContext{}, arrDown, static_cast<int32>( sizeof( arrDown ) ) ) );
-        SW_EXPECT_TRUE( NetHandleResult::Malformed == router.dispatch( NetPeerRole::Client, NetMessageContext{}, arrUp, static_cast<int32>( sizeof( arrUp ) ) ) );
-        SW_EXPECT_TRUE( NetHandleResult::Handled == router.dispatch( NetPeerRole::Client, NetMessageContext{}, arrDown, static_cast<int32>( sizeof( arrDown ) ) ) );
-        SW_EXPECT_TRUE( NetHandleResult::Handled == router.dispatch( NetPeerRole::Server, NetMessageContext{}, arrUp, static_cast<int32>( sizeof( arrUp ) ) ) );
+        SW_EXPECT_TRUE( NetHandleResult::Malformed == router.dispatch( NetPeerRole::Server, NetMessageContext{ nullptr, 0, 1 }, arrDown, static_cast<int32>( sizeof( arrDown ) ) ) );
+        SW_EXPECT_TRUE( NetHandleResult::Malformed == router.dispatch( NetPeerRole::Client, NetMessageContext{ nullptr, 0, 1 }, arrUp, static_cast<int32>( sizeof( arrUp ) ) ) );
+        SW_EXPECT_TRUE( NetHandleResult::Handled == router.dispatch( NetPeerRole::Client, NetMessageContext{ nullptr, 0, 1 }, arrDown, static_cast<int32>( sizeof( arrDown ) ) ) );
+        SW_EXPECT_TRUE( NetHandleResult::Handled == router.dispatch( NetPeerRole::Server, NetMessageContext{ nullptr, 0, 1 }, arrUp, static_cast<int32>( sizeof( arrUp ) ) ) );
         SW_EXPECT_EQUAL( 1, down.getHandledCount() );
         SW_EXPECT_EQUAL( 1, up.getHandledCount() );
         SW_EXPECT_EQUAL( uint64{ 2 }, router.getMalformedCount().get() );
@@ -685,11 +754,11 @@ SW_TEST_CASE( NetMessageRouterTest, HandWrittenTableMessagesTakeTheirChannelFrom
 namespace
 {
     /** @brief 열쇠(첫 값)가 준비됐을 때만 처리하는 보류 처리기입니다. 처리한 (열쇠, 값)을 순서대로 적습니다. */
-    class HoldingHandler final : public NetTableHandler<HoldingHandler, NetMessageTable<NetMessageRange::kGame, NetHeldMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1000>>,
-                                                        NetHeldMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1000>>
+    class HoldingHandler final : public NetTableHandler<HoldingHandler, NetMessageTable<NetMessageRange::kGame, NetHeldMessageDef<NetLimitedMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1024>, 1000>>,
+                                                        NetHeldMessageDef<NetLimitedMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1024>, 1000>>
     {
     public:
-        using Message = NetHeldMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1000>;
+        using Message = NetHeldMessageDef<NetLimitedMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1024>, 1000>;
 
         struct Entry
         {
@@ -859,8 +928,8 @@ namespace
     /** @brief 월드 범위 표를 받는 처리기입니다 — 받은 값을 순서대로 적습니다. */
     struct WorldTestMessage
     {
-        using Order = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
-        using Pose  = NetMessageDef<1, NetMessageDirection::Both, NetChannelKind::Unreliable>;
+        using Order = NetLimitedMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1024>;
+        using Pose  = NetLimitedMessageDef<NetMessageDef<1, NetMessageDirection::Both, NetChannelKind::Unreliable>, 1024>;
         using Table = NetWorldMessageTable<NetMessageRange::kGame, Order, Pose>;
     };
 

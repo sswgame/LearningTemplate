@@ -185,7 +185,7 @@ namespace sw
         if ( bMessageNotHandled )
             return NetHandleResult::NotMine;
         const int32 headSize = isWorldScoped() ? 2 : 1; // 종류 · 월드 세대(직접 전달은 세대를 보지 않는다)
-        if ( size < headSize )
+        if ( size < headSize || connectionID < 0 )
             return NetHandleResult::Malformed;
         BitReader body( pData + headSize, size - headSize );
         return handleNetMessage( NetMessageContext{ pData, size, connectionID, channel, pData[0] }, body );
@@ -197,6 +197,10 @@ namespace sw
         , _arrKindHandler{}
         , _arrNotificationHandler{}
         , _arrKindDirection{}
+        , _arrKindMaxPerPoll{}
+        , _arrKindLimitIndex{}
+        , _listPollCount{}
+        , _limitedKindCount{ 0 }
         , _kindStats{}
         , _inbound{}
         , _malformedCount{}
@@ -235,6 +239,16 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "Net.RouterKindWithoutDirection", "NetMessageRouter: range 0x%02x kinds (mask 0x%04x) have no declared direction - the handler is refused (declare each message ToServer, ToClient or Both)",
                              static_cast<int32>( rangeBase ), static_cast<int32>( missingDirectionMask ) );
+            return Subscription{};
+        }
+        // 서버로 갈 수 있는 종류는 상한이 있어야 한다 — 없으면 한 클라이언트가 틱 하나에 시킬 수 있는 일이 무한이다(폴백 없음).
+        const uint16 toServerMask = static_cast<uint16>( kindMask & pHandler->getMessageDirectionMask()._toServerMask );
+        for ( int32 offset = 0; offset < NetMessageRange::kSize; ++offset )
+        {
+            if ( ( ( toServerMask >> offset ) & 1u ) == 0 || pHandler->getMaxPerPoll( static_cast<uint8>( rangeBase + offset ) ) != 0 )
+                continue;
+            SW_LOG_ERROR_ID( "Net.RouterKindWithoutLimit", "NetMessageRouter: message kind 0x%02x travels to the server without a request limit - the handler is refused (declare it with NetLimitedMessageDef)",
+                             static_cast<int32>( rangeBase ) + offset );
             return Subscription{};
         }
         // 한 영역은 표 하나다 — 영역을 나눠 맡는 처리기(락스텝 · 롤백)는 같은 표의 판을 낸다. 다르면 상대와 견줄 판이 둘이 된다.
@@ -799,7 +813,11 @@ namespace sw
             _arrKindHandler[kind]         = nullptr;
             _arrNotificationHandler[kind] = nullptr;
             _arrKindDirection[kind]       = 0;
+            _arrKindMaxPerPoll[kind]      = 0;
+            _arrKindLimitIndex[kind]      = 0;
         }
+        _limitedKindCount = 0;
+        _listPollCount.clear();
         for ( INetMessageHandler* pHandler : _listHandler )
         {
             const uint8                   rangeBase     = pHandler->getMessageRangeBase();
@@ -824,6 +842,11 @@ namespace sw
                 _arrKindHandler[kind]   = pHandler;
                 _arrKindDirection[kind] = static_cast<uint8>( ( ( ( directionMask._toServerMask >> offset ) & 1u ) != 0 ? kDirectionToServerBit : 0u ) |
                                                               ( ( ( directionMask._toClientMask >> offset ) & 1u ) != 0 ? kDirectionToClientBit : 0u ) );
+                const uint32 maxPerPoll = pHandler->getMaxPerPoll( static_cast<uint8>( kind ) );
+                if ( maxPerPoll == 0 )
+                    continue;
+                _arrKindMaxPerPoll[kind] = static_cast<uint16>( MathUtil::min( maxPerPoll, uint32{ 0xFFFF } ) );
+                _arrKindLimitIndex[kind] = static_cast<uint8>( _limitedKindCount++ );
             }
         }
     }
@@ -857,6 +880,31 @@ namespace sw
         _listRefusedConnection.push_back( connectionID );
     }
 
+    bool NetMessageRouter::countOverLimit( int32 connectionID, uint8 kind )
+    {
+        if ( _arrKindMaxPerPoll[kind] == 0 || connectionID < 0 )
+            return false;
+        const size_t index = static_cast<size_t>( connectionID ) * static_cast<size_t>( _limitedKindCount ) + _arrKindLimitIndex[kind];
+        if ( index >= _listPollCount.size() )
+            _listPollCount.resize( ( static_cast<size_t>( connectionID ) + 1 ) * static_cast<size_t>( _limitedKindCount ), uint16{ 0 } );
+        if ( _listPollCount[index] >= _arrKindMaxPerPoll[kind] )
+            return true;
+        ++_listPollCount[index];
+        return false;
+    }
+
+    void NetMessageRouter::refuseOverLimit( INetPeers& peers, int32 connectionID, uint8 kind, NetChannelKind channel )
+    {
+        _overLimitCount.add();
+        const bool bReliable = channel == NetChannelKind::ReliableOrdered || channel == NetChannelKind::ReliableUnordered;
+        if ( bReliable == false )
+            return; // 잃어도 되는 것이다 — 로그도 남기지 않는다(요청으로 로그를 채울 수 있다)
+        SW_LOG_WARNING_ID( "Net.RouterRequestLimit", "NetMessageRouter: connection %# sent more than %# reliable messages of kind 0x%02x in one poll - disconnecting it", connectionID,
+                           static_cast<int32>( _arrKindMaxPerPoll[kind] ), static_cast<int32>( kind ) );
+        peers.disconnect( connectionID, NetLinger::none() );
+        _listRefusedConnection.push_back( connectionID );
+    }
+
     NetHandleResult NetMessageRouter::dispatch( NetPeerRole role, const NetMessageContext& context, const uint8* pData, int32 size )
     {
         if ( pData == nullptr || size <= 0 )
@@ -870,7 +918,7 @@ namespace sw
             return NetHandleResult::Malformed; // 반대 방향 종류다 — 처리기는 자기 역할이 받는 종류만 본다
         }
         const int32 headSize = pHandler->isWorldScoped() ? 2 : 1; // 종류 · 월드 세대
-        if ( size < headSize )
+        if ( size < headSize || context._connectionID < 0 )
         {
             _malformedCount.add();
             return NetHandleResult::Malformed;
@@ -897,6 +945,7 @@ namespace sw
     {
         peers.pollInbound( _inbound );
         _listRefusedConnection.clear();
+        std::fill( _listPollCount.begin(), _listPollCount.end(), uint16{ 0 } );
         const NetPeerRole role = peers.isServer() ? NetPeerRole::Server : NetPeerRole::Client;
         announceEnteredPeers( peers );
         for ( const NetEndpointEvent& event : _inbound._listEvent )
@@ -984,6 +1033,12 @@ namespace sw
             if ( bWrongDirection )
             {
                 refuseWrongDirection( peers, message._connectionID, pData[0], role );
+                continue;
+            }
+            const bool bOverLimit = role == NetPeerRole::Server && message._size > 0 && countOverLimit( message._connectionID, pData[0] );
+            if ( bOverLimit )
+            {
+                refuseOverLimit( peers, message._connectionID, pData[0], message._channel );
                 continue;
             }
             // 처리기 없는 메시지를 부르는 쪽이 받아 가면(테스트 · 하니스) 보류하지 않는다.
