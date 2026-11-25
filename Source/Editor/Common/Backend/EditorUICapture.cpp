@@ -289,13 +289,7 @@ namespace sw::editor
 
         // 메인 UI 를 그린 백버퍼 패스를 먼저 닫는다. 열린 채로 다음 패스를 열면 Vulkan 은 대상 레이아웃 전이(배리어)를 그 서브패스 안에 기록한다(검증 오류).
         pStream->endRenderPass();
-        RHIRenderPassBeginInfo capturePass{};
-        capturePass._bBindColor        = SW_TRUE;
-        capturePass._colorTargetCount  = 1;
-        capturePass._arrColorTarget[0] = _texture._texture;
-        capturePass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
-        capturePass._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
-        pStream->beginRenderPass( capturePass );
+        pStream->beginRenderPass( RHIRenderPassBeginInfo::color( _texture._texture, RHIRenderPassLoadOp::Clear, float4{ 0.0f, 0.0f, 0.0f, 1.0f } ) );
         renderer.render( device, drawData, job._listExcludedTexture ); // 개발 겹치기 텍스처(게임 뷰 위 디버그 HUD)는 다시 그리지 않는다
         // 연 패스는 이 함수 안에서 닫는다. OpenGL 은 패스를 닫아야 기본 프레임버퍼가 다시 묶이는데, 닫지 않으면 이 뒤에 패스 없이 직접 그리는 코드(렌더 스레드가 그리는 플로팅 뷰포트 창)가
         // 캡처 텍스처에 그려 플로팅 창이 캡처에 두 번 나오고 제 창에는 그려지지 않는다. 읽기 전이는 패스 밖의 일이라 닫은 뒤에 낸다(열린 채로 내면 RHI.RenderPassInterrupted).

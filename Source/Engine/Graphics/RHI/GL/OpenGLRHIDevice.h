@@ -123,7 +123,7 @@ namespace sw
         void                         destroySwapChainInternal( IRHISwapChain& swapChain ) override;
         [[nodiscard]] bool           acquireSwapChainImageInternal( IRHISwapChain& swapChain ) override { return useSwapChain( &swapChain ) != nullptr; }
         /**
-         * @brief 렌더 패스가 고른 창(`RHIRenderPassBeginInfo::_pSwapChain`)에 컨텍스트를 겁니다. nullptr 은 메인 창입니다. 걸지 못하면 nullptr 입니다.
+         * @brief 렌더 패스가 고른 창(`RHIRenderPassInfo::_pSwapChain`)에 컨텍스트를 겁니다. nullptr 은 메인 창입니다. 걸지 못하면 nullptr 입니다.
          * @details 다른 창은 `endFrame` 의 표시 목록에 오른다. 프레임 끝에는 메인 창으로 돌아간다(다음 프레임 · 다른 스레드의 바인딩이 메인 창을 본다).
          */
         OpenGLRHISwapChain* useSwapChain( IRHISwapChain* pSwapChain );

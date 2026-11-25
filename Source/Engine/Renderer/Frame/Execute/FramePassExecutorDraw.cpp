@@ -86,31 +86,25 @@ namespace sw
         if ( bInvalidPassTargets )
             return false;
 
-        RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor                           = SW_TRUE;
-        const TransientAttachmentPool::Attachment depth = depthName.empty() ? TransientAttachmentPool::Attachment{} : findTransientAttachment( depthName );
-        beginInfo._depthLoadOp                          = depthLoad;
-        beginInfo._depthStoreOp                         = depth._ops._storeOp;
-        beginInfo._clearDepth                           = depth._ops._clearDepth;
-        beginInfo._clearStencil                         = depth._ops._clearStencil;
-        beginInfo._depthTarget                          = depth._texture;
-        beginInfo._width                                = activePool().getWidth();
-        beginInfo._height                               = activePool().getHeight();
-        beginInfo._colorTargetCount                     = colorCount > kMaxColorAttachments ? kMaxColorAttachments : colorCount;
-        bool                  bViewSized                = false;
-        RenderResolutionSpace targetSpace               = RenderResolutionSpace::Render;
-        for ( uint32 colorTargetIndex = 0; colorTargetIndex < beginInfo._colorTargetCount; ++colorTargetIndex )
+        const TransientAttachmentPool::Attachment depth       = depthName.empty() ? TransientAttachmentPool::Attachment{} : findTransientAttachment( depthName );
+        const uint32                              targetCount = colorCount > kMaxColorAttachments ? kMaxColorAttachments : colorCount;
+        RHIRenderPassColorTarget                  arrColor[kMaxColorAttachments]{};
+        uint32                                    width       = activePool().getWidth();
+        uint32                                    height      = activePool().getHeight();
+        bool                                      bViewSized  = false;
+        RenderResolutionSpace                     targetSpace = RenderResolutionSpace::Render;
+        for ( uint32 colorTargetIndex = 0; colorTargetIndex < targetCount; ++colorTargetIndex )
         {
             const TransientAttachmentPool::Attachment target = findTransientAttachment( pColorNames[colorTargetIndex] );
-            beginInfo._arrColorTarget[colorTargetIndex]      = target._texture;
+            arrColor[colorTargetIndex]._texture              = target._texture;
             // 렌더 패스(뷰포트, 시저)는 타깃의 크기를 따른다. 나눗수가 있는 첨부는 프레임보다 작다. 한 패스의 타깃은 크기가 같다(검증).
             if ( colorTargetIndex == 0 && target._texture != 0 )
             {
-                beginInfo._width  = target._width;
-                beginInfo._height = target._height;
+                width  = target._width;
+                height = target._height;
             }
             // 핸들 0 은 무효다(RHI 가 패스를 열지 않는다). 어느 첨부가 없는지 여기서 이름으로 알리고 패스를 건너뛴다(패스 경로라 한 번만).
-            if ( beginInfo._arrColorTarget[colorTargetIndex] == 0 )
+            if ( target._texture == 0 )
             {
                 if ( _bMissingColorTargetLogged.exchange( 1, std::memory_order_relaxed ) == 0 )
                     SW_LOG_ERROR_ID( "FramePassExecutor.ColorTargetDoesNot", "Color target '%#' does not exist this frame - skipping the pass (a missing attachment has handle 0, which is invalid). "
@@ -123,13 +117,15 @@ namespace sw
                 bViewSized  = target._bViewSized != 0;
                 targetSpace = target._space;
             }
-            beginInfo._arrLoadOp[colorTargetIndex]  = pColorLoad != nullptr ? pColorLoad[colorTargetIndex] : RHIRenderPassLoadOp::Clear;
-            beginInfo._arrStoreOp[colorTargetIndex] = target._ops._storeOp;
+            arrColor[colorTargetIndex]._loadOp  = pColorLoad != nullptr ? pColorLoad[colorTargetIndex] : RHIRenderPassLoadOp::Clear;
+            arrColor[colorTargetIndex]._storeOp = target._ops._storeOp;
             if ( pTargetClearColor != nullptr )
-                beginInfo._arrClearColor[colorTargetIndex] = pTargetClearColor[colorTargetIndex];
+                arrColor[colorTargetIndex]._clearColor = pTargetClearColor[colorTargetIndex];
         }
-        context.beginRenderPass( beginInfo );
-        applyViewRectViewport( context, beginInfo._width, beginInfo._height, bViewSized, targetSpace );
+        context.beginRenderPass( RHIRenderPassBeginInfo::colors( arrColor, targetCount )
+                                     .setDepth( depth._texture, depthLoad, depth._ops._storeOp, depth._ops._clearDepth, depth._ops._clearStencil )
+                                     .setExtent( width, height ) );
+        applyViewRectViewport( context, width, height, bViewSized, targetSpace );
         applyPassResolutionSpace( context, targetSpace );
         return true;
     }
@@ -165,19 +161,12 @@ namespace sw
     {
         if ( context._pCmd == nullptr )
             return;
-        RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor                           = SW_FALSE;
-        const TransientAttachmentPool::Attachment depth = findTransientAttachment( depthName );
-        beginInfo._colorTargetCount                     = 0;
-        beginInfo._depthTarget                          = depth._texture;
-        beginInfo._depthLoadOp                          = depthLoad;
-        beginInfo._depthStoreOp                         = depth._ops._storeOp;
-        beginInfo._clearDepth                           = depth._ops._clearDepth;
-        beginInfo._clearStencil                         = depth._ops._clearStencil;
-        beginInfo._width                                = depth._texture != 0 ? depth._width : activePool().getWidth();
-        beginInfo._height                               = depth._texture != 0 ? depth._height : activePool().getHeight();
-        context.beginRenderPass( beginInfo );
-        applyViewRectViewport( context, beginInfo._width, beginInfo._height, depth._texture == 0 || depth._bViewSized != 0, depth._space );
+        const TransientAttachmentPool::Attachment depth  = findTransientAttachment( depthName );
+        const uint32                              width  = depth._texture != 0 ? depth._width : activePool().getWidth();
+        const uint32                              height = depth._texture != 0 ? depth._height : activePool().getHeight();
+        context.beginRenderPass(
+            RHIRenderPassBeginInfo::depthOnly( depth._texture, depthLoad, depth._ops._storeOp, depth._ops._clearDepth, depth._ops._clearStencil ).setExtent( width, height ) );
+        applyViewRectViewport( context, width, height, depth._texture == 0 || depth._bViewSized != 0, depth._space );
         applyPassResolutionSpace( context, depth._space );
     }
 
@@ -205,17 +194,8 @@ namespace sw
         if ( cache.needsRebuild() )
         {
             // 캐시 층을 지우고 캐시하는 타일마다 정적 배치만 그린다(그림자 컬링 칸 — 모든 그림자 볼륨을 덮는다). 타일은 모든 뷰가 같아 프레임에 한 번이다.
-            RHIRenderPassBeginInfo beginInfo{};
-            beginInfo._bBindColor       = SW_FALSE;
-            beginInfo._colorTargetCount = 0;
-            beginInfo._depthTarget      = layer._texture;
-            beginInfo._depthLoadOp      = RHIRenderPassLoadOp::Clear;
-            beginInfo._depthStoreOp     = RHIRenderPassStoreOp::Store;
-            beginInfo._clearDepth       = layer._ops._clearDepth;
-            beginInfo._clearStencil     = layer._ops._clearStencil;
-            beginInfo._width            = layer._width;
-            beginInfo._height           = layer._height;
-            context.beginRenderPass( beginInfo );
+            context.beginRenderPass( RHIRenderPassBeginInfo::depthOnly( layer._texture, RHIRenderPassLoadOp::Clear, RHIRenderPassStoreOp::Store, layer._ops._clearDepth, layer._ops._clearStencil )
+                                         .setExtent( layer._width, layer._height ) );
             const PassConstantNames&     names           = passConstantNames();
             const RHIPipelineStateHandle pso             = _psoManager.getEnginePSO( RenderPassKind::Shadow );
             const uint32                 viewCull        = context._cullViewIndex;
@@ -483,16 +463,7 @@ namespace sw
 
         const RHITextureSlot& depth = rain.getDepth();
         _pCmd->prepareTextureForRenderTarget( depth._texture );
-        RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor       = SW_FALSE;
-        beginInfo._colorTargetCount = 0;
-        beginInfo._depthTarget      = depth._texture;
-        beginInfo._depthLoadOp      = RHIRenderPassLoadOp::Clear;
-        beginInfo._depthStoreOp     = RHIRenderPassStoreOp::Store;
-        beginInfo._clearDepth       = 1.0f;
-        beginInfo._width            = depth._width;
-        beginInfo._height           = depth._height;
-        _pCmd->beginRenderPass( beginInfo );
+        _pCmd->beginRenderPass( RHIRenderPassBeginInfo::depthOnly( depth._texture, RHIRenderPassLoadOp::Clear ).setExtent( depth._width, depth._height ) );
         drawSceneMeshes( context, pso, false );
         _pCmd->endRenderPass();
         _pCmd->prepareTextureForShaderRead( depth._texture );
@@ -1061,16 +1032,8 @@ namespace sw
         }
         _pCmd->prepareTextureForRenderTarget( pAtlas->getHandle() );
 
-        RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor        = SW_TRUE;
-        beginInfo._colorTargetCount  = 1;
-        beginInfo._arrColorTarget[0] = pAtlas->getHandle();
-        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load; // 다른 칸은 지난 프레임에 그린 그대로다
-        beginInfo._depthTarget       = 0;
-        beginInfo._depthLoadOp       = RHIRenderPassLoadOp::DontCare;
-        beginInfo._width             = shaderslot::kLight2DCookieAtlasSize;
-        beginInfo._height            = shaderslot::kLight2DCookieAtlasSize;
-        _pCmd->beginRenderPass( beginInfo );
+        // 다른 칸은 지난 프레임에 그린 그대로다
+        _pCmd->beginRenderPass( RHIRenderPassBeginInfo::color( pAtlas->getHandle(), RHIRenderPassLoadOp::Load ).setExtent( shaderslot::kLight2DCookieAtlasSize, shaderslot::kLight2DCookieAtlasSize ) );
 
         // 칸마다 뷰포트를 그 칸으로 잡고 쿠키를 원본(SourceColor)으로 걸어 블릿한다. 원본이 칸마다 달라 상수 슬롯도 칸마다 새로 잡는다(그림자 타일과 같은 이유).
         FramePassContext context = _state._frameContext;
@@ -1176,23 +1139,12 @@ namespace sw
                 _pCmd->prepareTextureForRenderTarget( arrTarget[targetSet][0]->getHandle() );
                 _pCmd->prepareTextureForRenderTarget( arrTarget[targetSet][1]->getHandle() );
 
-                RHIRenderPassBeginInfo beginInfo{};
-                beginInfo._bBindColor        = SW_TRUE;
-                beginInfo._colorTargetCount  = 2;
-                beginInfo._arrColorTarget[0] = arrTarget[targetSet][0]->getHandle();
-                beginInfo._arrColorTarget[1] = arrTarget[targetSet][1]->getHandle();
-                beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::DontCare; // 전체 화면이 모든 픽셀을 덮는다
-                beginInfo._arrLoadOp[1]      = RHIRenderPassLoadOp::DontCare;
-                beginInfo._depthTarget       = 0;
-                beginInfo._depthLoadOp       = RHIRenderPassLoadOp::DontCare;
-                beginInfo._width             = width;
-                beginInfo._height            = height;
-                _pCmd->beginRenderPass( beginInfo );
-                RHIViewport viewport{};
-                viewport._width  = static_cast<float32>( width );
-                viewport._height = static_cast<float32>( height );
-                _pCmd->setViewport( viewport );
-                _pCmd->setScissorRect( RHIScissorRect{ 0, 0, width, height } );
+                // 전체 화면이 모든 픽셀을 덮는다. 뷰포트 · 가위는 패스가 연 크기 그대로다.
+                const RHIRenderPassColorTarget arrColor[2] = {
+                    RHIRenderPassColorTarget{arrTarget[targetSet][0]->getHandle(), RHIRenderPassLoadOp::DontCare},
+                    RHIRenderPassColorTarget{arrTarget[targetSet][1]->getHandle(), RHIRenderPassLoadOp::DontCare},
+                };
+                _pCmd->beginRenderPass( RHIRenderPassBeginInfo::colors( arrColor, 2 ).setExtent( width, height ) );
                 _pCmd->setPipelineState( pso );
                 // setPipelineState 가 슬롯 상태를 비운다 — 텍스처는 PSO 뒤에 건다.
                 TextureLayerBakeConstants constants{};

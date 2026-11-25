@@ -562,7 +562,7 @@ namespace sw
                                                             UINT destinationY );
 
         /**
-         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassBeginInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
+         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
          * @details 다른 창은 이 프레임에 처음 쓰일 때 백버퍼를 잡고(FLIP_DISCARD 라 매 프레임 다시 잡는다) `endFrame` 의 표시 목록에 오른다.
          */
         D3D11RHISwapChain& useSwapChain( IRHISwapChain* pSwapChain );

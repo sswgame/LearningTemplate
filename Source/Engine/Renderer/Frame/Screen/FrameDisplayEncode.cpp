@@ -111,43 +111,20 @@ namespace sw
         const float32 uiScale         = MathUtil::pow( MathUtil::min( paperWhiteRatio, 1.0f ), FrameDisplayEncodeInternal::kInverseSignalGamma );
 
         cmd.prepareTextureForShaderRead( _uiTarget._texture );
-        RHIRenderPassBeginInfo composeInfo{};
-        composeInfo._bBindColor        = SW_TRUE;
-        composeInfo._colorTargetCount  = 1;
-        composeInfo._arrColorTarget[0] = _sceneTarget._texture;
-        composeInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
-        composeInfo._width             = getWidth();
-        composeInfo._height            = getHeight();
-        cmd.beginRenderPass( composeInfo );
+        cmd.beginRenderPass( RHIRenderPassBeginInfo::color( _sceneTarget._texture, RHIRenderPassLoadOp::Load ).setExtent( getWidth(), getHeight() ) );
         drawFullscreen( cmd, composePSO, _uiTarget._srv, uiScale );
         cmd.endRenderPass();
 
         // 2) 인코딩 — 장면 출력 RT 를 nits 로 풀어 백버퍼 값(HDR10 PQ · scRGB 선형)으로 쓴다.
         cmd.prepareTextureForShaderRead( _sceneTarget._texture );
-        RHIRenderPassBeginInfo encodeInfo{};
-        encodeInfo._bBindColor        = SW_TRUE;
-        encodeInfo._colorTargetCount  = 1;
-        encodeInfo._arrColorTarget[0] = kRHIBackBufferTexture;      // 스왑체인 이미지
-        encodeInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear; // 이 프레임에 아무도 쓰지 않은 스왑체인 이미지(Vulkan 레이아웃 UNDEFINED)는 Load 로 열 수 없다
-        encodeInfo._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
-        encodeInfo._width             = getWidth();
-        encodeInfo._height            = getHeight();
-        cmd.beginRenderPass( encodeInfo );
+        // 이 프레임에 아무도 쓰지 않은 스왑체인 이미지(Vulkan 레이아웃 UNDEFINED)는 Load 로 열 수 없다
+        cmd.beginRenderPass( RHIRenderPassBeginInfo::backBuffer( nullptr, RHIRenderPassLoadOp::Clear, float4{ 0.0f, 0.0f, 0.0f, 1.0f } ).setExtent( getWidth(), getHeight() ) );
         drawFullscreen( cmd, encodePSO, _sceneTarget._srv, _output._maxLuminanceNits );
         cmd.endRenderPass();
         cmd.prepareTextureForRenderTarget( _sceneTarget._texture );
         // 3) UI RT 를 비운다 — 다음 프레임의 화면 쓰기(Canvas · 렌더 스레드 UI)는 Load 로 열고, 아무도 쓰지 않은 프레임은 투명한 UI 를 합성한다.
         cmd.prepareTextureForRenderTarget( _uiTarget._texture );
-        RHIRenderPassBeginInfo clearInfo{};
-        clearInfo._bBindColor        = SW_TRUE;
-        clearInfo._colorTargetCount  = 1;
-        clearInfo._arrColorTarget[0] = _uiTarget._texture;
-        clearInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
-        clearInfo._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearInfo._width             = getWidth();
-        clearInfo._height            = getHeight();
-        cmd.beginRenderPass( clearInfo );
-        cmd.endRenderPass();
+        cmd.clearRenderTargets( RHIRenderPassBeginInfo::color( _uiTarget._texture, RHIRenderPassLoadOp::Clear, float4{ 0.0f, 0.0f, 0.0f, 0.0f } ).setExtent( getWidth(), getHeight() ) );
     }
 
     void FrameDisplayEncode::drawFullscreen( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHITextureSRVIndex srv, float32 scale ) const

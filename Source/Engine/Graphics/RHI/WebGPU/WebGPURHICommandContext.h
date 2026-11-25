@@ -67,7 +67,7 @@ namespace sw
 
     protected:
         IRHIDevice&              getContextDevice() const override;
-        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo, RHIRenderPassExtent& outTargetExtent ) override;
+        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassInfo& beginInfo, RHIRenderPassExtent& outTargetExtent ) override;
         void                     setViewportNative( const RHIViewport& viewport ) override;
         void                     setScissorRectNative( const RHIScissorRect& rect ) override;
         void                     endRenderPassNative() override;

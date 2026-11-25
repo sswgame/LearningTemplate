@@ -15,9 +15,7 @@ namespace
     /** @brief 백버퍼 컬러 타깃 하나의 패스입니다. */
     RHIRenderPassBeginInfo makeBackBufferPass()
     {
-        RHIRenderPassBeginInfo beginInfo{};
-        beginInfo.setColorTarget( kRHIBackBufferTexture );
-        return beginInfo;
+        return RHIRenderPassBeginInfo::backBuffer( nullptr, RHIRenderPassLoadOp::Clear );
     }
 
     /** @brief 마지막으로 낸 뒤 바뀐 칸들입니다(칸 번호, 번호 — 뗀 칸은 무효). */
@@ -70,10 +68,7 @@ SW_TEST_CASE( RHIRecordingBindingsTest, PassExtentStaysInsideTheTarget )
     test::FakeRHIDevice         device;
     test::FakeRHICommandContext context{ device };
 
-    RHIRenderPassBeginInfo beginInfo = makeBackBufferPass();
-    beginInfo._width                 = 40;
-    beginInfo._height                = 400;
-    context.beginRenderPass( beginInfo );
+    context.beginRenderPass( makeBackBufferPass().setExtent( 40, 400 ) );
     SW_EXPECT_EQUAL( 40.0f, context._viewport._width );
     SW_EXPECT_EQUAL( 32.0f, context._viewport._height );
 }

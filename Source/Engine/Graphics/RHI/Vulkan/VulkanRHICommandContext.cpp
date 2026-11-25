@@ -278,7 +278,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 첨부 전이 · 렌더링 정보 채우기 · 시작 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
-    RHIRenderPassBeginResult VulkanRHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo, RHIRenderPassExtent& outTargetExtent )
+    RHIRenderPassBeginResult VulkanRHICommandContext::beginRenderPassNative( const RHIRenderPassInfo& beginInfo, RHIRenderPassExtent& outTargetExtent )
     {
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )

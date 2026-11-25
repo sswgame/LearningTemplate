@@ -6,7 +6,7 @@
  *          RHI 밖에서 제 스왑체인을 따로 짓게 되고, 동기화 결함이 그 사본에 숨는다(ImGui Vulkan 뷰포트의 세마포어 재사용).
  *
  *          수명은 디바이스가 쥔다 — `IRHIDevice::createSwapChain` 이 만들고 `destroySwapChain` 이 부순다. 그리기는 렌더 패스가 고른다:
- *          `RHIRenderPassBeginInfo::_pSwapChain` 의 백버퍼(컬러 타깃 `kRHIBackBufferTexture`)에 그리면 그 프레임의 `endFrame` 이 함께 표시한다.
+ *          `RHIRenderPassInfo::_pSwapChain` 의 백버퍼(컬러 타깃 `kRHIBackBufferTexture`)에 그리면 그 프레임의 `endFrame` 이 함께 표시한다.
  *          획득 · 표시 · 재생성은 백엔드의 구체 클래스(`<백엔드>RHISwapChain`)가 하고, 이 인터페이스는 바깥이 알아야 할 크기만 보인다.
  */
 #pragma once

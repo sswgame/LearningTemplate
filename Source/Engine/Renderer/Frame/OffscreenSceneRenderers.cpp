@@ -36,13 +36,7 @@ namespace sw
 
         // 타깃의 열기 · 읽기 전환은 게임 뷰(`RenderThread::executeFrameBody`)와 같은 규칙이다. 그리지 못해도 타깃은 지운 색 · 읽기 상태로 남는다.
         const RHITextureHandle outputTarget = packet._outputRenderTarget;
-        RHIRenderPassBeginInfo outputPass{};
-        outputPass._bBindColor        = SW_TRUE;
-        outputPass._colorTargetCount  = 1;
-        outputPass._arrColorTarget[0] = outputTarget;
-        outputPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
-        outputPass._arrClearColor[0]  = clearColor;
-        pFrameStream->clearRenderTargets( outputPass );
+        pFrameStream->clearRenderTargets( RHIRenderPassBeginInfo::color( outputTarget, RHIRenderPassLoadOp::Clear, clearColor ) );
         FrameRenderer* const pRenderer = getOrCreate( mainRenderer, pDevice, packet._sceneKey, pPipeline );
         const bool           bDrew     = pRenderer != nullptr && pRenderer->executePacket( pDevice, packet ); // 보기 모드는 패킷의 뷰 설정이 정한다
         pFrameStream->prepareTextureForShaderRead( outputTarget );

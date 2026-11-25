@@ -812,7 +812,7 @@ namespace sw
         void submitPendingIfImmediate();
 
         /**
-         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassBeginInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
+         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
          * @details 다른 창은 이 프레임에 처음 쓰일 때 DXGI 가 정한 현재 백버퍼를 읽고 `endFrame` 의 표시 목록에 오른다.
          */
         D3D12RHISwapChain& useSwapChain( IRHISwapChain* pSwapChain );

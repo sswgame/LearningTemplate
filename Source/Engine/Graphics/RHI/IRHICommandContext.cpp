@@ -163,7 +163,7 @@ namespace sw
         setScissorRectNative( RHIScissorRect{ x, y, MathUtil::min( rect._width, _passExtent._width - x ), MathUtil::min( rect._height, _passExtent._height - y ) } );
     }
 
-    RHIRenderPassExtent IRHICommandContext::computePassExtent( const RHIRenderPassBeginInfo& beginInfo, const RHIRenderPassExtent& targetExtent )
+    RHIRenderPassExtent IRHICommandContext::computePassExtent( const RHIRenderPassInfo& beginInfo, const RHIRenderPassExtent& targetExtent )
     {
         return RHIRenderPassExtent{ beginInfo._width > 0 ? MathUtil::min( beginInfo._width, targetExtent._width ) : targetExtent._width,
                                     beginInfo._height > 0 ? MathUtil::min( beginInfo._height, targetExtent._height ) : targetExtent._height };
@@ -172,7 +172,7 @@ namespace sw
     namespace
     {
         /** @brief 이 패스가 거는 컬러 타깃 중 핸들 0 이 있으면 true 입니다. 컬러 수 0 에 컬러를 걸면 0 번 하나를 건다(백엔드 다섯이 같은 규칙). */
-        bool hasNullColorTarget( const RHIRenderPassBeginInfo& beginInfo )
+        bool hasNullColorTarget( const RHIRenderPassInfo& beginInfo )
         {
             if ( beginInfo._bBindColor == SW_FALSE )
                 return false;
@@ -186,8 +186,9 @@ namespace sw
         }
     } // namespace
 
-    void IRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
+    void IRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& passInfo )
     {
+        const RHIRenderPassInfo& beginInfo = passInfo.getInfo();
         endRenderPassBefore( "beginRenderPass" ); // 패스는 겹치지 않는다 — 닫지 않고 새로 열면 알린다
         // 컬러 타깃 0 은 무효다(백버퍼는 `kRHIBackBufferTexture`) — 열지 않고 알린다. 이 패스의 드로우는 `isDrawAllowed` 가 알리고 버린다.
         if ( hasNullColorTarget( beginInfo ) )

@@ -1269,16 +1269,8 @@ namespace sw
             // 후처리 체인이 톤맵까지 하면 자동 노출을 이 그리기 앞에서 측정한다(Tonemap 패스와 같은 자리).
             _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
             // FSR 1 로 키우는 뷰는 렌더 패스를 열기 전에 EASU 를 중간 RT 에 그리고, 아래에서 블릿 대신 RCAS 로 그린다(prepareUpscale 이 셋업에서 정했다).
-            const bool             bUpscale = _upscale.recordUpscaleEasu( context, *_pActiveView, srcName );
-            RHIRenderPassBeginInfo beginInfo{};
-            beginInfo._bBindColor        = SW_TRUE;
-            beginInfo._arrColorTarget[0] = dstTarget;
-            beginInfo._colorTargetCount  = 1;
-            beginInfo._arrLoadOp[0]      = outputLoad;
-            beginInfo._arrClearColor[0]  = outputClear;
-            beginInfo._width             = outputWidth;
-            beginInfo._height            = outputHeight;
-            context.beginRenderPass( beginInfo );
+            const bool bUpscale = _upscale.recordUpscaleEasu( context, *_pActiveView, srcName );
+            context.beginRenderPass( RHIRenderPassBeginInfo::color( dstTarget, outputLoad, outputClear ).setExtent( outputWidth, outputHeight ) );
             // 사각형이면 뷰포트로 그 안에만 그린다. 전체 화면 삼각형이 사각형을 채우고 원본 전체를 그 안에 늘인다.
             // 정수 업스케일이면 원본 크기 × 배율을 사각형 가운데에 놓는다 — 셰이더가 점 샘플(SW_PASS_FLAG_POINT_UPSCALE)이라 원본 픽셀이 배율 × 배율 칸이다.
             if ( bFullRect == false )
@@ -1334,14 +1326,7 @@ namespace sw
         if ( bDraw )
         {
             const RHIPipelineStateHandle psoCanvas = _psoManager.findOutputPSO( RenderPassKind::Canvas, target._format ); // 셋업에 없으면 멈춘다(다른 포맷의 PSO 로 대신하지 않는다)
-            RHIRenderPassBeginInfo       beginInfo{};
-            beginInfo._bBindColor        = SW_TRUE;
-            beginInfo._arrColorTarget[0] = target._texture;
-            beginInfo._colorTargetCount  = 1;
-            beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
-            beginInfo._width             = target._width;
-            beginInfo._height            = target._height;
-            context.beginRenderPass( beginInfo );
+            context.beginRenderPass( RHIRenderPassBeginInfo::color( target._texture, RHIRenderPassLoadOp::Load ).setExtent( target._width, target._height ) );
             (void)_state._canvasRenderer.drawList( *context._pCmd, _state._canvasFrame.getMainOutput(), _state._canvasRenderer.getMainQuadBase(), psoCanvas, target._width, target._height,
                                                    _pDevice->supportsNativeBindlessSampling(), _state._canvasFrame._colorVisionMode );
             context._pCmd->endRenderPass();
@@ -1370,14 +1355,8 @@ namespace sw
         // 화면 대상(스왑체인 · 회전 대기 텍스처 · HDR UI RT)은 모두 UI 대상 포맷이다 — 셋업이 그 포맷의 캔버스 PSO 를 만든다.
         const RHIFormat              format = _pDevice->getUITargetFormat();
         const RHIPipelineStateHandle pso    = _psoManager.findOutputPSO( RenderPassKind::Canvas, format ); // 셋업에 없으면 멈춘다
-        RHIRenderPassBeginInfo       beginInfo{};
-        beginInfo._bBindColor        = SW_TRUE;
-        beginInfo._arrColorTarget[0] = screen; // 화면 — 캡처를 옮긴 뒤이거나 처음부터 화면에 그린 프레임이다
-        beginInfo._colorTargetCount  = 1;
-        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
-        beginInfo._width             = target._width;
-        beginInfo._height            = target._height;
-        context.beginRenderPass( beginInfo );
+        // 화면 — 캡처를 옮긴 뒤이거나 처음부터 화면에 그린 프레임이다
+        context.beginRenderPass( RHIRenderPassBeginInfo::color( screen, RHIRenderPassLoadOp::Load ).setExtent( target._width, target._height ) );
         (void)_state._canvasRenderer.drawList( *context._pCmd, list, _state._canvasRenderer.getDevOverlayQuadBase(), pso, target._width, target._height,
                                                _pDevice->supportsNativeBindlessSampling() );
         context._pCmd->endRenderPass();

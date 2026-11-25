@@ -157,7 +157,7 @@ namespace sw
     // 렌더 패스
     // ------------------------------------------------------------------------------
     // 길이 유지(긴 함수 정리 기준): 컬러 첨부 · 깊이 첨부 · 패스 시작 · 기본 뷰포트의 순서가 곧 의미라 나누지 않는다.
-    RHIRenderPassBeginResult WebGPURHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo, RHIRenderPassExtent& outTargetExtent )
+    RHIRenderPassBeginResult WebGPURHICommandContext::beginRenderPassNative( const RHIRenderPassInfo& beginInfo, RHIRenderPassExtent& outTargetExtent )
     {
         endComputePass();
         const WGPUCommandEncoder encoder = getEncoder();

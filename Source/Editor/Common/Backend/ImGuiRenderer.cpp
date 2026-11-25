@@ -439,14 +439,7 @@ namespace sw::editor
                 continue;
             // 열린 패스(메인 백버퍼)를 닫고 이 창의 백버퍼로 연다 — 열린 채로 다른 패스를 열면 Vulkan 이 레이아웃 전이를 서브패스 안에 기록한다.
             pCmd->endRenderPass();
-            RHIRenderPassBeginInfo pass{};
-            pass._pSwapChain        = pSwapChain;
-            pass._bBindColor        = SW_TRUE;
-            pass._colorTargetCount  = 1;
-            pass._arrColorTarget[0] = kRHIBackBufferTexture; // 이 창(`_pSwapChain`)의 백버퍼
-            pass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
-            pass._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
-            pCmd->beginRenderPass( pass );
+            pCmd->beginRenderPass( RHIRenderPassBeginInfo::backBuffer( pSwapChain, RHIRenderPassLoadOp::Clear, float4{ 0.0f, 0.0f, 0.0f, 1.0f } ) ); // 이 창의 백버퍼
             render( device, *snapshot.getPlatformWindowDrawData( index ) );
             pCmd->endRenderPass();
             _platformWindowFrames.fetch_add( 1, std::memory_order_relaxed );

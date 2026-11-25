@@ -266,15 +266,7 @@ namespace sw
         // 1 px 그리기 판 — 이번 칸을 렌더 타깃으로 옮긴다(선언은 UAV — 컴퓨트 판이 기본이다).
         graphPass.transition( ViewGraphResource::autoExposureTarget(), RenderGraphAccess::RenderTarget );
 
-        RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor        = SW_TRUE;
-        beginInfo._colorTargetCount  = 1;
-        beginInfo._arrColorTarget[0] = target;
-        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::DontCare;
-        beginInfo._depthTarget       = 0;
-        beginInfo._width             = 1;
-        beginInfo._height            = 1;
-        context.beginRenderPass( beginInfo );
+        context.beginRenderPass( RHIRenderPassBeginInfo::color( target, RHIRenderPassLoadOp::DontCare ).setExtent( 1, 1 ) );
         context.setPipeline( _psoManager.getEnginePSO( RenderPassKind::AutoExposure ) );
         // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(auto_exposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         if ( bNativeBindless == false )

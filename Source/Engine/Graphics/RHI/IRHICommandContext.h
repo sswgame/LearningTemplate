@@ -115,9 +115,9 @@ namespace sw
          * @brief 네이티브 패스를 엽니다. 열린 패스는 기반이 이미 닫았고 뷰포트 · 가위는 기반이 이어서 건다. 상태 전이는 여기서 패스를 열기 전에 끝낸다.
          * @param outTargetExtent 첫 첨부(그 밉)의 크기입니다. 패스 크기는 이것과 @p beginInfo 의 크기 중 작은 쪽이다(`computePassExtent`).
          */
-        virtual RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo, RHIRenderPassExtent& outTargetExtent ) = 0;
+        virtual RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassInfo& beginInfo, RHIRenderPassExtent& outTargetExtent ) = 0;
         /** @brief 요청한 크기(0 이면 타깃 크기)를 타깃 안으로 자른 패스 크기입니다. 네이티브 패스의 렌더 영역과 기본 뷰포트가 같은 값을 씁니다. */
-        static RHIRenderPassExtent computePassExtent( const RHIRenderPassBeginInfo& beginInfo, const RHIRenderPassExtent& targetExtent );
+        static RHIRenderPassExtent computePassExtent( const RHIRenderPassInfo& beginInfo, const RHIRenderPassExtent& targetExtent );
         /** @brief 열린 패스의 뷰포트를 겁니다. 가위는 건드리지 않는다 — 기반이 이어서 건다. */
         virtual void setViewportNative( const RHIViewport& viewport ) = 0;
         /** @brief 열린 패스의 가위를 겁니다. 패스 크기 안으로 이미 잘랐습니다. */

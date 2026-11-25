@@ -625,7 +625,7 @@ namespace sw
         /** @brief 표면이 돌아왔다 — 새 네이티브 창으로 표면을 다시 짓고 다음 프레임에 스왑체인을 다시 만듭니다. */
         [[nodiscard]] bool restoreSurfaceInternal() override;
         /**
-         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassBeginInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
+         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
          * @details 다른 창은 이 프레임에 처음 쓰일 때 이미지를 획득하고(낡았으면 그 자리에서 다시 만든다) 그 신호를 이 프레임의 첫 제출이 기다리게 하며,
          *          `endFrame` 의 신호 · 표시 목록에 오른다. 이번 프레임에 그릴 수 없으면 nullptr 입니다.
          */

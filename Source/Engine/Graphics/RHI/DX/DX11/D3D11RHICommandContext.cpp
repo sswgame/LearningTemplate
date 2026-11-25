@@ -149,7 +149,7 @@ namespace sw
         flushRootConstants( RHIBindPoint::Compute );
     }
 
-    RHIRenderPassBeginResult D3D11RHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo, RHIRenderPassExtent& outTargetExtent )
+    RHIRenderPassBeginResult D3D11RHICommandContext::beginRenderPassNative( const RHIRenderPassInfo& beginInfo, RHIRenderPassExtent& outTargetExtent )
     {
         if ( _pContext == nullptr )
             return RHIRenderPassBeginResult::Failed;

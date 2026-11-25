@@ -73,7 +73,7 @@ namespace sw
         void                     writeBreadcrumb( uint32 markerID ) override;
         void                     endEventMarker() override;
         IRHIDevice&              getContextDevice() const override;
-        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo, RHIRenderPassExtent& outTargetExtent ) override;
+        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassInfo& beginInfo, RHIRenderPassExtent& outTargetExtent ) override;
         void                     endRenderPassNative() override;
         void                     transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
         void                     transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count ) override;

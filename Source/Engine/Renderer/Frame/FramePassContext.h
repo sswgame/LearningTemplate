@@ -15,7 +15,7 @@ namespace sw
 {
     class IRHIPassCommandList;
     struct RenderGraphPassContext;
-    struct RHIRenderPassBeginInfo;
+    class RHIRenderPassBeginInfo;
     class ShaderBindingLayout;
 
     /**
@@ -92,6 +92,10 @@ namespace sw
         void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo );
         /** @brief PSO 를 겁니다. 다른 PSO 면 커맨드 리스트가 슬롯을 비우므로 바인딩 캐시도 잊습니다 — 패스 기록은 리스트에 직접 걸지 않고 이것을 부른다. */
         void setPipeline( RHIPipelineStateHandle pso );
+
+    private:
+        /** @brief 캐시 리셋은 PSO · 레이아웃 · 패스 CB 를 놓는 쪽(`FrameRenderer::releasePassResources`)만 한다 — 패스 기록은 `beginRenderPass` · `setPipeline` 이 스스로 잊는다. */
+        friend class FrameRenderer;
 
         /**
          * @brief "마지막으로 바인딩한 것" 캐시를 모두 지웁니다. PSO 와 버퍼 핸들이 무효가 되는 시점(디바이스 교체)에 부릅니다.

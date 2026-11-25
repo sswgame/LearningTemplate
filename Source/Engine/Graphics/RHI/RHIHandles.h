@@ -67,7 +67,7 @@ namespace sw
      * @brief 스왑체인 백버퍼를 가리키는 전용 텍스처 핸들입니다 — 렌더 패스 컬러 타깃 · 전이 · 블릿이 받는다. 어느 핸들 표도 이 값을 내지 않는다(칸 번호 · 세대 모두 최댓값).
      * @details 예전에는 0 이 "없음" 과 "백버퍼" 를 겸해, 선언하지 않은 그래프 접근 · 만들지 못한 첨부의 0 이 화면 그리기로 읽혔다. 언리얼은 뷰포트 백버퍼를
      *          `FRHIViewport::GetBackBuffer` 의 텍스처 객체로, Godot 은 화면 프레임버퍼를 따로 받는다 — 여기서는 핸들 값 하나로 따로 둔다.
-     *          어느 스왑체인인지는 `RHIRenderPassBeginInfo::_pSwapChain` 이 정한다(nullptr 이면 메인 창).
+     *          어느 스왑체인인지는 `RHIRenderPassInfo::_pSwapChain` 이 정한다(nullptr 이면 메인 창).
      */
     inline constexpr RHITextureHandle kRHIBackBufferTexture{ ~uint64{ 0 } };
 

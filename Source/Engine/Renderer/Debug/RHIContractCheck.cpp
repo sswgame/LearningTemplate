@@ -177,12 +177,7 @@ namespace sw
         const float4 firstColor{ Internal::kFull, 0.0f, 0.0f, 0.0f };
         const float4 secondColor{ 0.0f, Internal::kFull, 0.0f, 0.0f };
 
-        RHIRenderPassBeginInfo pass{};
-        pass.setColorTarget( _target._texture, float4{ 0.0f, 0.0f, 0.0f, 0.0f }, RHIRenderPassLoadOp::Clear );
-        pass._bBindColor = SW_TRUE;
-        pass._width      = Internal::kTargetWidth;
-        pass._height     = 1;
-        cmd.beginRenderPass( pass );
+        cmd.beginRenderPass( RHIRenderPassBeginInfo::color( _target._texture, RHIRenderPassLoadOp::Clear, float4{ 0.0f, 0.0f, 0.0f, 0.0f } ).setExtent( Internal::kTargetWidth, 1 ) );
 
         // 칸 0 과 4: 가위를 좁힌 뒤의 뷰포트는 가위를 되돌린다 — 끝 칸(4)까지 칠해진다(다른 그리기는 그 칸을 건드리지 않는다).
         cmd.setPipelineState( _firstPipeline._handle );

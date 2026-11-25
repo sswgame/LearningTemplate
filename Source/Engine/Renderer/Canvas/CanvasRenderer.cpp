@@ -166,12 +166,7 @@ namespace sw
             const bool             bInvalidCanvasTarget = bHasPSO == false || pso == 0 || width == 0 || height == 0;
             if ( bInvalidCanvasTarget )
                 continue;
-            RHIRenderPassBeginInfo beginInfo{};
-            beginInfo.setColorTarget( texture, target._clearColor, RHIRenderPassLoadOp::Clear );
-            beginInfo._bBindColor = SW_TRUE;
-            beginInfo._width      = width;
-            beginInfo._height     = height;
-            cmd.beginRenderPass( beginInfo );
+            cmd.beginRenderPass( RHIRenderPassBeginInfo::color( texture, RHIRenderPassLoadOp::Clear, target._clearColor ).setExtent( width, height ) );
             (void)drawList( cmd, target._list, getTargetQuadBase( targetIndex ), pso, width, height, device.supportsNativeBindlessSampling() );
             cmd.endRenderPass();
             // 그린 텍스처는 셰이더가 읽는다(머티리얼 · 에디터 ImGui 이미지) — 카메라 렌더 텍스처 출력과 같이 읽기 상태로 둔다(Vulkan 레이아웃).

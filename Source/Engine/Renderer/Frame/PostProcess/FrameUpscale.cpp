@@ -113,16 +113,9 @@ namespace sw
             return false;
 
         // 원본은 Present 의 입력 선언이, 중간 RT 는 이 패스의 렌더 타깃 선언(`ViewGraphResource::upscaleIntermediate` — 키우는 뷰만 등록)이 레벨 콜백에서 옮겼다.
-        IRHIPassCommandList&   cmd = *context._pCmd;
-        RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor        = SW_TRUE;
-        beginInfo._colorTargetCount  = 1;
-        beginInfo._arrColorTarget[0] = view._upscaleIntermediate._texture;
-        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::DontCare;
-        beginInfo._depthTarget       = 0;
-        beginInfo._width             = view._upscaleIntermediate._width;
-        beginInfo._height            = view._upscaleIntermediate._height;
-        context.beginRenderPass( beginInfo );
+        IRHIPassCommandList& cmd = *context._pCmd;
+        context.beginRenderPass( RHIRenderPassBeginInfo::color( view._upscaleIntermediate._texture, RHIRenderPassLoadOp::DontCare )
+                                     .setExtent( view._upscaleIntermediate._width, view._upscaleIntermediate._height ) );
         context.setPipeline( _psoManager.getEnginePSO( RenderPassKind::UpscaleEasu ) );
         // 원본 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor 칸(fsr1.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();

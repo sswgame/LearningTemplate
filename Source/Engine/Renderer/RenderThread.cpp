@@ -681,13 +681,7 @@ namespace sw
         // 아래 prepareTextureForShaderRead 의 배리어가 보장한다(별도 스트림이나 블로킹 제출을 두지 않는다).
         if ( bOffscreen )
         {
-            RHIRenderPassBeginInfo gameViewPass{};
-            gameViewPass._bBindColor        = SW_TRUE;
-            gameViewPass._colorTargetCount  = 1;
-            gameViewPass._arrColorTarget[0] = packet._outputRenderTarget;
-            gameViewPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
-            gameViewPass._arrClearColor[0]  = packet._clearColor;
-            pFrameStream->clearRenderTargets( gameViewPass );
+            pFrameStream->clearRenderTargets( RHIRenderPassBeginInfo::color( packet._outputRenderTarget, RHIRenderPassLoadOp::Clear, packet._clearColor ) );
         }
 
         // 그래프가 이 프레임을 실제로 그렸는가. 그리지 않은 프레임(렌더러 준비 전, 주 시점이 없는 패킷)은 백버퍼를 아무도 건드리지 않았다.
@@ -720,16 +714,11 @@ namespace sw
         const RHITextureHandle screenTarget   = bRendererReady ? _pFrameRenderer->getScreenTarget() : kRHIBackBufferTexture;
         if ( pFrameStream != nullptr )
         {
-            RHIRenderPassBeginInfo backbufferPass{};
-            backbufferPass._bBindColor        = SW_TRUE;
-            backbufferPass._colorTargetCount  = 1;
-            backbufferPass._arrColorTarget[0] = screenTarget; // `kRHIBackBufferTexture` = 백버퍼
             // 오프스크린 경로에서는 그래프가 게임 RT 에만 그렸으므로 백버퍼는 아직 아무도 건드리지 않았다.
             // 그래서 여기서 클리어한다. 백버퍼 경로에서는 그래프가 이미 그렸으므로 보존해야 한다.
             // 그래프가 그리지 않은 프레임도 백버퍼는 받은 그대로(Vulkan 은 레이아웃 UNDEFINED)라 Load 로 열 수 없다 — 클리어한다.
-            backbufferPass._arrLoadOp[0]     = ( bOffscreen || bGraphDrew == false ) ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
-            backbufferPass._arrClearColor[0] = packet._clearColor;
-            pFrameStream->beginRenderPass( backbufferPass );
+            const RHIRenderPassLoadOp loadOp = ( bOffscreen || bGraphDrew == false ) ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
+            pFrameStream->beginRenderPass( RHIRenderPassBeginInfo::color( screenTarget, loadOp, packet._clearColor ) );
         }
 
         if ( _presentHook.isBound() )

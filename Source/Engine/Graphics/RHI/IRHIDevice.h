@@ -542,7 +542,7 @@ namespace sw
 
         /**
          * @brief 창 하나에 스왑체인을 더 만듭니다(에디터 플로팅 창). 메인 창의 스왑체인은 `initialize` 가 만든다. 실패하면 이유를 남기고 nullptr 입니다.
-         * @details 언리얼 `RHICreateViewport` 자리다. 그리기는 `RHIRenderPassBeginInfo::_pSwapChain` 으로 고르고, 그 프레임의 `endFrame` 이 함께 표시한다.
+         * @details 언리얼 `RHICreateViewport` 자리다. 그리기는 `RHIRenderPassInfo::_pSwapChain` 으로 고르고, 그 프레임의 `endFrame` 이 함께 표시한다.
          *          **생성 · 크기 변경 · 파괴는 렌더 스레드와 GPU 를 비운 뒤에 한다**(`waitIdle`). 창이 생기고 사라지는 일은 드물고, 렌더 스레드는 스왑체인 목록을
          *          잠금 없이 읽기 때문이다(목록을 바꾸는 쪽은 프레임을 넘기는 게임 스레드라, 비운 뒤에는 렌더 스레드가 다음 프레임 전까지 쉰다).
          *          @p desc 의 창 핸들 · 디스플레이 · 표면 종류 · 크기를 읽는다. 버퍼 수 · 포맷 · VSync 는 메인 창과 같은 값을 쓴다(같은 렌더 패스 · 파이프라인을 쓴다).

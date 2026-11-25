@@ -333,7 +333,7 @@ namespace sw::test
 
     protected:
         IRHIDevice&              getContextDevice() const override { return *_pDevice; }
-        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo&, RHIRenderPassExtent& outTargetExtent ) override
+        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassInfo&, RHIRenderPassExtent& outTargetExtent ) override
         {
             ++_beginNativeCount;
             outTargetExtent = _targetExtent;

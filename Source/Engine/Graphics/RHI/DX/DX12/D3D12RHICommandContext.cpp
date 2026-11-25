@@ -729,7 +729,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 상태 전이 · 시작 접근 채우기 · 패스 시작 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
-    RHIRenderPassBeginResult D3D12RHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo, RHIRenderPassExtent& outTargetExtent )
+    RHIRenderPassBeginResult D3D12RHICommandContext::beginRenderPassNative( const RHIRenderPassInfo& beginInfo, RHIRenderPassExtent& outTargetExtent )
     {
         // 네이티브 렌더 패스다(`ID3D12GraphicsCommandList4::BeginRenderPass` — Vulkan · 언리얼 D3D12RHI 와 같은 모양). 상태 전이는 패스를 열기 전에 끝내고, 지우기는
         // 시작 접근(CLEAR)으로 넘긴다 — 패스 안에서는 배리어 · 복사 · Clear 호출을 할 수 없다(디버그 레이어가 잡는다). 예전에는 OMSetRenderTargets + Clear*View 로

@@ -133,11 +133,7 @@ SW_TEST_CASE( RHIUploadLogTest, TextureEntryPointsFeedTheLog )
     SW_EXPECT_FALSE( log.hasRecordedUse( kUploaded ) );
     SW_EXPECT_FALSE( log.isUsedByFrameOnOtherThread( kUploaded ) );
     context.prepareTextureForShaderRead( kRead );
-    RHIRenderPassBeginInfo pass{};
-    pass.setColorTarget( kTarget, float4{}, RHIRenderPassLoadOp::Clear );
-    pass._bBindColor  = SW_TRUE;
-    pass._depthTarget = kDepth;
-    context.beginRenderPass( pass );
+    context.beginRenderPass( RHIRenderPassBeginInfo::color( kTarget, RHIRenderPassLoadOp::Clear, float4{} ).setDepth( kDepth, RHIRenderPassLoadOp::Clear ) );
     context.endRenderPass();
     SW_EXPECT_TRUE( log.hasRecordedUse( kRead ) );
     SW_EXPECT_TRUE( log.hasRecordedUse( kTarget ) );

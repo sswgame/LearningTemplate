@@ -861,16 +861,7 @@ namespace sw
 
     void FrameGraphExecutor::drawDepthCopy( IRHIPassCommandList& cmd, RHITextureSRVIndex sourceSRV, const RHITextureSlot& target ) const
     {
-        RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor        = SW_TRUE;
-        beginInfo._colorTargetCount  = 1;
-        beginInfo._arrColorTarget[0] = target._texture;
-        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
-        beginInfo._arrClearColor[0]  = float4{ 1.0f, 0.0f, 0.0f, 0.0f };
-        beginInfo._depthTarget       = 0;
-        beginInfo._width             = target._width;
-        beginInfo._height            = target._height;
-        cmd.beginRenderPass( beginInfo );
+        cmd.beginRenderPass( RHIRenderPassBeginInfo::color( target._texture, RHIRenderPassLoadOp::Clear, float4{ 1.0f, 0.0f, 0.0f, 0.0f } ).setExtent( target._width, target._height ) );
         cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassKind::DepthHistory ) );
         // 원본 깊이 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SceneDepth 칸(depth_history.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool   bNativeBindless = _pDevice->supportsNativeBindlessSampling();
