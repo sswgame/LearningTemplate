@@ -73,6 +73,51 @@ SW_TEST_CASE( PackWriterTest, StreamedPackReadsBackEveryEntry )
     SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
 }
 
+// 저장 바이트가 같은 항목은 한 자리를 함께 쓴다 — 같은 내용을 여럿 담아도 팩이 그만큼 커지지 않고, 읽으면 저마다 제 내용이다.
+SW_TEST_CASE( PackWriterTest, EqualPayloadsShareOnePlace )
+{
+    const AbsolutePath packPath = test::makeScratchPath( "SwPackWriterShared.pack" );
+    vector<uint8>      shared( PackTestUtil::kBlockSize + 100 );
+    for ( size_t index = 0; index < shared.size(); ++index )
+    {
+        shared[index] = static_cast<uint8>( ( index * 31 ) ^ ( index >> 8 ) );
+    }
+    vector<uint8> other = shared;
+    other.back() ^= 1;
+    vector<std::pair<string, vector<uint8>>> listEntry{
+        {"a.bin", shared},
+        {"b.bin", shared},
+        {"c.bin",  other},
+        {"d.bin", shared}
+    };
+    VectorUtil::sort( listEntry, []( const auto& left, const auto& right )
+    { return PackStreamWriter::makePathHash( left.first ) < PackStreamWriter::makePathHash( right.first ); } );
+
+    PackStreamWriter writer;
+    SW_REQUIRE_TRUE( writer.open( packPath, PackTestUtil::makeDesc( "game/test" ) ).has_value() );
+    for ( const std::pair<string, vector<uint8>>& entry : listEntry )
+    {
+        SW_REQUIRE_TRUE( writer.append( entry.first, PackEntryStorage::Blocks, entry.second ).has_value() );
+    }
+    SW_REQUIRE_TRUE( writer.close().has_value() );
+
+    PackReader reader;
+    SW_REQUIRE_TRUE( reader.open( packPath.str() ) );
+    unordered_set<uint64> uniqueOffset;
+    for ( const std::pair<string, vector<uint8>>& entry : listEntry )
+    {
+        vector<uint8> bytes;
+        PackFileEntry fileEntry;
+        SW_REQUIRE_TRUE( reader.readFile( entry.first, bytes ) );
+        SW_EXPECT_TRUE( bytes == entry.second );
+        SW_REQUIRE_TRUE( reader.getFileEntry( entry.first, fileEntry ) );
+        uniqueOffset.insert( fileEntry._dataOffset );
+    }
+    SW_EXPECT_EQUAL( size_t( 2 ), uniqueOffset.size() );
+    reader.close();
+    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+}
+
 // 순서가 틀리거나 같은 경로(대소문자 무시 해시)를 두 번 담으면 오류이고, 그 쓰기는 끝난다 — 대상 파일은 생기지 않는다.
 SW_TEST_CASE( PackWriterTest, OutOfOrderAppendIsAnError )
 {

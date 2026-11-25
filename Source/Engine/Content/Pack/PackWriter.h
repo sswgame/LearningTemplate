@@ -9,6 +9,9 @@
  *          - **병렬 압축.** 받은 항목을 `_writeWindowBytes` 까지 모았다가 블록마다 병렬로 압축 · CRC 하고(`engine::runParallel`, 블록마다 자기 칸에만 쓴다)
  *            쓰기는 받은 순서대로 직렬이다. 그래서 팩 바이트는 직렬로 돌 때와 같다. 최고 메모리는 창 크기의 몇 배와 색인뿐이다(콘텐츠 크기와 무관).
  *          - **내용 해시.** 쓰는 바이트를 `ContentHash::appendBytes` 로 함께 섞어 `close` 가 돌려준다 — 쿠킹 기록이 출력을 다시 읽지 않는다.
+ *          - **같은 저장 바이트는 한 번.** 앞서 쓴 항목과 저장 바이트가 같으면(크기 · 블록마다의 CRC · 64 비트 해시) 그 자리를 함께 가리킨다 — 쿠킹한 셰이더는 변형 대부분이 같은 바이트다
+ *            (엔진 DX12 19,739 개의 서로 다른 바이트 2,880 개). 블록 표 줄은 항목마다 있다(리더 규칙 그대로). 슬롯 배치는 항목이 자기 자리를 지켜야 해 하지 않는다.
+ *            언리얼 UnrealPak 이 같은 내용의 파일을 한 자리에 두는 것과 같다.
  *          - 압축은 팩 단위다. 모든 블록을 같은 코덱으로 넣는다(리더가 헤더의 코덱 하나로 푼다). 빈 항목은 블록이 없고 0 바이트다.
  *          - 바이트 안정성(스팀 청크 차이 받기용): 항목은 경로 해시 순으로 놓이고 블록별로 압축하므로 같은 입력이면 같은 바이트다. 항목 하나가 바뀌어도 그 항목의
  *            페이로드 · FAT · 블록 칸 밖은 그대로다. 단 항목을 더하거나 지우거나 섹터를 넘게 키우면 해시 순으로 뒤에 오는 페이로드가 섹터 단위로 밀린다. 밀림을 없애는 것이
@@ -141,6 +144,14 @@ namespace sw
             vector<uint8>    _bytes;
             PackEntryStorage _storage{ PackEntryStorage::Blocks };
         };
+        /** @brief 이 팩에 이미 쓴 페이로드 하나입니다(같은 저장 바이트를 찾는 열쇠는 해시). */
+        struct StoredPayload
+        {
+            uint64 _offset{ 0 };
+            uint32 _storedSize{ 0 };
+            uint32 _rawSize{ 0 };
+            uint32 _firstBlock{ 0 };
+        };
         /** @brief 앞 빌드 팩에서 항목 하나가 차지한 자리입니다. */
         struct PreviousSlot
         {
@@ -158,6 +169,8 @@ namespace sw
         [[nodiscard]] expected<void> loadPreviousSlots();
         /** @brief 창의 항목을 블록으로 잘라 병렬로 압축하고 받은 순서대로 씁니다. */
         [[nodiscard]] expected<void> flushPending();
+        /** @brief 저장 바이트가 블록 [@p pSlot, @p blockCount) 과 같은 앞 페이로드입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] const StoredPayload* findStoredPayload( uint64 storedHash, const StoredPayload& candidate, const BlockSlot* pSlot, size_t blockCount ) const;
         /** @brief @p offset 에 @p size 바이트를 씁니다. 끝이면 덧붙이고 내용 해시에 섞는다(슬롯 배치의 앞 자리는 덮어쓴다). */
         [[nodiscard]] expected<void> writeBytes( uint64 offset, const uint8* pData, size_t size );
         /** @brief 파일 끝을 섹터 경계까지 0 으로 채웁니다. */
@@ -168,24 +181,25 @@ namespace sw
         [[nodiscard]] expected<PackWriteResult> compactCommitted();
 
     private:
-        PackWriterDesc                      _desc;
-        AtomicFileWriter                    _file;
-        AbsolutePath                        _packPath;
-        ICompressionCodec*                  _pCodec;
-        vector<PendingEntry>                _listPending;
-        uint64                              _pendingBytes;
-        vector<PackFileEntryOnDisk>         _listDiskEntry;
-        vector<PackBlockEntryOnDisk>        _listBlock;
-        vector<PackDigest>                  _listBlockDigest; ///< `_pDigestProvider` 가 있을 때만 — 블록마다 저장 바이트의 SHA-256
-        vector<uint8>                       _stringPoolBytes;
-        unordered_map<uint64, PreviousSlot> _mapPreviousSlot;  ///< 비어 있으면 모든 쓰기가 덧붙이기다
-        uint64                              _payloadEnd;       ///< 페이로드 구역의 끝(다음 덧붙이기 자리 앞)
-        uint64                              _usedPayloadBytes; ///< 이번 빌드 항목이 차지한 페이로드(섹터 정렬) — 슬롯 배치의 빈 자리 판정
-        uint64                              _contentHash;      ///< 덧붙인 바이트의 내용 해시 상태
-        uint64                              _lastPathHash;
-        uint32                              _entryCount;
-        PackWriteStats                      _stats;
-        Stopwatch                           _openWatch;
-        State                               _state;
+        PackWriterDesc                       _desc;
+        AtomicFileWriter                     _file;
+        AbsolutePath                         _packPath;
+        ICompressionCodec*                   _pCodec;
+        vector<PendingEntry>                 _listPending;
+        uint64                               _pendingBytes;
+        vector<PackFileEntryOnDisk>          _listDiskEntry;
+        vector<PackBlockEntryOnDisk>         _listBlock;
+        vector<PackDigest>                   _listBlockDigest; ///< `_pDigestProvider` 가 있을 때만 — 블록마다 저장 바이트의 SHA-256
+        vector<uint8>                        _stringPoolBytes;
+        unordered_map<uint64, StoredPayload> _mapStoredPayload; ///< 저장 바이트의 해시 → 처음 쓴 자리(`Sorted` 배치만)
+        unordered_map<uint64, PreviousSlot>  _mapPreviousSlot;  ///< 비어 있으면 모든 쓰기가 덧붙이기다
+        uint64                               _payloadEnd;       ///< 페이로드 구역의 끝(다음 덧붙이기 자리 앞)
+        uint64                               _usedPayloadBytes; ///< 이번 빌드 항목이 차지한 페이로드(섹터 정렬) — 슬롯 배치의 빈 자리 판정
+        uint64                               _contentHash;      ///< 덧붙인 바이트의 내용 해시 상태
+        uint64                               _lastPathHash;
+        uint32                               _entryCount;
+        PackWriteStats                       _stats;
+        Stopwatch                            _openWatch;
+        State                                _state;
     };
 } // namespace sw
