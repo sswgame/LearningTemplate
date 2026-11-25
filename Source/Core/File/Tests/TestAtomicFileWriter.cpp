@@ -3,7 +3,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // AtomicFileWriter — 조각으로 이어 쓰고 머리를 나중에 덮은 뒤 바꿔 끼우기, commit 없이 끝나면 원본이 그대로이고 임시 파일이 남지 않는다.
 

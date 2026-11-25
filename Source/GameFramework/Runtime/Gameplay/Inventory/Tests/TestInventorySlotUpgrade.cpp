@@ -2,7 +2,7 @@
 // 염색 값이 스키마 판 1 로 남는다, 지금 판 왕복, 더 새 판 거절(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"

@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"

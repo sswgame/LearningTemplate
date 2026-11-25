@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Graphics/Texture/TextureStreamingPolicy.h"

@@ -9,8 +9,8 @@
 #include "Core/Delegate/WeakRef.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestWait.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestWait.h"
 
 static int32 s_TestValue{ 0 };
 namespace

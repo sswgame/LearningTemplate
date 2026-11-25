@@ -5,8 +5,8 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 
 using namespace sw;
 

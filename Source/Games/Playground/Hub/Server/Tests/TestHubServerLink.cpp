@@ -3,7 +3,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 

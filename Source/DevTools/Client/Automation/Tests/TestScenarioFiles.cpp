@@ -3,7 +3,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationStepArgs.h"
 #include "DevTools/Client/Automation/Scenario/AutomationEnvironmentSteps.h"

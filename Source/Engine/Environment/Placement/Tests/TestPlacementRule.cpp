@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Environment/Placement/PlacementRule.h"
 #include "Engine/Environment/Placement/PlacementTileSurface.h"

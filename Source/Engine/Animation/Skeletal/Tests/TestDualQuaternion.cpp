@@ -3,7 +3,7 @@
 #include "Core/Math/DualQuaternion.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 

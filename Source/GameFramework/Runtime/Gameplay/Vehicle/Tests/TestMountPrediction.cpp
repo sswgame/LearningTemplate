@@ -3,7 +3,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

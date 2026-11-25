@@ -2,7 +2,7 @@
 // 몸은 쓰러짐 표시 · 어트리뷰트 세트가 걷히고(디렉터가 다시 세트를 준다), AI 조종자는 쥔 폰을 놓는다. 인스턴스는 프리팹 대신 같은 컴포넌트를 코드로 단 오브젝트다(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

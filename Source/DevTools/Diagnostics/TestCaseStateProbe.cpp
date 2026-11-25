@@ -9,7 +9,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Testing/TestWait.h"
+#include "Core/TestFramework/TestWait.h"
 
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevCommandRegistry.h"

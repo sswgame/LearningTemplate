@@ -2,7 +2,7 @@
 
 #include "Core/Math/SphericalHarmonics.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
 

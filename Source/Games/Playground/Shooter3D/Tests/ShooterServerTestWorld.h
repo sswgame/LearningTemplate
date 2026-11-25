@@ -11,7 +11,7 @@
 #include "Core/Network/Tests/FakeNetPeers.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

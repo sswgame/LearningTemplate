@@ -1,7 +1,7 @@
 // 환경설정 JSON — 기본값과 다른 프로퍼티만 담은 글(makeDifferenceJSON)을 applyJSON 이 그대로 입히고, 모르는 키는 알려 주며, 오브젝트가 아닌 글은 거절한다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 

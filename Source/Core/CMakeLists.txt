@@ -30,7 +30,7 @@ foreach(unused_backend_source IN LISTS list_memory_backend_source)
 endforeach()
 # 단위 테스트(틀 `Testing/` 과 기능 폴더의 `Tests/`)는 배포 구성이 짓지 않는다 — 배포본에 테스트 코드가 없다(구성마다 다른 케이스 수가 아니라 0).
 if(SW_SHIPPING_BUILD)
-	sw_remove_excluded_sources(list_core_source "/Source/Core/Testing/" ${SW_DEV_ONLY_SOURCE_PATTERNS})
+	sw_remove_excluded_sources(list_core_source "/Source/Core/TestFramework/" ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
 # ------------------------------------------------------------------------------

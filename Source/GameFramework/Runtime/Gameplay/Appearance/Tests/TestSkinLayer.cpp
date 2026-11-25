@@ -5,7 +5,7 @@
 #include "Core/Encoding/Base64Util.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"

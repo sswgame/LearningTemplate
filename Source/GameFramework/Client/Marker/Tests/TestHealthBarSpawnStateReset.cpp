@@ -1,7 +1,7 @@
 // HealthBarSpawnStateResetTest — 풀 반환(`HealthBarComponent::resetToSpawnState`): 쓰러져 비고 보이던 HP 바가 시작할 때의 보임으로 돌아오고, 비율은 다시 켜진 첫 틱에 몸의 지금 체력에서 흔적 없이 다시 읽는다(nogpu, 마커 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

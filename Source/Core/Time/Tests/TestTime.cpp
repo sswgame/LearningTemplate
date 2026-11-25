@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Diagnostics/ScopedTimer.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Clock.h"
 #include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/GameTimer.h"

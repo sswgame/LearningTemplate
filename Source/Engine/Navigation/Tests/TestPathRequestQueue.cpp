@@ -2,7 +2,7 @@
 // 타일 교체 순서는 형식이 지킨다 — 증표(`Fence` · `NavMeshWriteAccess`)는 줄 · 내비게이션 밖에서 만들 수 없다(아래 static_assert). 엔진 서비스 없이 부르므로 넘기기는 그 자리에서 푼다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Navigation/PathRequestQueue.h"
 #include "Engine/Navigation/Scene/NavMeshRuntime.h"

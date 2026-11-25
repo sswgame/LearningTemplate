@@ -10,7 +10,7 @@
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Serialization/LittleEndianUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include <cstring>
 

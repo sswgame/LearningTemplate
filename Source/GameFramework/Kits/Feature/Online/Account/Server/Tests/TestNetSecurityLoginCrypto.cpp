@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"

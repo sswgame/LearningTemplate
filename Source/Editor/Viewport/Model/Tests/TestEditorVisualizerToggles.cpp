@@ -1,7 +1,7 @@
 // 뷰포트 시각화 켬/끔 — 등록 줄의 기본값 위에 사용자가 바꾼 것만 id 로 남고, 기본값으로 돌아오면 기록을 지운다(nogpu, ImGui 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorVisualizerToggles.h"

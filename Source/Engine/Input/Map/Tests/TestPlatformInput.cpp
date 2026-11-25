@@ -2,7 +2,7 @@
 // 예전에는 두 표가 `#if SW_PLATFORM_WEB / ANDROID` 안에 있어 배포 빌드(시나리오 실행기 없음)에서만 지어졌고, 표의 결함을 자동으로 볼 길이 없었다(감사 P-9).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Input/Map/AndroidKeyCode.h"
 #include "Engine/Input/Map/InputKeyTable.h"

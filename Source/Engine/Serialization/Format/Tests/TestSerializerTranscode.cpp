@@ -2,7 +2,7 @@
 // 읽지 못하는 입력은 받는 버퍼를 건드리지 않는다. `Archive` 의 변환 함수는 같은 길을 아카이브에 싣는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"

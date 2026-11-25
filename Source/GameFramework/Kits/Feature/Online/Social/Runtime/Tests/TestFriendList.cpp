@@ -2,7 +2,7 @@
 // 접속 상태 알림이 다시 정렬한다. 오류 응답은 낡은 목록을 지우고 Failed 다. 클라이언트 없이 응답 길로 값을 넣는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/FriendList.h"
 

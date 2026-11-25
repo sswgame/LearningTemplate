@@ -3,8 +3,8 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 
 #include "Engine/Audio/CircularAudioBuffer.h"
 

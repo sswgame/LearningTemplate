@@ -5,7 +5,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsJSONDocument.h"

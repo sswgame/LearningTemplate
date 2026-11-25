@@ -1,7 +1,7 @@
 // TileNavCostTest — 타일 격자의 이동 비용(`TileGridUtil::makeNavCosts`)이 NavGrid 와 같은 값이라 그대로 넣어 경로를 찾는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/TileMap/TileGridUtil.h"
 #include "Engine/TileMap/TileSetAsset.h"

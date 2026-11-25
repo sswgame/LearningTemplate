@@ -179,7 +179,7 @@ SW_REGISTER_ARGUMENT( IMPORT_PO, Dev, CommandLineDiskPath{}, "import-po" )
 // 서비스 없이) 대기 중인 묶음을 보낸 뒤 끝낸다(헤드리스).
 SW_REGISTER_ARGUMENT( CRASH_REPORTER, All, CommandLineDiskPath{}, "crash-reporter" )
 
-// 엔진 안 단위 테스트(`<기능>/Tests/` 의 SW_TEST_CASE)를 헤드리스로 돌리고 끝낸다(Dev 만). 종료 코드는 모두 통과면 0. 형식은 `Core/Testing/TestFramework.h`.
+// 엔진 안 단위 테스트(`<기능>/Tests/` 의 SW_TEST_CASE)를 헤드리스로 돌리고 끝낸다(Dev 만). 종료 코드는 모두 통과면 0. 형식은 `Core/TestFramework/TestFramework.h`.
 SW_REGISTER_ARGUMENT( TEST, Test, false, "test" )
 // 돌릴 케이스 이름 와일드카드(`Suite.*`, 쉼표로 여럿, 앞에 - 면 뺀다).
 SW_REGISTER_ARGUMENT( TEST_FILTER, Test, "*", "test-filter" )

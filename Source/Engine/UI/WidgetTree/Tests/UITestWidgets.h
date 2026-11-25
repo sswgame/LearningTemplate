@@ -3,7 +3,7 @@
  * @brief UI 레이아웃과 포커스 테스트가 함께 쓰는 잎 위젯과 트리 도우미입니다. 글꼴 · 디바이스 없이 돕니다.
  */
 #pragma once
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"

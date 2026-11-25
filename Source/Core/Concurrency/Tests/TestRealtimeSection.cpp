@@ -4,7 +4,7 @@
 #include "Core/Concurrency/RealtimeSection.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 

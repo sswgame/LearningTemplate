@@ -1,7 +1,7 @@
 // SplineVisualizerTest — 뷰포트 시각화 gameplay.splines 의 모으기: 로컬 곡선을 지금 월드 행렬로 옮긴 선분을 내고, 끈 오브젝트는 내지 않는다(그리기 없음 — nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"

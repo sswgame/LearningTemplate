@@ -1,7 +1,7 @@
 // 에디터 상태 저장소 — 값은 타입마다 하나씩 처음 물을 때 생기고, resetAll 은 값을 처음으로 되돌리되 칸과 주소는 그대로 둔다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/EditorStateStore.h"
 

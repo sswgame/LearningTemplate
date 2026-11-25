@@ -1,7 +1,7 @@
 // ReflectedStateUpgradeTest — 손 본문 상태를 리플렉션 상태 칸으로 옮긴 형식의 옛 판 바이트가 판 올림 사슬로 올라 읽힌다(세이브 구간 · 어빌리티 본문, nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"

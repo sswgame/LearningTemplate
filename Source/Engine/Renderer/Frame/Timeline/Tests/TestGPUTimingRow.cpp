@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/Timeline/GPUTimingRow.h"

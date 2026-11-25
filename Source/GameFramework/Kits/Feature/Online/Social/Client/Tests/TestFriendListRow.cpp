@@ -1,7 +1,7 @@
 // FriendListRowTest — 친구 목록 화면의 줄 위젯: 계정 · 접속 상태 · 활동이 글에 보이고, 같은 줄을 다른 친구에 다시 이어도 앞 값이 남지 않는다(가상 목록이 줄을 다시 쓴다). 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationManager.h"

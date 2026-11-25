@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogEditModel.h"
 

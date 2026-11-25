@@ -3,8 +3,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestRunner.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestRunner.h"
 
 using namespace sw;
 using sw::test::TestRunner;

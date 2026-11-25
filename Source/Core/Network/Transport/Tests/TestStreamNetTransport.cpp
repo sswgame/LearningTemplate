@@ -6,7 +6,7 @@
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamNetTransport.h"
 #include "Core/Network/Transport/WebSocketAcceptTransport.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // 스트림 위의 데이터그램 전송 — 브라우저 게임 세션의 길. 루프백 스트림 망(I/O 스레드 없이 pollIO — 결정적)에서 서버는 운영과 같은 WebSocketAcceptTransport 로 감싼다.
 

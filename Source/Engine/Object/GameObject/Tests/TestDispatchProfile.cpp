@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Foundation/StdHeaders.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

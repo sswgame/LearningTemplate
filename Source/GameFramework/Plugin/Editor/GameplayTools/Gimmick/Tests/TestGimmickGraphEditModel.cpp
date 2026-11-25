@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphEditModel.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickNodeRegistry.h"

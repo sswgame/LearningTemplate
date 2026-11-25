@@ -2,7 +2,7 @@
 // 루트 이동 · 알림 순서 · 판정 시점의 소켓 위치를 견준다(nogpu, 에셋 없음). 가시성은 가짜 뷰 판정(`AnimationLODState::makeState` 의 bVisible)으로만 바꾼다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Scene/AnimationLOD.h"

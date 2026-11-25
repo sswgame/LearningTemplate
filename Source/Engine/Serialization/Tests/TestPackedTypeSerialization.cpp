@@ -6,7 +6,7 @@
 #include "Core/Math/XorShift32.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Task/TaskTypes.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"

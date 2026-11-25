@@ -2,7 +2,7 @@
 // 같은 주기의 컴포넌트가 프레임에 흩어지는지 본다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"

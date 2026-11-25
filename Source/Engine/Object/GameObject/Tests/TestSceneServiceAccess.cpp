@@ -1,7 +1,7 @@
 // SceneServiceAccessTest — 씬 서비스 등록 줄의 갱신 접근 선언을 매니저가 다른 서비스의 넘긴 일(창)과 견주는지 본다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"

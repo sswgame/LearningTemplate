@@ -2,7 +2,7 @@
 // 같은 입력의 두 판(락스텝)이 같은 체크섬을 내고 상태를 쓰고 읽은 판도 같은 체크섬을 냄. 두 쪽 모두 사람이라 컴퓨터 상대(행동 트리)는 돌지 않는다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 

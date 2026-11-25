@@ -4,7 +4,7 @@
 #include "pch.h"
 
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"

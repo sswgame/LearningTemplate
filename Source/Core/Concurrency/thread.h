@@ -58,7 +58,7 @@ namespace sw
     class HTTPClient;                   // 이름 해석(getaddrinfo)(DedicatedWorker)
     class HTTP2Client;                  // 이름 해석(getaddrinfo)(DedicatedWorker)
     class ThreadedLocalStore;           // 순서 있는 디스크 쓰기 · fsync(DedicatedWorker)
-    struct ThreadTestAccess;            // 테스트 · 테스트 실행기(`Core/Testing/ThreadTestAccess.h`) — 경합을 일부러 만든다
+    struct ThreadTestAccess;            // 테스트 · 테스트 실행기(`Core/TestFramework/ThreadTestAccess.h`) — 경합을 일부러 만든다
     namespace editor
     {
         class EditorExternalToolJob; // 외부 도구 프로세스가 끝나기를 기다린다

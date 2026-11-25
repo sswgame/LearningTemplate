@@ -9,8 +9,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/RHI/Backend/RHIPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"

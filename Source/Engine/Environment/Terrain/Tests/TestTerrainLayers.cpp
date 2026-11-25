@@ -3,7 +3,7 @@
 // GPU 쪽(terrain.hlsl 의 여덟 레이어 섞기)은 여기서 돌지 않는다. 대신 셰이더가 읽는 두 텍스처(평면 0 · 1)의 내용과 합 1 로 나누는 식을 CPU 에서 닫힌 값으로 본다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Environment/Placement/SurfaceLayerWeights.h"
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"

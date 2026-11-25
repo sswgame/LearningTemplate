@@ -1,7 +1,7 @@
 // 문서 편집 구간의 기준 글 — 바로 기록한 편집과 끝난 구간은 기준을 끝 글로 옮기고, 쥔 동안은 기준을 두며, resetBaseline 은 쥔 구간을 버린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/Undo/DocumentEditSpan.h"
 

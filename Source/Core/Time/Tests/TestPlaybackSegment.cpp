@@ -1,7 +1,7 @@
 // PlaybackSegmentTest — 재생 커서 구간의 문턱 규칙(정방향 (from, to], 역방향 [to, from), 빈 구간은 아무것도 지나지 않음)과 꺾이는 끝의 한 번(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/PlaybackSegment.h"
 
 using namespace sw;

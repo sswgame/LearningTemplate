@@ -1,7 +1,7 @@
 // SceneFormatUpgradeTest — 씬 · 프리팹 판 올림 단계: 형제 순서 칸 이름(`_siblingIndex` → `_siblingOrder`, 설계 E-6)(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"

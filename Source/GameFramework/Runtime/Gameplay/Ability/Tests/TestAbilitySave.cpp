@@ -1,7 +1,7 @@
 // AbilitySystemTest(저장) — 어빌리티 컴포넌트의 상태 스냅샷: base 를 훅 없이 다 쓴 뒤 한 번에 자르기, 걸린 이펙트의 남은 시간 · 주기, 이펙트 밖 태그, 깨진 바이트 거절.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

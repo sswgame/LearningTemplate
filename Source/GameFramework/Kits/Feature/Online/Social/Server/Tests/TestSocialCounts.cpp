@@ -2,7 +2,7 @@
 // 상한(친구 · 신청 · 막음)과 개수 변화가 양쪽에 맞는지. 저장소를 모르는 순수 함수라 표로 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
 

@@ -1,7 +1,7 @@
 // EditorAssetMoveOpenDocumentsTest — 옮기기 · 삭제 계획이 열린 문서를 본다(감사 P0-4): 미저장 참조 문서는 "먼저 저장" 으로, 연 문서(폴더면 그 아래)는 삭제를 거절한다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Workspace/IEditorPanelService.h"

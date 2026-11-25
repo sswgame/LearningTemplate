@@ -2,7 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"

@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"

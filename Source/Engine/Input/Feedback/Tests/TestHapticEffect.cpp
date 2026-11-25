@@ -1,7 +1,7 @@
 // HapticEffectTest — 진동 효과 데이터의 읽기 · 검사 · 보간과, 재생이 출력에 내는 값과 끝에서 멈추는 것(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Input/Feedback/HapticEffect.h"
 #include "Engine/Input/Feedback/HapticPlayback.h"

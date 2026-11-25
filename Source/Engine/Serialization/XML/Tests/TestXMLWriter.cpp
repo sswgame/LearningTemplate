@@ -1,8 +1,8 @@
 // XMLWriter — 속성 · 글 이스케이프, 금지 바이트 바꾸기, 빈 원소, 중첩 · 배치, 이름 검사, 주석, 조각 옮기기(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLWriter.h"

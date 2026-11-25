@@ -1,7 +1,7 @@
 // EditorComponentIconRowTest — 글리프 글(UTF-8 한 글자)의 코드 포인트: 아이콘 표의 기본 다국어 평면만 받고 틀린 글은 0 이다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 

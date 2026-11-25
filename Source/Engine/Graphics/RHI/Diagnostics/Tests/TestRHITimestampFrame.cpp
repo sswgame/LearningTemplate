@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/GPUTimestampSlotMask.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"

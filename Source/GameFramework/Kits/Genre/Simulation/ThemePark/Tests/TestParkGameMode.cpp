@@ -7,7 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/Component/SceneComponent.h"

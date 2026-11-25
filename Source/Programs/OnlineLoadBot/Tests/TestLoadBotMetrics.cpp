@@ -1,7 +1,7 @@
 // LoadBotMetricsTest — 부하 봇 지표의 조회: 동작마다의 오류 수, 종류마다의 푸시 수, 연결 열림 · 실패 · 끊김 수가 기록한 대로 나온다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Programs/OnlineLoadBot/LoadBotMetrics.h"
 #include "Programs/OnlineLoadBot/LoadBotScenario.h"

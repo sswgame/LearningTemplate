@@ -1,7 +1,7 @@
 // BusyClock — 겹친 일의 구간을 한 번만 세는지(합집합), 진행 중인 구간을 지금까지 세는지.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/BusyClock.h"
 
 using namespace sw;

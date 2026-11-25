@@ -1,7 +1,7 @@
 // AnimatorSpawnStateResetTest — 풀 반환(`SkeletalAnimatorComponent::resetToSpawnState`): 게임플레이가 쓴 파라미터(쓰러짐 · 트리거)가 걷혀 갓 스폰한 애니메이터와 같다(nogpu, 시작 전).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

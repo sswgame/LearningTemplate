@@ -1,7 +1,7 @@
 // GPUBatchMembershipPatchTest — 배치 구성원만 고치는 차례 다시 쓰기: 빠진 칸은 빼고 들어온 칸은 그 배치 끝에 붙이며, 뒤 배치의 차례 · 가시 구간이 밀리고 LOD 단계 배치는 머리만큼의 가시 구간을 받는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Renderer/Scene/GPUBatchMembershipPatch.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"

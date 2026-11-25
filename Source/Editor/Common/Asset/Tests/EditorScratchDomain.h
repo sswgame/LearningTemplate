@@ -7,7 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
 

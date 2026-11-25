@@ -6,7 +6,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Programs/OnlineLoadBot/LoadBotRunner.h"
 #include "Programs/OnlineLoadBot/LoadBotScenario.h"

@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/Pack/PackWriter.h"
 

@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Mesh/Mesh.h"

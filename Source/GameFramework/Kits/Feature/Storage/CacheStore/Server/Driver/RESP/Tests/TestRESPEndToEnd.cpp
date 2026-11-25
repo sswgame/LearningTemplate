@@ -5,7 +5,7 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPCodec.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"

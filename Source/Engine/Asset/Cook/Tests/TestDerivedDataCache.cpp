@@ -3,7 +3,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Asset/Cook/Tests/DerivedDataCacheTestAccess.h"

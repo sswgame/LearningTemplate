@@ -1,7 +1,7 @@
 // CookCodeFingerprintTest — 쿠킹 키에 들어가는 코드 지문은 빌드가 산출한 표에서 온다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/CookCodeFingerprint.h"
 

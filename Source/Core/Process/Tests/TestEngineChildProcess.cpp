@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/EngineChildProcess.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 namespace
 {

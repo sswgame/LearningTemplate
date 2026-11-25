@@ -2,7 +2,7 @@
 // 다시 읽기 일정(주기 · 알림 · 쓰기 뒤), 보이는 상태의 바뀜 표시, GM 창구의 결과 변환. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryProtocol.h"

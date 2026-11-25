@@ -1,7 +1,7 @@
 // 떼어 낸 창의 키 넘기기 — 누름을 넣고 아직 뗌을 넣지 않은 키를 기억했다가, 넘기기를 멈추면(포커스를 잃음 · 주 창으로 되돌림) 짝 뗌을 넣는다(nogpu, ImGui · 입력 매니저 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
 

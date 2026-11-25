@@ -1,7 +1,7 @@
 // EditorStatusViewModelTest — 하는 일이 없으면 상태줄 항목은 값을 채우지 않고 false 이고, 취소는 할 일이 없다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/GUI/Status/Model/EditorStatusViewModel.h"
 

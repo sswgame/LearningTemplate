@@ -1,7 +1,7 @@
 // GPUSceneSlotBufferTest — 칸 순 인스턴스 버퍼의 CPU 사본: 바뀐 칸 구간만 비교해 올리고, 배치 번호가 그대로인 재구성은 올리지 않으며, 빠진 칸은 구멍 · 다시 쓴 칸은 차례로 가른다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Renderer/Scene/GPUSceneSlotBuffer.h"
 

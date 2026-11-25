@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/AnimationClip.h"

@@ -6,7 +6,7 @@
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Compression/EngineCompressionCodecs.h"
 

@@ -21,11 +21,11 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/ScopedAllocationCount.h"
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestWait.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/ScopedAllocationCount.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestWait.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 #include "Core/Time/WallClock.h"
 
 #include <cstdlib>

@@ -1,7 +1,7 @@
 // FacialAnimationTest — 얼굴 컴포넌트가 유닛의 메시에 리그를 잇는 때(nogpu, 애니메이션 시스템 없이 단계 함수를 직접 부른다).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Component/FacialAnimationComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"

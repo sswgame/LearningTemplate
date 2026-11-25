@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"

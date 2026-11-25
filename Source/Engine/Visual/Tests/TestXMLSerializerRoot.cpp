@@ -1,7 +1,7 @@
 // XMLSerializer 의 루트 검사 — 이름이 다른 루트는 어느 입구로도 읽히지 않고(`Xml.WrongRoot`), 부르는 쪽이 고른 요소는 이름과 상관없이 읽힌다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"

@@ -8,7 +8,7 @@
 #include "Core/Log/Sink/ILogOutput.h"
 #include "Core/Log/Sink/JSONLinesLogOutput.h"
 #include "Core/String/JSONStringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // JSON lines 로그 — 칸과 이스케이프, 문맥의 추적 id, 장치가 달렸을 때만 싱크가 줄마다 JSON 을 만든다.
 

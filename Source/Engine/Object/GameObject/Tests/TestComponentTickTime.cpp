@@ -1,7 +1,7 @@
 // ComponentTickTimeTest — 프레임의 컴포넌트 틱 시간이 프로파일러 구간에 쌓인다(감시 값 `Scene.ComponentTickShare` 의 재료, 틱 주기 등급 판정의 재는 장치)(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"

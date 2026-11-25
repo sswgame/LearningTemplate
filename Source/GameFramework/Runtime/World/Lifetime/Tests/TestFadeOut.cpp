@@ -1,7 +1,7 @@
 // FadeOutTest — 흐려지다 사라지는 이펙트: 스프라이트의 처음 알파를 기준으로 흐려지고, 다시 읽은 상태는 이어 가며, 길이가 0 이면 남는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

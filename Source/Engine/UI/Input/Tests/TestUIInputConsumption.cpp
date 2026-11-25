@@ -1,7 +1,7 @@
 // UIInputConsumptionTest · UIInputRouterTest — UI 가 쓴 물리 입력이 뗄 때까지 게임에 보이지 않는 규칙, 마지막으로 쓴 장치로 입력 방식을 정하는 규칙(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"

@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Log/Logger.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/EngineFrameHooks.h"
 #include "Engine/Foundation/EngineServices.h"

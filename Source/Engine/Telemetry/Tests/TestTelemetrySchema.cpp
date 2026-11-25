@@ -1,7 +1,7 @@
 // TelemetrySchema — 정의 구조체를 스키마로 읽기(사용자 설정 스키마 테스트에서 옮겼다 — 사용자 설정은 텔레메트리를 보지 않는다).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Telemetry/TelemetrySchema.h"
 

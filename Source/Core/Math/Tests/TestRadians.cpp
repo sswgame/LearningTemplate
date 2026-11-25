@@ -3,7 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/PackedValueTraits.h"
 #include "Core/Math/Radians.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 namespace sw
 {

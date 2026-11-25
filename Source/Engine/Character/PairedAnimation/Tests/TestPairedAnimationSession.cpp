@@ -1,7 +1,7 @@
 // PairedAnimationSessionTest — 세션 수명: 참가자가 계층에서 꺼지면(풀 반환) 세션이 "잃은 역할" 로 정해진 까닭(`ParticipantDeactivated`)과 알림 로그로 끝난다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Character/PairedAnimation/Tests/PairedAnimationTestRig.h"
 

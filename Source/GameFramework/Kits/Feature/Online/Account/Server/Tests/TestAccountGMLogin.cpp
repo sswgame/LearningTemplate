@@ -2,7 +2,7 @@
 // 계정을 다시 정할 때까지 멈춘다. 빈 이름 · 빈 비밀번호는 받지 않는다. 서버 쪽은 같은 프로토콜 항목의 가짜(`OnlineHostTestUtil` 루프백)다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountGMLogin.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountProtocol.h"

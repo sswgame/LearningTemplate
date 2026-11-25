@@ -1,7 +1,7 @@
 // 지형 레이어 규칙(경사 · 고도 띠)과 높이 섞기 — CPU 식. 셰이더(terrain.hlsl)는 여기서 돌지 않으므로 같은 식의 닫힌 값을 박는다. 디바이스 없음(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Environment/Placement/SurfaceLayerWeights.h"
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"

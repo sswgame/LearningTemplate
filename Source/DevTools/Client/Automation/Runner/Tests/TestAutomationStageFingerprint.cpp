@@ -1,7 +1,7 @@
 // AutomationStageFingerprintTest — 자동화 단계 지문의 비교: 새로 남은 상태와 늘어난 수를 이름으로 대고, 처음 센 수 · 줄어든 수 · 같은 상태는 새지 않은 것이다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationStageFingerprint.h"
 

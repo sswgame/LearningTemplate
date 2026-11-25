@@ -1,7 +1,7 @@
 // AreaGraphTest — 방 사각형 걷기(`AreaGraph::walk`): 방 안은 그대로 걷고, 지날 수 있는 이웃으로 넘어가며, 잠긴 연결과 벽에서는 방 안에 멈춘다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"

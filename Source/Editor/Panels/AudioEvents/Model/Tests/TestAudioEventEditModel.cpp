@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/AudioEvents/Model/AudioEventEditModel.h"

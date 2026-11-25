@@ -1,7 +1,7 @@
 // AutomationTestOptionsTest — 시나리오 선언에서 나오는 글: `<Launch>` 변수의 명령줄 인자, 시나리오 경로의 이름 줄기(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 

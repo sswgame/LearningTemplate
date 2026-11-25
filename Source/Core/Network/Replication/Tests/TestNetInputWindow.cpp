@@ -4,7 +4,7 @@
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/Replication/NetInputWindow.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // 비신뢰 입력 묶음 — 확인 기반 보내는 창(확인된 다음 틱부터 · 예산이 모자라면 오래된 것부터 · 틱이 건너뛰거나 줄 때), 받는 버퍼(창 · 빈틈없이 받은 다음 틱 ·
 // 깨진 묶음은 하나도 넣지 않는다 · 가장 새 틱을 따르는 창), 고정 길이(롤백 1 바이트 — 길이 칸 없음, 옛 배치와 같은 바이트) · 항목 스탬프.

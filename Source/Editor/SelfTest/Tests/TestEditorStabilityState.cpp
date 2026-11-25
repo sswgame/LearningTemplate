@@ -1,7 +1,7 @@
 // EditorStabilityState — 정지 · 기다림 · 진동 판정: 진행 중인 일은 진척이 늘어 시한이 없고, 할 일 없이 이어서 움직인 프레임(진척 없음)만 진동으로 센다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/SelfTest/EditorStabilityState.h"
 

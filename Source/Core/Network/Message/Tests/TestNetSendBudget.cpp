@@ -3,7 +3,7 @@
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetSendBudget.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // 보내기 예산 — 메시지 상한으로 자르기, 키트 틱 예산이 연결 상한을 따름.
 

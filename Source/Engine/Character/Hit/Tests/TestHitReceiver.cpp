@@ -1,7 +1,7 @@
 // HitReceiverTest — 맞음 전달이 피해 받는 쪽(IHitReceiver)을 한 번 먼저 부르고 그 다음 반응(맞음 사건)에 알리는지 본다(nogpu, 헤드리스).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/Tests/HitReceiverTestComponent.h"

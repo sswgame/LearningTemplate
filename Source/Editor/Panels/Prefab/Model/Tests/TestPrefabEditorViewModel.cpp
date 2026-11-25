@@ -1,7 +1,7 @@
 // PrefabEditorViewModelTest — 프리팹 창의 상태: 문서 루트를 다시 스폰해야 하는지, 중첩 요청의 거절과 실패, 씬이 없을 때의 명령(스폰 · 저장은 시나리오 previewreopen 이 본다 — nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Commands/Scene/EditorPrefabIsolation.h"
 #include "Editor/Common/Workspace/EditorSelection.h"

@@ -1,7 +1,7 @@
 // RenderPassKindInfo — 패스 표의 PSO 기본 블렌드(끔 · 곧은 알파 · 미리 곱한 알파)가 그 패스가 그리는 방식과 맞는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 

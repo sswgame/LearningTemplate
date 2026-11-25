@@ -1,7 +1,7 @@
 // GameCatalogTest — 카탈로그 키(`CatalogKey<TDef>`)로 찾기 · 반드시 있어야 하는 키(`require`)는 빈 키 · 없는 키를 오류로 멈춘다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 

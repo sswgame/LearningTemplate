@@ -2,7 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Material/MaterialGraph.h"
 #include "DevTools/Material/MaterialGraphCompileResult.h"

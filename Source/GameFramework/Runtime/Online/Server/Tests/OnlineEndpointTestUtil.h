@@ -7,7 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Process/ProcessEnvironment.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace sw::test

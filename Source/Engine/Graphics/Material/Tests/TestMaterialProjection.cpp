@@ -2,7 +2,7 @@
 // 기대값은 같은 식을 파이썬으로 따로 계산한 값이다 — 셰이더를 바꾸면 이 값도 함께 바뀌어야 한다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/Material/MaterialProjection.h"
 

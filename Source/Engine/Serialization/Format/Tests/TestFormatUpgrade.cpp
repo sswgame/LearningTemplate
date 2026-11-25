@@ -1,7 +1,7 @@
 // FormatUpgrade — 판 올림 사슬: 한 판씩 순서대로 올리기, 빠진 단계 · 새 판 · 실패한 단계는 오류, 자리(에셋 XML · 세이브 바이트)마다 따로(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Format/FormatUpgrade.h"
 

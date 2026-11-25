@@ -1,7 +1,7 @@
 // AutomationWatchGroupTest — 감시 값 묶음은 `<묶음>.` 으로 시작하는 씬 감시 값만 모은다(디버그 HUD 범주가 보이는 것, nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 

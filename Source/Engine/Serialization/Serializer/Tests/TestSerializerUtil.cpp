@@ -3,7 +3,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Reflection/ReflectValueBinding.h"

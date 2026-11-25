@@ -6,7 +6,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Spatial/BVHTree3D.h"
 #include "Core/Spatial/SpatialHashGrid2D.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 namespace sw
 {

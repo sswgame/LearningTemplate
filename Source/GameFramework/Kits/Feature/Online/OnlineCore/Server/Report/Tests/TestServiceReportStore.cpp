@@ -2,7 +2,7 @@
 // 두 GM 의 동시 처리, 잘못된 처리 요청 · 깨진 레코드 거절(건너뛰지 않는다)(nogpu). 채팅 신고 길은 ChatService 테스트가 본다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"

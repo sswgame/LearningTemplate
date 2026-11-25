@@ -2,7 +2,7 @@
 // GUID 참조를 색인으로 풀어 읽고, 옮기는 동안의 경로 글도 읽으며, 다시 쓰면 GUID 참조로 적는다(GUID 2 단계 — 같은 이름의 칸이 모두 같은 저장 꼴이라 이전 도구가 이름으로 가른다).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"

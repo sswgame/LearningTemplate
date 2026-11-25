@@ -1,7 +1,7 @@
 // ModuleABIStampTest — 모듈 C-ABI 표의 스탬프가 표 선언 글에서 저절로 따라오는지(nogpu). 판정은 대부분 컴파일 때(static_assert) 끝난다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
 #include "ModuleAPI/ABI/GameAPI.h"

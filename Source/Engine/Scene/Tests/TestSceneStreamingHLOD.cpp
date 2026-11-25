@@ -2,7 +2,7 @@
 // 로드 큐는 개발 도구가 본다(`DevSceneStreamingAccessTest`).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"

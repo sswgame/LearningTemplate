@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Encoding/FourCCUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 

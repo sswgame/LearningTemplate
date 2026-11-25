@@ -4,7 +4,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleBuildID.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"

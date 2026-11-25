@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Log/Sink/AsyncLogSink.h"
 #include "Core/Log/Sink/ILogOutput.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include <thread>
 

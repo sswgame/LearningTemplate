@@ -4,7 +4,7 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Network/NetMessageChannel.h"

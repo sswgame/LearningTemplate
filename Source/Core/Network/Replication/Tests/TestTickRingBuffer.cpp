@@ -2,7 +2,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // 틱 고리 — 키 전체로 찾기(덮인 자리는 없다), 들어 있는 수 · 가장 새 틱 · 들 수 있는 가장 오래된 틱, 지우기, 비우기는 값(버퍼)을 남긴다, 빈 표시는 찾지 못한다.
 

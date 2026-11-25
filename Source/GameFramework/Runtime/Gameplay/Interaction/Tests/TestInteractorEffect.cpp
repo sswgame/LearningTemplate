@@ -1,7 +1,7 @@
 // InteractorEffectTest — 진행 동안만의 시작 효과: 대상이 진행 중에 사라져도 취소가 시작 효과를 지운다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
