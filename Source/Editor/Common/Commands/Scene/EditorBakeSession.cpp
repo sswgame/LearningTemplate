@@ -1,6 +1,9 @@
 #include "pch.h"
 
 #include "Editor/Common/Commands/Scene/EditorBakeSession.h"
+
+#include "Core/String/StringUtil.h"
+
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
@@ -53,5 +56,32 @@ namespace sw::editor
         if ( EditorPlaySession::getHeldSceneEditCount() != _heldEditCount )
             return "the scene was edited during the bake";
         return nullptr;
+    }
+
+    namespace
+    {
+        struct EditorBakeSessionInternal
+        {
+            /// @brief 씬 파일 이름의 끝 — 이것을 떼고 오브젝트 이름을 붙인다.
+            static constexpr string_view kSceneSuffix = ".scene.xml";
+        };
+    } // namespace
+
+    string makeSceneBakeAssetPath( string_view sceneAssetID, string_view ownerName, string_view extension )
+    {
+        if ( ownerName.empty() || StringUtil::endsWith( sceneAssetID, EditorBakeSessionInternal::kSceneSuffix ) == false )
+            return {};
+        string path{ sceneAssetID.substr( 0, sceneAssetID.size() - EditorBakeSessionInternal::kSceneSuffix.size() ) };
+        string name = StringUtil::toLower( ownerName );
+        for ( utf8& character : name )
+        {
+            const bool bAllowed = ( 'a' <= character && character <= 'z' ) || ( '0' <= character && character <= '9' );
+            if ( bAllowed == false )
+                character = '_';
+        }
+        path += '.';
+        path += name;
+        path += extension;
+        return path;
     }
 } // namespace sw::editor

@@ -4,7 +4,7 @@
   에디터 시나리오 — 씬 뷰의 물리 셰이프 시각화(Phys, physics_shapes)와 내비메시 시각화(Nav, navmesh), 그리고 navigation.bake 커맨드.
   TestMesh 에 RigidBodyComponent 를 붙이고(기본 셰이프는 상자) Phys 를 켜면 셰이프 선분이 그려진다(기본은 꺼짐이라 켜기 전엔 0).
   navigation.bake 는 편집 중인 씬을 베이크한다 — 이 시나리오의 씬에는 걸을 바닥이 없어 내비메시가 서지 않을 수 있으므로 커맨드가 돌았는지만 본다
-  (바닥이 있는 씬에서 내비메시가 서는 것은 EditorTest 의 EditorNavigationCommandsTest 가 본다). Nav 를 켜도 베이크 전에는 선이 없다.
+  (바닥이 있는 씬에서 내비메시가 서는지는 아직 보는 테스트가 없다). Nav 를 켜도 베이크 전에는 선이 없다.
   실행: App -EnableEditor -scenario=engine/automation/editor/physicsnavview.scenario.xml -unattended
 -->
 <Scenario name="editor.physicsnavview" fixedDelta="0.0166667" timeoutFrames="500" startAfter="Immediately" input="exclusive">
