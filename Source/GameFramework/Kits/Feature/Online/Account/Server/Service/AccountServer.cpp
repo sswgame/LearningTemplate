@@ -131,7 +131,7 @@ namespace sw
     void AccountServer::handleCall( OnlineServerCall<AccountMethod::GuestLogin> call, const OnlineCallContext& context, const AccountGuestLoginRequest& request )
     {
         if ( beginLogin( call, context ) )
-            _pLoginService->guestLogin( request._arrDeviceSecret, request._clientInfo, context._remoteKey, context._nowMs, call._callID );
+            _pLoginService->guestLogin( request._deviceSecret.reveal(), request._clientInfo, context._remoteKey, context._nowMs, call._callID );
     }
 
     void AccountServer::handleCall( OnlineServerCall<AccountMethod::PlatformLogin> call, const OnlineCallContext& context, const AccountPlatformRequest& request )

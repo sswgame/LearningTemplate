@@ -71,7 +71,7 @@ namespace sw
         if ( _pCrypto->fillRandom( pBody + LoginTicketAuthorityInternal::kNonceOffset, LoginTicketAuthorityInternal::kNonceSize ) == false )
             return false;
         uint8 arrTag[NetGameTicket::kTagSize];
-        if ( computeTag( pBody, arrTag ) == false || computeSecret( pBody, ticket._arrSecret ) == false )
+        if ( computeTag( pBody, arrTag ) == false || computeSecret( pBody, ticket._secret.reveal() ) == false )
             return false;
         Memory::copy( pBody + NetGameTicket::kBodySize, arrTag, NetGameTicket::kTagSize );
         ticket._expiresAtMs = expiresAtMs;

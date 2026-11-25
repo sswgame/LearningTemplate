@@ -76,7 +76,7 @@ namespace sw
         UnixMilliseconds  _nowMs{ 0 };
         LoginOperation    _operation{ LoginOperation::Login };
         LoginRevokeReason _revokeReason{ LoginRevokeReason::Administrative };
-        uint8             _arrDeviceSecret[LoginConstant::kDeviceSecretSize]{};
+        Secret32          _deviceSecret{};
         uint8             _bUpdateRecommended{ SW_FALSE };
     };
 
@@ -145,9 +145,9 @@ namespace sw
                 done._completion._requestTag = input._requestTag;
                 runOperation( connection, crypto, settings, authority, input, done );
                 // 워커를 떠나면 비밀번호, 장치 비밀, 외부 주체를 보관하지 않는다. 별도로 지우기(wipe)는 하지 않으며 서버의 관례를 따른다.
-                input._credential._password.clear();
+                input._credential._password.wipe();
                 input._subject.clear();
-                Memory::wipe( input._arrDeviceSecret, sizeof( input._arrDeviceSecret ) );
+                input._deviceSecret.wipe();
                 return done;
             }
 
@@ -170,7 +170,7 @@ namespace sw
                     }
                     case LoginOperation::GuestLogin:
                     {
-                        completion._result = logic.guestLogin( input._arrDeviceSecret, nowMs, completion._grant );
+                        completion._result = logic.guestLogin( input._deviceSecret.reveal(), nowMs, completion._grant );
                         break;
                     }
                     case LoginOperation::PlatformLogin:
@@ -374,7 +374,7 @@ namespace sw
         _listHashCompletionScratch.clear();
         for ( auto& entry : _mapPasswordCall )
         {
-            StringUtil::wipeSecret( entry.second->_input._credential._password );
+            entry.second->_input._credential._password.wipe();
         }
         _mapPasswordCall.clear();
         _mapHashJobToCall.clear();
@@ -624,7 +624,7 @@ namespace sw
             return;
         }
         LoginCallInput input = makeCallInput( LoginOperation::GuestLogin, requestTag, nowMs );
-        Memory::copy( input._arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
+        Memory::copy( input._deviceSecret.reveal(), arrDeviceSecret, LoginConstant::kDeviceSecretSize );
         input._bUpdateRecommended = buildGrant._bUpdateRecommended;
         input._storeURL           = buildGrant._storeURL;
         validateSharedAttempt( clientKey, LoginOperation::GuestLogin, requestTag, buildGrant, [this, input = std::move( input )]() mutable
@@ -832,7 +832,7 @@ namespace sw
         optional<PasswordHashTicket> ticket = _hashQueue.tryReserve();
         if ( ticket.has_value() == false )
         {
-            StringUtil::wipeSecret( input._credential._password );
+            input._credential._password.wipe();
             pushImmediate( input._operation, input._requestTag, LoginServiceResult::fail( OnlineError::kBusy ), LoginGrant{} );
             return false;
         }
@@ -842,7 +842,7 @@ namespace sw
             const LoginServiceResult valid = LoginStoreLogic::validateNewCredential( input._credential );
             if ( valid != LoginResult::Ok )
             {
-                StringUtil::wipeSecret( input._credential._password );
+                input._credential._password.wipe();
                 pushImmediate( input._operation, input._requestTag, valid, LoginGrant{} );
                 return true;
             }
@@ -918,11 +918,11 @@ namespace sw
             request._arrSpec[0]._params = call._prepared._params;
             Memory::copy( request._arrSpec[0]._arrSalt, call._prepared._arrSalt, LoginConstant::kSaltSize );
             request._specCount = 1;
-            StringUtil::wipeSecret( call._input._credential._password ); // 가입 · 연동은 다시 해시할 일이 없다 — 줄에 넘긴 사본만 남는다
+            call._input._credential._password.wipe(); // 가입 · 연동은 다시 해시할 일이 없다 — 줄에 넘긴 사본만 남는다
         }
         if ( bSaltFilled == false )
         {
-            StringUtil::wipeSecret( request._password );
+            request._password.wipe();
             LoginCompletion completion = LoginStoreRun::makePasswordCompletion( call );
             completion._result         = LoginServiceResult::fail( OnlineError::kUnavailable );
             finishPasswordCall( callID, std::move( completion ), LoginStoreResult{} );
@@ -954,7 +954,7 @@ namespace sw
         ILoginCrypto*               pCrypto    = _pCrypto;
         const LoginTicketAuthority* pAuthority = &_ticketAuthority;
         LoginCallInput              input      = call._input;
-        StringUtil::wipeSecret( input._credential._password ); // 커밋은 해시만 쓴다 — 비밀번호는 저장소 일로 가지 않는다
+        input._credential._password.wipe(); // 커밋은 해시만 쓴다 — 비밀번호는 저장소 일로 가지 않는다
         if ( call._input._operation != LoginOperation::Login )
         {
             Memory::copy( call._prepared._arrHash, completion._arrHash[0], LoginConstant::kPasswordHashSize );
@@ -1010,7 +1010,7 @@ namespace sw
             completion._grant._bUpdateRecommended = SW_TRUE;
             completion._grant._storeURL           = call._input._storeURL;
         }
-        StringUtil::wipeSecret( call._input._credential._password );
+        call._input._credential._password.wipe();
         _mapPasswordCall.erase( callIt );
         applyCompletion( std::move( completion ), serviceResult );
     }

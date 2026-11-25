@@ -522,7 +522,7 @@ namespace sw
         string nameKey;
         if ( Internal::normalizeLoginName( credential._loginName, nameKey ) == false )
             return LoginResult::InvalidName;
-        if ( Internal::isValidPassword( credential._password ) == false )
+        if ( Internal::isValidPassword( credential._password.reveal() ) == false )
             return LoginResult::InvalidPassword;
         return LoginResult::Ok;
     }
@@ -806,7 +806,7 @@ namespace sw
         outGrant                = LoginGrant{};
         const string sessionKey = ServiceKeyUtil::makeHex64( token._sessionID );
         uint8        arrDigest[LoginConstant::kDigestSize];
-        if ( Internal::computeTokenDigest( _crypto, token._arrSecret, arrDigest ) == false )
+        if ( Internal::computeTokenDigest( _crypto, token._secret.reveal(), arrDigest ) == false )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
 
         return ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.ResumeSession", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
@@ -839,8 +839,8 @@ namespace sw
             // 재접속할 때마다 비밀을 새로 바꾼다. 이전 토큰은 이 커밋으로 무효가 된다.
             LoginSessionToken rotated;
             rotated._sessionID     = token._sessionID;
-            const bool bSecretMade = _crypto.fillRandom( rotated._arrSecret, LoginConstant::kTokenSecretSize );
-            if ( bSecretMade == false || Internal::computeTokenDigest( _crypto, rotated._arrSecret, session._arrTokenDigest ) == false )
+            const bool bSecretMade = _crypto.fillRandom( rotated._secret.reveal(), LoginConstant::kTokenSecretSize );
+            if ( bSecretMade == false || Internal::computeTokenDigest( _crypto, rotated._secret.reveal(), session._arrTokenDigest ) == false )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
             session._resumeDeadlineMs = 0;
             ++session._rotation;
@@ -875,7 +875,7 @@ namespace sw
         if ( Internal::decodeSession( sessionRaw._bytes, session ) == false )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
         uint8 arrDigest[LoginConstant::kDigestSize];
-        if ( Internal::computeTokenDigest( _crypto, token._arrSecret, arrDigest ) == false )
+        if ( Internal::computeTokenDigest( _crypto, token._secret.reveal(), arrDigest ) == false )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
         if ( SecureUtil::equalsConstantTime( arrDigest, session._arrTokenDigest, LoginConstant::kDigestSize ) == false )
             return LoginResult::InvalidToken;
@@ -1542,13 +1542,13 @@ namespace sw
         }
 
         const bool bIDMade = Internal::makeNonZeroID( _crypto, outToken._sessionID );
-        if ( bIDMade == false || _crypto.fillRandom( outToken._arrSecret, LoginConstant::kTokenSecretSize ) == false )
+        if ( bIDMade == false || _crypto.fillRandom( outToken._secret.reveal(), LoginConstant::kTokenSecretSize ) == false )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
         Internal::SessionRecord session;
         session._accountID   = accountID;
         session._issuedAtMs  = nowMs;
         session._expiresAtMs = nowMs + _settings._sessionLifetimeMs;
-        if ( Internal::computeTokenDigest( _crypto, outToken._arrSecret, session._arrTokenDigest ) == false )
+        if ( Internal::computeTokenDigest( _crypto, outToken._secret.reveal(), session._arrTokenDigest ) == false )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
         Internal::stageSession( inoutTransaction, ServiceKeyUtil::makeHex64( outToken._sessionID ), session, ServiceRecord::kAbsentVersion );
         inoutTransaction.put( Internal::getAccountSessionTable(), accountKey, ServiceKeyUtil::encodeVarID( outToken._sessionID ), linkRaw._version );

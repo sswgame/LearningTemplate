@@ -52,10 +52,10 @@ namespace
             if ( context._method == AccountMethod::Login::kID )
             {
                 AccountGrantReply reply;
-                reply._grant._identity._accountID = 42;
-                reply._grant._token._sessionID    = 7;
-                reply._grant._token._arrSecret[0] = 5;
-                reply._result                     = LoginResult::Ok;
+                reply._grant._identity._accountID       = 42;
+                reply._grant._token._sessionID          = 7;
+                reply._grant._token._secret.reveal()[0] = 5;
+                reply._result                           = LoginResult::Ok;
                 (void)host.respondReply<AccountProtocol::MessageTypes>( context._token, reply );
                 return;
             }

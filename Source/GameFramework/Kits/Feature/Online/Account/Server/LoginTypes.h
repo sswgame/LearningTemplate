@@ -55,8 +55,8 @@ namespace sw
     /** @brief 가입과 로그인에 쓰는 자격입니다. 로그인 이름이 표시 이름이기도 합니다. 입력한 글자 그대로 보이며, 찾을 때는 대소문자를 무시합니다. */
     struct LoginCredential
     {
-        string _loginName{};
-        string _password{};
+        string     _loginName{};
+        SecretText _password{};
     };
 } // namespace sw
 

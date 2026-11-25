@@ -54,19 +54,19 @@ namespace sw
 
     uint64 AccountClient::registerAccount( string_view loginName, string_view password )
     {
-        return call<AccountMethod::Register>( AccountCredentialRequest{ string( loginName ), string( password ) },
+        return call<AccountMethod::Register>( AccountCredentialRequest{ string( loginName ), password },
                                               SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::Register>, &AccountClient::onGrantReply, this ) );
     }
 
     uint64 AccountClient::login( string_view loginName, string_view password )
     {
-        return call<AccountMethod::Login>( AccountLoginRequest{ string( loginName ), string( password ), _clientInfo }, SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::Login>, &AccountClient::onGrantReply, this ) );
+        return call<AccountMethod::Login>( AccountLoginRequest{ string( loginName ), password, _clientInfo }, SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::Login>, &AccountClient::onGrantReply, this ) );
     }
 
     uint64 AccountClient::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize] )
     {
         AccountGuestLoginRequest request;
-        Memory::copy( request._arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
+        Memory::copy( request._deviceSecret.reveal(), arrDeviceSecret, LoginConstant::kDeviceSecretSize );
         request._clientInfo = _clientInfo;
         return call<AccountMethod::GuestLogin>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::GuestLogin>, &AccountClient::onGrantReply, this ) );
     }
@@ -98,7 +98,7 @@ namespace sw
 
     uint64 AccountClient::linkCredential( string_view loginName, string_view password )
     {
-        return call<AccountMethod::LinkCredential>( AccountCredentialRequest{ string( loginName ), string( password ) },
+        return call<AccountMethod::LinkCredential>( AccountCredentialRequest{ string( loginName ), password },
                                                     SW_DELEGATE_METHOD( OnlineReplyDelegate<AccountMethod::LinkCredential>, &AccountClient::onGrantReply, this ) );
     }
 
@@ -158,7 +158,7 @@ namespace sw
         static_assert( NetGameTicket::kSecretSize == sizeof( outCredentials._secret._arrByte ) );
         Memory::copy( outCredentials._arrToken, ticket._arrToken, NetGameTicket::kTokenSize );
         outCredentials._tokenSize = NetGameTicket::kTokenSize;
-        Memory::copy( outCredentials._secret._arrByte, ticket._arrSecret, NetGameTicket::kSecretSize );
+        Memory::copy( outCredentials._secret._arrByte, ticket._secret.reveal(), NetGameTicket::kSecretSize );
     }
 
     void AccountClient::onPush( AccountMethod::Revoked, const AccountRevokedPush& body )
