@@ -179,7 +179,8 @@ SW_TEST_CASE( StateIOReflectedTest, HandBodyAddsValuesOutsideReflection )
     SW_EXPECT_EQUAL( 15, restored._handOnly );
 
     const uint64 hash = sw::computeLayoutHash<sw::StateIOReflectedTestMixed>();
-    SW_EXPECT_FALSE( sw::readCrafted( 1, hash, []( sw::Archive& out )
+    // 판을 적지 않은 형식은 첫 판(0)이다 — 지금 판의 바이트라 손 검사까지 간다.
+    SW_EXPECT_FALSE( sw::readCrafted( 0, hash, []( sw::Archive& out )
     { out << int32{ 5 } << int32{ 6 }; }, restored ) ); // 손 값이 한도를 넘는다
     SW_EXPECT_EQUAL( 15, restored._handOnly );
 }

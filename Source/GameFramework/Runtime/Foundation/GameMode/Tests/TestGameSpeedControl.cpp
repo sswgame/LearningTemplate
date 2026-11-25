@@ -12,6 +12,7 @@ SW_TEST_CASE( GameSpeedControlTest, StepsClampAndRefuseOutOfRange )
 {
     sw::GameSpeedControl speed;
     SW_EXPECT_LOG( "GameSpeedControl.RangeInvalid" );
+    SW_EXPECT_LOG( "GameSpeedControl.TimeScaleRefused" ); // 범위 없는 배속 · 범위 밖 저장값 · 0 · 100 배속을 거절하며 남긴다
     SW_EXPECT_FALSE( speed.initialize( sw::GameSpeedRange{} ) );
     SW_EXPECT_FALSE( speed.setTimeScale( 1.0f ) ); // 범위가 없으면 어떤 배속도 받지 않는다
     sw::GameSpeedRange range;
@@ -44,7 +45,6 @@ SW_TEST_CASE( GameSpeedControlTest, StepsClampAndRefuseOutOfRange )
     SW_EXPECT_TRUE( speed.isPaused() );
     SW_EXPECT_EQUAL( range._minTimeScale, speed.getTimeScale() );
 
-    SW_EXPECT_LOG( "GameSpeedControl.TimeScaleRefused" );
     SW_EXPECT_FALSE( speed.setTimeScale( 0.0f ) );
     SW_EXPECT_FALSE( speed.restore( 100.0f, false ) );
     SW_EXPECT_TRUE( speed.isPaused() ); // 거절한 복원은 아무것도 바꾸지 않는다

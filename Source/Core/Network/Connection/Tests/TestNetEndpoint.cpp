@@ -1017,6 +1017,7 @@ SW_TEST_CASE( NetEndpointTest, LostDisconnectIsSentAgainToAPeerStillTalking )
 SW_TEST_CASE( NetEndpointTest, UnconfirmedAddressNeverGetsMoreThanItSent )
 {
     using PacketKind = NetEndpoint::PacketKind;
+    SW_EXPECT_LOG( "Net.ConnectionRefused" ); // 다른 판 · 다른 게임의 요청을 서버가 이유와 함께 거절한다
     NetEndpointConfig        settings;
     LoopbackNetwork          network;
     test::RecordingTransport serverTransport( network.createEndpoint( 4000 ) );

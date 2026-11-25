@@ -493,11 +493,11 @@ SW_TEST_CASE( LocalizationBinaryTableTest, RoundTripAndCorruption )
     SW_EXPECT_FALSE( loaded.parse( truncated.data(), truncated.size() ) );
     SW_EXPECT_FALSE( loaded.parse( bytes.data(), 5 ) );
 
-    sw::vector<uint8> wrongMagic            = bytes;
-    wrongMagic[0]                           = 'X';
-    const sw::expected<void> wrongMagicRead = loaded.parse( wrongMagic.data(), wrongMagic.size() );
-    SW_EXPECT_FALSE( wrongMagicRead );
-    SW_EXPECT_TRUE( wrongMagicRead.has_value() == false && wrongMagicRead.error().message().find( "magic" ) != sw::string_view::npos );
+    sw::vector<uint8> wrongTag            = bytes;
+    wrongTag[0]                           = 'X';
+    const sw::expected<void> wrongTagRead = loaded.parse( wrongTag.data(), wrongTag.size() );
+    SW_EXPECT_FALSE( wrongTagRead );
+    SW_EXPECT_TRUE( wrongTagRead.has_value() == false && wrongTagRead.error().message().find( "another format" ) != sw::string_view::npos );
 
     // 어느 길이로 잘려도 거절한다(끝의 검사합이 먼저 지지만 길이가 머리보다 짧으면 거기서 진다).
     for ( size_t length = 0; length < bytes.size(); ++length )

@@ -264,6 +264,7 @@ SW_TEST_CASE( BodyProfileTest, InheritsAndOverridesByKey )
  */
 SW_TEST_CASE( BodyProfileTest, ValuesOutsideTheirRangeAreErrors )
 {
+    SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" ); // 읽기 보고(AppearanceLoadReport)는 모은 오류를 경고 로그로도 남긴다
     const pair<const utf8*, uint32> arrCase[] = {
         {                                                                                                        "<BodyProfile id=\"A\" wrinkleIntensity=\"2\"/>", 0u},
         {                                                                                                      "<BodyProfile id=\"A\" wrinkleIntensity=\"2.5\"/>", 1u},

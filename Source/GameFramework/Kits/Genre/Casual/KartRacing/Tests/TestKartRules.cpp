@@ -608,7 +608,8 @@ SW_TEST_CASE( KartItemsTest, ReportsBrokenTables )
  */
 SW_TEST_CASE( KartAITest, ItemDecisions )
 {
-    sw::KartAIDriver  driver;
+    sw::KartAIDriver driver;
+    driver.setSettings( KartTestUtil::makeAISettings() ); // 들고 있는 시간 · 사거리는 설정 칸이다(0.8 초 · 8 초 · 껍질 45 m · 바나나 15 m)
     sw::KartAIContext context;
     SW_EXPECT_FALSE( driver.shouldUseItem( context ) ); // 아이템 없음
 

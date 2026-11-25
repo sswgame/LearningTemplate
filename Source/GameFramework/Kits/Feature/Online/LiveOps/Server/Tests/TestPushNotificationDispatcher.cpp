@@ -357,6 +357,8 @@ SW_TEST_CASE( PushDispatcherTest, SameTokenMovesToTheNewAccount )
 /** @brief [PushDispatcherTest] 기기 수 · 재시도 값은 설정이 정한다 — 적지 않은 키트 설정은 읽지 못하고, 값이 없는 발송기 설정으로는 서지 않는다 */
 SW_TEST_CASE( PushDispatcherTest, DeviceAndRetryLimitsAreRequired )
 {
+    // 빠진 칸의 초기값(0)은 반사의 `Min` 밖이라 읽기 공통 끝도 칸마다 알린다 — 빠졌다는 오류와 함께 난다.
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_EXPECT_LOG( "Config.KeyMissing" );
     OnlineServerKitEntry entry;
     entry._name     = "liveops";

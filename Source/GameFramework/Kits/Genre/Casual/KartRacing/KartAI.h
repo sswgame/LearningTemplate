@@ -34,15 +34,15 @@ namespace sw
         float32 _steerGain{ 0.0f }; ///< 방향 오차(라디안)를 조향으로 바꾸는 배율이다
         PROPERTY( Min = 0.0, Max = 1.0 )
         float32 _racingLine{ 0.0f }; ///< 곡선 안쪽으로 붙는 정도이다(반 폭에 대한 비율이며 0 이면 중심선)
-        PROPERTY( Min = 0.0 )
+        PROPERTY( Min = 0.0, Units = rad )
         float32 _cornerAngle{ 0.0f }; ///< 이만큼(라디안) 도는 곡선이면 레이싱 라인을 끝까지 쓴다
         PROPERTY( Min = 0.0, Units = m )
         float32 _cornerLookAhead{ 0.0f }; ///< 곡선을 읽는 거리(m)
-        PROPERTY( Min = 0.0 )
+        PROPERTY( Min = 0.0, Units = rad )
         float32 _driftStartAngle{ 0.0f }; ///< 앞 곡선이 이만큼(라디안) 돌면 드리프트를 건다
-        PROPERTY( Min = 0.0 )
+        PROPERTY( Min = 0.0, Units = rad )
         float32 _driftEndAngle{ 0.0f }; ///< 곡선이 이 값(라디안) 아래로 펴지면 드리프트를 놓는다(미니터보)
-        PROPERTY( Min = 0.0 )
+        PROPERTY( Min = 0.0, Units = rad )
         float32 _brakeAngle{ 0.0f }; ///< 이보다(라디안) 급한 곡선에서는 페달을 늦춘다
         PROPERTY( Min = 0.0, Max = 1.0 )
         float32 _brakeThrottle{ 0.0f }; ///< 급한 곡선에서 밟는 페달(0..1)

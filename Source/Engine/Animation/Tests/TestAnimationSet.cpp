@@ -95,7 +95,8 @@ SW_TEST_CASE( AnimationSetTest, RejectsBrokenLines )
     SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a/b" path="x.animclip"/></AnimationSet>)", "<test>" ) );
     SW_EXPECT_LOG( "XMLFields.UnknownField" );
     SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a" path="x.animclip" speed="2"/></AnimationSet>)", "<test>" ) );
-    SW_EXPECT_LOG( "AssetRef.WrongType" ); // 다른 종류의 파일을 가리키면 읽지 않는다
+    SW_EXPECT_LOG( "AssetRef.WrongType" );        // 다른 종류의 파일을 가리키면 읽지 않는다
+    SW_EXPECT_LOG( "XMLFields.ValueUnreadable" ); // 칸 읽기가 그 원소 · 칸 자리를 함께 알린다
     SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a" path="x.mesh"/></AnimationSet>)", "<test>" ) );
     SW_EXPECT_TRUE( animationSet.getEntries().empty() );
 
