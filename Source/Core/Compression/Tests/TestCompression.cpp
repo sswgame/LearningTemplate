@@ -389,12 +389,13 @@ SW_TEST_CASE( CompressionTest, FuzzTimeoutInputIsRejectedBeforeAllocating )
 {
     SW_EXPECT_LOG( "Compression.SizeExceedsBound" ); // 압축 0 바이트가 요구한 크기는 코덱 상한(0)을 넘는다
 
+    // 판 바이트(다섯째)는 지금 판(CompressionHeader::kVersion = 0)으로 고쳤다 — 퍼저가 낸 입력은 판 1 시절이라 그대로면 헤더 검사에서 판으로 끊겨 크기 검사까지 가지 않는다.
     static constexpr uint8 kArrFuzzInput[] = {
         0x53,
         0x57,
         0x43,
         0x53,
-        0x01,
+        0x00,
         0x01,
         0x01,
         0x00,
