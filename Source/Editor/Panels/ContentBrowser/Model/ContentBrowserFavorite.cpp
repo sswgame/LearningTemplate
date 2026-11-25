@@ -5,8 +5,10 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Localization/EditorDataText.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserViewModel.h"
 
@@ -40,9 +42,10 @@ namespace sw::editor
         if ( state._bLoaded == SW_TRUE && state._revision == revision )
             return state._listFavorite;
         ContentBrowserFavoriteTable table;
-        if ( XMLSerializer::loadFromAsset( AssetID{ ContentBrowserFavoriteTable::kAsset }, &table, *ContentBrowserFavoriteTable::StaticType() ) == false )
+        const string&               tablePath = editor::getSubsystem<const EditorDefaultAssets>()._contentBrowserFavorites.get();
+        if ( XMLSerializer::loadFromAsset( AssetID{ tablePath }, &table, *ContentBrowserFavoriteTable::StaticType() ) == false )
         {
-            SW_LOG_ERROR_ID( "ContentBrowser.FavoritesCannotRead", "Content browser favorites '%#' could not be read strictly - the list is empty", ContentBrowserFavoriteTable::kAsset );
+            SW_LOG_ERROR_ID( "ContentBrowser.FavoritesCannotRead", "Content browser favorites '%#' could not be read strictly - the list is empty", tablePath );
             table._listFavorite.clear();
         }
         for ( ContentBrowserFavorite& favorite : table._listFavorite )

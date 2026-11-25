@@ -4,6 +4,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFavorite.h"
 
 #include "Engine/Content/AssetID.h"
@@ -15,8 +16,10 @@ using namespace sw::editor;
 /** @brief [ContentBrowserFavoriteTest] 배포된 표가 읽히고, 이름마다 폴더가 있으며 엔진 팩의 줄도 있다 */
 SW_TEST_CASE( ContentBrowserFavoriteTest, ShippedTableIsReadable )
 {
+    EditorDefaultAssets assets;
+    SW_REQUIRE_TRUE( EditorDefaultAssets::load( assets ) );
     ContentBrowserFavoriteTable table;
-    SW_REQUIRE_TRUE( XMLSerializer::loadFromAsset( AssetID{ ContentBrowserFavoriteTable::kAsset }, &table, *ContentBrowserFavoriteTable::StaticType() ) );
+    SW_REQUIRE_TRUE( XMLSerializer::loadFromAsset( AssetID{ assets._contentBrowserFavorites.get() }, &table, *ContentBrowserFavoriteTable::StaticType() ) );
     SW_EXPECT_TRUE( table._listFavorite.empty() == false );
     unordered_set<string> setLabel;
     bool                  bEngineListed{ false };

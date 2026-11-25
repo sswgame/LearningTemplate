@@ -8,9 +8,9 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"
+#include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorIconName.h"
-#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Reflection/TypeInfo.h"
@@ -24,7 +24,9 @@ namespace
     EditorIconGlyphTable loadEngineTable()
     {
         EditorIconGlyphTable table;
-        SW_EXPECT_TRUE( table.loadFromAsset( AssetID{ EditorPaths::kIconGlyphTable } ) );
+        EditorDefaultAssets  assets;
+        SW_EXPECT_TRUE( EditorDefaultAssets::load( assets ) );
+        SW_EXPECT_TRUE( table.loadFromAsset( AssetID{ assets._iconGlyphTable.get() } ) );
         return table;
     }
 
@@ -51,7 +53,9 @@ SW_TEST_CASE( EditorIconNames, EveryNameCodeAndDataUseIsInTheTable )
     }
 
     EditorComponentIconTable componentTable;
-    SW_REQUIRE_TRUE( componentTable.loadFromAsset( AssetID{ EditorPaths::kComponentIconTable } ) );
+    EditorDefaultAssets      assets;
+    SW_EXPECT_TRUE( EditorDefaultAssets::load( assets ) );
+    SW_REQUIRE_TRUE( componentTable.loadFromAsset( AssetID{ assets._componentIconTable.get() } ) );
     for ( const string* pName : { &componentTable._defaultIcon, &componentTable._objectIcon } )
     {
         fixed_string<constant::buffer::kMax256> message;

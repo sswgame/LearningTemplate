@@ -44,8 +44,6 @@ namespace sw::editor
     {
         REFLECT_BODY();
 
-        static constexpr const utf8* kAsset = "editor/panels/contentbrowser.favorites.xml";
-
         PROPERTY( Required, Tooltip = "Favorite folders in list order" )
         vector<ContentBrowserFavorite> _listFavorite{};
     };

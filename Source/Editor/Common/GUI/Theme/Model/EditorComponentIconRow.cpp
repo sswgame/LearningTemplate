@@ -6,8 +6,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"
+#include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -88,7 +88,7 @@ namespace sw::editor
             {
                 const bool bIcon = editor::getSubsystem<EditorIconGlyphTable>().findGlyph( hashed_string{ iconName } ) != nullptr;
                 if ( bIcon == false )
-                    SW_LOG_ERROR_ID( "EditorComponentIcon.UnknownIcon", "%# names icon '%#' which the icon table does not have (%#)", pOwner, iconName, EditorPaths::kIconGlyphTable );
+                    SW_LOG_ERROR_ID( "EditorComponentIcon.UnknownIcon", "%# names icon '%#' which the icon table does not have (%#)", pOwner, iconName, editor::getSubsystem<const EditorDefaultAssets>()._iconGlyphTable.get() );
                 const string colorKey = EditorComponentIconTable::makeColorKey( colorName );
                 const bool   bColor   = EditorThemeUtil::getActiveTheme().findColor( hashed_string{ string_view{ colorKey } } ) != nullptr;
                 if ( bColor == false )
