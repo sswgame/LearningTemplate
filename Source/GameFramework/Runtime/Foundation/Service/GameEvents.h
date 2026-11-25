@@ -1,6 +1,6 @@
 /**
  * @file GameEvents.h
- * @brief EventDispatcher 채널 "game" 의 장르 공통 수명주기 이벤트를 정의합니다.
+ * @brief EventDispatcher 채널 "game" 의 장르 공통 수명주기 이벤트와, 이벤트를 그 채널에 내는 단일 경로(`GameEventUtil` — 버스 스레드면 즉시, 아니면 큐)를 정의합니다.
  * @details 프레임워크가 정해진 시점에 이 이벤트를 낸다.
  *          모두 `GameEventUtil::send` 로 내며, 버스 스레드면 즉시, 아니면 다음 `processEvents` 에서 전달된다.
  *          - `SaveGameSavedEvent` 와 `SaveGameLoadedEvent`: `GameSaveSlots::save` 과 `load`(자동 저장 되돌리기 `AutosaveManager::restoreLatest` · `restoreCheckpoint` 도 같은 적용 길)이 맡긴 슬롯 쓰기 · 읽기가 끝난 뒤 낸다 — 세이브가 다른 씬이면 그 씬이 열려 적용한 뒤다. 성공과 실패 모두 낸다.
@@ -12,12 +12,14 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Event/EventDispatcher.h"
 #include "Core/Event/EventType.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
@@ -66,5 +68,28 @@ namespace sw
         string _levelName;        ///< 요청했던 씬 경로
         bool   _bSuccess{ true }; ///< 활성 씬이 되었으면 true. 읽지 못했거나 뒤 요청에 밀렸으면 false
         SW_DECLARE_GAMEPLAY_EVENT( SceneLoadCompletedEvent );
+    };
+
+    /**
+     * @struct GameEventUtil
+     * @brief 게임플레이 이벤트를 "game" 채널(`gameEventChannel`)에 냅니다.
+     * @details 언리얼의 델리게이트(`OnTakeAnyDamage`, GameMode 의 브로드캐스트)처럼 **즉시** 알리는 것이 기본입니다(`publish`). HP 바,
+     *          피해 숫자가 같은 프레임에 받습니다. 버스(구독 · 발행)는 큐를 비우는 스레드 전용이라(`EventDispatcher::isBusThread`), 다른 스레드에서
+     *          불리면 큐에 싣습니다(`push`, 다음 `processEvents`).
+     *          이벤트 버스가 붙지 않은 프로세스(도구 · 테스트)에서는 아무것도 하지 않습니다.
+     */
+    struct GameEventUtil
+    {
+        template <typename TEvent>
+        static void send( const TEvent& event )
+        {
+            EventDispatcher* pDispatcher = game::findSubsystem<EventDispatcher>();
+            if ( pDispatcher == nullptr )
+                return;
+            if ( pDispatcher->isBusThread() )
+                pDispatcher->publish( gameEventChannel(), event );
+            else
+                pDispatcher->push( gameEventChannel(), event );
+        }
     };
 } // namespace sw

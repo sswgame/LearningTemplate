@@ -15,7 +15,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionRoomHUDComponent.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionRoomHUDViewModel.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
+#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 using namespace sw;

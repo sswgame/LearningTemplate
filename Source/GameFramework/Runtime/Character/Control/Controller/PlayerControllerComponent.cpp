@@ -18,7 +18,7 @@
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
+#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw

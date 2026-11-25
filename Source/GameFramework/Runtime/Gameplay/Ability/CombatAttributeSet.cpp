@@ -9,7 +9,7 @@
 
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageEvents.h"
 #include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
+#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 
