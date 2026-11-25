@@ -96,7 +96,7 @@ endfunction()
 
 # 부하 시나리오 하나 — 측정 창(`<Load durationSeconds="N"/>`)이 끝내는 성능 측정이라 체인에 넣지 않고 기본 백엔드 한 프로세스로 혼자 돈다
 # (RUN_SERIAL — 다른 항목이 CPU · GPU 를 나눠 쓰면 잰 값이 흔들린다). 라벨은 `load` 하나라 기본 실행(`-L hostgpu` · `-L nogpu`)에 들지 않고
-# `ctest -L load` 로 돈다(언리얼 Gauntlet 의 성능 테스트가 따로 도는 것과 같다). 시한은 측정 창 + 기동 여유다. 이름은 Scenario.<팩>.load.<이름> · Scenario.engine.load.<이름>.
+# `ctest -L load` 로 돈다 — 묶음 검증의 gpu-release 에서 빠지고 Linux 와 함께 모아서 돈다(preflight.sh load — 언리얼 Gauntlet 의 성능 테스트가 따로 도는 것과 같다). 시한은 측정 창 + 기동 여유다. 이름은 Scenario.<팩>.load.<이름> · Scenario.engine.load.<이름>.
 function(sw_add_load_scenario load_path)
 	file(STRINGS "${scenario_root}/${load_path}" list_load_line REGEX "<Load ")
 	if(NOT list_load_line MATCHES "durationSeconds=\"([0-9]+)\"")
