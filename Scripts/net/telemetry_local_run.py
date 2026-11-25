@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
 from common.log_lines import count_id, payloads, problem_lines, read_log
@@ -168,9 +169,14 @@ def _run(argument: argparse.Namespace) -> int:
     return report("telemetry-local", check_run(sink, [read_log(log) for log in list_log]), list_log, "telemetry spool file and queued crash bundle reached the loopback sink over HTTP")
 
 
-def main(list_argument: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts telemetry-local", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("mode", choices=("run",), help="수신기를 띄우고 게임을 두 번 띄워 텔레메트리 · 크래시 업로드를 본다")
-    parser.add_argument("--game", default="Playground", help="게임 이름")
-    parser.add_argument("--preset", default=DEFAULT_PRESET, help="빌드 프리셋(build/<프리셋>/Bin 의 App 을 쓴다)")
-    return _run(parser.parse_args(list_argument))
+class TelemetryLocalCommand(Command):
+    name = "telemetry-local"
+    help = "텔레메트리 · 크래시 업로드 로컬 실행 — 루프백 HTTP 수신기와 게임 두 번으로 동의한 스풀 파일 · 보낼 줄의 크래시 묶음이 HTTP 로 오는지 본다(run)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("mode", choices=("run",), help="수신기를 띄우고 게임을 두 번 띄워 텔레메트리 · 크래시 업로드를 본다")
+        parser.add_argument("--game", default="Playground", help="게임 이름")
+        parser.add_argument("--preset", default=DEFAULT_PRESET, help="빌드 프리셋(build/<프리셋>/Bin 의 App 을 쓴다)")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        return _run(args)

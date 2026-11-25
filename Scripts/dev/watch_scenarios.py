@@ -12,7 +12,6 @@ from common.command import Command, ScriptContext
 from common import app_arguments
 from common.paths import get_build_dir
 from common.run_process import build_preset_or_exit
-from dev import scenario_bisect
 
 
 
@@ -30,7 +29,7 @@ class WatchScenariosCommand(Command):
     def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
         if args.speed < 1:
             self.parser.error('--speed 는 1 이상이다')
-        build_preset_or_exit(args.preset, cwd=scenario_bisect.REPO)   # 옛 바이너리를 눈으로 보지 않게
+        build_preset_or_exit(args.preset, cwd=context.root)   # 옛 바이너리를 눈으로 보지 않게
         build_dir = get_build_dir(args.preset)
         code = 0
         for chain in args.chains if args.stages is None else ['editor']:

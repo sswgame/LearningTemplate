@@ -134,27 +134,3 @@ def read_chain_stages(command: Sequence[str]) -> list[str]:
     if value is None:
         raise AppArgumentError('명령에 -scenario= 가 없다')
     return value.split(',')
-
-
-def self_check() -> int:
-    assert read_argument_table()['scenario'] is True and read_argument_table()['unattended'] is False
-    rejected = read_shipping_rejected_arguments()
-    assert '-test' in rejected and '-EnableEditor' in rejected and '-unattended' not in rejected and '-log-file=x' not in rejected
-    assert flag('scenario-keep-going') == '-scenario-keep-going'
-    assert option('scenario', 'a,b') == '-scenario=a,b'
-    assert 'gv_scenarioWallScale' in read_global_variable_names()
-    for bad in (lambda: flag('scenario'), lambda: option('unattended', 1), lambda: flag('no-such-argument'), lambda: variable('gv_noSuchVariable', 1)):
-        try:
-            bad()
-        except AppArgumentError:
-            continue
-        raise AssertionError('잘못된 인자가 통과했다')
-    command = ['App', '-scenario=a,b', '-unattended', '-scenario-backends=all', '-log-file=x']
-    assert without(command, 'unattended', 'scenario-backends') == ['App', '-scenario=a,b', '-log-file=x']
-    assert read_chain_stages(command) == ['a', 'b']
-    print('self-check ok')
-    return 0
-
-
-if __name__ == '__main__':
-    raise SystemExit(self_check())

@@ -57,6 +57,11 @@ class LintRuleTest(unittest.TestCase):
         self.assertGreater(len(map_rule), 0)
         self.assertEqual(find_orphan_tables(PROJECT_ROOT), [])
 
+    def test_every_rule_passes_its_self_check(self) -> None:
+        for rule in find_rules(PROJECT_ROOT).values():
+            with self.subTest(rule=rule.id):
+                rule.self_check()
+
 
 if __name__ == "__main__":
     unittest.main()

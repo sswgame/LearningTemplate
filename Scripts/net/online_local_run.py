@@ -20,6 +20,7 @@ import json
 import socket
 from pathlib import Path
 
+from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
 from common.log_lines import problem_lines
@@ -124,10 +125,14 @@ def _run_people(argument: argparse.Namespace) -> int:
     return _finish(server, [first, second], problems, "friend request -> accept -> list, gold trade settled, short trade refused, no unexpected errors or warnings")
 
 
-def main(list_argument: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts online-local", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("mode", choices=("run", "people"), help="run: 로그인 → 우편 목록 → 매칭 → 순위표, people: 클라이언트 둘의 친구 · 거래")
-    parser.add_argument("--server-config", default=_DEFAULT_CONFIG, help="서버 설정(옆 .online.json 과 함께) — 저장소 · 키트 · 제공자를 고른다(people 은 시드 계정 둘이 있어야 한다)")
-    parser.add_argument("--preset", default=DEFAULT_PRESET, help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    argument = parser.parse_args(list_argument)
-    return _run_people(argument) if argument.mode == "people" else _run(argument)
+class OnlineLocalCommand(Command):
+    name = "online-local"
+    help = "온라인 로컬 실행 — 전용 서버와 게임 클라이언트를 띄워 로그인 → 키트 호출까지 돈다. 저장소 · 키트 · 제공자는 --server-config 가 고른다(run · people)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("mode", choices=("run", "people"), help="run: 로그인 → 우편 목록 → 매칭 → 순위표, people: 클라이언트 둘의 친구 · 거래")
+        parser.add_argument("--server-config", default=_DEFAULT_CONFIG, help="서버 설정(옆 .online.json 과 함께) — 저장소 · 키트 · 제공자를 고른다(people 은 시드 계정 둘이 있어야 한다)")
+        parser.add_argument("--preset", default=DEFAULT_PRESET, help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        return _run_people(args) if args.mode == "people" else _run(args)

@@ -37,7 +37,7 @@ from common.command import Command, ScriptContext  # noqa: E402
 from common.git import run_git_or_raise  # noqa: E402
 from common.host_platform import is_windows_host  # noqa: E402
 from common import app_arguments  # noqa: E402
-from dev import scenario_bisect  # noqa: E402
+from dev import scenario_runs  # noqa: E402
 
 DISTRO = 'Ubuntu-26.04'
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -394,7 +394,7 @@ def stages(arguments):
 
 
 def bisect(arguments):
-    """이분 탐색은 scenario_bisect.find_first_bad_step(Windows 와 같은 함수) — 여기는 Xvfb · 드라이버(scenario_env) 실행기와 ctest 목록만 댄다."""
+    """이분 탐색은 scenario_runs.find_first_bad_step(Windows 와 같은 함수) — 여기는 Xvfb · 드라이버(scenario_env) 실행기와 ctest 목록만 댄다."""
     target = arguments[0]
     pack = arguments[1] if len(arguments) > 1 else 'editor'
     require_current_build()
@@ -403,23 +403,23 @@ def bisect(arguments):
         command = app_arguments.find_chain_command(pathlib.Path(RELEASE), pack, env)
         paths = app_arguments.read_chain_stages(command)
         # 단계 이름은 시나리오 파일의 name 속성, 판정은 실행마다 비운 보고 폴더의 JSON(scenario_bisect 과 같은 함수) — 로그 문구를 읽지 않는다.
-        target_index, target_name = scenario_bisect.resolve_target({index: scenario_bisect.read_scenario_name(path) for index, path in enumerate(paths)}, target)
+        target_index, target_name = scenario_runs.resolve_target({index: scenario_runs.read_scenario_name(path) for index, path in enumerate(paths)}, target)
         base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report')
         run_counter = [0]
 
         def fails(prefix):
             listed = ','.join(prefix + [paths[target_index]])
             run_counter[0] += 1
-            run_dir = scenario_bisect.make_run_report_folder(pathlib.Path(RELEASE), run_counter[0])
+            run_dir = scenario_runs.make_run_report_folder(pathlib.Path(RELEASE), run_counter[0])
             subprocess.run(['timeout', '1200', *base, app_arguments.option('scenario', listed), app_arguments.flag('scenario-keep-going'), app_arguments.option('scenario-backends', 'vk'),
                             app_arguments.option('scenario-report', run_dir / 'report.json'),
                             *window_arguments(), app_arguments.option('log-file', 'x_bisect.log')], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            bad = scenario_bisect.stage_failed_in_reports(scenario_bisect.read_run_reports(run_dir), target_name)
+            bad = scenario_runs.stage_failed_in_reports(scenario_runs.read_run_reports(run_dir), target_name)
             print(len(prefix), prefix[0] if prefix else '-', '짐' if bad else '통과', flush=True)
             return bad
 
         before = paths[:target_index]
-        found_index = scenario_bisect.find_first_bad_step(before, fails)
+        found_index = scenario_runs.find_first_bad_step(before, fails)
         if found_index is None:
             print('재현 안 됨 - 체인의 다른 인자(--record) · 앞 체인 상태를 본다')
             return 1
@@ -430,19 +430,19 @@ def bisect(arguments):
 
 
 def retry_failed(arguments):
-    """마지막 체인 실행에서 진 단계를 다시 돈다 — scenario_bisect.retry_failed_stages(Windows 와 같은 함수)에 Xvfb · 드라이버 실행기를 댄다."""
+    """마지막 체인 실행에서 진 단계를 다시 돈다 — scenario_runs.retry_failed_stages(Windows 와 같은 함수)에 Xvfb · 드라이버 실행기를 댄다."""
     pack = arguments[0] if arguments else 'editor'
     require_current_build()
     command = app_arguments.find_chain_command(pathlib.Path(RELEASE), pack)
     paths = app_arguments.read_chain_stages(command)
-    names = [scenario_bisect.read_scenario_name(path) for path in paths]
+    names = [scenario_runs.read_scenario_name(path) for path in paths]
     log_dir = pathlib.Path(f'{RELEASE}/Testing/Logs')
-    folder = scenario_bisect.find_latest_per_backend_folder(pathlib.Path(f'{RELEASE}/Bin/Saved/Automation'), set(names), log_dir / f'Scenario.{pack}.log')
+    folder = scenario_runs.find_latest_per_backend_folder(pathlib.Path(f'{RELEASE}/Bin/Saved/Automation'), set(names), log_dir / f'Scenario.{pack}.log')
     if folder is None:
         print(f'{pack} 의 체인 보고가 없다 - chain {pack} 을 먼저 돌린다')
         return 1
     split = any('scenario-backend-split' in part for part in command)
-    failed = scenario_bisect.select_failed_stages(scenario_bisect.collect_expected_stages(folder, log_dir, pack, names, split), scenario_bisect.read_backend_reports(folder))
+    failed = scenario_runs.select_failed_stages(scenario_runs.collect_expected_stages(folder, log_dir, pack, names, split), scenario_runs.read_backend_reports(folder))
     print(f'{pack}: {folder} 에서 진 단계 {len(failed)} 개', flush=True)
     with Xvfb():
         env = scenario_env(99)
@@ -451,15 +451,15 @@ def retry_failed(arguments):
 
         def run_stage(stage_paths, target_name, backend):
             run_counter[0] += 1
-            run_dir = scenario_bisect.make_run_report_folder(pathlib.Path(RELEASE), run_counter[0])
+            run_dir = scenario_runs.make_run_report_folder(pathlib.Path(RELEASE), run_counter[0])
             subprocess.run(['timeout', '1200', *base, app_arguments.option('scenario', ','.join(stage_paths)), app_arguments.flag('scenario-keep-going'),
                             app_arguments.option('scenario-backends', backend), app_arguments.option('scenario-report', run_dir / 'report.json'),
                             *window_arguments(), app_arguments.option('log-file', 'x_retry.log')], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            bad = scenario_bisect.stage_failed_in_reports(scenario_bisect.read_run_reports(run_dir), target_name)
+            bad = scenario_runs.stage_failed_in_reports(scenario_runs.read_run_reports(run_dir), target_name)
             print(backend, len(stage_paths), target_name, '짐' if bad else '통과', flush=True)
             return bad
 
-        return scenario_bisect.retry_failed_stages(paths, failed, run_stage)
+        return scenario_runs.retry_failed_stages(paths, failed, run_stage)
 
 
 def read_ppm_colors(path):

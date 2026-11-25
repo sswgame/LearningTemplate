@@ -19,7 +19,6 @@
 사용법:
     py -3 -m Scripts server-image --package Saved/Packages/<패키지> --config Config/Server/<게임>.json --game <게임>
     py -3 -m Scripts server-image ... --image registry.example.com/<게임>-server:1.0.0
-    py -3 -m Scripts server-image --self-check
 """
 
 from __future__ import annotations

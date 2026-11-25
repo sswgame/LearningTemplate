@@ -15,7 +15,6 @@ Scripts/dev/verify_record.py
   py -3 Scripts/dev/verify_record.py pass <단계> <sha>           # 단계 통과를 적는다
   py -3 Scripts/dev/verify_record.py ok <sha>                   # Windows 통과를 적는다(build/verify.ok)
   py -3 Scripts/dev/verify_record.py pre-push                   # git pre-push 훅 — 표준 입력은 `<로컬 ref> <로컬 sha> <원격 ref> <원격 sha>` 줄
-  py -3 Scripts/dev/verify_record.py --self-check
 """
 
 from __future__ import annotations
