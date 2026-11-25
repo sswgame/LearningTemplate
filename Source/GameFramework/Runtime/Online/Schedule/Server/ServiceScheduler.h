@@ -15,6 +15,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -118,6 +119,9 @@ namespace sw
             Retry        ///< 저장소에 닿지 못했다
         };
 
+        static constexpr int64 kFirstRetryDelayMs = 5000;
+        static constexpr int64 kMaxRetryDelayMs   = 60000;
+
         struct Job
         {
             ScheduleDef          _definition{};
@@ -125,6 +129,7 @@ namespace sw
             int64                _handledOccurrenceMs{ constant::invalid_index::kInt64 }; ///< 이 서버가 돌았거나 끝난 것을 본 마지막 회차
             int64                _retryOccurrenceMs{ constant::invalid_index::kInt64 };   ///< `_retryAtMs` 가 가리키는 회차
             int64                _retryAtMs{ 0 };
+            ExponentialBackoff   _retryBackoff{ ExponentialBackoff::createWithRandomSeed( kFirstRetryDelayMs ) }; ///< 저장소에 닿지 못할 때의 간격
             uint8                _bClaimPending{ SW_FALSE };
         };
 
@@ -132,7 +137,7 @@ namespace sw
         struct ClaimReport
         {
             uint64      _runToken{ 0 };
-            int64       _retryAtMs{ 0 };
+            int64       _retryAtMs{ 0 }; ///< Busy 일 때만 — 다른 서버의 임대가 끝나는 시각이다
             ClaimResult _result{ ClaimResult::Retry };
         };
 

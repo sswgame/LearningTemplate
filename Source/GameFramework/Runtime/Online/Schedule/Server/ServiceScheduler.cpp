@@ -22,7 +22,6 @@ namespace sw
             static constexpr int64     kDayMs        = 24 * 60 * kMinuteMs;
             static constexpr int64     kDaysPerWeek  = 7;
             static constexpr int64     kEpochWeekday = 3; ///< 1970-01-01 은 목요일(ISO 월요일 = 0)
-            static constexpr int64     kRetryMs      = 5000;
             static constexpr int32     kMaxJobIDSize = 128;
             static constexpr FormatDef kFormat{ "SCHD" };
             static constexpr uint32    kStateRunning   = 0;
@@ -109,8 +108,7 @@ namespace sw
     ServiceScheduler::ClaimReport ServiceScheduler::claimOccurrence( IServiceStoreConnection& connection, const string& jobID, int64 occurrenceMs, uint64 serverID, int64 nowMs,
                                                                      int64 leaseMs )
     {
-        ClaimReport attempt;
-        attempt._retryAtMs           = nowMs + ServiceSchedulerInternal::kRetryMs;
+        ClaimReport              attempt;
         const string             key = ServiceSchedulerInternal::makeKey( jobID, occurrenceMs );
         ServiceRecord            record;
         const ServiceStoreResult readResult = connection.readRecord( getTable(), key, record );
@@ -343,6 +341,8 @@ namespace sw
             return; // 종료한 뒤에 회수한 일
         Job& job           = _listJob[jobIndex];
         job._bClaimPending = SW_FALSE;
+        if ( serviceResult != ClaimResult::Retry )
+            job._retryBackoff.reset();
         switch ( serviceResult )
         {
             case ClaimResult::Claimed:
@@ -361,10 +361,15 @@ namespace sw
                 break;
             }
             case ClaimResult::Busy:
-            case ClaimResult::Retry:
             {
                 job._retryOccurrenceMs = occurrenceMs;
                 job._retryAtMs         = retryAtMs;
+                break;
+            }
+            case ClaimResult::Retry:
+            {
+                job._retryOccurrenceMs = occurrenceMs;
+                job._retryAtMs         = _lastTickMs.count() + job._retryBackoff.takeDelayMs( kMaxRetryDelayMs ); // 서버마다 지터가 달라 살아난 저장소에 같은 순간 몰리지 않는다
                 break;
             }
         }

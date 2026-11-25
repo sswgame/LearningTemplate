@@ -280,19 +280,26 @@ SW_TEST_CASE( ServiceSchedulerTest, MissedOccurrencesRunOnce )
     SW_EXPECT_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
 }
 
-/** @brief [ServiceSchedulerTest] 저장소가 실패하면 처리기를 부르지 않고, 재시도 시각 전에는 다시 묻지 않으며, 그 뒤에 돈다 */
+/** @brief [ServiceSchedulerTest] 저장소가 실패하면 처리기를 부르지 않고, 백오프 전에는 다시 묻지 않으며, 그 뒤에 돈다 */
 SW_TEST_CASE( ServiceSchedulerTest, StoreFailureRetriesLater )
 {
+    constexpr int64  kFirstDelayMs = 5000; // 첫 대기는 [0, 5 초], 둘째는 [2.5 초, 5 초]
     SchedulerFixture rig;
     rig._database.armFault( ServiceStoreFault::RejectCommit );
     rig._first.update( UnixMilliseconds{ kNowMs } );
     rig.poll();
     SW_EXPECT_TRUE( rig._firstSink._listRun.empty() );
 
-    rig._first.update( UnixMilliseconds{ kNowMs + 4999 } );
+    rig._database.armFault( ServiceStoreFault::RejectCommit );
+    rig._first.update( UnixMilliseconds{ kNowMs + kFirstDelayMs } );
+    SW_EXPECT_EQUAL( 1, rig._first.getPendingJobCount() );
+    rig.poll();
+    SW_EXPECT_TRUE( rig._firstSink._listRun.empty() );
+
+    rig._first.update( UnixMilliseconds{ kNowMs + kFirstDelayMs + kFirstDelayMs / 2 - 1 } );
     SW_EXPECT_EQUAL( 0, rig._first.getPendingJobCount() );
 
-    rig._first.update( UnixMilliseconds{ kNowMs + 5000 } );
+    rig._first.update( UnixMilliseconds{ kNowMs + kFirstDelayMs * 2 } );
     rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
 }

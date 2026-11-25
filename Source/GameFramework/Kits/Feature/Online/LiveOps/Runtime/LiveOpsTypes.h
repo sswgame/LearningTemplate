@@ -169,7 +169,8 @@ namespace sw
         static constexpr int32 kMaxLocaleSize       = 16;
         static constexpr int32 kMaxDevicePerAccount = 10;
         static constexpr int32 kMaxRetry            = 5;    ///< 일시 실패와 제공자 지연은 다섯 번까지 다시 시도한다
-        static constexpr int64 kFirstBackoffMs      = 1000; ///< 1, 2, 4, 8, 16초로 늘어난다
+        static constexpr int64 kFirstBackoffMs      = 1000; ///< 지터를 섞어 두 배씩 늘어난다(`ExponentialBackoff`)
+        static constexpr int64 kMaxBackoffMs        = 16000;
 
         /** @brief 제공자 id 규칙(`[0-9a-z_]`, 1~16바이트)에 맞으면 true 입니다. */
         SW_KIT_API static bool isValidProviderID( string_view providerID );

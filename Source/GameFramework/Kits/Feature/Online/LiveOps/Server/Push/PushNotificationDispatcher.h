@@ -15,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -132,8 +133,9 @@ namespace sw
         struct Delivery
         {
             PushNotificationMessage _message{};
-            PushDeviceRegistration  _device{}; ///< 토픽 배달이면 제공자 id 만 채운다
-            string                  _topic{};  ///< 토픽 배달의 토픽 이름
+            PushDeviceRegistration  _device{};             ///< 토픽 배달이면 제공자 id 만 채운다
+            string                  _topic{};              ///< 토픽 배달의 토픽 이름
+            ExponentialBackoff      _retryBackoff{ 0, 1 }; ///< 첫 실패에 씨앗을 운영체제 난수로 바꾼다
             AccountID               _accountID{ kInvalidAccountID };
             int64                   _nextAttemptMs{ 0 };
             int32                   _attempt{ 0 }; ///< 실패한 횟수이다

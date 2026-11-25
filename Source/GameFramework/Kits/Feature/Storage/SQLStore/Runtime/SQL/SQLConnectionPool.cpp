@@ -4,8 +4,8 @@
 
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
@@ -202,8 +202,8 @@ namespace sw
 
         SQLConnectionPoolInternal::ClosedConnection closed;
         unique_ptr<ISQLConnection>                  connection;
-        int64                                       retryDelayMs = SQLConnectionPoolInternal::kFirstRetryDelayMs;
-        Deadline                                    retryAt      = Deadline::afterMilliseconds( 0 );
+        ExponentialBackoff                          backoff = ExponentialBackoff::createWithRandomSeed( SQLConnectionPoolInternal::kFirstRetryDelayMs );
+        Deadline                                    retryAt = Deadline::afterMilliseconds( 0 );
         if ( expected<unique_ptr<ISQLConnection>> opened = _pDriver->openConnection( _settings->_connection, _settings->_secret ); opened.has_value() )
             connection = std::move( *opened );
         else
@@ -231,12 +231,11 @@ namespace sw
                 if ( reopened.has_value() == false )
                 {
                     SW_LOG_WARNING_ID( "SQLConnectionPool.SQLWorkerCouldNot2", "SQL worker %# could not reconnect: %# (%#)", workerIndex, reopened.error().message(), reopened.error().detail() );
-                    retryAt      = Deadline::afterMilliseconds( retryDelayMs ); // 먼저 기다리고 늘린다 - 예전에는 늘린 뒤 기다려 첫 값(`kFirstRetryDelayMs`)을 쓰는 일이 없었다
-                    retryDelayMs = MathUtil::min( retryDelayMs * 2, SQLConnectionPoolInternal::kMaxRetryDelayMs );
+                    retryAt = Deadline::afterMilliseconds( backoff.takeDelayMs( SQLConnectionPoolInternal::kMaxRetryDelayMs ) ); // 워커 · 서버마다 지터가 달라 살아난 DB 에 한꺼번에 붙지 않는다
                 }
                 else
                 {
-                    retryDelayMs = SQLConnectionPoolInternal::kFirstRetryDelayMs;
+                    backoff.reset();
                 }
             }
             const bool bUsable = connection != nullptr && connection->isAlive() && bStopping == false;

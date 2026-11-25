@@ -437,7 +437,9 @@ namespace sw
                             _mapDelivery.erase( deliveryIt );
                             break;
                         }
-                        delivery._nextAttemptMs = nowMs.count() + MathUtil::max( result._retryAfterMs, PushLimit::kFirstBackoffMs << ( delivery._attempt - 1 ) );
+                        if ( delivery._attempt == 1 )
+                            delivery._retryBackoff = ExponentialBackoff::createWithRandomSeed( PushLimit::kFirstBackoffMs ); // 배달마다 지터가 달라 한 장애의 배달이 한꺼번에 다시 가지 않는다
+                        delivery._nextAttemptMs = nowMs.count() + MathUtil::max( result._retryAfterMs, delivery._retryBackoff.takeDelayMs( PushLimit::kMaxBackoffMs ) );
                         break;
                     }
                     case PushDeliveryStatus::Rejected:

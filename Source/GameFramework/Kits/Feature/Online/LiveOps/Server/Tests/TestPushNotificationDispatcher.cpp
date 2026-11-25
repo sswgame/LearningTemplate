@@ -110,29 +110,33 @@ SW_TEST_CASE( PushDispatcherTest, InvalidTokenRemovesTheDevice )
     SW_EXPECT_EQUAL( string( "alive" ), rig._provider.getSent()[2]._deviceToken );
 }
 
-/** @brief [PushDispatcherTest] 일시 실패는 1, 2, 4, 8 초 백오프로 다시 보내고 다섯 번 지면 버린다. 기기는 지우지 않는다 */
+/** @brief [PushDispatcherTest] 일시 실패는 지터를 섞어 두 배씩 느는 백오프로 다시 보내고 다섯 번 지면 버린다. 기기는 지우지 않는다 */
 SW_TEST_CASE( PushDispatcherTest, TransientRetriesWithBackoffThenDrops )
 {
     DispatcherFixture rig;
     rig.addDevice( "a" );
-    rig._provider.scriptResult( "a", PushDeliveryStatus::Transient, 100 );
+    rig._provider.scriptResult( "a", PushDeliveryStatus::Transient, 100, 1 ); // 1 ms 는 첫 지터가 0 이어도 같은 시각에 다시 보내지 않게 한다
     rig.notify();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._provider.getSent().size() );
 
-    size_t expectedSent    = 1;
-    int64  timeSinceLastMs = 0;
-    for ( int64 backoffMs : { 1000ll, 2000ll, 4000ll, 8000ll } )
+    size_t expectedSent = 1;
+    int64  minimumMs    = 0; // 첫 대기는 [0, 1 초], 그다음은 [지연/2, 지연]
+    for ( int64 maximumMs : { PushLimit::kFirstBackoffMs, PushLimit::kFirstBackoffMs, PushLimit::kFirstBackoffMs * 2, PushLimit::kFirstBackoffMs * 4 } )
     {
-        rig._nowMs += backoffMs - 1;
-        rig.poll();
-        SW_EXPECT_EQUAL( expectedSent, rig._provider.getSent().size() ); // 백오프 전이다
-        rig._nowMs += 1;
+        if ( minimumMs > 0 )
+        {
+            rig._nowMs += minimumMs - 1;
+            rig.poll();
+            SW_EXPECT_EQUAL( expectedSent, rig._provider.getSent().size() ); // 백오프 전이다
+            rig._nowMs += maximumMs - ( minimumMs - 1 );
+        }
+        else
+            rig._nowMs += maximumMs;
         rig.poll();
         ++expectedSent;
         SW_EXPECT_EQUAL( expectedSent, rig._provider.getSent().size() );
-        timeSinceLastMs += backoffMs;
+        minimumMs = expectedSent == 2 ? PushLimit::kFirstBackoffMs / 2 : minimumMs * 2;
     }
-    SW_EXPECT_EQUAL( int64( 15000 ), timeSinceLastMs );
     rig.poll();
     SW_EXPECT_EQUAL( uint64( 1 ), rig._dispatcher.getStats()._droppedCount );
     SW_EXPECT_EQUAL( 0, rig._dispatcher.getInFlightCount() );
