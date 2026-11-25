@@ -5,7 +5,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Log/Sink/AsyncLogSink.h"
-#include "Core/Time/GameTimer.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Programs/ReflectionParser/ParserDefines.h"
 #include "Programs/ReflectionParser/ParserOptions.h"
@@ -106,15 +106,12 @@ int32 main( int32 argc, utf8* argv[] )
     if ( session._config.load( options._configPath, options._listTargetArg ) == false || sw::ReflectionParserInternal::loadTables( options, session ) == false )
         return 1;
 
-    sw::GameTimer timer;
-    timer.resetTimer();
-    timer.startTimer();
+    sw::Stopwatch timer;
 
     sw::ReflectionPipeline pipeline( options, session );
     const int32            errorCount = pipeline.run();
 
-    timer.updateTimer();
-    [[maybe_unused]] const float32 elapsedMs = timer.getDeltaTime() * 1000.0f;
+    [[maybe_unused]] const float32 elapsedMs = static_cast<float32>( timer.getElapsedSeconds() ) * 1000.0f;
     if ( errorCount == 0 )
         SW_LOG_INFO_ID( "ReflectionParser.DoneMsAllFiles", "Done in %# ms. All files processed successfully.", elapsedMs );
     else

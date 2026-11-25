@@ -63,9 +63,9 @@ namespace sw
             }
 
             /** @brief 엔진 설정에서 프레임 시간 정책 값을 꺼냅니다(값의 출처는 `Config/Engine/EngineConfig.json` 하나다). */
-            static FixedTimestepParams makeFixedTimestepParams( const EngineConfig& config )
+            static FrameClockParams makeFrameClockParams( const EngineConfig& config )
             {
-                FixedTimestepParams params;
+                FrameClockParams params;
                 params._maxFrameDeltaTime    = config._maxFrameDeltaTime;
                 params._fixedDeltaTime       = config._fixedDeltaTime;
                 params._maxFixedStepPerFrame = config._maxFixedStepPerFrame;
@@ -121,7 +121,7 @@ namespace sw
         , _pAutomation{ nullptr }
         , _pModuleManager{ nullptr }
         , _pWindow{ nullptr }
-        , _fixedTimestep{}
+        , _frameClock{}
         , _userSettingsHost{}
         , _uiPlatformBinding{}
         , _sceneViewCameraProvider{}
@@ -330,7 +330,7 @@ namespace sw
             return false;
         }
 
-        _fixedTimestep.configure( AppInternal::makeFixedTimestepParams( *pEngineConfig ) );
+        _frameClock.configure( AppInternal::makeFrameClockParams( *pEngineConfig ) );
         // 에디터가 Config/ 를 감시해 다시 읽으면(ConfigManager::reloadConfigFile) 프레임 시간 정책도 따라간다.
         _configReloadedSubscription = pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &App::onConfigReloaded, this ) );
 
@@ -590,7 +590,7 @@ namespace sw
 
         // 결정적 실행의 프레임 고정 시간(0 이면 벽시계) — 채우는 쪽(자동화 · 개발 스위치)이 없는 배포본은 늘 0 이다.
         const float32   fixedFrameDelta = engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta;
-        const FrameTime frameTime       = _fixedTimestep.advance( engine::getSubsystem<GameTimeScale>().get(), fixedFrameDelta );
+        const FrameTime frameTime       = _frameClock.advance( engine::getSubsystem<GameTimeScale>().get(), fixedFrameDelta );
 
         // 사용자 설정의 화면 변경(창 방식, 해상도, VSync)은 OS 리사이즈와 같은 시점인 프레임 시작 전에 처리한다.
         _userSettingsHost.update( frameTime._deltaTime );
@@ -650,7 +650,7 @@ namespace sw
 
         logMainLoopStart();
         _mainLoopStartMicro = MonotonicClock::nowMicroseconds();
-        _fixedTimestep.start();
+        _frameClock.start();
 
         // 페이서는 주 창 서비스가 든다 — 창(`_pWindow`)을 그 서비스에서 받았으므로 여기서 없으면 결함이다.
         MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
@@ -680,7 +680,7 @@ namespace sw
         if ( _bRenderPaused == SW_TRUE )
         {
             _bRenderPaused = SW_FALSE;
-            _fixedTimestep.start();
+            _frameClock.start();
         }
         return runFrame( *_pFramePacer );
     }
@@ -735,7 +735,7 @@ namespace sw
         const ConfigManager* pConfigManager = _launch.getEngine().getConfigManager();
         const EngineConfig*  pEngineConfig  = pConfigManager != nullptr ? pConfigManager->getConfig<EngineConfig>() : nullptr;
         if ( pEngineConfig != nullptr )
-            _fixedTimestep.configure( AppInternal::makeFixedTimestepParams( *pEngineConfig ) );
+            _frameClock.configure( AppInternal::makeFrameClockParams( *pEngineConfig ) );
     }
 
     bool App::onWindowMessage( const NativeWindowEvent& event )

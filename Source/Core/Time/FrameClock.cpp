@@ -1,37 +1,39 @@
 #include "pch.h"
 
-#include "Core/Time/FixedTimestep.h"
+#include "Core/Time/FrameClock.h"
 
 #include "Core/Math/MathUtil.h"
 
 namespace sw
 {
-    FixedTimestep::FixedTimestep()
-        : _timer{}
+    FrameClock::FrameClock()
+        : _pClock{ &SystemMonotonicClock::get() }
+        , _prevNanoseconds{ 0 }
         , _params{}
         , _stepTimer{}
     {
     }
 
-    FixedTimestep::FixedTimestep( const FixedTimestepParams& params )
-        : FixedTimestep{ params, SystemMonotonicClock::get() }
+    FrameClock::FrameClock( const FrameClockParams& params )
+        : FrameClock{ params, SystemMonotonicClock::get() }
     {
     }
 
-    FixedTimestep::FixedTimestep( const FixedTimestepParams& params, const IClock& clock )
-        : _timer{ clock }
+    FrameClock::FrameClock( const FrameClockParams& params, const IClock& clock )
+        : _pClock{ &clock }
+        , _prevNanoseconds{ 0 }
         , _params{}
         , _stepTimer{}
     {
         configure( params );
     }
 
-    void FixedTimestep::configure( const FixedTimestepParams& params )
+    void FrameClock::configure( const FrameClockParams& params )
     {
         // 설정 로드가 범위(Min)를 이미 본다. 다른 값으로 몰래 바꾸면 틀린 설정이 조용히 다른 정책이 된다 — 계약 위반은 단언한다.
         const bool bValid = params._maxFrameDeltaTime > 0.0f && params._fixedDeltaTime > 0.0f && params._maxFixedStepPerFrame > 0;
         // 시계 층(티어 2)은 로그 아래라 `SW_ENSURE` 대신 아래 티어 단언을 쓴다 — 단언과 빠져나가기가 같은 변수를 본다.
-        SW_LOW_LEVEL_ASSERT( bValid, "FixedTimestep needs positive time policy values (EngineConfig range checks should have rejected these)" );
+        SW_LOW_LEVEL_ASSERT( bValid, "FrameClock needs positive time policy values (EngineConfig range checks should have rejected these)" );
         if ( bValid == false )
             return;
         _params = params;
@@ -39,18 +41,19 @@ namespace sw
         _stepTimer = FixedStepTimer( params._fixedDeltaTime, params._fixedDeltaTime * static_cast<float32>( params._maxFixedStepPerFrame ) );
     }
 
-    void FixedTimestep::start()
+    void FrameClock::start()
     {
-        SW_LOW_LEVEL_ASSERT( isConfigured(), "FixedTimestep::start before configure - read EngineConfig first" );
+        SW_LOW_LEVEL_ASSERT( isConfigured(), "FrameClock::start before configure - read EngineConfig first" );
         _stepTimer.reset();
-        _timer.resetTimer();
-        _timer.startTimer();
+        _prevNanoseconds = _pClock->nowNanoseconds();
     }
 
-    FrameTime FixedTimestep::advance( float32 timeScale, float32 overrideFrameSeconds )
+    FrameTime FrameClock::advance( float32 timeScale, float32 overrideFrameSeconds )
     {
-        _timer.updateTimer();
-        const float32 elapsedSeconds = overrideFrameSeconds > 0.0f ? overrideFrameSeconds : _timer.getDeltaTime();
+        const int64   nowNanoseconds = _pClock->nowNanoseconds();
+        const float32 realSeconds    = static_cast<float32>( MathUtil::max<int64>( nowNanoseconds - _prevNanoseconds, 0 ) ) / static_cast<float32>( constant::time::kNanosecondsPerSecond );
+        _prevNanoseconds             = nowNanoseconds;
+        const float32 elapsedSeconds = overrideFrameSeconds > 0.0f ? overrideFrameSeconds : realSeconds;
 
         FrameTime frameTime{};
         frameTime._unscaledDeltaTime = MathUtil::min( elapsedSeconds, _params._maxFrameDeltaTime );

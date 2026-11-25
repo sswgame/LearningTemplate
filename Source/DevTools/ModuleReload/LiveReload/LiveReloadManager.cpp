@@ -331,8 +331,7 @@ namespace sw
                         moduleName, kMtimeDebounceMs );
         context._debounceStamp = FileStamp{};
         (void)FileUtil::getFileStamp( context._originalModulePath, context._debounceStamp ); // 빌드 도중이라 없으면 빈 도장 - 다음 확인에서 도장이 달라 다시 기다린다
-        context._debounceTimer.resetTimer();
-        context._debounceTimer.startTimer();
+        context._debounceTimer.restart();
         context._bMtimeDebouncing = true;
         context._bForceReload     = true;
     }
@@ -433,8 +432,7 @@ namespace sw
             if ( context._bMtimeDebouncing == false || bBuildInProgress )
                 continue;
 
-            context._debounceTimer.updateTimer();
-            const float64 elapsedSec = context._debounceTimer.getTotalTime();
+            const float64 elapsedSec = context._debounceTimer.getElapsedSeconds();
             if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / constant::time::kMillisecondsPerSecond )
                 continue;
 
@@ -444,8 +442,7 @@ namespace sw
             if ( bReadable == false || sourceStamp != context._debounceStamp ) // 없으면(빌드가 쓰는 중) 더 기다린다
             {
                 context._debounceStamp = sourceStamp;
-                context._debounceTimer.resetTimer();
-                context._debounceTimer.startTimer();
+                context._debounceTimer.restart();
                 continue;
             }
 

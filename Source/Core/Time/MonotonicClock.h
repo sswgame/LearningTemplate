@@ -1,7 +1,7 @@
 /**
  * @file MonotonicClock.h
  * @brief 엔진의 단조 시계 하나입니다 — 지금 시각(`MonotonicClock`) · 경과 시간(`Stopwatch`) · 기한(`Deadline`).
- * @details `GameTimer`(프레임 델타)와 같은 OS 카운터(Windows QPC · Linux `CLOCK_MONOTONIC`)를 읽습니다.
+ * @details OS 카운터(Windows QPC · Linux `CLOCK_MONOTONIC`)를 읽습니다(언리얼 `FPlatformTime::Seconds` · 유니티 `Time.realtimeSinceStartupAsDouble` 의 자리).
  *          엔진 코드에서 `std::chrono::steady_clock::now()` 를 직접 읽지 말고 이것을 씁니다 — 시계가 하나여야 프로파일러 · 로그 ·
  *          기한이 같은 시각을 봅니다. 로거를 include 하지 않는 가벼운 헤더라 동시성 · 컨테이너 헤더에서도 씁니다.
  */
@@ -53,7 +53,7 @@ namespace sw
 {
     /**
      * @class Stopwatch
-     * @brief 만들 때(또는 `restart` 때)부터 지난 시간을 정수로 측정합니다. 프레임 델타 · 일시정지가 필요하면 `GameTimer` 를 씁니다.
+     * @brief 만들 때(또는 `restart` · `lapSeconds` 때)부터 지난 시간을 잽니다. 구간 하나 · 구간마다의 길이(랩)를 잰다 — 프레임 시간 정책은 `FrameClock` 이다.
      */
     class Stopwatch
     {
@@ -73,6 +73,16 @@ namespace sw
         int64 getElapsedMicroseconds() const noexcept { return getElapsedNanoseconds() / constant::time::kNanosecondsPerMicrosecond; }
         /** @brief 지난 시간(밀리초)입니다. */
         int64 getElapsedMilliseconds() const noexcept { return getElapsedNanoseconds() / constant::time::kNanosecondsPerMillisecond; }
+        /** @brief 지난 시간(초)입니다. 읽기만 한다 — 몇 번 불러도 기준은 그대로다. */
+        float64 getElapsedSeconds() const noexcept { return static_cast<float64>( getElapsedNanoseconds() ) / static_cast<float64>( constant::time::kNanosecondsPerSecond ); }
+        /** @brief 지난 시간(초)을 돌려주고 기준을 지금으로 옮깁니다 — 단계마다 · 프레임마다의 길이(랩)를 잰다. 음수는 없다. */
+        float64 lapSeconds() noexcept
+        {
+            const int64 now     = MonotonicClock::nowNanoseconds();
+            const int64 elapsed = now - _startNanoseconds;
+            _startNanoseconds   = now;
+            return elapsed > 0 ? static_cast<float64>( elapsed ) / static_cast<float64>( constant::time::kNanosecondsPerSecond ) : 0.0;
+        }
 
     private:
         int64 _startNanoseconds;

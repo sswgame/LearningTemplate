@@ -2,7 +2,7 @@
  * @file FixedStepTimer.h
  * @brief 고정 스텝 누적기입니다. 들쭉날쭉한 프레임 시간을 같은 크기의 시뮬레이션 스텝으로 바꾸고, 남은 시간으로 보간 비를 냅니다.
  * @details 게임 시뮬레이션(열차 물리 · 경영 시뮬레이션 · 판 진행)과 씬 물리가 같은 이 타입을 씁니다(Gaffer "Fix Your Timestep").
- *          엔진 프레임 루프의 시간 정책(가변 델타 상한 · 시간 배율)은 `FixedTimestep` 입니다.
+ *          엔진 프레임 루프의 시간 정책(가변 델타 상한 · 시간 배율)은 `FrameClock` 입니다.
  */
 #pragma once
 #include "Core/Foundation/Constants.h"

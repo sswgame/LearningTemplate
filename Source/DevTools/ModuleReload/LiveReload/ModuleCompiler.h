@@ -12,7 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Time/GameTimer.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "ModuleAPI/Service/IModuleCompiler.h"
 
@@ -98,7 +98,7 @@ namespace sw
         LiveReloadManager*  _pLiveReloadManager;
         unique_ptr<Process> _pCurrentProcess;
         sw::thread          _workerThread;
-        GameTimer           _buildTimer;
+        Stopwatch           _buildTimer;
         string _targetName  SW_GUARDED_BY( _mutex );
         mutable mutex       _mutex;
         atomic<BuildState>  _buildState;

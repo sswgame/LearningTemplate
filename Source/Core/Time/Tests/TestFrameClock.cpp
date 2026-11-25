@@ -2,12 +2,12 @@
 
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
-#include "Core/Time/FixedTimestep.h"
+#include "Core/Time/FrameClock.h"
 
 using namespace sw;
 
 // ------------------------------------------------------------------------------
-// 1) FixedTimestepTest — 가변 델타 클램프 · 고정 스텝 상한 · 잔액 처리
+// 1) FrameClockTest — 가변 델타 클램프 · 고정 스텝 상한 · 잔액 처리
 //
 // 이 정책이 무너지면 증상은 "무거운 장면에서 게임이 점점 더 느려진다" 다. 프레임이 길어질수록
 // 고정 스텝을 더 부르고 그래서 더 길어지는 되먹임이라, 한 번 빠지면 스스로 빠져나오지 못한다.
@@ -29,21 +29,21 @@ namespace
     }
 
     /** @brief 만들 때 넘기는 정책(엔진에서는 `EngineConfig.json` 의 값)이다. 몫이 6 이 되게 둔다. */
-    FixedTimestepParams makeTimestepDefaults()
+    FrameClockParams makeTimestepDefaults()
     {
-        return FixedTimestepParams{ 0.1f, 1.0f / 60.0f, 6 };
+        return FrameClockParams{ 0.1f, 1.0f / 60.0f, 6 };
     }
 } // namespace
 
 /**
- * @brief [FixedTimestepTest] 가변 델타는 설정한 최대값에서 잘리고, 고정 스텝 수는 그 몫이다
+ * @brief [FrameClockTest] 가변 델타는 설정한 최대값에서 잘리고, 고정 스텝 수는 그 몫이다
  */
-SW_TEST_CASE( FixedTimestepTest, VariableDeltaIsClampedAndSplitIntoFixedSteps )
+SW_TEST_CASE( FrameClockTest, VariableDeltaIsClampedAndSplitIntoFixedSteps )
 {
-    ManualClock   clock = makeClock();
-    FixedTimestep timeline{ makeTimestepDefaults(), clock };
+    ManualClock clock = makeClock();
+    FrameClock  timeline{ makeTimestepDefaults(), clock };
     // 2의 거듭제곱 분수로 준다 — 몫이 부동소수 오차 없이 딱 떨어진다(0.25 / 0.0625 = 4).
-    timeline.configure( FixedTimestepParams{ 0.25f, 0.0625f, 8 } );
+    timeline.configure( FrameClockParams{ 0.25f, 0.0625f, 8 } );
     timeline.start();
 
     clock.advanceMilliseconds( kLongerThanAnyClampMs );
@@ -55,17 +55,17 @@ SW_TEST_CASE( FixedTimestepTest, VariableDeltaIsClampedAndSplitIntoFixedSteps )
 }
 
 /**
- * @brief [FixedTimestepTest] 스텝 수는 상한에서 잘리고, **넘친 잔액은 버린다**
+ * @brief [FrameClockTest] 스텝 수는 상한에서 잘리고, **넘친 잔액은 버린다**
  * @details 상한만 두고 잔액을 남기면 다음 프레임이 더 많은 스텝을 요구한다 — 상한이 있어도
  *          빚이 쌓여 영영 못 따라잡는다. 시뮬레이션이 실시간보다 느려지는 쪽을 택한 자리다.
  *          두 번째 호출 전에는 **시계를 밀지 않는다** — 잔액을 남겼다면 경과 없이도 스텝이 나온다.
  */
-SW_TEST_CASE( FixedTimestepTest, StepCountIsCappedAndTheOverflowIsDropped )
+SW_TEST_CASE( FrameClockTest, StepCountIsCappedAndTheOverflowIsDropped )
 {
-    ManualClock   clock = makeClock();
-    FixedTimestep timeline{ makeTimestepDefaults(), clock };
+    ManualClock clock = makeClock();
+    FrameClock  timeline{ makeTimestepDefaults(), clock };
     // 0.25초가 쌓이면 4스텝이 필요하지만 상한은 2 — 0.125초가 남는다.
-    timeline.configure( FixedTimestepParams{ 0.25f, 0.0625f, 2 } );
+    timeline.configure( FrameClockParams{ 0.25f, 0.0625f, 2 } );
     timeline.start();
 
     clock.advanceMilliseconds( kLongerThanAnyClampMs );
@@ -78,13 +78,13 @@ SW_TEST_CASE( FixedTimestepTest, StepCountIsCappedAndTheOverflowIsDropped )
 }
 
 /**
- * @brief [FixedTimestepTest] 시간 배율은 자른 델타에 곱해지고 고정 스텝 수도 따라간다 — 0 이면 멈춘다
+ * @brief [FrameClockTest] 시간 배율은 자른 델타에 곱해지고 고정 스텝 수도 따라간다 — 0 이면 멈춘다
  */
-SW_TEST_CASE( FixedTimestepTest, TimeScaleMultipliesTheClampedDelta )
+SW_TEST_CASE( FrameClockTest, TimeScaleMultipliesTheClampedDelta )
 {
-    ManualClock   clock = makeClock();
-    FixedTimestep timeline{ makeTimestepDefaults(), clock };
-    timeline.configure( FixedTimestepParams{ 0.25f, 0.0625f, 16 } );
+    ManualClock clock = makeClock();
+    FrameClock  timeline{ makeTimestepDefaults(), clock };
+    timeline.configure( FrameClockParams{ 0.25f, 0.0625f, 16 } );
     timeline.start();
 
     clock.advanceMilliseconds( kLongerThanAnyClampMs );
@@ -104,12 +104,12 @@ SW_TEST_CASE( FixedTimestepTest, TimeScaleMultipliesTheClampedDelta )
 }
 
 /**
- * @brief [FixedTimestepTest] 정책 없이 만든 시간선은 설정 전이고, configure 한 값이 그대로 정책이다(다른 값으로 몰래 바꾸지 않는다)
+ * @brief [FrameClockTest] 정책 없이 만든 시간선은 설정 전이고, configure 한 값이 그대로 정책이다(다른 값으로 몰래 바꾸지 않는다)
  * @details 값의 출처는 설정 파일 하나다. 범위 밖 값은 설정 로드(`Min`)가 막고, 여기 오는 값은 그대로 쓴다.
  */
-SW_TEST_CASE( FixedTimestepTest, UnconfiguredTimelineWaitsForTheConfiguredPolicy )
+SW_TEST_CASE( FrameClockTest, UnconfiguredTimelineWaitsForTheConfiguredPolicy )
 {
-    FixedTimestep timeline;
+    FrameClock timeline;
     SW_EXPECT_FALSE( timeline.isConfigured() );
     timeline.configure( makeTimestepDefaults() );
     SW_EXPECT_TRUE( timeline.isConfigured() );
@@ -118,7 +118,7 @@ SW_TEST_CASE( FixedTimestepTest, UnconfiguredTimelineWaitsForTheConfiguredPolicy
     // 정책만 본다 — 경과는 덮어쓴 프레임 시간으로 준다(벽시계를 재우지 않는다).
     const FrameTime frame = timeline.advance( 1.0f, static_cast<float32>( kLongerThanAnyClampMs ) * 0.001f );
 
-    const FixedTimestepParams policy = makeTimestepDefaults();
+    const FrameClockParams policy = makeTimestepDefaults();
     SW_EXPECT_NEAR( policy._maxFrameDeltaTime, frame._deltaTime, 0.0001f );
     SW_EXPECT_NEAR( policy._fixedDeltaTime, frame._fixedDeltaTime, 0.0001f );
     SW_EXPECT_TRUE_MSG( frame._fixedStepCount <= policy._maxFixedStepPerFrame, "상한을 넘겨 스텝을 돌렸다" );
@@ -127,17 +127,17 @@ SW_TEST_CASE( FixedTimestepTest, UnconfiguredTimelineWaitsForTheConfiguredPolicy
 }
 
 /**
- * @brief [FixedTimestepTest] 만들어 두고 한참 뒤에 start 해도 첫 델타는 "방금" 부터다
+ * @brief [FrameClockTest] 만들어 두고 한참 뒤에 start 해도 첫 델타는 "방금" 부터다
  * @details `App` 은 이 객체를 멤버로 만들어 두고 창·RHI·모듈을 다 세운 뒤에야 `start()` 를
  *          부른다. 그 사이의 시간이 첫 델타에 섞이면 첫 프레임이 상한 가득한 고정 스텝을 돌아
- *          **시작하자마자 한 박자 건너뛴 것처럼** 보인다. `GameTimer` 의 "첫 델타가 부팅 이후
+ *          **시작하자마자 한 박자 건너뛴 것처럼** 보인다. 옛 프레임 타이머의 "첫 델타가 부팅 이후
  *          시간" 함정과 같은 자리를 이 층에서도 막아 둔다.
  */
-SW_TEST_CASE( FixedTimestepTest, StartRewindsTheTimerBeforeTheFirstFrame )
+SW_TEST_CASE( FrameClockTest, StartRewindsTheTimerBeforeTheFirstFrame )
 {
-    ManualClock   clock = makeClock();
-    FixedTimestep timeline{ makeTimestepDefaults(), clock };
-    timeline.configure( FixedTimestepParams{ 0.25f, 0.0625f, 8 } );
+    ManualClock clock = makeClock();
+    FrameClock  timeline{ makeTimestepDefaults(), clock };
+    timeline.configure( FrameClockParams{ 0.25f, 0.0625f, 8 } );
 
     // 만든 시점과 루프 진입 사이에 시간이 흐른다.
     clock.advanceMilliseconds( kLongerThanAnyClampMs );
@@ -150,15 +150,15 @@ SW_TEST_CASE( FixedTimestepTest, StartRewindsTheTimerBeforeTheFirstFrame )
 }
 
 /**
- * @brief [FixedTimestepTest] 덮어쓴 프레임 시간은 벽시계를 무시한다 — 프레임마다 그 시간, 고정 스텝은 정확히 한 번(자동화 시나리오의 1/60)
+ * @brief [FrameClockTest] 덮어쓴 프레임 시간은 벽시계를 무시한다 — 프레임마다 그 시간, 고정 스텝은 정확히 한 번(자동화 시나리오의 1/60)
  * @details 시나리오 파일이 적는 값(`0.0166667`)은 고정 델타(1/60)보다 아주 조금 크다 — 누산 반올림으로 한 프레임이 0 스텝 · 다음이 2 스텝이 되면
  *          같은 시나리오가 프레임마다 다른 물리 스텝을 본다.
  */
-SW_TEST_CASE( FixedTimestepTest, OverrideFrameSecondsIgnoresTheWallClock )
+SW_TEST_CASE( FrameClockTest, OverrideFrameSecondsIgnoresTheWallClock )
 {
-    ManualClock   clock = makeClock();
-    FixedTimestep timeline{ makeTimestepDefaults(), clock };
-    timeline.configure( FixedTimestepParams{ 0.1f, 1.0f / 60.0f, 6 } );
+    ManualClock clock = makeClock();
+    FrameClock  timeline{ makeTimestepDefaults(), clock };
+    timeline.configure( FrameClockParams{ 0.1f, 1.0f / 60.0f, 6 } );
     timeline.start();
 
     for ( const float32 overrideSeconds : { 1.0f / 60.0f, 0.0166667f } )
@@ -176,13 +176,13 @@ SW_TEST_CASE( FixedTimestepTest, OverrideFrameSecondsIgnoresTheWallClock )
 }
 
 /**
- * @brief [FixedTimestepTest] 시간 배율 0(정지 메뉴)이어도 실제 경과(`_unscaledDeltaTime`)는 흐른다 — UI · 화면 전환 페이드가 그 값으로 돈다
+ * @brief [FrameClockTest] 시간 배율 0(정지 메뉴)이어도 실제 경과(`_unscaledDeltaTime`)는 흐른다 — UI · 화면 전환 페이드가 그 값으로 돈다
  * @details 게임 시간만 있으면 정지 메뉴가 뜬 동안 로딩 페이드가 반쯤 검은 채로 멈춘다. 실제 경과도 최대 델타로 자른다.
  */
-SW_TEST_CASE( FixedTimestepTest, UnscaledDeltaIgnoresTheTimeScale )
+SW_TEST_CASE( FrameClockTest, UnscaledDeltaIgnoresTheTimeScale )
 {
-    FixedTimestep timeline{ makeTimestepDefaults() };
-    timeline.configure( FixedTimestepParams{ 0.1f, 1.0f / 60.0f, 6 } );
+    FrameClock timeline{ makeTimestepDefaults() };
+    timeline.configure( FrameClockParams{ 0.1f, 1.0f / 60.0f, 6 } );
     timeline.start();
     const FrameTime paused = timeline.advance( 0.0f, 0.02f );
     SW_EXPECT_NEAR( 0.0f, paused._deltaTime, 1e-6f );

@@ -10,6 +10,6 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 #include "Core/String/string_splitter.h"
-#include "Core/Time/GameTimer.h"
+#include "Core/Time/Clock.h"
 
 #include "Engine/EngineMinimal.h"
