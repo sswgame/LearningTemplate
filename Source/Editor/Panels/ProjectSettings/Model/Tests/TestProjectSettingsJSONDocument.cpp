@@ -72,7 +72,7 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, EditsKeepTheFileShape )
 SW_TEST_CASE( ProjectSettingsJSONDocumentTest, AddedObjectItemCopiesTheKeys )
 {
     ProjectSettingsJSONDocument document;
-    SW_REQUIRE_TRUE( document.openText( ProcessRoots::get()._project.join( "Config/Rules/Test/Q.json" ), "{\"list\":[{\"name\":\"t\",\"days\":3}]}" ).has_value() );
+    SW_REQUIRE_TRUE( document.openText( ProcessRoots::get()._project.join( "Config/Rules/TestSelection/Q.json" ), "{\"list\":[{\"name\":\"t\",\"days\":3}]}" ).has_value() );
     const uint32 list = document.getNode( ProjectSettingsJSONDocument::kRootNode )._listChild[0];
     SW_REQUIRE_TRUE( document.addArrayItem( list ).has_value() );
     SW_EXPECT_EQUAL( document.makeText(), string( "{\"list\":[{\"name\":\"t\",\"days\":3},{\"name\":\"\",\"days\":0}]}" ) );

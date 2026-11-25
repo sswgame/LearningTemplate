@@ -11,7 +11,7 @@
 # @details 종료 코드는 표 하나(`Config/Engine/ProcessExitCodes.json` → `SW_EXIT_CODE_<이름>`)다 — 건너뜀(`SW_EXIT_CODE_Skipped`)은 CTest 의 건너뜀이다. 행렬은 첫 실패 백엔드의 코드를 낸다.
 #          단계별 결과는 `<빌드>/Testing/Logs/Scenario.<팩>.<백엔드>.log` 의 `chain stage i/n` 줄에 있다.
 #          하위 폴더는 조건이 붙은 시나리오라 체인이 줍지 않고 폴더마다 제 항목이 있다(`rhiswap/` — 네 백엔드가 있는 Windows, `netpair/` — 여러 프로세스, IntegrationTests/Net).
-#          어느 항목도 띄우지 않는 시나리오가 있으면 구성이 선다(이 파일 끝) — 돌릴 수 없는 것(디버거 · 브라우저)만 까닭과 함께 `Config/Rules/Test/ManualScenarios.json` 에 둔다.
+#          어느 항목도 띄우지 않는 시나리오가 있으면 구성이 선다(이 파일 끝) — 돌릴 수 없는 것(디버거 · 브라우저)만 까닭과 함께 `Config/Rules/TestSelection/ManualScenarios.json` 에 둔다.
 #          게임의 하위 폴더 다섯은 게임마다 같은 `-game=` 규칙으로 따로 항목이 된다: `showcase/`(쇼케이스 체인 `Scenario.<팩>.showcase`), `desktop/`(혼자 도는 데스크톱 시나리오),
 #          `sequence/`(두 번 기동 쌍), `editor/`(그 게임의 편집기 체인 `Scenario.<팩>.editor`), `load/`(부하 측정 — 라벨 load, 엔진 폴더도).
 #          항목이 GPU 자식을 백엔드 수만큼 띄우므로 그 수를 슬롯으로 선언한다(`PROCESSORS`) — `ctest -j` 의 다른 항목(단위 테스트)과 겹쳐도 GPU 자식이 늘지 않는다.
@@ -283,7 +283,7 @@ if(WIN32 AND TARGET EditorModule AND TARGET Server AND CMAKE_BUILD_TYPE STREQUAL
 	sw_glob_source_tree(list_unregistered RECURSE RELATIVE "${scenario_root}" ${list_all_scenario_glob})
 	get_property(list_registered GLOBAL PROPERTY SW_REGISTERED_SCENARIOS)
 	list(REMOVE_ITEM list_unregistered ${list_registered})
-	set(manual_scenarios_file "${CMAKE_SOURCE_DIR}/Config/Rules/Test/ManualScenarios.json")
+	set(manual_scenarios_file "${CMAKE_SOURCE_DIR}/Config/Rules/TestSelection/ManualScenarios.json")
 	set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${manual_scenarios_file}")
 	sw_require_json_value(manual_count "${manual_scenarios_file}" LENGTH _scenarios)
 	if(manual_count GREATER 0)
