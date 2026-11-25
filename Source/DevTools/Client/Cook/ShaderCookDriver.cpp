@@ -99,6 +99,7 @@ namespace sw
             {
                 shared_ptr<const ShaderReflectionData> _pReflection;         ///< 바이너리의 리플렉션. 바이트가 같은 바이너리는 한 벌을 함께 쓴다
                 int64                                  _reflectNanos{ 0 };   ///< 리플렉션 · 계약 검사에 쓴 시간
+                uint64                                 _bytecodeHash{ 0 };   ///< 컴파일한 바이트코드의 해시(실패면 0)
                 uint32                                 _violationCount{ 0 }; ///< 계약 검사가 센 위반 수(매니페스트에 넣을 때만 더한다)
                 bool                                   _bCooked{ false };    ///< 낡아서 새로 컴파일해 썼다
                 bool                                   _bCompileFailed{ false };
@@ -179,6 +180,7 @@ namespace sw
                     outResult._bCompileFailed = ShaderCooker::writeBinary( desc, compileResult, task._outPath, outResult._bCooked ) == false;
                     if ( outResult._bCompileFailed )
                         return;
+                    outResult._bytecodeHash = compileResult._record._outputHash;
 
                     // 새로 쿠킹했든 이미 최신이든 리플렉션은 항상 그 바이트에서 뽑는다 — 이전 매니페스트에서 가져오지 않는다.
                     // 리플렉션이 빠지면 런타임이 조용히 폴백하고, 배포 빌드에서는 그대로 실패한다.
@@ -424,6 +426,53 @@ namespace sw
                     }
                 }
                 ioState._summary._reflectMs = static_cast<uint32>( reflectNanos / constant::time::kNanosecondsPerMillisecond );
+            }
+
+            /**
+             * @brief 셰이더(소스 · 진입점 · 형식)마다 변형 수와 서로 다른 바이트코드 수를 세어, 겹친 변형이 가장 많은 것부터 남깁니다.
+             * @details 바이트가 같은 변형은 컴파일은 한 번이지만 요청 · 전처리 · 바이너리 파일은 변형마다 든다 — 어느 셰이더의 define 이 그 단계에 쓰이지 않는지 이 표로 보고 요청에서 뺀다.
+             */
+            static void logVariantOverlap( const vector<FormatTask>& listTask, const vector<FormatResult>& listResult )
+            {
+                struct Overlap
+                {
+                    string                _label;
+                    uint32                _variantCount{ 0 };
+                    unordered_set<uint64> _uniqueHash;
+
+                    size_t getRepeatCount() const { return _variantCount - _uniqueHash.size(); }
+                };
+                static constexpr size_t        kMaxLine = 20;
+                unordered_map<string, Overlap> mapOverlap;
+                unordered_set<uint64>          uniqueHash;
+                uint32                         variantCount = 0;
+                for ( size_t index = 0; index < listTask.size(); ++index )
+                {
+                    if ( listResult[index]._bytecodeHash == 0 )
+                        continue;
+                    StringBuilder<constant::buffer::kMax256> labelBuilder;
+                    labelBuilder.appendFormat( "%# %# [%#]", listTask[index]._source.c_str(), listTask[index]._pRequest->_entryPoint, ShaderCooker::getSubfolderForFormat( listTask[index]._format ) );
+                    Overlap& overlap = mapOverlap[string( labelBuilder.view() )];
+                    ++overlap._variantCount;
+                    overlap._uniqueHash.insert( listResult[index]._bytecodeHash );
+                    uniqueHash.insert( listResult[index]._bytecodeHash );
+                    ++variantCount;
+                }
+                vector<const Overlap*> listOverlap;
+                for ( auto& [label, overlap] : mapOverlap )
+                {
+                    overlap._label = label;
+                    if ( overlap.getRepeatCount() > 0 )
+                        listOverlap.push_back( &overlap );
+                }
+                VectorUtil::sort( listOverlap, []( const Overlap* pLeft, const Overlap* pRight )
+                { return pLeft->getRepeatCount() != pRight->getRepeatCount() ? pLeft->getRepeatCount() > pRight->getRepeatCount() : pLeft->_label < pRight->_label; } );
+                SW_LOG_INFO_ID( "ShaderCooker.VariantOverlap", "Shader variants: %# binaries hold %# distinct bytecodes", variantCount, static_cast<uint32>( uniqueHash.size() ) );
+                for ( size_t index = 0; index < listOverlap.size() && index < kMaxLine; ++index )
+                {
+                    SW_LOG_INFO_ID( "ShaderCooker.VariantOverlapShader", "Shader variants: %# - %# variants, %# distinct", listOverlap[index]->_label, listOverlap[index]->_variantCount,
+                                    static_cast<uint32>( listOverlap[index]->_uniqueHash.size() ) );
+                }
             }
 
             /**
@@ -749,6 +798,7 @@ namespace sw
         const Stopwatch                batchWatch;
         Internal::cookTasks( listTask, state, listResult );
         state._summary._compileMs = static_cast<uint32>( batchWatch.getElapsedMilliseconds() );
+        Internal::logVariantOverlap( listTask, listResult );
         Internal::mergeResults( listTask, listResult, state );
         Internal::writeManifests( state );
         state._summary._totalMs = static_cast<uint32>( totalWatch.getElapsedMilliseconds() );
