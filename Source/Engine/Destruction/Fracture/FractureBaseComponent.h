@@ -1,21 +1,21 @@
 /**
  * @file FractureBaseComponent.h
  * @brief 쪼갠 조각을 런타임에 다루는 컴포넌트의 공통 기반입니다. 3D `FractureComponent` 와 2D `Fracture2DComponent` 가 상속하며, 구조 상태(`DestructionState`)를 보관하고 피해 사건을 받아 바디와 렌더링을 바꿉니다.
- * @details **온전할 때는 오브젝트의 메시 하나가 그리기 하나다.** 이 컴포넌트는 그리지도 않고 바디도 갖지 않는다. 충돌은 오브젝트의 `RigidBodyComponent` 가 맡는다.
- *          처음 떨어진 조각이 생기면(그룹이 갈라지면) **쪼갠 상태로 바뀐다.** 오브젝트의 메시를 숨기고 강체 컴포넌트를 끈 뒤,
+ * @details 온전할 때는 오브젝트의 메시 하나가 그리기 하나다. 이 컴포넌트는 그리지도 않고 바디도 갖지 않는다. 충돌은 오브젝트의 `RigidBodyComponent` 가 맡는다.
+ *          처음 떨어진 조각이 생기면(그룹이 갈라지면) 쪼갠 상태로 바뀐다. 오브젝트의 메시를 숨기고 강체 컴포넌트를 끈 뒤,
  *          조각마다 본 하나를 둔 스킨드 메시 둘(겉면과 안쪽 면, 슬롯마다 그리기 하나, `FractureRenderUtil`)을 같은 오브젝트에 붙인다.
  *          앵커에 붙은 조각은 조각마다 정적 바디를 한 번에 만든다. 미리 만들어 둔 껍질 셰이프를 나눠 쓴다.
  *          떨어진 그룹은 그룹마다 동적 바디 하나(조각 껍질의 컴파운드)를 만든다.
  *          그룹이 갈라지면 이전 바디를 지우고, 갈라진 덩어리마다 자세와 속도(질량 중심의 선속도 + 각속도 × 거리)를 이어받는 새 바디를 만든다.
  *
- *          **예산과 정리(Chaos 의 Remove on Sleep).** 떨어진 그룹이 잠든 채 `sleepRemoveTime` 이 지나면 바디를 제거한다.
+ *          예산과 정리(Chaos 의 Remove on Sleep). 떨어진 그룹이 잠든 채 `sleepRemoveTime` 이 지나면 바디를 제거한다.
  *          `keepCollisionVolume` 이상인 큰 덩어리는 잠든 바디를 남겨 충돌을 유지한다.
  *          작은 파편(`smallDebrisVolume` 미만)은 `lifetime` 이 지난 뒤 `fadeTime` 동안 줄어들며 사라진다.
  *          떨어진 그룹의 바디가 `maxBodies` 를 넘으면 이 오브젝트의 가장 오래된 작은 파편부터, 씬 상한(물리 설정 `_maxDebrisBodyCount`)을 넘으면 씬 전체에서 그렇게 고른 파편(`DebrisBudget`)이 사라진다.
  *          움직이는 바디도 없고 사라지는 중인 조각도 없으면, 현재 자세를 정적 메시 둘에 베이크하고 스킨드 메시를 숨긴다(프레임 비용 0).
  *          다시 피해를 받으면 스킨드 메시로 돌아간다.
  *
- *          **피해.** `applyDamage`(메시 공간), `applyPointDamageAtWorld`, `applyRadialDamageAtWorld`, `applyRaycastDamage` 는 어느 틱에서든 불러도 된다.
+ *          피해. `applyDamage`(메시 공간), `applyPointDamageAtWorld`, `applyRadialDamageAtWorld`, `applyRaycastDamage` 는 어느 틱에서든 불러도 된다.
  *          요청은 잠금 아래 쌓이고 다음 물리 프레임에 게임 스레드에서 적용된다.
  *          충돌(막는 접촉 시작 사건 `GameObjectEvents::_collisionBegin` 의 충격량)은 권한이 있을 때(`_bAuthority`)만 사건이 된다.
  *          적용한 사건은 `getEventLog()` 에 쌓인다. 다른 기계가 이 사건을 같은 순서로 `applyDamage` 에 넘기면 같은 상태가 된다.

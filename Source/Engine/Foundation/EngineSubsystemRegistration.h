@@ -1,6 +1,6 @@
 /**
  * @file Engine/Foundation/EngineSubsystemRegistration.h
- * @brief 엔진 서브시스템과 서비스 칸을 **그 객체를 범위에 넣는 .cpp 에서** 등록하는 틀입니다 — 중앙 목록이 없습니다.
+ * @brief 엔진 서브시스템과 서비스 칸을 그 객체를 범위에 넣는 .cpp 에서 등록하는 틀입니다 — 중앙 목록이 없습니다.
  *
  * @details 언리얼 `UEngineSubsystem` 이 모듈 안에서 스스로 등록되고 `GEngine->GetEngineSubsystem<T>()` 로 타입으로 찾히는 것과 같은 모양입니다.
  *          등록 줄 하나가 그 타입의 모든 것을 말합니다.
@@ -9,11 +9,11 @@
  *          | `SW_ENGINE_SERVICE_SUBSYSTEM( Type, 노출, 수명, 단계, ( 먼저 만들 타입… ), 공장 )` | 서브시스템을 만들고 서비스 칸에 묶는다(가장 흔한 모양) |
  *          | `SW_ENGINE_SUBSYSTEM( Type, 수명, 단계, ( 먼저 만들 타입… ), 공장 )` | 서브시스템을 만들기만 한다(서비스 칸이 없다 — 범위로만 찾는다) |
  *          | `SW_ENGINE_SERVICE( Type, 노출 )` | 다른 서브시스템이 범위에 건 객체(값 묶음 · 안의 객체)를 서비스 칸에 묶는다 |
- *          - **필수 여부 · const** 는 타입 헤더의 칸 선언(`SW_SERVICE_SLOT`, `Core/Subsystem/ServiceSlot.h`)이 말한다 — 부르는 TU 가 컴파일 때 알아야 한다.
- *          - **노출**: `GameVisible` 이면 게임 모듈(SWGame)의 범위에도 건다(`engine::bindModuleServices`), `HostOnly` 면 호스트 · 에디터 전용.
- *          - **수명**: `Process`(게임을 다시 시작해도 남는다) · `GameInstance`(게임 인스턴스와 함께 상태를 비운다 — 두 함수를 재정의해야 컴파일된다, `SubsystemLifetime`).
- *          - **단계**: `Services`(초기화 · 종료할 것이 없고 수명만 있는 공용 서비스 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다) · `Startup`(기동 단계).
- *          - **만드는 순서**: 공장이 범위에서 다른 서브시스템을 찾으면(`scope.get<T>()`) 그 타입을 괄호 안에 적는다(언리얼 `Collection.InitializeDependency<T>()`).
+ *          - 필수 여부 · const 는 타입 헤더의 칸 선언(`SW_SERVICE_SLOT`, `Core/Subsystem/ServiceSlot.h`)이 말한다 — 부르는 TU 가 컴파일 때 알아야 한다.
+ *          - 노출: `GameVisible` 이면 게임 모듈(SWGame)의 범위에도 건다(`engine::bindModuleServices`), `HostOnly` 면 호스트 · 에디터 전용.
+ *          - 수명: `Process`(게임을 다시 시작해도 남는다) · `GameInstance`(게임 인스턴스와 함께 상태를 비운다 — 두 함수를 재정의해야 컴파일된다, `SubsystemLifetime`).
+ *          - 단계: `Services`(초기화 · 종료할 것이 없고 수명만 있는 공용 서비스 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다) · `Startup`(기동 단계).
+ *          - 만드는 순서: 공장이 범위에서 다른 서브시스템을 찾으면(`scope.get<T>()`) 그 타입을 괄호 안에 적는다(언리얼 `Collection.InitializeDependency<T>()`).
  *            같은 단계 안에서 그 순서로 위상 정렬하고, 동점은 이름 순이다(링크 순서에 기대지 않는다). 모르는 타입 · 다른 단계 · 순환은 기동 오류다.
  *            공장이 받는 범위(`EngineSubsystemFactoryScope`)는 괄호에 없는 타입을 찾으면 멈춘다 — 적지 않은 찾기가 이름 순 동점 덕에 우연히 통과하지 않는다.
  *            초기화 · 종료 · 소멸 순서는 이것이 아니라 서브시스템이 선언한 의존(`Subsystem::getSubsystemDependencies`)이 정한다. 두 선언은 뜻이 달라 합치지 않되
@@ -314,7 +314,7 @@ namespace sw::engine
     };
 } // namespace sw::engine
 
-// 인자가 **타입 이름**이라 괄호를 씌울 수 없다(`(Type)::s_serviceSlot` 은 올바른 문법이 아니다).
+// 인자가 타입 이름이라 괄호를 씌울 수 없다(`(Type)::s_serviceSlot` 은 올바른 문법이 아니다).
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define SW_ENGINE_REGISTRATION_UNPAREN( ... ) __VA_ARGS__
 

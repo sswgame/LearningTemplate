@@ -188,7 +188,7 @@ namespace sw
         [[nodiscard]] static bool sign( INetSecurityProvider& provider, const string& privateKeyPem, const PackDigest& indexDigest, PackPatchManifest& inOutManifest );
 
         /**
-         * @brief 목록의 서명을 확인하고 그 팩을 열 신뢰(@p outTrust — 서명된 색인 요약과 제공자)를 줍니다. 팩 바이트는 읽지 않는다 — 색인은 마운트가 여는 핸들로 견준다.
+         * @brief 목록의 서명을 확인하고 그 팩을 열 신뢰(@p outTrust, 서명된 색인 요약과 제공자)를 줍니다. 팩 바이트는 읽지 않는다. 색인은 마운트가 여는 핸들로 견준다.
          * @return 서명이 없거나 · 요약 · 서명 글이 틀렸거나 · 서명이 안 맞거나 · 공개 키가 ES256 이 아니면 이유를 남기고 false 입니다.
          * @param sourceName 오류에 적을 이름(목록 파일 경로)입니다.
          */

@@ -22,7 +22,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 마운트된 팩을 든 매니저입니다 — 에셋 매니저가 소유하고 엔진 범위에 건 것을 서비스 칸으로 읽는다(선택 칸 — `AssetManager.cpp` 의 등록).
+         * @brief 마운트된 팩을 든 매니저입니다. 에셋 매니저가 소유하고 엔진 범위에 건 것을 서비스 칸으로 읽는다(선택 칸, `AssetManager.cpp` 의 등록).
          *        엔진 범위가 없으면(엔진 없이 도는 도구 · 쿠커 · 테스트) nullptr 이고, 그때는 마운트된 팩이 없다.
          * @details 낱개 파일 정책은 이 함수와 `isLooseFileAllowed` 한 곳에서만 본다 — 부르는 쪽이 `AssetIO` 가 실패한 뒤 디스크를 다시 읽지 않게.
          */
@@ -39,7 +39,7 @@ namespace sw
 
         /**
          * @brief 리소스 id 가 아닌 OS 경로를 리소스 입구에 넣었으면 오류를 남기고 true 입니다.
-         * @details 리소스 입구는 **리소스 id 만** 받는다. 디스크 파일은 디스크 입구(`AssetIO::readTextFile` · `readBinaryFile`, 로더의 `*FromDiskFile`)로
+         * @details 리소스 입구는 리소스 id 만 받는다. 디스크 파일은 디스크 입구(`AssetIO::readTextFile` · `readBinaryFile`, 로더의 `*FromDiskFile`)로
          *          읽고, 루트 밖 폴더를 리소스로 읽어야 하면 `AssetPaths::mountDiskDomain` 으로 붙인다. 예전에는 OS 절대 경로를 디스크에서 바로 읽고
          *          배포 구성만 루트 안 경로를 거절해, 잘못 넣은 호출이 Dev 테스트를 지나 Shipping 에서야 드러났다(2026-10-19 CI).
          */
@@ -54,7 +54,7 @@ namespace sw
         }
 
         /**
-         * @brief 리소스 하나를 찾아 읽습니다. **순서는 텍스트 · 바이너리가 같습니다.**
+         * @brief 리소스 하나를 찾아 읽습니다. 순서는 텍스트 · 바이너리가 같습니다.
          * @param readFromDisk 디스크 절대 경로에서 읽는 방법.
          * @param readFromPack 마운트된 팩에서 읽는 방법(팩 매니저를 받고, 찾았으면 팩 경로를 `outPackPath` 에 담습니다).
          * @details 인자는 리소스 id 하나다 — OS 경로는 오류로 거절한다(`shouldRejectOSPath`). 순서는 둘입니다. (1) 낱개 파일 우선이 켜져 있거나 붙인 디스크
@@ -96,7 +96,7 @@ namespace sw
                 return false;
             }
 
-            // 1. 낱개 경로는 **여기서 한 번만** 푼다.
+            // 1. 낱개 경로는 여기서 한 번만 푼다.
             const PackManager* pPackManager = findPackManager();
             const bool         bDiskDomain  = engine::getSubsystem<AssetPaths>().isMountedDiskDomainID( relativePath );
             if ( isLooseFileAllowed( pPackManager ) || bDiskDomain )

@@ -80,7 +80,7 @@ namespace sw
         /** @brief 우선순위(작은 것 먼저) 순서의 줄입니다. */
         [[nodiscard]] vector<const Entry*> listByPriority() const;
         /**
-         * @brief 한 줄 참조 @p reference(`common/x.mat`)를 등록된 도메인 이름의 **최장 일치**(구간 경계 기준)로 가릅니다.
+         * @brief 한 줄 참조 @p reference(`common/x.mat`)를 등록된 도메인 이름의 최장 일치(구간 경계 기준)로 가릅니다.
          * @return 도메인이 맞으면 `{도메인, 나머지}`, 어느 도메인도 아니면 도메인 없는 `{상대}` 입니다. 참조가 잘못됐거나(`..` · 절대) 도메인 이름뿐이면 빈 값입니다.
          */
         [[nodiscard]] optional<ResourcePath> split( string_view reference ) const;

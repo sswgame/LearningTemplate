@@ -111,7 +111,7 @@ namespace
 
 /**
  * @brief [DialogueGraphTest] 핀 번호 인코딩·디코딩이 서로 되돌리는지 검증
- * @details 핀 번호는 **디스크에 저장되는 계약**이다. 에디터의 인코딩과 애셋의 디코딩을 각자 적으면 한쪽만 바뀔 때
+ * @details 핀 번호는 디스크에 저장되는 계약이다. 에디터의 인코딩과 애셋의 디코딩을 각자 적으면 한쪽만 바뀔 때
  *          대화가 조용히 엉뚱한 분기를 탄다.
  */
 SW_TEST_CASE( DialogueGraphTest, PinEncodeAndDecodeRoundTrip )
@@ -131,7 +131,7 @@ SW_TEST_CASE( DialogueGraphTest, PinEncodeAndDecodeRoundTrip )
 
 /**
  * @brief [DialogueGraphTest] 자릿수에 담기지 않는 핀은 만들지 않는지 검증
- * @details 오프셋이 `kPinScale` 을 넘으면 **노드 id 를 오염시켜** 링크가 다른 노드를 가리킨다.
+ * @details 오프셋이 `kPinScale` 을 넘으면 노드 id 를 오염시켜 링크가 다른 노드를 가리킨다.
  *          조용히 그런 번호를 만드느니 "없는 핀"(0)을 돌려준다.
  */
 SW_TEST_CASE( DialogueGraphTest, PinRefusesOffsetsThatWouldOverflowTheNodeID )
@@ -250,7 +250,7 @@ SW_TEST_CASE( DialogueGraphTest, XMLRoundTripAndLoadFromFileAgree )
 
 /**
  * @brief [DialogueGraphTest] 로컬라이즈 키가 아닌 원문은 그대로 돌려주는지 검증
- * @details 이 조회는 **키가 아닐 수도 있는 텍스트**로 물어본다. 그 원문으로 `hashed_string` 을 만들어 물으면
+ * @details 이 조회는 키가 아닐 수도 있는 텍스트로 물어본다. 그 원문으로 `hashed_string` 을 만들어 물으면
  *          대사가 intern 아레나에 영구히 남는다.
  */
 SW_TEST_CASE( DialogueGraphTest, PlainTextResolvesToItself )

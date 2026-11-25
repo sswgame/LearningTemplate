@@ -91,7 +91,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 노드 종류 테이블입니다. **종류마다 항목이 하나이고, 순서는 `DialogueAssetNodeKind` 값 순서입니다.**
+     * @brief 노드 종류 테이블입니다. 종류마다 항목이 하나이고, 순서는 `DialogueAssetNodeKind` 값 순서입니다.
      * @details 에셋 이름 해석, 런타임 진행(`DialogueCursor`), 에디터 그리기, 추가 메뉴, 인스펙터가 모두 이 테이블을 읽는다.
      */
     inline constexpr auto kArrDialogueNodeInfo = makeEnumTable<DialogueAssetNodeKind, DialogueNodeInfo>( {
@@ -199,7 +199,7 @@ namespace sw
 
         /** @brief 리소스 id 의 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 읽지 못하면 false 이고 그래프는 비어 있습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief **디스크 파일**의 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
+        /** @brief 디스크 파일의 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief XML 파일을 씁니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
@@ -223,7 +223,7 @@ namespace sw
         uint32 makeNextSpeakerID() const;
 
         // ------------------------------------------------------------------------------
-        // 핀 번호 계약: **이 파일이 기준이다.**
+        // 핀 번호 계약: 이 파일이 기준이다.
         //
         // 핀 번호는 `노드 id * kPinScale + 오프셋` 이고 링크의 양 끝으로 디스크에 저장된다.
         // 인코딩과 디코딩을 모두 여기서 한다. 에디터 패널이 오프셋을 따로 가지면 한쪽만 바뀔 때 대화가 조용히 엉뚱한 분기를 탄다.
@@ -246,7 +246,7 @@ namespace sw
         /**
          * @brief 노드 id 와 오프셋으로 핀 번호를 만듭니다.
          * @return 오프셋이 `kPinScale` 에 담기지 않거나 노드 id 가 1 미만이면 0 입니다.
-         *         담기지 않는 오프셋은 **자릿수를 넘어 노드 id 를 오염시킵니다.**
+         *         담기지 않는 오프셋은 자릿수를 넘어 노드 id 를 오염시킵니다.
          */
         static int32 encodePin( int32 nodeID, int32 pinOffset );
         /** @brief 선택지 하나의 핀 번호를 만듭니다. 담기지 않으면 0 입니다. */

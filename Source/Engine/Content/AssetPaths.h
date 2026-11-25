@@ -55,7 +55,7 @@ namespace sw
         [[nodiscard]] static bool collectContentFiles( const AbsolutePath& contentRoot, string_view extension, vector<AbsolutePath>& outListFile );
         /**
          * @brief 콘텐츠 뿌리 @p contentRoot 아래 게임 팩의 도메인 id(`game/<팩>`, 이름 순)를 @p outListDomain 에 더합니다. `game/` 이 없으면 더할 것이 없고 true 입니다.
-         * @details 게임 도메인은 이름을 코드가 알지 않고 폴더를 훑어 찾는다 - 쿠커 · 셰이더 스탬프 · 에셋 DB · 검색 순서 · 에디터가 함께 쓰는 나열 하나다(예전에는 일곱 곳이 따로 훑었다).
+         * @details 게임 도메인은 이름을 코드가 알지 않고 폴더를 훑어 찾는다 - 쿠커 · 셰이더 스탬프 · 에셋 DB · 검색 순서 · 에디터가 함께 쓰는 나열 하나다.
          *          목록을 끝까지 읽지 못하면(빠진 팩을 모른 채 넘어간다) 이유를 남기고 false 입니다.
          */
         [[nodiscard]] static bool collectGamePackDomains( const AbsolutePath& contentRoot, vector<string>& outListDomain );
@@ -95,7 +95,7 @@ namespace sw
         bool isInitialized() const;
 
         /**
-         * @brief 리소스 id 를 **디스크에 있는 낱개 파일 · 폴더**로 풉니다(있을 때만). 팩은 보지 않습니다.
+         * @brief 리소스 id 를 디스크에 있는 낱개 파일 · 폴더로 풉니다(있을 때만). 팩은 보지 않습니다.
          * @param resourceID 팩 상대 키(검색 순서로 이긴 것) 또는 `engine/`/`common/`/`game/<pack>/`/`editor/` 전역 ID. 디스크 경로는 받지 않는다(빈 값).
          * @return 있으면 디스크 경로, 없으면 빈 값입니다. 런타임 리소스 읽기 · 나열은 이 결과가 아니라 팩까지 보는 `AssetIO` 를 씁니다.
          *         없는 파일의 자리(만들 곳)는 `toDiskPath` 다.
@@ -104,7 +104,7 @@ namespace sw
         [[nodiscard]] optional<AbsolutePath> findLooseFile( string_view resourceID ) const;
 
         /**
-         * @brief 리소스 폴더 id 에 맞는 **디스크 폴더 전부**를 검색 순서로 모읍니다(폴더 나열 `AssetIO::collectAssets` 용).
+         * @brief 리소스 폴더 id 에 맞는 디스크 폴더 전부를 검색 순서로 모읍니다(폴더 나열 `AssetIO::collectAssets` 용).
          * @details 도메인이 붙은 id 는 그 도메인 폴더 하나, 도메인 없는 키는 검색 순서의 모든 리소스 폴더 아래 같은 하위 폴더다 — 팩 나열(우선순위 순 합집합)과 같은 규칙.
          *          `findLooseFile` 은 이긴 하나만 돌려줘, 나열에 쓰면 소스 구성에서만 다른 도메인의 파일이 빠졌다.
          */
@@ -114,10 +114,10 @@ namespace sw
          * @brief 리소스 id 를 디스크 경로로 풉니다(`toAssetID` 의 짝) — 낱개 파일 · 폴더의 자리를 정하는 입구 하나다(엔진의 `save*` 는 이 결과 `AbsolutePath` 만 받는다).
          *        에디터 · 쿠커 · 도구가 디스크 자리를 알 때 쓴다. 런타임 내용 읽기는 팩까지 보는 `AssetIO` 다.
          * @param resourceID 전역 id(`engine/`/`common/`/`game/<pack>/`/`editor/`/`dlc/<이름>/`… · 붙인 디스크 도메인)는 그 도메인 루트 아래(파일이 아직 없어도),
-         *        상대 키는 검색 순서로 이긴 **있는** 파일이다(읽은 그 파일에 쓴다).
+         *        상대 키는 검색 순서로 이긴 있는 파일이다(읽은 그 파일에 쓴다).
          * @return 디스크 경로입니다. 디스크 경로(절대) · `..` · 아직 없는 상대 키(어느 도메인에 만들지 모른다)는 이유를 오류로 남기고 빈 값입니다 — 작업 폴더로 물러나지 않는다.
          * @details 예전에는 문자열 하나가 리소스 id 이거나 디스크 경로였고(`getWritePath`), 저장 함수마다 어느 쪽을 받는지가 달랐다(같은 이름 `saveToFile`).
-         *          **대소문자.** 리소스 id 는 소문자인데 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템(Linux)에서는 이미 있는 폴더
+         *          대소문자. 리소스 id 는 소문자인데 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템(Linux)에서는 이미 있는 폴더
          *          성분은 디스크 표기를 쓰고, 없는 성분부터는 id 의 표기를 씁니다. 리소스 트리의 도메인은 소문자 규칙이라 모든 플랫폼에서 소문자로 잇습니다.
          */
         [[nodiscard]] optional<AbsolutePath> toDiskPath( string_view resourceID ) const;
@@ -133,7 +133,7 @@ namespace sw
         [[nodiscard]] static bool isUnderSourceControl( string_view diskPath );
 
         /**
-         * @brief **디스크 경로**를 리소스 id(전역 id. 예: `game/playground/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
+         * @brief 디스크 경로를 리소스 id(전역 id. 예: `game/playground/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
          * @param diskPath 디스크 경로입니다.
          * @return 리소스 id 입니다. 붙인 디스크 도메인(`mountDiskDomain`) 폴더 아래면 `<도메인>/…`, 리소스 루트 아래면 루트 기준입니다. 그 밖이면 빈 문자열입니다.
          * @details 예전에는 한 함수가 디스크 경로 · 프로젝트 기준 경로(`Content/…`) · 리소스 id 를 모두 받고 상대 글이 무엇인지 추측했다 — 작업 폴더 기준 디스크
@@ -150,7 +150,7 @@ namespace sw
         /**
          * @brief 이 객체를 쓰는 호스트의 빌드 타깃(`"Client"`, `"Server"`)을 정합니다. 그 타깃이 패키지에서 빼는 에셋 묶음
          *        (`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds` — 묶음은 종류 표 `AssetTypeDef::_excludeGroup`. 서버는 텍스처, 셰이더 바이너리, 오디오)는 이 호출 뒤부터
-         *        **없는 것**으로 취급합니다. 읽기는 조용히 false 를 반환하고 `hasAsset` 도 false 입니다("파일 없음" 경고와 오류를 남기지 않습니다).
+         *        없는 것으로 취급합니다. 읽기는 조용히 false 를 반환하고 `hasAsset` 도 false 입니다("파일 없음" 경고와 오류를 남기지 않습니다).
          * @details 팩 쿠커(`PackCooker`, `isExcludedForTarget`)가 같은 테이블로 그 파일을 팩에서 뺀다. 엔진 기동 첫머리(`Engine::initialize`)에서
          *          한 번 부르고, 그 뒤로는 읽기만 한다. 비우면(`""`) 아무것도 빼지 않는다(테스트 하네스).
          */
@@ -159,11 +159,11 @@ namespace sw
         bool isExcludedForHost( string_view assetPath ) const;
 
         /**
-         * @brief 리소스 루트 **밖**의 디스크 폴더 하나를 도메인 이름으로 붙입니다. 그 도메인의 id(`<domainName>/<key>`)는 그 폴더의 파일로 풀립니다.
+         * @brief 리소스 루트 밖의 디스크 폴더 하나를 도메인 이름으로 붙입니다. 그 도메인의 id(`<domainName>/<key>`)는 그 폴더의 파일로 풀립니다.
          * @details 리소스 입구(`AssetIO::read*Resource` · `hasAsset`)는 리소스 id 만 받고 OS 경로는 오류로 거절합니다.
          *          루트 밖 디스크 파일(테스트 케이스 임시 폴더, 도구 작업 폴더)을 캐시 · 로더가 리소스로 읽어야 할 때 이 함수로 붙이고 id 로 부릅니다.
          *          붙인 도메인은 낱개 파일 금지 구성(배포본)에서도 디스크에서 읽습니다 — 붙인 쪽이 고른 것이고, 팩에는 없습니다.
-         *          리소스 루트 **안**의 폴더는 붙일 수 없습니다(배포본의 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다).
+         *          리소스 루트 안의 폴더는 붙일 수 없습니다(배포본의 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다).
          * @return 이름이 비었거나 `/` · `:` · `..` 가 들었거나, 폴더가 없거나, 리소스 루트 안이거나, 같은 이름이 다른 폴더에 붙어 있으면 false 입니다(오류 로그).
          *         같은 이름을 같은 폴더에 다시 붙이면 true 입니다.
          */
@@ -209,7 +209,7 @@ namespace sw
 
         /**
          * @brief 쿠킹 세션을 열고 닫습니다(`CookSession` 만 부른다 — 겹쳐 열 수 있다). 열린 동안 작업 범위(`CookJob`) 밖의 리소스 읽기가 오류가 된다.
-         * @details 리소스를 읽는 길의 상태라 경로 상태와 같은 주인이 든다(예전에는 프로세스 원자 칸이었다 — 언리얼 쿠커의 `IsCookingInEditor` 상태가 쿠커 객체에 있는 자리).
+         * @details 리소스를 읽는 길의 상태라 경로 상태와 같은 주인이 든다(언리얼 쿠커의 `IsCookingInEditor` 상태가 쿠커 객체에 있는 자리).
          */
         void openCookSession();
         void closeCookSession();

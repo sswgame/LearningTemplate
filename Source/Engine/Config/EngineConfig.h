@@ -168,7 +168,7 @@ namespace sw
     /**
      * @struct SubtitleConfig
      * @brief 자막 서비스(`UISubtitleService::configure`)의 표시 규칙입니다 — 동시에 보이는 줄 수, 최소 표시 시간, 읽기 속도, 크기 설정 배율.
-     * @details Xbox Accessibility Guidelines(XAG 104)의 자막 항목 — 한 번에 많은 줄을 쌓지 않고, 읽을 시간을 주고, 크기를 고르게 한다 — 을 데이터로 둔다.
+     * @details Xbox Accessibility Guidelines(XAG 104)의 자막 항목(한 번에 많은 줄을 쌓지 않고, 읽을 시간을 주고, 크기를 고르게 한다)을 데이터로 둔다.
      *          언리얼 `USubtitleManager` 는 같은 값을 코드 상수로 두지만, 여기서는 정책 값이라 설정 파일이 정하고 없으면 자막 서비스 기동이 오류로 멈춘다.
      */
     REFLECT()

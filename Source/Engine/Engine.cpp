@@ -578,7 +578,7 @@ namespace sw
         const uint32               vpWidth     = bHasOutput ? mainOutput._width : ( bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pMainWindow != nullptr ? pMainWindow->getWidth() : 0 ) );
         const uint32               vpHeight    = bHasOutput ? mainOutput._height : ( bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pMainWindow != nullptr ? pMainWindow->getHeight() : 0 ) );
         _frameDeltaSeconds                     = deltaTime;
-        // 게임 시간이 선 동안(정지 메뉴 · 포토 모드 — `GameTimeScale`, 함께 쓰는 시간은 서지 않는다) 게임 소리와 자막도 선다. 에디터가 씬을 틱하지 않는 동안은 일시정지가 아니다 — 패널의 소리 미리듣기가 난다.
+        // 게임 시간이 선 동안(정지 메뉴 · 포토 모드, `GameTimeScale`, 함께 쓰는 시간은 서지 않는다) 게임 소리와 자막도 선다. 에디터가 씬을 틱하지 않는 동안은 일시정지가 아니다. 패널의 소리 미리듣기가 난다.
         _bGamePaused = sceneTick == SceneTick::Run && engine::getSubsystem<GameTimeScale>().get() <= 0.0f ? SW_TRUE : SW_FALSE;
 
         if ( _headlessState.isHeadless() )

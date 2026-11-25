@@ -97,7 +97,7 @@ namespace sw
                 return MathUtil::sqrt( deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ );
             }
 
-            /** @brief 청크 메시 열쇠입니다 — LOD 와 변마다의 유효 이웃 LOD(`max( 이웃, 자기 )` — 고운 이웃 쪽 변은 이웃이 접는다)를 4 비트씩 묶는다(`_maxLOD` 는 log2( 청크 칸 ) 이라 15 이하). */
+            /** @brief 청크 메시 열쇠입니다. LOD 와 변마다의 유효 이웃 LOD(`max( 이웃, 자기 )`, 고운 이웃 쪽 변은 이웃이 접는다)를 4 비트씩 묶는다(`_maxLOD` 는 log2( 청크 칸 ) 이라 15 이하). */
             static uint32 makeChunkMeshKey( uint32 lod, const uint32 ( &arrNeighborLOD )[4] )
             {
                 uint32 key = lod;
@@ -661,7 +661,7 @@ namespace sw
             archive.writeBytes( listHeight.data(), listHeight.size() * sizeof( float32 ) );
             return true;
         }
-        // 크기를 먼저 비교한다 — 맞지 않는 수로 버퍼를 잡지 않는다. 해상도가 달라도 되는 것은 크기를 바꾼 편집(`replaceHeightfield`)뿐이다 —
+        // 크기를 먼저 비교해 맞지 않는 수로 버퍼를 잡지 않는다. 해상도가 달라도 되는 것은 크기를 바꾼 편집(`replaceHeightfield`)뿐이다.
         // 디스크 에셋을 다른 해상도로 다시 가져왔으면 낡은 편집이 그것을 덮지 않는다.
         const uint32 current    = _heightfield.getResolution();
         const bool   bSameSize  = resolution == current;

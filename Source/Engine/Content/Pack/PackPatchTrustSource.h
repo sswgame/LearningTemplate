@@ -5,7 +5,7 @@
  *          (`SW_MODULE_SUBSYSTEM( Process, Process, OpenSSLNetSecuritySubsystem, INetSecurityProvider )`), 엔진은 인터페이스 타입으로 찾는다(`engine::findSubsystem<INetSecurityProvider>()`)
  *          — 함수 칸을 두고 높은 층이 채우던 길(언리얼 IModularFeatures 의 구현 등록과 같은 자리)을 범위 조회 하나로 바꿨다. 시작 마운트(`AssetManager::mountStartupPacks`)와
  *          패치 만들기(`-make-patch`)가 모두 같은 조회로 제공자를 받는다 — 게임 인스턴스가 서기 전이어도 닿는다(모듈 라이브러리는 에셋 마운트보다 먼저 올라온다).
- *          - **공개 키**는 엔진 설정(`EngineConfig::_patchTrustPublicKeyXHex` · `Y`, ES256 P-256 의 x · y 각 64 자리 16 진)이다. 둘 다 비면 서명을 요구하지 않는다(스팀처럼 스토어가
+ *          - 공개 키는 엔진 설정(`EngineConfig::_patchTrustPublicKeyXHex` · `Y`, ES256 P-256 의 x · y 각 64 자리 16 진)이다. 둘 다 비면 서명을 요구하지 않는다(스팀처럼 스토어가
  *            무결성을 맡는 채널 — 배포가 정한다). 하나만 있거나 형식이 틀리면 오류다.
  *          - 서명을 요구하는데(키가 있는데) 공개된 제공자가 없으면 오류로 멈춘다 — 서명을 못 보는 채로 패치를 올리는 폴백은 없다.
  *          - 개인 키는 이 설정에 없다 — 서명하는 쪽만 `-patch-sign-key <PEM 경로>` 로 저장소 밖 파일에서 읽는다(`PackPatchBuilder`).

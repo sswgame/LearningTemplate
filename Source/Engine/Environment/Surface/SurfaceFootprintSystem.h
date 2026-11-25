@@ -4,12 +4,12 @@
  * @details 반응은 데이터다(`SurfaceKindDef::_step` · `_wetStep`) — 흙먼지 · 모래 · 눈 가루 · 물 튀김 · 진흙이 모두 종류의 칸이고 코드에 지형 이름이 없다(언리얼 Physical Material
  *          별 발걸음 데이터 · 유니티 Terrain Layer 별 발걸음 표 자리). 고르는 규칙은 하나다: 땅의 젖음(`SurfaceSample::_wetness`)이 표의 `_wetThreshold` 이상이고 종류에
  *          젖은 반응이 있으면 젖은 반응, 아니면 마른 반응이다.
- *          - **발자국**: 표면 변형 층(`SurfaceDeformSystem`)의 도장이다 — 높이장 · 충돌 · 내비를 고치지 않고 지면 머티리얼이 꺼져 보인다. 남는 시간은 도장의 메워지는 속도가 정한다.
- *          - **젖은 자국**: 반응이 발을 적시면(`_feetWetness` — 물 · 젖은 진흙) 그 걸음꾼은 표의 `_wetFeetSteps` 걸음 동안 마른 땅에 젖은 자국을 남긴다(같은 층의 젖음 채널,
+ *          - 발자국: 표면 변형 층(`SurfaceDeformSystem`)의 도장이다 — 높이장 · 충돌 · 내비를 고치지 않고 지면 머티리얼이 꺼져 보인다. 남는 시간은 도장의 메워지는 속도가 정한다.
+ *          - 젖은 자국: 반응이 발을 적시면(`_feetWetness` — 물 · 젖은 진흙) 그 걸음꾼은 표의 `_wetFeetSteps` 걸음 동안 마른 땅에 젖은 자국을 남긴다(같은 층의 젖음 채널,
  *            걸음마다 옅어지고 `_wetPrintDrySpeed` 로 마른다). 걸음꾼은 오브젝트 id 로 센다.
- *          - **효과**: 고른 반응의 `_effect` 는 부르는 쪽(알림 처리기 — 표면과 VFX 를 함께 보는 층)이 씬의 효과 풀(`VFXEffectPool`, 효과마다 표의 `_stepEffectPoolSize` 개)로 튼다.
+ *          - 효과: 고른 반응의 `_effect` 는 부르는 쪽(알림 처리기 — 표면과 VFX 를 함께 보는 층)이 씬의 효과 풀(`VFXEffectPool`, 효과마다 표의 `_stepEffectPoolSize` 개)로 튼다.
  *            표면 층(Environment)은 VFX 층을 include 하지 않는다(같은 단 — `EngineLayers.toml`).
- *          - **소리**: 반응의 오디오 이벤트를 발 자리에서 낸다(`ISoundPlayer::postEventAt`).
+ *          - 소리: 반응의 오디오 이벤트를 발 자리에서 낸다(`ISoundPlayer::postEventAt`).
  *          소리 · 자국은 보이고 들리는 것뿐이라 전용 서버(`build::kWithClientCode` 가 거짓)는 내지 않는다 — 세기와 마지막 반응(감시 값)은 서버도 적는다.
  *          씬 서비스(`ISceneService`)이고 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생긴다(`manager.getSubsystem<sw::SurfaceFootprintSystem>()`).
  */

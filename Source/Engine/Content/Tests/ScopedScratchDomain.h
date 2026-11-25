@@ -76,7 +76,7 @@ namespace sw::test
         }
         /** @brief 도메인 폴더 아래 디스크 경로 @p diskPath 의 리소스 id 입니다(밖이면 빈 id). */
         [[nodiscard]] static AssetID toID( const AbsolutePath& diskPath ) { return AssetID{ toIDText( diskPath ) }; }
-        /** @brief `toID` 의 글입니다(경로 글을 받는 컴포넌트 칸 — 클립 폴더 · 그래프 경로 — 에 넣는다). 밖이면 케이스 실패이고 빈 글입니다. */
+        /** @brief `toID` 의 글입니다(클립 폴더 · 그래프 경로처럼 경로 글을 받는 컴포넌트 칸에 넣는다). 밖이면 케이스 실패이고 빈 글입니다. */
         [[nodiscard]] static string toIDText( const AbsolutePath& diskPath )
         {
             string id = engine::getSubsystem<AssetPaths>().toAssetID( diskPath );

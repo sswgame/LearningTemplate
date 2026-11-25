@@ -2,7 +2,7 @@
  * @file ServerConfig.h
  * @brief 전용 서버의 운영 설정(`Config/Server/<SW_ACTIVE_GAME>.json`, `-server-config=<경로>` 로 바꿈)입니다.
  * @details 실행 파일에 베이크하지 않습니다 — Shipping 서버도 디스크에서 읽고, 없으면 기동하지 않습니다(Dev 는 기본값 + 경고). 운영자가 포트 ·
- *          접속 문자열을 고치는 파일이라서입니다. **비밀번호 · 토큰은 이 파일에 쓰지 않습니다** — 항목의 `_secretEnvironment` 가 가리키는 환경 변수에서
+ *          접속 문자열을 고치는 파일이라서입니다. 비밀번호 · 토큰은 이 파일에 쓰지 않습니다 — 항목의 `_secretEnvironment` 가 가리키는 환경 변수에서
  *          드라이버가 읽습니다(`ServerSecret::read`). 저장소 · 캐시 항목의 드라이버 이름(`postgres` · `sqlite` · `memory` · `resp`)을 해석하는 것은
  *          서버 전용 모듈입니다 — 엔진은 항목을 운반만 합니다.
  *          클라이언트 빌드에도 이 타입은 있습니다(리플렉션 등록 한 줄) — 서버 로직이 아니라 설정의 모양이라서입니다(게임 세션의 리슨 값 `GameNetSession` 도 읽는다).
@@ -141,7 +141,7 @@ namespace sw
         PROPERTY( DefaultName )
         string _opsTokenEnvironment{ "SW_OPS_TOKEN" };
         /**
-         * @brief 관리 채널(서버 운영 O4 — 점검 모드 · 상태 · 정상 종료를 재시작 없이 부르는 텍스트 TCP 채널) 포트입니다. 0 이면 끔(기본 — Shipping 도 같다).
+         * @brief 관리 채널(서버 운영 O4. 점검 모드 · 상태 · 정상 종료를 재시작 없이 부르는 텍스트 TCP 채널) 포트입니다. 0 이면 끔(기본값이며 Shipping 도 같다).
          * @details 켜려면 `_adminChannelTokenEnvironment` 의 환경 변수에 비밀 토큰이 있어야 한다 — 없거나 비면 서버가 기동하지 못한다(토큰 없는 관리 채널로 뜨지 않는다).
          *          루프백에만 묶고(쿠버네티스 `port-forward` · 사이드카 · SSH 터널로 닿는다), 요청 줄마다 토큰을 요구하며 틀리면 끊는다. Dev 의 디버그 채널과 같은 채널 코드(`DebugChannel`)이지만
          *          개발 명령 전체가 아니라 허용 목록(`help`)만 받는다. 언리얼 `Rcon` · 유니티 Multiplay 관리 API 처럼 비밀은 파일이 아니라 환경에서만 읽는다.
@@ -198,7 +198,7 @@ namespace sw
         int32 _tickLoadWarnPercent{ 0 };
         /**
          * @brief 서비스 TLS 1.3 인증서(PEM, 체인 포함) 경로입니다 — 네트워크 보안 제공자의 서버 TLS 문맥에 그대로 넘깁니다.
-         * @details 둘 다 비면 **Dev 에서만** `Saved/Certificates/` 의 개발용 자체 서명 인증서, Shipping 은 서비스 포트를 열 때 오류입니다.
+         * @details 둘 다 비면 Dev 에서만 `Saved/Certificates/` 의 개발용 자체 서명 인증서, Shipping 은 서비스 포트를 열 때 오류입니다.
          *          상대 경로는 이 설정 파일이 아니라 프로젝트 루트 기준(ConfigManager 와 같다)입니다.
          */
         PROPERTY()

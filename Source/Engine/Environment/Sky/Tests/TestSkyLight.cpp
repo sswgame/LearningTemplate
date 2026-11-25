@@ -190,7 +190,7 @@ SW_TEST_CASE( SkyLightTest, ChangingSkyIsRecapturedOncePerInterval )
     SW_EXPECT_TRUE( pAfter->_reflection.sampleLevel( 0, float3{ 0.0f, 1.0f, 0.0f } )._x > 2.5f );
 }
 
-/** @brief [SkyLightTest] 다른 하늘(다른 컴포넌트 — 장면 전환 · 레이어 교체)과 거르기 설정의 변화는 간격을 기다리지 않는다 — 지난 하늘의 빛을 한 프레임도 쓰지 않는다 */
+/** @brief [SkyLightTest] 다른 하늘(다른 컴포넌트: 장면 전환 · 레이어 교체)과 거르기 설정의 변화는 간격을 기다리지 않는다. 지난 하늘의 빛을 한 프레임도 쓰지 않는다 */
 SW_TEST_CASE( SkyLightTest, ADifferentSkyOrConfigIsCapturedAtOnce )
 {
     SkyLightConfig    config = Util::makeConfig();

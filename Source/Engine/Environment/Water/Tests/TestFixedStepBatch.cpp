@@ -13,7 +13,7 @@
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
-// 고정 스텝 메서드 등록(층 8 — 부력 · 물이 섞인 장면이라 여기 둔다) — 컴포넌트가 onRegister 에서 쓰는 그룹만 명시 등록하고(`registerFixedStep<&T::메서드>`),
+// 고정 스텝 메서드 등록(층 8. 부력 · 물이 섞인 장면이라 여기 둔다): 컴포넌트가 onRegister 에서 쓰는 그룹만 명시 등록하고(`registerFixedStep<&T::메서드>`),
 // 틱 시스템의 고정 스텝 그룹이 같은 입력에 같은 결과(비트까지)를 낸다.
 
 using namespace sw;

@@ -106,7 +106,7 @@ namespace sw
             }
         };
 
-        // zlib 의 길이 타입은 `uLong`(= unsigned long) 이라 **Windows 에서 32비트다.** 이보다 큰
+        // zlib 의 길이 타입은 `uLong`(= unsigned long) 이라 Windows 에서 32비트다. 이보다 큰
         // 크기를 그대로 캐스팅하면 조용히 잘린 값이 들어가고, compress2 는 그 잘린 만큼만 압축한
         // 뒤 Z_OK 를 반환한다. 성공을 보고하면서 데이터를 버리는 셈이다. 입구에서 막는다.
         constexpr size_t kZlibMaxSize = static_cast<size_t>( static_cast<uLong>( -1 ) );

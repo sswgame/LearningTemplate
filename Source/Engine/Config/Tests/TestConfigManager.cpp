@@ -45,7 +45,7 @@ namespace
 } // namespace
 
 /**
- * @brief [ConfigManagerTest] 설정 표의 열쇠가 **타입**인지 검증
+ * @brief [ConfigManagerTest] 설정 표의 열쇠가 타입인지 검증
  * @details 호출부가 이름(`hashed_string( "EngineConfig" )`)을 손으로 적어 넘기지 않으므로 철자가 어긋날 자리가 없고,
  *          다른 타입을 물으면 그 타입이 없다고 답한다.
  */

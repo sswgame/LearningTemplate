@@ -61,7 +61,7 @@ namespace sw
         /**
          * @brief 이번 프레임의 실제 경과(배율 · 정지와 무관, 최대 델타로 자름)를 적습니다. `Engine::beginFrame` 이 호스트에게 받은 값으로 부릅니다
          *        (App 은 `FrameTime::_unscaledDeltaTime`, 서버는 틱 길이). 엔진 없이 게임 인스턴스를 돌리는 쪽은 이 서비스를 세워 직접 적습니다.
-         * @details 게임이 멈춰도 도는 것 — 런타임 UI(정지 메뉴의 애니메이션 · 탐색 반복) · 화면 전환 페이드 · 로딩 화면 — 이 읽습니다(유니티 `Time.unscaledDeltaTime`).
+         * @details 게임이 멈춰도 도는 것, 곧 런타임 UI(정지 메뉴의 애니메이션 · 탐색 반복) · 화면 전환 페이드 · 로딩 화면이 읽습니다(유니티 `Time.unscaledDeltaTime`).
          */
         void setUnscaledDeltaTime( float32 deltaSeconds );
         /**

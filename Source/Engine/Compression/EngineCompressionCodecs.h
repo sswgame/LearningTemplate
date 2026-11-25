@@ -1,6 +1,6 @@
 /**
  * @file EngineCompressionCodecs.h
- * @brief Engine 이 외부 라이브러리로 구현한 압축 코덱들의 **등록 목록**을 한곳에 둡니다.
+ * @brief Engine 이 외부 라이브러리로 구현한 압축 코덱들의 등록 목록을 한곳에 둡니다.
  */
 #pragma once
 #include "Core/Compression/ICompressionCodec.h"
@@ -16,7 +16,7 @@ namespace sw
      * @struct EngineCompressionCodecUtil
      * @brief `Engine/Compression` 이 제공하는 코덱을 레지스트리에 붙입니다.
      * @details Core 는 압축 라이브러리에 의존하지 않으므로(`ReflectionParser` 가 Core 를 링크합니다) LZ4 · Zstd · Zlib 은
-     *          Engine 이 가져와 붙입니다. **그 목록을 호출부에 두지 않습니다** — 호출부가 손으로 고르면 빠진 코덱(예: `Zlib`)은
+     *          Engine 이 가져와 붙입니다. 그 목록을 호출부에 두지 않습니다 — 호출부가 손으로 고르면 빠진 코덱(예: `Zlib`)은
      *          클래스도 열거값도 있는데 `CompressionStream` 에서 쓸 수 없습니다(요청하면 무압축으로 떨어지고, 다른 도구가 쓴 스트림은
      *          읽히지 않습니다).
      */
@@ -39,10 +39,10 @@ namespace sw
     /**
      * @class LZ4CompressionCodec
      * @brief LZ4 압축 코덱 (외부 라이브러리 `lz4`)
-     * @details 압축률보다 **속도**가 필요한 자리에 씁니다. 런타임 로드 경로처럼 압축 해제 시간이
+     * @details 압축률보다 속도가 필요한 자리에 씁니다. 런타임 로드 경로처럼 압축 해제 시간이
      *          곧 로딩 시간인 곳입니다. 압축률은 zlib/zstd 보다 낮습니다.
      * @note `compressionLevel` 을 0 보다 크게 주면 LZ4 HC(고압축) 경로로 갑니다. 압축만 느려지고
-     *       **해제 속도는 같습니다.** 한 번 쿠킹하고 여러 번 읽는 데이터에 쓰기 좋습니다.
+     *       해제 속도는 같습니다. 한 번 쿠킹하고 여러 번 읽는 데이터에 쓰기 좋습니다.
      */
     class SW_API LZ4CompressionCodec final : public ICompressionCodec
     {

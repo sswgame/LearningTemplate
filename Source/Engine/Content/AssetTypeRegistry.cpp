@@ -22,7 +22,7 @@ namespace sw
              */
             static SW_DEFINE_LOCKED_REGISTRATION_LIST( getTypes, const AssetTypeDef, "AssetTypeRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase )
 
-                /** @brief 받지 못한 등록입니다(`getTypes` 의 잠금 안에서만 만진다 — 겹친 이름 · 접미사 · JSON 으로 그대로 읽는 접미사). 까닭은 `collectProblems` 가 목록과 견줘 다시 낸다 — 문장을 들고 있지 않는다. */
+                /** @brief 받지 못한 등록입니다(`getTypes` 의 잠금 안에서만 만진다. 겹친 이름 · 접미사 · JSON 으로 그대로 읽는 접미사). 까닭은 `collectProblems` 가 목록과 견줘 다시 낸다. 문장을 들고 있지 않는다. */
                 static SW_DEFINE_REGISTRATION_LIST( getRejected, const AssetTypeDef, "AssetTypeRejected" )
 
                 /** @brief @p def 의 접미사 중 그대로 읽는데 JSON 인 것입니다. 없으면 nullptr 입니다. */

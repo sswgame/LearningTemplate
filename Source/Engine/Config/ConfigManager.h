@@ -2,7 +2,7 @@
  * @file ConfigManager.h
  * @brief Config/ 의 호스트 JSON(EngineConfig 등)을 관리합니다. Content/ 팩 에셋이 아니므로 AssetManager 와 분리합니다.
  *
- * @note **설정을 구분하는 것은 타입입니다. 이름 문자열이 아닙니다.** 키는 `T::StaticType()->_fullyQualifiedName` 에서
+ * @note 설정을 구분하는 것은 타입입니다. 이름 문자열이 아닙니다. 키는 `T::StaticType()->_fullyQualifiedName` 에서
  *       만듭니다. 호출부마다 이름을 손으로 적으면 한 곳만 철자가 어긋나도 `getConfig` 가 조용히 nullptr 을 반환하고,
  *       이름의 해시를 키로 쓰면 이름이 달라도 해시가 같을 때 같은 항목을 가리킵니다.
  */
@@ -117,7 +117,7 @@ namespace sw
      * @class ConfigManager
      * @brief 호스트 설정(EngineConfig, GameConfig 등)의 테이블입니다. 파일에서 읽은 설정은 그 경로를 기억해 실행 중에 다시 읽을 수 있습니다
      *        (`reloadConfigFile`. 에디터의 설정 파일 감시가 부릅니다).
-     * @details 호스트 설정 둘(`EngineConfig` · `GameConfig`)의 **소유자**는 이 표다. 서비스 표(`engine::getSubsystem<EngineConfig>()`)가 기동 초기화 전에 주소를
+     * @details 호스트 설정 둘(`EngineConfig` · `GameConfig`)의 소유자는 이 표다. 서비스 표(`engine::getSubsystem<EngineConfig>()`)가 기동 초기화 전에 주소를
      *          묶어야 해서, 값이 읽히기 전부터 자리(`getHostEngineConfig` · `getHostGameConfig`)가 있고 읽으면 그 자리에 담긴다 — 다시 읽기도 제자리라
      *          주소는 이 표가 사는 동안 바뀌지 않는다. 정적 사본(`setActive`)을 따로 두지 않으므로 표가 둘이면 설정도 둘이다.
      */
@@ -184,7 +184,7 @@ namespace sw
          */
         EngineConfig* loadEngineConfig( const ConfigSource& source );
         /**
-         * @brief 품질 단계를 @p tierName 으로 바꿔 엔진 설정을 **제자리에서** 다시 읽고 `onConfigReloaded` 를 알립니다(언리얼 `ScalabilityQuality` 즉시 적용 자리).
+         * @brief 품질 단계를 @p tierName 으로 바꿔 엔진 설정을 제자리에서 다시 읽고 `onConfigReloaded` 를 알립니다(언리얼 `ScalabilityQuality` 즉시 적용 자리).
          * @details 사용자 옵션 `graphics.renderQuality` 가 `gv_renderQuality` 를 바꾸면 이것이 불린다(기동 때 저장값 적용 포함). 같은 단계면 아무것도 하지 않는다.
          *          읽지 못하면(없는 단계 · 모르는 키 — 오류를 남겼다) 이전 값과 이전 단계를 그대로 둔다. 디스크 출처면 파일 다시 읽기도 새 단계로 합친다.
          * @return 반영했거나 이미 그 단계면 true, `loadEngineConfig` 전이거나 읽지 못했으면 false 입니다.
@@ -199,7 +199,7 @@ namespace sw
         }
 
         /**
-         * @brief 파일에서 읽은 설정 중 경로(바탕 · 덮어쓰기 · 품질 단계 표 파일)가 @p changedPath 인 것을 **제자리에서** 다시 읽고 `onConfigReloaded` 를 알립니다.
+         * @brief 파일에서 읽은 설정 중 경로(바탕 · 덮어쓰기 · 품질 단계 표 파일)가 @p changedPath 인 것을 제자리에서 다시 읽고 `onConfigReloaded` 를 알립니다.
          * @details 설정 객체는 바꾸지 않고 값만 덮어쓴다. 기동 때 받아 둔 포인터(`Engine::_pEngineConfig`)가 그대로 유효하다. JSON 이
          *          깨졌으면 경고를 남기고 이전 값을 그대로 둔다. 경로는 `FileUtil::isSameDiskPath` 로 비교한다.
          * @return 다시 읽었으면 `Reloaded`, 파일에서 읽은 설정이 아닌 경로면 `NotTracked`, 깨진 파일이면(오류를 남겼다) `Failed`
@@ -320,7 +320,7 @@ namespace sw
         }
 
         /**
-         * @brief 설정 하나를 파일에서 읽어 @p outConfig 에 담습니다. **테이블에 등록하지 않습니다.**
+         * @brief 설정 하나를 파일에서 읽어 @p outConfig 에 담습니다. 테이블에 등록하지 않습니다.
          * @details 모듈이 정의한 설정 타입은 이쪽으로 읽어 그 모듈의 객체(서비스 · 키트)가 소유한다. 이 매니저는 엔진 서비스라 모듈보다 오래 사는데, 모듈이 내려간 뒤 그 타입의
          *          객체를 소멸시키면 가상 소멸자가 사라진 이미지로 들어가 죽는다. 등록하지 않으면 그럴 객체도 `_mapSource` 의 다시 읽는 함수(모듈 코드)도 남지 않는다.
          *          매니저의 상태를 쓰지 않아 static 이다 — 매니저가 보이지 않는 게임 모듈(`SubsystemModuleVisibility::HostModules`)도 읽는다.
@@ -346,14 +346,14 @@ namespace sw
 
         /**
          * @brief 설정 JSON 하나를 @p pInstance 에 엄격하게 읽습니다.
-         * @details 모르는 키, 대소문자만 다른 키, 읽지 못한 값, 빠진 필수 칸(`PROPERTY( Required )` — 구조체 칸 · 구조체 목록 원소 안까지), `PROPERTY( Min/Max )` 밖 숫자를 **모두** 키 이름과 @p pSourceLabel 로 오류 로그에 남기고
+         * @details 모르는 키, 대소문자만 다른 키, 읽지 못한 값, 빠진 필수 칸(`PROPERTY( Required )` — 구조체 칸 · 구조체 목록 원소 안까지), `PROPERTY( Min/Max )` 밖 숫자를 모두 키 이름과 @p pSourceLabel 로 오류 로그에 남기고
          *          false 를 반환한다(첫 오류에서 멈추지 않는다. 한 번에 다 고치게 하려는 것이다). 설정이 아닌 리플렉션 타입(`EditorToolDefaults`)도 이 함수로 읽는다.
          *          구조체 필드 안의 모르는 키는 바깥 필드 이름과 본문으로 표시된다.
          */
         [[nodiscard]] static bool readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel );
         /**
          * @brief 설정 XML 요소 하나(`<Engine _windowTitle="…"/>` — 속성과 자식이 칸)를 @p pInstance 에 엄격하게 읽습니다.
-         * @details 모르는 속성 · 자식, 읽지 못한 값, 빠진 필수 칸(`PROPERTY( Required )`, 맨 위 칸만), 범위 밖 숫자를 **모두** 오류 로그에 남기고 false 를 반환한다.
+         * @details 모르는 속성 · 자식, 읽지 못한 값, 빠진 필수 칸(`PROPERTY( Required )`, 맨 위 칸만), 범위 밖 숫자를 모두 오류 로그에 남기고 false 를 반환한다.
          *          요소의 이름은 보지 않는다 — 부르는 쪽이 이름으로 찾은 요소다. 한 파일 안의 요소 하나를 소유하는 설정(`PackEngineSettings`)과 프로젝트 설정 창이 같은 규칙으로 읽는다.
          */
         [[nodiscard]] static bool readConfigXMLElement( void* pInstance, const TypeInfo& typeInfo, const XMLNode& element, const utf8* pSourceLabel );
@@ -421,7 +421,7 @@ namespace sw
         };
 
         /**
-         * @brief 바탕 파일을 읽고 덮어쓰기 파일(@p resolvedOverridePath — 비었거나 없으면 건너뛴다), 그 위에 품질 단계(@p qualityTier — 비면 건너뛴다)를 덮은 글을 @p outJSON 에 씁니다.
+         * @brief 바탕 파일을 읽고 덮어쓰기 파일(@p resolvedOverridePath, 비었거나 없으면 건너뛴다), 그 위에 품질 단계(@p qualityTier, 비면 건너뛴다)를 덮은 글을 @p outJSON 에 씁니다.
          *        @p outLabel 은 오류 표시용 출처입니다.
          * @return 바탕이 없으면 `Missing`(로그 없음), 어느 쪽이든 읽지 못했거나 합치지 못했거나 단계를 골랐는데 표가 없으면 `Failed`(오류를 남겼다)입니다.
          */
@@ -461,7 +461,7 @@ namespace sw
 
         /**
          * @brief 설정 타입 하나를 가리키는 테이블의 키입니다.
-         * @details `hashed_string` 의 intern 인덱스라 **충돌이 없다**(해시와 달리). 그리고 T 에서
+         * @details `hashed_string` 의 intern 인덱스라 충돌이 없다(해시와 달리). 그리고 T 에서
          *          만드므로, 테이블에 담긴 것이 T 가 아닌 일은 생기지 않는다. 아래 `static_cast` 가
          *          안전한 이유가 여기 있다.
          */

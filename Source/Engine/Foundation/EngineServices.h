@@ -2,7 +2,7 @@
  * @file EngineServices.h
  * @brief 엔진 범위의 서비스 창구입니다 — `engine::getSubsystem<T>()`(반드시 있음) · `engine::findSubsystem<T>()`(없을 수 있음).
  *
- * @details 서비스 접근은 **소유 수명마다 한 창구, 한 어휘**입니다. `get` 은 `T&` 를 돌려주고 비었으면 멈추며, `find` 는 `T*` 를 돌려준다.
+ * @details 서비스 접근은 소유 수명마다 한 창구, 한 어휘입니다. `get` 은 `T&` 를 돌려주고 비었으면 멈추며, `find` 는 `T*` 를 돌려준다.
  *          | 수명 | 창구 |
  *          | --- | --- |
  *          | 엔진(프로세스) | `engine::getSubsystem<T>()` · `engine::findSubsystem<T>()` — 이 헤더 |
@@ -40,9 +40,9 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief @p subsystems(엔진 범위 — 부모 범위까지 찾는다)에서 등록된 칸을 모두 찾아 둡니다.
-         * @return `Bound` 가 아니면 호스트는 서지 않는다. `MissingRequired` 는 비어 있는 **필수 칸의 타입 이름**을 준다 — 그 함수로 게이팅되는 스무 곳이 조용히
+         * @return `Bound` 가 아니면 호스트는 서지 않는다. `MissingRequired` 는 비어 있는 필수 칸의 타입 이름을 준다 — 그 함수로 게이팅되는 스무 곳이 조용히
          *         폴백으로 가는 것(배포본에서 셰이더 캐시를 건너뛰고 DXC 를 부르다 죽은 적이 있다)을 기동에서 막는다. `AlreadyBound` 는 이 프로세스에 이미 엔진이
-         *         묶였다는 뜻이다 — **프로세스당 엔진 하나**가 계약이라(칸은 타입마다 하나) 앞 엔진의 칸을 덮지 않고 거절한다.
+         *         묶였다는 뜻이다 — 프로세스당 엔진 하나가 계약이라(칸은 타입마다 하나) 앞 엔진의 칸을 덮지 않고 거절한다.
          * @note 로케이터는 끊을 때까지 살아 있어야 합니다(`getEngineSubsystems` 가 돌려준다).
          */
         [[nodiscard]] SW_API EngineServiceBindResult bindEngineServices( const ISubsystemLocator& subsystems );
@@ -105,7 +105,7 @@ namespace sw
         }
 
         /**
-         * @brief 엔진 서비스 @p T 입니다. **없으면 nullptr 이므로** 받는 쪽이 확인해야 합니다(바인딩 전 · 선택 칸 · 하네스가 넣지 않은 서비스).
+         * @brief 엔진 서비스 @p T 입니다. 없으면 nullptr 이므로 받는 쪽이 확인해야 합니다(바인딩 전 · 선택 칸 · 하네스가 넣지 않은 서비스).
          * @details 칸이 있는 타입은 그 칸을 읽고, 칸이 없는 타입은 바인딩한 범위에서 상위로 올라가며 찾는다(선형 검색 — 핫 패스면 칸을 선언한다).
          *          `const T` 로 찾으면 const 로 건 객체(전용 서버의 `const ServerConfig`)도 찾고 const 포인터를 돌려준다(`findInLocator` 와 같은 규칙).
          */
