@@ -12,7 +12,8 @@ Preserve existing project conventions unless the user explicitly requests otherw
 | name or rename anything (C++, CMake, Python, HLSL) | [NamingCpp](docs/agents/NamingCpp.md) |
 | place, move or merge a file or folder, or add content assets | [FolderLayout](docs/agents/FolderLayout.md) |
 | write an `onTick`, per-frame work, triggers, streaming or gameplay rules | [Gameplay](docs/agents/Gameplay.md) |
-| write a data file, `_base` inheritance, an input map bundle, a new data format, paths and resource ids | [DataInheritance](docs/agents/DataInheritance.md) |
+| write a data file, `_base` inheritance, conditions (`_when`), an input map bundle, a new data format | [DataInheritance](docs/agents/DataInheritance.md) |
+| handle a path, resource id, asset type registration, `AssetRef`, a resource load or a data-file field reader | [AssetLoading](docs/agents/AssetLoading.md) |
 | change an editor panel, shared widget, theme token or editor input | [EditorUI](docs/agents/EditorUI.md) |
 | write a render pipeline / pass XML, a material or material graph node, a shader or RHI code | [Rendering](docs/agents/Rendering.md) |
 | touch Android, web (WebGPU), a capability flag or a format fallback | [Platform](docs/agents/Platform.md) |

@@ -136,7 +136,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 
 - Log `SW_LOG_*_ID` (`"Area.Event"`, once `*_ONCE_ID`), command-line output `StandardOutput::write`; assert `SW_ASSERT`. Never `printf` · `assert`.
 - Time `MonotonicClock` · `Stopwatch` · `Deadline` · `WallClock`; random `MathUtil::getRandom*`, deterministic `XorShift32` · `GameRandom`. Never `std::chrono` clocks · `rand`.
-- Files only through `FileUtil` (`[[nodiscard]]`, writes pass `isWriteAllowed`) and `AsyncFileIO`; disk I/O takes `const AbsolutePath&` (string overloads are private). Path rules: [DataInheritance](DataInheritance.md) "경로 · 리소스 신원".
+- Files only through `FileUtil` (`[[nodiscard]]`, writes pass `isWriteAllowed`) and `AsyncFileIO`; disk I/O takes `const AbsolutePath&` (string overloads are private). Path rules: [AssetLoading](AssetLoading.md) "경로 · 리소스 신원".
 - Environment `ProcessEnvironment::tryRead`, child process `Process::execute`, shared library `ModuleLibraryUtil::loadLibraryAt`. Never `getenv` · `system` · `dlopen` · Python `subprocess`.
 - Text `StringUtil` · `HexUtil` · `Base64Util` · `hashed_string`; never `atoi` · `sscanf` · hand split loops.
 - Binary `ByteReader` · `Archive` · `BitReader` return values, no output parameter (the old overloads do not exist); a target outside the function gets a local moved in only after the failure check. Never a hand cursor or `.resize( countFromFile )`.

@@ -250,7 +250,7 @@ namespace sw
      *     </Schedules>
      * @endcode
      * @details 시각은 `H:MM`(0:00..24:00)으로 적는다. 자정을 넘는 블록은 `overnight="true"` 를 적고(`22:00` 부터 `6:00` 까지) 두 블록으로 나눠 읽는다.
-     *          엄격도(카탈로그 공통 계약 — docs/agents/DataInheritance.md "데이터 파일 읽기"):
+     *          엄격도(카탈로그 공통 계약 — docs/agents/AssetLoading.md "데이터 파일 읽기"):
      *          - 같은 파일의 id 연결(장소 · 약속 · 아키타입 · NPC — 약속 장소, NPC 집 · 아키타입, 아키타입 부모, 행사 참가자, 블록의 장소 · 약속)은 참조 표
      *            (`engine/settings/datacatalogreferences.xml` 의 `Schedules`)가 보고, 깨지면 로드 · 쿠킹 실패다.
      *          - 코드 등록 이름(활동 — 블록 `activity` · NPC `idle`)은 표로 적을 수 없어 이 카탈로그가 본다(`validateActivityNames`). 모르면 오류이고 로드 실패다.
