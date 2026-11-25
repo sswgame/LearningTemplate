@@ -391,6 +391,7 @@ SW_TEST_CASE( ActionRoomTest, ProjectilesHitOrExpire )
 
     // x = 1.5 에서 쏜 탄(속도 2)은 쏜 프레임에 1.0, 다음 프레임에 0.5 로, 그 상자 끝 0.25 가 몸 끝 0.28 안이다.
     sw::ActionRoom near_;
+    near_.setSettings( ActionRoomTestUtil::makeSettings() ); // 맞은 뒤 무적 시간은 설정 칸이다
     ActionRoomTestUtil::beginHallWith( near_, kGunner, sw::float2{ 1.5f, 0.0f } );
     SW_EXPECT_EQUAL( 0, near_.update( kRoomStep, input )._damageToPlayer );
     SW_EXPECT_EQUAL( 0, near_.update( kRoomStep, input )._damageToPlayer ); // 쏜 프레임
@@ -399,6 +400,7 @@ SW_TEST_CASE( ActionRoomTest, ProjectilesHitOrExpire )
 
     // x = 4 에서는 수명 1 초에 2 만큼만 날아 사라진다(다음 탄도 같다).
     sw::ActionRoom distant;
+    distant.setSettings( ActionRoomTestUtil::makeSettings() );
     ActionRoomTestUtil::beginHallWith( distant, kGunner, sw::float2{ 4.0f, 0.0f } );
     for ( int32 frame = 0; frame < 16; ++frame )
     {
