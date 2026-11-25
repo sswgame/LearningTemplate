@@ -15,7 +15,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/LOD/LODView.h"
+#include "Engine/Graphics/View/LODView.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 
 namespace sw

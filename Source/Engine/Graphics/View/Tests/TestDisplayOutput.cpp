@@ -3,7 +3,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Graphics/Display/DisplayOutput.h"
+#include "Engine/Graphics/View/DisplayOutput.h"
 
 using namespace sw;
 

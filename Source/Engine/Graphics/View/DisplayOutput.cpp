@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Display/DisplayOutput.h"
+#include "Engine/Graphics/View/DisplayOutput.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"

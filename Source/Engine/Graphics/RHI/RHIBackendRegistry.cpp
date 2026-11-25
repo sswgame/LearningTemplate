@@ -13,7 +13,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
-#include "Engine/Graphics/RHI/RHIModuleABI.h"
+#include "Engine/Graphics/RHI/RHIModuleEntry.h"
 #include "Engine/Module/EngineABIStamp.h"
 
 namespace sw
@@ -158,7 +158,7 @@ namespace sw
         if ( pModuleHandle == nullptr )
             return false;
 
-        // 백엔드 모듈이 이 엔진과 같은 헤더로 빌드됐는지 — 빌드가 모듈마다 박은 엔진 ABI 스탬프(`RHIModuleABI.h`)를 돌고 있는 엔진의 것과 대조한다.
+        // 백엔드 모듈이 이 엔진과 같은 헤더로 빌드됐는지 — 빌드가 모듈마다 박은 엔진 ABI 스탬프(`RHIModuleEntry.h`)를 돌고 있는 엔진의 것과 대조한다.
         const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
         if ( pInfo == nullptr )
         {

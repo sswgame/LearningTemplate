@@ -13,7 +13,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Graphics/LOD/LODView.h"
+#include "Engine/Graphics/View/LODView.h"
 
 namespace sw
 {
