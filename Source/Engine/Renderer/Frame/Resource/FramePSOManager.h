@@ -229,6 +229,12 @@ namespace sw
         void ensureMaterialFallbackBuffers();
         /** @brief PSO 생성 desc 로 레이아웃을 만들고 PSO 핸들에 연결합니다. */
         void registerLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
+        /**
+         * @brief 코드가 짓는 PSO 를 서술체 지문으로 찾거나 동기로 만듭니다(셰이더는 셋업이 데웠다 — 드라이버 생성만 남는다). 실패(0)도 저장소에 남겨 되풀이하지 않는다.
+         * @param pPurpose 실패 로그의 PSO 이름입니다(무엇을 그리지 못하는지).
+         * @return 0 이면 만들지 못한 것입니다(오류를 남겼다).
+         */
+        RHIPipelineStateHandle getOrCreateGlobalPSO( const RHIPipelineStateDesc& desc, const utf8* pPurpose );
         /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
         const RenderGraphPassDesc* findPassDescByType( RenderPassKind passType ) const;
         /**

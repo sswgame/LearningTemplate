@@ -203,18 +203,6 @@ namespace sw
             return desc;
         }
 
-        /** @brief 확장 프로그램 PSO 의 저장소 키입니다 — 셰이더 · 렌더 상태 · 타깃 포맷이 같으면 한 PSO 를 나눈다(`getOrCreateExtensionProgramPSO` · `warmExtensionPrograms`). 상태를 칸마다 글자로 적지 않아 칸이 늘어도 따라온다. */
-        hashed_string makeExtensionProgramKey( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
-        {
-            const RHIPipelineStateDesc desc = makeExtensionProgramDesc( program, colorFormat, bDepthTest );
-            string                     key  = program._shaderPath;
-            key.append( "|" );
-            key.append( to_string( desc._renderState.computeHash() ) );
-            key.append( "|" );
-            key.append( to_string( static_cast<uint32>( colorFormat ) ) );
-            return hashed_string{ string_view{ key } };
-        }
-
         /** @brief 2D 빛 쿠키 아틀라스 칸에 옮겨 그리는 PSO 의 desc 입니다 — 전체 화면 블릿 셰이더를 @p atlasFormat 으로(`getOrCreateCookieAtlasPSO` · 셋업의 셰이더 데우기). */
         RHIPipelineStateDesc makeCookieAtlasPSODesc( const string& shaderPath, RHIFormat atlasFormat )
         {
@@ -388,7 +376,7 @@ namespace sw
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
         {
             RHIPipelineStateHandle existingCompute{ 0 };
-            if ( _pCache->findExtensionProgramPSO( hashed_string( pass._name.c_str() ), existingCompute ) )
+            if ( _pCache->findPipelineComputePSO( hashed_string( pass._name.c_str() ), existingCompute ) )
                 continue;
             // 일반 풀스크린 패스의 컴퓨트 구현 — 네이티브 bindless 에서만 만든다(에뮬 백엔드는 픽셀 구현이 돈다 — 그 PSO 는 위의 표 단계가 늘 만든다). 키는 패스 이름이다.
             if ( pass._implementation == RenderPassExecutionMode::Compute && _pDevice->supportsNativeBindlessSampling() )
@@ -478,7 +466,7 @@ namespace sw
             computeDesc._listShaderDefine  = computeJob._listDefine;
             _pCache->registerDesc( pso._handle, computeDesc );
             if ( computeJob._pipelinePassName.empty() == false )
-                _pCache->setExtensionProgramPSO( _pDevice, computeJob._pipelinePassName, std::move( pso ) ); // 패스 이름이 키다 — 확장 프로그램과 같은 저장소(같이 해제한다)
+                _pCache->setPipelineComputePSO( _pDevice, computeJob._pipelinePassName, std::move( pso ) ); // 패스 이름이 키다
             else
                 _pCache->setEnginePSO( _pDevice, computeJob._passType, std::move( pso ) );
         }
@@ -551,7 +539,7 @@ namespace sw
     RHIPipelineStateHandle FramePSOManager::findPipelineComputePSO( const hashed_string& passName ) const
     {
         RHIPipelineStateHandle pso{ 0 };
-        return _pCache->findExtensionProgramPSO( passName, pso ) ? pso : RHIPipelineStateHandle{ 0 };
+        return _pCache->findPipelineComputePSO( passName, pso ) ? pso : RHIPipelineStateHandle{ 0 };
     }
 
     RHIPipelineStateHandle FramePSOManager::getEnginePSO( RenderPassKind passType ) const
@@ -769,48 +757,33 @@ namespace sw
         }
     }
 
-    RHIPipelineStateHandle FramePSOManager::getOrCreateCookieAtlasPSO( RHIFormat atlasFormat )
+    RHIPipelineStateHandle FramePSOManager::getOrCreateGlobalPSO( const RHIPipelineStateDesc& desc, const utf8* pPurpose )
     {
         if ( _pDevice == nullptr )
             return 0;
-        // 칸에 옮겨 그리는 PSO — 전체 화면 블릿 셰이더(쿠킹되는 Present 기본 셰이더)를 아틀라스 포맷으로. 머티리얼 변형 저장소의 키 공간을 빌려 저장소가 소유한다
-        // (입자 PSO 와 같은 방식 — 디바이스를 바꾸면 저장소가 비고 여기서 다시 만든다).
-        const string&  shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderFullscreenBlit.get();
-        MaterialPSOKey psoKey{};
-        psoKey._permutationHash = HashUtil::combine( HashUtil::computeStringHash64( shaderPath, false ), FourCCUtil::make( "CKAT" ) );
-        if ( _pCache->hasMaterialPSO( psoKey ) == false )
-        {
-            // 셰이더는 셋업이 데웠다(`createPassPSOS`) — 여기는 드라이버 생성만 남는다.
-            const RHIPipelineStateDesc desc = makeCookieAtlasPSODesc( shaderPath, atlasFormat );
-            RHIPipelineState           pso;
-            if ( pso.createGraphics( *_pDevice, desc ) == false )
-                SW_LOG_ERROR_ID( "FramePSOManager.DLightCookieAtlas", "The 2D light cookie atlas PSO could not be created from '%#' - cookie lights draw without cookies", shaderPath );
-            else
-                registerLayout( pso._handle, desc );
-            _pCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry::ready( std::move( pso ) ) );
-        }
-        return _pCache->findMaterialPSO( psoKey );
+        const uint64           descHash = desc.computeHash();
+        RHIPipelineStateHandle existing{ 0 };
+        if ( _pCache->findGlobalPSO( descHash, existing ) )
+            return existing;
+        RHIPipelineState             pso    = createPipelineStateTimed( *_pDevice, desc );
+        const RHIPipelineStateHandle handle = pso._handle;
+        if ( handle == 0 )
+            SW_LOG_ERROR_ID( "FramePSOManager.GlobalPSOCouldNot", "The %# PSO could not be created from '%#' (see the shader error above) - it is not drawn", pPurpose, desc._pixelShaderPath );
+        else
+            registerLayout( handle, desc );
+        _pCache->setGlobalPSO( _pDevice, descHash, std::move( pso ) );
+        return handle;
+    }
+
+    RHIPipelineStateHandle FramePSOManager::getOrCreateCookieAtlasPSO( RHIFormat atlasFormat )
+    {
+        // 칸에 옮겨 그리는 PSO — 전체 화면 블릿 셰이더(쿠킹되는 Present 기본 셰이더)를 아틀라스 포맷으로. 셰이더는 셋업이 데웠다(`createPassPSOS`).
+        return getOrCreateGlobalPSO( makeCookieAtlasPSODesc( engine::getSubsystem<EngineDefaultAssets>()._shaderFullscreenBlit.get(), atlasFormat ), "2D light cookie atlas" );
     }
 
     RHIPipelineStateHandle FramePSOManager::getOrCreateLayerBakePSO( RHIFormat targetFormat )
     {
-        if ( _pDevice == nullptr )
-            return 0;
-        // 쿠키 아틀라스 PSO 와 같은 길 — 머티리얼 변형 저장소의 키 공간을 빌려 저장소가 소유한다(디바이스를 바꾸면 저장소가 비고 여기서 다시 만든다).
-        const string&  shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderLayerBake.get();
-        MaterialPSOKey psoKey{};
-        psoKey._permutationHash = HashUtil::combine( HashUtil::computeStringHash64( shaderPath, false ), FourCCUtil::make( "LBAK" ) + static_cast<uint32>( targetFormat ) );
-        if ( _pCache->hasMaterialPSO( psoKey ) == false )
-        {
-            const RHIPipelineStateDesc desc = makeLayerBakePSODesc( shaderPath, targetFormat );
-            RHIPipelineState           pso;
-            if ( pso.createGraphics( *_pDevice, desc ) == false )
-                SW_LOG_ERROR_ID( "FramePSOManager.LayerBakePSO", "The UV layer bake PSO could not be created from '%#' - skin layers are not baked", shaderPath );
-            else
-                registerLayout( pso._handle, desc );
-            _pCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry::ready( std::move( pso ) ) );
-        }
-        return _pCache->findMaterialPSO( psoKey );
+        return getOrCreateGlobalPSO( makeLayerBakePSODesc( engine::getSubsystem<EngineDefaultAssets>()._shaderLayerBake.get(), targetFormat ), "UV layer bake" );
     }
 
     void FramePSOManager::warmExtensionPrograms( const vector<ExtensionProgramRequest>& listRequest ) const
@@ -822,9 +795,12 @@ namespace sw
         {
             RHIPipelineStateHandle existing{ 0 };
             const bool             bNoProgram = request._pProgram == nullptr || request._pProgram->_shaderPath.empty();
-            if ( bNoProgram || _pCache->findExtensionProgramPSO( makeExtensionProgramKey( *request._pProgram, request._colorFormat, request._bDepthTest ), existing ) )
+            if ( bNoProgram )
                 continue;
-            appendShaderWarm( makeExtensionProgramDesc( *request._pProgram, request._colorFormat, request._bDepthTest ), listShader );
+            const RHIPipelineStateDesc desc = makeExtensionProgramDesc( *request._pProgram, request._colorFormat, request._bDepthTest );
+            if ( _pCache->findGlobalPSO( desc.computeHash(), existing ) )
+                continue;
+            appendShaderWarm( desc, listShader );
         }
         warmShaders( listShader );
     }
@@ -833,22 +809,10 @@ namespace sw
     {
         // 모듈 확장 패스의 프로그램(ExtensionRenderPass M3)이다. 셰이더 · 고정 상태 · 타깃 포맷이 같으면 한 PSO 를 나눈다. 기록 중에는 만들 수 없으므로 셋업(`FrameExtensionHost::collectFrame`)만 부른다.
         // 실패(0)도 기록한다 — 매 프레임 같은 컴파일을 되풀이하지 않고, 부르는 쪽이 0 을 보고 오류를 남기고 그리지 않는다(다른 셰이더로 대신 그리지 않는다).
-        if ( _pDevice == nullptr || program._shaderPath.empty() )
-            return 0;
-        const hashed_string    programKey = makeExtensionProgramKey( program, colorFormat, bDepthTest );
-        RHIPipelineStateHandle existing{ 0 };
-        if ( _pCache->findExtensionProgramPSO( programKey, existing ) )
-            return existing;
-
         // 셰이더는 부르는 쪽이 이번 프레임의 프로그램과 함께 데웠다(`warmExtensionPrograms`) — 여기는 드라이버 생성만 남는다.
-        const RHIPipelineStateDesc   desc   = makeExtensionProgramDesc( program, colorFormat, bDepthTest );
-        RHIPipelineState             pso    = createPipelineStateTimed( *_pDevice, desc );
-        const RHIPipelineStateHandle handle = pso._handle;
-        registerLayout( handle, desc );
-        if ( handle == 0 )
-            SW_LOG_ERROR_ID( "FramePSOManager.ExtensionProgramCouldNot", "Extension program '%#' could not be created (see the shader error above) - passes that use it are not drawn", program._shaderPath );
-        _pCache->setExtensionProgramPSO( _pDevice, programKey, std::move( pso ) );
-        return handle;
+        if ( program._shaderPath.empty() )
+            return 0;
+        return getOrCreateGlobalPSO( makeExtensionProgramDesc( program, colorFormat, bDepthTest ), "extension program" );
     }
 
     bool FramePSOManager::makePassPSODesc( RenderPassKind passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride, RHIPipelineStateDesc& outDesc ) const

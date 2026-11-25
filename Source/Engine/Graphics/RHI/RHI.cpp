@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -101,6 +102,22 @@ namespace sw
         {
             _arrRTVFormat[attachmentIndex] = RHIFormat::R8G8B8A8_UNORM;
         }
+    }
+
+    uint64 RHIPipelineStateDesc::computeHash() const noexcept
+    {
+        uint64 hash = HashUtil::makeHash( _vertexShaderPath, _vertexEntryPoint, _pixelShaderPath, _pixelEntryPoint, _computeShaderPath, _computeEntryPoint, _geometryEntryPoint,
+                                          _hullEntryPoint, _domainEntryPoint );
+        for ( const string& define : _listShaderDefine )
+        {
+            hash = HashUtil::combine( hash, HashUtil::computeStringHash64( define, false ) );
+        }
+        hash = HashUtil::combine( hash, HashUtil::makeHash( _topology, _numRenderTargets, _depthStencilFormat, _renderState.computeHash(), _meshVertexFormat ) );
+        for ( uint32 targetIndex = 0; targetIndex < _numRenderTargets && targetIndex < kMaxColorAttachments; ++targetIndex )
+        {
+            hash = HashUtil::combine( hash, static_cast<uint64>( _arrRTVFormat[targetIndex] ) );
+        }
+        return hash;
     }
 
     RHITextureDesc::RHITextureDesc() noexcept

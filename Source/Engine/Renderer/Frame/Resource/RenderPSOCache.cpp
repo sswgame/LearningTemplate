@@ -24,7 +24,8 @@ namespace sw
         , _layoutMutex{}
         , _mapEnginePSO{}
         , _mapOutputPSO{}
-        , _mapExtensionProgramPSO{}
+        , _mapGlobalPSO{}
+        , _mapPipelineComputePSO{}
         , _mapMaterialPSO{}
         , _materialPSOMutex{}
     {
@@ -155,17 +156,33 @@ namespace sw
         return true;
     }
 
-    void RenderPSOCache::setExtensionProgramPSO( IRHIDevice* pDevice, const hashed_string& programKey, RHIPipelineState&& pso )
+    void RenderPSOCache::setGlobalPSO( IRHIDevice* pDevice, uint64 descHash, RHIPipelineState&& pso )
     {
-        RHIPipelineState& slot = _mapExtensionProgramPSO[programKey];
+        RHIPipelineState& slot = _mapGlobalPSO[descHash];
         releaseReplacedPSO( pDevice, slot );
         slot = std::move( pso );
     }
 
-    bool RenderPSOCache::findExtensionProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle& outPipelineState ) const
+    bool RenderPSOCache::findGlobalPSO( uint64 descHash, RHIPipelineStateHandle& outPipelineState ) const
     {
-        const auto it = _mapExtensionProgramPSO.find( programKey );
-        if ( it == _mapExtensionProgramPSO.end() )
+        const auto it = _mapGlobalPSO.find( descHash );
+        if ( it == _mapGlobalPSO.end() )
+            return false;
+        outPipelineState = it->second._handle;
+        return true;
+    }
+
+    void RenderPSOCache::setPipelineComputePSO( IRHIDevice* pDevice, const hashed_string& passName, RHIPipelineState&& pso )
+    {
+        RHIPipelineState& slot = _mapPipelineComputePSO[passName];
+        releaseReplacedPSO( pDevice, slot );
+        slot = std::move( pso );
+    }
+
+    bool RenderPSOCache::findPipelineComputePSO( const hashed_string& passName, RHIPipelineStateHandle& outPipelineState ) const
+    {
+        const auto it = _mapPipelineComputePSO.find( passName );
+        if ( it == _mapPipelineComputePSO.end() )
             return false;
         outPipelineState = it->second._handle;
         return true;
@@ -292,11 +309,16 @@ namespace sw
         }
         _mapOutputPSO.clear();
 
-        for ( auto& [programKey, pso] : _mapExtensionProgramPSO )
+        for ( auto& [descHash, pso] : _mapGlobalPSO )
         {
             pso.release( pDevice );
         }
-        _mapExtensionProgramPSO.clear();
+        _mapGlobalPSO.clear();
+        for ( auto& [passName, pso] : _mapPipelineComputePSO )
+        {
+            pso.release( pDevice );
+        }
+        _mapPipelineComputePSO.clear();
 
         // 두 맵은 방금 파괴한 PSO 핸들을 키로 가지고 있다. 핸들에 generation 이 들어 있어 같은 핸들이 다시 발급되어도
         // 이전 항목을 집는 일은 없지만, 셰이더 리로드마다 PSO 를 다시 만드는 지금은 그대로 두면
@@ -355,7 +377,7 @@ namespace sw
             destroy( it->second );
             it = _mapOutputPSO.erase( it );
         }
-        for ( auto it = _mapExtensionProgramPSO.begin(); it != _mapExtensionProgramPSO.end(); )
+        for ( auto it = _mapGlobalPSO.begin(); it != _mapGlobalPSO.end(); )
         {
             if ( it->second.isValid() && VectorUtil::contains( listAffected, it->second._handle ) == false )
             {
@@ -363,10 +385,20 @@ namespace sw
                 continue;
             }
             destroy( it->second );
-            it = _mapExtensionProgramPSO.erase( it );
+            it = _mapGlobalPSO.erase( it );
+        }
+        for ( auto it = _mapPipelineComputePSO.begin(); it != _mapPipelineComputePSO.end(); )
+        {
+            if ( it->second.isValid() && VectorUtil::contains( listAffected, it->second._handle ) == false )
+            {
+                ++it;
+                continue;
+            }
+            destroy( it->second );
+            it = _mapPipelineComputePSO.erase( it );
         }
 
-        // 3) 머티리얼 변형(입자 · 쿠키 아틀라스 · 디퍼드 타일 포함). 소유한 것만 파괴한다 — `_owned` 가 비면 패스 PSO 그대로다.
+        // 3) 머티리얼 변형(입자 · 디퍼드 타일 포함). 소유한 것만 파괴한다 — `_owned` 가 비면 패스 PSO 그대로다.
         // 만드는 중인 것은 모두 무효로 하고 지운다 — 옛 바이트코드를 집었을 수 있고, 패스 PSO 를 놓았으면 그 키를 다시 찾는 쪽이 없다. 다음 셋업이 다시 넣는다.
         _materialPSOBuilder.discardPending();
         {
@@ -404,7 +436,8 @@ namespace sw
         _materialPSOBuilder.shutdown( nullptr );
         _mapEnginePSO.clear();
         _mapOutputPSO.clear();
-        _mapExtensionProgramPSO.clear();
+        _mapGlobalPSO.clear();
+        _mapPipelineComputePSO.clear();
         {
             ScopedLock<shared_mutex> lock{ _materialPSOMutex };
             _mapMaterialPSO.clear();

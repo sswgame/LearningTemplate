@@ -130,10 +130,17 @@ namespace sw
         /** @brief 그 패스와 대상 포맷의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
         [[nodiscard]] bool findOutputPSO( RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const;
 
-        /** @brief 모듈 확장 패스 프로그램(`ExtensionProgramDesc`) 하나의 PSO 를 프로그램 키(셰이더 · 상태 · 타깃 포맷을 이은 글)로 둡니다. 실패(0)도 기록합니다(만들기를 되풀이하지 않는다). */
-        void setExtensionProgramPSO( IRHIDevice* pDevice, const hashed_string& programKey, RHIPipelineState&& pso );
-        /** @brief 모듈 프로그램의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
-        [[nodiscard]] bool findExtensionProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle& outPipelineState ) const;
+        /**
+         * @brief 코드가 짓는 PSO(모듈 확장 프로그램 · 쿠키 아틀라스 · 층 굽기) 하나를 서술체 지문(`RHIPipelineStateDesc::computeHash`)으로 둡니다. 실패(0)도 기록합니다(만들기를 되풀이하지 않는다).
+         * @details 부르는 쪽이 키를 고르지 않는다 — 서술 전체가 키라 포맷 · 상태를 키에서 빠뜨릴 수 없다. 머티리얼 변형 키 공간을 빌리지 않는다.
+         */
+        void setGlobalPSO( IRHIDevice* pDevice, uint64 descHash, RHIPipelineState&& pso );
+        /** @brief 그 지문의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
+        [[nodiscard]] bool findGlobalPSO( uint64 descHash, RHIPipelineStateHandle& outPipelineState ) const;
+        /** @brief 렌더 파이프라인의 컴퓨트 패스 PSO 를 패스 이름으로 둡니다(XML 패스 하나에 PSO 하나). 실패(0)도 기록합니다. */
+        void setPipelineComputePSO( IRHIDevice* pDevice, const hashed_string& passName, RHIPipelineState&& pso );
+        /** @brief 그 컴퓨트 패스의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
+        [[nodiscard]] bool findPipelineComputePSO( const hashed_string& passName, RHIPipelineStateHandle& outPipelineState ) const;
 
         // ------------------------------------------------------------------------------
         // 3) 머티리얼 퍼뮤테이션 변형: 키는 `MaterialPSOKey`(패스 PSO, 퍼뮤테이션 해시, 뷰 모드, 정점 형식, 컬 반전)
@@ -217,8 +224,10 @@ namespace sw
         unordered_map<RenderPassKind, RHIPipelineState> _mapEnginePSO;
         /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPSOKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
         unordered_map<uint64, RHIPipelineState> _mapOutputPSO;
-        /// @brief 모듈 프로그램의 PSO 입니다(키 = 프로그램 키). 모듈 패스는 셰이더가 패스마다 달라 패스 종류 하나로 둘 수 없습니다.
-        unordered_map<hashed_string, RHIPipelineState>                                      _mapExtensionProgramPSO;
+        /// @brief 코드가 짓는 PSO 입니다(키 = 서술체 지문 `RHIPipelineStateDesc::computeHash`).
+        unordered_map<uint64, RHIPipelineState> _mapGlobalPSO;
+        /// @brief 렌더 파이프라인 컴퓨트 패스의 PSO 입니다(키 = 패스 이름).
+        unordered_map<hashed_string, RHIPipelineState>                                      _mapPipelineComputePSO;
         unordered_map<MaterialPSOKey, MaterialPSOEntry, MaterialPSOKeyHash> _mapMaterialPSO SW_GUARDED_BY( _materialPSOMutex );
         mutable shared_mutex                                                                _materialPSOMutex; ///< `_layoutMutex` 와 같은 까닭의 공유 잠금
         /// @brief 머티리얼 변형의 생성 줄과 전용 스레드입니다. 캐시가 소유해 미리보기 렌더러와 함께 씁니다(해제는 `releaseAll` 이 스레드부터 합류합니다).
