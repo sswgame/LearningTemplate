@@ -35,7 +35,7 @@
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIGeometryBindings.h"
-#include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingRing.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
@@ -532,28 +532,16 @@ namespace sw
             UINT64                                            _fenceValue{ 0 }; ///< 제출 뒤 전송 펜스에 Signal 한 값. 0 이면 아직 내지 않았다
         };
 
-        /**
-         * @struct D3D12StagingRing
-         * @brief 영속 매핑한 스테이징 버퍼 하나와 그 구간 할당기입니다. 업로드 링은 소스를 여기에 복사한 뒤 복사 리스트가 읽고, 되읽기 링은 복사 리스트가 쓴 뒤 가져가기가 읽습니다(Vulkan 과 같은 두 링).
-         * @details 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 링보다 큰 한 장은 할당기가 단독 구간(`RHIStagingSpan::isSolo`, 오프셋 0)으로 내주고,
-         *          그 크기의 일회성 업로드 힙 버퍼(`_solo*`)를 만들어 쓴다. 할당기가 단독 구간을 한 번에 하나만 내주므로 링마다 하나다. 할당기가 돌려받은 뒤(`hasLiveSolo` 거짓)
-         *          `retireCompletedTransfers` 가 지운다. 구간 시작은 `D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT`(512)의 배수라 텍스처 복사의 배치 오프셋 규칙을 그대로 만족한다.
-         */
-        struct D3D12StagingRing
+        /** @brief 영속 매핑한 스테이징 버퍼 하나입니다(링 · 단독 버퍼). 업로드 링은 UPLOAD 힙, 되읽기 링은 READBACK 힙이다. */
+        struct D3D12StagingBuffer
         {
-            D3D12_HEAP_TYPE                        _heapType{ D3D12_HEAP_TYPE_UPLOAD }; ///< UPLOAD(업로드 소스) 또는 READBACK(되읽기 도착지) — 단독 버퍼도 같은 힙에 만든다
-            RHIStagingAllocator                    _allocator;
-            Microsoft::WRL::ComPtr<ID3D12Resource> _buffer;
+            Microsoft::WRL::ComPtr<ID3D12Resource> _resource;
             uint8*                                 _pMapped{ nullptr };
-            mutex                                  _soloMutex; ///< 단독 버퍼 칸(아래 둘)을 지키는 잎 락. 만드는 쪽(제출 스레드)과 지우는 쪽(아무 스레드의 회수)이 다르다
-            Microsoft::WRL::ComPtr<ID3D12Resource> _soloBuffer;
-            uint8*                                 _pSoloMapped{ nullptr };
 
-            /** @brief @p span 을 담은 버퍼입니다(단독 구간이면 단독 버퍼). 구간 안의 오프셋은 `span.getOffsetBytes()` 에서 센다. */
-            [[nodiscard]] ID3D12Resource* getSpanResource( const RHIStagingSpan& span ) const { return span.isSolo() ? _soloBuffer.Get() : _buffer.Get(); }
-            /** @brief @p span 을 담은 버퍼의 매핑 시작 주소입니다. 구간의 바이트는 여기에 `span.getOffsetBytes()` 이상의 오프셋을 더해 읽고 쓴다. */
-            [[nodiscard]] uint8* getSpanMappedBase( const RHIStagingSpan& span ) const { return span.isSolo() ? _pSoloMapped : _pMapped; }
+            [[nodiscard]] bool isValid() const { return _resource != nullptr; }
         };
+        /// @brief 구간 시작은 `D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT`(512)의 배수라 텍스처 복사의 배치 오프셋 규칙을 그대로 만족한다(`RHIStagingRing`).
+        using D3D12StagingRing = RHIStagingRing<D3D12StagingBuffer>;
         /** @brief 펜스를 기다리는 온라인 블록 묶음입니다. 리스트가 닫힐 때 상태의 블록 벡터를 통째로 옮겨 옵니다. */
         struct OnlineBlockRecycleBatch
         {
@@ -766,9 +754,9 @@ namespace sw
         /** @brief 링 버퍼와 단독 버퍼를 놓고 구간 할당기를 비웁니다. 없는 링이면 아무것도 하지 않습니다. */
         void destroyStagingRing( D3D12StagingRing& ring );
         /** @brief 업로드 힙 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다). 실패하면 두 출력은 비어 있다. */
-        [[nodiscard]] bool createMappedStagingBuffer( D3D12_HEAP_TYPE heapType, uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped );
+        [[nodiscard]] bool createMappedStagingBuffer( D3D12_HEAP_TYPE heapType, uint64 sizeBytes, D3D12StagingBuffer& outBuffer );
         /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 추적기에서 내립니다. 비어 있으면 아무것도 하지 않습니다. */
-        void destroyMappedStagingBuffer( Microsoft::WRL::ComPtr<ID3D12Resource>& rBuffer, uint8*& pMapped );
+        void destroyMappedStagingBuffer( D3D12StagingBuffer& rBuffer );
         /**
          * @brief @p ring 에서 구간을 잡습니다. 차 있으면 끝난 전송을 한 번 걷은 뒤 다시 봅니다. 기다리지 않습니다.
          * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::completeAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의

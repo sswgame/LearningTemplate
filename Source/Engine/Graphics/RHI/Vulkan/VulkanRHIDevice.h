@@ -24,7 +24,7 @@
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIRecordingBindings.h"
-#include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingRing.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAllocator.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
@@ -489,28 +489,16 @@ namespace sw
             VkFence         _fence{ nullptr };
         };
 
-        /**
-         * @struct VulkanStagingRing
-         * @brief 영속 매핑한 호스트 가시 · 일관 버퍼 하나와 그 구간 할당기입니다. 업로드 링과 되읽기 링이 하나씩 있다.
-         * @details 업로드 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 되읽기 구간은 결과를 가져갈 때(`free`) 돌아오고, 끝나기 전에 버린 구간은
-         *          그때 시리얼을 붙여 복사가 끝난 뒤에 돌아온다 — 구간을 GPU 가 아직 쓰는 동안 다음 되읽기가 같은 자리를 받지 않는다.
-         *          링보다 큰 한 장은 할당기가 단독 구간(`RHIStagingSpan::isSolo`, 오프셋 0)으로 내주고, 그 크기의 일회성 버퍼(`_solo*`)를 만들어 쓴다. 할당기가 단독 구간을
-         *          한 번에 하나만 내주므로 링마다 하나다. 할당기가 돌려받은 뒤(`hasLiveSolo` 거짓) `retireFinishedTransfers` 가 지운다.
-         */
-        struct VulkanStagingRing
+        /** @brief 영속 매핑한 호스트 가시 버퍼 하나입니다(링 · 단독 버퍼). 바이트는 `_memory._pMapped` 에 오프셋을 더해 읽고 쓴다(쓴 뒤 flush, 읽기 전 invalidate). */
+        struct VulkanStagingBuffer
         {
-            RHIStagingAllocator _allocator;
-            VkBuffer            _buffer{ nullptr };
-            VulkanAllocation    _memory{};
-            mutex               _soloMutex; ///< 단독 버퍼 칸(아래 둘)을 지키는 잎 락. 만드는 쪽(제출 스레드)과 지우는 쪽(아무 스레드의 회수)이 다르다
-            VkBuffer            _soloBuffer{ nullptr };
-            VulkanAllocation    _soloMemory{};
+            VkBuffer         _buffer{ nullptr };
+            VulkanAllocation _memory{};
 
-            /** @brief @p span 을 담은 버퍼입니다(단독 구간이면 단독 버퍼). 구간 안의 오프셋은 `span.getOffsetBytes()` 에서 센다. */
-            [[nodiscard]] VkBuffer getSpanBuffer( const RHIStagingSpan& span ) const { return span.isSolo() ? _soloBuffer : _buffer; }
-            /** @brief @p span 을 담은 버퍼의 할당입니다. 구간의 바이트는 `_pMapped` 에 `span.getOffsetBytes()` 이상의 오프셋을 더해 읽고 쓴다(쓴 뒤 flush, 읽기 전 invalidate). */
-            [[nodiscard]] const VulkanAllocation& getSpanMemory( const RHIStagingSpan& span ) const { return span.isSolo() ? _soloMemory : _memory; }
+            [[nodiscard]] bool isValid() const { return _buffer != nullptr; }
         };
+        /// @brief 업로드 링과 되읽기 링이 하나씩 있다(`RHIStagingRing` — 구간 회수 · 단독 버퍼 규칙).
+        using VulkanStagingRing = RHIStagingRing<VulkanStagingBuffer>;
 
         /** @brief 가져가지 않은 텍스처 읽기 하나입니다. 결과 바이트는 되읽기 링에 그대로 있고 `takeTextureReadback` 이 그때 복사해 간다. */
         struct VulkanPendingReadback
@@ -877,9 +865,9 @@ namespace sw
          * @brief @p capacityBytes 의 호스트 가시 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다).
          * @return 만들었으면 true. 실패하면 이유를 로그로 남기고 만든 것을 놓은 뒤 false 이며 두 출력은 비어 있다.
          */
-        [[nodiscard]] bool createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VkBuffer& outBuffer, VulkanAllocation& outMemory );
+        [[nodiscard]] bool createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VulkanStagingBuffer& outBuffer );
         /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 추적기에서 내립니다. 비어 있으면 아무것도 하지 않습니다. 두 칸을 비웁니다. */
-        void destroyMappedStagingBuffer( VkBuffer& rBuffer, VulkanAllocation& rMemory );
+        void destroyMappedStagingBuffer( VulkanStagingBuffer& rBuffer );
         /**
          * @brief @p ring 에서 구간을 잡습니다. 차 있으면 끝난 전송을 한 번 걷은 뒤 다시 봅니다. 기다리지 않습니다.
          * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::completeAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의

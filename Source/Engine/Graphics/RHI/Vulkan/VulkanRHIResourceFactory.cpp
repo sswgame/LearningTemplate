@@ -725,8 +725,8 @@ namespace sw
         {
             const RHITextureMipSpan& mipSpan = arrMip[mip];
             ringOffset                       = alignUpToMultiple( ringOffset, copyAlignment );
-            Memory::copy( ring.getSpanMemory( span )._pMapped + ringOffset, mipSpan._pData, mipSpan._sizeBytes );
-            _pDevice->_memoryAllocator.flush( ring.getSpanMemory( span ), ringOffset, mipSpan._sizeBytes );
+            Memory::copy( ring.getSpanBuffer( span )._memory._pMapped + ringOffset, mipSpan._pData, mipSpan._sizeBytes );
+            _pDevice->_memoryAllocator.flush( ring.getSpanBuffer( span )._memory, ringOffset, mipSpan._sizeBytes );
 
             VkBufferImageCopy& region              = arrRegion[mip];
             region.bufferOffset                    = ringOffset;
@@ -752,7 +752,7 @@ namespace sw
                                           VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT );
             VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
 
-            vkCmdCopyBufferToImage( job._commandBuffer, ring.getSpanBuffer( span ), pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipCount, arrRegion );
+            vkCmdCopyBufferToImage( job._commandBuffer, ring.getSpanBuffer( span )._buffer, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipCount, arrRegion );
 
             // 뒤에 낼 프레임의 셰이더 읽기가 이 쓰기를 본다(배리어의 두 번째 범위는 제출 순서상 뒤의 모든 명령이다 — 계약 3).
             barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -799,8 +799,8 @@ namespace sw
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
         const uint64 ringOffset = alignUpToMultiple( span.getOffsetBytes(), copyAlignment );
-        Memory::copy( ring.getSpanMemory( span )._pMapped + ringOffset, desc._pData, static_cast<size_t>( usedBytes ) );
-        _pDevice->_memoryAllocator.flush( ring.getSpanMemory( span ), ringOffset, usedBytes );
+        Memory::copy( ring.getSpanBuffer( span )._memory._pMapped + ringOffset, desc._pData, static_cast<size_t>( usedBytes ) );
+        _pDevice->_memoryAllocator.flush( ring.getSpanBuffer( span )._memory, ringOffset, usedBytes );
 
         const ScopedDeferredLog deferredLog;
         ScopedLock<mutex>       transferLock{ _pDevice->_transferMutex };
@@ -824,7 +824,7 @@ namespace sw
             region.imageSubresource.layerCount     = 1;
             region.imageOffset                     = { static_cast<int32>( desc._x ), static_cast<int32>( desc._y ), 0 };
             region.imageExtent                     = { desc._width, desc._height, 1 };
-            vkCmdCopyBufferToImage( job._commandBuffer, ring.getSpanBuffer( span ), pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
+            vkCmdCopyBufferToImage( job._commandBuffer, ring.getSpanBuffer( span )._buffer, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
 
             barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -869,10 +869,10 @@ namespace sw
         // 펜스를 지났고 복사 뒤에 HOST 배리어를 걸었다 — 캐시에 남은 옛 값만 버리고 읽는다. 읽은 뒤 구간을 돌려준다.
         VulkanRHIDevice::VulkanStagingRing& ring = _pDevice->_readbackRing;
         outBytes.resize( pending._sizeBytes );
-        const VulkanAllocation& readback = ring.getSpanMemory( pending._span );
+        const VulkanAllocation& readback = ring.getSpanBuffer( pending._span )._memory;
         _pDevice->_memoryAllocator.invalidate( readback, pending._dataOffsetBytes, pending._sizeBytes );
         Memory::copy( outBytes.data(), readback._pMapped + pending._dataOffsetBytes, pending._sizeBytes );
-        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, std::move( pending._span ) );
+        RHITextureTransferDriver::releaseTakenReadback( ring.getAllocator(), std::move( pending._span ) );
         if ( pending._depth24TexelCount != 0 )
             convertRHIDepth24ToFloat( outBytes.data(), pending._depth24TexelCount );
         return true;
@@ -886,7 +886,7 @@ namespace sw
         if ( _pDevice->_readbackTable.take( ticket._serial, pending ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
         // 끝나지 않은 복사는 아직 이 구간에 쓴다. 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(다음 되읽기가 같은 자리를 받지 않는다).
-        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, std::move( pending._span ), _pDevice->_transferSerials, ticket._serial );
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing.getAllocator(), std::move( pending._span ), _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat VulkanRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -991,7 +991,7 @@ namespace sw
             region.imageSubresource.baseArrayLayer = arraySlice;
             region.imageSubresource.layerCount     = 1;
             region.imageExtent                     = { outLayout._width, outLayout._height, 1 };
-            vkCmdCopyImageToBuffer( job._commandBuffer, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ring.getSpanBuffer( span ), 1, &region );
+            vkCmdCopyImageToBuffer( job._commandBuffer, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ring.getSpanBuffer( span )._buffer, 1, &region );
 
             // 읽기 뒤에는 샘플링 레이아웃으로 둔다. 한 번도 안 올린 텍스처(UNDEFINED)도 이제부터는 정의된 레이아웃을 갖는다.
             // 깊이는 읽기 전 레이아웃으로 되돌린다 — 렌더 패스 · 그림자 샘플링이 추적 레이아웃에서 출발한다(UNDEFINED 였으면 샘플링 레이아웃).
@@ -1019,7 +1019,7 @@ namespace sw
             hostBarrier.dstAccessMask       = VK_ACCESS_HOST_READ_BIT;
             hostBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             hostBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            hostBarrier.buffer              = ring.getSpanBuffer( span );
+            hostBarrier.buffer              = ring.getSpanBuffer( span )._buffer;
             hostBarrier.offset              = ringOffset;
             hostBarrier.size                = outLayout._sizeBytes;
             vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1, &hostBarrier, 0, nullptr );

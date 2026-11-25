@@ -3104,23 +3104,17 @@ namespace sw
     {
         // 구간 시작 정렬. 복사 오프셋 규칙(텍셀 블록 바이트와 4 의 배수)은 제출 함수가 구간 안에서 맞추고, 여기서는 캐시 줄 경계에서 시작하도록 넉넉히 둔다(GL 링과 같다).
         constexpr uint64 kSpanAlignmentBytes = 256;
-        if ( createMappedStagingBuffer( capacityBytes, usageFlags, pName, ring._buffer, ring._memory ) == false )
-            return false;
-        ring._allocator.initialize( capacityBytes, kSpanAlignmentBytes, soloMaxBytes );
-        return true;
+        return ring.initialize( capacityBytes, kSpanAlignmentBytes, soloMaxBytes, [this, usageFlags, pName]( uint64 sizeBytes, VulkanStagingBuffer& outBuffer )
+        { return createMappedStagingBuffer( sizeBytes, usageFlags, pName, outBuffer ); } );
     }
 
     void VulkanRHIDevice::destroyStagingRing( VulkanStagingRing& ring )
     {
-        {
-            ScopedLock<mutex> soloLock{ ring._soloMutex };
-            destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory );
-        }
-        destroyMappedStagingBuffer( ring._buffer, ring._memory );
-        ring._allocator.shutdown();
+        ring.shutdown( [this]( VulkanStagingBuffer& rBuffer )
+        { destroyMappedStagingBuffer( rBuffer ); } );
     }
 
-    bool VulkanRHIDevice::createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VkBuffer& outBuffer, VulkanAllocation& outMemory )
+    bool VulkanRHIDevice::createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VulkanStagingBuffer& outBuffer )
     {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -3129,56 +3123,39 @@ namespace sw
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         // 되읽기는 CPU 가 읽는 자리(캐시 메모리를 먼저 고른다), 업로드는 쓰기 자리다 — 쓴 뒤 flush, 읽기 전 invalidate 는 제출 · 가져가기가 부른다.
         const VulkanBufferMemory placement = ( usageFlags & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 ? VulkanBufferMemory::HostRead : VulkanBufferMemory::HostWrite;
-        if ( _memoryAllocator.createBuffer( bufferInfo, placement, pName, outBuffer, outMemory ) == false )
+        if ( _memoryAllocator.createBuffer( bufferInfo, placement, pName, outBuffer._buffer, outBuffer._memory ) == false )
         {
             SW_LOG_ERROR_ID( "Vulkan.FailedCreateVulkanStaging", "Failed to create the Vulkan %# staging buffer (%# bytes, _rhi._stagingRingMegabytes · _rhi._readbackRingMegabytes · _rhi._stagingSingleMaxMegabytes)",
                              pName, capacityBytes );
             return false;
         }
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( outMemory._allocation ), RHIMemoryKind::Staging, outMemory._sizeBytes );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( outBuffer._memory._allocation ), RHIMemoryKind::Staging, outBuffer._memory._sizeBytes );
         return true;
     }
 
-    void VulkanRHIDevice::destroyMappedStagingBuffer( VkBuffer& rBuffer, VulkanAllocation& rMemory )
+    void VulkanRHIDevice::destroyMappedStagingBuffer( VulkanStagingBuffer& rBuffer )
     {
-        if ( rMemory.isValid() )
-            getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( rMemory._allocation ) );
-        _memoryAllocator.destroyBuffer( rBuffer, rMemory );
-        rBuffer = VK_NULL_HANDLE;
-        rMemory = VulkanAllocation{};
+        if ( rBuffer._memory.isValid() )
+            getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( rBuffer._memory._allocation ) );
+        _memoryAllocator.destroyBuffer( rBuffer._buffer, rBuffer._memory );
+        rBuffer = VulkanStagingBuffer{};
     }
 
     RHISubmitResult VulkanRHIDevice::allocateStagingSpan( VulkanStagingRing& ring, uint64 sizeBytes, uint32 usageFlags, const utf8* pCaller, RHIStagingSpan& outSpan )
     {
-        RHIStagingAllocateResult result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
-        if ( result == RHIStagingAllocateResult::Full )
-        {
-            retireFinishedTransfers();
-            result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
-        }
-        // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다(잃은 장치면 Full 도 Rejected, 계약 2).
-        const RHISubmitResult submitResult = RHIStagingRingUtil::completeAllocation( ring._allocator, _transferSerials, result, sizeBytes, "Vulkan", pCaller, outSpan );
-        if ( submitResult != RHISubmitResult::Accepted || outSpan.isSolo() == false )
-            return submitResult;
-        // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
-        const ScopedDeferredLog deferredLog;
-        ScopedLock<mutex>       soloLock{ ring._soloMutex };
-        destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory );
-        if ( createMappedStagingBuffer( outSpan.getSizeBytes(), usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory ) )
-            return RHISubmitResult::Accepted;
-        return RHIStagingRingUtil::rejectSoloBufferFailure( ring._allocator, outSpan, "Vulkan", pCaller );
+        return ring.allocate(
+            sizeBytes, _transferSerials, "Vulkan", pCaller, [this]()
+        { retireFinishedTransfers(); },
+            [this, usageFlags]( uint64 soloBytes, VulkanStagingBuffer& outBuffer )
+        { return createMappedStagingBuffer( soloBytes, usageFlags, "single transfer", outBuffer ); },
+            [this]( VulkanStagingBuffer& rBuffer )
+        { destroyMappedStagingBuffer( rBuffer ); }, outSpan );
     }
 
     void VulkanRHIDevice::destroyIdleSoloBuffer( VulkanStagingRing& ring )
     {
-        ScopedLock<mutex> soloLock{ ring._soloMutex };
-        if ( ring._soloBuffer == VK_NULL_HANDLE )
-            return;
-        // 판정은 락 안에서 한다 — 밖에서 보면 그 사이 다른 스레드가 새 단독 구간을 받아 버퍼를 만들 수 있다.
-        ring._allocator.freeCompleted( _transferSerials.getWatermark() );
-        if ( ring._allocator.hasLiveSolo() )
-            return;
-        destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory );
+        ring.destroyIdleSolo( _transferSerials, [this]( VulkanStagingBuffer& rBuffer )
+        { destroyMappedStagingBuffer( rBuffer ); } );
     }
 
     bool VulkanRHIDevice::beginTransferJob( VulkanTransferJob& outJob )

@@ -433,7 +433,7 @@ namespace sw
         _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, span.getOffsetBytes(), arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
         // 소스를 스테이징으로 복사한다(계약 1). 이 뒤로 호출자는 버퍼를 재사용해도 된다. 큐 락 밖의 일이다.
-        uint8* const pRingBase = ring.getSpanMappedBase( span );
+        uint8* const pRingBase = ring.getSpanBuffer( span )._pMapped;
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             const RHITextureMipSpan&                  mipSpan   = arrMip[mip];
@@ -464,7 +464,7 @@ namespace sw
                 dst.SubresourceIndex = firstSubresource + arrMip[mip]._mip;
 
                 D3D12_TEXTURE_COPY_LOCATION src{};
-                src.pResource       = ring.getSpanResource( span );
+                src.pResource       = ring.getSpanBuffer( span )._resource.Get();
                 src.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
                 src.PlacedFootprint = arrFootprint[mip];
                 pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );
@@ -505,7 +505,7 @@ namespace sw
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
 
-        uint8*       pDstBase = ring.getSpanMappedBase( span ) + span.getOffsetBytes();
+        uint8*       pDstBase = ring.getSpanBuffer( span )._pMapped + span.getOffsetBytes();
         const uint8* pSrcBase = static_cast<const uint8*>( desc._pData );
         for ( uint32 row = 0; row < desc._height; ++row )
         {
@@ -528,7 +528,7 @@ namespace sw
             dst.SubresourceIndex = desc._mip + desc._arraySlice * resourceDesc.MipLevels; // D3D12CalcSubresource 와 같은 순서
 
             D3D12_TEXTURE_COPY_LOCATION src{};
-            src.pResource                          = ring.getSpanResource( span );
+            src.pResource                          = ring.getSpanBuffer( span )._resource.Get();
             src.Type                               = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
             src.PlacedFootprint.Offset             = span.getOffsetBytes();
             src.PlacedFootprint.Footprint.Format   = resourceDesc.Format;
@@ -580,14 +580,14 @@ namespace sw
 
         // 링은 영속 매핑이다. 읽을 범위로 한 번 더 Map 해 CPU 캐시를 무효화하고(중첩 Map 은 참조를 센다) 그 주소에서 읽는다.
         D3D12RHIDevice::D3D12StagingRing& ring    = _pDevice->_readbackRing;
-        ID3D12Resource* const             pBuffer = ring.getSpanResource( record._span );
+        ID3D12Resource* const             pBuffer = ring.getSpanBuffer( record._span )._resource.Get();
         const D3D12_RANGE                 readRange{ static_cast<SIZE_T>( record._footprint.Offset ),
                                      static_cast<SIZE_T>( record._footprint.Offset + static_cast<uint64>( record._footprint.Footprint.RowPitch ) * record._rowCount ) };
         void*                             pMapped{ nullptr };
         if ( pBuffer == nullptr || isHrSuccess( pBuffer->Map( 0, &readRange, &pMapped ), "Map" ) == false || pMapped == nullptr )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.TakeTextureReadbackFailedMapReadback", "takeTextureReadback: failed to map the readback buffer of ticket %#", ticket._serial );
-            RHITextureTransferDriver::releaseTakenReadback( ring._allocator, std::move( record._span ) );
+            RHITextureTransferDriver::releaseTakenReadback( ring.getAllocator(), std::move( record._span ) );
             return false;
         }
         outBytes.assign( record._layout._sizeBytes, 0 );
@@ -599,7 +599,7 @@ namespace sw
         }
         D3D12_RANGE noWrite{ 0, 0 };
         pBuffer->Unmap( 0, &noWrite );
-        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, std::move( record._span ) );
+        RHITextureTransferDriver::releaseTakenReadback( ring.getAllocator(), std::move( record._span ) );
         if ( record._bDepth != SW_FALSE )
             convertRHIDepth24ToFloat( outBytes.data(), record._layout._width * record._layout._height );
         return true;
@@ -613,7 +613,7 @@ namespace sw
         if ( _pDevice->_readbackTable.take( ticket._serial, record ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
         // 복사가 아직 GPU 에서 도는 중이면 구간에 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(Vulkan 과 같은 꼬리).
-        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, std::move( record._span ), _pDevice->_transferSerials, ticket._serial );
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing.getAllocator(), std::move( record._span ), _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat D3D12RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -695,7 +695,7 @@ namespace sw
             src.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
             src.SubresourceIndex = subresource;
             D3D12_TEXTURE_COPY_LOCATION dst{};
-            dst.pResource       = ring.getSpanResource( span );
+            dst.pResource       = ring.getSpanBuffer( span )._resource.Get();
             dst.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
             dst.PlacedFootprint = footprint;
             pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );

@@ -2596,79 +2596,57 @@ namespace sw
 
     bool D3D12RHIDevice::createStagingRing( D3D12StagingRing& ring, D3D12_HEAP_TYPE heapType, uint64 capacityBytes, uint64 soloMaxBytes )
     {
-        ring._heapType = heapType;
-        if ( createMappedStagingBuffer( heapType, capacityBytes, ring._buffer, ring._pMapped ) == false )
-            return false;
         // 구간 시작 정렬은 텍스처 복사의 배치 오프셋 규칙(512)이다 — 구간 안에서 다시 맞추지 않아도 된다.
-        ring._allocator.initialize( capacityBytes, static_cast<uint64>( D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT ), soloMaxBytes );
-        return true;
+        return ring.initialize( capacityBytes, static_cast<uint64>( D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT ), soloMaxBytes, [this, heapType]( uint64 sizeBytes, D3D12StagingBuffer& outBuffer )
+        { return createMappedStagingBuffer( heapType, sizeBytes, outBuffer ); } );
     }
 
     void D3D12RHIDevice::destroyStagingRing( D3D12StagingRing& ring )
     {
-        {
-            ScopedLock<mutex> soloLock{ ring._soloMutex };
-            destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
-        }
-        destroyMappedStagingBuffer( ring._buffer, ring._pMapped );
-        ring._allocator.shutdown();
+        ring.shutdown( [this]( D3D12StagingBuffer& rBuffer )
+        { destroyMappedStagingBuffer( rBuffer ); } );
     }
 
-    bool D3D12RHIDevice::createMappedStagingBuffer( D3D12_HEAP_TYPE heapType, uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped )
+    bool D3D12RHIDevice::createMappedStagingBuffer( D3D12_HEAP_TYPE heapType, uint64 sizeBytes, D3D12StagingBuffer& outBuffer )
     {
-        pOutMapped = nullptr;
+        outBuffer = D3D12StagingBuffer{};
         void*      pMapped{ nullptr };
-        const bool bCreated = heapType == D3D12_HEAP_TYPE_READBACK ? createMappedReadbackBuffer( sizeBytes, L"ReadbackRing", outBuffer, pMapped ) : createMappedUploadBuffer( sizeBytes, L"UploadRing", outBuffer, pMapped );
+        const bool bCreated = heapType == D3D12_HEAP_TYPE_READBACK ? createMappedReadbackBuffer( sizeBytes, L"ReadbackRing", outBuffer._resource, pMapped )
+                                                                   : createMappedUploadBuffer( sizeBytes, L"UploadRing", outBuffer._resource, pMapped );
         if ( bCreated == false )
         {
             SW_LOG_ERROR_ID( "D3D12.FailedCreateMapD3D12", "Failed to create or map the D3D12 staging upload buffer (%# bytes, _rhi._stagingRingMegabytes · _rhi._stagingSingleMaxMegabytes)", sizeBytes );
             return false;
         }
-        pOutMapped = static_cast<uint8*>( pMapped );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( outBuffer.Get() ), RHIMemoryKind::Staging, computeAllocationBytes( outBuffer.Get() ) );
+        outBuffer._pMapped = static_cast<uint8*>( pMapped );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( outBuffer._resource.Get() ), RHIMemoryKind::Staging, computeAllocationBytes( outBuffer._resource.Get() ) );
         return true;
     }
 
-    void D3D12RHIDevice::destroyMappedStagingBuffer( Microsoft::WRL::ComPtr<ID3D12Resource>& rBuffer, uint8*& pMapped )
+    void D3D12RHIDevice::destroyMappedStagingBuffer( D3D12StagingBuffer& rBuffer )
     {
         // 자원을 놓으면 매핑도 풀린다. 추적기에는 매핑까지 끝난 버퍼만 올렸다.
-        if ( rBuffer != nullptr )
-            getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( rBuffer.Get() ) );
-        rBuffer.Reset();
-        pMapped = nullptr;
+        if ( rBuffer.isValid() )
+            getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( rBuffer._resource.Get() ) );
+        rBuffer = D3D12StagingBuffer{};
     }
 
     RHISubmitResult D3D12RHIDevice::allocateStagingSpan( D3D12StagingRing& ring, uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan )
     {
-        RHIStagingAllocateResult result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
-        if ( result == RHIStagingAllocateResult::Full )
-        {
-            retireCompletedTransfers();
-            result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
-        }
-        // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다(잃은 장치면 Full 도 Rejected, 계약 2).
-        const RHISubmitResult submitResult = RHIStagingRingUtil::completeAllocation( ring._allocator, _transferSerials, result, sizeBytes, "D3D12", pCaller, outSpan );
-        if ( submitResult != RHISubmitResult::Accepted || outSpan.isSolo() == false )
-            return submitResult;
-        // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
-        const ScopedDeferredLog deferredLog;
-        ScopedLock<mutex>       soloLock{ ring._soloMutex };
-        destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
-        if ( createMappedStagingBuffer( ring._heapType, outSpan.getSizeBytes(), ring._soloBuffer, ring._pSoloMapped ) )
-            return RHISubmitResult::Accepted;
-        return RHIStagingRingUtil::rejectSoloBufferFailure( ring._allocator, outSpan, "D3D12", pCaller );
+        const D3D12_HEAP_TYPE heapType = &ring == &_readbackRing ? D3D12_HEAP_TYPE_READBACK : D3D12_HEAP_TYPE_UPLOAD; // 단독 버퍼도 링과 같은 힙이다
+        return ring.allocate(
+            sizeBytes, _transferSerials, "D3D12", pCaller, [this]()
+        { retireCompletedTransfers(); },
+            [this, heapType]( uint64 soloBytes, D3D12StagingBuffer& outBuffer )
+        { return createMappedStagingBuffer( heapType, soloBytes, outBuffer ); },
+            [this]( D3D12StagingBuffer& rBuffer )
+        { destroyMappedStagingBuffer( rBuffer ); }, outSpan );
     }
 
     void D3D12RHIDevice::destroyIdleSoloBuffer( D3D12StagingRing& ring )
     {
-        ScopedLock<mutex> soloLock{ ring._soloMutex };
-        if ( ring._soloBuffer == nullptr )
-            return;
-        // 판정은 락 안에서 한다 — 밖에서 보면 그 사이 다른 스레드가 새 단독 구간을 받아 버퍼를 만들 수 있다.
-        ring._allocator.freeCompleted( _transferSerials.getWatermark() );
-        if ( ring._allocator.hasLiveSolo() )
-            return;
-        destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
+        ring.destroyIdleSolo( _transferSerials, [this]( D3D12StagingBuffer& rBuffer )
+        { destroyMappedStagingBuffer( rBuffer ); } );
     }
 
     bool D3D12RHIDevice::beginTransferJob( D3D12TransferJob& outJob )
