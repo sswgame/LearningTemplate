@@ -8,6 +8,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Editor/Common/EditorExports.h"
+
 #include "Engine/Reflection/TextAddress.h"
 
 namespace sw
