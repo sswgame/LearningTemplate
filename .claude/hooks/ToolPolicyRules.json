@@ -32,6 +32,22 @@
       "hint": "코드를 고치기 전에 `Skill` 로 ponytail 을 부른다(구조 개편이면 장기 이득인 구조 변경은 과감히)."
     },
     {
+      "name": "humanizer-before-comments-and-commits",
+      "tools": [
+        "Edit",
+        "Write",
+        "NotebookEdit",
+        "Bash",
+        "PowerShell"
+      ],
+      "path": "/(Source|Scripts|cmake|Content|Test|Config)/|\\.md$",
+      "shell": "\\bgit\\s+(-C\\s+\\S+\\s+)?commit(?![-\\w])",
+      "requiresAny": [
+        "skill:humanizer"
+      ],
+      "hint": "주석 · 커밋 메시지 · .md 를 쓰기 전에 `Skill` 로 humanizer 를 부르고, 쓴 글을 그 목록으로 훑는다(사용자 결정 2026-11-26)."
+    },
+    {
       "name": "taste-before-editor-ui",
       "tools": [
         "Edit",
