@@ -4,7 +4,7 @@
 		<_listComponent>
 			<ShooterAutoAimControllerComponent _localID="14420210856601955983" _componentName="ShooterAutoAimControllerComponent"
 			                                   _bActive="true"
-			                                   _behaviorTree="game/playground/shooter3d/data/ai/autoaim.bt.xml" />
+			                                   _behaviorTree="guid:41321acdff3b09cb5a2de8d2316ed924" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

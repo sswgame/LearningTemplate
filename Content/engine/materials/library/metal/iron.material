@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="0b94291ac355fa6e39996e36eb068eba"?>
 <!-- 외형 라이브러리 프리셋(metal): 무쇠(어둡고 거칠다). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
-<MaterialDef formatVersion="0" name="Iron" _base="engine/materials/library/metal/base.material">
+<MaterialDef formatVersion="0" name="Iron" _base="guid:efcf6ddf6c4126d00a334310cf234013">
 	<_properties>
 		<item name="_color" defaultValue="0.4 0.39 0.38 1" />
 		<item name="_roughness" defaultValue="0.55" />

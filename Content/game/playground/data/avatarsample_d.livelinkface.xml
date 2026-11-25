@@ -7,7 +7,7 @@
   첫 배율은 ARKit 의 일반 범위로 정한 값이다 — 실제 iPhone 앱으로 얼굴을 움직여 보며 어색한 표정의 배율을 고친다(계획 FacialAnimation F4).
   쓰는 법: 이 머리를 그리는 오브젝트에 LiveLinkFaceComponent 를 더하고 Mapping 을 이 파일로 둔다(UDP 포트를 열므로 프리팹에 넣지 않는다).
 -->
-<LiveLinkFaceMapping _layoutPath="engine/animation/livelinkface.xml">
+<LiveLinkFaceMapping _layoutPath="guid:fb4d1aa497ad2448288bd7509d0980a1">
 	<_listExpression>
 		<LiveLinkFaceExpression _expression="blinkLeft">
 			<_listChannel>

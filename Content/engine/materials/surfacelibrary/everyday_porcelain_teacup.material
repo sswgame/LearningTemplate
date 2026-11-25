@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="5e5a765761a20ee998793f40a1acf4b4"?>
 <!-- 자기 찻잔 — 흰 소지 위 투명 유약(클리어 코트), 볼록한 굽 · 입술은 유약이 얇아 거친 소지가 드러난다(모서리 마모 = 밑 층). 부모(environmentsurface.material)의 값을 바꾸고 Clear Coat 셰이딩 모델(MATERIAL_LOBE_COAT)을 고른 프리셋이다. -->
-<MaterialDef formatVersion="0" name="PorcelainTeacup" _base="engine/materials/environmentsurface.material">
+<MaterialDef formatVersion="0" name="PorcelainTeacup" _base="guid:2de2ddc37fa7786ba07716ca4e1c5ded">
 	<_properties>
 		<item name="_baseColor" defaultValue="0.93 0.94 0.96 1"/>
 		<item name="_roughness" defaultValue="0.35"/>

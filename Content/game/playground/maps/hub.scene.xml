@@ -1,5 +1,5 @@
 <?asset guid="57d6125ff94a46bfb947271e54e65b52"?>
-<Scene formatVersion="3" _base="game/playground/maps/prairie.scene.xml" name="Hub">
+<Scene formatVersion="3" _base="guid:efba2ec29be47bca685fe4f466e144fa" name="Hub">
 	<!-- 마을 — 팩의 시작 맵(gamesettings startMap). 서부 평원(maps/prairie — GF_OpenWorldWestern 의 말 · 법 · 날씨 · 도착 컷씬 · 자동 저장, 스트리밍 셀 16 m)을 바탕으로 물려받고,
 	     플레이어가 장소 · 사물로 장르 미니게임에 들어가고 돌아온다(MinigameFlow). 바탕을 고치면 마을도 따라간다(언리얼 레벨 인스턴스 · Godot 씬 상속과 같은 자리).
 	     CardTableGate(x -6): 카드 탁자 — minigames/cardtable(SubLevel)을 하위 레벨 maps/hub_cardtable 로 더한다(마을이 보인 채로).
@@ -81,7 +81,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.95,0" _localRotation="0,0,0" _localScale="3,0.1,3" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.95,0" _localRotation="0,0,0" _localScale="3,0.1,3" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.866" />
 					<MinigameTriggerComponent _localID="8526823632005175649" _activatorTag="Player" _bOnce="false" _spawnInside="Ignore" _minigame="cardtable" />
 				</_listComponent>
 			</GameObject>
@@ -97,7 +97,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.95,0" _localRotation="0,0,0" _localScale="3,0.1,3" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.95,0" _localRotation="0,0,0" _localScale="3,0.1,3" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" />
 					<MinigameTriggerComponent _localID="8526823632005175649" _activatorTag="Player" _bOnce="false" _spawnInside="Ignore" _minigame="kitdemo_actioncombat" />
 				</_listComponent>
 			</GameObject>
@@ -105,14 +105,14 @@
 		<entity id="304" name="MinigamePortals">
 			<GameObject _schemaVersion="0" _name="MinigamePortals" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<MinigamePortalSpawnerComponent _localID="4824942144226795713" _localPosition="-24,0,32" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _portalPrefab="game/playground/prefabs/minigameportal.prefab.xml" _columnCount="8" _preloadPrefab="game/playground/prefabs/minigamepreload.prefab.xml" _slotSpacing="7,7" />
+					<MinigamePortalSpawnerComponent _localID="4824942144226795713" _localPosition="-24,0,32" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _portalPrefab="guid:48d9122f05cf4e408c5693aee28c27ea" _columnCount="8" _preloadPrefab="guid:29bd9c89679642489fb09ddf6497bde4" _slotSpacing="7,7" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="303" name="Marker">
 			<GameObject _schemaVersion="0" _name="Marker" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="0.866" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -173,7 +173,7 @@
 					<!-- 접속한 계정마다의 폰 — 자기 폰은 씬의 Player(4), 말은 Bessie(5) · Shadow(6). 서버의 폰 · 남의 모습은 프리팹이고 걸음 튜닝은 Player 에서 옮긴다. -->
 					<HubPawnReplicationComponent _localID="7316402985517324461" _componentName="HubPawnReplicationComponent"
 					                             _bActive="true"
-					                             _pawnPrefab="game/playground/prefabs/hubpawn.prefab.xml"
+					                             _pawnPrefab="guid:827ff06a965e4f129ef50af195085978"
 					                             _localPawn="4"
 					                             _tickInterval="0.0333333"
 					                             _smoothingHalfLife="0.05"
@@ -195,7 +195,7 @@
 					</HubPawnReplicationComponent>
 					<!-- 접속한 두 사람의 카드 탁자(턴 중계) — 개발 명령 hub.cards. 손패는 서버가 나눈 것만 HUD 에 보인다. -->
 					<HubCardTableComponent _localID="11840276335901482617" _componentName="HubCardTableComponent" _bActive="true" />
-					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true" _documentPath="game/playground/ui/hub_cards.ui.xml" />
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true" _documentPath="guid:1733b889dcd67cbe0006cf21af50e437" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -211,7 +211,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.2,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.2,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" />
 					<InterpToMovementComponent _localID="1626856420196830213" _segmentSeconds="4" _tickSeconds="0.0166667" _bPingPong="true" _turnRate="0">
 						<_listWaypoint>
 							<item>4,0,0</item>
@@ -231,7 +231,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.2,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.2,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" />
 					<InterpToMovementComponent _localID="1626856420196830213" _segmentSeconds="4" _tickSeconds="0.0166667" _bPingPong="true" _turnRate="0">
 						<_listWaypoint>
 							<item>0,3,0</item>
@@ -251,7 +251,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.2,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.2,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" />
 					<InterpToMovementComponent _localID="1626856420196830213" _segmentSeconds="2" _tickSeconds="0.0166667" _bPingPong="true" _turnRate="30">
 						<_listWaypoint />
 					</InterpToMovementComponent>

@@ -752,12 +752,15 @@ namespace sw::editor
             // 종류가 쓰는 칸만 그린다 — 칸 목록은 종류 표 한 곳이다(`SequenceItemKindInfo::_allowedProperties`).
             for ( const SequenceItemFieldView& view : kArrItemFieldView )
             {
-                string* pText = edit.accessTextField( view._field );
-                if ( pText == nullptr || pKindInfo->allowsField( view._field ) == false )
+                if ( pKindInfo->allowsField( view._field ) == false )
                     continue;
-                bEdited = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SequencerPanelInternal::findFieldLabel( view._field ), view._pStableID ), *pText,
-                                                                 SequencerPanelInternal::findFieldTip( view._field ), view._pDropExtension, view._pMark ) ||
-                          bEdited;
+                string     text       = edit.getFieldText( view._field );
+                const bool bCommitted = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SequencerPanelInternal::findFieldLabel( view._field ), view._pStableID ), text,
+                                                                               SequencerPanelInternal::findFieldTip( view._field ), view._pDropExtension, view._pMark );
+                // 에셋 칸은 반쯤 친 경로가 값이 될 수 없다 — 칸을 떠날 때 넣는다(받지 않는 경로면 값이 그대로다). 글 칸은 치는 동안에도 사본이 따라가 필수 칸 안내가 바로 바뀐다.
+                if ( bCommitted || view._field != SequenceItemField::Prefab )
+                    (void)edit.setFieldText( view._field, text );
+                bEdited = bCommitted || bEdited;
             }
 
             if ( _document.isDraftingItem() )

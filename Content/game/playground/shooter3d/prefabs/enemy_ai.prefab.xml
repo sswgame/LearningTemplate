@@ -7,7 +7,7 @@
 			                                   _possessAtStart="0"
 			                                   _turnRate="6"
 			                                   _arriveDistance="0.3"
-			                                   _behaviorTree="game/playground/shooter3d/data/ai/skeleton.bt.xml" />
+			                                   _behaviorTree="guid:ec7c607cd5ed921cb6aaddd150907da5" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

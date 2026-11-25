@@ -39,6 +39,6 @@
        (시나리오 game/playground/automation/sectionmaterial). -->
   <Rule id="SectionShowcaseGilded" priority="0">
     <When characterTag="Showcase.SectionGilded"/>
-    <SwapMaterial target="Outfit" part="Arms" section="mi_ranger" material="common/materials/kaykit_knight_gilded.material"/>
+    <SwapMaterial target="Outfit" part="Arms" section="mi_ranger" material="guid:a9050f74edcf521276954af2d494db12"/>
   </Rule>
 </AppearanceRuleCatalog>

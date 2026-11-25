@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="b26da1c5d62bb6df6c1b0aa7f16335d8"?>
 <!-- 외형 라이브러리 프리셋(translucent): 얇은 커튼. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
-<MaterialDef formatVersion="0" name="CurtainSheer" _base="engine/materials/library/translucent/base.material">
+<MaterialDef formatVersion="0" name="CurtainSheer" _base="guid:843bd87f676e375f9f5da51a290c658b">
 </MaterialDef>

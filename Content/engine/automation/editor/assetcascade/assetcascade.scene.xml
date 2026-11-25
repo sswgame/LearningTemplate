@@ -16,7 +16,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/automation/editor/assetcascade/parent.material"
+					               _materialPath="guid:a99dbaa114d4fbb1205035c28567be97"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -35,7 +35,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/automation/editor/assetcascade/child.material"
+					               _materialPath="guid:ddb133fee2a433baccb390eefddb6e5b"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />

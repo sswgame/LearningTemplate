@@ -1,5 +1,5 @@
 <?asset guid="03a7b6e371e9dc64234616e597fe9707"?>
-<SkeletonVariant _base="common/models/kaykit/knight/knight.skeleton.xml">
+<SkeletonVariant _base="guid:03273c012fee9c977aa7fb87663429b1">
 	<_listAddedBone>
 		<SkeletonAddedBone _name="tail0" _parentBone="hips">
 			<_referencePose _translation="0,0,-0.2" _rotation="0,0,0,1" _scale="1,1,1" />

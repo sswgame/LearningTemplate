@@ -22,7 +22,7 @@
 		<entity id="3" name="Plate">
 			<GameObject _schemaVersion="0" _name="Plate" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,5" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="game/playground/materials/displacement/displacement_flat.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,5" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="guid:c3c9cc416ee4371f50758714f94977c8" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>

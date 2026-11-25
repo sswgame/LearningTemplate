@@ -21,8 +21,8 @@
 			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
-			                           _animationGraphPath="common/data/anim/ubc_townsfolk.animgraph.xml"
-			                           _animationSetPath="common/models/quaternius/animations/ual1_standard/ual1_standard.animset.xml"
+			                           _animationGraphPath="guid:afc8082939b10b841fc07700d309fd09"
+			                           _animationSetPath="guid:594f05e80f63e6d0d710fedaa21bc48e"
 			                           _initialState="Locomotion"
 			                           _currentState=""
 			                           _stateTime="0"

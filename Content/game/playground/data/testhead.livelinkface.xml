@@ -1,5 +1,5 @@
 <?asset guid="10820b2eaeddf1aac4bc63591089ad33"?>
-<LiveLinkFaceMapping _layoutPath="engine/animation/livelinkface.xml">
+<LiveLinkFaceMapping _layoutPath="guid:fb4d1aa497ad2448288bd7509d0980a1">
 	<_listExpression>
 		<LiveLinkFaceExpression _expression="Happy">
 			<_listChannel>

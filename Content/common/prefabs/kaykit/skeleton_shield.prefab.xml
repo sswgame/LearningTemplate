@@ -1,8 +1,8 @@
 <?asset guid="ec4c8e81f97d9626f3cd568b3e7f8730"?>
-<Prefab formatVersion="1" _base="common/prefabs/kaykit/skeleton_axe.prefab.xml" name="SkeletonShield">
+<Prefab formatVersion="1" _base="guid:4069c4bdcc294bac6dade12803e675ae" name="SkeletonShield">
 	<PrefabOverrides>
 		<Override key="#0244d8c8807cd288">
-			<MeshComponent _meshID="common/models/kaykit/skeleton_shield_small_a.mesh" />
+			<MeshComponent _meshID="guid:31256153b4816675598fb786dc5ed8b2" />
 		</Override>
 		<Override key="#63e709ac676dd304">
 			<RigidBodyComponent _mass="2.5">

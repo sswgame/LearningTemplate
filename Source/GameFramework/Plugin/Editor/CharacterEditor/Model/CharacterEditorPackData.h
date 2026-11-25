@@ -9,8 +9,11 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 namespace sw
 {
@@ -37,8 +40,8 @@ namespace sw::editor
         PROPERTY( AssetPath, Name = "skeleton", Required )
         string _skeletonPath{}; ///< 스켈레톤(`*.skeleton.xml`)
         string _refPosePath{};  ///< 레퍼런스 포즈(`*.refpose.xml`) — 스켈레톤 경로에서 만든다(데이터 칸 아님)
-        PROPERTY( AssetPath, Name = "items", Required )
-        string _itemsPath{}; ///< 장비 아이템 카탈로그(`items.xml`)
+        PROPERTY( Name = "items", Required )
+        AssetRef<ItemCatalog> _itemsPath{}; ///< 장비 아이템 카탈로그(`data/items.xml`) — 저장 꼴은 GUID 참조(`AssetRefBase`)
         PROPERTY( AssetPath, Name = "appearance", Required )
         string _appearanceFolder{}; ///< 외형 데이터 폴더(`data/appearance`)
         PROPERTY( AssetPath, Required )

@@ -90,7 +90,7 @@ namespace sw
         PROPERTY( Category = "Data", DisplayName = "Items", Tooltip = "Item and rank table file (required while items are on)", EditCondition = "_bItems" )
         AssetRef<KartItemCatalog> _itemCatalog;
         PROPERTY( Category = "Data", DisplayName = "Vehicle", Required, Tooltip = "Vehicle tuning every kart drives (*.vehicle.xml)" )
-        AssetRef<KinematicVehicleSettings> _vehicle;
+        AssetRef<KinematicVehicleSettings> _vehicleSettings;
         PROPERTY( Category = "Race", DisplayName = "Bots", Tooltip = "Karts driven by the AI", Min = 1, Max = 7 )
         int32 _botCount;
         PROPERTY( Category = "Race", DisplayName = "Countdown", Min = 0.0, Units = s )

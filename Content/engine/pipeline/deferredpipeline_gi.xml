@@ -6,7 +6,7 @@
 	값(반경 · 조각 · 걸음 · 세기)은 아래 퍼뮤테이션이 정본이다 — 셰이더에 기본값이 없다.
 	고르는 법: `-gv_renderPipeline=engine/pipeline/deferredpipeline_gi.xml`. 시나리오: game/playground/automation/screenspacegi.
 -->
-<RenderPipelineDesc _base="engine/pipeline/deferredpipeline.xml" _name="DeferredPipelineGI">
+<RenderPipelineDesc _base="guid:0aedcbdbe6498f757ed2418be6656a47" _name="DeferredPipelineGI">
 	<_listPass>
 		<RenderGraphPassDesc _name="SSAO" _shaderPath="engine/shaders/gtao.hlsl">
 			<_listPermutation>

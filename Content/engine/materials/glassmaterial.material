@@ -2,7 +2,7 @@
 <?asset guid="d3a34da7fb773e70492bd5081b0acded"?>
 <!-- 반투명 머티리얼. 불투명과 **다른 에셋**이다 — 블렌드 모드는 메시가 아니라 머티리얼의 성질이고,
      알파를 쓰는지에 따라 셰이더 퍼뮤테이션(MATERIAL_BLEND_TRANSLUCENT)도 갈린다. -->
-<MaterialDef formatVersion="0" name="GlassMaterial" _base="engine/materials/defaultmaterial.material" alphaMode="Blend">
+<MaterialDef formatVersion="0" name="GlassMaterial" _base="guid:0e23c2ee4018be638b51655cf03239d2" alphaMode="Blend">
 	<_properties>
 		<item name="_color" defaultValue="0.9 0.6 0.3 0.45" />
 	</_properties>

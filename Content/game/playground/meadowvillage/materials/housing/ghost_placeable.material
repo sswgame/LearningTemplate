@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="13c89abafc574e80bb8db92d18b7bf55"?>
 <!-- 하우징 고스트 — 놓을 수 있는 자리(반투명 초록) -->
-<MaterialDef formatVersion="0" name="housing_ghost_placeable" _base="engine/materials/glassmaterial.material">
+<MaterialDef formatVersion="0" name="housing_ghost_placeable" _base="guid:d3a34da7fb773e70492bd5081b0acded">
 	<_properties>
 		<item name="_color" defaultValue="0.2 0.9 0.3 0.45"/>
 	</_properties>

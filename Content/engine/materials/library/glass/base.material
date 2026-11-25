@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="93cc78322966d2efd10a68ab0bf9046a"?>
 <!-- 외형 라이브러리 갈래 바탕: 유리 — 장면 색 사본을 굴절해 읽는다(scene_refraction.hlsli, 물과 같은 한 벌). MATERIAL_REFRACTION 이 반투명 정렬의 첫 띠(굴절 먼저)로 보낸다 — 차례를 적지 않는다. -->
-<MaterialDef formatVersion="0" name="AppearanceGlass" _base="engine/materials/library/appearance.material" alphaMode="Blend">
+<MaterialDef formatVersion="0" name="AppearanceGlass" _base="guid:dec52472672bb347f0b472ac23617b92" alphaMode="Blend">
 	<_properties>
 		<item name="_color" defaultValue="0.95 0.97 0.97 0" />
 		<item name="_roughness" defaultValue="0.02" />

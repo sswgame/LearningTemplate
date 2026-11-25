@@ -3,7 +3,7 @@
 <!-- 입자 정렬 시나리오(game/playground/automation/vfxsort)의 GPU 방출기 — vfxsort_cpu 와 같은 퍼프이고 CPU 전용 모듈이 없어 GPU 에서 돈다(정렬은 vfx_particle_sort.hlsl). -->
 <VFXEffectDef>
 	<_listEmitter>
-		<VFXEmitterDef _name="Puffs" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Alpha" _bLooping="true"
+		<VFXEmitterDef _name="Puffs" _texturePath="guid:6ccbb6cd99d1e6a55391cd4c91f29516" _blendMode="Alpha" _bLooping="true"
 		               _maxParticles="64" _duration="1" _spawnRate="6" _lifetimeMin="3" _lifetimeMax="3"
 		               _velocityMin="-0.1, 0, -1.6" _velocityMax="0.1, 0, -1.4" _gravity="0, 0, 0">
 			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="1.6" _interpolation="Linear"/><FloatCurveKey _time="1" _value="1.6" _interpolation="Linear"/></_listKey></_sizeOverLife>

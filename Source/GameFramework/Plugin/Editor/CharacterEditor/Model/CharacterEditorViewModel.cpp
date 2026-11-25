@@ -128,7 +128,7 @@ namespace sw::editor
         _paths._socketPath       = data._socketPath;
         _paths._skeletonPath     = data._skeletonPath;
         _paths._refPosePath      = data._refPosePath;
-        _paths._itemsPath        = data._itemsPath;
+        _paths._itemsPath        = data._itemsPath.path();
         _paths._appearanceFolder = data._appearanceFolder;
         _paths._animationSet     = data._animationSet;
         _paths._rigPath          = data._rigPath;

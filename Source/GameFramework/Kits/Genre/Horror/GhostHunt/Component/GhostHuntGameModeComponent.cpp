@@ -136,7 +136,7 @@ namespace sw
 
     GhostHuntGameModeComponent::GhostHuntGameModeComponent()
         : _areaGraph{}
-        , _loot{}
+        , _lootCatalog{}
         , _startRoom{}
         , _seed{ 5 }
         , _bagSlotCount{ 4 }
@@ -181,7 +181,7 @@ namespace sw
 
     bool GhostHuntGameModeComponent::startGame()
     {
-        if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pItemCatalog ) == false || acquireRequired( _areaGraph, _pGraphAsset ) == false || acquireRequired( _loot, _pLoot ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pItemCatalog ) == false || acquireRequired( _areaGraph, _pGraphAsset ) == false || acquireRequired( _lootCatalog, _pLoot ) == false )
             return false;
         const AreaDef* const pStart = _pGraphAsset->findArea( _startRoom );
         if ( pStart == nullptr )

@@ -11,8 +11,8 @@
 			               _attachOwner="None"
 			               _attachOwnerID="0"
 			               _attachComponent="None"
-			               _meshID="common/models/quaternius/nature/grass_common_tall.mesh"
-			               _materialPath="common/models/quaternius/nature/grass_common_tall/materials/grass.material"
+			               _meshID="guid:66a9e1db6dfcd54925f475adcb572cb2"
+			               _materialPath="guid:e837681008a7f34e9fbfa496776fa4fb"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

@@ -36,8 +36,8 @@
 					                 _localScale="22,12.5,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _textureName="game/playground/textures/twod/sky.dds"
-					                 _materialPath="engine/materials/sprite2dpixel.material"
+					                 _textureName="guid:43e9d04e6ccf60e65ce0cdb516a24b24"
+					                 _materialPath="guid:fc92c1367e380a5e52809d5824e9bdbf"
 					                 _sortingLayer="Background"
 					                 _orderInLayer="-10" />
 					<ParallaxLayerComponent _localID="7137138597366102481" _scrollFactor="0,0" _repeatSize="0,0" _referencePoint="13,-6" />
@@ -52,8 +52,8 @@
 					                 _localScale="8,4,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _textureName="game/playground/textures/twod/hills.dds"
-					                 _materialPath="engine/materials/sprite2dpixel.material"
+					                 _textureName="guid:c735862ace1c369418eb8d0f333f268d"
+					                 _materialPath="guid:fc92c1367e380a5e52809d5824e9bdbf"
 					                 _drawMode="Tiled"
 					                 _size="7,1"
 					                 _sortingLayer="Background"
@@ -70,8 +70,8 @@
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<TileMapComponent _localID="10766413655964845934" _tileMapPath="game/playground/maps/twod.tilemap.xml"
-					                          _materialPath="engine/materials/sprite2dlit.material"
+					<TileMapComponent _localID="10766413655964845934" _tileMapPath="guid:42c790abb892b36fb39050a5fdcf383a"
+					                          _materialPath="guid:39c05fe22138bb5dc3f0ba06404fe9e4"
 					                          _sortingLayer="Default"
 					                          _orderInLayer="0"
 					                          _colliderLayer="0"
@@ -88,8 +88,8 @@
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _textureName="game/playground/textures/twod/crate.dds"
-					                 _materialPath="engine/materials/sprite2dlit.material"
+					                 _textureName="guid:fd86459579ee7a212b50b1d906be31a9"
+					                 _materialPath="guid:39c05fe22138bb5dc3f0ba06404fe9e4"
 					                 _sortingLayer="Default"
 					                 _orderInLayer="1" />
 					<ShadowCaster2DComponent _localID="9067662233336966341" _size="1,1" _bUseTileMap="false" />
@@ -104,8 +104,8 @@
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _textureName="game/playground/textures/twod/hero.dds"
-					                 _materialPath="engine/materials/sprite2dlit.material"
+					                 _textureName="guid:674ec6c782849ce0c63a6d9bcc510f9f"
+					                 _materialPath="guid:39c05fe22138bb5dc3f0ba06404fe9e4"
 					                 _sortingLayer="Foreground"
 					                 _orderInLayer="0" />
 					<WidgetComponent _localID="11339505928329980331" _drawSize="64,8" _worldOffset="0,0.75,0" />
@@ -174,8 +174,8 @@
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _textureName="game/playground/textures/twod/panel.dds"
-					                 _materialPath="engine/materials/sprite2dpixel.material"
+					                 _textureName="guid:26501be8dd9237f6f317f2c634bb5165"
+					                 _materialPath="guid:fc92c1367e380a5e52809d5824e9bdbf"
 					                 _drawMode="Sliced"
 					                 _size="7,2"
 					                 _sliceBorder="0.25,0.25,0.25,0.25"

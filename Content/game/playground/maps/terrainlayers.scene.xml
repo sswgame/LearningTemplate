@@ -23,10 +23,10 @@
 			<GameObject _schemaVersion="0" _name="Terrain" _bActive="true">
 				<_listComponent>
 					<TerrainComponent _localID="1728601763249011038" _localPosition="-128,0,-128" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None"
-					                  _heightfieldPath="game/playground/heightfields/valley.heightfield"
-					                  _materialPath="engine/materials/terrain.material"
-					                  _layerWeightsPath="game/playground/heightfields/valley.layerweights"
-					                  _detailTexturePath="engine/textures/terrain/terrain_detail.dds"
+					                  _heightfieldPath="guid:75518446e6f8ea20de63ef832da69631"
+					                  _materialPath="guid:f8349c02da55a1d5c28265c9247af3a9"
+					                  _layerWeightsPath="guid:9b202b1315460ef5dfe237580af37ac6"
+					                  _detailTexturePath="guid:8cb5719f760f68154b72860300cc8b8d"
 					                  _size="256,256"
 					                  _heightMin="0"
 					                  _heightMax="40"

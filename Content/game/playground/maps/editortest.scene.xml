@@ -118,6 +118,6 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="8" name="TestProp" prefab="game/playground/prefabs/testprop.prefab.xml" />
+		<entity id="8" name="TestProp" prefab="guid:11f82e6344740714b4eddc32bfd88be8" />
 	</entities>
 </Scene>

@@ -49,9 +49,6 @@
 
 ## 6. 설계 할 일
 
-### 코어 · 리플렉션
-
-- `[코드]` 멤버 · 지역 · 매개변수 이름 형태(`_camelCase` · `out…` · 단수 컨테이너)를 clang 색인으로 자동 검사(`naming_words.py` 는 정규식이다).
 
 ### 에디터 · 도구
 
@@ -68,7 +65,6 @@
 
 ## 8. 에셋 정체성(GUID)
 
-- **2 단계 데이터 이전:** 모든 갈래를 합친 상태에서 빌드 → `--import-models` → `asset-ids --fix` → `migrate-asset-refs` → `--fix` → 한 커밋. 뒤에 GUID · 데이터베이스 · 팩 색인 단위, `editor.assetidentity` · `assetmove` · `flowimport` · `contentbrowser`, 세이브 옛 판 읽기.
 - **3 단계 원본 저장소 떼기:** 코드(`store:<SHA-256>` · `AssetSourceLocator`)는 있다. 데이터는 원본 2 GB 또는 LFS 비용이 문제일 때.
 
 ## 9. 감사 열린 항목

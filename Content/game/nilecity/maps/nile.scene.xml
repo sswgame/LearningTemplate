@@ -24,7 +24,7 @@
 					                 _bOrthographic="true" />
 					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _catalogPath="game/nilecity/data/nile.cameras.xml"
+					                         _catalogPath="guid:cbcaba6cf2261a7d29c20ce2cea941ef"
 					                         _initialPreset="city"
 					                         _focusPoint="26,0,14"
 					                         _bReadInput="true">
@@ -68,7 +68,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/nilecity/materials/cursor.material"
+					               _materialPath="guid:2832bbce29e9c9322240745e0c2f8c65"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="false" />
@@ -85,7 +85,7 @@
 				<_listComponent>
 					<NileGameModeComponent _localID="3793514620491349462" _componentName="NileGameModeComponent"
 					                       _bActive="true"
-					                       _cityDataPath="game/nilecity/data/city.xml"
+					                       _cityDataPath="guid:b9b78a37f924b6b00dd1d7c53dc18678"
 					                       _autoPlanPath="game/nilecity/data/autoplan.xml"
 					                       _startingMoney="1500"
 					                       _bAutoPlay="false" />
@@ -104,12 +104,12 @@
 					                         _statusAction="Status" />
 					<CityViewComponent _localID="8729144825244003241" _componentName="CityViewComponent"
 					                   _bActive="true"
-					                   _buildingViewPath="game/nilecity/data/buildings.views.xml"
-					                   _groundPrefab="game/nilecity/prefabs/ground.prefab.xml"
-					                   _roadPrefab="game/nilecity/prefabs/road.prefab.xml"
-					                   _modelBuildingPrefab="game/nilecity/prefabs/modelbuilding.prefab.xml"
-					                   _blockBuildingPrefab="game/nilecity/prefabs/blockbuilding.prefab.xml"
-					                   _walkerPrefab="game/nilecity/prefabs/walker.prefab.xml" />
+					                   _buildingViewPath="guid:19e9eb9b00c34ed88428b1e975dff82b"
+					                   _groundPrefab="guid:4fd765a713c513e798d217154532dcbb"
+					                   _roadPrefab="guid:6e1634b5f8bc1b3df6202cf7625cc6bc"
+					                   _modelBuildingPrefab="guid:ad46b28ed66a05e4410802ed533e5c39"
+					                   _blockBuildingPrefab="guid:0a2d41b08b824afbf96953e786e3f5d8"
+					                   _walkerPrefab="guid:9b0d32ccdd12f098be57031c1e7f094a" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -124,8 +124,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/building_type_a.mesh"
-					               _materialPath="game/nilecity/materials/palette.material"
+					               _meshID="guid:07679fcf34b7323d0628b013620b7118"
+					               _materialPath="guid:29ce1e750ae5713e282c51fead5df3d5"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -143,8 +143,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/building_type_b.mesh"
-					               _materialPath="game/nilecity/materials/palette.material"
+					               _meshID="guid:553059eecc329e93042440c7314e1b20"
+					               _materialPath="guid:29ce1e750ae5713e282c51fead5df3d5"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -162,8 +162,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/building_type_c.mesh"
-					               _materialPath="game/nilecity/materials/palette.material"
+					               _meshID="guid:b6d61fe09565c19973498271284ab6e9"
+					               _materialPath="guid:29ce1e750ae5713e282c51fead5df3d5"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -181,8 +181,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/building_type_d.mesh"
-					               _materialPath="game/nilecity/materials/palette.material"
+					               _meshID="guid:83f063b3f7b9447a1f4c880426c74277"
+					               _materialPath="guid:29ce1e750ae5713e282c51fead5df3d5"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -200,8 +200,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/building_type_e.mesh"
-					               _materialPath="game/nilecity/materials/palette.material"
+					               _meshID="guid:96d01080aaa94e8b6a14e24c29c91d4b"
+					               _materialPath="guid:29ce1e750ae5713e282c51fead5df3d5"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -219,8 +219,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/building_type_f.mesh"
-					               _materialPath="game/nilecity/materials/palette.material"
+					               _meshID="guid:fb34fe34171a5f0e6909ba4dd21189ef"
+					               _materialPath="guid:29ce1e750ae5713e282c51fead5df3d5"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -238,8 +238,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/building_type_g.mesh"
-					               _materialPath="game/nilecity/materials/palette.material"
+					               _meshID="guid:2c61f6f5eafadaa4c5179797b6c5c8de"
+					               _materialPath="guid:29ce1e750ae5713e282c51fead5df3d5"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -257,8 +257,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/kenney_nature_kit/crops_dirt_row.mesh"
-					               _materialPath="game/nilecity/materials/nature.material"
+					               _meshID="guid:7cb5552e291b37173b5b8c894fda3ea6"
+					               _materialPath="guid:8b4c93815b75d42e37170b030d0e0776"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -276,8 +276,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/crops_wheat_stage_a.mesh"
-					               _materialPath="game/nilecity/materials/nature.material"
+					               _meshID="guid:422b5661f6436629df195b6702c60d64"
+					               _materialPath="guid:8b4c93815b75d42e37170b030d0e0776"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -295,8 +295,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/crops_wheat_stage_b.mesh"
-					               _materialPath="game/nilecity/materials/nature.material"
+					               _meshID="guid:8314c1a9c4998a88e9b87406bac886b3"
+					               _materialPath="guid:8b4c93815b75d42e37170b030d0e0776"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -314,8 +314,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/fence_low.mesh"
-					               _materialPath="game/nilecity/materials/nature.material"
+					               _meshID="guid:e67e72dc719400f23bb3de574a5edc35"
+					               _materialPath="guid:8b4c93815b75d42e37170b030d0e0776"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -333,8 +333,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/planter.mesh"
-					               _materialPath="game/nilecity/materials/nature.material"
+					               _meshID="guid:695c333b6dddf799f725463e3f4cef9b"
+					               _materialPath="guid:8b4c93815b75d42e37170b030d0e0776"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -352,8 +352,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/statue_block.mesh"
-					               _materialPath="game/nilecity/materials/nature.material"
+					               _meshID="guid:19efbbac93e6f9f1b63f9edb8b4de168"
+					               _materialPath="guid:8b4c93815b75d42e37170b030d0e0776"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -371,8 +371,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/statue_column.mesh"
-					               _materialPath="game/nilecity/materials/nature.material"
+					               _meshID="guid:befbdb37fbd9bc5978ceb206577e248f"
+					               _materialPath="guid:8b4c93815b75d42e37170b030d0e0776"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -390,8 +390,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/statue_head.mesh"
-					               _materialPath="game/nilecity/materials/nature.material"
+					               _meshID="guid:73513ab9bfac2c349a666d26ff6aed86"
+					               _materialPath="guid:8b4c93815b75d42e37170b030d0e0776"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -409,8 +409,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/statue_obelisk.mesh"
-					               _materialPath="game/nilecity/materials/nature.material"
+					               _meshID="guid:f4febe5b942b6181a7c516f83f3023a1"
+					               _materialPath="guid:8b4c93815b75d42e37170b030d0e0776"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -428,8 +428,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/commontree_5.mesh"
-					               _materialPath="common/models/quaternius/nature/commontree_5/materials/bark_normaltree.material"
+					               _meshID="guid:418dac8941392d1e746f7db119a8cb81"
+					               _materialPath="guid:8d2b33a04d428c72ff997621f7d97521"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -437,7 +437,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/commontree_5/materials/leaves_normaltree.material"
+					                      _materialPath="guid:7a29955d26486f9bbd635f68a82ec787"
 					                      _sectionName="leaves_normaltree" />
 				</_listComponent>
 			</GameObject>

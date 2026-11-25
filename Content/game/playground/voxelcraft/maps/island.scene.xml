@@ -135,12 +135,12 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="engine/materials/glassmaterial.material"
+					               _materialPath="guid:d3a34da7fb773e70492bd5081b0acded"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="false" />
 					<VoxelHighlightComponent _localID="15788862186009154187" _componentName="VoxelHighlightComponent" _bActive="true" _player="3"
-					                         _outlinePrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
+					                         _outlinePrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -149,7 +149,7 @@
 				<_listComponent>
 					<VoxelGameModeComponent _localID="6698898816640166858" _componentName="VoxelGameModeComponent"
 					                        _bActive="true"
-					                        _autoPlayPrefab="game/playground/voxelcraft/prefabs/autoplay_ai.prefab.xml"
+					                        _autoPlayPrefab="guid:9916123fb7af96865ecf507801d4e0da"
 					                        _player="3"
 					                        _terrainSeed="20261003"
 					                        _chunkCountX="8"
@@ -169,7 +169,7 @@
 					                        _bAutoPlay="false" />
 					<VoxelWorldViewComponent _localID="7325518840021963471" _componentName="VoxelWorldViewComponent"
 					                         _bActive="true"
-					                         _chunkPrefab="game/playground/voxelcraft/prefabs/chunk.prefab.xml"
+					                         _chunkPrefab="guid:333f65062919d2c3fff424c45f4b7986"
 					                         _chunkBuildsPerFrame="4" />
 				</_listComponent>
 			</GameObject>

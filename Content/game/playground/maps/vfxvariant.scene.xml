@@ -15,7 +15,7 @@
 		<entity id="2" name="Effect">
 			<GameObject _schemaVersion="0" _name="Effect" _bActive="true">
 				<_listComponent>
-					<VFXComponent _localID="7647927963071728401" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _effectPath="engine/vfx/sparks_tinted.vfx.xml" _seed="1" _bPlayOnBegin="true" />
+					<VFXComponent _localID="7647927963071728401" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _effectPath="guid:bae9b81d5cd456aa63b52cff3e5dd217" _seed="1" _bPlayOnBegin="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

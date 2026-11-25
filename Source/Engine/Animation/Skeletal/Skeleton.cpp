@@ -14,6 +14,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
@@ -69,6 +70,8 @@ namespace sw
         , _translationRatio{ 1.0f }
     {
     }
+
+    SkeletonAttachment::SkeletonAttachment() = default;
 
     Skeleton::Skeleton()
         : _listBone{}

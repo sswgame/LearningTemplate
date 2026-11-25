@@ -58,7 +58,7 @@ namespace sw
         vector<AssetRef<AssetRefSampleTarget>> _listReference;
 
         PROPERTY()
-        AssetRef<AssetRefSampleBuiltinTarget> _shape;
+        AssetRef<AssetRefSampleBuiltinTarget> _builtin;
 
         PROPERTY()
         AssetRef<AssetRefSampleCatalog> _catalog;

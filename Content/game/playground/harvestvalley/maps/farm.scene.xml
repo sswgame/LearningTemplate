@@ -24,7 +24,7 @@
 					                 _bOrthographic="true" />
 					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _catalogPath="game/playground/harvestvalley/data/farm.cameras.xml"
+					                         _catalogPath="guid:8fa8833332da472864fe9c4d82d8a315"
 					                         _initialPreset="farm"
 					                         _focusPoint="6,0,1.92"
 					                         _bReadInput="false">
@@ -81,7 +81,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="game/playground/harvestvalley/materials/meadow.material"
+					               _materialPath="guid:621a911d75c1763a6f5529fd097e1c19"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -99,8 +99,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/harvestvalley/models/tent_small_closed.mesh"
-					               _materialPath="engine/materials/defaultmaterial.material"
+					               _meshID="guid:c55868e54b7a7b0b7c13361fe323f06f"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -138,7 +138,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/harvestvalley/materials/shippingbin.material"
+					               _materialPath="guid:9468d91b8166e08eac164caf547c6d95"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -175,8 +175,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/harvestvalley/models/tent_detailed_open.mesh"
-					               _materialPath="engine/materials/defaultmaterial.material"
+					               _meshID="guid:1e7cda011fb4f3c51b6c42669856b36a"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -213,8 +213,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _meshID="guid:9e61849eeb528eebde1f3a2303a5a5ed"
+					               _materialPath="guid:78643eaab3020bfd68700d3e94922b1c"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -251,8 +251,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _meshID="guid:9e61849eeb528eebde1f3a2303a5a5ed"
+					               _materialPath="guid:78643eaab3020bfd68700d3e94922b1c"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -289,8 +289,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _meshID="guid:9e61849eeb528eebde1f3a2303a5a5ed"
+					               _materialPath="guid:78643eaab3020bfd68700d3e94922b1c"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -327,8 +327,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _meshID="guid:9e61849eeb528eebde1f3a2303a5a5ed"
+					               _materialPath="guid:78643eaab3020bfd68700d3e94922b1c"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -365,8 +365,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _meshID="guid:9e61849eeb528eebde1f3a2303a5a5ed"
+					               _materialPath="guid:78643eaab3020bfd68700d3e94922b1c"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -403,8 +403,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _meshID="guid:9e61849eeb528eebde1f3a2303a5a5ed"
+					               _materialPath="guid:78643eaab3020bfd68700d3e94922b1c"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -441,8 +441,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _meshID="guid:9e61849eeb528eebde1f3a2303a5a5ed"
+					               _materialPath="guid:78643eaab3020bfd68700d3e94922b1c"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -479,8 +479,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _meshID="guid:9e61849eeb528eebde1f3a2303a5a5ed"
+					               _materialPath="guid:78643eaab3020bfd68700d3e94922b1c"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -517,8 +517,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _meshID="guid:9e61849eeb528eebde1f3a2303a5a5ed"
+					               _materialPath="guid:78643eaab3020bfd68700d3e94922b1c"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -555,8 +555,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/commontree_1.mesh"
-					               _materialPath="common/models/quaternius/nature/commontree_1/materials/bark_normaltree.material"
+					               _meshID="guid:82be2f79f149f6c94f6e16d4ae33e5f4"
+					               _materialPath="guid:beb58ac46c138dca55b739fe9d9a5c0a"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -564,7 +564,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/commontree_1/materials/leaves_normaltree.material"
+					                      _materialPath="guid:a264702a01d2c2818f2d87debc3aee04"
 					                      _sectionName="leaves_normaltree" />
 					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -599,8 +599,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/commontree_4.mesh"
-					               _materialPath="common/models/quaternius/nature/commontree_4/materials/bark_normaltree.material"
+					               _meshID="guid:0195bd9f5e82039d6394cc4e6dbbc4ca"
+					               _materialPath="guid:dcd4e2f1d4fe99a854ba0bf40f87146e"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -608,7 +608,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/commontree_4/materials/leaves_normaltree.material"
+					                      _materialPath="guid:8c33dfa2a77da54af0bb8b64fd6683a6"
 					                      _sectionName="leaves_normaltree" />
 					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -643,8 +643,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/commontree_2.mesh"
-					               _materialPath="common/models/quaternius/nature/commontree_2/materials/bark_normaltree.material"
+					               _meshID="guid:ae149e071f6ac062c3df46adab584c11"
+					               _materialPath="guid:033e0e56e282fe539fc8009e94f288b2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -652,7 +652,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/commontree_2/materials/leaves_normaltree.material"
+					                      _materialPath="guid:9b2bd000096b5fffacca672cf9174791"
 					                      _sectionName="leaves_normaltree" />
 					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -687,8 +687,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/commontree_3.mesh"
-					               _materialPath="common/models/quaternius/nature/commontree_3/materials/bark_normaltree.material"
+					               _meshID="guid:c8e78b6dbaab847f61641a64b813e2d6"
+					               _materialPath="guid:cdee5cc11aa6a9b8ba3e820bbba376dd"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -696,7 +696,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/commontree_3/materials/leaves_normaltree.material"
+					                      _materialPath="guid:7b822b495adac687b1e094fbd999ca91"
 					                      _sectionName="leaves_normaltree" />
 					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -731,8 +731,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/commontree_5.mesh"
-					               _materialPath="common/models/quaternius/nature/commontree_5/materials/bark_normaltree.material"
+					               _meshID="guid:418dac8941392d1e746f7db119a8cb81"
+					               _materialPath="guid:8d2b33a04d428c72ff997621f7d97521"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -740,7 +740,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/commontree_5/materials/leaves_normaltree.material"
+					                      _materialPath="guid:7a29955d26486f9bbd635f68a82ec787"
 					                      _sectionName="leaves_normaltree" />
 					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -775,8 +775,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/commontree_1.mesh"
-					               _materialPath="common/models/quaternius/nature/commontree_1/materials/bark_normaltree.material"
+					               _meshID="guid:82be2f79f149f6c94f6e16d4ae33e5f4"
+					               _materialPath="guid:beb58ac46c138dca55b739fe9d9a5c0a"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -784,7 +784,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/commontree_1/materials/leaves_normaltree.material"
+					                      _materialPath="guid:a264702a01d2c2818f2d87debc3aee04"
 					                      _sectionName="leaves_normaltree" />
 					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -819,8 +819,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/commontree_2.mesh"
-					               _materialPath="common/models/quaternius/nature/commontree_2/materials/bark_normaltree.material"
+					               _meshID="guid:ae149e071f6ac062c3df46adab584c11"
+					               _materialPath="guid:033e0e56e282fe539fc8009e94f288b2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -828,7 +828,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/commontree_2/materials/leaves_normaltree.material"
+					                      _materialPath="guid:9b2bd000096b5fffacca672cf9174791"
 					                      _sectionName="leaves_normaltree" />
 					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -863,8 +863,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/commontree_4.mesh"
-					               _materialPath="common/models/quaternius/nature/commontree_4/materials/bark_normaltree.material"
+					               _meshID="guid:0195bd9f5e82039d6394cc4e6dbbc4ca"
+					               _materialPath="guid:dcd4e2f1d4fe99a854ba0bf40f87146e"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -872,7 +872,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/commontree_4/materials/leaves_normaltree.material"
+					                      _materialPath="guid:8c33dfa2a77da54af0bb8b64fd6683a6"
 					                      _sectionName="leaves_normaltree" />
 					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -907,8 +907,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/harvestvalley/models/log.mesh"
-					               _materialPath="engine/materials/defaultmaterial.material"
+					               _meshID="guid:3ac4f48463c44a01cef0a08bb1db4111"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -945,8 +945,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/harvestvalley/models/stump_round.mesh"
-					               _materialPath="engine/materials/defaultmaterial.material"
+					               _meshID="guid:06f1e19b321553a4c144f4b9590cf742"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -983,8 +983,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/bush_common_flowers.mesh"
-					               _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/leaves_normaltree.material"
+					               _meshID="guid:b34f4e586a11b4e6738529a9c60faeb9"
+					               _materialPath="guid:284b35ec9a775d35485612fbd25fbfe7"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -992,7 +992,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/flowers.material"
+					                      _materialPath="guid:451183a49602986f9f64d40f9589ee1b"
 					                      _sectionName="flowers" />
 				</_listComponent>
 			</GameObject>
@@ -1008,8 +1008,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/flower_4_group.mesh"
-					               _materialPath="common/models/quaternius/nature/flower_4_group/materials/leaves.material"
+					               _meshID="guid:0e5fb9ab48b8041b172fe5127ba3ea93"
+					               _materialPath="guid:8ef90c7ea84948491d573d870c976936"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -1017,7 +1017,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/flower_4_group/materials/flowers.material"
+					                      _materialPath="guid:218f5aa27a71b06717376361a6263cd7"
 					                      _sectionName="flowers" />
 				</_listComponent>
 			</GameObject>
@@ -1033,8 +1033,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/flower_3_group.mesh"
-					               _materialPath="common/models/quaternius/nature/flower_3_group/materials/leaves.material"
+					               _meshID="guid:47047aa75c27ff63c8fba34c99db5404"
+					               _materialPath="guid:c3411517713bd095fbfe7d567c34b149"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -1042,7 +1042,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/flower_3_group/materials/flowers.material"
+					                      _materialPath="guid:d6a0bbd2b515dc869c57993d6b3251b7"
 					                      _sectionName="flowers" />
 				</_listComponent>
 			</GameObject>
@@ -1058,8 +1058,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/plant_1.mesh"
-					               _materialPath="common/models/quaternius/nature/plant_1/materials/leaves.material"
+					               _meshID="guid:0720b9e2842585db45ac0fa443e26118"
+					               _materialPath="guid:29f421a3e751b7acb64802c13136672c"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1077,8 +1077,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/flower_4_group.mesh"
-					               _materialPath="common/models/quaternius/nature/flower_4_group/materials/leaves.material"
+					               _meshID="guid:0e5fb9ab48b8041b172fe5127ba3ea93"
+					               _materialPath="guid:8ef90c7ea84948491d573d870c976936"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -1086,7 +1086,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/flower_4_group/materials/flowers.material"
+					                      _materialPath="guid:218f5aa27a71b06717376361a6263cd7"
 					                      _sectionName="flowers" />
 				</_listComponent>
 			</GameObject>
@@ -1102,8 +1102,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/flower_3_group.mesh"
-					               _materialPath="common/models/quaternius/nature/flower_3_group/materials/leaves.material"
+					               _meshID="guid:47047aa75c27ff63c8fba34c99db5404"
+					               _materialPath="guid:c3411517713bd095fbfe7d567c34b149"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -1111,7 +1111,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/flower_3_group/materials/flowers.material"
+					                      _materialPath="guid:d6a0bbd2b515dc869c57993d6b3251b7"
 					                      _sectionName="flowers" />
 				</_listComponent>
 			</GameObject>
@@ -1127,8 +1127,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/bush_common_flowers.mesh"
-					               _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/leaves_normaltree.material"
+					               _meshID="guid:b34f4e586a11b4e6738529a9c60faeb9"
+					               _materialPath="guid:284b35ec9a775d35485612fbd25fbfe7"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
@@ -1136,7 +1136,7 @@
 					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
 					                      _attachComponent="#0244d8c8807cd288"
-					                      _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/flowers.material"
+					                      _materialPath="guid:451183a49602986f9f64d40f9589ee1b"
 					                      _sectionName="flowers" />
 				</_listComponent>
 			</GameObject>
@@ -1163,8 +1163,8 @@
 					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
-					                           _animationGraphPath="common/data/anim/ubc_farmer.animgraph.xml"
-					                           _animationSetPath="common/data/anim/ubc_farmer.animset.xml"
+					                           _animationGraphPath="guid:2c00238087cb49febe13f8e381298e10"
+					                           _animationSetPath="guid:081f0aee05c6f64e9b4f3c5a56cb3fc1"
 					                           _initialState="Locomotion"
 					                           _currentState=""
 					                           _stateTime="0"
@@ -1246,7 +1246,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Cube"
-					               _materialPath="game/playground/harvestvalley/materials/target.material"
+					               _materialPath="guid:64825eb98054a320e25cd136f8a257c6"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1275,47 +1275,47 @@
 					<FarmGameModeComponent _localID="12488349250694271848" _componentName="FarmGameModeComponent"
 					                       _bActive="true"
 					                       _playerState="40"
-					                       _cropDataPath="game/playground/harvestvalley/data/crops.xml"
-					                       _weatherPath="game/playground/harvestvalley/data/farm.weather.xml"
+					                       _cropDataPath="guid:9c2564bf5a22995137a67e7208dcda89"
+					                       _weatherPath="guid:12f4e84e144fb052f53afb7c899c79ae"
 					                       _fieldWidth="12"
 					                       _fieldHeight="8"
 					                       _shippingBin="5"
 					                       _shop="6"
 					                       _farmer="33"
-					                       _autoFarmerPrefab="game/playground/harvestvalley/prefabs/autofarmer.prefab.xml"
+					                       _autoFarmerPrefab="guid:d364a28c2d0555ef306c1a5c42fbae52"
 					                       _playerStart="6,0,-1.2"
 					                       _bAutoPlay="false" />
 					<FarmFieldViewComponent _localID="362370289443144604" _componentName="FarmFieldViewComponent"
 					                        _bActive="true"
-					                        _soilPrefab="game/playground/harvestvalley/prefabs/farmsoil.prefab.xml"
-					                        _cropPrefab="game/playground/harvestvalley/prefabs/farmcrop.prefab.xml"
+					                        _soilPrefab="guid:b8ad9e5a7b9f3e0046a12bf228c4fda4"
+					                        _cropPrefab="guid:cf42249762124e01c35eb8fd4a5d0254"
 					                        _grassSoilColor="0.4,0.62,0.28,1"
 					                        _tilledSoilColor="0.58,0.4,0.24,1"
 					                        _wateredSoilColor="0.33,0.22,0.13,1"
 					                        _witheredCropColor="0.55,0.4,0.22,1"
 					                        _cameraRig="1">
 						<_listCropModel>
-							<FarmCropModel _cropID="turnip" _readyModel="game/playground/harvestvalley/models/crop_turnip.mesh" />
-							<FarmCropModel _cropID="onion" _readyModel="game/playground/harvestvalley/models/crop_turnip.mesh" />
-							<FarmCropModel _cropID="carrot" _readyModel="game/playground/harvestvalley/models/crop_carrot.mesh" />
-							<FarmCropModel _cropID="pumpkin" _readyModel="game/playground/harvestvalley/models/crop_pumpkin.mesh" />
-							<FarmCropModel _cropID="corn" _readyModel="game/playground/harvestvalley/models/crops_corn_stage_d.mesh">
+							<FarmCropModel _cropID="turnip" _readyModel="guid:de14c8a83ab18919fd2a4f3ba3f758cb" />
+							<FarmCropModel _cropID="onion" _readyModel="guid:de14c8a83ab18919fd2a4f3ba3f758cb" />
+							<FarmCropModel _cropID="carrot" _readyModel="guid:ecb6be71d2c788b70c4a4d5d2e7414b9" />
+							<FarmCropModel _cropID="pumpkin" _readyModel="guid:fea2c8c7f627888b8a490bc52434a597" />
+							<FarmCropModel _cropID="corn" _readyModel="guid:651e5d557727b26cf46d08c55cc3e88c">
 								<_listGrowingModel>
-									<item>game/playground/harvestvalley/models/crops_corn_stage_a.mesh</item>
-									<item>game/playground/harvestvalley/models/crops_corn_stage_b.mesh</item>
-									<item>game/playground/harvestvalley/models/crops_corn_stage_c.mesh</item>
+									<item>guid:1119bc802bf29d57726ac7dc1590365a</item>
+									<item>guid:1e5a3592bc1770f496d66214dfc8b8d0</item>
+									<item>guid:ab56eb7cdb133844265c796a613abb9f</item>
 								</_listGrowingModel>
 							</FarmCropModel>
 						</_listCropModel>
 						<_listDefaultGrowingModel>
-							<item>game/playground/harvestvalley/models/crops_leafs_stage_a.mesh</item>
-							<item>game/playground/harvestvalley/models/crops_leafs_stage_b.mesh</item>
+							<item>guid:5837a347d86e0ccf4f26819276b80bf9</item>
+							<item>guid:b12627123e55388688bd548f22de15f9</item>
 						</_listDefaultGrowingModel>
 					</FarmFieldViewComponent>
 					<FarmVillageGameModeComponent _localID="1365981938186610330" _componentName="FarmVillageGameModeComponent"
 					                              _bActive="true"
-					                              _scheduleDataPath="game/playground/harvestvalley/data/villagers.schedules.xml"
-					                              _villagerPrefab="game/playground/harvestvalley/prefabs/villager.prefab.xml"
+					                              _scheduleDataPath="guid:0162c80cab265d0b9e1b61ff3c4d2cd9"
+					                              _villagerPrefab="guid:a9e8a957e56c90ae636299fce2a53cf5"
 					                              _navOrigin="-10,0,-8"
 					                              _navWidth="48"
 					                              _navHeight="42"
@@ -1344,8 +1344,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_wagon.mesh"
-					               _materialPath="common/models/quaternius/village/prop_wagon/materials/mi_woodtrim_wear.material"
+					               _meshID="guid:fcf5995a170542fcb13dfef77727314c"
+					               _materialPath="guid:7caceebf921424288a4e865bf2246012"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1363,8 +1363,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/kenney_nature_kit/crops_dirt_row.mesh"
-					               _materialPath="engine/materials/defaultmaterial.material"
+					               _meshID="guid:7cb5552e291b37173b5b8c894fda3ea6"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1382,8 +1382,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/kenney_nature_kit/crops_dirt_single.mesh"
-					               _materialPath="engine/materials/defaultmaterial.material"
+					               _meshID="guid:d9ea7b4532d71f5600b5548c74c88afc"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />

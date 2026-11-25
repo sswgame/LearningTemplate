@@ -15,6 +15,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Engine/Asset/PrefabAssetKind.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Curve/FloatCurve.h"
@@ -224,9 +225,9 @@ namespace sw
 
         PROPERTY( Tooltip = "Item name (event name for Event items)" )
         string _name;
-        /** @brief 스폰: 구간 시작 몇 프레임 전(`_prerollFrames`)부터 꺼 둔 채 만들어 구간 동안 켤 프리팹입니다(언리얼 Spawnable). 다른 종류는 비운다. 글 칸 표(`findTextField`)에 들어 경로 글로 쓴다 — 이름은 GUID 참조 칸 `_prefab` 과 갈라 둔다(GUID 이전 도구가 칸 이름으로 꼴을 가른다). */
-        PROPERTY( AssetPath, AssetType = "Prefab", SkipIfEmpty, Tooltip = "Spawn: prefab spawned inactive before the span and shown during it" )
-        string _spawnPrefab;
+        /** @brief 스폰: 구간 시작 몇 프레임 전(`_prerollFrames`)부터 꺼 둔 채 만들어 구간 동안 켤 프리팹입니다(언리얼 Spawnable). 다른 종류는 비운다. 저장 꼴은 GUID 참조다(`AssetRefBase`). */
+        PROPERTY( SkipIfEmpty, Tooltip = "Spawn: prefab spawned inactive before the span and shown during it" )
+        AssetRef<PrefabAsset> _spawnPrefab;
         /** @brief 카메라 컷: 대상의 카메라 디렉터가 켤 프리셋 id 입니다. 비우면 카메라를 그대로 씁니다. 외형: 대상이 입을 외형 프리셋 id 입니다(필수). */
         PROPERTY( SkipIfEmpty, Tooltip = "Camera cut: preset id the target's camera director turns on (empty: camera as is). Appearance: preset id the target wears (required)" )
         string _preset;
@@ -285,12 +286,16 @@ namespace sw
         [[nodiscard]] float32 computeEaseWeight( float32 frame ) const;
         /** @brief 칸 @p field 가 차 있는지입니다(바인딩은 0 이 아니면 찼다). */
         [[nodiscard]] bool hasField( SequenceItemField field ) const;
-        /** @brief 글 칸 @p field 입니다. 바인딩 · 범위 밖이면 nullptr 입니다(에디터가 칸을 표에서 그린다). */
-        [[nodiscard]] string* accessTextField( SequenceItemField field );
-        /** @brief 글 칸 @p field 입니다(읽기). 바인딩 · 범위 밖이면 nullptr 입니다. */
-        [[nodiscard]] const string* findTextField( SequenceItemField field ) const;
+        /** @brief 칸 @p field 의 글입니다(에셋 칸은 경로). 바인딩 · 범위 밖이면 빈 글입니다(에디터가 칸을 표에서 그린다). */
+        [[nodiscard]] string getFieldText( SequenceItemField field ) const;
+        /** @brief 칸 @p field 에 글을 넣습니다. 글 칸이 아니거나(바인딩 · 범위 밖) 에셋 칸이 받지 않는 글(다른 종류 — `AssetRefBase::assign` 이 알린다)이면 false 이고 값은 그대로입니다. */
+        [[nodiscard]] bool setFieldText( SequenceItemField field, string_view text );
         /** @brief 칸의 PROPERTY 이름(`_spawnPrefab`)입니다. 오류 · 에디터 표식에 씁니다. */
         static const utf8* getFieldPropertyName( SequenceItemField field );
+
+    private:
+        /** @brief 글(`string`)로 든 칸 @p field 입니다. 바인딩 · 에셋 칸 · 범위 밖이면 nullptr 입니다. */
+        [[nodiscard]] const string* findStringField( SequenceItemField field ) const;
     };
 } // namespace sw
 

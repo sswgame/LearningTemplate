@@ -3,7 +3,7 @@
 <!--
   깊은 용암(변형 ②) — 용암 + 허리까지 잠기면(immersion ≥ 0.5) 즉사(무적 존중).
 -->
-<ZoneProfile _base="game/playground/zones/lava.zone.xml">
+<ZoneProfile _base="guid:c070f43a04824203ed2ac3b728a9e82b">
 	<_listModule>
 		<ZoneModuleDef _name="melt" _kind="Action" _condition="immersion &gt;= 0.5">
 			<_listParam>

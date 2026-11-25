@@ -13,7 +13,7 @@
 			               _attachOwner="None"
 			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
-			               _materialPath="game/playground/meadowvillage/materials/housing/wood.material"
+			               _materialPath="guid:54c563144237454fa5cf22c24363fe8d"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
@@ -23,7 +23,7 @@
 			               _attachOwner="None"
 			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
-			               _materialPath="game/playground/meadowvillage/materials/housing/wood.material"
+			               _materialPath="guid:54c563144237454fa5cf22c24363fe8d"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
@@ -33,7 +33,7 @@
 			               _attachOwner="None"
 			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
-			               _materialPath="game/playground/meadowvillage/materials/housing/wood.material"
+			               _materialPath="guid:54c563144237454fa5cf22c24363fe8d"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
@@ -43,7 +43,7 @@
 			               _attachOwner="None"
 			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
-			               _materialPath="game/playground/meadowvillage/materials/housing/wood.material"
+			               _materialPath="guid:54c563144237454fa5cf22c24363fe8d"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
@@ -53,7 +53,7 @@
 			               _attachOwner="None"
 			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
-			               _materialPath="game/playground/meadowvillage/materials/housing/wood.material"
+			               _materialPath="guid:54c563144237454fa5cf22c24363fe8d"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />

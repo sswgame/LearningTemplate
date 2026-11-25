@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="0261918719f56796a1624a0ad658d65b"?>
 <!-- 외형 라이브러리 프리셋(silk): 비단. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
-<MaterialDef formatVersion="0" name="SilkPlain" _base="engine/materials/library/silk/base.material">
+<MaterialDef formatVersion="0" name="SilkPlain" _base="guid:61a95e3c498c467e0c22926366797aa1">
 	<_properties>
 		<item name="_color" defaultValue="0.75 0.62 0.3 1" />
 		<item name="_secondaryColor" defaultValue="0.7 0.58 0.28 1" />

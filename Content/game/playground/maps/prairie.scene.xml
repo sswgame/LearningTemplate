@@ -60,7 +60,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Cube"
-					               _materialPath="game/playground/wildwest/materials/wood.material"
+					               _materialPath="guid:413e73b61a8863801316ad3a2fec441e"
 					               _boundsRadius="0.45"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -94,7 +94,7 @@
 					                 _bOrthographic="true" />
 					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _catalogPath="game/playground/wildwest/data/prairie.cameras.xml"
+					                         _catalogPath="guid:984d4dbe98e41b1400041d011806a384"
 					                         _initialPreset="prairie"
 					                         _focusPoint="0,0,0"
 					                         _bReadInput="false">
@@ -176,7 +176,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Plane"
-					               _materialPath="game/playground/wildwest/materials/sand.material"
+					               _materialPath="guid:11a9dfd64741bceee39915916a8913d5"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -210,7 +210,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#19b3407eb1f9cd74"
 					               _meshID="Capsule"
-					               _materialPath="game/playground/wildwest/materials/rider.material"
+					               _materialPath="guid:bfc19c51b5252a851d4b9e7efa4ce412"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -223,7 +223,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#19b3407eb1f9cd74"
 					               _meshID="Cube"
-					               _materialPath="game/playground/wildwest/materials/hat.material"
+					               _materialPath="guid:cabd7a4fcfa38fafba4adceb33f36eb4"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -236,7 +236,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#19b3407eb1f9cd74"
 					               _meshID="Cube"
-					               _materialPath="game/playground/wildwest/materials/hat.material"
+					               _materialPath="guid:cabd7a4fcfa38fafba4adceb33f36eb4"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -305,19 +305,19 @@
 					                       _attachOwner="None"
 					                       _attachOwnerID="0"
 					                       _attachComponent="#ae80bcb72e918025"
-					                       _meshID="game/playground/wildwest/models/horse.mesh"
-					                       _materialPath="game/playground/wildwest/materials/morgan.material"
+					                       _meshID="guid:623724c33e7fd32bfb1f7cac410166da"
+					                       _materialPath="guid:ec344edc9db843fa844bf154e26de16c"
 					                       _boundsRadius="2.4"
 					                       _gpuSpinSeed="0"
 					                       _bVisible="true"
-					                       _skeletonPath="game/playground/wildwest/models/horse/horse.skeleton.xml"
+					                       _skeletonPath="guid:95c92d73528ec4b31949aedf5d679245"
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
 					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
-					                           _animationGraphPath="game/playground/wildwest/data/horse.animgraph.xml"
-					                           _animationSetPath="game/playground/wildwest/models/horse/horse.animset.xml"
+					                           _animationGraphPath="guid:3f98a3b18dd03b67e2e629040b969a34"
+					                           _animationSetPath="guid:2f1635b5966e9397c2e51755334ac99b"
 					                           _initialState="Gait"
 					                           _currentState=""
 					                           _stateTime="0"
@@ -336,7 +336,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
-					               _materialPath="game/playground/wildwest/materials/hat.material"
+					               _materialPath="guid:cabd7a4fcfa38fafba4adceb33f36eb4"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -413,19 +413,19 @@
 					                       _attachOwner="None"
 					                       _attachOwnerID="0"
 					                       _attachComponent="#ae80bcb72e918025"
-					                       _meshID="game/playground/wildwest/models/horse.mesh"
-					                       _materialPath="game/playground/wildwest/materials/mustang.material"
+					                       _meshID="guid:623724c33e7fd32bfb1f7cac410166da"
+					                       _materialPath="guid:1869faa8090e21596537ab436c35ea06"
 					                       _boundsRadius="2.4"
 					                       _gpuSpinSeed="0"
 					                       _bVisible="true"
-					                       _skeletonPath="game/playground/wildwest/models/horse/horse.skeleton.xml"
+					                       _skeletonPath="guid:95c92d73528ec4b31949aedf5d679245"
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
 					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
-					                           _animationGraphPath="game/playground/wildwest/data/horse.animgraph.xml"
-					                           _animationSetPath="game/playground/wildwest/models/horse/horse.animset.xml"
+					                           _animationGraphPath="guid:3f98a3b18dd03b67e2e629040b969a34"
+					                           _animationSetPath="guid:2f1635b5966e9397c2e51755334ac99b"
 					                           _initialState="Gait"
 					                           _currentState=""
 					                           _stateTime="0"
@@ -444,7 +444,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
-					               _materialPath="game/playground/wildwest/materials/hat.material"
+					               _materialPath="guid:cabd7a4fcfa38fafba4adceb33f36eb4"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -510,7 +510,7 @@
 					                         _possessAtStart="5"
 					                         _turnRate="6"
 					                         _arriveDistance="1"
-					                         _behaviorTree="game/playground/wildwest/data/ai/horse.bt.xml"
+					                         _behaviorTree="guid:e6c3cd4b3048719b4673593c2935d563"
 					                         _ownerObject="4" />
 				</_listComponent>
 			</GameObject>
@@ -523,7 +523,7 @@
 					                         _possessAtStart="6"
 					                         _turnRate="6"
 					                         _arriveDistance="1"
-					                         _behaviorTree="game/playground/wildwest/data/ai/horse.bt.xml"
+					                         _behaviorTree="guid:e6c3cd4b3048719b4673593c2935d563"
 					                         _ownerObject="4" />
 				</_listComponent>
 			</GameObject>
@@ -535,12 +535,12 @@
 					<WesternGameModeComponent _localID="17445800879317630793" _componentName="WesternGameModeComponent"
 					                          _bActive="true"
 					                          _bAutoPlay="false"
-					                          _westernDataPath="game/playground/wildwest/data/western.xml"
+					                          _westernDataPath="guid:7339dc8b0e2e455adadbf6caa677bfb2"
 					                          _player="4"
 					                          _playerState="115"
 					                          _whistleButton="West.Whistle"
 					                          _useButton="West.Use"
-					                          _weatherDataPath="game/playground/wildwest/data/prairie.weather.xml"
+					                          _weatherDataPath="guid:a22d406ba44b947011325e356b55aa55"
 					                          _regionID="frontier"
 					                          _regionBaseTemperature="22"
 					                          _secondsPerDay="1440"
@@ -549,7 +549,7 @@
 					<WesternRiderViewComponent _localID="14839205716633094417" _componentName="WesternRiderViewComponent" _bActive="true" _cameraRig="114" _lowCoreWarning="30" />
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
 					                        _bActive="true"
-					                        _documentPath="game/playground/wildwest/ui/hud.ui.xml" />
+					                        _documentPath="guid:690b60eef6442750d66401a061ff9912" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -564,8 +564,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/wildwest/models/cactus_tall.mesh"
-					               _materialPath="game/playground/wildwest/materials/cactus.material"
+					               _meshID="guid:62a237a14042fc999ea70f3e7d6de141"
+					               _materialPath="guid:207fbf73c66126fc048c235f5a8fc42a"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -583,8 +583,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/wildwest/models/cactus_short.mesh"
-					               _materialPath="game/playground/wildwest/materials/cactus.material"
+					               _meshID="guid:2ddfa838f88dd9eb1672e150832c5148"
+					               _materialPath="guid:207fbf73c66126fc048c235f5a8fc42a"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -602,8 +602,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/wildwest/models/cactus_tall.mesh"
-					               _materialPath="game/playground/wildwest/materials/cactus.material"
+					               _meshID="guid:62a237a14042fc999ea70f3e7d6de141"
+					               _materialPath="guid:207fbf73c66126fc048c235f5a8fc42a"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -621,8 +621,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/wildwest/models/cactus_short.mesh"
-					               _materialPath="game/playground/wildwest/materials/cactus.material"
+					               _meshID="guid:2ddfa838f88dd9eb1672e150832c5148"
+					               _materialPath="guid:207fbf73c66126fc048c235f5a8fc42a"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -640,8 +640,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/wildwest/models/cactus_tall.mesh"
-					               _materialPath="game/playground/wildwest/materials/cactus.material"
+					               _meshID="guid:62a237a14042fc999ea70f3e7d6de141"
+					               _materialPath="guid:207fbf73c66126fc048c235f5a8fc42a"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -659,8 +659,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/wildwest/models/cactus_short.mesh"
-					               _materialPath="game/playground/wildwest/materials/cactus.material"
+					               _meshID="guid:2ddfa838f88dd9eb1672e150832c5148"
+					               _materialPath="guid:207fbf73c66126fc048c235f5a8fc42a"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -678,8 +678,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/wildwest/models/cactus_tall.mesh"
-					               _materialPath="game/playground/wildwest/materials/cactus.material"
+					               _meshID="guid:62a237a14042fc999ea70f3e7d6de141"
+					               _materialPath="guid:207fbf73c66126fc048c235f5a8fc42a"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -697,8 +697,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/wildwest/models/cactus_short.mesh"
-					               _materialPath="game/playground/wildwest/materials/cactus.material"
+					               _meshID="guid:2ddfa838f88dd9eb1672e150832c5148"
+					               _materialPath="guid:207fbf73c66126fc048c235f5a8fc42a"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -716,8 +716,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/rock_medium_1.mesh"
-					               _materialPath="common/models/quaternius/nature/rock_medium_1/materials/rocks.material"
+					               _meshID="guid:92c0a8f3d03ec23789e6acf33b2f1dc3"
+					               _materialPath="guid:c6b4e2eb8acb72d98492f210ac0dc408"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -735,8 +735,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/rock_medium_2.mesh"
-					               _materialPath="common/models/quaternius/nature/rock_medium_2/materials/rocks.material"
+					               _meshID="guid:d4b357c19593fe0ddc44d8cfaf1532d2"
+					               _materialPath="guid:d5fb66477eae656c339f27cf29c9a982"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -754,8 +754,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/rock_medium_3.mesh"
-					               _materialPath="common/models/quaternius/nature/rock_medium_3/materials/rocks.material"
+					               _meshID="guid:04ab0fc1b793c96e779fc0c0119b3cdb"
+					               _materialPath="guid:4c4535f793a6855b981380ec9e0481b0"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -773,8 +773,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/rock_medium_3.mesh"
-					               _materialPath="common/models/quaternius/nature/rock_medium_3/materials/rocks.material"
+					               _meshID="guid:04ab0fc1b793c96e779fc0c0119b3cdb"
+					               _materialPath="guid:4c4535f793a6855b981380ec9e0481b0"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -792,8 +792,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/nature/rock_medium_1.mesh"
-					               _materialPath="common/models/quaternius/nature/rock_medium_1/materials/rocks.material"
+					               _meshID="guid:92c0a8f3d03ec23789e6acf33b2f1dc3"
+					               _materialPath="guid:c6b4e2eb8acb72d98492f210ac0dc408"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -811,8 +811,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _meshID="guid:9e61849eeb528eebde1f3a2303a5a5ed"
+					               _materialPath="guid:78643eaab3020bfd68700d3e94922b1c"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -830,8 +830,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_extension1.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_extension1/materials/mi_woodtrim.material"
+					               _meshID="guid:e3ccca56d9ac8b1099710c6a0389d7ee"
+					               _materialPath="guid:6c7554d26d2cc379d0ec86714a6d08b3"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -849,8 +849,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/wildwest/models/fence_corner.mesh"
-					               _materialPath="game/playground/wildwest/materials/wood.material"
+					               _meshID="guid:d9ad5bc42210e18505746e29b0aedb1e"
+					               _materialPath="guid:413e73b61a8863801316ad3a2fec441e"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -868,8 +868,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/wildwest/models/fence_gate.mesh"
-					               _materialPath="game/playground/wildwest/materials/wood.material"
+					               _meshID="guid:ef93000a2dc5a958d11e8d9d26aaee54"
+					               _materialPath="guid:413e73b61a8863801316ad3a2fec441e"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -887,8 +887,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_single.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_single/materials/mi_woodtrim.material"
+					               _meshID="guid:9e61849eeb528eebde1f3a2303a5a5ed"
+					               _materialPath="guid:78643eaab3020bfd68700d3e94922b1c"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -906,8 +906,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="common/models/quaternius/village/prop_woodenfence_extension1.mesh"
-					               _materialPath="common/models/quaternius/village/prop_woodenfence_extension1/materials/mi_woodtrim.material"
+					               _meshID="guid:e3ccca56d9ac8b1099710c6a0389d7ee"
+					               _materialPath="guid:6c7554d26d2cc379d0ec86714a6d08b3"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -925,8 +925,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/playground/wildwest/models/fence_corner.mesh"
-					               _materialPath="game/playground/wildwest/materials/wood.material"
+					               _meshID="guid:d9ad5bc42210e18505746e29b0aedb1e"
+					               _materialPath="guid:413e73b61a8863801316ad3a2fec441e"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -954,7 +954,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
-					               _materialPath="game/playground/wildwest/materials/wood.material"
+					               _materialPath="guid:413e73b61a8863801316ad3a2fec441e"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -985,7 +985,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Capsule"
-					               _materialPath="game/playground/wildwest/materials/rider.material"
+					               _materialPath="guid:bfc19c51b5252a851d4b9e7efa4ce412"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1013,7 +1013,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Capsule"
-					               _materialPath="game/playground/wildwest/materials/rider.material"
+					               _materialPath="guid:bfc19c51b5252a851d4b9e7efa4ce412"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1045,7 +1045,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Capsule"
-					               _materialPath="game/playground/wildwest/materials/rider.material"
+					               _materialPath="guid:bfc19c51b5252a851d4b9e7efa4ce412"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1076,7 +1076,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
-					               _materialPath="game/playground/wildwest/materials/mustang.material"
+					               _materialPath="guid:1869faa8090e21596537ab436c35ea06"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1107,7 +1107,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
-					               _materialPath="game/playground/wildwest/materials/wood.material"
+					               _materialPath="guid:413e73b61a8863801316ad3a2fec441e"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1138,7 +1138,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
-					               _materialPath="game/playground/wildwest/materials/wood.material"
+					               _materialPath="guid:413e73b61a8863801316ad3a2fec441e"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1169,7 +1169,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
-					               _materialPath="game/playground/wildwest/materials/sand.material"
+					               _materialPath="guid:11a9dfd64741bceee39915916a8913d5"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1200,7 +1200,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
-					               _materialPath="game/playground/wildwest/materials/hat.material"
+					               _materialPath="guid:cabd7a4fcfa38fafba4adceb33f36eb4"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -1283,7 +1283,7 @@
 				<_listComponent>
 					<SequencePlayerComponent _localID="7060533932593436227" _componentName="SequencePlayerComponent"
 					                         _bActive="true"
-					                         _sequencePath="game/playground/wildwest/data/arrival.seq.xml"
+					                         _sequencePath="guid:5ec3543fa0c6a47cba9bd401430c206b"
 					                         _framesPerSecond="30"
 					                         _loopMode="None"
 					                         _playerMovement="Blocked"

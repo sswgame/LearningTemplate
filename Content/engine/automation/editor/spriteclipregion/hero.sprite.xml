@@ -1,5 +1,5 @@
 <?asset guid="d819e6c09386976e41d5384db8ff46e3"?>
-<SpriteClipAsset _atlasPath="engine/textures/pixel/zelda_like/character.dds" _atlasPixelSize="272,256">
+<SpriteClipAsset _atlasPath="guid:b25928d220fc7e6543eadeee841ed8e9" _atlasPixelSize="272,256">
 	<_listFrame>
 		<SpriteClipFrame _uvRect="0.0,0.0,0.05882353,0.125" _borderPixels="0,0,0,0" _durationMs="120" />
 		<SpriteClipFrame _uvRect="0.05882353,0.0,0.05882353,0.125" _borderPixels="0,0,0,0" _durationMs="120" />

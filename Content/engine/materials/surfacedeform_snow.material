@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="0fe6cdf32280d0d845dab15c2b9ed478"?>
 <!-- 눈 지면 — 표면 변형 층을 읽는 지면(surfacedeform.material)에 희고 거친 눈 색과 밝은 격자(크기 가늠용)를 얹는다. -->
-<MaterialDef formatVersion="0" name="SurfaceDeformSnow" _base="engine/materials/surfacedeform.material">
+<MaterialDef formatVersion="0" name="SurfaceDeformSnow" _base="guid:e1360521536d34240642a32657ba62dc">
 	<_properties>
 		<item name="_color" defaultValue="0.92 0.95 1.0 1.0" />
 		<item name="_roughness" defaultValue="0.9" />

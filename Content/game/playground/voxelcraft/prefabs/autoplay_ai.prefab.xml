@@ -4,7 +4,7 @@
 		<_listComponent>
 			<VoxelAutoPlayControllerComponent _localID="8199746220104088750" _componentName="VoxelAutoPlayControllerComponent"
 			                                  _bActive="true"
-			                                  _behaviorTree="game/playground/voxelcraft/data/ai/autoplay.bt.xml" />
+			                                  _behaviorTree="guid:00123f3c083c6edb920fbb45bc034aa2" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

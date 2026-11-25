@@ -30,7 +30,7 @@
 			<GameObject _schemaVersion="0" _name="Weather" _bActive="true">
 				<_listComponent>
 					<GameStateComponent _localID="6673597520240684436" />
-					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="game/playground/data/surfacedemo.weather.xml" _startWeather="clear" _seed="7" />
+					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="guid:09240464dab6a318d55a75c045afab6e" _startWeather="clear" _seed="7" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -45,7 +45,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -60,7 +60,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.04,0" _localRotation="0,0,0" _localScale="4,0.42,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.04,0" _localRotation="0,0,0" _localScale="4,0.42,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:8c9750760f544d393d0405c50debad00" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -75,7 +75,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -90,7 +90,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -105,7 +105,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.08,0" _localRotation="0,0,0" _localScale="4,0.34,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.08,0" _localRotation="0,0,0" _localScale="4,0.34,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -120,14 +120,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.2,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.2,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:51749176fa5a59f663092304d160221f" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="10" name="Pool">
 			<GameObject _schemaVersion="0" _name="Pool" _bActive="true">
 				<_listComponent>
-					<WaterBodyComponent _localID="5729965392566960456" _localPosition="4,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _materialPath="engine/materials/water.material" _size="4,6" _cellSize="0.5" />
+					<WaterBodyComponent _localID="5729965392566960456" _localPosition="4,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _materialPath="guid:1546675df109d0a941207e13ed3a21b6" _size="4,6" _cellSize="0.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -135,7 +135,7 @@
 			<GameObject _schemaVersion="0" _name="Quicksand" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="8,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/sand.zone.xml" _shape="Box" _halfExtents="1.5,1,2.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0">
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="guid:017ad72b980733a1bee80ffb4478a86a" _shape="Box" _halfExtents="1.5,1,2.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0">
 						<_listModuleOverride>
 							<ZoneModuleDef _name="rim" _kind="SurfaceStamp">
 								<_listParam>
@@ -157,9 +157,9 @@
 				<_listComponent>
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="-3,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
-					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Walking_A" _bPlayOnBegin="true" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Walking_A" _bPlayOnBegin="true" />
 					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
-					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml" />
+					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="guid:41d588160a20a771c2a97324cfa7aca3" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 					<CharacterWetnessComponent _localID="11376761862312545975" _wetChannel="Wet" _precipitationValue="wetness" _rainWetPerSecond="0.2" _shelterDistance="20" _immersionWetPerSecond="0.5" _bodyHeight="1.8" />
 					<AbilitySystemComponent _localID="2238906797121419031" _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
@@ -172,14 +172,14 @@
 		<entity id="13" name="SnowGround">
 			<GameObject _schemaVersion="0" _name="SnowGround" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_snow.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="guid:0fe6cdf32280d0d845dab15c2b9ed478" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="14" name="SandGround">
 			<GameObject _schemaVersion="0" _name="SandGround" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localID="163493842152903304" _localPosition="8,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_sand.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="8,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="guid:5897ace58e4dc0fde236a56ef05a47b7" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>

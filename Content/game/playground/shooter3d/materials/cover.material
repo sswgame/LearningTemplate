@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="8365a6f57d7b62f860ace2599e5c2888"?>
 <!-- 아레나 엄폐물(블로커 크기 큐브) — Poly Haven "Container Side"(CC0, 1.94 m 타일) 스캔 텍스처를 월드 좌표로 타일링한다. -->
-<MaterialDef formatVersion="0" name="ShooterCover" _base="engine/materials/pbrworldtile.material">
+<MaterialDef formatVersion="0" name="ShooterCover" _base="guid:fccdbe62f6e4804ccde68cd398d3273f">
 	<_properties>
 		<item name="_worldTileSize" defaultValue="1.94" />
 		<item name="_albedoMap" assetPath="common/textures/polyhaven/container_side/container_side_diff_2k.dds" />

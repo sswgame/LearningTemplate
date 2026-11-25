@@ -16,7 +16,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="game/playground/shooter3d/materials/floor.material"
+					               _materialPath="guid:4d4bf5a109be9458f9b57d913e137a49"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -86,8 +86,8 @@
 					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
-					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
-					                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"
+					                           _animationGraphPath="guid:4acc784c4115bb691da73754fcd0a89c"
+					                           _animationSetPath="guid:5cdc50168836caff61298efe87d056fc"
 					                           _initialState="Idle"
 					                           _currentState=""
 					                           _stateTime="0"
@@ -103,7 +103,7 @@
 					                              _seed="0" />
 					<PairedAnimationComponent _localID="4756347524451515510" _componentName="PairedAnimationComponent"
 					                          _bActive="true"
-					                          _pairedAnimationPath="common/data/anim/bow_shoot.pairedanim.xml"
+					                          _pairedAnimationPath="guid:5d70fdf422cb3d7ef5f7b413a2b3a113"
 					                          _role="Archer"
 					                          _bStartOnPlay="true" />
 				</_listComponent>

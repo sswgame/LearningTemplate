@@ -7,7 +7,7 @@
 		<VFXUserParameterDef _name="Intensity" _value="1, 1, 1, 1"/>
 	</_listUserParameter>
 	<_listEmitter>
-		<VFXEmitterDef _name="Streaks" _texturePath="engine/textures/particles/kenney_particle/trace_07.dds" _blendMode="Alpha" _bLooping="true"
+		<VFXEmitterDef _name="Streaks" _texturePath="guid:d3300a43c023ac49283faa4656fd756b" _blendMode="Alpha" _bLooping="true"
 		               _maxParticles="4000" _duration="1" _spawnRate="3400" _lifetimeMin="1.1" _lifetimeMax="1.1"
 		               _spawnHalfExtents="10, 1, 10" _space="World" _velocityMin="-0.4, -16, -0.4" _velocityMax="0.4, -13, 0.4" _gravity="0, 0, 0" _tintParameter="Intensity">
 			<_collision _mode="Kill" _method="RainOcclusion"/>

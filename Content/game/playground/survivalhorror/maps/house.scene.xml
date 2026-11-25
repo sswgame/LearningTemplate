@@ -64,7 +64,7 @@
 					               _attachOwnerID="0"
 					               _attachComponent="None"
 					               _meshID="Plane"
-					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _materialPath="guid:51749176fa5a59f663092304d160221f"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
@@ -77,7 +77,7 @@
 				<_listComponent>
 					<SurvivalHorrorGameModeComponent _localID="1728830496623915538" _componentName="SurvivalHorrorGameModeComponent"
 					                                 _bActive="true"
-					                                 _areaGraph="game/playground/survivalhorror/data/house.areas.xml"
+					                                 _areaGraph="guid:7e5785bd782e4033a96dccfb6a39973b"
 					                                 _boxSlotCount="8"
 					                                 _seed="3"
 					                                 _moveSpeed="4"
@@ -116,10 +116,10 @@
 					                               _useAction="SurvivalHorror.Use"
 					                               _lightAction="SurvivalHorror.Light"
 					                               _healAction="SurvivalHorror.Heal"
-					                               _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
+					                               _markerPrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5" />
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
 					                        _bActive="true"
-					                        _documentPath="game/playground/survivalhorror/ui/hud.ui.xml" />
+					                        _documentPath="guid:d8ddc71c7f9f4d42a4b14caf34597979" />
 				</_listComponent>
 			</GameObject>
 		</entity>
