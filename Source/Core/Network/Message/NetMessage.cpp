@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Network/Connection/NetEndpoint.h"
+#include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <limits>
@@ -879,6 +880,10 @@ namespace sw
         peers.disconnect( connectionID, NetLinger::none() );
         _listRefusedConnection.push_back( connectionID );
     }
+
+    // 신뢰 메시지를 넘기면 연결을 끊는다 — 정상 클라이언트는 확인받지 못한 신뢰 메시지를 창까지만 보내므로 상한이 창 이상이면 닿지 않는다
+    static_assert( NetRequestLimit::kCommand >= static_cast<uint32>( NetConnection::kReliableWindow ) && NetRequestLimit::kPerTick >= NetRequestLimit::kCommand &&
+                   NetRequestLimit::kBurst >= NetRequestLimit::kPerTick );
 
     bool NetMessageRouter::countOverLimit( int32 connectionID, uint8 kind )
     {
