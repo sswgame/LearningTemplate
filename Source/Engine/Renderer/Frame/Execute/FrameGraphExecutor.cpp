@@ -880,7 +880,7 @@ namespace sw
             constexpr uint32 kDepthSlot = shaderslot::emulated::getSlot( "SceneDepth" );
             cmd.bindShaderResource( sourceSRV, kDepthSlot );
         }
-        cmd.setGraphicsRootConstants( 0, 1, &sourceIndex );
+        cmd.setGraphicsRootConstants( 1, &sourceIndex );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
     }
@@ -1095,7 +1095,7 @@ namespace sw
                 // 앞 단계가 쓴 목록을 다음 단계가 읽는다(상태는 그대로 UAV).
                 graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::cullVisibleInstances() }, cullViewIndex );
                 const RootConstants constants{ batch._batchIndex, static_cast<uint32>( stage._kind ), stage._span };
-                _pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+                _pCmd->setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
                 _pCmd->dispatchThreads( stage._threadCount, 1, 1 );
             }
         }

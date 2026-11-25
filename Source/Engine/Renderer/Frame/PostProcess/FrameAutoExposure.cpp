@@ -257,10 +257,9 @@ namespace sw
         {
             constants._output = static_cast<uint32>( current._uav );
             cmd.setComputePipelineState( histogramPSO );
-            cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+            cmd.setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
             cmd.dispatchCompute( 1, 1, 1 );
             graphPass.transition( ViewGraphResource::autoExposureTarget(), RenderGraphAccess::ShaderRead );
-            context.resetBindingCache();
             context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, current._srv );
             return;
         }
@@ -275,8 +274,8 @@ namespace sw
         beginInfo._depthTarget       = 0;
         beginInfo._width             = 1;
         beginInfo._height            = 1;
-        cmd.beginRenderPass( beginInfo );
-        cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassKind::AutoExposure ) );
+        context.beginRenderPass( beginInfo );
+        context.setPipeline( _psoManager.getEnginePSO( RenderPassKind::AutoExposure ) );
         // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(auto_exposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         if ( bNativeBindless == false )
         {
@@ -285,12 +284,10 @@ namespace sw
             cmd.bindShaderResource( source._srv, kSourceSlot );
             cmd.bindShaderResource( previous._srv, kHistorySlot );
         }
-        cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        cmd.setGraphicsRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
         graphPass.transition( ViewGraphResource::autoExposureTarget(), RenderGraphAccess::ShaderRead );
-        // 측정 그리기는 PSO · 슬롯을 직접 바꿨다 — 톤맵 그리기가 바인딩 캐시를 믿고 PSO 를 건너뛰지 않게 지운다.
-        context.resetBindingCache();
         context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, current._srv );
     }
 } // namespace sw

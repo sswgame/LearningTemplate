@@ -1256,6 +1256,7 @@ namespace sw
                 SW_LOG_ERROR_ONCE_ID( "WebGPU.FrameFenceWaitFailed", "WebGPU: waiting for frame %# to finish failed", busySerial );
             retireFinishedFrames();
         }
+        _frameStreamContext->beginRecording();
         _bindGroupCache.beginFrame(); // 오래 걸지 않은 그룹만 놓는다(`WebGPUBindGroupCache`)
         ensureTimestampQuerySet();
         collectTimestampReadback( _frameFenceRing.getRecordingSlot() ); // 이 칸의 앞 프레임은 끝났다(위 칸 대기)

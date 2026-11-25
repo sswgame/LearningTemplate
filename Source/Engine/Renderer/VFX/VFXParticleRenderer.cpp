@@ -206,7 +206,7 @@ namespace sw
                     arrRoot[Root::kRootColumn0 + column * Root::kFloatsPerColumn + row] = BitUtil::floatToBits( arrColumn[column][row] );
                 }
             }
-            cmd.setGraphicsRootConstants( 0, Root::kRootConstantCount, arrRoot );
+            cmd.setGraphicsRootConstants( Root::kRootConstantCount, arrRoot );
             ++drawnBatchCount;
             if ( bGPUBatch )
             {

@@ -162,7 +162,7 @@ namespace sw
         constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
         if ( bNativeBindless == false )
             cmd.bindShaderResource( srv, kSourceSlot );
-        cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        cmd.setGraphicsRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
     }
 } // namespace sw

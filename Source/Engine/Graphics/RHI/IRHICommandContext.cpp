@@ -19,20 +19,21 @@ namespace sw
     {
     }
 
-    void IRHICommandContext::trackComputeBinding( RHIDescriptorIndex index, bool bUAV, uint32 slot )
+    void IRHICommandContext::resetBindings()
     {
-        if ( slot < kTrackedComputeSlotCount )
-            _arrTrackedCompute[bUAV ? 1 : 0][slot] = index;
+        _bindings         = RHIRecordingBindings{};
+        _computeGroupSize = RHIThreadGroupSize{};
     }
 
-    void IRHICommandContext::clearTrackedComputeBindings()
+    void IRHICommandContext::markBindingsDirty()
     {
-        for ( RHIDescriptorIndex( &arrSlot )[kTrackedComputeSlotCount] : _arrTrackedCompute )
+        for ( RHIShaderSlots& slots : _bindings._arrSlots )
         {
-            for ( RHIDescriptorIndex& index : arrSlot )
-            {
-                index = kInvalidDescriptorIndex;
-            }
+            slots.markAllDirty();
+        }
+        for ( RHIRootConstants& constants : _bindings._arrRootConstants )
+        {
+            constants.markAllDirty();
         }
     }
 
@@ -41,16 +42,131 @@ namespace sw
         if constexpr ( build::kShipping == false )
         {
             RHIComputeBindingLog& log = getContextDevice().getComputeBindingLog();
-            for ( uint32 space = 0; log.isEnabled() && _computePSO != 0 && space < 2; ++space )
+            if ( log.isEnabled() == false || _bindings._computePSO == 0 )
+                return;
+            const RHIShaderSlots& slots = _bindings.getSlots( RHIBindPoint::Compute );
+            for ( const RHIShaderSlotKind kind : { RHIShaderSlotKind::ShaderResource, RHIShaderSlotKind::UnorderedAccess } )
             {
-                for ( uint32 slot = 0; slot < kTrackedComputeSlotCount; ++slot )
+                for ( uint32 slot = 0; slot < RHIShaderSlots::getSlotCount( kind ); ++slot )
                 {
-                    if ( _arrTrackedCompute[space][slot] != kInvalidDescriptorIndex )
-                        log.record( _arrTrackedCompute[space][slot], space == 1, _computePSO, slot );
+                    if ( slots.isBound( kind, slot ) )
+                        log.record( slots.get( kind, slot ), kind == RHIShaderSlotKind::UnorderedAccess, _bindings._computePSO, slot );
                 }
             }
-            clearTrackedComputeBindings();
         }
+    }
+
+    // ------------------------------------------------------------------------------
+    // 바인딩 상태
+    // ------------------------------------------------------------------------------
+    void IRHICommandContext::bindSlot( RHIBindPoint point, RHIShaderSlotKind kind, uint32 firstSlot, uint32 endSlot, RHIDescriptorIndex index, uint32 slot, const utf8* pOperation )
+    {
+        if ( slot < firstSlot || slot >= endSlot )
+        {
+            getContextDevice().getDrawDiagnostics().reportShaderSlotOutOfRange( pOperation, slot, firstSlot, endSlot );
+            return;
+        }
+        _bindings.getSlots( point ).bind( kind, slot, index );
+    }
+
+    void IRHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Graphics, RHIShaderSlotKind::ConstantBuffer, 0, RHIShaderSlots::kConstantBufferCount, constantBufferIndex, slot, "bindConstantBuffer" );
+    }
+
+    void IRHICommandContext::bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Graphics, RHIShaderSlotKind::ShaderResource, 0, RHIShaderSlots::kBufferResourceCount, index, slot, "bindStructuredBuffer" );
+    }
+
+    void IRHICommandContext::bindShaderResource( RHITextureSRVIndex index, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Graphics, RHIShaderSlotKind::ShaderResource, RHIShaderSlots::kBufferResourceCount, RHIShaderSlots::kShaderResourceCount, index, slot, "bindShaderResource" );
+    }
+
+    void IRHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Graphics, RHIShaderSlotKind::UnorderedAccess, 0, shaderslot::kComputeUAVSlotCount, index, slot, "bindGraphicsUAV" );
+    }
+
+    void IRHICommandContext::bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Compute, RHIShaderSlotKind::ConstantBuffer, 0, RHIShaderSlots::kConstantBufferCount, constantBufferIndex, slot, "bindComputeConstantBuffer" );
+    }
+
+    void IRHICommandContext::bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Compute, RHIShaderSlotKind::ShaderResource, 0, RHIShaderSlots::kBufferResourceCount, index, slot, "bindComputeShaderResource" );
+    }
+
+    void IRHICommandContext::bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Compute, RHIShaderSlotKind::UnorderedAccess, 0, RHIShaderSlots::kUnorderedAccessCount, index, slot, "bindComputeUAV" );
+    }
+
+    void IRHICommandContext::writeRootConstants( RHIBindPoint point, uint32 count, const void* pData, uint32 firstDword, const utf8* pOperation )
+    {
+        if ( _bindings.getRootConstants( point ).write( count, pData, firstDword ) == RHIRootConstantWrite::Overflow )
+            getContextDevice().getDrawDiagnostics().reportRootConstantsOverflow( pOperation, firstDword, count, shaderslot::kRootConstantDwords );
+    }
+
+    void IRHICommandContext::setComputeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
+    {
+        writeRootConstants( RHIBindPoint::Compute, num32BitValues, pData, destOffsetIn32BitValues, "setComputeRootConstants" );
+    }
+
+    void IRHICommandContext::setGraphicsRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
+    {
+        writeRootConstants( RHIBindPoint::Graphics, num32BitValues, pData, destOffsetIn32BitValues, "setGraphicsRootConstants" );
+    }
+
+    void IRHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
+    {
+        // 등록되지 않은 핸들도 적는다 — 앞 PSO 를 남겨 두면 다음 드로우가 그것으로 대신 그려진다. 그 드로우는 백엔드가 멈춘다.
+        _bindings.setGraphicsPipeline( pso );
+    }
+
+    void IRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
+    {
+        _bindings._geometry.setVertexBuffer( slot, buffer, stride, offset );
+    }
+
+    void IRHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
+    {
+        _bindings._geometry.setIndexBuffer( buffer, indexStride, offset );
+    }
+
+    void IRHICommandContext::setViewport( const RHIViewport& viewport )
+    {
+        if ( _bRenderPassOpen == false )
+            return; // 패스를 열면 패스 전체로 돌아간다 — 패스 밖에서 건 값은 쓰이지 않는다
+        setViewportNative( viewport );
+        // 가위 = 뷰포트(왼쪽 위가 타깃 밖이면 그만큼 줄인다).
+        const uint32 left   = static_cast<uint32>( MathUtil::max( viewport._x, 0.0f ) );
+        const uint32 top    = static_cast<uint32>( MathUtil::max( viewport._y, 0.0f ) );
+        const uint32 right  = static_cast<uint32>( MathUtil::max( viewport._x + viewport._width, 0.0f ) );
+        const uint32 bottom = static_cast<uint32>( MathUtil::max( viewport._y + viewport._height, 0.0f ) );
+        applyScissorRect( RHIScissorRect{ left, top, MathUtil::max( right, left ) - left, MathUtil::max( bottom, top ) - top } );
+    }
+
+    void IRHICommandContext::setScissorRect( const RHIScissorRect& rect )
+    {
+        if ( _bRenderPassOpen )
+            applyScissorRect( rect );
+    }
+
+    void IRHICommandContext::applyScissorRect( const RHIScissorRect& rect )
+    {
+        // 타깃 밖의 가위는 API 마다 다르다(WebGPU 는 검증 오류) — 여기서 패스 안으로 자른다.
+        const uint32 x = MathUtil::min( rect._x, _passExtent._width );
+        const uint32 y = MathUtil::min( rect._y, _passExtent._height );
+        setScissorRectNative( RHIScissorRect{ x, y, MathUtil::min( rect._width, _passExtent._width - x ), MathUtil::min( rect._height, _passExtent._height - y ) } );
+    }
+
+    RHIRenderPassExtent IRHICommandContext::computePassExtent( const RHIRenderPassBeginInfo& beginInfo, const RHIRenderPassExtent& targetExtent )
+    {
+        return RHIRenderPassExtent{ beginInfo._width > 0 ? MathUtil::min( beginInfo._width, targetExtent._width ) : targetExtent._width,
+                                    beginInfo._height > 0 ? MathUtil::min( beginInfo._height, targetExtent._height ) : targetExtent._height };
     }
 
     namespace
@@ -90,9 +206,21 @@ namespace sw
             }
         }
         recordTextureUse( beginInfo._depthTarget );
-        const RHIRenderPassBeginResult result = beginRenderPassNative( beginInfo );
+        _bindings.resetGraphics();
+        RHIRenderPassExtent            targetExtent{};
+        const RHIRenderPassBeginResult result = beginRenderPassNative( beginInfo, targetExtent );
         _bRenderPassOpen                      = result == RHIRenderPassBeginResult::Begun;
         _bRenderPassNoBackBuffer              = result == RHIRenderPassBeginResult::NoBackBuffer;
+        if ( _bRenderPassOpen == false )
+            return;
+        // 앞 패스의 뷰포트 · 가위가 새지 않게 패스 전체로 연다.
+        _passExtent = computePassExtent( beginInfo, targetExtent );
+        RHIViewport viewport{};
+        viewport._width    = static_cast<float32>( _passExtent._width );
+        viewport._height   = static_cast<float32>( _passExtent._height );
+        viewport._minDepth = 0.0f;
+        viewport._maxDepth = 1.0f;
+        setViewport( viewport );
     }
 
     void IRHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
@@ -164,8 +292,9 @@ namespace sw
     void IRHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
     {
         endRenderPassBefore( "setComputePipelineState" );
-        setComputePipelineStateNative( pso );
-        _computePSO       = pso;
+        if ( pso == _bindings._computePSO )
+            return;
+        _bindings.setComputePipeline( pso );
         _computeGroupSize = pso != 0 ? getContextDevice().getResourceFactory()->getThreadGroupSize( pso ) : RHIThreadGroupSize{};
     }
 
@@ -367,6 +496,15 @@ namespace sw
     {
         endRenderPassBefore( "uavBarrier" );
         uavBarrierNative( buffer );
+    }
+
+    void IRHICommandContext::beginTextureAlias( RHITextureHandle texture )
+    {
+        if ( isTextureHandleValid( texture, "beginTextureAlias" ) == false )
+            return;
+        endRenderPassBefore( "beginTextureAlias" );
+        recordTextureUse( texture );
+        beginTextureAliasNative( texture );
     }
 
     void IRHICommandContext::uavBarrierTexture( RHITextureHandle texture )

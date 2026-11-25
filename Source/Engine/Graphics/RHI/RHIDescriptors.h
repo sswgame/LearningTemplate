@@ -264,6 +264,13 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 렌더 패스가 그리는 크기(px)입니다. */
+    struct RHIRenderPassExtent
+    {
+        uint32 _width{ 0 };
+        uint32 _height{ 0 };
+    };
+
     /**
      * @struct RHIViewport
      * @brief 렌더링 뷰포트 영역입니다. DirectX 규약이며 모든 백엔드가 같습니다.

@@ -29,7 +29,6 @@ namespace sw
         ~D3D11RHICommandContext() override = default;
 
         void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
-        void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override;
         void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         /**
          * @brief D3D11 에 상태 전이는 없지만 바인딩 해저드는 있습니다. 이 텍스처가 바인딩된 PS SRV 슬롯을 해제합니다.
@@ -39,27 +38,20 @@ namespace sw
         void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override;
         /** @brief D3D11 은 UAV 해저드를 런타임이 풀어 의도적으로 아무것도 하지 않습니다. */
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override { (void)texture; }
-        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
-        void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
-        void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void drawNative( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
-        void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
         /** @brief 이 컨텍스트에 `Map(WRITE_DISCARD)` 합니다. Deferred Context 면 런타임이 리스트 단위로 버저닝하고, 즉시 컨텍스트(프레임 스트림)면 다른 스레드의 팩토리 갱신과 같은 버퍼를 다툴 수 있어 `D3D11ImmediateContext::lock()` 으로 묶습니다. */
         void updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        void bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override;
-        void bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
-        void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override;
         void dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
-        void setViewport( const RHIViewport& viewport ) override;
-        void setScissorRect( const RHIScissorRect& rect ) override;
+        void setViewportNative( const RHIViewport& viewport ) override;
+        void setScissorRectNative( const RHIScissorRect& rect ) override;
 
-        /** @brief 디스패치 직전에 `setComputePipelineState` 로 건 컴퓨트 PSO 가 등록된 레코드인지 봅니다. 아니면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
-        void                     requireComputePipelineForDispatch() const;
+        /** @brief 새 기록 스트림입니다(리스트 시작) — 건 것이 없고 네이티브 컨텍스트도 기본 상태다. */
+        void beginRecording();
+        /** @brief 네이티브 컨텍스트 상태가 지워졌습니다(`ClearState` · `ExecuteCommandList( FALSE )` · 바깥 코드) — 걸린 것을 다음 드로우 · 디스패치가 다시 겁니다. */
+        void                     onNativeStateCleared();
         void                     drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
                                                      RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
-        void                     setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void                     setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
         void                     drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
                                                             uint32 countBufferOffset = 0 ) override;
         void                     drawIndexedInstancedNative( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override;
@@ -67,12 +59,9 @@ namespace sw
         void                     beginEventMarker( const utf8* pName ) override;
         void                     writeBreadcrumb( uint32 markerID ) override;
         void                     endEventMarker() override;
-        void                     setPipelineState( RHIPipelineStateHandle pso ) override;
-        void                     setComputePipelineStateNative( RHIPipelineStateHandle pso ) override;
         IRHIDevice&              getContextDevice() const override;
-        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) override;
+        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo, RHIRenderPassExtent& outTargetExtent ) override;
         void                     endRenderPassNative() override;
-        void                     setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
         void                     transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
         void                     copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
         uint64                   findBufferBytes( RHIBufferHandle buffer ) const override;
@@ -83,7 +72,7 @@ namespace sw
     private:
         /**
          * @brief 드로우 본문의 한 길입니다. 그래픽스 파이프라인(@p bIndexed 면 인덱스 버퍼도)을 걸고, 걸었을 때만 @p issue( ID3D11DeviceContext& ) 로 드로우를 냅니다.
-         * @details DX11 은 `setPipelineState` 가 **핸들만 기록**하고, VS/PS/InputLayout, 정점 버퍼, 토폴로지는 드로우 시점에 바인딩합니다.
+         * @details `setPipelineState` 는 **핸들만 기록**하고(공용 기반), 셰이더 · 렌더 상태 · 슬롯 · 정점 버퍼는 드로우 시점에 바뀐 것만 바인딩합니다.
          *          예전에는 드로우 진입점마다 바인딩을 손으로 불렀고, 한 곳이라도 빠뜨리면 그 경로의 드로우가 셰이더도 정점 버퍼도 없이 나가
          *          클리어 색만 남았다. 이제 바인딩 함수는 이 템플릿만 부르고 진입점은 본문만 넘깁니다(언리얼 D3D11 RHI 의 `CommitGraphicsResourceTables` 단일 경로).
          *          템플릿 · 인라인이라 드로우마다 간접 호출 · 할당이 늘지 않습니다.
@@ -99,15 +88,24 @@ namespace sw
         /** @brief bindless 인덱스가 가리키는 구조 버퍼의 SRV 를 반환합니다. 범위 밖이거나 미등록이면 nullptr 입니다. 그래픽스와 컴퓨트 바인딩이 같은 조회를 씁니다. */
         ID3D11ShaderResourceView* findBindlessBufferSRV( RHIBufferSRVIndex index ) const;
         /**
-         * @brief 루트 상수를 흉내 냅니다. 그림자 배열에 쓰고 계약 슬롯의 작은 상수 버퍼를 다시 채워 바인딩합니다.
-         * @details DX11 에는 루트 상수가 없습니다. 그래픽스와 컴퓨트 진입점이 이것을 함께 쓰고, 다른 점은 어느
-         *          스테이지에 바인딩하는가뿐입니다(VS+PS / CS). 상한 검사와 WRITE_DISCARD 재명명 규칙이 두 벌이면 한쪽만 고쳐집니다.
+         * @brief 루트 상수를 흉내 냅니다. 바뀌었으면 계약 슬롯의 작은 상수 버퍼(바인드 포인트마다 하나)를 다시 채워 바인딩합니다.
+         * @details DX11 에는 루트 상수가 없습니다. 그래픽스와 컴퓨트가 이것을 함께 쓰고, 다른 점은 어느 스테이지에 바인딩하는가뿐입니다(VS+PS+HS+DS / CS).
          */
-        void writeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues, bool bCompute );
+        void flushRootConstants( RHIBindPoint point );
+        /** @brief 바뀐 셰이더 슬롯을 겁니다(뗀 칸은 뗀다). 등록되지 않은 번호는 알리고 칸을 비운다. */
+        void flushShaderSlots( RHIBindPoint point );
+        /** @brief t 슬롯 하나를 그래픽스 스테이지에 겁니다(nullptr 이면 뗀다). 버퍼 칸은 VS · PS · HS · DS, 텍스처 칸은 PS 와 정점 쪽이 읽는 칸만 VS · HS · DS 다. */
+        void setGraphicsShaderResource( uint32 slot, ID3D11ShaderResourceView* pSRV );
+        /** @brief u 슬롯 하나를 픽셀 단계에 겁니다(nullptr 이면 뗀다). */
+        void setGraphicsUnorderedAccess( uint32 slot, ID3D11UnorderedAccessView* pUAV );
+        /** @brief 디스패치 직전에 컴퓨트 PSO · 슬롯 · 루트 상수를 겁니다. 등록된 컴퓨트 PSO 가 없으면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
+        void bindComputePipelineForDispatch();
+        /** @brief 즉시 컨텍스트를 바깥 코드가 만졌으면 그림자를 버립니다(`D3D11RHIDevice::_nativeContextSerial`). */
+        void syncNativeState();
         /**
-         * @brief 번호 @p index 의 상수 버퍼를 @p slot 에 겁니다(그래픽스면 VS · PS · CS · HS · DS, 컴퓨트면 CS). 페이지 구간이면 `*SetConstantBuffers1` 오프셋으로 겁니다(감사 R-4).
+         * @brief 번호 @p index 의 상수 버퍼를 @p slot 에 겁니다(그래픽스면 VS · PS · HS · DS, 컴퓨트면 CS). 무효 번호면 뗍니다. 페이지 구간이면 `*SetConstantBuffers1` 오프셋으로 겁니다(감사 R-4).
          */
-        void bindConstantBufferAt( RHIBufferSRVIndex index, uint32 slot, bool bCompute );
+        void bindConstantBufferAt( RHIDescriptorIndex index, uint32 slot, RHIBindPoint point );
         /**
          * @brief 스테이지 @p stage(`D3D11ConstantBufferBindings` 순서)의 @p slot 에 상수 버퍼를 겁니다. @p firstConstant 가 `kWholeBuffer` 면 버퍼 전체, 아니면 구간입니다.
          * @details 그림자와 같으면 건너뛴다. 같은 버퍼를 오프셋만 바꿔 걸 때, 드라이버가 커맨드 리스트를 지원하지 않는 지연 컨텍스트에서만 빈 칸을 먼저 건다

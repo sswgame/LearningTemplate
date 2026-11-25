@@ -27,7 +27,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
-#include "Engine/Graphics/RHI/RHIGeometryBindings.h"
+#include "Engine/Graphics/RHI/RHIRecordingBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
@@ -54,17 +54,14 @@ namespace sw
      */
     struct OpenGLRecordingState
     {
-        RHIGeometryBindings _geometry; ///< setVertexBuffer · setIndexBuffer 로 건 정점 슬롯과 인덱스 버퍼(드로우 때 건다 — RHIGeometryBindings)
-        /// @brief 지금 텍스처가 바인딩된 유닛의 비트마스크(비트 i는 유닛 i)입니다. beginRenderPass 가 이 유닛들만 해제합니다.
-        uint64 _boundTextureUnitMask{ 0 };
-
-        RHIPipelineStateHandle _boundGraphicsPSO{ 0 };
-        RHIPipelineStateHandle _boundComputePSO{ 0 }; ///< setComputePipelineState 가 마지막으로 설정한 컴퓨트 PSO. dispatchCompute 가 이 프로그램을 쓴다.
-        /// @brief 지금 렌더 패스 타깃의 높이(px)입니다. 기본 프레임버퍼에서는 뷰포트의 y 를 아래 원점으로 뒤집는 데 씁니다(`setViewport`).
+        const RHIShaderSlots*  _pLastFlushedSlots{ nullptr };                   ///< 슬롯을 마지막으로 낸 표(스트림 · 바인드 포인트). 비교만 하고 읽지 않는다 — 다르면 이쪽 것을 모두 다시 건다
+        uint64                 _arrBoundSlotMask[RHIShaderSlots::kKindCount]{}; ///< GL 에 지금 걸린 슬롯 비트(종류마다)
+        RHIPipelineStateHandle _boundNativeGraphicsPSO{ 0 };                    ///< 렌더 상태를 건 그래픽스 PSO(0 이면 모름)
+        /// @brief 지금 렌더 패스 타깃의 높이(px)입니다. 기본 프레임버퍼에서는 뷰포트의 y 를 아래 원점으로 뒤집는 데 씁니다(`setViewportNative`).
         uint32 _renderTargetHeight{ 0 };
         /// @brief 지금 렌더 패스가 기본 프레임버퍼(창의 백버퍼, GL_LOWER_LEFT)에 그리는지 나타냅니다.
         uint8 _bDefaultFramebuffer{ SW_FALSE };
-        /// @brief setScissorRect 가 GL_SCISSOR_TEST 를 켜 두었는지 나타냅니다. setViewport 와 beginRenderPass 가 끄고, blitTexture 는 그동안만 끕니다.
+        /// @brief GL_SCISSOR_TEST 를 켜 두었는지 나타냅니다. 렌더 패스 안에서만 켜지고, blitTexture 는 그동안만 끕니다.
         uint8 _bScissorEnabled{ SW_FALSE };
     };
 } // namespace sw
@@ -271,9 +268,6 @@ namespace sw
             uint32 _buffer{ 0 };        ///< GL 버퍼 이름. 0 이면 없다
         };
         struct OpenGLTextureRecord;
-
-        /** @brief setComputeRootConstants 의 실제 용량(dword)입니다. 네 백엔드 공통 안전값은
-         *         shaderslot::kRootConstantDwords(DX12 와 Vulkan 의 루트 상수, 푸시 상수 크기)입니다. */
 
         /// @brief 드로우 때 바인딩할 버퍼와 텍스처 슬롯입니다.
         struct BindlessResourceRecord
@@ -489,7 +483,7 @@ namespace sw
         [[nodiscard]] uint32 getReadbackBuffer( const RHIStagingSpan& span ) const;
 
         /** @brief 컴퓨트 루트 상수 UBO 를 확보합니다. */
-        [[nodiscard]] bool ensureComputeRootConstantUbo();
+        [[nodiscard]] bool ensureRootConstantUbo( RHIBindPoint point );
         /** @brief MRT 합성 FBO 를 확보합니다. */
         uint32 ensureCompositeFboMrt( const RHITextureHandle* pColor, const uint16* pColorSlice, const uint8* pColorMip, uint32 colorCount, RHITextureHandle depth, uint32 depthSlice,
                                       uint32 depthMip );
@@ -566,8 +560,6 @@ namespace sw
         RHITimestampRing  _timestampRing;  ///< 칸마다 적은 슬롯. 칸은 프레임 펜스 링의 기록 칸이다(`_frameFenceRing.getRecordingSlot`)
         RHITimestampFrame _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
 
-        uint32 _arrComputeRootConstantShadow[shaderslot::kRootConstantDwords];
-
         RHIHandleTable<RHIPipelineStateHandle, OpenGLPipelineStateRecord> _pipelineStates;
 
         RHIReleaseQueue _releaseQueue;
@@ -602,7 +594,7 @@ namespace sw
         ContextThreadBinding _contextThreadBinding;
 
         // 8바이트보다 작은 필드는 끝에 모은다. 큰 필드 사이에 끼면 필드마다 패딩이 생긴다.
-        uint32 _computeRootConstantUbo;
+        uint32 _arrRootConstantUbo[RHIRecordingBindings::kBindPointCount];
         uint32 _stagingRingBuffer;  ///< 스테이징 링 PBO 이름. 0 이면 링이 없다(GL 4.4 미만) — 업로드는 Rejected 다
         uint32 _readbackRingBuffer; ///< 되읽기 링 PBO 이름. 0 이면 링이 없다(GL 4.4 미만) — 텍스처 되읽기는 Rejected 다
         int8   _lastVsync;          ///< -1이면 아직 정하지 않았고, 0/1은 마지막으로 적용한 값이다.

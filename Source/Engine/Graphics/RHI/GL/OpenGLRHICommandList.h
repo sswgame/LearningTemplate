@@ -37,8 +37,10 @@ namespace sw
          *         (RenderThread 가 이미 바인딩했어도 해가 없는 재확인입니다). */
         void beginCommandList() override
         {
-            if ( _pDevice != nullptr )
-                (void)_pDevice->bindGraphicsContext(); // 못 잡으면 디바이스가 시한이 지난 뒤 오류로 남긴다(acquireGraphicsContextBlocking)
+            if ( _pDevice == nullptr )
+                return;
+            _context.beginRecording();
+            (void)_pDevice->bindGraphicsContext(); // 못 잡으면 디바이스가 시한이 지난 뒤 오류로 남긴다(acquireGraphicsContextBlocking)
         }
         void endCommandList() override {}
         void writeTimestamp( uint32 slotIndex ) override

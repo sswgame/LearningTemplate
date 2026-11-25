@@ -15,6 +15,7 @@ namespace sw
 {
     class IRHIPassCommandList;
     struct RenderGraphPassContext;
+    struct RHIRenderPassBeginInfo;
     class ShaderBindingLayout;
 
     /**
@@ -65,6 +66,7 @@ namespace sw
          *          디바이스를 잃는다(GPU-AV: "binding 25 Descriptor index 0 is uninitialized").
          */
         RHIPipelineStateHandle _lastBindPSO{ 0 };
+        RHIPipelineStateHandle _boundPSO{ 0 }; ///< 이 패스가 마지막으로 건 PSO(`setPipeline`) — 다른 PSO 를 걸면 슬롯이 비므로 `_lastBindPSO` 를 잊는다
         /**
          * @brief 이 패스가 어느 컬링 슬롯의 결과를 쓸지 정합니다. 뷰 번호 n 의 시점이 2n, 그림자가 2n + 1 입니다(`kCullSlotsPerView`).
          * @details 그림자 패스만 그림자 슬롯을 쓰고, 나머지는 지금 그리는 뷰의 슬롯을 쓴다. 컬링 결과는 절두체에 종속되므로
@@ -86,6 +88,11 @@ namespace sw
         RHIPipelineStateHandle     _lastLayoutPSO{ 0 };
         const ShaderBindingLayout* _pLastLayout{ nullptr };
 
+        /** @brief 렌더 패스를 엽니다. 패스를 열면 커맨드 리스트가 PSO 와 슬롯을 비우므로(`IRHICommandContext`) 바인딩 캐시도 잊습니다 — 패스 기록은 리스트를 직접 열지 않고 이것을 부른다. */
+        void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo );
+        /** @brief PSO 를 겁니다. 다른 PSO 면 커맨드 리스트가 슬롯을 비우므로 바인딩 캐시도 잊습니다 — 패스 기록은 리스트에 직접 걸지 않고 이것을 부른다. */
+        void setPipeline( RHIPipelineStateHandle pso );
+
         /**
          * @brief "마지막으로 바인딩한 것" 캐시를 모두 지웁니다. PSO 와 버퍼 핸들이 무효가 되는 시점(디바이스 교체)에 부릅니다.
          * @details 핸들 값은 **디바이스 안에서만** 식별자 역할을 한다. 새 디바이스의 PSO 가 옛 디바이스의 PSO 와 같은 값을
@@ -100,6 +107,7 @@ namespace sw
             _lastCbRegistryVersion = 0;
             _lastCbLayoutHash      = 0;
             _lastBindPSO           = 0;
+            _boundPSO              = 0;
             _lastLayoutPSO         = 0;
             _pLastLayout           = nullptr;
         }

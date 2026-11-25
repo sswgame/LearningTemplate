@@ -31,6 +31,8 @@ namespace sw
         }
         ~D3D12RHICommandContext() override = default;
 
+        /** @brief 새 네이티브 리스트에 기록을 시작합니다 — 걸린 것이 없다(`D3D12RecordingState` 를 되돌리는 자리와 짝이다). */
+        void beginRecording() { resetBindings(); }
         /** @brief 아직 기록 시작 전이면 얼로케이터와 리스트를 Reset 하고 기록 상태로 표시합니다. */
         void ensureRecording();
         /** @brief 이 컨텍스트가 기록 중인 네이티브 커맨드 리스트를 반환합니다. */
@@ -47,34 +49,22 @@ namespace sw
         ID3D12GraphicsCommandList* commandListForRecord();
 
         void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
-        void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override;
         void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override;
         /** @brief 앨리어싱 배리어(앞 리소스를 특정하지 않는다)를 기록합니다 — 힙에 겹쳐 놓은 텍스처의 프레임 첫 쓰기 앞. */
-        void beginTextureAlias( RHITextureHandle texture ) override;
+        void beginTextureAliasNative( RHITextureHandle texture ) override;
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override;
         /** @brief 텍스처 전이를 `ResourceBarrier` 한 번으로 냅니다(배열 크기만큼씩). 단일 `prepareTextureFor*Native` 도 원소 하나로 이 길을 지난다. */
         void transitionTexturesNative( const RHITextureTransition* pTransition, uint32 count ) override;
-        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
-        void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
-        void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void drawNative( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
-        void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
         /** @brief 버퍼의 이번 프레임 슬롯에 씁니다. 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다. */
         void                     updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        void                     bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override;
-        void                     bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
-        void                     bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override;
         void                     dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
-        void                     setViewport( const RHIViewport& viewport ) override;
-        void                     setScissorRect( const RHIScissorRect& rect ) override;
+        void                     setViewportNative( const RHIViewport& viewport ) override;
+        void                     setScissorRectNative( const RHIScissorRect& rect ) override;
         void                     drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
                                                      RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
-        void                     setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,
-                                                          uint32 destOffsetIn32BitValues = 0 ) override;
-        void                     setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,
-                                                           uint32 destOffsetIn32BitValues = 0 ) override;
         void                     drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
                                                             uint32 countBufferOffset = 0 ) override;
         void                     drawIndexedInstancedNative( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override;
@@ -82,12 +72,9 @@ namespace sw
         void                     beginEventMarker( const utf8* pName ) override;
         void                     writeBreadcrumb( uint32 markerID ) override;
         void                     endEventMarker() override;
-        void                     setPipelineState( RHIPipelineStateHandle pso ) override;
-        void                     setComputePipelineStateNative( RHIPipelineStateHandle pso ) override;
         IRHIDevice&              getContextDevice() const override;
-        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) override;
+        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo, RHIRenderPassExtent& outTargetExtent ) override;
         void                     endRenderPassNative() override;
-        void                     setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
         void                     transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
         void                     transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count ) override;
         void                     copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
@@ -105,26 +92,24 @@ namespace sw
          * @return 인덱스가 범위 밖이거나 슬롯이 비어 있으면 0 입니다.
          */
         D3D12_GPU_VIRTUAL_ADDRESS resolveBufferAddress( RHIDescriptorIndex index, bool bUAV, bool bConstantBuffer ) const;
-        /** @brief 그래픽스(또는 컴퓨트) t 슬롯에 SRV 뷰를 적습니다 — 텍스처 · 구조 버퍼가 같은 테이블이다. */
-        void bindSRVView( bool bCompute, RHIDescriptorIndex index, uint32 slot );
         /** @brief 등록된 bindless 인덱스의 오프라인 뷰 핸들입니다(슬롯 테이블 복사 원본). 없으면 ptr 0 입니다. */
-        D3D12_CPU_DESCRIPTOR_HANDLE resolveOfflineView( RHIDescriptorIndex index, bool bUAV ) const; /**
-                                                                                                      * @brief 바뀐 t/u 슬롯 테이블을 온라인 블록에 확정해 루트 테이블로 바인딩합니다. 드로우와 디스패치 직전에 부릅니다(Vulkan 의 flushSlotSet 에 해당합니다).
-                                                                                                      * @param bCompute true 면 컴퓨트 바인드 포인트(t 와 u), false 면 그래픽스(t 만).
-                                                                                                      * @return 바뀐 테이블을 모두 바인딩했으면 true 입니다. 온라인 블록을 빌리지 못해 바인딩하지 못했으면 false 이고, 부르는 쪽은 그 드로우나 디스패치를 건너뜁니다.
-                                                                                                      *         주의: 실패를 삼키고 그리면 이전 드로우의 테이블, 이 리스트에서 처음이면 **바인딩된 적 없는 테이블**을 읽어 장치 제거로 이어집니다.
-                                                                                                      */
-        bool flushSlotTables( bool bCompute );
+        D3D12_CPU_DESCRIPTOR_HANDLE resolveOfflineView( RHIDescriptorIndex index, bool bUAV ) const;
+        /**
+         * @brief 바뀐 셰이더 슬롯과 루트 상수를 겁니다 — b 는 루트 CBV, t/u 는 바뀐 테이블만 온라인 블록에 확정한 루트 테이블이다. 드로우와 디스패치 직전에 부릅니다(Vulkan 의 flushSlotSet 에 해당합니다).
+         * @return 바뀐 것을 모두 걸었으면 true 입니다. 온라인 블록을 빌리지 못해 걸지 못했으면 false 이고, 부르는 쪽은 그 드로우나 디스패치를 건너뜁니다.
+         *         주의: 실패를 삼키고 그리면 이전 드로우의 테이블, 이 리스트에서 처음이면 **바인딩된 적 없는 테이블**을 읽어 장치 제거로 이어집니다.
+         */
+        [[nodiscard]] bool flushBindings( RHIBindPoint point );
+        /** @brief 드로우 하나의 준비입니다 — PSO · 위상 · 슬롯 · 정점(@p bIndexed 면 인덱스도). 걸 수 없으면 false 이고 드로우를 내지 않습니다. 모든 드로우 진입점이 부릅니다. */
+        [[nodiscard]] bool prepareDraw( bool bIndexed );
         /** @brief 슬롯 배열을 온라인 블록에 복사하고 테이블 GPU 핸들을 반환합니다. 바인딩되지 않은 슬롯은 nullView 로 채웁니다. */
         [[nodiscard]] bool writeSlotTable( const D3D12_CPU_DESCRIPTOR_HANDLE* pSlots, uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE nullView, D3D12_GPU_DESCRIPTOR_HANDLE& outTable );
         /** @brief 이 리스트의 온라인 블록에서 count 개를 bump 할당합니다. 블록이 차면 디바이스에서 하나 더 빌립니다. */
         bool allocateOnlineDescriptors( uint32 count, uint32& outBase );
-        /** @brief 활성 PSO 가 읽는 정점 버퍼 슬롯(메시 · 인스턴스 슬롯 스트림)만 바인딩합니다. 읽는 슬롯에 버퍼가 없거나 설정한 버퍼가 파괴됐으면 알리고 false 를 반환하며, 부르는 쪽은 드로우를 버립니다(네 백엔드가 같습니다). */
-        [[nodiscard]] bool bindMeshVertexBufferForDraw();
-        /** @brief 활성 그래픽스 PSO 를 네이티브 리스트에 바인딩합니다(바뀌었을 때만). PSO 가 없으면 false 이고, 드로우를 내지 않습니다. */
-        [[nodiscard]] bool bindActiveGraphicsPSO();
-        /** @brief 디스패치 직전에 `setComputePipelineState` 로 건 컴퓨트 PSO 가 등록된 레코드인지 봅니다. 아니면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
-        void requireComputePipelineForDispatch() const;
+        /** @brief PSO 가 읽는(@p layout) 정점 버퍼 슬롯(메시 · 인스턴스 슬롯 스트림)만 바인딩합니다. 읽는 슬롯에 버퍼가 없거나 설정한 버퍼가 파괴됐으면 알리고 false 를 반환하며, 부르는 쪽은 드로우를 버립니다(네 백엔드가 같습니다). */
+        [[nodiscard]] bool bindMeshVertexBufferForDraw( const RHIVertexLayout& layout );
+        /** @brief 디스패치 하나의 준비입니다 — 컴퓨트 PSO · 슬롯 · 루트 상수. 등록된 컴퓨트 PSO 가 없으면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
+        [[nodiscard]] bool prepareDispatch();
         /** @brief 건 인덱스 버퍼를 겁니다. 걸지 않았거나 부서졌으면 알리고 false 이며 부르는 쪽은 드로우를 버립니다(네 백엔드가 같다 — `RHIBufferBinding::bindForDraw`). */
         [[nodiscard]] bool bindIndexBufferForDraw();
         /** @brief @p texture 의 @p range 를 @p newState 로 옮기는 배리어를 바로 냅니다. */

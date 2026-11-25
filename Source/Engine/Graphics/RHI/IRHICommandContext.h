@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Engine/Graphics/RHI/IRHICommandList.h"
+#include "Engine/Graphics/RHI/RHIRecordingBindings.h"
 
 namespace sw
 {
@@ -27,6 +28,10 @@ namespace sw
      *            (`RHI.RenderPassInterrupted`, 언리얼 RHI 검증과 같다). 부르는 쪽은 `endRenderPass` 를 먼저 부르거나 입력을 패스 전에 건다.
      *          - **드로우는 열린 패스 안에서만** 나간다. 패스가 없으면 알리고 버린다(`RHI.DrawSkippedNoRenderPass`). 백버퍼가 없던 패스(`RHIRenderPassBeginResult::NoBackBuffer`)만
      *            조용히 버린다.
+     *          - **패스를 열면 그래픽스 파이프라인 · 셰이더 슬롯 · 정점 · 인덱스가 비고 뷰포트 · 가위는 패스 전체다**(WebGPU · Metal 의 인코더와 같다). 패스 안의 것은 패스를 연 뒤에 건다.
+     *          - **다른 파이프라인을 걸면 그 바인드 포인트의 셰이더 슬롯이 빈다**(그래픽스는 정점 슬롯도). 같은 파이프라인을 다시 거는 것은 아무것도 바꾸지 않는다.
+     *          바인딩 · 루트 상수 · 뷰포트 규약은 이 기반의 상태(`RHIRecordingBindings`) 하나이고, 백엔드는 드로우 · 디스패치 직전에 바뀐 것만 네이티브로 낸다 — 슬롯을 거는 호출은
+     *          가상 호출 하나로 끝난다. 예전에는 다섯 백엔드가 슬롯 표를 따로 들어 PSO 바꿈 · 슬롯 범위 · 루트 상수 넘침 · 뷰포트의 가위가 저마다 달랐다.
      *          예전에는 백엔드마다 따로 지켜, Vulkan 만 패스 안의 업로드가 패스를 닫고 그 뒤 드로우를 조용히 버렸고(에디터 UI 가 화면에서 사라졌다) DX11 · DX12 · GL 은
      *          같은 위반이 그냥 지나가 시나리오가 놓쳤다. 이제 어느 백엔드로 돌려도 같은 위반이 같은 오류다. `beginCommandList` · `endCommandList` 는 리스트 쪽에만 뜻이 있다.
      */
@@ -40,6 +45,24 @@ namespace sw
 
         void beginCommandList() override {}
         void endCommandList() override {}
+
+        // ------------------------------------------------------------------------------
+        // 바인딩 상태 — 여기서 적고, 백엔드는 드로우 · 디스패치 직전에 낸다
+        // ------------------------------------------------------------------------------
+        void setViewport( const RHIViewport& viewport ) final;
+        void setScissorRect( const RHIScissorRect& rect ) final;
+        void setPipelineState( RHIPipelineStateHandle pso ) final;
+        void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) final;
+        void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) final;
+        void setComputeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) final;
+        void setGraphicsRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) final;
+        void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) final;
+        void bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) final;
+        void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) final;
+        void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) final;
+        void bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) final;
+        void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) final;
+        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) final;
 
         // ------------------------------------------------------------------------------
         // 렌더 패스
@@ -66,11 +89,6 @@ namespace sw
         void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) final;
         void dispatchThreads( uint32 threadCountX, uint32 threadCountY, uint32 threadCountZ ) final;
         void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) final;
-        /**
-         * @brief 컴퓨트 슬롯에 건 버퍼 번호를 기억합니다 — 다음 디스패치가 걸린 PSO 와 함께 `RHIComputeBindingLog` 에 적는다(버퍼 보기). 개발 구성에서만 부른다(`RHICommandListForwarder`).
-         * @details 번호를 걸 때 적지 않는 것은 PSO 를 뒤에 거는 자리가 있어서다 — 디스패치 순간의 PSO 가 그 번호를 읽는 셰이더다. 디스패치가 적으면 비운다(앞 셰이더가 건 번호를 다음 PSO 의 것으로 적지 않게).
-         */
-        void trackComputeBinding( RHIDescriptorIndex index, bool bUAV, uint32 slot );
         void prepareTextureForShaderRead( RHITextureHandle texture ) final;
         void prepareTextureForRenderTarget( RHITextureHandle texture ) final;
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) final;
@@ -82,6 +100,7 @@ namespace sw
         void copyBufferRegion( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) final;
         void uavBarrier( RHIBufferHandle buffer ) final;
         void uavBarrierTexture( RHITextureHandle texture ) final;
+        void beginTextureAlias( RHITextureHandle texture ) final;
 
         // ------------------------------------------------------------------------------
         // 기록 경로의 상수 버퍼 쓰기 — 한 프레임에 한 버퍼는 한 번(`IRHIDevice::getConstantBufferWriteLog`)
@@ -92,8 +111,17 @@ namespace sw
     protected:
         /** @brief 이 문맥을 만든 디바이스입니다. 드로우 진단(`IRHIDevice::getDrawDiagnostics`)을 거기서 받는다 — 진단 횟수는 디바이스 멤버다. */
         virtual IRHIDevice& getContextDevice() const = 0;
-        /** @brief 네이티브 패스를 엽니다. 열린 패스는 기반이 이미 닫았다. 상태 전이는 여기서 패스를 열기 전에 끝낸다. */
-        virtual RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) = 0;
+        /**
+         * @brief 네이티브 패스를 엽니다. 열린 패스는 기반이 이미 닫았고 뷰포트 · 가위는 기반이 이어서 건다. 상태 전이는 여기서 패스를 열기 전에 끝낸다.
+         * @param outTargetExtent 첫 첨부(그 밉)의 크기입니다. 패스 크기는 이것과 @p beginInfo 의 크기 중 작은 쪽이다(`computePassExtent`).
+         */
+        virtual RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo, RHIRenderPassExtent& outTargetExtent ) = 0;
+        /** @brief 요청한 크기(0 이면 타깃 크기)를 타깃 안으로 자른 패스 크기입니다. 네이티브 패스의 렌더 영역과 기본 뷰포트가 같은 값을 씁니다. */
+        static RHIRenderPassExtent computePassExtent( const RHIRenderPassBeginInfo& beginInfo, const RHIRenderPassExtent& targetExtent );
+        /** @brief 열린 패스의 뷰포트를 겁니다. 가위는 건드리지 않는다 — 기반이 이어서 건다. */
+        virtual void setViewportNative( const RHIViewport& viewport ) = 0;
+        /** @brief 열린 패스의 가위를 겁니다. 패스 크기 안으로 이미 잘랐습니다. */
+        virtual void setScissorRectNative( const RHIScissorRect& rect ) = 0;
         /** @brief 열린 네이티브 패스를 닫습니다. 기반이 열린 패스가 있을 때만 부른다. */
         virtual void endRenderPassNative()                                                                                                                                      = 0;
         virtual void drawNative( uint32 vertexCount, uint32 startVertex )                                                                                                       = 0;
@@ -102,7 +130,6 @@ namespace sw
         virtual void drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer, uint32 countBufferOffset ) = 0;
         virtual void drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
                                                 uint32 countBufferOffset )                                                                                                      = 0;
-        virtual void setComputePipelineStateNative( RHIPipelineStateHandle pso )                                                                                                = 0;
         virtual void dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )                                                      = 0;
         virtual void dispatchIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )                                                                      = 0;
         virtual void prepareTextureForShaderReadNative( RHITextureHandle texture )                                                                                              = 0;
@@ -122,10 +149,24 @@ namespace sw
         virtual void uavBarrierNative( RHIBufferHandle buffer )                                                                                                     = 0;
         /** @brief `uavBarrierTexture` 의 백엔드 몸통입니다(핸들 0 은 기반이 걸렀고 렌더 패스는 닫혀 있다). */
         virtual void uavBarrierTextureNative( RHITextureHandle texture ) = 0;
+        /** @brief `beginTextureAlias` 의 백엔드 몸통입니다(핸들 0 은 기반이 걸렀고 렌더 패스는 닫혀 있다). 겹쳐 놓기가 없는 백엔드는 할 일이 없다. */
+        virtual void beginTextureAliasNative( RHITextureHandle texture ) { (void)texture; }
         /** @brief 버퍼의 이번 프레임 슬롯(DX11 은 이 리스트의 판)에 씁니다. 두 번째 쓰기 진단은 기반이 이미 했다. */
         virtual void updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
 
+        /** @brief 네이티브 기록 스트림을 새로 열었습니다(리스트 시작 · 프레임 스트림의 새 조각) — 걸린 것이 없다. 백엔드가 스트림을 여는 자리에서 부릅니다. */
+        void resetBindings();
+        /** @brief 네이티브 바인딩을 다른 것이 지웠습니다(DX11 `ClearState`, GL 의 다른 바인드 포인트) — 걸린 것을 다음 드로우 · 디스패치가 다시 냅니다. */
+        void markBindingsDirty();
+
     private:
+        /** @brief 종류의 칸([@p firstSlot, @p endSlot) 안)에 겁니다. 칸이 범위 밖이면 @p pOperation 이름으로 알리고 버립니다. */
+        void bindSlot( RHIBindPoint point, RHIShaderSlotKind kind, uint32 firstSlot, uint32 endSlot, RHIDescriptorIndex index, uint32 slot, const utf8* pOperation );
+        /** @brief 루트 상수를 씁니다. 블록을 넘으면 @p pOperation 이름으로 알리고 버립니다. */
+        void writeRootConstants( RHIBindPoint point, uint32 count, const void* pData, uint32 firstDword, const utf8* pOperation );
+        /** @brief 가위를 패스 안으로 잘라 겁니다. */
+        void applyScissorRect( const RHIScissorRect& rect );
+
         /** @brief 패스 밖의 일 @p pOperation 앞에서 열린 패스를 닫습니다. 열려 있었으면 알린다(`RHIDrawDiagnostics::reportRenderPassInterrupted`) — 닫기는 그대로 한다. */
         void endRenderPassBefore( const utf8* pOperation );
         /** @brief 드로우를 내도 되는지 봅니다. 패스가 없으면 백버퍼가 없던 패스면 조용히, 아니면 알리고 false 입니다. */
@@ -138,18 +179,16 @@ namespace sw
         /** @brief (개발 구성) 이번 프레임이 @p texture 의 전이 · 복사 · 렌더 타깃을 기록한다고 적습니다 — 전송 판정(`IRHIDevice::beginTextureUpload`)이 읽는다. */
         void recordTextureUse( RHITextureHandle texture );
 
-    private:
-        static constexpr uint32 kTrackedComputeSlotCount = 8; ///< 슬롯 종류마다 기억하는 칸(binding_slots.hlsli 의 컴퓨트 슬롯보다 넉넉하다)
-
-        /** @brief 앞 디스패치 뒤에 건 컴퓨트 버퍼를 지금 PSO 와 함께 기록하고(기록이 켜져 있을 때만) 비웁니다. */
+        /** @brief (개발 구성) 컴퓨트 슬롯에 건 버퍼를 지금 PSO 와 함께 `RHIComputeBindingLog` 에 적습니다(버퍼 보기 — 기록이 켜져 있을 때만). */
         void recordComputeBindings();
-        void clearTrackedComputeBindings();
+
+    protected:
+        RHIRecordingBindings _bindings; ///< 이 스트림에 건 것 — 쓰는 쪽은 기반, 백엔드는 낸 것을 표시한다
 
     private:
-        RHIDescriptorIndex     _arrTrackedCompute[2][kTrackedComputeSlotCount]; ///< [0] SRV · [1] UAV 슬롯에 걸린 번호
-        RHIPipelineStateHandle _computePSO{ 0 };                                ///< 걸려 있는 컴퓨트 PSO
-        RHIThreadGroupSize     _computeGroupSize{};                             ///< 걸려 있는 컴퓨트 PSO 의 그룹 크기(`setComputePipelineState`)
-        uint8                  _bRenderPassOpen         : 1;
-        uint8                  _bRenderPassNoBackBuffer : 1;
+        RHIRenderPassExtent _passExtent{};       ///< 열린 패스의 크기
+        RHIThreadGroupSize  _computeGroupSize{}; ///< 걸려 있는 컴퓨트 PSO 의 그룹 크기(`setComputePipelineState`)
+        uint8               _bRenderPassOpen         : 1;
+        uint8               _bRenderPassNoBackBuffer : 1;
     };
 } // namespace sw

@@ -33,6 +33,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIGeometryBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
@@ -57,7 +58,7 @@ namespace sw
     /**
      * @struct D3D12SlotTableState
      * @brief 바인드 포인트(그래픽스, 컴퓨트) 하나의 t/u 슬롯 테이블 상태입니다. 언리얼 FD3D12DescriptorCache 의 SRV/UAV 캐시에 해당합니다.
-     * @details bind*() 는 오프라인 힙의 뷰 핸들을 슬롯에 기록해 두기만 하고, 드로우나 디스패치 직전에 flushSlotTables 가 바뀐
+     * @details 공용 슬롯 표(`RHIShaderSlots`)의 번호를 오프라인 힙의 뷰 핸들로 푼 것이다. 드로우나 디스패치 직전에 flushBindings 가 바뀐
      *          테이블만 온라인(셰이더 가시) 힙 블록에 복사해 루트 테이블로 바인딩한다. 바인딩되지 않은 슬롯은 null 뷰로 채운다.
      */
     struct D3D12SlotTableState
@@ -85,16 +86,11 @@ namespace sw
         /// @brief 이 리스트가 빌린 온라인 힙 블록들입니다. 리스트가 닫힐 때 GPU 펜스 뒤에 반납합니다(releaseOnlineBlocksDeferred).
         vector<uint32> _listOnlineBlock;
         /// @brief 지금 쓰는 온라인 블록의 커서와 끝입니다(셰이더 가시 힙 인덱스). 같으면 블록이 없다는 뜻입니다.
-        uint32                 _onlineCursor;
-        uint32                 _onlineEnd;
-        RHIGeometryBindings    _geometry; ///< setVertexBuffer · setIndexBuffer 로 건 정점 슬롯과 인덱스 버퍼(드로우 때 건다 — RHIGeometryBindings)
-        RHIPipelineStateHandle _activeGraphicsPSO;
-        D3D_PRIMITIVE_TOPOLOGY _activeTopology;   ///< 지금 PSO 의 위상입니다(드로우가 건다)
-        RHIPipelineStateHandle _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
-        /** @brief _pCmdList 에 실제로 SetPipelineState 가 나간 PSO 핸들입니다.
-         *  드로우가 _activeGraphicsPSO 와 같으면 다시 설정하지 않습니다. Reset() 직후에는
-         *  0 으로 되돌려야 합니다(그 리스트에는 아직 아무 PSO 도 설정되지 않아 캐시가 무효입니다). */
-        RHIPipelineStateHandle _boundNativeGraphicsPSO;
+        uint32 _onlineCursor;
+        uint32 _onlineEnd;
+        /** @brief _pCmdList 에 실제로 SetPipelineState 가 나간 PSO 핸들입니다(그래픽스든 컴퓨트든 리스트에 하나다). 드로우 · 디스패치가 같은 PSO 면 다시 설정하지 않습니다.
+         *  Reset() 직후에는 0 으로 되돌려야 합니다(그 리스트에는 아직 아무 PSO 도 설정되지 않아 캐시가 무효입니다). */
+        RHIPipelineStateHandle _boundNativePSO;
         RHITextureHandle       _arrActiveColorTarget[kMaxColorAttachments];
         RHITextureHandle       _activeDepthTarget;
         uint8                  _bActiveSwapchainRT : 1;
@@ -113,11 +109,7 @@ namespace sw
             , _listOnlineBlock{}
             , _onlineCursor{ 0 }
             , _onlineEnd{ 0 }
-            , _geometry{}
-            , _activeGraphicsPSO{ 0 }
-            , _activeTopology{ D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST }
-            , _activeComputePSO{ 0 }
-            , _boundNativeGraphicsPSO{ 0 }
+            , _boundNativePSO{ 0 }
             , _arrActiveColorTarget{}
             , _activeDepthTarget{ 0 }
             , _bActiveSwapchainRT{ SW_FALSE }
@@ -444,6 +436,7 @@ namespace sw
             D3D12_CPU_DESCRIPTOR_HANDLE _rtvHandle{}; ///< 고른 면의 RTV(없으면 0)
             D3D12_CPU_DESCRIPTOR_HANDLE _dsvHandle{}; ///< 고른 면의 DSV(없으면 0)
             DXGI_FORMAT                 _format = DXGI_FORMAT_UNKNOWN;
+            RHIRenderPassExtent         _extent{}; ///< 고른 밉의 크기
             uint8                       _bHasRTV{ SW_FALSE };
             uint8                       _bHasDSV{ SW_FALSE };
             uint8                       _bSliceInRange{ SW_FALSE }; ///< 고른 (밉, 면) 이 범위 안에 있고 그 뷰가 있다.
@@ -653,6 +646,8 @@ namespace sw
         void publishBindlessReadSlot( RHIDescriptorIndex index, BindlessReadRegistry registry, const BindlessResourceRecord& record );
         /** @brief 번호 @p index 가 고른 등록표(@p bUAV)에 살아 있으면 그 읽기 칸을, 아니면 nullptr 를 줍니다(락 없음 — 기록 경로의 바인딩이 부른다). */
         const BindlessReadSlot* findBindlessReadSlot( RHIDescriptorIndex index, bool bUAV ) const;
+        /** @brief 걸지 않은 b 슬롯이 읽는 0 버퍼의 주소입니다. */
+        D3D12_GPU_VIRTUAL_ADDRESS getNullConstantBufferAddress() const { return _nullConstantBuffer != nullptr ? _nullConstantBuffer->GetGPUVirtualAddress() : 0; }
         /** @brief bindless 번호 @p index 를 기록 경로에서 비웁니다(값은 번호가 다시 나갈 때까지 남긴다). `_bindlessMutex` 배타 락 아래에서 부릅니다. */
         void retireBindlessReadSlot( RHIDescriptorIndex index );
         /**
@@ -887,6 +882,7 @@ namespace sw
         vector<uint8>                                     _listPipelineLibraryBlob; ///< 라이브러리를 만든 바이트 — 라이브러리가 사본 없이 가리키므로 라이브러리보다 오래 산다
         RHIPipelineCacheFile                              _pipelineCacheFile;
         mutex                                             _pipelineLibraryMutex; ///< 라이브러리에서 꺼내기를 줄 세운다(같은 이름을 두 스레드가 함께 꺼내면 안 된다 — D3D12 문서). 잎 락
+        Microsoft::WRL::ComPtr<ID3D12Resource>            _nullConstantBuffer;   ///< 걸지 않은 b 슬롯이 읽는 0 버퍼(루트 CBV 는 null 을 읽을 수 없다)
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawIndexedCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _dispatchCommandSignature;

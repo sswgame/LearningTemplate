@@ -178,7 +178,7 @@ namespace sw
             const bool            bTiles = mip == HZBLayout::kTileMip && constants._tileColumns > 0;
             const uint32          countX = bTiles && target._occlusionColumns > level._width ? target._occlusionColumns : level._width;
             const uint32          countY = bTiles && target._occlusionRows > level._height ? target._occlusionRows : level._height;
-            cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+            cmd.setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
             cmd.dispatchThreads( countX, countY, 1 );
         }
         barriers.end();

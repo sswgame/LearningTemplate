@@ -16,30 +16,23 @@ namespace sw
         explicit OpenGLRHICommandContext( OpenGLRHIDevice* pDevice );
         ~OpenGLRHICommandContext() override = default;
 
+        /** @brief 새 기록 스트림입니다(프레임 시작 · 리스트 시작) — 건 것이 없다. GL 상태는 하나라 앞 스트림이 남긴 것은 다음 드로우 · 디스패치가 뗍니다. */
+        void beginRecording();
+
         void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
-        void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override;
         void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         /** @brief OpenGL 은 리소스 상태를 추적하지 않습니다. 의도적으로 아무것도 하지 않습니다. */
         void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override { (void)texture; }
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override;
-        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
-        void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
-        void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void drawNative( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
-        void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
         /** @brief 버퍼의 이번 프레임 슬롯에 씁니다. 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다. */
         void                     updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        void                     bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override;
-        void                     bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
-        void                     bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override;
         void                     dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
-        void                     setViewport( const RHIViewport& viewport ) override;
-        void                     setScissorRect( const RHIScissorRect& rect ) override;
+        void                     setViewportNative( const RHIViewport& viewport ) override;
+        void                     setScissorRectNative( const RHIScissorRect& rect ) override;
         void                     drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
                                                      RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
-        void                     setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void                     setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
         void                     drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
                                                             uint32 countBufferOffset = 0 ) override;
         void                     drawIndexedInstancedNative( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override;
@@ -47,12 +40,9 @@ namespace sw
         void                     beginEventMarker( const utf8* pName ) override;
         void                     writeBreadcrumb( uint32 markerID ) override;
         void                     endEventMarker() override;
-        void                     setPipelineState( RHIPipelineStateHandle pso ) override;
-        void                     setComputePipelineStateNative( RHIPipelineStateHandle pso ) override;
         IRHIDevice&              getContextDevice() const override;
-        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) override;
+        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo, RHIRenderPassExtent& outTargetExtent ) override;
         void                     endRenderPassNative() override;
-        void                     setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
         void                     transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
         void                     copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
         uint64                   findBufferBytes( RHIBufferHandle buffer ) const override;
@@ -61,18 +51,27 @@ namespace sw
         void                     uavBarrierTextureNative( RHITextureHandle texture ) override;
 
     private:
-        /** @brief 번호 @p index 의 상수 버퍼를 UBO 바인딩 @p slot 에 겁니다. 페이지 구간이면 `glBindBufferRange`, 아니면 `glBindBufferBase` 입니다(감사 R-4). */
-        void bindUniformBuffer( RHIBufferSRVIndex index, uint32 slot );
+        /**
+         * @brief 바뀐 셰이더 슬롯 · 루트 상수를 겁니다. 드로우 · 디스패치 직전에 부릅니다.
+         * @details GL 의 바인딩 지점은 컨텍스트에 하나이고 바인드 포인트(그래픽스 · 컴퓨트)도 가리지 않는다 — 마지막에 건 쪽이 다른 스트림 · 다른 바인드 포인트면 그쪽이 건 것을 떼고 이쪽 것을 모두 다시 건다.
+         */
+        void flushBindings( RHIBindPoint point );
+        /** @brief b 슬롯에 겁니다(UBO). 페이지 구간이면 `glBindBufferRange`, 아니면 `glBindBufferBase` 입니다(감사 R-4). 무효 번호면 뗍니다. */
+        void bindUniformSlot( uint32 slot, RHIDescriptorIndex index );
+        /** @brief t 슬롯에 겁니다 — 버퍼 칸은 SSBO(레지스터 번호 그대로), 텍스처 칸은 텍스처 유닛입니다. 무효 번호면 뗍니다. */
+        void bindResourceSlot( uint32 slot, RHIDescriptorIndex index );
+        /** @brief u 슬롯에 겁니다 — 버퍼는 SSBO `kUAVBinding0 + slot`, RW 텍스처(u5..)는 이미지 유닛입니다. 무효 번호면 뗍니다. */
+        void bindUnorderedAccessSlot( uint32 slot, RHIDescriptorIndex index );
         /**
          * @brief 건 PSO 가 읽는 정점 슬롯만 VAO 로 겁니다(정점 입력이 없으면 빈 VAO). 읽는 슬롯에 버퍼가 없거나 건 버퍼가 부서졌으면 알리고 false 이며, 드로우를 버립니다(네 백엔드가 같다).
          * @details 모든 드로우 진입점이 이것을 씁니다. draw 뒤의 언바인드는 부르는 쪽이 각자 맡습니다.
          */
         [[nodiscard]] bool bindVertexInputsForDraw();
         /**
-         * @brief 드로우가 쓸 프로그램과 토폴로지를 건 PSO 에서 고릅니다. 등록된 PSO 가 없으면 오류로 멈춥니다(기본 프로그램 없음).
-         * @details 드로우 진입점 네 개가 모두 이것을 씁니다. 따로 고르는 진입점은 PSO 토폴로지를 놓쳐 GL_TRIANGLES 로 굳기 쉽습니다.
+         * @brief 건 PSO 의 프로그램 · 렌더 상태 · 셰이더 슬롯을 걸고 토폴로지를 고릅니다. 등록된 PSO 가 없으면 오류로 멈춥니다(기본 프로그램 없음).
+         * @details 드로우 진입점이 모두 이것을 씁니다. 따로 고르는 진입점은 PSO 토폴로지를 놓쳐 GL_TRIANGLES 로 굳기 쉽습니다.
          */
-        void resolveDrawProgram( uint32& outProgram, uint32& outMode ) const;
+        void bindDrawPipeline( uint32& outMode );
         /**
          * @brief 디스패치가 쓸 프로그램을 `setComputePipelineState` 로 건 컴퓨트 PSO 에서 고릅니다. 등록된 컴퓨트 PSO 가 없으면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다).
          */

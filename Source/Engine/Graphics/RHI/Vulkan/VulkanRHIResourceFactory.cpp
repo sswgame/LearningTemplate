@@ -108,7 +108,7 @@ namespace sw
 
         // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferMirror` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
         // 세 프레임 중 두 프레임을 옛 값으로 그리던 것). 링 상수버퍼가 아니면(칸 크기가 없다) 버퍼 앞에 그대로 쓴다.
-        // 디스크립터는 여기서 손대지 않는다. 드로우 직전 슬롯 세트를 쓸 때(flushSlotSet) 이번 프레임 칸의 오프셋을 넣는다.
+        // 디스크립터는 여기서 손대지 않는다. 드로우 직전 슬롯 세트를 쓸 때(flushBindings) 이번 프레임 칸의 오프셋을 넣는다.
         VulkanRHIDevice::VulkanBufferRecord* const pRecord = _pDevice->resolveAllocatedBuffer( buffer );
         if ( pRecord == nullptr || pRecord->_cbSlotSize == 0 )
         {
@@ -1212,7 +1212,7 @@ namespace sw
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
 
-        // 버퍼는 인덱스 → 핸들 표에만 올린다. 실제 VkBuffer · 오프셋은 슬롯 세트를 쓰는 순간(flushSlotSet)에 푼다.
+        // 버퍼는 인덱스 → 핸들 표에만 올린다. 실제 VkBuffer · 오프셋은 슬롯 세트를 쓰는 순간(flushBindings)에 푼다.
         // 링 상수버퍼의 프레임 오프셋도 그때 더한다.
         const ScopedDeferredLog  deferredLog;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
@@ -1249,7 +1249,7 @@ namespace sw
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessBufferTableFull", "The bindless buffer table (%#) is full.", VulkanRHIDevice::kBindlessBufferCapacity );
             return kInvalidDescriptorIndex;
         }
-        // 슬롯 세트를 쓰는 순간(setSlot)에 프레임 칸 오프셋 + 구간 오프셋, range = 구간 크기로 푼다.
+        // 슬롯 세트를 쓰는 순간(resolveSlot)에 프레임 칸 오프셋 + 구간 오프셋, range = 구간 크기로 푼다.
         _pDevice->publishBufferReadSlot( index, false, slice._buffer, slice._offset, slice._size );
         return RHIBufferSRVIndex{ index };
     }
@@ -1775,8 +1775,6 @@ namespace sw
             } ),
                                                        _pDevice->_frameFenceRing.getRecordingSerial() );
         }
-        if ( _pDevice->_recordingState._activeGraphicsPSO == pso )
-            _pDevice->_recordingState._activeGraphicsPSO = 0;
         return true;
     }
 } // namespace sw

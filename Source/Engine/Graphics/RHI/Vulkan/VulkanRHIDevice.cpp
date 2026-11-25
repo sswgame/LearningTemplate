@@ -443,7 +443,7 @@ namespace sw
                 _memoryAllocator.destroyBuffer( slot._buffer, slot._memory );
                 slot = StructuredUploadSlot{};
             }
-            _recordingState._geometry = RHIGeometryBindings{};
+            _recordingState = VulkanRecordingState{};
 
             _gpuTextures.forEach( [this]( VulkanTextureRecord& record )
             {
@@ -2365,13 +2365,11 @@ namespace sw
         _frameSegmentCursor = 0;
         _listPendingSubmit.clear();
 
-        // 새 커맨드버퍼에는 아직 아무 세트도 안 걸렸다. flushSlotSet 이 슬롯 세트와 텍스처 세트를 다시 건다.
-        _recordingState._bTextureSetBound = SW_FALSE;
-        _recordingState._arrSlotState[0]  = VulkanSlotState{};
-        _recordingState._arrSlotState[1]  = VulkanSlotState{};
+        // 새 커맨드버퍼에는 아직 아무것도 안 걸렸다. 첫 드로우 · 디스패치가 파이프라인과 세트를 다시 건다.
+        _recordingState = VulkanRecordingState{};
+        _frameStreamContext->beginRecording();
 
-        _bFrameStarted                     = SW_TRUE;
-        _recordingState._bRenderPassActive = SW_FALSE;
+        _bFrameStarted = SW_TRUE;
 
         constexpr float32 kDefaultViewportX        = 0.0f;
         constexpr float32 kDefaultViewportMinDepth = 0.0f;
@@ -3056,6 +3054,7 @@ namespace sw
         }
         _activeFrameBuffer = nextSegment;
         _recordingState    = VulkanRecordingState{};
+        _frameStreamContext->beginRecording();
 
         VkViewport viewport{};
         viewport.x        = 0.0f;

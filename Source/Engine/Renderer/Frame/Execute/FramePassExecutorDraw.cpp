@@ -128,7 +128,7 @@ namespace sw
             if ( pTargetClearColor != nullptr )
                 beginInfo._arrClearColor[colorTargetIndex] = pTargetClearColor[colorTargetIndex];
         }
-        context._pCmd->beginRenderPass( beginInfo );
+        context.beginRenderPass( beginInfo );
         applyViewRectViewport( context, beginInfo._width, beginInfo._height, bViewSized, targetSpace );
         applyPassResolutionSpace( context, targetSpace );
         return true;
@@ -176,7 +176,7 @@ namespace sw
         beginInfo._clearStencil                         = depth._ops._clearStencil;
         beginInfo._width                                = depth._texture != 0 ? depth._width : activePool().getWidth();
         beginInfo._height                               = depth._texture != 0 ? depth._height : activePool().getHeight();
-        context._pCmd->beginRenderPass( beginInfo );
+        context.beginRenderPass( beginInfo );
         applyViewRectViewport( context, beginInfo._width, beginInfo._height, depth._texture == 0 || depth._bViewSized != 0, depth._space );
         applyPassResolutionSpace( context, depth._space );
     }
@@ -215,7 +215,7 @@ namespace sw
             beginInfo._clearStencil     = layer._ops._clearStencil;
             beginInfo._width            = layer._width;
             beginInfo._height           = layer._height;
-            context._pCmd->beginRenderPass( beginInfo );
+            context.beginRenderPass( beginInfo );
             const PassConstantNames&     names           = passConstantNames();
             const RHIPipelineStateHandle pso             = _psoManager.getEnginePSO( RenderPassKind::Shadow );
             const uint32                 viewCull        = context._cullViewIndex;
@@ -361,7 +361,7 @@ namespace sw
         }
     }
 
-    void FramePassExecutor::commitBindlessTextureBindings( FramePassContext& context )
+    void FramePassExecutor::bindEngineTextures( FramePassContext& context )
     {
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
@@ -688,7 +688,7 @@ namespace sw
         // 덮어쓸 수 없다. 그래서 PassCB 는 패스당 하나면 충분하다(PassCB 에 넣으면 드로우마다 버퍼를 새로 잡아야
         // 한다). 언리얼의 드로우별 느슨한 파라미터와 같은 자리다.
         const uint32 arrDrawRootConstant[] = { context._drawMaterialCount };
-        context._pCmd->setGraphicsRootConstants( 0, static_cast<uint32>( sizeof( arrDrawRootConstant ) / sizeof( arrDrawRootConstant[0] ) ),
+        context._pCmd->setGraphicsRootConstants( static_cast<uint32>( sizeof( arrDrawRootConstant ) / sizeof( arrDrawRootConstant[0] ) ),
                                                  arrDrawRootConstant );
 
         // 앞 드로우가 이미 올린 슬롯에 다른 값을 다시 쓰지 않는다 — GPU 가 나중에 읽는 DX12 · Vulkan 에서는 그 패스의 모든 드로우가 마지막 값을 본다
@@ -703,13 +703,17 @@ namespace sw
 
         // 엔진 상수버퍼를 이 드로우에서 다시 만들 필요가 있나. 값 · 레지스트리 버전과 버퍼가 모두 그대로면 없다.
         // **PSO 도 같아야 한다.** 이 플래그는 상수버퍼 재업로드만이 아니라 리소스 재바인딩까지 건너뛰게 하는데,
-        // 슬롯 상태는 PSO 가 바뀌는 순간 백엔드가 비우기 때문이다(FramePassContext::_lastBindPSO 참고).
+        // 슬롯 상태는 PSO 가 바뀌거나 패스를 여는 순간 비기 때문이다(FramePassContext::_lastBindPSO 참고).
         const uint32 valuesVersion   = context._passValues.getVersion();
         const uint32 registryVersion = context._resourceRegistry.getVersion();
         // 버퍼의 바이트가 이미 맞나(올리기를 건너뛴다)와, 슬롯 상태까지 그대로인가(PSO 가 같아야 한다 — 리소스 재바인딩을 건너뛴다)는 따로다.
         const bool bCbUpToDate = ( context._lastCbBuffer == context._passCb ) && ( context._lastCbValuesVersion == valuesVersion ) &&
                                  ( context._lastCbRegistryVersion == registryVersion ) && ( context._lastCbLayoutHash == cbLayoutHash );
         const bool bBindUpToDate = bCbUpToDate && ( context._lastBindPSO == pso );
+
+        // 에뮬 백엔드의 엔진 텍스처 칸도 PSO 를 걸면 빈다 — 이 드로우가 다시 걸어야 하는 것과 같은 조건이다(예전에는 PSO 앞에서 걸어, 슬롯을 비우는 백엔드면 사라질 자리였다).
+        if ( bBindUpToDate == false )
+            bindEngineTextures( context );
 
         const BindlessIndexCheckSite  indexCheck{ _pDevice, context._passName };
         const BindlessIndexCheckSite* pIndexCheck = &indexCheck;
@@ -739,16 +743,12 @@ namespace sw
             return;
         }
 
-        // 그릴 메시가 하나도 없다. 상태만 맞춰 두고 나간다.
+        // 그릴 메시가 하나도 없다.
         //
         // 주의: 씬을 다시 순회하는 폴백이나 배치마다 drawInstanced 를 부르는 두 번째 드로우 루프를 두지 않는다.
         // 네 백엔드가 모두 인다이렉트 드로우를 지원하고, 경로가 둘이면 새 기능(컬링 · 정렬 · 인스턴스 애니메이션)이
         // 한쪽에만 들어가 다른 쪽이 조용히 다른 그림을 낸다.
-        if ( pso != 0 )
-            context._pCmd->setPipelineState( pso );
-
         setIdentityWorld( context );
-        commitBindlessTextureBindings( context );
     }
 
     void FramePassExecutor::drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso )
@@ -840,10 +840,8 @@ namespace sw
         if ( bCannotDraw )
             return;
 
-        context._pCmd->setPipelineState( pso );
-
+        context.setPipeline( pso );
         setIdentityWorld( context );
-        commitBindlessTextureBindings( context );
 
         const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
                                 _state._gpuScene.getInstanceSRV() != kInvalidDescriptorIndex;
@@ -954,7 +952,7 @@ namespace sw
         context._lastLayoutPSO = batchPSO;
         if ( batchPSO != inoutState._boundPSO )
         {
-            context._pCmd->setPipelineState( batchPSO ); // 정점 슬롯을 비운다 — 스트림은 아래에서 다시 건다
+            context.setPipeline( batchPSO ); // 정점 슬롯을 비운다 — 스트림은 아래에서 다시 건다
             inoutState._boundPSO          = batchPSO;
             inoutState._boundVertexBuffer = 0;
             if ( inoutState._slotStream != 0 )
@@ -1017,11 +1015,7 @@ namespace sw
             return false;
         const vector_reference<const GPUTransparentParticleSlot> listRun = listSlot.subspan( inOutCursor, slotEnd - inOutCursor );
         inOutCursor                                                      = slotEnd;
-        if ( drawParticleSlots( context, listRun ) == false )
-            return false;
-        // 메시 드로우가 읽는 패스 단위 상태를 되돌린다 — PSO 가 바뀌어 에뮬 텍스처 슬롯이 비었다(정점 스트림은 메시 묶음이 PSO 를 걸며 다시 건다).
-        commitBindlessTextureBindings( context );
-        return true;
+        return drawParticleSlots( context, listRun );
     }
 
     bool FramePassExecutor::drawParticleSlots( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot )
@@ -1032,7 +1026,7 @@ namespace sw
         if ( bCannotDraw )
             return false;
         // 정점은 셰이더가 SV_VertexID 로 만든다 — PSO 의 입력 레이아웃이 비어 정점 버퍼를 걸지 않는다.
-        context._pCmd->setPipelineState( pso );
+        context.setPipeline( pso );
         setIdentityWorld( context );
         // PassCB(g_ViewProj · g_InvViewProj)를 건다. 입자 버퍼 · 텍스처 · 루트 상수는 그 뒤에 입자 렌더러가 건다.
         if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) == false )
@@ -1208,7 +1202,7 @@ namespace sw
                 {
                     bindTexture( arrRead[slot], slot, constants._arrDword[TextureLayerBakeConstants::kRootSourceAlbedo + slot] );
                 }
-                _pCmd->setGraphicsRootConstants( 0, TextureLayerBakeConstants::kRootDwordCount, constants._arrDword );
+                _pCmd->setGraphicsRootConstants( TextureLayerBakeConstants::kRootDwordCount, constants._arrDword );
                 _pCmd->draw( 3, 0 );
                 _pCmd->endRenderPass();
                 pSourceAlbedo  = arrTarget[targetSet][0];
@@ -1227,8 +1221,7 @@ namespace sw
         if ( context._pCmd == nullptr || pso == 0 )
             return;
         setIdentityWorld( context );
-        commitBindlessTextureBindings( context );
-        context._pCmd->setPipelineState( pso );
+        context.setPipeline( pso );
         if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) )
             context._pCmd->draw( 3, 0 );
     }

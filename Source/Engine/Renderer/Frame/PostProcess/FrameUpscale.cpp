@@ -122,8 +122,8 @@ namespace sw
         beginInfo._depthTarget       = 0;
         beginInfo._width             = view._upscaleIntermediate._width;
         beginInfo._height            = view._upscaleIntermediate._height;
-        cmd.beginRenderPass( beginInfo );
-        cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassKind::UpscaleEasu ) );
+        context.beginRenderPass( beginInfo );
+        context.setPipeline( _psoManager.getEnginePSO( RenderPassKind::UpscaleEasu ) );
         // 원본 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor 칸(fsr1.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameUpscaleInternal::RootConstants constants{};
@@ -137,13 +137,11 @@ namespace sw
         constexpr uint32 kSourceSlot  = shaderslot::emulated::getSlot( "SourceColor" );
         if ( bNativeBindless == false )
             cmd.bindShaderResource( source._srv, kSourceSlot );
-        cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        cmd.setGraphicsRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
         // 같은 패스의 RCAS 가 읽는다 — 쓰기로 선언한 중간 RT 를 패스 안에서 셰이더 읽기로 옮긴다.
         context._pGraphPass->transition( ViewGraphResource::upscaleIntermediate(), RenderGraphAccess::ShaderRead );
-        // PSO · 슬롯을 직접 바꿨다 — 뒤의 그리기가 바인딩 캐시를 믿고 PSO 를 건너뛰지 않게 지운다.
-        context.resetBindingCache();
         return true;
     }
 
@@ -151,7 +149,7 @@ namespace sw
     {
         const RHIPipelineStateHandle pso = _psoManager.findOutputPSO( RenderPassKind::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
         IRHIPassCommandList&         cmd = *context._pCmd;
-        cmd.setPipelineState( pso );
+        context.setPipeline( pso );
         const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameUpscaleInternal::RootConstants constants{};
         constants._source            = bNativeBindless ? static_cast<uint32>( view._upscaleIntermediate._srv ) : 0u;
@@ -161,8 +159,7 @@ namespace sw
         constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
         if ( bNativeBindless == false )
             cmd.bindShaderResource( view._upscaleIntermediate._srv, kSourceSlot );
-        cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        cmd.setGraphicsRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
-        context.resetBindingCache();
     }
 } // namespace sw

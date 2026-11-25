@@ -36,7 +36,7 @@ namespace sw
         // 2) 뷰포트, PSO, 렌더 패스
         // ------------------------------------------------------------------------------
         /**
-         * @brief 뷰포트를 설정합니다. **가위 사각형도 이 뷰포트 전체로 되돌립니다**(`beginRenderPass` 도 그 패스 크기로 되돌립니다).
+         * @brief 열린 패스의 뷰포트를 설정합니다. **가위 사각형도 이 뷰포트 전체로 되돌립니다**(`beginRenderPass` 도 그 패스 크기로 되돌립니다). 패스 밖에서는 아무 일도 하지 않습니다.
          * @details 가위를 설정하고 잊어버려도 다음 뷰포트나 다음 패스로 새지 않는다(언리얼 `RHISetViewport` 가 가위를 끄는 것과 같다).
          */
         virtual void setViewport( const RHIViewport& viewport ) = 0;
@@ -53,7 +53,7 @@ namespace sw
         virtual void writeTimestamp( uint32 slotIndex ) { (void)slotIndex; }
 
         /**
-         * @brief 그래픽스 PSO 를 겁니다. **셰이더 슬롯과 정점 버퍼 슬롯을 비운다**(네 백엔드 같음) — 버퍼 · 정점 스트림은 PSO 뒤에 건다.
+         * @brief 그래픽스 PSO 를 겁니다. **다른 PSO 면 셰이더 슬롯과 정점 버퍼 슬롯을 비운다**(같은 PSO 면 그대로) — 버퍼 · 텍스처 · 정점 스트림은 패스를 열고 PSO 를 건 뒤에 건다.
          * @details 앞 드로우의 스트림이 남으면 그 슬롯을 읽는 다음 PSO 가 남은 스트림을 조용히 읽는다. 비워 두면 거는 것을 잊은 드로우는
          *          버려지고 알려진다(`RHIDrawDiagnostics::validateVertexSlotsBound`). 백엔드는 드로우마다 바인딩 표에서 정점 버퍼를 다시 걸므로 비용이 없다.
          */
@@ -102,7 +102,7 @@ namespace sw
         // 4) 컴퓨트: PSO, 디스패치, 루트 상수, UAV
         // ------------------------------------------------------------------------------
         /**
-         * @brief 컴퓨트 PSO 를 건다. 등록되지 않은 핸들도 기록하므로 앞 컴퓨트 PSO 가 남지 않는다.
+         * @brief 컴퓨트 PSO 를 건다. **다른 PSO 면 컴퓨트 셰이더 슬롯을 비운다** — 슬롯은 PSO 뒤에 건다. 등록되지 않은 핸들도 기록하므로 앞 컴퓨트 PSO 가 남지 않는다.
          * @note 디스패치(`dispatchCompute` · `dispatchIndirect`)는 **등록된 컴퓨트 PSO 가 걸려 있어야** 한다 — 없으면 네 백엔드 모두 오류로 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
          *       PSO 가 0 이면 부르는 쪽이 디스패치를 건너뛰는 것이 렌더러의 규칙이다.
          */
@@ -116,21 +116,20 @@ namespace sw
         virtual void dispatchThreads( uint32 threadCountX, uint32 threadCountY, uint32 threadCountZ ) = 0;
         /**
          * @brief 컴퓨트 루트 상수(푸시 상수)를 씁니다.
-         * @details 백엔드마다 실제 용량(dword)이 다르다. DX11 은 64, OpenGL 은 64, DX12 와 Vulkan 은 16이다(루트 상수와 푸시 상수,
-         *          binding_slots.hlsli 의 SW_ROOT_DWORD_COUNT). 네 백엔드 모두에서 안전한
-         *          상한은 shaderslot::kRootConstantDwords 이고, 그보다 크면 조용히 잘린다.
+         * @details 블록은 `shaderslot::kRootConstantDwords` 칸이고 다섯 백엔드가 같다. 넘는 쓰기는 자르지 않고 통째로 버리며 알린다(`RHI.RootConstantsOverflow`).
+         *          컴퓨트와 그래픽스의 블록은 따로다. 새 기록 스트림의 값은 0 이고, PSO 를 바꿔도 남는다.
          */
-        virtual void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
+        virtual void setComputeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
         /**
          * @brief 그래픽스 스테이지에 루트 상수(푸시 상수)를 씁니다. **드로우마다 바뀌는 소수의 값** 전용입니다.
          * @details 언리얼이 `FMeshDrawCommand` 의 느슨한 파라미터를 드로우별로 싣는 방식에 해당한다. 상수 버퍼로
          *          보내면 드로우마다 버퍼를 새로 잡거나(할당과 디스크립터) 덮어써야 한다. 덮어쓰면 GPU 는 마지막
          *          값만 본다. 루트 상수와 푸시 상수는 커맨드 리스트에 값이 그대로 실려 그 문제가 없다.
-         *          용량은 `shaderslot::kRootConstantDwords` 까지가 네 백엔드 공통 안전선이다.
+         *          용량은 `shaderslot::kRootConstantDwords` 이다(넘으면 알리고 버린다).
          *          DX12 는 루트 상수, Vulkan 은 푸시 상수를 쓰고, DX11 과 GL 은 계약 슬롯 b2 의 상수 버퍼로 흉내 낸다.
          */
-        virtual void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
-        virtual void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )                                                                        = 0;
+        virtual void setGraphicsRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
+        virtual void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )                                             = 0;
         /**
          * @brief 그래픽스(픽셀) 단계에 쓰기 버퍼 u# 를 겁니다(UAV 레지스트리의 인덱스). 렌더 패스를 연 **뒤** 드로우 앞에서 부릅니다 — 셰이더 메시지 채널(`GPUMessageChannel::bindGraphics`)이 쓴다.
          * @details DX12 는 슬롯 테이블의 u 범위(모든 단계에 보인다), Vulkan 은 슬롯 세트의 u 바인딩, GL 은 SSBO `kUAVBinding0 + slot`, DX11 은 `OMSetRenderTargetsAndUnorderedAccessViews` 의
@@ -332,9 +331,9 @@ namespace sw
         /**
          * @brief 힙에 겹쳐 놓은 텍스처(`IRHIResourceFactory::createPlacedTexture2D`)를 이제부터 이 텍스처로 쓴다고 알립니다 — 같은 바이트의 앞 텍스처 쓰기가 끝난 뒤에 이 텍스처를 쓴다.
          * @details DX12 는 앨리어싱 배리어(앞 리소스를 특정하지 않는 형태)다. 겹쳐 놓기가 없는 백엔드(능력 `_bPlacedTextures` 거짓)는 그런 텍스처가 없어 할 일이 없다 — 기본 구현이 그것이다.
-         *          첫 쓰기 전이(`prepareTextureForRenderTarget`) 앞에 부른다.
+         *          첫 쓰기 전이(`prepareTextureForRenderTarget`) 앞에 부른다. 핸들 0 은 오류로 알리고 버린다.
          */
-        virtual void beginTextureAlias( RHITextureHandle texture ) { (void)texture; }
+        virtual void beginTextureAlias( RHITextureHandle texture ) = 0;
 
         /**
          * @brief 여러 텍스처의 전이를 한 번에 냅니다. 상태마다 같은 이름의 단일 함수(`prepareTextureFor*`)와 같은 일이고, 이미 그 상태인 텍스처는 건너뛴다.

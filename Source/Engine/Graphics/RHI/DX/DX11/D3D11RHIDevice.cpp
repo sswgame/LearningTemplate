@@ -208,9 +208,10 @@ namespace sw
         _nativeContextSerial.fetch_add( 1u ); // 바깥 코드가 상수 버퍼 슬롯을 바꿨을 수 있다 — 렌더 스레드의 그림자가 다음 바인딩에서 버린다
     }
 
-    bool D3D11RHIDevice::ensureRootConstantCb( D3D11RecordingState& state )
+    bool D3D11RHIDevice::ensureRootConstantCb( D3D11RecordingState& state, RHIBindPoint point )
     {
-        if ( state._rootConstantCb != nullptr )
+        Microsoft::WRL::ComPtr<ID3D11Buffer>& buffer = state._arrRootConstantCb[static_cast<uint32>( point )];
+        if ( buffer != nullptr )
             return true;
         if ( _device == nullptr )
             return false;
@@ -222,7 +223,7 @@ namespace sw
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         // `ID3D11Device::CreateBuffer` 는 free-threaded 라 병렬 기록 중에 만들어도 된다.
         // 스레드마다 자기 상태의 버퍼를 만들 뿐, 공유 테이블을 건드리지 않는다.
-        if ( isHrSuccess( _device->CreateBuffer( &desc, nullptr, state._rootConstantCb.GetAddressOf() ), "CreateBuffer" ) == false )
+        if ( isHrSuccess( _device->CreateBuffer( &desc, nullptr, buffer.GetAddressOf() ), "CreateBuffer" ) == false )
         {
             SW_LOG_ERROR_ID( "D3D11.FailedCreateRootConstant", "Failed to create root-constant cbuffer." );
             return false;
@@ -703,7 +704,6 @@ namespace sw
         _swapChain.shutdown();
         _gpuTextures.clear();
         _gpuBuffers.clear();
-        _recordingState._activeGraphicsPSO = 0;
         {
             UniqueLock<shared_mutex> lock{ _bindlessMutex };
             _bufferRegistry.clear();
@@ -754,7 +754,7 @@ namespace sw
         {
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             context->ClearState();
-            _recordingState._constantBuffers.invalidate();
+            invalidateFrameStreamState();
         }
         _windowSwapChains.remove( static_cast<D3D11RHISwapChain&>( swapChain ) );
     }
@@ -808,7 +808,7 @@ namespace sw
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             context->ClearState();
             context->Flush();
-            _recordingState._constantBuffers.invalidate();
+            invalidateFrameStreamState();
         }
     }
 
@@ -1054,6 +1054,7 @@ namespace sw
 
         // FLIP_DISCARD 는 백버퍼를 돌려 쓴다. Present 가 보여 줄 그 버퍼에 그리도록 매 프레임 다시 잡는다.
         _swapChain.acquireNextImage( _device.Get() );
+        _frameStreamContext->beginRecording(); // 프레임 스트림은 프레임마다 새 기록이다(다른 백엔드의 새 커맨드 버퍼와 같다)
         // 정적 샘플러 세트는 컨텍스트 상태라 ClearState 로 사라질 수 있다. 프레임마다 다시 건다(값싸다).
         bindStaticSamplers( context.get() );
         if ( _swapChain.getBackBufferRTV() == nullptr )
@@ -1256,30 +1257,10 @@ namespace sw
         return list;
     }
 
-    void D3D11RHIDevice::removeBufferInRecordingStates( RHIBufferHandle buffer )
+    void D3D11RHIDevice::invalidateFrameStreamState()
     {
-        _recordingState._geometry.remove( buffer );
-
-        ScopedLock<mutex> lock{ _liveCmdListMutex };
-        for ( D3D11RHICommandList* pList : _listLiveCmd )
-        {
-            if ( pList == nullptr )
-                continue;
-            pList->getRecordingState()._geometry.remove( buffer );
-        }
-    }
-
-    void D3D11RHIDevice::removePipelineStateInRecordingStates( RHIPipelineStateHandle pso )
-    {
-        if ( _recordingState._activeGraphicsPSO == pso )
-            _recordingState._activeGraphicsPSO = 0;
-
-        ScopedLock<mutex> lock{ _liveCmdListMutex };
-        for ( D3D11RHICommandList* pList : _listLiveCmd )
-        {
-            if ( pList != nullptr && pList->getRecordingState()._activeGraphicsPSO == pso )
-                pList->getRecordingState()._activeGraphicsPSO = 0;
-        }
+        if ( _frameStreamContext != nullptr )
+            _frameStreamContext->onNativeStateCleared();
     }
 
     void D3D11RHIDevice::registerCommandList( D3D11RHICommandList* pCmdList )
@@ -1307,7 +1288,7 @@ namespace sw
         // 그대로 끼워진다. DX12/Vulkan 이 세그먼트를 잘라 얻는 순서 보장을 공짜로 갖는다.
         const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
         context->ExecuteCommandList( pList, FALSE );
-        _recordingState._constantBuffers.invalidate(); // RestoreContextState FALSE 가 즉시 컨텍스트 상태를 지웠다
+        invalidateFrameStreamState(); // RestoreContextState FALSE 가 즉시 컨텍스트 상태를 지웠다
 
         // 남은 차이는 제출 시점뿐이다. Immediate Context 는 커맨드를 모아뒀다가 드라이버가 정한
         // 때(보통 Present)에 GPU 로 보내므로, 오류가 나면 어느 리스트 때문인지 알 수 없다.

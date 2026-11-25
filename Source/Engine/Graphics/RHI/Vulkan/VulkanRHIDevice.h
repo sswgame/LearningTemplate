@@ -23,7 +23,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
-#include "Engine/Graphics/RHI/RHIGeometryBindings.h"
+#include "Engine/Graphics/RHI/RHIRecordingBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAllocator.h"
@@ -106,8 +106,7 @@ namespace sw
     /**
      * @struct VulkanSlotState
      * @brief 바인드 포인트(그래픽스, 컴퓨트) 하나의 슬롯 세트 상태입니다. 언리얼 Vulkan RHI 의 파이프라인별 디스크립터 상태에 해당합니다.
-     * @details PSO 를 바인딩할 때 비워지고(이전 패스의 t/u 슬롯이 다음 세트로 새지 않도록), 드로우나 디스패치 직전에 flushSlotSet 이
-     *          바뀐 것을 세트로 확정한다.
+     * @details 공용 슬롯 표(`RHIShaderSlots`)의 번호를 버퍼 구간으로 푼 것이다. 드로우나 디스패치 직전에 flushBindings 가 바뀐 것을 세트로 확정한다.
      */
     struct VulkanSlotState
     {
@@ -131,25 +130,21 @@ namespace sw
      */
     struct VulkanRecordingState
     {
-        RHIPipelineStateHandle _activeGraphicsPSO;
-        RHIPipelineStateHandle _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
-
-        RHIGeometryBindings _geometry; ///< setVertexBuffer · setIndexBuffer 로 건 정점 슬롯과 인덱스 버퍼(드로우 때 건다 — RHIGeometryBindings)
-        /// @brief 이 스트림에 렌더 패스가 열려 있는지 여부입니다.
-        uint8 _bRenderPassActive : 1;
+        RHIPipelineStateHandle _boundNativeGraphicsPSO; ///< 이 버퍼에 건 그래픽스 파이프라인(0 이면 없음)
+        RHIPipelineStateHandle _boundNativeComputePSO;  ///< 이 버퍼에 건 컴퓨트 파이프라인(0 이면 없음)
+        RHIBindPoint           _lastPushPoint;          ///< 푸시 상수를 마지막으로 쓴 바인드 포인트(Count 면 없음) — 두 바인드 포인트가 같은 자리를 나눠 쓴다
         /// @brief 텍스처 배열 세트(set 1)를 이 버퍼의 두 바인드 포인트에 이미 바인딩했는지 여부입니다.
         uint8                  _bTextureSetBound : 1;
-        [[maybe_unused]] uint8 _reserved         : 6;
+        [[maybe_unused]] uint8 _reserved         : 7;
 
         /// @brief 바인드 포인트별 슬롯 세트 상태입니다([0] 그래픽스, [1] 컴퓨트). 서로 독립이라 디스패치가 드로우의 바인딩을 지우지 않습니다.
         VulkanSlotState _arrSlotState[2];
 
         /** @brief 아무것도 바인딩되지 않은 상태로 시작합니다. */
         VulkanRecordingState()
-            : _activeGraphicsPSO{ 0 }
-            , _activeComputePSO{ 0 }
-            , _geometry{}
-            , _bRenderPassActive{ SW_FALSE }
+            : _boundNativeGraphicsPSO{ 0 }
+            , _boundNativeComputePSO{ 0 }
+            , _lastPushPoint{ RHIBindPoint::Count }
             , _bTextureSetBound{ SW_FALSE }
             , _reserved{ 0 }
             , _arrSlotState{}

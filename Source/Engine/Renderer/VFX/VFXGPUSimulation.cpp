@@ -766,7 +766,7 @@ namespace sw
         const auto recordPass = [&]( uint32 pass, uint32 stepIndex, uint32 groupCount )
         {
             const uint32 arrRoot[2]{ dispatch._paramRow, pass | ( stepIndex << SW_VFX_PASS_STEP_SHIFT ) };
-            cmd.setComputeRootConstants( 0, 2, arrRoot );
+            cmd.setComputeRootConstants( 2, arrRoot );
             cmd.dispatchCompute( groupCount, 1, 1 );
         };
         if ( usesMultiGroup( state._clock.getDef() ) == false )
@@ -860,7 +860,7 @@ namespace sw
             cmd.bindComputeShaderResource( state._particleBuffer._srv, 1 );
             cmd.bindComputeShaderResource( state._argsBuffer._srv, 2 );
             cmd.bindComputeUAV( _orderBuffer._uav, 0 );
-            cmd.setComputeRootConstants( 0, 1, &dispatch._paramRow );
+            cmd.setComputeRootConstants( 1, &dispatch._paramRow );
             cmd.dispatchCompute( 1, 1, 1 );
         }
     }
@@ -884,7 +884,7 @@ namespace sw
             cmd.bindComputeShaderResource( state._particleBuffer._srv, 1 );
             cmd.bindComputeShaderResource( state._argsBuffer._srv, 2 );
             cmd.bindComputeUAV( _frameInput._instanceUAV, 0 );
-            cmd.setComputeRootConstants( 0, 1, &dispatch._paramRow );
+            cmd.setComputeRootConstants( 1, &dispatch._paramRow );
             cmd.dispatchCompute( dispatch._groupCount, 1, 1 );
             context.uavBarrier( getInstanceBufferUAV() ); // 다음 방출기가 같은 버퍼의 다른 칸을 쓴다 — 칸이 겹치지 않아도 상태 추적을 맞춘다
         }

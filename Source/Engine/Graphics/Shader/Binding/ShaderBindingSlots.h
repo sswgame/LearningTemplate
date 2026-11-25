@@ -512,7 +512,7 @@ namespace sw
          *          (`ShaderCompiler::appendEngineDefines`). `binding.hlsli` 는 둘째 매크로로 PassCB 의 `uint g_<이름>Index` 필드(네 백엔드)와
          *          에뮬의 `Bindless::emulatedSlot` 비교를 칸 번호로 펼친다 — 셰이더에 손으로 맞춘 둘째 표가 없어, 셰이더가 읽을 수 있는 엔진 텍스처
          *          인덱스는 곧 이 표의 항목이다(언리얼 셰이더 매개변수 구조체처럼 한 정의에서 두 쪽이 나온다). 그래서 에뮬의 자홍(`kUnmappedEngineTextureColor`)은
-         *          표 밖 값(루트 상수 등)을 `Bindless::sampleIndex` 에 넘긴 셰이더에서만 날 수 있다. 실행의 바인딩(`FramePassExecutor::commitBindlessTextureBindings`)도 이 표를 돈다.
+         *          표 밖 값(루트 상수 등)을 `Bindless::sampleIndex` 에 넘긴 셰이더에서만 날 수 있다. 실행의 바인딩(`FramePassExecutor::bindEngineTextures`)도 이 표를 돈다.
          */
         namespace emulated
         {

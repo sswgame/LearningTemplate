@@ -1689,8 +1689,6 @@ namespace sw
         D3D12RHIDevice::D3D12PipelineStateRecord record{};
         if ( _pDevice->_pipelineStates.take( pso, record ) == false )
             return false;
-        if ( _pDevice->_frameStreamState._activeGraphicsPSO == pso )
-            _pDevice->_frameStreamState._activeGraphicsPSO = 0;
         _pDevice->_releaseQueue.enqueueGPUKeepAlive( record._pso, _pDevice->_fenceValue );
         return true;
     }

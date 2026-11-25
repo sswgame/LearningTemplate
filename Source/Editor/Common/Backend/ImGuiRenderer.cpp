@@ -417,7 +417,7 @@ namespace sw::editor
                     boundSRV                        = srv;
                     arrRoot[Internal::kRootTexture] = 0;
                 }
-                pCmd->setGraphicsRootConstants( 0, Internal::kRootConstantCount, arrRoot );
+                pCmd->setGraphicsRootConstants( Internal::kRootConstantCount, arrRoot );
                 // 명령 하나 = 드로우 하나(인덱스 하나 = 정점 하나, 셰이더 VSMain) — 시작 위치는 루트 상수로 넘겨 SV_VertexID 는 0 부터다.
                 pCmd->drawInstanced( cmd.ElemCount, 1, 0, 0 );
             }

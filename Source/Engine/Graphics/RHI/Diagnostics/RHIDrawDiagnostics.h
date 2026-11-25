@@ -53,6 +53,12 @@ namespace sw
          *          부른 자리를 함께 남긴다. 예전에는 같은 0 이 화면 그리기로 읽혔다.
          */
         void reportNullTexture( const utf8* pOperation ) const;
+        /** @brief 셰이더 슬롯을 범위([@p firstSlot, @p endSlot)) 밖에 걸어 그 바인딩을 버렸음을 알립니다(`IRHICommandContext` 가 판정한다 — 다섯 백엔드가 같다). */
+        void reportShaderSlotOutOfRange( const utf8* pOperation, uint32 slot, uint32 firstSlot, uint32 endSlot ) const;
+        /** @brief 루트 상수 쓰기가 블록(@p capacity 칸)을 넘어 통째로 버렸음을 알립니다(자르지 않는다). */
+        void reportRootConstantsOverflow( const utf8* pOperation, uint32 firstDword, uint32 count, uint32 capacity ) const;
+        /** @brief 슬롯(@p pKind — "b" · "t" · "u")에 건 번호가 등록되지 않아(해제했거나 다른 종류의 번호다) 그 칸을 비운 채 그립니다. 백엔드가 낼 때 판정한다. */
+        void reportDescriptorNotRegistered( const utf8* pKind, uint32 slot, RHIDescriptorIndex index ) const;
         /** @brief 인덱스 드로우에 인덱스 버퍼를 걸지 않아 그 드로우를 버렸음을 알립니다(네 백엔드가 같다 — 앞 드로우의 인덱스 버퍼로 그리지 않는다). */
         void reportIndexBufferUnbound() const;
         /** @brief 인덱스 드로우에 건 인덱스 버퍼가 해제돼 핸들로 찾을 수 없어 그 드로우를 버렸음을 알립니다. */

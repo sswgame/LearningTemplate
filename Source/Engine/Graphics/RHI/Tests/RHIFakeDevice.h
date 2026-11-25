@@ -79,8 +79,8 @@ namespace sw::test
         void setComputePipelineState( RHIPipelineStateHandle ) override {}
         void dispatchCompute( uint32, uint32, uint32 ) override {}
         void dispatchThreads( uint32, uint32, uint32 ) override {}
-        void setComputeRootConstants( uint32, uint32, const void*, uint32 ) override {}
-        void setGraphicsRootConstants( uint32, uint32, const void*, uint32 ) override {}
+        void setComputeRootConstants( uint32, const void*, uint32 ) override {}
+        void setGraphicsRootConstants( uint32, const void*, uint32 ) override {}
         void bindComputeUAV( RHIUnorderedAccessIndex, uint32 ) override {}
         void bindGraphicsUAV( RHIUnorderedAccessIndex, uint32 ) override {}
         void bindShaderResource( RHITextureSRVIndex, uint32 ) override {}
@@ -92,6 +92,7 @@ namespace sw::test
         void prepareTextureForShaderRead( RHITextureHandle ) override {}
         void prepareTextureForRenderTarget( RHITextureHandle ) override {}
         void prepareTextureForUnorderedAccess( RHITextureHandle ) override {}
+        void beginTextureAlias( RHITextureHandle ) override {}
         void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) override { _listTextureTransition.insert( _listTextureTransition.end(), pTransition, pTransition + count ); }
         void blitTexture( RHITextureHandle, RHITextureHandle ) override {}
         void drawIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
@@ -272,13 +273,16 @@ namespace sw::test
     class FakeRHICommandContext final : public IRHICommandContext
     {
     public:
-        uint32                   _beginNativeCount{ 0 }; /**< `beginRenderPassNative` 횟수 */
-        uint32                   _endNativeCount{ 0 };   /**< `endRenderPassNative` 횟수 — 기반이 열린 패스가 있을 때만 부른다 */
-        uint32                   _drawNativeCount{ 0 };  /**< 나간 드로우 수(패스가 없어 버린 드로우는 세지 않는다) */
-        uint32                   _blitNativeCount{ 0 };  /**< 백엔드에 닿은 블릿 수 */
-        uint32                   _copyRegionCount{ 0 };  /**< 백엔드에 닿은 버퍼 구간 복사 수 */
-        uint64                   _bufferBytes{ 256 };    /**< `findBufferBytes` 가 답할 모든 버퍼의 크기 */
-        vector<RHITextureHandle> _listTransitionTexture; /**< 백엔드에 닿은 텍스처 전이의 핸들(차례대로) */
+        uint32                   _beginNativeCount{ 0 };  /**< `beginRenderPassNative` 횟수 */
+        uint32                   _endNativeCount{ 0 };    /**< `endRenderPassNative` 횟수 — 기반이 열린 패스가 있을 때만 부른다 */
+        uint32                   _drawNativeCount{ 0 };   /**< 나간 드로우 수(패스가 없어 버린 드로우는 세지 않는다) */
+        uint32                   _blitNativeCount{ 0 };   /**< 백엔드에 닿은 블릿 수 */
+        uint32                   _copyRegionCount{ 0 };   /**< 백엔드에 닿은 버퍼 구간 복사 수 */
+        uint64                   _bufferBytes{ 256 };     /**< `findBufferBytes` 가 답할 모든 버퍼의 크기 */
+        RHIRenderPassExtent      _targetExtent{ 64, 32 }; /**< 패스 타깃의 크기 */
+        RHIViewport              _viewport{};             /**< 백엔드에 닿은 마지막 뷰포트 */
+        RHIScissorRect           _scissor{};              /**< 백엔드에 닿은 마지막 가위 */
+        vector<RHITextureHandle> _listTransitionTexture;  /**< 백엔드에 닿은 텍스처 전이의 핸들(차례대로) */
 
         /** @brief 진단을 낼 디바이스와 함께 만듭니다. */
         explicit FakeRHICommandContext( FakeRHIDevice& device )
@@ -286,38 +290,30 @@ namespace sw::test
         {
         }
 
-        void setViewport( const RHIViewport& ) override {}
-        void setScissorRect( const RHIScissorRect& ) override {}
-        void setPipelineState( RHIPipelineStateHandle ) override {}
-        void setVertexBuffer( uint32, RHIBufferHandle, uint32, uint32 ) override {}
-        void setIndexBuffer( RHIBufferHandle, uint32, uint32 ) override {}
-        void setComputeRootConstants( uint32, uint32, const void*, uint32 ) override {}
-        void setGraphicsRootConstants( uint32, uint32, const void*, uint32 ) override {}
-        void bindComputeUAV( RHIUnorderedAccessIndex, uint32 ) override {}
-        void bindGraphicsUAV( RHIUnorderedAccessIndex, uint32 ) override {}
-        void bindShaderResource( RHITextureSRVIndex, uint32 ) override {}
-        void bindConstantBuffer( RHIBufferSRVIndex, uint32 ) override {}
-        void bindStructuredBuffer( RHIBufferSRVIndex, uint32 ) override {}
-        void bindComputeConstantBuffer( RHIBufferSRVIndex, uint32 ) override {}
-        void bindComputeShaderResource( RHIBufferSRVIndex, uint32 ) override {}
+        using IRHICommandContext::resetBindings; /**< 스트림 시작 — 백엔드가 부르는 자리를 테스트가 흉내 낸다 */
+        /** @brief 공용 기반이 든 바인딩입니다(백엔드가 드로우 직전에 읽는 것). */
+        RHIRecordingBindings& getBindings() { return _bindings; }
+
         void beginEventMarker( const utf8* ) override {}
         void endEventMarker() override {}
         void writeBreadcrumb( uint32 ) override {}
 
     protected:
         IRHIDevice&              getContextDevice() const override { return *_pDevice; }
-        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& ) override
+        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo&, RHIRenderPassExtent& outTargetExtent ) override
         {
             ++_beginNativeCount;
+            outTargetExtent = _targetExtent;
             return RHIRenderPassBeginResult::Begun;
         }
+        void   setViewportNative( const RHIViewport& viewport ) override { _viewport = viewport; }
+        void   setScissorRectNative( const RHIScissorRect& rect ) override { _scissor = rect; }
         void   endRenderPassNative() override { ++_endNativeCount; }
         void   drawNative( uint32, uint32 ) override { ++_drawNativeCount; }
         void   drawInstancedNative( uint32, uint32, uint32, uint32 ) override { ++_drawNativeCount; }
         void   drawIndexedInstancedNative( uint32, uint32, uint32, int32, uint32 ) override { ++_drawNativeCount; }
         void   drawIndirectNative( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override { ++_drawNativeCount; }
         void   drawIndexedIndirectNative( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override { ++_drawNativeCount; }
-        void   setComputePipelineStateNative( RHIPipelineStateHandle ) override {}
         void   dispatchComputeNative( uint32, uint32, uint32 ) override {}
         void   dispatchIndirectNative( RHIBufferHandle, uint32 ) override {}
         void   prepareTextureForShaderReadNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }

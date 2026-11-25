@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
@@ -27,7 +28,8 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
-#include "Engine/Graphics/RHI/RHIGeometryBindings.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIRecordingBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingBudget.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -69,31 +71,24 @@ namespace sw
 
         ID3D11Buffer* _arrBuffer[kStageCount][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
         UINT          _arrFirstConstant[kStageCount][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
-        uint32        _nativeContextSerialSeen{ 0 }; ///< 즉시 컨텍스트 그림자가 마지막으로 본 `D3D11RHIDevice::_nativeContextSerial`(바깥 코드가 컨텍스트를 만지면 그림자를 버린다)
 
         /** @brief 모든 칸을 "모름" 으로 둡니다. */
-        void invalidate()
-        {
-            const uint32 seen        = _nativeContextSerialSeen;
-            *this                    = D3D11ConstantBufferBindings{};
-            _nativeContextSerialSeen = seen;
-        }
+        void invalidate() { *this = D3D11ConstantBufferBindings{}; }
     };
 
     struct D3D11RecordingState
     {
         /**
-         * @brief 루트 상수 에뮬레이션(계약 슬롯 b2)의 버퍼와 CPU 그림자입니다. **기록 스트림마다** 따로 있습니다.
+         * @brief 루트 상수 에뮬레이션(계약 슬롯 b2)의 버퍼입니다(바인드 포인트마다). **기록 스트림마다** 따로 있습니다.
          * @details D3D11 에는 루트 상수가 없어 작은 상수 버퍼로 흉내 낸다. 이것이 디바이스 전역이면
-         *          병렬로 기록하는 두 패스가 같은 그림자 배열과 같은 버퍼를 번갈아 덮어써서, 한쪽 패스의
-         *          드로우가 **다른 패스의 월드 행렬**로 그려진다.
+         *          병렬로 기록하는 두 패스가 같은 버퍼를 번갈아 덮어써서, 한쪽 패스의 드로우가 **다른 패스의 월드 행렬**로 그려진다.
          */
-        Microsoft::WRL::ComPtr<ID3D11Buffer> _rootConstantCb;
-        uint32                               _arrRootConstantShadow[shaderslot::kRootConstantDwords]{};
+        Microsoft::WRL::ComPtr<ID3D11Buffer> _arrRootConstantCb[RHIRecordingBindings::kBindPointCount];
 
-        RHIGeometryBindings    _geometry; ///< setVertexBuffer · setIndexBuffer 로 건 정점 슬롯과 인덱스 버퍼(드로우 때 건다 — RHIGeometryBindings)
-        RHIPipelineStateHandle _activeGraphicsPSO{ 0 };
-        RHIPipelineStateHandle _activeComputePSO{ 0 }; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
+        RHIPipelineStateHandle _boundNativeGraphicsPSO{ 0 };  ///< 네이티브에 셰이더 · 렌더 상태를 건 그래픽스 PSO(0 이면 모름)
+        RHIPipelineStateHandle _boundNativeComputePSO{ 0 };   ///< 네이티브에 셰이더를 건 컴퓨트 PSO(0 이면 모름)
+        uint64                 _pixelSRVMask{ 0 };            ///< PS 에 무언가 걸린 t 슬롯 비트
+        uint32                 _nativeContextSerialSeen{ 0 }; ///< 즉시 컨텍스트 상태가 마지막으로 본 `D3D11RHIDevice::_nativeContextSerial`(바깥 코드가 컨텍스트를 만지면 다시 건다)
         /**
          * @brief CS UAV 슬롯마다 지금 바인딩되어 있는 버퍼입니다(0이면 없음).
          * @details D3D11 은 같은 리소스를 출력(UAV)과 입력(SRV)에 동시에 바인딩할 수 없다. UAV 를 해제하지 않으면
@@ -109,7 +104,7 @@ namespace sw
          *          `prepareTextureForRenderTarget` 가 이 테이블을 보고 그 텍스처가 바인딩된 슬롯만 해제한다(언리얼 D3D11 RHI 의
          *          `ConditionalClearShaderResource` 에 해당한다).
          */
-        RHITextureHandle _arrPixelSRVTexture[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
+        RHITextureHandle _arrPixelSRVTexture[RHIShaderSlots::kShaderResourceCount]{};
         /// @brief 스테이지 · 슬롯마다 건 상수 버퍼의 그림자입니다(`D3D11ConstantBufferBindings`).
         D3D11ConstantBufferBindings _constantBuffers;
     };
@@ -388,6 +383,8 @@ namespace sw
                 , _bDepth{ SW_FALSE }
                 , _reserved{ 0 } {}
 
+            /** @brief 밉 하나의 크기입니다. */
+            RHIRenderPassExtent getMipExtent( uint32 mip ) const { return RHIRenderPassExtent{ MathUtil::max( _width >> mip, 1u ), MathUtil::max( _height >> mip, 1u ) }; }
             /** @brief (밉 `mip`, 면 `slice`) 의 RTV 입니다. 없으면 nullptr 입니다. */
             ID3D11RenderTargetView* findSliceRTV( uint32 slice, uint32 mip ) const
             {
@@ -529,17 +526,10 @@ namespace sw
         /** @brief UAV 인덱스가 가리키는 원본 버퍼 핸들입니다(없으면 0). SRV/UAV 해저드를 해소할 때 씁니다. */
         RHIBufferHandle uavSourceBufferAt( RHIUnorderedAccessIndex index ) const;
 
-        /** @brief 이 기록 스트림의 루트 상수 CB 를 확보합니다(없으면 만듭니다). */
-        [[nodiscard]] bool ensureRootConstantCb( D3D11RecordingState& state );
-        /**
-         * @brief 살아 있는 모든 기록 상태에서 이 버퍼와 PSO 캐시를 지웁니다.
-         * @details 캐시가 리스트마다 있으므로 자원이 사라질 때 **모두** 훑어야 한다. 한 곳만 지우면
-         *          다른 리스트가 죽은 핸들을 드로우 시점에 다시 참조한다.
-         *          목록은 `_liveCmdListMutex` 가 지키지만 **리스트의 상태**는 그 리스트를 기록하는 스레드의 것이다. 그래서 병렬 기록 중에는 부르지 않는다
-         *          (`destroyBuffer` · `destroyPipelineState` 가 `requireRegistryMutableNow` 로 모든 구성에서 감시한다. 해제는 `IRHIDevice::releaseHandle` 이 기록 밖으로 미룬다).
-         */
-        void removeBufferInRecordingStates( RHIBufferHandle buffer );
-        void removePipelineStateInRecordingStates( RHIPipelineStateHandle pso );
+        /** @brief 즉시 컨텍스트의 네이티브 상태가 지워졌습니다 — 프레임 스트림이 건 것을 다시 걸게 합니다. */
+        void invalidateFrameStreamState();
+        /** @brief 이 기록 스트림 · 바인드 포인트의 루트 상수 CB 를 확보합니다(없으면 만듭니다). */
+        [[nodiscard]] bool ensureRootConstantCb( D3D11RecordingState& state, RHIBindPoint point );
         /** @brief 불투명 버퍼 핸들로 ID3D11Buffer 를 찾습니다. */
         ID3D11Buffer* resolveBuffer( RHIBufferHandle handle ) const;
         /**

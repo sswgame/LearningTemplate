@@ -119,7 +119,7 @@ namespace sw
         cmd.bindComputeUAV( quads._uav, 0 );
         // 루트 상수 하나(canvas_marker.hlsl g_MarkerDebugMode) — 1 이면 앵커의 네 번째 값에 인스턴스 칸 유무 코드를 쓴다(보기 모드 MarkerSlots).
         const uint32 debugMode = bShowInstanceSlots ? 1u : 0u;
-        cmd.setComputeRootConstants( 0, 1, &debugMode );
+        cmd.setComputeRootConstants( 1, &debugMode );
         inoutMessages.bindCompute( cmd ); // canvas_marker.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
         cmd.dispatchThreads( _markerCount, 1, 1 );
     }

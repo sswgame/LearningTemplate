@@ -54,34 +54,22 @@ namespace sw
         void dispatchThreads( uint32 x, uint32 y, uint32 z ) override { _pContext->dispatchThreads( x, y, z ); }
         void uavBarrier( RHIBufferHandle buffer ) override { _pContext->uavBarrier( buffer ); }
         void uavBarrierTexture( RHITextureHandle texture ) override { _pContext->uavBarrierTexture( texture ); }
-        void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,
-                                       uint32 destOffsetIn32BitValues = 0 ) override
+        void setGraphicsRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override
         {
-            _pContext->setGraphicsRootConstants( rootParameterIndex, num32BitValues, pData, destOffsetIn32BitValues );
+            _pContext->setGraphicsRootConstants( num32BitValues, pData, destOffsetIn32BitValues );
         }
-        void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,
-                                      uint32 destOffsetIn32BitValues = 0 ) override
+        void setComputeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override
         {
-            _pContext->setComputeRootConstants( rootParameterIndex, num32BitValues, pData, destOffsetIn32BitValues );
+            _pContext->setComputeRootConstants( num32BitValues, pData, destOffsetIn32BitValues );
         }
-        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override
-        {
-            if constexpr ( build::kShipping == false )
-                _pContext->trackComputeBinding( index, true, slot );
-            _pContext->bindComputeUAV( index, slot );
-        }
+        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override { _pContext->bindComputeUAV( index, slot ); }
         void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override { _pContext->bindGraphicsUAV( index, slot ); }
         void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override { _pContext->bindShaderResource( index, slot ); }
         void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override { _pContext->bindConstantBuffer( constantBufferIndex, slot ); }
         void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override { _pContext->updateConstantBuffer( buffer, pData, size ); }
         void bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override { _pContext->bindStructuredBuffer( index, slot ); }
         void bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override { _pContext->bindComputeConstantBuffer( constantBufferIndex, slot ); }
-        void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override
-        {
-            if constexpr ( build::kShipping == false )
-                _pContext->trackComputeBinding( index, false, slot );
-            _pContext->bindComputeShaderResource( index, slot );
-        }
+        void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override { _pContext->bindComputeShaderResource( index, slot ); }
         void prepareTextureForShaderRead( RHITextureHandle texture ) override { _pContext->prepareTextureForShaderRead( texture ); }
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override { _pContext->prepareTextureForRenderTarget( texture ); }
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override { _pContext->prepareTextureForUnorderedAccess( texture ); }

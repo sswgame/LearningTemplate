@@ -125,7 +125,7 @@ namespace sw
         commands.transitionBuffer( _buffer._buffer, RHIBufferState::UnorderedAccess );
         commands.setComputePipelineState( pso );
         commands.bindComputeUAV( _buffer._uav, 0 );
-        commands.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        commands.setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         commands.dispatchThreads( width, height, 1 );
         _bScannedThisFrame = SW_TRUE;
     }

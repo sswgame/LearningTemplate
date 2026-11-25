@@ -292,9 +292,7 @@ namespace sw
     {
         if ( buffer == 0 )
             return false;
-        // 아래 `removeBufferInRecordingStates` 는 다른 스레드가 기록 중인 리스트의 상태에 쓴다. 병렬 기록 중에는 부르지 않는 것이 계약이다.
         _pDevice->requireRegistryMutableNow( "destroyBuffer" );
-        _pDevice->removeBufferInRecordingStates( buffer );
 
         D3D11RHIDevice::BufferRecord owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
@@ -1115,11 +1113,8 @@ namespace sw
     {
         if ( pso == 0 )
             return false;
-        // 아래 `removePipelineStateInRecordingStates` 는 다른 스레드가 기록 중인 리스트의 상태에 쓴다. 병렬 기록 중에는 부르지 않는 것이 계약이다.
         _pDevice->requireRegistryMutableNow( "destroyPipelineState" );
-        const bool bLive = _pDevice->_pipelineStates.erase( pso );
-        _pDevice->removePipelineStateInRecordingStates( pso );
-        return bLive;
+        return _pDevice->_pipelineStates.erase( pso ); // 건 채인 기록 스트림은 세대가 달라 풀리지 않는다 — 그 드로우 · 디스패치가 멈춘다
     }
 } // namespace sw
 #endif

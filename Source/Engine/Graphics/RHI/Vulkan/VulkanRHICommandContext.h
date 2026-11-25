@@ -10,6 +10,7 @@ namespace sw
 {
     struct VulkanDescriptorPoolSet;
     struct VulkanRecordingState;
+    struct VulkanSlotState;
 
     class VulkanRHIDevice;
 
@@ -33,30 +34,20 @@ namespace sw
         ~VulkanRHICommandContext() override = default;
 
         void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
-        void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override;
         void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override;
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override;
         /** @brief 텍스처 전이를 `vkCmdPipelineBarrier` 한 번으로 냅니다(`VulkanRHIDevice::transitionTextureLayouts`). 단일 `prepareTextureFor*Native` 도 원소 하나로 이 길을 지난다. */
         void transitionTexturesNative( const RHITextureTransition* pTransition, uint32 count ) override;
-        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
-        void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override;
-        void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void drawNative( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
-        void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
         /** @brief 버퍼의 이번 프레임 슬롯에 씁니다. 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다. */
         void                     updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        void                     bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override;
-        void                     bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override;
-        void                     bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override;
         void                     dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
-        void                     setViewport( const RHIViewport& viewport ) override;
-        void                     setScissorRect( const RHIScissorRect& rect ) override;
+        void                     setViewportNative( const RHIViewport& viewport ) override;
+        void                     setScissorRectNative( const RHIScissorRect& rect ) override;
         void                     drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
                                                      RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
-        void                     setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void                     setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
         void                     drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
                                                             uint32 countBufferOffset = 0 ) override;
         void                     drawIndexedInstancedNative( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override;
@@ -64,12 +55,9 @@ namespace sw
         void                     beginEventMarker( const utf8* pName ) override;
         void                     writeBreadcrumb( uint32 markerID ) override;
         void                     endEventMarker() override;
-        void                     setPipelineState( RHIPipelineStateHandle pso ) override;
-        void                     setComputePipelineStateNative( RHIPipelineStateHandle pso ) override;
         IRHIDevice&              getContextDevice() const override;
-        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) override;
+        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo, RHIRenderPassExtent& outTargetExtent ) override;
         void                     endRenderPassNative() override;
-        void                     setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
         void                     transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
         void                     transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count ) override;
         void                     copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
@@ -77,10 +65,12 @@ namespace sw
         void                     copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override;
         void                     uavBarrierNative( RHIBufferHandle buffer ) override;
         void                     uavBarrierTextureNative( RHITextureHandle texture ) override;
-        void                     beginTextureAlias( RHITextureHandle texture ) override;
+        void                     beginTextureAliasNative( RHITextureHandle texture ) override;
         /** @brief 마지막으로 연 이벤트 마커입니다(없으면 빈 문자열). 기록이 끝난 뒤 제출하는 스레드가 읽습니다. */
         const utf8* getLastEventMarker() const { return _lastEventMarker.c_str(); }
 
+        /** @brief 새 커맨드 버퍼에 기록을 시작합니다 — 걸린 것이 없다(`VulkanRecordingState` 를 되돌리는 자리와 짝이다). */
+        void beginRecording() { resetBindings(); }
         /** @brief 기록 대상 버퍼와 풀 그룹을 교체합니다(소유자가 버퍼와 풀 쌍을 바꿀 때). */
         void rebindCommandBuffer( VkCommandBuffer targetBuffer, VulkanDescriptorPoolSet* pDescriptorPoolSet )
         {
@@ -90,32 +80,22 @@ namespace sw
 
     private:
         /**
-         * @brief 바뀐 슬롯 상태를 슬롯 세트(set 0)로 확정해 그 바인드 포인트(bCompute)에 바인딩하고, 텍스처 세트(set 1)는 커맨드 버퍼마다 한 번 두 바인드 포인트에 바인딩합니다.
+         * @brief 바뀐 셰이더 슬롯을 슬롯 세트(set 0)로 확정해 그 바인드 포인트에 바인딩하고 바뀐 루트 상수를 푸시합니다. 텍스처 세트(set 1)는 커맨드 버퍼마다 한 번 두 바인드 포인트에 바인딩합니다.
          * @details 언리얼 Vulkan RHI 처럼 드로우와 디스패치 직전에 부릅니다. 상태가 그대로면 아무것도 하지 않습니다.
          */
-        void flushSlotSet( bool bCompute );
+        void flushBindings( RHIBindPoint point );
+        /** @brief 공용 표의 슬롯 하나를 버퍼 구간으로 풀어 세트 원소(@p bindingIndex = 종류별 시프트 + 레지스터)에 적습니다. 뗀 칸 · 등록되지 않은 번호는 비운다(뒤는 알린다). */
+        void resolveSlot( VulkanSlotState& state, RHIShaderSlotKind kind, uint32 slot, RHIDescriptorIndex index ) const;
         /**
-         * @brief 슬롯 하나에 bindless 인덱스의 버퍼를 설정합니다(세트는 flushSlotSet 이 확정합니다).
-         * @param bCompute true 면 컴퓨트 바인드 포인트의 상태, false 면 그래픽스입니다. 둘은 독립입니다.
-         * @param bindingIndex 세트 0 의 binding (종류별 시프트 + 레지스터 번호).
-         * @param bUAV true 면 UAV 레지스트리, false 면 SRV/CB 레지스트리입니다.
-         * @param bConstantBuffer true 면 링 상수 버퍼의 이번 프레임 슬롯 오프셋과 크기를 씁니다.
+         * @brief 드로우 하나의 준비입니다 — 파이프라인 · 슬롯 세트 · 루트 상수 · 정점(@p bIndexed 면 인덱스도). 모든 드로우 진입점이 부릅니다.
+         * @return 걸 수 없으면(커맨드 버퍼 없음 · 빈 정점 슬롯 · 부서진 버퍼) false 이고 드로우를 내지 않습니다. 등록된 PSO 가 없으면 오류로 멈춥니다.
          */
-        void setSlot( bool bCompute, uint32 bindingIndex, RHIDescriptorIndex index, bool bUAV, bool bConstantBuffer );
+        [[nodiscard]] bool prepareDraw( bool bIndexed );
+        /** @brief 디스패치 하나의 준비입니다 — 컴퓨트 파이프라인 · 슬롯 세트 · 루트 상수. 등록된 컴퓨트 PSO 가 없으면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
+        void prepareDispatch();
 
-        /**
-         * @brief 현재 활성 그래픽스 PSO(없으면 오프스크린/기본 파이프라인)를 바인딩합니다.
-         * @details 모든 draw 계열이 직전 상태에 의존하지 않고 스스로 파이프라인을 바인딩하도록 합니다. 슬롯 세트(set 0)도 여기서 확정합니다(flushSlotSet).
-         * @return 바인딩할 파이프라인이 있으면 true, 없으면 false 입니다(드로우를 건너뛰어야 함).
-         */
-        [[nodiscard]] bool bindActiveGraphicsPipeline();
-        /** @brief 디스패치 직전에 `setComputePipelineState` 로 건 컴퓨트 PSO 가 등록된 레코드인지 봅니다. 아니면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
-        void requireComputePipelineForDispatch() const;
-
-        /** @brief 메시 VB(없으면 풀스크린 정점 버퍼)를 바인딩 0 에, 인스턴스 슬롯 스트림(없으면 바인딩 0 의 버퍼)을 바인딩 1 에 설정합니다. 모든 드로우 진입점이 이것을 쓰고, false(설정한 메시 VB 가 파괴됨, 또는 커맨드 버퍼 없음)면 드로우를 버립니다. */
-        [[nodiscard]] bool bindMeshVertexBufferForDraw();
-        /** @brief 인덱스 드로우가 함께 쓰는 준비 — 파이프라인 · 메시 정점 · 인덱스 버퍼를 건다. 인덱스 버퍼가 없거나 커맨드 버퍼가 없으면 false(그리지 않는다). */
-        [[nodiscard]] bool bindIndexedMeshForDraw();
+        /** @brief 파이프라인이 선언한 바인딩(@p layout — 셰이더가 읽는 슬롯)에만 정점 버퍼를 겁니다. 읽는 슬롯이 비었거나 건 버퍼가 부서졌으면 알리고 false 이며 드로우를 버립니다. */
+        [[nodiscard]] bool bindMeshVertexBufferForDraw( const RHIVertexLayout& layout );
 
         /** @brief 실제로 기록할 커맨드 버퍼입니다(지정된 것이 있으면 그것, 없으면 디바이스의 현재 버퍼). */
         VkCommandBuffer commandBuffer() const;

@@ -386,7 +386,6 @@ namespace sw
             return false;
 
         ScopedOpenGLContext contextScope( _pDevice );
-        _pDevice->_recordingState._geometry.remove( buffer );
 
         OpenGLRHIDevice::OpenGLBufferRecord taken{};
         if ( _pDevice->_gpuBuffers.take( buffer, taken ) == false )
@@ -1220,11 +1219,6 @@ namespace sw
         const GLuint                                program = record._program;
         const GLuint                                vao     = record._vao;
         _pDevice->_pipelineStates.erase( pso );
-
-        if ( _pDevice->_recordingState._boundGraphicsPSO == pso )
-            _pDevice->_recordingState._boundGraphicsPSO = 0;
-        if ( _pDevice->_recordingState._boundComputePSO == pso )
-            _pDevice->_recordingState._boundComputePSO = 0;
 
         if ( program == 0 && vao == 0 )
             return true;

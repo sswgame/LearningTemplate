@@ -391,8 +391,8 @@ namespace sw
          *        attachmentNames() 의 캐시를 넘기세요.
          */
         void registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, const hashed_string& attachmentName );
-        /** @brief bindless 텍스처 바인딩을 커밋합니다. PassConstantValues 를 갱신하고, 에뮬레이션 백엔드에는 폴백 바인딩을 합니다. */
-        void commitBindlessTextureBindings( FramePassContext& context );
+        /** @brief 에뮬 백엔드(DX11 · GL · WebGPU)의 엔진 텍스처 칸(t32..)에 이 패스가 이름으로 건 텍스처를 겁니다. 네이티브 bindless 는 셰이더가 번호로 읽어 할 일이 없습니다. PSO 를 건 뒤 `bindForDraw` 가 부릅니다. */
+        void bindEngineTextures( FramePassContext& context );
         /**
          * @brief 지금 뷰의 주 출력 대상을 고릅니다. 렌더 텍스처 뷰는 자기 텍스처를, 주 시점과 화면 사각형 뷰는 주 출력(백버퍼 또는 게임 뷰 RT)을 씁니다.
          *        스크린샷 실행이면 캡처 텍스처를 씁니다. Present 와 Canvas 가 같은 판단을 씁니다.
@@ -426,7 +426,7 @@ namespace sw
         void registerLightBuffer( FramePassContext& context );
         /**
          * @brief 표면 변형 층의 높이 텍스처를 "SurfaceDeform" 이름으로 겁니다. **모든 패스**에 겁니다(창 `g_SurfaceDeformParams` 가 프레임 시드로 모든 패스에 가므로 칸도 같이 간다).
-         * @details 인스턴스 버퍼 등록에 두었을 때 DX11 · GL 에서 칸이 비었다 — 그 등록은 인스턴스 그리기에서만 불리고 에뮬 칸을 거는 `commitBindlessTextureBindings`
+         * @details 인스턴스 버퍼 등록에 두었을 때 DX11 · GL 에서 칸이 비었다 — 그 등록은 인스턴스 그리기에서만 불리고 에뮬 칸을 거는 `bindEngineTextures`
          *          보다 뒤였다. 창만 켜지고 칸이 빈 채 지형 · 지면이 평평했다. 텍스처가 올라가기 전에는 걸지 않는다(창도 0 — `FrameRenderer::updatePassConstants`).
          */
         void registerSurfaceDeformLayer( FramePassContext& context );

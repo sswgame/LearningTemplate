@@ -191,6 +191,7 @@ namespace sw
         outView._format                      = record._format;
         outView._bHasRTV                     = record._bHasRTV;
         outView._bHasDSV                     = record._bHasDSV;
+        outView._extent                      = RHIRenderPassExtent{ MathUtil::max( record._width >> mip, 1u ), MathUtil::max( record._height >> mip, 1u ) };
         if ( slice >= record._arraySize || mip >= record._mipLevels )
             return true;
 
@@ -339,7 +340,7 @@ namespace sw
             if ( _bOnlineHeapExhaustedLogged == SW_FALSE )
             {
                 _bOnlineHeapExhaustedLogged = SW_TRUE;
-                // 실제 동작은 건너뛰기다 — flushSlotTables 가 false 를 받아 드로우 · 디스패치를 내지 않는다(앞 테이블로 그리지 않는다).
+                // 실제 동작은 건너뛰기다 — flushBindings 가 false 를 받아 드로우 · 디스패치를 내지 않는다(앞 테이블로 그리지 않는다).
                 SW_LOG_ERROR_ID( "D3D12.OutOnlineDescriptorBlocks", "Out of online descriptor blocks (%#x%#) - draws and dispatches that need a new slot table are skipped.",
                                  kOnlineBlockCount, kOnlineBlockDescriptorCount );
             }
@@ -1280,6 +1281,7 @@ namespace sw
         _windowSwapChains.clear();
         _swapChain.shutdown();
         _rootSignature.Reset();
+        _nullConstantBuffer.Reset();
         _drawCommandSignature.Reset();
         _drawIndexedCommandSignature.Reset();
         _dispatchCommandSignature.Reset();
@@ -1597,6 +1599,7 @@ namespace sw
         _frameStreamState.resetForRecording();
         _frameStreamState._bRecording = SW_TRUE;
         _frameStreamContext->rebindCommandList( pNextSegment );
+        _frameStreamContext->beginRecording();
 
         D3D12_VIEWPORT viewport{};
         viewport.Width    = static_cast<float32>( _swapChain.getWidth() );
@@ -2145,12 +2148,12 @@ namespace sw
             // list" 에러를 매번 뱉으며 프레임마다 반복 폭주하게 된다. 실패하면 이번 프레임을 건너뛴다.
             if ( isHrSuccess( pAllocator->Reset(), "Reset" ) == false || isHrSuccess( _commandList->Reset( pAllocator, nullptr ), "Reset" ) == false )
                 return;
-            _frameStreamState._bRecording      = SW_TRUE;
-            _frameStreamState._arrSlotState[0] = D3D12SlotTableState{}; // 새 리스트라 슬롯 테이블은 첫 드로우가 다시 굳힌다
-            _frameStreamState._arrSlotState[1] = D3D12SlotTableState{};
-            _pActiveFrameList                  = _commandList.Get();
+            _frameStreamState.resetForRecording(); // 새 리스트라 PSO · 슬롯 테이블은 첫 드로우가 다시 굳힌다
+            _frameStreamState._bRecording = SW_TRUE;
+            _pActiveFrameList             = _commandList.Get();
             _frameThreadID.store( std::this_thread::get_id(), std::memory_order_relaxed );
             _frameStreamContext->rebindCommandList( _pActiveFrameList );
+            _frameStreamContext->beginRecording();
             bindBindlessRootState( _pActiveFrameList );
         }
         _swapChain.acquireNextImage();
@@ -2333,6 +2336,11 @@ namespace sw
         pList->SetGraphicsRootDescriptorTable( kBindlessTextureTableParam, heapStart );
         pList->SetComputeRootSignature( _rootSignature.Get() );
         pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, heapStart );
+        for ( uint32 slot = 0; slot < shaderslot::kConstantBufferSlotCount; ++slot )
+        {
+            pList->SetGraphicsRootConstantBufferView( kCBVRootParam0 + slot, getNullConstantBufferAddress() ); // 걸지 않은 b 슬롯은 0 을 읽는다
+            pList->SetComputeRootConstantBufferView( kCBVRootParam0 + slot, getNullConstantBufferAddress() );
+        }
     }
 
     void D3D12RHIDevice::bindBindlessComputeRootState( ID3D12GraphicsCommandList* pList )
@@ -2347,6 +2355,10 @@ namespace sw
         D3D12_GPU_DESCRIPTOR_HANDLE heapStart = _cbvHeap->GetGPUDescriptorHandleForHeapStart();
         heapStart.ptr += static_cast<UINT64>( getBindlessRingBase( _frameRing.currentIndex() ) ) * _cbvDescriptorSize; // 이번 링 슬롯의 bindless 사본(R-6)
         pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, heapStart );
+        for ( uint32 slot = 0; slot < shaderslot::kConstantBufferSlotCount; ++slot )
+        {
+            pList->SetComputeRootConstantBufferView( kCBVRootParam0 + slot, getNullConstantBufferAddress() );
+        }
     }
 
     void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )
@@ -2400,7 +2412,7 @@ namespace sw
             setRootDescriptor( kCBVRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_CBV, slot );
         }
 
-        // t/u 슬롯 테이블. 범위 하나씩. 테이블 시작은 드로우 · 디스패치 직전 flushSlotTables 가 온라인 블록에 굳혀 건다.
+        // t/u 슬롯 테이블. 범위 하나씩. 테이블 시작은 드로우 · 디스패치 직전 flushBindings 가 온라인 블록에 굳혀 건다.
         D3D12_DESCRIPTOR_RANGE srvSlotRange{};
         srvSlotRange.RangeType                                       = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
         srvSlotRange.NumDescriptors                                  = shaderslot::kSRVSlotCount;
@@ -2539,6 +2551,12 @@ namespace sw
         if ( isHrSuccess( _device->CreateCommandSignature( &dispatchCmdSigDesc, nullptr, IID_PPV_ARGS( _dispatchCommandSignature.GetAddressOf() ) ), "CreateCommandSignature (dispatch)" ) == false )
             return false;
 
+        // cbuffer 하나의 상한(64 KB)만큼이라 어떤 선언도 버퍼 밖을 읽지 않는다.
+        void*            pNullConstantMapped{ nullptr };
+        constexpr uint64 kNullConstantBytes = D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 4u * sizeof( uint32 );
+        if ( createMappedUploadBuffer( kNullConstantBytes, L"NullConstantBuffer", _nullConstantBuffer, pNullConstantMapped ) == false )
+            return false;
+        Memory::set( pNullConstantMapped, 0, kNullConstantBytes );
         return true;
     }
 

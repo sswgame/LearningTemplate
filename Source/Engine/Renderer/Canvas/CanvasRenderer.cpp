@@ -125,7 +125,7 @@ namespace sw
                     arrRoot[CanvasRendererInternal::kRootTexture0 + slot] = slot;
                 }
             }
-            cmd.setGraphicsRootConstants( 0, CanvasRendererInternal::kRootConstantCount, arrRoot );
+            cmd.setGraphicsRootConstants( CanvasRendererInternal::kRootConstantCount, arrRoot );
             // 시작 인스턴스는 0 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않는다. 시작 사각형은 루트 상수로 간다.
             cmd.drawInstanced( CanvasRendererInternal::kVerticesPerQuad, batch._quadCount, 0, 0 );
             ++drawnBatchCount;
