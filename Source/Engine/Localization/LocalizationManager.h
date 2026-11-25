@@ -285,6 +285,8 @@ namespace sw
         const utf8* findByHash( uint64 keyHash ) const;
         /** @brief 텍스트 버전을 올리고 콜백을 부릅니다. */
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
+        /** @brief 지금 언어를 엔진의 리소스 조건(`locale` 축)에 적습니다 — 언어가 정해지는 자리(바꾸기 · 프로젝트 올리기 · 표 읽기 · 비우기)마다 부른다. `_mutex` 밖에서 부른다. */
+        void syncLocaleTag() const;
 
     private:
         mutable shared_mutex                                            _mutex;

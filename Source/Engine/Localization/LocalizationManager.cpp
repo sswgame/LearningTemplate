@@ -117,6 +117,7 @@ namespace sw
             rebuildTablesLocked();
             rebuildLookupChainLocked();
         }
+        syncLocaleTag();
         _onLanguageChanged.removeAll();
         clearMissingKeys();
         _textRevision.fetch_add( 1, std::memory_order_relaxed );
@@ -440,24 +441,30 @@ namespace sw
     {
         TranslationTable incoming;
         incoming.getOrAddEntry( key.view() );
-        const ScopedDeferredLog  deferredLog;
-        UniqueLock<shared_mutex> lock{ _mutex };
-        if ( const expected<void> checked = validateKeyHashesLocked( nullptr, &incoming ); checked.has_value() == false )
+        const ScopedDeferredLog deferredLog;
+        bool                    bLanguageChosen = false;
         {
-            SW_LOG_ERROR_ID( "LocalizationManager.KeyHashCollision", "Localized string '%#' is not set: %# (%#)", key.c_str(), checked.error().message(), checked.error().detail() );
-            return;
+            UniqueLock<shared_mutex> lock{ _mutex };
+            if ( const expected<void> checked = validateKeyHashesLocked( nullptr, &incoming ); checked.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "LocalizationManager.KeyHashCollision", "Localized string '%#' is not set: %# (%#)", key.c_str(), checked.error().message(), checked.error().detail() );
+                return;
+            }
+            const string      code  = normalizeLanguageCode( languageCode );
+            TranslationTable& loose = _mapLooseTable[code];
+            loose.setCulture( code );
+            TranslationEntry& entry = loose.getOrAddEntry( key.c_str() );
+            entry._text             = string( value );
+            getOrCreateTableLocked( code ).setStringByHash( LocalizationKeyIndex::computeHash( key.view() ), value );
+            if ( _currentLanguage.empty() )
+            {
+                _currentLanguage = code;
+                rebuildLookupChainLocked();
+                bLanguageChosen = true;
+            }
         }
-        const string      code  = normalizeLanguageCode( languageCode );
-        TranslationTable& loose = _mapLooseTable[code];
-        loose.setCulture( code );
-        TranslationEntry& entry = loose.getOrAddEntry( key.c_str() );
-        entry._text             = string( value );
-        getOrCreateTableLocked( code ).setStringByHash( LocalizationKeyIndex::computeHash( key.view() ), value );
-        if ( _currentLanguage.empty() )
-        {
-            _currentLanguage = code;
-            rebuildLookupChainLocked();
-        }
+        if ( bLanguageChosen )
+            syncLocaleTag();
     }
 
     void LocalizationManager::unloadLanguage( string_view languageCode )
@@ -885,16 +892,6 @@ namespace sw
         }
         syncCookedTables();
         SW_LOG_INFO_ID( "LocalizationManager.LanguageChanged", "Language changed: '%#' -> '%#'", oldLanguage.c_str(), code.c_str() );
-        if ( _bEngineInstance == SW_FALSE )
-        {
-            notifyLanguageChanged( oldLanguage, code );
-            return true; // 엔진의 관리자가 아니다 — 리소스 조건은 엔진의 언어를 따른다
-        }
-        // 리소스 조건의 `locale` 축 — 언어별 값 · 경로 교체(`<_when _if="locale.ko">` · `<Remap when>`)가 읽는다. 식의 이름 글자에 '-' 가 없어 `en-US` 는 `locale.en_US` 다.
-        // 언어 코드에는 '.' 이 없어(`normalizeLanguageCode`) 축 값으로 늘 받힌다 — 받히지 않으면 `ResourceTags` 가 오류를 남긴다.
-        string localeValue = code;
-        std::replace( localeValue.begin(), localeValue.end(), '-', '_' );
-        (void)engine::getSubsystem<ResourceTags>().setAxisValue( "locale", localeValue );
         notifyLanguageChanged( oldLanguage, code );
         return true;
     }
@@ -1171,8 +1168,20 @@ namespace sw
         return _onLanguageChanged.add( callback ); // 빈 콜백은 빈 구독이다
     }
 
+    void LocalizationManager::syncLocaleTag() const
+    {
+        if ( _bEngineInstance == SW_FALSE )
+            return; // 엔진의 관리자가 아니다 — 리소스 조건은 엔진의 언어를 따른다
+        // 리소스 조건의 `locale` 축 — 언어별 값 · 경로 교체(`<_when _if="locale.ko">` · `<Remap when>`)가 읽는다. 식의 이름 글자에 '-' 가 없어 `en-US` 는 `locale.en_US` 다.
+        // 언어 코드에는 '.' 이 없어(`normalizeLanguageCode`) 축 값으로 늘 받힌다 — 받히지 않으면 `ResourceTags` 가 오류를 남긴다. 언어가 없으면 축도 없다.
+        string localeValue = getCurrentLanguage();
+        std::replace( localeValue.begin(), localeValue.end(), '-', '_' );
+        (void)engine::getSubsystem<ResourceTags>().setAxisValue( "locale", localeValue );
+    }
+
     void LocalizationManager::notifyLanguageChanged( string_view oldLanguage, string_view newLanguage )
     {
+        syncLocaleTag();
         _textRevision.fetch_add( 1, std::memory_order_relaxed );
         _onLanguageChanged.broadcast( oldLanguage, newLanguage );
     }

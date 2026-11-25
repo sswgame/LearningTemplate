@@ -493,3 +493,21 @@ SW_TEST_CASE( LocalizationManagerTest, SeparateManagerLeavesTheEngineLocaleTag )
     SW_EXPECT_EQUAL( string( "ja_jp" ), separate.getCurrentLanguage() );
     SW_EXPECT_TRUE( listTag == engine::getSubsystem<ResourceTags>().capture().getTags() );
 }
+
+/** @brief [LocalizationManagerEngineTest] 엔진의 리소스 조건은 늘 엔진의 지금 언어다 — 프로젝트를 올리며 정해진 처음 언어도 바꾼 언어도 되돌린 언어도 */
+SW_TEST_CASE_F( LocalizationManagerEngineTest, LocaleTagFollowsTheEngineLanguage )
+{
+    const auto hasLocaleTag = []( string_view language )
+    {
+        string tag = "locale.";
+        tag.append( language );
+        return engine::getSubsystem<ResourceTags>().capture().contains( tag );
+    };
+    SW_REQUIRE_FALSE( _previousLanguage.empty() );
+    SW_EXPECT_TRUE( hasLocaleTag( _previousLanguage ) );
+    SW_REQUIRE_TRUE( _loc.setCurrentLanguage( "qa" ) );
+    SW_EXPECT_TRUE( hasLocaleTag( "qa" ) );
+    SW_EXPECT_FALSE( hasLocaleTag( _previousLanguage ) );
+    SW_REQUIRE_TRUE( _loc.setCurrentLanguage( _previousLanguage ) );
+    SW_EXPECT_TRUE( hasLocaleTag( _previousLanguage ) );
+}
