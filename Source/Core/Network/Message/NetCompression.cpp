@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Network/NetCompression.h"
+#include "Core/Network/Message/NetCompression.h"
 
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Serialization/VarIntUtil.h"

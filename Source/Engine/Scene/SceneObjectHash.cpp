@@ -5,8 +5,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Encoding/HexUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Log/DebugReplyLine.h"
 #include "Core/Log/Logger.h"
-#include "Core/Network/DebugReplyLine.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
