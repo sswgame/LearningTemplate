@@ -3,7 +3,7 @@
 	<spawn x="7" y="7" />
 	<tiles />
 	<warps />
-	<tileLayer tileSet="game/playground/tilesets/demo.tileset.xml">
+	<tileLayer tileSet="guid:600d76790335bad66e08d4f5272d6b04">
 		<palette>
 			<b name="ground" />
 			<b name="stone" />

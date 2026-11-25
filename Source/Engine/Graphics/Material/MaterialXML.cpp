@@ -129,7 +129,7 @@ namespace sw
 
     void MaterialXML::appendReference( XMLNode parent, const utf8* pName, string_view path )
     {
-        appendAttribute( parent, pName, AssetRegistry::makeReferenceText( path, AssetRegistry::resolveGUID( path ) ) );
+        appendAttribute( parent, pName, AssetRegistry::makeIndexedReferenceText( path ) );
     }
 
     void MaterialXML::appendAttribute( XMLNode parent, const utf8* pName, string_view value )

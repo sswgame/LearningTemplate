@@ -10,6 +10,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Scene/SceneDocument.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -111,7 +112,7 @@ namespace sw
                 data._name          = std::move( header._name );
                 data._width         = header._width;
                 data._height        = header._height;
-                data._scenePath     = std::move( header._scene );
+                data._scenePath     = header._scene.path();
                 data._role          = std::move( header._role );
                 const XMLNode spawn = root.findChild( "spawn" );
                 if ( spawn.isValid() )
@@ -269,7 +270,7 @@ namespace sw
                 const bool      bKnownAttributes = XMLFields::readProperties( tileLayer, layerParams, data._name );
                 if ( ( XMLNameCheck::reportUnknownChildren( tileLayer, kArrKnownTileLayerChild, data._name ) && bKnownAttributes ) == false )
                     return false;
-                data._tileSetPath     = std::move( layerParams._tileSet );
+                data._tileSetPath     = layerParams._tileSet.path();
                 const XMLNode palette = tileLayer.findChild( "palette" );
                 for ( XMLNode entry = palette.isValid() ? palette.findChild( "b" ) : XMLNode{}; entry; entry = entry.findNextSibling( "b" ) )
                 {
@@ -375,8 +376,10 @@ namespace sw
             {
                 if ( data._tileSetPath.empty() )
                     return;
-                const XMLNode tileLayer = root.appendChild( "tileLayer" );
-                XMLFields::writeProperties( tileLayer, TileLayerParams{ data._tileSetPath } );
+                const XMLNode   tileLayer = root.appendChild( "tileLayer" );
+                TileLayerParams layerParams;
+                layerParams._tileSet = data._tileSetPath;
+                XMLFields::writeProperties( tileLayer, layerParams );
                 const XMLNode palette = tileLayer.appendChild( "palette" );
                 for ( const string& name : data._listPaletteName )
                 {
@@ -671,6 +674,10 @@ namespace sw
             SW_LOG_INFO_ID( "TileMapXML.Saved", "Saved '%#' -> %#", _name, absPath.str() );
         return bOk;
     }
+
+    TileMapHeaderParams::TileMapHeaderParams() = default;
+
+    TileLayerParams::TileLayerParams() = default;
 
     string TileMapXMLData::toXML() const
     {
