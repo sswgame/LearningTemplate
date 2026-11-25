@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerHand.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
 
 namespace sw
 {

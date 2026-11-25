@@ -5,10 +5,9 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle/CardBattle.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Klondike/KlondikeGame.h"
-#include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/HwatuDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/MatgoGame.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/SheddingCard/SheddingCardGame.h"

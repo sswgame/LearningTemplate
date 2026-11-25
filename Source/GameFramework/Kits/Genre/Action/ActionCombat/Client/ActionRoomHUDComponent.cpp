@@ -14,7 +14,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionRoomHUDViewModel.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageEvents.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"

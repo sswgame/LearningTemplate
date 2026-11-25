@@ -10,7 +10,6 @@
 #include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartAI.h"
-#include "GameFramework/Kits/Genre/Casual/KartRacing/KartGhost.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartItems.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartRace.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartTrack.h"

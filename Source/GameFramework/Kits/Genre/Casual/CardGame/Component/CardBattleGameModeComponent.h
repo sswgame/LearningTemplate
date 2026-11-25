@@ -15,7 +15,7 @@
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle/CardBattle.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 

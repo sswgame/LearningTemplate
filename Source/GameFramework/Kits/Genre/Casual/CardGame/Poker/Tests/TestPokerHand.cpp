@@ -7,7 +7,6 @@
 #include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
-#include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerHand.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 

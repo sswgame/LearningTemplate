@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/HwatuDeck.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/MatgoGame.h"
 
 namespace sw
 {

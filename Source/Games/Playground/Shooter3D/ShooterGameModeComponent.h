@@ -34,8 +34,8 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 #include "Games/Playground/Shooter3D/ShooterBlockerComponent.h"
+#include "Games/Playground/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Playground/Shooter3D/ShooterEnemyComponent.h"
-#include "Games/Playground/Shooter3D/ShooterFloor.h"
 
 namespace sw
 {

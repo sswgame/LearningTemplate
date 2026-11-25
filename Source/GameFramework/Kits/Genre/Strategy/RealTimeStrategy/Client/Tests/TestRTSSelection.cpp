@@ -9,7 +9,6 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSCommandInputComponent.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSSelection.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/SkirmishGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"

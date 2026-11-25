@@ -232,8 +232,10 @@ namespace sw
         /** @brief 이번 라운드 점수를 사람 순서로 반환합니다. */
         void computeRoundScores( vector<int32>& outListScore ) const;
 
-        const TrampolinePlayer*   findPlayer( int32 player ) const;
-        int32                     getPlayerCount() const { return static_cast<int32>( _listPlayer.size() ); }
+        const TrampolinePlayer* findPlayer( int32 player ) const;
+        int32                   getPlayerCount() const { return static_cast<int32>( _listPlayer.size() ); }
+        /** @brief 봇이 맡은 @p player 의 이번 걸음 입력입니다. 무대에 없거나(떨어지는 중 · 부활 대기) 없는 번호면 빈 입력입니다. */
+        TrampolineInput           computeBotInput( int32 player ) const;
         const MatchState&         getMatch() const { return _match; }
         bool                      isRoundOver() const { return _match.getPhase() == MatchPhase::Ended; }
         float32                   getTime() const { return _time; }

@@ -11,7 +11,7 @@
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/Component/PartyGameModeComponent.h"
-#include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineBot.h"
+#include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineArena.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
@@ -149,6 +149,6 @@ SW_TEST_CASE( PartyGameModeTest, BotReturnsFromTheEdge )
         ++steps;
     }
     SW_REQUIRE_TRUE( arena.findPlayer( 0 )->_position._x >= 6.5f );
-    SW_EXPECT_TRUE( TrampolineBot::computeInput( arena, 0 )._moveX < 0.0f );
-    SW_EXPECT_NEAR( 0.0f, TrampolineBot::computeInput( arena, 7 )._moveX, 1.0e-6f );
+    SW_EXPECT_TRUE( arena.computeBotInput( 0 )._moveX < 0.0f );
+    SW_EXPECT_NEAR( 0.0f, arena.computeBotInput( 7 )._moveX, 1.0e-6f );
 }

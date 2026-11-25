@@ -11,7 +11,7 @@
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineBot.h"
+#include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineArena.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
@@ -292,7 +292,7 @@ namespace sw
             {
                 for ( int32 player = isAutoPlayOn() ? kLocalPlayer : kLocalPlayer + 1; player < _arena.getPlayerCount(); ++player )
                 {
-                    _arena.setInput( player, TrampolineBot::computeInput( _arena, player ) );
+                    _arena.setInput( player, _arena.computeBotInput( player ) );
                 }
                 (void)_arena.update( deltaTime ); // 걸음 수는 쓰지 않는다
                 reportEvents();

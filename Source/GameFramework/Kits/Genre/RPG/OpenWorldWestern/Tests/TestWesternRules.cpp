@@ -8,9 +8,9 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCarcass.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternHonor.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternHorse.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternLaw.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternOutlaw.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternSurvival.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"

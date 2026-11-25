@@ -1,11 +1,10 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Casual/KartRacing/KartGhost.h"
-
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Kits/Genre/Casual/KartRacing/KartRace.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartTrack.h"
 
 namespace sw

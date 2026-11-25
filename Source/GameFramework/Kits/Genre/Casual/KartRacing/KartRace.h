@@ -26,6 +26,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -35,6 +36,105 @@
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Match/MatchPhase.h"
+
+namespace sw
+{
+    class BitReader;
+    class BitWriter;
+    class KartTrack;
+
+    /** @brief 한 걸음의 양자화한 입력입니다. */
+    struct KartGhostFrame
+    {
+        int8  _throttle{ 0 }; ///< -127..127 이 -1..1 에 대응한다
+        int8  _steer{ 0 };
+        uint8 _buttons{ 0 }; ///< `KartGhost::kButton*` 비트이다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class KartGhost
+     * @brief 한 번의 주행 기록입니다. 출발 위치, 방향, 걸음 크기와 걸음마다의 입력을 가집니다.
+     */
+    class SW_KIT_API KartGhost
+    {
+    public:
+        static constexpr uint8     kButtonDrift   = 1u << 0;
+        static constexpr uint8     kButtonBoost   = 1u << 1;
+        static constexpr uint8     kButtonJump    = 1u << 2;
+        static constexpr uint8     kButtonUseItem = 1u << 3;
+        static constexpr FormatDef kFormat{ "KGHT" };
+
+        KartGhost();
+
+        static KartGhostFrame        encodeInput( const KinematicVehicleInput& input, bool bUseItem = false );
+        static KinematicVehicleInput decodeInput( const KartGhostFrame& frame );
+        /** @brief 기록했다가 되돌린 것과 똑같은 입력을 반환합니다. 기록하는 차는 이 입력으로 달립니다. */
+        static KinematicVehicleInput quantizeInput( const KinematicVehicleInput& input ) { return decodeInput( encodeInput( input ) ); }
+        /** @brief 프레임 하나를 씁니다. 축이 -127..127 밖이면(-128) 아무것도 쓰지 않고 false 입니다. */
+        [[nodiscard]] static bool writeFrame( BitWriter& writer, const KartGhostFrame& frame );
+        /** @brief 프레임 하나를 읽습니다. 비트가 모자라거나 축이 범위 밖이면 false 입니다. */
+        [[nodiscard]] static bool readFrame( BitReader& reader, KartGhostFrame& outFrame );
+
+        /** @brief 기록을 비우고 출발 위치, 방향(라디안), 걸음 크기를 설정합니다. */
+        void begin( const float3& startPosition, float32 startYaw, float32 step );
+        void record( const KinematicVehicleInput& input, bool bUseItem = false );
+        void setFinishTime( float32 finishTime ) { _finishTime = finishTime; }
+
+        /** @brief 바이트로 씁니다(세이브와 서버 순위표용). 프레임 하나라도 쓰지 못하면(`writeFrame`) false 이고 @p outBuffer 는 쓰면 안 됩니다. */
+        [[nodiscard]] bool serialize( vector<uint8>& outBuffer ) const;
+        /** @brief 바이트를 읽습니다. 형식이 다르거나 잘렸거나 걸음 크기 · 기록이 범위 밖이면 false 를 반환하고 상태는 그대로입니다. */
+        [[nodiscard]] bool deserialize( const uint8* pData, int32 byteCount );
+
+        const vector<KartGhostFrame>& getFrames() const { return _listFrame; }
+        int32                         getFrameCount() const { return static_cast<int32>( _listFrame.size() ); }
+        const float3&                 getStartPosition() const { return _startPosition; }
+        float32                       getStartYaw() const { return _startYaw; }
+        float32                       getStep() const { return _step; }
+        float32                       getFinishTime() const { return _finishTime; }
+
+    private:
+        vector<KartGhostFrame> _listFrame;
+        float3                 _startPosition;
+        float32                _startYaw;
+        float32                _step;
+        float32                _finishTime; ///< 0 이면 끝까지 달리지 않은 기록이다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class KartGhostPlayer
+     * @brief 고스트를 자기 차로 다시 돌립니다. 트랙의 땅과 부스트 패드를 기록할 때와 같이 씁니다(고스트와 트랙은 빌려 쓴다).
+     */
+    class SW_KIT_API KartGhostPlayer
+    {
+    public:
+        KartGhostPlayer();
+
+        /** @brief @p ghost 를 @p track 위에서 처음부터 돌릴 준비를 합니다. */
+        void initialize( const KartGhost& ghost, const KinematicVehicleSettings& settings, const KartTrack& track );
+        /** @brief 한 걸음 진행합니다. 기록이 끝났으면 false 를 반환합니다. */
+        bool step();
+        /** @brief 프레임 시간만큼(고정 걸음으로 나눠) 진행하고, 진행한 걸음 수를 반환합니다. */
+        int32 advance( float32 frameTime );
+
+        bool                         isFinished() const;
+        int32                        getFrameIndex() const { return _frameIndex; }
+        const KinematicVehicleMotor& getMotor() const { return _motor; }
+
+    private:
+        KinematicVehicleMotor _motor;
+        FixedStepTimer        _timer;
+        const KartGhost*      _pGhost;
+        const KartTrack*      _pTrack;
+        int32                 _frameIndex;
+        int32                 _lastBoostPad;
+    };
+} // namespace sw
 
 namespace sw
 {

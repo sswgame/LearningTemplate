@@ -15,7 +15,7 @@
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerRespawnWorld.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionStageRun.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw

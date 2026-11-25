@@ -10,7 +10,6 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Casual/KartRacing/KartGhost.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartTrack.h"
 #include "GameFramework/Runtime/Character/Combat/LockOnSelector.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"

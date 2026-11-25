@@ -10,7 +10,6 @@
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"

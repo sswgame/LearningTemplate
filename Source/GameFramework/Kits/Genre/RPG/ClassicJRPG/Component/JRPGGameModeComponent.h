@@ -22,7 +22,6 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGBattle.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
-#include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGEncounter.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.h"
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"

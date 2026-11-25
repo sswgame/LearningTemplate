@@ -1,6 +1,6 @@
 /**
  * @file ActionRoomHUDComponent.h
- * @brief 액션 룸 이벤트(`ActionCombatEvents.h`)와 유닛 피해(`DamageAppliedEvent`)를 받아 HUD 알림과 카메라 흔들림으로 보입니다 — 룸을 든 디렉터가 무엇이든(키트의 디렉터 · 게임의 전투) 같은 이벤트 하나로 이어진다.
+ * @brief 액션 룸 이벤트(`ActionRoom.h` 의 룸 이벤트)와 유닛 피해(`DamageAppliedEvent`)를 받아 HUD 알림과 카메라 흔들림으로 보입니다 — 룸을 든 디렉터가 무엇이든(키트의 디렉터 · 게임의 전투) 같은 이벤트 하나로 이어진다.
  * @details 같은 오브젝트의 HUD(`HUDControllerComponent` — `actionroom.ui.xml`)에 뷰모델을 건다. 문이 잠겨 있는 동안 잠김 표시를, 방을 비우거나 쓰러지면 알림을 `_notificationSeconds` 동안 보인다.
  *          카메라는 씬의 흔들림 채널(`CameraShakeChannel`)로 흔든다 — 카메라 매니저 · 디렉터가 없는 씬이면 듣는 쪽이 없다.
  */
