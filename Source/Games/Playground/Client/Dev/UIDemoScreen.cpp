@@ -1,6 +1,6 @@
 /**
  * @file UIDemoScreen.cpp
- * @brief 개발용 UI 견본 화면의 스위치입니다(`-gv_uiDemo=1`). 화면은 문서(`uidemo.ui.xml`)이고, 여기서는 열고 닫기만 합니다.
+ * @brief 개발용 UI 견본 화면의 스위치입니다(`-gv_uiDemo=1`). 화면은 문서(벤치 설정의 `_uiDemoDocument` — `uidemo.ui.xml`)이고, 여기서는 열고 닫기만 합니다.
  */
 #include "pch.h"
 
@@ -14,6 +14,8 @@
 
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
+#include "Games/Playground/Client/Dev/StressTestSceneSettings.h"
+
 SW_TEST_GLOBAL_VARIABLE( bool, gv_uiDemo, false,
                          "UI 테스트 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)" );
 
@@ -23,11 +25,9 @@ namespace sw
     {
         struct UIDemoScreenInternal
         {
-            static constexpr const utf8* kDocument = "game/playground/ui/uidemo.ui.xml"; ///< 위젯 이름은 시나리오(textinput · web/dominput)가 본다
-
             /**
              * @brief 화면 스위치: `gv_uiDemo` 를 따라 견본 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 바꿔 첫 버튼에 포커스 테두리를 보입니다).
-             *        열 수 없으면(문서 오류) 스위치를 내려 프레임마다 다시 시도하지 않는다.
+             *        열 수 없으면(설정 · 문서 오류) 스위치를 내려 프레임마다 다시 시도하지 않는다.
              */
             static UIScreenHandle syncSwitch( UISystem& uiSystem, UIScreenHandle current )
             {
@@ -39,7 +39,8 @@ namespace sw
                     uiSystem.closeScreen( current );
                     return kInvalidUIScreenHandle;
                 }
-                const UIScreenHandle screen = uiSystem.openScreen( kDocument );
+                StressTestSceneSettings settings{};
+                const UIScreenHandle    screen = StressTestSceneSettings::loadForGame( settings ) ? uiSystem.openScreen( settings._uiDemoDocument.path() ) : kInvalidUIScreenHandle;
                 if ( screen == kInvalidUIScreenHandle )
                 {
                     gv_uiDemo = false;

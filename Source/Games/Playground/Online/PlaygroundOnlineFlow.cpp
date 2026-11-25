@@ -327,6 +327,7 @@ namespace sw
         : _listReplyScratch{}
         , _listAssignmentScratch{}
         , _listTopKills{}
+        , _settings{}
         , _offers{}
         , _shopProvider{}
         , _friends{}
@@ -412,10 +413,13 @@ namespace sw
     {
         if ( _shopProvider != nullptr )
             return _shopProvider.get();
-        _offers = SharedAssetCache<OfferCatalog>::acquire( kOfferCatalog ).snapshot();
+        if ( PlaygroundOnlineSettings::loadForGame( _settings ) == false )
+            return nullptr;
+        const string& catalogPath = _settings._offerCatalog.get();
+        _offers                   = SharedAssetCache<OfferCatalog>::acquire( catalogPath ).snapshot();
         if ( _offers == nullptr )
         {
-            SW_LOG_ERROR_ID( "Playground.OnlineShopNoOffers", "[Playground] the shop offer catalog '%#' could not be read", kOfferCatalog );
+            SW_LOG_ERROR_ID( "Playground.OnlineShopNoOffers", "[Playground] the shop offer catalog '%#' could not be read", catalogPath );
             return nullptr;
         }
         _shopProvider = make_unique<EconomyShopPurchaseProvider>( session.get<EconomyClient>(), *_offers );

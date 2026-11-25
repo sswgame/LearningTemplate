@@ -1,0 +1,4 @@
+<?asset guid="0cbd2f7b4ae55a00ca35b4376e36942f"?>
+<!-- 온라인 흐름(PlaygroundOnlineFlow)이 쓰는 에셋 — 상점의 상품 카탈로그와 상점 화면 문서 -->
+<PlaygroundOnlineSettings _offerCatalog="guid:759168d3d4fb5cdd2b8b822bf095eaf9"
+                          _shopDocument="guid:31d3621cede3fdd40788ddaf304c9288" />
