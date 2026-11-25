@@ -113,20 +113,13 @@ namespace sw
         void retryRedeem( const StorePurchaseReport& finished );
 
     private:
-        struct PendingRedeem
-        {
-            EconomyRedeemRequest _request{};
-            NetIdempotencyKey    _key{};
-        };
-
         void redeem( const EconomyRedeemRequest& request, const NetIdempotencyKey& key );
-        void onRedeemReply( const OnlineResult<EconomyRedeemReply>& reply );
+        void onRedeemReply( const EconomyRedeemRequest& request, const OnlineResult<EconomyRedeemReply>& reply );
         void notifyReport( const StorePurchaseReport& finished );
 
     private:
-        vector<PendingRedeem> _listPending;
-        ReportDelegate        _onReport;
-        IStoreBillingBridge&  _bridge;
-        EconomyClient&        _client;
+        ReportDelegate       _onReport;
+        IStoreBillingBridge& _bridge;
+        EconomyClient&       _client;
     };
 } // namespace sw

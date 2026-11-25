@@ -15,6 +15,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/DevOnly.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -26,9 +27,15 @@
 #include "Engine/Reflection/ReflectionFwd.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
 
+#include <type_traits>
+#include <utility>
+
 namespace sw
 {
     class XMLNode;
+
+    template <typename T>
+    class ConfigFileID;
 
     struct GlobalVariableInfo;
 
@@ -48,6 +55,16 @@ namespace sw
         Loaded = 0, ///< 읽었다
         Missing,    ///< 파일이 없다. 필수 설정(`loadHostConfig`)이면 오류이고, 선택 설정(`loadOptionalConfig`)만 없음으로 다룬다
         Invalid,    ///< 파일이 있는데 틀렸다. 키 이름과 함께 오류를 남겼다
+    };
+
+    /** @brief 설정 형식이 칸 사이의 규칙을 스스로 검사하는지입니다(`expected<void> validate() const`). 칸 하나의 범위는 `PROPERTY( Min/Max )` 다. */
+    template <typename T, typename = void>
+    struct HasConfigValidate : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasConfigValidate<T, std::void_t<decltype( std::declval<const T&>().validate() )>> : std::is_same<decltype( std::declval<const T&>().validate() ), expected<void>>
+    {
     };
 
     /**
@@ -345,6 +362,33 @@ namespace sw
         }
 
         /**
+         * @brief 자리가 정해진 설정 파일(`ConfigFileID`)을 읽습니다 — 파일이 곧 형식이라 모르는 키 · 빠진 필수 칸 · 범위 밖 값 · 형식의 규칙(`validate`)이 모두 오류입니다(`parseConfig`).
+         * @return 파일이 없으면 `NotFound`(로그 없음 — 없어도 되는 파일은 부르는 쪽이 가른다), 틀렸으면 `InvalidArgument`(칸 이름은 로그에 남았다)입니다. 대상 글은 경로다.
+         */
+        template <typename T>
+        [[nodiscard]] static expected<T> readConfig( const ConfigFileID<T>& file )
+        {
+            const expected<string> text = readProjectText( file.getPath() );
+            if ( text.has_value() == false )
+                return unexpected( text.error() );
+            return parseConfig<T>( *text, file.getPath() );
+        }
+        /** @brief `readConfig` 의 글 판입니다(테스트). */
+        template <typename T>
+        [[nodiscard]] static expected<T> parseConfig( string_view jsonStr, const utf8* pSourceLabel )
+        {
+            T config{};
+            if ( readConfigJSON( config, jsonStr, pSourceLabel ) == false )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the config has an unknown key, a missing key or a bad value (the log names it)", pSourceLabel } );
+            if constexpr ( HasConfigValidate<T>::value )
+            {
+                if ( const expected<void> valid = config.validate(); valid.has_value() == false )
+                    return unexpected( valid.error() );
+            }
+            return config;
+        }
+
+        /**
          * @brief 설정 JSON 하나를 @p pInstance 에 엄격하게 읽습니다.
          * @details 모르는 키, 대소문자만 다른 키, 읽지 못한 값, 빠진 필수 칸(`PROPERTY( Required )` — 구조체 칸 · 구조체 목록 원소 안까지), `PROPERTY( Min/Max )` 밖 숫자를 **모두** 키 이름과 @p pSourceLabel 로 오류 로그에 남기고
          *          false 를 반환한다(첫 오류에서 멈추지 않는다. 한 번에 다 고치게 하려는 것이다). 설정이 아닌 리플렉션 타입(`EditorToolDefaults`)도 이 함수로 읽는다.
@@ -407,6 +451,9 @@ namespace sw
         }
 
     private:
+        /** @brief 프로젝트 루트 기준 글 파일을 읽습니다(`readConfig`). 없으면 `NotFound`(로그 없음), 읽지 못하면 `ExternalFailure` 입니다. */
+        [[nodiscard]] static expected<string> readProjectText( const utf8* pPath );
+
         /** @brief 파일에서 읽은 설정 하나의 경로와 다시 읽는 함수입니다. */
         struct ReloadSource
         {

@@ -260,7 +260,7 @@ namespace sw
         // 무변경 재쿠킹이 파일을 건드리지 않는다 — 내용 해시는 도장(크기 · 시각)이 그대로면 파일을 다시 읽지 않는다.
         if ( FileUtil::isRegularFile( outputPath ) && ContentHash::computeFile( outputPath ) == compileResult._record._outputHash )
             return true;
-        if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || FileUtil::writeFile( outputPath, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
+        if ( FileUtil::writeFile( outputPath, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
         {
             SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookedBytecode", "Failed to write cooked bytecode to %#", outputPath.str() );
             return false;

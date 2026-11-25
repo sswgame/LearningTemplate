@@ -22,7 +22,6 @@ namespace
 
         static void write( const AbsolutePath& path, string_view text )
         {
-            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
             SW_EXPECT_TRUE( FileUtil::writeTextFile( path, text ) );
         }
 

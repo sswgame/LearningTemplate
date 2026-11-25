@@ -38,7 +38,7 @@ namespace sw
         string                    _packageName{};
         string                    _baseURL{ kDefaultBaseURL };
         ReceiptBuyerRule          _buyerRule{}; ///< 설정의 `buyerBinding`(`ReceiptProviderManager`). 구글은 `AccountToken` 이나 명시적 `None` 이다
-        int64                     _requestTimeoutMs{ 10000 };
+        int64                     _requestTimeoutMs{ HTTPConstant::kDefaultTimeoutMs };
         int64                     _voidedPollIntervalMs{ 3600000 };
         int64                     _voidedLookbackMs{ 172800000 }; ///< 무효 구매 목록을 지난 조회 시각보다 이만큼 앞에서부터 읽는다(2 일)
         int64                     _voidedMaxAgeMs{ 2505600000 };  ///< 시작점의 한계(29 일) — 구글은 지난 30 일까지만 받는다

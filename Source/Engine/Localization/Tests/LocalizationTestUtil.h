@@ -144,7 +144,7 @@ namespace sw::test
         template <typename TTable>
         static void save( const TTable& table, const AbsolutePath& path )
         {
-            const bool bSaved = FileUtil::ensureParentDirectoryExists( path ) && table.saveToFile( path );
+            const bool bSaved = table.saveToFile( path );
             if ( bSaved == false )
             {
                 fixed_string<constant::buffer::kMax512> message;

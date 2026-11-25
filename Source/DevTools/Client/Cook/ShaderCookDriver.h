@@ -17,7 +17,9 @@
 
 #include "DevTools/Cook/IShaderCookService.h"
 
+#include "Engine/Config/ConfigFileID.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -42,10 +44,11 @@ namespace sw
 
     /**
      * @enum ShaderCookSampleAxis
-     * @brief 표본이 값마다 적어도 한 번 덮을 요청의 축입니다. 규칙 파일의 이름(`source` · `entryPoint` · `stage` · `permutationDefine`)과 짝입니다.
+     * @brief 표본이 값마다 적어도 한 번 덮을 요청의 축입니다. 규칙 파일은 이 이름을 적습니다.
      * @details 굽기 경로의 갈래는 소스(include · 도메인 · 머티리얼 그래프 생성물) · 진입점 · 스테이지(그래픽 · 컴퓨트 · 지오메트리 · 테셀레이션) · 퍼뮤테이션 define(변형 키)이 정한다.
      *          바인드리스는 형식(SM6.6 의 DX12 · Vulkan)이 정하므로 축이 아니다. 언리얼 `-ShaderCompileWorker` 테스트가 셰이더 형식 · 퍼뮤테이션 대표만 굽는 것과 같은 자리다.
      */
+    ENUM()
     enum class ShaderCookSampleAxis : uint8
     {
         Source,
@@ -55,18 +58,29 @@ namespace sw
     };
 
     /**
+     * @struct ShaderCookSampleRule
+     * @brief 셰이더 표본 굽기(`App --cook-shaders -cook-shaders-sample`)의 규칙입니다 — 요청을 순서대로 보며 이 축들 가운데 하나라도 아직 덮지 않은 값을 가진 요청만 굽는다(`ShaderCookDriver::selectSample`).
+     */
+    REFLECT()
+    struct ShaderCookSampleRule
+    {
+        REFLECT_BODY();
+
+        static constexpr ConfigFileID<ShaderCookSampleRule> kConfigFile{ "Config/Dev/ShaderCookSample.json" };
+
+        PROPERTY( Required )
+        vector<ShaderCookSampleAxis> _listCoverAxis;
+
+        /** @brief 축이 하나 이상이고 겹치지 않는지 봅니다(`ConfigManager::readConfig` 가 부른다). */
+        [[nodiscard]] expected<void> validate() const;
+    };
+
+    /**
      * @struct ShaderCookDriver
      * @brief 요청 수집과 일괄 쿠킹입니다. `App --cook-shaders` 와 테스트가 부릅니다.
      */
     struct ShaderCookDriver
     {
-        /** @brief 표본 규칙 파일(프로젝트 루트 기준, 개발 전용)입니다 — `{ "_listCoverAxis": [ "source", … ] }`. */
-        static constexpr const utf8* kSampleRuleFile = "Config/Dev/ShaderCookSample.json";
-
-        /** @brief 표본 규칙 JSON 글을 읽습니다. 칸이 없거나 비었거나 모르는 · 겹친 축이면 그 값이 대상인 오류입니다(기본값이 없다). */
-        [[nodiscard]] static expected<vector<ShaderCookSampleAxis>> parseSampleRule( string_view jsonText, string_view sourceName );
-        /** @brief 프로젝트의 표본 규칙 파일을 읽습니다(`parseSampleRule`). */
-        [[nodiscard]] static expected<vector<ShaderCookSampleAxis>> loadSampleRule();
         /**
          * @brief 요청을 순서대로 보며 @p listAxis 의 어느 축에서든 아직 덮지 않은 값을 가진 요청만 고릅니다(퍼뮤테이션이 없는 요청은 빈 define 하나로 센다). 결정적이다 — 같은 요청 목록이면 같은 표본이다.
          * @details 표본은 모든 소스 · 진입점 · 스테이지 · define 을 한 번씩 컴파일 · 리플렉션 · 계약 검사에 지나게 한다. 전체 굽기는 배포 쿠킹(CookAssets — shipping-check)이 본다.

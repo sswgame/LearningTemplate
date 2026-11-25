@@ -5,7 +5,9 @@
 #include "Core/Log/Logger.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -14,12 +16,6 @@ namespace sw
     {
         struct HubProfileStoreInternal
         {
-            static const hashed_string& getTable()
-            {
-                static const hashed_string table{ HubProfileStore::kTableName };
-                return table;
-            }
-
             /** @brief 진행 하나를 읽는 일입니다. */
             class ReadJob final : public ServiceStoreJob
             {
@@ -36,10 +32,9 @@ namespace sw
             private:
                 void run( ServiceReadSetConnection& connection ) override
                 {
-                    ServiceRecord record;
-                    _completion._result  = connection.readRecord( getTable(), HubProfileStore::makeRecordKey( _completion._accountID ), record );
-                    _completion._bytes   = std::move( record._bytes );
-                    _completion._version = record._version;
+                    _completion._result = HubProfileStore::getTable().read( connection, HubProfileStore::makeRecordKey( _completion._accountID ), _completion._profile, &_completion._version );
+                    if ( _completion._result == ServiceStoreResult::Ok && HubProfileStore::encodeRecord( _completion._profile, _completion._bytes ) == false )
+                        _completion._result = ServiceStoreResult::Corrupt; // 읽은 값이 선언 범위 밖이다
                 }
 
             private:
@@ -51,12 +46,13 @@ namespace sw
             class WriteJob final : public ServiceStoreJob
             {
             public:
-                WriteJob( shared_ptr<HubProfileStore::Inbox> pInbox, uint64 accountID, vector<uint8> bytes, uint64 expectedVersion )
+                WriteJob( shared_ptr<HubProfileStore::Inbox> pInbox, uint64 accountID, const HubProfile& profile, vector<uint8> bytes, uint64 expectedVersion )
                     : _pInbox{ std::move( pInbox ) }
                     , _completion{}
                     , _expectedVersion{ expectedVersion }
                 {
                     _completion._accountID = accountID;
+                    _completion._profile   = profile;
                     _completion._bytes     = std::move( bytes );
                     _completion._bWrite    = SW_TRUE;
                 }
@@ -75,9 +71,9 @@ namespace sw
                 void run( ServiceReadSetConnection& connection ) override
                 {
                     ServiceTransaction transaction;
-                    transaction.put( getTable(), HubProfileStore::makeRecordKey( _completion._accountID ), _completion._bytes, _expectedVersion );
+                    transaction.put( HubProfileStore::getTable(), HubProfileStore::makeRecordKey( _completion._accountID ), _completion._profile, _expectedVersion );
                     ServiceCommitInfo info;
-                    _completion._result  = connection.commit( transaction, &info );
+                    _completion._result  = ServiceCommitRunner::commitOnce( connection, transaction, &info );
                     _completion._version = info._commitVersion;
                 }
 
@@ -107,20 +103,15 @@ namespace sw
         return key;
     }
 
-    bool HubProfileStore::encodeRecord( const HubProfile& profile, vector<uint8>& outBytes )
+    const ServiceRecordTable<HubProfile>& HubProfileStore::getTable()
     {
-        BitWriter  writer( std::move( outBytes ) );
-        const bool bWritten = profile.write( writer );
-        outBytes            = writer.releaseBytes();
-        if ( bWritten == false )
-            outBytes.clear();
-        return bWritten;
+        static const ServiceRecordTable<HubProfile> s_table{ HubProfileStore::kTableName };
+        return s_table;
     }
 
-    bool HubProfileStore::decodeRecord( const vector<uint8>& bytes, HubProfile& outProfile )
+    bool HubProfileStore::encodeRecord( const HubProfile& profile, vector<uint8>& outBytes )
     {
-        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        return outProfile.read( reader );
+        return getTable().encode( profile, outBytes );
     }
 
     ServiceStore* HubProfileStore::findStore( const utf8* pPurpose, uint64 accountID ) const
@@ -193,15 +184,16 @@ namespace sw
         }
         if ( state._bWriting )
         {
-            state._queuedBytes = std::move( bytes ); // 앞 쓰기가 끝나면 그 판으로 맡긴다(가장 새 것만)
-            state._bQueued     = SW_TRUE;
+            state._queuedBytes   = std::move( bytes ); // 앞 쓰기가 끝나면 그 판으로 맡긴다(가장 새 것만)
+            state._queuedProfile = profile;
+            state._bQueued       = SW_TRUE;
             return true;
         }
-        submitWrite( accountID, state, std::move( bytes ) );
+        submitWrite( accountID, state, profile, std::move( bytes ) );
         return true;
     }
 
-    void HubProfileStore::submitWrite( uint64 accountID, AccountState& state, vector<uint8> bytes )
+    void HubProfileStore::submitWrite( uint64 accountID, AccountState& state, const HubProfile& profile, vector<uint8> bytes )
     {
         state._bWriting     = SW_TRUE;
         state._writingBytes = bytes;
@@ -215,7 +207,7 @@ namespace sw
             _pInbox->push( std::move( failed ) );
             return;
         }
-        pStore->submit( make_unique<HubProfileStoreInternal::WriteJob>( _pInbox, accountID, std::move( bytes ), state._version ) );
+        pStore->submit( make_unique<HubProfileStoreInternal::WriteJob>( _pInbox, accountID, profile, std::move( bytes ), state._version ) );
     }
 
     void HubProfileStore::releaseAccount( uint64 accountID )
@@ -273,7 +265,7 @@ namespace sw
                 if ( state._bQueued )
                 {
                     state._bQueued = SW_FALSE;
-                    submitWrite( completion._accountID, state, std::move( state._queuedBytes ) );
+                    submitWrite( completion._accountID, state, state._queuedProfile, std::move( state._queuedBytes ) );
                     continue;
                 }
                 if ( settleAccount( completion._accountID, state ) )
@@ -286,8 +278,9 @@ namespace sw
                 load._bOk = SW_TRUE; // 새 계정 — 기본 진행
             else if ( completion._result == ServiceStoreResult::Ok )
             {
-                load._bOk    = decodeRecord( completion._bytes, load._profile ) ? SW_TRUE : SW_FALSE;
-                load._bFound = load._bOk;
+                load._bOk     = SW_TRUE; // 읽은 일이 표 형식으로 읽었다(깨졌으면 Corrupt 로 온다)
+                load._bFound  = SW_TRUE;
+                load._profile = completion._profile;
             }
             if ( load._bOk == SW_TRUE && iter != _mapAccount.end() )
             {

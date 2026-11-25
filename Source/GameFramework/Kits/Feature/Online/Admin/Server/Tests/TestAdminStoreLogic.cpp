@@ -10,6 +10,7 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
@@ -85,7 +86,7 @@ namespace
     void setRoleToViewer( MemoryServiceDatabase& database, AccountID adminID )
     {
         ServiceTransaction transaction;
-        transaction.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( adminID ), vector<uint8>{ static_cast<uint8>( AdminRole::Viewer ) } );
+        transaction.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( adminID ), AdminRoleRecord{ AdminRole::Viewer, {} } );
         SW_EXPECT_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
     }
 
@@ -191,8 +192,8 @@ SW_TEST_CASE( AdminStoreLogicTest, AccountDeletionErasesTheRole )
 {
     MemoryServiceDatabase database;
     ServiceTransaction    seed;
-    seed.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 7 ), vector<uint8>{ 1 } );
-    seed.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 8 ), vector<uint8>{ 1 } );
+    seed.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 7 ), AdminRoleRecord{ AdminRole::Viewer, {} } );
+    seed.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 8 ), AdminRoleRecord{ AdminRole::Viewer, {} } );
     SW_REQUIRE_TRUE( database.commit( seed ) == ServiceStoreResult::Ok );
     SW_REQUIRE_TRUE( AdminStoreLogic::eraseAccount( database, 7, 0 ) == ServiceStoreResult::Ok );
     ServiceRecord record;
@@ -234,10 +235,8 @@ SW_TEST_CASE( AdminStoreLogicTest, OperatorWriteFailsWhenDemotedBeforeCommit )
 {
     Fixture             fixture;
     ServiceAuditedWrite write;
-    write._pGuard              = AdminStoreLogic::makeRoleGuard( kOperator, AdminRole::Operator );
-    write._table               = hashed_string( "liveops_event" );
-    write._key                 = "spring.sale";
-    write._bytes               = vector<uint8>{ 1 };
+    write._pGuard = AdminStoreLogic::makeRoleGuard( kOperator, AdminRole::Operator );
+    write._change.put( AdminStoreLogic::getRoleTable(), "spring.sale", AdminRoleRecord{ AdminRole::Viewer, {} } ); // 가드 판정만 본다 — 어느 표의 값이든 같다
     write._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( kOperator );
     write._auditEntry._action  = "liveops.event.put";
     write._auditEntry._subject = "liveops/spring.sale";

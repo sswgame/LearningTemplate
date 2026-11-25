@@ -100,7 +100,7 @@ namespace sw
             {
                 const size_t slash  = record._key.rfind( '/' );
                 int64        amount = 0;
-                if ( slash == string::npos || Ledger::decodeBalanceRecord( record._bytes, amount ) == false )
+                if ( slash == string::npos || Ledger::decodeBalanceRecord( record, amount ) == false )
                 {
                     ++outReport._unreadableRecordCount;
                     continue;

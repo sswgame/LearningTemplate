@@ -10,6 +10,7 @@
 
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/Tests/EphemeralStoreTestUtil.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
@@ -145,8 +146,9 @@ namespace
             {
                 _bReadCacheOnTick = SW_FALSE;
                 _cacheReplyOwner  = host.getEphemeralRouter()->openReplyOwner();
-                (void)host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( _cacheKeyToRead ),
-                                                         SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &FakeOnlineService::onCacheReply, this ), _cacheReplyOwner );
+                host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( _cacheKeyToRead ),
+                                                   _cacheReplyOwner, [this]( const EphemeralReply& reply )
+                { onCacheReply( reply ); } );
             }
         }
 
@@ -940,8 +942,8 @@ SW_TEST_CASE( OnlineServiceHostTest, EphemeralRepliesReachOnlyTheSubmittingServi
     OnlineServiceHostConfig settings = HostFixture::makeSettings();
     settings._pEphemeralStore        = &hostCache;
     HostFixture rig( settings );
-    (void)writer.submit( EphemeralRequest::makeSet( "a", vector<uint8>{ 1 }, 0 ) );    // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
-    (void)writer.submit( EphemeralRequest::makeSet( "b", vector<uint8>{ 2, 2 }, 0 ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
+    (void)writer.submit( EphemeralRequest::makeSet( "a", sw::EphemeralStoreTestAccess::makeValue( vector<uint8>{ 1 } ), 0 ) );    // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
+    (void)writer.submit( EphemeralRequest::makeSet( "b", sw::EphemeralStoreTestAccess::makeValue( vector<uint8>{ 2, 2 } ), 0 ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     rig._serviceA._cacheKeyToRead   = "a";
     rig._serviceB._cacheKeyToRead   = "b";
     rig._serviceA._bReadCacheOnTick = SW_TRUE;
@@ -949,8 +951,8 @@ SW_TEST_CASE( OnlineServiceHostTest, EphemeralRepliesReachOnlyTheSubmittingServi
     rig.step( 2 );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._serviceA._listCacheReply.size() );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._serviceB._listCacheReply.size() );
-    SW_EXPECT_TRUE( rig._serviceA._listCacheReply[0]._value == vector<uint8>{ 1 } );
-    SW_EXPECT_TRUE( ( rig._serviceB._listCacheReply[0]._value == vector<uint8>{ 2, 2 } ) );
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( rig._serviceA._listCacheReply[0] ) == vector<uint8>{ 1 } );
+    SW_EXPECT_TRUE( ( sw::EphemeralStoreTestAccess::getBytes( rig._serviceB._listCacheReply[0] ) == vector<uint8>{ 2, 2 } ) );
     SW_EXPECT_EQUAL( 0, rig._host.getEphemeralRouter()->getPendingCount() );
     writer.shutdown();
 }
@@ -1007,8 +1009,9 @@ SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCa
     HostFixture        rig( settings );
     const Subscription subscription    = rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
     const Subscription cacheReplyOwner = rig._host.getEphemeralRouter()->openReplyOwner();
-    (void)rig._host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( "never.pumped" ),
-                                                  SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &FakeOnlineService::onCacheReply, &rig._serviceA ), cacheReplyOwner );
+    rig._host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( "never.pumped" ),
+                                            cacheReplyOwner, [&rig]( const EphemeralReply& reply )
+    { rig._serviceA.onCacheReply( reply ); } );
     rig._host.shutdown();
     SW_EXPECT_EQUAL( 1, rig._serviceA._hostShutdownCount );
     SW_EXPECT_EQUAL( 1, rig._serviceB._hostShutdownCount );

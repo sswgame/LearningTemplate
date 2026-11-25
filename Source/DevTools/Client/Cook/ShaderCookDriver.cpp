@@ -34,6 +34,7 @@
 
 #include "DevTools/Client/Cook/ShaderCookRequestCollector.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -510,7 +511,7 @@ namespace sw
         {
             vector<AbsolutePath> listExisting;
             (void)FileUtil::collectFiles( cookedDir, "", listExisting, true ); // 폴더가 없으면 빈 목록이다
-            const expected<vector<ShaderCookSampleAxis>> rule = loadSampleRule();
+            const expected<ShaderCookSampleRule> rule = ConfigManager::readConfig( ShaderCookSampleRule::kConfigFile );
             if ( cookedDir.empty() || listExisting.empty() == false || rule.has_value() == false )
             {
                 if ( rule.has_value() == false )
@@ -525,7 +526,7 @@ namespace sw
                 nothingCooked._failedCount = 1;
                 return nothingCooked;
             }
-            listSampleAxis = *rule;
+            listSampleAxis = rule->_listCoverAxis;
         }
 
         // 루트를 주지 않으면 찾아 둔 리소스 루트다. 그것도 없으면 쿠킹하지 못한다(작업 폴더 기준 "Resource" 로 짐작하지 않는다).
@@ -574,51 +575,21 @@ namespace sw
         {
             const size_t requestCount = listRequest.size();
             listRequest               = selectSample( listRequest, listSampleAxis );
-            SW_LOG_INFO_ID( "ShaderCooker.SampleSelected", "Sample cook: %# of %# requests cover every value of the rule axes (%#)", listRequest.size(), requestCount, kSampleRuleFile );
+            SW_LOG_INFO_ID( "ShaderCooker.SampleSelected", "Sample cook: %# of %# requests cover every value of the rule axes (%#)", listRequest.size(), requestCount, ShaderCookSampleRule::kConfigFile.getPath() );
         }
         return cookRequests( cookedDir, listRequest, targetFormat );
     }
 
-    expected<vector<ShaderCookSampleAxis>> ShaderCookDriver::parseSampleRule( string_view jsonText, string_view sourceName )
+    expected<void> ShaderCookSampleRule::validate() const
     {
-        static constexpr struct
+        if ( _listCoverAxis.empty() )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "_listCoverAxis needs at least one axis", kConfigFile.getPath() } );
+        for ( size_t index = 1; index < _listCoverAxis.size(); ++index )
         {
-            string_view          _name;
-            ShaderCookSampleAxis _axis;
-        } kArrAxisName[] = {
-            {           "source",            ShaderCookSampleAxis::Source},
-            {       "entryPoint",        ShaderCookSampleAxis::EntryPoint},
-            {            "stage",             ShaderCookSampleAxis::Stage},
-            {"permutationDefine", ShaderCookSampleAxis::PermutationDefine},
-        };
-        JSONDocument document;
-        if ( document.parse( jsonText, sourceName ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the shader cook sample rule is not JSON", sourceName } );
-        const JSONValue listAxisValue = document.getRoot().get( "_listCoverAxis" );
-        if ( listAxisValue.isArray() == false || listAxisValue.size() == 0 )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the shader cook sample rule needs a non-empty _listCoverAxis array", sourceName } );
-        vector<ShaderCookSampleAxis> listAxis;
-        for ( size_t index = 0; index < listAxisValue.size(); ++index )
-        {
-            const JSONValue item = listAxisValue.at( index );
-            const string    name = item.isString() ? item.asString() : string{};
-            const auto*     pFound =
-                std::find_if( std::begin( kArrAxisName ), std::end( kArrAxisName ), [&name]( const auto& entry )
-            { return entry._name == string_view{ name }; } );
-            if ( pFound == std::end( kArrAxisName ) || VectorUtil::contains( listAxis, pFound->_axis ) )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "_listCoverAxis takes source | entryPoint | stage | permutationDefine (each once)", name } );
-            listAxis.push_back( pFound->_axis );
+            if ( std::find( _listCoverAxis.begin(), _listCoverAxis.begin() + static_cast<ptrdiff_t>( index ), _listCoverAxis[index] ) != _listCoverAxis.begin() + static_cast<ptrdiff_t>( index ) )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_listCoverAxis takes each axis once", kConfigFile.getPath() } );
         }
-        return listAxis;
-    }
-
-    expected<vector<ShaderCookSampleAxis>> ShaderCookDriver::loadSampleRule()
-    {
-        const AbsolutePath path = ProcessRoots::get()._project.join( kSampleRuleFile );
-        string             text;
-        if ( FileUtil::readTextFile( path, text ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "could not read the shader cook sample rule", path.str() } );
-        return parseSampleRule( text, path.str() );
+        return {};
     }
 
     vector<ShaderCookRequest> ShaderCookDriver::selectSample( const vector<ShaderCookRequest>& listRequest, const vector<ShaderCookSampleAxis>& listAxis )

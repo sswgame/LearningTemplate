@@ -29,8 +29,8 @@ namespace sw
     /** @brief 하위 레벨 미니게임 복제의 메시지 표입니다. */
     struct MinigameNetMessage
     {
-        using State = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>; ///< 서버가 들어간 하위 레벨 목록(전부)
-        using Ready = NetMessageDef<1, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>; ///< 그 번호의 맵을 다 읽었다 · 읽지 못했다
+        using State = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;                                                  ///< 서버가 들어간 하위 레벨 목록(전부)
+        using Ready = NetLimitedMessageDef<NetMessageDef<1, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>, NetRequestLimit::kCommand>; ///< 그 번호의 맵을 다 읽었다 · 읽지 못했다
         using Table = NetWorldMessageTable<NetMessageRange::kRuntime, State, Ready>;
 
         static constexpr uint32 kMaxEntry      = 16; ///< 목록의 상한 — 쌓는 깊이 한도보다 넉넉하다

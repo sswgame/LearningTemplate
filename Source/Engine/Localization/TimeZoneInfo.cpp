@@ -3,6 +3,7 @@
 #include "Engine/Localization/TimeZoneInfo.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Time/CalendarDate.h"
 
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
@@ -14,41 +15,6 @@ namespace sw
         {
             static constexpr int32 kDaylightShiftMinutes = 60;
 
-            /** @brief 내림 나눗셈입니다(C++ 의 `/` 는 0 쪽으로 자른다). */
-            static int64 floorDivide( int64 value, int64 divisor )
-            {
-                int64 quotient = value / divisor;
-                if ( ( value % divisor != 0 ) && ( ( value < 0 ) != ( divisor < 0 ) ) )
-                    --quotient;
-                return quotient;
-            }
-
-            /** @brief 1970-01-01 부터 그 날짜까지의 일 수입니다(Howard Hinnant 의 days_from_civil). */
-            static int64 computeDaysFromCivil( int64 year, int32 month, int32 day )
-            {
-                year -= month <= 2 ? 1 : 0;
-                const int64 era          = floorDivide( year, 400 );
-                const int64 yearOfEra    = year - era * 400;
-                const int64 monthShifted = month + ( month > 2 ? -3 : 9 );
-                const int64 dayOfYear    = ( 153 * monthShifted + 2 ) / 5 + day - 1;
-                const int64 dayOfEra     = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear;
-                return era * 146097 + dayOfEra - 719468;
-            }
-
-            /** @brief 일 수에서 날짜입니다(Howard Hinnant 의 civil_from_days). */
-            static void computeCivilFromDays( int64 days, int32& outYear, int32& outMonth, int32& outDay )
-            {
-                const int64 shifted      = days + 719468;
-                const int64 era          = floorDivide( shifted, 146097 );
-                const int64 dayOfEra     = shifted - era * 146097;
-                const int64 yearOfEra    = ( dayOfEra - dayOfEra / 1460 + dayOfEra / 36524 - dayOfEra / 146096 ) / 365;
-                const int64 dayOfYear    = dayOfEra - ( 365 * yearOfEra + yearOfEra / 4 - yearOfEra / 100 );
-                const int64 monthShifted = ( 5 * dayOfYear + 2 ) / 153;
-                outDay                   = static_cast<int32>( dayOfYear - ( 153 * monthShifted + 2 ) / 5 + 1 );
-                outMonth                 = static_cast<int32>( monthShifted < 10 ? monthShifted + 3 : monthShifted - 9 );
-                outYear                  = static_cast<int32>( yearOfEra + era * 400 + ( outMonth <= 2 ? 1 : 0 ) );
-            }
-
             /** @brief 일 수의 요일입니다(0 이 일요일). 1970-01-01 은 목요일입니다. */
             static int32 computeWeekday( int64 days )
             {
@@ -59,7 +25,7 @@ namespace sw
             /** @brief 그 달의 @p ordinal 번째(1 부터) 일요일의 일 수입니다. */
             static int64 findNthSunday( int32 year, int32 month, int32 ordinal )
             {
-                const int64 firstOfMonth = computeDaysFromCivil( year, month, 1 );
+                const int64 firstOfMonth = CalendarDate{ year, month, 1 }.toUnixDays();
                 const int32 untilSunday  = ( 7 - computeWeekday( firstOfMonth ) ) % 7;
                 return firstOfMonth + untilSunday + static_cast<int64>( ordinal - 1 ) * 7;
             }
@@ -67,7 +33,7 @@ namespace sw
             /** @brief 그 달 마지막 일요일의 일 수입니다(3 월과 10 월은 31 일까지 있다). */
             static int64 findLastSunday( int32 year, int32 month )
             {
-                const int64 lastOfMonth = computeDaysFromCivil( year, month, 31 );
+                const int64 lastOfMonth = CalendarDate{ year, month, 31 }.toUnixDays();
                 return lastOfMonth - computeWeekday( lastOfMonth );
             }
 
@@ -77,12 +43,9 @@ namespace sw
                 if ( zone._daylightRule == DaylightRule::None )
                     return false;
                 const int64 standardSeconds = static_cast<int64>( zone._standardOffsetMinutes ) * constant::time::kSecondsPerMinute;
-                int32       year{ 0 };
-                int32       month{ 0 };
-                int32       day{ 0 };
-                computeCivilFromDays( floorDivide( unixSeconds + standardSeconds, constant::time::kSecondsPerDay ), year, month, day );
-                int64 startSeconds{ 0 };
-                int64 endSeconds{ 0 };
+                const int32 year            = static_cast<int32>( CalendarDate::fromUnixDays( CalendarDate::floorDivide( unixSeconds + standardSeconds, constant::time::kSecondsPerDay ) )._year );
+                int64       startSeconds{ 0 };
+                int64       endSeconds{ 0 };
                 if ( zone._daylightRule == DaylightRule::UnitedStates )
                 {
                     const int64 daylightSeconds = standardSeconds + kDaylightShiftMinutes * constant::time::kSecondsPerMinute;
@@ -156,21 +119,18 @@ namespace sw
 
     TextDateTime TimeZoneInfo::convertUnixMilliseconds( int64 unixMilliseconds, const TimeZoneInfo& zone )
     {
-        const int64 unixSeconds   = TimeZoneInfoInternal::floorDivide( unixMilliseconds, constant::time::kMillisecondsPerSecond );
+        const int64 unixSeconds   = CalendarDate::floorDivide( unixMilliseconds, constant::time::kMillisecondsPerSecond );
         const int32 offsetMinutes = computeOffsetMinutes( unixSeconds, zone );
         const int64 localSeconds  = unixSeconds + static_cast<int64>( offsetMinutes ) * constant::time::kSecondsPerMinute;
-        const int64 days          = TimeZoneInfoInternal::floorDivide( localSeconds, constant::time::kSecondsPerDay );
+        const int64 days          = CalendarDate::floorDivide( localSeconds, constant::time::kSecondsPerDay );
         const int64 secondOfDay   = localSeconds - days * constant::time::kSecondsPerDay;
 
-        int32 year{ 0 };
-        int32 month{ 0 };
-        int32 day{ 0 };
-        TimeZoneInfoInternal::computeCivilFromDays( days, year, month, day );
+        const CalendarDate date = CalendarDate::fromUnixDays( days );
 
         TextDateTime value;
-        value._year             = year;
-        value._month            = static_cast<uint8>( month );
-        value._day              = static_cast<uint8>( day );
+        value._year             = static_cast<int32>( date._year );
+        value._month            = static_cast<uint8>( date._month );
+        value._day              = static_cast<uint8>( date._day );
         value._hour             = static_cast<uint8>( secondOfDay / constant::time::kSecondsPerHour );
         value._minute           = static_cast<uint8>( secondOfDay % constant::time::kSecondsPerHour / constant::time::kSecondsPerMinute );
         value._second           = static_cast<uint8>( secondOfDay % constant::time::kSecondsPerMinute );
@@ -181,7 +141,7 @@ namespace sw
 
     int64 TimeZoneInfo::computeUnixSeconds( const TextDateTime& value )
     {
-        const int64 days = TimeZoneInfoInternal::computeDaysFromCivil( value._year, value._month, value._day );
+        const int64 days = CalendarDate{ value._year, value._month, value._day }.toUnixDays();
         return days * constant::time::kSecondsPerDay + value._hour * constant::time::kSecondsPerHour +
                value._minute * constant::time::kSecondsPerMinute + value._second;
     }

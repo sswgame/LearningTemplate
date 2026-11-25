@@ -53,8 +53,7 @@ namespace
             for ( uint32 fileIndex = 0; fileIndex < fileCount; ++fileIndex )
             {
                 const AbsolutePath absPath = root.join( makeAssetID( fileIndex ) );
-                if ( ( fileIndex % kFilePerFolder == 0 && FileUtil::ensureParentDirectoryExists( absPath ) == false ) ||
-                     FileUtil::writeTextFile( absPath, makeText( fileIndex, fileCount ) ) == false )
+                if ( FileUtil::writeTextFile( absPath, makeText( fileIndex, fileCount ) ) == false )
                     return false;
             }
             return true;

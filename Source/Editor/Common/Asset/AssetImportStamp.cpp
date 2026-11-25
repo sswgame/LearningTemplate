@@ -341,7 +341,7 @@ namespace sw::editor
                     const uint8*       pBytes = payload.data() + entry._offset;
                     const bool         bWritten =
                         isSharedStorePath( path.str() ) ? ImportedAssetStore::writeIfAbsent( path, pBytes, entry._size )
-                                                                : FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFile( path, pBytes, entry._size );
+                                                                : FileUtil::writeFile( path, pBytes, entry._size );
                     if ( bWritten == false )
                         return false;
                 }

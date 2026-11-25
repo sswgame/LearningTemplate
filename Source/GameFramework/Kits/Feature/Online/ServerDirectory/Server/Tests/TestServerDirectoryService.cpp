@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
@@ -201,10 +202,9 @@ namespace
         /** @brief 다른 서버가 쓴 것처럼 서비스를 거치지 않고 점검을 넣습니다. */
         void writeMaintenanceDirectly( const MaintenanceWindow& window )
         {
-            vector<uint8> bytes;
-            SW_REQUIRE_TRUE( ServerDirectoryProtocol::encodeMaintenance( window, bytes ) );
-            ServiceTransaction transaction;
-            transaction.put( hashed_string{ "sd_maintenance" }, window._scope, bytes, 0 );
+            static const ServiceRecordTable<MaintenanceWindow> s_maintenanceTable{ "sd_maintenance" };
+            ServiceTransaction                                 transaction;
+            transaction.put( s_maintenanceTable, window._scope, window, 0 );
             SW_REQUIRE_TRUE( _database.commit( transaction ) == ServiceStoreResult::Ok );
         }
     };

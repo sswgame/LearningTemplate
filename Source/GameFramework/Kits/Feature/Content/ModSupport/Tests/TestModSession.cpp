@@ -56,7 +56,7 @@ namespace
 
         static bool writeText( const AbsolutePath& path, string_view text )
         {
-            return FileUtil::ensureDirectoryExists( path.getParent() ) && FileUtil::writeTextFile( path, text );
+            return FileUtil::writeTextFile( path, text );
         }
 
         /** @brief 설치 폴더에 매니페스트를 씁니다(덮어쓰기는 기본 리소스 하나). */

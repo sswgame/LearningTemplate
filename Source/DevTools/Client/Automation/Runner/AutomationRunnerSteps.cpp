@@ -523,12 +523,9 @@ namespace sw
 
         static bool runScreenshot( IAutomationStepContext& context, const AutomationStep& step )
         {
-            AutomationRunner&  runner    = asRunner( context );
-            const AbsolutePath path      = runner.resolveOutputPath( step.readValidatedProperties<AutomationScreenshotParams>()._file );
-            const AbsolutePath directory = path.getParent();
-            if ( directory.empty() == false )
-                (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
-            (void)FileUtil::tryRemoveFile( path );                  // 지난 실행의 이미지를 읽지 않게 지운다
+            AutomationRunner&  runner = asRunner( context );
+            const AbsolutePath path   = runner.resolveOutputPath( step.readValidatedProperties<AutomationScreenshotParams>()._file );
+            (void)FileUtil::tryRemoveFile( path ); // 지난 실행의 이미지를 읽지 않게 지운다
             if ( path.empty() )
             {
                 SW_LOG_ERROR_ID( "Automation.ScreenshotPathNotAbsolute", "Screenshot '%#' was not taken: the output path is not absolute", step.readValidatedProperties<AutomationScreenshotParams>()._file );

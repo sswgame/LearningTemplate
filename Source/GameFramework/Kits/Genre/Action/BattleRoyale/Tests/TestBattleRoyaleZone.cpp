@@ -55,7 +55,7 @@ namespace
 
         static float32 computeDistance( const sw::float2& lhs, const sw::float2& rhs ) { return sw::float2::getDistance( lhs, rhs ); }
 
-        /** @brief 넷 코덱과 같은 모양의 비트를 @p target 에 읽고 결과를 돌려줍니다. */
+        /** @brief 칸 선언(`Replicated`) 순서의 비트를 @p target 에 읽고 결과를 돌려줍니다. 선언이 쓰기를 거절하는 값을 넣으려고 손으로 짓습니다. */
         static bool readCrafted( sw::BattleRoyaleZone& target, int32 phase, sw::BattleRoyaleZoneStage stage, float32 remaining, float32 centerX, float32 radius, float32 fromRadius, float32 nextRadius )
         {
             sw::BitWriter writer;
@@ -312,6 +312,19 @@ SW_TEST_CASE( BattleRoyaleZoneTest, CodecRejectsOutOfRangeValues )
     SW_EXPECT_TRUE( read( 1, Stage::Final, 0.0f, 450.0f, 100.0f, 100.0f, 100.0f ) ); // 다 줄어든 마지막 단계
     SW_EXPECT_NEAR( 100.0f, zone.getRadius(), kZoneTolerance );
     SW_EXPECT_NEAR( 450.0f, zone.getCenter()._x, kZoneTolerance );
+
+    // 넷으로 쓴 원 상태를 받은 쪽은 같은 원이다
+    sw::BitWriter writer;
+    SW_REQUIRE_TRUE( zone.writeState( writer ) );
+    sw::BattleRoyaleZone remote;
+    SW_REQUIRE_TRUE( remote.initialize( BattleRoyaleZoneTestUtil::makeSettings( 1 ), kMapSize, 9, kOpenTerrain ) );
+    const sw::vector<uint8>& bytes = writer.getBytes();
+    sw::BitReader            reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+    SW_REQUIRE_TRUE( remote.readState( reader ) );
+    SW_EXPECT_EQUAL( zone.getPhaseIndex(), remote.getPhaseIndex() );
+    SW_EXPECT_TRUE( remote.getStage() == Stage::Final );
+    SW_EXPECT_NEAR( zone.getRadius(), remote.getRadius(), kZoneTolerance );
+    SW_EXPECT_NEAR( zone.getNextRadius(), remote.getNextRadius(), kZoneTolerance );
 }
 
 /**

@@ -24,6 +24,12 @@
 
 namespace sw
 {
+    template <typename TRecord>
+    class ServiceRecordTable;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 진행 저장소를 찾는 곳입니다. 지금 저장소가 없으면(조립이 서 있지 않다) nullptr 을 돌려준다. */
     using HubServiceStoreSource = Delegate<ServiceStore*()>;
 
@@ -76,15 +82,16 @@ namespace sw
 
         /** @brief 계정 id 의 레코드 키입니다(`a` + 16자 16 진수 — 키 규칙 `[0-9a-z_./-]` 안). */
         static string makeRecordKey( uint64 accountID );
-        /** @brief 레코드 바이트입니다 — 진행의 바이트(`HubProfile::write` — 판 뒤에 칸) 그대로. 칸이 선언 범위 밖이면 false 이고 @p outBytes 는 비웁니다. */
+        /** @brief 진행 표(`hub_profile`)입니다. */
+        static const ServiceRecordTable<HubProfile>& getTable();
+        /** @brief 견주기용 바이트입니다 — 표가 싣는 바이트 그대로(같으면 쓰지 않는다). 칸이 선언 범위 밖이면 false 이고 @p outBytes 는 비웁니다. */
         [[nodiscard]] static bool encodeRecord( const HubProfile& profile, vector<uint8>& outBytes );
-        /** @brief 레코드 바이트를 읽습니다. 판을 모르거나 깨졌거나 값이 범위 밖이면 false 입니다. */
-        [[nodiscard]] static bool decodeRecord( const vector<uint8>& bytes, HubProfile& outProfile );
 
         /** @brief 일이 결과를 두는 곳입니다(일과 저장소가 함께 든다 — 파일 머리말). */
         struct Completion
         {
-            vector<uint8>      _bytes{};
+            HubProfile         _profile{}; ///< 읽은 진행 · 쓴 진행
+            vector<uint8>      _bytes{};   ///< 그 진행의 견주기용 바이트
             uint64             _accountID{ 0 };
             uint64             _version{ 0 }; ///< 읽은 판 · 쓴 판
             ServiceStoreResult _result{ ServiceStoreResult::Unavailable };
@@ -109,6 +116,7 @@ namespace sw
             vector<uint8>          _storedBytes{};                            ///< 저장소에 있다고 아는 바이트(읽었거나 쓴 것). 비면 레코드가 없다
             vector<uint8>          _writingBytes{};                           ///< 맡긴 쓰기의 바이트(`_bWriting`)
             vector<uint8>          _queuedBytes{};                            ///< 쓰는 중에 들어온 가장 새 바이트(`_bQueued`)
+            HubProfile             _queuedProfile{};                          ///< 그 바이트의 진행
             uint64                 _version{ ServiceRecord::kAbsentVersion }; ///< 쓰기 조건으로 걸 판
             uint8                  _bKnown       : 1;                         ///< 판을 안다(읽었거나 쓴 뒤다)
             uint8                  _bWriting     : 1;                         ///< 맡긴 쓰기가 아직 거두어지지 않았다
@@ -131,7 +139,7 @@ namespace sw
         /** @brief 지금 저장소입니다. 없으면 오류를 남기고 nullptr 입니다. */
         ServiceStore* findStore( const utf8* pPurpose, uint64 accountID ) const;
         void          submitRead( uint64 accountID );
-        void          submitWrite( uint64 accountID, AccountState& state, vector<uint8> bytes );
+        void          submitWrite( uint64 accountID, AccountState& state, const HubProfile& profile, vector<uint8> bytes );
         /** @brief 쓰기가 남지 않은 계정의 기다리던 읽기 · 지우기를 처리합니다. 계정을 지웠으면 true 입니다. */
         bool settleAccount( uint64 accountID, AccountState& state );
 

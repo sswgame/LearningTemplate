@@ -235,7 +235,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ContentBrowserCollectionStore.NotOverwritten", "Content Browser collections were not saved: '%#' was not read completely and writing would lose the rest of it", string( filePath.str() ).c_str() );
             return false;
         }
-        if ( filePath.empty() || FileUtil::ensureParentDirectoryExists( filePath ) == false || FileUtil::writeTextFile( filePath, toText( bShared ) ) == false )
+        if ( filePath.empty() || FileUtil::writeTextFile( filePath, toText( bShared ) ) == false )
         {
             SW_LOG_WARNING_ID( "ContentBrowserCollectionStore.NotSaved", "Content Browser collections could not be saved to %#", string( filePath.str() ).c_str() );
             return false;

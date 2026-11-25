@@ -11,6 +11,7 @@
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw::editor
@@ -106,20 +107,14 @@ namespace sw::editor
 
     expected<AbsolutePath> AssetSourceLocator::loadStoreRoot()
     {
-        const AbsolutePath path = ProcessRoots::get()._project.join( kConfigFile );
-        JSONDocument       document;
-        if ( document.loadFromFile( path ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "the source store config could not be read", path.str() } );
-        const optional<string> root        = document.getRoot().readRequired<string>( "_root" );
-        const optional<string> environment = document.getRoot().readRequired<string>( "_rootEnvironment" );
-        // 폴더와 환경 변수 중 정확히 하나 — 둘 다 적으면 어느 쪽이 이기는지가 숨은 규칙이 된다(DDC 층과 같은 규칙).
-        if ( root.has_value() == false || environment.has_value() == false || root->empty() == environment->empty() )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the source store config needs exactly one of _root or _rootEnvironment", path.str() } );
-        if ( root->empty() == false )
-            return ProcessRoots::get()._derivedData.join( *root );
+        const expected<AssetSourceStoreConfig> config = ConfigManager::readConfig( AssetSourceStoreConfig::kConfigFile );
+        if ( config.has_value() == false )
+            return unexpected( config.error() );
+        if ( config->_root.empty() == false )
+            return ProcessRoots::get()._derivedData.join( config->_root );
         string environmentRoot;
-        if ( ProcessEnvironment::tryReadNonEmpty( *environment, environmentRoot ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "the source store environment variable is not set", *environment } );
+        if ( ProcessEnvironment::tryReadNonEmpty( config->_rootEnvironment, environmentRoot ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "the source store environment variable is not set", config->_rootEnvironment } );
         const optional<AbsolutePath> environmentPath = FileUtil::requireAbsolutePath( environmentRoot );
         if ( environmentPath.has_value() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the source store environment variable is not an absolute path", environmentRoot } );

@@ -750,7 +750,7 @@ namespace sw::editor
             if ( bSelf || bDead )
                 outListRecoveredFolder.push_back( sessionFolder );
         }
-        return FileUtil::ensureDirectoryExists( ownFolder ) && FileUtil::writeTextFile( ownFolder.join( kLockFileName ), lockBuilder.view() );
+        return FileUtil::writeTextFile( ownFolder.join( kLockFileName ), lockBuilder.view() );
     }
 
     void EditorAutosaveSession::removeOwned( const AbsolutePath& root, const int32 processID )

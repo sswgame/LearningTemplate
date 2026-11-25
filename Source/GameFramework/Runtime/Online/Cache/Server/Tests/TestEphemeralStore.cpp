@@ -6,6 +6,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/Tests/EphemeralStoreTestUtil.h"
 
 // EphemeralStoreTest — 휘발성 저장의 메모리 구현과 라우터: 키 · 크기 · 점수 형식 검사, 조건 쓰기 · 비교 후 쓰기(임대), 게으른 만료, 정수 증감,
 // 정렬 집합의 순서(큰 점수 · 같은 점수는 멤버 바이트 역순) · 순위 · 범위, 값과 정렬 집합의 종류 충돌, 발행/구독, 내린 뒤의 Unavailable,
@@ -16,6 +17,11 @@ namespace
     sw::vector<uint8> makeBytes( sw::string_view text )
     {
         return sw::vector<uint8>( text.begin(), text.end() );
+    }
+
+    sw::EphemeralValue makeValue( sw::string_view text )
+    {
+        return sw::EphemeralStoreTestAccess::makeTextValue( text );
     }
 
     /** @brief 데이터 하나 + 앞 하나입니다. 시각은 1000 ms 에서 시작합니다. */
@@ -61,10 +67,10 @@ SW_TEST_CASE( EphemeralStoreTest, MalformedRequestsAreInvalidAndNotExecuted )
     SW_EXPECT_FALSE( sw::EphemeralRequest::isValidKey( "has space" ) );
 
     CacheFixture rig;
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "Bad Key", makeBytes( "v" ), 0 ) ) == sw::EphemeralResult::Invalid );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "Bad Key", makeValue( "v" ), 0 ) ) == sw::EphemeralResult::Invalid );
     sw::vector<uint8> listHuge( static_cast<size_t>( sw::IEphemeralStore::kMaxValueSize ) + 1, 'x' );
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "big", listHuge, 0 ) ) == sw::EphemeralResult::Invalid );
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "neg", makeBytes( "v" ), -1 ) ) == sw::EphemeralResult::Invalid );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "big", sw::EphemeralStoreTestAccess::makeValue( listHuge ), 0 ) ) == sw::EphemeralResult::Invalid );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "neg", makeValue( "v" ), -1 ) ) == sw::EphemeralResult::Invalid );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeIncrement( "neg", 1, -5 ) ) == sw::EphemeralResult::Invalid );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeScoreSet( "board", "", 1 ) ) == sw::EphemeralResult::Invalid );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeScoreSet( "board", "m", sw::IEphemeralStore::kMaxAbsScore + 1 ) ) == sw::EphemeralResult::Invalid );
@@ -85,7 +91,7 @@ SW_TEST_CASE( EphemeralStoreTest, MalformedRequestsAreInvalidAndNotExecuted )
 SW_TEST_CASE( EphemeralStoreTest, RepliesKeepSubmitOrderAndIDsStartAtOne )
 {
     CacheFixture rig;
-    SW_EXPECT_EQUAL( uint64( 1 ), rig._store.submit( sw::EphemeralRequest::makeSet( "a", makeBytes( "1" ), 0 ) ) );
+    SW_EXPECT_EQUAL( uint64( 1 ), rig._store.submit( sw::EphemeralRequest::makeSet( "a", makeValue( "1" ), 0 ) ) );
     SW_EXPECT_EQUAL( uint64( 2 ), rig._store.submit( sw::EphemeralRequest::makeGet( "a" ) ) );
     SW_EXPECT_EQUAL( uint64( 3 ), rig._store.submit( sw::EphemeralRequest::makeGet( "missing" ) ) );
     SW_EXPECT_EQUAL( 3, rig._store.getPendingCount() );
@@ -95,7 +101,7 @@ SW_TEST_CASE( EphemeralStoreTest, RepliesKeepSubmitOrderAndIDsStartAtOne )
     SW_EXPECT_EQUAL( 0, rig._store.getPendingCount() );
     SW_EXPECT_TRUE( listReply[0]._operation == sw::EphemeralOperation::Set );
     SW_EXPECT_TRUE( listReply[1]._result == sw::EphemeralResult::Ok );
-    SW_EXPECT_TRUE( listReply[1]._value == makeBytes( "1" ) );
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( listReply[1] ) == makeBytes( "1" ) );
     SW_EXPECT_TRUE( listReply[2]._result == sw::EphemeralResult::NotFound );
     SW_EXPECT_EQUAL( uint64( 3 ), listReply[2]._requestID );
 }
@@ -106,13 +112,13 @@ SW_TEST_CASE( EphemeralStoreTest, RepliesKeepSubmitOrderAndIDsStartAtOne )
 SW_TEST_CASE( EphemeralStoreTest, ConditionalSetAndErase )
 {
     CacheFixture rig;
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeBytes( "x" ), 0, sw::EphemeralCondition::IfPresent ) ) == sw::EphemeralResult::Conflict );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeValue( "x" ), 0, sw::EphemeralCondition::IfPresent ) ) == sw::EphemeralResult::Conflict );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeGet( "k" ) ) == sw::EphemeralResult::NotFound );
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeBytes( "first" ), 0, sw::EphemeralCondition::IfAbsent ) ) == sw::EphemeralResult::Ok );
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeBytes( "second" ), 0, sw::EphemeralCondition::IfAbsent ) ) == sw::EphemeralResult::Conflict );
-    SW_EXPECT_TRUE( rig.run( sw::EphemeralRequest::makeGet( "k" ) )._value == makeBytes( "first" ) );
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeBytes( "third" ), 0, sw::EphemeralCondition::IfPresent ) ) == sw::EphemeralResult::Ok );
-    SW_EXPECT_TRUE( rig.run( sw::EphemeralRequest::makeGet( "k" ) )._value == makeBytes( "third" ) );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeValue( "first" ), 0, sw::EphemeralCondition::IfAbsent ) ) == sw::EphemeralResult::Ok );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeValue( "second" ), 0, sw::EphemeralCondition::IfAbsent ) ) == sw::EphemeralResult::Conflict );
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( rig.run( sw::EphemeralRequest::makeGet( "k" ) ) ) == makeBytes( "first" ) );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeValue( "third" ), 0, sw::EphemeralCondition::IfPresent ) ) == sw::EphemeralResult::Ok );
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( rig.run( sw::EphemeralRequest::makeGet( "k" ) ) ) == makeBytes( "third" ) );
 
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeErase( "k" ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeErase( "k" ) ) == sw::EphemeralResult::NotFound );
@@ -124,16 +130,16 @@ SW_TEST_CASE( EphemeralStoreTest, ConditionalSetAndErase )
 SW_TEST_CASE( EphemeralStoreTest, ValuesExpireAtDeadlineAndCanBeReacquired )
 {
     CacheFixture rig;
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "lease", makeBytes( "owner1" ), 100, sw::EphemeralCondition::IfAbsent ) ) == sw::EphemeralResult::Ok );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "lease", makeValue( "owner1" ), 100, sw::EphemeralCondition::IfAbsent ) ) == sw::EphemeralResult::Ok );
     rig._clock.advanceMilliseconds( 99 );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeGet( "lease" ) ) == sw::EphemeralResult::Ok );
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "lease", makeBytes( "owner2" ), 100, sw::EphemeralCondition::IfAbsent ) ) == sw::EphemeralResult::Conflict );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "lease", makeValue( "owner2" ), 100, sw::EphemeralCondition::IfAbsent ) ) == sw::EphemeralResult::Conflict );
     rig._clock.advanceMilliseconds( 1 );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeGet( "lease" ) ) == sw::EphemeralResult::NotFound );
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "lease", makeBytes( "owner2" ), 100, sw::EphemeralCondition::IfAbsent ) ) == sw::EphemeralResult::Ok );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "lease", makeValue( "owner2" ), 100, sw::EphemeralCondition::IfAbsent ) ) == sw::EphemeralResult::Ok );
 
     // 만료 0 은 영원하다
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "forever", makeBytes( "v" ), 0 ) ) == sw::EphemeralResult::Ok );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "forever", makeValue( "v" ), 0 ) ) == sw::EphemeralResult::Ok );
     rig._clock.advanceMilliseconds( 1000000 );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeGet( "forever" ) ) == sw::EphemeralResult::Ok );
 }
@@ -146,7 +152,7 @@ SW_TEST_CASE( EphemeralStoreTest, ExpireResetsOrErasesValuesAndScoreSets )
     CacheFixture rig;
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeExpire( "none", 100 ) ) == sw::EphemeralResult::NotFound );
 
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeBytes( "v" ), 50 ) ) == sw::EphemeralResult::Ok );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeValue( "v" ), 50 ) ) == sw::EphemeralResult::Ok );
     rig._clock.advanceMilliseconds( 40 );
     SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeExpire( "k", 50 ) ) == sw::EphemeralResult::Ok ); // 이제 만료는 1090
     rig._clock.advanceMilliseconds( 40 );
@@ -154,7 +160,7 @@ SW_TEST_CASE( EphemeralStoreTest, ExpireResetsOrErasesValuesAndScoreSets )
     rig._clock.advanceMilliseconds( 10 );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeGet( "k" ) ) == sw::EphemeralResult::NotFound );
 
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k2", makeBytes( "v" ), 0 ) ) == sw::EphemeralResult::Ok );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k2", makeValue( "v" ), 0 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeExpire( "k2", 0 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeGet( "k2" ) ) == sw::EphemeralResult::NotFound );
 
@@ -171,21 +177,21 @@ SW_TEST_CASE( EphemeralStoreTest, ExpireResetsOrErasesValuesAndScoreSets )
 SW_TEST_CASE( EphemeralStoreTest, CompareAndSetAndEraseGuardOwnership )
 {
     CacheFixture rig;
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndSet( "lease", makeBytes( "me" ), makeBytes( "me" ), 100 ) ) == sw::EphemeralResult::Conflict );
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "lease", makeBytes( "me" ), 100 ) ) == sw::EphemeralResult::Ok );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndSet( "lease", makeValue( "me" ), makeValue( "me" ), 100 ) ) == sw::EphemeralResult::Conflict );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "lease", makeValue( "me" ), 100 ) ) == sw::EphemeralResult::Ok );
 
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndErase( "lease", makeBytes( "other" ) ) ) == sw::EphemeralResult::Conflict );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndErase( "lease", makeValue( "other" ) ) ) == sw::EphemeralResult::Conflict );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeGet( "lease" ) ) == sw::EphemeralResult::Ok );
 
     rig._clock.advanceMilliseconds( 90 );
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndSet( "lease", makeBytes( "me" ), makeBytes( "me" ), 100 ) ) == sw::EphemeralResult::Ok ); // 연장: 1190 까지
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndSet( "lease", makeValue( "me" ), makeValue( "me" ), 100 ) ) == sw::EphemeralResult::Ok ); // 연장: 1190 까지
     rig._clock.advanceMilliseconds( 90 );
-    SW_EXPECT_TRUE( rig.run( sw::EphemeralRequest::makeGet( "lease" ) )._value == makeBytes( "me" ) );
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndSet( "lease", makeBytes( "other" ), makeBytes( "other" ), 100 ) ) == sw::EphemeralResult::Conflict );
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( rig.run( sw::EphemeralRequest::makeGet( "lease" ) ) ) == makeBytes( "me" ) );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndSet( "lease", makeValue( "other" ), makeValue( "other" ), 100 ) ) == sw::EphemeralResult::Conflict );
 
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndErase( "lease", makeBytes( "me" ) ) ) == sw::EphemeralResult::Ok );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndErase( "lease", makeValue( "me" ) ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeGet( "lease" ) ) == sw::EphemeralResult::NotFound );
-    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndErase( "lease", makeBytes( "me" ) ) ) == sw::EphemeralResult::Conflict );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndErase( "lease", makeValue( "me" ) ) ) == sw::EphemeralResult::Conflict );
 }
 
 /**
@@ -196,25 +202,25 @@ SW_TEST_CASE( EphemeralStoreTest, IncrementStartsWindowAndRejectsNonIntegerOrOve
     CacheFixture rig;
     SW_EXPECT_EQUAL( int64( 3 ), rig.run( sw::EphemeralRequest::makeIncrement( "rate", 3, 100 ) )._integer );
     rig._clock.advanceMilliseconds( 60 );
-    SW_EXPECT_EQUAL( int64( -2 ), rig.run( sw::EphemeralRequest::makeIncrement( "rate", -5, 100 ) )._integer ); // 창을 다시 열지 않는다
-    SW_EXPECT_TRUE( rig.run( sw::EphemeralRequest::makeGet( "rate" ) )._value == makeBytes( "-2" ) );           // 값은 10 진 글이다
+    SW_EXPECT_EQUAL( int64( -2 ), rig.run( sw::EphemeralRequest::makeIncrement( "rate", -5, 100 ) )._integer );                          // 창을 다시 열지 않는다
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( rig.run( sw::EphemeralRequest::makeGet( "rate" ) ) ) == makeBytes( "-2" ) ); // 값은 10 진 글이다
     rig._clock.advanceMilliseconds( 40 );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeGet( "rate" ) ) == sw::EphemeralResult::NotFound ); // 처음 창(1100)에 끝난다
     SW_EXPECT_EQUAL( int64( 1 ), rig.run( sw::EphemeralRequest::makeIncrement( "rate", 1, 100 ) )._integer );
 
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "text", makeBytes( "12a" ), 0 ) ) == sw::EphemeralResult::Ok );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "text", makeValue( "12a" ), 0 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeIncrement( "text", 1, 0 ) ) == sw::EphemeralResult::Invalid );
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "plus", makeBytes( "+1" ), 0 ) ) == sw::EphemeralResult::Ok );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "plus", makeValue( "+1" ), 0 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeIncrement( "plus", 1, 0 ) ) == sw::EphemeralResult::Invalid ); // RESP 처럼 `+` 는 아니다
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "dash", makeBytes( "-" ), 0 ) ) == sw::EphemeralResult::Ok );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "dash", makeValue( "-" ), 0 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeIncrement( "dash", 1, 0 ) ) == sw::EphemeralResult::Invalid );
 
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "max", makeBytes( "9223372036854775807" ), 0 ) ) == sw::EphemeralResult::Ok );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "max", makeValue( "9223372036854775807" ), 0 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeIncrement( "max", 1, 0 ) ) == sw::EphemeralResult::Invalid );
-    SW_EXPECT_TRUE( rig.run( sw::EphemeralRequest::makeGet( "max" ) )._value == makeBytes( "9223372036854775807" ) );
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "min", makeBytes( "-9223372036854775808" ), 0 ) ) == sw::EphemeralResult::Ok );
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( rig.run( sw::EphemeralRequest::makeGet( "max" ) ) ) == makeBytes( "9223372036854775807" ) );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "min", makeValue( "-9223372036854775808" ), 0 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_EQUAL( int64( -9223372036854775807ll ), rig.run( sw::EphemeralRequest::makeIncrement( "min", 1, 0 ) )._integer );
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "over", makeBytes( "9223372036854775808" ), 0 ) ) == sw::EphemeralResult::Ok );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "over", makeValue( "9223372036854775808" ), 0 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeIncrement( "over", 0, 0 ) ) == sw::EphemeralResult::Invalid ); // int64 에 들지 않는 글
 }
 
@@ -284,14 +290,14 @@ SW_TEST_CASE( EphemeralStoreTest, ScoreAddRefusesOutOfRangeAndEmptySetVanishes )
 SW_TEST_CASE( EphemeralStoreTest, ValueAndScoreSetKindsDoNotMix )
 {
     CacheFixture rig;
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeBytes( "v" ), 0 ) ) == sw::EphemeralResult::Ok );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeValue( "v" ), 0 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeScoreSet( "k", "m", 1 ) ) == sw::EphemeralResult::Invalid );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeScoreRange( "k", 0, 5 ) ) == sw::EphemeralResult::Invalid );
-    SW_EXPECT_TRUE( rig.run( sw::EphemeralRequest::makeGet( "k" ) )._value == makeBytes( "v" ) );
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( rig.run( sw::EphemeralRequest::makeGet( "k" ) ) ) == makeBytes( "v" ) );
 
     SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeScoreSet( "board", "m", 1 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeGet( "board" ) ) == sw::EphemeralResult::NotFound ); // RESP 앞과 같다
-    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "board", makeBytes( "plain" ), 0 ) ) == sw::EphemeralResult::Ok );
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "board", makeValue( "plain" ), 0 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeScoreRank( "board", "m" ) ) == sw::EphemeralResult::Invalid ); // 이제 값 키다
 
     // 정렬 집합 키의 증감은 Invalid 이고 집합은 그대로다(RESP `INCRBY` 의 WRONGTYPE 과 같다)
@@ -316,24 +322,24 @@ SW_TEST_CASE( EphemeralStoreTest, PublishReachesEachSubscribedFrontOnce )
     sw::vector<sw::EphemeralReply>   listReply;
     sw::vector<sw::EphemeralMessage> listMessage;
 
-    (void)storeA.submit( sw::EphemeralRequest::makePublish( "chan", makeBytes( "early" ) ) ); // 아무도 구독하지 않았다
+    (void)storeA.submit( sw::EphemeralStoreTestAccess::makePublish( "chan", makeBytes( "early" ) ) ); // 아무도 구독하지 않았다
     storeA.subscribe( "chan" );
     storeB.subscribe( "chan" );
     storeB.subscribe( "chan" );
     storeB.subscribe( "Bad Channel" ); // 키 규칙을 어긴 채널은 구독하지 않는다
-    (void)storeA.submit( sw::EphemeralRequest::makePublish( "chan", makeBytes( "hello" ) ) );
+    (void)storeA.submit( sw::EphemeralStoreTestAccess::makePublish( "chan", makeBytes( "hello" ) ) );
     SW_REQUIRE_EQUAL( 2, storeA.pollReplies( listReply ) );
     SW_EXPECT_EQUAL( int64( 0 ), listReply[0]._integer );
     SW_EXPECT_EQUAL( int64( 2 ), listReply[1]._integer );
 
     SW_REQUIRE_EQUAL( 1, storeB.pollMessages( listMessage ) );
     SW_EXPECT_EQUAL( sw::string( "chan" ), listMessage[0]._channel );
-    SW_EXPECT_TRUE( listMessage[0]._bytes == makeBytes( "hello" ) );
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( listMessage[0] ) == makeBytes( "hello" ) );
     SW_EXPECT_EQUAL( 1, storeA.pollMessages( listMessage ) ); // 보낸 앞도 구독했으면 받는다
 
     storeB.unsubscribe( "chan" );
     database.clearData();
-    (void)storeA.submit( sw::EphemeralRequest::makePublish( "chan", makeBytes( "after" ) ) );
+    (void)storeA.submit( sw::EphemeralStoreTestAccess::makePublish( "chan", makeBytes( "after" ) ) );
     listReply.clear();
     SW_REQUIRE_EQUAL( 1, storeA.pollReplies( listReply ) );
     SW_EXPECT_EQUAL( int64( 1 ), listReply[0]._integer ); // clearData 뒤에도 A 의 구독은 남았다
@@ -354,14 +360,14 @@ SW_TEST_CASE( EphemeralStoreTest, ShutdownAnswersUnavailableAndDropsSubscription
     storeB.shutdown();
     storeB.shutdown();
 
-    (void)storeB.submit( sw::EphemeralRequest::makeSet( "k", makeBytes( "v" ), 0 ) );
+    (void)storeB.submit( sw::EphemeralRequest::makeSet( "k", makeValue( "v" ), 0 ) );
     sw::vector<sw::EphemeralReply> listReply;
     SW_REQUIRE_EQUAL( 1, storeB.pollReplies( listReply ) );
     SW_EXPECT_TRUE( listReply[0]._result == sw::EphemeralResult::Unavailable );
     SW_EXPECT_TRUE( listReply[0]._operation == sw::EphemeralOperation::Set );
 
     (void)storeA.submit( sw::EphemeralRequest::makeGet( "k" ) );
-    (void)storeA.submit( sw::EphemeralRequest::makePublish( "chan", makeBytes( "x" ) ) );
+    (void)storeA.submit( sw::EphemeralStoreTestAccess::makePublish( "chan", makeBytes( "x" ) ) );
     listReply.clear();
     SW_REQUIRE_EQUAL( 2, storeA.pollReplies( listReply ) );
     SW_EXPECT_TRUE( listReply[0]._result == sw::EphemeralResult::NotFound ); // 내린 앞의 Set 은 실행되지 않았다
@@ -382,20 +388,19 @@ SW_TEST_CASE( EphemeralStoreTest, RouterDispatchesRepliesToLiveOwnersOnly )
     int32             callCount = 0;
     sw::vector<uint8> listGotValue;
     sw::Subscription  owner = router.openReplyOwner();
-    const uint64      setID = router.submit( sw::EphemeralRequest::makeSet( "k", makeBytes( "v" ), 0 ),
-                                             [&callCount]( const sw::EphemeralReply& reply )
-         {
-        ++callCount;
-        SW_EXPECT_TRUE( reply._result == sw::EphemeralResult::Ok );
-    }, owner );
-    SW_EXPECT_EQUAL( uint64( 1 ), setID );
-    router.submit( sw::EphemeralRequest::makeErase( "nobody.waits" ) ); // 답을 보지 않는 쓰기
-    (void)router.submit( sw::EphemeralRequest::makeGet( "k" ), [&callCount, &listGotValue]( const sw::EphemeralReply& reply )
+    router.submit( sw::EphemeralRequest::makeSet( "k", makeValue( "v" ), 0 ), owner, [&callCount]( const sw::EphemeralReply& reply )
     {
         ++callCount;
-        listGotValue = reply._value;
-    }, owner );
+        SW_EXPECT_TRUE( reply._result == sw::EphemeralResult::Ok );
+    } );
+    router.submit( sw::EphemeralRequest::makeErase( "nobody.waits" ) ); // 답을 보지 않는 쓰기
+    router.submit( sw::EphemeralRequest::makeGet( "k" ), owner, [&callCount, &listGotValue]( const sw::EphemeralReply& reply )
+    {
+        ++callCount;
+        listGotValue = sw::EphemeralStoreTestAccess::getBytes( reply );
+    } );
     SW_EXPECT_EQUAL( 2, router.getPendingCount() );
+    SW_EXPECT_EQUAL( 2, router.getPendingCount( owner ) );
     SW_EXPECT_EQUAL( 2, router.poll() );
     SW_EXPECT_EQUAL( 2, callCount );
     SW_EXPECT_TRUE( listGotValue == makeBytes( "v" ) );
@@ -403,17 +408,17 @@ SW_TEST_CASE( EphemeralStoreTest, RouterDispatchesRepliesToLiveOwnersOnly )
     SW_EXPECT_EQUAL( 0, router.poll() ); // 같은 답이 두 번 오지 않는다
 
     // 주인이 몫을 놓으면 맡긴 답은 버린다(요청 자체는 이미 실행됐다)
-    (void)router.submit( sw::EphemeralRequest::makeSet( "k", makeBytes( "w" ), 0 ), [&callCount]( const sw::EphemeralReply& )
-    { ++callCount; }, owner );
+    router.submit( sw::EphemeralRequest::makeSet( "k", makeValue( "w" ), 0 ), owner, [&callCount]( const sw::EphemeralReply& )
+    { ++callCount; } );
     owner.reset();
     SW_EXPECT_EQUAL( 0, router.getPendingCount() );
     SW_EXPECT_EQUAL( 0, router.poll() );
     SW_EXPECT_EQUAL( 2, callCount );
-    SW_EXPECT_TRUE( rig.run( sw::EphemeralRequest::makeGet( "k" ) )._value == makeBytes( "w" ) );
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( rig.run( sw::EphemeralRequest::makeGet( "k" ) ) ) == makeBytes( "w" ) );
 }
 
 /**
- * @brief [EphemeralStoreTest] 라우터의 거절: 죽은 주인 몫 · 빈 델리게이트로 맡기면 0 이고 아무것도 맡기지 않으며, 초기화 전 · 빈 델리게이트 구독은 빈 구독이다
+ * @brief [EphemeralStoreTest] 라우터의 거절: 죽은 주인 몫 · 다른 라우터의 몫으로 맡기면 아무것도 맡기지 않고 그 자리에서 Unavailable 로 끝나며, 초기화 전 · 빈 델리게이트 구독은 빈 구독이다
  */
 SW_TEST_CASE( EphemeralStoreTest, RouterRefusesDeadOwnerEmptyDelegateAndEarlySubscribe )
 {
@@ -428,10 +433,13 @@ SW_TEST_CASE( EphemeralStoreTest, RouterRefusesDeadOwnerEmptyDelegateAndEarlySub
     sw::EphemeralStoreRouter otherRouter;
     const sw::Subscription   foreignOwner = otherRouter.openReplyOwner(); // 다른 라우터의 몫
     sw::Subscription         deadOwner;
-    SW_EXPECT_EQUAL( uint64( 0 ), router.submit( sw::EphemeralRequest::makeGet( "k" ), []( const sw::EphemeralReply& ) {}, deadOwner ) );
-    SW_EXPECT_EQUAL( uint64( 0 ), router.submit( sw::EphemeralRequest::makeGet( "k" ), []( const sw::EphemeralReply& ) {}, foreignOwner ) );
-    const sw::Subscription owner = router.openReplyOwner();
-    SW_EXPECT_EQUAL( uint64( 0 ), router.submit( sw::EphemeralRequest::makeGet( "k" ), sw::EphemeralStoreRouter::ReplyDelegate{}, owner ) );
+    int32                    unavailableCount = 0;
+    for ( const sw::Subscription* pOwner : { static_cast<const sw::Subscription*>( &deadOwner ), &foreignOwner } )
+    {
+        router.submit( sw::EphemeralRequest::makeGet( "k" ), *pOwner, [&unavailableCount]( const sw::EphemeralReply& reply )
+        { unavailableCount += reply._result == sw::EphemeralResult::Unavailable ? 1 : 0; } );
+    }
+    SW_EXPECT_EQUAL( 2, unavailableCount );
     SW_EXPECT_FALSE( router.subscribe( "chan", sw::EphemeralStoreRouter::MessageDelegate{} ).isActive() );
     SW_EXPECT_EQUAL( 0, rig._store.getPendingCount() ); // 앞에 아무것도 맡기지 않았다
     SW_EXPECT_EQUAL( 0, router.getPendingCount() );
@@ -457,7 +465,7 @@ SW_TEST_CASE( EphemeralStoreTest, RouterSharesChannelUntilLastSubscriberLeaves )
 
     auto publishCount = [&publisher]() -> int64
     {
-        (void)publisher.submit( sw::EphemeralRequest::makePublish( "chan", makeBytes( "m" ) ) );
+        (void)publisher.submit( sw::EphemeralStoreTestAccess::makePublish( "chan", makeBytes( "m" ) ) );
         sw::vector<sw::EphemeralReply> listReply;
         (void)publisher.pollReplies( listReply );
         return listReply.empty() ? -1 : listReply.back()._integer;
@@ -494,13 +502,13 @@ SW_TEST_CASE( EphemeralStoreTest, RouterShutdownAnswersPendingExactlyOnce )
     int32 otherCount       = 0;
     for ( int32 index = 0; index < 3; ++index )
     {
-        (void)router.submit( sw::EphemeralRequest::makeGet( "k" ), [&unavailableCount, &otherCount]( const sw::EphemeralReply& reply )
+        router.submit( sw::EphemeralRequest::makeGet( "k" ), owner, [&unavailableCount, &otherCount]( const sw::EphemeralReply& reply )
         {
             if ( reply._result == sw::EphemeralResult::Unavailable )
                 ++unavailableCount;
             else
                 ++otherCount;
-        }, owner );
+        } );
     }
     router.shutdown();
     router.shutdown();

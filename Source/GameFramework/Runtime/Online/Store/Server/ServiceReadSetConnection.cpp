@@ -4,6 +4,7 @@
 
 #include "Core/Foundation/Constants.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 
 namespace sw
@@ -70,6 +71,8 @@ namespace sw
             return nullptr;
         };
         ServiceTransaction conditioned;
+        if ( transaction.isMalformed() )
+            conditioned.markMalformed(); // 사본도 커밋하지 못한다 — 쓰지 못한 값이 빈 값으로 들어가지 않는다
         for ( const ServiceWrite& write : listWrite )
         {
             ServiceWrite           copy  = write;
@@ -105,7 +108,7 @@ namespace sw
         _listRead.clear();
         _listRangeRead.clear();
         ServiceCommitInfo        info;
-        const ServiceStoreResult committed = _inner.commit( conditioned, &info );
+        const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( _inner, conditioned, &info );
         if ( _pStats != nullptr )
         {
             _pStats->_commitCount.fetch_add( 1, std::memory_order_relaxed );

@@ -28,6 +28,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 namespace sw
@@ -137,7 +138,8 @@ namespace sw
         template <typename TMethod>
         [[nodiscard]] const LoginSessionToken* beginSessionCall( OnlineServerCall<TMethod> call, const OnlineCallContext& context );
 
-        void handleCompletion( OnlineServiceHost& host, const LoginCompletion& completion );
+        void trackLogin( uint64 callID, const PendingCall& call );
+        void handleCompletion( OnlineServiceHost& host, const PendingCall& call, const LoginCompletion& completion );
         void handleEvent( OnlineServiceHost& host, const LoginEvent& event );
         /** @brief 업무 결과가 공통 오류(시도 제한, 저장소, 빌드 버전)이면 그 오류로 응답하고 true 를 반환합니다. */
         bool respondCommonError( uint64 callID, LoginServiceResult result, const LoginGrant& grant );
@@ -149,20 +151,21 @@ namespace sw
         void publishRemoteRevocations( OnlineServiceHost& host );
 
     private:
-        unordered_map<uint64, PendingCall>     _mapCallToPending; ///< 응답을 기다리는 호출(호출 번호 → 연결)이다
-        unordered_map<AccountID, BoundSession> _mapAccountToSession;
-        unordered_map<AccountID, string>       _mapAccountToReasonCode;
-        unordered_set<uint64>                  _uniqueSetLoginConnection; ///< 로그인을 맡겨 두고 완료를 기다리는 연결(packed)이다 — 묶기 전이라 호스트의 연결 주체로는 겹친 로그인을 가리지 못한다
-        vector<LoginCompletion>                _listCompletionScratch;
-        vector<LoginEvent>                     _listEventScratch;
-        vector<Subscription>                   _listBusSubscription; ///< 취소 주제와 이 서버의 알림 주제 구독(`attachHost`). 호스트가 내려가면 `onHostShutdown` 이 푼다
-        OnlinePresence                         _presence;
-        SessionControl                         _sessionControl; ///< 세션 끊기 창구(`getSessionControl`)
-        AccountServerConfig                    _settings;
-        LoginService*                          _pLoginService;
-        UnixMilliseconds                       _nowMs;
-        UnixMilliseconds                       _nextPurgeMs;
-        UnixMilliseconds                       _nextRefreshMs;
-        uint8                                  _bHostAttached;
+        PendingRequestTable<uint64, LoginCompletion> _logins; ///< 로그인 서비스에 맡기고 완료를 기다리는 호출(호출 번호 → 연결)이다
+        unordered_map<AccountID, BoundSession>       _mapAccountToSession;
+        unordered_map<AccountID, string>             _mapAccountToReasonCode;
+        unordered_set<uint64>                        _uniqueSetLoginConnection; ///< 로그인을 맡겨 두고 완료를 기다리는 연결(packed)이다 — 묶기 전이라 호스트의 연결 주체로는 겹친 로그인을 가리지 못한다
+        vector<LoginCompletion>                      _listCompletionScratch;
+        vector<LoginEvent>                           _listEventScratch;
+        vector<Subscription>                         _listBusSubscription; ///< 취소 주제와 이 서버의 알림 주제 구독(`attachHost`). 호스트가 내려가면 `onHostShutdown` 이 푼다
+        OnlinePresence                               _presence;
+        SessionControl                               _sessionControl; ///< 세션 끊기 창구(`getSessionControl`)
+        AccountServerConfig                          _settings;
+        LoginService*                                _pLoginService;
+        OnlineServiceHost*                           _pHost; ///< 붙은 호스트(`attachHost` 가 잇고 `onHostShutdown` 이 놓는다)
+        UnixMilliseconds                             _nowMs;
+        UnixMilliseconds                             _nextPurgeMs;
+        UnixMilliseconds                             _nextRefreshMs;
+        uint8                                        _bHostAttached;
     };
 } // namespace sw

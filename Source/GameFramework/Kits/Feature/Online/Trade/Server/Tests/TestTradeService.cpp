@@ -9,7 +9,9 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 using namespace sw;
 
@@ -434,4 +436,55 @@ SW_TEST_CASE( TradeServiceTest, RestartRecoversEveryOwnedTradePastOnePage )
     SW_EXPECT_EQUAL( size_t( kTradeCount ), restarted.takeUpdates().size() );
     restarted._service.recoverOwnedTrades( UnixMilliseconds{ kNowMs } );
     SW_EXPECT_TRUE( restarted.takeUpdates().empty() ); // 남은 열린 거래가 없다
+}
+
+/** @brief [TradeServiceTest] 기동 복구가 충돌에 거듭 지면 kBusy 이고 거래는 열려 있다 — Ok 로 넘기면 닫지 못한 거래가 주인 서버 없이 남는다. 충돌이 풀리면 닫는다 */
+SW_TEST_CASE( TradeServiceTest, RecoveryUnderConflictsIsBusyNotDone )
+{
+    SW_EXPECT_LOG( "ServiceStore.ConflictRetriesExhausted" );
+    MemoryServiceDatabase database;
+    TradeFixture          fixture( database );
+    const TradeCompletion invited = fixture.invite( kAlice, kBob );
+    SW_REQUIRE_TRUE( invited._result == TradeResult::Ok );
+
+    UnreliableStoreConnection unreliable( database );
+    TradeStoreLogic           logic( unreliable, fixture._policy, nullptr, kServer, fixture._settings );
+    unreliable._conflictCount = 1000;
+    vector<TradeSnapshot> listClosed;
+    SW_EXPECT_TRUE( logic.recoverOwned( kNowMs, listClosed ).hasError( OnlineError::kBusy ) );
+    SW_EXPECT_TRUE( listClosed.empty() );
+    unreliable._conflictCount = 1;
+    SW_EXPECT_TRUE( logic.recoverOwned( kNowMs, listClosed ) == TradeResult::Ok );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listClosed.size() );
+    SW_EXPECT_TRUE( listClosed[0].isClosed() );
+}
+
+/** @brief [TradeServiceTest] 초대가 충돌에 거듭 지면 kBusy 다 — 쓰지 않았으므로 다시 해도 된다 */
+SW_TEST_CASE( TradeServiceTest, InviteUnderConflictsIsBusy )
+{
+    SW_EXPECT_LOG( "ServiceStore.ConflictRetriesExhausted" );
+    MemoryServiceDatabase     database;
+    TradeFixture              fixture( database );
+    UnreliableStoreConnection unreliable( database );
+    unreliable._conflictCount = 1000;
+    TradeStoreLogic logic( unreliable, fixture._policy, nullptr, kServer, fixture._settings );
+    TradeSnapshot   snapshot;
+    SW_EXPECT_TRUE( logic.invite( kAlice, kBob, 1, kNowMs, snapshot ).hasError( OnlineError::kBusy ) );
+    unreliable._conflictCount = 0;
+    SW_EXPECT_TRUE( logic.invite( kAlice, kBob, 1, kNowMs, snapshot ) == TradeResult::Ok );
+}
+
+/** @brief [TradeServiceTest] 기동 복구가 저장소 실패로 지면 재시도 간격 뒤의 update 가 다시 해 거래를 닫는다 */
+SW_TEST_CASE( TradeServiceTest, FailedRecoveryRunsAgainFromUpdate )
+{
+    TradeWorld world;
+    SW_REQUIRE_TRUE( world._rig.invite( kAlice, kBob )._result == TradeResult::Ok );
+    TradeFixture restarted( world._database );
+    world._database.armFault( ServiceStoreFault::RejectCommit );
+    restarted._service.recoverOwnedTrades( UnixMilliseconds{ kNowMs } );
+    SW_EXPECT_TRUE( restarted.takeUpdates().empty() );
+    restarted._service.update( UnixMilliseconds{ kNowMs + TradeConstant::kExpiryRetryMs - 1 } );
+    SW_EXPECT_TRUE( restarted.takeUpdates().empty() ); // 아직 간격 전이다
+    restarted._service.update( UnixMilliseconds{ kNowMs + TradeConstant::kExpiryRetryMs } );
+    SW_EXPECT_EQUAL( size_t( 1 ), restarted.takeUpdates().size() );
 }

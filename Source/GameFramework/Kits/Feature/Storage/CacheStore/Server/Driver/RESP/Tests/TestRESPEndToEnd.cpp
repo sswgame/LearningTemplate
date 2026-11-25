@@ -9,6 +9,7 @@
 
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPCodec.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/Tests/EphemeralStoreTestUtil.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/Tests/OnlineEndpointTestUtil.h"
 #include "GameFramework/Runtime/Online/Server/Tests/OnlineRuntimeTestUtil.h"
@@ -244,24 +245,24 @@ SW_TEST_CASE( RESPEndToEndTest, ConfigSelectsRESPAndReachesTheEndpoint )
     int32                 repliedCount = 0;
     const Subscription    owner        = router.openReplyOwner();
     const Subscription    subscription = router.subscribe( "e2e.topic", SW_DELEGATE_LAMBDA( EphemeralStoreRouter::MessageDelegate, [&message]( const EphemeralMessage& received )
-       { message.assign( received._bytes.begin(), received._bytes.end() ); } ) );
+       { message.assign( sw::EphemeralStoreTestAccess::getBytes( received ).begin(), sw::EphemeralStoreTestAccess::getBytes( received ).end() ); } ) );
     const auto            onReply      = [&repliedCount, &readBack]( const EphemeralReply& reply )
     {
         ++repliedCount;
         SW_EXPECT_TRUE( reply._result == EphemeralResult::Ok );
         if ( reply._operation == EphemeralOperation::Get )
-            readBack.assign( reply._value.begin(), reply._value.end() );
+            readBack.assign( sw::EphemeralStoreTestAccess::getBytes( reply ).begin(), sw::EphemeralStoreTestAccess::getBytes( reply ).end() );
     };
 
-    (void)router.submit( EphemeralRequest::makeSet( "e2e:key", StringUtil::toBytes( "value" ), 0 ), SW_DELEGATE_LAMBDA( EphemeralStoreRouter::ReplyDelegate, onReply ), owner );
-    (void)router.submit( EphemeralRequest::makeGet( "e2e:key" ), SW_DELEGATE_LAMBDA( EphemeralStoreRouter::ReplyDelegate, onReply ), owner );
+    router.submit( EphemeralRequest::makeSet( "e2e:key", sw::EphemeralStoreTestAccess::makeValue( StringUtil::toBytes( "value" ) ), 0 ), owner, onReply );
+    router.submit( EphemeralRequest::makeGet( "e2e:key" ), owner, onReply );
     SW_REQUIRE_TRUE( test::pollUntil( poll, [&repliedCount]()
     { return repliedCount == 2; } ) );
     SW_EXPECT_EQUAL( string( "value" ), readBack );
     SW_EXPECT_EQUAL( string( "value" ), server.findValue( "g:e2e:key" ) );
     SW_EXPECT_TRUE( server.getAuthCount() >= 2 ); // 명령 연결과 구독 연결이 각각 AUTH 한다
 
-    router.submit( EphemeralRequest::makePublish( "e2e.topic", StringUtil::toBytes( "hello" ) ) );
+    router.submit( sw::EphemeralStoreTestAccess::makePublish( "e2e.topic", StringUtil::toBytes( "hello" ) ) );
     SW_REQUIRE_TRUE( test::pollUntil( poll, [&message]()
     { return message.empty() == false; } ) );
     SW_EXPECT_EQUAL( string( "hello" ), message );

@@ -17,29 +17,9 @@ namespace sw
     {
     }
 
-    string RenderScaleAdjuster::validate( const RenderScaleAdjusterConfig& config )
-    {
-        string reason;
-        if ( config._budgetMs <= 0.0f )
-            reason = "budgetMs must be > 0";
-        else if ( config._minScale <= 0.0f || config._minScale > 1.0f )
-            reason = "minScale must be in (0, 1]";
-        else if ( config._stepDown <= 0.0f || config._stepUp <= 0.0f )
-            reason = "stepDown and stepUp must be > 0";
-        else if ( config._stepUp >= config._stepDown )
-            reason = "stepUp must be smaller than stepDown (otherwise the scale oscillates)";
-        else if ( config._overRatio < 1.0f )
-            reason = "overRatio must be >= 1";
-        else if ( config._headroomRatio <= 0.0f || config._headroomRatio >= 1.0f )
-            reason = "headroomRatio must be in (0, 1)";
-        else if ( config._downFrames == 0 || config._upFrames == 0 )
-            reason = "downFrames and upFrames must be >= 1";
-        return reason;
-    }
-
     bool RenderScaleAdjuster::configure( const RenderScaleAdjusterConfig& config )
     {
-        if ( validate( config ).empty() == false )
+        if ( config.validate().has_value() == false )
             return false;
         _config      = config;
         _bConfigured = SW_TRUE;

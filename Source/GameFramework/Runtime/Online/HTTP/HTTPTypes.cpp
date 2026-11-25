@@ -9,6 +9,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Time/CalendarDate.h"
 
 namespace sw
 {
@@ -100,6 +101,96 @@ namespace sw
                 return "POST";
         }
         return "GET";
+    }
+
+    HTTPResponseKind HTTPClientResponse::getKind() const
+    {
+        if ( _statusCode == 0 )
+            return HTTPResponseKind::TransportFailed;
+        if ( HTTPConstant::kStatusOk <= _statusCode && _statusCode < HTTPConstant::kStatusMultipleChoices )
+            return HTTPResponseKind::Success;
+        if ( _statusCode >= HTTPConstant::kStatusServerError )
+            return HTTPResponseKind::ServerError;
+        switch ( _statusCode )
+        {
+            case HTTPConstant::kStatusUnauthorized:
+            case HTTPConstant::kStatusForbidden:
+                return HTTPResponseKind::Denied;
+            case HTTPConstant::kStatusNotFound:
+                return HTTPResponseKind::NotFound;
+            case HTTPConstant::kStatusGone:
+                return HTTPResponseKind::Gone;
+            case HTTPConstant::kStatusTooManyRequests:
+                return HTTPResponseKind::RateLimited;
+            default:
+                return HTTPResponseKind::Refused;
+        }
+    }
+
+    bool HTTPClientResponse::isTransientFailure() const
+    {
+        const HTTPResponseKind kind = getKind();
+        return kind == HTTPResponseKind::TransportFailed || kind == HTTPResponseKind::RateLimited || kind == HTTPResponseKind::ServerError;
+    }
+
+    int64 HTTPClientResponse::getRetryAfterMs( UnixMilliseconds nowMs ) const
+    {
+        const HTTPHeader* pHeader = findHeader( "Retry-After" );
+        if ( pHeader == nullptr )
+            return 0;
+        const string_view text    = StringUtil::trim( pHeader->_value );
+        int64             seconds = 0;
+        if ( StringUtil::parseInt64( text, seconds ) ) // 상한은 두지 않는다 — 부르는 쪽이 시도 횟수로 막는다. 넘치는 곱만 막는다
+            return MathUtil::clamp( seconds, int64{ 0 }, HTTPConstant::kMaxRetryAfterSeconds ) * constant::time::kMillisecondsPerSecond;
+        const optional<int64> dateMs = parseDate( text );
+        if ( dateMs.has_value() == false )
+            return 0;
+        return MathUtil::clamp( *dateMs - nowMs.count(), int64{ 0 }, HTTPConstant::kMaxRetryAfterSeconds * constant::time::kMillisecondsPerSecond );
+    }
+
+    optional<int64> HTTPClientResponse::parseDate( string_view text )
+    {
+        // 자리가 정해진 29 글자다. 옛 꼴 둘(RFC 850 · asctime)은 보내는 서버가 없어 읽지 않는다.
+        constexpr string_view kShape         = "___, dd ___ dddd dd:dd:dd GMT";
+        constexpr string_view kMonthNames    = "JanFebMarAprMayJunJulAugSepOctNovDec";
+        constexpr size_t      kMonthNameSize = 3;
+        constexpr size_t      kTwoDigit      = 2;
+        constexpr size_t      kYearDigit     = 4;
+        constexpr size_t      kDayOffset     = 5;
+        constexpr size_t      kMonthOffset   = 8;
+        constexpr size_t      kYearOffset    = 12;
+        constexpr size_t      kHourOffset    = 17;
+        constexpr size_t      kMinuteOffset  = 20;
+        constexpr size_t      kSecondOffset  = 23;
+        constexpr int64       kHourCount     = constant::time::kSecondsPerDay / constant::time::kSecondsPerHour;
+        constexpr int64       kMinuteCount   = constant::time::kSecondsPerHour / constant::time::kSecondsPerMinute;
+        constexpr int64       kMaxSecond     = constant::time::kSecondsPerMinute; // 윤초(60)까지 허용한다
+        if ( text.size() != kShape.size() )
+            return nullopt;
+        for ( size_t index = 0; index < kShape.size(); ++index )
+        {
+            const bool bDigit   = '0' <= text[index] && text[index] <= '9';
+            const bool bMatched = kShape[index] == '_' || ( kShape[index] == 'd' ? bDigit : text[index] == kShape[index] );
+            if ( bMatched == false )
+                return nullopt;
+        }
+        const size_t month = kMonthNames.find( text.substr( kMonthOffset, kMonthNameSize ) );
+        if ( month == string_view::npos || month % kMonthNameSize != 0 )
+            return nullopt;
+        const auto readDigits = [text]( size_t start, size_t count ) -> int64
+        {
+            int64 value = 0;
+            (void)StringUtil::parseInt64( text.substr( start, count ), value ); // 위에서 숫자임을 봤다
+            return value;
+        };
+        const CalendarDate date{ readDigits( kYearOffset, kYearDigit ), static_cast<int32>( month / kMonthNameSize ) + 1, static_cast<int32>( readDigits( kDayOffset, kTwoDigit ) ) };
+        const int64        hour   = readDigits( kHourOffset, kTwoDigit );
+        const int64        minute = readDigits( kMinuteOffset, kTwoDigit );
+        const int64        second = readDigits( kSecondOffset, kTwoDigit );
+        if ( date.isValid() == false || hour >= kHourCount || minute >= kMinuteCount || second > kMaxSecond )
+            return nullopt;
+        const int64 seconds = date.toUnixDays() * constant::time::kSecondsPerDay + hour * constant::time::kSecondsPerHour + minute * constant::time::kSecondsPerMinute + second;
+        return seconds * constant::time::kMillisecondsPerSecond;
     }
 
     const HTTPHeader* HTTPClientResponse::findHeader( string_view name ) const

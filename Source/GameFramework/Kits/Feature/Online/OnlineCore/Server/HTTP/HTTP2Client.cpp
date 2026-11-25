@@ -335,8 +335,7 @@ namespace sw
     {
         HTTPClientResponse& response = _listDone.emplace_back();
         response._requestID          = requestID;
-        response._bTransportFailed   = SW_TRUE;
-        response._failureText        = pFailure;
+        response.setTransportFailed( pFailure );
     }
 
     HTTP2Client::Session* HTTP2Client::findByHandleLocked( StreamConnectionHandle handle )

@@ -12,6 +12,8 @@
 
 #include "DevTools/DevToolsAPI.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     struct AutomationImageRegion;
@@ -70,10 +72,15 @@ namespace sw
 namespace sw
 {
     /** @struct AutomationImageThreshold @brief 비교가 화소 하나를 어떻게 셀지입니다(색 거리 = R · G · B 차의 합, 0..765). 값은 정책 데이터에서 온다. */
-    struct AutomationImageThreshold
+    REFLECT()
+    struct SW_DEVTOOLS_API AutomationImageThreshold
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 1, Max = 765 )
         uint32 _differingMinDistance{ 0 }; ///< 이 거리 이상이면 "다른 화소" — 축소 뒤 반올림 흔들림(1~2)을 넘는 값
-        uint32 _deepMinDistance{ 0 };      ///< 이 거리 이상이면 "깊은 화소" — 덩어리(좁고 깊은 차이)를 이 화소로 센다
+        PROPERTY( Required, Min = 1, Max = 765 )
+        uint32 _deepMinDistance{ 0 }; ///< 이 거리 이상이면 "깊은 화소" — 덩어리(좁고 깊은 차이)를 이 화소로 센다
     };
 
     /** @struct AutomationImageDifference @brief 골든 비교 결과입니다. 판정은 `AutomationGoldenUtil::evaluate` 한 곳이 한다. */

@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
@@ -49,17 +50,18 @@ namespace sw
 
     bool ModAllowList::readMod( const XMLNode& node, string_view sourceName )
     {
-        const string_view id       = node.getAttributeText( "id" );
-        const string_view hashText = node.getAttributeText( "contentHash" );
-        ModDigestEntry    entry;
-        const bool        bRead = ModManifest::isValidID( id ) && ModVersion::parse( node.getAttributeText( "version" ), entry._version ) &&
-                           hashText.size() == ModAllowListInternal::kHashTextLength && StringUtil::parseUint64( hashText, entry._contentHash, 16 );
+        ModAllowEntryDef def;
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
+            return false;
+        ModDigestEntry entry;
+        const bool     bRead = ModManifest::isValidID( def._id ) && ModVersion::parse( def._version, entry._version ) && def._contentHash.size() == ModAllowListInternal::kHashTextLength &&
+                           StringUtil::parseUint64( def._contentHash, entry._contentHash, 16 );
         if ( bRead == false )
         {
             SW_LOG_ERROR_ID( "ModAllowList.BadEntry", "Mod allow list '%#': <Mod> needs id (a-z, 0-9, _), version (major.minor.patch) and contentHash (16 hex digits)", sourceName );
             return false;
         }
-        entry._id = string{ id };
+        entry._id = std::move( def._id );
         for ( const ModDigestEntry& listed : _listEntry )
         {
             if ( listed._id == entry._id )

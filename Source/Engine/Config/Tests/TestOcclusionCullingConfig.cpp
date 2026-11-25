@@ -13,9 +13,7 @@ using namespace sw;
 /** @brief [OcclusionCullingConfigTest] 커밋한 Config/Engine/OcclusionCulling.json 은 읽히고 맞다. */
 SW_TEST_CASE( OcclusionCullingConfigTest, CommittedFileLoadsAndValidates )
 {
-    OcclusionCullingConfig config;
-    SW_REQUIRE_TRUE( ConfigManager::readConfigFileInto( OcclusionCullingConfig::kConfigFile, config ) == ConfigReadResult::Loaded );
-    SW_EXPECT_TRUE( config.validate().empty() );
+    SW_EXPECT_TRUE( ConfigManager::readConfig( OcclusionCullingConfig::kConfigFile ).has_value() );
 }
 
 /** @brief [OcclusionCullingConfigTest] 발자국은 1 ~ 4, 깊이 치우침은 0 이상이다 — 밖이면 이유가 있다. */
@@ -24,12 +22,12 @@ SW_TEST_CASE( OcclusionCullingConfigTest, ValidateRejectsOutOfRange )
     OcclusionCullingConfig config;
     config._footprintTexels = 2;
     config._depthBias       = 0.0f;
-    SW_EXPECT_TRUE( config.validate().empty() );
+    SW_EXPECT_TRUE( config.validate().has_value() );
     config._footprintTexels = 0;
-    SW_EXPECT_FALSE( config.validate().empty() );
+    SW_EXPECT_FALSE( config.validate().has_value() );
     config._footprintTexels = OcclusionCullingConfig::kMaxFootprintTexels + 1u;
-    SW_EXPECT_FALSE( config.validate().empty() );
+    SW_EXPECT_FALSE( config.validate().has_value() );
     config._footprintTexels = 2;
     config._depthBias       = -0.001f;
-    SW_EXPECT_FALSE( config.validate().empty() );
+    SW_EXPECT_FALSE( config.validate().has_value() );
 }

@@ -114,8 +114,7 @@ namespace sw
 
     void ProfileAPILoginProvider::readVerification( const HTTPClientResponse& response, PlatformLoginVerification& outVerification ) const
     {
-        const bool bDenied = response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden;
-        if ( bDenied )
+        if ( response.getKind() == HTTPResponseKind::Denied )
         {
             outVerification._bRejected = SW_TRUE;
             return;

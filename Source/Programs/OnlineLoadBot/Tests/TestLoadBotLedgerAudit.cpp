@@ -7,8 +7,10 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 #include "Programs/OnlineLoadBot/LoadBotLocalServer.h"
 
@@ -47,7 +49,7 @@ namespace
         ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) override { return _inner.readRecord( table, key, outRecord ); }
         ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, vector<ServiceRecord>& outListRecord ) override
         {
-            if ( _bInterleaved == false && table == Ledger::getBalanceTable() )
+            if ( _bInterleaved == false && table == Ledger::getBalanceTable().getName() )
             {
                 _bInterleaved = true;
                 LedgerTransferResult moved;
@@ -55,7 +57,7 @@ namespace
             }
             return ServiceRecordReader::readPage( _inner, table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord )._result;
         }
-        ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) override { return _inner.commit( transaction, pOutInfo ); }
+        ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) override { return ServiceCommitRunner::commitOnce( _inner, transaction, pOutInfo ); }
 
     private:
         IServiceStoreConnection& _inner;
@@ -172,8 +174,8 @@ SW_TEST_CASE( LoadBotLedgerAuditTest, StoreCountsCommitsAndConflicts )
         tracker.submit( []( IServiceStoreConnection& connection )
         {
             ServiceTransaction transaction;
-            transaction.put( kTable, "key", vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
-            return connection.commit( transaction );
+            ServiceStoreTestAccess::putBytes( transaction, kTable, "key", vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
+            return ServiceCommitRunner::commitOnce( connection, transaction );
         }, [&slot]( ServiceStoreResult committed )
         { slot = committed; } );
     }

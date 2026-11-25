@@ -67,7 +67,7 @@ namespace sw::editor
         for ( const AbsolutePath& path : listPath )
             ledger.appendFormat( "%#\n", path.str() );
         const AbsolutePath ledgerPath = Internal::getLedgerPath();
-        if ( FileUtil::ensureParentDirectoryExists( ledgerPath ) == false || FileUtil::writeTextFile( ledgerPath, ledger.view() ) == false )
+        if ( FileUtil::writeTextFile( ledgerPath, ledger.view() ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the lock ledger", ledgerPath.str() } );
         for ( const AbsolutePath& path : listPath )
         {

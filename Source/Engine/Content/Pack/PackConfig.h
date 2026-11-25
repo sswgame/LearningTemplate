@@ -15,6 +15,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Config/ConfigFileID.h"
 #include "Engine/Config/IConfig.h"
 #include "Engine/Config/PackCookRuleTypes.h"
 #include "Engine/Content/Pack/PackTypes.h"
@@ -252,7 +253,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 프로젝트 루트 기준 설정 파일 경로입니다. */
-        static constexpr const utf8* kConfigPath = "Config/Engine/PackConfig.json";
+        static constexpr ConfigFileID<PackConfig> kConfigFile{ "Config/Engine/PackConfig.json" };
 
         /**
          * @brief 셰이더 원본(`.hlsl` · `.hlsli`)인가입니다 — `_bExcludeRawShaderSource` 가 켜진 팩(배포)에는 없고 쿠킹한 바이너리만 있다.

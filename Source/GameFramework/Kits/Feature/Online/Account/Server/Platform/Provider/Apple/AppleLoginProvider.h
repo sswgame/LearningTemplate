@@ -14,7 +14,6 @@
 #pragma once
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
@@ -26,6 +25,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
+#include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
 
 namespace sw
 {
@@ -68,36 +68,30 @@ namespace sw
         string makeClientSecret( UnixMilliseconds now );
 
     private:
-        struct PendingVerification
-        {
-            PlatformLoginVerification _verified{}; ///< ID 토큰 확인이 끝난 결과(연동 비밀은 교환 뒤에 채운다)
-            string                    _code{};
-            uint64                    _outerID{ 0 };
-            uint64                    _innerID{ 0 };
-            uint64                    _exchangeRequestID{ 0 }; ///< 0 이면 교환 전이다
-        };
-
-        void   submitExchange( PendingVerification& pending, UnixMilliseconds nowMs );
-        void   finishExchange( PendingVerification& pending, const HTTPClientResponse& response );
+        /** @brief ID 토큰 확인이 끝났습니다. 확인됐고 인가 코드가 있으면 교환으로 잇고, 아니면 그대로 끝냅니다. */
+        void   onVerified( PlatformLoginVerification verified, const string& code );
+        void   submitExchange( PlatformLoginVerification verified, const string& code );
+        void   finishExchange( PlatformLoginVerification verified, const HTTPClientResponse& response );
         void   finishRevocation( uint64 revocationID, const HTTPClientResponse& response );
         uint64 submitForm( const string& url, const vector<HTTPHeader>& listForm, UnixMilliseconds nowMs );
 
     private:
-        PlatformLoginProviderConfig            _settings;
-        OidcLoginProvider                      _oidc;
-        string                                 _signingKeyPem;
-        string                                 _clientSecret;
-        string                                 _tokenURL;
-        string                                 _revokeURL;
-        vector<PendingVerification>            _listPending;
-        EventBuffer<PlatformLoginVerification> _verificationBuffer;
-        EventBuffer<PlatformLoginRevocation>   _revocationBuffer;
-        vector<PlatformLoginVerification>      _listInnerScratch;
-        unordered_map<uint64, uint64>          _mapRequestToRevocation;
-        INetSecurityProvider*                  _pSecurity;
-        HTTPClient*                            _pAppleHTTPClient;
-        int64                                  _secretExpiresMs;
-        IDAllocator<uint64>                    _verificationIDAllocator;
-        IDAllocator<uint64>                    _revocationIDAllocator;
+        PlatformLoginProviderConfig                            _settings;
+        OidcLoginProvider                                      _oidc;
+        string                                                 _signingKeyPem;
+        string                                                 _clientSecret;
+        string                                                 _tokenURL;
+        string                                                 _revokeURL;
+        PendingRequestTable<uint64, PlatformLoginVerification> _innerVerifications; ///< 안쪽 OIDC 확인을 기다리는 티켓(안쪽 번호 → 인가 코드)이다
+        EventBuffer<PlatformLoginVerification>                 _verificationBuffer;
+        EventBuffer<PlatformLoginRevocation>                   _revocationBuffer;
+        vector<PlatformLoginVerification>                      _listInnerScratch;
+        PendingRequestTable<uint64, HTTPClientResponse>        _exchangeTable; ///< 애플 서버의 답을 기다리는 교환 · 철회 요청이다
+        INetSecurityProvider*                                  _pSecurity;
+        HTTPClient*                                            _pAppleHTTPClient;
+        int64                                                  _secretExpiresMs;
+        UnixMilliseconds                                       _nowMs; ///< 마지막 `update` 의 시각이다(교환의 client secret 서명)
+        IDAllocator<uint64>                                    _verificationIDAllocator;
+        IDAllocator<uint64>                                    _revocationIDAllocator;
     };
 } // namespace sw

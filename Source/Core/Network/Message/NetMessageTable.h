@@ -66,6 +66,43 @@ namespace sw
         static constexpr uint32 kHoldMilliseconds = HoldMilliseconds;
     };
 
+    /**
+     * @brief 서버 수신 상한의 단계입니다(`NetLimitedMessageDef` — 한 연결이 `poll` 한 번에 보내는 수). 정상 게임이 닿지 않는 값이다.
+     * @details 정상 클라이언트가 `poll` 한 번에 가장 많이 몰아 보내는 때는 서버가 멈췄다 깬 뒤다. 그 길이는 연결 시한(`NetEndpointConfig::_timeoutSeconds`, 5 초)을 넘지 못한다 —
+     *          넘으면 클라이언트가 먼저 끊는다. 신뢰 메시지는 서버가 확인을 보내지 못하는 동안 창(`NetConnection::kReliableWindow`, 256)까지만 나가므로, 상한이 창 이상이면
+     *          디버거로 오래 세운 서버에서도 정상 연결이 끊기지 않는다(`NetMessage.cpp` 의 단언). 그래서 사람이 시키는 일도 64 가 아니라 창이다 — 64 면 5 초 멈춤에 초당 13 번이라 연타에 끊긴다.
+     */
+    struct NetRequestLimit
+    {
+        static constexpr uint32 kCommand = 256;  ///< 사람이 시키는 일(참가 · 나가기 · 행동 · 건너뛰기) — 신뢰 창 하나. 5 초에 초당 50 번
+        static constexpr uint32 kPerTick = 640;  ///< 틱마다 하나씩 보내는 비신뢰(입력 · 확인) — 128 Hz × 5 초. 넘으면 버릴 뿐 끊지 않는다
+        static constexpr uint32 kBurst   = 1024; ///< 한꺼번에 몰리는 것(어긋난 대상마다의 요청 · 원격 호출 · 락스텝) — 신뢰는 창 넷, 비신뢰 원격 호출은 초당 200 번 × 5 초
+    };
+
+    /**
+     * @brief 서술자 @p TMessage 에 서버가 한 연결에게서 `poll` 한 번에 받는 상한을 선언합니다. 서버로 갈 수 있는 메시지(`ToServer` · `Both`)는 이것이 없으면 받는 처리기가 컴파일되지 않는다.
+     * @details 상한은 "틱 하나에 한 클라이언트가 시킬 수 있는 일" 이다 — 초당 수가 아니라 `poll` 마다라 서버가 느려진 만큼 저절로 준다(Housing 의 틱당 요청 · 합성 대조 줄 수와 같은 단위).
+     *          넘은 비신뢰 메시지는 버리고 센다(늦거나 잃어도 되는 것이다). 넘은 신뢰 메시지는 전달 약속을 어길 수 없어 그 연결을 끊는다(언리얼 RPC DoS 감지의 끊기 단계).
+     *          상한은 서버가 멈췄다 깬 뒤 몰려온 정상 트래픽보다 넉넉히 적는다.
+     */
+    template <typename TMessage, uint32 MaxPerPoll>
+    struct NetLimitedMessageDef : TMessage
+    {
+        static_assert( TMessage::kDirection != NetMessageDirection::ToClient, "only messages that travel to the server have a request limit" );
+        static_assert( MaxPerPoll > 0 && MaxPerPoll <= 0xFFFF, "a request limit is 1 to 65535" );
+        static constexpr uint32 kMaxPerPoll = MaxPerPoll;
+    };
+
+    /** @brief 메시지 서술자 @p TMessage 의 서버 수신 상한입니다(`NetLimitedMessageDef`). 선언하지 않았으면 0 입니다. */
+    template <typename TMessage, typename = void>
+    struct NetMessageMaxPerPoll : std::integral_constant<uint32, 0u>
+    {
+    };
+    template <typename TMessage>
+    struct NetMessageMaxPerPoll<TMessage, std::void_t<decltype( TMessage::kMaxPerPoll )>> : std::integral_constant<uint32, TMessage::kMaxPerPoll>
+    {
+    };
+
     /** @brief 메시지 서술자 @p TMessage 가 보류를 선언했으면 true 입니다(`NetHeldMessageDef`). */
     template <typename TMessage, typename = void>
     struct NetMessageIsHeld : std::false_type
@@ -125,10 +162,20 @@ namespace sw
         static constexpr NetMessageDirectionMask makeDirectionMask()
         {
             static_assert( ( contains<TSubset>() && ... ), "every message of the mask must be in this table" );
+            static_assert( ( ( TSubset::kDirection == NetMessageDirection::ToClient || NetMessageMaxPerPoll<TSubset>::value > 0 ) && ... ),
+                           "a message the server receives must declare its request limit (NetLimitedMessageDef)" );
             NetMessageDirectionMask mask{};
             mask._toServerMask = static_cast<uint16>( ( 0u | ... | ( TSubset::kDirection != NetMessageDirection::ToClient ? 1u << TSubset::kOffset : 0u ) ) );
             mask._toClientMask = static_cast<uint16>( ( 0u | ... | ( TSubset::kDirection != NetMessageDirection::ToServer ? 1u << TSubset::kOffset : 0u ) ) );
             return mask;
+        }
+
+        /** @brief 종류 @p kind 를 서버가 한 연결에게서 `poll` 한 번에 받는 상한입니다(`INetMessageHandler::getMaxPerPoll`). 표에 없거나 서버로 가지 않으면 0 입니다. */
+        static constexpr uint32 getMaxPerPollOf( uint8 kind )
+        {
+            uint32 maxPerPoll = 0;
+            ( ( maxPerPoll = kind == static_cast<uint8>( RangeBase + TMessage::kOffset ) ? NetMessageMaxPerPoll<TMessage>::value : maxPerPoll ), ... );
+            return maxPerPoll;
         }
 
         /** @brief 번호가 @p kind 인 메시지의 `visitor.visit<TMessage>()` 를 부르고 그 값을 돌려줍니다. 표에 없으면 @p notFound 입니다. */
@@ -261,12 +308,8 @@ namespace sw
         uint8                   getMessageRangeBase() const final { return TTable::kRangeBase; }
         uint16                  getMessageKindMask() const final { return kReceivedMask; }
         NetMessageDirectionMask getMessageDirectionMask() const final { return TTable::template makeDirectionMask<TReceived...>(); }
+        uint32                  getMaxPerPoll( uint8 kind ) const final { return TTable::getMaxPerPollOf( kind ); }
         uint32                  getWireVersion() const final { return TTable::computeWireVersion(); }
-        NetHandleResult         handleNetMessage( const NetMessageContext& context, BitReader& body ) final
-        {
-            ReceiveVisitor visitor{ static_cast<TDerived&>( *this ), context, body };
-            return TTable::template dispatch<NetHandleResult>( context._kind, visitor, NetHandleResult::Handled ); // 마스크가 거른 뒤라 표 밖 종류는 오지 않는다
-        }
 
         bool   isWorldScoped() const final { return TTable::kWorldScoped; }
         uint32 getHoldLimit( uint8 kind ) const final
@@ -278,6 +321,13 @@ namespace sw
         {
             HoldKeyVisitor visitor{ static_cast<const TDerived&>( *this ), body };
             return TTable::template dispatch<uint64>( kind, visitor, uint64{ 0 } );
+        }
+
+    protected:
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) final
+        {
+            ReceiveVisitor visitor{ static_cast<TDerived&>( *this ), context, body };
+            return TTable::template dispatch<NetHandleResult>( context._kind, visitor, NetHandleResult::Handled ); // 마스크가 거른 뒤라 표 밖 종류는 오지 않는다
         }
 
     private:

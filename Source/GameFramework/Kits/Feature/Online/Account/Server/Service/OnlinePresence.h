@@ -21,11 +21,33 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
+#include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
+
+namespace sw
+{
+    /** @brief 이름으로 찾는 접속 기록(키 `presence.name:<소문자 이름>`)입니다. 다시 만들 수 있는 캐시다. */
+    REFLECT()
+    struct OnlinePresenceNameRecord
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint64 _accountID{ 0 };
+        PROPERTY()
+        uint64 _serverID{ 0 };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bGuest{ SW_FALSE };
+        PROPERTY( MaxCount = LoginConstant::kMaxDisplayNameSize )
+        string _displayName{};
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -84,60 +106,33 @@ namespace sw
         bool   relayRemotePush( const OnlinePushRelay& relay ) override;
 
     private:
-        enum class PendingKind : uint8
-        {
-            FindName = 0,
-            FindAccount,
-            Push,
-            RefreshAccount,
-            RefreshName
-        };
-
-        struct PendingOperation
-        {
-            OnlinePushRelay         _relay{};   ///< Push 의 중계 봉투이다
-            string                  _nameKey{}; ///< FindName 에서는 찾는 이름(소문자 비교)이고, RefreshName 에서는 키이다
-            AccountPresenceDelegate _onFound{}; ///< Find* — 부른 쪽
-            AccountID               _accountID{ kInvalidAccountID };
-            uint64                  _lookupID{ 0 }; ///< Find* 를 부른 쪽에 준 id 이다
-            uint64                  _ownerID{ 0 };  ///< Find* 를 맡긴 주인 몫의 번호이다
-            PendingKind             _pendingKind{ PendingKind::FindName };
-        };
-
-        struct DeferredFound
-        {
-            AccountPresenceResult   _result{};
-            AccountPresenceDelegate _onFound{};
-            uint64                  _ownerID{ 0 };
-        };
-
-        /** @brief 찾기 주인 몫 @p ownerID 가 풀렸습니다. 그 몫으로 맡긴 찾기의 델리게이트를 지웁니다(캐시 답은 그대로 받아서 버린다). */
+        /** @brief 찾기 주인 몫 @p ownerID 가 풀렸습니다. 그 몫으로 맡긴 찾기를 버립니다(캐시 답은 그대로 받아서 버린다). */
         void releaseSubscription( uint64 ownerID ) override;
-        /** @brief 캐시 없이 끝난 찾기를 다음 `tick` 에 알리도록 쌓습니다. */
-        uint64 deferNotFound( const AccountPresenceDelegate& onFound, uint64 ownerID );
-
-        void onCacheReply( const EphemeralReply& reply );
-        void submitPending( const EphemeralRequest& request, PendingOperation&& pending );
+        /** @brief 찾기 하나를 열고 그 번호를 돌려줍니다. 결과는 `_lookupTable` 가 부른 쪽에 넘긴다. */
+        uint64 openLookup( const AccountPresenceDelegate& onFound, uint64 ownerID );
+        /** @brief 캐시에 맡기고 답을 @p complete 로 받습니다. */
+        template <typename TComplete>
+        void submitCache( const EphemeralRequest& request, TComplete&& complete );
         void writeAccountEntries( const AccountIdentity& identity, bool bRefresh );
-        void finishFindName( const PendingOperation& pending, const EphemeralReply& reply );
-        void finishFindAccount( const PendingOperation& pending, const EphemeralReply& reply );
+        void finishFindName( uint64 lookupID, const string& nameKey, const EphemeralReply& reply );
+        void finishFindAccount( uint64 lookupID, AccountID accountID, const EphemeralReply& reply );
         void deliverDeferred();
-        void finishPush( const PendingOperation& pending, const EphemeralReply& reply );
-        void finishRefresh( const PendingOperation& pending, const EphemeralReply& reply );
-        /** @brief 중계 봉투를 이 빌드의 알림으로 바꿔 이 서버에 접속한 계정에게 보냅니다. 바꾸지 못하면 레지스트리가 로그와 카운터를 남겼다. */
-        void          deliverRelay( const OnlinePushRelay& relay );
-        vector<uint8> makeServerBytes() const;
-        vector<uint8> makeNameBytes( const AccountIdentity& identity ) const;
+        void finishPush( const OnlinePushRelay& relay, const EphemeralReply& reply );
+        /** @brief 다시 쓰기의 비교가 어긋났고 계정이 아직 이 서버에 있으면 그 신원입니다. */
+        const AccountIdentity* findLostEntry( AccountID accountID, const EphemeralReply& reply ) const;
+        void                   deliverRelay( const OnlinePushRelay& relay );
+        EphemeralValue         makeServerValue() const;
+        EphemeralValue         makeNameValue( const AccountIdentity& identity ) const;
 
     private:
-        unordered_map<uint64, PendingOperation>   _mapRequestToPending;
-        unordered_map<AccountID, AccountIdentity> _mapAccountToIdentity; ///< 이 프로세스에 접속한 계정이다
-        vector<DeferredFound>                     _listDeferred;         ///< 캐시 없이 끝난 찾기이다. 맡긴 함수 안에서 부르지 않고 다음 `tick` 에 알린다
-        OnlinePresenceConfig                      _settings;
-        OnlineServiceHost*                        _pHost;
-        Subscription                              _replyOwner; ///< 라우터 답의 주인 몫(`attach` 가 열고 `detach` 가 놓는다)
-        uint64                                    _serverID;
-        IDAllocator<uint64>                       _lookupIDAllocator;
-        UnixMilliseconds                          _nextRefreshMs;
+        PendingRequestTable<uint64, AccountPresenceResult> _lookupTable;          ///< 부른 쪽에 준 번호 → 찾기(주인 몫의 번호가 주인이다)
+        unordered_map<AccountID, AccountIdentity>          _mapAccountToIdentity; ///< 이 프로세스에 접속한 계정이다
+        vector<uint64>                                     _listDeferredLookup;   ///< 캐시 없이 끝난 찾기이다. 맡긴 함수 안에서 부르지 않고 다음 `tick` 에 알린다
+        OnlinePresenceConfig                               _settings;
+        OnlineServiceHost*                                 _pHost;
+        Subscription                                       _replyOwner; ///< 라우터 답의 주인 몫(`attach` 가 열고 `detach` 가 놓는다)
+        uint64                                             _serverID;
+        IDAllocator<uint64>                                _lookupIDAllocator;
+        UnixMilliseconds                                   _nextRefreshMs;
     };
 } // namespace sw

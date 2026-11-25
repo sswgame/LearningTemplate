@@ -33,10 +33,15 @@ namespace sw
         return EphemeralStoreInternal::makeKeyed( EphemeralOperation::Get, key );
     }
 
-    EphemeralRequest EphemeralRequest::makeSet( string_view key, vector<uint8> valueBytes, int64 ttlMs, EphemeralCondition condition )
+    EphemeralValue EphemeralValue::of( const EphemeralReply& reply )
+    {
+        return EphemeralValue{ reply._value };
+    }
+
+    EphemeralRequest EphemeralRequest::makeSet( string_view key, EphemeralValue value, int64 ttlMs, EphemeralCondition condition )
     {
         EphemeralRequest request = EphemeralStoreInternal::makeKeyed( EphemeralOperation::Set, key );
-        request._value           = std::move( valueBytes );
+        request._value           = std::move( value._bytes );
         request._ttlMs           = ttlMs;
         request._condition       = condition;
         return request;
@@ -47,19 +52,19 @@ namespace sw
         return EphemeralStoreInternal::makeKeyed( EphemeralOperation::Erase, key );
     }
 
-    EphemeralRequest EphemeralRequest::makeCompareAndSet( string_view key, vector<uint8> expectedBytes, vector<uint8> valueBytes, int64 ttlMs )
+    EphemeralRequest EphemeralRequest::makeCompareAndSet( string_view key, EphemeralValue expected, EphemeralValue value, int64 ttlMs )
     {
         EphemeralRequest request = EphemeralStoreInternal::makeKeyed( EphemeralOperation::CompareAndSet, key );
-        request._expected        = std::move( expectedBytes );
-        request._value           = std::move( valueBytes );
+        request._expected        = std::move( expected._bytes );
+        request._value           = std::move( value._bytes );
         request._ttlMs           = ttlMs;
         return request;
     }
 
-    EphemeralRequest EphemeralRequest::makeCompareAndErase( string_view key, vector<uint8> expectedBytes )
+    EphemeralRequest EphemeralRequest::makeCompareAndErase( string_view key, EphemeralValue expected )
     {
         EphemeralRequest request = EphemeralStoreInternal::makeKeyed( EphemeralOperation::CompareAndErase, key );
-        request._expected        = std::move( expectedBytes );
+        request._expected        = std::move( expected._bytes );
         return request;
     }
 

@@ -5,17 +5,19 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialStoreRecords.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -27,26 +29,25 @@ namespace sw
     {
         struct SocialServiceInternal
         {
-            static constexpr FormatDef kFormat{ "SOCL" };
-            static constexpr int64     kPresenceTTLMs     = 90000;
-            static constexpr int64     kPresenceRefreshMs = 30000;
+            static constexpr int64 kPresenceTTLMs     = 90000;
+            static constexpr int64 kPresenceRefreshMs = 30000;
 
-            static const hashed_string& getLinkTable()
+            static const ServiceRecordTable<SocialLinkStoreRecord>& getLinkTable()
             {
-                static const hashed_string s_table{ "social_link" };
+                static const ServiceRecordTable<SocialLinkStoreRecord> s_table{ "social_link" };
                 return s_table;
             }
 
-            static const hashed_string& getCountTable()
+            static const ServiceRecordTable<SocialCountStoreRecord>& getCountTable()
             {
-                static const hashed_string s_table{ "social_count" };
+                static const ServiceRecordTable<SocialCountStoreRecord> s_table{ "social_count" };
                 return s_table;
             }
 
             /** @brief 막음의 역색인 `<막힌 사람>/<막은 사람>`(값 없음)입니다. 막힌 쪽 줄은 없으므로 탈퇴 정리가 "나를 막은 사람" 을 여기서 찾는다. */
-            static const hashed_string& getBlockedByTable()
+            static const ServiceIndexTable& getBlockedByTable()
             {
-                static const hashed_string s_table{ "social_blocked_by" };
+                static const ServiceIndexTable s_table{ "social_blocked_by" };
                 return s_table;
             }
 
@@ -75,49 +76,44 @@ namespace sw
                 return string( key.view() );
             }
 
-            static vector<uint8> encodeLink( SocialLinkState state, int64 sinceMs )
+            static SocialLinkStoreRecord encodeLink( SocialLinkState state, int64 sinceMs )
             {
-                BitWriter writer;
-                kFormat.writeVersion( writer );
-                writer.writeVarUint( static_cast<uint64>( state ) );
-                writer.writeVarInt( sinceMs );
-                return writer.getBytes();
+                SocialLinkStoreRecord record;
+                record._state   = state;
+                record._sinceMs = sinceMs;
+                return record;
             }
 
-            [[nodiscard]] static bool decodeLink( const vector<uint8>& bytes, SocialLinkState& outState, int64& outSinceMs )
+            [[nodiscard]] static bool decodeLink( const ServiceRecord& raw, SocialLinkState& outState, int64& outSinceMs )
             {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
+                SocialLinkStoreRecord record;
+                if ( getLinkTable().decode( raw, record ) == false || record._state == SocialLinkState::Count )
                     return false;
-                const uint64 state = reader.readVarUint();
-                outSinceMs         = reader.readVarInt();
-                if ( reader.hasOverflowed() || state >= static_cast<uint64>( SocialLinkState::Count ) )
-                    return false;
-                outState = static_cast<SocialLinkState>( state );
+                outState   = record._state;
+                outSinceMs = record._sinceMs;
                 return true;
             }
 
-            static vector<uint8> encodeCounts( const SocialCounts& counts )
+            static SocialCountStoreRecord encodeCounts( const SocialCounts& counts )
             {
-                BitWriter writer;
-                kFormat.writeVersion( writer );
-                writer.writeVarInt( counts._friendCount );
-                writer.writeVarInt( counts._incomingCount );
-                writer.writeVarInt( counts._outgoingCount );
-                writer.writeVarInt( counts._blockedCount );
-                return writer.getBytes();
+                SocialCountStoreRecord record;
+                record._friendCount   = counts._friendCount;
+                record._incomingCount = counts._incomingCount;
+                record._outgoingCount = counts._outgoingCount;
+                record._blockedCount  = counts._blockedCount;
+                return record;
             }
 
-            [[nodiscard]] static bool decodeCounts( const vector<uint8>& bytes, SocialCounts& outCounts )
+            [[nodiscard]] static bool decodeCounts( const ServiceRecord& raw, SocialCounts& outCounts )
             {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
+                SocialCountStoreRecord record;
+                if ( getCountTable().decode( raw, record ) == false )
                     return false;
-                outCounts._friendCount   = reader.readVarInt32();
-                outCounts._incomingCount = reader.readVarInt32();
-                outCounts._outgoingCount = reader.readVarInt32();
-                outCounts._blockedCount  = reader.readVarInt32();
-                return reader.hasOverflowed() == false;
+                outCounts._friendCount   = record._friendCount;
+                outCounts._incomingCount = record._incomingCount;
+                outCounts._outgoingCount = record._outgoingCount;
+                outCounts._blockedCount  = record._blockedCount;
+                return true;
             }
 
             static void addCounts( SocialCounts& inoutCounts, const SocialCounts& delta )
@@ -144,7 +140,7 @@ namespace sw
                 if ( bWasBlocked != bBlocked ) // 막음이 서거나 풀릴 때 역색인을 같은 트랜잭션에서 맞춘다
                 {
                     if ( bBlocked )
-                        inoutTransaction.put( getBlockedByTable(), makeReverseKey( key ), vector<uint8>{} );
+                        inoutTransaction.put( getBlockedByTable(), makeReverseKey( key ) );
                     else
                         inoutTransaction.erase( getBlockedByTable(), makeReverseKey( key ) );
                 }
@@ -199,12 +195,12 @@ namespace sw
                 SocialLinkState selfState  = SocialLinkState::None;
                 SocialLinkState otherState = SocialLinkState::None;
                 int64           sinceMs    = 0;
-                if ( pSelfLink != nullptr && Internal::decodeLink( pSelfLink->_bytes, selfState, sinceMs ) == false )
+                if ( pSelfLink != nullptr && Internal::decodeLink( *pSelfLink, selfState, sinceMs ) == false )
                     selfState = SocialLinkState::None;
-                if ( otherLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( otherLink._bytes, otherState, sinceMs ) == false )
+                if ( otherLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( otherLink, otherState, sinceMs ) == false )
                     otherState = SocialLinkState::None;
                 SocialCounts counts;
-                if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount._bytes, counts ) == false )
+                if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount, counts ) == false )
                     counts = SocialCounts{};
                 ServiceTransaction transaction;
                 if ( pSelfLink != nullptr )
@@ -216,7 +212,7 @@ namespace sw
                     transaction.erase( Internal::getBlockedByTable(), Internal::makeReverseKey( selfKey ) );
                 if ( otherState == SocialLinkState::Blocked || pSelfLink == nullptr )
                     transaction.erase( Internal::getBlockedByTable(), Internal::makeReverseKey( otherKey ) );
-                return connection.commit( transaction );
+                return ServiceCommitRunner::commitOnce( connection, transaction );
             }
         };
 
@@ -255,22 +251,18 @@ namespace sw
             {
                 if ( _displayName.empty() == false && resolveName( connection ) == false )
                     return;
-                for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
+                // 두 링크 · 두 개수를 읽어 정한다 — 쓰지 않는 쪽(바뀌지 않은 상대 링크)도 판단의 근거라 시도의 읽기 집합이 모두 커밋 조건으로 건다.
+                const ServiceStoreResult result = ServiceCommitRunner::run<ServiceStoreResult>( connection, "Social.Link", [this]( ServiceCommitAttempt& attempt ) -> optional<ServiceStoreResult>
                 {
-                    // 두 링크 · 두 개수를 읽어 정한다 — 쓰지 않는 쪽(바뀌지 않은 상대 링크)도 판단의 근거라 모두 커밋 조건이다(시도마다 새 읽기 집합).
-                    ServiceReadSetConnection readSet( connection );
-                    const ServiceStoreResult commitResult = runOnce( readSet );
-                    if ( commitResult == ServiceStoreResult::Ok )
-                        return;
-                    if ( commitResult != ServiceStoreResult::Conflict )
-                    {
-                        _decision         = SocialLinkDecision{};
-                        _decision._result = SocialServiceResult::fail( OnlineError::kUnavailable );
-                        return;
-                    }
-                }
+                    const ServiceStoreResult once = runOnce( attempt );
+                    if ( once == ServiceStoreResult::Conflict )
+                        return nullopt;
+                    return once;
+                } );
+                if ( result == ServiceStoreResult::Ok )
+                    return;
                 _decision         = SocialLinkDecision{};
-                _decision._result = SocialServiceResult::fail( OnlineError::kBusy );
+                _decision._result = SocialServiceResult::fail( result == ServiceStoreResult::Conflict ? OnlineError::kBusy : OnlineError::kUnavailable );
             }
 
             /** @brief 이름으로 계정 id 를 찾습니다. 못 찾으면 결과를 적고 false 를 반환합니다. */
@@ -294,7 +286,7 @@ namespace sw
             }
 
             /** @brief 읽고, 정하고, 커밋합니다. 쓸 것이 없으면 Ok 이며 결정의 결과가 응답입니다. */
-            ServiceStoreResult runOnce( IServiceStoreConnection& connection )
+            ServiceStoreResult runOnce( ServiceCommitAttempt& connection )
             {
                 using Internal = SocialServiceInternal;
                 ServiceRecord selfLink;
@@ -317,13 +309,13 @@ namespace sw
                 int64           sinceMs    = 0;
                 SocialCounts    selfCounts;
                 SocialCounts    otherCounts;
-                if ( selfLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( selfLink._bytes, selfState, sinceMs ) == false )
+                if ( selfLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( selfLink, selfState, sinceMs ) == false )
                     selfState = SocialLinkState::None;
-                if ( otherLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( otherLink._bytes, otherState, sinceMs ) == false )
+                if ( otherLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( otherLink, otherState, sinceMs ) == false )
                     otherState = SocialLinkState::None;
-                if ( selfCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( selfCount._bytes, selfCounts ) == false )
+                if ( selfCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( selfCount, selfCounts ) == false )
                     selfCounts = SocialCounts{};
-                if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount._bytes, otherCounts ) == false )
+                if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount, otherCounts ) == false )
                     otherCounts = SocialCounts{};
 
                 _decision = SocialCounts::decide( _policy, _operation, selfState, otherState, selfCounts, otherCounts );
@@ -366,7 +358,7 @@ namespace sw
                 {
                     SocialLink link;
                     const bool bParsed = ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), link._otherID ) &&
-                                         SocialServiceInternal::decodeLink( record._bytes, link._state, link._sinceMs );
+                                         SocialServiceInternal::decodeLink( record, link._state, link._sinceMs );
                     if ( bParsed )
                         read._value.push_back( link );
                 }
@@ -381,7 +373,6 @@ namespace sw
     SocialService::SocialService()
         : _mapAccountToLocal{}
         , _mapFriendToWatchers{}
-        , _mapCacheRequestToRead{}
         , _mapQuery{}
         , _completionBuffer{}
         , _notificationBuffer{}
@@ -407,7 +398,6 @@ namespace sw
     void SocialService::shutdown()
     {
         _replyOwner.reset(); // 기다리던 접속 상태 답이 이 객체를 부르지 않게 지운다
-        _mapCacheRequestToRead.clear();
         _mapQuery.clear();
         _mapAccountToLocal.clear();
         _mapFriendToWatchers.clear();
@@ -450,7 +440,7 @@ namespace sw
                 {
                     ServiceTransaction broken; // 지운 계정의 깨진 줄이다 — 지우기만 한다
                     broken.erase( Internal::getLinkTable(), link._key, link._version );
-                    if ( const ServiceStoreResult committed = connection.commit( broken ); committed != ServiceStoreResult::Ok )
+                    if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, broken ); committed != ServiceStoreResult::Ok )
                         return committed;
                     continue;
                 }
@@ -474,7 +464,7 @@ namespace sw
                 {
                     ServiceTransaction broken;
                     broken.erase( Internal::getBlockedByTable(), blocker._key, blocker._version );
-                    if ( const ServiceStoreResult committed = connection.commit( broken ); committed != ServiceStoreResult::Ok )
+                    if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, broken ); committed != ServiceStoreResult::Ok )
                         return committed;
                     continue;
                 }
@@ -484,7 +474,7 @@ namespace sw
         }
         ServiceTransaction counts;
         counts.erase( Internal::getCountTable(), ServiceKeyUtil::makeHex64( accountID ) );
-        return connection.commit( counts );
+        return ServiceCommitRunner::commitOnce( connection, counts );
     }
 
     void SocialService::changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, UnixMilliseconds nowMs, uint64 requestTag )
@@ -620,6 +610,7 @@ namespace sw
         const uint64        queryID = _queryIDAllocator.allocate();
         PresenceQuery       query;
         query._requestTag = requestTag;
+        vector<AccountID> listCachedFriend;
         for ( const SocialLink& link : local._listLink )
         {
             if ( link._state != SocialLinkState::Friend )
@@ -635,14 +626,17 @@ namespace sw
                 query._listPresence.push_back( SocialPresence{ string{}, link._otherID, SocialPresenceStatus::Offline } );
                 continue;
             }
-            const uint64 cacheRequestID            = _dependencies._pRouter->submit( EphemeralRequest::makeGet( SocialServiceInternal::makePresenceKey( link._otherID ) ),
-                                                                                     SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &SocialService::onPresenceReply, this ), _replyOwner );
-            _mapCacheRequestToRead[cacheRequestID] = PresenceRead{ queryID, link._otherID };
-            ++query._outstandingCount;
+            listCachedFriend.push_back( link._otherID );
         }
-        if ( query._outstandingCount > 0 )
+        if ( listCachedFriend.empty() == false )
         {
-            _mapQuery[queryID] = std::move( query );
+            query._outstandingCount = static_cast<int32>( listCachedFriend.size() ); // 먼저 다 세고 표에 올려 둔다 — 맡기지 못한 요청은 그 자리에서 끝난다
+            _mapQuery[queryID]      = std::move( query );
+            for ( const AccountID friendID : listCachedFriend )
+            {
+                _dependencies._pRouter->submit( EphemeralRequest::makeGet( SocialServiceInternal::makePresenceKey( friendID ) ), _replyOwner, [this, queryID, friendID]( const EphemeralReply& reply )
+                { onPresenceReply( queryID, friendID, reply ); } );
+            }
             return;
         }
         SocialCompletion completion;
@@ -745,12 +739,12 @@ namespace sw
 
     bool SocialService::writePresenceRecord( const SocialPresence& presence )
     {
-        vector<uint8> bytes;
-        if ( SocialProtocol::encodePresenceRecord( presence, bytes ) == false )
+        EphemeralValue value;
+        if ( EphemeralRecordTable<SocialPresence>{}.makeValue( presence, value ) == false )
             return false;
         if ( _dependencies._pRouter == nullptr )
             return true;
-        _dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( presence._accountID ), std::move( bytes ),
+        _dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( presence._accountID ), std::move( value ),
                                                                    SocialServiceInternal::kPresenceTTLMs ) );
         return true;
     }
@@ -775,22 +769,17 @@ namespace sw
         }
     }
 
-    void SocialService::onPresenceReply( const EphemeralReply& reply )
+    void SocialService::onPresenceReply( uint64 queryID, AccountID friendID, const EphemeralReply& reply )
     {
-        const auto readIt = _mapCacheRequestToRead.find( reply._requestID );
-        if ( readIt == _mapCacheRequestToRead.end() )
-            return;
-        const PresenceRead read = readIt->second;
-        _mapCacheRequestToRead.erase( readIt );
-        const auto queryIt = _mapQuery.find( read._queryID );
+        const auto queryIt = _mapQuery.find( queryID );
         if ( queryIt == _mapQuery.end() )
             return;
         PresenceQuery& query = queryIt->second;
-        SocialPresence presence{ string{}, read._friendID, SocialPresenceStatus::Offline };
+        SocialPresence presence{ string{}, friendID, SocialPresenceStatus::Offline };
         if ( reply._result == EphemeralResult::Ok )
         {
-            if ( SocialProtocol::decodePresenceRecord( reply._value, presence ) == false || presence._accountID != read._friendID )
-                presence = SocialPresence{ string{}, read._friendID, SocialPresenceStatus::Offline };
+            if ( EphemeralRecordTable<SocialPresence>{}.decode( reply, presence ) == false || presence._accountID != friendID )
+                presence = SocialPresence{ string{}, friendID, SocialPresenceStatus::Offline };
         }
         query._listPresence.push_back( std::move( presence ) );
         if ( --query._outstandingCount > 0 )

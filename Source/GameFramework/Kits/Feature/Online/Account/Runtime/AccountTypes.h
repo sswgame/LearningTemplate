@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/SecretValue.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
@@ -100,8 +101,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         uint64 _sessionID{ 0 };
-        PROPERTY( Min = 0, Max = 255 )
-        uint8 _arrSecret[LoginConstant::kTokenSecretSize]{};
+        PROPERTY()
+        Secret32 _secret{};
 
         bool isEmpty() const { return _sessionID == 0; }
     };
@@ -121,8 +122,8 @@ namespace sw
 
         PROPERTY( Min = 0, Max = 255 )
         uint8 _arrToken[kTokenSize]{};
-        PROPERTY( Min = 0, Max = 255 )
-        uint8 _arrSecret[kSecretSize]{};
+        PROPERTY()
+        Secret32 _secret{};
         PROPERTY()
         int64 _expiresAtMs{ 0 };
     };
@@ -130,6 +131,11 @@ namespace sw
 
 namespace sw
 {
+    // 비밀 칸의 크기는 값 형식이 정한다
+    static_assert( LoginConstant::kTokenSecretSize == Secret32::kSize && LoginConstant::kDeviceSecretSize == Secret32::kSize && NetGameTicket::kSecretSize == Secret32::kSize );
+    static_assert( LoginConstant::kDigestSize == Secret32::kSize && LoginConstant::kPasswordHashSize == Secret32::kSize );
+    static_assert( LoginConstant::kMaxPasswordSize == SecretText::kMaxWireSize );
+
     /** @brief 로그인과 재접속의 결과입니다. 문구 상한은 `LoginConstant::kMaxReasonCodeSize` 와 상점 주소 상한(512)입니다. */
     REFLECT()
     struct LoginGrant

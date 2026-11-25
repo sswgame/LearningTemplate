@@ -94,8 +94,7 @@ SW_TEST_CASE( EditorTexturePipelineTest, BlockCompressedImportAlignsTheTopLevelT
     const AbsolutePath root       = test::makeScratchPath( "TextureBlockAlign" );
     const AbsolutePath sourcePath = root.join( "textures_raw/odd.tga" );
     const AbsolutePath outputPath = root.join( "textures/odd.dds" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( sourcePath ) && FileUtil::writeFile( sourcePath, bytes.data(), bytes.size() ) );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( outputPath ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( sourcePath, bytes.data(), bytes.size() ) );
 
     TextureImportResult result{};
     SW_REQUIRE_TRUE( TextureImporter::importTexture( sourcePath, outputPath, TextureImportRule{}, &result ) ); // 기본 규칙은 BC7 · 밉

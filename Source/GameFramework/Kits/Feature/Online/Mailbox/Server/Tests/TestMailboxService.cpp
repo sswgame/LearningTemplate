@@ -16,7 +16,9 @@
 #include "GameFramework/Runtime/Online/Server/Tests/OnlineRuntimeTestUtil.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 using namespace sw;
 
@@ -279,9 +281,9 @@ SW_TEST_CASE( MailboxServiceTest, EndedCampaignsAndClaimsExpire )
     SW_REQUIRE_TRUE( ServiceMailCampaign::stageCreate( campaign, created ) );
     SW_REQUIRE_TRUE( database.commit( created ) == ServiceStoreResult::Ok );
     ServiceTransaction claims; // 받은 계정의 표식 둘과, 색인보다 먼저 지운 캠페인의 옛 표식 하나
-    claims.put( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 1, 100 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
-    claims.put( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 1, 101 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
-    claims.put( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 9, 100 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+    ServiceStoreTestAccess::putBytes( claims, ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 1, 100 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+    ServiceStoreTestAccess::putBytes( claims, ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 1, 101 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+    ServiceStoreTestAccess::putBytes( claims, ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 9, 100 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( database.commit( claims ) == ServiceStoreResult::Ok );
 
     ServiceTTLRule        claimRule    = ServiceMailCampaign::makeClaimTTLRule( 1000 );

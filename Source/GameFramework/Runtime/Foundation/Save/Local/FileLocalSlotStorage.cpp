@@ -48,8 +48,6 @@ namespace sw
     LocalStoreResult FileLocalSlotStorage::writeSlot( const string& slot, const vector<uint8>& envelopeBytes )
     {
         const AbsolutePath path = makeSlotPath( slot );
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false )
-            return LocalStoreResult::IOError;
         // 지금 파일을 한 세대 남긴다(언리얼 SaveGame 백업 슬롯 자리). 못 남기면 쓰지 않는다 — 다음 쓰기가 덮어 둘 다 잃는 일을 막는다.
         if ( FileUtil::isRegularFile( path ) && FileUtil::copyFile( path, path.appendSuffix( kPreviousGenerationSuffix ) ) == false )
             return LocalStoreResult::IOError;

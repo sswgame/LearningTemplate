@@ -89,7 +89,7 @@ namespace sw
                                 Memory::compare( listSavedData.data(), listCacheData.data(), listCacheData.size() ) == 0;
         if ( bUnchanged )
             SW_LOG_INFO_ID( "RHI.PipelineCacheUnchanged", "Pipeline cache unchanged (%# bytes) - not saved.", listCacheData.size() );
-        else if ( FileUtil::ensureParentDirectoryExists( _path ) && FileUtil::writeFile( _path, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
+        else if ( FileUtil::writeFile( _path, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
             SW_LOG_INFO_ID( "RHI.SavedPipelineCacheBytes", "Saved pipeline cache (%# bytes).", listCacheData.size() );
         else
             SW_LOG_WARNING_ID( "RHI.CouldNotSavePipelineCache", "Could not save the pipeline cache - the next run builds pipelines from scratch" );

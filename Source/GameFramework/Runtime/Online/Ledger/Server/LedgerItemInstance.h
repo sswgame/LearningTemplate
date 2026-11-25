@@ -22,6 +22,12 @@
 
 namespace sw
 {
+    template <typename TRecord>
+    class ServiceRecordTable;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 인스턴스 아이템 하나의 상태입니다. 저장소 레코드(A)이며 GM 조회와 인벤토리 응답에 실을 수 있습니다. */
     REFLECT()
     struct SW_GF_API LedgerItemState
@@ -50,7 +56,7 @@ namespace sw
         static constexpr int32 kMaxDefIDSize    = 24; ///< `item.` + 정의 + `-` + 16진 16자가 자산 id 상한(48) 안에 들어간다
         static constexpr int32 kMaxEnhanceLevel = 100;
 
-        static const hashed_string& getStateTable(); ///< "item_state"
+        static const ServiceRecordTable<LedgerItemState>& getStateTable(); ///< "item_state"
 
         /** @brief 정의 @p defID(`[0-9a-z_]`, 24자 이하)와 고유 번호 @p instanceID 로 자산 id 를 만듭니다. 규칙 밖이면 false 입니다. */
         [[nodiscard]] static bool makeAssetID( string_view defID, uint64 instanceID, string& outAssetID );

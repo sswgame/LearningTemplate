@@ -529,7 +529,7 @@ namespace sw
         XMLDocument xmlDoc;
         if ( buildXML( xmlDoc ) == false )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || xmlDoc.saveCompleteToFile( absPath ) == false )
+        if ( xmlDoc.saveCompleteToFile( absPath ) == false )
         {
             SW_LOG_ERROR_ID( "SceneDocument.FailedWrite", "Failed to write: %#", absPath.str() );
             return false;
@@ -772,7 +772,7 @@ namespace sw
         file.writeBytes( arch.getData(), arch.getSize() );
         file.writeBytes( content.getData(), content.getSize() );
 
-        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath ) && file.saveToFile( absPath );
+        const bool bOk = file.saveToFile( absPath );
         if ( bOk )
             SW_LOG_INFO_ID( "SceneDocument.SavedBinaryEntitiesStreaming", "Saved binary '%#' (%# entities, %# streaming cells) -> %#", _name, static_cast<uint32>( computeTotalEntityCount() ),
                             static_cast<uint32>( _listStreamingCell.size() ), absPath.str() );

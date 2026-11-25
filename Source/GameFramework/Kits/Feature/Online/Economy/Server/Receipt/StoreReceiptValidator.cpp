@@ -139,7 +139,7 @@ namespace sw
     {
         if ( response.isTransientFailure() )
             return ReceiptResponseKind::Unreachable;
-        if ( response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden )
+        if ( response.getKind() == HTTPResponseKind::Denied )
             return ReceiptResponseKind::CredentialRejected;
         return response.isSuccess() ? ReceiptResponseKind::Answered : ReceiptResponseKind::Refused;
     }
@@ -330,13 +330,13 @@ namespace sw
         {
             case ReceiptResponseKind::Unreachable:
             {
-                if ( response._bTransportFailed == SW_TRUE )
+                if ( response.getKind() == HTTPResponseKind::TransportFailed )
                 {
-                    completeRetry( call, response._failureText );
+                    completeRetry( call, response.getFailureText() );
                     return;
                 }
                 StringBuilder<constant::buffer::kMax256> reason;
-                reason.appendFormat( "%# answered status %#", getStoreName(), response._statusCode );
+                reason.appendFormat( "%# answered status %#", getStoreName(), response.getStatusCode() );
                 completeRetry( call, string( reason.view() ) );
                 return;
             }
@@ -344,7 +344,7 @@ namespace sw
             {
                 onCredentialRejected( response );
                 StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "%# rejected our credentials (status %#)", getStoreName(), response._statusCode );
+                textBuilder.appendFormat( "%# rejected our credentials (status %#)", getStoreName(), response.getStatusCode() );
                 completeRetry( call, string( textBuilder.view() ) );
                 return;
             }
@@ -353,7 +353,7 @@ namespace sw
                 ReceiptValidationResult result = makeResult( call );
                 result._status                 = ReceiptStatus::Invalid; // 모르는 영수증이면 스토어가 4xx 로 답한다
                 StringBuilder<constant::buffer::kMax256> failureTextBuilder;
-                failureTextBuilder.appendFormat( "%# does not know this purchase (status %#)", getStoreName(), response._statusCode );
+                failureTextBuilder.appendFormat( "%# does not know this purchase (status %#)", getStoreName(), response.getStatusCode() );
                 result._failureText = string( failureTextBuilder.view() );
                 _completionBuffer.push( std::move( result ) );
                 return;
@@ -419,7 +419,7 @@ namespace sw
             case ReceiptResponseKind::Refused:
             {
                 // 이미 확인했거나 소비했거나 없어진 구매다. 다시 보내도 같고, 정말 확인되지 않았으면 스토어가 환불하고 환불 조회가 회수한다.
-                SW_LOG_WARNING_ID( "StoreReceiptValidator.DeliveryRefused", "%# refused a delivery confirmation (status %#) - it is not sent again", getStoreName(), response._statusCode );
+                SW_LOG_WARNING_ID( "StoreReceiptValidator.DeliveryRefused", "%# refused a delivery confirmation (status %#) - it is not sent again", getStoreName(), response.getStatusCode() );
                 completeDelivery( call, ReceiptDeliveryStatus::Refused );
                 break;
             }
@@ -454,7 +454,7 @@ namespace sw
         JSONDocument document;
         if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
         {
-            SW_LOG_WARNING_ID( "StoreReceiptValidator.RefundQueryFailed", "The %# refund query failed (status %#) - the next poll reads from the last successful one", getStoreName(), response._statusCode );
+            SW_LOG_WARNING_ID( "StoreReceiptValidator.RefundQueryFailed", "The %# refund query failed (status %#) - the next poll reads from the last successful one", getStoreName(), response.getStatusCode() );
             _refundWindow.finishFailed(); // 시작점을 그대로 둔다 — 다음 조회가 이번 구간까지 다시 읽는다
             return;
         }

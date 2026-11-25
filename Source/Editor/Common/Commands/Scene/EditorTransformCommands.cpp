@@ -224,9 +224,6 @@ namespace sw::editor
         AbsolutePath fullPath( filePath );
         if ( StringUtil::endsWith( fullPath.str(), EditorTransformCommandsInternal::kPresetSuffix, true ) == false )
             fullPath = fullPath.removeExtension().appendSuffix( EditorTransformCommandsInternal::kPresetSuffix );
-        if ( FileUtil::ensureParentDirectoryExists( fullPath ) == false )
-            return false;
-
         // 저장 입구(`saveToFile`)가 빈 직렬화 결과를 거절하고 이유를 남긴다.
         return XMLSerializer::saveToFile( fullPath, pComp, *pComp->getTypeInfo() );
     }

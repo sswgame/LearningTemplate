@@ -148,6 +148,9 @@ namespace sw
                 // Windows 는 바꿔 끼우기가 져 아래 재시도(20 ms × 10)를 헛되이 잔다. 언리얼 `IFileManager::Move` 도 읽기 전용 대상은 덮지 않는다(EvenIfReadOnly 를 따로 받는다).
                 if ( FileUtil::isReadOnlyFile( filePath ) )
                     return false;
+                // 부모 폴더는 쓰기가 만든다 — 부르는 쪽마다 먼저 만들게 하면 빠뜨린 자리가 첫 실행에서만 진다. 게이트 뒤라 거절된 쓰기가 빈 폴더를 남기지 않는다.
+                if ( FileUtil::ensureParentDirectoryExists( filePath ) == false )
+                    return false;
                 outTempPath = FileUtil::makeWriteTempPath( filePath );
                 return true;
             }
@@ -1010,6 +1013,8 @@ namespace sw
         if ( isWriteAllowed( fileName ) == false )
             return false;
         FileUtilInternal::requireDiskIOAllowed( fileName.str() );
+        if ( ensureParentDirectoryExists( fileName ) == false )
+            return false;
         FILE* pFile = PlatformFileUtil::openFile( fileName.c_str(), "ab" );
         if ( pFile == nullptr )
             return false;

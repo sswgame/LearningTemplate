@@ -490,9 +490,9 @@ namespace sw
         _responseBuffer.push( HTTPClientResponse{} );
         HTTPClientResponse& response = _responseBuffer.getLast();
         response._requestID          = stream._requestID;
-        response._statusCode         = stream._statusCode;
-        response._listHeader         = std::move( stream._listHeader );
-        response._bodyBytes          = std::move( stream._responseBytes );
+        response.setStatusCode( stream._statusCode );
+        response._listHeader = std::move( stream._listHeader );
+        response._bodyBytes  = std::move( stream._responseBytes );
         if ( stream._bRequestEnded == SW_FALSE )
             (void)HTTP2FrameHeader::writeRstStream( streamID, HTTP2ErrorCode::kNoError, outBytes ); // 응답이 먼저 끝났다 — 남은 본문은 보내지 않는다(RFC 9113 8.1)
         _mapStream.erase( streamIt );
@@ -514,8 +514,7 @@ namespace sw
         _responseBuffer.push( HTTPClientResponse{} );
         HTTPClientResponse& response = _responseBuffer.getLast();
         response._requestID          = requestID;
-        response._bTransportFailed   = SW_TRUE;
-        response._failureText        = pFailure;
+        response.setTransportFailed( pFailure );
     }
 
     expected<void> HTTP2Connection::failConnection( const utf8* pReason )

@@ -161,7 +161,8 @@ namespace sw
     /** @brief 엔진 세션 선 형식의 상한입니다. 본문 형식(`PROPERTY( MaxCount )`)과 메시지 표가 함께 쓴다. */
     struct GameNetSessionLimit
     {
-        static constexpr int32 kMaxDigestIDBytes = 512; ///< `GameNetSessionMessage::kMaxDigestIDBytes`
+        static constexpr int32  kMaxDigestIDBytes = 512;  ///< `GameNetSessionMessage::kMaxDigestIDBytes`
+        static constexpr uint32 kMaxDigestPerPoll = 4096; ///< 한 연결이 `poll` 한 번에 보내는 합성 줄 상한 — 접속하자마자 모두 보내므로 연결의 총 상한(`ResourceDigestComparer::kMaxLinesPerPeer`)과 같다
     };
 
     /** @brief 서버 틱(서버 → 모두) 본문입니다 — 방금 끝낸 서버 틱 번호. */
@@ -203,7 +204,7 @@ namespace sw
          * @brief 클라이언트 → 서버(신뢰 순서). 로드 축 조건 · 덮어쓰기 층에 기댄 합성 한 줄씩 — 리소스 id(blob) + 합성 결과 해시(varuint, `ResourceComposition::hashText`). 접속하자마자 모두 보내고, 붙은 뒤 새로 읽거나 바뀐 합성을 그때마다 보낸다.
          * @details 서버가 같은 리소스를 다르게 합성했고 유예(`gv_netResourceDigestGraceSeconds`)가 지나도 다르면(품질 축이 시뮬레이션 값을 건드렸다 · 다른 모드 층) 그 연결을 끊는다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트가 거짓을 보낼 수 있다).
          */
-        using ResourceDigest                     = NetMessageBodyDef<0x02, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, GameResourceDigestBody>;
+        using ResourceDigest                     = NetLimitedMessageDef<NetMessageBodyDef<0x02, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, GameResourceDigestBody>, GameNetSessionLimit::kMaxDigestPerPoll>;
         static constexpr int32 kMaxDigestIDBytes = GameNetSessionLimit::kMaxDigestIDBytes; ///< `kResourceDigest` 의 리소스 id 길이 상한(넘는 id 는 보내지 않고 오류를 남긴다)
         /**
          * @brief `net.traffic` 부하 메시지입니다. 처리기가 없어 받는 쪽 라우터가 버린다.
@@ -474,6 +475,7 @@ namespace sw
             uint32                  getWireVersion() const override { return GameNetSessionMessage::Table::computeWireVersion(); }
             uint16                  getMessageKindMask() const override;
             NetMessageDirectionMask getMessageDirectionMask() const override;
+            uint32                  getMaxPerPoll( uint8 kind ) const override { return GameNetSessionMessage::Table::getMaxPerPollOf( kind ); }
             /** @brief 표(`GameNetSessionMessage::Table`)가 종류를 세션의 `receive` 오버로드로 나눈다. */
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
             /** @brief 클라이언트가 서버에 붙었다 — 합성 해시를 보낸다(`sendResourceDigest`). */

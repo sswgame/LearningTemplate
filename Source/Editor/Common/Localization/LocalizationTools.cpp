@@ -745,7 +745,7 @@ namespace sw
             const string             text = file.toText();
             string                   existing;
             const bool               bSame = FileUtil::readOptionalTextFile( result._path, existing ) == OptionalFileRead::Read && existing == text;
-            if ( bSame == false && ( FileUtil::ensureParentDirectoryExists( result._path ) == false || FileUtil::writeTextFile( result._path, text ) == false ) )
+            if ( bSame == false && ( FileUtil::writeTextFile( result._path, text ) == false ) )
             {
                 SW_LOG_ERROR_ID( "LocalizationTools.CouldNotWritten", "[ExportPo] '%#' could not be written", result._path.c_str() );
                 bAllWritten = false;

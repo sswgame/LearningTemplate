@@ -292,10 +292,10 @@ namespace sw
         };
 
         void startRead( const PendingRead& read );
-        void onReadyReply( const EphemeralReply& reply );
-        void onRankReply( const EphemeralReply& reply );
-        void onRangeReply( const EphemeralReply& reply );
-        void onNameReply( const EphemeralReply& reply );
+        void onReadyReply( const PendingRead& read, const EphemeralReply& reply );
+        void onRankReply( uint64 queryID, const EphemeralReply& reply );
+        void onRangeReply( uint64 queryID, const EphemeralReply& reply );
+        void onNameReply( uint64 queryID, size_t entryIndex, const EphemeralReply& reply );
         void finishQuery( uint64 queryID );
         void completeRead( const PendingRead& read, LeaderboardServiceResult result );
         void pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardServiceResult result );
@@ -317,9 +317,6 @@ namespace sw
         int32                                              _maxAroundRadius;         ///< `setReadPolicy`
         unordered_map<string, vector<PendingRead>>         _mapRankKeyToWaitingRead; ///< 다시 채우는 동안 대기 중인 읽기이다
         unordered_map<string, vector<LeaderboardScoreRow>> _mapRankKeyToLateWrite;   ///< 다시 채우는 동안 쓴 점수(캐시 점수)이다. 채운 뒤 한 번 더 싣는다
-        unordered_map<uint64, PendingRead>                 _mapReadyRequestToRead;
-        unordered_map<uint64, uint64>                      _mapRequestToQuery; ///< 캐시 요청에서 질의(순위, 범위, 이름)로 가는 맵이다
-        unordered_map<uint64, int32>                       _mapNameRequestToIndex;
         unordered_map<uint64, RankQuery>                   _mapQuery;
         unordered_map<string, OnlineAchievementDef>        _mapAchievement;
         unordered_map<AccountID, AccountStats>             _mapAccountStats;        ///< 이 서버에 접속한 계정의 통계이다

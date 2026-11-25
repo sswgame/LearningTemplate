@@ -152,8 +152,7 @@ namespace sw
         if ( _pSecurityProvider == nullptr || _pSecurityProvider->fillRandomBytes( _arrKey, kKeySize ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "Could not generate a local store key (no security provider or no random bytes)" } );
         vector<uint8> bytes;
-        const bool    bWritten = Internal::protectKey( _arrKey, kKeySize, bytes ) && FileUtil::ensureParentDirectoryExists( _keyFilePath ) &&
-                              FileUtil::writeFileDurable( _keyFilePath, bytes.data(), bytes.size() );
+        const bool    bWritten = Internal::protectKey( _arrKey, kKeySize, bytes ) && FileUtil::writeFileDurable( _keyFilePath, bytes.data(), bytes.size() );
         Memory::wipe( bytes.data(), bytes.size() ); // DPAPI 가 없는 플랫폼에서는 파일에 쓴 바이트가 곧 키다
         if ( bWritten == false )
         {

@@ -181,7 +181,7 @@ SW_TEST_CASE( RenderScaleAdjusterTest, RejectsInvalidConfig )
     RenderScaleAdjuster       adjuster;
     RenderScaleAdjusterConfig config = makeConfig();
     config._stepUp                   = config._stepDown; // 진동한다
-    SW_EXPECT_TRUE( RenderScaleAdjuster::validate( config ).empty() == false );
+    SW_EXPECT_TRUE( config.validate().has_value() == false );
     SW_EXPECT_TRUE( adjuster.configure( config ) == false );
     config           = makeConfig();
     config._minScale = 0.0f;
@@ -189,6 +189,6 @@ SW_TEST_CASE( RenderScaleAdjusterTest, RejectsInvalidConfig )
     config             = makeConfig();
     config._downFrames = 0;
     SW_EXPECT_TRUE( adjuster.configure( config ) == false );
-    SW_EXPECT_TRUE( RenderScaleAdjuster::validate( RenderScaleAdjusterConfig{} ).empty() == false ); // 파일이 빈 칸을 남기면 거절한다(기본값이 없다)
-    SW_EXPECT_TRUE( isNear( 1.0f, adjuster.update( GPUFrameSample{ 1, 100.0f } ) ) );                // 설정 전에는 건드리지 않는다
+    SW_EXPECT_TRUE( RenderScaleAdjusterConfig{}.validate().has_value() == false );    // 파일이 빈 칸을 남기면 거절한다(기본값이 없다)
+    SW_EXPECT_TRUE( isNear( 1.0f, adjuster.update( GPUFrameSample{ 1, 100.0f } ) ) ); // 설정 전에는 건드리지 않는다
 }

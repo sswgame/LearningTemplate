@@ -7,6 +7,7 @@
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/Tests/EphemeralStoreTestUtil.h"
 
 namespace
 {
@@ -192,7 +193,8 @@ namespace
             return string( text.view() );
         }
 
-        [[nodiscard]] static vector<uint8> bytes( string_view text ) { return vector<uint8>( text.begin(), text.end() ); }
+        [[nodiscard]] static vector<uint8>  bytes( string_view text ) { return vector<uint8>( text.begin(), text.end() ); }
+        [[nodiscard]] static EphemeralValue value( string_view text ) { return EphemeralStoreTestAccess::makeTextValue( text ); }
     };
 } // namespace
 
@@ -203,7 +205,7 @@ SW_TEST_CASE_F( RESPStoreTest, GetMapsReplies )
     _server.pushAll( { "$1\r\nv\r\n", "$-1\r\n", "-WRONGTYPE x\r\n", ":1\r\n" } );
     const EphemeralReply found = run( EphemeralRequest::makeGet( "k" ) );
     SW_EXPECT_TRUE( found._result == EphemeralResult::Ok );
-    SW_EXPECT_TRUE( found._value == bytes( "v" ) );
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( found ) == bytes( "v" ) );
     SW_EXPECT_EQUAL( takeCommands(), string( "GET g:k" ) ); // 접두어가 붙는다
 
     SW_EXPECT_TRUE( run( EphemeralRequest::makeGet( "k" ) )._result == EphemeralResult::NotFound );
@@ -215,13 +217,13 @@ SW_TEST_CASE_F( RESPStoreTest, SetCarriesOptionsAndMapsReplies )
 {
     start();
     _server.pushAll( { "+OK\r\n", "$-1\r\n", "+OK\r\n", "-ERR\r\n" } );
-    SW_EXPECT_TRUE( run( EphemeralRequest::makeSet( "k", bytes( "v" ), 500, EphemeralCondition::IfAbsent ) )._result == EphemeralResult::Ok );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeSet( "k", value( "v" ), 500, EphemeralCondition::IfAbsent ) )._result == EphemeralResult::Ok );
     SW_EXPECT_EQUAL( takeCommands(), string( "SET g:k v PX 500 NX" ) );
-    SW_EXPECT_TRUE( run( EphemeralRequest::makeSet( "k", bytes( "v" ), 0, EphemeralCondition::IfPresent ) )._result == EphemeralResult::Conflict );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeSet( "k", value( "v" ), 0, EphemeralCondition::IfPresent ) )._result == EphemeralResult::Conflict );
     SW_EXPECT_EQUAL( takeCommands(), string( "SET g:k v XX" ) );
-    SW_EXPECT_TRUE( run( EphemeralRequest::makeSet( "k", bytes( "v" ), 0 ) )._result == EphemeralResult::Ok );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeSet( "k", value( "v" ), 0 ) )._result == EphemeralResult::Ok );
     SW_EXPECT_EQUAL( takeCommands(), string( "SET g:k v" ) );
-    SW_EXPECT_TRUE( run( EphemeralRequest::makeSet( "k", bytes( "v" ), 0 ) )._result == EphemeralResult::Invalid );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeSet( "k", value( "v" ), 0 ) )._result == EphemeralResult::Invalid );
 }
 
 SW_TEST_CASE_F( RESPStoreTest, EraseAndExpire )
@@ -241,19 +243,19 @@ SW_TEST_CASE_F( RESPStoreTest, CompareAndSetUsesWatchAndExec )
 {
     start();
     _server.pushAll( { "+OK\r\n", "$1\r\na\r\n", "+OK\r\n", "+QUEUED\r\n", "*1\r\n+OK\r\n" } );
-    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndSet( "k", bytes( "a" ), bytes( "b" ), 200 ) )._result == EphemeralResult::Ok );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndSet( "k", value( "a" ), value( "b" ), 200 ) )._result == EphemeralResult::Ok );
     SW_EXPECT_EQUAL( takeCommands(), string( "WATCH g:k | GET g:k | MULTI | SET g:k b PX 200 | EXEC" ) );
 
     _server.pushAll( { "+OK\r\n", "$1\r\nz\r\n", "+OK\r\n" } );
-    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndSet( "k", bytes( "a" ), bytes( "b" ), 0 ) )._result == EphemeralResult::Conflict );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndSet( "k", value( "a" ), value( "b" ), 0 ) )._result == EphemeralResult::Conflict );
     SW_EXPECT_EQUAL( takeCommands(), string( "WATCH g:k | GET g:k | UNWATCH" ) );
 
     _server.pushAll( { "+OK\r\n", "$1\r\na\r\n", "+OK\r\n", "+QUEUED\r\n", "*-1\r\n" } );
-    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndErase( "k", bytes( "a" ) ) )._result == EphemeralResult::Conflict );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndErase( "k", value( "a" ) ) )._result == EphemeralResult::Conflict );
     SW_EXPECT_EQUAL( takeCommands(), string( "WATCH g:k | GET g:k | MULTI | DEL g:k | EXEC" ) );
 
     _server.pushAll( { "+OK\r\n", "$-1\r\n", "+OK\r\n" } );
-    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndErase( "k", bytes( "a" ) ) )._result == EphemeralResult::Conflict ); // 없는 키
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndErase( "k", value( "a" ) ) )._result == EphemeralResult::Conflict ); // 없는 키
 }
 
 // 결함: WATCH 가 거절돼도(권한 · 프록시) 비교 후 쓰기를 이어 가, 지켜보지 않은 채 쓴 값을 Ok 로 답했다. EXEC 안의 쓰기 오류도 Ok 였다.
@@ -261,11 +263,11 @@ SW_TEST_CASE_F( RESPStoreTest, CompareWithoutWatchDoesNotWrite )
 {
     start();
     _server.pushAll( { "-NOPERM no WATCH\r\n", "$1\r\na\r\n", "+OK\r\n" } );
-    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndSet( "k", bytes( "a" ), bytes( "b" ), 0 ) )._result == EphemeralResult::Invalid );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndSet( "k", value( "a" ), value( "b" ), 0 ) )._result == EphemeralResult::Invalid );
     SW_EXPECT_EQUAL( takeCommands(), string( "WATCH g:k | GET g:k | UNWATCH" ) );
 
     _server.pushAll( { "+OK\r\n", "$1\r\na\r\n", "+OK\r\n", "+QUEUED\r\n", "*1\r\n-ERR write failed\r\n" } );
-    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndSet( "k", bytes( "a" ), bytes( "b" ), 0 ) )._result == EphemeralResult::Invalid );
+    SW_EXPECT_TRUE( run( EphemeralRequest::makeCompareAndSet( "k", value( "a" ), value( "b" ), 0 ) )._result == EphemeralResult::Invalid );
 
     _server.pushAll( { "$1\r\nv\r\n" } ); // 뒤 요청은 막히지 않는다
     SW_EXPECT_TRUE( run( EphemeralRequest::makeGet( "later" ) )._result == EphemeralResult::Ok );
@@ -275,7 +277,7 @@ SW_TEST_CASE_F( RESPStoreTest, CompareWithoutWatchDoesNotWrite )
 SW_TEST_CASE_F( RESPStoreTest, RequestsWaitBehindACompare )
 {
     start();
-    const uint64 compareID = _store.submit( EphemeralRequest::makeCompareAndSet( "k", bytes( "a" ), bytes( "b" ), 0 ) );
+    const uint64 compareID = _store.submit( EphemeralRequest::makeCompareAndSet( "k", value( "a" ), value( "b" ), 0 ) );
     const uint64 getID     = _store.submit( EphemeralRequest::makeGet( "later" ) );
     SW_EXPECT_TRUE( poll().empty() );
     SW_EXPECT_EQUAL( takeCommands(), string( "WATCH g:k | GET g:k" ) );
@@ -288,7 +290,7 @@ SW_TEST_CASE_F( RESPStoreTest, RequestsWaitBehindACompare )
     SW_REQUIRE_EQUAL( listReply.size(), size_t{ 2 } );
     SW_EXPECT_EQUAL( listReply[0]._requestID, compareID );
     SW_EXPECT_EQUAL( listReply[1]._requestID, getID );
-    SW_EXPECT_TRUE( listReply[1]._value == bytes( "v" ) );
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( listReply[1] ) == bytes( "v" ) );
 }
 
 // 더하기: 만료 없으면 INCRBY 하나, 있으면 새 키에만 만료를 거는 트랜잭션이다.
@@ -492,7 +494,7 @@ SW_TEST_CASE_F( RESPStoreTest, SubscribeDeliversMessagesWithoutPrefix )
     const vector<EphemeralMessage> listMessage = collectMessages();
     SW_REQUIRE_EQUAL( listMessage.size(), size_t{ 1 } );
     SW_EXPECT_EQUAL( listMessage[0]._channel, string( "chan" ) );
-    SW_EXPECT_TRUE( listMessage[0]._bytes == bytes( "hi" ) );
+    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( listMessage[0] ) == bytes( "hi" ) );
 
     _store.subscribe( "chan" ); // 이미 구독한 채널은 다시 보내지 않는다
     (void)collectMessages();

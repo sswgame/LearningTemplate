@@ -11,6 +11,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
@@ -77,7 +78,7 @@ namespace sw
         UnixMilliseconds  _nowMs{ 0 };
         LoginOperation    _operation{ LoginOperation::Login };
         LoginRevokeReason _revokeReason{ LoginRevokeReason::Administrative };
-        uint8             _arrDeviceSecret[LoginConstant::kDeviceSecretSize]{};
+        Secret32          _deviceSecret{};
         uint8             _bUpdateRecommended{ SW_FALSE };
     };
 
@@ -146,9 +147,9 @@ namespace sw
                 done._completion._requestTag = input._requestTag;
                 runOperation( connection, crypto, settings, authority, input, done );
                 // 워커를 떠나면 비밀번호, 장치 비밀, 외부 주체를 보관하지 않는다. 별도로 지우기(wipe)는 하지 않으며 서버의 관례를 따른다.
-                input._credential._password.clear();
+                input._credential._password.wipe();
                 input._subject.clear();
-                Memory::wipe( input._arrDeviceSecret, sizeof( input._arrDeviceSecret ) );
+                input._deviceSecret.wipe();
                 return done;
             }
 
@@ -171,7 +172,7 @@ namespace sw
                     }
                     case LoginOperation::GuestLogin:
                     {
-                        completion._result = logic.guestLogin( input._arrDeviceSecret, nowMs, completion._grant );
+                        completion._result = logic.guestLogin( input._deviceSecret.reveal(), nowMs, completion._grant );
                         break;
                     }
                     case LoginOperation::PlatformLogin:
@@ -377,7 +378,7 @@ namespace sw
         _listHashCompletionScratch.clear();
         for ( auto& entry : _mapPasswordCall )
         {
-            StringUtil::wipeSecret( entry.second->_input._credential._password );
+            entry.second->_input._credential._password.wipe();
         }
         _mapPasswordCall.clear();
         _mapHashJobToCall.clear();
@@ -387,7 +388,6 @@ namespace sw
         _mapNameKeyToAccount.clear();
         _verifications.cancelAll(); // 답을 기다리던 요청은 버린다 — 연결이 닫히며 호스트가 답 없는 요청을 끝낸다
         _cacheReplyOwner.reset();   // 기다리던 캐시 답이 이 객체를 부르지 않게 한다
-        _cacheRequests.cancelAll();
         _pRouter = nullptr;
         _revocations.cancelAll(); // 철회 대기열 항목은 저장소에 남아 다음 기동이 다시 한다
         _registeredPlatformProvider.clear();
@@ -494,16 +494,17 @@ namespace sw
         }
     }
 
+    int32 LoginService::getPendingCount() const
+    {
+        const int32 cacheCount = _pRouter != nullptr ? _pRouter->getPendingCount( _cacheReplyOwner ) : 0;
+        return _store.getOpenCount() + _verifications.getOpenCount() + cacheCount + _hashQueue.getOpenCount();
+    }
+
     void LoginService::attachCache( EphemeralStoreRouter* pRouter )
     {
         SW_ASSERT( pRouter != nullptr );
         _pRouter         = pRouter;
         _cacheReplyOwner = pRouter->openReplyOwner();
-    }
-
-    void LoginService::onCacheReply( const EphemeralReply& reply )
-    {
-        (void)_cacheRequests.answer( reply._requestID, reply ); // 모르는 번호는 취소한 일의 늦은 답이다
     }
 
     template <typename TContinue>
@@ -516,27 +517,18 @@ namespace sw
         }
         StringBuilder<constant::buffer::kMax64> key;
         key.appendFormat( "%#%#", LoginServiceInternal::kAttemptKeyPrefix, ServiceKeyUtil::makeHex64( clientKey ) );
-        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeIncrement( key.view(), 1, _settings._sharedAttemptWindowMs ),
-                                                   SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LoginService::onCacheReply, this ), _cacheReplyOwner );
-        if ( requestID == 0 )
-        {
-            onAllowed(); // 맡기지 못했다(라우터가 오류 로그를 남겼다) — 이 서버의 버킷은 이미 지났다
-            return;
-        }
-        const bool bTracked = _cacheRequests.track( requestID, 0, [this, operation, requestTag, grant, onAllowed = std::forward<TContinue>( onAllowed )]( const EphemeralReply& reply ) mutable
+        _pRouter->submit( EphemeralRequest::makeIncrement( key.view(), 1, _settings._sharedAttemptWindowMs ), _cacheReplyOwner, [this, operation, requestTag, grant, onAllowed = std::forward<TContinue>( onAllowed )]( const EphemeralReply& reply ) mutable
         {
             const bool bOverLimit = reply._result == EphemeralResult::Ok && reply._integer > _settings._sharedAttemptLimit;
             if ( bOverLimit == false )
             {
-                onAllowed(); // 캐시에 닿지 못했으면(Unavailable) 이 서버의 버킷만으로 막는다
+                onAllowed(); // 캐시에 닿지 못했거나 맡기지 못했으면(Unavailable) 이 서버의 버킷만으로 막는다
                 return;
             }
             LoginGrant limited    = grant;
             limited._retryAfterMs = _settings._sharedAttemptWindowMs; // 창이 끝날 때까지 — 위 끝이다
             pushImmediate( operation, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), limited );
         } );
-        SW_ASSERT( bTracked ); // 라우터 요청 번호는 겹치지 않는다
-        (void)bTracked;
     }
 
     void LoginService::issueLoginNonce( uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
@@ -565,15 +557,7 @@ namespace sw
         Memory::wipe( arrNonce, sizeof( arrNonce ) );
         StringBuilder<constant::buffer::kMax128> nonceKey;
         nonceKey.appendFormat( "%#%#", LoginServiceInternal::kNonceKeyPrefix, nonce );
-        const uint64 requestID =
-            _pRouter->submit( EphemeralRequest::makeSet( nonceKey.view(), vector<uint8>{ 1 }, _settings._loginNonceLifetimeMs, EphemeralCondition::IfAbsent ),
-                              SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LoginService::onCacheReply, this ), _cacheReplyOwner );
-        if ( requestID == 0 )
-        {
-            pushImmediate( LoginOperation::IssueLoginNonce, requestTag, LoginServiceResult::fail( OnlineError::kUnavailable ), LoginGrant{} );
-            return;
-        }
-        (void)_cacheRequests.track( requestID, 0, [this, requestTag, nonce = std::move( nonce )]( const EphemeralReply& reply )
+        _pRouter->submit( EphemeralRequest::makeSet( nonceKey.view(), EphemeralValueUtil::makeMarker(), _settings._loginNonceLifetimeMs, EphemeralCondition::IfAbsent ), _cacheReplyOwner, [this, requestTag, nonce = std::move( nonce )]( const EphemeralReply& reply )
         {
             LoginCompletion completion;
             completion._operation  = LoginOperation::IssueLoginNonce;
@@ -644,7 +628,7 @@ namespace sw
             return;
         }
         LoginCallInput input = makeCallInput( LoginOperation::GuestLogin, requestTag, nowMs );
-        Memory::copy( input._arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
+        Memory::copy( input._deviceSecret.reveal(), arrDeviceSecret, LoginConstant::kDeviceSecretSize );
         input._bUpdateRecommended = buildGrant._bUpdateRecommended;
         input._storeURL           = buildGrant._storeURL;
         validateSharedAttempt( clientKey, LoginOperation::GuestLogin, requestTag, buildGrant, [this, input = std::move( input )]() mutable
@@ -852,7 +836,7 @@ namespace sw
         optional<PasswordHashTicket> ticket = _hashQueue.tryReserve();
         if ( ticket.has_value() == false )
         {
-            StringUtil::wipeSecret( input._credential._password );
+            input._credential._password.wipe();
             pushImmediate( input._operation, input._requestTag, LoginServiceResult::fail( OnlineError::kBusy ), LoginGrant{} );
             return false;
         }
@@ -862,7 +846,7 @@ namespace sw
             const LoginServiceResult valid = LoginStoreLogic::validateNewCredential( input._credential );
             if ( valid != LoginResult::Ok )
             {
-                StringUtil::wipeSecret( input._credential._password );
+                input._credential._password.wipe();
                 pushImmediate( input._operation, input._requestTag, valid, LoginGrant{} );
                 return true;
             }
@@ -938,11 +922,11 @@ namespace sw
             request._arrSpec[0]._params = call._prepared._params;
             Memory::copy( request._arrSpec[0]._arrSalt, call._prepared._arrSalt, LoginConstant::kSaltSize );
             request._specCount = 1;
-            StringUtil::wipeSecret( call._input._credential._password ); // 가입 · 연동은 다시 해시할 일이 없다 — 줄에 넘긴 사본만 남는다
+            call._input._credential._password.wipe(); // 가입 · 연동은 다시 해시할 일이 없다 — 줄에 넘긴 사본만 남는다
         }
         if ( bSaltFilled == false )
         {
-            StringUtil::wipeSecret( request._password );
+            request._password.wipe();
             LoginCompletion completion = LoginStoreRun::makePasswordCompletion( call );
             completion._result         = LoginServiceResult::fail( OnlineError::kUnavailable );
             finishPasswordCall( callID, std::move( completion ), LoginStoreResult{} );
@@ -974,7 +958,7 @@ namespace sw
         ILoginCrypto*               pCrypto    = _pCrypto;
         const LoginTicketAuthority* pAuthority = &_ticketAuthority;
         LoginCallInput              input      = call._input;
-        StringUtil::wipeSecret( input._credential._password ); // 커밋은 해시만 쓴다 — 비밀번호는 저장소 일로 가지 않는다
+        input._credential._password.wipe(); // 커밋은 해시만 쓴다 — 비밀번호는 저장소 일로 가지 않는다
         if ( call._input._operation != LoginOperation::Login )
         {
             Memory::copy( call._prepared._arrHash, completion._arrHash[0], LoginConstant::kPasswordHashSize );
@@ -1030,7 +1014,7 @@ namespace sw
             completion._grant._bUpdateRecommended = SW_TRUE;
             completion._grant._storeURL           = call._input._storeURL;
         }
-        StringUtil::wipeSecret( call._input._credential._password );
+        call._input._credential._password.wipe();
         _mapPasswordCall.erase( callIt );
         applyCompletion( std::move( completion ), serviceResult );
     }
@@ -1189,14 +1173,7 @@ namespace sw
         }
         StringBuilder<constant::buffer::kMax128> nonceKey;
         nonceKey.appendFormat( "%#%#", LoginServiceInternal::kNonceKeyPrefix, nonce );
-        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeErase( nonceKey.view() ),
-                                                   SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &LoginService::onCacheReply, this ), _cacheReplyOwner );
-        if ( requestID == 0 )
-        {
-            pushImmediate( operation, requestTag, LoginResult::ProviderUnavailable, LoginGrant{} );
-            return;
-        }
-        (void)_cacheRequests.track( requestID, 0, [this, operation, provider = string( provider ), ticketBytes, token, buildGrant, nowMs, requestTag]( const EphemeralReply& reply )
+        _pRouter->submit( EphemeralRequest::makeErase( nonceKey.view() ), _cacheReplyOwner, [this, operation, provider = string( provider ), ticketBytes, token, buildGrant, nowMs, requestTag]( const EphemeralReply& reply )
         {
             if ( reply._result == EphemeralResult::Ok )
                 startVerification( operation, provider, ticketBytes, token, buildGrant, nowMs, requestTag );

@@ -26,6 +26,13 @@
 
 namespace sw
 {
+    struct EconomyDeliveryRecord;
+    struct EconomyPurchaseCountRecord;
+    struct EconomyReceiptRecord;
+    struct EconomyRefundCursorRecord;
+    template <typename TRecord>
+    class ServiceRecordTable;
+
     /** @brief 회수로 잔액이 바뀐 계정 하나와 그 자산의 잔액입니다. */
     struct EconomyBalanceChange
     {
@@ -81,17 +88,17 @@ namespace sw
     /** @brief 경제 저장 함수 모음입니다. 저장소 스레드에서 부릅니다. */
     struct SW_KIT_SERVER_API EconomyStoreLogic
     {
-        static const hashed_string& getPurchaseCountTable(); ///< "econ_purchase" — 키 `<계정 16 진>/<상품 id>`
-        static const hashed_string& getRefundCursorTable();  ///< "econ_refund_cursor" — 키는 스토어 이름, 값은 환불 조회의 기준 시각(가변 정수)
+        static const ServiceRecordTable<EconomyPurchaseCountRecord>& getPurchaseCountTable(); ///< "econ_purchase" — 키 `<계정 16 진>/<상품 id>`
+        static const ServiceRecordTable<EconomyRefundCursorRecord>&  getRefundCursorTable();  ///< "econ_refund_cursor" — 키는 스토어 이름, 값은 환불 조회의 기준 시각
         /**
-         * @brief 영수증 상태 표입니다(키 = 지급 분개 키 `rcpt.<스토어>/<거래 id>`, 값 `[판 번호][상태]`). 보존 정리가 지우지 않는다.
+         * @brief 영수증 상태 표입니다(키 = 지급 분개 키 `rcpt.<스토어>/<거래 id>`). 보존 정리가 지우지 않는다.
          * @details 거래 하나의 상태(지급 · 지급 전 환불 · 환불 회수 · 청약철회)가 레코드 하나라서 지급과 환불 · 철회가 서로 이 레코드의 버전을 커밋 조건으로 건다 —
          *          어느 쪽이 먼저 커밋해도 다른 쪽은 Conflict 로 다시 읽으므로 "환불된 구매의 지급" 이 통과하지 않는다(감사 O-1). 분개는 감사 내역이라 지워지고 이 레코드가 멱등 기록이다(감사 P0-7).
          *          지우지 않는 레코드라 받은 계정은 담지 않는다 — 탈퇴한 사람과 이어지지 않는다(받은 계정은 보존 기간이 있는 지급 분개에만 있다).
          */
-        static const hashed_string& getReceiptTable();
-        static const hashed_string& getDeliveryTable(); ///< "econ_delivery" — 스토어에 아직 알리지 못한 지급. 키는 지급 분개 키, 값은 `[판 번호][스토어][알림 키][기한]`
-        static EconomyServiceResult toEconomyResult( LedgerResult result );
+        static const ServiceRecordTable<EconomyReceiptRecord>&  getReceiptTable();
+        static const ServiceRecordTable<EconomyDeliveryRecord>& getDeliveryTable(); ///< "econ_delivery" — 스토어에 아직 알리지 못한 지급. 키는 지급 분개 키
+        static EconomyServiceResult                             toEconomyResult( LedgerResult result );
 
         /** @brief 검증 결과의 지급 알림 하나를 만듭니다. 결과에 알림 키가 없거나 거래 id 로 레코드 키를 만들 수 없으면 false 입니다. */
         [[nodiscard]] static bool makeDeliveryTask( const ReceiptValidationResult& receipt, ReceiptDeliveryTask& outTask );

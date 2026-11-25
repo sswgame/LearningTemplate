@@ -516,7 +516,7 @@ namespace sw::editor
         if ( isElementMode() )
             bSaved = saveElement( text );
         else
-            bSaved = FileUtil::ensureParentDirectoryExists( _path ) && FileUtil::writeTextFile( _path, text );
+            bSaved = FileUtil::writeTextFile( _path, text );
         if ( bSaved == false )
         {
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsCouldNot2", "Project settings could not be saved to %#", _path.c_str() );

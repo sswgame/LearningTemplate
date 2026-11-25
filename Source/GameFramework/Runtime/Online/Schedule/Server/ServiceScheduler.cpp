@@ -5,8 +5,8 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -17,26 +17,16 @@ namespace sw
     {
         struct ServiceSchedulerInternal
         {
-            static constexpr int64     kMinuteMs     = constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
-            static constexpr int64     kDayMs        = 24 * 60 * kMinuteMs;
-            static constexpr int64     kDaysPerWeek  = 7;
-            static constexpr int64     kEpochWeekday = 3; ///< 1970-01-01 은 목요일(ISO 월요일 = 0)
-            static constexpr int64     kRetryMs      = 5000;
-            static constexpr int32     kMaxJobIDSize = 128;
-            static constexpr FormatDef kFormat{ "SCHD" };
-            static constexpr uint32    kStateRunning   = 0;
-            static constexpr uint32    kStateSucceeded = 1;
-            static constexpr uint32    kStateFailed    = 2;
-            static constexpr int32     kStateBitCount  = 2;
+            static constexpr int64                   kMinuteMs       = constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
+            static constexpr int64                   kDayMs          = 24 * 60 * kMinuteMs;
+            static constexpr int64                   kDaysPerWeek    = 7;
+            static constexpr int64                   kEpochWeekday   = 3; ///< 1970-01-01 은 목요일(ISO 월요일 = 0)
+            static constexpr int32                   kMaxJobIDSize   = 128;
+            static constexpr ServiceScheduleRunState kStateRunning   = ServiceScheduleRunState::Running;
+            static constexpr ServiceScheduleRunState kStateSucceeded = ServiceScheduleRunState::Succeeded;
+            static constexpr ServiceScheduleRunState kStateFailed    = ServiceScheduleRunState::Failed;
 
-            /** @brief 차지 레코드입니다. */
-            struct RunRecord
-            {
-                uint64 _serverID{ 0 };
-                int64  _startMs{ 0 };
-                int64  _endMs{ 0 };
-                uint32 _state{ kStateRunning };
-            };
+            using RunRecord = ServiceScheduleRunRecord;
 
             static string makeKey( string_view jobID, int64 occurrenceMs )
             {
@@ -46,32 +36,11 @@ namespace sw
                 return key;
             }
 
-            static vector<uint8> encode( const RunRecord& record )
-            {
-                BitWriter writer;
-                kFormat.writeVersion( writer );
-                writer.writeVarUint( record._serverID );
-                writer.writeVarInt( record._startMs );
-                writer.writeVarInt( record._endMs );
-                writer.writeBits( record._state, kStateBitCount );
-                return writer.releaseBytes();
-            }
+            [[nodiscard]] static bool decode( const ServiceRecord& raw, RunRecord& outRecord ) { return ServiceScheduler::getTable().decode( raw, outRecord ); }
 
-            [[nodiscard]] static bool decode( const vector<uint8>& bytes, RunRecord& outRecord )
+            static const ServiceIndexTable& getExpiryTable()
             {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
-                    return false;
-                outRecord._serverID = reader.readVarUint();
-                outRecord._startMs  = reader.readVarInt();
-                outRecord._endMs    = reader.readVarInt();
-                outRecord._state    = reader.readBits( kStateBitCount );
-                return reader.hasOverflowed() == false;
-            }
-
-            static const hashed_string& getExpiryTable()
-            {
-                static const hashed_string s_table{ "service_schedule_expiry" };
+                static const ServiceIndexTable s_table{ "service_schedule_expiry" };
                 return s_table;
             }
 
@@ -81,14 +50,14 @@ namespace sw
             /** @brief 차지 레코드를 쓰고 그 기준 시각의 TTL 색인 줄을 함께 넣습니다. 차지 · 끝 쓰기가 모두 이 함수를 지난다 — 끝을 적으면 늦은 줄이 하나 더 생긴다. */
             static void stageRun( ServiceTransaction& inoutTransaction, string_view key, const RunRecord& record, uint64 expectedVersion )
             {
-                inoutTransaction.put( ServiceScheduler::getTable(), key, encode( record ), expectedVersion );
-                inoutTransaction.put( getExpiryTable(), ServiceTTLRule::makeTTLIndexKey( computeRunTimeMs( record ), key ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+                inoutTransaction.put( ServiceScheduler::getTable(), key, record, expectedVersion );
+                inoutTransaction.put( getExpiryTable(), ServiceTTLRule::makeTTLIndexKey( computeRunTimeMs( record ), key ), ServiceRecord::kAnyVersion );
             }
 
             [[nodiscard]] static bool readRunTimeMs( const ServiceRecord& record, int64& outTimeMs )
             {
                 RunRecord run;
-                if ( decode( record._bytes, run ) == false )
+                if ( decode( record, run ) == false )
                     return false;
                 outTimeMs = computeRunTimeMs( run );
                 return true;
@@ -108,8 +77,7 @@ namespace sw
     ServiceScheduler::ClaimReport ServiceScheduler::claimOccurrence( IServiceStoreConnection& connection, const string& jobID, int64 occurrenceMs, uint64 serverID, int64 nowMs,
                                                                      int64 leaseMs )
     {
-        ClaimReport attempt;
-        attempt._retryAtMs           = nowMs + ServiceSchedulerInternal::kRetryMs;
+        ClaimReport              attempt;
         const string             key = ServiceSchedulerInternal::makeKey( jobID, occurrenceMs );
         ServiceRecord            record;
         const ServiceStoreResult readResult = connection.readRecord( getTable(), key, record );
@@ -119,7 +87,7 @@ namespace sw
         if ( readResult == ServiceStoreResult::Ok )
         {
             ServiceSchedulerInternal::RunRecord existing;
-            if ( ServiceSchedulerInternal::decode( record._bytes, existing ) == false )
+            if ( ServiceSchedulerInternal::decode( record, existing ) == false )
                 return attempt; // 깨진 레코드 — 다시 보지 않으면 영영 안 돈다. 운영이 고칠 때까지 다시 해 본다
             if ( existing._state != ServiceSchedulerInternal::kStateRunning )
             {
@@ -141,7 +109,7 @@ namespace sw
         ServiceTransaction transaction;
         ServiceSchedulerInternal::stageRun( transaction, key, claim, expectedVersion );
         ServiceCommitInfo        info;
-        const ServiceStoreResult commitResult = connection.commit( transaction, &info );
+        const ServiceStoreResult commitResult = ServiceCommitRunner::commitOnce( connection, transaction, &info );
         if ( commitResult == ServiceStoreResult::Ok )
         {
             attempt._result   = ClaimResult::Claimed;
@@ -165,7 +133,7 @@ namespace sw
         finished._state    = bSucceeded ? ServiceSchedulerInternal::kStateSucceeded : ServiceSchedulerInternal::kStateFailed;
         ServiceTransaction transaction;
         ServiceSchedulerInternal::stageRun( transaction, ServiceSchedulerInternal::makeKey( run._jobID, run._occurrenceMs.count() ), finished, run._runToken );
-        return connection.commit( transaction );
+        return ServiceCommitRunner::commitOnce( connection, transaction );
     }
 } // namespace sw
 
@@ -330,9 +298,9 @@ namespace sw
         return false;
     }
 
-    const hashed_string& ServiceScheduler::getTable()
+    const ServiceRecordTable<ServiceScheduleRunRecord>& ServiceScheduler::getTable()
     {
-        static const hashed_string s_table{ "service_schedule" };
+        static const ServiceRecordTable<ServiceScheduleRunRecord> s_table{ "service_schedule" };
         return s_table;
     }
 
@@ -342,6 +310,8 @@ namespace sw
             return; // 종료한 뒤에 회수한 일
         Job& job           = _listJob[jobIndex];
         job._bClaimPending = SW_FALSE;
+        if ( serviceResult != ClaimResult::Retry )
+            job._retryBackoff.reset();
         switch ( serviceResult )
         {
             case ClaimResult::Claimed:
@@ -360,10 +330,15 @@ namespace sw
                 break;
             }
             case ClaimResult::Busy:
-            case ClaimResult::Retry:
             {
                 job._retryOccurrenceMs = occurrenceMs;
                 job._retryAtMs         = retryAtMs;
+                break;
+            }
+            case ClaimResult::Retry:
+            {
+                job._retryOccurrenceMs = occurrenceMs;
+                job._retryAtMs         = _lastTickMs.count() + job._retryBackoff.takeDelayMs( kMaxRetryDelayMs ); // 서버마다 지터가 달라 살아난 저장소에 같은 순간 몰리지 않는다
                 break;
             }
         }

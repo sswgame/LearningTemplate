@@ -6,7 +6,9 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 // ServiceMailTest — 우편 넣기(보상 · 플레이어 첨부 맡김), 멱등 키 재전송, 새 우편 알림이 한 번만 나가는지, 보낸 기록의 보존 기간 쓸기. (nogpu)
 
@@ -68,7 +70,7 @@ SW_TEST_CASE( ServiceMailTest, RewardMailIsSentOnce )
     sw::ServiceRecord stored;
     SW_REQUIRE_TRUE( database.readRecord( sw::ServiceMail::getMailTable(), mailKey, stored ) == sw::ServiceStoreResult::Ok );
     sw::ServiceMailRecord record;
-    SW_REQUIRE_TRUE( sw::ServiceMail::decodeRecord( stored._bytes, record ) );
+    SW_REQUIRE_TRUE( sw::ServiceMail::decodeRecord( stored, record ) );
     SW_EXPECT_EQUAL( reward._titleKey, record._message._titleKey );
     SW_REQUIRE_EQUAL( size_t( 1 ), record._message._listAttachment.size() );
     SW_EXPECT_EQUAL( int64( 50 ), record._message._listAttachment[0]._amount );
@@ -151,7 +153,7 @@ SW_TEST_CASE( ServiceMailTest, SentRecordExpiresByRetentionRule )
     SW_EXPECT_EQUAL( kNowMs, sentMs );
 
     sw::ServiceTransaction broken; // 값이 우편 키 모양이 아닌 기록은 시각을 읽지 못해 지우지 않는다
-    broken.put( sw::ServiceMail::getSentTable(), "0000000000000016/broken", sw::vector<uint8>{ 'x' }, sw::ServiceRecord::kAbsentVersion );
+    sw::ServiceStoreTestAccess::putBytes( broken, sw::ServiceMail::getSentTable(), "0000000000000016/broken", sw::vector<uint8>{ 'x' }, sw::ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( database.commit( broken ) == sw::ServiceStoreResult::Ok );
 
     sw::ServiceTTLRule        rule = sw::ServiceMail::makeSentTTLRule( kRetentionMs ); // 운영과 같은 TTL 색인 규칙

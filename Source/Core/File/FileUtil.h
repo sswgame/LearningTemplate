@@ -207,6 +207,7 @@ namespace sw
         static string suffixAfterPathComponent( const PathKey& path, string_view component );
         /**
          * @brief 대상 파일이 들어갈 상위 디렉터리가 있게 합니다(없으면 재귀적으로 만듭니다). 폴더 부분이 없는 이름이면 할 일이 없어 true 입니다.
+         * @details `FileUtil` 의 쓰기는 스스로 부른다. 경로를 스스로 여는 쓰기(SQLite · stdio)와 폴더만 필요한 곳(파일 옮기기)이 쓴다.
          * @return 디렉터리가 있으면 true. 만들지 못했으면 경로와 이유를 알리고 false 입니다.
          */
         [[nodiscard]] static bool ensureParentDirectoryExists( const AbsolutePath& filePath );
@@ -380,6 +381,7 @@ namespace sw
         /**
          * @brief 바이너리 데이터를 파일에 씁니다. **원자적입니다**: 같은 폴더의 임시 파일에 다 쓰고 결과를 확인한 뒤 원본과 바꿔 끼웁니다.
          * @details 실패하면(디스크 가득 · 잠김 · 도중 종료) false 이고 원본은 그대로 남습니다. 반쯤 쓴 파일이 남지 않습니다.
+         *          없는 부모 폴더는 만듭니다(쓰기 입구 모두 — `AtomicFileWriter` · `appendTextFile` 도). 부르는 쪽이 먼저 만들지 않는다.
          */
         [[nodiscard]] static bool writeFile( const AbsolutePath& fileName, const uint8* pData, uint64 size );
         /**

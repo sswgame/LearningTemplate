@@ -36,9 +36,9 @@ namespace sw
      */
     struct NetClientServerMessage
     {
-        using Snapshot    = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced>;                         ///< 바뀐 엔티티를 통째 또는 바뀐 조각(`NetSnapshot::kDeltaChunkBytes`)만 싣는다
-        using SnapshotAck = NetMessageBodyDef<1, NetMessageDirection::ToServer, NetChannelKind::UnreliableSequenced, NetSnapshotAckBody>; ///< 옛 확인은 새 확인이 덮는다
-        using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::Unreliable>;                                  ///< 비신뢰 — 입력 창을 겹쳐 보내고 서버가 틱 번호로 거르므로 순서 보장이 필요 없다(언리얼 이동 RPC 와 같다).
+        using Snapshot    = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced>;                                                                          ///< 바뀐 엔티티를 통째 또는 바뀐 조각(`NetSnapshot::kDeltaChunkBytes`)만 싣는다
+        using SnapshotAck = NetLimitedMessageDef<NetMessageBodyDef<1, NetMessageDirection::ToServer, NetChannelKind::UnreliableSequenced, NetSnapshotAckBody>, NetRequestLimit::kPerTick>; ///< 옛 확인은 새 확인이 덮는다
+        using Input       = NetLimitedMessageDef<NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::Unreliable>, NetRequestLimit::kPerTick>;                                  ///< 비신뢰 — 입력 창을 겹쳐 보내고 서버가 틱 번호로 거르므로 순서 보장이 필요 없다(언리얼 이동 RPC 와 같다).
         using Table       = NetWorldMessageTable<NetKitMessageRange::kClientServer, Snapshot, SnapshotAck, Input>;
 
         static constexpr uint8 kSnapshot    = Table::getKindOf<Snapshot>();

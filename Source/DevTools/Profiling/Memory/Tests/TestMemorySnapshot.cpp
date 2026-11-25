@@ -14,6 +14,7 @@
 #include "DevTools/Profiling/Memory/MemorySnapshotSources.h"
 
 #include "Engine/Asset/Cache/AssetCacheBase.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 
@@ -240,9 +241,9 @@ SW_TEST_CASE( MemorySnapshotTest, TextRoundTripsAndRejectsBadRows )
  */
 SW_TEST_CASE( MemorySnapshotTest, PolicyNeedsBothKeysInRange )
 {
-    SW_EXPECT_TRUE( MemorySnapshotPolicy::parse( R"({ "_exportFolder": "MemorySnapshots", "_allocationSiteLimit": 8 })", "test" ).has_value() );
-    SW_EXPECT_LOG( "JSON.MissingMember" ); // 필수 칸 없음 — JSON 읽기가 오류 로그를 남긴다
-    SW_EXPECT_FALSE( MemorySnapshotPolicy::parse( R"({ "_exportFolder": "MemorySnapshots" })", "test" ).has_value() );
-    SW_EXPECT_FALSE( MemorySnapshotPolicy::parse( R"({ "_exportFolder": "a/b", "_allocationSiteLimit": 8 })", "test" ).has_value() );
-    SW_EXPECT_FALSE( MemorySnapshotPolicy::parse( R"({ "_exportFolder": "MemorySnapshots", "_allocationSiteLimit": 0 })", "test" ).has_value() );
+    SW_EXPECT_TRUE( ConfigManager::parseConfig<MemorySnapshotPolicy>( R"({ "_exportFolder": "MemorySnapshots", "_allocationSiteLimit": 8 })", "test" ).has_value() );
+    SW_EXPECT_LOG( "Config.KeyMissing" ); // 필수 칸 없음 — 설정 읽기가 칸 이름을 남긴다
+    SW_EXPECT_FALSE( ConfigManager::parseConfig<MemorySnapshotPolicy>( R"({ "_exportFolder": "MemorySnapshots" })", "test" ).has_value() );
+    SW_EXPECT_FALSE( ConfigManager::parseConfig<MemorySnapshotPolicy>( R"({ "_exportFolder": "a/b", "_allocationSiteLimit": 8 })", "test" ).has_value() );
+    SW_EXPECT_FALSE( ConfigManager::parseConfig<MemorySnapshotPolicy>( R"({ "_exportFolder": "MemorySnapshots", "_allocationSiteLimit": 0 })", "test" ).has_value() );
 }

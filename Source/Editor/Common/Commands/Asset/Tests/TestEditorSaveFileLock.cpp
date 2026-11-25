@@ -18,7 +18,6 @@ namespace
     AbsolutePath makeLockTarget( const utf8* pName, const utf8* pText )
     {
         const AbsolutePath path = test::makeScratchPath( pName );
-        (void)FileUtil::ensureParentDirectoryExists( path );
         (void)FileUtil::writeTextFile( path, pText );
         return path;
     }

@@ -15,6 +15,9 @@
 #include "DevTools/Client/Automation/Runner/AutomationImage.h"
 #include "DevTools/DevToolsAPI.h"
 
+#include "Engine/Config/ConfigFileID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     /** @brief 골든 비교 한 번의 판정입니다. 세 값을 한 식(`AutomationGoldenUtil::evaluate`)이 낸다. */
@@ -50,21 +53,46 @@ namespace sw
     };
 
     /** @struct AutomationGoldenLimits @brief 판정의 세 축의 상한입니다. 기본은 정책 데이터, 시나리오 `<ExpectImage>` 가 덮는다. */
-    struct AutomationGoldenLimits
+    REFLECT()
+    struct SW_DEVTOOLS_API AutomationGoldenLimits
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
         float64 _maxDifferingFraction{ 0.0 }; ///< 다른 화소 비율의 상한(0..1) — `tolerance`
-        float64 _maxMeanDistance{ 0.0 };      ///< 평균 색 거리의 상한(0..1) — `maxMeanDistance`, 넓고 얕은 차이
-        uint32  _maxDeepRegionPixels{ 0 };    ///< 깊은 화소 덩어리의 상한(축소 그림의 화소 수) — `maxRegionPixels`, 좁고 깊은 차이
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
+        float64 _maxMeanDistance{ 0.0 }; ///< 평균 색 거리의 상한(0..1) — `maxMeanDistance`, 넓고 얕은 차이
+        PROPERTY( Required )
+        uint32 _maxDeepRegionPixels{ 0 }; ///< 깊은 화소 덩어리의 상한(축소 그림의 화소 수) — `maxRegionPixels`, 좁고 깊은 차이
     };
 
     /** @struct AutomationGoldenPolicy @brief `Config/Dev/GoldenImage.json` 의 내용입니다. 칸이 하나라도 없거나 범위 밖이면 읽기가 오류다(기본값이 없다). */
-    struct AutomationGoldenPolicy
+    REFLECT()
+    struct SW_DEVTOOLS_API AutomationGoldenPolicy
     {
+        REFLECT_BODY();
+
+        static constexpr ConfigFileID<AutomationGoldenPolicy> kConfigFile{ "Config/Dev/GoldenImage.json" };
+
+        PROPERTY( Required )
         AutomationImageThreshold _measure{};
-        AutomationGoldenLimits   _limits{};
-        float64                  _nearLimitRatio{ 0.0 }; ///< 한 축이 상한의 이 비율을 넘으면 근접(0..1 사이, 끝 제외)
-        /// `<AdvanceSimulation>`(그리지 않는 진행)의 마지막 이 수만큼은 그린다 — TAA 기록 · 노출 적응 · GPU 입자가 사진 전에 자리 잡게. 시나리오가 줄일 수 없다(`AutomationRunner::advanceSimulation`)
+        PROPERTY( Required )
+        AutomationGoldenLimits _limits{};
+        PROPERTY( Required )
+        float64 _nearLimitRatio{ 0.0 }; ///< 한 축이 상한의 이 비율을 넘으면 근접(0..1 사이, 끝 제외)
+        /// `<AdvanceSimulation>`(그리지 않는 진행)의 마지막 이 수만큼은 그린다 — TAA 기록 · 노출 적응 · GPU 입자가 사진 전에 자리 잡게. 시나리오마다 다르면 단계의 `drawn` 이 덮는다.
+        PROPERTY( Required )
         uint32 _advanceDrawnFrames{ 0 };
+
+        /** @brief 칸 사이의 규칙을 봅니다(`ConfigManager::readConfig` 가 부른다). */
+        [[nodiscard]] expected<void> validate() const
+        {
+            if ( _measure._deepMinDistance < _measure._differingMinDistance )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_deepMinDistance must not be under _differingMinDistance", kConfigFile.getPath() } );
+            if ( _nearLimitRatio <= 0.0 || _nearLimitRatio >= 1.0 )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_nearLimitRatio must be between 0 and 1", kConfigFile.getPath() } );
+            return {};
+        }
     };
 
     /** @struct AutomationGoldenMeta @brief 골든 옆 `*.golden.json` 한 편의 내용입니다 — 언제(커밋) · 어디서(백엔드) · 왜 · 그때 무엇을 쟀는지. */
@@ -97,14 +125,6 @@ namespace sw
     /** @struct AutomationGoldenUtil @brief 골든 판정 · 기록 결정 · 정책 읽기 · 이름 짓기입니다. */
     struct SW_DEVTOOLS_API AutomationGoldenUtil
     {
-        /** @brief 정책 파일(프로젝트 루트 기준)입니다. */
-        static constexpr const utf8* kPolicyFile = "Config/Dev/GoldenImage.json";
-
-        /** @brief 정책 JSON 글을 읽습니다. 칸이 없거나 형식 · 범위가 틀리면 그 칸이 대상인 오류입니다. */
-        [[nodiscard]] static expected<AutomationGoldenPolicy> parsePolicy( string_view jsonText, string_view sourceName );
-        /** @brief 프로젝트의 정책 파일을 읽습니다(`parsePolicy`). */
-        [[nodiscard]] static expected<AutomationGoldenPolicy> loadPolicy();
-
         /** @brief 판정입니다 — 한 축이라도 상한을 넘으면 `Fail`, 한 축이라도 상한 × @p nearLimitRatio 를 넘으면 `PassNearLimit`, 아니면 `Pass`. */
         [[nodiscard]] static GoldenResult evaluate( const AutomationImageDifference& difference, const AutomationGoldenLimits& limits, float64 nearLimitRatio );
         /** @brief 판정 뒤 할 일입니다. `All` 은 `Pass` 가 아닌 모든 골든을 쓴다 — 근접도 쓴다. `Missing` 은 없는 골든만 쓴다. */

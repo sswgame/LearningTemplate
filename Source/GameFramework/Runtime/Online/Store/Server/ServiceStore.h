@@ -32,30 +32,50 @@
 
 namespace sw
 {
+    class IServiceStoreConnection;
+    class ServiceIndexTable;
+    class ServiceLinkTable;
+    class ServiceOpaqueTable;
     class ServiceReadSetConnection;
+    template <typename TRecord>
+    class ServiceRecordTable;
+    struct ServiceStoreTestAccess;
 
     /** @brief 저장소 호출의 결과입니다. */
     enum class ServiceStoreResult : uint8
     {
         Ok = 0,
         NotFound,    ///< 읽기에서 키가 없다
-        Conflict,    ///< 커밋에서 기대 버전이 어긋났다(아무것도 쓰지 않았다). SQL 의 직렬화 실패도 이것이다(다시 읽고 다시 하면 된다)
+        Conflict,    ///< 커밋에서 기대 버전이 어긋났다(아무것도 쓰지 않았다). SQL 의 직렬화 실패도 이것이다(다시 읽고 다시 하면 된다 — `ServiceCommitRunner::run`)
         Unavailable, ///< 저장소에 닿지 못했다. 커밋이라면 적용됐는지 모른다
-        Invalid      ///< 빈 테이블이나 키, 키 규칙이나 상한 위반, 한 트랜잭션에 같은 키 둘
+        Invalid,     ///< 빈 테이블이나 키, 키 규칙이나 상한 위반, 한 트랜잭션에 같은 키 둘, 표 형식으로 쓰지 못한 값
+        Corrupt      ///< 읽은 값이 표 형식으로 읽히지 않는다(`ServiceRecordTable::read` 가 오류 로그를 남겼다). 없는 것과 다르다 — 부르는 쪽은 요청을 실패로 돌려준다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 레코드 하나입니다. */
+    /**
+     * @brief 레코드 하나입니다. 값 바이트는 표 형식(`ServiceRecordTable.h`)과 저장소 구현(`IServiceStoreConnection` 의 파생)만 만진다.
+     * @details 서비스가 바이트를 손으로 짜고 읽으면 칸 배치 · 판 · 손상 처리가 레코드마다 달라졌다(판 공유 · 판 없음 · 모르는 칸 소실 · 깨진 값을 없음으로 읽기).
+     */
     struct ServiceRecord
     {
         static constexpr uint64 kAnyVersion    = ~0ull; ///< 쓰기 조건 없음
         static constexpr uint64 kAbsentVersion = 0;     ///< "없어야 한다" 조건이다. 읽은 버전이 이 값이면 레코드가 없다는 뜻이다
 
+        string _key{}; ///< `listRecords` 만 채운다
+        uint64 _version{ kAbsentVersion };
+
+    private:
+        template <typename TRecord>
+        friend class ServiceRecordTable;
+        friend class ServiceLinkTable;
+        friend class ServiceOpaqueTable;
+        friend class IServiceStoreConnection;
+        friend struct ServiceStoreTestAccess;
+
         vector<uint8> _bytes{};
-        string        _key{}; ///< `listRecords` 만 채운다
-        uint64        _version{ kAbsentVersion };
     };
 } // namespace sw
 
@@ -81,12 +101,18 @@ namespace sw
             uint8  _bDescending{ SW_FALSE };
         };
 
-        vector<uint8> _bytes{};
         string        _key{};
         hashed_string _table{};
         Range         _range{};
         uint64        _expectedVersion{ ServiceRecord::kAnyVersion };
         Kind          _kind{ Kind::Put };
+
+    private:
+        friend class ServiceTransaction;
+        friend class IServiceStoreConnection;
+        friend struct ServiceStoreTestAccess;
+
+        vector<uint8> _bytes{};
     };
 } // namespace sw
 
@@ -106,7 +132,20 @@ namespace sw
 
         ServiceTransaction();
 
-        void put( const hashed_string& table, string_view key, vector<uint8> bytes, uint64 expectedVersion = ServiceRecord::kAnyVersion );
+        /** @brief 레코드 하나를 씁니다. 값이 표 형식으로 쓰이지 않으면(선언 범위 밖) 오류를 남기고 이 트랜잭션의 커밋이 `Invalid` 다(정의는 `ServiceRecordTable.h`). */
+        template <typename TRecord>
+        void put( const ServiceRecordTable<TRecord>& table, string_view key, const typename ServiceRecordTable<TRecord>::Record& record,
+                  uint64 expectedVersion = ServiceRecord::kAnyVersion );
+        /** @brief `put` 과 같되 값이 표 형식으로 쓰이지 않으면 아무것도 붙이지 않고 false 입니다(오류 로그는 표가 남긴다). 그 값만 빼고 나머지를 쓰는 일괄 쓰기가 씁니다. */
+        template <typename TRecord>
+        [[nodiscard]] bool tryPut( const ServiceRecordTable<TRecord>& table, string_view key, const typename ServiceRecordTable<TRecord>::Record& record,
+                                   uint64 expectedVersion = ServiceRecord::kAnyVersion );
+        /** @brief 값 없는 색인 줄 하나를 씁니다(키가 곧 내용이다). */
+        void put( const ServiceIndexTable& table, string_view key, uint64 expectedVersion = ServiceRecord::kAnyVersion );
+        /** @brief 다른 레코드의 id 하나를 가리키는 연결을 씁니다. id 0 은 쓰지 않는다(오류 로그 · `Invalid`). */
+        void put( const ServiceLinkTable& table, string_view key, uint64 linkedID, uint64 expectedVersion = ServiceRecord::kAnyVersion );
+        /** @brief 이 서버가 뜻을 읽지 않는 바이트(봉인된 비밀 · 저장해 둔 응답)를 씁니다. */
+        void put( const ServiceOpaqueTable& table, string_view key, vector<uint8> bytes, uint64 expectedVersion = ServiceRecord::kAnyVersion );
         void erase( const hashed_string& table, string_view key, uint64 expectedVersion = ServiceRecord::kAnyVersion );
         void requireVersion( const hashed_string& table, string_view key, uint64 expectedVersion );
         /**
@@ -114,9 +153,24 @@ namespace sw
          * @details 저장소는 같은 트랜잭션 안에서 범위를 다시 읽어 견준다(이 트랜잭션의 쓰기 전에). 버전 조건 상한(`kMaxConditionCount`)에 든다.
          */
         void requireRange( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, uint64 fingerprint );
-        /** @brief 쓰기 하나를 그대로 덧붙입니다(다른 트랜잭션에서 짠 쓰기를 옮길 때). */
+        /** @brief 이 트랜잭션을 커밋하지 못하게 합니다(`Invalid`). 넣으려던 값이 규칙을 어겨 일부만 쓰면 안 될 때 — 빈 키 같은 가짜 쓰기로 대신하지 않는다. */
+        void markMalformed() { _bMalformed = SW_TRUE; }
+        /** @brief 쓰기 하나를 그대로 덧붙입니다(조건을 고친 사본을 다시 짤 때 — 읽기 집합 연결 · 운영 쓰기). */
         void addWrite( const ServiceWrite& write ) { _listWrite.push_back( write ); }
-        void clear() { _listWrite.clear(); }
+        /** @brief 다른 트랜잭션의 쓰기를 모두 덧붙입니다. 그 트랜잭션이 커밋하지 못하는 것이었으면(`markMalformed`) 이것도 그렇다 — 쓰지 못한 값을 빈 값으로 옮기지 않는다. */
+        void append( const ServiceTransaction& source )
+        {
+            _listWrite.insert( _listWrite.end(), source._listWrite.begin(), source._listWrite.end() );
+            if ( source._bMalformed == SW_TRUE )
+                _bMalformed = SW_TRUE;
+        }
+        /** @brief 표 형식으로 쓰지 못한 값이 있었는지입니다(`markMalformed`). 사본을 다시 짜는 쪽이 본다. */
+        bool isMalformed() const { return _bMalformed == SW_TRUE; }
+        void clear()
+        {
+            _listWrite.clear();
+            _bMalformed = SW_FALSE;
+        }
 
         bool                        isEmpty() const { return _listWrite.empty(); }
         const vector<ServiceWrite>& getWrites() const { return _listWrite; }
@@ -129,8 +183,84 @@ namespace sw
         static uint64 computeRangeFingerprint( const vector<ServiceRecord>& listRecord, size_t first );
 
     private:
+        friend struct ServiceStoreTestAccess;
+
+        void putBytes( const hashed_string& table, string_view key, vector<uint8> bytes, uint64 expectedVersion );
+
+    private:
         vector<ServiceWrite> _listWrite;
+        uint8                _bMalformed{ SW_FALSE }; ///< 표 형식으로 쓰지 못한 값이 있었다 — 커밋은 `Invalid` 다
     };
+} // namespace sw
+
+namespace sw
+{
+    /** @class ServiceIndexTable @brief 값 없는 줄의 표입니다(키가 곧 내용이다). */
+    class SW_GF_API ServiceIndexTable
+    {
+    public:
+        /** @brief 표가 없음입니다(규칙의 고르는 칸 — `ServiceTTLRule::_ttlIndexTable`). */
+        ServiceIndexTable() = default;
+        explicit ServiceIndexTable( const utf8* pName )
+            : _name{ pName }
+        {
+        }
+
+        const hashed_string& getName() const { return _name; }
+        operator const hashed_string&() const { return _name; }
+        bool empty() const { return _name.empty(); }
+
+    private:
+        hashed_string _name{};
+    };
+
+    /** @class ServiceLinkTable @brief 다른 레코드의 id 하나를 가리키는 표입니다(가변 정수). 서비스 id(계정 · 세션 · 거래 · 길드)는 0 을 내지 않는다 — 0 은 깨진 값이다. */
+    class SW_GF_API ServiceLinkTable
+    {
+    public:
+        explicit ServiceLinkTable( const utf8* pName )
+            : _name{ pName }
+        {
+        }
+
+        const hashed_string& getName() const { return _name; }
+        operator const hashed_string&() const { return _name; }
+
+        /**
+         * @brief 받은 레코드의 id 를 읽습니다. 깨졌거나 0 이면 오류 로그를 남기고 false 이며 @p outID 는 그대로입니다.
+         * @details 깨진 연결을 "연결 없음" 으로 보면 세션 폐기 · 중복 로그인 검사가 살아 있는 세션을 놓친 채 성공한다 — 부르는 쪽은 요청을 실패로 돌려준다.
+         */
+        [[nodiscard]] bool decode( string_view key, const ServiceRecord& record, uint64& outID ) const;
+        /** @brief 연결 하나를 읽습니다. 있으면 Ok 와 id, 없으면 NotFound, 깨졌으면 Corrupt 입니다. */
+        [[nodiscard]] ServiceStoreResult read( IServiceStoreConnection& connection, string_view key, uint64& outID, uint64* pOutVersion = nullptr ) const;
+        /** @brief id 를 바이트로 씁니다(`ServiceTransaction::put` 이 부른다). 0 이면 오류 로그와 false 입니다. */
+        [[nodiscard]] bool encode( string_view key, uint64 id, vector<uint8>& outBytes ) const;
+
+    private:
+        hashed_string _name;
+    };
+
+    /** @class ServiceOpaqueTable @brief 이 서버가 뜻을 읽지 않는 바이트의 표입니다(봉인된 비밀 · 저장해 둔 응답). 바이트를 해석하는 코드는 다른 표 형식을 쓴다. */
+    class SW_GF_API ServiceOpaqueTable
+    {
+    public:
+        explicit ServiceOpaqueTable( const utf8* pName )
+            : _name{ pName }
+        {
+        }
+
+        const hashed_string& getName() const { return _name; }
+        operator const hashed_string&() const { return _name; }
+
+        /** @brief 받은 레코드의 바이트입니다. */
+        static const vector<uint8>& getBytes( const ServiceRecord& record ) { return record._bytes; }
+        /** @brief 받은 레코드의 바이트를 옮겨 갑니다. */
+        static vector<uint8> takeBytes( ServiceRecord& record ) { return std::move( record._bytes ); }
+
+    private:
+        hashed_string _name;
+    };
+
 } // namespace sw
 
 namespace sw
@@ -163,10 +293,19 @@ namespace sw
 
         /** @brief 레코드 하나를 읽습니다. 없으면 NotFound 를 반환하고, @p outRecord 는 비며 버전은 `kAbsentVersion` 입니다. */
         [[nodiscard]] virtual ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) = 0;
+
+    protected:
+        // 레코드 값 바이트는 저장소 구현(이 형식의 파생)만 옮긴다 — 서비스 코드는 표 형식으로만 읽고 쓴다
+        static vector<uint8>&       accessBytes( ServiceRecord& record ) { return record._bytes; }
+        static const vector<uint8>& accessBytes( const ServiceRecord& record ) { return record._bytes; }
+        static const vector<uint8>& accessBytes( const ServiceWrite& write ) { return write._bytes; }
+
+        // 커밋은 `ServiceCommitRunner` 만 부른다 — 서비스가 손 루프로 충돌을 다시 하면 상한 · 다 썼을 때의 답 · 로그가 자리마다 달라진다(`ServiceCommitRunner.h`).
+        friend struct ServiceCommitRunner;
+
         /** @brief 트랜잭션을 모두 적용하거나 아무것도 적용하지 않습니다. */
         [[nodiscard]] virtual ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) = 0;
 
-    protected:
         // 목록 읽기는 `ServiceRecordReader` 만 부른다 — 결과에 다음 쪽 · 잘림을 싣지 않는 한 쪽 읽기를 서비스 코드가 직접 부르지 못하게 한다(감사 O-18). 구현(메모리 · SQL)은 겹쳐 쓴다.
         friend struct ServiceRecordReader;
 
@@ -179,6 +318,77 @@ namespace sw
         [[nodiscard]] virtual ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending,
                                                               vector<ServiceRecord>& outListRecord ) = 0;
     };
+} // namespace sw
+
+namespace sw
+{
+    template <typename TRecord>
+    struct ServiceRecordCodec; ///< `ServiceRecordTable.h` 가 정의한다 — 레코드를 쓰고 읽는 TU 만 무거운 코덱을 읽는다
+
+    /**
+     * @class ServiceRecordTable
+     * @brief 레코드 형식 @p TRecord 하나를 싣는 표입니다. 레코드 형식은 `REFLECT` 이고 `ServiceRecordUnknownFields _unknownProperties{};` 를 든다(`ServiceRecordUtil::readDurable`).
+     */
+    template <typename TRecord>
+    class ServiceRecordTable
+    {
+    public:
+        using Record = TRecord;
+
+        explicit ServiceRecordTable( const utf8* pName )
+            : _name{ pName }
+        {
+        }
+
+        const hashed_string& getName() const { return _name; }
+        /** @brief 표 이름이 필요한 곳(지우기 · 조건 · 목록 읽기 · TTL 규칙)에 그대로 넘긴다. 값은 이 이름으로 읽고 쓸 수 없다(바이트가 비공개다). */
+        operator const hashed_string&() const { return _name; }
+
+        /** @brief 목록 읽기 등으로 받은 레코드의 값을 읽습니다. 못 읽으면 오류 로그를 남기고 false 이며 @p outRecord 는 그대로입니다. */
+        [[nodiscard]] bool decode( string_view key, const ServiceRecord& record, TRecord& outRecord ) const { return ServiceRecordCodec<TRecord>::decode( key, record._bytes, outRecord ); }
+        /** @brief 목록 읽기로 받은 레코드(키가 채워져 있다)의 값을 읽습니다. */
+        [[nodiscard]] bool decode( const ServiceRecord& record, TRecord& outRecord ) const { return decode( record._key, record, outRecord ); }
+
+        /**
+         * @brief 레코드 하나를 읽습니다. 있으면 Ok 와 값 · 버전, 없으면 NotFound(@p outRecord 는 그대로, 버전은 `kAbsentVersion`), 값이 깨졌으면 Corrupt 입니다. 그 밖은 저장소 결과입니다.
+         * @param pOutVersion 있으면 읽은 버전(없으면 `kAbsentVersion`)을 담는다 — 같은 버전 조건으로 다시 쓸 때.
+         */
+        [[nodiscard]] ServiceStoreResult read( IServiceStoreConnection& connection, string_view key, TRecord& outRecord, uint64* pOutVersion = nullptr ) const
+        {
+            ServiceRecord            record;
+            const ServiceStoreResult result = connection.readRecord( _name, key, record );
+            if ( pOutVersion != nullptr )
+                *pOutVersion = record._version;
+            if ( result != ServiceStoreResult::Ok )
+                return result;
+            return decode( key, record, outRecord ) ? ServiceStoreResult::Ok : ServiceStoreResult::Corrupt;
+        }
+
+        /** @brief 값을 바이트로 씁니다(`ServiceTransaction::put` 이 부른다). 못 쓰면 오류 로그를 남기고 false 입니다. */
+        [[nodiscard]] bool encode( const TRecord& record, vector<uint8>& outBytes ) const { return ServiceRecordCodec<TRecord>::encode( record, outBytes ); }
+
+    private:
+        hashed_string _name;
+    };
+
+    template <typename TRecord>
+    void ServiceTransaction::put( const ServiceRecordTable<TRecord>& table, string_view key, const typename ServiceRecordTable<TRecord>::Record& record, uint64 expectedVersion )
+    {
+        vector<uint8> bytes;
+        if ( table.encode( record, bytes ) == false )
+            _bMalformed = SW_TRUE; // 쓰지 못한 값을 빈 값으로 싣지 않는다 — 커밋이 Invalid 다
+        putBytes( table.getName(), key, std::move( bytes ), expectedVersion );
+    }
+
+    template <typename TRecord>
+    bool ServiceTransaction::tryPut( const ServiceRecordTable<TRecord>& table, string_view key, const typename ServiceRecordTable<TRecord>::Record& record, uint64 expectedVersion )
+    {
+        vector<uint8> bytes;
+        if ( table.encode( record, bytes ) == false )
+            return false;
+        putBytes( table.getName(), key, std::move( bytes ), expectedVersion );
+        return true;
+    }
 } // namespace sw
 
 namespace sw

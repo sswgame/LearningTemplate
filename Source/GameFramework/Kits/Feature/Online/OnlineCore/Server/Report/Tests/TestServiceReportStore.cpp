@@ -6,6 +6,7 @@
 
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 using namespace sw;
 
@@ -190,7 +191,7 @@ SW_TEST_CASE( ServiceReportStoreTest, CorruptRecordIsInvalidNotSkipped )
     Util::open( database, Util::kNowMs, 1 );
     const string       brokenKey = ServiceReportStore::makeOpenKey( Util::kNowMs + 1, Util::kReporter, 2 );
     ServiceTransaction seed;
-    seed.put( ServiceReportStore::getTable(), brokenKey, vector<uint8>{ 0, 0, 0, 0 } ); // 버전 머리만 있고 몸이 없다
+    ServiceStoreTestAccess::putBytes( seed, ServiceReportStore::getTable(), brokenKey, vector<uint8>{ 0, 0, 0, 0 } ); // 버전 머리만 있고 몸이 없다
     SW_REQUIRE_TRUE( database.commit( seed ) == ServiceStoreResult::Ok );
 
     vector<ServiceReport> listReport;

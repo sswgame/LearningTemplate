@@ -95,6 +95,7 @@ namespace sw
         , _pLedgerPolicy{ nullptr }
         , _serverID{ 0 }
         , _nextSeed{ 0 }
+        , _recoverAtMs{ 0 }
         , _store{}
     {
     }
@@ -118,6 +119,7 @@ namespace sw
 
     void TradeService::recoverOwnedTrades( UnixMilliseconds nowMs )
     {
+        _recoverAtMs       = 0;
         TradeCallInput job = makeCallInput( TradeOperation::Recover, uint64{ 0 }, nowMs );
         submitCall( std::move( job ) );
     }
@@ -185,6 +187,8 @@ namespace sw
 
     void TradeService::update( UnixMilliseconds nowMs )
     {
+        if ( _recoverAtMs != 0 && nowMs.count() >= _recoverAtMs )
+            recoverOwnedTrades( nowMs );
         for ( auto tradeIt = _mapTradeToDeadline.begin(); tradeIt != _mapTradeToDeadline.end(); )
         {
             if ( nowMs.count() < tradeIt->second )
@@ -217,9 +221,11 @@ namespace sw
         { return TradeStoreRun::runCall( connection, *pPolicy, pLedgerPolicy, serverID, settings, input ); },
                        [this, tradeID = input._tradeID, nowMs = input._nowMs]( TradeCallResult& done )
         {
-            const bool bExpiryFailed = done._completion._operation == TradeOperation::Expire && done._completion._result.hasError( OnlineError::kUnavailable );
-            if ( bExpiryFailed )
+            const bool bRetryLater = OnlineError::isRetryable( done._completion._result._errorCode ); // 저장소에 닿지 못했거나(kUnavailable) 충돌에 거듭 졌다(kBusy)
+            if ( bRetryLater && done._completion._operation == TradeOperation::Expire )
                 retryExpiry( tradeID, nowMs );
+            if ( bRetryLater && done._completion._operation == TradeOperation::Recover )
+                _recoverAtMs = nowMs.count() + TradeConstant::kExpiryRetryMs;
             applyCompletion( std::move( done._completion ), done._listChanged );
         } );
     }

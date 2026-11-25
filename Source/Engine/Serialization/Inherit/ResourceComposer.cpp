@@ -907,8 +907,6 @@ namespace sw
                 return false;
             }
         }
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false )
-            return false;
         string sourceText;
         switch ( FileUtil::readOptionalTextFile( absPath, sourceText ) )
         {

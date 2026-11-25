@@ -158,3 +158,59 @@ SW_TEST_CASE( HTTPMessageParserTest, AddressAndPercentRules )
     SW_EXPECT_FALSE( sw::HTTPUtil::decodePercent( "bad%zz", false, decoded ) );
     SW_EXPECT_EQUAL( sw::string( "a%20b%2Fc" ), sw::HTTPUtil::encodePercent( "a b/c" ) );
 }
+
+/** @brief [HTTPClientResponseTest] 갈래: 상태 코드마다 한 갈래이고, 다시 보내면 될 수 있는 것은 전송 실패 · 429 · 5xx 뿐이다 */
+SW_TEST_CASE( HTTPClientResponseTest, KindOfStatus )
+{
+    sw::HTTPClientResponse response;
+    response.setTransportFailed( "down" );
+    SW_EXPECT_TRUE( response.getKind() == sw::HTTPResponseKind::TransportFailed );
+    SW_EXPECT_TRUE( response.isTransientFailure() );
+    SW_EXPECT_FALSE( response.isSuccess() );
+
+    const auto check = [&]( int32 status, sw::HTTPResponseKind kind, bool bTransient )
+    {
+        response.setStatusCode( status );
+        SW_EXPECT_TRUE( response.getKind() == kind );
+        SW_EXPECT_TRUE( response.isTransientFailure() == bTransient );
+        SW_EXPECT_TRUE( response.isSuccess() == ( kind == sw::HTTPResponseKind::Success ) );
+    };
+    check( 200, sw::HTTPResponseKind::Success, false );
+    check( 204, sw::HTTPResponseKind::Success, false );
+    check( 302, sw::HTTPResponseKind::Refused, false );
+    check( 400, sw::HTTPResponseKind::Refused, false );
+    check( 401, sw::HTTPResponseKind::Denied, false );
+    check( 403, sw::HTTPResponseKind::Denied, false );
+    check( 404, sw::HTTPResponseKind::NotFound, false );
+    check( 410, sw::HTTPResponseKind::Gone, false );
+    check( 429, sw::HTTPResponseKind::RateLimited, true );
+    check( 500, sw::HTTPResponseKind::ServerError, true );
+    check( 503, sw::HTTPResponseKind::ServerError, true );
+}
+
+/** @brief [HTTPClientResponseTest] `Retry-After` 는 초와 HTTP 날짜 두 꼴을 읽고, 지난 날짜 · 틀린 글 · 음수는 0 이며 상한에서 자른다 */
+SW_TEST_CASE( HTTPClientResponseTest, RetryAfterReadsSecondsAndDate )
+{
+    constexpr int64 kDateMs = 784111777000ll; // RFC 9110 의 본보기 날짜
+    const auto      read    = [&]( sw::string_view value, int64 nowMs )
+    {
+        sw::HTTPClientResponse response;
+        response.setStatusCode( 503 );
+        response._listHeader.push_back( sw::HTTPHeader{ "retry-after", sw::string( value ) } );
+        return response.getRetryAfterMs( sw::UnixMilliseconds{ nowMs } );
+    };
+    SW_EXPECT_EQUAL( int64( 120000 ), read( "120", kDateMs ) );
+    SW_EXPECT_EQUAL( int64( 5000 ), read( "Sun, 06 Nov 1994 08:49:37 GMT", kDateMs - 5000 ) );
+    SW_EXPECT_EQUAL( int64( 0 ), read( "Sun, 06 Nov 1994 08:49:37 GMT", kDateMs + 1 ) );
+    SW_EXPECT_EQUAL( int64( 0 ), read( "-3", 0 ) );
+    SW_EXPECT_EQUAL( int64( 0 ), read( "soon", 0 ) );
+    SW_EXPECT_EQUAL( sw::HTTPConstant::kMaxRetryAfterSeconds * 1000, read( "9223372036854775807", 0 ) );
+    SW_EXPECT_EQUAL( sw::HTTPConstant::kMaxRetryAfterSeconds * 1000, read( "Sun, 06 Nov 1994 08:49:37 GMT", 0 ) );
+    SW_EXPECT_EQUAL( int64( 0 ), sw::HTTPClientResponse{}.getRetryAfterMs( sw::UnixMilliseconds{ 0 } ) );
+
+    const sw::optional<int64> date = sw::HTTPClientResponse::parseDate( "Sun, 06 Nov 1994 08:49:37 GMT" );
+    SW_REQUIRE_TRUE( date.has_value() );
+    SW_EXPECT_EQUAL( kDateMs, *date );
+    for ( const utf8* pText : { "", "Sun, 06 Xxx 1994 08:49:37 GMT", "Sun, 06 anF 1994 08:49:37 GMT", "Sun, 31 Feb 1994 08:49:37 GMT", "Sun, 06 Nov 1994 24:00:00 GMT", "Sun, 06 Nov 1994 08:49:37 KST", "Sunday, 06-Nov-94 08:49:37 GMT" } )
+        SW_EXPECT_FALSE( sw::HTTPClientResponse::parseDate( pText ).has_value() );
+}

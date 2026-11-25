@@ -65,7 +65,7 @@ namespace sw
 {
     /**
      * @brief 이벤트 정의 하나입니다. 운영이 쓰며 영속합니다.
-     * @details 저장소 레코드(`LiveOpsProtocol::encodeEvent`)는 자기 기술형(A)이라 이 `PROPERTY` 목록이 레코드 형식입니다. 와이어에는 싣지 않습니다.
+     * @details 저장소 레코드(라이브 운영 서비스의 이벤트 표 `liveops_event`)는 자기 기술형(A)이라 이 `PROPERTY` 목록이 레코드 형식입니다. 와이어에는 싣지 않습니다.
      *          지역 목록(`vector<string>`)이 있어 고정 배치형 코덱은 없습니다.
      */
     REFLECT()
@@ -140,7 +140,7 @@ namespace sw
 {
     /**
      * @brief 기기 등록 하나입니다. 클라이언트가 OS 에서 받은 토큰을 담습니다.
-     * @details 등록 요청 본문(B)과 저장소의 기기 레코드(A, `LiveOpsProtocol::encodeDevice`)가 같은 선언을 씁니다. 상한은 `PushLimit` 와 같은 값입니다.
+     * @details 등록 요청 본문(B)과 저장소의 기기 레코드(A, 기기 표 `liveops_device`)가 같은 선언을 씁니다. 상한은 `PushLimit` 와 같은 값입니다.
      */
     REFLECT()
     struct PushDeviceRegistration

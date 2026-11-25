@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
 
 namespace sw
 {
@@ -66,7 +67,7 @@ namespace sw
         int64                     _clockSkewMs{ 60000 };   ///< exp 와 iat 의 허용 오차이다
         int64                     _jwksRefreshMs{ 3600000 };
         int64                     _minRefetchMs{ 30000 }; ///< 모르는 kid 때문에 JWKS 를 다시 받는 최소 간격이다. 키 회전에 대응하면서 요청이 몰리는 것을 막는다
-        int64                     _requestTimeoutMs{ 10000 };
+        int64                     _requestTimeoutMs{ HTTPConstant::kDefaultTimeoutMs };
         PlatformLoginProviderKind _kind{ PlatformLoginProviderKind::Oidc };
         uint8                     _bRequireNonce{ SW_FALSE }; ///< Oidc 에서 티켓에 `|<nonce>` 가 있고 토큰의 `nonce` 와 같아야 한다
 

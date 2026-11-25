@@ -6,10 +6,10 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -19,8 +19,6 @@ namespace sw
     {
         struct ServiceMailInternal
         {
-            static constexpr FormatDef kRecordFormat{ "MAIL" };
-
             static string makeMailKey( uint64 recipientAccountID, int64 createdMs, string_view idempotencyKey )
             {
                 string key;
@@ -55,23 +53,26 @@ namespace sw
 
 namespace sw
 {
-    const hashed_string& ServiceMail::getMailTable()
+    const ServiceRecordTable<ServiceMailStoreRecord>& ServiceMail::getMailTable()
     {
-        static const hashed_string s_table{ "mail_item" };
+        static const ServiceRecordTable<ServiceMailStoreRecord> s_table{ "mail_item" };
         return s_table;
     }
 
-    const hashed_string& ServiceMail::getSentTable()
+    const ServiceRecordTable<ServiceMailSentRecord>& ServiceMail::getSentTable()
     {
-        static const hashed_string s_table{ "mail_sent" };
+        static const ServiceRecordTable<ServiceMailSentRecord> s_table{ "mail_sent" };
         return s_table;
     }
 
     bool ServiceMail::readSentTimeMs( const ServiceRecord& record, int64& outTimeMs )
     {
         // 값은 우편 키 `<받는 계정 16 진>/<만든 시각 16 진>.<멱등 키 해시 16 진>` 이다
-        const size_t      width     = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
-        const string_view mailKey   = string_view( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() );
+        const size_t          width = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+        ServiceMailSentRecord sent;
+        if ( getSentTable().decode( record, sent ) == false )
+            return false;
+        const string_view mailKey   = sent._mailKey;
         uint64            createdMs = 0;
         const bool        bShapeOk  = mailKey.size() == width * 3 + 2 && mailKey[width] == '/' && mailKey[width * 2 + 1] == '.';
         if ( bShapeOk == false || ServiceKeyUtil::parseHex64( mailKey.substr( width + 1, width ), createdMs ) == false )
@@ -80,9 +81,9 @@ namespace sw
         return true;
     }
 
-    const hashed_string& ServiceMail::getSentExpiryTable()
+    const ServiceIndexTable& ServiceMail::getSentExpiryTable()
     {
-        static const hashed_string s_table{ "mail_sent_expiry" };
+        static const ServiceIndexTable s_table{ "mail_sent_expiry" };
         return s_table;
     }
 
@@ -98,9 +99,9 @@ namespace sw
         return rule;
     }
 
-    const hashed_string& ServiceMail::getExpiryTable()
+    const ServiceIndexTable& ServiceMail::getExpiryTable()
     {
-        static const hashed_string s_table{ "mail_expiry" };
+        static const ServiceIndexTable s_table{ "mail_expiry" };
         return s_table;
     }
 
@@ -137,11 +138,11 @@ namespace sw
             return LedgerResult::Invalid;
 
         const string             sentKey = ServiceMailInternal::makeSentKey( message._recipientAccountID, message._idempotencyKey );
-        ServiceRecord            sentRecord;
-        const ServiceStoreResult sentRead = connection.readRecord( getSentTable(), sentKey, sentRecord );
+        ServiceMailSentRecord    sentRecord;
+        const ServiceStoreResult sentRead = getSentTable().read( connection, sentKey, sentRecord );
         if ( sentRead == ServiceStoreResult::Ok )
         {
-            outMailKey.assign( reinterpret_cast<const utf8*>( sentRecord._bytes.data() ), sentRecord._bytes.size() );
+            outMailKey   = std::move( sentRecord._mailKey );
             outbReplayed = true;
             return LedgerResult::Ok;
         }
@@ -184,13 +185,12 @@ namespace sw
         record._message = message;
         record._state   = ServiceMailState::Unread;
         pending.put( getMailTable(), mailKey, encodeRecord( record ), ServiceRecord::kAbsentVersion );
-        pending.put( getSentTable(), sentKey, vector<uint8>( reinterpret_cast<const uint8*>( mailKey.data() ), reinterpret_cast<const uint8*>( mailKey.data() ) + mailKey.size() ), ServiceRecord::kAbsentVersion );
-        pending.put( getSentExpiryTable(), ServiceTTLRule::makeTTLIndexKey( message._createdMs, sentKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+        pending.put( getSentTable(), sentKey, ServiceMailSentRecord{ mailKey, {} }, ServiceRecord::kAbsentVersion );
+        pending.put( getSentExpiryTable(), ServiceTTLRule::makeTTLIndexKey( message._createdMs, sentKey ), ServiceRecord::kAnyVersion );
         if ( message._expiresMs > 0 )
-            pending.put( getExpiryTable(), makeExpiryKey( message._expiresMs, mailKey ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+            pending.put( getExpiryTable(), makeExpiryKey( message._expiresMs, mailKey ), ServiceRecord::kAbsentVersion );
         pending.put( getNotificationTable(), makeExpiryKey( message._createdMs, mailKey ), // 키 모양(시각 16 진 + 우편 키)이 TTL 색인과 같다
-                     vector<uint8>( reinterpret_cast<const uint8*>( message._titleKey.data() ), reinterpret_cast<const uint8*>( message._titleKey.data() ) + message._titleKey.size() ),
-                     ServiceRecord::kAbsentVersion );
+                     ServiceMailNotificationRecord{ message._titleKey, {} }, ServiceRecord::kAbsentVersion );
 
         const size_t totalWriteCount = inoutTransaction.getWrites().size() + pending.getWrites().size();
         if ( totalWriteCount > static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
@@ -200,9 +200,9 @@ namespace sw
         return LedgerResult::Ok;
     }
 
-    const hashed_string& ServiceMail::getNotificationTable()
+    const ServiceRecordTable<ServiceMailNotificationRecord>& ServiceMail::getNotificationTable()
     {
-        static const hashed_string s_table{ "mail_notice" };
+        static const ServiceRecordTable<ServiceMailNotificationRecord> s_table{ "mail_notice" };
         return s_table;
     }
 
@@ -218,17 +218,18 @@ namespace sw
         vector<ServiceMailNotification> listNotification;
         for ( const ServiceRecord& record : listRecord )
         {
-            const size_t separator = record._key.find( '/' );
-            if ( separator == string::npos || record._bytes.size() > static_cast<size_t>( ServiceMailConstant::kMaxTitleSize ) )
+            const size_t                  separator = record._key.find( '/' );
+            ServiceMailNotificationRecord stored;
+            if ( separator == string::npos || getNotificationTable().decode( record, stored ) == false )
                 return ServiceStoreResult::Invalid;
             ServiceMailNotification& notification = listNotification.emplace_back();
             notification._mailKey                 = record._key.substr( separator + 1 );
-            notification._titleKey.assign( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() );
+            notification._titleKey                = std::move( stored._titleKey );
             if ( parseRecipient( notification._mailKey, notification._recipientAccountID ) == false )
                 return ServiceStoreResult::Invalid;
             transaction.erase( getNotificationTable(), record._key, record._version );
         }
-        const ServiceStoreResult committed = connection.commit( transaction );
+        const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
         if ( committed == ServiceStoreResult::Ok )
             outListNotification = std::move( listNotification );
         return committed;
@@ -257,72 +258,26 @@ namespace sw
         return ServiceKeyUtil::parseHex64( mailKey.substr( 0, width ), outAccountID );
     }
 
-    vector<uint8> ServiceMail::encodeRecord( const ServiceMailRecord& record )
+    ServiceMailStoreRecord ServiceMail::encodeRecord( const ServiceMailRecord& record )
     {
-        const ServiceMailMessage& message = record._message;
-        BitWriter                 writer;
-        ServiceMailInternal::kRecordFormat.writeVersion( writer );
-        writer.writeVarUint( static_cast<uint64>( record._state ) );
-        writer.writeVarUint( static_cast<uint64>( message._expiryAction ) );
-        writer.writeVarUint( static_cast<uint64>( message._actorKind ) );
-        writer.writeBool( message._bLiteralText == SW_TRUE );
-        writer.writeVarUint( message._recipientAccountID );
-        writer.writeVarUint( message._actorID );
-        writer.writeVarInt( message._createdMs );
-        writer.writeVarInt( message._expiresMs );
-        LedgerHolder::write( writer, message._fundingHolder );
-        ServiceKeyUtil::writeString( writer, message._titleKey );
-        ServiceKeyUtil::writeString( writer, message._body );
-        ServiceKeyUtil::writeString( writer, message._senderName );
-        ServiceKeyUtil::writeString( writer, message._idempotencyKey );
-        writer.writeVarUint( message._listAttachment.size() );
-        for ( const ServiceMailAttachment& attachment : message._listAttachment )
-        {
-            ServiceKeyUtil::writeString( writer, attachment._assetID );
-            writer.writeVarInt( attachment._amount );
-        }
-        return writer.releaseBytes();
+        ServiceMailStoreRecord stored;
+        stored._message = record._message;
+        stored._state   = record._state;
+        return stored;
     }
 
-    bool ServiceMail::decodeRecord( const vector<uint8>& bytes, ServiceMailRecord& outRecord )
+    bool ServiceMail::decodeRecord( const ServiceRecord& raw, ServiceMailRecord& outRecord )
     {
-        ServiceMailMessage& message = outRecord._message;
-        BitReader           reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( ServiceMailInternal::kRecordFormat.readVersion( reader ) == false )
+        ServiceMailStoreRecord stored;
+        if ( getMailTable().decode( raw, stored ) == false )
             return false;
-        const uint64 state        = reader.readVarUint();
-        const uint64 expiryAction = reader.readVarUint();
-        const uint64 actorKind    = reader.readVarUint();
-        const bool   bStateOk     = state < static_cast<uint64>( ServiceMailState::Count ) && expiryAction < static_cast<uint64>( ServiceMailExpiryAction::Count ) &&
-                              actorKind < static_cast<uint64>( LedgerActorKind::Count );
+        const ServiceMailMessage& message  = stored._message;
+        const bool                bStateOk = stored._state != ServiceMailState::Count && message._expiryAction != ServiceMailExpiryAction::Count &&
+                              message._actorKind != LedgerActorKind::Count && message._fundingHolder.isValid();
         if ( bStateOk == false )
-            return false;
-        outRecord._state            = static_cast<ServiceMailState>( state );
-        message._expiryAction       = static_cast<ServiceMailExpiryAction>( expiryAction );
-        message._actorKind          = static_cast<LedgerActorKind>( actorKind );
-        message._bLiteralText       = reader.readBool() ? SW_TRUE : SW_FALSE;
-        message._recipientAccountID = reader.readVarUint();
-        message._actorID            = reader.readVarUint();
-        message._createdMs          = reader.readVarInt();
-        message._expiresMs          = reader.readVarInt();
-        if ( LedgerHolder::read( reader, message._fundingHolder ) == false )
-            return false;
-        const bool bTextOk = ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxTitleSize, message._titleKey ) &&
-                             ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxBodySize, message._body ) &&
-                             ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxSenderNameSize, message._senderName ) &&
-                             ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxIdempotencyKeySize, message._idempotencyKey );
-        if ( bTextOk == false )
-            return false;
-        const uint64 attachmentCount = reader.readVarUint();
-        if ( attachmentCount > static_cast<uint64>( ServiceMailConstant::kMaxAttachmentCount ) )
-            return false;
-        message._listAttachment.resize( static_cast<size_t>( attachmentCount ) );
-        for ( ServiceMailAttachment& attachment : message._listAttachment )
-        {
-            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, attachment._assetID ) == false )
-                return false;
-            attachment._amount = reader.readVarInt();
-        }
-        return reader.hasOverflowed() == false;
+            return false; // 누구도 가질 수 없는 값 · 규칙 밖 보유자다
+        outRecord._message = std::move( stored._message );
+        outRecord._state   = stored._state;
+        return true;
     }
 } // namespace sw
