@@ -536,8 +536,6 @@ namespace sw
             uint32 _sizeBytes{ 0 };
         };
         RHIHandleTable<RHIBufferHandle, OpenGLBufferRecord> _gpuBuffers;
-        /// @brief GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT 입니다. 초기화가 한 번 묻고, 상수 버퍼 구간(256 B 배수)을 담지 못하는 값이면 백엔드를 세우지 않는다(감사 R-4).
-        uint32 _uniformBufferOffsetAlignment{ 0 };
         /// @brief 기록 상태입니다. GL 은 실제 상태가 하나라 리스트도 이것을 함께 씁니다(OpenGLRecordingState 참고).
         OpenGLRecordingState _recordingState;
 

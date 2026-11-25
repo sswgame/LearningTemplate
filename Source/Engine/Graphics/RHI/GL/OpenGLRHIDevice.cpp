@@ -498,7 +498,6 @@ namespace sw
                 _initResult = RHIInitResult::DriverUnsupported;
                 return false;
             }
-            _uniformBufferOffsetAlignment = static_cast<uint32>( uniformOffsetAlignment );
             GLint maxFragmentTextureUnit{ 0 };
             GLint maxCombinedTextureUnit{ 0 };
             glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextureUnit );

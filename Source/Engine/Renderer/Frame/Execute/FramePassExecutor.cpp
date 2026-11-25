@@ -51,6 +51,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Renderer/Capture/FrameCapture.h"
 #include "Engine/Renderer/Debug/MeshVertexCheck.h"
+#include "Engine/Renderer/Debug/RHIContractCheck.h"
 #include "Engine/Renderer/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
@@ -156,6 +157,8 @@ namespace sw
         _bufferInspector.release();
         if ( _meshVertexCheck != nullptr )
             _meshVertexCheck->release( _pDevice );
+        if ( _rhiContractCheck != nullptr )
+            _rhiContractCheck->release( _pDevice );
         _nanCheckCommandList.reset();
         _frameEndCommandList.reset();
         _nanCheck.shutdown();
@@ -245,6 +248,9 @@ namespace sw
             if ( _meshVertexCheck == nullptr )
                 _meshVertexCheck = make_unique<MeshVertexCheck>();
             _meshVertexCheck->service( *_pCmd, *pDevice, _state._gpuScene, *_state._pRenderDebug );
+            if ( _rhiContractCheck == nullptr )
+                _rhiContractCheck = make_unique<RHIContractCheck>();
+            _rhiContractCheck->service( *_pCmd, *pDevice, *_state._pRenderDebug );
         }
 #endif
 #if SW_PROFILE_COMPILED

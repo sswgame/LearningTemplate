@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b6e6236bf1314577a5037af9de8e2a93"?>
+<!--
+  RHI 계약 — 공통 입구(IRHIResourceFactory · IRHICommandContext)의 거절과 바인딩 규칙을 살아 있는 장치에서 확인한다(C++ RHIContractCheck). 백엔드마다 같은 답이어야 한다.
+  거절은 같은 로그 ID 하나씩, 그림(5x1 대상 되읽기)은 어긋나면 RHIContractCheck.Failed 다. 두 번 돌려 자원을 놓고 다시 만드는 길도 본다.
+  실행: ctest -R Scenario.playground
+-->
+<Scenario name="game.playground.rhicontract" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/rendertest3d.scene.xml"/>
+	<DevCommand line="gpu.rhicontract"/>
+	<WaitUntil watch="Log.Count" key="RHIContractCheck.Done" equals="1" timeoutFrames="120"/>
+	<DevCommand line="gpu.rhicontract"/>
+	<WaitUntil watch="Log.Count" key="RHIContractCheck.Done" equals="2" timeoutFrames="120"/>
+	<ExpectLog id="RHIContractCheck.Done" contains="0 of " count="2"/>
+	<ExpectLog id="RHIContractCheck.Failed" count="0"/>
+	<ExpectLog id="RHI.TextureShapeInvalid" count="2"/>
+	<ExpectLog id="RHI.BindlessTextureNotTexture2D" count="2"/>
+	<ExpectLog id="RHI.BindlessTextureNotUnorderedAccess" count="2"/>
+	<ExpectLog id="RHI.BadConstantBufferSlice" count="2"/>
+	<ExpectLog id="RHI.BufferContentMissing" count="2"/>
+	<ExpectLog id="RHI.BindlessIndexNotOwned" count="2"/>
+	<ExpectLog id="RHI.RootConstantsOverflow" count="2"/>
+	<Pass/>
+</Scenario>
