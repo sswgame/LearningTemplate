@@ -36,7 +36,7 @@
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.AnimationGraphMaskBoneRowCount" equals="5" timeoutFrames="120"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="maskpaint/hierarchy.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="maskpaint/hierarchy.png"/>
 	<EditorWaitStable/>
 	<!-- arm(줄 2)을 고르고 이 본만 칠한다 — "bones" 항목이 하나 는다 -->
 	<EditorClick mark="animationGraph.mask.bone.2"/>
@@ -44,7 +44,7 @@
 	<EditorClick mark="animationGraph.mask.paintBone"/>
 	<WaitUntil watch="Editor.AnimationGraphMaskEntryCount" equals="3" timeoutFrames="60"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="maskpaint/painted.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="maskpaint/painted.png"/>
 	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.mask.resetBone"/>
 	<WaitUntil watch="Editor.AnimationGraphMaskEntryCount" equals="2" timeoutFrames="60"/>

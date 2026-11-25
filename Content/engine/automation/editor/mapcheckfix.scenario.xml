@@ -23,7 +23,7 @@
 	<Expect watch="Editor.MapCheckIssueCount" equals="1"/>
 	<WaitUntil watch="Editor.MapCheckFixableRows" equals="1" timeoutFrames="60"/>
 	<Store watch="Editor.UndoIndex" as="undoBefore"/>
-	<CaptureEditorUI file="mapcheckfix/before.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="mapcheckfix/before.png"/>
 	<!-- ① 줄 고침 -->
 	<EditorClick mark="mapCheck.fix.0" state="Down"/>
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
@@ -33,7 +33,7 @@
 	<Expect watch="Editor.SceneDirty" equals="1"/>
 	<ExpectLog id="MapCheckFixCommands.Applied" contains="applied 1 fix(es)" count="1"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="mapcheckfix/after.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="mapcheckfix/after.png"/>
 	<!-- ② 되돌리기 · 다시 실행 -->
 	<DevCommand line="editor edit.undo"/>
 	<EditorWaitStable/>

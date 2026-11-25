@@ -23,7 +23,7 @@
 	<EditorClick mark="vfx.emitter.0" state="Up"/>
 	<WaitUntil watch="Editor.VFXSelectedEmitter" equals="0" timeoutFrames="60"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="vfxvariantedit/selected.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="vfxvariantedit/selected.png"/>
 	<EditorClick mark="vfx.search"/>
 	<EditorWaitStable/>
 	<EditorText value="_spawnRate"/>
@@ -44,7 +44,7 @@
 	<DevCommand line="panel.reloadDocument vfx_preview"/>
 	<WaitUntil watch="Editor.VFXEmitterCount" equals="1" timeoutFrames="120"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="vfxvariantedit/saved.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="vfxvariantedit/saved.png"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

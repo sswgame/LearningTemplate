@@ -43,7 +43,7 @@
 	<WaitUntil watch="Editor.RenderTargetChannel" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.RenderTargetPassUses" atLeast="1"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="rendertargetview/passes.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="rendertargetview/passes.png" everyBackend="true"/>
 	<EditorWaitStable/>
 	<EditorHover mark="renderTargets.preview" anchor="0.5,0.5"/>
 	<EditorWaitStable/>

@@ -60,19 +60,21 @@ namespace sw
                 string_view _kind;
                 string_view _attribute;
             };
-            // `CaptureEditorUI` 는 마젠타 문턱이 있을 때만 화소를 본다 — 문턱 없는 캡처는 사람 · 리뷰가 볼 그림을 남기고, 잘린 창 수는 레이아웃이라 백엔드와 무관하다.
+            // `CaptureEditorUI` 는 그림이 렌더러에서 나온다고 적은 것(`everyBackend`)만이다 — 마젠타는 문턱을 적지 않아도 늘 0 으로 보고, 패널 · 글자 화면은 백엔드 하나에서 보면 된다
+            // (UI 렌더러는 백엔드가 같이 쓰는 하나이고 `uicapture` 가 모든 백엔드에서 본다). 예전에는 마젠타 문턱을 적은 캡처가 이 뜻을 겸해, 기본값과 같은 "0" 을 베껴 적은 화면 40 개가 네 번씩 돌았다.
             static constexpr BackendEvaluationStep kArrBackendEvaluationStep[] = {
-                {       "ExpectImage",                   {}},
-                {"ExpectImagesDiffer",                   {}},
-                {   "CaptureEditorUI", "maxMagentaFraction"},
-                {    "EditorSelfTest",                   {}},
-                {            "Record",                   {}}
+                {       "ExpectImage",             {}},
+                {"ExpectImagesDiffer",             {}},
+                {   "CaptureEditorUI", "everyBackend"},
+                {    "EditorSelfTest",             {}},
+                {            "Record",             {}}
             };
             /**
              * @brief 값이 렌더러 · 백엔드에서 나오는 감시 값의 이름 묶음입니다(`<묶음>.<값>`) — 그 값을 보는 단계(`Expect` · `WaitUntil` · `SkipUnless` …)가 있는 시나리오도 백엔드마다 다를 수 있다.
+             *        렌더 품질 단(`RenderQuality.*`)은 설정 파일에서 온 값이라 들지 않는다.
              *        게임 · 물리 · UI 값은 CPU 에서만 정해지므로 백엔드 하나에서 보면 된다(같아야 하는 값은 `Record` 로 남긴다).
              */
-            static constexpr string_view kArrBackendWatchGroup[] = { "RHI", "GPU", "Render", "RenderView", "RenderQuality", "VFX", "Texture", "Display", "Shader", "Window" };
+            static constexpr string_view kArrBackendWatchGroup[] = { "RHI", "GPU", "Render", "RenderView", "VFX", "Texture", "Display", "Shader", "Window" };
 
             static bool isEvaluatedPerBackend( const AutomationStep& step )
             {

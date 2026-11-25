@@ -16,7 +16,7 @@
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutSeconds="10"/>
 	<!-- 눈 확인용(GPU 검증): 열린 월드 셀 패널 -->
 	<EditorWaitStable/>
-	<CaptureEditorUI file="worldcellspanel/open.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="worldcellspanel/open.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close world_cells"/>
 	<EditorWaitStable/>
