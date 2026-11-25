@@ -6,6 +6,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorCompactControls.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -19,6 +20,7 @@
 #include "Editor/Panels/Material/Model/MaterialViewModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -79,6 +81,9 @@ namespace sw::editor
     {
         struct MaterialPanelInternal
         {
+            /** @brief 텍스처 칸에 놓을 수 있는 에셋입니다 — 쿠킹본과 원본 이미지(쿠킹본으로 풀어 적는다, `TextureImporter::resolveTextureAsset`). */
+            static constexpr const utf8* kTextureAssetExtensions = ".dds,.png";
+
             /** @brief 값이 기본값과 다르면 true 입니다. 기본값이 없는 칸(텍스처 슬롯)은 되돌릴 곳이 없어 늘 false 다. */
             static bool isModified( const MaterialProperty& prop ) { return prop._defaultValue.empty() == false && prop._value != prop._defaultValue; }
 
@@ -228,8 +233,15 @@ namespace sw::editor
                     case MaterialPropertyKind::Texture3D:
                     case MaterialPropertyKind::Texture2DArray:
                     {
-                        // 텍스처는 값 글이 아니라 에셋 칸 하나다 — 파일의 칸(`MaterialPropertyParams::_assetPath`)이 받는 쿠킹본(.dds)만 놓는다.
-                        return EditorWidgets::drawAssetSlot( pLabel, prop._assetPath, Texture2D::kArrAssetSuffix[0]._text.data() );
+                        // 텍스처는 값 글이 아니라 에셋 칸 하나다 — 파일의 칸(`MaterialPropertyParams::_assetPath`)이 쿠킹본만 받아 원본 이미지를 놓으면 그 쿠킹본을 적는다.
+                        string path = prop._assetPath;
+                        if ( EditorWidgets::drawAssetSlot( pLabel, path, MaterialPanelInternal::kTextureAssetExtensions ) == false )
+                            return false;
+                        AssetRef<Texture2D> texture;
+                        if ( texture.assign( TextureImporter::resolveTextureAsset( path ) ) == false )
+                            return false; // 종류가 다른 에셋을 놓았다 — 칸이 이유를 남겼다
+                        prop._assetPath = texture.path();
+                        return true;
                     }
                     case MaterialPropertyKind::Float4x4:
                     case MaterialPropertyKind::Uint:

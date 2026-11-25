@@ -6,8 +6,12 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
+
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 
 namespace sw::editor
 {
@@ -91,9 +95,11 @@ namespace sw::editor
 
     bool TileSetEditModel::applySetAtlasPath( string_view path )
     {
-        if ( string_view( _content._atlasPath ) == path )
+        // 파일의 칸이 쿠킹본만 받는다 — 원본 이미지는 쿠킹본으로 풀고, 종류가 다른 글은 넣지 않는다(칸이 이유를 남긴다). 넣으면 저장한 파일이 다시 읽히지 않는다.
+        AssetRef<Texture2D> atlas;
+        if ( atlas.assign( TextureImporter::resolveTextureAsset( path ) ) == false || atlas == _content._atlasPath )
             return false;
-        _content._atlasPath = string( path );
+        _content._atlasPath = atlas.path();
         return true;
     }
 

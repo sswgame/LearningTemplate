@@ -126,6 +126,8 @@ namespace sw::editor
         static string makeImportedTexturePath( string_view rawTexturePath );
         /** @brief `makeImportedTexturePath` 의 디스크 경로 판입니다. */
         static AbsolutePath makeImportedTexturePath( const AbsolutePath& rawTexturePath );
+        /** @brief 텍스처 칸에 놓은 에셋 @p path 의 쿠킹본 리소스 id 입니다 — 쿠킹본이면 그대로, 원본 이미지면 임포트한 자리다. 산출물 자리가 없는 원본은 @p path 그대로라 칸의 종류 검사가 거절한다. */
+        static string resolveTextureAsset( string_view path );
 
         /**
          * @brief 원본 바이트, 규칙(해석한 DXGI 포맷, 스위즐, 밉, sRGB, 그린 반전), 임포터 버전을 섞어 FNV-1a 64 해시를 계산합니다. 읽지 못하면 0 입니다.

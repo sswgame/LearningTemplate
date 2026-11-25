@@ -13,6 +13,7 @@
 #include "DevTools/Material/MaterialGraphGeneratedPaths.h"
 #include "DevTools/Material/MaterialGraphNodeRegistry.h"
 
+#include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
@@ -28,14 +29,12 @@ namespace sw::editor
     {
         struct MaterialGraphViewModelInternal
         {
-            /** @brief 노드 종류가 가리키는 에셋 칸입니다 — 하위 그래프 · 층은 그래프, 그 밖(텍스처 파라미터)은 텍스처다. */
-            static AssetRefBase& selectAssetField( MaterialGraphNodeDef& node )
+            /** @brief 노드 종류의 에셋 칸(하위 그래프 · 층은 그래프, 그 밖(텍스처 파라미터)은 텍스처)에 에셋 @p path 를 넣습니다. 종류가 다르면 칸이 이유를 남기고 false 입니다. 원본 이미지는 쿠킹본으로 풀어 넣는다. */
+            [[nodiscard]] static bool assignAsset( MaterialGraphNodeDef& node, string_view path )
             {
                 const MaterialGraphNodeKind* const pKind  = MaterialGraphNodeRegistry::find( node._kind );
                 const bool                         bGraph = pKind != nullptr && ( pKind->getRole() == MaterialGraphNodeRole::Subgraph || pKind->getRole() == MaterialGraphNodeRole::Layer );
-                if ( bGraph )
-                    return node._subgraph;
-                return node._texture;
+                return bGraph ? node._subgraph.assign( path ) : node._texture.assign( TextureImporter::resolveTextureAsset( path ) );
             }
         };
     } // namespace
@@ -229,7 +228,7 @@ namespace sw::editor
         MaterialGraphNodeDef node;
         node._kind     = string{ kindName };
         node._position = canvasPosition;
-        if ( MaterialGraphViewModelInternal::selectAssetField( node ).assign( assetPath ) == false )
+        if ( MaterialGraphViewModelInternal::assignAsset( node, assetPath ) == false )
             return false; // 종류가 다른 에셋을 놓았다 — 칸이 이유를 남겼다
         for ( uint32 number = 1; node._name.empty(); ++number )
         {
@@ -326,7 +325,7 @@ namespace sw::editor
 
     void MaterialGraphViewModel::setAssetPath( uint32 nodeIndex, string_view path )
     {
-        if ( MaterialGraphViewModelInternal::selectAssetField( _graph._listNode[nodeIndex] ).assign( path ) == false )
+        if ( MaterialGraphViewModelInternal::assignAsset( _graph._listNode[nodeIndex], path ) == false )
             return; // 종류가 다른 에셋이다 — 칸이 이유를 남겼다
         rebuildPins();
         recordEdit( "Edit Material Graph Asset", true );
