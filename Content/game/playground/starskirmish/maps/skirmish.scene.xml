@@ -109,6 +109,54 @@
 					                                   _productionUnitID="barracks"
 					                                   _armyUnitID="marine"
 					                                   _bAutoPlay="false">
+						<_map _tileMapPath="guid:98c1076f7b3a88ee29dc8e392a310086">
+							<_listPlayerStart>
+								<SkirmishPlayerStart _team="0" _position="10,10" _aiRole="Rush" />
+								<SkirmishPlayerStart _team="1" _position="54,54" _aiRole="Macro" />
+							</_listPlayerStart>
+							<_listPlacement>
+								<SkirmishUnitPlacement _unitID="command_center" _owner="0" _cell="8,8" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="3,6" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="3,7" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="3,8" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="3,9" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="3,10" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="3,11" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="3,12" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="3,13" />
+								<SkirmishUnitPlacement _unitID="geyser" _owner="-1" _cell="8,2" />
+								<SkirmishUnitPlacement _unitID="worker" _owner="0" _cell="6,8" />
+								<SkirmishUnitPlacement _unitID="worker" _owner="0" _cell="6,9" />
+								<SkirmishUnitPlacement _unitID="worker" _owner="0" _cell="6,10" />
+								<SkirmishUnitPlacement _unitID="worker" _owner="0" _cell="6,11" />
+								<SkirmishUnitPlacement _unitID="command_center" _owner="1" _cell="52,52" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="60,57" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="60,56" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="60,55" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="60,54" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="60,53" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="60,52" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="60,51" />
+								<SkirmishUnitPlacement _unitID="minerals" _owner="-1" _cell="60,50" />
+								<SkirmishUnitPlacement _unitID="geyser" _owner="-1" _cell="54,60" />
+								<SkirmishUnitPlacement _unitID="worker" _owner="1" _cell="57,55" />
+								<SkirmishUnitPlacement _unitID="worker" _owner="1" _cell="57,54" />
+								<SkirmishUnitPlacement _unitID="worker" _owner="1" _cell="57,53" />
+								<SkirmishUnitPlacement _unitID="worker" _owner="1" _cell="57,52" />
+								<SkirmishUnitPlacement _unitID="rich_minerals" _owner="-1" _cell="3,38" />
+								<SkirmishUnitPlacement _unitID="rich_minerals" _owner="-1" _cell="60,25" />
+								<SkirmishUnitPlacement _unitID="rich_minerals" _owner="-1" _cell="3,39" />
+								<SkirmishUnitPlacement _unitID="rich_minerals" _owner="-1" _cell="60,24" />
+								<SkirmishUnitPlacement _unitID="rich_minerals" _owner="-1" _cell="3,40" />
+								<SkirmishUnitPlacement _unitID="rich_minerals" _owner="-1" _cell="60,23" />
+								<SkirmishUnitPlacement _unitID="rich_minerals" _owner="-1" _cell="3,41" />
+								<SkirmishUnitPlacement _unitID="rich_minerals" _owner="-1" _cell="60,22" />
+								<SkirmishUnitPlacement _unitID="rich_minerals" _owner="-1" _cell="3,42" />
+								<SkirmishUnitPlacement _unitID="rich_minerals" _owner="-1" _cell="60,21" />
+								<SkirmishUnitPlacement _unitID="geyser" _owner="-1" _cell="6,45" />
+								<SkirmishUnitPlacement _unitID="geyser" _owner="-1" _cell="56,17" />
+							</_listPlacement>
+						</_map>
 						<_rushAI _workerTarget="12" _productionTarget="2" _attackArmySize="6" _supplyMargin="3" />
 						<_macroAI _workerTarget="18" _productionTarget="3" _attackArmySize="14" _supplyMargin="4" />
 						<_opponentAI _workerTarget="16" _productionTarget="2" _attackArmySize="10" _supplyMargin="3" />

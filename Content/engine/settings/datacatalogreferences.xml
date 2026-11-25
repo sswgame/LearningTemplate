@@ -186,6 +186,7 @@
 	<Field owner="SkirmishGameModeComponent" field="_supplyUnitID" tag="RTSUnitDef"/>
 	<Field owner="SkirmishGameModeComponent" field="_productionUnitID" tag="RTSUnitDef"/>
 	<Field owner="SkirmishGameModeComponent" field="_armyUnitID" tag="RTSUnitDef"/>
+	<Field owner="SkirmishUnitPlacement" field="_unitID" tag="RTSUnitDef"/>
 	<Derived type="LockstepSkirmishGameModeComponent" base="SkirmishGameModeComponent"/>
 	<CatalogKey tag="CityBuildingDef" catalog="CityCatalog" entry="Building"/>
 	<Field owner="CityGameModeComponent" field="_landmarkBuilding" tag="CityBuildingDef"/>

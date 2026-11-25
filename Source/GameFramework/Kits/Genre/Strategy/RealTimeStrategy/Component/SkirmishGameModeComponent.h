@@ -1,6 +1,6 @@
 /**
  * @file SkirmishGameModeComponent.h
- * @brief RTS 키트의 1 대 1 한 판 디렉터입니다. 한 판(`SkirmishMatch`), 속도 · 일시정지를 맡고 사람의 명령을 값(`RTSCommand`)으로 받습니다.
+ * @brief RTS 키트의 교전 한 판 디렉터입니다(지도 · 플레이어 수는 씬 데이터 `SkirmishMap`). 한 판(`SkirmishMatch`), 속도 · 일시정지를 맡고 사람의 명령을 값(`RTSCommand`)으로 받습니다.
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 규칙(채취, 생산, 전투, 안개, AI)은 `RTSWorld`, `RTSCommanderAI`, `SkirmishMatch` 가 맡는다.
  *          고르기 · 명령 입력(`RTSCommandInputComponent`)과 모습(`RTSBattlefieldViewComponent` · `RTSUnitViewComponent`)은 클라이언트 모듈(`GF_Client_RealTimeStrategy`)의 것이고,
  *          이 디렉터의 명령 · 읽기 API 로만 판을 본다.
@@ -92,6 +92,8 @@ namespace sw
         /** @brief 한 프레임만큼 판을 진행합니다. 여기서는 일시정지가 아니면 배속대로 한 번이고, 2 인 대전 파생은 모인 락스텝 틱만큼이다. */
         virtual void   stepMatch( float32 deltaTime );
         SkirmishMatch& getMutableMatch() { return _match; }
+        /** @brief 씬이 적은 지도입니다(플레이어 수 — 판을 열기 전에도 읽는다). */
+        const SkirmishMap& getMap() const { return _map; }
 
     private:
         /** @brief 컴퓨터 상대(`SkirmishMatch::findAI`)마다 실행기 하나를 내놓는 어댑터입니다. 리플렉션 컴포넌트가 인터페이스를 직접 상속하지 않게 멤버로 둔다. */
@@ -111,6 +113,8 @@ namespace sw
     private:
         PROPERTY( Category = "Data", DisplayName = "Commander Tree", Tooltip = "Behavior tree (.bt.xml) of the computer opponent; its task names are the rts.* tasks of the RTS kit" )
         AssetRef<BehaviorTreeAsset> _commanderTreePath;
+        PROPERTY( Category = "Map", DisplayName = "Map", Tooltip = "Ground, player starts and first units of the match; required" )
+        SkirmishMap _map;
         PROPERTY( Category = "Rules", DisplayName = "Hunt Interval", Tooltip = "Seconds between sending idle army at the enemy start to the nearest enemy building", Min = 0.1 )
         float32 _huntIntervalSeconds;
         PROPERTY( Category = "Rules", DisplayName = "Arrived Radius", Tooltip = "Army within this distance of the enemy start counts as arrived", Min = 0.0, Units = m )
