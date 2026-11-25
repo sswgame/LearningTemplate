@@ -83,15 +83,6 @@ namespace sw
         , _blockBuildingPrefab{}
         , _walkerPrefab{}
         , _roadColor{ 1.0f, 1.0f, 1.0f, 1.0f }
-        , _producerModelTint{ 0.85f, 0.65f, 0.5f, 1.0f }
-        , _storageModelTint{ 0.8f, 0.68f, 0.55f, 1.0f }
-        , _marketModelTint{ 1.0f, 0.75f, 0.55f, 1.0f }
-        , _houseBlockColor{ 0.75f, 0.62f, 0.42f, 1.0f }
-        , _fieldBlockColor{ 0.78f, 0.8f, 0.3f, 1.0f }
-        , _workshopBlockColor{ 0.6f, 0.42f, 0.3f, 1.0f }
-        , _storageBlockColor{ 0.5f, 0.35f, 0.2f, 1.0f }
-        , _marketBlockColor{ 0.9f, 0.45f, 0.2f, 1.0f }
-        , _decorationBlockColor{ 0.3f, 0.75f, 0.35f, 1.0f }
         , _traderColor{ 1.0f, 0.6f, 0.2f, 1.0f }
         , _cartColor{ 0.45f, 0.3f, 0.15f, 1.0f }
         , _director{}
@@ -197,7 +188,7 @@ namespace sw
             spawnTerrain( manager, city, catalog );
         if ( _shownRevision != pDirector->getLayoutRevision() )
         {
-            syncTiles( manager, city, catalog );
+            syncTiles( manager, city );
             _shownRevision = pDirector->getLayoutRevision();
         }
         spawnWalkers( manager, catalog, city.getWalkers().size() );
@@ -241,7 +232,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 스폰(틱 뒤 · 게임 스레드). 도시는 절대 자리에서 돈다 — 메시에 쓸 때 월드 원점 기준 로컬로 옮긴다.
     // ------------------------------------------------------------------------------
-    void CityViewComponent::syncTiles( GameObjectManager& manager, const CitySimulation& city, const CityCatalog& catalog )
+    void CityViewComponent::syncTiles( GameObjectManager& manager, const CitySimulation& city )
     {
         const vector<CityBuilding>& listBuilding = city.getBuildings();
         _buildingViews.beginCollect();
@@ -264,8 +255,8 @@ namespace sw
             CityViewComponentInternal::destroyView( manager, inoutHandle );
             inoutHandle = GameObjectHandle{};
         };
-        _buildingViews.flush( destroy, [this, &manager, &catalog]( size_t buildingIndex, const BuildingView& view )
-        { return spawnBuilding( manager, catalog, buildingIndex, *view._pDef ); } );
+        _buildingViews.flush( destroy, [this, &manager]( size_t buildingIndex, const BuildingView& view )
+        { return spawnBuilding( manager, buildingIndex, *view._pDef ); } );
         _roadViews.flush( destroy, [this, &manager, &topology]( size_t tileIndex, uint8 )
         { return spawnRoad( manager, topology.toCell( static_cast<int32>( tileIndex ) ) ); } );
     }
@@ -329,7 +320,7 @@ namespace sw
         return pRoad != nullptr ? pRoad->getHandle() : GameObjectHandle{};
     }
 
-    GameObjectHandle CityViewComponent::spawnBuilding( GameObjectManager& manager, const CityCatalog& catalog, size_t buildingIndex, const CityBuildingDef& def )
+    GameObjectHandle CityViewComponent::spawnBuilding( GameObjectManager& manager, size_t buildingIndex, const CityBuildingDef& def )
     {
         // 모델이 있는 건물은 팔레트 머티리얼, 밭 · 조각상은 색 상자다. 자리 · 단계 · 사람에 따른 모델 · 높이는 뷰가 맞춘다.
         const RuleViewCatalog* const pViews    = getBuildingViews();
@@ -338,7 +329,7 @@ namespace sw
         if ( pBuilding == nullptr )
             return GameObjectHandle{};
         MeshComponent* const pMesh = pBuilding->getComponent<MeshComponent>();
-        if ( pMesh != nullptr && _tintCache.apply( *pMesh, bModel ? computeModelTint( catalog, def ) : computeBlockColor( catalog, def ) ) == false )
+        if ( pMesh != nullptr && _tintCache.apply( *pMesh, bModel ? def._modelTint : def._blockColor ) == false )
             SW_LOG_ERROR_ONCE_ID( "CityView.BuildingWithoutMaterial", "[City]: prefab '%#' has a mesh without a material - it keeps the prefab colour", ( bModel ? _modelBuildingPrefab : _blockBuildingPrefab ).c_str() );
         CityBuildingViewComponent* const pView = pBuilding->getComponent<CityBuildingViewComponent>();
         if ( pView != nullptr )
@@ -389,53 +380,13 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 색 — 땅 · 서비스는 카탈로그의 행, 건물 종류 · 일꾼 종류(코드 동작이 다른 열거형)는 PROPERTY 다
+    // 색 — 땅 · 서비스 · 건물은 카탈로그의 행, 일꾼 종류(코드 동작이 다른 열거형)는 PROPERTY 다
     // ------------------------------------------------------------------------------
     float4 CityViewComponent::computeServiceColor( const CityCatalog& catalog, int32 serviceIndex )
     {
         if ( serviceIndex >= 0 )
             return catalog.getServiceRows()[static_cast<size_t>( serviceIndex )]._color;
         return float4{ CityViewComponentInternal::kNoServiceGray, CityViewComponentInternal::kNoServiceGray, CityViewComponentInternal::kNoServiceGray, 1.0f }; // 서비스 없음 — 칠할 일이 없는 칸이다.
-    }
-
-    float4 CityViewComponent::computeModelTint( const CityCatalog& catalog, const CityBuildingDef& def ) const
-    {
-        const float4 white{ 1.0f, 1.0f, 1.0f, 1.0f };
-        switch ( def._kind )
-        {
-            case CityBuildingKind::Service:
-                return ( computeServiceColor( catalog, def._serviceIndex ) + white ) * 0.5f;
-            case CityBuildingKind::Producer:
-                return _producerModelTint;
-            case CityBuildingKind::Storage:
-                return _storageModelTint;
-            case CityBuildingKind::Market:
-                return _marketModelTint;
-            case CityBuildingKind::House:
-            case CityBuildingKind::Decoration:
-                break;
-        }
-        return white;
-    }
-
-    float4 CityViewComponent::computeBlockColor( const CityCatalog& catalog, const CityBuildingDef& def ) const
-    {
-        switch ( def._kind )
-        {
-            case CityBuildingKind::House:
-                return _houseBlockColor;
-            case CityBuildingKind::Service:
-                return computeServiceColor( catalog, def._serviceIndex );
-            case CityBuildingKind::Producer:
-                return def.requiresTerrain() ? _fieldBlockColor : _workshopBlockColor;
-            case CityBuildingKind::Storage:
-                return _storageBlockColor;
-            case CityBuildingKind::Market:
-                return _marketBlockColor;
-            case CityBuildingKind::Decoration:
-                return _decorationBlockColor;
-        }
-        return float4{ 1.0f, 0.0f, 1.0f, 1.0f }; // 모르는 종류 — 눈에 띄는 자홍색
     }
 
     float4 CityViewComponent::computeWalkerColor( const CityCatalog& catalog, CityWalkerKind kind, int32 serviceIndex ) const

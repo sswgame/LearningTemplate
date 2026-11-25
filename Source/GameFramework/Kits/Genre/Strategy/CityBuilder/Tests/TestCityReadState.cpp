@@ -24,8 +24,8 @@ namespace
   <Service id="Water" name="Water" color="0.25,0.5,0.95,1"/>
   <Service id="Tax" name="Tax" color="0.95,0.55,0.15,1" tax="true"/>
   <Good id="grain" name="Grain"/>
-  <Building id="hut" name="Hut" kind="House" size="1" cost="1"/>
-  <Building id="garden" name="Garden" kind="Decoration" size="2" cost="1"/>
+  <Building modelTint="1,1,1,1" blockColor="0.5,0.4,0.3,1" id="hut" name="Hut" kind="House" size="1" cost="1"/>
+  <Building modelTint="1,1,1,1" blockColor="0.5,0.4,0.3,1" id="garden" name="Garden" kind="Decoration" size="2" cost="1"/>
   <HouseLevel name="Hut" population="5"/>
 </CityCatalog>)";
 
@@ -497,7 +497,7 @@ SW_TEST_CASE( CityCatalogTest, CatalogWithoutRulesIsRefused )
 {
     SW_EXPECT_LOG( "CityCatalog.RulesMissing" );
     sw::CityCatalog bare;
-    SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CityCatalog roadCost="1"><Building id="hut" name="Hut" kind="House" size="1" cost="1"/><HouseLevel name="Hut" population="5"/></CityCatalog>)", "CityCatalogTest" ) );
+    SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CityCatalog roadCost="1"><Building modelTint="1,1,1,1" blockColor="0.5,0.4,0.3,1" id="hut" name="Hut" kind="House" size="1" cost="1"/><HouseLevel name="Hut" population="5"/></CityCatalog>)", "CityCatalogTest" ) );
     sw::CitySimulation city;
     sw::Wallet         wallet;
     SW_EXPECT_LOG( "CitySimulation.CitySimulationNeedsCatalog" );
@@ -519,8 +519,8 @@ namespace
 )" );
             text.append( rows );
             text.append( R"(
-  <Building id="hut" name="Hut" kind="House" size="1" cost="1"/>
-  <Building id="tree" name="Shade Tree" kind="Service" service="Shade" delivery="Radius" range="3" size="1" cost="1"/>
+  <Building modelTint="1,1,1,1" blockColor="0.5,0.4,0.3,1" id="hut" name="Hut" kind="House" size="1" cost="1"/>
+  <Building modelTint="1,1,1,1" blockColor="0.5,0.4,0.3,1" id="tree" name="Shade Tree" kind="Service" service="Shade" delivery="Radius" range="3" size="1" cost="1"/>
   <HouseLevel name="Hut" population="5"/>
   <HouseLevel name="Shaded Hut" population="7" services="Shade"/>
 </CityCatalog>)" );
@@ -575,6 +575,28 @@ SW_TEST_CASE( CityCatalogTest, TerrainAndServiceRowsAreData )
     Util::build( plainCity );
     SW_EXPECT_EQUAL( 1, plainCity.findBuildingAt( 0, 1 )->_level );
     SW_EXPECT_NEAR( 0.0f, plainCity.computeCultureCoverage(), 1.0e-5f );
+}
+
+/** @brief [CityCatalogTest] 건물의 색은 건물 행이 적는다 — 종류가 같아도 행마다 다르고, 빠지면 로드가 실패한다(종류별 기본색이 없다) */
+SW_TEST_CASE( CityCatalogTest, BuildingColorsAreRowData )
+{
+    using Util                      = CityRowTestUtil;
+    const sw::string      xml       = Util::makeXML( kShadeRows );
+    const sw::string_view treeColor = R"(blockColor="0.5,0.4,0.3,1" id="tree")";
+    SW_REQUIRE_TRUE( xml.find( treeColor ) != sw::string::npos );
+    sw::string colored = xml;
+    colored.replace( colored.find( treeColor ), treeColor.size(), R"(blockColor="0.1,0.2,0.3,1" id="tree")" );
+    sw::CityCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( colored, "CityCatalogTest" ) );
+    SW_EXPECT_NEAR( 0.2f, catalog.findBuilding( "tree" )->_blockColor._y, 1.0e-5f );
+    SW_EXPECT_NEAR( 0.4f, catalog.findBuilding( "hut" )->_blockColor._y, 1.0e-5f );
+    SW_EXPECT_NEAR( 1.0f, catalog.findBuilding( "hut" )->_modelTint._y, 1.0e-5f );
+
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
+    sw::string withoutColor = xml;
+    withoutColor.replace( withoutColor.find( treeColor ), treeColor.size(), R"(id="tree")" );
+    sw::CityCatalog refused;
+    SW_EXPECT_FALSE( refused.loadFromXMLText( withoutColor, "CityCatalogTest" ) );
 }
 
 /** @brief [CityCatalogTest] 행이 늘거나 자리가 바뀐 카탈로그에서도 저장된 땅 · 서비스는 id 로 제자리를 찾고, 없어진 땅은 거절하고 도시를 둔다 */

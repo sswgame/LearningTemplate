@@ -24,7 +24,7 @@ namespace
   <Terrain id="Floodplain" name="Floodplain" color="1,1,1,1" flood="true"/>
   <Terrain id="Water" name="Water" color="1,1,1,1" blocked="true"/>
   <Terrain id="Rock" name="Rock" color="1,1,1,1" blocked="true"/>
-  <Building id="hut" name="Hut" kind="House" size="1" cost="1"/>
+  <Building modelTint="1,1,1,1" blockColor="0.5,0.4,0.3,1" id="hut" name="Hut" kind="House" size="1" cost="1"/>
   <HouseLevel name="Hut" population="5"/>
 </CityCatalog>)";
 

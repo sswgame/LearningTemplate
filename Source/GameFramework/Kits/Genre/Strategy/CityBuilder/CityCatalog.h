@@ -82,7 +82,7 @@ namespace sw
         PROPERTY( Required )
         string _name{};
         PROPERTY( Required )
-        float4 _color{}; ///< 순회 일꾼 · 색 상자의 색(모델에는 반쯤 섞는다)
+        float4 _color{}; ///< 순회 일꾼의 색
         PROPERTY()
         bool _bLaborFirst{ false }; ///< 이 서비스의 건물이 일꾼을 가장 먼저 받는다(물)
         PROPERTY()
@@ -118,6 +118,10 @@ namespace sw
         hashed_string _id{};
         PROPERTY( Required )
         string _name{};
+        PROPERTY( Required )
+        float4 _modelTint{}; ///< 모델에 곱하는 색(흰색이면 팔레트 그대로)
+        PROPERTY( Required )
+        float4 _blockColor{}; ///< 모델이 없는 건물을 그리는 색 상자의 색
         PROPERTY( Name = "goods" )
         vector<hashed_string> _listGood{}; ///< 생산자는 만드는 물자(첫 항목), 창고는 받는 물자, 시장은 파는 물자
         PROPERTY( Min = 0.5 )
