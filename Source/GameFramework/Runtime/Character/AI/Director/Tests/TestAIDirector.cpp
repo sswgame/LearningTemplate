@@ -34,7 +34,7 @@ namespace
   <Phase id="Peak" spawnScale="2"><Exit to="Relax" minTime="5"/></Phase>
   <Phase id="Relax" spawnScale="0" rewardScale="2"><Exit to="BuildUp" intensityBelow="0.25" calmFor="2" minTime="3"/></Phase>
   <Pool id="horde" trigger="PhaseEnter" phase="Peak" picks="2">
-    <Encounter id="swarm" count="6" scale="1.5"/>
+    <Encounter id="swarm" effect="Horde" count="6" scale="1.5"/>
   </Pool>
   <Pool id="ambient" trigger="Interval" interval="10" pacing="Relax">
     <Encounter id="stranger" cooldown="100"/>
@@ -555,4 +555,23 @@ SW_TEST_CASE( AIDirectorStateTest, RebindProfileContinuesTheRun )
     SW_EXPECT_FALSE( rig._director.rebindProfile( &reshapedProfile ) );
     SW_EXPECT_TRUE( rig._director.getProfile() == &tunedProfile );
     SW_EXPECT_EQUAL( hashBefore, rig._director.computeStateHash() );
+}
+
+/** @brief [AIDirectorPoolTest] 항목의 `effect` 는 사건에 그대로 실린다 — 게임은 항목 id 가 아니라 이 낱말로 할 일을 고르고, 적지 않은 항목은 빈 글이다 */
+SW_TEST_CASE( AIDirectorPoolTest, PickCarriesTheEffectWord )
+{
+    DirectorRig rig;
+    SW_REQUIRE_TRUE( rig._director.forcePhase( hashed_string( "Peak" ) ) );
+    rig.run( 0.1f );
+    int32 encounterCount = 0;
+    for ( const AIDirectorEvent& event : rig._listEvent )
+    {
+        if ( event._kind != AIDirectorEventKind::Encounter )
+            continue;
+        ++encounterCount;
+        SW_EXPECT_TRUE( event._effect == hashed_string( "Horde" ) );
+    }
+    SW_EXPECT_EQUAL( 2, encounterCount );
+    SW_REQUIRE_FALSE( rig._profile.getPools().empty() );
+    SW_EXPECT_TRUE( rig._profile.getPools()[1]._listEncounter[0]._effect.empty() ); // ambient 의 stranger — 적지 않았다
 }

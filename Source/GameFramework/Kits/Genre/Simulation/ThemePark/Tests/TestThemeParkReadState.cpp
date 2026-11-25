@@ -385,5 +385,8 @@ SW_TEST_CASE( ThemeParkSimulationTest, RejectsZeroDivisorSettings )
     swappedCash._guestCashMin         = 100;
     swappedCash._guestCashMax         = 10;
     SW_EXPECT_FALSE( park.initialize( swappedCash, wallet, walkGrid ) );
+    sw::ThemeParkSettings noSeed = sw::ThemeParkTestRules::make();
+    noSeed._randomSeed           = 0; // 씨앗 없는 설정 — 코드가 지어낸 씨앗으로 돌지 않는다
+    SW_EXPECT_FALSE( park.initialize( noSeed, wallet, walkGrid ) );
     SW_EXPECT_TRUE( park.initialize( sw::ThemeParkTestRules::make(), wallet, walkGrid ) );
 }

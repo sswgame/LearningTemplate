@@ -127,7 +127,7 @@ namespace sw
              *          앞 계정의 알림이 가지 않게 한다(FCM · APNs 토큰은 기기 · 앱 설치에 붙고 계정을 모른다).
              */
             static LiveOpsServiceResult writeDevice( IServiceStoreConnection& connection, AccountID accountID, const string& key, const string& ownerKey,
-                                                     const vector<uint8>& bytes )
+                                                     const vector<uint8>& bytes, int32 maxDevicePerAccount )
             {
                 using Internal             = PushNotificationDispatcherInternal;
                 const hashed_string& table = Internal::getDeviceTable();
@@ -166,7 +166,7 @@ namespace sw
                             oldestMs   = registration._registeredMs;
                         }
                     }
-                    const bool bEvictOldestDevice = bReplacing == false && deviceCount >= PushLimit::kMaxDevicePerAccount && pOldestKey != nullptr;
+                    const bool bEvictOldestDevice = bReplacing == false && deviceCount >= maxDevicePerAccount && pOldestKey != nullptr;
                     if ( bEvictOldestDevice )
                     {
                         transaction.erase( table, *pOldestKey ); // 한도를 넘었으므로 가장 오래 등록된 기기를 밀어낸다
@@ -212,17 +212,30 @@ namespace sw
         , _listResultScratch{}
         , _completionBuffer{}
         , _accountBucketMap{}
+        , _settings{}
         , _stats{}
         , _deliveryIDAllocator{}
         , _store{}
     {
     }
 
-    void PushNotificationDispatcher::initialize( ServiceStore* pStore, const PushDispatcherConfig& settings )
+    bool PushNotificationDispatcher::initialize( ServiceStore* pStore, const PushDispatcherConfig& settings )
     {
         SW_ASSERT( pStore != nullptr );
+        // 운영 값은 서버 설정에서 온다 — 없는 값으로 서면 기기를 하나도 못 올리거나 재시도 없이 버린다.
+        const bool bDeviceOk = 0 < settings._maxDevicePerAccount && settings._maxDevicePerAccount <= PushLimit::kMaxDevicePerAccount;
+        const bool bRateOk   = settings._accountBurst > 0 && settings._accountRefillIntervalMs > 0;
+        if ( bDeviceOk == false || bRateOk == false || settings._maxRetry <= 0 || settings._firstBackoffMs <= 0 )
+        {
+            SW_LOG_ERROR_ID( "PushNotificationDispatcher.PushDispatcherNoLimits", "PushDispatcher needs _pushMaxDevicePerAccount in 1..%# (%#), and _pushMaxRetry (%#), _pushFirstBackoffMs (%#), _pushAccountBurst (%#), _pushAccountRefillIntervalMs (%#) above zero",
+                             static_cast<int32>( PushLimit::kMaxDevicePerAccount ), settings._maxDevicePerAccount, settings._maxRetry, settings._firstBackoffMs, settings._accountBurst,
+                             settings._accountRefillIntervalMs );
+            return false;
+        }
+        _settings = settings;
         _store.bindStore( pStore );
         _accountBucketMap.initialize( settings._accountBurst, settings._accountRefillIntervalMs, static_cast<size_t>( settings._maxTrackedAccountCount ) );
+        return true;
     }
 
     bool PushNotificationDispatcher::registerProvider( IPushNotificationProvider* pProvider )
@@ -415,13 +428,13 @@ namespace sw
                     case PushDeliveryStatus::Transient:
                     case PushDeliveryStatus::RateLimited:
                     {
-                        if ( ++delivery._attempt >= PushLimit::kMaxRetry )
+                        if ( ++delivery._attempt >= _settings._maxRetry )
                         {
                             ++_stats._droppedCount;
                             _mapDelivery.erase( deliveryIt );
                             break;
                         }
-                        delivery._nextAttemptMs = nowMs.count() + MathUtil::max( result._retryAfterMs, PushLimit::kFirstBackoffMs << ( delivery._attempt - 1 ) );
+                        delivery._nextAttemptMs = nowMs.count() + MathUtil::max( result._retryAfterMs, _settings._firstBackoffMs << ( delivery._attempt - 1 ) );
                         break;
                     }
                     case PushDeliveryStatus::Rejected:
@@ -478,8 +491,8 @@ namespace sw
 
     void PushNotificationDispatcher::submitWrite( AccountID accountID, string&& key, string&& ownerKey, vector<uint8>&& bytes, uint64 requestTag )
     {
-        _store.submit( [accountID, key = std::move( key ), ownerKey = std::move( ownerKey ), bytes = std::move( bytes )]( IServiceStoreConnection& connection )
-        { return PushStoreRun::writeDevice( connection, accountID, key, ownerKey, bytes ); },
+        _store.submit( [accountID, key = std::move( key ), ownerKey = std::move( ownerKey ), bytes = std::move( bytes ), maxDevice = _settings._maxDevicePerAccount]( IServiceStoreConnection& connection )
+        { return PushStoreRun::writeDevice( connection, accountID, key, ownerKey, bytes, maxDevice ); },
                        [this, requestTag]( LiveOpsServiceResult result )
         { applyWrite( requestTag, result ); } );
     }

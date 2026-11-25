@@ -39,22 +39,6 @@ namespace sw
             static constexpr const utf8* kEventJudged     = "RhythmJudged";
             static constexpr const utf8* kEventMissed     = "RhythmMissed";
             static constexpr const utf8* kEventEmptyPress = "RhythmEmptyPress";
-
-            /** @brief 기본 판정 창 하나입니다(좁은 것부터). */
-            struct DefaultWindow
-            {
-                const utf8* _pGrade{ nullptr };
-                float32     _width{ 0.0f };
-                int32       _score{ 0 };
-                float32     _lifeDelta{ 0.0f };
-                uint8       _bBreaksCombo : 1;
-            };
-
-            static constexpr DefaultWindow kArrDefaultWindow[] = {
-                {"Cool", 0.045f, 300,  1.0f, SW_FALSE},
-                {"Good",  0.09f, 150,  0.0f, SW_FALSE},
-                { "Bad",  0.14f,  50, -2.0f,  SW_TRUE},
-            };
         };
     } // namespace
 
@@ -69,6 +53,7 @@ namespace sw
         : _chart{}
         , _clock{ RhythmClock::Music }
         , _listWindow{}
+        , _listRank{}
         , _missLifeDelta{ -5.0f }
         , _maxLife{ 100.0f }
         , _resultHoldSeconds{ 3.0f }
@@ -80,16 +65,6 @@ namespace sw
         , _resultHold{}
         , _musicTime{ 0.0f }
     {
-        for ( const RhythmGameModeComponentInternal::DefaultWindow& source : RhythmGameModeComponentInternal::kArrDefaultWindow )
-        {
-            RhythmJudgeWindow window;
-            window._grade        = hashed_string( source._pGrade );
-            window._width        = source._width;
-            window._score        = source._score;
-            window._lifeDelta    = source._lifeDelta;
-            window._bBreaksCombo = source._bBreaksCombo == SW_TRUE;
-            _listWindow.push_back( window );
-        }
     }
 
     RhythmGameModeComponent::~RhythmGameModeComponent() = default;
@@ -97,10 +72,11 @@ namespace sw
     bool RhythmGameModeComponent::openSession( RhythmPlaySession& outSession ) const
     {
         RhythmPlaySettings settings;
-        settings._missLifeDelta = _missLifeDelta;
-        settings._maxLife       = _maxLife;
-        settings._initialLife   = _maxLife;
-        settings._bAutoPlay     = isAutoPlayOn() ? SW_TRUE : SW_FALSE;
+        settings._missLifeDelta     = _missLifeDelta;
+        settings._maxLife           = _maxLife;
+        settings._initialLife       = _maxLife;
+        settings._bAutoPlay         = isAutoPlayOn() ? SW_TRUE : SW_FALSE;
+        settings._listRankThreshold = _listRank;
         for ( const RhythmJudgeWindow& window : _listWindow )
         {
             RhythmGradeRule rule;

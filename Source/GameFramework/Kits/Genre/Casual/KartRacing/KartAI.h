@@ -27,6 +27,7 @@ namespace sw
         float32 _driftStartAngle{ 0.9f };    ///< 앞 곡선이 이만큼 돌면 드리프트를 건다
         float32 _driftEndAngle{ 0.35f };     ///< 곡선이 이 값 아래로 펴지면 드리프트를 놓는다(미니터보)
         float32 _brakeAngle{ 2.2f };         ///< 이보다 급한 곡선에서는 페달을 늦춘다
+        float32 _brakeThrottle{ 0.4f };      ///< 급한 곡선에서 밟는 페달(0..1)
         float32 _itemUseDelay{ 0.8f };       ///< 아이템을 받고 이 시간(초) 동안은 들고 있는다
         float32 _itemMaxHold{ 8.0f };        ///< 이 시간(초)보다 오래 들고 있지 않는다
         float32 _shellRange{ 45.0f };        ///< 앞 차가 이 거리(m) 안에 있으면 껍질을 쏜다

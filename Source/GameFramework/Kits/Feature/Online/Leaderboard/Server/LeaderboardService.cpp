@@ -827,6 +827,8 @@ namespace sw
     LeaderboardService::LeaderboardService()
         : _mapBoard{}
         , _pastScoreRetentionMs{ 0 }
+        , _nameCacheTTLMs{ 0 }
+        , _maxAroundRadius{ 0 }
         , _mapRankKeyToWaitingRead{}
         , _mapRankKeyToLateWrite{}
         , _mapReadyRequestToRead{}
@@ -1199,7 +1201,7 @@ namespace sw
             _dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, expireAfterMs ) );
         if ( displayName.empty() == false )
             _dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeNameKey( accountID ),
-                                                                       vector<uint8>( reinterpret_cast<const uint8*>( displayName.data() ), reinterpret_cast<const uint8*>( displayName.data() ) + displayName.size() ), LeaderboardLimit::kNameTTLMs ) );
+                                                                       vector<uint8>( reinterpret_cast<const uint8*>( displayName.data() ), reinterpret_cast<const uint8*>( displayName.data() ) + displayName.size() ), _nameCacheTTLMs ) );
     }
 
     int64 LeaderboardService::computeRankRetentionMs( const LeaderboardDef& definition, uint64 periodID, UnixMilliseconds nowMs ) const
@@ -1274,7 +1276,7 @@ namespace sw
         read._count                  = radius;
         read._operation              = LeaderboardOperation::Around;
         const LeaderboardDef* pBoard = findBoard( boardID );
-        const bool            bRange = 0 <= radius && radius <= LeaderboardLimit::kMaxAround;
+        const bool            bRange = 0 <= radius && radius <= _maxAroundRadius;
         if ( pBoard == nullptr || bRange == false )
         {
             completeRead( read, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );

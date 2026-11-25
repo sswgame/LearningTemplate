@@ -36,9 +36,10 @@ namespace sw
         shutdown();
     }
 
-    void MatchServerAgent::initialize( uint64 serverID, int32 seatCapacity )
+    void MatchServerAgent::initialize( uint64 serverID, int32 seatCapacity, const MatchServerAgentPolicy& policy )
     {
         _serverID     = serverID;
+        _policy       = policy;
         _seatCapacity = seatCapacity;
     }
 
@@ -75,7 +76,7 @@ namespace sw
         MatchFormed match;
         if ( MatchQueueBus::kAssignTopic.read( message, match ) != ServerBusReadResult::Read )
             return false; // 읽기가 (타입, 결과, 버전)마다 한 번 오류 로그와 카운터를 남겼다
-        acceptMatch( match, nowMs.count() + kExpectTTLMs );
+        acceptMatch( match, nowMs.count() + _policy._expectTTLMs );
         return true;
     }
 
@@ -215,8 +216,8 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             _bReadRequested = SW_FALSE; // 이 읽기가 지금까지의 요청을 덮는다
         }
-        _nextListReadMs = _nowMs + kRecordRefreshMs;
-        _listRequestID  = _pRouter->submit( EphemeralRequest::makeScoreRange( MatchQueueService::makeMatchListKey( _serverID ), 0, kMaxRecordCount ),
+        _nextListReadMs = _nowMs + _policy._recordRefreshMs;
+        _listRequestID  = _pRouter->submit( EphemeralRequest::makeScoreRange( MatchQueueService::makeMatchListKey( _serverID ), 0, _policy._maxRecordCount ),
                                             SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchServerAgent::onListReply, this ), _replyOwner );
     }
 

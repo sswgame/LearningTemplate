@@ -22,8 +22,8 @@ namespace sw
         PROPERTY( Required )
         vector<string> _listTradablePrefix{};
         /** @brief 한쪽이 내놓을 수 있는 자산 줄 수입니다. */
-        PROPERTY( Min = 1 )
-        int32 _maxLegsPerSide{ 8 };
+        PROPERTY( Required, Min = 1 )
+        int32 _maxLegsPerSide{ 0 };
         /** @brief 닫힌 거래 레코드의 TTL 입니다. TTL 쓸기가 닫은 뒤 이 기간이 지난 거래를 지웁니다(분쟁 조회 기간). */
         PROPERTY( Required )
         ServiceTTLConfig _closedSessionTTL{};

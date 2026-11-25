@@ -45,9 +45,18 @@ namespace sw
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "SHOT" );
             static constexpr uint32 kStateVersion = 3;
-            /** @brief 이 게임이 아는 조우, 보상, 스폰 ID 입니다. 프로필이 다른 이름을 쓰면 시작할 때 알립니다. */
-            static constexpr const utf8* kArrKnownEncounter[] = { "swarm", "elite", "ammo", "repair" };
-            static constexpr const utf8* kArrKnownSpawn[]     = { "skeleton" };
+            /** @brief 감독 프로필의 항목이 고르는 일(`effect`)의 낱말입니다 — 항목 id 는 데이터가 마음대로 짓고, 무엇을 할지만 이 낱말로 적는다. */
+            static constexpr const utf8* kEffectElite  = "Elite";  ///< 조우: 정예 종류로 낸다(비우면 보통 종류)
+            static constexpr const utf8* kEffectAmmo   = "Ammo";   ///< 보상: 탄약 상자
+            static constexpr const utf8* kEffectRepair = "Repair"; ///< 보상: 체력(`scale` × 디렉터의 회복량)
+
+            /** @brief 풀 종류가 받는 `effect` 인지입니다 — 조우는 빈 글 · Elite, 보상은 Ammo · Repair. */
+            static bool isKnownEffect( AIDirectorPoolKind poolKind, const hashed_string& effect )
+            {
+                if ( poolKind == AIDirectorPoolKind::Reward )
+                    return effect == hashed_string( kEffectAmmo ) || effect == hashed_string( kEffectRepair );
+                return effect.empty() || effect == hashed_string( kEffectElite );
+            }
             /** @brief 플레이어 통계 id 입니다(`game/playground/data/playground.stats.xml`). */
             /** @brief 매치 결과 이름과 처치 수 값 이름입니다(`minigames/shooter3d_match` 의 matchScore). */
             static constexpr const utf8* kResultDown        = "down";
@@ -60,17 +69,6 @@ namespace sw
             static float3 closestPointXz( const float3& point, const float3& boxMin, const float3& boxMax )
             {
                 return float3{ MathUtil::clamp( point._x, boxMin._x, boxMax._x ), point._y, MathUtil::clamp( point._z, boxMin._z, boxMax._z ) };
-            }
-
-            template <size_t Count>
-            static bool isKnownID( const hashed_string& id, const utf8* const ( &arrKnown )[Count] )
-            {
-                for ( const utf8* pKnown : arrKnown )
-                {
-                    if ( id == hashed_string( pKnown ) )
-                        return true;
-                }
-                return false;
             }
         };
     } // namespace
@@ -525,22 +523,29 @@ namespace sw
             return;
         if ( acquireRequired( _spawnTable, _pTable ) == false )
             return;
-        // 감독은 ID 만 낸다. 이 게임이 모르는 ID 는 아무 일도 하지 않으므로 데이터 오타를 여기서 알린다.
-        vector<hashed_string> listID;
-        _pProfile->collectEncounterIDs( listID );
-        for ( const hashed_string& id : listID )
-        {
-            if ( Internal::isKnownID( id, Internal::kArrKnownEncounter ) == false )
-                SW_LOG_ERROR_ID( "ShooterGameMode.PacingProfileNamesEncounter", "[Shooter] pacing profile '%#' names encounter '%#' this game does not know", _pacingProfile.c_str(), id.c_str() );
-        }
-        for ( const SpawnEntryDef& entry : _pTable->getEntries() )
-        {
-            if ( Internal::isKnownID( entry._id, Internal::kArrKnownSpawn ) == false )
-                SW_LOG_ERROR_ID( "ShooterGameMode.SpawnTableNamesGame", "[Shooter] spawn table '%#' names '%#' this game does not know", _spawnTable.c_str(), entry._id.c_str() );
-        }
+        // 감독은 항목의 `effect` 를 그대로 건넨다. 이 게임이 모르는 낱말은 아무 일도 하지 않으므로 데이터 오타를 여기서 알리고 서지 않는다.
+        if ( hasKnownEffects( *_pProfile, _pacingProfile.c_str() ) == false )
+            return;
         _director.initialize( _pProfile.get(), _pTable.get(), static_cast<uint32>( _pacingSeed ) );
         _bPacingReady = SW_TRUE;
         applyDirectorEvents(); // 시작 단계 사건
+    }
+
+    bool ShooterGameModeComponent::hasKnownEffects( const AIDirectorProfile& profile, string_view profileName )
+    {
+        bool bEffectsKnown = true;
+        for ( const AIDirectorPoolDef& pool : profile.getPools() )
+        {
+            for ( const AIDirectorEncounterDef& encounter : pool._listEncounter )
+            {
+                if ( ShooterGameModeComponentInternal::isKnownEffect( pool._kind, encounter._effect ) )
+                    continue;
+                SW_LOG_ERROR_ID( "ShooterGameMode.PacingProfileUnknownEffect", "[Shooter] pacing profile '%#': '%#' in pool '%#' has effect '%#' this game does not know (encounters: empty or Elite, rewards: Ammo or Repair)",
+                                 profileName, encounter._id.c_str(), pool._id.c_str(), encounter._effect.c_str() );
+                bEffectsKnown = false;
+            }
+        }
+        return bEffectsKnown;
     }
 
     void ShooterGameModeComponent::requestEnemies( int32 count, float32 healthScale, uint32 spawnID, bool bElite )
@@ -595,15 +600,15 @@ namespace sw
                 }
                 case AIDirectorEventKind::Encounter:
                 {
-                    requestEnemies( event._count, event._scale, 0, event._id == hashed_string( "elite" ) );
+                    requestEnemies( event._count, event._scale, 0, event._effect == hashed_string( ShooterGameModeComponentInternal::kEffectElite ) );
                     SW_LOG_INFO_ID( "ShooterGameMode.SkeletonsXHealthWave", "[Shooter] %# - %# skeletons (x%.1f health) on wave %#", event._id.c_str(), event._count, event._scale, getWave() );
                     break;
                 }
                 case AIDirectorEventKind::Reward:
                 {
-                    if ( event._id == hashed_string( "ammo" ) )
+                    if ( event._effect == hashed_string( ShooterGameModeComponentInternal::kEffectAmmo ) )
                         _bAmmoPending = SW_TRUE;
-                    else if ( event._id == hashed_string( "repair" ) )
+                    else if ( event._effect == hashed_string( ShooterGameModeComponentInternal::kEffectRepair ) )
                         _pendingHeal += event._scale * _repairHealthPerScale;
                     break;
                 }

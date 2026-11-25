@@ -53,9 +53,10 @@ namespace
     sw::AudioConfig makeOutputConfig()
     {
         sw::AudioConfig config;
-        config._reopenFirstDelayMs = 1000;
-        config._reopenMaxDelayMs   = 30000;
-        config._clipCacheMegabytes = 192;
+        config._reopenFirstDelayMs    = 1000;
+        config._reopenMaxDelayMs      = 30000;
+        config._clipCacheMegabytes    = 192;
+        config._musicCrossfadeSeconds = 0.25f;
         return config;
     }
 } // namespace

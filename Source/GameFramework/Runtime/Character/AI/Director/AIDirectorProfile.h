@@ -150,7 +150,9 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Required )
-        hashed_string     _id{};
+        hashed_string _id{};
+        PROPERTY( Tooltip = "What the game does with this pick (a word of the game's own vocabulary - elite, ammo ...). Empty is the pool's plain pick" )
+        hashed_string     _effect{};
         ScheduleCondition _condition{}; ///< 요일, 계절, 날씨, 하루의 때(`phases`), 플래그 식, 태그(플레이어 상태), 확률
         PROPERTY( Name = "areas" )
         vector<hashed_string> _listArea{}; ///< 지금 지역 태그 중 하나가 이것이어야 한다. 비면 어디서나

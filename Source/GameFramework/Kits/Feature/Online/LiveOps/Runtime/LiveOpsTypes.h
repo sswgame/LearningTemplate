@@ -167,9 +167,7 @@ namespace sw
         static constexpr int32 kMaxProviderIDSize   = 16;
         static constexpr int32 kMaxTokenSize        = 256;
         static constexpr int32 kMaxLocaleSize       = 16;
-        static constexpr int32 kMaxDevicePerAccount = 10;
-        static constexpr int32 kMaxRetry            = 5;    ///< 일시 실패와 제공자 지연은 다섯 번까지 다시 시도한다
-        static constexpr int64 kFirstBackoffMs      = 1000; ///< 1, 2, 4, 8, 16초로 늘어난다
+        static constexpr int32 kMaxDevicePerAccount = 10; ///< 계정의 기기 레코드를 한 번에 읽는 수의 위 끝이다. 등록할 수 있는 수는 서버 설정 `_pushMaxDevicePerAccount` 가 이 안에서 정한다
 
         /** @brief 제공자 id 규칙(`[0-9a-z_]`, 1~16바이트)에 맞으면 true 입니다. */
         SW_KIT_API static bool isValidProviderID( string_view providerID );

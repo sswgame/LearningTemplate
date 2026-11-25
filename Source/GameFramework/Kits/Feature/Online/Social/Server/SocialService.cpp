@@ -228,9 +228,11 @@ namespace sw
         class SocialLinkStoreRun final
         {
         public:
-            SocialLinkStoreRun( const IAccountNameIndex* pNameIndex, SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, UnixMilliseconds nowMs )
+            SocialLinkStoreRun( const SocialLinkPolicy& policy, const IAccountNameIndex* pNameIndex, SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName,
+                                UnixMilliseconds nowMs )
                 : _decision{}
                 , _displayName{ displayName }
+                , _policy{ policy }
                 , _pNameIndex{ pNameIndex }
                 , _accountID{ accountID }
                 , _otherID{ otherID }
@@ -322,7 +324,7 @@ namespace sw
                 if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount._bytes, otherCounts ) == false )
                     otherCounts = SocialCounts{};
 
-                _decision = SocialCounts::decide( _operation, selfState, otherState, selfCounts, otherCounts );
+                _decision = SocialCounts::decide( _policy, _operation, selfState, otherState, selfCounts, otherCounts );
                 if ( _decision._bWrite == SW_FALSE )
                     return ServiceStoreResult::Ok;
 
@@ -337,6 +339,7 @@ namespace sw
         private:
             SocialLinkDecision       _decision;
             string                   _displayName;
+            SocialLinkPolicy         _policy; ///< 서비스 스레드에서 복사해 둔다. 저장소 스레드는 서비스를 읽지 않는다
             const IAccountNameIndex* _pNameIndex;
             AccountID                _accountID;
             AccountID                _otherID;
@@ -505,9 +508,9 @@ namespace sw
     void SocialService::submitLinkJob( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
     {
         (void)ensureLocal( accountID ); // 항목을 있게만 한다 — 쓰는 쪽은 저마다 다시 찾는다
-        _store.submit( [pNameIndex = _dependencies._pNameIndex, operation, accountID, otherID, name = string( displayName ), nowMs]( IServiceStoreConnection& connection )
+        _store.submit( [policy = _dependencies._linkPolicy, pNameIndex = _dependencies._pNameIndex, operation, accountID, otherID, name = string( displayName ), nowMs]( IServiceStoreConnection& connection )
         {
-            SocialLinkStoreRun runner{ pNameIndex, operation, accountID, otherID, name, nowMs };
+            SocialLinkStoreRun runner{ policy, pNameIndex, operation, accountID, otherID, name, nowMs };
             return runner.run( connection );
         }, [this, requestTag, accountID]( const SocialLinkResult& done )
         { applyLinkChange( requestTag, accountID, done._otherID, done._decision ); } );

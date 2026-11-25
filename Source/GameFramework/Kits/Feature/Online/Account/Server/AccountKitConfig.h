@@ -36,8 +36,8 @@ namespace sw
         PROPERTY()
         string _ticketKeySecretEnvironment{};
         /** @brief 주소마다 한꺼번에 받는 로그인 시도 수입니다(부하 봇은 크게). */
-        PROPERTY( Min = 1 )
-        int32 _attemptBurst{ 10 };
+        PROPERTY( Required, Min = 1 )
+        int32 _attemptBurst{ 0 };
         /**
          * @brief 동시에 도는 비밀번호 해시 수입니다(작업 풀 위의 해시 줄 `PasswordHashQueue`). 메모리 상한은 이 수 × 19 MiB × 2 다(다시 해시). 감사 O-3.
          * @details 값은 코어 수 · 메모리로 정한다(Keycloak Argon2 의 `cpu-cores` 와 같은 자리). 부하 측정(`login_storm`) 뒤에 맞춘다.

@@ -213,6 +213,13 @@ namespace sw
             SW_LOG_ERROR_ID( "MatchQueueService.MatchQueueNoCancelWait", "MatchQueue: the cancel confirmation wait is missing (_cancelConfirmWaitMs in the matchmaking settings)" );
             return false;
         }
+        // 연장 주기가 임대 수명 이상이면 권한 서버가 살아 있어도 임대가 끊겨 권한이 서버 사이를 오간다.
+        if ( dependencies._policy._leaseRenewMs <= 0 || dependencies._policy._leaseRenewMs >= dependencies._policy._leaseTTLMs )
+        {
+            SW_LOG_ERROR_ID( "MatchQueueService.MatchQueueLeaseTimes", "MatchQueue: the lease renew period %# ms must be positive and shorter than the lease lifetime %# ms (_queue in the matchmaking settings)",
+                             dependencies._policy._leaseRenewMs, dependencies._policy._leaseTTLMs );
+            return false;
+        }
         if ( dependencies._seatReservationTTLMs <= 0 )
         {
             SW_LOG_ERROR_ID( "MatchQueueService.MatchQueueNoSeatReservation", "MatchQueue: the seat reservation window is missing (_seatReservationSeconds in the online config)" );
@@ -355,12 +362,12 @@ namespace sw
     {
         if ( state._leaseRequestID != 0 )
             return; // 응답을 기다린다
-        if ( state._bLeaseAttempted != SW_FALSE && nowMs.count() - state._leaseAttemptMs < MatchQueueLimit::kLeaseRenewMs )
+        if ( state._bLeaseAttempted != SW_FALSE && nowMs.count() - state._leaseAttemptMs < _dependencies._policy._leaseRenewMs )
             return;
         const vector<uint8>    selfValue              = MatchmakingProtocol::encodeID( _dependencies._serverID );
         const EphemeralRequest request                = state._bAuthority != SW_FALSE
-                                                          ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, MatchQueueLimit::kLeaseTTLMs )
-                                                          : EphemeralRequest::makeSet( makeLeaseKey( modeID ), selfValue, MatchQueueLimit::kLeaseTTLMs, EphemeralCondition::IfAbsent );
+                                                          ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, _dependencies._policy._leaseTTLMs )
+                                                          : EphemeralRequest::makeSet( makeLeaseKey( modeID ), selfValue, _dependencies._policy._leaseTTLMs, EphemeralCondition::IfAbsent );
         state._leaseRequestID                         = _dependencies._pRouter->submit( request, SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchQueueService::onLeaseReply, this ), _replyOwner );
         state._leaseAttemptMs                         = nowMs.count();
         state._bLeaseAttempted                        = SW_TRUE;
@@ -534,7 +541,7 @@ namespace sw
             {
                 bLoaded = bLoaded && isRatingLoaded( mode, accountID );
             }
-            if ( bLoaded == false && nowMs.count() - wait._join._nowMs.count() < MatchQueueLimit::kRatingWaitMs )
+            if ( bLoaded == false && nowMs.count() - wait._join._nowMs.count() < _dependencies._policy._ratingWaitMs )
             {
                 ++index;
                 continue;
@@ -609,7 +616,7 @@ namespace sw
         local._modeID             = join._modeID;
         local._ticketID           = ticket._ticketID;
         local._partyID            = ticket._partyID;
-        local._deadlineMs         = join._nowMs.count() + mode._maxWaitMs + MatchQueueLimit::kNoServerGiveUpMs + MatchQueueLimit::kResultGraceMs;
+        local._deadlineMs         = join._nowMs.count() + mode._maxWaitMs + _dependencies._policy._noServerGiveUpMs + _dependencies._policy._resultGraceMs;
         for ( const MatchMember& member : ticket._listMember )
         {
             local._listAccount.push_back( member._accountID );
@@ -655,7 +662,7 @@ namespace sw
         for ( size_t index = 0; index < state._listUnplaced.size(); )
         {
             const UnplacedMatch& unplaced = state._listUnplaced[index];
-            const bool           bGiveUp  = nowMs.count() - unplaced._formedMs >= MatchQueueLimit::kNoServerGiveUpMs;
+            const bool           bGiveUp  = nowMs.count() - unplaced._formedMs >= _dependencies._policy._noServerGiveUpMs;
             // 배정할 서버가 없으면 다음 틱에 다시 시도한다. 서버 목록이 바뀌기를 기다리는 것이며, 오래 기다렸으면 NoServer 로 끝낸다
             if ( placeMatch( state, unplaced._match, bGiveUp ? MatchQueueResult::NoServer : MatchQueueResult::Count, nowMs ) == false && bGiveUp == false )
             {

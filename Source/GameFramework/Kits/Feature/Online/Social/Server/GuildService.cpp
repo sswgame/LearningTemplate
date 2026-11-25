@@ -328,9 +328,10 @@ namespace sw
         class GuildStoreRun final
         {
         public:
-            GuildStoreRun( const GuildRequest& request, const ILedgerPolicy* pLedgerPolicy )
+            GuildStoreRun( const GuildRequest& request, const GuildPolicy& policy, const ILedgerPolicy* pLedgerPolicy )
                 : _request{ request }
                 , _serviceResult{}
+                , _policy{ policy }
                 , _pLedgerPolicy{ pLedgerPolicy }
             {
             }
@@ -478,7 +479,7 @@ namespace sw
                     return fail( SocialResult::NotFound );
                 if ( info._bOpenToApply == SW_FALSE )
                     return fail( SocialResult::GuildClosed );
-                if ( info._memberCount >= GuildLimit::kMaxMember )
+                if ( info._memberCount >= _policy._maxMember )
                     return fail( SocialResult::GuildFull );
                 StringBuilder<constant::buffer::kMax128> prefixBuilder;
                 prefixBuilder.appendFormat( "%#/", guildKey );
@@ -506,15 +507,15 @@ namespace sw
                         transaction.erase( Internal::getApplicationTable(), record._key, record._version ); // 죽었거나 읽을 수 없는 신청이다
                         transaction.erase( Internal::getAccountApplicationTable(), Internal::makeApplicationReverseKey( record._key ) );
                     }
-                    return liveCount < GuildLimit::kMaxApplication; // 상한에 닿으면 더 볼 것이 없다
+                    return liveCount < _policy._maxApplication; // 상한에 닿으면 더 볼 것이 없다
                 } );
                 if ( listed != ServiceStoreResult::Ok )
                     return ServiceStoreResult::Unavailable;
-                if ( liveCount >= GuildLimit::kMaxApplication )
+                if ( liveCount >= _policy._maxApplication )
                     return fail( SocialResult::PendingLimit );
                 // 쓰기: 죽은 신청과 그 역색인 지우기(최대 2 × kMaxDeadErase) + 신청 + 역색인 + TTL 색인 줄 + 여유 하나(길드 · 신청 목록은 읽기 집합이 조건으로 건다 — 상한에 들지 않는다)
                 static_assert( kMaxDeadErase * 2 + 4 <= ServiceTransaction::kMaxWriteCount, "runApply 의 트랜잭션이 쓰기 상한을 넘을 수 있다" );
-                const int64 expiresMs = _request._nowMs.count() + GuildLimit::kApplicationLifetimeMs;
+                const int64 expiresMs = _request._nowMs.count() + _policy._applicationLifetimeMs;
                 transaction.put( Internal::getApplicationTable(), selfKey, Internal::encodeApplication( _request._nowMs.count(), expiresMs ) );
                 // 해산한 길드 · 다시 오지 않는 신청자의 신청은 이 함수가 다시 돌지 않아 남는다 - TTL 색인 줄이 기간 뒤에 지운다. 다시 낸 신청은 새 줄이 맡는다
                 transaction.put( Internal::getApplicationExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, selfKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
@@ -567,7 +568,7 @@ namespace sw
                                       Internal::decodeGuild( guildRecord._bytes, _request._guildID, info );
                 if ( bGuildOk == false )
                     return fail( SocialResult::NotFound ); // 해산된 길드이다
-                if ( info._memberCount >= GuildLimit::kMaxMember )
+                if ( info._memberCount >= _policy._maxMember )
                     return fail( SocialResult::GuildFull );
                 ++info._memberCount;
                 ServiceTransaction transaction;
@@ -689,7 +690,7 @@ namespace sw
                     return fail( SocialResult::AlreadyInGuild );
                 ServiceTransaction transaction;
                 const string       inviteKey = Internal::makePairKey( _request._targetID, guildID );
-                const int64        expiresMs = _request._nowMs.count() + GuildLimit::kInviteLifetimeMs;
+                const int64        expiresMs = _request._nowMs.count() + _policy._inviteLifetimeMs;
                 transaction.put( Internal::getInviteTable(), inviteKey, Internal::encodeInvite( _request._accountID, expiresMs ) ); // 다시 보내면 덮어쓴다
                 transaction.put( Internal::getInviteExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, inviteKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
                 _serviceResult._invitedID = _request._targetID;
@@ -977,7 +978,7 @@ namespace sw
                     return ServiceStoreResult::Unavailable;
                 if ( targetRead == ServiceStoreResult::Ok )
                     return fail( SocialResult::AlreadyInGuild ); // 그사이 다른 길드에 들어갔다
-                if ( inoutInfo._memberCount >= GuildLimit::kMaxMember )
+                if ( inoutInfo._memberCount >= _policy._maxMember )
                     return fail( SocialResult::GuildFull );
                 ++inoutInfo._memberCount;
                 const string guildKey = ServiceKeyUtil::makeHex64( guildID );
@@ -1224,7 +1225,7 @@ namespace sw
                     const string prefix( prefixBuilder.view() );
                     if ( ServiceRecordReader::readPage( connection, Internal::getGrantTable(), prefix, "", GuildLimit::kMaxStorageGrant, false, listGrantRecord )._result != ServiceStoreResult::Ok )
                         return ServiceStoreResult::Unavailable;
-                    if ( listGrantRecord.size() >= static_cast<size_t>( GuildLimit::kMaxStorageGrant ) )
+                    if ( listGrantRecord.size() >= static_cast<size_t>( _policy._maxStorageGrant ) )
                         return fail( SocialResult::StorageLimit ); // 쓰지 않는 허용을 거둔 뒤에 준다
                 }
                 transaction.put( Internal::getGrantTable(), recordKey, Internal::encodeGrant( _request._amount ), bExists ? grantRecord._version : ServiceRecord::kAbsentVersion );
@@ -1276,6 +1277,7 @@ namespace sw
         private:
             GuildRequest         _request;
             GuildResult          _serviceResult;
+            GuildPolicy          _policy;        ///< 서비스 스레드에서 복사해 둔다. 저장소 스레드는 서비스를 읽지 않는다
             const ILedgerPolicy* _pLedgerPolicy; ///< 서비스 스레드에서 복사해 둔다. 저장소 스레드는 서비스를 읽지 않는다
         };
     } // namespace
@@ -1289,13 +1291,15 @@ namespace sw
         , _onEvent{}
         , _listLevelExperience{}
         , _pLedgerPolicy{ nullptr }
+        , _policy{}
         , _store{}
     {
     }
 
-    void GuildService::initialize( ServiceStore* pStore )
+    void GuildService::initialize( ServiceStore* pStore, const GuildPolicy& policy )
     {
         SW_ASSERT( pStore != nullptr );
+        _policy = policy;
         _store.bindStore( pStore );
     }
 
@@ -1609,9 +1613,9 @@ namespace sw
 
     void GuildService::submit( const GuildRequest& request, uint64 requestTag )
     {
-        _store.submit( [request, pLedgerPolicy = _pLedgerPolicy]( IServiceStoreConnection& connection )
+        _store.submit( [request, policy = _policy, pLedgerPolicy = _pLedgerPolicy]( IServiceStoreConnection& connection )
         {
-            GuildStoreRun runner{ request, pLedgerPolicy };
+            GuildStoreRun runner{ request, policy, pLedgerPolicy };
             return runner.run( connection );
         }, [this, request, requestTag]( GuildResult& serviceResult )
         { applyServiceResult( request, requestTag, std::move( serviceResult ) ); } );
