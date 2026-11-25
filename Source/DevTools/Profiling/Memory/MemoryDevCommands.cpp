@@ -1,10 +1,12 @@
 /**
  * @file MemoryDevCommands.cpp
- * @brief 메모리 스냅숏 개발 명령(`memory.snapshot` · `memory.export` · `memory.exportinfo`)입니다(언리얼 `memreport` 자리). 실행 인자 `-memory-export` 는 `MemoryExportSubsystem` 이다.
+ * @brief 메모리 개발 명령입니다 — 태그 표(`memory.report` · `memory.tracking`, 언리얼 `stat llm` 자리)와 스냅숏(`memory.snapshot` · `memory.export` · `memory.exportinfo`, 언리얼 `memreport` 자리). 실행 인자 `-memory-export` 는 `MemoryExportSubsystem` 이다.
  * @details 배포 호스트는 DevTools 를 링크하지 않아 명령도 인자 처리도 없다. 설정은 `Config/Dev/MemorySnapshot.json`(`MemorySnapshotPolicy`) — 없으면 명령이 이유를 답하고 아무것도 쓰지 않는다.
+ *          태그 명령은 예전 테스트용 변수(`-gv_memoryReport` · `-gv_memoryTracking`)를 프레임마다 읽던 감시를 대신한다. 시작부터는 `-gv_devConsoleExec=memory.tracking on`(기동 중 할당까지 세려면 Debug 구성).
  */
 #include "pch.h"
 
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -18,6 +20,7 @@
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Profiling/MemoryBudgetMonitor.h"
 
 namespace sw
 {
@@ -129,9 +132,50 @@ namespace sw
                 outReply = string( reply.view() );
                 return true;
             }
+
+            /** @brief `memory.report`: 태그 표(살아 있는 · 최고치 · 예산)를 로그로 한 번 남깁니다. */
+            static bool runReport( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+                if ( pProfiler == nullptr )
+                {
+                    outReply = "memory: no memory profiler in this build";
+                    return true;
+                }
+                MemoryBudgetMonitor::logMemoryReport( *pProfiler, "memory.report" );
+                outReply = pProfiler->isTrackingEnabled() ? "memory: tag table logged" : "memory: tag table logged - tracking is off, the counts did not move (memory.tracking on)";
+                return true;
+            }
+
+            /** @brief `memory.tracking [on|off]`: 메모리 태그 추적을 켜고 끕니다(인자가 없으면 지금 상태를 답한다). 켜거나 끄면 최고치를 다시 잰다 — 꺼진 동안의 할당은 세지 않았다. */
+            static bool runTracking( const vector<string>& listArgument, string& outReply )
+            {
+                MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+                if ( pProfiler == nullptr )
+                {
+                    outReply = "memory: no memory profiler in this build";
+                    return true;
+                }
+                if ( listArgument.size() > 1 )
+                    return false;
+                if ( listArgument.size() == 1 )
+                {
+                    bool bOn = false;
+                    if ( StringUtil::tryParseBool( listArgument[0], bOn ) == false )
+                        return false;
+                    pProfiler->setTrackingEnabled( bOn );
+                    pProfiler->resetPeaks();
+                }
+                outReply = pProfiler->isTrackingEnabled() ? "memory tracking: on" : "memory tracking: off";
+                return true;
+            }
         };
     } // namespace
 
+    SW_DEV_COMMAND( MemoryReport, "memory.report", "memory.report", "Log the memory tag table once (live, peak, budget)", &MemoryDevCommandsInternal::runReport );
+    SW_DEV_COMMAND( MemoryTracking, "memory.tracking", "memory.tracking [on|off]", "Show or switch memory tag tracking (peaks restart when switched)", &MemoryDevCommandsInternal::runTracking );
     SW_DEV_COMMAND( MemorySnapshotText, "memory.snapshot", "memory.snapshot", "Reply with a memory snapshot as text (tags, sites, assets, GPU resources, types, caches)",
                     &MemoryDevCommandsInternal::runSnapshot );
     SW_DEV_COMMAND( MemoryExport, "memory.export", "memory.export [folder]", "Write a memory snapshot as CSV sheets under <folder or Saved/MemorySnapshots>/<time>",
