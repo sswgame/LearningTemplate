@@ -38,29 +38,29 @@ SW_TEST_CASE( AIPerceptionTest, ThinkIntervalRunsOncePerInterval )
 {
     ControlFrameInterval schedule;
     ControlFrameContext  context;
-    context._deltaTime = 0.1f;
-    int32   runCount   = 0;
-    float32 lastDelta  = 0.0f;
+    context._deltaTime   = GameSeconds{ 0.1f };
+    int32       runCount = 0;
+    GameSeconds lastDelta{};
     for ( uint32 tick = 0; tick < 9; ++tick )
     {
         context._tick = tick;
-        float32 delta = 0.0f;
+        GameSeconds delta{};
         if ( schedule.advance( context, 3, 0, delta ) )
         {
             ++runCount;
             lastDelta = delta;
         }
     }
-    SW_EXPECT_EQUAL( 3, runCount );           // 틱 0 · 3 · 6
-    SW_EXPECT_NEAR( 0.3f, lastDelta, 1e-5f ); // 틱 4 · 5 · 6 을 모았다
-    SW_EXPECT_NEAR( 0.2f, schedule._elapsed, 1e-5f );
+    SW_EXPECT_EQUAL( 3, runCount );                   // 틱 0 · 3 · 6
+    SW_EXPECT_NEAR( 0.3f, lastDelta.count(), 1e-5f ); // 틱 4 · 5 · 6 을 모았다
+    SW_EXPECT_NEAR( 0.2f, schedule._elapsed.count(), 1e-5f );
 
     ControlFrameInterval everyFrame;
     int32                everyCount = 0;
     for ( uint32 tick = 0; tick < 5; ++tick )
     {
         context._tick = tick;
-        float32 delta = 0.0f;
+        GameSeconds delta{};
         everyCount += everyFrame.advance( context, 1, 7, delta ) ? 1 : 0;
     }
     SW_EXPECT_EQUAL( 5, everyCount );

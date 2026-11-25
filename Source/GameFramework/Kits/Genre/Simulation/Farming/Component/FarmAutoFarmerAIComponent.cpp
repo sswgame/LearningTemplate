@@ -175,7 +175,7 @@ namespace sw
             return;
         const optional<float32> actionTimer = blackboard.getFloat( "ActionTimer" );
         SW_ASSERT( actionTimer.has_value() && "the constructor seeds ActionTimer and nothing clears it" );
-        blackboard.setFloat( "ActionTimer", *actionTimer - context._deltaTime );
+        blackboard.setFloat( "ActionTimer", *actionTimer - context._deltaTime.count() );
 
         const FarmGameModeComponent& gameMode = *pGameMode;
         const Inventory&             bag      = pBag->getInventory();

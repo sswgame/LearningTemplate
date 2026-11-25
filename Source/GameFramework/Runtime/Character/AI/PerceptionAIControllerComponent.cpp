@@ -53,7 +53,7 @@ namespace sw
         const float3  eye{ feet._x, feet._y + _eyeHeight, feet._z };
         const float32 yaw = pawn.getIntent()._controlYaw;
         const float3  forward{ MathUtil::sin( yaw ), 0.0f, MathUtil::cos( yaw ) };
-        _perception.sense( *pManager, _team, eye, forward, nullptr, context._deltaTime );
+        _perception.sense( *pManager, _team, eye, forward, nullptr, context._deltaTime.count() );
 
         blackboard.setVector( "SelfPosition", feet );
         if ( const AIPerceivedTarget* pSeen = _perception.findNearestSeen( eye ) )

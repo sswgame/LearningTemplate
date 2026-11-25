@@ -141,7 +141,7 @@ namespace sw
         if ( _thinkSchedule.advance( context, _thinkInterval, static_cast<uint32>( getComponentID() ), thinkContext._deltaTime ) == false )
             return;
         updateBlackboard( thinkContext, pawn );
-        (void)_runner.tick( _blackboard, this, thinkContext._deltaTime ); // 루트의 결과는 쓰지 않는다 — 잎이 이미 목표를 정했다
+        (void)_runner.tick( _blackboard, this, thinkContext._deltaTime.count() ); // 루트의 결과는 쓰지 않는다 — 잎이 이미 목표를 정했다
         if constexpr ( build::kShipping == false )
             AIControllerComponentInternal::logDecision( *this, pawn );
     }
@@ -177,7 +177,7 @@ namespace sw
         const float32 moveLength    = MathUtil::sqrt( moveDirection._x * moveDirection._x + moveDirection._z * moveDirection._z );
 
         // 바라보기 — 초점이 있으면 그쪽(요 · 피치), 없으면 움직이는 쪽(요만, 피치는 0 으로).
-        const float32 maxStep = _turnRate * context._deltaTime;
+        const float32 maxStep = _turnRate * context._deltaTime.count();
         float32       yaw     = getControlYaw();
         float32       pitch   = getControlPitch();
         if ( _bHasFocus == SW_TRUE )

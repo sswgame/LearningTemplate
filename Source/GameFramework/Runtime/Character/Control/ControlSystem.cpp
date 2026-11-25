@@ -164,7 +164,7 @@ namespace sw
         ControlFrameContext context{};
         context._pInput        = findInputManager();
         context._pInputCapture = findInputCapture();
-        context._deltaTime     = deltaTime;
+        context._deltaTime     = GameSeconds{ deltaTime };
         context._tick          = _tick;
         context._viewTick      = _viewTick;
 
