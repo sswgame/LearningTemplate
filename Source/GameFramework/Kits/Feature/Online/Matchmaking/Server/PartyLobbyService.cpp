@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/PartyLobbyService.h"
 
 #include "Core/Math/SecureRandom.h"
 

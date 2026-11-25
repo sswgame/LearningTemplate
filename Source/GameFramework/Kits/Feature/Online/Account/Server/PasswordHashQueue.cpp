@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/PasswordHashQueue.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/PasswordHashQueue.h"
 
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/StringUtil.h"

@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.h"
 
 namespace sw
 {

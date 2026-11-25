@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchServerAgent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchQueueService.h"
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"

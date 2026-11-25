@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginSecretVault.h"
 
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"

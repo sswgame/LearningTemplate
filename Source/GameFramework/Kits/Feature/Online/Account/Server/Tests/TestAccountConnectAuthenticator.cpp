@@ -5,9 +5,9 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountConnectAuthenticator.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountConnectAuthenticator.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/ConnectAdmission.h"
 
 using namespace sw;

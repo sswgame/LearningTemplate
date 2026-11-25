@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Rule/AccountNameIndex.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountNameIndex.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginStoreLogic.h"
 
 namespace sw
 {

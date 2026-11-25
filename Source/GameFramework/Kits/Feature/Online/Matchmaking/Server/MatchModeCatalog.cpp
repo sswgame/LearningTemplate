@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchModeCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchModeCatalog.h"
 
 #include "Core/String/StringUtil.h"
 

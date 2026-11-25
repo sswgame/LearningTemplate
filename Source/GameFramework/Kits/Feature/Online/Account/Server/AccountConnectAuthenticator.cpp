@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountConnectAuthenticator.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountConnectAuthenticator.h"
 
 #include "Core/Memory/Memory.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/ConnectAdmission.h"
 
 namespace sw

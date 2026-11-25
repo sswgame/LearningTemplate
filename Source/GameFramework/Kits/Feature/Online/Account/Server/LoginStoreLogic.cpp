@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginStoreLogic.h"
 
 #include "Core/Encoding/HexUtil.h"
 #include "Core/Hash/SecureUtil.h"

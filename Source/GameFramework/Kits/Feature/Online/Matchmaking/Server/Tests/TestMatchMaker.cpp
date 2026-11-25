@@ -5,8 +5,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchMaker.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchModeCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchMaker.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchModeCatalog.h"
 
 using namespace sw;
 

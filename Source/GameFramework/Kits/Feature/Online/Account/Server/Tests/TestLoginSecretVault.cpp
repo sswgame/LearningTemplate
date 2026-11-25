@@ -5,7 +5,7 @@
 #include "Core/Network/Security/Tests/FakeNetSecurityProvider.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginSecretVault.h"
 
 using namespace sw;
 

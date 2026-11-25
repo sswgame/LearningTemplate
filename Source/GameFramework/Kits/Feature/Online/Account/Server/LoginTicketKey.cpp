@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketKey.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketKey.h"
 
 #include "Core/Memory/Memory.h"
 #include "Core/Network/DevOnlineExtension.h"

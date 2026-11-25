@@ -5,7 +5,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginStoreLogic.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"

@@ -32,7 +32,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchMaker.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchMaker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 
@@ -87,10 +87,6 @@ namespace sw
         MatchQueuePolicy      _policy{};                  ///< 필수 — 임대 · 포기 · 통계 대기 시한(키트 설정 `_queue`)
         int64                 _seatReservationTTLMs{ 0 }; ///< 필수 — 서버 사이의 좌석 예약 창(서버 설정 `_seatReservationSeconds`). 0 이면 `initialize` 가 거절한다
     };
-} // namespace sw
-
-namespace sw
-{
 } // namespace sw
 
 namespace sw

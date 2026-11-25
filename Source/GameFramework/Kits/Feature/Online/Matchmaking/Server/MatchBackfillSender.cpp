@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchBackfillSender.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchBackfillSender.h"
 
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchServerAgent.h"
 
 namespace sw
 {

@@ -652,7 +652,7 @@
     "Source/GameFramework/Kits/Feature/Network/NetTurnRelay/TurnRelay.h": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Online/Account/Runtime/AccountTypes.cpp": {"integer": 2},
     "Source/GameFramework/Kits/Feature/Online/Account/Runtime/LoopbackPkceLoginClient.cpp": {"integer": 1},
-    "Source/GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.cpp": {"integer": 2},
+    "Source/GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.cpp": {"integer": 2},
     "Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminCommandProvider.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminLoginBridge.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp": {"float": 22, "integer": 1},

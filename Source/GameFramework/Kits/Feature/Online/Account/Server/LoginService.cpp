@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginService.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -8,8 +8,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginSecretVault.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginStoreLogic.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"

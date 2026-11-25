@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/OnlinePresence.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/OnlinePresence.h"
 
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
