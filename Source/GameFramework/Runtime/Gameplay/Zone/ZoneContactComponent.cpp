@@ -181,7 +181,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Zone.ProfileMissing", "%#: zone profile could not be read", sourceName );
         else if ( pZone->_compiled.compile( *pProfile, sourceName, game::findSubsystem<const AbilityCatalog>() ) )
             pZone->_bValid = SW_TRUE;
-        if ( pZone->_bValid == SW_TRUE && pOwner != nullptr && pOwner->getMutableManager() != nullptr )
+        if ( pZone->_bValid == SW_TRUE && pOwner != nullptr && pOwner->getManager() != nullptr )
             ZoneTracker::onZoneOpened( *pOwner->getMutableManager(), pZone->_compiled );
         _listSurfaceZone.push_back( std::move( pZone ) );
         return *_listSurfaceZone.back();

@@ -60,9 +60,9 @@ namespace sw
     AudioEngine* AudioEmitterComponent::findAudioEngine() const
     {
         const GameObject* pOwner = getOwner();
-        if ( pOwner == nullptr || pOwner->getMutableManager() == nullptr )
+        if ( pOwner == nullptr || pOwner->getManager() == nullptr )
             return nullptr;
-        return pOwner->getMutableManager()->getSubsystem<sw::SceneAudio>().findAudioEngine();
+        return pOwner->getManager()->getSubsystem<sw::SceneAudio>().findAudioEngine();
     }
 
     void AudioEmitterComponent::onWorldOriginShifted( const float3& delta )

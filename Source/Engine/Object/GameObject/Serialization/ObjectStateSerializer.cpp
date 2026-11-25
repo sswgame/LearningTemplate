@@ -182,7 +182,7 @@ namespace sw
              */
             static void finishLoad( GameObject* pGameObject, hashed_string oldName )
             {
-                if ( pGameObject->getName() != oldName && pGameObject->getMutableManager() != nullptr )
+                if ( pGameObject->getName() != oldName && pGameObject->getManager() != nullptr )
                     pGameObject->getMutableManager()->notifyNameChanged( pGameObject, oldName, pGameObject->getName() );
 
                 pGameObject->setActive( pGameObject->isActive() );
@@ -204,7 +204,7 @@ namespace sw
             static void* createOwnedComponent( void* pOuter, hashed_string typeName )
             {
                 GameObject* pGameObject = static_cast<GameObject*>( pOuter );
-                if ( pGameObject == nullptr || pGameObject->getMutableManager() == nullptr )
+                if ( pGameObject == nullptr || pGameObject->getManager() == nullptr )
                     return nullptr;
                 // 만들지 못하면 직렬화기가 원문을 `keepMissingComponent` 에 맡긴다(경고도 그쪽이 한다).
                 return pGameObject->getMutableManager()->addComponentByName( pGameObject, typeName, false );
@@ -920,9 +920,9 @@ namespace sw
         {
             GameObject* pObject = entry._pObject;
             // 상태 읽기는 형제 순서(`_siblingOrder` PROPERTY)를 세터 없이 쓴다(리플렉션 쓰기라 형식으로 막지 못한다). 구조 세대를 여기서 올린다.
-            if ( pObject->getMutableManager() != nullptr )
+            if ( pObject->getManager() != nullptr )
                 pObject->getMutableManager()->notifyStructureChanged();
-            const bool bSkipRename = pObject->getMutableManager() == nullptr || pObject->isPendingDestroy() || entry._savedName.empty() || pObject->getName() == entry._savedName;
+            const bool bSkipRename = pObject->getManager() == nullptr || pObject->isPendingDestroy() || entry._savedName.empty() || pObject->getName() == entry._savedName;
             if ( bSkipRename )
                 continue;
             pObject->setName( entry._savedName ); // 아직 다른 오브젝트가 사용 중이면 매니저가 현재 이름(번호)을 그대로 둔다
@@ -1118,7 +1118,7 @@ namespace sw
         if ( pOwner != nullptr )
             return pOwner;
         // 같은 실행의 상태면 배치 밖(이미 살아 있는 부모, 되돌리기, 복제)도 런타임 id 로 찾는다. 파일 id 는 이 실행의 id 와 우연히 같을 수 있어 찾지 않는다.
-        if ( _idSpace == ObjectIDSpace::Live && entry._pObject->getMutableManager() != nullptr )
+        if ( _idSpace == ObjectIDSpace::Live && entry._pObject->getManager() != nullptr )
             return entry._pObject->getMutableManager()->findGameObjectByID( ownerID );
         return nullptr;
     }

@@ -127,8 +127,8 @@ namespace sw
 
     void UnitStatsComponent::takeDamage( int32 amount, GameObjectHandle instigator )
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        GameObject*              pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             enqueueStatsMutation( pOwner, amount, false, instigator );

@@ -151,9 +151,9 @@ namespace sw
             /** @brief 첫 슈터 플레이어의 폰을 가진 조종자를 반환합니다. 0 은 플레이어, 1 은 AI(자동 플레이), -1 은 없음입니다(그 밖의 조종자도 -1). */
             [[nodiscard]] static bool readControllerKind( const ShooterPlayerComponent& player, float64& outValue )
             {
-                GameObject*          pOwner   = player.getOwner();
-                GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-                const PawnComponent* pPawn    = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+                GameObject*              pOwner   = player.getOwner();
+                const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                const PawnComponent*     pPawn    = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
                 if ( pPawn == nullptr || pManager == nullptr )
                     return false;
                 // 조종자 목록은 레지스트리에서 얻는다. 폰을 가진 것 하나를 찾는다.
@@ -642,7 +642,7 @@ namespace sw
             return;
         const HealthDamageResult  result    = _healthMachine.applyDamage( amount );
         GameObject*               pOwner    = getOwner();
-        GameObjectManager*        pManager  = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObjectManager*  pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const GameObject*         pObject   = pManager != nullptr ? pManager->resolveGameObject( getGameMode() ) : nullptr;
         ShooterGameModeComponent* pGameMode = pObject != nullptr ? pObject->getComponent<ShooterGameModeComponent>() : nullptr;
         if ( result._bIgnored == SW_TRUE )
@@ -1467,7 +1467,7 @@ namespace sw
         GameObject* const                   pOwner   = getOwner();
         GameObject* const                   pBody    = findMutableBodyObject();
         const CharacterAppearanceComponent* pLook    = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
-        GameObjectManager* const            pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObjectManager* const      pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pOwner == nullptr || pLook == nullptr || pManager == nullptr )
             return;
         const GameObject* const pPart     = pManager->resolveGameObject( pLook->findSlotPartObject( hashed_string( "MainHand" ) ) );

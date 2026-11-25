@@ -64,9 +64,9 @@ namespace sw
     {
         SceneComponent::onPostLoad();
         // 배치는 게임 스레드에서만 짓는다(머티리얼 캐시 · 프리미티브 레지스트리) — 비동기 씬 로드는 이 함수를 워커에서 부른다(폴리지와 같은 규칙).
-        const TaskManager* pTaskManager = engine::findSubsystem<TaskManager>(); // 선택: 작업 시스템 없는 호스트(테스트)는 한 스레드다
-        GameObject*        pOwner       = getOwner();
-        GameObjectManager* pManager     = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const TaskManager*       pTaskManager = engine::findSubsystem<TaskManager>(); // 선택: 작업 시스템 없는 호스트(테스트)는 한 스레드다
+        GameObject*              pOwner       = getOwner();
+        const GameObjectManager* pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pTaskManager != nullptr && pTaskManager->isMainThread() == false && pManager != nullptr )
         {
             pManager->deferPostTickOnComponent( *this, []( InstancedMeshComponent& self )

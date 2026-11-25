@@ -54,7 +54,7 @@ namespace sw
 
     void WeatherDirectorComponent::onEndPlay()
     {
-        if ( GameObject* const pOwner = getOwner(); pOwner != nullptr && pOwner->getMutableManager() != nullptr )
+        if ( GameObject* const pOwner = getOwner(); pOwner != nullptr && pOwner->getManager() != nullptr )
             DecalRainWashSystem::release( *pOwner->getMutableManager() );
         Component::onEndPlay();
     }

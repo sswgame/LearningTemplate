@@ -703,7 +703,7 @@ namespace sw
     bool PrefabCache::collectPartOverrides( const GameObject& root, const PrefabAsset& asset, const unordered_map<uint64, uint64>* pSavedIDMap, vector<PrefabPartOverride>& outListPartOverride )
     {
         outListPartOverride.clear();
-        GameObjectManager* pManager = root.getMutableManager();
+        const GameObjectManager* pManager = root.getManager();
         if ( asset.getNestedInstances().empty() || pManager == nullptr )
             return true;
         const PrefabInstanceRegistry& registry = pManager->getSubsystem<PrefabInstanceRegistry>();

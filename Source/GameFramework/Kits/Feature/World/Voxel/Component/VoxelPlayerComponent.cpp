@@ -465,11 +465,11 @@ namespace sw
 
     void VoxelPlayerComponent::flushPending()
     {
-        _bFlushScheduled                  = SW_FALSE;
-        GameObject*             pOwner    = getOwner();
-        GameObjectManager*      pManager  = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        const GameObject*       pObject   = pManager != nullptr ? pManager->resolveGameObject( getGameMode() ) : nullptr;
-        VoxelGameModeComponent* pGameMode = pObject != nullptr ? pObject->getComponent<VoxelGameModeComponent>() : nullptr;
+        _bFlushScheduled                   = SW_FALSE;
+        GameObject*              pOwner    = getOwner();
+        const GameObjectManager* pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject*        pObject   = pManager != nullptr ? pManager->resolveGameObject( getGameMode() ) : nullptr;
+        VoxelGameModeComponent*  pGameMode = pObject != nullptr ? pObject->getComponent<VoxelGameModeComponent>() : nullptr;
         for ( const BlockEdit& edit : _listPendingEdit )
         {
             if ( pGameMode != nullptr )

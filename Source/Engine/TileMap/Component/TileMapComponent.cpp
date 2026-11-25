@@ -250,8 +250,8 @@ namespace sw
 
     bool TileMapComponent::rebuildChunks()
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
+        GameObject*              pOwner   = getOwner();
+        const GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _bLoaded == SW_FALSE )
             return false;
         releaseChunks();

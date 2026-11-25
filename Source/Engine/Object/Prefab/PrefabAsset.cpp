@@ -442,7 +442,7 @@ namespace sw
             static void captureNestedParts( const GameObject& root, PrefabCache* pPrefabs, vector<PrefabInstanceNode>& outListNode )
             {
                 outListNode.clear();
-                GameObjectManager* pManager = root.getMutableManager();
+                const GameObjectManager* pManager = root.getManager();
                 if ( pManager == nullptr )
                     return;
                 const PrefabInstanceRegistry& registry = pManager->getSubsystem<PrefabInstanceRegistry>();

@@ -53,7 +53,7 @@ namespace sw
              */
             static ISoundPlayer* findSoundPlayer( const AnimationNotifyContext& context )
             {
-                GameObjectManager* pManager = context._owner.getMutableManager();
+                const GameObjectManager* pManager = context._owner.getManager();
                 return pManager != nullptr ? locateSubsystem<ISoundPlayer>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
             }
 

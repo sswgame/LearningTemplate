@@ -418,7 +418,7 @@ namespace sw
         }
         _boundContentID = _asset->getContentID();
         _groundQuery.reset();
-        if ( pOwner->getMutableManager() != nullptr )
+        if ( pOwner->getManager() != nullptr )
             _groundQuery = make_unique<PoseModifierComponentInternal::SceneGroundQuery>( *pOwner->getMutableManager(), _instance.getSolveSpace()._bPlanar == SW_TRUE, pOwner->getObjectID() );
         loadSharedColliders();
         bindExternalTargets();
@@ -502,7 +502,7 @@ namespace sw
 
     bool PoseModifierComponent::wouldCreateCycle( const SkeletalMeshComponent* pUpstream ) const
     {
-        GameObjectManager* pManager = ( getOwner() != nullptr ) ? getOwner()->getMutableManager() : nullptr;
+        const GameObjectManager* pManager = ( getOwner() != nullptr ) ? getOwner()->getManager() : nullptr;
         if ( pManager == nullptr || pUpstream == nullptr )
             return false;
         // 위 유닛에서 의존을 따라 올라가다 내 유닛을 만나면 고리다.
@@ -575,7 +575,7 @@ namespace sw
             const SocketID   socketID          = _pSocketTable->resolveTarget( _pSocketTable->findSocket( def._socket ) );
             const SocketDef* pDef              = ( socketID != kInvalidSocketID ) ? _pSocketTable->findSocketDef( socketID ) : nullptr;
             const uint32     skeletalMeshIndex = ( pDef != nullptr ) ? _pSocketTable->getSocketUnit( socketID ) : MathUtil::kMaxUInt32;
-            if ( skeletalMeshIndex < _listTableUnit.size() && getOwner()->getMutableManager() != nullptr )
+            if ( skeletalMeshIndex < _listTableUnit.size() && getOwner()->getManager() != nullptr )
                 pTargetUnit = getOwner()->getMutableManager()->resolveComponent( _listTableUnit[skeletalMeshIndex] );
             if ( pDef != nullptr )
             {
@@ -740,11 +740,11 @@ namespace sw
         if ( _instance.isInitialized() == false )
             return;
 
-        _pFrameAnimator                        = ( getOwner() != nullptr ) ? getOwner()->getComponent<SkeletalAnimatorComponent>() : nullptr;
-        _worldFromModel                        = skeletalMesh.getWorldMatrix();
-        const float4x4          modelFromWorld = _worldFromModel.invert();
-        GameObjectManager*      pManager       = ( getOwner() != nullptr ) ? getOwner()->getMutableManager() : nullptr;
-        const vector<float4x4>& listOwnModel   = skeletalMesh.getModelSpaceTransforms(); // 지난 프레임의 최종 포즈
+        _pFrameAnimator                         = ( getOwner() != nullptr ) ? getOwner()->getComponent<SkeletalAnimatorComponent>() : nullptr;
+        _worldFromModel                         = skeletalMesh.getWorldMatrix();
+        const float4x4           modelFromWorld = _worldFromModel.invert();
+        const GameObjectManager* pManager       = ( getOwner() != nullptr ) ? getOwner()->getManager() : nullptr;
+        const vector<float4x4>&  listOwnModel   = skeletalMesh.getModelSpaceTransforms(); // 지난 프레임의 최종 포즈
         for ( uint32 targetIndex = 0; targetIndex < static_cast<uint32>( _listExternal.size() ); ++targetIndex )
         {
             ExternalTarget& external = _listExternal[targetIndex];
