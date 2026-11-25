@@ -143,7 +143,7 @@ namespace sw
 
     void CityViewComponent::updateView( GameObjectManager& manager, const CityBuilderGameModeComponent& director )
     {
-        const CityCatalog& catalog = director->findCatalog(); // 열린 판은 카탈로그를 쥐고 있다
+        const CityCatalog& catalog = *director.findCatalog(); // 열린 판은 카탈로그를 쥐고 있다
         if ( _shownCatalog.get() != &catalog )
         {
             despawnViews(); // 도시가 새 판에 묶였다 — 땅 · 서비스의 색과 집 단계가 바뀌었을 수 있다
