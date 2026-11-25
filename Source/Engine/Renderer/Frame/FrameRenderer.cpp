@@ -400,8 +400,8 @@ namespace sw
             pRenderDebug->endFrame();
 #endif
         // 건너뛴 프레임 뒤의 따라잡기 — GPU 입자가 다 따라잡았으면 이 패킷이 실은 건너뛴 번호까지 끝났다고 적는다(캡처 준비가 본다).
-        if ( SimulationOnlyFrameQueue* const pSimulationOnly = engine::areEngineServicesBound() ? engine::findSubsystem<SimulationOnlyFrameQueue>() : nullptr )
-            pSimulationOnly->reportDrawnFrame( packet._simulationOnlySerial, _state._particleRenderer.getPendingGPUStepCount() );
+        if ( _host._pSimulationOnly != nullptr )
+            _host._pSimulationOnly->reportDrawnFrame( packet._simulationOnlySerial, _state._particleRenderer.getPendingGPUStepCount() );
         return bDrew;
     }
 

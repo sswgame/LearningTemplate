@@ -158,7 +158,7 @@ namespace sw
         _state._gpuMessages.poll();
         _state._vfxMeshReadback.poll();
         // 이번 프레임의 출력 선택(`gpu.inspect` · `gpu.thread`)과 로그 예산 — 프레임의 기록보다 먼저 큐에 들어간다.
-        const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
+        const GPUPixelInspector* const pInspector = _state._pPixelInspector;
         _state._gpuMessages.updateControl( pInspector != nullptr ? pInspector->getSelection() : GPUMessageSelection{}, _state._settings._diagnostics._gpuMessageLogBudget );
         _state._gpuMessages.transitionForWrite( cmd ); // 위 업로드가 읽기 상태로 남긴다 — 패스 몸통은 전이하지 않는다
         // HZB · 가림 타일 표시는 짓는 쪽(HZBBuild 패스 · 프리패스 뒤 · 반사 앞)이 다시 켠다. 패스가 없는 파이프라인에서 지난 프레임의 표시가 남아 컬링이 낡은 피라미드를 읽지 않게 비운다.

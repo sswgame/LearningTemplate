@@ -60,12 +60,14 @@ namespace sw
     class Mesh;
     class RenderExtensionRegistry;
     class FrameProfiler;
+    class GPUPixelInspector;
     class MaterialCache;
     class MaterialInstance;
     class RenderDebugRegistry;
     class RenderTargetRegistry;
     class Scene;
     class ShaderBindingLayout;
+    class SimulationOnlyFrameQueue;
     class TaskArgs;
     class TaskManager;
     class Texture2D;
@@ -105,11 +107,13 @@ namespace sw
      */
     struct FrameRendererHost
     {
-        FrameProfiler*           _pProfiler{ nullptr };        ///< 패스별 GPU 시간 보고(타임스탬프 슬롯은 디바이스에 하나 — 렌더러 하나만 계측한다)
-        RenderExtensionRegistry* _pExtensions{ nullptr };      ///< 모듈 렌더 확장(주 파이프라인에 붙는다)
-        RenderTargetRegistry*    _pRenderTargets{ nullptr };   ///< 렌더 타깃 패널의 목록(주 시점의 첨부)
-        MaterialCache*           _pPinnedMaterials{ nullptr }; ///< 고정 머티리얼의 PSO 미리 만들기 줄(줄은 하나 — 렌더러 하나만 꺼낸다)
-        RenderDebugRegistry*     _pRenderDebug{ nullptr };     ///< 렌더링 런타임 디버그 우편함(프레임 디버거 · 통계 · 그래프 사본 · 버퍼 보기 — 주 시점만)
+        FrameProfiler*            _pProfiler{ nullptr };        ///< 패스별 GPU 시간 보고(타임스탬프 슬롯은 디바이스에 하나 — 렌더러 하나만 계측한다)
+        RenderExtensionRegistry*  _pExtensions{ nullptr };      ///< 모듈 렌더 확장(주 파이프라인에 붙는다)
+        RenderTargetRegistry*     _pRenderTargets{ nullptr };   ///< 렌더 타깃 패널의 목록(주 시점의 첨부)
+        MaterialCache*            _pPinnedMaterials{ nullptr }; ///< 고정 머티리얼의 PSO 미리 만들기 줄(줄은 하나 — 렌더러 하나만 꺼낸다)
+        GPUPixelInspector*        _pPixelInspector{ nullptr };  ///< 개발 명령 `gpu.inspect` · `gpu.thread` · `gpu.show` 의 선택(주 화면의 픽셀 — 미리보기 · 캡처는 고르지 않는다)
+        SimulationOnlyFrameQueue* _pSimulationOnly{ nullptr };  ///< 건너뛴 프레임의 따라잡기 보고(번호는 주 패킷이 싣는다)
+        RenderDebugRegistry*      _pRenderDebug{ nullptr };     ///< 렌더링 런타임 디버그 우편함(프레임 디버거 · 통계 · 그래프 사본 · 버퍼 보기 — 주 시점만)
     };
 
     /**
@@ -152,8 +156,9 @@ namespace sw
         /** @brief 주 렌더러만 하는 일의 상대를 겁니다(`FrameRendererHost`). `initialize` 앞에 부릅니다(파이프라인 로드가 렌더 타깃을 공개한다). */
         void bindHost( const FrameRendererHost& host )
         {
-            _host                = host;
-            _state._pRenderDebug = host._pRenderDebug;
+            _host                   = host;
+            _state._pRenderDebug    = host._pRenderDebug;
+            _state._pPixelInspector = host._pPixelInspector;
         }
         /**
          * @brief 화면 밖 씬(미리보기 · 캡처) 하나를 그리는 렌더러로 초기화합니다(`OffscreenSceneRenderers` 가 만든다).

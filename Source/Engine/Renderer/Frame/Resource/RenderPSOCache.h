@@ -163,10 +163,13 @@ namespace sw
         void requestMaterialPSO( IRHIDevice* pDevice, const MaterialPSOKey& key, RHIPipelineStateDesc&& desc, bool bUrgent, bool bAsync );
         /**
          * @brief 빌더가 끝낸 결과를 캐시에 합칩니다(`Building` → `Ready` · `Failed`, 레이아웃 등록 포함). 렌더 스레드가 셋업 구간(기록 전)에만 부릅니다.
-         * @param bAsync false 이면 먼저 줄의 작업을 @p budgetMicroseconds 안에서 이 스레드가 만듭니다(0 이면 전부).
-         * @return 이번에 `Ready` 로 합친 항목 수입니다(0 보다 크면 호출자가 폴백 버퍼를 다시 점검합니다).
+         * @details 저장소는 렌더러(주 화면 · 미리보기)가 함께 쓰고 렌더러마다 두 번 부른다 — 예산은 **장치 프레임에 하나**라 부른 횟수만큼 늘지 않는다(`IRHIDevice::getFrameNumber`).
+         * @param bAsync false 이면 먼저 줄의 작업을 이 프레임에 남은 예산(@p budgetMicroseconds — 0 이면 전부) 안에서 이 스레드가 만듭니다.
+         * @return 이번에 `Ready` 로 합친 항목 수입니다. 레이아웃을 보는 쪽은 이 수가 아니라 `getLayoutSerial` 로 안다 — 다른 렌더러의 호출이 먼저 합쳤을 수 있다.
          */
         uint32 pollMaterialPSOBuilds( IRHIDevice* pDevice, bool bAsync, uint32 budgetMicroseconds );
+        /** @brief 레이아웃을 등록할 때마다 오르는 번호입니다. 저장소를 함께 쓰는 렌더러마다 자기가 본 번호와 견줘 새 레이아웃을 안다(`FramePSOManager` 의 폴백 원소). */
+        [[nodiscard]] uint64 getLayoutSerial() const;
         /** @brief 빌더 줄에 있거나 만드는 중인 작업 수입니다(계측). */
         [[nodiscard]] uint32 getPendingMaterialPSOBuilds() const;
 
@@ -208,7 +211,8 @@ namespace sw
         ShaderBindingLayoutCache                                                        _bindingLayoutCache;
         unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPSOLayout SW_GUARDED_BY( _layoutMutex );
         unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc> _mapPSODesc         SW_GUARDED_BY( _layoutMutex );
-        mutable shared_mutex                                                            _layoutMutex; ///< 기록 워커들이 배치마다 조회만 한다 — 공유 잠금(언리얼 PSO 캐시의 `FRWLock`)
+        uint64 _layoutSerial                                                            SW_GUARDED_BY( _layoutMutex ){ 0 }; ///< 레이아웃 등록 번호(`getLayoutSerial`)
+        mutable shared_mutex                                                            _layoutMutex;                       ///< 기록 워커들이 배치마다 조회만 한다 — 공유 잠금(언리얼 PSO 캐시의 `FRWLock`)
         /// @brief 엔진이 만들어 둔 패스별 PSO 입니다. 키가 enum 이라 조회에 문자열을 만들지 않습니다.
         unordered_map<RenderPassKind, RHIPipelineState> _mapEnginePSO;
         /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPSOKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
@@ -219,5 +223,7 @@ namespace sw
         mutable shared_mutex                                                                _materialPSOMutex; ///< `_layoutMutex` 와 같은 까닭의 공유 잠금
         /// @brief 머티리얼 변형의 생성 줄과 전용 스레드입니다. 캐시가 소유해 미리보기 렌더러와 함께 씁니다(해제는 `releaseAll` 이 스레드부터 합류합니다).
         MaterialPSOBuilder _materialPSOBuilder;
+        uint64             _pollFrameNumber{ ~uint64{ 0 } }; ///< `_buildBudgetNanoseconds` 를 연 장치 프레임(렌더 스레드)
+        int64              _buildBudgetNanoseconds{ 0 };     ///< 그 프레임에 남은 생성 예산
     };
 } // namespace sw

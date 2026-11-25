@@ -46,6 +46,7 @@
 
 namespace sw
 {
+    class GPUPixelInspector;
     class RenderDebugRegistry;
     class TaskManager;
 
@@ -104,6 +105,8 @@ namespace sw
         RenderGraph _frameGraph{};
         /** @brief 렌더링 런타임 디버그 우편함(프레임 디버거 · 통계 · 그래프 사본 · 버퍼 보기)입니다. 주 렌더러만 호스트가 건다 — 화면 밖 렌더러는 nullptr 이라 기록하지 않는다. */
         RenderDebugRegistry* _pRenderDebug{ nullptr };
+        /** @brief 개발 명령의 픽셀 · 스레드 선택과 첨부 보기입니다. 주 렌더러만 호스트가 건다(`_pRenderDebug` 와 같다). */
+        const GPUPixelInspector* _pPixelInspector{ nullptr };
         /**
          * @brief 뷰 그래프의 트랜지언트 앨리어싱 계획입니다(레벨 수명이 겹치지 않고 서술이 같은 첨부가 텍스처 하나를 나눈다 — `RenderGraphAliasPlan::make`).
          * @details 콜백을 묶을 때(`FramePassExecutor::bindPassCallbacks`) 세우고 세대를 올린다. 뷰 풀은 세대가 다르면 다시 만든다(`FrameViewResources::updateViewTransients`).

@@ -4,6 +4,8 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/ScopedDeferredLog.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -11,6 +13,7 @@
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/View/RenderViewMode.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -35,6 +38,13 @@ namespace sw
         ScopedLock<shared_mutex>   lock{ _layoutMutex };
         _mapPSOLayout[pso] = &layout;
         _mapPSODesc[pso]   = desc;
+        ++_layoutSerial;
+    }
+
+    uint64 RenderPSOCache::getLayoutSerial() const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _layoutMutex };
+        return _layoutSerial;
     }
 
     const ShaderBindingLayout* RenderPSOCache::findLayout( RHIPipelineStateHandle pso ) const
@@ -204,8 +214,21 @@ namespace sw
     {
         if ( pDevice == nullptr )
             return 0;
-        if ( bAsync == false )
-            (void)_materialPSOBuilder.buildOnCaller( budgetMicroseconds );
+        if ( _pollFrameNumber != pDevice->getFrameNumber() )
+        {
+            _pollFrameNumber        = pDevice->getFrameNumber();
+            _buildBudgetNanoseconds = static_cast<int64>( budgetMicroseconds ) * constant::time::kNanosecondsPerMicrosecond;
+            SW_PROFILE_COUNT( "RT.PSO.pendingBuilds", getPendingMaterialPSOBuilds() ); // 카운터는 프레임 합이라 프레임에 한 번 낸다(앞 프레임까지 밀린 수)
+        }
+        const bool bBuildAll = budgetMicroseconds == 0;
+        if ( bAsync == false && ( bBuildAll || _buildBudgetNanoseconds > 0 ) )
+        {
+            const int64  startNanoseconds = MonotonicClock::nowNanoseconds();
+            const uint32 leftMicroseconds = static_cast<uint32>( MathUtil::max<int64>( _buildBudgetNanoseconds / constant::time::kNanosecondsPerMicrosecond, 1 ) );
+            const uint32 builtCount       = _materialPSOBuilder.buildOnCaller( bBuildAll ? 0u : leftMicroseconds );
+            if ( builtCount > 0 )
+                _buildBudgetNanoseconds -= MonotonicClock::nowNanoseconds() - startNanoseconds;
+        }
         vector<MaterialPSOBuilder::Result> listResult;
         _materialPSOBuilder.takeResults( listResult );
         uint32 readyCount{ 0 };

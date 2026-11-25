@@ -535,3 +535,21 @@ SW_TEST_CASE( VulkanPhysicalDeviceRankTest, CPUIsAlwaysLast )
     SW_EXPECT_TRUE( Rank::compute( Rank::kIntegratedGPU, true ) < Rank::compute( Rank::kDiscreteGPU, true ) );
     SW_EXPECT_TRUE( Rank::compute( Rank::kIntegratedGPU, false ) < Rank::compute( Rank::kVirtualGPU, false ) );
 }
+
+/**
+ * @brief [RHIDeviceFrameNumberTest] 장치 프레임 번호는 프레임을 열 때만 하나씩 오른다 — GPU 대기는 올리지 않는다
+ * @details 핸들 재사용 경계 수(`getHandleReuseCount`)와 다르다. 프레임에 한 번인 일(PSO 생성 예산)이 이 번호로 가른다. 변이: 대기에서도 올리면 한 프레임에 예산을 두 번 연다.
+ */
+SW_TEST_CASE( RHIDeviceFrameNumberTest, CountsOpenedFramesOnly )
+{
+    test::FakeRHIDevice device;
+    const uint64        first = device.getFrameNumber();
+    device.beginFrame();
+    SW_EXPECT_EQUAL( first + 1, device.getFrameNumber() );
+    device.waitIdle( RHIWaitIdleReason::WindowSwapChain );
+    device.endFrame();
+    SW_EXPECT_EQUAL( first + 1, device.getFrameNumber() );
+    device.beginFrame();
+    device.endFrame();
+    SW_EXPECT_EQUAL( first + 2, device.getFrameNumber() );
+}

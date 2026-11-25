@@ -368,6 +368,8 @@ namespace sw
          *       `endFrame` 은 그 프레임에 그린 스왑체인을 모두 표시합니다(`createSwapChain`).
          */
         void beginFrame();
+        /** @brief 지금까지 연 장치 프레임 수입니다(렌더 스레드). 렌더러가 여럿이어도 프레임에 한 번인 일(예산 · 계측)이 "이번 프레임에 이미 했나" 를 이 값으로 가른다. */
+        uint64 getFrameNumber() const { return _frameNumber; }
         /**
          * @brief `beginFrame` 이 이번 프레임의 기록을 실제로 열었는지입니다. 렌더 스레드에서만 부른다.
          * @details 스왑체인 이미지를 얻지 못한 프레임(서피스 손실 · 크기 0 · 다시 만들기 실패)은 기록해도 제출되지 않는다 — 한 번만 기록하는 일(정점 풀 복사)은 이것을 보고 다음 프레임으로 미룬다.
@@ -887,5 +889,6 @@ namespace sw
         RHIConstantBufferWriteLog _constantBufferWriteLog;
         /// @brief 지난 경계 수입니다(`getHandleReuseCount`).
         atomic<uint64> _handleReuseCount{ 0 };
+        uint64         _frameNumber{ 0 }; ///< 연 프레임 수(`getFrameNumber`)
     };
 } // namespace sw

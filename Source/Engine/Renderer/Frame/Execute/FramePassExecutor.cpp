@@ -689,7 +689,7 @@ namespace sw
     void FramePassExecutor::prepareVisualizedAttachment( IRHICommandList& cmd ) const
     {
         // 개발 보기 `gpu.show <첨부>` — Present 가 선언하지 않은 첨부를 읽는다. 앞 레벨이 쓴 첨부라 같은 레벨의 다른 패스가 그것을 쓰지 않는다(쓰기 사슬).
-        const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
+        const GPUPixelInspector* const pInspector = _state._pPixelInspector;
         string                         attachment;
         if ( isRenderingExtraView() || pInspector == nullptr || pInspector->findVisualizedAttachment( attachment ) == false )
             return;
@@ -702,7 +702,7 @@ namespace sw
     void FramePassExecutor::registerVisualizedAttachment( FramePassContext& context )
     {
         // 주 시점만 바꾼다 — 추가 뷰(CCTV · 렌더 텍스처)는 제 원본을 그대로 낸다. 없는 이름이면 원본을 그대로 둔다(개발 명령이 이미 이름을 알렸다).
-        const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
+        const GPUPixelInspector* const pInspector = _state._pPixelInspector;
         string                         attachment;
         if ( isRenderingExtraView() || pInspector == nullptr || pInspector->findVisualizedAttachment( attachment ) == false )
             return;

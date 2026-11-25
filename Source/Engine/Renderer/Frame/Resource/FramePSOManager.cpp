@@ -537,7 +537,8 @@ namespace sw
         }
         _listMaterialFallback.clear();
         _mapLayoutMaterialFallback.clear();
-        _particlePSOKey = MaterialPSOKey{};
+        _fallbackLayoutSerial = 0;
+        _particlePSOKey       = MaterialPSOKey{};
     }
 
     void FramePSOManager::onShaderRecompiled( string_view shaderPath )
@@ -626,6 +627,7 @@ namespace sw
 
         // 등록된 PSO 레이아웃마다 머티리얼 폴백 원소를 만든다. stride 와 텍스처 인덱스 필드 위치는 셰이더 타입마다 다를 수 있고, 레이아웃은
         // 이 디바이스의 백엔드로 빌드된 것이다(SPIR-V 도 지금은 `-fvk-use-dx-layout` 으로 DX 규칙을 따른다). 내용이 같은 원소는 버퍼 하나를 나눠 쓴다.
+        _fallbackLayoutSerial = _pCache->getLayoutSerial();
         vector<RenderPSOCache::RegisteredLayout> listLayout;
         _pCache->collectLayouts( listLayout );
         for ( const RenderPSOCache::RegisteredLayout& registered : listLayout )
@@ -1048,7 +1050,6 @@ namespace sw
         if ( listOpaqueRequest.empty() && listTransparentRequest.empty() )
             return;
 
-        bool bCreatedVariant{ false };
         for ( const auto& [passType, passState] : _pCache->getEnginePSOs() )
         {
             const RHIPipelineStateHandle passPSO = passState._handle;
@@ -1058,18 +1059,9 @@ namespace sw
             const vector<MaterialPSORequest>& listRequest      = bTransparentPass ? listTransparentRequest : listOpaqueRequest;
             for ( const MaterialPSORequest& request : listRequest )
             {
-                if ( ensureRequestMaterialPSOs( passPSO, passType, request, viewModeMask ) )
-                    bCreatedVariant = true;
+                ensureRequestMaterialPSOs( passPSO, passType, request, viewModeMask );
             }
         }
-
-        // 방금 만든 변형의 레이아웃은 셋업 때 폴백 stride 를 모으던 시점에는 없었다. 그 셰이더가
-        // 다른 크기의 MaterialData 를 선언하면 그 stride 의 폴백이 없고, 머티리얼 없는 배치가
-        // 그 PSO 로 그려질 때 registerMaterialBuffer 가 t5 를 **비운 채** 드로우를 낸다.
-        // Vulkan 이 초기화되지 않은 디스크립터를 읽어 디바이스를 잃는 그 경로다.
-        // 여기는 아직 기록 시작 전이라 버퍼를 만들 수 있다. 새 변형을 만든 프레임에만 돈다.
-        if ( bCreatedVariant )
-            ensureMaterialFallbackBuffers();
     }
 
     void FramePSOManager::warmPinnedMaterialPSOs( MaterialCache& pinnedMaterials, uint32 viewModeMask )
@@ -1084,7 +1076,6 @@ namespace sw
         SW_PROFILE_SCOPE( "RT.PSO.warmPinned" );
         // 씬 배치와 같은 키로 만든다(`GPUMaterialRegistry::makeShaderPermutation`) — 그 머티리얼이 씬에 들어오는 프레임에는 이미 캐시에 있다.
         // 비동기로 읽혀 나타나는 메시는 등장 디더 변형으로 먼저 그려지므로 그 변형도 만든다. 거울 배치(컬 반전)는 드물어 그 프레임에 만든다.
-        bool bCreatedVariant{ false };
         for ( const MaterialPSOWarmEntry& entry : listEntry )
         {
             const bool bTransparentMaterial = entry._bTransparent;
@@ -1103,15 +1094,12 @@ namespace sw
                     {
                         if ( ( passModeMask & ( 1u << modeIndex ) ) == 0 )
                             continue;
-                        if ( ensureMaterialPSOVariant( passPSO, passType, &permutation, permutation._hash, false, static_cast<RenderViewMode>( modeIndex ), RHIMeshVertexFormat::Packed, false ) )
-                            bCreatedVariant = true;
+                        ensureMaterialPSOVariant( passPSO, passType, &permutation, permutation._hash, false, static_cast<RenderViewMode>( modeIndex ), RHIMeshVertexFormat::Packed, false );
                     }
                 }
             }
         }
         listEntry.clear();
-        if ( bCreatedVariant )
-            ensureMaterialFallbackBuffers();
     }
 
     void FramePSOManager::collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest, vector<uint32>& outListVariant )
@@ -1133,15 +1121,14 @@ namespace sw
         }
     }
 
-    bool FramePSOManager::ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPSORequest& request, uint32 viewModeMask )
+    void FramePSOManager::ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPSORequest& request, uint32 viewModeMask )
     {
         const bool bReverseCulling = ( request._bReverseCulling != SW_FALSE );
         // 이 패스가 그리지 않는 배치(외곽선을 켜지 않은 머티리얼)의 변형은 만들지 않는다. 쿠커도 그것을 쿠킹하지 않는다.
         const GPUShaderPermutation* pRequestPermutation =
             ( request._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( request._shaderPermutation );
         if ( getRenderPassKindInfo( passType ).shouldDrawMaterial( pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
-            return false;
-        bool         bCreatedVariant{ false };
+            return;
         const uint32 passModeMask = getPassViewModeMask( getRenderPassKindInfo( passType ), viewModeMask );
         for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
         {
@@ -1153,35 +1140,32 @@ namespace sw
                 // 퍼뮤테이션이 없는 배치를 위한 변형이다. 적용하는 것이 뷰 모드와 컬 반전뿐이다. Lit 이고 거울이 아니면 만들 것이 없다
                 // (그때는 패스 PSO 가 그대로 정답이고 resolveBatchPSO 도 캐시를 보지 않는다).
                 const bool bNeedsVariant = viewMode != RenderViewMode::Lit || bReverseCulling || request._vertexFormat != RHIMeshVertexFormat::Packed;
-                if ( bNeedsVariant && ensureMaterialPSOVariant( passPSO, passType, nullptr, 0, bReverseCulling, viewMode, request._vertexFormat ) )
-                    bCreatedVariant = true;
+                if ( bNeedsVariant )
+                    ensureMaterialPSOVariant( passPSO, passType, nullptr, 0, bReverseCulling, viewMode, request._vertexFormat );
                 continue;
             }
             if ( pRequestPermutation == nullptr )
                 continue;
-            if ( ensureMaterialPSOVariant( passPSO, passType, pRequestPermutation, pRequestPermutation->_hash, bReverseCulling, viewMode, request._vertexFormat ) )
-                bCreatedVariant = true;
+            ensureMaterialPSOVariant( passPSO, passType, pRequestPermutation, pRequestPermutation->_hash, bReverseCulling, viewMode, request._vertexFormat );
         }
-        return bCreatedVariant;
     }
 
-    bool FramePSOManager::ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassKind passType, const GPUShaderPermutation* pPermutation,
+    void FramePSOManager::ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassKind passType, const GPUShaderPermutation* pPermutation,
                                                     uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode, RHIMeshVertexFormat vertexFormat, bool bUrgent )
     {
         // 키를 `Building` 으로 올린 쪽만 만든다(`beginMaterialPSO`). 셰이더 컴파일이 낄 수 있는 변형은 desc 만 정해 빌더 줄에 넣고(렌더 스레드의 임계 경로에서 뺀다),
         // 결과는 `pollMaterialPSOBuilds` 가 기록 전에 합친다. 드로우 경로는 `Building` 배치를 이번 프레임만 건너뛴다(`RT.PSO.pendingBatches`).
         const MaterialPSOKey key{ passPSO, permutationHash, viewMode, vertexFormat, static_cast<uint8>( bReverseCulling ? SW_TRUE : SW_FALSE ) };
         if ( _pCache->beginMaterialPSO( key ) == false )
-            return false;
+            return;
         RHIPipelineStateDesc             deferredDesc{};
         RenderPSOCache::MaterialPSOEntry entry = createMaterialPSOVariant( passPSO, passType, pPermutation, viewMode, bReverseCulling, vertexFormat, &deferredDesc );
         if ( entry._state == RenderPSOCache::MaterialPSOState::Building )
         {
             _pCache->requestMaterialPSO( _pDevice, key, std::move( deferredDesc ), bUrgent, usesAsyncMaterialPSOBuilder() );
-            return false;
+            return;
         }
         _pCache->setMaterialPSO( key, std::move( entry ) );
-        return true;
     }
 
     bool FramePSOManager::usesAsyncMaterialPSOBuilder() const
@@ -1200,10 +1184,11 @@ namespace sw
         // 예산은 `EngineConfig::_render`(Config/Engine/EngineConfig.json)가 정본이다 — 0 이면 로드의 범위 검사(Min 1)가 막는다.
         const bool   bBuildAll          = _frameSettings._bPSOAsync == SW_FALSE || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE; // 결정적 실행은 시간 예산 없이 이 프레임에 모두 만든다
         const uint32 budgetMicroseconds = bBuildAll ? 0u : engine::getSubsystem<EngineConfig>()._render._psoBuildBudgetMicroseconds;
-        const uint32 readyCount         = _pCache->pollMaterialPSOBuilds( _pDevice, usesAsyncMaterialPSOBuilder(), budgetMicroseconds );
-        SW_PROFILE_COUNT( "RT.PSO.pendingBuilds", _pCache->getPendingMaterialPSOBuilds() );
-        // 방금 합친 변형의 레이아웃은 폴백 stride 를 모으던 시점에는 없었다(`ensureMaterialPSOs` 의 같은 이유).
-        if ( readyCount > 0 )
+        (void)_pCache->pollMaterialPSOBuilds( _pDevice, usesAsyncMaterialPSOBuilder(), budgetMicroseconds );
+        // 새 변형의 레이아웃은 폴백 stride 를 모으던 시점에는 없었다. 그 셰이더가 다른 크기의 MaterialData 를 선언하면 그 stride 의 폴백이 없고, 머티리얼 없는 배치가
+        // 그 PSO 로 그려질 때 registerMaterialBuffer 가 t5 를 **비운 채** 드로우를 낸다. Vulkan 이 초기화되지 않은 디스크립터를 읽어 디바이스를 잃는 그 경로다.
+        // 저장소는 렌더러가 함께 쓰므로 새 레이아웃은 **다른 렌더러의 호출이 먼저 합쳤을 수 있다** — 이 호출이 합친 수가 아니라 등록 번호로 안다. 기록 앞이라 버퍼를 만들 수 있다.
+        if ( _fallbackLayoutSerial != _pCache->getLayoutSerial() )
             ensureMaterialFallbackBuffers();
     }
 

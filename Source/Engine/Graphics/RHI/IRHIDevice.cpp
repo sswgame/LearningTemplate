@@ -242,6 +242,7 @@ namespace sw
     {
         assumeRenderThreadRole(); // 프레임 진행 상태는 렌더 스레드의 것이다 — 다른 스레드의 그리기는 `RenderThread::executeAndWait` 로 넘긴다
         _handleReuseCount.fetch_add( 1, std::memory_order_acq_rel );
+        ++_frameNumber;
         activateReservedBindlessTextures(); // 예약한 번호를 그려지기 전에 살린다(R-6)
         reportResourceCounts();
         beginFrameInternal();
