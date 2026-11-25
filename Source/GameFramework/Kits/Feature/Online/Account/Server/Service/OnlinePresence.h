@@ -22,6 +22,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
@@ -31,12 +32,6 @@ namespace sw
     class OnlineServiceHost;
     class ServerBusMessage;
 
-    /** @brief 접속 상태 설정입니다. */
-    struct OnlinePresenceConfig
-    {
-        int64 _ttlMs{ 60000 };             ///< 캐시 키의 시한이다
-        int64 _refreshIntervalMs{ 30000 }; ///< 캐시에 다시 기록하는 간격이다. 시한의 절반이다
-    };
 } // namespace sw
 
 namespace sw

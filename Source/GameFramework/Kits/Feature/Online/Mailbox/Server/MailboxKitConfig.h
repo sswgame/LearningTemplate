@@ -13,6 +13,24 @@
 
 namespace sw
 {
+    /** @brief 우편 알림 · 캠페인 · 정리의 운영 값입니다. 코드 기본값이 없다. */
+    REFLECT()
+    struct SW_KIT_API MailboxDeliveryPolicy
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 1 )
+        int64 _campaignRefreshMs{ 0 };
+        PROPERTY( Required, Min = 0 )
+        int64 _notificationIntervalMs{ 0 }; ///< 새 우편 알림을 가져가는 주기이다. 0 이면 알림을 보내지 않는다(다른 서버가 맡는다)
+        PROPERTY( Required, Min = 1 )
+        int32 _sweepBatchCount{ 0 };
+        PROPERTY( Required, Min = 1, Max = 64 )
+        int32 _notificationBatchCount{ 0 }; ///< 한 번에 가져가는 알림 수이다(트랜잭션 상한 64 안)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 우편함 키트의 서버 설정입니다. */
     REFLECT()
     struct MailboxKitConfig
@@ -33,5 +51,8 @@ namespace sw
         /** @brief 모두 받기 한 번에 훑는 우편 레코드 수입니다(최근 것부터). `_maxClaimAllCount` 이상이어야 합니다. */
         PROPERTY( Required, Min = 1, Max = 5000 )
         int32 _maxClaimAllScanCount{ 0 };
+        /** @brief 우편 알림 · 캠페인 · 정리의 운영 값입니다. */
+        PROPERTY( Required )
+        MailboxDeliveryPolicy _delivery{};
     };
 } // namespace sw

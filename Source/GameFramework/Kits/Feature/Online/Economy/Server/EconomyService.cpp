@@ -17,6 +17,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/OnlinePushRelay.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
+#include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
@@ -99,6 +100,11 @@ namespace sw
         if ( bMissingDependencies )
         {
             SW_LOG_ERROR_ID( "EconomyService.EconomyServiceNeedsStoreBoth", "EconomyService needs a store and both catalogs" );
+            return false;
+        }
+        if ( const string rangeError = ConfigRangeUtil::describeRangeErrors( static_cast<const EconomyPolicy&>( settings ) ); rangeError.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "EconomyService.PolicyRefused", "EconomyService refused its operating values (economy kit _policy): %#", rangeError.c_str() );
             return false;
         }
         // 서명 없는 개발 전용 제공자는 DevOnline 단위가 있는 구성(개발)에서만 받는다 — 배포는 그 단위를 짓지 않는다.

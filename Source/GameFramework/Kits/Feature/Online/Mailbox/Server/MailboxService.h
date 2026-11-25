@@ -17,6 +17,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
@@ -41,19 +42,15 @@ namespace sw
     class ServiceScheduler;
 
     /** @brief 우편함 서비스 설정입니다. 포인터는 빌려 씁니다. */
-    struct MailboxServiceConfig
+    struct MailboxServiceConfig : MailboxDeliveryPolicy
     {
         const ILedgerPolicy*     _pPolicy{ nullptr }; ///< 계정 상한이다. 게임이 CurrencyCatalog 를 넘기며, 기반 계층의 계약이라 키트끼리 몰라도 된다
         MetricRegistry*          _pMetricRegistry{ nullptr };
-        int32                    _maxClaimAllCount{ 0 };     ///< 필수. 모두 받기 한 번에 받는 우편 수(`MailboxKitConfig::_maxClaimAllCount`). 0 이하면 `initialize` 가 거절한다
-        int32                    _maxClaimAllScanCount{ 0 }; ///< 필수. 모두 받기 한 번에 훑는 우편 레코드 수(`MailboxKitConfig::_maxClaimAllScanCount`)
-        int64                    _claimedRetentionMs{ 0 };   ///< 필수. 받은 우편을 남기는 기간이다(`MailboxKitConfig::_claimedRetentionDays`). 0 이하면 서지 않는다
-        int64                    _sweepIntervalMs{ 60000 };  ///< 만료 정리 주기이다. 예약 테이블이 있으면 그 주기의 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
-        ServiceScheduler*        _pScheduler{ nullptr };     ///< 서버 조립의 예약 테이블이다. 없으면(테스트, 서버 한 대 도구) 틱 주기로 정리한다
-        int64                    _campaignRefreshMs{ 60000 };
-        int32                    _sweepBatchCount{ 256 };
-        int64                    _notificationIntervalMs{ 1000 };  ///< 새 우편 알림을 가져가는 주기이다. 0 이면 알림을 보내지 않는다(다른 서버가 맡는다)
-        int32                    _notificationBatchCount{ 32 };    ///< 한 번에 가져가는 알림 수이다(트랜잭션 상한 64 안)
+        int32                    _maxClaimAllCount{ 0 };           ///< 필수. 모두 받기 한 번에 받는 우편 수(`MailboxKitConfig::_maxClaimAllCount`). 0 이하면 `initialize` 가 거절한다
+        int32                    _maxClaimAllScanCount{ 0 };       ///< 필수. 모두 받기 한 번에 훑는 우편 레코드 수(`MailboxKitConfig::_maxClaimAllScanCount`)
+        int64                    _claimedRetentionMs{ 0 };         ///< 필수. 받은 우편을 남기는 기간이다(`MailboxKitConfig::_claimedRetentionDays`). 0 이하면 서지 않는다
+        int64                    _sweepIntervalMs{ 0 };            ///< 만료 정리 주기이다. 예약 테이블이 있으면 그 주기의 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
+        ServiceScheduler*        _pScheduler{ nullptr };           ///< 서버 조립의 예약 테이블이다. 없으면(테스트, 서버 한 대 도구) 틱 주기로 정리한다
         AccountPresence*         _pPresence{ nullptr };            ///< 다른 서버에 붙은 계정을 찾고 알림을 넘긴다. 서버 한 대 구성(`OnlineServerTopology`)에서만 null 이다
         IBalanceChangedListener* _pBalanceNotification{ nullptr }; ///< 수령 · 만료 반환으로 바뀐 잔액을 그 계정에 알린다. 경제 키트가 없으면 null 이다
         IOfflinePushSender*      _pOfflinePush{ nullptr };         ///< 접속하지 않은 계정의 기기 푸시이다(라이브 운영 키트). 없으면 오프라인 계정에는 알리지 않는다

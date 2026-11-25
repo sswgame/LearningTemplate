@@ -13,6 +13,64 @@
 
 namespace sw
 {
+    /** @brief 로그인 · 세션 · 탈퇴의 운영 값입니다. 코드 기본값이 없다. */
+    REFLECT()
+    struct SW_KIT_API LoginPolicy
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 1 )
+        int64 _sessionLifetimeMs{ 0 }; ///< 세션의 절대 수명이다. 지나면 비밀번호로 다시 로그인해야 한다
+        PROPERTY( Required, Min = 1 )
+        int64 _reconnectGraceMs{ 0 }; ///< 연결이 끊긴 뒤 토큰으로 돌아올 수 있는 시간이다
+        PROPERTY( Required, Min = 1 )
+        int64 _tombstoneLifetimeMs{ 0 }; ///< 밀려난 세션이 `Revoked` 로 응답하는 시간이다
+        PROPERTY( Required, Min = 1 )
+        int64 _ticketLifetimeMs{ 0 }; ///< 게임 접속 티켓의 시한이다. 새 UDP 연결만 막는다
+        PROPERTY( Required, Min = 1 )
+        int64 _lockoutMs{ 0 };
+        PROPERTY( Required, Min = 1 )
+        int64 _attemptRefillMs{ 0 }; ///< 연결(주소)마다 시도 횟수 하나가 채워지는 간격이다
+        PROPERTY( Required, Min = 1 )
+        int64 _deletionGraceMs{ 0 }; ///< 탈퇴를 요청한 뒤 계정을 지울 때까지의 유예 시간이다. 그 안에 취소할 수 있다
+        PROPERTY( Required, Min = 1 )
+        int64 _revocationScanMs{ 0 }; ///< 탈퇴한 계정의 연동 비밀 철회 대기열을 읽는 간격이다(철회할 제공자가 있을 때만)
+        PROPERTY( Required, Min = 1 )
+        int32 _revocationBatchSize{ 0 }; ///< 한 번에 읽어 철회를 맡기는 대기열 항목 수이다
+        PROPERTY( Required, Min = 1 )
+        int32 _maxFailedCount{ 0 }; ///< 이만큼 틀리면 계정을 잠근다
+    };
+
+    /** @brief 접속 상태 기록의 운영 값입니다. 코드 기본값이 없다. */
+    REFLECT()
+    struct SW_KIT_API OnlinePresenceConfig
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 1 )
+        int64 _ttlMs{ 0 }; ///< 캐시 키의 시한이다
+        PROPERTY( Required, Min = 1 )
+        int64 _refreshIntervalMs{ 0 }; ///< 캐시에 다시 기록하는 간격이다. 시한의 절반이다
+    };
+
+    /** @brief 계정 서버가 도는 주기와 한 번에 다루는 수입니다. 코드 기본값이 없다. */
+    REFLECT()
+    struct SW_KIT_API AccountServerPolicy
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 1 )
+        int64 _purgeIntervalMs{ 0 }; ///< 탈퇴 계정을 정리하는 간격이다
+        PROPERTY( Required, Min = 1 )
+        int64 _refreshIntervalMs{ 0 }; ///< 접속해 있는 세션을 다시 읽는 간격이다. 서버가 여러 대일 때 버스 알림을 놓친 변경을 찾아낸다
+        PROPERTY( Required, Min = 1 )
+        int32 _refreshCount{ 0 };
+        PROPERTY( Required, Min = 1 )
+        int32 _purgeCount{ 0 };
+        PROPERTY( Required )
+        OnlinePresenceConfig _presence{}; ///< 접속 상태 기록
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 서버가 서자마자 가입시켜 둘 개발용 계정 하나입니다. 이미 있으면 그대로 둡니다. */
     REFLECT()
     struct AccountSeedEntry
@@ -74,6 +132,12 @@ namespace sw
         /** @brief 연동 비밀(애플의 refresh token)을 저장소에 쓰기 전에 암호화할 키(32 B, 16 진수 64 자)를 담은 환경 변수 이름입니다. 탈퇴 때 연동 토큰을 철회하는 제공자를 쓰면 필수입니다. */
         PROPERTY()
         string _linkSecretKeySecretEnvironment{};
+        /** @brief 로그인 · 세션 · 탈퇴의 운영 값입니다. */
+        PROPERTY( Required )
+        LoginPolicy _login{};
+        /** @brief 계정 서버가 도는 주기와 접속 상태 기록입니다. */
+        PROPERTY( Required )
+        AccountServerPolicy _server{};
     };
 
     /** @brief 게임 서버 조립(`gameConnect`)의 서버 설정입니다. */

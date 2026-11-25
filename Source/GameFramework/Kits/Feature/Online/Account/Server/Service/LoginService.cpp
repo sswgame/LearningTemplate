@@ -10,6 +10,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
+#include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
@@ -352,6 +353,8 @@ namespace sw
         // 비밀번호 해시는 작업 풀 위의 상한 있는 줄에서만 돈다 — 작업 풀 · 해시 구현이 없으면 기동 오류다(저장소 워커로 대신하지 않는다, 감사 O-3).
         if ( pTaskManager == nullptr || pHasher == nullptr )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the login service needs the task manager and a password hasher - password hashing does not run on store workers" } );
+        if ( const string rangeError = ConfigRangeUtil::describeRangeErrors( static_cast<const LoginPolicy&>( settings ) ); rangeError.empty() == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the login service refused its operating values (account kit _login)", rangeError } );
         PasswordHashQueueConfig hashSettings;
         hashSettings._maxConcurrentPasswordHashes = settings._maxConcurrentPasswordHashes;
         hashSettings._maxQueuedPasswordHashes     = settings._maxQueuedPasswordHashes;

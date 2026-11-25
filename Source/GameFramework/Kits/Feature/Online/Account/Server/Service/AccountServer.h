@@ -22,6 +22,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/OnlinePresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
@@ -34,14 +35,9 @@ namespace sw
     class MetricRegistry;
 
     /** @brief 계정 바인딩 설정입니다. */
-    struct AccountServerConfig
+    struct AccountServerConfig : AccountServerPolicy
     {
-        MetricRegistry*      _pMetricRegistry{ nullptr }; ///< 없으면 요청 지표를 세지 않는다
-        int64                _purgeIntervalMs{ 60000 };   ///< 탈퇴 계정을 정리하는 간격이다
-        int64                _refreshIntervalMs{ 10000 }; ///< 접속해 있는 세션을 다시 읽는 간격이다. 서버가 여러 대일 때 버스 알림을 놓친 변경을 찾아낸다
-        int32                _refreshCount{ 64 };
-        int32                _purgeCount{ 32 };
-        OnlinePresenceConfig _presence{};
+        MetricRegistry* _pMetricRegistry{ nullptr }; ///< 없으면 요청 지표를 세지 않는다
     };
 } // namespace sw
 

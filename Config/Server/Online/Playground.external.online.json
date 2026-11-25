@@ -27,6 +27,8 @@
         {
             "_name": "account",
             "_settings": {
+                "_login": { "_sessionLifetimeMs": 43200000, "_reconnectGraceMs": 120000, "_tombstoneLifetimeMs": 600000, "_ticketLifetimeMs": 60000, "_lockoutMs": 300000, "_attemptRefillMs": 2000, "_deletionGraceMs": 2592000000, "_revocationScanMs": 60000, "_revocationBatchSize": 16, "_maxFailedCount": 5 },
+                "_server": { "_purgeIntervalMs": 60000, "_refreshIntervalMs": 10000, "_refreshCount": 64, "_purgeCount": 32, "_presence": { "_ttlMs": 60000, "_refreshIntervalMs": 30000 } },
                 "_attemptBurst": 10,
                 "_expiredSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
                 "_maxConcurrentPasswordHashes": 2,
@@ -57,12 +59,14 @@
         {
             "_name": "directory",
             "_settings": {
+                "_refresh": { "_reloadPeriodMs": 30000, "_registryRefreshPeriodMs": 2000, "_staleMs": 15000 },
                 "_endedAnnouncementTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 }
             }
         },
         {
             "_name": "economy",
             "_settings": {
+                "_policy": { "_withdrawalWindowMs": 604800000, "_refundCursorRetryMs": 30000, "_deliveryScanIntervalMs": 300000, "_deliveryAlarmMarginMs": 86400000, "_deliveryScanMaxCount": 200, "_auditMinuteOfDay": 270 },
                 "_currencyCatalog": "game/playground/data/playground.currencies.xml",
                 "_offerCatalog": "game/playground/data/playground.offers.xml",
                 "_refundRecovery": "Debt",
@@ -104,6 +108,7 @@
         {
             "_name": "mailbox",
             "_settings": {
+                "_delivery": { "_campaignRefreshMs": 60000, "_notificationIntervalMs": 1000, "_sweepBatchCount": 256, "_notificationBatchCount": 32 },
                 "_sweepIntervalMs": 60000,
                 "_maxClaimAllCount": 16,
                 "_maxClaimAllScanCount": 500,

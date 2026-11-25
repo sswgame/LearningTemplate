@@ -116,10 +116,33 @@ namespace
         }
     };
 
-    /** @brief 테스트의 로그인 설정입니다. 해시 줄 상한은 키트 설정의 필수 칸이라 기본값이 없다. */
+    /** @brief 테스트의 계정 서버 설정입니다(키트 설정 `_server` — 코드 기본값이 없다). */
+    AccountServerConfig makeAccountServerSettings()
+    {
+        AccountServerConfig settings;
+        settings._purgeIntervalMs             = 60000;
+        settings._refreshIntervalMs           = 10000;
+        settings._refreshCount                = 64;
+        settings._purgeCount                  = 32;
+        settings._presence._ttlMs             = 60000;
+        settings._presence._refreshIntervalMs = 30000;
+        return settings;
+    }
+
+    /** @brief 테스트의 로그인 설정입니다. 운영 값 · 해시 줄 상한은 키트 설정의 필수 칸이라 기본값이 없다. */
     LoginServiceConfig makeAccountServerLoginSettings()
     {
         LoginServiceConfig settings;
+        settings._sessionLifetimeMs           = 43200000;
+        settings._reconnectGraceMs            = 120000;
+        settings._tombstoneLifetimeMs         = 600000;
+        settings._ticketLifetimeMs            = 60000;
+        settings._lockoutMs                   = 300000;
+        settings._attemptRefillMs             = 2000;
+        settings._deletionGraceMs             = 2592000000;
+        settings._revocationScanMs            = 60000;
+        settings._revocationBatchSize         = 16;
+        settings._maxFailedCount              = 5;
         settings._maxConcurrentPasswordHashes = 2;
         settings._maxQueuedPasswordHashes     = 64;
         return settings;
@@ -143,7 +166,7 @@ namespace
             _pRig = make_unique<test::OnlineTestFixture>( false );
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize]{ 1, 2, 3 };
             SW_EXPECT_TRUE( _loginService.initialize( &_pRig->_server._store, &_crypto, &_hasher, game::findSubsystem<TaskManager>(), settings, arrMasterKey ).has_value() );
-            _accountServer.initialize( &_loginService, AccountServerConfig{} );
+            _accountServer.initialize( &_loginService, makeAccountServerSettings() );
             SW_EXPECT_TRUE( _pRig->_server._host.registerServerService( &_accountServer ) );
             _pRig->_server.start();
         }

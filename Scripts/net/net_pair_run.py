@@ -83,6 +83,8 @@ def make_online_config(list_kit: list[dict], server_id: int = 1, topology: str =
 def make_account_kit(accounts: tuple[tuple[str, str], ...]) -> dict:
     """계정 키트 설정(@p accounts 는 시드 계정의 이름 · 비밀번호)."""
     return {"_name": "account", "_settings": {
+        "_login": {"_sessionLifetimeMs": 43200000, "_reconnectGraceMs": 120000, "_tombstoneLifetimeMs": 600000, "_ticketLifetimeMs": 60000, "_lockoutMs": 300000, "_attemptRefillMs": 2000, "_deletionGraceMs": 2592000000, "_revocationScanMs": 60000, "_revocationBatchSize": 16, "_maxFailedCount": 5},
+        "_server": {"_purgeIntervalMs": 60000, "_refreshIntervalMs": 10000, "_refreshCount": 64, "_purgeCount": 32, "_presence": {"_ttlMs": 60000, "_refreshIntervalMs": 30000}},
         "_expiredSessionTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
         "_attemptBurst": 10,
         "_maxConcurrentPasswordHashes": 2,
@@ -483,7 +485,7 @@ def _start_match_servers(group: ProcessGroup, server_exe: Path, cache_server: _C
     store = {"_driver": "sqlite", "_connection": (group.out_dir / "match.sqlite").as_posix()}
     cache = {"_driver": "resp", "_endpoint": f"127.0.0.1:{cache_server.server_address[1]}?prefix=netpair:"}
     content = "game/playground/data/playground"
-    directory = {"_name": "directory", "_settings": {"_endedAnnouncementTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500}}}
+    directory = {"_name": "directory", "_settings": {"_refresh": {"_reloadPeriodMs": 30000, "_registryRefreshPeriodMs": 2000, "_staleMs": 15000}, "_endedAnnouncementTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500}}}
     leaderboard = {"_name": "leaderboard", "_settings": {
         "_pastScoreTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
         "_seasonResultTTL": {"_expireAfterDays": 365, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},

@@ -11,6 +11,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTypes.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 
 namespace sw
@@ -26,25 +27,15 @@ namespace sw
 namespace sw
 {
     /** @brief 로그인 서비스 설정입니다. 시간은 밀리초입니다. */
-    struct LoginServiceConfig
+    struct LoginServiceConfig : LoginPolicy
     {
-        NetPasswordHashParams _passwordHashParams{};                                                                                   ///< Argon2id 해시 파라미터이다. 기본값은 OWASP 권장(19 MiB, 2회, 1레인)이며, 바꾸면 다음 로그인에서 다시 해시한다
-        int64                 _sessionLifetimeMs{ 12 * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond };     ///< 세션의 절대 수명이다. 지나면 비밀번호로 다시 로그인해야 한다
-        int64                 _reconnectGraceMs{ 2 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond };     ///< 연결이 끊긴 뒤 토큰으로 돌아올 수 있는 시간이다
-        int64                 _tombstoneLifetimeMs{ 10 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond }; ///< 밀려난 세션이 `Revoked` 로 응답하는 시간이다
-        int64                 _ticketLifetimeMs{ constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond };         ///< 게임 접속 티켓의 시한이다. 새 UDP 연결만 막는다
-        int64                 _lockoutMs{ 5 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond };
-        int64                 _attemptRefillMs{ 2000 };                                                                         ///< 연결(주소)마다 시도 횟수 하나가 채워지는 간격이다
-        int64                 _deletionGraceMs{ 30 * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond }; ///< 탈퇴를 요청한 뒤 계정을 지울 때까지의 유예 시간이다. 그 안에 취소할 수 있다
-        int64                 _revocationScanMs{ constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond };  ///< 탈퇴한 계정의 연동 비밀 철회 대기열을 읽는 간격이다(철회할 제공자가 있을 때만)
-        int32                 _revocationBatchSize{ 16 };                                                                       ///< 한 번에 읽어 철회를 맡기는 대기열 항목 수이다
-        int32                 _maxFailedCount{ 5 };                                                                             ///< 이만큼 틀리면 계정을 잠근다
-        int32                 _attemptBurst{ 10 };                                                                              ///< 연결(주소)마다 한꺼번에 할 수 있는 시도 횟수이다
-        int64                 _sharedAttemptWindowMs{ 0 };                                                                      ///< 서버 사이에 나누는 주소 단위 시도 창(휘발 저장소 INCR + TTL)의 길이이다. 0 이면 나누지 않는다(캐시 없는 단위 테스트)
-        int64                 _loginNonceLifetimeMs{ 0 };                                                                       ///< 서버가 낸 외부 로그인 nonce 의 수명이다. 0 이면 nonce 를 내지 못한다(Unavailable)
-        int32                 _sharedAttemptLimit{ 0 };                                                                         ///< 창 하나에 주소마다 받는 시도 수(서버 전체)이다. 키트 설정(필수)에서 채운다
-        int32                 _maxConcurrentPasswordHashes{ 0 };                                                                ///< 동시에 도는 비밀번호 해시 상한이다(`PasswordHashQueue`, 작업 풀 위). 1 이상이어야 하며 키트 설정(필수)에서 채운다
-        int32                 _maxQueuedPasswordHashes{ 0 };                                                                    ///< 자리를 기다리는 비밀번호 해시 상한이다. 넘으면 읽기 전에 `kBusy` 다. 1 이상이어야 하며 키트 설정(필수)에서 채운다
+        NetPasswordHashParams _passwordHashParams{};             ///< Argon2id 해시 파라미터이다. 기본값은 OWASP 권장(19 MiB, 2회, 1레인)이며, 바꾸면 다음 로그인에서 다시 해시한다
+        int32                 _attemptBurst{ 10 };               ///< 연결(주소)마다 한꺼번에 할 수 있는 시도 횟수이다
+        int64                 _sharedAttemptWindowMs{ 0 };       ///< 서버 사이에 나누는 주소 단위 시도 창(휘발 저장소 INCR + TTL)의 길이이다. 0 이면 나누지 않는다(캐시 없는 단위 테스트)
+        int64                 _loginNonceLifetimeMs{ 0 };        ///< 서버가 낸 외부 로그인 nonce 의 수명이다. 0 이면 nonce 를 내지 못한다(Unavailable)
+        int32                 _sharedAttemptLimit{ 0 };          ///< 창 하나에 주소마다 받는 시도 수(서버 전체)이다. 키트 설정(필수)에서 채운다
+        int32                 _maxConcurrentPasswordHashes{ 0 }; ///< 동시에 도는 비밀번호 해시 상한이다(`PasswordHashQueue`, 작업 풀 위). 1 이상이어야 하며 키트 설정(필수)에서 채운다
+        int32                 _maxQueuedPasswordHashes{ 0 };     ///< 자리를 기다리는 비밀번호 해시 상한이다. 넘으면 읽기 전에 `kBusy` 다. 1 이상이어야 하며 키트 설정(필수)에서 채운다
         LoginDuplicatePolicy  _duplicatePolicy{ LoginDuplicatePolicy::KickExisting };
         uint8                 _bKeepGuestDeviceAfterLink{ SW_TRUE }; ///< 연동한 뒤에도 같은 장치가 게스트 비밀로 들어올 수 있게 한다
     };

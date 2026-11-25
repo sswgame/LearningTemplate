@@ -36,7 +36,8 @@ namespace sw
                 ServerDirectoryKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
                     return result;
-                _settings._listServerKind = std::move( kitConfig._listServerKind );
+                static_cast<ServerDirectoryPolicy&>( _settings ) = kitConfig._refresh;
+                _settings._listServerKind                        = std::move( kitConfig._listServerKind );
                 // 점검 · 공지 창은 GM 키트가 `start` 에서 읽는다(GM 키트의 선택 의존).
                 const ServiceTTLConfig& announcementTTL = kitConfig._endedAnnouncementTTL;
                 return registerServerService( context, entry, &_server )
