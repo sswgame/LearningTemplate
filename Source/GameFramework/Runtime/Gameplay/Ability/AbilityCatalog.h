@@ -332,11 +332,11 @@ namespace sw
     /**
      * @class AbilityClassRegistry
      * @brief 클래스 이름으로 어빌리티 · 어트리뷰트 세트를 만드는 레지스트리입니다. 게임 모듈의 코드(팩토리)이므로 데이터 카탈로그와 나눈다.
-     * @details **소유자**: 게임이 하나 들고 게임 범위에 건다(게임 인스턴스 `bindScopedService` · 게임 기능 `GameFeatureScope::emplaceService`). 컴포넌트에 따로 정하지 않았으면 이 서비스를 쓴다.
+     * @details 소유자: 게임이 하나 들고 게임 범위에 건다(게임 인스턴스 `bindScopedService` · 게임 기능 `GameFeatureScope::emplaceService`). 컴포넌트에 따로 정하지 않았으면 이 서비스를 쓴다.
      *          키트의 클래스는 그 키트의 게임 기능이 켤 때 올리고 구독을 쥔다(`register…Class` · `GameFeatureScope::holdSubscription`) — 이름은 게임 하나에서 겹치지 않는다.
      *          예전에는 카탈로그가 팩토리를 함께 들어 카탈로그를 게임마다 사본으로 읽어야 했다 — 데이터는 공유 캐시의 한 벌(`SharedAssetCache<AbilityCatalog>`)이고 코드는 여기다.
      *          언리얼 GAS 도 어빌리티 클래스(코드)와 데이터 에셋을 나눈다(기억에 의존). 등록한 팩토리는 게임 모듈의 코드이므로 레지스트리의 수명은 게임 모듈과 같다.
-     *          **기본 등록**: 어트리뷰트 세트는 "Generic"(`AttributeSet`, 어트리뷰트를 데이터가 정함)과 "Combat"(`CombatAttributeSet`), 어빌리티는 "ApplyEffects"(`ApplyEffectsAbility`)이다.
+     *          기본 등록: 어트리뷰트 세트는 "Generic"(`AttributeSet`, 어트리뷰트를 데이터가 정함)과 "Combat"(`CombatAttributeSet`), 어빌리티는 "ApplyEffects"(`ApplyEffectsAbility`)이다.
      */
     class SW_GF_API AbilityClassRegistry
     {
@@ -388,12 +388,12 @@ namespace sw
     /**
      * @class AbilityCatalog
      * @brief 이펙트, 어빌리티, 세트의 정의를 id 로 찾습니다. 데이터만 든다 — 클래스로 만드는 일은 `AbilityClassRegistry` 다.
-     * @details **소유자**: 공유 캐시(`SharedAssetCache<AbilityCatalog>`)의 한 벌을 게임 인스턴스가 쥐고 게임 범위에 건다(`GameInstance::loadRequiredCatalog`).
+     * @details 소유자: 공유 캐시(`SharedAssetCache<AbilityCatalog>`)의 한 벌을 게임 인스턴스가 쥐고 게임 범위에 건다(`GameInstance::loadRequiredCatalog`).
      *          컴포넌트에 카탈로그를 따로 정하지 않았으면 이 서비스를 쓴다.
      *
-     *          **실행 계산**: 이펙트를 읽을 때 `<Execution class="...">` 를 만든다 — 그 어휘("Damage", `DamageExecution`)는 읽기의 일부라 카탈로그가 든다.
+     *          실행 계산: 이펙트를 읽을 때 `<Execution class="...">` 를 만든다 — 그 어휘("Damage", `DamageExecution`)는 읽기의 일부라 카탈로그가 든다.
      *
-     *          **데이터**(파일은 공유 캐시, 글은 `loadFromXMLText`): 루트 `<AbilityCatalog>` 아래에 `<AbilityEffect>`, `<Ability>`, `<AbilitySet>` 을 둔다.
+     *          데이터(파일은 공유 캐시, 글은 `loadFromXMLText`): 루트 `<AbilityCatalog>` 아래에 `<AbilityEffect>`, `<Ability>`, `<AbilitySet>` 을 둔다.
      *          파일 안의 순서와 상관없이 이펙트, 어빌리티, 세트 순으로 읽는다. 그래서 비용 이펙트나 쿨다운 이펙트 같은 참조가 앞에 있지 않아도 된다.
      *          여러 글을 차례로 읽으면 합쳐지고, 같은 id 는 나중에 읽은 것이 우선한다. 한 글 안에서 같은 종류 id 를 두 번 적으면 오류이고 그 글은 읽히지 않는다(`XMLCatalog.DuplicateID` — 참조 표의 `<Unique>` 줄).
      *          연결(비용 · 쿨다운 이펙트, 부여 어빌리티, 세트의 어빌리티 · 이펙트)은 참조 표(`engine/settings/datacatalogreferences.xml`)가 보고 없으면 로드 실패다.

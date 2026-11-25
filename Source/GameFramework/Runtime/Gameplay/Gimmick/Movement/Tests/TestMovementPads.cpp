@@ -1,4 +1,4 @@
-// MovementPadTest — 발사대가 겹친 동적 강체를 쏘는지(실제 2D 물리, Box2D), 부스트 패드가 부스트 계약(IBoostReceiver — 탈것 · 테스트 받는 쪽)에 부스트를 거는지 본다(nogpu). 받는 쪽이 하나라 이벤트 없이 직접 부른다.
+// MovementPadTest: 발사대가 겹친 동적 강체를 쏘는지(실제 2D 물리, Box2D), 부스트 패드가 부스트 계약(IBoostReceiver: 탈것 · 테스트 받는 쪽)에 부스트를 거는지 본다(nogpu). 받는 쪽이 하나라 이벤트 없이 직접 부른다.
 #include "pch.h"
 
 #include "Core/Name/hashed_string.h"

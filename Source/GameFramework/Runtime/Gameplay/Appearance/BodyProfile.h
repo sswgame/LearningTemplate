@@ -1,6 +1,6 @@
 /**
  * @file BodyProfile.h
- * @brief 캐릭터 몸 프로필(`bodyprofiles.xml`)입니다. 캐릭터마다 고르는 몸 동작 프리셋 — 기본 몸 채널 층, 지글 묶음 물성, 동작 배율, 주름 매핑, 눈동자 반응, 체액(눈물 · 침) 방출 — 을 하나로 묶습니다.
+ * @brief 캐릭터 몸 프로필(`bodyprofiles.xml`)입니다. 캐릭터마다 고르는 몸 동작 프리셋(기본 몸 채널 층, 지글 묶음 물성, 동작 배율, 주름 매핑, 눈동자 반응, 체액(눈물 · 침) 방출)을 하나로 묶습니다.
  * @details 외형 프리셋(`<CharacterAppearance bodyProfile="…">`)이 id 로 고른다(부모 프리셋의 것을 물려받는다). 항목은 `_base="<id>"` 로 다른 프로필을 상속하고 다른 칸만 적는다 —
  *          카탈로그 상속 표(`datacataloginheritance.xml` 의 `BodyProfileCatalog`)가 목록 원소를 열쇠(`name` · `group` · `region` · `tag`)로 합친다(코드 없이).
  *          언리얼에서는 캐릭터 블루프린트의 AnimDynamics · 포즈 에셋 · 머티리얼 커브 설정이 흩어진 자리를, 데이터 한 벌로 모았다.

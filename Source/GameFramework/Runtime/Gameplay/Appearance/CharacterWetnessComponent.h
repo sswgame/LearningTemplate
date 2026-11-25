@@ -2,12 +2,12 @@
  * @file CharacterWetnessComponent.h
  * @brief 날씨 · 물이 캐릭터 몸 표면을 바꿉니다. 비(날씨 값)와 물속 깊이가 서로 다른 입력으로 `Wet` 를 올리고, 물은 씻김 채널(흙 · 피)을 씻습니다.
  * @details 같은 오브젝트의 외형(`CharacterAppearanceComponent`)이 가진 표면 상태(`CharacterSurfaceState`)에 씁니다 — 머티리얼로 올리기와 마르기(채널의 초당 감쇠)는 외형이 한다.
- *          - **비**: 씬의 첫 열린 판 상태(`GameStateComponent`)의 날씨 값 `_precipitationValue`(기본 `wetness`)에 `_rainWetPerSecond` 를 곱한다. 머리 위로 쏜 광선이
+ *          - 비: 씬의 첫 열린 판 상태(`GameStateComponent`)의 날씨 값 `_precipitationValue`(기본 `wetness`)에 `_rainWetPerSecond` 를 곱한다. 머리 위로 쏜 광선이
  *            `_shelterDistance` 안에서 무엇을 맞으면 지붕 아래라 비를 맞지 않는다(노출 데이터가 없는 실내 판정의 첫 단계 — 0 이면 보지 않는다). 날씨가 없는 씬은 비가 없다.
- *          - **물**: 발 자리가 물(`WaterBodyComponent`)의 수면 아래면 잠긴 비율 = 깊이 ÷ `_bodyHeight`(0..1)이다. 젖음은 `_immersionWetPerSecond` × 비율로 오르고,
+ *          - 물: 발 자리가 물(`WaterBodyComponent`)의 수면 아래면 잠긴 비율 = 깊이 ÷ `_bodyHeight`(0..1)이다. 젖음은 `_immersionWetPerSecond` × 비율로 오르고,
  *            씻김은 그 비율로 `CharacterSurfaceState::applyWater` 가 한다(발목 · 허리 · 전신에서 빠르기가 다르다). 몸 전체가 같은 빠르기로 젖는 시작점이고
  *            부위별 침수 · 옷의 방수는 요구가 생길 때 영역마다 높이를 두어 넓힌다.
- *          - **시간**: 틱의 게임 초(일시정지 · 시간 배율과 같다). 틱은 시간만 쌓고, 물리 질의와 표면 쓰기는 표면 노출 프레임 시스템(`CharacterWetnessSystem`)이
+ *          - 시간: 틱의 게임 초(일시정지 · 시간 배율과 같다). 틱은 시간만 쌓고, 물리 질의와 표면 쓰기는 표면 노출 프레임 시스템(`CharacterWetnessSystem`)이
  *            틱 뒤 게임 스레드에서 등록 순서로 한 번에 한다(`applyExposure`).
  *          언리얼에는 이 자리의 내장 기능이 없고(게임이 Material Parameter Collection 에 젖음을 쓴다) 유니티 HDRP 의 Wetness 도 머티리얼 값만 준다 — 값을 정하는 규칙은 이 컴포넌트다.
  */

@@ -25,7 +25,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 어트리뷰트 하나의 값입니다.
-     * @details **base** 는 즉시 이펙트나 코드가 영구히 바꾸는 값이고, **current** 는 base 에 지금 적용된 지속 이펙트를 모두 반영한 값이다.
+     * @details base 는 즉시 이펙트나 코드가 영구히 바꾸는 값이고, current 는 base 에 지금 적용된 지속 이펙트를 모두 반영한 값이다.
      *          게임 규칙(이동 속도, 피해 공식)은 current 를 읽는다. 버프가 해제되면 current 는 base 로 돌아온다.
      */
     struct AttributeData
@@ -60,11 +60,11 @@ namespace sw
     /**
      * @class AttributeSet
      * @brief 이름(`hashed_string`)으로 찾는 어트리뷰트 세트입니다. 클램프나 메타 어트리뷰트 같은 규칙은 파생 클래스가 훅으로 구현합니다.
-     * @details 언리얼에서는 `UPROPERTY` 필드 하나가 어트리뷰트 하나이다. 여기서는 **어트리뷰트의 개수와 이름을 코드가 정하지 않는다**(키트 규칙, README 의 "개수를 코드가 정하지 않는다").
+     * @details 언리얼에서는 `UPROPERTY` 필드 하나가 어트리뷰트 하나이다. 여기서는 어트리뷰트의 개수와 이름을 코드가 정하지 않는다(키트 규칙, README 의 "개수를 코드가 정하지 않는다").
      *          데이터(`AbilityCatalog` XML 의 `<AttributeSet>`)가 어트리뷰트를 추가하고, 규칙이 필요한 세트만 파생 클래스를 만든다(`CombatAttributeSet`).
      *          이름별 범위(`setAttributeRange`)만 있으면 되는 세트는 이 클래스를 그대로 쓴다.
      *
-     *          값을 바꾸는 경로는 **`AbilitySystemComponent` 하나**뿐이다. 훅, 집계, 델리게이트가 그 안에서 차례로 실행된다. 그래서 값 쓰기는
+     *          값을 바꾸는 경로는 `AbilitySystemComponent` 하나뿐이다. 훅, 집계, 델리게이트가 그 안에서 차례로 실행된다. 그래서 값 쓰기는
      *          공개하지 않는다(`AbilitySystemComponent::setAttributeBaseValue` 를 쓴다).
      */
     REFLECT( Abstract )
@@ -86,7 +86,7 @@ namespace sw
 
         /**
          * @brief 어트리뷰트를 추가합니다. 이미 있으면 base 와 current 를 @p baseValue 로 되돌립니다.
-         * @details 컴포넌트에 붙이기 **전에** 부른다. 붙인 뒤에 추가할 때는 `AbilitySystemComponent::defineAttribute` 를 쓴다. 이 함수는 집계와 알림을 거친다.
+         * @details 컴포넌트에 붙이기 전에 부른다. 붙인 뒤에 추가할 때는 `AbilitySystemComponent::defineAttribute` 를 쓴다. 이 함수는 집계와 알림을 거친다.
          */
         void defineAttribute( const hashed_string& name, float32 baseValue );
         /** @brief 값을 데이터가 정해야 하는 어트리뷰트 가운데 아직 정하지 않은(`defineAttribute`) 이름들입니다. 남아 있으면 컴포넌트가 이 세트를 붙이지 않는다. */

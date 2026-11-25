@@ -4,7 +4,7 @@
  * @details 회로는 고정 스텝의 결정적 상태 기계라서, 이 번들을 게임의 `IRollbackGame::saveState` / `loadState` 에 싣거나 네트워크 스냅샷의
  *          엔티티(`GimmickSnapshotUtil`, 네트워크 키트)로 보내면 문과 엘리베이터와 타이머가 같은 걸음에서 이어진다. 레벨 세이브는 이것을 쓰지 않는다
  *          (컴포넌트의 `_state` 가 오브젝트 상태와 함께 자기 기술형으로 저장된다).
- *          **키는 소유 오브젝트 이름의 해시**다. 오브젝트 id 는 기계마다 다를 수 있지만, 같은 씬을 읽은 두 기계의 오브젝트 이름은 매니저가 같은 규칙으로 유일하게 만든다.
+ *          키는 소유 오브젝트 이름의 해시다. 오브젝트 id 는 기계마다 다를 수 있지만, 같은 씬을 읽은 두 기계의 오브젝트 이름은 매니저가 같은 규칙으로 유일하게 만든다.
  *          번들은 키 오름차순이라 같은 씬이면 같은 바이트다.
  *
  *          바이트는 고정 배치형(`FixedLayout`, 같은 빌드끼리만)이다. 직접 작성한 코덱, 매직, 버전을 두지 않는다. 머리의 스키마 해시가 다른 빌드의 바이트를 거절한다.
@@ -56,7 +56,7 @@ namespace sw
         vector<GimmickStateEntry> _listEntry{};
 
         /**
-         * @brief 오브젝트 이름의 키입니다(대소문자를 가리지 않는 **64 비트** 해시).
+         * @brief 오브젝트 이름의 키입니다(대소문자를 가리지 않는 64 비트 해시).
          * @details 롤백 · 넷 스냅샷에 실리는 키라 32 비트 이름 해시(`hashed_string::getHash`)면 오브젝트 수만 개에서 충돌이 흔하다. 칸은 처음부터 uint64 였다.
          */
         static uint64 makeOwnerKey( const hashed_string& objectName ) { return HashUtil::computeStringHash64( objectName.view() ); }

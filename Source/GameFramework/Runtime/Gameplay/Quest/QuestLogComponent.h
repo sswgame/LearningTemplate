@@ -29,9 +29,9 @@ namespace sw
     /**
      * @class QuestLogComponent
      * @brief 플레이어 한 명의 퀘스트 일지입니다. 조종자 오브젝트에 다른 플레이어 상태 컴포넌트와 함께 둡니다.
-     * @details - **열기**: 퀘스트 카탈로그를 받아 연다(디렉터의 `startGame` — `PlayerComponentUtil::openOnOwner`). 카탈로그는 소유하지 않고 참조만 한다. 카탈로그가 없으면 퀘스트를 시작하지 못한다.
-     *          - **찾기 · 세이브**: `PlayerComponentUtil` · `DeferredStateRestore`. 정의한 .cpp 가 `StatefulComponentRegistrar` 로 모든 게임의 스냅샷에 올린다.
-     *          - **자동 세기**: "game" 채널의 쓰러짐(`AbilityOwnerDiedEvent`)과 상호작용 완료(`InteractionCompletedEvent`)를 구독해, 이 일지 주인이 조종하는 폰이 한 것만
+     * @details - 열기: 퀘스트 카탈로그를 받아 연다(디렉터의 `startGame` — `PlayerComponentUtil::openOnOwner`). 카탈로그는 소유하지 않고 참조만 한다. 카탈로그가 없으면 퀘스트를 시작하지 못한다.
+     *          - 찾기 · 세이브: `PlayerComponentUtil` · `DeferredStateRestore`. 정의한 .cpp 가 `StatefulComponentRegistrar` 로 모든 게임의 스냅샷에 올린다.
+     *          - 자동 세기: "game" 채널의 쓰러짐(`AbilityOwnerDiedEvent`)과 상호작용 완료(`InteractionCompletedEvent`)를 구독해, 이 일지 주인이 조종하는 폰이 한 것만
      *            `notify( "Defeat", <쓰러진 대상의 태그> )` · `notify( "Interact", <상호작용 이름> )` · `notify( "Cue", <연출 신호 이름> )`(`GimmickCueEvent` — 자기 폰이 트리거에 들어가 부른 것) 로 센다(Lyra 처럼 대상은 게임플레이 태그로 맞춘다). 게임 고유의 일(보스 종 ·
      *            지역 클리어)은 디렉터가 직접 `notify` 한다.
      */

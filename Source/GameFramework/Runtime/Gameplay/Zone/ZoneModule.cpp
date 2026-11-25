@@ -64,7 +64,7 @@ namespace sw
                 return pSample != nullptr ? static_cast<float64>( pSample->_contactNormalUp ) : std::nan( "" );
             }
 
-            /** @brief 그냥 이름 — `target.<속성>` 은 대상의 어빌리티 속성(current)이고, 없으면 값이 없음(NaN — 어떤 비교에도 거짓)입니다. */
+            /** @brief 그냥 이름: `target.<속성>` 은 대상의 어빌리티 속성(current)이고, 없으면 값이 없음(NaN, 어떤 비교에도 거짓)입니다. */
             static float64 readZoneValue( const GameplayContext& context, const ConditionNameArg& args )
             {
                 const ZoneSample* pSample = findSample( context );

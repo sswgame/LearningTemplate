@@ -139,7 +139,7 @@ namespace sw
         vector<AppearanceMaterialValueDef> _listMaterialValue{}; ///< 이 변형을 고르면 이 부품에 거는 머티리얼 값(`<Material name value section>`)
         PROPERTY( Required )
         hashed_string _name{};
-        /** @brief 부품 종류가 고르는 에셋 칸입니다 — `Skinned` 는 `mesh`, `SocketPrefab` 은 `prefab`, `Sprite` 는 `sprite` 하나만 적는다. 읽기가 그중 하나를 `_asset` 으로 고른다. 메시 · 프리팹은 GUID 참조로 쓴다(`AssetRef<T>` — 같은 이름의 다른 칸과 저장 꼴이 같아야 GUID 이전 도구가 칸 이름으로 가른다). */
+        /** @brief 부품 종류가 고르는 에셋 칸입니다. `Skinned` 는 `mesh`, `SocketPrefab` 은 `prefab`, `Sprite` 는 `sprite` 하나만 적는다. 읽기가 그중 하나를 `_asset` 으로 고른다. 메시 · 프리팹은 GUID 참조로 쓴다(`AssetRef<T>` — 같은 이름의 다른 칸과 저장 꼴이 같아야 GUID 이전 도구가 칸 이름으로 가른다). */
         PROPERTY( Name = "mesh" )
         AssetRef<MeshAssetFormat> _meshAsset{};
         PROPERTY( Name = "prefab" )
@@ -197,14 +197,14 @@ namespace sw
         float3                               _breakImpulse{};        ///< 떨어져 나갈 때의 충격 힌트(부품 로컬)
         PROPERTY( Required )
         hashed_string _name{};
-        /** @brief 부품 종류가 고르는 에셋 칸입니다 — `Skinned` 는 `mesh`, `SocketPrefab` 은 `prefab`, `Sprite` 는 `sprite` 하나만 적는다. 읽기가 그중 하나를 `_asset` 으로 고른다. 메시 · 프리팹은 GUID 참조로 쓴다(`AssetRef<T>` — 같은 이름의 다른 칸과 저장 꼴이 같아야 GUID 이전 도구가 칸 이름으로 가른다). */
+        /** @brief 부품 종류가 고르는 에셋 칸입니다. `Skinned` 는 `mesh`, `SocketPrefab` 은 `prefab`, `Sprite` 는 `sprite` 하나만 적는다. 읽기가 그중 하나를 `_asset` 으로 고른다. 메시 · 프리팹은 GUID 참조로 쓴다(`AssetRef<T>` — 같은 이름의 다른 칸과 저장 꼴이 같아야 GUID 이전 도구가 칸 이름으로 가른다). */
         PROPERTY( Name = "mesh" )
         AssetRef<MeshAssetFormat> _meshAsset{};
         PROPERTY( Name = "prefab" )
         AssetRef<PrefabAsset> _prefabAsset{};
         PROPERTY( Name = "sprite" )
         AssetRef<SpriteClipAsset> _spriteAsset;
-        hashed_string             _asset{}; ///< 메시, 프리팹, 스프라이트 경로 — 종류가 위 칸에서 고른다(읽기가 채운다 — 데이터 칸이 아니다)
+        hashed_string             _asset{}; ///< 메시, 프리팹, 스프라이트 경로. 종류가 위 칸에서 고른다(읽기가 채우며 데이터 칸이 아니다)
         PROPERTY()
         AssetRef<Material> _material{}; ///< 비어 있으면 메시의 것
         PROPERTY()

@@ -23,7 +23,7 @@ namespace sw
 
     /**
      * @struct AppearanceXMLUtil
-     * @brief 외형 카탈로그들이 함께 쓰는 XML 읽기 함수입니다. 사람이 고치는 데이터이므로 **알 수 없는 이름은 모두 오류**입니다. 철자를 틀린 속성이 조용히 기본값으로 처리되는 것을 막기 위해서입니다.
+     * @brief 외형 카탈로그들이 함께 쓰는 XML 읽기 함수입니다. 사람이 고치는 데이터이므로 알 수 없는 이름은 모두 오류입니다. 철자를 틀린 속성이 조용히 기본값으로 처리되는 것을 막기 위해서입니다.
      */
     struct SW_GF_API AppearanceXMLUtil
     {
@@ -52,7 +52,7 @@ namespace sw
         static void reportUnknownChild( const XMLNode& parent, const XMLNode& child, AppearanceLoadReport& report, string_view sourceName );
 
         /**
-         * @brief **필수** 이름 속성을 읽습니다. 없거나 비었거나 글 `none` 이면 @p report 에 오류를 더하고 빈 이름을 돌려줍니다.
+         * @brief 필수 이름 속성을 읽습니다. 없거나 비었거나 글 `none` 이면 @p report 에 오류를 더하고 빈 이름을 돌려줍니다.
          * @details 오류가 보고서에 남으므로 부르는 쪽이 빈 이름을 걸러 넣지 않더라도 로드는 실패한다. 걸러 넣지 않는 것은 부르는 쪽 몫이다(`name.empty()`).
          */
         static hashed_string readRequiredName( const XMLNode& node, const utf8* pAttribute, AppearanceLoadReport& report, string_view sourceName );

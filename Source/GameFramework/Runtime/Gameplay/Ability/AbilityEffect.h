@@ -86,13 +86,13 @@ namespace sw
     /**
      * @brief 이펙트 하나의 정의입니다. 만든 뒤에는 바꾸지 않습니다. 스펙과 활성 이펙트가 `shared_ptr<const ...>` 로 함께 씁니다.
      * @details 태그는 다섯 가지이고, 언리얼과 뜻이 같다.
-     *          - `_assetTags`: 이 이펙트 **자체**를 설명한다("Effect.Damage.Fire"). `removeActiveEffectsWithTags` 가 이 태그로 대상을 고른다.
-     *          - `_grantedTags`: 걸려 있는 동안 **대상에게** 붙는다("State.Burning", 쿨다운이면 "Cooldown.Fireball").
+     *          - `_assetTags`: 이 이펙트 자체를 설명한다("Effect.Damage.Fire"). `removeActiveEffectsWithTags` 가 이 태그로 대상을 고른다.
+     *          - `_grantedTags`: 걸려 있는 동안 대상에게 붙는다("State.Burning", 쿨다운이면 "Cooldown.Fireball").
      *          - `_applicationRequiredTags`: 대상이 이 태그를 모두 가져야 적용된다.
      *          - `_applicationBlockedTags`: 대상이 이 태그를 하나라도 가지면 걸리지 않는다(면역).
      *          - `_removeEffectsWithTags`: 걸리는 순간 대상의 활성 이펙트 중 에셋 태그나 부여 태그가 이 태그와 일치하는 것을 지운다(정화).
      *          `_cueTags` 는 연출에 쓴다(`AbilityPresentationEvent`).
-     *          `_ongoingRequiredTags` 는 걸린 **동안의** 조건이다(언리얼 `OngoingTagRequirements`). 대상이 이 태그를 모두 갖지 못하는 동안 이펙트는
+     *          `_ongoingRequiredTags` 는 걸린 동안의 조건이다(언리얼 `OngoingTagRequirements`). 대상이 이 태그를 모두 갖지 못하는 동안 이펙트는
      *          남아 있되 멈춘다 — 모디파이어 · 부여 태그 · 부여 어빌리티 · 주기 실행이 빠지고 시간은 흐른다. 태그가 돌아오면 다시 든다.
      *          `_listGrantedAbility` 는 걸린 동안 대상에게 주는 어빌리티의 카탈로그 id 다(장비가 스킬을 준다, 언리얼 `GrantedAbilities`).
      */
@@ -174,7 +174,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 이펙트를 **한 번 적용하는** 데이터입니다. 정의, 레벨, 컨텍스트, 코드가 넣은 수, 쏜 쪽 어트리뷰트 스냅샷을 담습니다.
+     * @brief 이펙트를 한 번 적용하는 데이터입니다. 정의, 레벨, 컨텍스트, 코드가 넣은 수, 쏜 쪽 어트리뷰트 스냅샷을 담습니다.
      * @details `AbilitySystemComponent::makeOutgoingSpec` 이 만든다. 이때 쏜 쪽 어트리뷰트를 통째로 저장해 두므로(`_mapSourceAttribute`),
      *          투사체가 날아가는 동안 쏜 쪽이 죽거나 사라져도 피해 공식은 쏜 순간의 공격력을 쓴다(언리얼의 Source 캡처와 스냅샷에 해당).
      *          값 타입이므로 복사해서 여러 대상에 적용해도 된다.

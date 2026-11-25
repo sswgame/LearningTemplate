@@ -69,7 +69,7 @@ namespace sw
     /**
      * @class MountMovementComponent
      * @brief 말 오브젝트(폰, 캐릭터 컨트롤러, 외형과 애니메이터, 좌석)에 붙어서 의도를 걸음새로 바꿉니다. 의도의 월드 이동(조종 요 기준이며 3인칭과 같음)의
-     *        크기가 걸음새를 정하고, 말은 그 방향으로 걸음새마다의 조향 속도만큼 몸을 돌리며 **자기 요 방향으로** 갑니다. 옆걸음과 제자리 뒷걸음은 없고,
+     *        크기가 걸음새를 정하고, 말은 그 방향으로 걸음새마다의 조향 속도만큼 몸을 돌리며 자기 요 방향으로 갑니다. 옆걸음과 제자리 뒷걸음은 없고,
      *        말은 돌아서 갑니다. 플레이어가 W 로 몰든 AI 가 목적지로 몰든 같은 규칙입니다.
      * @details 걸음새 사이의 속도는 `_acceleration` 과 `_deceleration` 으로 이어진다. 조향 속도는 걸음새마다 테이블(PROPERTY)로 둔다. `_bUseRootMotion` 이 켜져 있으면
      *          애니메이터 파라미터(`Gait` 0..4, `Turn` -1..1)만 쓰고 이동은 애니메이션 루트 모션이 한다(`CharacterControllerComponent::addRootMotionDisplacement` 를
@@ -79,7 +79,7 @@ namespace sw
      *          걸음새의 가속 · 감속이 경사의 당김보다 크면 걸음새 속도를 지키고, 가파르면 오르막에서 처지고 내리막에서 빨라진다. 표면은 이동 계수(`GroundSurfaceComponent`)가 이미 줄이므로
      *          구름 저항 배율은 기본 0 이다(발굽은 바퀴가 아니다).
      *          언리얼 CharacterMovement 위의 말 이동과 같은 구조이다. 같은 의도이면 플레이어가 타든 AI 가 몰든 같은 궤적이 나온다.
-     *          **네트워크 예측**(`setNetDriven`): 캐릭터 컨트롤러 없이 루트를 옮기는 탈것은 걸음이 (상태, 의도)만의 순수 함수(`simulate`)라, 탄 클라이언트가 말의 이동을 자기 몸처럼 예측한다.
+     *          네트워크 예측(`setNetDriven`): 캐릭터 컨트롤러 없이 루트를 옮기는 탈것은 걸음이 (상태, 의도)만의 순수 함수(`simulate`)라, 탄 클라이언트가 말의 이동을 자기 몸처럼 예측한다.
      *          컨트롤러가 있는 탈것은 켤 수 없다(오류) — 물리 이동은 서버 권위 + 보간으로 둔다(언리얼 Chaos 차량의 기본 복제와 같다).
      */
     REFLECT( Category = "Vehicle", DisplayName = "Mount Movement", Tooltip = "Control intent -> gait (idle, walk, trot, canter, gallop), steering and root motion for a ridden animal" )

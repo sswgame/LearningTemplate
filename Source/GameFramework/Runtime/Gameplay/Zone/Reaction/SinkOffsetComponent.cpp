@@ -18,7 +18,7 @@ namespace sw
     {
         struct SinkOffsetInternal
         {
-            /** @brief 자기 오브젝트의 메시를 핸들로 찾습니다 — 내리는 메시는 늘 자기 것이라 매니저(남의 오브젝트 찾기 — 틱에서는 읽기 전용)를 거치지 않는다. */
+            /** @brief 자기 오브젝트의 메시를 핸들로 찾습니다. 내리는 메시는 늘 자기 것이라 매니저(남의 오브젝트 찾기, 틱에서는 읽기 전용)를 거치지 않는다. */
             static MeshComponent* findOwnMesh( const GameObject& self, TComponentHandle<MeshComponent> mesh )
             {
                 return castTo<MeshComponent>( self.findComponentByID( mesh.componentID() ) );

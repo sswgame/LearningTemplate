@@ -79,7 +79,7 @@ namespace sw
                                       const IAppearanceUnlockQuery* pUnlockQuery, ResolvedAppearance& outResolved, AppearanceSelectionReport& outReport );
 
         // 선택을 비트로 씁니다. 네트워크 외형 동기화에 쓰며, 받는 쪽이 펼쳐서 해석하면 같은 해시가 나옵니다. 공유 코드와 세이브도 이것을 씁니다.
-        // 판을 넘어 뜻이 남게 쓴다 — 슬라이더는 실제 값(32 비트, 스키마 범위가 바뀌어도 그대로), 선택이 담은 카테고리의 모든 매개변수를 적는다(정하지 않은 값은 지금 기본값 —
+        // 판을 넘어 뜻이 남게 쓴다. 슬라이더는 실제 값(32 비트, 스키마 범위가 바뀌어도 그대로), 선택이 담은 카테고리의 모든 매개변수를 적는다(정하지 않은 값은 지금 기본값 —
         // 뒤 판이 기본값을 바꿔도 저장된 캐릭터는 그대로다). 색은 성분마다 8 비트, 피해는 8 비트(해석기의 정밀도와 같다). 값마다 종류를 2 비트로
         static void writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database );
         /** @brief 읽습니다. 비트가 모자라거나 개수가 비정상이면 false 입니다. */

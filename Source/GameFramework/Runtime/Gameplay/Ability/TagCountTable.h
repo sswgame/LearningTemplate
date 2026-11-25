@@ -44,7 +44,7 @@ namespace sw
         bool hasAllMatchingTags( const TagContainer& tags ) const;
         /** @brief @p tags 중 하나라도 가지고 있으면 true 입니다. @p tags 가 비어 있으면 false 입니다. */
         bool hasAnyMatchingTags( const TagContainer& tags ) const;
-        /** @brief @p tag 와 **같은** 태그의 개수입니다. 하위 태그는 세지 않습니다. */
+        /** @brief @p tag 와 같은 태그의 개수입니다. 하위 태그는 세지 않습니다. */
         int32 getCount( TagID tag ) const;
 
         /** @brief @p tag 의 개수를 @p delta 만큼 바꿉니다. 0 아래로 내려가지 않습니다. 태그가 생기거나 사라지면 알립니다. */

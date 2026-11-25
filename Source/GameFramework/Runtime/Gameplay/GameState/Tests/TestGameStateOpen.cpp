@@ -50,7 +50,7 @@ SW_TEST_CASE( GameStateOpenTest, SecondStateInSceneIsRefused )
 }
 
 /**
- * @brief [GameStateOpenTest] 월드 플래그 소유자가 씬에 둘 열려 있으면 찾는 쪽(`IGameFlagsOwner::findOpen` — 활성자 볼륨의 진행 플래그)이 오류로 멈춘다 — 등록 순서로 고르지 않는다
+ * @brief [GameStateOpenTest] 월드 플래그 소유자가 씬에 둘 열려 있으면 찾는 쪽(`IGameFlagsOwner::findOpen`, 활성자 볼륨의 진행 플래그)이 오류로 멈춘다. 등록 순서로 고르지 않는다
  * @details 판 상태는 둘째 열기를 거절하므로, 같은 계약을 내보내는 다른 컴포넌트(`FlagsOwnerTestComponent`)로 "둘 열림" 을 만든다(하위 레벨이 둘째 소유자를 연 경우).
  */
 SW_TEST_CASE( GameStateOpenTest, SecondOpenFlagsOwnerIsAnError )

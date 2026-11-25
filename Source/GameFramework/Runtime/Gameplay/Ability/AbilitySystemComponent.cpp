@@ -268,7 +268,7 @@ namespace sw
             return false;
         }
 
-        // 세트의 기본값은 붙이기 **전에** 정한다. 붙인 뒤에 정하면 "체력 ≤ 최대 체력" 같은 훅이 값을 정하는 순서에 따라 값을 잘라 버린다.
+        // 세트의 기본값은 붙이기 전에 정한다. 붙인 뒤에 정하면 "체력 ≤ 최대 체력" 같은 훅이 값을 정하는 순서에 따라 값을 잘라 버린다.
         for ( const AbilitySetAttributeSetEntry& setEntry : pSet->_listAttributeSet )
         {
             unique_ptr<AttributeSet> pAttributeSet = pClasses->createAttributeSet( setEntry._className );

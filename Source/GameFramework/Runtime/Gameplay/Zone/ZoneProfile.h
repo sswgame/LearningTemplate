@@ -1,12 +1,12 @@
 /**
  * @file ZoneProfile.h
  * @brief 지역 프로필(`*.zone.xml`)입니다 — 지역 효과의 정본 데이터. 이름 붙은 모듈 목록이고, 모듈은 효과 하나(감속 · 가라앉음 · 중심 당김 · 주기 피해 · 젖음 · 내비 비용 · 무중력 …)와 그 매개변수입니다.
- * @details **상속보다 조합.** 독 늪 = 늪의 모듈 + 독 피해 모듈이다. 두 프리셋을 함께 물려받는 다중 상속(같은 칸이 부딪히는 모호함)을 두지 않는다 — `_base` 는 출발 목록 하나이고,
+ * @details 상속보다 조합. 독 늪 = 늪의 모듈 + 독 피해 모듈이다. 두 프리셋을 함께 물려받는 다중 상속(같은 칸이 부딪히는 모호함)을 두지 않는다 — `_base` 는 출발 목록 하나이고,
  *          변형 · 배치는 모듈을 이름으로 더하고 · 빼고(`_op="Remove"`) · 고친다. 처리기는 모듈 종류마다 하나이고 서로를 모른다(`IZoneModuleProcessor`) — 새 효과는 모듈 종류 하나다.
  *          언리얼 GAS 이펙트의 Component 목록 · 유니티 Volume Profile 의 Override 목록 자리다(기억).
  *
- *          **세 층** — 모두 기존 데이터 상속(`_base` · 열쇠 목록 · `Replace` · `Remove` · 자리 옮기기, `docs/agents/DataInheritance.md`)이 합친다:
- *          ① 기본 지형 프리셋(`sand.zone.xml`), ② 변형 프리셋(`_base` + 바뀌는 칸만 — 느린 사구), ③ 배치한 볼륨 · 표면 영역의 덮어쓰기(같은 형식의 모듈 목록 — `ZoneVolumeComponent`,
+ *          세 층 — 모두 기존 데이터 상속(`_base` · 열쇠 목록 · `Replace` · `Remove` · 자리 옮기기, `docs/agents/DataInheritance.md`)이 합친다:
+ *          ① 기본 지형 프리셋(`sand.zone.xml`), ② 변형 프리셋(`_base` + 바뀌는 칸만, 예: 느린 사구), ③ 배치한 볼륨 · 표면 영역의 덮어쓰기(같은 형식의 모듈 목록, `ZoneVolumeComponent`,
  *          `applyOverrides`). 섹션은 모두 선택(적지 않으면 물려받음)이고 모듈 · 매개변수 · 경우는 이름이 열쇠다. 위치 값이 볼륨 모양으로 정규화돼 같은 프리셋이 어떤 모양에도 맞는다.
  *          여러 번 쓰는 모듈은 에셋(`*.zonemodule.xml`, 루트 `ZoneModuleDef`)으로 두고 `_modulePath` 로 가리킨다 — 프로필의 칸이 에셋의 칸을 덮는다.
  *          로드 때 합친 결과를 검증한다(모듈 종류 · 매개변수 이름 · 식 · 동작 이름 · 카탈로그 참조, `ZoneCompiledProfile::compile`). 코드에 지형 이름이 나오지 않는다 — 새 지형은 `.zone.xml` 하나다.

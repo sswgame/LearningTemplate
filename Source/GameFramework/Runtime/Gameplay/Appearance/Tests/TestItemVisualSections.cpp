@@ -7,7 +7,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
 
-// ItemVisualSectionsTest — 스킨드 부품의 <Section name material>: 구간마다 머티리얼(머티리얼이 여럿인 몸 — 몸 · 머리카락 · 눈), 부품 material 과 함께 쓰면 오류.
+// ItemVisualSectionsTest: 스킨드 부품의 <Section name material>: 구간마다 머티리얼(머티리얼이 여럿인 몸: 몸 · 머리카락 · 눈), 부품 material 과 함께 쓰면 오류.
 
 namespace
 {

@@ -1101,7 +1101,7 @@ namespace sw
         {
             if ( proportion._owner.empty() == false )
                 continue; // 다른 주인(장비)의 본 비율은 그 주인의 부품이 다룬다
-            // 부품 머티리얼이 받은 채널(`<ChannelMaterial>` — 머리카락 길이)은 이 스켈레톤이 축으로 적지 않았으면 몸 축이 아니다 — 체형 축 데이터 없이도 닿는다.
+            // 부품 머티리얼이 받은 채널(`<ChannelMaterial>`, 예: 머리카락 길이)은 이 스켈레톤이 축으로 적지 않았으면 몸 축이 아니므로 체형 축 데이터 없이도 닿는다.
             const bool bMaterialOnly = VectorUtil::contains( resolved._listMaterialChannel, proportion._name ) && ( _bodyShapeSet == nullptr || _bodyShapeSet->findAxis( proportion._name ) == nullptr );
             if ( bMaterialOnly == false )
                 listValue.push_back( BodyShapeValue{ proportion._name, proportion._value } );

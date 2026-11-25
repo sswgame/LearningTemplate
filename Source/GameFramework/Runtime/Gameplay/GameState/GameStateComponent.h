@@ -62,14 +62,14 @@ namespace sw
 {
     /**
      * @class GameStateComponent
-     * @brief 키트 디렉터 여럿이 함께 쓰는 월드 상태(씬에 하나 — 둘째는 `onRegister` 가 거절한다)입니다. 같은 오브젝트에 디렉터들과 함께 두고 **맨 앞**에 붙입니다.
-     * @details - **순서**: 한 오브젝트의 틱은 한 워커가 붙은 순서대로 처리한다(`TickRegistry`). 이 컴포넌트(시계를 진행), 첫 디렉터, 둘째 디렉터 순서가
-     *            매 틱 같고, 디렉터는 앞 디렉터가 이번 틱에 쓴 플래그를 잠금 없이 읽는다. 주의할 점이 있다. 공유 상태를 쓰는 디렉터를 **다른 오브젝트**에 두면
+     * @brief 키트 디렉터 여럿이 함께 쓰는 월드 상태(씬에 하나 — 둘째는 `onRegister` 가 거절한다)입니다. 같은 오브젝트에 디렉터들과 함께 두고 맨 앞에 붙입니다.
+     * @details - 순서: 한 오브젝트의 틱은 한 워커가 붙은 순서대로 처리한다(`TickRegistry`). 이 컴포넌트(시계를 진행), 첫 디렉터, 둘째 디렉터 순서가
+     *            매 틱 같고, 디렉터는 앞 디렉터가 이번 틱에 쓴 플래그를 잠금 없이 읽는다. 주의할 점이 있다. 공유 상태를 쓰는 디렉터를 다른 오브젝트에 두면
      *            같은 그룹에서 동시에 실행되어 데이터 경쟁이 생긴다. 그래서 찾는 함수도 `findOnOwner`(같은 오브젝트) 하나뿐이다.
-     *          - **알림**: 시계 알림은 이 컴포넌트가 틱마다 꺼내서 `getClockEvents` 로 내준다. 다음 틱 처음에 비운다(`ReputationComponent` 가 날이 넘어갈 때 평판을 식히며 읽는다).
-     *          - **여는 쪽**: 같은 오브젝트의 첫 디렉터가 `startGame` 에서 `initialize` 를 부른다. 디렉터가 없는 씬(시연 · 테스트)은 `_bOpenAtBeginPlay` 로 기본 설정으로 연다. 시작값(공유 상태를 건드리는 시작 배치 포함)은
+     *          - 알림: 시계 알림은 이 컴포넌트가 틱마다 꺼내서 `getClockEvents` 로 내준다. 다음 틱 처음에 비운다(`ReputationComponent` 가 날이 넘어갈 때 평판을 식히며 읽는다).
+     *          - 여는 쪽: 같은 오브젝트의 첫 디렉터가 `startGame` 에서 `initialize` 를 부른다. 디렉터가 없는 씬(시연 · 테스트)은 `_bOpenAtBeginPlay` 로 기본 설정으로 연다. 시작값(공유 상태를 건드리는 시작 배치 포함)은
      *            `isFreshGame()` 일 때만 넣는다. 복원한 판 위에 시작값이 중복으로 쌓이지 않게 하기 위해서다.
-     *          - **세이브**: `writeState` 는 상태마다 구간 하나(`StateIO::writeSection`)를 쓴다. 알 수 없는 구간은 건너뛰고, 빠진 구간은 새 판으로 둔다. 읽지 못한 구간이 있으면 로드 전체가 실패하고 상태는 그대로다(조용히 새 판으로 두지 않는다).
+     *          - 세이브: `writeState` 는 상태마다 구간 하나(`StateIO::writeSection`)를 쓴다. 알 수 없는 구간은 건너뛰고, 빠진 구간은 새 판으로 둔다. 읽지 못한 구간이 있으면 로드 전체가 실패하고 상태는 그대로다(조용히 새 판으로 두지 않는다).
      *            정의한 .cpp 가 `StatefulComponentRegistrar` 로 모든 게임의 스냅샷에 올린다(게임마다 적던 줄을 빠뜨린 게임은 시계 · 날씨 · 플래그를 조용히 잃었다) — 게임의 디렉터보다 먼저 복원 바이트를 받는다.
      */
     REFLECT( Category = "Framework", DisplayName = "Game State", Tooltip = "World state, one per scene (flags, clock, weather, land) used by the kit directors on the same object" )

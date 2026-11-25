@@ -99,28 +99,28 @@ namespace sw
     /**
      * @class AbilitySystemComponent
      * @brief 오브젝트 하나의 어빌리티 시스템으로, 어트리뷰트 세트와 적용된 이펙트, 부여된 어빌리티, 태그 개수를 보관하고 시간을 진행합니다.
-     * @details **쓰는 법**(언리얼 GAS 와 같은 순서):
+     * @details 쓰는 법(언리얼 GAS 와 같은 순서):
      *          1. 오브젝트에 붙이고 어트리뷰트 세트를 추가한다. 코드(`addAttributeSet`)로 하거나 데이터로 할 수 있다.
      *             데이터로 하면 `_abilitySetID` 가 가리키는 카탈로그의 `<AbilitySet>` 이 플레이 시작에 어트리뷰트 세트, 어빌리티, 시작 이펙트, 태그를 한 번에 준다.
      *          2. 어빌리티를 준다(`giveAbility`, `giveAbilityByID`). 입력 번호를 주면 `abilityInputPressed( 번호 )` 가 어빌리티를 발동한다.
      *          3. 어빌리티는 이펙트 스펙(`makeOutgoingSpec`)을 만들어 자기 자신이나 다른 오브젝트에 적용한다(`applyGameplayEffectSpecToTarget`).
      *          4. 게임은 델리게이트(어트리뷰트, 태그, 큐, 이벤트)나 "game" 채널(`AbilityOwnerDiedEvent`)로 반응한다.
      *
-     *          **시간**: 컴포넌트 틱이 `advanceTime( 프레임 시간 )` 을 부른다. 시간으로 움직일 것(기간 · 주기 이펙트 — 쿨다운 포함, 켜진 어빌리티와 그 작업)이
+     *          시간: 컴포넌트 틱이 `advanceTime( 프레임 시간 )` 을 부른다. 시간으로 움직일 것(기간 · 주기 이펙트 — 쿨다운 포함, 켜진 어빌리티와 그 작업)이
      *          없으면 주 틱을 끄고 생기면 켠다(`refreshTickEnabled` — 이펙트 · 어빌리티가 붙고 떨어지는 자리에서만 부른다). 그래서 쉬는 동안 `getTime` 은 멈춘다.
      *          턴제 게임은 `setManualTime( true )` 로 틱을 늘 끄고 턴마다 `advanceTime( 1 )` 을 부르면 된다. 그러면 지속 시간, 주기, 쿨다운이 턴 단위가 된다.
      *          테스트도 이 함수로 시간을 진행한다.
      *
-     *          **스레드**: 컴포넌트 틱은 오브젝트마다 병렬 워커에서 돈다. 자기 상태(시간, 자기 이펙트, 자기 어빌리티)는 바로 바꾼다.
-     *          **다른 오브젝트에** 이펙트를 걸거나 이벤트를 보내면(`applyGameplayEffectSpecToTarget`, `sendGameplayEventToTarget`) 틱이 끝난 직후로 미룬다.
+     *          스레드: 컴포넌트 틱은 오브젝트마다 병렬 워커에서 돈다. 자기 상태(시간, 자기 이펙트, 자기 어빌리티)는 바로 바꾼다.
+     *          다른 오브젝트에 이펙트를 걸거나 이벤트를 보내면(`applyGameplayEffectSpecToTarget`, `sendGameplayEventToTarget`) 틱이 끝난 직후로 미룬다.
      *          맞음(`receiveHit`)도 같은 규칙을 따른다. 체력이 깎일 때 띄우는 피해 숫자도 틱 직후에 만든다.
      *
-     *          **연결된 UI**: 이 컴포넌트는 체력 원천(`IHealthSource`)이다. 체력이나 최대 체력이 바뀔 때마다 같은 오브젝트의
+     *          연결된 UI: 이 컴포넌트는 체력 원천(`IHealthSource`)이다. 체력이나 최대 체력이 바뀔 때마다 같은 오브젝트의
      *          `IHealthListener`(HP 바)에 비율을 알리고, 체력이 0 이면 쓰러짐(`Died`)을 알린다. 이 컴포넌트는 HP 바의 존재를 알지 못한다.
      *          `_bShowDamageNumbers` 가 켜져 있으면 체력이 깎일 때 피해 숫자 창구(`IDamageNumberSink`, 클라이언트 전용 구현)로 숫자를 띄운다.
      *          체력 어트리뷰트의 이름은 `_healthAttribute` 와 `_maxHealthAttribute` 로 바꿀 수 있다.
      *
-     *          **저장**: 설정은 PROPERTY 로, 런타임 상태(어트리뷰트 base, 걸린 이펙트, 이펙트 밖 태그)는 `ComponentStateCodec` 계약
+     *          저장: 설정은 PROPERTY 로, 런타임 상태(어트리뷰트 base, 걸린 이펙트, 이펙트 밖 태그)는 `ComponentStateCodec` 계약
      *          (`serializeState` / `restoreState`, `AbilitySaveState`)으로 모든 게임의 상태 스냅샷에 실린다(정적 등록 — 게임이 적지 않는다).
      *          부여한 어빌리티는 싣지 않고 플레이를 시작할 때 세트가 다시 준다. 실행 중이던 어빌리티는 이어 가지 않는다(언리얼 GAS 와 같다).
      */

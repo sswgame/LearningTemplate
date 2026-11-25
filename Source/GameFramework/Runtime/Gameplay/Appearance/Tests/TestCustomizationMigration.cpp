@@ -164,7 +164,7 @@ SW_TEST_CASE_F( CustomizationMigrationTest, NewerVersionIsRefusedWithoutOverwrit
     SW_EXPECT_EQUAL( size_t{ 1 }, kept.getCount() );
     expectColor( kept, "Primary", kGreen );
 
-    // 견본 번호가 묶음 밖이면 어느 색인지 모른다 — 가까운 색으로 맞추지 않고 그 값만 뺀다(나머지는 올린다 — 패치가 세이브 전체를 버리지 않는다)
+    // 견본 번호가 묶음 밖이면 어느 색인지 모른다. 가까운 색으로 맞추지 않고 그 값만 뺀다(나머지는 올린다. 패치가 세이브 전체를 버리지 않는다)
     for ( const float32 index : { 2.0f, -1.0f } )
     {
         CustomizationValueSet outside = makeFirstVersionValues();

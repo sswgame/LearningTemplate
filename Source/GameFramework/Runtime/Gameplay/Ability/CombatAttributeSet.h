@@ -19,7 +19,7 @@ namespace sw
     /**
      * @struct CombatAttributes
      * @brief `CombatAttributeSet` 의 어트리뷰트 이름입니다. 데이터(XML)도 같은 철자를 씁니다.
-     * @details `IncomingDamage` 와 `IncomingHealing` 은 **메타 어트리뷰트**이다. 이펙트가 여기에 값을 더하면 세트가 즉시 그 값을 체력으로 옮기고
+     * @details `IncomingDamage` 와 `IncomingHealing` 은 메타 어트리뷰트이다. 이펙트가 여기에 값을 더하면 세트가 즉시 그 값을 체력으로 옮기고
      *          0 으로 되돌린다(언리얼 Lyra 의 `Damage`, `Healing` 에 해당). 그래서 피해 공식(`DamageExecution`)은 체력을 직접 깎지 않는다.
      *          죽음, 피해 숫자, 무적 같은 규칙은 체력을 바꾸는 한 곳(`CombatAttributeSet::postGameplayEffectExecute`)에 모인다.
      */
@@ -47,7 +47,7 @@ namespace sw
      * @brief 체력, 마나, 공격력, 방어, 이동 속도와 메타 어트리뷰트 두 개를 가진 어트리뷰트 세트입니다.
      * @details 규칙은 다음과 같다.
      *          - 체력은 [0, 최대 체력], 마나는 [0, 최대 마나] 범위에 머물고, 이동 속도와 최대치는 0 이상이다. 최대치가 줄면 현재치도 따라서 줄인다.
-     *          - `IncomingDamage` 를 받으면 체력에서 뺀다. 체력이 0 에 닿은 **처음 한 번만** 주인에게 `State.Dead` 태그를 붙이고 모든 어빌리티를
+     *          - `IncomingDamage` 를 받으면 체력에서 뺀다. 체력이 0 에 닿은 처음 한 번만 주인에게 `State.Dead` 태그를 붙이고 모든 어빌리티를
      *            취소한 뒤, `Event.Death` 게임플레이 이벤트와 `AbilityOwnerDiedEvent`("game" 채널)를 낸다. 쓰러진 뒤의 피해와 회복은 무시한다.
      *          - 쓰러짐은 체력 current 의 전이(> 0 → ≤ 0) 한 곳에서 판정한다 — 메타 피해 · 체력 직접 수정자 · 최대 체력 디버프 · 코드가 쓴 base · 즉사 어느 길이든 같다(Lyra `ULyraHealthSet` 의 OutOfHealth 자리).
      *          - 맞을 때마다 주인에게 `Event.Hit` 게임플레이 이벤트를 보낸다. 이벤트의 크기는 깎인 체력이고, 피격 반응 어빌리티가 이 이벤트로 발동한다.
