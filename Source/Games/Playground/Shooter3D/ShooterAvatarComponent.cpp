@@ -106,7 +106,7 @@ namespace sw
         , _mapClipFootSpeed{}
         , _aimWeight{ 0.0f }
         , _shootWeight{ 0.0f }
-        , _hitTimer{ 0.0f }
+        , _hitTimer{}
         , _bodyYaw{ 0.0f }
         , _lastStrideScale{ 1.0f }
         , _strideAppliedCount{ 0 }
@@ -294,11 +294,11 @@ namespace sw
             _lastHitReaction = pose._hitReactionCount;
             if ( bAlive )
             {
-                _hitTimer = _hitPause;
+                _hitTimer.start( _hitPause );
                 pAnimator->getParameters().setTrigger( hashed_string( ShooterAnimationParameter::kHit ) );
             }
         }
-        _hitTimer -= step;
+        (void)_hitTimer.update( step );
         AnimationParameterSet& parameters = pAnimator->getParameters();
         // 대각선 · 임계값 근처에서 상태가 오가면 클립이 매번 처음부터 다시 돈다 — 히스테리시스로 고르고 바뀐 것은 잠깐 이어져야 받아들인다.
         const LocomotionDirection candidate     = LocomotionMath::classifyFrom( _locomotion.getDirection(), pose._velocity, _bodyYaw,
@@ -317,7 +317,7 @@ namespace sw
         applyStrideWarping( strideScale, localVelocity );
 
         // 상체 — 겨눈 자세는 늘, 쏘는 동작은 막 쏜 동안. 맞음 · 쓰러짐 동안은 비켜선다.
-        const bool    bUpperBodyFree = bAlive && _hitTimer <= 0.0f;
+        const bool    bUpperBodyFree = bAlive && _hitTimer.isActive() == false;
         const float32 aimTarget      = bUpperBodyFree ? 1.0f : 0.0f;
         const float32 shootTarget    = bUpperBodyFree && pose._timeSinceShot < 0.2f ? 1.0f : 0.0f;
         _aimWeight                   = MathUtil::moveToward( _aimWeight, aimTarget, _layerBlendRate * step );

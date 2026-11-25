@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/Countdown.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -39,7 +40,7 @@ namespace sw
         void hide();
 
     private:
-        float32                _remaining;
+        Countdown              _remaining;
         uint8                  _bShowing : 1;
         [[maybe_unused]] uint8 _reserved : 7;
     };

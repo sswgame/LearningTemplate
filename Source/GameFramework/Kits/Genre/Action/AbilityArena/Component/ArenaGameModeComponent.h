@@ -26,6 +26,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -52,11 +53,11 @@ namespace sw
     /** @brief 스폰한 유닛 하나입니다. 쓰러짐을 세고 정리하기까지의 시간을 보관합니다. */
     struct ArenaUnit
     {
-        GameObjectHandle _object{};
-        GameObjectHandle _controller{};                              ///< 적을 조종하는 AI 조종자의 오브젝트(플레이어는 비어 있다. 플레이어 조종자는 다시 스폰한 몸을 다시 조종한다).
-        float32          _deathTimer{ -1.0f };                       ///< 0 이상이면 쓰러진 뒤 정리하기까지 남은 시간.
-        int32            _unitID{ constant::invalid_index::kInt32 }; ///< 스폰할 때 `_nextUnitID` 에서 받는다(판 안에서 늘기만 한다)
-        ArenaUnitKind    _kind{ ArenaUnitKind::Grunt };
+        GameObjectHandle    _object{};
+        GameObjectHandle    _controller{};                              ///< 적을 조종하는 AI 조종자의 오브젝트(플레이어는 비어 있다. 플레이어 조종자는 다시 스폰한 몸을 다시 조종한다).
+        optional<Countdown> _death{};                                   ///< 쓰러졌으면 정리하기까지 남은 시간
+        int32               _unitID{ constant::invalid_index::kInt32 }; ///< 스폰할 때 `_nextUnitID` 에서 받는다(판 안에서 늘기만 한다)
+        ArenaUnitKind       _kind{ ArenaUnitKind::Grunt };
     };
 } // namespace sw
 
@@ -263,9 +264,9 @@ namespace sw
         vector<ProjectileCargo> _listProjectileCargo; ///< 나는 탄(`_projectiles`)과 함께 싣지 않는다 — 불러온 판은 웨이브를 처음부터 다시 세운다
         vector<SpawnRequest>    _listPendingUnit;
         float3                  _playerFocus;
-        GameObjectHandle        _playerObject;       ///< 이번 프레임 스냅샷의 플레이어(`getPlayerObject`).
-        GameObjectHandle        _autoBattleObject;   ///< 자동 전투 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
-        float32                 _playerRespawnTimer; ///< 0 이상이면 플레이어가 다시 등장하기까지 남은 시간.
+        GameObjectHandle        _playerObject;     ///< 이번 프레임 스냅샷의 플레이어(`getPlayerObject`).
+        GameObjectHandle        _autoBattleObject; ///< 자동 전투 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
+        optional<Countdown>     _playerRespawn;    ///< 플레이어가 없으면 다시 등장하기까지 남은 시간
         PROPERTY( RuntimeState )
         uint32 _wave;
         PROPERTY( RuntimeState )

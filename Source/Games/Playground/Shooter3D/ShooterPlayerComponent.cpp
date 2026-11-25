@@ -387,7 +387,7 @@ namespace sw
         , _listPendingTracer{}
         , _soundQueue{}
         , _body{}
-        , _hitMarkerTimer{ 0.0f }
+        , _hitMarkerTimer{}
         , _timeSinceShot{ 10.0f }
         , _downTimer{ 0.0f }
         , _bodyEyeHeight{ 0.0f }
@@ -543,7 +543,7 @@ namespace sw
             advanceWeapons( step );
         _healthMachine.update( step );
         _timeSinceShot += step;
-        _hitMarkerTimer -= step;
+        (void)_hitMarkerTimer.update( step );
         if ( _healthMachine.isAlive() == false )
         {
             // 쓰러짐 클립이 도는 동안 멈춰 있다가 판을 처음부터 다시 시작한다.
@@ -676,15 +676,15 @@ namespace sw
         _bServerOut      = bOut ? SW_TRUE : SW_FALSE;
         if ( confirmedHitCount <= _hitCount )
             return;
-        _hitCount       = confirmedHitCount;
-        _hitMarkerTimer = 0.15f;
+        _hitCount = confirmedHitCount;
+        _hitMarkerTimer.start( 0.15f );
         _soundQueue.queueEvent( ShooterPlayerComponentInternal::kSoundHitEnemy );
     }
 
     void ShooterPlayerComponent::recordMeleeHit()
     {
         ++_hitCount;
-        _hitMarkerTimer = 0.15f;
+        _hitMarkerTimer.start( 0.15f );
         _soundQueue.queueEvent( ShooterPlayerComponentInternal::kSoundHitEnemy );
     }
 
@@ -1060,7 +1060,7 @@ namespace sw
             if ( bAnyHit )
             {
                 ++_hitCount;
-                _hitMarkerTimer = 0.15f;
+                _hitMarkerTimer.start( 0.15f );
                 _soundQueue.queueEvent( Internal::kSoundHitEnemy );
             }
             else if ( bHitCover )
@@ -1238,7 +1238,7 @@ namespace sw
             (void)pBinder->bindHUDViewModel( *pOwner, pViewModel );
         const bool bCrosshair = _bFirstPerson == SW_TRUE && _healthMachine.isAlive() && isServerDown() == false;
         pViewModel->setCrosshairShown( bCrosshair );
-        pViewModel->setHitMarkerShown( bCrosshair && _hitMarkerTimer > 0.0f );
+        pViewModel->setHitMarkerShown( bCrosshair && _hitMarkerTimer.isActive() );
         if ( _bServerHealth == SW_TRUE )
             pViewModel->setHealth( _serverHealth, _maxHealth > 0.0f ? _serverHealth / _maxHealth : 0.0f );
         else

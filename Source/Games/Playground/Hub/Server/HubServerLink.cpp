@@ -54,7 +54,7 @@ namespace sw
         , _beforeWithdraw{}
         , _pPeers{ nullptr }
         , _pRouter{ nullptr }
-        , _autosaveTimer{ 0.0f }
+        , _autosaveTimer{}
     {
     }
 
@@ -89,9 +89,9 @@ namespace sw
             return false;
         }
         _profiles.bindSource( std::move( storeSource ) );
-        _pPeers        = &peers;
-        _pRouter       = &router;
-        _autosaveTimer = rules._autosaveSeconds;
+        _pPeers  = &peers;
+        _pRouter = &router;
+        _autosaveTimer.start( rules._autosaveSeconds );
         // 핫 리로드로 다시 선 링크는 이미 붙은 연결의 열림 사건을 받지 못한다(`GameNetSession` 경고) — 붙어 있는 연결을 들인다.
         vector<int32> listConnection;
         peers.collectConnected( listConnection );
@@ -165,12 +165,8 @@ namespace sw
             if ( _world.consumeDirtyFlag( entry.second->_avatarID ) )
                 sendProgress( *entry.second );
         }
-        _autosaveTimer -= deltaSeconds;
-        if ( _autosaveTimer <= 0.0f )
-        {
-            _autosaveTimer = _world.getRules()._autosaveSeconds;
+        if ( _autosaveTimer.updateRepeat( deltaSeconds, _world.getRules()._autosaveSeconds, true ) )
             saveAll();
-        }
         publishEntities();
         _replicator.update( deltaSeconds );
     }
@@ -233,7 +229,7 @@ namespace sw
     {
         // 대기와 월드 시계는 같은 게임 시간으로 흐른다. 올린 뒤 한 틱을 더해 실수 반올림으로 이른 쪽에 서지 않게 한다.
         const HubAvatar* const pAvatar      = _world.findAvatar( avatarID );
-        const float32          cooldown     = pAvatar != nullptr ? pAvatar->_attackCooldown : 0.0f;
+        const float32          cooldown     = pAvatar != nullptr ? pAvatar->_attackCooldown.getRemaining() : 0.0f;
         const uint32           cooldownTick = cooldown > 0.0f ? static_cast<uint32>( MathUtil::ceil( cooldown / NetClock::kTickSeconds ) ) + 1 : 0;
         return _pRouter->getWorldClock().getWholeTick() + cooldownTick;
     }

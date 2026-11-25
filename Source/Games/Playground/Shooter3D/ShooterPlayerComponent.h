@@ -12,6 +12,7 @@
 #include "Core/Math/Ray.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -357,7 +358,7 @@ namespace sw
         vector<TracerRequest>           _listPendingTracer;
         GameSoundQueue                  _soundQueue; ///< 낼 소리(틱이 끝난 뒤 처리한다. 오디오는 게임 스레드에서 다룬다).
         GameObjectHandle                _body;
-        float32                         _hitMarkerTimer;
+        Countdown                       _hitMarkerTimer;
         float32                         _timeSinceShot;
         float32                         _downTimer;     ///< 쓰러진 뒤 지난 시간(쓰러졌을 때만).
         float32                         _bodyEyeHeight; ///< 몸 소켓 Eyes 의 높이(0은 아직 모른다는 뜻).

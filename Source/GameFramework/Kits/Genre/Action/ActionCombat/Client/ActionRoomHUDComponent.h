@@ -8,6 +8,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/Countdown.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -84,7 +85,7 @@ namespace sw
         Subscription                       _clearedSubscription;
         Subscription                       _defeatedSubscription;
         Subscription                       _damageSubscription;
-        float32                            _notificationLeft;
+        Countdown                          _notificationLeft;
         Notification                       _notification;
         uint8                              _bGateLocked;
     };

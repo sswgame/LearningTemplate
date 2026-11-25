@@ -129,7 +129,7 @@ namespace sw
         , _playerFocus{ 0.0f, 0.0f, 0.0f }
         , _playerObject{}
         , _autoBattleObject{}
-        , _playerRespawnTimer{ -1.0f }
+        , _playerRespawn{}
         , _wave{ 0 }
         , _killCount{ 0 }
         , _playerShotCount{ 0 }
@@ -239,10 +239,10 @@ namespace sw
         _projectiles.clear(); // 짐(스펙)은 런타임 값이라 상태에 싣지 않는다 — 유닛과 함께 걷는다
         _listProjectileCargo.clear();
         _listPendingUnit.clear();
-        _playerRespawnTimer = -1.0f;
-        _autoBattleObject   = GameObjectHandle{};
-        _bUnitsRequested    = SW_FALSE;
-        _bPossessionDirty   = SW_FALSE;
+        _playerRespawn.reset();
+        _autoBattleObject = GameObjectHandle{};
+        _bUnitsRequested  = SW_FALSE;
+        _bPossessionDirty = SW_FALSE;
     }
 
     // ------------------------------------------------------------------------------
@@ -625,9 +625,9 @@ namespace sw
                 _listUnit.erase( _listUnit.begin() + static_cast<ptrdiff_t>( unitIndex - 1 ) );
                 continue;
             }
-            if ( unit._deathTimer < 0.0f && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
+            if ( unit._death.has_value() == false && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
             {
-                unit._deathTimer = _deathLifeSpan;
+                unit._death = Countdown( _deathLifeSpan );
                 if ( unit._kind == ArenaUnitKind::Player )
                 {
                     SW_LOG_INFO_ID( "ArenaGameMode.PlayerFellWaveAfter", "[Arena] the player fell on wave %# after %# kills", _wave, _killCount );
@@ -639,11 +639,11 @@ namespace sw
                     getSoundQueue().queueEvent( ArenaGameModeComponentInternal::kEventEnemyFell );
                 }
             }
-            if ( unit._deathTimer >= 0.0f )
+            if ( unit._death.has_value() )
             {
                 // 유닛이 납작해지는 동안 기다렸다가 정리한다. 조종하던 AI 조종자도 함께 정리한다.
-                unit._deathTimer -= deltaTime;
-                if ( unit._deathTimer <= 0.0f )
+                (void)unit._death->update( deltaTime );
+                if ( unit._death->isActive() == false )
                 {
                     retireUnit( *pManager, unit );
                     _listUnit.erase( _listUnit.begin() + static_cast<ptrdiff_t>( unitIndex - 1 ) );
@@ -684,7 +684,7 @@ namespace sw
             view._unitID      = unit._unitID;
             view._position    = AbsolutePosition{ pManager->getWorldOrigin().toAbsolute( pMesh->getWorldPosition() ) };
             view._kind        = unit._kind;
-            view._bAlive      = unit._deathTimer < 0.0f && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) == false ? SW_TRUE : SW_FALSE;
+            view._bAlive      = unit._death.has_value() == false && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) == false ? SW_TRUE : SW_FALSE;
             view._bPlayerTeam = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
             view._bEnemyTeam  = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "Team.Enemy"_tag ) ? SW_TRUE : SW_FALSE;
             _listUnitView.push_back( view );
@@ -706,18 +706,17 @@ namespace sw
         }
         if ( bPlayerPresent )
         {
-            _playerRespawnTimer = -1.0f;
+            _playerRespawn.reset();
             return;
         }
         // 쓰러진 플레이어는 정리된 뒤 잠시 있다가 중앙에 다시 등장한다(웨이브는 이어진다).
-        if ( _playerRespawnTimer < 0.0f )
-            _playerRespawnTimer = _playerRespawnDelay;
-        _playerRespawnTimer -= deltaTime;
-        if ( _playerRespawnTimer <= 0.0f )
-        {
-            _playerRespawnTimer = -1.0f;
-            requestUnit( ArenaUnitKind::Player, float3{ 0.0f, 0.0f, 0.0f }, 1 );
-        }
+        if ( _playerRespawn.has_value() == false )
+            _playerRespawn = Countdown( _playerRespawnDelay );
+        (void)_playerRespawn->update( deltaTime );
+        if ( _playerRespawn->isActive() )
+            return;
+        _playerRespawn.reset();
+        requestUnit( ArenaUnitKind::Player, float3{ 0.0f, 0.0f, 0.0f }, 1 );
     }
 
     void ArenaGameModeComponent::logStatus() const

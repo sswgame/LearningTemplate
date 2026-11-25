@@ -16,6 +16,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Time/Countdown.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -170,7 +171,7 @@ namespace sw
         uint32     _avatarID{ 0 };
         uint32     _partyID{ 0 };      ///< 0 이면 파티가 없다
         uint32     _inviteFromID{ 0 }; ///< 받은 초대를 보낸 아바타. 0 이면 없다
-        float32    _attackCooldown{ 0.0f };
+        Countdown  _attackCooldown{};
         float32    _moveBudget{ 0.0f };   ///< 지금 갈 수 있는 거리(m) — 이동이 그 걸음의 시간 × 속도 한도만큼 채우고(`_maxMoveStep` 까지) 간 거리만큼 쓴다(감사 K-1)
         uint8      _bChanged{ SW_FALSE }; ///< 알릴 진행 · 파티가 바뀌었다(`HubWorld::consumeDirtyFlag`)
     };
@@ -181,7 +182,7 @@ namespace sw
         HubPlacement _def{};
         uint32       _placementID{ 0 };
         int32        _health{ 0 };
-        float32      _respawnTimer{ 0.0f };
+        Countdown    _respawn{};
         uint8        _bPresent{ SW_TRUE }; ///< 쓰러졌거나 캐였으면 다시 날 때까지 거짓
     };
 

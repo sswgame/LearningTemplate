@@ -11,6 +11,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/Countdown.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -151,7 +152,7 @@ namespace sw
 
         float32                _aimWeight;
         float32                _shootWeight;
-        float32                _hitTimer;
+        Countdown              _hitTimer;
         float32                _bodyYaw; ///< 몸이 보는 요 — 시점을 각속도 상한으로 따라간다
         float32                _lastStrideScale;
         uint32                 _strideAppliedCount;

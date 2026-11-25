@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Time/Countdown.h"
 
 #include "Engine/Scene/StreamingCellGrid.h"
 
@@ -153,6 +154,6 @@ namespace sw
         Subscription                                     _beforeWithdraw; ///< 저장소가 내려가기 직전의 알림(`flushProfiles`)
         INetPeers*                                       _pPeers;
         const NetMessageRouter*                          _pRouter; ///< 월드의 서버 시계(`getWorldClock`)를 읽는다. 서 있는 동안만 있다
-        float32                                          _autosaveTimer;
+        Countdown                                        _autosaveTimer;
     };
 } // namespace sw
