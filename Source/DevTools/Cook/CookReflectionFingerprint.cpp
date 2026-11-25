@@ -64,7 +64,7 @@ namespace sw
             }
 
             /**
-             * @brief 두 기본 인스턴스에서 **값이 같은** 칸을 접습니다. 만들 때마다 다른 값(GUID · 런타임 id · 시각)은 기본값이 아니라 빠진다 — 접으면 쿠킹마다 키가 달라진다.
+             * @brief 두 기본 인스턴스에서 값이 같은 칸을 접습니다. 만들 때마다 다른 값(GUID · 런타임 id · 시각)은 기본값이 아니라 빠진다 — 접으면 쿠킹마다 키가 달라진다.
              * @return 접을 칸이 없으면 0 입니다.
              */
             static uint64 foldCommonValues( const vector<DefaultValue>& listFirst, const vector<DefaultValue>& listSecond )

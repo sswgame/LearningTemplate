@@ -15,12 +15,12 @@ namespace sw
 {
     /**
      * @struct ModuleLibraryPatch
-     * @brief 공유 라이브러리가 의존을 부르는 이름을 **같은 길이로** 바꿉니다 — ELF64(리틀 엔디언)의 동적 섹션 문자열과 PE32+ 의 import DLL 이름.
+     * @brief 공유 라이브러리가 의존을 부르는 이름을 같은 길이로 바꿉니다 — ELF64(리틀 엔디언)의 동적 섹션 문자열과 PE32+ 의 import DLL 이름.
      * @details 파일 바이트만 다루므로 어느 플랫폼에서나 돕니다(테스트는 합성 ELF · 합성 PE 로 돈다). 쓰는 곳은 `LiveReloadManager` 뿐입니다.
      *          문자열을 늘리지 않으므로 섹션 · 세그먼트 배치가 그대로입니다.
      * @note 왜 고치는가: 로더는 의존을 이름으로 풀고, 같은 이름의 라이브러리가 이미 올라와 있으면 그것을 씁니다(리눅스는 SONAME, Windows 는 파일
      *       이름). 섀도 복사본을 원본 이름 그대로 두면 연쇄 리로드("전부 prepare(새 라이브러리 로드) → commit(옛 라이브러리 내림)")의 prepare 중인 새 킷이
-     *       아직 올라와 있는 **옛** 의존에 묶이고(리눅스), 원본 이름의 import 는 원본 DLL 을 한 벌 더 올립니다(Windows). 그래서 복사본에 세대마다
+     *       아직 올라와 있는 옛 의존에 묶이고(리눅스), 원본 이름의 import 는 원본 DLL 을 한 벌 더 올립니다(Windows). 그래서 복사본에 세대마다
      *       고유한 이름을 주고(리눅스 SONAME · Windows 파일 이름), 의존 모듈 복사본이 그 이름을 부르게 바꿉니다 — 언리얼이 빌드마다 번호 붙은
      *       이름으로 다시 링크하는 것을 복사 시점에 하는 셈입니다. 그래서 모듈끼리 지연 로드(`/DELAYLOAD`)를 쓰지 않고 일반 import 로 묶습니다
      *       (lld 20 의 지연 로드 썽크는 첫 호출의 float 인자를 망가뜨린다).
@@ -50,7 +50,7 @@ namespace sw
         static uint32 replaceDynamicString( vector<uint8>& inoutBytes, int64 tag, string_view from, string_view to );
 
         /**
-         * @brief 세대 @p generation 을 담은, @p libraryName 과 **길이가 같은** 이름을 만듭니다
+         * @brief 세대 @p generation 을 담은, @p libraryName 과 길이가 같은 이름을 만듭니다
          *        (예: `libGameFramework.so` → `libGameFrame0003.so`, `GF_Mailbox.dll` → `GF_Mai0003.dll`).
          * @details 확장자(`.so` · `.dll` 부터) 앞의 끝 네 글자를 36진 세대로 바꿉니다. 세대는 프로세스 안에서 모듈과 무관하게 하나씩 오르므로
          *          앞부분이 같은 두 모듈도 같은 이름을 받지 않습니다. `lib` 접두어는 남깁니다(도구가 이름을 알아보는 자리).
@@ -75,7 +75,7 @@ namespace sw
 
         /**
          * @brief 모듈 파일 바이트에서 엔진 ABI 스탬프(`swEngineABIStamp:<sha1>`)을 찾습니다. 이 함수만은 ELF 에 한정되지 않습니다(DLL · SO 모두).
-         * @details 핫 리로드는 **모듈 코드가 한 줄도 돌기 전에**(정적 초기화 전) 돌고 있는 엔진과 같은 헤더로 빌드됐는지 봐야 하므로, 심볼을
+         * @details 핫 리로드는 모듈 코드가 한 줄도 돌기 전에(정적 초기화 전) 돌고 있는 엔진과 같은 헤더로 빌드됐는지 봐야 하므로, 심볼을
          *          찾지 않고 파일에서 표식 문자열을 찾습니다.
          * @return 표식과 그 뒤 16진 40 글자가 온전히 있으면 true 입니다(@p outStamp 는 표식을 포함한 전체).
          */

@@ -1,6 +1,6 @@
 /**
  * @file CrashInjection.h
- * @brief 크래시 보고 경로를 일부러 태워 보는 개발 기능입니다 — 죽는 방식마다 하나(`CrashInjectionKind`). 개발 도구(`DevTools`)에 있다 — 배포 호스트는 DevTools 를 링크하지 않는다.
+ * @brief 크래시 보고 경로를 일부러 태워 보는 개발 기능이며, 죽는 방식마다 하나씩 있다(`CrashInjectionKind`). 배포 호스트는 DevTools 를 링크하지 않으므로 개발 도구(`DevTools`)에 둔다.
  * @details 예전에는 런타임 보고기(`CrashHandler`) 안에 `crashForTest` 와 죽는 도우미가 있어 배포 바이너리에 실려 나갔다. 보고기는 보고만 하고,
  *          일부러 죽는 일은 개발 쪽이 맡는다(언리얼 `debug crash` · `debug stackoverflow` 콘솔 명령 자리). 부르는 곳: `-gv_crashTest`(`CrashInjectionSubsystem` — 렌더러가 선 뒤, `DevTools/Client`) · 크래시 보고를 끝까지 태우는 테스트.
  */

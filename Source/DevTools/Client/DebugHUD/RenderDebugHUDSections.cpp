@@ -1,6 +1,6 @@
 /**
  * @file RenderDebugHUDSections.cpp
- * @brief 렌더링 런타임 디버그의 HUD 범주입니다 — `occlusion`(가림 타일 · 가려진 프리미티브), `streaming`(텍스처 스트리밍 — 요청 밉 대 올라온 밉 · 대기 · 메모리),
+ * @brief 렌더링 런타임 디버그의 HUD 범주입니다. `occlusion`(가림 타일 · 가려진 프리미티브), `streaming`(텍스처 스트리밍: 요청 밉 대 올라온 밉 · 대기 · 메모리),
  *        `framedebug`(프레임 디버거 멈춤 지점). 게임 중에 에디터 렌더 디버거 창과 같은 값을 본다(유니티 Rendering Debugger 의 런타임 화면 자리).
  * @details 이미 있는 값에서 읽기만 한다: 가림 타일 CPU 사본(`FrameRenderer::getOcclusionSnapshot`), 프로파일러 카운터(`RT.TextureStreaming.*` · `RT.TextureUpload.waiting`),
  *          `RenderDebugRegistry`. 꺼진 섹션은 아무것도 읽지 않는다(HUD 계약).

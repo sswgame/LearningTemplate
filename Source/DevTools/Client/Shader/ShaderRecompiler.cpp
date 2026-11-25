@@ -39,7 +39,7 @@ namespace sw
                 return pLiveShader != nullptr ? pLiveShader->findShaderRecompiler() : nullptr;
             }
 
-            /** @brief 감시 값 `Shader.LiveRecompile` — 이 실행에 셰이더 재컴파일기(Ctrl+F8)가 섰으면 1 입니다(Debug 클라이언트만 세운다 — `LiveShaderSubsystem`). 셰이더 리로드 시나리오의 `<SkipUnless>` 가 본다. */
+            /** @brief 감시 값 `Shader.LiveRecompile`: 이 실행에 셰이더 재컴파일기(Ctrl+F8)가 섰으면 1 입니다(Debug 클라이언트만 세운다, `LiveShaderSubsystem`). 셰이더 리로드 시나리오의 `<SkipUnless>` 가 본다. */
             [[nodiscard]] static bool readLiveCompiler( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = findRecompiler() != nullptr ? 1.0 : 0.0;
@@ -88,7 +88,7 @@ namespace sw
         ContentHash::clearCache();
         engine::getSubsystem<AssetPaths>().clearPathCache(); // 없던 헤더가 생긴 것도 다시 본다(기록의 "없음" 입력)
 
-        // 등록 목록을 따로 두지 않는다. **이 실행에서 실제로 컴파일된 셰이더**가 곧 리로드 대상이다
+        // 등록 목록을 따로 두지 않는다. 이 실행에서 실제로 컴파일된 셰이더가 곧 리로드 대상이다
         // (따로 채우는 목록은 채우는 쪽을 빠뜨리면 단축키가 빈 목록을 돈다).
         vector<ShaderCompileDesc> listDesc;
         engine::getSubsystem<ShaderCache>().collectCompiledDescs( listDesc );
@@ -120,7 +120,7 @@ namespace sw
         // 셰이더 DDC 는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 컴파일러 안에서 DDC 에 맞아 컴파일러를
         // 타지 않는다. DDC 항목은 소스와 자기가 연 헤더의 내용(의존 기록)을 보므로, 바뀐 헤더를
         // 연 셰이더만 실제로 다시 컴파일된다. 한 번에 묶어 워커에서 컴파일한다 — 공용 헤더를 고치면 수백 개가 낡아, 하나씩 하면 게임 스레드가 그 합만큼 멈춘다.
-        // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(진단 정책의 디버그 코드젠). 요청 그대로 컴파일하면 리로드한
+        // 캐시의 실시간 컴파일과 같은 요청으로 컴파일한다(진단 정책의 디버그 코드젠). 요청 그대로 컴파일하면 리로드한
         // 셰이더만 디버그 정보를 잃는다.
         // 엔진 설정 값은 지금 캐시의 사본으로 싣는다 — 모은 요청에는 그 항목을 넣을 때의 사본이 실려 있다.
         vector<ShaderCompileDesc> listLiveDesc;
@@ -147,7 +147,7 @@ namespace sw
                 continue;
             }
 
-            // **바이트가 같으면 "갱신" 으로 세지 않는다.** 세면 재컴파일 콜백이 불리고, 바뀌지 않은
+            // 바이트가 같으면 "갱신" 으로 세지 않는다. 세면 재컴파일 콜백이 불리고, 바뀌지 않은
             // 셰이더의 PSO 까지 다시 만들게 된다. 견줄 바이트는 이 실행이 쓰는 메모리 캐시 항목이다.
             vector<uint8> previousBytecode;
             const bool    bBytesChanged = shaderCache.findCachedBytecode( desc, previousBytecode ) == false || previousBytecode != newResult._bytecode;
@@ -177,7 +177,7 @@ namespace sw
             // 다시 맞춘다(Material::isShaderLayoutSynced). 비우지 않으면 맞춘 레이아웃이 옛 셰이더 것 그대로 남는다.
             ShaderReflectionLibrary::clearCache();
         }
-        // 알림은 항목을 바꾸고 리플렉션을 비운 **뒤에** 한다 — 받는 쪽(렌더러)이 PSO 를 다시 만들 때 새 바이트코드 · 레이아웃을 집는다.
+        // 알림은 항목을 바꾸고 리플렉션을 비운 뒤에 한다 — 받는 쪽(렌더러)이 PSO 를 다시 만들 때 새 바이트코드 · 레이아웃을 집는다.
         if ( listChangedPath.empty() == false && _onAnyRecompiled.isBound() )
             _onAnyRecompiled.get()( listChangedPath );
 

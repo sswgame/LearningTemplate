@@ -22,7 +22,7 @@ namespace sw
         /**
          * @class HostDevLayer
          * @brief 개발 구성의 개발 계층입니다 — 개발 도구 연결(`HostDevTools`)과, 동적 모듈 구성이면 핫 리로드(`ModuleReloadDriver`)를 듭니다.
-         * @details 정적 모듈 구성(웹 · Android 개발 — `SW_STATIC_MODULES`)은 리로드 구동기(`ModuleReload/`)를 짓지 않는다 — 리로드 창구가 형식에 없다.
+         * @details 정적 모듈 구성(웹 · Android 개발, `SW_STATIC_MODULES`)은 리로드 구동기(`ModuleReload/`)를 짓지 않으므로 리로드 창구가 형식에 없다.
          */
         class HostDevLayer final : public IHostDevLayer
         {

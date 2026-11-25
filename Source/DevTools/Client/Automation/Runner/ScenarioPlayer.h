@@ -1,6 +1,6 @@
 /**
  * @file ScenarioPlayer.h
- * @brief 시나리오 **재생** 객체입니다 — 게임 · 콘솔 · 시퀀서가 부르는 데모 · 어트랙트 · 벤치마크 · 튜토리얼 재생(`ScenarioPlayback`)을 실제로 돌립니다.
+ * @brief 시나리오 재생 객체입니다 — 게임 · 콘솔 · 시퀀서가 부르는 데모 · 어트랙트 · 벤치마크 · 튜토리얼 재생(`ScenarioPlayback`)을 실제로 돌립니다.
  * @details 테스트 실행(`AutomationSession` — 체인 · 판정 · 종료 코드 · 녹화)과 나뉜 객체다. 언리얼이 Automation/Functional Test 의 세션과 Level Sequence Player(재생 객체)를
  *          나누는 것과 같다 — 세션에 재생 인터페이스를 붙이지 않고, 재생기는 자기 실행기 · 선택 · 프레임 훅을 스스로 든다.
  */

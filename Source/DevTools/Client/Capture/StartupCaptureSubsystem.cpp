@@ -63,7 +63,7 @@ namespace sw
 
     /**
      * @brief `-gv_screenshotFrame=<N>` 입니다. 몇 번째 프레임에서 찍을지 정합니다(기본 10이고, 10보다 작으면 10으로 봅니다).
-     * @details 시간에 따라 움직이는 것(GPU 인스턴스 회전 등)을 검증하려면 **서로 다른 시각**의 장면이 필요하다. `-gv_profileFrames` 는 찍는 시각을 바꾸지 않는다.
+     * @details 시간에 따라 움직이는 것(GPU 인스턴스 회전 등)을 검증하려면 서로 다른 시각의 장면이 필요하다. `-gv_profileFrames` 는 찍는 시각을 바꾸지 않는다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotFrame, static_cast<int32>( StartupCaptureInternal::kMinWarmupFrames ), "스크린샷을 찍을 프레임 번호 (기본 10)" );
 

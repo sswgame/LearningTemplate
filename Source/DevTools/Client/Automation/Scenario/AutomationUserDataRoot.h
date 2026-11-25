@@ -1,8 +1,8 @@
 /**
  * @file AutomationUserDataRoot.h
- * @brief 자동화 실행(`-unattended` · `-scenario` — `CommandLineManager::isAutomatedRun`)의 사용자 데이터 뿌리(`SW_USER_DATA_ROOT` — `UserDataPath`)를 자동화 폴더(`<Saved>/Automation/`) 아래로 가둡니다.
+ * @brief 자동화 실행(`-unattended` · `-scenario`, `CommandLineManager::isAutomatedRun`)의 사용자 데이터 뿌리(`SW_USER_DATA_ROOT`, `UserDataPath`)를 자동화 폴더(`<Saved>/Automation/`) 아래로 가둡니다.
  * @details 와일드웨스트 체인에서 백엔드별 자식들이 사람의 `%LOCALAPPDATA%/SWEngine/<게임>/saves` 를 함께 써서, 한 프로세스가 다른 프로세스의 쓰는 중인 임시 파일을 잔재로 지웠다.
- *          러너가 환경 변수를 잘 주는 데 기대지 않는다 — 자동화 실행은 기동 때(호스트 서비스 · 게임 · 로컬 저장보다 먼저) 뿌리를 정하고, 자동화 폴더 밖이면 거절한다(종료 11, 로드 오류 —
+ *          러너가 환경 변수를 잘 주는 데 기대지 않는다. 자동화 실행은 기동 때(호스트 서비스 · 게임 · 로컬 저장보다 먼저) 뿌리를 정하고, 자동화 폴더 밖이면 거절한다(종료 11, 로드 오류:
  *          시나리오를 시작할 수 없는 실행이다). 뿌리가 없으면 실행 뿌리(`ProcessRoots::_run`) 아래 `userdata` 를 건다 — 실행 뿌리가 실행마다 새 폴더라 pid 꼬리도 형제 거두기도 없다.
  *          백엔드별 부모는 자식마다 제 실행 뿌리(`<부모 실행 뿌리>/<백엔드>`)를 주고 그 아래 `userdata` 를 건다(`AutomationPerBackend`).
  *          두 번 기동 쌍(`sequence/` · `statedir/`)은 러너가 묶음마다 같은 뿌리를 둘 모두에 건다(`Test/Scenario/RunStateDirPair.cmake`).

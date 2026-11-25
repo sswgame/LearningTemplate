@@ -1,7 +1,7 @@
 /**
  * @file DevTools/Client/Render/RHIBackendSwitcher.h
  * @brief 실행 중 백엔드 교체 요청(`gv_rhiBackend` · 시나리오 단계 `SwapBackend`)과 장치 제거 시험(`rhi.removeDevice`)의 개발 창구입니다.
- * @details 실행 중 교체 · 디바이스 제거 시험은 개발 기능이라 개발 도구에 둔다(배포는 짓지 않는다 — 언리얼도 RHI 변경은 재시작). 교체기는 요청만 RHI 에 예약한다 —
+ * @details 실행 중 교체 · 디바이스 제거 테스트는 개발 기능이라 개발 도구에 두고 배포는 짓지 않는다(언리얼도 RHI 변경은 재시작). 교체기는 요청만 RHI 에 예약하고,
  *          적용(모듈 내리기 → 장치 → 모듈 세우기)은 배포도 쓰는 모듈 관리자 하나가 프레임 경계에서 한다(`GameModuleManager::applyPendingDeviceChange`). 그래서 App 의
  *          모듈 관리자를 몰라도 되고, 기동 단계 서브시스템으로 스스로 선다(렌더러가 있는 클라이언트만 — `RHIBackendSwitcher.cpp` 의 등록).
  */

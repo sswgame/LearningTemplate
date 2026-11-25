@@ -655,7 +655,7 @@ namespace sw
         }
 
         /**
-         * @brief 렌더 정착 — 에셋 일이 0 이고 정착 조건(`AutomationStepRegistry::findStabilityCondition` — TAA 기록 · 노출 적응, 해당 없음은 막지 않는다)이 모두 설 때까지 붙잡습니다.
+         * @brief 렌더 정착: 에셋 일이 0 이고 정착 조건(`AutomationStepRegistry::findStabilityCondition`: TAA 기록 · 노출 적응, 해당 없음은 막지 않는다)이 모두 설 때까지 붙잡습니다.
          * @return 섰으면 Run(이 프레임은 붙잡지 않고 붙잡기를 놓았다 — `holdUntilReady`), 아직이면 Hold, 정지 시한 · 벽시계 상한에 걸려 시나리오를 끝냈으면 Skip
          * @details 정지 시한은 그린 프레임(`RenderPresentCounter`)으로 센다 — 장치를 다시 만드는 동안처럼 그리지 않는 프레임에는 조건이 나아갈 기회가 없다. 에셋 일은 바깥 일(워커 로드)이라
          *          진척을 세지 않고 벽시계 상한(`kMaxRenderStableWallSeconds`)만 본다. 카메라가 계속 움직이면 TAA 조건의 진척(정지 프레임)이 0 에 머물러 정지 시한에 바로 진다 —

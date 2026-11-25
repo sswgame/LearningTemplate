@@ -20,7 +20,7 @@ namespace sw
      * @class NetListenLaunchSubsystem
      * @brief 세션의 기동 덮어쓰기(`GameNetSession::setLaunchOverride`)로 `-gv_netListenPort=<포트>` 를 서버 역할로 엽니다(0=덮어쓰지 않음).
      * @details 리슨 호스트(App)는 이 길로만 열고, 전용 서버에서는 서버 설정(`ServerConfig::_gamePort`)보다 우선한다(에디터 멀티 프로세스 재생 · 스크립트의 서버 짝이 고른 포트).
-     *          언리얼 `?listen` · `-port=` 의 자리다. 평문 리슨은 루프백 · 개발 빌드로만 남긴다(U4 — `GameNetSession::makeServerParams`) — 그래서 배포에는 이 길이 없다.
+     *          언리얼 `?listen` · `-port=` 의 자리다. 평문 리슨은 루프백 · 개발 빌드로만 남기므로(U4, `GameNetSession::makeServerParams`) 배포에는 이 길이 없다.
      *          세션에 의존한다 — 세션이 열기 전에 걸리고, 세션보다 먼저 내려가며 덮어쓰기를 푼다.
      */
     class SW_DEVTOOLS_API NetListenLaunchSubsystem final : public Subsystem

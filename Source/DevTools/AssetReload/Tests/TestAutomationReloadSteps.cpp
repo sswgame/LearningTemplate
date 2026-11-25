@@ -88,7 +88,7 @@ SW_TEST_CASE( AutomationReloadStepsTest, StepAttributesAreValidatedAtLoad )
     SW_EXPECT_FALSE( validateSingleStep( "<RestoreOverwrites file=\"x\"/>" ).has_value() );
 }
 
-/** @brief [AutomationReloadStepsTest] RebuildModule 의 인자 — name 은 필수, variant 는 선택이다(등록은 모듈 리로드가 있는 구성만 — 스키마는 어디서나 본다) */
+/** @brief [AutomationReloadStepsTest] RebuildModule 의 인자: name 은 필수, variant 는 선택이다(등록은 모듈 리로드가 있는 구성만 하지만 스키마는 어디서나 본다) */
 SW_TEST_CASE( AutomationReloadStepsTest, RebuildModuleNeedsAName )
 {
     AutomationScenario scenario;

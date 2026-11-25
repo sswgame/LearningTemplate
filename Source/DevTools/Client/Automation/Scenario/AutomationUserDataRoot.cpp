@@ -36,7 +36,7 @@ namespace sw
         {
             /**
              * @brief 실행마다 따로 써야 하는 상태 자리를 가리키는 전역 변수입니다 — 값을 주면 자동 자리(사용자 데이터 뿌리 · 프로세스별 폴더) 대신 그 자리를 읽고 쓴다.
-             * @details `gv_editorStateDir`(에디터 상태 폴더 — `EditorPaths`), `gv_userSettingsFile`(사용자 설정 파일 — `DevToolsHost`). 산출물 경로(`gv_screenshot` · 트레이스 · 보고)는
+             * @details `gv_editorStateDir`(에디터 상태 폴더, `EditorPaths`), `gv_userSettingsFile`(사용자 설정 파일, `DevToolsHost`). 산출물 경로(`gv_screenshot` · 트레이스 · 보고)는
              *          쓰기만 하고 다음 실행이 읽지 않아 여기 넣지 않는다. 새 상태 자리 변수를 만들면 여기에 더한다.
              */
             static constexpr string_view kArrStateVariable[] = { "gv_editorStateDir", "gv_userSettingsFile" };

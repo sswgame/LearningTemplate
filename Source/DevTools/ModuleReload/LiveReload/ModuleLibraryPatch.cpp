@@ -30,7 +30,7 @@ namespace sw
             static constexpr uint64 kProgramFileSize     = 32;   ///< p_filesz
             static constexpr uint64 kDynamicValue        = 8;    ///< d_val
 
-            /** @brief 동적 섹션과 문자열 표의 **파일 안** 위치입니다. */
+            /** @brief 동적 섹션과 문자열 표의 파일 안 위치입니다. */
             struct DynamicView
             {
                 uint64 _dynamicOffset{ 0 };

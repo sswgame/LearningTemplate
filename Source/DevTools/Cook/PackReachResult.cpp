@@ -211,7 +211,7 @@ namespace sw
                         include( path, reach );
                         return;
                     }
-                    // 제외 규칙이 뺀 원본(셰이더 원본 — 백엔드 쿠킹본이 스테이징에 있다, 머티리얼 그래프 원본 — 생성 머티리얼이 담긴다)은 빠진 것이 아니다.
+                    // 제외 규칙이 뺀 원본(백엔드 쿠킹본이 스테이징에 있는 셰이더 원본, 생성 머티리얼이 담기는 머티리얼 그래프 원본)은 빠진 것이 아니다.
                     if ( _graph.getFiles()._setExisting.contains( path ) )
                     {
                         _setReferencedExcluded.insert( path );

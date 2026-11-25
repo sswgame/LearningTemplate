@@ -2,11 +2,11 @@
  * @file DevTools/ModuleReload/LiveReload/LiveReloadManager.h
  * @brief 모듈 공유 라이브러리를 섀도 복사해 핫 리로드합니다(의존 모듈까지 연쇄로 교체합니다).
  *
- * @note **이 클래스는 Engine 이 아니라 개발 도구(DevTools.dll)에 있습니다.** 모듈을 로드하고 교체하는 것은 런처(App, Server)의 일이고, Engine 은 모듈이라는 개념
+ * @note 이 클래스는 Engine 이 아니라 개발 도구(DevTools.dll)에 있습니다. 모듈을 로드하고 교체하는 것은 런처(App, Server)의 일이고, Engine 은 모듈이라는 개념
  *       자체를 몰라야 합니다. 모듈 관리자(GameModuleManager · ClientModuleManager)는 창구 `ILiveReloadManager`(ModuleManager)로만 보고, 이 구현을 만드는 것은
  *       리로드 구동기(`ModuleReloadDriver`)입니다. 배포는 DevTools 를 짓지 않아 함께 빠집니다(언리얼 HotReload 가 Developer 모듈인 자리).
  *
- *       이 클래스는 리로드 **순서**(prepare → 배치 콜백 → commit, 언로드 구간, 정적 등록 헤드, `RegistrationReloadScope`)를 정하고, 그 밖의 일은
+ *       이 클래스는 리로드 순서(prepare → 배치 콜백 → commit, 언로드 구간, 정적 등록 헤드, `RegistrationReloadScope`)를 정하고, 그 밖의 일은
  *       값 멤버나 도우미에 맡깁니다. 연쇄 교체 대상과 순서를 계산하는 `ModuleDependencyGraph`, 섀도 복사본 파일을 쓰고 지우는 `ModuleShadowCopy`,
  *       교체된 옛 라이브러리를 배치 단위로 남겨 두는 `DeferredLibraryUnloadQueue` 입니다.
  *       핫 리로드만 쓰는 도우미는 그 밖에 셋이 더 있습니다. 섀도 복사본의 파일 바이트를 읽고 고치는 `ModuleLibraryPatch`, 새 모듈 코드를
@@ -53,11 +53,11 @@ namespace sw
      * @brief 모듈을 섀도 경로에 복사해 로드하는 핫 리로드 매니저입니다.
      * @note 연쇄 교체는 의존 순서(위상 정렬)대로 합니다. 모든 모듈의 prepare 가 성공한 뒤에만 commit 합니다. 언로드는 위상 역순
      *       (의존하는 쪽 먼저)입니다.
-     *       - **적용 전 실패는 옛 라이브러리를 그대로 두고 계속 돕니다**(그래프를 막지 않습니다). 엔진 ABI 스탬프 불일치, 로드 실패, 라이브러리 검사
+     *       - 적용 전 실패는 옛 라이브러리를 그대로 두고 계속 돕니다(그래프를 막지 않습니다). 엔진 ABI 스탬프 불일치, 로드 실패, 라이브러리 검사
      *         거절(`IReloadableModuleClient::isLibraryUsable`), 배치 직전 콜백의 거절(`addOnBeforeCommitBatch`)이 여기에 해당합니다. 새 라이브러리가 상태를 넘겨받기 전이라 잃는 것이 없습니다.
-     *       - **적용 뒤 결함은 되돌리지 않습니다.** commit 중 실패, onAfter 의 결함, 그래프 막힘은 남은 commit 을 멈추고 그래프를 막습니다
+     *       - 적용 뒤 결함은 되돌리지 않습니다. commit 중 실패, onAfter 의 결함, 그래프 막힘은 남은 commit 을 멈추고 그래프를 막습니다
      *         (재시작 안내). 이미 교체된 DLL 은 되돌릴 수 없습니다. UE Live Coding 과 Unity 의 도메인 리로드도 적용 뒤 결함을 되돌리지 않습니다.
-     *       - **콜백 등록은 모두 `Subscription` 을 돌려줍니다.** 등록한 쪽(모듈 호스트 · 서버)이 멤버로 들고, 사라지면 그 등록만 풀립니다 — 다른 쪽이 건 것을
+     *       - 콜백 등록은 모두 `Subscription` 을 돌려줍니다. 등록한 쪽(모듈 호스트 · 서버)이 멤버로 들고, 사라지면 그 등록만 풀립니다 — 다른 쪽이 건 것을
      *         덮어쓰거나 통째로 비우는 길이 없습니다. 모듈마다의 칸은 그 모듈의 주인 하나가 걸고(다시 걸면 앞 구독은 아무것도 풀지 않는다),
      *         배치 직전 콜백은 여럿이 걸 수 있는 목록입니다.
      */
@@ -98,11 +98,11 @@ namespace sw
         [[nodiscard]] bool registerModule( string_view moduleName, const vector<string>& listDependsOn ) override;
 
         /**
-         * @brief 핫 리로드하지 않는 공용 모듈(GameFramework)을 섀도 복사 없이 로드하고, 그 정적 레지스트리를 **제 이름으로** 등록합니다.
-         * @details 키트와 SWGame 이 링크하는 공용 모듈을 **처음 부르는 쪽**이 로드하게 두면(Windows 지연 로드, 리눅스 첫 키트의 DT_NEEDED)
+         * @brief 핫 리로드하지 않는 공용 모듈(GameFramework)을 섀도 복사 없이 로드하고, 그 정적 레지스트리를 제 이름으로 등록합니다.
+         * @details 키트와 SWGame 이 링크하는 공용 모듈을 처음 부르는 쪽이 로드하게 두면(Windows 지연 로드, 리눅스 첫 키트의 DT_NEEDED)
          *          그 정적 레지스트리(타입, 컴포넌트 팩토리, 전역 변수)가 그때 등록을 모으는 모듈(SWGame 이나 첫 키트)의 이름으로 들어간다.
          *          그러면 SWGame 의 팩토리 캐시를 덮어써서 그 뒤에 만든 씬에 SWGame 컴포넌트가 없어지고, 첫 SWGame 리로드가 공용 모듈의 컴포넌트와 타입을 모든
-         *          씬에서 지운다. 공용 모듈은 다시 로드되지 않으므로 돌아오지도 않는다. 그래서 그 모듈을 링크하는 모듈을 등록하기 **전에** 이 함수를 부른다.
+         *          씬에서 지운다. 공용 모듈은 다시 로드되지 않으므로 돌아오지도 않는다. 그래서 그 모듈을 링크하는 모듈을 등록하기 전에 이 함수를 부른다.
          *          로드하기 전에 엔진 ABI 스탬프를 대조한다. 라이브러리는 리로드하지 않고, 이 매니저가 `shutdown` 에서 그것을 링크하는 모듈을 모두 내린 뒤 마지막에 내린다(의존 모듈의 import 가 그 라이브러리를 가리킨다).
          * @return 로드했거나 이 매니저가 이미 로드했으면 true 입니다. 파일이 없으면(그 모듈을 쓰지 않는 구성) 아무것도 하지 않고 true 를 반환합니다.
          */
@@ -150,13 +150,13 @@ namespace sw
 
         /**
          * @brief 연쇄 교체 대상이 모두 prepare 된 뒤 첫 commit 직전에 부를 콜백을 목록에 더합니다. 구독이 사라지면 그 항목만 빠집니다.
-         * @details **나중에 더한 것이 먼저 불린다** — 바깥 층(서버 서비스, 모듈 호스트 뒤에 선다)이 안쪽 층(게임 언로드)보다 먼저 내려간다.
+         * @details 나중에 더한 것이 먼저 불린다 — 바깥 층(서버 서비스, 모듈 호스트 뒤에 선다)이 안쪽 층(게임 언로드)보다 먼저 내려간다.
          *          하나라도 false 면 거기서 멈추고 이번 연쇄를 취소해 옛 라이브러리를 모두 유지한다(앞에서 멈춘 것은 다음 틱에 스스로 다시 선다).
          */
         [[nodiscard]] Subscription addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate ) override;
 
         /**
-         * @brief 리로드를 잡아 둘 조건을 목록에 더합니다. 하나라도 true 인 동안 바뀐 모듈은 **대기열에 남고** 잡음이 풀린 첫 갱신에서 리로드된다(버리지 않는다).
+         * @brief 리로드를 잡아 둘 조건을 목록에 더합니다. 하나라도 true 인 동안 바뀐 모듈은 대기열에 남고 잡음이 풀린 첫 갱신에서 리로드된다(버리지 않는다).
          * @details 모듈 코드가 다른 스레드에서 아직 돌고 있어 지금 내리면 그 스레드가 내려간 코드로 돌아오는 때에 쓴다(편집기의 네이티브 파일 대화상자 —
          *          닫힐 때까지 돌아오지 않는다). 거절(`addOnBeforeCommitBatch`)과 달리 이번 변경을 잃지 않는다. 구독이 사라지면 그 항목만 빠집니다.
          */
@@ -175,10 +175,10 @@ namespace sw
         bool isGraphBroken() const override { return _bReloadGraphBroken == SW_TRUE; }
 
         /**
-         * @brief 등록된 모듈마다, 의존 모듈이 **지금 이 매니저가 보관한 라이브러리**에 바인딩됐는지 확인합니다.
+         * @brief 등록된 모듈마다, 의존 모듈이 지금 이 매니저가 보관한 라이브러리에 바인딩됐는지 확인합니다.
          * @return 어긋난 바인딩이 하나도 없으면 true 입니다. 어긋나면 모듈과 의존 이름, 양쪽 주소를 로그로 남기고 false 를 반환합니다.
          * @details 의존 모듈은 이름으로 바인딩되고, prepare 가 복사본마다 세대 이름을 주고 의존하는 복사본이 그 이름을 부르게 바꾼다
-         *          (`ModuleShadowCopy::writeShadowCopy`). 바꾸기가 빠지면 Windows 는 원본 DLL 을 한 벌 더 로드하고, 리눅스는 SONAME 이 같은 **먼저 로드된**
+         *          (`ModuleShadowCopy::writeShadowCopy`). 바꾸기가 빠지면 Windows 는 원본 DLL 을 한 벌 더 로드하고, 리눅스는 SONAME 이 같은 먼저 로드된
          *          라이브러리에 바인딩된다. 어긋나면 한 프로세스에서 같은 모듈이 두 벌 돌고(정적 상태와 타입 등록이 갈린다), 옛 라이브러리를 언로드하는 순간
          *          거기로 점프하는 코드가 죽는다. 등록과 연쇄 리로드 끝에 호출하고, 어긋나면 그래프를 막는다. 섞인 채 조용히 도는 것보다 낫기 때문이다.
          *          Windows 는 import 테이블 첫 항목이 가리키는 라이브러리로, 리눅스는 모듈마다 박힌 스탬프 상수(`sw_moduleEngineABIStamp_<이름>`,
@@ -247,7 +247,7 @@ namespace sw
             AbsolutePath             _tempModulePath;
             ShadowLibraryNameState   _libraryName;
             void*                    _pLibraryModule;
-            FileStamp                _loadedSourceStamp; ///< 로드한 원본의 도장. 이것과 **다르면** 다시 빌드된 것이다(초 단위 크기 비교는 같은 초 안의 빌드를 놓쳤다)
+            FileStamp                _loadedSourceStamp; ///< 로드한 원본의 도장. 이것과 다르면 다시 빌드된 것이다(초 단위 크기 비교는 같은 초 안의 빌드를 놓쳤다)
             FileStamp                _debounceStamp;     ///< 조용해지기를 기다리는 동안 마지막으로 본 원본의 도장
             GameTimer                _debounceTimer;
             atomic<bool>             _bPendingReload;
@@ -298,7 +298,7 @@ namespace sw
         void unloadModule( ModuleRecord& context );
         /**
          * @brief `loadSharedModule` 로 올린 공용 모듈을 올린 순서의 거꾸로 내립니다(등록을 제 이름으로 해제하고 라이브러리를 놓는다).
-         * @details 공용 모듈은 그것을 링크하는 모듈보다 오래 살아야 하므로 `shutdown` 이 리로드 대상을 모두 내린 **뒤에** 부른다. 라이브러리는 프로세스 전역이라 매니저가 놓지 않으면
+         * @details 공용 모듈은 그것을 링크하는 모듈보다 오래 살아야 하므로 `shutdown` 이 리로드 대상을 모두 내린 뒤에 부른다. 라이브러리는 프로세스 전역이라 매니저가 놓지 않으면
          *          다음 매니저(테스트 · 재기동)가 같은 모듈을 다시 올리며 정적 등록(데이터 종류 · 감시 값 · 단계 · 개발 명령 · 서비스 팩토리)이 이름 중복으로 거절된다.
          *          엔진 서비스가 이미 내려갔으면 등록을 해제할 곳이 없어 라이브러리를 그대로 둔다(프로세스 끝까지).
          */

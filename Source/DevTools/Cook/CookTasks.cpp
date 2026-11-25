@@ -131,7 +131,7 @@ namespace sw
             /**
              * @brief 팩에 담을 셰이더를 쿠킹 스테이징에 굽고(바뀐 것만 — 내용 해시) 소스와 맞는지 판정합니다. 맞지 않으면 false 입니다.
              * @details 쿠킹본은 소스 트리가 아니라 스테이징에만 있으므로 팩을 구울 때 늘 굽는다 — 굽지 않은 채 팩을 만들면 셰이더 없는 팩이 된다.
-             *          `CookSession` 을 열기 **전에** 부른다 — 셰이더 쿠커는 엔진 기본 에셋 같은 리소스를 `CookJob` 밖에서 읽는데, 세션 안에서는 그 읽기가 실패한다.
+             *          `CookSession` 을 열기 전에 부른다 — 셰이더 쿠커는 엔진 기본 에셋 같은 리소스를 `CookJob` 밖에서 읽는데, 세션 안에서는 그 읽기가 실패한다.
              *          쿠킹 요청이 만드는 바이너리와 그 출처도 같은 까닭으로 여기서 모아 @p outMapRequestedBinary 로 돌려준다(팩 단계는 받기만 한다).
              */
             [[nodiscard]] static bool cookShadersForPack( const CommandLineManager& commandLine, const AbsolutePath& cookedDir, unordered_map<string, vector<vector<string>>>& outMapRequestedBinary )

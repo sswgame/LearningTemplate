@@ -33,7 +33,7 @@ namespace sw
         /**
          * @brief @p resourceRoot 아래의 모든 씬(`*.scene.xml`) 가운데 표면이 있는 것을 `<cookedDir>/<씬 경로의 .navmesh>` 로 씁니다. 활성 게임이 아닌
          *        게임 팩의 씬은 건너뜁니다(배포본은 활성 게임의 팩만 연다).
-         * @param store 기록과 DDC 입니다. 씬마다 작업 하나로 베이크하고 — 씬 · 프리팹 · 메시 등 씬을 세우며 읽은 것이 입력이다 — 기록이 새것이면 DDC 의 출력을 다시 씁니다.
+         * @param store 기록과 DDC 입니다. 씬마다 작업 하나로 베이크하고(씬 · 프리팹 · 메시 등 씬을 세우며 읽은 것이 입력이다), 기록이 새것이면 DDC 의 출력을 다시 씁니다.
          * @return 쓴 파일 수입니다. 실패는 @p outFailedCount 에 셉니다.
          */
         static uint32 cookAll( const SceneEngineServices& services, const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, const CookStore& store, uint64 reflectionFingerprint,

@@ -343,7 +343,7 @@ namespace sw
         vector<string>            listBackend;
         const vector<string_view> listName = StringUtil::split( text, ",", { ._bTrim = true, ._bDropEmpty = true } );
         // 표 순서로 모은다 — 적은 순서와 무관하게 보고 · 종료 코드의 "첫 실패" 가 늘 같다.
-        // `all` 은 이 플랫폼의 검증 백엔드다(`RHIAvailability::getScenarioBackends` — 쿠킹 표 `scenario_backends`, 리눅스는 vk · gl). 이름을 적은 백엔드는 그대로 띄운다 — 못 돌면 자식이 건너뜀(77)으로 끝난다.
+        // `all` 은 이 플랫폼의 검증 백엔드다(`RHIAvailability::getScenarioBackends`, 쿠킹 표 `scenario_backends`, 리눅스는 vk · gl). 이름을 적은 백엔드는 그대로 띄우고, 못 돌면 자식이 건너뜀(77)으로 끝난다.
         const bool bAll = listName.size() == 1 && listName[0] == "all";
         for ( size_t index = 0; index < SW_COUNT_OF( Internal::kArrBackendName ); ++index )
         {
@@ -622,8 +622,8 @@ namespace sw
                 listArgument.push_back( std::move( launchArgument ) );
 
             pChild->_command = options._executablePath.empty() ? ProcessCommand{} : ProcessCommand::at( options._executablePath, std::move( listArgument ) );
-            // 자식마다 제 실행 뿌리(`<이 실행 뿌리>/<백엔드>`) — 사용자 데이터 · 에디터 상태 · 시나리오 사본이 그 아래라 자식끼리 한 폴더를 다투지 않는다
-            // (예전에는 한 자식이 다른 자식의 쓰는 중인 세이브 임시 파일을 잔재로 지웠다 — 와일드웨스트). 그 폴더의 주인은 이 부모다 — 띄우기 전에 비운다.
+            // 자식마다 제 실행 뿌리(`<이 실행 뿌리>/<백엔드>`)를 준다. 사용자 데이터 · 에디터 상태 · 시나리오 사본이 그 아래라 자식끼리 한 폴더를 다투지 않는다
+            // (한 폴더를 나눠 쓰면 한 자식이 다른 자식의 쓰는 중인 세이브 임시 파일을 잔재로 지운다). 그 폴더의 주인은 이 부모라 띄우기 전에 비운다.
             const AbsolutePath childRunRoot = ProcessRoots::get()._run.join( backend );
             (void)FileUtil::removeDirectory( childRunRoot ); // 못 지우면 FileUtil 이 경고를 남긴다
             pChild->_runRoot = childRunRoot;

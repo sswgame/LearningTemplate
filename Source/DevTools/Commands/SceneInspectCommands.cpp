@@ -202,7 +202,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 이름 붙은 오브젝트를 지웁니다(시나리오가 트리거 · 지역 안에서 지운 대상의 이탈 — 로그아웃 · 죽음 — 을 본다). */
+            /** @brief 이름 붙은 오브젝트를 지웁니다. 시나리오가 트리거 · 지역 안에서 지운 대상의 이탈(로그아웃 · 죽음)을 본다. */
             static bool runObjectDestroy( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() != 1 )

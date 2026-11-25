@@ -19,7 +19,7 @@ namespace sw
         struct SceneStreamingCommandsInternal
         {
             /**
-             * @brief `world.streamqueue` — 로드 큐를 보입니다: 올리려는 셀 조각(줄 차례 — 우선순위 · 거리 · 단계)과 HLOD 대리 수, 텍스처 밉 줄(우선순위 · 밉)과 읽는 중 · 업로드 중 수.
+             * @brief `world.streamqueue`: 로드 큐를 보입니다. 올리려는 셀 조각(줄 차례: 우선순위 · 거리 · 단계)과 HLOD 대리 수, 텍스처 밉 줄(우선순위 · 밉)과 읽는 중 · 업로드 중 수.
              * @details 셀과 텍스처가 같은 우선순위(`StreamingSourcePriority`)로 줄을 선다 — 둘을 한 화면에 놓아 차례가 어긋났는지 본다. 줄마다 앞 @p kMaxListedEntries 개만 적는다.
              */
             static bool runStreamingQueue( const vector<string>& listArgument, string& outReply )

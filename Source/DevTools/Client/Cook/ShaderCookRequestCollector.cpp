@@ -1,7 +1,7 @@
 /**
  * @file ShaderCookRequestCollector.cpp
- * @brief **무엇을 쿠킹할지** 정합니다. 파이프라인 XML 과 머티리얼을 훑어 (셰이더 · 진입점 · define) 목록을 만듭니다.
- * @details 쿠킹하는 일(`Shader/Compile/ShaderCooker.cpp`)과 나누는 이유는 입력이 다르기 때문입니다. 여기 입력은 **에셋**(파이프라인 · 머티리얼)이고
+ * @brief 무엇을 쿠킹할지 정합니다. 파이프라인 XML 과 머티리얼을 훑어 (셰이더 · 진입점 · define) 목록을 만듭니다.
+ * @details 쿠킹하는 일(`Shader/Compile/ShaderCooker.cpp`)과 나누는 이유는 입력이 다르기 때문입니다. 여기 입력은 에셋(파이프라인 · 머티리얼)이고
  *          저쪽 입력은 요청 하나입니다. 런타임이 만드는 퍼뮤테이션과 여기서 만드는 요청이 어긋나면 Shipping 에서
  *          매니페스트 미스로 떨어지므로, define 을 합치는 규칙(`mergeDefines`)과 패스 기본 셰이더를 고르는 규칙이
  *          런타임과 같은 자리를 봐야 합니다. 그 대조가 이 파일의 일입니다.
@@ -181,7 +181,7 @@ namespace sw
                 }
             }
 
-            /** @brief 머티리얼 하나가 요구하는 셰이더 경로와 **런타임과 같은** define 목록입니다. */
+            /** @brief 머티리얼 하나가 요구하는 셰이더 경로와 런타임과 같은 define 목록입니다. */
             struct MaterialVariantInfo
             {
                 string         _shaderPath;
@@ -217,7 +217,7 @@ namespace sw
 
             /**
              * @brief 머티리얼이 런타임에 낼 수 있는 define 목록 전부입니다 — 에셋 상태 하나 + 런타임에 바꿀 수 있는 정적 스위치(`bShaderFeature="0"`)의 켬/끔 조합.
-             * @details 유니티의 shader_feature(쓰는 변형만) · multi_compile(모든 변형) 구분과 같다. 조합은 런타임 PSO 미리 만들기와 **같은 함수**
+             * @details 유니티의 shader_feature(쓰는 변형만) · multi_compile(모든 변형) 구분과 같다. 조합은 런타임 PSO 미리 만들기와 같은 함수
              *          (`Material::collectRuntimeSwitchVariants` — `setStaticSwitch` 뒤의 `getCachedShaderDefines` 와 같은 정의)로 만든다. 상한(`Material::kMaxRuntimeStaticSwitchCount`)을
              *          넘으면 그 함수가 오류를 남기고 에셋 상태만 낸다.
              */
@@ -284,7 +284,7 @@ namespace sw
 
                     for ( const RenderGraphPassDesc& pass : pipelineResource.getGraphPass() )
                     {
-                        // 셰이더 경로와 define 은 런타임 PSO 생성(FramePSOManager::makePassPSODesc)과 **같은 함수**로 정한다. 경로는 XML 의
+                        // 셰이더 경로와 define 은 런타임 PSO 생성(FramePSOManager::makePassPSODesc)과 같은 함수로 정한다. 경로는 XML 의
                         // `_shaderPath`, 비어 있으면 패스 종류 표의 기본 셰이더다. define 은 XML 퍼뮤테이션 + 패스 define(G버퍼의
                         // `SW_PASS_GBUFFER=1` 처럼 C++ 이 얹는 것)이다. 패스 종류는 로드 때 enum 으로 해석한 값을 본다.
                         const RenderPassShaderSelection passShader = selectRenderPassShader( pass._type, &pass, &pass, engineDefaultAssets );
@@ -361,7 +361,7 @@ namespace sw
             /**
              * @brief 2) 패스 종류 표(RenderPassKindInfo)의 엔진 셰이더입니다. 런타임이 패스 서술 없이도 만드는 PSO 의 셰이더다.
              * @details 컴퓨트 패스는 CSMain, 나머지는 VSMain · PSMain 을 define 없이 쿠킹한다. 런타임(FrameRenderer::ensurePassResources)은 로드한
-             *          파이프라인과 무관하게 표의 **모든** 패스 종류로 엔진 PSO 를 만들고, 씬 메시 패스면 그 위에 머티리얼 · 뷰 모드 변형을 얹는다.
+             *          파이프라인과 무관하게 표의 모든 패스 종류로 엔진 PSO 를 만들고, 씬 메시 패스면 그 위에 머티리얼 · 뷰 모드 변형을 얹는다.
              *          파이프라인에 그 종류가 없으면 서술 없이 표만으로 만든다 — 그 메시 패스도 5) 의 곱에 넣는다. XML 에 나오는 패스만 곱하면
              *          어느 파이프라인에도 없는 종류의 변형이 빠진다.
              */
@@ -447,9 +447,9 @@ namespace sw
                 bool bAllRead = true;
                 for ( const AbsolutePath& matPath : listMaterialFile )
                 {
-                    // **머티리얼을 직접 읽어 런타임과 같은 define 목록을 얻는다.** 주의: XML 의 `_alwaysDefines` 만
+                    // 머티리얼을 직접 읽어 런타임과 같은 define 목록을 얻는다. 주의: XML 의 `_alwaysDefines` 만
                     // 손으로 긁으면 런타임이 얹는 품질 · SHADER_LOD · usage · 정적 스위치 · 멀티 컴파일이 빠져,
-                    // 쿠킹된 변형이 런타임이 **한 번도 요청하지 않는** 해시가 된다. 같은 함수를 부르면 어긋날 자리가 없다.
+                    // 쿠킹된 변형이 런타임이 한 번도 요청하지 않는 해시가 된다. 같은 함수를 부르면 어긋날 자리가 없다.
                     const shared_ptr<Material> material = Material::create();
                     if ( material->loadFromDiskFile( matPath ) == false )
                     {
@@ -503,7 +503,7 @@ namespace sw
              * @brief 5) 패스 x (머티리얼 없음 + 머티리얼) x 뷰 모드: 런타임이 실제로 요구하는 조합입니다.
              * @details FrameRenderer::createMaterialPSOVariant 는 패스 PSO 의 define 위에 머티리얼 define 을, 그 위에 뷰 모드 define 을 얹어 변형 PSO 를
              *          만든다. 런타임이 찾는 것은 셋의 합집합이고, 머티리얼이 없는 배치(ensureMaterialPSOs 의 퍼뮤테이션 없는 요청)도 패스 define 위에
-             *          뷰 모드를 얹는다. 쿠킹하지 않은 조합은 Shipping 에서 PSO 생성이 실패하고 패스 PSO 로 물러나 **조용히 Lit 으로** 그려지거나(뷰 모드)
+             *          뷰 모드를 얹는다. 쿠킹하지 않은 조합은 Shipping 에서 PSO 생성이 실패하고 패스 PSO 로 물러나 조용히 Lit 으로 그려지거나(뷰 모드)
              *          드로우가 사라진다(머티리얼). 뷰 모드 define 은 런타임과 같은 표(`RenderViewModeUtil::getInfo` 의 `_pShaderDefine`)에서 얻는다. Wireframe 처럼
              *          래스터라이저 상태만 바꾸는 모드는 define 이 없어 새 바이트코드가 필요 없다.
              */

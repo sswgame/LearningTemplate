@@ -32,7 +32,7 @@ namespace
 
         /**
          * @brief 한 폴더의 시나리오마다 `<ExpectImage>` 골든이 검증 체인 백엔드마다 있는지 봅니다. 시나리오가 없는 폴더면 false 입니다.
-         * @details 백엔드를 고르는 시나리오(`<SkipUnless>` — 능력이 없는 백엔드는 건너뛴다, `<SwapBackend>` — 단언하는 때의 백엔드가 바뀐다)는 하나 이상이면 된다.
+         * @details 백엔드를 고르는 시나리오(`<SkipUnless>` 는 능력이 없는 백엔드를 건너뛰고, `<SwapBackend>` 는 단언하는 때의 백엔드를 바꾼다)는 하나 이상이면 된다.
          */
         static bool validateFolder( string_view folder, const vector<string>& listTag )
         {

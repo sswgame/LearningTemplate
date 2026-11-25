@@ -363,8 +363,8 @@ namespace sw
                 if ( variable._name == kStartSceneVariable )
                     startScene = variable._value;
             }
-            // 결정적 실행 정책 — 애니메이터가 시작 클립을 기다리고(첫 포즈가 디스크 지연에 달리지 않게), 에셋 도착을 프레임에 묶는다(끄면 셰이더 캐시가 빈 첫 실행 —
-            // 느린 프레임 — 이 다른 그림을 낸다). 게임이 서기 전에 건다(첫 단계는 게임이 이 뒤에 서고, 다음 단계는 아래에서 다시 선다). 환경 시간 멈춤은 시나리오가 고른다.
+            // 결정적 실행 정책: 애니메이터가 시작 클립을 기다리고(첫 포즈가 디스크 지연에 달리지 않게), 에셋 도착을 프레임에 묶는다(끄면 셰이더 캐시가 빈 첫 실행의
+            // 느린 프레임이 다른 그림을 낸다). 게임이 서기 전에 건다(첫 단계는 게임이 이 뒤에 서고, 다음 단계는 아래에서 다시 선다). 환경 시간 멈춤은 시나리오가 고른다.
             DeterministicRunPolicy policy      = engine::getSubsystem<DeterministicRun>().getPolicy();
             policy._bWaitForAnimationClips     = SW_TRUE;
             policy._bFinishAssetJobsEachFrame  = SW_TRUE;
@@ -681,7 +681,7 @@ namespace sw
 
     bool AutomationSession::Runtime::isBusy() const
     {
-        // 재생(데모 · 벤치마크 경로 — `ScenarioPlayer`)은 사람이 보는 화면이라 보통 프레임 속도로 돈다 — 세션의 무인 실행만 센다.
+        // 재생(데모 · 벤치마크 경로, `ScenarioPlayer`)은 사람이 보는 화면이라 보통 프레임 속도로 돈다. 세션의 무인 실행만 센다.
         return _owner.isBusy();
     }
 

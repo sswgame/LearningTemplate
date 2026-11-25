@@ -216,7 +216,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "SceneCooker.SceneCookComponentsUnknown", "Scene cook: '%#' has %# components of unknown type - not cooked", scenePath.str(), missingComponentCount );
                     return CookStep::Failed;
                 }
-                // 이 비교는 **모든 빌드에서** 돌아야 한다. 아래 요약은 `SW_LOG_INFO` 라 Shipping 에서
+                // 이 비교는 모든 빌드에서 돌아야 한다. 아래 요약은 `SW_LOG_INFO` 라 Shipping 에서
                 // 통째로 사라지는데, "쿠킹했다고 했지만 실은 XML 그대로" 는 그때도 알아야 할 일이다.
                 if ( cookedCount < statefulCount )
                 {
@@ -319,7 +319,7 @@ namespace sw
             SW_LOG_ERROR_ID( "SceneCooker.SceneCookNotCooked", "Scene cook: '%#' is not cooked - the engine services have no type registry", inoutDoc._name );
             return 0;
         }
-        // **런타임이 읽는 그대로 짓고 쿠킹한다.** 엔티티를 하나씩 따로 읽으면 부모가 문서에서 뒤에 있는 자식이 부모를 찾지 못하고 저장이
+        // 런타임이 읽는 그대로 짓고 쿠킹한다. 엔티티를 하나씩 따로 읽으면 부모가 문서에서 뒤에 있는 자식이 부모를 찾지 못하고 저장이
         // 그 연결을 지운다(배포본에서 자식이 루트가 된다). 그래서 문서 전체를 `Scene::instantiate`(프리팹 스폰 · 묶음 부착까지 런타임과
         // 같은 길)로 짓고, 쿠킹된 문서를 다시 지어 엔티티마다 상태 전체를 비교한다(컴포넌트 타입 목록만 보면 값이 어긋나도 통과한다).
         // 엔티티는 파일 id 로 찾는다 — 쿠킹된 상태의 부착도 파일 id 로만 부모를 가리킨다. id 없는 엔티티는 읽는 쪽이 받지 않는 문서다.
@@ -366,7 +366,7 @@ namespace sw
             }
         }
 
-        // **쿠킹된 것을 다시 지어 본다.** 모르는 컴포넌트 타입 · 값이 바뀌는 필드 · 부모를 잃는 부착이 있으면 그 엔티티의 상태가 어긋나고, 그
+        // 쿠킹된 것을 다시 지어 본다. 모르는 컴포넌트 타입 · 값이 바뀌는 필드 · 부모를 잃는 부착이 있으면 그 엔티티의 상태가 어긋나고, 그
         // 엔티티는 XML 로 남는다. 쿠킹이 조용히 무언가를 떨어뜨리지 않는다.
         Scene verify{ "SceneCooker.Verify", services };
         verify.setBuildAllDataLayers();

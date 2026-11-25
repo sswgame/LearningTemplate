@@ -1,16 +1,16 @@
 /**
  * @file ShaderCookDriver.cpp
- * @brief 오프라인 쿠킹의 **정책**입니다. 요청 모두를 네 RHI 포맷으로 쿠킹하고 리플렉션 매니페스트를 씁니다.
+ * @brief 오프라인 쿠킹의 정책입니다. 요청 모두를 네 RHI 포맷으로 쿠킹하고 리플렉션 매니페스트를 씁니다.
  * @details 셰이더 하나를 컴파일하고 쓰는 법(`ShaderCompiler::compileBatch` · `ShaderCooker::writeBinary`)과 이름 짓기, 최신 판정은 `Shader/Compile` 의 메커니즘이고,
  *          "무엇을 쿠킹하는가"는 파이프라인 XML 과 패스 종류를 아는 렌더러의 지식입니다. 그래서 이 파일은
  *          `Renderer/Cook` 에 있고 `Shader/` 는 `Renderer/` 를 include 하지 않습니다.
  *
- *          **쿠킹은 "깨끗하다" 를 거짓으로 답하지 않는다**(`ShaderCookSummary::isClean` 이 `App --cook-shaders` 의 종료 코드를 정한다).
+ *          쿠킹은 "깨끗하다" 를 거짓으로 답하지 않는다(`ShaderCookSummary::isClean` 이 `App --cook-shaders` 의 종료 코드를 정한다).
  *          소스가 없거나 `shaders` 폴더 밖인 요청 · 읽지 못한 바이너리 · 쓰지 못한 매니페스트 · 지우지 못한 옛 바이너리는 모두 실패로 센다. 조용히 건너뛰는 갈래를 두면 요청이 어긋난 채 종료 코드 0 이 된다.
- *          **요청이 만들지 않는 바이너리는 쿠커가 지운다**(`removeUnlistedFiles`). 이 쿠킹은 요청을 모두 훑어 매니페스트를 새로 쓰므로 매니페스트 밖의 바이너리는 옛 퍼뮤테이션 해시나 사라진 셰이더의 것이다.
+ *          요청이 만들지 않는 바이너리는 쿠커가 지운다(`removeUnlistedFiles`). 이 쿠킹은 요청을 모두 훑어 매니페스트를 새로 쓰므로 매니페스트 밖의 바이너리는 옛 퍼뮤테이션 해시나 사라진 셰이더의 것이다.
  *          예전에는 손으로 지워야 했고, 그렇지 않으면 `--verify-shaders` 가 "매니페스트에 없는 바이너리" 로 졌다.
  *
- *          **컴파일 · 리플렉션은 병렬이고 합치기는 직렬이다.** 요청 × 포맷 작업은 계획(직렬) → 컴파일 · 리플렉션(병렬, 작업마다 자기 결과 칸에만 쓴다) → 합치기(직렬, 요청 순서)로 돈다.
+ *          컴파일 · 리플렉션은 병렬이고 합치기는 직렬이다. 요청 × 포맷 작업은 계획(직렬) → 컴파일 · 리플렉션(병렬, 작업마다 자기 결과 칸에만 쓴다) → 합치기(직렬, 요청 순서)로 돈다.
  *          매니페스트 합치기 · 카운터 · 실패 소스 기록 · 매니페스트 쓰기는 직렬로 돌 때와 같은 순서라 산출물은 바이트 단위로 같다. 언리얼의 셰이더 컴파일 워커도 컴파일은 워커에서 하고 결과 병합은 한 스레드에서 한다.
  */
 #include "pch.h"
@@ -150,7 +150,7 @@ namespace sw
             };
 
             /**
-             * @brief 쿠킹 한 번의 묶음 컴파일이 내는 결과를 받습니다(`ShaderCompiler::compileBatch` — 워커에서 동시에 불린다). 컴파일 요청 하나가 **사슬**(같은 바이너리 파일을 만드는 작업의 묶음) 하나라 두 스레드가 한 파일을 쓰지 않습니다.
+             * @brief 쿠킹 한 번의 묶음 컴파일이 내는 결과를 받습니다(`ShaderCompiler::compileBatch` — 워커에서 동시에 불린다). 컴파일 요청 하나가 사슬(같은 바이너리 파일을 만드는 작업의 묶음) 하나라 두 스레드가 한 파일을 쓰지 않습니다.
              * @details `ContentHash` · `ShaderCooker::writeBinary` · `ShaderReflectionData::reflect` · `ShaderBindingValidatorIssue::validate` 가 스레드 안전해야 하고,
              *          그 확인은 각 함수의 주석에 있다.
              */
@@ -312,7 +312,7 @@ namespace sw
             }
 
             /**
-             * @brief 요청 하나를 모든 포맷의 작업으로 풀어 `outListTask` 에 더합니다. 소스 파일이 없거나 `shaders` 폴더 밖이면 쿠킹할 수 없으므로 **실패로 셉니다**(요청은 에셋이 만든 것이라 소스가 있어야 한다).
+             * @brief 요청 하나를 모든 포맷의 작업으로 풀어 `outListTask` 에 더합니다. 소스 파일이 없거나 `shaders` 폴더 밖이면 쿠킹할 수 없으므로 실패로 셉니다(요청은 에셋이 만든 것이라 소스가 있어야 한다).
              */
             static void planRequest( const ShaderCookRequest& request, const vector<ShaderTargetFormat>& listTargetFormat, CookState& ioState, vector<FormatTask>& outListTask )
             {
@@ -392,7 +392,7 @@ namespace sw
             }
 
             /**
-             * @brief 작업 결과를 **작업 순서(요청 순서 × 포맷 순서)대로** 카운터와 매니페스트에 합칩니다. 병렬로 돌았어도 직렬 쿠킹과 같은 순서라 매니페스트의 내용과 카운터가 같습니다.
+             * @brief 작업 결과를 작업 순서(요청 순서 × 포맷 순서)대로 카운터와 매니페스트에 합칩니다. 병렬로 돌았어도 직렬 쿠킹과 같은 순서라 매니페스트의 내용과 카운터가 같습니다.
              */
             static void mergeResults( const vector<FormatTask>& listTask, vector<FormatResult>& inoutListResult, CookState& ioState )
             {
@@ -477,7 +477,7 @@ namespace sw
 
             /**
              * @brief RHI 폴더별 리플렉션 매니페스트를 쓰고, 그 매니페스트에 없는 옛 파일을 지웁니다. 매니페스트를 못 쓴 폴더는 지우지 않습니다(다음 쿠킹이 다시 판정한다).
-             * @details 옛 바이너리를 지우는 것은 쿠커의 일이다: 이 쿠킹은 요청을 **모두** 훑어 매니페스트를 새로 썼으므로 매니페스트 밖의 바이너리는 어떤 요청도 만들지 않는 것이다
+             * @details 옛 바이너리를 지우는 것은 쿠커의 일이다: 이 쿠킹은 요청을 모두 훑어 매니페스트를 새로 썼으므로 매니페스트 밖의 바이너리는 어떤 요청도 만들지 않는 것이다
              *          (퍼뮤테이션 해시가 바뀌었거나 셰이더 · 목록 줄이 사라진 것). 남겨 두면 `--verify-shaders` 가 지고 배포 팩에 실린다.
              */
             static void writeManifests( CookState& ioState )

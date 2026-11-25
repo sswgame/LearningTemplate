@@ -19,7 +19,7 @@ namespace sw
     /**
      * @class TracyProfilerBackend
      * @brief Tracy C API 로 구간 · 프레임 · 그래프 · 메모리 · GPU 타임라인을 냅니다.
-     * @details **GPU 구간은 "수동 GPU 컨텍스트" 로 냅니다.** Tracy 의 API 별 헤더(TracyD3D12 · TracyVulkan …)를 쓰지 않습니다 — 그것들은
+     * @details GPU 구간은 "수동 GPU 컨텍스트" 로 냅니다. Tracy 의 API 별 헤더(TracyD3D12 · TracyVulkan …)를 쓰지 않습니다 — 그것들은
      *          RHI 백엔드 DLL 안에서 네이티브 쿼리를 두 번째로 만들고, 백엔드 DLL 마다 클라이언트를 링크하게 만듭니다. 대신 엔진이 이미
      *          네 백엔드에서 모으는 타임스탬프(`IRHITimestampProvider::readTimestamps`)를 그대로 Tracy 에 넘깁니다 — 쿼리는 한 벌이고, Tracy 클라이언트는
      *          DevTools.dll 하나만 링크합니다.

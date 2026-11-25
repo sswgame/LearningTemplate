@@ -59,7 +59,7 @@ namespace sw
              * @param pOutExpected 비교한 기준입니다(로그용).
              * @return 아직 묶이지 않았거나 @p pExpected 에 묶였으면 true 입니다.
              * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 박힌 스탬프 상수를 모듈의 검색 범위(자기 + 자기 의존)에서
-             *          찾습니다. `dlsym( pModule, ... )` 이 돌려주는 주소는 그 모듈이 **실제로 묶인** 의존의 것입니다.
+             *          찾습니다. `dlsym( pModule, ... )` 이 돌려주는 주소는 그 모듈이 실제로 묶인 의존의 것입니다.
              */
             static bool isBoundTo( void* pModule, string_view dependencyName, string_view dependencyFileName, void* pExpected, const void*& pOutActual,
                                    const void*& pOutExpected )
@@ -93,7 +93,7 @@ namespace sw
 
             /**
              * @brief 섀도 복사 없이 여는 라이브러리 파일 @p modulePath 를 열어도 되는지 봅니다(엔진 ABI 스탬프 · 지연 import).
-             * @details 섀도 복사본(`ModuleShadowCopy::writeShadowCopy`)과 같은 이유로 로드하기 **전에** 본다 — 스탬프가 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
+             * @details 섀도 복사본(`ModuleShadowCopy::writeShadowCopy`)과 같은 이유로 로드하기 전에 본다 — 스탬프가 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
              */
             [[nodiscard]] static bool isLibraryFileUsable( string_view moduleName, const AbsolutePath& modulePath )
             {
@@ -171,7 +171,7 @@ namespace sw
 
         _moduleFolderWatch.reset();
 
-        // 언로드를 미룬 옛 라이브러리를 먼저 언로드한다. 그것들은 같은 배치의 미룬 라이브러리나 **지금 살아 있는** 라이브러리에 바인딩돼 있으므로, 살아
+        // 언로드를 미룬 옛 라이브러리를 먼저 언로드한다. 그것들은 같은 배치의 미룬 라이브러리나 지금 살아 있는 라이브러리에 바인딩돼 있으므로, 살아
         // 있는 모듈을 먼저 언로드하면 옛 라이브러리의 정적 소멸자가 언로드된 코드로 점프할 수 있다.
         _deferredUnloadQueue.unloadAll();
 
@@ -287,7 +287,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "LiveReloadManager.FailedWatchModuleDirectory", "Failed to watch the module directory %# - outside builds are not reloaded", moduleDir.str() );
         }
 
-        // 의존 목록은 로드 **전에** 둔다 — 섀도 복사본이 의존 모듈의 import 를 그 의존의 지금 이름으로 바꿀 때 읽는다.
+        // 의존 목록은 로드 전에 둔다 — 섀도 복사본이 의존 모듈의 import 를 그 의존의 지금 이름으로 바꿀 때 읽는다.
         _dependencyGraph.setDependsOn( moduleName, listDependsOn );
         ModuleRecord& moduleRecord       = getOrCreateRecord( moduleName );
         moduleRecord._moduleName         = moduleName;
@@ -707,7 +707,7 @@ namespace sw
         }
         else
         {
-            // 원본을 대조하고 세대 이름을 붙여 복사본으로 쓴다. 로드하기 **전이라** 대조에 걸린 모듈의 정적 초기화는 돌지 않는다.
+            // 원본을 대조하고 세대 이름을 붙여 복사본으로 쓴다. 로드하기 전이라 대조에 걸린 모듈의 정적 초기화는 돌지 않는다.
             ShadowCopyParams params;
             populateShadowCopyParams( context, params );
             if ( ModuleShadowCopy::writeShadowCopy( params, _shadowCopySerials, context._libraryName, outShadow._tempPath ) == false )

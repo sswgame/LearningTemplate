@@ -2,7 +2,7 @@
  * @file PackReachResult.h
  * @brief 쓰는 것만 담는 쿠킹의 고르기입니다 — 뿌리에서 참조를 따라 닿는 파일을 모읍니다. 팩 쿠커(`PackCooker`)가 도메인 팩마다 이 집합의 파일만 담는다.
  * @details 언리얼 쿠커가 맵 · Primary Asset(규칙 `AlwaysCook`)에서 시작해 참조된 패키지만 쿠킹하는 것과 같다(기억에 의존한 비교 — Primary Asset Rules 의 `CookRule`).
- *          - 뿌리: 엔진 코드가 상수로 읽는 에셋(`SW_ASSET_COOK_ROOT` — 엔진 기본 에셋 표가 그 하나라 엔진 쪽은 그 칸들로 닿는다), 항상 담기 묶음(`PackCookRules::_listAlwaysCook` —
+ *          - 뿌리: 엔진 코드가 상수로 읽는 에셋(`SW_ASSET_COOK_ROOT`. 엔진 기본 에셋 표가 그 하나라 엔진 쪽은 그 칸들로 닿는다), 항상 담기 묶음(`PackCookRules::_listAlwaysCook`:
  *            게임 · 키트 코드가 이름으로 읽는 것, 게임 데이터 · 맵), 게임 설정(`_gameSettingsPath`)의 `<RequiredData kind pack>` 이 가리키는 다른 팩의 데이터(`_listRequiredData` 의 자리),
  *            도메인 뿌리의 리다이렉트 표(`AssetRedirect` — 런타임이 이름으로 읽고, 옛 id 를 적는 글이라 훑지 않는다).
  *          - 따라가기: 글 에셋의 참조 칸(`AssetReferenceFields` — 생성 표 + 손 표, `_base` 부모 포함)과 곁 파일(`AssetCompanionRule`). 임포트 산출물(머티리얼 · 셋)도 따라간다.
@@ -178,7 +178,7 @@ namespace sw
          */
         [[nodiscard]] static bool collect( PackReachGraph& graph, const unordered_set<string>& setDeferredRoot, PackReachResult& outResult );
         /**
-         * @brief 뿌리 @p listRoot(정규화한 id — 담을 수 있는 파일)에서만 닿는 파일을 모읍니다. 씬 하나의 닿음(씬 청크 나누기 — `PackSceneChunkPlan`)에 쓴다.
+         * @brief 뿌리 @p listRoot(정규화한 id, 담을 수 있는 파일)에서만 닿는 파일을 모읍니다. 씬 하나의 닿음(씬 청크 나누기, `PackSceneChunkPlan`)에 쓴다.
          * @return `collect` 와 같은 실패 규칙입니다.
          */
         [[nodiscard]] static bool collectFromRoots( PackReachGraph& graph, const vector<string>& listRoot, PackReachResult& outResult );

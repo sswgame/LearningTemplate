@@ -27,7 +27,7 @@ namespace sw
 
     /**
      * @class ModuleReloadDriver
-     * @brief 호스트가 값 멤버로 들고 직접 부릅니다. **Shipping 에는 리로드할 모듈이 없어** 매니저가 없고 모든 함수가 아무것도 하지 않습니다.
+     * @brief 호스트가 값 멤버로 들고 직접 부릅니다. Shipping 에는 리로드할 모듈이 없어 매니저가 없고 모든 함수가 아무것도 하지 않습니다.
      * @details `initialize` 가 자신을 호스트 범위에 겁니다(`SubsystemScope::bind`). 개발 명령 `module.reload` 와 감시 값 `Module.*` 는 `engine::findSubsystem<ModuleReloadDriver>()`
      *          로 엔진 범위에서 호스트 범위까지 올라가 찾습니다 — 정적 포인터 창구를 두지 않습니다. 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이라
      *          매니저 종료와 범위에서 풀기는 호스트 범위의 모듈 라이브러리 창구(`ModuleLoaderSubsystem`)의 씬 뒤 훅에 겁니다.
@@ -65,7 +65,7 @@ namespace sw
          * @details 디버그 키 갱신은 개발 계층(`HostDevLayer::pollShellActions`)이 한다 — 정적 모듈 구성에도 콘솔 키가 살아야 해서 이 구동기 밖으로 뺐다.
          */
         void pollReloadActions( const DebugKeyActions& debugKeys, bool bEnableEditor );
-        /** @brief 요청된 모듈 교체를 실행합니다. **틱 직전**(게임 업데이트 뒤, 씬 틱 앞)에 부릅니다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어집니다. */
+        /** @brief 요청된 모듈 교체를 실행합니다. 틱 직전(게임 업데이트 뒤, 씬 틱 앞)에 부릅니다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어집니다. */
         void update();
 
         /** @brief 핫 리로드 매니저입니다. Shipping 에서는 항상 nullptr 이고, 받는 쪽이 그 경우를 처리합니다. */

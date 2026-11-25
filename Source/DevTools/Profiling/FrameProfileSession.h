@@ -62,7 +62,7 @@ namespace sw
             uint32 _overTwoAndHalfMedian{ 0 }; ///< 칸 아래 끝이 중앙 간격의 2.5 배 이상인 프레임 수
         };
 
-        /** @brief @p pRenderDriver 는 GPU 메모리 표 · RHI 이름을 묻는 창구다(렌더러가 없는 호스트 — 전용 서버 — 는 nullptr). */
+        /** @brief @p pRenderDriver 는 GPU 메모리 표 · RHI 이름을 묻는 창구다(렌더러가 없는 전용 서버 같은 호스트는 nullptr). */
         explicit FrameProfileSession( IEngineRenderDriver* pRenderDriver );
         FrameProfileSession( const FrameProfileSession& )            = delete;
         FrameProfileSession& operator=( const FrameProfileSession& ) = delete;
@@ -132,7 +132,7 @@ namespace sw
         uint64 _allocationCountAtStart;
         /**
          * @brief 측정 구간이 시작된 벽시계 시각(마이크로초, steady_clock)입니다.
-         * @details 구간 표는 스레드마다 **일한 시간**이라 "프레임이 실제로 몇 us 마다 나오나" 를 답하지 못합니다. 게임 스레드가
+         * @details 구간 표는 스레드마다 일한 시간이라 "프레임이 실제로 몇 us 마다 나오나" 를 답하지 못합니다. 게임 스레드가
          *          빨라져 렌더 스레드의 구간이 늘어 보일 때(경합인지 회귀인지) 가르려면 측정 구간 전체의 벽시계가 필요합니다.
          */
         int64 _measureStartMicro;

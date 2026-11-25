@@ -19,7 +19,7 @@ namespace sw
 {
     /**
      * @class EditorModuleHeadlessSession
-     * @brief 헤드리스 실행 한 번에 에디터 모듈을 **한 번만** 올리고 끝에 내립니다(임포트 · 로컬라이제이션 · 참조 검사가 함께 쓴다).
+     * @brief 헤드리스 실행 한 번에 에디터 모듈을 한 번만 올리고 끝에 내립니다(임포트 · 로컬라이제이션 · 참조 검사가 함께 쓴다).
      * @details 예전에는 작업마다 모듈을 올리고(정적 등록 · 타입 등록 · ABI 대조) 내렸다 — `--import-textures --import-models --check-asset-refs` 한 실행이 세 번 올렸다.
      *          언리얼 커맨드릿이 엔진 · 모듈을 한 번 올린 뒤 일을 도는 것과 같다. 작업 표를 도는 쪽(`EditorModuleHeadlessTask::runRequested`)이 이 객체를 쥐고 작업에 넘긴다.
      *          정적 모듈 구성(배포 · 웹 · Android 개발)에는 에디터 모듈이 없어 아무것도 올리지 않는다(작업이 그 전에 실패로 답한다).

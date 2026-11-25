@@ -22,7 +22,7 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_gpuCulling, kDefaultFrameSettings._bGPUCulling != SW_FALSE, "GPU 컬링 컴퓨트 디스패치 (false=건너뜀, 진단용)" );
     /**
-     * @brief `-gv_meshMorphDebugMode=<모드>`: 메시 모프 진단입니다. SkipDispatch 의 정답은 **레스트 포즈와 같은 이미지**다 — 컴퓨트가 아예 돌지 않으므로 "컴퓨트가 범인인가" 를 가른다.
+     * @brief `-gv_meshMorphDebugMode=<모드>`: 메시 모프 진단입니다. SkipDispatch 의 정답은 레스트 포즈와 같은 이미지다 — 컴퓨트가 아예 돌지 않으므로 "컴퓨트가 범인인가" 를 가른다.
      */
     SW_TEST_GLOBAL_VARIABLE( MeshMorphDiagMode, gv_meshMorphDebugMode, kDefaultFrameSettings._meshMorphDebugMode, "메시 모프 진단 (Normal 평소 / ForceOn 강제 켬 / SkipDispatch 디스패치 생략)" );
     /**

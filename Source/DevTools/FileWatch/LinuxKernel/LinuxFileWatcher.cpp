@@ -86,7 +86,7 @@ namespace sw
         const bool bAdded = _bRecursive ? addWatchRecursive( _directoryPath ) : addWatchDirectory( _directoryPath );
         if ( bAdded == false )
         {
-            // 하위 디렉터리의 실패는 addWatchRecursive 가 모아서 경고하고 넘어간다. 여기에 오는 것은 **루트조차** 걸지 못한
+            // 하위 디렉터리의 실패는 addWatchRecursive 가 모아서 경고하고 넘어간다. 여기에 오는 것은 루트조차 걸지 못한
             // 경우뿐이라, 감시 자체가 성립하지 않는다.
             SW_LOG_ERROR_ID( "LinuxFileWatcher.InotifyAddWatchFailed", "inotify_add_watch failed for root (%#): %#", _directoryPath.c_str(), strerror( errno ) );
             stopWatching();
