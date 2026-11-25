@@ -427,6 +427,12 @@ namespace sw
                 {
                     BitReader reader( countRecord._bytes.data(), static_cast<int32>( countRecord._bytes.size() ) );
                     bought = reader.readVarInt();
+                    // 깨진 수를 0 으로 읽으면 계정 한도가 다시 열린다
+                    if ( reader.hasOverflowed() || bought < 0 )
+                    {
+                        SW_LOG_ERROR_ID( "EconomyStoreLogic.PurchaseCountUnreadable", "The purchase count record '%#' is unreadable - purchases of that offer wait until the record is fixed", countKey );
+                        return EconomyServiceResult::fail( OnlineError::kUnavailable );
+                    }
                 }
                 if ( bought + count > offer._limitPerAccount )
                     return EconomyResult::LimitReached;

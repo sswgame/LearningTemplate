@@ -711,8 +711,7 @@ namespace sw
             }
             else
             {
-                accountID = ServiceKeyUtil::decodeVarID( guestRaw._bytes );
-                if ( accountID == 0 || Internal::readProfile( _connection, accountID, profile ) != ServiceStoreResult::Ok )
+                if ( ServiceKeyUtil::decodeVarID( digestHex, guestRaw._bytes, accountID ) == false || Internal::readProfile( _connection, accountID, profile ) != ServiceStoreResult::Ok )
                     return LoginServiceResult::fail( OnlineError::kUnavailable );
                 const LoginServiceResult sanction = evaluateSanction( accountID, nowMs, outGrant );
                 if ( sanction != LoginResult::Ok )
@@ -774,8 +773,7 @@ namespace sw
             }
             else
             {
-                accountID = ServiceKeyUtil::decodeVarID( externalRaw._bytes );
-                if ( accountID == 0 || Internal::readProfile( _connection, accountID, profile ) != ServiceStoreResult::Ok )
+                if ( ServiceKeyUtil::decodeVarID( externalKey, externalRaw._bytes, accountID ) == false || Internal::readProfile( _connection, accountID, profile ) != ServiceStoreResult::Ok )
                     return LoginServiceResult::fail( OnlineError::kUnavailable );
                 const LoginServiceResult sanction = evaluateSanction( accountID, nowMs, outGrant );
                 if ( sanction != LoginResult::Ok )
@@ -902,8 +900,11 @@ namespace sw
             ServiceRecord      linkRaw;
             ServiceTransaction transaction;
             transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( token._sessionID ) );
-            const ServiceStoreResult readResult = attempt.readRecord( Internal::getAccountSessionTable(), accountKey, linkRaw );
-            if ( readResult == ServiceStoreResult::Ok && ServiceKeyUtil::decodeVarID( linkRaw._bytes ) == token._sessionID )
+            const ServiceStoreResult readResult      = attempt.readRecord( Internal::getAccountSessionTable(), accountKey, linkRaw );
+            uint64                   linkedSessionID = 0;
+            if ( readResult == ServiceStoreResult::Ok && ServiceKeyUtil::decodeVarID( accountKey, linkRaw._bytes, linkedSessionID ) == false )
+                return LoginServiceResult::fail( OnlineError::kUnavailable );
+            if ( linkedSessionID == token._sessionID )
                 transaction.erase( Internal::getAccountSessionTable(), accountKey, linkRaw._version );
             const ServiceStoreResult commitResult = attempt.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
@@ -1341,8 +1342,11 @@ namespace sw
         const ServiceStoreResult linkRead = _connection.readRecord( Internal::getAccountSessionTable(), accountKey, linkRaw );
         if ( linkRead == ServiceStoreResult::Ok )
         {
+            uint64 sessionID = 0;
+            if ( ServiceKeyUtil::decodeVarID( accountKey, linkRaw._bytes, sessionID ) == false )
+                return LoginServiceResult::fail( OnlineError::kUnavailable ); // 세션을 놓친 채 계정을 지우지 않는다
             transaction.erase( Internal::getAccountSessionTable(), accountKey );
-            transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( ServiceKeyUtil::decodeVarID( linkRaw._bytes ) ) );
+            transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( sessionID ) );
         }
         // 원장 묘비와 소각 대기를 계정 지우기와 한 트랜잭션에 넣는다 — 탈퇴가 그사이 취소돼 이 커밋이 지면 잔액도 그대로다(Nakama DeleteAccount 의 지갑 · user_tombstone)
         Ledger::stageAccountDeletion( accountID, nowMs, transaction );
@@ -1512,7 +1516,9 @@ namespace sw
         ServiceStoreResult readResult = _connection.readRecord( Internal::getAccountSessionTable(), accountKey, linkRaw );
         if ( readResult != ServiceStoreResult::Ok && readResult != ServiceStoreResult::NotFound )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
-        const uint64 oldSessionID = readResult == ServiceStoreResult::Ok ? ServiceKeyUtil::decodeVarID( linkRaw._bytes ) : 0;
+        uint64 oldSessionID = 0;
+        if ( readResult == ServiceStoreResult::Ok && ServiceKeyUtil::decodeVarID( accountKey, linkRaw._bytes, oldSessionID ) == false )
+            return LoginServiceResult::fail( OnlineError::kUnavailable ); // 깨진 연결을 없음으로 보면 앞 세션이 산 채로 새 세션이 열린다
         if ( oldSessionID != 0 )
         {
             ServiceRecord oldSessionRaw;
@@ -1569,7 +1575,9 @@ namespace sw
             return LoginResult::Ok;
         if ( readResult != ServiceStoreResult::Ok )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
-        const uint64  sessionID  = ServiceKeyUtil::decodeVarID( linkRaw._bytes );
+        uint64 sessionID = 0;
+        if ( ServiceKeyUtil::decodeVarID( accountKey, linkRaw._bytes, sessionID ) == false )
+            return LoginServiceResult::fail( OnlineError::kUnavailable ); // 없는 세션을 지운 셈 치면 정지 · 강제 종료가 산 세션을 남긴다
         const string  sessionKey = ServiceKeyUtil::makeHex64( sessionID );
         ServiceRecord sessionRaw;
         readResult = _connection.readRecord( Internal::getSessionTable(), sessionKey, sessionRaw );

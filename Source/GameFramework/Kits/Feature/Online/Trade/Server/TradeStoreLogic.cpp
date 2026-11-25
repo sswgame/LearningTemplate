@@ -194,8 +194,11 @@ namespace sw
                 if ( linkRead != ServiceStoreResult::Ok )
                     return TradeServiceResult::fail( OnlineError::kUnavailable );
                 // 남은 링크가 있고 그 거래가 닫혔거나 시한이 지났으면 정리하고 이어 간다. 지연 만료이다.
+                uint64 linkedTradeID = 0;
+                if ( ServiceKeyUtil::decodeVarID( ServiceKeyUtil::makeHex64( arrParty[sideIndex] ), linkRaw._bytes, linkedTradeID ) == false )
+                    return TradeServiceResult::fail( OnlineError::kUnavailable );
                 SessionRead              stale;
-                const TradeServiceResult staleRead = readSession( ServiceKeyUtil::decodeVarID( linkRaw._bytes ), stale );
+                const TradeServiceResult staleRead = readSession( linkedTradeID, stale );
                 const bool               bOrphan   = staleRead == TradeResult::NotFound;
                 const bool               bExpired  = staleRead == TradeResult::Ok && ( stale._snapshot.isClosed() || isIdleExpired( stale._snapshot, _settings, nowMs ) );
                 if ( bOrphan == false && bExpired == false )
@@ -352,8 +355,11 @@ namespace sw
                 return TradeResult::NotFound;
             if ( linkRead != ServiceStoreResult::Ok )
                 return TradeServiceResult::fail( OnlineError::kUnavailable );
+            uint64 linkedTradeID = 0;
+            if ( ServiceKeyUtil::decodeVarID( ServiceKeyUtil::makeHex64( accountID ), linkRaw._bytes, linkedTradeID ) == false )
+                return TradeServiceResult::fail( OnlineError::kUnavailable );
             SessionRead              session;
-            const TradeServiceResult read = readSession( ServiceKeyUtil::decodeVarID( linkRaw._bytes ), session );
+            const TradeServiceResult read = readSession( linkedTradeID, session );
             if ( read != TradeResult::Ok )
                 return read;
             outSnapshot = session._snapshot;

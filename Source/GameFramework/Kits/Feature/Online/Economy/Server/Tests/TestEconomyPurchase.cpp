@@ -112,6 +112,24 @@ SW_TEST_CASE( EconomyPurchaseTest, RetryIsIdempotentAndLimitHolds )
     SW_EXPECT_EQUAL( fixture.database.computeContentHash(), hashWithFunds );
 }
 
+/** @brief [EconomyPurchaseTest] 결함: 깨진 구매 수 레코드를 0 으로 읽어 계정 한도가 다시 열렸다. 거절하고 아무것도 바꾸지 않는다 */
+SW_TEST_CASE( EconomyPurchaseTest, UnreadablePurchaseCountRefusesPurchase )
+{
+    SW_EXPECT_LOG( "EconomyStoreLogic.PurchaseCountUnreadable" );
+    Fixture fixture;
+    SW_REQUIRE_TRUE( buy( fixture.database, fixture.currencies, fixture.offers, "starter_pack", 1 ) == EconomyResult::Ok );
+    grant( fixture.database, "cur.gem_paid", 1000 );
+    vector<ServiceRecord> listCount;
+    SW_REQUIRE_TRUE( fixture.database.listRecords( EconomyStoreLogic::getPurchaseCountTable(), "", "", 1, false, listCount ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listCount.size() );
+    ServiceTransaction broken;
+    broken.put( EconomyStoreLogic::getPurchaseCountTable(), listCount[0]._key, vector<uint8>{ uint8( 0xFF ) } ); // 끝나지 않은 가변 정수
+    SW_REQUIRE_TRUE( fixture.database.commit( broken ) == ServiceStoreResult::Ok );
+    const uint64 hashBroken = fixture.database.computeContentHash();
+    SW_EXPECT_FALSE( buy( fixture.database, fixture.currencies, fixture.offers, "starter_pack", 2 ) == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( fixture.database.computeContentHash(), hashBroken );
+}
+
 /** @brief [EconomyPurchaseTest] 잔액이 모자라거나 판매 기간 밖이거나 모르는 상품이면 아무것도 바꾸지 않는다 */
 SW_TEST_CASE( EconomyPurchaseTest, RefusalsChangeNothing )
 {

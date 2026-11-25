@@ -36,10 +36,10 @@ namespace sw
         /** @brief id 하나를 레코드 값(가변 정수)으로 씁니다. 다른 표의 레코드를 가리키는 연결 레코드(게스트 → 계정, 계정 → 세션)가 쓴다. */
         static vector<uint8> encodeVarID( uint64 id );
         /**
-         * @brief `encodeVarID` 의 값을 읽습니다. 깨졌으면 0 입니다.
-         * @details 서비스 id(계정 · 세션 · 거래)는 0 을 내지 않는다 — 0 은 "없음" 이라 부르는 쪽이 같은 검사로 "없음 · 깨짐" 을 함께 거른다(대체값이 아니라 형식의 약속).
+         * @brief 레코드 @p key 의 `encodeVarID` 값을 읽습니다. 깨졌거나 0(서비스 id 는 0 을 내지 않는다)이면 오류 로그를 남기고 false 이며 @p outID 는 그대로입니다.
+         * @details 깨진 연결을 "연결 없음" 으로 보면 세션 폐기 · 중복 로그인 검사가 살아 있는 세션을 놓친 채 성공한다 — 부르는 쪽은 요청을 실패로 돌려준다.
          */
-        static uint64 decodeVarID( const vector<uint8>& bytes );
+        [[nodiscard]] static bool decodeVarID( string_view key, const vector<uint8>& bytes, uint64& outID );
 
         /** @brief 길이 + UTF-8 바이트를 씁니다. */
         static void writeString( BitWriter& outWriter, string_view text );
