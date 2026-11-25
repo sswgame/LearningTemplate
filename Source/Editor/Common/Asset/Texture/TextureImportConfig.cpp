@@ -10,6 +10,8 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/Texture/TextureImporter.h"
+
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
@@ -270,7 +272,7 @@ namespace sw::editor
     AbsolutePath TextureImportConfig::makeSharedSourcePath( const AbsolutePath& domainFolder, string_view ruleName, string_view key, string_view extension )
     {
         const string rule = ruleName.empty() ? string( kSharedDefaultRuleName ) : StringUtil::toLower( ruleName );
-        return domainFolder.join( "textures_raw" ).join( kSharedFolderName ).join( rule ).join( key ).appendSuffix( extension );
+        return domainFolder.join( TextureImporter::kRawFolder ).join( kSharedFolderName ).join( rule ).join( key ).appendSuffix( extension );
     }
 
     string TextureImportConfig::makeSelectionText() const

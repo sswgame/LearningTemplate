@@ -1,0 +1,11 @@
+<?asset guid="1f2cab28c215d3e7d2599c0130a09ecc"?>
+<!-- 팩에 압축하지 않고 담는 확장자 - 이미 압축된 형식이다. .dds 는 밉 스트리밍이 구간만 읽는다(PackEntryStorageRule). 쿠커와 모드 팩 빌더가 함께 읽는다. -->
+<PackStorageSettings>
+	<_listStoredExtension>
+		<item>.dds</item>
+		<item>.ktx2</item>
+		<item>.png</item>
+		<item>.jpg</item>
+		<item>.ogg</item>
+	</_listStoredExtension>
+</PackStorageSettings>

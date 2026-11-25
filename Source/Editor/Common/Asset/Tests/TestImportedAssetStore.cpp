@@ -230,7 +230,7 @@ SW_TEST_CASE( ImportedAssetStoreTest, RemovesOnlyUnreferencedFiles )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( setPath, R"(<AnimationSet formatVersion="0"><clip name="a" path="common/models/_shared/clips/aaaa.animclip"/></AnimationSet>)" ) );
 
     vector<string> listProblem;
-    SW_EXPECT_EQUAL( uint32{ 1 }, ImportedAssetStore::removeUnreferenced( root, listProblem ) );
+    SW_EXPECT_EQUAL( uint32{ 1 }, ImportedAssetStore::removeUnreferenced( vector<AbsolutePath>{ root.join( "common" ) }, listProblem ) );
     SW_EXPECT_TRUE( listProblem.empty() );
     SW_EXPECT_TRUE( FileUtil::exists( kept ) );
     SW_EXPECT_FALSE( FileUtil::exists( stale ) );

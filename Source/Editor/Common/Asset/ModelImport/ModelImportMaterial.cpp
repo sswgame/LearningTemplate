@@ -487,7 +487,7 @@ namespace sw::editor
         const AbsolutePath rawTextureFolder = makeRawTextureFolder( sourcePath );
         if ( rawTextureFolder.empty() )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFNotUnderNo", "glTF '%#' is not under %#/ - there is no texture source folder for its material", sourcePath.str(), ModelImportUtil::kRawModelFolder.data() );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFNotUnderNo", "glTF '%#' is not under %#/ - there is no texture source folder for its material", sourcePath.str(), ModelImporter::kRawFolder.data() );
             return false;
         }
         // 텍스처 원본을 꺼내 두고(바이트가 같으면 건드리지 않는다) 텍스처 임포트가 만들 DDS 경로를 머티리얼에 적는다.
@@ -497,7 +497,7 @@ namespace sw::editor
                 return true;
             // 원본이 이미 텍스처 원본 폴더의 파일이면 그대로 가리킨다(같은 이미지를 두 벌 두지 않는다 — 내려받은 에셋은 이미지를 textures_raw 에 둔다).
             StringBuilder<constant::buffer::kMax64> rawMarker;
-            rawMarker.appendFormat( "/%#/", ModelImportUtil::kRawTextureFolder );
+            rawMarker.appendFormat( "/%#/", TextureImporter::kRawFolder );
             if ( texture._sourcePath.find( rawMarker.view() ) != string::npos )
             {
                 outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( FileUtil::toDiskPath( texture._sourcePath ) ) );
@@ -590,7 +590,7 @@ namespace sw::editor
             return false;
         }
         StringBuilder<constant::buffer::kMax64> rawMarker;
-        rawMarker.appendFormat( "/%#/", ModelImportUtil::kRawTextureFolder );
+        rawMarker.appendFormat( "/%#/", TextureImporter::kRawFolder );
         const AbsolutePath domain  = FileUtil::toDiskPath( string_view( logicalPath.str() ).substr( 0, logicalPath.str().find( rawMarker.view() ) ) );
         const string       key     = ImportedAssetStore::makeKey( texture._bytes.data(), texture._bytes.size(), string_view{} );
         const AbsolutePath rawPath = TextureImportConfig::makeSharedSourcePath( domain, match._rule._name, key, texture._extension );
@@ -642,7 +642,7 @@ namespace sw::editor
         const AbsolutePath domain = ImportedAssetStore::findDomainFolder( sourcePath );
         if ( domain.empty() )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.MaterialSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its material", sourcePath.str(), ModelImportUtil::kRawModelFolder.data() );
+            SW_LOG_ERROR_ID( "ModelImporter.MaterialSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its material", sourcePath.str(), ModelImporter::kRawFolder.data() );
             return false;
         }
         const AbsolutePath sharedPath = ImportedAssetStore::makeStorePath( domain, kSharedMaterialKind, shared._key, ".material" );
@@ -671,11 +671,11 @@ namespace sw::editor
     {
         const string&                           normalized = sourcePath.str();
         StringBuilder<constant::buffer::kMax64> marker;
-        marker.appendFormat( "/%#/", ModelImportUtil::kRawModelFolder );
+        marker.appendFormat( "/%#/", ModelImporter::kRawFolder );
         const size_t at = normalized.find( marker.view() );
         if ( at == string::npos )
             return {};
         const AbsolutePath domain = FileUtil::toDiskPath( string_view( normalized ).substr( 0, at ) );
-        return domain.join( ModelImportUtil::kRawTextureFolder ).join( FileUtil::removeExtension( string_view( normalized ).substr( at + marker.size() ) ) );
+        return domain.join( TextureImporter::kRawFolder ).join( FileUtil::removeExtension( string_view( normalized ).substr( at + marker.size() ) ) );
     }
 } // namespace sw::editor

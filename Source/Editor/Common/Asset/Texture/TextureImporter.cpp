@@ -405,8 +405,6 @@ namespace sw::editor
          */
         struct TextureImporterInternal
         {
-            /** @brief 원본 이미지를 두는 폴더 이름입니다. 쿠킹은 이 폴더를 팩에서 뺍니다(`Config/Engine/PackConfig.json`). */
-            static constexpr string_view kRawTextureFolder = "textures_raw";
             /** @brief 원본 폴더 옆에 임포트된 DDS 를 두는 폴더 이름입니다. 런타임은 여기의 DDS 만 읽습니다. */
             static constexpr string_view kImportedTextureFolder = "textures";
             /** @brief 스탬프의 헤더 줄입니다. 형식이나 판정이 바뀌면 올립니다. 이전 스탬프는 모두 어긋남이 되어 한 번 다시 임포트합니다. */
@@ -415,7 +413,7 @@ namespace sw::editor
             static constexpr uint32 kImporterVersion = 2; // 2: BC 압축 원본을 4 의 배수 크기로 다시 표본한다
 
             /** @brief 임포트하는 원본 이미지 확장자인지 확인합니다. `.dds`, `import.stamp` 같은 파일은 원본이 아닙니다. */
-            static bool isSourceImage( string_view path ) { return FileUtil::hasAnyExtension( path, { ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".hdr" } ); }
+            static bool isSourceImage( string_view path ) { return AssetIdentityRules::getProjectRules().isImportSource( TextureImporter::kRawFolder, path ); }
         };
 
         /**
@@ -432,7 +430,7 @@ namespace sw::editor
             {
             }
 
-            string_view  getRawFolderName() const override { return TextureImporterInternal::kRawTextureFolder; }
+            string_view  getRawFolderName() const override { return TextureImporter::kRawFolder; }
             string_view  getStampHeader() const override { return TextureImporterInternal::kImportStampHeader; }
             string_view  getImportedLabel() const override { return "DDS"; }
             uint64       findCodeFingerprint() const override { return CookCodeFingerprint::find( "TextureImport" ); }
@@ -599,7 +597,7 @@ namespace sw::editor
         for ( size_t mip = 0; mip < metadata.mipLevels; ++mip )
         {
             const DirectX::Image* pImage = mipChain.GetImage( mip, 0, 0 );
-            if ( pImage == nullptr || TextureBlockEncoder::encodeMip( format, pImage->pixels, static_cast<uint32>( pImage->width ), static_cast<uint32>( pImage->height ), payload ) == false )
+            if ( pImage == nullptr || TextureBlockEncoder::encodeMip( format, pImage->pixels, static_cast<uint32>( pImage->width ), static_cast<uint32>( pImage->height ), payload, pTaskManager ) == false )
                 return false;
         }
         if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false )
@@ -706,41 +704,30 @@ namespace sw::editor
         }
     }
 
-    bool TextureImporter::importChangedSourceImage( const AssetPaths& assetPaths, string_view relativePath )
+    void TextureImporter::importChangedSources( AssetSourceBatch& batch )
     {
-        if ( FileUtil::hasExtension( relativePath, ".dds" ) )
-            return false;
-
-        const AbsolutePath& resourceRoot = assetPaths.getRootFolderPathFor( relativePath ); // 워커다 — 잡을 올린 에디터 스레드가 넘긴 경로 상태를 쓴다. 작업 도메인 사본은 실행 뿌리 아래다
-        const AbsolutePath  normalized   = resourceRoot.join( relativePath );
-        if ( makeImportedTexturePath( normalized ).empty() )
-        {
-            SW_LOG_WARNING_ID( "TextureImporter.SourceImagesMustUnder", "Source images must be under `%#` to be imported: %#", TextureImporterInternal::kRawTextureFolder, relativePath );
-            return true;
-        }
-
-        // 바뀐 원본 하나만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 기록하는 길은 `importAllTextures` 와 같은 `AssetImportStampUtil` 한 곳이라
+        // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 기록하는 길은 `importAllTextures` 와 같은 `AssetImportStampUtil` 한 곳이라
         // 에디터에서 임포트한 것과 `App --import-textures` 로 임포트한 것이 같은 판정을 받는다. 내용이 그대로이면(저장만 다시 했다) 임포트하지 않는다.
+        vector<AssetSourceBatchEntry> listEntry;
+        for ( size_t itemIndex = 0; itemIndex < batch._listItem.size(); ++itemIndex )
+        {
+            AssetSourceBatchItem& item = batch._listItem[itemIndex];
+            item._bRan                 = true;
+            if ( FileUtil::hasExtension( item._relativePath, ".dds" ) )
+                continue; // 원본이 아니다 — 캐시가 다시 읽는다
+            item._bHandled                = true;
+            const AbsolutePath sourcePath = batch._pAssetPaths->getRootFolderPathFor( item._relativePath ).join( item._relativePath ); // 워커다 — 잡을 올린 에디터 스레드가 넘긴 경로 상태를 쓴다. 작업 도메인 사본은 실행 뿌리 아래다
+            if ( makeImportedTexturePath( sourcePath ).empty() )
+                SW_LOG_WARNING_ID( "TextureImporter.SourceImagesMustUnder", "Source images must be under `%#` to be imported: %#", TextureImporter::kRawFolder, item._relativePath );
+            else
+                listEntry.push_back( AssetSourceBatchEntry{ itemIndex, vector<string>{ item._relativePath } } );
+        }
         // 규칙 파일이 없거나 깨졌으면 기본 규칙으로 임포트하지 않는다(결과가 말없이 바뀐다) — 로드가 오류를 남겼다.
         TextureImportConfig config{};
-        if ( config.loadFromFile( makeDefaultImportConfigPath() ) == false )
-            return true;
-        // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 밴드 압축도 이 워커가 차례로 한다.
-        const TextureRawImporter         importer{ config, nullptr };
-        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
-        if ( derivedDataCache.has_value() == false )
-        {
-            SW_LOG_ERROR_ID( "TextureImporter.DerivedDataConfigUnreadable", "Texture import skipped: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
-            return true;
-        }
-        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr, *derivedDataCache );
-        for ( const string& problem : summary._listProblem )
-        {
-            SW_LOG_ERROR_ID( "TextureImporter.TextureImportFailed", "Texture import failed: %#", problem.c_str() );
-        }
-
-        SW_LOG_INFO_ID( "TextureImporter.TextureImportChangedImported", "Texture import: %# changed -> %# imported", relativePath, summary._importedCount );
-        return true;
+        if ( listEntry.empty() || config.loadFromFile( makeDefaultImportConfigPath() ) == false )
+            return;
+        const TextureRawImporter importer{ config, batch._pTaskManager };
+        AssetImportStampUtil::importChangedSources( batch, listEntry, importer );
     }
 
     AssetImportSummary TextureImporter::importAllTextures( const AbsolutePath& resourceRoot, const TextureImportConfig& config, AssetImportMode mode )
@@ -757,7 +744,7 @@ namespace sw::editor
         }
         AssetImportSummary summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
         // 공유 원본이 쓰는 규칙은 패턴에 맞는 파일이 없어도(모델 옆 자리로 골랐다) 살아 있다.
-        const vector<string> listSourcePath = AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer );
+        const vector<string>& listSourcePath = summary._listSourcePath;
         // 원본마다 공유 규칙 이름을 한 번만 구한다 — 규칙마다 원본 전체를 훑으면 규칙 수 × 원본 수다.
         unordered_set<string> uniqueSharedRuleName;
         for ( const string& path : listSourcePath )
@@ -782,20 +769,20 @@ namespace sw::editor
 
     string TextureImporter::makeImportedTexturePath( string_view rawTexturePath )
     {
-        return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporterInternal::kRawTextureFolder, TextureImporterInternal::kImportedTextureFolder,
+        return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporter::kRawFolder, TextureImporterInternal::kImportedTextureFolder,
                                                        ".dds" );
     }
 
     AbsolutePath TextureImporter::makeImportedTexturePath( const AbsolutePath& rawTexturePath )
     {
-        return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporterInternal::kRawTextureFolder, TextureImporterInternal::kImportedTextureFolder,
+        return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporter::kRawFolder, TextureImporterInternal::kImportedTextureFolder,
                                                        ".dds" );
     }
 
     uint64 TextureImporter::computeSourceHash( const AbsolutePath& sourcePath, const TextureImportRule& rule )
     {
-        vector<uint8> bytes;
-        if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
+        const uint64 contentHash = AssetSourceLocator::computeHash( sourcePath );
+        if ( contentHash == 0 )
             return 0;
 
         // 규칙은 해석한 결과로 섞는다. "bc7" 과 "BC7_UNORM", BGRA 와 ARGB 처럼 같은 결과를 내는 표기는 같은 해시가 된다.
@@ -812,7 +799,6 @@ namespace sw::editor
         if ( rule._bQuickCompress == SW_TRUE )
             ruleText.append( ";quick=1" ); // 끈 값(기본)은 섞지 않는다 — 이 칸이 생기기 전의 스탬프가 그대로 맞는다
 
-        const uint64 contentHash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
         return HashUtil::computeStringHash64( ruleText.c_str(), ruleText.size(), false, contentHash );
     }
 

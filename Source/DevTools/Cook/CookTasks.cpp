@@ -25,6 +25,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/PackStorageSettings.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Content/Pack/PackConfig.h"
@@ -171,10 +172,14 @@ namespace sw
                     return false;
                 }
 
+                PackStorageSettings storageSettings; // 모드 팩 빌더와 같은 파일이다 — 배포본에는 `Config/` 가 없어 엔진 데이터에 둔다
+                if ( storageSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._packStorage.get() } ) == false )
+                    return false;
                 PackCookParams params;
-                params._projectRoot  = ProcessRoots::get()._project; // 참조 칸 표(`Config/Dev/AssetReferenceFields*.json`) — 쓰는 것만 담는 고르기가 읽는다
-                params._resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
-                params._cookedDir    = cookedDir;
+                params._listStoredExtension = storageSettings._listStoredExtension;
+                params._projectRoot         = ProcessRoots::get()._project; // 참조 칸 표(`Config/Dev/AssetReferenceFields*.json`) — 쓰는 것만 담는 고르기가 읽는다
+                params._resourceRoot        = engine::getSubsystem<AssetPaths>().getRootFolderPath();
+                params._cookedDir           = cookedDir;
                 (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packOutputDir ); // 비면 cookAllPacks 가 오류로 멈춘다
                 params._shaderFolder = shaderFolder;
                 params._buildTarget  = bDedicatedServer ? "Server" : "Client";
@@ -347,11 +352,9 @@ namespace sw
                 // 쿠킹 시작에 한 번 — 언리얼 파일 DDC 가 시작할 때 오래 안 쓴 항목을 지우는 자리다. 지운 수는 DDC.EntriesEvicted 로그가 남긴다.
                 DerivedDataCache::evictAllBuckets();
                 // 앞 쿠킹이 남긴 내용 해시를 싣는다 — 도장이 같은 입력은 읽지 않는다. 캐시라 못 읽어도 빈 채로 계속한다(다음 저장이 새로 쓴다).
-                ContentHashCache&    hashCache = engine::getSubsystem<ContentHashCache>();
-                const expected<void> hashLoad  = hashCache.load( ContentHashCache::makeLocalCachePath() );
-                if ( hashLoad.has_value() == false )
-                    SW_LOG_WARNING_ID( "Headless.ContentHashCacheDropped", "Content hash cache dropped - every input is hashed again: %# (%#)", hashLoad.error().message(), hashLoad.error().detail() );
-                [[maybe_unused]] const uint64 hashedBytesBefore = hashCache.getHashedByteCount(); // 로그로만 쓴다(Shipping 은 빠진다)
+                const LocalContentHashCacheScope         hashCacheScope{ LocalContentHashCacheUse::LoadAndSave };
+                [[maybe_unused]] const ContentHashCache& hashCache         = engine::getSubsystem<ContentHashCache>();
+                [[maybe_unused]] const uint64            hashedBytesBefore = hashCache.getHashedByteCount(); // 로그로만 쓴다(Shipping 은 빠진다)
                 // 입력 맵 묶음은 게임 시작의 검사와 같은 길로 먼저 본다 — 겹친 묶음은 배포본이 뜨지 않으므로 구울 까닭이 없다. 쿠킹 세션 밖이다(출력의 입력이 아니다).
                 if ( InputMapBundle::validatePack( engine::getSubsystem<GameConfig>()._packRoot.get() ) == false )
                 {
@@ -375,9 +378,6 @@ namespace sw
                     bSucceeded = cookPackStage( commandLine, context._bDedicatedServer, cookedDir, cookStore, std::move( mapRequestedShaderBinary ) );
                 // 변경 없는 두 번째 쿠킹은 0 이어야 한다(도장만 본다 — `Pack.Scale` 측정의 입력 읽기 값).
                 SW_LOG_INFO_ID( "Headless.CookHashedBytes", "Cook hashed %# input bytes", hashCache.getHashedByteCount() - hashedBytesBefore );
-                const expected<void> hashSave = hashCache.save();
-                if ( hashSave.has_value() == false )
-                    SW_LOG_WARNING_ID( "Headless.ContentHashCacheNotSaved", "Content hash cache not saved - the next cook hashes every input again: %# (%#)", hashSave.error().message(), hashSave.error().detail() );
                 return bSucceeded;
             }
         };

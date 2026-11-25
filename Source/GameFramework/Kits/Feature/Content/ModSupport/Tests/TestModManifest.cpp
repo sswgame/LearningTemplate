@@ -29,7 +29,6 @@ namespace
             settings._maxEntryBytes         = 4096;
             settings._packBlockSize         = kPackMinBlockSize;
             settings._listOverridablePrefix = { "game/test/data/" };
-            settings._listStoredExtension   = { ".dds" };
             return settings;
         }
 
@@ -337,7 +336,7 @@ SW_TEST_CASE( ModSupportSettingsTest, EveryLimitIsRequired )
 {
     ModSupportSettings settings;
     SW_REQUIRE_TRUE( ModSupportSettings::parseXMLText(
-        R"(<ModSupportSettings contentVersion="1" maxModCount="2" maxManifestBytes="100" maxPackBytes="5000000000" maxEntryCount="3" maxEntryBytes="4" packBlockSize="65536"><Overridable prefix="game/test/data/"/><Stored extension=".dds"/></ModSupportSettings>)",
+        R"(<ModSupportSettings contentVersion="1" maxModCount="2" maxManifestBytes="100" maxPackBytes="5000000000" maxEntryCount="3" maxEntryBytes="4" packBlockSize="65536"><Overridable prefix="game/test/data/"/></ModSupportSettings>)",
         "test", settings ) );
     SW_EXPECT_EQUAL( uint64{ 5000000000ull }, settings._maxPackBytes );
     SW_EXPECT_TRUE( settings.isOverridable( "game/test/data/welcome.xml" ) );
@@ -345,7 +344,7 @@ SW_TEST_CASE( ModSupportSettingsTest, EveryLimitIsRequired )
     SW_EXPECT_FALSE( settings.isOverridable( "game/test/tables/quests.xml" ) );
     // 파일 하나만 여는 줄 — 같은 폴더의 다른 표는 열리지 않는다
     SW_REQUIRE_TRUE( ModSupportSettings::parseXMLText(
-        R"(<ModSupportSettings contentVersion="1" maxModCount="2" maxManifestBytes="100" maxPackBytes="5" maxEntryCount="3" maxEntryBytes="4" packBlockSize="65536"><Overridable path="game/test/tables/quests.xml"/><Stored extension=".dds"/></ModSupportSettings>)",
+        R"(<ModSupportSettings contentVersion="1" maxModCount="2" maxManifestBytes="100" maxPackBytes="5" maxEntryCount="3" maxEntryBytes="4" packBlockSize="65536"><Overridable path="game/test/tables/quests.xml"/></ModSupportSettings>)",
         "test", settings ) );
     SW_EXPECT_TRUE( settings.isOverridable( "game/test/tables/quests.xml" ) );
     SW_EXPECT_FALSE( settings.isOverridable( "game/test/tables/quests.xml.bak" ) );

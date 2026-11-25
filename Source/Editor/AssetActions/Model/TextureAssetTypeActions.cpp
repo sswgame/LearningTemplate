@@ -41,12 +41,9 @@ namespace sw::editor
 
         const TextureAssetTypeActions s_textureActions{};
 
-        /** @brief 저작 원본 이미지의 확장자입니다. 엔진은 원본을 읽지 않으므로 엔진 정의에 없다 — 임포트하는 것이 리로드다. */
-        constexpr string_view kArrTextureSourceExt[] = { ".png", ".jpg", ".jpeg", ".tga", ".hdr", ".bmp" };
-
+        // 저작 원본 이미지 — 엔진은 원본을 읽지 않으므로 엔진 정의에 없다. 임포트하는 것이 리로드다.
         const EditorAssetMatchRule kArrTextureRule[] = {
-            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, kArrTextureSourceExt, SW_COUNT_OF( kArrTextureSourceExt ), EditorAssetMatchPriority::Suffix,
-                                            { "Texture", &TextureImporter::importChangedSourceImage, AssetImportThread::WorkerParallel } ),
+            EditorAssetMatchRule::importSource( TextureImporter::kRawFolder, EditorAssetMatchPriority::Suffix, { "Texture", nullptr, &TextureImporter::importChangedSources } ),
             EditorAssetMatchRule::engineType( Texture2D::kAssetType, { "Texture" } ),
         };
     } // namespace

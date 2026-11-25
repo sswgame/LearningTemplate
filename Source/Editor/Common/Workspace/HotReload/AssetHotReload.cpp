@@ -499,9 +499,9 @@ namespace sw::editor
     {
         // 워커 임포터의 원본(모델 · 텍스처 · 높이장 원본)은 임포트 잡이 임포트한다 — 에디터 스레드에서 동기로 돌지 않는다.
         const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( relPath );
-        if ( route._pfnImportSource != nullptr && route._importThread != AssetImportThread::Editor )
+        if ( route._pfnImportBatch != nullptr )
         {
-            requestSourceImport( relPath, route._pfnImportSource, route._importThread );
+            requestSourceImport( relPath, route._pfnImportBatch );
             return;
         }
 
@@ -621,7 +621,7 @@ namespace sw::editor
         return false;
     }
 
-    void AssetHotReload::requestSourceImport( string_view relativePath, AssetSourceImporterFunc pfnImport, AssetImportThread thread )
+    void AssetHotReload::requestSourceImport( string_view relativePath, AssetSourceBatchImporterFunc pfnImport )
     {
         const string path = FileUtil::normalizeSeparators( relativePath );
         // 같은 원본인지는 구분자를 맞추고 대소문자를 무시한 키로 해시 집합에서 본다. 체크아웃 한 번에 원본이 수천 개 올라오므로 목록을 훑으면 O(N^2) 이다.
@@ -632,7 +632,7 @@ namespace sw::editor
         if ( _bImportInFlight && _uniqueSetRunningImportKey.contains( key ) )
             _pImportJob->cancel();
         if ( _uniqueSetQueuedImportKey.insert( key ).second )
-            _listQueuedImport.push_back( ImportRequest{ path, pfnImport, thread } );
+            _listQueuedImport.push_back( ImportRequest{ path, pfnImport } );
     }
 
     void AssetHotReload::pollImportJob()
@@ -663,7 +663,7 @@ namespace sw::editor
         listItem.reserve( _listQueuedImport.size() );
         for ( const ImportRequest& request : _listQueuedImport )
         {
-            listItem.push_back( EditorAssetImportItem{ request._relativePath, request._pfnImport, request._thread } );
+            listItem.push_back( EditorAssetImportItem{ request._relativePath, request._pfnImport } );
         }
         const size_t sourceCount = listItem.size();
         // 경로 상태 · 작업 시스템은 여기(에디터 스레드)서 찾아 워커에 넘긴다 — 워커는 에디터 서비스 범위를 읽지 않는다.
@@ -692,7 +692,7 @@ namespace sw::editor
                 // 취소로 건너뛴 원본 — 다시 올린다(그 사이 같은 원본이 또 올라왔으면 합쳐진다).
                 ++skippedCount;
                 if ( index < _listRunningImport.size() )
-                    requestSourceImport( _listRunningImport[index]._relativePath, _listRunningImport[index]._pfnImport, _listRunningImport[index]._thread );
+                    requestSourceImport( _listRunningImport[index]._relativePath, _listRunningImport[index]._pfnImport );
                 continue;
             }
             ++_finishedImportCount;
@@ -726,11 +726,11 @@ namespace sw::editor
     {
         const string_view      relativePath = assetID.view();
         const AssetReloadRoute route        = EditorAssetTypeRegistry::findReloadRoute( relativePath );
+        // 워커 임포터의 원본은 임포트 잡이 임포트한다(`onResourceFileChanged`). 에디터 스레드에서 동기로 돌리지 않는다.
+        if ( route._pfnImportBatch != nullptr )
+            return ReloadResult::NotTracked;
         if ( route._pfnImportSource != nullptr )
         {
-            // 워커 임포터의 원본은 임포트 잡이 임포트한다(`onResourceFileChanged`). 에디터 스레드에서 동기로 돌리지 않는다.
-            if ( route._importThread != AssetImportThread::Editor )
-                return ReloadResult::NotTracked;
             // 소스를 임포트하는 종류는 임포트하는 것이 리로드다 — 임포트된 결과의 쓰기가 다음 감시 이벤트로 온다(그 결과를 읽는 캐시가 없어도 임포트는 한다).
             if ( route._pfnImportSource( editor::getSubsystem<AssetPaths>(), relativePath ) )
             {

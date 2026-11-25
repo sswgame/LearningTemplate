@@ -48,7 +48,7 @@ namespace sw::editor
         constexpr EditorNewAssetTemplate kMaterialGraphTemplate{ "matgraph", "Material Graph", "new_material", ".matgraph.xml", nullptr, kNewGraphText, nullptr };
 
         const EditorAssetMatchRule kArrMaterialGraphRule[] = {
-            EditorAssetMatchRule::engineType( MaterialGraphDef::kAssetType, { nullptr, &MaterialGraphAssetTypeActionsInternal::importGraph, AssetImportThread::Editor, AssetReferenceUse::ResolvedAtUse } ),
+            EditorAssetMatchRule::engineType( MaterialGraphDef::kAssetType, { nullptr, &MaterialGraphAssetTypeActionsInternal::importGraph, nullptr, AssetReferenceUse::ResolvedAtUse } ),
         };
     } // namespace
 

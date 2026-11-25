@@ -75,10 +75,10 @@ namespace sw::editor
         static void collectReferencedFiles( const AbsolutePath& importedPath, string_view text, vector<AbsolutePath>& outListPath );
 
         /**
-         * @brief @p resourceRoot 아래 모든 저장소에서 같은 도메인의 임포트 결과가 가리키지 않는 파일을 지웁니다(원본을 고치면 옛 키의 파일이 남는다).
+         * @brief @p listDomainFolder(도메인 폴더 — `findDomainFolder`)의 저장소에서 같은 도메인의 임포트 결과가 가리키지 않는 파일을 지웁니다(원본을 고치면 옛 키의 파일이 남는다).
          * @details 범위를 정한 임포트(핫 리로드)는 부르지 않는다 — 전체 임포트(`ModelImporter::importAllModels`)가 끝난 뒤 직렬로 부른다.
          * @return 지운 파일 수입니다.
          */
-        static uint32 removeUnreferenced( const AbsolutePath& resourceRoot, vector<string>& inoutListProblem );
+        static uint32 removeUnreferenced( const vector<AbsolutePath>& listDomainFolder, vector<string>& inoutListProblem );
     };
 } // namespace sw::editor
