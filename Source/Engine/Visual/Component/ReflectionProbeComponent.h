@@ -92,7 +92,7 @@ namespace sw
         PROPERTY( Category = "Reflection Probe Bake", DisplayName = "Samples Per Texel", Min = 1, Max = 4096, Tooltip = "GGX samples each prefiltered texel takes" )
         uint32 _bakeSampleCount;
 
-        ReflectionProbeAsset _probeData;         ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
-        uint32               _probeDataRevision; ///< `_probeData` 를 바꿀 때마다 오른다(`getProbeDataRevision`)
+        SW_TRANSIENT ReflectionProbeAsset _probeData;         ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
+        SW_TRANSIENT uint32               _probeDataRevision; ///< `_probeData` 를 바꿀 때마다 오른다(`getProbeDataRevision`)
     };
 } // namespace sw

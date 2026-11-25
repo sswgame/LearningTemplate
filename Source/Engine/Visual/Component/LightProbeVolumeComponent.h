@@ -148,13 +148,13 @@ namespace sw
         PROPERTY( Category = "Light Probe Realtime", DisplayName = "Emissive Intensity", Min = 0.0, Tooltip = "Scale on emissive meshes (material _emissiveColor) a probe ray hits (0 ignores emission)" )
         float32 _realtimeEmissiveIntensity;
 
-        LightProbeGrid _probeData;         ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
-        uint32         _probeDataRevision; ///< `_probeData` 를 바꿀 때마다 오른다(`getProbeDataRevision`)
+        SW_TRANSIENT LightProbeGrid _probeData;         ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
+        SW_TRANSIENT uint32         _probeDataRevision; ///< `_probeData` 를 바꿀 때마다 오른다(`getProbeDataRevision`)
         /// @brief 실시간 갱신의 복셀 장면 캐시입니다(`findRealtimeVoxelScene`). 게임 스레드의 수집 경로만 만진다.
         mutable shared_ptr<const SceneVoxelScene> _pRealtimeVoxelScene;
-        mutable uint64                            _realtimeVoxelSetGeneration;    ///< 캐시를 만들 때의 프리미티브 집합 세대
-        mutable uint64                            _realtimeVoxelChangeGeneration; ///< 캐시를 만들 때의 메시 변경 세대
-        mutable AABB                              _realtimeVoxelBounds;           ///< 캐시를 만들 때의 상자
-        mutable float32                           _realtimeVoxelCellSize;         ///< 캐시를 만들 때의 목표 칸 크기
+        SW_TRANSIENT mutable uint64               _realtimeVoxelSetGeneration;    ///< 캐시를 만들 때의 프리미티브 집합 세대
+        SW_TRANSIENT mutable uint64               _realtimeVoxelChangeGeneration; ///< 캐시를 만들 때의 메시 변경 세대
+        SW_TRANSIENT mutable AABB                 _realtimeVoxelBounds;           ///< 캐시를 만들 때의 상자
+        SW_TRANSIENT mutable float32              _realtimeVoxelCellSize;         ///< 캐시를 만들 때의 목표 칸 크기
     };
 } // namespace sw

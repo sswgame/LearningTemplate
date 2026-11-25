@@ -136,7 +136,7 @@ namespace sw
         float32 _intensity;
         PROPERTY( Category = "Light", DisplayName = "Lens Flare", Tooltip = "Lens flare data (.lensflare.xml) drawn for this 3D light - empty draws none" )
         AssetRef<LensFlareAsset> _lensFlarePath;
-        float32                  _intensityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
-        uint32                   _lightType;      ///< `shaderslot::kLightType*`. 만들 때 파생이 정하고 바뀌지 않습니다
+        SW_TRANSIENT float32     _intensityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
+        SW_TRANSIENT uint32      _lightType;      ///< `shaderslot::kLightType*`. 만들 때 파생이 정하고 바뀌지 않습니다
     };
 } // namespace sw

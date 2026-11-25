@@ -120,10 +120,10 @@ namespace sw
         PROPERTY( Category = "Rendering", DisplayName = "Instances", Tooltip = "Placement of each copy relative to this component" )
         vector<InstancedMeshTransform> _listInstance;
 
-        unique_ptr<MeshInstanceBatch> _pBatch;
-        MeshHandle                    _meshLoad;             ///< 읽는 중인 메시(`.mesh` 경로일 때)
-        Material*                     _pMaterial;            ///< 잡은 머티리얼(빌림 — `_acquiredMaterialPath` 로 놓는다)
-        hashed_string                 _acquiredMaterialPath; ///< 머티리얼 캐시에서 잡은 경로(놓을 때 쓴다)
-        PrimitiveRegistry*            _pPrimitiveRegistry;   ///< 등록된 동안의 레지스트리(빌림)
+        SW_TRANSIENT unique_ptr<MeshInstanceBatch> _pBatch;
+        MeshHandle                                 _meshLoad;             ///< 읽는 중인 메시(`.mesh` 경로일 때)
+        Material*                                  _pMaterial;            ///< 잡은 머티리얼(빌림 — `_acquiredMaterialPath` 로 놓는다)
+        SW_TRANSIENT hashed_string                 _acquiredMaterialPath; ///< 머티리얼 캐시에서 잡은 경로(놓을 때 쓴다)
+        PrimitiveRegistry*                         _pPrimitiveRegistry;   ///< 등록된 동안의 레지스트리(빌림)
     };
 } // namespace sw

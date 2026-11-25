@@ -84,8 +84,8 @@ namespace sw
         PROPERTY( Category = "Buoyancy", DisplayName = "Linear Drag", Min = 0.0, Tooltip = "Drag force per m/s of a fully submerged pontoon", Meta = "Units=N*s/m" )
         float32 _linearDrag;
 
-        uint32 _submergedPontoonCount;
+        SW_TRANSIENT uint32 _submergedPontoonCount;
         /** @brief 힘을 거는 강체입니다(`onRegister` 가 찾는다). */
-        TComponentHandle<RigidBodyComponent> _rigidBody;
+        SW_TRANSIENT TComponentHandle<RigidBodyComponent> _rigidBody;
     };
 } // namespace sw

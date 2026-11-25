@@ -127,9 +127,9 @@ namespace sw
         bool _bPixelSnapping;
         PROPERTY( Category = "Pixel Perfect", DisplayName = "Upscale Render Texture",
                   Tooltip = "Render at viewport / zoom and enlarge with point sampling, so rotated or sub-pixel sprites stay on the art pixel grid" )
-        bool                _bUpscaleRenderTexture;
-        float32             _publishedSnapUnit; ///< 마지막으로 알린 스냅 단위(0 = 끔). 저장하지 않습니다
-        PixelPerfectLayout  _layout;            ///< 마지막 배치. 저장하지 않습니다
-        SpriteInstanceBatch _barBatch;          ///< 레터박스 띠 넷(좌 · 우 · 아래 · 위). 저장하지 않습니다
+        bool                             _bUpscaleRenderTexture;
+        SW_TRANSIENT float32             _publishedSnapUnit; ///< 마지막으로 알린 스냅 단위(0 = 끔). 저장하지 않습니다
+        SW_TRANSIENT PixelPerfectLayout  _layout;            ///< 마지막 배치. 저장하지 않습니다
+        SW_TRANSIENT SpriteInstanceBatch _barBatch;          ///< 레터박스 띠 넷(좌 · 우 · 아래 · 위). 저장하지 않습니다
     };
 } // namespace sw

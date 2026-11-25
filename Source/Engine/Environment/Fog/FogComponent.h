@@ -77,6 +77,6 @@ namespace sw
         PROPERTY( Category = "Volumetric", DisplayName = "Anisotropy", Min = -0.95, Max = 0.95, EditCondition = "_bVolumetric", Tooltip = "Phase function: above 0 scatters toward the light, below 0 away" )
         float32 _anisotropy;
 
-        float32 _densityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
+        SW_TRANSIENT float32 _densityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
     };
 } // namespace sw

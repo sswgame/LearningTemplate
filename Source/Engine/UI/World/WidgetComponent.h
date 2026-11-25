@@ -262,19 +262,19 @@ namespace sw
         bool isRayBlockedByPhysics( const float3& origin, const float3& direction, float32 distance ) const;
 
     private:
-        unique_ptr<Widget>        _pendingContent; ///< 아직 마커 화면에 붙이지 않은 위젯입니다.
-        WidgetID                  _markerWidget;   ///< 마커 화면에 붙인 위젯입니다(없으면 무효).
-        UIPointerState            _worldPointer;   ///< World 위젯 트리의 호버와 포인터 잡기 상태입니다(광선 입력).
-        UIWidgetComponentService* _pUIService;     ///< 등록한 위젯 컴포넌트 서비스입니다(없으면 nullptr).
-        unique_ptr<WidgetTree>    _worldTree;      ///< World 위젯 트리입니다(루트는 콘텐츠).
-        CanvasDrawList            _worldCanvas;    ///< World 의 마지막 그리기 목록입니다(텍스처 픽셀).
-        CanvasDrawList            _worldScratch;   ///< World 의 칠하는 중인 목록입니다.
-        uint64                    _worldRevision;  ///< World 의 `_worldCanvas` 내용 번호입니다.
-        GameObjectHandle          _worldQuad;      ///< World 의 사각형 자식 오브젝트입니다.
-        uint32                    _gpuAnchor;      ///< GPU 투영 마커의 앵커 번호입니다(`_gpuState` 가 `Off` 가 아닐 때 뜻이 있다).
-        uint8                     _bHidden;        ///< 코드가 숨겼는지 나타냅니다(`setHidden`, 저장하지 않습니다).
-        uint8                     _gpuState;       ///< GPU 투영의 위젯 쪽 상태입니다(0 꺼짐 · 1 접힘 · 2 보임). 상태가 바뀔 때만 위젯을 만진다.
-        uint8                     _bGPUSlotDirty;  ///< GPU 투영 마커의 슬롯을 다시 정해야 합니다(그리기 크기 · 피벗이 바뀌었거나 처음).
+        SW_TRANSIENT unique_ptr<Widget> _pendingContent;    ///< 아직 마커 화면에 붙이지 않은 위젯입니다.
+        WidgetID                        _markerWidget;      ///< 마커 화면에 붙인 위젯입니다(없으면 무효).
+        SW_TRANSIENT UIPointerState     _worldPointer;      ///< World 위젯 트리의 호버와 포인터 잡기 상태입니다(광선 입력).
+        UIWidgetComponentService*       _pUIService;        ///< 등록한 위젯 컴포넌트 서비스입니다(없으면 nullptr).
+        SW_TRANSIENT unique_ptr<WidgetTree> _worldTree;     ///< World 위젯 트리입니다(루트는 콘텐츠).
+        SW_TRANSIENT CanvasDrawList         _worldCanvas;   ///< World 의 마지막 그리기 목록입니다(텍스처 픽셀).
+        SW_TRANSIENT CanvasDrawList         _worldScratch;  ///< World 의 칠하는 중인 목록입니다.
+        SW_TRANSIENT uint64                 _worldRevision; ///< World 의 `_worldCanvas` 내용 번호입니다.
+        SW_TRANSIENT GameObjectHandle       _worldQuad;     ///< World 의 사각형 자식 오브젝트입니다.
+        SW_TRANSIENT uint32                 _gpuAnchor;     ///< GPU 투영 마커의 앵커 번호입니다(`_gpuState` 가 `Off` 가 아닐 때 뜻이 있다).
+        SW_TRANSIENT uint8                  _bHidden;       ///< 코드가 숨겼는지 나타냅니다(`setHidden`, 저장하지 않습니다).
+        SW_TRANSIENT uint8                  _gpuState;      ///< GPU 투영의 위젯 쪽 상태입니다(0 꺼짐 · 1 접힘 · 2 보임). 상태가 바뀔 때만 위젯을 만진다.
+        SW_TRANSIENT uint8                  _bGPUSlotDirty; ///< GPU 투영 마커의 슬롯을 다시 정해야 합니다(그리기 크기 · 피벗이 바뀌었거나 처음).
         PROPERTY( DisplayName = "Document", Tooltip = "UI document to show; empty = the component's own default (or content set by code)" )
         AssetRef<UIDocumentAsset> _documentPath;
         PROPERTY( DisplayName = "Space" )

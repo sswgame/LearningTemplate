@@ -55,15 +55,15 @@ namespace sw
         PROPERTY( Category = "Live Link Face", DisplayName = "Port", Min = 0, Max = 65535, Tooltip = "UDP port the Live Link Face app sends to (0 lets the OS pick)" )
         int32 _port;
 
-        LiveLinkFaceLayout          _layout;
-        LiveLinkFaceSource          _source;
-        LiveLinkFaceFrame           _frame;
-        vector<uint8>               _listReceive;
-        unique_ptr<UDPNetTransport> _transport;
-        Subscription                _faceRegistration; ///< 얼굴에 건 입력의 구독(`onBeginPlay` 가 받고 `onEndPlay` 가 놓는다)
+        SW_TRANSIENT LiveLinkFaceLayout _layout;
+        SW_TRANSIENT LiveLinkFaceSource _source;
+        SW_TRANSIENT LiveLinkFaceFrame  _frame;
+        SW_TRANSIENT vector<uint8> _listReceive;
+        SW_TRANSIENT unique_ptr<UDPNetTransport> _transport;
+        Subscription                             _faceRegistration; ///< 얼굴에 건 입력의 구독(`onBeginPlay` 가 받고 `onEndPlay` 가 놓는다)
         PROPERTY( Category = "Live Link Face", DisplayName = "Loopback Only", Tooltip = "Accept packets from this machine only (local sender, tests)" )
         uint8                  _bLoopbackOnly  : 1;
-        uint8                  _bReportedError : 1; ///< 깨진 패킷을 알렸다(한 번만)
+        SW_TRANSIENT uint8     _bReportedError : 1; ///< 깨진 패킷을 알렸다(한 번만)
         [[maybe_unused]] uint8 _reserved       : 6;
     };
 } // namespace sw

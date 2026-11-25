@@ -390,37 +390,37 @@ namespace sw
          */
         SceneTransformPage* _pTransformPage;
         /** @brief 트랜스폼 저장소의 슬롯 번호입니다. 만들 때 받고 소멸할 때 반환합니다. */
-        uint32 _transformSlot;
+        SW_TRANSIENT uint32 _transformSlot;
         /**
          * @brief 계층의 더티 루트 목록에서 자기가 있는 위치입니다. 목록에 없으면 `kNotInList` 입니다. `SceneTransformHierarchy` 만 바꿉니다.
          * @details 해제할 때 이 위치로 O(1) swap-remove 를 한다(선형으로 찾으면 8000 개를 지울 때 3200만 번 비교한다).
          *          위치는 플러시가 비운다.
          */
         static constexpr uint32 kNotInList = constant::invalid_index::kUint32;
-        uint32                  _dirtyRootIndex;
+        SW_TRANSIENT uint32     _dirtyRootIndex;
         /**
          * @brief 이 컴포넌트가 속한 매니저입니다. 붙을 때 받아 둡니다(`bindToManager`).
          * @details 언리얼 컴포넌트가 등록할 때 `GetWorld()` 를 잡아 두는 것과 같다.
          *          씬에 붙지 않았으면 nullptr 이고, 그때는 지연 없이 바로 반영하는 경로를 탄다.
          */
-        GameObjectManager*      _pManager;
-        SceneComponent*         _pParent;
-        vector<SceneComponent*> _listChild;
+        GameObjectManager* _pManager;
+        SceneComponent*    _pParent;
+        SW_TRANSIENT vector<SceneComponent*> _listChild;
         /** @brief 찾지 못한 부착 참조입니다(`keepUnresolvedAttach`). 거의 늘 비어 있어 따로 둡니다. 컴포넌트마다 40 바이트를 차지하지 않게 하기 위해서입니다. */
-        unique_ptr<SceneAttachReference> _unresolvedAttach;
+        SW_TRANSIENT unique_ptr<SceneAttachReference> _unresolvedAttach;
         /// @brief 비트필드가 **아닙니다.** 적용과 배치 쓰기의 워커들이 이 둘을 같은 조상과 자손에 겹쳐 세웁니다(`markHierarchyDirtyParallel`).
         /// 비트필드이면 이웃 비트까지 쓰게 됩니다. 같은 값을 쓰므로 결과는 무해하지만, 평범한 바이트로 쓰면 데이터 경쟁(미정의 동작)이라
         /// ThreadSanitizer 가 지적합니다. 그래서 relaxed 원자값으로 둡니다(x86 에서는 같은 명령입니다).
-        atomic<uint8> _bIsTransformDirty;
-        atomic<uint8> _bHasDirtyDescendant;
+        SW_TRANSIENT atomic<uint8> _bIsTransformDirty;
+        SW_TRANSIENT atomic<uint8> _bHasDirtyDescendant;
         /**
          * @brief 루트일 때 계층의 더티 루트 목록에 올라 있는지 나타냅니다. `SceneTransformHierarchy` 만 바꿉니다.
          * @details 원자값으로 둔 이유는, 배치 쓰기의 워커 둘이 같은 루트 아래의 자식을 써서 동시에 올리려 할 때 한 번만 올라가게 하려는 것이다(exchange).
          */
-        atomic<uint8> _bQueuedDirtyRoot;
+        SW_TRANSIENT atomic<uint8> _bQueuedDirtyRoot;
         /** @brief 순간이동 횟수 · 그중 운동까지 지운 횟수 · 원점 이동 횟수입니다(`teleportTo` — 틱 중 워커가 남의 자식 것도 올린다). 저장하지 않습니다. */
-        atomic<uint16> _teleportSerial;
-        atomic<uint16> _motionResetSerial;
-        atomic<uint16> _originShiftSerial;
+        SW_TRANSIENT atomic<uint16> _teleportSerial;
+        SW_TRANSIENT atomic<uint16> _motionResetSerial;
+        SW_TRANSIENT atomic<uint16> _originShiftSerial;
     };
 } // namespace sw

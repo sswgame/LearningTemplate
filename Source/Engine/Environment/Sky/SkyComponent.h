@@ -122,6 +122,6 @@ namespace sw
         PROPERTY( Category = "Clouds", DisplayName = "Ground Light", Min = 0.0, EditCondition = "_cloudMode == Volumetric", Tooltip = "Multiplies the light bounced off the ground onto the cloud bottoms" )
         float32 _cloudGroundLight;
 
-        float32 _intensityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
+        SW_TRANSIENT float32 _intensityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
     };
 } // namespace sw

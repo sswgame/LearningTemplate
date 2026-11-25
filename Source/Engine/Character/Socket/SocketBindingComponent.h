@@ -135,12 +135,12 @@ namespace sw
         PROPERTY( Category = "Socket", DisplayName = "State", ReadOnly, Transient )
         SocketBindingState _state;
 
-        float4x4            _socketInHolder;
-        float4x4            _returnFrom;
-        hashed_string       _socketName;
-        GameObjectHandle    _holder;
-        ComponentHandle     _physicsBodyComponent;
-        ISocketPhysicsBody* _pPhysicsBody;
-        float32             _returnElapsed;
+        SW_TRANSIENT float4x4         _socketInHolder;
+        SW_TRANSIENT float4x4         _returnFrom;
+        SW_TRANSIENT hashed_string    _socketName;
+        SW_TRANSIENT GameObjectHandle _holder;
+        SW_TRANSIENT ComponentHandle  _physicsBodyComponent;
+        ISocketPhysicsBody*           _pPhysicsBody;
+        SW_TRANSIENT float32          _returnElapsed;
     };
 } // namespace sw

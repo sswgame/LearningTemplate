@@ -68,7 +68,7 @@ namespace sw
         void setPrimitiveIndex( uint32 index );
 
         /** @brief 레지스트리 번호입니다. 등록되지 않았으면 kInvalidPrimitiveIndex 입니다. */
-        uint32 _primitiveIndex;
+        SW_TRANSIENT uint32 _primitiveIndex;
     };
 } // namespace sw
 

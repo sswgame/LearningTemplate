@@ -189,25 +189,25 @@ namespace sw
         void writeMeshEntries( uint32 emitterIndex, const vector<GPUParticle>* pListParticle );
 
         PROPERTY( Category = "VFX", DisplayName = "Effect", Tooltip = "Particle effect (.vfx.xml)" )
-        AssetRef<VFXEffectDef>                        _effectPath;
-        vector<EmitterSimulation>                     _listSimulation;
-        vector<shared_ptr<const vector<GPUParticle>>> _listPublished;          ///< CPU 방출기마다 마지막 틱의 입자(GPU 방출기는 늘 nullptr)
-        vector<SharedVectorPool<GPUParticle>>         _listParticlePool;       ///< CPU 방출기마다 입자 배열(패킷이 다 놓은 배열을 다시 쓴다)
-        vector<hashed_string>                         _listEmitterTexturePath; ///< 방출기마다 텍스처 경로
-        vector<VFXGPUEmitterRequest>                  _listGPURequest;         ///< GPU 방출기마다 이번 요청(재생 중이 아니거나 CPU 방출기면 `_pDef` 가 nullptr)
-        vector<MeshEmitter>                           _listMeshEmitter;        ///< 방출기마다 하나(`_listSimulation` 과 길이가 같다)
-        vector<MeshHandle>                            _listMeshLoad;           ///< 방출기마다 메시 로드(`_listSimulation` 과 길이가 같다, 메시 방출기가 아니거나 내장 도형이면 빈 핸들)
-        vector<uint8>                                 _listEmitterEnabled;     ///< 방출기마다 켜짐(1) · 꺼짐(0)(`_listSimulation` 과 길이가 같다, 효과를 읽으면 모두 1)
-        shared_ptr<const VFXEffectDef>                _pEffect;                ///< 읽은 효과(공유 캐시의 한 벌 — 사용자 파라미터의 기본값과 방출기 정의를 든다). 읽지 못했으면 nullptr
+        AssetRef<VFXEffectDef> _effectPath;
+        SW_TRANSIENT vector<EmitterSimulation> _listSimulation;
+        SW_TRANSIENT vector<shared_ptr<const vector<GPUParticle>>> _listPublished; ///< CPU 방출기마다 마지막 틱의 입자(GPU 방출기는 늘 nullptr)
+        SW_TRANSIENT vector<SharedVectorPool<GPUParticle>> _listParticlePool;      ///< CPU 방출기마다 입자 배열(패킷이 다 놓은 배열을 다시 쓴다)
+        SW_TRANSIENT vector<hashed_string> _listEmitterTexturePath;                ///< 방출기마다 텍스처 경로
+        SW_TRANSIENT vector<VFXGPUEmitterRequest> _listGPURequest;                 ///< GPU 방출기마다 이번 요청(재생 중이 아니거나 CPU 방출기면 `_pDef` 가 nullptr)
+        SW_TRANSIENT vector<MeshEmitter> _listMeshEmitter;                         ///< 방출기마다 하나(`_listSimulation` 과 길이가 같다)
+        SW_TRANSIENT vector<MeshHandle> _listMeshLoad;                             ///< 방출기마다 메시 로드(`_listSimulation` 과 길이가 같다, 메시 방출기가 아니거나 내장 도형이면 빈 핸들)
+        SW_TRANSIENT vector<uint8>     _listEmitterEnabled;                        ///< 방출기마다 켜짐(1) · 꺼짐(0)(`_listSimulation` 과 길이가 같다, 효과를 읽으면 모두 1)
+        shared_ptr<const VFXEffectDef> _pEffect;                                   ///< 읽은 효과(공유 캐시의 한 벌 — 사용자 파라미터의 기본값과 방출기 정의를 든다). 읽지 못했으면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "User Parameters", Tooltip = "Overrides of the effect's user parameters by name" )
         vector<VFXUserParameterDef> _listUserParameter;
-        float4x4                    _worldSpaceFrame;    ///< 월드 공간 입자의 기준 틀(재생 시작의 배율 · 자리) — 원점 이동을 따라간다
+        SW_TRANSIENT float4x4       _worldSpaceFrame;    ///< 월드 공간 입자의 기준 틀(재생 시작의 배율 · 자리) — 원점 이동을 따라간다
         PrimitiveRegistry*          _pPrimitiveRegistry; ///< 등록된 씬의 프리미티브 레지스트리(빌림). 등록 전이면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "Seed", Tooltip = "Random seed of the emitters; the same seed replays the same particles" )
-        uint32  _seed;
-        float32 _spawnScale; ///< 지금 시뮬레이션을 지은 이펙트 품질 배율 — 다음 재생(`play`)이 지금 값과 견준다
+        uint32               _seed;
+        SW_TRANSIENT float32 _spawnScale; ///< 지금 시뮬레이션을 지은 이펙트 품질 배율 — 다음 재생(`play`)이 지금 값과 견준다
         PROPERTY( Category = "Playback", DisplayName = "Play On Begin", Tooltip = "Start playing when gameplay begins" )
-        bool _bPlayOnBegin;
-        bool _bPlaying;
+        bool              _bPlayOnBegin;
+        SW_TRANSIENT bool _bPlaying;
     };
 } // namespace sw

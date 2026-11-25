@@ -111,9 +111,9 @@ namespace sw
         WheelDrive _drive;
 
         PhysicsCommandPage<VehicleDriverInput>* _pInputPage; ///< 입력 칸이 든 페이지(`PhysicsPoseStore::getCommandStore`)
-        uint32                                  _inputSlot;  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
-        PhysicsVehicleState                     _state;      ///< 마지막 물리 프레임의 끝(게임 스레드가 쓴다)
-        PhysicsVehicleHandle                    _vehicle;
-        PhysicsBodyHandle                       _vehicleChassis; ///< 차를 지은 차체 바디(다시 지어졌는지 본다)
+        SW_TRANSIENT uint32                     _inputSlot;  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
+        SW_TRANSIENT PhysicsVehicleState        _state;      ///< 마지막 물리 프레임의 끝(게임 스레드가 쓴다)
+        SW_TRANSIENT PhysicsVehicleHandle       _vehicle;
+        SW_TRANSIENT PhysicsBodyHandle          _vehicleChassis; ///< 차를 지은 차체 바디(다시 지어졌는지 본다)
     };
 } // namespace sw

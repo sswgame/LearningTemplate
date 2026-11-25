@@ -670,8 +670,8 @@ namespace sw
         // 붙는 순간의 장부(트랜스폼 계층 · 매니저 연결)는 씬 컴포넌트만 쓴다 — 가상 함수가 아니라 `_bIsSceneComponent` 를 보고 `SceneComponent::bindToManager` 를 바로 부른다.
 
     protected:
-        GameObject* _pOwner;      ///< 소유자 GameObject
-        uint64      _componentID; ///< 컴포넌트 고유 일련번호
+        GameObject*         _pOwner;      ///< 소유자 GameObject
+        SW_TRANSIENT uint64 _componentID; ///< 컴포넌트 고유 일련번호
         /** @brief 이름입니다(기본은 타입 이름). 저장되며 컴포넌트 키(`ComponentStableKey`)가 이 이름으로 만들어집니다. 타입이 아닙니다. 타입은 `getTypeName` 을 씁니다. */
         PROPERTY( HideInInspector )
         hashed_string _componentName;
@@ -691,7 +691,7 @@ namespace sw
          */
         ComponentPoolEntry* _pPoolEntry;
 
-        atomic<uint64> _subTickActiveMask; ///< 서브틱 1~63 의 활성 상태(원자 비트마스크, O(1))
+        SW_TRANSIENT atomic<uint64> _subTickActiveMask; ///< 서브틱 1~63 의 활성 상태(원자 비트마스크, O(1))
         /**
          * @brief 컴포넌트 자기 활성 비트입니다. 저장됩니다(PROPERTY).
          * @details 스냅샷이 이 값을 실어야 끈 컴포넌트가 Stop, 되돌리기, 씬 다시 열기 뒤에도 꺼진 채로 남고 토글이 되돌리기 기록에 남는다.
@@ -699,23 +699,23 @@ namespace sw
          */
         PROPERTY( HideInInspector )
         reflected_atomic<bool> _bActive;
-        atomic<bool>           _bIsPendingDestroy; ///< 삭제 예정 표시
-        TickGroup              _tickGroup;         ///< 주 틱의 그룹이다. 붙을 때 형식의 `kTickGroup` 을 한 번 적는다(`GameObject::attachCreatedComponent`)
-        uint8                  _bCanEverTick      : 1;
-        uint8                  _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세운다
-        uint8                  _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직 불리지 않았다. `dispatchBeginPlay` 와 `dispatchEndPlay` 만 바꾼다
-        uint8                  _bRegistered       : 1; ///< onRegister 가 불렸고 onUnregister 는 아직 불리지 않았다. `dispatchRegister` 와 `dispatchUnregister` 만 바꾼다
-        uint8                  _bPostLoadPending  : 1; ///< 상태를 읽었고 `onPostLoad` 가 배치 끝에 온다. `markPostLoadPending` 과 `dispatchPostLoad` 만 바꾼다
-        uint8                  _bStaged           : 1; ///< 나눠 짓는 셀에 들어 아직 드러나지 않았다. 저장소 잠금 아래에서 `stageGameObjects` · `releaseStagedGameObjects` 만 바꾼다
-        uint8                  _bTransient        : 1; ///< 실행 중에 붙은 파생 컴포넌트다 — 저장 · 상태 해시가 건너뛴다(`setTransient`)
-        uint8                  _reservedFlags     : 1;
+        SW_TRANSIENT atomic<bool> _bIsPendingDestroy; ///< 삭제 예정 표시
+        SW_TRANSIENT TickGroup    _tickGroup;         ///< 주 틱의 그룹이다. 붙을 때 형식의 `kTickGroup` 을 한 번 적는다(`GameObject::attachCreatedComponent`)
+        SW_TRANSIENT uint8        _bCanEverTick      : 1;
+        SW_TRANSIENT uint8        _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세운다
+        SW_TRANSIENT uint8        _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직 불리지 않았다. `dispatchBeginPlay` 와 `dispatchEndPlay` 만 바꾼다
+        SW_TRANSIENT uint8        _bRegistered       : 1; ///< onRegister 가 불렸고 onUnregister 는 아직 불리지 않았다. `dispatchRegister` 와 `dispatchUnregister` 만 바꾼다
+        SW_TRANSIENT uint8        _bPostLoadPending  : 1; ///< 상태를 읽었고 `onPostLoad` 가 배치 끝에 온다. `markPostLoadPending` 과 `dispatchPostLoad` 만 바꾼다
+        SW_TRANSIENT uint8        _bStaged           : 1; ///< 나눠 짓는 셀에 들어 아직 드러나지 않았다. 저장소 잠금 아래에서 `stageGameObjects` · `releaseStagedGameObjects` 만 바꾼다
+        SW_TRANSIENT uint8        _bTransient        : 1; ///< 실행 중에 붙은 파생 컴포넌트다 — 저장 · 상태 해시가 건너뛴다(`setTransient`)
+        uint8                     _reservedFlags     : 1;
         /**
          * @brief `_pPoolEntry` 의 버킷 안 위치입니다. 버킷에 없으면 `kNotInPoolEntry` 입니다. 제거를 O(1) 로 하려고 둡니다.
          * @details 플래그(4 B) 뒤, `_listSubTick` 앞의 정렬 패딩에 들어간다. 앞쪽으로 옮기면 객체가 커진다. 저장소의 `_mutex` 아래에서만 바뀐다.
          */
-        uint32              _poolEntrySlot;
-        vector<SubTickInfo> _listSubTick;  ///< 등록된 보조 서브틱 목록
-        float32             _tickInterval; ///< 주 틱의 주기(초)다. 붙을 때 형식의 `kTickInterval` 을 한 번 적는다(`GameObject::attachCreatedComponent`)
+        SW_TRANSIENT uint32 _poolEntrySlot;
+        SW_TRANSIENT vector<SubTickInfo> _listSubTick;  ///< 등록된 보조 서브틱 목록
+        SW_TRANSIENT float32             _tickInterval; ///< 주 틱의 주기(초)다. 붙을 때 형식의 `kTickInterval` 을 한 번 적는다(`GameObject::attachCreatedComponent`)
     };
 } // namespace sw
 

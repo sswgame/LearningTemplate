@@ -13,6 +13,7 @@
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 using namespace sw;
 
@@ -175,4 +176,31 @@ SW_TEST_CASE( NavAgentCrowdSyncTest, OutsidePushAndTeleportReachTheCrowd )
     step();
     SW_EXPECT_EQUAL( 1u, pCrowd->_teleportCount );
     SW_EXPECT_EQUAL( 1u, pCrowd->_syncCount );
+}
+
+/** @brief [NavAgentCrowdSyncTest] 걸어 둔 목적지는 상태로 남는다 — 되살린 에이전트가 같은 곳으로 걷고(월드 원점이 옮겨졌어도 같은 절대 자리), 멈춘 에이전트는 쓰는 것이 없다 */
+SW_TEST_CASE( NavAgentCrowdSyncTest, DestinationSurvivesRestore )
+{
+    GameObjectManager      manager;
+    GameObject*            pObject = manager.createGameObject( hashed_string( "Walker" ) );
+    NavMeshAgentComponent* pAgent  = pObject->addComponent<NavMeshAgentComponent>();
+    Archive                empty;
+    pAgent->writeState( empty );
+    SW_EXPECT_EQUAL( uint64{ 0 }, static_cast<uint64>( empty.getSize() ) );
+
+    pAgent->setDestination( float3{ 1012.0f, 0.0f, -4.0f } );
+    Archive archive;
+    pAgent->writeState( archive );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+
+    GameObjectManager      restoredManager;
+    GameObject*            pRestoredObject = restoredManager.createGameObject( hashed_string( "Walker" ) );
+    NavMeshAgentComponent* pRestored       = pRestoredObject->addComponent<NavMeshAgentComponent>();
+    restoredManager.setWorldOrigin( double3{ 1000.0, 0.0, 0.0 } );
+    pRestored->restoreState( std::move( bytes ) );
+    SW_EXPECT_TRUE( pRestored->hasDestination() );
+    SW_EXPECT_NEAR( 12.0f, pRestored->getDestination()._x, 1.0e-3f );
+    SW_EXPECT_NEAR( -4.0f, pRestored->getDestination()._z, 1.0e-3f );
+    SW_EXPECT_TRUE( pRestored->getMoveStatus() == NavMoveStatus::Moving );
 }
