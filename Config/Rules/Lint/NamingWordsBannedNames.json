@@ -1,6 +1,8 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "FractureRenderUtil": "FractureRenderUnits — 조각 그리기 static 함수는 렌더 유닛 형식에 둔다(2026-11-26)",
+    "FractureAnchorUtil": "FractureComponentBaseInternal — 쓰는 곳이 FractureBaseComponent.cpp 하나다(2026-11-26)",
     "IFacialLiveSource": "LiveLinkFaceSource — 구현 · 받는 곳이 하나라 구체 형식으로 받는다(2026-11-26)",
     "RecastAreaUtil": "RecastUtil — Recast 경계 규칙 하나로 합쳤다(2026-11-26)",
     "RecastQueryUtil": "RecastUtil — Recast 경계 규칙 하나로 합쳤다(2026-11-26)",

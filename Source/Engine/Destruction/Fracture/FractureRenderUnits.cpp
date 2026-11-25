@@ -3,12 +3,12 @@
 #include "Engine/Destruction/Fracture/FractureRenderUnits.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
-#include "Engine/Destruction/Fracture/FractureRenderUtil.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
@@ -33,11 +33,11 @@ namespace sw
 
     void FractureRenderUnits::create( GameObject& owner, const FractureAsset& asset, const MeshComponent* pIntact, const hashed_string& interiorMaterialPath )
     {
-        shared_ptr<const Skeleton> skeleton   = FractureRenderUtil::createPieceSkeleton( asset );
+        shared_ptr<const Skeleton> skeleton   = FractureRenderUnits::createPieceSkeleton( asset );
         const FractureSurfaceSlot  arrSlot[2] = { FractureSurfaceSlot::Outer, FractureSurfaceSlot::Interior };
         for ( uint32 slot = 0; slot < 2; ++slot )
         {
-            _arrSkinnedMesh[slot] = FractureRenderUtil::createSkinnedMesh( asset, arrSlot[slot] );
+            _arrSkinnedMesh[slot] = FractureRenderUnits::createSkinnedMesh( asset, arrSlot[slot] );
             if ( _arrSkinnedMesh[slot] == nullptr )
                 continue;
             SkeletalMeshComponent* pUnit = owner.addComponent<SkeletalMeshComponent>();
@@ -102,7 +102,7 @@ namespace sw
             }
             if ( bBaked )
             {
-                shared_ptr<Mesh> baked = FractureRenderUtil::createBakedMesh( asset, arrSlot[slot], listPiecePose );
+                shared_ptr<Mesh> baked = FractureRenderUnits::createBakedMesh( asset, arrSlot[slot], listPiecePose );
                 pBaked->setVisible( baked != nullptr );
                 if ( baked != nullptr )
                     pBaked->setMesh( std::move( baked ) );
@@ -116,5 +116,113 @@ namespace sw
             }
         }
         _bBaked = bBaked ? SW_TRUE : SW_FALSE;
+    }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct FractureRenderUnitsInternal
+        {
+            static constexpr int32 kNoParent = -1; ///< 조각 본은 모두 루트다
+        };
+    } // namespace
+
+    shared_ptr<Skeleton> FractureRenderUnits::createPieceSkeleton( const FractureAsset& asset )
+    {
+        shared_ptr<Skeleton> skeleton = make_shared<Skeleton>();
+        for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
+        {
+            StringBuilder<constant::buffer::kMax32> name;
+            name.appendFormat( "piece%#", piece );
+            const float3& centroid = asset._graph._listNode[piece]._centroid;
+            BoneTransform reference;
+            reference._translation = centroid;
+            (void)skeleton->addBone( hashed_string( name.c_str() ), FractureRenderUnitsInternal::kNoParent, reference );
+        }
+        return skeleton;
+    }
+
+    shared_ptr<Mesh> FractureRenderUnits::createSkinnedMesh( const FractureAsset& asset, FractureSurfaceSlot slot )
+    {
+        vector<RHIVertex>      listVertex;
+        vector<MeshSkinVertex> listSkin;
+        for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
+        {
+            const FracturePiece& range = asset._listPiece[piece];
+            for ( uint32 vertex = 0; vertex < range._vertexCount; vertex += 3 )
+            {
+                if ( asset._listTriangleSlot[( range._firstVertex + vertex ) / 3] != static_cast<uint8>( slot ) )
+                    continue;
+                for ( uint32 corner = 0; corner < 3; ++corner )
+                {
+                    listVertex.push_back( asset._listVertex[range._firstVertex + vertex + corner] );
+                    MeshSkinVertex skin;
+                    skin._arrJoint[0] = static_cast<uint16>( piece );
+                    listSkin.push_back( skin );
+                }
+            }
+        }
+        if ( listVertex.empty() )
+            return nullptr;
+        shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
+        mesh->setVertices( std::move( listVertex ) );
+        // 조각 뼈의 레퍼런스가 조각 중심이므로 역 바인드는 중심을 원점으로 옮긴다.
+        MeshSkinBinding skinBinding{};
+        skinBinding._listInverseBind.reserve( asset.getPieceCount() );
+        for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
+        {
+            skinBinding._listInverseBind.push_back( float4x4::makeTranslation( -asset._graph._listNode[piece]._centroid ) );
+        }
+        mesh->setSkin( std::move( listSkin ), std::move( skinBinding ) );
+        return mesh;
+    }
+
+    shared_ptr<Mesh> FractureRenderUnits::createBakedMesh( const FractureAsset& asset, FractureSurfaceSlot slot, vector_reference<const BoneTransform> listPose )
+    {
+        vector<RHIVertex> listVertex;
+        for ( uint32 piece = 0; piece < asset.getPieceCount() && piece < listPose.size(); ++piece )
+        {
+            const BoneTransform& pose = listPose[piece];
+            if ( pose._scale._x <= 0.0f )
+                continue;
+            const float3&        centroid = asset._graph._listNode[piece]._centroid;
+            const FracturePiece& range    = asset._listPiece[piece];
+            for ( uint32 vertex = 0; vertex < range._vertexCount; vertex += 3 )
+            {
+                if ( asset._listTriangleSlot[( range._firstVertex + vertex ) / 3] != static_cast<uint8>( slot ) )
+                    continue;
+                for ( uint32 corner = 0; corner < 3; ++corner )
+                {
+                    RHIVertex    baked = asset._listVertex[range._firstVertex + vertex + corner];
+                    const float3 local{ baked._arrPosition[0] - centroid._x, baked._arrPosition[1] - centroid._y, baked._arrPosition[2] - centroid._z };
+                    const float3 position = float3::transform( float3::multiply( local, pose._scale ), pose._rotation ) +
+                                            pose._translation;
+                    const float3 normal   = float3::transform( float3{ baked._arrNormal[0], baked._arrNormal[1], baked._arrNormal[2] }, pose._rotation );
+                    baked._arrPosition[0] = position._x;
+                    baked._arrPosition[1] = position._y;
+                    baked._arrPosition[2] = position._z;
+                    baked._arrNormal[0]   = normal._x;
+                    baked._arrNormal[1]   = normal._y;
+                    baked._arrNormal[2]   = normal._z;
+                    listVertex.push_back( baked );
+                }
+            }
+        }
+        if ( listVertex.empty() )
+            return nullptr;
+        shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
+        mesh->setVertices( std::move( listVertex ) );
+        return mesh;
+    }
+
+    BoneTransform FractureRenderUnits::makeBoneTransform( const float3& centroid, const quaternion& rotation, const float3& offset, float32 scale )
+    {
+        BoneTransform transform;
+        transform._rotation    = rotation;
+        transform._scale       = float3{ scale, scale, scale };
+        transform._translation = float3::transform( centroid, rotation ) + offset;
+        return transform;
     }
 } // namespace sw

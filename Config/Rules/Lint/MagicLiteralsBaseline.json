@@ -418,7 +418,6 @@
     "Source/Engine/Destruction/Fracture/FractureAsset.cpp": {"integer": 2},
     "Source/Engine/Destruction/Fracture/FractureBaseComponent.cpp": {"float": 6, "integer": 1},
     "Source/Engine/Destruction/Fracture/FractureGraph.cpp": {"float": 2},
-    "Source/Engine/Destruction/Fracture/FractureRenderUtil.cpp": {"minus-one": 1},
     "Source/Engine/Destruction/Fracture/PolygonFracture.cpp": {"float": 4},
     "Source/Engine/Engine.cpp": {"integer": 1},
     "Source/Engine/Environment/Foliage/FoliageComponent.cpp": {"float": 2},
