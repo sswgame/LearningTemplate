@@ -16,6 +16,8 @@
  *          gRPC 비동기 서버의 메서드 표, Nakama `RegisterRpc` 의 자리입니다(기억에 의존).
  */
 #pragma once
+#include "Core/Container/IDAllocator.h"
+#include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -25,7 +27,8 @@
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/ServiceServerCallTableBase.h"
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Observability/ServiceMetrics.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -33,6 +36,33 @@
 
 namespace sw
 {
+    class MetricRegistry;
+
+    /**
+     * @class OnlineServerCallTableBase
+     * @brief 서버 호출 표(`OnlineServerCallTable`)의 템플릿이 아닌 몫입니다. 표준 지표, 서비스 이름, 호출 id, 로그를 맡습니다.
+     * @details 모르는 호출 id 의 완료는 경고 하나(`ServiceServerCallTable.UnknownCall`)로 같고, 종료 때 남은 호출은 오류 하나(`ServiceServerCallTable.AbandonedCalls`)로 남깁니다.
+     *          gRPC 비동기 서버의 호출 태그 표, 언리얼 HTTP 서버의 요청 핸들과 같은 자리입니다(기억에 의존).
+     */
+    class SW_KIT_SERVER_API OnlineServerCallTableBase
+    {
+    public:
+        /** @brief 모르는 호출 id 의 완료를 경고로 남깁니다. 호출 표 앞에 자기 표를 둔 키트(GM)도 같은 경고를 씁니다. */
+        void warnUnknownCall( uint64 callID ) const;
+
+    protected:
+        OnlineServerCallTableBase();
+
+        uint64       allocateCallID() { return _callIDAllocator.allocate(); }
+        void         reportAbandoned( size_t callCount ) const;
+        static int64 nowNanoseconds();
+
+    protected:
+        ServiceMetrics      _metrics;
+        string              _serviceName;
+        IDAllocator<uint64> _callIDAllocator;
+    };
+
     /** @brief 응답을 기다리는 호출의 표지입니다. 메서드가 타입에 있어 그 메서드의 응답만 받습니다. 값으로 복사해 저장소 작업에 넘깁니다. */
     template <typename TMethod>
     struct OnlineServerCall
@@ -49,7 +79,7 @@ namespace sw
      * @details 호출 번호로 색인합니다(같은 프로세스 표 `OnlineLocalCallTable` 과 같은 모양). 완료는 `isOpen` + `take` 로 두 번 찾으므로 선형 표면 대기 수 P 에 O(P) 둘이다.
      *          측정: `OnlineServerCallTableTest.CompletionCostByPending` · 지표 `service_store_pending_peak`.
      */
-    class OnlineServerCallTable final : public ServiceServerCallTableBase
+    class OnlineServerCallTable final : public OnlineServerCallTableBase
     {
     public:
         /** @brief 지표를 등록합니다. 결과 라벨은 @p TResult 의 열거자와 공통 범주입니다. 레지스트리가 null 이면 세지 않습니다. */

@@ -1,6 +1,7 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "ServiceServerCallTableBase": "OnlineServerCallTableBase — 파생 OnlineServerCallTable 과 같은 머리말, OnlineProtocolService.h 로 합쳤다(2026-11-26)",
     "CityTerrain": "CityTerrainDef — 땅은 도시 카탈로그의 <Terrain> 행이다(2026-11-25)",
     "CityService": "CityServiceDef — 서비스는 도시 카탈로그의 <Service> 행이다(2026-11-25)",
     "makeCityServiceBit": "CityHouseLevelDef::_listServiceIndex — 서비스는 행 번호다(2026-11-25)",
