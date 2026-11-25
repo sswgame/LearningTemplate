@@ -10,8 +10,8 @@
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
-#include "Engine/Animation/Facial/FacialLiveSource.h"
 #include "Engine/Animation/Facial/FacialRig.h"
+#include "Engine/Animation/Facial/LiveLinkFace.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
@@ -126,7 +126,7 @@ namespace sw
         , _listExpressionWeight{}
         , _listLiveWeight{}
         , _pLiveSource{ nullptr }
-        , _liveSourceSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<const IFacialLiveSource>::ReleaseFunction, &FacialAnimationComponent::detachLiveSource, this ) }
+        , _liveSourceSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<const LiveLinkFaceSource>::ReleaseFunction, &FacialAnimationComponent::detachLiveSource, this ) }
         , _listExpressionTarget{}
         , _listVisemeTarget{}
         , _listBlinkTarget{}
@@ -261,7 +261,7 @@ namespace sw
         return true;
     }
 
-    Subscription FacialAnimationComponent::registerLiveSource( const IFacialLiveSource* pSource )
+    Subscription FacialAnimationComponent::registerLiveSource( const LiveLinkFaceSource* pSource )
     {
         if ( pSource == nullptr )
             return {};
@@ -271,7 +271,7 @@ namespace sw
         return _liveSourceSubscriptions.issue( pSource );
     }
 
-    void FacialAnimationComponent::detachLiveSource( const IFacialLiveSource* pSource )
+    void FacialAnimationComponent::detachLiveSource( const LiveLinkFaceSource* pSource )
     {
         if ( _pLiveSource != pSource )
             return;

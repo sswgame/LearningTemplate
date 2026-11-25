@@ -29,11 +29,67 @@
 #include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
-#include "Engine/Animation/Notify/AnimationFootContact.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /**
+     * @struct AnimationFootContactDef
+     * @brief 발 하나의 닿음 감지 데이터입니다. 알림 테이블 `<FootContact notify="FootL" bone="foot.l" contact_height="0.05" release_height="0.12" max_vertical_speed="0.6"/>` 한 줄입니다.
+     * @details 모든 필드가 필수다. `release_height` 는 `contact_height` 보다 커야 한다(그 사이가 떨림을 막는 간격이다).
+     *          `notify` 는 같은 테이블의 `<Notify>` 이름이어야 하고, 그 이름의 알림은 감지만 낸다 — 클립에 같은 이름의 알림이 있어도 처리하지 않는다(출처는 하나).
+     */
+    REFLECT()
+    struct SW_API AnimationFootContactDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _notify{};
+        PROPERTY( Required )
+        hashed_string _bone{};
+        PROPERTY( Name = "contact_height", Required, Units = m )
+        float32 _contactHeight{ 0.0f }; ///< 이 높이(m) 이하로 내려오면 닿을 수 있다
+        PROPERTY( Name = "release_height", Required, Units = m )
+        float32 _releaseHeight{ 0.0f }; ///< 이 높이(m) 위로 올라가야 다음 닿음을 받는다
+        PROPERTY( Name = "max_vertical_speed", Required, Min = 0.0001, Units = "m/s" )
+        float32 _maxVerticalSpeed{ 0.0f }; ///< 세로 속도(m/s)가 이 값 이하일 때 닿았다고 본다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class AnimationFootContactTracker
+     * @brief 발 하나의 닿음 상태입니다. 들린 발이 `contact_height` 아래로 내려와 세로 속도가 `max_vertical_speed` 이하가 되는 프레임에 한 번 닿음을 냅니다.
+     * @details 닿은 뒤에는 `release_height` 위로 올라가야 다시 낼 수 있다. 첫 프레임은 기록만 하고 내지 않는다(땅에 선 채 시작하면 그 발은 이미 디딘 것이다).
+     */
+    class SW_API AnimationFootContactTracker
+    {
+    public:
+        AnimationFootContactTracker();
+
+        /** @brief 이번 프레임의 발 높이(m)를 넣습니다. 이번에 닿았으면 true 입니다. @p deltaSeconds 가 0 이하면 아무것도 하지 않습니다. */
+        bool update( const AnimationFootContactDef& def, float32 footHeight, float32 deltaSeconds );
+        /** @brief 기록을 버립니다(다음 프레임이 첫 프레임이 됩니다). */
+        void reset();
+        /** @brief 발이 디딘 상태인지 반환합니다. */
+        bool isPlanted() const { return _bPlanted == SW_TRUE; }
+        /** @brief 발 본을 못 찾았다는 오류를 이미 냈는지 반환합니다(프레임마다 같은 오류를 내지 않게 합니다). */
+        bool isMissingBoneReported() const { return _bMissingBoneReported == SW_TRUE; }
+        void setMissingBoneReported() { _bMissingBoneReported = SW_TRUE; }
+
+    private:
+        float32 _previousHeight;
+        uint8   _bHasPrevious;
+        uint8   _bPlanted;
+        uint8   _bMissingBoneReported;
+    };
+} // namespace sw
 
 namespace sw
 {
