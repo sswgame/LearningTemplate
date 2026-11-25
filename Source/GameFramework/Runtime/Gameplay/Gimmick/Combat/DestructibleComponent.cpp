@@ -7,7 +7,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
-#include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 
@@ -57,7 +56,7 @@ namespace sw
                 continue;
             // 단계마다 조각을 깎고, 마지막 단계는 통째로 부순다.
             const float32 strain = _stage >= stageCount ? _shatterStrain : _stageStrain * static_cast<float32>( _stage ) / static_cast<float32>( stageCount );
-            GimmickDamageUtil::breakAtCenter( *pFracture, position, strain, strain * 0.5f );
+            GimmickUtil::breakAtCenter( *pFracture, position, strain, strain * 0.5f );
         }
         pSensor->setSignal( static_cast<float32>( _stage ) );
         if ( isDestroyed() && bFracture == false )

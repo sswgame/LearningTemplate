@@ -14,7 +14,6 @@
 #include "Engine/Object/GameObject/Tick/TickInterval.h"
 
 #include "GameFramework/Runtime/Character/Combat/Health/IHealthSource.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 
@@ -77,7 +76,7 @@ namespace sw
         // 파괴 컴포넌트가 있으면 몸을 끄지 않는다. 조각으로 부서져 날아가며, 조각의 그래픽과 바디가 그 몸이다.
         FractureBaseComponent* pSelfFracture = owner.getComponent<FractureBaseComponent>();
         if ( pSelfFracture != nullptr && pSelfFracture->hasFractureData() )
-            GimmickDamageUtil::breakAtCenter( *pSelfFracture, center, _fractureStrain * 2.0f, _blastImpulse );
+            GimmickUtil::breakAtCenter( *pSelfFracture, center, _fractureStrain * 2.0f, _blastImpulse );
         else
             GimmickUtil::setBodyActive( owner, false, this );
         if ( pManager == nullptr || _radius <= 0.0f )
@@ -137,7 +136,7 @@ namespace sw
             if ( target._pFracture != nullptr )
                 target._pFracture->applyRadialDamageAtWorld( center, radius, _fractureStrain, _blastImpulse );
             if ( target._distance <= radius )
-                GimmickDamageUtil::applyDamage( *target._pObject, pSource, hashed_string( "Explosion" ), _damage * ( 1.0f - target._distance / radius ) );
+                GimmickUtil::applyDamage( *target._pObject, pSource, hashed_string( "Explosion" ), _damage * ( 1.0f - target._distance / radius ) );
         }
     }
 } // namespace sw

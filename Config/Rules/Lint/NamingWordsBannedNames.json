@@ -2286,6 +2286,7 @@
     "kExpectTTLMs": "MatchServerAgentPolicy::_expectTTLMs — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
     "kRecordRefreshMs": "MatchServerAgentPolicy::_recordRefreshMs — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
     "kMaxRecordCount": "MatchServerAgentPolicy::_maxRecordCount — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
-    "kMaxChannelPerMember": "ChatKitConfig::_maxChannelPerMember — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)"
+    "kMaxChannelPerMember": "ChatKitConfig::_maxChannelPerMember — 운영 값은 서버 설정(키트 설정)이 정한다 (2026-11-25)",
+    "GimmickDamageUtil": "GimmickUtil — 기믹 도구는 GimmickUtil 하나로 합쳤다(피해 · 파괴도 같은 주인 없는 도구)(2026-11-26)"
   }
 }
