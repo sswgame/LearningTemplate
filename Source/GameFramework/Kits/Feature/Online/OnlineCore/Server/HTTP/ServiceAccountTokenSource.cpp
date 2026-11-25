@@ -7,7 +7,7 @@
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Security/JSONWebToken.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/JSONWebToken.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 
 namespace sw

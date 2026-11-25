@@ -9,7 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/PartyLobbyService.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountStatSource.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountStatSource.h"
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"

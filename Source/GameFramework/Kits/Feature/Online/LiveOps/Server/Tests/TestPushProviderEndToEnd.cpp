@@ -19,7 +19,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderManager.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HPACK.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HTTP2Frame.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProviderFile.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPLink.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"

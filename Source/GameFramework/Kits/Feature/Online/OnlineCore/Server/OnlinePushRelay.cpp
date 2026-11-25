@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/OnlinePushRelay.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlinePushRelay.h"
 
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"

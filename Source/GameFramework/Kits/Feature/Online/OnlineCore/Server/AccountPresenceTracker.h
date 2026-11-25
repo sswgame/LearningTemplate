@@ -12,7 +12,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
 #include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
 
 namespace sw

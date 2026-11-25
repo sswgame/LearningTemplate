@@ -16,7 +16,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Security/JSONWebToken.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/JSONWebToken.h"
 
 namespace sw
 {

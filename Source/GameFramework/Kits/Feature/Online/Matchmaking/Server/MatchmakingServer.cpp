@@ -6,9 +6,9 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchServerAgent.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/GroupChannelMembership.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/OnlinePushRelay.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/GroupChannelMembership.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlinePushRelay.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 
 #include <algorithm>

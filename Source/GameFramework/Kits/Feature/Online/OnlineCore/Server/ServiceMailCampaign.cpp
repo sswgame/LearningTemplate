@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServiceMailCampaign.h"
 
 #include "Core/Serialization/BitStream.h"
 

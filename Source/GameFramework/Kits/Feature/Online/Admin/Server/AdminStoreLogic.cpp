@@ -5,7 +5,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServiceMailCampaign.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"

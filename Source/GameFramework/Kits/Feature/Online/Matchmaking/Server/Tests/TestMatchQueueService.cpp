@@ -12,7 +12,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchmakingKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/PartyLobbyService.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Tests/MatchmakingTestPolicy.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountStatSource.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountStatSource.h"
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"

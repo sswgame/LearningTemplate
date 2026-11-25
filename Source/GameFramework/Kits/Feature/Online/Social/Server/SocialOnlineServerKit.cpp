@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/GroupChannelMembership.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/GroupChannelMembership.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialServer.h"

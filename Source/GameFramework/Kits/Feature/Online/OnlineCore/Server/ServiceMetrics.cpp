@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Observability/ServiceMetrics.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServiceMetrics.h"
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Time/MonotonicClock.h"

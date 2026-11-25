@@ -10,7 +10,7 @@
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServiceMailCampaign.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"

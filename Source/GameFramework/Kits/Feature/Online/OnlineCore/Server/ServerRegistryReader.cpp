@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerRegistryReader.h"
 
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringUtil.h"

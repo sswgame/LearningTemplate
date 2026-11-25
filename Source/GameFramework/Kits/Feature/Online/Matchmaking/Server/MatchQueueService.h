@@ -33,7 +33,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchMaker.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerRegistryReader.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 
 namespace sw

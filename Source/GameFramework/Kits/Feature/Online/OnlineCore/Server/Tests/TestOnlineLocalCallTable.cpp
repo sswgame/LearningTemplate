@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProtocolService.h"
 
 // OnlineLocalCallTableTest — 같은 프로세스 호출의 표: 응답은 한 번이고, 번호는 호스트 호출과 겹치지 않으며, 응답 안에서 다시 올려도 된다(nogpu).
 

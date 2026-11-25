@@ -22,7 +22,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderManager.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProviderFile.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"

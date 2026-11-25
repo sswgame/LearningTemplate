@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProviderFile.h"
 
 // OnlineProviderFileTest — 키트 제공자 설정 파일(`{ "providers": [ … ] }`) 읽기: 파일 없음 = 제공자 없음, 신뢰 PEM 만 정함 거절,
 // 항목을 적은 순서대로 읽기, 못 읽는 파일 · JSON 아님 · 배열 없음 · 객체 아닌 항목 · 항목 읽기 실패 거절. 케이스 폴더에 작은 파일을 쓴다(nogpu).

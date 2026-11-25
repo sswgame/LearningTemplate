@@ -8,7 +8,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"

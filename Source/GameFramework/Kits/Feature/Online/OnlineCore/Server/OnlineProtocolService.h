@@ -28,7 +28,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Observability/ServiceMetrics.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServiceMetrics.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
