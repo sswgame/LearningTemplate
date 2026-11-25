@@ -130,6 +130,8 @@ namespace sw
         /** @brief `_listWeaponID` 의 총마다 기본 탄 · 장비 아이템 · 탄 아이템이 표에 있는지 봅니다. 아니면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validateWeapons() const;
         /** @brief 비행 경로와 뛰어내릴 시각 · 첫 총을 정하고 바닥 전리품을 놓습니다. */
+        /** @brief 이 판의 씨앗(`_matchSeed`)과 카탈로그로 비행 경로를 정합니다. 비행 설정이 범위 밖이면 false 입니다. */
+        [[nodiscard]] bool makeFlightPath();
         [[nodiscard]] bool prepareDrop();
         void               stepDrop( float32 deltaTime );
         void               stepBattle( float32 deltaTime );
@@ -183,8 +185,8 @@ namespace sw
         PROPERTY( Category = "Squads", DisplayName = "Squad Size", Min = 1 )
         int32 _squadSize;
         PROPERTY( Category = "Match", DisplayName = "Seed", Tooltip = "Seed of the zone, the flight, the loot and the computer people (not 0)", Min = 1 )
-        uint32              _seed;
-        SW_TRANSIENT uint32 _matchSeed; ///< 이 판의 씨앗(`startGame` 이 `_seed` 에서 정한다 — 서버 월드는 난수)
+        uint32                _seed;
+        SW_CODEC_STATE uint32 _matchSeed; ///< 이 판의 씨앗(`startGame` 이 `_seed` 에서 정한다 — 서버 월드는 난수라 싣는다: 다시 읽은 판이 같은 비행 경로 · 구역으로 열린다)
         PROPERTY( Category = "Match", DisplayName = "Ground Height", Units = m )
         float32 _groundHeight;
         PROPERTY( Category = "People", DisplayName = "Player Speed", Min = 0.1, Units = "m/s" )

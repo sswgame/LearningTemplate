@@ -190,7 +190,8 @@ namespace
         size_t computePilotHead() const
         {
             Archive prefix;
-            prefix << 0.0f; // 고정 걸음 타이머
+            prefix << 0.0f;            // 고정 걸음 타이머
+            prefix << _settings._seed; // 판의 씨앗
             _world.getMatch().writeState( prefix );
             prefix << static_cast<uint32>( _world.getPilotCount() );
             const MechPilot& first = pilot( 0 );
@@ -852,6 +853,24 @@ SW_TEST_CASE_F( MechArenaRulesTest, StateRoundTripContinuesIdentically )
     step( 1 );
     SW_REQUIRE_TRUE( _world.isEnded() );
     SW_EXPECT_TRUE( readInFreshWorld( writeBytes( _world ) ) );
+}
+
+/**
+ * @brief [MechArenaRulesTest] 결함: 판의 씨앗을 싣지 않아, 다른 씨앗으로 연 판(서버 월드는 열 때마다 난수)에 읽으면 씨앗이 그 판의 것으로 남아 기체를 바꿀 때 든 총의 퍼짐이 갈렸다.
+ *        씨앗을 싣는다 — 다른 씨앗으로 연 판에 읽어 다시 쓰면 같은 바이트다
+ */
+SW_TEST_CASE_F( MechArenaRulesTest, StateCarriesTheSeed )
+{
+    SW_REQUIRE_TRUE( openDuel( "gunner", "gunner", 3.0f ) );
+    step( 1 );
+    const vector<uint8> listSaved = writeBytes( _world );
+    MechArenaSettings   other     = _settings;
+    other._seed                   = _settings._seed + 1u;
+    MechArenaWorld restored;
+    SW_REQUIRE_TRUE( restored.initialize( other, _mechs, _weapons, _projectiles, _moves ) );
+    Archive reading( listSaved.data(), listSaved.size() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_TRUE( writeBytes( restored ) == listSaved );
 }
 
 /**

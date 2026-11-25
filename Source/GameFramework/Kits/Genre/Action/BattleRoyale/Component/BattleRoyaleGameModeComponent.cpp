@@ -181,10 +181,16 @@ namespace sw
         return true;
     }
 
+    bool BattleRoyaleGameModeComponent::makeFlightPath()
+    {
+        return _pCatalog != nullptr &&
+               BattleRoyaleFlightPath::makeRandom( _pCatalog->getFlightSettings(), _pCatalog->getMapSize(), GameRandom::deriveSeed( _matchSeed, BattleRoyaleGameModeComponentInternal::kFlightSalt ), _flightPath );
+    }
+
     bool BattleRoyaleGameModeComponent::prepareDrop()
     {
         using Internal = BattleRoyaleGameModeComponentInternal;
-        if ( BattleRoyaleFlightPath::makeRandom( _pCatalog->getFlightSettings(), _pCatalog->getMapSize(), GameRandom::deriveSeed( _matchSeed, Internal::kFlightSalt ), _flightPath ) == false )
+        if ( makeFlightPath() == false )
             return false; // 비행 설정이 범위 밖이면 키트가 오류를 남긴다
         _listPerson.clear();
         for ( int32 person = 0; person < _match.getPlayerCount(); ++person )
@@ -796,7 +802,11 @@ namespace sw
         io.header( BattleRoyaleGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        // 판은 같은 카탈로그 · 분대로 연 뒤에 읽는다(키트 계약). 비행 경로는 씨앗으로 `startGame` 이 이미 정했고, 입력 명령은 싣지 않는다.
+        // 씨앗을 먼저 읽는다 — 판 · 비행 경로는 그 씨앗으로 연다. 서버 월드는 열 때마다 씨앗이 달라(`WorldSeed::makeForWorld`) 싣지 않으면 다시 읽은 판의 비행 경로 · 구역이 바뀐다.
+        // 읽다 어긋나면 씨앗도 되돌린다(`GameModeComponent::readStateOrRevert`). 입력 명령은 싣지 않는다.
+        io.value( _matchSeed );
+        if ( io.isReading() && io.check( makeFlightPath() ) == false )
+            return;
         if ( io.valueOpened( _match, [this]( BattleRoyaleMatch& match )
         { return _pCatalog != nullptr && openMatch( match ); } ) == false )
             return;

@@ -339,7 +339,7 @@ namespace sw
         void pushEvent( MechArenaEvent::Kind kind, optional<int32> pilot, optional<int32> other, float32 value, const hashed_string& id );
 
     private:
-        SW_TRANSIENT MechArenaSettings _settings;
+        SW_CODEC_STATE MechArenaSettings _settings; ///< 규칙은 열 때 데이터에서 받고, 상태 본문은 그 가운데 씨앗만 싣는다
         SW_CODEC_STATE vector<MechPilot>    _listPilot;
         SW_CODEC_STATE ProjectileSimulation _projectiles;
         PROPERTY( RuntimeState )

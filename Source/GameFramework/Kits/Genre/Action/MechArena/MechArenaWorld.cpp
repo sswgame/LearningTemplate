@@ -1068,6 +1068,8 @@ namespace sw
             return;
         io.reflected( *this ); // 팀 이름 · 걸음 수 · 시작 · 끝 알림
         io.value( _timer );    // 리플렉션 밖 값 — 고정 걸음 타이머는 설정된 걸음으로 읽는다
+        // 판의 씨앗 — 서버 월드는 열 때마다 씨앗이 달라(`WorldSeed::makeForWorld`) 싣지 않으면 다시 읽은 판에서 기체를 바꿀 때 든 총의 퍼짐이 쓴 판과 갈린다(`equipMech`).
+        io.value( _settings._seed );
         if ( io.isOk() == false )
             return;
         if ( io.isReading() )
