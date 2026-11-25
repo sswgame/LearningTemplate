@@ -4,6 +4,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/Transport/DelayedStreamTransport.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamSendQueue.h"
@@ -332,4 +333,60 @@ SW_TEST_CASE( StreamTransportTest, SendQueueTracksWatermarksAcrossChunks )
     SW_EXPECT_TRUE( queue.consume( 25000 ) );   // 15 000 — 내려왔다(한 번)
     SW_EXPECT_FALSE( queue.consume( 15000 ) );
     SW_EXPECT_TRUE( queue.isEmpty() );
+}
+
+namespace
+{
+    /** @brief 클라이언트만 지연 장식자(`DelayedStreamTransport`)로 감싼 루프백 한 쌍을 세우고 연결을 엽니다. 연결 핸들을 돌려줍니다. */
+    StreamConnectionHandle openDelayedClient( StreamFixture& rig, float64 sendDelaySeconds )
+    {
+        rig._network = make_unique<LoopbackStreamNetwork>( 7u );
+        rig._server  = rig._network->createTransport();
+        rig._client  = make_unique<DelayedStreamTransport>( rig._network->createTransport(), sendDelaySeconds );
+        StreamTransportConfig settings;
+        settings._ioThreadCount = 0; // 수동 판 — `pollIO` 가 때가 된 보내기를 안쪽에 넘긴다
+        if ( rig._server->initialize( &rig._serverRecorder, settings ) == false || rig._client->initialize( &rig._clientRecorder, settings ) == false )
+            return StreamConnectionHandle{};
+        if ( rig._server->listen( NetAddress::makeLoopback( 0 ) ) == false )
+            return StreamConnectionHandle{};
+        const StreamConnectionHandle handle = rig._client->connect( NetAddress::makeLoopback( rig._server->getListenPort() ) );
+        const bool                   bOpen  = rig.runUntil( [&]()
+        { return rig._serverRecorder.getOpenedCount() == 1 && rig._clientRecorder.getOpenedCount() == 1; } );
+        return bOpen ? handle : StreamConnectionHandle{};
+    }
+} // namespace
+
+/** @brief [StreamTransportTest] 지연 장식자는 지연이 지나기 전에는 바이트도 닫기도 안쪽에 넘기지 않는다(지연을 한 시간으로 잡아 시각과 무관하다). */
+SW_TEST_CASE( StreamTransportTest, DelayedSendHoldsBytesAndCloseUntilDue )
+{
+    StreamFixture                rig;
+    const StreamConnectionHandle handle = openDelayedClient( rig, 3600.0 );
+    SW_REQUIRE_TRUE( handle.isValid() );
+    const vector<uint8> payload = makePattern( 300, 5u );
+    SW_EXPECT_TRUE( rig._client->send( handle, payload.data(), 300 ) == StreamSendResult::Queued );
+    rig._client->close( handle, StreamCloseMode::Graceful );
+    for ( int32 round = 0; round < 50; ++round )
+    {
+        (void)rig._server->pollIO( 0 );
+        (void)rig._client->pollIO( 0 );
+    }
+    SW_EXPECT_EQUAL( 0, rig._serverRecorder.getReceivedCount() );
+    SW_EXPECT_EQUAL( 0, rig._serverRecorder.getClosedCount() );
+    rig.shutdown(); // 지연 중인 보내기는 버린다
+}
+
+/** @brief [StreamTransportTest] 지연 0 이면 다음 `pollIO` 에 보낸 순서대로 넘기고, 닫기는 앞서 보낸 바이트를 앞지르지 않는다. */
+SW_TEST_CASE( StreamTransportTest, DelayedSendKeepsOrderAndClosesAfterBytes )
+{
+    StreamFixture                rig;
+    const StreamConnectionHandle handle = openDelayedClient( rig, 0.0 );
+    SW_REQUIRE_TRUE( handle.isValid() );
+    const vector<uint8> payload = makePattern( 5000, 9u );
+    SW_EXPECT_TRUE( rig._client->send( handle, payload.data(), 1000 ) == StreamSendResult::Queued );
+    SW_EXPECT_TRUE( rig._client->send( handle, payload.data() + 1000, 4000 ) == StreamSendResult::Queued );
+    rig._client->close( handle, StreamCloseMode::Graceful );
+    SW_REQUIRE_TRUE( rig.runUntil( [&]()
+    { return rig._serverRecorder.getClosedCount() == 1; } ) );
+    SW_EXPECT_TRUE( rig._serverRecorder.copyReceived() == payload );
+    rig.shutdown();
 }

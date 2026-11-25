@@ -58,6 +58,8 @@
 ### 게임플레이
 
 - MMO 키트 부하 목표 · 운영 비용(측정).
+- 허브 미니게임의 네트워크 판이 기믹(문 · 엘리베이터)을 쓰면 서버 스냅샷에 `GimmickSnapshotUtil::appendEntities`, 클라이언트에 `extractBundle` → `GimmickStateBundle::apply` 를 건다(지금 쓰는 게임이 없고 단위 테스트만 있다).
+- 온라인 다중 서버 왕복 측정 시나리오가 서면 서버 사이 스트림을 `DelayedStreamTransport` 로 감싼다(지금은 단위 테스트만 — 온라인 저장 형식 작업 뒤).
 
 ## 7. 허브 흡수
 
