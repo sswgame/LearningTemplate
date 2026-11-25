@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
@@ -29,7 +30,6 @@ namespace sw
         struct LoginStoreLogicInternal
         {
             static constexpr FormatDef kRecordFormat{ "LOGN" };
-            static constexpr int32     kStoreRetryLimit    = 4; ///< 조건부 쓰기가 다른 쓰기와 부딪혔을 때 다시 읽는 횟수이다
             static constexpr int32     kMaxLinkCount       = 16;
             static constexpr int32     kDigestHexSize      = LoginConstant::kDigestSize * 2;
             static constexpr utf8      kDigestLabel[]      = "sw-login-token-digest-v1";
@@ -543,7 +543,7 @@ namespace sw
         Internal::ProfileRecord profile;
         profile._nameKey     = nameKey;
         profile._displayName = credential._loginName;
-        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
+        return ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.Register", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
         {
             if ( Internal::makeNonZeroID( _crypto, account._accountID ) == false )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
@@ -552,18 +552,17 @@ namespace sw
             transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( account._accountID ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
             Ledger::requireNoTombstone( account._accountID, transaction ); // 지운 계정의 id 는 다시 쓰지 않는다 — 겹치면 아래 Conflict 로 새 id 를 뽑는다
             ServiceCommitInfo        info;
-            const ServiceStoreResult result = _connection.commit( transaction, &info );
+            const ServiceStoreResult result = attempt.commit( transaction, &info );
             if ( result == ServiceStoreResult::Conflict && info._conflictIndex == 0 )
                 return LoginResult::NameTaken;
             if ( result == ServiceStoreResult::Conflict )
-                continue; // 계정 id 가 겹쳤으므로(확률 2^-64) 새 id 로 다시 시도한다. SQL 의 직렬화 실패(버전 -1)도 다시 본다
+                return nullopt; // 계정 id 가 겹쳤으므로(확률 2^-64) 새 id 로 다시 시도한다. SQL 의 직렬화 실패(버전 -1)도 다시 본다
             if ( result != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
             if ( pOutAccountID != nullptr )
                 *pOutAccountID = account._accountID;
             return LoginResult::Ok;
-        }
-        return LoginServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     LoginServiceResult LoginStoreLogic::readLoginChallenge( string_view loginName, int64 nowMs, PasswordHashChallenge& outChallenge, LoginGrant& outGrant )
@@ -609,7 +608,7 @@ namespace sw
             return LoginResult::WrongCredentials;
         const string& nameKey = challenge._nameKey;
 
-        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
+        return ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.Login", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
         {
             ServiceRecord            accountRaw;
             const ServiceStoreResult readResult = _connection.readRecord( Internal::getAccountTable(), nameKey, accountRaw );
@@ -668,17 +667,16 @@ namespace sw
             const LoginServiceResult staged            = stageSessionOpen( account._accountID, nowMs, transaction, token, expiresAtMs, replacedSessionID );
             if ( staged != LoginResult::Ok )
                 return staged;
-            const ServiceStoreResult commitResult = _connection.commit( transaction );
+            const ServiceStoreResult commitResult = attempt.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue; // 같은 계정이 그사이 다른 곳에서 로그인했거나 실패 횟수가 바뀌었으므로 다시 읽는다(솔트 · 매개변수가 같으면 계산한 해시를 다시 쓴다)
+                return nullopt; // 같은 계정이 그사이 다른 곳에서 로그인했거나 실패 횟수가 바뀌었으므로 다시 읽는다(솔트 · 매개변수가 같으면 계산한 해시를 다시 쓴다)
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable ); // 적용됐는지 알 수 없다. 클라이언트가 다시 로그인하면 그 세션을 밀어낸다
 
             recordSessionOpened( account._accountID, token, replacedSessionID );
             Internal::fillGrantIdentity( account._accountID, profile, token, expiresAtMs, replacedSessionID, outGrant );
             return LoginResult::Ok;
-        }
-        return LoginServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     LoginServiceResult LoginStoreLogic::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], int64 nowMs, LoginGrant& outGrant )
@@ -689,7 +687,7 @@ namespace sw
         if ( Internal::computeGuestDigestHex( _crypto, arrDeviceSecret, digestHex ) == false )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
 
-        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
+        return ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.GuestLogin", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
         {
             ServiceRecord            guestRaw;
             const ServiceStoreResult guestRead = _connection.readRecord( Internal::getGuestTable(), digestHex, guestRaw );
@@ -727,9 +725,9 @@ namespace sw
             const LoginServiceResult staged            = stageSessionOpen( accountID, nowMs, transaction, token, expiresAtMs, replacedSessionID );
             if ( staged != LoginResult::Ok )
                 return staged;
-            const ServiceStoreResult commitResult = _connection.commit( transaction );
+            const ServiceStoreResult commitResult = attempt.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue; // 같은 장치가 그사이 계정을 만들었거나 다른 곳에서 로그인했으므로 다시 읽는다
+                return nullopt; // 같은 장치가 그사이 계정을 만들었거나 다른 곳에서 로그인했으므로 다시 읽는다
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
 
@@ -737,8 +735,7 @@ namespace sw
             Internal::fillGrantIdentity( accountID, profile, token, expiresAtMs, replacedSessionID, outGrant );
             outGrant._bCreated = bCreate ? SW_TRUE : SW_FALSE;
             return LoginResult::Ok;
-        }
-        return LoginServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     LoginServiceResult LoginStoreLogic::platformLogin( string_view provider, string_view subject, string_view displayNameHint, const vector<uint8>* pSealedLinkSecret, int64 nowMs,
@@ -753,7 +750,7 @@ namespace sw
             return LoginServiceResult::fail( OnlineError::kUnavailable );
         const string externalKey = Internal::makeExternalKey( provider, digestHex );
 
-        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
+        return ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.PlatformLogin", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
         {
             ServiceRecord            externalRaw;
             const ServiceStoreResult externalRead = _connection.readRecord( Internal::getExternalTable(), externalKey, externalRaw );
@@ -792,9 +789,9 @@ namespace sw
             if ( staged != LoginResult::Ok )
                 return staged;
             Internal::stageLinkSecret( transaction, accountID, provider, pSealedLinkSecret );
-            const ServiceStoreResult commitResult = _connection.commit( transaction );
+            const ServiceStoreResult commitResult = attempt.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue;
+                return nullopt;
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
 
@@ -802,8 +799,7 @@ namespace sw
             Internal::fillGrantIdentity( accountID, profile, token, expiresAtMs, replacedSessionID, outGrant );
             outGrant._bCreated = bCreate ? SW_TRUE : SW_FALSE;
             return LoginResult::Ok;
-        }
-        return LoginServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     LoginServiceResult LoginStoreLogic::resumeSession( const LoginSessionToken& token, int64 nowMs, LoginGrant& outGrant )
@@ -815,7 +811,7 @@ namespace sw
         if ( Internal::computeTokenDigest( _crypto, token._arrSecret, arrDigest ) == false )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
 
-        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
+        return ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.ResumeSession", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
         {
             ServiceRecord            sessionRaw;
             const ServiceStoreResult readResult = _connection.readRecord( Internal::getSessionTable(), sessionKey, sessionRaw );
@@ -852,9 +848,9 @@ namespace sw
             ++session._rotation;
             ServiceTransaction transaction;
             Internal::stageSession( transaction, sessionKey, session, sessionRaw._version );
-            const ServiceStoreResult commitResult = _connection.commit( transaction );
+            const ServiceStoreResult commitResult = attempt.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue; // 같은 토큰으로 그사이 돌아온 쪽이 있다. 다시 읽으면 비밀이 달라서 InvalidToken 이 된다
+                return nullopt; // 같은 토큰으로 그사이 돌아온 쪽이 있다. 다시 읽으면 비밀이 달라서 InvalidToken 이 된다
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
 
@@ -865,8 +861,7 @@ namespace sw
             outGrant._token         = rotated;
             outGrant._expiresAtMs   = session._expiresAtMs;
             return LoginResult::Ok;
-        }
-        return LoginResult::InvalidToken;
+        } );
     }
 
     LoginServiceResult LoginStoreLogic::validateSession( const LoginSessionToken& token, int64 nowMs, AccountIdentity& outIdentity, LoginRevokeReason* pOutRevokeReason )
@@ -901,16 +896,24 @@ namespace sw
         const LoginServiceResult state = validateSession( token, nowMs, identity );
         if ( state != LoginResult::Ok )
             return state;
-        const string       accountKey = ServiceKeyUtil::makeHex64( identity._accountID );
-        ServiceRecord      linkRaw;
-        ServiceTransaction transaction;
-        transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( token._sessionID ) );
-        const ServiceStoreResult readResult = _connection.readRecord( Internal::getAccountSessionTable(), accountKey, linkRaw );
-        if ( readResult == ServiceStoreResult::Ok && ServiceKeyUtil::decodeVarID( linkRaw._bytes ) == token._sessionID )
-            transaction.erase( Internal::getAccountSessionTable(), accountKey, linkRaw._version );
-        const ServiceStoreResult commitResult = _connection.commit( transaction );
-        if ( commitResult != ServiceStoreResult::Ok && commitResult != ServiceStoreResult::Conflict )
-            return LoginServiceResult::fail( OnlineError::kUnavailable );
+        const string             accountKey = ServiceKeyUtil::makeHex64( identity._accountID );
+        const LoginServiceResult erased     = ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.Logout", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
+            {
+            ServiceRecord      linkRaw;
+            ServiceTransaction transaction;
+            transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( token._sessionID ) );
+            const ServiceStoreResult readResult = attempt.readRecord( Internal::getAccountSessionTable(), accountKey, linkRaw );
+            if ( readResult == ServiceStoreResult::Ok && ServiceKeyUtil::decodeVarID( linkRaw._bytes ) == token._sessionID )
+                transaction.erase( Internal::getAccountSessionTable(), accountKey, linkRaw._version );
+            const ServiceStoreResult commitResult = attempt.commit( transaction );
+            if ( commitResult == ServiceStoreResult::Conflict )
+                return nullopt; // 다른 쪽이 같은 계정의 세션을 건드렸다 — 지우지 않고 Ok 로 답하면 로그아웃한 토큰이 살아 있다
+            if ( commitResult != ServiceStoreResult::Ok )
+                return LoginServiceResult::fail( OnlineError::kUnavailable );
+            return LoginServiceResult{ LoginResult::Ok };
+        } );
+        if ( erased != LoginResult::Ok )
+            return erased;
         _result._listOffline.push_back( LoginSessionRef{ identity._accountID, token._sessionID, LoginRevokeReason::LoggedOut } );
         _result._listEvent.push_back( LoginEvent{ identity._accountID, token._sessionID, LoginRevokeReason::LoggedOut, LoginEvent::Kind::LoggedOut } );
         return LoginResult::Ok;
@@ -920,33 +923,37 @@ namespace sw
     {
         using Internal          = LoginStoreLogicInternal;
         const string sessionKey = ServiceKeyUtil::makeHex64( sessionID );
-        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
+        bool         bReported  = false;
+        const auto   start      = [&]( ServiceCommitAttempt& attempt ) -> optional<ServiceStoreResult>
         {
-            ServiceRecord sessionRaw;
-            if ( _connection.readRecord( Internal::getSessionTable(), sessionKey, sessionRaw ) != ServiceStoreResult::Ok )
-                return;
+            ServiceRecord            sessionRaw;
+            const ServiceStoreResult readResult = attempt.readRecord( Internal::getSessionTable(), sessionKey, sessionRaw );
+            if ( readResult != ServiceStoreResult::Ok )
+                return readResult;
             Internal::SessionRecord session;
             if ( Internal::decodeSession( sessionRaw._bytes, session ) == false )
-                return;
-            if ( attempt == 0 )
+                return ServiceStoreResult::Invalid;
+            if ( bReported == false )
                 _result._listDisconnected.push_back( LoginSessionRef{ session._accountID, sessionID, LoginRevokeReason::None } );
+            bReported = true;
             if ( session._revokeReason != LoginRevokeReason::None || session._resumeDeadlineMs != 0 )
-                return;
+                return ServiceStoreResult::Ok;
             session._resumeDeadlineMs = nowMs + _settings._reconnectGraceMs;
             ServiceTransaction transaction;
             Internal::stageSession( transaction, sessionKey, session, sessionRaw._version );
-            const ServiceStoreResult commitResult = _connection.commit( transaction );
+            const ServiceStoreResult commitResult = attempt.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue;
-            if ( commitResult != ServiceStoreResult::Ok )
-                SW_LOG_WARNING_ID( "LoginStoreLogic.SessionCouldNotStart", "session %# could not start its reconnect grace (store %#)", sessionKey.c_str(), static_cast<int32>( commitResult ) );
-            return;
-        }
+                return nullopt;
+            return commitResult;
+        };
+        const ServiceStoreResult started = ServiceCommitRunner::run<ServiceStoreResult>( _connection, "Account.MarkDisconnected", start );
+        if ( started != ServiceStoreResult::Ok && started != ServiceStoreResult::NotFound ) // 없는 세션은 이미 로그아웃한 것이다
+            SW_LOG_WARNING_ID( "LoginStoreLogic.SessionCouldNotStart", "session %# could not start its reconnect grace (store %#)", sessionKey.c_str(), static_cast<int32>( started ) );
     }
 
     LoginServiceResult LoginStoreLogic::revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, int64 nowMs )
     {
-        for ( int32 attempt = 0; attempt < LoginStoreLogicInternal::kStoreRetryLimit; ++attempt )
+        return ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.RevokeSessions", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
         {
             ServiceTransaction       transaction;
             uint64                   sessionID = 0;
@@ -955,15 +962,14 @@ namespace sw
                 return staged;
             if ( sessionID == 0 )
                 return LoginResult::Ok;
-            const ServiceStoreResult commitResult = _connection.commit( transaction );
+            const ServiceStoreResult commitResult = attempt.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue;
+                return nullopt;
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
             _result._listRevoked.push_back( LoginSessionRef{ accountID, sessionID, reason } );
             return LoginResult::Ok;
-        }
-        return LoginServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     LoginServiceResult LoginStoreLogic::issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, int64 nowMs, NetGameTicket& outTicket )
@@ -995,7 +1001,7 @@ namespace sw
         Memory::copy( account._arrSalt, prepared._arrSalt, LoginConstant::kSaltSize );
         Memory::copy( account._arrPasswordHash, prepared._arrHash, LoginConstant::kPasswordHashSize );
 
-        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
+        return ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.LinkCredential", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
         {
             Internal::ProfileRecord profile;
             if ( Internal::readProfile( _connection, identity._accountID, profile ) != ServiceStoreResult::Ok )
@@ -1017,17 +1023,16 @@ namespace sw
             ServiceAuditLog::stageEntry( transaction, Internal::makeAuditEntry( identity._accountID, "account.link.credential", nowMs ), identity._accountID,
                                          profileVersion );
             ServiceCommitInfo        info;
-            const ServiceStoreResult commitResult = _connection.commit( transaction, &info );
+            const ServiceStoreResult commitResult = attempt.commit( transaction, &info );
             if ( commitResult == ServiceStoreResult::Conflict && info._conflictIndex == 0 )
                 return LoginResult::AlreadyLinked; // 이름이 다른 계정의 것이므로 합치지 않는다
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue;
+                return nullopt;
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
             outIdentity = Internal::makeIdentity( identity._accountID, profile );
             return LoginResult::Ok;
-        }
-        return LoginServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     ServiceStoreResult LoginStoreLogic::readIsLinked( IServiceStoreConnection& connection, ILoginCrypto& crypto, uint64 accountID, string_view provider, string_view subject, bool& outbLinked )
@@ -1064,7 +1069,7 @@ namespace sw
         if ( Internal::computeSubjectDigestHex( _crypto, provider, subject, digestHex ) == false )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
 
-        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
+        return ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.LinkPlatform", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
         {
             Internal::ProfileRecord profile;
             if ( Internal::readProfile( _connection, identity._accountID, profile ) != ServiceStoreResult::Ok )
@@ -1082,18 +1087,17 @@ namespace sw
             ServiceAuditLog::stageEntry( transaction, audit, identity._accountID, profileVersion );
             Internal::stageLinkSecret( transaction, identity._accountID, provider, pSealedLinkSecret ); // 쓰기 번호가 뒤라서 위의 충돌 번호 판정(0 · 1)을 흔들지 않는다
             ServiceCommitInfo        info;
-            const ServiceStoreResult commitResult = _connection.commit( transaction, &info );
+            const ServiceStoreResult commitResult = attempt.commit( transaction, &info );
             const bool               bTaken       = commitResult == ServiceStoreResult::Conflict && ( info._conflictIndex == 0 || info._conflictIndex == 1 );
             if ( bTaken )
                 return LoginResult::AlreadyLinked; // 그 주체가 다른 계정의 것이거나 이 계정에 그 제공자가 이미 있다
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue;
+                return nullopt;
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
             outIdentity = Internal::makeIdentity( identity._accountID, profile );
             return LoginResult::Ok;
-        }
-        return LoginServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     LoginServiceResult LoginStoreLogic::unlinkPlatform( const LoginSessionToken& token, string_view provider, int64 nowMs )
@@ -1103,7 +1107,7 @@ namespace sw
         const LoginServiceResult state = validateSession( token, nowMs, identity );
         if ( state != LoginResult::Ok )
             return state;
-        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
+        return ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.UnlinkPlatform", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
         {
             Internal::ProfileRecord profile;
             if ( Internal::readProfile( _connection, identity._accountID, profile ) != ServiceStoreResult::Ok )
@@ -1132,12 +1136,11 @@ namespace sw
             ServiceAuditEntry audit = Internal::makeAuditEntry( identity._accountID, "account.unlink.platform", nowMs );
             audit._before           = string( provider );
             ServiceAuditLog::stageEntry( transaction, audit, identity._accountID, pLink->_version );
-            const ServiceStoreResult commitResult = _connection.commit( transaction );
+            const ServiceStoreResult commitResult = attempt.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue;
+                return nullopt;
             return commitResult == ServiceStoreResult::Ok ? LoginResult::Ok : LoginServiceResult::fail( OnlineError::kUnavailable );
-        }
-        return LoginServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     LoginServiceResult LoginStoreLogic::listLinks( const LoginSessionToken& token, int64 nowMs, AccountLinkSummary& outSummary )
@@ -1173,7 +1176,7 @@ namespace sw
         const LoginServiceResult state = validateSession( token, nowMs, identity );
         if ( state != LoginResult::Ok )
             return state;
-        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
+        return ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.RequestDeletion", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
         {
             Internal::ProfileRecord profile;
             if ( Internal::readProfile( _connection, identity._accountID, profile ) != ServiceStoreResult::Ok )
@@ -1190,17 +1193,16 @@ namespace sw
                 return staged;
             ServiceAuditEntry audit = Internal::makeAuditEntry( identity._accountID, "account.delete.request", nowMs );
             ServiceAuditLog::stageEntry( transaction, audit, identity._accountID, static_cast<uint64>( profile._deletionDueMs ) );
-            const ServiceStoreResult commitResult = _connection.commit( transaction );
+            const ServiceStoreResult commitResult = attempt.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue;
+                return nullopt;
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
             if ( sessionID != 0 )
                 _result._listRevoked.push_back( LoginSessionRef{ identity._accountID, sessionID, LoginRevokeReason::AccountDeleted } );
             outDueMs = profile._deletionDueMs;
             return LoginResult::Ok;
-        }
-        return LoginServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     LoginServiceResult LoginStoreLogic::cancelDeletion( const LoginSessionToken& token, int64 nowMs )
@@ -1210,7 +1212,7 @@ namespace sw
         const LoginServiceResult state = validateSession( token, nowMs, identity );
         if ( state != LoginResult::Ok )
             return state;
-        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
+        return ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.CancelDeletion", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
         {
             Internal::ProfileRecord profile;
             if ( Internal::readProfile( _connection, identity._accountID, profile ) != ServiceStoreResult::Ok )
@@ -1224,12 +1226,11 @@ namespace sw
             transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( identity._accountID ), Internal::encodeProfile( profile ), profileVersion );
             transaction.erase( Internal::getDeletionTable(), Internal::makeDeletionKey( dueMs, identity._accountID ) );
             ServiceAuditLog::stageEntry( transaction, Internal::makeAuditEntry( identity._accountID, "account.delete.cancel", nowMs ), identity._accountID, profileVersion );
-            const ServiceStoreResult commitResult = _connection.commit( transaction );
+            const ServiceStoreResult commitResult = attempt.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue;
+                return nullopt;
             return commitResult == ServiceStoreResult::Ok ? LoginResult::Ok : LoginServiceResult::fail( OnlineError::kUnavailable );
-        }
-        return LoginServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     int32 LoginStoreLogic::purgeDueDeletions( int64 nowMs, int32 maxCount, const vector<const IAfterDeleteAccount*>& listAfterDeleteAccount )
@@ -1293,7 +1294,7 @@ namespace sw
                 continue;
             ServiceTransaction done;
             done.erase( Internal::getAfterDeleteTable(), queued._key, queued._version );
-            if ( _connection.commit( done ) == ServiceStoreResult::Unavailable )
+            if ( ServiceCommitRunner::commitOnce( _connection, done ) == ServiceStoreResult::Unavailable )
                 return;
         }
     }
@@ -1309,7 +1310,7 @@ namespace sw
             // 취소했거나 이미 지운 계정의 낡은 인덱스이므로 인덱스만 지운다.
             ServiceTransaction cleanup;
             cleanup.erase( Internal::getDeletionTable(), deletionKey );
-            return _connection.commit( cleanup ) == ServiceStoreResult::Unavailable ? LoginServiceResult::fail( OnlineError::kUnavailable ) : LoginResult::NotLinked;
+            return ServiceCommitRunner::commitOnce( _connection, cleanup ) == ServiceStoreResult::Unavailable ? LoginServiceResult::fail( OnlineError::kUnavailable ) : LoginResult::NotLinked;
         }
         if ( profileRead != ServiceStoreResult::Ok )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
@@ -1349,7 +1350,7 @@ namespace sw
         ServiceAuditEntry audit = Internal::makeAuditEntry( accountID, "account.delete", nowMs );
         audit._actor            = ServiceAuditLog::kSystemActor;
         ServiceAuditLog::stageEntry( transaction, audit, accountID, static_cast<uint64>( profile._deletionDueMs ) );
-        const ServiceStoreResult commitResult = _connection.commit( transaction );
+        const ServiceStoreResult commitResult = ServiceCommitRunner::commitOnce( _connection, transaction );
         if ( commitResult == ServiceStoreResult::Conflict )
             return LoginResult::NotLinked; // 그사이 취소했거나 로그인했으므로 다음 정리에서 다시 본다
         return commitResult == ServiceStoreResult::Ok ? LoginResult::Ok : LoginServiceResult::fail( OnlineError::kUnavailable );
@@ -1414,7 +1415,7 @@ namespace sw
     {
         ServiceTransaction transaction;
         transaction.erase( LoginStoreLogicInternal::getRevokeTable(), key );
-        return connection.commit( transaction );
+        return ServiceCommitRunner::commitOnce( connection, transaction );
     }
 
     ServiceStoreResult LoginStoreLogic::readIdentity( IServiceStoreConnection& connection, uint64 accountID, AccountIdentity& outIdentity )
@@ -1454,7 +1455,7 @@ namespace sw
         current._version = accountVersion;
         // 틀린 시도가 동시에 겹치면(워커 여럿 · 서버 여럿) 조건부 쓰기가 Conflict 다 — 다시 읽어 센다. 버리면 겹친 만큼 덜 세어 잠금을 비켜 간다(감사 O-14).
         // 주소마다의 시도 버킷은 프로세스 메모리라 서버 여럿에서는 이 계정 단위 셈이 유일한 막이다.
-        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
+        const LoginServiceResult counted = ServiceCommitRunner::run<LoginServiceResult>( _connection, "Account.RecordFailure", [&]( ServiceCommitAttempt& attempt ) -> optional<LoginServiceResult>
         {
             Internal::AccountRecord account;
             if ( Internal::decodeAccount( current._bytes, account ) == false )
@@ -1475,14 +1476,17 @@ namespace sw
             }
             ServiceTransaction transaction;
             transaction.put( Internal::getAccountTable(), nameKey, Internal::encodeAccount( account ), current._version );
-            const ServiceStoreResult committed = _connection.commit( transaction );
+            const ServiceStoreResult committed = attempt.commit( transaction );
             if ( committed != ServiceStoreResult::Conflict )
                 return result; // 저장소 장애면 세지 못했어도 같은 답이다 — 있는 계정만 다른 답을 내면 계정 열거가 된다
             const ServiceStoreResult reread = _connection.readRecord( Internal::getAccountTable(), nameKey, current );
             if ( reread != ServiceStoreResult::Ok )
                 return LoginResult::WrongCredentials; // 지워졌거나 읽지 못했다 — 없는 계정과 같은 답이다
-        }
-        return LoginResult::WrongCredentials; // 겹침이 상한을 넘었다. 다른 답(kBusy)은 계정이 있다는 신호라 쓰지 않는다
+            return nullopt;
+        } );
+        if ( counted.hasError( OnlineError::kBusy ) )
+            return LoginResult::WrongCredentials; // 겹침이 상한을 넘었다. 다른 답(kBusy)은 계정이 있다는 신호라 쓰지 않는다
+        return counted;
     }
 
     LoginServiceResult LoginStoreLogic::evaluateSanction( uint64 accountID, int64 nowMs, LoginGrant& outGrant )

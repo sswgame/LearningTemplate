@@ -19,6 +19,8 @@
 
 namespace sw
 {
+    class ServiceCommitAttempt;
+
     /** @brief 멱등 기록 도우미입니다. 저장소 스레드(`ServiceStoreJob::run` 안)에서 씁니다. */
     struct SW_KIT_SERVER_API ServiceIdempotency
     {
@@ -26,7 +28,11 @@ namespace sw
         static string               makeKey( string_view scope, uint64 keyHigh, uint64 keyLow );
         /** @brief 이미 처리한 요청이면 Ok 와 그때의 응답, 처음이면 NotFound 입니다. */
         [[nodiscard]] static ServiceStoreResult findReply( IServiceStoreConnection& connection, string_view scope, uint64 keyHigh, uint64 keyLow, vector<uint8>& outReplyBytes );
-        /** @brief @p transaction 에 기록을 넣습니다("없어야 한다" 조건). */
-        static void addReply( ServiceTransaction& transaction, string_view scope, uint64 keyHigh, uint64 keyLow, vector<uint8> replyBytes );
+        /**
+         * @brief @p inoutTransaction 에 기록을 넣어("없어야 한다" 조건) 커밋하고, 적용됐는지 모르는 실패(`Unavailable`)면 기록을 다시 읽어 가립니다(멱등 규칙 하나).
+         * @return `Ok`(이번이든 앞이든 적용됐다), `Conflict`(시도 함수는 빈 값으로 다시 한다 — 같은 키가 그사이 커밋됐으면 다음 시도의 `findReply` 가 찾는다), 그 밖은 저장소 결과입니다.
+         */
+        [[nodiscard]] static ServiceStoreResult commit( ServiceCommitAttempt& attempt, ServiceTransaction& inoutTransaction, string_view scope, uint64 keyHigh, uint64 keyLow,
+                                                        vector<uint8> replyBytes );
     };
 } // namespace sw

@@ -13,6 +13,7 @@
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
@@ -195,7 +196,7 @@ namespace sw
                 {
                     transaction.put( ChatServiceInternal::getHistoryIndexTable(), indexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
                 }
-                const bool bCommitted = transaction.isEmpty() || connection.commit( transaction ) == ServiceStoreResult::Ok;
+                const bool bCommitted = transaction.isEmpty() || ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok;
                 write._bCommitted     = bCommitted ? SW_TRUE : SW_FALSE;
                 return write;
             }
@@ -265,7 +266,7 @@ namespace sw
                 ServiceTransaction transaction;
                 if ( ServiceReportStore::stageOpen( transaction, report, uniqueID ) == false )
                     return ChatServiceResult::fail( OnlineError::kInvalidRequest );
-                if ( connection.commit( transaction ) == ServiceStoreResult::Ok )
+                if ( ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok )
                     return ChatResult::Ok;
                 return ChatServiceResult::fail( OnlineError::kUnavailable );
             }
@@ -883,7 +884,7 @@ namespace sw
                 if ( StringUtil::startsWith( channelID, Internal::kWhisperPrefix ) && VectorUtil::contains( listWhisperChannel, channelID ) == false )
                     listWhisperChannel.push_back( channelID );
             }
-            if ( const ServiceStoreResult committed = connection.commit( transaction ); committed != ServiceStoreResult::Ok )
+            if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction ); committed != ServiceStoreResult::Ok )
                 return committed;
         }
         // 귓속말 채널은 id 에 두 계정이 있다 — 상대가 보낸 기록까지 채널째 지운다. 그 채널의 TTL 색인 줄은 대상이 비어 TTL 쓸기가 지운다

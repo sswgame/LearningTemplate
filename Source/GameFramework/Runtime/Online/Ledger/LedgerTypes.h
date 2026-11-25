@@ -166,7 +166,6 @@ namespace sw
         static constexpr int32 kMaxJournalScopeSize = 32; ///< `makeFromToken` 의 범위(`rcpt.<스토어>` · `mail.claim`) 길이
         /// `makeFromToken` 이 16 진으로 펴는 토큰 바이트(83). 범위 상한 + '/' + 16 진이 분개 키 상한에 들도록 키 상한에서 낸다 — 와이어(청약철회 거래 id)가 받은 토큰은 언제나 원장 키가 된다.
         static constexpr int32 kMaxTokenBytes = ( kMaxJournalKeySize - 1 - kMaxJournalScopeSize ) / 2;
-        static constexpr int32 kMaxRetryCount = 8;
     };
 } // namespace sw
 

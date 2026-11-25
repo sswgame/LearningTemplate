@@ -6,8 +6,18 @@
 
 #include "Engine/Serialization/Format/FormatDef.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+
+namespace sw
+{
+    template <>
+    struct ServiceConflictAnswer<ServiceAuditedWriteResult>
+    {
+        [[nodiscard]] static ServiceAuditedWriteResult make() { return ServiceAuditedWriteResult::Busy; }
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -162,7 +172,7 @@ namespace sw
         const NetIdempotencyKey unique = NetIdempotencyKey::makeRandom();
         ServiceTransaction      transaction;
         stageEntry( transaction, rejected, unique._high, unique._low );
-        const ServiceStoreResult committed = connection.commit( transaction );
+        const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
         if ( committed != ServiceStoreResult::Ok )
             SW_LOG_WARNING_ID( "ServiceAuditLog.RejectionNotRecorded", "Denied operator request '%#' on '%#' could not be audited (result %#)", rejected._action, rejected._subject,
                                static_cast<int32>( committed ) );
@@ -208,26 +218,32 @@ namespace sw
             ServiceAuditLog::commitRejection( connection, _auditEntry );
             return ServiceAuditedWriteResult::Forbidden;
         }
-        const ServiceStoreResult allowed = _pGuard->validateAllowed( connection );
-        if ( allowed == ServiceStoreResult::NotFound )
+        return ServiceCommitRunner::run<ServiceAuditedWriteResult>( connection, "Service.AuditedWrite", [this]( ServiceCommitAttempt& attempt ) -> optional<ServiceAuditedWriteResult>
         {
-            ServiceAuditLog::commitRejection( connection, _auditEntry );
-            return ServiceAuditedWriteResult::Forbidden;
-        }
-        if ( allowed != ServiceStoreResult::Ok )
-            return ServiceAuditedWriteResult::Unavailable;
-        ServiceRecord            current;
-        const ServiceStoreResult readResult = connection.readRecord( _table, _key, current );
-        if ( readResult == ServiceStoreResult::Unavailable || readResult == ServiceStoreResult::Invalid )
-            return ServiceAuditedWriteResult::Unavailable;
-        if ( _bytes.empty() && readResult == ServiceStoreResult::NotFound )
-            return ServiceAuditedWriteResult::NotFound;
-        ServiceTransaction transaction;
-        if ( _bytes.empty() )
-            transaction.erase( _table, _key, current._version );
-        else
-            transaction.put( _table, _key, _bytes, current._version );
-        ServiceAuditLog::stageEntry( transaction, _auditEntry, _auditUnique._high, _auditUnique._low );
-        return connection.commit( transaction ) == ServiceStoreResult::Ok ? ServiceAuditedWriteResult::Ok : ServiceAuditedWriteResult::Unavailable;
+            const ServiceStoreResult allowed = _pGuard->validateAllowed( attempt );
+            if ( allowed == ServiceStoreResult::NotFound )
+            {
+                ServiceAuditLog::commitRejection( attempt, _auditEntry );
+                return ServiceAuditedWriteResult::Forbidden;
+            }
+            if ( allowed != ServiceStoreResult::Ok )
+                return ServiceAuditedWriteResult::Unavailable;
+            ServiceRecord            current;
+            const ServiceStoreResult readResult = attempt.readRecord( _table, _key, current );
+            if ( readResult == ServiceStoreResult::Unavailable || readResult == ServiceStoreResult::Invalid )
+                return ServiceAuditedWriteResult::Unavailable;
+            if ( _bytes.empty() && readResult == ServiceStoreResult::NotFound )
+                return ServiceAuditedWriteResult::NotFound;
+            ServiceTransaction transaction;
+            if ( _bytes.empty() )
+                transaction.erase( _table, _key, current._version );
+            else
+                transaction.put( _table, _key, _bytes, current._version );
+            ServiceAuditLog::stageEntry( transaction, _auditEntry, _auditUnique._high, _auditUnique._low );
+            const ServiceStoreResult committed = attempt.commit( transaction );
+            if ( committed == ServiceStoreResult::Conflict )
+                return nullopt;
+            return committed == ServiceStoreResult::Ok ? ServiceAuditedWriteResult::Ok : ServiceAuditedWriteResult::Unavailable;
+        } );
     }
 } // namespace sw

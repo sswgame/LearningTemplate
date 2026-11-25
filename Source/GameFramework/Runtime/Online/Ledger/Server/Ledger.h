@@ -34,6 +34,7 @@
 
 namespace sw
 {
+    class ServiceCommitAttempt;
     /** @brief 자산 하나의 공급 합입니다. 분개 하나 이상 또는 이월 레코드에서 셉니다. */
     struct LedgerSupplyStats
     {
@@ -91,14 +92,20 @@ namespace sw
          *          붙이는 쓰기 수는 바뀐 잔액 수에 분개 1, 분개의 TTL 색인 1 과 계정, 맡김 보유자 수(내역)와 계정 보유자 수(묘비가 없어야 한다는 조건)를 더한 값이다.
          *          다리의 계정에 묘비가 서 있으면(탈퇴로 지움) `AccountDeleted` 이다.
          *          부르는 쪽 쓰기와 합쳐 `ServiceTransaction::kMaxWriteCount` 를 넘으면 `Invalid` 이다.
-         *          커밋이 `Conflict` 나 `Unavailable` 이면 `resolveConflict` 로 가린다.
+         *          커밋은 `commitTransfer` 로 한다.
          */
         [[nodiscard]] static LedgerResult stageTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, ServiceTransaction& inoutTransaction,
                                                          LedgerTransferResult& outResult );
         /** @brief 붙인 트랜잭션의 커밋이 실패했을 때 결과를 가립니다. 분개가 이제 있으면 `Ok` 와 `_bReplayed` 이며(다른 서버가 먼저 했거나 응답만 잃은 경우), 없으면 `Conflict` 이고, 읽지 못하면 `Unavailable` 입니다. */
         [[nodiscard]] static LedgerResult resolveConflict( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outResult );
         /**
-         * @brief 이동 하나를 혼자 커밋합니다. 붙이고, 커밋하고, 버전 충돌이면 다시 읽어 다시 합니다(`kMaxRetryCount`).
+         * @brief 붙인 이동이 든 트랜잭션을 커밋하고 결과를 가립니다(멱등 규칙 하나 — 분개가 적용 여부를 안다).
+         * @return `Ok`(이번에 썼으면 새 버전, 이미 쓰였으면 `_bReplayed`), `Invalid`, `Conflict`(시도 함수는 빈 값으로 다시 한다), `Unavailable`(적용됐는지 모르고 분개도 없다 — 같은 키로 나중에), 또는 분개가 말하는 실패입니다.
+         */
+        [[nodiscard]] static LedgerResult commitTransfer( ServiceCommitAttempt& attempt, const ServiceTransaction& transaction, const LedgerTransferRequest& request,
+                                                          LedgerTransferResult& outResult );
+        /**
+         * @brief 이동 하나를 혼자 커밋합니다. 붙이고, 커밋하고, 버전 충돌이면 다시 읽어 다시 합니다(`ServiceCommitRunner`).
          * @details 커밋이 `Unavailable` 이고 분개가 없으면 `Unavailable` 이다. 적용 여부를 모르는 상태이며, 같은 키로 나중에 다시 하면 가려진다.
          */
         [[nodiscard]] static LedgerResult executeTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outResult );

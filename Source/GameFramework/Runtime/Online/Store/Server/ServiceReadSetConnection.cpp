@@ -4,6 +4,7 @@
 
 #include "Core/Foundation/Constants.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 
 namespace sw
@@ -105,7 +106,7 @@ namespace sw
         _listRead.clear();
         _listRangeRead.clear();
         ServiceCommitInfo        info;
-        const ServiceStoreResult committed = _inner.commit( conditioned, &info );
+        const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( _inner, conditioned, &info );
         if ( _pStats != nullptr )
         {
             _pStats->_commitCount.fetch_add( 1, std::memory_order_relaxed );

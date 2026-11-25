@@ -12,10 +12,20 @@
 #include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Online/Ledger/Server/LedgerItemInstance.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
+
+namespace sw
+{
+    template <>
+    struct ServiceConflictAnswer<LedgerResult>
+    {
+        [[nodiscard]] static LedgerResult make() { return LedgerResult::Conflict; }
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -480,65 +490,71 @@ namespace sw
                 return StringUtil::startsWith( key, kPrefix ) && ServiceKeyUtil::parseHex64( key.substr( kPrefix.size() ), outAccountID ) && outAccountID != 0;
             }
 
+            /** @brief 지운 계정의 잔액 @p listBalance 앞쪽(다리 상한까지)을 소각하는 이동을 @p outTransaction 에 붙입니다. 분개 키가 이미 다른 소각에 쓰였으면 Invalid 입니다. */
+            [[nodiscard]] static ServiceStoreResult stageBurn( IServiceStoreConnection& connection, uint64 accountID, const vector<LedgerBalance>& listBalance, int64 timeMs,
+                                                               ServiceTransaction& outTransaction )
+            {
+                const LedgerHolder                       account = LedgerHolder::makeAccount( accountID );
+                LedgerTransferRequest                    request;
+                StringBuilder<constant::buffer::kMax128> journalKey;
+                journalKey.appendFormat( "%#/delete.%#", LedgerJournalKey::makeAccountScope( accountID ), listBalance.front()._assetID );
+                request._journalKey    = string( journalKey.view() );
+                request._reason        = "account.delete";
+                request._timeMs        = timeMs;
+                request._actorKind     = LedgerActorKind::System;
+                const size_t burnCount = std::min( listBalance.size(), static_cast<size_t>( LedgerConstant::kMaxPostingCount ) );
+                for ( size_t balanceIndex = 0; balanceIndex < burnCount; ++balanceIndex )
+                {
+                    const LedgerBalance& balance = listBalance[balanceIndex];
+                    if ( balance._amount > 0 )
+                        request._listPosting.push_back( LedgerPosting{ account, LedgerHolder::makeSink(), balance._assetID, balance._amount } );
+                    else
+                        request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, balance._assetID, -balance._amount } ); // 빚은 메워 없앤다 — 거둘 사람이 없다
+                    if ( LedgerItemInstance::isInstanceAssetID( balance._assetID ) )
+                        outTransaction.erase( LedgerItemInstance::getStateTable(), balance._assetID ); // 소각한 아이템의 상태도 함께 지운다(`stageDestroy` 와 같다)
+                }
+                LedgerTransferResult result;
+                const LedgerResult   staged = stageTransfer( connection, request, TombstoneRule::Skip, outTransaction, result );
+                if ( staged == LedgerResult::Unavailable )
+                    return ServiceStoreResult::Unavailable;
+                if ( staged == LedgerResult::Ok && result._bReplayed == SW_FALSE )
+                    return ServiceStoreResult::Ok;
+                SW_LOG_ERROR_ID( "Ledger.AccountBurnRefused", "Burning the balances of deleted account %# was refused (journal '%#') - the account stays in the deletion queue", accountID,
+                                 request._journalKey.c_str() );
+                return ServiceStoreResult::Invalid;
+            }
+
             /**
              * @brief 지운 계정 하나의 잔액을 모두 소각하고 소각 대기에서 뺍니다. 잔액은 Sink 로, 빚은 Mint 에서 메워 0 으로 만든다(대손 상각).
              * @return 다 소각했으면 Ok, 충돌이 이어지면 Conflict(다음 회차), 분개 키가 이미 다른 소각에 쓰였으면 Invalid, 저장소 문제면 그 결과입니다.
              */
             [[nodiscard]] static ServiceStoreResult burnAccount( IServiceStoreConnection& connection, uint64 accountID, int64 timeMs )
             {
-                const LedgerHolder account       = LedgerHolder::makeAccount( accountID );
-                int32              conflictCount = 0;
-                while ( true )
+                const LedgerHolder account = LedgerHolder::makeAccount( accountID );
+                bool               bDone   = false;
+                // 한 걸음(자산 `kMaxPostingCount` 개까지)마다 커밋한다 — 늦게 닿은 커밋이면 다음 회차가 다시 읽어 남은 것만 소각한다
+                const auto burnStep = [&]( ServiceCommitAttempt& attempt ) -> optional<ServiceStoreResult>
                 {
                     vector<LedgerBalance>    listBalance;
-                    const ServiceStoreResult listed = Ledger::listBalances( connection, account, listBalance );
+                    const ServiceStoreResult listed = Ledger::listBalances( attempt, account, listBalance );
                     if ( listed != ServiceStoreResult::Ok )
                         return listed;
-                    if ( listBalance.empty() )
-                    {
-                        ServiceTransaction done;
-                        done.erase( Ledger::getDeletionQueueTable(), account.makeKey() );
-                        return connection.commit( done );
-                    }
-                    LedgerTransferRequest                    request;
-                    StringBuilder<constant::buffer::kMax128> journalKey;
-                    journalKey.appendFormat( "%#/delete.%#", LedgerJournalKey::makeAccountScope( accountID ), listBalance.front()._assetID );
-                    request._journalKey = string( journalKey.view() );
-                    request._reason     = "account.delete";
-                    request._timeMs     = timeMs;
-                    request._actorKind  = LedgerActorKind::System;
                     ServiceTransaction transaction;
-                    const size_t       burnCount = std::min( listBalance.size(), static_cast<size_t>( LedgerConstant::kMaxPostingCount ) );
-                    for ( size_t balanceIndex = 0; balanceIndex < burnCount; ++balanceIndex )
-                    {
-                        const LedgerBalance& balance = listBalance[balanceIndex];
-                        if ( balance._amount > 0 )
-                            request._listPosting.push_back( LedgerPosting{ account, LedgerHolder::makeSink(), balance._assetID, balance._amount } );
-                        else
-                            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, balance._assetID, -balance._amount } ); // 빚은 메워 없앤다 — 거둘 사람이 없다
-                        if ( LedgerItemInstance::isInstanceAssetID( balance._assetID ) )
-                            transaction.erase( LedgerItemInstance::getStateTable(), balance._assetID ); // 소각한 아이템의 상태도 함께 지운다(`stageDestroy` 와 같다)
-                    }
-                    LedgerTransferResult result;
-                    const LedgerResult   staged = stageTransfer( connection, request, TombstoneRule::Skip, transaction, result );
-                    if ( staged == LedgerResult::Unavailable )
-                        return ServiceStoreResult::Unavailable;
-                    if ( staged != LedgerResult::Ok || result._bReplayed == SW_TRUE )
-                    {
-                        SW_LOG_ERROR_ID( "Ledger.AccountBurnRefused", "Burning the balances of deleted account %# was refused (journal '%#') - the account stays in the deletion queue", accountID,
-                                         request._journalKey.c_str() );
-                        return ServiceStoreResult::Invalid;
-                    }
-                    const ServiceStoreResult committed = connection.commit( transaction );
-                    if ( committed == ServiceStoreResult::Ok )
-                    {
-                        conflictCount = 0;
-                        continue;
-                    }
-                    if ( committed != ServiceStoreResult::Conflict )
-                        return committed; // 늦게 닿은 커밋이면 다음 회차가 다시 읽어 남은 것만 소각한다
-                    if ( ++conflictCount >= LedgerConstant::kMaxRetryCount )
-                        return ServiceStoreResult::Conflict;
+                    bDone = listBalance.empty();
+                    if ( bDone )
+                        transaction.erase( Ledger::getDeletionQueueTable(), account.makeKey() );
+                    else if ( const ServiceStoreResult staged = stageBurn( attempt, accountID, listBalance, timeMs, transaction ); staged != ServiceStoreResult::Ok )
+                        return staged;
+                    const ServiceStoreResult committed = attempt.commit( transaction );
+                    if ( committed == ServiceStoreResult::Conflict )
+                        return nullopt;
+                    return committed;
+                };
+                while ( true )
+                {
+                    const ServiceStoreResult burned = ServiceCommitRunner::run<ServiceStoreResult>( connection, "Ledger.BurnAccount", burnStep );
+                    if ( burned != ServiceStoreResult::Ok || bDone )
+                        return burned;
                 }
             }
 
@@ -710,30 +726,37 @@ namespace sw
         return LedgerInternal::finish( outResult, LedgerResult::Unavailable );
     }
 
+    LedgerResult Ledger::commitTransfer( ServiceCommitAttempt& attempt, const ServiceTransaction& transaction, const LedgerTransferRequest& request, LedgerTransferResult& outResult )
+    {
+        ServiceCommitInfo        info;
+        const ServiceStoreResult committed = attempt.commit( transaction, &info );
+        if ( committed == ServiceStoreResult::Ok )
+        {
+            LedgerInternal::applyCommitVersion( outResult, info._commitVersion );
+            return LedgerResult::Ok;
+        }
+        if ( committed == ServiceStoreResult::Invalid )
+            return LedgerInternal::finish( outResult, LedgerResult::Invalid );
+        const LedgerResult resolved = resolveConflict( attempt, request, outResult );
+        if ( resolved != LedgerResult::Conflict )
+            return resolved;
+        return LedgerInternal::finish( outResult, committed == ServiceStoreResult::Unavailable ? LedgerResult::Unavailable : LedgerResult::Conflict ); // 분개가 없어도 커밋이 늦게 닿을 수 있다 — 같은 키로 나중에
+    }
+
     LedgerResult Ledger::executeTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outResult )
     {
-        for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+        const LedgerResult moved = ServiceCommitRunner::run<LedgerResult>( connection, "Ledger.Transfer", [&]( ServiceCommitAttempt& attempt ) -> optional<LedgerResult>
         {
             ServiceTransaction transaction;
-            const LedgerResult staged = stageTransfer( connection, request, transaction, outResult );
+            const LedgerResult staged = stageTransfer( attempt, request, transaction, outResult );
             if ( staged != LedgerResult::Ok || outResult._bReplayed == SW_TRUE )
                 return staged;
-            ServiceCommitInfo        info;
-            const ServiceStoreResult committed = connection.commit( transaction, &info );
-            if ( committed == ServiceStoreResult::Ok )
-            {
-                LedgerInternal::applyCommitVersion( outResult, info._commitVersion );
-                return LedgerResult::Ok;
-            }
-            if ( committed == ServiceStoreResult::Invalid )
-                return LedgerInternal::finish( outResult, LedgerResult::Invalid );
-            const LedgerResult resolved = resolveConflict( connection, request, outResult );
-            if ( resolved != LedgerResult::Conflict )
-                return resolved;
-            if ( committed == ServiceStoreResult::Unavailable )
-                return LedgerInternal::finish( outResult, LedgerResult::Unavailable ); // 분개가 없어도 커밋이 늦게 닿을 수 있다 — 같은 키로 나중에
-        }
-        return LedgerInternal::finish( outResult, LedgerResult::Conflict );
+            const LedgerResult committed = commitTransfer( attempt, transaction, request, outResult );
+            if ( committed == LedgerResult::Conflict )
+                return nullopt;
+            return committed;
+        } );
+        return LedgerInternal::finish( outResult, moved );
     }
 
     ServiceStoreResult Ledger::listBalances( IServiceStoreConnection& connection, const LedgerHolder& holder, vector<LedgerBalance>& outListBalance )

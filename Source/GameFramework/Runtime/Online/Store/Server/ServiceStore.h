@@ -39,7 +39,7 @@ namespace sw
     {
         Ok = 0,
         NotFound,    ///< 읽기에서 키가 없다
-        Conflict,    ///< 커밋에서 기대 버전이 어긋났다(아무것도 쓰지 않았다). SQL 의 직렬화 실패도 이것이다(다시 읽고 다시 하면 된다)
+        Conflict,    ///< 커밋에서 기대 버전이 어긋났다(아무것도 쓰지 않았다). SQL 의 직렬화 실패도 이것이다(다시 읽고 다시 하면 된다 — `ServiceCommitRunner::run`)
         Unavailable, ///< 저장소에 닿지 못했다. 커밋이라면 적용됐는지 모른다
         Invalid      ///< 빈 테이블이나 키, 키 규칙이나 상한 위반, 한 트랜잭션에 같은 키 둘
     };
@@ -163,10 +163,14 @@ namespace sw
 
         /** @brief 레코드 하나를 읽습니다. 없으면 NotFound 를 반환하고, @p outRecord 는 비며 버전은 `kAbsentVersion` 입니다. */
         [[nodiscard]] virtual ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) = 0;
+
+    protected:
+        // 커밋은 `ServiceCommitRunner` 만 부른다 — 서비스가 손 루프로 충돌을 다시 하면 상한 · 다 썼을 때의 답 · 로그가 자리마다 달라진다(`ServiceCommitRunner.h`).
+        friend struct ServiceCommitRunner;
+
         /** @brief 트랜잭션을 모두 적용하거나 아무것도 적용하지 않습니다. */
         [[nodiscard]] virtual ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) = 0;
 
-    protected:
         // 목록 읽기는 `ServiceRecordReader` 만 부른다 — 결과에 다음 쪽 · 잘림을 싣지 않는 한 쪽 읽기를 서비스 코드가 직접 부르지 못하게 한다(감사 O-18). 구현(메모리 · SQL)은 겹쳐 쓴다.
         friend struct ServiceRecordReader;
 

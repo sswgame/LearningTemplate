@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -77,7 +78,7 @@ namespace sw
                     ServiceTransaction transaction;
                     transaction.put( getTable(), HubProfileStore::makeRecordKey( _completion._accountID ), _completion._bytes, _expectedVersion );
                     ServiceCommitInfo info;
-                    _completion._result  = connection.commit( transaction, &info );
+                    _completion._result  = ServiceCommitRunner::commitOnce( connection, transaction, &info );
                     _completion._version = info._commitVersion;
                 }
 

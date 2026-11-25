@@ -556,6 +556,7 @@ namespace sw
             const ServerDirectoryServiceResult serviceResult = result == ServiceAuditedWriteResult::Ok        ? ServerDirectoryServiceResult{ ServerDirectoryResult::Ok }
                                                              : result == ServiceAuditedWriteResult::NotFound  ? ServerDirectoryServiceResult{ ServerDirectoryResult::NotFound }
                                                              : result == ServiceAuditedWriteResult::Forbidden ? ServerDirectoryServiceResult::fail( OnlineError::kForbidden )
+                                                             : result == ServiceAuditedWriteResult::Busy      ? ServerDirectoryServiceResult::fail( OnlineError::kBusy )
                                                                                                               : ServerDirectoryServiceResult::fail( OnlineError::kUnavailable );
             applyWrite( requestTag, serviceResult );
         } );

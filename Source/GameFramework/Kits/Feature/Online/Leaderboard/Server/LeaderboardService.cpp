@@ -17,6 +17,7 @@
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
@@ -435,7 +436,6 @@ namespace sw
         /** @brief 저장소 스레드에서 도는 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
         struct LeaderboardStoreRun
         {
-            /** @brief 갱신 방식에 따라 새 값을 정하고 버전 조건으로 씁니다. 충돌이면 다시 읽어 `OnlineLimit::kMaxConflictRetry` 번까지 다시 한다. */
             /** @brief 멱등 기록의 응답(적용한 뒤의 값)을 읽습니다. 처음 요청이면 NotFound 입니다. */
             static ServiceStoreResult findReplayedValue( IServiceStoreConnection& connection, const LeaderboardWriteInput& input, int64& outValue )
             {
@@ -449,62 +449,58 @@ namespace sw
                 return ServiceStoreResult::Ok;
             }
 
+            /** @brief 갱신 방식에 따라 새 값을 정하고 버전 조건으로 씁니다. 충돌이면 다시 읽어 다시 한다(`ServiceCommitRunner`). */
             static LeaderboardWriteResult writeValue( IServiceStoreConnection& connection, const LeaderboardWriteInput& input )
             {
                 using Internal = LeaderboardServiceInternal;
                 LeaderboardWriteResult write;
                 // 누적 · 덮어쓰기는 다시 적용하면 값이 달라진다 — 멱등 기록이 재시도를 가린다(Best 는 다시 해도 같다)
                 const bool bRecorded = input._idempotencyKey.isValid() && ( input._update == LeaderboardUpdate::Sum || input._update == LeaderboardUpdate::Latest );
-                for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
-                {
+                write._result        = ServiceCommitRunner::run<LeaderboardServiceResult>( connection, "Leaderboard.Write", [&]( ServiceCommitAttempt& attempt ) -> optional<LeaderboardServiceResult>
+                       {
                     if ( bRecorded )
                     {
-                        const ServiceStoreResult replayed = findReplayedValue( connection, input, write._finalValue );
+                        const ServiceStoreResult replayed = findReplayedValue( attempt, input, write._finalValue );
                         if ( replayed == ServiceStoreResult::Ok )
                         {
-                            write._result = LeaderboardResult::Ok; // 이미 적용했다 — 그때의 값을 돌려준다
-                            return write;
+                            return LeaderboardServiceResult{ LeaderboardResult::Ok }; // 이미 적용했다 — 그때의 값을 돌려준다
                         }
                         if ( replayed != ServiceStoreResult::NotFound )
-                            return write;
+                            return write._result;
                     }
                     ServiceRecord            record;
-                    const ServiceStoreResult readResult = connection.readRecord( input._table, input._key, record );
+                    const ServiceStoreResult readResult = attempt.readRecord( input._table, input._key, record );
                     if ( readResult != ServiceStoreResult::Ok && readResult != ServiceStoreResult::NotFound )
-                        return write;
+                        return write._result;
                     int64      oldValue = 0;
                     const bool bHasOld  = readResult == ServiceStoreResult::Ok && Internal::decodeScore( record._bytes, oldValue );
                     bool       bChanged = false;
                     write._finalValue   = Internal::applyUpdate( input._update, input._order, bHasOld, oldValue, input._value, bChanged );
                     if ( bChanged == false )
                     {
-                        write._result = LeaderboardResult::Ok; // 더 좋지 않으므로 쓰지 않는다
-                        return write;
+                        return LeaderboardServiceResult{ LeaderboardResult::Ok }; // 더 좋지 않으므로 쓰지 않는다
                     }
                     ServiceTransaction transaction;
                     transaction.put( input._table, input._key, Internal::encodeScore( write._finalValue, input._nowMs.count(), input._displayName ), record._version );
                     if ( readResult == ServiceStoreResult::NotFound && input._expiryBaseMs > 0 ) // 계정 · 기간마다 한 번이다(같은 줄을 여럿이 쓰지 않는다)
                         transaction.put( Internal::getScoreExpiryTable(), ServiceTTLRule::makeTTLIndexKey( input._expiryBaseMs, input._key ), vector<uint8>{},
-                                         ServiceRecord::kAnyVersion );
+                                                ServiceRecord::kAnyVersion );
+                    ServiceStoreResult committed = ServiceStoreResult::Ok;
                     if ( bRecorded )
                     {
                         vector<uint8> listReply( sizeof( int64 ) );
                         std::memcpy( listReply.data(), &write._finalValue, sizeof( int64 ) );
-                        ServiceIdempotency::addReply( transaction, input._key, input._idempotencyKey._high, input._idempotencyKey._low, std::move( listReply ) );
+                        committed = ServiceIdempotency::commit( attempt, transaction, input._key, input._idempotencyKey._high, input._idempotencyKey._low, std::move( listReply ) );
                     }
-                    const ServiceStoreResult commitResult = connection.commit( transaction );
-                    const bool               bApplied     = commitResult == ServiceStoreResult::Ok ||
-                                          ( bRecorded && commitResult == ServiceStoreResult::Unavailable && findReplayedValue( connection, input, write._finalValue ) == ServiceStoreResult::Ok );
-                    if ( bApplied )
-                    {
-                        write._result   = LeaderboardResult::Ok;
-                        write._bChanged = SW_TRUE;
-                        return write;
-                    }
-                    if ( commitResult != ServiceStoreResult::Conflict )
-                        return write;
-                }
-                write._result = LeaderboardServiceResult::fail( OnlineError::kBusy );
+                    else
+                        committed = attempt.commit( transaction );
+                    if ( committed == ServiceStoreResult::Conflict )
+                        return nullopt;
+                    if ( committed != ServiceStoreResult::Ok )
+                        return LeaderboardServiceResult::fail( OnlineError::kUnavailable );
+                    write._bChanged = SW_TRUE;
+                    return LeaderboardServiceResult{ LeaderboardResult::Ok };
+                } );
                 return write;
             }
 
@@ -607,7 +603,7 @@ namespace sw
                     if ( staged != LedgerResult::Ok )
                         return false; // 우편 규칙이나 저장소 때문에 실패했으므로 업적도 쓰지 않는다. 다음에 다시 시도한다
                 }
-                return connection.commit( transaction ) == ServiceStoreResult::Ok;
+                return ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok;
             }
 
             /** @brief 계정이 달성한 업적 한 쪽입니다. 읽을 수 없는 기록은 건너뛴다. */
@@ -765,13 +761,13 @@ namespace sw
                     const size_t writeCount = transaction.getWrites().size() + player.getWrites().size();
                     if ( writeCount > static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
                     {
-                        if ( connection.commit( transaction ) != ServiceStoreResult::Ok )
+                        if ( ServiceCommitRunner::commitOnce( connection, transaction ) != ServiceStoreResult::Ok )
                             return false;
                         transaction.clear();
                     }
                     Ledger::appendWrites( player, transaction );
                 }
-                return transaction.isEmpty() || connection.commit( transaction ) == ServiceStoreResult::Ok;
+                return transaction.isEmpty() || ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok;
             }
 
         private:
@@ -949,7 +945,7 @@ namespace sw
         {
             if ( transaction.getWrites().size() + 2 <= static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
                 return ServiceStoreResult::Ok;
-            const ServiceStoreResult committed = connection.commit( transaction );
+            const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
             transaction                        = ServiceTransaction{};
             return committed;
         };
@@ -1002,7 +998,7 @@ namespace sw
             if ( erased != ServiceStoreResult::Ok )
                 return erased;
         }
-        return transaction.getWrites().empty() ? ServiceStoreResult::Ok : connection.commit( transaction );
+        return transaction.getWrites().empty() ? ServiceStoreResult::Ok : ServiceCommitRunner::commitOnce( connection, transaction );
     }
 
     uint64 LeaderboardService::computePeriodID( const LeaderboardDef& definition, UnixMilliseconds nowMs ) const

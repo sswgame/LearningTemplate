@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 
@@ -71,7 +72,7 @@ namespace sw
                     ServiceTransaction transaction;
                     if ( ServiceMailCampaign::stageCreate( campaign, transaction ) == false )
                         return ServiceStoreResult::Invalid;
-                    return connection.commit( transaction );
+                    return ServiceCommitRunner::commitOnce( connection, transaction );
                 }, [&result]( ServiceStoreResult committed )
                 { result = committed; } );
                 if ( result != ServiceStoreResult::Ok )

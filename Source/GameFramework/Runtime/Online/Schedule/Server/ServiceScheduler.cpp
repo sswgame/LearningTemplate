@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/FormatDef.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -141,7 +142,7 @@ namespace sw
         ServiceTransaction transaction;
         ServiceSchedulerInternal::stageRun( transaction, key, claim, expectedVersion );
         ServiceCommitInfo        info;
-        const ServiceStoreResult commitResult = connection.commit( transaction, &info );
+        const ServiceStoreResult commitResult = ServiceCommitRunner::commitOnce( connection, transaction, &info );
         if ( commitResult == ServiceStoreResult::Ok )
         {
             attempt._result   = ClaimResult::Claimed;
@@ -165,7 +166,7 @@ namespace sw
         finished._state    = bSucceeded ? ServiceSchedulerInternal::kStateSucceeded : ServiceSchedulerInternal::kStateFailed;
         ServiceTransaction transaction;
         ServiceSchedulerInternal::stageRun( transaction, ServiceSchedulerInternal::makeKey( run._jobID, run._occurrenceMs.count() ), finished, run._runToken );
-        return connection.commit( transaction );
+        return ServiceCommitRunner::commitOnce( connection, transaction );
     }
 } // namespace sw
 

@@ -11,6 +11,7 @@
 #include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -163,7 +164,7 @@ namespace sw
         ServiceAuditLog::stageEntry( transaction, audit, expectedVersion, HashUtil::computeStringHash64( key.data(), key.size(), false ) );
         ServiceCommitInfo        info;
         ServiceStoreRead<uint64> write;
-        write._result = connection.commit( transaction, &info );
+        write._result = ServiceCommitRunner::commitOnce( connection, transaction, &info );
         write._value  = info._commitVersion;
         return write;
     }

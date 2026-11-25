@@ -7,6 +7,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 
@@ -55,7 +56,7 @@ namespace
             }
             return ServiceRecordReader::readPage( _inner, table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord )._result;
         }
-        ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) override { return _inner.commit( transaction, pOutInfo ); }
+        ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) override { return ServiceCommitRunner::commitOnce( _inner, transaction, pOutInfo ); }
 
     private:
         IServiceStoreConnection& _inner;
@@ -173,7 +174,7 @@ SW_TEST_CASE( LoadBotLedgerAuditTest, StoreCountsCommitsAndConflicts )
         {
             ServiceTransaction transaction;
             transaction.put( kTable, "key", vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
-            return connection.commit( transaction );
+            return ServiceCommitRunner::commitOnce( connection, transaction );
         }, [&slot]( ServiceStoreResult committed )
         { slot = committed; } );
     }

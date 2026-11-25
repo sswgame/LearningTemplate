@@ -104,7 +104,8 @@ namespace sw
         Ok = 0,
         NotFound,   ///< 지울 레코드가 없다
         Forbidden,  ///< 가드가 허락하지 않았다(그사이 강등 등) — 가드가 없는 쓰기도 여기다. 거절 감사 줄(`<동작>.denied`)을 남긴다
-        Unavailable ///< 닿지 못했거나 그사이 바뀌었다(다시 하면 된다)
+        Busy,       ///< 다른 쓰기와 거듭 부딪혔다(쓰지 않았다 — 다시 하면 된다)
+        Unavailable ///< 저장소에 닿지 못했다(적용됐는지 모른다)
     };
 
     struct SW_GF_API ServiceAuditedWrite
@@ -123,7 +124,7 @@ namespace sw
         void setOperatorAudit( const ServiceOperator& actor, string_view action, string_view subject, UnixMilliseconds nowMs, string_view memo = {} );
         /**
          * @brief 가드로 허락을 본 뒤 읽은 버전을 조건으로 쓰거나 지우고 감사 줄을 넣어 커밋합니다. 가드가 읽은 레코드(등급)도 같은 커밋의 조건이다.
-         * @return Ok · NotFound · Forbidden · Unavailable(닿지 못했거나 그사이 바뀌었다 — Conflict 도 "다시 하라" 는 뜻이라 여기로 모은다)
+         *        그사이 바뀌었으면 등급부터 다시 읽어 다시 한다(`ServiceCommitRunner`).
          */
         [[nodiscard]] ServiceAuditedWriteResult commit( IServiceStoreConnection& connection ) const;
     };

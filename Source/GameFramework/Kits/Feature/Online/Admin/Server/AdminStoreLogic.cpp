@@ -13,6 +13,7 @@
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -491,7 +492,7 @@ namespace sw
     {
         ServiceTransaction transaction;
         transaction.erase( getRoleTable(), ServiceKeyUtil::makeHex64( accountID ) );
-        return connection.commit( transaction );
+        return ServiceCommitRunner::commitOnce( connection, transaction );
     }
 
     const hashed_string& AdminStoreLogic::getRoleTable()
@@ -583,18 +584,17 @@ namespace sw
         }
 
         const string scope = ServiceAuditLog::makeOperatorActor( command._adminID );
-        for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+        return AdminStoreLogicInternal::finish( outReply, ServiceCommitRunner::run<AdminServiceResult>( connection, "Admin.Command", [&]( ServiceCommitAttempt& attempt ) -> optional<AdminServiceResult>
         {
             // 시도마다 운영자 등급부터 다시 읽어 커밋 조건으로 건다 — 읽기와 커밋 사이에 강등된 운영자의 명령이 들어가지 않는다(읽은 대상 상태 · 등급도 같이 조건이 된다).
-            ServiceReadSetConnection readSet( connection );
-            AdminRole                attemptRole    = AdminRole::None;
-            uint64                   attemptVersion = 0;
-            if ( readRole( readSet, command._adminID, attemptRole, attemptVersion ) != ServiceStoreResult::Ok )
+            AdminRole attemptRole    = AdminRole::None;
+            uint64    attemptVersion = 0;
+            if ( readRole( attempt, command._adminID, attemptRole, attemptVersion ) != ServiceStoreResult::Ok )
                 return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kUnavailable ) );
             if ( attemptRole < required )
-                return AdminStoreLogicInternal::refuseForRole( connection, command, outReply );
+                return AdminStoreLogicInternal::refuseForRole( attempt, command, outReply );
             vector<uint8>            listStoredReply;
-            const ServiceStoreResult found = ServiceIdempotency::findReply( readSet, scope, command._keyHigh, command._keyLow, listStoredReply );
+            const ServiceStoreResult found = ServiceIdempotency::findReply( attempt, scope, command._keyHigh, command._keyLow, listStoredReply );
             if ( found == ServiceStoreResult::Ok )
             {
                 // 지난 결과이다. 멱등 기록에는 결과 한 바이트만 있고 세션 끊기 표시는 실리지 않으므로 재시도가 두 번 끊지 않는다.
@@ -607,34 +607,21 @@ namespace sw
 
             AdminReply               attemptReply;
             ServiceTransaction       transaction;
-            const AdminServiceResult staged = AdminStoreLogicInternal::stageEffect( readSet, command, transaction, attemptReply );
+            const AdminServiceResult staged = AdminStoreLogicInternal::stageEffect( attempt, command, transaction, attemptReply );
             if ( staged != AdminResult::Ok )
             {
                 outReply = attemptReply;
                 return AdminStoreLogicInternal::finish( outReply, staged );
             }
-            ServiceIdempotency::addReply( transaction, scope, command._keyHigh, command._keyLow, vector<uint8>{ static_cast<uint8>( AdminResult::Ok ) } );
-            const ServiceStoreResult committed = readSet.commit( transaction );
-            if ( committed == ServiceStoreResult::Ok )
-            {
-                outReply = attemptReply;
-                return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok );
-            }
-            if ( committed == ServiceStoreResult::Invalid )
-                return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kInvalidRequest ) );
-            if ( committed == ServiceStoreResult::Unavailable )
-            {
-                // 적용됐는지 알 수 없다. 멱등 기록이 있으면 적용된 것이다.
-                const ServiceStoreResult recheck = ServiceIdempotency::findReply( connection, scope, command._keyHigh, command._keyLow, listStoredReply );
-                if ( recheck != ServiceStoreResult::Ok )
-                    return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kUnavailable ) );
-                outReply            = attemptReply;
-                outReply._bReplayed = SW_TRUE;
-                return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok );
-            }
-            // Conflict 이다. 다음 반복의 멱등 기록 확인이 "이미 됐다" 를 가려 준다
-        }
-        return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kBusy ) );
+            const ServiceStoreResult committed =
+                ServiceIdempotency::commit( attempt, transaction, scope, command._keyHigh, command._keyLow, vector<uint8>{ static_cast<uint8>( AdminResult::Ok ) } );
+            if ( committed == ServiceStoreResult::Conflict )
+                return nullopt; // 다음 시도의 멱등 기록 확인이 "이미 됐다" 를 가려 준다
+            if ( committed != ServiceStoreResult::Ok )
+                return AdminServiceResult::fail( committed == ServiceStoreResult::Invalid ? OnlineError::kInvalidRequest : OnlineError::kUnavailable );
+            outReply = attemptReply;
+            return AdminServiceResult{ AdminResult::Ok };
+        } ) );
     }
 
     AdminServiceResult AdminStoreLogic::seedRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole role, int64 nowMs )
@@ -654,7 +641,7 @@ namespace sw
         audit._after   = toString( role );
         audit._timeMs  = nowMs;
         ServiceAuditLog::stageEntry( transaction, audit, accountID, static_cast<uint64>( nowMs ) );
-        const ServiceStoreResult committed = connection.commit( transaction );
+        const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
         return committed == ServiceStoreResult::Ok || committed == ServiceStoreResult::Conflict ? AdminResult::Ok : AdminServiceResult::fail( OnlineError::kUnavailable );
     }
 } // namespace sw

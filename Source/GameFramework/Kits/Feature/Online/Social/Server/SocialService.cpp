@@ -14,6 +14,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
@@ -216,7 +217,7 @@ namespace sw
                     transaction.erase( Internal::getBlockedByTable(), Internal::makeReverseKey( selfKey ) );
                 if ( otherState == SocialLinkState::Blocked || pSelfLink == nullptr )
                     transaction.erase( Internal::getBlockedByTable(), Internal::makeReverseKey( otherKey ) );
-                return connection.commit( transaction );
+                return ServiceCommitRunner::commitOnce( connection, transaction );
             }
         };
 
@@ -253,22 +254,18 @@ namespace sw
             {
                 if ( _displayName.empty() == false && resolveName( connection ) == false )
                     return;
-                for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
+                // 두 링크 · 두 개수를 읽어 정한다 — 쓰지 않는 쪽(바뀌지 않은 상대 링크)도 판단의 근거라 시도의 읽기 집합이 모두 커밋 조건으로 건다.
+                const ServiceStoreResult result = ServiceCommitRunner::run<ServiceStoreResult>( connection, "Social.Link", [this]( ServiceCommitAttempt& attempt ) -> optional<ServiceStoreResult>
                 {
-                    // 두 링크 · 두 개수를 읽어 정한다 — 쓰지 않는 쪽(바뀌지 않은 상대 링크)도 판단의 근거라 모두 커밋 조건이다(시도마다 새 읽기 집합).
-                    ServiceReadSetConnection readSet( connection );
-                    const ServiceStoreResult commitResult = runOnce( readSet );
-                    if ( commitResult == ServiceStoreResult::Ok )
-                        return;
-                    if ( commitResult != ServiceStoreResult::Conflict )
-                    {
-                        _decision         = SocialLinkDecision{};
-                        _decision._result = SocialServiceResult::fail( OnlineError::kUnavailable );
-                        return;
-                    }
-                }
+                    const ServiceStoreResult once = runOnce( attempt );
+                    if ( once == ServiceStoreResult::Conflict )
+                        return nullopt;
+                    return once;
+                } );
+                if ( result == ServiceStoreResult::Ok )
+                    return;
                 _decision         = SocialLinkDecision{};
-                _decision._result = SocialServiceResult::fail( OnlineError::kBusy );
+                _decision._result = SocialServiceResult::fail( result == ServiceStoreResult::Conflict ? OnlineError::kBusy : OnlineError::kUnavailable );
             }
 
             /** @brief 이름으로 계정 id 를 찾습니다. 못 찾으면 결과를 적고 false 를 반환합니다. */
@@ -292,7 +289,7 @@ namespace sw
             }
 
             /** @brief 읽고, 정하고, 커밋합니다. 쓸 것이 없으면 Ok 이며 결정의 결과가 응답입니다. */
-            ServiceStoreResult runOnce( IServiceStoreConnection& connection )
+            ServiceStoreResult runOnce( ServiceCommitAttempt& connection )
             {
                 using Internal = SocialServiceInternal;
                 ServiceRecord selfLink;
@@ -447,7 +444,7 @@ namespace sw
                 {
                     ServiceTransaction broken; // 지운 계정의 깨진 줄이다 — 지우기만 한다
                     broken.erase( Internal::getLinkTable(), link._key, link._version );
-                    if ( const ServiceStoreResult committed = connection.commit( broken ); committed != ServiceStoreResult::Ok )
+                    if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, broken ); committed != ServiceStoreResult::Ok )
                         return committed;
                     continue;
                 }
@@ -471,7 +468,7 @@ namespace sw
                 {
                     ServiceTransaction broken;
                     broken.erase( Internal::getBlockedByTable(), blocker._key, blocker._version );
-                    if ( const ServiceStoreResult committed = connection.commit( broken ); committed != ServiceStoreResult::Ok )
+                    if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, broken ); committed != ServiceStoreResult::Ok )
                         return committed;
                     continue;
                 }
@@ -481,7 +478,7 @@ namespace sw
         }
         ServiceTransaction counts;
         counts.erase( Internal::getCountTable(), ServiceKeyUtil::makeHex64( accountID ) );
-        return connection.commit( counts );
+        return ServiceCommitRunner::commitOnce( connection, counts );
     }
 
     void SocialService::changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, UnixMilliseconds nowMs, uint64 requestTag )

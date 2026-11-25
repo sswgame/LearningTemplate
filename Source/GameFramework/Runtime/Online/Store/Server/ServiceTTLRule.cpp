@@ -6,6 +6,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -122,7 +123,7 @@ namespace sw
                         break;
                     count = ( count + 1 ) / 2; // 함께 넣는 쓰기가 상한을 넘었다. 묶음을 줄여 다시 짠다
                 }
-                const ServiceStoreResult committed = connection.commit( transaction );
+                const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
                 if ( committed == ServiceStoreResult::Ok )
                     outReport._deletedCount += static_cast<int32>( count );
                 else if ( committed != ServiceStoreResult::Conflict )
@@ -213,7 +214,7 @@ namespace sw
                 bNewPass              = true;
             }
             transaction.put( getBackfillTable(), progressKey, Internal::encodeProgress( progress ), progressRecord._version ); // 없으면 "없어야 함"이다
-            const ServiceStoreResult committed = connection.commit( transaction );
+            const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
             if ( committed == ServiceStoreResult::Conflict )
                 return ServiceStoreResult::Ok; // 다른 쓸기가 같은 진행을 옮겼다. 다음 회차가 이어 간다
             if ( committed != ServiceStoreResult::Ok )
@@ -276,7 +277,7 @@ namespace sw
                     // 색인 형식이 틀린 줄이다. 데이터가 아니라 색인이므로 지워도 잃는 것이 없고, 남기면 앞자리를 막는다
                     ServiceTransaction drop;
                     drop.erase( rule._ttlIndexTable, entry._key, entry._version );
-                    const ServiceStoreResult dropped = connection.commit( drop );
+                    const ServiceStoreResult dropped = ServiceCommitRunner::commitOnce( connection, drop );
                     if ( dropped != ServiceStoreResult::Ok && dropped != ServiceStoreResult::Conflict )
                         return dropped;
                     continue;
@@ -352,7 +353,7 @@ namespace sw
         }
         if ( transaction.isEmpty() )
             return ServiceStoreResult::Ok;
-        const ServiceStoreResult committed = connection.commit( transaction );
+        const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
         if ( committed == ServiceStoreResult::Ok )
             inoutReport._deletedCount += static_cast<int32>( listErased.size() );
         outbEntryDone = bEntryDone;

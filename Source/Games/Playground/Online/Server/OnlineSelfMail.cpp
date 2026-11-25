@@ -19,6 +19,7 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
@@ -48,7 +49,7 @@ namespace sw
                 string             mailKey;
                 bool               bReplayed = false;
                 const bool         bStaged   = ServiceMail::stageSend( connection, _message, transaction, mailKey, bReplayed ) == LedgerResult::Ok;
-                _bSent                       = ( bStaged && connection.commit( transaction ) == ServiceStoreResult::Ok ) ? SW_TRUE : SW_FALSE;
+                _bSent                       = ( bStaged && ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok ) ? SW_TRUE : SW_FALSE;
             }
 
             void complete() override

@@ -13,6 +13,7 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
@@ -347,26 +348,27 @@ namespace sw
         private:
             void runAttempts( IServiceStoreConnection& connection )
             {
-                for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
+                // 판단에 쓴 레코드(내 멤버 역할 · 길드 · 대상의 길드)는 시도의 읽기 집합이 모두 커밋 조건으로 건다 — 강등 · 추방된 임원의 초대 · 공지 · 가입 정책이 읽기와 커밋 사이에 통과하지 않는다.
+                const ServiceStoreResult result = ServiceCommitRunner::run<ServiceStoreResult>( connection, "Guild.Request", [this]( ServiceCommitAttempt& attempt ) -> optional<ServiceStoreResult>
                 {
-                    _serviceResult = GuildResult{};
-                    // 판단에 쓴 레코드(내 멤버 역할 · 길드 · 대상의 길드)를 모두 커밋 조건으로 — 강등 · 추방된 임원의 초대 · 공지 · 가입 정책이 읽기와 커밋 사이에 통과하지 않는다.
-                    ServiceReadSetConnection readSet( connection );
-                    const ServiceStoreResult result = runOnce( readSet );
-                    if ( result == ServiceStoreResult::Ok )
-                    {
-                        collectMembers( connection );
-                        return;
-                    }
-                    if ( result != ServiceStoreResult::Conflict )
-                    {
-                        if ( _serviceResult._result == SocialResult::Ok )
-                            _serviceResult._result = SocialServiceResult::fail( OnlineError::kUnavailable );
-                        return;
-                    }
+                    _serviceResult                = GuildResult{};
+                    const ServiceStoreResult once = runOnce( attempt );
+                    if ( once == ServiceStoreResult::Conflict )
+                        return nullopt;
+                    return once;
+                } );
+                if ( result == ServiceStoreResult::Ok )
+                {
+                    collectMembers( connection );
+                    return;
                 }
-                _serviceResult         = GuildResult{};
-                _serviceResult._result = SocialServiceResult::fail( OnlineError::kBusy );
+                if ( result == ServiceStoreResult::Conflict )
+                {
+                    _serviceResult         = GuildResult{};
+                    _serviceResult._result = SocialServiceResult::fail( OnlineError::kBusy );
+                }
+                else if ( _serviceResult._result == SocialResult::Ok )
+                    _serviceResult._result = SocialServiceResult::fail( OnlineError::kUnavailable );
             }
 
             /** @brief 규칙 실패를 처리합니다. 결과를 적고 Invalid 를 반환하며 다시 시도하지 않습니다. */
@@ -386,7 +388,7 @@ namespace sw
                 return GuildServiceInternal::decodeID( outRecord._bytes, outGuildID ) ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
             }
 
-            ServiceStoreResult runOnce( IServiceStoreConnection& connection )
+            ServiceStoreResult runOnce( ServiceCommitAttempt& connection )
             {
                 ServiceRecord            selfGuildRecord;
                 uint64                   guildID  = 0;
@@ -427,7 +429,7 @@ namespace sw
                 }
             }
 
-            ServiceStoreResult runCreate( IServiceStoreConnection& connection )
+            ServiceStoreResult runCreate( ServiceCommitAttempt& connection )
             {
                 using Internal = GuildServiceInternal;
                 if ( GuildService::isValidName( _request._text ) == false )
@@ -468,7 +470,7 @@ namespace sw
             }
 
             /** @brief 공개 길드에 가입 신청을 냅니다. 죽은 신청을 지우고 살아 있는 신청이 상한이면 PendingLimit 입니다. */
-            ServiceStoreResult runApply( IServiceStoreConnection& connection )
+            ServiceStoreResult runApply( ServiceCommitAttempt& connection )
             {
                 using Internal = GuildServiceInternal;
                 ServiceRecord guildRecord;
@@ -525,7 +527,7 @@ namespace sw
             }
 
             /** @brief 서버 시스템이 길드 경험치를 늘립니다. 상한(`kMaxExperience`)을 넘지 않습니다. */
-            ServiceStoreResult runAddExperience( IServiceStoreConnection& connection )
+            ServiceStoreResult runAddExperience( ServiceCommitAttempt& connection )
             {
                 using Internal = GuildServiceInternal;
                 if ( _request._amount <= 0 )
@@ -550,7 +552,7 @@ namespace sw
                 return commitResult;
             }
 
-            ServiceStoreResult runAccept( IServiceStoreConnection& connection )
+            ServiceStoreResult runAccept( ServiceCommitAttempt& connection )
             {
                 using Internal = GuildServiceInternal;
                 ServiceRecord inviteRecord;
@@ -589,7 +591,7 @@ namespace sw
             }
 
             /** @brief "내 길드" 에 대한 요청입니다. 조회, 초대, 떠나기, 내보내기, 역할, 공지가 해당합니다. */
-            ServiceStoreResult runInGuild( IServiceStoreConnection& connection, uint64 guildID, const ServiceRecord& selfGuildRecord )
+            ServiceStoreResult runInGuild( ServiceCommitAttempt& connection, uint64 guildID, const ServiceRecord& selfGuildRecord )
             {
                 using Internal = GuildServiceInternal;
                 ServiceRecord guildRecord;
@@ -675,7 +677,7 @@ namespace sw
             }
 
             /** @brief 임원이 다른 계정을 길드에 초대합니다. 다시 보내면 초대를 덮어씁니다. */
-            ServiceStoreResult runInvite( IServiceStoreConnection& connection, uint64 guildID, const GuildMember& selfMember )
+            ServiceStoreResult runInvite( ServiceCommitAttempt& connection, uint64 guildID, const GuildMember& selfMember )
             {
                 using Internal = GuildServiceInternal;
                 if ( selfMember._role < GuildRole::Officer )
@@ -699,7 +701,7 @@ namespace sw
             }
 
             /** @brief 길드를 떠납니다. 혼자 남은 길드장이 떠나면 길드를 해산하며, 공용 창고와 맡긴 사람별 몫이 모두 비어 있어야 합니다. 멤버가 떠나면 그의 몫을 돌려줍니다. */
-            ServiceStoreResult runLeave( IServiceStoreConnection& connection, uint64 guildID, GuildInfo& inoutInfo, const ServiceRecord& guildRecord, const GuildMember& selfMember,
+            ServiceStoreResult runLeave( ServiceCommitAttempt& connection, uint64 guildID, GuildInfo& inoutInfo, const ServiceRecord& guildRecord, const GuildMember& selfMember,
                                          const ServiceRecord& selfMemberRecord, const ServiceRecord& selfGuildRecord )
             {
                 using Internal = GuildServiceInternal;
@@ -870,7 +872,7 @@ namespace sw
              * @details 키셋 쪽 읽기다 — 쪽 크기는 클라이언트가 정하고 서버가 `GuildLimit::kMaxStoragePage` 로 자른다(입력 검증). 쪽이 가득 차면 마지막 품목이 다음 커서다.
              *          커서는 클라이언트 값이지만 길드는 요청한 계정의 것이라 다른 길드의 보유자를 가리킬 수 없다.
              */
-            ServiceStoreResult runListStorage( IServiceStoreConnection& connection, uint64 guildID )
+            ServiceStoreResult runListStorage( ServiceCommitAttempt& connection, uint64 guildID )
             {
                 using Internal                         = GuildServiceInternal;
                 const GuildStorageCursor& cursor       = _request._storageCursor;
@@ -935,7 +937,7 @@ namespace sw
             }
 
             /** @brief 임원의 신청 처리입니다. 목록, 받아들이기(수락과 같은 쓰기), 지우기가 해당합니다. */
-            ServiceStoreResult runApplication( IServiceStoreConnection& connection, uint64 guildID, GuildInfo& inoutInfo, const ServiceRecord& guildRecord )
+            ServiceStoreResult runApplication( ServiceCommitAttempt& connection, uint64 guildID, GuildInfo& inoutInfo, const ServiceRecord& guildRecord )
             {
                 using Internal = GuildServiceInternal;
                 if ( _request._operation == GuildOperation::ListApplications )
@@ -994,7 +996,7 @@ namespace sw
             }
 
             /** @brief 내보내기와 역할 바꾸기(길드장 넘기기 포함)입니다. */
-            ServiceStoreResult runMemberChange( IServiceStoreConnection& connection, uint64 guildID, GuildInfo& inoutInfo, const ServiceRecord& guildRecord,
+            ServiceStoreResult runMemberChange( ServiceCommitAttempt& connection, uint64 guildID, GuildInfo& inoutInfo, const ServiceRecord& guildRecord,
                                                 const GuildMember& selfMember, const ServiceRecord& selfMemberRecord )
             {
                 using Internal = GuildServiceInternal;
@@ -1065,7 +1067,7 @@ namespace sw
              * @details 이전 불가 자산(유료 재화)은 맡긴 사람별 보유자에 든다 — 공용 창고에 섞이면 다른 임원이 꺼내 계정 사이로 옮겨진다. 맡긴 당사자가 허용한 권한 안에서만
              *          다른 계정으로 간다(사용자 결정 2026-11-12, 감사 O-10). 정책이 없으면(화폐 카탈로그 없이 조립한 서버) 유료 재화도 없어 모두 공용 창고이다.
              */
-            ServiceStoreResult runStorageTransfer( IServiceStoreConnection& connection, uint64 guildID, const GuildInfo& info, const ServiceRecord& guildRecord, const GuildMember& selfMember )
+            ServiceStoreResult runStorageTransfer( ServiceCommitAttempt& connection, uint64 guildID, const GuildInfo& info, const ServiceRecord& guildRecord, const GuildMember& selfMember )
             {
                 using Internal      = GuildServiceInternal;
                 const bool bDeposit = _request._operation == GuildOperation::Deposit;
@@ -1119,11 +1121,11 @@ namespace sw
                 const LedgerResult   staged = Ledger::stageTransfer( connection, transfer, transaction, transferResult );
                 if ( staged != LedgerResult::Ok )
                     return failLedger( staged );
-                if ( transferResult._bReplayed == SW_FALSE && connection.commit( transaction ) != ServiceStoreResult::Ok )
+                if ( transferResult._bReplayed == SW_FALSE )
                 {
-                    const LedgerResult resolved = Ledger::resolveConflict( connection, transfer, transferResult );
-                    if ( resolved != LedgerResult::Ok )
-                        return resolved == LedgerResult::Conflict ? ServiceStoreResult::Conflict : ServiceStoreResult::Unavailable;
+                    const LedgerResult committed = Ledger::commitTransfer( connection, transaction, transfer, transferResult );
+                    if ( committed != LedgerResult::Ok )
+                        return committed == LedgerResult::Conflict ? ServiceStoreResult::Conflict : ServiceStoreResult::Unavailable;
                 }
                 const AccountID itemDepositorID = bShare ? depositorID : kInvalidAccountID;
                 for ( const LedgerTransferResult::HolderBalance& holderBalance : transferResult._listHolderBalance )
@@ -1179,7 +1181,7 @@ namespace sw
              *          부여 · 회수는 멱등 기록(`ServiceIdempotency`, 지우지 않는다)을 같은 트랜잭션에 남긴다 — 같은 키의 재전송은 상태를 바꾸지 않고 Ok 만 돌려주므로,
              *          쓴 만큼 줄어든 한도가 되돌아가거나 회수 뒤 늦게 다시 온 부여가 허용을 되살리지 않는다(Stripe Idempotency-Key 와 같다).
              */
-            ServiceStoreResult runStorageGrant( IServiceStoreConnection& connection, uint64 guildID )
+            ServiceStoreResult runStorageGrant( ServiceCommitAttempt& connection, uint64 guildID )
             {
                 using Internal    = GuildServiceInternal;
                 const bool bGrant = _request._operation == GuildOperation::GrantWithdrawal;
@@ -1204,7 +1206,6 @@ namespace sw
                     return ServiceStoreResult::Unavailable;
                 const bool         bExists = grantRead == ServiceStoreResult::Ok;
                 ServiceTransaction transaction;
-                ServiceIdempotency::addReply( transaction, scope, key._high, key._low, vector<uint8>{ static_cast<uint8>( SocialResult::Ok ) } );
                 if ( bGrant == false )
                 {
                     if ( bExists ) // 이미 없어도 기록은 남긴다 — 회수의 재전송도 같은 답이다
@@ -1234,14 +1235,10 @@ namespace sw
             }
 
             /** @brief 허용 부여 · 회수를 커밋합니다. 적용됐는지 모르는 실패(Unavailable)는 멱등 기록이 있으면 적용된 것으로 봅니다. */
-            ServiceStoreResult commitGrant( IServiceStoreConnection& connection, const ServiceTransaction& transaction, string_view scope )
+            ServiceStoreResult commitGrant( ServiceCommitAttempt& attempt, ServiceTransaction& inoutTransaction, string_view scope )
             {
-                const ServiceStoreResult committed = connection.commit( transaction );
-                if ( committed != ServiceStoreResult::Unavailable )
-                    return committed; // 같은 키가 그사이 다른 서버에서 커밋됐으면 Conflict 로 다시 읽어 기록을 찾는다
-                vector<uint8> listReply;
-                const bool    bApplied = ServiceIdempotency::findReply( connection, scope, _request._idempotencyKey._high, _request._idempotencyKey._low, listReply ) == ServiceStoreResult::Ok;
-                return bApplied ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
+                return ServiceIdempotency::commit( attempt, inoutTransaction, scope, _request._idempotencyKey._high, _request._idempotencyKey._low,
+                                                   vector<uint8>{ static_cast<uint8>( SocialResult::Ok ) } );
             }
 
             /** @brief 성공한 뒤 멤버 목록을 읽습니다. 조회이면 정보로, 변경이면 알림 대상으로 씁니다. 창고 요청(이동 · 목록 · 허용)은 멤버 정보가 바뀌지 않으므로 읽지 않습니다. */
@@ -1315,12 +1312,14 @@ namespace sw
             /** @brief 맡김 @p holder 의 잔액을 모두 소각합니다. 분개는 자산 `kMaxPostingCount` 개씩, 키는 @p journalPrefix + 첫 자산입니다. */
             static ServiceStoreResult burnEscrow( IServiceStoreConnection& connection, const LedgerHolder& holder, const string& journalPrefix, int64 nowMs )
             {
-                for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; )
+                bool       bDone    = false;
+                const auto burnStep = [&]( ServiceCommitAttempt& attempt ) -> optional<ServiceStoreResult>
                 {
                     vector<LedgerBalance> listBalance;
-                    if ( Ledger::listBalances( connection, holder, listBalance ) != ServiceStoreResult::Ok )
+                    if ( Ledger::listBalances( attempt, holder, listBalance ) != ServiceStoreResult::Ok )
                         return ServiceStoreResult::Unavailable;
-                    if ( listBalance.empty() )
+                    bDone = listBalance.empty();
+                    if ( bDone )
                         return ServiceStoreResult::Ok;
                     LedgerTransferRequest                    request;
                     StringBuilder<constant::buffer::kMax128> journalKey;
@@ -1335,14 +1334,23 @@ namespace sw
                     {
                         request._listPosting.push_back( LedgerPosting{ holder, LedgerHolder::makeSink(), listBalance[index]._assetID, listBalance[index]._amount } );
                     }
+                    ServiceTransaction   transaction;
                     LedgerTransferResult result;
-                    const LedgerResult   moved = Ledger::executeTransfer( connection, request, result );
+                    LedgerResult         moved = Ledger::stageTransfer( attempt, request, transaction, result );
+                    if ( moved == LedgerResult::Ok && result._bReplayed == SW_FALSE )
+                        moved = Ledger::commitTransfer( attempt, transaction, request, result );
                     if ( moved == LedgerResult::Unavailable )
                         return ServiceStoreResult::Unavailable;
                     if ( moved != LedgerResult::Ok || result._bReplayed == SW_TRUE )
-                        ++attempt; // 그사이 바뀌었거나 같은 키가 이미 쓰였다 — 다시 읽는다
+                        return nullopt; // 그사이 바뀌었거나 같은 키가 이미 쓰였다 — 다시 읽는다
+                    return ServiceStoreResult::Ok;
+                };
+                while ( true )
+                {
+                    const ServiceStoreResult burned = ServiceCommitRunner::run<ServiceStoreResult>( connection, "Guild.BurnEscrow", burnStep );
+                    if ( burned != ServiceStoreResult::Ok || bDone )
+                        return burned;
                 }
-                return ServiceStoreResult::Conflict;
             }
 
             /** @brief 길드 @p guildID 의 허용 중 @p accountID 가 주거나(@p bAll 이면 모두) 받은 것을 지웁니다. */
@@ -1370,13 +1378,13 @@ namespace sw
                         transaction.erase( Internal::getGrantTable(), record._key, record._version );
                         if ( transaction.getWrites().size() < static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
                             continue;
-                        if ( const ServiceStoreResult committed = connection.commit( transaction ); committed != ServiceStoreResult::Ok )
+                        if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction ); committed != ServiceStoreResult::Ok )
                             return committed;
                         transaction = ServiceTransaction{};
                     }
                     if ( transaction.getWrites().empty() == false )
                     {
-                        if ( const ServiceStoreResult committed = connection.commit( transaction ); committed != ServiceStoreResult::Ok )
+                        if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction ); committed != ServiceStoreResult::Ok )
                             return committed;
                     }
                     if ( static_cast<int32>( listGrant.size() ) < Internal::kGrantPageSize )
@@ -1397,7 +1405,7 @@ namespace sw
                     return burned;
                 ServiceTransaction transaction;
                 transaction.erase( Internal::getDepositorTable(), Internal::makePairKey( guildID, depositorID ) );
-                return connection.commit( transaction );
+                return ServiceCommitRunner::commitOnce( connection, transaction );
             }
 
             /** @brief 남은 멤버 중 다음 길드장(가장 높은 역할, 같으면 먼저 들어온 사람, 같으면 작은 id)을 고릅니다. 없으면 false 입니다. */
@@ -1453,7 +1461,7 @@ namespace sw
                 if ( memberRead == ServiceStoreResult::Ok )
                     transaction.erase( Internal::getMemberTable(), memberKey, memberRecord._version );
                 if ( bGuildOk == false )
-                    return connection.commit( transaction ); // 길드가 이미 없다 — 계정 쪽 줄만 지운다
+                    return ServiceCommitRunner::commitOnce( connection, transaction ); // 길드가 이미 없다 — 계정 쪽 줄만 지운다
                 const bool bMaster = bMemberOk && selfMember._role == GuildRole::Master;
                 if ( bMaster && info._memberCount <= 1 )
                 {
@@ -1482,7 +1490,7 @@ namespace sw
                         return grants;
                     transaction.erase( Internal::getGuildTable(), guildKey, guildRecord._version );
                     transaction.erase( Internal::getNameTable(), Internal::makeNameKey( info._name ) );
-                    return connection.commit( transaction );
+                    return ServiceCommitRunner::commitOnce( connection, transaction );
                 }
                 if ( bMaster )
                 {
@@ -1501,7 +1509,7 @@ namespace sw
                 }
                 info._memberCount = info._memberCount > 0 ? info._memberCount - 1 : 0;
                 transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
-                return connection.commit( transaction );
+                return ServiceCommitRunner::commitOnce( connection, transaction );
             }
         };
     } // namespace
@@ -1529,7 +1537,7 @@ namespace sw
                 if ( Internal::decodeInviteExpiry( record._bytes, expiresMs ) )
                     transaction.erase( Internal::getInviteExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, record._key ) );
             }
-            if ( const ServiceStoreResult committed = connection.commit( transaction ); committed != ServiceStoreResult::Ok )
+            if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction ); committed != ServiceStoreResult::Ok )
                 return committed;
         }
         // 낸 신청(역색인 `<나>/<길드>` → 신청 `<길드>/<나>`)
@@ -1547,7 +1555,7 @@ namespace sw
                 transaction.erase( Internal::getAccountApplicationTable(), record._key, record._version );
                 transaction.erase( Internal::getApplicationTable(), Internal::makeApplicationReverseKey( record._key ) ); // 역색인의 역은 신청 키다
             }
-            if ( const ServiceStoreResult committed = connection.commit( transaction ); committed != ServiceStoreResult::Ok )
+            if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction ); committed != ServiceStoreResult::Ok )
                 return committed;
         }
         uint64                   guildID = 0;
@@ -1561,7 +1569,7 @@ namespace sw
         {
             ServiceTransaction broken; // 지운 계정의 깨진 줄이다 — 지우기만 한다
             broken.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( accountID ), selfGuildRecord._version );
-            return connection.commit( broken );
+            return ServiceCommitRunner::commitOnce( connection, broken );
         }
         return GuildDeleteAccountInternal::eraseMembership( connection, guildID, accountID, selfGuildRecord, nowMs );
     }

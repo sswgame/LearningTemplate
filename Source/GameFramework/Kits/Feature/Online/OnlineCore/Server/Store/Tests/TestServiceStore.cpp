@@ -4,6 +4,7 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 // ServiceStoreTest — 서비스 저장소 트랜잭션의 약속(원장 · 우편 · 거래가 기대는 것): "없어야 한다" 조건, 버전 조건, 원자성, 키 규칙,
 // 그리고 그 위의 멱등 기록. 메모리 구현으로 본다(SQL 구현도 같은 약속을 지킨다)(nogpu).
@@ -86,17 +87,22 @@ SW_TEST_CASE( ServiceStoreTest, IdempotencyRecordsTheFirstReply )
     sw::vector<uint8>         reply;
     SW_EXPECT_TRUE( sw::ServiceIdempotency::findReply( database, "a1", 7, 9, reply ) == sw::ServiceStoreResult::NotFound );
 
-    sw::ServiceTransaction first;
-    first.put( kTable, "effect", makeBytesOf( "done" ) );
-    sw::ServiceIdempotency::addReply( first, "a1", 7, 9, makeBytesOf( "reply-1" ) );
-    SW_REQUIRE_TRUE( database.commit( first ) == sw::ServiceStoreResult::Ok );
+    const auto write = []( sw::IServiceStoreConnection& connection, const utf8* pEffect, const utf8* pReply ) -> sw::ServiceStoreResult
+    {
+        return sw::ServiceCommitRunner::run<sw::ServiceStoreResult>( connection, "Test.Idempotency", [&]( sw::ServiceCommitAttempt& attempt ) -> sw::optional<sw::ServiceStoreResult>
+        {
+            sw::ServiceTransaction transaction;
+            transaction.put( kTable, "effect", makeBytesOf( pEffect ) );
+            return sw::ServiceIdempotency::commit( attempt, transaction, "a1", 7, 9, makeBytesOf( pReply ) ); // 충돌도 답으로 받는다
+        } );
+    };
+    sw::UnreliableStoreConnection lostReply( database );
+    lostReply._lostReplyCount = 1;
+    SW_REQUIRE_TRUE( write( lostReply, "done", "reply-1" ) == sw::ServiceStoreResult::Ok ); // 쓰고 응답을 잃었다 — 기록이 있으면 적용된 것이다
     SW_REQUIRE_TRUE( sw::ServiceIdempotency::findReply( database, "a1", 7, 9, reply ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( reply == makeBytesOf( "reply-1" ) );
 
-    sw::ServiceTransaction retry; // 다른 서버가 같은 요청을 동시에 처리했다
-    retry.put( kTable, "effect", makeBytesOf( "done-again" ) );
-    sw::ServiceIdempotency::addReply( retry, "a1", 7, 9, makeBytesOf( "reply-2" ) );
-    SW_EXPECT_TRUE( database.commit( retry ) == sw::ServiceStoreResult::Conflict );
+    SW_EXPECT_TRUE( write( database, "done-again", "reply-2" ) == sw::ServiceStoreResult::Conflict ); // 다른 서버가 같은 요청을 동시에 처리했다
     sw::ServiceRecord effect;
     SW_REQUIRE_TRUE( database.readRecord( kTable, "effect", effect ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( effect._bytes == makeBytesOf( "done" ) );

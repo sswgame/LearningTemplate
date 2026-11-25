@@ -12,7 +12,7 @@ namespace sw
     {
         static constexpr int32 kMaxKeySize       = 256;  ///< 저장소, 캐시, 우편함 키 한 개의 최대 길이
         static constexpr int32 kMaxBalanceCount  = 1024; ///< 프로토콜 메시지 하나가 싣는 잔액 수의 상한(경제, 관리자, 우편함)
-        static constexpr int32 kMaxConflictRetry = 4;    ///< 저장소 충돌(낙관적 잠금) 때 서비스가 다시 시도하는 횟수(길드, 소셜, 리더보드)
+        static constexpr int32 kMaxConflictRetry = 8;    ///< 저장소 충돌(낙관적 잠금) 때 시도 함수를 부르는 횟수의 상한(`ServiceCommitRunner`)
 
         // 요청 크기와 문자열 상한 — 서비스 프레임워크가 본문을 읽기 전에, 키트가 필드를 읽을 때 같은 값을 본다. 조용히 자르지 않고 거절한다.
         static constexpr int32 kMaxRequestBodySize = 64 * 1024; ///< 서비스 요청 본문 상한. 스트림 프레임 상한과 별개이며 서비스는 작게 둔다

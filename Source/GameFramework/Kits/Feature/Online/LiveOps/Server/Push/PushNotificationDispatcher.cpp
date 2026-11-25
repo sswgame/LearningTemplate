@@ -8,6 +8,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsProtocol.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
@@ -118,20 +119,15 @@ namespace sw
             {
                 ServiceTransaction transaction;
                 transaction.put( PushNotificationDispatcherInternal::getTopicClaimTable(), claimKey, vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
-                return connection.commit( transaction );
+                return ServiceCommitRunner::commitOnce( connection, transaction );
             }
 
-            /**
-             * @brief 기기 등록(덮어쓰기와 넘친 가장 오래된 기기 지우기)이나 해지(@p bytes 가 비었다)를 한 트랜잭션으로 씁니다.
-             * @details 등록은 토큰의 역색인(@p ownerKey)도 고친다 — 같은 토큰을 다른 계정이 가지고 있었으면 그 계정의 기기를 지운다. 기기를 넘겨받은 사람에게
-             *          앞 계정의 알림이 가지 않게 한다(FCM · APNs 토큰은 기기 · 앱 설치에 붙고 계정을 모른다).
-             */
-            static LiveOpsServiceResult writeDevice( IServiceStoreConnection& connection, AccountID accountID, const string& key, const string& ownerKey,
-                                                     const vector<uint8>& bytes )
+            /** @brief 기기 등록 · 해지의 쓰기를 @p outTransaction 에 붙입니다(`writeDevice` 의 시도 하나). */
+            static LiveOpsServiceResult stageDevice( IServiceStoreConnection& connection, AccountID accountID, const string& key, const string& ownerKey,
+                                                     const vector<uint8>& bytes, ServiceTransaction& outTransaction )
             {
                 using Internal             = PushNotificationDispatcherInternal;
                 const hashed_string& table = Internal::getDeviceTable();
-                ServiceTransaction   transaction;
                 if ( bytes.empty() )
                 {
                     ServiceRecord            current;
@@ -140,8 +136,8 @@ namespace sw
                         return LiveOpsResult::NotFound;
                     if ( readResult != ServiceStoreResult::Ok )
                         return LiveOpsServiceResult::fail( OnlineError::kUnavailable );
-                    transaction.erase( table, key, current._version );
-                    if ( Internal::stageOwnerErase( connection, ownerKey, key, transaction ) != ServiceStoreResult::Ok )
+                    outTransaction.erase( table, key, current._version );
+                    if ( Internal::stageOwnerErase( connection, ownerKey, key, outTransaction ) != ServiceStoreResult::Ok )
                         return LiveOpsServiceResult::fail( OnlineError::kUnavailable );
                 }
                 else
@@ -169,17 +165,17 @@ namespace sw
                     const bool bEvictOldestDevice = bReplacing == false && deviceCount >= PushLimit::kMaxDevicePerAccount && pOldestKey != nullptr;
                     if ( bEvictOldestDevice )
                     {
-                        transaction.erase( table, *pOldestKey ); // 한도를 넘었으므로 가장 오래 등록된 기기를 밀어낸다
+                        outTransaction.erase( table, *pOldestKey ); // 한도를 넘었으므로 가장 오래 등록된 기기를 밀어낸다
                         for ( const ServiceRecord& record : listRecord )
                         {
                             PushDeviceRegistration evicted;
                             const bool             bEvicted = record._key == *pOldestKey && LiveOpsProtocol::decodeDevice( record._key, record._bytes, evicted );
-                            if ( bEvicted && Internal::stageOwnerErase( connection, Internal::makeOwnerKey( evicted._providerID, evicted._token ), record._key, transaction ) !=
+                            if ( bEvicted && Internal::stageOwnerErase( connection, Internal::makeOwnerKey( evicted._providerID, evicted._token ), record._key, outTransaction ) !=
                                                  ServiceStoreResult::Ok )
                                 return LiveOpsServiceResult::fail( OnlineError::kUnavailable );
                         }
                     }
-                    transaction.put( table, key, bytes );
+                    outTransaction.put( table, key, bytes );
                     // 역색인 — 다른 계정이 이 토큰을 가졌으면 그 기기를 지우고 이 계정으로 옮긴다
                     ServiceRecord            owner;
                     const ServiceStoreResult ownerRead = connection.readRecord( Internal::getDeviceOwnerTable(), ownerKey, owner );
@@ -191,14 +187,34 @@ namespace sw
                         ServiceRecord            previous;
                         const ServiceStoreResult previousRead = connection.readRecord( table, previousKey, previous );
                         if ( previousRead == ServiceStoreResult::Ok )
-                            transaction.erase( table, previousKey, previous._version );
+                            outTransaction.erase( table, previousKey, previous._version );
                         else if ( previousRead != ServiceStoreResult::NotFound )
                             return LiveOpsServiceResult::fail( OnlineError::kUnavailable );
                     }
-                    transaction.put( Internal::getDeviceOwnerTable(), ownerKey, vector<uint8>( key.begin(), key.end() ),
-                                     ownerRead == ServiceStoreResult::Ok ? owner._version : ServiceRecord::kAbsentVersion );
+                    outTransaction.put( Internal::getDeviceOwnerTable(), ownerKey, vector<uint8>( key.begin(), key.end() ),
+                                        ownerRead == ServiceStoreResult::Ok ? owner._version : ServiceRecord::kAbsentVersion );
                 }
-                return connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsServiceResult{ LiveOpsResult::Ok } : LiveOpsServiceResult::fail( OnlineError::kUnavailable );
+                return LiveOpsResult::Ok;
+            }
+
+            /**
+             * @brief 기기 등록(덮어쓰기와 넘친 가장 오래된 기기 지우기)이나 해지(@p bytes 가 비었다)를 한 트랜잭션으로 씁니다.
+             * @details 등록은 토큰의 역색인(@p ownerKey)도 고친다 — 같은 토큰을 다른 계정이 가지고 있었으면 그 계정의 기기를 지운다. 기기를 넘겨받은 사람에게
+             *          앞 계정의 알림이 가지 않게 한다(FCM · APNs 토큰은 기기 · 앱 설치에 붙고 계정을 모른다).
+             */
+            static LiveOpsServiceResult writeDevice( IServiceStoreConnection& connection, AccountID accountID, const string& key, const string& ownerKey, const vector<uint8>& bytes )
+            {
+                return ServiceCommitRunner::run<LiveOpsServiceResult>( connection, "Push.WriteDevice", [&]( ServiceCommitAttempt& attempt ) -> optional<LiveOpsServiceResult>
+                {
+                    ServiceTransaction         transaction;
+                    const LiveOpsServiceResult staged = stageDevice( attempt, accountID, key, ownerKey, bytes, transaction );
+                    if ( staged != LiveOpsResult::Ok )
+                        return staged;
+                    const ServiceStoreResult committed = attempt.commit( transaction );
+                    if ( committed == ServiceStoreResult::Conflict )
+                        return nullopt; // 그사이 다른 기기가 등록됐거나 토큰이 옮겨 갔다
+                    return committed == ServiceStoreResult::Ok ? LiveOpsServiceResult{ LiveOpsResult::Ok } : LiveOpsServiceResult::fail( OnlineError::kUnavailable );
+                } );
             }
         };
     } // namespace
@@ -271,7 +287,7 @@ namespace sw
         }
         if ( transaction.isEmpty() == false )
         {
-            const ServiceStoreResult committed = connection.commit( transaction );
+            const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
             if ( committed != ServiceStoreResult::Ok )
                 return committed;
         }

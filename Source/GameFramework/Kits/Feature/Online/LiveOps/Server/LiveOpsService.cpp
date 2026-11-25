@@ -391,6 +391,7 @@ namespace sw
             const LiveOpsServiceResult serviceResult = result == ServiceAuditedWriteResult::Ok        ? LiveOpsServiceResult{ LiveOpsResult::Ok }
                                                      : result == ServiceAuditedWriteResult::NotFound  ? LiveOpsServiceResult{ LiveOpsResult::NotFound }
                                                      : result == ServiceAuditedWriteResult::Forbidden ? LiveOpsServiceResult::fail( OnlineError::kForbidden )
+                                                     : result == ServiceAuditedWriteResult::Busy      ? LiveOpsServiceResult::fail( OnlineError::kBusy )
                                                                                                       : LiveOpsServiceResult::fail( OnlineError::kUnavailable );
             applyWrite( requestTag, serviceResult );
         } );

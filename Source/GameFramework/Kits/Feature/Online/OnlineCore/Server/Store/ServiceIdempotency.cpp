@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -30,8 +31,14 @@ namespace sw
         return result;
     }
 
-    void ServiceIdempotency::addReply( ServiceTransaction& transaction, string_view scope, uint64 keyHigh, uint64 keyLow, vector<uint8> replyBytes )
+    ServiceStoreResult ServiceIdempotency::commit( ServiceCommitAttempt& attempt, ServiceTransaction& inoutTransaction, string_view scope, uint64 keyHigh, uint64 keyLow,
+                                                   vector<uint8> replyBytes )
     {
-        transaction.put( getTable(), makeKey( scope, keyHigh, keyLow ), std::move( replyBytes ), ServiceRecord::kAbsentVersion );
+        inoutTransaction.put( getTable(), makeKey( scope, keyHigh, keyLow ), std::move( replyBytes ), ServiceRecord::kAbsentVersion );
+        const ServiceStoreResult committed = attempt.commit( inoutTransaction );
+        if ( committed != ServiceStoreResult::Unavailable )
+            return committed;
+        vector<uint8> storedBytes;
+        return findReply( attempt, scope, keyHigh, keyLow, storedBytes ) == ServiceStoreResult::Ok ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
     }
 } // namespace sw

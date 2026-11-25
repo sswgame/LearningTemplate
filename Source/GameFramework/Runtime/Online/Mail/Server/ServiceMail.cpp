@@ -9,6 +9,7 @@
 #include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -228,7 +229,7 @@ namespace sw
                 return ServiceStoreResult::Invalid;
             transaction.erase( getNotificationTable(), record._key, record._version );
         }
-        const ServiceStoreResult committed = connection.commit( transaction );
+        const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
         if ( committed == ServiceStoreResult::Ok )
             outListNotification = std::move( listNotification );
         return committed;

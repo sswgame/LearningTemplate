@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 
@@ -91,7 +92,7 @@ namespace
         {
             ServiceStoreResult result = ServiceStoreResult::Invalid;
             const bool         bDone  = run( store, [&]( IServiceStoreConnection& connection )
-                     { result = connection.commit( transaction, pOutInfo ); } );
+                     { result = ServiceCommitRunner::commitOnce( connection, transaction, pOutInfo ); } );
             SW_EXPECT_TRUE( bDone );
             return result;
         }
@@ -170,7 +171,7 @@ namespace
         static void recordCommit( vector<string>& inoutListLine, IServiceStoreConnection& connection, string_view step, const ServiceTransaction& transaction, ServiceCommitInfo& outInfo )
         {
             outInfo                         = ServiceCommitInfo{};
-            const ServiceStoreResult result = connection.commit( transaction, &outInfo );
+            const ServiceStoreResult result = ServiceCommitRunner::commitOnce( connection, transaction, &outInfo );
             addLine( inoutListLine, step, result, outInfo._conflictIndex );
         }
 
@@ -336,7 +337,7 @@ SW_TEST_CASE( ServiceStoreParityTest, ConcurrentCreatesHaveOneWinner, ._timeoutS
         {
             ServiceTransaction transaction;
             transaction.put( kTable, "only", SQLServiceStoreTestUtil::makeBytes( "x" ), ServiceRecord::kAbsentVersion );
-            result = connection.commit( transaction );
+            result = ServiceCommitRunner::commitOnce( connection, transaction );
         };
         fixture._store.submit( sw::make_unique<ServiceStoreTestJob<decltype( function )>>( std::move( function ), completeCount, cancelledCount ) );
     }
@@ -375,7 +376,7 @@ namespace
         {
             ServiceTransaction transaction;
             transaction.put( kRangeTable, key, SQLServiceStoreTestUtil::makeBytes( text ) );
-            SW_EXPECT_TRUE( connection.commit( transaction ) == ServiceStoreResult::Ok );
+            SW_EXPECT_TRUE( ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok );
         }
 
         /** @brief "q/" 범위를 @p fingerprint 로 걸고 범위 밖 키 @p otherKey 를 쓰는(비면 조건만) 커밋의 결과 줄입니다. */
@@ -387,7 +388,7 @@ namespace
             if ( writeKey.empty() == false )
                 transaction.put( kRangeTable, writeKey, SQLServiceStoreTestUtil::makeBytes( "w" ) );
             ServiceCommitInfo        info;
-            const ServiceStoreResult result = connection.commit( transaction, &info ); // 인자 자리에 두면 info 를 커밋 앞에 읽을 수 있다(인자 평가 순서는 정해지지 않는다)
+            const ServiceStoreResult result = ServiceCommitRunner::commitOnce( connection, transaction, &info ); // 인자 자리에 두면 info 를 커밋 앞에 읽을 수 있다(인자 평가 순서는 정해지지 않는다)
             ServiceStoreParity::addLine( inoutListLine, step, result, info._conflictIndex );
         }
 
@@ -423,7 +424,7 @@ namespace
             {
                 ServiceTransaction erase;
                 erase.erase( kRangeTable, "q/2" );
-                SW_EXPECT_TRUE( connection.commit( erase ) == ServiceStoreResult::Ok );
+                SW_EXPECT_TRUE( ServiceCommitRunner::commitOnce( connection, erase ) == ServiceStoreResult::Ok );
             }
             recordGuardedCommit( listLine, connection, "erased", "", 10, false, fingerprint, "" );
 
@@ -479,10 +480,10 @@ SW_TEST_CASE( ServiceStoreParityTest, ReadSetConditionsTheListedRange )
     ServiceRangeParity::put( database, "q/2", "2" ); // 다른 서버의 삽입
     ServiceTransaction transaction;
     transaction.put( kRangeTable, "z/a", SQLServiceStoreTestUtil::makeBytes( "a" ) );
-    SW_EXPECT_TRUE( readSet.commit( transaction ) == ServiceStoreResult::Conflict );
+    SW_EXPECT_TRUE( ServiceCommitRunner::commitOnce( readSet, transaction ) == ServiceStoreResult::Conflict );
     ServiceRecord record;
     SW_EXPECT_TRUE( database.readRecord( kRangeTable, "z/a", record ) == ServiceStoreResult::NotFound );
-    SW_EXPECT_TRUE( readSet.commit( transaction ) == ServiceStoreResult::Ok ); // 커밋이 읽은 것을 비웠다 — 다시 읽지 않은 시도는 조건이 없다
+    SW_EXPECT_TRUE( ServiceCommitRunner::commitOnce( readSet, transaction ) == ServiceStoreResult::Ok ); // 커밋이 읽은 것을 비웠다 — 다시 읽지 않은 시도는 조건이 없다
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
