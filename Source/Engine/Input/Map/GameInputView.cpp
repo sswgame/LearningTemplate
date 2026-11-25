@@ -2,6 +2,7 @@
 
 #include "Engine/Input/Map/GameInputView.h"
 
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/Map/InputMap.h"
 
@@ -44,4 +45,10 @@ namespace sw
     {
         return isActionBlocked( action ) ? float2{} : _inputMap.getVector2D( action );
     }
+} // namespace sw
+
+namespace sw
+{
+    // `IInputCaptureQuery` 칸의 등록 — 구현(`UISystem`)이 범위에 인터페이스로 건다. 게임 모듈도 읽는다. Input 폴더에 두어 UI 폴더를 짓지 않는 구성에서도 링크된다.
+    SW_ENGINE_SERVICE( IInputCaptureQuery, GameVisible );
 } // namespace sw
