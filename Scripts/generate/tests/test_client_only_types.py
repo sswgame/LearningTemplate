@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
+from common.command import CommandError  # noqa: E402
 from generate.client_only_types import REFLECTED_TYPE, write_table  # noqa: E402
 
 HEADER = "REFLECT( Component )\nclass SW_API HudComponent : public Component\n{\n};\nREFLECT()\nstruct Marker\n{\n};\nclass NotReflected\n{\n};\n"
@@ -39,6 +40,13 @@ class ClientOnlyTypesTest(unittest.TestCase):
             os.utime(output, (0, 0))
             write_table([root / "A.h", root / "B.h"], output)
             self.assertEqual(output.stat().st_mtime, 0, "같은 글이면 표를 다시 쓰지 않는다")
+
+    def test_unread_reflect_stops(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            header = Path(folder) / "Odd.h"
+            header.write_text("REFLECT() class Odd\n{\n};\n" + HEADER, encoding="utf-8")
+            with self.assertRaisesRegex(CommandError, "Odd.h:1 "):
+                write_table([header], Path(folder) / "ClientOnlyTypes.json")
 
     def test_missing_header_stops(self) -> None:
         with tempfile.TemporaryDirectory() as folder:

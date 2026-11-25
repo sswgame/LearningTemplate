@@ -143,6 +143,9 @@ KEY_VCPKG_AUTO_BOOTSTRAP = "vcpkg_auto_bootstrap"
 ENV_SW_LLVM_AUTO_BOOTSTRAP = "SW_LLVM_AUTO_BOOTSTRAP"
 ENV_SW_VCPKG_AUTO_BOOTSTRAP = "SW_VCPKG_AUTO_BOOTSTRAP"
 
+#: 전용 서버가 짓지 않는 엔진 폴더(`Source/Engine/` 기준) — CMake 의 `SW_EXCLUDED_ENGINE_FOLDERS`(BuildLayout.cmake)와 서버 게이트(`target_layers.py`)가 함께 읽는 정본이다.
+SERVER_EXCLUDED_ENGINE_FOLDERS: tuple[str, ...] = ("Audio", "Renderer", "UI", "Window/Linux", "Input/Linux")
+
 # =============================================================================
 # --- 6. Lint & Formatting Targets (린트 및 포맷팅 대상 디렉터리 SSOT) --------
 # =============================================================================
