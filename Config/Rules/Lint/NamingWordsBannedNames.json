@@ -1,6 +1,13 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "RecastAreaUtil": "RecastUtil — Recast 경계 규칙 하나로 합쳤다(2026-11-26)",
+    "RecastQueryUtil": "RecastUtil — Recast 경계 규칙 하나로 합쳤다(2026-11-26)",
+    "Physics2DAudioOcclusionQuery": "PhysicsAudioOcclusionQuery — setScene 겹정의로 2D 씬도 받는다(2026-11-26)",
+    "IPhysicsJointScene": "IPhysicsScene — 관절 함수는 씬 인터페이스 멤버다(2026-11-26)",
+    "INavMeshQuery": "INavMesh — 질의는 내비메시 인터페이스 멤버다(2026-11-26)",
+    "INavMeshDynamics": "INavMesh — 링크 막기 · 장애물은 내비메시 인터페이스 멤버다(2026-11-26)",
+    "INavMeshDebug": "INavMesh — 디버그 그리기는 내비메시 인터페이스 멤버다(2026-11-26)",
     "runFloorStatus": "지움 — 바닥 위 자리는 감시 값 Hub.PawnFloorX/Z · Shooter.FloorX/Z 를 시나리오 <Record> 가 보고에 남긴다(2026-11-25)",
     "runLockstepStatus": "지움 — 감시 값 Skirmish.Lockstep*(LockstepSkirmishGameModeComponent.cpp, 2026-11-25)",
     "EngineSubsystemSet": "지움 — 코어 범위는 Engine::initialize 가 직접 채우고 서비스 · 기동 단계는 등록 줄이 채운다(2026-11-25)",

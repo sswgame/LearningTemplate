@@ -9,9 +9,8 @@
 #include "Engine/Navigation/NavClusterGraph.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/Recast/DetourNavCrowd.h"
-#include "Engine/Navigation/Recast/RecastAreaUtil.h"
-#include "Engine/Navigation/Recast/RecastQueryUtil.h"
 #include "Engine/Navigation/Recast/RecastTileCache.h"
+#include "Engine/Navigation/Recast/RecastUtil.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 
 #include <recastnavigation/DetourAlloc.h>
@@ -105,10 +104,10 @@ namespace sw
                 }
             };
 
-            /** @brief 시작 · 끝 · 레이캐스트가 모두 이 함수로 붙으므로 상자 밖 점에 붙는 길이 없다(규칙은 `RecastQueryUtil::findPolyInBox`). */
+            /** @brief 시작 · 끝 · 레이캐스트가 모두 이 함수로 붙으므로 상자 밖 점에 붙는 길이 없다(규칙은 `RecastUtil::findPolyInBox`). */
             static dtPolyRef findPolyInBox( const dtNavMeshQuery* pQuery, const float3& position, const float3& searchExtent, const dtQueryFilter& filter, float32* pOutNearest )
             {
-                return RecastQueryUtil::findPolyInBox( pQuery, &position._x, &searchExtent._x, &filter, pOutNearest );
+                return RecastUtil::findPolyInBox( pQuery, &position._x, &searchExtent._x, &filter, pOutNearest );
             }
 
             // ------------------------------------------------------------------------------
@@ -172,7 +171,7 @@ namespace sw
                     listTriangleIndex[slot * 3 + 0] = static_cast<int32>( listIndex[triangleIndex * 3 + 0] );
                     listTriangleIndex[slot * 3 + 1] = static_cast<int32>( listIndex[triangleIndex * 3 + 1] );
                     listTriangleIndex[slot * 3 + 2] = static_cast<int32>( listIndex[triangleIndex * 3 + 2] );
-                    listTriangleArea[slot]          = RecastAreaUtil::toRecastArea( listArea[triangleIndex] );
+                    listTriangleArea[slot]          = RecastUtil::toRecastArea( listArea[triangleIndex] );
                 }
                 const int32 triangleCount = static_cast<int32>( listTriangle.size() );
                 rcClearUnwalkableTriangles( &context, config.walkableSlopeAngle, pVertex, vertexCount, listTriangleIndex.data(), triangleCount, listTriangleArea.data() );
@@ -224,7 +223,7 @@ namespace sw
                         listVolumePoint.push_back( volume._minY );
                         listVolumePoint.push_back( point._z );
                     }
-                    const uint8    recastArea  = RecastAreaUtil::toRecastArea( volume._area );
+                    const uint8    recastArea  = RecastUtil::toRecastArea( volume._area );
                     const int32    pointCount  = static_cast<int32>( volume._listPoint.size() );
                     const float32* pPolygon    = listVolumePoint.data();
                     int32          polygonSize = pointCount;
@@ -301,7 +300,7 @@ namespace sw
                 // 영역 → 표시 비트(거름의 영역 비트와 같다).
                 for ( int32 polyIndex = 0; polyIndex < polyMesh.npolys; ++polyIndex )
                 {
-                    polyMesh.flags[polyIndex] = RecastAreaUtil::toPolyFlags( polyMesh.areas[polyIndex] );
+                    polyMesh.flags[polyIndex] = RecastUtil::toPolyFlags( polyMesh.areas[polyIndex] );
                 }
 
                 // 오프 메시 링크 — 시작점이 이 타일에 포함된 것만 싣는다.
@@ -313,7 +312,7 @@ namespace sw
                 vector<uint32>  listLinkUserID;
                 for ( const NavOffMeshLink& link : collectLinksInTile( geometry, tileBounds ) )
                 {
-                    const uint8 recastArea = RecastAreaUtil::toRecastArea( link._area );
+                    const uint8 recastArea = RecastUtil::toRecastArea( link._area );
                     for ( const float3* pPoint : { &link._start, &link._end } )
                     {
                         listLinkVertex.push_back( pPoint->_x );
@@ -322,7 +321,7 @@ namespace sw
                     }
                     listLinkRadius.push_back( link._radius );
                     listLinkArea.push_back( recastArea );
-                    listLinkFlag.push_back( RecastAreaUtil::toPolyFlags( recastArea ) );
+                    listLinkFlag.push_back( RecastUtil::toPolyFlags( recastArea ) );
                     listLinkDirection.push_back( link._bBidirectional == SW_TRUE ? static_cast<uint8>( DT_OFFMESH_CON_BIDIR ) : static_cast<uint8>( 0 ) );
                     listLinkUserID.push_back( link._userID );
                 }
@@ -605,7 +604,7 @@ namespace sw
                 const dtOffMeshConnection& link      = pTile->offMeshCons[linkIndex];
                 const dtPoly&              poly      = pTile->polys[link.poly];
                 const bool                 bDisabled = std::binary_search( _listDisabledLinkID.begin(), _listDisabledLinkID.end(), link.userId );
-                const uint16               flags     = bDisabled ? static_cast<uint16>( 0 ) : RecastAreaUtil::toPolyFlags( poly.getArea() );
+                const uint16               flags     = bDisabled ? static_cast<uint16>( 0 ) : RecastUtil::toPolyFlags( poly.getArea() );
                 (void)_pNavMesh->setPolyFlags( base | static_cast<dtPolyRef>( link.poly ), flags ); // 참조는 방금 이 타일에서 만든 것이라 실패하지 않는다
             }
         }
@@ -971,7 +970,7 @@ namespace sw
         if ( polyRef == 0 )
             return false;
         outLocation._position = float3( arrNearest );
-        outLocation._poly     = RecastQueryUtil::toNavPolyRef( polyRef );
+        outLocation._poly     = RecastUtil::toNavPolyRef( polyRef );
         return true;
     }
 

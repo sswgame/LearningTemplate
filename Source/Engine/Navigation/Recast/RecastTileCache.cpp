@@ -6,7 +6,7 @@
 #include "Core/Memory/MemoryTag.h"
 
 #include "Engine/Navigation/NavMeshSettings.h"
-#include "Engine/Navigation/Recast/RecastAreaUtil.h"
+#include "Engine/Navigation/Recast/RecastUtil.h"
 
 #include <cstring>
 #include <recastnavigation/DetourAlloc.h>
@@ -147,7 +147,7 @@ namespace sw
             void free( void* pPtr ) override { (void)pPtr; } // 선형 — `reset` 이 한꺼번에 돌려준다
         };
 
-        /** @brief 층에서 지은 폴리곤의 표시 비트와 그 타일의 오프 메시 링크를 채웁니다(정적 베이크와 같은 규칙 — `RecastAreaUtil`). */
+        /** @brief 층에서 지은 폴리곤의 표시 비트와 그 타일의 오프 메시 링크를 채웁니다(정적 베이크와 같은 규칙 — `RecastUtil`). */
         struct RecastTileCacheMeshProcess final : public dtTileCacheMeshProcess
         {
             const vector<NavTileData>* _pListPack{ nullptr };
@@ -162,7 +162,7 @@ namespace sw
             {
                 for ( int32 polyIndex = 0; polyIndex < pParams->polyCount; ++polyIndex )
                 {
-                    pPolyFlags[polyIndex] = RecastAreaUtil::toPolyFlags( pPolyAreas[polyIndex] );
+                    pPolyFlags[polyIndex] = RecastUtil::toPolyFlags( pPolyAreas[polyIndex] );
                 }
                 _listLinkVertex.clear();
                 _listLinkRadius.clear();
@@ -183,14 +183,14 @@ namespace sw
                 {
                     for ( const NavOffMeshLink& link : parsed._listLink )
                     {
-                        const uint8 recastArea = RecastAreaUtil::toRecastArea( link._area );
+                        const uint8 recastArea = RecastUtil::toRecastArea( link._area );
                         for ( const float3* pPoint : { &link._start, &link._end } )
                         {
                             _listLinkVertex.insert( _listLinkVertex.end(), { pPoint->_x, pPoint->_y, pPoint->_z } );
                         }
                         _listLinkRadius.push_back( link._radius );
                         _listLinkArea.push_back( recastArea );
-                        _listLinkFlag.push_back( RecastAreaUtil::toPolyFlags( recastArea ) );
+                        _listLinkFlag.push_back( RecastUtil::toPolyFlags( recastArea ) );
                         _listLinkDirection.push_back( link._bBidirectional == SW_TRUE ? static_cast<uint8>( DT_OFFMESH_CON_BIDIR ) : static_cast<uint8>( 0 ) );
                         _listLinkUserID.push_back( link._userID );
                     }
