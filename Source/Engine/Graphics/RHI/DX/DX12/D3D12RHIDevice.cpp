@@ -1432,6 +1432,10 @@ namespace sw
                 _commandQueue->ExecuteCommandLists( 1, arrCommandList );
             _frameStreamState._bRecording = SW_FALSE;
             releaseOnlineBlocksDeferred( _frameStreamState );
+            _frameThreadID.store( std::thread::id{}, std::memory_order_relaxed );
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
+            retireFrameCopies();
         }
 
         (void)waitForPreviousFrame(); // 잃은 장치여도 백 버퍼는 놓는다
@@ -1716,6 +1720,17 @@ namespace sw
         {
             // 프레임 리스트 앞에 넣는다. 큐 순서가 실행 순서다.
             _listPendingSubmit.insert( _listPendingSubmit.begin(), slot._copyCommandList.Get() );
+        }
+    }
+
+    void D3D12RHIDevice::retireFrameCopies()
+    {
+        for ( StructuredUploadSlot& slot : _arrStructuredUploadSlot )
+        {
+            if ( slot._bFrameCopies == SW_FALSE )
+                continue;
+            slot._bFrameCopies = SW_FALSE;
+            slot._resetFence   = _fenceValue.load(); // 이 제출 뒤 첫 Signal 이 복사의 끝을 덮는다(`flushPendingUploads` 와 같은 까닭)
         }
     }
 
@@ -2134,6 +2149,7 @@ namespace sw
             _frameStreamState._arrSlotState[0] = D3D12SlotTableState{}; // 새 리스트라 슬롯 테이블은 첫 드로우가 다시 굳힌다
             _frameStreamState._arrSlotState[1] = D3D12SlotTableState{};
             _pActiveFrameList                  = _commandList.Get();
+            _frameThreadID.store( std::this_thread::get_id(), std::memory_order_relaxed );
             _frameStreamContext->rebindCommandList( _pActiveFrameList );
             bindBindlessRootState( _pActiveFrameList );
         }
@@ -2245,9 +2261,11 @@ namespace sw
                                                         _listPendingSubmit.data() );
                 }
                 _listPendingSubmit.clear();
+                retireFrameCopies();
             }
             _pActiveFrameList = nullptr;
         }
+        _frameThreadID.store( std::thread::id{}, std::memory_order_relaxed );
 
         // 빌려 쓴 추가 세그먼트는 이번 프레임 펜스를 통과한 뒤 풀로 돌아간다.
         for ( D3D12CommandListEntry& segment : _listFrameSegment )

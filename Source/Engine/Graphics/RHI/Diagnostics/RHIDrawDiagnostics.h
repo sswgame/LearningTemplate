@@ -41,7 +41,7 @@ namespace sw
         void reportDestroyedVertexBuffer( RHIBufferHandle handle ) const;
         /** @brief 렌더 패스가 열려 있지 않아 그 드로우를 버렸음을 알립니다(패스 밖 드로우가 없는 백엔드 — Vulkan). 열린 패스를 무언가가 닫았거나 패스를 열지 않고 그렸다. */
         void reportDrawWithoutRenderPass() const;
-        /** @brief 렌더 스레드가 렌더 패스를 연 채로 버퍼를 갱신했음을 알립니다(`IRHIDevice::requireNoOpenRenderPassForUpload` — 업로드는 그리기 기록 전에). */
+        /** @brief 렌더 스레드가 렌더 패스를 연 채로 버퍼를 갱신했음을 알립니다(`IRHIDevice::requireUploadOutsidePass` — 업로드는 그리기 기록 전에). */
         void reportBufferUpdateInsideRenderPass( const utf8* pWhat ) const;
         /** @brief 패스 밖의 일(@p pOperation — 전이 · 복사 · 디스패치 · 새 패스 열기)이 열린 렌더 패스를 닫았음을 알립니다(`IRHICommandContext::endRenderPassBefore`). 그 패스의 남은 드로우는 빠진다. */
         void reportRenderPassInterrupted( const utf8* pOperation ) const;

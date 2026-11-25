@@ -114,7 +114,10 @@ namespace sw
     {
         if ( _bOwnEncoder != SW_FALSE )
             return _ownEncoder;
-        return _pDevice != nullptr ? _pDevice->getFrameEncoder() : nullptr;
+        if ( _pDevice == nullptr )
+            return nullptr;
+        _pDevice->markFrameEncoderUsed();
+        return _pDevice->getFrameEncoder();
     }
 
     void WebGPURHICommandContext::beginCommandList()

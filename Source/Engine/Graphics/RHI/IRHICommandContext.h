@@ -46,7 +46,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) final;
         void endRenderPass() final;
-        /** @brief 지금 렌더 패스가 열려 있으면 true 입니다(패스 안의 업로드 판정 — `IRHIDevice::requireNoOpenRenderPassForUpload`). */
+        /** @brief 지금 렌더 패스가 열려 있으면 true 입니다(패스 안의 업로드 판정 — `IRHIDevice::requireUploadOutsidePass`). */
         bool isRenderPassOpen() const { return _bRenderPassOpen; }
 
         // ------------------------------------------------------------------------------

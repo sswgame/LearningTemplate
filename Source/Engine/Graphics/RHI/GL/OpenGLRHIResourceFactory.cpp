@@ -259,7 +259,7 @@ namespace sw
     void OpenGLRHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                   const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "updateStructuredBufferRegions" );
+        _pDevice->requireUploadOutsidePass( "updateStructuredBufferRegions" );
         const bool bInvalidBufferRegionUpdate = _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidBufferRegionUpdate )
             return;
@@ -354,7 +354,7 @@ namespace sw
 
     void OpenGLRHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "updateGeometryBufferRegions" );
+        _pDevice->requireUploadOutsidePass( "updateGeometryBufferRegions" );
         const bool bInvalidVertexRegionUpdate = _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidVertexRegionUpdate )
             return;

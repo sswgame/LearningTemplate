@@ -473,9 +473,34 @@ namespace sw
             _state._deform._vertexAnimationPool.rebuild( _pDevice, _state._deform._listScratchVertexAnimationMesh );
         }
         _state._gpuScene.assignVertexAnimationBases( _state._deform._vertexAnimationPool );
+        if ( morphDiag == MeshMorphDiagMode::SkipDispatch )
+            uploadRestAsMorphResult();
         SW_PROFILE_COUNT( "RT.Skin.instances", _state._deform._meshMorphPool.getSkinInstanceCount() );
         SW_PROFILE_COUNT( "RT.Skin.vertices", _state._deform._meshMorphPool.getSkinVertexCount() );
         SW_PROFILE_COUNT( "RT.Skin.sourceVertices", _state._deform._meshMorphPool.getSkinSourceVertexCount() );
+    }
+
+    void FrameGraphExecutor::uploadRestAsMorphResult()
+    {
+        // 레스트를 결과 배치로 묶어 결과 버퍼에 올린다 — 정점 셰이더의 결과 읽기(원소 번호 · 풀기)를 컴퓨트 없이 본다. 패스 안에서 올리면 그래프가 낸 전이와 어긋나 준비 단계에서 올린다.
+        // 메시마다 풀 구간(getBaseOf)에 쓴다 — 구간은 목록 순서로 이어져 있지 않다(C-43 부분 갱신).
+        FrameMeshDeformState& deform = _state._deform;
+        if ( deform._meshMorphPool.isDispatchable() == false )
+            return;
+        for ( const Mesh* pMesh : deform._listScratchMorphMesh )
+        {
+            const uint32 base = ( pMesh != nullptr ) ? deform._meshMorphPool.getBaseOf( pMesh ) : GPUMeshMorphPool::kInvalidBase;
+            if ( base == GPUMeshMorphPool::kInvalidBase )
+                continue;
+            deform._listScratchRestResult.clear();
+            for ( const RHIVertex& vertex : pMesh->getCPUView().getVertices() )
+            {
+                deform._listScratchRestResult.push_back( GPUDeformResult::fromVertex( vertex ) );
+            }
+            deform._meshMorphPool.getMorphBuffer().upload( _pDevice, deform._listScratchRestResult.data(), static_cast<uint32>( deform._listScratchRestResult.size() * sizeof( GPUDeformResult ) ),
+                                                           base * static_cast<uint32>( sizeof( GPUDeformResult ) ) );
+        }
+        deform._bDeformDispatchSkipped = SW_TRUE;
     }
 
     void FrameGraphExecutor::collectSkinInstances()
@@ -515,27 +540,9 @@ namespace sw
         if ( _state._deform._meshMorphPool.isDispatchable() == false )
             return;
 
-        // 진단 SkipDispatch: 컴퓨트를 돌리지 않고 레스트를 결과 배치로 묶어 결과 버퍼에 올린다 — 정점 셰이더의 결과 읽기(원소 번호 · 풀기)를 컴퓨트 없이 본다.
-        // 메시마다 풀 구간(getBaseOf)에 쓴다 — 구간은 목록 순서로 이어져 있지 않다(C-43 부분 갱신).
+        // 진단 SkipDispatch: 컴퓨트를 돌리지 않는다 — 결과 버퍼는 준비 단계가 레스트로 채웠다(`uploadRestAsMorphResult`).
         if ( morphDiag == MeshMorphDiagMode::SkipDispatch )
-        {
-            for ( const Mesh* pMesh : _state._deform._listScratchMorphMesh )
-            {
-                const uint32 base = ( pMesh != nullptr ) ? _state._deform._meshMorphPool.getBaseOf( pMesh ) : GPUMeshMorphPool::kInvalidBase;
-                if ( base == GPUMeshMorphPool::kInvalidBase )
-                    continue;
-                _state._deform._listScratchRestResult.clear();
-                for ( const RHIVertex& vertex : pMesh->getCPUView().getVertices() )
-                {
-                    _state._deform._listScratchRestResult.push_back( GPUDeformResult::fromVertex( vertex ) );
-                }
-                _state._deform._meshMorphPool.getMorphBuffer().upload( _pDevice, _state._deform._listScratchRestResult.data(),
-                                                                       static_cast<uint32>( _state._deform._listScratchRestResult.size() * sizeof( GPUDeformResult ) ),
-                                                                       base * static_cast<uint32>( sizeof( GPUDeformResult ) ) );
-            }
-            _state._deform._bDeformDispatchSkipped = SW_TRUE;
             return;
-        }
 
         const RHIPipelineStateHandle morphPSO         = _psoManager.getEnginePSO( RenderPassKind::MeshMorph );
         const RHIBufferSRVIndex      programSRV       = _state._deform._meshMorphPool.getDeformProgramBuffer()._srv;

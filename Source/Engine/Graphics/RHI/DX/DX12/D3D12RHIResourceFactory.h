@@ -132,17 +132,27 @@ namespace sw
         /** @brief 인덱스를 GPU 펜스 뒤에 프리리스트로 돌려보냅니다. 실행 중인 리스트가 새 리소스를 읽지 않게 합니다. */
         void deferFreeBindlessIndex( RHIDescriptorIndex index );
 
+        /** @brief 버퍼 복사를 어디에 기록하는가입니다. */
+        enum class UploadOrder : uint8
+        {
+            FrameStream, ///< 프레임 스트림의 지금 자리 — 앞서 낸 리스트 뒤, 뒤에 내는 리스트 앞에 실행된다
+            BeforeFrame, ///< 업로드 리스트 — 다음 제출의 맨 앞에 실행된다(프레임 밖 · 다른 스레드 · 새 버퍼의 첫 내용)
+        };
+
+        /** @brief 조각들을 스테이징에 모아 복사와 상태 전이를 @p order 자리에 기록합니다. */
+        void recordBufferCopies( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount, UploadOrder order );
         /**
-         * @brief 현재 프레임 링 슬롯의 스테이징 힙에서 sizeBytes 를 bump 할당하고 복사 리스트를 열어 둡니다.
-         * @details 얼로케이터는 펜스 구간이 바뀔 때만 Reset 합니다. 같은 구간의 앞선 복사가 GPU 에서 도는 중일 수
-         *          있습니다. 성공하면 `_pDevice->_arrStructuredUploadSlot[outSlotIndex]._copyCommandList` 에 기록합니다.
-         *          리스트는 **닫지 않습니다.** 프레임 끝(또는 큐 대기 직전)에 `D3D12RHIDevice::flushPendingUploads` 가
-         *          한 번 닫아 제출합니다. updateStructuredBufferRegions 전용입니다(텍스처 전송은 `D3D12RHIDevice::beginTransferJob` 과 스테이징 링을 쓴다).
-         *          부르는 쪽이 `_uploadSlotMutex` 를 쥡니다.
+         * @brief 현재 프레임 링 슬롯의 스테이징 힙에서 sizeBytes 를 bump 할당합니다.
+         * @details 같은 펜스 구간의 앞선 복사가 GPU 에서 도는 중일 수 있어 구간이 바뀔 때만 되감습니다. 부르는 쪽이 `_uploadSlotMutex` 를 쥡니다.
          */
         bool acquireUploadStaging( uint64 sizeBytes, uint64 alignment, uint32& outSlotIndex, uint64& outOffset, void*& pOutMapped );
-        /** @brief 현재 프레임 링 슬롯의 복사 리스트를 엽니다(`acquireUploadStaging` 이 부른다). 부르는 쪽이 `_uploadSlotMutex` 를 쥡니다. */
-        [[nodiscard]] bool openUploadSlot( uint32& outSlotIndex );
+        /**
+         * @brief 슬롯 @p slotIndex 의 펜스 구간이 바뀌었으면 앞 구간의 복사가 끝나기를 기다려 얼로케이터를 Reset 하고 스테이징을 되감습니다. 부르는 쪽이 `_uploadSlotMutex` 를 쥡니다.
+         * @details 그 슬롯의 복사 리스트가 앞 구간에서 열린 채면(프레임 제출과 Signal 사이에 연 복사) 내보내고, 프레임 스트림 복사가 남았으면 되감지 않는다.
+         */
+        [[nodiscard]] bool beginUploadPeriod( uint32 slotIndex );
+        /** @brief 슬롯 @p slotIndex 의 복사 리스트를 엽니다(`beginUploadPeriod` 뒤). 다른 칸이 열려 있으면 먼저 내보냅니다. 닫고 제출하는 것은 `D3D12RHIDevice::flushPendingUploads`. */
+        [[nodiscard]] bool openUploadList( uint32 slotIndex );
 
     public:
     private:

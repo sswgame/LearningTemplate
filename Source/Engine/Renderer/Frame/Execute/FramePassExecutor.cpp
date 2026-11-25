@@ -362,6 +362,7 @@ namespace sw
     {
         prepareShadowCacheLayerResource();
         registerViewResources( _state.getMainView() );
+        const IRHIDevice::PassRecordingScope recordingScope{ *pDevice };
         // 병렬 기록이 가능하면(백엔드 capability, TaskManager, 레벨이 나올 만큼 컴파일된 그래프) 레벨마다 여러 리스트로 기록한다.
         // 첫 프레임처럼 그래프가 아직 컴파일되지 않았으면(getExecutionOrder() 가 비어 있으면) 직렬 경로로 간다.
         const bool bCanRunParallel = _state._pTaskManager != nullptr &&
@@ -403,6 +404,7 @@ namespace sw
         prepareShadowCacheLayerResource(); // 주 시점보다 먼저 그리는 뷰도 있다 — 층은 기록 전에
         registerViewResources( view );
 
+        const IRHIDevice::PassRecordingScope recordingScope{ *pDevice };
         pCmd->beginCommandList();
         if ( _state._graph.execute( _graphContext, pCmd ) == false )
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.RenderGraphCouldNot", "Render graph could not run for an extra view (cycle or compile failure)" );
@@ -1074,10 +1076,12 @@ namespace sw
             // 비동기 묶음이 있다 — 컴퓨트 큐 리스트를 그래프가 포크마다 열고 닫는다. 프리패스 리스트는 포크 · 조인에서 잘려 큐에 나가고 다시 열린다.
             if ( _asyncComputeCmd == nullptr )
                 _asyncComputeCmd = pDevice->createAsyncComputeCommandList();
+            const IRHIDevice::PassRecordingScope recordingScope{ *pDevice };
             bOk = _asyncComputeCmd != nullptr && frameGraph.executeOnQueues( _frameGraphContext, *pDevice, *_pCmd, _asyncComputeCmd.get() );
         }
         else if ( frameGraph.getNodeCount() > 0 )
         {
+            const IRHIDevice::PassRecordingScope recordingScope{ *pDevice };
             bOk = frameGraph.execute( _frameGraphContext, _pCmd );
         }
         if ( bOk == false )

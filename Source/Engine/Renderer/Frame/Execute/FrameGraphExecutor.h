@@ -118,6 +118,8 @@ namespace sw
          * @details 스킨 결과는 메시가 아니라 칸마다라 배치의 메시로는 모을 수 없다(같은 메시를 캐릭터 여럿이 그린다). 팔레트가 메시 소유권을 싣는다.
          */
         void collectSkinInstances();
+        /** @brief 진단 SkipDispatch 의 결과 버퍼 채우기입니다 — 모프 메시의 레스트를 결과 배치로 올립니다(준비 단계). */
+        void uploadRestAsMorphResult();
         /** @brief GPU 입자 시뮬레이션의 이번 프레임 입력(PSO · 주 시점 깊이 히스토리 · 인스턴스 버퍼)입니다. GPUScene 을 올린 뒤 부릅니다. */
         VFXSimulationFrameInput makeVFXSimulationInput() const;
 

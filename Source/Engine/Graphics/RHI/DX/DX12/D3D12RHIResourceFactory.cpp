@@ -12,6 +12,7 @@
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
+#include "Engine/Graphics/RHI/DX/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
@@ -138,68 +139,70 @@ namespace sw
         return handle;
     }
 
-    bool D3D12RHIResourceFactory::openUploadSlot( uint32& outSlotIndex )
+    bool D3D12RHIResourceFactory::beginUploadPeriod( uint32 slotIndex )
     {
         if ( _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
             return false;
-        const uint32                          slotIndex       = _pDevice->_frameRing.currentIndex();
-        D3D12RHIDevice::StructuredUploadSlot& slot            = _pDevice->_arrStructuredUploadSlot[slotIndex];
-        bool                                  bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue.load() );
-
-        // 같은 펜스 구간에 이미 열려 있으면 이어서 기록한다. 리스트를 닫고 다시 여는 것도, 제출도 프레임에 한 번이다.
-        if ( _pDevice->_openUploadSlotIndex == slotIndex && bNewFencePeriod == false )
-        {
-            outSlotIndex = slotIndex;
+        D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[slotIndex];
+        // 프레임 스트림에 기록한 복사가 아직 나가지 않았으면 그 구간이 이어진다 — 프레임 도중의 장치 대기가 펜스 값을 올려도 스테이징을 되감지 않는다.
+        if ( slot._bFrameCopies != SW_FALSE || slot._resetFence == _pDevice->_fenceValue.load() )
             return true;
-        }
-        // 다른 칸이 열려 있거나(링이 넘어가기 전에 연 프레임 밖 업로드) 이 칸이 앞 펜스 구간에서 열렸으면(프레임 제출과 Signal 사이에 연 복사) 지금 내보낸다 — 열린 리스트는 하나라 기록 순서가
-        // 큐 순서다(`_openUploadSlotIndex`). 이 칸을 내보냈으면 `_resetFence` 가 **지금** 구간이 되므로(그 복사는 이번 구간의 Signal 에서야 끝난다) 얼로케이터를 Reset 하지 않고 이어 쓴다 — 다시 판정한다.
-        if ( _pDevice->_openUploadSlotIndex.has_value() )
+        // 구간이 바뀌었는데 이 슬롯의 리스트가 열려 있다면 프레임 제출과 Signal 사이에 연 복사다. 지금 내보낸다. 내보내면 `_resetFence` 가 **지금** 구간이 되므로
+        // (그 복사는 이번 구간의 Signal 에서야 끝난다) 얼로케이터를 Reset 하지 않고 이어 쓴다.
+        if ( _pDevice->_openUploadSlotIndex == slotIndex )
         {
             _pDevice->flushPendingUploads( true );
-            bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue.load() );
+            return true;
         }
+        if ( slot._resetFence != UINT64_MAX )
+        {
+            // 펜스 값이 바뀌었다는 것은 앞 구간 뒤에 Signal 이 **큐에 들어갔다**는 뜻이지 GPU 가 그 구간의 복사를
+            // 끝냈다는 뜻이 아니다. signalCurrentFrame 은 올리기만 하고 기다리지 않는다. 프레임 끝 Signal 직후,
+            // 링이 아직 앞 슬롯을 가리키는 동안 업로드가 오면 여기서 아직 실행 중인 얼로케이터를 Reset 하게 된다
+            // ("is being reset before previous executions ... have completed" → DEVICE_HUNG, GPU 가 붐빌 때만).
+            // 링 슬롯 대기가 가려 줄 것이라 기대하지 않고 이 슬롯의 펜스(_resetFence: 그 구간의 제출 뒤에
+            // Signal 된 값)를 직접 기다린다. 보통은 이미 지나 있어 비용이 없다.
+            if ( _pDevice->waitForFenceValue( slot._resetFence ) == false )
+            {
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotPreviousCopiesAllocator", "beginUploadPeriod: previous copies on allocator %# have not completed (fence %#)",
+                                 slotIndex, slot._resetFence );
+                return false;
+            }
+            if ( slot._copyAllocator != nullptr && isHrSuccess( slot._copyAllocator->Reset(), "Reset" ) == false )
+            {
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotCopyAllocatorReset", "beginUploadPeriod: copy allocator Reset failed" );
+                return false;
+            }
+        }
+        slot._uploadOffset = 0;
+        slot._resetFence   = _pDevice->_fenceValue.load();
+        return true;
+    }
 
+    bool D3D12RHIResourceFactory::openUploadList( uint32 slotIndex )
+    {
+        // 이미 열려 있으면 이어서 기록한다. 리스트를 닫고 다시 여는 것도, 제출도 프레임에 한 번이다.
+        if ( _pDevice->_openUploadSlotIndex == slotIndex )
+            return true;
+        // 다른 칸이 열려 있으면(링이 넘어가기 전에 연 프레임 밖 업로드) 지금 내보낸다 — 열린 리스트는 하나라 기록 순서가 큐 순서다(`_openUploadSlotIndex`).
+        _pDevice->flushPendingUploads( true );
+        D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[slotIndex];
         if ( slot._copyAllocator == nullptr )
         {
             if ( isHrSuccess( _pDevice->_device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( slot._copyAllocator.GetAddressOf() ) ), "CreateCommandAllocator" ) == false )
             {
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotFailedCreateCopy", "openUploadSlot: failed to create copy command allocator" );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotFailedCreateCopy", "openUploadList: failed to create copy command allocator" );
                 return false;
             }
             utf16 arrName[constant::buffer::kMax64]{};
             swprintf_s( arrName, L"StructuredUploadAllocator%u", slotIndex );
             slot._copyAllocator->SetName( arrName );
         }
-        else if ( bNewFencePeriod )
-        {
-            // 펜스 값이 바뀌었다는 것은 앞 구간 뒤에 Signal 이 **큐에 들어갔다**는 뜻이지 GPU 가 그 구간의 복사를
-            // 끝냈다는 뜻이 아니다. signalCurrentFrame 은 올리기만 하고 기다리지 않는다. 프레임 끝 Signal 직후,
-            // 링이 아직 앞 슬롯을 가리키는 동안 업로드가 오면 여기서 아직 실행 중인 얼로케이터를 Reset 하게 된다
-            // ("is being reset before previous executions ... have completed" → DEVICE_HUNG, GPU 가 붐빌 때만).
-            // 링 슬롯 대기가 가려 줄 것이라 기대하지 않고 이 얼로케이터의 펜스(_resetFence: 그 구간의 제출 뒤에
-            // Signal 된 값)를 직접 기다린다. 보통은 이미 지나 있어 비용이 없다.
-            if ( _pDevice->waitForFenceValue( slot._resetFence ) == false )
-            {
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotPreviousCopiesAllocator", "openUploadSlot: previous copies on allocator %# have not completed (fence %#)",
-                                 slotIndex, slot._resetFence );
-                return false;
-            }
-            if ( isHrSuccess( slot._copyAllocator->Reset(), "Reset" ) == false )
-            {
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotCopyAllocatorReset", "openUploadSlot: copy allocator Reset failed" );
-                return false;
-            }
-        }
-        if ( bNewFencePeriod )
-            slot._uploadOffset = 0;
-        slot._resetFence = _pDevice->_fenceValue.load();
-
         if ( slot._copyCommandList == nullptr )
         {
             if ( isHrSuccess( _pDevice->_device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, slot._copyAllocator.Get(), nullptr, IID_PPV_ARGS( slot._copyCommandList.GetAddressOf() ) ), "CreateCommandList" ) == false )
             {
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotFailedCreateCopy2", "openUploadSlot: failed to create copy command list" );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotFailedCreateCopy2", "openUploadList: failed to create copy command list" );
                 return false;
             }
             utf16 arrListName[constant::buffer::kMax64]{};
@@ -208,11 +211,10 @@ namespace sw
         }
         else if ( isHrSuccess( slot._copyCommandList->Reset( slot._copyAllocator.Get(), nullptr ), "Reset" ) == false )
         {
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotCopyCommandList", "openUploadSlot: copy command list Reset failed" );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotCopyCommandList", "openUploadList: copy command list Reset failed" );
             return false;
         }
         _pDevice->_openUploadSlotIndex = slotIndex;
-        outSlotIndex                   = slotIndex;
         return true;
     }
 
@@ -227,9 +229,9 @@ namespace sw
         // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다. **프레임 사이에는**.
         // 같은 프레임 안의 두 번째 호출은 첫 번째 복사가 GPU 에서 아직 도는 중일 수 있으므로, 펜스 구간이
         // 바뀌었을 때만 얼로케이터를 Reset 하고 스테이징은 오프셋을 이어 쓴다.
-        // 얼로케이터 · 리스트를 먼저 연다. 펜스 구간이 바뀌었으면 여기서 오프셋도 0 으로 되감긴다.
-        uint32 slotIndex{ 0 };
-        if ( openUploadSlot( slotIndex ) == false )
+        // 펜스 구간이 바뀌었으면 여기서 오프셋이 0 으로 되감긴다.
+        const uint32 slotIndex = _pDevice->_frameRing.currentIndex();
+        if ( beginUploadPeriod( slotIndex ) == false )
             return false;
         D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[slotIndex];
 
@@ -280,7 +282,12 @@ namespace sw
     void D3D12RHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                  const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "updateStructuredBufferRegions" );
+        _pDevice->requireUploadOutsidePass( "updateStructuredBufferRegions" );
+        recordBufferCopies( buffer, pBaseSource, pRegions, regionCount, _pDevice->isRecordingFrameOnThisThread() ? UploadOrder::FrameStream : UploadOrder::BeforeFrame );
+    }
+
+    void D3D12RHIResourceFactory::recordBufferCopies( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount, UploadOrder order )
+    {
         const bool bInvalidBufferRegionUpload = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 ||
                                                 _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr;
         if ( bInvalidBufferRegionUpload )
@@ -289,6 +296,9 @@ namespace sw
         ID3D12Resource* pDest = _pDevice->resolveBuffer( buffer );
         if ( pDest == nullptr )
             return;
+        // 프레임 스트림의 복사는 패스 밖이다(위 판정이 렌더 스레드의 위반을 알리고 닫았다 — 렌더 스레드가 없는 실행은 여기서 닫는다).
+        if ( order == UploadOrder::FrameStream )
+            _pDevice->_frameStreamContext->endRenderPass();
 
         const ScopedDeferredLog deferredLog;
         ScopedLock<mutex>       uploadLock{ _pDevice->_uploadSlotMutex };
@@ -322,11 +332,33 @@ namespace sw
         }
 
         D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
-        ID3D12GraphicsCommandList*            pList = slot._copyCommandList.Get();
+        ID3D12GraphicsCommandList*            pList = _pDevice->_pActiveFrameList;
+        if ( order == UploadOrder::FrameStream )
+        {
+            // 프레임 스트림의 지금 자리에 기록한다 — 추적 상태는 기록 시점의 값이고 실행 순서도 기록 순서다. 업로드 리스트(제출 맨 앞)로 보내면 이 프레임이 이미 낸 전이와 어긋나고
+            // 앞서 기록한 읽기가 새 내용을 본다(Vulkan 도 렌더 스레드의 갱신은 프레임 커맨드버퍼에 기록한다).
+            _pDevice->_frameStreamState._bRecordedAny = SW_TRUE;
+            slot._bFrameCopies                        = SW_TRUE;
+        }
+        else
+        {
+            if ( openUploadList( slotIndex ) == false )
+                return;
+            pList = slot._copyCommandList.Get();
+        }
 
         D3D12RHIDevice::BufferRecord* const pBufferRecord = _pDevice->findBufferRecord( buffer );
         const bool                          bTracked      = pBufferRecord != nullptr && pBufferRecord->_bTrackedState != SW_FALSE;
         const D3D12_RESOURCE_STATES         stateBefore   = bTracked ? pBufferRecord->_state.load() : D3D12_RESOURCE_STATE_COMMON;
+        if constexpr ( build::kShipping == false )
+        {
+            // 업로드 리스트는 제출 맨 앞에 실행된다 — 다른 스레드가 프레임을 기록하는 동안 이미 쓰는 버퍼(상태가 COMMON 이 아니다)를 여기로 갱신하면 그 프레임이 기록한 전이와 순서가 없다.
+            // 새 버퍼의 첫 내용은 아무도 아직 쓰지 않아 안전하다. 갱신은 프레임을 기록하는 스레드(패킷)로 보낸다.
+            if ( order == UploadOrder::BeforeFrame && stateBefore != D3D12_RESOURCE_STATE_COMMON && _pDevice->isRecordingFrameOnOtherThread() )
+                reportFatalError( "updateStructuredBufferRegions: buffer %# (state 0x%#) is updated from another thread while the render thread records a frame - the copy has no order against that frame's "
+                                  "transitions. Send the update to the render thread",
+                                  buffer.getPacked(), static_cast<uint32>( stateBefore ) );
+        }
 
         // 끝낸 뒤 둘 읽기 상태는 버퍼 종류가 정한다(정점 · 인덱스 · 구조 — `BufferRecord::_uploadReadState`). 추적하지 않는 버퍼는 셰이더 읽기다.
         constexpr D3D12_RESOURCE_STATES kShaderReadState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -362,7 +394,7 @@ namespace sw
         toShaderRead.Transition.StateAfter  = readState;
         toShaderRead.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         pList->ResourceBarrier( 1, &toShaderRead );
-        // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번이다. D3D12RHIDevice::flushPendingUploads.
+        // 업로드 리스트의 제출은 프레임 끝(또는 큐 대기 직전)에 한 번이다. D3D12RHIDevice::flushPendingUploads.
 
         if ( bTracked )
             pBufferRecord->_state.store( readState );
@@ -703,7 +735,7 @@ namespace sw
     RHIBufferHandle D3D12RHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
     {
         // 정적 정점은 default 힙에 둔다 — 업로드 힙(시스템 메모리)에서 그리면 디스크리트 GPU 가 그릴 때마다 PCIe 로 읽는다(언리얼 · 유니티의 정적 버퍼도 default 힙 + 복사).
-        // 내용은 스테이징 복사로 올린다(`updateStructuredBufferRegions` — 이번 프레임 리스트보다 먼저 실행된다).
+        // 내용은 스테이징 복사로 올린다(`recordBufferCopies` — 이번 프레임 리스트보다 먼저 실행된다).
         if ( pData == nullptr || sizeBytes == 0 )
             return 0;
         constexpr D3D12_RESOURCE_STATES kVertexRead =
@@ -718,8 +750,9 @@ namespace sw
             return 0;
         if ( D3D12RHIDevice::BufferRecord* const pRecord = _pDevice->findBufferRecord( handle ) )
             pRecord->_uploadReadState = readState; // 핸들을 돌려주기 전이라 락 없이 쓴다
+        // 새 버퍼의 첫 내용은 제출 맨 앞에 실행된다 — 어느 스레드 · 어느 자리에서 만들어도 이 버퍼를 쓰는 기록보다 먼저다(Vulkan `uploadDeviceLocal` 과 같다).
         const RHIBufferCopyRegion region{ 0, 0, sizeBytes };
-        updateStructuredBufferRegions( handle, pData, &region, 1 );
+        recordBufferCopies( handle, pData, &region, 1, UploadOrder::BeforeFrame );
         return handle;
     }
 
@@ -742,11 +775,11 @@ namespace sw
 
     void D3D12RHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "updateGeometryBufferRegions" );
+        _pDevice->requireUploadOutsidePass( "updateGeometryBufferRegions" );
         const bool bInvalidVertexRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidVertexRegionUpdate )
             return;
-        // 정점 · 인덱스 버퍼는 default 힙이다(정적 자원을 시스템 메모리에서 그리지 않는다) — 스테이징 복사로 쓴다. 복사는 이번 프레임 리스트보다 먼저 실행되고
+        // 정점 · 인덱스 버퍼는 default 힙이다(정적 자원을 시스템 메모리에서 그리지 않는다) — 스테이징 복사로 쓴다. 복사는 기록한 자리에서 실행되고
         // 앞 프레임이 읽는 조각이 아님은 부르는 쪽이 지킨다(IRHIResourceFactory::updateGeometryBufferRegions). 범위는 여기서 본다.
         ID3D12Resource* pDest = _pDevice->resolveBuffer( buffer );
         if ( pDest == nullptr )

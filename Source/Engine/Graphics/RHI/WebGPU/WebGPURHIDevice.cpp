@@ -1124,8 +1124,23 @@ namespace sw
         if ( _frameEncoder != nullptr || _device == nullptr )
             return;
         WGPUCommandEncoderDescriptor desc{};
-        desc.label    = WebGPURHIUtil::toStringView( "SW Frame" );
-        _frameEncoder = wgpuDeviceCreateCommandEncoder( _device, &desc );
+        desc.label         = WebGPURHIUtil::toStringView( "SW Frame" );
+        _frameEncoder      = wgpuDeviceCreateCommandEncoder( _device, &desc );
+        _bFrameEncoderUsed = SW_FALSE;
+    }
+
+    void WebGPURHIDevice::submitRecordedBeforeQueueWrite()
+    {
+        // 다른 스레드의 갱신은 렌더 스레드의 기록과 순서가 없다 — 프레임 인코더를 만지지 않는다.
+        const std::thread::id renderThread = _renderThreadID.load( std::memory_order_relaxed );
+        if ( renderThread != std::thread::id{} && renderThread != std::this_thread::get_id() )
+            return;
+        const bool bNothingRecorded = _frameEncoder == nullptr || ( _bFrameEncoderUsed == SW_FALSE && _listPendingCommandBuffer.empty() );
+        if ( bNothingRecorded )
+            return;
+        closeFrameEncoder();
+        submitPending();
+        openFrameEncoder();
     }
 
     void WebGPURHIDevice::closeFrameEncoder()

@@ -241,10 +241,17 @@ namespace sw
         endFrameInternal( vsync, bPresent );
     }
 
-    void IRHIDevice::requireNoOpenRenderPassForUpload( const utf8* pWhat )
+    void IRHIDevice::requireUploadOutsidePass( const utf8* pWhat )
     {
         if ( std::this_thread::get_id() != _renderThreadID.load( std::memory_order_relaxed ) )
             return;
+        if constexpr ( build::kShipping == false )
+        {
+            if ( _bPassRecording.load( std::memory_order_relaxed ) )
+                reportFatalError( "%# on the render thread while it records the render graph - the copy runs before the pass lists already recorded, against the states they transitioned. "
+                                  "Upload before the graph (a prepare step)",
+                                  pWhat );
+        }
         IRHICommandContext* const pFrameStream = getFrameStreamContext();
         if ( pFrameStream == nullptr || pFrameStream->isRenderPassOpen() == false )
             return;
@@ -548,6 +555,7 @@ namespace sw
         , _bSoftwareAdapter{ SW_FALSE }
         , _bShutDown{ SW_FALSE }
         , _bGPUBreadcrumbs{ SW_FALSE }
+        , _bPassRecording{ false }
         , _bParallelRecording{ false }
         , _parallelBarrierReportCount{ 0 }
         , _initResult{ RHIInitResult::NotStarted }

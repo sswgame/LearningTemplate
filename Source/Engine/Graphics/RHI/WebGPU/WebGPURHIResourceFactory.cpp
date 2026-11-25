@@ -316,7 +316,7 @@ namespace sw
         WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( buffer );
         if ( pRecord == nullptr || pData == nullptr || size == 0 )
             return;
-        _pDevice->requireNoOpenRenderPassForUpload( "WebGPU.updateConstantBuffer" );
+        _pDevice->requireUploadOutsidePass( "WebGPU.updateConstantBuffer" );
         // 프레임 밖 갱신은 버퍼 자체에 쓴다 — 기록 중의 이름 바꾼 칸은 이제 낡았다(다음 그리기는 버퍼를 읽는다).
         const uint64  alignedSize = MathUtil::align( static_cast<uint64>( size ), WebGPURHIResourceFactoryInternal::kCopyAlignment );
         vector<uint8> padded( static_cast<size_t>( MathUtil::min( alignedSize, pRecord->_sizeBytes ) ), 0 );
@@ -336,7 +336,7 @@ namespace sw
         WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( slice._buffer );
         if ( pRecord == nullptr || pData == nullptr || size == 0 )
             return;
-        _pDevice->requireNoOpenRenderPassForUpload( "WebGPU.updateConstantBuffer(slice)" );
+        _pDevice->requireUploadOutsidePass( "WebGPU.updateConstantBuffer(slice)" );
         // 큐 쓰기 크기는 4 의 배수다 — 4 B 배수 앞부분은 원본에서 바로 쓰고, 남는 꼬리(머티리얼 바이트는 256 B 정렬이라 보통 없다)만 스택의 0 채운 4 B 로 쓴다(구간 오프셋은 256 배수).
         constexpr uint32 kCopyBytes = static_cast<uint32>( WebGPURHIResourceFactoryInternal::kCopyAlignment );
         const uint32     writeBytes = MathUtil::min( size, slice._size );
@@ -366,6 +366,7 @@ namespace sw
         const WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( buffer );
         if ( pRecord == nullptr || pBaseSource == nullptr || pRegions == nullptr )
             return;
+        _pDevice->submitRecordedBeforeQueueWrite();
         const uint8* const pBase = static_cast<const uint8*>( pBaseSource );
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
@@ -386,7 +387,7 @@ namespace sw
 
     void WebGPURHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "WebGPU.updateStructuredBufferRegions" );
+        _pDevice->requireUploadOutsidePass( "WebGPU.updateStructuredBufferRegions" );
         writeBufferRegions( buffer, pBaseSource, pRegions, regionCount );
     }
 
@@ -405,7 +406,7 @@ namespace sw
 
     void WebGPURHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "WebGPU.updateGeometryBufferRegions" );
+        _pDevice->requireUploadOutsidePass( "WebGPU.updateGeometryBufferRegions" );
         writeBufferRegions( buffer, pBaseSource, pRegions, regionCount );
     }
 

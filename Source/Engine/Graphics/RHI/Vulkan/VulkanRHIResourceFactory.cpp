@@ -227,7 +227,7 @@ namespace sw
     void VulkanRHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                   const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "updateStructuredBufferRegions" );
+        _pDevice->requireUploadOutsidePass( "updateStructuredBufferRegions" );
         // 스테이징 슬롯에 쓰고 복사를 프레임 커맨드버퍼에 기록한다. 목적 버퍼를 직접 vkMapMemory 해서 쓰면
         // "GPU 가 직전 프레임을 아직 읽는 중인 메모리를 CPU 가 덮어쓰는" 해저드가 생긴다. 큐 순서가 곧 해저드 해결이고,
         // "바뀐 게 없으면 업로드 생략" 같은 상위 로직도 단일 목적 버퍼 그대로 유효하다.
@@ -308,7 +308,7 @@ namespace sw
 
         // 렌더 스레드가 기록 중인 프레임 스트림에 넣는다(같은 스레드의 앞뒤 그리기와 기록 순서 그대로).
         const VkCommandBuffer cmd = _pDevice->_activeFrameBuffer;
-        // 패스 안에는 복사를 기록할 수 없다. 렌더 스레드의 위반은 위 판정(requireNoOpenRenderPassForUpload)이 알리고 닫았다 — 남은 것은 공용 상태와 함께 닫는다.
+        // 패스 안에는 복사를 기록할 수 없다. 렌더 스레드의 위반은 위 판정(requireUploadOutsidePass)이 알리고 닫았다 — 남은 것은 공용 상태와 함께 닫는다.
         _pDevice->_frameStreamContext->endRenderPass();
 
         // 앞 프레임의 읽기(셰이더 · 간접 인자 · 컴퓨트 쓰기) 가 끝난 뒤에 복사하고, 복사가 끝난 뒤에 이번
@@ -384,7 +384,7 @@ namespace sw
 
     void VulkanRHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "updateGeometryBufferRegions" );
+        _pDevice->requireUploadOutsidePass( "updateGeometryBufferRegions" );
         const bool bInvalidVertexRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 || _pDevice->_device == VK_NULL_HANDLE;
         if ( bInvalidVertexRegionUpdate )
             return;

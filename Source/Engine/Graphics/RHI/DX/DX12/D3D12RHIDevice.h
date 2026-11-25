@@ -527,7 +527,8 @@ namespace sw
             void*                                             _pMapped{ nullptr };
             uint64                                            _capacity{ 0 };
             uint64                                            _uploadOffset{ 0 };        ///< 이번 펜스 구간에서 쓴 스테이징 바이트
-            uint64                                            _resetFence{ UINT64_MAX }; ///< 마지막으로 얼로케이터를 Reset 한 펜스 구간
+            uint64                                            _resetFence{ UINT64_MAX }; ///< 마지막으로 얼로케이터를 Reset 한 펜스 구간. 처음이면 UINT64_MAX
+            uint8                                             _bFrameCopies{ SW_FALSE }; ///< 이 스테이징을 읽는 복사를 프레임 스트림에 기록했고 프레임을 아직 내지 않았다 — 펜스 값이 올라도 되감지 않는다
         };
 
         /**
@@ -755,15 +756,24 @@ namespace sw
         static void CALLBACK onValidationMessage( D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR pDescription,
                                                   void* pContext );
         /**
-         * @brief 열어 둔 구조 버퍼 복사 리스트를 닫아 제출합니다. **프레임에 한 번**입니다.
-         * @details 갱신 호출은 리스트를 열어 두고 기록만 하고, 여기서 한 번 닫는다. 갱신은 인스턴스, 배치 테이블, 뷰마다의
-         *          간접 인자, 머티리얼 그룹까지 프레임에 대여섯 번이고 제출 하나가 수십µs 라, 호출마다 `ExecuteCommandLists` 를
-         *          부르면 렌더 스레드 비용이 된다. 큐 순서가 곧 실행 순서라 프레임 리스트 **앞에** 넣으면 갱신이 그 프레임의
-         *          드로우보다 먼저 실행된다. 텍스처 전송은 이 리스트를 거치지 않는다(`submitTransferJob`).
+         * @brief 열어 둔 업로드 복사 리스트를 닫아 제출합니다.
+         * @details 업로드 리스트는 프레임 밖 · 다른 스레드의 갱신과 새 버퍼의 첫 내용만 담는다 — 프레임을 기록하는 스레드의 갱신은 프레임 스트림에 기록 순서대로 들어간다
+         *          (`D3D12RHIResourceFactory::recordBufferCopies`). 큐 순서가 곧 실행 순서라 프레임 리스트 **앞에** 넣으면 그 프레임의 드로우보다 먼저 실행된다.
+         *          텍스처 전송은 이 리스트를 거치지 않는다(`submitTransferJob`).
          * @param bExecuteNow true 면 지금 큐에 넣습니다(펜스 대기 직전). false 면 `_listPendingSubmit` 맨 앞에 끼워
          *                    endFrame 의 한 번의 제출에 같이 나갑니다.
          */
         void flushPendingUploads( bool bExecuteNow );
+        /** @brief 이 스레드가 프레임 스트림을 기록하는 중이면 true 입니다. */
+        bool isRecordingFrameOnThisThread() const { return _frameThreadID.load( std::memory_order_relaxed ) == std::this_thread::get_id() && _pActiveFrameList != nullptr; }
+        /** @brief 다른 스레드가 프레임을 기록하는 중이면 true 입니다. */
+        bool isRecordingFrameOnOtherThread() const
+        {
+            const std::thread::id frameThread = _frameThreadID.load( std::memory_order_relaxed );
+            return frameThread != std::thread::id{} && frameThread != std::this_thread::get_id();
+        }
+        /** @brief 프레임을 냈다 — 프레임 스트림 복사가 읽은 스테이징은 지금 펜스 구간의 것이다. 부르는 쪽이 `_uploadSlotMutex` 를 쥡니다. */
+        void retireFrameCopies();
 
         /**
          * @brief 전송 전용 스테이징 링(`RHIDeviceDesc::_stagingRingBytes`)을 만듭니다. 용량이 0 이면 오류를 남기고 false 입니다(기본값으로 바꾸지 않는다).
@@ -939,6 +949,8 @@ namespace sw
          *          Vulkan 도 열린 업로드 커맨드버퍼가 하나다(`VulkanRHIDevice::_openUploadBuffer`).
          */
         optional<uint32> _openUploadSlotIndex;
+        /// @brief 프레임을 기록하는 스레드입니다(프레임 밖이면 빈 값). 이 스레드의 갱신은 프레임 스트림에, 다른 스레드의 갱신은 업로드 리스트에 기록한다. 업로드 스레드도 읽어 atomic 입니다.
+        atomic<std::thread::id> _frameThreadID{ std::thread::id{} };
 
         /// @brief 버퍼 · 텍스처 레코드입니다. 칸 찾기는 락이 없고(`SlotHandleTable::get`), 추적 상태도 칸 안의 원자값이라 배리어가 락을 잡지 않는다.
         RHIHandleTable<RHIBufferHandle, BufferRecord>   _gpuBuffers;

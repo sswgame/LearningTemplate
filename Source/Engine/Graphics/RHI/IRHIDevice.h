@@ -644,6 +644,23 @@ namespace sw
          */
         void setParallelRecording( bool bEnable ) { _bParallelRecording.store( bEnable, std::memory_order_relaxed ); }
 
+        /** @class PassRecordingScope @brief 렌더 스레드가 렌더 그래프(패스 몸통)를 기록하는 구간입니다 — 이 안의 버퍼 갱신을 `requireUploadOutsidePass` 가 잡는다. 겹치지 않는다. */
+        class PassRecordingScope
+        {
+        public:
+            explicit PassRecordingScope( IRHIDevice& device )
+                : _device{ device }
+            {
+                _device._bPassRecording.store( true, std::memory_order_relaxed );
+            }
+            ~PassRecordingScope() { _device._bPassRecording.store( false, std::memory_order_relaxed ); }
+            PassRecordingScope( const PassRecordingScope& )            = delete;
+            PassRecordingScope& operator=( const PassRecordingScope& ) = delete;
+
+        private:
+            IRHIDevice& _device;
+        };
+
         /**
          * @brief 지금 리소스 테이블(bindless 레지스트리, 텍스처 레코드)을 바꿔도 되는 시점인지 **모든 구성에서** 확인하고, 어기면 오류를 남기고 멈춥니다.
          * @details 모든 백엔드의 register/unregister · create/destroy 진입부에서 부른다. 어긴 호출이 곧 다른 스레드의 기록 상태를 쓰는 데이터 경쟁이라(DX11 `forget*InRecordingStates`,
@@ -654,14 +671,15 @@ namespace sw
         void requireRegistryMutableNow( const utf8* pWhat ) const;
 
         /**
-         * @brief 렌더 스레드가 프레임 스트림에 렌더 패스를 연 채로 버퍼를 갱신하면 알리고 그 패스를 닫습니다(네 백엔드가 같다). 백엔드의 버퍼 갱신이 들어올 때 부릅니다.
-         * @details 전송 계약 3 — 업로드는 그리기 기록 전에 한다. Vulkan 은 패스 안에 복사를 기록할 수 없어 패스를 닫고, D3D12 는 업로드가 별도 복사 리스트로 가 프레임
-         *          리스트보다 **먼저** 실행된다(이미 기록한 드로우가 새 내용을 읽는다). 어느 백엔드에서든 같은 오류(`RHI.BufferUpdateInsideRenderPass`)로 드러나게 하고,
-         *          패스를 닫아 그 뒤의 드로우도 네 백엔드에서 같게 버린다. 에디터 UI 가 열린 백버퍼 패스 안에서 올려 Vulkan 화면에서만 사라졌던 결함이 이 모양이다.
+         * @brief 렌더 스레드의 버퍼 갱신이 패스 밖(전송 계약 3 — 업로드는 그리기 기록 전)인지 봅니다(다섯 백엔드가 같다). 백엔드의 버퍼 갱신이 들어올 때 부릅니다.
+         * @details 렌더 그래프를 기록하는 동안(`PassRecordingScope`)의 갱신이면 개발 구성에서 멈춘다 — 패스는 자기 리스트에 기록하고 갱신은 프레임 스트림에 기록해 그 리스트 **앞에**
+         *          실행된다. 그래프가 이미 기록한 전이(추적 상태)와 어긋나고(D3D12 상태 오류), 앞 패스가 새 내용을 읽는다. 그래프 앞(준비 단계)에서 올린다.
+         *          프레임 스트림에 렌더 패스를 연 채면 알리고(`RHI.BufferUpdateInsideRenderPass`) 그 패스를 닫는다 — Vulkan 은 패스 안에 복사를 기록할 수 없다. 어느 백엔드에서든 같은
+         *          오류로 드러나게 하고, 패스를 닫아 그 뒤의 드로우도 같게 버린다. 에디터 UI 가 열린 백버퍼 패스 안에서 올려 Vulkan 화면에서만 사라졌던 결함이 이 모양이다.
          *          다른 스레드의 갱신은 렌더 스레드가 기록하는 패스와 순서가 없어 보지 않는다(렌더 스레드가 없으면 보지 않는다).
          * @param pWhat 로그에 남길 호출 지점 이름입니다.
          */
-        void requireNoOpenRenderPassForUpload( const utf8* pWhat );
+        void requireUploadOutsidePass( const utf8* pWhat );
 
         /**
          * @brief 병렬 기록 중에 배리어가 나왔음을 **진단으로만** 남깁니다(디버그 전용, 8회까지).
@@ -823,6 +841,8 @@ namespace sw
         uint8 _bShutDown : 1;
         /// @brief GPU 브레드크럼을 켰다(`isGPUBreadcrumbsEnabled`). `initialize` 만 쓴다.
         uint8 _bGPUBreadcrumbs : 1;
+        /// @brief 렌더 스레드가 렌더 그래프를 기록하는 구간인지 나타냅니다(`PassRecordingScope`). 다른 스레드의 갱신도 이 값을 지나므로 atomic 입니다.
+        atomic<bool> _bPassRecording;
         /// @brief 지금이 병렬 패스 기록 구간인지 나타냅니다(setParallelRecording 참고). 렌더 스레드가 쓰고 등록 · 해제를 감시하는 다른 스레드가 읽으므로 atomic 입니다.
         atomic<bool>           _bParallelRecording;
         mutable atomic<uint32> _parallelBarrierReportCount; ///< 병렬 기록 중 배리어 진단을 남긴 횟수(장치마다 앞 8 번만 — `reportBarrierDuringRecording`)
