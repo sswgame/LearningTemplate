@@ -1,5 +1,5 @@
 <?asset guid="8685ba5dc56189cf33cde66eb51d7133"?>
-<Scene formatVersion="3" name="MeadowVillage">
+<Scene formatVersion="0" name="MeadowVillage">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -86,6 +86,7 @@
 					                           _harvestedFlag="farm.harvested"
 					                           _fieldWidth="4"
 					                           _fieldHeight="2">
+						<_speedRange _minTimeScale="0.25" _maxTimeScale="8" _stepFactor="2" />
 						<_stateSettings _landWidth="40" _landHeight="40" _landCellSize="1" _landOrigin="-20,0,-20">
 							<_clock _secondsPerDay="120" _startHour="6" _daysPerSeason="28">
 								<_listSeason>

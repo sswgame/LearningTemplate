@@ -13,7 +13,7 @@
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
 
-#include "Games/Playground/Shooter3D/ShooterFloor.h"
+#include "Games/Playground/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Playground/Shooter3D/Tests/ShooterServerTestWorld.h"
 
 using namespace sw;

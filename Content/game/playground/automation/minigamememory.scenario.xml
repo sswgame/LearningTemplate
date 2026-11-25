@@ -46,7 +46,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Record watch="Minigame.LeaveAssetCacheBytes"/>
 	<Record watch="Minigame.LeaveHeapBytes"/>
-	<ExpectActiveScene path="game/playground/maps/fogshowcase.scene.xml"/>
+	<ExpectActiveScene path="guid:18182025ed2be61069d33dff8765efc9"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<ExpectLog id="MinigameFlow.Restored" count="4"/>

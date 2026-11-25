@@ -67,12 +67,12 @@ namespace sw
         PROPERTY( Category = "Killcam", DisplayName = "Shot Capacity", Min = 1, Max = 64, Tooltip = "Recent shots kept; older shots are overwritten" )
         uint32 _shotCapacity;
 
-        vector<KillcamShot>    _listShot;  ///< 기록(가장 오래된 것이 앞)
-        KillcamShot            _playing;   ///< 재생 중인 발(사본 — 기록이 덮여도 끝까지 간다)
-        KillcamPose            _pose;      ///< 지금 순간
-        float32                _elapsed;   ///< 재생한 시간(초)
-        Subscription           _cameraCut; ///< 재생 동안 쥔 컷 자리(`CameraRegistry::setCutCamera`)
-        uint8                  _bPlaying : 1;
-        [[maybe_unused]] uint8 _reserved : 7;
+        SW_TRANSIENT vector<KillcamShot> _listShot;  ///< 기록(가장 오래된 것이 앞)
+        SW_TRANSIENT KillcamShot         _playing;   ///< 재생 중인 발(사본 — 기록이 덮여도 끝까지 간다)
+        SW_TRANSIENT KillcamPose         _pose;      ///< 지금 순간
+        SW_TRANSIENT float32             _elapsed;   ///< 재생한 시간(초)
+        Subscription                     _cameraCut; ///< 재생 동안 쥔 컷 자리(`CameraRegistry::setCutCamera`)
+        SW_TRANSIENT uint8               _bPlaying : 1;
+        [[maybe_unused]] uint8           _reserved : 7;
     };
 } // namespace sw

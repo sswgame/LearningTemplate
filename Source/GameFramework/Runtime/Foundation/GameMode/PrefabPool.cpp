@@ -17,13 +17,14 @@
 
 namespace sw
 {
-    PrefabPool::PrefabPool( string prefabPath, uint32 maxIdleCount )
+    PrefabPool::PrefabPool( string prefabPath, uint32 maxIdleCount, SpawnLifetime lifetime )
         : _prefabPath{ std::move( prefabPath ) }
         , _spawner{}
         , _listIdle{}
         , _busyOrder{}
         , _listScratchHandle{}
         , _maxIdleCount{ maxIdleCount }
+        , _lifetime{ lifetime }
         , _createdCount{}
         , _bContractChecked{ SW_FALSE }
         , _bRefused{ SW_FALSE }
@@ -65,6 +66,8 @@ namespace sw
         if ( _spawner.isBound() )
         {
             pObject = _spawner( manager, pInstanceName );
+            if ( pObject != nullptr )
+                pObject->setTransient( _lifetime == SpawnLifetime::Derived );
         }
         else
         {
@@ -74,7 +77,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "PrefabPool.PrefabPoolCannotSpawn", "Prefab pool '%#' cannot spawn - %#", _prefabPath, _prefabPath.empty() ? "no prefab path" : "no asset manager" );
                 return nullptr;
             }
-            pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, _prefabPath, pInstanceName );
+            pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, _prefabPath, _lifetime, pInstanceName );
         }
         if ( pObject == nullptr )
             return nullptr;

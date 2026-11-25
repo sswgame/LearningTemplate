@@ -32,8 +32,6 @@ namespace sw
     {
         struct GameSaveSlotsInternal
         {
-            /** @brief 게임 상태 세이브 슬롯의 형식 버전입니다(봉투에 적힌다). 스냅샷 봉투(`GameStateSnapshot`)의 바이트 형식을 바꾸면 올린다. */
-            static constexpr uint32 kSaveSlotFormatVersion = 1;
             /** @brief `game.save [슬롯]` · `game.load [슬롯]` 의 몸통입니다. 슬롯을 비우면 기본 슬롯입니다. 맡기기만 하고 끝은 감시 값 `Save.Written` · `Save.Loaded` 로 본다. */
             template <bool bSave>
             static bool runSlotCommand( const vector<string>& listArgument, string& outReply )
@@ -209,8 +207,7 @@ namespace sw
             GameEventUtil::send( event );
             return false;
         }
-        LocalStoreWriteOptions options{};
-        options._formatVersion = GameSaveSlotsInternal::kSaveSlotFormatVersion;
+        LocalStoreWriteOptions options{}; // 판은 바이트(스냅샷 봉투)의 머리에 있다 — 그릇에 또 적지 않는다
         holdSlotRequest( _owner.getSubsystem<GameLocalStore>().submitWrite( slotName, std::move( snapshotBytes ), options,
                                                                             SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &GameSaveSlots::onSlotWritten, this ) ) );
         return true;
@@ -256,14 +253,6 @@ namespace sw
         if ( completion._result != LocalStoreResult::Ok )
         {
             SW_LOG_ERROR_ID( "GameSaveSlots.SaveSlotCouldNot2", "Save slot '%#' could not be read (local store result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
-            publishSlotLoaded( completion._slot, false, onApplied, sessionTravel );
-            return;
-        }
-        if ( completion._formatVersion != GameSaveSlotsInternal::kSaveSlotFormatVersion )
-        {
-            // 옛 형식 리더는 두지 않는다 - 다른 판의 세이브는 거절한다.
-            SW_LOG_ERROR_ID( "GameSaveSlots.SaveSlotFormatVersion", "Save slot '%#' has format version %#, this build reads %#", completion._slot.c_str(), completion._formatVersion,
-                             GameSaveSlotsInternal::kSaveSlotFormatVersion );
             publishSlotLoaded( completion._slot, false, onApplied, sessionTravel );
             return;
         }

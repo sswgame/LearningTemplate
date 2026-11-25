@@ -18,12 +18,12 @@ namespace
 
     constexpr const utf8* kVisualsXML = R"(<ItemVisualCatalog>
         <ItemVisual id="body">
-          <Part name="Body" kind="Skinned" mesh="body.mesh" material="body.material" sockets="body.sockets"><Variant name="Slim" mesh="slim.mesh" skeleton="slim.skeleton.xml"/></Part>
+          <Part name="Body" kind="Skinned" mesh="body.mesh" material="body.material" sockets="body.sockets.xml"><Variant name="Slim" mesh="slim.mesh" skeleton="slim.skeleton.xml"/></Part>
         </ItemVisual>
         <ItemVisual id="helmet" tags="Helmet.Full"><Part name="Shell" kind="SocketPrefab" prefab="helmet.prefab" socket="Head,Neck" offset="0 1 0"/></ItemVisual>
         <ItemVisual id="hood"><Part name="Cloth" kind="SocketPrefab" prefab="hood.prefab" socket="Head"/><Part name="Tie" kind="SocketPrefab" prefab="tie.prefab" socket="Neck"/></ItemVisual>
         <ItemVisual id="rifle" occupancy="TwoHanded" customization="Gun" tags="Weapon.Rifle">
-          <Part name="Gun" kind="SocketPrefab" prefab="rifle.prefab" socket="Grip" sockets="rifle.sockets"><Variant name="Long" prefab="rifle_long.prefab"/><MaterialVariant name="Desert" material="desert.material"/></Part>
+          <Part name="Gun" kind="SocketPrefab" prefab="rifle.prefab" socket="Grip" sockets="rifle.sockets.xml"><Variant name="Long" prefab="rifle_long.prefab"/><MaterialVariant name="Desert" material="desert.material"/></Part>
         </ItemVisual>
         <ItemVisual id="scope"><Part name="Lens" kind="SocketPrefab" prefab="lens.prefab" socket="Rail"/></ItemVisual>
         <ItemVisual id="shield" tags="Weapon.Shield"><Part name="Board" kind="SocketPrefab" prefab="shield.prefab" socket="Arm"/></ItemVisual>
@@ -45,7 +45,7 @@ namespace
         <ItemVisual id="shirt"><Part name="Cover" kind="BodyModification"><HideRegion name="Chest"/></Part></ItemVisual>
         <ItemVisual id="cape_knight"><Part name="Crest" kind="SocketPrefab" prefab="crest.prefab" socket="Back"/><ForBody bodies="body_other" visual="cape_other"/></ItemVisual>
         <ItemVisual id="cape_other"><Part name="OtherCrest" kind="SocketPrefab" prefab="crest_other.prefab" socket="Back"/></ItemVisual>
-        <ItemVisual id="body_other"><Part name="Body" kind="Skinned" mesh="other.mesh" material="body.material" sockets="body.sockets"/></ItemVisual>
+        <ItemVisual id="body_other"><Part name="Body" kind="Skinned" mesh="other.mesh" material="body.material" sockets="body.sockets.xml"/></ItemVisual>
         <ItemVisual id="sectioned_a"><Part name="Suit" kind="Skinned" mesh="suit.mesh"><Section name="s0" material="red.material"/></Part></ItemVisual>
         <ItemVisual id="sectioned_b"><Part name="Suit" kind="Skinned" mesh="suit.mesh"><Section name="s0" material="blue.material"/></Part></ItemVisual>
     </ItemVisualCatalog>)";
@@ -105,7 +105,7 @@ SW_TEST_CASE_F( AppearanceResolverTest, BodyThenSlotsInOrder )
     SW_REQUIRE_EQUAL( _resolved._listSocketSource.size(), size_t{ 2 } );
     SW_EXPECT_TRUE( _resolved._listSocketSource[0]._owner.empty() );
     SW_EXPECT_TRUE( _resolved._listSocketSource[1]._owner == hashed_string( "MainHand" ) );
-    SW_EXPECT_TRUE( _resolved._listSocketSource[1]._socketSet == hashed_string( "rifle.sockets" ) );
+    SW_EXPECT_TRUE( _resolved._listSocketSource[1]._socketSet == hashed_string( "rifle.sockets.xml" ) );
 }
 
 // 아이템 표를 거쳐 외형을 고르고, 표에 없으면 "외형 없음" 을 설명에 남긴다.
@@ -535,7 +535,7 @@ SW_TEST_CASE( AppearanceInputUtilTest, ApplyEquipmentCopiesTheInstanceState )
     item._listDetachedPart.push_back( hashed_string( "Visor" ) );
     CustomizationValueSet tint;
     tint.setNumber( hashed_string( "Tint" ), 0.5f );
-    tint.setSchemaVersion( CustomizationValueSet::kFirstSchemaVersion );
+    tint.setSchemaVersion( 0 );
     SW_REQUIRE_TRUE( item.setCustomization( tint ) );
     vector<InventorySlot> listRemoved;
     SW_REQUIRE_TRUE( equipment.equip( hashed_string( "Head" ), item, listRemoved ) == EquipResult::Ok );

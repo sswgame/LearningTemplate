@@ -18,14 +18,16 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelTerrain.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
@@ -68,7 +70,7 @@ namespace sw
         /** @brief 뷰가 그릴 반경(청크)입니다 — 상주 반경보다 한 칸 안쪽이라 그리는 청크의 이웃은 늘 올라와 있다. */
         int32 getViewChunkRadius() const { return _residentChunkRadius - 1; }
         /** @brief 가운데에서 시작해 나선으로 찾은 첫 땅(물이 아닌 곳)의 위쪽 위치입니다. */
-        float3 findSpawnPosition() const;
+        AbsolutePosition findSpawnPosition() const;
 
     protected:
         /** @brief 시드로 지형을 생성합니다. 블록 카탈로그가 없거나 블록 이름 PROPERTY 가 카탈로그에 없으면 오류를 남기고 false 를 반환합니다. */
@@ -93,8 +95,8 @@ namespace sw
         AssetRef<PrefabAsset> _autoPlayPrefab;
         PROPERTY( Category = "Scene", DisplayName = "Player", Tooltip = "Object with the VoxelPlayerComponent" )
         GameObjectHandle _player;
-        PROPERTY( Category = "World", DisplayName = "Terrain Seed", Tooltip = "Same seed, same island" )
-        int32 _terrainSeed;
+        PROPERTY( Required, Category = "World", DisplayName = "Terrain", Tooltip = "Seed, heights, blocks and ores of the generated terrain; every value is required" )
+        VoxelTerrainSettings _terrain;
         PROPERTY( Required, Category = "World", DisplayName = "Chunk Count X", Tooltip = "World width in chunks (each chunk is 16 blocks wide)", Min = 1 )
         int32 _chunkCountX;
         PROPERTY( Required, Category = "World", DisplayName = "Chunk Count Z", Tooltip = "World depth in chunks (each chunk is 16 blocks wide)", Min = 1 )
@@ -105,33 +107,12 @@ namespace sw
         int32 _chunkLoadsPerFrame;
         PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
         float32 _statusLogInterval;
-        // ---- 블록 이름 · 지형 규칙(광석 확률 · 높이)입니다. 씬 데이터가 정본이고 C++ 기본값이 없다(필수 칸 — 빠지면 씬 로드 실패, 감사 K-4). 블록 id 는 게임을 시작할 때 모두 있는지 확인합니다 ----
-        PROPERTY( Required, Category = "Blocks", DisplayName = "Water", Tooltip = "Spawn spots on this block are skipped" )
-        CatalogKey<VoxelBlockDef> _waterBlock;
-        PROPERTY( Required, Category = "Blocks", DisplayName = "Stone", Tooltip = "Ore replaces this block underground" )
-        CatalogKey<VoxelBlockDef> _stoneBlock;
-        PROPERTY( Required, Category = "Blocks", DisplayName = "Grass", Tooltip = "High peaks of this block get a snow cap" )
-        CatalogKey<VoxelBlockDef> _grassBlock;
-        PROPERTY( Required, Category = "Blocks", DisplayName = "Snow" )
-        CatalogKey<VoxelBlockDef> _snowBlock;
-        PROPERTY( Required, Category = "Blocks", DisplayName = "Coal Ore" )
-        CatalogKey<VoxelBlockDef> _coalOreBlock;
-        PROPERTY( Required, Category = "Blocks", DisplayName = "Iron Ore" )
-        CatalogKey<VoxelBlockDef> _ironOreBlock;
-        PROPERTY( Required, Category = "World", DisplayName = "Snow Height", Tooltip = "Grass tops at or above this height get a snow cap", Min = 0 )
-        int32 _snowHeight;
-        PROPERTY( Required, Category = "World", DisplayName = "Coal Ore Chance", Tooltip = "Chance that an underground stone block becomes coal", Min = 0.0, Max = 1.0 )
-        float32 _coalOreChance;
-        PROPERTY( Required, Category = "World", DisplayName = "Iron Ore Chance", Tooltip = "Chance that an underground stone block below the iron height becomes iron", Min = 0.0, Max = 1.0 )
-        float32 _ironOreChance;
-        PROPERTY( Required, Category = "World", DisplayName = "Iron Ore Max Height", Tooltip = "Iron is placed only below this height", Min = 0 )
-        int32 _ironOreMaxHeight;
 
-        SharedAssetRef<VoxelBlockCatalog> _pCatalog; ///< 게임 기능 Voxel 이 건 블록 카탈로그 — 월드가 빌린다
-        VoxelWorld                        _world;
-        GameObjectHandle                  _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트입니다. 스폰한 오브젝트라 정리 목록에 들어갑니다.
-        int32                             _centerChunkX;       ///< 상주 범위의 가운데 청크입니다(몸이 든 청크).
-        int32                             _centerChunkZ;
-        int8                              _appliedAutoPlay; ///< 플레이어 폰에 적용한 자동 플레이 상태입니다(−1 아직 없음, 0 끔, 1 켬).
+        BoundAssetRef<VoxelBlockCatalog> _pCatalog; ///< 게임 기능 Voxel 이 건 블록 카탈로그 — 월드가 빌린다
+        SW_CODEC_STATE VoxelWorld        _world;
+        SW_TRANSIENT GameObjectHandle    _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트입니다. 스폰한 오브젝트라 정리 목록에 들어갑니다.
+        SW_TRANSIENT int32               _centerChunkX;       ///< 상주 범위의 가운데 청크입니다(몸이 든 청크).
+        SW_TRANSIENT int32               _centerChunkZ;
+        SW_TRANSIENT int8                _appliedAutoPlay; ///< 플레이어 폰에 적용한 자동 플레이 상태입니다(−1 아직 없음, 0 끔, 1 켬).
     };
 } // namespace sw

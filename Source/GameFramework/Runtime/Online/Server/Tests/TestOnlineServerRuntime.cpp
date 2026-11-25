@@ -296,6 +296,14 @@ namespace
             settings._pClock                            = &_clock;
             settings._pTransport                        = _transport.get();
             settings._config._ioThreadCount             = 0;
+            settings._config._serverKind                = "game"; // 아래는 온라인 서버 설정 파일의 값 — 필수 칸이다
+            settings._config._region                    = "local";
+            settings._config._capacity                  = 100;
+            settings._config._maxConnections            = 4096;
+            settings._config._storeWorkerCount          = 4;
+            settings._config._requestBurstPerRemote     = 10;
+            settings._config._requestBurstPerAccount    = 30;
+            settings._config._maxConnectionsPerRemote   = 64;
             settings._config._maxPendingCallsPerService = 100000; // 온라인 서버 설정 파일의 값 — 필수 칸이다
             settings._store._driver                     = kMemoryStoreDriverName;
             settings._cache._driver                     = kMemoryStoreDriverName;

@@ -72,7 +72,7 @@ namespace sw
     {
         JSONDocument document;
         JSONValue    root = document.makeObject();
-        root.set( "version" ).setUint( kVersion );
+        root.set( "version" ).setUint( kFormat._version );
         JSONValue paths = root.set( "paths" );
         paths.setArray();
         for ( const string& path : listPath )
@@ -94,11 +94,8 @@ namespace sw
         }
         const JSONValue root    = document.getRoot();
         const auto      version = root.readRequired<uint32>( "version" );
-        if ( version.has_value() == false || *version != kVersion )
-        {
-            SW_LOG_ERROR_ID( "ScenePreloadList.ScenePreloadListVersion", "Scene preload list '%#' has version %# - this build reads version %#", listAssetID, version.has_value() ? *version : 0u, kVersion );
-            return false;
-        }
+        if ( version.has_value() == false || kFormat.accept( *version, listAssetID ) == false )
+            return false; // 칸이 없으면 readRequired 가 알렸다
         const JSONValue paths = root.get( "paths" );
         if ( paths.isArray() == false )
         {

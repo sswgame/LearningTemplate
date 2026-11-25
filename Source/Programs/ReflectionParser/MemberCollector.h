@@ -23,7 +23,7 @@ namespace sw
         /** @brief @p recordCursor 의 자식을 돌며 멤버를 모읍니다. */
         void collect( CXCursor recordCursor );
         /** @brief 멤버를 다 모은 뒤의 검증입니다. 메서드는 프로퍼티 뒤에 선언될 수 있어 이름으로 가리키는 애노테이션은 여기서 대조합니다. */
-        void validate();
+        void validate( CXCursor recordCursor );
 
         [[nodiscard]] bool hasError() const noexcept { return _bHasError == SW_TRUE; }
         [[nodiscard]] bool isBodyFound() const noexcept { return _bBodyFound == SW_TRUE; }
@@ -91,6 +91,37 @@ namespace sw
         [[nodiscard]] bool validateInterfaces();
         /** @brief 포트 형식 @p portType 의 기반 가운데 @p interfaceSpelling 으로 끝나는 것의 정규 이름입니다. 없으면 빈 글입니다. */
         static string findPortInterface( CXType portType, const string& interfaceSpelling );
+        /** @brief 데이터 멤버 하나의 상태 선언입니다(`SW_TRANSIENT` · `SW_CODEC_STATE` · `PROPERTY`). */
+        enum class StateDeclaration : uint8
+        {
+            None = 0,  ///< 적지 않았다
+            Property,  ///< PROPERTY — 역할이 어느 길로 싣는지 정한다
+            Codec,     ///< SW_CODEC_STATE — `serializeState` · `serializeGameState` 가 싣는다
+            Transient, ///< SW_TRANSIENT — 싣지 않는다
+            Conflict   ///< 둘 이상을 적었다
+        };
+        /** @brief 이 타입이 선언한 데이터 멤버 하나입니다(PROPERTY 여부와 무관). */
+        struct CollectedField
+        {
+            string           _name{};
+            CXType           _type{};
+            StateDeclaration _declaration{ StateDeclaration::None };
+        };
+
+        /** @brief 데이터 멤버 하나를 적어 둡니다(이름 · 형식 · 상태 선언). */
+        void recordField( CXCursor cursor );
+        /**
+         * @brief 상태를 싣는 형식(컴포넌트, `RuntimeState` · `SaveGame` 칸을 가진 형식)의 값 멤버가 모두 상태 선언을 가졌는지 봅니다.
+         * @details 선언 없는 멤버는 저장 · 스트리밍 · 되돌리기 · 핫 리로드에서 조용히 빠진다 — 새 멤버가 어느 쪽인지 적지 않으면 생성이 멈춘다. `SW_CODEC_STATE` 는 이 형식이나
+         *          기반에 `serializeState` · `serializeGameState` 가 있어야 하고, 상태를 싣지 않는 형식에는 어느 선언도 적지 않는다(뜻이 없는 선언이 남지 않게).
+         */
+        [[nodiscard]] bool validateStateDeclarations( CXCursor recordCursor );
+        /** @brief @p type 이 싣고 되살릴 값을 드는 형식인지 봅니다. 포인터 · 참조 · const 값 · `typeidentity::kArrNonStateType` 은 아니다. 배열은 원소로 본다. */
+        static bool hasStateValue( CXType type );
+        struct StateCodecSearch;
+        /** @brief @p recordCursor 나 그 기반이 `serializeState` · `serializeGameState` 를 선언했는지 봅니다. */
+        static bool               hasStateCodec( CXCursor recordCursor );
+        static CXChildVisitResult stateCodecVisitor( CXCursor cursor, CXCursor, CXClientData data );
         /** @brief 함수 꼴 멤버 하나 — 마커 · 생성자 · 메서드로 나눕니다. */
         void collectFunctionMember( CXCursor cursor, CXCursorKind kind );
         /**
@@ -107,7 +138,7 @@ namespace sw
         ParsedTypeInfo*               _pType;
         const ParserSession*          _pSession;
         vector<ParsedMethodSignature> _listMethodSignature; ///< FUNCTION 여부와 무관하게 이 타입이 선언한 메서드(애노테이션이 이름으로 가리킬 때 대조)
-        vector<pair<string, CXType>>  _listField;           ///< PROPERTY 여부와 무관하게 이 타입이 선언한 데이터 멤버(이름, 형식) — 인터페이스 상태 검사 · 포트 형식 찾기
+        vector<CollectedField>        _listField;           ///< PROPERTY 여부와 무관하게 이 타입이 선언한 데이터 멤버 — 인터페이스 상태 검사 · 포트 형식 찾기 · 상태 선언 검사
         uint32                        _baseCount;
         uint8                         _bSkipConstructors : 1; ///< Abstract / Static 타입은 생성할 수 없다(Unreal UCLASS(Abstract))
         uint8                         _bBodyFound        : 1;

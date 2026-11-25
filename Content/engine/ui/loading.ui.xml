@@ -1,5 +1,5 @@
 <?asset guid="8685b6809ad8bd0cc6672017781c4f1f"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<UIScreenDef _layer="Loading" _bTakesFocus="false" _bShowCursor="false" />
 	<BorderPanel _name="Backdrop">
 		<_background _color="0.03,0.035,0.05,1" />
@@ -13,11 +13,11 @@
 					<_style _alignment="End" />
 					<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-400,-110" _offsetMax="-136,-74" />
 				</TextWidget>
-				<!-- 진행 막대 — LoadingScreenController 가 로드 진행(프리로드 세트)이 있을 때만 보이고 값을 넣는다. 입력은 받지 않는다. -->
-				<SliderWidget _name="Progress" _visibility="Collapsed">
+				<!-- 진행 막대 — 로드 진행(프리로드 세트)이 있을 때만 보인다(`LoadingScreenViewModel`). 입력은 받지 않는다. -->
+				<SliderWidget _name="Progress" _minValue="0" _maxValue="1" _value="{bind:_progress}" _visibility="{bind:_progressVisibility}">
 					<_slot _anchorMin="0,1" _anchorMax="1,1" _offsetMin="72,-60" _offsetMax="-72,-36" />
 				</SliderWidget>
-				<TextWidget _name="Tip" _styleClass="tip">
+				<TextWidget _name="Tip" _styleClass="tip" _text="{bind:_tip}" _visibility="{bind:_tipVisibility}">
 					<_slot _anchorMin="0,1" _anchorMax="0.6,1" _offsetMin="72,-110" _offsetMax="0,-74" />
 				</TextWidget>
 			</CanvasPanel>

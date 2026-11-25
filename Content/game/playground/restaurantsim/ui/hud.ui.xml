@@ -1,5 +1,5 @@
 <?asset guid="ce34c2a6849a59377c1ba4a0f44c74f3"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<!-- 항구 식당 미니게임(minigames/restaurantsim)의 HUD — 값은 RestaurantHUDViewModel, 글은 이 문서(현지화 키)와 카탈로그의 요리 이름이다. -->
 	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
 	<SafeZonePanel _visibility="SelfHitTestInvisible">

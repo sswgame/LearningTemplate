@@ -9,6 +9,7 @@
 #include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 #include "Engine/Window/CursorShape.h"
@@ -73,7 +74,7 @@ namespace sw
         /** @brief 지금 툴팁을 띄운 주인입니다(없으면 `kInvalidWidgetID`). */
         WidgetID getShownOwner() const { return _shownOwner; }
         /** @brief 툴팁 화면입니다(열려 있지 않으면 무효 핸들). */
-        UIScreenHandle getScreen() const { return _screen; }
+        UIScreenHandle getScreen() const { return _screen.getHandle(); }
 
     private:
         /** @brief 툴팁 화면을 열고 글을 넣고 포인터 옆으로 옮깁니다. 문서를 열지 못하면 오류를 한 번 남기고 다시 시도하지 않습니다. */
@@ -82,12 +83,12 @@ namespace sw
         void hide();
 
     private:
-        UISystem*      _pUI;                ///< 화면 스택(기동이 찾는다, 그 전 · 종료 뒤에는 nullptr)
-        Subscription   _updateSubscription; ///< UI 갱신 칸(`UISystem::onUpdateBeforeScreens`) 구독
-        UIScreenHandle _screen;
-        WidgetID       _hoverOwner;          ///< 지금 머무는 주인(설명 글을 가진 위젯)
-        WidgetID       _shownOwner;          ///< 툴팁을 띄운 주인
-        float32        _hoverSeconds;        ///< `_hoverOwner` 위에 머문 시간
-        uint8          _bDocumentFailed : 1; ///< 문서를 열지 못했는지(같은 오류를 매 프레임 내지 않게)
+        UISystem*     _pUI;                ///< 화면 스택(기동이 찾는다, 그 전 · 종료 뒤에는 nullptr)
+        Subscription  _updateSubscription; ///< UI 갱신 칸(`UISystem::onUpdateBeforeScreens`) 구독
+        UIOwnedScreen _screen;
+        WidgetID      _hoverOwner;          ///< 지금 머무는 주인(설명 글을 가진 위젯)
+        WidgetID      _shownOwner;          ///< 툴팁을 띄운 주인
+        float32       _hoverSeconds;        ///< `_hoverOwner` 위에 머문 시간
+        uint8         _bDocumentFailed : 1; ///< 문서를 열지 못했는지(같은 오류를 매 프레임 내지 않게)
     };
 } // namespace sw

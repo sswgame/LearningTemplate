@@ -14,6 +14,7 @@
 #include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -126,10 +127,22 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 카탈로그 루트(`<FighterCatalog buttons moves>`)의 칸입니다. */
+    REFLECT()
+    struct SW_KIT_API FighterCatalogRootParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _buttons{}; ///< 커맨드 글의 버튼 이름(쉼표로 가른다). 적지 않으면 기본 이름
+        PROPERTY()
+        AssetRef<MoveCatalog> _moves{}; ///< 기반 기술 카탈로그 — 파일로 읽는 카탈로그는 필수다(`loadFileRoot`)
+    };
+
     /**
      * @class FighterCatalog
      * @brief 다음 형식의 XML 을 읽는 캐릭터 카탈로그입니다.
-     *        `<FighterCatalog buttons="1,2,3,4" moves="game/x/data/moves.xml"><Fighter id="kaz" name="Kaz" health="170" walkSpeed="0.03" hurtRadius="0.35" pushRadius="0.3"
+     *        `<FighterCatalog buttons="1,2,3,4" moves="guid:…"><Fighter id="kaz" name="Kaz" health="170" walkSpeed="0.03" hurtRadius="0.35" pushRadius="0.3"
      *        standHeight="1.8" crouchHeight="1.1" sidestepAngle="40" sidestepFrames="16" sidestep="u" sidestepDown="d,n" jump="u/f"
      *        jumpFrames="40" jumpHeight="1" jumpDistance="0.8">
      *        <Move id="jab" command="1" priority="0" maxGap="10" from="Standing,Crouching" stance="" enterStance="" stringOnly="false" tracking="false"

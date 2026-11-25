@@ -11,16 +11,15 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -50,7 +49,7 @@ namespace sw
      * @brief 준비 → 영업 → 결산을 정한 날 수만큼 명령과 시간으로 진행하고 이익 합으로 승패를 정합니다.
      */
     REFLECT( Category = "RestaurantSim", DisplayName = "Restaurant Game Mode", Tooltip = "Runs a few RestaurantSim business days: shopping and prices from commands, the open hours by time, the profit target at the end" )
-    class SW_KIT_API RestaurantGameModeComponent : public GameModeComponent
+    class SW_KIT_API RestaurantGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -102,8 +101,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               updateMatch( float32 deltaTime ) override;
         /** @brief 남긴 이익 합을 돈으로 냅니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 
@@ -156,21 +154,18 @@ namespace sw
         int32 _dayCount;
         PROPERTY( Category = "Business", DisplayName = "Target Profit", Min = 0 )
         int32 _targetProfit;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
 
-        SharedAssetRef<RestaurantCatalog> _pCatalog;
-        SharedAssetRef<RecipeCatalog>     _pRecipes;
-        SharedAssetRef<ShopCatalog>       _pShops;
-        SharedAssetRef<ItemCatalog>       _pItemCatalog;
-        WorldClock                        _clock;              ///< 이 판의 날(식당이 빌린다 — 시세의 시드). 하루를 덮을 때 다음 날로 넘긴다
-        SharedAssetRef<ReputationCatalog> _pReputationCatalog; ///< 단계를 적지 않은 판이면 비었다
-        ReputationState                   _reputation;         ///< 손님 평판(식당이 빌린다)
-        Wallet                            _wallet;             ///< 이 판의 돈(식당이 빌린다) — 결과 값으로만 바탕 판에 나간다
-        Inventory                         _pantry;             ///< 이 판의 창고(식당이 빌린다)
-        RestaurantSimulation              _simulation;
-        vector<RestaurantEvent>           _listEvent;
-        Countdown                         _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
+        BoundAssetRef<RestaurantCatalog>    _pCatalog;
+        BoundAssetRef<RecipeCatalog>        _pRecipes;
+        BoundAssetRef<ShopCatalog>          _pShops;
+        BoundAssetRef<ItemCatalog>          _pItemCatalog;
+        SW_CODEC_STATE WorldClock           _clock;              ///< 이 판의 날(식당이 빌린다 — 시세의 시드). 하루를 덮을 때 다음 날로 넘긴다
+        BoundAssetRef<ReputationCatalog>    _pReputationCatalog; ///< 단계를 적지 않은 판이면 비었다
+        SW_CODEC_STATE ReputationState      _reputation;         ///< 손님 평판(식당이 빌린다)
+        SW_CODEC_STATE Wallet               _wallet;             ///< 이 판의 돈(식당이 빌린다) — 결과 값으로만 바탕 판에 나간다
+        SW_CODEC_STATE Inventory            _pantry;             ///< 이 판의 창고(식당이 빌린다)
+        SW_CODEC_STATE RestaurantSimulation _simulation;
+        SW_TRANSIENT vector<RestaurantEvent> _listEvent;
         PROPERTY( RuntimeState )
         int64 _totalProfit;
         PROPERTY( RuntimeState, Min = 1 )

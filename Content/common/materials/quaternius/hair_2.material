@@ -4,6 +4,6 @@
      임포트가 만든 PBR 머티리얼(mi_hair_2) 대신 itemvisuals.xml 의 머리카락 부품이 이것을 든다. -->
 <MaterialDef formatVersion="0" name="hair_2" _base="guid:5bdd4d3bbfd48b5adcb65cc5d000738f">
 	<_properties>
-		<item name="_albedoMap" assetPath="common/textures/quaternius/hair/t_hair_2_basecolor.dds" />
+		<item name="_albedoMap" assetPath="guid:5979a10c842dc2e389f456e857b47ebd" />
 	</_properties>
 </MaterialDef>

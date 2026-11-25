@@ -5,7 +5,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -125,9 +124,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "SRBF" );
-        static constexpr uint32 kStateVersion = 1;
-
         SRPGBattlefield();
 
         /** @brief 크기 · 기본 지형 · 시드로 전장을 엽니다. 규칙 수치는 @p catalog 의 `<Rules>` 에서만 받는다(감사 K-4). */
@@ -243,16 +239,16 @@ namespace sw
         bool isPhaseFinished() const;
 
     private:
-        vector<const SRPGTerrainDef*> _listTerrain; ///< 셀마다의 지형이다
-        vector<SRPGUnit>              _listUnit;
-        NotificationBuffer<SRPGEvent> _eventBuffer;
-        mutable GridSearchScratch     _cellMarks; ///< `collectThreatCells` 가 "한 셀은 한 번만" 처리하려고 쓰는 표시이다
-        SRPGSettings                  _settings;
-        TurnOrder                     _turnOrder;
-        GameRandom                    _random;
-        const SRPGCatalog*            _pCatalog;
-        GridTopology                  _topology;
-        LandBinding                   _land; ///< 전투 동안 빌린 공유 땅(없으면 단독 동작)
+        SW_CODEC_STATE vector<const SRPGTerrainDef*> _listTerrain; ///< 셀마다의 지형이다
+        SW_CODEC_STATE vector<SRPGUnit> _listUnit;
+        SW_TRANSIENT NotificationBuffer<SRPGEvent> _eventBuffer;
+        SW_TRANSIENT mutable GridSearchScratch     _cellMarks; ///< `collectThreatCells` 가 "한 셀은 한 번만" 처리하려고 쓰는 표시이다
+        SW_TRANSIENT SRPGSettings                  _settings;
+        SW_CODEC_STATE TurnOrder                   _turnOrder;
+        SW_CODEC_STATE GameRandom                  _random;
+        const SRPGCatalog*                         _pCatalog;
+        SW_CODEC_STATE GridTopology                _topology;
+        SW_TRANSIENT LandBinding                   _land; ///< 전투 동안 빌린 공유 땅(없으면 단독 동작)
         PROPERTY( RuntimeState, Min = 0 )
         int32 _turn;
         PROPERTY( RuntimeState, Min = -1 )

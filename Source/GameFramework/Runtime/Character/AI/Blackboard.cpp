@@ -5,6 +5,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
+
 namespace sw
 {
     float32 BlackboardValue::computeNumeric() const
@@ -135,6 +137,62 @@ namespace sw
             if ( value._type == BlackboardValueKind::Vector )
                 value._vector = value._vector + delta;
         }
+    }
+
+    void Blackboard::serializeState( StateIO& io, const WorldOrigin& origin )
+    {
+        struct Entry
+        {
+            hashed_string   _key{};
+            BlackboardValue _value{};
+        };
+        vector<Entry> listEntry;
+        if ( io.isWriting() )
+        {
+            vector<hashed_string> listKey;
+            collectKeys( listKey ); // 이름순 — 같은 값이면 같은 바이트다
+            for ( const hashed_string& key : listKey )
+            {
+                listEntry.push_back( Entry{ key, *findValue( key ) } );
+            }
+        }
+        io.list( listEntry, sizeof( uint32 ) + sizeof( uint8 ), [&io, &origin]( Entry& entry )
+        {
+            BlackboardValue& value = entry._value;
+            io.value( entry._key );
+            io.enumValue( value._type, BlackboardValueKind::Object );
+            switch ( value._type )
+            {
+                case BlackboardValueKind::None:
+                    break;
+                case BlackboardValueKind::Float:
+                    io.value( value._float );
+                    break;
+                case BlackboardValueKind::Int:
+                case BlackboardValueKind::Bool:
+                    io.value( value._int );
+                    break;
+                case BlackboardValueKind::Vector:
+                {
+                    float3 position = origin.toAbsolute( value._vector );
+                    io.value( position );
+                    if ( io.isReading() )
+                        value._vector = origin.toLocal( position );
+                    break;
+                }
+                case BlackboardValueKind::Object:
+                    io.value( value._object );
+                    break;
+            }
+        } );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _mapValue.clear();
+        for ( Entry& entry : listEntry )
+        {
+            _mapValue[entry._key] = entry._value;
+        }
+        ++_revision;
     }
 
     bool Blackboard::isSet( const hashed_string& key ) const

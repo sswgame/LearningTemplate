@@ -37,6 +37,6 @@ namespace sw
         PROPERTY( Category = "Conveyor", DisplayName = "Move Occupants", Tooltip = "Move overlapping objects directly" )
         bool _bMoveOccupants;
 
-        float32 _pendingSeconds; ///< 틱이 쌓고 틱 뒤 옮기기가 쓰는 시간
+        SW_TRANSIENT float32 _pendingSeconds; ///< 틱이 쌓고 틱 뒤 옮기기가 쓰는 시간
     };
 } // namespace sw

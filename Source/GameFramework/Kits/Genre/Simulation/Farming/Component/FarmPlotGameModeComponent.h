@@ -7,18 +7,18 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameSpeedControl.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
@@ -39,8 +39,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "MVFM" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "MVFM" };
 
         FarmPlotGameModeComponent();
         virtual ~FarmPlotGameModeComponent() override;
@@ -63,7 +62,6 @@ namespace sw
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
         void               collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 하루 넘김 — 밭이 자라고, 다 자란 칸을 거둬 팔고 다시 심고, 나머지는 물 준다. */
@@ -85,14 +83,16 @@ namespace sw
         int32 _fieldHeight;
         PROPERTY( Category = "Economy", DisplayName = "Starting Gold", Min = 0 )
         int32 _startingGold;
-        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (up to the game speed limit)", Min = 1.0, Max = 8.0 )
+        PROPERTY( Category = "Time", DisplayName = "Speed Range", Tooltip = "Slowest and fastest time scale and the factor of one step; required" )
+        GameSpeedRange _speedRange;
+        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (within the speed range)", Min = 1.0 )
         float32 _fastTimeScale;
 
-        SharedAssetRef<CropCatalog> _pCropCatalog;
-        FarmField                   _field;
-        GameSpeedControl            _speed; ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
-        uint32                      _fieldRevision;
-        uint8                       _bFastForward : 1; ///< 마지막 빨리 감기 명령 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
-        [[maybe_unused]] uint8      _reserved     : 7;
+        BoundAssetRef<CropCatalog>    _pCropCatalog;
+        SW_CODEC_STATE FarmField      _field;
+        SW_TRANSIENT GameSpeedControl _speed; ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
+        SW_CODEC_STATE uint32         _fieldRevision;
+        SW_TRANSIENT uint8            _bFastForward : 1; ///< 마지막 빨리 감기 명령 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
+        [[maybe_unused]] uint8        _reserved     : 7;
     };
 } // namespace sw

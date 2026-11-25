@@ -5,10 +5,10 @@
  *          (`RTSBattlefieldViewComponent`)다. 이 파일은 두 키트를 섞는 게임 몫(공유 땅 · 지갑, 시연 명령)만 든다.
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/RTSGameModeComponent.h"
@@ -33,8 +33,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "FTSK" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "FTSK" };
 
         FrontierSkirmishGameModeComponent();
         virtual ~FrontierSkirmishGameModeComponent() override;
@@ -46,7 +45,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 빈 월드를 열고 공유 땅과 지갑을 겁니다(시작과 복원이 같은 설정으로 연다). 격자 크기는 공유 땅의 크기이고, 월드가 열리지 않으면 false 입니다. */
@@ -67,6 +65,8 @@ namespace sw
         int32 _barracksX;
         PROPERTY( Category = "Layout", DisplayName = "Barracks Y", Min = 0 )
         int32 _barracksY;
+        PROPERTY( Category = "Layout", DisplayName = "Player Start", Tooltip = "Start position of the player on the shared land; required (the skirmish does not open off the land)", Units = m )
+        float3 _playerStart;
         PROPERTY( Category = "Layout", DisplayName = "Worker Start", Units = m )
         float3 _workerStart;
         PROPERTY( Category = "Layout", DisplayName = "Patrol A", Tooltip = "First patrol end (also the soldier's start)", Units = m )
@@ -74,9 +74,9 @@ namespace sw
         PROPERTY( Category = "Layout", DisplayName = "Patrol B", Units = m )
         float3 _patrolB;
 
-        RTSWorld  _world;
-        RTSUnitID _worker;
-        RTSUnitID _soldier;
+        SW_CODEC_STATE RTSWorld  _world;
+        SW_CODEC_STATE RTSUnitID _worker;
+        SW_CODEC_STATE RTSUnitID _soldier;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _tickCount;
         PROPERTY( RuntimeState )

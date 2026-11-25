@@ -63,7 +63,7 @@ namespace sw
         bool _bExploded;
 
         PROPERTY( RuntimeState, Category = "Barrel", DisplayName = "Fuse Steps Left", Tooltip = "Runtime: steps until the fuse burns down (-1: not counting yet)" )
-        int32  _fuseStepsLeft;
-        float3 _blastCenter; ///< 터진 자리 — 틱 뒤 `applyRadialDamage` 가 읽는다(틱 뒤 일은 캡처 없이 핸들로 다시 찾는다)
+        int32               _fuseStepsLeft;
+        SW_TRANSIENT float3 _blastCenter; ///< 터진 자리 — 틱 뒤 `applyRadialDamage` 가 읽는다(틱 뒤 일은 캡처 없이 핸들로 다시 찾는다)
     };
 } // namespace sw

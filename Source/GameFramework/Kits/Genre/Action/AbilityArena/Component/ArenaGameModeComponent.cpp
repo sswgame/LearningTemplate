@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Component/ArenaGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -13,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -34,8 +34,7 @@ namespace sw
     {
         struct ArenaGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "ARNA" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "ARNA" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 팩의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventWave       = "ArenaWaveStart";
@@ -115,6 +114,8 @@ namespace sw
         , _baseGruntCount{ 2u }
         , _wavesPerCaster{ 2u }
         , _wavesPerLevel{ 2u }
+        , _statScalePerLevel{ 0.15f }
+        , _hostileSearchRadius{ 0.0f }
         , _deathLifeSpan{ 0.8f }
         , _playerRespawnDelay{ 2.5f }
         , _statusLogInterval{ 5.0f }
@@ -127,7 +128,7 @@ namespace sw
         , _playerFocus{ 0.0f, 0.0f, 0.0f }
         , _playerObject{}
         , _autoBattleObject{}
-        , _playerRespawnTimer{ -1.0f }
+        , _playerRespawn{}
         , _wave{ 0 }
         , _killCount{ 0 }
         , _playerShotCount{ 0 }
@@ -147,6 +148,11 @@ namespace sw
         if ( pCatalog == nullptr || pCatalog->getAbilitySetCount() == 0 )
         {
             SW_LOG_ERROR_ID( "ArenaGameMode.AbilityCatalogNotLoaded", "[Arena] the ability catalog is not loaded - the arena cannot start" );
+            return false;
+        }
+        if ( _hostileSearchRadius <= 0.0f )
+        {
+            SW_LOG_ERROR_ID( "ArenaGameMode.HostileSearchRadiusMissing", "[Arena] the game mode needs _hostileSearchRadius above 0 - the arena cannot start" );
             return false;
         }
         bool bSetsKnown = true;
@@ -185,7 +191,7 @@ namespace sw
     void ArenaGameModeComponent::serializeGameState( StateIO& io )
     {
         // 웨이브 · 처치 수는 상태 칸이다(`GameModeComponent::serializeState` 가 싣는다) — 손 본문은 판 머리만.
-        io.header( ArenaGameModeComponentInternal::kStateTag, ArenaGameModeComponentInternal::kStateVersion );
+        io.header( ArenaGameModeComponentInternal::kStateFormat );
         io.end();
     }
 
@@ -232,10 +238,10 @@ namespace sw
         _projectiles.clear(); // 짐(스펙)은 런타임 값이라 상태에 싣지 않는다 — 유닛과 함께 걷는다
         _listProjectileCargo.clear();
         _listPendingUnit.clear();
-        _playerRespawnTimer = -1.0f;
-        _autoBattleObject   = GameObjectHandle{};
-        _bUnitsRequested    = SW_FALSE;
-        _bPossessionDirty   = SW_FALSE;
+        _playerRespawn.reset();
+        _autoBattleObject = GameObjectHandle{};
+        _bUnitsRequested  = SW_FALSE;
+        _bPossessionDirty = SW_FALSE;
     }
 
     // ------------------------------------------------------------------------------
@@ -292,7 +298,7 @@ namespace sw
 
     bool ArenaGameModeComponent::findNearestHostilePosition( GameObjectHandle from, float3& outPosition ) const
     {
-        const ArenaUnitView* pNearest = findNearestHostileView( from, 100.0f );
+        const ArenaUnitView* pNearest = findNearestHostileView( from, _hostileSearchRadius );
         return pNearest != nullptr && findUnitPosition( pNearest->_object, outPosition );
     }
 
@@ -433,7 +439,7 @@ namespace sw
         // 웨이브가 오르면 적의 체력과 공격력이 오른다(이펙트의 perLevel 이 붙은 값만 커진다).
         if ( request._level > 1 )
         {
-            const float32           levelScale  = 1.0f + 0.15f * static_cast<float32>( request._level - 1 );
+            const float32           levelScale  = 1.0f + _statScalePerLevel * static_cast<float32>( request._level - 1 );
             const optional<float32> maxHealth   = pAbilitySystem->getAttributeBaseValue( CombatAttributes::maxHealth() );
             const optional<float32> attackPower = pAbilitySystem->getAttributeBaseValue( CombatAttributes::attackPower() );
             if ( maxHealth.has_value() == false || attackPower.has_value() == false )
@@ -618,9 +624,9 @@ namespace sw
                 _listUnit.erase( _listUnit.begin() + static_cast<ptrdiff_t>( unitIndex - 1 ) );
                 continue;
             }
-            if ( unit._deathTimer < 0.0f && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
+            if ( unit._death.has_value() == false && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
             {
-                unit._deathTimer = _deathLifeSpan;
+                unit._death = Countdown( _deathLifeSpan );
                 if ( unit._kind == ArenaUnitKind::Player )
                 {
                     SW_LOG_INFO_ID( "ArenaGameMode.PlayerFellWaveAfter", "[Arena] the player fell on wave %# after %# kills", _wave, _killCount );
@@ -632,11 +638,11 @@ namespace sw
                     getSoundQueue().queueEvent( ArenaGameModeComponentInternal::kEventEnemyFell );
                 }
             }
-            if ( unit._deathTimer >= 0.0f )
+            if ( unit._death.has_value() )
             {
                 // 유닛이 납작해지는 동안 기다렸다가 정리한다. 조종하던 AI 조종자도 함께 정리한다.
-                unit._deathTimer -= deltaTime;
-                if ( unit._deathTimer <= 0.0f )
+                (void)unit._death->update( deltaTime );
+                if ( unit._death->isActive() == false )
                 {
                     retireUnit( *pManager, unit );
                     _listUnit.erase( _listUnit.begin() + static_cast<ptrdiff_t>( unitIndex - 1 ) );
@@ -677,7 +683,7 @@ namespace sw
             view._unitID      = unit._unitID;
             view._position    = AbsolutePosition{ pManager->getWorldOrigin().toAbsolute( pMesh->getWorldPosition() ) };
             view._kind        = unit._kind;
-            view._bAlive      = unit._deathTimer < 0.0f && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) == false ? SW_TRUE : SW_FALSE;
+            view._bAlive      = unit._death.has_value() == false && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) == false ? SW_TRUE : SW_FALSE;
             view._bPlayerTeam = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
             view._bEnemyTeam  = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "Team.Enemy"_tag ) ? SW_TRUE : SW_FALSE;
             _listUnitView.push_back( view );
@@ -699,18 +705,17 @@ namespace sw
         }
         if ( bPlayerPresent )
         {
-            _playerRespawnTimer = -1.0f;
+            _playerRespawn.reset();
             return;
         }
         // 쓰러진 플레이어는 정리된 뒤 잠시 있다가 중앙에 다시 등장한다(웨이브는 이어진다).
-        if ( _playerRespawnTimer < 0.0f )
-            _playerRespawnTimer = _playerRespawnDelay;
-        _playerRespawnTimer -= deltaTime;
-        if ( _playerRespawnTimer <= 0.0f )
-        {
-            _playerRespawnTimer = -1.0f;
-            requestUnit( ArenaUnitKind::Player, float3{ 0.0f, 0.0f, 0.0f }, 1 );
-        }
+        if ( _playerRespawn.has_value() == false )
+            _playerRespawn = Countdown( _playerRespawnDelay );
+        (void)_playerRespawn->update( deltaTime );
+        if ( _playerRespawn->isActive() )
+            return;
+        _playerRespawn.reset();
+        requestUnit( ArenaUnitKind::Player, float3{ 0.0f, 0.0f, 0.0f }, 1 );
     }
 
     void ArenaGameModeComponent::logStatus() const

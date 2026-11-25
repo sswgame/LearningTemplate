@@ -1,4 +1,4 @@
 <?asset guid="b258140546ac68f1672e340d5332d0ff"?>
 <SQLMigrationList>
-	<Migration _name="0001_local_slot" _compatibility="Backward" />
+	<Migration _name="0000_local_slot" _compatibility="Backward" />
 </SQLMigrationList>

@@ -91,6 +91,9 @@
 	</Catalog>
 	<Catalog root="CityCatalog">
 		<Reference owner="Building" attribute="goods" target="Good"/>
+		<Reference owner="Building" attribute="service" target="Service"/>
+		<Reference owner="Building" attribute="terrain" target="Terrain"/>
+		<Reference owner="HouseLevel" attribute="services" target="Service"/>
 	</Catalog>
 	<Catalog root="ConquestCatalog">
 		<Reference owner="Rules" attribute="waveUnit" target="Unit"/>
@@ -181,14 +184,17 @@
 	<Field owner="FrontierSkirmishGameModeComponent" field="_soldierUnit" tag="RTSUnitDef"/>
 	<Field owner="FrontierSkirmishGameModeComponent" field="_barracksUnit" tag="RTSUnitDef"/>
 	<Field owner="RTSCommandInputComponent" field="_listBuildUnitID" tag="RTSUnitDef"/>
-	<Field owner="SkirmishGameModeComponent" field="_workerUnitID" tag="RTSUnitDef"/>
-	<Field owner="SkirmishGameModeComponent" field="_depotUnitID" tag="RTSUnitDef"/>
-	<Field owner="SkirmishGameModeComponent" field="_supplyUnitID" tag="RTSUnitDef"/>
-	<Field owner="SkirmishGameModeComponent" field="_productionUnitID" tag="RTSUnitDef"/>
-	<Field owner="SkirmishGameModeComponent" field="_armyUnitID" tag="RTSUnitDef"/>
+	<Field owner="RTSCommanderUnits" field="_workerID" tag="RTSUnitDef"/>
+	<Field owner="RTSCommanderUnits" field="_depotID" tag="RTSUnitDef"/>
+	<Field owner="RTSCommanderUnits" field="_supplyID" tag="RTSUnitDef"/>
+	<Field owner="RTSCommanderUnits" field="_productionID" tag="RTSUnitDef"/>
+	<Field owner="RTSCommanderUnits" field="_armyUnitID" tag="RTSUnitDef"/>
+	<Field owner="SkirmishUnitPlacement" field="_unitID" tag="RTSUnitDef"/>
 	<Derived type="LockstepSkirmishGameModeComponent" base="SkirmishGameModeComponent"/>
 	<CatalogKey tag="CityBuildingDef" catalog="CityCatalog" entry="Building"/>
 	<Field owner="CityGameModeComponent" field="_landmarkBuilding" tag="CityBuildingDef"/>
+	<CatalogKey tag="CityTerrainDef" catalog="CityCatalog" entry="Terrain"/>
+	<Field owner="NileGameModeComponent" field="_listTerrain" tag="CityTerrainDef"/>
 	<CatalogKey tag="CameraPresetDef" catalog="CameraPresetCatalog" entry="Preset"/>
 	<Field owner="CameraDirectorComponent" field="_initialPreset" tag="CameraPresetDef"/>
 	<Field owner="RTSCommandInputComponent" field="_watchCameraPreset" tag="CameraPresetDef"/>
@@ -221,12 +227,16 @@
 	<CatalogKey tag="WeatherDef" catalog="WeatherCatalog" entry="Weather"/>
 	<Field owner="WeatherDirectorComponent" field="_startWeather" tag="WeatherDef"/>
 	<CatalogKey tag="VoxelBlockDef" catalog="VoxelBlockCatalog" entry="Block"/>
-	<Field owner="VoxelGameModeComponent" field="_waterBlock" tag="VoxelBlockDef"/>
-	<Field owner="VoxelGameModeComponent" field="_stoneBlock" tag="VoxelBlockDef"/>
-	<Field owner="VoxelGameModeComponent" field="_grassBlock" tag="VoxelBlockDef"/>
-	<Field owner="VoxelGameModeComponent" field="_snowBlock" tag="VoxelBlockDef"/>
-	<Field owner="VoxelGameModeComponent" field="_coalOreBlock" tag="VoxelBlockDef"/>
-	<Field owner="VoxelGameModeComponent" field="_ironOreBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelTerrainSettings" field="_grassBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelTerrainSettings" field="_dirtBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelTerrainSettings" field="_stoneBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelTerrainSettings" field="_sandBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelTerrainSettings" field="_waterBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelTerrainSettings" field="_bedrockBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelTerrainSettings" field="_logBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelTerrainSettings" field="_leavesBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelTerrainSettings" field="_snowBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelOreLayer" field="_block" tag="VoxelBlockDef"/>
 	<Field owner="VoxelPlayerComponent" field="_waterBlock" tag="VoxelBlockDef"/>
 	<Field owner="VoxelPlayerComponent" field="_listStartBlock" tag="VoxelBlockDef"/>
 	<CatalogKey tag="CharacterAppearanceDef" catalog="CharacterAppearanceCatalog" entry="CharacterAppearance"/>

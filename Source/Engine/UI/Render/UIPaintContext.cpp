@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/UI/Style/UIWidgetSkin.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
@@ -29,14 +30,6 @@ namespace sw
             /** @brief 순회가 끝나면 지우는 비트입니다. */
             static constexpr uint32 kClearBits = kSelfPaintBits;
 
-            /** @brief 포커스 테두리 색입니다(위젯의 계산된 스타일이 `_focusRingColor` 를 정하지 않았을 때). */
-            static constexpr float32 kFocusRingRed   = 1.0f;
-            static constexpr float32 kFocusRingGreen = 0.78f;
-            static constexpr float32 kFocusRingBlue  = 0.2f;
-            /** @brief 포커스 테두리 두께, 바깥으로 넓히는 길이, 모서리 반지름(UI 단위)입니다. */
-            static constexpr float32 kFocusRingWidth  = 2.0f;
-            static constexpr float32 kFocusRingOutset = 3.0f;
-            static constexpr float32 kFocusRingRadius = 6.0f;
             /** @brief 보이는 자식 범위를 이분 탐색으로 찾는 자식 수 임계값입니다. 그보다 적으면 자식마다 자르기 검사하는 편이 더 쌉니다. */
             static constexpr uint32 kVisibleRangeSearchMinChildCount = 64;
 
@@ -151,19 +144,16 @@ namespace sw
 
     void UIPaintContext::paintFocusRing( const Widget& widget, CanvasPainter& painter )
     {
-        using Internal                 = UIPaintPassInternal;
-        const WidgetGeometry& geometry = widget.getGeometry();
-        CanvasBrush           ring{};
+        const UIWidgetSkin::FocusRing& skin     = UIWidgetSkin::get()._focusRing;
+        const WidgetGeometry&          geometry = widget.getGeometry();
+        CanvasBrush                    ring{};
         ring._color                   = float4{};
         const UIComputedStyle* pStyle = widget.getComputedStyle();
-        ring._borderColor             = pStyle != nullptr && pStyle->has( UIStyleField::FocusRingColor )
-                                          ? pStyle->_value._focusRingColor
-                                          : float4{ Internal::kFocusRingRed, Internal::kFocusRingGreen, Internal::kFocusRingBlue, 1.0f };
-        ring._borderWidth             = Internal::kFocusRingWidth;
-        ring._cornerRadius            = float4{ Internal::kFocusRingRadius, Internal::kFocusRingRadius, Internal::kFocusRingRadius, Internal::kFocusRingRadius };
+        ring._borderColor             = pStyle != nullptr && pStyle->has( UIStyleField::FocusRingColor ) ? pStyle->_value._focusRingColor : skin._color;
+        ring._borderWidth             = skin._width;
+        ring._cornerRadius            = skin._cornerRadius;
         painter.pushTransform( makeWidgetTransform( geometry ) );
-        painter.fillRect( float2{ -Internal::kFocusRingOutset, -Internal::kFocusRingOutset },
-                          float2{ geometry._size._x + 2.0f * Internal::kFocusRingOutset, geometry._size._y + 2.0f * Internal::kFocusRingOutset }, ring );
+        painter.fillRect( float2{ -skin._outset, -skin._outset }, float2{ geometry._size._x + 2.0f * skin._outset, geometry._size._y + 2.0f * skin._outset }, ring );
         painter.popTransform();
     }
 

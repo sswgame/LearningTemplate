@@ -18,7 +18,7 @@ namespace sw
      *          만들고 창을 열고 닫기만 한다. 칼날은 `setBlade` 의 두 점(이 오브젝트 기준)과 두께다. 칼 끝처럼 따로 움직일 판정은 자식 오브젝트에 붙인다.
      *          `beginAttack` 부터 `duration` 동안 창이 열리고, 그 사이 칼날에 걸린 오브젝트는 창마다 **한 번** 맞는다. 휘두르기 전부터 칼날 안에 있던 오브젝트는
      *          시작할 때, 휘두르는 동안 들어온 오브젝트는 그 프레임에 맞는다. 공격자 계층(이 오브젝트의 맨 위 조상과 그 아래 모두)은 맞지 않고, 맞음의 때린 쪽은
-     *          그 맨 위 조상이다. 맞음은 맞음 사건(`GameObjectEvents::_hitReceived`)으로 가고 유닛은 `UnitStatsComponent::receiveHit` 에서 피해를 받는다(투사체와 같은 `takeDamage`).
+     *          그 맨 위 조상이다. 맞음은 맞음 사건(`GameObjectEvents::_hitReceived`)으로 가고 유닛은 `AbilitySystemComponent::receiveHit` 에서 피해를 받는다(투사체 · 기믹과 같은 피해 이펙트).
      *          트리거(감지 범위)는 걸리지 않는다. 클라이언트 프로세스는 맞음을 전달하지 않는다(서버 권위, `MeleeHit::getProcessAuthority`).
      *          스윕은 틱 밖에서 돈다 — 틱(물리 뒤 단계)이 틱 직후로 미룬다(물리 질의와 맞음 사건은 틱 밖의 일이다).
      */
@@ -65,10 +65,10 @@ namespace sw
          * @brief 지난 스윕의 칼날 표본점(월드)입니다. 비었으면 지금 칼날만 씁니다.
          * @details 저장하지 않는다. 다시 연 판정은 지금 칼날부터 다시 쓸고, 이미 맞은 목록이 같은 오브젝트를 다시 맞히지 않게 한다.
          */
-        vector<float3> _listPreviousPoint;
-        vector<float3> _listBladeScratch; ///< 이번 스윕의 표본점을 모으는 버퍼 — 끝나면 지난 표본점과 맞바꾼다(틱마다 새 벡터를 만들지 않는다)
+        SW_TRANSIENT vector<float3> _listPreviousPoint;
+        SW_TRANSIENT vector<float3> _listBladeScratch; ///< 이번 스윕의 표본점을 모으는 버퍼 — 끝나면 지난 표본점과 맞바꾼다(틱마다 새 벡터를 만들지 않는다)
         /** @brief 순간이동하면 지난 칼날을 잊는다 — 지나가지 않은 길을 쓸지 않는다. */
-        SceneTeleportCursor _teleport;
+        SW_TRANSIENT SceneTeleportCursor _teleport;
         PROPERTY()
         float3 _bladeStart;
         PROPERTY()

@@ -105,9 +105,9 @@ namespace sw
         void bindToAnimator();
         void unbindFromAnimator();
 
-        MotionWarpingBinding     _binding;
-        vector<MotionWarpTarget> _listTarget;
-        vector<MotionWarpWindow> _listWindow;
-        Subscription             _animatorRegistration; ///< 애니메이터의 루트 모션 수정자 등록 구독(놓으면 빠진다)
+        SW_TRANSIENT MotionWarpingBinding _binding;
+        SW_TRANSIENT vector<MotionWarpTarget> _listTarget;
+        SW_TRANSIENT vector<MotionWarpWindow> _listWindow;
+        Subscription                          _animatorRegistration; ///< 애니메이터의 루트 모션 수정자 등록 구독(놓으면 빠진다)
     };
 } // namespace sw

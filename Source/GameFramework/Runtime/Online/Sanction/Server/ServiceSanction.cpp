@@ -4,6 +4,8 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -12,8 +14,8 @@ namespace sw
     {
         struct ServiceSanctionInternal
         {
-            static constexpr uint64 kFormat    = 1;
-            static constexpr int32  kKindCount = static_cast<int32>( ServiceSanctionKind::Count );
+            static constexpr FormatDef kFormat{ "SANC" };
+            static constexpr int32     kKindCount = static_cast<int32>( ServiceSanctionKind::Count );
 
             static bool isEmpty( const ServiceSanctionState& state )
             {
@@ -48,7 +50,7 @@ namespace sw
         if ( read != ServiceStoreResult::Ok )
             return read;
         BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
-        if ( reader.readVarUint() != ServiceSanctionInternal::kFormat )
+        if ( ServiceSanctionInternal::kFormat.readVersion( reader ) == false )
             return ServiceStoreResult::Unavailable;
         for ( int64& untilMs : outState._arrUntilMs ) // 레코드는 열거자 순서의 값 나열이다
         {
@@ -89,7 +91,7 @@ namespace sw
             return;
         }
         BitWriter writer;
-        writer.writeVarUint( ServiceSanctionInternal::kFormat );
+        ServiceSanctionInternal::kFormat.writeVersion( writer );
         for ( const int64 untilMs : state._arrUntilMs )
         {
             writer.writeVarInt( untilMs );

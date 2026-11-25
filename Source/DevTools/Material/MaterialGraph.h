@@ -29,6 +29,7 @@
 
 #include "DevTools/DevToolsAPI.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/GraphCommentBox.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -70,6 +71,9 @@ namespace sw
 
 namespace sw
 {
+    class Texture2D;
+    struct MaterialGraphDef;
+
     /** @brief 그래프의 노드 하나입니다. */
     REFLECT()
     struct SW_DEVTOOLS_API MaterialGraphNodeDef
@@ -84,10 +88,14 @@ namespace sw
         vector<MaterialGraphLink> _listLink{};
         PROPERTY( Tooltip = "Settings and constants of unconnected pins; values left out keep the kind's default" )
         vector<MaterialGraphValue> _listValue{};
-        PROPERTY( AssetPath, Tooltip = "Asset of the node: the default texture of a texture parameter, the graph of a subgraph node" )
-        string _assetPath{};
+        PROPERTY( Tooltip = "Default texture of a texture parameter node" )
+        AssetRef<Texture2D> _texture;
+        PROPERTY( Tooltip = "Graph of a subgraph or layer node" )
+        AssetRef<MaterialGraphDef> _subgraph;
         PROPERTY( Tooltip = "Position on the editor canvas; the compiler does not read it" )
         float2 _position{ 0.0f, 0.0f };
+
+        MaterialGraphNodeDef(); // 텍스처 · 그래프가 완전한 자리(.cpp)에서 짓는다
 
         /** @brief 값 @p name 입니다. 적지 않았으면 nullptr 입니다. */
         [[nodiscard]] const MaterialGraphValue* findValue( string_view name ) const;
@@ -115,7 +123,7 @@ namespace sw
         /** @brief 머티리얼 그래프 에셋 종류입니다(등록은 `MaterialGraph.cpp` 의 `SW_ASSET_TYPE`). 판 0. */
         static constexpr AssetTypeDef kAssetType{ "MaterialGraph", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
-        PROPERTY( Name = "formatVersion", Tooltip = "Schema version of the file" )
+        PROPERTY( Name = "formatVersion", Required, Tooltip = "Schema version of the file" )
         uint32 _formatVersion{ 0 };
         PROPERTY( Tooltip = "Nodes of the graph" )
         vector<MaterialGraphNodeDef> _listNode{};

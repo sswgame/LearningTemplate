@@ -1,5 +1,5 @@
 <?asset guid="c67980500a3cf0dd3fb173dfab4eae37"?>
-<Scene formatVersion="3" name="CameraShake">
+<Scene formatVersion="0" name="CameraShake">
 	<!-- 카메라 흔들림 시나리오(automation/camerashake)의 무대 — 화면 카메라(GameCamera)는 카메라 매니저로 View 를 본다. Fighter 의 베기 클립 알림(data/camerashake.notifies.xml)이 흔들림을 낸다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
@@ -32,7 +32,7 @@
 				<_listComponent>
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Idle" _bPlayOnBegin="true" />
-					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="guid:480309ac75a2431aeb227f392cf1e577" />
 					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="guid:eef7979dbc0ff750fc73cf23206f2a22" />
 				</_listComponent>
 			</GameObject>

@@ -550,7 +550,7 @@ namespace sw
 
     void CharacterAppearanceComponent::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         const AppearanceDatabase* pDatabase = findDatabase();
         // 게임 선택만 싣는다 — 미리보기(편집기 데이터)는 세이브의 뜻이 없다
         uint8  bSelection = _bSelectionSet == SW_TRUE && _pPreviewDatabase == nullptr && pDatabase != nullptr ? SW_TRUE : SW_FALSE;
@@ -1326,7 +1326,7 @@ namespace sw
                 pObject = manager.getSubsystem<SocketPartPool>().takePart( Internal::makePoolKey( part._asset, part._material ) );
                 if ( pObject == nullptr && pAssetManager != nullptr )
                 {
-                    pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, part._asset.view(), part._partName.c_str() );
+                    pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, part._asset.view(), SpawnLifetime::Derived, part._partName.c_str() );
                     // 같은 메시를 머티리얼만 달리한 변형(`material` · `<MaterialVariant>`)이다. 풀에서 꺼낸 부품은 열쇠가 머티리얼을 담아 이미 입었다.
                     if ( pObject != nullptr && part._material.empty() == false )
                         Internal::forEachMesh( *pObject, [&part]( MeshComponent& mesh )
@@ -1506,7 +1506,7 @@ namespace sw
         }
         // 부품 칸이 늘면 다시 만든다(마스크가 부품 번호별이라 늘리는 길이 없다). 같은 파일 · 같은 영역 수 · 충분한 부품 칸이면 값을 지킨다 — 장비를 바꿔도 젖음 · 피가 사라지지 않게.
         const uint32 partCount = static_cast<uint32>( _state.getResolved()._listPart.size() );
-        const bool   bSameData = _loadedSurfaceChannels == _surfaceChannelsPath && _surfaceRegionCount == regionCount;
+        const bool   bSameData = _surfaceChannelsPath == _loadedSurfaceChannels && _surfaceRegionCount == regionCount;
         const bool   bFits     = hasSurfaceState() && _surface.getPartCount() >= partCount;
         if ( bSameData && bFits )
             return;
@@ -1523,7 +1523,7 @@ namespace sw
         }
         _surfaceBinding.releaseTextures();
         _surface.initialize( *pChannels, regionCount, partCount );
-        _loadedSurfaceChannels  = _surfaceChannelsPath;
+        _loadedSurfaceChannels  = _surfaceChannelsPath.path();
         _surfaceRegionCount     = regionCount;
         _surfaceAppliedRevision = constant::invalid_index::kUint64;
     }

@@ -8,6 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 using namespace sw;
 
@@ -22,7 +23,7 @@ SW_TEST_CASE( RigidBodyStateTest, RestoredVelocityIsWrittenAgainBeforeTheBodyExi
     SW_EXPECT_EQUAL( uint64{ 0 }, static_cast<uint64>( resting.getSize() ) );
 
     Archive moving;
-    StateIO::writeHeader( moving, FourCCUtil::make( "RBST" ), 1 );
+    FormatDef{ "RBST" }.write( moving );
     moving << float3{ 1.0f, 2.0f, 3.0f } << float3{ 0.0f, 4.0f, 0.0f };
     vector<uint8> bytes;
     moving.writeData( bytes );

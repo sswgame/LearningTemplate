@@ -248,19 +248,19 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        WeaponDef    _def;
-        ResolvedShot _shot;
-        GameRandom   _random;
-        Countdown    _cooldown; ///< 다음 발까지 남은 시간. 발사는 `restart` 로 시작해 늦음을 다음 간격에서 뺀다
-        Countdown    _reload;
-        Radians      _currentSpread;
+        SW_CODEC_STATE WeaponDef    _def;
+        SW_CODEC_STATE ResolvedShot _shot;
+        SW_CODEC_STATE GameRandom   _random;
+        SW_CODEC_STATE Countdown    _cooldown; ///< 다음 발까지 남은 시간. 발사는 `restart` 로 시작해 늦음을 다음 간격에서 뺀다
+        SW_CODEC_STATE Countdown    _reload;
+        SW_CODEC_STATE Radians      _currentSpread;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _magazineAmmo;
         PROPERTY( RuntimeState, Min = 0 )
         int32                  _reserveAmmo;
-        uint8                  _bFireSound   : 1; ///< 낼 소리(`queueSound` 가 비운다) — 싣지 않는다(아래도)
-        uint8                  _bReloadSound : 1;
-        uint8                  _bEmptySound  : 1;
+        SW_TRANSIENT uint8     _bFireSound   : 1; ///< 낼 소리(`queueSound` 가 비운다) — 싣지 않는다(아래도)
+        SW_TRANSIENT uint8     _bReloadSound : 1;
+        SW_TRANSIENT uint8     _bEmptySound  : 1;
         [[maybe_unused]] uint8 _reserved     : 5;
     };
 } // namespace sw

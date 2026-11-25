@@ -13,8 +13,8 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"
+#include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -44,10 +44,10 @@ namespace sw::editor
         shutdown();
     }
 
-    void EditorContext::initialize( EditorToolDefaults& toolDefaults, EditorIconGlyphTable& iconGlyphs, const EditorComponentIconTable& componentIcons, const SubsystemInstaller install )
+    void EditorContext::initialize( EditorToolDefaults& toolDefaults, EditorIconGlyphTable& iconGlyphs, const EditorComponentIconTable& componentIcons, const EditorDefaultAssets& defaultAssets, const SubsystemInstaller install )
     {
         // 도구 시드 · 아이콘 표는 서브시스템이 서며 읽을 수 있다(입력 맵 경로 · 핫 리로드 확장자 · 아이콘 이름) — 그보다 먼저 범위에 빌려 건다. 내리는 것은 `shutdown`.
-        const bool bShellDataBound = _scope.bind( &toolDefaults ) && _scope.bind( &iconGlyphs ) && _scope.bind( &componentIcons );
+        const bool bShellDataBound = _scope.bind( &toolDefaults ) && _scope.bind( &iconGlyphs ) && _scope.bind( &componentIcons ) && _scope.bind( &defaultAssets );
         SW_ASSERT( bShellDataBound );
         (void)bShellDataBound;
         // 어느 하위 객체가 있는지는 조립점(`install`, 셸이 넘긴다)이 정한다 — 컨텍스트는 범위와 생명 주기만 안다(패널 · 팝업 · 인스펙터 매니저를 모른다).
@@ -61,8 +61,8 @@ namespace sw::editor
         LocalizationManager* const pLocalization = editor::findSubsystem<LocalizationManager>();
         if ( pLocalization == nullptr )
             SW_LOG_WARNING_ID( "EditorContext.NoLocalizationManagerEditorText", "No LocalizationManager - editor text shows its keys" );
-        else if ( pLocalization->mountProject( AssetID{ EditorPaths::kLocalizationProject }, LocalizationScope::Editor ) == false )
-            SW_LOG_WARNING_ID( "EditorContext.EditorLocalizationProjectNot", "Editor localization project '%#' is not (fully) loaded", EditorPaths::kLocalizationProject );
+        else if ( pLocalization->mountProject( AssetID{ defaultAssets._localizationProject.get() }, LocalizationScope::Editor ) == false )
+            SW_LOG_WARNING_ID( "EditorContext.EditorLocalizationProjectNot", "Editor localization project '%#' is not (fully) loaded", defaultAssets._localizationProject.get() );
 
         // 종료 시간을 서브시스템마다 잰다 — 백엔드 교체 · 리로드가 에디터를 내리고 다시 세우므로 그 몫이 어디서 드는지 줄 하나로 보인다.
         SubsystemTimingReport::enableTiming( _scope.getCollection() );
@@ -100,6 +100,7 @@ namespace sw::editor
         _scope.destroyAll();                 // 뷰 렌더 타깃은 EditorRenderViews 의 종료가 놓는다
         _scope.unbind<EditorToolDefaults>(); // 셸이 소유한 값 — 다음 `initialize` 가 다시 건다
         _scope.unbind<EditorIconGlyphTable>();
+        _scope.unbind<const EditorDefaultAssets>();
         _scope.unbind<const EditorComponentIconTable>(); // 메인 `CommandStack` 칸은 주인(`EditorUndoHistory`)과 함께 `destroyAll` 이 지웠다
     }
 

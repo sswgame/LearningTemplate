@@ -7,6 +7,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
@@ -24,18 +26,18 @@ namespace sw
     {
         struct GuildServiceInternal
         {
-            static constexpr uint8       kFormatVersion      = 1;
-            static constexpr uint8       kGuildFormatVersion = 2;                             ///< 길드 레코드이다. 2 에서 경험치와 공개 여부를 더했다(옛 레코드는 다시 쓴다)
-            static constexpr int64       kMaxExperience      = static_cast<int64>( 1 ) << 53; ///< 경험치 상한이다. 넘으면 상한에 멈춘다
-            static constexpr const utf8* kSequenceKey        = "guild";
-            static constexpr uint32      kReplacementChar    = 0xFFFDu;
-            static constexpr uint32      kFirstPrintable     = 0x20u;
-            static constexpr uint32      kDeleteChar         = 0x7Fu;
-            static constexpr const utf8* kStorageDomain      = "guild";
-            static constexpr const utf8* kDepositReason      = "guild.deposit";
-            static constexpr const utf8* kWithdrawReason     = "guild.withdraw";
-            static constexpr const utf8* kRefundReason       = "guild.refund"; ///< 떠나거나 내보내진 멤버에게 그의 몫을 돌려준다
-            static constexpr int32       kGrantPageSize      = 128;            ///< 길드의 허용 전체를 훑을 때(떠나는 멤버가 받은 허용 지우기) 한 번에 읽는 수이다
+            static constexpr FormatDef   kFormat{ "GLDR" };
+            static constexpr FormatDef   kGuildFormat{ "GILD" };                           ///< 길드 레코드이다
+            static constexpr int64       kMaxExperience   = static_cast<int64>( 1 ) << 53; ///< 경험치 상한이다. 넘으면 상한에 멈춘다
+            static constexpr const utf8* kSequenceKey     = "guild";
+            static constexpr uint32      kReplacementChar = 0xFFFDu;
+            static constexpr uint32      kFirstPrintable  = 0x20u;
+            static constexpr uint32      kDeleteChar      = 0x7Fu;
+            static constexpr const utf8* kStorageDomain   = "guild";
+            static constexpr const utf8* kDepositReason   = "guild.deposit";
+            static constexpr const utf8* kWithdrawReason  = "guild.withdraw";
+            static constexpr const utf8* kRefundReason    = "guild.refund"; ///< 떠나거나 내보내진 멤버에게 그의 몫을 돌려준다
+            static constexpr int32       kGrantPageSize   = 128;            ///< 길드의 허용 전체를 훑을 때(떠나는 멤버가 받은 허용 지우기) 한 번에 읽는 수이다
             /// 신청 표를 끝까지 훑을 때 한 번에 읽는 수이다. 읽은 쪽마다 읽기 집합의 범위 조건이 하나씩 붙으므로(상한 `kMaxConditionCount`) 크게 잡는다 — 죽은 신청은 TTL 쓸기가 지워 쪽 수가 늘지 않는다
             static constexpr int32 kApplicationPageSize = 256;
 
@@ -77,7 +79,7 @@ namespace sw
             static vector<uint8> encodeGrant( int64 remaining )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarInt( remaining );
                 return writer.getBytes();
             }
@@ -85,7 +87,7 @@ namespace sw
             [[nodiscard]] static bool decodeGrant( const vector<uint8>& bytes, int64& outRemaining )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 outRemaining = reader.readVarInt();
                 return reader.hasOverflowed() == false && 0 <= outRemaining;
@@ -199,7 +201,7 @@ namespace sw
             static vector<uint8> encodeGuild( const GuildInfo& info )
             {
                 BitWriter writer;
-                writer.writeBits( kGuildFormatVersion, 8 );
+                kGuildFormat.writeVersion( writer );
                 ServiceKeyUtil::writeString( writer, info._name );
                 ServiceKeyUtil::writeString( writer, info._announcement );
                 writer.writeVarUint( info._masterID );
@@ -213,7 +215,7 @@ namespace sw
             [[nodiscard]] static bool decodeGuild( const vector<uint8>& bytes, uint64 guildID, GuildInfo& outInfo )
             {
                 BitReader  reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                const bool bHeadOk = reader.readBits( 8 ) == kGuildFormatVersion && ServiceKeyUtil::readString( reader, GuildLimit::kMaxNameSize, outInfo._name ) &&
+                const bool bHeadOk = kGuildFormat.readVersion( reader ) && ServiceKeyUtil::readString( reader, GuildLimit::kMaxNameSize, outInfo._name ) &&
                                      ServiceKeyUtil::readString( reader, GuildLimit::kMaxAnnouncementSize, outInfo._announcement );
                 if ( bHeadOk == false )
                     return false;
@@ -229,7 +231,7 @@ namespace sw
             static vector<uint8> encodeMember( GuildRole role, int64 joinedMs )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarUint( static_cast<uint64>( role ) );
                 writer.writeVarInt( joinedMs );
                 return writer.getBytes();
@@ -238,7 +240,7 @@ namespace sw
             [[nodiscard]] static bool decodeMember( const vector<uint8>& bytes, GuildMember& outMember )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 const uint64 role   = reader.readVarUint();
                 outMember._joinedMs = reader.readVarInt();
@@ -251,7 +253,7 @@ namespace sw
             static vector<uint8> encodeID( uint64 value )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarUint( value );
                 return writer.getBytes();
             }
@@ -259,7 +261,7 @@ namespace sw
             [[nodiscard]] static bool decodeID( const vector<uint8>& bytes, uint64& outValue )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 outValue = reader.readVarUint();
                 return reader.hasOverflowed() == false;
@@ -268,7 +270,7 @@ namespace sw
             static vector<uint8> encodeInvite( AccountID inviterID, int64 expiresMs )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarUint( inviterID );
                 writer.writeVarInt( expiresMs );
                 return writer.getBytes();
@@ -277,7 +279,7 @@ namespace sw
             static vector<uint8> encodeApplication( int64 appliedMs, int64 expiresMs )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarInt( appliedMs );
                 writer.writeVarInt( expiresMs );
                 return writer.getBytes();
@@ -286,7 +288,7 @@ namespace sw
             [[nodiscard]] static bool decodeApplication( const vector<uint8>& bytes, int64& outAppliedMs, int64& outExpiresMs )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 outAppliedMs = reader.readVarInt();
                 outExpiresMs = reader.readVarInt();
@@ -296,7 +298,7 @@ namespace sw
             [[nodiscard]] static bool decodeInviteExpiry( const vector<uint8>& bytes, int64& outExpiresMs )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 (void)reader.readVarUint(); // 초대한 사람 필드는 건너뛴다. 읽기가 넘쳤는지는 아래 hasOverflowed 가 확인한다
                 outExpiresMs = reader.readVarInt();
@@ -328,9 +330,10 @@ namespace sw
         class GuildStoreRun final
         {
         public:
-            GuildStoreRun( const GuildRequest& request, const ILedgerPolicy* pLedgerPolicy )
+            GuildStoreRun( const GuildRequest& request, const GuildPolicy& policy, const ILedgerPolicy* pLedgerPolicy )
                 : _request{ request }
                 , _serviceResult{}
+                , _policy{ policy }
                 , _pLedgerPolicy{ pLedgerPolicy }
             {
             }
@@ -478,7 +481,7 @@ namespace sw
                     return fail( SocialResult::NotFound );
                 if ( info._bOpenToApply == SW_FALSE )
                     return fail( SocialResult::GuildClosed );
-                if ( info._memberCount >= GuildLimit::kMaxMember )
+                if ( info._memberCount >= _policy._maxMember )
                     return fail( SocialResult::GuildFull );
                 StringBuilder<constant::buffer::kMax128> prefixBuilder;
                 prefixBuilder.appendFormat( "%#/", guildKey );
@@ -506,15 +509,15 @@ namespace sw
                         transaction.erase( Internal::getApplicationTable(), record._key, record._version ); // 죽었거나 읽을 수 없는 신청이다
                         transaction.erase( Internal::getAccountApplicationTable(), Internal::makeApplicationReverseKey( record._key ) );
                     }
-                    return liveCount < GuildLimit::kMaxApplication; // 상한에 닿으면 더 볼 것이 없다
+                    return liveCount < _policy._maxApplication; // 상한에 닿으면 더 볼 것이 없다
                 } );
                 if ( listed != ServiceStoreResult::Ok )
                     return ServiceStoreResult::Unavailable;
-                if ( liveCount >= GuildLimit::kMaxApplication )
+                if ( liveCount >= _policy._maxApplication )
                     return fail( SocialResult::PendingLimit );
                 // 쓰기: 죽은 신청과 그 역색인 지우기(최대 2 × kMaxDeadErase) + 신청 + 역색인 + TTL 색인 줄 + 여유 하나(길드 · 신청 목록은 읽기 집합이 조건으로 건다 — 상한에 들지 않는다)
                 static_assert( kMaxDeadErase * 2 + 4 <= ServiceTransaction::kMaxWriteCount, "runApply 의 트랜잭션이 쓰기 상한을 넘을 수 있다" );
-                const int64 expiresMs = _request._nowMs.count() + GuildLimit::kApplicationLifetimeMs;
+                const int64 expiresMs = _request._nowMs.count() + _policy._applicationLifetimeMs;
                 transaction.put( Internal::getApplicationTable(), selfKey, Internal::encodeApplication( _request._nowMs.count(), expiresMs ) );
                 // 해산한 길드 · 다시 오지 않는 신청자의 신청은 이 함수가 다시 돌지 않아 남는다 - TTL 색인 줄이 기간 뒤에 지운다. 다시 낸 신청은 새 줄이 맡는다
                 transaction.put( Internal::getApplicationExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, selfKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
@@ -567,7 +570,7 @@ namespace sw
                                       Internal::decodeGuild( guildRecord._bytes, _request._guildID, info );
                 if ( bGuildOk == false )
                     return fail( SocialResult::NotFound ); // 해산된 길드이다
-                if ( info._memberCount >= GuildLimit::kMaxMember )
+                if ( info._memberCount >= _policy._maxMember )
                     return fail( SocialResult::GuildFull );
                 ++info._memberCount;
                 ServiceTransaction transaction;
@@ -689,7 +692,7 @@ namespace sw
                     return fail( SocialResult::AlreadyInGuild );
                 ServiceTransaction transaction;
                 const string       inviteKey = Internal::makePairKey( _request._targetID, guildID );
-                const int64        expiresMs = _request._nowMs.count() + GuildLimit::kInviteLifetimeMs;
+                const int64        expiresMs = _request._nowMs.count() + _policy._inviteLifetimeMs;
                 transaction.put( Internal::getInviteTable(), inviteKey, Internal::encodeInvite( _request._accountID, expiresMs ) ); // 다시 보내면 덮어쓴다
                 transaction.put( Internal::getInviteExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, inviteKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
                 _serviceResult._invitedID = _request._targetID;
@@ -977,7 +980,7 @@ namespace sw
                     return ServiceStoreResult::Unavailable;
                 if ( targetRead == ServiceStoreResult::Ok )
                     return fail( SocialResult::AlreadyInGuild ); // 그사이 다른 길드에 들어갔다
-                if ( inoutInfo._memberCount >= GuildLimit::kMaxMember )
+                if ( inoutInfo._memberCount >= _policy._maxMember )
                     return fail( SocialResult::GuildFull );
                 ++inoutInfo._memberCount;
                 const string guildKey = ServiceKeyUtil::makeHex64( guildID );
@@ -1224,7 +1227,7 @@ namespace sw
                     const string prefix( prefixBuilder.view() );
                     if ( ServiceRecordReader::readPage( connection, Internal::getGrantTable(), prefix, "", GuildLimit::kMaxStorageGrant, false, listGrantRecord )._result != ServiceStoreResult::Ok )
                         return ServiceStoreResult::Unavailable;
-                    if ( listGrantRecord.size() >= static_cast<size_t>( GuildLimit::kMaxStorageGrant ) )
+                    if ( listGrantRecord.size() >= static_cast<size_t>( _policy._maxStorageGrant ) )
                         return fail( SocialResult::StorageLimit ); // 쓰지 않는 허용을 거둔 뒤에 준다
                 }
                 transaction.put( Internal::getGrantTable(), recordKey, Internal::encodeGrant( _request._amount ), bExists ? grantRecord._version : ServiceRecord::kAbsentVersion );
@@ -1276,6 +1279,7 @@ namespace sw
         private:
             GuildRequest         _request;
             GuildResult          _serviceResult;
+            GuildPolicy          _policy;        ///< 서비스 스레드에서 복사해 둔다. 저장소 스레드는 서비스를 읽지 않는다
             const ILedgerPolicy* _pLedgerPolicy; ///< 서비스 스레드에서 복사해 둔다. 저장소 스레드는 서비스를 읽지 않는다
         };
     } // namespace
@@ -1289,13 +1293,15 @@ namespace sw
         , _onEvent{}
         , _listLevelExperience{}
         , _pLedgerPolicy{ nullptr }
+        , _policy{}
         , _store{}
     {
     }
 
-    void GuildService::initialize( ServiceStore* pStore )
+    void GuildService::initialize( ServiceStore* pStore, const GuildPolicy& policy )
     {
         SW_ASSERT( pStore != nullptr );
+        _policy = policy;
         _store.bindStore( pStore );
     }
 
@@ -1572,7 +1578,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &GuildServiceInternal::readInviteExpiryMs;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&GuildServiceInternal::readInviteExpiryMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 
@@ -1585,7 +1591,7 @@ namespace sw
         rule._pfnReadTime     = &GuildServiceInternal::readApplicationExpiryMs;
         rule._pfnStageErase   = &GuildServiceInternal::stageApplicationErase;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&GuildServiceInternal::readApplicationExpiryMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 
@@ -1609,9 +1615,9 @@ namespace sw
 
     void GuildService::submit( const GuildRequest& request, uint64 requestTag )
     {
-        _store.submit( [request, pLedgerPolicy = _pLedgerPolicy]( IServiceStoreConnection& connection )
+        _store.submit( [request, policy = _policy, pLedgerPolicy = _pLedgerPolicy]( IServiceStoreConnection& connection )
         {
-            GuildStoreRun runner{ request, pLedgerPolicy };
+            GuildStoreRun runner{ request, policy, pLedgerPolicy };
             return runner.run( connection );
         }, [this, request, requestTag]( GuildResult& serviceResult )
         { applyServiceResult( request, requestTag, std::move( serviceResult ) ); } );

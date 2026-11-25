@@ -4,13 +4,13 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -40,8 +40,7 @@ namespace sw
 
         static constexpr TickGroup kTickGroup = TickGroup::PostPhysics;
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "REPC" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "REPC" };
 
         ReputationComponent();
         ~ReputationComponent() override;
@@ -74,8 +73,8 @@ namespace sw
     private:
         SharedAssetRef<ReputationCatalog>   _catalog;       ///< 연 카탈로그(다시 읽히면 새 판을 가리킨다). 카탈로그 없이 열었으면 비었다
         shared_ptr<const ReputationCatalog> _pBoundCatalog; ///< 평판이 가리키는 판
-        ReputationState                     _reputation;
-        DeferredStateRestore                _restore;
+        SW_CODEC_STATE ReputationState      _reputation;
+        SW_CODEC_STATE DeferredStateRestore _restore;
         PROPERTY( Tooltip = "Open without a reputation catalog at begin play - only for scenes without a kit director (the hub); a director opens it with its own catalog" )
         uint8                  _bOpenAtBeginPlay : 1;
         [[maybe_unused]] uint8 _reserved         : 7;

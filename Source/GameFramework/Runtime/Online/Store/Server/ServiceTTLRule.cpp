@@ -138,7 +138,7 @@ namespace sw
 
     bool ServiceTTLRule::isValid() const
     {
-        const bool bBackfillOk = _pBackfillSource == nullptr || ( _ttlIndexTable.empty() == false && _backfillVersion > 0 && _backfillRolloutMs >= 0 );
+        const bool bBackfillOk = _pBackfillSource == nullptr || ( _ttlIndexTable.empty() == false && _backfillVersion.has_value() && _backfillRolloutMs >= 0 );
         return _expireAfterMs > 0 && ( _pfnReadTime != nullptr || _ttlIndexTable.empty() == false ) && bBackfillOk;
     }
 
@@ -169,13 +169,13 @@ namespace sw
                 return read;
             Internal::BackfillProgress progress;
             const bool                 bKnown = read == ServiceStoreResult::Ok && Internal::decodeProgress( progressRecord._bytes, progress );
-            if ( bKnown && progress._version >= rule._backfillVersion && progress._state == Internal::kBackfillDone )
+            if ( bKnown && progress._version >= *rule._backfillVersion && progress._state == Internal::kBackfillDone )
                 return ServiceStoreResult::Ok; // 이 판은 끝났다
-            if ( bKnown == false || progress._version < rule._backfillVersion )
+            if ( bKnown == false || progress._version < *rule._backfillVersion )
             {
                 // 처음이거나 판이 올랐다(모르는 값도 처음부터 다시 훑는다 - 겹쳐 넣어도 같은 줄이다)
                 progress              = Internal::BackfillProgress{};
-                progress._version     = rule._backfillVersion;
+                progress._version     = *rule._backfillVersion;
                 progress._activatedMs = nowMs;
                 progress._passStartMs = nowMs;
             }

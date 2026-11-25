@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
+#include "GameFramework/Runtime/Character/Combat/Damage/DamageEvents.h"
 #include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
@@ -95,13 +96,13 @@ namespace sw
     CombatAttributeSet::CombatAttributeSet()
         : _bApplyingDamage{ 0 }
     {
-        defineAttribute( CombatAttributes::health(), 100.0f );
-        defineAttribute( CombatAttributes::maxHealth(), 100.0f );
-        defineAttribute( CombatAttributes::mana(), 100.0f );
-        defineAttribute( CombatAttributes::maxMana(), 100.0f );
-        defineAttribute( CombatAttributes::attackPower(), 10.0f );
-        defineAttribute( CombatAttributes::armor(), 0.0f );
-        defineAttribute( CombatAttributes::moveSpeed(), 5.0f );
+        requireAttribute( CombatAttributes::health() );
+        requireAttribute( CombatAttributes::maxHealth() );
+        requireAttribute( CombatAttributes::mana() );
+        requireAttribute( CombatAttributes::maxMana() );
+        requireAttribute( CombatAttributes::attackPower() );
+        requireAttribute( CombatAttributes::armor() );
+        requireAttribute( CombatAttributes::moveSpeed() );
         defineAttribute( CombatAttributes::incomingDamage(), 0.0f );
         defineAttribute( CombatAttributes::incomingHealing(), 0.0f );
     }
@@ -223,6 +224,14 @@ namespace sw
             hitEvent._target     = pOwner != nullptr ? pOwner->getHandle() : GameObjectHandle{};
             hitEvent._magnitude  = oldHealth - newHealth;
             (void)pAbilitySystem->handleGameplayEvent( hitEvent._eventTag, hitEvent ); // 피격 반응이 없어도 된다
+            // "game" 채널의 피해 알림(언리얼 `OnTakeAnyDamage`) — 피해가 체력에 닿는 곳이 여기 하나다(무기 · 근접 · 기믹 · 어빌리티).
+            DamageAppliedEvent applied;
+            applied._instigator  = hitEvent._instigator;
+            applied._target      = hitEvent._target;
+            applied._amount      = static_cast<int32>( MathUtil::round( damage ) );
+            applied._remainingHP = static_cast<int32>( MathUtil::round( newHealth ) );
+            applied._bKilled     = newHealth <= 0.0f ? SW_TRUE : SW_FALSE;
+            GameEventUtil::send( applied );
         }
 
         if ( newHealth <= 0.0f )

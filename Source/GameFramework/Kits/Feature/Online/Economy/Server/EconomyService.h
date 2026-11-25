@@ -61,21 +61,15 @@ namespace sw
     class ServiceScheduler;
 
     /** @brief 서비스 설정입니다. 포인터는 모두 빌려 쓰며 서비스보다 오래 살아야 합니다. */
-    struct EconomyServiceConfig
+    struct EconomyServiceConfig : EconomyPolicy
     {
         const CurrencyCatalog*       _pCurrencyCatalog{ nullptr };
-        SharedAssetRef<OfferCatalog> _pOfferCatalog;                                                                                            ///< 키트가 받은 참조(다시 읽힌 판을 따라간다). 저장소 일감은 그때의 판을 스냅숏으로 잡는다
-        ReceiptValidatorRegistry*    _pReceiptRegistry{ nullptr };                                                                              ///< 없으면 RedeemReceipt 는 ReceiptInvalid 로 끝난다
-        MetricRegistry*              _pMetricRegistry{ nullptr };                                                                               ///< 없으면 지표를 세지 않는다
-        int64                        _withdrawalWindowMs{ 7 * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond };        ///< 청약철회 기한이다(전자상거래법의 7일)
-        ServiceScheduler*            _pScheduler{ nullptr };                                                                                    ///< 원장 보존 검사를 예약한다. 없으면 검사하지 않는다(테스트는 `requestLedgerAudit`)
-        int64                        _refundCursorRetryMs{ 30000 };                                                                             ///< 환불 조회 기준 시각을 읽지 못했을 때 다시 읽는 간격이다
-        int64                        _deliveryScanIntervalMs{ 5 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond }; ///< 남은 지급 알림을 읽어 다시 보내는 간격이다(재시도 · 재시작 복구)
-        int64                        _deliveryAlarmMarginMs{ constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond };         ///< 지급 알림의 기한이 이만큼 안으로 오면 오류 로그를 남긴다(사람이 볼 시간)
-        int32                        _deliveryScanMaxCount{ 200 };                                                                              ///< 한 번에 읽는 지급 알림 수이다. 평소에는 비어 있고 끝난 것은 지워지므로 뒤쪽도 차례가 온다
-        int32                        _auditMinuteOfDay{ 4 * 60 + 30 };                                                                          ///< 보존 검사 시각(UTC 분)이다. 테이블 전체를 읽으므로 한가한 시간에 둔다
-        AccountPresence*             _pPresence{ nullptr };                                                                                     ///< 다른 서버에 붙은 계정에 잔액 변경 알림을 중계한다. 서버 한 대 구성(`OnlineServerTopology`)에서만 null 이다
-        const IAccountExternalLinks* _pExternalLinks{ nullptr };                                                                                ///< 영수증 구매자를 외부 로그인으로 묶는 제공자(`ReceiptBuyerBinding::LinkedLogin`)가 있으면 필수다. 없으면 기동 실패다
+        SharedAssetRef<OfferCatalog> _pOfferCatalog;               ///< 키트가 받은 참조(다시 읽힌 판을 따라간다). 저장소 일감은 그때의 판을 스냅숏으로 잡는다
+        ReceiptValidatorRegistry*    _pReceiptRegistry{ nullptr }; ///< 없으면 RedeemReceipt 는 ReceiptInvalid 로 끝난다
+        MetricRegistry*              _pMetricRegistry{ nullptr };  ///< 없으면 지표를 세지 않는다
+        ServiceScheduler*            _pScheduler{ nullptr };       ///< 원장 보존 검사를 예약한다. 없으면 검사하지 않는다(테스트는 `requestLedgerAudit`)
+        AccountPresence*             _pPresence{ nullptr };        ///< 다른 서버에 붙은 계정에 잔액 변경 알림을 중계한다. 서버 한 대 구성(`OnlineServerTopology`)에서만 null 이다
+        const IAccountExternalLinks* _pExternalLinks{ nullptr };   ///< 영수증 구매자를 외부 로그인으로 묶는 제공자(`ReceiptBuyerBinding::LinkedLogin`)가 있으면 필수다. 없으면 기동 실패다
         uint8                        _bAcceptSandboxReceipts{ SW_FALSE };
         EconomyRefundRecoveryMode    _refundRecovery{ EconomyRefundRecoveryMode::Count }; ///< 지급 뒤 온 환불의 회수 정책(키트 설정 `_refundRecovery`). 정하지 않으면 기동 실패다
     };

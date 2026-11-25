@@ -6,6 +6,8 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
@@ -17,7 +19,7 @@ namespace sw
     {
         struct ServiceMailInternal
         {
-            static constexpr uint64 kRecordFormat = 1;
+            static constexpr FormatDef kRecordFormat{ "MAIL" };
 
             static string makeMailKey( uint64 recipientAccountID, int64 createdMs, string_view idempotencyKey )
             {
@@ -92,7 +94,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &readSentTimeMs;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readSentTimeMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 
@@ -259,7 +261,7 @@ namespace sw
     {
         const ServiceMailMessage& message = record._message;
         BitWriter                 writer;
-        writer.writeVarUint( ServiceMailInternal::kRecordFormat );
+        ServiceMailInternal::kRecordFormat.writeVersion( writer );
         writer.writeVarUint( static_cast<uint64>( record._state ) );
         writer.writeVarUint( static_cast<uint64>( message._expiryAction ) );
         writer.writeVarUint( static_cast<uint64>( message._actorKind ) );
@@ -286,7 +288,7 @@ namespace sw
     {
         ServiceMailMessage& message = outRecord._message;
         BitReader           reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( reader.readVarUint() != ServiceMailInternal::kRecordFormat )
+        if ( ServiceMailInternal::kRecordFormat.readVersion( reader ) == false )
             return false;
         const uint64 state        = reader.readVarUint();
         const uint64 expiryAction = reader.readVarUint();

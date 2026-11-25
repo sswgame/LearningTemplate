@@ -36,7 +36,7 @@ namespace sw
             static GameObject* spawnAt( GameObjectManager& manager, const string& path, const float3& position )
             {
                 AssetManager* const pAssets = manager.findAssetManager();
-                GameObject* const   pSpawn  = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, path ) : nullptr;
+                GameObject* const   pSpawn  = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, path, SpawnLifetime::Persistent ) : nullptr;
                 SceneComponent*     pScene  = pSpawn != nullptr ? pSpawn->getPrimarySceneComponent() : nullptr;
                 if ( pScene == nullptr )
                 {

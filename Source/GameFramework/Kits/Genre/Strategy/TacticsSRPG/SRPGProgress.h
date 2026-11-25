@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -88,9 +87,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "SRCP" );
-        static constexpr uint32 kStateVersion = 1;
-
         SRPGCampaign();
 
         /** @brief 캠페인을 새로 엽니다. 지도 설정이 범위 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다. */
@@ -122,7 +118,7 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        RunMap _runMap;
+        SW_CODEC_STATE RunMap _runMap;
         PROPERTY( RuntimeState )
         vector<SRPGRosterEntry> _listRoster;
         PROPERTY( RuntimeState )

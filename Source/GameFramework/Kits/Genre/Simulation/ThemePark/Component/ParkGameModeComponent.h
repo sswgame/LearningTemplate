@@ -18,9 +18,9 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
@@ -41,7 +41,7 @@ namespace sw
      * @details 시뮬레이션, 건설한 것, 열차 위치는 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드와 세이브를 넘긴다.
      *          코스터 트랙은 배치 데이터에서 다시 만든다.
      */
-    REFLECT( Version = 2, Category = "ThemePark", DisplayName = "Park Game Mode", Tooltip = "Runs the park simulation, the coaster trains and building; the park layout is placed at this object's scene component" )
+    REFLECT( Category = "ThemePark", DisplayName = "Park Game Mode", Tooltip = "Runs the park simulation, the coaster trains and building; the park layout is placed at this object's scene component" )
     class SW_KIT_API ParkGameModeComponent : public GameModeComponent
     {
     public:
@@ -94,7 +94,6 @@ namespace sw
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
         void               collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 건설한 코스터 하나입니다. 트랙은 열차가 가리키므로 힙에 둡니다(목록이 자라도 주소가 그대로입니다). */
@@ -123,8 +122,8 @@ namespace sw
         [[nodiscard]] bool hasRide( int32 rideIndex ) const;
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Park Layout", AssetPath, Tooltip = "Gate, cash and ride placement XML" )
-        string _parkDataPath;
+        PROPERTY( Category = "Data", DisplayName = "Park Layout", Tooltip = "Gate, cash and ride placement XML" )
+        DataPath _parkDataPath;
         PROPERTY( Category = "Scene", DisplayName = "Gate", Tooltip = "Object whose position is the park gate; empty uses the park layout" )
         GameObjectHandle _gate;
         PROPERTY( Category = "Park", DisplayName = "Walk Blockers", Tooltip = "Scene objects with a static body (stalls, benches, bins) that guests and paths go around" )
@@ -138,17 +137,17 @@ namespace sw
         PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
         float32 _statusLogInterval;
 
-        NavGrid                              _walkGrid; ///< 시뮬레이션이 빌린다 — 먼저 만들고 나중에 사라진다
-        ThemeParkSimulation                  _simulation;
-        Wallet                               _wallet;       ///< 공원 금고. 한 판 임시 상태라 디렉터가 보관하고 빌려 준다(디렉터 계약 ③).
-        int32                                _startingCash; ///< 이 판을 연 돈(배치 데이터) — 나갈 때 번 돈을 센다
-        SharedAssetRef<CoasterLayoutCatalog> _pLayoutCatalog;
-        ThemeParkSettings                    _settings;
-        vector<RidePlacement>                _listPlacement;
-        vector<unique_ptr<CoasterRuntime>>   _listCoaster;
+        SW_CODEC_STATE NavGrid                 _walkGrid; ///< 시뮬레이션이 빌린다 — 먼저 만들고 나중에 사라진다
+        SW_CODEC_STATE ThemeParkSimulation     _simulation;
+        SW_CODEC_STATE Wallet                  _wallet;         ///< 공원 금고. 한 판 임시 상태라 디렉터가 보관하고 빌려 준다(디렉터 계약 ③).
+        SW_TRANSIENT int32                     _startingCash;   ///< 이 판을 연 돈(배치 데이터) — 나갈 때 번 돈을 센다
+        shared_ptr<const CoasterLayoutCatalog> _pLayoutCatalog; ///< 연 배치가 쥔 판 그대로(다시 읽힌 판은 다음 판이 쓴다)
+        SW_CODEC_STATE ThemeParkSettings       _settings;
+        SW_CODEC_STATE vector<RidePlacement> _listPlacement;
+        SW_CODEC_STATE vector<unique_ptr<CoasterRuntime>> _listCoaster;
         PROPERTY( RuntimeState )
-        float32 _autoBuildTimer;
-        float32 _parkYaw;      ///< `getParkYaw`
-        uint32  _parkRevision; ///< `getParkRevision`
+        float32               _autoBuildTimer;
+        SW_TRANSIENT float32  _parkYaw;      ///< `getParkYaw`
+        SW_CODEC_STATE uint32 _parkRevision; ///< `getParkRevision`
     };
 } // namespace sw

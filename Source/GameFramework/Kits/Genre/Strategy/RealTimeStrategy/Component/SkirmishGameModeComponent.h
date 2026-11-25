@@ -1,6 +1,6 @@
 /**
  * @file SkirmishGameModeComponent.h
- * @brief RTS 키트의 1 대 1 한 판 디렉터입니다. 한 판(`SkirmishMatch`), 속도 · 일시정지를 맡고 사람의 명령을 값(`RTSCommand`)으로 받습니다.
+ * @brief RTS 키트의 교전 한 판 디렉터입니다(지도 · 플레이어 수는 씬 데이터 `SkirmishMap`). 한 판(`SkirmishMatch`), 속도 · 일시정지를 맡고 사람의 명령을 값(`RTSCommand`)으로 받습니다.
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 규칙(채취, 생산, 전투, 안개, AI)은 `RTSWorld`, `RTSCommanderAI`, `SkirmishMatch` 가 맡는다.
  *          고르기 · 명령 입력(`RTSCommandInputComponent`)과 모습(`RTSBattlefieldViewComponent` · `RTSUnitViewComponent`)은 클라이언트 모듈(`GF_Client_RealTimeStrategy`)의 것이고,
  *          이 디렉터의 명령 · 읽기 API 로만 판을 본다.
@@ -14,7 +14,6 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -25,6 +24,7 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/SkirmishMatch.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameSpeedControl.h"
 
 namespace sw
@@ -82,7 +82,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onStateRestored( bool bRestored ) override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
         /**
          * @brief 새 판에서 사람이 맡을 플레이어 깃발(`SkirmishMatch::kHumanPlayer0` …)입니다. 여기서는 0 번, 자동 플레이면 없음(0)입니다.
@@ -92,6 +91,8 @@ namespace sw
         /** @brief 한 프레임만큼 판을 진행합니다. 여기서는 일시정지가 아니면 배속대로 한 번이고, 2 인 대전 파생은 모인 락스텝 틱만큼이다. */
         virtual void   stepMatch( float32 deltaTime );
         SkirmishMatch& getMutableMatch() { return _match; }
+        /** @brief 씬이 적은 지도입니다(플레이어 수 — 판을 열기 전에도 읽는다). */
+        const SkirmishMap& getMap() const { return _map; }
 
     private:
         /** @brief 컴퓨터 상대(`SkirmishMatch::findAI`)마다 실행기 하나를 내놓는 어댑터입니다. 리플렉션 컴포넌트가 인터페이스를 직접 상속하지 않게 멤버로 둔다. */
@@ -111,38 +112,20 @@ namespace sw
     private:
         PROPERTY( Category = "Data", DisplayName = "Commander Tree", Tooltip = "Behavior tree (.bt.xml) of the computer opponent; its task names are the rts.* tasks of the RTS kit" )
         AssetRef<BehaviorTreeAsset> _commanderTreePath;
-        PROPERTY( Category = "Rules", DisplayName = "Hunt Interval", Tooltip = "Seconds between sending idle army at the enemy start to the nearest enemy building", Min = 0.1 )
-        float32 _huntIntervalSeconds;
-        PROPERTY( Category = "Rules", DisplayName = "Arrived Radius", Tooltip = "Army within this distance of the enemy start counts as arrived", Min = 0.0, Units = m )
-        float32 _arrivedRadius;
-        PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between match status log lines", Min = 0.1, Units = s )
-        float32 _statusLogInterval;
-        // ---- AI 가 쓰는 유닛 — 유닛 카탈로그(data/units.xml)의 id 다 ----
-        PROPERTY( Category = "AI Units", DisplayName = "Worker" )
-        CatalogKey<RTSUnitDef> _workerUnitID;
-        PROPERTY( Category = "AI Units", DisplayName = "Depot", Tooltip = "Resource drop-off building" )
-        CatalogKey<RTSUnitDef> _depotUnitID;
-        PROPERTY( Category = "AI Units", DisplayName = "Supply", Tooltip = "Supply building" )
-        CatalogKey<RTSUnitDef> _supplyUnitID;
-        PROPERTY( Category = "AI Units", DisplayName = "Production", Tooltip = "Building that trains the army unit" )
-        CatalogKey<RTSUnitDef> _productionUnitID;
-        PROPERTY( Category = "AI Units", DisplayName = "Army", Tooltip = "Unit the AI trains and attacks with" )
-        CatalogKey<RTSUnitDef> _armyUnitID;
-        // ---- 컴퓨터 상대의 성향 — 셋 다 씬 데이터에 적는다(적지 않으면 판을 열지 않는다) ----
-        PROPERTY( Category = "AI Styles", DisplayName = "Rush AI", Tooltip = "Player 0 when both players are AI: few workers, early small attacks" )
-        SkirmishAIStyle _rushAI;
-        PROPERTY( Category = "AI Styles", DisplayName = "Macro AI", Tooltip = "Player 1 when both players are AI: more workers and production, later big attacks" )
-        SkirmishAIStyle _macroAI;
-        PROPERTY( Category = "AI Styles", DisplayName = "Opponent AI", Tooltip = "The computer player against a human" )
-        SkirmishAIStyle _opponentAI;
+        PROPERTY( Category = "Map", DisplayName = "Map", Tooltip = "Ground, player starts and first units of the match; required" )
+        SkirmishMap _map;
+        PROPERTY( Required, Category = "Rules", DisplayName = "Match", Tooltip = "Rules, AI units and AI styles of the match; every value is required" )
+        SkirmishMatchSettings _matchSettings;
+        PROPERTY( Category = "Time", DisplayName = "Speed Range", Tooltip = "Slowest and fastest time scale and the factor of one step; required" )
+        GameSpeedRange _speedRange;
 
-        SharedAssetRef<BehaviorTreeAsset> _pCommanderTree;
-        CommanderDebugSource              _commanderDebugSource;
-        SkirmishMatch                     _match;
-        vector<RTSEvent>                  _listStepEvent;
-        GameSpeedControl                  _speed;                       ///< 배속 · 일시정지(2 인 대전에서는 쓰지 않는다)
-        uint64                            _matchID;                     ///< `getMatchID`
-        uint8                             _bAutoPlayChangeReported : 1; ///< 판이 열린 뒤 자동 플레이가 바뀐 것을 한 번 알렸다
-        [[maybe_unused]] uint8            _reserved                : 7;
+        BoundAssetRef<BehaviorTreeAsset>  _pCommanderTree;
+        SW_TRANSIENT CommanderDebugSource _commanderDebugSource;
+        SW_CODEC_STATE SkirmishMatch      _match;
+        SW_CODEC_STATE vector<RTSEvent> _listStepEvent;
+        SW_CODEC_STATE GameSpeedControl _speed;                       ///< 배속 · 일시정지(2 인 대전에서는 쓰지 않는다)
+        SW_CODEC_STATE uint64           _matchID;                     ///< `getMatchID`
+        SW_TRANSIENT uint8              _bAutoPlayChangeReported : 1; ///< 판이 열린 뒤 자동 플레이가 바뀐 것을 한 번 알렸다
+        [[maybe_unused]] uint8          _reserved                : 7;
     };
 } // namespace sw

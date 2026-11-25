@@ -30,9 +30,9 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 지난 프레임에 엔진에 넣은 자리입니다(속도 = 차이 / 시간). 아직 넣은 적이 없으면 비어 있습니다. `SceneAudio` 만 씁니다. */
-        optional<float3> _lastAudioPosition;
+        SW_TRANSIENT optional<float3> _lastAudioPosition;
         /** @brief `_lastAudioPosition` 을 낸 때의 월드 변경 번호입니다(`getWorldTransformVersion`). `SceneAudio` 만 씁니다. */
-        uint32 _seenTransformVersion;
+        SW_TRANSIENT uint32 _seenTransformVersion;
 
         /** @brief 기본 값으로 만듭니다. */
         AudioEmitterComponent();

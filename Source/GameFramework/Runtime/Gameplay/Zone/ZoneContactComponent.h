@@ -98,9 +98,10 @@ namespace sw
         PROPERTY( Category = "Contact", DisplayName = "Touch Distance", Min = 0.0, Units = m, Tooltip = "How far past a character's capsule a wall counts as touched (thorns, electric fences)" )
         float32 _touchDistance;
 
-        vector<unique_ptr<SurfaceZone>> _listSurfaceZone;       ///< 종류마다(처음 닿을 때 만든다). 기록이 처리기 기억을 가리키므로 자리가 움직이지 않게 힙에 둔다
-        vector<ContactRecord>           _listCollision;         ///< 지난 갱신 뒤 강체 접촉 사건이 적은 것
-        vector<ContactRecord>           _listContactScratch;    ///< `updateContacts` 가 이번 프레임에 닿은 표면을 모으는 재사용 버퍼
-        Subscription                    _collisionSubscription; ///< 막는 접촉 시작 구독(`recordCollision`)
+        SW_TRANSIENT vector<unique_ptr<SurfaceZone>> _listSurfaceZone; ///< 종류마다(처음 닿을 때 만든다). 기록이 처리기 기억을 가리키므로 자리가 움직이지 않게 힙에 둔다
+        SW_TRANSIENT vector<ContactRecord> _listCollision;             ///< 지난 갱신 뒤 강체 접촉 사건이 적은 것
+        SW_TRANSIENT vector<ContactRecord> _listContactScratch;        ///< `updateContacts` 가 이번 프레임에 닿은 표면을 모으는 재사용 버퍼
+        Subscription                       _collisionSubscription;     ///< 막는 접촉 시작 구독(`recordCollision`)
+        Subscription                       _staySubscription;          ///< 막는 접촉 유지 구독(`receiveCollisionStay`)
     };
 } // namespace sw

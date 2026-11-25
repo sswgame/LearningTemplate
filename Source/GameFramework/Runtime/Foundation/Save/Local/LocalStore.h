@@ -58,7 +58,7 @@ namespace sw
     /** @brief 슬롯 하나를 쓸 때의 선택 사항입니다. */
     struct LocalStoreWriteOptions
     {
-        uint32         _formatVersion{ 1 };    ///< 쓰는 쪽의 형식 버전. 읽을 때 그대로 돌려준다. 옛 버전 리더를 두지 않으므로 다르면 부르는 쪽이 거절한다
+        uint32         _formatVersion{ 0 };    ///< 쓰는 쪽의 형식 버전. 읽을 때 그대로 돌려준다. 옛 버전 리더를 두지 않으므로 다르면 부르는 쪽이 거절한다
         uint8          _compressionCodec{ 0 }; ///< Core `CompressionCodecKind` 값(0 = 안 함). 줄지 않으면 원문으로 둔다
         LocalStoreSeal _seal{ LocalStoreSeal::None };
     };

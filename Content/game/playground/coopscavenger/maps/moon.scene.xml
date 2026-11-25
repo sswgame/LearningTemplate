@@ -1,5 +1,5 @@
 <?asset guid="0ce278724b504308ab8cf9bba2c14903"?>
-<Scene formatVersion="3" name="CoopScavengerMoon">
+<Scene formatVersion="0" name="CoopScavengerMoon">
 	<!-- 협동 수집 공포 미니게임(minigames/coopscavenger)의 무대 — 승무원 둘(사용자 0 · 1, 사람이 없으면 봇). 우주선 · 바깥 · 시설 방은 카탈로그와 시드가 정하고, 방 한 칸이 _areaSpacing 이다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

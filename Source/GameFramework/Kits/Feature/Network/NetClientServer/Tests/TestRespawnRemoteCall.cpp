@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
@@ -58,6 +59,7 @@ namespace
         RespawnRemoteTarget       _serverTarget;
         RespawnRemoteTarget       _clientTarget;
         int32                     _connectionID{ -1 };
+        vector<Subscription>      _listRegistration;
 
         RespawnRemoteCallRig()
         {
@@ -105,6 +107,14 @@ namespace
             { (void)_server.callClient( kPlayerID, "receiveRespawnResult", { ReflectedValue::make( result ) } ); };
         }
 
+        /** @brief 등록 @p registration 을 rig 가 쥡니다. 등록하지 못했으면 false 입니다. */
+        [[nodiscard]] bool hold( Subscription registration )
+        {
+            const bool bActive = registration.isActive();
+            _listRegistration.push_back( std::move( registration ) );
+            return bActive;
+        }
+
         void pollUntilDelivered()
         {
             for ( int32 step = 0; step < 8; ++step )
@@ -137,8 +147,8 @@ namespace
 SW_TEST_CASE( RespawnRemoteCallTest, ServerDecidesAndRepliesOverTheWire )
 {
     RespawnRemoteCallRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kPlayerID, *RespawnRemoteTarget::StaticType(), &rig._serverTarget, rig._connectionID ) );
-    SW_REQUIRE_TRUE( rig._client.registerTarget( kPlayerID, *RespawnRemoteTarget::StaticType(), &rig._clientTarget ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kPlayerID, *RespawnRemoteTarget::StaticType(), &rig._serverTarget, rig._connectionID ) ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._client.registerTarget( kPlayerID, *RespawnRemoteTarget::StaticType(), &rig._clientTarget ) ) );
 
     // 서버가 아는 죽은 자리 — 땅 끝(x 10) 너머 구덩이
     SW_REQUIRE_TRUE( rig._flow.notifyDied( float3{ 11.0f, -2.0f, 0.0f }, 0.0f ) );
@@ -173,8 +183,8 @@ SW_TEST_CASE( RespawnRemoteCallTest, ServerDecidesAndRepliesOverTheWire )
 SW_TEST_CASE( RespawnRemoteCallTest, MalformedAndFloodedCallsNeverReachTheFlow )
 {
     RespawnRemoteCallRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kPlayerID, *RespawnRemoteTarget::StaticType(), &rig._serverTarget, rig._connectionID ) );
-    SW_REQUIRE_TRUE( rig._client.registerTarget( kPlayerID, *RespawnRemoteTarget::StaticType(), &rig._clientTarget ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kPlayerID, *RespawnRemoteTarget::StaticType(), &rig._serverTarget, rig._connectionID ) ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._client.registerTarget( kPlayerID, *RespawnRemoteTarget::StaticType(), &rig._clientTarget ) ) );
     SW_REQUIRE_TRUE( rig._flow.notifyDied( float3{ 5.0f, 1.0f, 0.0f }, 0.0f ) );
     (void)rig._flow.update( 0.016f, rig._serverTarget._context );
     SW_REQUIRE_TRUE( rig._flow.getPhase() == RespawnPhase::Selection );

@@ -46,9 +46,9 @@ namespace sw
         PROPERTY( Category = "Villager", DisplayName = "Height Offset", Tooltip = "Lift above the ground point", Units = m )
         float32 _heightOffset;
 
-        NavAgent       _agent;
-        vector<float3> _listGoal;     ///< 목표 한 점(`NavAgent::followPath` 가 받는 모양)
-        vector<float3> _listNeighbor; ///< 이번 틱 떨어질 이웃(다른 마을 사람의 일정상 위치)
-        bool           _bPlaced;      ///< 몸을 한 번이라도 일정상 위치에 놓았다
+        SW_TRANSIENT NavAgent _agent;
+        SW_TRANSIENT vector<float3> _listGoal;     ///< 목표 한 점(`NavAgent::followPath` 가 받는 모양)
+        SW_TRANSIENT vector<float3> _listNeighbor; ///< 이번 틱 떨어질 이웃(다른 마을 사람의 일정상 위치)
+        SW_TRANSIENT bool           _bPlaced;      ///< 몸을 한 번이라도 일정상 위치에 놓았다
     };
 } // namespace sw

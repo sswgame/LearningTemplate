@@ -30,5 +30,23 @@ namespace sw
         /** @brief 토픽 알림 표(`liveops_push`)의 TTL 입니다. 이벤트 창이 끝난 뒤 이 기간이 지나면 TTL 쓸기가 지웁니다. */
         PROPERTY( Required )
         ServiceTTLConfig _pushClaimTTL{};
+        /** @brief 계정마다 등록할 수 있는 기기 수입니다. 넘으면 가장 오래된 기기를 밀어냅니다. */
+        PROPERTY( Required, Min = 1, Max = PushLimit::kMaxDevicePerAccount )
+        int32 _pushMaxDevicePerAccount{ 0 };
+        /** @brief 일시 실패와 제공자 지연을 다시 시도하는 횟수입니다. */
+        PROPERTY( Required, Min = 1, Max = 16 )
+        int32 _pushMaxRetry{ 0 };
+        /** @brief 첫 재시도까지의 밀리초입니다. 시도마다 두 배가 됩니다. */
+        PROPERTY( Required, Min = 1, Max = 60000 )
+        int64 _pushFirstBackoffMs{ 0 };
+        /** @brief 계정마다 한꺼번에 보낼 수 있는 알림 수입니다(도배 제한). */
+        PROPERTY( Required, Min = 1, Max = 1000 )
+        int32 _pushAccountBurst{ 0 };
+        /** @brief 계정마다 알림 하나가 다시 차는 간격(밀리초)입니다. */
+        PROPERTY( Required, Min = 1000 )
+        int64 _pushAccountRefillIntervalMs{ 0 };
+        /** @brief 도배 제한이 보관하는 계정 수의 상한입니다. */
+        PROPERTY( Required, Min = 1, Max = 10000000 )
+        int32 _pushMaxTrackedAccountCount{ 0 };
     };
 } // namespace sw

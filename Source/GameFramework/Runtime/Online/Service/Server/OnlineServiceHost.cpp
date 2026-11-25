@@ -250,6 +250,8 @@ namespace sw
             return unexpected( Error{ ErrorKind::InvalidArgument, "online service host needs a stream transport" } );
         if ( settings._maxPendingCallsPerService < 1 )
             return unexpected( Error{ ErrorKind::InvalidArgument, "online service host needs _maxPendingCallsPerService of at least 1 (the online server config sets it)" } );
+        if ( settings._requestBurstPerAccount < 1 || settings._requestBurstPerRemote < 1 || settings._maxConnectionsPerRemote < 1 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "online service host needs _requestBurstPerAccount, _requestBurstPerRemote and _maxConnectionsPerRemote of at least 1 (the online server config sets them)" } );
         _settings          = settings;
         _listenerTransport = make_unique<ListenerTransport>( pTransport, settings._pAdminTransport );
         _pServerBus        = settings._pServerBusTransport != nullptr ? make_unique<ServerBus>( *settings._pServerBusTransport ) : nullptr;

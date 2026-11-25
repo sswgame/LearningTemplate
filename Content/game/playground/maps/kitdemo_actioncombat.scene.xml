@@ -1,5 +1,5 @@
 <?asset guid="82019e554e14d0606d7f73c46418d3cb"?>
-<Scene formatVersion="3" name="KitDemoActionCombat">
+<Scene formatVersion="0" name="KitDemoActionCombat">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -30,6 +30,7 @@
 					                               _playerMaxHP="100"
 					                               _playerSpeed="4"
 					                               _bossDelaySeconds="1">
+						<_roomSettings _dashCooldownSeconds="0.85" _dashInvulnerableSeconds="0.22" _hitInvulnerableSeconds="0.7" _attackCooldownSeconds="0.28" _playerAttackDamage="34" />
 						<_listHallMonster>
 							<item>demo_grunt</item>
 							<item>demo_grunt</item>

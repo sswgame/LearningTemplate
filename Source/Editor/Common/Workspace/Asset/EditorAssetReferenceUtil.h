@@ -29,7 +29,7 @@ namespace sw::editor
     struct SW_EDITOR_API EditorAssetReferenceUtil
     {
         /**
-         * @brief @p component 의 에셋 경로 칸(`PROPERTY( AssetPath )` · `AssetType = …` · `AssetRef<T>` 와 그 시퀀스, 상속 칸 포함)이 @p mapOldToNew 의 옛 id 면 새 id 로 바꿉니다.
+         * @brief @p component 의 에셋 경로 칸(`AssetRef<T>` · `DataPath` 와 그 시퀀스, 상속 칸 포함)이 @p mapOldToNew 의 옛 id 면 새 id 로 바꿉니다.
          * @details 바꾼 칸 이름을 @p outListChanged 끝에 더한다 — 부른 쪽이 `onPropertyChanged` 로 알린다(자원을 다시 잡는다). 이 함수는 알리지 않는다.
          * @return 바꾼 값 수입니다(시퀀스는 원소마다).
          */

@@ -1,5 +1,5 @@
 <?asset guid="d932e3ef88a4803989db8766b6130464"?>
-<Scene formatVersion="3" name="NileCity">
+<Scene formatVersion="0" name="NileCity">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -86,9 +86,19 @@
 					<NileGameModeComponent _localID="3793514620491349462" _componentName="NileGameModeComponent"
 					                       _bActive="true"
 					                       _cityDataPath="guid:b9b78a37f924b6b00dd1d7c53dc18678"
-					                       _autoPlanPath="game/nilecity/data/autoplan.xml"
+					                       _autoPlanPath="guid:32449a3941f2568d5a842067fcba3de2"
 					                       _startingMoney="1500"
-					                       _bAutoPlay="false" />
+					                       _tileMapPath="guid:1fe61e0ed0e5eb32fd3d7b3ab943268f"
+					                       _bAutoPlay="false">
+						<_speedRange _minTimeScale="0.25" _maxTimeScale="8" _stepFactor="2" />
+						<_listTerrain>
+							<item>Grass</item>
+							<item>Water</item>
+							<item>Floodplain</item>
+							<item>Sand</item>
+							<item>Rock</item>
+						</_listTerrain>
+					</NileGameModeComponent>
 					<CityBuildInputComponent _localID="8074901273520097621" _componentName="CityBuildInputComponent"
 					                         _bActive="true"
 					                         _cameraRig="1"

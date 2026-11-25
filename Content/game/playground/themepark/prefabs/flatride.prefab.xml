@@ -1,5 +1,5 @@
 <?asset guid="cc291151065e6b1172dc12accd7a43e5"?>
-<Prefab formatVersion="1" name="FlatRide">
+<Prefab formatVersion="0" name="FlatRide">
 	<GameObject _schemaVersion="0" _name="FlatRide" _bActive="true">
 		<_listComponent>
 			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"

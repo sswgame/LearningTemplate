@@ -40,6 +40,7 @@ namespace sw
     CityBuilderGameModeComponent::CityBuilderGameModeComponent()
         : _cityDataPath{}
         , _startingMoney{ 0 }
+        , _speedRange{}
         , _pCatalog{}
         , _city{}
         , _cityEventLease{}
@@ -105,7 +106,7 @@ namespace sw
 
     bool CityBuilderGameModeComponent::acquireCatalog()
     {
-        return acquireRequired( _cityDataPath, _pCatalog );
+        return acquireRequired( _cityDataPath, _pCatalog ) && _speed.initialize( _speedRange ); // 까닭은 남았다
     }
 
     bool CityBuilderGameModeComponent::beginCity()

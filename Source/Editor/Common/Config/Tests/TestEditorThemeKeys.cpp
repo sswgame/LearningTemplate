@@ -13,7 +13,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"
-#include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorThemeKey.h"
 #include "Editor/Common/Config/EditorThemeTokens.h"
@@ -100,7 +100,9 @@ namespace
         }
         // 데이터가 이름으로 드는 색: 컴포넌트 아이콘 표의 색과 컴포넌트 선언의 `IconColor=` 메타(키는 `Component.<이름>`).
         EditorComponentIconTable componentTable;
-        SW_EXPECT_TRUE( componentTable.loadFromAsset( AssetID{ EditorPaths::kComponentIconTable } ) );
+        EditorDefaultAssets      assets;
+        SW_EXPECT_TRUE( EditorDefaultAssets::load( assets ) );
+        SW_EXPECT_TRUE( componentTable.loadFromAsset( AssetID{ assets._componentIconTable.get() } ) );
         scan._setColorKey.insert( EditorComponentIconTable::makeColorKey( componentTable._neutralColor ) );
         for ( const EditorComponentCategoryIcon& row : componentTable._listCategory )
             scan._setColorKey.insert( EditorComponentIconTable::makeColorKey( row._color ) );

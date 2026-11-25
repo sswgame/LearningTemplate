@@ -7,14 +7,9 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/Client/CardBattleHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Component/CardBattleGameModeComponent.h"
@@ -48,7 +43,8 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( cardBattleSelected, "CardBattle.SelectedCard", "Picked hand slot (0 = leftmost)", CardBattleViewComponent, &CardBattleViewComponent::getSelectedCard );
 
     CardBattleViewComponent::CardBattleViewComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&CardBattleViewComponent::updateView, &CardBattleViewComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _confirmAction{}
         , _endTurnAction{}
         , _cardPrefab{}
@@ -58,43 +54,20 @@ namespace sw
         , _pickedColor{ 1.0f, 0.85f, 0.25f, 1.0f }
         , _pileColor{ 0.25f, 0.35f, 0.75f, 1.0f }
         , _enemyColor{ 0.85f, 0.25f, 0.3f, 1.0f }
-        , _director{}
         , _cardViews{}
         , _enemyViews{}
         , _hudViewModel{ nullptr }
         , _selectedCard{ 0 }
         , _lastStep{ 0 }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
         setCanEverTick( true );
     }
 
     CardBattleViewComponent::~CardBattleViewComponent() = default;
 
-    void CardBattleViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                        pOwner    = getOwner();
-        const CardBattleGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<CardBattleGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "CardBattle.ViewWithoutGameMode", "Card battle view on '%#': no CardBattleGameModeComponent in front of it on the same object - the view does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<CardBattleGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<CardBattleGameModeComponent>( pDirector );
-    }
-
     void CardBattleViewComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
-        _bActionsValid = _moveAction.empty() == false && _confirmAction.empty() == false && _endTurnAction.empty() == false ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "CardBattle.ViewActionMissing", "Card battle view: move '%#', confirm '%#' and end turn '%#' actions must all be named - the view reads no input", _moveAction.c_str(),
-                             _confirmAction.c_str(), _endTurnAction.c_str() );
+        GameModeViewComponent::onBeginPlay();
         _selectedCard = 0;
         _lastStep     = 0;
     }
@@ -109,39 +82,23 @@ namespace sw
             _enemyViews.destroyAll( *pManager );
         }
         _hudViewModel.reset(); // 지워지는 뷰모델은 HUD 가 스스로 뗀다
-        Component::onEndPlay();
+        GameModeViewComponent::onEndPlay();
     }
 
-    void CardBattleViewComponent::onTick( TickContext& context )
+    void CardBattleViewComponent::updateView( GameObjectManager& manager, CardBattleGameModeComponent& director )
     {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( CardBattleViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
+        dispatchInput( manager, director );
+        _selectedCard = MathUtil::clamp( _selectedCard, 0, MathUtil::max( 0, director.getHandCount() - 1 ) ); // 낸 카드만큼 손이 줄었다
+        showBattle( manager, director );
+        updateHUD( director );
     }
 
-    void CardBattleViewComponent::updateView( GameObjectManager& manager )
+    void CardBattleViewComponent::submitInput( const GameModeInput& input, CardBattleGameModeComponent& director )
     {
-        CardBattleGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        if ( _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAwaitingCommand() )
-            submitInput( *pDirector );
-        _selectedCard = MathUtil::clamp( _selectedCard, 0, MathUtil::max( 0, pDirector->getHandCount() - 1 ) ); // 낸 카드만큼 손이 줄었다
-        showBattle( manager, *pDirector );
-        updateHUD( *pDirector );
-    }
-
-    void CardBattleViewComponent::submitInput( CardBattleGameModeComponent& director )
-    {
-        const InputManager* const pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return;
-        const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-        const int32         step  = CardBattleViewComponentInternal::computeStep( input.getVector2D( _moveAction )._x );
-        const int32         fresh = step != _lastStep ? step : 0;
-        _lastStep                 = step;
-        _selectedCard             = MathUtil::clamp( _selectedCard + fresh, 0, MathUtil::max( 0, director.getHandCount() - 1 ) );
+        const int32 step  = CardBattleViewComponentInternal::computeStep( input.getVector2D( _moveAction )._x );
+        const int32 fresh = step != _lastStep ? step : 0;
+        _lastStep         = step;
+        _selectedCard     = MathUtil::clamp( _selectedCard + fresh, 0, MathUtil::max( 0, director.getHandCount() - 1 ) );
         // 낼 수 없는 카드는 디렉터가 거절한다 — 고른 자리는 결과로 바뀌지 않는다.
         if ( input.wasActionTriggered( _confirmAction ) )
             (void)director.playCard( _selectedCard );

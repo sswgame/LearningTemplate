@@ -6,7 +6,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -32,9 +31,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "MABL" );
-        static constexpr uint32 kStateVersion = 1;
 
         MetroidvaniaAbilitySet();
 
@@ -68,8 +64,8 @@ namespace sw
         static bool isMotorSettingName( const hashed_string& name );
 
     private:
-        const MetroidvaniaCatalog* _pCatalog;
-        PlatformerSettings         _baseSettings;
+        const MetroidvaniaCatalog*      _pCatalog;
+        SW_TRANSIENT PlatformerSettings _baseSettings;
         PROPERTY( RuntimeState )
         vector<hashed_string> _listAbility; ///< 얻은 순서
     };

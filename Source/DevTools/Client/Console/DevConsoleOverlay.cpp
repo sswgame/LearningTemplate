@@ -103,7 +103,7 @@ namespace sw
 
     DevConsoleOverlay::DevConsoleOverlay( UISystem& ui )
         : _pUI{ &ui }
-        , _screen{ kInvalidUIScreenHandle }
+        , _screen{}
     {
     }
 
@@ -114,21 +114,19 @@ namespace sw
 
     void DevConsoleOverlay::setVisible( bool bVisible )
     {
-        if ( bVisible == ( _screen != kInvalidUIScreenHandle ) )
+        if ( bVisible == _screen.isHeld() )
             return;
         if ( bVisible )
         {
-            _screen = _pUI->pushScreen( DevConsoleScreen::create() );
+            _screen = UIOwnedScreen( *_pUI, _pUI->pushScreen( DevConsoleScreen::create() ) );
             return;
         }
-        _pUI->closeScreen( _screen );
-        _screen = kInvalidUIScreenHandle;
+        _screen.reset();
     }
 
     void DevConsoleOverlay::present( const vector<string>& listLine, const vector<uint8>& listErrorFlag )
     {
-        // 화면은 UI 시스템이 소유한다 — 핸들로 다시 찾는다(닫혔으면 아무것도 하지 않는다).
-        if ( UIScreen* pScreen = _pUI->findScreen( _screen ) )
+        if ( UIScreen* pScreen = _screen.find() ) // 닫혔으면 아무것도 하지 않는다
             static_cast<DevConsoleScreen*>( pScreen )->present( listLine, listErrorFlag );
     }
 } // namespace sw

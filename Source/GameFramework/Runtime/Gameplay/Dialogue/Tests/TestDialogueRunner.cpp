@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Presentation/ISubtitleSink.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h"
@@ -427,4 +428,43 @@ SW_TEST_CASE( DialogueRunnerTest, CurrentLineStaysAKey )
     SW_EXPECT_EQUAL( string( "어디로?" ), LocalizedText::resolve( &localization, runner.getCurrentText() ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), runner.getCurrentChoices().size() );
     SW_EXPECT_EQUAL( string( "왼쪽" ), LocalizedText::resolve( &localization, runner.getCurrentChoices()[0] ) );
+}
+
+/** @brief [DialogueRunnerTest] 대화의 진행은 상태로 남는다 — 선택을 기다리던 대화를 되살리면 같은 물음에서 고르고 이어 가며, 그 노드가 없는 그래프면 처음 상태로 선다 */
+SW_TEST_CASE( DialogueRunnerTest, ProgressSurvivesRestore )
+{
+    GameObjectManager        manager;
+    DialogueRunnerComponent* pRunner = manager.createGameObject( hashed_string( "Talk" ) )->addComponent<DialogueRunnerComponent>();
+    pRunner->setGraph( makeConversation() );
+    manager.beginPlay();
+    SW_REQUIRE_TRUE( pRunner->startDialogue() );
+    SW_REQUIRE_TRUE( pRunner->advance() );
+    SW_REQUIRE_TRUE( pRunner->getState() == DialogueRunnerState::WaitingForChoice );
+    Archive archive;
+    pRunner->writeState( archive );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+
+    GameObjectManager        restoredManager;
+    DialogueRunnerComponent* pRestored = restoredManager.createGameObject( hashed_string( "Talk" ) )->addComponent<DialogueRunnerComponent>();
+    pRestored->setGraph( makeConversation() );
+    pRestored->restoreState( vector<uint8>( bytes ) ); // 시작 전에 받은 것은 시작할 때 적용한다
+    SW_EXPECT_TRUE( pRestored->getState() == DialogueRunnerState::Idle );
+    restoredManager.beginPlay();
+    SW_EXPECT_TRUE( pRestored->getState() == DialogueRunnerState::WaitingForChoice );
+    SW_EXPECT_EQUAL( string( "Where?" ), pRestored->getCurrentText() );
+    SW_EXPECT_EQUAL( size_t( 2 ), pRestored->getCurrentChoices().size() );
+    SW_REQUIRE_TRUE( pRestored->selectChoice( 0 ) );
+    SW_EXPECT_EQUAL( string( "Went left" ), pRestored->getCurrentText() );
+
+    DialogueGraphBuilder other;
+    (void)other.add( kStart, DialogueAssetNodeKind::Start );
+    DialogueRunnerComponent* pOther = restoredManager.createGameObject( hashed_string( "Other" ) )->addComponent<DialogueRunnerComponent>();
+    pOther->setGraph( other._asset );
+    restoredManager.update( 1.0f / 60.0f );
+    SW_EXPECT_LOG( "DeferredStateRestore.SavedStateUnread" );
+    pOther->restoreState( std::move( bytes ) );
+    SW_EXPECT_TRUE( pOther->getState() == DialogueRunnerState::Idle );
+    manager.endPlay();
+    restoredManager.endPlay();
 }

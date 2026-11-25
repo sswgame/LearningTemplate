@@ -13,10 +13,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Component/KartGameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/GameMode/Tests/GameModeStateVersionTest.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
@@ -31,6 +31,13 @@ namespace
     constexpr const utf8* kKartTrackXML   = R"(<KartTrackCatalog><Track id="ring" name="Ring" width="12" laps="1" samples="16">
         <Point x="40" z="0"/><Point x="0" z="40"/><Point x="-40" z="0"/><Point x="0" z="-40"/></Track></KartTrackCatalog>)";
     constexpr const utf8* kKartVehicleXML = R"(<KinematicVehicleSettings _maxSpeed="30" _maxDriveForce="3600"/>)";
+
+    /** @brief 디렉터 원소입니다 — 차 파일, 아이템을 켤지(경기 규칙은 `circuit.scene.xml` 과 같고 카운트다운만 없다). */
+    constexpr const utf8* kKartDirectorXML = R"(<KartGameModeComponent _trackID="ring" _vehicleSettings="%#" _resultHoldSeconds="0.5">
+<_raceSettings _step="0.016666668" _countdownTime="0" _finishTimeout="5" _gridFirstDistance="6" _gridRowSpacing="6" _wrongWayDelay="1" _wrongWaySpeed="2" _kartRadius="1" _itemBoxRadius="1.5" _itemBoxRespawn="2" _ownerGrace="0.5" _dropBehindDistance="2.5" _projectionRange="40"
+_rubberBandDistance="120" _rubberBandMaxBonus="0.15" _rubberBandLeadPenalty="0.05" _redShellLockDistance="120" _redShellLockAngle="75" _seed="7" _bRubberBand="true" _bItems="%#">
+<_ai _lookAheadBase="6" _lookAheadPerSpeed="0.35" _steerGain="2.5" _racingLine="0.6" _cornerAngle="0.8" _cornerLookAhead="25" _driftStartAngle="0.9" _driftEndAngle="0.35"
+_brakeAngle="2.2" _brakeThrottle="0.4" _itemUseDelay="0.8" _itemMaxHold="8" _shellRange="45" _bananaRange="15" /></_raceSettings></KartGameModeComponent>)";
 
     /** @brief 고리 트랙 카탈로그를 건 게임 범위와 디렉터 하나입니다. */
     struct KartGameModeTest
@@ -51,12 +58,15 @@ namespace
             _pScopeBinding = make_unique<game::ScopedGameScope>( _scope );
             _pGameMode     = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<KartGameModeComponent>();
             SW_REQUIRE_NOT_NULL( _pGameMode );
-            set( "_trackID", "ring" );
-            set( "_vehicleSettings", test::ScopedScratchDomain::makeID( "kart.vehicle.xml" ).str() );
-            set( "_bItems", "false" );
-            set( "_countdownSeconds", "0" );
-            set( "_finishTimeoutSeconds", "5" );
-            set( "_resultHoldSeconds", "0.5" );
+            readDirector( false );
+        }
+
+        /** @brief 경기 설정은 씬 데이터다(필수 칸) — 씬이 적는 것과 같은 모양으로 읽힌다. */
+        void readDirector( bool bItems )
+        {
+            StringBuilder<constant::buffer::kMax2048> xml;
+            xml.appendFormat( kKartDirectorXML, test::ScopedScratchDomain::makeID( "kart.vehicle.xml" ).str(), bItems ? "true" : "false" );
+            SW_REQUIRE_TRUE( XMLSerializer::deserialize( _pGameMode, *KartGameModeComponent::StaticType(), xml.view() ) );
         }
 
         void set( const utf8* pProperty, string_view text )
@@ -102,7 +112,7 @@ SW_TEST_CASE_F( KartGameModeTest, UnknownTrackDoesNotOpen )
 SW_TEST_CASE_F( KartGameModeTest, ItemsOnWithoutAFileDoesNotOpen )
 {
     SW_EXPECT_LOG( "GameMode.RequiredAssetMissing" );
-    set( "_bItems", "true" );
+    readDirector( true );
     _manager.beginPlay();
     SW_EXPECT_FALSE( _pGameMode->isStarted() );
     _manager.endPlay();
@@ -162,16 +172,5 @@ SW_TEST_CASE_F( KartGameModeTest, AutoPlayedRaceEndsWithPlacesAndReward )
     SW_REQUIRE_EQUAL( size_t{ 1 }, listValue.size() );
     SW_EXPECT_EQUAL( int64{ 50 - place * 10 }, listValue[0]._amount );
     advance( 60 ); // 결과 0.5 초를 넘긴다
-    _manager.endPlay();
-}
-
-/** @brief [KartGameModeTest] 결과 유지 깃발이 있던 판 1 상태는 패치로 올라 읽히고 나머지 값이 그대로다(판 1 의 상태 칸은 `_bResultShown` · `_bFinishRequested` 둘이었다) */
-SW_TEST_CASE_F( KartGameModeTest, Version1StateIsPatchedAndReadsTheSame )
-{
-    _manager.beginPlay();
-    SW_REQUIRE_TRUE( _pGameMode->isStarted() );
-    advance( 30 );
-    constexpr uint8 kArrRemovedField[] = { 0, 0 };
-    test::GameModeStateVersionTest::expectVersion1ReadsTheSame( *_pGameMode, 0, kArrRemovedField );
     _manager.endPlay();
 }

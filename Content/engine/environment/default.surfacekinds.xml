@@ -21,39 +21,39 @@
 	<_listKind>
 		<SurfaceKindDef _name="Default" _rollingResistance="0.015" _gripScale="1" />
 		<SurfaceKindDef _name="Stone" _rollingResistance="0.015" _gripScale="1">
-			<_wetStep _effect="engine/vfx/footstep_splash_small.vfx.xml" />
+			<_wetStep _effect="guid:e53509e8d26740b3ba52a414e8c9a894" />
 		</SurfaceKindDef>
 		<SurfaceKindDef _name="Wood" _rollingResistance="0.02" _gripScale="1">
-			<_wetStep _effect="engine/vfx/footstep_splash_small.vfx.xml" />
+			<_wetStep _effect="guid:e53509e8d26740b3ba52a414e8c9a894" />
 		</SurfaceKindDef>
 		<SurfaceKindDef _name="Metal" _rollingResistance="0.01" _gripScale="0.9">
-			<_wetStep _effect="engine/vfx/footstep_splash_small.vfx.xml" />
+			<_wetStep _effect="guid:e53509e8d26740b3ba52a414e8c9a894" />
 		</SurfaceKindDef>
 		<SurfaceKindDef _name="Ice" _rollingResistance="0.005" _gripScale="0.15" />
 		<SurfaceKindDef _name="Rubber" _rollingResistance="0.02" _gripScale="1" />
 		<SurfaceKindDef _name="Flesh" _rollingResistance="0.05" _gripScale="0.8" />
 		<SurfaceKindDef _name="Dirt" _rollingResistance="0.04" _gripScale="0.85" _moveScale="0.95">
-			<_step _effect="engine/vfx/footstep_dust.vfx.xml">
+			<_step _effect="guid:d9b3a550d2c0414db84de09b6269700d">
 				<_footprint _shape="Print" _size="0.12,0.27" _depth="0.012" _fillSpeed="0.0006" />
 			</_step>
-			<_wetStep _effect="engine/vfx/footstep_mud.vfx.xml" _feetWetness="0.3">
+			<_wetStep _effect="guid:01c952e334a142fe80665048ef4bf090" _feetWetness="0.3">
 				<_footprint _shape="Print" _size="0.12,0.27" _depth="0.025" _rimHeight="0.006" _rimWidth="0.03" _fillSpeed="0.0008" />
 			</_wetStep>
 		</SurfaceKindDef>
 		<SurfaceKindDef _name="Grass" _rollingResistance="0.05" _gripScale="0.8" _moveScale="0.95">
-			<_step _effect="engine/vfx/footstep_grass.vfx.xml" />
-			<_wetStep _effect="engine/vfx/footstep_splash_small.vfx.xml" _feetWetness="0.2" />
+			<_step _effect="guid:9c9cb43d93da40d7a2b403903c39f818" />
+			<_wetStep _effect="guid:e53509e8d26740b3ba52a414e8c9a894" _feetWetness="0.2" />
 		</SurfaceKindDef>
 		<SurfaceKindDef _name="Snow" _rollingResistance="0.06" _gripScale="0.6" _moveScale="0.8">
-			<_step _effect="engine/vfx/footstep_snow.vfx.xml">
+			<_step _effect="guid:ec621ac7a096485c8dc855a2d40cfe1e">
 				<_footprint _shape="Print" _size="0.14,0.3" _depth="0.07" _rimHeight="0.012" _rimWidth="0.04" _fillSpeed="0.003" />
 			</_step>
-			<_wetStep _effect="engine/vfx/footstep_splash_small.vfx.xml" _feetWetness="0.3">
+			<_wetStep _effect="guid:e53509e8d26740b3ba52a414e8c9a894" _feetWetness="0.3">
 				<_footprint _shape="Print" _size="0.14,0.3" _depth="0.05" _fillSpeed="0.006" />
 			</_wetStep>
 		</SurfaceKindDef>
 		<SurfaceKindDef _name="Sand" _rollingResistance="0.15" _gripScale="0.7" _moveScale="0.85">
-			<_step _effect="engine/vfx/footstep_sand.vfx.xml">
+			<_step _effect="guid:cc92c69be3fc4c6b9b7c528be3d1f9a8">
 				<_footprint _shape="Print" _size="0.13,0.28" _depth="0.03" _rimHeight="0.008" _rimWidth="0.03" _fillSpeed="0.01" />
 			</_step>
 			<_wetStep>
@@ -61,22 +61,22 @@
 			</_wetStep>
 		</SurfaceKindDef>
 		<SurfaceKindDef _name="Mud" _rollingResistance="0.2" _gripScale="0.5" _moveScale="0.7">
-			<_step _effect="engine/vfx/footstep_mud.vfx.xml" _feetWetness="0.2">
+			<_step _effect="guid:01c952e334a142fe80665048ef4bf090" _feetWetness="0.2">
 				<_footprint _shape="Print" _size="0.13,0.28" _depth="0.04" _fillSpeed="0.002" />
 			</_step>
-			<_wetStep _effect="engine/vfx/footstep_mud.vfx.xml" _feetWetness="0.4">
+			<_wetStep _effect="guid:01c952e334a142fe80665048ef4bf090" _feetWetness="0.4">
 				<_footprint _shape="Print" _size="0.13,0.28" _depth="0.05" _rimHeight="0.01" _rimWidth="0.03" _fillSpeed="0.003" />
 			</_wetStep>
 		</SurfaceKindDef>
 		<SurfaceKindDef _name="Water" _rollingResistance="0.3" _gripScale="0.4" _moveScale="0.6">
-			<_step _effect="engine/vfx/footstep_splash.vfx.xml" _feetWetness="1" />
+			<_step _effect="guid:33fcdf06a30b4593ad8c78e306cdc568" _feetWetness="1" />
 		</SurfaceKindDef>
 		<SurfaceKindDef _name="Sea" _rollingResistance="0.3" _gripScale="0.4" _moveScale="0.6">
-			<_step _effect="engine/vfx/footstep_splash.vfx.xml" _feetWetness="1" />
+			<_step _effect="guid:33fcdf06a30b4593ad8c78e306cdc568" _feetWetness="1" />
 		</SurfaceKindDef>
 		<SurfaceKindDef _name="Lava" _rollingResistance="0.2" _gripScale="0.5" _moveScale="0.5" />
 		<SurfaceKindDef _name="Thorns" _rollingResistance="0.02" _gripScale="1" _moveScale="0.8">
-			<_step _effect="engine/vfx/footstep_grass.vfx.xml" />
+			<_step _effect="guid:9c9cb43d93da40d7a2b403903c39f818" />
 		</SurfaceKindDef>
 	</_listKind>
 </SurfaceKindTable>

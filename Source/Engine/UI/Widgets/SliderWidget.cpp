@@ -8,6 +8,7 @@
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
+#include "Engine/UI/Style/UIWidgetSkin.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
 
 namespace sw
@@ -16,18 +17,10 @@ namespace sw
     {
         struct SliderWidgetInternal
         {
-            /** @brief 트랙 두께와 엄지 지름(UI 단위)입니다. */
-            static constexpr float32 kTrackThickness = 4.0f;
-            static constexpr float32 kThumbSize      = 16.0f;
             /** @brief 한 단계를 정하지 않았을 때의 범위 비율입니다. */
             static constexpr float32 kDefaultStepFraction = 0.05f;
-            /** @brief 꺼진 슬라이더의 불투명도 배율입니다. */
-            static constexpr float32 kDisabledAlpha = 0.4f;
-            /** @brief 진행 막대의 기본 두께와 모서리 반지름(UI 단위)입니다. */
-            static constexpr float32 kProgressThickness    = 12.0f;
-            static constexpr float32 kProgressCornerRadius = 4.0f;
-
-            static float4 makeStateColor( const float4& color, bool bEnabled ) { return float4{ color._x, color._y, color._z, bEnabled ? color._w : color._w * kDisabledAlpha }; }
+            /** @brief 꺼진 슬라이더는 색의 불투명도에 @p disabledOpacity 를 곱합니다. */
+            static float4 makeStateColor( const float4& color, bool bEnabled, float32 disabledOpacity ) { return float4{ color._x, color._y, color._z, bEnabled ? color._w : color._w * disabledOpacity }; }
         };
     } // namespace
 } // namespace sw
@@ -41,9 +34,9 @@ namespace sw
         , _minValue{ 0.0f }
         , _maxValue{ 1.0f }
         , _step{ 0.0f }
-        , _trackColor{ 0.3f, 0.32f, 0.38f, 0.9f }
-        , _fillColor{ 0.95f, 0.75f, 0.2f, 1.0f }
-        , _thumbColor{ 0.95f, 0.95f, 0.98f, 1.0f }
+        , _trackColor{ UIWidgetSkin::get()._slider._trackColor }
+        , _fillColor{ UIWidgetSkin::get()._slider._fillColor }
+        , _thumbColor{ UIWidgetSkin::get()._slider._thumbColor }
         , _bDragging{ SW_FALSE }
     {
     }
@@ -82,16 +75,21 @@ namespace sw
             notifyValueEdited( "_value" );
     }
 
+    void SliderWidget::synchronizeProperties()
+    {
+        Widget::synchronizeProperties();
+        // 세터(`setRange`, `setValue`)와 같은 제한이다. 알림은 부르지 않는다(문서 · 바인딩이 쓴 값이다).
+        _maxValue = MathUtil::max( _minValue, _maxValue );
+        _step     = MathUtil::max( 0.0f, _step );
+        _value    = MathUtil::isFinite( _value ) ? MathUtil::clamp( _value, _minValue, _maxValue ) : _minValue;
+    }
+
     void SliderWidget::onBoundPropertyChanged( const PropertyInfo& property )
     {
         const hashed_string& name           = property._name;
         const bool           bRangeProperty = name == hashed_string( "_value" ) || name == hashed_string( "_minValue" ) || name == hashed_string( "_maxValue" ) || name == hashed_string( "_step" );
         if ( bRangeProperty )
         {
-            // 세터(`setRange`, `setValue`)와 같은 제한을 적용한다. 알림은 부르지 않는다(바인딩이 쓴 값이다).
-            _maxValue = MathUtil::max( _minValue, _maxValue );
-            _step     = MathUtil::max( 0.0f, _step );
-            _value    = MathUtil::clamp( _value, _minValue, _maxValue );
             invalidate( WidgetDirty::kPaint );
             return;
         }
@@ -109,8 +107,9 @@ namespace sw
         float2 local{};
         if ( getGeometry().inverseTransformPoint( screenPoint, local ) == false )
             return _value;
-        const float32 usable   = MathUtil::max( 1.0f, getGeometry()._size._x - SliderWidgetInternal::kThumbSize );
-        float32       fraction = MathUtil::saturate( ( local._x - SliderWidgetInternal::kThumbSize * 0.5f ) / usable );
+        const float32 thumbSize = UIWidgetSkin::get()._slider._thumbSize;
+        const float32 usable    = MathUtil::max( 1.0f, getGeometry()._size._x - thumbSize );
+        float32       fraction  = MathUtil::saturate( ( local._x - thumbSize * 0.5f ) / usable );
         if ( isRightToLeft() )
             fraction = 1.0f - fraction;
         return _minValue + fraction * ( _maxValue - _minValue );
@@ -171,45 +170,46 @@ namespace sw
     {
         (void)context;
         (void)availableSize;
-        return float2{ kDefaultLength, kDefaultThickness };
+        return UIWidgetSkin::get()._slider._size;
     }
 
     void SliderWidget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
-        using Internal         = SliderWidgetInternal;
-        const float2& size     = getGeometry()._size;
-        const bool    bOn      = isEnabledInHierarchy();
-        const float32 half     = Internal::kThumbSize * 0.5f;
-        const float32 usable   = MathUtil::max( 0.0f, size._x - Internal::kThumbSize );
-        const float32 trackY   = ( size._y - Internal::kTrackThickness ) * 0.5f;
-        float32       fraction = computeFraction();
+        using Internal                       = SliderWidgetInternal;
+        const UIWidgetSkin::Slider& skin     = UIWidgetSkin::get()._slider;
+        const float2&               size     = getGeometry()._size;
+        const bool                  bOn      = isEnabledInHierarchy();
+        const float32               half     = skin._thumbSize * 0.5f;
+        const float32               usable   = MathUtil::max( 0.0f, size._x - skin._thumbSize );
+        const float32               trackY   = ( size._y - skin._trackThickness ) * 0.5f;
+        float32                     fraction = computeFraction();
         if ( isRightToLeft() )
             fraction = 1.0f - fraction;
         const float32 thumbX = usable * fraction;
 
-        const float32 radius = Internal::kTrackThickness * 0.5f;
+        const float32 radius = skin._trackThickness * 0.5f;
         CanvasBrush   track{};
-        track._color        = Internal::makeStateColor( _trackColor, bOn );
+        track._color        = Internal::makeStateColor( _trackColor, bOn, skin._disabledOpacity );
         track._cornerRadius = float4{ radius, radius, radius, radius };
-        painter.fillRect( float2{ half, trackY }, float2{ usable, Internal::kTrackThickness }, track );
+        painter.fillRect( float2{ half, trackY }, float2{ usable, skin._trackThickness }, track );
         CanvasBrush fill        = track;
-        fill._color             = Internal::makeStateColor( _fillColor, bOn );
+        fill._color             = Internal::makeStateColor( _fillColor, bOn, skin._disabledOpacity );
         const float32 fillStart = isRightToLeft() ? half + thumbX : half;
         const float32 fillWidth = isRightToLeft() ? usable - thumbX : thumbX;
         if ( fillWidth > 0.0f )
-            painter.fillRect( float2{ fillStart, trackY }, float2{ fillWidth, Internal::kTrackThickness }, fill );
+            painter.fillRect( float2{ fillStart, trackY }, float2{ fillWidth, skin._trackThickness }, fill );
         CanvasBrush thumb{};
-        thumb._color        = Internal::makeStateColor( _thumbColor, bOn );
+        thumb._color        = Internal::makeStateColor( _thumbColor, bOn, skin._disabledOpacity );
         thumb._cornerRadius = float4{ half, half, half, half };
-        painter.fillRect( float2{ thumbX, ( size._y - Internal::kThumbSize ) * 0.5f }, float2{ Internal::kThumbSize, Internal::kThumbSize }, thumb );
+        painter.fillRect( float2{ thumbX, ( size._y - skin._thumbSize ) * 0.5f }, float2{ skin._thumbSize, skin._thumbSize }, thumb );
     }
 
     ProgressBarWidget::ProgressBarWidget()
         : Widget{}
         , _percent{ 0.0f }
-        , _fillColor{ 0.35f, 0.8f, 0.4f, 1.0f }
-        , _backgroundColor{ 0.08f, 0.09f, 0.12f, 0.85f }
+        , _fillColor{ UIWidgetSkin::get()._progressBar._fillColor }
+        , _backgroundColor{ UIWidgetSkin::get()._progressBar._backgroundColor }
     {
     }
 
@@ -229,13 +229,18 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
+    void ProgressBarWidget::synchronizeProperties()
+    {
+        Widget::synchronizeProperties();
+        _percent = MathUtil::saturate( _percent );
+    }
+
     void ProgressBarWidget::onBoundPropertyChanged( const PropertyInfo& property )
     {
         const hashed_string& name          = property._name;
         const bool           bFillProperty = name == hashed_string( "_percent" ) || name == hashed_string( "_fillColor" ) || name == hashed_string( "_backgroundColor" );
         if ( bFillProperty )
         {
-            _percent = MathUtil::saturate( _percent );
             invalidate( WidgetDirty::kPaint );
             return;
         }
@@ -262,14 +267,14 @@ namespace sw
     {
         (void)context;
         (void)availableSize;
-        return float2{ SliderWidget::kDefaultLength, SliderWidgetInternal::kProgressThickness };
+        return UIWidgetSkin::get()._progressBar._size;
     }
 
     void ProgressBarWidget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
         const float2& size   = getGeometry()._size;
-        const float32 radius = MathUtil::min( SliderWidgetInternal::kProgressCornerRadius, size._y * 0.5f );
+        const float32 radius = MathUtil::min( UIWidgetSkin::get()._progressBar._cornerRadius, size._y * 0.5f );
         CanvasBrush   background{};
         background._color        = _backgroundColor;
         background._cornerRadius = float4{ radius, radius, radius, radius };

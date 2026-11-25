@@ -2,15 +2,13 @@
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Component/KartGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
-
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -19,22 +17,9 @@ namespace sw
     {
         struct KartGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "KRGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "KRGM" };
 
-            /** @brief 상태 칸 판 1 → 2: 결과 유지 깃발을 뺀다 — 끝난 걸음에 `Countdown` 을 걸고 다 된 걸음에 한 번 끝내는 길은 깃발 없이 선다(다른 디렉터와 같은 꼴). */
-            [[nodiscard]] static bool dropHoldFlags( Archive& inOldBody, Archive& outNewBody )
-            {
-                uint8 bResultShown     = 0;
-                uint8 bFinishRequested = 0;
-                inOldBody >> bResultShown >> bFinishRequested;
-                (void)outNewBody; // 남은 칸이 없다 — 읽지 않은 꼬리(손 본문)는 그대로 붙는다
-                return inOldBody.isOk();
-            }
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
-            static constexpr int32       kFirstPlace = 1;
+            static constexpr int32 kFirstPlace = 1;
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventGo            = "KartRacingGo";
@@ -133,14 +118,10 @@ namespace sw
 
     KartGameModeComponent::KartGameModeComponent()
         : _trackID{}
-        , _bItems{ true }
         , _itemCatalog{}
         , _vehicleSettings{}
         , _botCount{ 3 }
-        , _countdownSeconds{ 3.0f }
-        , _finishTimeoutSeconds{ 10.0f }
-        , _resultHoldSeconds{ 3.0f }
-        , _seed{ GameRandom::kDefaultSeed }
+        , _raceSettings{}
         , _firstReward{ 0 }
         , _rewardStep{ 0 }
         , _pTrackCatalog{}
@@ -150,7 +131,6 @@ namespace sw
         , _track{}
         , _race{}
         , _listEvent{}
-        , _resultHold{}
     {
     }
 
@@ -164,12 +144,7 @@ namespace sw
             SW_LOG_ERROR_ID( "KartRacing.TrackUnusable", "Kart race game mode: track '%#' is not in the catalog or has no usable centre line - the race does not open", _trackID.c_str() );
             return false;
         }
-        KartRaceSettings settings;
-        settings._countdownTime = _countdownSeconds;
-        settings._finishTimeout = _finishTimeoutSeconds;
-        settings._seed          = _seed;
-        settings._bItems        = _bItems ? SW_TRUE : SW_FALSE;
-        if ( outRace.initialize( settings, _track, _pItemCatalog.get(), _pProjectileCatalog.get() ) == false )
+        if ( outRace.initialize( _raceSettings, _track, _pItemCatalog.get(), _pProjectileCatalog.get() ) == false )
             return false; // 까닭은 경기가 남겼다
         const bool bAutoPlay = isAutoPlayOn();
         for ( int32 racer = 0; racer <= _botCount; ++racer )
@@ -188,12 +163,11 @@ namespace sw
     {
         if ( acquireBoundCatalog( _pTrackCatalog ) == false || acquireRequired( _vehicleSettings, _pVehicle ) == false )
             return false;
-        if ( _bItems && ( acquireRequired( _itemCatalog, _pItemCatalog ) == false || acquireBoundCatalog( _pProjectileCatalog ) == false ) )
+        if ( _raceSettings._bItems && ( acquireRequired( _itemCatalog, _pItemCatalog ) == false || acquireBoundCatalog( _pProjectileCatalog ) == false ) )
             return false;
         if ( openRace( _race ) == false )
             return false;
         _race.start();
-        _resultHold.clear();
         return true;
     }
 
@@ -295,24 +269,14 @@ namespace sw
         }
     }
 
-    void KartGameModeComponent::updateGame( float32 deltaTime )
+    void KartGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        const bool bWasEnded = _race.getPhase() == MatchPhase::Ended;
         (void)_race.update( deltaTime ); // 걸음 수는 쓰지 않는다
         reportEvents();
         if ( _race.getPhase() != MatchPhase::Ended )
             return;
-        if ( bWasEnded == false )
-        {
-            _resultHold.start( _resultHoldSeconds ); // 끝난 걸음 — 결과를 보이기 시작한다
-            return;
-        }
-        if ( _resultHold.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
-            return;
         const bool bWon = getPlayerFinishPlace() == KartGameModeComponentInternal::kFirstPlace;
-        (void)finishMinigame( hashed_string( bWon ? KartGameModeComponentInternal::kWinResult : KartGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
+        endMatch( hashed_string( bWon ? kWinResult : kLoseResult ) );
     }
 
     void KartGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
@@ -322,34 +286,14 @@ namespace sw
             addMoneyResult( outListValue, _firstReward - _rewardStep * placesBehind );
     }
 
-    void KartGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`KartRaceViewComponent`)이 읽어 보인다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void KartGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( KartGameModeComponentInternal::kStateTag, KartGameModeComponentInternal::kStateVersion );
+        io.header( KartGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 경기는 같은 트랙 · 같은 차 수로 연 뒤에 읽는다(키트 계약).
-        KartRace  restoredRace;
-        Countdown resultHold = _resultHold;
-        if ( io.isReading() && io.check( _pTrackCatalog != nullptr && _pVehicle != nullptr && openRace( restoredRace ) ) == false )
-            return;
-        io.value( io.isWriting() ? _race : restoredRace );
-        io.value( resultHold );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _race       = std::move( restoredRace );
-        _resultHold = resultHold;
+        if ( io.valueOpened( _race, [this]( KartRace& race )
+        { return _pTrackCatalog != nullptr && _pVehicle != nullptr && openRace( race ); } ) )
+            io.end();
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_TYPE_VERSION_PATCH( kartGameModeState1To2, "sw::KartGameModeComponent", 1, 2, &KartGameModeComponentInternal::dropHoldFlags );
 } // namespace sw

@@ -46,6 +46,7 @@ namespace
         Wallet                 _arrOtherWallet[3];
         RTSCommanderAI         _ai;
         RTSCommanderAISettings _settings;
+        RTSCommanderUnits      _units;
 
         /** @brief 생각한 횟수를 세는 작업입니다. */
         static BehaviorStatus taskCountThink( BehaviorContext& )
@@ -64,11 +65,20 @@ namespace
             (void)_world.addPlayer( 0, _arrOtherWallet[0], float3{ 8.0f, 0.0f, 8.0f } );   // 같은 팀 - 가장 가깝지만 적이 아니다
             (void)_world.addPlayer( 1, _arrOtherWallet[1], float3{ 25.0f, 0.0f, 25.0f } ); // 가까운 적
             (void)_world.addPlayer( 1, _arrOtherWallet[2], float3{ 42.0f, 0.0f, 42.0f } ); // 먼 적
-            _settings._workerID     = kWorker;
-            _settings._depotID      = kDepot;
-            _settings._supplyID     = kSupply;
-            _settings._productionID = kBarracks;
-            _settings._armyUnitID   = kMarine;
+            _units._workerID                = CatalogKey<RTSUnitDef>{ kWorker };
+            _units._depotID                 = CatalogKey<RTSUnitDef>{ kDepot };
+            _units._supplyID                = CatalogKey<RTSUnitDef>{ kSupply };
+            _units._productionID            = CatalogKey<RTSUnitDef>{ kBarracks };
+            _units._armyUnitID              = CatalogKey<RTSUnitDef>{ kMarine };
+            _settings._thinkInterval        = 0.5f;
+            _settings._defendRadius         = 14.0f;
+            _settings._resourceSearchRadius = 16.0f;
+            _settings._workerTarget         = 14;
+            _settings._productionTarget     = 2;
+            _settings._attackArmySize       = 8;
+            _settings._supplyMargin         = 3;
+            _settings._buildSiteMinRadius   = 3;
+            _settings._buildSiteMaxRadius   = 12;
             return true;
         }
 
@@ -78,7 +88,7 @@ namespace
             BehaviorTree tree;
             const int32  root = tree.addSequence( nullopt, "Root" ).value();
             (void)tree.addAction( root, "Task", function );
-            _ai.initialize( &_world, player, _settings, tree );
+            _ai.initialize( &_world, player, _settings, _units, tree );
         }
 
         /** @brief 등록된 동작 @p pAction(`rts.defend` 등) 하나로 된 트리로 AI 를 시작합니다. 설정(`_settings`)을 고친 뒤에 부릅니다. */
@@ -89,7 +99,7 @@ namespace
             BehaviorTree tree;
             const int32  root = tree.addSequence( nullopt, "Root" ).value();
             (void)tree.addAction( root, "Task", call );
-            _ai.initialize( &_world, player, _settings, tree );
+            _ai.initialize( &_world, player, _settings, _units, tree );
         }
 
         /** @brief 생각 간격 하나를 흘립니다. 한 번 생각합니다(첫 번째는 시작하자마자, 그 뒤는 간격이 찰 때). */
@@ -516,4 +526,33 @@ SW_TEST_CASE( RTSCommanderAITest, ReadStateRefusesCorruptBytes )
     SW_EXPECT_EQUAL( 2, rig._ai.getAttackWaveCount() );
     rig.think();
     SW_EXPECT_EQUAL( 1, Rig::s_thinkCount ); // 타이머도 그대로라 바로 생각한다
+}
+
+/** @brief [RTSCommanderAITest] 성향은 데이터다 — 한 칸이라도 빠지면(0) 쓸 수 없는 설정이고, 보급 여유 0 은 뜻이 있다 */
+SW_TEST_CASE( RTSCommanderAITest, EveryTargetIntervalAndRadiusIsRequired )
+{
+    RTSCommanderAISettings full;
+    full._thinkInterval        = 0.5f;
+    full._defendRadius         = 14.0f;
+    full._resourceSearchRadius = 16.0f;
+    full._workerTarget         = 14;
+    full._productionTarget     = 2;
+    full._attackArmySize       = 8;
+    full._buildSiteMinRadius   = 3;
+    full._buildSiteMaxRadius   = 12;
+    SW_EXPECT_TRUE( full.isSet() );
+    SW_EXPECT_FALSE( RTSCommanderAISettings{}.isSet() );
+    for ( float32 RTSCommanderAISettings::* pField : { &RTSCommanderAISettings::_thinkInterval, &RTSCommanderAISettings::_defendRadius, &RTSCommanderAISettings::_resourceSearchRadius } )
+    {
+        RTSCommanderAISettings missing = full;
+        missing.*pField                = 0.0f;
+        SW_EXPECT_FALSE( missing.isSet() );
+    }
+    for ( int32 RTSCommanderAISettings::* pField : { &RTSCommanderAISettings::_workerTarget, &RTSCommanderAISettings::_productionTarget, &RTSCommanderAISettings::_attackArmySize,
+                                                     &RTSCommanderAISettings::_buildSiteMinRadius, &RTSCommanderAISettings::_buildSiteMaxRadius } )
+    {
+        RTSCommanderAISettings missing = full;
+        missing.*pField                = 0;
+        SW_EXPECT_FALSE( missing.isSet() );
+    }
 }

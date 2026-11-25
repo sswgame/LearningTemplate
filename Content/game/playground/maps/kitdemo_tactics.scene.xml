@@ -1,5 +1,5 @@
 <?asset guid="48c8ff4a8e1b3f7aef57ff6b3c264b0e"?>
-<Scene formatVersion="3" name="KitDemoTactics">
+<Scene formatVersion="0" name="KitDemoTactics">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -32,6 +32,7 @@
 					                       _defaultTerrain="plain"
 					                       _seed="7"
 					                       _pilot="demo_pilot">
+						<_aiSettings _counterRiskPercent="100" _killBonus="1000" _commanderBonus="500" />
 						<_listPlayerUnit>
 							<item>demo_knight</item>
 						</_listPlayerUnit>

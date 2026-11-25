@@ -7,7 +7,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -35,14 +34,20 @@ namespace sw
         SideHopRight ///< 오른쪽 옆 뛰기(회피)
     };
 
-    /** @brief 주목 설정입니다. 시간 단위는 초입니다. */
-    struct AdventureTargetingSettings
+    /** @brief 주목 설정입니다. 시간 단위는 초입니다. 값은 데이터에 있고 코드에는 기본값이 없다(록온 거리 · 각은 `LockOnSettings` 의 몫). */
+    REFLECT()
+    struct SW_KIT_API AdventureTargetingSettings
     {
+        REFLECT_BODY();
         LockOnSettings _lockOn{};
-        float32        _deadZone{ 0.3f };         ///< 이 값 아래의 입력은 없는 것으로 본다
-        float32        _backflipDuration{ 0.6f }; ///< 회피 동작 동안은 다른 입력을 받지 않는다
-        float32        _sideHopDuration{ 0.4f };
-        float32        _evadeInvulnerable{ 0.25f }; ///< 회피를 시작하고 이 시간 동안은 무적이다(게임이 `isInvulnerable` 로 확인한다)
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
+        float32 _deadZone{ 0.0f }; ///< 이 값 아래의 입력은 없는 것으로 본다
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _backflipDuration{ 0.0f }; ///< 회피 동작 동안은 다른 입력을 받지 않는다
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _sideHopDuration{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _evadeInvulnerable{ 0.0f }; ///< 회피를 시작하고 이 시간 동안은 무적이다(게임이 `isInvulnerable` 로 확인한다)
     };
 } // namespace sw
 
@@ -59,9 +64,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "ATGT" );
-        static constexpr uint32 kStateVersion = 1;
 
         AdventureTargeting();
 
@@ -100,12 +102,12 @@ namespace sw
         void refreshTargetPosition( const vector<LockOnCandidate>& listCandidate );
 
     private:
-        AdventureTargetingSettings _settings;
-        LockOnSelector             _selector;
+        SW_TRANSIENT AdventureTargetingSettings _settings;
+        SW_CODEC_STATE LockOnSelector           _selector;
         PROPERTY( RuntimeState )
-        float3    _targetPosition;
-        Countdown _evade;
-        Countdown _invulnerable;
+        float3                   _targetPosition;
+        SW_CODEC_STATE Countdown _evade;
+        SW_CODEC_STATE Countdown _invulnerable;
         PROPERTY( RuntimeState )
         AdventureTargetingState _state;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

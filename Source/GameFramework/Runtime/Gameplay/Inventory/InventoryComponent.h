@@ -4,13 +4,13 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -49,8 +49,7 @@ namespace sw
         SW_REGISTERED_COMPONENT( InventoryComponent );
         REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort );
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "INVC" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "INVC" };
 
         InventoryComponent();
         ~InventoryComponent() override;
@@ -82,10 +81,10 @@ namespace sw
         void rebindCatalog();
 
     private:
-        SharedAssetRef<ItemCatalog>   _catalog;       ///< 연 카탈로그(다시 읽히면 새 판을 가리킨다)
-        shared_ptr<const ItemCatalog> _pBoundCatalog; ///< 가방이 가리키는 판
-        Inventory                     _inventory;
-        DeferredStateRestore          _restore;
+        SharedAssetRef<ItemCatalog>         _catalog;       ///< 연 카탈로그(다시 읽히면 새 판을 가리킨다)
+        shared_ptr<const ItemCatalog>       _pBoundCatalog; ///< 가방이 가리키는 판
+        SW_CODEC_STATE Inventory            _inventory;
+        SW_CODEC_STATE DeferredStateRestore _restore;
 
         /** @brief 아이템 받기 계약을 가방으로 넘기는 포트입니다(`REFLECT_INTERFACE`). */
         struct ItemReceiverPort final : IItemReceiver
@@ -96,7 +95,7 @@ namespace sw
         ItemReceiverPort _itemReceiverPort;
 
         PROPERTY( Min = 0, Tooltip = "Slots of the bag opened at begin play with the game's item catalog - only for scenes without a kit director; 0 = a director opens it" )
-        int32 _openSlotCount;
-        int32 _slotCount; ///< 연 슬롯 수(다시 묶을 때 같은 수로 연다)
+        int32              _openSlotCount;
+        SW_TRANSIENT int32 _slotCount; ///< 연 슬롯 수(다시 묶을 때 같은 수로 연다)
     };
 } // namespace sw

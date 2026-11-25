@@ -44,6 +44,6 @@ namespace sw
         PROPERTY( Category = "Crowd", Min = 0.0, Tooltip = "Walking speed toward the center", Units = "m/s" )
         float32 _walkSpeed;
 
-        uint32 _spawnedCount;
+        SW_TRANSIENT uint32 _spawnedCount;
     };
 } // namespace sw

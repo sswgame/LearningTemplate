@@ -39,8 +39,11 @@ namespace sw
                 MailboxKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
                     return result;
-                _settings._sweepIntervalMs    = kitConfig._sweepIntervalMs;
-                _settings._claimedRetentionMs = static_cast<int64>( kitConfig._claimedRetentionDays ) * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond;
+                static_cast<MailboxDeliveryPolicy&>( _settings ) = kitConfig._delivery;
+                _settings._sweepIntervalMs                       = kitConfig._sweepIntervalMs;
+                _settings._maxClaimAllCount                      = kitConfig._maxClaimAllCount;
+                _settings._maxClaimAllScanCount                  = kitConfig._maxClaimAllScanCount;
+                _settings._claimedRetentionMs                    = static_cast<int64>( kitConfig._claimedRetentionDays ) * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond;
                 if ( expected<void> result = registerServerService( context, entry, &_service ); result.has_value() == false )
                     return result;
                 const ServiceTTLConfig& campaignTTL = kitConfig._endedCampaignTTL;

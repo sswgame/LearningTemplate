@@ -13,7 +13,7 @@ using namespace sw;
 /** @brief [TerrainAssetBytesTest] 하이트필드는 왕복하고, 어느 길이로 잘려도 · 해상도를 꾸며도 · 뒤에 남아도 거절한다 */
 SW_TEST_CASE( TerrainAssetBytesTest, HeightfieldRefusesTruncationAndCraftedResolution )
 {
-    SW_EXPECT_LOG( "HeightfieldAsset.NotHeightfieldMagicSWHF" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_LOG( "HeightfieldAsset.BytesResolutionNeeds" );
     SW_EXPECT_LOG( "HeightfieldAsset.ResolutionExpected" );
 
@@ -50,7 +50,7 @@ SW_TEST_CASE( TerrainAssetBytesTest, HeightfieldRefusesTruncationAndCraftedResol
 /** @brief [TerrainAssetBytesTest] 레이어 무게 맵은 왕복하고, 어느 길이로 잘려도 · 크기를 꾸며도 거절한다 */
 SW_TEST_CASE( TerrainAssetBytesTest, LayerWeightsRefuseTruncationAndCraftedSize )
 {
-    SW_EXPECT_LOG( "LayerWeightsAsset.NotLayerWeightMap" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_LOG( "LayerWeightsAsset.BytesXNeeds" );
     SW_EXPECT_LOG( "LayerWeightsAsset.XLayersExpectedPer" );
 

@@ -141,7 +141,7 @@ namespace sw
         if ( pManager == nullptr || findSurface( *pManager, hit, _reach, pOwner->getObjectID(), surface ) == false )
             return; // 튈 면이 닿지 않는다(허공 · 움직이는 것)
         AssetManager* const   pAssets = pManager->findAssetManager();
-        GameObject* const     pDecal  = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, _decalPrefab.path() ) : nullptr;
+        GameObject* const     pDecal  = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, _decalPrefab.path(), SpawnLifetime::Persistent ) : nullptr;
         SceneComponent* const pScene  = pDecal != nullptr ? pDecal->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr )
         {

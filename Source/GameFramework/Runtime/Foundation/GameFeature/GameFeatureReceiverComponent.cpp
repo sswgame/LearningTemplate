@@ -47,6 +47,8 @@ namespace sw
         if ( pAdded == nullptr )
             return; // 까닭은 매니저가 알렸다
         pAdded->setTransient( true );
+        if ( rule._pConfigure != nullptr )
+            rule._pConfigure( *pAdded ); // 형식은 규칙이 정했다(`GameFeatureScope::addComponent< T, Configure >`)
         AddedEntry& added = _listAdded.emplace_back();
         added._ruleID     = rule._ruleID;
         added._component  = pAdded->getHandle();

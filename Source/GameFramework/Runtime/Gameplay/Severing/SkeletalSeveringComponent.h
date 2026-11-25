@@ -132,12 +132,12 @@ namespace sw
         vector<hashed_string> _listSeveredRegion;
 
         SharedAssetRef<FitTables> _pRegionTable; ///< 영역 표(공유 캐시의 한 벌). 받지 못했으면 nullptr
-        vector<GameObjectHandle>  _listPiece;
-        Subscription              _hitSubscription;  ///< 맞음 사건 구독(`handleHit`)
-        Subscription              _meshSubscription; ///< 유닛 메시 사건 구독(`handleSkinnedMeshResolved`)
-        shared_ptr<Mesh>          _pIntactMesh;      ///< 자르기 전의 지금 몸 메시(자른 적이 없거나 되돌린 영역을 아직 자르지 않았으면 nullptr) — 풀 반환이 다시 건다
-        shared_ptr<Mesh>          _pSeveredMesh;     ///< 이 컴포넌트가 건 잘린 메시(유닛이 이것을 그리면 다시 자를 것이 없다)
-        bool                      _bTableLoaded;
-        bool                      _bRestorePending; ///< 되돌린 영역의 바디 · 피를 아직 적용하지 않았다
+        SW_TRANSIENT vector<GameObjectHandle> _listPiece;
+        Subscription                          _hitSubscription;  ///< 맞음 사건 구독(`handleHit`)
+        Subscription                          _meshSubscription; ///< 유닛 메시 사건 구독(`handleSkinnedMeshResolved`)
+        SW_TRANSIENT shared_ptr<Mesh> _pIntactMesh;              ///< 자르기 전의 지금 몸 메시(자른 적이 없거나 되돌린 영역을 아직 자르지 않았으면 nullptr) — 풀 반환이 다시 건다
+        SW_TRANSIENT shared_ptr<Mesh> _pSeveredMesh;             ///< 이 컴포넌트가 건 잘린 메시(유닛이 이것을 그리면 다시 자를 것이 없다)
+        SW_TRANSIENT bool             _bTableLoaded;
+        SW_TRANSIENT bool             _bRestorePending; ///< 되돌린 영역의 바디 · 피를 아직 적용하지 않았다
     };
 } // namespace sw

@@ -77,7 +77,7 @@ namespace sw
         PROPERTY( Category = "Wind", DisplayName = "Speed", Min = 0.0, Units = "m/s", Tooltip = "Wind speed that pushes sails (foliage sway uses Strength)" )
         float32 _speed;
 
-        float32 _strengthScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
-        float32 _speedScale;    ///< 날씨 같은 실행 중 배율(저장하지 않는다)
+        SW_TRANSIENT float32 _strengthScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
+        SW_TRANSIENT float32 _speedScale;    ///< 날씨 같은 실행 중 배율(저장하지 않는다)
     };
 } // namespace sw

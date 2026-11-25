@@ -15,6 +15,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Presentation/ISubtitleSink.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/Widgets/UIBrush.h"
 
@@ -125,15 +126,13 @@ namespace sw
         /** @brief 대기열의 줄 수입니다. */
         uint32 getQueuedLineCount() const { return static_cast<uint32>( _listQueued.size() ); }
         /** @brief 자막 화면입니다(열려 있지 않으면 무효 핸들). */
-        UIScreenHandle getScreen() const { return _screen; }
+        UIScreenHandle getScreen() const { return _screen.getHandle(); }
         /** @brief 보이는 줄의 마지막 배치 결과(글 크기 · 접힌 줄 수 · 넘침)입니다. 화면이 없으면 빈 결과입니다. */
         UISubtitleLayoutReport makeLayoutReport() const;
 
     private:
         /** @brief 화면을 엽니다. 문서를 만들지 못하면 오류를 한 번 남기고 다시 시도하지 않습니다. 열었으면 true 입니다. */
         [[nodiscard]] bool openScreen();
-        /** @brief 화면을 닫고 핸들을 잊습니다. */
-        void closeScreen();
         /** @brief 줄 슬롯 @p slot 을 줄 @p pLine 으로 맞춥니다(nullptr 이면 접습니다). 바뀐 필드만 씁니다. */
         void applySlot( UIScreen& screen, uint32 slot, const UISubtitleLine* pLine, float32 sizeScale, float32 backgroundOpacity );
 
@@ -168,7 +167,7 @@ namespace sw
         UIBrush                _authoredBackground;      ///< 문서에 적힌 줄 바탕입니다(알파는 설정이 바꿉니다).
         float32                _authoredTextFontSize;    ///< 문서에 적힌 텍스트 크기입니다(크기 설정이 곱합니다).
         float32                _authoredSpeakerFontSize; ///< 문서에 적힌 화자 이름 크기입니다.
-        UIScreenHandle         _screen;
+        UIOwnedScreen          _screen;
         IDAllocator<uint32>    _lineIDAllocator;
         uint8                  _bGamePaused     : 1; ///< 게임이 멈췄다(`setGamePaused`)
         uint8                  _bDocumentFailed : 1; ///< 문서를 만들지 못했는지 나타냅니다. 같은 오류를 매 프레임 내지 않기 위한 값입니다.

@@ -302,6 +302,13 @@ namespace sw
     {
         using Internal = UIScenarioStepsInternal;
         bool bPassed   = true;
+        // 화면 칸은 참조 글(GUID · 경로 · none)이라 읽은 값을 본다 — 적었는지만 단계 속성으로 가른다.
+        AutomationExpectUIParams params;
+        if ( const expected<void> read = step.readProperties( params ); read.has_value() == false )
+        {
+            outFailure += read.error().message(); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            return false;
+        }
         if ( const string* pFocus = step.findAttribute( "focus" ); pFocus != nullptr )
         {
             const string focused = Internal::describeFocus( ui );
@@ -313,15 +320,16 @@ namespace sw
                 bPassed = false;
             }
         }
-        if ( const string* pScreen = step.findAttribute( "screen" ); pScreen != nullptr )
+        if ( params._screen.isSet() )
         {
-            const string active   = Internal::describeActiveScreen( ui );
-            const bool   bNone    = *pScreen == Internal::kNone;
-            const bool   bMatches = bNone ? active == Internal::kNone : FileUtil::normalizePath( *pScreen ).str() == active;
+            const string& screen   = params._screen.get();
+            const string  active   = Internal::describeActiveScreen( ui );
+            const bool    bNone    = screen == Internal::kNone;
+            const bool    bMatches = bNone ? active == Internal::kNone : FileUtil::normalizePath( screen ).str() == active;
             if ( bMatches == false )
             {
                 StringBuilder<constant::buffer::kMax256> failure;
-                failure.appendFormat( "active screen is '%#', expected '%#'. ", active, *pScreen );
+                failure.appendFormat( "active screen is '%#', expected '%#'. ", active, screen );
                 outFailure += failure.view();
                 bPassed = false;
             }

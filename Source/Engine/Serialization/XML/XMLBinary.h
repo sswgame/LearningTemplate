@@ -13,6 +13,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 namespace sw
 {
     class XMLNode;
@@ -50,9 +52,8 @@ namespace sw
     /** @struct XMLBinary @brief 파일 머리말 참고. */
     struct SW_API XMLBinary
     {
-        static constexpr uint32 kMagic   = 0x42584D4Cu; ///< 글 XML 의 첫 글자(`<` · 공백 · BOM)와 겹치지 않는다
-        static constexpr uint32 kVersion = 1;
-        static constexpr uint32 kNone    = 0xFFFFFFFFu;
+        static constexpr FormatDef kFormat{ "LMXB" }; ///< 글 XML 의 첫 글자(`<` · 공백 · BOM)와 겹치지 않는다
+        static constexpr uint32    kNone = 0xFFFFFFFFu;
 
         /** @brief @p bytes 가 쿠킹본이면 true 입니다(머리의 표식만 본다). */
         [[nodiscard]] static bool isBinary( string_view bytes );

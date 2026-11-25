@@ -163,10 +163,13 @@ namespace sw
     uint32 FighterCatalog::loadFileRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 기반 기술 카탈로그는 데이터가 정한다 — 공유 캐시는 경로만으로 나눠 주므로 호출하는 쪽의 문맥을 받을 수 없다(작물의 계절과 같은 규칙).
-        const string_view movesPath = root.getAttributeText( "moves" );
+        FighterCatalogRootParams params;
+        if ( root.readProperties( params, sourceName ) == false )
+            return 0;
+        const string& movesPath = params._moves.path();
         if ( movesPath.empty() )
         {
-            SW_LOG_ERROR_ID( "FighterCatalog.FileNeedsMoves", "%#: <FighterCatalog> read from a file needs moves=\"<move catalog path>\"", sourceName );
+            SW_LOG_ERROR_ID( "FighterCatalog.FileNeedsMoves", "%#: <FighterCatalog> read from a file needs moves=\"<move catalog>\"", sourceName );
             return 0;
         }
         const shared_ptr<const MoveCatalog> pMoves = SharedAssetCache<MoveCatalog>::acquire( movesPath ).snapshot();
@@ -199,10 +202,12 @@ namespace sw
 
     uint32 FighterCatalog::loadRoot( const XMLCatalogRoot& root, const MoveCatalog& moveCatalog, string_view sourceName )
     {
+        FighterCatalogRootParams params;
+        if ( root.readProperties( params, sourceName ) == false )
+            return 0;
         InputCommandParser parser;
-        const string_view  buttonNames = root.getAttributeText( "buttons" );
-        if ( buttonNames.empty() == false )
-            parser.setButtonNames( buttonNames );
+        if ( params._buttons.empty() == false )
+            parser.setButtonNames( params._buttons );
 
         /** 표의 줄은 ( node, sourceName ) 만 받으므로 문맥을 든 읽는 쪽을 둔다. 함수 안의 형식이라 이 클래스의 비공개를 볼 수 있다. */
         struct FighterElementReader

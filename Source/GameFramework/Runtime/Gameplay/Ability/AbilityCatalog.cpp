@@ -125,33 +125,29 @@ namespace sw
         , _attributeSetFactories{}
     {
         // 빈 표의 첫 이름들이라 겹치지 않는다 — 겹치면 레지스트리가 오류로 알린다.
-        (void)registerAttributeSetClass<AttributeSet>( "Generic" );
-        (void)registerAttributeSetClass<CombatAttributeSet>( "Combat" );
-        (void)registerAbilityClass<ApplyEffectsAbility>( "ApplyEffects" );
+        (void)_attributeSetFactories.addLogged( "Generic", &AbilityClassRegistry::createDefault<AttributeSet, AttributeSet>, "Attribute set class" );
+        (void)_attributeSetFactories.addLogged( "Combat", &AbilityClassRegistry::createDefault<AttributeSet, CombatAttributeSet>, "Attribute set class" );
+        (void)_abilityFactories.addLogged( "ApplyEffects", &AbilityClassRegistry::createDefault<Ability, ApplyEffectsAbility>, "Ability class" );
     }
 
     AbilityClassRegistry::~AbilityClassRegistry() = default;
 
-    bool AbilityClassRegistry::registerAbilityClass( const hashed_string& className, AbilityFactoryFunc factory )
+    Subscription AbilityClassRegistry::registerAbilityClass( const hashed_string& className, AbilityFactoryFunc factory )
     {
         SW_ASSERT( factory != nullptr );
-        return _abilityFactories.addLogged( className, factory, "Ability class" );
+        if ( _abilityFactories.find( className ) == nullptr )
+            return _abilityFactories.addOwned( className, factory, "Ability class" );
+        reportRegistrationRejected( RegistrationResult::DuplicateName, "Ability class", className.c_str() );
+        return Subscription{};
     }
 
-    void AbilityClassRegistry::unregisterAbilityClass( const hashed_string& className )
-    {
-        (void)_abilityFactories.remove( className ); // 없는 이름을 내리는 것은 할 일이 없는 것이다
-    }
-
-    bool AbilityClassRegistry::registerAttributeSetClass( const hashed_string& className, AttributeSetFactoryFunc factory )
+    Subscription AbilityClassRegistry::registerAttributeSetClass( const hashed_string& className, AttributeSetFactoryFunc factory )
     {
         SW_ASSERT( factory != nullptr );
-        return _attributeSetFactories.addLogged( className, factory, "Attribute set class" );
-    }
-
-    void AbilityClassRegistry::unregisterAttributeSetClass( const hashed_string& className )
-    {
-        (void)_attributeSetFactories.remove( className ); // 없는 이름을 내리는 것은 할 일이 없는 것이다
+        if ( _attributeSetFactories.find( className ) == nullptr )
+            return _attributeSetFactories.addOwned( className, factory, "Attribute set class" );
+        reportRegistrationRejected( RegistrationResult::DuplicateName, "Attribute set class", className.c_str() );
+        return Subscription{};
     }
 
     unique_ptr<Ability> AbilityClassRegistry::createAbility( const AbilityCatalog& catalog, const hashed_string& abilityID ) const

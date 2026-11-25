@@ -8,33 +8,24 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Client/ArenaProjectileComponent.h"
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Component/ArenaGameModeComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
-#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {
-    namespace
-    {
-        /** @brief 상태를 싣기 전에 세운 투사체 모습을 걷습니다 — 씬 섹션에 실리면 복원한 뒤 다시 세운 것과 겹친다. */
-        const StatefulComponentRegistrar<ArenaViewComponent> s_viewRegistration{ "ArenaViewComponent" };
-    } // namespace
-
     ArenaViewComponent::ArenaViewComponent()
-        : _projectilePrefab{}
+        : GameModeViewComponent( GameModeViewBinding::of<&ArenaViewComponent::updateViews>() )
+        , _projectilePrefab{}
         , _projectilePoolSize{ 0 }
         , _playerTint{ 0.55f, 0.75f, 1.0f, 1.0f }
         , _gruntTint{ 1.0f, 0.5f, 0.45f, 1.0f }
         , _casterTint{ 0.8f, 0.55f, 1.0f, 1.0f }
         , _projectileTint{ 1.0f, 0.6f, 0.1f, 1.0f }
-        , _director{}
         , _tintCache{}
-        , _projectilePool{ string{}, 0 }
+        , _projectilePool{ string{}, 0, SpawnLifetime::Derived }
         , _nextProjectileID{ 0 }
     {
         setCanEverTick( true );
@@ -42,38 +33,16 @@ namespace sw
 
     ArenaViewComponent::~ArenaViewComponent() = default;
 
-    void ArenaViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        const GameObject* const             pOwner    = getOwner();
-        const ArenaGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<ArenaGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ArenaView.NoGameMode", "Arena view on '%#': no ArenaGameModeComponent in front of it on the same object - no projectile is shown",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<ArenaGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<ArenaGameModeComponent>( pDirector );
-    }
-
     void ArenaViewComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
-        _projectilePool = PrefabPool( _projectilePrefab.path(), _projectilePoolSize );
+        GameModeViewComponent::onBeginPlay();
+        _projectilePool = PrefabPool( _projectilePrefab.path(), _projectilePoolSize, SpawnLifetime::Derived );
     }
 
     void ArenaViewComponent::onEndPlay()
     {
         despawnViews();
-        Component::onEndPlay();
-    }
-
-    void ArenaViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        context.deferPostTickOnComponent( *this, []( ArenaViewComponent& view, GameObjectManager& manager )
-        { view.updateViews( manager ); } );
+        GameModeViewComponent::onEndPlay();
     }
 
     void ArenaViewComponent::despawnViews()
@@ -85,13 +54,10 @@ namespace sw
         _nextProjectileID = 0;
     }
 
-    void ArenaViewComponent::updateViews( GameObjectManager& manager )
+    void ArenaViewComponent::updateViews( GameObjectManager& manager, const ArenaGameModeComponent& director )
     {
-        const ArenaGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        tintUnits( manager, *pDirector );
-        syncProjectiles( manager, *pDirector );
+        tintUnits( manager, director );
+        syncProjectiles( manager, director );
     }
 
     void ArenaViewComponent::tintUnits( GameObjectManager& manager, const ArenaGameModeComponent& director )

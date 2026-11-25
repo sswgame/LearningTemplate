@@ -130,7 +130,7 @@ namespace sw
     expected<string> UserAppearancePresetStore::saveToText() const
     {
         UserAppearancePresetFile file;
-        file._formatVersion = kVersion;
+        file._formatVersion = static_cast<int32>( kFormat._version );
         file._listPreset    = _listPreset;
         return JSONSerializer::serializePretty( &file, *UserAppearancePresetFile::StaticType() );
     }
@@ -138,14 +138,11 @@ namespace sw
     bool UserAppearancePresetStore::loadFromXMLText( string_view text )
     {
         UserAppearancePresetFile file;
-        // 모르는 키 · 빠진 필수 칸 · 읽지 못한 값은 키 이름과 함께 오류로 남는다(옛 `key=value` 세이브도 여기서 진다).
+        // 모르는 키 · 빠진 필수 칸 · 읽지 못한 값은 키 이름과 함께 오류로 남는다.
         if ( ConfigManager::readConfigJSON( file, text, "appearance presets" ) == false )
             return false;
-        if ( file._formatVersion != kVersion )
-        {
-            SW_LOG_WARNING_ID( "UserAppearancePresetStore.AppearancePresetSaveFormat", "Appearance preset save has format version %# (this build reads %#)", file._formatVersion, kVersion );
+        if ( kFormat.accept( static_cast<uint32>( file._formatVersion ), "appearance presets" ) == false )
             return false;
-        }
         _listPreset = std::move( file._listPreset );
         return true;
     }

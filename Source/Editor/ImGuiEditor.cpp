@@ -23,6 +23,7 @@
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorComponentIconTable.h"
+#include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorPreferences.h"
@@ -77,6 +78,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -241,7 +243,7 @@ namespace sw::editor
 
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션 상태의 키와 형식 판입니다. */
             static constexpr string_view kSessionStoreKey = "editor.session";
-            static constexpr uint32      kSessionVersion  = 1;
+            static constexpr FormatDef   kSessionFormat{ "EDSE" };
 
             /** @brief 인스턴스가 종료하기 전에 선택 · 미저장 표시를 호스트의 맡김 칸에 맡깁니다. 다음 인스턴스가 `resumeEditSession` 으로 찾아갑니다. */
             static void storeEditSession( EditorContext& context )
@@ -259,7 +261,8 @@ namespace sw::editor
                 }
                 // 워크스페이스가 아직 이 세대를 보지 못했으면 선택 · 표시는 옛 씬의 것이다 — 세대를 그대로 적어 다음 인스턴스가 버리게 한다.
                 Archive archive;
-                archive << kSessionVersion << workspace.getObservedSceneGeneration() << workspace.isSceneDirty();
+                kSessionFormat.write( archive );
+                archive << workspace.getObservedSceneGeneration() << workspace.isSceneDirty();
                 writeUndoArg( archive, listSelectedObjectID );
                 writeUndoArg( archive, selection.getSelectedAssets() );
                 pStore->store( kSessionStoreKey, vector<uint8>( archive.getData(), archive.getData() + archive.getSize() ) );
@@ -282,13 +285,11 @@ namespace sw::editor
                 if ( pStore == nullptr || pStore->take( kSessionStoreKey, bytes ) == false )
                     return false;
                 Archive        archive( bytes.data(), bytes.size() );
-                uint32         version{ 0 };
                 uint64         storedGeneration{ 0 };
                 bool           bSceneDirty{ false };
                 vector<uint64> listSelectedObjectID;
                 vector<string> listSelectedAsset;
-                archive >> version >> storedGeneration >> bSceneDirty;
-                const bool bRead = archive.isOk() && version == kSessionVersion && readUndoArg( archive, listSelectedObjectID ) && readUndoArg( archive, listSelectedAsset );
+                const bool     bRead = kSessionFormat.check( archive ).has_value() && ( archive >> storedGeneration >> bSceneDirty ).isOk() && readUndoArg( archive, listSelectedObjectID ) && readUndoArg( archive, listSelectedAsset );
                 if ( bRead == false || storedGeneration != generation )
                     return true; // 앞선 인스턴스는 있었다 — 씬이 바뀌었거나 형식이 달라 값만 버린다
                 if ( bSceneDirty )
@@ -508,6 +509,7 @@ namespace sw::editor
         , _editorToolDefaults{ nullptr }
         , _pIconGlyphTable{ nullptr }
         , _fontSetup{}
+        , _defaultAssets{ nullptr }
         , _pComponentIconTable{ nullptr }
         , _editorContext{ nullptr }
         , _dockLayout{}
@@ -588,11 +590,15 @@ namespace sw::editor
         _editorToolDefaults = make_unique<EditorToolDefaults>();
         if ( _editorToolDefaults->loadFromHost() == false )
             return SubsystemInitResult::Failed;
+        // 에디터가 이름으로 여는 데이터의 표 — 아래 아이콘 표도 여기서 경로를 얻는다.
+        _defaultAssets = make_unique<EditorDefaultAssets>();
+        if ( EditorDefaultAssets::load( *_defaultAssets ) == false )
+            return SubsystemInitResult::Failed;
         // 아이콘 표 둘도 에디터 필수 데이터다 — 글꼴(아이콘 글리프 범위)이 이 단계 뒤에 서고, 그리기가 이름으로 찾는다. 못 읽으면 이유를 남겼고 멈춘다.
         _pIconGlyphTable     = make_unique<EditorIconGlyphTable>();
         _pComponentIconTable = make_unique<EditorComponentIconTable>();
-        if ( _pIconGlyphTable->loadFromAsset( AssetID{ EditorPaths::kIconGlyphTable } ) == false ||
-             _pComponentIconTable->loadFromAsset( AssetID{ EditorPaths::kComponentIconTable } ) == false )
+        if ( _pIconGlyphTable->loadFromAsset( AssetID{ _defaultAssets->_iconGlyphTable.get() } ) == false ||
+             _pComponentIconTable->loadFromAsset( AssetID{ _defaultAssets->_componentIconTable.get() } ) == false )
             return SubsystemInitResult::Failed;
         // 정적 칸에 걸지 않는다 — 범위가 서기 전의 단계(글꼴)는 인자로 받고, 에디터 컨텍스트가 자기 범위에 빌려 건다(`initializeEditorContext`).
         return SubsystemInitResult::Succeeded;
@@ -605,6 +611,7 @@ namespace sw::editor
         EditorPreferencesStore::close(); // 서비스가 서 있을 때 마지막으로 쓴다 — 뒤에 모듈이 내려가며 부르는 저장은 쓰지 않는다
         _pComponentIconTable.reset();
         _pIconGlyphTable.reset();
+        _defaultAssets.reset();
         _editorToolDefaults.reset();
     }
 
@@ -721,7 +728,7 @@ namespace sw::editor
     SubsystemInitResult ImGuiEditor::initializeEditorContext()
     {
         _editorContext = make_unique<EditorContext>();
-        _editorContext->initialize( *_editorToolDefaults, *_pIconGlyphTable, *_pComponentIconTable, &EditorSubsystemSet::install );
+        _editorContext->initialize( *_editorToolDefaults, *_pIconGlyphTable, *_pComponentIconTable, *_defaultAssets, &EditorSubsystemSet::install );
         _editorContext->setDockLayout( &_dockLayout );
         _pUICapture = &_editorContext->getSubsystem<EditorUICapture>();
         // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이
@@ -764,8 +771,9 @@ namespace sw::editor
         // `-gv_editorStartupScene=<경로>` 는 검증용이다. 기동 검증이 오브젝트를 순회하는 코드까지 실행하게 한다. 정의는 이 파일 위쪽에 있다.
         // 스위치가 있으면 그 값을 쓰고, 없으면 환경설정(General 의 시작 씬)을 쓴다.
         // 앞선 인스턴스를 이어받았으면(백엔드 교체 · 에디터 모듈 리로드) 시작 씬을 열지 않는다 — 열면 편집 중인 씬과 미저장 편집을 버린다.
-        const string sceneArgument = gv_editorStartupScene.get();
-        const string startupScene  = sceneArgument.empty() == false ? sceneArgument : getPreferences<EditorGeneralPreferences>()._startupScene;
+        const string    sceneArgument   = gv_editorStartupScene.get();
+        const DataPath& scenePreference = getPreferences<EditorGeneralPreferences>()._startupScene;
+        const string    startupScene    = sceneArgument.empty() && scenePreference.isSet() ? scenePreference.get() : sceneArgument;
         if ( startupScene.empty() == false && bResumedSession == false )
         {
             SW_LOG_INFO_ID( "ImGuiEditor.OpeningStartupScene", "Opening the startup scene: %#", startupScene.c_str() );

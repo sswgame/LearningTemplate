@@ -86,7 +86,7 @@ namespace sw
     /**
      * @brief 미니게임이 끝나며 넘기는 결과입니다 — 돌아올 자리를 복원한 뒤에 넘긴다(복원이 파생 인스턴스 상태까지 되감으므로 번 것은 그 뒤에 얹는다).
      * @details 한 판 임시 상태(미니게임 지갑 · 창고 · 점수)는 디렉터가 소유하고 바탕 판(플레이어 진행 · 월드 상태)에 직접 쓰지 않는다 — 이 값 목록으로만 내보낸다
-     *          (언리얼 매치 상태가 PlayerState 를 거치지 않고 끝에 정산하는 자리, `GameModeComponent::finishMinigame`).
+     *          (언리얼 매치 상태가 PlayerState 를 거치지 않고 끝에 정산하는 자리, `MatchGameModeComponent::endMatch`).
      */
     struct MinigameResult
     {

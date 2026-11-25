@@ -15,7 +15,7 @@
 #include "Engine/Scene/SceneSubLevelTypes.h"
 
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameDefinition.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigamePortalSpawnerComponent.h"
@@ -33,23 +33,24 @@ namespace
     }
 
     /** @brief 한 판 임시 상태(번 돈)를 쥐고 결과로만 내보내는 미니게임 디렉터입니다 — 디렉터 계약 ③ 의 시험 대역. */
-    class MinigameDirectorTestComponent final : public GameModeComponent
+    class MinigameDirectorTestComponent final : public MatchGameModeComponent
     {
     public:
         int64 _roundMoney{ 0 }; ///< 한 판 임시 지갑 — 바탕 판에 쓰지 않는다
 
+        MinigameDirectorTestComponent()
+            : MatchGameModeComponent( 0.0f ) // 결과를 보이지 않고 바로 끝낸다
+        {
+        }
+
         void        collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override { outListValue.push_back( MinigameResultValue{ hashed_string( "gold" ), _roundMoney } ); }
+        void        endMatchForTest() { endMatch( hashed_string( kWinResult ) ); }
         static void addMoneyResultForTest( vector<MinigameResultValue>& outListValue, int64 profit ) { addMoneyResult( outListValue, profit ); }
 
     protected:
         void serializeGameState( StateIO& io ) override { (void)io; }
         bool startGame() override { return true; }
-        void updateGame( float32 deltaTime ) override { (void)deltaTime; }
-        void onFlush( GameObjectManager& manager, bool bRespawnViews ) override
-        {
-            (void)manager;
-            (void)bRespawnViews;
-        }
+        void updateMatch( float32 deltaTime ) override { (void)deltaTime; }
     };
 
     constexpr string_view kValidXML = R"(<Minigame name="arcade" map="testproject/minigame/arcade.scene.xml" entry="SceneSwitch" features="TestFeature"
@@ -474,7 +475,8 @@ SW_TEST_CASE( MinigameTest, FinishWithoutActiveMinigameIsRefused )
 {
     MinigameDirectorTestComponent director;
     SW_EXPECT_LOG( "GameMode.FinishWithoutMinigame" );
-    SW_EXPECT_FALSE( director.finishMinigame( hashed_string( "win" ) ) );
+    director.endMatchForTest();
+    SW_EXPECT_TRUE( director.isMatchEnded() );
 }
 
 /** @brief [MinigameTest] 넷 세션이 열린 인스턴스에서 씬 전환 진입은 오류로 거절되고(폴백 없음), 하위 레벨 진입과 혼자 하는 게임의 씬 전환은 받는다 */

@@ -5,7 +5,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -140,8 +139,6 @@ namespace sw
 
         static constexpr const utf8* kShipAreaID    = "ship";
         static constexpr const utf8* kOutsideAreaID = "outside";
-        static constexpr uint32      kStateTag      = FourCCUtil::make( "SCEX" );
-        static constexpr uint32      kStateVersion  = 2; ///< 2: 안쪽 터미널 상점(`ShopManager`)이 머리표와 되사기 목록을 싣는다
 
         ScavengerExpedition();
 
@@ -224,24 +221,24 @@ namespace sw
         void    pushEvent( ScavengerEvent::Kind kind, optional<int32> player, int32 value, const hashed_string& id = hashed_string{} );
 
     private:
-        vector<ScavengerCrewMember> _listCrew;
+        SW_CODEC_STATE vector<ScavengerCrewMember> _listCrew;
         PROPERTY( RuntimeState )
-        vector<ScavengerScrap>             _listShipScrap;
-        NotificationBuffer<ScavengerEvent> _eventBuffer;
-        const ScavengerCatalog*            _pCatalog;        ///< 빌린 카탈로그(`initialize` 뒤 늘 있다 — 아래 빌림도 같다)
-        const WeatherCatalog*              _pWeatherCatalog; ///< 빌린 날씨 표
-        const SpawnTable*                  _pThreatTable;    ///< 빌린 위협 표
-        ScavengerQuota                     _quota;
-        ScavengerFacility                  _facility;
-        SpawnDirector                      _indoorDirector;
-        SpawnDirector                      _outdoorDirector;
-        ShopManager                        _shop;
-        GameRandom                         _random;
-        Inventory*                         _pShipStorage; ///< 우주선 창고(빌림)
-        Wallet*                            _pWallet;      ///< 빌린 지갑(회사 돈)
-        WorldClock*                        _pClock;       ///< 빌린 시계이다. 떠나면 다음 날 도착 시각으로 넘긴다
-        WeatherSystem*                     _pWeather;     ///< 빌린 날씨이다. 내리면 그 위성의 날씨로 바꾼다
-        const ScavengerMoonDef*            _pMoon;
+        vector<ScavengerScrap> _listShipScrap;
+        SW_TRANSIENT NotificationBuffer<ScavengerEvent> _eventBuffer;
+        const ScavengerCatalog*                         _pCatalog;        ///< 빌린 카탈로그(`initialize` 뒤 늘 있다 — 아래 빌림도 같다)
+        const WeatherCatalog*                           _pWeatherCatalog; ///< 빌린 날씨 표
+        const SpawnTable*                               _pThreatTable;    ///< 빌린 위협 표
+        SW_CODEC_STATE ScavengerQuota                   _quota;
+        SW_CODEC_STATE ScavengerFacility                _facility;
+        SW_CODEC_STATE SpawnDirector                    _indoorDirector;
+        SW_CODEC_STATE SpawnDirector                    _outdoorDirector;
+        SW_CODEC_STATE ShopManager                      _shop;
+        SW_CODEC_STATE GameRandom                       _random;
+        Inventory*                                      _pShipStorage; ///< 우주선 창고(빌림)
+        Wallet*                                         _pWallet;      ///< 빌린 지갑(회사 돈)
+        WorldClock*                                     _pClock;       ///< 빌린 시계이다. 떠나면 다음 날 도착 시각으로 넘긴다
+        WeatherSystem*                                  _pWeather;     ///< 빌린 날씨이다. 내리면 그 위성의 날씨로 바꾼다
+        const ScavengerMoonDef*                         _pMoon;
         PROPERTY( RuntimeState )
         uint32 _seed;
         PROPERTY( RuntimeState, Min = 0 )

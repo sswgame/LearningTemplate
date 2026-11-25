@@ -1,5 +1,5 @@
 <?asset guid="487e9f4458a7d6ecf66c371db3a72749"?>
-<Prefab formatVersion="1" _base="guid:53ab17d5a6c435e2c34fc93965d562fe" name="Trilobite">
+<Prefab formatVersion="0" _base="guid:53ab17d5a6c435e2c34fc93965d562fe" name="Trilobite">
 	<PrefabOverrides>
 		<Override key="#55727fc07d545151">
 			<SkeletalAnimatorComponent _animationGraphPath="guid:5b49acf9e250618c8b0aa7c5eb24e2e5" _animationSetPath="guid:d60286faccb88466c2706ca7f67ef038" />

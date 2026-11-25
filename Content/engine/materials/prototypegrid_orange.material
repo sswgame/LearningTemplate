@@ -4,7 +4,7 @@
 <MaterialDef formatVersion="0" name="PrototypeGridOrange" _base="guid:0e23c2ee4018be638b51655cf03239d2">
 	<_properties>
 		<item name="_roughness" defaultValue="0.8" />
-		<item name="_albedoMap" assetPath="engine/textures/prototype/grid_orange.dds" />
+		<item name="_albedoMap" assetPath="guid:e2a3e153a66a28a1f4491c33730128d1" />
 	</_properties>
 	<_permutations>
 		<_alwaysDefines>

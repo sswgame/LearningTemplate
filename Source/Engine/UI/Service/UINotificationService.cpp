@@ -43,22 +43,6 @@ namespace sw
                 }
                 return "notification info";
             }
-
-            /** @brief @p widget 아래에서 이름 @p name 의 위젯을 찾습니다(항목마다 같은 이름이라 트리 전체가 아니라 그 항목 안에서). */
-            static Widget* findDescendant( Widget& widget, const hashed_string& name )
-            {
-                if ( widget.getName() == name )
-                    return &widget;
-                PanelWidget* pPanel = castTo<PanelWidget>( &widget );
-                if ( pPanel == nullptr )
-                    return nullptr;
-                for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
-                {
-                    if ( Widget* pFound = findDescendant( *pPanel->getChild( index ), name ); pFound != nullptr )
-                        return pFound;
-                }
-                return nullptr;
-            }
         };
     } // namespace
 
@@ -70,7 +54,7 @@ namespace sw
         , _pUI{ nullptr }
         , _updateSubscription{}
         , _nextOrder{ 0 }
-        , _screen{ kInvalidUIScreenHandle }
+        , _screen{}
     {
     }
 
@@ -183,17 +167,14 @@ namespace sw
         }
         announceVisible();
         // 3) 보일 것이 없으면 화면을 닫는다(오버레이라 입력과 무관하며, 열고 닫는 비용은 알림 단위로 든다).
-        const bool bIdleScreenOpen = _listVisible.empty() && _listFading.empty() && _screen != kInvalidUIScreenHandle;
+        const bool bIdleScreenOpen = _listVisible.empty() && _listFading.empty() && _screen.isHeld();
         if ( bIdleScreenOpen )
-        {
-            _pUI->closeScreen( _screen );
-            _screen = kInvalidUIScreenHandle;
-        }
+            _screen.reset();
     }
 
     void UINotificationService::announceVisible()
     {
-        UIScreen* pScreen = _screen != kInvalidUIScreenHandle ? _pUI->findScreen( _screen ) : nullptr;
+        UIScreen* pScreen = _screen.find();
         if ( pScreen == nullptr )
             return;
         for ( Entry& entry : _listVisible )
@@ -214,9 +195,7 @@ namespace sw
         _listVisible.clear();
         _listQueued.clear();
         _listFading.clear();
-        if ( _screen != kInvalidUIScreenHandle && _pUI->findScreen( _screen ) != nullptr )
-            _pUI->closeScreen( _screen );
-        _screen = kInvalidUIScreenHandle;
+        _screen.reset();
     }
 
     void UINotificationService::resetGameInstanceState( GameInstanceBoundary boundary )
@@ -243,11 +222,11 @@ namespace sw
 
     UIScreen* UINotificationService::acquireScreen()
     {
-        UIScreen* pScreen = _pUI->findScreen( _screen );
-        if ( pScreen != nullptr && pScreen->isClosing() == false )
+        UIScreen* pScreen = _screen.find();
+        if ( pScreen != nullptr )
             return pScreen;
-        _screen = _pUI->openScreen( _pUI->getEngineDocuments()._notifications );
-        return _pUI->findScreen( _screen );
+        _screen = UIOwnedScreen( *_pUI, _pUI->openScreen( _pUI->getEngineDocuments()._notifications ) );
+        return _screen.find();
     }
 
     void UINotificationService::showEntry( Entry& entry )
@@ -275,9 +254,9 @@ namespace sw
         widget->setStyleClass( Internal::getKindClass( entry._desc._kind ) );
         // 같은 조각을 항목마다 붙이므로 붙이기 전에 이름을 항목 번호로 가른다(붙은 뒤에는 "name is used twice" 경고가 난다).
         widget->setName( getEntryWidgetName( entry._order ) );
-        if ( Widget* pMessage = Internal::findDescendant( *widget, Internal::kMessageName ); pMessage != nullptr )
+        if ( Widget* pMessage = widget->findDescendant( Internal::kMessageName ); pMessage != nullptr )
             pMessage->setName( getEntryWidgetName( entry._order, Internal::kMessageName ) );
-        if ( Widget* pCount = Internal::findDescendant( *widget, Internal::kCountName ); pCount != nullptr )
+        if ( Widget* pCount = widget->findDescendant( Internal::kCountName ); pCount != nullptr )
             pCount->setName( getEntryWidgetName( entry._order, Internal::kCountName ) );
         entry._widget = widget->getID();
         widget->setOpacity( 0.0f ); // 페이드로 들어온다(움직임 줄이기이면 아래 트윈이 바로 1 을 쓴다)
@@ -294,13 +273,13 @@ namespace sw
     {
         using Internal = UINotificationServiceInternal;
         // 연 화면이 없으면 고칠 위젯도 없다 — 기동 전(`_pUI` 가 아직 없다)에 같은 글이 다시 와 합치기만 한 경우다(`announceVisible` 과 같은 기준).
-        UIScreen* pScreen = _screen != kInvalidUIScreenHandle ? _pUI->findScreen( _screen ) : nullptr;
+        UIScreen* pScreen = _screen.find();
         Widget*   pEntry  = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
         if ( pEntry == nullptr )
             return; // 아직 기다리는 중이다
-        if ( TextWidget* pMessage = castTo<TextWidget>( Internal::findDescendant( *pEntry, getEntryWidgetName( entry._order, Internal::kMessageName ) ) ); pMessage != nullptr )
+        if ( TextWidget* pMessage = castTo<TextWidget>( pEntry->findDescendant( getEntryWidgetName( entry._order, Internal::kMessageName ) ) ); pMessage != nullptr )
             pMessage->setText( entry._desc._text );
-        if ( TextWidget* pCount = castTo<TextWidget>( Internal::findDescendant( *pEntry, getEntryWidgetName( entry._order, Internal::kCountName ) ) ); pCount != nullptr )
+        if ( TextWidget* pCount = castTo<TextWidget>( pEntry->findDescendant( getEntryWidgetName( entry._order, Internal::kCountName ) ) ); pCount != nullptr )
         {
             StringBuilder<constant::buffer::kMax256> textBuilder;
             textBuilder.appendFormat( "x%#", entry._count );
@@ -311,7 +290,7 @@ namespace sw
 
     void UINotificationService::startFadeOut( const Entry& entry )
     {
-        UIScreen* pScreen = _pUI->findScreen( _screen );
+        UIScreen* pScreen = _screen.find();
         Widget*   pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
         if ( pWidget == nullptr )
             return; // 위젯을 만들지 못했던 항목이다
@@ -328,7 +307,7 @@ namespace sw
 
     void UINotificationService::removeEntryWidget( WidgetID widget )
     {
-        UIScreen*    pScreen = _pUI->findScreen( _screen );
+        UIScreen*    pScreen = _screen.find();
         Widget*      pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( widget ) : nullptr;
         PanelWidget* pParent = pWidget != nullptr ? pWidget->getParent() : nullptr;
         if ( pParent != nullptr )

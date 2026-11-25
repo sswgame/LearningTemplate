@@ -3,13 +3,13 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Component/MonsterHuntGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
@@ -23,11 +23,7 @@ namespace sw
     {
         struct MonsterHuntGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "MHGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 변이원 · 스킬
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
+            static constexpr FormatDef kStateFormat{ "MHGM" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventContract  = "MonsterHuntContract";
@@ -110,7 +106,6 @@ namespace sw
         , _monsterSpeed{ 3.0f }
         , _monsterAttackSeconds{ 2.0f }
         , _seed{ 7 }
-        , _resultHoldSeconds{ 3.0f }
         , _pCatalog{}
         , _pChart{}
         , _pRecipes{}
@@ -132,7 +127,6 @@ namespace sw
         , _attackCooldown{}
         , _dodge{}
         , _monsterAttack{}
-        , _resultHold{}
         , _playerPosition{ 0.0f, 0.0f }
         , _monsterPosition{ 0.0f, 0.0f }
         , _commandMove{ 0.0f, 0.0f }
@@ -311,7 +305,6 @@ namespace sw
         _attackCooldown.clear();
         _dodge.clear();
         _monsterAttack.clear();
-        _resultHold.clear();
         _playerPosition  = _startPosition;
         _monsterPosition = _spawnPosition;
         _commandMove     = float2{ 0.0f, 0.0f };
@@ -585,7 +578,7 @@ namespace sw
     void MonsterHuntGameModeComponent::finishGame( MonsterHuntPhase phase )
     {
         _phase = phase;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( phase == MonsterHuntPhase::Victory ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( phase == MonsterHuntPhase::Victory ? MonsterHuntGameModeComponentInternal::kEventWon : MonsterHuntGameModeComponentInternal::kEventLost );
         if ( phase == MonsterHuntPhase::Victory )
             SW_LOG_INFO_ID( "MonsterHunt.Victory", "[MonsterHunt] '%#' is slain - the reward is %#", _monster.c_str(), _haggle.getFinalReward() );
@@ -593,31 +586,15 @@ namespace sw
             SW_LOG_INFO_ID( "MonsterHunt.Defeat", "[MonsterHunt] the hunter fell" );
     }
 
-    void MonsterHuntGameModeComponent::updateGame( float32 deltaTime )
+    void MonsterHuntGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f || _phase == MonsterHuntPhase::Haggle )
+        if ( isAlive() == false )
             return; // 흥정은 명령이 진행한다
-        if ( isAlive() )
-        {
-            const float2 step  = WalkSweep::walkOnGround( getObjectManager(), getPlayerPosition(), _commandMove * ( _moveSpeed * deltaTime ), _bodyRadius );
-            _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, _fieldMin._x, _fieldMax._x );
-            _playerPosition._y = MathUtil::clamp( _playerPosition._y + step._y, _fieldMin._y, _fieldMax._y );
-            if ( _phase == MonsterHuntPhase::Hunt )
-                updateHunt( deltaTime );
-            return;
-        }
-        if ( _resultHold.update( deltaTime ) )
-        {
-            const bool bWon = _phase == MonsterHuntPhase::Victory;
-            (void)finishMinigame( hashed_string( bWon ? MonsterHuntGameModeComponentInternal::kWinResult : MonsterHuntGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-        }
-    }
-
-    void MonsterHuntGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`MonsterHuntAvatarComponent`)이 읽어 그린다.
-        (void)manager;
-        (void)bRespawnViews;
+        const float2 step  = WalkSweep::walkOnGround( getObjectManager(), getPlayerPosition(), _commandMove * ( _moveSpeed * deltaTime ), _bodyRadius );
+        _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, _fieldMin._x, _fieldMax._x );
+        _playerPosition._y = MathUtil::clamp( _playerPosition._y + step._y, _fieldMin._y, _fieldMax._y );
+        if ( _phase == MonsterHuntPhase::Hunt )
+            updateHunt( deltaTime );
     }
 
     void MonsterHuntGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
@@ -628,78 +605,62 @@ namespace sw
 
     void MonsterHuntGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( MonsterHuntGameModeComponentInternal::kStateTag, MonsterHuntGameModeComponentInternal::kStateVersion );
+        io.header( MonsterHuntGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 자리 · 체력 · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 규칙 객체는 같은 카탈로그로 연 뒤에 읽는다(키트 계약).
-        MonsterHuntHaggle        restoredHaggle;
-        MonsterHuntInvestigation restoredInvestigation;
-        MonsterHuntBestiary      restoredBestiary;
-        MonsterHuntCombat        restoredCombat;
-        MonsterHuntAlchemy       restoredAlchemy;
-        Inventory                restoredBag;
-        QuestLog                 restoredQuestLog;
-        MonsterHuntMutagens      restoredMutagens;
-        SkillTreeState           restoredSkills;
-        Countdown                attackCooldown = _attackCooldown;
-        Countdown                dodge          = _dodge;
-        Countdown                monsterAttack  = _monsterAttack;
-        Countdown                resultHold     = _resultHold;
-        if ( io.isReading() )
+        if ( io.isReading() && ( _pCatalog == nullptr || _pChart == nullptr || _pRecipes == nullptr || _pItemCatalog == nullptr ) )
         {
-            const bool bReady = _pCatalog != nullptr && _pChart != nullptr && _pRecipes != nullptr && _pItemCatalog != nullptr && restoredHaggle.initialize( _pCatalog.get(), _contract.key() ) &&
-                                restoredInvestigation.initialize( *_pCatalog, _contract.key(), _questLog ) && restoredCombat.initialize( _pCatalog.get(), _seed ) &&
-                                restoredBag.initialize( *_pItemCatalog, _bagSlotCount );
-            if ( bReady == false )
-            {
-                SW_LOG_ERROR_ID( "MonsterHunt.StateNeedsCatalog", "Monster hunt game mode: state read before the catalog, the recipes, the items and the element chart are loaded - refused" );
-                io.fail();
-                return;
-            }
-            restoredBestiary.initialize( *_pCatalog, *_pChart );
-            restoredAlchemy.initialize( *_pCatalog, *_pRecipes );
-            if ( _pQuests != nullptr )
-                restoredQuestLog.initialize( *_pQuests );
-            restoredMutagens.initialize( *_pCatalog, _hunterLevel );
-            restoredSkills.initialize( _skills.getTree() );
-            restoredSkills.addPoints( _skillPoints );
+            SW_LOG_ERROR_ID( "MonsterHunt.StateNeedsCatalog", "Monster hunt game mode: state read before the catalog, the recipes, the items and the element chart are loaded - refused" );
+            io.fail();
+            return;
         }
-        io.value( io.isWriting() ? _haggle : restoredHaggle );
-        io.value( io.isWriting() ? _investigation : restoredInvestigation );
-        io.value( io.isWriting() ? _questLog : restoredQuestLog );
-        io.value( io.isWriting() ? _bestiary : restoredBestiary );
-        io.value( io.isWriting() ? _combat : restoredCombat );
-        io.value( io.isWriting() ? _alchemy : restoredAlchemy );
-        io.value( io.isWriting() ? _bag : restoredBag );
-        io.value( io.isWriting() ? _mutagens : restoredMutagens );
-        io.value( attackCooldown );
-        io.value( dodge );
-        io.value( monsterAttack );
-        io.value( resultHold );
+        const bool bRead = io.valueOpened( _haggle, [this]( MonsterHuntHaggle& haggle )
+        { return haggle.initialize( _pCatalog.get(), _contract.key() ); } ) &&
+                           io.valueOpened( _investigation, [this]( MonsterHuntInvestigation& investigation )
+        { return investigation.initialize( *_pCatalog, _contract.key(), _questLog ); } ) &&
+                           io.valueOpened( _questLog, [this]( QuestLog& questLog )
+        {
+            if ( _pQuests != nullptr )
+                questLog.initialize( *_pQuests );
+            return true;
+        } ) && io.valueOpened( _bestiary, [this]( MonsterHuntBestiary& bestiary )
+        {
+            bestiary.initialize( *_pCatalog, *_pChart );
+            return true;
+        } ) && io.valueOpened( _combat, [this]( MonsterHuntCombat& combat )
+        { return combat.initialize( _pCatalog.get(), _seed ); } ) &&
+                           io.valueOpened( _alchemy, [this]( MonsterHuntAlchemy& alchemy )
+        {
+            alchemy.initialize( *_pCatalog, *_pRecipes );
+            return true;
+        } ) && io.valueOpened( _bag, [this]( Inventory& bag )
+        { return bag.initialize( *_pItemCatalog, _bagSlotCount ); } ) &&
+                           io.valueOpened( _mutagens, [this]( MonsterHuntMutagens& mutagens )
+        {
+            mutagens.initialize( *_pCatalog, _hunterLevel );
+            return true;
+        } );
+        if ( bRead == false )
+            return;
+        io.value( _attackCooldown );
+        io.value( _dodge );
+        io.value( _monsterAttack );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
         const bool bHealthValid = _playerHP <= _playerMaxHP && _monsterHP <= _monsterMaxHP;
-        const bool bPhaseValid  = ( _phase == MonsterHuntPhase::Haggle ) != restoredHaggle.isClosed();
+        const bool bPhaseValid  = ( _phase == MonsterHuntPhase::Haggle ) != _haggle.isClosed();
         if ( io.check( bHealthValid && bPhaseValid ) == false )
             return;
+        SkillTreeState skills; // 배운 것은 상태 칸(`_listLearnedSkill`)이다 — 트리에 다시 건다
+        skills.initialize( _skills.getTree() );
+        skills.addPoints( _skillPoints );
         for ( const hashed_string& skillID : _listLearnedSkill )
         {
-            if ( io.check( restoredSkills.rankUp( skillID, _hunterLevel ) == SkillResult::Ok ) == false ) // 트리가 바뀌어 배울 수 없는 저장은 거절한다
+            if ( io.check( skills.rankUp( skillID, _hunterLevel ) == SkillResult::Ok ) == false ) // 트리가 바뀌어 배울 수 없는 저장은 거절한다
                 return;
         }
-        _mutagens       = std::move( restoredMutagens );
-        _skills         = std::move( restoredSkills );
-        _haggle         = restoredHaggle;
-        _investigation  = std::move( restoredInvestigation ); // 빌린 일지의 주소는 그대로다
-        _questLog       = std::move( restoredQuestLog );
-        _bestiary       = std::move( restoredBestiary );
-        _combat         = restoredCombat;
-        _alchemy        = std::move( restoredAlchemy );
-        _bag            = std::move( restoredBag );
-        _attackCooldown = attackCooldown;
-        _dodge          = dodge;
-        _monsterAttack  = monsterAttack;
-        _resultHold     = resultHold;
+        _skills = std::move( skills );
     }
 } // namespace sw

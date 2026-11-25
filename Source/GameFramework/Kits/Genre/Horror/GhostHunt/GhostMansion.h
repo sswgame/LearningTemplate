@@ -7,7 +7,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -111,9 +110,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "GHMN" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 동전을 준 유령의 번호
-
         GhostMansion();
 
         /**
@@ -167,16 +163,16 @@ namespace sw
         void pushEvent( GhostMansionEventKind type, const hashed_string& id, const hashed_string& room = hashed_string{}, int32 count = 0 );
 
     private:
-        GhostEncounter             _encounter;
-        GameRandom                 _random;
-        vector<HidingGhostRuntime> _listBoo;      ///< 카탈로그의 부 순서를 따른다
-        vector<uint8>              _listSearched; ///< 카탈로그의 가구 순서를 따른다
+        SW_CODEC_STATE GhostEncounter _encounter;
+        SW_CODEC_STATE GameRandom     _random;
+        SW_CODEC_STATE vector<HidingGhostRuntime> _listBoo; ///< 카탈로그의 부 순서를 따른다
+        SW_CODEC_STATE vector<uint8> _listSearched;         ///< 카탈로그의 가구 순서를 따른다
         PROPERTY( RuntimeState )
         vector<hashed_string> _listPendingKeyRoom; ///< 가방이 차서 아직 주지 못한 열쇠의 방이다
         PROPERTY( RuntimeState )
-        vector<uint32>                        _listRewardedGhost; ///< 지금 방에서 잡아 동전을 준 유령의 번호이다. 이벤트로 세면 잡은 뒤 `update` 앞의 저장이 동전과 불을 잃는다
-        NotificationBuffer<GhostMansionEvent> _eventBuffer;
-        vector<GhostEvent>                    _listGhostEvent; ///< 게임에 넘길 싸움 이벤트이다
+        vector<uint32> _listRewardedGhost; ///< 지금 방에서 잡아 동전을 준 유령의 번호이다. 이벤트로 세면 잡은 뒤 `update` 앞의 저장이 동전과 불을 잃는다
+        SW_TRANSIENT NotificationBuffer<GhostMansionEvent> _eventBuffer;
+        SW_TRANSIENT vector<GhostEvent> _listGhostEvent; ///< 게임에 넘길 싸움 이벤트이다
         PROPERTY( RuntimeState )
         hashed_string       _currentRoom;
         const GhostCatalog* _pCatalog; ///< 빌린 카탈로그(`initialize` 뒤 늘 있다 — 아래 빌림도 같다)

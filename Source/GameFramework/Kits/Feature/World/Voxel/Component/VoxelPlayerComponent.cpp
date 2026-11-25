@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelPlayerComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -12,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
@@ -31,8 +31,7 @@ namespace sw
     {
         struct VoxelPlayerComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "PLYR" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 부순 · 놓은 블록 수가 상태 칸으로 나갔다(옛 판은 거절한다 — 출시 전)
+            static constexpr FormatDef kStateFormat{ "PLYR" };
 
             // 사운드 이벤트 이름입니다. 클립, 범위, 동시 재생 상한은 게임의 사운드 이벤트 라이브러리(Playground 는 playground.audioevents.xml)가 정합니다.
             static constexpr const utf8* kEventLand  = "VoxelLand";
@@ -74,7 +73,7 @@ namespace sw
 
             [[nodiscard]] static bool readWalkedDistance( const VoxelPlayerComponent& player, float64& outValue )
             {
-                const float3 delta = player.getBody().getPosition() - player.getStartPosition();
+                const float3 delta = player.getBody().getPosition() - player.getStartPosition()._value;
                 outValue           = static_cast<float64>( MathUtil::sqrt( delta._x * delta._x + delta._z * delta._z ) );
                 return true;
             }
@@ -153,6 +152,7 @@ namespace sw
         , _placeInterval{ 0.25f }
         , _startYaw{ Radians::fromRadians( 0.6f ) }
         , _startPitch{ Radians::fromRadians( -0.2f ) }
+        , _bodySettings{}
         , _jumpButton{}
         , _sprintButton{}
         , _breakButton{}
@@ -168,7 +168,7 @@ namespace sw
         , _soundQueue{}
         , _pendingStateBytes{}
         , _intentSlots{}
-        , _startPosition{ 0.0f, 0.0f, 0.0f }
+        , _startPosition{}
         , _breakProgress{ 0.0f }
         , _placeCooldown{}
         , _brokenCount{ 0 }
@@ -227,7 +227,7 @@ namespace sw
 
     void VoxelPlayerComponent::serializeState( StateIO& io )
     {
-        io.header( VoxelPlayerComponentInternal::kStateTag, VoxelPlayerComponentInternal::kStateVersion );
+        io.header( VoxelPlayerComponentInternal::kStateFormat );
         float3      position    = _body.getPosition();
         VoxelHotbar hotbar      = _hotbar;
         uint8       bBodyPlaced = static_cast<uint8>( _bBodyPlaced );
@@ -292,7 +292,7 @@ namespace sw
             _soundQueue.queueEvent( VoxelPlayerComponentInternal::kEventLand );
         // 월드 밖으로 떨어지면 처음 위치로 되돌립니다.
         if ( _body.getPosition()._y < -10.0f )
-            _body.setPosition( pGameMode->findSpawnPosition() );
+            _body.setPosition( pGameMode->findSpawnPosition()._value );
         pCamera->setEyePosition( getOwner()->getManager()->getWorldOrigin().toLocal( _body.getEyePosition() ) ); // 복셀 월드는 절대 자리다
 
         updateTarget( *pGameMode, *pCamera );
@@ -317,8 +317,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     void VoxelPlayerComponent::initializeBody( const VoxelGameModeComponent& gameMode )
     {
-        _body.setPosition( gameMode.findSpawnPosition() );
-        _startPosition                      = _body.getPosition();
+        _body.setSettings( _bodySettings );
+        _startPosition = gameMode.findSpawnPosition();
+        _body.setPosition( _startPosition._value );
         _bBodyPlaced                        = SW_TRUE;
         GameObject*                 pOwner  = getOwner();
         FirstPersonCameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;

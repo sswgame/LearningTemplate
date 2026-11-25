@@ -13,10 +13,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -24,7 +22,8 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/Fighting/FighterCatalog.h"
 #include "GameFramework/Kits/Genre/Action/Fighting/FightingMatch.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
@@ -34,7 +33,7 @@ namespace sw
      * @brief 라운드 → 대전 끝 → 결과를 플레이어 입력 명령과 컴퓨터 상대로 진행합니다. 0 번이 플레이어, 1 번이 상대입니다.
      */
     REFLECT( Category = "Fighting", DisplayName = "Fighting Game Mode", Tooltip = "Runs one Fighting kit match: player 0 from input commands (or the computer on auto play), player 1 by the computer" )
-    class SW_KIT_API FightingGameModeComponent : public GameModeComponent
+    class SW_KIT_API FightingGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -56,7 +55,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 대전이 끝나지 않아 입력 명령을 받으면 true 입니다. */
-        bool                 isAcceptingInput() const;
+        bool                 isAcceptingInput() const override;
         const FightingMatch& getMatch() const { return _match; }
         /** @brief 캐릭터의 절대 자리입니다(무대 중심이 원점, y 는 점프 · 저글 높이). */
         AbsolutePosition getFighterPosition( int32 player ) const;
@@ -75,8 +74,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               updateMatch( float32 deltaTime ) override;
         /** @brief 이겼으면 결과 값 `money`(`_victoryMoney`)를 냅니다. 지거나 비기면 넘길 값이 없다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 
@@ -114,19 +112,16 @@ namespace sw
         float32 _cpuAttackChance;
         PROPERTY( Category = "Computer", DisplayName = "Seed", Tooltip = "Seed of the computer decisions (not 0)", Min = 1 )
         uint32 _seed;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Result", DisplayName = "Victory Money", Tooltip = "Result value 'money' reported on victory", Min = 0 )
         int32 _victoryMoney;
 
-        SharedAssetRef<FighterCatalog> _pCatalog;
-        FightingMatch                  _match;
-        FixedStepTimer                 _timer; ///< 걸음 하나가 격투 프레임 하나(1/60 초)다
-        GameRandom                     _random;
-        Countdown                      _resultHold; ///< 대전이 끝난 뒤 미니게임을 끝내기까지
-        CPUHand                        _arrCPUHand[FightingMatch::kPlayerCount];
-        vector<FightingEvent>          _listEvent;
-        uint16                         _queuedButtons;    ///< 다음 걸음이 쓸 버튼 누름 — 클라이언트 입력이라 싣지 않는다
-        uint8                          _commandDirection; ///< 마지막 입력 명령의 방향(넘패드) — 클라이언트 입력이라 싣지 않는다
+        BoundAssetRef<FighterCatalog> _pCatalog;
+        SW_CODEC_STATE FightingMatch  _match;
+        SW_CODEC_STATE FixedStepTimer _timer; ///< 걸음 하나가 격투 프레임 하나(1/60 초)다
+        SW_CODEC_STATE GameRandom     _random;
+        SW_CODEC_STATE CPUHand        _arrCPUHand[FightingMatch::kPlayerCount];
+        SW_TRANSIENT vector<FightingEvent> _listEvent;
+        SW_TRANSIENT uint16                _queuedButtons;    ///< 다음 걸음이 쓸 버튼 누름 — 클라이언트 입력이라 싣지 않는다
+        SW_TRANSIENT uint8                 _commandDirection; ///< 마지막 입력 명령의 방향(넘패드) — 클라이언트 입력이라 싣지 않는다
     };
 } // namespace sw

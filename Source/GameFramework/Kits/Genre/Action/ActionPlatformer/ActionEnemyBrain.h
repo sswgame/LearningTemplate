@@ -5,7 +5,6 @@
  * @details 순찰, 조준, 사격, 쉬기로 이어지는 플랫포머의 졸개와 보스 패턴은 이것으로 충분하다. 난수가 없고 프레임으로만 진행하므로 결정적이다.
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -47,9 +46,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "APEB" );
-        static constexpr uint32 kStateVersion = 1;
-
         ActionEnemyBrain();
 
         /** @brief 패턴을 설정하고 시작 상태로 갑니다. 패턴이 없거나 시작 상태(`_start`)가 상태 목록에 없으면 false 를 반환하고 패턴 없는 상태가 됩니다. */
@@ -82,7 +78,7 @@ namespace sw
     private:
         const ActionPatternDef*        _pPattern;
         const ActionPlatformerCatalog* _pCatalog;   ///< `readState` 가 패턴을 찾는 카탈로그(빌려 온 것)
-        optional<int32>                _stateIndex; ///< 패턴의 지금 상태(비면 상태가 없다). 상태는 id 로 저장한다(`serializeState`)
+        SW_CODEC_STATE optional<int32> _stateIndex; ///< 패턴의 지금 상태(비면 상태가 없다). 상태는 id 로 저장한다(`serializeState`)
         PROPERTY( RuntimeState, Min = 0 )
         int32 _stateFrame; ///< 지금 상태에서 지난 프레임(들어선 프레임이 0)
         PROPERTY( RuntimeState, Min = -1, Max = 1 )

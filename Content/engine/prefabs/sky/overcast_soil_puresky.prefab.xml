@@ -1,9 +1,9 @@
 <?asset guid="4cdbb1ad9948dbc583745327d9e5c673"?>
 <!-- Scripts/dev/make_sky_hdri_prefabs.py 가 지었다 — 손으로 고치지 않는다. 그림은 텍스처, 간접 조명은 원본을 투영한 SH9 계수, 반사는 곁의 .radiancemap 을 거른 것이다. -->
-<Prefab formatVersion="1" name="Sky_overcast_soil_puresky">
+<Prefab formatVersion="0" name="Sky_overcast_soil_puresky">
 	<GameObject _schemaVersion="0" _name="Sky_overcast_soil_puresky" _bActive="true">
 		<_listComponent>
-			<SkyComponent _localID="14376368575749838118" _intensity="1" _mode="Hdri" _hdriTexture="guid:d685b860defa2c5d8ea22d92264e7f6f" _hdriRotation="0" _hdriRadianceMap="engine/prefabs/sky/overcast_soil_puresky.radiancemap">
+			<SkyComponent _localID="14376368575749838118" _intensity="1" _mode="Hdri" _hdriTexture="guid:d685b860defa2c5d8ea22d92264e7f6f" _hdriRotation="0" _hdriRadianceMap="guid:4cbd217decba88b10f4000501e2faa59">
 				<_listHdriAmbient>
 					<item>3.252302</item>
 					<item>3.203131</item>

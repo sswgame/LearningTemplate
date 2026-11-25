@@ -110,7 +110,7 @@ namespace sw
     struct SW_KIT_API SocialPresence
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 서버 버스(`SocialBus::kPresenceTopic`)의 의미 버전. 캐시 레코드의 판과 따로다
+        static constexpr uint32 kBusVersion = 0; ///< 서버 버스(`SocialBus::kPresenceTopic`)의 의미 버전. 캐시 레코드의 판과 따로다
         PROPERTY( MaxCount = SocialLimit::kMaxActivitySize )
         string _activity{}; ///< 활동 문구이다(예: "던전 3층"). 상한은 `SocialLimit::kMaxActivitySize` 와 같다
         PROPERTY()
@@ -143,7 +143,7 @@ namespace sw
     struct SW_KIT_API SocialNotification
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전
+        static constexpr uint32 kBusVersion = 0; ///< push 중계(`OnlinePushRelay`)의 의미 버전
         PROPERTY()
         SocialPresence _presence{}; ///< PresenceChanged
         AccountID      _recipientID{ kInvalidAccountID };
@@ -161,12 +161,9 @@ namespace sw
     /** @brief 상한 값들입니다. 상한은 저장소 트랜잭션이 버전 조건으로 지키므로 경합이 나도 넘지 않습니다. */
     struct SocialLimit
     {
-        static constexpr int32 kMaxFriend       = 200;
-        static constexpr int32 kMaxIncoming     = 100;
-        static constexpr int32 kMaxOutgoing     = 100;
-        static constexpr int32 kMaxBlocked      = 500;
+        static constexpr int32 kMaxFriend       = 200;  ///< 와이어 상한(`ListPresence` 응답)이다. 운영 값은 서버 설정 `SocialLinkPolicy::_maxFriend` 가 이 안에서 정한다
         static constexpr int32 kMaxActivitySize = 64;   ///< UTF-8 바이트 수이다
-        static constexpr int32 kMaxLinkPage     = 1000; ///< 친구, 받은 신청, 보낸 신청, 막음의 합보다 크게 잡는다
+        static constexpr int32 kMaxLinkPage     = 1000; ///< 와이어 상한(`ListLinks` 응답)이다. 서버 설정의 친구 · 받은 신청 · 보낸 신청 · 막음 상한의 합이 이것을 넘으면 기동 오류다
     };
 } // namespace sw
 
@@ -285,15 +282,13 @@ namespace sw
 {
     struct GuildLimit
     {
-        static constexpr int32 kMaxStoragePage        = 128; ///< 창고 목록 한 쪽의 품목 수 상한이다. 요청의 쪽 크기가 더 크면 서버가 이 값으로 자른다
-        static constexpr int32 kMaxMember             = 100;
-        static constexpr int32 kMaxNameSize           = 24;                               ///< UTF-8 바이트 수이다
-        static constexpr int32 kMaxAnnouncementSize   = 256;                              ///< UTF-8 바이트 수이다
-        static constexpr int64 kInviteLifetimeMs      = 604800000;                        ///< 7일이다
-        static constexpr int64 kApplicationLifetimeMs = 604800000;                        ///< 가입 신청이 남는 기간이며 7일이다
-        static constexpr int32 kMaxApplication        = 50;                               ///< 길드 하나가 쌓아 두는 살아 있는 신청 수이다
-        static constexpr int32 kMaxLevelCount         = 100;                              ///< 레벨 테이블의 길이 상한이다
-        static constexpr int32 kMaxDepositorAsset     = LedgerConstant::kMaxPostingCount; ///< 맡긴 사람 한 명의 몫에 드는 이전 불가 자산 종류 수이다. 떠날 때 돌려주는 이동 하나(다리 상한)에 담긴다
-        static constexpr int32 kMaxStorageGrant       = 32;                               ///< 맡긴 사람 한 명이 남겨 둘 수 있는 꺼내기 허용(받는 계정 · 자산 쌍) 수이다
+        static constexpr int32 kMaxStoragePage      = 128;                              ///< 창고 목록 한 쪽의 품목 수 상한이다. 요청의 쪽 크기가 더 크면 서버가 이 값으로 자른다
+        static constexpr int32 kMaxMember           = 100;                              ///< 와이어 상한(`GuildInfo::_listMember`)이다. 정원은 서버 설정 `GuildPolicy::_maxMember` 가 이 안에서 정한다
+        static constexpr int32 kMaxNameSize         = 24;                               ///< UTF-8 바이트 수이다
+        static constexpr int32 kMaxAnnouncementSize = 256;                              ///< UTF-8 바이트 수이다
+        static constexpr int32 kMaxApplication      = 50;                               ///< 와이어 상한(`ListApplications` 응답)이다. 살아 있는 신청 수는 서버 설정 `GuildPolicy::_maxApplication` 이 이 안에서 정한다
+        static constexpr int32 kMaxLevelCount       = 100;                              ///< 레벨 테이블의 길이 상한이다
+        static constexpr int32 kMaxDepositorAsset   = LedgerConstant::kMaxPostingCount; ///< 맡긴 사람 한 명의 몫에 드는 이전 불가 자산 종류 수이다. 떠날 때 돌려주는 이동 하나(다리 상한)에 담긴다
+        static constexpr int32 kMaxStorageGrant     = 32;                               ///< 맡긴 사람 한 명의 꺼내기 허용(받는 계정 · 자산 쌍)을 한 번에 읽는 수의 위 끝이다. 줄 수 있는 수는 서버 설정 `GuildPolicy::_maxStorageGrant` 가 이 안에서 정한다
     };
 } // namespace sw

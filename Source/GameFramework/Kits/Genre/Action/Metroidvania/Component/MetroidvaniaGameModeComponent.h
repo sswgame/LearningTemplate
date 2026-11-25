@@ -20,7 +20,6 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -34,7 +33,8 @@
 #include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaTrinketLoadout.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
@@ -84,7 +84,7 @@ namespace sw
      * @brief 탐험 → 능력 · 부적 줍기 → 쉬기 · 지도 → 전투 → 보스를 플레이어 입력 명령으로 진행합니다.
      */
     REFLECT( Category = "Metroidvania", DisplayName = "Metroidvania Game Mode", Tooltip = "Runs one Metroidvania exploration (rooms, abilities, rest, duels, boss) from player input commands" )
-    class SW_KIT_API MetroidvaniaGameModeComponent : public GameModeComponent
+    class SW_KIT_API MetroidvaniaGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -101,7 +101,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 이기기 전이라 입력 명령을 받으면 true 입니다(죽어 있는 동안도 받는다). */
-        bool                              isAcceptingInput() const { return isStarted() && _phase != MetroidvaniaPhase::Won; }
+        bool                              isAcceptingInput() const override { return isStarted() && _phase != MetroidvaniaPhase::Won; }
         const PlatformerMotor2D&          getMotor() const { return _motor; }
         const MetroidvaniaDuelist&        getPlayer() const { return _player; }
         const MetroidvaniaDeathRestState& getDeathRest() const { return _deathRest; }
@@ -126,8 +126,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               updateMatch( float32 deltaTime ) override;
         /** @brief 가진 통화를 결과 값 `money` 로 냅니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 
@@ -206,31 +205,28 @@ namespace sw
         float32 _enemyInterval;
         PROPERTY( Category = "Result", DisplayName = "Respawn Delay", Min = 0.05, Units = s )
         float32 _respawnDelaySeconds;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Result", DisplayName = "Seed", Tooltip = "Seed of the loot rolls (not 0)", Min = 1 )
         uint32 _seed;
 
-        SharedAssetRef<MetroidvaniaCatalog> _pCatalog;
-        SharedAssetRef<AreaGraph>           _pAreas; ///< 방 정의(탐색 상태는 `_graph` 사본이 가진다)
-        AreaGraph                           _graph;  ///< 방문 · 발견
-        PlatformTileMap                     _terrain;
-        PlatformerMotor2D                   _motor;
-        MetroidvaniaAbilitySet              _abilities;
-        MetroidvaniaMapState                _mapState;  ///< `_graph` 를 빌린다
-        MetroidvaniaDeathRestState          _deathRest; ///< `_wallet` 을 빌린다
-        MetroidvaniaTrinketLoadout          _loadout;
-        MetroidvaniaDuelist                 _player;
-        Wallet                              _wallet;
-        GameFlags                           _flags;
-        GameRandom                          _random;
-        FixedStepTimer                      _timer;
-        Countdown                           _attackCooldown;
-        Countdown                           _respawnDelay;
-        Countdown                           _resultHold;
-        vector<MetroidvaniaEnemy>           _listEnemy;
-        vector<MetroidvaniaDeathRestEvent>  _listEvent;
-        MetroidvaniaPlayerCommand           _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다
+        BoundAssetRef<MetroidvaniaCatalog>        _pCatalog;
+        BoundAssetRef<AreaGraph>                  _pAreas; ///< 방 정의(탐색 상태는 `_graph` 사본이 가진다)
+        SW_CODEC_STATE AreaGraph                  _graph;  ///< 방문 · 발견
+        SW_TRANSIENT PlatformTileMap              _terrain;
+        SW_CODEC_STATE PlatformerMotor2D          _motor;
+        SW_CODEC_STATE MetroidvaniaAbilitySet     _abilities;
+        SW_CODEC_STATE MetroidvaniaMapState       _mapState;  ///< `_graph` 를 빌린다
+        SW_CODEC_STATE MetroidvaniaDeathRestState _deathRest; ///< `_wallet` 을 빌린다
+        SW_CODEC_STATE MetroidvaniaTrinketLoadout _loadout;
+        SW_CODEC_STATE MetroidvaniaDuelist        _player;
+        SW_CODEC_STATE Wallet                     _wallet;
+        SW_CODEC_STATE GameFlags                  _flags;
+        SW_CODEC_STATE GameRandom                 _random;
+        SW_CODEC_STATE FixedStepTimer             _timer;
+        SW_CODEC_STATE Countdown                  _attackCooldown;
+        SW_CODEC_STATE Countdown                  _respawnDelay;
+        SW_CODEC_STATE vector<MetroidvaniaEnemy> _listEnemy;
+        SW_TRANSIENT vector<MetroidvaniaDeathRestEvent> _listEvent;
+        SW_TRANSIENT MetroidvaniaPlayerCommand          _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다
         PROPERTY( RuntimeState )
         hashed_string _area; ///< 지금 방(어느 방도 아니면 마지막 방)
         PROPERTY( RuntimeState )

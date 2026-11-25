@@ -5,7 +5,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -43,9 +42,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32  kStateTag     = FourCCUtil::make( "WSRV" );
-        static constexpr uint32  kStateVersion = 1;
-        static constexpr float32 kCoreMax      = 100.0f;
+        static constexpr float32 kCoreMax = 100.0f;
 
         WesternSurvival();
 
@@ -99,8 +96,8 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<hashed_string> _listClothing;
         PROPERTY( RuntimeState )
-        vector<uint64> _listMark;
-        ResourceGauge  _arrGauge[kCoreCount];
+        vector<uint64>               _listMark;
+        SW_CODEC_STATE ResourceGauge _arrGauge[kCoreCount];
         PROPERTY( RuntimeState, Min = 0, Max = WesternSurvival::kCoreMax )
         float32               _arrCore[kCoreCount];
         const WesternCatalog* _pCatalog;

@@ -1,5 +1,5 @@
 <?asset guid="d9c0a74a5927680c5048ad84c27854d6"?>
-<Scene formatVersion="3" name="Severing">
+<Scene formatVersion="0" name="Severing">
 	<!-- 절단 시나리오(automation/severing)의 무대 — 해골 전사(몸 영역 표 skeleton_warrior.fit.xml 이 있는 유일한 리그)에 래그돌과 절단을 붙여 바닥 위에 세운다.
 	     게임 안의 같은 길은 사격장 해골 적(shooter3d/prefabs/skeleton.prefab.xml · automation/shooter3d_severing)이 본다. 여기는 치명 표시를 단 맞음(combat.fatalhit)과 자를 수 없는 영역을 본다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
@@ -40,7 +40,7 @@
 				<_listComponent>
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="guid:8d5a84b9050b8cadf1d06d0d49363c85" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Idle_Combat" _bPlayOnBegin="true" />
-					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="guid:480309ac75a2431aeb227f392cf1e577" />
 					<RagdollComponent _localID="3882491709238727780" _physicsAssetPath="guid:838a817bb59114526689cc7f27a02f17" _bRagdollOnFatalHit="true" _bAutoGetUp="false" />
 					<SkeletalSeveringComponent _localID="12034596935017574515" _severedSurfaceChannel="Blood" _regionTablePath="guid:9fb8f706daaf99963cf9c891924fce5a">
 						<_listSeverableRegion>

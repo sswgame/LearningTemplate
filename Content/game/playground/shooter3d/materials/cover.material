@@ -4,8 +4,8 @@
 <MaterialDef formatVersion="0" name="ShooterCover" _base="guid:fccdbe62f6e4804ccde68cd398d3273f">
 	<_properties>
 		<item name="_worldTileSize" defaultValue="1.94" />
-		<item name="_albedoMap" assetPath="common/textures/polyhaven/container_side/container_side_diff_2k.dds" />
-		<item name="_normalMap" assetPath="common/textures/polyhaven/container_side/container_side_nor_gl_2k.dds" />
-		<item name="_ormMap" assetPath="common/textures/polyhaven/container_side/container_side_arm_2k.dds" />
+		<item name="_albedoMap" assetPath="guid:62f812b88026f397d0b0f05f0c9c197d" />
+		<item name="_normalMap" assetPath="guid:7396c9915993debab982c25540bd135b" />
+		<item name="_ormMap" assetPath="guid:52ccfaf4aea95569b8eee798140efcfb" />
 	</_properties>
 </MaterialDef>

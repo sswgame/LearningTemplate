@@ -1,5 +1,5 @@
 <?asset guid="ec5f8bc49b28fa75a5b24f3185bf9090"?>
-<Scene formatVersion="3" name="CardTable">
+<Scene formatVersion="0" name="CardTable">
 	<!-- 덱 전투 한 판 — 카드 · 덱 · 상대는 data/deckbattle.xml. 손패 · 더미 · 상대는 뷰가 원시 도형 프리팹으로 세운다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
@@ -53,13 +53,12 @@
 					<CardBattleGameModeComponent _localID="1268641875259238741" _componentName="CardBattleGameModeComponent" _bActive="true"
 					                             _deckID="starter"
 					                             _enemyID="slime"
-					                             _playerHP="50"
-					                             _energyPerTurn="3"
-					                             _drawPerTurn="5"
 					                             _seed="7"
 					                             _autoPlayInterval="0.4"
 					                             _resultHoldSeconds="3"
-					                             _winReward="30" />
+					                             _winReward="30">
+						<_battleSettings _playerHP="50" _energyPerTurn="3" _drawPerTurn="5" _handLimit="10" />
+					</CardBattleGameModeComponent>
 					<CardBattleViewComponent _localID="1286451381983802543" _componentName="CardBattleViewComponent" _bActive="true"
 					                         _moveAction="Move"
 					                         _confirmAction="Card.Confirm"

@@ -15,6 +15,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
@@ -472,7 +473,7 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "RT.Deform.rebuildMorphPool" );
             _state._deform._meshMorphPool.update( _pDevice, _state._deform._listScratchMorphMesh, _state._deform._listScratchSkinMesh, _state._deform._listScratchSkinSlot,
-                                                  _state._deform._listScratchSkinLOD );
+                                                  _state._deform._listScratchSkinLOD, engine::getSubsystem<EngineConfig>()._render._meshDeformPoolMaxVertices );
             // 변형 프로그램(에디터 모디파이어 미리보기)은 레스트와 따로 바뀐다 - 번호가 바뀐 프레임에만 올린다
             _state._deform._meshMorphPool.updateDeformPrograms( _pDevice );
         }

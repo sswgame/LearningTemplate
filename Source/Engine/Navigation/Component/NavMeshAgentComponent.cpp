@@ -5,12 +5,22 @@
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
+    namespace
+    {
+        struct NavMeshAgentComponentInternal
+        {
+            static constexpr FormatDef kStateFormat{ "NAVA" };
+        };
+    } // namespace
+
     bool NavMeshAgentMover::moveTo( const float3& destination )
     {
         // 경로는 군중이 다음 내비게이션 갱신의 워커 일에서 구한다 — 여기서는 받아들이기만 하고, 길이 없으면 나중에 `Failed` 로 알린다(`INavMover::moveTo` 의 늦은 실패).
@@ -126,6 +136,28 @@ namespace sw
         inoutBuilder.addUint8( static_cast<uint8>( _moveStatus ) );
     }
 
+    void NavMeshAgentComponent::serializeState( StateIO& io )
+    {
+        if ( io.isWriting() && _bHasDestination == SW_FALSE )
+            return; // 멈춘 에이전트는 실을 것이 없다
+        // 뜬 때와 되돌릴 때의 월드 원점이 다를 수 있다 — 절대로 싣는다.
+        float3 destination = getWorldOrigin().toAbsolute( _destination );
+        io.header( NavMeshAgentComponentInternal::kStateFormat );
+        io.value( destination );
+        if ( io.isWriting() )
+            return;
+        io.end();
+        if ( io.isOk() )
+            setDestination( getWorldOrigin().toLocal( destination ) );
+    }
+
+    void NavMeshAgentComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), bytes.size() );
+        if ( readState( archive ) == false )
+            SW_LOG_WARNING_ID( "NavMeshAgent.SavedDestinationUnreadable", "'%#': the saved navmesh destination did not read - the agent stands still", getOwner()->getName().c_str() );
+    }
+
     void NavMeshAgentComponent::onBeginPlay()
     {
         Component::onBeginPlay();
@@ -199,4 +231,6 @@ namespace sw
         params._pathOptimizationRange = _radius * 30.0f;
         return params;
     }
+
+    SW_COMPONENT_STATE_CODEC( NavMeshAgentComponent )
 } // namespace sw

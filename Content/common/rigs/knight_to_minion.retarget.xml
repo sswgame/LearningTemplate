@@ -1,6 +1,6 @@
 <?asset guid="f0fb61b143f7a3dac4bb00114b544906"?>
-<RetargetProfile source_skeleton="common/models/kaykit/knight/knight.skeleton.xml"
-                 target_skeleton="common/models/kaykit/skeleton_minion/skeleton_minion.skeleton.xml"
+<RetargetProfile source_skeleton="guid:03273c012fee9c977aa7fb87663429b1"
+                 target_skeleton="guid:c076ebfb891cd0f193e835d52eca1898"
                  translation="ScaleByPelvisHeight">
 	<root source="root" target="root" />
 	<pelvis source="hips" target="hips" />

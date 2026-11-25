@@ -35,6 +35,7 @@
 
 #include "Engine/Character/CharacterIssue.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -184,6 +185,9 @@ namespace sw
         friend struct AssetTypeLoader;
 
     public:
+        /** @brief 이 데이터 종류입니다(등록은 `CharacterDataCache.cpp` 의 캐시 등록 줄이 로더를 더한다). 타입 있는 참조 `AssetRef<BodyShapeSet>` 는 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "bodyshape", AssetPathRule{ {}, {}, ".bodyshape.xml" }, {} );
+
         /** @brief XML 텍스트에서 읽습니다. 모르는 속성이나 원소, 겹친 축은 오류입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 이름의 축입니다. 없으면 nullptr 입니다. */

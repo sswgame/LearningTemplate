@@ -52,10 +52,13 @@ namespace sw
 
     bool ModSupportSettings::readOverridable( const XMLNode& node, string_view sourceName )
     {
-        const string_view prefix = node.getAttributeText( "prefix" );
-        const string_view path   = node.getAttributeText( "path" );
-        if ( path.empty() == false )
+        ModOverridableLine line;
+        if ( XMLFields::readProperties( node, line, sourceName ) == false )
+            return false;
+        const string_view prefix = line._prefix;
+        if ( line._path.isSet() )
         {
+            const string_view path = line._path.get();
             // 파일 하나 — 폴더(끝 `/`)나 정규형이 아닌 글은 받지 않는다(검사는 정확히 같은 id 만 연다). 접두와 함께 적으면 어느 쪽인지 알 수 없다.
             const bool bFile = prefix.empty() && StringUtil::endsWith( path, "/" ) == false && AssetPaths::normalizeAssetID( path ) == path;
             if ( bFile == false || StringUtil::startsWith( path, "mods/" ) )

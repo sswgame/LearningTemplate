@@ -142,7 +142,7 @@
 - **사본을 만들지 않는다**: `loadFromAsset` 은 비공개. 게임 범위 서비스는 `GameInstance::loadRequiredCatalog`, 테스트 · 미리 보기는 `loadFromXMLText`, 쿠커가 읽는 형식만 `loadCopyFromAsset`. 사본이 맞는 것은 기동 때 서비스 상태로 옮기는 엔진 설정, 쓰는 쪽이 고치는 입력(`InputMap` · `NavMeshAsset` 등), 도구 입력뿐.
 - 공유 객체는 `const`. 실행 상태가 섞인 카탈로그는 정의와 실행으로 나눈다(`BehaviorTree` · `BehaviorTreeRunner`).
 - **리소스는 id 로 읽는다**: `ConfigManager::readComposedXMLDocument` · `XMLReadUtil::parseResourceRoot` · `XMLDocument::loadResource` · `loadResourceAs` · `parseResourceText`. 읽은 글을 id 없이 글 입구로 넘기는 것은 린트 `common-shapes` `assetEntrance` 강제.
-- **다른 에셋을 가리키는 칸은 `AssetRef<T>`** — 스스로 읽지 않는다(`acquire()` · `request()`), 접미사가 다르면 로드 오류. 칸이 만들어지는 곳에서 `T` 는 완전해야 한다. 종류가 하나로 정해지지 않는 칸만 `PROPERTY( AssetPath )`. 경로 칸은 리플렉션 선언에서만 온다(생성 목록 `Config/Dev/AssetReferenceFields.generated.json`, 낡음은 `--check-asset-refs`).
+- **다른 에셋을 가리키는 칸은 `AssetRef<T>`** — 스스로 읽지 않는다(`acquire()` · `request()`), 접미사가 다르면 로드 오류. 칸이 만들어지는 곳에서 `T` 는 완전해야 한다. 종류가 없는 파일 · 폴더는 `DataPath`, 한 칸이 두 종류를 가리키면 칸을 나눈다(글 칸에 `AssetPath` · `AssetType` 을 다는 것은 파서 오류). 경로 칸은 리플렉션 선언에서만 온다(생성 목록 `Config/Dev/AssetReferenceFields.generated.json`, 낡음은 `--check-asset-refs`).
 - **쿠킹은 닿는 것만 담는다**(`PackReachability`). 코드가 경로를 조립해 읽는 파일은 뿌리(`_cookRules` · `<RequiredData>` · `SW_ASSET_COOK_ROOT`)나 곁 파일(`SW_ASSET_COMPANION`)로 선언한다 — 아니면 배포에서 빠진다.
 - 에셋 정체성은 GUID, 내용 변경은 내용 해시 — 한 값에 두지 않는다. 형식 판 올림으로 GUID 를 넣지 않는다(`asset-ids --fix` 가 쓴다). 사람은 `.meta` · 머리를 만지지 않는다. 저장 입구를 지나지 않는 `FileUtil::writeTextFile` 쓰기는 머리를 잃으니, 생성물 바이트 비교 검사가 있는 도구는 `AssetGUIDHeader::carry` 를 쓴다.
 - 에셋 옮기기 · 지우기는 `move-asset`([FolderLayout](FolderLayout.md) "콘텐츠").

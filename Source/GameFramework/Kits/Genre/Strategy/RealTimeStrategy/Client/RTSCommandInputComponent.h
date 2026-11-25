@@ -10,21 +10,84 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSSelection.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
+
+namespace sw
+{
+    /**
+     * @class RTSSelection
+     * @brief 이 화면의 플레이어가 선택한 유닛과 부대를 관리합니다. 화면 좌표를 월드 위치로 바꾸는 일은 쓰는 쪽(`RTSCommandInputComponent`)이 합니다.
+     * @details 끌어서 선택은 스타크래프트 규칙을 따른다. 사각형 안에 내 움직이는 유닛이 있으면 그것만 고르고, 없으면 내 건물 하나, 그것도 없으면 보이는 남의 유닛 하나를 고른다.
+     *          남의 것을 고르면 명령을 줄 수 없다(`isCommandable`). 죽은 유닛은 `prune` 이 선택에서 뺀다.
+     */
+    class SW_KIT_CLIENT_API RTSSelection
+    {
+    public:
+        static constexpr int32 kGroupCount = 10;
+
+        RTSSelection();
+
+        /** @brief 한 번에 고를 수 있는 최대 수를 정합니다. 0 이면 제한이 없고, 스타크래프트 1 은 12 입니다. */
+        void setMaxCount( int32 maxCount ) { _maxCount = maxCount; }
+        void setPlayer( int32 player ) { _player = player; }
+
+        /** @brief XZ 평면의 사각형(두 모서리) 안을 고릅니다. @p bAdd 가 true 이면 지금 고른 것에 더합니다(쉬프트). */
+        void selectInRect( const RTSWorld& world, const float3& cornerA, const float3& cornerB, bool bAdd );
+        /** @brief 유닛 하나를 고릅니다. @p bToggle 이 true 이고 이미 골랐으면 선택에서 뺍니다. */
+        void selectUnit( const RTSWorld& world, RTSUnitID unitID, bool bToggle );
+        /** @brief 사각형 안에서 @p unitID 와 같은 종류인 내 유닛을 고릅니다(더블 클릭). */
+        void selectSameType( const RTSWorld& world, RTSUnitID unitID, const float3& cornerA, const float3& cornerB );
+        void clear() { _listSelected.clear(); }
+
+        /** @brief 지금 고른 것을 부대로 지정합니다(Ctrl + 숫자). */
+        void assignGroup( int32 group );
+        /** @brief 지금 고른 것을 부대에 추가합니다(Shift + 숫자). */
+        void addToGroup( int32 group );
+        /** @brief 부대를 선택합니다(숫자). 부대가 비었으면 false 를 반환합니다. */
+        bool recallGroup( const RTSWorld& world, int32 group );
+
+        /** @brief 죽은 유닛을 선택과 부대에서 뺍니다. */
+        void prune( const RTSWorld& world );
+
+        const vector<RTSUnitID>& getSelected() const { return _listSelected; }
+        const vector<RTSUnitID>& getGroup( int32 group ) const;
+        /** @brief 가장 먼저 고른 유닛을 반환합니다(명령 카드와 초상화에 씁니다). */
+        RTSUnitID getPrimary() const { return _listSelected.empty() ? RTSUnitID{} : _listSelected.front(); }
+        bool      isSelected( RTSUnitID unitID ) const;
+        /** @brief 고른 것이 모두 내 것이라 명령을 줄 수 있는지 반환합니다. */
+        bool  isCommandable( const RTSWorld& world ) const;
+        int32 getPlayer() const { return _player; }
+
+        /**
+         * @brief 고른 유닛과 부대를 유닛 id(세대 포함)로 씁니다. 핫 리로드와 세이브에 쓰며, 같은 id 를 복원한 월드와 함께 읽어야 합니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. 죽은 유닛은 다음 `prune` 이 걸러 냅니다.
+         */
+        SW_DECLARE_STATE_IO();
+
+    private:
+        void addUnit( RTSUnitID unitID );
+
+    private:
+        vector<RTSUnitID> _listSelected;
+        vector<RTSUnitID> _arrGroup[kGroupCount];
+        int32             _player;
+        int32             _maxCount;
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -41,7 +104,7 @@ namespace sw
      */
     REFLECT( Category = "RealTimeStrategy", DisplayName = "RTS Command Input",
              Tooltip = "Client side of a skirmish: selects units and sends orders, training, building and speed input to the Skirmish Game Mode on the same object" )
-    class SW_KIT_CLIENT_API RTSCommandInputComponent : public Component
+    class SW_KIT_CLIENT_API RTSCommandInputComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -49,17 +112,11 @@ namespace sw
         static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
 
         /** @brief 고르기 · 끌기는 틱 뒤 게임 스레드에서만 바뀝니다 — 유닛 뷰 · 끌기 상자가 병렬 틱에서 읽어도 됩니다(자기 틱이 쓰는 것은 따로 둔 `_bInputLive` 뿐이다). */
-        static constexpr bool   kTickReadSafe = true;
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "RTSI" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr bool      kTickReadSafe = true;
+        static constexpr FormatDef kStateFormat{ "RTSI" };
 
         RTSCommandInputComponent();
         virtual ~RTSCommandInputComponent() override;
-
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 알림 · 입력 처리를 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
 
         /** @brief 고른 유닛 · 부대를 씁니다(`ComponentStateCodec::captureObject`). 읽기는 사본에 받아 끝까지 맞으면 옮깁니다. */
         SW_DECLARE_STATE_IO_IN_PLACE();
@@ -76,7 +133,8 @@ namespace sw
 
     private:
         /** @brief 틱 뒤 게임 스레드: 새 판이면 맞추고, 알림을 내고, 시간이 흐르는 동안 입력을 명령으로 바꿉니다. */
-        void updateInput( GameObjectManager& manager );
+        void updateInput( GameObjectManager& manager, SkirmishGameModeComponent& director );
+        void submitInput( const GameModeInput& inputMap, SkirmishGameModeComponent& director );
         /** @brief 열린 판에 맞춥니다 — 다른 판의 고르기를 버리고 플레이어 · 상한을 정하고 데이터 이름을 보고 카메라를 맞춘 뒤 조작을 안내합니다. */
         void applyMatch( GameObjectManager& manager, const SkirmishGameModeComponent& director );
         /** @brief 씬 데이터가 준 이름(입력 액션 · 건설 단축키 표 · 관전 프리셋)이 입력 맵과 유닛 카탈로그에 모두 있는지 봅니다. 빠진 것은 모두 오류로 남기고 false 다 — 입력을 읽지 않는다. */
@@ -142,17 +200,16 @@ namespace sw
         PROPERTY( Category = "Input Actions", DisplayName = "Build Units", Tooltip = "Unit catalog id placed by the build action at the same index" )
         vector<CatalogKey<RTSUnitDef>> _listBuildUnitID;
 
-        TComponentHandle<SkirmishGameModeComponent> _director;
-        RTSSelection                                _selection;
-        float3                                      _dragStart;
-        float3                                      _dragPoint;
-        uint64                                      _appliedMatchID;   ///< 맞춘 판(`SkirmishGameModeComponent::getMatchID`, 0 이면 아직)
-        uint64                                      _selectionMatchID; ///< 고르기가 속한 판(되돌린 구간이 실은 것이거나 맞춘 판)
-        uint8                                       _bInputLive;       ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다). 틱이 쓰므로 뷰가 읽는 비트와 나눈다
-        uint8                                       _bNamesValid        : 1;
-        uint8                                       _bDragging          : 1;
-        uint8                                       _bDragPointValid    : 1;
-        uint8                                       _bAttackMovePending : 1;
-        [[maybe_unused]] uint8                      _reserved           : 4;
+        SW_CODEC_STATE RTSSelection _selection;
+        SW_TRANSIENT float3         _dragStart;
+        SW_TRANSIENT float3         _dragPoint;
+        uint64                      _appliedMatchID;   ///< 맞춘 판(`SkirmishGameModeComponent::getMatchID`, 0 이면 아직)
+        uint64                      _selectionMatchID; ///< 고르기가 속한 판(되돌린 구간이 실은 것이거나 맞춘 판)
+        uint8                       _bInputLive;       ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다). 틱이 쓰므로 뷰가 읽는 비트와 나눈다
+        SW_TRANSIENT uint8          _bNamesValid        : 1;
+        SW_TRANSIENT uint8          _bDragging          : 1;
+        SW_TRANSIENT uint8          _bDragPointValid    : 1;
+        SW_TRANSIENT uint8          _bAttackMovePending : 1;
+        [[maybe_unused]] uint8      _reserved           : 4;
     };
 } // namespace sw

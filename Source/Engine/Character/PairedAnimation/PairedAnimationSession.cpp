@@ -198,7 +198,7 @@ namespace sw
         if ( roleDef._skeletonPath.empty() == false )
         {
             const SkeletalMeshComponent* pMesh         = PairedAnimationSessionInternal::findSibling<SkeletalMeshComponent>( *pAnimator );
-            const bool                   bSameSkeleton = pMesh != nullptr && pMesh->getSkeletonPath() == roleDef._skeletonPath;
+            const bool                   bSameSkeleton = pMesh != nullptr && roleDef._skeletonPath == pMesh->getSkeletonPath();
             if ( bSameSkeleton == false )
             {
                 SW_LOG_ERROR_ID( "PairedAnimation.RoleNeedsSkeleton", "'%#': role '%#' needs skeleton '%#'", ownerName.c_str(), roleDef._name.c_str(), roleDef._skeletonPath.c_str() );

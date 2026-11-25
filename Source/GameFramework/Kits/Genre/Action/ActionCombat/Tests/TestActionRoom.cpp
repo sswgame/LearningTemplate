@@ -10,13 +10,13 @@
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
-#include "GameFramework/Runtime/Character/Combat/Health/UnitStatsComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
 
 #include <cstring>
 #include <limits>
@@ -71,6 +71,18 @@ namespace
 
     struct ActionRoomTestUtil
     {
+        /** @brief 씬 데이터(`kitdemo_actioncombat.scene.xml`)와 같은 플레이어 값입니다(코드에는 기본값이 없다). */
+        static sw::ActionRoomSettings makeSettings()
+        {
+            sw::ActionRoomSettings settings   = ActionRoomTestUtil::makeSettings();
+            settings._dashCooldownSeconds     = 0.85f;
+            settings._dashInvulnerableSeconds = 0.22f;
+            settings._hitInvulnerableSeconds  = 0.7f;
+            settings._attackCooldownSeconds   = 0.28f;
+            settings._playerAttackDamage      = 34.0f;
+            return settings;
+        }
+
         static sw::ActionRoomFrameInput makeInput( const sw::float2& position = sw::float2{ 0.0f, 0.0f }, sw::FacingDirection facing = sw::FacingDirection::Right, bool bAttack = false, bool bDash = false )
         {
             sw::ActionRoomFrameInput input;
@@ -117,6 +129,7 @@ SW_TEST_CASE( ActionRoomTest, AttackHitsFacingBoxWithArmorAndCooldown )
     SW_REQUIRE_TRUE( bench.setUp() );
     sw::game::ScopedGameScope scopedScope( bench._scope );
     sw::ActionRoom            room;
+    room.setSettings( ActionRoomTestUtil::makeSettings() );
     ActionRoomTestUtil::beginBossWith( room, kGrunt, sw::float2{ 1.0f, 0.0f } );
     SW_EXPECT_NEAR( 1.0f, room.getBossHPFill(), kRoomTolerance );
 
@@ -146,8 +159,9 @@ SW_TEST_CASE( ActionRoomTest, AttackDirectionsAndMinimumDamage )
     SW_REQUIRE_TRUE( bench.setUp() );
     sw::game::ScopedGameScope scopedScope( bench._scope );
 
-    sw::ActionRoom         room;
-    sw::ActionRoomSettings settings;
+    sw::ActionRoom room;
+    room.setSettings( ActionRoomTestUtil::makeSettings() );
+    sw::ActionRoomSettings settings = ActionRoomTestUtil::makeSettings();
     settings._playerAttackDamage    = 1.0f;
     settings._attackCooldownSeconds = 0.125f;
     room.setSettings( settings );
@@ -175,6 +189,7 @@ SW_TEST_CASE( ActionRoomTest, ClearReportsOnce )
     SW_EXPECT_NEAR( 0.0f, idle.getBossHPFill(), kRoomTolerance );
 
     sw::ActionRoom room;
+    room.setSettings( ActionRoomTestUtil::makeSettings() );
     ActionRoomTestUtil::beginHallWith( room, kGunner, sw::float2{ 1.0f, 0.0f } );
     SW_EXPECT_TRUE( room.getKind() == sw::ActionRoomKind::Hall );
     SW_EXPECT_NEAR( 0.0f, room.getBossHPFill(), kRoomTolerance ); // 보스 룸이 아니다
@@ -226,6 +241,7 @@ SW_TEST_CASE( ActionRoomTest, MissingCatalogServiceSpawnsNothing )
         source.writeState( written );
     }
     sw::ActionRoom room;
+    room.setSettings( ActionRoomTestUtil::makeSettings() );
     ActionRoomTestUtil::beginHallWith( room, kGrunt, sw::float2{ 1.0f, 0.0f } );
     SW_EXPECT_EQUAL( 0, room.getAliveEnemyCount() );
 
@@ -243,6 +259,7 @@ SW_TEST_CASE( ActionRoomTest, ContactDamageRespectsInvulnerability )
     SW_REQUIRE_TRUE( bench.setUp() );
     sw::game::ScopedGameScope scopedScope( bench._scope );
     sw::ActionRoom            room;
+    room.setSettings( ActionRoomTestUtil::makeSettings() );
     ActionRoomTestUtil::beginHallWith( room, kGrunt, sw::float2{ 0.0f, 0.0f } );
     const sw::ActionRoomFrameInput input = ActionRoomTestUtil::makeInput();
 
@@ -267,11 +284,12 @@ SW_TEST_CASE( ActionRoomTest, DashGrantsInvulnerabilityWithoutShorteningIt )
     SW_REQUIRE_TRUE( bench.setUp() );
     sw::game::ScopedGameScope scopedScope( bench._scope );
 
-    sw::ActionRoomSettings settings;
+    sw::ActionRoomSettings settings   = ActionRoomTestUtil::makeSettings();
     settings._dashCooldownSeconds     = 1.0f;
     settings._dashInvulnerableSeconds = 0.5f;
     settings._hitInvulnerableSeconds  = 1.5f;
     sw::ActionRoom room;
+    room.setSettings( ActionRoomTestUtil::makeSettings() );
     room.setSettings( settings );
     ActionRoomTestUtil::beginHallWith( room, kGrunt, sw::float2{ 0.0f, 0.0f } );
     const sw::ActionRoomFrameInput idle = ActionRoomTestUtil::makeInput();
@@ -310,6 +328,7 @@ SW_TEST_CASE( ActionRoomTest, WalkersApproachAndNegativeTimeIsIgnored )
     SW_REQUIRE_TRUE( bench.setUp() );
     sw::game::ScopedGameScope scopedScope( bench._scope );
     sw::ActionRoom            room;
+    room.setSettings( ActionRoomTestUtil::makeSettings() );
     ActionRoomTestUtil::beginHallWith( room, kWalker, sw::float2{ 5.0f, 0.0f } );
     const sw::ActionRoomFrameInput input = ActionRoomTestUtil::makeInput();
 
@@ -340,6 +359,7 @@ SW_TEST_CASE( ActionRoomTest, VolleysFollowDelayAndCoolTime )
     SW_REQUIRE_TRUE( bench.setUp() );
     sw::game::ScopedGameScope scopedScope( bench._scope );
     sw::ActionRoom            room;
+    room.setSettings( ActionRoomTestUtil::makeSettings() );
     ActionRoomTestUtil::beginHallWith( room, kGunner, sw::float2{ 20.0f, 0.0f } ); // 탄이 닿지 않는 거리
     const sw::ActionRoomFrameInput input = ActionRoomTestUtil::makeInput();
 
@@ -404,6 +424,7 @@ SW_TEST_CASE( ActionRoomTest, ShotAngleRotatesTheAim )
     for ( int32 caseIndex = 0; caseIndex < 2; ++caseIndex )
     {
         sw::ActionRoom room;
+        room.setSettings( ActionRoomTestUtil::makeSettings() );
         ActionRoomTestUtil::beginHallWith( room, kSideGunner, sw::float2{ 0.0f, 1.5f } );
         SW_EXPECT_EQUAL( 1, room.update( kRoomStep, ActionRoomTestUtil::makeInput() )._enemyVolleyCount );
         const sw::ActionRoomFrameInput moved = ActionRoomTestUtil::makeInput( arrSpot[caseIndex] );
@@ -436,6 +457,7 @@ SW_TEST_CASE( ActionRoomTest, ShotsResolveFromTheProjectileCatalog )
     SW_REQUIRE_TRUE( scope.bind<sw::MonsterCatalog>( &monsters ) );
     sw::game::ScopedGameScope scopedScope( scope );
     sw::ActionRoom            room;
+    room.setSettings( ActionRoomTestUtil::makeSettings() );
     ActionRoomTestUtil::beginHallWith( room, kGunner, sw::float2{ 5.0f, 0.0f } );
     SW_EXPECT_EQUAL( 0, room.getAliveEnemyCount() );
     ActionRoomTestUtil::beginHallWith( room, kGrunt, sw::float2{ 5.0f, 0.0f } ); // 쏘지 않는 종은 탄 카탈로그가 없어도 선다
@@ -451,6 +473,7 @@ SW_TEST_CASE( ActionRoomTest, ClearRemovesRemainingProjectiles )
     SW_REQUIRE_TRUE( bench.setUp() );
     sw::game::ScopedGameScope scopedScope( bench._scope );
     sw::ActionRoom            room;
+    room.setSettings( ActionRoomTestUtil::makeSettings() );
     ActionRoomTestUtil::beginHallWith( room, kSlowGunner, sw::float2{ 1.0f, 0.0f } );
 
     SW_REQUIRE_TRUE( room.update( kRoomStep, ActionRoomTestUtil::makeInput() )._enemyVolleyCount == 1 );  // 탄은 x = 0.75
@@ -501,6 +524,7 @@ SW_TEST_CASE( ActionRoomTest, EventsFollowTheFight )
     site._zoneID        = "zone1";
     site._returnMapPath = "map/field";
     sw::ActionRoom room;
+    room.setSettings( ActionRoomTestUtil::makeSettings() );
     room.setSite( site );
     room.onPlayerDefeated(); // 비활성이면 아무 일도 없다
     SW_EXPECT_TRUE( listLog.empty() );
@@ -712,12 +736,13 @@ SW_TEST_CASE( MonsterCatalogTest, ReadsAllSections )
     SW_EXPECT_TRUE( pBoss->_archetype == sw::MonsterArchetype::RangedShooter );
     SW_EXPECT_EQUAL( 220, pBoss->_stats._hp );
     SW_EXPECT_EQUAL( 300, pBoss->_stats._maxHP );
-    sw::GameObjectManager   manager;
-    sw::UnitStatsComponent* pUnit = manager.createGameObject( sw::hashed_string( "Boss" ) )->addComponent<sw::UnitStatsComponent>();
+    sw::GameObjectManager       manager;
+    sw::AbilitySystemComponent* pUnit = manager.createGameObject( sw::hashed_string( "Boss" ) )->addComponent<sw::AbilitySystemComponent>();
     SW_REQUIRE_NOT_NULL( pUnit );
-    pBoss->_stats.applyTo( *pUnit ); // 카탈로그의 스탯이 유닛에 그대로 옮는다
-    SW_EXPECT_EQUAL( 220, pUnit->getHP() );
-    SW_EXPECT_EQUAL( 300, pUnit->getMaxHP() );
+    SW_REQUIRE_NOT_NULL( pUnit->addAttributeSet( sw::test::makeCombatAttributeSet() ) );
+    SW_REQUIRE_TRUE( pBoss->_stats.applyTo( *pUnit ) ); // 카탈로그의 스탯이 전투 세트에 그대로 옮는다
+    SW_EXPECT_NEAR( 220.0f, pUnit->getAttributeValue( sw::CombatAttributes::health() ).value_or( 0.0f ), kRoomTolerance );
+    SW_EXPECT_NEAR( 300.0f, pUnit->getAttributeValue( sw::CombatAttributes::maxHealth() ).value_or( 0.0f ), kRoomTolerance );
     SW_EXPECT_NEAR( 1.25f, pBoss->_ai._firstAttackDelay, kRoomTolerance );
     SW_REQUIRE_EQUAL( size_t( 2 ), pBoss->_listShot.size() );
     SW_EXPECT_NEAR( 1.5f, pBoss->_listShot[1]._angle.radians(), kRoomTolerance );

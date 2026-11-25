@@ -168,6 +168,8 @@ namespace sw
         float32 _wakeInvulnerable{ 1.5f }; ///< 일어난 뒤의 무적 시간
         PROPERTY( Name = "lockOn", Min = 0.0 )
         float32 _lockOnRange{ 60.0f };
+        PROPERTY( Name = "lockOnBreak", Required, Min = 1.0 )
+        float32 _lockOnBreakScale{ 0.0f }; ///< 락온이 풀리는 거리(락온 거리의 배수 — 1 이상이라 잡는 거리에서 바로 풀리지 않는다)
         PROPERTY( Min = 1.0, Max = 180.0 )
         Radians _lockOnAngle{ Radians::fromDegrees( 60.0f ) }; ///< 락온 원뿔의 각(데이터 · 범위는 도)
         PROPERTY( Min = 0.0 )

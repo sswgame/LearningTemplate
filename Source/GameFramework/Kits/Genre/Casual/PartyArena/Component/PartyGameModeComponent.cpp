@@ -2,18 +2,16 @@
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/Component/PartyGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
-
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineBot.h"
+#include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineArena.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
@@ -22,23 +20,7 @@ namespace sw
     {
         struct PartyGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "PTGM" );
-            static constexpr uint32 kStateVersion = 1;
-
-            /** @brief 상태 칸 판 1 → 2: 결과 유지 깃발을 뺀다 — 끝난 걸음에 `Countdown` 을 걸고 다 된 걸음에 한 번 끝내는 길은 깃발 없이 선다(다른 디렉터와 같은 꼴). */
-            [[nodiscard]] static bool dropHoldFlags( Archive& inOldBody, Archive& outNewBody )
-            {
-                int64 phase              = 0; // 열거 칸은 int64 로 실린다(`StateIO::reflectedProperties`)
-                int32 winner             = 0;
-                int32 playerRingOutCount = 0;
-                uint8 bFinishRequested   = 0;
-                inOldBody >> phase >> winner >> playerRingOutCount >> bFinishRequested;
-                outNewBody << phase << winner << playerRingOutCount;
-                return inOldBody.isOk();
-            }
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
+            static constexpr FormatDef kStateFormat{ "PTGM" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventBounce      = "PartyArenaBounce";
@@ -113,7 +95,6 @@ namespace sw
         , _botCount{ 2 }
         , _roundLimit{ 5 }
         , _intermissionSeconds{ 2.0f }
-        , _resultHoldSeconds{ 3.0f }
         , _seed{ GameRandom::kDefaultSeed }
         , _winReward{ 0 }
         , _arenaSettings{}
@@ -273,7 +254,7 @@ namespace sw
     {
         _winner = winner;
         _phase  = PartyGamePhase::Finished;
-        _phaseTimer.start( _resultHoldSeconds );
+        endMatch( hashed_string( _winner == kLocalPlayer ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( _winner == kLocalPlayer ? PartyGameModeComponentInternal::kEventWon : PartyGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "PartyArena.Finished", "[PartyArena] the series is over - winner %#", _winner );
     }
@@ -303,17 +284,15 @@ namespace sw
         _phaseTimer.start( _intermissionSeconds );
     }
 
-    void PartyGameModeComponent::updateGame( float32 deltaTime )
+    void PartyGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
         switch ( _phase )
         {
             case PartyGamePhase::Round:
             {
                 for ( int32 player = isAutoPlayOn() ? kLocalPlayer : kLocalPlayer + 1; player < _arena.getPlayerCount(); ++player )
                 {
-                    _arena.setInput( player, TrampolineBot::computeInput( _arena, player ) );
+                    _arena.setInput( player, _arena.computeBotInput( player ) );
                 }
                 (void)_arena.update( deltaTime ); // 걸음 수는 쓰지 않는다
                 reportEvents();
@@ -339,10 +318,7 @@ namespace sw
             }
             case PartyGamePhase::Finished:
             {
-                if ( _phaseTimer.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
-                    return;
-                (void)finishMinigame( hashed_string( _winner == kLocalPlayer ? PartyGameModeComponentInternal::kWinResult : PartyGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-                return;
+                return; // 끝난 판에는 걸음이 오지 않는다(`endMatch`)
             }
         }
     }
@@ -353,39 +329,19 @@ namespace sw
             addMoneyResult( outListValue, _winReward );
     }
 
-    void PartyGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`PartyArenaViewComponent`)이 읽어 보인다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void PartyGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( PartyGameModeComponentInternal::kStateTag, PartyGameModeComponentInternal::kStateVersion );
+        io.header( PartyGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 시리즈는 같은 카탈로그 · 같은 사람 수로, 무대는 읽은 시리즈의 라운드로 연 뒤에 읽는다(키트 계약).
-        PartyRoundSeries restoredSeries;
-        TrampolineArena  restoredArena;
-        Countdown        phaseTimer = _phaseTimer;
-        if ( io.isReading() && io.check( _pCatalog != nullptr && openSeries( restoredSeries ) ) == false )
+        const bool bRead = io.valueOpened( _series, [this]( PartyRoundSeries& series )
+        { return _pCatalog != nullptr && openSeries( series ); } ) &&
+                           io.valueOpened( _arena, [this]( TrampolineArena& arena )
+        { return openRound( _series, arena ); } );
+        if ( bRead == false )
             return;
-        io.value( io.isWriting() ? _series : restoredSeries );
-        if ( io.isReading() && io.check( io.isOk() && openRound( restoredSeries, restoredArena ) ) == false )
-            return;
-        io.value( io.isWriting() ? _arena : restoredArena );
-        io.value( phaseTimer );
+        io.value( _phaseTimer );
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _series     = std::move( restoredSeries );
-        _arena      = std::move( restoredArena );
-        _phaseTimer = phaseTimer;
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_TYPE_VERSION_PATCH( partyGameModeState1To2, "sw::PartyGameModeComponent", 1, 2, &PartyGameModeComponentInternal::dropHoldFlags );
 } // namespace sw

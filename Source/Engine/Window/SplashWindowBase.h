@@ -85,7 +85,7 @@ namespace sw
          *          않아도 되도록 여기서 맞춰 줍니다(`normalizeSplashToBgra`).
          *          플랫폼 `initialize` 가 에셋을 읽지 않으므로 창 테스트가 에셋 없이 창만 본다(Win32SplashWindowTest).
          */
-        [[nodiscard]] bool loadSplashImage();
+        [[nodiscard]] bool loadSplashImage( const AssetID& imageID );
 
     protected:
         /**

@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerRespawnWorld.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionStageRun.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 
 // ActionPlatformerRespawnWorldTest — 칸 지형의 설 자리: 땅 위면 그 자리, 낭떠러지면 반경 안 가장 가까운 칸, 위험 칸 위 · 반경 밖은 없음. 키트 GF_ActionPlatformer(nogpu).

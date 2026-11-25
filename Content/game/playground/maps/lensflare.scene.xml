@@ -1,5 +1,5 @@
 <?asset guid="d6abb23785ef51615f7a0e25efc5aea0"?>
-<Scene formatVersion="3" name="LensFlare">
+<Scene formatVersion="0" name="LensFlare">
 	<!-- 시나리오 automation/lensflare — 두 점광에 같은 플레어(engine/lensflares/sun.lensflare.xml)를 달았다. 오른쪽 빛은 보여 빛무리 · 줄 · 고스트가 화면 가운데를 지나는 축 위에 그려지고, 왼쪽 빛은 주황 기둥 뒤라 깊이 가림으로 플레어가 없다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
@@ -37,7 +37,7 @@
 					                     _color="1,0.85,0.6"
 					                     _intensity="6"
 					                     _radius="10"
-					                     _lensFlarePath="engine/lensflares/sun.lensflare.xml" />
+					                     _lensFlarePath="guid:0a81c8c24bd6c559139aa960af2f50f5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -52,7 +52,7 @@
 					                     _color="0.6,0.8,1"
 					                     _intensity="6"
 					                     _radius="10"
-					                     _lensFlarePath="engine/lensflares/sun.lensflare.xml" />
+					                     _lensFlarePath="guid:0a81c8c24bd6c559139aa960af2f50f5" />
 				</_listComponent>
 			</GameObject>
 		</entity>

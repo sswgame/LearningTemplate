@@ -3,7 +3,7 @@
 <!-- 환경 마당(maps/weathergarden)의 날씨 — 시나리오가 cheat.weather 로 바꾸므로 맑음만 고를 무게를 갖고 나머지는 무게 0 이다(저절로 오지 않는다).
      MaterialBinding: 지면 묶음의 젖음 · 웅덩이 · 눈, 빗방울 링. SceneBinding: skyLight(맑음 1 .. 폭풍 0)가 해 · 하늘을 어둡게, fog 가 안개를 짙게, wind 가 풀 · 천 · 돛의 바람을 세게 한다.
      SoundBinding: 빗소리 · 바람 소리(audio/playground.audioevents.xml). rain · snowfall 은 떨어지는 입자의 세기이기도 하다(PrecipitationComponent). -->
-<WeatherCatalog transition="3" materialCollection="engine/materials/weather.matparams.xml">
+<WeatherCatalog transition="3" materialCollection="guid:d4a6dcfaefbfafcfd96263788f8a8e54">
 	<MaterialBinding parameter="Weather" valueX="wetness" valueY="puddle" valueZ="snowfall"/>
 	<MaterialBinding parameter="Rain" valueX="rain"/>
 	<SceneBinding target="SunIntensity" value="skyLight" atZero="0.25" atOne="1"/>

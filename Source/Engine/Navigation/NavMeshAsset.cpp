@@ -3,7 +3,6 @@
 #include "Engine/Navigation/NavMeshAsset.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -23,7 +22,6 @@ namespace sw
     {
         struct NavMeshAssetInternal
         {
-            static constexpr uint32 kMagic = FourCCUtil::make( "SWNV" );
             /** @brief 씬 저작본(`.scene.xml`)과 쿠킹본(`.scene.bin`) 접미사입니다. 파일이 하나도 없던 맨 `.scene` 은 별칭이라 두지 않습니다. */
             static constexpr string_view kArrSceneSuffix[] = { ".scene.xml", ".scene.bin" };
             /** @brief 머리의 타일 한 줄 바이트 수입니다(x · z · 내용 안 시작 · 길이). 깨진 타일 수를 할당 전에 남은 바이트로 거른다. */
@@ -93,8 +91,7 @@ namespace sw
             return;
         }
         ByteWriter writer{ outBytes };
-        writer.writePod( NavMeshAssetInternal::kMagic );
-        writer.writePod( kVersion );
+        kFormat.write( outBytes );
         writer.writePod( uint64{ 0 } ); // 머리 길이 — 머리를 다 쓴 뒤 채운다
         writer.writeString( NavMeshBackend::getBackendName() );
         writer.writePod( NavMeshBackend::getBackendFormatVersion() );
@@ -135,18 +132,9 @@ namespace sw
         _listEntry.clear();
         _bHeadOnly = SW_FALSE;
         ByteReader reader{ pData, size };
-        uint32     magic    = 0;
-        uint32     version  = 0;
-        uint64     headSize = 0;
-        magic               = reader.readPod<uint32>();
-        version             = reader.readPod<uint32>();
-        headSize            = reader.readPod<uint64>();
-        const bool bFixed   = reader.hasOverflowed() == false;
-        if ( bFixed == false || magic != NavMeshAssetInternal::kMagic || version != kVersion )
-        {
-            SW_LOG_ERROR_ID( "NavMeshAsset.NotNavmeshFormat", "'%#' is not a navmesh of format %#", sourceLabel, kVersion );
+        if ( kFormat.read( reader, sourceLabel, NavMeshAssetInternal::kFixedHeadBytes ) == false )
             return false;
-        }
+        const uint64 headSize = reader.readPod<uint64>();
         if ( headSize < NavMeshAssetInternal::kFixedHeadBytes || headSize > size )
         {
             SW_LOG_ERROR_ID( "NavMeshAsset.Truncated", "'%#' is truncated, longer than its entries or holds non-finite bounds", sourceLabel );
@@ -159,23 +147,19 @@ namespace sw
     {
         _listEntry.clear();
         ByteReader reader{ pHead, headSize };
-        uint32     magic         = 0;
-        uint32     version       = 0;
-        uint64     headSizeField = 0;
-        string     backendName;
-        uint32     backendVersion = 0;
-        uint32     entryCount     = 0;
-        magic                     = reader.readPod<uint32>();
-        version                   = reader.readPod<uint32>();
-        headSizeField             = reader.readPod<uint64>();
-        backendName               = reader.readString();
-        backendVersion            = reader.readPod<uint32>();
-        entryCount                = reader.readPod<uint32>();
-        const bool bHeader        = reader.hasOverflowed() == false;
-        const bool bInvalidHeader = bHeader == false || magic != NavMeshAssetInternal::kMagic || version != kVersion;
-        if ( bInvalidHeader )
+        if ( kFormat.read( reader, sourceLabel ) == false )
+            return false;
+        uint64 headSizeField = 0;
+        string backendName;
+        uint32 backendVersion = 0;
+        uint32 entryCount     = 0;
+        headSizeField         = reader.readPod<uint64>();
+        backendName           = reader.readString();
+        backendVersion        = reader.readPod<uint32>();
+        entryCount            = reader.readPod<uint32>();
+        if ( reader.hasOverflowed() )
         {
-            SW_LOG_ERROR_ID( "NavMeshAsset.NotNavmeshFormat", "'%#' is not a navmesh of format %#", sourceLabel, kVersion );
+            SW_LOG_ERROR_ID( "NavMeshAsset.Truncated", "'%#' is truncated, longer than its entries or holds non-finite bounds", sourceLabel );
             return false;
         }
         if ( backendName != NavMeshBackend::getBackendName() || backendVersion != NavMeshBackend::getBackendFormatVersion() )
@@ -253,22 +237,13 @@ namespace sw
         vector<uint8>          fixedHead;
         if ( fileSize.has_value() == false || AssetIO::readBinaryAssetRange( assetID, 0, NavMeshAssetInternal::kFixedHeadBytes, fixedHead ) == false )
         {
-            SW_LOG_ERROR_ID( "NavMeshAsset.NotNavmeshFormat", "'%#' is not a navmesh of format %#", label, kVersion );
+            SW_LOG_ERROR_ID( "NavMeshAsset.NotNavmeshFormat", "'%#' is not a navmesh of format %#", label, kFormat._version );
             return false;
         }
         ByteReader reader{ fixedHead.data(), fixedHead.size() };
-        uint32     magic    = 0;
-        uint32     version  = 0;
-        uint64     headSize = 0;
-        magic               = reader.readPod<uint32>();
-        version             = reader.readPod<uint32>();
-        headSize            = reader.readPod<uint64>();
-        const bool bFixed   = reader.hasOverflowed() == false;
-        if ( bFixed == false || magic != NavMeshAssetInternal::kMagic || version != kVersion )
-        {
-            SW_LOG_ERROR_ID( "NavMeshAsset.NotNavmeshFormat", "'%#' is not a navmesh of format %#", label, kVersion );
+        if ( kFormat.read( reader, label, NavMeshAssetInternal::kFixedHeadBytes ) == false )
             return false;
-        }
+        const uint64  headSize = reader.readPod<uint64>();
         vector<uint8> head;
         const bool    bHeadRead = headSize >= NavMeshAssetInternal::kFixedHeadBytes && headSize <= *fileSize && AssetIO::readBinaryAssetRange( assetID, 0, headSize, head );
         if ( bHeadRead == false || readHead( head.data(), head.size(), *fileSize - headSize, nullptr, label ) == false )

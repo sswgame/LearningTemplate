@@ -71,7 +71,7 @@
 	<WaitUntil watch="UI.FocusedWidget" is="Offer2" timeoutFrames="10"/>
 	<Tap slot="Gamepad.A" hold="1"/>
 	<AdvanceSimulation frames="10"/> <!-- 확인 창이 뜨지 않는다(일어나지 않음 — 시간이 내용) -->
-	<ExpectUI screen="common/ui/shop/shop.ui.xml"/>
+	<ExpectUI screen="guid:31d3621cede3fdd40788ddaf304c9288"/>
 	<ExpectLog id="ShopScreen.NotEnoughMoney" count="1"/>
 	<Expect watch="Shop.PurchaseCount" equals="3"/>
 

@@ -3,7 +3,6 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
@@ -13,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
@@ -24,8 +24,7 @@ namespace sw
     {
         struct PawnComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "PAWN" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "PAWN" };
 
             /** @brief 조종 회전 오프셋 고정소수점의 한 라디안입니다(0.00001 rad 간격 — 프레임 사이에 쌓이는 반동은 수 라디안을 넘지 않는다). */
             static constexpr float32 kRotationOffsetUnitsPerRadian = 100000.0f;
@@ -140,7 +139,7 @@ namespace sw
         float32 pitch = _intent._controlPitch;
         if ( io.isWriting() && yaw == 0.0f && pitch == 0.0f )
             return;
-        io.header( PawnComponentInternal::kStateTag, PawnComponentInternal::kStateVersion );
+        io.header( PawnComponentInternal::kStateFormat );
         io.value( yaw );
         io.value( pitch );
         if ( io.isWriting() )

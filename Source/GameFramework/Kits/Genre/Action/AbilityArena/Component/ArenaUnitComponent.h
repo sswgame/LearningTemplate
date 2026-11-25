@@ -3,10 +3,12 @@
  * @brief 아레나 유닛 하나의 폰 쪽 — 의도(`ControlIntent`)로 움직이고 어빌리티 입력 번호를 누릅니다. 조종자(플레이어 · AI)는 따로 산다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
@@ -23,12 +25,26 @@ namespace sw
     class ArenaGameModeComponent;
     class PawnComponent;
 
+    /** @brief 폰 버튼 하나가 누르는 어빌리티 입력 번호입니다(유닛 프리팹의 데이터 — 번호는 abilities.xml 의 세트가 어빌리티에 준 `input` 이다). */
+    REFLECT()
+    struct ArenaAbilityButton
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Tooltip = "Pawn button name (the pawn schema's button)" )
+        hashed_string _button{};
+        PROPERTY( Required, Min = 1, Tooltip = "Ability input id the button presses (abilities.xml)" )
+        int32 _inputID{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class ArenaUnitComponent
      * @brief 유닛 오브젝트(메시 · 어빌리티 시스템 · HP 바 · 폰과 같은 오브젝트)에 붙어 그 유닛만 움직입니다. **의도만 읽습니다** — 입력 맵도, 판단도 없다.
      * @details 기본 틱 그룹(`DuringPhysics`)에서 돕니다 — 디렉터(`PrePhysics`)가 이번 프레임의 유닛 모습을 다 적은 뒤이고, 의도는 조종 시스템이 틱 전에 채웠다.
      *          한 틱의 차례: (1) 바라보는 쪽 — `_facingMode` 가 `MoveDirection` 이면 움직이는 쪽, `ControlYaw` 면 조종 요(AI 가 초점으로 돌린다)
-     *          (2) 폰 버튼(스키마 순서 = `kArrAbilityButton`)의 발동 · 해제을 어빌리티 입력 번호로 — 같은 오브젝트의 어빌리티 시스템과 같은 워커라 그 자리에서 발동한다
+     *          (2) 폰 버튼(`_listAbilityButton` — 프리팹 데이터)의 발동 · 해제을 어빌리티 입력 번호로 — 같은 오브젝트의 어빌리티 시스템과 같은 워커라 그 자리에서 발동한다
      *          (3) 이동 — 이동 속도는 `MoveSpeed` current, 대시 중(`State.Dashing`)에는 의도와 상관없이 바라보는 쪽으로 (4) 적끼리 겹치지 않게 밀기 (5) 아레나 안으로.
      *          자기 오브젝트에만 씁니다. 디렉터는 핸들로 들고 매 프레임 풉니다. 어빌리티가 디렉터를 찾는 길도 이 핸들입니다(`ArenaGameModeComponent::findForUnit`).
      */
@@ -37,20 +53,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        /** @brief 폰 버튼 이름 → 어빌리티 입력 번호입니다(abilities.xml 의 세트와 같다). */
-        struct AbilityButton
-        {
-            const utf8* _pName;
-            int32       _inputID;
-        };
-        static constexpr AbilityButton kArrAbilityButton[] = {
-            {   "Arena.Melee", 1},
-            {"Arena.Fireball", 2},
-            {    "Arena.Heal", 3},
-            {    "Arena.Dash", 4},
-        };
-        static constexpr int32 kAbilityButtonCount = static_cast<int32>( sizeof( kArrAbilityButton ) / sizeof( kArrAbilityButton[0] ) );
 
         ArenaUnitComponent();
         virtual ~ArenaUnitComponent() override = default;
@@ -85,12 +87,16 @@ namespace sw
         PawnFacingMode _facingMode;
         PROPERTY( Category = "Arena", DisplayName = "Unit Radius", Tooltip = "Body radius used to push overlapping enemies apart", Min = 0.0, Units = m )
         float32 _unitRadius;
+        PROPERTY( Category = "Arena", DisplayName = "Ability Buttons", Tooltip = "Pawn buttons and the ability input each presses; a unit without rows presses no ability" )
+        vector<ArenaAbilityButton> _listAbilityButton;
 
-        float3                 _facing;                              ///< XZ 단위 벡터
-        float32                _deathRemainRatio;                    ///< 쓰러진 뒤 걷기까지 남은 비율(서 있으면 1 — 디렉터의 Death Linger 동안 0 으로 준다)
-        optional<int32>        _arrButtonIndex[kAbilityButtonCount]; ///< `kArrAbilityButton` 마다 폰 버튼의 인덱스(없으면 비어 있다)
-        uint32                 _previousButtonDown;                  ///< 지난 틱에 누르고 있던 폰 버튼(뗌을 알아챈다)
-        uint8                  _bButtonsResolved : 1;
-        [[maybe_unused]] uint8 _reserved         : 7;
+        PROPERTY( RuntimeState )
+        float3 _facing; ///< XZ 단위 벡터
+        PROPERTY( RuntimeState )
+        float32      _deathRemainRatio;                           ///< 쓰러진 뒤 걷기까지 남은 비율(서 있으면 1 — 디렉터의 Death Linger 동안 0 으로 준다)
+        SW_TRANSIENT vector<optional<int32>> _listButtonIndex;    ///< `_listAbilityButton` 마다 폰 버튼의 인덱스(없으면 비어 있다)
+        SW_TRANSIENT uint32                  _previousButtonDown; ///< 지난 틱에 누르고 있던 폰 버튼(뗌을 알아챈다)
+        SW_TRANSIENT uint8                   _bButtonsResolved : 1;
+        [[maybe_unused]] uint8               _reserved         : 7;
     };
 } // namespace sw

@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -51,9 +50,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "WBST" );
-        static constexpr uint32 kStateVersion = 1;
-
         MonsterHuntBestiary();
 
         /** @brief 카탈로그와 상성표를 빌립니다(도감보다 오래 살아야 합니다). 상성이 없는 판은 줄이 없는 상성표를 줍니다. */
@@ -99,9 +95,9 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<Entry>                                _listEntry;
-        NotificationBuffer<MonsterHuntBestiaryEvent> _eventBuffer;
-        const MonsterHuntCatalog*                    _pCatalog;
-        const ElementChart*                          _pChart;
+        vector<Entry> _listEntry;
+        SW_TRANSIENT NotificationBuffer<MonsterHuntBestiaryEvent> _eventBuffer;
+        const MonsterHuntCatalog*                                 _pCatalog;
+        const ElementChart*                                       _pChart;
     };
 } // namespace sw

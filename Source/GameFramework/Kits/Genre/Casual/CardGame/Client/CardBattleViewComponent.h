@@ -11,11 +11,10 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -30,7 +29,7 @@ namespace sw
      * @brief `Move` 축을 좌우로 한 번 기울일 때 고른 카드가 한 장 옮겨 가고, 확정 액션은 카드 내기, 턴 끝 액션은 턴 끝으로 디렉터에 넘깁니다.
      */
     REFLECT( Category = "CardGame", DisplayName = "Card Battle View", Tooltip = "Client side of a deck battle: picks hand cards from input, shows the hand and the enemy and fills the HUD" )
-    class SW_KIT_CLIENT_API CardBattleViewComponent : public Component
+    class SW_KIT_CLIENT_API CardBattleViewComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -40,23 +39,18 @@ namespace sw
         CardBattleViewComponent();
         virtual ~CardBattleViewComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 액션 이름이 비었으면 오류를 남깁니다(폴백 없음). 틱 그룹은 뷰와 같은 `PostUpdate` 입니다. */
         void onBeginPlay() override;
         /** @brief 세운 모습을 지우고 HUD 에서 뷰모델을 뗍니다. */
         void onEndPlay() override;
-        /** @brief 입력 · 명령 · 모습을 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
 
         /** @brief 고른 손패 자리입니다(자동화 감시 값). */
         int32 getSelectedCard() const { return _selectedCard; }
 
     private:
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 내고 모습과 HUD 를 맞춥니다. */
-        void updateView( GameObjectManager& manager );
+        void updateView( GameObjectManager& manager, CardBattleGameModeComponent& director );
         /** @brief 고르기를 옮기고 확정 · 턴 끝을 디렉터에 냅니다. */
-        void submitInput( CardBattleGameModeComponent& director );
+        void submitInput( const GameModeInput& input, CardBattleGameModeComponent& director );
         /** @brief 손패 · 더미 · 상대를 보입니다. */
         void showBattle( GameObjectManager& manager, const CardBattleGameModeComponent& director );
         /** @brief HUD 뷰모델을 채웁니다. HUD 가 없는 씬이면 값만 듭니다. */
@@ -65,9 +59,9 @@ namespace sw
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action: left/right steps the picked card (required)" )
         hashed_string _moveAction;
-        PROPERTY( Category = "Input", DisplayName = "Confirm Action", Tooltip = "InputMap action that plays the picked card (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Confirm Action", Tooltip = "InputMap action that plays the picked card (required)" )
         hashed_string _confirmAction;
-        PROPERTY( Category = "Input", DisplayName = "End Turn Action", Tooltip = "InputMap action that ends the turn (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "End Turn Action", Tooltip = "InputMap action that ends the turn (required)" )
         hashed_string _endTurnAction;
         PROPERTY( Category = "View", DisplayName = "Card Prefab", Required, Tooltip = "Unit piece stretched to a card" )
         AssetRef<PrefabAsset> _cardPrefab;
@@ -84,14 +78,10 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Enemy Color" )
         float4 _enemyColor;
 
-        TComponentHandle<CardBattleGameModeComponent> _director;
-        PrefabViewBatch                               _cardViews;
-        PrefabViewBatch                               _enemyViews;
-        unique_ptr<CardBattleHUDViewModel>            _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
-        int32                                         _selectedCard;      ///< 고른 손패 자리
-        int32                                         _lastStep;          ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 장으로 옮긴다
-        uint8                                         _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않는다)
-        uint8                                         _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                        _reserved      : 6;
+        SW_TRANSIENT PrefabViewBatch       _cardViews;
+        SW_TRANSIENT PrefabViewBatch       _enemyViews;
+        unique_ptr<CardBattleHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
+        SW_TRANSIENT int32                 _selectedCard; ///< 고른 손패 자리
+        int32                              _lastStep;     ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 장으로 옮긴다
     };
 } // namespace sw

@@ -14,7 +14,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -22,6 +21,7 @@
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGBattlefield.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCommanderAI.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/GrowthLog.h"
 
@@ -71,6 +71,7 @@ namespace sw
         SRPGBattleResult   getBattleResult() const { return _result; }
         /** @brief 판이 열렸고 진행 중이며 아군 페이즈라 명령을 받으면 true 입니다. */
         bool  isAwaitingCommand() const;
+        bool  isAcceptingInput() const override { return isAwaitingCommand(); }
         int32 getPhaseTeam() const { return static_cast<int32>( _field.getPhaseTeam() ); }
         int32 getTurn() const { return _field.getTurn(); }
         int32 getResult() const { return static_cast<int32>( _result ); }
@@ -84,7 +85,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 씬 데이터로 전장을 열고 유닛을 놓습니다. 목록 길이가 다르거나 놓을 수 없는 유닛이 있으면 오류를 남기고 false 입니다. */
@@ -115,16 +115,18 @@ namespace sw
         vector<int2> _listEnemyCell;
         PROPERTY( Category = "Units", DisplayName = "Pilot", Tooltip = "Pilot id (catalog) every unit flies with" )
         CatalogKey<SRPGPilotDef> _pilot;
+        PROPERTY( Required, Category = "AI", DisplayName = "Commander AI", Tooltip = "Score weights of the computer commander; every value is required" )
+        SRPGCommanderAISettings _aiSettings;
 
-        SharedAssetRef<SRPGCatalog> _pCatalog;
-        SRPGBattlefield             _field;
-        SRPGCommanderAI             _ai; ///< 설정뿐이라 실을 상태가 없다(계획은 부를 때마다 전장에서 세운다)
-        ConsumerLease               _eventLease;
-        vector<SRPGEvent>           _listEvent;
+        BoundAssetRef<SRPGCatalog>     _pCatalog;
+        SW_CODEC_STATE SRPGBattlefield _field;
+        SW_TRANSIENT SRPGCommanderAI   _ai; ///< 설정뿐이라 실을 상태가 없다(계획은 부를 때마다 전장에서 세운다)
+        ConsumerLease                  _eventLease;
+        SW_TRANSIENT vector<SRPGEvent> _listEvent;
         PROPERTY( RuntimeState, Min = -1 )
         int32 _selectedUnit;
         PROPERTY( RuntimeState )
-        SRPGBattleResult _result;
-        GrowthLog        _growthLog; ///< 레벨 오름과 그 출처(명중 · 격파) — 표시용이라 저장하지 않는다
+        SRPGBattleResult       _result;
+        SW_TRANSIENT GrowthLog _growthLog; ///< 레벨 오름과 그 출처(명중 · 격파) — 표시용이라 저장하지 않는다
     };
 } // namespace sw

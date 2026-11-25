@@ -128,23 +128,23 @@ namespace sw
         PROPERTY( Category = "Interaction", DisplayName = "Keep Distance Scale", Tooltip = "A focused target stays focused until it is this many times its reach away (hysteresis)", Min = 1.0 )
         float32 _keepDistanceScale;
 
-        InteractionSession                              _session;
-        optional<int32>                                 _interactIndex;   ///< 폰 스키마의 `_interactButton` 번호(시작할 때 한 번 찾는다)
-        hashed_string                                   _resumeState;     ///< 몽타주를 틀기 전 애니메이터 상태입니다. 취소하면 이 상태로 돌아갑니다(몽타주가 없었으면 비어 있다).
-        int32                                           _montageStep;     ///< 이번 상호작용에서 몽타주를 튼 단계 번호입니다(상호작용이 아니면 -1).
-        uint32                                          _pairedSessionID; ///< 이번 상호작용이 시작한 페어드 애니메이션 세션 id 입니다(없으면 0). 취소하면 중단한다
-        InteractionPrompt                               _prompt;
-        vector<InteractionCandidate>                    _listCandidate;
-        vector<TComponentHandle<InteractableComponent>> _listCandidateComponent;
-        vector<InteractionSessionEvent>                 _listSessionEvent;
-        GameObjectHandle                                _focus;
-        TComponentHandle<InteractableComponent>         _focusComponent;
-        TComponentHandle<InteractableComponent>         _highlightComponent; ///< 강조를 켜 둔 대상입니다(틱 뒤 `syncHighlight` 가 `_focusComponent` 로 맞춘다)
-        uint8                                           _bHeld;
-        uint8                                           _bWasHeld;
-        uint8                                           _bPressed;
-        uint8                                           _bPairedStartPending; ///< 페어드 애니메이션 시작을 틱 뒤로 미뤘다. 그 사이 취소되면 내려 시작하지 않는다
-        uint8                                           _bSpatialIndexUser;   ///< 씬 공간 색인의 `_space` 층 사용자로 세어졌다(BeginPlay ~ EndPlay)
-        vector<Component*>                              _listGridTarget;      ///< 공간 색인 질의 결과(틱마다 다시 채운다)
+        SW_TRANSIENT InteractionSession _session;
+        SW_TRANSIENT optional<int32>   _interactIndex;   ///< 폰 스키마의 `_interactButton` 번호(시작할 때 한 번 찾는다)
+        SW_TRANSIENT hashed_string     _resumeState;     ///< 몽타주를 틀기 전 애니메이터 상태입니다. 취소하면 이 상태로 돌아갑니다(몽타주가 없었으면 비어 있다).
+        SW_TRANSIENT int32             _montageStep;     ///< 이번 상호작용에서 몽타주를 튼 단계 번호입니다(상호작용이 아니면 -1).
+        SW_TRANSIENT uint32            _pairedSessionID; ///< 이번 상호작용이 시작한 페어드 애니메이션 세션 id 입니다(없으면 0). 취소하면 중단한다
+        SW_TRANSIENT InteractionPrompt _prompt;
+        SW_TRANSIENT vector<InteractionCandidate> _listCandidate;
+        SW_TRANSIENT vector<TComponentHandle<InteractableComponent>> _listCandidateComponent;
+        SW_TRANSIENT vector<InteractionSessionEvent> _listSessionEvent;
+        SW_TRANSIENT GameObjectHandle                _focus;
+        SW_TRANSIENT TComponentHandle<InteractableComponent> _focusComponent;
+        SW_TRANSIENT TComponentHandle<InteractableComponent> _highlightComponent; ///< 강조를 켜 둔 대상입니다(틱 뒤 `syncHighlight` 가 `_focusComponent` 로 맞춘다)
+        SW_TRANSIENT uint8                                   _bHeld;
+        SW_TRANSIENT uint8                                   _bWasHeld;
+        SW_TRANSIENT uint8                                   _bPressed;
+        SW_TRANSIENT uint8                                   _bPairedStartPending; ///< 페어드 애니메이션 시작을 틱 뒤로 미뤘다. 그 사이 취소되면 내려 시작하지 않는다
+        SW_TRANSIENT uint8                                   _bSpatialIndexUser;   ///< 씬 공간 색인의 `_space` 층 사용자로 세어졌다(BeginPlay ~ EndPlay)
+        SW_TRANSIENT vector<Component*> _listGridTarget;                           ///< 공간 색인 질의 결과(틱마다 다시 채운다)
     };
 } // namespace sw

@@ -5,4 +5,4 @@
   판은 맵의 PartyGameModeComponent 가 돌리고 입력 · 모습 · HUD 는 같은 오브젝트의 PartyArenaViewComponent(GF_Client_PartyArena)다. 짧은 대전이라 판이 끝날 때까지 저장을 막는다.
   시나리오 automation/partyarena 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="partyarena" map="game/playground/partyarena/maps/trampoline.scene.xml" entry="SceneSwitch" portalSlot="16" save="Blocked" features="PartyArena" inputContexts="Movement,PartyArena" catalogs="PartyRoundSeries"/>
+<Minigame name="partyarena" map="guid:a03a699e3f5df2fa2c4c75b90c65421c" entry="SceneSwitch" portalSlot="16" save="Blocked" features="PartyArena" inputContexts="Movement,PartyArena" catalogs="PartyRoundSeries"/>

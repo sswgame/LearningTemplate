@@ -4,7 +4,6 @@
  *        기반 `ElementChart` 상태이상), 아드레날린 포인트(적중으로 쌓이고 피격으로 줄어듦)를 관리합니다.
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -68,9 +67,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "WCMB" );
-        static constexpr uint32 kStateVersion = 1;
-
         MonsterHuntCombat();
 
         /** @brief 카탈로그의 전투 수치로 시작합니다. 카탈로그가 없거나(대신 쓸 기본 수치는 없다) 스태미나 설정이 범위 밖이면 오류를 남기고 false 를 반환하며 상태는 그대로입니다. */
@@ -104,9 +100,9 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        ResourceGauge             _stamina;
-        GameRandom                _random;
-        const MonsterHuntCatalog* _pCatalog;
+        SW_CODEC_STATE ResourceGauge _stamina;
+        SW_CODEC_STATE GameRandom    _random;
+        const MonsterHuntCatalog*    _pCatalog;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _adrenaline;
     };

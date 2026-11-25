@@ -9,12 +9,14 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     struct GPULight;
+    struct LensFlareAsset;
 
     /**
      * @brief 빛 종류입니다(게임 코드가 GPU 칸 상수 `shaderslot::kLightType*` 를 모르고 빛을 종류별로 찾는다). 값은 셰이더의 종류 값과 같다 — `LightComponent.cpp` 가 맞는지 컴파일에서 본다.
@@ -102,7 +104,7 @@ namespace sw
          * @brief 렌즈 플레어 파일(`LensFlareAsset`, `*.lensflare.xml`)의 경로입니다. 비면 플레어가 없습니다. 3D 빛(방향광 · 점광 · 스폿)만 그린다.
          * @details 렌더 수집기가 빛마다 읽어 패킷에 싣고(`RenderPacketSceneCollector::collectLensFlares`) 렌즈 플레어 패스가 그린다. 못 읽으면 오류를 한 번 남기고 그 빛은 플레어가 없다.
          */
-        const string& getLensFlarePath() const { return _lensFlarePath; }
+        const string& getLensFlarePath() const { return _lensFlarePath.path(); }
         /** @brief 빛 목록의 칸은 종류입니다(방향광이 0 — 종류 순서로 돌면 앞에 온다). 종류는 만들 때 정해진다. */
         uint32 getRegistryChannel() const override { return _lightType; }
 
@@ -133,8 +135,8 @@ namespace sw
         PROPERTY( Category = "Light", DisplayName = "Intensity", Min = 0.0, Tooltip = "Light intensity" )
         float32 _intensity;
         PROPERTY( Category = "Light", DisplayName = "Lens Flare", Tooltip = "Lens flare data (.lensflare.xml) drawn for this 3D light - empty draws none" )
-        string  _lensFlarePath;
-        float32 _intensityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
-        uint32  _lightType;      ///< `shaderslot::kLightType*`. 만들 때 파생이 정하고 바뀌지 않습니다
+        AssetRef<LensFlareAsset> _lensFlarePath;
+        SW_TRANSIENT float32     _intensityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
+        SW_TRANSIENT uint32      _lightType;      ///< `shaderslot::kLightType*`. 만들 때 파생이 정하고 바뀌지 않습니다
     };
 } // namespace sw

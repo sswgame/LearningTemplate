@@ -204,8 +204,12 @@ namespace sw
         MonsterStat _raised{ MonsterStat::Attack };
         PROPERTY( Name = "down" )
         MonsterStat _lowered{ MonsterStat::Attack };
+        PROPERTY( Name = "upPercent", Required, Min = 100, Max = 200 )
+        int32 _raisedPercent{ 0 }; ///< 올리는 능력치의 보정(%)
+        PROPERTY( Name = "downPercent", Required, Min = 1, Max = 100 )
+        int32 _loweredPercent{ 0 }; ///< 내리는 능력치의 보정(%)
 
-        /** @brief 이 능력치의 성격 보정(%)입니다. 110, 100, 90 중 하나입니다. */
+        /** @brief 이 능력치의 성격 보정(%)입니다. 올리는 값 · 100 · 내리는 값 중 하나입니다. */
         int32 computePercent( MonsterStat stat ) const;
     };
 } // namespace sw
@@ -370,7 +374,7 @@ namespace sw
      *          `<Move id="ember" name="Ember" type="Fire" category="Special" power="40" accuracy="100" pp="25" status="Burn" statusChance="10"/>`
      *          `<Move id="growl" name="Growl" type="Normal" category="Status" pp="40" stat="Attack" stages="-1" target="Foe"/>`
      *          상태이상을 거는 기술은 `statusChance` 를 적어야 한다(변화 기술도 100 을 적는다).
-     *          `<Nature id="Adamant" up="Attack" down="SpecialAttack"/>`, `<Weather id="Rain" boost="Water" weaken="Fire" turns="5"/>`
+     *          `<Nature id="Adamant" up="Attack" down="SpecialAttack" upPercent="110" downPercent="90"/>`, `<Weather id="Rain" boost="Water" weaken="Fire" turns="5"/>`
      *          `<StatusImmunity status="Burn" types="Fire"/>`
      *          `<Species id="charmander" name="Charmander" types="Fire" stats="39 52 43 60 50 65" catchRate="45" baseExp="62" expGroup="Medium" evYield="0 0 0 0 0 1">`
      *          `<Learn level="1" move="scratch"/><Evolve to="charmeleon" level="16"/></Species>`

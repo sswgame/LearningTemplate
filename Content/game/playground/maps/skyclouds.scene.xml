@@ -1,5 +1,5 @@
 <?asset guid="1142251ebaa74cbaace20bb1a3412e62"?>
-<Scene formatVersion="3" name="SkyClouds">
+<Scene formatVersion="0" name="SkyClouds">
 	<!-- 볼륨 구름 시나리오(automation/skyclouds)의 무대 — skyshowcase 와 같은 해 · 대기에 볼륨 구름을 켜고, 위로 솟은 기둥(Tower)이 하늘 가장자리를 가른다(저해상도 구름이 물체 위로 번지지 않는다).
 	     바람은 0 이다 — 기록이 쌓인 뒤의 사진이 프레임 번호에 기대지 않는다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">

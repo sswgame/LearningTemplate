@@ -38,7 +38,6 @@
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
@@ -55,8 +54,6 @@ namespace sw
 {
     namespace
     {
-        /** @brief 세운 몸(`despawnViews`)을 상태 저장 전에 걷게 모든 게임의 스냅샷에 올립니다 — 게임 생성자가 적지 않는다. */
-        const StatefulComponentRegistrar<ShooterPlayerComponent> s_viewRegistration{ "ShooterPlayerComponent" };
 
         struct ShooterPlayerComponentInternal
         {
@@ -125,7 +122,7 @@ namespace sw
                 for ( const AppearancePartDef& part : pVisual->_listPart )
                 {
                     if ( part._socketSet.empty() == false )
-                        return part._socketSet;
+                        return part._socketSet.key();
                 }
                 return hashed_string{};
             }
@@ -387,7 +384,7 @@ namespace sw
         , _listPendingTracer{}
         , _soundQueue{}
         , _body{}
-        , _hitMarkerTimer{ 0.0f }
+        , _hitMarkerTimer{}
         , _timeSinceShot{ 10.0f }
         , _downTimer{ 0.0f }
         , _bodyEyeHeight{ 0.0f }
@@ -543,7 +540,7 @@ namespace sw
             advanceWeapons( step );
         _healthMachine.update( step );
         _timeSinceShot += step;
-        _hitMarkerTimer -= step;
+        (void)_hitMarkerTimer.update( step );
         if ( _healthMachine.isAlive() == false )
         {
             // 쓰러짐 클립이 도는 동안 멈춰 있다가 판을 처음부터 다시 시작한다.
@@ -676,15 +673,15 @@ namespace sw
         _bServerOut      = bOut ? SW_TRUE : SW_FALSE;
         if ( confirmedHitCount <= _hitCount )
             return;
-        _hitCount       = confirmedHitCount;
-        _hitMarkerTimer = 0.15f;
+        _hitCount = confirmedHitCount;
+        _hitMarkerTimer.start( 0.15f );
         _soundQueue.queueEvent( ShooterPlayerComponentInternal::kSoundHitEnemy );
     }
 
     void ShooterPlayerComponent::recordMeleeHit()
     {
         ++_hitCount;
-        _hitMarkerTimer = 0.15f;
+        _hitMarkerTimer.start( 0.15f );
         _soundQueue.queueEvent( ShooterPlayerComponentInternal::kSoundHitEnemy );
     }
 
@@ -1060,7 +1057,7 @@ namespace sw
             if ( bAnyHit )
             {
                 ++_hitCount;
-                _hitMarkerTimer = 0.15f;
+                _hitMarkerTimer.start( 0.15f );
                 _soundQueue.queueEvent( Internal::kSoundHitEnemy );
             }
             else if ( bHitCover )
@@ -1238,7 +1235,7 @@ namespace sw
             (void)pBinder->bindHUDViewModel( *pOwner, pViewModel );
         const bool bCrosshair = _bFirstPerson == SW_TRUE && _healthMachine.isAlive() && isServerDown() == false;
         pViewModel->setCrosshairShown( bCrosshair );
-        pViewModel->setHitMarkerShown( bCrosshair && _hitMarkerTimer > 0.0f );
+        pViewModel->setHitMarkerShown( bCrosshair && _hitMarkerTimer.isActive() );
         if ( _bServerHealth == SW_TRUE )
             pViewModel->setHealth( _serverHealth, _maxHealth > 0.0f ? _serverHealth / _maxHealth : 0.0f );
         else
@@ -1288,7 +1285,7 @@ namespace sw
         ShooterNetPawnComponent* const pNetPawn = findNetPawn( manager );
         if ( pNetPawn == nullptr || pNetPawn->isServer() == false )
         {
-            if ( pGameMode == nullptr || pGameMode->endMatch( pGameMode->getKillCount() ) == false ) // 매치는 쓰러지면 끝난다 — 결과를 내고 돌아간다
+            if ( pGameMode == nullptr || pGameMode->requestMatchEnd( pGameMode->getKillCount() ) == false ) // 매치는 쓰러지면 끝난다 — 결과를 내고 돌아간다
                 restartRound();
             return;
         }
@@ -1410,7 +1407,7 @@ namespace sw
             finishDown( *pManager, pGameMode );
         // 접속한 매치의 끝은 서버가 정한다 — 서버가 센 처치 수로 끝내고 돌아간다.
         if ( _bServerOut == SW_TRUE && pGameMode != nullptr )
-            (void)pGameMode->endMatch( _serverKillCount );
+            (void)pGameMode->requestMatchEnd( _serverKillCount );
     }
 
     void ShooterPlayerComponent::spawnBody()
@@ -1439,7 +1436,7 @@ namespace sw
         AssetManager* const pAssets = game::findSubsystem<AssetManager>();
         if ( pAssets == nullptr || _bodyPrefab.empty() )
             return GameObjectHandle{};
-        GameObject* const pBody = pAssets->getAssetCache<PrefabCache>().spawn( &manager, _bodyPrefab, pName );
+        GameObject* const pBody = pAssets->getAssetCache<PrefabCache>().spawn( &manager, _bodyPrefab, SpawnLifetime::Derived, pName );
         if ( pBody != nullptr && pBody->getComponent<ShooterAvatarComponent>() != nullptr )
             return pBody->getHandle();
         SW_LOG_ERROR_ID( "ShooterPlayer.BodyPrefabNoShooterAvatarComponent", "[Shooter] body prefab '%#' has no ShooterAvatarComponent - the player has no visible body", _bodyPrefab.c_str() );

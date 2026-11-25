@@ -1,5 +1,5 @@
 <?asset guid="24f6c7c80c9e4535a5c65c5a86276e71"?>
-<Scene formatVersion="3" name="FightingRing">
+<Scene formatVersion="0" name="FightingRing">
 	<!-- 격투 미니게임 판(minigames/fighting) — 무대 중심이 원점, 반 너비 4 m(_rules _stageHalfSize). 두 몸은 FightingViewComponent 가 대전의 자리로 옮긴다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

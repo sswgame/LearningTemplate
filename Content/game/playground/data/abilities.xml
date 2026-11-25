@@ -88,11 +88,64 @@
   <!-- 세트 — 지역 효과가 읽는 속성(SinkDepth · MoveSpeedScale · FireResist)을 Generic 세트로 둔다 -->
   <!-- ===================================================================== -->
 
+  <!-- 액션 컴뱃 기능이 받는 이름 Combatant(허수아비)에 붙인 어빌리티 시스템에 준다 -->
+  <AbilitySet id="ActionCombat.Combatant">
+    <AttributeSet class="Combat">
+      <Attribute name="Health" base="100"/>
+      <Attribute name="MaxHealth" base="100"/>
+      <Attribute name="MoveSpeed" base="0"/>
+      <Attribute name="Mana" base="0"/>
+      <Attribute name="MaxMana" base="0"/>
+      <Attribute name="AttackPower" base="0"/>
+      <Attribute name="Armor" base="0"/>
+    </AttributeSet>
+  </AbilitySet>
+  <!-- 근접 판정 무대(maps/meleeduel)의 휘두르는 쪽 -->
+  <AbilitySet id="MeleeDuel.Fighter">
+    <AttributeSet class="Combat">
+      <Attribute name="Health" base="50"/>
+      <Attribute name="MaxHealth" base="50"/>
+      <Attribute name="MoveSpeed" base="2"/>
+      <Attribute name="Mana" base="0"/>
+      <Attribute name="MaxMana" base="0"/>
+      <Attribute name="AttackPower" base="5"/>
+      <Attribute name="Armor" base="0"/>
+    </AttributeSet>
+  </AbilitySet>
+  <!-- 근접 판정 무대의 맞는 허수아비 -->
+  <AbilitySet id="MeleeDuel.Dummy">
+    <AttributeSet class="Combat">
+      <Attribute name="Health" base="30"/>
+      <Attribute name="MaxHealth" base="30"/>
+      <Attribute name="MoveSpeed" base="2"/>
+      <Attribute name="Mana" base="0"/>
+      <Attribute name="MaxMana" base="0"/>
+      <Attribute name="AttackPower" base="5"/>
+      <Attribute name="Armor" base="0"/>
+    </AttributeSet>
+  </AbilitySet>
+  <!-- 근접 판정 무대의 폭발 통 옆 허수아비 -->
+  <AbilitySet id="MeleeDuel.BlastDummy">
+    <AttributeSet class="Combat">
+      <Attribute name="Health" base="100"/>
+      <Attribute name="MaxHealth" base="100"/>
+      <Attribute name="MoveSpeed" base="0"/>
+      <Attribute name="Mana" base="0"/>
+      <Attribute name="MaxMana" base="0"/>
+      <Attribute name="AttackPower" base="0"/>
+      <Attribute name="Armor" base="0"/>
+    </AttributeSet>
+  </AbilitySet>
+
   <AbilitySet id="ZoneWalker">
     <AttributeSet class="Combat">
       <Attribute name="Health" base="100"/>
       <Attribute name="MaxHealth" base="100"/>
       <Attribute name="MoveSpeed" base="4"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
+      <Attribute name="AttackPower" base="10"/>
+      <Attribute name="Armor" base="0"/>
     </AttributeSet>
     <AttributeSet class="Generic">
       <Attribute name="SinkDepth" base="0"/>
@@ -107,6 +160,10 @@
       <Attribute name="Health" base="100"/>
       <Attribute name="MaxHealth" base="100"/>
       <Attribute name="MoveSpeed" base="4"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
+      <Attribute name="AttackPower" base="10"/>
+      <Attribute name="Armor" base="0"/>
     </AttributeSet>
     <AttributeSet class="Generic">
       <Attribute name="SinkDepth" base="0"/>
@@ -121,6 +178,10 @@
       <Attribute name="Health" base="100"/>
       <Attribute name="MaxHealth" base="100"/>
       <Attribute name="MoveSpeed" base="4"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
+      <Attribute name="AttackPower" base="10"/>
+      <Attribute name="Armor" base="0"/>
     </AttributeSet>
     <AttributeSet class="Generic">
       <Attribute name="SinkDepth" base="0"/>
@@ -157,6 +218,10 @@
       <Attribute name="Health" base="100"/>
       <Attribute name="MaxHealth" base="100"/>
       <Attribute name="MoveSpeed" base="3.5"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
+      <Attribute name="AttackPower" base="10"/>
+      <Attribute name="Armor" base="0"/>
     </AttributeSet>
     <AttributeSet class="Generic">
       <Attribute name="MoveSpeedScale" base="1"/>
@@ -333,6 +398,8 @@
       <Attribute name="AttackPower" base="4"/>
       <Attribute name="Armor" base="20"/>
       <Attribute name="MoveSpeed" base="3"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
     </AttributeSet>
     <Ability id="GA_EnemyMelee" input="1"/>
     <Ability id="GA_Thorns"/>
@@ -346,6 +413,8 @@
       <Attribute name="AttackPower" base="6"/>
       <Attribute name="Armor" base="0"/>
       <Attribute name="MoveSpeed" base="2.2"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
     </AttributeSet>
     <Ability id="GA_EnemyBolt" input="2"/>
     <Tag tag="Team.Enemy"/>

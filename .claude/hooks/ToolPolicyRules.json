@@ -225,7 +225,7 @@
       "requiresAny": [
         "never"
       ],
-      "hint": "생성물은 손으로 고치지 않는다 — 머티리얼 그래프 생성물은 그래프를 고친 뒤 `App --cook-shaders`(또는 편집기 저장), AssetReferenceFields.generated.json 은 빌드의 리플렉션 생성(Scripts/generate/asset_reference_field_list.py)이 다시 쓴다 — 칸은 구조체의 PROPERTY( AssetPath ) 로 고친다."
+      "hint": "생성물은 손으로 고치지 않는다 — 머티리얼 그래프 생성물은 그래프를 고친 뒤 `App --cook-shaders`(또는 편집기 저장), AssetReferenceFields.generated.json 은 빌드의 리플렉션 생성(Scripts/generate/asset_reference_field_list.py)이 다시 쓴다 — 칸은 구조체의 AssetRef<T> · DataPath 형식으로 고친다."
     },
     {
       "name": "no-hand-raise-magic-baseline",

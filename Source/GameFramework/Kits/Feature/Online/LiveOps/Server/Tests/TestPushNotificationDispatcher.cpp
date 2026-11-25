@@ -4,6 +4,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fake/FakePushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
@@ -14,8 +15,22 @@ using namespace sw;
 
 namespace
 {
-    constexpr int64     kNowMs   = 1700000000000ll;
-    constexpr AccountID kAccount = 42;
+    constexpr int64     kNowMs               = 1700000000000ll;
+    constexpr AccountID kAccount             = 42;
+    constexpr int32     kMaxDevicePerAccount = 10; ///< 서버 설정 `_pushMaxDevicePerAccount` 와 같은 값
+
+    /** @brief 서버 설정과 같은 운영 값을 든 발송기 설정입니다. */
+    LiveOpsKitConfig makePushSettings()
+    {
+        LiveOpsKitConfig settings;
+        settings._pushMaxDevicePerAccount     = kMaxDevicePerAccount;
+        settings._pushMaxRetry                = 5;
+        settings._pushFirstBackoffMs          = 1000;
+        settings._pushAccountBurst            = 6;
+        settings._pushAccountRefillIntervalMs = 600000;
+        settings._pushMaxTrackedAccountCount  = 100000;
+        return settings;
+    }
 
     /** @brief 발송기 + 메모리 저장소 + 가짜 제공자입니다. */
     struct DispatcherFixture
@@ -26,14 +41,14 @@ namespace
         PushNotificationDispatcher _dispatcher;
         int64                      _nowMs;
 
-        explicit DispatcherFixture( const PushDispatcherConfig& settings = PushDispatcherConfig{} )
+        explicit DispatcherFixture( const LiveOpsKitConfig& settings = makePushSettings() )
             : _database{}
             , _store{ &_database }
             , _provider{}
             , _dispatcher{}
             , _nowMs{ kNowMs }
         {
-            _dispatcher.initialize( &_store, settings );
+            SW_EXPECT_TRUE( _dispatcher.initialize( &_store, settings ) );
             SW_EXPECT_TRUE( _dispatcher.registerProvider( &_provider ) );
         }
 
@@ -178,8 +193,8 @@ SW_TEST_CASE( PushDispatcherTest, RejectedIsDroppedOnce )
 /** @brief [PushDispatcherTest] 계정마다 한꺼번에 보낼 수 있는 상한이 있고 넘으면 보내지 않고 센다 */
 SW_TEST_CASE( PushDispatcherTest, AccountBurstIsLimited )
 {
-    PushDispatcherConfig settings;
-    settings._accountBurst = 2;
+    LiveOpsKitConfig settings  = makePushSettings();
+    settings._pushAccountBurst = 2;
     DispatcherFixture rig( settings );
     rig.addDevice( "a" );
     PushNotificationMessage message;
@@ -196,7 +211,7 @@ SW_TEST_CASE( PushDispatcherTest, AccountBurstIsLimited )
 SW_TEST_CASE( PushDispatcherTest, DeviceLimitEvictsTheOldest )
 {
     DispatcherFixture rig;
-    for ( int32 index = 0; index < PushLimit::kMaxDevicePerAccount; ++index )
+    for ( int32 index = 0; index < kMaxDevicePerAccount; ++index )
     {
         fixed_string<constant::buffer::kMax16> token;
         formatstring( token.data(), token.capacity(), "t%#", index );
@@ -206,7 +221,7 @@ SW_TEST_CASE( PushDispatcherTest, DeviceLimitEvictsTheOldest )
     rig.addDevice( "new", kNowMs + 100 );
     rig.notify();
     const vector<FakePushProvider::SentRecord>& listSent = rig._provider.getSent();
-    SW_EXPECT_EQUAL( static_cast<size_t>( PushLimit::kMaxDevicePerAccount ), listSent.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( kMaxDevicePerAccount ), listSent.size() );
     for ( const FakePushProvider::SentRecord& sent : listSent )
     {
         SW_EXPECT_NOT_EQUAL( string( "t0" ), sent._deviceToken );
@@ -337,4 +352,39 @@ SW_TEST_CASE( PushDispatcherTest, SameTokenMovesToTheNewAccount )
     rig._dispatcher.unregisterDevice( kAccount + 1, "fake", "shared", 0 );
     rig.poll();
     SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "liveops_device_owner" ) ) );
+}
+
+/** @brief [PushDispatcherTest] 기기 수 · 재시도 값은 설정이 정한다 — 적지 않은 키트 설정은 읽지 못하고, 값이 없는 발송기 설정으로는 서지 않는다 */
+SW_TEST_CASE( PushDispatcherTest, DeviceAndRetryLimitsAreRequired )
+{
+    SW_EXPECT_LOG( "Config.KeyMissing" );
+    OnlineServerKitEntry entry;
+    entry._name     = "liveops";
+    entry._settings = R"({ "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 } })";
+    LiveOpsKitConfig kitConfig;
+    SW_EXPECT_FALSE( entry.readSettings( kitConfig ) );
+
+    SW_EXPECT_LOG( "PushNotificationDispatcher.PushDispatcherNoLimits" );
+    MemoryServiceDatabase      database;
+    MemoryServiceStore         store( &database );
+    PushNotificationDispatcher dispatcher;
+    SW_EXPECT_FALSE( dispatcher.initialize( &store, LiveOpsKitConfig{} ) );
+}
+
+/** @brief [PushDispatcherTest] 기기 수 상한은 설정이 정한다 — 2 로 낮추면 세 번째 기기가 가장 오래된 것을 밀어내 둘에게만 간다 */
+SW_TEST_CASE( PushDispatcherTest, DeviceLimitComesFromSettings )
+{
+    LiveOpsKitConfig settings         = makePushSettings();
+    settings._pushMaxDevicePerAccount = 2;
+    DispatcherFixture rig( settings );
+    rig.addDevice( "first", kNowMs );
+    rig.addDevice( "second", kNowMs + 1 );
+    rig.addDevice( "third", kNowMs + 2 );
+    rig.notify();
+    const vector<FakePushProvider::SentRecord>& listSent = rig._provider.getSent();
+    SW_EXPECT_EQUAL( size_t( 2 ), listSent.size() );
+    for ( const FakePushProvider::SentRecord& sent : listSent )
+    {
+        SW_EXPECT_NOT_EQUAL( string( "first" ), sent._deviceToken );
+    }
 }

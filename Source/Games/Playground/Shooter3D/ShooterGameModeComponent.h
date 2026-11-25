@@ -19,7 +19,6 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -29,13 +28,14 @@
 #include "GameFramework/Runtime/Character/AI/Director/AIDirector.h"
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 #include "Games/Playground/Shooter3D/ShooterBlockerComponent.h"
+#include "Games/Playground/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Playground/Shooter3D/ShooterEnemyComponent.h"
-#include "Games/Playground/Shooter3D/ShooterFloor.h"
 
 namespace sw
 {
@@ -98,6 +98,8 @@ namespace sw
         AssetRef<PrefabAsset> _prefab{};
         PROPERTY( Required, Tooltip = "Appearance preset of the body (presets.xml)" )
         CatalogKey<CharacterAppearanceDef> _preset{};
+        PROPERTY( Tooltip = "Entry id of the spawn table this kind stands for (several kinds may share one; the elite kind is called by the director's effect and names none)" )
+        hashed_string _spawnEntryID{};
         PROPERTY( Tooltip = "Pool of this kind's prefab (kinds sharing a prefab share its pool; 0 spawns every time)" )
         PrefabPoolPolicy _pool{};
     };
@@ -160,7 +162,7 @@ namespace sw
      *          적 목록(`getEnemyViews`)을 그 자리로 채운다. 그래서 자동 플레이 AI · 사격 예측 · 근접 예측이 혼자 하는 게임과 같은 목록을 본다. 역할은 프로세스 구성(한 프로세스 재생 · 전용 서버 + 앱)을 가리지 않고 링크가 정한다.
      */
     REFLECT( Category = "Shooter", DisplayName = "Shooter Game Mode", Tooltip = "Runs the skeleton waves, kills, blockers, the effect pools and the runtime spawns" )
-    class ShooterGameModeComponent : public GameModeComponent
+    class ShooterGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -169,6 +171,17 @@ namespace sw
         /** @brief `ShooterEnemyView::_kindIndex` 의 정예 표시입니다. */
         static constexpr uint32 kMaxFloor       = 8; ///< 씬에 둘 수 있는 움직이는 바닥 수(`ShooterPawnNetState::_floorNumber` 의 Max)
         static constexpr uint8  kEliteKindIndex = 255;
+
+        /**
+         * @brief 감독 프로필의 항목이 고르는 일(`effect`)이 모두 이 게임이 아는 낱말인지 봅니다(조우: 빈 글 · Elite, 보상: Ammo · Repair).
+         * @details 모르는 낱말마다 `ShooterGameMode.PacingProfileUnknownEffect` 를 남긴다. `startPacing` 이 거짓이면 감독을 세우지 않는다.
+         */
+        [[nodiscard]] static bool hasKnownEffects( const AIDirectorProfile& profile, string_view profileName );
+        /**
+         * @brief 스폰 표의 항목 id 와 적 종류의 `_spawnEntryID` 가 서로 빠짐없이 맞는지 봅니다 — 표의 항목마다 종류가 하나는 있고, 종류는 모두 표에 있는 항목을 적는다.
+         * @details 어긋난 것마다 `ShooterGameMode.SpawnEntryUnknown` 을 남긴다. `startPacing` 이 거짓이면 감독을 세우지 않는다. 어느 종류가 나오는지는 자리 순서(목록 차례)다.
+         */
+        [[nodiscard]] static bool matchesSpawnTable( const SpawnTable& table, const vector<ShooterEnemyKind>& listKind, string_view tableName );
 
         ShooterGameModeComponent();
         virtual ~ShooterGameModeComponent() override;
@@ -181,7 +194,7 @@ namespace sw
          * @brief 매치형 미니게임의 판이면 처치 수 @p killCount 로 판을 끝내고 돌아가기를 맡깁니다(틱이 끝난 뒤 게임 스레드에서 부릅니다).
          * @return 매치를 끝냈으면(또는 이미 끝냈으면) true 입니다. 매치가 아니거나 매치 서버의 판이면 false 이고 부르는 쪽이 판을 다시 시작합니다.
          */
-        [[nodiscard]] bool endMatch( uint32 killCount );
+        [[nodiscard]] bool requestMatchEnd( uint32 killCount );
         /** @brief 플레이어가 맞았습니다. 감독의 긴장도 신호로 넣습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
         void reportPlayerDamage( float32 amount );
         /** @brief 탄착과 총구 섬광 구 하나를 풀에서 꺼내 보입니다(게임 스레드). */
@@ -227,9 +240,11 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
-        void               onViewsDespawned() override;
+        /** @brief 시간이 멈춘 프레임 · 끝난 판에서도 플레이어 보기 · 바닥 걸음을 잇고 판의 걸음은 베이스에 맡깁니다. */
+        void updateGame( float32 deltaTime ) override;
+        void updateMatch( float32 deltaTime ) override;
+        void onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void onViewsDespawned() override;
         /** @brief 스폰 요청이 쌓였거나 자동 플레이 스위치와 플레이어 폰의 조종자가 어긋났으면 true 를 반환합니다. 베이스가 틱 끝에 플러시를 잡습니다. */
         bool hasPendingSpawn() const override;
         /** @brief 매치 결과로 낼 처치 수(`kills`)입니다 — 매치를 끝낼 때만 모은다. */
@@ -322,8 +337,8 @@ namespace sw
         vector<GameObjectHandle> _listSpawnPoint;
         PROPERTY( Category = "Arena", DisplayName = "Arena Half Size", Min = 1.0, Units = m )
         float32 _arenaHalfSize;
-        PROPERTY( Category = "Pacing", AssetPath, DisplayName = "Pacing Profile", Tooltip = "AI director profile (*.director.xml): intensity, phases, encounter and reward pools" )
-        string _pacingProfile;
+        PROPERTY( Category = "Pacing", DisplayName = "Pacing Profile", Tooltip = "AI director profile (*.director.xml): intensity, phases, encounter and reward pools" )
+        AssetRef<AIDirectorProfile> _pacingProfile;
         PROPERTY( Category = "Pacing", DisplayName = "Spawn Table", Tooltip = "Enemy spawn budget (*.spawns.xml) the director scales per phase" )
         AssetRef<SpawnTable> _spawnTable;
         PROPERTY( Category = "Pacing", DisplayName = "Pacing Seed", Tooltip = "Seed of the director; the same seed and inputs give the same pacing" )
@@ -341,40 +356,39 @@ namespace sw
         PROPERTY( Category = "Match", DisplayName = "Match Down Limit", Tooltip = "Times one player may fall in an online match before that player's match ends; before that the player is born again", Min = 1 )
         int32 _matchDownLimit;
 
-        vector<ShooterArenaBox>             _listBox;
-        vector<ArenaFloor>                  _listFloor;     ///< 움직이는 바닥(번호 차례)
-        vector<ShooterFloorStep>            _listFloorStep; ///< 이번 프레임의 바닥 걸음
-        float64                             _floorSeconds;  ///< 지난 프레임의 바닥 시각
-        vector<ShooterEnemyView>            _listEnemyView;
-        shared_ptr<const AIDirectorProfile> _pProfile; ///< 페이싱 프로필(공유 캐시의 한 벌, 떼어 내는 종류 — 다시 읽으면 감독이 번호를 이어 새 객체로 옮긴다)
-        SharedAssetRef<SpawnTable>          _pTable;
-        AIDirector                          _director;
-        vector<AIDirectorEvent>             _listDirectorEvent;
-        vector<EnemyRecord>                 _listEnemy;
-        PrefabPool                          _effectPool;
-        PrefabPool                          _tracerPool;
-        vector<EnemyRequest>                _listPendingEnemy;
-        vector<EffectRequest>               _listPendingEffect;
-        vector<ShooterReplicatedEnemy>      _listReplicaSample;  ///< 이번 프레임에 받은 적(네트 클라이언트)
-        vector<ShooterReplicatedEnemy>      _listPendingReplica; ///< 틱 뒤에 세울 복제 모습
-        MaterialTintCache                   _tintCache;          ///< 효과 색(같은 색은 나눠 쓴다).
-        GameObjectHandle                    _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트(스폰한 것이며 정리할 목록에 들어 있다).
-        vector<ShooterPlayerView>           _listPlayerView;
-        vector<GameObjectHandle>            _listPlayerScratch;
-        optional<uint32>                    _resultKillCount; ///< 결과로 낼 처치 수(비었으면 이 판의 처치 수)
-        float32                             _pendingHeal;     ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
-        uint32                              _spawnCursor;     ///< 다음 적의 스폰 위치 순번.
+        SW_TRANSIENT vector<ShooterArenaBox> _listBox;
+        SW_TRANSIENT vector<ArenaFloor> _listFloor;           ///< 움직이는 바닥(번호 차례)
+        SW_TRANSIENT vector<ShooterFloorStep> _listFloorStep; ///< 이번 프레임의 바닥 걸음
+        SW_TRANSIENT float64                  _floorSeconds;  ///< 지난 프레임의 바닥 시각
+        SW_TRANSIENT vector<ShooterEnemyView> _listEnemyView;
+        shared_ptr<const AIDirectorProfile>   _pProfile; ///< 페이싱 프로필(공유 캐시의 한 벌, 떼어 내는 종류 — 다시 읽으면 감독이 번호를 이어 새 객체로 옮긴다)
+        BoundAssetRef<SpawnTable>             _pTable;
+        SW_CODEC_STATE AIDirector             _director;
+        SW_TRANSIENT vector<AIDirectorEvent> _listDirectorEvent;
+        SW_TRANSIENT vector<EnemyRecord> _listEnemy;
+        SW_TRANSIENT PrefabPool          _effectPool;
+        SW_TRANSIENT PrefabPool          _tracerPool;
+        SW_TRANSIENT vector<EnemyRequest> _listPendingEnemy;
+        SW_TRANSIENT vector<EffectRequest> _listPendingEffect;
+        SW_TRANSIENT vector<ShooterReplicatedEnemy> _listReplicaSample;  ///< 이번 프레임에 받은 적(네트 클라이언트)
+        SW_TRANSIENT vector<ShooterReplicatedEnemy> _listPendingReplica; ///< 틱 뒤에 세울 복제 모습
+        SW_TRANSIENT MaterialTintCache              _tintCache;          ///< 효과 색(같은 색은 나눠 쓴다).
+        SW_TRANSIENT GameObjectHandle               _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트(스폰한 것이며 정리할 목록에 들어 있다).
+        SW_TRANSIENT vector<ShooterPlayerView> _listPlayerView;
+        SW_TRANSIENT vector<GameObjectHandle> _listPlayerScratch;
+        SW_TRANSIENT optional<uint32> _resultKillCount; ///< 결과로 낼 처치 수(비었으면 이 판의 처치 수)
+        SW_TRANSIENT float32          _pendingHeal;     ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
+        SW_TRANSIENT uint32           _spawnCursor;     ///< 다음 적의 스폰 위치 순번.
         PROPERTY( RuntimeState )
-        uint32                              _killCount;
-        AssetReloadWatch<AIDirectorProfile> _profileReload;   ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수(바뀌면 판을 이어 새 프로필로 옮긴다)
-        uint32                              _nextEnemyNetID;  ///< 다음 적의 복제 엔티티 번호
-        int8                                _appliedAutoPlay; ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
+        uint32       _killCount;
+        SW_TRANSIENT AssetReloadWatch<AIDirectorProfile> _profileReload;   ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수(바뀌면 판을 이어 새 프로필로 옮긴다)
+        SW_TRANSIENT uint32                              _nextEnemyNetID;  ///< 다음 적의 복제 엔티티 번호
+        SW_TRANSIENT int8                                _appliedAutoPlay; ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
         PROPERTY( Category = "Match", DisplayName = "Spawn Enemies", Tooltip = "Enemies come (off: players only fight each other)" )
         uint8                  _bSpawnEnemies : 1;
-        uint8                  _bAmmoPending  : 1; ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
-        uint8                  _bPacingReady  : 1; ///< 프로필과 스폰 테이블을 읽었다.
-        uint8                  _bReplica      : 1; ///< 네트 클라이언트의 월드다(판을 돌리지 않고 스냅샷의 적을 그린다)
-        uint8                  _bMatchEnded   : 1; ///< 매치를 끝내고 돌아갈 맵을 기다린다(`endMatch`)
-        [[maybe_unused]] uint8 _reserved      : 3;
+        SW_TRANSIENT uint8     _bAmmoPending  : 1; ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
+        SW_CODEC_STATE uint8   _bPacingReady  : 1; ///< 프로필과 스폰 테이블을 읽었다.
+        SW_TRANSIENT uint8     _bReplica      : 1; ///< 네트 클라이언트의 월드다(판을 돌리지 않고 스냅샷의 적을 그린다)
+        [[maybe_unused]] uint8 _reserved      : 4;
     };
 } // namespace sw

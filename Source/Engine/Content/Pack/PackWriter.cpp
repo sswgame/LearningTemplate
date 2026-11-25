@@ -157,7 +157,7 @@ namespace sw
         const expected<void> opened = _file.open( packDiskPath );
         if ( opened.has_value() == false )
             return fail( opened.error() );
-        // 풀의 맨 앞은 마운트 도메인이다(`kPackFormatVersion` 2) - 항목이 없어도 담아 풀은 늘 있다.
+        // 풀의 맨 앞은 마운트 도메인이다- 항목이 없어도 담아 풀은 늘 있다.
         _stringPoolBytes.assign( _desc._mountDomain.begin(), _desc._mountDomain.end() );
         _stringPoolBytes.push_back( 0 );
         const expected<void> loaded = loadPreviousSlots();
@@ -462,8 +462,8 @@ namespace sw
 
         // 색인 구역은 FAT · 블록 표 · 블록 해시 표 · 스트링 풀 · 헤더 순으로 빈틈 없이 잇는다 — `_indexOffset` 부터 파일 끝까지 한 구간이다(색인 서명의 자리).
         PackHeader header{};
-        header._magic              = kPackMagic;
-        header._formatVersion      = kPackFormatVersion;
+        header._magic              = kPackFormat._tag;
+        header._formatVersion      = kPackFormat._version;
         header._dlcAppID           = _desc._dlcAppID;
         header._compressionType    = static_cast<uint8>( _desc._compression );
         header._encryptionType     = static_cast<uint8>( PackEncryptionKind::None );

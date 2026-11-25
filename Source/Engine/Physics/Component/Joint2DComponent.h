@@ -75,10 +75,10 @@ namespace sw
         PROPERTY( Category = "Joint", Tooltip = "Connect to the world instead of the parent's body" )
         bool _bConnectToWorld;
         /// 이 바디 쌍으로 만들기가 실패했다(Cone 등) — 바디 · 설정이 바뀔 때까지 다시 시도하지 않는다(실패는 프레임마다 오류 로그를 남긴다)
-        bool _bJointCreateFailed;
+        SW_TRANSIENT bool _bJointCreateFailed;
 
-        PhysicsJointHandle _joint;
-        PhysicsBodyHandle  _jointBodyA; ///< 관절을 만들 때의 바디(바뀌면 다시 짓는다)
-        PhysicsBodyHandle  _jointBodyB;
+        SW_TRANSIENT PhysicsJointHandle _joint;
+        SW_TRANSIENT PhysicsBodyHandle  _jointBodyA; ///< 관절을 만들 때의 바디(바뀌면 다시 짓는다)
+        SW_TRANSIENT PhysicsBodyHandle  _jointBodyB;
     };
 } // namespace sw

@@ -1,5 +1,5 @@
 <?asset guid="655c9ec32f75401d8fc36ebf413cb32a"?>
-<Scene formatVersion="3" name="AsymmetricHorrorEstate">
+<Scene formatVersion="0" name="AsymmetricHorrorEstate">
 	<!-- 비대칭 공포 미니게임(minigames/asymmetrichorror)의 무대 — 생존자 둘(사용자 0 · 1, 사람이 없으면 봇)이 발전기 셋 가운데 둘을 고쳐 탈출구로 나간다. 살인마는 15 초 뒤에 풀려난다. 자리는 디렉터의 _stage 다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

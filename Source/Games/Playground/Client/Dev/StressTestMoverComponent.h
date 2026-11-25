@@ -38,10 +38,10 @@ namespace sw
 
     private:
         SceneComponent*        _pTarget;
-        float3                 _basePosition;
-        float32                _phase;
-        float32                _elapsed;
-        uint8                  _bWritesTransform : 1;
+        SW_TRANSIENT float3    _basePosition;
+        SW_TRANSIENT float32   _phase;
+        SW_TRANSIENT float32   _elapsed;
+        SW_TRANSIENT uint8     _bWritesTransform : 1;
         [[maybe_unused]] uint8 _reserved         : 7;
     };
 } // namespace sw

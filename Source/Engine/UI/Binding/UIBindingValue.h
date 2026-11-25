@@ -84,6 +84,12 @@ namespace sw
          */
         [[nodiscard]] static expected<void> resolvePath( const TypeInfo& type, string_view path, UIPropertyPath& outPath );
 
+        /**
+         * @brief 위젯 타입 @p type 의 **쓰는** 경로를 해석합니다(바인딩 대상 · 애니메이션). `resolvePath` 와 같되 위젯의 식별자(`Widget::_name`)는 거절합니다.
+         * @details 이름은 트리에서 위젯을 찾는 열쇠다(findWidget · 선택자 `#이름` · 탐색) — 값이 아니라 정체라 데이터가 바꾸지 않는다(언리얼 위젯 이름 · 유니티 USS name 과 같다).
+         */
+        [[nodiscard]] static expected<void> resolveWidgetTarget( const TypeInfo& type, string_view path, UIPropertyPath& outPath );
+
         /** @brief 경로 값을 읽습니다. Other 는 리플렉션 텍스트 표기를 Text 로 둡니다. 컨테이너는 None 입니다. */
         static UIBindingValue readValue( const UIPropertyPath& path, const void* pRoot );
         /**

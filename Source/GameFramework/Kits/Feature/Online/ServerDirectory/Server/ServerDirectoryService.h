@@ -25,6 +25,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryTypes.h"
+#include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryKitConfig.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServicePeriodicJob.h"
@@ -38,13 +39,10 @@ namespace sw
     class ServerBus;
 
     /** @brief 서버 디렉터리 설정입니다. */
-    struct ServerDirectoryServiceConfig
+    struct ServerDirectoryServiceConfig : ServerDirectoryPolicy
     {
-        vector<string> _listServerKind{};                ///< 배정과 목록을 받는 서버 종류이다(예: "game")
-        int64          _reloadPeriodMs{ 30000 };         ///< 점검과 공지를 다시 읽는 주기이다
-        int64          _registryRefreshPeriodMs{ 2000 }; ///< 서버 목록을 다시 읽는 주기이다
-        int64          _seatReservationTTLMs{ 0 };       ///< 필수 — 서버 사이의 좌석 예약 창(서버 설정 `_seatReservationSeconds`)
-        int64          _staleMs{ 15000 };                ///< 하트비트가 이보다 오래된 서버는 고르지 않는다
+        vector<string> _listServerKind{};          ///< 배정과 목록을 받는 서버 종류이다(예: "game")
+        int64          _seatReservationTTLMs{ 0 }; ///< 필수 — 서버 사이의 좌석 예약 창(서버 설정 `_seatReservationSeconds`)
     };
 } // namespace sw
 
@@ -76,7 +74,7 @@ namespace sw
     struct SW_KIT_SERVER_API ServerDirectoryChanged
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 의미 버전
+        static constexpr uint32 kBusVersion = 0; ///< 의미 버전
     };
 } // namespace sw
 

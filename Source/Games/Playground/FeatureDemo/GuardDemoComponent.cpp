@@ -2,7 +2,6 @@
 
 #include "Games/Playground/FeatureDemo/GuardDemoComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
@@ -11,6 +10,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
@@ -25,8 +25,7 @@ namespace sw
     {
         struct GuardDemoComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "FDGU" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "FDGU" };
 
             static bool runLock( const vector<string>& listArgument, string& outReply )
             {
@@ -205,12 +204,6 @@ namespace sw
         refreshLockedTarget();
     }
 
-    void GuardDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     bool GuardDemoComponent::lockBest()
     {
         float3 eye{};
@@ -245,7 +238,7 @@ namespace sw
     void GuardDemoComponent::serializeGameState( StateIO& io )
     {
         // 감각의 기억 · 록온 대상은 런타임 id 라 저장하지 않는다 — 불러온 판이 다음 프레임에 다시 본다.
-        io.header( GuardDemoComponentInternal::kStateTag, GuardDemoComponentInternal::kStateVersion );
+        io.header( GuardDemoComponentInternal::kStateFormat );
         io.end();
     }
 } // namespace sw

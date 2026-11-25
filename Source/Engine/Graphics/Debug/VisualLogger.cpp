@@ -320,7 +320,7 @@ namespace sw
     {
         JSONDocument document;
         JSONValue    root = document.makeObject();
-        root.set( "version" ).setUint( kFileVersion );
+        root.set( "version" ).setUint( kFileFormat._version );
         {
             ScopedLock<mutex> lock{ _mutex };
             root.set( "frame" ).setUint( _frame );
@@ -364,10 +364,10 @@ namespace sw
         const auto      version      = root.readRequired<uint32>( "version" );
         const auto      frame        = root.readRequired<uint64>( "frame" );
         const JSONValue listNode     = root.get( "entries" );
-        const bool      bNotThisFile = version.has_value() == false || *version != kFileVersion || frame.has_value() == false || listNode.isArray() == false;
+        const bool      bNotThisFile = version.has_value() == false || *version != kFileFormat._version || frame.has_value() == false || listNode.isArray() == false;
         if ( bNotThisFile )
         {
-            SW_LOG_ERROR_ID( "VisualLogger.VisualLogNotVersion", "Visual log '%#' is not a version %# visual log file", diskPath.str(), kFileVersion );
+            SW_LOG_ERROR_ID( "VisualLogger.VisualLogNotVersion", "Visual log '%#' is not a version %# visual log file", diskPath.str(), kFileFormat._version );
             return false;
         }
         deque<VisualLogEntry> listLoaded;

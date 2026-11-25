@@ -62,6 +62,6 @@ namespace sw
         PROPERTY( Category = "Reaction", DisplayName = "Fade Out Time", Min = 0.0, Units = s, Tooltip = "Seconds from full look to none after the tag goes (0 = at once)" )
         float32 _fadeOutTime;
 
-        float32 _weight;
+        SW_TRANSIENT float32 _weight;
     };
 } // namespace sw

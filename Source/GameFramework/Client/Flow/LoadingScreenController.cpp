@@ -14,9 +14,6 @@
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
-#include "Engine/UI/Widgets/BorderPanel.h"
-#include "Engine/UI/Widgets/SliderWidget.h"
-#include "Engine/UI/Widgets/TextWidget.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
@@ -95,10 +92,11 @@ namespace sw
         , _settings{}
         , _currentTip{}
         , _pUISystem{ nullptr }
-        , _loadingScreen{ kInvalidUIScreenHandle }
-        , _fadeScreen{ kInvalidUIScreenHandle }
-        , _loadFailureDialog{ kInvalidUIScreenHandle }
-        , _saveFailureDialog{ kInvalidUIScreenHandle }
+        , _viewModel{}
+        , _loadingScreen{}
+        , _fadeScreen{}
+        , _loadFailureDialog{}
+        , _saveFailureDialog{}
         , _shownSeconds{ 0.0f }
         , _spinnerAngle{ 0.0f }
         , _sceneLoadSubscription{}
@@ -143,7 +141,7 @@ namespace sw
 
     void LoadingScreenController::onSceneLoadCompleted( const SceneLoadCompletedEvent& event )
     {
-        closeLoadFailure();
+        _loadFailureDialog.reset();
         const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
         const bool                bSuperseded   = pSceneManager != nullptr && pSceneManager->isTransitioning(); // 뒤 요청에 밀렸다 — 그 로드의 끝이 온다
         if ( event._bSuccess || bSuperseded || _pUISystem == nullptr || _pUISystem->isInitialized() == false )
@@ -155,30 +153,22 @@ namespace sw
         desc._acceptText       = SW_LOCKEYREF( "SceneLoad", "Retry" );
         desc._cancelText       = SW_LOCKEYREF( "UIMenu", "Cancel" );
         const string levelName = event._levelName;
-        _loadFailureDialog     = ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [levelName]( ConfirmDialogResult result )
+        _loadFailureDialog     = UIOwnedScreen( *_pUISystem, ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [levelName]( ConfirmDialogResult result )
             {
             SceneManager* const pScenes = game::findSubsystem<SceneManager>();
             if ( result == ConfirmDialogResult::Accepted && pScenes != nullptr && pScenes->requestLoadFuture( levelName, SceneLoadKind::Travel ).isValid() == false )
                 SW_LOG_ERROR_ID( "LoadingScreen.RetryNotRequested", "The scene '%#' could not be requested again", levelName.c_str() );
-        } ) );
-    }
-
-    void LoadingScreenController::closeLoadFailure()
-    {
-        if ( _pUISystem != nullptr && _loadFailureDialog != kInvalidUIScreenHandle )
-            _pUISystem->closeScreen( _loadFailureDialog );
-        _loadFailureDialog = kInvalidUIScreenHandle;
+        } ) ) );
     }
 
     bool LoadingScreenController::isShowingLoadFailure() const
     {
-        const UIScreen* const pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _loadFailureDialog ) : nullptr;
-        return pScreen != nullptr && pScreen->isClosing() == false;
+        return _loadFailureDialog.find() != nullptr;
     }
 
     void LoadingScreenController::onSaveGameSaved( const SaveGameSavedEvent& event )
     {
-        closeSaveFailure();
+        _saveFailureDialog.reset();
         if ( event._bSuccess || _pUISystem == nullptr || _pUISystem->isInitialized() == false )
             return;
         ConfirmDialogDesc desc{};
@@ -187,17 +177,17 @@ namespace sw
         desc._acceptText   = SW_LOCKEYREF( "SceneLoad", "Retry" );
         desc._cancelText   = SW_LOCKEYREF( "UIMenu", "Cancel" );
         const string slot  = event._slot;
-        _saveFailureDialog = ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [slot]( ConfirmDialogResult result )
+        _saveFailureDialog = UIOwnedScreen( *_pUISystem, ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [slot]( ConfirmDialogResult result )
         {
             GameSaveSlots* const pSlots = game::findSubsystem<GameSaveSlots>();
             if ( result == ConfirmDialogResult::Accepted && pSlots != nullptr )
                 (void)pSlots->save( slot ); // 또 지면 그 이벤트가 다시 알린다
-        } ) );
+        } ) ) );
     }
 
     void LoadingScreenController::onSaveGameLoaded( const SaveGameLoadedEvent& event )
     {
-        closeSaveFailure();
+        _saveFailureDialog.reset();
         // 세이브의 씬이 열리지 않아 진 것은 씬 로드 실패 알림이 이미 말한다.
         if ( event._bSuccess || event._bSuperseded || isShowingLoadFailure() || _pUISystem == nullptr || _pUISystem->isInitialized() == false )
             return;
@@ -207,31 +197,20 @@ namespace sw
         desc._acceptText   = SW_LOCKEYREF( "SceneLoad", "Retry" );
         desc._cancelText   = SW_LOCKEYREF( "UIMenu", "Cancel" );
         const string slot  = event._slot;
-        _saveFailureDialog = ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [slot]( ConfirmDialogResult result )
+        _saveFailureDialog = UIOwnedScreen( *_pUISystem, ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [slot]( ConfirmDialogResult result )
         {
             GameSaveSlots* const pSlots = game::findSubsystem<GameSaveSlots>();
             if ( result == ConfirmDialogResult::Accepted && pSlots != nullptr )
                 (void)pSlots->load( slot );
-        } ) );
-    }
-
-    void LoadingScreenController::closeSaveFailure()
-    {
-        if ( _pUISystem != nullptr && _saveFailureDialog != kInvalidUIScreenHandle )
-            _pUISystem->closeScreen( _saveFailureDialog );
-        _saveFailureDialog = kInvalidUIScreenHandle;
+        } ) ) );
     }
 
     bool LoadingScreenController::isShowingSaveFailure() const
     {
-        const UIScreen* const pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _saveFailureDialog ) : nullptr;
-        return pScreen != nullptr && pScreen->isClosing() == false;
+        return _saveFailureDialog.find() != nullptr;
     }
 
-    LoadingScreenController::~LoadingScreenController()
-    {
-        closeScreens();
-    }
+    LoadingScreenController::~LoadingScreenController() = default;
 
     void LoadingScreenController::bindUISystem( UISystem* pUISystem )
     {
@@ -255,7 +234,7 @@ namespace sw
             return false; // 문서를 적지 않은 게임은 로딩 화면이 없다(gamesettings 의 `loadingScreen`)
         if ( findLoadingScreen() != nullptr )
             return true;
-        _loadingScreen    = _pUISystem->openScreen<LoadingScreen>( _settings._documentPath.get() );
+        _loadingScreen    = UIOwnedScreen( *_pUISystem, _pUISystem->openScreen<LoadingScreen>( _settings._documentPath.get() ) );
         UIScreen* pScreen = findLoadingScreen();
         if ( pScreen == nullptr )
         {
@@ -264,8 +243,10 @@ namespace sw
         }
         if ( pScreen->getDesc()._layer != UILayer::Loading )
             SW_LOG_WARNING_ID( "LoadingScreen.LoadingScreenNotLoading", "The loading screen '%#' is not on the Loading layer - it does not cover the other screens", _settings._documentPath.c_str() );
+        pScreen->setViewModel( &_viewModel );
+        _viewModel.setProgress( nullopt );
         _spinnerAngle = 0.0f;
-        applyTip( *pScreen );
+        applyTip();
         return true;
     }
 
@@ -275,7 +256,7 @@ namespace sw
         if ( pScreen != nullptr )
         {
             _shownSeconds += deltaSeconds;
-            applyProgress( *pScreen, loadProgress );
+            _viewModel.setProgress( loadProgress );
             const bool bSkipMinimum = game::getSubsystem<DeterministicRun>().getPolicy()._bSkipLoadingScreenMinimum == SW_TRUE;
             if ( bLoading || ( bSkipMinimum == false && _shownSeconds < _settings._minimumSeconds ) )
             {
@@ -292,27 +273,11 @@ namespace sw
             else
             {
                 // 닫고 검은 화면에서 씬으로 돌아온다 — 페이드는 Overlay 층이라 입력을 막지 않는다.
-                pScreen->close();
-                _loadingScreen = kInvalidUIScreenHandle;
+                _loadingScreen.reset();
                 transition.fadeInFromBlack( _settings._fadeInSeconds );
             }
         }
         syncFadeOverlay( transition.fade().getOverlayAlpha() );
-    }
-
-    void LoadingScreenController::applyProgress( UIScreen& screen, optional<float32> loadProgress )
-    {
-        SliderWidget* pProgress = screen.getTree().findWidget<SliderWidget>( hashed_string( kProgressWidgetName ) );
-        if ( pProgress == nullptr )
-            return;
-        if ( loadProgress.has_value() == false )
-        {
-            pProgress->setVisibility( WidgetVisibility::Collapsed );
-            return;
-        }
-        pProgress->setRange( 0.0f, 1.0f, 0.0f );
-        pProgress->setValue( MathUtil::clamp( *loadProgress, 0.0f, 1.0f ) );
-        pProgress->setVisibility( WidgetVisibility::HitTestInvisible ); // 진행 막대는 입력을 받지 않는다
     }
 
     bool LoadingScreenController::loadTipsFromResource( const AssetID& assetID, vector<string>& outListTip )
@@ -343,29 +308,20 @@ namespace sw
 
     UIScreen* LoadingScreenController::findLoadingScreen() const
     {
-        UIScreen* pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _loadingScreen ) : nullptr;
-        return pScreen != nullptr && pScreen->isClosing() == false ? pScreen : nullptr;
+        return _loadingScreen.find();
     }
 
     UIScreen* LoadingScreenController::findFadeScreen() const
     {
-        UIScreen* pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _fadeScreen ) : nullptr;
-        return pScreen != nullptr && pScreen->isClosing() == false ? pScreen : nullptr;
+        return _fadeScreen.find();
     }
 
     void LoadingScreenController::closeScreens()
     {
-        closeLoadFailure();
-        closeSaveFailure();
-        if ( _pUISystem != nullptr )
-        {
-            if ( _loadingScreen != kInvalidUIScreenHandle )
-                _pUISystem->closeScreen( _loadingScreen );
-            if ( _fadeScreen != kInvalidUIScreenHandle )
-                _pUISystem->closeScreen( _fadeScreen );
-        }
-        _loadingScreen = kInvalidUIScreenHandle;
-        _fadeScreen    = kInvalidUIScreenHandle;
+        _loadFailureDialog.reset();
+        _saveFailureDialog.reset();
+        _loadingScreen.reset();
+        _fadeScreen.reset();
     }
 
     void LoadingScreenController::syncFadeOverlay( float32 alpha )
@@ -373,25 +329,15 @@ namespace sw
         UIScreen* pScreen = findFadeScreen();
         if ( alpha <= 0.0f )
         {
-            if ( pScreen != nullptr )
-                pScreen->close();
-            _fadeScreen = kInvalidUIScreenHandle;
+            _fadeScreen.reset();
             return;
         }
         if ( pScreen == nullptr )
         {
             if ( _pUISystem == nullptr || _pUISystem->isInitialized() == false )
                 return;
-            // 뷰포트 전체를 덮는 검은 패널 — Overlay 층은 포커스 · 포인터를 받지 않는다(아래 화면 · 게임 입력이 그대로).
-            unique_ptr<BorderPanel> panel = sw::make_unique<BorderPanel>();
-            panel->setBackground( UIBrush::makeSolid( float4{ 0.0f, 0.0f, 0.0f, 1.0f } ) );
-            panel->setVisibility( WidgetVisibility::HitTestInvisible );
-            UIScreenDef desc{};
-            desc._layer       = UILayer::Overlay;
-            desc._bTakesFocus = false;
-            desc._bShowCursor = false;
-            _fadeScreen       = _pUISystem->pushScreen( sw::make_unique<UIScreen>( desc, std::move( panel ) ) );
-            pScreen           = findFadeScreen();
+            _fadeScreen = UIOwnedScreen( *_pUISystem, _pUISystem->openScreen( _pUISystem->getEngineDocuments()._screenFade ) );
+            pScreen     = findFadeScreen();
             if ( pScreen == nullptr )
                 return;
         }
@@ -400,23 +346,14 @@ namespace sw
             pPanel->setOpacity( MathUtil::saturate( alpha ) );
     }
 
-    void LoadingScreenController::applyTip( UIScreen& screen )
+    void LoadingScreenController::applyTip()
     {
-        TextWidget* pTip = screen.getTree().findWidget<TextWidget>( hashed_string( kTipWidgetName ) );
         _currentTip.clear();
         if ( _settings._listTip.empty() == false )
         {
             const int32 index = _tipRandom.nextInt( 0, static_cast<int32>( _settings._listTip.size() ) - 1 );
             _currentTip       = _settings._listTip[static_cast<size_t>( index )];
         }
-        if ( pTip == nullptr )
-            return;
-        if ( _currentTip.empty() )
-        {
-            pTip->setVisibility( WidgetVisibility::Collapsed );
-            return;
-        }
-        pTip->setText( _currentTip ); // 팁은 현지화 키(원문)다 — 글 위젯이 그릴 때 푼다(표에 없으면 원문 그대로)
-        pTip->setVisibility( WidgetVisibility::HitTestInvisible );
+        _viewModel.setTip( _currentTip );
     }
 } // namespace sw

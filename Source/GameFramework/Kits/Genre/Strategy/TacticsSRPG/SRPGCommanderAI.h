@@ -8,6 +8,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGBattlefield.h"
 
@@ -15,12 +17,17 @@ namespace sw
 {
     struct SRPGCombatResult;
 
-    /** @brief 점수의 가중치입니다. */
-    struct SRPGCommanderAISettings
+    /** @brief 컴퓨터 지휘관의 점수 가중치입니다. 값은 데이터(디렉터의 `_aiSettings`)에 있고 코드에는 기본값이 없다. */
+    REFLECT()
+    struct SW_KIT_API SRPGCommanderAISettings
     {
-        int32 _counterRiskPercent{ 100 }; ///< 반격으로 받을 기대 피해를 얼마나 크게 반영할지(%)
-        int32 _killBonus{ 1000 };         ///< 격파할 수 있으면 더하는 점수(명중률을 곱한다)
-        int32 _commanderBonus{ 500 };     ///< 표적이 지휘관이면 더하는 점수(명중률을 곱한다)
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 0 )
+        int32 _counterRiskPercent{ 0 }; ///< 반격으로 받을 기대 피해를 얼마나 크게 반영할지(%)
+        PROPERTY( Required, Min = 0 )
+        int32 _killBonus{ 0 }; ///< 격파할 수 있으면 더하는 점수(명중률을 곱한다)
+        PROPERTY( Required, Min = 0 )
+        int32 _commanderBonus{ 0 }; ///< 표적이 지휘관이면 더하는 점수(명중률을 곱한다)
     };
 } // namespace sw
 

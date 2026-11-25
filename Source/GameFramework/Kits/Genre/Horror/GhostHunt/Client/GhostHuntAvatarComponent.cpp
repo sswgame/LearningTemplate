@@ -4,14 +4,9 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/Client/GhostHuntHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/Component/GhostHuntGameModeComponent.h"
@@ -70,46 +65,20 @@ namespace sw
     } // namespace
 
     GhostHuntAvatarComponent::GhostHuntAvatarComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&GhostHuntAvatarComponent::updateAvatar, &GhostHuntAvatarComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _lightAction{}
         , _strobeAction{}
         , _vacuumAction{}
         , _useAction{}
         , _markerPrefab{}
-        , _director{}
         , _markers{}
         , _hudViewModel{}
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
         setCanEverTick( true );
     }
 
     GhostHuntAvatarComponent::~GhostHuntAvatarComponent() = default;
-
-    void GhostHuntAvatarComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                       pOwner    = getOwner();
-        const GhostHuntGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<GhostHuntGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "GhostHunt.AvatarWithoutGameMode", "Ghost Hunt avatar on '%#': no GhostHuntGameModeComponent in front of it on the same object - the avatar does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<GhostHuntGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<GhostHuntGameModeComponent>( pDirector );
-    }
-
-    void GhostHuntAvatarComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        _bActionsValid = _moveAction.empty() == false && _lightAction.empty() == false && _strobeAction.empty() == false && _vacuumAction.empty() == false && _useAction.empty() == false ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "GhostHunt.AvatarActionMissing", "Ghost Hunt avatar: the actions must all be named (move '%#', light '%#', strobe '%#', vacuum '%#', use '%#') - the avatar reads no input", _moveAction.c_str(), _lightAction.c_str(), _strobeAction.c_str(), _vacuumAction.c_str(), _useAction.c_str() );
-    }
 
     void GhostHuntAvatarComponent::onEndPlay()
     {
@@ -117,43 +86,29 @@ namespace sw
         GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             _markers.destroyAll( *pManager );
-        Component::onEndPlay();
+        GameModeViewComponent::onEndPlay();
     }
 
-    void GhostHuntAvatarComponent::onTick( TickContext& context )
+    void GhostHuntAvatarComponent::updateAvatar( GameObjectManager& manager, GhostHuntGameModeComponent& director )
     {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( GhostHuntAvatarComponent& avatar, GameObjectManager& manager )
-        { avatar.updateAvatar( manager ); } );
-    }
-
-    void GhostHuntAvatarComponent::updateAvatar( GameObjectManager& manager )
-    {
-        GhostHuntGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        GameObject* const                 pOwner    = getOwner();
-        if ( pDirector == nullptr || pOwner == nullptr || pDirector->isStarted() == false )
+        GameObject* const pOwner = getOwner();
+        if ( pOwner == nullptr )
             return;
-        if ( _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAcceptingInput() )
-            submitInput( *pDirector );
+        dispatchInput( manager, director );
         _markers.begin();
-        drawGame( manager, *pDirector );
+        drawGame( manager, director );
         _markers.end( manager );
         if ( _hudViewModel == nullptr )
             _hudViewModel = make_unique<GhostHuntHUDViewModel>();
         // 같은 뷰모델이면 거는 일은 아무것도 하지 않는다. HUD 가 없는 씬이면 값만 들고 보일 곳이 없다.
         if ( IHUDViewModelBinder* const pBinder = game::findSubsystem<IHUDViewModelBinder>() )
             (void)pBinder->bindHUDViewModel( *pOwner, _hudViewModel.get() );
-        fillHUD( *_hudViewModel, *pDirector );
+        fillHUD( *_hudViewModel, director );
     }
 
-    void GhostHuntAvatarComponent::submitInput( GhostHuntGameModeComponent& director ) const
+    void GhostHuntAvatarComponent::submitInput( const GameModeInput& input, GhostHuntGameModeComponent& director ) const
     {
-        const InputManager* const pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return;
-        const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-        GhostHuntCommand    command;
+        GhostHuntCommand command;
         command._move          = input.getVector2D( _moveAction );
         command._bLight        = input.isActionDown( _lightAction ) ? SW_TRUE : SW_FALSE;
         command._bStrobe       = input.isActionDown( _strobeAction ) ? SW_TRUE : SW_FALSE;

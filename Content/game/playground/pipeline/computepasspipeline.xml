@@ -10,7 +10,7 @@
 	</_listAttachment>
 	<_listPass>
 		<RenderGraphPassDesc _name="Tonemap" _op="Remove" />
-		<RenderGraphPassDesc _name="ChannelSwap" _after="ForwardOpaque" _type="Compute" _depthAttachment="" _shaderPath="game/playground/shaders/compute_channelswap.hlsl" _vertexEntryPoint="" _pixelEntryPoint="" _computeEntryPoint="CSMain" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _minPostQuality="0">
+		<RenderGraphPassDesc _name="ChannelSwap" _after="ForwardOpaque" _type="Compute" _depthAttachment="" _shaderPath="guid:4d848aec9505af4e9f03f30b2c27cde3" _vertexEntryPoint="" _pixelEntryPoint="" _computeEntryPoint="CSMain" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _minPostQuality="0">
 			<_listInput>
 				<item>SceneColor</item>
 			</_listInput>
@@ -19,7 +19,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="Present" _shaderPath="engine/shaders/post_chain.hlsl">
+		<RenderGraphPassDesc _name="Present" _shaderPath="guid:1596bb5708612b810adf07569f2a2936">
 			<_listInput>
 				<item>SwappedColor</item>
 			</_listInput>

@@ -13,14 +13,14 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyItemSpawner.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyRoundSeries.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineArena.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw
 {
@@ -42,8 +42,8 @@ namespace sw
      * @class PartyGameModeComponent
      * @brief 라운드 열기 → 겨루기 → 순위 점수 → 다음 라운드 → 우승을 진행합니다.
      */
-    REFLECT( Version = 2, Category = "PartyArena", DisplayName = "Party Game Mode", Tooltip = "Runs one PartyArena round series on the trampoline arena: the player from input commands, the rivals by bots" )
-    class SW_KIT_API PartyGameModeComponent : public GameModeComponent
+    REFLECT( Category = "PartyArena", DisplayName = "Party Game Mode", Tooltip = "Runs one PartyArena round series on the trampoline arena: the player from input commands, the rivals by bots" )
+    class SW_KIT_API PartyGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -63,7 +63,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 라운드를 겨루는 중이고 사람이 움직이면 true 입니다(자동 플레이면 false). */
-        bool                    isAcceptingInput() const;
+        bool                    isAcceptingInput() const override;
         const TrampolineArena&  getArena() const { return _arena; }
         const PartyRoundSeries& getSeries() const { return _series; }
         /** @brief 사람 @p player 의 절대 자리입니다. 없는 번호면 원점입니다. */
@@ -80,8 +80,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               updateMatch( float32 deltaTime ) override;
 
     private:
         /** @brief 카탈로그의 라운드 · 점수로 시리즈를 엽니다. 열지 못하면 오류를 남기고 false 입니다. */
@@ -106,8 +105,6 @@ namespace sw
         int32 _roundLimit;
         PROPERTY( Category = "Match", DisplayName = "Intermission", Min = 0.1, Units = s )
         float32 _intermissionSeconds;
-        PROPERTY( Category = "Match", DisplayName = "Result Hold", Tooltip = "Time the result stays on screen before the minigame ends", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Match", DisplayName = "Seed" )
         uint32 _seed;
         PROPERTY( Category = "Match", DisplayName = "Win Reward", Tooltip = "Money for winning the series", Min = 0 )
@@ -115,14 +112,14 @@ namespace sw
         PROPERTY( Category = "Arena", DisplayName = "Arena Settings" )
         TrampolineSettings _arenaSettings;
 
-        SharedAssetRef<PartyRoundSeries> _pCatalog;
-        SharedAssetRef<PartyItemSpawner> _pItems; ///< 아이템 없는 판이면 비었다
-        PartyRoundSeries                 _series;
-        TrampolineArena                  _arena;
-        vector<TrampolineEvent>          _listArenaEvent;
-        vector<PartyItemEvent>           _listItemEvent;
-        vector<PartySeriesEvent>         _listSeriesEvent;
-        Countdown                        _phaseTimer; ///< 쉬는 시간 · 결과를 보이는 시간
+        BoundAssetRef<PartyRoundSeries> _pCatalog;
+        BoundAssetRef<PartyItemSpawner> _pItems; ///< 아이템 없는 판이면 비었다
+        SW_CODEC_STATE PartyRoundSeries _series;
+        SW_CODEC_STATE TrampolineArena  _arena;
+        SW_TRANSIENT vector<TrampolineEvent> _listArenaEvent;
+        SW_TRANSIENT vector<PartyItemEvent> _listItemEvent;
+        SW_TRANSIENT vector<PartySeriesEvent> _listSeriesEvent;
+        SW_CODEC_STATE Countdown              _phaseTimer; ///< 쉬는 시간
         PROPERTY( RuntimeState )
         PartyGamePhase _phase;
         PROPERTY( RuntimeState, Min = -1 )

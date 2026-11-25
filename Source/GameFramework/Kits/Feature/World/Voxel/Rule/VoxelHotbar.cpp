@@ -18,7 +18,7 @@ namespace sw
 
     void VoxelHotbar::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion ); // 판 1(머리표 없음 · 카탈로그 순서 번호)은 거절한다
+        io.header( kStateFormat ); // 판 1(머리표 없음 · 카탈로그 순서 번호)은 거절한다
         if ( io.isReading() && io.check( _pCatalog != nullptr ) == false )
             return;
         io.reflected( *this ); // 고른 칸(아래 경계는 `PROPERTY( Min )`). 칸은 블록 번호 ↔ id 를 바꾸는 손 본문이다

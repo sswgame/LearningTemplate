@@ -5,6 +5,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/Lighting/ReflectionProbeAsset.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -69,7 +70,7 @@ namespace sw
         if ( _mode == SkyMode::Hdri )
         {
             gradient._hdriTexture     = hashed_string( _hdriTexture.c_str() );
-            gradient._hdriRadianceMap = hashed_string( _hdriRadianceMap.c_str() );
+            gradient._hdriRadianceMap = _hdriRadianceMap.key();
             // 칸 수가 틀리면 간접 조명을 지어내지 않는다 — 계수는 0 이고 하늘 그림만 나온다.
             if ( _listHdriAmbient.size() == SH9Color::kCoefficientCount )
                 Memory::copy( gradient._hdriAmbient._arrCoefficient, _listHdriAmbient.data(), sizeof( gradient._hdriAmbient._arrCoefficient ) );

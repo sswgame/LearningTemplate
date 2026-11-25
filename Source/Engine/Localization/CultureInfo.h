@@ -215,9 +215,9 @@ namespace sw
     /**
      * @class CultureTable
      * @brief 문화권 테이블(`*.cultures.xml`)입니다. 문화권은 카탈로그 항목이라 `_base` 로 부모를 가리키고 적은 칸만 덮으며, 지역이 붙은 코드(`ko_kr`)는 없으면 언어(`ko`)로 찾습니다.
-     * @details 형식(판 1, CLDR 의 numberingSystems · currencyData · plurals 를 한 파일에 모은 모양 — 문화권 원소는 `CultureInfo` 의 리플렉션 XML 이다):
+     * @details 형식(CLDR 의 numberingSystems · currencyData · plurals 를 한 파일에 모은 모양 — 문화권 원소는 `CultureInfo` 의 리플렉션 XML 이다):
      * @code
-     *     <CultureTable formatVersion="1">
+     *     <CultureTable formatVersion="0">
      *         <numberingSystems><numberingSystem id="latn" digits="0123456789"/><numberingSystem id="arab" digits="٠١٢٣٤٥٦٧٨٩"/></numberingSystems>
      *         <currencies><currency code="KRW" symbol="₩" digits="0"/></currencies>
      *         <CultureInfo _code="ru" _nativeName="Русский" _numberingSystem="latn" …>
@@ -230,7 +230,7 @@ namespace sw
      * @endcode
      *          부모 병합(순서 · 순환 · 없는 부모)은 `DataCatalogInheritance` 가 하고, 필수 칸(`PROPERTY( Required )` — 뿌리가 적는다)은 리플렉션 스키마가 본다.
      *          모르는 칸 · 범주 · 숫자 체계, 틀린 규칙 글, 글자가 10 개가 아닌 숫자 체계, 겹친 id · 코드, 없는 부모, 부모 순환은 로드 오류이고 표는 그대로 남는다.
-     *          숫자 체계와 통화는 앞서 읽은 파일의 것도 쓰고, 같은 id 는 바꾼다. 판 0(`<cultures><culture code parent …>`)은 판 올림(`SW_ASSET_FORMAT_UPGRADE`)이 판 1 로 고쳐 읽는다.
+     *          숫자 체계와 통화는 앞서 읽은 파일의 것도 쓰고, 같은 id 는 바꾼다.
      */
     class SW_API CultureTable
     {
@@ -242,7 +242,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `CultureInfo.cpp` 의 `SW_ASSET_TYPE`). 판 1 은 문화권을 리플렉션 원소 · `_base` 상속으로 적는다. */
-        static constexpr AssetTypeDef kAssetType{ "CultureTable", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 1, {} };
+        static constexpr AssetTypeDef kAssetType{ "CultureTable", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 언어 코드의 정규 표기입니다. 소문자로 쓰고 `-` 는 `_` 로 바꿉니다(`ko-KR` → `ko_kr`). */
         static string normalizeCode( string_view code );

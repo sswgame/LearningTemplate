@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Component/BattleRoyaleGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
@@ -13,6 +12,7 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -23,11 +23,7 @@ namespace sw
     {
         struct BattleRoyaleGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "BRGM" );
-            static constexpr uint32 kStateVersion = 3; ///< 2: 사람마다 든 총이 실린다. 3: 보급 상자가 판의 리플렉션 상태 칸이다
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
+            static constexpr FormatDef kStateFormat{ "BRGM" };
 
             // 한 씨앗에서 갈래마다 다른 수열을 뽑는 소금이다.
             static constexpr uint32 kFlightSalt = 1;
@@ -133,7 +129,6 @@ namespace sw
         , _lootDataPath{}
         , _lootSpotKind{}
         , _listLootPosition{}
-        , _resultHoldSeconds{ 3.0f }
         , _victoryMoney{ 60 }
         , _pCatalog{}
         , _pWeaponCatalog{}
@@ -145,7 +140,6 @@ namespace sw
         , _flightPath{}
         , _timer{}
         , _random{}
-        , _resultHold{}
         , _listPerson{}
         , _listGroundItem{}
         , _listEvent{}
@@ -187,10 +181,16 @@ namespace sw
         return true;
     }
 
+    bool BattleRoyaleGameModeComponent::makeFlightPath()
+    {
+        return _pCatalog != nullptr &&
+               BattleRoyaleFlightPath::makeRandom( _pCatalog->getFlightSettings(), _pCatalog->getMapSize(), GameRandom::deriveSeed( _matchSeed, BattleRoyaleGameModeComponentInternal::kFlightSalt ), _flightPath );
+    }
+
     bool BattleRoyaleGameModeComponent::prepareDrop()
     {
         using Internal = BattleRoyaleGameModeComponentInternal;
-        if ( BattleRoyaleFlightPath::makeRandom( _pCatalog->getFlightSettings(), _pCatalog->getMapSize(), GameRandom::deriveSeed( _matchSeed, Internal::kFlightSalt ), _flightPath ) == false )
+        if ( makeFlightPath() == false )
             return false; // 비행 설정이 범위 밖이면 키트가 오류를 남긴다
         _listPerson.clear();
         for ( int32 person = 0; person < _match.getPlayerCount(); ++person )
@@ -222,7 +222,7 @@ namespace sw
         if ( bBound == false || validateWeapons() == false )
             return false;
         const bool bNeedsLoot = _listLootPosition.empty() == false || _pCatalog->getSupplyDropSettings()._listTime.empty() == false;
-        _pLootCatalog         = SharedAssetRef<LootCatalog>{};
+        _pLootCatalog.reset();
         if ( bNeedsLoot && acquireRequired( _lootDataPath, _pLootCatalog ) == false )
             return false;
         if ( _listLootPosition.empty() == false && _pCatalog->findLootSpot( _lootSpotKind ) == nullptr )
@@ -238,7 +238,6 @@ namespace sw
         if ( openMatch( _match ) == false || prepareDrop() == false )
             return false;
         _timer.reset();
-        _resultHold.clear();
         _commandMove = float2{ 0.0f, 0.0f };
         _bFireHeld   = SW_FALSE;
         _bUseHeld    = SW_FALSE;
@@ -703,7 +702,7 @@ namespace sw
         if ( _phase == BattleRoyalePhase::Ended )
             return;
         _phase = BattleRoyalePhase::Ended;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( hasWon() ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( hasWon() ? BattleRoyaleGameModeComponentInternal::kEventWon : BattleRoyaleGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "BattleRoyale.Ended", "[BattleRoyale] the match ends for squad %# - winning team %# (-1 = still fought or draw), %# people left", kPlayerSquad,
                         _match.getMatchState().getWinningTeam(), _match.countRemainingPlayers() );
@@ -779,16 +778,8 @@ namespace sw
             endGame();
     }
 
-    void BattleRoyaleGameModeComponent::updateGame( float32 deltaTime )
+    void BattleRoyaleGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _phase == BattleRoyalePhase::Ended )
-        {
-            if ( _resultHold.update( deltaTime ) )
-                (void)finishMinigame( hashed_string( hasWon() ? BattleRoyaleGameModeComponentInternal::kWinResult : BattleRoyaleGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-            return;
-        }
         const int32 stepCount = _timer.consume( deltaTime );
         for ( int32 step = 0; step < stepCount && _phase != BattleRoyalePhase::Ended; ++step )
         {
@@ -800,13 +791,6 @@ namespace sw
         }
     }
 
-    void BattleRoyaleGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`BattleRoyaleViewComponent`)이 읽어 보인다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void BattleRoyaleGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
     {
         if ( hasWon() )
@@ -815,23 +799,20 @@ namespace sw
 
     void BattleRoyaleGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( BattleRoyaleGameModeComponentInternal::kStateTag, BattleRoyaleGameModeComponentInternal::kStateVersion );
+        io.header( BattleRoyaleGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        // 판은 같은 카탈로그 · 분대로 연 뒤에 읽는다(키트 계약). 비행 경로는 씨앗으로 `startGame` 이 이미 정했고, 입력 명령은 싣지 않는다.
-        BattleRoyaleMatch              restoredMatch;
-        FixedStepTimer                 timer          = _timer;
-        GameRandom                     random         = _random;
-        Countdown                      resultHold     = _resultHold;
-        vector<Person>                 listPerson     = _listPerson;
-        vector<BattleRoyaleGroundItem> listGroundItem = _listGroundItem;
-        if ( io.isReading() && io.check( _pCatalog != nullptr && openMatch( restoredMatch ) ) == false )
+        // 씨앗을 먼저 읽는다 — 판 · 비행 경로는 그 씨앗으로 연다. 서버 월드는 열 때마다 씨앗이 달라(`WorldSeed::makeForWorld`) 싣지 않으면 다시 읽은 판의 비행 경로 · 구역이 바뀐다.
+        // 읽다 어긋나면 씨앗도 되돌린다(`GameModeComponent::readStateOrRevert`). 입력 명령은 싣지 않는다.
+        io.value( _matchSeed );
+        if ( io.isReading() && io.check( makeFlightPath() ) == false )
             return;
-        io.value( io.isWriting() ? _match : restoredMatch );
-        io.value( timer );
-        io.value( random );
-        io.value( resultHold );
-        io.list( listPerson, BattleRoyaleGameModeComponentInternal::kMinPersonBytes, [&]( Person& person )
+        if ( io.valueOpened( _match, [this]( BattleRoyaleMatch& match )
+        { return _pCatalog != nullptr && openMatch( match ); } ) == false )
+            return;
+        io.value( _timer );
+        io.value( _random );
+        io.list( _listPerson, BattleRoyaleGameModeComponentInternal::kMinPersonBytes, [&]( Person& person )
         {
             float3                position = person._skydiver.getPosition();
             BattleRoyaleFallStage stage    = person._skydiver.getStage();
@@ -852,7 +833,7 @@ namespace sw
                 (void)person._skydiver.tryOpenParachute(); // 낮은 높이면 이미 펴졌다
             io.check( person._bJumped == SW_FALSE || person._skydiver.getStage() == stage );
         } );
-        io.list( listGroundItem, BattleRoyaleGameModeComponentInternal::kMinGroundItemBytes, [&]( BattleRoyaleGroundItem& item )
+        io.list( _listGroundItem, BattleRoyaleGameModeComponentInternal::kMinGroundItemBytes, [&]( BattleRoyaleGroundItem& item )
         {
             io.value( item._position );
             io.value( item._itemID );
@@ -860,16 +841,9 @@ namespace sw
             io.value( item._spotIndex );
             io.check( item._count > 0 );
         } );
-        io.check( io.isWriting() || static_cast<int32>( listPerson.size() ) == restoredMatch.getPlayerCount() );
+        io.check( io.isWriting() || static_cast<int32>( _listPerson.size() ) == _match.getPlayerCount() );
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _match          = std::move( restoredMatch );
-        _timer          = timer;
-        _random         = random;
-        _resultHold     = resultHold;
-        _listPerson     = std::move( listPerson );
-        _listGroundItem = std::move( listGroundItem );
-        ++_groundItemRevision;
+        if ( io.isReading() && io.isOk() )
+            ++_groundItemRevision;
     }
 } // namespace sw

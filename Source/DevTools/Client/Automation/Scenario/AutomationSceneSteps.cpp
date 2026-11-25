@@ -59,7 +59,7 @@ namespace sw
                 PendingLoad* pPending = static_cast<PendingLoad*>( context.findHeldStepState( step ) );
                 if ( pPending == nullptr )
                 {
-                    TaskFuture<SceneHandle> future = engine::getSubsystem<SceneManager>().requestLoadFuture( params._path, SceneLoadKind::Travel );
+                    TaskFuture<SceneHandle> future = engine::getSubsystem<SceneManager>().requestLoadFuture( params._path.get(), SceneLoadKind::Travel );
                     if ( future.isValid() == false )
                     {
                         context.recordFailure( step, "the scene load could not be requested" );
@@ -72,7 +72,7 @@ namespace sw
                 const bool         bLoaded      = pLoaded != nullptr && sceneManager.getActiveScene() == pLoaded;
                 // Run 이면 실행기가 상태를 지운다 — 그 뒤로 pPending 을 읽지 않는다.
                 StringBuilder<constant::buffer::kMax1024> waitingFor;
-                waitingFor.appendFormat( "the scene '%#%#", params._path, pPending->_future.isReady() ? "' to become active" : "' to load" );
+                waitingFor.appendFormat( "the scene '%#%#", params._path.get(), pPending->_future.isReady() ? "' to become active" : "' to load" );
                 const AutomationStepHold hold = context.holdUntilReady( step, input, bLoaded, params._timeoutFrames, waitingFor.view() );
                 if ( hold == AutomationStepHold::Run && bLoaded == false )
                     context.recordFailure( step, "the scene did not become active in time (or failed to load - see the log)" );
@@ -85,10 +85,10 @@ namespace sw
                 const Scene* const                      pScene = engine::getSubsystem<SceneManager>().getActiveScene();
                 if ( pScene == nullptr )
                     context.recordFailure( step, "there is no active scene" );
-                else if ( pScene->getSourcePath() != params._path )
+                else if ( params._path != pScene->getSourcePath() )
                 {
                     StringBuilder<constant::buffer::kMax1024> text;
-                    text.appendFormat( "the active scene came from '%#', not '%#'", pScene->getSourcePath(), params._path );
+                    text.appendFormat( "the active scene came from '%#', not '%#'", pScene->getSourcePath(), params._path.get() );
                     context.recordFailure( step, text.view() );
                 }
                 return true;

@@ -11,13 +11,9 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -28,15 +24,12 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
-#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 상태를 싣기 전에 세운 모습을 걷습니다 — 씬 섹션에 실리면 복원한 뒤 다시 세운 것과 겹친다. */
-        const StatefulComponentRegistrar<ParkViewComponent> s_viewRegistration{ "ParkViewComponent" };
 
         struct ParkViewComponentInternal
         {
@@ -71,7 +64,8 @@ namespace sw
 namespace sw
 {
     ParkViewComponent::ParkViewComponent()
-        : _guestPrefab{}
+        : GameModeViewComponent( GameModeViewBinding::of<&ParkViewComponent::updateView, &ParkViewComponent::updateInput>() )
+        , _guestPrefab{}
         , _carFrontPrefab{}
         , _carPrefab{}
         , _railPrefab{}
@@ -107,61 +101,22 @@ namespace sw
         , _railTopDepth{ 0.7f }
         , _railBottomDepth{ 1.0f }
         , _selectedPlacement{ 0 }
-        , _director{}
         , _listViewObject{}
         , _listRideShown{}
         , _tintCache{}
         , _arrGuestLook{}
         , _shownRevision{ 0 }
         , _ridingCoaster{ constant::invalid_index::kInt32 }
-        , _bWasRiding{ SW_FALSE }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
         setCanEverTick( true );
     }
 
     ParkViewComponent::~ParkViewComponent() = default;
 
-    void ParkViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                  pOwner    = getOwner();
-        const ParkGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<ParkGameModeComponent>() : nullptr;
-        _director                                    = pDirector != nullptr ? TComponentHandle<ParkGameModeComponent>( pDirector ) : TComponentHandle<ParkGameModeComponent>{};
-    }
-
-    void ParkViewComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        // 배선 오류는 플레이가 시작될 때 알린다 — 편집 중에는 컴포넌트를 하나씩 더하는 동안 비어 있을 수 있다.
-        if ( _director.isValid() == false )
-            SW_LOG_ERROR_ID( "ParkView.WithoutGameMode", "[Park] park view on '%#': no ParkGameModeComponent in front of it on the same object - the park is not shown",
-                             getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
-        _bActionsValid = SW_TRUE;
-        for ( const hashed_string* pAction : { &_nextRideAction, &_toggleOpenAction, &_priceDownAction, &_priceUpAction, &_feeDownAction, &_feeUpAction, &_buildAction, &_rideAction, &_thoughtsAction,
-                                               &_statusAction } )
-        {
-            if ( pAction->empty() )
-                _bActionsValid = SW_FALSE;
-        }
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "ParkView.ActionMissing", "[Park] park view: every input action must be named - the view reads no input" );
-    }
-
     void ParkViewComponent::onEndPlay()
     {
         despawnViews();
-        Component::onEndPlay();
-    }
-
-    void ParkViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령 · 스폰은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( ParkViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
+        GameModeViewComponent::onEndPlay();
     }
 
     void ParkViewComponent::despawnViews()
@@ -194,21 +149,11 @@ namespace sw
         return happiness >= ParkViewComponentInternal::kContentThreshold ? 1 : 2;
     }
 
-    void ParkViewComponent::updateView( GameObjectManager& manager )
+    void ParkViewComponent::updateView( GameObjectManager& manager, ParkGameModeComponent& director )
     {
-        ParkGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        const bool                bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE;
-        const InputManager* const pInput     = bReadInput ? game::findSubsystem<InputManager>() : nullptr;
-        if ( pInput != nullptr )
-        {
-            // 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
-            const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-            updateInput( input, *pDirector );
-        }
-        syncViews( manager, *pDirector );
-        updateCameraOverride( manager, *pDirector );
+        dispatchInput( manager, director );
+        syncViews( manager, director );
+        updateCameraOverride( manager, director );
     }
 
     // ------------------------------------------------------------------------------
@@ -432,7 +377,7 @@ namespace sw
         AssetManager* const pAssetManager = game::findSubsystem<AssetManager>();
         if ( pAssetManager == nullptr || prefab.empty() )
             return nullptr;
-        GameObject* const pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefab.path(), pName );
+        GameObject* const pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefab.path(), SpawnLifetime::Derived, pName );
         if ( pObject == nullptr )
             return nullptr;
         pObject->setAlwaysLoaded( true ); // 하위 레벨로 얹은 공원의 모습이다 — 스트리밍하는 바탕 씬의 셀이 삼키지 않는다(하위 레벨 앵커와 같다)
@@ -442,22 +387,15 @@ namespace sw
 
     void ParkViewComponent::updateCameraOverride( GameObjectManager& manager, const ParkGameModeComponent& director )
     {
-        // 카메라 디렉터는 PostPhysics 틱 뒤에 포즈를 쓴다. 이 그룹(PrePhysics)에서 넣은 시점을 같은 프레임에 읽는다. 카메라 오브젝트에는 다른 쓰기가 없다.
-        const CoasterTrain* const pTrain = director.findCoasterTrain( _ridingCoaster );
-        if ( pTrain == nullptr && _bWasRiding == SW_FALSE )
-            return;
-        GameObject* const              pRigObject = manager.resolveGameObject( _cameraRig );
+        // 탄 동안만 프레임마다 시점을 요청한다 — 내리면 요청이 끊기고 카메라 디렉터가 스스로 원래 프리셋으로 돌아간다.
+        const CoasterTrain* const      pTrain     = director.findCoasterTrain( _ridingCoaster );
+        GameObject* const              pRigObject = pTrain != nullptr ? manager.resolveGameObject( _cameraRig ) : nullptr;
         CameraDirectorComponent* const pRig       = pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
-        _bWasRiding                               = pTrain != nullptr ? SW_TRUE : SW_FALSE;
         if ( pRig == nullptr )
             return;
-        if ( pTrain == nullptr )
-        {
-            pRig->clearViewOverride();
-            return;
-        }
         // 맨 앞 차량에 탄 시점이다. 롤까지 따라간다(루프에서 하늘이 아래로 온다).
         const CoasterTrackFrame frame = pTrain->getFrame();
-        pRig->setViewOverride( manager.getWorldOrigin().toLocal( frame._position + frame._up * _rideEyeHeight ), OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up ), _rideFieldOfView.radians(), _rideFarPlane );
+        pRig->requestViewOverride( CameraViewOverride{ manager.getWorldOrigin().toLocal( frame._position + frame._up * _rideEyeHeight ), OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up ),
+                                                       _rideFieldOfView.radians(), _rideFarPlane } );
     }
 } // namespace sw

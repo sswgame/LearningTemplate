@@ -78,7 +78,7 @@ namespace sw
         static string makeRecordKey( uint64 accountID );
         /** @brief 레코드 바이트입니다 — 진행의 바이트(`HubProfile::write` — 판 뒤에 칸) 그대로. 칸이 선언 범위 밖이면 false 이고 @p outBytes 는 비웁니다. */
         [[nodiscard]] static bool encodeRecord( const HubProfile& profile, vector<uint8>& outBytes );
-        /** @brief 레코드 바이트를 읽습니다. 판 1(손 배치) 레코드도 읽는다. 판을 모르거나 깨졌거나 값이 범위 밖이면 false 입니다. */
+        /** @brief 레코드 바이트를 읽습니다. 판을 모르거나 깨졌거나 값이 범위 밖이면 false 입니다. */
         [[nodiscard]] static bool decodeRecord( const vector<uint8>& bytes, HubProfile& outProfile );
 
         /** @brief 일이 결과를 두는 곳입니다(일과 저장소가 함께 든다 — 파일 머리말). */

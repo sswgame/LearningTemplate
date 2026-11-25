@@ -3,7 +3,7 @@
 <!-- 장치 · 기믹 표면 마스터 머티리얼(gimmick_surface.hlsl) — 불투명. 프리셋은 engine/materials/library/gimmick_*.material 이 값만 바꾼다.
      효과(_effect): 0 발광(네온) · 1 상호작용 강조(프레넬 맥동) · 2 녹아 사라짐(gimmicksurface_dissolve 부모) · 3 홀로그램 · 4 역장(gimmicksurface_translucent 부모) · 5 용암 · 6 얼음 · 7 켜진 화면.
      _patternScale 은 효과마다 뜻이 다르다(셰이더 evaluateGimmick 의 주석). 자체 발광은 G버퍼 패스가 장면 색에 쓴다(표면 모델 Emissive) — 디퍼드에서도 G버퍼로 그린다. -->
-<MaterialDef formatVersion="0" name="GimmickSurface" shaderPath="engine/shaders/gimmick_surface.hlsl" surfaceModel="Emissive" alphaMode="Opaque">
+<MaterialDef formatVersion="0" name="GimmickSurface" shaderPath="guid:43d6b5339071a249173ad7715df47254" surfaceModel="Emissive" alphaMode="Opaque">
 	<_properties>
 		<item name="_baseColor" type="Color" defaultValue="0.5 0.5 0.5 1" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="_emissiveColor" type="Color" defaultValue="1 1 1 1" displayName="Emissive Color" group="Emission" bHdr="1" bSrgb="1"/>

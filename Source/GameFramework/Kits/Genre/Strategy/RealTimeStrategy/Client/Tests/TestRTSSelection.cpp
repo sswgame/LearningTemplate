@@ -9,7 +9,6 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSCommandInputComponent.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSSelection.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/SkirmishGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
@@ -146,7 +145,7 @@ SW_TEST_CASE( RTSSelectionTest, CommandInputKeepsTheSelectionInItsOwnState )
     const RTSUnitID selected = RTSUnitID::make( 3, 1 );
     const RTSUnitID grouped  = RTSUnitID::make( 5, 2 );
     Archive         written;
-    StateIO::writeHeader( written, RTSCommandInputComponent::kStateTag, RTSCommandInputComponent::kStateVersion );
+    RTSCommandInputComponent::kStateFormat.write( written );
     written << uint64{ 7 }; // 이 고르기가 속한 판
     StateIO::writeIDList( written, vector<uint64>{ selected.packed() } );
     StateIO::writeIDList( written, vector<uint64>{ grouped.packed() } );

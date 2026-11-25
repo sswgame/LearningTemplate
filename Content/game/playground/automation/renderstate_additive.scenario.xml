@@ -13,7 +13,7 @@
 	<Launch variable="gv_viewDistanceScale" value="1"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="renderstate_additive_off.ppm"/>
-	<LoadScene path="game/playground/maps/renderstate_additive.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:c5fecb29861f0d672c245261e981dbe1" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

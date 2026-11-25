@@ -27,6 +27,7 @@
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
@@ -276,7 +277,7 @@ namespace sw
                 const OnlineSession* const pSession = game::findSubsystem<OnlineSession>();
                 if ( pSession == nullptr )
                     return false;
-                outValue = static_cast<float64>( pSession->get<EconomyClient>().getBalance( PlaygroundOnlineFlow::kAssetGold ) );
+                outValue = static_cast<float64>( pSession->get<EconomyClient>().getBalance( pSession->getGameSettings()._onlineSoftCurrency ) );
                 return true;
             }
 
@@ -286,7 +287,7 @@ namespace sw
                 const OnlineSession* const pSession = game::findSubsystem<OnlineSession>();
                 if ( pSession == nullptr )
                     return false;
-                outValue = static_cast<float64>( pSession->get<EconomyClient>().getBalance( PlaygroundOnlineFlow::kAssetGem ) );
+                outValue = static_cast<float64>( pSession->get<EconomyClient>().getBalance( pSession->getGameSettings()._onlineHardCurrency ) );
                 return true;
             }
 
@@ -388,9 +389,12 @@ namespace sw
             SW_LOG_ERROR_ID( "Playground.MatchNoHubServerID", "[Playground] match '%#' is refused - GameSettings onlineHubServerID is empty, the client could not return to the hub server", definition._name.c_str() );
             return false;
         }
+        const string& region = pSession->getGameSettings()._onlineRegion;
+        if ( requireSetting( region, "onlineRegion" ) == false )
+            return false;
         MatchmakingModeRequest request;
         request._modeID = definition._matchMode;
-        request._region = kMatchRegion;
+        request._region = region;
         _matchMinigame  = definition._name;
         _matchState     = PlaygroundMatchState::Queued;
         (void)pSession->get<MatchmakingClient>().call<MatchmakingMethod::QueueJoin>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<MatchmakingMethod::QueueJoin>, &PlaygroundOnlineFlow::onQueueJoined, this ) );
@@ -409,14 +413,25 @@ namespace sw
             clearMatch();
     }
 
+    bool PlaygroundOnlineFlow::requireSetting( string_view value, const utf8* pField )
+    {
+        if ( value.empty() == false )
+            return true;
+        SW_LOG_ERROR_ID( "Playground.OnlineSettingMissing", "[Playground] GameSettings %# is empty - the request is not sent", pField );
+        return false;
+    }
+
     EconomyShopPurchaseProvider* PlaygroundOnlineFlow::findShopProvider( OnlineSession& session )
     {
         if ( _shopProvider != nullptr )
             return _shopProvider.get();
-        _offers = SharedAssetCache<OfferCatalog>::acquire( kOfferCatalog ).snapshot();
+        const DataPath& offerCatalog = session.getGameSettings()._onlineOfferCatalog;
+        if ( requireSetting( offerCatalog.isSet() ? string_view( offerCatalog.get() ) : string_view{}, "onlineOfferCatalog" ) == false )
+            return nullptr;
+        _offers = SharedAssetCache<OfferCatalog>::acquire( offerCatalog.get() ).snapshot();
         if ( _offers == nullptr )
         {
-            SW_LOG_ERROR_ID( "Playground.OnlineShopNoOffers", "[Playground] the shop offer catalog '%#' could not be read", kOfferCatalog );
+            SW_LOG_ERROR_ID( "Playground.OnlineShopNoOffers", "[Playground] the shop offer catalog '%#' could not be read", offerCatalog.c_str() );
             return nullptr;
         }
         _shopProvider = make_unique<EconomyShopPurchaseProvider>( session.get<EconomyClient>(), *_offers );
@@ -720,8 +735,11 @@ namespace sw
 
     void PlaygroundOnlineFlow::requestSubmitKills( OnlineSession& session, int64 kills )
     {
+        const string& board = session.getGameSettings()._onlineLeaderboard;
+        if ( requireSetting( board, "onlineLeaderboard" ) == false )
+            return;
         LeaderboardSubmitRequest request;
-        request._boardID = kBoardKills;
+        request._boardID = board;
         request._score   = kills;
         (void)session.get<LeaderboardClient>().call<LeaderboardMethod::SubmitScore>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<LeaderboardMethod::SubmitScore>, &PlaygroundOnlineFlow::onScoreSubmitted, this ) );
     }
@@ -745,10 +763,18 @@ namespace sw
 
     void PlaygroundOnlineFlow::requestTopKills( OnlineSession& session )
     {
+        const GameSettings& settings = session.getGameSettings();
+        if ( requireSetting( settings._onlineLeaderboard, "onlineLeaderboard" ) == false )
+            return;
+        if ( settings._onlineLeaderboardTopCount <= 0 )
+        {
+            SW_LOG_ERROR_ID( "Playground.OnlineSettingMissing", "[Playground] GameSettings onlineLeaderboardTopCount is %# - the request is not sent", settings._onlineLeaderboardTopCount );
+            return;
+        }
         LeaderboardTopRequest request;
-        request._boardID = kBoardKills;
+        request._boardID = settings._onlineLeaderboard;
         request._offset  = 0;
-        request._count   = kTopCount;
+        request._count   = settings._onlineLeaderboardTopCount;
         (void)session.get<LeaderboardClient>().call<LeaderboardMethod::GetTop>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<LeaderboardMethod::GetTop>, &PlaygroundOnlineFlow::onTopKills, this ) );
     }
 
@@ -765,7 +791,10 @@ namespace sw
 
     void PlaygroundOnlineFlow::requestLiveEvents( OnlineSession& session )
     {
-        (void)session.get<LiveOpsClient>().requestLiveState( kMatchRegion, 0, SW_DELEGATE_FUNCTION( OnlineReplyDelegate<LiveOpsMethod::GetLiveState>, &PlaygroundOnlineFlowInternal::onLiveEvents ) );
+        const string& region = session.getGameSettings()._onlineRegion;
+        if ( requireSetting( region, "onlineRegion" ) == false )
+            return;
+        (void)session.get<LiveOpsClient>().requestLiveState( region, 0, SW_DELEGATE_FUNCTION( OnlineReplyDelegate<LiveOpsMethod::GetLiveState>, &PlaygroundOnlineFlowInternal::onLiveEvents ) );
     }
 
     void PlaygroundOnlineFlow::requestServiceStatus( OnlineSession& session )

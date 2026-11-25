@@ -21,7 +21,7 @@
 		<RenderGraphPassDesc _name="Shadow"
 		                     _type="Shadow"
 		                     _depthAttachment="ShadowMap"
-		                     _shaderPath="engine/shaders/shadow_depth.hlsl"
+		                     _shaderPath="guid:777a8d03e1be7553c570340051c7cc1a"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
@@ -37,7 +37,7 @@
 		<RenderGraphPassDesc _name="LocalShadow"
 		                     _type="Shadow"
 		                     _depthAttachment="LocalShadowMap"
-		                     _shaderPath="engine/shaders/shadow_depth.hlsl"
+		                     _shaderPath="guid:777a8d03e1be7553c570340051c7cc1a"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
@@ -52,7 +52,7 @@
 		<RenderGraphPassDesc _name="ForwardOpaque"
 		                     _type="ForwardOpaque"
 		                     _depthAttachment="SceneDepth"
-		                     _shaderPath="engine/shaders/forward_lit.hlsl"
+		                     _shaderPath="guid:137c80752dda756ff708a4ba404475d6"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
@@ -218,7 +218,7 @@
 		<RenderGraphPassDesc _name="Transparent"
 		                     _type="Transparent"
 		                     _depthAttachment="SceneDepth"
-		                     _shaderPath="engine/shaders/forward_lit.hlsl"
+		                     _shaderPath="guid:137c80752dda756ff708a4ba404475d6"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
@@ -364,7 +364,7 @@
 		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Present"
 		                     _type="Present"
-		                     _shaderPath="engine/shaders/post_chain.hlsl"
+		                     _shaderPath="guid:1596bb5708612b810adf07569f2a2936"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
@@ -400,9 +400,9 @@
 		</RenderGraphPassDesc>
 	</_listPass>
 	<_listRenderPassRef>
-		<item>engine/renderpass/defaultrenderpass.xml</item>
-		<item>engine/renderpass/forwardcolorrenderpass.xml</item>
-		<item>engine/renderpass/scenecopyrenderpass.xml</item>
-		<item>engine/renderpass/framecomputerenderpass.xml</item>
+		<item>guid:57bd09488b11feda78cbced691b416fe</item>
+		<item>guid:772ca6339dfa39e6f45e06670e127c46</item>
+		<item>guid:85dda27761602296f8342aa3e0fda17e</item>
+		<item>guid:3bbe483ea09c587a0612ffacd7007d3d</item>
 	</_listRenderPassRef>
 </RenderPipelineDesc>

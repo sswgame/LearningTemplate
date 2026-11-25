@@ -19,6 +19,7 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -226,6 +227,7 @@ namespace sw
             uint32                                _layerIndex{ 0 };
             uint32                                _instanceCount{ 0 };
         };
+        static constexpr FormatDef kStateFormat{ "FOLC" };
 
         /**
          * @brief 레이어 하나의 머티리얼들입니다. 바람 · 페이드 값이 레이어 값이라 레이어마다 자기 인스턴스를 가진다.
@@ -244,8 +246,6 @@ namespace sw
             float32 _radius{ 0.0f };
             float32 _remaining{ 0.0f }; ///< 다시 자라기까지 남은 시간(초, `_regrowSeconds` 가 0 이면 쓰지 않는다)
         };
-
-        static constexpr uint32 kStateVersion = 1;
 
         /** @brief 셀 @p cell 의 항목 보이기를 지금 벤 자리들에 맞춥니다. 새로 만든 셀과 다시 자란 뒤에 부릅니다. */
         void applyCuts( Cell& cell ) const;
@@ -308,23 +308,23 @@ namespace sw
         PROPERTY( Category = "Foliage", DisplayName = "Regrow Time", Min = 0.0, Units = s, Tooltip = "Seconds until cut instances grow back; 0 leaves them cut" )
         float32 _regrowSeconds;
 
-        vector<CutArea>                    _listCutArea; ///< 벤 자리들(상태 스냅샷이 싣는다)
-        vector<Cell>                       _listCell;
-        vector<LayerMaterials>             _listLayerMaterial;      ///< 레이어마다 하나다(바람 값을 레이어마다 싣는다).
-        vector<vector<PlacementCandidate>> _listLayerCandidate;     ///< 레이어마다 후보의 표면 판정(지형 위일 때만, 지형 편집 뒤 부분 계산용)
-        vector<vector<MeshHandle>>         _listLayerMeshLoad;      ///< 레이어마다 메시 로드(레이어의 `_listMesh` 순서, 내장 도형은 빈 핸들). 준비된 메시를 쥐어 다음 짓기가 다시 읽지 않는다
-        PlacementRegion                    _builtRegion;            ///< 배치를 계산한 영역 — 바뀌면 후보 판정을 버린다
-        PrimitiveRegistry*                 _pPrimitiveRegistry;     ///< 등록된 매니저의 레지스트리다(구조 링크라 생포인터를 쓴다).
-        uint32                             _terrainStabilityFrames; ///< 지형 세대가 마지막으로 바뀐 뒤 지난 프레임 수 — 칠하는 동안 다시 계산하지 않는다
-        uint32                             _instanceCount;
-        uint32                             _cutInstanceCount;       ///< `getCutInstanceCount`
-        uint32                             _lastRebuiltBatchCount;  ///< 마지막 배치 계산이 새로 만든 인스턴스 배치 수(로그)
-        uint32                             _builtTerrainGeneration; ///< 배치를 계산할 때 지형의 높이장 세대(`TerrainComponent::getHeightfieldGeneration`)
-        uint32                             _builtSplatRevision;     ///< 배치를 계산할 때 지형의 스플랫 세대(`TerrainComponent::getSplatRevision`)
-        uint32                             _seenTerrainGeneration;  ///< 지난 틱에 본 높이장 세대
-        uint32                             _seenSplatRevision;      ///< 지난 틱에 본 스플랫 세대
-        uint8                              _bBuiltOnTerrain   : 1;  ///< 마지막 계산이 지형 위였다(아니면 시작 때 지형을 다시 찾는다)
-        uint8                              _bWaitingForMeshes : 1;  ///< 레이어 메시가 와야 짓는다(`rebuildFoliage`)
-        [[maybe_unused]] uint8             _reserved          : 6;
+        SW_CODEC_STATE vector<CutArea> _listCutArea; ///< 벤 자리들(상태 스냅샷이 싣는다)
+        SW_TRANSIENT vector<Cell> _listCell;
+        SW_TRANSIENT vector<LayerMaterials> _listLayerMaterial;              ///< 레이어마다 하나다(바람 값을 레이어마다 싣는다).
+        SW_TRANSIENT vector<vector<PlacementCandidate>> _listLayerCandidate; ///< 레이어마다 후보의 표면 판정(지형 위일 때만, 지형 편집 뒤 부분 계산용)
+        SW_TRANSIENT vector<vector<MeshHandle>> _listLayerMeshLoad;          ///< 레이어마다 메시 로드(레이어의 `_listMesh` 순서, 내장 도형은 빈 핸들). 준비된 메시를 쥐어 다음 짓기가 다시 읽지 않는다
+        SW_TRANSIENT PlacementRegion            _builtRegion;                ///< 배치를 계산한 영역 — 바뀌면 후보 판정을 버린다
+        PrimitiveRegistry*                      _pPrimitiveRegistry;         ///< 등록된 매니저의 레지스트리다(구조 링크라 생포인터를 쓴다).
+        SW_TRANSIENT uint32                     _terrainStabilityFrames;     ///< 지형 세대가 마지막으로 바뀐 뒤 지난 프레임 수 — 칠하는 동안 다시 계산하지 않는다
+        SW_TRANSIENT uint32                     _instanceCount;
+        SW_TRANSIENT uint32                     _cutInstanceCount;       ///< `getCutInstanceCount`
+        SW_TRANSIENT uint32                     _lastRebuiltBatchCount;  ///< 마지막 배치 계산이 새로 만든 인스턴스 배치 수(로그)
+        SW_TRANSIENT uint32                     _builtTerrainGeneration; ///< 배치를 계산할 때 지형의 높이장 세대(`TerrainComponent::getHeightfieldGeneration`)
+        SW_TRANSIENT uint32                     _builtSplatRevision;     ///< 배치를 계산할 때 지형의 스플랫 세대(`TerrainComponent::getSplatRevision`)
+        SW_TRANSIENT uint32                     _seenTerrainGeneration;  ///< 지난 틱에 본 높이장 세대
+        SW_TRANSIENT uint32                     _seenSplatRevision;      ///< 지난 틱에 본 스플랫 세대
+        SW_TRANSIENT uint8                      _bBuiltOnTerrain   : 1;  ///< 마지막 계산이 지형 위였다(아니면 시작 때 지형을 다시 찾는다)
+        SW_TRANSIENT uint8                      _bWaitingForMeshes : 1;  ///< 레이어 메시가 와야 짓는다(`rebuildFoliage`)
+        [[maybe_unused]] uint8                  _reserved          : 6;
     };
 } // namespace sw

@@ -119,10 +119,10 @@ namespace sw
         PROPERTY( Category = "Water", DisplayName = "Yaw Drag", Min = 0.0, Meta = "Units=N*m*s/rad", Tooltip = "Turning drag per rad/s about the up axis while in the water" )
         float32 _yawDrag;
 
-        BoatHelmInput _input;
-        BoatState     _state;
-        float32       _arrRollPeak[2];    ///< [지난 창, 지금 창] 옆 기울기 크기 최댓값
-        float32       _arrPitchPeak[2];   ///< [지난 창, 지금 창] 앞뒤 기울기 크기 최댓값
-        float32       _peakWindowElapsed; ///< 지금 창에서 흐른 시간(초)
+        SW_TRANSIENT BoatHelmInput _input;
+        SW_TRANSIENT BoatState     _state;
+        SW_TRANSIENT float32       _arrRollPeak[2];    ///< [지난 창, 지금 창] 옆 기울기 크기 최댓값
+        SW_TRANSIENT float32       _arrPitchPeak[2];   ///< [지난 창, 지금 창] 앞뒤 기울기 크기 최댓값
+        SW_TRANSIENT float32       _peakWindowElapsed; ///< 지금 창에서 흐른 시간(초)
     };
 } // namespace sw

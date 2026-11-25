@@ -13,7 +13,6 @@
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -22,8 +21,8 @@
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorBot.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorMatch.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
-#include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorStage.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw
 {
@@ -46,7 +45,7 @@ namespace sw
      */
     REFLECT( Category = "AsymmetricHorror", DisplayName = "Asymmetric Horror Game Mode",
              Tooltip = "Runs one asymmetric horror match: survivors from input commands or bots against a killer bot, to escape or sacrifice" )
-    class SW_KIT_API AsymmetricHorrorGameModeComponent : public GameModeComponent
+    class SW_KIT_API AsymmetricHorrorGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -70,7 +69,7 @@ namespace sw
         const AsymmetricHorrorMatch& getMatch() const { return _match; }
         const AsymmetricHorrorStage& getStage() const { return _stage; }
         /** @brief 판이 열렸고 결과가 나지 않았으면 true 입니다. */
-        bool isAcceptingInput() const { return isStarted() && _result == AsymmetricHorrorResult::Ongoing; }
+        bool isAcceptingInput() const override { return isStarted() && _result == AsymmetricHorrorResult::Ongoing; }
         /** @brief 사람이 잡은 생존자이면 true 입니다. */
         bool isHuman( int32 survivor ) const;
         /** @brief 무대의 자리(절대)를 형식으로 감쌉니다. */
@@ -92,8 +91,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               updateMatch( float32 deltaTime ) override;
 
     private:
         /** @brief 씬 데이터로 판의 설정을 만듭니다. */
@@ -119,18 +117,15 @@ namespace sw
         AsymmetricHorrorStage _stage;
         PROPERTY( Category = "Bot", DisplayName = "Bot" )
         AsymmetricHorrorBotSettings _botSettings;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "How long the result stays on screen before the minigame ends", Min = 0.0, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Result", DisplayName = "Escape Reward", Tooltip = "Money the base game gets per escaped survivor", Min = 0 )
         int32 _escapeReward;
 
-        SharedAssetRef<AsymmetricHorrorRulesCatalog> _pCatalog;
-        AsymmetricHorrorMatch                        _match;
-        AsymmetricHorrorBot                          _bot;         ///< 살인마의 기억(본 자리)은 싣지 않는다 — 불러온 판은 다시 감지한다
-        vector<AsymmetricHorrorCommand>              _listCommand; ///< 생존자마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
-        vector<AsymmetricHorrorEvent>                _listEvent;   ///< 걸음마다 비워 다시 쓰는 알림 그릇
-        Countdown                                    _killerRelease;
-        Countdown                                    _resultHold;
+        BoundAssetRef<AsymmetricHorrorRulesCatalog> _pCatalog;
+        SW_CODEC_STATE AsymmetricHorrorMatch        _match;
+        SW_TRANSIENT AsymmetricHorrorBot            _bot;            ///< 살인마의 기억(본 자리)은 싣지 않는다 — 불러온 판은 다시 감지한다
+        SW_CODEC_STATE vector<AsymmetricHorrorCommand> _listCommand; ///< 생존자마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
+        SW_TRANSIENT vector<AsymmetricHorrorEvent> _listEvent;       ///< 걸음마다 비워 다시 쓰는 알림 그릇
+        SW_CODEC_STATE Countdown                   _killerRelease;
         PROPERTY( RuntimeState )
         uint32 _humanMask; ///< 사람이 잡은 생존자의 비트(생존자 0 은 늘 사람이라 넣지 않는다)
         PROPERTY( RuntimeState )

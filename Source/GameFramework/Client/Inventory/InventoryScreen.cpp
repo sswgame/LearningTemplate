@@ -40,8 +40,8 @@ namespace sw
     {
         struct InventoryScreenInternal
         {
-            static constexpr float32     kCellWidth        = 136.0f; ///< 칸 단추 너비(UI 단위)
-            static constexpr float32     kCellHeight       = 48.0f;  ///< 칸 단추 높이
+            static constexpr const utf8* kCellClass        = "inventorycell"; ///< 칸 단추의 스타일 클래스 — 크기 · 겉모습은 문서의 시트가 정한다
+            static constexpr const utf8* kHeldCellClass    = "inventorycell selected";
             static constexpr const utf8* kSlotCommand      = "Slot";
             static constexpr const utf8* kEquipSlotCommand = "EquipSlot";
             static constexpr const utf8* kEquipNamePrefix  = "Equip.";
@@ -129,10 +129,15 @@ namespace sw
         , _lastResult{ InventoryCommandResult::Ok }
         , _bLongPressFired{ SW_FALSE }
         , _bBuilt{ SW_FALSE }
+        , _viewModel{}
     {
+        setViewModel( &_viewModel );
     }
 
-    InventoryScreen::~InventoryScreen() = default;
+    InventoryScreen::~InventoryScreen()
+    {
+        setViewModel( nullptr );
+    }
 
     UIScreenHandle InventoryScreen::open( UISystem& ui, string_view documentPath, CharacterEquipmentComponent& character )
     {
@@ -157,12 +162,9 @@ namespace sw
         WidgetTree&                        tree       = getTree();
         PanelWidget*                       pGrid      = tree.findWidget<PanelWidget>( hashed_string( kGridName ) );
         PanelWidget*                       pEquipment = tree.findWidget<PanelWidget>( hashed_string( kEquipmentName ) );
-        const bool                         bTexts     = tree.findWidget<TextWidget>( hashed_string( kDetailsName ) ) != nullptr && tree.findWidget<TextWidget>( hashed_string( kStatsName ) ) != nullptr &&
-                            tree.findWidget<TextWidget>( hashed_string( kWeightName ) ) != nullptr && tree.findWidget<TextWidget>( hashed_string( kStatusName ) ) != nullptr;
-        if ( pGrid == nullptr || pEquipment == nullptr || tree.findWidgetByName( hashed_string( kActionsName ) ) == nullptr || bTexts == false || pCharacter == nullptr )
+        if ( pGrid == nullptr || pEquipment == nullptr || tree.findWidgetByName( hashed_string( kActionsName ) ) == nullptr || pCharacter == nullptr )
         {
-            SW_LOG_ERROR_ID( "InventoryScreen.InventoryDocumentNeeds", "Inventory document %# needs '%#' and '%#' panels, an '%#' panel and the '%#', '%#', '%#' and '%#' texts", getDocumentPath().c_str(),
-                             kGridName, kEquipmentName, kActionsName, kDetailsName, kStatsName, kWeightName, kStatusName );
+            SW_LOG_ERROR_ID( "InventoryScreen.InventoryDocumentNeeds", "Inventory document %# needs '%#' and '%#' panels and an '%#' panel", getDocumentPath().c_str(), kGridName, kEquipmentName, kActionsName );
             _bBuilt = SW_TRUE; // 문서가 틀렸다 — 프레임마다 같은 오류를 되풀이하지 않는다
             return;
         }
@@ -175,10 +177,7 @@ namespace sw
             nameBuilder.appendFormat( "%#%#", Internal::kSlotNamePrefix, index );
             slot->setName( hashed_string( nameBuilder.view() ) );
             slot->setCommand( hashed_string( Internal::kSlotCommand ) );
-            WidgetLayoutSlot layout = slot->getLayoutSlot();
-            layout._widthOverride   = Internal::kCellWidth;
-            layout._heightOverride  = Internal::kCellHeight;
-            slot->setLayoutSlot( layout );
+            slot->setStyleClass( Internal::kCellClass );
             (void)slot->addChild( Internal::makeLabel() );
             _listSlotWidget.push_back( slot.get() );
             (void)pGrid->addChild( std::move( slot ) );
@@ -217,7 +216,7 @@ namespace sw
             // 거르기에 맞지 않는 칸은 끈다(빈 칸은 놓을 자리라 켜 둔다). 집은 칸은 선택 표시(중립 단계).
             const bool bFiltered = _filter.empty() == false && pDef != nullptr && pDef->_category != _filter;
             pWidget->setEnabled( bFiltered == false );
-            pWidget->setStyleClass( index == _heldSlot ? "selected" : "" );
+            pWidget->setStyleClass( index == _heldSlot ? InventoryScreenInternal::kHeldCellClass : InventoryScreenInternal::kCellClass );
         }
         PanelWidget* pEquipment = getTree().findWidget<PanelWidget>( hashed_string( kEquipmentName ) );
         if ( pEquipment != nullptr )
@@ -242,37 +241,30 @@ namespace sw
         {
             listStat.push_back( SW_LOCALIZED_MESSAGE( "Inventory", "StatLine" ).addKey( "stat", stat._name.c_str() ).addDecimal( "value", static_cast<float64>( stat._value ) ).str() );
         }
-        TextWidget* pStats = getTree().findWidget<TextWidget>( hashed_string( kStatsName ) );
-        if ( pStats != nullptr )
-            pStats->setText( LocalizedMessage::join( "  ", listStat ) );
+        _viewModel.setStats( LocalizedMessage::join( "  ", listStat ) );
         StringBuilder<constant::buffer::kMax128> weightBuilder;
         if ( bag.getMaxWeight() > 0.0f )
             weightBuilder.appendFormat( "%# / %#", bag.computeWeight(), bag.getMaxWeight() );
         else
             weightBuilder.appendFormat( "%#", bag.computeWeight() );
-        TextWidget* pWeight = getTree().findWidget<TextWidget>( hashed_string( kWeightName ) );
-        if ( pWeight != nullptr )
-            pWeight->setText( string( weightBuilder.view() ) );
+        _viewModel.setWeight( string( weightBuilder.view() ) );
         _shownBagRevision       = bag.getRevision();
         _shownEquipmentRevision = pCharacter->getEquipment().getRevision();
     }
 
     void InventoryScreen::refreshDetails()
     {
-        TextWidget* pDetails = getTree().findWidget<TextWidget>( hashed_string( kDetailsName ) );
-        UISystem*   pUI      = getUISystem();
-        if ( pDetails == nullptr || pUI == nullptr )
+        UISystem* pUI = getUISystem();
+        if ( pUI == nullptr )
             return;
         const UIFocusManager& focus    = pUI->getInputRouter().getFocusManager();
         const Widget*         pFocused = focus.getFocusedTree() == &getTree() ? getTree().findWidgetByID( focus.getFocusedWidget() ) : nullptr;
-        pDetails->setText( pFocused != nullptr ? pFocused->getTooltip() : string{} );
+        _viewModel.setDetails( pFocused != nullptr ? pFocused->getTooltip() : string{} );
     }
 
     void InventoryScreen::setStatus( const string& text )
     {
-        TextWidget* pStatus = getTree().findWidget<TextWidget>( hashed_string( kStatusName ) );
-        if ( pStatus != nullptr )
-            pStatus->setText( text );
+        _viewModel.setStatus( text );
     }
 
     InventoryCommandResult InventoryScreen::run( const InventoryCommand& command )

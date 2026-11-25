@@ -118,4 +118,25 @@ namespace sw
         }
         return pNearest;
     }
+
+    void AIPerception::serializeState( StateIO& io )
+    {
+        // 뜬 때와 되돌릴 때의 월드 원점이 다를 수 있다 — 절대로 싣고, 읽은 기억은 원점 0 기준이다(다음 감지가 지금 원점으로 옮긴다).
+        const WorldOrigin origin{ _worldOrigin };
+        io.list( _listTarget, static_cast<uint32>( sizeof( float3 ) + sizeof( uint64 ) + sizeof( float32 ) + 3 ), [&io, &origin]( AIPerceivedTarget& target )
+        {
+            float3 position = origin.toAbsolute( target._lastKnownPosition );
+            io.value( position );
+            io.value( target._id );
+            io.value( target._age );
+            io.check( target._age >= 0.0f );
+            io.flag( target._bSeen );
+            io.flag( target._bHeard );
+            io.flag( target._bWasSeen );
+            if ( io.isReading() )
+                target._lastKnownPosition = position;
+        } );
+        if ( io.isReading() )
+            _worldOrigin = double3{};
+    }
 } // namespace sw

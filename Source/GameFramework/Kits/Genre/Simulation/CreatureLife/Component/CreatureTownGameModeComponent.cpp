@@ -57,20 +57,17 @@ namespace sw
         QuestLogComponent*   pQuestLog   = io.isReading() ? findOnPlayerState<QuestLogComponent>() : nullptr;
         if ( io.check( pState != nullptr && pReputation != nullptr && pQuestLog != nullptr ) == false )
             return;
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         if ( io.isOk() == false )
             return;
-        CreatureTown restoredTown;
-        if ( io.isReading() && io.check( initializeTown( restoredTown, *pState, *pReputation, *pQuestLog ) ) == false )
-            return;
-        CreatureTown& town = io.isWriting() ? _town : restoredTown;
-        io.section( CreatureTown::kStateTag, CreatureTown::kStateVersion, [&town]( StateIO& bodyIO )
-        { bodyIO.value( town ); } );
+        io.section( CreatureTown::kStateFormat, [&]( StateIO& bodyIO )
+        {
+            (void)bodyIO.valueOpened( _town, [&]( CreatureTown& town )
+            { return initializeTown( town, *pState, *pReputation, *pQuestLog ); } ); // 실패는 아카이브에 남는다
+        } );
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _town = std::move( restoredTown );
-        ++_townRevision;
+        if ( io.isReading() && io.isOk() )
+            ++_townRevision;
     }
 
     bool CreatureTownGameModeComponent::initializeTown( CreatureTown& outTown, GameStateComponent& state, ReputationComponent& reputation, QuestLogComponent& questLog ) const
@@ -240,12 +237,5 @@ namespace sw
         (void)placeObjects( _listUpgradeObject ); // 놓지 못한 줄은 오류를 남겼다
         ++_townRevision;
         SW_LOG_INFO_ID( "CreatureTown.UpgradeBought", "[CreatureTown] '%#' built on day %#", _upgradeHabitat.c_str(), day );
-    }
-
-    void CreatureTownGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트 모듈(`CreatureTownViewComponent`)이 세운다.
-        (void)manager;
-        (void)bRespawnViews;
     }
 } // namespace sw

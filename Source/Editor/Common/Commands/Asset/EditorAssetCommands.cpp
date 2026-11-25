@@ -89,7 +89,7 @@ namespace sw::editor
             return nullptr;
         }
 
-        GameObject* pSpawned = editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().spawn( pManager, pPath );
+        GameObject* pSpawned = editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().spawn( pManager, pPath, SpawnLifetime::Persistent );
         if ( pSpawned == nullptr )
         {
             SW_LOG_WARNING_ID( "EditorAssetCommands.FailedSpawnPrefab", "Failed to spawn prefab: %#", pPath );

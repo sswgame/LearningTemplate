@@ -11,8 +11,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -20,22 +18,17 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/Client/FarmSoilComponent.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
-    namespace
-    {
-        /** @brief 칸 오브젝트는 상태에서 다시 세우는 모습이라 상태를 저장하기 전에 걷는다 — 걷지 않으면 복원한 씬에서 다시 세운 것과 겹친다. */
-        const StatefulComponentRegistrar<FarmFieldViewComponent> s_fieldViewRegistration{ "FarmFieldViewComponent" };
-    } // namespace
 } // namespace sw
 
 namespace sw
 {
     FarmFieldViewComponent::FarmFieldViewComponent()
-        : _soilPrefab{}
+        : GameModeViewComponent( GameModeViewBinding::of<&FarmFieldViewComponent::updateView>() )
+        , _soilPrefab{}
         , _cropPrefab{}
         , _grassSoilColor{ 0.40f, 0.62f, 0.28f, 1.0f }
         , _tilledSoilColor{ 0.58f, 0.40f, 0.24f, 1.0f }
@@ -45,7 +38,6 @@ namespace sw
         , _cameraFollow{ 0.4f }
         , _listCropModel{}
         , _listDefaultGrowingModel{}
-        , _director{}
         , _listTileObject{}
         , _tintCache{}
         , _listCropLook{}
@@ -62,32 +54,10 @@ namespace sw
 
     FarmFieldViewComponent::~FarmFieldViewComponent() = default;
 
-    void FarmFieldViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                  pOwner    = getOwner();
-        const FarmGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<FarmGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "FarmFieldView.WithoutGameMode", "[Farm] field view on '%#': no FarmGameModeComponent in front of it on the same object - the field is not shown",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<FarmGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<FarmGameModeComponent>( pDirector );
-    }
-
     void FarmFieldViewComponent::onEndPlay()
     {
         despawnViews();
-        Component::onEndPlay();
-    }
-
-    void FarmFieldViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        context.deferPostTickOnComponent( *this, []( FarmFieldViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
+        GameModeViewComponent::onEndPlay();
     }
 
     void FarmFieldViewComponent::despawnViews()
@@ -152,20 +122,17 @@ namespace sw
         return ( *pList )[static_cast<size_t>( index )].path();
     }
 
-    void FarmFieldViewComponent::updateView( GameObjectManager& manager )
+    void FarmFieldViewComponent::updateView( GameObjectManager& manager, const FarmGameModeComponent& director )
     {
-        const FarmGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        updateCameraFocus( manager, *pDirector );
+        updateCameraFocus( manager, director );
         if ( _bSpawned == SW_TRUE || _bRejected == SW_TRUE )
             return;
-        if ( validateModels( *pDirector ) == false )
+        if ( validateModels( director ) == false )
         {
             _bRejected = SW_TRUE; // 씬 데이터가 틀렸다 — 오류는 한 번 남겼다
             return;
         }
-        spawnField( manager, *pDirector );
+        spawnField( manager, director );
         _bSpawned = SW_TRUE;
     }
 
@@ -228,7 +195,7 @@ namespace sw
         AssetManager* const pAssetManager = game::findSubsystem<AssetManager>();
         if ( pAssetManager == nullptr || prefab.empty() )
             return nullptr;
-        GameObject* const pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefab.path(), pName );
+        GameObject* const pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefab.path(), SpawnLifetime::Derived, pName );
         if ( pObject != nullptr )
             _listTileObject.push_back( pObject->getHandle() );
         return pObject;

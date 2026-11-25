@@ -312,7 +312,7 @@ namespace sw
                 const SequenceBinding* pBinding = asset.findBinding( item._binding );
                 const utf8*            pName    = pBinding != nullptr ? pBinding->_name.c_str() : item._name.c_str();
                 AssetManager*          pAssets  = pManager->findAssetManager();
-                GameObject*            pObject  = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, item._spawnPrefab, pName ) : nullptr;
+                GameObject*            pObject  = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, item._spawnPrefab, SpawnLifetime::Persistent, pName ) : nullptr;
                 SequenceSpawnedObject  spawned;
                 spawned._itemIndex = itemIndex;
                 if ( pObject == nullptr )

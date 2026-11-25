@@ -12,6 +12,7 @@
 #include "Core/Serialization/LittleEndianUtil.h"
 
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -23,8 +24,9 @@ namespace sw
          */
         struct MeshAssetFormatInternal
         {
+            static constexpr FormatDef kFormat{ "SWMS", MeshAssetFormat::kVersion };
+
             /** @brief 파일 머리의 매직(`SWMS`)입니다. */
-            static constexpr uint8 kArrMagic[4] = { 'S', 'W', 'M', 'S' };
             /** @brief 정점 플래그의 비트 0 입니다 — 바이탄젠트 부호가 -1 이면 켭니다(탄젠트 w). */
             static constexpr uint32 kFlagBitangentNegative = 1u;
             /** @brief 정점 플래그의 비트 1 입니다 — 이음매 정점이면 켭니다(`RHIVertex::isOnSeam`). */
@@ -381,7 +383,7 @@ namespace sw
                 return bRead && chunk.isFullyRead();
             }
 
-            // 파일의 정점은 압축 배치이고 메모리의 `RHIVertex`(float32 16 개)와 크기가 다르다 — 배치를 바꾸면 `kVersion` 을 올리고 모델을 다시 임포트한다.
+            // 파일의 정점은 압축 배치이고 메모리의 `RHIVertex`(float32 16 개)와 크기가 다르다 — 배치를 바꾸면 `kFormat` 의 판을 올리고 모델을 다시 임포트한다.
             static_assert( MeshAssetFormat::kVertexSize == 3 * sizeof( float32 ) + 2 * sizeof( OctahedralNormal ) + sizeof( unorm16x2 ) + sizeof( unorm8x4 ) + sizeof( uint32 ),
                            "kVertexSize must match the packed layout (position, normal, tangent, uv, color, flags)" );
             static_assert( MeshAssetFormat::kHeaderSize == 28 + sizeof( UVBounds ), "kHeaderSize must hold the fixed fields and the UV bounds" );
@@ -604,11 +606,7 @@ namespace sw
         const size_t skinByteCount = bSkin ? data._listSkinVertex.size() * kSkinVertexSize + sizeof( uint64 ) + skinBoneCount * kInverseBindSize : 0u;
         outBytes.clear();
         outBytes.reserve( kHeaderSize + data._listVertex.size() * kVertexSize + skinByteCount + data._listIndex.size() * getIndexBytes( static_cast<uint32>( data._listVertex.size() ) ) );
-        for ( const uint8 magic : MeshAssetFormatInternal::kArrMagic )
-        {
-            outBytes.push_back( magic );
-        }
-        LittleEndianUtil::appendUint32( outBytes, kVersion );
+        MeshAssetFormatInternal::kFormat.write( outBytes );
         LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( data._listVertex.size() ) );
         LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( data._listIndex.size() ) );
         LittleEndianUtil::appendUint32( outBytes, kVertexSize );
@@ -684,23 +682,17 @@ namespace sw
             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetShorterHeader", "Mesh asset is shorter than its header (%# bytes)", size );
             return false;
         }
-        if ( Memory::compare( pData, Internal::kArrMagic, sizeof( Internal::kArrMagic ) ) != 0 )
-        {
-            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetNoSWMS", "Mesh asset has no SWMS magic" );
-            return false;
-        }
-
         ByteReader reader{ pData, size };
-        (void)reader.skipBytes( sizeof( Internal::kArrMagic ) ); // 위에서 길이와 매직을 봤다
-        const uint32  version        = reader.readUint32();
+        if ( MeshAssetFormatInternal::kFormat.read( reader, "mesh asset" ) == false )
+            return false;
         const uint32  vertexCount    = reader.readUint32();
         const uint32  indexCount     = reader.readUint32();
         const uint32  vertexSize     = reader.readUint32();
         const float32 boundingRadius = reader.readFloat32();
         const uint32  skinBoneCount  = reader.readUint32();
-        if ( version != kVersion || vertexSize != kVertexSize )
+        if ( vertexSize != kVertexSize )
         {
-            SW_LOG_ERROR_ID( "MeshAssetFormat.MeshAssetVersionVertex", "Mesh asset version %# / vertex size %# is not the current %# / %# - re-import the model", version, vertexSize, kVersion, kVertexSize );
+            SW_LOG_ERROR_ID( "MeshAssetFormat.MeshAssetVersionVertex", "Mesh asset vertex size %# is not the current %# - re-import the model", vertexSize, kVertexSize );
             return false;
         }
 

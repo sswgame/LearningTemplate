@@ -6,4 +6,4 @@
   입력은 걷기 공통 레이어와 MonsterCollector 레이어(monstercollector/data/collector.input.xml)만 켠다. 안에서 저장한다(전투 중에도 파티 · 전투가 실린다).
   시나리오 automation/monstercollector_slice.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="monstercollector" map="game/playground/monstercollector/maps/glade.scene.xml" entry="SceneSwitch" portalSlot="25" save="Allowed" features="MonsterCollector" inputContexts="Movement,MonsterCollector" catalogs="MonsterCollectorCatalog"/>
+<Minigame name="monstercollector" map="guid:48cf4d1a09ee442fbf00c98996f28c63" entry="SceneSwitch" portalSlot="25" save="Allowed" features="MonsterCollector" inputContexts="Movement,MonsterCollector" catalogs="MonsterCollectorCatalog"/>

@@ -16,11 +16,11 @@
 	<!-- ① 가져오기 — 새 GUID -->
 	<EditorWaitStable/>
 	<DevCommand line="asset.import common/prefabs/gimmicks/environment/flickerlight.prefab.xml scratch/import/editor.assetidentity"/>
-	<DevCommand line="asset.import common/sql/localstore/0001_local_slot.sql scratch/import/editor.assetidentity"/>
+	<DevCommand line="asset.import common/sql/localstore/0000_local_slot.sql scratch/import/editor.assetidentity"/>
 	<!-- ② 내용 바꾸기 — GUID 그대로 -->
 	<EditorWaitStable/>
 	<DevCommand line="asset.replaceContent scratch/import/editor.assetidentity/flickerlight.prefab.xml common/prefabs/gimmicks/interaction/hidingspot.prefab.xml"/>
-	<DevCommand line="asset.replaceContent scratch/import/editor.assetidentity/0001_local_slot.sql common/sql/servicestore/0001_records.sql"/>
+	<DevCommand line="asset.replaceContent scratch/import/editor.assetidentity/0000_local_slot.sql common/sql/servicestore/0000_records.sqlite.sql"/>
 	<EditorWaitStable/>
 	<DevCommand line="asset.removeImportFolder scratch/import/editor.assetidentity"/>
 	<EditorWaitStable/>

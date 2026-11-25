@@ -12,6 +12,9 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchModeCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 
 namespace sw
 {
@@ -27,8 +30,8 @@ namespace sw
         PROPERTY()
         vector<MatchModeDef> _listMode{};
         /** @brief 파티 최대 인원입니다. */
-        PROPERTY( Min = 1 )
-        int32 _maxPartySize{ 4 };
+        PROPERTY( Required, Min = PartyLobbyLimit::kMinPartySize, Max = PartyLobbyLimit::kMaxPartySize )
+        int32 _maxPartySize{ 0 };
         /** @brief 떠난 계정을 파티와 로비에 남겨 둘 밀리초입니다. 0 이면 바로 뺍니다. */
         PROPERTY( Required, Min = 0, Max = 3600000 )
         int32 _reconnectGraceMs{ 0 };
@@ -41,5 +44,14 @@ namespace sw
          */
         PROPERTY()
         bool _bGameServer{ false };
+        /** @brief 파티 · 로비 · 초대 레코드의 수명입니다. */
+        PROPERTY( Required )
+        PartyLobbyPolicy _partyLobby{};
+        /** @brief 대기열의 임대 · 포기 · 통계 대기 시한입니다. */
+        PROPERTY( Required )
+        MatchQueuePolicy _queue{};
+        /** @brief 게임 서버가 배정 명단을 받는 운영 값입니다(`_bGameServer` 가 꺼진 서버도 적는다 — 켜는 순간 값이 있어야 한다). */
+        PROPERTY( Required )
+        MatchServerAgentPolicy _agent{};
     };
 } // namespace sw

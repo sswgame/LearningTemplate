@@ -5,14 +5,12 @@
 #pragma once
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Screen/UIScreenTypes.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class UISystem;
-
     /**
      * @class TitleMenuComponent
      * @brief 플레이 시작에 메인 메뉴를 열고 끝에 닫습니다(Lyra 의 Frontend 상태 컴포넌트가 메인 메뉴를 밀어 넣는 것, 유니티 메뉴 씬의 Canvas).
@@ -32,10 +30,6 @@ namespace sw
         void onEndPlay() override;
 
     private:
-        void closeMenu();
-
-    private:
-        UISystem*      _pUISystem; ///< 메뉴를 연 UI 시스템(없으면 nullptr)
-        UIScreenHandle _menu;
+        SW_TRANSIENT UIOwnedScreen _menu;
     };
 } // namespace sw

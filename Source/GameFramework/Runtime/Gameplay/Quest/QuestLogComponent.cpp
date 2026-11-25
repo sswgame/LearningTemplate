@@ -143,7 +143,7 @@ namespace sw
 
     void QuestLogComponent::serializeState( StateIO& io )
     {
-        _restore.serialize( io, kStateTag, kStateVersion, _questLog, "the quest log" );
+        _restore.serialize( io, kStateFormat, _questLog, "the quest log" );
     }
 
     void QuestLogComponent::restoreState( vector<uint8>&& bytes )

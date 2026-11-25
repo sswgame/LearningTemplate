@@ -1,5 +1,5 @@
 <?asset guid="cf67cf926f671dfcd1472ca4fb611298"?>
-<Prefab formatVersion="1" name="TestKnight">
+<Prefab formatVersion="0" name="TestKnight">
 	<GameObject _schemaVersion="0" _name="TestKnight" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"

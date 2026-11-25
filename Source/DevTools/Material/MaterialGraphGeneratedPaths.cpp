@@ -4,6 +4,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -16,6 +17,7 @@
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Graphics/Shader/Compile/ShaderSourceGenerator.h"
 
 namespace sw
@@ -106,9 +108,10 @@ namespace sw
                     SW_LOG_WARNING_ID( "MaterialGraph.StaleShaderNotRemoved", "Could not remove old generated shader '%#'", staleMetaPath.str() );
             }
 
-            /** @brief 같은 줄기의 옛 해시 셰이더를 지웁니다. 남겨 두면 그 내용을 아무도 안 쓰는데 쿠킹 입력과 저장소에 쌓인다. 곁의 서술은 지금 셰이더로 옮긴다(`carryStaleMeta`). */
-            static void removeStaleShaders( const AssetPaths& assetPaths, const MaterialGraphGeneratedPaths& paths, string_view currentShaderPath )
+            /** @brief 같은 줄기의 옛 해시 셰이더(@p currentShaderPath 말고)를 모읍니다. */
+            static void collectStaleShaders( const AssetPaths& assetPaths, const MaterialGraphGeneratedPaths& paths, string_view currentShaderPath, vector<AbsolutePath>& outListFile )
             {
+                outListFile.clear();
                 const optional<AbsolutePath> folder = assetPaths.toDiskPath( paths._shadersFolder );
                 if ( folder.has_value() == false || FileUtil::isDirectory( *folder ) == false )
                     return;
@@ -116,12 +119,53 @@ namespace sw
                 if ( FileUtil::collectFiles( *folder, kShaderSuffix, listFile, false ) == false )
                     return;
                 const string currentName = FileUtil::getFileNamePart( currentShaderPath );
-                for ( const AbsolutePath& filePath : listFile )
+                for ( AbsolutePath& filePath : listFile )
                 {
                     const string fileName = FileUtil::getFileNamePart( filePath.str() );
-                    if ( fileName == currentName || isHashedShaderOfStem( fileName, paths._stem ) == false )
-                        continue;
-                    carryStaleMeta( filePath, folder->join( currentName ) );
+                    if ( fileName != currentName && isHashedShaderOfStem( fileName, paths._stem ) )
+                        outListFile.push_back( std::move( filePath ) );
+                }
+            }
+
+            /**
+             * @brief 지금 셰이더 @p shaderPath 의 정체성을 세웁니다 — 생성 머티리얼이 그것을 GUID 로 가리키므로 머티리얼 글보다 먼저다. 옛 셰이더의 서술을 옮기고(`carryStaleMeta`), 옮길 것이 없으면 새로 준다.
+             * @details 미리보기(작업 도메인)의 셰이더는 정체성을 갖지 않는다 — 머티리얼은 경로로 가리킨다.
+             */
+            [[nodiscard]] static bool ensureShaderIdentity( const AssetPaths& assetPaths, const MaterialGraphGeneratedPaths& paths, string_view shaderPath )
+            {
+                const optional<AbsolutePath> diskPath = assetPaths.toDiskPath( shaderPath );
+                if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( shaderPath ), AssetPaths::kScratchDomain ) || AssetRegistry::resolveGUID( shaderPath ).has_value() || diskPath.has_value() == false )
+                    return true; // 디스크 자리가 없으면 쓰기가 이미 오류를 남겼다
+                vector<AbsolutePath> listStale;
+                collectStaleShaders( assetPaths, paths, shaderPath, listStale );
+                for ( const AbsolutePath& stalePath : listStale )
+                {
+                    carryStaleMeta( stalePath, *diskPath );
+                }
+                string             metaText;
+                AssetMeta          meta;
+                const AbsolutePath metaPath = AssetMeta::makePath( *diskPath );
+                if ( FileUtil::exists( metaPath ) )
+                {
+                    const optional<AssetGUID> guid = FileUtil::readTextFile( metaPath, metaText ) ? meta.parseXML( metaText, metaPath.str() ) : nullopt;
+                    if ( guid.has_value() == false )
+                        return false; // 서술이 까닭을 남겼다
+                    AssetRegistry::record( *guid, shaderPath );
+                    return true;
+                }
+                AssetIdentityRules rules;
+                return rules.load( ProcessRoots::get()._project ) && rules.assignNewIdentity( *diskPath, shaderPath );
+            }
+
+            /** @brief 같은 줄기의 옛 해시 셰이더를 지웁니다. 남겨 두면 그 내용을 아무도 안 쓰는데 쿠킹 입력과 저장소에 쌓인다. 곁의 서술은 지금 셰이더로 옮긴다(`carryStaleMeta`). */
+            static void removeStaleShaders( const AssetPaths& assetPaths, const MaterialGraphGeneratedPaths& paths, string_view currentShaderPath )
+            {
+                vector<AbsolutePath> listStale;
+                collectStaleShaders( assetPaths, paths, currentShaderPath, listStale );
+                const string currentName = FileUtil::getFileNamePart( currentShaderPath );
+                for ( const AbsolutePath& filePath : listStale )
+                {
+                    carryStaleMeta( filePath, filePath.getParent().join( currentName ) );
                     if ( FileUtil::removeFile( filePath ) == false )
                         SW_LOG_WARNING_ID( "MaterialGraph.StaleShaderNotRemoved", "Could not remove old generated shader '%#'", filePath.str() );
                 }
@@ -195,6 +239,8 @@ namespace sw
         const string shaderPath = makeShaderPath( paths, result );
         // 셰이더를 먼저 쓴다 — 머티리얼이 가리키는 파일이 늘 있어야 감시가 먼저 머티리얼을 다시 읽어도 컴파일이 된다.
         if ( Internal::writeIfChanged( assetPaths, shaderPath, result._hlsl, pOutWrittenCount ) == false )
+            return false;
+        if ( Internal::ensureShaderIdentity( assetPaths, paths, shaderPath ) == false )
             return false;
         const string materialText = MaterialGraphCompileResult::makeMaterialText( result, paths._stem, shaderPath, graphID );
         if ( Internal::writeIfChanged( assetPaths, paths._materialPath, materialText, pOutWrittenCount ) == false )

@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
 
 #include "Core/Container/EnumArray.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -15,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmAutoFarmerAIComponent.h"
@@ -38,9 +38,8 @@ namespace sw
         struct FarmGameModeComponentInternal
         {
             /** @brief 이 길이보다 짧은 이동 의도는 걷지 않는다(스틱 떨림) — 걸음 판정과 이동이 같은 문턱을 쓴다. */
-            static constexpr float32 kMinMoveLength = 1.0e-4f;
-            static constexpr uint32  kStateTag      = FourCCUtil::make( "FARM" );
-            static constexpr uint32  kStateVersion  = 4; ///< 4: 비 · 날씨 난수를 판 상태 날씨로 옮겼다(이 칸에서 빠졌다)
+            static constexpr float32   kMinMoveLength = 1.0e-4f;
+            static constexpr FormatDef kStateFormat{ "FARM" };
 
             /** @brief 비를 정하는 날씨 값 이름입니다(날씨 카탈로그 `<Values wetness>` — 표면 젖음과 같은 값). 이 값이 반 이상이면 비다. */
             static constexpr const utf8* kWetnessValue     = "wetness";
@@ -205,29 +204,23 @@ namespace sw
 
     void FarmGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion );
+        io.header( FarmGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        FarmField       restoredField;
-        FarmShippingBin restoredShipment;
-        if ( io.isReading() )
-        {
-            if ( io.check( _pCropCatalog != nullptr ) == false )
-                return;
-            restoredField.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
-        }
-        FarmField&       field    = io.isWriting() ? _field : restoredField;
-        FarmShippingBin& shipment = io.isWriting() ? _shipment : restoredShipment;
-        io.section( FarmField::kStateTag, FarmField::kStateVersion, [&field]( StateIO& bodyIO )
-        { bodyIO.value( field ); } );
-        io.section( FarmShippingBin::kStateTag, FarmShippingBin::kStateVersion, [&shipment]( StateIO& bodyIO )
-        { bodyIO.value( shipment ); } );
-        // 날씨(난수 · 지금 날씨)는 판 상태가 싣는다 — 판 4 부터 이 칸에 비 · 난수가 없다. 농부 자리 · 기력 · 도구 · 하루는 상태 칸이다(`GameModeComponent::serializeState`).
+        io.section( FarmField::kStateFormat, [this]( StateIO& bodyIO )
+        { (void)bodyIO.valueOpened( _field, [this]( FarmField& field )
+          {
+              if ( _pCropCatalog == nullptr )
+                  return false;
+              field.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
+              return true;
+          } ); } ); // 실패는 아카이브에 남는다
+        io.section( FarmShippingBin::kStateFormat, [this]( StateIO& bodyIO )
+        { bodyIO.value( _shipment ); } );
+        // 날씨(난수 · 지금 날씨)는 판 상태가 싣는다. 농부 자리 · 기력 · 도구 · 하루는 상태 칸이다(`GameModeComponent::serializeState`).
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _field    = std::move( restoredField );
-        _shipment = std::move( restoredShipment );
         applyCropCatalog();                                               // 작물 카탈로그가 다시 읽혀 왕복했으면 가방 · 씨앗 목록도 새 판이다
         _stamina           = MathUtil::clamp( _stamina, 0, _maxStamina ); // 칸 사이 맞춤 — 최대는 설정이다
         _selectedSeedIndex = _listSeed.empty() ? 0 : MathUtil::clamp( _selectedSeedIndex, 0, static_cast<int32>( _listSeed.size() ) - 1 );
@@ -648,12 +641,12 @@ namespace sw
 
     bool FarmGameModeComponent::isNearShippingBin() const
     {
-        return float3::getHorizontalDistance( _playerPosition, _shippingBinPosition ) < _nearDistance;
+        return float3::getHorizontalDistance( _playerPosition, _shippingBinPosition._value ) < _nearDistance;
     }
 
     bool FarmGameModeComponent::isNearShop() const
     {
-        return float3::getHorizontalDistance( _playerPosition, _shopPosition ) < _nearDistance + 0.5f;
+        return float3::getHorizontalDistance( _playerPosition, _shopPosition._value ) < _nearDistance + 0.5f;
     }
 
     const hashed_string& FarmGameModeComponent::getSelectedSeed() const
@@ -679,14 +672,14 @@ namespace sw
         return _handStaminaCost;
     }
 
-    bool FarmGameModeComponent::tryGetObjectPosition( GameObjectHandle handle, float3& outPosition ) const
+    bool FarmGameModeComponent::tryGetObjectPosition( GameObjectHandle handle, AbsolutePosition& outPosition ) const
     {
         const GameObjectManager* pManager = getObjectManager();
         const GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( handle ) : nullptr;
         const SceneComponent*    pScene   = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr )
             return false;
-        outPosition = pManager->getWorldOrigin().toAbsolute( pScene->getWorldPosition() ); // 밭 시뮬레이션은 절대 자리로 돈다
+        outPosition = AbsolutePosition{ pManager->getWorldOrigin().toAbsolute( pScene->getWorldPosition() ) }; // 밭 시뮬레이션은 절대 자리로 돈다
         return true;
     }
 } // namespace sw

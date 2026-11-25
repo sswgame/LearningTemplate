@@ -10,6 +10,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include "GameFramework/Runtime/Gameplay/Vehicle/KinematicVehicleComponent.h"
@@ -46,4 +47,54 @@ SW_TEST_CASE( KinematicVehicleTeleportTest, TeleportMovesTheMotor )
     SW_EXPECT_NEAR( 30.0f, pRoot->getWorldPosition()._z, 1.0f );
     SW_EXPECT_NEAR( 0.0f, pVehicle->getMotor().getForwardSpeed(), 1.0e-3f );
     manager.endPlay();
+}
+
+/** @brief [KinematicVehicleTeleportTest] 달리던 속도는 상태로 남는다 — 시작 전에 받은 것은 시작할 때, 달리는 중에 받은 것은 바로 이어 달린다(트랜스폼 복원의 순간이동이 모터를 멈추지 않는다) */
+SW_TEST_CASE( KinematicVehicleTeleportTest, MotorStateSurvivesRestore )
+{
+    constexpr float32               kFrame = 1.0f / 60.0f;
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cart.vehicle.xml" ), R"(<KinematicVehicleSettings _maxSpeed="30" _maxDriveForce="3600"/>)" ) );
+    StringBuilder<constant::buffer::kMax512> text;
+    text.appendFormat( "<KinematicVehicleComponent _tuning=\"%#\" _driftButton=\"Drift\" _boostButton=\"Boost\" _jumpButton=\"Jump\" _bUsePhysicsGround=\"false\"/>",
+                       test::ScopedScratchDomain::makeID( "cart.vehicle.xml" ).str() );
+    const auto addCart = [&text]( GameObjectManager& manager )
+    {
+        GameObject* pCart = manager.createGameObject( hashed_string( "Cart" ) );
+        (void)pCart->addComponent<SceneComponent>();
+        KinematicVehicleComponent* pVehicle = pCart->addComponent<KinematicVehicleComponent>();
+        SW_EXPECT_TRUE( XMLSerializer::deserialize( pVehicle, *KinematicVehicleComponent::StaticType(), text.view() ) );
+        return pVehicle;
+    };
+    GameObjectManager          manager;
+    KinematicVehicleComponent* pVehicle = addCart( manager );
+    manager.beginPlay();
+    SW_REQUIRE_TRUE( pVehicle->isReady() );
+    pVehicle->getMotor().setVelocity( float3{ 0.0f, 0.0f, 20.0f } );
+    manager.update( kFrame );
+    const float32 speed = pVehicle->getMotor().getForwardSpeed();
+    SW_REQUIRE_TRUE( speed > 10.0f );
+    Archive archive;
+    pVehicle->writeState( archive );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+
+    GameObjectManager          restoredManager;
+    KinematicVehicleComponent* pRestored = addCart( restoredManager );
+    pRestored->restoreState( vector<uint8>( bytes ) );
+    Archive held;
+    pRestored->writeState( held ); // 시작 전에 다시 떠도 받은 바이트 그대로다
+    vector<uint8> heldBytes;
+    held.writeData( heldBytes );
+    SW_EXPECT_TRUE( heldBytes == bytes );
+    restoredManager.beginPlay();
+    SW_EXPECT_NEAR( speed, pRestored->getMotor().getForwardSpeed(), 1.0e-3f );
+
+    pVehicle->getMotor().setVelocity( float3{} );
+    pVehicle->getOwner()->getPrimarySceneComponent()->teleportTo( float3{ 0.0f, 0.0f, 5.0f }, TeleportType::ResetPhysics );
+    pVehicle->restoreState( std::move( bytes ) );
+    manager.update( kFrame );
+    SW_EXPECT_TRUE( pVehicle->getMotor().getForwardSpeed() > 10.0f );
+    manager.endPlay();
+    restoredManager.endPlay();
 }

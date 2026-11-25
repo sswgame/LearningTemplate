@@ -2,7 +2,7 @@
  * @file ServiceRecordUtil.h
  * @brief 저장소 레코드 값(`ServiceRecord::_bytes`)을 `REFLECT` 타입 하나에서 읽고 씁니다. 형식은 버전 헤더가 붙은 자기 기술형(A, `BinarySerializer`)입니다.
  * @details 저장소 레코드는 쓴 빌드와 다른 빌드가 읽으므로 고정 배치형(B)을 쓰지 않습니다.
- *          **판은 레코드 타입 한 곳이다** — `REFLECT( Version = N )`(없으면 1, `TypeMetadata::getVersion`). 호출부가 판 상수를 따로 넘기지 않는다(그릇마다 판을 두면
+ *          **판은 레코드 타입 한 곳이다** — `REFLECT( Version = N )`(없으면 0, `TypeMetadata::getVersion`). 호출부가 판 상수를 따로 넘기지 않는다(그릇마다 판을 두면
  *          같은 타입을 싣는 두 곳이 판을 따로 올려 한쪽이 옛 판을 새 판으로 읽는다).
  *          A 는 필드를 이름으로 짝짓습니다. 필드를 더하면 옛 레코드의 그 필드는 타입의 기본값으로 채워집니다. 필드를 빼면 옛 레코드에 남은 그 필드는 이 빌드가 모르는 칸이 되고,
  *          영속 레코드는 그 칸을 들어(`_unknownProperties`) 다시 쓸 때 그대로 싣는다 — 판을 올리지 않아도 읽힌다. 칸의 **뜻**을 바꿀 때만 판을 올리고,
@@ -55,7 +55,7 @@ namespace sw
     /** @brief 저장소 레코드 값의 A 코덱입니다. @p T 는 `REFLECT_BODY()` 를 가진 타입이고 판은 그 타입의 `REFLECT( Version )` 입니다. */
     struct ServiceRecordUtil
     {
-        /** @brief @p T 의 레코드 판입니다(`REFLECT( Version = N )`, 없으면 1). */
+        /** @brief @p T 의 레코드 판입니다(`REFLECT( Version = N )`, 없으면 0). */
         template <typename T>
         [[nodiscard]] static uint32 getVersion()
         {

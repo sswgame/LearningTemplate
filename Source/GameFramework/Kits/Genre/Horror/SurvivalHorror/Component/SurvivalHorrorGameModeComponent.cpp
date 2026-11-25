@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/Component/SurvivalHorrorGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -10,6 +9,7 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -20,8 +20,7 @@ namespace sw
     {
         struct SurvivalHorrorGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "SHGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "SHGM" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventSanity        = "SurvivalHorrorSanity";
@@ -100,9 +99,6 @@ namespace sw
                 }
                 return nullptr;
             }
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
         };
     } // namespace
 
@@ -129,7 +125,6 @@ namespace sw
         , _ammoStrength{ 0 }
         , _damagePerPoint{ 10.0f }
         , _turnSeconds{ 0.5f }
-        , _resultHoldSeconds{ 3.0f }
         , _winReward{ 0 }
         , _pCatalog{}
         , _pGraphAsset{}
@@ -144,7 +139,6 @@ namespace sw
         , _listEvent{}
         , _listUsedSpot{}
         , _turn{}
-        , _resultHold{}
         , _playerPosition{ 0.0f, 0.0f }
         , _encounterSpot{ constant::invalid_index::kInt32 }
         , _bArmed{ SW_FALSE }
@@ -172,7 +166,6 @@ namespace sw
         _listUsedSpot.assign( _stage._listSpot.size(), SW_FALSE );
         _playerPosition = _graph.findArea( _stage._startArea )->getCenter(); // 있는 방인지는 `validate` 가 보았다
         _turn.clear();
-        _resultHold.clear();
         witnessMonsters();
         return true;
     }
@@ -184,10 +177,8 @@ namespace sw
 
     void SurvivalHorrorGameModeComponent::onStateRestored( bool bRestored )
     {
-        if ( bRestored )
-            return;
-        SW_LOG_WARNING_ID( "SurvivalHorror.StateRefused", "[SurvivalHorror] the saved game does not fit this build - a new game opens" );
-        (void)openGame(); // 새 판도 열지 못하면 startGame 이 이유를 남겼다
+        if ( bRestored == false )
+            SW_LOG_WARNING_ID( "SurvivalHorror.StateRefused", "[SurvivalHorror] the saved game does not fit this build - the current game goes on" );
     }
 
     bool SurvivalHorrorGameModeComponent::submitPlayerInput( const SurvivalHorrorCommand& command )
@@ -422,17 +413,8 @@ namespace sw
         _bArmed        = SW_FALSE;
     }
 
-    void SurvivalHorrorGameModeComponent::updateGame( float32 deltaTime )
+    void SurvivalHorrorGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _result != SurvivalHorrorResult::Ongoing )
-        {
-            using Internal = SurvivalHorrorGameModeComponentInternal;
-            if ( _resultHold.update( deltaTime ) )
-                (void)finishMinigame( hashed_string( _result == SurvivalHorrorResult::Win ? Internal::kWinResult : Internal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-            return;
-        }
         const SurvivalHorrorCommand command = _command;
         _command                            = SurvivalHorrorCommand{}; // 쓴 명령이다(이동은 클라이언트가 다음 프레임에 다시 넣는다)
         if ( isFighting() )
@@ -479,7 +461,7 @@ namespace sw
             _result = SurvivalHorrorResult::Win;
         if ( _result == SurvivalHorrorResult::Ongoing )
             return;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( _result == SurvivalHorrorResult::Win ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( _result == SurvivalHorrorResult::Win ? SurvivalHorrorGameModeComponentInternal::kEventWon : SurvivalHorrorGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "SurvivalHorror.Ended", "[SurvivalHorror] %# - health %#, sanity %#", _result == SurvivalHorrorResult::Win ? "got out" : "died", getHealth(), getSanity() );
     }
@@ -499,20 +481,13 @@ namespace sw
         return isStarted();
     }
 
-    void SurvivalHorrorGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`SurvivalHorrorAvatarComponent`)이 읽어 그린다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void SurvivalHorrorGameModeComponent::serializeGameState( StateIO& io )
     {
         using Internal = SurvivalHorrorGameModeComponentInternal;
-        io.header( Internal::kStateTag, Internal::kStateVersion );
+        io.header( Internal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        // 세션은 그래프 · 깃발 · 가방 · 상자를 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 세션에 바로 읽고, 거절되면 `onStateRestored` 가 새 판을 연다.
+        // 세션은 그래프 · 깃발 · 가방 · 상자를 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 세션에 바로 읽는다(거절되면 베이스가 앞 상태로 되돌린다).
         const bool bBound = _pCatalog != nullptr && _pGraphAsset != nullptr && _pItemCatalog != nullptr;
         if ( io.isReading() && ( bBound == false || openSession() == false ) )
         {
@@ -538,7 +513,6 @@ namespace sw
             io.flag( bUsed );
         }
         io.value( _turn );
-        io.value( _resultHold );
         if ( isFighting() )
         {
             // 전투는 같은 괴물 · 조사자로 연 뒤에 읽는다(키트 계약).

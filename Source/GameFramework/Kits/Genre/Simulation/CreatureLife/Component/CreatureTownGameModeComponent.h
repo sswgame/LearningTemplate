@@ -7,19 +7,19 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
@@ -59,8 +59,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "MVTN" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "MVTN" };
 
         CreatureTownGameModeComponent();
         virtual ~CreatureTownGameModeComponent() override;
@@ -75,13 +74,14 @@ namespace sw
         const CreatureTown& getTown() const { return _town; }
         /** @brief 지금 카탈로그입니다(다시 읽힌 판을 따라간다). 판이 열리기 전이면 nullptr 일 수 있습니다. */
         const CreatureLifeCatalog* getCatalog() const { return _pCatalog.get(); }
+        /** @brief `getCatalog` 를 소유 포인터로 돌려줍니다 — 어느 판과 견주었는지 기억하는 뷰가 쥔다. */
+        shared_ptr<const CreatureLifeCatalog> getCatalogSnapshot() const { return _pCatalog.snapshot(); }
         /** @brief 마을 모습(오브젝트 · 사는 생물)의 판입니다 — 바꾸거나 복원할 때마다 오르고, 열린 판은 1 이상입니다. 뷰는 이 값이 바뀐 때만 맞춘다. */
         uint32 getTownRevision() const { return _townRevision; }
 
     protected:
         [[nodiscard]] bool startGame() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 마을을 열고 공유 상태(일지 · 평판 · 시계)를 빌립니다(시작과 복원이 같은 설정으로 연다). 크기가 범위 밖이면 마을이 오류를 남기고 false 입니다. */
@@ -115,11 +115,11 @@ namespace sw
         PROPERTY( Category = "Economy", DisplayName = "Upgrade Objects", Tooltip = "Objects that form the upgrade habitat" )
         vector<CreatureTownPlacement> _listUpgradeObject;
 
-        SharedAssetRef<CreatureLifeCatalog> _pCatalog;           ///< 마을이 빌린다 — 다시 읽히면 베이스가 상태를 왕복시켜 새 판에 다시 묶는다(`acquireRequired`)
+        BoundAssetRef<CreatureLifeCatalog>  _pCatalog;           ///< 마을이 빌린다 — 다시 읽히면 베이스가 상태를 왕복시켜 새 판에 다시 묶는다(`acquireRequired`)
         shared_ptr<const QuestCatalog>      _pQuestCatalog;      ///< 처음 연 때의 판 — 부탁 일지가 빌린다(일지는 첫 카탈로그만 쓴다)
         shared_ptr<const ReputationCatalog> _pFriendshipCatalog; ///< 처음 연 때의 판 — 평판이 빌린다(평판은 첫 카탈로그만 쓴다)
-        CreatureTown                        _town;
-        vector<CreatureTownEvent>           _listTownEvent; ///< `reportTownEvents` 의 임시 목록(용량만 넘긴다)
-        uint32                              _townRevision;  ///< `getTownRevision`
+        SW_CODEC_STATE CreatureTown         _town;
+        SW_TRANSIENT vector<CreatureTownEvent> _listTownEvent; ///< `reportTownEvents` 의 임시 목록(용량만 넘긴다)
+        SW_CODEC_STATE uint32                  _townRevision;  ///< `getTownRevision`
     };
 } // namespace sw

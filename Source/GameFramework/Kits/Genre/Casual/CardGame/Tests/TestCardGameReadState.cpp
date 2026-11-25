@@ -5,10 +5,9 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle/CardBattle.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Klondike/KlondikeGame.h"
-#include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/HwatuDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/MatgoGame.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/SheddingCard/SheddingCardGame.h"
@@ -102,6 +101,8 @@ namespace
         {
             sw::Archive written;
             CardGameReadStateTestUtil::writeHeader( written, inoutGame );
+            written << uint64{ 0 }; // 비밀 섞기의 판 번호 · 섞은 횟수
+            written << uint32{ 0 };
             written << _currentPlayer;
             written << _direction;
             written << _pendingDraw;
@@ -639,8 +640,10 @@ SW_TEST_CASE( CardGameReadStateTest, DeckBattleRefusesImpossibleBattles )
     sw::CardBattleCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCardBattleXML, "CardGameReadStateTest" ) );
     sw::CardBattleSettings settings;
-    settings._drawPerTurn = 1;
-    settings._handLimit   = 1;
+    settings._playerHP      = 50;
+    settings._energyPerTurn = 3;
+    settings._drawPerTurn   = 1;
+    settings._handLimit     = 1;
     sw::CardBattleEnemy enemy;
     enemy._hp = 10;
     enemy._listIntent.push_back( sw::CardBattleEffect{ 3, sw::CardBattleEffectKind::Damage } );

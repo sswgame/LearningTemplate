@@ -10,9 +10,9 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 
@@ -49,7 +49,6 @@ namespace sw
         void               serializeGameState( StateIO& io ) override;
         [[nodiscard]] bool startGame() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 같은 씬 캐릭터의 가방입니다(장비 컴포넌트가 시작했을 때만). */
@@ -74,7 +73,7 @@ namespace sw
         PROPERTY( RuntimeState )
         hashed_string _lastResult; ///< 마지막 명령의 `CraftResult` 이름
 
-        SharedAssetRef<RecipeCatalog> _pRecipes; ///< 제작이 빌려 쓴다
-        Crafter                       _crafter;
+        BoundAssetRef<RecipeCatalog> _pRecipes; ///< 제작이 빌려 쓴다
+        SW_CODEC_STATE Crafter       _crafter;
     };
 } // namespace sw

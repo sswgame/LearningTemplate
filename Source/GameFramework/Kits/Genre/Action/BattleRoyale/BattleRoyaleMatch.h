@@ -5,7 +5,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -118,9 +117,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32  kStateTag     = FourCCUtil::make( "BRMT" );
-        static constexpr uint32  kStateVersion = 1;
-        static constexpr float32 kFixedStep    = 0.1f;
+        static constexpr float32 kFixedStep = 0.1f;
 
         BattleRoyaleMatch();
 
@@ -184,17 +181,17 @@ namespace sw
         void               pushEvent( BattleRoyaleEvent::Kind kind, optional<int32> player, optional<int32> other, optional<int32> team, int32 value );
 
     private:
-        vector<BattleRoyalePlayer> _listPlayer;
+        SW_CODEC_STATE vector<BattleRoyalePlayer> _listPlayer;
         PROPERTY( RuntimeState )
-        vector<BattleRoyaleSupplyDrop>        _listSupplyDrop;
-        NotificationBuffer<BattleRoyaleEvent> _eventBuffer;
-        MatchState                            _matchState;
-        BattleRoyaleZone                      _zone;
-        GameRandom                            _random;
-        FixedStepTimer                        _stepTimer;
-        const BattleRoyaleCatalog*            _pCatalog;
-        const ItemCatalog*                    _pItemCatalog;
-        const LootCatalog*                    _pLootCatalog;
+        vector<BattleRoyaleSupplyDrop> _listSupplyDrop;
+        SW_TRANSIENT NotificationBuffer<BattleRoyaleEvent> _eventBuffer;
+        SW_CODEC_STATE MatchState                          _matchState;
+        SW_CODEC_STATE BattleRoyaleZone                    _zone;
+        SW_CODEC_STATE GameRandom                          _random;
+        SW_CODEC_STATE FixedStepTimer                      _stepTimer;
+        const BattleRoyaleCatalog*                         _pCatalog;
+        const ItemCatalog*                                 _pItemCatalog;
+        const LootCatalog*                                 _pLootCatalog;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _time;
         PROPERTY( RuntimeState, Min = 0 )

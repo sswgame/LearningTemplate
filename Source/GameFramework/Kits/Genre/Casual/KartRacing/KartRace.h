@@ -15,7 +15,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -27,6 +26,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -39,36 +39,160 @@
 
 namespace sw
 {
+    class BitReader;
+    class BitWriter;
+    class KartTrack;
+
+    /** @brief 한 걸음의 양자화한 입력입니다. */
+    struct KartGhostFrame
+    {
+        int8  _throttle{ 0 }; ///< -127..127 이 -1..1 에 대응한다
+        int8  _steer{ 0 };
+        uint8 _buttons{ 0 }; ///< `KartGhost::kButton*` 비트이다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class KartGhost
+     * @brief 한 번의 주행 기록입니다. 출발 위치, 방향, 걸음 크기와 걸음마다의 입력을 가집니다.
+     */
+    class SW_KIT_API KartGhost
+    {
+    public:
+        static constexpr uint8     kButtonDrift   = 1u << 0;
+        static constexpr uint8     kButtonBoost   = 1u << 1;
+        static constexpr uint8     kButtonJump    = 1u << 2;
+        static constexpr uint8     kButtonUseItem = 1u << 3;
+        static constexpr FormatDef kFormat{ "KGHT" };
+
+        KartGhost();
+
+        static KartGhostFrame        encodeInput( const KinematicVehicleInput& input, bool bUseItem = false );
+        static KinematicVehicleInput decodeInput( const KartGhostFrame& frame );
+        /** @brief 기록했다가 되돌린 것과 똑같은 입력을 반환합니다. 기록하는 차는 이 입력으로 달립니다. */
+        static KinematicVehicleInput quantizeInput( const KinematicVehicleInput& input ) { return decodeInput( encodeInput( input ) ); }
+        /** @brief 프레임 하나를 씁니다. 축이 -127..127 밖이면(-128) 아무것도 쓰지 않고 false 입니다. */
+        [[nodiscard]] static bool writeFrame( BitWriter& writer, const KartGhostFrame& frame );
+        /** @brief 프레임 하나를 읽습니다. 비트가 모자라거나 축이 범위 밖이면 false 입니다. */
+        [[nodiscard]] static bool readFrame( BitReader& reader, KartGhostFrame& outFrame );
+
+        /** @brief 기록을 비우고 출발 위치, 방향(라디안), 걸음 크기를 설정합니다. */
+        void begin( const float3& startPosition, float32 startYaw, float32 step );
+        void record( const KinematicVehicleInput& input, bool bUseItem = false );
+        void setFinishTime( float32 finishTime ) { _finishTime = finishTime; }
+
+        /** @brief 바이트로 씁니다(세이브와 서버 순위표용). 프레임 하나라도 쓰지 못하면(`writeFrame`) false 이고 @p outBuffer 는 쓰면 안 됩니다. */
+        [[nodiscard]] bool serialize( vector<uint8>& outBuffer ) const;
+        /** @brief 바이트를 읽습니다. 형식이 다르거나 잘렸거나 걸음 크기 · 기록이 범위 밖이면 false 를 반환하고 상태는 그대로입니다. */
+        [[nodiscard]] bool deserialize( const uint8* pData, int32 byteCount );
+
+        const vector<KartGhostFrame>& getFrames() const { return _listFrame; }
+        int32                         getFrameCount() const { return static_cast<int32>( _listFrame.size() ); }
+        const float3&                 getStartPosition() const { return _startPosition; }
+        float32                       getStartYaw() const { return _startYaw; }
+        float32                       getStep() const { return _step; }
+        float32                       getFinishTime() const { return _finishTime; }
+
+    private:
+        vector<KartGhostFrame> _listFrame;
+        float3                 _startPosition;
+        float32                _startYaw;
+        float32                _step;
+        float32                _finishTime; ///< 0 이면 끝까지 달리지 않은 기록이다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class KartGhostPlayer
+     * @brief 고스트를 자기 차로 다시 돌립니다. 트랙의 땅과 부스트 패드를 기록할 때와 같이 씁니다(고스트와 트랙은 빌려 쓴다).
+     */
+    class SW_KIT_API KartGhostPlayer
+    {
+    public:
+        KartGhostPlayer();
+
+        /** @brief @p ghost 를 @p track 위에서 처음부터 돌릴 준비를 합니다. */
+        void initialize( const KartGhost& ghost, const KinematicVehicleSettings& settings, const KartTrack& track );
+        /** @brief 한 걸음 진행합니다. 기록이 끝났으면 false 를 반환합니다. */
+        bool step();
+        /** @brief 프레임 시간만큼(고정 걸음으로 나눠) 진행하고, 진행한 걸음 수를 반환합니다. */
+        int32 advance( float32 frameTime );
+
+        bool                         isFinished() const;
+        int32                        getFrameIndex() const { return _frameIndex; }
+        const KinematicVehicleMotor& getMotor() const { return _motor; }
+
+    private:
+        KinematicVehicleMotor _motor;
+        FixedStepTimer        _timer;
+        const KartGhost*      _pGhost;
+        const KartTrack*      _pTrack;
+        int32                 _frameIndex;
+        int32                 _lastBoostPad;
+    };
+} // namespace sw
+
+namespace sw
+{
     class Archive;
     class KartGhost;
     class KartTrack;
     class ProjectileCatalog;
     struct ProjectileDef;
 
-    /** @brief 경기 설정입니다. */
-    struct KartRaceSettings
+    /** @brief 경기 설정입니다. 값은 데이터(디렉터의 `_raceSettings`)에 있고 코드에는 기본값이 없다 — 디렉터가 그대로 넘긴다. */
+    REFLECT()
+    struct SW_KIT_API KartRaceSettings
     {
-        float32 _step{ constant::time::kDefaultFixedStepSeconds };
-        float32 _countdownTime{ 3.0f };
-        float32 _finishTimeout{ 30.0f };    ///< 1등이 들어온 뒤 이 시간(초)이 지나면 남은 차를 지금 순위로 끝낸다
-        float32 _gridFirstDistance{ 6.0f }; ///< 결승선 뒤 첫 줄까지의 거리(m)
-        float32 _gridRowSpacing{ 6.0f };    ///< 줄 간격(m)이다. 한 줄에 두 대가 선다
-        float32 _wrongWayDelay{ 1.0f };     ///< 이 시간(초) 동안 거꾸로 달리면 역주행으로 본다
-        float32 _wrongWaySpeed{ 2.0f };     ///< 트랙 방향 속도가 이보다 크게 음수이면 거꾸로 달리는 것이다
-        float32 _kartRadius{ 1.0f };        ///< 아이템과 상자에 맞는 차의 반지름
-        float32 _itemBoxRadius{ 1.5f };
-        float32 _itemBoxRespawn{ 2.0f };
-        float32 _ownerGrace{ 0.5f };             ///< 쏜 차는 이 시간(초) 동안 자기 껍질에 맞지 않는다
-        float32 _dropBehindDistance{ 2.5f };     ///< 바나나를 놓는 거리(차 뒤쪽)
-        float32 _projectionRange{ 40.0f };       ///< 지난 거리 앞뒤로 이만큼 안에서만 중심선을 찾는다(트랙이 겹치는 경우를 위해서이다)
-        float32 _rubberBandDistance{ 120.0f };   ///< 1등과 이만큼 벌어지면 보너스가 최대가 된다
-        float32 _rubberBandMaxBonus{ 0.15f };    ///< AI 최고 속도 보너스이다(0.15 는 +15 %)
-        float32 _rubberBandLeadPenalty{ 0.05f }; ///< 사람보다 앞선 AI 1등의 최고 속도 감소량
-        float32 _redShellLockDistance{ 120.0f };
-        float32 _redShellLockAngle{ 75.0f }; ///< 단위는 도(degree)이다
-        uint32  _seed{ GameRandom::kDefaultSeed };
-        uint8   _bRubberBand{ SW_TRUE };
-        uint8   _bItems{ SW_TRUE }; ///< 아이템 상자가 있는 경기다 — 켜면 카탈로그가 필요하다(`KartRace::initialize`)
+        REFLECT_BODY();
+        PROPERTY( Required )
+        KartAISettings _ai{}; ///< AI 가 모는 차의 운전 수치. 비면 `KartRace::initialize` 가 거절한다
+        PROPERTY( Required, Min = 0.001, Units = s )
+        float32 _step{ 0.0f }; ///< 고정 걸음
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _countdownTime{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Units = s, Tooltip = "Time after the first finish before the rest is ranked as it stands" )
+        float32 _finishTimeout{ 0.0f }; ///< 1등이 들어온 뒤 이 시간(초)이 지나면 남은 차를 지금 순위로 끝낸다
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _gridFirstDistance{ 0.0f }; ///< 결승선 뒤 첫 줄까지의 거리(m)
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _gridRowSpacing{ 0.0f }; ///< 줄 간격(m)이다. 한 줄에 두 대가 선다
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _wrongWayDelay{ 0.0f }; ///< 이 시간(초) 동안 거꾸로 달리면 역주행으로 본다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _wrongWaySpeed{ 0.0f }; ///< 트랙 방향 속도가 이보다 크게 음수이면 거꾸로 달리는 것이다
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _kartRadius{ 0.0f }; ///< 아이템과 상자에 맞는 차의 반지름
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _itemBoxRadius{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _itemBoxRespawn{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _ownerGrace{ 0.0f }; ///< 쏜 차는 이 시간(초) 동안 자기 껍질에 맞지 않는다
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _dropBehindDistance{ 0.0f }; ///< 바나나를 놓는 거리(차 뒤쪽)
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _projectionRange{ 0.0f }; ///< 지난 거리 앞뒤로 이만큼 안에서만 중심선을 찾는다(트랙이 겹치는 경우를 위해서이다)
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _rubberBandDistance{ 0.0f }; ///< 1등과 이만큼 벌어지면 보너스가 최대가 된다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _rubberBandMaxBonus{ 0.0f }; ///< AI 최고 속도 보너스이다(0.15 는 +15 %)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _rubberBandLeadPenalty{ 0.0f }; ///< 사람보다 앞선 AI 1등의 최고 속도 감소량
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _redShellLockDistance{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Max = 180.0, Units = deg )
+        float32 _redShellLockAngle{ 0.0f };
+        PROPERTY( Required )
+        uint32 _seed{ 0 };
+        PROPERTY( Required )
+        bool _bRubberBand{ false };
+        PROPERTY( Required, Tooltip = "Races with item boxes; off is the only way to race without items" )
+        bool _bItems{ false }; ///< 아이템 상자가 있는 경기다 — 켜면 카탈로그가 필요하다(`KartRace::initialize`)
     };
 } // namespace sw
 
@@ -174,9 +298,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "KRAC" );
-        static constexpr uint32 kStateVersion = 3; ///< 3: 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
-
         KartRace();
 
         /**
@@ -261,29 +382,29 @@ namespace sw
         void            pushEvent( KartRaceEvent::Kind kind, optional<int32> racer, optional<int32> other, int32 value, float32 time );
 
     private:
-        vector<KartRacer>                 _listRacer;
-        ProjectileSimulation              _projectiles;
-        NotificationBuffer<KartRaceEvent> _eventBuffer;
-        vector<KinematicVehicleEvent>     _listVehicleEvent; ///< `pushVehicleEvents` 의 임시 목록(용량만 넘긴다)
-        vector<Countdown>                 _listItemBoxTimer; ///< 끝나 있으면 상자가 놓여 있는 것이다
-        vector<int32>                     _listPlaceOrder;   ///< 순위 순서로 나열한 차 번호
-        KartRaceSettings                  _settings;
-        GameRandom                        _random;
-        FixedStepTimer                    _timer;
-        const KartTrack*                  _pTrack;
-        const KartItemCatalog*            _pItemCatalog;
-        const ProjectileCatalog*          _pProjectileCatalog;
-        KartGhost*                        _pGhost;
+        SW_CODEC_STATE vector<KartRacer>    _listRacer;
+        SW_CODEC_STATE ProjectileSimulation _projectiles;
+        SW_TRANSIENT NotificationBuffer<KartRaceEvent> _eventBuffer;
+        SW_TRANSIENT vector<KinematicVehicleEvent> _listVehicleEvent; ///< `pushVehicleEvents` 의 임시 목록(용량만 넘긴다)
+        SW_CODEC_STATE vector<Countdown> _listItemBoxTimer;           ///< 끝나 있으면 상자가 놓여 있는 것이다
+        SW_CODEC_STATE vector<int32>  _listPlaceOrder;                ///< 순위 순서로 나열한 차 번호
+        SW_TRANSIENT KartRaceSettings _settings;
+        SW_CODEC_STATE GameRandom     _random;
+        SW_CODEC_STATE FixedStepTimer _timer;
+        const KartTrack*              _pTrack;
+        const KartItemCatalog*        _pItemCatalog;
+        const ProjectileCatalog*      _pProjectileCatalog;
+        KartGhost*                    _pGhost;
         PROPERTY( RuntimeState, Min = 0 )
-        float32   _raceTime;
-        Countdown _countdown;
+        float32                  _raceTime;
+        SW_CODEC_STATE Countdown _countdown;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _bestLapTime;
         PROPERTY( RuntimeState )
-        float32 _firstFinishTime; ///< 0 보다 작으면 아직 아무도 들어오지 않은 것이다
-        int32   _ghostRacer;
+        float32            _firstFinishTime; ///< 0 보다 작으면 아직 아무도 들어오지 않은 것이다
+        SW_TRANSIENT int32 _ghostRacer;
         PROPERTY( RuntimeState, Min = 0 )
-        int32      _finishedCount;
-        MatchPhase _phase;
+        int32                     _finishedCount;
+        SW_CODEC_STATE MatchPhase _phase;
     };
 } // namespace sw

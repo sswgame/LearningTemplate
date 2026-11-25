@@ -20,9 +20,30 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/CacheRecordUpdater.h"
+
+namespace sw
+{
+    /** @brief 파티 · 로비 · 초대 레코드가 캐시에 남는 시간입니다(서버 설정 `MatchmakingKitConfig::_partyLobby` — 값이 없으면 기동 오류). 여러 서버가 같은 값을 써야 합니다. */
+    REFLECT()
+    struct PartyLobbyPolicy
+    {
+        REFLECT_BODY();
+        /** @brief 파티 레코드의 수명(밀리초)입니다. 바뀔 때마다 연장합니다. */
+        PROPERTY( Required, Min = 1000 )
+        int64 _partyTTLMs{ 0 };
+        /** @brief 로비 레코드의 수명(밀리초)입니다. */
+        PROPERTY( Required, Min = 1000 )
+        int64 _lobbyTTLMs{ 0 };
+        /** @brief 파티 초대의 수명(밀리초)입니다. */
+        PROPERTY( Required, Min = 1000 )
+        int64 _inviteTTLMs{ 0 };
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -126,7 +147,7 @@ namespace sw
          * @details @p maxPartySize 가 [`PartyLobbyLimit::kMinPartySize`, `kMaxPartySize`] 밖이면 오류를 남기고 false 를 반환하며 라우터를 잡지 않는다.
          *          예전에는 범위 안으로 조용히 맞췄다(폴백 금지 원칙).
          */
-        [[nodiscard]] bool initialize( EphemeralStoreRouter* pRouter, uint64 serverID, int32 maxPartySize = 4 );
+        [[nodiscard]] bool initialize( EphemeralStoreRouter* pRouter, uint64 serverID, const PartyLobbyPolicy& policy, int32 maxPartySize );
         /** @brief 기다리던 캐시 요청을 취소합니다. 라우터보다 먼저 종료될 때 부릅니다. */
         void shutdown();
 
@@ -241,6 +262,7 @@ namespace sw
         uint64                              _serverID;
         IDAllocator<uint64>                 _lobbyListIDAllocator;
         int32                               _maxPartySize;
+        PartyLobbyPolicy                    _policy; ///< 레코드 수명(`initialize`)
         uint32                              _sequence;
     };
 } // namespace sw

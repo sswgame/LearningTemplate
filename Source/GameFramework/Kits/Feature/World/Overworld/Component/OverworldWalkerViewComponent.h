@@ -43,6 +43,6 @@ namespace sw
         PROPERTY( Category = "Walker", DisplayName = "Depth Per Unit Y", Tooltip = "Z per world unit of feet Y; positive draws higher characters behind lower ones" )
         float32 _depthPerUnitY;
 
-        string _playingAnimation; ///< 마지막으로 튼 애니메이션 이름(같으면 다시 틀지 않는다)
+        SW_TRANSIENT string _playingAnimation; ///< 마지막으로 튼 애니메이션 이름(같으면 다시 틀지 않는다)
     };
 } // namespace sw

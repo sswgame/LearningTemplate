@@ -28,6 +28,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
@@ -44,7 +45,8 @@ namespace sw
         {
             /** @brief 덮어쓴 시점 프리셋의 id 입니다. 카탈로그에 없으므로 저장하면 고정 포즈로 돌아온다. */
             /** @brief 포토 모드 동안 게임 입력 레이어를 막는 칸의 이름입니다(액션이 없는 빈 레이어). */
-            static constexpr const utf8* kPhotoModeLayer   = "PhotoMode";
+            static constexpr const utf8* kPhotoModeLayer = "PhotoMode";
+            static constexpr FormatDef   kStateFormat{ "CAMC" };
             static constexpr const utf8* kOverridePresetID = "__viewOverride";
             /** @brief 덮어쓴 원근 시점의 가까운 면(m)입니다. 탑승 카메라가 바로 앞 레일을 자르지 않게 짧게 둔다. */
             static constexpr float32 kOverrideNearPlane = 0.1f;
@@ -197,6 +199,8 @@ namespace sw
         , _exposureOffset{ 0.0f }
         , _overrideDef{}
         , _presetBeforeOverride{}
+        , _viewRequest{}
+        , _bViewRequested{ false }
         , _bViewOverride{ false }
         , _photoMode{}
         , _photoInputMap{}
@@ -283,24 +287,30 @@ namespace sw
             const hashed_string startID = resolveStartPreset();
             if ( _director.activatePreset( *_pCatalog, startID ) == false )
                 SW_LOG_ERROR_ID( "Camera.UnknownPreset", "Camera preset '%#' is not in '%#'", startID.c_str(), _catalogPath.c_str() );
+            _selectedPreset = _director.getActivePresetID();
+            _contextPreset  = _selectedPreset;
         }
-        _selectedPreset = _director.getActivePresetID();
-        _contextPreset  = _selectedPreset;
         updateCamera( 0.0f );
     }
 
-    void CameraDirectorComponent::setViewOverride( const float3& position, const float3& euler, float32 fieldOfViewY, float32 farPlane )
+    void CameraDirectorComponent::requestViewOverride( const CameraViewOverride& view )
+    {
+        _viewRequest    = view;
+        _bViewRequested = true;
+    }
+
+    void CameraDirectorComponent::applyViewOverride( const CameraViewOverride& view )
     {
         _overrideDef._id                 = hashed_string( CameraDirectorComponentInternal::kOverridePresetID );
         _overrideDef._view._mode         = CameraPresetMode::Fixed;
         _overrideDef._view._aim          = CameraAimMode::Angles;
-        _overrideDef._view._offset       = position;
-        _overrideDef._view._pitch        = Radians::fromRadians( euler._x );
-        _overrideDef._view._yaw          = Radians::fromRadians( euler._y );
-        _overrideDef._lens._fieldOfViewY = Radians::fromRadians( fieldOfViewY );
+        _overrideDef._view._offset       = view._position;
+        _overrideDef._view._pitch        = Radians::fromRadians( view._euler._x );
+        _overrideDef._view._yaw          = Radians::fromRadians( view._euler._y );
+        _overrideDef._lens._fieldOfViewY = Radians::fromRadians( view._fieldOfViewY );
         _overrideDef._lens._nearPlane    = CameraDirectorComponentInternal::kOverrideNearPlane;
-        SW_ASSERT( farPlane >= CameraDirectorComponentInternal::kOverrideNearPlane * 2.0f ); // 호출부 속성(`Far Plane`)의 범위가 지킨다. 올려 맞추지 않는다
-        _overrideDef._lens._farPlane      = farPlane;
+        SW_ASSERT( view._farPlane >= CameraDirectorComponentInternal::kOverrideNearPlane * 2.0f ); // 호출부 속성(`Far Plane`)의 범위가 지킨다. 올려 맞추지 않는다
+        _overrideDef._lens._farPlane      = view._farPlane;
         _overrideDef._lens._bOrthographic = SW_FALSE;
         // 덮어쓰는 동안에는 값만 바꾼다 — 매 프레임 블렌드를 새로 시작하면 영영 도착하지 못한다.
         if ( _bViewOverride )
@@ -313,7 +323,7 @@ namespace sw
         _bViewOverride = true;
     }
 
-    void CameraDirectorComponent::clearViewOverride()
+    void CameraDirectorComponent::releaseViewOverride()
     {
         if ( _bViewOverride == false )
             return;
@@ -429,7 +439,25 @@ namespace sw
     {
         if ( io.isReading() && io.check( _pCatalog != nullptr ) == false )
             return; // 카탈로그 전에는 프리셋을 찾을 수 없다 — 부르는 쪽(`applyPendingState`)은 시작 뒤에만 읽는다
+        // 고른 프리셋과 켜진 상황은 카메라 스택에서 되짚을 수 없다 — 상황(조준) 중에 뜬 스택의 활성 프리셋은 고른 것이 아니라 상황의 것이다.
+        hashed_string         selectedPreset = _selectedPreset;
+        vector<hashed_string> listContext    = _listContext;
+        io.header( CameraDirectorComponentInternal::kStateFormat );
+        io.value( selectedPreset );
+        io.list( listContext );
+        io.check( io.isWriting() || selectedPreset.empty() || _pCatalog->find( selectedPreset ) != nullptr );
+        for ( const hashed_string& context : listContext )
+        {
+            io.check( io.isWriting() || _pCatalog->findContext( context ) != nullptr );
+        }
+        if ( io.isOk() == false )
+            return;
         _director.serializeState( io, io.isReading() ? _pCatalog.get() : nullptr );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _selectedPreset = selectedPreset;
+        _listContext    = std::move( listContext );
+        _contextPreset  = _director.getActivePresetID();
     }
 
     void CameraDirectorComponent::restoreState( vector<uint8>&& bytes )
@@ -479,7 +507,10 @@ namespace sw
     void CameraDirectorComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
+        if ( _bViewRequested == false )
+            releaseViewOverride(); // 덮은 쪽이 이번 틱까지 다시 묻지 않았다 — 풀기를 그쪽에 맡기지 않는다
         updateCamera( context.getDeltaTime() );
+        _bViewRequested = false;
     }
 
     bool CameraDirectorComponent::activatePreset( const hashed_string& id )
@@ -570,6 +601,8 @@ namespace sw
 
     void CameraDirectorComponent::updateCamera( float32 deltaTime )
     {
+        if ( _bViewRequested )
+            applyViewOverride( _viewRequest );
         if ( _director.hasActivePreset() == false )
             return;
         // 포토 모드는 게임이 멈춰도 움직이므로 실제 경과로 돌고, 게임 카메라에는 입력을 주지 않는다.

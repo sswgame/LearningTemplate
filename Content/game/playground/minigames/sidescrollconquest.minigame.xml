@@ -5,4 +5,4 @@
   판은 맵의 ConquestGameModeComponent 가 돌리고 입력 · 모습 · HUD 는 같은 오브젝트의 ConquestViewComponent(GF_Client_SideScrollConquest)다. 혼자 하는 긴 판이라 안에서 저장하고 이어 한다.
   시나리오 automation/sidescrollconquest 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="sidescrollconquest" map="game/playground/sidescrollconquest/maps/front.scene.xml" entry="SceneSwitch" portalSlot="19" save="Allowed" features="SideScrollConquest" inputContexts="Movement,SideScrollConquest" catalogs="ConquestCatalog"/>
+<Minigame name="sidescrollconquest" map="guid:f4ba8188db426dad1d7196a62ffb231d" entry="SceneSwitch" portalSlot="19" save="Allowed" features="SideScrollConquest" inputContexts="Movement,SideScrollConquest" catalogs="ConquestCatalog"/>

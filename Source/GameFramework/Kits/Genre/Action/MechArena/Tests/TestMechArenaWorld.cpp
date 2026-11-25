@@ -40,28 +40,28 @@ namespace
     constexpr const utf8* kMechCatalogXML = R"(<MechCatalog deckCostLimit="2000">
   <Class id="Near" melee="2" shot="0.5"/>
   <Class id="Far" down="2"/>
-  <Mech id="gunner" name="Gunner" cost="300" hp="100" down="100" downRecovery="0" downTime="1" wakeInvulnerable="1" boostRegen="0" overheatPenalty="0" dashSpeed="20" dashTime="0.1" dashCost="25" jumpCost="15" jumpSpeed="10" hoverPerSecond="30">
+  <Mech id="gunner" name="Gunner" cost="300" hp="100" down="100" downRecovery="0" downTime="1" wakeInvulnerable="1" boostRegen="0" overheatPenalty="0" dashSpeed="20" dashTime="0.1" dashCost="25" jumpCost="15" jumpSpeed="10" hoverPerSecond="30" lockOnBreak="1.2">
     <Weapon id="rifle" kind="Shot" weapon="rifle" down="10" stagger="0.2" knockback="1"/>
     <Weapon id="missile" kind="Special" projectile="missile" homing="90" cooldown="1" down="0" stagger="0"/>
     <Weapon id="saber" kind="Melee" moves="slash1,slash2" range="2" down="0"/>
   </Mech>
-  <Mech id="brawler" name="Brawler" class="Near" cost="300" hp="100" down="100" downTime="1" boostRegen="0">
+  <Mech id="brawler" name="Brawler" class="Near" cost="300" hp="100" down="100" downTime="1" boostRegen="0" lockOnBreak="1.2">
     <Weapon id="saber" kind="Melee" moves="slash1,slash2" range="2" down="0"/>
   </Mech>
-  <Mech id="sniper" name="Sniper" class="Far" cost="300" hp="100" down="100" downRecovery="0" boostRegen="0"/>
-  <Mech id="plain" name="Plain" cost="200" hp="100" boostRegen="0"/>
-  <Mech id="heavy" name="Heavy" cost="900" hp="300" boostRegen="0">
+  <Mech id="sniper" name="Sniper" class="Far" cost="300" hp="100" down="100" downRecovery="0" boostRegen="0" lockOnBreak="1.2"/>
+  <Mech id="plain" name="Plain" cost="200" hp="100" boostRegen="0" lockOnBreak="1.2"/>
+  <Mech id="heavy" name="Heavy" cost="900" hp="300" boostRegen="0" lockOnBreak="1.2">
     <Weapon id="rifle" kind="Shot" weapon="rifle"/>
   </Mech>
-  <Mech id="flyer" name="Flyer" cost="300" hp="100" transformTime="1" skillSlots="1" boostRegen="0">
+  <Mech id="flyer" name="Flyer" cost="300" hp="100" transformTime="1" skillSlots="1" boostRegen="0" lockOnBreak="1.2">
     <Mode id="ms" speed="9"><Weapon id="rifle" kind="Shot" weapon="rifle"/></Mode>
     <Mode id="jet" speed="20"><Weapon id="missile" kind="Special" projectile="missile" down="0"/></Mode>
   </Mech>
-  <Mech id="ghostspecial" name="GhostSpecial" cost="100"><Weapon id="x" kind="Special" projectile="ghost"/></Mech>
-  <Mech id="flatspecial" name="FlatSpecial" cost="100"><Weapon id="x" kind="Special" projectile="flat"/></Mech>
-  <Mech id="ghostgun" name="GhostGun" cost="100"><Weapon id="x" kind="Shot" weapon="ghost"/></Mech>
-  <Mech id="ghostmove" name="GhostMove" cost="100"><Weapon id="x" kind="Melee" moves="ghost" range="1"/></Mech>
-  <Mech id="nomoves" name="NoMoves" cost="100"><Weapon id="x" kind="Melee" range="1"/></Mech>
+  <Mech id="ghostspecial" name="GhostSpecial" cost="100" lockOnBreak="1.2"><Weapon id="x" kind="Special" projectile="ghost"/></Mech>
+  <Mech id="flatspecial" name="FlatSpecial" cost="100" lockOnBreak="1.2"><Weapon id="x" kind="Special" projectile="flat"/></Mech>
+  <Mech id="ghostgun" name="GhostGun" cost="100" lockOnBreak="1.2"><Weapon id="x" kind="Shot" weapon="ghost"/></Mech>
+  <Mech id="ghostmove" name="GhostMove" cost="100" lockOnBreak="1.2"><Weapon id="x" kind="Melee" moves="ghost" range="1"/></Mech>
+  <Mech id="nomoves" name="NoMoves" cost="100" lockOnBreak="1.2"><Weapon id="x" kind="Melee" range="1"/></Mech>
   <Skill id="iron" trigger="Manual" duration="1" cooldown="5"><Stats defense="2"/></Skill>
   <Skill id="rage" trigger="HealthBelow" threshold="0.5" duration="100"><Stats attack="2"/></Skill>
   <Skill id="revenge" trigger="OnDown" duration="100"><Stats speed="2"/></Skill>
@@ -190,7 +190,8 @@ namespace
         size_t computePilotHead() const
         {
             Archive prefix;
-            prefix << 0.0f; // 고정 걸음 타이머
+            prefix << 0.0f;            // 고정 걸음 타이머
+            prefix << _settings._seed; // 판의 씨앗
             _world.getMatch().writeState( prefix );
             prefix << static_cast<uint32>( _world.getPilotCount() );
             const MechPilot& first = pilot( 0 );
@@ -855,6 +856,24 @@ SW_TEST_CASE_F( MechArenaRulesTest, StateRoundTripContinuesIdentically )
 }
 
 /**
+ * @brief [MechArenaRulesTest] 결함: 판의 씨앗을 싣지 않아, 다른 씨앗으로 연 판(서버 월드는 열 때마다 난수)에 읽으면 씨앗이 그 판의 것으로 남아 기체를 바꿀 때 든 총의 퍼짐이 갈렸다.
+ *        씨앗을 싣는다 — 다른 씨앗으로 연 판에 읽어 다시 쓰면 같은 바이트다
+ */
+SW_TEST_CASE_F( MechArenaRulesTest, StateCarriesTheSeed )
+{
+    SW_REQUIRE_TRUE( openDuel( "gunner", "gunner", 3.0f ) );
+    step( 1 );
+    const vector<uint8> listSaved = writeBytes( _world );
+    MechArenaSettings   other     = _settings;
+    other._seed                   = _settings._seed + 1u;
+    MechArenaWorld restored;
+    SW_REQUIRE_TRUE( restored.initialize( other, _mechs, _weapons, _projectiles, _moves ) );
+    Archive reading( listSaved.data(), listSaved.size() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_TRUE( writeBytes( restored ) == listSaved );
+}
+
+/**
  * @brief [MechArenaRulesTest] 카탈로그가 없거나, 잘렸거나, 머리가 범위 밖인 바이트는 거절하고 상태를 바꾸지 않는다
  */
 SW_TEST_CASE_F( MechArenaRulesTest, CraftedHeadIsRefused )
@@ -1009,11 +1028,11 @@ SW_TEST_CASE( MechArenaTest, CatalogRefusesBrokenElements )
     SW_EXPECT_LOG( "Xml.UnknownElement" );
     MechCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MechCatalog>
-  <Mech id="good" name="Good"/>
-  <Mech id="norange" name="A"><Weapon id="x" kind="Melee" moves="m"/></Mech>
-  <Mech id="noprojectile" name="D"><Weapon id="x" kind="Special" cooldown="1"/></Mech>
-  <Mech id="speedy" name="B" speed="3"><Mode id="ms"/></Mech>
-  <Mech id="mixed" name="C"><Mode id="ms"/><Weapon id="x" kind="Shot"/></Mech>
+  <Mech id="good" name="Good" lockOnBreak="1.2"/>
+  <Mech id="norange" name="A" lockOnBreak="1.2"><Weapon id="x" kind="Melee" moves="m"/></Mech>
+  <Mech id="noprojectile" name="D" lockOnBreak="1.2"><Weapon id="x" kind="Special" cooldown="1"/></Mech>
+  <Mech id="speedy" name="B" speed="3" lockOnBreak="1.2"><Mode id="ms"/></Mech>
+  <Mech id="mixed" name="C" lockOnBreak="1.2"><Mode id="ms"/><Weapon id="x" kind="Shot"/></Mech>
   <Class id="Space" melee="2"/>
   <Pilot id="who"/>
 </MechCatalog>)",
@@ -1030,8 +1049,8 @@ SW_TEST_CASE( MechArenaTest, CatalogRefusesDuplicateIDs )
     SW_EXPECT_LOG( "GameDataXML.DuplicateID" );
     MechCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MechCatalog>
-  <Mech id="a" name="First" cost="100"/>
-  <Mech id="a" name="Second" cost="200"/>
+  <Mech id="a" name="First" cost="100" lockOnBreak="1.2"/>
+  <Mech id="a" name="Second" cost="200" lockOnBreak="1.2"/>
   <Skill id="s" duration="1"/>
   <Skill id="s" duration="2"/>
 </MechCatalog>)",
@@ -1050,7 +1069,7 @@ SW_TEST_CASE( MechArenaTest, CatalogRefusesBrokenRoot )
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     MechCatalog catalog;
-    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<MechCatalog deckCostLimit="-1"><Mech id="a" name="A"/></MechCatalog>)", "MechArenaTest" ) );
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<MechCatalog deckCostLimit="-1"><Mech id="a" name="A" lockOnBreak="1.2"/></MechCatalog>)", "MechArenaTest" ) );
     SW_EXPECT_TRUE( catalog.getMechs().empty() );
 }
 

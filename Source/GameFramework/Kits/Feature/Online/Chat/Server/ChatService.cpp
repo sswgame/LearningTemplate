@@ -230,7 +230,8 @@ namespace sw
              * @details 기록 키는 고정 폭 16진이라 순번을 하나 올린 키가 신고한 메시지 바로 다음 키입니다. 그 키를 커서로 내림차순으로 읽으면 첫 레코드가 신고한 메시지입니다.
              *          첫 레코드가 그 메시지가 아니면 기록에 아직 없거나 지워진 것이므로 NotFound 입니다. 문맥 줄은 오래된 것부터 담아 마지막 줄이 신고 대상입니다.
              */
-            static ChatServiceResult writeReport( IServiceStoreConnection& connection, const ChatReportRequest& request, AccountID reporterID, uint64 uniqueID, UnixMilliseconds nowMs )
+            static ChatServiceResult writeReport( IServiceStoreConnection& connection, const ChatReportRequest& request, AccountID reporterID, uint64 uniqueID, UnixMilliseconds nowMs,
+                                                  int32 contextCount )
             {
                 using Internal                                      = ChatServiceInternal;
                 const string                             messageKey = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, request._sequence );
@@ -238,7 +239,7 @@ namespace sw
                 vector<ServiceRecord>                    listRecord;
                 StringBuilder<constant::buffer::kMax256> channelPrefix;
                 channelPrefix.appendFormat( "%#/", request._channelID );
-                if ( ServiceRecordReader::readPage( connection, Internal::getHistoryTable(), channelPrefix.view(), cursorKey, ChatLimit::kReportContextCount, true, listRecord )._result != ServiceStoreResult::Ok )
+                if ( ServiceRecordReader::readPage( connection, Internal::getHistoryTable(), channelPrefix.view(), cursorKey, contextCount, true, listRecord )._result != ServiceStoreResult::Ok )
                     return ChatServiceResult::fail( OnlineError::kUnavailable );
                 if ( listRecord.empty() || listRecord.front()._key != messageKey )
                     return ChatResult::NotFound;
@@ -328,6 +329,16 @@ namespace sw
         if ( settings._spam.isComplete() == false )
         {
             SW_LOG_ERROR_ID( "ChatService.ChatServiceNoSpamLimit", "ChatService needs the spam limits (_spam in the chat kit settings)" );
+            return false;
+        }
+        const bool bReportContextOk = 0 < settings._reportContextCount && settings._reportContextCount <= ServiceReportConstant::kMaxLineCount;
+        const bool bReportRateOk    = settings._reportBurst > 0 && settings._reportRefillIntervalMs > 0 && settings._sanctionCacheMs > 0;
+        const bool bQueueOk         = settings._maxQueuedHistory > 0 && settings._maxPendingSendPerMember > 0 && settings._pendingSendRetryAfterMs > 0;
+        if ( settings._maxChannelPerMember <= 0 || bReportContextOk == false || bReportRateOk == false || bQueueOk == false )
+        {
+            SW_LOG_ERROR_ID( "ChatService.ChatServiceNoLimits", "ChatService needs _maxChannelPerMember above zero (%#), _reportContextCount in 1..%# (%#), and _reportBurst (%#), _reportRefillIntervalMs (%#), _sanctionCacheMs (%#) above zero from the chat kit settings",
+                             settings._maxChannelPerMember, static_cast<int32>( ServiceReportConstant::kMaxLineCount ), settings._reportContextCount, settings._reportBurst, settings._reportRefillIntervalMs,
+                             settings._sanctionCacheMs );
             return false;
         }
         _dependencies = dependencies;
@@ -500,7 +511,7 @@ namespace sw
         const string id( channelID );
         if ( VectorUtil::contains( pMember->_listChannel, id ) )
             return ChatResult::Ok;
-        if ( static_cast<int32>( pMember->_listChannel.size() ) >= ChatLimit::kMaxChannelPerMember )
+        if ( static_cast<int32>( pMember->_listChannel.size() ) >= _settings._maxChannelPerMember )
             return ChatResult::TooManyChannels;
         addLocalMember( accountID, *pMember, id );
         return ChatResult::Ok;
@@ -831,7 +842,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &ChatServiceInternal::readHistoryTimeMs;
         rule._pBackfillSource = make_shared<ChatHistoryBackfillSource>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 
@@ -1000,8 +1011,8 @@ namespace sw
         }
         ++_reportSequence;
         const uint64 uniqueID = ( _dependencies._serverID << 32 ) | _reportSequence;
-        _store.submit( [request, accountID, uniqueID, nowMs]( IServiceStoreConnection& connection )
-        { return ChatStoreRun::writeReport( connection, request, accountID, uniqueID, nowMs ); },
+        _store.submit( [request, accountID, uniqueID, nowMs, contextCount = _settings._reportContextCount]( IServiceStoreConnection& connection )
+        { return ChatStoreRun::writeReport( connection, request, accountID, uniqueID, nowMs, contextCount ); },
                        [this, requestTag]( ChatServiceResult result )
         { applyReport( requestTag, result ); } );
     }

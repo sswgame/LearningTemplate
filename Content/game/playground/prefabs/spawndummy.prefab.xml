@@ -1,6 +1,6 @@
 <?asset guid="53b6f074bff42c8a06ab4c77511a6366"?>
 <!-- 스폰 감독 시나리오(automation/spawndirector)가 세우는 것 — 상자 하나. -->
-<Prefab formatVersion="1" name="SpawnDummy">
+<Prefab formatVersion="0" name="SpawnDummy">
 	<GameObject _schemaVersion="0" _name="SpawnDummy" _bActive="true">
 		<_listComponent>
 			<SceneComponent _localID="12574257654564749349" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />

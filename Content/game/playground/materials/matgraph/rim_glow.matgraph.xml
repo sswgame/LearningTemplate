@@ -40,7 +40,7 @@
 				<MaterialGraphValue _name="Max" _value="8" />
 			</_listValue>
 		</MaterialGraphNodeDef>
-		<MaterialGraphNodeDef _name="Rim" _kind="Subgraph" _assetPath="game/playground/materials/matgraph/rim_term.matgraph.xml" _position="280,500">
+		<MaterialGraphNodeDef _name="Rim" _kind="Subgraph" _subgraph="guid:f87b44e9c186d217f564015a7cbc7a04" _position="280,500">
 			<_listLink>
 				<MaterialGraphLink _pin="Power" _fromNode="RimPower" _fromPin="Out" />
 			</_listLink>

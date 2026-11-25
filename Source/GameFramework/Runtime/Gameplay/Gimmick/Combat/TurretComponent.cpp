@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Ray.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -14,16 +15,28 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/GameObject/Tick/TickInterval.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
 #include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Ballistics.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionView.h"
 #include "GameFramework/Runtime/World/Query/WorldQuery.h"
 
 namespace sw
 {
+    namespace
+    {
+        struct TurretComponentInternal
+        {
+            static constexpr FormatDef kStateFormat{ "TURT" };
+        };
+
+        const StatefulComponentRegistrar<TurretComponent> s_stateRegistration{ "TurretComponent" };
+    } // namespace
+
     TurretShotWorld::TurretShotWorld( const vector<TurretShotTarget>& listTarget, float32 hitRadius, const IWorldQuery& blockers, uint64 ownerID )
         : _listTarget{ listTarget }
         , _blockers{ blockers }
@@ -179,6 +192,34 @@ namespace sw
     {
         _previousTargetPosition += delta;
         _projectiles.applyWorldOffset( delta );
+    }
+
+    void TurretComponent::serializeState( StateIO& io )
+    {
+        const GameObject* pOwner         = getOwner();
+        const bool        bNothingFlying = io.isWriting() && _projectiles.getProjectiles().empty();
+        if ( bNothingFlying || pOwner == nullptr || pOwner->getManager() == nullptr )
+            return;
+        // 뜬 때와 되돌릴 때의 월드 원점이 다를 수 있다 — 자리는 절대로 싣는다.
+        const WorldOrigin&   origin      = pOwner->getManager()->getWorldOrigin();
+        ProjectileSimulation projectiles = _projectiles;
+        projectiles.applyWorldOffset( origin.toAbsolute( float3{} ) );
+        io.header( TurretComponentInternal::kStateFormat );
+        io.value( projectiles );
+        if ( io.isWriting() )
+            return;
+        io.end();
+        if ( io.isOk() == false )
+            return;
+        projectiles.applyWorldOffset( origin.toLocal( float3{} ) );
+        _projectiles = std::move( projectiles );
+    }
+
+    void TurretComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), bytes.size() );
+        if ( readState( archive ) == false )
+            SW_LOG_WARNING_ID( "Turret.SavedShotsUnreadable", "'%#': the saved shots in flight did not read - they are gone", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
     }
 
     void TurretComponent::stepOnce()

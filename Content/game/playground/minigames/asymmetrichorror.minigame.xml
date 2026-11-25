@@ -6,4 +6,4 @@
   한 화면 협동 둘이다(localPlayers) — 사용자 0 은 키보드, 사용자 1 은 짝지은 패드. 사용자 1 이 입력을 내기 전에는 봇이 그 생존자를 맡는다. 짧은 대전이라 안에서 저장하지 않는다.
   입력은 걷기 공통 레이어와 AsymmetricHorror 레이어(asymmetrichorror/data/asymmetrichorror.input.xml)만 켠다. 시나리오 automation/asymmetrichorror_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="asymmetrichorror" map="game/playground/asymmetrichorror/maps/estate.scene.xml" entry="SceneSwitch" portalSlot="20" localPlayers="2" save="Blocked" features="AsymmetricHorror" inputContexts="Movement,AsymmetricHorror" catalogs="AsymmetricHorrorRulesCatalog"/>
+<Minigame name="asymmetrichorror" map="guid:655c9ec32f75401d8fc36ebf413cb32a" entry="SceneSwitch" portalSlot="20" localPlayers="2" save="Blocked" features="AsymmetricHorror" inputContexts="Movement,AsymmetricHorror" catalogs="AsymmetricHorrorRulesCatalog"/>

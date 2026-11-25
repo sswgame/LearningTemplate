@@ -13,6 +13,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -78,7 +79,7 @@ namespace sw
         uint32               getBrokenCount() const { return _brokenCount; }
         uint32               getPlacedCount() const { return _placedCount; }
         /** @brief 몸을 처음 놓은 위치입니다. 테스트와 감시 값이 걸은 거리를 측정할 때 기준으로 씁니다. */
-        const float3& getStartPosition() const { return _startPosition; }
+        const AbsolutePosition& getStartPosition() const { return _startPosition; }
 
     private:
         /** @brief 바꿀 블록 하나입니다. 틱이 끝난 뒤 디렉터가 월드에 반영합니다. */
@@ -124,6 +125,8 @@ namespace sw
         Radians _startYaw;
         PROPERTY( Category = "Player", DisplayName = "Start Pitch" )
         Radians _startPitch;
+        PROPERTY( Required, Category = "Player", DisplayName = "Body", Tooltip = "Size and movement of the body; every value is required" )
+        VoxelBodySettings _bodySettings;
         // ---- 폰 의도 이름입니다. 같은 오브젝트의 PawnComponent 스키마(_listButton, _listAnalog)에 있어야 합니다 ----
         PROPERTY( Category = "Intent", DisplayName = "Jump Button" )
         hashed_string _jumpButton;
@@ -143,23 +146,23 @@ namespace sw
         PROPERTY( Category = "Blocks", DisplayName = "Start Blocks", Tooltip = "Blocks in the first hotbar (64 each)" )
         vector<CatalogKey<VoxelBlockDef>> _listStartBlock;
 
-        VoxelBody         _body;
-        VoxelHotbar       _hotbar;
-        VoxelRayHit       _target;
-        vector<BlockEdit> _listPendingEdit;
-        GameSoundQueue    _soundQueue;        ///< 재생할 소리입니다. 오디오는 게임 스레드에서 틱이 끝난 뒤 재생합니다.
-        vector<uint8>     _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트입니다(`restoreState`).
-        IntentSlots       _intentSlots;
-        float3            _startPosition; ///< 몸을 처음 놓은 위치
-        float32           _breakProgress;
-        Countdown         _placeCooldown; ///< 버튼을 누르고 있을 때의 놓기 간격입니다(늦은 만큼 이어서 셉니다).
+        SW_CODEC_STATE VoxelBody   _body;
+        SW_CODEC_STATE VoxelHotbar _hotbar;
+        SW_TRANSIENT VoxelRayHit   _target;
+        SW_TRANSIENT vector<BlockEdit> _listPendingEdit;
+        SW_TRANSIENT GameSoundQueue    _soundQueue;       ///< 재생할 소리입니다. 오디오는 게임 스레드에서 틱이 끝난 뒤 재생합니다.
+        SW_TRANSIENT vector<uint8>    _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트입니다(`restoreState`).
+        SW_TRANSIENT IntentSlots      _intentSlots;
+        SW_TRANSIENT AbsolutePosition _startPosition; ///< 몸을 처음 놓은 절대 자리(복셀 월드 좌표)
+        SW_TRANSIENT float32          _breakProgress;
+        SW_TRANSIENT Countdown        _placeCooldown; ///< 버튼을 누르고 있을 때의 놓기 간격입니다(늦은 만큼 이어서 셉니다).
         PROPERTY( RuntimeState )
         uint32 _brokenCount;
         PROPERTY( RuntimeState )
         uint32                 _placedCount;
-        uint8                  _bHasTarget      : 1;
-        uint8                  _bBodyPlaced     : 1; ///< 월드가 생성된 뒤 첫 땅에 몸을 놓았는지입니다.
-        uint8                  _bFlushScheduled : 1;
+        SW_TRANSIENT uint8     _bHasTarget      : 1;
+        SW_CODEC_STATE uint8   _bBodyPlaced     : 1; ///< 월드가 생성된 뒤 첫 땅에 몸을 놓았는지입니다.
+        SW_TRANSIENT uint8     _bFlushScheduled : 1;
         [[maybe_unused]] uint8 _reserved        : 5;
     };
 } // namespace sw

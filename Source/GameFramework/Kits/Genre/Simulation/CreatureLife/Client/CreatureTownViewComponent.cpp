@@ -4,26 +4,18 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/Component/CreatureTownGameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 상태를 싣기 전에 세운 모습을 걷습니다 — 씬 섹션에 실리면 복원한 뒤 다시 세운 것과 겹친다. */
-        const StatefulComponentRegistrar<CreatureTownViewComponent> s_viewRegistration{ "CreatureTownViewComponent" };
 
         struct CreatureTownViewComponentInternal
         {
@@ -69,18 +61,16 @@ namespace sw
     } // namespace
 
     CreatureTownViewComponent::CreatureTownViewComponent()
-        : _listObjectView{}
+        : GameModeViewComponent( GameModeViewBinding::of<&CreatureTownViewComponent::updateView, &CreatureTownViewComponent::submitInput>() )
+        , _listObjectView{}
         , _listCreatureView{}
         , _townOrigin{}
         , _talkAction{}
         , _talkSpecies{}
-        , _director{}
         , _objectViews{}
         , _creatureViews{}
-        , _pValidatedCatalog{ nullptr }
+        , _pValidatedCatalog{}
         , _shownRevision{ 0 }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
         , _bViewsRejected{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -88,44 +78,17 @@ namespace sw
 
     CreatureTownViewComponent::~CreatureTownViewComponent() = default;
 
-    void CreatureTownViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                          pOwner    = getOwner();
-        const CreatureTownGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<CreatureTownGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "CreatureTown.ViewWithoutGameMode", "Creature town view on '%#': no CreatureTownGameModeComponent in front of it on the same object - the view does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<CreatureTownGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<CreatureTownGameModeComponent>( pDirector );
-    }
-
     void CreatureTownViewComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
-        _pValidatedCatalog         = nullptr;
-        _bViewsRejected            = SW_FALSE;
-        const bool bActionsMissing = _talkAction.empty() || _talkSpecies.empty();
-        _bActionsValid             = bActionsMissing ? SW_FALSE : SW_TRUE;
-        if ( bActionsMissing )
-            SW_LOG_ERROR_ID( "CreatureTown.ViewActionMissing", "Creature town view: the talk action and the talk species must be named - the view reads no input" );
+        GameModeViewComponent::onBeginPlay();
+        _pValidatedCatalog.reset();
+        _bViewsRejected = SW_FALSE;
     }
 
     void CreatureTownViewComponent::onEndPlay()
     {
         despawnViews();
-        Component::onEndPlay();
-    }
-
-    void CreatureTownViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령 · 스폰은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( CreatureTownViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
+        GameModeViewComponent::onEndPlay();
     }
 
     void CreatureTownViewComponent::despawnViews()
@@ -140,29 +103,25 @@ namespace sw
         _shownRevision = 0;
     }
 
-    void CreatureTownViewComponent::updateView( GameObjectManager& manager )
+    void CreatureTownViewComponent::updateView( GameObjectManager& manager, CreatureTownGameModeComponent& director )
     {
-        CreatureTownGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        const bool                bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE;
-        const InputManager* const pInput     = bReadInput ? game::findSubsystem<InputManager>() : nullptr;
-        if ( pInput != nullptr )
+        dispatchInput( manager, director );
+        const CreatureLifeCatalog* const pCatalog = director.getCatalog(); // 열린 판에는 있다
+        if ( pCatalog != nullptr && pCatalog != _pValidatedCatalog.get() )
         {
-            const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-            if ( input.wasActionTriggered( _talkAction ) )
-                (void)pDirector->submitTalk( _talkSpecies.key() ); // 거절한 까닭은 디렉터가 남긴다
-        }
-        const CreatureLifeCatalog* const pCatalog = pDirector->getCatalog(); // 열린 판에는 있다
-        if ( pCatalog != nullptr && pCatalog != _pValidatedCatalog )
-        {
-            _pValidatedCatalog = pCatalog;
+            _pValidatedCatalog = director.getCatalogSnapshot();
             _bViewsRejected    = validateViews( *pCatalog ) ? SW_FALSE : SW_TRUE;
         }
-        if ( _bViewsRejected == SW_TRUE || _shownRevision == pDirector->getTownRevision() )
+        if ( _bViewsRejected == SW_TRUE || _shownRevision == director.getTownRevision() )
             return;
-        syncTown( manager, pDirector->getTown() );
-        _shownRevision = pDirector->getTownRevision();
+        syncTown( manager, director.getTown() );
+        _shownRevision = director.getTownRevision();
+    }
+
+    void CreatureTownViewComponent::submitInput( const GameModeInput& input, CreatureTownGameModeComponent& director )
+    {
+        if ( input.wasActionTriggered( _talkAction ) )
+            (void)director.submitTalk( _talkSpecies.key() ); // 거절한 까닭은 디렉터가 남긴다
     }
 
     bool CreatureTownViewComponent::validateViews( const CreatureLifeCatalog& catalog ) const
@@ -248,7 +207,7 @@ namespace sw
     GameObjectHandle CreatureTownViewComponent::spawnView( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const float2& center ) const
     {
         AssetManager* const pAssets = game::findSubsystem<AssetManager>();
-        GameObject* const   pView   = pAssets != nullptr && prefab.empty() == false ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefab, "CreatureTownView" ) : nullptr;
+        GameObject* const   pView   = pAssets != nullptr && prefab.empty() == false ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefab, SpawnLifetime::Derived, "CreatureTownView" ) : nullptr;
         if ( pView == nullptr )
             return GameObjectHandle{}; // 읽지 못한 까닭은 프리팹 캐시가 남겼다
         SceneComponent* const pRoot = pView->getComponent<SceneComponent>();

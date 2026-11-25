@@ -1076,3 +1076,23 @@ SW_TEST_CASE_F( PartyArenaRulesTest, ArenaDeterminism )
     };
     SW_EXPECT_TRUE( StateBytesTestUtil::isDeterministic<TrampolineArena>( setup, step, 240 ) );
 }
+
+/** @brief [PartyArenaRulesTest] 튕김 판정 창은 설정 칸이다 — Good 창이 Perfect 창보다 좁은 설정은 거절하고, Perfect 창을 넓히면 같은 누름의 등급이 오른다 */
+SW_TEST_CASE_F( PartyArenaRulesTest, BounceWindowsComeFromTheSettings )
+{
+    SW_EXPECT_LOG( "TrampolineArena.TrampolineArenaRefusedWindows" );
+    TrampolineSettings inverted = _settings;
+    inverted._perfectWindow     = 0.2f;
+    inverted._goodWindow        = 0.1f;
+    SW_EXPECT_FALSE( _arena.initialize( inverted, 2, 0.0f, 0, 5u ) );
+
+    // 닿은 뒤 0.08 초에 누른 튕김은 기본 창(±0.05)에서 Good 이다(BounceTimingRaisesAndBreaksCombo). Perfect 창을 0.09 로 넓히면 같은 누름이 Perfect 다.
+    _settings._perfectWindow = 0.09f;
+    _settings._goodWindow    = 0.1f;
+    SW_REQUIRE_TRUE( open() );
+    SW_REQUIRE_TRUE( stepUntilState( 0, TrampolinePlayerState::Contact ) );
+    step( 3 );
+    pressJump( 0 );
+    SW_REQUIRE_TRUE( stepUntilState( 0, TrampolinePlayerState::Air ) );
+    SW_EXPECT_TRUE( findLastEvent( TrampolineEvent::Kind::Bounced, 0 )._grade == hashed_string( "Perfect" ) );
+}

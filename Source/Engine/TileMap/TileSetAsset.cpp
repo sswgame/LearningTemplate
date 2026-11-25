@@ -10,6 +10,8 @@
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetRegistry.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
@@ -216,6 +218,8 @@ namespace sw
         }
     }
 
+    TileSetRootParams::TileSetRootParams() = default;
+
     string TileSetContent::saveToXMLText() const
     {
         using Internal = TileSetAssetInternal;
@@ -223,9 +227,9 @@ namespace sw
         const XMLNode root = doc.appendRoot( "TileSet" );
         if ( _name.empty() == false )
             root.appendAttribute( "name", string_view( _name ) );
-        root.appendAttribute( "atlas", string_view( _atlasPath ) );
+        root.appendAttribute( "atlas", string_view{ AssetRegistry::makeIndexedReferenceText( _atlasPath ) } );
         if ( _normalAtlasPath.empty() == false )
-            root.appendAttribute( "normalAtlas", string_view( _normalAtlasPath ) );
+            root.appendAttribute( "normalAtlas", string_view{ AssetRegistry::makeIndexedReferenceText( _normalAtlasPath ) } );
         root.appendAttribute( "columns", _columnCount );
         root.appendAttribute( "rows", _rowCount );
         root.appendAttribute( "tileSize", _tileSize );
@@ -349,8 +353,8 @@ namespace sw
             return false;
         TileSetContent loaded;
         loaded._name            = rootParams._name;
-        loaded._atlasPath       = rootParams._atlas;
-        loaded._normalAtlasPath = rootParams._normalAtlas;
+        loaded._atlasPath       = rootParams._atlas.path();
+        loaded._normalAtlasPath = rootParams._normalAtlas.path();
         loaded._columnCount     = rootParams._columns;
         loaded._rowCount        = rootParams._rows;
         loaded._tileSize        = rootParams._tileSize;

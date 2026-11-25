@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -12,6 +11,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -39,8 +39,7 @@ namespace sw
 
         static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 탈것 컴포넌트(PostPhysics)가 이번 프레임 질주로 스태미나를 쓴 뒤에 회복 · 코어 감소를 흘린다.
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "WWHS" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "WWHS" };
 
         WesternHorseComponent();
         ~WesternHorseComponent() override;
@@ -76,10 +75,10 @@ namespace sw
         PROPERTY( Category = "Horse", DisplayName = "Game Hours Per Second", Min = 0.0, Tooltip = "Game time that passes per real second (core drain, brush cooldown)" )
         float32 _gameHoursPerSecond;
 
-        WesternHorse           _horse;
-        vector<uint8>          _pendingStateBytes; ///< 말을 열기 전에 받은 복원 바이트
-        uint8                  _bOpened  : 1;      ///< 말을 열고 탈것 컴포넌트에 빌려 주었다
-        uint8                  _bFailed  : 1;      ///< 열지 못했다(오류를 남겼다 — 다시 시도하지 않는다)
-        [[maybe_unused]] uint8 _reserved : 6;
+        SW_CODEC_STATE WesternHorse _horse;
+        SW_TRANSIENT vector<uint8> _pendingStateBytes; ///< 말을 열기 전에 받은 복원 바이트
+        SW_CODEC_STATE uint8       _bOpened  : 1;      ///< 말을 열고 탈것 컴포넌트에 빌려 주었다
+        SW_TRANSIENT uint8         _bFailed  : 1;      ///< 열지 못했다(오류를 남겼다 — 다시 시도하지 않는다)
+        [[maybe_unused]] uint8     _reserved : 6;
     };
 } // namespace sw

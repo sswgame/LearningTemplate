@@ -3,23 +3,18 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionCombatAvatarComponent.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/ActionCombatGameModeComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Health/RuleHealthViewComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
     ActionCombatAvatarComponent::ActionCombatAvatarComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&ActionCombatAvatarComponent::updateAvatar, &ActionCombatAvatarComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _attackAction{}
         , _dashAction{}
         , _playerView{}
@@ -29,10 +24,7 @@ namespace sw
         , _playerHeight{ 0.5f }
         , _playerColor{ 0.2f, 0.6f, 1.0f, 1.0f }
         , _invulnerableColor{ 0.6f, 0.9f, 1.0f, 1.0f }
-        , _director{}
         , _sphereViews{}
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
         , _bViewReset{ SW_FALSE }
         , _bPlayerViewMissing{ SW_FALSE }
         , _reserved{ 0 }
@@ -41,28 +33,9 @@ namespace sw
 
     ActionCombatAvatarComponent::~ActionCombatAvatarComponent() = default;
 
-    void ActionCombatAvatarComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                          pOwner    = getOwner();
-        const ActionCombatGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<ActionCombatGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ActionCombat.AvatarWithoutGameMode", "Action combat avatar on '%#': no ActionCombatGameModeComponent in front of it on the same object - the avatar does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<ActionCombatGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<ActionCombatGameModeComponent>( pDirector );
-    }
-
     void ActionCombatAvatarComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
-        _bActionsValid = _moveAction.empty() == false && _attackAction.empty() == false && _dashAction.empty() == false ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "ActionCombat.AvatarActionMissing", "Action combat avatar: move '%#', attack '%#' and dash '%#' actions must all be named - the avatar reads no input",
-                             _moveAction.c_str(), _attackAction.c_str(), _dashAction.c_str() );
+        GameModeViewComponent::onBeginPlay();
         _bViewReset         = SW_FALSE;
         _bPlayerViewMissing = SW_FALSE;
     }
@@ -73,32 +46,20 @@ namespace sw
         GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             _sphereViews.destroyAll( *pManager );
-        Component::onEndPlay();
+        GameModeViewComponent::onEndPlay();
     }
 
-    void ActionCombatAvatarComponent::onTick( TickContext& context )
+    void ActionCombatAvatarComponent::updateAvatar( GameObjectManager& manager, ActionCombatGameModeComponent& director )
     {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( ActionCombatAvatarComponent& avatar, GameObjectManager& manager )
-        { avatar.updateAvatar( manager ); } );
+        dispatchInput( manager, director );
+        pushPlayerHealthView( manager, director ); // 시간이 멈춘 프레임 · 복원 직후에도 넣는다
+        showRoom( director, manager );
     }
 
-    void ActionCombatAvatarComponent::updateAvatar( GameObjectManager& manager )
+    void ActionCombatAvatarComponent::submitInput( const GameModeInput& input, ActionCombatGameModeComponent& director )
     {
-        ActionCombatGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        const bool                bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAcceptingInput();
-        const InputManager* const pInput     = bReadInput ? game::findSubsystem<InputManager>() : nullptr;
-        if ( pInput != nullptr )
-        {
-            const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-            // 판이 끝났으면 디렉터가 거절한다 — 거절은 할 일이 없다는 뜻이라 버린다.
-            (void)pDirector->submitPlayerInput( input.getVector2D( _moveAction ), input.wasActionTriggered( _attackAction ), input.wasActionTriggered( _dashAction ) );
-        }
-        pushPlayerHealthView( manager, *pDirector ); // 시간이 멈춘 프레임 · 복원 직후에도 넣는다
-        showRoom( *pDirector, manager );
+        // 판이 끝났으면 디렉터가 거절한다 — 거절은 할 일이 없다는 뜻이라 버린다.
+        (void)director.submitPlayerInput( input.getVector2D( _moveAction ), input.wasActionTriggered( _attackAction ), input.wasActionTriggered( _dashAction ) );
     }
 
     void ActionCombatAvatarComponent::pushPlayerHealthView( GameObjectManager& manager, const ActionCombatGameModeComponent& director )

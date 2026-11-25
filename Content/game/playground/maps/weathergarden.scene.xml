@@ -1,5 +1,5 @@
 <?asset guid="b70f2e95d3c84a61924ae6f1c8d07b52"?>
-<Scene formatVersion="3" name="WeatherGarden">
+<Scene formatVersion="0" name="WeatherGarden">
 	<!-- 환경 마당(automation/weathergarden) — 날씨 · 바람 · 풀베기 · 피 데칼을 한 자리에서 본다. 날씨는 Weather 의 판 상태가 data/weathergarden.weather.xml 로 연다.
 	     가운데(원점) 빈 마당: 바닥은 날씨 묶음을 따르는 환경 표면(젖음 · 웅덩이 · 눈). 왼쪽 풀밭(x -8 ~ 0): Fighter(스켈레톤 전사)가 휘두르면(HitWindow — foliage 0.9) 풀이 베이고 3 초 뒤 다시 자라며,
 	     둘레의 Target 이 맞아 피 데칼을 땅에 남긴다(HitDecalComponent, 비에 씻긴다). 앞 Flag: 바람에 날리는 천. 오른쪽(x 9 ~ 15) Shelter: 지붕과 뒤 벽 — 비가 들지 않고 빗소리가 먹먹하다.
@@ -115,7 +115,7 @@
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="-4,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Walking_A" _bPlayOnBegin="true" />
-					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="guid:480309ac75a2431aeb227f392cf1e577" />
 					<SocketSetComponent _localID="7203911658842047713" _socketSetPath="guid:88459ede77129d62f7781de030072fad" />
 					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="guid:41d588160a20a771c2a97324cfa7aca3" />
 				</_listComponent>

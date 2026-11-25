@@ -2,13 +2,13 @@
 
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
@@ -25,8 +25,7 @@ namespace sw
     {
         struct VoxelGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "VOXL" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "VOXL" };
         };
     } // namespace
 } // namespace sw
@@ -36,22 +35,12 @@ namespace sw
     VoxelGameModeComponent::VoxelGameModeComponent()
         : _autoPlayPrefab{}
         , _player{}
-        , _terrainSeed{ 20261003 }
+        , _terrain{}
         , _chunkCountX{ 0 }
         , _chunkCountZ{ 0 }
         , _residentChunkRadius{ 0 }
         , _chunkLoadsPerFrame{ 0 }
         , _statusLogInterval{ 5.0f }
-        , _waterBlock{}
-        , _stoneBlock{}
-        , _grassBlock{}
-        , _snowBlock{}
-        , _coalOreBlock{}
-        , _ironOreBlock{}
-        , _snowHeight{ 0 }
-        , _coalOreChance{ 0.0f }
-        , _ironOreChance{ 0.0f }
-        , _ironOreMaxHeight{ 0 }
         , _pCatalog{}
         , _world{}
         , _autoPlayController{}
@@ -128,11 +117,11 @@ namespace sw
         return _world.setBlock( coord, block );
     }
 
-    float3 VoxelGameModeComponent::findSpawnPosition() const
+    AbsolutePosition VoxelGameModeComponent::findSpawnPosition() const
     {
         // 가운데에서 시작해 나선으로 찾은, 물이 아닌 첫 땅입니다.
         // 게임이 시작되었다면 카탈로그와 블록 이름은 startGame 이 이미 확인했습니다.
-        const VoxelBlockIndex water   = _world.getCatalog()->findBlockIndex( _waterBlock.key() ).value(); // startGame 이 확인했다 — 없으면 멈춘다
+        const VoxelBlockIndex water   = _world.getCatalog()->findBlockIndex( _terrain._waterBlock.key() ).value(); // startGame 이 확인했다 — 없으면 멈춘다
         const int32           centerX = _world.getSizeX() / 2;
         const int32           centerZ = _world.getSizeZ() / 2;
         for ( int32 radius = 0; radius < _world.getSizeX() / 2; ++radius )
@@ -148,25 +137,26 @@ namespace sw
                     const optional<int32> topY         = _world.findTopSolidY( x, z );
                     const bool            bOpenAirSpot = topY.has_value() && _world.getBlock( x, *topY + 1, z ) != water && _world.getBlock( x, *topY + 1, z ) == kVoxelAirBlock;
                     if ( bOpenAirSpot )
-                        return float3{ static_cast<float32>( x ) + 0.5f, static_cast<float32>( *topY + 1 ) + 0.01f, static_cast<float32>( z ) + 0.5f };
+                        return AbsolutePosition{
+                            float3{ static_cast<float32>( x ) + 0.5f, static_cast<float32>( *topY + 1 ) + 0.01f, static_cast<float32>( z ) + 0.5f }
+                        };
                 }
             }
         }
-        return float3{ static_cast<float32>( centerX ) + 0.5f, static_cast<float32>( kVoxelChunkHeight ) - 2.0f, static_cast<float32>( centerZ ) + 0.5f };
+        return AbsolutePosition{
+            float3{ static_cast<float32>( centerX ) + 0.5f, static_cast<float32>( kVoxelChunkHeight ) - 2.0f, static_cast<float32>( centerZ ) + 0.5f }
+        };
     }
 
     void VoxelGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion );
+        io.header( VoxelGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        const VoxelBlockCatalog* const pBoundCatalog = _world.getCatalog();
         if ( io.isReading() && _pCatalog != nullptr )
-            _world.rebindCatalog( *_pCatalog ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
+            _world.rebindCatalog( *_pCatalog ); // 다시 읽힌 카탈로그면 새 판으로 읽는다(거절하면 베이스가 앞 판 바이트를 다시 읽는다)
         io.value( _world );
         io.end();
-        if ( io.isReading() && io.isOk() == false && pBoundCatalog != nullptr )
-            _world.rebindCatalog( *pBoundCatalog ); // 거절했다 — 블록 번호는 앞 판의 것이다(앞 판은 베이스가 쥐고 있다)
     }
 
     void VoxelGameModeComponent::onStateRestored( bool bRestored )
@@ -190,30 +180,19 @@ namespace sw
             return false;
         }
         bool bBlocksKnown = true;
-        for ( const CatalogKey<VoxelBlockDef>* pBlockID : { &_waterBlock, &_stoneBlock, &_grassBlock, &_snowBlock, &_coalOreBlock, &_ironOreBlock } )
+        _terrain.forEachBlock( [&]( const CatalogKey<VoxelBlockDef>& block )
         {
-            if ( _pCatalog->findBlockIndex( pBlockID->key() ).has_value() )
-                continue;
-            SW_LOG_ERROR_ID( "VoxelGameMode.DirectorBlockNotBlock", "[Voxel] the game mode's block '%#' is not in the block catalog - the world cannot start", pBlockID->c_str() );
+            if ( _pCatalog->findBlockIndex( block.key() ).has_value() )
+                return;
+            SW_LOG_ERROR_ID( "VoxelGameMode.DirectorBlockNotBlock", "[Voxel] the game mode's terrain block '%#' is not in the block catalog - the world cannot start", block.c_str() );
             bBlocksKnown = false;
-        }
+        } );
         if ( bBlocksKnown == false )
             return false;
         if ( _world.initialize( _chunkCountX, _chunkCountZ, _pCatalog.get() ) == false )
             return false;
-        // 광석 · 눈도 지형 생성기가 같은 씨앗으로 놓는다(감사 K-8). 깊을수록 철이다.
-        VoxelTerrainSettings settings;
-        settings._seed         = static_cast<uint32>( _terrainSeed );
-        settings._stoneBlock   = _stoneBlock.key();
-        settings._grassBlock   = _grassBlock.key();
-        settings._snowBlock    = _snowBlock.key();
-        settings._snowHeight   = _snowHeight;
-        settings._listOreLayer = {
-            VoxelOreLayer{_coalOreBlock.key(), _coalOreChance, kVoxelChunkHeight},
-            VoxelOreLayer{_ironOreBlock.key(), _ironOreChance, _ironOreMaxHeight}
-        };
         // 지형은 청크를 올릴 때 생성한다(생성 훅). 처음에는 스폰 자리를 찾는 월드 가운데 둘레를 한 번에 올린다 — 몸을 놓기 전이다.
-        _world.setChunkGenerator( VoxelTerrainSettings::makeChunkGenerator( settings ) );
+        _world.setChunkGenerator( VoxelTerrainSettings::makeChunkGenerator( _terrain ) );
         _centerChunkX = VoxelWorld::toChunkCoord( _world.getSizeX() / 2 );
         _centerChunkZ = VoxelWorld::toChunkCoord( _world.getSizeZ() / 2 );
         (void)_world.updateResidency( _centerChunkX, _centerChunkZ, _residentChunkRadius, _world.getChunkCountX() * _world.getChunkCountZ() );

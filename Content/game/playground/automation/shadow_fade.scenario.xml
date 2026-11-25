@@ -15,7 +15,7 @@
 	<Launch variable="gv_shadowFilter" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="shadow_cut.ppm"/>
-	<LoadScene path="game/playground/maps/shadowtest_fade.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:ff8fa7fca8c2dc7c058cec8e3e7243f1" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

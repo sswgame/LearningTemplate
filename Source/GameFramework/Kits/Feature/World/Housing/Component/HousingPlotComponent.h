@@ -18,13 +18,14 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Housing/Network/HousingReplication.h"
 #include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
@@ -55,8 +56,7 @@ namespace sw
         SW_REGISTERED_COMPONENT( HousingPlotComponent );
         friend class HousingNetSessionComponent; ///< 세션이 틱 뒤에 요청을 꺼내 보내고 판정 · 주인을 돌려준다
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "HPLT" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 앞에 주인 주체(`HousingOwnerID`)가 생겼다
+        static constexpr FormatDef kStateFormat{ "HPLT" };
 
         HousingPlotComponent();
         ~HousingPlotComponent() override;
@@ -164,22 +164,22 @@ namespace sw
         PROPERTY( Category = "Housing", DisplayName = "Ghost Blocked Prefab", Tooltip = "Unit box (1 m, base at y 0) shown where a part cannot go" )
         AssetRef<PrefabAsset> _ghostBlockedPrefab;
 
-        SharedAssetRef<HousingPartCatalog> _pCatalog;
-        HousingLayout                      _layout;
-        Wallet                             _wallet;
-        vector<PartView>                   _listView;
-        HousingCandidate                   _ghostCandidate;
-        HousingPlaceCheck                  _ghostCheck;
-        GameObjectHandle                   _ghost;
-        EventBuffer<HousingEditRequest>    _outgoingEditBuffer;  ///< 클라이언트 — 세션이 다음 틱 뒤에 보낼 요청
-        uint32                             _viewRevision;        ///< 뷰가 맞춘 레이아웃 판
-        uint32                             _pendingRequestCount; ///< 클라이언트 — 보냈거나 쌓였고 아직 답이 없는 요청
-        HousingPlaceResult                 _lastResult;
-        uint64                             _ownerID;         ///< 주인 주체(`HousingOwnerID`) — 서버 · 혼자 하는 게임이 쓰고 세이브에 싣는다
-        HousingPlotOwner                   _replicatedOwner; ///< 클라이언트 — 서버가 마지막으로 보낸 주인
-        HousingNetRole                     _netRole;
-        uint8                              _bGhostShown : 1; ///< 미리보기를 켰다
-        uint8                              _bGhostDirty : 1; ///< 고스트를 다시 세울 차례다
-        [[maybe_unused]] uint8             _reserved    : 6;
+        BoundAssetRef<HousingPartCatalog> _pCatalog;
+        SW_CODEC_STATE HousingLayout      _layout;
+        SW_CODEC_STATE Wallet             _wallet;
+        SW_TRANSIENT vector<PartView>  _listView;
+        SW_TRANSIENT HousingCandidate  _ghostCandidate;
+        SW_TRANSIENT HousingPlaceCheck _ghostCheck;
+        SW_TRANSIENT GameObjectHandle  _ghost;
+        SW_TRANSIENT EventBuffer<HousingEditRequest> _outgoingEditBuffer;  ///< 클라이언트 — 세션이 다음 틱 뒤에 보낼 요청
+        SW_TRANSIENT uint32                          _viewRevision;        ///< 뷰가 맞춘 레이아웃 판
+        SW_TRANSIENT uint32                          _pendingRequestCount; ///< 클라이언트 — 보냈거나 쌓였고 아직 답이 없는 요청
+        SW_TRANSIENT HousingPlaceResult              _lastResult;
+        SW_CODEC_STATE uint64                        _ownerID;         ///< 주인 주체(`HousingOwnerID`) — 서버 · 혼자 하는 게임이 쓰고 세이브에 싣는다
+        SW_TRANSIENT HousingPlotOwner                _replicatedOwner; ///< 클라이언트 — 서버가 마지막으로 보낸 주인
+        SW_TRANSIENT HousingNetRole                  _netRole;
+        SW_TRANSIENT uint8                           _bGhostShown : 1; ///< 미리보기를 켰다
+        SW_TRANSIENT uint8                           _bGhostDirty : 1; ///< 고스트를 다시 세울 차례다
+        [[maybe_unused]] uint8                       _reserved    : 6;
     };
 } // namespace sw

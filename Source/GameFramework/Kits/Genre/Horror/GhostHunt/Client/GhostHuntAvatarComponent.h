@@ -11,11 +11,10 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -31,7 +30,7 @@ namespace sw
      */
     REFLECT( Category = "GhostHunt", DisplayName = "Ghost Hunt Avatar",
              Tooltip = "Client side of a ghost hunt: sends commands to the Ghost Hunt Game Mode on the same object, draws the game and fills the HUD" )
-    class SW_KIT_CLIENT_API GhostHuntAvatarComponent : public Component
+    class SW_KIT_CLIENT_API GhostHuntAvatarComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -41,20 +40,14 @@ namespace sw
         GhostHuntAvatarComponent();
         virtual ~GhostHuntAvatarComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 액션 이름이 비었으면 오류를 남깁니다(폴백 없음). 틱 그룹은 뷰와 같은 `PostUpdate` 입니다. */
-        void onBeginPlay() override;
         /** @brief 세운 표식을 지웁니다. */
         void onEndPlay() override;
-        /** @brief 입력 · 명령 · 그리기를 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
 
     private:
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 판을 그리며 HUD 를 채웁니다. */
-        void updateAvatar( GameObjectManager& manager );
+        void updateAvatar( GameObjectManager& manager, GhostHuntGameModeComponent& director );
         /** @brief 입력 맵을 읽어 디렉터 명령으로 넘깁니다. */
-        void submitInput( GhostHuntGameModeComponent& director ) const;
+        void submitInput( const GameModeInput& input, GhostHuntGameModeComponent& director ) const;
         /** @brief 판을 표식으로 그립니다. */
         void drawGame( GameObjectManager& manager, const GhostHuntGameModeComponent& director );
         /** @brief HUD 값을 채웁니다. */
@@ -63,22 +56,18 @@ namespace sw
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that walks the player and pulls against a ghost in the vacuum (required)" )
         hashed_string _moveAction;
-        PROPERTY( Category = "Input", DisplayName = "Light Action", Tooltip = "InputMap action held to shine the flashlight (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Light Action", Tooltip = "InputMap action held to shine the flashlight (required)" )
         hashed_string _lightAction;
-        PROPERTY( Category = "Input", DisplayName = "Strobe Action", Tooltip = "InputMap action held to charge the strobe, released to fire it (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Strobe Action", Tooltip = "InputMap action held to charge the strobe, released to fire it (required)" )
         hashed_string _strobeAction;
-        PROPERTY( Category = "Input", DisplayName = "Vacuum Action", Tooltip = "InputMap action held to run the vacuum (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Vacuum Action", Tooltip = "InputMap action held to run the vacuum (required)" )
         hashed_string _vacuumAction;
-        PROPERTY( Category = "Input", DisplayName = "Use Action", Tooltip = "InputMap action: surge, search furniture (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Use Action", Tooltip = "InputMap action: surge, search furniture (required)" )
         hashed_string _useAction;
         PROPERTY( Required, Category = "Look", DisplayName = "Marker Prefab", Tooltip = "Prefab with one mesh, spawned for everything the view shows" )
         AssetRef<PrefabAsset> _markerPrefab;
 
-        TComponentHandle<GhostHuntGameModeComponent> _director;
-        PrefabViewBatch                              _markers;
-        unique_ptr<GhostHuntHUDViewModel>            _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
-        uint8                                        _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않고 그리기만 한다)
-        uint8                                        _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                       _reserved      : 6;
+        SW_TRANSIENT PrefabViewBatch      _markers;
+        unique_ptr<GhostHuntHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
     };
 } // namespace sw

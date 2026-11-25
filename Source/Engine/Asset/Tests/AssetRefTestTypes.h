@@ -9,6 +9,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw
 {
@@ -75,5 +76,11 @@ namespace sw
 
         PROPERTY()
         vector<AssetRefSample> _listInner;
+
+        PROPERTY()
+        DataPath _dataPath;
+
+        PROPERTY()
+        vector<DataPath> _listDataPath;
     };
 } // namespace sw

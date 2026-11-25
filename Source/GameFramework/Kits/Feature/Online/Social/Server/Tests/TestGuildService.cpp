@@ -7,6 +7,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/Tests/SocialTestPolicy.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
@@ -65,7 +66,7 @@ namespace
             , _sink{}
             , _eventSubscription{}
         {
-            _service.initialize( &_store );
+            _service.initialize( &_store, test::SocialTestPolicy::makeGuild() );
             _eventSubscription = _service.bindEventDelegate( SW_DELEGATE_METHOD( GuildEventDelegate, &GuildEventSink::onEvent, &_sink ) );
         }
 
@@ -268,7 +269,7 @@ SW_TEST_CASE( GuildServiceTest, ExpiredInvitesAreSwept )
 
     ServiceTTLRule        rule = GuildService::makeInviteTTLRule( 1000 );
     ServiceTTLSweepReport report;
-    const int64           firstExpiryMs = kNowMs + GuildLimit::kInviteLifetimeMs;
+    const int64           firstExpiryMs = kNowMs + test::SocialTestPolicy::kWeekMs;
     SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, firstExpiryMs + 1500, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, report._deletedCount );
     SW_EXPECT_EQUAL( 1, rig._database.countRecords( inviteTable ) );
@@ -298,7 +299,7 @@ SW_TEST_CASE( GuildServiceTest, ExpiredApplicationsAreSwept )
 
     ServiceTTLRule        rule = GuildService::makeApplicationTTLRule( 1000 );
     ServiceTTLSweepReport report;
-    const int64           firstExpiryMs = kNowMs + GuildLimit::kApplicationLifetimeMs;
+    const int64           firstExpiryMs = kNowMs + test::SocialTestPolicy::kWeekMs;
     SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, firstExpiryMs + 1500, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._deletedCount ); // 처음 신청만 기간이 지났다
     SW_EXPECT_EQUAL( 1, rig._database.countRecords( applicationTable ) );
@@ -333,7 +334,7 @@ SW_TEST_CASE( GuildServiceTest, InviteAndAccept )
     SW_EXPECT_EQUAL( kOutside, listNotification[0]._recipientID );
     SW_EXPECT_EQUAL( guildID, listNotification[0]._guildID );
 
-    const int64 expiredMs = kNowMs + GuildLimit::kInviteLifetimeMs;
+    const int64 expiredMs = kNowMs + test::SocialTestPolicy::kWeekMs;
     SW_EXPECT_TRUE( rig.run( GuildOperation::Accept, kOutside, kInvalidAccountID, "", guildID, expiredMs )._result == SocialResult::InviteExpired );
     SW_EXPECT_TRUE( rig.run( GuildOperation::Accept, kOutside, kInvalidAccountID, "", guildID, expiredMs - 1 )._result == SocialResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._sink._listEvent.size() );
@@ -569,7 +570,7 @@ SW_TEST_CASE( GuildServiceTest, ApplicationsExpireAndAreCapped )
     SW_EXPECT_TRUE( rig.run( GuildOperation::Create, kElsewhere, kInvalidAccountID, "Elsewhere" )._result == SocialResult::Ok );
     SW_EXPECT_TRUE( rig.run( GuildOperation::Approve, kOfficer, kElsewhere )._result == SocialResult::AlreadyInGuild );
 
-    const int64     deadMs = kNowMs + GuildLimit::kApplicationLifetimeMs;
+    const int64     deadMs = kNowMs + test::SocialTestPolicy::kWeekMs;
     GuildCompletion dead;
     GuildRequest    listRequest;
     listRequest._operation = GuildOperation::ListApplications;
@@ -975,7 +976,7 @@ namespace
     {
         ConnectionServiceStore store( connection );
         GuildService           service;
-        service.initialize( &store );
+        service.initialize( &store, test::SocialTestPolicy::makeGuild() );
         service.submit( request, 1 );
         while ( store.pollCompletions() > 0 )
         {
@@ -1173,7 +1174,7 @@ namespace
         static vector<uint8> encode( std::initializer_list<int64> listValue )
         {
             BitWriter writer;
-            writer.writeBits( 1, 8 ); // 서비스의 레코드 형식 판
+            writer.writeBits( 0, 8 ); // 서비스의 레코드 형식 판
             for ( const int64 value : listValue )
             {
                 writer.writeVarInt( value );
@@ -1225,7 +1226,7 @@ SW_TEST_CASE( GuildServiceTest, ApplicationCapCountsPastDeadApplications )
     for ( AccountID applicant = 1000; applicant < 1000 + static_cast<AccountID>( GuildLimit::kMaxApplication ); ++applicant ) // 살아 있는 신청
     {
         GuildRawRecord::put( rig._database, "social_guild_application", GuildRawRecord::makePairKey( guildID, applicant ),
-                             GuildRawRecord::encode( { kNowMs, kNowMs + GuildLimit::kApplicationLifetimeMs } ) );
+                             GuildRawRecord::encode( { kNowMs, kNowMs + test::SocialTestPolicy::kWeekMs } ) );
     }
 
     SW_EXPECT_TRUE( rig.run( GuildOperation::Apply, 5000, kInvalidAccountID, "", guildID )._result == SocialResult::PendingLimit );

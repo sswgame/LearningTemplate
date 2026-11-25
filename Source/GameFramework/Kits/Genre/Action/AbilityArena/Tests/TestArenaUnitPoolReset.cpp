@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Foundation/GameMode/Tests/PrefabPoolComponentSpawner.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
+#include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
 
 using namespace sw;
 
@@ -33,7 +34,7 @@ SW_TEST_CASE( ArenaUnitPoolResetTest, FallenGruntAndItsAIComeBackFresh )
     SW_REQUIRE_TRUE( pAbility != nullptr && pPawn != nullptr && pAI != nullptr );
 
     // 디렉터가 세트를 주고 AI 가 쥔 뒤 쓰러졌다.
-    SW_REQUIRE_NOT_NULL( pAbility->addAttributeSet<CombatAttributeSet>() );
+    SW_REQUIRE_NOT_NULL( pAbility->addAttributeSet( test::makeCombatAttributeSet() ) );
     pAI->possess( *pPawn );
     SW_REQUIRE_TRUE( pPawn->isPossessed() );
     pAbility->getOwnedTagCounts().updateCount( CombatAttributeSet::getDeadTag(), 1 );

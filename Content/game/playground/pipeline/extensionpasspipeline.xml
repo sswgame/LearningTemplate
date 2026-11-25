@@ -27,12 +27,12 @@
 		</RenderGraphPassDesc>
 	</_listPass>
 	<_listRenderPassRef>
-		<item>engine/renderpass/defaultrenderpass.xml</item>
-		<item>engine/renderpass/framecomputerenderpass.xml</item>
-		<item>engine/renderpass/forwardcolorrenderpass.xml</item>
+		<item>guid:57bd09488b11feda78cbced691b416fe</item>
+		<item>guid:3bbe483ea09c587a0612ffacd7007d3d</item>
+		<item>guid:772ca6339dfa39e6f45e06670e127c46</item>
 	</_listRenderPassRef>
 	<_listExtensionShader>
-		<item>engine/shaders/extension_pass_demo.hlsl</item>
-		<item>engine/shaders/extension_draw_demo.hlsl</item>
+		<item>guid:d065c7e080a5fd21566ce30f25a0be89</item>
+		<item>guid:3b25ef0271c9987617ccbb6daa3a64d4</item>
 	</_listExtensionShader>
 </RenderPipelineDesc>

@@ -318,10 +318,10 @@ namespace sw
                         }
                     }
                     // 모듈 확장 패스의 프로그램(ExtensionRenderPass) — 모듈이 런타임에 고르는 셰이더라 파이프라인 XML 이 `_listExtensionShader` 로 선언한다. 진입점 · define 은 기본 한 벌이다.
-                    for ( const string& moduleShader : pipelineResource.getDesc()._listExtensionShader )
+                    for ( const AssetRef<ShaderSourceAsset>& moduleShader : pipelineResource.getDesc()._listExtensionShader )
                     {
-                        appendRequestUnique( outListRequest, moduleShader, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {}, pipelineOrigin );
-                        appendRequestUnique( outListRequest, moduleShader, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {}, pipelineOrigin );
+                        appendRequestUnique( outListRequest, moduleShader.path(), getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {}, pipelineOrigin );
+                        appendRequestUnique( outListRequest, moduleShader.path(), getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {}, pipelineOrigin );
                     }
                 }
                 return true;

@@ -97,9 +97,9 @@ namespace sw
                _skinWeight._srv != kInvalidDescriptorIndex && _skinInstance._srv != kInvalidDescriptorIndex && _skinPalette._srv != kInvalidDescriptorIndex;
     }
 
-    void GPUMeshMorphPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
+    void GPUMeshMorphPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMesh, uint32 maxVertexCount )
     {
-        update( pDevice, listMesh, vector<Mesh*>{}, vector<AnimationSkinSlotKey>{}, vector<uint32>{} );
+        update( pDevice, listMesh, vector<Mesh*>{}, vector<AnimationSkinSlotKey>{}, vector<uint32>{}, maxVertexCount );
     }
 
     bool GPUMeshMorphPool::isSameList( const vector<Mesh*>& listMesh, const vector<IdentityToken>& listBuiltContentID )
@@ -404,8 +404,9 @@ namespace sw
     }
 
     void GPUMeshMorphPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh, const vector<AnimationSkinSlotKey>& listSkinSlot,
-                                   const vector<uint32>& listSkinLOD )
+                                   const vector<uint32>& listSkinLOD, uint32 maxVertexCount )
     {
+        _maxVertexCount = maxVertexCount;
         if ( pDevice == nullptr )
             return;
 
@@ -482,10 +483,10 @@ namespace sw
             const MeshLOD*         pLower     = ( bAllLevels == false && lodIndex > 0 && listLOD.empty() == false ) ? &listLOD[MathUtil::min( static_cast<size_t>( lodIndex ), listLOD.size() ) - 1] : nullptr;
             const uint32           first      = pLower != nullptr ? pLower->_firstVertex : 0u;
             const uint32           count      = pLower != nullptr ? pLower->_vertexCount : ( bAllLevels ? pMesh->getDrawVertexCount() : pMesh->getVertexCount() );
-            if ( _skinVertexBase + resultOffset + count > kMaxPoolVertices )
+            if ( _skinVertexBase + resultOffset + count > _maxVertexCount )
             {
                 // 상한 초과는 오류다 — 이 메시는 풀에 없고(getBaseOf = kInvalidBase) 그 배치는 그리지 않는다(바인드 포즈로 대신 그리지 않는다).
-                SW_LOG_ERROR_ID( "GPUMeshMorphPool.MeshDeformPoolLimit", "Mesh deform pool limit exceeded (%# vertices, skinned mesh needs %#) - that mesh is not drawn", kMaxPoolVertices, count );
+                SW_LOG_ERROR_ID( "GPUMeshMorphPool.MeshDeformPoolLimit", "Mesh deform pool limit exceeded (%# vertices, skinned mesh needs %#) - that mesh is not drawn", _maxVertexCount, count );
                 continue;
             }
             GPUSkinInstanceRow row{};
@@ -676,8 +677,8 @@ namespace sw
         uint32 capacity = liveCount + liveCount / 2u;
         if ( capacity < kMinMorphVertices )
             capacity = kMinMorphVertices;
-        if ( capacity > kMaxPoolVertices )
-            capacity = kMaxPoolVertices;
+        if ( capacity > _maxVertexCount )
+            capacity = _maxVertexCount;
 
         _morphAllocator.reset( capacity );
 
@@ -698,7 +699,7 @@ namespace sw
                     entry._slot = kInvalidBase;
                 }
                 if ( bWarnedFull == false )
-                    SW_LOG_ERROR_ID( "GPUMeshMorphPool.MeshDeformPoolLimit2", "Mesh deform pool limit exceeded (%# vertices) - the remaining morph meshes are not drawn", kMaxPoolVertices );
+                    SW_LOG_ERROR_ID( "GPUMeshMorphPool.MeshDeformPoolLimit2", "Mesh deform pool limit exceeded (%# vertices) - the remaining morph meshes are not drawn", _maxVertexCount );
                 bWarnedFull = true;
                 continue;
             }

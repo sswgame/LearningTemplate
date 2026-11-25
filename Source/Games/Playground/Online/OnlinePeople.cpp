@@ -13,6 +13,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeClient.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
@@ -81,9 +82,12 @@ namespace sw
                     (void)trade.respond( tradeID, true );
                 else if ( verb == "offer" && bAlone == false && StringUtil::parseInt( listArgument[1], amount ) && amount >= 0 )
                 {
+                    const string&    currency = pSession->getGameSettings()._onlineSoftCurrency;
                     vector<TradeLeg> listLeg;
+                    if ( amount > 0 && PlaygroundOnlineFlow::requireSetting( currency, "onlineSoftCurrency" ) == false )
+                        return false;
                     if ( amount > 0 )
-                        listLeg.push_back( TradeLeg{ PlaygroundOnlineFlow::kAssetGold, amount } );
+                        listLeg.push_back( TradeLeg{ currency, amount } );
                     (void)trade.setOffer( tradeID, listLeg );
                 }
                 else if ( verb == "lock" && bAlone )
@@ -145,10 +149,11 @@ namespace sw
                 const optional<int32> sideIndex = snapshot.findSideIndex( pSession->get<AccountClient>().getIdentity()._accountID );
                 if ( sideIndex.has_value() == false )
                     return false;
-                int64 gold = 0;
+                const string& currency = pSession->getGameSettings()._onlineSoftCurrency;
+                int64         gold     = 0;
                 for ( const TradeLeg& leg : snapshot._arrSide[bOwnSide ? *sideIndex : 1 - *sideIndex]._listLeg )
                 {
-                    if ( leg._assetID == PlaygroundOnlineFlow::kAssetGold )
+                    if ( leg._assetID == currency )
                         gold += leg._amount;
                 }
                 outValue = static_cast<float64>( gold );

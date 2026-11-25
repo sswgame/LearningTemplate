@@ -1,5 +1,5 @@
 <?asset guid="53ab17d5a6c435e2c34fc93965d562fe"?>
-<Prefab formatVersion="1" name="QuadShell">
+<Prefab formatVersion="0" name="QuadShell">
 	<GameObject _schemaVersion="0" _name="QuadShell" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"

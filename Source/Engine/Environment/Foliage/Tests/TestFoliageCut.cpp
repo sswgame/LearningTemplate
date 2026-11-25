@@ -8,6 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 using namespace sw;
 
@@ -42,8 +43,9 @@ SW_TEST_CASE( FoliageCutTest, CutAreasRoundTrip )
     SW_REQUIRE_NOT_NULL( pObject );
     FoliageComponent* pFoliage = pObject->addComponent<FoliageComponent>();
     SW_REQUIRE_NOT_NULL( pFoliage );
-    Archive source; // 판 1, 벤 자리 하나(기준 자리 1 2 3, 반지름 0.5, 남은 2 초)
-    source << uint32{ 1 } << uint32{ 1 } << float3{ 1.0f, 2.0f, 3.0f } << 0.5f << 2.0f;
+    Archive source; // 머리, 벤 자리 하나(기준 자리 1 2 3, 반지름 0.5, 남은 2 초)
+    FormatDef{ "FOLC" }.write( source );
+    source << uint32{ 1 } << float3{ 1.0f, 2.0f, 3.0f } << 0.5f << 2.0f;
     const vector<uint8> bytes( source.getData(), source.getData() + source.getSize() );
     pFoliage->restoreState( vector<uint8>( bytes ) );
     Archive written;

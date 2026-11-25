@@ -26,7 +26,7 @@ namespace sw
 
         PROPERTY( Required, Tooltip = "Facial rig expression name (its weight includes the animator curve of the same name)" )
         hashed_string _expression{};
-        PROPERTY( Tooltip = "Region weight at expression weight 1" )
+        PROPERTY( Min = 0.0, Max = 2.0, Tooltip = "Region weight at expression weight 1" )
         float32 _weight{ 1.0f };
     };
 } // namespace sw

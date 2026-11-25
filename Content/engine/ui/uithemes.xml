@@ -3,13 +3,13 @@
 	<_listTheme>
 		<UIThemeDef _name="default">
 			<_listStyleSheet>
-				<item>engine/ui/styles/default.uistyle.xml</item>
+				<item>guid:a393253228921ab9b4aa65e6ad6498dc</item>
 			</_listStyleSheet>
 		</UIThemeDef>
 		<UIThemeDef _name="highcontrast">
 			<_listStyleSheet>
-				<item>engine/ui/styles/default.uistyle.xml</item>
-				<item>engine/ui/styles/highcontrast.uistyle.xml</item>
+				<item>guid:a393253228921ab9b4aa65e6ad6498dc</item>
+				<item>guid:a76464f7ee0df89c390c67e3b3381f61</item>
 			</_listStyleSheet>
 		</UIThemeDef>
 	</_listTheme>

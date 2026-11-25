@@ -6,11 +6,14 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
+#include "Engine/Graphics/Material/MaterialParameterCollection.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -72,6 +75,8 @@ namespace sw
 
 namespace sw
 {
+    MaterialPropertyParams::MaterialPropertyParams() = default;
+
     bool MaterialXML::parsePropertyNode( XMLNode item, MaterialProperty& outProp )
     {
         outProp                = MaterialProperty{};
@@ -87,13 +92,13 @@ namespace sw
         // 기본값과 현재 값은 한쪽만 적으면 다른 쪽이 따라간다.
         prop._defaultValue        = params._defaultValue.empty() ? params._value : params._defaultValue;
         prop._value               = params._value.empty() ? prop._defaultValue : params._value;
-        prop._assetPath           = params._assetPath;
+        prop._assetPath           = params._assetPath.path();
         prop._enumType            = params._enumType;
         prop._displayName         = params._displayName;
         prop._group               = params._group;
         prop._tooltip             = params._tooltip;
         prop._shaderKeyword       = params._shaderKeyword;
-        prop._collectionPath      = params._collection;
+        prop._collectionPath      = params._collection.path();
         prop._collectionParameter = params._collectionParameter;
         if ( prop._collectionPath.empty() != prop._collectionParameter.empty() )
         {
@@ -120,6 +125,11 @@ namespace sw
         MaterialProperty probe = prop;
         vector<uint8>    listScratch;
         return MaterialPacking::packPropertyIntoBuffer( probe, listScratch );
+    }
+
+    void MaterialXML::appendReference( XMLNode parent, const utf8* pName, string_view path )
+    {
+        appendAttribute( parent, pName, AssetRegistry::makeIndexedReferenceText( path ) );
     }
 
     void MaterialXML::appendAttribute( XMLNode parent, const utf8* pName, string_view value )

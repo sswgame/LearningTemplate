@@ -1,0 +1,47 @@
+<?asset guid="5aa4e771b65db92f9b7dbe6b5ffa78a3"?>
+<UIStyleSheet _schemaVersion="0">
+	<!-- 엔진 위젯의 기본 겉모습(UIWidgetSkin) - 문서 · 코드 · 테마 시트가 적지 않은 값이 여기서 온다. 칸이 하나라도 빠지면 기동이 멈춘다.
+	     부품은 클래스로 적는다(SliderWidget.thumb). 길이는 UI 단위이고 _size 는 부품 크기다. -->
+	<Rule _selector="ButtonWidget" _backgroundColor="0.16,0.176,0.216,0.95" _cornerRadius="6,6,6,6" _padding="16,8,16,8" />
+	<Rule _selector="ButtonWidget:hover" _backgroundColor="0.24,0.264,0.324,0.95" />
+	<Rule _selector="ButtonWidget:pressed" _backgroundColor="0.1,0.11000001,0.135,0.95" />
+	<Rule _selector="ButtonWidget:disabled" _backgroundColor="0.16,0.176,0.216,0.4" />
+
+	<!-- 체크 상자는 상자가 겉모습이다 - 바탕은 투명하고 호버와 누름에서만 옅게 칠한다. .box 의 _padding 은 표시가 놓이는 안쪽 여백, .label 의 왼쪽 여백은 상자와 글 사이 틈이다. -->
+	<Rule _selector="CheckBoxWidget" _backgroundColor="0,0,0,0" _cornerRadius="0,0,0,0" _padding="0,0,0,0" />
+	<Rule _selector="CheckBoxWidget:hover" _backgroundColor="1,1,1,0.06" _cornerRadius="4,4,4,4" />
+	<Rule _selector="CheckBoxWidget:pressed" _backgroundColor="1,1,1,0.12" _cornerRadius="4,4,4,4" />
+	<Rule _selector="CheckBoxWidget:disabled" _backgroundColor="0,0,0,0" />
+	<Rule _selector="CheckBoxWidget.box" _backgroundColor="0.08,0.09,0.12,0.9" _borderColor="0.85,0.88,0.95,1" _borderWidth="2" _cornerRadius="4,4,4,4" _size="20,20" _padding="5,5,5,5" />
+	<Rule _selector="CheckBoxWidget.box:disabled" _opacity="0.4" />
+	<Rule _selector="CheckBoxWidget.mark" _backgroundColor="0.95,0.75,0.2,1" _cornerRadius="2,2,2,2" />
+	<Rule _selector="CheckBoxWidget.label" _padding="8,0,0,0" />
+
+	<!-- 콤보 상자와 좌우 선택의 바탕은 버튼의 것이다. .arrow 의 _size 는 화살표가 차지하는 너비다. -->
+	<Rule _selector="ComboBoxWidget" _padding="12,8,32,8" />
+	<Rule _selector="ComboBoxWidget.popup" _backgroundColor="0.1,0.11,0.14,0.98" _cornerRadius="6,6,6,6" _borderColor="0.45,0.48,0.55,1" _borderWidth="1" _padding="2,2,2,2" _shadowColor="0,0,0,0.5" _shadowOffset="0,4" _shadowBlur="8" />
+	<Rule _selector="ComboBoxWidget.option" _size="0,32" _padding="10,6,10,6" _cornerRadius="4,4,4,4" />
+	<Rule _selector="ComboBoxWidget.arrow" _backgroundColor="0.85,0.88,0.95,1" _size="32,0" />
+	<Rule _selector="ComboBoxWidget.arrow:disabled" _opacity="0.4" />
+	<Rule _selector="RotatorWidget" _padding="32,8,32,8" />
+	<Rule _selector="RotatorWidget.arrow" _backgroundColor="0.85,0.88,0.95,1" _size="32,0" />
+	<Rule _selector="RotatorWidget.arrow:disabled" _opacity="0.35" />
+
+	<Rule _selector="SliderWidget" _size="200,24" />
+	<Rule _selector="SliderWidget:disabled" _opacity="0.4" />
+	<Rule _selector="SliderWidget.track" _backgroundColor="0.3,0.32,0.38,0.9" _size="0,4" />
+	<Rule _selector="SliderWidget.fill" _backgroundColor="0.95,0.75,0.2,1" />
+	<Rule _selector="SliderWidget.thumb" _backgroundColor="0.95,0.95,0.98,1" _size="16,16" />
+
+	<Rule _selector="ProgressBarWidget" _backgroundColor="0.08,0.09,0.12,0.85" _cornerRadius="4,4,4,4" _size="200,12" />
+	<Rule _selector="ProgressBarWidget.fill" _backgroundColor="0.35,0.8,0.4,1" />
+
+	<Rule _selector="TextInputWidget" _backgroundColor="0.06,0.07,0.09,0.95" _cornerRadius="4,4,4,4" _borderColor="0.45,0.48,0.55,1" _borderWidth="1" _padding="8,6,8,6" _textColor="1,1,1,1" />
+	<Rule _selector="TextInputWidget.hint" _textColor="1,1,1,0.4" />
+	<Rule _selector="TextInputWidget.selection" _backgroundColor="0.3,0.5,1,0.4" />
+	<Rule _selector="TextInputWidget.caret" _backgroundColor="1,1,1,0.9" _size="2,0" />
+	<Rule _selector="TextInputWidget.underline" _size="0,1" />
+
+	<!-- 탐색 포커스 테두리 - _padding 은 위젯 바깥으로 넓히는 길이다. -->
+	<Rule _selector="Widget.focusring" _focusRingColor="1,0.78,0.2,1" _borderWidth="2" _cornerRadius="6,6,6,6" _padding="3,3,3,3" />
+</UIStyleSheet>

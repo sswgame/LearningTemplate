@@ -16,7 +16,6 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -29,7 +28,8 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntContract.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntMutagens.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -58,7 +58,7 @@ namespace sw
      * @brief 흥정(올리기 · 받기) → 조사(걷기 · 단서) → 사냥(공격 · 회피 · 표식 · 오일 · 물약) → 승리 · 패배를 명령으로 진행합니다.
      */
     REFLECT( Category = "MonsterHuntRPG", DisplayName = "Monster Hunt Game Mode", Tooltip = "Runs one MonsterHuntRPG contract: haggling, clue investigation and the hunt from commands" )
-    class SW_KIT_API MonsterHuntGameModeComponent : public GameModeComponent
+    class SW_KIT_API MonsterHuntGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -141,8 +141,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               updateMatch( float32 deltaTime ) override;
         /** @brief 승리면 흥정한 보상을 돈으로 냅니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 
@@ -255,36 +254,33 @@ namespace sw
         float32 _monsterAttackSeconds;
         PROPERTY( Category = "Contract", DisplayName = "Seed", Min = 1 )
         uint32 _seed;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
 
-        SharedAssetRef<MonsterHuntCatalog>    _pCatalog;
-        SharedAssetRef<ElementChart>          _pChart;
-        SharedAssetRef<RecipeCatalog>         _pRecipes;
-        SharedAssetRef<ItemCatalog>           _pItemCatalog;
-        SharedAssetRef<QuestCatalog>          _pQuests;  ///< 퀘스트를 적지 않은 계약이면 비었다
-        QuestLog                              _questLog; ///< 계약 퀘스트(`MonsterHuntContractDef::_questID`)만 진행한다 — 조사가 빌린다
-        vector<QuestEvent>                    _listQuestEvent;
-        SharedAssetRef<SkillTreeCatalog>      _pSkillTreeCatalog; ///< 트리를 적지 않은 판이면 비었다
-        MonsterHuntMutagens                   _mutagens;
-        SkillTreeState                        _skills; ///< 배운 차례(`_listLearnedSkill`)가 상태다 — 복원은 차례대로 다시 배운다
-        MonsterHuntHaggle                     _haggle;
-        MonsterHuntInvestigation              _investigation;
-        MonsterHuntBestiary                   _bestiary;
-        MonsterHuntCombat                     _combat;
-        MonsterHuntAlchemy                    _alchemy;
-        Inventory                             _bag;
-        vector<MonsterHuntInvestigationEvent> _listInvestigationEvent;
-        vector<MonsterHuntBestiaryEvent>      _listBestiaryEvent;
-        Countdown                             _attackCooldown;
-        Countdown                             _dodge;
-        Countdown                             _monsterAttack;
-        Countdown                             _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
+        BoundAssetRef<MonsterHuntCatalog> _pCatalog;
+        BoundAssetRef<ElementChart>       _pChart;
+        BoundAssetRef<RecipeCatalog>      _pRecipes;
+        BoundAssetRef<ItemCatalog>        _pItemCatalog;
+        BoundAssetRef<QuestCatalog>       _pQuests;  ///< 퀘스트를 적지 않은 계약이면 비었다
+        SW_CODEC_STATE QuestLog           _questLog; ///< 계약 퀘스트(`MonsterHuntContractDef::_questID`)만 진행한다 — 조사가 빌린다
+        SW_TRANSIENT vector<QuestEvent>         _listQuestEvent;
+        BoundAssetRef<SkillTreeCatalog>         _pSkillTreeCatalog; ///< 트리를 적지 않은 판이면 비었다
+        SW_CODEC_STATE MonsterHuntMutagens      _mutagens;
+        SW_CODEC_STATE SkillTreeState           _skills; ///< 배운 차례(`_listLearnedSkill`)가 상태다 — 복원은 차례대로 다시 배운다
+        SW_CODEC_STATE MonsterHuntHaggle        _haggle;
+        SW_CODEC_STATE MonsterHuntInvestigation _investigation;
+        SW_CODEC_STATE MonsterHuntBestiary      _bestiary;
+        SW_CODEC_STATE MonsterHuntCombat        _combat;
+        SW_CODEC_STATE MonsterHuntAlchemy       _alchemy;
+        SW_CODEC_STATE Inventory                _bag;
+        SW_TRANSIENT vector<MonsterHuntInvestigationEvent> _listInvestigationEvent;
+        SW_TRANSIENT vector<MonsterHuntBestiaryEvent> _listBestiaryEvent;
+        SW_CODEC_STATE Countdown                      _attackCooldown;
+        SW_CODEC_STATE Countdown                      _dodge;
+        SW_CODEC_STATE Countdown                      _monsterAttack;
         PROPERTY( RuntimeState )
         float2 _playerPosition;
         PROPERTY( RuntimeState )
-        float2 _monsterPosition;
-        float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
+        float2              _monsterPosition;
+        SW_TRANSIENT float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
         PROPERTY( RuntimeState )
         vector<hashed_string> _listLearnedSkill; ///< 랭크를 올린 스킬(차례대로)
         PROPERTY( RuntimeState, Min = 0 )

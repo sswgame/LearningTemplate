@@ -23,7 +23,7 @@
 	<WaitUntil watch="Gimmick.OccupantWeight" target="Plate" near="40" tolerance="0.01" timeoutSeconds="3"/>
 	<WaitUntil watch="Object.Y" target="Crate" atMost="0.3" timeoutSeconds="3"/>
 
-	<LoadScene path="game/playground/maps/severing.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:d9c0a74a5927680c5048ad84c27854d6" timeoutFrames="600"/>
 	<WaitUntil watch="Object.Exists" target="Skeleton" equals="1" timeoutFrames="30"/> <!-- 새 씬이 섰다 -->
 	<Expect watch="Object.Exists" target="Keeper" equals="1"/>
 	<Expect watch="Object.Exists" target="Crate" equals="0"/>

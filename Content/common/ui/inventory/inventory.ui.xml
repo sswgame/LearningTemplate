@@ -1,8 +1,11 @@
 <?asset guid="d4b9aba48e79036f07eeadf7ef2ccbc4"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<!-- 인벤토리 견본 문서(`InventoryScreen`). 가방 칸 단추(명령 Slot)는 코드가 `Grid` 에, 장비 칸 단추(명령 EquipSlot)는 `Equipment` 에 만든다.
 	     동작 메뉴 `Actions` 는 처음엔 접혀 있고 오른쪽 누름 · 길게 누르기 · UI.ContextMenu(패드 X)가 연다. 나누기 · 여러 개 버리기는 엔진 수량 대화 상자다. -->
 	<UIScreenDef _defaultFocus="Slot0" />
+	<_listStyleSheet>
+		<item>guid:a65c8a060a50b759804e7dcee40811e8</item>
+	</_listStyleSheet>
 	<SafeZonePanel>
 		<CanvasPanel>
 			<BorderPanel _name="Window" _styleClass="window">
@@ -13,8 +16,8 @@
 				<BoxPanel _spacing="12" _orientation="Vertical">
 					<TextWidget _name="Title" _styleClass="title" _text="Inventory" />
 					<BoxPanel _spacing="16">
-						<TextWidget _name="Stats" _text="" />
-						<TextWidget _name="Weight" _text="" />
+						<TextWidget _name="Stats" _text="{bind:_stats}" />
+						<TextWidget _name="Weight" _text="{bind:_weight}" />
 					</BoxPanel>
 					<BoxPanel _name="Equipment" _spacing="8" />
 					<WrapPanel _name="Grid" _itemSpacing="6" _lineSpacing="6">
@@ -37,8 +40,8 @@
 							<TextWidget _text="Cancel" />
 						</ButtonWidget>
 					</BoxPanel>
-					<TextWidget _name="Details" _text="" />
-					<TextWidget _name="Status" _text="" />
+					<TextWidget _name="Details" _text="{bind:_details}" />
+					<TextWidget _name="Status" _text="{bind:_status}" />
 					<BoxPanel _spacing="8">
 						<ButtonWidget _name="Sort" _command="Sort">
 							<TextWidget _text="Sort" />

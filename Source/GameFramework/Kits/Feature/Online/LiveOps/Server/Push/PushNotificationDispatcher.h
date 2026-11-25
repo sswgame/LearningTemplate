@@ -19,6 +19,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationProvider.h"
 #include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
@@ -30,17 +31,6 @@ namespace sw
 
     class ServiceStore;
 
-    /** @brief 발송기 설정입니다. */
-    struct PushDispatcherConfig
-    {
-        int64 _accountRefillIntervalMs{ 600000 }; ///< 계정마다 10분에 하나씩 다시 채운다
-        int32 _accountBurst{ 6 };                 ///< 한꺼번에 보낼 수 있는 상한이다
-        int32 _maxTrackedAccountCount{ 100000 };  ///< 도배 제한이 보관하는 계정 수의 상한이다
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 발송 통계입니다. 관측과 테스트에 씁니다. */
     struct PushDispatcherStats
     {
@@ -79,7 +69,7 @@ namespace sw
         PushNotificationDispatcher& operator=( const PushNotificationDispatcher& ) = delete;
 
         /** @brief @p pStore 는 빌려 씁니다. 맡긴 작업은 저장소의 `shutdown` 과 `pollCompletions` 가 회수하므로 이 객체는 그때까지 살아 있어야 합니다. */
-        void initialize( ServiceStore* pStore, const PushDispatcherConfig& settings );
+        [[nodiscard]] bool initialize( ServiceStore* pStore, const LiveOpsKitConfig& settings );
         /** @brief 제공자를 등록합니다. 빌려 쓰는 포인터이며 같은 id 가 있으면 false 를 반환합니다. */
         [[nodiscard]] bool registerProvider( IPushNotificationProvider* pProvider );
 
@@ -150,6 +140,7 @@ namespace sw
         vector<PushDeliveryResult>         _listResultScratch;
         EventBuffer<PushDeviceCompletion>  _completionBuffer;
         TokenBucketMap                     _accountBucketMap;
+        LiveOpsKitConfig                   _settings; ///< `initialize` 가 받은 운영 값
         PushDispatcherStats                _stats;
         IDAllocator<uint64>                _deliveryIDAllocator;
         ServiceStoreTracker                _store; ///< 저장소에 맡긴 일의 앞이다

@@ -2,13 +2,13 @@
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Component/SRPGGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCombat.h"
@@ -19,9 +19,8 @@ namespace sw
     {
         struct SRPGGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "KDTS" );
-            static constexpr uint32 kStateVersion = 3; // 3: 커서가 클라이언트 모듈(`SRPGCursorComponent`)로 가 디렉터 상태 칸에서 빠졌다
-            static constexpr int32  kNoSelection  = -1;
+            static constexpr FormatDef kStateFormat{ "KDTS" };
+            static constexpr int32     kNoSelection = -1;
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventPhase     = "SRPGPhase";
@@ -87,6 +86,7 @@ namespace sw
         , _listEnemyUnit{}
         , _listEnemyCell{}
         , _pilot{}
+        , _aiSettings{}
         , _pCatalog{}
         , _field{}
         , _ai{}
@@ -134,6 +134,7 @@ namespace sw
             return false;
         if ( openField( _field ) == false )
             return false;
+        _ai.setSettings( _aiSettings );
         _field.beginBattle();
         if ( _eventLease.isHeld() == false && _field.claimEvents( _eventLease ) == false )
             return false; // 이 디렉터의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
@@ -279,34 +280,22 @@ namespace sw
         settle();
     }
 
-    void SRPGGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`SRPGCursorComponent`)이 읽어 그린다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void SRPGGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( SRPGGameModeComponentInternal::kStateTag, SRPGGameModeComponentInternal::kStateVersion );
+        io.header( SRPGGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        // 전장은 같은 카탈로그 · 같은 크기로 `initialize` 한 뒤에 읽는다(키트 계약). 꺼내기 표는 대입이 옮기지 않아 이 디렉터의 표가 그대로다.
-        SRPGBattlefield restoredField;
-        if ( io.isReading() )
+        // 전장은 같은 카탈로그 · 같은 크기로 `initialize` 한 뒤에 읽는다(키트 계약). 꺼내기 표는 대입이 옮기지 않아 이 디렉터의 표가 그대로다. 고른 유닛 · 결과는 상태 칸이다(`GameModeComponent::serializeState`).
+        if ( io.valueOpened( _field, [this]( SRPGBattlefield& field )
         {
             if ( _pCatalog == nullptr )
             {
                 SW_LOG_ERROR_ID( "SRPG.StateNeedsCatalog", "SRPG game mode: state read before the SRPG catalog is loaded - refused" );
-                io.fail();
-                return;
+                return false;
             }
-            restoredField.initialize( *_pCatalog, _width, _height, _defaultTerrain.key(), _seed );
-        }
-        io.value( io.isWriting() ? _field : restoredField ); // 고른 유닛 · 결과는 상태 칸이다(`GameModeComponent::serializeState`)
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _field = std::move( restoredField );
+            field.initialize( *_pCatalog, _width, _height, _defaultTerrain.key(), _seed );
+            return true;
+        } ) )
+            io.end();
     }
 } // namespace sw

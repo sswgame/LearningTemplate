@@ -2,14 +2,10 @@
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/Client/JRPGAvatarComponent.h"
 
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/Client/JRPGBattleHUDViewModel.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/Component/JRPGGameModeComponent.h"
@@ -78,7 +74,8 @@ namespace sw
     } // namespace
 
     JRPGAvatarComponent::JRPGAvatarComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&JRPGAvatarComponent::updateAvatar, &JRPGAvatarComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _attackAction{}
         , _spellAction{}
         , _defendAction{}
@@ -89,44 +86,19 @@ namespace sw
         , _classChangeMember{ 0 }
         , _bodyPrefab{}
         , _markerPrefab{}
-        , _director{}
         , _bodies{}
         , _markers{}
         , _hudViewModel{}
         , _target{ 0 }
         , _lastStep{ 0 }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
     JRPGAvatarComponent::~JRPGAvatarComponent() = default;
 
-    void JRPGAvatarComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                  pOwner    = getOwner();
-        const JRPGGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<JRPGGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "JRPG.AvatarWithoutGameMode", "JRPG avatar on '%#': no JRPGGameModeComponent in front of it on the same object - the avatar does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<JRPGGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<JRPGGameModeComponent>( pDirector );
-    }
-
     void JRPGAvatarComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
-        const bool bMoveNamed   = _moveAction.empty() == false && _restAction.empty() == false && _equipAction.empty() == false && _classChangeAction.empty() == false;
-        const bool bBattleNamed = _attackAction.empty() == false && _spellAction.empty() == false && _defendAction.empty() == false && _fleeAction.empty() == false;
-        _bActionsValid          = bMoveNamed && bBattleNamed ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "JRPG.AvatarActionMissing", "JRPG avatar: move '%#', rest '%#', equip '%#', class change '%#', attack '%#', spell '%#', defend '%#' and flee '%#' actions must all be named - the avatar reads no input",
-                             _moveAction.c_str(), _restAction.c_str(), _equipAction.c_str(), _classChangeAction.c_str(), _attackAction.c_str(), _spellAction.c_str(), _defendAction.c_str(), _fleeAction.c_str() );
+        GameModeViewComponent::onBeginPlay();
         _target   = 0;
         _lastStep = 0;
     }
@@ -140,40 +112,28 @@ namespace sw
             _bodies.destroyAll( *pManager );
             _markers.destroyAll( *pManager );
         }
-        Component::onEndPlay();
+        GameModeViewComponent::onEndPlay();
     }
 
-    void JRPGAvatarComponent::onTick( TickContext& context )
+    void JRPGAvatarComponent::updateAvatar( GameObjectManager& manager, JRPGGameModeComponent& director )
     {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( JRPGAvatarComponent& avatar, GameObjectManager& manager )
-        { avatar.updateAvatar( manager ); } );
-    }
-
-    void JRPGAvatarComponent::updateAvatar( GameObjectManager& manager )
-    {
-        JRPGGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        const bool                bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAcceptingInput();
-        const InputManager* const pInput     = bReadInput ? game::findSubsystem<InputManager>() : nullptr;
-        if ( pInput != nullptr )
-        {
-            const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-            if ( pDirector->getGamePhase() == JRPGGamePhase::Explore )
-                submitExploreInput( *pDirector, input );
-            else if ( pDirector->getGamePhase() == JRPGGamePhase::Battle )
-                submitBattleInput( *pDirector, input );
-            else if ( pDirector->getGamePhase() == JRPGGamePhase::Timing && input.wasActionTriggered( _attackAction ) )
-                (void)pDirector->submitTiming(); // 타이밍 단계인 것은 위에서 보았다
-        }
-        updateHUD( *pDirector );
+        dispatchInput( manager, director );
+        updateHUD( director );
         _bodies.begin();
         _markers.begin();
-        draw( *pDirector, manager );
+        draw( director, manager );
         _bodies.end( manager );
         _markers.end( manager );
+    }
+
+    void JRPGAvatarComponent::submitInput( const GameModeInput& input, JRPGGameModeComponent& director )
+    {
+        if ( director.getGamePhase() == JRPGGamePhase::Explore )
+            submitExploreInput( director, input );
+        else if ( director.getGamePhase() == JRPGGamePhase::Battle )
+            submitBattleInput( director, input );
+        else if ( director.getGamePhase() == JRPGGamePhase::Timing && input.wasActionTriggered( _attackAction ) )
+            (void)director.submitTiming(); // 타이밍 단계인 것은 위에서 보았다
     }
 
     void JRPGAvatarComponent::submitExploreInput( JRPGGameModeComponent& director, const GameInputView& input )

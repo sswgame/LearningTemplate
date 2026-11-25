@@ -4,7 +4,7 @@
  * @details 키트 세 갈래의 클라이언트 몫이다(`GF_Client_RealTimeStrategy`, 전용 서버는 짓지 않는다). 디렉터의 읽기 API(`getWorld` · `findCatalog` · `getLocalPlayer` · `isLocalPlayerHuman`)만 쓴다.
  *          디렉터는 같은 오브젝트에 먼저 붙인다 — 등록(`onRegister`)에서 찾아 핸들로 든다. 1 대 1 판과 도시 건설 미니게임의 RTS 가 같은 뷰를 쓴다.
  *          틱 뒤 게임 스레드에서 안개 · 죽음으로 바뀐 슬롯만 지우고 세운다(`SimulationViewSync`). 자리 · 크기 · 색은 유닛 뷰(`RTSUnitViewComponent`)가 저마다 병렬 틱에서 맞춘다.
- *          세운 것은 상태를 싣기 전에 걷는다(`despawnViews` — .cpp 의 `StatefulComponentRegistrar`). 다음 틱이 지금 월드대로 다시 세운다.
+ *          세운 것은 파생이라 상태에 들지 않는다(`SpawnLifetime::Derived`).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -16,12 +16,11 @@
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
-#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 #include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
@@ -43,7 +42,7 @@ namespace sw
      */
     REFLECT( Category = "RealTimeStrategy", DisplayName = "RTS Battlefield View",
              Tooltip = "Client side of an RTS world: spawns the unit views and the cliffs of the RTS game mode on the same object" )
-    class SW_KIT_CLIENT_API RTSBattlefieldViewComponent : public Component
+    class SW_KIT_CLIENT_API RTSBattlefieldViewComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -56,24 +55,19 @@ namespace sw
         RTSBattlefieldViewComponent();
         virtual ~RTSBattlefieldViewComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
         /** @brief 틱 그룹은 뷰의 `PostUpdate` 입니다. */
         void onBeginPlay() override;
         /** @brief 세운 모습을 걷습니다. */
         void onEndPlay() override;
-        /** @brief 모습 맞추기를 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
-
-        /** @brief 세운 모습(유닛 · 절벽)을 모두 지웁니다(상태를 싣기 전 · 플레이 끝). 월드는 그대로이고 다음 틱이 다시 세웁니다. */
-        void despawnViews();
 
         /** @brief 유닛 주인(또는 자원 종류)과 선택 여부의 색 인스턴스입니다. 아직 없으면 비어 있습니다. */
         const shared_ptr<MaterialInstance>& findUnitLook( const RTSUnit& unit, bool bSelected ) const;
 
     private:
+        /** @brief 세운 모습을 모두 지웁니다(플레이 끝 · 다시 세울 때). 모습은 파생이라 상태를 실을 때 걷지 않는다(`SpawnLifetime::Derived`). */
+        void despawnViews();
         /** @brief 틱 뒤 게임 스레드: 보일 유닛과 세운 모습을 비교해 바뀐 슬롯만 다시 세웁니다. 처음이면 절벽도 놓습니다. */
-        void updateViews( GameObjectManager& manager );
+        void updateViews( GameObjectManager& manager, const RTSGameModeComponent& director );
         /** @brief 모델 표를 받아 유닛 카탈로그와 서로 같은 id 를 가지는지 보고, 모델을 워커로 미리 읽게 합니다. 어긋난 것은 모두 오류로 남기고 false 입니다. */
         [[nodiscard]] bool acquireUnitModels( const RTSGameModeComponent& director );
         /** @brief 막힌 지형 칸마다 절벽 프리팹 하나를 놓습니다 — 고르기 · 돌리기는 칸 자리의 해시라 판마다 같습니다. */
@@ -102,18 +96,17 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Gas Color" )
         float4 _gasColor;
 
-        TComponentHandle<RTSGameModeComponent> _director;
-        SharedAssetRef<RuleViewCatalog>        _pUnitModelCatalog;
-        shared_ptr<const RuleViewCatalog>      _shownUnitModels; ///< 세운 모습이 쓴 모델 표의 판 — 다시 읽히면 모습을 새 판으로 다시 세운다
-        AssetReadySet                          _unitModels;      ///< 모든 유닛 모델 — 판이 열리면 워커가 읽어 둔다(처음 짓는 건물 · 유닛이 게임 스레드에서 디스크를 읽지 않게). 집합이 핸들을 쥐어 약한 참조 캐시에 남긴다.
-        optional<PrefabPool>                   _unitViewPool;
-        SimulationViewSync<RTSUnitID>          _unitViews; ///< 유닛 슬롯 번호 → 보일 유닛(죽음 · 안개면 없다)
-        vector<GameObjectHandle>               _listCliff;
-        MaterialTintCache                      _tintCache;    ///< 유닛 색(같은 색은 나눠 쓴다).
-        vector<shared_ptr<MaterialInstance>>   _listUnitLook; ///< (팀 또는 자원 종류) x 2 + 선택 여부로 만든 유닛 모습 인스턴스.
-        uint8                                  _bModelsChecked : 1;
-        uint8                                  _bModelsValid   : 1;
-        uint8                                  _bCliffsSpawned : 1;
-        [[maybe_unused]] uint8                 _reserved       : 5;
+        SharedAssetRef<RuleViewCatalog>   _pUnitModelCatalog;
+        shared_ptr<const RuleViewCatalog> _shownUnitModels; ///< 세운 모습이 쓴 모델 표의 판 — 다시 읽히면 모습을 새 판으로 다시 세운다
+        AssetReadySet                     _unitModels;      ///< 모든 유닛 모델 — 판이 열리면 워커가 읽어 둔다(처음 짓는 건물 · 유닛이 게임 스레드에서 디스크를 읽지 않게). 집합이 핸들을 쥐어 약한 참조 캐시에 남긴다.
+        SW_TRANSIENT optional<PrefabPool> _unitViewPool;
+        SimulationViewSync<RTSUnitID>     _unitViews; ///< 유닛 슬롯 번호 → 보일 유닛(죽음 · 안개면 없다)
+        SW_TRANSIENT vector<GameObjectHandle> _listCliff;
+        MaterialTintCache                     _tintCache;    ///< 유닛 색(같은 색은 나눠 쓴다).
+        vector<shared_ptr<MaterialInstance>>  _listUnitLook; ///< (팀 또는 자원 종류) x 2 + 선택 여부로 만든 유닛 모습 인스턴스.
+        SW_TRANSIENT uint8                    _bModelsChecked : 1;
+        SW_TRANSIENT uint8                    _bModelsValid   : 1;
+        SW_TRANSIENT uint8                    _bCliffsSpawned : 1;
+        [[maybe_unused]] uint8                _reserved       : 5;
     };
 } // namespace sw

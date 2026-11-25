@@ -107,6 +107,8 @@ namespace sw
         [[nodiscard]] static expected<AssetReferenceTarget> readReferenceText( string_view text );
         /** @brief @p path 를 파일에 적을 참조 글입니다 — 정체성이 있으면 GUID 참조, 없으면 경로 글 그대로. `readReferenceText` 의 짝이다. */
         [[nodiscard]] static string makeReferenceText( string_view path, const optional<AssetGUID>& guid );
+        /** @brief @p path 의 정체성을 색인에서 찾아 적을 참조 글입니다 — 글로 든 경로를 파일에 쓰는 자리가 쓴다. 정체성이 없으면 경로 글 그대로다. */
+        [[nodiscard]] static string makeIndexedReferenceText( string_view path );
 
         /**
          * @brief 경로로 찾는 에셋 캐시(메시 · 프리팹 · 머티리얼 · 텍스처 · UI 글 · 물리 메시)의 키를 만드는 한 곳입니다 — 맵 키 꼴(`FileUtil::normalizePath`)로 접은 지금 경로다. GUID 참조 글도 받는다.

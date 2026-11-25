@@ -27,8 +27,6 @@ namespace sw
             /** @brief `FileStamp::_writeTime` 의 100 ns 눈금이 1 ms 에 드는 수입니다. */
             static constexpr uint64 kWriteTicksPerMs = 10000u;
 
-            /** @brief 영속 캐시 파일의 머리 표지입니다. */
-            static constexpr uint32 kCacheMagic = 0x43485753u; // "SWHC"
             /** @brief 영속 항목 하나가 파일에서 차지하는 최소 바이트입니다(빈 경로 길이 4 + 크기 · 시각 · 해시 24). */
             static constexpr size_t kMinCacheEntryBytes = 28;
 
@@ -202,9 +200,9 @@ namespace sw
         ByteReader   reader{ bytes.data(), bytes.size() };
         const uint32 magic   = reader.readUint32();
         const uint32 version = reader.readUint32();
-        if ( reader.hasOverflowed() || magic != ContentHashInternal::kCacheMagic )
+        if ( reader.hasOverflowed() || magic != kCacheFormat._tag )
             return unexpected( Error{ ErrorKind::InvalidArgument, "content hash cache is not a cache file", cachePath.str() } );
-        if ( version != kCacheFormatVersion )
+        if ( version != kCacheFormat._version )
             return {}; // 다른 판 — 빈 캐시로 시작하고 다음 save 가 이 판으로 덮는다
         struct LoadedEntry
         {
@@ -242,8 +240,7 @@ namespace sw
                 return unexpected( Error{ ErrorKind::InvalidArgument, "content hash cache has no path - call load first" } );
             cachePath = _cachePath;
             ByteWriter writer{ bytes };
-            writer.writeUint32( ContentHashInternal::kCacheMagic );
-            writer.writeUint32( kCacheFormatVersion );
+            kCacheFormat.write( bytes );
             const size_t countOffset = writer.getByteCount();
             writer.writeUint32( 0 );
             uint32 count = 0;

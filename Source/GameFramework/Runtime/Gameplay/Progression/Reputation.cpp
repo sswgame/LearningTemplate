@@ -11,8 +11,6 @@
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
-#include "Engine/Serialization/Format/ReflectedStateUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -37,8 +35,6 @@ namespace sw
 
 namespace sw
 {
-    SW_STATE_FORMAT_UPGRADE( reputationState1To2, "REPU", 1, 2, &ReflectedStateUpgrade::prependHead<ReputationState> ); // 판 1 손 본문은 칸 순서 · 폭이 같다
-
     uint32 ReputationCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<ReputationCatalog>;
@@ -51,7 +47,6 @@ namespace sw
 
     bool ReputationCatalog::loadFaction( const XMLNode& node, string_view sourceName )
     {
-
         // 적지 않은 칸은 FactionDef 의 초기값이다. 깨진 값 · 범위 밖 값(최대 >= 최소, 시작은 그 사이)은 그 세력을 넣지 않는 오류다(자르지 않는다).
         FactionDef faction;
         bool       bValid = XMLFields::readProperties( node, faction, sourceName );

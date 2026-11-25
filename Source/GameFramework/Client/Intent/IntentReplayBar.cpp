@@ -31,15 +31,14 @@ namespace sw
     } // namespace
 
     IntentReplayBar::IntentReplayBar()
-        : _pUI{ nullptr }
-        , _pSession{ nullptr }
+        : _pSession{ nullptr }
         , _scrubSubscription{}
         , _tickSeconds{ constant::time::kDefaultFixedStepSeconds }
         , _shownMin{ 0.0f }
         , _shownMax{ 0.0f }
         , _furthestTick{ 0 }
         , _seekTicksPerFrame{ 1 }
-        , _screen{ kInvalidUIScreenHandle }
+        , _screen{}
         , _bOpen{ SW_FALSE }
         , _bPaused{ SW_FALSE }
         , _bSyncing{ SW_FALSE }
@@ -59,8 +58,8 @@ namespace sw
             SW_LOG_ERROR_ID( "IntentReplayBar.IntentReplayBarRefusedOpenTick", "IntentReplayBar: refused to open - tick length %# s and %# seek ticks per frame must both be positive", tickSeconds, seekTicksPerFrame );
             return false;
         }
-        const UIScreenHandle handle  = ui.openScreen( documentPath );
-        UIScreen*            pScreen = ui.findScreen( handle );
+        UIOwnedScreen   screen( ui, ui.openScreen( documentPath ) );
+        UIScreen* const pScreen = screen.find();
         if ( pScreen == nullptr )
             return false; // 문서 단계가 이유를 남겼다
         SliderWidget* pScrub         = pScreen->getTree().findWidget<SliderWidget>( hashed_string( IntentReplayBarInternal::kScrub ) );
@@ -71,14 +70,12 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "IntentReplayBar.IntentReplayBarNeedsSliderWidgetTextWidgets", "IntentReplayBar: '%#' needs a SliderWidget '%#' and TextWidgets '%#' and '%#'", string( documentPath ).c_str(), IntentReplayBarInternal::kScrub,
                              IntentReplayBarInternal::kTimeText, IntentReplayBarInternal::kPlayPauseLabel );
-            ui.closeScreen( handle );
             return false;
         }
-        _pUI                                   = &ui;
         _pSession                              = &session;
         _tickSeconds                           = tickSeconds;
         _seekTicksPerFrame                     = seekTicksPerFrame;
-        _screen                                = handle;
+        _screen                                = std::move( screen );
         _bOpen                                 = SW_TRUE;
         _bPaused                               = SW_FALSE;
         _furthestTick                          = session.getWorldTick();
@@ -102,10 +99,7 @@ namespace sw
         {
             registration.reset(); // 화면이 먼저 닫혔으면 이미 무효다
         }
-        UIScreen* pScreen = _pUI != nullptr ? _pUI->findScreen( _screen ) : nullptr;
-        if ( pScreen != nullptr )
-            _pUI->closeScreen( _screen );
-        _screen  = kInvalidUIScreenHandle;
+        _screen.reset();
         _bOpen   = SW_FALSE;
         _bPaused = SW_FALSE;
     }
@@ -121,11 +115,11 @@ namespace sw
     {
         if ( _bOpen == SW_FALSE )
             return;
-        UIScreen* pScreen = _pUI->findScreen( _screen );
-        if ( pScreen == nullptr || pScreen->isClosing() )
+        UIScreen* pScreen = _screen.find();
+        if ( pScreen == nullptr )
         {
             // 사용자가 뒤로 가기로 화면을 닫았다 — 막대도 닫힌 것으로 치고 호스트가 평소대로 돈다.
-            _screen  = kInvalidUIScreenHandle;
+            _screen.reset();
             _bOpen   = SW_FALSE;
             _bPaused = SW_FALSE;
             return;
@@ -186,8 +180,7 @@ namespace sw
         if ( command == hashed_string( IntentReplayBarInternal::kClose ) )
         {
             // 명령을 처리하는 중이라 명령 등록을 지우지 않는다 — 화면 닫기는 지연 처리이고, 닫는 중인 화면은 더 이상 명령을 내지 않는다.
-            _pUI->closeScreen( _screen );
-            _screen  = kInvalidUIScreenHandle;
+            _screen.reset();
             _bOpen   = SW_FALSE;
             _bPaused = SW_FALSE;
         }
@@ -202,7 +195,7 @@ namespace sw
 
     void IntentReplayBar::updatePauseLabel()
     {
-        UIScreen* pScreen = _pUI != nullptr ? _pUI->findScreen( _screen ) : nullptr;
+        UIScreen* pScreen = _screen.find();
         if ( pScreen == nullptr )
             return;
         TextWidget* pLabel = pScreen->getTree().findWidget<TextWidget>( hashed_string( IntentReplayBarInternal::kPlayPauseLabel ) );

@@ -28,6 +28,7 @@ namespace sw
         , _runner{}
         , _blackboard{}
         , _settings{}
+        , _units{}
         , _pWorld{ nullptr }
         , _thinkTimer{}
         , _player{ constant::invalid_index::kInt32 }
@@ -35,12 +36,13 @@ namespace sw
     {
     }
 
-    void RTSCommanderAI::initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings, const BehaviorTree& tree )
+    void RTSCommanderAI::initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings, const RTSCommanderUnits& units, const BehaviorTree& tree )
     {
         SW_ASSERT( tree.isValid() && "the commander behavior tree must be read from data (BehaviorTreeAsset) before the AI starts" );
         _pWorld   = pWorld;
         _player   = player;
         _settings = settings;
+        _units    = units;
         _thinkTimer.clear();
         _attackWaveCount = 0;
         _blackboard.clear();
@@ -88,7 +90,7 @@ namespace sw
         RTSUnitID depotID{};
         _pWorld->forEachUnit( [&]( const RTSUnit& unit )
         {
-            const bool bDepotCandidate = depotID.isValid() == false && unit._owner == _player && unit._pDef->_id == _settings._depotID && unit.isConstructed();
+            const bool bDepotCandidate = depotID.isValid() == false && unit._owner == _player && unit._pDef->_id == _units._depotID.key() && unit.isConstructed();
             if ( bDepotCandidate )
                 depotID = unit._id;
         } );
@@ -112,14 +114,14 @@ namespace sw
         if ( pDepot == nullptr )
             return false;
         int2 cell{};
-        if ( _pWorld->findBuildSite( buildingID, pDepot->_position, 3, 12, cell ) == false )
+        if ( _pWorld->findBuildSite( buildingID, pDepot->_position, _settings._buildSiteMinRadius, _settings._buildSiteMaxRadius, cell ) == false )
             return false;
         // 짐 없이 노는 일꾼을 먼저, 광물로 가는 일꾼을 그다음에 고른다.
         RTSUnitID workerID{};
         int32     bestScore = 3;
         _pWorld->forEachUnit( [&]( const RTSUnit& unit )
         {
-            if ( unit._owner != _player || unit._pDef->_id != _settings._workerID )
+            if ( unit._owner != _player || unit._pDef->_id != _units._workerID.key() )
                 return;
             const RTSOrder* pOrder                   = unit.findOrder();
             int32           score                    = 3;
@@ -139,7 +141,7 @@ namespace sw
         if ( workerID.isValid() == false || _pWorld->issueBuild( workerID, buildingID, cell ) != RTSCommandResult::Ok )
             return false;
         // 다 지으면 다시 캐러 간다.
-        const RTSUnitID mineralID = _pWorld->findNearestResource( pDepot->_position, RTSResourceKind::Minerals, 16.0f );
+        const RTSUnitID mineralID = _pWorld->findNearestResource( pDepot->_position, RTSResourceKind::Minerals, _settings._resourceSearchRadius );
         if ( mineralID.isValid() )
             (void)_pWorld->issueGather( workerID, mineralID, true );
         return true;
@@ -179,7 +181,7 @@ namespace sw
         } );
         for ( const RTSUnitID workerID : listIdle )
         {
-            const RTSUnitID mineralID = world.findNearestResource( pDepot->_position, RTSResourceKind::Minerals, 16.0f );
+            const RTSUnitID mineralID = world.findNearestResource( pDepot->_position, RTSResourceKind::Minerals, self._settings._resourceSearchRadius );
             if ( mineralID.isValid() == false )
                 return ActionResult::Failed;
             (void)world.issueGather( workerID, mineralID );
@@ -192,10 +194,10 @@ namespace sw
         RTSCommanderAI& self               = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&       world              = *self._pWorld;
         const RTSUnit*  pDepot             = world.findUnit( self.findDepot() );
-        const bool      bCannotTrainWorker = pDepot == nullptr || pDepot->_listProduction.empty() == false || world.countPlanned( self._player, self._settings._workerID ) >= self._settings._workerTarget;
+        const bool      bCannotTrainWorker = pDepot == nullptr || pDepot->_listProduction.empty() == false || world.countPlanned( self._player, self._units._workerID.key() ) >= self._settings._workerTarget;
         if ( bCannotTrainWorker )
             return ActionResult::Failed;
-        return world.train( pDepot->_id, self._settings._workerID ) == RTSCommandResult::Ok ? ActionResult::Succeeded : ActionResult::Failed;
+        return world.train( pDepot->_id, self._units._workerID.key() ) == RTSCommandResult::Ok ? ActionResult::Succeeded : ActionResult::Failed;
     }
 
     ActionResult RTSCommanderAI::taskBuildSupply( ActionContext& context, const VocabularyNoParams& /*params*/ )
@@ -206,21 +208,21 @@ namespace sw
         if ( pPlayer->_supplyCap >= world.getCatalog()->getSupplyMax() || pPlayer->_supplyCap - pPlayer->_supplyUsed > self._settings._supplyMargin )
             return ActionResult::Failed;
         // 짓고 있거나 지으러 가는 보급 건물이 있으면 기다린다.
-        if ( world.countPlanned( self._player, self._settings._supplyID ) > world.countUnits( self._player, self._settings._supplyID, false ) )
+        if ( world.countPlanned( self._player, self._units._supplyID.key() ) > world.countUnits( self._player, self._units._supplyID.key(), false ) )
             return ActionResult::Failed;
-        return self.orderConstruction( self._settings._supplyID ) ? ActionResult::Succeeded : ActionResult::Failed;
+        return self.orderConstruction( self._units._supplyID.key() ) ? ActionResult::Succeeded : ActionResult::Failed;
     }
 
     ActionResult RTSCommanderAI::taskBuildProduction( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI& self  = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&       world = *self._pWorld;
-        if ( world.countPlanned( self._player, self._settings._productionID ) >= self._settings._productionTarget )
+        if ( world.countPlanned( self._player, self._units._productionID.key() ) >= self._settings._productionTarget )
             return ActionResult::Failed;
         // 일꾼을 어느 정도 모은 뒤에 시작한다.
-        if ( world.countUnits( self._player, self._settings._workerID, false ) < self._settings._workerTarget / 2 )
+        if ( world.countUnits( self._player, self._units._workerID.key(), false ) < self._settings._workerTarget / 2 )
             return ActionResult::Failed;
-        return self.orderConstruction( self._settings._productionID ) ? ActionResult::Succeeded : ActionResult::Failed;
+        return self.orderConstruction( self._units._productionID.key() ) ? ActionResult::Succeeded : ActionResult::Failed;
     }
 
     ActionResult RTSCommanderAI::taskTrainArmy( ActionContext& context, const VocabularyNoParams& /*params*/ )
@@ -230,14 +232,14 @@ namespace sw
         vector<RTSUnitID> listIdleProducer;
         world.forEachUnit( [&]( const RTSUnit& unit )
         {
-            const bool bIdleProducer = unit._owner == self._player && unit._pDef->_id == self._settings._productionID && unit.isConstructed() && unit._listProduction.empty();
+            const bool bIdleProducer = unit._owner == self._player && unit._pDef->_id == self._units._productionID.key() && unit.isConstructed() && unit._listProduction.empty();
             if ( bIdleProducer )
                 listIdleProducer.push_back( unit._id );
         } );
         bool bTrained = false;
         for ( const RTSUnitID producerID : listIdleProducer )
         {
-            bTrained = world.train( producerID, self._settings._armyUnitID ) == RTSCommandResult::Ok || bTrained;
+            bTrained = world.train( producerID, self._units._armyUnitID.key() ) == RTSCommandResult::Ok || bTrained;
         }
         return bTrained ? ActionResult::Succeeded : ActionResult::Failed;
     }

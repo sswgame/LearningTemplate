@@ -58,12 +58,6 @@ namespace sw
     class PlaygroundOnlineFlow final : public IMinigameMatchmaking
     {
     public:
-        static constexpr const utf8* kAssetGold          = "cur.gold";
-        static constexpr const utf8* kAssetGem           = "cur.gem";
-        static constexpr const utf8* kMatchRegion        = "local";                                      ///< 서버 온라인 설정의 `_region` 기본값
-        static constexpr const utf8* kBoardKills         = "arena_kills";                                ///< `game/playground/data/playground.leaderboards.xml`
-        static constexpr const utf8* kOfferCatalog       = "game/playground/data/playground.offers.xml"; ///< 상점 화면의 상품(서버 경제 키트와 같은 파일 — `Config/Server/Online/Playground.online.json`)
-        static constexpr int32       kTopCount           = 10;
         static constexpr const utf8* kResultDisconnected = "disconnected"; ///< 판 도중 서버를 잃고 나온 결과 이름
 
         PlaygroundOnlineFlow();
@@ -95,9 +89,11 @@ namespace sw
         void  requestClaimAll( OnlineSession& session );
         /** @brief 허브 서버 @p address 에 접속 티켓(gamesettings `onlineHubServerID`)으로 붙습니다 — 티켓을 청하고 답이 오면 세션을 엽니다. 허브 이름이 없거나 매치 중이면 알리고 false 입니다. */
         [[nodiscard]] bool requestJoinHub( OnlineSession& session, const NetAddress& address );
-        /** @brief 처치 수를 순위표 `kBoardKills` 에 클라이언트로서 냅니다 — 그 보드는 서버 제출만 받아 거절된다(거절을 보는 개발 명령이 부른다). */
+        /** @brief gamesettings 의 온라인 칸 @p value(이름 @p pField)가 비었으면 오류(`Playground.OnlineSettingMissing`)를 남기고 false 입니다 — 빈 id 로 요청을 내지 않는다. */
+        [[nodiscard]] static bool requireSetting( string_view value, const utf8* pField );
+        /** @brief 처치 수를 순위표(gamesettings `onlineLeaderboard`)에 클라이언트로서 냅니다 — 그 보드는 서버 제출만 받아 거절된다(거절을 보는 개발 명령이 부른다). */
         void requestSubmitKills( OnlineSession& session, int64 kills );
-        /** @brief 순위표 `kBoardKills` 의 상위 `kTopCount` 를 받습니다. */
+        /** @brief 순위표(gamesettings `onlineLeaderboard`)의 상위 줄을 받습니다. */
         void requestTopKills( OnlineSession& session );
         /** @brief 열린 기간 이벤트를 받습니다(로그인 뒤 — 출시 비율이 계정을 본다). 목록은 세션의 라이브 운영 클라이언트가 든다. */
         static void requestLiveEvents( OnlineSession& session );
@@ -107,7 +103,7 @@ namespace sw
         void  recordSelfMailSent() { ++_selfMailSentCount; }
         int32 getSelfMailSentCount() const { return _selfMailSentCount; }
         /**
-         * @brief 상점 화면(`ShopScreen`)에 꽂을 온라인 구매 공급자입니다. 처음 부를 때 세션의 경제 클라이언트와 상품 카탈로그(`kOfferCatalog`)로 세운다. 카탈로그를 읽지 못하면 nullptr 입니다.
+         * @brief 상점 화면(`ShopScreen`)에 꽂을 온라인 구매 공급자입니다. 처음 부를 때 세션의 경제 클라이언트와 상품 카탈로그(gamesettings `onlineOfferCatalog`)로 세운다. 적지 않았거나 카탈로그를 읽지 못하면 nullptr 입니다.
          * @details 공급자는 이 흐름(게임 범위)이 든다 — 화면은 빌려 쓰고, 게임이 내려가면 늦게 온 답은 공급자의 약한 참조가 버린다.
          */
         EconomyShopPurchaseProvider* findShopProvider( OnlineSession& session );

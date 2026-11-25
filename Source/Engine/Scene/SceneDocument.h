@@ -35,6 +35,8 @@ namespace sw
         string _name{};
     };
 
+    struct SceneDocument;
+
     /**
      * @brief 엔티티(`<entities><entity id name prefab>`)의 칸입니다. 상태(`<GameObject>`)와 프리팹 덮어쓰기는 자식 원소라 서브트리째 둔다.
      * @details 파일 id 는 0 이 아니어야 한다(`Scene::serializeToDocument` 가 늘 적는다) — 부착 · 핸들이 이 값으로 부모를 가리키고 쿠커가 엔티티를 찾는다.
@@ -53,7 +55,7 @@ namespace sw
         AssetRef<PrefabAsset> _prefab{};
         /** @brief 씬 인스턴스의 앵커면 넣을 씬의 리소스 id 입니다(언리얼 Level Instance). 앵커 자리에 그 씬이 펼쳐진다. */
         PROPERTY()
-        string _scene{};
+        AssetRef<SceneDocument> _scene{};
         /** @brief 이 엔티티가 붙은 데이터 레이어 이름들입니다(쉼표로 가른다). 모두 켜졌을 때 오른다. */
         PROPERTY()
         string _layers{};
@@ -85,7 +87,7 @@ namespace sw
          * @details 판 1: 프리팹 엔티티가 프리팹 경로 + 덮어쓴 것(`<PrefabOverrides>`)을 싣는다. 판 2: 씬 루트에 월드 설정(`<SceneSettings>`, 스트리밍 여부 · 격자)이
          *          반드시 있다. 판이 2 가 아닌 씬 파일은 읽지 않는다 — 이관기를 두지 않고 저장소의 씬을 다시 썼다.
          */
-        static constexpr AssetTypeDef kAssetType{ "Scene", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), ".scene.bin", 3, {} };
+        static constexpr AssetTypeDef kAssetType{ "Scene", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), ".scene.bin", 0, {} };
 
         /** @brief 씬 문서 안의 엔티티 하나입니다(프리팹 참조 또는 임베디드 GameObject 상태). */
         struct SceneObjectNode

@@ -415,8 +415,13 @@ namespace sw
         shutdown();
         if ( requested._role == GameNetRole::None )
             return false;
+        if ( _runWireContent.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "GameNetSession.WireContentNotSet", "Net session is opened before its wire content (content configuration, replicated types) is known - open it after the game registered them" );
+            return false;
+        }
         GameNetSessionParams params       = requested;
-        params._hostSettings._wireVersion = combineWireContent( params._hostSettings._wireVersion, _runWireContent ); // 여는 길(기동 인자 · 서버 설정 · 접속 티켓)마다 빠뜨릴 수 없게 여기 한 곳에서 섞는다
+        params._hostSettings._wireVersion = combineWireContent( params._hostSettings._wireVersion, *_runWireContent ); // 여는 길(기동 인자 · 서버 설정 · 접속 티켓)마다 빠뜨릴 수 없게 여기 한 곳에서 섞는다
         if ( NetSendThrottleSettings::loadInto( params._hostSettings ) == false )
             return false; // 고정 속도로 대신 열지 않는다 — 막힌 회선에서 재전송을 키우는 것이 고정 버킷이다(감사 N-11)
         if ( GameNetSessionInternal::isValidShardLayout( params ) == false )
@@ -509,7 +514,7 @@ namespace sw
         _role = params._role;
         if ( GameTimeScale* const pTimeScale = engine::findSubsystem<GameTimeScale>() )
             _worldTimeShare = pTimeScale->shareWorldTime(); // 이 기계만 멈추면 상대보다 뒤처진다 — 정지 메뉴는 열려도 시간은 흐른다
-        _wireContent = _runWireContent;                     // 위의 shutdown 이 앞 세션 것을 지웠다 — 연 뒤에 적는다
+        _wireContent = *_runWireContent;                    // 위의 shutdown 이 앞 세션 것을 지웠다 — 연 뒤에 적는다
         if ( _role == GameNetRole::Client )
             SW_LOG_INFO_ID( "GameNetSession.NetSessionConnecting", "Net session connecting to %#", _serverAddress.toString() );
         else if ( params._shardCount == 1 )
@@ -547,7 +552,7 @@ namespace sw
                              _wireContent._contentConfigHash, _wireContent._replicatedSchemaHash, wireContent._contentConfigHash, wireContent._replicatedSchemaHash );
             return false;
         }
-        _runWireContent = wireContent; // 지금 열지 않아도 적는다 — 나중에 티켓으로 여는 세션도 같은 내용을 섞는다
+        setRunWireContent( wireContent ); // 지금 열지 않아도 적는다 — 나중에 티켓으로 여는 세션도 같은 내용을 섞는다
         GameNetSessionParams params;
         switch ( makeLaunchParams( params ) )
         {

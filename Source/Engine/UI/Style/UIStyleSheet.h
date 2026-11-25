@@ -12,6 +12,7 @@
 
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/PropertyHandle.h"
+#include "Engine/UI/Style/UIStyleSheetAssetKind.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw
@@ -88,7 +89,7 @@ namespace sw
      * @brief 스타일 시트 하나입니다(`UIStyleSheetCache` 가 경로별로 나눠 줍니다).
      * @details 형식:
      *          ```xml
-     *          <UIStyleSheet _schemaVersion="1">
+     *          <UIStyleSheet _schemaVersion="0">
      *              <Variable _name="accent" _value="0.25,0.5,1,1" />
      *              <Rule _selector="ButtonWidget.primary:hover" _backgroundColor="$accent" _padding="16,8,16,8">
      *              <_font _weight="Bold" />                                  (구조체 필드는 자식 요소로 쓰며, 적은 안쪽 필드만 바꾼다)
@@ -105,15 +106,10 @@ namespace sw
      */
     struct UIStyleSheetAsset
     {
-        static constexpr uint32 kVersion     = 1;
-        static constexpr utf8   kExtension[] = ".uistyle.xml";
-        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
-        static constexpr AssetSuffix kArrAssetSuffix[] = {
-            { kExtension, AssetSuffixRole::Plain },
-        };
-        /** @brief 이 에셋 종류입니다(등록은 `UIStyleSheet.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "UIStyleSheetAsset", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
-        static constexpr utf8         kRootElementName[] = "UIStyleSheet";
+        static constexpr uint32 kVersion = 0;
+        /** @brief 이 에셋 종류입니다(정의는 `UIStyleSheetAssetKind`, 등록은 `UIStyleSheet.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr const AssetTypeDef& kAssetType         = UIStyleSheetAssetKind::kAssetType;
+        static constexpr utf8                kRootElementName[] = "UIStyleSheet";
 
         string              _path{};
         vector<UIStyleRule> _listRule{}; ///< 시트 안의 순서입니다(같은 특정도에서는 뒤의 규칙이 이깁니다).

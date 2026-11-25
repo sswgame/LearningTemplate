@@ -4,7 +4,7 @@
      아침에 밭에 물을 준다(FarmField::advanceDay), 마을 일정(FarmVillage)과 해(SceneBinding SunIntensity — 비면 0.55 배)가 같은 값을 읽는다.
      날씨는 하루(86400 게임 초) 동안 이어진다. 겨울에는 비가 오지 않는다(계절 가중치에 Winter 가 없다). 비 · 맑음 무게는 예전 비 확률 25 % 와 같다(1 : 3). -->
 <!-- 비(wetness)는 지면 머티리얼 묶음에도 간다 — Weather.x 젖음 · Rain.x 빗방울 링(판 상태가 쓴다, WeatherMaterialWriter). 웅덩이 양(Weather.y)은 파일 값 그대로다. -->
-<WeatherCatalog transition="600" materialCollection="engine/materials/weather.matparams.xml">
+<WeatherCatalog transition="600" materialCollection="guid:d4a6dcfaefbfafcfd96263788f8a8e54">
 	<MaterialBinding parameter="Weather" valueX="wetness"/>
 	<MaterialBinding parameter="Rain" valueX="wetness"/>
 	<SceneBinding target="SunIntensity" value="wetness" atZero="1" atOne="0.55"/>

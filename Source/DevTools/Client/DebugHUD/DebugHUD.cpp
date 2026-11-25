@@ -694,8 +694,8 @@ namespace sw
         : _pUI{ &ui }
         , _pSettings{ pSettings }
         , _toggleAction{ kToggleActionName }
-        , _screen{ kInvalidUIScreenHandle }
-        , _window{ kInvalidUIScreenHandle }
+        , _screen{}
+        , _window{}
         , _seenSectionState{}
         , _seenSectionRevision{ ~uint64{ 0 } }
         , _listShownSection{}
@@ -723,15 +723,8 @@ namespace sw
 
     void DebugHUD::shutdown()
     {
-        if ( _pUI != nullptr )
-        {
-            if ( _screen != kInvalidUIScreenHandle )
-                _pUI->closeScreen( _screen );
-            if ( _window != kInvalidUIScreenHandle )
-                _pUI->closeScreen( _window );
-        }
-        _screen = kInvalidUIScreenHandle;
-        _window = kInvalidUIScreenHandle;
+        _screen.reset();
+        _window.reset();
         if ( _bProfilerEnabledByHUD == SW_TRUE && engine::areEngineServicesBound() )
             engine::getSubsystem<FrameProfiler>().setEnabled( false );
         _bProfilerEnabledByHUD = SW_FALSE;
@@ -747,17 +740,17 @@ namespace sw
         if ( pShellMap != nullptr && pShellMap->wasActionTriggered( _toggleAction ) )
             setShown( isShown() == false );
         readRunVisibility();
-        const bool bScreenOpen = _screen != kInvalidUIScreenHandle;
+        const bool bScreenOpen = _screen.isHeld();
         const bool bShowScreen = isShown() || isRunStatusShown(); // 실행 상태만으로 띄운 화면은 사용자 설정에 쓰지 않는다
         if ( bShowScreen != bScreenOpen )
             syncScreen( bShowScreen );
-        if ( _screen != kInvalidUIScreenHandle || _bProfilerEnabledByHUD == SW_TRUE )
+        if ( _screen.isHeld() || _bProfilerEnabledByHUD == SW_TRUE )
             syncFrameProfiler();
         drawSections();
         // 창이 닫혔다(닫기 단추나 뒤로 가기). 창의 설정 바인딩이 넣은 보류 값을 확정해 사용자 파일에 남긴다.
-        if ( _window != kInvalidUIScreenHandle && _pUI->findScreen( _window ) == nullptr )
+        if ( _window.isHeld() && _window.find() == nullptr )
         {
-            _window = kInvalidUIScreenHandle;
+            _window.reset();
             if ( _pSettings != nullptr && _pSettings->hasPendingChanges() )
                 (void)_pSettings->applyPending(); // 결과의 저장 실패는 매니저가 로그에 남긴다
         }
@@ -852,36 +845,36 @@ namespace sw
             return false;
         if ( isWindowOpen() )
             return true;
-        _window = _pUI->openScreen<DebugHUDWindowScreen>( _pUI->getEngineDocuments()._debugHUD );
-        return _window != kInvalidUIScreenHandle;
+        _window = UIOwnedScreen( *_pUI, _pUI->openScreen<DebugHUDWindowScreen>( _pUI->getEngineDocuments()._debugHUD ) );
+        return _window.isHeld();
     }
 
     void DebugHUD::closeWindow()
     {
-        if ( _pUI != nullptr && _window != kInvalidUIScreenHandle )
-            _pUI->closeScreen( _window );
+        if ( UIScreen* const pWindow = _window.find() )
+            pWindow->close(); // 다음 갱신이 닫힌 것을 보고 보류 값을 확정한다
     }
 
     bool DebugHUD::isWindowOpen() const
     {
-        return _pUI != nullptr && _window != kInvalidUIScreenHandle && _pUI->findScreen( _window ) != nullptr;
+        return _window.find() != nullptr;
     }
 
     bool DebugHUD::isScreenOpen() const
     {
-        return _pUI != nullptr && _screen != kInvalidUIScreenHandle && _pUI->findScreen( _screen ) != nullptr;
+        return _screen.find() != nullptr;
     }
 
     uint32 DebugHUD::getDrawnSectionCount() const
     {
         // 이 번호의 화면은 `syncScreen` 이 DebugHUDScreen 으로 만든 것이다(코드 화면이라 castTo 로 찾을 타입 정보가 없다).
-        const UIScreen* pScreen = isScreenOpen() ? _pUI->findScreen( _screen ) : nullptr;
+        const UIScreen* pScreen = _screen.find();
         return pScreen != nullptr ? static_cast<const DebugHUDScreen*>( pScreen )->getSectionViewCount() : 0;
     }
 
     bool DebugHUD::isSectionDrawn( string_view name ) const
     {
-        const UIScreen* pScreen = isScreenOpen() ? _pUI->findScreen( _screen ) : nullptr;
+        const UIScreen* pScreen = _screen.find();
         return pScreen != nullptr && static_cast<const DebugHUDScreen*>( pScreen )->hasSectionView( name );
     }
 
@@ -889,7 +882,7 @@ namespace sw
     {
         if ( isScreenOpen() == false )
             return false;
-        const UIScreen* pScreen           = _pUI->findScreen( _screen );
+        const UIScreen* pScreen           = _screen.find();
         const Widget*   pPanel            = pScreen->getTree().findWidget<Widget>( hashed_string( kPanelName ) );
         const float2&   size              = _pUI->getViewport()._size;
         const bool      bPanelUnavailable = pPanel == nullptr || pPanel->getGeometry()._size._x <= 0.0f || size._x <= 0.0f;
@@ -940,11 +933,10 @@ namespace sw
     {
         if ( bShowScreen )
         {
-            _screen = _pUI->pushScreen( DebugHUDScreen::create() );
+            _screen = UIOwnedScreen( *_pUI, _pUI->pushScreen( DebugHUDScreen::create() ) );
             return;
         }
-        _pUI->closeScreen( _screen );
-        _screen = kInvalidUIScreenHandle;
+        _screen.reset();
     }
 
     void DebugHUD::refreshSectionCache()
@@ -1006,10 +998,10 @@ namespace sw
 
     void DebugHUD::syncFrameProfiler()
     {
-        if ( _screen != kInvalidUIScreenHandle )
+        if ( _screen.isHeld() )
             refreshSectionCache();
         // 실행 상태만으로 띄운 화면(사용자 HUD 꺼짐)은 프로파일러를 켜지 않는다 — 보이는 실행과 숨김 실행의 프로파일러 상태가 같다.
-        const bool     bNeedsProfiler = _screen != kInvalidUIScreenHandle && isShown() && _bSectionsNeedProfiler == SW_TRUE;
+        const bool     bNeedsProfiler = _screen.isHeld() && isShown() && _bSectionsNeedProfiler == SW_TRUE;
         FrameProfiler& profiler       = engine::getSubsystem<FrameProfiler>();
         if ( bNeedsProfiler && profiler.isEnabled() == false )
         {

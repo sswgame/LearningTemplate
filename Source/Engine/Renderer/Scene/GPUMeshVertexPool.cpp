@@ -116,7 +116,7 @@ namespace sw
         return Placement{ it->second._base, it->second._indexBase };
     }
 
-    bool GPUMeshVertexPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
+    bool GPUMeshVertexPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMesh, uint32 maxVertexCount )
     {
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
             return false;
@@ -144,7 +144,7 @@ namespace sw
 
         // 3) 들어온 메시에 구간을 준다. 하나라도 자리가 없으면(용량 부족, 조각남) 새 버퍼로 다시 채운다.
         if ( _vertexBuffer.isValid() == false || placeAddedMeshes( pDevice ) == false )
-            repack( pDevice );
+            repack( pDevice, maxVertexCount );
         return true;
     }
 
@@ -253,7 +253,7 @@ namespace sw
         return true;
     }
 
-    void GPUMeshVertexPool::repack( IRHIDevice* pDevice )
+    void GPUMeshVertexPool::repack( IRHIDevice* pDevice, uint32 maxVertexCount )
     {
         // 새 버퍼는 아무 프레임도 읽지 않는다 — 대기 중인 반납까지 버리고 살아 있는 메시를 앞에서부터 잇는다.
         uint32 liveCount      = 0;
@@ -263,8 +263,8 @@ namespace sw
             liveCount += entry._count;
             liveIndexCount += entry._indexCount;
         }
-        const uint32 capacity      = MathUtil::clamp( liveCount + liveCount / 2u, kMinPoolVertices, kMaxPoolVertices );
-        const uint32 indexCapacity = MathUtil::clamp( liveIndexCount + liveIndexCount / 2u, kMinPoolIndices, kMaxPoolIndices );
+        const uint32 capacity      = MathUtil::clamp( liveCount + liveCount / 2u, kMinPoolVertices, maxVertexCount );
+        const uint32 indexCapacity = MathUtil::clamp( liveIndexCount + liveIndexCount / 2u, kIndicesPerVertex * kMinPoolVertices, kIndicesPerVertex * maxVertexCount );
 
         // 옛 풀 정점 버퍼는 새 풀로 GPU 복사하는 원본이다(R-15 — CPU 정점을 다시 읽지 않는다). 그 복사를 프레임 업로드 단계가 기록한 뒤에 지연 해제한다.
         // 옛 자리(구간 시작)를 먼저 적어 둔다 — 아래에서 새 자리로 덮는다. 내용이 바뀌어 다시 들어온 메시는 옛 자리가 없다(`retireEntry`).
@@ -317,7 +317,7 @@ namespace sw
                 if ( bWarnedFull == false )
                     SW_LOG_WARNING_ID( "GPUMeshVertexPool.VertexPoolFullVertices",
                                        "The vertex pool is full (%# vertices, %# indices) - the remaining meshes are drawn with their own vertex and index buffers (they cannot join multi-draw).",
-                                       kMaxPoolVertices, kMaxPoolIndices );
+                                       maxVertexCount, kIndicesPerVertex * maxVertexCount );
                 bWarnedFull = true;
                 continue;
             }

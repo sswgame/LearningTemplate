@@ -12,22 +12,17 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Client/VoxelChunkComponent.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelGameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 세운 청크를 모든 게임의 상태 저장 전에 걷는다(게임마다 올리지 않는다). */
-        const StatefulComponentRegistrar<VoxelWorldViewComponent> s_viewRegistration{ "VoxelWorldViewComponent" };
 
         struct VoxelWorldViewComponentInternal
         {
@@ -40,9 +35,9 @@ namespace sw
     } // namespace
 
     VoxelWorldViewComponent::VoxelWorldViewComponent()
-        : _chunkPrefab{}
+        : GameModeViewComponent( GameModeViewBinding::of<&VoxelWorldViewComponent::updateViews>() )
+        , _chunkPrefab{}
         , _chunkBuildsPerFrame{ 4 }
-        , _director{}
         , _mapChunkView{}
         , _atlasGate{}
         , _bPrefabInvalid{ SW_FALSE }
@@ -53,32 +48,10 @@ namespace sw
 
     VoxelWorldViewComponent::~VoxelWorldViewComponent() = default;
 
-    void VoxelWorldViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        const GameObject* const             pOwner    = getOwner();
-        const VoxelGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<VoxelGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "VoxelWorldView.NoGameMode", "Voxel world view on '%#': no VoxelGameModeComponent in front of it on the same object - no chunk is drawn",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<VoxelGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<VoxelGameModeComponent>( pDirector );
-    }
-
     void VoxelWorldViewComponent::onEndPlay()
     {
         despawnViews();
-        Component::onEndPlay();
-    }
-
-    void VoxelWorldViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        context.deferPostTickOnComponent( *this, []( VoxelWorldViewComponent& view, GameObjectManager& manager )
-        { view.updateViews( manager ); } );
+        GameModeViewComponent::onEndPlay();
     }
 
     void VoxelWorldViewComponent::despawnViews()
@@ -97,33 +70,30 @@ namespace sw
         _mapChunkView.clear();
     }
 
-    void VoxelWorldViewComponent::updateViews( GameObjectManager& manager )
+    void VoxelWorldViewComponent::updateViews( GameObjectManager& manager, const VoxelGameModeComponent& director )
     {
-        const VoxelGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        removeHiddenViews( manager, *pDirector );
+        removeHiddenViews( manager, director );
         if ( _atlasGate.isPending() )
-            updateAtlasGate( manager, *pDirector );
+            updateAtlasGate( manager, director );
 
         // 몸에서 가까운 청크부터 본다 — 블록을 부순 곳이 먼저 다시 메싱된다. 처음 짓는 청크는 한도에 들지 않는다.
-        const VoxelWorld& world        = pDirector->getWorld();
-        const int32       centerX      = pDirector->getCenterChunkX();
-        const int32       centerZ      = pDirector->getCenterChunkZ();
+        const VoxelWorld& world        = director.getWorld();
+        const int32       centerX      = director.getCenterChunkX();
+        const int32       centerZ      = director.getCenterChunkZ();
         int32             rebuiltCount = 0;
-        for ( int32 ring = 0; ring <= pDirector->getViewChunkRadius(); ++ring )
+        for ( int32 ring = 0; ring <= director.getViewChunkRadius(); ++ring )
         {
             for ( int32 chunkZ = centerZ - ring; chunkZ <= centerZ + ring; ++chunkZ )
             {
                 for ( int32 chunkX = centerX - ring; chunkX <= centerX + ring; ++chunkX )
                 {
-                    const bool              bOnRing = VoxelWorldViewComponentInternal::computeDistance( *pDirector, chunkX, chunkZ ) == ring;
+                    const bool              bOnRing = VoxelWorldViewComponentInternal::computeDistance( director, chunkX, chunkZ ) == ring;
                     const VoxelChunk* const pChunk  = bOnRing ? world.findChunk( chunkX, chunkZ ) : nullptr;
                     if ( pChunk == nullptr )
                         continue;
                     const uint64 key = VoxelWorld::makeChunkKey( chunkX, chunkZ );
                     if ( _mapChunkView.contains( key ) == false )
-                        spawnView( manager, *pDirector, chunkX, chunkZ );
+                        spawnView( manager, director, chunkX, chunkZ );
                     const auto viewIt = _mapChunkView.find( key );
                     if ( viewIt == _mapChunkView.end() || _atlasGate.canDraw() == false )
                         continue;
@@ -170,7 +140,7 @@ namespace sw
         AssetManager* const pAssets = game::findSubsystem<AssetManager>();
         if ( _bPrefabInvalid == SW_TRUE || pAssets == nullptr )
             return;
-        GameObject* const          pObject = pAssets->getAssetCache<PrefabCache>().spawn( &manager, _chunkPrefab.path(), "VoxelChunk" );
+        GameObject* const          pObject = pAssets->getAssetCache<PrefabCache>().spawn( &manager, _chunkPrefab.path(), SpawnLifetime::Derived, "VoxelChunk" );
         VoxelChunkComponent* const pChunk  = pObject != nullptr ? pObject->getComponent<VoxelChunkComponent>() : nullptr;
         MeshComponent* const       pMesh   = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
         if ( pChunk == nullptr || pMesh == nullptr )

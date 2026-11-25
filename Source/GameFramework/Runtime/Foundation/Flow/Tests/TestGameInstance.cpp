@@ -311,6 +311,9 @@ SW_TEST_CASE( GameInstanceTest, NetSessionRefusesLocalRestoreAndClientSaves )
     config._gamePort      = 0; // 운영체제가 고른다
     GameNetSessionParams serverParams;
     SW_REQUIRE_TRUE( server.makeServerParams( config, serverParams ) );
+    SW_EXPECT_LOG( "GameNetSession.WireContentNotSet" );
+    SW_EXPECT_FALSE( server.initialize( serverParams ) ); // 와이어 내용을 정하기 전에는 열리지 않는다
+    server.setRunWireContent( GameNetWireContent{} );
     SubsystemScope testScope;
     SW_REQUIRE_TRUE( testScope.bind( &timeScale ) );
     SW_REQUIRE_TRUE( testScope.bind( &session ) );

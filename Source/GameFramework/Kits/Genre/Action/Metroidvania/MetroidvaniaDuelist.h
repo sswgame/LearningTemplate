@@ -6,7 +6,6 @@
  *          호출한 시각이다. 너무 일찍 누르면(창 밖) 패리가 아니라 그냥 맞는다.
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -57,9 +56,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "MDUE" );
-        static constexpr uint32 kStateVersion = 1;
-
         MetroidvaniaDuelist();
 
         /**
@@ -105,14 +101,14 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        const MetroidvaniaCatalog* _pCatalog;
-        HealthStateMachine         _healthMachine;
-        ResourceGauge              _stamina;
+        const MetroidvaniaCatalog*        _pCatalog;
+        SW_CODEC_STATE HealthStateMachine _healthMachine;
+        SW_CODEC_STATE ResourceGauge      _stamina;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _time;
         PROPERTY( RuntimeState )
-        float32   _parryPressTime; ///< 마지막으로 패리를 누른 시각(쓰고 나면 아주 먼 과거로 돌린다)
-        Countdown _riposteWindow;
+        float32                  _parryPressTime; ///< 마지막으로 패리를 누른 시각(쓰고 나면 아주 먼 과거로 돌린다)
+        SW_CODEC_STATE Countdown _riposteWindow;
         PROPERTY( RuntimeState )
         float32 _damageTakenScale;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

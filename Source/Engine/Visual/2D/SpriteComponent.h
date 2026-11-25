@@ -173,9 +173,9 @@ namespace sw
         PROPERTY( Category = "Rendering", DisplayName = "Texture", Tooltip = "Texture asset name; empty uses the clip atlas" )
         AssetRef<Texture2D> _textureName;
         PROPERTY( Category = "Rendering", DisplayName = "Normal Map", Tooltip = "Normal map read by the lit sprite material" )
-        AssetRef<Texture2D> _normalMapName;
-        hashed_string       _appliedTexture;   ///< 이 컴포넌트가 등록한 텍스처 인스턴스의 텍스처다. 비어 있으면 등록한 것이 없다
-        hashed_string       _appliedNormalMap; ///< 그 인스턴스의 노멀 맵
+        AssetRef<Texture2D>        _normalMapName;
+        SW_TRANSIENT hashed_string _appliedTexture;   ///< 이 컴포넌트가 등록한 텍스처 인스턴스의 텍스처다. 비어 있으면 등록한 것이 없다
+        SW_TRANSIENT hashed_string _appliedNormalMap; ///< 그 인스턴스의 노멀 맵
         /**
          * @brief 스프라이트 클립(`.sprite.xml`) 경로입니다. 보여 줄 프레임은 번호(`_clipFrame`)로 따로 가집니다. 프레임마다 문자열을 만들어
          *        파싱하지 않고 번호 하나를 넘깁니다.
@@ -202,14 +202,14 @@ namespace sw
         float2 _size;
         PROPERTY( Category = "Rendering", DisplayName = "Slice Border",
                   Tooltip = "9-slice border (left, bottom, right, top) as frame fractions; used when the clip frame has none", Min = 0.0, Max = 1.0 )
-        float4 _sliceBorder;
-        uint8  _bSliceMeshApplied; ///< 슬라이스 메시를 설정한 상태인지 나타낸다. Simple 로 돌아갈 때 사각형을 다시 설정한다. 저장하지 않는다
+        float4             _sliceBorder;
+        SW_TRANSIENT uint8 _bSliceMeshApplied; ///< 슬라이스 메시를 설정한 상태인지 나타낸다. Simple 로 돌아갈 때 사각형을 다시 설정한다. 저장하지 않는다
         PROPERTY( Category = "Sorting", DisplayName = "Order In Layer", Tooltip = "Draw order inside the sorting layer; higher draws on top", Min = -32767.0,
                   Max = 32767.0 )
         int32                           _orderInLayer;
         SharedAssetRef<SpriteClipAsset> _clip;              ///< 읽은 클립(공유하는 것)이다. 저장하지 않는다
-        string                          _loadedClipPath;    ///< `_clip` 이 어느 경로의 것인지 나타낸다. 실패한 경로도 기록해 같은 실패를 되풀이해 읽지 않는다
+        SW_TRANSIENT string             _loadedClipPath;    ///< `_clip` 이 어느 경로의 것인지 나타낸다. 실패한 경로도 기록해 같은 실패를 되풀이해 읽지 않는다
         SharedAssetRef<SpriteLibrary>   _library;           ///< 읽은 라이브러리(공유하는 것)다. 저장하지 않는다
-        string                          _loadedLibraryPath; ///< `_library` 가 어느 경로의 것인지 나타낸다. 실패한 경로도 기록한다
+        SW_TRANSIENT string             _loadedLibraryPath; ///< `_library` 가 어느 경로의 것인지 나타낸다. 실패한 경로도 기록한다
     };
 } // namespace sw

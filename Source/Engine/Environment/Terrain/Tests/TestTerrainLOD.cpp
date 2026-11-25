@@ -10,6 +10,7 @@
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
+#include "Engine/Environment/Terrain/Tests/TerrainTestServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -50,7 +51,8 @@ SW_TEST_CASE( TerrainLODTest, ReturningLODsReuseCachedChunkMeshes )
     namespace Util = TerrainLODTestUtil;
     const test::ScopedScratchDomain domain;
     const string                    heightfieldID = Util::writeFlatHeightfield( domain );
-    GameObjectManager               manager;
+    const test::TerrainTestServices services;
+    GameObjectManager               manager{ services.makeServices() };
     GameObject*                     pObject = manager.createGameObject( hashed_string( "Terrain" ) );
     SW_REQUIRE_NOT_NULL( pObject );
     TerrainComponent* pTerrain = pObject->addComponent<TerrainComponent>();

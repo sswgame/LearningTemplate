@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
 
@@ -14,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Navigation/NavGridObstacle.h"
@@ -25,8 +24,7 @@ namespace sw
     {
         struct ParkGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "PARK" );
-            static constexpr uint32 kStateVersion = 4; ///< 3: 고른 배치를 클라이언트 뷰로 옮겼다. 4: 손님이 남은 길의 점을 싣는다
+            static constexpr FormatDef kStateFormat{ "PARK" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`)가 정한다.
             static constexpr const utf8* kEventBlocked = "ParkBlocked";
@@ -37,16 +35,6 @@ namespace sw
             static constexpr float32 kEntranceSideDistance   = 5.0f;  ///< 스테이션에서 줄 입구까지 바깥쪽 거리(m)
             static constexpr int32   kCoasterBaseRunningCost = 8;     ///< 코스터의 분당 운영비 바탕
             static constexpr float32 kTrackPerRunningCost    = 60.0f; ///< 트랙 이만큼(m)마다 분당 운영비가 1 오른다
-
-            /** @brief 상태 칸 판 1 → 2: 손으로 세던 상태 로그 시간(`_statusTimer`)이 사라졌다 — 첫 칸을 버리고 자동 건설 시간을 옮긴다. */
-            [[nodiscard]] static bool dropStatusTimer( Archive& inOldBody, Archive& outNewBody )
-            {
-                float32 statusTimer    = 0.0f;
-                float32 autoBuildTimer = 0.0f;
-                inOldBody >> statusTimer >> autoBuildTimer;
-                outNewBody << autoBuildTimer;
-                return inOldBody.isOk();
-            }
 
             /** @brief 시나리오 프로브입니다. 첫 공원 디렉터의 손님 수를 반환하며, 그림자 장면이 비어 있지 않다는 전제를 확인합니다. */
             [[nodiscard]] static bool readGuestCount( const ParkGameModeComponent& gameMode, float64& outValue )
@@ -115,13 +103,6 @@ namespace sw
         {
             pCoaster->_train.step( deltaTime );
         }
-    }
-
-    void ParkGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트 모듈(`ParkViewComponent`)이 세운다.
-        (void)manager;
-        (void)bRespawnViews;
     }
 
     const CoasterTrain* ParkGameModeComponent::findCoasterTrain( int32 coasterIndex ) const
@@ -280,10 +261,10 @@ namespace sw
         // 배치는 공유 캐시의 한 벌이다. 코스터 레이아웃은 배치가 같은 팩에서 받아 쥔 그 한 벌을 쓴다 — 게임 모드가 코스터 경로를 따로 적지 않는다(기준 하나).
         // 배치 · 규칙은 열 때 값으로 옮겨 쥔다 — 연 공원은 다시 읽힌 배치를 따라가지 않는다(다음 판이 쓴다).
         shared_ptr<const ParkLayout> pLayout;
-        if ( acquireRequiredSnapshot( _parkDataPath, pLayout ) == false )
+        if ( acquireRequiredSnapshot( _parkDataPath.isSet() ? string_view{ _parkDataPath.get() } : string_view{}, pLayout ) == false )
             return false;
         const ParkLayout& layout = *pLayout;
-        _pLayoutCatalog          = layout.getCoasterLayouts();
+        _pLayoutCatalog          = layout.getCoasterLayouts().snapshot();
         _settings                = layout.getRules(); // 공원 규칙은 배치 데이터의 <Rules> 다(감사 K-4)
         _settings._entryFee      = layout.getEntryFee();
         if ( placeLayout( layout ) == false || rebuildWalkGrid() == false )
@@ -392,26 +373,25 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ParkGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion );
+        io.header( ParkGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        ThemeParkSimulation restoredSimulation;
-        if ( io.isReading() && io.check( restoredSimulation.initialize( _settings, _wallet, _walkGrid ) ) == false )
+        if ( io.valueOpened( _simulation, [this]( ThemeParkSimulation& simulation )
+        { return simulation.initialize( _settings, _wallet, _walkGrid ); } ) == false )
             return;
-        ThemeParkSimulation& simulation = io.isWriting() ? _simulation : restoredSimulation;
-        io.value( simulation );
         uint32 placementCount = static_cast<uint32>( _listPlacement.size() );
         io.count( sizeof( int32 ), placementCount );
         // 배치 데이터가 바뀌었으면 건설한 것을 맞출 수 없다.
         if ( io.check( placementCount == _listPlacement.size() ) == false )
             return;
-        const int32   rideCount = static_cast<int32>( simulation.getRides().size() );
-        vector<int32> listRideIndex( placementCount );
-        for ( uint32 index = 0; index < placementCount; ++index )
+        const int32 rideCount = static_cast<int32>( _simulation.getRides().size() );
+        for ( RidePlacement& placement : _listPlacement )
         {
-            listRideIndex[index] = _listPlacement[index]._rideIndex;
-            io.value( listRideIndex[index] );
-            io.check( -1 <= listRideIndex[index] && listRideIndex[index] < rideCount );
+            io.value( placement._rideIndex );
+            if ( io.check( -1 <= placement._rideIndex && placement._rideIndex < rideCount ) == false )
+                return;
+            if ( io.isReading() && placement._rideIndex >= 0 )
+                placement._ride = _simulation.getRides()[static_cast<size_t>( placement._rideIndex )];
         }
         uint32 coasterCount = static_cast<uint32>( _listCoaster.size() );
         io.count( sizeof( int32 ) + sizeof( float32 ) * 2, coasterCount );
@@ -436,20 +416,10 @@ namespace sw
             pCoaster->_train.setSpeed( speed );
             listCoaster.push_back( std::move( pCoaster ) );
         }
-        Wallet restoredWallet; // 두 시계는 상태 칸이다(`GameModeComponent::serializeState`)
-        io.value( io.isWriting() ? _wallet : restoredWallet );
+        io.value( _wallet ); // 두 시계는 상태 칸이다(`GameModeComponent::serializeState`)
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _simulation = std::move( restoredSimulation );
-        _wallet     = std::move( restoredWallet );
-        for ( uint32 placementIndex = 0; placementIndex < placementCount; ++placementIndex )
-        {
-            RidePlacement& placement = _listPlacement[placementIndex];
-            placement._rideIndex     = listRideIndex[placementIndex];
-            if ( placement._rideIndex >= 0 )
-                placement._ride = _simulation.getRides()[static_cast<size_t>( placement._rideIndex )];
-        }
         _listCoaster = std::move( listCoaster );
         ++_parkRevision;
     }
@@ -495,7 +465,5 @@ namespace sw
 
 namespace sw
 {
-    SW_TYPE_VERSION_PATCH( parkGameMode1To2, "sw::ParkGameModeComponent", 1, 2, &ParkGameModeComponentInternal::dropStatusTimer );
-
     SW_AUTOMATION_COMPONENT_WATCH( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park game mode", ParkGameModeComponent, &ParkGameModeComponentInternal::readGuestCount );
 } // namespace sw

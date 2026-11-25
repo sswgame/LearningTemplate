@@ -27,6 +27,11 @@ namespace sw
         /** @brief 메시지 본문의 인자 꼴과 함수 찾기입니다. */
         struct RemoteCallInternal
         {
+            /** @brief 대상 id · 연결 번호 @p id 의 구독 번호입니다 — id 0 이 있어 하나 민다(구독 번호 0 은 빈 구독이다). */
+            static uint64 toRegistrationID( uint32 id ) { return static_cast<uint64>( id ) + 1; }
+            /** @brief `toRegistrationID` 의 역입니다. */
+            static uint32 fromRegistrationID( uint64 registrationID ) { return static_cast<uint32>( registrationID - 1 ); }
+
             /** @brief 인자 하나의 이진 꼴입니다. 함수의 인자 타입이 정합니다(`findArgumentKind`). */
             enum class ArgumentKind : uint8
             {
@@ -424,6 +429,8 @@ namespace sw
         , _pRouter{ nullptr }
         , _pClock{ []() -> int64
     { return MonotonicClock::nowNanoseconds() / constant::time::kNanosecondsPerMillisecond; } }
+        , _sessionSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &RemoteCallServer::releaseSessionTarget, this ) }
+        , _targetSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &RemoteCallServer::releaseTarget, this ) }
     {
     }
 
@@ -479,42 +486,42 @@ namespace sw
         return bucketIt->second.tryConsume( nowMs );
     }
 
-    bool RemoteCallServer::registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance, int32 ownerConnectionID )
+    Subscription RemoteCallServer::registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance, int32 ownerConnectionID )
     {
         if ( pInstance == nullptr || targetID == RemoteCallTargets::kSessionTargetID || _targets.findTarget( targetID ) != nullptr )
         {
             SW_LOG_ERROR_ID( "RemoteCall.ServerTargetRefused", "Remote call target %# (%#) was not registered - the instance is null, the id is the session id 0 or already taken", targetID,
                              type._name.c_str() );
-            return false;
+            return Subscription{};
         }
         if ( _targets.validateRemoteCallContract( type, FunctionNetRole::Server ) == false )
-            return false;
+            return Subscription{};
         _targets._mapTarget[targetID] = RemoteCallTargets::Target{ &type, pInstance, ownerConnectionID };
-        return true;
+        return _targetSubscriptions.issue( RemoteCallInternal::toRegistrationID( targetID ) );
     }
 
-    void RemoteCallServer::unregisterTarget( uint32 targetID )
+    void RemoteCallServer::releaseTarget( uint64 registrationID )
     {
-        _targets._mapTarget.erase( targetID );
+        _targets._mapTarget.erase( RemoteCallInternal::fromRegistrationID( registrationID ) );
     }
 
-    bool RemoteCallServer::registerSessionTarget( int32 connectionID, const TypeInfo& type, void* pInstance )
+    Subscription RemoteCallServer::registerSessionTarget( int32 connectionID, const TypeInfo& type, void* pInstance )
     {
         if ( pInstance == nullptr || hasSessionTarget( connectionID ) )
         {
             SW_LOG_ERROR_ID( "RemoteCall.SessionTargetRefused", "Remote call session of connection %# (%#) was not registered - the instance is null or the connection already has one", connectionID,
                              type._name.c_str() );
-            return false;
+            return Subscription{};
         }
         if ( _targets.validateRemoteCallContract( type, FunctionNetRole::Server ) == false )
-            return false;
+            return Subscription{};
         _mapSession[connectionID] = RemoteCallTargets::Target{ &type, pInstance, connectionID };
-        return true;
+        return _sessionSubscriptions.issue( RemoteCallInternal::toRegistrationID( static_cast<uint32>( connectionID ) ) );
     }
 
-    void RemoteCallServer::unregisterSessionTarget( int32 connectionID )
+    void RemoteCallServer::releaseSessionTarget( uint64 registrationID )
     {
-        _mapSession.erase( connectionID );
+        _mapSession.erase( static_cast<int32>( RemoteCallInternal::fromRegistrationID( registrationID ) ) );
     }
 
     const RemoteCallTargets::Target* RemoteCallServer::findCallTarget( uint32 targetID, int32 connectionID ) const
@@ -667,6 +674,7 @@ namespace sw
     {
         (void)reason;
         _mapSession.erase( connectionID );
+        _sessionSubscriptions.detach( RemoteCallInternal::toRegistrationID( static_cast<uint32>( connectionID ) ) ); // 같은 슬롯의 다음 연결을 옛 구독이 내리지 않게
         _mapCallBucket.erase( connectionID );
         for ( auto iter = _mapFunctionCallBucket.begin(); iter != _mapFunctionCallBucket.end(); )
         {
@@ -677,10 +685,13 @@ namespace sw
         }
         for ( auto iter = _targets._mapTarget.begin(); iter != _targets._mapTarget.end(); )
         {
-            if ( iter->second._ownerConnectionID == connectionID )
-                iter = _targets._mapTarget.erase( iter );
-            else
+            if ( iter->second._ownerConnectionID != connectionID )
+            {
                 ++iter;
+                continue;
+            }
+            _targetSubscriptions.detach( RemoteCallInternal::toRegistrationID( iter->first ) ); // 같은 번호의 다음 대상을 옛 구독이 내리지 않게
+            iter = _targets._mapTarget.erase( iter );
         }
     }
 
@@ -715,25 +726,26 @@ namespace sw
         , _pRouter{ nullptr }
         , _invokedCount{ 0 }
         , _nextSequence{ 1 }
+        , _targetSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &RemoteCallClient::releaseTarget, this ) }
     {
     }
 
-    bool RemoteCallClient::registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance )
+    Subscription RemoteCallClient::registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance )
     {
         if ( pInstance == nullptr || _targets.findTarget( targetID ) != nullptr )
         {
             SW_LOG_ERROR_ID( "RemoteCall.ClientTargetRefused", "Remote call target %# (%#) was not registered - the instance is null or the id is already taken", targetID, type._name.c_str() );
-            return false;
+            return Subscription{};
         }
         if ( _targets.validateRemoteCallContract( type, FunctionNetRole::Client ) == false )
-            return false;
+            return Subscription{};
         _targets._mapTarget[targetID] = RemoteCallTargets::Target{ &type, pInstance, 0 };
-        return true;
+        return _targetSubscriptions.issue( RemoteCallInternal::toRegistrationID( targetID ) );
     }
 
-    void RemoteCallClient::unregisterTarget( uint32 targetID )
+    void RemoteCallClient::releaseTarget( uint64 registrationID )
     {
-        _targets._mapTarget.erase( targetID );
+        _targets._mapTarget.erase( RemoteCallInternal::fromRegistrationID( registrationID ) );
     }
 
     uint32 RemoteCallClient::callServer( uint32 targetID, const TypeInfo& type, string_view functionName, const vector<ReflectedValue>& listArg )

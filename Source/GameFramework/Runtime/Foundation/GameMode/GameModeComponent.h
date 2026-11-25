@@ -19,6 +19,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
@@ -29,6 +30,7 @@ namespace sw
     class GameObject;
     class GameObjectManager;
     class IBehaviorTreeDebugSource;
+    class StateHashBuilder;
     struct MinigameResultValue;
     template <typename AssetType>
     class SharedAssetCache;
@@ -39,7 +41,7 @@ namespace sw
      * @details 파생 클래스는 규칙(시작, 틱, 상태 바이트)과 무엇을 스폰하는지만 적는다. 베이스는 다음을 맡는다.
      *          - **수명**: `PrePhysics` 에서 틱하고(`kTickGroup` — 뷰와 컨트롤러는 뒤 그룹에서 읽는다) `onBeginPlay` 의 `openGame` 이 상태 칸을 기본값으로 되돌린 뒤 `startGame` 을 부른다.
      *            그다음 보관하던 복원 바이트를 적용하고 첫 플러시를 예약한다. 시작하지 못하면 틱도 돌지 않는다.
-     *          - **상태 바이트**: `restoreState` 는 시작 전이면 바이트를 보관했다가 시작할 때 적용하고, 시작 뒤면 바로 `readState` 로 적용한다.
+     *          - **상태 바이트**: `restoreState` 는 시작 전이면 바이트를 보관했다가 시작할 때 적용하고, 시작 뒤면 바로 `readStateOrRevert` 로 적용한다.
      *            적용한 뒤에는 뷰 오브젝트를 정리해 다시 스폰하게 한다.
      *            `writeState` 와 `restoreState` 는 `ComponentStateCodec` 가 이름으로 부르는 계약이다.
      *            게임 인스턴스는 `GameStateSnapshot::registerGameMode<T>()`(게임 인스턴스의 `getStateSnapshot()`) 한 줄로 이 디렉터를 상태 스냅샷에 등록한다.
@@ -57,12 +59,13 @@ namespace sw
      *            (`requirePlayerState` — 없으면 판을 열지 않는다). 디렉터 오브젝트에 두지 않는다.
      *          - **다시 읽힌 카탈로그**: 규칙 객체는 카탈로그를 날 포인터로 빌린다. `acquireRequired` · `acquireBoundCatalog` 로 받은 에셋은 베이스가 연 판부터 쥐어 끊기지 않고,
      *            다시 읽히면 규칙 틱 앞에서 상태를 왕복(`writeState` → `readState`)시켜 규칙 객체를 새 판에 다시 묶는다(세이브를 읽는 길 하나 — 항목은 id 로 다시 찾는다).
-     *            언리얼 DataTable 행 핸들이 다시 읽힌 표에서 행 이름으로 찾는 자리이다. 왕복이 지면(새 판에 없는 항목) 디렉터의 복원 실패 처리(`onStateRestored( false )`)를 따르고 알린다.
+     *            언리얼 DataTable 행 핸들이 다시 읽힌 표에서 행 이름으로 찾는 자리이다. 왕복이 지면(새 판에 없는 항목) 앞 판에 묶인 상태로 되돌리고 디렉터의 복원 실패 처리(`onStateRestored( false )`)를 따르고 알린다.
+     *            멤버는 `BoundAssetRef` 라 디렉터 · 뷰 · 입력은 규칙 객체가 묶인 판만 본다 — 다시 읽힌 뒤 묶기 전에 새 판에서 옛 행 번호를 찾지 않는다.
      *
      *          - **디렉터 계약 셋**(모든 미니게임 · 허브 디렉터가 같은 셋만 적는다 — 키트 규칙 객체에는 계약을 더하지 않는다):
      *            ① 걸음 `updateGame`(틱 뒤 게임 스레드) — 베이스가 프로파일러 구간(`kStepScopeName`)으로 감싸 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 가 그 구간을 읽는다(줄 추가 없이 모든 미니게임이 값을 낸다).
      *            ② 세이브 `serializeGameState`(리플렉션 상태 칸 뒤에 잇는 손 본문 하나).
-     *            ③ 결과 `finishMinigame`(스스로 끝난다) 또는 플레이어의 나가기 → `collectMinigameResult` — 한 판 임시 상태(미니게임 지갑 · 창고 · 점수)는 디렉터가 소유하고
+     *            ③ 결과 `MatchGameModeComponent::endMatch`(스스로 끝난다) 또는 플레이어의 나가기 → `collectMinigameResult` — 한 판 임시 상태(미니게임 지갑 · 창고 · 점수)는 디렉터가 소유하고
      *            바탕 판(플레이어 진행 · 월드 상태)에 직접 쓰지 않으며 `MinigameResult` 의 값 목록으로만 내보낸다(`MinigameFlow::requestLeave`).
      *
      *          디렉터의 시뮬레이션은 키트의 보통 클래스이고 PROPERTY 가 아니다.
@@ -96,6 +99,11 @@ namespace sw
         void onTick( TickContext& context ) override;
         /** @brief 규칙 서브틱(`kRuleSubTick`)이면 `runRules` 를, 상태 로그 서브틱(`kStatusSubTick`)이면 `logStatus` 를 틱 뒤로 겁니다. */
         void onSubTick( uint32 subTickID, TickContext& context ) override;
+        /**
+         * @brief 상태 칸 뒤에 열린 판의 상태 바이트(`writeState`)를 접습니다 — 규칙 객체는 칸이 아니고 모습은 파생이라(`SpawnLifetime::Derived`) 바이트가 없으면 규칙이 어긋나도 해시가 같다.
+         * @details 네트 세션에 묶인 씬은 접지 않는다 — 클라이언트의 디렉터는 판을 돌리지 않아 서버와 바이트가 다르다.
+         */
+        void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
         /** @brief 다른 오브젝트의 디렉터 뒤에 규칙을 돌게 합니다. 플레이를 시작하기 전에 불러야 하며, 씬 데이터는 PROPERTY `_tickAfter` 로 적습니다. */
         void setTickAfter( GameObjectHandle gameMode ) { _tickAfter = gameMode; }
         /** @brief 이 디렉터의 규칙이 도는 틱입니다. `_tickAfter` 를 걸었으면 규칙 서브틱이고, 아니면 주 틱입니다. 다른 디렉터가 선행 조건으로 겁니다. */
@@ -130,7 +138,7 @@ namespace sw
         /**
          * @brief 디렉터 상태의 입구입니다 — 리플렉션 상태 칸(`PROPERTY( RuntimeState )`, 동적 형식 기준 `StateIO::reflectedAs`)을 먼저 놓고 파생의 `serializeGameState` 를 잇습니다.
          * @details 상태 칸은 씬 스냅숏도 옮기지만 그 뒤 `onBeginPlay` 의 `openGame` 이 기본값으로 되돌리므로, 판을 연 뒤 적용하는 이 바이트가 싣는다(언리얼 `UPROPERTY( SaveGame )` 자리).
-         *          파생은 칸을 다시 적지 않는다 — 한 칸을 두 곳이 알지 않는다. 읽기는 사본 없이 돌아, 칸을 덮기 전에 지금 칸을 따로 써 두고 손 본문이 거절하면 되돌린다.
+         *          파생은 칸을 다시 적지 않는다 — 한 칸을 두 곳이 알지 않는다. 읽기는 사본 없이 제자리에서 돈다 — 끝까지 맞지 않으면 `readStateOrRevert` 가 앞 상태로 되돌린다.
          */
         void serializeState( StateIO& io );
         /**
@@ -144,19 +152,15 @@ namespace sw
         void despawnViews();
 
         /**
-         * @brief 디렉터 계약 ③ — 이 디렉터가 도는 미니게임을 결과 @p resultName(예: `win` · `lose`)으로 끝냅니다. 넘길 값은 `collectMinigameResult` 가 모은다.
-         * @details 나가기는 다음 게임 인스턴스 갱신(틱 밖)이 한다(`MinigameFlow::requestLeave`) — 하위 레벨 나가기가 이 디렉터를 지우므로 규칙 안에서 바로 나가지 않는다.
-         * @return 미니게임 흐름이 없거나 켜진 미니게임이 없으면 오류를 남기고 false 입니다(허브 판에서 부르면 계약 위반이다).
-         */
-        [[nodiscard]] bool finishMinigame( const hashed_string& resultName );
-        /**
-         * @brief `finishMinigame` · 플레이어의 나가기(`MinigameFlow::requestQuit`)가 결과에 실을 값(번 돈 · 얻은 물건 · 점수)을 @p outListValue 에 더합니다. 한 판 임시 상태를 쥔 미니게임 디렉터가 덮는다.
+         * @brief 디렉터 계약 ③ — 스스로 끝난 판(`MatchGameModeComponent::endMatch`) · 플레이어의 나가기(`MinigameFlow::requestQuit`)가 결과에 실을 값(번 돈 · 얻은 물건 · 점수)을 @p outListValue 에 더합니다. 한 판 임시 상태를 쥔 미니게임 디렉터가 덮는다.
          * @details 바탕 판에 쓰는 것은 결과를 받는 쪽(`MinigameFlow::onFinished` 구독 — 허브 디렉터)이다. 미니게임 디렉터가 플레이어 진행을 직접 고치면
          *          씬 전환 복원(들어갈 때 찍은 스냅숏)이 그 값을 되감는다.
          */
         virtual void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const { (void)outListValue; }
         /** @brief 판이 열렸으면(`startGame` 이 성공) true 입니다. */
         bool isStarted() const { return _bStarted == SW_TRUE; }
+        /** @brief 사람의 입력 명령을 받는 중이면 true 입니다(열린 판이 기본 — 끝난 판 · 남의 차례 · 자동 플레이를 가르는 디렉터가 덮는다). 뷰가 입력을 넘기기 전에 묻는다(`GameModeViewComponent`). */
+        virtual bool isAcceptingInput() const { return isStarted(); }
         /** @brief 플레이어 상태 오브젝트(`_playerState` — 조종자)입니다. 가리키는 것이 없으면 nullptr 입니다. */
         const GameObject* findPlayerState() const { return findGameObject( _playerState ); }
         /** @brief 게임이 스스로 돌면 true 입니다(`_bAutoPlay`, 또는 개발 구성에서 게임의 `-gv_<게임>AutoPlay=1`). */
@@ -180,7 +184,7 @@ namespace sw
     protected:
         /**
          * @brief 리플렉션 밖의 디렉터 상태(키트 시뮬레이션 · 포인터 ↔ id · `Countdown` · 난수)를 놓는 본문 하나입니다(`StateIO`). 첫 값은 `io.header` 의 표준 머리입니다.
-         * @details 상태 칸은 이미 읽혀 있어 칸 사이 검사에 쓸 수 있다. 읽기는 사본 없이 돌므로(컴포넌트는 복사하지 않는다) 지역 변수에 읽어 끝까지 맞으면 대입합니다.
+         * @details 상태 칸은 이미 읽혀 있어 칸 사이 검사에 쓸 수 있다. 멤버에 바로 읽습니다 — 거절하면 베이스(`readStateOrRevert`)가 앞 상태의 바이트로 되돌리므로 지역 사본을 두지 않는다(규칙 객체가 서로 빌린 주소도 그대로 맞는다).
          */
         virtual void serializeGameState( StateIO& io ) = 0;
         /**
@@ -190,9 +194,9 @@ namespace sw
         [[nodiscard]] virtual bool startGame() = 0;
         /** @brief 상태 칸을 모두 기본값으로 되돌리고 `startGame` 으로 새 판을 엽니다. 판을 여는 유일한 입구입니다(플레이 시작, 복원에 실패한 판을 새로 열 때). */
         [[nodiscard]] bool openGame();
-        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 입니다. */
-        [[nodiscard]] bool readState( Archive& archive ) { return StateIO::readInPlace( *this, archive ); }
-        /** @brief 복원 바이트를 적용한 뒤에 불립니다. 결과를 알리고, 실패했으면 반쯤 바뀐 판을 새 판으로 되돌립니다. */
+        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 읽기 전 상태의 바이트로 되돌리고 false 입니다 — 디렉터마다 되돌림을 적지 않는다. */
+        [[nodiscard]] bool readStateOrRevert( Archive& archive );
+        /** @brief 복원 바이트를 적용한 뒤에 불립니다. 결과를 알립니다 — 실패했으면 판은 읽기 전 그대로입니다. */
         virtual void onStateRestored( bool bRestored ) { (void)bRestored; }
         /** @brief 번 돈 @p profit 이 있으면(0 보다 크면) 결과 값 `MinigameResultValue::kMoneyName` 으로 더합니다 — 손해는 바탕 판으로 나가지 않는다. */
         static void addMoneyResult( vector<MinigameResultValue>& outListValue, int64 profit );
@@ -201,10 +205,14 @@ namespace sw
         /** @brief 판이 열린 뒤 매 프레임 불립니다 — PrePhysics 틱이 건 틱 뒤 작업이라 게임 스레드(틱 밖)에서 돈다(`deferRules`). 시간이 멈춘 프레임(@p deltaTime 0)에도 불립니다. */
         virtual void updateGame( float32 deltaTime ) = 0;
         /**
-         * @brief 틱 뒤 게임 스레드에서 쌓인 요청을 세웁니다. @p bRespawnViews 면 처음(또는 걷은 뒤)이라 지금 상태의 모습 전부를 세웁니다.
+         * @brief 틱 뒤 게임 스레드에서 쌓인 요청을 세웁니다. @p bRespawnViews 면 처음(또는 걷은 뒤)이라 지금 상태의 모습 전부를 세웁니다. 오브젝트를 세우지 않는 디렉터는 덮지 않는다.
          * @details 쌓인 소리는 이 함수 뒤에 베이스가 냅니다.
          */
-        virtual void onFlush( GameObjectManager& manager, bool bRespawnViews ) = 0;
+        virtual void onFlush( GameObjectManager& manager, bool bRespawnViews )
+        {
+            (void)manager;
+            (void)bRespawnViews;
+        }
         /** @brief `despawnViews` 가 스폰한 오브젝트를 지운 뒤에 불립니다. 파생 클래스가 보관한 핸들 목록과 대기 요청을 비웁니다. */
         virtual void onViewsDespawned() {}
         /** @brief 세울 요청이 쌓여 있으면 true 입니다. 틱 끝에 플러시를 잡습니다. */
@@ -266,16 +274,13 @@ namespace sw
             reportMissingAsset( path );
             return false;
         }
-        /** @brief `acquireRequired` 와 같고 멤버로 쥐어 다시 읽힌 판을 따라갑니다(`SharedAssetRef`). 받은 때의 판을 일부러 쥘 종류(번호를 지어 둔 떼어 내는 종류)는 `acquireRequiredSnapshot` 이다. */
+        /** @brief `acquireRequiredSnapshot` 과 같고 다시 읽힌 판을 규칙 객체와 같은 때에 따라갑니다(`BoundAssetRef`). 받은 때의 판을 일부러 쥘 종류(번호를 지어 둔 떼어 내는 종류)는 `acquireRequiredSnapshot` 이다. */
         template <typename TAsset>
-        [[nodiscard]] bool acquireRequired( string_view path, SharedAssetRef<TAsset>& outAsset )
+        [[nodiscard]] bool acquireRequired( string_view path, BoundAssetRef<TAsset>& outAsset )
         {
-            outAsset = path.empty() ? SharedAssetRef<TAsset>{} : SharedAssetCache<TAsset>::acquire( path );
+            outAsset = path.empty() ? BoundAssetRef<TAsset>{} : followAsset( SharedAssetCache<TAsset>::acquire( path ) );
             if ( outAsset != nullptr )
-            {
-                followAsset( outAsset );
                 return true;
-            }
             reportMissingAsset( path );
             return false;
         }
@@ -284,23 +289,14 @@ namespace sw
          * @details 씬을 나가는 동안(범위를 끈 뒤 새 씬이 서기 전) 디렉터가 더 돈다 — 날 포인터 대신 참조로 쥐어 그동안 끊기지 않는다.
          */
         template <typename TCatalog>
-        [[nodiscard]] bool acquireBoundCatalog( SharedAssetRef<TCatalog>& outCatalog )
+        [[nodiscard]] bool acquireBoundCatalog( BoundAssetRef<TCatalog>& outCatalog )
         {
-            outCatalog = SharedAssetRef<TCatalog>::shareLive( game::findSubsystem<const TCatalog>() );
+            outCatalog = followAsset( SharedAssetRef<TCatalog>::shareLive( game::findSubsystem<const TCatalog>() ) );
             if ( outCatalog != nullptr )
-            {
-                followAsset( outCatalog );
                 return true;
-            }
             reportMissingCatalog( TCatalog::kDataKind );
             return false;
         }
-        /** @brief 입력 맵의 동작이 눌려 있으면 true 입니다. 위젯이 받은 입력은 게임으로 새지 않습니다(`UIInputMapView`). */
-        [[nodiscard]] bool isActionDown( const hashed_string& action ) const;
-        /** @brief 입력 맵의 동작이 이번 프레임에 발동했으면 true 입니다(`UIInputMapView`). */
-        [[nodiscard]] bool wasActionTriggered( const hashed_string& action ) const;
-        /** @brief 입력 맵의 2D 축 동작(`Move`)입니다. 위젯이 받은 입력은 게임으로 새지 않습니다(`UIInputMapView`). 입력 서비스가 없으면 0 입니다. */
-        [[nodiscard]] float2 getActionVector2D( const hashed_string& action ) const;
         /**
          * @brief 판이 도는 동안 @p interval 초마다 `logStatus` 를 부르게 합니다(서브틱 주기). 파생의 `startGame` 이 부릅니다 — 디렉터가 남은 시간을 손으로 세지 않는다.
          * @details 멈춘 씬(델타 0)에서는 주기가 차지 않는다. 틱 뒤 게임 스레드에서 부르므로 남의 오브젝트를 읽어도 된다(규칙과 같은 자리).
@@ -318,24 +314,21 @@ namespace sw
         GameObjectManager* getObjectManager();
 
     private:
-        /** @brief 판을 열며 받은 에셋 하나입니다. 다시 읽힌 판을 알아채고, 규칙 객체가 날 포인터로 빌린 판들을 다음 판을 열 때까지 쥔다. */
-        struct FollowedAsset
-        {
-            Delegate<shared_ptr<const void>()> _takeLatest{}; ///< 지금 최신 판
-            vector<shared_ptr<const void>>     _listHeld{};   ///< 연 판부터 지금 판까지(뒤가 지금 판)
-        };
-
-        /** @brief 판을 열며 받은 @p asset 을 쥐고 다시 읽히는지 봅니다. */
+        /** @brief 판을 열며 받은 @p asset 을 쥐고 다시 읽히는지 봅니다. 비었으면 빈 참조입니다. */
         template <typename TAsset>
-        void followAsset( const SharedAssetRef<TAsset>& asset )
+        BoundAssetRef<TAsset> followAsset( const SharedAssetRef<TAsset>& asset )
         {
-            FollowedAsset followed;
-            followed._takeLatest = SW_DELEGATE_LAMBDA( Delegate<shared_ptr<const void>()>, [asset]()
-            { return shared_ptr<const void>( asset.snapshot() ); } );
-            followed._listHeld.push_back( asset.snapshot() );
-            _listFollowedAsset.push_back( std::move( followed ) );
+            if ( asset == nullptr )
+                return BoundAssetRef<TAsset>{};
+            shared_ptr<BoundAsset> pFollowed = make_shared<BoundAsset>();
+            pFollowed->_takeLatest           = SW_DELEGATE_LAMBDA( Delegate<shared_ptr<const void>()>, [asset]()
+                      { return shared_ptr<const void>( asset.snapshot() ); } );
+            pFollowed->_pBound               = asset.snapshot();
+            pFollowed->_listHeld.push_back( pFollowed->_pBound );
+            _listFollowedAsset.push_back( pFollowed );
+            return BoundAssetRef<TAsset>( std::move( pFollowed ) );
         }
-        /** @brief 받은 에셋이 다시 읽혔으면 상태를 왕복시켜 규칙 객체를 새 판에 다시 묶습니다(게임 스레드, 규칙 틱 앞). */
+        /** @brief 받은 에셋이 다시 읽혔으면 `BoundAssetRef` 를 새 판으로 옮기고 상태를 왕복시켜 규칙 객체를 다시 묶습니다(게임 스레드, 규칙 틱 앞). 묶지 못하면 앞 판으로 되돌린다. */
         void applyReloadedAssets();
         /** @brief 상태 칸(`PROPERTY( RuntimeState )`)을 이 형식의 기본 생성자 값으로 되돌립니다. 되돌리지 못하는 칸이면 프로세스를 멈춥니다. */
         void resetRuntimeState();
@@ -370,17 +363,17 @@ namespace sw
                   Tooltip = "Object that holds the player's wallet, inventory, reputation and quest log (the player controller object); game modes that open one of them do not start without it" )
         GameObjectHandle _playerState;
 
-        vector<GameObjectHandle> _listSpawned;
-        vector<PrefabPool>       _listPool;             ///< 풀 정책으로 꺼낸 프리팹의 풀(경로마다 하나). 꺼낸 것은 `_listSpawned` 밖이라 `despawnViews` 가 풀째 지운다
-        vector<FollowedAsset>    _listFollowedAsset;    ///< 이 판을 열며 받은 에셋(`followAsset`)
-        vector<uint8>            _pendingStateBytes;    ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
-        GameSoundQueue           _soundQueue;           ///< 낼 소리. 오디오는 게임 스레드에서 다루므로 틱 뒤에 낸다
-        uint32                   _compactThreshold;     ///< 이 수를 넘으면 사라진 핸들을 덜어 낸다
-        float32                  _pendingRuleDeltaTime; ///< 틱이 쌓고 틱 뒤 `runPendingRules` 가 쓰는 시간
-        uint8                    _bStarted        : 1;
-        uint8                    _bViewsSpawned   : 1; ///< 지금 상태의 뷰 오브젝트가 스폰돼 있다(정리하면 다음 틱이 다시 스폰한다)
-        uint8                    _bFlushScheduled : 1;
-        uint8                    _bRuleOnSubTick  : 1; ///< 규칙이 서브틱에서 돈다(`_tickAfter`)
-        [[maybe_unused]] uint8   _reserved        : 4;
+        SW_TRANSIENT vector<GameObjectHandle> _listSpawned;
+        SW_TRANSIENT vector<PrefabPool> _listPool;                      ///< 풀 정책으로 꺼낸 프리팹의 풀(경로마다 하나). 꺼낸 것은 `_listSpawned` 밖이라 `despawnViews` 가 풀째 지운다
+        SW_TRANSIENT vector<shared_ptr<BoundAsset>> _listFollowedAsset; ///< 이 판을 열며 받은 에셋(`followAsset`)
+        SW_TRANSIENT vector<uint8>  _pendingStateBytes;                 ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
+        SW_TRANSIENT GameSoundQueue _soundQueue;                        ///< 낼 소리. 오디오는 게임 스레드에서 다루므로 틱 뒤에 낸다
+        SW_TRANSIENT uint32         _compactThreshold;                  ///< 이 수를 넘으면 사라진 핸들을 덜어 낸다
+        SW_TRANSIENT float32        _pendingRuleDeltaTime;              ///< 틱이 쌓고 틱 뒤 `runPendingRules` 가 쓰는 시간
+        SW_TRANSIENT uint8          _bStarted        : 1;
+        SW_TRANSIENT uint8          _bViewsSpawned   : 1; ///< 지금 상태의 뷰 오브젝트가 스폰돼 있다(정리하면 다음 틱이 다시 스폰한다)
+        SW_TRANSIENT uint8          _bFlushScheduled : 1;
+        SW_TRANSIENT uint8          _bRuleOnSubTick  : 1; ///< 규칙이 서브틱에서 돈다(`_tickAfter`)
+        [[maybe_unused]] uint8      _reserved        : 4;
     };
 } // namespace sw

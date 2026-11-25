@@ -1,0 +1,134 @@
+<?asset guid="c44f551b40a90ce3c1f2b5ee2c1a0117"?>
+<UIDocument _schemaVersion="0">
+	<!-- 개발용 UI 견본 화면(`-gv_uiDemo=1`, `UIDemoScreen.cpp`) — 글 · 버튼 · 슬라이더 · 체크 · 진행 막대 · 콤보 · 입력 칸과 그리기 견본. 글은 번역하지 않는다. -->
+	<UIScreenDef _layer="Menu" _defaultFocus="Start" />
+	<CanvasPanel>
+		<BorderPanel _name="DemoPanel" _contentPadding="28,24,28,24" _shadowColor="0,0,0,0.6" _shadowOffset="6,8" _shadowBlur="12">
+			<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-280,-360" _offsetMax="280,360" />
+			<_background _color="0.07,0.08,0.11,0.92" _borderColor="0.95,0.75,0.2,1" _borderWidth="2" _cornerRadius="16,16,16,16" />
+			<BoxPanel _spacing="10" _orientation="Vertical">
+				<TextWidget _text="UI Demo" _color="1,0.85,0.3,1" _bLocalized="false">
+					<_style _fontSize="36" />
+				</TextWidget>
+				<TextWidget _text="Retained widget tree: layout, paint cache, focus and navigation. Arrow keys or the gamepad move the focus." _color="0.85,0.87,0.92,1" _bLocalized="false">
+					<_style _fontSize="18" />
+				</TextWidget>
+				<TextWidget _text="[b]Bold[/b] [i]italic[/i] [color=#ffcc33ff]colored[/color] [size=1.4]bigger[/size]" _color="1,1,1,1" _bLocalized="false" _bRichText="true">
+					<_style _fontSize="20" />
+				</TextWidget>
+				<ButtonWidget _name="Start" _styleClass="primary">
+					<_slot _heightOverride="44" />
+					<TextWidget _text="Start" _color="1,1,1,1" _bLocalized="false">
+						<_style _fontSize="20" />
+						<_slot _verticalAlignment="Center" />
+					</TextWidget>
+				</ButtonWidget>
+				<ButtonWidget _name="Continue">
+					<_slot _heightOverride="44" />
+					<TextWidget _text="Continue" _color="1,1,1,1" _bLocalized="false">
+						<_style _fontSize="20" />
+						<_slot _verticalAlignment="Center" />
+					</TextWidget>
+				</ButtonWidget>
+				<ButtonWidget _name="Options">
+					<_slot _heightOverride="44" />
+					<TextWidget _text="Options" _color="1,1,1,1" _bLocalized="false">
+						<_style _fontSize="20" />
+						<_slot _verticalAlignment="Center" />
+					</TextWidget>
+				</ButtonWidget>
+				<ButtonWidget _name="Credits">
+					<_slot _heightOverride="44" />
+					<TextWidget _text="Credits" _color="1,1,1,1" _bLocalized="false">
+						<_style _fontSize="20" />
+						<_slot _verticalAlignment="Center" />
+					</TextWidget>
+				</ButtonWidget>
+				<ButtonWidget _name="Quit">
+					<_slot _heightOverride="44" />
+					<TextWidget _text="Quit" _color="1,1,1,1" _bLocalized="false">
+						<_style _fontSize="20" />
+						<_slot _verticalAlignment="Center" />
+					</TextWidget>
+				</ButtonWidget>
+				<!-- 시나리오 textinput · web/dominput 이 탭 순서를 이름으로 본다(VolumeSlider · VSyncCheck · QualityCombo · NameInput). -->
+				<BoxPanel _spacing="12">
+					<TextWidget _text="Volume" _color="0.8,0.83,0.9,1" _bLocalized="false">
+						<_style _fontSize="18" />
+						<_slot _widthOverride="140" _verticalAlignment="Center" />
+					</TextWidget>
+					<SliderWidget _name="VolumeSlider" _minValue="0" _maxValue="100" _step="5" _value="65">
+						<_slot _sizeRule="Fill" _verticalAlignment="Center" />
+					</SliderWidget>
+				</BoxPanel>
+				<BoxPanel _spacing="12">
+					<TextWidget _text="Display" _color="0.8,0.83,0.9,1" _bLocalized="false">
+						<_style _fontSize="18" />
+						<_slot _widthOverride="140" _verticalAlignment="Center" />
+					</TextWidget>
+					<CheckBoxWidget _name="VSyncCheck" _bChecked="true">
+						<_slot _sizeRule="Fill" _verticalAlignment="Center" />
+						<TextWidget _text="V-Sync" _color="1,1,1,1" _bLocalized="false">
+							<_style _fontSize="18" />
+						</TextWidget>
+					</CheckBoxWidget>
+				</BoxPanel>
+				<BoxPanel _spacing="12">
+					<TextWidget _text="Loading" _color="0.8,0.83,0.9,1" _bLocalized="false">
+						<_style _fontSize="18" />
+						<_slot _widthOverride="140" _verticalAlignment="Center" />
+					</TextWidget>
+					<ProgressBarWidget _percent="0.6">
+						<_slot _sizeRule="Fill" _verticalAlignment="Center" />
+					</ProgressBarWidget>
+				</BoxPanel>
+				<BoxPanel _spacing="12">
+					<TextWidget _text="Quality" _color="0.8,0.83,0.9,1" _bLocalized="false">
+						<_style _fontSize="18" />
+						<_slot _widthOverride="140" _verticalAlignment="Center" />
+					</TextWidget>
+					<ComboBoxWidget _name="QualityCombo" _selectedIndex="2">
+						<_slot _sizeRule="Fill" _verticalAlignment="Center" />
+						<_listOption>
+							<item>Low</item>
+							<item>Medium</item>
+							<item>High</item>
+							<item>Epic</item>
+						</_listOption>
+					</ComboBoxWidget>
+				</BoxPanel>
+				<BoxPanel _spacing="12">
+					<TextWidget _text="Name" _color="0.8,0.83,0.9,1" _bLocalized="false">
+						<_style _fontSize="18" />
+						<_slot _widthOverride="140" _verticalAlignment="Center" />
+					</TextWidget>
+					<TextInputWidget _name="NameInput" _hintText="Player name" _bLocalized="false">
+						<_slot _sizeRule="Fill" _verticalAlignment="Center" />
+					</TextInputWidget>
+				</BoxPanel>
+				<!-- 그리기 견본: 둥근 상자, 자르기(넓은 빨간 자식이 상자 밖으로 세 칸 더 나간다), 9-슬라이스, 오른쪽에서 왼쪽 글. -->
+				<BoxPanel _name="Samples" _spacing="12">
+					<BorderPanel _name="RoundBox">
+						<_slot _widthOverride="96" _heightOverride="48" _verticalAlignment="Center" />
+						<_background _color="0.2,0.75,0.3,1" _cornerRadius="20,20,20,20" />
+					</BorderPanel>
+					<CanvasPanel _name="ClipBox" _bClipChildren="true">
+						<_slot _widthOverride="96" _heightOverride="48" _verticalAlignment="Center" />
+						<BorderPanel _name="ClipOverflow">
+							<_slot _offsetMin="0,0" _offsetMax="384,48" />
+							<_background _color="0.9,0.1,0.1,1" />
+						</BorderPanel>
+					</CanvasPanel>
+					<ImageWidget _name="NineSlice" _imagePath="guid:2f8ecca6a35bee326d0d3e97b4feb7c7">
+						<_slot _widthOverride="96" _heightOverride="48" _verticalAlignment="Center" />
+						<_brush _nineSliceMargin="0.25,0.25,0.25,0.25" />
+					</ImageWidget>
+					<TextWidget _name="RTLSample" _text="שלום עולם" _color="1,1,1,1" _bLocalized="false">
+						<_style _fontSize="20" />
+						<_slot _verticalAlignment="Center" />
+					</TextWidget>
+				</BoxPanel>
+			</BoxPanel>
+		</BorderPanel>
+	</CanvasPanel>
+</UIDocument>

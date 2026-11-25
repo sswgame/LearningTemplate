@@ -60,6 +60,15 @@ def make_online_config(list_kit: list[dict], server_id: int = 1, topology: str =
         "_serverID": server_id,
         "_storeName": "local",
         "_cacheName": "local",
+        "_serverKind": "game",
+        "_region": "local",
+        "_capacity": 100,
+        "_maxConnections": 4096,
+        "_ioThreadCount": 2,
+        "_storeWorkerCount": 4,
+        "_requestBurstPerRemote": 10,
+        "_requestBurstPerAccount": 30,
+        "_maxConnectionsPerRemote": 64,
         # 기반 표 TTL 은 필수다(코드에 기본값이 없다). 짧은 짝 실행이라 지우지 않는다(기간 0).
         **{name: {"_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1}
            for name in ("_auditRetention", "_ledgerRetention", "_closedReportTTL", "_mailSentTTL", "_scheduleRunTTL")},
@@ -75,7 +84,10 @@ def make_online_config(list_kit: list[dict], server_id: int = 1, topology: str =
 def make_account_kit(accounts: tuple[tuple[str, str], ...]) -> dict:
     """계정 키트 설정(@p accounts 는 시드 계정의 이름 · 비밀번호)."""
     return {"_name": "account", "_settings": {
+        "_login": {"_sessionLifetimeMs": 43200000, "_reconnectGraceMs": 120000, "_tombstoneLifetimeMs": 600000, "_ticketLifetimeMs": 60000, "_lockoutMs": 300000, "_attemptRefillMs": 2000, "_deletionGraceMs": 2592000000, "_revocationScanMs": 60000, "_revocationBatchSize": 16, "_maxFailedCount": 5},
+        "_server": {"_purgeIntervalMs": 60000, "_refreshIntervalMs": 10000, "_refreshCount": 64, "_purgeCount": 32, "_presence": {"_ttlMs": 60000, "_refreshIntervalMs": 30000}},
         "_expiredSessionTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
+        "_attemptBurst": 10,
         "_maxConcurrentPasswordHashes": 2,
         "_maxQueuedPasswordHashes": 64,
         "_sharedAttemptLimit": 1000,
@@ -412,14 +424,17 @@ def _start_match_servers(group: ProcessGroup, server_exe: Path, cache_server: _C
     store = {"_driver": "sqlite", "_connection": (group.out_dir / "match.sqlite").as_posix()}
     cache = {"_driver": "resp", "_endpoint": f"127.0.0.1:{cache_server.server_address[1]}?prefix=netpair:"}
     content = "game/playground/data/playground"
-    directory = {"_name": "directory", "_settings": {"_endedAnnouncementTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500}}}
+    directory = {"_name": "directory", "_settings": {"_refresh": {"_reloadPeriodMs": 30000, "_registryRefreshPeriodMs": 2000, "_staleMs": 15000}, "_endedAnnouncementTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500}}}
     leaderboard = {"_name": "leaderboard", "_settings": {
         "_pastScoreTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
         "_seasonResultTTL": {"_expireAfterDays": 365, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
-        "_catalog": f"{content}.leaderboards.xml"}}
+        "_catalog": f"{content}.leaderboards.xml", "_maxAroundRadius": 25, "_nameCacheTTLMs": 2592000000}}
 
     def matchmaking(game_server: bool) -> dict:
-        return {"_name": "matchmaking", "_settings": {"_catalog": f"{content}.matchmodes.xml", "_reconnectGraceMs": 60000, "_cancelConfirmWaitMs": 3000, "_bGameServer": game_server}}
+        return {"_name": "matchmaking", "_settings": {"_catalog": f"{content}.matchmodes.xml", "_maxPartySize": 4, "_reconnectGraceMs": 60000, "_cancelConfirmWaitMs": 3000, "_bGameServer": game_server,
+                                                       "_partyLobby": {"_partyTTLMs": 1800000, "_lobbyTTLMs": 7200000, "_inviteTTLMs": 300000},
+                                                       "_queue": {"_leaseTTLMs": 10000, "_leaseRenewMs": 3000, "_noServerGiveUpMs": 30000, "_resultGraceMs": 10000, "_ratingWaitMs": 3000},
+                                                       "_agent": {"_expectTTLMs": 120000, "_recordRefreshMs": 1000, "_maxRecordCount": 256}}}
 
     hub_port, hub_service_port = free_port(socket.SOCK_DGRAM), free_port(socket.SOCK_STREAM)
     # 허브는 배정받는 서버가 아니다(`_publicAddress` 없음) - 매치 서버만 디렉터리에 선다.

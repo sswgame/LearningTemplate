@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -123,6 +125,8 @@ namespace sw
         /** @brief 지금 보이는 대상 중 @p origin 에 가장 가까운 것입니다. 없으면 nullptr 입니다. */
         const AIPerceivedTarget* findNearestSeen( const float3& origin ) const;
         void                     clearAll() { _listTarget.clear(); }
+        /** @brief 기억한 대상(절대 자리 · 나이 · 보임)입니다. 감각 설정은 쓰는 쪽이 감지마다 넣는다. */
+        SW_DECLARE_STATE_IO();
 
     private:
         AIPerceptionSettings      _settings;

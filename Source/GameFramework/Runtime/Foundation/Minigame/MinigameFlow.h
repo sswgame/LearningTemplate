@@ -125,7 +125,7 @@ namespace sw
         /** @brief @p scenePath 를 이 흐름의 요청으로 맡깁니다 — 칸 스택을 둔 채 씬을 다시 연다(받아들임 알림이 장치 밖 이동으로 보지 않게). */
         [[nodiscard]] bool requestScene( const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded, uint32 sessionTravel );
         /**
-         * @brief 틱 뒤 작업(디렉터의 `finishMinigame`)에서 나가기를 맡깁니다 — 다음 `update`(틱 밖)가 `leave` 합니다. 맡긴 나가기가 이미 있으면 경고하고 이것을 버립니다.
+         * @brief 틱 뒤 작업(디렉터의 `MatchGameModeComponent::endMatch`)에서 나가기를 맡깁니다 — 다음 `update`(틱 밖)가 `leave` 합니다. 맡긴 나가기가 이미 있으면 경고하고 이것을 버립니다.
          * @details 하위 레벨 나가기는 그 자리에서 하위 레벨을 빼므로 그 안 디렉터의 규칙 중에 부르면 자기를 지운다 — 진입(`requestEnter`)과 같은 줄로 미룬다.
          */
         void requestLeave( const hashed_string& resultName, vector<MinigameResultValue> listValue );
@@ -187,6 +187,8 @@ namespace sw
 
         /** @brief 이름 @p name 의 미니게임 파일 리소스 id 입니다(`<팩>/minigames/<이름>.minigame.xml`). */
         static string makeAssetPath( const GamePackConfig& packConfig, string_view name );
+        /** @brief 팩 @p packConfig 의 미니게임 @p name 의 정의를 읽고 이름이 파일 이름과 같은지 봅니다(참조는 보지 않는다). 실패하면 이유를 알리고 false 입니다 — 인스턴스 없이도 쓴다(넷 시뮬레이션). */
+        [[nodiscard]] static bool loadDefinitionFile( const GamePackConfig& packConfig, string_view name, MinigameDefinition& outDefinition );
         /**
          * @brief 팩의 미니게임 정의 가운데 허브 입구 자리(`portalSlot`)를 적은 것을 자리 순으로 @p outListPortal 에 모읍니다(먼저 비운다) — `MinigamePortalSpawnerComponent` 가 부른다.
          * @details 파일마다 들어갈 때와 같은 읽기 · 검사를 한다. 못 읽은 정의와 자리가 겹친 뒤의 정의는 오류를 남기고 빼며, 나머지 입구는 그대로 선다.

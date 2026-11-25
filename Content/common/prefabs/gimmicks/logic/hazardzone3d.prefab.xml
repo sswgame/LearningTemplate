@@ -1,5 +1,5 @@
 <?asset guid="b69bede1d1ff15618a1a74d8c9bc6302"?>
-<Prefab formatVersion="1" name="HazardZone3D">
+<Prefab formatVersion="0" name="HazardZone3D">
 	<GameObject _schemaVersion="0" _name="HazardZone3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"

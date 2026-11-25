@@ -2,12 +2,11 @@
 
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/Component/AsymmetricHorrorGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
-
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -18,10 +17,9 @@ namespace sw
     {
         struct AsymmetricHorrorGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "AHGM" );
-            static constexpr uint32 kStateVersion = 1;
-            static constexpr int32  kPlayer       = 0;  ///< 늘 사람이 잡는 생존자(카메라 · 감시 값의 주인)
-            static constexpr int32  kMaxSurvivors = 32; ///< 사람 비트(`_humanMask`)에 들어가는 수
+            static constexpr FormatDef kStateFormat{ "AHGM" };
+            static constexpr int32     kPlayer       = 0;  ///< 늘 사람이 잡는 생존자(카메라 · 감시 값의 주인)
+            static constexpr int32     kMaxSurvivors = 32; ///< 사람 비트(`_humanMask`)에 들어가는 수
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventHit           = "AsymmetricHorrorHit";
@@ -153,15 +151,11 @@ namespace sw
                 return nullptr;
             }
 
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kDrawResult = "draw";
-            static constexpr const utf8* kLoseResult = "lose";
-
             static const utf8* findResultName( AsymmetricHorrorResult result )
             {
                 if ( result == AsymmetricHorrorResult::Win )
-                    return kWinResult;
-                return result == AsymmetricHorrorResult::Draw ? kDrawResult : kLoseResult;
+                    return MatchGameModeComponent::kWinResult;
+                return result == AsymmetricHorrorResult::Draw ? MatchGameModeComponent::kDrawResult : MatchGameModeComponent::kLoseResult;
             }
         };
     } // namespace
@@ -188,7 +182,6 @@ namespace sw
         , _killerReleaseSeconds{ 0.0f }
         , _stage{}
         , _botSettings{}
-        , _resultHoldSeconds{ 3.0f }
         , _escapeReward{ 0 }
         , _pCatalog{}
         , _match{}
@@ -196,7 +189,6 @@ namespace sw
         , _listCommand{}
         , _listEvent{}
         , _killerRelease{}
-        , _resultHold{}
         , _humanMask{ 0 }
         , _result{ AsymmetricHorrorResult::Ongoing }
     {
@@ -234,7 +226,6 @@ namespace sw
         _bot.initialize( _botSettings );
         _listCommand.assign( _stage._listSurvivorStart.size(), AsymmetricHorrorCommand{} );
         _killerRelease.start( _killerReleaseSeconds );
-        _resultHold.clear();
         return true;
     }
 
@@ -247,10 +238,7 @@ namespace sw
     {
         _bot.initialize( _botSettings ); // 살인마의 기억은 저장하지 않는다 — 다시 감지한다
         if ( bRestored == false )
-        {
-            SW_LOG_WARNING_ID( "AsymmetricHorror.StateRefused", "[AsymmetricHorror] the saved match does not fit this build - a new match opens" );
-            (void)openGame(); // 새 판도 열지 못하면 startGame 이 이유를 남겼다
-        }
+            SW_LOG_WARNING_ID( "AsymmetricHorror.StateRefused", "[AsymmetricHorror] the saved match does not fit this build - the current match goes on" );
     }
 
     bool AsymmetricHorrorGameModeComponent::submitSurvivorInput( int32 survivor, const AsymmetricHorrorCommand& command )
@@ -337,16 +325,8 @@ namespace sw
             interact( survivor );
     }
 
-    void AsymmetricHorrorGameModeComponent::updateGame( float32 deltaTime )
+    void AsymmetricHorrorGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _result != AsymmetricHorrorResult::Ongoing )
-        {
-            if ( _resultHold.update( deltaTime ) )
-                (void)finishMinigame( hashed_string( AsymmetricHorrorGameModeComponentInternal::findResultName( _result ) ) ); // 흐름이 없으면 베이스가 알린다
-            return;
-        }
         for ( int32 survivor = 0; survivor < _match.getSurvivorCount(); ++survivor )
         {
             AsymmetricHorrorCommand& pending = _listCommand[static_cast<size_t>( survivor )];
@@ -391,7 +371,7 @@ namespace sw
             _result = AsymmetricHorrorResult::Win;
         else
             _result = winner < 0 ? AsymmetricHorrorResult::Draw : AsymmetricHorrorResult::Lose;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( AsymmetricHorrorGameModeComponentInternal::findResultName( _result ) ) );
         getSoundQueue().queueEvent( _result == AsymmetricHorrorResult::Win ? AsymmetricHorrorGameModeComponentInternal::kEventWon : AsymmetricHorrorGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "AsymmetricHorror.Ended", "[AsymmetricHorror] %# - %# escaped, %# sacrificed", AsymmetricHorrorGameModeComponentInternal::findResultName( _result ), countEscaped(),
                         countSacrificed() );
@@ -451,41 +431,24 @@ namespace sw
         return pPlayer != nullptr ? static_cast<int32>( pPlayer->_activity ) : 0;
     }
 
-    void AsymmetricHorrorGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`AsymmetricHorrorAvatarComponent`)이 읽어 그린다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void AsymmetricHorrorGameModeComponent::serializeGameState( StateIO& io )
     {
         using Internal = AsymmetricHorrorGameModeComponentInternal;
-        io.header( Internal::kStateTag, Internal::kStateVersion );
+        io.header( Internal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        // 판은 같은 카탈로그 · 설정으로 `initialize` 한 뒤에 읽는다(키트 계약). 무대와 생존자는 바이트가 정한다.
-        AsymmetricHorrorMatch restoredMatch;
-        if ( io.isReading() )
+        // 판은 같은 카탈로그 · 설정으로 `initialize` 한 뒤에 읽는다(키트 계약). 무대와 생존자는 바이트가 정한다. 사람 비트 · 결과는 상태 칸이다(`GameModeComponent::serializeState`).
+        const bool bMatch = io.valueOpened( _match, [this]( AsymmetricHorrorMatch& match )
         {
-            if ( _pCatalog == nullptr || restoredMatch.initialize( makeSettings(), _pCatalog.get() ) == false )
-            {
-                SW_LOG_ERROR_ID( "AsymmetricHorror.StateNeedsCatalog", "Asymmetric horror game mode: state read before the rules catalog is bound - refused" );
-                io.fail();
-                return;
-            }
-        }
-        Countdown killerRelease = _killerRelease;
-        Countdown resultHold    = _resultHold;
-        io.value( io.isWriting() ? _match : restoredMatch ); // 사람 비트 · 결과는 상태 칸이다(`GameModeComponent::serializeState`)
-        io.value( killerRelease );
-        io.value( resultHold );
-        io.check( io.isWriting() || restoredMatch.getSurvivorCount() == static_cast<int32>( _listCommand.size() ) );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
+            if ( _pCatalog != nullptr && match.initialize( makeSettings(), _pCatalog.get() ) )
+                return true;
+            SW_LOG_ERROR_ID( "AsymmetricHorror.StateNeedsCatalog", "Asymmetric horror game mode: state read before the rules catalog is bound - refused" );
+            return false;
+        } );
+        if ( bMatch == false )
             return;
-        _match         = std::move( restoredMatch );
-        _killerRelease = killerRelease;
-        _resultHold    = resultHold;
+        io.value( _killerRelease );
+        io.check( io.isWriting() || _match.getSurvivorCount() == static_cast<int32>( _listCommand.size() ) );
+        io.end();
     }
 } // namespace sw

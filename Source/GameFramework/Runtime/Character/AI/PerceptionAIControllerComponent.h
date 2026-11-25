@@ -3,10 +3,12 @@
  * @brief 시각 · 청각 감각을 씬의 자극 색인에서 받아 블랙보드에 적는 AI 조종자입니다(경비 · 순찰).
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Radians.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/AIPerception.h"
@@ -32,6 +34,9 @@ namespace sw
 
         /** @brief 바탕의 되돌림에 더해 기억한 대상을 비웁니다. */
         [[nodiscard]] SpawnStateReset resetToSpawnState() override;
+        /** @brief 기억한 대상입니다. 판단의 상태(블랙보드 · 목적지 …)는 바탕의 코덱이 따로 싣는다. */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        void restoreState( vector<uint8>&& bytes );
 
     protected:
         void updateBlackboard( const ControlFrameContext& context, const PawnComponent& pawn ) override;
@@ -54,6 +59,6 @@ namespace sw
         PROPERTY( Category = "Perception", DisplayName = "Memory Duration", Min = 0.0, Units = s, Tooltip = "How long a target no longer sensed is remembered" )
         float32 _memoryDuration;
 
-        AIPerception _perception;
+        SW_CODEC_STATE AIPerception _perception;
     };
 } // namespace sw

@@ -169,28 +169,28 @@ namespace sw
         RideFeelSettings _rideFeel;
 
         PROPERTY( RuntimeState )
-        GameObjectHandle                      _occupant;                  ///< 앉은 탑승자의 오브젝트. 저장 · 스냅샷(미니게임에서 돌아오기 · 되감기 · 핫 리로드)에 실리고 되살아난 뒤 다시 앉힌다(`restoreRider`)
-        TComponentHandle<ControllerComponent> _occupantController;        ///< 탈 때 탑승자를 쥐고 있던 조종자. 운전석에서 쓰며 내릴 때 탑승자에게 돌려준다
-        TComponentHandle<ControllerComponent> _previousVehicleController; ///< 탈 때 탈것에 빙의해 있던 조종자. 주인을 따라오던 말 AI 가 해당하며, 내리면 다시 빙의한다
-        Subscription                          _unloadSubscription;        ///< 탈것이 셀 · 레이어와 함께 내려가는 알림(`handleUnloading`)
-        Subscription                          _riderUnloadSubscription;   ///< 앉은 탑승자가 내려가는 알림(`handleUnloading`)
-        Subscription                          _riderSuspension;           ///< 앉은 동안 탑승자의 걷기를 멈춘다
-        float4x4                              _seatInVehicle;             ///< 탈 때 붙인 소켓 변환(탈것 기준). 기울임은 이 위에 얹는다
-        float3                                _lastSeatPosition;          ///< 지난 틱의 좌석 월드 위치
-        float3                                _lastSeatVelocity;          ///< 지난 틱의 좌석 월드 속도
-        float3                                _rideAcceleration;          ///< 매끄럽게 한 좌석 가속도(탈것 기준)
-        float2                                _riderLean;                 ///< 지금 탑승자 기울임
-        float32                               _pendingFieldOfViewKick;    ///< 틱 뒤 카메라에 걸 시야각 킥(0 이면 없음)
-        float32                               _pendingBumpShake;          ///< 틱 뒤 카메라에 걸 충격 크기(0 이면 없음)
-        float32                               _pendingFeedbackSpeed;      ///< 틱 뒤 소리에 넘길 탈것 속력(m/s)
-        float32                               _pendingFeedbackSlip;       ///< 틱 뒤 소리에 넘길 옆 미끄럼 가속(m/s²)
-        SceneTeleportCursor                   _teleport;                  ///< 탈것이 순간이동하면 잰 걸음을 버린다(가속이 아니다)
-        int32                                 _rideSampleCount;           ///< 잰 걸음 수(0..2). 위치 · 속도가 모두 있어야 가속도를 낸다
-        uint8                                 _bFieldOfViewKickArmed : 1; ///< 앞 가속이 문턱 아래로 내려가야 다음 킥을 건다
-        uint8                                 _bBumpArmed            : 1; ///< 수직 가속이 문턱 아래로 내려가야 다음 충격을 건다
-        uint8                                 _bRidePending          : 1; ///< 틱이 반응을 쟀고 `VehicleSeatSystem` 이 아직 걸지 않았다
-        uint8                                 _bRestorePending       : 1; ///< 되살아난 탑승이다 — 조종자가 자기 폰을 쥔 뒤(첫 틱) 다시 앉힌다
-        [[maybe_unused]] uint8                _reservedRideFlags     : 4;
+        GameObjectHandle _occupant;                                                    ///< 앉은 탑승자의 오브젝트. 저장 · 스냅샷(미니게임에서 돌아오기 · 되감기 · 핫 리로드)에 실리고 되살아난 뒤 다시 앉힌다(`restoreRider`)
+        SW_TRANSIENT TComponentHandle<ControllerComponent> _occupantController;        ///< 탈 때 탑승자를 쥐고 있던 조종자. 운전석에서 쓰며 내릴 때 탑승자에게 돌려준다
+        SW_TRANSIENT TComponentHandle<ControllerComponent> _previousVehicleController; ///< 탈 때 탈것에 빙의해 있던 조종자. 주인을 따라오던 말 AI 가 해당하며, 내리면 다시 빙의한다
+        Subscription                                       _unloadSubscription;        ///< 탈것이 셀 · 레이어와 함께 내려가는 알림(`handleUnloading`)
+        Subscription                                       _riderUnloadSubscription;   ///< 앉은 탑승자가 내려가는 알림(`handleUnloading`)
+        Subscription                                       _riderSuspension;           ///< 앉은 동안 탑승자의 걷기를 멈춘다
+        SW_TRANSIENT float4x4                              _seatInVehicle;             ///< 탈 때 붙인 소켓 변환(탈것 기준). 기울임은 이 위에 얹는다
+        SW_TRANSIENT float3                                _lastSeatPosition;          ///< 지난 틱의 좌석 월드 위치
+        SW_TRANSIENT float3                                _lastSeatVelocity;          ///< 지난 틱의 좌석 월드 속도
+        SW_TRANSIENT float3                                _rideAcceleration;          ///< 매끄럽게 한 좌석 가속도(탈것 기준)
+        SW_TRANSIENT float2                                _riderLean;                 ///< 지금 탑승자 기울임
+        SW_TRANSIENT float32                               _pendingFieldOfViewKick;    ///< 틱 뒤 카메라에 걸 시야각 킥(0 이면 없음)
+        SW_TRANSIENT float32                               _pendingBumpShake;          ///< 틱 뒤 카메라에 걸 충격 크기(0 이면 없음)
+        SW_TRANSIENT float32                               _pendingFeedbackSpeed;      ///< 틱 뒤 소리에 넘길 탈것 속력(m/s)
+        SW_TRANSIENT float32                               _pendingFeedbackSlip;       ///< 틱 뒤 소리에 넘길 옆 미끄럼 가속(m/s²)
+        SW_TRANSIENT SceneTeleportCursor                   _teleport;                  ///< 탈것이 순간이동하면 잰 걸음을 버린다(가속이 아니다)
+        SW_TRANSIENT int32                                 _rideSampleCount;           ///< 잰 걸음 수(0..2). 위치 · 속도가 모두 있어야 가속도를 낸다
+        SW_TRANSIENT uint8                                 _bFieldOfViewKickArmed : 1; ///< 앞 가속이 문턱 아래로 내려가야 다음 킥을 건다
+        SW_TRANSIENT uint8                                 _bBumpArmed            : 1; ///< 수직 가속이 문턱 아래로 내려가야 다음 충격을 건다
+        SW_TRANSIENT uint8                                 _bRidePending          : 1; ///< 틱이 반응을 쟀고 `VehicleSeatSystem` 이 아직 걸지 않았다
+        SW_TRANSIENT uint8                                 _bRestorePending       : 1; ///< 되살아난 탑승이다 — 조종자가 자기 폰을 쥔 뒤(첫 틱) 다시 앉힌다
+        [[maybe_unused]] uint8                             _reservedRideFlags     : 4;
 
         /** @brief 카메라 킥 · 충격과 소리 파라미터를 겁니다(오디오 · 카메라 디렉터는 게임 스레드에서만 부른다). */
         void applyRideFeedback();

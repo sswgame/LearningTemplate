@@ -36,9 +36,9 @@ namespace sw
      */
     struct NetClientServerMessage
     {
-        using Snapshot    = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced, 2>;                      ///< 판 2: 바뀐 엔티티를 통째 또는 바뀐 조각(`NetSnapshot::kDeltaChunkBytes`)만 싣는다
+        using Snapshot    = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced>;                         ///< 바뀐 엔티티를 통째 또는 바뀐 조각(`NetSnapshot::kDeltaChunkBytes`)만 싣는다
         using SnapshotAck = NetMessageBodyDef<1, NetMessageDirection::ToServer, NetChannelKind::UnreliableSequenced, NetSnapshotAckBody>; ///< 옛 확인은 새 확인이 덮는다
-        using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::Unreliable, 8>;                               ///< 비신뢰 — 입력 창을 겹쳐 보내고 서버가 틱 번호로 거르므로 순서 보장이 필요 없다(언리얼 이동 RPC 와 같다).                      ///< 판 8: 발동이 사건 목록(버튼 · 시선 · 보던 시각)이고 보던 시각이 항목 스탬프에서 의도 안으로 옮겼다. 7: 주장 뒤에 그 의도를 낸 폰의 엔티티 id 가 붙는다(6: 의도 끝에 발동 순간 시선 필드(선택), 5: 입력 항목마다의 보던 틱 스탬프, 4: 소유자 상태 필드)
+        using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::Unreliable>;                                  ///< 비신뢰 — 입력 창을 겹쳐 보내고 서버가 틱 번호로 거르므로 순서 보장이 필요 없다(언리얼 이동 RPC 와 같다).
         using Table       = NetWorldMessageTable<NetKitMessageRange::kClientServer, Snapshot, SnapshotAck, Input>;
 
         static constexpr uint8 kSnapshot    = Table::getKindOf<Snapshot>();

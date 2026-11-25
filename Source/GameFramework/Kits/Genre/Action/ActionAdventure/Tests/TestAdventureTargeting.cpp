@@ -29,6 +29,7 @@ namespace
         static void setUp( sw::AdventureTargeting& targeting )
         {
             sw::AdventureTargetingSettings settings;
+            settings._deadZone          = 0.3f;
             settings._backflipDuration  = 0.5f;
             settings._sideHopDuration   = 0.25f;
             settings._evadeInvulnerable = 0.25f;

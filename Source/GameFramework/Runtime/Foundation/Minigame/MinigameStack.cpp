@@ -7,7 +7,6 @@
 
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 #include "GameFramework/Runtime/Foundation/Save/GameStateSnapshot.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
@@ -27,7 +26,7 @@ namespace sw
             /** @brief 씬을 GUID 참조로 적습니다 — 세이브가 남은 뒤 씬을 옮겨도 풀린다. */
             static void writeScene( Archive& arch, const string& scenePath )
             {
-                arch.writeString( AssetRegistry::makeReferenceText( scenePath, AssetRegistry::resolveGUID( scenePath ) ) );
+                arch.writeString( AssetRegistry::makeIndexedReferenceText( scenePath ) );
             }
 
             /** @brief 넘기지 못한 결과 하나를 씁니다. */
@@ -47,7 +46,7 @@ namespace sw
             /** @brief `writeResult` 의 짝입니다. 잘렸거나 씬이 없으면 없음입니다. */
             static optional<MinigamePendingResult> readResult( Archive& arch )
             {
-                const expected<AssetReferenceTarget> scene = AssetRedirect::readSavedReference( arch.readString() );
+                const expected<AssetReferenceTarget> scene = AssetRegistry::readReferenceText( arch.readString() );
                 MinigamePendingResult                pending;
                 pending._result._minigame   = hashed_string( arch.readString() );
                 pending._result._resultName = hashed_string( arch.readString() );
@@ -96,7 +95,7 @@ namespace sw
                     return nullopt;
                 if ( kind == MinigameReturnPoint{ MinigameEntranceReturn{} }.index() )
                     return MinigameReturnPoint{ MinigameEntranceReturn{} };
-                const expected<AssetReferenceTarget> scene = AssetRedirect::readSavedReference( arch.readString() ); // 씬을 옮긴 뒤에도 옛 세이브가 제 씬을 찾는다
+                const expected<AssetReferenceTarget> scene = AssetRegistry::readReferenceText( arch.readString() ); // GUID 참조라 씬을 옮긴 뒤에도 제 씬을 찾는다
                 if ( scene.has_value() == false )
                     return nullopt;
                 const string& scenePath = scene->_path;

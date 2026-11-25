@@ -9,7 +9,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/UI/Screen/UIScreenTypes.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 
 namespace sw
 {
@@ -20,8 +20,8 @@ namespace sw
 {
     /**
      * @class UIScreenMarkers
-     * @brief 마커를 담는 HUD 화면의 핸들, 마커마다의 앵커(UI 단위), 뗀 마커가 돌려준 앵커 번호, 그리기 단계가 낸 앵커(물리 픽셀 정수)를 듭니다.
-     * @details 마커 화면을 올리고 닫는 일과 위젯 붙이기 · 떼기는 위젯 컴포넌트 서비스(`UIWidgetComponentService`)가 화면 스택에 묻는다. 이 클래스는 핸들과 앵커 번호 · 값만 맡는다.
+     * @brief 마커를 담는 HUD 화면, 마커마다의 앵커(UI 단위), 뗀 마커가 돌려준 앵커 번호, 그리기 단계가 낸 앵커(물리 픽셀 정수)를 듭니다.
+     * @details 마커 화면을 올리고 닫는 일과 위젯 붙이기 · 떼기는 위젯 컴포넌트 서비스(`UIWidgetComponentService`)가 화면 스택에 묻는다. 이 클래스는 화면의 소유와 앵커 번호 · 값만 맡는다.
      */
     class SW_API UIScreenMarkers
     {
@@ -31,9 +31,9 @@ namespace sw
         UIScreenMarkers( const UIScreenMarkers& )            = delete;
         UIScreenMarkers& operator=( const UIScreenMarkers& ) = delete;
 
-        /** @brief 마커를 담는 HUD 화면입니다(없으면 `kInvalidUIScreenHandle`). */
-        UIScreenHandle getScreen() const { return _screen; }
-        void           setScreen( UIScreenHandle screen ) { _screen = screen; }
+        /** @brief 마커를 담는 HUD 화면입니다(떠 있지 않으면 nullptr). */
+        UIScreen* findScreen() const { return _screen.find(); }
+        void      setScreen( UIOwnedScreen&& screen ) { _screen = std::move( screen ); }
         /** @brief 앵커 번호 하나를 줍니다(뗀 마커의 번호부터 다시 쓴다). 앵커 값은 비어 있다 — 첫 위치는 붙인 쪽이 정한다. */
         uint32 allocateAnchor();
         /** @brief 뗀 마커의 앵커 번호를 돌려받습니다(다음 마커가 다시 쓴다). */
@@ -84,6 +84,6 @@ namespace sw
         const GameObjectManager*   _pGPUManager;       ///< `_markerView` 를 구한 관리자입니다(빌린 포인터).
         vector<CanvasAnchor>       _listCanvasAnchor;  ///< 그리기 단계가 낸 앵커입니다(물리 픽셀 정수).
         vector<uint32>             _listFreeAnchor;    ///< 뗀 마커가 돌려준 앵커 번호입니다.
-        UIScreenHandle             _screen;            ///< 화면 마커를 담는 HUD 화면입니다(없으면 무효).
+        UIOwnedScreen              _screen;            ///< 화면 마커를 담는 HUD 화면입니다(없으면 무효).
     };
 } // namespace sw

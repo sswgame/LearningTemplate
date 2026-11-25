@@ -1,5 +1,5 @@
 <?asset guid="d4c6ee26c3b76bff01a62cd0b76073f8"?>
-<Scene formatVersion="3" name="TurnOrder">
+<Scene formatVersion="0" name="TurnOrder">
 	<!-- 턴 순서 시나리오(automation/turnorder)의 무대 — 속도 10 · 20 · 5 인 행위자 셋을 타임라인제(TimelineDemo)와 라운드제(RoundDemo)로 세운다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

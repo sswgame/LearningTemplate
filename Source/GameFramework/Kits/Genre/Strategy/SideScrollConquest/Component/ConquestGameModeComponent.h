@@ -11,16 +11,15 @@
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Time/Countdown.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestWorld.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw
 {
@@ -30,8 +29,8 @@ namespace sw
      * @class ConquestGameModeComponent
      * @brief 시작 건물 → 훈련 · 진격 · 점령(명령) → 승패 → 결과를 진행합니다.
      */
-    REFLECT( Version = 2, Category = "SideScrollConquest", DisplayName = "Conquest Game Mode", Tooltip = "Runs one side scroll conquest: the commander, squad orders and training from commands, to victory or defeat" )
-    class SW_KIT_API ConquestGameModeComponent : public GameModeComponent
+    REFLECT( Category = "SideScrollConquest", DisplayName = "Conquest Game Mode", Tooltip = "Runs one side scroll conquest: the commander, squad orders and training from commands, to victory or defeat" )
+    class SW_KIT_API ConquestGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -54,6 +53,7 @@ namespace sw
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 승패가 나지 않았으며 사람이 지휘하면 true 입니다(자동 플레이면 false). */
         bool                 isAwaitingCommand() const;
+        bool                 isAcceptingInput() const override { return isAwaitingCommand(); }
         const ConquestWorld& getWorld() const { return _world; }
         /** @brief 이 판의 카탈로그입니다. 열기 전이면 nullptr 입니다. */
         const ConquestCatalog* findCatalog() const { return _pCatalog.get(); }
@@ -68,8 +68,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               updateMatch( float32 deltaTime ) override;
 
     private:
         /** @brief 씬 데이터의 시작 건물을 지을 수 있는지 봅니다(건물이 병사를 훈련하고 거점 · 병종이 카탈로그에 있다). 틀렸으면 오류를 남기고 false 입니다. */
@@ -86,15 +85,12 @@ namespace sw
         CatalogKey<ConquestSiteDef> _startSite;
         PROPERTY( Category = "Start", DisplayName = "Trained Unit", Required, Tooltip = "Unit the training command trains" )
         CatalogKey<ConquestUnitDef> _trainUnit;
-        PROPERTY( Category = "Match", DisplayName = "Result Hold", Tooltip = "Time the result stays on screen before the minigame ends", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Match", DisplayName = "Win Reward", Tooltip = "Money for taking every site", Min = 0 )
         int32 _winReward;
 
-        SharedAssetRef<ConquestCatalog> _pCatalog;
-        ConquestWorld                   _world;
-        ConsumerLease                   _eventLease;
-        vector<ConquestEvent>           _listEvent;
-        Countdown                       _resultHold;
+        BoundAssetRef<ConquestCatalog> _pCatalog;
+        SW_CODEC_STATE ConquestWorld   _world;
+        ConsumerLease                  _eventLease;
+        SW_TRANSIENT vector<ConquestEvent> _listEvent;
     };
 } // namespace sw

@@ -16,6 +16,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -150,7 +151,9 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Required )
-        hashed_string     _id{};
+        hashed_string _id{};
+        PROPERTY( Tooltip = "What the game does with this pick (a word of the game's own vocabulary - elite, ammo ...). Empty is the pool's plain pick" )
+        hashed_string     _effect{};
         ScheduleCondition _condition{}; ///< 요일, 계절, 날씨, 하루의 때(`phases`), 플래그 식, 태그(플레이어 상태), 확률
         PROPERTY( Name = "areas" )
         vector<hashed_string> _listArea{}; ///< 지금 지역 태그 중 하나가 이것이어야 한다. 비면 어디서나
@@ -265,6 +268,9 @@ namespace sw
         friend struct AssetTypeLoader;
 
     public:
+        /** @brief 이 데이터 종류입니다(등록은 `AIDirectorProfile.cpp` 의 줄이 로더를 더한다). 타입 있는 참조 `AssetRef<AIDirectorProfile>` 는 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "aidirector", AssetPathRule{ {}, {}, ".director.xml" }, {} );
+
         AIDirectorProfile();
 
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );

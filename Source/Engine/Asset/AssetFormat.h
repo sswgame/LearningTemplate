@@ -68,17 +68,14 @@ namespace sw
     {
     public:
         static constexpr auto kXMLAttrName = "formatVersion";
-        /** @brief 태그가 없는 파일의 판(세대 0)입니다. */
-        static constexpr AssetFormatVersion kUnversioned = 0;
-
-        /** @brief 루트의 formatVersion 을 읽습니다. 태그가 없으면 `kUnversioned`, 읽지 못하거나 담기지 않으면 가장 큰 판입니다(어느 쪽이든 현재 판과 달라 거절됩니다). */
-        static AssetFormatVersion readXMLVersion( XMLNode root );
+        /** @brief 루트의 formatVersion 을 읽습니다. 칸이 없으면 비어 있고(첫 판 0 과 다르다 — 거절된다), 읽지 못하거나 담기지 않으면 가장 큰 판입니다(새 판으로 거절된다). */
+        static optional<AssetFormatVersion> readXMLVersion( XMLNode root );
         /** @brief 루트에 formatVersion 을 씁니다. */
         static void writeXMLVersion( XMLNode root, AssetFormatVersion version );
 
         /**
          * @brief 루트를 @p type 의 현재 판(`AssetTypeDef::_formatVersion`)으로 맞춥니다. 같은 판이면 그대로 true, 옛 판이면 판 올림 사슬로 제자리에서 고치고 판을 적은 뒤 true 입니다.
-         * @details 새 판 · 읽을 수 없는 값 · 빠진 단계 · 실패한 단계는 파일 종류와 두 판을 적어 오류를 알리고 false 입니다(고치다 만 글은 쓰지 않는다).
+         * @details 판 칸이 없는 글 · 새 판 · 읽을 수 없는 값 · 빠진 단계 · 실패한 단계는 파일 종류와 두 판을 적어 오류를 알리고 false 입니다(고치다 만 글은 쓰지 않는다).
          */
         [[nodiscard]] static bool upgradeToCurrentXMLVersion( const AssetTypeDef& type, XMLNode root );
     };

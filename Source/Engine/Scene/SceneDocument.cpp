@@ -4,7 +4,6 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
@@ -14,10 +13,10 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Object/GameObject/Serialization/GameObjectFormatUpgrade.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
@@ -37,24 +36,21 @@ namespace sw
             static constexpr const utf8* kEntity        = "entity";
             static constexpr const utf8* kGameObject    = "GameObject";
             static constexpr const utf8* kDefaultEntity = "Entity";
-            static constexpr uint32      kBinMagic      = FourCCUtil::make( "SCN1" );
             // 배치: 이름 · 월드 설정(리플렉션 바이너리) · 기본 엔티티 목록 · 셀 목록(셀 좌표 x · z, 그 셀의 엔티티 목록).
             // 엔티티 하나: 이름 · 프리팹 경로 · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXML`) · id 범위 · 앵커 파일 id · 레이어 목록 · 인스턴스 덮어쓰기 목록.
-            // 프리팹은 경로 하나로 가리킨다(판 5 에서 GUID 칸을 지웠다). 판 6 에서 조립 칸을 더했다. 판 7 부터 상태의 컴포넌트 키가 고정 지역 id(`_localID`, `ComponentStableKey` — 감사 A-2)다. 셀에는 레이어 목록이 붙는다.
-            // 판 8 부터 셀 목록은 색인(좌표 · 레이어 · 내용 구간)이고 셀 내용(엔티티 목록)은 색인 뒤에 셀마다 이어 붙는다 — 씬을 열 때 색인만 풀고 내용은 셀을 올릴 때 구간으로 읽는다(감사 A-13).
-            // 판 9 부터 매직 · 판 뒤에 머리 길이(이 고정 머리 포함) · 내용 길이가 온다 — 로더는 고정 머리와 머리만 구간으로 읽고 셀 내용은 읽지 않는다.
+            // 프리팹은 경로 하나로 가리킨다. 상태의 컴포넌트 키는 고정 지역 id(`_localID`, `ComponentStableKey` — 감사 A-2)다. 셀에는 레이어 목록이 붙는다.
+            // 셀 목록은 색인(좌표 · 레이어 · 내용 구간)이고 셀 내용(엔티티 목록)은 색인 뒤에 셀마다 이어 붙는다 — 씬을 열 때 색인만 풀고 내용은 셀을 올릴 때 구간으로 읽는다(감사 A-13).
+            // 매직 · 판 뒤에 머리 길이(이 고정 머리 포함) · 내용 길이가 온다 — 로더는 고정 머리와 머리만 구간으로 읽고 셀 내용은 읽지 않는다.
             // 구간의 시작은 머리 끝에서 센 값으로 적는다(머리 길이가 레이어 이름에 달려 쓰기 전에 절대 위치를 모른다).
-            // 판 10 부터 셀 색인 뒤에 셀 엔티티의 가장 큰 파일 id(`_maxCellFileID`)가 온다 — 색인만 읽은 씬이 새 파일 id 를 내려간 셀과 겹치지 않게 고른다.
+            // 셀 색인 뒤에 셀 엔티티의 가장 큰 파일 id(`_maxCellFileID`)가 온다 — 색인만 읽은 씬이 새 파일 id 를 내려간 셀과 겹치지 않게 고른다.
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
-            // 판 11 부터 셀 색인의 구간 뒤에 그 조각의 HLOD 대리 파일 id(`StreamingCell::_hlodFileID`, 0 이면 없음)가 온다.
-            // 판 12 부터 그 뒤에 조각 내용의 XZ 경계(`StreamingCell::_contentBounds`, 최소 x · z · 최대 x · z — 빈 경계면 최소가 최대보다 크다)가 온다.
-            static constexpr uint32 kBinVersion = 12;
+            // 셀 색인의 구간 뒤에 그 조각의 HLOD 대리 파일 id(`StreamingCell::_hlodFileID`, 0 이면 없음)가 온다.
+            // 그 뒤에 조각 내용의 XZ 경계(`StreamingCell::_contentBounds`, 최소 x · z · 최대 x · z — 빈 경계면 최소가 최대보다 크다)가 온다.
+            static constexpr FormatDef kBinFormat{ "SWSC" };
             // 고정 머리: 매직 · 판 · 머리 길이 · 내용 길이.
             static constexpr uint64 kFixedHeadBytes = 2u * sizeof( uint32 ) + 2u * sizeof( uint64 );
             // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯, 목록 수 둘, 파일 id · id 범위 · 앵커 id(8바이트씩)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
             static constexpr uint32 kMinBytesPerEntity = 7u * sizeof( uint32 ) + 3u * sizeof( uint64 );
-            /** @brief 지운 칸입니다. 프리팹은 경로로만 가리킨다 — 이 속성이 남은 씬은 오류로 읽지 않는다(옛 GUID 를 말없이 버리면 그 엔티티가 무엇을 가리켰는지 모른다). */
-            static constexpr const utf8* kRemovedPrefabGUID = "prefabGUID";
             // 셀 색인 한 줄은 좌표 둘 · 레이어 수 · 내용 구간(시작 · 길이) · HLOD 대리 id · 경계 넷이다.
             static constexpr uint32 kMinBytesPerCell = 2u * sizeof( int32 ) + sizeof( uint32 ) + 3u * sizeof( uint64 ) + 4u * sizeof( float32 );
             /** @brief 인스턴스 멤버의 이름에서 앵커 이름과 내부 이름을 가르는 글자입니다. 네트워크 씬 번호가 이름의 해시라(`NetObjectTable`) 멤버 이름은 인스턴스마다 달라야 한다. */
@@ -219,13 +215,6 @@ namespace sw
              */
             [[nodiscard]] static bool readEntityNode( const XMLNode& sceneObjectNode, string_view absPath, SceneDocument::SceneObjectNode& outNode )
             {
-                // 지운 칸은 옮겨 갈 곳을 알려 준다(모르는 칸 오류보다 먼저).
-                if ( sceneObjectNode.findAttribute( kRemovedPrefabGUID ) != nullptr )
-                {
-                    SW_LOG_ERROR_ID( "SceneDocument.EntityPrefabGUIDRemoved", "Entity '%#' still has '%#' in %# - prefabs are referenced by path only (put the prefab's path in 'prefab'); the scene is not loaded",
-                                     sceneObjectNode.getAttributeText( "name" ), kRemovedPrefabGUID, absPath );
-                    return false;
-                }
                 // 칸 · 0 이 아닌 id 는 SceneEntityParams 의 PROPERTY 가 본다.
                 SceneEntityParams params;
                 if ( XMLFields::readProperties( sceneObjectNode, params, absPath ) == false )
@@ -236,7 +225,7 @@ namespace sw
                 outNode._fileID        = params._id;
                 outNode._name          = std::move( params._name );
                 outNode._prefab        = params._prefab.path();
-                outNode._sceneInstance = std::move( params._scene );
+                outNode._sceneInstance = params._scene.path();
                 parseDataLayers( params._layers, outNode._listDataLayer );
 
                 const XMLNode overrideNode = sceneObjectNode.findChild( PrefabOverrides::kRootName );
@@ -272,8 +261,6 @@ namespace sw
 namespace sw
 {
     SW_ASSET_TYPE( Scene, SceneDocument::kAssetType );
-    // 판 3: 형제 순서 칸 `_siblingIndex` → `_siblingOrder`(분수 색인 키, 설계 E-6)
-    SW_ASSET_FORMAT_UPGRADE( sceneSiblingOrder, "Scene", 2, 3, &GameObjectFormatUpgrade::renameSiblingIndex );
     SW_DATA_INHERITANCE_SCHEMA( Scene, &SceneDocumentInternal::makeInheritanceSchema );
 
     bool SceneDocument::loadXML( const AssetID& assetID )
@@ -607,7 +594,7 @@ namespace sw
                 return false;
             }
             XMLNode sceneObjectNode = entities.appendChild( SceneDocumentInternal::kEntity );
-            XMLFields::writeProperties( sceneObjectNode, SceneEntityParams{ entity._fileID, entity._name, AssetRef<PrefabAsset>{ entity._prefab }, entity._sceneInstance, SceneDocumentInternal::joinDataLayers( entity._listDataLayer ) } );
+            XMLFields::writeProperties( sceneObjectNode, SceneEntityParams{ entity._fileID, entity._name, AssetRef<PrefabAsset>{ entity._prefab }, AssetRef<SceneDocument>{ entity._sceneInstance }, SceneDocumentInternal::joinDataLayers( entity._listDataLayer ) } );
             if ( entity._prefabOverrideXML.empty() == false )
             {
                 XMLDocument overrideDoc;
@@ -647,22 +634,11 @@ namespace sw
             return false;
         }
         Archive fixedArch( fixedHead.data(), fixedHead.size() );
-        uint32  magic{ 0 };
-        uint32  version{ 0 };
-        uint64  headSize{ 0 };
-        uint64  contentSize{ 0 };
-        fixedArch >> magic >> version >> headSize >> contentSize;
-        if ( magic != SceneDocumentInternal::kBinMagic )
-        {
-            SW_LOG_ERROR_ID( "SceneDocument.BadBinaryMagic", "Bad binary magic: %#", absPath );
+        if ( SceneDocumentInternal::kBinFormat.read( fixedArch, absPath ) == false )
             return false;
-        }
-        if ( version != SceneDocumentInternal::kBinVersion )
-        {
-            SW_LOG_ERROR_ID( "Scene.UnsupportedBinaryVersion", "Unsupported binary version %# in %# (this build reads %#) - cook the scene again", version, absPath,
-                             SceneDocumentInternal::kBinVersion );
-            return false;
-        }
+        uint64 headSize{ 0 };
+        uint64 contentSize{ 0 };
+        fixedArch >> headSize >> contentSize;
         vector<uint8> head;
         const bool    bHeadRead = headSize > SceneDocumentInternal::kFixedHeadBytes &&
                                AssetIO::readBinaryAssetRange( assetID, SceneDocumentInternal::kFixedHeadBytes, headSize - SceneDocumentInternal::kFixedHeadBytes, head );
@@ -790,7 +766,8 @@ namespace sw
         }
         arch << maxCellFileID;
         Archive file;
-        file << SceneDocumentInternal::kBinMagic << SceneDocumentInternal::kBinVersion << static_cast<uint64>( SceneDocumentInternal::kFixedHeadBytes + arch.getSize() )
+        SceneDocumentInternal::kBinFormat.write( file );
+        file << static_cast<uint64>( SceneDocumentInternal::kFixedHeadBytes + arch.getSize() )
              << static_cast<uint64>( content.getSize() );
         file.writeBytes( arch.getData(), arch.getSize() );
         file.writeBytes( content.getData(), content.getSize() );

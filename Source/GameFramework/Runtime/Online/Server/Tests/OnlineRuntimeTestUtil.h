@@ -32,17 +32,17 @@ namespace sw::test
         OnlineTestClients            _clients{ _network };
 
         /**
-         * @brief 온라인 설정 글 @p onlineJSON(`{` 로 시작) 맨 앞에 서버 구성(한 대 · id 1)과 기반 표 TTL 칸(감사 · 원장 · 닫힌 신고 · 보낸 우편 · 쓸기 시각)을 "지우지 않음"(기간 0)으로 넣은 글입니다.
+         * @brief 온라인 설정 글 @p onlineJSON(`{` 로 시작) 맨 앞에 서버 구성(한 대 · id 1)과 운영 칸(수용 · 연결 · 요청 한도 · 저장소 워커 @p storeWorkerCount) · 기반 표 TTL 칸("지우지 않음" — 기간 0)을 넣은 글입니다.
          * @details 그 칸들은 필수라(코드 기본값 없음) 쓸기를 보지 않는 끝단 테스트도 적어야 한다. 조립이 빠진 칸을 채워 주지는 않는다 — 테스트가 이 함수로 드러내 적는다.
          */
-        static string withBaseTTL( string_view onlineJSON )
+        static string withBaseSettings( string_view onlineJSON, int32 storeWorkerCount = 4 )
         {
-            constexpr string_view                     kBaseTTLJSON = R"( "_topology": "SingleServer", "_serverID": 1, "_auditRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
+            constexpr string_view                     kBaseJSON = R"( "_topology": "SingleServer", "_serverID": 1, "_serverKind": "game", "_region": "local", "_capacity": 100, "_maxConnections": 4096, "_ioThreadCount": 2, "_requestBurstPerRemote": 10, "_requestBurstPerAccount": 30, "_maxConnectionsPerRemote": 64, "_auditRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_ledgerRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_closedReportTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_mailSentTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 }, "_scheduleRunTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 }, "_ttlSweepMinuteOfDay": 300, "_ttlBackfillRolloutHours": 0, "_maxPendingCallsPerService": 100000, "_listTrustedProxy": [], "_seatReservationSeconds": 30,)";
-            StringBuilder<constant::buffer::kMax2048> text;
-            text.appendFormat( "%#%#%#", onlineJSON.substr( 0, 1 ), kBaseTTLJSON, onlineJSON.substr( 1 ) );
+            StringBuilder<constant::buffer::kMax4096> text;
+            text.appendFormat( "%#%# \"_storeWorkerCount\": %#, %#", onlineJSON.substr( 0, 1 ), kBaseJSON, storeWorkerCount, onlineJSON.substr( 1 ) );
             return string( text.view() );
         }
 

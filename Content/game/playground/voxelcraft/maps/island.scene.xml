@@ -1,5 +1,5 @@
 <?asset guid="feafd225e659cb5347214199397b981d"?>
-<Scene formatVersion="3" name="VoxelCraft">
+<Scene formatVersion="0" name="VoxelCraft">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -100,6 +100,7 @@
 					                      _placeButton="Voxel.Place"
 					                      _hotbarScrollAnalog="Voxel.HotbarScroll"
 					                      _waterBlock="water">
+						<_bodySettings _halfWidth="0.3" _height="1.8" _eyeHeight="1.62" _gravity="28" _jumpSpeed="8.4" _walkSpeed="4.3" _sprintSpeed="5.6" _maxFallSpeed="50" _groundAcceleration="40" _airAcceleration="10" _swimSpeed="3" _maxStep="0.008333334" />
 						<_listSlotButton>
 							<item>Voxel.Slot1</item>
 							<item>Voxel.Slot2</item>
@@ -151,22 +152,18 @@
 					                        _bActive="true"
 					                        _autoPlayPrefab="guid:9916123fb7af96865ecf507801d4e0da"
 					                        _player="3"
-					                        _terrainSeed="20261003"
 					                        _chunkCountX="8"
 					                        _chunkCountZ="8"
 					                        _residentChunkRadius="5"
 					                        _chunkLoadsPerFrame="4"
-					                        _waterBlock="water"
-					                        _stoneBlock="stone"
-					                        _grassBlock="grass"
-					                        _snowBlock="snow"
-					                        _coalOreBlock="coal_ore"
-					                        _ironOreBlock="iron_ore"
-					                        _snowHeight="34"
-					                        _coalOreChance="0.012"
-					                        _ironOreChance="0.006"
-					                        _ironOreMaxHeight="12"
-					                        _bAutoPlay="false" />
+					                        _bAutoPlay="false">
+						<_terrain _seed="20261003" _baseHeight="18" _heightAmplitude="18" _waterLevel="20" _dirtDepth="3" _noiseScale="0.020833334" _octaveCount="4" _treeChance="0.012" _grassBlock="grass" _dirtBlock="dirt" _stoneBlock="stone" _sandBlock="sand" _waterBlock="water" _bedrockBlock="bedrock" _logBlock="log" _leavesBlock="leaves" _snowBlock="snow" _snowHeight="34">
+							<_listOreLayer>
+								<VoxelOreLayer _block="coal_ore" _chance="0.012" _maxHeight="64" />
+								<VoxelOreLayer _block="iron_ore" _chance="0.006" _maxHeight="12" />
+							</_listOreLayer>
+						</_terrain>
+					</VoxelGameModeComponent>
 					<VoxelWorldViewComponent _localID="7325518840021963471" _componentName="VoxelWorldViewComponent"
 					                         _bActive="true"
 					                         _chunkPrefab="guid:333f65062919d2c3fff424c45f4b7986"

@@ -37,6 +37,15 @@ namespace sw
     class ICameraCollisionProbe;
     class InputMap;
 
+    /** @brief 덮어쓸 원근 시점 하나입니다(`CameraDirectorComponent::requestViewOverride`). */
+    struct CameraViewOverride
+    {
+        float3  _position{}; ///< 씬 자리
+        float3  _euler{};    ///< 피치, 요, 롤(라디안) — 롤은 쓰지 않는다
+        float32 _fieldOfViewY{ 0.0f };
+        float32 _farPlane{ 0.0f };
+    };
+
     /**
      * @class CameraDirectorComponent
      * @brief 프리셋 카탈로그(`<CameraPresetCatalog>` XML)를 읽고, 켠 프리셋을 대상에 맞춰 계산하고 블렌드, 감쇠, 흔들림을 거쳐 같은 오브젝트의 카메라에 씁니다.
@@ -101,20 +110,18 @@ namespace sw
         void blendFromPose( const CameraPose& from, const BlendCurveDef& blend ) { _director.blendFromPose( from, blend ); }
 
         /**
-         * @brief 다음 갱신부터 이 원근 시점(`Fixed`)을 씁니다. @p euler 는 피치, 요, 롤(라디안)이며 롤은 쓰지 않습니다.
-         * @details 처음 덮어쓸 때 `_overrideBlend` 로 섞어 들어가고, 덮어쓰는 동안 다시 부르면 값만 바꾼다(탑승 시점은 매 프레임 움직인다).
-         *          게임 디렉터가 코스터 탑승이나 짧은 컷에 쓴다. 언리얼의 `SetViewTargetWithBlend` 로 임시 시점을 넣는 것과 같다.
+         * @brief 이 프레임의 원근 시점(`Fixed`) 요청입니다. 덮어쓰려는 쪽이 프레임마다 냅니다 — 요청이 없는 틱이 오면 디렉터가 스스로 풀어, 덮은 쪽이 풀기를 잊을 수 없다.
+         * @details 처음 덮어쓸 때 `_overrideBlend` 로 섞어 들어가고, 이어지는 요청은 값만 바꾼다(탑승 시점은 매 프레임 움직인다). 요청이 끊긴 틱에 덮어쓰기 전 프리셋으로 같은 블렌드를 따라 돌아간다.
+         *          게임 뷰가 코스터 탑승이나 짧은 컷에 쓴다. 언리얼 `APlayerCameraManager` 가 프레임마다 뷰 타깃에 `CalcCamera` 를 묻는 것, 시네머신이 켜진 가상 카메라만 보는 것과 같다.
          */
-        void setViewOverride( const float3& position, const float3& euler, float32 fieldOfViewY, float32 farPlane );
-        /** @brief 덮어쓴 시점을 풀고, 덮어쓰기 전에 켜 있던 프리셋으로 `_overrideBlend` 를 따라 돌아갑니다. */
-        void clearViewOverride();
+        void requestViewOverride( const CameraViewOverride& view );
         bool isViewOverridden() const { return _bViewOverride; }
         /**
          * @brief 포토 모드를 켭니다. 게임 시간을 멈추고(`GameTimeScale::addPauseRequest`), UI 레이어를 숨기고(`_photoHiddenUILayers` 속성이 정한 레이어에 `IUILayerVisibility::addLayerHideRequest`),
          *        지금 포즈에서 시작하는 자유 카메라를 디렉터 포즈 위에 덮습니다.
          * @details 디렉터 상태(프리셋, 블렌드, 덮어쓴 시점)는 건드리지 않고 마지막 쓰기만 바꾼다. 그래서 끌 때 되돌릴 것은 정지 요청과 UI 숨김 요청뿐이다.
          *          카메라 컴포넌트는 UI 를 모르고, 이 디렉터가 레이어 숨김 창구(`IUILayerVisibility`)에 "이 레이어를 숨겨 달라" 는 요청만 건다 — 어느 레이어인지는 게임 데이터(속성)가 정한다.
-         *          `setViewOverride` 는 탑승 카메라가 매 프레임 부르는 원근 전용 함수라서 쓰지 않는다. 겹치면 끌 때 탑승 시점을 지운다.
+         *          `requestViewOverride` 는 탑승 카메라가 매 프레임 내는 원근 전용 요청이라서 쓰지 않는다. 겹치면 끌 때 탑승 시점을 지운다.
          *          조작은 게임 입력 맵이 아니라 엔진의 포토 모드 입력 맵(`EngineDefaultAssets::_photoModeInputMap`)에서 읽는다. 그래서 게임마다 맵에 액션을 더하지 않아도 되고,
          *          켜 있는 동안 게임 입력 레이어를 막아 게임 키와 겹쳐도 부딪히지 않는다(늘 켜지는 레이어는 남는다 — 게임이 끄기 액션을 거기 둔다. 언리얼 Enhanced Input 이 포토 모드 동안 전용 매핑 컨텍스트를 추가하는 것과 같다).
          *          아직 포즈가 없거나(프리셋 없음) 이미 켜 있거나 그 맵을 읽지 못하면(오류 로그) false 입니다.
@@ -200,6 +207,10 @@ namespace sw
         bool isResolvePending() const { return _bResolvePending; }
 
     private:
+        /** @brief 시점 요청을 켭니다. 처음이면 섞어 들어가고, 덮어쓰는 동안이면 값만 바꿉니다. */
+        void applyViewOverride( const CameraViewOverride& view );
+        /** @brief 덮어쓴 시점을 풀고, 덮어쓰기 전에 켜 있던 프리셋으로 `_overrideBlend` 를 따라 돌아갑니다. 덮지 않았으면 아무 일도 하지 않습니다. */
+        void         releaseViewOverride();
         CameraTarget computeTarget() const;
         /** @brief 대상이 지난 계산 뒤 순간이동했으면 디렉터에 알립니다(`CameraDirector::onTargetTeleported`). */
         void consumeTargetTeleport();
@@ -273,32 +284,34 @@ namespace sw
         PROPERTY( Category = "Sequencer", DisplayName = "Exposure Offset", Tooltip = "Exposure compensation a sequencer value track adds to the preset's", Meta = "Units=EV" )
         float32 _exposureOffset;
 
-        CameraPresetDef _overrideDef;          ///< 덮어쓴 시점의 고정 프리셋
-        hashed_string   _presetBeforeOverride; ///< 덮어쓰기를 풀 때 돌아갈 프리셋
-        bool            _bViewOverride;
+        SW_TRANSIENT CameraPresetDef    _overrideDef;          ///< 덮어쓴 시점의 고정 프리셋
+        SW_TRANSIENT hashed_string      _presetBeforeOverride; ///< 덮어쓰기를 풀 때 돌아갈 프리셋
+        SW_TRANSIENT CameraViewOverride _viewRequest;          ///< 이번 틱까지 받은 시점 요청(`requestViewOverride`)
+        SW_TRANSIENT bool               _bViewRequested;       ///< 지난 틱 뒤에 시점 요청이 왔다
+        SW_TRANSIENT bool               _bViewOverride;
 
-        PhotoModeCamera      _photoMode;
-        unique_ptr<InputMap> _photoInputMap;   ///< 포토 모드 동안만 있는 엔진 포토 모드 입력 맵(`enterPhotoMode` 가 읽고 `exitPhotoMode` 가 버린다)
-        bool                 _bPhotoModeCut;   ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
-        Subscription         _photoPause;      ///< 포토 모드가 건 게임 시간 정지 요청
-        Subscription         _photoLayerHide;  ///< 포토 모드가 건 UI 레이어 숨김 요청(`IUILayerVisibility`)
-        Subscription         _photoCut;        ///< 포토 모드가 시퀀스 컷 · 킬캠 위에 쥔 컷 자리(`CameraRegistry::setCutCamera`)
-        Subscription         _photoInputBlock; ///< 포토 모드 동안 게임 입력 레이어를 막는 칸(`InputManager::pushSharedLayer`)
+        SW_TRANSIENT PhotoModeCamera _photoMode;
+        SW_TRANSIENT unique_ptr<InputMap> _photoInputMap;   ///< 포토 모드 동안만 있는 엔진 포토 모드 입력 맵(`enterPhotoMode` 가 읽고 `exitPhotoMode` 가 버린다)
+        SW_TRANSIENT bool                 _bPhotoModeCut;   ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
+        Subscription                      _photoPause;      ///< 포토 모드가 건 게임 시간 정지 요청
+        Subscription                      _photoLayerHide;  ///< 포토 모드가 건 UI 레이어 숨김 요청(`IUILayerVisibility`)
+        Subscription                      _photoCut;        ///< 포토 모드가 시퀀스 컷 · 킬캠 위에 쥔 컷 자리(`CameraRegistry::setCutCamera`)
+        Subscription                      _photoInputBlock; ///< 포토 모드 동안 게임 입력 레이어를 막는 칸(`InputManager::pushSharedLayer`)
 
         SharedAssetRef<CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(`SharedAssetCache<CameraPresetCatalog>`). 경로가 없으면 빈 표다
-        CameraDirector                      _director;
-        CameraImpulseListener               _channelImpulse;    ///< 흔들림 채널의 충격. 이 카메라를 뷰 타깃으로 읽는 매니저가 있으면 매니저가 더하므로 쓰지 않는다(두 번 더하지 않는다)
+        SW_CODEC_STATE CameraDirector       _director;
+        SW_TRANSIENT CameraImpulseListener  _channelImpulse;    ///< 흔들림 채널의 충격. 이 카메라를 뷰 타깃으로 읽는 매니저가 있으면 매니저가 더하므로 쓰지 않는다(두 번 더하지 않는다)
         Subscription                        _shakeSubscription; ///< 흔들림 채널 구독(플레이 동안)
-        vector<uint8>                       _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`). 카탈로그를 읽은 뒤 적용한다
-        const ICameraCollisionProbe*        _pExternalProbe;
-        hashed_string                       _inputCheckedPresetID; ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)
-        hashed_string                       _selectedPreset;       ///< 플레이어 · 코드가 고른 프리셋(상황 적용 전)
-        hashed_string                       _contextPreset;        ///< 상황을 적용해 마지막으로 켠 프리셋. 바뀔 때만 켠다(직접 켠 프리셋과 다투지 않는다)
-        vector<hashed_string>               _listContext;          ///< 코드가 켠 상황(`setContext`)
-        vector<hashed_string>               _listHeldContext;      ///< 이번 프레임 액션을 누르고 있는 상황
-        GameObjectHandle                    _teleportTarget;       ///< `_targetTeleport` 이 마지막에 본 대상
-        SceneTeleportCursor                 _targetTeleport;       ///< 대상이 순간이동했는지 읽는 자리
-        float32                             _pendingDeltaTime;     ///< 틱이 모은 시간. 미룬 계산이 쓴다
-        bool                                _bResolvePending;      ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
+        SW_TRANSIENT vector<uint8>   _pendingStateBytes;        ///< 시작 전에 받은 상태(`restoreState`). 카탈로그를 읽은 뒤 적용한다
+        const ICameraCollisionProbe* _pExternalProbe;
+        SW_TRANSIENT hashed_string   _inputCheckedPresetID;   ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)
+        SW_CODEC_STATE hashed_string _selectedPreset;         ///< 플레이어 · 코드가 고른 프리셋(상황 적용 전)
+        SW_TRANSIENT hashed_string   _contextPreset;          ///< 상황을 적용해 마지막으로 켠 프리셋. 바뀔 때만 켠다(직접 켠 프리셋과 다투지 않는다)
+        SW_CODEC_STATE vector<hashed_string> _listContext;    ///< 코드가 켠 상황(`setContext`)
+        SW_TRANSIENT vector<hashed_string> _listHeldContext;  ///< 이번 프레임 액션을 누르고 있는 상황
+        SW_TRANSIENT GameObjectHandle      _teleportTarget;   ///< `_targetTeleport` 이 마지막에 본 대상
+        SW_TRANSIENT SceneTeleportCursor   _targetTeleport;   ///< 대상이 순간이동했는지 읽는 자리
+        SW_TRANSIENT float32               _pendingDeltaTime; ///< 틱이 모은 시간. 미룬 계산이 쓴다
+        SW_TRANSIENT bool                  _bResolvePending;  ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
     };
 } // namespace sw

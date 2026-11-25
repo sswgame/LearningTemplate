@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.run_process import ProcessResult  # noqa: E402
 from dev.changed_tests import CTEST_DEFAULT_TIMEOUT_SECONDS, ChangedFile, ChangedRow, ChangedRun, CtestItem, EDITOR_UNIT_TEST_ITEM, SINGLE_SCENARIO_TIMEOUT_SECONDS, decide_changed, find_dash, find_feature_folder, find_golden_scenario, fold_scenario_failures, fold_scenario_rows, format_changed_table, get_argument, list_new_references, make_editor_unit_run, make_scenario_runs, make_unit_runs, parse_branch, parse_ctest_items, parse_name_status, read_unit_rows, select_editor_files, select_scenarios, select_unit_folders, set_argument  # noqa: E402
-from dev.run_history import QuarantineEntry, SCHEMA, compute_percentile, compute_scenario_costs, compute_stats, decide_flaky, find_flaky, find_scenario_cost, find_slow_runs, ingest, make_ctest_exclude, make_scenario_costs_text, prepare_schema, record_stage  # noqa: E402
+from dev.run_history import QuarantineEntry, SCHEMA, compute_percentile, compute_scenario_costs, compute_stats, decide_flaky, find_flaky, find_scenario_cost, find_slow_runs, ingest, make_ctest_exclude, make_scenario_costs_text, record_stage  # noqa: E402
 
 
 class TestHistoryTest(unittest.TestCase):
@@ -147,8 +147,7 @@ class TestHistoryTest(unittest.TestCase):
     def test_kinds_flaky_and_slow(self) -> None:
         """실행 종류 · 흔들림 · 느려짐 · 단계 시간."""
         connection = sqlite3.connect(":memory:")
-        connection.executescript(SCHEMA.replace("    runKind TEXT NOT NULL DEFAULT '',\n", ""))   # 옛 DB 모양에 칸을 더한다
-        prepare_schema(connection)
+        connection.executescript(SCHEMA)
         old = [{"name": "s", "result": "Failed", "startedAtUnixMs": 10, "backend": "dx12"}]
         new = [{"name": "s", "result": result, "startedAtUnixMs": started, "backend": "dx12"} for result, started in (("Passed", 100), ("Failed", 101))]
         assert ingest(connection, old + new, "c1", "verify", since_unix_ms=100) == 3
@@ -170,7 +169,7 @@ class TestHistoryTest(unittest.TestCase):
 
     def test_statistics_and_costs(self) -> None:
         connection = sqlite3.connect(":memory:")
-        prepare_schema(connection)
+        connection.executescript(SCHEMA)
         list_report = [{"name": "a", "result": result, "startedAtUnixMs": index, "wallMilliseconds": wall, "backend": "dx12"}
                       for index, (result, wall) in enumerate([("Passed", 100), ("Failed", 100), ("Passed", 300), ("Passed", 300)])]
         assert ingest(connection, list_report, "abc") == 4 and ingest(connection, list_report, "abc") == 0, "같은 보고는 한 번만"

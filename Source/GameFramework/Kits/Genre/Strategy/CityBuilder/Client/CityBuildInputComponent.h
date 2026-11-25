@@ -8,17 +8,16 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 
@@ -35,7 +34,7 @@ namespace sw
      */
     REFLECT( Category = "CityBuilder", DisplayName = "City Build Input",
              Tooltip = "Client side of a city: picks a tool and sends building, demolishing and speed input to the city game mode on the same object" )
-    class SW_KIT_CLIENT_API CityBuildInputComponent : public Component
+    class SW_KIT_CLIENT_API CityBuildInputComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -43,19 +42,14 @@ namespace sw
         static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
 
         /** @brief 도구 · 커서는 틱 뒤 게임 스레드에서만 바뀝니다 — 커서 뷰가 병렬 틱에서 읽어도 됩니다(자기 틱이 쓰는 것은 따로 둔 `_bInputLive` 뿐이다). */
-        static constexpr bool   kTickReadSafe = true;
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "CTBI" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr bool      kTickReadSafe = true;
+        static constexpr FormatDef kStateFormat{ "CTBI" };
 
         CityBuildInputComponent();
         virtual ~CityBuildInputComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
         /** @brief 틱 그룹은 뷰의 `PostUpdate` 입니다. 입력 액션이 맵에 모두 있는지 봅니다(빠지면 오류를 남기고 입력을 읽지 않는다). */
         void onBeginPlay() override;
-        /** @brief 알림 · 입력 처리를 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
 
         /** @brief 고른 도구를 씁니다(`ComponentStateCodec::captureObject`). */
         SW_DECLARE_STATE_IO_IN_PLACE();
@@ -69,7 +63,8 @@ namespace sw
 
     private:
         /** @brief 틱 뒤 게임 스레드: 알림을 소리로 내고, 시간이 흐르는 동안 입력을 명령으로 바꿉니다. */
-        void updateInput( GameObjectManager& manager );
+        void updateInput( GameObjectManager& manager, CityBuilderGameModeComponent& director );
+        void submitInput( const GameModeInput& inputMap, CityBuilderGameModeComponent& director );
         /** @brief 디렉터의 이번 걸음 알림을 소리로 냅니다. */
         static void playStepEvents( const CityBuilderGameModeComponent& director );
         void        updateTool( const CityBuilderGameModeComponent& director, const GameInputView& inputMap );
@@ -105,13 +100,12 @@ namespace sw
         PROPERTY( Category = "Input Actions", DisplayName = "Status", Tooltip = "Logs the city status" )
         hashed_string _statusAction;
 
-        TComponentHandle<CityBuilderGameModeComponent> _director;
-        int2                                           _cursorTile;
-        int32                                          _cursorSize; ///< 고른 것의 크기(타일 수)
-        int32                                          _selectedTool;
-        uint8                                          _bInputLive; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다). 틱이 쓰므로 뷰가 읽는 비트와 나눈다
-        uint8                                          _bActionsValid : 1;
-        uint8                                          _bCursorValid  : 1;
-        [[maybe_unused]] uint8                         _reserved      : 6;
+        SW_TRANSIENT int2      _cursorTile;
+        int32                  _cursorSize; ///< 고른 것의 크기(타일 수)
+        SW_CODEC_STATE int32   _selectedTool;
+        uint8                  _bInputLive; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다). 틱이 쓰므로 뷰가 읽는 비트와 나눈다
+        SW_TRANSIENT uint8     _bActionsValid : 1;
+        SW_TRANSIENT uint8     _bCursorValid  : 1;
+        [[maybe_unused]] uint8 _reserved      : 6;
     };
 } // namespace sw

@@ -4,6 +4,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -44,6 +45,10 @@ namespace
 </ItemCatalog>)";
 
     constexpr const utf8* kBattleRoyaleGameModeXML = R"(<BattleRoyaleGameModeComponent _squadCount="2" _squadSize="1" _seed="7" _playerHitChance="0" _botHitChance="0" _startReserveAmmo="24">
+  <_listWeaponID><item>first</item><item>better</item></_listWeaponID>
+</BattleRoyaleGameModeComponent>)";
+    /** @brief 씨앗만 다른 디렉터입니다(씨앗을 싣는지 본다). */
+    constexpr const utf8* kBattleRoyaleOtherSeedXML = R"(<BattleRoyaleGameModeComponent _squadCount="2" _squadSize="1" _seed="99" _playerHitChance="0" _botHitChance="0" _startReserveAmmo="24">
   <_listWeaponID><item>first</item><item>better</item></_listWeaponID>
 </BattleRoyaleGameModeComponent>)";
 
@@ -95,6 +100,39 @@ namespace
         }
     };
 } // namespace
+
+/**
+ * @brief [BattleRoyaleGameModeTest] 결함: 판의 씨앗을 싣지 않아, 다른 씨앗으로 연 판(서버 월드는 열 때마다 난수)에 상태를 읽으면 비행 경로가 그 판의 것으로 바뀌었다.
+ *        씨앗을 싣고 그 씨앗으로 비행 경로를 다시 정한다 — 내리기 전 사람의 자리가 쓴 판과 같다
+ */
+SW_TEST_CASE( BattleRoyaleGameModeTest, StateCarriesTheMatchSeed )
+{
+    vector<uint8>    bytes;
+    AbsolutePosition written;
+    {
+        BattleRoyaleDirectorTest first;
+        SW_REQUIRE_TRUE( first.open() );
+        game::ScopedGameScope scopedScope( first._scope );
+        first._manager.beginPlay();
+        SW_REQUIRE_TRUE( first._pGameMode->isStarted() );
+        first._manager.update( kBattleRoyaleGameModeFrame );
+        written = first._pGameMode->getPersonPosition( BattleRoyaleGameModeComponent::kPlayer );
+        Archive archive;
+        first._pGameMode->writeState( archive );
+        bytes.assign( archive.getData(), archive.getData() + archive.getSize() );
+        first._manager.endPlay();
+    }
+    BattleRoyaleDirectorTest second;
+    SW_REQUIRE_TRUE( second.open( kBattleRoyaleOtherSeedXML ) );
+    game::ScopedGameScope scopedScope( second._scope );
+    second._manager.beginPlay();
+    SW_REQUIRE_TRUE( second._pGameMode->isStarted() );
+    second._manager.update( kBattleRoyaleGameModeFrame );
+    SW_EXPECT_TRUE( float3::getDistance( written._value, second._pGameMode->getPersonPosition( BattleRoyaleGameModeComponent::kPlayer )._value ) > 1.0f ); // 다른 씨앗은 다른 비행 경로다
+    second._pGameMode->restoreState( std::move( bytes ) );
+    SW_EXPECT_NEAR( 0.0f, float3::getDistance( written._value, second._pGameMode->getPersonPosition( BattleRoyaleGameModeComponent::kPlayer )._value ), 1.0e-3f );
+    second._manager.endPlay();
+}
 
 /** @brief [BattleRoyaleGameModeTest] 판이 열리기 전의 입력 명령은 거절한다 — 클라이언트가 먼저 돌아도 판을 바꾸지 않는다 */
 SW_TEST_CASE( BattleRoyaleGameModeTest, InputBeforeTheMatchOpensIsRefused )

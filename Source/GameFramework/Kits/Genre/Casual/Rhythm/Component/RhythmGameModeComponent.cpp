@@ -2,14 +2,13 @@
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Component/RhythmGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -18,43 +17,12 @@ namespace sw
     {
         struct RhythmGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "RHGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 등급 수가 판의 리플렉션 상태 칸이다
-
-            /** @brief 상태 칸 판 1 → 2: 결과 유지 깃발을 뺀다 — 끝난 걸음에 `Countdown` 을 걸고 다 된 걸음에 한 번 끝내는 길은 깃발 없이 선다(다른 디렉터와 같은 꼴). */
-            [[nodiscard]] static bool dropHoldFlags( Archive& inOldBody, Archive& outNewBody )
-            {
-                float32 musicTime        = 0.0f;
-                uint8   bResultShown     = 0;
-                uint8   bFinishRequested = 0;
-                inOldBody >> musicTime >> bResultShown >> bFinishRequested;
-                outNewBody << musicTime;
-                return inOldBody.isOk();
-            }
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
+            static constexpr FormatDef kStateFormat{ "RHGM" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventJudged     = "RhythmJudged";
             static constexpr const utf8* kEventMissed     = "RhythmMissed";
             static constexpr const utf8* kEventEmptyPress = "RhythmEmptyPress";
-
-            /** @brief 기본 판정 창 하나입니다(좁은 것부터). */
-            struct DefaultWindow
-            {
-                const utf8* _pGrade{ nullptr };
-                float32     _width{ 0.0f };
-                int32       _score{ 0 };
-                float32     _lifeDelta{ 0.0f };
-                uint8       _bBreaksCombo : 1;
-            };
-
-            static constexpr DefaultWindow kArrDefaultWindow[] = {
-                {"Cool", 0.045f, 300,  1.0f, SW_FALSE},
-                {"Good",  0.09f, 150,  0.0f, SW_FALSE},
-                { "Bad",  0.14f,  50, -2.0f,  SW_TRUE},
-            };
         };
     } // namespace
 
@@ -68,47 +36,21 @@ namespace sw
     RhythmGameModeComponent::RhythmGameModeComponent()
         : _chart{}
         , _clock{ RhythmClock::Music }
-        , _listWindow{}
-        , _missLifeDelta{ -5.0f }
-        , _maxLife{ 100.0f }
-        , _resultHoldSeconds{ 3.0f }
+        , _playSettings{}
         , _clearReward{ 0 }
         , _pChart{}
         , _judge{}
         , _session{}
         , _listEvent{}
-        , _resultHold{}
         , _musicTime{ 0.0f }
     {
-        for ( const RhythmGameModeComponentInternal::DefaultWindow& source : RhythmGameModeComponentInternal::kArrDefaultWindow )
-        {
-            RhythmJudgeWindow window;
-            window._grade        = hashed_string( source._pGrade );
-            window._width        = source._width;
-            window._score        = source._score;
-            window._lifeDelta    = source._lifeDelta;
-            window._bBreaksCombo = source._bBreaksCombo == SW_TRUE;
-            _listWindow.push_back( window );
-        }
     }
 
     RhythmGameModeComponent::~RhythmGameModeComponent() = default;
 
     bool RhythmGameModeComponent::openSession( RhythmPlaySession& outSession ) const
     {
-        RhythmPlaySettings settings;
-        settings._missLifeDelta = _missLifeDelta;
-        settings._maxLife       = _maxLife;
-        settings._initialLife   = _maxLife;
-        settings._bAutoPlay     = isAutoPlayOn() ? SW_TRUE : SW_FALSE;
-        for ( const RhythmJudgeWindow& window : _listWindow )
-        {
-            RhythmGradeRule rule;
-            rule._grade     = window._grade;
-            rule._lifeDelta = window._lifeDelta;
-            settings._listGradeRule.push_back( rule );
-        }
-        return outSession.initialize( *_pChart, _judge, settings ); // 거절하면 판이 까닭을 남긴다
+        return outSession.initialize( *_pChart, _judge, _playSettings, isAutoPlayOn() ); // 거절하면 판이 까닭을 남긴다
     }
 
     bool RhythmGameModeComponent::startGame()
@@ -116,7 +58,7 @@ namespace sw
         if ( acquireRequired( _chart, _pChart ) == false )
             return false;
         vector<TimingWindow> listWindow;
-        for ( const RhythmJudgeWindow& window : _listWindow )
+        for ( const RhythmJudgeWindow& window : _playSettings._listWindow )
         {
             TimingWindow timing;
             timing._grade        = window._grade;
@@ -131,7 +73,6 @@ namespace sw
         if ( openSession( session ) == false )
             return false;
         _session = std::move( session );
-        _resultHold.clear();
         return true;
     }
 
@@ -188,29 +129,14 @@ namespace sw
         }
     }
 
-    void RhythmGameModeComponent::updateGame( float32 deltaTime )
+    void RhythmGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        const bool bWasFinished = _session.isFinished();
-        if ( bWasFinished == false )
-        {
-            if ( _clock == RhythmClock::Simulation )
-                _musicTime += deltaTime;
-            _session.update( _musicTime );
-        }
+        if ( _clock == RhythmClock::Simulation )
+            _musicTime += deltaTime;
+        _session.update( _musicTime );
         reportEvents();
-        if ( _session.isFinished() == false )
-            return;
-        if ( bWasFinished == false )
-        {
-            _resultHold.start( _resultHoldSeconds ); // 끝난 걸음 — 결과를 보이기 시작한다
-            return;
-        }
-        if ( _resultHold.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
-            return;
-        const bool bCleared = _session.getState() == RhythmPlayState::Cleared;
-        (void)finishMinigame( hashed_string( bCleared ? RhythmGameModeComponentInternal::kWinResult : RhythmGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
+        if ( _session.isFinished() )
+            endMatch( hashed_string( _session.getState() == RhythmPlayState::Cleared ? kWinResult : kLoseResult ) );
     }
 
     void RhythmGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
@@ -219,34 +145,14 @@ namespace sw
             addMoneyResult( outListValue, _clearReward );
     }
 
-    void RhythmGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`RhythmViewComponent`)이 읽어 보인다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void RhythmGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( RhythmGameModeComponentInternal::kStateTag, RhythmGameModeComponentInternal::kStateVersion );
+        io.header( RhythmGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 판은 같은 채보 · 같은 판정 창으로 연 뒤에 읽는다(키트 계약).
-        RhythmPlaySession restoredSession;
-        Countdown         resultHold = _resultHold;
-        if ( io.isReading() && io.check( _pChart != nullptr && openSession( restoredSession ) ) == false )
-            return;
-        io.value( io.isWriting() ? _session : restoredSession );
-        io.value( resultHold );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _session    = std::move( restoredSession );
-        _resultHold = resultHold;
+        if ( io.valueOpened( _session, [this]( RhythmPlaySession& session )
+        { return _pChart != nullptr && openSession( session ); } ) )
+            io.end();
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_TYPE_VERSION_PATCH( rhythmGameModeState1To2, "sw::RhythmGameModeComponent", 1, 2, &RhythmGameModeComponentInternal::dropHoldFlags );
 } // namespace sw

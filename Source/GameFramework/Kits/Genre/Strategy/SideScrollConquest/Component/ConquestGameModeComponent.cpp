@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/Component/ConquestGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -11,7 +10,7 @@
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -20,23 +19,10 @@ namespace sw
     {
         struct ConquestGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "CQGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "CQGM" };
 
-            /** @brief 상태 칸 판 1 → 2: 결과 유지 깃발을 뺀다 — 끝난 걸음에 `Countdown` 을 걸고 다 된 걸음에 한 번 끝내는 길은 깃발 없이 선다(다른 디렉터와 같은 꼴). */
-            [[nodiscard]] static bool dropHoldFlags( Archive& inOldBody, Archive& outNewBody )
-            {
-                uint8 bResultShown     = 0;
-                uint8 bFinishRequested = 0;
-                inOldBody >> bResultShown >> bFinishRequested;
-                (void)outNewBody; // 남은 칸이 없다 — 읽지 않은 꼬리(손 본문)는 그대로 붙는다
-                return inOldBody.isOk();
-            }
-
-            static constexpr const utf8* kWinResult     = "win";
-            static constexpr const utf8* kLoseResult    = "lose";
-            static constexpr int32       kStartBuilding = 0;    ///< 시작 건물의 번호 — 판을 열며 처음 짓는다
-            static constexpr float32     kAutoPlayAxis  = 1.0f; ///< 자동 플레이의 지휘관 이동 축(오른쪽 — 적 쪽)
+            static constexpr int32   kStartBuilding = 0;    ///< 시작 건물의 번호 — 판을 열며 처음 짓는다
+            static constexpr float32 kAutoPlayAxis  = 1.0f; ///< 자동 플레이의 지휘관 이동 축(오른쪽 — 적 쪽)
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventOrder         = "ConquestOrder";
@@ -116,13 +102,11 @@ namespace sw
         : _startBuilding{}
         , _startSite{}
         , _trainUnit{}
-        , _resultHoldSeconds{ 3.0f }
         , _winReward{ 0 }
         , _pCatalog{}
         , _world{}
         , _eventLease{}
         , _listEvent{}
-        , _resultHold{}
     {
     }
 
@@ -163,7 +147,6 @@ namespace sw
         if ( _eventLease.isHeld() == false && _world.claimEvents( _eventLease ) == false )
             return false; // 이 디렉터의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
         _listEvent.clear();
-        _resultHold.clear();
         return true;
     }
 
@@ -249,25 +232,15 @@ namespace sw
         }
     }
 
-    void ConquestGameModeComponent::updateGame( float32 deltaTime )
+    void ConquestGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        const bool bOver = _world.isVictory() || _world.isDefeat();
-        if ( bOver == false && isAutoPlayOn() )
+        if ( isAutoPlayOn() )
             stepAutoPlay();
         _world.update( deltaTime );
         reportEvents();
         if ( _world.isVictory() == false && _world.isDefeat() == false )
             return;
-        if ( bOver == false )
-        {
-            _resultHold.start( _resultHoldSeconds ); // 끝난 걸음 — 결과를 보이기 시작한다
-            return;
-        }
-        if ( _resultHold.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
-            return;
-        (void)finishMinigame( hashed_string( _world.isVictory() ? ConquestGameModeComponentInternal::kWinResult : ConquestGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
+        endMatch( hashed_string( _world.isVictory() ? kWinResult : kLoseResult ) );
     }
 
     void ConquestGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
@@ -276,34 +249,14 @@ namespace sw
             addMoneyResult( outListValue, _winReward );
     }
 
-    void ConquestGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`ConquestViewComponent`)이 읽어 보인다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void ConquestGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( ConquestGameModeComponentInternal::kStateTag, ConquestGameModeComponentInternal::kStateVersion );
+        io.header( ConquestGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 판은 같은 카탈로그로 `initialize` 한 뒤에 읽는다(키트 계약). 꺼내기 표는 대입이 옮기지 않아 이 디렉터의 표가 그대로다.
-        ConquestWorld restoredWorld;
-        Countdown     resultHold = _resultHold;
-        if ( io.isReading() && io.check( _pCatalog != nullptr && restoredWorld.initialize( *_pCatalog ) ) == false )
-            return;
-        io.value( io.isWriting() ? _world : restoredWorld );
-        io.value( resultHold );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _world      = std::move( restoredWorld );
-        _resultHold = resultHold;
+        if ( io.valueOpened( _world, [this]( ConquestWorld& world )
+        { return _pCatalog != nullptr && world.initialize( *_pCatalog ); } ) )
+            io.end();
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_TYPE_VERSION_PATCH( conquestGameModeState1To2, "sw::ConquestGameModeComponent", 1, 2, &ConquestGameModeComponentInternal::dropHoldFlags );
 } // namespace sw

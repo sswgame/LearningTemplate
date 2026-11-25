@@ -62,7 +62,7 @@ namespace
             *pType->findProperty( "_stage" )->getValuePtr<AsymmetricHorrorStage>( pDirector )                  = stage;
             *pType->findProperty( "_killer" )->getValuePtr<CatalogKey<AsymmetricHorrorKillerDef>>( pDirector ) = CatalogKey<AsymmetricHorrorKillerDef>( hashed_string( "trapper" ) );
             *pType->findProperty( "_killerReleaseSeconds" )->getValuePtr<float32>( pDirector )                 = killerReleaseSeconds;
-            *pType->findProperty( "_resultHoldSeconds" )->getValuePtr<float32>( pDirector )                    = 1000.0f; // 미니게임 흐름이 없는 테스트다 — 끝내기를 부르지 않는다
+            *pType->findPropertyInHierarchy( "_resultHoldSeconds" )->getValuePtr<float32>( pDirector )         = 1000.0f; // 미니게임 흐름이 없는 테스트다 — 끝내기를 부르지 않는다
             *pType->findProperty( "_escapeReward" )->getValuePtr<int32>( pDirector )                           = 10;
             return pDirector;
         }

@@ -34,7 +34,7 @@ namespace sw
         if ( pObject == nullptr )
         {
             AssetManager* const pAssets = game::findSubsystem<AssetManager>();
-            pObject                     = pAssets != nullptr && prefab.empty() == false ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefab, "RuleView" ) : nullptr;
+            pObject                     = pAssets != nullptr && prefab.empty() == false ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefab, SpawnLifetime::Derived, "RuleView" ) : nullptr;
             pMesh                       = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
             if ( pMesh == nullptr )
             {
@@ -44,7 +44,6 @@ namespace sw
                 _bRefused = SW_TRUE;
                 return false;
             }
-            pObject->setTransient( true );
             slot._object       = pObject->getHandle();
             slot._prefabOffset = pMesh->getLocalPosition();
             slot._prefabScale  = pMesh->getLocalScale();

@@ -233,8 +233,8 @@ SW_TEST_CASE( PackReachabilityTest, MissingReferenceStopsTheCook )
 }
 
 /**
- * @brief [PackReachabilityTest] 도메인 뿌리의 리다이렉트 표(`redirects.xml`)는 아무도 가리키지 않아도 담고, 훑지 않는다 — `from` 의 옛 id 는 빠진 참조가 아니다.
- *        도메인 뿌리가 아닌 자리의 같은 이름 파일은 런타임이 읽지 않으므로 뿌리가 아니다.
+ * @brief [PackReachabilityTest] 도메인 뿌리의 리다이렉트 표(`redirects.xml`)는 아무도 가리키지 않아도 담고, 훑지 않는다 — `from` 의 지운 GUID 는 빠진 참조가 아니다.
+ *        도메인 뿌리가 아닌 자리의 같은 이름 파일은 색인이 읽지 않으므로 뿌리가 아니다.
  */
 SW_TEST_CASE( PackReachabilityTest, RedirectTablesAreRootsAndNotFollowed )
 {
@@ -244,8 +244,8 @@ SW_TEST_CASE( PackReachabilityTest, RedirectTablesAreRootsAndNotFollowed )
     Util::MemorySource source;
     Util::addGame( files, source, "" );
     Util::addText( files, source, "game/x/maps/a.scene.xml", "<Scene/>" );
-    Util::addText( files, source, "game/x/redirects.xml", R"(<Redirects><Redirect from="game/x/maps/old.scene.xml" to="game/x/maps/a.scene.xml" /></Redirects>)" );
-    Util::addText( files, source, "common/redirects.xml", R"(<Redirects><Redirect from="common/data/gone.xml" to="common/data/kept.xml" /></Redirects>)" );
+    Util::addText( files, source, "game/x/redirects.xml", R"(<Redirects><IdentityRedirect from="0000000000000000000000000000000a" to="0000000000000000000000000000000b" /></Redirects>)" );
+    Util::addText( files, source, "common/redirects.xml", R"(<Redirects><IdentityRedirect from="0000000000000000000000000000000c" to="0000000000000000000000000000000d" /></Redirects>)" );
     Util::addText( files, source, "common/data/redirects.xml", "<Redirects/>" );
 
     PackReachResult result;

@@ -98,24 +98,17 @@ namespace sw
     void WesternGameModeComponent::serializeGameState( StateIO& io )
     {
         // 플레이어의 삶만 싣는다 — 지갑 · 평판 · 시계 · 날씨는 판 상태가, 말 상태는 말 컴포넌트가, 자리는 씬 오브젝트가 싣는다.
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         if ( io.isOk() == false )
             return;
-        if ( io.isWriting() )
+        if ( io.isReading() )
         {
-            io.value( _outlaw );
-            io.end();
-            return;
+            if ( io.check( _pWesternCatalog != nullptr && _pWesternCatalog->findRegion( _regionID.key() ) != nullptr ) == false )
+                return;
+            _outlaw.rebindCatalog( *_pWesternCatalog ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
         }
-        // 사본에 읽는다 — 다시 읽힌 카탈로그면 새 판으로 다시 묶고, 거절하면 앞 판에 묶인 무법자가 그대로다.
-        if ( io.check( _pWesternCatalog != nullptr && _pWesternCatalog->findRegion( _regionID.key() ) != nullptr ) == false )
-            return;
-        WesternOutlaw restoredOutlaw = _outlaw;
-        restoredOutlaw.rebindCatalog( *_pWesternCatalog );
-        io.value( restoredOutlaw );
+        io.value( _outlaw );
         io.end();
-        if ( io.isOk() )
-            _outlaw = std::move( restoredOutlaw );
     }
 
     bool WesternGameModeComponent::startGame()
@@ -197,13 +190,6 @@ namespace sw
         }
         pManager->executeOrDeferPostTickOnComponent( *this, []( WesternGameModeComponent& gameMode )
         { gameMode.updateLawSight(); } );
-    }
-
-    void WesternGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 세우는 런타임 오브젝트가 없다 — 말과 기수는 씬에 있다.
-        (void)manager;
-        (void)bRespawnViews;
     }
 
     const PawnComponent* WesternGameModeComponent::findPlayerPawn() const

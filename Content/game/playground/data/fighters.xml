@@ -5,7 +5,7 @@
   버튼 이름 1, 2, 3, 4 가 비트 0 .. 3 이고 입력 액션(FightingViewComponent 의 _listButtonAction)과 같은 순서다: 1 손, 2 발, 3 하단, 4 잡기.
   하단(3)은 서서 막지 못하고 잡기(4)는 앉아 피하거나 버튼 4 로 푼다.
 -->
-<FighterCatalog moves="game/playground/fighting/data/ring.moves.xml" buttons="1,2,3,4">
+<FighterCatalog moves="guid:bd7c9ebd094f49a69f17b16a1664225f" buttons="1,2,3,4">
 	<Fighter id="boxer" name="Boxer" health="120" walkSpeed="0.035" sidestep="u" sidestepDown="d,n" jump="u/f">
 		<Move id="straight" command="1"/>
 		<Move id="hook" command="2"/>

@@ -35,7 +35,7 @@
 
 namespace sw
 {
-    class UnitStatsComponent;
+    class AbilitySystemComponent;
     class XMLNode;
     struct ProjectileDef;
 
@@ -72,8 +72,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 몬스터 한 종의 기본 스탯입니다(`<Stats>`). `applyTo` 가 유닛(`UnitStatsComponent`)에 그대로 옮깁니다.
-     * @details 단위는 월드 단위다. 거리는 m, 속도는 m/s, 시간은 s 이다. 이동 속도의 상한은 `UnitStatsComponent` 의 Move Speed 상한과 같다 —
+     * @brief 몬스터 한 종의 기본 스탯입니다(`<Stats>`). `applyTo` 가 오브젝트의 어빌리티 시스템(전투 세트)에 그대로 옮깁니다.
+     * @details 단위는 월드 단위다. 거리는 m, 속도는 m/s, 시간은 s 이다. 이동 속도의 상한은 50 m/s 다 —
      *          넘으면 로드 오류다(픽셀 단위로 적은 값을 잡아낸다).
      */
     REFLECT()
@@ -82,7 +82,8 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 이 종의 스탯을 @p unit 에 정합니다. 단위는 같습니다(이동 속도는 m/s, 무적 시간은 s). */
-        void applyTo( UnitStatsComponent& unit ) const;
+        /** @brief 체력 · 최대 체력 · 공격력 · 이동 속도를 전투 세트의 base 에 씁니다. 방어 · 피격 뒤 무적은 액션 룸의 규칙이라 옮기지 않는다(세트의 방어는 감쇠 공식이 다르다). 전투 세트가 없으면 false 입니다. */
+        [[nodiscard]] bool applyTo( AbilitySystemComponent& abilities ) const;
 
         PROPERTY( Min = 1 )
         int32 _maxHP{ 100 };

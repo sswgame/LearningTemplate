@@ -178,53 +178,53 @@ namespace sw
         PROPERTY( Category = "Facial", DisplayName = "Facial Rig", Tooltip = "Facial rig (.facial.xml): expressions, visemes, blink, gaze" )
         AssetRef<FacialRig> _facialRigPath;
 
-        FacialAnimationBinding          _binding;
-        Subscription                    _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        SharedAssetRef<FacialRig>       _pRig;                ///< 쥔 얼굴 리그(경로로 받았으면 공유 캐시의 한 벌). 없으면 nullptr
-        SharedAssetRef<LipSyncSettings> _pLipSync;            ///< 쥔 립싱크 표(공유 캐시의 한 벌). 받지 못했으면 nullptr — 진폭 립싱크를 하지 않는다
-        VisemeTrack                     _speechTrack;
-        vector<float32>                 _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
-        vector<float32>                 _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
-        vector<float32>                 _listLiveWeight;       ///< 리그 표정 순서의 실시간 입력 값(게임 스레드가 프레임마다 옮겨 둔다, 입력이 없으면 0)
-        const IFacialLiveSource*        _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
+        SW_TRANSIENT FacialAnimationBinding _binding;
+        Subscription                        _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        SharedAssetRef<FacialRig>           _pRig;                ///< 쥔 얼굴 리그(경로로 받았으면 공유 캐시의 한 벌). 없으면 nullptr
+        SharedAssetRef<LipSyncSettings>     _pLipSync;            ///< 쥔 립싱크 표(공유 캐시의 한 벌). 받지 못했으면 nullptr — 진폭 립싱크를 하지 않는다
+        SW_TRANSIENT VisemeTrack            _speechTrack;
+        SW_TRANSIENT vector<float32> _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
+        SW_TRANSIENT vector<float32> _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
+        SW_TRANSIENT vector<float32> _listLiveWeight;       ///< 리그 표정 순서의 실시간 입력 값(게임 스레드가 프레임마다 옮겨 둔다, 입력이 없으면 0)
+        const IFacialLiveSource*     _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
 
         /** @brief 지금 입력이 @p pSource 이면 뗍니다(입력 구독이 풀릴 때 — 교체된 옛 구독이면 할 일이 없다). */
         void                                          detachLiveSource( const IFacialLiveSource* pSource );
         ItemSubscriptionList<const IFacialLiveSource> _liveSourceSubscriptions; ///< `_pLiveSource` 의 등록 구독을 내준다(풀리면 `detachLiveSource`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
-        vector<vector<optional<uint32>>>              _listExpressionTarget;    ///< 표정마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
-        vector<vector<optional<uint32>>>              _listVisemeTarget;        ///< 비즘마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
-        vector<optional<uint32>>                      _listBlinkTarget;         ///< 깜빡임 타깃 → 메시 타깃 번호(메시에 없으면 없음)
-        vector<uint32>                                _listEyeBone;             ///< 눈 본 번호(스켈레톤에 있는 것만)
-        vector<optional<uint32>>                      _listTrackToRigViseme;    ///< 립싱크 비즘 순서 → 리그 비즘 번호(리그에 없으면 없음)
-        vector<float32>                               _listScratchVisemeWeight;
-        shared_ptr<const WrinkleMap>                  _pWrinkleMap;                 ///< 주름 매핑(몸 프로필이 준다). 없으면 nullptr
-        vector<hashed_string>                         _listScratchExpressionName;   ///< 주름 계산의 표정 이름(리그 표정 순서)
-        vector<float32>                               _listScratchExpressionWeight; ///< 주름 계산의 표정 가중치
-        WrinkleWeights                                _wrinkleWeights;              ///< 이번 프레임 주름 마스크 가중치(워커가 쓰고 프레임 끝에 게임 스레드가 넣는다)
-        WrinkleWeights                                _pushedWrinkleWeights;        ///< 마지막으로 머티리얼에 넣은 값(같은 인스턴스에 같은 값이면 다시 넣지 않는다)
-        weak_ptr<MaterialInstance>                    _pushedWrinkleInstance;       ///< 그 값을 넣은 인스턴스 — 외형이 인스턴스를 갈면 새 것에 다시 넣는다
-        TComponentHandle<SkeletalAnimatorComponent>   _animator;                    ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)
-        SkeletalMeshComponent*                        _pSkeletalMesh;
-        const Mesh*                                   _pBoundMesh;     ///< 번호를 지은 메시(정체성만)
-        const Skeleton*                               _pBoundSkeleton; ///< 번호를 지은 스켈레톤(정체성만)
-        float3                                        _lookAtWorld;
-        float3                                        _lookAtModel; ///< 게임 스레드가 옮겨 둔 모델 공간 목표
-        float2                                        _saccadeOffset;
-        float32                                       _speechTime;
-        uint32                                        _speechSampleRate;
-        float32                                       _blinkTimer;   ///< 다음 깜빡임까지 남은 시간
-        float32                                       _blinkElapsed; ///< 깜빡이는 중 지난 시간(음수 = 깜빡이지 않음)
-        float32                                       _blinkAmount;
-        float32                                       _saccadeTimer;
-        DeterministicRandom32                         _random; ///< 깜빡임 · 사카드 박자(씨앗은 주인의 이름)
+        SW_TRANSIENT vector<vector<optional<uint32>>> _listExpressionTarget;    ///< 표정마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        SW_TRANSIENT vector<vector<optional<uint32>>> _listVisemeTarget;        ///< 비즘마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        SW_TRANSIENT vector<optional<uint32>> _listBlinkTarget;                 ///< 깜빡임 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        SW_TRANSIENT vector<uint32> _listEyeBone;                               ///< 눈 본 번호(스켈레톤에 있는 것만)
+        SW_TRANSIENT vector<optional<uint32>> _listTrackToRigViseme;            ///< 립싱크 비즘 순서 → 리그 비즘 번호(리그에 없으면 없음)
+        SW_TRANSIENT vector<float32> _listScratchVisemeWeight;
+        shared_ptr<const WrinkleMap> _pWrinkleMap;                          ///< 주름 매핑(몸 프로필이 준다). 없으면 nullptr
+        SW_TRANSIENT vector<hashed_string> _listScratchExpressionName;      ///< 주름 계산의 표정 이름(리그 표정 순서)
+        SW_TRANSIENT vector<float32> _listScratchExpressionWeight;          ///< 주름 계산의 표정 가중치
+        SW_TRANSIENT WrinkleWeights  _wrinkleWeights;                       ///< 이번 프레임 주름 마스크 가중치(워커가 쓰고 프레임 끝에 게임 스레드가 넣는다)
+        SW_TRANSIENT WrinkleWeights  _pushedWrinkleWeights;                 ///< 마지막으로 머티리얼에 넣은 값(같은 인스턴스에 같은 값이면 다시 넣지 않는다)
+        weak_ptr<MaterialInstance>   _pushedWrinkleInstance;                ///< 그 값을 넣은 인스턴스 — 외형이 인스턴스를 갈면 새 것에 다시 넣는다
+        SW_TRANSIENT TComponentHandle<SkeletalAnimatorComponent> _animator; ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)
+        SkeletalMeshComponent*                                   _pSkeletalMesh;
+        const Mesh*                                              _pBoundMesh;     ///< 번호를 지은 메시(정체성만)
+        const Skeleton*                                          _pBoundSkeleton; ///< 번호를 지은 스켈레톤(정체성만)
+        SW_TRANSIENT float3                                      _lookAtWorld;
+        SW_TRANSIENT float3                                      _lookAtModel; ///< 게임 스레드가 옮겨 둔 모델 공간 목표
+        SW_TRANSIENT float2                                      _saccadeOffset;
+        SW_TRANSIENT float32                                     _speechTime;
+        SW_TRANSIENT uint32                                      _speechSampleRate;
+        SW_TRANSIENT float32                                     _blinkTimer;   ///< 다음 깜빡임까지 남은 시간
+        SW_TRANSIENT float32                                     _blinkElapsed; ///< 깜빡이는 중 지난 시간(음수 = 깜빡이지 않음)
+        SW_TRANSIENT float32                                     _blinkAmount;
+        SW_TRANSIENT float32                                     _saccadeTimer;
+        SW_TRANSIENT DeterministicRandom32                       _random; ///< 깜빡임 · 사카드 박자(씨앗은 주인의 이름)
         PROPERTY( Category = "Facial", DisplayName = "Blink", Tooltip = "Blink automatically with the rig's interval and duration" )
         uint8 _bBlink : 1;
         PROPERTY( Category = "Facial", DisplayName = "Saccades", Tooltip = "Add small random eye jumps while looking at a target" )
         uint8                  _bSaccades             : 1;
-        uint8                  _bLookAt               : 1;
-        uint8                  _bLookAtModelReady     : 1;
-        uint8                  _bSpeaking             : 1;
-        uint8                  _bLipSyncSettingsReady : 1;
+        SW_TRANSIENT uint8     _bLookAt               : 1;
+        SW_TRANSIENT uint8     _bLookAtModelReady     : 1;
+        SW_TRANSIENT uint8     _bSpeaking             : 1;
+        SW_TRANSIENT uint8     _bLipSyncSettingsReady : 1;
         [[maybe_unused]] uint8 _reserved              : 2;
     };
 } // namespace sw

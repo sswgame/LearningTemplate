@@ -62,11 +62,11 @@ namespace sw
         PROPERTY( Category = "Unit", DisplayName = "Unit Fill", Tooltip = "A unit model is scaled to this many times its collision diameter (a bit larger reads as a ship from above)", Min = 0.0 )
         float32 _unitFill;
 
-        float3                 _lastPosition; ///< 지난 프레임 자리(움직인 쪽으로 돌린다)
-        SlotHandle             _unitID;
-        float32                _modelWidth;
-        float32                _yaw;
-        uint8                  _bPlaced  : 1; ///< 한 번이라도 자리를 맞췄다(그 전에는 숨어 있다)
-        [[maybe_unused]] uint8 _reserved : 7;
+        SW_TRANSIENT float3     _lastPosition; ///< 지난 프레임 자리(움직인 쪽으로 돌린다)
+        SW_TRANSIENT SlotHandle _unitID;
+        SW_TRANSIENT float32    _modelWidth;
+        SW_TRANSIENT float32    _yaw;
+        SW_TRANSIENT uint8      _bPlaced  : 1; ///< 한 번이라도 자리를 맞췄다(그 전에는 숨어 있다)
+        [[maybe_unused]] uint8  _reserved : 7;
     };
 } // namespace sw

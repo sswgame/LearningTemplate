@@ -2,7 +2,6 @@
 
 #include "Games/Playground/FeatureDemo/CraftingDemoComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
@@ -11,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
@@ -24,8 +24,7 @@ namespace sw
     {
         struct CraftingDemoComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "FDCR" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "FDCR" };
 
             static bool runEnqueue( const vector<string>& listArgument, string& outReply )
             {
@@ -153,25 +152,13 @@ namespace sw
         _queueCount = static_cast<int32>( _crafter.getQueue().size() );
     }
 
-    void CraftingDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void CraftingDemoComponent::serializeGameState( StateIO& io )
     {
-        io.header( CraftingDemoComponentInternal::kStateTag, CraftingDemoComponentInternal::kStateVersion );
-        if ( io.isWriting() )
+        io.header( CraftingDemoComponentInternal::kStateFormat );
+        (void)io.valueOpened( _crafter, [this]( Crafter& crafter )
         {
-            io.value( _crafter );
-            return;
-        }
-        Crafter crafter;
-        crafter.initialize( _pRecipes.get() );
-        io.value( crafter );
-        if ( io.isOk() == false )
-            return;
-        _crafter = std::move( crafter );
+            crafter.initialize( _pRecipes.get() );
+            return true;
+        } ); // 실패는 아카이브에 남는다
     }
 } // namespace sw

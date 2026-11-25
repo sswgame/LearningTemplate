@@ -27,9 +27,9 @@ namespace
 </ProjectileCatalog>)";
 
     constexpr const utf8* kMechDirectorCatalogXML = R"(<MechCatalog>
-  <Mech id="gunner" name="Gunner" cost="100" hp="100"><Weapon id="rifle" kind="Shot" weapon="rifle" down="0"/></Mech>
-  <Mech id="fencer" name="Fencer" cost="100" hp="100"><Weapon id="saber" kind="Melee" moves="mech_slash,mech_cleave" range="5" down="0"/></Mech>
-  <Mech id="target" name="Target" cost="100" hp="10"/>
+  <Mech id="gunner" name="Gunner" cost="100" hp="100" lockOnBreak="1.2"><Weapon id="rifle" kind="Shot" weapon="rifle" down="0"/></Mech>
+  <Mech id="fencer" name="Fencer" cost="100" hp="100" lockOnBreak="1.2"><Weapon id="saber" kind="Melee" moves="mech_slash,mech_cleave" range="5" down="0"/></Mech>
+  <Mech id="target" name="Target" cost="100" hp="10" lockOnBreak="1.2"/>
 </MechCatalog>)";
 
     // 적은 무기가 없고 제자리(가까이 붙지 않는 거리)라 한 발에 격추된다 — 게이지 100 이 코스트 100 에 바닥난다.

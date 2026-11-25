@@ -88,7 +88,7 @@ namespace sw
     vector<uint8> ServerRecord::encode( const ServerStatus& status )
     {
         BitWriter writer;
-        writer.writeBits( kFormatVersion, 8 );
+        kFormat.writeVersion( writer );
         writeStatus( writer, status );
         return writer.releaseBytes();
     }
@@ -96,7 +96,7 @@ namespace sw
     bool ServerRecord::decode( const vector<uint8>& bytes, ServerStatus& outStatus )
     {
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( reader.readBits( 8 ) != kFormatVersion )
+        if ( kFormat.readVersion( reader ) == false )
             return false;
         return readStatus( reader, outStatus );
     }

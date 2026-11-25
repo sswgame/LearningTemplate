@@ -12,11 +12,10 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
@@ -32,7 +31,7 @@ namespace sw
      * @brief `Move` 축의 좌우는 지휘관 이동, 따르기 · 대기 · 돌격 액션은 부대 명령, 훈련 액션은 병사 훈련으로 디렉터에 넘깁니다.
      */
     REFLECT( Category = "SideScrollConquest", DisplayName = "Conquest View", Tooltip = "Client side of a side scroll conquest: commands from input, shows sites, soldiers and the commander and fills the HUD" )
-    class SW_KIT_CLIENT_API ConquestViewComponent : public Component
+    class SW_KIT_CLIENT_API ConquestViewComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -42,20 +41,14 @@ namespace sw
         ConquestViewComponent();
         virtual ~ConquestViewComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 액션 이름이 비었으면 오류를 남깁니다(폴백 없음). 틱 그룹은 뷰와 같은 `PostUpdate` 입니다. */
-        void onBeginPlay() override;
         /** @brief 세운 모습을 지우고 HUD 에서 뷰모델을 뗍니다. */
         void onEndPlay() override;
-        /** @brief 입력 · 명령 · 모습을 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
 
     private:
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 내고 모습과 HUD 를 맞춥니다. */
-        void updateView( GameObjectManager& manager );
+        void updateView( GameObjectManager& manager, ConquestGameModeComponent& director );
         /** @brief 이번 프레임의 지휘 명령을 디렉터에 냅니다. */
-        void submitInput( ConquestGameModeComponent& director ) const;
+        void submitInput( const GameModeInput& input, ConquestGameModeComponent& director ) const;
         /** @brief 거점 · 병사 · 지휘관을 지금 자리에 보입니다. */
         void showWorld( GameObjectManager& manager, const ConquestGameModeComponent& director );
         /** @brief HUD 뷰모델을 채웁니다. HUD 가 없는 씬이면 값만 듭니다. */
@@ -65,13 +58,13 @@ namespace sw
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action: left/right moves the commander (required)" )
         hashed_string _moveAction;
-        PROPERTY( Category = "Input", DisplayName = "Follow Action", Tooltip = "InputMap action that orders the squad to follow (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Follow Action", Tooltip = "InputMap action that orders the squad to follow (required)" )
         hashed_string _followAction;
-        PROPERTY( Category = "Input", DisplayName = "Hold Action", Tooltip = "InputMap action that orders the squad to hold (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Hold Action", Tooltip = "InputMap action that orders the squad to hold (required)" )
         hashed_string _holdAction;
-        PROPERTY( Category = "Input", DisplayName = "Charge Action", Tooltip = "InputMap action that orders the squad to charge (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Charge Action", Tooltip = "InputMap action that orders the squad to charge (required)" )
         hashed_string _chargeAction;
-        PROPERTY( Category = "Input", DisplayName = "Train Action", Tooltip = "InputMap action that trains one soldier (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Train Action", Tooltip = "InputMap action that trains one soldier (required)" )
         hashed_string _trainAction;
         PROPERTY( Category = "View", DisplayName = "Site Prefab", Required, Tooltip = "Unit piece used for sites, gates and walls" )
         AssetRef<PrefabAsset> _sitePrefab;
@@ -88,13 +81,9 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Enemy Color" )
         float4 _enemyColor;
 
-        TComponentHandle<ConquestGameModeComponent> _director;
-        PrefabViewBatch                             _siteViews;
-        PrefabViewBatch                             _soldierViews;
-        PrefabViewBatch                             _commanderViews;
-        unique_ptr<ConquestHUDViewModel>            _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
-        uint8                                       _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않는다)
-        uint8                                       _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                      _reserved      : 6;
+        SW_TRANSIENT PrefabViewBatch     _siteViews;
+        SW_TRANSIENT PrefabViewBatch     _soldierViews;
+        SW_TRANSIENT PrefabViewBatch     _commanderViews;
+        unique_ptr<ConquestHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
     };
 } // namespace sw

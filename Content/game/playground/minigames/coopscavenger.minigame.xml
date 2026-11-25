@@ -7,4 +7,4 @@
   한 화면 협동 둘이다(localPlayers) — 사용자 0 은 키보드, 사용자 1 은 짝지은 패드. 사용자 1 이 입력을 내기 전에는 봇이 그 승무원을 맡는다. 여러 날 이어지는 판이라 안에서 저장한다.
   입력은 걷기 공통 레이어와 CoopScavenger 레이어(coopscavenger/data/coopscavenger.input.xml)만 켠다. 시나리오 automation/coopscavenger_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="coopscavenger" map="game/playground/coopscavenger/maps/moon.scene.xml" entry="SceneSwitch" portalSlot="21" localPlayers="2" save="Allowed" features="CoopScavenger" inputContexts="Movement,CoopScavenger" catalogs="ScavengerCatalog"/>
+<Minigame name="coopscavenger" map="guid:0ce278724b504308ab8cf9bba2c14903" entry="SceneSwitch" portalSlot="21" localPlayers="2" save="Allowed" features="CoopScavenger" inputContexts="Movement,CoopScavenger" catalogs="ScavengerCatalog"/>

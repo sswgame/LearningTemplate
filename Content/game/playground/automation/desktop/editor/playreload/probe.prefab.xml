@@ -1,5 +1,5 @@
 <?asset guid="2aa5f84261ff458492a4c366a27f1a21"?>
-<Prefab formatVersion="1" name="PlayReloadProp">
+<Prefab formatVersion="0" name="PlayReloadProp">
 	<!-- 플레이 중 리로드 시나리오의 프리팹 — probe_edited.prefab.xml(크기만 다르다)을 덮으면 캐시가 다시 읽는다(놓인 인스턴스는 다음 스폰부터 바뀐다). -->
 	<GameObject _schemaVersion="0" _name="PlayReloadProp" _bActive="true">
 		<_listComponent>

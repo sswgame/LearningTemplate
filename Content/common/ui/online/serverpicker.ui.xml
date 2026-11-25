@@ -1,5 +1,5 @@
 <?asset guid="9f9fdf4be1709af479bbf582dbe77694"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<!-- 서버 고르기 견본 문서(온라인 키트 U1). C++ 화면은 `ServerPickerScreen` 이다. 줄 단추는 코드가 가상 목록 `Servers` 에 보이는 만큼만 만든다(창 크기가 정해져 목록이 그 안에서 스크롤한다). 문서 경로는 호출하는 게임이 `ServerPickerScreen::open` 에 준다. -->
 	<UIScreenDef _bPausesGame="false" _defaultFocus="Refresh" />
 	<SafeZonePanel>
@@ -11,7 +11,7 @@
 				       _offsetMax="320,260" />
 				<BoxPanel _spacing="12" _orientation="Vertical">
 					<TextWidget _name="Title" _styleClass="title" _text="Servers" />
-					<TextWidget _name="Status" _text="" />
+					<TextWidget _name="Status" _text="{bind:_status}" />
 					<ListViewWidget _name="Servers" _rowHeight="36">
 						<_slot _sizeRule="Fill" />
 					</ListViewWidget>

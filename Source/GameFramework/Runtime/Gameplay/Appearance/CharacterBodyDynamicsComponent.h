@@ -19,6 +19,7 @@
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/SkinLayer.h"
@@ -44,6 +45,11 @@ namespace sw
         void onTick( TickContext& context ) override;
         /** @brief 맞음 · 애니메이션 알림 사건을 구독합니다. */
         void onRegister( GameObjectManager& manager ) override;
+        /** @brief 피부 층 번짐과 그것이 선 외형 해석의 해시입니다. 같은 해석을 적용한 뒤(`applyProfile`)에 되돌린다. */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        void restoreState( vector<uint8>&& bytes );
+        /** @brief 프로필을 적용하기 전에 받은 상태입니다. */
+        const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
 
         /** @brief 지글 충격(월드 속도 m/s)을 더합니다(착지 · 게임 코드). 다음 리그 준비 단계에 들어간다. */
         FUNCTION( Category = "Dynamics", Exec )
@@ -99,6 +105,8 @@ namespace sw
         void update( GameObjectManager& manager );
         /** @brief 해석이 바뀌었으면 프로필(지글 물성 · 주름 · 번짐 칸 수)을 다시 겁니다. */
         void applyProfile( CharacterAppearanceComponent& appearance, const CharacterBodyProfileDef* pProfile, uint64 resolvedHash );
+        /** @brief 보관한 상태(`restoreState`)를 지금 프로필에 적용합니다. 외형이 달라졌으면 버리고 알립니다. */
+        void applyPendingState();
         /** @brief 눈 위치의 빛 세기를 잽니다(방향광 + 가림 광선 + 점광). */
         float32 measureEyeLuminance( GameObjectManager& manager, const float3& eye ) const;
         /** @brief 동공 크기를 순응시켜 몸 머티리얼에 겁니다. */
@@ -126,20 +134,21 @@ namespace sw
         PROPERTY( Category = "Smear", DisplayName = "Tear Smear Strength", Min = 0.0, Tooltip = "Pigment transport per wet stamp of a fluid stream" )
         float32 _fluidSmearStrength;
 
-        vector<FluidStream>         _listFluid;
-        vector<ManualTrigger>       _listManualTrigger;
-        vector<SkinLayerSmearState> _listSmear; ///< 해석의 피부 층 순서
-        vector<float32>             _listSmearResistance;
-        Subscription                _hitSubscription;    ///< 맞음 사건 구독(`handleHit`)
-        Subscription                _notifySubscription; ///< 애니메이션 알림 사건 구독(`handleAnimationNotify`)
-        float3                      _pendingImpulse;
-        uint64                      _appliedHash;
-        float32                     _pendingSeconds;
-        float32                     _footLift;
-        float32                     _pupilSize;
-        float32                     _eyeLuminance;
-        float32                     _motionScale;
-        float32                     _pendingWipe;
-        uint8                       _bJiggleApplied;
+        SW_TRANSIENT vector<FluidStream> _listFluid;
+        SW_TRANSIENT vector<ManualTrigger> _listManualTrigger;
+        SW_CODEC_STATE vector<SkinLayerSmearState> _listSmear; ///< 해석의 피부 층 순서
+        SW_TRANSIENT vector<uint8> _pendingStateBytes;         ///< 프로필을 적용하기 전에 받은 상태(`restoreState`)
+        SW_TRANSIENT vector<float32> _listSmearResistance;
+        Subscription                 _hitSubscription;    ///< 맞음 사건 구독(`handleHit`)
+        Subscription                 _notifySubscription; ///< 애니메이션 알림 사건 구독(`handleAnimationNotify`)
+        SW_TRANSIENT float3          _pendingImpulse;
+        SW_TRANSIENT uint64          _appliedHash;
+        SW_TRANSIENT float32         _pendingSeconds;
+        SW_TRANSIENT float32         _footLift;
+        SW_TRANSIENT float32         _pupilSize;
+        SW_TRANSIENT float32         _eyeLuminance;
+        SW_TRANSIENT float32         _motionScale;
+        SW_TRANSIENT float32         _pendingWipe;
+        SW_TRANSIENT uint8           _bJiggleApplied;
     };
 } // namespace sw

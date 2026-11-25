@@ -5,24 +5,19 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Component/AdventureGameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 namespace sw
 {
     AdventureAvatarComponent::AdventureAvatarComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&AdventureAvatarComponent::updateAvatar, &AdventureAvatarComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _useAction{}
         , _cubePrefab{}
         , _spherePrefab{}
@@ -37,39 +32,12 @@ namespace sw
         , _playerRadius{ 0.28f }
         , _playerHeight{ 0.5f }
         , _playerColor{ 0.2f, 0.6f, 1.0f, 1.0f }
-        , _director{}
         , _cubeViews{}
         , _sphereViews{}
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
     AdventureAvatarComponent::~AdventureAvatarComponent() = default;
-
-    void AdventureAvatarComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                       pOwner    = getOwner();
-        const AdventureGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<AdventureGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "Adventure.AvatarWithoutGameMode", "Adventure avatar on '%#': no AdventureGameModeComponent in front of it on the same object - the avatar does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<AdventureGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<AdventureGameModeComponent>( pDirector );
-    }
-
-    void AdventureAvatarComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        _bActionsValid = _moveAction.empty() == false && _useAction.empty() == false ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "Adventure.AvatarActionMissing", "Adventure avatar: move '%#' and use '%#' actions must both be named - the avatar reads no input", _moveAction.c_str(), _useAction.c_str() );
-    }
 
     void AdventureAvatarComponent::onEndPlay()
     {
@@ -80,30 +48,18 @@ namespace sw
             _cubeViews.destroyAll( *pManager );
             _sphereViews.destroyAll( *pManager );
         }
-        Component::onEndPlay();
+        GameModeViewComponent::onEndPlay();
     }
 
-    void AdventureAvatarComponent::onTick( TickContext& context )
+    void AdventureAvatarComponent::updateAvatar( GameObjectManager& manager, AdventureGameModeComponent& director )
     {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( AdventureAvatarComponent& avatar, GameObjectManager& manager )
-        { avatar.updateAvatar( manager ); } );
+        dispatchInput( manager, director );
+        showWorld( director, manager );
     }
 
-    void AdventureAvatarComponent::updateAvatar( GameObjectManager& manager )
+    void AdventureAvatarComponent::submitInput( const GameModeInput& input, AdventureGameModeComponent& director )
     {
-        AdventureGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        const bool                bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE;
-        const InputManager* const pInput     = bReadInput ? game::findSubsystem<InputManager>() : nullptr;
-        if ( pInput != nullptr )
-        {
-            const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-            (void)pDirector->submitPlayerInput( input.getVector2D( _moveAction ), input.wasActionTriggered( _useAction ) ); // 열린 판인지는 위에서 보았다
-        }
-        showWorld( *pDirector, manager );
+        (void)director.submitPlayerInput( input.getVector2D( _moveAction ), input.wasActionTriggered( _useAction ) ); // 열린 판인지는 위에서 보았다
     }
 
     void AdventureAvatarComponent::showWorld( const AdventureGameModeComponent& director, GameObjectManager& manager )

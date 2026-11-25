@@ -55,7 +55,7 @@ namespace sw
         PROPERTY( Category = "Network", DisplayName = "Interpolation Delay", Min = 0.0, Units = s, Tooltip = "Least time clients draw moving chunks in the past" )
         float32 _interpolationDelay;
 
-        DestructionNetSession _session;
-        Subscription          _hashSubscription; ///< 해시 이력의 `destruction` 줄 등록. `_session` 보다 뒤에 선언한다 — 먼저 풀린다
+        SW_TRANSIENT DestructionNetSession _session;
+        Subscription                       _hashSubscription; ///< 해시 이력의 `destruction` 줄 등록. `_session` 보다 뒤에 선언한다 — 먼저 풀린다
     };
 } // namespace sw

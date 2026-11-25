@@ -89,6 +89,19 @@ SW_TEST_CASE( TextGathererTest, CodeScannerReadsLiteralMacroCalls )
 }
 
 /**
+ * @brief [TextGathererTest] UI 문서의 글은 `_bLocalized="false"` 면 모으지 않고, 적지 않았거나 참이면 모은다
+ */
+SW_TEST_CASE( TextGathererTest, TextThatIsNotLocalizedIsNotGathered )
+{
+    sw::TextGatherer gatherer;
+    gatherer.gatherReflectedXML( R"(<UIDocument><BoxPanel><TextWidget _text="Debug Title" _bLocalized="false"/><TextWidget _text="Start Game"/><TextWidget _text="Quit Game" _bLocalized="true"/></BoxPanel></UIDocument>)",
+                                 "engine/ui/test.ui.xml" );
+    SW_EXPECT_NULL( TextGathererTestInternal::findText( gatherer, "Debug Title" ) );
+    SW_EXPECT_NOT_NULL( TextGathererTestInternal::findText( gatherer, "Start Game" ) );
+    SW_EXPECT_NOT_NULL( TextGathererTestInternal::findText( gatherer, "Quit Game" ) );
+}
+
+/**
  * @brief [TextGathererTest] 같은 키에 원문이 둘이면 오류 · 원문이 메시지 구문으로 틀리면 오류
  */
 SW_TEST_CASE( TextGathererTest, ConflictingOrBrokenSourceIsAnError )

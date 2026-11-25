@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -69,9 +68,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "SCFC" );
-        static constexpr uint32 kStateVersion = 1;
-
         ScavengerFacility();
 
         /** @brief 지도를 만들고 고철을 놓습니다. 회사 위성이면 바깥과 우주선만 있습니다. 지도를 읽다 실패하면 false 를 반환합니다. */
@@ -109,7 +105,7 @@ namespace sw
         void bindCatalog( const ScavengerCatalog* pCatalog ) { _pCatalog = pCatalog; }
 
     private:
-        AreaGraph _graph;
+        SW_CODEC_STATE AreaGraph _graph;
         PROPERTY( RuntimeState )
         vector<ScavengerScrap> _listGroundScrap;
         PROPERTY( RuntimeState )

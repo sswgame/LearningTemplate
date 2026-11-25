@@ -29,7 +29,7 @@
 	<WaitUntil watch="Minigame.Active" is="none" timeoutFrames="600"/>
 	<AdvanceSimulation frames="2"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<ExpectActiveScene path="guid:57d6125ff94a46bfb947271e54e65b52"/>
 	<ExpectLog id="MinigameFlow.Finished" contains="'mecharena' finished" count="1"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>

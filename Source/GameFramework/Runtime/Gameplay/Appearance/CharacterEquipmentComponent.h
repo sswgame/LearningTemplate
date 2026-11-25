@@ -6,7 +6,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/WeakRef.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -14,6 +13,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -47,8 +47,7 @@ namespace sw
         REFLECT_BODY();
         REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort );
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "CEQP" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 아이템 칸에 꾸미기 스키마 판(`Inventory::serializeSlot`). 판 1 은 `SW_STATE_FORMAT_UPGRADE` 가 올린다
+        static constexpr FormatDef kStateFormat{ "CEQP" };
 
         CharacterEquipmentComponent();
         virtual ~CharacterEquipmentComponent() override;
@@ -114,19 +113,19 @@ namespace sw
         bool applyPendingState();
 
     private:
-        EquipmentCharacterContext _character; ///< 장착 조건이 보는 캐릭터 정보(장비가 빌린다 — 장비보다 먼저 선언)
-        TagContainer              _specTags;  ///< 외형 전개(프리셋)가 준 태그. 오브젝트 태그와 합쳐 `_character` 가 된다
-        Subscription              _tagSubscription;
-        Equipment                 _equipment;
-        Inventory                 _bag;
-        vector<uint8>             _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`)
+        SW_TRANSIENT EquipmentCharacterContext _character; ///< 장착 조건이 보는 캐릭터 정보(장비가 빌린다 — 장비보다 먼저 선언)
+        SW_TRANSIENT TagContainer              _specTags;  ///< 외형 전개(프리셋)가 준 태그. 오브젝트 태그와 합쳐 `_character` 가 된다
+        Subscription                           _tagSubscription;
+        SW_CODEC_STATE Equipment               _equipment;
+        SW_CODEC_STATE Inventory               _bag;
+        SW_TRANSIENT vector<uint8> _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`)
         PROPERTY( Category = "Equipment", DisplayName = "Bag Slots", Min = 1, Max = 256, Tooltip = "Item instances the character carries besides what it wears" )
         int32 _bagSlotCount;
         PROPERTY( Category = "Equipment", DisplayName = "Bag Max Weight", Min = 0.0, Tooltip = "Most weight the bag carries (0: no limit)" )
         float32 _bagMaxWeight;
         PROPERTY( Category = "Equipment", DisplayName = "Pickup Prefab", Tooltip = "Prefab a dropped item is spawned as (needs a PickupComponent; give it an interaction so it can be picked up again)" )
         AssetRef<PrefabAsset> _pickupPrefab;
-        uint8                 _bStarted;
+        SW_TRANSIENT uint8    _bStarted;
         /** @brief 아이템 받기 계약을 가방으로 넘기는 포트입니다(`REFLECT_INTERFACE`). 가방이 열리기 전이면 자리가 없다고 답한다. */
         struct ItemReceiverPort final : IItemReceiver
         {
@@ -135,6 +134,6 @@ namespace sw
         };
         ItemReceiverPort _itemReceiverPort;
         // 컴포넌트 핸들(`TComponentHandle`)은 오브젝트 관리자마다의 id 공간이라 관리자가 새로 서면 같은 id 가 다른 컴포넌트를 가리킬 수 있다 — 관리자보다 오래 사는 빌림은 약한 참조다.
-        WeakRefSource _weakRefSource; ///< 맨 끝 멤버 — 먼저 닫혀, 다른 멤버가 사라지는 동안 화면이 컴포넌트를 돌려받지 않는다
+        SW_TRANSIENT WeakRefSource _weakRefSource; ///< 맨 끝 멤버 — 먼저 닫혀, 다른 멤버가 사라지는 동안 화면이 컴포넌트를 돌려받지 않는다
     };
 } // namespace sw

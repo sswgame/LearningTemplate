@@ -83,8 +83,27 @@ namespace sw
         return true;
     }
 
-    bool PropertyResolver::resolveAssetRefProperty( ParsedPropertyInfo& prop, const CXType valueType, const ParserSession& session, const string& owner )
+    bool PropertyResolver::resolveAssetPathProperty( ParsedPropertyInfo& prop, const CXType valueType, const ParserSession& session, const string& owner )
     {
+        // 글 칸에 경로 표시를 달아 에셋을 가리키면 종류 검사도 GUID 저장도 없다 — 형식이 말하게 하고, 표시는 손으로 적지 못하게 막는다.
+        if ( prop._bAssetPath == SW_TRUE || prop._assetType.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYWritesAssetPath", "ERROR: PROPERTY() '%#' (%#) writes AssetPath or AssetType by hand. Point at an asset with AssetRef<T>, and at a file without a kind or a folder with "
+                                                                        "DataPath - the parser marks those fields itself.",
+                             owner, prop._typeName );
+            return false;
+        }
+        if ( CursorReader::containsTypeIdentity( valueType, typeidentity::kDataPath ) )
+        {
+            const bool bShape = prop._bIsContainer == SW_FALSE || ( isFlatOrderedSequence( prop ) && CursorReader::getTypeIdentity( getSequenceElementType( valueType ) ) == typeidentity::kDataPath );
+            if ( bShape == false )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYHoldsDataPath", "ERROR: PROPERTY() '%#' holds a data path (%#) in a shape tools cannot rewrite. Use one DataPath, or a vector of DataPath.", owner, prop._typeName );
+                return false;
+            }
+            prop._bAssetPath = SW_TRUE;
+            return true;
+        }
         if ( CursorReader::containsTypeIdentity( valueType, typeidentity::kAssetRef ) == false )
             return true;
         const bool   bSingleValue = prop._bIsContainer == SW_FALSE;

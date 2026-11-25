@@ -104,7 +104,7 @@ namespace sw
                     const float3       position = float3::transform( offset, world );
                     GameObjectManager* pManager = context._owner.getMutableManager();
                     AssetManager*      pAssets  = pManager != nullptr ? pManager->findAssetManager() : nullptr;
-                    GameObject*        pSpawned = ( pManager != nullptr && pAssets != nullptr ) ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, prefab.path() ) : nullptr;
+                    GameObject*        pSpawned = ( pManager != nullptr && pAssets != nullptr ) ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, prefab.path(), SpawnLifetime::Persistent ) : nullptr;
                     SceneComponent*    pScene   = pSpawned != nullptr ? pSpawned->getPrimarySceneComponent() : nullptr;
                     if ( pScene != nullptr )
                     {

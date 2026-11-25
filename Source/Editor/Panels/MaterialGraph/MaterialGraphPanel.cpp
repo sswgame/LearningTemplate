@@ -35,7 +35,9 @@ namespace sw::editor
             /** @brief 캔버스가 차지하는 폭의 비율입니다(나머지는 미리보기 · 값). */
             static constexpr float32 kCanvasWidthRatio = 0.68f;
             /** @brief 텍스처 노드가 받는 원본 확장자입니다 — 값 칸의 에셋 슬롯과 캔버스에 놓기가 같은 거르개를 쓴다. */
-            static constexpr const utf8* kTextureAssetExtension = ".png";
+            /** @brief 텍스처 칸에 놓을 수 있는 에셋입니다 — 쿠킹본과 원본 이미지(모델이 쿠킹본으로 푼다, `TextureImporter::resolveTextureAsset`). */
+            static constexpr const utf8* kArrTextureAssetExtension[] = { ".dds", ".png" };
+            static constexpr const utf8* kTextureAssetExtensions     = ".dds,.png";
             /** @brief 텍스처를 캔버스에 놓으면 만드는 노드 종류 이름입니다(언리얼 머티리얼 그래프의 Texture Sample). */
             static constexpr string_view kTextureSampleKindName = "TextureSample";
             /** @brief 미리보기의 세로 / 가로 비율입니다. */
@@ -77,7 +79,12 @@ namespace sw::editor
             _listMenu.push_back( EditorGraphNodeKind{ _listKind[kindIndex]->getName(), _listKind[kindIndex]->getCategory(), kindIndex } );
             // 에셋 → 노드 종류 표(EditorGraphAssetNodeRule) — 텍스처는 샘플 노드로 놓인다.
             if ( string_view{ _listKind[kindIndex]->getName() } == MaterialGraphPanelInternal::kTextureSampleKindName )
-                _listAssetNodeRule.push_back( EditorGraphAssetNodeRule{ MaterialGraphPanelInternal::kTextureAssetExtension, kindIndex } );
+            {
+                for ( const utf8* const pExtension : MaterialGraphPanelInternal::kArrTextureAssetExtension )
+                {
+                    _listAssetNodeRule.push_back( EditorGraphAssetNodeRule{ pExtension, kindIndex } );
+                }
+            }
         }
         // 등록표에 샘플 노드가 없으면 텍스처 놓기가 조용히 꺼진다 — 이름이 바뀐 것이니 멈춘다.
         SW_ASSERT( _listKind.empty() || _listAssetNodeRule.empty() == false );
@@ -409,8 +416,8 @@ namespace sw::editor
         const bool bSubgraph    = pKind->getRole() == MaterialGraphNodeRole::Subgraph || pKind->getRole() == MaterialGraphNodeRole::Layer; // 층도 그래프 파일을 가리킨다
         if ( bTextureNode || bSubgraph )
         {
-            string     assetPath = node._assetPath;
-            const bool bChanged  = EditorWidgets::drawAssetSlot( SW_LOCKEY( "EditorMaterialGraph", "AssetSlot" ), assetPath, bSubgraph ? MaterialGraphDef::kExtension.data() : MaterialGraphPanelInternal::kTextureAssetExtension );
+            string     assetPath = bSubgraph ? node._subgraph.path() : node._texture.path();
+            const bool bChanged  = EditorWidgets::drawAssetSlot( SW_LOCKEY( "EditorMaterialGraph", "AssetSlot" ), assetPath, bSubgraph ? MaterialGraphDef::kExtension.data() : MaterialGraphPanelInternal::kTextureAssetExtensions );
             if ( bChanged )
                 _model.setAssetPath( nodeIndex, assetPath );
         }

@@ -6,14 +6,14 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/RuleViewCatalog.h"
 
@@ -32,6 +32,7 @@ namespace sw
             : _roundCount{ 0 }
             , _winner{ -1 }
             , _listScore{}
+            , _handValue{ 0 }
             , _viewPath{}
             , _pViews{}
             , _pBound{ nullptr }
@@ -49,13 +50,14 @@ namespace sw
         PROPERTY( RuntimeState )
         int32 _winner; ///< 우승자 번호(-1 없음)
         PROPERTY( RuntimeState )
-        vector<int32>                   _listScore;
-        string                          _viewPath;
-        SharedAssetRef<RuleViewCatalog> _pViews;
-        const RuleViewCatalog*          _pBound; ///< 규칙 객체가 빌린 판
-        const RuleViewDef*              _pView;  ///< 규칙 객체가 빌린 항목
-        uint32                          _restoredCount;
-        uint32                          _refusedCount;
+        vector<int32>                  _listScore;
+        int32                          _handValue; ///< 손 본문이 멤버에 바로 읽는 값 — 음수는 읽은 뒤 거절한다
+        string                         _viewPath;
+        BoundAssetRef<RuleViewCatalog> _pViews;
+        const RuleViewCatalog*         _pBound; ///< 규칙 객체가 빌린 판
+        const RuleViewDef*             _pView;  ///< 규칙 객체가 빌린 항목
+        uint32                         _restoredCount;
+        uint32                         _refusedCount;
         PROPERTY( RuntimeState )
         uint8                  _bBonus   : 1;
         uint8                  _bWins    : 1; ///< 다음 판이 우승자를 적는다 — 상태 칸이 아니라 되돌리지 않는다
@@ -85,7 +87,9 @@ namespace sw
         }
         void serializeGameState( StateIO& io ) override
         {
-            io.header( FourCCUtil::make( "TGMC" ), 1 );
+            io.header( FormatDef{ "TGMC" } );
+            io.value( _handValue );
+            io.check( _handValue >= 0 );
             io.end();
             if ( io.isWriting() || io.isOk() == false || _viewPath.empty() )
                 return;
@@ -97,10 +101,5 @@ namespace sw
         }
         void onStateRestored( bool bRestored ) override { ++( bRestored ? _restoredCount : _refusedCount ); }
         void updateGame( float32 deltaTime ) override { (void)deltaTime; }
-        void onFlush( GameObjectManager& manager, bool bRespawnViews ) override
-        {
-            (void)manager;
-            (void)bRespawnViews;
-        }
     };
 } // namespace sw

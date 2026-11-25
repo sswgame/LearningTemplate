@@ -6,7 +6,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -98,9 +97,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag         = FourCCUtil::make( "AVIT" );
-        static constexpr uint32 kStateVersion     = 1;
-        static constexpr int32  kQuartersPerHeart = 4;
+        static constexpr int32 kQuartersPerHeart = 4;
 
         /** @brief 기본 설정(`AdventureVitalsSettings{}`, 범위 안)으로 시작합니다. 다른 설정은 `initialize` 로 줍니다. */
         AdventureVitals();
@@ -157,10 +154,10 @@ namespace sw
         [[nodiscard]] bool resetHealth();
 
     private:
-        AdventureVitalsSettings _settings;
-        HealthStateMachine      _health;
-        ResourceGauge           _magic;
-        ResourceGauge           _stamina;
+        SW_CODEC_STATE AdventureVitalsSettings _settings;
+        SW_CODEC_STATE HealthStateMachine      _health;
+        SW_CODEC_STATE ResourceGauge           _magic;
+        SW_CODEC_STATE ResourceGauge           _stamina;
         PROPERTY( RuntimeState, Min = 1 )
         int32 _heartCount;
         PROPERTY( RuntimeState, Min = 0 )

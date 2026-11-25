@@ -32,10 +32,11 @@ namespace
             "_focusRingColor",
             "_opacity",
             "_transition",
+            "_size",
         };
 
         /** @brief 필드 순서의 float32 성분 수입니다. */
-        static constexpr uint32 kArrComponentCount[kFieldCount] = { 4, 4, 1, 4, 4, 2, 1, 4, 0, 1, 4, 4, 1, 4, 1, 0 };
+        static constexpr uint32 kArrComponentCount[kFieldCount] = { 4, 4, 1, 4, 4, 2, 1, 4, 0, 1, 4, 4, 1, 4, 1, 0, 2 };
 
         static UIStyleField toField( uint32 index ) { return static_cast<UIStyleField>( index ); }
 

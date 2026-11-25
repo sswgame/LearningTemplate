@@ -22,7 +22,7 @@ namespace
         static sw::shared_ptr<const sw::AudioMusicDef> makeOneLayerMusic()
         {
             sw::AudioMusicLayerDef layer;
-            layer._path = sw::hashed_string( sw::test::OfflineAudioEngine::kClipPath );
+            layer._path = sw::test::OfflineAudioEngine::kClipPath;
             sw::AudioMusicSegmentDef segment;
             segment._name = sw::hashed_string( "A" );
             segment._listLayer.push_back( layer );

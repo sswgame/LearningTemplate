@@ -183,13 +183,6 @@ namespace sw
                 appendEnumeratorRedirect( target._listRemovedEnumerator, value );
             }
 
-            /** @brief 에셋 타입을 적으면 그 프로퍼티는 에셋 경로이기도 합니다. */
-            static void applyAssetType( ParsedPropertyInfo& target, const string_view value )
-            {
-                target._assetType  = string( value );
-                target._bAssetPath = SW_TRUE;
-            }
-
             /** @brief 받은 값의 알림 함수를 적으면 복제 대상이기도 합니다. */
             static void applyRepNotify( ParsedPropertyInfo& target, const string_view value )
             {

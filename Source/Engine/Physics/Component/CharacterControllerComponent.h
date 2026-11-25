@@ -341,35 +341,35 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: stood on a floor after the last step" )
         bool _bGrounded; ///< 마지막 스텝 뒤 바닥을 딛고 있었다(`_state._bGrounded` — 복원한 뒤 첫 스텝 앞에도 이동기가 읽는다)
 
-        PhysicsCharacterHandle                  _character;
-        PhysicsCharacterState3D                 _state;
-        PhysicsCommandPage<CharacterCommand3D>* _pCommandPage;                 ///< 입력 칸이 든 페이지 — 이동 요청 · 대기(`PhysicsPoseStore::getCommandStore`)
-        uint32                                  _commandSlot;                  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
-        ThreadRole                              _physicsStep;                  ///< 물리 스텝 역할 — 이번 프레임 속도 · 공중 속도는 onPrePhysicsStep 만 만진다(잠금이 아니라 분석용 능력)
-        float3 _frameRootMotionVelocity         SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 스텝마다 더할 루트 모션 속도
-        float3 _frameSurfaceVelocity            SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 면 속도
-        float32 _frameMoveScale                 SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 이동 계수
-        atomic<float32>                         _reportedMoveScale;            ///< 진단 · 감시 값이 읽는 사본(`getMoveScale`) — 물리 스텝이 쓰고 게임 스레드가 읽는다
-        PhysicsFieldSample                      _frameField;                   ///< 이번 물리 프레임의 필드(`onPhysicsFrameBegin` 이 옮긴다)
-        float3                                  _frameClimbVelocity;           ///< 이번 물리 프레임의 오르기 속도(`_bFrameClimb` 일 때)
-        float3 _queuedStepVelocity              SW_GUARDED_BY( _physicsStep ); ///< 이번 스텝에 넣은 이동 속도(수직 포함 — 스텝 기록용)
-        float32 _queuedStepSeconds              SW_GUARDED_BY( _physicsStep ); ///< 이번 스텝에 넣은 이동의 길이(초). 0 이면 넣지 않았다 — `onPostPhysicsStep` 이 읽고 비운다
-        float3                                  _previousPosition;
-        float3                                  _worldScale;               ///< 트랜스폼의 월드 배율(변경 번호가 바뀔 때만 다시 읽는다)
-        quaternion                              _worldRotation;            ///< 트랜스폼의 월드 회전(바닥이 돈 각을 얹어 쓴다). 변경 번호가 같으면 그대로다
-        float32                                 _pendingGroundYaw;         ///< 마지막 쓰기 뒤 디딘 바닥이 위 축 둘레로 돈 각(rad) — 다음 트랜스폼 쓰기에 얹는다
-        atomic<float32>                         _requestedHeightReduction; ///< 줄일 키(m, `setHeightReduction`) — 아무 스레드가 쓰고 물리 프레임 시작이 읽는다
-        float32                                 _appliedHeightReduction;   ///< 백엔드 캡슐을 지은 줄인 키(m) — `getScaledCapsule` 이 뺀다
-        vector<StepRecord>                      _listStepHistory;          ///< 스텝 기록 고리(`setStepHistoryEnabled` 가 켜졌을 때 처음 칸을 만든다 — 꺼져 있으면 비어 있다)
-        uint32                                  _stepHistoryCount;         ///< 기록한 스텝의 누계(고리의 다음 칸은 `% kStepHistoryCapacity`)
-        float3                                  _motionDisplayOffset;      ///< 손으로 돌리는 캐릭터의 그리기 자리에 더한다(`setMotionDisplay`)
-        float32                                 _motionDisplayAlpha;       ///< 손으로 돌리는 캐릭터의 그리기 보간 비
-        uint8                                   _bFrameClimb       : 1;    ///< 이번 물리 프레임에 오르기 요청이 있다
-        uint8                                   _bStepClimb        : 1;    ///< 이번 스텝을 오르기로 움직였다(점프 · 발사가 없었다)
-        uint8                                   _bManualSimulation : 1;    ///< 물리 고정 스텝 대신 `simulateMotion` 이 걸음을 돌린다
-        [[maybe_unused]] uint8                  _reserved          : 5;
-        atomic<uint32>                          _suspendCount; ///< 살아 있는 `suspend` 구독 수
-        uint64                                  _nextSuspensionID;
-        SubscriptionList                        _suspensionSubscriptions; ///< `suspend` 가 낸 구독 — 맨 끝이라 먼저 닫힌다
+        SW_TRANSIENT PhysicsCharacterHandle          _character;
+        SW_TRANSIENT PhysicsCharacterState3D         _state;
+        PhysicsCommandPage<CharacterCommand3D>*      _pCommandPage;                 ///< 입력 칸이 든 페이지 — 이동 요청 · 대기(`PhysicsPoseStore::getCommandStore`)
+        SW_TRANSIENT uint32                          _commandSlot;                  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
+        ThreadRole                                   _physicsStep;                  ///< 물리 스텝 역할 — 이번 프레임 속도 · 공중 속도는 onPrePhysicsStep 만 만진다(잠금이 아니라 분석용 능력)
+        SW_TRANSIENT float3 _frameRootMotionVelocity SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 스텝마다 더할 루트 모션 속도
+        SW_TRANSIENT float3 _frameSurfaceVelocity    SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 면 속도
+        SW_TRANSIENT float32 _frameMoveScale         SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 이동 계수
+        SW_TRANSIENT atomic<float32>            _reportedMoveScale;                 ///< 진단 · 감시 값이 읽는 사본(`getMoveScale`) — 물리 스텝이 쓰고 게임 스레드가 읽는다
+        SW_TRANSIENT PhysicsFieldSample         _frameField;                        ///< 이번 물리 프레임의 필드(`onPhysicsFrameBegin` 이 옮긴다)
+        SW_TRANSIENT float3                     _frameClimbVelocity;                ///< 이번 물리 프레임의 오르기 속도(`_bFrameClimb` 일 때)
+        SW_TRANSIENT float3 _queuedStepVelocity SW_GUARDED_BY( _physicsStep );      ///< 이번 스텝에 넣은 이동 속도(수직 포함 — 스텝 기록용)
+        SW_TRANSIENT float32 _queuedStepSeconds SW_GUARDED_BY( _physicsStep );      ///< 이번 스텝에 넣은 이동의 길이(초). 0 이면 넣지 않았다 — `onPostPhysicsStep` 이 읽고 비운다
+        SW_TRANSIENT float3                     _previousPosition;
+        SW_TRANSIENT float3                     _worldScale;       ///< 트랜스폼의 월드 배율(변경 번호가 바뀔 때만 다시 읽는다)
+        SW_TRANSIENT quaternion                 _worldRotation;    ///< 트랜스폼의 월드 회전(바닥이 돈 각을 얹어 쓴다). 변경 번호가 같으면 그대로다
+        SW_TRANSIENT float32                    _pendingGroundYaw; ///< 마지막 쓰기 뒤 디딘 바닥이 위 축 둘레로 돈 각(rad) — 다음 트랜스폼 쓰기에 얹는다
+        SW_TRANSIENT atomic<float32> _requestedHeightReduction;    ///< 줄일 키(m, `setHeightReduction`) — 아무 스레드가 쓰고 물리 프레임 시작이 읽는다
+        SW_TRANSIENT float32         _appliedHeightReduction;      ///< 백엔드 캡슐을 지은 줄인 키(m) — `getScaledCapsule` 이 뺀다
+        SW_TRANSIENT vector<StepRecord> _listStepHistory;          ///< 스텝 기록 고리(`setStepHistoryEnabled` 가 켜졌을 때 처음 칸을 만든다 — 꺼져 있으면 비어 있다)
+        SW_TRANSIENT uint32             _stepHistoryCount;         ///< 기록한 스텝의 누계(고리의 다음 칸은 `% kStepHistoryCapacity`)
+        SW_TRANSIENT float3             _motionDisplayOffset;      ///< 손으로 돌리는 캐릭터의 그리기 자리에 더한다(`setMotionDisplay`)
+        SW_TRANSIENT float32            _motionDisplayAlpha;       ///< 손으로 돌리는 캐릭터의 그리기 보간 비
+        SW_TRANSIENT uint8              _bFrameClimb       : 1;    ///< 이번 물리 프레임에 오르기 요청이 있다
+        SW_TRANSIENT uint8              _bStepClimb        : 1;    ///< 이번 스텝을 오르기로 움직였다(점프 · 발사가 없었다)
+        SW_TRANSIENT uint8              _bManualSimulation : 1;    ///< 물리 고정 스텝 대신 `simulateMotion` 이 걸음을 돌린다
+        [[maybe_unused]] uint8          _reserved          : 5;
+        SW_TRANSIENT atomic<uint32> _suspendCount; ///< 살아 있는 `suspend` 구독 수
+        SW_TRANSIENT uint64         _nextSuspensionID;
+        SubscriptionList            _suspensionSubscriptions; ///< `suspend` 가 낸 구독 — 맨 끝이라 먼저 닫힌다
     };
 } // namespace sw

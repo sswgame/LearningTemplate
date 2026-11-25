@@ -14,9 +14,10 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
-#include "Engine/UI/Screen/UIScreenTypes.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
+#include "GameFramework/Client/Flow/LoadingScreenViewModel.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
@@ -57,7 +58,7 @@ namespace sw
      *            진행률은 부르는 쪽이 넘긴다(`update` 의 `loadProgress` — 씬 매니저의 프리로드 진행 `SceneManager::tryGetLoadProgress`). 문서에 `Progress` 슬라이더가 있으면
      *            값이 있을 때 보이고(입력은 받지 않는다) 없으면 접는다.
      *            팁 목록은 gamesettings 의 `_loadingTips` 파일(`loadTipsFromResource`)이 채운다.
-     *          - **페이드**: `ScreenFade::getOverlayAlpha` 가 0 보다 크면 Overlay 층(입력 없음, 로딩 화면 아래)에 전체 화면 검은 패널을 띄우고 불투명도를 그 알파로 둔다.
+     *          - **페이드**: `ScreenFade::getOverlayAlpha` 가 0 보다 크면 Overlay 층(입력 없음, 로딩 화면 아래)에 페이드 판 문서(`UIEngineDocuments::_screenFade`)를 띄우고 불투명도를 그 알파로 둔다.
      *            0 이 되면 닫는다.
      *          - **실패 알림**: 게임 이동 씬 로드가 실패하면(`SceneLoadCompletedEvent` — 앞 씬에 남는다) 엔진 확인 대화 상자로 알리고 다시 시도할지 묻는다. 뒤 요청에 밀린 로드는
      *            실패가 아니라 알리지 않고, 그 뒤 로드가 서면 떠 있던 알림을 닫는다. 저장 · 불러오기의 실패(`SaveGameSavedEvent` · `SaveGameLoadedEvent`)도 같은 대화 상자로 알리고
@@ -78,9 +79,7 @@ namespace sw
         static constexpr float32 kSpinnerRadiansPerSecond = MathUtil::kPi * 1.5f;
         /** @brief 로딩 문서에서 돌릴 위젯과 팁 글 위젯의 이름입니다. */
         static constexpr const utf8* kSpinnerWidgetName = "Spinner";
-        static constexpr const utf8* kTipWidgetName     = "Tip";
         /** @brief 로딩 문서의 진행 슬라이더 이름입니다(0~1). 없으면 진행률을 그리지 않는다. */
-        static constexpr const utf8* kProgressWidgetName = "Progress";
 
         /**
          * @brief 팁 목록 파일(`<LoadingTips><Tip text="원문"/>…</LoadingTips>`)을 읽어 @p outListTip 을 채웁니다(먼저 비운다). 파일을 못 읽거나 `text` 가 빈 팁이 있으면 오류를 남기고 false 입니다.
@@ -137,18 +136,14 @@ namespace sw
         void closeScreens();
         /** @brief 씬 로드가 끝났습니다 — 실패면 알리고, 성공이면 앞선 실패의 알림을 닫습니다. */
         void onSceneLoadCompleted( const SceneLoadCompletedEvent& event );
-        void closeLoadFailure();
         /** @brief 저장이 끝났습니다 — 실패면 알리고(다시 저장), 성공이면 앞선 실패의 알림을 닫습니다. */
         void onSaveGameSaved( const SaveGameSavedEvent& event );
         /** @brief 불러오기가 끝났습니다 — 실패면 알리고(다시 불러오기), 성공이면 앞선 실패의 알림을 닫습니다. */
         void onSaveGameLoaded( const SaveGameLoadedEvent& event );
-        void closeSaveFailure();
         /** @brief 페이드 패널을 알파에 맞춥니다. 알파가 0 이면 닫고, 0 보다 크면 열고 불투명도를 맞춥니다. */
         void syncFadeOverlay( float32 alpha );
-        /** @brief 진행 슬라이더(`Progress`)를 로드 진행에 맞춥니다. 진행을 모르면 접는다. 문서에 슬라이더가 없으면 아무것도 하지 않는다. */
-        static void applyProgress( UIScreen& screen, optional<float32> loadProgress );
-        /** @brief 팁을 하나 골라 `Tip` 위젯에 넣습니다. 목록이 비면 팁 위젯을 접습니다. */
-        void applyTip( UIScreen& screen );
+        /** @brief 팁을 하나 골라 뷰모델에 넣습니다(문서의 `{bind:_tip}`). 목록이 비면 팁을 접습니다. */
+        void applyTip();
 
     private:
         /** @class LoadingScreenProxy @brief `ILoadingScreen` 을 컨트롤러의 같은 이름 함수로 넘깁니다(수명은 컨트롤러와 같다). */
@@ -169,19 +164,20 @@ namespace sw
         };
 
     private:
-        LoadingScreenProxy    _loadingScreenPort;
-        LoadingScreenSettings _settings;
-        string                _currentTip;
-        UISystem*             _pUISystem;
-        UIScreenHandle        _loadingScreen;
-        UIScreenHandle        _fadeScreen;
-        UIScreenHandle        _loadFailureDialog;
-        UIScreenHandle        _saveFailureDialog;
-        float32               _shownSeconds;
-        float32               _spinnerAngle;
-        Subscription          _sceneLoadSubscription;
-        Subscription          _saveSavedSubscription;
-        Subscription          _saveLoadedSubscription;
-        GameRandom            _tipRandom; ///< 팁 고르기 난수(`setSettings` 가 시드를 다시 설정한다)
+        LoadingScreenProxy     _loadingScreenPort;
+        LoadingScreenSettings  _settings;
+        string                 _currentTip;
+        UISystem*              _pUISystem;
+        LoadingScreenViewModel _viewModel; ///< 로딩 화면 문서가 읽는 진행 · 팁 — 화면보다 먼저 선언해 화면이 먼저 닫힌다
+        UIOwnedScreen          _loadingScreen;
+        UIOwnedScreen          _fadeScreen;
+        UIOwnedScreen          _loadFailureDialog;
+        UIOwnedScreen          _saveFailureDialog;
+        float32                _shownSeconds;
+        float32                _spinnerAngle;
+        Subscription           _sceneLoadSubscription;
+        Subscription           _saveSavedSubscription;
+        Subscription           _saveLoadedSubscription;
+        GameRandom             _tipRandom; ///< 팁 고르기 난수(`setSettings` 가 시드를 다시 설정한다)
     };
 } // namespace sw

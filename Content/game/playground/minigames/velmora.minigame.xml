@@ -8,4 +8,4 @@
   입력은 걷기 공통 레이어와 Velmora 레이어(velmora/data/velmora.input.xml)만 켠다. 확장 팩은 선택이다 — `-gv_modList=velmora_tidecaves`(Test/Mods/velmora_tidecaves)가 표 셋에 층으로 더하고 세이브를 깨지 않는다.
   시나리오 automation/velmora_vale 와 두 번 기동 쌍 automation/sequence/velmora_carry · velmora_release 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="velmora" map="game/playground/velmora/maps/vale.scene.xml" entry="SceneSwitch" portalSlot="7" features="ActionCombat,ActionAdventure" inputContexts="Movement,Velmora" catalogs="MonsterCatalog,adventureregions,quests"/>
+<Minigame name="velmora" map="guid:b4aad35143683c01659085eec0970d79" entry="SceneSwitch" portalSlot="7" features="ActionCombat,ActionAdventure" inputContexts="Movement,Velmora" catalogs="MonsterCatalog,adventureregions,quests"/>

@@ -35,7 +35,7 @@ namespace sw
             GimmickSensorComponent* pSensor = pTarget->getComponent<GimmickSensorComponent>();
             if ( pSensor != nullptr )
                 pSensor->applyDamage( amount );
-            // 체력은 무기 · 근접과 같은 맞음 길로 깎는다(언리얼 ApplyDamage → TakeDamage) — 받는 체력 원천(`UnitStatsComponent::receiveHit` 등)이 피해를 정한다.
+            // 체력은 무기 · 근접과 같은 맞음 길로 깎는다(언리얼 ApplyDamage → TakeDamage) — 받는 체력 원천(`AbilitySystemComponent::receiveHit`)이 피해를 정한다.
             // 받는 쪽이 없으면(체력도 센서도 없는 소품) 조용히 지나간다: 범위 · 점유자 피해는 대상을 영역이 고르고, 무기 광선이 벽을 맞힌 것과 같다.
             HitInfo hit;
             hit._pInstigator = sceneManager.resolveGameObject( sourceHandle );

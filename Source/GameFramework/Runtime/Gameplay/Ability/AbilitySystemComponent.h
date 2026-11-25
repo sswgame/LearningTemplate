@@ -100,7 +100,7 @@ namespace sw
      * @class AbilitySystemComponent
      * @brief 오브젝트 하나의 어빌리티 시스템으로, 어트리뷰트 세트와 적용된 이펙트, 부여된 어빌리티, 태그 개수를 보관하고 시간을 진행합니다.
      * @details **쓰는 법**(언리얼 GAS 와 같은 순서):
-     *          1. 오브젝트에 붙이고 어트리뷰트 세트를 추가한다. 코드(`addAttributeSet<CombatAttributeSet>()`)로 하거나 데이터로 할 수 있다.
+     *          1. 오브젝트에 붙이고 어트리뷰트 세트를 추가한다. 코드(`addAttributeSet`)로 하거나 데이터로 할 수 있다.
      *             데이터로 하면 `_abilitySetID` 가 가리키는 카탈로그의 `<AbilitySet>` 이 플레이 시작에 어트리뷰트 세트, 어빌리티, 시작 이펙트, 태그를 한 번에 준다.
      *          2. 어빌리티를 준다(`giveAbility`, `giveAbilityByID`). 입력 번호를 주면 `abilityInputPressed( 번호 )` 가 어빌리티를 발동한다.
      *          3. 어빌리티는 이펙트 스펙(`makeOutgoingSpec`)을 만들어 자기 자신이나 다른 오브젝트에 적용한다(`applyGameplayEffectSpecToTarget`).
@@ -113,7 +113,7 @@ namespace sw
      *
      *          **스레드**: 컴포넌트 틱은 오브젝트마다 병렬 워커에서 돈다. 자기 상태(시간, 자기 이펙트, 자기 어빌리티)는 바로 바꾼다.
      *          **다른 오브젝트에** 이펙트를 걸거나 이벤트를 보내면(`applyGameplayEffectSpecToTarget`, `sendGameplayEventToTarget`) 틱이 끝난 직후로 미룬다.
-     *          `UnitStatsComponent::takeDamage` 도 같은 규칙을 따른다. 체력이 깎일 때 띄우는 피해 숫자도 틱 직후에 만든다.
+     *          맞음(`receiveHit`)도 같은 규칙을 따른다. 체력이 깎일 때 띄우는 피해 숫자도 틱 직후에 만든다.
      *
      *          **연결된 UI**: 이 컴포넌트는 체력 원천(`IHealthSource`)이다. 체력이나 최대 체력이 바뀔 때마다 같은 오브젝트의
      *          `IHealthListener`(HP 바)에 비율을 알리고, 체력이 0 이면 쓰러짐(`Died`)을 알린다. 이 컴포넌트는 HP 바의 존재를 알지 못한다.
@@ -209,9 +209,9 @@ namespace sw
         // --------------------------------------------------------------------------
         // 2) 어트리뷰트
         // --------------------------------------------------------------------------
-        /** @brief 어트리뷰트 세트를 붙입니다. 다른 세트와 이름이 겹치는 어트리뷰트는 먼저 붙은 쪽이 우선하고, 경고를 남깁니다. */
+        /** @brief 어트리뷰트 세트를 붙입니다. 다른 세트와 이름이 겹치는 어트리뷰트는 먼저 붙은 쪽이 우선하고, 경고를 남깁니다. 값이 빠진 세트면 오류를 남기고 nullptr 입니다. */
         AttributeSet* addAttributeSet( unique_ptr<AttributeSet> pAttributeSet );
-        /** @brief T 를 만들어 붙이고 반환합니다. */
+        /** @brief T 를 만들어 붙이고 반환합니다. 값을 데이터가 정해야 하는 세트(`AttributeSet::requireAttribute`)면 붙이지 않고 nullptr 입니다 — 값을 정한 세트를 넘긴다. */
         template <typename T>
         T* addAttributeSet()
         {
@@ -551,36 +551,36 @@ namespace sw
         void guardHealthBaseChange( const hashed_string& name, float32 oldBase, float32& inoutNewBase );
 
         // ---- 런타임 상태(`serializeState` 가 싣는다 — 구독 · 델리게이트 · 기록은 싣지 않는다) ----
-        vector<unique_ptr<AttributeSet>>                                                                _listAttributeSet;
-        ActiveEffectContainer                                                                           _activeEffects;
-        AbilitySpecContainer                                                                            _abilitySpecs;
-        TagCountTable                                                                                   _ownedTagCounts;
-        Subscription                                                                                    _ownedTagSubscription;        ///< `_ownedTagCounts` 의 변화를 자기가 듣는 구독(`onOwnedTagChanged`)
-        Subscription                                                                                    _moduleUnloadingSubscription; ///< 등록된 동안 모듈 내림을 듣는 구독(`onModuleUnloading`)
-        TagCountTable                                                                                   _blockedAbilityTagCounts;     ///< `_blockAbilitiesWithTags` 가 막은 어빌리티 태그(알림 없이 센다)
-        unordered_map<hashed_string, unique_ptr<MulticastDelegate<void( const AttributeChangeData& )>>> _mapAttributeChangedMulticast;
-        unordered_map<uint64, unique_ptr<MulticastDelegate<void( const AbilityEventData& )>>>           _mapGameplayEventMulticast;
-        MulticastDelegate<void( const AttributeChangeData& )>                                           _anyAttributeChangedMulticast;
-        MulticastDelegate<void( const ActiveGameplayEffect& )>                                          _effectAppliedMulticast;
-        MulticastDelegate<void( const ActiveGameplayEffect& )>                                          _effectRemovedMulticast;
-        MulticastDelegate<void( const Ability& )>                                                       _abilityActivatedMulticast;
-        MulticastDelegate<void( const Ability&, bool )>                                                 _abilityEndedMulticast;
-        MulticastDelegate<void( const AbilityPresentationEvent& )>                                      _gameplayCueMulticast;
-        const AbilityCatalog*                                                                           _pCatalog;
-        const AbilityClassRegistry*                                                                     _pClassRegistry;
-        float32                                                                                         _time;
-        uint64                                                                                          _nextHandleID;
-        AbilityEffectLogEntry                                                                           _arrEffectLog[kEffectLogCapacity]; ///< 적용 · 거부 · 제거 기록 고리(진단 — 저장하지 않는다)
-        uint32                                                                                          _effectLogCount;                   ///< 적은 누계(다음 칸은 `% kEffectLogCapacity`)
-        uint32                                                                                          _listLockDepth;
-        uint32                                                                                          _blockedHealthDecreaseCount; ///< 무적이 체력 내림을 막은 횟수(`guardHealthBaseChange`) — `executeSpec` 이 앞뒤를 견줘 막힌 피격의 즉시 큐를 거른다
-        const AbilityEffectContext*                                                                     _pExecutingContext;          ///< 지금 적용 중인 즉시 이펙트의 컨텍스트(`executeSpec` 안만). 체력이 0 에 닿으면 그 맞힌 자리로 치명 신호를 낸다
-        uint8                                                                                           _bHasPendingRemoval;
-        uint8                                                                                           _bRefreshingOngoingTags; ///< `refreshOngoingTagRequirements` 안이다 — 그 안에서 바뀐 태그로 다시 들어가지 않는다
-        uint8                                                                                           _bRestoringState;        ///< `applySaveState` 안이다 — 집계 · 태그 반응 · 피해 숫자를 미룬다
-        uint8                                                                                           _bWantsTick;             ///< 마지막으로 요청한 주 틱 — 틱 중 요청은 미뤄져 `canEverTick` 이 늦게 바뀌므로 요청 값과 견준다
-        uint8                                                                                           _bManualTime;            ///< `setManualTime` — 틱을 늘 끈다
-        vector<uint8>                                                                                   _pendingStateBytes;      ///< 플레이 시작 전에 받은 상태(`restoreState`)
+        SW_CODEC_STATE vector<unique_ptr<AttributeSet>> _listAttributeSet;
+        SW_CODEC_STATE ActiveEffectContainer            _activeEffects;
+        SW_CODEC_STATE AbilitySpecContainer             _abilitySpecs;
+        SW_CODEC_STATE TagCountTable                    _ownedTagCounts;
+        Subscription                                    _ownedTagSubscription;        ///< `_ownedTagCounts` 의 변화를 자기가 듣는 구독(`onOwnedTagChanged`)
+        Subscription                                    _moduleUnloadingSubscription; ///< 등록된 동안 모듈 내림을 듣는 구독(`onModuleUnloading`)
+        SW_TRANSIENT TagCountTable                      _blockedAbilityTagCounts;     ///< `_blockAbilitiesWithTags` 가 막은 어빌리티 태그(알림 없이 센다)
+        SW_TRANSIENT unordered_map<hashed_string, unique_ptr<MulticastDelegate<void( const AttributeChangeData& )>>> _mapAttributeChangedMulticast;
+        SW_TRANSIENT unordered_map<uint64, unique_ptr<MulticastDelegate<void( const AbilityEventData& )>>> _mapGameplayEventMulticast;
+        MulticastDelegate<void( const AttributeChangeData& )>                                              _anyAttributeChangedMulticast;
+        MulticastDelegate<void( const ActiveGameplayEffect& )>                                             _effectAppliedMulticast;
+        MulticastDelegate<void( const ActiveGameplayEffect& )>                                             _effectRemovedMulticast;
+        MulticastDelegate<void( const Ability& )>                                                          _abilityActivatedMulticast;
+        MulticastDelegate<void( const Ability&, bool )>                                                    _abilityEndedMulticast;
+        MulticastDelegate<void( const AbilityPresentationEvent& )>                                         _gameplayCueMulticast;
+        const AbilityCatalog*                                                                              _pCatalog;
+        const AbilityClassRegistry*                                                                        _pClassRegistry;
+        SW_CODEC_STATE float32                                                                             _time;
+        SW_TRANSIENT uint64                                                                                _nextHandleID;
+        SW_TRANSIENT AbilityEffectLogEntry                                                                 _arrEffectLog[kEffectLogCapacity]; ///< 적용 · 거부 · 제거 기록 고리(진단 — 저장하지 않는다)
+        SW_TRANSIENT uint32                                                                                _effectLogCount;                   ///< 적은 누계(다음 칸은 `% kEffectLogCapacity`)
+        SW_TRANSIENT uint32                                                                                _listLockDepth;
+        SW_TRANSIENT uint32                                                                                _blockedHealthDecreaseCount; ///< 무적이 체력 내림을 막은 횟수(`guardHealthBaseChange`) — `executeSpec` 이 앞뒤를 견줘 막힌 피격의 즉시 큐를 거른다
+        const AbilityEffectContext*                                                                        _pExecutingContext;          ///< 지금 적용 중인 즉시 이펙트의 컨텍스트(`executeSpec` 안만). 체력이 0 에 닿으면 그 맞힌 자리로 치명 신호를 낸다
+        SW_TRANSIENT uint8                                                                                 _bHasPendingRemoval;
+        SW_TRANSIENT uint8                                                                                 _bRefreshingOngoingTags; ///< `refreshOngoingTagRequirements` 안이다 — 그 안에서 바뀐 태그로 다시 들어가지 않는다
+        SW_TRANSIENT uint8                                                                                 _bRestoringState;        ///< `applySaveState` 안이다 — 집계 · 태그 반응 · 피해 숫자를 미룬다
+        SW_TRANSIENT uint8                                                                                 _bWantsTick;             ///< 마지막으로 요청한 주 틱 — 틱 중 요청은 미뤄져 `canEverTick` 이 늦게 바뀌므로 요청 값과 견준다
+        SW_TRANSIENT uint8                                                                                 _bManualTime;            ///< `setManualTime` — 틱을 늘 끈다
+        SW_TRANSIENT vector<uint8> _pendingStateBytes;                                                                              ///< 플레이 시작 전에 받은 상태(`restoreState`)
 
         // ---- 저장되는 설정 ----
         PROPERTY( Category = "Ability System", DisplayName = "Ability Set", Tooltip = "Ability set id in the AbilityCatalog, granted on begin play" )

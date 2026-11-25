@@ -1,8 +1,10 @@
-// FormatUpgrade — 판 올림 사슬: 한 판씩 순서대로 올리기, 빠진 단계 · 새 판 · 실패한 단계는 오류, 자리(에셋 XML · 세이브 바이트)마다 따로(nogpu).
+// FormatUpgrade — 판 올림 사슬: 한 판씩 순서대로 올리기, 빠진 단계 · 새 판 · 실패한 단계는 오류, 바이트 형식의 머리(nogpu).
 #include "pch.h"
 
+#include "Core/Serialization/ByteStream.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
 
 namespace sw
@@ -30,19 +32,11 @@ namespace sw
                 payload._root.appendAttribute( "runSpeed", "6" );
                 return true;
             }
-
-            /** @brief 세이브 v1 → v2: 바이트 머리에 판 표지를 더한다. */
-            static bool prefixMarker( FormatUpgradePayload& payload )
-            {
-                payload._pBytes->insert( payload._pBytes->begin(), uint8{ 0xAB } );
-                return true;
-            }
         };
     } // namespace
 
     SW_ASSET_FORMAT_UPGRADE( formatUpgradeTest0, FormatUpgradeTestSteps::kKind, 0, 1, &FormatUpgradeTestSteps::renameSpeed );
     SW_ASSET_FORMAT_UPGRADE( formatUpgradeTest1, FormatUpgradeTestSteps::kKind, 1, 2, &FormatUpgradeTestSteps::addRunSpeed );
-    SW_SAVE_FORMAT_UPGRADE( formatUpgradeTestSave1, FormatUpgradeTestSteps::kKind, 1, 2, &FormatUpgradeTestSteps::prefixMarker );
 } // namespace sw
 
 /**
@@ -79,16 +73,26 @@ SW_TEST_CASE( FormatUpgradeTest, MissingNewerAndFailingStepsAreErrors )
 }
 
 /**
- * @brief [FormatUpgradeTest] 자리마다 따로 센다 — 같은 종류 이름이라도 세이브 바이트 단계는 에셋 XML 단계가 아니다
+ * @brief [FormatUpgradeTest] 바이트 형식의 머리는 다른 표 · 새 판 · 옛 판 · 잘린 바이트를 같은 오류 하나로 거절하고, 판은 단계 수다
  */
-SW_TEST_CASE( FormatUpgradeTest, DomainsAreSeparate )
+SW_TEST_CASE( FormatUpgradeTest, HeadIsWrittenReadAndRefusedInOnePlace )
 {
-    sw::vector<uint8>        bytes{ 1, 2 };
-    sw::FormatUpgradePayload payload;
-    payload._pBytes = &bytes;
-    SW_REQUIRE_TRUE( sw::FormatUpgradeStep::upgrade( sw::FormatUpgradeDomain::SaveBytes, "FormatUpgradeTestKind", 1, 2, payload ) );
-    SW_REQUIRE_EQUAL( size_t{ 3 }, bytes.size() );
-    SW_EXPECT_EQUAL( uint8{ 0xAB }, bytes[0] );
-    SW_EXPECT_LOG( "FormatUpgrade.StepMissing" );
-    SW_EXPECT_FALSE( sw::FormatUpgradeStep::upgrade( sw::FormatUpgradeDomain::SaveBytes, "FormatUpgradeTestKind", 0, 1, payload ) );
+    constexpr sw::FormatDef kFormat{ "TFMT", 1 };
+    sw::vector<uint8>       bytes;
+    kFormat.write( bytes );
+    const auto check = [&bytes]( const sw::FormatDef& format )
+    {
+        sw::ByteReader reader{ bytes.data(), bytes.size() };
+        return format.check( reader );
+    };
+    SW_EXPECT_TRUE( check( kFormat ).has_value() );
+    SW_EXPECT_FALSE( check( sw::FormatDef{ "TFMT", 0 } ).has_value() ); // 새 판
+    SW_EXPECT_FALSE( check( sw::FormatDef{ "TFMT", 2 } ).has_value() ); // 옛 판
+    SW_EXPECT_FALSE( check( sw::FormatDef{ "OTHR", 1 } ).has_value() );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
+    sw::ByteReader cut{ bytes.data(), bytes.size() - 1 };
+    SW_EXPECT_FALSE( kFormat.read( cut, "cut" ) );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
+    SW_EXPECT_FALSE( kFormat.accept( 2, "newer" ) );
+    SW_EXPECT_TRUE( kFormat.accept( 1, "current" ) );
 }

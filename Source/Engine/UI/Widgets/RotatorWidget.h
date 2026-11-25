@@ -38,8 +38,8 @@ namespace sw
         ~RotatorWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
-        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(항목과 고른 인덱스는 보이는 텍스트를 다시 만듭니다). */
-        void onBoundPropertyChanged( const PropertyInfo& property ) override;
+        /** @brief 고른 인덱스를 항목 범위로 제한하고 보이는 글을 맞춥니다. */
+        void synchronizeProperties() override;
 
         /** @brief 항목들을 바꿉니다(고른 인덱스가 범위 밖이면 없음). */
         void                  setOptions( const vector<string>& listOption );

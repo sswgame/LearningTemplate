@@ -2,12 +2,12 @@
 
 #include "Games/Playground/FeatureDemo/TurnOrderDemoComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "Games/Playground/FeatureDemo/FeatureDemoCommandUtil.h"
@@ -18,8 +18,7 @@ namespace sw
     {
         struct TurnOrderDemoComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "FDTO" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "FDTO" };
 
             /** @brief 명령 인자 `<demo object> <actor> …` 의 앞 둘을 읽습니다. 시연이 없거나 없는 행위자면 까닭을 적고 nullptr 입니다. */
             [[nodiscard]] static TurnOrderDemoComponent* findActor( const vector<string>& listArgument, int32& outActorID, string& outReply )
@@ -171,24 +170,9 @@ namespace sw
         (void)deltaTime;
     }
 
-    void TurnOrderDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void TurnOrderDemoComponent::serializeGameState( StateIO& io )
     {
-        io.header( TurnOrderDemoComponentInternal::kStateTag, TurnOrderDemoComponentInternal::kStateVersion );
-        if ( io.isWriting() )
-        {
-            io.value( _order );
-            return;
-        }
-        TurnOrder order;
-        io.value( order );
-        if ( io.isOk() == false )
-            return;
-        _order = std::move( order );
+        io.header( TurnOrderDemoComponentInternal::kStateFormat );
+        io.value( _order );
     }
 } // namespace sw

@@ -56,7 +56,7 @@
 	<ExpectLog id="MonsterCollector.Victory" count="1"/>
 	<!-- 결과를 보여 준 뒤 스스로 끝난다 — 돌아올 씬이 없으니(첫 진입) 입구 씬(허브)으로 간다 -->
 	<WaitUntil watch="Minigame.LastResult" is="win" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<ExpectActiveScene path="guid:57d6125ff94a46bfb947271e54e65b52"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<Pass/>

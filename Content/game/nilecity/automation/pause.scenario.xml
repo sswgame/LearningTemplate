@@ -20,7 +20,7 @@
 	<Tap slot="Key.Escape" hold="6"/>
 	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/pause.ui.xml" timeoutFrames="30"/> <!-- 메뉴가 떴다 -->
 	<AdvanceSimulation frames="6"/> <!-- 누름이 끝나도 메뉴가 닫히지 않는다(일어나지 않음 — 시간이 내용) -->
-	<ExpectUI screen="engine/ui/pause.ui.xml"/>
+	<ExpectUI screen="guid:042f0aebab522b80e56176bc8b5be9de"/>
 	<!-- 메뉴가 떠 있다: B 는 UI 뒤로가기라 메뉴를 닫고, 같은 B 로 허물지는 않는다(일어나지 않는 것을 보므로 시간이 내용 — AdvanceSimulation) -->
 	<Tap slot="Gamepad.B" hold="1"/>
 	<AdvanceSimulation frames="22"/> <!-- 일어나지 않음 — 시간이 내용 -->

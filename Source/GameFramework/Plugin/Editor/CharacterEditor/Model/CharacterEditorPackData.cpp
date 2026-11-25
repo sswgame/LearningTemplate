@@ -78,7 +78,7 @@ namespace sw::editor
             bOk = false;
         }
         if ( _skeletonPath.empty() == false )
-            bOk = Internal::makeRefPosePath( _skeletonPath, _refPosePath, sourceName ) && bOk;
+            bOk = Internal::makeRefPosePath( _skeletonPath.path(), _refPosePath, sourceName ) && bOk;
         return bOk;
     }
 } // namespace sw::editor

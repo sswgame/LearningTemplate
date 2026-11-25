@@ -12,10 +12,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Component/RhythmGameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/GameMode/Tests/GameModeStateVersionTest.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
@@ -30,6 +30,22 @@ namespace
     constexpr const utf8* kRhythmChartXML = R"(<Chart title="Song" artist="Band" level="1" lanes="2"><Bpm beat="0" bpm="120"/><Note lane="0" beat="4" endBeat="8"/><Note lane="1" beat="6"/></Chart>)";
 
     /** @brief 채보 파일을 가리키는 디렉터 하나입니다. */
+    /** @brief 디렉터의 판 규칙입니다(`stage.scene.xml` 과 같은 값). */
+    constexpr const utf8* kJudgeDataXML = R"(<_playSettings _failedRank="F" _missLifeDelta="-4" _maxLife="100" _initialLife="100" _comboBonusPerCombo="0" _comboBonusCap="100" _globalOffset="0" _scrollMode="ConstantSpeed"><_listWindow>
+<RhythmJudgeWindow _grade="Cool" _width="0.045" _score="300" _lifeDelta="1" _bBreaksCombo="false" />
+<RhythmJudgeWindow _grade="Good" _width="0.09" _score="150" _lifeDelta="0" _bBreaksCombo="false" />
+<RhythmJudgeWindow _grade="Bad" _width="0.14" _score="50" _lifeDelta="-2" _bBreaksCombo="true" />
+</_listWindow>
+<_listRank>
+<RhythmRankThreshold _rank="S" _minAccuracy="95" />
+<RhythmRankThreshold _rank="A" _minAccuracy="90" />
+<RhythmRankThreshold _rank="B" _minAccuracy="80" />
+<RhythmRankThreshold _rank="C" _minAccuracy="70" />
+<RhythmRankThreshold _rank="D" _minAccuracy="0" />
+</_listRank></_playSettings>)";
+    /** @brief 디렉터 원소입니다 — 차트 id, 판정 데이터. */
+    constexpr const utf8* kDirectorXML = R"(<RhythmGameModeComponent _chart="%#" _resultHoldSeconds="0.5" _clearReward="25">%#</RhythmGameModeComponent>)";
+
     struct RhythmGameModeTest
     {
         const test::ScopedScratchDomain   _domain;
@@ -46,9 +62,10 @@ namespace
             SW_REQUIRE_TRUE( FileUtil::writeTextFile( _domain.makeDiskPath( "song.chart.xml" ), kRhythmChartXML ) );
             _pGameMode = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<RhythmGameModeComponent>();
             SW_REQUIRE_NOT_NULL( _pGameMode );
-            set( "_chart", test::ScopedScratchDomain::makeID( "song.chart.xml" ).str() );
-            set( "_resultHoldSeconds", "0.5" );
-            set( "_clearReward", "25" );
+            // 판정 창 · 등급 표는 씬 데이터다(필수 칸) — 씬이 적는 것과 같은 모양으로 읽힌다.
+            StringBuilder<constant::buffer::kMax2048> xml;
+            xml.appendFormat( kDirectorXML, test::ScopedScratchDomain::makeID( "song.chart.xml" ).str(), kJudgeDataXML );
+            SW_REQUIRE_TRUE( XMLSerializer::deserialize( _pGameMode, *RhythmGameModeComponent::StaticType(), xml.view() ) );
         }
 
         void set( const utf8* pProperty, string_view text )
@@ -154,13 +171,14 @@ SW_TEST_CASE_F( RhythmGameModeTest, AutoPlayedSongIsClearedWithTheReward )
     _manager.endPlay();
 }
 
-/** @brief [RhythmGameModeTest] 결과 유지 깃발이 있던 판 1 상태는 패치로 올라 읽히고 나머지 값이 그대로다(판 1 은 `_musicTime` 뒤에 깃발 둘이 있었다) */
-SW_TEST_CASE_F( RhythmGameModeTest, Version1StateIsPatchedAndReadsTheSame )
+/** @brief [RhythmGameModeTest] 판정 창 · 등급 표를 적지 않은 디렉터 데이터는 읽지 못한다 — 코드 기본 표로 조용히 돌지 않는다 */
+SW_TEST_CASE( RhythmGameModeTest, JudgeDataIsRequired )
 {
-    _manager.beginPlay();
-    SW_REQUIRE_TRUE( _pGameMode->isStarted() );
-    advance( 30 );
-    constexpr uint8 kArrRemovedField[] = { 0, 0 };
-    test::GameModeStateVersionTest::expectVersion1ReadsTheSame( *_pGameMode, sizeof( float32 ), kArrRemovedField );
-    _manager.endPlay();
+    SW_EXPECT_LOG( "Serialization.RequiredMissing" );
+    GameObjectManager        manager;
+    RhythmGameModeComponent* pGameMode = manager.createGameObject( hashed_string( "Director" ) )->addComponent<RhythmGameModeComponent>();
+    SW_REQUIRE_NOT_NULL( pGameMode );
+    StringBuilder<constant::buffer::kMax2048> xml;
+    xml.appendFormat( kDirectorXML, "game/none.chart.xml", "" );
+    SW_EXPECT_FALSE( XMLSerializer::deserialize( pGameMode, *RhythmGameModeComponent::StaticType(), xml.view() ) );
 }

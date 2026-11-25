@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -332,7 +333,7 @@ namespace sw
      * @class AbilityClassRegistry
      * @brief 클래스 이름으로 어빌리티 · 어트리뷰트 세트를 만드는 레지스트리입니다. 게임 모듈의 코드(팩토리)이므로 데이터 카탈로그와 나눈다.
      * @details **소유자**: 게임이 하나 들고 게임 범위에 건다(게임 인스턴스 `bindScopedService` · 게임 기능 `GameFeatureScope::emplaceService`). 컴포넌트에 따로 정하지 않았으면 이 서비스를 쓴다.
-     *          키트의 클래스는 그 키트의 게임 기능이 켤 때 올리고 끌 때 내린다(`register…Class` · `unregister…Class`) — 이름은 게임 하나에서 겹치지 않는다.
+     *          키트의 클래스는 그 키트의 게임 기능이 켤 때 올리고 구독을 쥔다(`register…Class` · `GameFeatureScope::holdSubscription`) — 이름은 게임 하나에서 겹치지 않는다.
      *          예전에는 카탈로그가 팩토리를 함께 들어 카탈로그를 게임마다 사본으로 읽어야 했다 — 데이터는 공유 캐시의 한 벌(`SharedAssetCache<AbilityCatalog>`)이고 코드는 여기다.
      *          언리얼 GAS 도 어빌리티 클래스(코드)와 데이터 에셋을 나눈다(기억에 의존). 등록한 팩토리는 게임 모듈의 코드이므로 레지스트리의 수명은 게임 모듈과 같다.
      *          **기본 등록**: 어트리뷰트 세트는 "Generic"(`AttributeSet`, 어트리뷰트를 데이터가 정함)과 "Combat"(`CombatAttributeSet`), 어빌리티는 "ApplyEffects"(`ApplyEffectsAbility`)이다.
@@ -343,24 +344,23 @@ namespace sw
         AbilityClassRegistry();
         ~AbilityClassRegistry();
 
-        /** @return 이름이 비었거나 같은 이름이 이미 있으면 알리고(`Registration.EmptyName` · `Registration.DuplicateName`) false 입니다 — 뒤에 올린 것이 앞의 것을 소리 없이 바꾸지 않게. */
-        [[nodiscard]] bool registerAbilityClass( const hashed_string& className, AbilityFactoryFunc factory );
-        /** @brief 어빌리티 클래스를 내립니다(올린 게임 기능이 꺼질 때). 이미 만든 어빌리티는 그대로 돕니다. */
-        void unregisterAbilityClass( const hashed_string& className );
+        /**
+         * @brief 어빌리티 클래스를 올리고 그 등록을 소유하는 구독을 돌려줍니다 — 풀리면 내립니다(이미 만든 어빌리티는 그대로 돈다).
+         * @return 이름이 비었거나 같은 이름이 이미 있으면 알리고(`Registration.EmptyName` · `Registration.DuplicateName`) 빈 구독입니다 — 뒤에 올린 것이 앞의 것을 소리 없이 바꾸지 않게.
+         */
+        [[nodiscard]] Subscription registerAbilityClass( const hashed_string& className, AbilityFactoryFunc factory );
         /** @return `registerAbilityClass` 와 같은 규칙입니다. */
-        [[nodiscard]] bool registerAttributeSetClass( const hashed_string& className, AttributeSetFactoryFunc factory );
-        /** @brief 어트리뷰트 세트 클래스를 내립니다(올린 게임 기능이 꺼질 때). 이미 만든 세트는 그대로 돕니다. */
-        void unregisterAttributeSetClass( const hashed_string& className );
+        [[nodiscard]] Subscription registerAttributeSetClass( const hashed_string& className, AttributeSetFactoryFunc factory );
         /** @brief 어빌리티 클래스 T 를 이름으로 등록합니다. 기본 생성자로 만듭니다. */
         template <typename T>
-        [[nodiscard]] bool registerAbilityClass( const hashed_string& className )
+        [[nodiscard]] Subscription registerAbilityClass( const hashed_string& className )
         {
             static_assert( HasOwnReflectBody_v<T>, "ability class needs REFLECT( Abstract ) + REFLECT_BODY() and a getTypeInfo override - hot reload picks module abilities by type" );
             return registerAbilityClass( className, &AbilityClassRegistry::createDefault<Ability, T> );
         }
         /** @brief 어트리뷰트 세트 클래스 T 를 이름으로 등록합니다. 기본 생성자로 만듭니다. */
         template <typename T>
-        [[nodiscard]] bool registerAttributeSetClass( const hashed_string& className )
+        [[nodiscard]] Subscription registerAttributeSetClass( const hashed_string& className )
         {
             static_assert( HasOwnReflectBody_v<T>, "attribute set class needs REFLECT( Abstract ) + REFLECT_BODY() and a getTypeInfo override - hot reload picks module sets by type" );
             return registerAttributeSetClass( className, &AbilityClassRegistry::createDefault<AttributeSet, T> );

@@ -1,5 +1,5 @@
 <?asset guid="7ac46e6a34064c9480b66e88ea711ee1"?>
-<Scene formatVersion="3" name="GhostHuntMansion">
+<Scene formatVersion="0" name="GhostHuntMansion">
 	<!-- 유령 사냥 미니게임(minigames/ghosthunt)의 무대 — 방은 ghosthunt/data/mansion.areas.xml 의 사각형(미터)이고 유령 · 열쇠 · 가구는 카탈로그(data/ghosts.xml)다. 뷰가 방 바닥과 유령을 그린다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

@@ -6,4 +6,4 @@
   입력은 걷기 · 시선 · 카메라 공통 레이어와 Shooter 레이어(shooter3d/data/shooter.input.xml)만 켠다 — 입력 레이어 스택에 든 레이어만 발화한다.
   시나리오 automation/shooter3d_* 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="shooter3d" map="game/playground/shooter3d/maps/arena.scene.xml" entry="SceneSwitch" portalSlot="9" inputContexts="Movement,Traversal,Look,Camera,CameraOrbit,Shooter"/>
+<Minigame name="shooter3d" map="guid:12d39350b79eb1e5903098fceef6374f" entry="SceneSwitch" portalSlot="9" inputContexts="Movement,Traversal,Look,Camera,CameraOrbit,Shooter"/>

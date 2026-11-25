@@ -5,7 +5,7 @@
  *          고치지 않는다. 디렉터는 같은 오브젝트에 먼저 붙인다 — 등록(`onRegister`)에서 찾아 핸들로 든다. 모습 하나를 매 프레임 맞추는 일은 뷰 컴포넌트
  *          (`ParkGuestComponent`, `CoasterCarComponent`, `FlatRideComponent`)가 디렉터를 읽어 한다.
  *          하는 일은 모두 틱 뒤 게임 스레드에서 한다. 디렉터와 같은 `PrePhysics` 그룹이라 카메라 디렉터(`CameraDirectorComponent`, `PostPhysics` 틱 뒤)가 이번 프레임의 탑승 시점을 읽는다.
- *          세운 모습은 상태를 싣기 전에 걷는다(`despawnViews` — .cpp 의 `StatefulComponentRegistrar`). 다음 틱이 지금 공원대로 다시 세운다.
+ *          세운 모습은 파생이라 상태에 들지 않는다(`SpawnLifetime::Derived`).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -16,12 +16,11 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
@@ -42,7 +41,7 @@ namespace sw
      */
     REFLECT( Category = "ThemePark", DisplayName = "Park View",
              Tooltip = "Client side of a park: spawns the guest, ride and coaster views of the Park Game Mode on the same object, turns input into its commands and drives the coaster ride camera" )
-    class SW_KIT_CLIENT_API ParkViewComponent : public Component
+    class SW_KIT_CLIENT_API ParkViewComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -55,17 +54,8 @@ namespace sw
         ParkViewComponent();
         virtual ~ParkViewComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 액션 이름이 비었으면 오류를 남기고 입력을 읽지 않습니다(폴백 없음). */
-        void onBeginPlay() override;
         /** @brief 세운 모습을 걷습니다. */
         void onEndPlay() override;
-        /** @brief 입력 명령 · 모습 세우기 · 탑승 시점을 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
-
-        /** @brief 세운 모습을 모두 지웁니다(상태를 싣기 전 · 플레이 끝). 공원은 그대로이고 다음 틱이 다시 세웁니다. */
-        void despawnViews();
 
         /** @brief 행복도 슬롯(0 초록, 1 노랑, 2 빨강)의 손님 모습을 반환합니다. 아직 없으면 비어 있습니다. */
         const shared_ptr<MaterialInstance>& getGuestLook( int32 bucket ) const;
@@ -73,8 +63,10 @@ namespace sw
         static int32 computeHappinessBucket( float32 happiness );
 
     private:
+        /** @brief 세운 모습을 모두 지웁니다(플레이 끝 · 다시 세울 때). 모습은 파생이라 상태를 실을 때 걷지 않는다(`SpawnLifetime::Derived`). */
+        void despawnViews();
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고, 모습을 맞추고, 탑승 시점을 카메라에 겁니다. */
-        void updateView( GameObjectManager& manager );
+        void updateView( GameObjectManager& manager, ParkGameModeComponent& director );
         void updateInput( const GameInputView& input, ParkGameModeComponent& director );
         /** @brief 고른 배치를 다음 것으로 옮깁니다. */
         void selectNextRide( const ParkGameModeComponent& director );
@@ -119,25 +111,25 @@ namespace sw
         float4 _unhappyColor;
         PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent the coaster ride view overrides" )
         GameObjectHandle _cameraRig;
-        PROPERTY( Category = "Input", DisplayName = "Next Ride Action", Tooltip = "InputMap action that selects the next ride (all actions are required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Next Ride Action", Tooltip = "InputMap action that selects the next ride (all actions are required)" )
         hashed_string _nextRideAction;
-        PROPERTY( Category = "Input", DisplayName = "Toggle Open Action", Tooltip = "InputMap action that opens or closes the selected ride" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Toggle Open Action", Tooltip = "InputMap action that opens or closes the selected ride" )
         hashed_string _toggleOpenAction;
-        PROPERTY( Category = "Input", DisplayName = "Price Down Action", Tooltip = "InputMap action that lowers the selected ride's ticket price" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Price Down Action", Tooltip = "InputMap action that lowers the selected ride's ticket price" )
         hashed_string _priceDownAction;
-        PROPERTY( Category = "Input", DisplayName = "Price Up Action", Tooltip = "InputMap action that raises the selected ride's ticket price" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Price Up Action", Tooltip = "InputMap action that raises the selected ride's ticket price" )
         hashed_string _priceUpAction;
-        PROPERTY( Category = "Input", DisplayName = "Fee Down Action", Tooltip = "InputMap action that lowers the entry fee" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Fee Down Action", Tooltip = "InputMap action that lowers the entry fee" )
         hashed_string _feeDownAction;
-        PROPERTY( Category = "Input", DisplayName = "Fee Up Action", Tooltip = "InputMap action that raises the entry fee" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Fee Up Action", Tooltip = "InputMap action that raises the entry fee" )
         hashed_string _feeUpAction;
-        PROPERTY( Category = "Input", DisplayName = "Build Action", Tooltip = "InputMap action that builds the selected ride (the cheapest remaining one when it is already built)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Build Action", Tooltip = "InputMap action that builds the selected ride (the cheapest remaining one when it is already built)" )
         hashed_string _buildAction;
-        PROPERTY( Category = "Input", DisplayName = "Ride Action", Tooltip = "InputMap action that boards or leaves the selected coaster" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Ride Action", Tooltip = "InputMap action that boards or leaves the selected coaster" )
         hashed_string _rideAction;
-        PROPERTY( Category = "Input", DisplayName = "Thoughts Action", Tooltip = "InputMap action that logs what the guests think" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Thoughts Action", Tooltip = "InputMap action that logs what the guests think" )
         hashed_string _thoughtsAction;
-        PROPERTY( Category = "Input", DisplayName = "Status Action", Tooltip = "InputMap action that logs the park status" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Status Action", Tooltip = "InputMap action that logs the park status" )
         hashed_string _statusAction;
         PROPERTY( Category = "Input", DisplayName = "Price Step", Tooltip = "Ticket price change per press", Min = 1 )
         int32 _priceStep;
@@ -171,16 +163,11 @@ namespace sw
         PROPERTY( RuntimeState )
         int32 _selectedPlacement;
 
-        TComponentHandle<ParkGameModeComponent> _director;
-        vector<GameObjectHandle>                _listViewObject; ///< 세운 모습(걷을 목록)
-        vector<uint8>                           _listRideShown;  ///< 배치 번호 → 모습을 세웠으면 SW_TRUE
-        MaterialTintCache                       _tintCache;      ///< 손님 · 평지 놀이기구 색(같은 색은 나눠 쓴다. 배치 키가 인스턴스다)
-        shared_ptr<MaterialInstance>            _arrGuestLook[3];
-        uint32                                  _shownRevision;     ///< 모습을 세운 공원의 번호(0 이면 아직 — 열린 디렉터는 1 부터다)
-        int32                                   _ridingCoaster;     ///< 0 이상이면 그 코스터에 타고 있다
-        uint8                                   _bWasRiding    : 1; ///< 앞 프레임에 카메라를 덮었다
-        uint8                                   _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
-        uint8                                   _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                  _reserved      : 5;
+        vector<GameObjectHandle> _listViewObject;    ///< 세운 모습(걷을 목록)
+        SW_TRANSIENT vector<uint8>   _listRideShown; ///< 배치 번호 → 모습을 세웠으면 SW_TRUE
+        MaterialTintCache            _tintCache;     ///< 손님 · 평지 놀이기구 색(같은 색은 나눠 쓴다. 배치 키가 인스턴스다)
+        shared_ptr<MaterialInstance> _arrGuestLook[3];
+        uint32                       _shownRevision; ///< 모습을 세운 공원의 번호(0 이면 아직 — 열린 디렉터는 1 부터다)
+        SW_TRANSIENT int32           _ridingCoaster; ///< 0 이상이면 그 코스터에 타고 있다
     };
 } // namespace sw

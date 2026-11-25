@@ -53,53 +53,9 @@ namespace sw
                 io.value( paletteNumber );
                 io.value( length );
             }
-
-            /**
-             * @brief 판 2 → 3: 모든 청크를 순서대로 싣던 판을 (청크 수, 청크마다 x · z · 구간) 판으로 옮깁니다. 머리 · 청크 수 · 팔레트와 구간 바이트는 그대로다.
-             *        판 2 는 바뀐 청크를 가리지 않았으므로 모든 청크를 싣는다 — 옛 세이브의 월드(옛 지형 생성 결과 포함)가 그대로 남는다.
-             */
-            [[nodiscard]] static bool upgradeStateFrom2( Archive& inOldBody, Archive& outNewBody )
-            {
-                StateIO               reader( inOldBody );
-                StateIO               writer( outNewBody );
-                int32                 chunkCountX = 0;
-                int32                 chunkCountZ = 0;
-                vector<hashed_string> listPaletteID;
-                reader.value( chunkCountX );
-                reader.value( chunkCountZ );
-                reader.list( listPaletteID );
-                if ( reader.check( 0 <= chunkCountX && 0 <= chunkCountZ ) == false )
-                    return false;
-                writer.value( chunkCountX );
-                writer.value( chunkCountZ );
-                writer.list( listPaletteID );
-                uint32 chunkCount = static_cast<uint32>( chunkCountX ) * static_cast<uint32>( chunkCountZ );
-                writer.value( chunkCount );
-                for ( int32 chunkZ = 0; chunkZ < chunkCountZ && reader.isOk(); ++chunkZ )
-                {
-                    for ( int32 chunkX = 0; chunkX < chunkCountX && reader.isOk(); ++chunkX )
-                    {
-                        int32 savedX = chunkX;
-                        int32 savedZ = chunkZ;
-                        writer.value( savedX );
-                        writer.value( savedZ );
-                        uint32 length = 0;
-                        do
-                        {
-                            uint16 paletteNumber = 0;
-                            reader.value( paletteNumber );
-                            reader.value( length );
-                            writer.value( paletteNumber );
-                            writer.value( length );
-                        } while ( length != 0 && reader.isOk() );
-                    }
-                }
-                return reader.isOk();
-            }
         };
     } // namespace
 
-    SW_STATE_FORMAT_UPGRADE( voxelWorld2To3, "VXWL", 2, 3, &VoxelWorldInternal::upgradeStateFrom2 );
 } // namespace sw
 
 namespace sw
@@ -303,7 +259,7 @@ namespace sw
 
     void VoxelWorld::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion ); // 판 1(머리표 없음 · 카탈로그 순서 번호)은 거절하고, 판 2 는 올림 단계(upgradeStateFrom2)가 옮긴다
+        io.header( kStateFormat );
         // 청크 수(월드 크기)는 설정이 정한다 — 저장된 수로 읽어 같은 청크 좌표에 옮긴다. 줄어 밖에 블록이 남은 청크가 있으면 거절한다(감사 A-6).
         int32 savedCountX = _chunkCountX;
         int32 savedCountZ = _chunkCountZ;

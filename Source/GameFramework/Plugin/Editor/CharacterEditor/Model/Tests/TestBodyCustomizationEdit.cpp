@@ -23,8 +23,8 @@ namespace
             , _model{}
         {
             SW_REQUIRE_TRUE( _database.loadSectionFromXMLText( R"(<SkinLayerCatalog>
-                <SkinLayer id="lipstick" category="Makeup" mask="lips.png" defaultColor="0.7 0.1 0.1 1" defaultOpacity="0.8"/>
-                <SkinLayer id="rose" category="Tattoo" mask="rose.png" placeable="true" smearResistance="1"/>
+                <SkinLayer id="lipstick" category="Makeup" mask="lips.dds" defaultColor="0.7 0.1 0.1 1" defaultOpacity="0.8"/>
+                <SkinLayer id="rose" category="Tattoo" mask="rose.dds" placeable="true" smearResistance="1"/>
             </SkinLayerCatalog>)",
                                                                "test" ) );
             AppearanceSelection   selection;

@@ -1,5 +1,5 @@
 <?asset guid="63de9e11dec9417cc5a9a894260c566d"?>
-<CultureTable formatVersion="1">
+<CultureTable formatVersion="0">
 	<numberingSystems>
 		<numberingSystem id="latn" digits="0123456789" />
 		<numberingSystem id="arab" digits="٠١٢٣٤٥٦٧٨٩" />

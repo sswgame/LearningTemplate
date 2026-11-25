@@ -18,6 +18,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
+#include "Engine/Object/Prefab/SpawnLifetime.h"
 
 namespace sw
 {
@@ -86,12 +87,12 @@ namespace sw
         /** @brief 프리팹을 로드합니다. `request` 와 같은 로드 작업을 기다립니다(새 로드는 이 자리에서 읽는다). 읽지 못하면 nullptr 입니다. */
         shared_ptr<const PrefabAsset> loadPrefab( string_view assetRelativePath );
         /**
-         * @brief 프리팹을 스폰합니다.
+         * @brief 프리팹을 스폰합니다. @p lifetime 이 상태인지 모습인지 정하며, 모습이면 중첩 인스턴스까지 계층째 파생으로 표시합니다.
          * @details 컴포넌트 틱 중이면 오브젝트는 바로 반환하고 프리팹 상태는 틱 직후(구조 변경 큐)에 채운다. 그때까지 오브젝트는 비어 있다.
          *          상태를 쓰지 못하면 그 오브젝트를 지운다. 틱 안에서 스폰하고 바로 초기화하려면 `executeOrDeferPostTick` 으로 감싼다.
          *          씬에 놓인 인스턴스는 이 함수를 거치지 않는다. 씬은 프리팹 원형에 덮어쓴 값만 얹어 만든다(`Scene::instantiate`, `PrefabOverrides`).
          */
-        GameObject* spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName = nullptr );
+        GameObject* spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, SpawnLifetime lifetime, const utf8* pInstanceName = nullptr );
         /**
          * @brief @p asset 의 중첩 인스턴스를 @p pRoot(그 프리팹의 인스턴스 루트) 아래에 스폰합니다. 원본의 중첩 인스턴스까지 재귀로 스폰합니다.
          * @details `spawn` 과 씬 로드(`Scene::instantiate`)가 루트 상태를 읽은 뒤 부른다. 노드마다 원본 프리팹에 오버라이드를 얹은 상태로 오브젝트를 만들고

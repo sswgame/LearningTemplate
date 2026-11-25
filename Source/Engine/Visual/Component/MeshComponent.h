@@ -323,10 +323,10 @@ namespace sw
         bool advanceAppearance( float32 deltaSeconds );
 
     private:
-        shared_ptr<Mesh>             _mesh;
-        MeshHandle                   _meshLoad; ///< 읽는 중인 메시 에셋 로드다(저장하지 않는다). 끝나면 `applyMeshLoad` 가 놓는다
-        Material*                    _pMaterial;
-        shared_ptr<MaterialInstance> _materialInstance;
+        SW_TRANSIENT shared_ptr<Mesh> _mesh;
+        MeshHandle                    _meshLoad; ///< 읽는 중인 메시 에셋 로드다(저장하지 않는다). 끝나면 `applyMeshLoad` 가 놓는다
+        Material*                     _pMaterial;
+        SW_TRANSIENT shared_ptr<MaterialInstance> _materialInstance;
         /** @brief 저장되는 메시 id 입니다(`.mesh` 경로나 내장 도형 이름 — 메시 종류의 `MeshAssetFormat::kArrBuiltinName`). */
         PROPERTY( Category = "Rendering", DisplayName = "Mesh Asset", Tooltip = "Mesh asset path or built-in shape name" )
         AssetRef<MeshAssetFormat> _meshID;
@@ -335,10 +335,10 @@ namespace sw
          * @details 예전에는 `hashed_string` 이라 빈 값이 `"None"` 으로 저장됐다 — 그 글은 머티리얼이 아니므로 이제 로드 오류다(데이터는 빈 글로 옮겼다).
          */
         PROPERTY( Category = "Rendering", DisplayName = "Material", Tooltip = "Material asset; empty uses the scene default" )
-        AssetRef<Material> _materialPath;
-        hashed_string      _acquiredMaterialPath;  ///< 캐시에서 잡아 둔 경로다(저장하지 않는다). 인스펙터가 `_materialPath` 를 먼저 고쳐 써도 이 경로로 해제한다
-        hashed_string      _requestedMaterialPath; ///< 마지막으로 해석한 요청 경로다(저장하지 않는다). 누락 머티리얼로 대체한 뒤에도 같은 요청을 다시 시도하거나 경고하지 않는다
-        hashed_string      _resolvedMeshID;        ///< `_mesh` 가 어느 메시 id 의 것인지 나타낸다(저장하지 않는다). 현재 id 와 다르면 다시 잡는다
+        AssetRef<Material>         _materialPath;
+        SW_TRANSIENT hashed_string _acquiredMaterialPath;  ///< 캐시에서 잡아 둔 경로다(저장하지 않는다). 인스펙터가 `_materialPath` 를 먼저 고쳐 써도 이 경로로 해제한다
+        SW_TRANSIENT hashed_string _requestedMaterialPath; ///< 마지막으로 해석한 요청 경로다(저장하지 않는다). 누락 머티리얼로 대체한 뒤에도 같은 요청을 다시 시도하거나 경고하지 않는다
+        SW_TRANSIENT hashed_string _resolvedMeshID;        ///< `_mesh` 가 어느 메시 id 의 것인지 나타낸다(저장하지 않는다). 현재 id 와 다르면 다시 잡는다
         PROPERTY( Category = "Rendering", DisplayName = "Bounds Radius", Tooltip = "Bounding sphere radius", Min = 0.0, Units = m )
         float32 _boundsRadius;
         PROPERTY( Category = "Rendering", DisplayName = "GPU Spin Seed", Tooltip = "Non-zero makes the GPU spin this instance; the seed picks its speed" )
@@ -346,34 +346,34 @@ namespace sw
         PROPERTY( Category = "Rendering", DisplayName = "Section", Tooltip = "Mesh section to draw (material section of an imported model); empty draws the whole mesh" )
         hashed_string _sectionName;
         /** @brief GPU 인스턴스의 스프라이트 슬롯 값입니다(담기 전). 저장하지 않으며, 파생 타입의 저장되는 값(프레임, 색)에서 만듭니다. */
-        InstanceSpriteFrame _spriteFrame;
+        SW_TRANSIENT InstanceSpriteFrame _spriteFrame;
         PROPERTY( Category = "Rendering", DisplayName = "Custom Data 0", Tooltip = "Per-instance value the material shader reads; does not split the batch" )
         float4 _customData0;
         PROPERTY( Category = "Rendering", DisplayName = "Custom Data 1", Tooltip = "Per-instance value the material shader reads; does not split the batch" )
         float4 _customData1;
         /** @brief 정점 애니메이션 시각 오프셋(초)입니다. 저장하지 않습니다(setVertexAnimationPhase). */
-        float32 _vertexAnimationPhase;
+        SW_TRANSIENT float32 _vertexAnimationPhase;
         /** @brief 투명 큐의 정렬 키입니다(0 = 기본). 저장하지 않습니다. */
-        uint32 _sortKey;
+        SW_TRANSIENT uint32 _sortKey;
         /** @brief 강조(방식 None = 없음)입니다. 저장하지 않습니다. */
-        InstanceHighlight _highlight;
+        SW_TRANSIENT InstanceHighlight _highlight;
         PROPERTY( Category = "Rendering", DisplayName = "Appear Seconds", Tooltip = "Dither fade-in time after the mesh finishes loading (and for beginAppearance/beginDisappearance); 0 shows it at once", Min = 0.0, Max = 5.0, Units = s )
-        float32 _appearSeconds;
-        float32 _appearance;     ///< 등장 비율(0 ~ 1, 저장하지 않음). `getAppearance`
-        float32 _appearanceRate; ///< 등장 비율의 초당 변화(양수 등장 · 음수 사라지기 · 0 멈춤, 저장하지 않음)
+        float32              _appearSeconds;
+        SW_TRANSIENT float32 _appearance;     ///< 등장 비율(0 ~ 1, 저장하지 않음). `getAppearance`
+        SW_TRANSIENT float32 _appearanceRate; ///< 등장 비율의 초당 변화(양수 등장 · 음수 사라지기 · 0 멈춤, 저장하지 않음)
         /** @brief 순간이동이 표시한 등장 요청입니다(`onTeleported`, 워커가 쓴다). 도착 단계가 꺼내 `beginAppearance` 한다. 비트필드에 두면 이웃 비트와 레이스다. */
-        atomic<bool> _bTeleportAppearPending;
+        SW_TRANSIENT atomic<bool> _bTeleportAppearPending;
         /** @brief 그리는 LOD 단계입니다(0 = 원본, `setLODIndex`). 저장하지 않습니다. 게임 스레드만 쓴다(렌더 수집은 그 프레임의 더티 뒤에 읽는다). */
-        uint8 _lodIndex;
+        SW_TRANSIENT uint8 _lodIndex;
         /** @brief 등록할 때 받은 레지스트리입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */
         PrimitiveRegistry* _pPrimitiveRegistry;
         // "더티" 비트는 여기 없다. 레지스트리의 원자 플래그 하나가 기준이다. 더티를 이 비트필드에 두면 워커의 더티 쓰기가
         // `_bVisible` 과 같은 바이트를 읽고 고쳐 쓰는 것이라, 이웃 비트를 만지는 스레드와 레이스가 된다.
         /** @brief 그리는지 여부입니다. 저장됩니다(PROPERTY). 숨긴 메시가 Stop, 되돌리기, 씬 다시 열기 뒤에도 숨은 채로 남습니다. */
         PROPERTY( Category = "Rendering", DisplayName = "Visible", Tooltip = "Draw this mesh" )
-        uint8 _bVisible            : 1;
-        uint8 _bFirstPersonView    : 1; ///< 1인칭 시점인지(저장하지 않음, `setFirstPersonView`) — 게임 스레드만 쓴다
-        uint8 _bAwaitingAppearance : 1; ///< 등장을 미루는 중이다(`holdAppearanceUntilReady`, 저장하지 않음)
+        uint8              _bVisible            : 1;
+        SW_TRANSIENT uint8 _bFirstPersonView    : 1; ///< 1인칭 시점인지(저장하지 않음, `setFirstPersonView`) — 게임 스레드만 쓴다
+        SW_TRANSIENT uint8 _bAwaitingAppearance : 1; ///< 등장을 미루는 중이다(`holdAppearanceUntilReady`, 저장하지 않음)
         PROPERTY( Category = "Rendering", DisplayName = "Appear On Teleport", Tooltip = "Dither in again after teleportTo (respawn); off for network corrections and camera cuts" )
         uint8 _bAppearOnTeleport : 1;
         PROPERTY( Category = "Rendering", DisplayName = "Static", Tooltip = "Never moves at runtime; drawn once into the shadow cache of stationary point and spot lights (gv_shadowCache)" )

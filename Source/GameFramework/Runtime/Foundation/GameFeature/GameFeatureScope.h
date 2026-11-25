@@ -31,6 +31,7 @@
 
 namespace sw
 {
+    class Component;
     class GlobalVariableManager;
     class InputMap;
     struct GamePackConfig;
@@ -163,7 +164,17 @@ namespace sw
         template <class TComponent>
         [[nodiscard]] bool addComponent( const utf8* pReceiver )
         {
-            return addComponentRule( hashed_string( pReceiver ), TComponent::StaticType()->_name );
+            return addComponentRule( hashed_string( pReceiver ), TComponent::StaticType()->_name, nullptr );
+        }
+        /**
+         * @brief 위와 같고, 붙인 직후 @p Configure 를 부릅니다 — 받는 쪽마다 같은 설정(어빌리티 세트 주기 등)을 키트가 형식 있는 함수 하나로 적는다(언리얼 Game Feature 액션 AddAbilities).
+         * @details 설정 함수의 인자 형식이 @p TComponent 라 다른 컴포넌트로 부를 수 없다.
+         */
+        template <class TComponent, void ( *Configure )( TComponent& )>
+        [[nodiscard]] bool addComponent( const utf8* pReceiver )
+        {
+            return addComponentRule( hashed_string( pReceiver ), TComponent::StaticType()->_name, []( Component& component )
+            { Configure( static_cast<TComponent&>( component ) ); } );
         }
 
         /**
@@ -193,7 +204,7 @@ namespace sw
 
     private:
         /** @brief `addComponent` 의 몸통입니다. */
-        [[nodiscard]] bool addComponentRule( const hashed_string& receiver, const hashed_string& componentType );
+        [[nodiscard]] bool addComponentRule( const hashed_string& receiver, const hashed_string& componentType, void ( *pConfigure )( Component& ) );
         /** @brief `loadCatalog` 의 경로입니다 — 선언되지 않았거나 경로를 못 만들면 알리고 false 입니다. */
         [[nodiscard]] bool resolveCatalogPath( const utf8* pKind, string& outPath ) const;
         /** @brief 같은 타입이 이미 걸려 있음을 알립니다. */

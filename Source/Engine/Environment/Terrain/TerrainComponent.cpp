@@ -2,12 +2,14 @@
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/NormalizedInt.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"
@@ -26,6 +28,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 namespace sw
@@ -34,18 +37,11 @@ namespace sw
     {
         struct TerrainComponentInternal
         {
-            /**
-             * @brief 높이 쓰기로 낡은 청크 메시를 한 프레임(쓰기 한 번 또는 틱 한 번)에 다시 만드는 최대 수입니다. 브러시 한 번이 닿는 청크(넷 이하)는 바로 끝난다.
-             * @details Debug 측정으로 32 칸 청크 하나가 약 4.4 ms 이고(`TerrainBenchTest.WriteHeightsRectSizes`), 257 샘플 전체(청크 64)는 288 ms 였다(정점 만들기를 워커로
-             *          나누기 전의 값). 넷은 워커로 나눠 만든다(`rebuildChunkMeshes`). Release 로 다시 재어 GT 2 ms 에 맞게 고친다.
-             */
-            static constexpr uint32 kMaxChunkMeshRebuildsPerFrame = 4;
             /** @brief 청크 메시 정점 만들기를 워커로 나누는 최소 청크 수입니다. 청크 하나가 디스패치 비용(수십 us)보다 훨씬 크다. */
             static constexpr uint32 kParallelChunkMeshCount = 2;
             /** @brief `findEditedArea` 가 바뀐 청크 둘레로 더 넓히는 칸 수입니다. 높이 질의는 셀의 두 샘플을, 노멀은 그 이웃 샘플을 읽는다. */
-            static constexpr uint32 kEditedAreaMarginCells = 2;
-            /** @brief `writeState` 형식 버전입니다. 형식을 바꾸면 올린다. */
-            static constexpr uint32 kStateVersion = 3; ///< 3: 스플랫이 텍셀마다 레이어 여덟 바이트다. 2: 구멍 마스크를 더했고, 높이의 해상도가 다시 읽은 것과 달라도 복원한다(크기 바꾸기)
+            static constexpr uint32    kEditedAreaMarginCells = 2;
+            static constexpr FormatDef kStateFormat{ "TERS" };
 
             static const hashed_string& getLayerColorName( uint32 layerIndex )
             {
@@ -289,11 +285,26 @@ namespace sw
             } );
             return;
         }
-        (void)rebuildStaleChunkMeshes( TerrainComponentInternal::kMaxChunkMeshRebuildsPerFrame );
+        rebuildStaleChunkMeshes();
         float3     viewPosition{};
         const bool bHasChunks = _listChunk.empty() == false;
         if ( bHasChunks && EnvironmentUtil::findViewPosition( context.getManager(), viewPosition ) )
             (void)updateLODs( viewPosition );
+    }
+
+    void TerrainComponent::rebuildStaleChunkMeshes()
+    {
+        if ( _listStaleChunk.empty() )
+            return;
+        const GameObject* const        pOwner   = getOwner();
+        const GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const EngineConfig* const      pConfig  = pManager != nullptr ? locateSubsystem<EngineConfig>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
+        if ( pConfig == nullptr )
+        {
+            SW_LOG_ERROR_ONCE_ID( "Terrain.NoRebuildBudget", "Terrain: the scene has no EngineConfig (_terrain._maxChunkMeshRebuildsPerFrame) - the written chunks keep their old mesh" );
+            return;
+        }
+        (void)rebuildStaleChunkMeshes( pConfig->_terrain._maxChunkMeshRebuildsPerFrame );
     }
 
     uint32 TerrainComponent::rebuildStaleChunkMeshes( uint32 maxCount )
@@ -445,7 +456,7 @@ namespace sw
             }
         }
         // 큰 사각형은 청크 메시를 프레임마다 나눠 다시 만든다(남은 것은 틱이 이어서). 브러시 한 번(청크 넷 이하)은 바로 끝난다.
-        (void)rebuildStaleChunkMeshes( Internal::kMaxChunkMeshRebuildsPerFrame );
+        rebuildStaleChunkMeshes();
         invalidateNavigation( sampleRect );
     }
 
@@ -615,14 +626,12 @@ namespace sw
     void TerrainComponent::serializeState( StateIO& io )
     {
         // 쓸 값으로 채운 지역 변수를 놓는다 — 읽을 때는 읽은 값으로 덮인다.
-        uint32 version  = TerrainComponentInternal::kStateVersion;
-        bool   bHeights = _bHeightsWritten && _heightfield.isValid();
-        io.value( version );
+        bool bHeights = _bHeightsWritten && _heightfield.isValid();
+        io.header( TerrainComponentInternal::kStateFormat );
         io.value( bHeights );
-        if ( io.isReading() && ( io.isOk() == false || version != TerrainComponentInternal::kStateVersion ) )
+        if ( io.isOk() == false )
         {
-            SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedEditState", "Terrain '%#': unsaved edit state (version %#) did not read - keeping the asset values", _heightfieldPath.c_str(), version );
-            io.fail();
+            SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedEditState", "Terrain '%#': unsaved edit state did not read - keeping the asset values", _heightfieldPath.c_str() );
             return;
         }
         if ( bHeights && serializeHeightEdits( io ) == false )

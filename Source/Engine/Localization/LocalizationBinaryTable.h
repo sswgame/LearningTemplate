@@ -16,13 +16,13 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Localization/StringTable.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -33,8 +33,7 @@ namespace sw
     class SW_API LocalizationBinaryTable
     {
     public:
-        static constexpr uint32      kMagic     = FourCCUtil::make( "SWLR" );
-        static constexpr uint32      kVersion   = 2; ///< 2: 키 해시가 64 비트(`LocalizationKeyIndex`)다 — 1 은 32 비트 해시라 조회가 맞지 않아 거절한다
+        static constexpr FormatDef   kFormat{ "SWLR" };
         static constexpr const utf8* kExtension = ".locres";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

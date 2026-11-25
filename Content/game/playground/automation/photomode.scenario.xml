@@ -42,7 +42,7 @@
 	<!-- ⑤ 켠 채 씬 바꾸기 -->
 	<DevCommand line="photo.on"/>
 	<Expect watch="Time.Paused" equals="1"/>
-	<LoadScene path="game/playground/maps/rendertest3d.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:b3fdbd2e29297cae9d6c89508393807e" timeoutFrames="600"/>
 	<WaitUntil watch="Time.Paused" equals="0" timeoutFrames="60"/>
 	<Expect watch="UI.HUDHidden" equals="0"/>
 	<Pass/>

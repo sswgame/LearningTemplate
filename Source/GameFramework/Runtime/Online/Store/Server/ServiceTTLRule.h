@@ -84,7 +84,7 @@ namespace sw
         ServiceTTLTimeFn                            _pfnReadTime{ nullptr };   ///< 색인 규칙은 비워도 된다(색인의 시각을 믿는다). 커서 규칙은 필수다
         ServiceTTLStageFn                           _pfnStageErase{ nullptr }; ///< 비우면 지우기만 한다. 값이 있으면 지우는 트랜잭션에 이 쓰기를 함께 넣는다
         shared_ptr<const IServiceTTLBackfillSource> _pBackfillSource{};        ///< 색인 규칙만. 값이 있으면 색인 없는 기존 레코드를 훑어 줄을 채운다(`_keyPrefix` 가 훑을 범위다)
-        uint32                                      _backfillVersion{ 0 };     ///< 색인 줄 모양의 판. 백필이 있으면 1 이상이고, 쓰는 쪽의 줄 모양을 바꾸면 올려 다시 훑게 한다
+        optional<uint32>                            _backfillVersion{};        ///< 색인 줄 모양의 판. 백필이 있으면 적어야 하고, 쓰는 쪽의 줄 모양을 바꾸면 올려 다시 훑게 한다
         int64                                       _backfillRolloutMs{ 0 };   ///< 판을 처음 본 뒤 이 시간 안에 끝난 바퀴는 다시 돈다(순차 배포 창, 운영 설정 `_ttlBackfillRolloutHours`)
         string                                      _cursor{};                 ///< 다음 회차가 이어서 훑을 위치. 쓸기가 채운다
         int32                                       _maxScanPerSweep{ 0 };     ///< 예약 쓸기 한 회차에 훑는 레코드 상한(Config JSON `ServiceTTLConfig`). 0 이면 예약 쓸기에 올리지 못한다

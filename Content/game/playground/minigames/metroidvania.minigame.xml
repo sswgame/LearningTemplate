@@ -6,4 +6,4 @@
   입력은 걷기 공통 레이어와 Metroidvania 레이어(metroidvania/data/metroidvania.input.xml)만 켠다. 탐험이라 안에서 저장한다.
   시나리오 automation/metroidvania_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="metroidvania" map="game/playground/metroidvania/maps/caverns.scene.xml" entry="SceneSwitch" portalSlot="14" save="Allowed" features="Metroidvania" inputContexts="Movement,Metroidvania" catalogs="MetroidvaniaCatalog"/>
+<Minigame name="metroidvania" map="guid:0efedf80b1bc41639e55f62b4dd7ab27" entry="SceneSwitch" portalSlot="14" save="Allowed" features="Metroidvania" inputContexts="Movement,Metroidvania" catalogs="MetroidvaniaCatalog"/>

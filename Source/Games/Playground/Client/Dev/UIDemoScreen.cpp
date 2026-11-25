@@ -1,46 +1,20 @@
 /**
  * @file UIDemoScreen.cpp
- * @brief 개발용 UI 테스트 화면입니다(`-gv_uiDemo=1`). 텍스트, 버튼 다섯 개, 슬라이더, 체크, 진행 막대, 콤보, 입력 필드를 한 패널에 띄웁니다.
+ * @brief 개발용 UI 견본 화면의 스위치입니다(`-gv_uiDemo=1`). 화면은 문서(벤치 설정의 `_uiDemoDocument` — `uidemo.ui.xml`)이고, 여기서는 열고 닫기만 합니다.
  */
 #include "pch.h"
 
-#include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Memory/Memory.h"
 
-#include "Engine/UI/Layout/BoxPanel.h"
-#include "Engine/UI/Layout/CanvasPanel.h"
-#include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Screen/UIScreenSwitch.h"
 #include "Engine/UI/Service/UINotificationService.h"
 #include "Engine/UI/UISystem.h"
-#include "Engine/UI/Widgets/BorderPanel.h"
-#include "Engine/UI/Widgets/ButtonWidget.h"
-#include "Engine/UI/Widgets/CheckBoxWidget.h"
-#include "Engine/UI/Widgets/ComboBoxWidget.h"
-#include "Engine/UI/Widgets/ImageWidget.h"
-#include "Engine/UI/Widgets/SliderWidget.h"
-#include "Engine/UI/Widgets/TextInputWidget.h"
-#include "Engine/UI/Widgets/TextWidget.h"
 
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
-namespace sw
-{
-    /**
-     * @struct UIDemoScreen
-     * @brief 코드로 만든 위젯 트리가 게임 창에 보이는지(네 백엔드 스크린샷)와 패드로 포커스가 옮겨지는지 확인하는 화면입니다. 에셋 없이 동작합니다(이미지 없음).
-     * @details 아래 화면 스위치(`SW_UI_SCREEN_SWITCH`)가 `gv_uiDemo` 를 보고 열고 닫는다(`UISystem::update` 가 돌린다). 열 때 입력 방식을 탐색으로 두어 첫 버튼에 포커스 테두리가 보인다.
-     */
-    struct UIDemoScreen
-    {
-        /** @brief 테스트 화면을 만듭니다(Menu 레이어, 게임 정지 없음, 기본 포커스는 첫 버튼). */
-        static unique_ptr<UIScreen> create();
-    };
-} // namespace sw
+#include "Games/Playground/Client/Dev/StressTestSceneSettings.h"
 
 SW_TEST_GLOBAL_VARIABLE( bool, gv_uiDemo, false,
                          "UI 테스트 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)" );
@@ -51,118 +25,28 @@ namespace sw
     {
         struct UIDemoScreenInternal
         {
-            /** @brief 패널 크기(UI 단위)입니다. */
-            static constexpr float32 kPanelWidth  = 560.0f;
-            static constexpr float32 kPanelHeight = 720.0f;
-            /** @brief 그리기 샘플 칸 하나의 크기(UI 단위)입니다. */
-            static constexpr float32 kSampleWidth  = 96.0f;
-            static constexpr float32 kSampleHeight = 48.0f;
-
-            static unique_ptr<TextWidget> makeText( string_view text, float32 fontSize, const float4& color, bool bRichText = false )
-            {
-                unique_ptr<TextWidget> widget = make_unique<TextWidget>();
-                TextLayoutStyle        style  = widget->getTextStyle();
-                style._fontSize               = fontSize;
-                widget->setTextStyle( style );
-                widget->setColor( color );
-                widget->setRichText( bRichText );
-                widget->setText( text );
-                return widget;
-            }
-
-            static void setHeight( Widget& widget, float32 height )
-            {
-                WidgetLayoutSlot slot = widget.getLayoutSlot();
-                slot._heightOverride  = height;
-                widget.setLayoutSlot( slot );
-            }
-
-            static void setSampleSize( Widget& widget )
-            {
-                WidgetLayoutSlot slot   = widget.getLayoutSlot();
-                slot._widthOverride     = kSampleWidth;
-                slot._heightOverride    = kSampleHeight;
-                slot._verticalAlignment = UIAlignment::Center;
-                widget.setLayoutSlot( slot );
-            }
-
             /**
-             * @brief 그리기 샘플 줄입니다. 둥근 상자(`RoundBox`), 자르기(`ClipBox`, 넓은 빨간 자식을 자릅니다), 9-슬라이스(`NineSlice`), 오른쪽에서 왼쪽 텍스트(`RTLSample`)를 둡니다.
-             * @details `AppUITest` 가 레이아웃 덤프의 이름으로 사각형을 찾아 픽셀을 확인하므로, 이름을 바꾸면 그 테스트도 바꿔야 한다.
+             * @brief 화면 스위치: `gv_uiDemo` 를 따라 견본 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 바꿔 첫 버튼에 포커스 테두리를 보입니다).
+             *        열 수 없으면(설정 · 문서 오류) 스위치를 내려 프레임마다 다시 시도하지 않는다.
              */
-            static unique_ptr<BoxPanel> makeSamples()
-            {
-                unique_ptr<BoxPanel> row = make_unique<BoxPanel>();
-                row->setName( hashed_string( "Samples" ) );
-                row->setSpacing( 12.0f );
-                unique_ptr<BorderPanel> round = make_unique<BorderPanel>();
-                round->setName( hashed_string( "RoundBox" ) );
-                round->setBackground( UIBrush::makeSolid( float4{ 0.2f, 0.75f, 0.3f, 1.0f }, 20.0f ) );
-                setSampleSize( *round );
-                (void)row->addChild( std::move( round ) );
-
-                unique_ptr<CanvasPanel> clip = make_unique<CanvasPanel>();
-                clip->setName( hashed_string( "ClipBox" ) );
-                clip->setClipChildren( true );
-                setSampleSize( *clip );
-                unique_ptr<BorderPanel> overflow = make_unique<BorderPanel>();
-                overflow->setName( hashed_string( "ClipOverflow" ) );
-                overflow->setBackground( UIBrush::makeSolid( float4{ 0.9f, 0.1f, 0.1f, 1.0f } ) );
-                WidgetLayoutSlot overflowSlot = overflow->getLayoutSlot();
-                overflowSlot._offsetMin       = float2{ 0.0f, 0.0f };
-                overflowSlot._offsetMax       = float2{ kSampleWidth * 4.0f, kSampleHeight }; // 상자 밖으로 세 칸 더 나가므로 잘려야 한다
-                overflow->setLayoutSlot( overflowSlot );
-                (void)clip->addChild( std::move( overflow ) );
-                (void)row->addChild( std::move( clip ) );
-
-                unique_ptr<ImageWidget> nineSlice = make_unique<ImageWidget>();
-                nineSlice->setName( hashed_string( "NineSlice" ) );
-                nineSlice->setImagePath( "engine/textures/test/checker.dds" );
-                UIBrush nineSliceBrush          = nineSlice->getBrush();
-                nineSliceBrush._nineSliceMargin = float4{ 0.25f, 0.25f, 0.25f, 0.25f };
-                nineSlice->setBrush( nineSliceBrush );
-                setSampleSize( *nineSlice );
-                (void)row->addChild( std::move( nineSlice ) );
-
-                unique_ptr<TextWidget> rtl = makeText( "\xD7\xA9\xD7\x9C\xD7\x95\xD7\x9D \xD7\xA2\xD7\x95\xD7\x9C\xD7\x9D", 20.0f, float4{ 1.0f, 1.0f, 1.0f, 1.0f } ); // "שלום עולם"
-                rtl->setName( hashed_string( "RTLSample" ) );
-                WidgetLayoutSlot rtlSlot   = rtl->getLayoutSlot();
-                rtlSlot._verticalAlignment = UIAlignment::Center;
-                rtl->setLayoutSlot( rtlSlot );
-                (void)row->addChild( std::move( rtl ) );
-                return row;
-            }
-
-            static void addLabeled( BoxPanel& column, string_view label, unique_ptr<Widget> control )
-            {
-                unique_ptr<BoxPanel> row = make_unique<BoxPanel>();
-                row->setSpacing( 12.0f );
-                unique_ptr<TextWidget> text     = makeText( label, 18.0f, float4{ 0.8f, 0.83f, 0.9f, 1.0f } );
-                WidgetLayoutSlot       textSlot = text->getLayoutSlot();
-                textSlot._widthOverride         = 140.0f;
-                textSlot._verticalAlignment     = UIAlignment::Center;
-                text->setLayoutSlot( textSlot );
-                (void)row->addChild( std::move( text ) );
-                WidgetLayoutSlot controlSlot   = control->getLayoutSlot();
-                controlSlot._sizeRule          = UISizeRule::Fill;
-                controlSlot._verticalAlignment = UIAlignment::Center;
-                control->setLayoutSlot( controlSlot );
-                (void)row->addChild( std::move( control ) );
-                (void)column.addChild( std::move( row ) );
-            }
-
-            /** @brief 화면 스위치: `gv_uiDemo` 를 따라 견본 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 바꿔 첫 버튼에 포커스 테두리를 보입니다). */
             static UIScreenHandle syncSwitch( UISystem& uiSystem, UIScreenHandle current )
             {
-                const bool bOpen = current != kInvalidUIScreenHandle && uiSystem.findScreen( current ) != nullptr;
+                UIScreen* const pCurrent = uiSystem.findScreen( current );
+                const bool      bOpen    = pCurrent != nullptr;
                 if ( gv_uiDemo == bOpen )
                     return current;
                 if ( bOpen )
                 {
-                    uiSystem.closeScreen( current );
+                    pCurrent->close();
                     return kInvalidUIScreenHandle;
                 }
-                const UIScreenHandle screen = uiSystem.pushScreen( UIDemoScreen::create() );
+                StressTestSceneSettings settings{};
+                const UIScreenHandle    screen = StressTestSceneSettings::loadForGame( settings ) ? uiSystem.openScreen( settings._uiDemoDocument.path() ) : kInvalidUIScreenHandle;
+                if ( screen == kInvalidUIScreenHandle )
+                {
+                    gv_uiDemo = false;
+                    return kInvalidUIScreenHandle;
+                }
                 uiSystem.setInputMode( UIInputMode::Navigation );
                 // 알림과 액션 글리프도 함께 보인다(오버레이 레이어, 스크린샷 확인용).
                 UINotificationDef hint{};
@@ -179,81 +63,4 @@ namespace sw
 namespace sw
 {
     SW_UI_SCREEN_SWITCH( UIDemo, "UIDemo", 0, &UIDemoScreenInternal::syncSwitch );
-
-    unique_ptr<UIScreen> UIDemoScreen::create()
-    {
-        using Internal                = UIDemoScreenInternal;
-        unique_ptr<CanvasPanel> root  = make_unique<CanvasPanel>();
-        unique_ptr<BorderPanel> panel = make_unique<BorderPanel>();
-        panel->setName( hashed_string( "DemoPanel" ) );
-        UIBrush brush      = UIBrush::makeSolid( float4{ 0.07f, 0.08f, 0.11f, 0.92f }, 16.0f );
-        brush._borderColor = float4{ 0.95f, 0.75f, 0.2f, 1.0f };
-        brush._borderWidth = 2.0f;
-        panel->setBackground( brush );
-        panel->setShadow( float4{ 0.0f, 0.0f, 0.0f, 0.6f }, 12.0f, float2{ 6.0f, 8.0f } );
-        panel->setContentPadding( float4{ 28.0f, 24.0f, 28.0f, 24.0f } );
-        WidgetLayoutSlot panelSlot = panel->getLayoutSlot();
-        panelSlot._anchorMin       = float2{ 0.5f, 0.5f };
-        panelSlot._anchorMax       = float2{ 0.5f, 0.5f };
-        panelSlot._offsetMin       = float2{ -Internal::kPanelWidth * 0.5f, -Internal::kPanelHeight * 0.5f };
-        panelSlot._offsetMax       = float2{ Internal::kPanelWidth * 0.5f, Internal::kPanelHeight * 0.5f };
-        panel->setLayoutSlot( panelSlot );
-
-        unique_ptr<BoxPanel> column = make_unique<BoxPanel>();
-        column->setOrientation( UIOrientation::Vertical );
-        column->setSpacing( 10.0f );
-        (void)column->addChild( Internal::makeText( "UI Demo", 36.0f, float4{ 1.0f, 0.85f, 0.3f, 1.0f } ) );
-        (void)column->addChild( Internal::makeText( "Retained widget tree: layout, paint cache, focus and navigation. Arrow keys or the gamepad move the focus.",
-                                                    18.0f, float4{ 0.85f, 0.87f, 0.92f, 1.0f } ) );
-        (void)column->addChild( Internal::makeText( "[b]Bold[/b] [i]italic[/i] [color=#ffcc33ff]colored[/color] [size=1.4]bigger[/size]", 20.0f,
-                                                    float4{ 1.0f, 1.0f, 1.0f, 1.0f }, true ) );
-
-        const utf8* const arrButton[] = { "Start", "Continue", "Options", "Credits", "Quit" };
-        for ( const utf8* pLabel : arrButton )
-        {
-            unique_ptr<ButtonWidget> button = make_unique<ButtonWidget>();
-            button->setName( hashed_string( pLabel ) );
-            if ( pLabel == arrButton[0] )
-                button->setStyleClass( "primary" ); // 주 버튼이며 테마의 강조색을 쓴다(AppUITest 가 가운데 색을 확인한다)
-            Internal::setHeight( *button, 44.0f );
-            unique_ptr<TextWidget> label     = Internal::makeText( pLabel, 20.0f, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
-            WidgetLayoutSlot       labelSlot = label->getLayoutSlot();
-            labelSlot._verticalAlignment     = UIAlignment::Center;
-            label->setLayoutSlot( labelSlot );
-            (void)button->addChild( std::move( label ) );
-            (void)column->addChild( std::move( button ) );
-        }
-
-        unique_ptr<SliderWidget> slider = make_unique<SliderWidget>();
-        slider->setName( hashed_string( "VolumeSlider" ) ); // 시나리오 web/dominput 이 탭 순서를 이름으로 본다(아래 체크 · 콤보도)
-        slider->setRange( 0.0f, 100.0f, 5.0f );
-        slider->setValue( 65.0f );
-        Internal::addLabeled( *column, "Volume", std::move( slider ) );
-        unique_ptr<CheckBoxWidget> check = make_unique<CheckBoxWidget>();
-        check->setName( hashed_string( "VSyncCheck" ) );
-        check->setChecked( true );
-        (void)check->addChild( Internal::makeText( "V-Sync", 18.0f, float4{ 1.0f, 1.0f, 1.0f, 1.0f } ) );
-        Internal::addLabeled( *column, "Display", std::move( check ) );
-        unique_ptr<ProgressBarWidget> progress = make_unique<ProgressBarWidget>();
-        progress->setPercent( 0.6f );
-        Internal::addLabeled( *column, "Loading", std::move( progress ) );
-        unique_ptr<ComboBoxWidget> combo = make_unique<ComboBoxWidget>();
-        combo->setName( hashed_string( "QualityCombo" ) );
-        combo->setOptions( vector<string>{ "Low", "Medium", "High", "Epic" } );
-        combo->setSelectedIndex( 2 );
-        Internal::addLabeled( *column, "Quality", std::move( combo ) );
-        unique_ptr<TextInputWidget> input = make_unique<TextInputWidget>();
-        input->setName( hashed_string( "NameInput" ) ); // 시나리오 textinput 이 포커스 이름으로 찾는다
-        input->setHintText( "Player name" );
-        Internal::addLabeled( *column, "Name", std::move( input ) );
-        (void)column->addChild( Internal::makeSamples() );
-
-        (void)panel->addChild( std::move( column ) );
-        (void)root->addChild( std::move( panel ) );
-
-        UIScreenDef desc{};
-        desc._layer        = UILayer::Menu;
-        desc._defaultFocus = hashed_string( "Start" );
-        return sw::make_unique<UIScreen>( desc, std::move( root ) );
-    }
 } // namespace sw

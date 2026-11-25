@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
+#include "Core/Event/EventType.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
@@ -21,6 +21,54 @@
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
 #include "GameFramework/Runtime/Foundation/Grid/FacingDirection.h"
+
+namespace sw
+{
+    /** @brief 액션 룸을 클리어했음을 알립니다(`ActionRoom` 에서 마지막 적이 쓰러진 프레임에 냅니다). */
+    struct SW_KIT_API RoomClearedEvent final : EventBase
+    {
+        string                 _mapPath;           ///< 클리어한 맵
+        uint8                  _bBossDefeated : 1; ///< 보스 처치 여부
+        [[maybe_unused]] uint8 _reserved      : 7;
+
+        /** @brief 보스 미처치와 예약 비트를 0으로 초기화합니다. */
+        RoomClearedEvent() noexcept
+            : _bBossDefeated{ SW_FALSE }
+            , _reserved{ 0 } {}
+
+        SW_DECLARE_GAMEPLAY_EVENT( RoomClearedEvent );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 액션 룸에서 플레이어가 패배했음을 알립니다(`ActionRoom::onPlayerDefeated`). */
+    struct SW_KIT_API PlayerDefeatedInRoomEvent final : EventBase
+    {
+        string _returnMapPath; ///< 복귀할 오버월드 맵
+        SW_DECLARE_GAMEPLAY_EVENT( PlayerDefeatedInRoomEvent );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 클리어 게이트의 잠금이 바뀌었음을 알립니다(`ActionRoom` 에서 전투를 시작할 때 닫히고, 클리어하거나 패배하면 열립니다). */
+    struct SW_KIT_API ClearGateStateChangedEvent final : EventBase
+    {
+        string                 _zoneID;         ///< 존 ID
+        uint8                  _bLocked    : 1; ///< 잠김 여부
+        uint8                  _bTriggered : 1; ///< 방에 들어서면 닫히는 트리거인지
+        [[maybe_unused]] uint8 _reserved   : 6;
+
+        /** @brief 열림, 비트리거, 예약 비트로 초기화합니다. */
+        ClearGateStateChangedEvent() noexcept
+            : _bLocked{ SW_FALSE }
+            , _bTriggered{ SW_FALSE }
+            , _reserved{ 0 } {}
+
+        SW_DECLARE_GAMEPLAY_EVENT( ClearGateStateChangedEvent );
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -99,16 +147,23 @@ namespace sw
     // 2) ActionRoom: 적과 투사체를 스폰하고, 클리어하면 게이트를 연다
     // ------------------------------------------------------------------------------
     /**
-     * @brief 플레이어 쪽 조절 값입니다. 적의 수치는 몬스터 정의(`MonsterDef`)에 있습니다. 게임이 `setSettings` 로 넘기고, 넘기지 않으면 기본값입니다.
+     * @brief 플레이어 쪽 조절 값입니다. 적의 수치는 몬스터 정의(`MonsterDef`)에 있습니다. 값은 데이터(디렉터의 `_roomSettings`)에 있고 코드에는 기본값이 없다 — 디렉터가 그대로 넘긴다.
      * @details 대시 쿨다운은 `update` 가 넣는 값이자 `getDashFill` 의 분모라 이 칸 하나만 둔다(둘로 두면 게이지가 쿨다운과 어긋난다).
      */
-    struct ActionRoomSettings
+    REFLECT()
+    struct SW_KIT_API ActionRoomSettings
     {
-        float32 _dashCooldownSeconds{ 0.85f };     ///< `getDashFill` 의 분모이기도 하다
-        float32 _dashInvulnerableSeconds{ 0.22f }; ///< 대시가 주는 무적
-        float32 _hitInvulnerableSeconds{ 0.7f };   ///< 맞았을 때의 무적 — 대시 무적보다 길다
-        float32 _attackCooldownSeconds{ 0.28f };
-        float32 _playerAttackDamage{ 34.0f }; ///< 적의 방어(`MonsterDef::_def`)를 뺀 값이 들어간다
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _dashCooldownSeconds{ 0.0f }; ///< `getDashFill` 의 분모이기도 하다
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _dashInvulnerableSeconds{ 0.0f }; ///< 대시가 주는 무적
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _hitInvulnerableSeconds{ 0.0f }; ///< 맞았을 때의 무적 — 대시 무적보다 길다
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _attackCooldownSeconds{ 0.0f };
+        PROPERTY( Required, Min = 0.0 )
+        float32 _playerAttackDamage{ 0.0f }; ///< 적의 방어(`MonsterDef::_def`)를 뺀 값이 들어간다
     };
 } // namespace sw
 
@@ -148,7 +203,7 @@ namespace sw
      *          적의 수치(HP, 반지름, 속도, 닿은 피해, 방어, 사격)는 게임이 게임 서비스로 등록한 `MonsterCatalog` 에서 종 id 로 찾는다. 코드에 내장 정의가 없으므로
      *          카탈로그가 없거나 그 종이 없으면 오류를 남기고 그 적을 세우지 않는다.
      *          싸움을 시작할 때 그 싸움에 나온 종의 정의를 복사해 둔다(싸움 도중 카탈로그가 다시 로드되어도 영향이 없다). 방 배치(어느 종을 어디에 둘지)는 게임이 넘기는 `ActionRoomLayout` 이다.
-     *          적은 오브젝트가 아니라서 `UnitStatsComponent` 를 거치지 않고, 방어 공식만 같다(`DamageMath::applyArmor`).
+     *          적은 오브젝트가 아니라서 어빌리티 시스템을 거치지 않는다 — 룸의 고정 방어 공식(`DamageMath::applyArmor`)으로 계산한다.
      *          적의 탄은 단일 발사체 시뮬레이션(`ProjectileSimulation`)을 룸 평면(x, y, z = 0)에 묶어 돌리고, 플레이어 맞음(무적 · 한 프레임 한 번)만 룸이 본다.
      *          탄 수치는 사격 줄이 가리키는 탄 정의(게임 서비스 `ProjectileCatalog`)다. 몬스터 카탈로그와 같은 길(서비스)로 받고, 종을 처음 세울 때 그 종의 탄을 함께 풀어 둔다.
      */
@@ -157,9 +212,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "AROM" );
-        static constexpr uint32 kStateVersion = 4; ///< 4: 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다), 3: 탄의 정의 이름이 탄 정의 id 다(2 는 비어 있었다)
 
         /** @brief 비활성(None)과 게이트 닫힘 상태로 시작합니다. */
         ActionRoom();
@@ -292,19 +344,19 @@ namespace sw
         AABB playerAttackBox( float32 x, float32 y, FacingDirection facing ) const;
 
     private:
-        ActionRoomSite     _site;
-        ActionRoomSettings _settings;
-        ActionRoomLayout   _layout;
+        SW_TRANSIENT ActionRoomSite     _site;
+        SW_TRANSIENT ActionRoomSettings _settings;
+        SW_TRANSIENT ActionRoomLayout   _layout;
         PROPERTY( RuntimeState )
         ActionRoomKind               _kind;
-        CollisionLayers              _layers;
-        vector<Actor>                _listActor;
-        ProjectileSimulation         _projectiles;
-        vector<MonsterDef>           _listMonsterDef;  ///< 이번 싸움에 나온 종의 정의 복사본(`Actor::_defIndex` 가 가리킨다)
-        vector<vector<ResolvedShot>> _listMonsterShot; ///< `_listMonsterDef` 와 같은 순서로, 그 종의 사격 줄마다 푼 탄(싸움 도중 탄 카탈로그를 다시 읽어도 그대로다)
-        Countdown                    _attackCooldown;
-        Countdown                    _dashCooldown;
-        Countdown                    _invulnerable; ///< 피격 후 무적 시간
+        SW_TRANSIENT CollisionLayers _layers;
+        SW_CODEC_STATE vector<Actor>        _listActor;
+        SW_CODEC_STATE ProjectileSimulation _projectiles;
+        SW_CODEC_STATE vector<MonsterDef> _listMonsterDef;          ///< 이번 싸움에 나온 종의 정의 복사본(`Actor::_defIndex` 가 가리킨다)
+        SW_TRANSIENT vector<vector<ResolvedShot>> _listMonsterShot; ///< `_listMonsterDef` 와 같은 순서로, 그 종의 사격 줄마다 푼 탄(싸움 도중 탄 카탈로그를 다시 읽어도 그대로다)
+        SW_CODEC_STATE Countdown                  _attackCooldown;
+        SW_CODEC_STATE Countdown                  _dashCooldown;
+        SW_CODEC_STATE Countdown                  _invulnerable; ///< 피격 후 무적 시간
         PROPERTY( RuntimeState )
         uint8                  _bCleared : 1;
         [[maybe_unused]] uint8 _reserved : 7;

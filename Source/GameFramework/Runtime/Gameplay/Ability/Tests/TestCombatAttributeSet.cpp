@@ -13,6 +13,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
+#include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
 
 using namespace sw;
 
@@ -48,7 +49,7 @@ namespace
         CombatFixture()
         {
             _pAbilities = _manager.createGameObject( hashed_string( "Fighter" ) )->addComponent<AbilitySystemComponent>();
-            (void)_pAbilities->addAttributeSet<CombatAttributeSet>();
+            (void)_pAbilities->addAttributeSet( test::makeCombatAttributeSet() );
             _hitSubscription   = _pAbilities->registerGameplayEvent( CombatAttributeSet::getHitEventTag(), SW_DELEGATE_LAMBDA( AbilitySystemComponent::AbilityEventDelegate, [this]( const AbilityEventData& event )
               {
                 _listEventTag.push_back( CombatAttributeSet::getHitEventTag() );
@@ -379,4 +380,27 @@ SW_TEST_CASE( CombatAttributeSetTest, LethalHitDiesAndSendsOneFatalCopy )
     CharacterRayHit::deliverHit( *pOwner, hit ); // 쓰러진 뒤의 맞음 — 다시 죽지 않고 치명 사본도 없다
     SW_EXPECT_EQUAL( 1u, fatalCount );
     SW_EXPECT_EQUAL( size_t( 2 ), rig._listEventTag.size() );
+}
+
+/** @brief [CombatAttributeSetTest] 기본 능력치는 데이터다 — 일곱 값 가운데 하나라도 정하지 않은 세트는 붙지 않고, 데이터가 정한 값이 그대로 선다 */
+SW_TEST_CASE( CombatAttributeSetTest, ValuesComeFromTheData )
+{
+    SW_EXPECT_LOG( "AbilitySystemComponent.AttributeValueMissing" );
+    GameObjectManager       manager;
+    AbilitySystemComponent* pAbilities = manager.createGameObject( hashed_string( "Fighter" ) )->addComponent<AbilitySystemComponent>();
+    SW_EXPECT_TRUE( pAbilities->addAttributeSet<CombatAttributeSet>() == nullptr );
+    unique_ptr<AttributeSet> pIncomplete = make_unique<CombatAttributeSet>();
+    for ( const hashed_string& name : vector<hashed_string>( pIncomplete->getUndefinedAttributes() ) )
+    {
+        if ( name != CombatAttributes::armor() )
+            pIncomplete->defineAttribute( name, 1.0f );
+    }
+    SW_EXPECT_EQUAL( size_t( 1 ), pIncomplete->getUndefinedAttributes().size() );
+    SW_EXPECT_TRUE( pAbilities->addAttributeSet( std::move( pIncomplete ) ) == nullptr );
+    SW_EXPECT_FALSE( pAbilities->hasAttribute( CombatAttributes::health() ) );
+
+    unique_ptr<AttributeSet> pComplete = test::makeCombatAttributeSet();
+    pComplete->defineAttribute( CombatAttributes::attackPower(), 17.0f );
+    SW_REQUIRE_NOT_NULL( pAbilities->addAttributeSet( std::move( pComplete ) ) );
+    SW_EXPECT_NEAR( 17.0f, pAbilities->getAttributeValue( CombatAttributes::attackPower() ).value(), 1.0e-5f );
 }

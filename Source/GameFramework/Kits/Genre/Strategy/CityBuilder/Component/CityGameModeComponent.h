@@ -6,10 +6,10 @@
  *          땅을 나누는 다른 키트의 디렉터(RTS 등)는 같은 오브젝트에서 이 디렉터 뒤에 붙는다 — 판을 여는 설정은 이 디렉터의 씬 데이터 하나다.
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -33,8 +33,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "FTCT" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "FTCT" };
 
         CityGameModeComponent();
         virtual ~CityGameModeComponent() override;
@@ -55,7 +54,6 @@ namespace sw
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
         void               collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 빈 도시를 열고 공유 땅을 빌립니다(시작과 복원이 같은 설정으로 연다). 설정이 범위 밖이면 도시가 오류를 남기고 false 입니다. */
@@ -84,12 +82,12 @@ namespace sw
         int32 _roadToX;
         PROPERTY( Category = "Layout", DisplayName = "Road End Y", Min = 0 )
         int32 _roadToY;
-        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (up to the game speed limit)", Min = 1.0, Max = 8.0 )
+        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (up to the game speed limit)", Min = 1.0 )
         float32 _fastTimeScale;
 
         PROPERTY( RuntimeState )
         uint8                  _bLaidOut     : 1;
-        uint8                  _bFastForward : 1; ///< 지금 빨리 감기 명령(`submitFastForward`)
+        SW_TRANSIENT uint8     _bFastForward : 1; ///< 지금 빨리 감기 명령(`submitFastForward`)
         [[maybe_unused]] uint8 _reserved     : 6;
     };
 } // namespace sw

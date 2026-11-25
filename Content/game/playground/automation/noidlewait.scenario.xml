@@ -9,7 +9,7 @@
 	<Launch variable="gv_firstScene" value="game/playground/maps/rendertest3d.scene.xml"/>
 	<WaitRenderStable/> <!-- 시작 렌더가 자리 잡은 뒤의 GPU 대기 수를 기준으로 둔다 -->
 	<Store watch="RHI.GPUIdleWaits" as="beforeLoad"/>
-	<LoadScene path="game/playground/maps/fogshowcase.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:18182025ed2be61069d33dff8765efc9" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

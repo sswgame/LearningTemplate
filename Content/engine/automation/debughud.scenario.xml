@@ -46,7 +46,7 @@
 	<!-- 설정 창(모달) — 열린 동안 활성 화면, B 로 닫는다 -->
 	<DevCommand line="hud window"/>
 	<WaitUntil watch="DebugHUD.WindowOpen" equals="1" timeoutFrames="60"/>
-	<ExpectUI screen="engine/ui/debughud.ui.xml"/>
+	<ExpectUI screen="guid:cdd8d22529869eb376e8fa0b6082b6b5"/>
 	<AdvanceSimulation frames="2"/> <!-- 모달이 열린 프레임 뒤에 B 가 닿는다(프레임 경계) -->
 	<Tap slot="Gamepad.B"/>
 	<WaitUntil watch="DebugHUD.WindowOpen" equals="0" timeoutFrames="60"/>

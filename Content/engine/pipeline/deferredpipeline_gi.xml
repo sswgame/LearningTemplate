@@ -8,7 +8,7 @@
 -->
 <RenderPipelineDesc _base="guid:0aedcbdbe6498f757ed2418be6656a47" _name="DeferredPipelineGI">
 	<_listPass>
-		<RenderGraphPassDesc _name="SSAO" _shaderPath="engine/shaders/gtao.hlsl">
+		<RenderGraphPassDesc _name="SSAO" _shaderPath="guid:f5e2c9d9a4ce22c73185a420d0f8f0e6">
 			<_listPermutation>
 				<item>SW_GTAO_RADIUS=0.6</item>
 				<item>SW_GTAO_SLICES=3</item>
@@ -20,7 +20,7 @@
 		                     _after="SceneDepthCopy"
 		                     _type="ScreenSpaceGI"
 		                     _depthAttachment=""
-		                     _shaderPath="engine/shaders/ssgi.hlsl"
+		                     _shaderPath="guid:0c4b8b798cc42b0e65473503b8c0a6c3"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"

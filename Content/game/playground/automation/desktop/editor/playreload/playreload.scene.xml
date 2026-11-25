@@ -1,5 +1,5 @@
 <?asset guid="5e3ab81b3be843c7a0172094ce7258d6"?>
-<Scene formatVersion="3" name="PlayReload">
+<Scene formatVersion="0" name="PlayReload">
 	<!-- 플레이 중 리로드 시나리오(desktop/editor/playreload)의 무대 — 시나리오가 <Scratch> 사본으로 연다.
 	     확인용 컴포넌트(리로드를 건너야 하는 값 42) · 생존 공포 키트 시연(체력 · 정신력 · 가방 — 카탈로그 demo.horror.xml) · 머티리얼과 텍스처를 쓰는 상자 · 프리팹 인스턴스. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">

@@ -11,6 +11,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/Countdown.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -146,24 +147,24 @@ namespace sw
         PROPERTY( Required, Category = "Avatar", DisplayName = "Look Source Object", Tooltip = "Object name of the rig target the player object is bound to (its camera drives the look-at)" )
         hashed_string _lookSourceObject;
 
-        LocomotionDirectionFilter                    _locomotion;
-        unordered_map<const AnimationClip*, float32> _mapClipFootSpeed; ///< 클립마다 한 번 측정한 레퍼런스 스켈레톤의 발 속도(m/s) — 쓸 때 다리 길이 비를 곱한다
+        SW_TRANSIENT LocomotionDirectionFilter _locomotion;
+        SW_TRANSIENT unordered_map<const AnimationClip*, float32> _mapClipFootSpeed; ///< 클립마다 한 번 측정한 레퍼런스 스켈레톤의 발 속도(m/s) — 쓸 때 다리 길이 비를 곱한다
 
-        float32                _aimWeight;
-        float32                _shootWeight;
-        float32                _hitTimer;
-        float32                _bodyYaw; ///< 몸이 보는 요 — 시점을 각속도 상한으로 따라간다
-        float32                _lastStrideScale;
-        uint32                 _strideAppliedCount;
-        uint32                 _lastHitReaction;
-        float3                 _gunPrevious;       ///< 지난 표본의 몸 무기 위치(몸 공간)
-        float3                 _gunBeforePrevious; ///< 그 앞 표본
-        uint32                 _gunSampleCount;    ///< 이번 걸음의 표본 수(2 차 차분은 셋째부터)
-        float32                _gunJerkMax;        ///< 이번 걸음의 2 차 차분 최댓값(`getGunJerkMax`)
-        ShooterAvatarPose      _replicatedPose;    ///< 남의 몸이면 따르는 자세(`_bReplicated`)
-        uint8                  _bYawReady         : 1;
-        uint8                  _bStrideErrorShown : 1; ///< 노드가 없다는 오류를 한 번만 남긴다
-        uint8                  _bReplicated       : 1; ///< 플레이어 대신 `_replicatedPose` 를 따른다
-        [[maybe_unused]] uint8 _reserved          : 5;
+        SW_TRANSIENT float32           _aimWeight;
+        SW_TRANSIENT float32           _shootWeight;
+        SW_TRANSIENT Countdown         _hitTimer;
+        SW_TRANSIENT float32           _bodyYaw; ///< 몸이 보는 요 — 시점을 각속도 상한으로 따라간다
+        SW_TRANSIENT float32           _lastStrideScale;
+        SW_TRANSIENT uint32            _strideAppliedCount;
+        SW_TRANSIENT uint32            _lastHitReaction;
+        SW_TRANSIENT float3            _gunPrevious;       ///< 지난 표본의 몸 무기 위치(몸 공간)
+        SW_TRANSIENT float3            _gunBeforePrevious; ///< 그 앞 표본
+        SW_TRANSIENT uint32            _gunSampleCount;    ///< 이번 걸음의 표본 수(2 차 차분은 셋째부터)
+        SW_TRANSIENT float32           _gunJerkMax;        ///< 이번 걸음의 2 차 차분 최댓값(`getGunJerkMax`)
+        SW_TRANSIENT ShooterAvatarPose _replicatedPose;    ///< 남의 몸이면 따르는 자세(`_bReplicated`)
+        SW_TRANSIENT uint8             _bYawReady         : 1;
+        SW_TRANSIENT uint8             _bStrideErrorShown : 1; ///< 노드가 없다는 오류를 한 번만 남긴다
+        SW_TRANSIENT uint8             _bReplicated       : 1; ///< 플레이어 대신 `_replicatedPose` 를 따른다
+        [[maybe_unused]] uint8         _reserved          : 5;
     };
 } // namespace sw

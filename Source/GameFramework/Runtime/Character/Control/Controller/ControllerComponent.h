@@ -130,12 +130,14 @@ namespace sw
         PROPERTY( Category = "Control", DisplayName = "Possess At Start", Tooltip = "Object whose pawn this controller takes when play starts" )
         GameObjectHandle _possessAtStart;
 
-        TComponentHandle<PawnComponent> _pawn; ///< 쥔 폰 컴포넌트
-        float32                         _controlYaw;
-        float32                         _controlPitch;
-        uint32                          _inputPeer; ///< 의도가 오는 연결(0 = 로컬)
-        uint8                           _bSwitchingPawn  : 1;
-        uint8                           _bSpawnedForPawn : 1; ///< 자동 빙의가 폰 하나를 위해 세웠다(폰과 함께 지운다)
-        [[maybe_unused]] uint8          _reserved        : 6;
+        SW_TRANSIENT TComponentHandle<PawnComponent> _pawn; ///< 쥔 폰 컴포넌트
+        PROPERTY( RuntimeState )
+        float32 _controlYaw;
+        PROPERTY( RuntimeState )
+        float32                _controlPitch;
+        SW_TRANSIENT uint32    _inputPeer; ///< 의도가 오는 연결(0 = 로컬)
+        SW_TRANSIENT uint8     _bSwitchingPawn  : 1;
+        SW_TRANSIENT uint8     _bSpawnedForPawn : 1; ///< 자동 빙의가 폰 하나를 위해 세웠다(폰과 함께 지운다)
+        [[maybe_unused]] uint8 _reserved        : 6;
     };
 } // namespace sw

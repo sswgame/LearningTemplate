@@ -1,5 +1,5 @@
 <?asset guid="7d738a1880e5b2df260d1294b782fd4e"?>
-<Scene formatVersion="3" name="RhythmStage">
+<Scene formatVersion="0" name="RhythmStage">
 	<!-- 리듬 한 곡 — 채보는 rhythm/data/stage1.chart.xml, 음악은 common/music 의 CC0 곡(rhythm/data/stage1.music.xml). 레인 · 노트는 뷰가 원시 도형 프리팹으로 세운다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
@@ -53,12 +53,25 @@
 					<RhythmGameModeComponent _localID="8629025867396012359" _componentName="RhythmGameModeComponent" _bActive="true"
 					                         _chart="guid:e62d0ddecee57cae7b2d0a05e358e799"
 					                         _clock="Music"
-					                         _missLifeDelta="-4"
-					                         _maxLife="100"
 					                         _resultHoldSeconds="3"
-					                         _clearReward="30" />
+					                         _clearReward="30">
+						<_playSettings _failedRank="F" _missLifeDelta="-4" _maxLife="100" _initialLife="100" _comboBonusPerCombo="0" _comboBonusCap="100" _globalOffset="0" _scrollMode="ConstantSpeed">
+							<_listWindow>
+								<RhythmJudgeWindow _grade="Cool" _width="0.045" _score="300" _lifeDelta="1" _bBreaksCombo="false" />
+								<RhythmJudgeWindow _grade="Good" _width="0.09" _score="150" _lifeDelta="0" _bBreaksCombo="false" />
+								<RhythmJudgeWindow _grade="Bad" _width="0.14" _score="50" _lifeDelta="-2" _bBreaksCombo="true" />
+							</_listWindow>
+							<_listRank>
+								<RhythmRankThreshold _rank="S" _minAccuracy="95" />
+								<RhythmRankThreshold _rank="A" _minAccuracy="90" />
+								<RhythmRankThreshold _rank="B" _minAccuracy="80" />
+								<RhythmRankThreshold _rank="C" _minAccuracy="70" />
+								<RhythmRankThreshold _rank="D" _minAccuracy="0" />
+							</_listRank>
+						</_playSettings>
+					</RhythmGameModeComponent>
 					<RhythmViewComponent _localID="5675568754244570621" _componentName="RhythmViewComponent" _bActive="true"
-					                     _music="game/playground/rhythm/data/stage1.music.xml"
+					                     _music="guid:987d6cf72602b158423bdce5fabf78e3"
 					                     _notePrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5"
 					                     _laneWidth="1.2"
 					                     _hiSpeed="8"

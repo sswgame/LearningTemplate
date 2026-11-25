@@ -8,7 +8,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -73,9 +72,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32  kStateTag     = FourCCUtil::make( "APCR" );
-        static constexpr uint32  kStateVersion = 3;            ///< 3: 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
-        static constexpr float32 kFrameTime    = 1.0f / 60.0f; ///< 한 프레임의 시간(탄과 총에 쓴다)
+        static constexpr float32 kFrameTime = 1.0f / 60.0f; ///< 한 프레임의 시간(탄과 총에 쓴다)
 
         ActionPlatformerCombatSimulation();
 
@@ -134,13 +131,13 @@ namespace sw
         void               pushEvent( ActionPlatformerCombatEventKind type, const hashed_string& id, int32 value );
 
     private:
-        const ActionPlatformerCatalog*                  _pCatalog;
-        const MoveCatalog*                              _pMoves;
-        const ActionComboDef*                           _pCombo;
-        MoveTimeline                                    _timeline;
-        WeaponState                                     _gun;
-        ProjectileSimulation                            _projectiles;
-        NotificationBuffer<ActionPlatformerCombatEvent> _eventBuffer;
+        const ActionPlatformerCatalog*      _pCatalog;
+        const MoveCatalog*                  _pMoves;
+        const ActionComboDef*               _pCombo;
+        SW_CODEC_STATE MoveTimeline         _timeline;
+        SW_CODEC_STATE WeaponState          _gun;
+        SW_CODEC_STATE ProjectileSimulation _projectiles;
+        SW_TRANSIENT NotificationBuffer<ActionPlatformerCombatEvent> _eventBuffer;
         PROPERTY( RuntimeState, Min = -1 )
         int32 _comboIndex; ///< 지금 기술의 콤보 인덱스(−1이면 쉬는 중)
         PROPERTY( RuntimeState, Min = 0 )
@@ -148,7 +145,7 @@ namespace sw
         PROPERTY( RuntimeState, Min = 0 )
         int32 _parryFrames;
         PROPERTY( RuntimeState, Min = 0 )
-        int32 _hitstopFrames;
-        uint8 _bGunEquipped;
+        int32                _hitstopFrames;
+        SW_CODEC_STATE uint8 _bGunEquipped;
     };
 } // namespace sw

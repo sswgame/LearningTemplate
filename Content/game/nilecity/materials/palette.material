@@ -3,6 +3,6 @@
 <!-- Kenney City Kit (Suburban) 모델의 팔레트 머티리얼 — _albedoMap 이 키트의 색 칸 텍스처다(모델 UV 가 칸을 고른다). 도로 · 건물 모델이 이 하나를 나눠 쓰고, 건물 종류 색은 디렉터가 만든 인스턴스가 곱한다. -->
 <MaterialDef formatVersion="0" name="NileCityPalette" _base="guid:5634e58d4c5e4c2b50d7902ed885a5cb">
 	<_properties>
-		<item name="_albedoMap" assetPath="game/nilecity/textures/suburban_colormap.dds" />
+		<item name="_albedoMap" assetPath="guid:08e634b51d7c635a2a78c2d56d985e9e" />
 	</_properties>
 </MaterialDef>

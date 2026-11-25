@@ -11,7 +11,7 @@
 	<Launch variable="gv_renderScale" value="1"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="instancecustom_off.ppm"/>
-	<LoadScene path="game/playground/maps/instancecustomdata_changed.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:e34cd4bf51c9aa6ae1719f123dbf2d6c" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

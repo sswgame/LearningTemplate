@@ -32,7 +32,7 @@
 	<ExpectImage file="surfacelibrary_lineup_rain.ppm" golden="lineup_rain"/>
 	<ExpectImage file="surfacelibrary_lineup_snow.ppm" golden="lineup_snow"/>
 
-	<LoadScene path="game/playground/maps/terrainlayers.scene.xml" timeoutFrames="900"/>
+	<LoadScene path="guid:c9b322bcfdc226d632b685fadaf89a25" timeoutFrames="900"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="90"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="90"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

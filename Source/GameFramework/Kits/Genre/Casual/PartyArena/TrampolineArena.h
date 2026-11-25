@@ -12,7 +12,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -57,6 +56,10 @@ namespace sw
         float32 _comboHeightStep{ 0.75f };
         PROPERTY( Min = 0.0 )
         float32 _contactTime{ 0.12f }; ///< 면에 눌려 있는 시간이다. 늦은 판정 창은 이보다 길 수 없다
+        PROPERTY( Min = 0.001, Max = 1.0, Units = s, Tooltip = "A bounce pressed this close to the landing is Perfect" )
+        float32 _perfectWindow{ 0.05f };
+        PROPERTY( Min = 0.001, Max = 1.0, Units = s, Tooltip = "A bounce pressed this close to the landing is Good - not narrower than the Perfect window" )
+        float32 _goodWindow{ 0.1f };
         PROPERTY( Min = 0.0 )
         float32 _spawnHeight{ 3.0f };
         PROPERTY( Min = 0.0 )
@@ -198,18 +201,13 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "PTRA" );
-        static constexpr uint32 kStateVersion = 1;
-
         TrampolineArena();
 
         /**
          * @brief 2~4명으로 라운드를 준비합니다. @p roundTime 이 0 이면 시간 제한이 없고, @p scoreLimit 이 0 이면 점수 제한이 없습니다.
          * @details 사람 수가 범위 밖이거나, 설정이 범위 밖이거나, @p roundTime · @p scoreLimit 가 음수이면 오류를 남기고 false 를 반환합니다(0 으로 올려 받지 않는다).
          */
-        [[nodiscard]] bool initialize( const TrampolineSettings& settings, int32 playerCount, float32 roundTime, int32 scoreLimit, uint32 seed );
-        /** @brief 튕김 판정 창을 정합니다(기본은 Perfect ±0.05, Good ±0.1). 콤보를 깨는 창(`_bBreaksCombo`)은 실패로 칩니다. */
-        void                    setTimingWindows( const vector<TimingWindow>& listWindow ) { _judge.setWindows( listWindow ); }
+        [[nodiscard]] bool      initialize( const TrampolineSettings& settings, int32 playerCount, float32 roundTime, int32 scoreLimit, uint32 seed );
         PartyItemSpawner&       getItemSpawner() { return _itemSpawner; }
         const PartyItemSpawner& getItemSpawner() const { return _itemSpawner; }
         void                    start();
@@ -234,8 +232,10 @@ namespace sw
         /** @brief 이번 라운드 점수를 사람 순서로 반환합니다. */
         void computeRoundScores( vector<int32>& outListScore ) const;
 
-        const TrampolinePlayer*   findPlayer( int32 player ) const;
-        int32                     getPlayerCount() const { return static_cast<int32>( _listPlayer.size() ); }
+        const TrampolinePlayer* findPlayer( int32 player ) const;
+        int32                   getPlayerCount() const { return static_cast<int32>( _listPlayer.size() ); }
+        /** @brief 봇이 맡은 @p player 의 이번 걸음 입력입니다. 무대에 없거나(떨어지는 중 · 부활 대기) 없는 번호면 빈 입력입니다. */
+        TrampolineInput           computeBotInput( int32 player ) const;
         const MatchState&         getMatch() const { return _match; }
         bool                      isRoundOver() const { return _match.getPhase() == MatchPhase::Ended; }
         float32                   getTime() const { return _time; }
@@ -263,13 +263,13 @@ namespace sw
         void               pushEvent( TrampolineEvent::Kind kind, int32 player, optional<int32> other, int32 value );
 
     private:
-        vector<TrampolinePlayer>            _listPlayer;
-        NotificationBuffer<TrampolineEvent> _eventBuffer;
-        TrampolineSettings                  _settings;
-        TimingJudge                         _judge;
-        PartyItemSpawner                    _itemSpawner;
-        MatchState                          _match;
-        FixedStepTimer                      _timer;
+        SW_CODEC_STATE vector<TrampolinePlayer> _listPlayer;
+        SW_TRANSIENT NotificationBuffer<TrampolineEvent> _eventBuffer;
+        SW_TRANSIENT TrampolineSettings                  _settings;
+        SW_TRANSIENT TimingJudge                         _judge;
+        SW_CODEC_STATE PartyItemSpawner                  _itemSpawner;
+        SW_CODEC_STATE MatchState                        _match;
+        SW_CODEC_STATE FixedStepTimer                    _timer;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _time;
     };

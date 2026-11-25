@@ -20,6 +20,7 @@ namespace sw
         , _fieldWidth{ 4 }
         , _fieldHeight{ 2 }
         , _startingGold{ 20 }
+        , _speedRange{}
         , _fastTimeScale{ 8.0f }
         , _pCropCatalog{}
         , _field{}
@@ -34,31 +35,26 @@ namespace sw
 
     void FarmPlotGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         if ( io.isOk() == false )
             return;
-        FarmField restoredField;
-        if ( io.isReading() )
-        {
-            if ( io.check( _pCropCatalog != nullptr ) == false )
-                return;
-            restoredField.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
-        }
-        FarmField& field = io.isWriting() ? _field : restoredField;
-        io.section( FarmField::kStateTag, FarmField::kStateVersion, [&field]( StateIO& bodyIO )
-        { bodyIO.value( field ); } );
+        io.section( FarmField::kStateFormat, [this]( StateIO& bodyIO )
+        { (void)bodyIO.valueOpened( _field, [this]( FarmField& field )
+          {
+              if ( _pCropCatalog == nullptr )
+                  return false;
+              field.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
+              return true;
+          } ); } ); // 실패는 아카이브에 남는다
         io.end();
         if ( io.isReading() && io.isOk() )
-        {
-            _field = std::move( restoredField );
             ++_fieldRevision;
-        }
     }
 
     bool FarmPlotGameModeComponent::startGame()
     {
-        if ( acquireRequired( _cropDataPath, _pCropCatalog ) == false )
-            return false;
+        if ( acquireRequired( _cropDataPath, _pCropCatalog ) == false || _speed.initialize( _speedRange ) == false )
+            return false; // 까닭은 남았다
         if ( _pCropCatalog->findCrop( _crop.key() ) == nullptr )
         {
             SW_LOG_ERROR_ID( "FarmPlot.CropUnknown", "[FarmPlot] the field cannot start - crop '%#' is not in the crop catalog", _crop.c_str() );
@@ -174,12 +170,5 @@ namespace sw
         const CropDef* const pCrop = _pCropCatalog->findCrop( _crop.key() ); // 판을 열 때 보았다 — 다시 읽은 카탈로그가 지웠으면 심지 않는다
         if ( pCrop != nullptr )
             (void)_field.plant( x, y, pCrop->_seedItem, season );
-    }
-
-    void FarmPlotGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트 모듈(`FarmPlotViewComponent`)이 세운다.
-        (void)manager;
-        (void)bRespawnViews;
     }
 } // namespace sw

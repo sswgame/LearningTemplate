@@ -1,5 +1,5 @@
 <?asset guid="12d39350b79eb1e5903098fceef6374f"?>
-<Scene formatVersion="3" name="Shooter3D">
+<Scene formatVersion="0" name="Shooter3D">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -610,7 +610,7 @@
 					                          _autoPlayPrefab="guid:db9836711aca7b372e2ebbb9fc0c0eae"
 					                          _player="50"
 					                          _arenaHalfSize="20"
-					                          _pacingProfile="game/playground/shooter3d/data/arena.director.xml"
+					                          _pacingProfile="guid:9d8ded789d178770ce902adcf06cb327"
 					                          _spawnTable="guid:12cb4974b26306129fddf631e4704b55"
 					                          _pacingSeed="1"
 					                          _effectPoolSize="32"
@@ -618,19 +618,19 @@
 					                          _matchDownLimit="3"
 					                          _bAutoPlay="false">
 						<_listEnemyKind>
-							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="guid:487e9f4458a7d6ecf66c371db3a72749" _preset="Trilobite">
+							<ShooterEnemyKind _prefab="guid:487e9f4458a7d6ecf66c371db3a72749" _preset="Trilobite" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="guid:d09c50d9428157b3c1ac9ebde784336d" _preset="SkeletonMinion">
+							<ShooterEnemyKind _prefab="guid:d09c50d9428157b3c1ac9ebde784336d" _preset="SkeletonMinion" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
 						</_listEnemyKind>

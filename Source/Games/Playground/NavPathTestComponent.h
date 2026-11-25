@@ -52,15 +52,15 @@ namespace sw
         PROPERTY( Category = "Probe", DisplayName = "Target", Tooltip = "Name of the object the probe asks a path to" )
         hashed_string _target;
 
-        SceneNavigation*       _pSceneNavigation; ///< 등록한 씬의 내비게이션(등록 동안)
-        float3                 _origin;           ///< 플레이를 시작한 자리 — 에이전트가 움직여도 질의는 여기서 낸다
-        NavPathTicket          _probe;
-        NavPathTicket          _cancelPending; ///< 다음 프레임에 버릴 질의(그 사이 워커에 넘어간다)
-        float32                _lastPathLength;
-        uint32                 _requestCount;
-        uint32                 _resultCount;
-        uint32                 _cancelLeakCount;
-        uint8                  _bAgentSent : 1; ///< 첫 완전 경로로 에이전트를 대상에 보냈다
-        [[maybe_unused]] uint8 _reserved   : 7;
+        SceneNavigation*           _pSceneNavigation; ///< 등록한 씬의 내비게이션(등록 동안)
+        SW_TRANSIENT float3        _origin;           ///< 플레이를 시작한 자리 — 에이전트가 움직여도 질의는 여기서 낸다
+        SW_TRANSIENT NavPathTicket _probe;
+        SW_TRANSIENT NavPathTicket _cancelPending; ///< 다음 프레임에 버릴 질의(그 사이 워커에 넘어간다)
+        SW_TRANSIENT float32       _lastPathLength;
+        SW_TRANSIENT uint32        _requestCount;
+        SW_TRANSIENT uint32        _resultCount;
+        SW_TRANSIENT uint32        _cancelLeakCount;
+        SW_TRANSIENT uint8         _bAgentSent : 1; ///< 첫 완전 경로로 에이전트를 대상에 보냈다
+        [[maybe_unused]] uint8     _reserved   : 7;
     };
 } // namespace sw

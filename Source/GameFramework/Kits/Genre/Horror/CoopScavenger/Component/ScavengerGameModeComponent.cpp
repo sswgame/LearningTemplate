@@ -3,13 +3,13 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Component/ScavengerGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -21,9 +21,8 @@ namespace sw
     {
         struct ScavengerGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "SCGM" );
-            static constexpr uint32 kStateVersion = 1;
-            static constexpr int32  kPlayer       = 0; ///< 늘 사람이 잡는 승무원(카메라 · 감시 값의 주인)
+            static constexpr FormatDef kStateFormat{ "SCGM" };
+            static constexpr int32     kPlayer = 0; ///< 늘 사람이 잡는 승무원(카메라 · 감시 값의 주인)
             /** @brief 축 방향과 이웃 방향이 이만큼은 맞아야 그 이웃으로 본다(내적). */
             static constexpr float32 kNeighborAlignment = 0.5f;
             static constexpr float32 kPercent           = 100.0f;
@@ -100,9 +99,6 @@ namespace sw
                 }
                 return nullptr;
             }
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
         };
     } // namespace
 
@@ -137,7 +133,6 @@ namespace sw
         , _threatStepSeconds{ 2.0f }
         , _threatLifeSeconds{ 60.0f }
         , _threatDamage{ 25.0f }
-        , _resultHoldSeconds{ 3.0f }
         , _pCatalog{}
         , _pThreatTable{}
         , _pShopCatalog{}
@@ -150,7 +145,6 @@ namespace sw
         , _listCommand{}
         , _listStep{}
         , _listEvent{}
-        , _resultHold{}
         , _listThreat{}
         , _humanMask{ 0 }
         , _result{ ScavengerResult::Ongoing }
@@ -211,7 +205,6 @@ namespace sw
         updateClock();
         _listCommand.assign( static_cast<size_t>( _crewCount ), ScavengerCommand{} );
         _listStep.assign( static_cast<size_t>( _crewCount ), Countdown{} );
-        _resultHold.clear();
         return true;
     }
 
@@ -222,10 +215,8 @@ namespace sw
 
     void ScavengerGameModeComponent::onStateRestored( bool bRestored )
     {
-        if ( bRestored )
-            return;
-        SW_LOG_WARNING_ID( "Scavenger.StateRefused", "[Scavenger] the saved expedition does not fit this build - a new expedition opens" );
-        (void)openGame(); // 새 판도 열지 못하면 startGame 이 이유를 남겼다
+        if ( bRestored == false )
+            SW_LOG_WARNING_ID( "Scavenger.StateRefused", "[Scavenger] the saved expedition does not fit this build - the current expedition goes on" );
     }
 
     bool ScavengerGameModeComponent::submitCrewCommand( int32 player, const ScavengerCommand& command )
@@ -495,17 +486,8 @@ namespace sw
         { return threat._lifeRemaining <= 0.0f; } );
     }
 
-    void ScavengerGameModeComponent::updateGame( float32 deltaTime )
+    void ScavengerGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _result != ScavengerResult::Ongoing )
-        {
-            using Internal = ScavengerGameModeComponentInternal;
-            if ( _resultHold.update( deltaTime ) )
-                (void)finishMinigame( hashed_string( _result == ScavengerResult::Win ? Internal::kWinResult : Internal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-            return;
-        }
         for ( int32 player = 0; player < _expedition.getCrewCount(); ++player )
         {
             const ScavengerCommand command              = isHuman( player ) ? _listCommand[static_cast<size_t>( player )] : decideBot( player );
@@ -583,7 +565,7 @@ namespace sw
         }
         if ( _result == ScavengerResult::Ongoing )
             return;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( _result == ScavengerResult::Win ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( _result == ScavengerResult::Win ? ScavengerGameModeComponentInternal::kEventWon : ScavengerGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "Scavenger.Ended", "[Scavenger] %# - credits %#", _result == ScavengerResult::Win ? "quota met" : "quota missed", getCredits() );
     }
@@ -652,20 +634,13 @@ namespace sw
         return static_cast<int32>( MathUtil::round( ( value > 0.0f ? value : 1.0f ) * ScavengerGameModeComponentInternal::kPercent ) );
     }
 
-    void ScavengerGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`ScavengerAvatarComponent`)이 읽어 그린다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void ScavengerGameModeComponent::serializeGameState( StateIO& io )
     {
         using Internal = ScavengerGameModeComponentInternal;
-        io.header( Internal::kStateTag, Internal::kStateVersion );
+        io.header( Internal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        // 원정은 지갑 · 깃발 · 창고를 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 원정에 바로 읽고, 거절되면 `onStateRestored` 가 새 판을 연다.
+        // 원정은 지갑 · 깃발 · 창고를 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 원정에 바로 읽는다(거절되면 베이스가 앞 상태로 되돌린다).
         if ( io.isReading() && ( _pCatalog == nullptr || openExpedition() == false ) )
         {
             SW_LOG_ERROR_ID( "Scavenger.StateNeedsCatalog", "Scavenger game mode: state read before the catalog is bound - refused" );
@@ -680,7 +655,6 @@ namespace sw
         {
             io.value( step );
         }
-        io.value( _resultHold );
         io.end();
     }
 } // namespace sw

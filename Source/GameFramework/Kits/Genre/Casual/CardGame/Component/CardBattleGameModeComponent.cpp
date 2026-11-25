@@ -2,13 +2,11 @@
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/Component/CardBattleGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
-
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -17,21 +15,7 @@ namespace sw
     {
         struct CardBattleGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "CBGM" );
-            static constexpr uint32 kStateVersion = 1;
-
-            /** @brief 상태 칸 판 1 → 2: 결과 유지 깃발을 뺀다 — 끝난 걸음에 `Countdown` 을 걸고 다 된 걸음에 한 번 끝내는 길은 깃발 없이 선다(다른 디렉터와 같은 꼴). */
-            [[nodiscard]] static bool dropHoldFlags( Archive& inOldBody, Archive& outNewBody )
-            {
-                uint8 bResultShown     = 0;
-                uint8 bFinishRequested = 0;
-                inOldBody >> bResultShown >> bFinishRequested;
-                (void)outNewBody; // 남은 칸이 없다 — 읽지 않은 꼬리(손 본문)는 그대로 붙는다
-                return inOldBody.isOk();
-            }
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
+            static constexpr FormatDef kStateFormat{ "CBGM" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventPlay    = "CardBattlePlay";
@@ -55,16 +39,13 @@ namespace sw
     CardBattleGameModeComponent::CardBattleGameModeComponent()
         : _deckID{}
         , _enemyID{}
-        , _playerHP{ 50 }
-        , _energyPerTurn{ 3 }
-        , _drawPerTurn{ 5 }
+        , _battleSettings{}
         , _seed{ GameRandom::kDefaultSeed }
         , _autoPlayInterval{ 0.5f }
-        , _resultHoldSeconds{ 3.0f }
         , _winReward{ 0 }
         , _pCatalog{}
         , _battle{}
-        , _timer{}
+        , _autoPlayTimer{}
     {
     }
 
@@ -79,14 +60,10 @@ namespace sw
             SW_LOG_ERROR_ID( "CardBattle.DeckOrEnemyMissing", "Card battle game mode: deck '%#' or enemy '%#' is not in the catalog - the battle does not open", _deckID.c_str(), _enemyID.c_str() );
             return false;
         }
-        CardBattleSettings settings;
-        settings._playerHP      = _playerHP;
-        settings._energyPerTurn = _energyPerTurn;
-        settings._drawPerTurn   = _drawPerTurn;
         CardBattleEnemy enemy;
         enemy._listIntent = pEnemy->_listIntent;
         enemy._hp         = pEnemy->_hp;
-        if ( outBattle.initialize( *_pCatalog, settings, pDeck->_listCard, enemy, _seed ) )
+        if ( outBattle.initialize( *_pCatalog, _battleSettings, pDeck->_listCard, enemy, _seed ) )
             return true;
         SW_LOG_ERROR_ID( "CardBattle.DeckNotOpened", "Card battle game mode: deck '%#' has no card or an unknown one - the battle does not open", _deckID.c_str() );
         return false;
@@ -100,7 +77,7 @@ namespace sw
         if ( openBattle( battle ) == false )
             return false;
         _battle = std::move( battle );
-        _timer.start( _autoPlayInterval );
+        _autoPlayTimer.start( _autoPlayInterval );
         return true;
     }
 
@@ -192,29 +169,19 @@ namespace sw
         // 부르는 곳은 모두 플레이어 차례에 한 수를 둔 바로 뒤다(`isAwaitingCommand` · `updateGame` 의 차례 갈래) — 차례가 끝난 수에서 한 번만 여기를 지난다.
         if ( _battle.getPhase() == CardBattlePhase::PlayerTurn )
             return;
-        _timer.start( _resultHoldSeconds );
+        endMatch( hashed_string( _battle.getPhase() == CardBattlePhase::Won ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( _battle.getPhase() == CardBattlePhase::Won ? CardBattleGameModeComponentInternal::kEventWon : CardBattleGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "CardBattle.Finished", "[CardBattle] %# on turn %# with %# HP left", _battle.getPhase() == CardBattlePhase::Won ? "victory" : "defeat", _battle.getTurn(), _battle.getPlayerHP() );
     }
 
-    void CardBattleGameModeComponent::updateGame( float32 deltaTime )
+    void CardBattleGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _battle.getPhase() == CardBattlePhase::PlayerTurn )
+        if ( isAutoPlayOn() && _autoPlayTimer.update( deltaTime ) )
         {
-            if ( isAutoPlayOn() && _timer.update( deltaTime ) )
-            {
-                stepAutoPlay();
-                _timer.start( _autoPlayInterval );
-                settle();
-            }
-            return;
+            stepAutoPlay();
+            _autoPlayTimer.start( _autoPlayInterval );
+            settle();
         }
-        if ( _timer.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
-            return;
-        const bool bWon = _battle.getPhase() == CardBattlePhase::Won;
-        (void)finishMinigame( hashed_string( bWon ? CardBattleGameModeComponentInternal::kWinResult : CardBattleGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
     }
 
     void CardBattleGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
@@ -223,34 +190,16 @@ namespace sw
             addMoneyResult( outListValue, _winReward );
     }
 
-    void CardBattleGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`CardBattleViewComponent`)이 읽어 보인다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void CardBattleGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( CardBattleGameModeComponentInternal::kStateTag, CardBattleGameModeComponentInternal::kStateVersion );
+        io.header( CardBattleGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 전투는 같은 카탈로그 · 같은 덱으로 연 뒤에 읽는다(키트 계약).
-        CardBattle restoredBattle;
-        Countdown  timer = _timer;
-        if ( io.isReading() && io.check( _pCatalog != nullptr && openBattle( restoredBattle ) ) == false )
+        if ( io.valueOpened( _battle, [this]( CardBattle& battle )
+        { return _pCatalog != nullptr && openBattle( battle ); } ) == false )
             return;
-        io.value( io.isWriting() ? _battle : restoredBattle );
-        io.value( timer );
+        io.value( _autoPlayTimer );
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _battle = std::move( restoredBattle );
-        _timer  = timer;
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_TYPE_VERSION_PATCH( cardBattleGameModeState1To2, "sw::CardBattleGameModeComponent", 1, 2, &CardBattleGameModeComponentInternal::dropHoldFlags );
 } // namespace sw

@@ -212,17 +212,17 @@ namespace sw
         PROPERTY( Category = "Body", Tooltip = "Draw the pose interpolated between the last two physics steps" )
         bool _bInterpolate;
 
-        RigidBodySocketPhysics               _socketPhysics;
+        SW_TRANSIENT RigidBodySocketPhysics  _socketPhysics;
         PhysicsBodyPage<PhysicsDimension3D>* _pPosePage;    ///< 강체 칸이 든 페이지 — 바디 핸들 · 스텝 자세 · 속도 · 명령(`PhysicsPoseStore`)
-        uint32                               _poseSlot;     ///< 강체 칸 번호
-        PhysicsFieldSample                   _pendingField; ///< 이번 게임 프레임에 모인 물리 필드 — 명령과 같은 칸 잠금(`PhysicsBodyPage::_arrCommandLock`) 아래다
-        PhysicsFieldSample                   _frameField;   ///< 이번 물리 프레임의 필드(`onPhysicsFrameBegin` 이 옮긴다)
-        float3                               _worldScale;   ///< 트랜스폼에서 마지막으로 읽은 월드 배율(변경 번호가 같으면 그대로다)
-        float3                               _kinematicStartPosition;
-        float3                               _kinematicTargetPosition;
-        quaternion                           _kinematicStartRotation;
-        quaternion                           _kinematicTargetRotation;
-        PhysicsBodyType                      _appliedBodyType;  ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
-        bool                                 _bRestPoseWritten; ///< 잠든 자세를 트랜스폼에 이미 썼다 — 깨기 전까지 다시 쓰지 않는다
+        SW_TRANSIENT uint32                  _poseSlot;     ///< 강체 칸 번호
+        SW_TRANSIENT PhysicsFieldSample      _pendingField; ///< 이번 게임 프레임에 모인 물리 필드 — 명령과 같은 칸 잠금(`PhysicsBodyPage::_arrCommandLock`) 아래다
+        SW_TRANSIENT PhysicsFieldSample      _frameField;   ///< 이번 물리 프레임의 필드(`onPhysicsFrameBegin` 이 옮긴다)
+        SW_TRANSIENT float3                  _worldScale;   ///< 트랜스폼에서 마지막으로 읽은 월드 배율(변경 번호가 같으면 그대로다)
+        SW_TRANSIENT float3                  _kinematicStartPosition;
+        SW_TRANSIENT float3                  _kinematicTargetPosition;
+        SW_TRANSIENT quaternion              _kinematicStartRotation;
+        SW_TRANSIENT quaternion              _kinematicTargetRotation;
+        SW_TRANSIENT PhysicsBodyType         _appliedBodyType;  ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
+        SW_TRANSIENT bool                    _bRestPoseWritten; ///< 잠든 자세를 트랜스폼에 이미 썼다 — 깨기 전까지 다시 쓰지 않는다
     };
 } // namespace sw

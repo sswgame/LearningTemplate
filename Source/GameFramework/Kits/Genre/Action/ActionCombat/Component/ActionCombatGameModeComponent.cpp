@@ -2,10 +2,9 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/ActionCombatGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
-
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
@@ -17,12 +16,9 @@ namespace sw
     {
         struct ActionCombatGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "KDAC" );
-            static constexpr uint32 kStateVersion = 3; ///< 2: 탄의 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다). 3: 결과 보여 주기 시간(`_resultHold`)
+            static constexpr FormatDef kStateFormat{ "KDAC" };
 
-            static constexpr const utf8* kHealValue  = "heal"; ///< 승리 결과 값 이름 — 허브 캐릭터의 보상 표(`MinigameRewardComponent`)가 같은 이름을 적는다
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
+            static constexpr const utf8* kHealValue = "heal"; ///< 승리 결과 값 이름 — 허브 캐릭터의 보상 표(`MinigameRewardComponent`)가 같은 이름을 적는다
 
             /** @brief 축 입력이 이보다 작으면 바라보는 쪽을 바꾸지 않는다(패드 스틱의 떨림). */
             static constexpr float32 kFacingDeadZone = 0.2f;
@@ -45,11 +41,10 @@ namespace sw
         , _playerMaxHP{ 100 }
         , _playerSpeed{ 4.0f }
         , _bossDelaySeconds{ 1.0f }
-        , _resultHoldSeconds{ 3.0f }
         , _victoryHeal{ 25 }
+        , _roomSettings{}
         , _room{}
         , _bossDelay{}
-        , _resultHold{}
         , _playerPosition{ 0.0f, 0.0f }
         , _facing{ FacingDirection::Right }
         , _playerHP{ 100 }
@@ -90,12 +85,12 @@ namespace sw
         ActionRoomLayout layout;
         if ( makeLayout( layout ) == false )
             return false;
+        _room.setSettings( _roomSettings );
         _room.setLayout( layout );
         _room.beginHall(); // 종이 카탈로그에 없으면 룸이 오류를 남기고 그 적을 세우지 않는다 — 시나리오의 첫 Alive 판정이 진다
         _facing   = FacingDirection::Right;
         _playerHP = _playerMaxHP;
         _bossDelay.clear();
-        _resultHold.clear();
         _commandMove   = float2{ 0.0f, 0.0f };
         _bAttackQueued = SW_FALSE;
         _bDashQueued   = SW_FALSE;
@@ -149,7 +144,7 @@ namespace sw
         {
             _room.onPlayerDefeated();
             _phase = ActionCombatPhase::Defeat;
-            _resultHold.start( _resultHoldSeconds );
+            endMatch( hashed_string( kLoseResult ) );
             SW_LOG_INFO_ID( "ActionCombat.Defeat", "[ActionCombat] the player fell" );
             return;
         }
@@ -163,24 +158,12 @@ namespace sw
             return;
         }
         _phase = ActionCombatPhase::Victory;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( kWinResult ) );
         SW_LOG_INFO_ID( "ActionCombat.Victory", "[ActionCombat] boss defeated (%#) with %# HP left", result._bBossDefeated == SW_TRUE ? "boss" : "room", _playerHP );
     }
 
-    void ActionCombatGameModeComponent::updateGame( float32 deltaTime )
+    void ActionCombatGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        const bool bFinished = _phase == ActionCombatPhase::Victory || _phase == ActionCombatPhase::Defeat;
-        if ( bFinished )
-        {
-            if ( _resultHold.update( deltaTime ) )
-            {
-                const bool bWon = _phase == ActionCombatPhase::Victory;
-                (void)finishMinigame( hashed_string( bWon ? ActionCombatGameModeComponentInternal::kWinResult : ActionCombatGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-            }
-            return;
-        }
         const ActionRoomFrameInput input = consumeInput( deltaTime );
         if ( _phase == ActionCombatPhase::BossWait )
         {
@@ -195,13 +178,6 @@ namespace sw
         applyResult( _room.update( deltaTime, input ) );
     }
 
-    void ActionCombatGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트 모듈의 디버그 그리기뿐이라 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void ActionCombatGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
     {
         if ( _phase != ActionCombatPhase::Victory || _victoryHeal <= 0 )
@@ -211,31 +187,23 @@ namespace sw
 
     void ActionCombatGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( ActionCombatGameModeComponentInternal::kStateTag, ActionCombatGameModeComponentInternal::kStateVersion );
+        io.header( ActionCombatGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        ActionRoom restoredRoom;
-        if ( io.isReading() )
+        const bool bRoom = io.valueOpened( _room, [this]( ActionRoom& room )
         {
             ActionRoomLayout layout;
-            if ( io.check( makeLayout( layout ) ) == false )
-                return;
-            restoredRoom.setLayout( layout );
-        }
-        io.value( io.isWriting() ? _room : restoredRoom );
-        // 자리 · HP · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 손 본문은 룸 · 보스 지연 · 결과 보여 주기(`Countdown`) · 방향(리플렉션 열거가 아니다)만.
-        Countdown       bossDelay  = _bossDelay;
-        Countdown       resultHold = _resultHold;
-        FacingDirection facing     = _facing;
-        io.value( bossDelay );
-        io.value( resultHold );
-        io.enumValue( facing, FacingDirection::Up );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
+            if ( makeLayout( layout ) == false )
+                return false;
+            room.setSettings( _roomSettings );
+            room.setLayout( layout );
+            return true;
+        } );
+        if ( bRoom == false )
             return;
-        _room       = std::move( restoredRoom );
-        _bossDelay  = bossDelay;
-        _resultHold = resultHold;
-        _facing     = facing;
+        // 자리 · HP · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 손 본문은 룸 · 보스 지연 · 방향(리플렉션 열거가 아니다)만.
+        io.value( _bossDelay );
+        io.enumValue( _facing, FacingDirection::Up );
+        io.end();
     }
 } // namespace sw

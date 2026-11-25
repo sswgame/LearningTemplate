@@ -3,12 +3,12 @@
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/Component/RestaurantGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -19,11 +19,8 @@ namespace sw
     {
         struct RestaurantGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "RSGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 평판
+            static constexpr FormatDef kStateFormat{ "RSGM" };
 
-            static constexpr const utf8* kWinResult      = "win";
-            static constexpr const utf8* kLoseResult     = "lose";
             static constexpr const utf8* kCookName       = "cook"; ///< 직원 이름(레벨 오름 알림의 id)
             static constexpr const utf8* kServerName     = "server";
             static constexpr float32     kMinutesPerHour = 60.0f;
@@ -119,7 +116,6 @@ namespace sw
         , _minutesPerSecond{ 10.0f }
         , _dayCount{ 2 }
         , _targetProfit{ 100 }
-        , _resultHoldSeconds{ 3.0f }
         , _pCatalog{}
         , _pRecipes{}
         , _pShops{}
@@ -131,7 +127,6 @@ namespace sw
         , _pantry{}
         , _simulation{}
         , _listEvent{}
-        , _resultHold{}
         , _totalProfit{ 0 }
         , _day{ 1 }
         , _phase{ RestaurantPhase::Prepare }
@@ -179,7 +174,6 @@ namespace sw
         {
             (void)_simulation.hireStaff( hashed_string( RestaurantGameModeComponentInternal::kServerName ), StaffRole::Server, _dailyWage );
         }
-        _resultHold.clear();
         return true;
     }
 
@@ -296,7 +290,7 @@ namespace sw
             getSoundQueue().queueEvent( RestaurantGameModeComponentInternal::kEventClose );
             return;
         }
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( _targetProfit <= _totalProfit ? kWinResult : kLoseResult ) );
         if ( _targetProfit <= _totalProfit )
         {
             _phase = RestaurantPhase::Victory;
@@ -326,30 +320,14 @@ namespace sw
         }
     }
 
-    void RestaurantGameModeComponent::updateGame( float32 deltaTime )
+    void RestaurantGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f || _phase == RestaurantPhase::Prepare || _phase == RestaurantPhase::Closed )
+        if ( _phase != RestaurantPhase::Open )
             return; // 준비 · 결산은 명령이 진행한다
-        if ( _phase == RestaurantPhase::Open )
-        {
-            _simulation.update( deltaTime * _minutesPerSecond );
-            reportEvents();
-            if ( isDayOver() )
-                closeDay();
-            return;
-        }
-        if ( _resultHold.update( deltaTime ) )
-        {
-            const bool bWon = _phase == RestaurantPhase::Victory;
-            (void)finishMinigame( hashed_string( bWon ? RestaurantGameModeComponentInternal::kWinResult : RestaurantGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-        }
-    }
-
-    void RestaurantGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`RestaurantCounterComponent`)이 읽어 그린다.
-        (void)manager;
-        (void)bRespawnViews;
+        _simulation.update( deltaTime * _minutesPerSecond );
+        reportEvents();
+        if ( isDayOver() )
+            closeDay();
     }
 
     void RestaurantGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
@@ -359,43 +337,34 @@ namespace sw
 
     void RestaurantGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( RestaurantGameModeComponentInternal::kStateTag, RestaurantGameModeComponentInternal::kStateVersion );
+        io.header( RestaurantGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        // 날 · 이익 합 · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 식당은 같은 카탈로그 · 설정으로 연 뒤에 읽는다(키트 계약).
-        Wallet               restoredWallet;
-        Inventory            restoredPantry;
-        ReputationState      restoredReputation;
-        WorldClock           restoredClock = _clock; // 설정은 이 판의 것이다
-        RestaurantSimulation restoredSimulation;
-        Countdown            resultHold = _resultHold;
-        if ( io.isReading() )
+        // 날 · 이익 합 · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 식당은 같은 카탈로그 · 설정으로 연 뒤에 읽는다(키트 계약) — 빌리는 지갑 · 창고 · 평판을 먼저 읽는다.
+        if ( io.isReading() && ( _pCatalog == nullptr || _pRecipes == nullptr || _pShops == nullptr || _pItemCatalog == nullptr ) )
         {
-            if ( _pCatalog == nullptr || _pRecipes == nullptr || _pShops == nullptr || _pItemCatalog == nullptr || restoredPantry.initialize( *_pItemCatalog, _pantrySlotCount ) == false )
-            {
-                SW_LOG_ERROR_ID( "Restaurant.StateNeedsCatalog", "Restaurant game mode: state read before the restaurant, recipe, shop and item catalogs are loaded - refused" );
-                io.fail();
-                return;
-            }
-            restoredReputation.initialize( RestaurantGameModeComponentInternal::getReputationCatalog( _pReputationCatalog.get() ) );
-            initializeSimulation( restoredSimulation ); // 빌린 지갑 · 창고 · 평판은 이 디렉터의 칸이다 — 읽는 동안은 건드리지 않는다
+            SW_LOG_ERROR_ID( "Restaurant.StateNeedsCatalog", "Restaurant game mode: state read before the restaurant, recipe, shop and item catalogs are loaded - refused" );
+            io.fail();
+            return;
         }
-        io.value( io.isWriting() ? _wallet : restoredWallet );
-        io.value( io.isWriting() ? _pantry : restoredPantry );
-        io.value( io.isWriting() ? _reputation : restoredReputation );
-        io.value( restoredClock );
-        io.value( io.isWriting() ? _simulation : restoredSimulation );
-        io.value( resultHold );
+        io.value( _wallet );
+        const bool bBorrowed = io.valueOpened( _pantry, [this]( Inventory& pantry )
+        { return pantry.initialize( *_pItemCatalog, _pantrySlotCount ); } ) &&
+                               io.valueOpened( _reputation, [this]( ReputationState& reputation )
+        {
+            reputation.initialize( RestaurantGameModeComponentInternal::getReputationCatalog( _pReputationCatalog.get() ) );
+            return true;
+        } );
+        if ( bBorrowed == false )
+            return;
+        io.value( _clock ); // 설정은 이 판의 것이다
+        if ( io.valueOpened( _simulation, [this]( RestaurantSimulation& simulation )
+        {
+            initializeSimulation( simulation );
+            return true;
+        } ) == false )
+            return;
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        if ( io.check( _day <= _dayCount && ( _phase == RestaurantPhase::Open ) == restoredSimulation.isOpen() ) == false )
-            return;
-        _wallet     = std::move( restoredWallet );
-        _pantry     = std::move( restoredPantry );
-        _reputation = std::move( restoredReputation );
-        _clock      = restoredClock;
-        _simulation = std::move( restoredSimulation );
-        _resultHold = resultHold;
+        io.check( io.isWriting() || ( _day <= _dayCount && ( _phase == RestaurantPhase::Open ) == _simulation.isOpen() ) );
     }
 } // namespace sw

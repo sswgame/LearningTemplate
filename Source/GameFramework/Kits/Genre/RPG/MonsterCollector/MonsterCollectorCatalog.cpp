@@ -101,9 +101,9 @@ namespace sw
         if ( stat == MonsterStat::HP || _raised == _lowered )
             return 100;
         if ( stat == _raised )
-            return 110;
+            return _raisedPercent;
         if ( stat == _lowered )
-            return 90;
+            return _loweredPercent;
         return 100;
     }
 

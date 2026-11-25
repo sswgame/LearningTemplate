@@ -26,7 +26,7 @@ namespace sw
         /** @brief 에디터 메타데이터(`ReflectionEditorMetadata.h`)입니다. 타입을 등록할 때 `TypeRegistry` 가 붙이고, 없으면(배포 · 적은 것 없음) nullptr 입니다. 읽기는 `getEditor` 로. */
         const TypeEditorMetadata* _pEditor;
         /**
-         * @brief `REFLECT( Version = N )` 의 저장 판입니다. 0 이면 적지 않은 것이고 판은 1 이다 — 읽기는 `getVersion` 으로.
+         * @brief `REFLECT( Version = N )` 의 저장 판입니다. 적지 않으면 첫 판(0)이다.
          * @details 판은 타입 한 곳에 둔다(ezEngine 의 타입 판 · 언리얼 `FCustomVersion` 자리). 이 타입을 싣는 그릇(상태 바이트 · 서비스 레코드)은 그릇마다 판을 따로 두지 않고
          *          이 값을 머리에 싣고, 옛 판은 이 타입에 등록한 패치 사슬(`SW_TYPE_VERSION_PATCH`)이 올린다.
          */
@@ -43,8 +43,8 @@ namespace sw
 
         TypeMetadata() noexcept;
 
-        /** @brief 타입의 저장 판입니다. `REFLECT( Version )` 를 적지 않았으면 1 입니다. */
-        uint32 getVersion() const noexcept { return _version != 0 ? _version : 1u; }
+        /** @brief 타입의 저장 판입니다. `REFLECT( Version )` 를 적지 않았으면 첫 판(0)입니다. */
+        uint32 getVersion() const noexcept { return _version; }
 
         /** @brief 에디터 메타데이터입니다. 붙지 않았으면 기본값(`TypeEditorMetadata::getDefault`)입니다. */
         const TypeEditorMetadata& getEditor() const noexcept;
@@ -91,7 +91,7 @@ namespace sw
          *          런타임 경고가 아니라 컴파일 오류다(언리얼 메타 `DefaultValue` 는 글이라 로드 때에야 드러난다). C++ 멤버 초기화자와는 별개다.
          */
         PropertyDefaultApplyFunction _pApplyDefault;
-        /** @brief 소프트 에셋의 타입 힌트입니다(`PROPERTY( AssetPath )`, `AssetType = "Texture"`). */
+        /** @brief 에셋 칸의 대상 종류입니다(파서가 `AssetRef<T>` 칸에 적는다). */
         string _assetType;
         /** @brief `CatalogKey<T>` 칸의 항목 종류 이름 `T` 입니다(파서가 적는다). 참조 표(`DataCatalogReferenceRules`)의 `<CatalogKey tag>` 로 카탈로그를 찾는다. 아니면 빈 글이다. */
         string _catalogKeyTag;

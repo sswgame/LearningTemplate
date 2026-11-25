@@ -122,16 +122,16 @@ namespace sw
         PROPERTY( Category = "Orientation", DisplayName = "Bones", Tooltip = "Bones turned around the character up axis and their share" )
         vector<LocomotionOrientationBone> _listOrientationBone;
 
-        LocomotionWarpingBinding _binding;
-        Subscription             _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        SkeletalMeshComponent*   _pSkeletalMesh;       ///< 같은 오브젝트의 유닛(일을 건 곳 — 유닛이 사라지면 알려 준다)
-        float3                   _previousPosition;
-        SceneTeleportCursor      _teleport;
-        float3                   _measuredVelocity;
-        float32                  _orientationAngle;
-        float32                  _strideScale;
-        float32                  _lastDeltaSeconds;
-        bool                     _bHasPrevious;
-        bool                     _bPlayRateHeld; ///< 재생 속도를 다른 쪽(페어드 애니메이션 세션)이 쥐었다
+        SW_TRANSIENT LocomotionWarpingBinding _binding;
+        Subscription                          _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        SkeletalMeshComponent*                _pSkeletalMesh;       ///< 같은 오브젝트의 유닛(일을 건 곳 — 유닛이 사라지면 알려 준다)
+        SW_TRANSIENT float3                   _previousPosition;
+        SW_TRANSIENT SceneTeleportCursor      _teleport;
+        SW_TRANSIENT float3                   _measuredVelocity;
+        SW_TRANSIENT float32                  _orientationAngle;
+        SW_TRANSIENT float32                  _strideScale;
+        SW_TRANSIENT float32                  _lastDeltaSeconds;
+        SW_TRANSIENT bool                     _bHasPrevious;
+        SW_TRANSIENT bool                     _bPlayRateHeld; ///< 재생 속도를 다른 쪽(페어드 애니메이션 세션)이 쥐었다
     };
 } // namespace sw

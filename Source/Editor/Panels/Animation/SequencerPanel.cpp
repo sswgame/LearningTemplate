@@ -128,7 +128,7 @@ namespace sw::editor
             {  SequenceItemField::Prefab,   "Prefab",   ".prefab.xml",   "sequencer.item.prefab"},
             {  SequenceItemField::Preset,   "Preset",         nullptr,   "sequencer.item.preset"},
             {SequenceItemField::Scenario, "Scenario", ".scenario.xml", "sequencer.item.scenario"},
-            {    SequenceItemField::Clip,     "Clip",     ".animclip",     "sequencer.item.clip"},
+            {    SequenceItemField::Clip,     "Clip",         nullptr,     "sequencer.item.clip"},
             {   SequenceItemField::Sound,    "Sound",         nullptr,    "sequencer.item.sound"},
             {    SequenceItemField::Text,     "Text",         nullptr,     "sequencer.item.text"},
         };

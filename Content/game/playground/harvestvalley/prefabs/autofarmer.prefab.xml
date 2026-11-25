@@ -1,5 +1,5 @@
 <?asset guid="d364a28c2d0555ef306c1a5c42fbae52"?>
-<Prefab formatVersion="1" name="FarmAutoFarmer">
+<Prefab formatVersion="0" name="FarmAutoFarmer">
 	<GameObject _schemaVersion="0" _name="FarmAutoFarmer" _bActive="true">
 		<_listComponent>
 			<FarmAutoFarmerAIComponent _localID="11352697028849582381" _componentName="FarmAutoFarmerAIComponent"

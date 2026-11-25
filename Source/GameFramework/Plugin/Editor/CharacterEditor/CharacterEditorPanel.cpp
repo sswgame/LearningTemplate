@@ -13,6 +13,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -21,6 +22,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
@@ -48,16 +50,24 @@ namespace sw::editor
             static constexpr float32 kPreviewHeight        = 260.0f; ///< 미리보기 뷰포트 높이(96 DPI 픽셀)
             static constexpr float32 kCustomizationReserve = 150.0f; ///< 꾸미기 머리글이 펼쳐졌을 때 뷰포트 아래에 남기는 높이(머리글 + 슬라이더 몇 줄, 96 DPI 픽셀)
             static constexpr float32 kUVDragSpeed          = 0.002f; ///< 체액 경로 점을 끄는 빠르기(UV)
-            static constexpr uint32  kMaxWrinkleMask       = 7;      ///< 주름 마스크 채널의 끝 번호(0..7)
-            static constexpr float32 kMaxGravityScale      = 2.0f;   ///< 지글 중력 배율 슬라이더 끝
-            static constexpr float32 kMaxSwingDegrees      = 90.0f;  ///< 지글 흔들림 각 슬라이더 끝(도)
-            static constexpr float32 kMaxImpulseScale      = 4.0f;   ///< 지글 충격 배율 슬라이더 끝
-            static constexpr float32 kMaxWrinkleWeight     = 2.0f;   ///< 주름 세기 · 표정 무게 슬라이더 끝
-            static constexpr float32 kMaxFluidValue        = 10.0f;  ///< 체액 흐름 값(초당 줄기 · 빠르기 · 반지름) 끌기 끝
             static constexpr float32 kFillWidth            = -1.0f;  ///< ImGui 다음 칸 폭 "남은 폭 모두"
 
             /** @brief 입력칸 글 버퍼입니다(별칭 · 묶음 — 그리기마다 데이터 값으로 채우고 놓을 때 쓴다). */
             using TextBuffer = fixed_string<constant::buffer::kMax128>;
+
+            /**
+             * @brief 데이터 형식 @p TDef 의 칸 @p pProperty 가 받는 범위(`PROPERTY( Min · Max )`)입니다. 이 패널의 슬라이더 칸은 모두 양 끝을 적는다.
+             * @details 파일을 읽는 쪽이 같은 범위로 거절하므로 에디터가 따로 정하지 않는다.
+             */
+            template <typename TDef>
+            static InspectorNumericRange getDataRange( const utf8* pProperty )
+            {
+                const PropertyInfo* const pInfo = TDef::StaticType()->findPropertyInHierarchy( hashed_string( pProperty ) );
+                SW_ASSERT( pInfo != nullptr );
+                const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( *pInfo, ObjectAddress{ nullptr } );
+                SW_ASSERT( range._bHasClampMin && range._bHasClampMax );
+                return range;
+            }
 
             /** @brief 데이터 속성 글의 수입니다. 읽지 못하면(빈 칸) 0 입니다 — 고치는 칸이 0 에서 시작한다. */
             static float32 readFloat( const string& text )
@@ -890,22 +900,23 @@ namespace sw::editor
             struct JiggleField
             {
                 const utf8* _pAttribute;
+                const utf8* _pProperty;
                 float32     _value;
-                float32     _max;
             };
             const JiggleField arrField[] = {
-                {      "stiffness",          params._stiffness,                       1.0f},
-                {        "damping",            params._damping,                       1.0f},
-                {   "gravityScale",       params._gravityScale, Internal::kMaxGravityScale},
-                {"maxSwingDegrees", params._maxSwing.degrees(), Internal::kMaxSwingDegrees},
-                {   "impulseScale",       params._impulseScale, Internal::kMaxImpulseScale}
+                {      "stiffness",    "_stiffness",          params._stiffness},
+                {        "damping",      "_damping",            params._damping},
+                {   "gravityScale", "_gravityScale",       params._gravityScale},
+                {"maxSwingDegrees",     "_maxSwing", params._maxSwing.degrees()},
+                {   "impulseScale", "_impulseScale",       params._impulseScale}
             };
             for ( const JiggleField& field : arrField )
             {
-                float32 value = field._value;
+                const InspectorNumericRange range = Internal::getDataRange<RigJiggleGroupParams>( field._pProperty );
+                float32                     value = field._value;
                 ImGui::PushID( field._pAttribute );
                 EditorWidgets::drawPropertyRowLabel( field._pAttribute ); // 이름은 데이터 칸 이름이다(파일과 같은 철자)
-                const bool bChanged = EditorWidgets::sliderFloat( SW_WIDGET_ID( "##value" ), &value, 0.0f, field._max );
+                const bool bChanged = EditorWidgets::sliderFloat( SW_WIDGET_ID( "##value" ), &value, static_cast<float32>( range._clampMin ), static_cast<float32>( range._clampMax ) );
                 ImGui::PopID();
                 if ( bChanged )
                     (void)BodyCustomizationViewModel::setJiggleValue( profiles, state._bodyProfile, params._group, field._pAttribute, value, true );
@@ -919,9 +930,12 @@ namespace sw::editor
 
         // 주름 — 표정이 주름 마스크 채널을 얼마나 켜는지.
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "Wrinkles" ) );
-        float32 intensity = state._wrinkleIntensity;
+        const InspectorNumericRange intensityRange = Internal::getDataRange<CharacterBodyProfileDef>( "_wrinkleIntensity" );
+        const InspectorNumericRange maskRange      = Internal::getDataRange<WrinkleRegionDef>( "_mask" );
+        const InspectorNumericRange weightRange    = Internal::getDataRange<WrinkleSourceDef>( "_weight" );
+        float32                     intensity      = state._wrinkleIntensity;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "WrinkleIntensity" ) );
-        if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##wrinkleIntensity" ), &intensity, 0.0f, Internal::kMaxWrinkleWeight ) )
+        if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##wrinkleIntensity" ), &intensity, static_cast<float32>( intensityRange._clampMin ), static_cast<float32>( intensityRange._clampMax ) ) )
             (void)BodyCustomizationViewModel::setWrinkleIntensity( profiles, state._bodyProfile, intensity, true );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             profiles.endContinuousEdit();
@@ -933,14 +947,14 @@ namespace sw::editor
             ImGui::SameLine();
             int32 mask = static_cast<int32>( region._mask );
             EditorWidgets::drawInlineLabel( "mask" ); // 데이터 칸 이름
-            if ( EditorWidgets::sliderInt( SW_WIDGET_ID( "##mask" ), &mask, 0, static_cast<int32>( Internal::kMaxWrinkleMask ) ) )
+            if ( EditorWidgets::sliderInt( SW_WIDGET_ID( "##mask" ), &mask, static_cast<int32>( maskRange._clampMin ), static_cast<int32>( maskRange._clampMax ) ) )
                 (void)BodyCustomizationViewModel::setWrinkleMask( profiles, state._bodyProfile, region._region, static_cast<uint32>( mask ) );
             for ( const WrinkleSourceDef& source : region._listSource )
             {
                 float32 weight = source._weight;
                 ImGui::PushID( source._expression.c_str() );
                 EditorWidgets::drawPropertyRowLabel( source._expression.c_str() ); // 표정 이름은 데이터 이름이다
-                const bool bWeightChanged = EditorWidgets::sliderFloat( SW_WIDGET_ID( "##weight" ), &weight, 0.0f, Internal::kMaxWrinkleWeight );
+                const bool bWeightChanged = EditorWidgets::sliderFloat( SW_WIDGET_ID( "##weight" ), &weight, static_cast<float32>( weightRange._clampMin ), static_cast<float32>( weightRange._clampMax ) );
                 ImGui::PopID();
                 if ( bWeightChanged )
                     (void)BodyCustomizationViewModel::setWrinkleWeight( profiles, state._bodyProfile, region._region, source._expression, weight, true );
@@ -985,20 +999,22 @@ namespace sw::editor
             struct FluidField
             {
                 const utf8* _pAttribute;
+                const utf8* _pProperty;
                 float32     _value;
                 float32     _speed;
             };
             const FluidField arrField[] = {
-                {"ratePerSecond", row._ratePerSecond,   Internal::kDragSpeed},
-                {        "speed",         row._speed, Internal::kUVDragSpeed},
-                {       "radius",        row._radius, Internal::kUVDragSpeed}
+                {"ratePerSecond", "_ratePerSecond", row._ratePerSecond,   Internal::kDragSpeed},
+                {        "speed",         "_speed",         row._speed, Internal::kUVDragSpeed},
+                {       "radius",        "_radius",        row._radius, Internal::kUVDragSpeed}
             };
             for ( const FluidField& field : arrField )
             {
-                float32 value = field._value;
+                const InspectorNumericRange range = Internal::getDataRange<BodyFluidDef>( field._pProperty );
+                float32                     value = field._value;
                 ImGui::PushID( field._pAttribute );
                 EditorWidgets::drawPropertyRowLabel( field._pAttribute ); // 데이터 칸 이름
-                const bool bValueChanged = EditorWidgets::dragFloat( SW_WIDGET_ID( "##value" ), &value, field._speed, 0.0f, Internal::kMaxFluidValue );
+                const bool bValueChanged = EditorWidgets::dragFloat( SW_WIDGET_ID( "##value" ), &value, field._speed, static_cast<float32>( range._clampMin ), static_cast<float32>( range._clampMax ) );
                 ImGui::PopID();
                 if ( bValueChanged )
                     (void)BodyCustomizationViewModel::setFluidValue( profiles, state._bodyProfile, row._name, field._pAttribute, value, true );

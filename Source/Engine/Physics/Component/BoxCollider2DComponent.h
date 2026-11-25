@@ -148,17 +148,17 @@ namespace sw
         PROPERTY( Category = "Collider", DisplayName = "Is Trigger", Tooltip = "Reports overlaps but does not block - projectiles and attacks ignore it" )
         bool _bTrigger;
 
-        PhysicsBodyHandle _body;              ///< 2D 씬의 센서 바디(시작 전 · 꺼짐이면 무효)
-        float2            _bodyCenter;        ///< 바디에 준 마지막 중심(이번 프레임의 도착점)
-        float2            _bodyHalfExtent;    ///< 바디를 만든 반 크기(바뀌면 다시 만든다)
-        float2            _sweepOrigin;       ///< 다음 물리 프레임의 출발점 — 시작할 때의 자리, 그 뒤로는 지난 프레임의 중심
-        float2            _frameFromCenter;   ///< 이번 물리 프레임의 출발점(순간이동했거나 출발점이 없으면 도착점과 같다)
-        float2            _bodyOffsetPos;     ///< 바디 상자를 잰 때의 `_offsetPos`(세터가 표시를 남기지 않아 값으로 비교한다)
-        float2            _bodyOffsetScale;   ///< 바디 상자를 잰 때의 `_offsetScale`
-        hashed_string     _bodyLayerName;     ///< 바디를 만든 프로필 이름(바뀌면 다시 만든다)
-        uint8             _bodyLayer;         ///< 바디를 만든 프로필의 레이어 번호
-        bool              _bBodyTrigger;      ///< 바디를 만든 트리거 여부
-        bool              _bSweepOriginValid; ///< `_sweepOrigin` 이 있는지(시작 전 · 바디를 놓은 뒤에는 없다 — 다시 켠 콜라이더는 꺼진 자리에서 쓸리지 않는다)
-        uint32            _colliderIndex;     ///< 씬 물리의 콜라이더 목록 자리(`ScenePhysics::registerCollider2D`). 없으면 `kNotRegistered`
+        SW_TRANSIENT PhysicsBodyHandle _body;              ///< 2D 씬의 센서 바디(시작 전 · 꺼짐이면 무효)
+        SW_TRANSIENT float2            _bodyCenter;        ///< 바디에 준 마지막 중심(이번 프레임의 도착점)
+        SW_TRANSIENT float2            _bodyHalfExtent;    ///< 바디를 만든 반 크기(바뀌면 다시 만든다)
+        SW_TRANSIENT float2            _sweepOrigin;       ///< 다음 물리 프레임의 출발점 — 시작할 때의 자리, 그 뒤로는 지난 프레임의 중심
+        SW_TRANSIENT float2            _frameFromCenter;   ///< 이번 물리 프레임의 출발점(순간이동했거나 출발점이 없으면 도착점과 같다)
+        SW_TRANSIENT float2            _bodyOffsetPos;     ///< 바디 상자를 잰 때의 `_offsetPos`(세터가 표시를 남기지 않아 값으로 비교한다)
+        SW_TRANSIENT float2            _bodyOffsetScale;   ///< 바디 상자를 잰 때의 `_offsetScale`
+        SW_TRANSIENT hashed_string     _bodyLayerName;     ///< 바디를 만든 프로필 이름(바뀌면 다시 만든다)
+        SW_TRANSIENT uint8             _bodyLayer;         ///< 바디를 만든 프로필의 레이어 번호
+        SW_TRANSIENT bool              _bBodyTrigger;      ///< 바디를 만든 트리거 여부
+        SW_TRANSIENT bool              _bSweepOriginValid; ///< `_sweepOrigin` 이 있는지(시작 전 · 바디를 놓은 뒤에는 없다 — 다시 켠 콜라이더는 꺼진 자리에서 쓸리지 않는다)
+        SW_TRANSIENT uint32            _colliderIndex;     ///< 씬 물리의 콜라이더 목록 자리(`ScenePhysics::registerCollider2D`). 없으면 `kNotRegistered`
     };
 } // namespace sw

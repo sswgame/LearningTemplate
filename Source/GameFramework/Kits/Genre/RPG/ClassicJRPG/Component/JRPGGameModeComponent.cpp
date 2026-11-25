@@ -2,13 +2,13 @@
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/Component/JRPGGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -21,11 +21,7 @@ namespace sw
     {
         struct JRPGGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "JRGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 가방 · 타이밍
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
+            static constexpr FormatDef kStateFormat{ "JRGM" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventEncounter     = "JRPGEncounter";
@@ -159,7 +155,6 @@ namespace sw
         , _bagSlotCount{ 8 }
         , _restClass{}
         , _classChangeLevel{ JRPGParty::kClassChangeMinLevel }
-        , _resultHoldSeconds{ 3.0f }
         , _pCatalog{}
         , _pItemCatalog{}
         , _bag{}
@@ -170,7 +165,6 @@ namespace sw
         , _battle{}
         , _listBattleEvent{}
         , _listPartyEvent{}
-        , _resultHold{}
         , _playerPosition{ 0.0f, 0.0f }
         , _commandMove{ 0.0f, 0.0f }
         , _strideProgress{ 0.0f }
@@ -270,8 +264,7 @@ namespace sw
             _wallet.add( Wallet::getDefaultCurrency(), _startGold );
         _walker.initialize( *_pCatalog, _seed );
         _walker.restartGrace(); // 첫 걸음에 조우하지 않는다
-        _battle = JRPGBattle{};
-        _resultHold.clear();
+        _battle         = JRPGBattle{};
         _playerPosition = _startPosition;
         _commandMove    = float2{ 0.0f, 0.0f };
         return true;
@@ -671,7 +664,7 @@ namespace sw
     void JRPGGameModeComponent::finishGame( JRPGGamePhase phase )
     {
         _phase = phase;
-        _resultHold.start( _resultHoldSeconds );
+        endMatch( hashed_string( phase == JRPGGamePhase::Victory ? kWinResult : kLoseResult ) );
         getSoundQueue().queueEvent( phase == JRPGGamePhase::Victory ? JRPGGameModeComponentInternal::kEventWon : JRPGGameModeComponentInternal::kEventLost );
         if ( phase == JRPGGamePhase::Victory )
             SW_LOG_INFO_ID( "JRPG.Victory", "[JRPG] the boss fell in %# rounds", _battle.getRound() );
@@ -679,10 +672,8 @@ namespace sw
             SW_LOG_INFO_ID( "JRPG.Defeat", "[JRPG] the party fell" );
     }
 
-    void JRPGGameModeComponent::updateGame( float32 deltaTime )
+    void JRPGGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
         if ( isAutoPlayOn() )
             updateAutoPlay();
         if ( _phase == JRPGGamePhase::Battle )
@@ -692,16 +683,8 @@ namespace sw
             updateTiming( deltaTime );
             return;
         }
-        if ( _phase == JRPGGamePhase::Explore )
-        {
+        if ( _phase == JRPGGamePhase::Explore ) // 자동 플레이가 이 걸음에 판을 끝냈을 수 있다
             updateExplore( deltaTime );
-            return;
-        }
-        if ( _resultHold.update( deltaTime ) )
-        {
-            const bool bWon = _phase == JRPGGamePhase::Victory;
-            (void)finishMinigame( hashed_string( bWon ? JRPGGameModeComponentInternal::kWinResult : JRPGGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
-        }
     }
 
     void JRPGGameModeComponent::updateAutoPlay()
@@ -737,13 +720,6 @@ namespace sw
         }
     }
 
-    void JRPGGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`JRPGAvatarComponent`)이 읽어 그린다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void JRPGGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
     {
         if ( _phase != JRPGGamePhase::Defeat )
@@ -752,57 +728,59 @@ namespace sw
 
     void JRPGGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( JRPGGameModeComponentInternal::kStateTag, JRPGGameModeComponentInternal::kStateVersion );
+        io.header( JRPGGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 자리 · 걸음 · 명령 멤버 · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 규칙 객체는 같은 카탈로그로 연 뒤에 읽는다(키트 계약).
         // 전투는 전투 중일 때만 싣는다 — 다음 전투는 시작할 때 새로 열고 시드는 연 전투 수가 정한다.
-        Wallet              restoredWallet;
-        Inventory           restoredBag;
-        JRPGParty           restoredParty;
-        JRPGEncounterWalker restoredWalker;
-        JRPGBattle          restoredBattle;
-        Countdown           resultHold = _resultHold;
-        const bool          bInBattle  = isInBattle();
-        if ( io.isReading() )
+        if ( io.isReading() && ( _pCatalog == nullptr || _pItemCatalog == nullptr ) )
         {
-            if ( _pCatalog == nullptr || _pItemCatalog == nullptr )
-            {
-                SW_LOG_ERROR_ID( "JRPG.StateNeedsCatalog", "JRPG game mode: state read before the JRPG and item catalogs are loaded - refused" );
-                io.fail();
-                return;
-            }
-            if ( io.check( restoredBag.initialize( *_pItemCatalog, _bagSlotCount ) ) == false )
-                return;
-            restoredParty.initialize( *_pCatalog, *_pItemCatalog, _bag, _wallet );
-            restoredWalker.initialize( *_pCatalog, _seed );
-            restoredBattle.initialize( *_pCatalog, _judge, _battleSettings, _seed );
-            restoredBattle.bindParty( restoredParty );
+            SW_LOG_ERROR_ID( "JRPG.StateNeedsCatalog", "JRPG game mode: state read before the JRPG and item catalogs are loaded - refused" );
+            io.fail();
+            return;
         }
-        io.value( io.isWriting() ? _wallet : restoredWallet );
-        io.value( io.isWriting() ? _bag : restoredBag );
-        io.value( io.isWriting() ? _party : restoredParty );
-        io.value( io.isWriting() ? _walker : restoredWalker );
+        io.value( _wallet );
+        const bool bRead = io.valueOpened( _bag, [this]( Inventory& bag )
+        { return bag.initialize( *_pItemCatalog, _bagSlotCount ); } ) &&
+                           io.valueOpened( _party, [this]( JRPGParty& party )
+        {
+            party.initialize( *_pCatalog, *_pItemCatalog, _bag, _wallet );
+            return true;
+        } ) && io.valueOpened( _walker, [this]( JRPGEncounterWalker& walker )
+        {
+            walker.initialize( *_pCatalog, _seed );
+            return true;
+        } );
+        if ( bRead == false )
+            return;
+        const bool bInBattle  = isInBattle();
+        const auto openBattle = [this]( JRPGBattle& battle )
+        {
+            battle.initialize( *_pCatalog, _judge, _battleSettings, _seed );
+            battle.bindParty( _party );
+            return true;
+        };
         if ( bInBattle )
-            io.value( io.isWriting() ? _battle : restoredBattle );
-        io.value( resultHold );
+        {
+            if ( io.valueOpened( _battle, openBattle ) == false )
+                return;
+        }
+        else if ( io.isReading() )
+        {
+            JRPGBattle battle;
+            (void)openBattle( battle ); // 늘 열린다
+            _battle = std::move( battle );
+        }
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        const bool bCommandValid = _commandMember < restoredParty.getMemberCount() && restoredParty.getMember( _commandMember ).isAlive();
-        const bool bBattleValid  = restoredBattle.getResult() == JRPGBattleResult::Ongoing && restoredBattle.getEnemies().empty() == false && bCommandValid;
-        if ( io.check( restoredParty.getMemberCount() > 0 && ( bInBattle == false || bBattleValid ) ) == false )
-            return;
-        const size_t stepCount    = static_cast<size_t>( restoredParty.getMemberCount() ) + 1;
-        const bool   bTimingValid = _listTimingOffset.size() == stepCount && _listTimingPressed.size() == stepCount && static_cast<size_t>( _timingStep ) < stepCount;
-        if ( io.check( _phase != JRPGGamePhase::Timing || bTimingValid ) == false )
-            return;
-        _wallet     = std::move( restoredWallet );
-        _bag        = std::move( restoredBag );
-        _party      = std::move( restoredParty ); // 빌린 가방 · 지갑의 주소는 그대로다
-        _walker     = std::move( restoredWalker );
-        _battle     = std::move( restoredBattle );
-        _resultHold = resultHold;
         _battle.bindParty( _party );
+        const bool bCommandValid = _commandMember < _party.getMemberCount() && _party.getMember( _commandMember ).isAlive();
+        const bool bBattleValid  = _battle.getResult() == JRPGBattleResult::Ongoing && _battle.getEnemies().empty() == false && bCommandValid;
+        if ( io.check( _party.getMemberCount() > 0 && ( bInBattle == false || bBattleValid ) ) == false )
+            return;
+        const size_t stepCount    = static_cast<size_t>( _party.getMemberCount() ) + 1;
+        const bool   bTimingValid = _listTimingOffset.size() == stepCount && _listTimingPressed.size() == stepCount && static_cast<size_t>( _timingStep ) < stepCount;
+        io.check( _phase != JRPGGamePhase::Timing || bTimingValid );
     }
 } // namespace sw

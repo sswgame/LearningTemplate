@@ -1,5 +1,5 @@
 <?asset guid="a022cb5ceed46f84dc9d6576fe13181f"?>
-<Scene formatVersion="3" name="PixelTown">
+<Scene formatVersion="0" name="PixelTown">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -128,7 +128,9 @@
 		<entity id="6" name="TownGameMode">
 			<GameObject _schemaVersion="0" _name="TownGameMode" _bActive="true">
 				<_listComponent>
-					<OverworldGameModeComponent _localID="5813994512679157748" _ground="2" _props="3" _hero="4" _interactButton="Interact" _stepSeconds="0.18" />
+					<OverworldGameModeComponent _localID="5813994512679157748" _ground="2" _props="3" _hero="4" _interactButton="Interact">
+						<_moverSettings _moveDeadZone="0.5" _encounterRate="0" _stepSeconds="0.18" />
+					</OverworldGameModeComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

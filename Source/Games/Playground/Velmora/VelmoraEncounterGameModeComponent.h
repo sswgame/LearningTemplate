@@ -5,11 +5,11 @@
  *          (도시 · RTS 를 섞는 `FrontierSkirmishGameModeComponent` 와 같은 자리).
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
@@ -46,8 +46,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "VLEN" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "VLEN" };
 
         VelmoraEncounterGameModeComponent();
         virtual ~VelmoraEncounterGameModeComponent() override;
@@ -68,7 +67,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 지역 표의 전투 종이 모두 몬스터 표에 있는지 봅니다. 없는 종마다 오류를 남기고 false 입니다. */
@@ -83,11 +81,11 @@ namespace sw
         PROPERTY( Category = "Combat", DisplayName = "Boss Delay", Tooltip = "Seconds between clearing the hall (or entering a boss region) and the boss fight", Min = 0.1, Units = s )
         float32 _bossDelaySeconds;
 
-        ActionRoom             _room;
-        Countdown              _bossDelay;
-        VelmoraPhase           _phase;
-        uint8                  _bAttackQueued : 1; ///< 다음 걸음이 쓸 공격 누름
-        uint8                  _bDashQueued   : 1; ///< 다음 걸음이 쓸 대시 누름
-        [[maybe_unused]] uint8 _reserved      : 6;
+        SW_TRANSIENT ActionRoom   _room;
+        SW_TRANSIENT Countdown    _bossDelay;
+        SW_TRANSIENT VelmoraPhase _phase;
+        SW_TRANSIENT uint8        _bAttackQueued : 1; ///< 다음 걸음이 쓸 공격 누름
+        SW_TRANSIENT uint8        _bDashQueued   : 1; ///< 다음 걸음이 쓸 대시 누름
+        [[maybe_unused]] uint8    _reserved      : 6;
     };
 } // namespace sw

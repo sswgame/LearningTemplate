@@ -142,7 +142,7 @@ SW_TEST_CASE( ContentHashCacheTest, CacheFromAnotherVersionIsDropped )
     vector<uint8> bytes;
     SW_REQUIRE_TRUE( FileUtil::readFile( cachePath, bytes ) );
     SW_REQUIRE_TRUE( bytes.size() >= 8 );
-    const uint32 otherVersion = ContentHashCache::kCacheFormatVersion + 1; // 머리: 표지(4 B) 뒤의 판(4 B, 리틀 엔디언)
+    const uint32 otherVersion = ContentHashCache::kCacheFormat._version + 1; // 머리: 표지(4 B) 뒤의 판(4 B, 리틀 엔디언)
     for ( uint32 byteIndex = 0; byteIndex < 4; ++byteIndex )
     {
         bytes[4 + byteIndex] = static_cast<uint8>( otherVersion >> ( 8 * byteIndex ) );

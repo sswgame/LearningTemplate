@@ -14,9 +14,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Time/Countdown.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -24,10 +22,10 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGBattle.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
-#include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGEncounter.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.h"
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -53,7 +51,7 @@ namespace sw
      * @brief 걷기(걸음 조우) ↔ 전투(멤버마다 명령 하나) → 길 끝의 보스 → 승리 · 패배를 명령으로 진행합니다.
      */
     REFLECT( Category = "ClassicJRPG", DisplayName = "JRPG Game Mode", Tooltip = "Runs one ClassicJRPG trail: step encounters, round battles from commands and the boss at the end" )
-    class SW_KIT_API JRPGGameModeComponent : public GameModeComponent
+    class SW_KIT_API JRPGGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -91,7 +89,7 @@ namespace sw
         /** @brief 전투 중(명령 · 타이밍)이면 true 입니다. */
         bool isInBattle() const { return _phase == JRPGGamePhase::Battle || _phase == JRPGGamePhase::Timing; }
         /** @brief 판이 열렸고 자동 플레이가 아니라 플레이어의 명령을 받으면 true 입니다. */
-        bool  isAcceptingInput() const { return isStarted() && isAutoPlayOn() == false; }
+        bool  isAcceptingInput() const override { return isStarted() && isAutoPlayOn() == false; }
         int32 getPhase() const { return static_cast<int32>( _phase ); }
         /** @brief 명령을 기다리는 멤버 번호입니다. 전투 중이 아니면 비어 있습니다. */
         [[nodiscard]] optional<int32> findCommandMember() const;
@@ -129,8 +127,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               updateMatch( float32 deltaTime ) override;
         /** @brief 번 돈(지갑 - 시작 돈)을 냅니다. 패배한 판은 내지 않습니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 
@@ -220,23 +217,20 @@ namespace sw
         CatalogKey<JRPGClassDef> _restClass;
         PROPERTY( Category = "Class", DisplayName = "Class Change Level", Tooltip = "Lowest level that may change class", Min = 1 )
         int32 _classChangeLevel;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
 
-        SharedAssetRef<JRPGCatalog> _pCatalog;
-        SharedAssetRef<ItemCatalog> _pItemCatalog;
-        Inventory                   _bag;   ///< 이 판의 가방(파티가 빌린다)
-        TimingJudge                 _judge; ///< 판정 창(전투가 빌린다)
-        JRPGParty                   _party;
-        Wallet                      _wallet; ///< 이 판의 돈(파티가 빌린다) — 결과 값으로만 바탕 판에 나간다
-        JRPGEncounterWalker         _walker;
-        JRPGBattle                  _battle;
-        vector<JRPGBattleEvent>     _listBattleEvent;
-        vector<JRPGPartyEvent>      _listPartyEvent;
-        Countdown                   _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
+        BoundAssetRef<JRPGCatalog>         _pCatalog;
+        BoundAssetRef<ItemCatalog>         _pItemCatalog;
+        SW_CODEC_STATE Inventory           _bag;   ///< 이 판의 가방(파티가 빌린다)
+        SW_CODEC_STATE TimingJudge         _judge; ///< 판정 창(전투가 빌린다)
+        SW_CODEC_STATE JRPGParty           _party;
+        SW_CODEC_STATE Wallet              _wallet; ///< 이 판의 돈(파티가 빌린다) — 결과 값으로만 바탕 판에 나간다
+        SW_CODEC_STATE JRPGEncounterWalker _walker;
+        SW_CODEC_STATE JRPGBattle          _battle;
+        SW_TRANSIENT vector<JRPGBattleEvent> _listBattleEvent;
+        SW_TRANSIENT vector<JRPGPartyEvent> _listPartyEvent;
         PROPERTY( RuntimeState )
-        float2 _playerPosition;
-        float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
+        float2              _playerPosition;
+        SW_TRANSIENT float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
         PROPERTY( RuntimeState, Min = 0 )
         float32 _strideProgress; ///< 다음 걸음까지 걸은 거리(m)
         PROPERTY( RuntimeState, Min = 0 )

@@ -105,7 +105,7 @@ SW_TEST_CASE( GBufferLayoutTest, ShaderShadingModelTableMatchesTheEnum )
  */
 SW_TEST_CASE( GBufferLayoutTest, VelocityIsTheFourthSlot )
 {
-    SW_EXPECT_EQUAL( 3u, GBufferLayout::kVersion );
+    SW_EXPECT_EQUAL( 0u, GBufferLayout::kVersion );
     const GBufferAttachmentSpec& velocity = GBufferLayout::kArrAttachment[GBufferLayout::kVelocitySlot];
     SW_EXPECT_EQUAL( 3u, GBufferLayout::kVelocitySlot );
     SW_EXPECT_EQUAL( 6u, GBufferLayout::kAttachmentCount ); // 사용자 칸 · 장면 색이 뒤를 잇는다

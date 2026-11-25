@@ -9,6 +9,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
+#include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
@@ -128,4 +130,34 @@ SW_TEST_CASE( MountPredictionTest, NetPositionFollowsTheWorldOrigin )
     SW_REQUIRE_TRUE( pMount->setNetDriven( true ) );
     pMount->onWorldOriginShifted( float3{ -100.0f, 0.0f, 0.0f } );
     SW_EXPECT_NEAR( 0.0f, pMount->getState()._position._x, 1.0e-4f );
+}
+
+/** @brief [MountPredictionTest] 달리던 말의 속도 · 향 · 걸음새 · 상한은 스냅숏으로 남는다 */
+SW_TEST_CASE( MountPredictionTest, RideStateSurvivesASnapshot )
+{
+    GameObjectManager       manager;
+    MountMovementComponent* pMount    = addHorse( manager );
+    MountMovementComponent* pRestored = addHorse( manager );
+    manager.beginPlay();
+    SW_REQUIRE_TRUE( pMount->setNetDriven( true ) );
+    MountMoveState state = pMount->getState();
+    for ( const ControlIntent& intent : makeRideIntents() )
+    {
+        state = pMount->simulate( state, intent, kMountTestTick );
+        if ( state._forwardSpeed > 3.0f )
+            break;
+    }
+    state._maxGait        = static_cast<uint8>( MountGait::Canter );
+    state._bGallopAllowed = SW_FALSE;
+    pMount->setState( state, state._position );
+
+    const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Snapshot );
+    vector<uint8>           bytes;
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( pMount, *MountMovementComponent::StaticType(), bytes, context ) );
+    SW_REQUIRE_TRUE( BinarySerializer::deserialize( pRestored, *MountMovementComponent::StaticType(), bytes.data(), bytes.size(), context ) );
+    SW_EXPECT_TRUE( pRestored->getForwardSpeed() == pMount->getForwardSpeed() );
+    SW_EXPECT_TRUE( pRestored->getFacingYaw() == pMount->getFacingYaw() );
+    SW_EXPECT_TRUE( pRestored->getGait() == pMount->getGait() );
+    SW_EXPECT_TRUE( pRestored->getMaxGait() == MountGait::Canter );
+    SW_EXPECT_FALSE( pRestored->isGallopAllowed() );
 }

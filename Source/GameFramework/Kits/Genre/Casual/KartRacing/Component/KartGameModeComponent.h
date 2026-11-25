@@ -12,10 +12,8 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -25,7 +23,8 @@
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartTrack.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw
 {
@@ -35,8 +34,8 @@ namespace sw
      * @class KartGameModeComponent
      * @brief 출발 격자 → 카운트다운 → 바퀴 → 결승 순위 → 결과를 진행합니다.
      */
-    REFLECT( Version = 2, Category = "KartRacing", DisplayName = "Kart Race Game Mode", Tooltip = "Runs one KartRacing race: the player kart from driver commands, the rivals by the kart AI, to the finish places" )
-    class SW_KIT_API KartGameModeComponent : public GameModeComponent
+    REFLECT( Category = "KartRacing", DisplayName = "Kart Race Game Mode", Tooltip = "Runs one KartRacing race: the player kart from driver commands, the rivals by the kart AI, to the finish places" )
+    class SW_KIT_API KartGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -57,7 +56,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 경기가 열렸고 사람이 모는 차가 결승 전이면 true 입니다(자동 플레이면 false). */
-        bool             isAcceptingInput() const;
+        bool             isAcceptingInput() const override;
         const KartRace&  getRace() const { return _race; }
         const KartTrack& getTrack() const { return _track; }
         /** @brief 차 @p racer 의 절대 자리입니다. 없는 번호면 원점입니다. */
@@ -71,8 +70,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               updateMatch( float32 deltaTime ) override;
 
     private:
         /** @brief 지금 카탈로그로 트랙을 풀고 @p outRace 를 열어 차를 모두 세웁니다(출발은 하지 않는다). 열지 못하면 오류를 남기고 false 입니다. */
@@ -85,34 +83,25 @@ namespace sw
     private:
         PROPERTY( Category = "Data", DisplayName = "Track", Required, Tooltip = "Track id in the catalog" )
         CatalogKey<KartTrackDef> _trackID;
-        PROPERTY( Category = "Data", DisplayName = "Items On", Tooltip = "Races with item boxes; off is the only way to race without items" )
-        bool _bItems;
-        PROPERTY( Category = "Data", DisplayName = "Items", Tooltip = "Item and rank table file (required while items are on)", EditCondition = "_bItems" )
+        PROPERTY( Category = "Data", DisplayName = "Items", Tooltip = "Item and rank table file (required while items are on)", EditCondition = "_raceSettings._bItems" )
         AssetRef<KartItemCatalog> _itemCatalog;
         PROPERTY( Category = "Data", DisplayName = "Vehicle", Required, Tooltip = "Vehicle tuning every kart drives (*.vehicle.xml)" )
         AssetRef<KinematicVehicleSettings> _vehicleSettings;
         PROPERTY( Category = "Race", DisplayName = "Bots", Tooltip = "Karts driven by the AI", Min = 1, Max = 7 )
         int32 _botCount;
-        PROPERTY( Category = "Race", DisplayName = "Countdown", Min = 0.0, Units = s )
-        float32 _countdownSeconds;
-        PROPERTY( Category = "Race", DisplayName = "Finish Timeout", Tooltip = "Time after the first finish before the rest is ranked as it stands", Min = 0.0, Units = s )
-        float32 _finishTimeoutSeconds;
-        PROPERTY( Category = "Race", DisplayName = "Result Hold", Tooltip = "Time the places stay on screen before the minigame ends", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
-        PROPERTY( Category = "Race", DisplayName = "Seed" )
-        uint32 _seed;
+        PROPERTY( Required, Category = "Race", DisplayName = "Race", Tooltip = "Rules of the race and the karts the AI drives; every value is required" )
+        KartRaceSettings _raceSettings;
         PROPERTY( Category = "Race", DisplayName = "First Reward", Tooltip = "Money for first place", Min = 0 )
         int32 _firstReward;
         PROPERTY( Category = "Race", DisplayName = "Reward Step", Tooltip = "Money less for every place after the first (never below 0)", Min = 0 )
         int32 _rewardStep;
 
-        SharedAssetRef<KartTrackCatalog>         _pTrackCatalog;
-        SharedAssetRef<KartItemCatalog>          _pItemCatalog;       ///< 아이템을 끈 경기면 비었다
-        SharedAssetRef<ProjectileCatalog>        _pProjectileCatalog; ///< 아이템이 쏘는 탄(아이템을 끈 경기면 비었다)
-        SharedAssetRef<KinematicVehicleSettings> _pVehicle;
-        KartTrack                                _track; ///< 경기 · 차가 빌려 쓴다 — 경기보다 먼저 선언한다
-        KartRace                                 _race;
-        vector<KartRaceEvent>                    _listEvent;
-        Countdown                                _resultHold; ///< 순위가 정해진 뒤 결과를 보이는 시간
+        BoundAssetRef<KartTrackCatalog>         _pTrackCatalog;
+        BoundAssetRef<KartItemCatalog>          _pItemCatalog;       ///< 아이템을 끈 경기면 비었다
+        BoundAssetRef<ProjectileCatalog>        _pProjectileCatalog; ///< 아이템이 쏘는 탄(아이템을 끈 경기면 비었다)
+        BoundAssetRef<KinematicVehicleSettings> _pVehicle;
+        SW_TRANSIENT KartTrack                  _track; ///< 경기 · 차가 빌려 쓴다 — 경기보다 먼저 선언한다
+        SW_CODEC_STATE KartRace                 _race;
+        SW_TRANSIENT vector<KartRaceEvent> _listEvent;
     };
 } // namespace sw

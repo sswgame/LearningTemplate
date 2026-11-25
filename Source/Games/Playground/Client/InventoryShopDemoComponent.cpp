@@ -2,13 +2,13 @@
 
 #include "Games/Playground/Client/InventoryShopDemoComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/UISystem.h"
@@ -25,8 +25,7 @@ namespace sw
     {
         struct InventoryShopDemoInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "IVSD" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "IVSD" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventBought    = "ShopBought";
@@ -83,8 +82,8 @@ namespace sw
         , _wallet{}
         , _currency{}
         , _provider{}
-        , _inventoryScreen{ kInvalidUIScreenHandle }
-        , _shopScreen{ kInvalidUIScreenHandle }
+        , _inventoryScreen{}
+        , _shopScreen{}
     {
     }
 
@@ -102,14 +101,8 @@ namespace sw
 
     void InventoryShopDemoComponent::closeScreens()
     {
-        UISystem* pUI = game::findSubsystem<UISystem>();
-        if ( pUI != nullptr )
-        {
-            pUI->closeScreen( _inventoryScreen );
-            pUI->closeScreen( _shopScreen );
-        }
-        _inventoryScreen = kInvalidUIScreenHandle;
-        _shopScreen      = kInvalidUIScreenHandle;
+        _inventoryScreen.reset();
+        _shopScreen.reset();
     }
 
     bool InventoryShopDemoComponent::startGame()
@@ -143,35 +136,20 @@ namespace sw
         }
     }
 
-    void InventoryShopDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void InventoryShopDemoComponent::serializeGameState( StateIO& io )
     {
-        io.header( InventoryShopDemoInternal::kStateTag, InventoryShopDemoInternal::kStateVersion );
-        if ( io.isWriting() )
+        io.header( InventoryShopDemoInternal::kStateFormat );
+        io.value( _wallet );
+        if ( io.valueOpened( _shop, [this]( ShopManager& shop )
         {
-            io.value( _wallet );
-            io.value( _shop );
+            const AppearanceDatabase* const pDatabase = game::findSubsystem<AppearanceDatabase>();
+            const ItemCatalog* const        pItems    = pDatabase != nullptr ? pDatabase->getItemCatalog() : nullptr;
+            if ( _pShops == nullptr || pItems == nullptr )
+                return false;
+            shop.initialize( *_pShops, *pItems ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
+            return true;
+        } ) == false )
             return;
-        }
-        // 지역 사본에 읽고 끝까지 맞으면 바꾼다.
-        const AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
-        const ItemCatalog* const  pItems    = pDatabase != nullptr ? pDatabase->getItemCatalog() : nullptr;
-        if ( io.check( _pShops != nullptr && pItems != nullptr ) == false )
-            return;
-        Wallet      wallet = _wallet;
-        ShopManager shop;
-        shop.initialize( *_pShops, *pItems ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
-        io.value( wallet );
-        io.value( shop );
-        if ( io.isOk() == false )
-            return;
-        _wallet = std::move( wallet );
-        _shop   = std::move( shop );
     }
 
     CharacterEquipmentComponent* InventoryShopDemoComponent::findCharacter() const
@@ -185,21 +163,21 @@ namespace sw
     {
         UISystem*                    pUI        = game::findSubsystem<UISystem>();
         CharacterEquipmentComponent* pCharacter = findCharacter();
-        if ( pUI == nullptr || pCharacter == nullptr || pUI->findScreen( _inventoryScreen ) != nullptr )
+        if ( pUI == nullptr || pCharacter == nullptr || _inventoryScreen.find() != nullptr )
             return false;
-        _inventoryScreen = InventoryScreen::open( *pUI, _inventoryDocument.path(), *pCharacter );
-        return _inventoryScreen != kInvalidUIScreenHandle;
+        _inventoryScreen = UIOwnedScreen( *pUI, InventoryScreen::open( *pUI, _inventoryDocument.path(), *pCharacter ) );
+        return _inventoryScreen.isHeld();
     }
 
     bool InventoryShopDemoComponent::openShop()
     {
         UISystem*                    pUI        = game::findSubsystem<UISystem>();
         CharacterEquipmentComponent* pCharacter = findCharacter();
-        if ( pUI == nullptr || pCharacter == nullptr || isStarted() == false || pUI->findScreen( _shopScreen ) != nullptr )
+        if ( pUI == nullptr || pCharacter == nullptr || isStarted() == false || _shopScreen.find() != nullptr )
             return false;
         // 가방은 캐릭터의 것이다 — 산 것은 인벤토리 화면에 그대로 보인다(칸 · 무게가 모자라면 가게가 NoRoom 으로 거절한다).
         _provider   = make_unique<LocalShopPurchaseProvider>( *_pShops, *pCharacter->getBag().getCatalog(), _shop, _wallet, pCharacter->getBagForTrade(), _shopID );
-        _shopScreen = ShopScreen::open( *pUI, _shopDocument.path(), *_provider );
-        return _shopScreen != kInvalidUIScreenHandle;
+        _shopScreen = UIOwnedScreen( *pUI, ShopScreen::open( *pUI, _shopDocument.path(), *_provider ) );
+        return _shopScreen.isHeld();
     }
 } // namespace sw

@@ -364,7 +364,7 @@ namespace sw
         PROPERTY( Multiline )
         string _notes;
 
-        PROPERTY( AssetPath, FileFilter = "*.png;*.dds" )
+        PROPERTY( FileFilter = "*.png;*.dds" )
         string _texture;
 
         PROPERTY()
@@ -670,13 +670,13 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 에셋 경로 · 다형 값 프로퍼티 샘플입니다. */
+    /** @brief 글 · 다형 값 프로퍼티 샘플입니다. */
     REFLECT()
-    struct AssetPathActor
+    struct AnyValueActor
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath, AssetType = "Texture" )
+        PROPERTY()
         string _albedo;
 
         PROPERTY()
@@ -727,7 +727,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath = true, AssetType = "Texture" )
+        PROPERTY( ReadOnly = true )
         string _albedo;
 
         PROPERTY( Transient = true )

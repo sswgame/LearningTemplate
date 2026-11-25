@@ -6,7 +6,6 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -133,11 +132,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag            = FourCCUtil::make( "JPTY" );
-        static constexpr uint32 kStateVersion        = 2; ///< 2: 장비를 아이템 인스턴스로
-        static constexpr int32  kMaxMembers          = 4;
-        static constexpr int32  kInnerMax            = 100;
-        static constexpr int32  kClassChangeMinLevel = 20; ///< DQ3 다마 신전의 최소 레벨
+        static constexpr int32 kMaxMembers          = 4;
+        static constexpr int32 kInnerMax            = 100;
+        static constexpr int32 kClassChangeMinLevel = 20; ///< DQ3 다마 신전의 최소 레벨
 
         JRPGParty();
 
@@ -193,12 +190,12 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<JRPGMember>                 _listMember;
-        NotificationBuffer<JRPGPartyEvent> _eventBuffer;
-        string                             _equipLayout;
-        const JRPGCatalog*                 _pCatalog;
-        const ItemCatalog*                 _pItemCatalog;
-        Inventory*                         _pInventory; ///< 플레이어 가방(빌려 온 것)
-        Wallet*                            _pWallet;    ///< 빌려 온 지갑(골드)
+        vector<JRPGMember> _listMember;
+        SW_TRANSIENT NotificationBuffer<JRPGPartyEvent> _eventBuffer;
+        SW_TRANSIENT string                             _equipLayout;
+        const JRPGCatalog*                              _pCatalog;
+        const ItemCatalog*                              _pItemCatalog;
+        Inventory*                                      _pInventory; ///< 플레이어 가방(빌려 온 것)
+        Wallet*                                         _pWallet;    ///< 빌려 온 지갑(골드)
     };
 } // namespace sw

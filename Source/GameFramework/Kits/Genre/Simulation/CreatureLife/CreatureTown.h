@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -14,6 +13,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -175,8 +175,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "CTWN" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 집이 리플렉션 상태 칸이다
+        static constexpr FormatDef kStateFormat{ "CTWN" };
 
         CreatureTown();
 
@@ -274,26 +273,26 @@ namespace sw
         [[nodiscard]] bool areLinksValid() const;
 
     private:
-        vector<hashed_string>   _listObject; ///< 셀마다의 오브젝트 id 이다(`_topology` 의 타일 번호). 빈 id 는 빈 셀이다
-        vector<HabitatInstance> _listHabitat;
+        SW_CODEC_STATE vector<hashed_string> _listObject; ///< 셀마다의 오브젝트 id 이다(`_topology` 의 타일 번호). 빈 id 는 빈 셀이다
+        SW_CODEC_STATE vector<HabitatInstance> _listHabitat;
         PROPERTY( RuntimeState )
         vector<TownCreature> _listCreature; ///< 온 순서
         PROPERTY( RuntimeState )
         vector<CreatureHouse> _listHouse;
         PROPERTY( RuntimeState )
-        vector<hashed_string>                 _listOpenRequest; ///< 이 마을이 받은 부탁 중 아직 끝나지 않은 것이다(퀘스트 id)
-        NotificationBuffer<CreatureTownEvent> _eventBuffer;
-        CreatureTownSettings                  _settings;
-        const CreatureLifeCatalog*            _pCatalog;
-        ReputationState*                      _pReputation; ///< 빌린 평판이다(호감도 — `initialize` 뒤 늘 있다)
-        QuestLog*                             _pQuestLog;   ///< 빌린 부탁 일지(`initialize` 뒤 늘 있다)
-        const WorldClock*                     _pClock;      ///< 빌린 시계이다(날 — `initialize` 뒤 늘 있다)
-        GridTopology                          _topology;
-        LandBinding                           _land; ///< 빌린 공유 땅(없으면 단독 동작)
+        vector<hashed_string> _listOpenRequest; ///< 이 마을이 받은 부탁 중 아직 끝나지 않은 것이다(퀘스트 id)
+        SW_TRANSIENT NotificationBuffer<CreatureTownEvent> _eventBuffer;
+        SW_TRANSIENT CreatureTownSettings                  _settings;
+        const CreatureLifeCatalog*                         _pCatalog;
+        ReputationState*                                   _pReputation; ///< 빌린 평판이다(호감도 — `initialize` 뒤 늘 있다)
+        QuestLog*                                          _pQuestLog;   ///< 빌린 부탁 일지(`initialize` 뒤 늘 있다)
+        const WorldClock*                                  _pClock;      ///< 빌린 시계이다(날 — `initialize` 뒤 늘 있다)
+        SW_CODEC_STATE GridTopology                        _topology;
+        SW_TRANSIENT LandBinding                           _land; ///< 빌린 공유 땅(없으면 단독 동작)
         PROPERTY( RuntimeState, Min = 1 )
         int32 _nextHabitatID;
         PROPERTY( RuntimeState, Min = -1 )
-        int32 _lastAttractKey; ///< 마지막으로 방문을 굴린 날 x 24 + 시
-        int32 _appealTier;
+        int32              _lastAttractKey; ///< 마지막으로 방문을 굴린 날 x 24 + 시
+        SW_TRANSIENT int32 _appealTier;
     };
 } // namespace sw

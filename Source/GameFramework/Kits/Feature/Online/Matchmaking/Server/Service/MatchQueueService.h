@@ -28,11 +28,38 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchMaker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+
+namespace sw
+{
+    /** @brief 대기열의 시한입니다(서버 설정 `MatchmakingKitConfig::_queue` — 값이 없으면 기동 오류). 권한 임대를 나누는 서버들이 같은 값을 써야 합니다. */
+    REFLECT()
+    struct MatchQueuePolicy
+    {
+        REFLECT_BODY();
+        /** @brief 모드 권한 임대의 수명(밀리초)입니다. 권한 서버가 이만큼 연장하지 못하면 다른 서버가 잡습니다. */
+        PROPERTY( Required, Min = 1000 )
+        int64 _leaseTTLMs{ 0 };
+        /** @brief 임대를 연장하거나 잡아 보는 주기(밀리초)입니다. 임대 수명보다 짧아야 합니다(`MatchQueueService::initialize` 가 거절한다). */
+        PROPERTY( Required, Min = 100 )
+        int64 _leaseRenewMs{ 0 };
+        /** @brief 짜인 경기를 받을 게임 서버를 찾지 못했을 때 포기하기까지(밀리초)입니다. */
+        PROPERTY( Required, Min = 0 )
+        int64 _noServerGiveUpMs{ 0 };
+        /** @brief 티켓 시한에 더하는 결과 전달 여유(밀리초)입니다. */
+        PROPERTY( Required, Min = 0 )
+        int64 _resultGraceMs{ 0 };
+        /** @brief 줄 서는 사람의 통계 읽기를 기다리는 시간(밀리초)입니다. 넘으면 RatingUnavailable 입니다. */
+        PROPERTY( Required, Min = 1 )
+        int64 _ratingWaitMs{ 0 };
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -57,21 +84,13 @@ namespace sw
         uint64                _serverID{ 1 };          ///< 32비트 안의 값이다. 티켓과 경기 id 의 위쪽 32비트가 된다
         int64                 _registryRefreshPeriodMs{ 2000 };
         int64                 _cancelConfirmWaitMs{ 0 };  ///< 필수 — 빠지기가 권한 서버의 확인 답을 기다리는 시간(키트 설정 `_cancelConfirmWaitMs`). 넘으면 권한이 없는 것으로 보고 끝낸다
+        MatchQueuePolicy      _policy{};                  ///< 필수 — 임대 · 포기 · 통계 대기 시한(키트 설정 `_queue`)
         int64                 _seatReservationTTLMs{ 0 }; ///< 필수 — 서버 사이의 좌석 예약 창(서버 설정 `_seatReservationSeconds`). 0 이면 `initialize` 가 거절한다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 대기열 상수입니다. 다른 모듈이 값으로 읽으므로 내보내는 클래스 밖에 둡니다. */
-    struct MatchQueueLimit
-    {
-        static constexpr int64 kLeaseTTLMs       = 10000;
-        static constexpr int64 kLeaseRenewMs     = 3000; ///< 임대를 연장하거나 잡아 보는 주기이다
-        static constexpr int64 kNoServerGiveUpMs = 30000;
-        static constexpr int64 kResultGraceMs    = 10000;
-        static constexpr int64 kRatingWaitMs     = 3000; ///< 줄 서는 사람의 통계를 읽기를 기다리는 시간이다. 넘으면 RatingUnavailable 이다
-    };
 } // namespace sw
 
 namespace sw

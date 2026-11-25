@@ -384,14 +384,15 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
     constexpr const utf8* kServerJSON    = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })";
     const auto            makeOnlineJSON = [&providersFile]( string_view trustOption )
     {
-        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        StringBuilder<constant::buffer::kMax1024> resultBuilder;
         resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "economy", "_settings": {
             "_currencyCatalog": "%#/e2e.currencies.xml",
             "_offerCatalog": "%#/e2e.offers.xml",
             "_refundRecovery": "Debt",
+            "_policy": { "_withdrawalWindowMs": 604800000, "_refundCursorRetryMs": 30000, "_deliveryScanIntervalMs": 300000, "_deliveryAlarmMarginMs": 86400000, "_deliveryScanMaxCount": 200, "_auditMinuteOfDay": 270 },
             "_receiptProvidersFile": "%#"%# } } ] })",
                                     test::ScopedScratchDomain::kDomain, test::ScopedScratchDomain::kDomain, providersFile, trustOption );
-        return test::OnlineRuntimeFixture::withBaseTTL( resultBuilder.view() );
+        return test::OnlineRuntimeFixture::withBaseSettings( resultBuilder.view() );
     };
 
     {

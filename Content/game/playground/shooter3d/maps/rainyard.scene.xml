@@ -1,5 +1,5 @@
 <?asset guid="9a17abe1c4944db38b1aaa554d43869f"?>
-<Scene formatVersion="3" _base="guid:12d39350b79eb1e5903098fceef6374f" name="Shooter3DRainYard">
+<Scene formatVersion="0" _base="guid:12d39350b79eb1e5903098fceef6374f" name="Shooter3DRainYard">
 	<!-- 빗마당 무대(automation/rainyard.scenario.xml) — 아레나를 물려받아 시작 자리(0, -16) 앞 x = 0 줄에 표면을 +Z 로 늘어놓는다(플레이어가 W 로 곧장 지나간다):
 	     흙(Dirt, z -14 ~ -10) · 웅덩이(얕은 물 4 cm, z -10 ~ -6) · 진흙(Mud, z -6 ~ -2), 그리고 흙 옆 돌(아레나 바닥 Stone, x -3.5 z -12 — 젖은 자국이 보이게 변형 지면을 깐다).
 	     패드는 2 cm 두께의 정적 상자(물리 재질 = 표면 종류)와 그 위의 변형 지면(PlaneDense)이다 — 발걸음은 패드 재질로, 웅덩이는 물(WaterBodyComponent)로 종류를 정한다.
@@ -21,26 +21,26 @@
 					                          _autoPlayPrefab="guid:db9836711aca7b372e2ebbb9fc0c0eae"
 					                          _player="50"
 					                          _arenaHalfSize="20"
-					                          _pacingProfile="game/playground/shooter3d/data/arena.director.xml"
+					                          _pacingProfile="guid:9d8ded789d178770ce902adcf06cb327"
 					                          _spawnTable="guid:a4ea400538e948a2a07b6a6a2c8276dd"
 					                          _pacingSeed="1"
 					                          _effectPoolSize="32"
 					                          _tracerPoolSize="24"
 					                          _bAutoPlay="false">
 						<_listEnemyKind>
-							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="guid:487e9f4458a7d6ecf66c371db3a72749" _preset="Trilobite">
+							<ShooterEnemyKind _prefab="guid:487e9f4458a7d6ecf66c371db3a72749" _preset="Trilobite" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="guid:d09c50d9428157b3c1ac9ebde784336d" _preset="SkeletonMinion">
+							<ShooterEnemyKind _prefab="guid:d09c50d9428157b3c1ac9ebde784336d" _preset="SkeletonMinion" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
 						</_listEnemyKind>
@@ -112,7 +112,7 @@
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="16,0.05,-18" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Walking_A" _bPlayOnBegin="true" />
-					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="guid:480309ac75a2431aeb227f392cf1e577" />
 					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="guid:41d588160a20a771c2a97324cfa7aca3" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 				</_listComponent>

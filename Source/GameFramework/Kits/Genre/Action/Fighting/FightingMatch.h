@@ -271,10 +271,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-        /** @brief 세이브 본문(자기 기술형)의 버전입니다. 필드의 뜻이 바뀌면 올리고 데이터를 다시 씁니다(이관 함수는 없다). 롤백 바이트는 스키마 해시가 가리므로 버전이 없습니다. */
-        static constexpr uint32 kStateVersion = 1;
-        static constexpr int32  kPlayerCount  = 2;
-        static constexpr int32  kDraw         = 2; ///< 라운드와 대전 결과의 무승부 값
+        static constexpr int32 kPlayerCount = 2;
+        static constexpr int32 kDraw        = 2; ///< 라운드와 대전 결과의 무승부 값
 
         FightingMatch();
 
@@ -290,7 +288,7 @@ namespace sw
         /** @brief `saveState` 가 쓴 바이트로 상태를 되돌립니다. 같은 캐릭터로 `initialize` 한 대전이어야 하고, 바이트가 깨졌거나 맞지 않으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool loadState( const vector<uint8>& buffer );
         /**
-         * @brief 세이브(`Archive`)에 상태를 버전 머리(`kStateVersion`)가 붙은 자기 기술형으로 씁니다.
+         * @brief 세이브(`Archive`)에 상태를 타입의 판 머리(`REFLECT( Version )`)가 붙은 자기 기술형으로 씁니다.
          *        `writeState` 의 본문으로 상태를 되돌립니다. 같은 캐릭터로 `initialize` 한 대전이어야 하고, 본문이 잘렸거나 맞지 않으면 상태를 바꾸지 않고 false 를 반환합니다.
          */
         SW_DECLARE_STATE_IO();

@@ -9,7 +9,7 @@
 
 #include "DevTools/Console/DevConsoleController.h"
 
-#include "Engine/UI/Screen/UIScreenTypes.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 
 namespace sw
 {
@@ -34,7 +34,7 @@ namespace sw
         void present( const vector<string>& listLine, const vector<uint8>& listErrorFlag ) override;
 
     private:
-        UISystem*      _pUI;
-        UIScreenHandle _screen; ///< 오버레이 화면입니다(닫혀 있으면 무효).
+        UISystem*     _pUI;
+        UIOwnedScreen _screen; ///< 오버레이 화면입니다(닫혀 있으면 무효).
     };
 } // namespace sw

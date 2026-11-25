@@ -12,7 +12,7 @@
 	<Launch variable="gv_viewDistanceScale" value="1"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="lensflare_off.ppm"/>
-	<LoadScene path="game/playground/maps/lensflare.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:d6abb23785ef51615f7a0e25efc5aea0" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw
 {
@@ -126,10 +127,10 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath, Required )
-        string _from{};
         PROPERTY( Required )
-        string _as{};
+        DataPath _from; ///< 폴더(정체성이 없다)나 사본 원본 하나
+        PROPERTY( Required )
+        string _as{}; ///< 만들 사본 자리(`scratch/…`) — 아직 없는 자리라 글이다
     };
 
     /** @brief `ExpectUI` 의 인자입니다. 적은 칸만 본다(셋 중 하나 이상) — 판정은 적었는지를 단계 속성으로 가른다(`screen="None"` 은 화면 없음). */
@@ -140,8 +141,8 @@ namespace sw
 
         PROPERTY()
         string _focus{};
-        PROPERTY( AssetPath )
-        string _screen{};
+        PROPERTY()
+        DataPath _screen; ///< 화면 문서, 화면이 없어야 하면 `none`
         PROPERTY( Min = 0 )
         int32 _screens{ 0 };
     };
@@ -152,8 +153,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath, Required )
-        string _path{};
+        PROPERTY( Required )
+        DataPath _path; ///< 씬(GUID, 작업 사본 `scratch/…` 과 없는 씬을 일부러 여는 단계는 경로 글)
         PROPERTY( Min = 1 )
         uint32 _timeoutFrames{ 600 };
     };
@@ -164,8 +165,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath, Required )
-        string _path{};
+        PROPERTY( Required )
+        DataPath _path;
     };
 
     /** @brief `RecordStateHash` · `ExpectStateHash` 의 인자입니다 — 같은 `key` 로 앞에서 잰 활성 씬 상태 해시를 뒤에서 견준다. */
@@ -328,8 +329,8 @@ namespace sw
 
         PROPERTY( Required )
         string _configFile{};
-        PROPERTY( AssetPath )
-        string _from{};
+        PROPERTY()
+        DataPath _from;
     };
 
     /** @brief 인자가 없는 단계의 스키마입니다 — 적힌 속성은 모두 오타입니다. */

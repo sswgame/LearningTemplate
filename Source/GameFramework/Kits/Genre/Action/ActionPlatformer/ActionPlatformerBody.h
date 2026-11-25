@@ -7,7 +7,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -115,9 +114,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "APBD" );
-        static constexpr uint32 kStateVersion = 1;
-
         ActionPlatformerBody();
 
         /** @brief 움직임 규칙(`<Motor>`)과 몸 설정(`<Body>`)을 @p catalog 에서만 받습니다(감사 K-4 — 기본 생성한 설정으로 몸을 열 길이 없다). */
@@ -156,9 +152,9 @@ namespace sw
         void returnToMotor( const float2& velocity );
 
     private:
-        PlatformerMotor2D  _motor;
-        PlatformerSettings _motorSettings;
-        ActionBodyDef      _settings;
+        SW_CODEC_STATE PlatformerMotor2D _motor;
+        SW_TRANSIENT PlatformerSettings  _motorSettings;
+        SW_TRANSIENT ActionBodyDef       _settings;
         PROPERTY( RuntimeState )
         float2 _position; ///< 갈고리와 드릴 모드의 위치
         PROPERTY( RuntimeState )
@@ -166,9 +162,9 @@ namespace sw
         PROPERTY( RuntimeState )
         float2 _anchor;
         PROPERTY( RuntimeState, Min = 0 )
-        float32   _ropeLength;
-        Countdown _drillSearchTimer;
-        uint32    _events;
+        float32                  _ropeLength;
+        SW_CODEC_STATE Countdown _drillSearchTimer;
+        SW_TRANSIENT uint32      _events;
         PROPERTY( RuntimeState )
         ActionMoveMode _mode;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

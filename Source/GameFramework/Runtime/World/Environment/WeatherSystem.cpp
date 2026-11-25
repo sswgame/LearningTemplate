@@ -5,11 +5,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Graphics/Material/MaterialParameterCollection.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
-#include "Engine/Serialization/Format/ReflectedStateUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -19,39 +18,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct WeatherSystemInternal
-        {
-            /** @brief 판 1 → 2: 손 본문(지금 · 이전 id, 난수, 남은 시간, 전환 경과)을 리플렉션 본문(머리, 남은 시간, 전환 경과, 지금 · 이전 id, 난수)으로 옮겨 씁니다. */
-            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
-            {
-                hashed_string currentID;
-                hashed_string previousID;
-                GameRandom    random;
-                float32       remaining         = 0.0f;
-                float32       transitionElapsed = 0.0f;
-                StateIO       in( inOldBody );
-                in.value( currentID );
-                in.value( previousID );
-                in.value( random );
-                in.value( remaining );
-                in.value( transitionElapsed );
-                if ( in.isOk() == false || ReflectedStateUpgrade::writeHead<WeatherSystem>( outNewBody ) == false )
-                    return false;
-                StateIO out( outNewBody );
-                out.value( remaining );
-                out.value( transitionElapsed );
-                out.value( currentID );
-                out.value( previousID );
-                out.value( random );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_STATE_FORMAT_UPGRADE( weatherSystem1To2, "WTHR", 1, 2, &WeatherSystemInternal::upgradeStateFrom1 );
-
     float32 WeatherDef::computeWeight( const hashed_string& season ) const
     {
         if ( _listSeasonWeight.empty() )
@@ -64,17 +30,21 @@ namespace sw
         return 0.0f;
     }
 
+    WeatherCatalogRootParams::WeatherCatalogRootParams() = default;
+
     uint32 WeatherCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 적지 않은 칸은 초기값이다. 깨진 값 · 범위 밖 값은 오류다(자르지 않는다). 날씨는 그 원소를, 전환 시간은 표 전체를 넣지 않는다.
         _listMaterialBinding.clear(); // 다시 읽기는 같은 카탈로그에 읽는다 — 옛 바인딩을 남기지 않는다
         _listSceneBinding.clear();
         _listSoundBinding.clear();
-        WeatherCatalogRootParams rootParams{ _transitionTime, _materialCollection };
+        WeatherCatalogRootParams rootParams;
+        rootParams._transition         = _transitionTime;
+        rootParams._materialCollection = _materialCollection;
         if ( root.readProperties( rootParams, sourceName ) == false )
             return 0;
         _transitionTime                        = rootParams._transition;
-        _materialCollection                    = rootParams._materialCollection;
+        _materialCollection                    = rootParams._materialCollection.path();
         using Element                          = XMLCatalogElement<WeatherCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&WeatherCatalog::loadWeather>( "Weather" ),
@@ -88,7 +58,6 @@ namespace sw
 
     bool WeatherCatalog::loadWeather( const XMLNode& node, string_view sourceName )
     {
-
         WeatherDef  weather;
         bool        bValid = XMLFields::readProperties( node, weather, sourceName, { "seasons" } ); // 칸 · 범위는 WeatherDef 의 PROPERTY
         const utf8* pID    = weather._id.c_str();

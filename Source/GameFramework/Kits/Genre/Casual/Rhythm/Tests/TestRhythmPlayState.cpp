@@ -75,6 +75,37 @@ namespace
     };
 
     /** @brief 채보, 판정기, 시작한 판입니다. */
+    /** @brief 씬 데이터(`stage.scene.xml` 의 `_listRank`)와 같은 등급 표를 든 설정입니다 — 등급 표가 없으면 판이 열리지 않는다. */
+    sw::RhythmPlaySettings makeSettings()
+    {
+        sw::RhythmPlaySettings settings;
+        settings._failedRank         = sw::hashed_string( "F" );
+        settings._missLifeDelta      = -10.0f;
+        settings._maxLife            = 100.0f;
+        settings._initialLife        = 100.0f;
+        settings._comboBonusPerCombo = 0.0f;
+        settings._comboBonusCap      = 100;
+        const struct
+        {
+            const utf8* _pRank;
+            float32     _minAccuracy;
+        } arrRank[] = {
+            {"S", 95.0f},
+            {"A", 90.0f},
+            {"B", 80.0f},
+            {"C", 70.0f},
+            {"D",  0.0f}
+        };
+        for ( const auto& source : arrRank )
+        {
+            sw::RhythmRankThreshold threshold;
+            threshold._rank        = sw::hashed_string( source._pRank );
+            threshold._minAccuracy = source._minAccuracy;
+            settings._listRank.push_back( threshold );
+        }
+        return settings;
+    }
+
     struct RhythmPlayStateTest
     {
         sw::RhythmChart       _chart{};
@@ -90,7 +121,7 @@ namespace
             window._lateWidth  = 0.1f;
             window._score      = 100;
             _judge.setWindows( { window } );
-            SW_REQUIRE_TRUE( _session.initialize( _chart, _judge, sw::RhythmPlaySettings{} ) );
+            SW_REQUIRE_TRUE( _session.initialize( _chart, _judge, makeSettings(), false ) );
         }
     };
 } // namespace
@@ -106,7 +137,7 @@ SW_TEST_CASE_F( RhythmPlayStateTest, RealAndCraftedStatesRead )
     _session.writeState( written );
 
     sw::RhythmPlaySession restored;
-    SW_REQUIRE_TRUE( restored.initialize( _chart, _judge, sw::RhythmPlaySettings{} ) );
+    SW_REQUIRE_TRUE( restored.initialize( _chart, _judge, makeSettings(), false ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( restored.isHolding( 0 ) );
@@ -262,7 +293,7 @@ SW_TEST_CASE_F( RhythmPlayStateTest, PlayDeterminism )
     </Chart>)",
                                             "RhythmPlayStateTest" ) );
     const auto setup = [this, &chart]( sw::RhythmPlaySession& session ) -> bool
-    { return session.initialize( chart, _judge, sw::RhythmPlaySettings{} ); };
+    { return session.initialize( chart, _judge, makeSettings(), false ); };
     const auto step = []( sw::RhythmPlaySession& session, int32 stepIndex )
     {
         const float32 now = static_cast<float32>( stepIndex ) / 30.0f;
@@ -286,12 +317,30 @@ SW_TEST_CASE( RhythmPlayStateTest, RefusesAJudgeWithoutWindows )
 {
     sw::RhythmChart chart;
     SW_REQUIRE_TRUE( chart.loadFromXMLText( kChartText, "NoWindows" ) );
-    const sw::TimingJudge  judge;
-    sw::RhythmPlaySettings settings;
-    settings._bAutoPlay = SW_TRUE;
+    const sw::TimingJudge judge;
     sw::RhythmPlaySession session;
     SW_EXPECT_LOG( "RhythmPlaySession.NoTimingWindows" );
-    SW_EXPECT_FALSE( session.initialize( chart, judge, settings ) );
+    SW_EXPECT_FALSE( session.initialize( chart, judge, makeSettings(), true ) );
     session.update( 100.0f ); // 열리지 않은 판이라 할 일이 없다
     SW_EXPECT_EQUAL( 0, session.getJudgedCount() );
+}
+
+/** @brief [RhythmPlayStateTest] 등급 표는 데이터다 — 없는 설정으로는 판이 열리지 않고, 표를 바꾸면 같은 정확도의 등급이 바뀐다 */
+SW_TEST_CASE_F( RhythmPlayStateTest, RanksComeFromTheSettings )
+{
+    SW_EXPECT_LOG( "RhythmPlaySession.NoRankThresholds" );
+    sw::RhythmPlaySettings settings = makeSettings();
+    settings._listRank.clear();
+    sw::RhythmPlaySession refused;
+    SW_EXPECT_FALSE( refused.initialize( _chart, _judge, settings, false ) );
+
+    // 아무것도 판정하지 않은 판의 정확도는 100 % 다 — 기본 표에서는 S, 문턱 하나짜리 표에서는 그 이름이다.
+    SW_EXPECT_TRUE( _session.computeRank() == sw::hashed_string( "S" ) );
+    sw::RhythmRankThreshold only;
+    only._rank        = sw::hashed_string( "Gold" );
+    only._minAccuracy = 0.0f;
+    settings._listRank.push_back( only );
+    sw::RhythmPlaySession custom;
+    SW_REQUIRE_TRUE( custom.initialize( _chart, _judge, settings, false ) );
+    SW_EXPECT_TRUE( custom.computeRank() == sw::hashed_string( "Gold" ) );
 }

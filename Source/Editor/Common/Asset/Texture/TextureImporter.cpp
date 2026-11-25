@@ -767,6 +767,12 @@ namespace sw::editor
         return summary;
     }
 
+    string TextureImporter::resolveTextureAsset( string_view path )
+    {
+        const string imported = FileUtil::getExtension( path ) == ".dds" ? string{} : makeImportedTexturePath( path );
+        return imported.empty() ? string( path ) : imported;
+    }
+
     string TextureImporter::makeImportedTexturePath( string_view rawTexturePath )
     {
         return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporter::kRawFolder, TextureImporterInternal::kImportedTextureFolder,

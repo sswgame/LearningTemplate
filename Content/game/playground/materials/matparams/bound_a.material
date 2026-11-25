@@ -2,6 +2,6 @@
 <?asset guid="42a949bc22c07d5043fd73fc204b8da5"?>
 <MaterialDef formatVersion="0" name="matparams_bound_a" _base="guid:0e23c2ee4018be638b51655cf03239d2">
 	<_properties>
-		<item name="_color" collection="game/playground/materials/matparams/world.matparams.xml" collectionParameter="WorldTint"/>
+		<item name="_color" collection="guid:f86795fce96284b1e6c06badd9b71f0f" collectionParameter="WorldTint"/>
 	</_properties>
 </MaterialDef>

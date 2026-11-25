@@ -46,7 +46,6 @@ namespace sw
         void               serializeGameState( StateIO& io ) override;
         [[nodiscard]] bool startGame() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 상태 칸(라운드 · 앞으로의 차례)을 순서에서 옮깁니다. */
@@ -69,6 +68,6 @@ namespace sw
         PROPERTY( RuntimeState )
         string _orderText; ///< 앞으로의 차례
 
-        TurnOrder _order;
+        SW_CODEC_STATE TurnOrder _order;
     };
 } // namespace sw

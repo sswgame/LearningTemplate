@@ -108,8 +108,8 @@ namespace sw
         PROPERTY( Min = 0.0, Tooltip = "Opacity fraction rain washes away per second at full rain (blood, mud); 0 = rain leaves it (paint, scorch)" )
         float32 _rainWashPerSecond;
 
-        float32 _ageSeconds;  ///< 등록 뒤 흐른 플레이 시간(저장하지 않는다)
-        float32 _washedRatio; ///< 비가 씻은 몫(0..1, 저장하지 않는다)
+        SW_TRANSIENT float32 _ageSeconds;  ///< 등록 뒤 흐른 플레이 시간(저장하지 않는다)
+        SW_TRANSIENT float32 _washedRatio; ///< 비가 씻은 몫(0..1, 저장하지 않는다)
 
         /** @brief 다 사라졌으면 정리합니다 — 데칼이 주 컴포넌트면 오브젝트째, 아니면 이 컴포넌트만. */
         void removeWhenGone();

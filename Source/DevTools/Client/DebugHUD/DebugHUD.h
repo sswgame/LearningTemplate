@@ -15,7 +15,7 @@
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
-#include "Engine/UI/Screen/UIScreenTypes.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_debugHUD );                     ///< 디버그 HUD 표시(사용자 설정 debug.hud).
 SW_EXTERN_GLOBAL_VARIABLE( sw::GlobalString, gv_debugHUDSections ); ///< 섹션 켬과 끔 텍스트입니다(DebugHUDSectionState).
@@ -157,8 +157,8 @@ namespace sw
         UISystem*                                  _pUI;
         UserSettingsManager*                       _pSettings;
         hashed_string                              _toggleAction;
-        UIScreenHandle                             _screen;                    ///< HUD 화면입니다(오버레이 레이어이며, 없으면 무효).
-        UIScreenHandle                             _window;                    ///< 설정 창입니다(모달이며, 없으면 무효).
+        UIOwnedScreen                              _screen;                    ///< HUD 화면입니다(오버레이 레이어이며, 없으면 무효).
+        UIOwnedScreen                              _window;                    ///< 설정 창입니다(모달이며, 없으면 무효).
         string                                     _seenSectionState;          ///< `refreshSectionCache` 가 마지막으로 본 `gv_debugHUDSections` 입니다.
         uint64                                     _seenSectionRevision;       ///< `refreshSectionCache` 가 마지막으로 본 레지스트리 판 번호입니다(처음은 아무 판과도 다른 값).
         vector<const DebugHUDSectionRegistration*> _listShownSection;          ///< 켜진 사용자 섹션입니다(`refreshSectionCache`).

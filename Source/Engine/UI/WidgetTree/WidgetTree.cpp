@@ -219,6 +219,18 @@ namespace sw
         _mapNameToWidget[widget._name] = &widget;
     }
 
+    void WidgetTree::refreshName( Widget& widget )
+    {
+        for ( auto iter = _mapNameToWidget.begin(); iter != _mapNameToWidget.end(); ++iter )
+        {
+            if ( iter->second != &widget )
+                continue;
+            _mapNameToWidget.erase( iter );
+            break; // 위젯 하나는 한 줄이다
+        }
+        registerName( widget );
+    }
+
     void WidgetTree::unregisterName( Widget& widget )
     {
         ++_structureGeneration;

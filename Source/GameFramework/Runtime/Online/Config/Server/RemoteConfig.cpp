@@ -8,6 +8,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Observability/MetricRegistry.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
@@ -19,13 +20,13 @@ namespace sw
     {
         struct RemoteConfigInternal
         {
-            static constexpr uint64 kRecordVersion   = 2; ///< 2 에서 값 종류가 3 비트가 됐다(실험). 옛 버전 레코드는 다시 쓴다
-            static constexpr uint64 kVersion         = 2;
-            static constexpr int32  kTypeBitCount    = 3;
-            static constexpr int32  kMaxVariantCount = 16;
-            static constexpr int32  kListPageSize    = 256;
-            static constexpr int32  kMaxKeySize      = 128;
-            static constexpr int32  kMaxSnapshotKeys = 4096;
+            static constexpr FormatDef kRecordFormat{ "RCFG" };
+            static constexpr FormatDef kFormat{ "RCFW" };
+            static constexpr int32     kTypeBitCount    = 3;
+            static constexpr int32     kMaxVariantCount = 16;
+            static constexpr int32     kListPageSize    = 256;
+            static constexpr int32     kMaxKeySize      = 128;
+            static constexpr int32     kMaxSnapshotKeys = 4096;
 
             static void writeValue( BitWriter& outWriter, const RemoteConfigValue& value )
             {
@@ -73,7 +74,7 @@ namespace sw
             static vector<uint8> encodeRecord( const RemoteConfigValue& value )
             {
                 BitWriter writer;
-                writer.writeVarUint( kRecordVersion );
+                kRecordFormat.writeVersion( writer );
                 writeValue( writer, value );
                 return writer.releaseBytes();
             }
@@ -81,7 +82,7 @@ namespace sw
             [[nodiscard]] static bool decodeRecord( const vector<uint8>& bytes, RemoteConfigValue& outValue )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readVarUint() != kRecordVersion )
+                if ( kRecordFormat.readVersion( reader ) == false )
                     return false;
                 return readValue( reader, outValue );
             }
@@ -255,7 +256,7 @@ namespace sw
                 ++visibleCount;
             (void)key;
         }
-        outWriter.writeVarUint( RemoteConfigInternal::kVersion );
+        RemoteConfigInternal::kFormat.writeVersion( outWriter );
         outWriter.writeVarUint( visibleCount );
         for ( const auto& [key, entry] : _mapEntry )
         {
@@ -268,7 +269,7 @@ namespace sw
 
     bool RemoteConfig::readClientSnapshot( BitReader& reader )
     {
-        if ( reader.readVarUint() != RemoteConfigInternal::kVersion )
+        if ( RemoteConfigInternal::kFormat.readVersion( reader ) == false )
             return false;
         const uint64 count = reader.readVarUint();
         if ( count > static_cast<uint64>( RemoteConfigInternal::kMaxSnapshotKeys ) )

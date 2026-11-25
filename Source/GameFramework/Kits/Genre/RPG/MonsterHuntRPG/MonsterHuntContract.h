@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -66,8 +65,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32      kStateTag       = FourCCUtil::make( "WINV" );
-        static constexpr uint32      kStateVersion   = 1;
         static constexpr const utf8* kClueNotifyKind = "Clue";
         static constexpr const utf8* kStepNotifyKind = "Investigate";
 
@@ -100,11 +97,11 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<hashed_string>                             _listFound; ///< 지금 단계에서 찾은 단서
-        NotificationBuffer<MonsterHuntInvestigationEvent> _eventBuffer;
-        const MonsterHuntCatalog*                         _pCatalog; ///< 상태 바이트의 계약 id 로 찾는 카탈로그
-        const MonsterHuntContractDef*                     _pContract;
-        QuestLog*                                         _pQuestLog;
+        vector<hashed_string> _listFound; ///< 지금 단계에서 찾은 단서
+        SW_TRANSIENT NotificationBuffer<MonsterHuntInvestigationEvent> _eventBuffer;
+        const MonsterHuntCatalog*                                      _pCatalog; ///< 상태 바이트의 계약 id 로 찾는 카탈로그
+        const MonsterHuntContractDef*                                  _pContract;
+        QuestLog*                                                      _pQuestLog;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _stepIndex;
     };
@@ -133,9 +130,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "WHAG" );
-        static constexpr uint32 kStateVersion = 1;
 
         MonsterHuntHaggle();
 

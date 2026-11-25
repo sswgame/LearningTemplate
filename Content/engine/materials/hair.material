@@ -4,7 +4,7 @@
      alphaMode="Mask" 는 빼지 않는다 — 카드 덮임 · 길이 자르기 · 디더가 모두 알파 컷오프 길로 버린다(깊이 · 그림자 · 본 패스가 같은 픽셀). 카드는 양면이다.
      surfaceModel="Hair" 가 MATERIAL_FORWARD_ONLY 를 낸다 — G버퍼에 머리카락 칸이 없어 디퍼드는 ForwardOnlyOpaque 패스가 포워드로 그린다.
      꾸미기(외형이 머티리얼 값으로 건다): _length · _rootColor · _tipColor · _gradientPosition · _gradientWidth · _highlightColor(a 세기) · _highlightAmount(세기 배율) · _highlightMap(r 마스크). -->
-<MaterialDef formatVersion="0" name="Hair" shaderPath="engine/shaders/hair.hlsl" surfaceModel="Hair" alphaMode="Mask" cullMode="None" twoSidedLighting="true">
+<MaterialDef formatVersion="0" name="Hair" shaderPath="guid:b113fb2e7f7838170b06669b8de8cee5" surfaceModel="Hair" alphaMode="Mask" cullMode="None" twoSidedLighting="true">
 	<_properties>
 		<item name="_baseColor" type="Color" defaultValue="1 1 1 1" displayName="Base Color" group="Color" bHdr="0" bSrgb="1"/>
 		<item name="_rootColor" type="Color" defaultValue="1 1 1 1" displayName="Root Color" group="Color" bHdr="0" bSrgb="1"/>

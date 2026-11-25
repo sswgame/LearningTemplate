@@ -1,5 +1,5 @@
 <?asset guid="6193e7bb52974ba02d264bb08f2366e4"?>
-<Scene formatVersion="3" name="AbilityArena">
+<Scene formatVersion="0" name="AbilityArena">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -6372,6 +6372,7 @@
 				<_listComponent>
 					<ArenaGameModeComponent _localID="2358713137147008199" _componentName="ArenaGameModeComponent"
 					                        _bActive="true"
+					                        _hostileSearchRadius="100"
 					                        _playerAbilitySet="ArenaPlayer"
 					                        _gruntAbilitySet="ArenaGrunt"
 					                        _casterAbilitySet="ArenaCaster"

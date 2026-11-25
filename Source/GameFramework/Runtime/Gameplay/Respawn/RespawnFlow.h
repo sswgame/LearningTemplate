@@ -183,7 +183,7 @@ namespace sw
         bool                   isStateConsistent() const;
 
     private:
-        RespawnRules _rules;
+        SW_TRANSIENT RespawnRules _rules;
         PROPERTY( RuntimeState )
         vector<int32> _listUses; ///< 정책 항목마다 부활한 횟수(규칙 목록과 같은 길이)
         PROPERTY( RuntimeState )
@@ -195,9 +195,9 @@ namespace sw
         PROPERTY( RuntimeState )
         float32 _deathYaw;
         PROPERTY( RuntimeState )
-        float32   _pendingYaw;
-        Countdown _delay;  ///< 손 본문
-        Countdown _choice; ///< 손 본문
+        float32                  _pendingYaw;
+        SW_CODEC_STATE Countdown _delay;  ///< 손 본문
+        SW_CODEC_STATE Countdown _choice; ///< 손 본문
         PROPERTY( RuntimeState, Min = 0 )
         int32 _cursor; ///< 다음에 시도할 정책 항목 자리
         PROPERTY( RuntimeState, Min = -1 )

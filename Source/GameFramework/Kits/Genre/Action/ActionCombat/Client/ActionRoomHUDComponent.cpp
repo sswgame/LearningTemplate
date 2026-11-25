@@ -14,7 +14,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionRoomHUDViewModel.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageEvents.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
@@ -36,7 +36,7 @@ namespace sw
         , _clearedSubscription{}
         , _defeatedSubscription{}
         , _damageSubscription{}
-        , _notificationLeft{ 0.0f }
+        , _notificationLeft{}
         , _notification{ Notification::None }
         , _bGateLocked{ SW_FALSE }
     {
@@ -75,7 +75,7 @@ namespace sw
 
     void ActionRoomHUDComponent::onEndPlay()
     {
-        _notificationLeft                  = 0.0f;
+        _notificationLeft.clear();
         _notification                      = Notification::None;
         _bGateLocked                       = SW_FALSE;
         IHUDViewModelBinder* const pBinder = game::findSubsystem<IHUDViewModelBinder>();
@@ -119,8 +119,8 @@ namespace sw
 
     void ActionRoomHUDComponent::showNotification( Notification notification, float32 shakeAmplitude )
     {
-        _notification                     = notification;
-        _notificationLeft                 = _notificationSeconds;
+        _notification = notification;
+        _notificationLeft.start( _notificationSeconds );
         GameObject* const        pOwner   = getOwner();
         GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || shakeAmplitude <= 0.0f )
@@ -137,8 +137,8 @@ namespace sw
     void ActionRoomHUDComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        _notificationLeft -= context.getDeltaTime();
-        if ( _notificationLeft <= 0.0f )
+        (void)_notificationLeft.update( context.getDeltaTime() );
+        if ( _notificationLeft.isActive() == false )
             _notification = Notification::None;
         context.deferPostTickOnComponent( *this, []( ActionRoomHUDComponent& hud )
         { hud.updateHUD(); } );

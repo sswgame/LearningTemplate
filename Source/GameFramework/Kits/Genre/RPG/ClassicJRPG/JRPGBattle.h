@@ -6,7 +6,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -18,8 +17,46 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/TurnOrder.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
+#include "GameFramework/Runtime/World/Encounter/StepEncounter.h"
+
+namespace sw
+{
+    class Archive;
+
+    /**
+     * @class JRPGEncounterWalker
+     * @brief 걸음을 세어 조우를 정합니다. 시드와 걸음이 같으면 같은 걸음에서 같은 무리를 만납니다.
+     */
+    class SW_KIT_API JRPGEncounterWalker
+    {
+    public:
+        static constexpr int32 kNoEncounterYet = StepEncounterCounter::kNoEncounterYet;
+
+        JRPGEncounterWalker();
+
+        void initialize( const JRPGCatalog& catalog, uint32 seed );
+        /** @brief @p areaID 에서 한 걸음 걷습니다. 조우하면 그 무리를 반환하고, 아니면 nullptr 을 반환합니다(모르는 지역이나 무리가 없는 지역도 nullptr 입니다). */
+        const JRPGEncounterGroup* step( const hashed_string& areaID );
+        /** @brief 유예를 처음부터 다시 셉니다(마을에서 나왔을 때나 성수를 썼을 때 호출합니다). */
+        void restartGrace() { _counter.restartGrace(); }
+        /**
+         * @brief 난수, 조우 뒤 걸음, 총 걸음을 씁니다. 카탈로그는 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
+
+        int32 getStepsSinceEncounter() const { return _counter.getStepsSinceEncounter(); }
+        int32 getTotalSteps() const { return _counter.getTotalSteps(); }
+
+    private:
+        GameRandom           _random;
+        const JRPGCatalog*   _pCatalog;
+        StepEncounterCounter _counter; ///< 기반 걸음 조우 셈(확률 + 유예 판정은 `StepEncounterRule::Chance`)
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -223,10 +260,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag       = FourCCUtil::make( "JBTL" );
-        static constexpr uint32 kStateVersion   = 1;
-        static constexpr int32  kEnemyActorBase = 100; ///< TurnOrder 의 적 번호는 이 값에 적 인덱스를 더한 값이다
-        static constexpr int32  kDefendPriority = 1;
+        static constexpr int32 kEnemyActorBase = 100; ///< TurnOrder 의 적 번호는 이 값에 적 인덱스를 더한 값이다
+        static constexpr int32 kDefendPriority = 1;
 
         JRPGBattle();
 
@@ -298,15 +333,15 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<JRPGCommand> _listCommand; ///< 멤버 인덱스마다의 명령
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
-        vector<uint8>                       _listDefending; ///< 이번 라운드에 방어 중인지(멤버 인덱스마다)
-        NotificationBuffer<JRPGBattleEvent> _eventBuffer;
-        TurnOrder                           _turnOrder;
-        GameRandom                          _random;
-        JRPGBattleSettings                  _settings;
-        const JRPGCatalog*                  _pCatalog;
-        const TimingJudge*                  _pJudge;
-        const IJRPGTimingInput*             _pTimingInput;
-        JRPGParty*                          _pParty;
+        vector<uint8> _listDefending; ///< 이번 라운드에 방어 중인지(멤버 인덱스마다)
+        SW_TRANSIENT NotificationBuffer<JRPGBattleEvent> _eventBuffer;
+        SW_CODEC_STATE TurnOrder                         _turnOrder;
+        SW_CODEC_STATE GameRandom                        _random;
+        SW_CODEC_STATE JRPGBattleSettings                _settings;
+        const JRPGCatalog*                               _pCatalog;
+        const TimingJudge*                               _pJudge;
+        const IJRPGTimingInput*                          _pTimingInput;
+        JRPGParty*                                       _pParty;
         PROPERTY( RuntimeState, Min = 0 )
         int64 _rewardExp;
         PROPERTY( RuntimeState, Min = 0 )

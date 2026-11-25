@@ -87,6 +87,7 @@ namespace sw
         , _view{}
         , _listRejectScratch{}
         , _listSubscription{}
+        , _targetSubscription{}
         , _bActive{ SW_FALSE }
     {
     }
@@ -94,7 +95,8 @@ namespace sw
     bool HubClientLink::initialize( INetPeers& peers, NetMessageRouter& router )
     {
         _remoteCalls.initialize( &peers, &router );
-        if ( _remoteCalls.registerTarget( RemoteCallTargets::kSessionTargetID, *HubAvatarAgent::StaticType(), &_agent ) == false )
+        _targetSubscription = _remoteCalls.registerTarget( RemoteCallTargets::kSessionTargetID, *HubAvatarAgent::StaticType(), &_agent );
+        if ( _targetSubscription.isActive() == false )
             return false;
         _listSubscription.push_back( router.registerHandler( &_remoteCalls ) );
         _listSubscription.push_back( router.registerHandler( &_view ) );
@@ -104,6 +106,7 @@ namespace sw
                 continue;
             SW_LOG_ERROR_ID( "Hub.ClientRouterTaken", "[Hub] a message range of the hub client is already handled - the client link does not start" );
             _listSubscription.clear();
+            _targetSubscription.reset();
             return false;
         }
         _bActive = SW_TRUE;
@@ -113,7 +116,7 @@ namespace sw
     void HubClientLink::shutdown()
     {
         _listSubscription.clear();
-        _remoteCalls.unregisterTarget( RemoteCallTargets::kSessionTargetID );
+        _targetSubscription.reset();
         _bActive = SW_FALSE;
     }
 

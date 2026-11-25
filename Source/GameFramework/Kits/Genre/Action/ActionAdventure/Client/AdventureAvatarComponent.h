@@ -11,11 +11,10 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -31,7 +30,7 @@ namespace sw
      */
     REFLECT( Category = "ActionAdventure", DisplayName = "Adventure Avatar",
              Tooltip = "Client side of an action adventure: sends input commands to the Adventure Game Mode on the same object and draws its regions, beacons, camps and player" )
-    class SW_KIT_CLIENT_API AdventureAvatarComponent : public Component
+    class SW_KIT_CLIENT_API AdventureAvatarComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -41,18 +40,13 @@ namespace sw
         AdventureAvatarComponent();
         virtual ~AdventureAvatarComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 액션 이름이 비었으면 오류를 남깁니다(폴백 없음). 틱 그룹은 뷰와 같은 `PostUpdate` 입니다. */
-        void onBeginPlay() override;
         /** @brief 세운 모습을 지웁니다. */
         void onEndPlay() override;
-        /** @brief 입력 · 명령 · 그리기를 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
 
     private:
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 그립니다. */
-        void updateAvatar( GameObjectManager& manager );
+        void updateAvatar( GameObjectManager& manager, AdventureGameModeComponent& director );
+        void submitInput( const GameModeInput& input, AdventureGameModeComponent& director );
         /** @brief 판을 보입니다. 지역 표 · 플레이어 자리는 절대 자리다. */
         void showWorld( const AdventureGameModeComponent& director, GameObjectManager& manager );
         /** @brief 지역 경계 넷을 얇은 상자로 보입니다 — 씬에 땅 메시가 없는 지역(확장 팩)도 어디까지 걸을 수 있는지 보인다. */
@@ -61,7 +55,7 @@ namespace sw
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that walks the player (required)" )
         hashed_string _moveAction;
-        PROPERTY( Category = "Input", DisplayName = "Use Action", Tooltip = "InputMap action that lights a beacon or rests at a camp (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Use Action", Tooltip = "InputMap action that lights a beacon or rests at a camp (required)" )
         hashed_string _useAction;
         PROPERTY( Category = "View", DisplayName = "Cube Prefab", Required, Tooltip = "1 m cube stretched into region borders and beacons" )
         AssetRef<PrefabAsset> _cubePrefab;
@@ -90,11 +84,7 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Player Color" )
         float4 _playerColor;
 
-        TComponentHandle<AdventureGameModeComponent> _director;
-        PrefabViewBatch                              _cubeViews;
-        PrefabViewBatch                              _sphereViews;
-        uint8                                        _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않고 그리기만 한다)
-        uint8                                        _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                       _reserved      : 6;
+        SW_TRANSIENT PrefabViewBatch _cubeViews;
+        SW_TRANSIENT PrefabViewBatch _sphereViews;
     };
 } // namespace sw

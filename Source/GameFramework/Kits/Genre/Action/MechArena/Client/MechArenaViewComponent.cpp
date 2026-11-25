@@ -6,29 +6,21 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Action/MechArena/Client/MechArenaHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/Component/MechArenaGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 상태를 싣기 전에 세운 탄 모습을 걷습니다 — 씬 섹션에 실리면 복원한 뒤 다시 세운 것과 겹친다. */
-        const StatefulComponentRegistrar<MechArenaViewComponent> s_viewRegistration{ "MechArenaViewComponent" };
 
         /** @brief 다운된 기체의 높이 비율입니다. */
         constexpr float32 kMechArenaDownHeightRatio = 0.4f;
@@ -41,7 +33,8 @@ namespace sw
     } // namespace
 
     MechArenaViewComponent::MechArenaViewComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&MechArenaViewComponent::updateView, &MechArenaViewComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _fireAction{}
         , _meleeAction{}
         , _specialAction{}
@@ -52,59 +45,24 @@ namespace sw
         , _mechHeight{ 2.4f }
         , _projectilePrefab{}
         , _projectilePoolSize{ 0 }
-        , _director{}
         , _hudViewModel{}
-        , _projectilePool{ string{}, 0 }
+        , _projectilePool{ string{}, 0, SpawnLifetime::Derived }
         , _listProjectileView{}
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
     MechArenaViewComponent::~MechArenaViewComponent() = default;
 
-    void MechArenaViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                       pOwner    = getOwner();
-        const MechArenaGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<MechArenaGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "MechArena.ViewWithoutGameMode", "Mech arena view on '%#': no MechArenaGameModeComponent in front of it on the same object - the view does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<MechArenaGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<MechArenaGameModeComponent>( pDirector );
-    }
-
     void MechArenaViewComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
-        _projectilePool    = PrefabPool( _projectilePrefab.path(), _projectilePoolSize );
-        bool bActionsValid = true;
-        for ( const hashed_string* pAction : { &_moveAction, &_fireAction, &_meleeAction, &_specialAction, &_dashAction, &_jumpAction, &_lockAction } )
-        {
-            bActionsValid = bActionsValid && pAction->empty() == false;
-        }
-        _bActionsValid = bActionsValid ? SW_TRUE : SW_FALSE;
-        if ( bActionsValid == false )
-            SW_LOG_ERROR_ID( "MechArena.ViewActionMissing", "Mech arena view: the move, fire, melee, special, dash, jump and lock actions must all be named - the view reads no input" );
+        GameModeViewComponent::onBeginPlay();
+        _projectilePool = PrefabPool( _projectilePrefab.path(), _projectilePoolSize, SpawnLifetime::Derived );
     }
 
     void MechArenaViewComponent::onEndPlay()
     {
         despawnViews();
-        Component::onEndPlay();
-    }
-
-    void MechArenaViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( MechArenaViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
+        GameModeViewComponent::onEndPlay();
     }
 
     void MechArenaViewComponent::despawnViews()
@@ -116,27 +74,18 @@ namespace sw
         _listProjectileView.clear();
     }
 
-    void MechArenaViewComponent::updateView( GameObjectManager& manager )
+    void MechArenaViewComponent::updateView( GameObjectManager& manager, MechArenaGameModeComponent& director )
     {
-        MechArenaGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        const bool bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAcceptingInput();
-        if ( bReadInput )
-            submitInput( *pDirector );
-        updatePilotBody( manager, *pDirector );
-        syncProjectiles( manager, *pDirector );
-        updateHUD( *pDirector );
+        dispatchInput( manager, director );
+        updatePilotBody( manager, director );
+        syncProjectiles( manager, director );
+        updateHUD( director );
     }
 
-    void MechArenaViewComponent::submitInput( MechArenaGameModeComponent& director ) const
+    void MechArenaViewComponent::submitInput( const GameModeInput& view, MechArenaGameModeComponent& director ) const
     {
-        const InputManager* const pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return;
-        const GameInputView view( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-        const float2        move = view.getVector2D( _moveAction );
-        MechInput           input;
+        const float2 move = view.getVector2D( _moveAction );
+        MechInput    input;
         input._moveX    = move._x;
         input._moveZ    = move._y;
         input._bFire    = toMechInputFlag( view.isActionDown( _fireAction ) );

@@ -10,12 +10,12 @@
 	<_listFamily>
 		<FontFamilyDef _name="Kenney Future">
 			<_listFace>
-				<FontFaceDef _path="engine/fonts/kenney_future.ttf" />
+				<FontFaceDef _path="guid:9901be9f18c05828d38416f1f490f2f0" />
 			</_listFace>
 		</FontFamilyDef>
 		<FontFamilyDef _name="Kenney Future Narrow">
 			<_listFace>
-				<FontFaceDef _path="engine/fonts/kenney_future_narrow.ttf" />
+				<FontFaceDef _path="guid:6066dab3952751b64d8855bd5a6e9e00" />
 			</_listFace>
 		</FontFamilyDef>
 	</_listFamily>

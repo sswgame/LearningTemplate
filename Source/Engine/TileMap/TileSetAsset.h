@@ -12,6 +12,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -19,6 +20,7 @@
 
 namespace sw
 {
+    class Texture2D;
     class XMLDocument;
     class XMLNode;
 
@@ -94,16 +96,18 @@ namespace sw
 
         PROPERTY()
         string _name{};
-        PROPERTY( AssetPath )
-        string _atlas{};
-        PROPERTY( AssetPath )
-        string _normalAtlas{};
+        PROPERTY()
+        AssetRef<Texture2D> _atlas;
+        PROPERTY()
+        AssetRef<Texture2D> _normalAtlas;
         PROPERTY( Min = 1 )
         int32 _columns{ 1 };
         PROPERTY( Min = 1 )
         int32 _rows{ 1 };
         PROPERTY( Min = 0.0001 )
         float32 _tileSize{ 1.0f };
+
+        TileSetRootParams();
     };
 
     /** @brief `<Tile>` · `<RuleTile>` 의 칸입니다. 그림(`cell` · `frames` · `fps`)은 서로 배타라 손으로 읽는다(`TileSetAsset::parseVisual`). */

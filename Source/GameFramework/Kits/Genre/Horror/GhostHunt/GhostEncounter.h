@@ -7,7 +7,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -102,9 +101,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "GHEN" );
-        static constexpr uint32 kStateVersion = 1;
-
         GhostEncounter();
 
         /** @brief 카탈로그와 시드를 정하고 새 싸움을 엽니다. 카탈로그가 없거나 시드가 0 이면 오류를 남기고 false 를 반환하며 그대로입니다. */
@@ -165,10 +161,10 @@ namespace sw
         void           pushEvent( GhostEventKind type, uint32 ghostID, float32 amount = 0.0f, int32 coins = 0 );
 
     private:
-        const GhostCatalog*            _pCatalog;
-        GameRandom                     _random;
-        vector<GhostInstance>          _listGhost;
-        NotificationBuffer<GhostEvent> _eventBuffer;
+        const GhostCatalog*       _pCatalog;
+        SW_CODEC_STATE GameRandom _random;
+        SW_CODEC_STATE vector<GhostInstance> _listGhost;
+        SW_TRANSIENT NotificationBuffer<GhostEvent> _eventBuffer;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _strobeCharge;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

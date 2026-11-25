@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle/CardBattle.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
 

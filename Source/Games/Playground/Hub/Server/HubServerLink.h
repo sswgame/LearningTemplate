@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Time/Countdown.h"
 
 #include "Engine/Scene/StreamingCellGrid.h"
 
@@ -143,6 +144,7 @@ namespace sw
         StreamingCellGrid                                _grid; ///< 복제기보다 먼저 선언한다 — 복제기가 빌려 쓴다
         MMOReplicator                                    _replicator;
         unordered_map<int32, unique_ptr<HubAvatarAgent>> _mapAgent;          ///< 연결 → 세션 객체(들인 접속)
+        unordered_map<int32, Subscription>               _mapSessionTarget;  ///< 연결 → 세션 대상(`_mapAgent` 의 것)의 등록 — 뒤 멤버라 대상보다 먼저 내린다
         unordered_map<int32, uint64>                     _mapPendingAccount; ///< 진행을 읽는 중인 연결 → 계정
         vector<HubProfileLoad>                           _listLoadScratch;
         vector<uint8>                                    _listStateScratch;
@@ -152,6 +154,6 @@ namespace sw
         Subscription                                     _beforeWithdraw; ///< 저장소가 내려가기 직전의 알림(`flushProfiles`)
         INetPeers*                                       _pPeers;
         const NetMessageRouter*                          _pRouter; ///< 월드의 서버 시계(`getWorldClock`)를 읽는다. 서 있는 동안만 있다
-        float32                                          _autosaveTimer;
+        Countdown                                        _autosaveTimer;
     };
 } // namespace sw

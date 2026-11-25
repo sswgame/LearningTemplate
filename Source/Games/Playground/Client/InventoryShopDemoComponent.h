@@ -10,10 +10,10 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Screen/UIScreenTypes.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h"
@@ -50,7 +50,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 같은 씬의 캐릭터 장비 컴포넌트입니다(시작했을 때만). */
@@ -71,13 +70,13 @@ namespace sw
         PROPERTY( Category = "UI", DisplayName = "Shop Document" )
         AssetRef<UIDocumentAsset> _shopDocument;
 
-        SharedAssetRef<ShopCatalog>           _pShops;
-        ShopManager                           _shop;
-        vector<ShopEvent>                     _listShopEvent; ///< 이번 프레임의 가게 알림(용량만 넘긴다)
-        Wallet                                _wallet;
-        hashed_string                         _currency;
-        unique_ptr<LocalShopPurchaseProvider> _provider;
-        UIScreenHandle                        _inventoryScreen;
-        UIScreenHandle                        _shopScreen;
+        BoundAssetRef<ShopCatalog> _pShops;
+        SW_CODEC_STATE ShopManager _shop;
+        SW_TRANSIENT vector<ShopEvent> _listShopEvent; ///< 이번 프레임의 가게 알림(용량만 넘긴다)
+        SW_CODEC_STATE Wallet          _wallet;
+        SW_TRANSIENT hashed_string     _currency;
+        SW_TRANSIENT unique_ptr<LocalShopPurchaseProvider> _provider;
+        SW_TRANSIENT UIOwnedScreen                         _inventoryScreen;
+        SW_TRANSIENT UIOwnedScreen                         _shopScreen;
     };
 } // namespace sw

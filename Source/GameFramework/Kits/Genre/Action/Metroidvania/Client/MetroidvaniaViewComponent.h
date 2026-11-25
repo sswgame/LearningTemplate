@@ -12,11 +12,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -31,7 +30,7 @@ namespace sw
      */
     REFLECT( Category = "Metroidvania", DisplayName = "Metroidvania View",
              Tooltip = "Client side of a metroidvania game: sends input commands to the Metroidvania Game Mode on the same object and shows the player, enemies, pickups, the corpse and the HUD" )
-    class SW_KIT_CLIENT_API MetroidvaniaViewComponent : public Component
+    class SW_KIT_CLIENT_API MetroidvaniaViewComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -41,17 +40,10 @@ namespace sw
         MetroidvaniaViewComponent();
         virtual ~MetroidvaniaViewComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 액션 이름이 비었으면 오류를 남깁니다(폴백 없음). 틱 그룹은 뷰와 같은 `PostUpdate` 입니다. */
-        void onBeginPlay() override;
-        /** @brief 입력 · 명령 · 모습을 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
-
     private:
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 모습 · HUD 를 맞춥니다. */
-        void updateView( GameObjectManager& manager );
-        void submitInput( MetroidvaniaGameModeComponent& director ) const;
+        void updateView( GameObjectManager& manager, MetroidvaniaGameModeComponent& director );
+        void submitInput( const GameModeInput& input, MetroidvaniaGameModeComponent& director ) const;
         void updateScene( GameObjectManager& manager, const MetroidvaniaGameModeComponent& director ) const;
         /** @brief 오브젝트 하나를 보이거나 숨기고, 보이면 평면 자리 @p position 을 가운데로 @p size 로 둡니다. */
         static void placeBody( GameObjectManager& manager, GameObjectHandle body, bool bShown, const float2& position, const float3& size );
@@ -60,17 +52,17 @@ namespace sw
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that runs and climbs (required)" )
         hashed_string _moveAction;
-        PROPERTY( Category = "Input", DisplayName = "Jump Action", Tooltip = "InputMap action of the jump, higher while held (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Jump Action", Tooltip = "InputMap action of the jump, higher while held (required)" )
         hashed_string _jumpAction;
-        PROPERTY( Category = "Input", DisplayName = "Dash Action", Tooltip = "InputMap action of the dash (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Dash Action", Tooltip = "InputMap action of the dash (required)" )
         hashed_string _dashAction;
-        PROPERTY( Category = "Input", DisplayName = "Attack Action", Tooltip = "InputMap action of the attack (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Attack Action", Tooltip = "InputMap action of the attack (required)" )
         hashed_string _attackAction;
-        PROPERTY( Category = "Input", DisplayName = "Guard Action", Tooltip = "InputMap action that parries when pressed and guards while held (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Guard Action", Tooltip = "InputMap action that parries when pressed and guards while held (required)" )
         hashed_string _guardAction;
-        PROPERTY( Category = "Input", DisplayName = "Use Action", Tooltip = "InputMap action that uses a site (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Use Action", Tooltip = "InputMap action that uses a site (required)" )
         hashed_string _useAction;
-        PROPERTY( Category = "Input", DisplayName = "Flask Action", Tooltip = "InputMap action that drinks a flask (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Flask Action", Tooltip = "InputMap action that drinks a flask (required)" )
         hashed_string _flaskAction;
         PROPERTY( Category = "Scene", DisplayName = "Player Body", Tooltip = "Object shown as the player" )
         GameObjectHandle _playerBody;
@@ -87,10 +79,6 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Marker Size", Tooltip = "Size of pickups and of the corpse", Units = m )
         float3 _markerSize;
 
-        TComponentHandle<MetroidvaniaGameModeComponent> _director;
-        unique_ptr<MetroidvaniaHUDViewModel>            _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
-        uint8                                           _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
-        uint8                                           _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                          _reserved      : 6;
+        unique_ptr<MetroidvaniaHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
     };
 } // namespace sw

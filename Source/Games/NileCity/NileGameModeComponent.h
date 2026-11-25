@@ -8,9 +8,12 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Math/Radians.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/TileMap/TileMapXML.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityBuilderGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -52,8 +55,6 @@ namespace sw
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
-        /** @brief 모습은 키트 클라이언트(`CityViewComponent`)가 세운다 — 여기서 세울 것이 없다. */
-        void onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 나일 달력입니다. 아케트, 페레트, 셰무가 각각 네 달씩(열두 달)이며, 계절 하루가 한 달입니다. */
@@ -63,35 +64,19 @@ namespace sw
         /** @brief 이번 걸음의 도시 알림에서 달 · 진화 · 범람을 세고 달마다 로그를 남깁니다. */
         void logCityEvents();
         bool isAutoPlanOn() const;
-        /** @brief 땅 모양 · 자동 계획 PROPERTY 를 플래너에 넘길 설정으로 모읍니다. */
+        /** @brief 자동 계획 PROPERTY 를 플래너에 넘길 설정으로 모읍니다. */
         NileCityLayout makeCityLayout() const;
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Auto Plan", AssetPath, Tooltip = "Build order the auto plan follows (roads, buildings and population thresholds); required" )
-        string _autoPlanPath;
+        PROPERTY( Category = "Data", DisplayName = "Auto Plan", Tooltip = "Build order the auto plan follows (roads, buildings and population thresholds); required" )
+        DataPath _autoPlanPath;
         PROPERTY( Category = "City", DisplayName = "Seconds Per Month", Tooltip = "Real seconds in one city month before the time scale", Min = 1.0, Units = s )
         float32 _secondsPerMonth;
 
-        PROPERTY( Category = "Map", DisplayName = "River Center X", Tooltip = "Average x of the river's middle (tiles)", Min = 0.0 )
-        float32 _riverCenterX;
-        PROPERTY( Category = "Map", DisplayName = "River Meander", Tooltip = "How far the river swings east and west (tiles)", Min = 0.0 )
-        float32 _riverMeander;
-        PROPERTY( Category = "Map", DisplayName = "River Meander Rate", Tooltip = "Phase of the river's swing per tile north to south" )
-        Radians _riverMeanderRate;
-        PROPERTY( Category = "Map", DisplayName = "River Half Width", Tooltip = "Half the river's width (tiles)", Min = 0.0 )
-        float32 _riverHalfWidth;
-        PROPERTY( Category = "Map", DisplayName = "East Floodplain Width", Tooltip = "Floodplain east of the river, where the farms and the city stand (tiles)", Min = 0.0 )
-        float32 _eastFloodWidth;
-        PROPERTY( Category = "Map", DisplayName = "West Floodplain Width", Tooltip = "Floodplain west of the river (tiles)", Min = 0.0 )
-        float32 _westFloodWidth;
-        PROPERTY( Category = "Map", DisplayName = "Desert Dune Height", Tooltip = "How far the east desert's edge waves (tiles)", Min = 0.0 )
-        float32 _desertDuneHeight;
-        PROPERTY( Category = "Map", DisplayName = "Desert Dune Rate", Tooltip = "Phase of the desert edge's wave per tile north to south" )
-        Radians _desertDuneRate;
-        PROPERTY( Category = "Map", DisplayName = "Desert Start X", Tooltip = "Tile x where the east desert begins", Min = 0 )
-        int32 _desertStartX;
-        PROPERTY( Category = "Map", DisplayName = "Rock Ridge X", Tooltip = "Tile x from which the east rock ridge runs", Min = 0 )
-        int32 _rockRidgeX;
+        PROPERTY( Category = "Map", DisplayName = "Tile Map", Tooltip = "Tile map of the land: the city size and the data layer 'terrain' whose values are numbers of Terrains; required" )
+        AssetRef<TileMapXMLData> _tileMapPath;
+        PROPERTY( Category = "Map", DisplayName = "Terrains", Tooltip = "Terrains (city catalog) the map's data layer 'terrain' numbers from 0; every value of the layer needs one" )
+        vector<CatalogKey<CityTerrainDef>> _listTerrain;
         PROPERTY( Category = "Auto Plan", DisplayName = "Road X", Tooltip = "Tile x of the north-south road between the floodplain farms and the city", Min = 0 )
         int32 _roadX;
         PROPERTY( Category = "Auto Plan", DisplayName = "Farm X", Tooltip = "Left tile x of the 3x3 farms; must be floodplain on every row", Min = 0 )
@@ -101,10 +86,10 @@ namespace sw
         PROPERTY( Category = "Auto Plan", DisplayName = "Third Block Population", Tooltip = "Population at which the auto plan starts the third block", Min = 0 )
         int32 _thirdBlockPeople;
 
-        Wallet                  _wallet; ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
-        WorldClock              _clock;  ///< 달력. 하루가 한 달이다(계절 열둘 x 하루). 디렉터가 보관하고 시간을 흘린다.
-        NileCityPlanner         _planner;
-        vector<WorldClockEvent> _listClockEvent; ///< 이번 틱의 달력 알림(스크래치).
+        SW_CODEC_STATE Wallet          _wallet; ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
+        SW_CODEC_STATE WorldClock      _clock;  ///< 달력. 하루가 한 달이다(계절 열둘 x 하루). 디렉터가 보관하고 시간을 흘린다.
+        SW_CODEC_STATE NileCityPlanner _planner;
+        SW_TRANSIENT vector<WorldClockEvent> _listClockEvent; ///< 이번 틱의 달력 알림(스크래치).
         PROPERTY( RuntimeState )
         int32 _monthCount;
         PROPERTY( RuntimeState )

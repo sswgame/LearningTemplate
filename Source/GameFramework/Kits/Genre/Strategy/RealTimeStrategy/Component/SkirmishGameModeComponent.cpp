@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/SkirmishGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -19,6 +18,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
@@ -29,8 +29,7 @@ namespace sw
     {
         struct SkirmishGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "RTMS" );
-            static constexpr uint32 kStateVersion = 3; ///< 3: 판의 정체(`getMatchID`)를 싣고, 고른 유닛 · 부대가 클라이언트 구간(`RTSCommandInputComponent`)으로 나갔다(옛 판은 거절한다 — 출시 전)
+            static constexpr FormatDef kStateFormat{ "RTMS" };
         };
 
         /** @brief 감시 값 `Skirmish.UnitCount` 입니다. 두 진영의 유닛 · 건물 수의 합입니다(AI 가 일꾼 · 군대를 늘리는지 본다). */
@@ -46,11 +45,16 @@ namespace sw
             return true;
         }
 
-        /** @brief 감시 값 `Skirmish.AIPlayerCount` 입니다. 컴퓨터가 맡은 플레이어(0 · 1) 수입니다 — 자동 플레이로 열렸으면 2 다. */
+        /** @brief 감시 값 `Skirmish.AIPlayerCount` 입니다. 컴퓨터가 맡은 플레이어 수입니다 — 자동 플레이로 열렸으면 지도의 플레이어 수다. */
         [[nodiscard]] bool readAIPlayerCount( const SkirmishGameModeComponent& gameMode, float64& outValue )
         {
             const SkirmishMatch& match = gameMode.getMatch();
-            outValue                   = static_cast<float64>( ( match.findAI( 0 ) != nullptr ? 1 : 0 ) + ( match.findAI( 1 ) != nullptr ? 1 : 0 ) );
+            int32                count = 0;
+            for ( int32 player = 0; player < match.getPlayerCount(); ++player )
+            {
+                count += match.findAI( player ) != nullptr ? 1 : 0;
+            }
+            outValue = static_cast<float64>( count );
             return true;
         }
 
@@ -127,7 +131,7 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_COMPONENT_WATCH( skirmishUnitCount, "Skirmish.UnitCount", "Units and buildings of both players", SkirmishGameModeComponent, &readUnitCount );
-    SW_AUTOMATION_COMPONENT_WATCH( skirmishAIPlayerCount, "Skirmish.AIPlayerCount", "Players (0 and 1) the AI commander plays - 2 when the match opened in autoplay", SkirmishGameModeComponent,
+    SW_AUTOMATION_COMPONENT_WATCH( skirmishAIPlayerCount, "Skirmish.AIPlayerCount", "Players the AI commander plays - every player of the map when the match opened in autoplay", SkirmishGameModeComponent,
                                    &readAIPlayerCount );
     SW_DEV_COMMAND( SkirmishOrder, "skirmish.order", "skirmish.order <x> <z>", "Attack-move every army unit of this screen's player to the map point (through the lockstep input in a network match)",
                     &SkirmishGameModeComponentDevInternal::runOrder );
@@ -139,17 +143,9 @@ namespace sw
 {
     SkirmishGameModeComponent::SkirmishGameModeComponent()
         : _commanderTreePath{}
-        , _huntIntervalSeconds{ 4.0f }
-        , _arrivedRadius{ 10.0f }
-        , _statusLogInterval{ 30.0f }
-        , _workerUnitID{}
-        , _depotUnitID{}
-        , _supplyUnitID{}
-        , _productionUnitID{}
-        , _armyUnitID{}
-        , _rushAI{}
-        , _macroAI{}
-        , _opponentAI{}
+        , _map{}
+        , _matchSettings{}
+        , _speedRange{}
         , _pCommanderTree{}
         , _commanderDebugSource{ *this }
         , _match{}
@@ -165,13 +161,15 @@ namespace sw
 
     void SkirmishGameModeComponent::CommanderDebugSource::collectBehaviorTreeRunners( vector<BehaviorTreeDebugRunner>& outList ) const
     {
-        for ( int32 player = 0; player < SkirmishMatch::kPlayerCount; ++player )
+        for ( int32 player = 0; player < _owner._match.getPlayerCount(); ++player )
         {
             const RTSCommanderAI* pAI = _owner._match.findAI( player );
             if ( pAI == nullptr )
                 continue;
+            fixed_string<constant::buffer::kMax256> name;
+            formatstring( name.data(), name.capacity(), "Player %#", player );
             BehaviorTreeDebugRunner& entry = outList.emplace_back();
-            entry._name                    = player == 0 ? "Player 0" : "Player 1"; // 판은 두 플레이어(kPlayerCount)
+            entry._name                    = name.view();
             entry._treePath                = _owner._commanderTreePath.path();
             entry._pRunner                 = &pAI->getRunner();
         }
@@ -184,7 +182,7 @@ namespace sw
 
     void SkirmishGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( SkirmishGameModeComponentInternal::kStateTag, SkirmishGameModeComponentInternal::kStateVersion );
+        io.header( SkirmishGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         if ( io.isReading() && findCatalog() != nullptr )
@@ -199,10 +197,8 @@ namespace sw
         io.end();
         if ( io.isReading() && io.isOk() )
         {
-            GameSpeedControl restoredSpeed;
-            if ( io.check( restoredSpeed.restore( timeScale, bPaused != SW_FALSE ) && matchID != 0 ) == false )
+            if ( io.check( _speed.restore( timeScale, bPaused != SW_FALSE ) && matchID != 0 ) == false )
                 return; // 범위 밖 배속 · 정체 없는 판(깨진 세이브)은 거절한다
-            _speed   = restoredSpeed;
             _matchID = matchID;
             _listStepEvent.clear();
         }
@@ -216,9 +212,7 @@ namespace sw
         }
         else
         {
-            // 판이 반쯤 바뀌었을 수 있다. 새 판으로 되돌린다.
-            SW_LOG_WARNING_ID( "SkirmishGameMode.SavedMatchStateDoes", "[Skirmish] the saved match state does not match this build - starting a new match" );
-            (void)openGame();
+            SW_LOG_WARNING_ID( "SkirmishGameMode.SavedMatchStateDoes", "[Skirmish] the saved match state does not match this build - the current match goes on" );
         }
     }
 
@@ -229,32 +223,27 @@ namespace sw
         if ( acquireRequired( _commanderTreePath, _pCommanderTree ) == false )
             return false;
         // AI · 맵 배치가 쓰는 유닛 id 는 유닛 카탈로그에 있어야 한다.
-        if ( hasUnits( { &_workerUnitID, &_depotUnitID, &_supplyUnitID, &_productionUnitID, &_armyUnitID } ) == false )
+        const RTSCommanderUnits& units = _matchSettings._units;
+        if ( hasUnits( { &units._workerID, &units._depotID, &units._supplyID, &units._productionID, &units._armyUnitID } ) == false )
             return false;
-        const bool bAIStylesSet = _rushAI.isSet() && _macroAI.isSet() && _opponentAI.isSet();
+        if ( _speed.initialize( _speedRange ) == false )
+            return false; // 까닭은 남았다
+        const bool bAIStylesSet = _matchSettings._rushAI.isSet() && _matchSettings._macroAI.isSet() && _matchSettings._opponentAI.isSet();
         if ( bAIStylesSet == false )
         {
-            SW_LOG_ERROR_ID( "SkirmishGameMode.DirectorNeedsRushAIMacroAI", "[Skirmish] the game mode needs _rushAI, _macroAI and _opponentAI (worker, production and attack targets) - the match cannot start" );
+            SW_LOG_ERROR_ID( "SkirmishGameMode.DirectorNeedsRushAIMacroAI", "[Skirmish] the game mode needs _matchSettings._rushAI, _macroAI and _opponentAI (every target, interval and radius) - the match cannot start" );
+            return false;
+        }
+        TileMapXMLData tileMap;
+        if ( tileMap.load( AssetID{ _map._tileMapPath } ) == false )
+        {
+            SW_LOG_ERROR_ID( "SkirmishGameMode.MapMissing", "[Skirmish] the game mode needs a readable _map._tileMapPath (got '%#') - the match cannot start", _map._tileMapPath.c_str() );
             return false;
         }
         const optional<uint8> humanMask = openPlayers( isAutoPlayOn() );
         if ( humanMask.has_value() == false )
             return false; // 까닭은 대전을 여는 파생이 남겼다
-        SkirmishMatchSettings matchSettings;
-        matchSettings._huntIntervalSeconds   = _huntIntervalSeconds;
-        matchSettings._arrivedRadius         = _arrivedRadius;
-        matchSettings._startMinerals         = getStartMinerals();
-        matchSettings._statusIntervalSeconds = _statusLogInterval;
-        matchSettings._workerID              = _workerUnitID.key();
-        matchSettings._depotID               = _depotUnitID.key();
-        matchSettings._supplyID              = _supplyUnitID.key();
-        matchSettings._productionID          = _productionUnitID.key();
-        matchSettings._armyUnitID            = _armyUnitID.key();
-        matchSettings._rushAI                = _rushAI;
-        matchSettings._macroAI               = _macroAI;
-        matchSettings._opponentAI            = _opponentAI;
-        matchSettings._pCommanderTree        = _pCommanderTree.snapshot(); // 판은 받은 때의 트리로 끝까지 돈다
-        if ( _match.initialize( findCatalog(), *humanMask, matchSettings ) == false )
+        if ( _match.initialize( findCatalog(), _map, tileMap, *humanMask, _matchSettings, getStartMinerals(), _pCommanderTree.get() ) == false )
             return false;
         _listStepEvent.clear();
         do
@@ -289,13 +278,6 @@ namespace sw
     {
         if ( _speed.isPaused() == false )
             _match.update( deltaTime, _speed.getTimeScale() );
-    }
-
-    void SkirmishGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트 모듈(`RTSBattlefieldViewComponent`)이 세운다.
-        (void)manager;
-        (void)bRespawnViews;
     }
 
     int32 SkirmishGameModeComponent::submitCommand( RTSCommand&& command )

@@ -37,7 +37,7 @@ namespace sw
      * @brief 넣은 순서를 지키는 작은 이름 → 꾸미기 값 목록입니다(보통 수십 개 안이라 선형 조회).
      * @details 값은 스키마의 범위와 간격에 맞추기 전의 것일 수 있습니다. 해석기(`ResolvedAppearance`)가 스키마로 정규화한 뒤 씁니다.
      *          **스키마 판**(`getSchemaVersion`): 값을 쓴 스키마의 판입니다. 세이브 · 공유 코드가 함께 싣고, 스키마가 바뀐 뒤 읽으면 `CustomizationSchemaDef::migrate` 가
-     *          판을 차례로 올린다(이름 바꾸기 · 채널 나누기 · 팔레트 번호 → 색). 0 은 아직 판을 찍지 않은 값 — 이 실행이 읽은 스키마(콘텐츠 · 코드)로 만든 값이라 지금 판으로 읽는다.
+     *          판을 차례로 올린다(이름 바꾸기 · 채널 나누기 · 팔레트 번호 → 색). 판이 없으면(nullopt) 아직 찍지 않은 값 — 이 실행이 읽은 스키마(콘텐츠 · 코드)로 만든 값이라 지금 판으로 읽는다. 첫 판은 0 이다.
      *          스키마를 아는 자리(`applyValue` · `normalize` · `migrate` · 공유 코드 읽기)가 판을 찍는다.
      */
     class SW_GF_API CustomizationValueSet
@@ -54,18 +54,14 @@ namespace sw
         void clear()
         {
             _listValue.clear();
-            _schemaVersion = kUnversionedSchemaVersion;
+            _schemaVersion = nullopt;
         }
-        /** @brief 값을 쓴 스키마의 판입니다. 0(`kUnversionedSchemaVersion`)은 판을 찍지 않은 값입니다. */
-        uint32 getSchemaVersion() const { return _schemaVersion; }
-        void   setSchemaVersion( uint32 version ) { _schemaVersion = version; }
-
-        static constexpr uint32 kUnversionedSchemaVersion = 0;
-        /** @brief 판을 두기 전에 저장한 값(옛 세이브 · 옛 공유 코드)의 판입니다 — 판을 적지 않은 스키마의 판과 같다. */
-        static constexpr uint32 kFirstSchemaVersion = 1;
+        /** @brief 값을 쓴 스키마의 판입니다. 없으면 판을 찍지 않은 값입니다. */
+        const optional<uint32>& getSchemaVersion() const { return _schemaVersion; }
+        void                    setSchemaVersion( const optional<uint32>& version ) { _schemaVersion = version; }
 
         const CustomizationValue* findValue( const hashed_string& parameter ) const;
-        /** @brief 판과 이름 · 값이 모두 같은 집합인지입니다. 순서는 보지 않고, 판을 찍지 않은 쪽(0 — 지금 판)은 어느 판과도 맞는 것으로 봅니다. */
+        /** @brief 판과 이름 · 값이 모두 같은 집합인지입니다. 순서는 보지 않고, 판을 찍지 않은 쪽(지금 판)은 어느 판과도 맞는 것으로 봅니다. */
         bool                              isEquivalent( const CustomizationValueSet& other ) const;
         const vector<CustomizationValue>& getValues() const { return _listValue; }
         bool                              isEmpty() const { return _listValue.empty(); }
@@ -76,6 +72,6 @@ namespace sw
 
     private:
         vector<CustomizationValue> _listValue{};
-        uint32                     _schemaVersion{ kUnversionedSchemaVersion };
+        optional<uint32>           _schemaVersion{};
     };
 } // namespace sw

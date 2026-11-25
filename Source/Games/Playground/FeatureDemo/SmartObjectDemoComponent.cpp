@@ -2,7 +2,6 @@
 
 #include "Games/Playground/FeatureDemo/SmartObjectDemoComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
@@ -14,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
@@ -26,10 +26,9 @@ namespace sw
     {
         struct SmartObjectDemoComponentInternal
         {
-            static constexpr uint32  kStateTag       = FourCCUtil::make( "FDSO" );
-            static constexpr uint32  kStateVersion   = 1;
-            static constexpr int32   kMinutesPerHour = 60;
-            static constexpr float32 kMaxHour        = 24.0f; ///< 첫날의 끝
+            static constexpr FormatDef kStateFormat{ "FDSO" };
+            static constexpr int32     kMinutesPerHour = 60;
+            static constexpr float32   kMaxHour        = 24.0f; ///< 첫날의 끝
 
             /** @brief `schedule.advance <demo object> <hour>` — 첫날 그 시각(소수 시간)까지 일정을 흘립니다. */
             static bool runAdvance( const vector<string>& listArgument, string& outReply )
@@ -168,16 +167,10 @@ namespace sw
         (void)deltaTime; // 시각은 명령으로만 흐른다
     }
 
-    void SmartObjectDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void SmartObjectDemoComponent::serializeGameState( StateIO& io )
     {
         // 슬롯 점유는 스마트 오브젝트가, 시각 · 셈은 상태 칸이 싣는다. 일정은 시각의 함수라 그 시각으로 건너뛰고(이벤트는 버린다), 점유를 잇는 예약 번호만 다시 찾는다.
-        io.header( SmartObjectDemoComponentInternal::kStateTag, SmartObjectDemoComponentInternal::kStateVersion );
+        io.header( SmartObjectDemoComponentInternal::kStateFormat );
         if ( io.isWriting() || io.isOk() == false )
             return;
         _schedule.skipTo( _minute );

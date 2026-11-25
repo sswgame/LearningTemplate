@@ -10,6 +10,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
@@ -18,20 +19,60 @@
 
 namespace sw
 {
-    /** @brief AI 가 쓰는 정의 id 와 목표 수입니다. 종족과 난이도에 따라 데이터로 바꿉니다. */
-    struct RTSCommanderAISettings
+    /**
+     * @struct RTSCommanderAISettings
+     * @brief 컴퓨터 상대 하나의 성향(경제 · 병력 목표, 생각 주기, 짓는 자리)입니다.
+     * @details 값은 데이터(디렉터의 PROPERTY)에 있고 코드에는 기본 성향이 없다. 적지 않은 칸은 0 이라 판을 열 때 거절한다(`isSet`).
+     */
+    REFLECT()
+    struct SW_KIT_API RTSCommanderAISettings
     {
-        hashed_string _workerID{};
-        hashed_string _depotID{};      ///< 일꾼을 만드는 본진
-        hashed_string _supplyID{};     ///< 보급 건물
-        hashed_string _productionID{}; ///< 병력 건물
-        hashed_string _armyUnitID{};   ///< 병력 유닛
-        float32       _thinkInterval{ 0.5f };
-        float32       _defendRadius{ 14.0f }; ///< 본진에서 이 거리 안의 공격만 막으러 간다
-        int32         _workerTarget{ 14 };
-        int32         _productionTarget{ 2 };
-        int32         _attackArmySize{ 8 };
-        int32         _supplyMargin{ 3 }; ///< 남은 보급이 이 값 이하이면 보급 건물을 짓는다
+        REFLECT_BODY();
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Seconds between two decisions" )
+        float32 _thinkInterval{ 0.0f };
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "The army answers attacks only within this distance of the main base" )
+        float32 _defendRadius{ 0.0f };
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "Workers are sent to minerals within this distance of the main base" )
+        float32 _resourceSearchRadius{ 0.0f };
+        PROPERTY( Min = 0, Tooltip = "Workers the AI trains" )
+        int32 _workerTarget{ 0 };
+        PROPERTY( Min = 0, Tooltip = "Production buildings the AI builds" )
+        int32 _productionTarget{ 0 };
+        PROPERTY( Min = 0, Tooltip = "Army size that starts an attack" )
+        int32 _attackArmySize{ 0 };
+        PROPERTY( Min = 0, Tooltip = "The AI builds supply when the free supply is at most this" )
+        int32 _supplyMargin{ 0 };
+        PROPERTY( Min = 0, Tooltip = "Cells around the main base kept free when the AI looks for a building site" )
+        int32 _buildSiteMinRadius{ 0 };
+        PROPERTY( Min = 0, Tooltip = "Cells around the main base in which the AI looks for a building site" )
+        int32 _buildSiteMaxRadius{ 0 };
+        /** @brief 성향이 모두 적혔으면 true 입니다(보급 여유는 0 도 뜻이 있다). */
+        bool isSet() const
+        {
+            const bool bTargets = _workerTarget >= 1 && _productionTarget >= 1 && _attackArmySize >= 1;
+            const bool bRanges  = _thinkInterval > 0.0f && _defendRadius > 0.0f && _resourceSearchRadius > 0.0f;
+            return bTargets && bRanges && _buildSiteMinRadius >= 1 && _buildSiteMaxRadius >= _buildSiteMinRadius;
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 컴퓨터 상대가 짓고 만드는 유닛의 카탈로그 id 입니다. 값은 데이터(디렉터의 PROPERTY)에 있다. */
+    REFLECT()
+    struct SW_KIT_API RTSCommanderUnits
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, DisplayName = "Worker" )
+        CatalogKey<RTSUnitDef> _workerID{};
+        PROPERTY( Required, DisplayName = "Depot", Tooltip = "Resource drop-off building" )
+        CatalogKey<RTSUnitDef> _depotID{}; ///< 일꾼을 만드는 본진
+        PROPERTY( Required, DisplayName = "Supply", Tooltip = "Supply building" )
+        CatalogKey<RTSUnitDef> _supplyID{};
+        PROPERTY( Required, DisplayName = "Production", Tooltip = "Building that trains the army unit" )
+        CatalogKey<RTSUnitDef> _productionID{};
+        PROPERTY( Required, DisplayName = "Army", Tooltip = "Unit the AI trains and attacks with" )
+        CatalogKey<RTSUnitDef> _armyUnitID{};
     };
 } // namespace sw
 
@@ -66,7 +107,7 @@ namespace sw
          * @brief 월드 · 플레이어 · 설정으로 AI 를 시작합니다. 행동 트리는 데이터에서 읽은 것(`BehaviorTreeAsset::getTree`)을 복사해 쥔다 - 트리가 올바르지 않으면 어설트합니다(데이터 읽기가 이미 걸렀어야 한다).
          * @param tree 지휘관 트리입니다. 잎의 `task` 는 이 클래스가 등록한 `rts.*` 이름이어야 한다.
          */
-        void initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings, const BehaviorTree& tree );
+        void initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings, const RTSCommanderUnits& units, const BehaviorTree& tree );
         /** @brief `_thinkInterval` 마다 행동 트리를 한 번 실행합니다. */
         void update( float32 deltaTime );
         /** @brief 월드의 알림(공격받음)을 받습니다. */
@@ -101,13 +142,14 @@ namespace sw
         void      collectArmy( vector<RTSUnitID>& outListUnit ) const;
 
     private:
-        BehaviorTree           _tree;
-        BehaviorTreeRunner     _runner;
-        Blackboard             _blackboard;
-        RTSCommanderAISettings _settings;
-        RTSWorld*              _pWorld;
-        Countdown              _thinkTimer;
-        int32                  _player;
+        SW_TRANSIENT BehaviorTree           _tree;
+        SW_TRANSIENT BehaviorTreeRunner     _runner;
+        SW_TRANSIENT Blackboard             _blackboard;
+        SW_TRANSIENT RTSCommanderAISettings _settings;
+        SW_TRANSIENT RTSCommanderUnits      _units;
+        RTSWorld*                           _pWorld;
+        SW_CODEC_STATE Countdown            _thinkTimer;
+        SW_TRANSIENT int32                  _player;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _attackWaveCount;
     };

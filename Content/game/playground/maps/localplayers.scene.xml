@@ -1,5 +1,5 @@
 <?asset guid="02cb87ae09004926a4246e6e63b1ef27"?>
-<Scene formatVersion="3" name="LocalPlayers">
+<Scene formatVersion="0" name="LocalPlayers">
 	<!-- 로컬 멀티 무대(minigames/localplayers, automation/localplayers) — 폰 둘을 로컬 플레이어 0 · 1 이 조종한다(PawnAutoPossess). 사용자 0 은 키보드 · 마우스, 사용자 1 은 짝지은 패드(InputManager::openLocalUsers). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

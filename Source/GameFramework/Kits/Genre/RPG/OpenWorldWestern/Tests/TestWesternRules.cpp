@@ -8,9 +8,9 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCarcass.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternHonor.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternHorse.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternLaw.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternOutlaw.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternSurvival.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
@@ -38,9 +38,10 @@ namespace
     <Action id="help" delta="300"/>
     <Action id="brand" delta="-900"/>
   </Honor>
-  <Horse id="steady" health="100" stamina="100" courage="0.5" gallopDrain="12" coreDrain="2" gallopCoreDrain="6" fearDecay="0.25" buckChance="0"/>
-  <Horse id="wild" courage="0" buckChance="1"/>
-  <Horse id="coin" courage="0" buckChance="0.5"/>
+  <Horse id="steady" health="100" stamina="100" courage="0.5" gallopDrain="12" coreDrain="2" gallopCoreDrain="6" fearDecay="0.25" buckChance="0" healthRegenRatio="0.02" healthRegenDelay="3" staminaRegenRatio="0.1" staminaRegenDelay="1" exhaustRatio="0.25"/>
+  <Horse id="wild" courage="0" buckChance="1" healthRegenRatio="0.02" healthRegenDelay="3" staminaRegenRatio="0.1" staminaRegenDelay="1" exhaustRatio="0.25"/>
+  <Horse id="coin" courage="0" buckChance="0.5" healthRegenRatio="0.02" healthRegenDelay="3" staminaRegenRatio="0.1" staminaRegenDelay="1" exhaustRatio="0.25"/>
+  <Horse id="slowmend" health="100" stamina="100" gallopDrain="12" staminaRegenRatio="0.01" exhaustRatio="1" healthRegenRatio="0.02" healthRegenDelay="3" staminaRegenDelay="1"/>
   <Bond level="1" xp="0"/>
   <Bond level="2" xp="10" unlocks="rear" stamina="10" fearResist="0.1"/>
   <Bond level="3" xp="30" unlocks="drift,piaffe" stamina="20" health="5" fearResist="0.3"/>
@@ -49,7 +50,7 @@ namespace
   <Food id="apple" healthCore="5"/>
   <Food id="stew" healthCore="30" staminaCore="40" deadEyeCore="50" health="10" stamina="20"/>
   <Clothing id="coat" warmth="15"/>
-  <Survival comfortMin="5" comfortMax="30" coreDrain="1.5" temperatureDrain="0.5" minRegenScale="0.2" staminaRegen="15" deadEyeDrain="20" deadEyeMinimum="10"/>
+  <Survival comfortMin="5" comfortMax="30" coreDrain="1.5" temperatureDrain="0.5" minRegenScale="0.2" staminaRegen="15" deadEyeDrain="20" deadEyeMinimum="10" healthRegenDelay="4" staminaRegenDelay="1" deadEyeRegenDelay="2" exhaustRatio="0.2"/>
   <DeadEye level="2" timeScale="0.4" marks="3"/>
   <DeadEye level="1" timeScale="0.5" marks="0"/>
   <Animal id="deer" size="Medium" quality="3" pelt="1.5" carcass="3" decayHours="48" loot="deer_parts"/>
@@ -1134,4 +1135,15 @@ SW_TEST_CASE( WesternCatalogTest, ReportsBrokenTables )
     SW_EXPECT_TRUE( catalog.findHuntWeapon( "tiny" ) == nullptr );
     SW_EXPECT_EQUAL( size_t( 2 ), catalog.getBondLevels().size() );
     SW_EXPECT_TRUE( catalog.findCrime( "theft" ) != nullptr );
+}
+
+/** @brief [WesternHorseTest] 회복 빠르기와 탈진 문턱은 품종 데이터다 — 느리게 차고 가득 차야 풀리는 품종은 보통 품종이 풀리는 10 초 뒤에도 탈진이다 */
+SW_TEST_CASE_F( WesternHorseTest, RecoveryRatesComeFromTheBreed )
+{
+    sw::WesternHorse slow;
+    SW_REQUIRE_TRUE( slow.initialize( &_catalog, "slowmend", 7 ) );
+    SW_EXPECT_FALSE( slow.gallop( 10.0f ) );
+    SW_EXPECT_TRUE( slow.getStamina().isExhausted() );
+    slow.update( 10.0f, 0.0f );
+    SW_EXPECT_TRUE( slow.getStamina().isExhausted() ); // 보통 품종(steady)은 같은 10 초에 풀린다(GallopDrainsAndExhausts)
 }

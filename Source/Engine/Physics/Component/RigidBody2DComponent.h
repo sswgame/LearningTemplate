@@ -169,15 +169,15 @@ namespace sw
         bool _bInterpolate;
 
         PhysicsBodyPage<PhysicsDimension2D>* _pPosePage; ///< 강체 칸이 든 페이지 — 바디 핸들 · 스텝 자세 · 속도 · 명령(`PhysicsPoseStore`)
-        uint32                               _poseSlot;  ///< 강체 칸 번호
-        float2                               _kinematicStartPosition;
-        float2                               _kinematicTargetPosition;
-        float3                               _worldPosition; ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
-        quaternion                           _worldRotation; ///< 마지막으로 읽은 월드 회전(Z 둘레 각 밖의 회전을 지킨다)
-        float3                               _worldScale;    ///< 마지막으로 읽은 월드 배율
-        float32                              _kinematicStartAngle;
-        float32                              _kinematicTargetAngle;
-        PhysicsBodyType                      _appliedBodyType;  ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
-        bool                                 _bRestPoseWritten; ///< 잠든 자세를 트랜스폼에 이미 썼다 — 깨기 전까지 다시 쓰지 않는다
+        SW_TRANSIENT uint32                  _poseSlot;  ///< 강체 칸 번호
+        SW_TRANSIENT float2                  _kinematicStartPosition;
+        SW_TRANSIENT float2                  _kinematicTargetPosition;
+        SW_TRANSIENT float3                  _worldPosition; ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
+        SW_TRANSIENT quaternion              _worldRotation; ///< 마지막으로 읽은 월드 회전(Z 둘레 각 밖의 회전을 지킨다)
+        SW_TRANSIENT float3                  _worldScale;    ///< 마지막으로 읽은 월드 배율
+        SW_TRANSIENT float32                 _kinematicStartAngle;
+        SW_TRANSIENT float32                 _kinematicTargetAngle;
+        SW_TRANSIENT PhysicsBodyType         _appliedBodyType;  ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
+        SW_TRANSIENT bool                    _bRestPoseWritten; ///< 잠든 자세를 트랜스폼에 이미 썼다 — 깨기 전까지 다시 쓰지 않는다
     };
 } // namespace sw

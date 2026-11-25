@@ -6,9 +6,9 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -16,6 +16,34 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Respawn/CheckpointState.h"
+#include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
+
+namespace sw
+{
+    class PlatformTileMap;
+
+    /**
+     * @class ActionPlatformerRespawnWorld
+     * @brief 칸 지형과 몸 반 크기를 빌려 설 자리를 답합니다. 지형보다 오래 살지 않습니다(걸음마다 만들어 넘긴다).
+     */
+    class SW_KIT_API ActionPlatformerRespawnWorld final : public IRespawnWorld
+    {
+    public:
+        ActionPlatformerRespawnWorld( const PlatformTileMap& map, const float2& halfExtents );
+
+        /** @brief @p position(몸 가운데)이 설 자리면 그대로, 아니면 @p radius 안 가장 가까운 설 자리(칸 가운데, 발이 칸 위)입니다. */
+        [[nodiscard]] optional<float3> findSafeLocation( const float3& position, float32 radius ) const override;
+        [[nodiscard]] bool             isLocationReady( const float3& position ) const override;
+
+    private:
+        /** @brief 칸 (@p x, @p y) 가 몸이 설 칸인지(그 칸이 비고 아래 칸이 밟히는 땅인지) 봅니다. */
+        bool isStandingCell( int32 x, int32 y ) const;
+
+    private:
+        const PlatformTileMap* _pMap; ///< 빌림(생성자가 받은 참조)
+        float2                 _halfExtents;
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -61,9 +89,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "APST" );
-        static constexpr uint32 kStateVersion = 1;
 
         ActionStageRun();
 
@@ -120,8 +145,8 @@ namespace sw
     private:
         const ActionPlatformerCatalog* _pCatalog;
         const ActionStageDef*          _pStage;
-        vector<hashed_string>          _listSecretCommitted; ///< 체크포인트나 클리어로 확정된 것
-        vector<hashed_string>          _listSecretPending;   ///< 주웠지만 아직 확정되지 않은 것
+        SW_CODEC_STATE vector<hashed_string> _listSecretCommitted; ///< 체크포인트나 클리어로 확정된 것
+        SW_CODEC_STATE vector<hashed_string> _listSecretPending;   ///< 주웠지만 아직 확정되지 않은 것
         PROPERTY( RuntimeState, Min = 0 )
         float32 _elapsed;
         PROPERTY( RuntimeState, Min = 0 )

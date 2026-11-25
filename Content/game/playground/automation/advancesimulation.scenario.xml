@@ -10,11 +10,11 @@
 	<Launch variable="gv_firstScene" value="game/playground/maps/twodphysics.scene.xml"/>
 	<Launch variable="gv_renderPipeline" value="engine/pipeline/forward2dpipeline.xml"/>
 	<!-- 첫 길: 그리며 진행 -->
-	<LoadScene path="game/playground/maps/twodphysics.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:5cad7c59138b3cc560e7632ebc7ef34b" timeoutFrames="600"/>
 	<AdvanceSimulation frames="120" render="true"/>
 	<Store watch="Scene.TransformHash" as="drawn"/>
 	<!-- 둘째 길: 같은 씬을 다시 열어 그리지 않고 진행 -->
-	<LoadScene path="game/playground/maps/twodphysics.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:5cad7c59138b3cc560e7632ebc7ef34b" timeoutFrames="600"/>
 	<AdvanceSimulation frames="120"/>
 	<Expect watch="Scene.TransformHash" sameAs="drawn"/>
 	<Pass/>

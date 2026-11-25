@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    class Component;
     class GameFeatureReceiverComponent;
 
     /** @brief 기능 하나가 건 "이 이름의 받는 쪽에 이 컴포넌트" 한 줄입니다. */
@@ -22,7 +23,8 @@ namespace sw
     {
         uint32        _ruleID{ 0 };
         hashed_string _receiver{};
-        hashed_string _componentType{}; ///< 리플렉션 형식 이름 — 모듈을 다시 올려도 같은 이름이다
+        hashed_string _componentType{};                 ///< 리플렉션 형식 이름 — 모듈을 다시 올려도 같은 이름이다
+        void ( *_pConfigure )( Component& ){ nullptr }; ///< 붙인 직후 부를 설정(어빌리티 세트 주기 등 — 언리얼 Game Feature 액션 AddAbilities 자리). 없으면 nullptr
     };
 
     /**
@@ -41,7 +43,7 @@ namespace sw
         const utf8* getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 규칙을 더하고 시작해 있는 받는 쪽에 곧바로 붙입니다. 규칙 번호를 돌려줍니다(1 부터). */
-        uint32 addRule( const hashed_string& receiver, const hashed_string& componentType );
+        uint32 addRule( const hashed_string& receiver, const hashed_string& componentType, void ( *pConfigure )( Component& ) );
         /** @brief 규칙을 빼고 받는 쪽마다 그 규칙이 붙인 컴포넌트를 뗍니다(없는 번호면 할 일이 없다). */
         void removeRule( uint32 ruleID );
 

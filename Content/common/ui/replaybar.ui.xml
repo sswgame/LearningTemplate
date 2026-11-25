@@ -1,5 +1,5 @@
 <?asset guid="46c119923c40cef1d78d14185507d7c8"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<!--
 		리플레이 막대 — IntentReplayBar 가 연다(IntentNetworkWiring 3절). 이름 Scrub(슬라이더, 값 = 재생 틱) · TimeText(현재 / 가장 먼 시각) · PlayPauseLabel 은 코드가 맞추고,
 		버튼 명령 Replay.StepBack(1 초 되감기) · Replay.TogglePause · Replay.Close 를 코드가 받는다. 게임은 이 문서를 복사해 모습만 바꾼다.

@@ -68,7 +68,7 @@ namespace sw
     };
 
     /** @brief `RHINativeHandles` 의 버전 번호입니다. 필드, 순서, 의미가 바뀌면 올립니다. */
-    inline constexpr uint32 kRHINativeHandlesVersion = 3;
+    inline constexpr uint32 kRHINativeHandlesVersion = 0;
 
     /**
      * @struct RHINativeHandles

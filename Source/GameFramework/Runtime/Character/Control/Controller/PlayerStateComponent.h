@@ -8,6 +8,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -33,8 +34,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "PLST" };
 
         PlayerStateComponent();
         ~PlayerStateComponent() override = default;
@@ -48,6 +48,6 @@ namespace sw
         void restoreState( vector<uint8>&& bytes );
 
     private:
-        GameFlags _progressFlags;
+        SW_CODEC_STATE GameFlags _progressFlags;
     };
 } // namespace sw

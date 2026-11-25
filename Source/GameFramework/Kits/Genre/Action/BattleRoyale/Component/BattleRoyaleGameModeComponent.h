@@ -18,7 +18,6 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -30,7 +29,8 @@
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleSceneTerrain.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
@@ -54,7 +54,7 @@ namespace sw
      * @brief 낙하 → 전투 → 결과를 플레이어 입력 명령과 컴퓨터 분대로 진행합니다.
      */
     REFLECT( Category = "BattleRoyale", DisplayName = "Battle Royale Game Mode", Tooltip = "Runs one BattleRoyale match: drop, shrinking zone fight and result; person 0 from input commands, the rest by the computer" )
-    class SW_KIT_API BattleRoyaleGameModeComponent : public GameModeComponent
+    class SW_KIT_API BattleRoyaleGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -78,7 +78,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 끝나지 않아 입력 명령을 받으면 true 입니다. */
-        bool                                  isAcceptingInput() const { return isStarted() && _phase != BattleRoyalePhase::Ended; }
+        bool                                  isAcceptingInput() const override { return isStarted() && _phase != BattleRoyalePhase::Ended; }
         const BattleRoyaleMatch&              getMatch() const { return _match; }
         const vector<BattleRoyaleGroundItem>& getGroundItems() const { return _listGroundItem; }
         /** @brief 바닥 무더기 목록이 바뀔 때마다 늘어나는 번호입니다 — 뷰가 다시 세울지 정한다. */
@@ -108,8 +108,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               updateMatch( float32 deltaTime ) override;
         /** @brief 이겼으면 결과 값 `money`(`_victoryMoney`)를 냅니다. 지면 넘길 값이 없다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 
@@ -131,6 +130,8 @@ namespace sw
         /** @brief `_listWeaponID` 의 총마다 기본 탄 · 장비 아이템 · 탄 아이템이 표에 있는지 봅니다. 아니면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validateWeapons() const;
         /** @brief 비행 경로와 뛰어내릴 시각 · 첫 총을 정하고 바닥 전리품을 놓습니다. */
+        /** @brief 이 판의 씨앗(`_matchSeed`)과 카탈로그로 비행 경로를 정합니다. 비행 설정이 범위 밖이면 false 입니다. */
+        [[nodiscard]] bool makeFlightPath();
         [[nodiscard]] bool prepareDrop();
         void               stepDrop( float32 deltaTime );
         void               stepBattle( float32 deltaTime );
@@ -184,8 +185,8 @@ namespace sw
         PROPERTY( Category = "Squads", DisplayName = "Squad Size", Min = 1 )
         int32 _squadSize;
         PROPERTY( Category = "Match", DisplayName = "Seed", Tooltip = "Seed of the zone, the flight, the loot and the computer people (not 0)", Min = 1 )
-        uint32 _seed;
-        uint32 _matchSeed; ///< 이 판의 씨앗(`startGame` 이 `_seed` 에서 정한다 — 서버 월드는 난수)
+        uint32                _seed;
+        SW_CODEC_STATE uint32 _matchSeed; ///< 이 판의 씨앗(`startGame` 이 `_seed` 에서 정한다 — 서버 월드는 난수라 싣는다: 다시 읽은 판이 같은 비행 경로 · 구역으로 열린다)
         PROPERTY( Category = "Match", DisplayName = "Ground Height", Units = m )
         float32 _groundHeight;
         PROPERTY( Category = "People", DisplayName = "Player Speed", Min = 0.1, Units = "m/s" )
@@ -222,36 +223,33 @@ namespace sw
         hashed_string _lootSpotKind;
         PROPERTY( Category = "Loot", DisplayName = "Loot Positions", Tooltip = "Map positions of the loot spots", Units = m )
         vector<float2> _listLootPosition;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Result", DisplayName = "Victory Money", Tooltip = "Result value 'money' reported on victory", Min = 0 )
         int32 _victoryMoney;
 
-        SharedAssetRef<BattleRoyaleCatalog> _pCatalog;
-        SharedAssetRef<WeaponCatalog>       _pWeaponCatalog;
-        SharedAssetRef<ProjectileCatalog>   _pProjectileCatalog;
-        SharedAssetRef<ItemCatalog>         _pItemCatalog;
-        SharedAssetRef<LootCatalog>         _pLootCatalog; ///< 전리품 지점 · 보급 상자가 있을 때만 있다
-        BattleRoyaleSceneTerrain            _terrain;      ///< 판(`_match`)이 빌린다 — 먼저 만들고 나중에 사라진다
-        BattleRoyaleMatch                   _match;
-        BattleRoyaleFlightPath              _flightPath; ///< 씨앗과 카탈로그로 정해진다 — 싣지 않는다
-        FixedStepTimer                      _timer;
-        GameRandom                          _random;
-        Countdown                           _resultHold;
-        vector<Person>                      _listPerson;
-        vector<BattleRoyaleGroundItem>      _listGroundItem;
-        vector<BattleRoyaleEvent>           _listEvent;
-        vector<BattleRoyaleZoneEvent>       _listZoneEvent;
+        BoundAssetRef<BattleRoyaleCatalog>    _pCatalog;
+        BoundAssetRef<WeaponCatalog>          _pWeaponCatalog;
+        BoundAssetRef<ProjectileCatalog>      _pProjectileCatalog;
+        BoundAssetRef<ItemCatalog>            _pItemCatalog;
+        BoundAssetRef<LootCatalog>            _pLootCatalog; ///< 전리품 지점 · 보급 상자가 있을 때만 있다
+        SW_TRANSIENT BattleRoyaleSceneTerrain _terrain;      ///< 판(`_match`)이 빌린다 — 먼저 만들고 나중에 사라진다
+        SW_CODEC_STATE BattleRoyaleMatch      _match;
+        SW_TRANSIENT BattleRoyaleFlightPath   _flightPath; ///< 씨앗과 카탈로그로 정해진다 — 싣지 않는다
+        SW_CODEC_STATE FixedStepTimer         _timer;
+        SW_CODEC_STATE GameRandom             _random;
+        SW_CODEC_STATE vector<Person> _listPerson;
+        SW_CODEC_STATE vector<BattleRoyaleGroundItem> _listGroundItem;
+        SW_TRANSIENT vector<BattleRoyaleEvent> _listEvent;
+        SW_TRANSIENT vector<BattleRoyaleZoneEvent> _listZoneEvent;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _flightTime;
         PROPERTY( RuntimeState )
         BattleRoyalePhase      _phase;
-        uint32                 _groundItemRevision;
-        float2                 _commandMove; ///< 마지막 입력 명령 — 클라이언트 입력이라 싣지 않는다(아래 깃발도)
-        uint8                  _bFireHeld   : 1;
-        uint8                  _bUseHeld    : 1;
-        uint8                  _bUseQueued  : 1; ///< 다음 걸음이 쓸 쓰기 누름
-        uint8                  _bFireQueued : 1; ///< 다음 걸음이 쓸 사격 누름(반자동 총)
+        SW_CODEC_STATE uint32  _groundItemRevision;
+        SW_TRANSIENT float2    _commandMove; ///< 마지막 입력 명령 — 클라이언트 입력이라 싣지 않는다(아래 깃발도)
+        SW_TRANSIENT uint8     _bFireHeld   : 1;
+        SW_TRANSIENT uint8     _bUseHeld    : 1;
+        SW_TRANSIENT uint8     _bUseQueued  : 1; ///< 다음 걸음이 쓸 쓰기 누름
+        SW_TRANSIENT uint8     _bFireQueued : 1; ///< 다음 걸음이 쓸 사격 누름(반자동 총)
         [[maybe_unused]] uint8 _reserved    : 4;
     };
 } // namespace sw

@@ -6,7 +6,7 @@
      좌표(_patternShape.w): 0 메시 UV · 1 월드 축 투영(벽 · 바닥 — 크기가 m 다). 날씨는 셰이더 전역 값(g_MaterialGlobalWeather)이라 지형과 함께 젖는다.
      클리어 코트 · 비등방은 셰이딩 모델이다 — 자식이 _permutations 에 MATERIAL_LOBE_COAT 또는 MATERIAL_LOBE_ANISOTROPY 를 단다(environment_surface.hlsl 머리말, 값만 넣고 define 이 없으면 MaterialLibraryTest 가 진다).
      프로퍼티 이름 · 타입은 셰이더의 SW_MATERIAL 구조체와 같다. -->
-<MaterialDef formatVersion="0" name="EnvironmentSurface" shaderPath="engine/shaders/environment_surface.hlsl" surfaceModel="Lit" alphaMode="Opaque">
+<MaterialDef formatVersion="0" name="EnvironmentSurface" shaderPath="guid:2af03aeec00b38ead09de627212b6c58" surfaceModel="Lit" alphaMode="Opaque">
 	<_properties>
 		<item name="_baseColor" type="Color" defaultValue="0.8 0.8 0.8 1" displayName="Base Color" group="Base" bHdr="0" bSrgb="1"/>
 		<item name="_secondaryColor" type="Color" defaultValue="0.4 0.4 0.4 1" displayName="Pattern Color (grout, veins, grain)" group="Pattern" bHdr="0" bSrgb="1"/>

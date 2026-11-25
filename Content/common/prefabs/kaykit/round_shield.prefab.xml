@@ -1,5 +1,5 @@
 <?asset guid="5288c309f1fa54916c03185bcffe1ef0"?>
-<Prefab formatVersion="1" _base="guid:038e5f36534add2ce05ecd56e01e2f89" name="RoundShield">
+<Prefab formatVersion="0" _base="guid:038e5f36534add2ce05ecd56e01e2f89" name="RoundShield">
 	<PrefabOverrides>
 		<Override key="#0244d8c8807cd288">
 			<MeshComponent _meshID="guid:727a077bb916736ea59c8852cbfdf0b1" />

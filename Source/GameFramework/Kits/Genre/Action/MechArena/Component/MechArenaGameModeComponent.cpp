@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Action/MechArena/Component/MechArenaGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -11,6 +10,7 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -21,12 +21,7 @@ namespace sw
     {
         struct MechArenaGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "MAGM" );
-            static constexpr uint32 kStateVersion = 1;
-
-            static constexpr const utf8* kWinResult  = "win";
-            static constexpr const utf8* kLoseResult = "lose";
-            static constexpr const utf8* kDrawResult = "draw";
+            static constexpr FormatDef kStateFormat{ "MAGM" };
 
             static constexpr uint32  kBotSalt         = 1; ///< 판 씨앗에서 컴퓨터 손놀림의 수열을 뽑는 소금
             static constexpr float32 kEvenChance      = 0.5f;
@@ -137,7 +132,6 @@ namespace sw
         , _botMeleeRange{ 4.0f }
         , _botDashChance{ 0.25f }
         , _botSpecialChance{ 0.3f }
-        , _resultHoldSeconds{ 3.0f }
         , _victoryMoney{ 50 }
         , _pMechs{}
         , _pWeapons{}
@@ -146,7 +140,6 @@ namespace sw
         , _world{}
         , _timer{}
         , _random{}
-        , _resultHold{}
         , _listBotHand{}
         , _listEvent{}
         , _command{}
@@ -217,7 +210,6 @@ namespace sw
         _world.start();
         _timer  = FixedStepTimer{ _rules._fixedStep, constant::time::kDefaultMaxFrameSeconds };
         _random = GameRandom( GameRandom::deriveSeed( _rules._seed, MechArenaGameModeComponentInternal::kBotSalt ) );
-        _resultHold.clear();
         _listBotHand.assign( static_cast<size_t>( _world.getPilotCount() ), BotHand{} );
         _command = MechInput{};
         return true;
@@ -389,29 +381,20 @@ namespace sw
                 SW_LOG_INFO_ID( "MechArena.Respawned", "[MechArena] pilot %# launches again with '%#'", event._pilot.value(), event._id.c_str() );
             else if ( event._kind == MechArenaEvent::Kind::MatchEnded )
             {
-                _resultHold.start( _resultHoldSeconds );
+                const utf8* pResult = kDrawResult;
+                if ( hasWon() )
+                    pResult = kWinResult;
+                else if ( _world.getMatch().getWinningTeam() == kEnemyTeam )
+                    pResult = kLoseResult;
+                endMatch( hashed_string( pResult ) );
                 getSoundQueue().queueEvent( hasWon() ? MechArenaGameModeComponentInternal::kEventWon : MechArenaGameModeComponentInternal::kEventLost );
                 SW_LOG_INFO_ID( "MechArena.MatchEnd", "[MechArena] the match ends - winning team %# (-1 = draw)", _world.getMatch().getWinningTeam() );
             }
         }
     }
 
-    void MechArenaGameModeComponent::updateGame( float32 deltaTime )
+    void MechArenaGameModeComponent::updateMatch( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        if ( _world.isEnded() )
-        {
-            if ( _resultHold.update( deltaTime ) == false )
-                return;
-            const utf8* pResult = MechArenaGameModeComponentInternal::kDrawResult;
-            if ( hasWon() )
-                pResult = MechArenaGameModeComponentInternal::kWinResult;
-            else if ( _world.getMatch().getWinningTeam() == kEnemyTeam )
-                pResult = MechArenaGameModeComponentInternal::kLoseResult;
-            (void)finishMinigame( hashed_string( pResult ) ); // 흐름이 없으면 베이스가 알린다
-            return;
-        }
         const bool  bAutoPlay = isAutoPlayOn();
         const int32 stepCount = _timer.consume( deltaTime );
         for ( int32 step = 0; step < stepCount && _world.isEnded() == false; ++step )
@@ -426,13 +409,6 @@ namespace sw
         settle();
     }
 
-    void MechArenaGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`MechArenaViewComponent`)이 읽어 보인다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void MechArenaGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
     {
         if ( hasWon() )
@@ -441,34 +417,21 @@ namespace sw
 
     void MechArenaGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( MechArenaGameModeComponentInternal::kStateTag, MechArenaGameModeComponentInternal::kStateVersion );
+        io.header( MechArenaGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 판은 같은 설정 · 카탈로그로 연 뒤에 읽는다(키트 계약). 입력 명령은 싣지 않는다.
-        MechArenaWorld  restoredWorld;
-        FixedStepTimer  timer       = _timer;
-        GameRandom      random      = _random;
-        Countdown       resultHold  = _resultHold;
-        vector<BotHand> listBotHand = _listBotHand;
-        if ( io.isReading() && io.check( _pMechs != nullptr && _pMoves != nullptr && openWorld( restoredWorld ) ) == false )
+        if ( io.valueOpened( _world, [this]( MechArenaWorld& world )
+        { return _pMechs != nullptr && _pMoves != nullptr && openWorld( world ); } ) == false )
             return;
-        io.value( io.isWriting() ? _world : restoredWorld );
-        io.value( timer );
-        io.value( random );
-        io.value( resultHold );
-        io.list( listBotHand, MechArenaGameModeComponentInternal::kMinBotHandBytes, [&]( BotHand& hand )
+        io.value( _timer );
+        io.value( _random );
+        io.list( _listBotHand, MechArenaGameModeComponentInternal::kMinBotHandBytes, [&]( BotHand& hand )
         {
             io.value( hand._think );
             io.value( hand._strafeSign );
         } );
-        io.check( io.isWriting() || static_cast<int32>( listBotHand.size() ) == restoredWorld.getPilotCount() );
+        io.check( io.isWriting() || static_cast<int32>( _listBotHand.size() ) == _world.getPilotCount() );
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _world       = std::move( restoredWorld );
-        _timer       = timer;
-        _random      = random;
-        _resultHold  = resultHold;
-        _listBotHand = std::move( listBotHand );
     }
 } // namespace sw

@@ -1,5 +1,5 @@
 <?asset guid="27cd0e45d2cf8ca5ec7be85ff3a37560"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<!-- 친구 목록 견본 문서(온라인 키트 U1). C++ 화면은 `FriendListScreen` 이다. 줄 글은 코드가 가상 목록 `Friends` 에 보이는 만큼만 만든다(창 크기가 정해져 목록이 그 안에서 스크롤한다). 문서 경로는 호출하는 게임이 `FriendListScreen::open` 에 준다. -->
 	<UIScreenDef _bPausesGame="false" _defaultFocus="Refresh" />
 	<SafeZonePanel>
@@ -11,7 +11,7 @@
 				       _offsetMax="320,260" />
 				<BoxPanel _spacing="12" _orientation="Vertical">
 					<TextWidget _name="Title" _styleClass="title" _text="Friends" />
-					<TextWidget _name="Status" _text="" />
+					<TextWidget _name="Status" _text="{bind:_status}" />
 					<ListViewWidget _name="Friends" _rowHeight="36">
 						<_slot _sizeRule="Fill" />
 					</ListViewWidget>

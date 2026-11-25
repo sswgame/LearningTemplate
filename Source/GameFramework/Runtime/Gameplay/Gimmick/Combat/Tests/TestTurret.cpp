@@ -8,9 +8,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeInfo.h"
 
-#include "GameFramework/Runtime/Character/Combat/Health/UnitStatsComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
 #include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/TurretComponent.h"
 #include "GameFramework/Runtime/World/Query/WorldQuery.h"
@@ -175,8 +176,9 @@ SW_TEST_CASE( TurretTest, DeadTargetIsNotPicked )
     (void)pTurretObject->addComponent<SceneComponent>();
     pPlayer->addComponent<SceneComponent>()->setLocalPosition( float3{ 0.0f, 0.0f, 5.0f } );
     pPlayer->addTag( "Player"_tag );
-    UnitStatsComponent* const pStats = pPlayer->addComponent<UnitStatsComponent>();
-    pStats->setStats( 10, 10, 0, 0, 0.0f, 0.0f );
+    AbilitySystemComponent* const pStats = pPlayer->addComponent<AbilitySystemComponent>();
+    SW_REQUIRE_NOT_NULL( pStats->addAttributeSet( test::makeCombatAttributeSet() ) );
+    SW_REQUIRE_TRUE( pStats->setAttributeBaseValue( CombatAttributes::health(), 10.0f ) );
     TurretComponent* const    pTurret     = pTurretObject->addComponent<TurretComponent>();
     const PropertyInfo* const pTargetTags = TurretComponent::StaticType()->findProperty( hashed_string( "_targetTags" ) );
     SW_REQUIRE_NOT_NULL( pTargetTags );
@@ -186,12 +188,14 @@ SW_TEST_CASE( TurretTest, DeadTargetIsNotPicked )
     pTurret->stepOnce();
     SW_EXPECT_TRUE( pTurret->getTarget() == pPlayer->getHandle() );
     GimmickDamageUtil::applyDamage( *pPlayer, nullptr, hashed_string( "Hazard" ), 50.0f );
-    SW_REQUIRE_TRUE( pStats->isDead() );
+    SW_REQUIRE_TRUE( pStats->getHealthReading()._bDead == SW_TRUE );
     SW_EXPECT_FALSE( TargetFilter::isSelectable( *pPlayer ) );
     pTurret->stepOnce();
     SW_EXPECT_FALSE( pTurret->getTarget().isValid() );
-    pStats->setStats( 10, 10, 0, 0, 0.0f, 0.0f ); // 다시 세웠다
-    SW_EXPECT_FALSE( pStats->isDead() );
+    // 다시 세웠다 — 풀 반환처럼 쓰러짐 표시째 걷고 세트를 다시 준다(체력이 차면 쓰러짐 태그를 뗀다)
+    SW_REQUIRE_TRUE( pStats->resetToSpawnState() == SpawnStateReset::Reset );
+    SW_REQUIRE_NOT_NULL( pStats->addAttributeSet( test::makeCombatAttributeSet() ) );
+    SW_EXPECT_FALSE( pStats->getHealthReading()._bDead == SW_TRUE );
     pTurret->stepOnce();
     SW_EXPECT_TRUE( pTurret->getTarget() == pPlayer->getHandle() );
 }

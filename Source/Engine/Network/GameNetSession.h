@@ -274,6 +274,8 @@ namespace sw
          *          `VersionMismatch` 로 갈린다. 열린 세션을 이어받는 리로드가 다른 값이면 오류로 false 다(붙은 상대와 다른 콘텐츠 · 스키마로 계속 돌지 않는다).
          */
         [[nodiscard]] bool openFromLaunch( const GameNetWireContent& wireContent );
+        /** @brief 이 실행의 와이어 내용을 정합니다(`openFromLaunch` 가 부른다). 정하기 전에는 세션이 열리지 않는다 — 형식을 등록하기 전에 연 세션이 빈 내용으로 열려 상대와 다른 프로토콜이 되지 않게. */
+        void setRunWireContent( const GameNetWireContent& wireContent ) { _runWireContent = wireContent; }
         /**
          * @brief 와이어 버전 @p wireVersion 에 @p wireContent 의 칸을 차례로 섞습니다. 0 인 칸은 섞지 않는다 — 모드 · 복제 타입이 없는 실행의 와이어 버전은 바뀌지 않는다.
          * @details 언리얼이 콘텐츠 해시를 넷 버전에 섞는 자리(`FNetworkVersion::GetLocalNetworkVersionOverride`)와 같다(기억에 의존). **섞는 규칙은 이 함수 하나다** —
@@ -556,7 +558,7 @@ namespace sw
         NetAddress                        _serverAddress;
         NetConnectCredentials             _credentials;      ///< 클라이언트 — 내미는 접속 티켓. 거절되면 지운다(옛 비밀을 들고 있지 않는다)
         uint64                            _latestServerTick; ///< 클라이언트 — 받은 가장 새 서버 틱(`_bServerTickKnown` 일 때만 뜻이 있다)
-        GameNetWireContent                _runWireContent;   ///< 이 실행의 와이어 내용(`openFromLaunch` 가 적는다) — `initialize` 가 어느 길로 연 세션에든 섞는다
+        optional<GameNetWireContent>      _runWireContent;   ///< 이 실행의 와이어 내용(`openFromLaunch` 가 적는다) — `initialize` 가 어느 길로 연 세션에든 섞는다
         GameNetWireContent                _wireContent;      ///< 열린 세션에 섞은 와이어 내용(닫으면 비운다)
         uint16                            _listenPort;
         GameNetRole                       _role;

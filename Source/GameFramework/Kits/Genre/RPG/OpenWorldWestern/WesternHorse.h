@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -63,8 +62,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32  kStateTag      = FourCCUtil::make( "WHRS" );
-        static constexpr uint32  kStateVersion  = 1;
         static constexpr float32 kCoreMax       = 100.0f;
         static constexpr float32 kFearThreshold = 1.0f;
 
@@ -118,14 +115,14 @@ namespace sw
         [[nodiscard]] bool areAbilitiesUnlocked() const;
 
     private:
-        NotificationBuffer<WesternHorseEvent> _eventBuffer;
+        SW_TRANSIENT NotificationBuffer<WesternHorseEvent> _eventBuffer;
         PROPERTY( RuntimeState )
-        vector<hashed_string>  _listAbility; ///< 지금 단계까지 열린 능력
-        ResourceGauge          _health;
-        ResourceGauge          _stamina;
-        GameRandom             _random;
-        const WesternCatalog*  _pCatalog;
-        const WesternHorseDef* _pDef;
+        vector<hashed_string>        _listAbility; ///< 지금 단계까지 열린 능력
+        SW_CODEC_STATE ResourceGauge _health;
+        SW_CODEC_STATE ResourceGauge _stamina;
+        SW_CODEC_STATE GameRandom    _random;
+        const WesternCatalog*        _pCatalog;
+        const WesternHorseDef*       _pDef;
         PROPERTY( RuntimeState, Min = 0, Max = WesternHorse::kCoreMax )
         float32 _healthCore;
         PROPERTY( RuntimeState, Min = 0, Max = WesternHorse::kCoreMax )

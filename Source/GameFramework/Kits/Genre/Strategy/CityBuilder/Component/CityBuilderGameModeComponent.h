@@ -13,12 +13,12 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameSpeedControl.h"
 
@@ -53,8 +53,10 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         const CitySimulation& getCity() const { return _city; }
-        /** @brief 지금 쥔 도시 카탈로그입니다. 판을 열기 전에는 nullptr 입니다. */
+        /** @brief 도시가 묶인 카탈로그입니다(도시가 든 행 번호 · 정의 포인터와 같은 판). 판을 열기 전에는 nullptr 입니다. */
         const CityCatalog* findCatalog() const { return _pCatalog.get(); }
+        /** @brief `findCatalog` 를 소유 포인터로 돌려줍니다 — 어느 판으로 모습을 지었는지 기억하는 뷰가 쥔다. */
+        shared_ptr<const CityCatalog> getCatalogSnapshot() const { return _pCatalog.snapshot(); }
         /** @brief 도시 배치(건물 · 도로)의 판입니다 — 놓거나 허물거나 복원할 때마다 오르고, 열린 판은 1 이상입니다. 뷰는 이 값이 바뀐 때만 맞춘다. */
         uint32 getLayoutRevision() const { return _layoutRevision; }
         /** @brief 이번 걸음의 도시 알림입니다(달 끝 · 집 진화 · 범람). 디렉터가 한 번 꺼내 두고 파생의 규칙 · 클라이언트의 소리가 같은 목록을 읽는다. */
@@ -89,13 +91,16 @@ namespace sw
         PROPERTY( Category = "Economy", DisplayName = "Starting Money", Tooltip = "City money a fresh game starts with (the currency of the city catalog)", Min = 0 )
         int32 _startingMoney;
 
-        SharedAssetRef<CityCatalog> _pCatalog;
-        CitySimulation              _city;
-        ConsumerLease               _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다)
-        vector<CityEvent>           _listStepEvent;  ///< `getStepEvents`
-        GameSpeedControl            _speed;          ///< 배속 · 일시정지(디렉터가 쥐고 도시 · 달력이 받는다)
-        uint32                      _layoutRevision; ///< `getLayoutRevision`
-        DevCounter                  _buildCount;     ///< 감시 값 `City.BuildCount` — 저장하지 않는 이번 판 수
-        DevCounter                  _demolishCount;  ///< 감시 값 `City.DemolishCount` — 저장하지 않는 이번 판 수
+        PROPERTY( Category = "Time", DisplayName = "Speed Range", Tooltip = "Slowest and fastest time scale and the factor of one step; required" )
+        GameSpeedRange _speedRange;
+
+        BoundAssetRef<CityCatalog>  _pCatalog;
+        SW_TRANSIENT CitySimulation _city;
+        ConsumerLease               _cityEventLease;    ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다)
+        SW_TRANSIENT vector<CityEvent> _listStepEvent;  ///< `getStepEvents`
+        SW_TRANSIENT GameSpeedControl  _speed;          ///< 배속 · 일시정지(디렉터가 쥐고 도시 · 달력이 받는다)
+        SW_TRANSIENT uint32            _layoutRevision; ///< `getLayoutRevision`
+        DevCounter                     _buildCount;     ///< 감시 값 `City.BuildCount` — 저장하지 않는 이번 판 수
+        DevCounter                     _demolishCount;  ///< 감시 값 `City.DemolishCount` — 저장하지 않는 이번 판 수
     };
 } // namespace sw

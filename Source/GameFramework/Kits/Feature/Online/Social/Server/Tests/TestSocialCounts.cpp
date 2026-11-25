@@ -5,6 +5,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialKitConfig.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/Tests/SocialTestPolicy.h"
 
 using namespace sw;
 
@@ -15,7 +17,7 @@ namespace
 
     SocialLinkDecision decide( Op operation, State selfState, State otherState, const SocialCounts& selfCounts = {}, const SocialCounts& otherCounts = {} )
     {
-        return SocialCounts::decide( operation, selfState, otherState, selfCounts, otherCounts );
+        return SocialCounts::decide( test::SocialTestPolicy::makeLinks(), operation, selfState, otherState, selfCounts, otherCounts );
     }
 
     /** @brief 짝인 개수 변화(내 보낸 신청 ↔ 상대 받은 신청, 친구 ↔ 친구)가 같은지 봅니다 — 한쪽만 세면 개수 레코드가 어긋난다. */
@@ -72,14 +74,15 @@ SW_TEST_CASE( SocialLinkRulesTest, RequestToABlockerIsASilentOk )
 /** @brief [SocialLinkRulesTest] 상한에 닿으면 쓰지 않는다 — 내 보낸 신청 · 상대 받은 신청 · 양쪽 친구 수 · 내 막음 수 */
 SW_TEST_CASE( SocialLinkRulesTest, LimitsStopTheWrite )
 {
-    SocialCounts fullOutgoing;
-    fullOutgoing._outgoingCount = SocialLimit::kMaxOutgoing;
+    const SocialLinkPolicy policy = test::SocialTestPolicy::makeLinks();
+    SocialCounts           fullOutgoing;
+    fullOutgoing._outgoingCount = policy._maxOutgoing;
     SocialCounts fullIncoming;
-    fullIncoming._incomingCount = SocialLimit::kMaxIncoming;
+    fullIncoming._incomingCount = policy._maxIncoming;
     SocialCounts fullFriends;
-    fullFriends._friendCount = SocialLimit::kMaxFriend;
+    fullFriends._friendCount = policy._maxFriend;
     SocialCounts fullBlocked;
-    fullBlocked._blockedCount = SocialLimit::kMaxBlocked;
+    fullBlocked._blockedCount = policy._maxBlocked;
 
     const SocialLinkDecision listDecision[] = {
         decide( Op::Request, State::None, State::None, fullOutgoing, {} ),
@@ -144,4 +147,36 @@ SW_TEST_CASE( SocialLinkRulesTest, UnblockLeavesTheOtherRowAlone )
     SW_EXPECT_TRUE( unblock._newSelfState == State::None && unblock._newOtherState == State::Blocked );
     SW_EXPECT_EQUAL( unblock._selfDelta._blockedCount, -1 );
     SW_EXPECT_TRUE( decide( Op::Unblock, State::Friend, State::Friend )._result == SocialResult::NotFound );
+}
+
+/** @brief [SocialLinkRulesTest] 상한은 설정이 정한다 — 친구 상한을 1 로 낮추면 친구 한 명인 계정의 수락이 거절되고, 기본 테스트 값에서는 받아들여진다 */
+SW_TEST_CASE( SocialLinkRulesTest, PolicyValueDecidesTheLimit )
+{
+    SocialCounts oneFriend;
+    oneFriend._friendCount = 1;
+    SocialLinkPolicy tight = test::SocialTestPolicy::makeLinks();
+    tight._maxFriend       = 1;
+    SW_EXPECT_TRUE( SocialCounts::decide( tight, Op::Accept, State::Incoming, State::Outgoing, oneFriend, {} )._result == SocialResult::FriendLimit );
+    SW_EXPECT_TRUE( decide( Op::Accept, State::Incoming, State::Outgoing, oneFriend, {} )._bWrite == SW_TRUE );
+}
+
+/** @brief [SocialLinkRulesTest] 네 상한의 합이 목록 응답의 와이어 상한을 넘는 설정은 가려낸다(친구 키트가 그 설정으로 서지 않는다) */
+SW_TEST_CASE( SocialLinkRulesTest, PolicyMustFitOneLinkPage )
+{
+    SocialLinkPolicy policy = test::SocialTestPolicy::makeLinks();
+    SW_EXPECT_TRUE( policy.isWithinWireLimits() );
+    policy._maxBlocked = SocialLimit::kMaxLinkPage;
+    SW_EXPECT_FALSE( policy.isWithinWireLimits() );
+}
+
+/** @brief [SocialLinkRulesTest] 운영 값(`_links` · `_guild`)을 적지 않은 키트 설정은 읽지 못한다 — 코드 기본값으로 조용히 서지 않는다 */
+SW_TEST_CASE( SocialLinkRulesTest, KitConfigRequiresThePolicies )
+{
+    SW_EXPECT_LOG( "Config.KeyMissing" );
+    OnlineServerKitEntry entry;
+    entry._name     = "social";
+    entry._settings = R"({ "_expiredInviteTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },
+"_expiredApplicationTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 } })";
+    SocialKitConfig kitConfig;
+    SW_EXPECT_FALSE( entry.readSettings( kitConfig ) );
 }

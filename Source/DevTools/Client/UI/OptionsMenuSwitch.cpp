@@ -23,12 +23,13 @@ namespace sw
             /** @brief 화면 스위치: `gv_uiOptionsMenu` 를 따라 옵션 메뉴를 열고 닫습니다. 열 수 없으면(설정 서비스 없음) 스위치를 내려 프레임마다 다시 시도하지 않는다. */
             static UIScreenHandle syncSwitch( UISystem& uiSystem, UIScreenHandle current )
             {
-                const bool bOpen = current != kInvalidUIScreenHandle && uiSystem.findScreen( current ) != nullptr;
+                UIScreen* const pCurrent = uiSystem.findScreen( current );
+                const bool      bOpen    = pCurrent != nullptr;
                 if ( gv_uiOptionsMenu == bOpen )
                     return current;
                 if ( bOpen )
                 {
-                    uiSystem.closeScreen( current );
+                    pCurrent->close();
                     return kInvalidUIScreenHandle;
                 }
                 const UIScreenHandle screen = OptionsMenuScreen::open( uiSystem );

@@ -15,6 +15,7 @@
 #include "Engine/UI/Menu/ConfirmDialogScreen.h"
 #include "Engine/UI/Screen/UIScreen.h"
 
+#include "GameFramework/Client/Inventory/InventoryViewModel.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h"
 
@@ -42,10 +43,6 @@ namespace sw
         static constexpr const utf8* kGridName      = "Grid";
         static constexpr const utf8* kEquipmentName = "Equipment";
         static constexpr const utf8* kActionsName   = "Actions";
-        static constexpr const utf8* kDetailsName   = "Details";
-        static constexpr const utf8* kStatsName     = "Stats";
-        static constexpr const utf8* kWeightName    = "Weight";
-        static constexpr const utf8* kStatusName    = "Status";
         static constexpr int32       kNoSlot        = InventoryCommand::kNoSlot;
 
         const TypeInfo* getTypeInfo() const override { return StaticType(); }
@@ -106,5 +103,6 @@ namespace sw
         InventoryCommandResult               _lastResult;
         uint8                                _bLongPressFired; ///< 길게 누르기가 메뉴를 열었다 — 이어 오는 클릭을 버린다
         uint8                                _bBuilt;
+        InventoryViewModel                   _viewModel; ///< 문서가 바인딩으로 읽는 글(`{bind:…}`) — 화면이 위젯 이름으로 찾아 쓰지 않는다
     };
 } // namespace sw

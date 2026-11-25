@@ -3,7 +3,6 @@
 #include "Games/Playground/FeatureDemo/SpawnDirectorDemoComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
@@ -11,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -19,8 +19,7 @@ namespace sw
     {
         struct SpawnDirectorDemoComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "FDSP" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "FDSP" };
         };
     } // namespace
 
@@ -105,17 +104,11 @@ namespace sw
 
     void SpawnDirectorDemoComponent::serializeGameState( StateIO& io )
     {
-        io.header( SpawnDirectorDemoComponentInternal::kStateTag, SpawnDirectorDemoComponentInternal::kStateVersion );
-        if ( io.isWriting() )
+        io.header( SpawnDirectorDemoComponentInternal::kStateFormat );
+        (void)io.valueOpened( _director, [this]( SpawnDirector& director )
         {
-            io.value( _director );
-            return;
-        }
-        SpawnDirector director;
-        director.initialize( _pTable.get(), _seed );
-        io.value( director );
-        if ( io.isOk() == false )
-            return;
-        _director = std::move( director );
+            director.initialize( _pTable.get(), _seed );
+            return true;
+        } ); // 실패는 아카이브에 남는다
     }
 } // namespace sw

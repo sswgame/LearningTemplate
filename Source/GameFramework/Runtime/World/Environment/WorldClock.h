@@ -5,13 +5,13 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -92,9 +92,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag               = FourCCUtil::make( "CLOK" );
-        static constexpr uint32 kStateVersion           = 3; ///< 2: 하루 안 시각이 float64 다. 3: 리플렉션 상태 칸(판 2 는 머리를 붙여 올린다 — `ReflectedStateUpgrade::prependHead`)
-        static constexpr uint32 kStateHeaderlessVersion = 1; ///< 판 1 까지는 머리표가 없었다 — 머리가 없는 바이트는 판 1 로 읽어 올린다(`StateIO::header`)
+        static constexpr FormatDef kStateFormat{ "CLOK" };
 
         WorldClock();
 
@@ -147,8 +145,8 @@ namespace sw
         bool validateInitialized( const utf8* pAction ) const;
 
     private:
-        WorldClockSettings                  _settings;
-        NotificationBuffer<WorldClockEvent> _eventBuffer;
+        SW_CODEC_STATE WorldClockSettings _settings;
+        SW_TRANSIENT NotificationBuffer<WorldClockEvent> _eventBuffer;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _day;
         PROPERTY( RuntimeState, Min = 0 )

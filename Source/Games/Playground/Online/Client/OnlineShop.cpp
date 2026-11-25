@@ -11,6 +11,7 @@
 
 #include "GameFramework/Client/Shop/ShopScreen.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyShopPurchaseProvider.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
@@ -22,8 +23,6 @@ namespace sw
     {
         struct PlaygroundOnlineShopInternal
         {
-            static constexpr const utf8* kShopDocument = "common/ui/shop/shop.ui.xml"; ///< 공용 상점 견본 문서
-
             /** @brief `playground.online.shop` — 세션의 경제 클라이언트로 상점 화면을 연다. 로그인 뒤에 쓴다(구매는 세션 요청이다). */
             static bool runOpenShop( const vector<string>& listArgument, string& outReply )
             {
@@ -43,7 +42,13 @@ namespace sw
                     outReply = "playground.online.shop: no offer catalog";
                     return true;
                 }
-                const UIScreenHandle handle = ShopScreen::open( *pUI, kShopDocument, *pProvider );
+                const DataPath& shopDocument = pSession->getGameSettings()._onlineShopDocument;
+                if ( shopDocument.isSet() == false )
+                {
+                    outReply = "playground.online.shop: GameSettings onlineShopDocument is empty";
+                    return true;
+                }
+                const UIScreenHandle handle = ShopScreen::open( *pUI, shopDocument.get(), *pProvider );
                 outReply                    = handle != kInvalidUIScreenHandle ? "playground.online.shop: opened" : "playground.online.shop: the shop document did not open";
                 return true;
             }

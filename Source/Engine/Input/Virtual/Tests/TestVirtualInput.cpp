@@ -241,7 +241,7 @@ SW_TEST_CASE( InputReplayTest, SaveLoadSaveKeepsBytes )
 SW_TEST_CASE( InputReplayTest, BrokenFilesAreRefused )
 {
     SW_EXPECT_LOG( "File.NotFound" );
-    SW_EXPECT_LOG( "InputReplay.InputReplayVersionNot" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_LOG( "InputReplay.InputReplayTruncatedName" );
     SW_EXPECT_LOG( "InputReplay.InputReplayTruncatedFrame" );
     const AbsolutePath path = test::makeScratchPath( "broken.swreplay" );

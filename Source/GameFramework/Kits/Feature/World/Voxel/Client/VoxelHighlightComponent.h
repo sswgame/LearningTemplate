@@ -66,11 +66,11 @@ namespace sw
         PROPERTY( Category = "Highlight", DisplayName = "Outline Width", Tooltip = "Thickness of one outline edge", Min = 0.001, Units = m )
         float32 _outlineWidth;
 
-        shared_ptr<MaterialInstance> _arrLevelLook[kLevelCount];
-        PrefabViewBatch              _outlineViews;
-        AbsolutePosition             _targetCenter;  ///< 이번 틱에 겨눈 블록의 가운데(절대 자리)
-        int32                        _level;         ///< 지금 적용한 단계입니다(−1 이면 아직 적용하지 않았습니다).
-        uint8                        _bTargeted : 1; ///< 이번 틱에 겨눈 블록이 있다
-        [[maybe_unused]] uint8       _reserved  : 7;
+        SW_TRANSIENT shared_ptr<MaterialInstance> _arrLevelLook[kLevelCount];
+        SW_TRANSIENT PrefabViewBatch              _outlineViews;
+        SW_TRANSIENT AbsolutePosition             _targetCenter;  ///< 이번 틱에 겨눈 블록의 가운데(절대 자리)
+        SW_TRANSIENT int32                        _level;         ///< 지금 적용한 단계입니다(−1 이면 아직 적용하지 않았습니다).
+        SW_TRANSIENT uint8                        _bTargeted : 1; ///< 이번 틱에 겨눈 블록이 있다
+        [[maybe_unused]] uint8                    _reserved  : 7;
     };
 } // namespace sw

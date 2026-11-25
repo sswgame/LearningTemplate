@@ -16,6 +16,7 @@
 
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw
 {
@@ -235,8 +236,8 @@ namespace sw
         vector<string> _listStagedCulture;
         vector<string> _listStringTable;
         vector<string> _listCodeRoot;
-        PROPERTY( AssetPath, Name = "assetRoots" )
-        vector<string>                _listAssetRoot;
+        PROPERTY( Name = "assetRoots" )
+        vector<DataPath>              _listAssetRoot; ///< 글을 모을 리소스 폴더(폴더는 정체성이 없어 경로 글이다)
         vector<LocalizationAssetRule> _listAssetRule;
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "LocalizationProject", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };

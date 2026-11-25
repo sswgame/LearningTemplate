@@ -3,7 +3,6 @@
 #include "Games/Playground/Shooter3D/ShooterGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
@@ -16,6 +15,7 @@
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
@@ -43,11 +43,19 @@ namespace sw
     {
         struct ShooterGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "SHOT" );
-            static constexpr uint32 kStateVersion = 3;
-            /** @brief 이 게임이 아는 조우, 보상, 스폰 ID 입니다. 프로필이 다른 이름을 쓰면 시작할 때 알립니다. */
-            static constexpr const utf8* kArrKnownEncounter[] = { "swarm", "elite", "ammo", "repair" };
-            static constexpr const utf8* kArrKnownSpawn[]     = { "skeleton" };
+            static constexpr FormatDef kStateFormat{ "SHOT" };
+            /** @brief 감독 프로필의 항목이 고르는 일(`effect`)의 낱말입니다 — 항목 id 는 데이터가 마음대로 짓고, 무엇을 할지만 이 낱말로 적는다. */
+            static constexpr const utf8* kEffectElite  = "Elite";  ///< 조우: 정예 종류로 낸다(비우면 보통 종류)
+            static constexpr const utf8* kEffectAmmo   = "Ammo";   ///< 보상: 탄약 상자
+            static constexpr const utf8* kEffectRepair = "Repair"; ///< 보상: 체력(`scale` × 디렉터의 회복량)
+
+            /** @brief 풀 종류가 받는 `effect` 인지입니다 — 조우는 빈 글 · Elite, 보상은 Ammo · Repair. */
+            static bool isKnownEffect( AIDirectorPoolKind poolKind, const hashed_string& effect )
+            {
+                if ( poolKind == AIDirectorPoolKind::Reward )
+                    return effect == hashed_string( kEffectAmmo ) || effect == hashed_string( kEffectRepair );
+                return effect.empty() || effect == hashed_string( kEffectElite );
+            }
             /** @brief 플레이어 통계 id 입니다(`game/playground/data/playground.stats.xml`). */
             /** @brief 매치 결과 이름과 처치 수 값 이름입니다(`minigames/shooter3d_match` 의 matchScore). */
             static constexpr const utf8* kResultDown        = "down";
@@ -60,17 +68,6 @@ namespace sw
             static float3 closestPointXz( const float3& point, const float3& boxMin, const float3& boxMax )
             {
                 return float3{ MathUtil::clamp( point._x, boxMin._x, boxMax._x ), point._y, MathUtil::clamp( point._z, boxMin._z, boxMax._z ) };
-            }
-
-            template <size_t Count>
-            static bool isKnownID( const hashed_string& id, const utf8* const ( &arrKnown )[Count] )
-            {
-                for ( const utf8* pKnown : arrKnown )
-                {
-                    if ( id == hashed_string( pKnown ) )
-                        return true;
-                }
-                return false;
             }
         };
     } // namespace
@@ -120,7 +117,8 @@ namespace sw
     }
 
     ShooterGameModeComponent::ShooterGameModeComponent()
-        : _effectPrefab{}
+        : MatchGameModeComponent( 0.0f ) // 결과를 보이지 않고 바로 끝낸다 — 매치 결과는 돌아간 맵이 보인다
+        , _effectPrefab{}
         , _tracerPrefab{}
         , _autoPlayPrefab{}
         , _listEnemyKind{}
@@ -148,8 +146,8 @@ namespace sw
         , _director{}
         , _listDirectorEvent{}
         , _listEnemy{}
-        , _effectPool{ string{}, 0 }
-        , _tracerPool{ string{}, 0 }
+        , _effectPool{ string{}, 0, SpawnLifetime::Derived }
+        , _tracerPool{ string{}, 0, SpawnLifetime::Derived }
         , _listPendingEnemy{}
         , _listPendingEffect{}
         , _listReplicaSample{}
@@ -169,7 +167,6 @@ namespace sw
         , _bAmmoPending{ SW_FALSE }
         , _bPacingReady{ SW_FALSE }
         , _bReplica{ SW_FALSE }
-        , _bMatchEnded{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -204,14 +201,14 @@ namespace sw
     {
         // 처치 수는 상태 칸이다(`GameModeComponent::serializeState`). 감독 유무는 지금 판과 대조만 하고 덮지 않아 손 본문에 남는다.
         uint8 bPacing = static_cast<uint8>( _bPacingReady );
-        io.header( ShooterGameModeComponentInternal::kStateTag, ShooterGameModeComponentInternal::kStateVersion );
+        io.header( ShooterGameModeComponentInternal::kStateFormat );
         io.value( bPacing );
         if ( io.check( bPacing != SW_TRUE || _bPacingReady != SW_FALSE ) == false )
             return;
         // 감독은 단계 · 웨이브 · 예산 · 산 스폰까지 잇는다. 적 모습은 복원 뒤 걷히고(`onViewsDespawned`) 감독 예산으로 섰던 것만 같은 스폰 id 로 다시 선다.
         if ( bPacing == SW_TRUE )
         {
-            io.valueAtomic( _director );
+            io.value( _director );
         }
         io.end();
     }
@@ -224,11 +221,7 @@ namespace sw
         }
         else
         {
-            // 감독은 읽었는데 끝 바이트가 남은 경우도 여기로 온다. 새 판으로 되돌린다.
-            SW_LOG_WARNING_ID( "ShooterGameMode.SavedArenaStateDoes", "[Shooter] the saved arena state does not match this build - starting a new round" );
-            _killCount = 0;
-            if ( _bPacingReady == SW_TRUE )
-                _director.restart();
+            SW_LOG_WARNING_ID( "ShooterGameMode.SavedArenaStateDoes", "[Shooter] the saved arena state does not match this build - the current round goes on" );
         }
     }
 
@@ -252,10 +245,15 @@ namespace sw
 
     void ShooterGameModeComponent::updateGame( float32 deltaTime )
     {
-        const float32 step = MathUtil::min( deltaTime, 0.1f );
         updatePlayerView();
         updateFloorSteps();
-        if ( step > 0.0f && _bReplica == SW_TRUE )
+        MatchGameModeComponent::updateGame( deltaTime );
+    }
+
+    void ShooterGameModeComponent::updateMatch( float32 deltaTime )
+    {
+        const float32 step = MathUtil::min( deltaTime, 0.1f );
+        if ( _bReplica == SW_TRUE )
         {
             updateReplicaEnemies();
             // 복제 쪽도 자동 플레이 조종자를 세운다 — 그 의도가 서버로 가는 입력이다.
@@ -264,15 +262,12 @@ namespace sw
                 syncAutoPlayPossession( *pManager );
             return;
         }
-        if ( step > 0.0f )
+        updateEnemies();
+        if ( _bPacingReady == SW_TRUE )
         {
-            updateEnemies();
-            if ( _bPacingReady == SW_TRUE )
-            {
-                applyReloadedProfile();
-                _director.update( step );
-                applyDirectorEvents();
-            }
+            applyReloadedProfile();
+            _director.update( step );
+            applyDirectorEvents();
         }
     }
 
@@ -320,19 +315,19 @@ namespace sw
         _listDirectorEvent.clear();
     }
 
-    bool ShooterGameModeComponent::endMatch( uint32 killCount )
+    bool ShooterGameModeComponent::requestMatchEnd( uint32 killCount )
     {
-        if ( _bMatchEnded == SW_TRUE )
+        if ( isMatchEnded() )
             return true; // 돌아갈 맵을 기다린다
         const NetLinkValue* const       pLink   = SceneNetLink::findBoundFor( *this );
         const MinigameFlow* const       pFlow   = game::findSubsystem<MinigameFlow>();
         const MinigameDefinition* const pActive = pFlow != nullptr ? pFlow->findActiveDefinition() : nullptr;
         const bool                      bServer = pLink != nullptr && pLink->_role == NetLinkRole::Server; // 매치 서버의 판은 다음에 배정받은 사람이 잇는다
-        if ( bServer || pActive == nullptr || pActive->isMatch() == false )
+        if ( bServer || pActive == nullptr || pActive->isMatch() == false || pFlow->isObserving() )
             return false;
         setResultKillCount( killCount );
-        _bMatchEnded = finishMinigame( hashed_string( ShooterGameModeComponentInternal::kResultDown ) ) ? SW_TRUE : SW_FALSE;
-        return _bMatchEnded == SW_TRUE;
+        endMatch( hashed_string( ShooterGameModeComponentInternal::kResultDown ) );
+        return true;
     }
 
     void ShooterGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
@@ -525,22 +520,52 @@ namespace sw
             return;
         if ( acquireRequired( _spawnTable, _pTable ) == false )
             return;
-        // 감독은 ID 만 낸다. 이 게임이 모르는 ID 는 아무 일도 하지 않으므로 데이터 오타를 여기서 알린다.
-        vector<hashed_string> listID;
-        _pProfile->collectEncounterIDs( listID );
-        for ( const hashed_string& id : listID )
-        {
-            if ( Internal::isKnownID( id, Internal::kArrKnownEncounter ) == false )
-                SW_LOG_ERROR_ID( "ShooterGameMode.PacingProfileNamesEncounter", "[Shooter] pacing profile '%#' names encounter '%#' this game does not know", _pacingProfile.c_str(), id.c_str() );
-        }
-        for ( const SpawnEntryDef& entry : _pTable->getEntries() )
-        {
-            if ( Internal::isKnownID( entry._id, Internal::kArrKnownSpawn ) == false )
-                SW_LOG_ERROR_ID( "ShooterGameMode.SpawnTableNamesGame", "[Shooter] spawn table '%#' names '%#' this game does not know", _spawnTable.c_str(), entry._id.c_str() );
-        }
+        // 감독은 항목의 `effect` 를 그대로 건넨다. 이 게임이 모르는 낱말은 아무 일도 하지 않으므로 데이터 오타를 여기서 알리고 서지 않는다.
+        if ( hasKnownEffects( *_pProfile, _pacingProfile.c_str() ) == false )
+            return;
+        if ( matchesSpawnTable( *_pTable, _listEnemyKind, _spawnTable.c_str() ) == false )
+            return;
         _director.initialize( _pProfile.get(), _pTable.get(), static_cast<uint32>( _pacingSeed ) );
         _bPacingReady = SW_TRUE;
         applyDirectorEvents(); // 시작 단계 사건
+    }
+
+    bool ShooterGameModeComponent::hasKnownEffects( const AIDirectorProfile& profile, string_view profileName )
+    {
+        bool bEffectsKnown = true;
+        for ( const AIDirectorPoolDef& pool : profile.getPools() )
+        {
+            for ( const AIDirectorEncounterDef& encounter : pool._listEncounter )
+            {
+                if ( ShooterGameModeComponentInternal::isKnownEffect( pool._kind, encounter._effect ) )
+                    continue;
+                SW_LOG_ERROR_ID( "ShooterGameMode.PacingProfileUnknownEffect", "[Shooter] pacing profile '%#': '%#' in pool '%#' has effect '%#' this game does not know (encounters: empty or Elite, rewards: Ammo or Repair)",
+                                 profileName, encounter._id.c_str(), pool._id.c_str(), encounter._effect.c_str() );
+                bEffectsKnown = false;
+            }
+        }
+        return bEffectsKnown;
+    }
+
+    bool ShooterGameModeComponent::matchesSpawnTable( const SpawnTable& table, const vector<ShooterEnemyKind>& listKind, string_view tableName )
+    {
+        bool bMatches = true;
+        for ( const ShooterEnemyKind& kind : listKind )
+        {
+            if ( table.findEntry( kind._spawnEntryID ) != nullptr )
+                continue;
+            SW_LOG_ERROR_ID( "ShooterGameMode.SpawnEntryUnknown", "[Shooter] enemy kind '%#' stands for spawn entry '%#', which spawn table '%#' does not have - no enemies will come", kind._preset.c_str(),
+                             kind._spawnEntryID.c_str(), tableName );
+            bMatches = false;
+        }
+        for ( const SpawnEntryDef& entry : table.getEntries() )
+        {
+            if ( VectorUtil::findIndexBy<&ShooterEnemyKind::_spawnEntryID>( listKind, entry._id ).has_value() )
+                continue;
+            SW_LOG_ERROR_ID( "ShooterGameMode.SpawnEntryUnknown", "[Shooter] spawn table '%#' has entry '%#', but no enemy kind stands for it - no enemies will come", tableName, entry._id.c_str() );
+            bMatches = false;
+        }
+        return bMatches;
     }
 
     void ShooterGameModeComponent::requestEnemies( int32 count, float32 healthScale, uint32 spawnID, bool bElite )
@@ -595,15 +620,15 @@ namespace sw
                 }
                 case AIDirectorEventKind::Encounter:
                 {
-                    requestEnemies( event._count, event._scale, 0, event._id == hashed_string( "elite" ) );
+                    requestEnemies( event._count, event._scale, 0, event._effect == hashed_string( ShooterGameModeComponentInternal::kEffectElite ) );
                     SW_LOG_INFO_ID( "ShooterGameMode.SkeletonsXHealthWave", "[Shooter] %# - %# skeletons (x%.1f health) on wave %#", event._id.c_str(), event._count, event._scale, getWave() );
                     break;
                 }
                 case AIDirectorEventKind::Reward:
                 {
-                    if ( event._id == hashed_string( "ammo" ) )
+                    if ( event._effect == hashed_string( ShooterGameModeComponentInternal::kEffectAmmo ) )
                         _bAmmoPending = SW_TRUE;
-                    else if ( event._id == hashed_string( "repair" ) )
+                    else if ( event._effect == hashed_string( ShooterGameModeComponentInternal::kEffectRepair ) )
                         _pendingHeal += event._scale * _repairHealthPerScale;
                     break;
                 }
@@ -696,8 +721,8 @@ namespace sw
     void ShooterGameModeComponent::spawnEffectPools( GameObjectManager& manager )
     {
         // 탄착과 섬광 구, 탄도선 상자를 미리 스폰해 꺼 둔다(오브젝트를 매 발 만들고 지우지 않는다).
-        _effectPool = PrefabPool( _effectPrefab.path(), static_cast<uint32>( _effectPoolSize ) );
-        _tracerPool = PrefabPool( _tracerPrefab.path(), static_cast<uint32>( _tracerPoolSize ) );
+        _effectPool = PrefabPool( _effectPrefab.path(), static_cast<uint32>( _effectPoolSize ), SpawnLifetime::Derived );
+        _tracerPool = PrefabPool( _tracerPrefab.path(), static_cast<uint32>( _tracerPoolSize ), SpawnLifetime::Derived );
         (void)_effectPool.prewarm( manager, static_cast<uint32>( _effectPoolSize ), "ShotEffect" );
         (void)_tracerPool.prewarm( manager, static_cast<uint32>( _tracerPoolSize ), "Tracer" );
     }

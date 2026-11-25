@@ -4,7 +4,7 @@
      바람 · 휘게 하는 구 · 페이드는 컴포넌트가 인스턴스에 싣고, 바람 시간 · 카메라 위치는 셰이더 전역 값(g_MaterialGlobalEnvironment)이다. 프로퍼티 이름 · 타입은 foliage.hlsl 의 SW_MATERIAL 구조체와 같다.
      MATERIAL_VERTEX_DEFORM 은 깊이 프리패스에서 빠지게 하고(shadow_depth.hlsl — 흔들린 정점이 프리패스 깊이와 어긋나지 않게),
      그림자 패스를 foliage.hlsl 의 그림자 퍼뮤테이션으로 그리게 한다(FrameRendererUtil::usesMaterialShaderForDepth). -->
-<MaterialDef formatVersion="0" name="Foliage" shaderPath="engine/shaders/foliage.hlsl" surfaceModel="Lit" alphaMode="Opaque">
+<MaterialDef formatVersion="0" name="Foliage" shaderPath="guid:c8a1ee99c6f2bb288d24ee47ad282e04" surfaceModel="Lit" alphaMode="Opaque">
 	<_properties>
 		<item name="_tint" type="Vector4" defaultValue="1.0 1.0 1.0 1.0" displayName="Tint" group="Foliage"/>
 		<item name="_windParams" type="Vector4" defaultValue="1.0 0.0 0.35 0.0" displayName="Wind Direction XZ, Strength" group="Wind"/>

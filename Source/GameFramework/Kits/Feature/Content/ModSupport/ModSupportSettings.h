@@ -3,9 +3,9 @@
  * @brief 게임이 모드에 허락하는 것(콘텐츠 판, 덮어쓸 수 있는 기본 리소스 접두 · 파일)과 바깥 입력의 크기 한계입니다. 게임 팩 데이터(`game/<팩>/data/modsupport.xml`)에서 읽는다.
  * @details 정책 값은 코드 표가 아니라 데이터다(데이터 종류 `kDataKind`). 모든 칸이 필수이고 빠지면 읽기가 실패한다(기본값으로 물러나지 않는다).
  *
- *          <ModSupportSettings contentVersion="1" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216" packBlockSize="131072">
+ *          <ModSupportSettings contentVersion="0" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216" packBlockSize="131072">
  *              <Overridable prefix="game/playground/data/mods/"/>
- *              <Overridable path="game/playground/data/quests.xml"/>
+ *              <Overridable path="guid:…"/>
  *          </ModSupportSettings>
  */
 #pragma once
@@ -15,6 +15,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -22,6 +23,18 @@ namespace sw
 {
     class XMLDocument;
     class XMLNode;
+
+    /** @brief `<Overridable prefix>` · `<Overridable path>` 한 줄의 칸입니다 — 둘 중 하나만 적는다(`ModSupportSettings::readOverridable` 이 본다). */
+    REFLECT()
+    struct SW_KIT_API ModOverridableLine
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _prefix{}; ///< 기본 리소스 폴더(끝 `/`) — 폴더는 정체성이 없어 글이다
+        PROPERTY()
+        DataPath _path; ///< 기본 리소스 파일 하나
+    };
 
     /**
      * @struct ModSupportSettings
@@ -36,7 +49,7 @@ namespace sw
         static constexpr const utf8* kDataKind    = "modsupport";
         static constexpr const utf8* kRootElement = "ModSupportSettings";
 
-        PROPERTY( Required, Min = 1 )
+        PROPERTY( Required, Min = 0 )
         uint32 _contentVersion{ 0 }; ///< 게임 콘텐츠 판 — 매니페스트의 `minContentVersion` ~ `maxContentVersion` 안이어야 한다
         PROPERTY( Required, Min = 1 )
         uint32 _maxModCount{ 0 }; ///< 한 세션에 켜는 모드 수 상한

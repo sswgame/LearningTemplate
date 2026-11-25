@@ -11,8 +11,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternHUDViewModel.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternGameModeComponent.h"
@@ -66,45 +64,22 @@ namespace sw
                                &WesternRiderViewComponentInternal::readOutlawStatus, true, false );
 
     WesternRiderViewComponent::WesternRiderViewComponent()
-        : _cameraRig{}
+        : GameModeViewComponent( GameModeViewBinding::of<&WesternRiderViewComponent::updateView>() )
+        , _cameraRig{}
         , _lowCoreWarning{ 30.0f }
-        , _director{}
         , _hudViewModel{}
     {
     }
 
     WesternRiderViewComponent::~WesternRiderViewComponent() = default;
 
-    void WesternRiderViewComponent::onRegister( GameObjectManager& manager )
+    void WesternRiderViewComponent::updateView( GameObjectManager& manager, const WesternGameModeComponent& director )
     {
-        Component::onRegister( manager );
-        GameObject* const                     pOwner    = getOwner();
-        const WesternGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<WesternGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "Western.RiderViewWithoutGameMode", "Western rider view on '%#': no WesternGameModeComponent in front of it on the same object - the view does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<WesternGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<WesternGameModeComponent>( pDirector );
-    }
-
-    void WesternRiderViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        context.deferPostTickOnComponent( *this, []( WesternRiderViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
-    }
-
-    void WesternRiderViewComponent::updateView( GameObjectManager& manager )
-    {
-        const WesternGameModeComponent* const pDirector   = manager.resolveComponent( _director );
-        const PawnComponent* const            pPlayerPawn = pDirector != nullptr && pDirector->isStarted() ? pDirector->findPlayerPawn() : nullptr;
+        const PawnComponent* const pPlayerPawn = director.findPlayerPawn();
         if ( pPlayerPawn == nullptr )
             return;
         updateCameraFocus( manager, *pPlayerPawn );
-        updateHUD( *pDirector, *pPlayerPawn );
+        updateHUD( director, *pPlayerPawn );
     }
 
     void WesternRiderViewComponent::updateCameraFocus( GameObjectManager& manager, const PawnComponent& playerPawn )

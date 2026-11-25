@@ -38,20 +38,17 @@ namespace sw
         WalletComponent*    pWallet = io.isReading() ? findOnPlayerState<WalletComponent>() : nullptr;
         if ( io.isReading() && io.check( pState != nullptr && pWallet != nullptr ) == false )
             return;
-        io.header( kStateTag, kStateVersion ); // 배치를 마쳤는지는 상태 칸이다(`GameModeComponent::serializeState`)
+        io.header( kStateFormat ); // 배치를 마쳤는지는 상태 칸이다(`GameModeComponent::serializeState`)
         if ( io.isOk() == false )
             return;
-        CitySimulation restoredCity;
-        if ( io.isReading() && io.check( initializeCity( restoredCity, *pState, *pWallet ) ) == false )
-            return;
-        CitySimulation& city = io.isWriting() ? getMutableCity() : restoredCity;
-        io.section( CitySimulation::kStateTag, CitySimulation::kStateVersion, [&city]( StateIO& bodyIO )
-        { bodyIO.value( city ); } );
+        io.section( CitySimulation::kStateFormat, [&]( StateIO& bodyIO )
+        {
+            (void)bodyIO.valueOpened( getMutableCity(), [&]( CitySimulation& city )
+            { return initializeCity( city, *pState, *pWallet ); } ); // 실패는 아카이브에 남는다
+        } );
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        getMutableCity() = std::move( restoredCity );
-        markLayoutChanged();
+        if ( io.isReading() && io.isOk() )
+            markLayoutChanged();
     }
 
     bool CityGameModeComponent::initializeCity( CitySimulation& outCity, GameStateComponent& state, WalletComponent& wallet ) const
@@ -155,12 +152,5 @@ namespace sw
                 getMutableCity().settleMonth( false );
         }
         collectStepEvents();
-    }
-
-    void CityGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트 모듈(`CityViewComponent`)이 세운다.
-        (void)manager;
-        (void)bRespawnViews;
     }
 } // namespace sw

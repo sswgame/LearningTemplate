@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Foundation/GameMode/Tests/PrefabPoolComponentSpawner.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
+#include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
 
 using namespace sw;
 
@@ -57,7 +58,7 @@ SW_TEST_CASE( HealthBarSpawnStateResetTest, ReacquiredBodyShowsItsCurrentHealth 
     SW_REQUIRE_TRUE( pBar->hasBegunPlay() );
 
     // 가득 찬 채 싸우다 쓰러졌다.
-    SW_REQUIRE_NOT_NULL( pAbility->addAttributeSet<CombatAttributeSet>() );
+    SW_REQUIRE_NOT_NULL( pAbility->addAttributeSet( test::makeCombatAttributeSet() ) );
     SW_REQUIRE_TRUE( pAbility->setAttributeBaseValue( CombatAttributes::maxHealth(), 100.0f ) );
     SW_REQUIRE_TRUE( pAbility->setAttributeBaseValue( CombatAttributes::health(), 100.0f ) );
     manager.update( 1.0f / 60.0f );
@@ -67,7 +68,7 @@ SW_TEST_CASE( HealthBarSpawnStateResetTest, ReacquiredBodyShowsItsCurrentHealth 
     pool.release( manager, pObject->getHandle() );
     SW_REQUIRE_TRUE( pool.acquire( manager, "Grunt" ) == pObject );
     // 꺼낸 쪽(디렉터)이 세트를 다시 주고 이번 몸의 체력을 정한다.
-    SW_REQUIRE_NOT_NULL( pAbility->addAttributeSet<CombatAttributeSet>() );
+    SW_REQUIRE_NOT_NULL( pAbility->addAttributeSet( test::makeCombatAttributeSet() ) );
     SW_REQUIRE_TRUE( pAbility->setAttributeBaseValue( CombatAttributes::maxHealth(), 100.0f ) );
     SW_REQUIRE_TRUE( pAbility->setAttributeBaseValue( CombatAttributes::health(), 30.0f ) );
     manager.update( 1.0f / 60.0f );

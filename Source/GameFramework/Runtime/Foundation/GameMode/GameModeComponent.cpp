@@ -8,12 +8,11 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/IGameAutoplayQuery.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/Map/GameInputView.h"
+#include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectVisit.h"
@@ -22,7 +21,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
-#include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
@@ -110,39 +109,58 @@ namespace sw
 
     bool GameModeComponent::openGame()
     {
-        vector<FollowedAsset> listPrevious = std::move( _listFollowedAsset ); // 규칙 객체는 `startGame` 이 다시 묶을 때까지 앞 판을 가리킨다
+        vector<shared_ptr<BoundAsset>> listPrevious = std::move( _listFollowedAsset ); // 규칙 객체는 `startGame` 이 다시 묶을 때까지 앞 판을 가리킨다
         _listFollowedAsset.clear();
         resetRuntimeState();
         if ( startGame() )
             return true;
-        for ( FollowedAsset& previous : listPrevious )
+        for ( shared_ptr<BoundAsset>& previous : listPrevious )
         {
             _listFollowedAsset.push_back( std::move( previous ) ); // 다시 묶지 못한 규칙 객체가 남았다 — 쥔 채로 둔다
         }
+        _bStarted = SW_FALSE; // 다시 열지 못한 판은 닫는다 — 참조는 새 판, 규칙 객체는 앞 판인 채로 돌지 않는다
         return false;
     }
 
     void GameModeComponent::applyReloadedAssets()
     {
-        bool bReloaded = false;
-        for ( FollowedAsset& followed : _listFollowedAsset )
+        vector<shared_ptr<BoundAsset>> listReloaded;
+        vector<shared_ptr<const void>> listPrevious; // 새 판에 묶지 못하면 되돌릴 판(`listReloaded` 와 같은 순서)
+        for ( const shared_ptr<BoundAsset>& pFollowed : _listFollowedAsset )
         {
-            shared_ptr<const void> pLatest = followed._takeLatest();
-            if ( pLatest == nullptr || pLatest == followed._listHeld.back() )
+            shared_ptr<const void> pLatest = pFollowed->_takeLatest();
+            if ( pLatest == nullptr || pLatest == pFollowed->_listHeld.back() )
                 continue;
-            followed._listHeld.push_back( std::move( pLatest ) );
-            bReloaded = true;
+            pFollowed->_listHeld.push_back( std::move( pLatest ) );
+            listReloaded.push_back( pFollowed );
+            listPrevious.push_back( pFollowed->_pBound );
         }
-        if ( bReloaded == false )
+        if ( listReloaded.empty() )
             return;
         Archive state;
-        writeState( state );
+        writeState( state ); // 규칙 객체가 묶인 판으로 적는다 — 참조를 옮기기 전이다
+        for ( const shared_ptr<BoundAsset>& pReloaded : listReloaded )
+        {
+            pReloaded->_pBound = pReloaded->_listHeld.back();
+        }
         state.setReadModeAndResetPosition( true );
-        const bool bRebound = readState( state );
+        const bool bRebound = StateIO::readInPlace( *this, state );
         if ( bRebound )
+        {
             SW_LOG_INFO_ID( "GameMode.ReloadedAssetApplied", "GameMode '%#': a reloaded asset is applied - the running game is bound to it", getTypeName().c_str() );
+        }
         else
+        {
             SW_LOG_WARNING_ID( "GameMode.ReloadedAssetRefused", "GameMode '%#': the running game does not fit a reloaded asset (see the messages above)", getTypeName().c_str() );
+            for ( size_t index = 0; index < listReloaded.size(); ++index )
+            {
+                listReloaded[index]->_pBound = listPrevious[index];
+            }
+            // 제자리에서 여는 규칙 객체(지갑 · 격자를 빌린 쪽)는 새 판에 묶인 채로 남는다 — 앞 판으로 다시 읽어 묶는다.
+            state.setReadModeAndResetPosition( true );
+            if ( StateIO::readInPlace( *this, state ) == false )
+                SW_LOG_ERROR_ID( "GameMode.ReloadedAssetNotReverted", "GameMode '%#': the running game cannot go back to the previous asset either", getTypeName().c_str() );
+        }
         onStateRestored( bRebound );
         despawnViews(); // 새 판의 모습으로 다시 세운다(이번 규칙 틱이 플러시를 잡는다)
     }
@@ -166,23 +184,6 @@ namespace sw
                 reportFatalError( "state field '%#::%#' cannot be reset to its default before a game opens", pType->_fullyQualifiedName.c_str(), field._property._name.c_str() );
             return ReflectVisitFlow::Continue;
         } );
-    }
-
-    bool GameModeComponent::finishMinigame( const hashed_string& resultName )
-    {
-        MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
-        if ( pFlow != nullptr && pFlow->isObserving() )
-            return false; // 서버의 판을 보는 클라이언트다 — 끝내는 것은 서버가 정한다
-        if ( pFlow == nullptr || pFlow->findActiveDefinition() == nullptr )
-        {
-            SW_LOG_ERROR_ID( "GameMode.FinishWithoutMinigame", "GameMode '%#' finishes with result '%#' but no minigame is active - only a minigame director ends a minigame",
-                             getTypeName().c_str(), resultName.c_str() );
-            return false;
-        }
-        vector<MinigameResultValue> listValue;
-        collectMinigameResult( listValue );
-        pFlow->requestLeave( resultName, std::move( listValue ) );
-        return true;
     }
 
     void GameModeComponent::addMoneyResult( vector<MinigameResultValue>& outListValue, int64 profit )
@@ -236,6 +237,18 @@ namespace sw
         runRules( deltaTime );
     }
 
+    void GameModeComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
+    {
+        Component::foldStateHash( inoutBuilder );
+        if ( _bStarted == SW_FALSE || SceneNetLink::findBoundFor( *this ) != nullptr )
+            return;
+        Archive state;
+        writeState( state );
+        vector<uint8> bytes;
+        state.writeData( bytes );
+        inoutBuilder.addBytes( bytes.data(), bytes.size() );
+    }
+
     SubTickHandle GameModeComponent::getRuleTickHandle() const
     {
         SubTickHandle handle = getTickHandle();
@@ -282,27 +295,21 @@ namespace sw
         const TypeInfo* const pType = findCachedTypeInfo();
         if ( pType == nullptr )
             reportFatalError( "GameModeComponent '%#' has no reflected type - its state fields cannot be carried", getTypeName().c_str() );
-        if ( io.isWriting() )
-        {
-            io.reflectedAs( *pType, *this );
-            serializeGameState( io );
-            return;
-        }
-        Archive backup;
-        {
-            StateIO backupIO( backup );
-            backupIO.reflectedAs( *pType, *this );
-        }
         io.reflectedAs( *pType, *this );
         if ( io.isOk() )
             serializeGameState( io );
-        if ( io.isOk() )
-            return;
-        // 칸이나 손 본문이 거절했다 — 덮은 상태 칸을 읽기 전 값으로 되돌린다(손 본문은 끝까지 맞을 때만 대입하므로 그대로다).
-        backup.setReadModeAndResetPosition( true );
-        StateIO restoreIO( backup );
-        restoreIO.reflectedAs( *pType, *this );
-        SW_ASSERT( restoreIO.isOk() );
+    }
+
+    bool GameModeComponent::readStateOrRevert( Archive& archive )
+    {
+        Archive previous;
+        writeState( previous );
+        if ( StateIO::readInPlace( *this, archive ) )
+            return true;
+        previous.setReadModeAndResetPosition( true );
+        if ( StateIO::readInPlace( *this, previous ) == false )
+            SW_LOG_ERROR_ID( "GameMode.StateNotReverted", "GameMode '%#': a refused state was read halfway and the state before it cannot be read back", getTypeName().c_str() );
+        return false;
     }
 
     void GameModeComponent::restoreState( vector<uint8>&& bytes )
@@ -345,7 +352,7 @@ namespace sw
     void GameModeComponent::applyPendingState()
     {
         Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
-        const bool bRestored = readState( archive );
+        const bool bRestored = readStateOrRevert( archive );
         _pendingStateBytes.clear();
         // 새 판을 열며 쌓은 소리(첫 짓기 · 웨이브)는 복원한 판의 것이 아니다.
         _soundQueue.clear();
@@ -387,7 +394,7 @@ namespace sw
         AssetManager* pAssetManager = game::findSubsystem<AssetManager>();
         if ( pAssetManager == nullptr || prefabPath.empty() )
             return nullptr;
-        GameObject* pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefabPath, pName );
+        GameObject* pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefabPath, SpawnLifetime::Persistent, pName );
         if ( pObject != nullptr )
             trackSpawned( *pObject );
         return pObject;
@@ -404,7 +411,7 @@ namespace sw
                 pPool = &existing;
         }
         if ( pPool == nullptr )
-            pPool = &_listPool.emplace_back( string( prefabPath ), pool._maxIdleCount );
+            pPool = &_listPool.emplace_back( string( prefabPath ), pool._maxIdleCount, SpawnLifetime::Persistent );
         return pPool->acquire( manager, pName );
     }
 
@@ -473,26 +480,6 @@ namespace sw
     {
         SW_LOG_ERROR_ID( "GameMode.BoundCatalogMissing",
                          "GameMode: catalog '%#' is not bound in the game scope - the minigame (features, catalogs) or gamesettings gameFeatures must load it; the game cannot start", kind );
-    }
-
-    bool GameModeComponent::isActionDown( const hashed_string& action ) const
-    {
-        const InputManager* pInput = game::findSubsystem<InputManager>();
-        return pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).isActionDown( action );
-    }
-
-    bool GameModeComponent::wasActionTriggered( const hashed_string& action ) const
-    {
-        const InputManager* pInput = game::findSubsystem<InputManager>();
-        return pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).wasActionTriggered( action );
-    }
-
-    float2 GameModeComponent::getActionVector2D( const hashed_string& action ) const
-    {
-        const InputManager* pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return float2{ 0.0f, 0.0f };
-        return GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).getVector2D( action );
     }
 
     void GameModeComponent::compactSpawned( const GameObjectManager& manager )

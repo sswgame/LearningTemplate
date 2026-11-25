@@ -14,9 +14,9 @@
     <ActionScale tag="State.Combat.Attack" scale="1.8"/>
     <ActionScale tag="State.Rest" scale="0.6"/>
     <Pupil parameter="_pupilDilation" emotionCurve="Pupil.Emotion" minSize="0.15" maxSize="0.85" constrictSeconds="0.3" dilateSeconds="3" darkLuminance="0.05" brightLuminance="2" emotionScale="0.25"/>
-    <Fluid name="TearL" channel="Teardrop" residueChannel="TearSalt" trigger="Cry" path="0.43 0.38; 0.42 0.45; 0.41 0.53; 0.42 0.62" ratePerSecond="0.8" speed="0.06" radius="0.008" effect="common/vfx/tear_drip.vfx.xml" socket="Chin" dripSeconds="0.6"/>
-    <Fluid name="TearR" channel="Teardrop" residueChannel="TearSalt" trigger="Cry" path="0.57 0.38; 0.58 0.45; 0.59 0.53; 0.58 0.62" ratePerSecond="0.8" speed="0.06" radius="0.008" effect="common/vfx/tear_drip.vfx.xml" socket="Chin" dripSeconds="0.6"/>
-    <Fluid name="Drool" channel="Saliva" trigger="Drool" path="0.52 0.70; 0.52 0.76; 0.53 0.82" ratePerSecond="0.4" speed="0.03" radius="0.006" residueValue="0" effect="common/vfx/saliva_strand.vfx.xml" socket="Mouth" strand="true"/>
+    <Fluid name="TearL" channel="Teardrop" residueChannel="TearSalt" trigger="Cry" path="0.43 0.38; 0.42 0.45; 0.41 0.53; 0.42 0.62" ratePerSecond="0.8" speed="0.06" radius="0.008" effect="guid:484d954994d5e51a477462c253a4c446" socket="Chin" dripSeconds="0.6"/>
+    <Fluid name="TearR" channel="Teardrop" residueChannel="TearSalt" trigger="Cry" path="0.57 0.38; 0.58 0.45; 0.59 0.53; 0.58 0.62" ratePerSecond="0.8" speed="0.06" radius="0.008" effect="guid:484d954994d5e51a477462c253a4c446" socket="Chin" dripSeconds="0.6"/>
+    <Fluid name="Drool" channel="Saliva" trigger="Drool" path="0.52 0.70; 0.52 0.76; 0.53 0.82" ratePerSecond="0.4" speed="0.03" radius="0.006" residueValue="0" effect="guid:f4e11084aa557cb9ad5b1d521b630c49" socket="Mouth" strand="true"/>
   </BodyProfile>
   <!-- 얼굴(FacialAnimationComponent)이 있는 사람 몸 — 표정이 주름 마스크를 움직인다. 얼굴이 없는 몸(해골)은 HumanoidBase 를 쓴다(주름을 실으면 얼굴 없음 오류다). -->
   <BodyProfile id="HumanoidFace" _base="HumanoidBase" wrinkleIntensity="1">

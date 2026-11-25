@@ -1,7 +1,7 @@
 /**
  * @file ShooterNetSimGame.cpp
  * @brief 사격장 를 한 프로세스 가상 서버(`NetSimHarness`, 에디터 Multiplayer 창의 In process 탭)에서 돌리는 `INetSimGame` 입니다(ServerDebug S8).
- * @details 월드마다 아레나 씬(`game/playground/shooter3d/maps/arena.scene.xml`)을 그 월드의 씬에 풀어 넣는다. 씬 안의 `ShooterNetPawnComponent` 는 전역 세션이 아니라
+ * @details 월드마다 아레나 씬(미니게임 `shooter3d` 의 맵)을 그 월드의 씬에 풀어 넣는다. 씬 안의 `ShooterNetPawnComponent` 는 전역 세션이 아니라
  *          월드가 올린 넷 링크(`SceneNetLink`)로 서버 · 클라이언트 역할을 받으므로, 서버 월드 하나와 클라이언트 월드 N 이 서로 다른 역할로 같은 컴포넌트를 돌린다.
  *          - 서버 월드 · 클라이언트 월드 모두 같은 아레나 씬이다. 적은 서버 몫이고 클라이언트 월드의 감독은 넷 링크 역할을 보고 복제 모습만 그린다(`ShooterGameModeComponent`).
  *          - 입력은 입력 초점이 있는 월드의 폰만 읽는다(`NetSimWorld::hasInputFocus`). 나머지 월드의 몸 이동은 멈춤(`suspend` 구독)이라 입력이 0 이다.
@@ -16,6 +16,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Character/Hit/MeleeSweepHistory.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -26,6 +27,10 @@
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameDefinition.h"
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 #include "Games/Playground/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Playground/Shooter3D/ShooterGameModeComponent.h"
@@ -38,8 +43,8 @@ namespace sw
     class ShooterNetSimGame final : public INetSimGame
     {
     public:
-        static constexpr const utf8* kName      = "Playground: shooter3d arena"; ///< `NetSimGameRegistry` 에 등록하는 이름
-        static constexpr const utf8* kScenePath = "game/playground/shooter3d/maps/arena.scene.xml";
+        static constexpr const utf8* kName     = "Playground: shooter3d arena"; ///< `NetSimGameRegistry` 에 등록하는 이름
+        static constexpr const utf8* kMinigame = "shooter3d";                   ///< 맵을 가진 미니게임(`minigames/shooter3d.minigame.xml`)
 
         unique_ptr<INetSimSession> createSession( NetSimWorld& world ) override;
         /** @brief 아레나를 비스듬히 내려다보는 카메라를 알립니다(씬이 자기 바닥을 가지므로 바닥은 깔지 않는다). */
@@ -148,15 +153,21 @@ namespace sw
 
     unique_ptr<INetSimSession> ShooterNetSimGame::createSession( NetSimWorld& world )
     {
+        GamePackConfig packConfig{};
+        packConfig._packRoot = game::getSubsystem<const GameConfig>()._packRoot;
+        MinigameDefinition definition{};
+        if ( MinigameFlow::loadDefinitionFile( packConfig, kMinigame, definition ) == false )
+            return nullptr; // 이유는 읽기가 남겼다
+        const string& scenePath = definition._map.get();
         SceneDocument document{};
-        if ( document.load( AssetID{ kScenePath } ) == false )
+        if ( document.load( AssetID{ scenePath } ) == false )
         {
-            SW_LOG_ERROR_ID( "ShooterNetSimGame.ShooterNetSimArena", "Shooter net sim: the arena scene '%#' could not be loaded - the world stays empty", kScenePath );
+            SW_LOG_ERROR_ID( "ShooterNetSimGame.ShooterNetSimArena", "Shooter net sim: the arena scene '%#' could not be loaded - the world stays empty", scenePath );
             return nullptr;
         }
         if ( world.getScene().instantiate( document ) == false )
         {
-            SW_LOG_ERROR_ID( "ShooterNetSimGame.ShooterNetSimArena2", "Shooter net sim: the arena scene '%#' could not be instantiated - the world stays incomplete", kScenePath );
+            SW_LOG_ERROR_ID( "ShooterNetSimGame.ShooterNetSimArena2", "Shooter net sim: the arena scene '%#' could not be instantiated - the world stays incomplete", scenePath );
             return nullptr;
         }
         GameObjectManager&     manager    = world.getObjectManager();

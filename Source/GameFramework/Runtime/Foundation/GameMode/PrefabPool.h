@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Object/Prefab/SpawnLifetime.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -46,7 +47,7 @@ namespace sw
      *          그 인스턴스를 지운 뒤 이 풀을 막는다 — 다음 꺼내기도 nullptr 이다(매번 스폰으로 물러서지 않는다, 유니티 `IPoolable` · 언리얼 풀 인터페이스의 강제를 형식 대신 등록에서).
      *          `prewarm` 은 컷 · 레벨 시작 전에 미리 만들어 꺼 둔다(첫 사용 프레임의 스폰 비용을 앞당긴다).
      *          수가 정해진 효과(탄착 · 탄도선)는 `acquireRecycling` 을 쓴다 — 꺼낸 수가 상한이면 가장 오래 꺼낸 것을 다시 내주어(유니티 파티클 `Stop Action Recycle` 의 자리, 기억에 의존한 비교) 연사가 풀보다 빨라도 새 효과가 보인다.
-     *          풀이 만든 인스턴스는 씬의 평범한 오브젝트라 상태 스냅샷 앞에 걷어야 한다 — 쓰는 쪽이 `destroyAll` 을 부른다.
+     *          상태(`SpawnLifetime::Persistent`)로 만든 인스턴스는 씬의 평범한 오브젝트라 상태 스냅샷 앞에 걷어야 한다 — 쓰는 쪽이 `destroyAll` 을 부른다. 모습(`Derived`)은 스냅샷이 건너뛴다.
      */
     class SW_GF_API PrefabPool
     {
@@ -54,8 +55,11 @@ namespace sw
         /** @brief 새 인스턴스를 만드는 길입니다. 코드로 세우는 쪽과 테스트가 넘기고, 넘기지 않으면 프리팹을 스폰합니다. */
         using SpawnDelegate = Delegate<GameObject*( GameObjectManager& manager, const utf8* pInstanceName )>;
 
-        /** @param prefabPath 리소스 상대 경로(`.prefab.xml`)입니다. 비면 `acquire` 가 오류를 남기고 nullptr 를 돌려준다. */
-        PrefabPool( string prefabPath, uint32 maxIdleCount );
+        /**
+         * @param prefabPath 리소스 상대 경로(`.prefab.xml`)입니다. 비면 `acquire` 가 오류를 남기고 nullptr 를 돌려준다.
+         * @param lifetime 꺼낸 것이 상태인지 모습인지입니다(`SpawnLifetime`).
+         */
+        PrefabPool( string prefabPath, uint32 maxIdleCount, SpawnLifetime lifetime );
 
         /** @brief 새 인스턴스를 프리팹 대신 @p spawner 로 만듭니다. */
         void setSpawner( SpawnDelegate spawner ) { _spawner = std::move( spawner ); }
@@ -116,6 +120,7 @@ namespace sw
         LRUMap<GameObjectHandle, uint8> _busyOrder;         ///< 꺼낸 인스턴스(오래 꺼낸 것이 앞 — 값은 쓰지 않는다). 돌려주기 · 다시 내주기가 목록을 훑지 않는다
         vector<GameObjectHandle>        _listScratchHandle; ///< `releaseBusyIf` 가 걷는 사본(프레임마다 할당하지 않는다)
         uint32                          _maxIdleCount;
+        SpawnLifetime                   _lifetime;
         DevCounter                      _createdCount;
         uint8                           _bContractChecked : 1; ///< 처음 만든 인스턴스로 풀 계약을 확인했다
         uint8                           _bRefused         : 1; ///< 풀 계약을 어긴 프리팹이다 — 더 만들지 않는다

@@ -133,9 +133,9 @@ namespace sw
         PROPERTY( Category = "Sensor", DisplayName = "Count Triggers", Tooltip = "Also count the other object's trigger colliders" )
         bool _bCountTriggers;
 
-        atomic<float32> _pendingDamage;
-        atomic<float32> _pendingUse;
-        atomic<uint32>  _seenCompletedCount; ///< 지난번에 읽은 `InteractableComponent::getCompletedCount` 값
-        atomic<float32> _signal;
+        SW_TRANSIENT atomic<float32> _pendingDamage;
+        SW_TRANSIENT atomic<float32> _pendingUse;
+        SW_TRANSIENT atomic<uint32> _seenCompletedCount; ///< 지난번에 읽은 `InteractableComponent::getCompletedCount` 값
+        SW_TRANSIENT atomic<float32> _signal;
     };
 } // namespace sw

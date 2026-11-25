@@ -10,6 +10,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
@@ -17,6 +18,7 @@
 #include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/Visual/2D/SortingLayerNameValidation.h"
 #include "Engine/Visual/2D/SpriteInstanceBatch.h"
@@ -24,6 +26,21 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct TileMapComponentInternal
+        {
+            static constexpr FormatDef kStateFormat{ "TMAP" };
+
+            /** @brief 칠한 칸 하나의 상태입니다. */
+            struct PaintedCell
+            {
+                uint32        _index{ 0 };
+                hashed_string _brush{}; ///< 빈 이름이면 지운 칸
+            };
+        };
+    } // namespace
+
     TileMapComponent::TileMapComponent()
         : _tileMapPath{}
         , _materialPath{}
@@ -34,6 +51,7 @@ namespace sw
         , _map{}
         , _pTileSet{}
         , _chunkGrid{}
+        , _listPaintedFlag{}
         , _listBrushIndex{}
         , _listAnimatedFlag{}
         , _listAnimatedCell{}
@@ -98,8 +116,10 @@ namespace sw
             shared_ptr<const TileSetAsset> pReloaded = SharedAssetCache<TileSetAsset>::acquire( _map._tileSetPath ).snapshot();
             if ( pReloaded != nullptr && pReloaded != _pTileSet )
             {
-                const TileMapXMLData map = _map;
+                const TileMapXMLData map         = _map;
+                vector<uint8>        listPainted = std::move( _listPaintedFlag );
                 setTileMapData( map, std::move( pReloaded ) );
+                _listPaintedFlag = std::move( listPainted ); // 같은 맵에 타일셋만 바뀌었다 — 칠한 칸은 그대로다
                 // 청크 배치를 다시 만드는 것은 씬 레지스트리 쓰기라 틱 뒤(같은 프레임)에 한다.
                 if ( _bLoaded == SW_TRUE )
                     context.deferPostTickOnComponent( *this, []( TileMapComponent& tiles )
@@ -192,6 +212,7 @@ namespace sw
             SW_LOG_ERROR_ID( "TileMap.TileMapPaintsBrush", "Tile map '%#' paints a brush that tile set '%#' does not have - those cells are empty", _map._name, _map._tileSetPath );
         _chunkGrid = TileChunkGrid::make( _map._width, _map._height, kChunkSize );
         _listAnimatedFlag.assign( count, 0 );
+        _listPaintedFlag.assign( count, SW_FALSE );
         _listAnimatedCell.clear();
         _bLoaded = SW_TRUE;
     }
@@ -350,7 +371,8 @@ namespace sw
             value = static_cast<uint16>( *brush + 1u );
         }
         (void)_map.setTileBrush( x, y, brushName ); // 칸 범위는 위에서 봤다
-        _listBrushIndex[getIndexOf( x, y )] = value;
+        _listBrushIndex[getIndexOf( x, y )]  = value;
+        _listPaintedFlag[getIndexOf( x, y )] = SW_TRUE;
         if ( _listChunkBatch.empty() == false )
         {
             // 규칙 타일은 이웃을 보므로 칠한 칸과 이웃 여덟 칸을 다시 고른다.
@@ -369,6 +391,55 @@ namespace sw
         // 충돌은 그리기 배치와 따로 표시한다. 단단함은 그 칸의 브러시만 보므로 이웃 청크는 그대로다(바디를 아직 짓지 않았으면 표시는 아무것도 하지 않는다).
         markCollisionDirty( _chunkGrid.computeChunkIndex( x, y ) );
         return true;
+    }
+
+    void TileMapComponent::serializeState( StateIO& io )
+    {
+        using Internal = TileMapComponentInternal;
+        vector<Internal::PaintedCell> listCell;
+        if ( io.isWriting() )
+        {
+            const vector<TileBrush>& listBrush = getTileSet().getBrushes();
+            for ( size_t index = 0; index < _listPaintedFlag.size(); ++index )
+            {
+                if ( _listPaintedFlag[index] == SW_FALSE )
+                    continue;
+                const uint16 brush = _listBrushIndex[index];
+                listCell.push_back( Internal::PaintedCell{ static_cast<uint32>( index ), brush > 0 ? listBrush[brush - 1u]._name : hashed_string{} } );
+            }
+            if ( listCell.empty() )
+                return; // 칠하지 않은 맵은 파일에서 그대로 선다
+        }
+        io.header( Internal::kStateFormat );
+        io.list( listCell, static_cast<uint32>( sizeof( uint32 ) * 2 ), [&io]( Internal::PaintedCell& cell )
+        {
+            io.value( cell._index );
+            io.value( cell._brush );
+        } );
+        if ( io.isWriting() )
+            return;
+        io.end();
+        // 맵이 줄었거나 브러시가 사라진 세이브는 통째로 거절한다 — 반쯤 칠한 맵을 남기지 않는다.
+        for ( const Internal::PaintedCell& cell : listCell )
+        {
+            const bool bKnownCell = cell._index < _listPaintedFlag.size() && ( cell._brush.empty() || getTileSet().findBrush( cell._brush ).has_value() );
+            if ( io.check( bKnownCell ) == false )
+                return;
+        }
+        if ( io.isOk() == false )
+            return;
+        for ( const Internal::PaintedCell& cell : listCell )
+        {
+            const uint32 width = static_cast<uint32>( _map._width );
+            (void)setTileBrush( static_cast<int32>( cell._index % width ), static_cast<int32>( cell._index / width ), cell._brush.c_str() ); // 칸 · 브러시는 위에서 봤다
+        }
+    }
+
+    void TileMapComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), bytes.size() );
+        if ( readState( archive ) == false )
+            SW_LOG_WARNING_ID( "TileMap.SavedPaintUnreadable", "'%#': the saved painted tiles do not fit tile map '%#' - keeping the map as read", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", _map._name );
     }
 
     optional<int32> TileMapComponent::getDisplayedCell( int32 x, int32 y ) const
@@ -672,4 +743,6 @@ namespace sw
     {
         SortingLayerNameValidation::validate( context, "_sortingLayer", _sortingLayer );
     }
+
+    SW_COMPONENT_STATE_CODEC( TileMapComponent )
 } // namespace sw

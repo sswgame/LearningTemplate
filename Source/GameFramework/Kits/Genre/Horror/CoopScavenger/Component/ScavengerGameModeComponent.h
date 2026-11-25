@@ -17,7 +17,6 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -27,7 +26,8 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerExpedition.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -99,7 +99,7 @@ namespace sw
      */
     REFLECT( Category = "CoopScavenger", DisplayName = "Scavenger Game Mode",
              Tooltip = "Runs a coop scavenger expedition: crew from input commands or bots hauls scrap, threats roam, the company buys and the quota decides" )
-    class SW_KIT_API ScavengerGameModeComponent : public GameModeComponent
+    class SW_KIT_API ScavengerGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -125,7 +125,7 @@ namespace sw
         /** @brief 이 판의 카탈로그입니다. 열기 전이면 nullptr 입니다. */
         const ScavengerCatalog* findCatalog() const { return _pCatalog.get(); }
         /** @brief 판이 열렸고 결과가 나지 않았으면 true 입니다. */
-        bool isAcceptingInput() const { return isStarted() && _result == ScavengerResult::Ongoing; }
+        bool isAcceptingInput() const override { return isStarted() && _result == ScavengerResult::Ongoing; }
         bool isHuman( int32 player ) const;
         /** @brief 승무원 @p player 가 있는 곳에서 @p direction(x 오른쪽 · y 앞) 쪽의 이웃입니다. 그쪽에 이웃이 없으면 빈 이름입니다(잠긴 문의 이웃도 답한다). */
         hashed_string findNeighborToward( int32 player, const float2& direction ) const;
@@ -164,8 +164,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               updateMatch( float32 deltaTime ) override;
 
     private:
         /** @brief 씬 데이터가 가리키는 위성 · 가게 · 아이템이 카탈로그에 있는지 봅니다. 없으면 오류를 남기고 false 입니다. */
@@ -221,22 +220,19 @@ namespace sw
         float32 _threatLifeSeconds;
         PROPERTY( Category = "Threat", DisplayName = "Threat Damage", Tooltip = "Health a crew member loses when a threat steps into the same area", Min = 0.0 )
         float32 _threatDamage;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "How long the result stays on screen before the minigame ends", Min = 0.0, Units = s )
-        float32 _resultHoldSeconds;
 
-        SharedAssetRef<ScavengerCatalog> _pCatalog;
-        SharedAssetRef<SpawnTable>       _pThreatTable;
-        SharedAssetRef<ShopCatalog>      _pShopCatalog;
-        SharedAssetRef<ItemCatalog>      _pItemCatalog;    ///< 게임 범위의 아이템 카탈로그
-        shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 월드 상태가 쥔 것과 같은 판(스냅숏 — 날씨 상태가 그 판의 항목을 가리킨다)
-        Wallet                           _wallet;          ///< 한 판의 회사 돈(원정이 빌린다)
-        GameFlags                        _flags;           ///< 한 판의 문 잠금(원정이 빌린다)
-        Inventory                        _storage;         ///< 우주선 창고(원정이 빌린다)
-        ScavengerExpedition              _expedition;
-        vector<ScavengerCommand>         _listCommand; ///< 승무원마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
-        vector<Countdown>                _listStep;    ///< 승무원마다 다음 걸음까지
-        vector<ScavengerEvent>           _listEvent;   ///< 걸음마다 비워 다시 쓰는 알림 그릇
-        Countdown                        _resultHold;
+        BoundAssetRef<ScavengerCatalog>    _pCatalog;
+        BoundAssetRef<SpawnTable>          _pThreatTable;
+        BoundAssetRef<ShopCatalog>         _pShopCatalog;
+        BoundAssetRef<ItemCatalog>         _pItemCatalog;    ///< 게임 범위의 아이템 카탈로그
+        shared_ptr<const WeatherCatalog>   _pWeatherCatalog; ///< 월드 상태가 쥔 것과 같은 판(스냅숏 — 날씨 상태가 그 판의 항목을 가리킨다)
+        SW_CODEC_STATE Wallet              _wallet;          ///< 한 판의 회사 돈(원정이 빌린다)
+        SW_CODEC_STATE GameFlags           _flags;           ///< 한 판의 문 잠금(원정이 빌린다)
+        SW_CODEC_STATE Inventory           _storage;         ///< 우주선 창고(원정이 빌린다)
+        SW_CODEC_STATE ScavengerExpedition _expedition;
+        SW_TRANSIENT vector<ScavengerCommand> _listCommand; ///< 승무원마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
+        SW_CODEC_STATE vector<Countdown> _listStep;         ///< 승무원마다 다음 걸음까지
+        SW_TRANSIENT vector<ScavengerEvent> _listEvent;     ///< 걸음마다 비워 다시 쓰는 알림 그릇
         PROPERTY( RuntimeState )
         vector<ScavengerThreat> _listThreat;
         PROPERTY( RuntimeState )

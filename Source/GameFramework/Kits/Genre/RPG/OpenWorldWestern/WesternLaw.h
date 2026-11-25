@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -127,9 +126,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "WLAW" );
-        static constexpr uint32 kStateVersion = 1;
-
         WesternLawState();
 
         void initialize( const WesternCatalog& catalog );
@@ -204,10 +200,10 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<RegionRecord>                _listRecord;
-        vector<PendingReport>               _listPending;
-        NotificationBuffer<WesternLawEvent> _eventBuffer;
-        const WesternCatalog*               _pCatalog;
+        vector<RegionRecord> _listRecord;
+        SW_CODEC_STATE vector<PendingReport> _listPending;
+        SW_TRANSIENT NotificationBuffer<WesternLawEvent> _eventBuffer;
+        const WesternCatalog*                            _pCatalog;
         PROPERTY( RuntimeState, Min = 1 )
         uint32 _nextIncidentID;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

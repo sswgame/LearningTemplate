@@ -12,38 +12,31 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Client/CityBuildingViewComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Client/CityWalkerViewComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityBuilderGameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 상태를 싣기 전에 세운 모습을 걷습니다 — 씬 섹션에 실리면 복원한 뒤 다시 세운 것과 겹친다. */
-        const StatefulComponentRegistrar<CityViewComponent> s_viewRegistration{ "CityViewComponent" };
 
         struct CityViewComponentInternal
         {
-            static constexpr float32 kHalfCell         = 0.5f;
-            static constexpr float32 kGroundThickness  = 0.2f;   ///< 땅 상자의 두께(m)
-            static constexpr float32 kWaterSurface     = -0.15f; ///< 물 상자 윗면의 높이(m) — 강이 둘레 땅보다 낮게 보인다
-            static constexpr float32 kRockWidth        = 0.9f;   ///< 바위 상자가 차지하는 칸 비율
-            static constexpr float32 kRockHeight       = 0.8f;   ///< 바위 상자의 높이(m)
-            static constexpr int32   kWalkerLookStride = 16;     ///< 일꾼 모습 번호 = 종류 × 16 + 서비스
-            static constexpr int32   kWalkerKindCount  = 3;
-            static constexpr float32 kNoServiceGray    = 0.6f; ///< 서비스 없음의 회색
+            static constexpr float32 kHalfCell        = 0.5f;
+            static constexpr float32 kGroundThickness = 0.2f; ///< 땅 상자의 두께(m)
+            static constexpr float32 kRockWidth       = 0.9f; ///< 바위 상자가 차지하는 칸 비율
+            static constexpr int32   kWalkerKindCount = 3;
+            static constexpr float32 kNoServiceGray   = 0.6f; ///< 서비스 없음의 회색
 
-            static int32 makeWalkerLookKey( CityWalkerKind kind, CityService service )
+            /** @brief 일꾼 모습 번호입니다 = 종류 × @p stride + 서비스 행 번호 + 1(서비스 없음이 0). */
+            static int32 makeWalkerLookKey( int32 stride, CityWalkerKind kind, int32 serviceIndex )
             {
-                return static_cast<int32>( kind ) * kWalkerLookStride + static_cast<int32>( service );
+                return static_cast<int32>( kind ) * stride + serviceIndex + 1;
             }
 
             static void destroyView( GameObjectManager& manager, GameObjectHandle handle )
@@ -78,36 +71,16 @@ namespace sw
 namespace sw
 {
     CityViewComponent::CityViewComponent()
-        : _buildingViewPath{}
+        : GameModeViewComponent( GameModeViewBinding::of<&CityViewComponent::updateView>() )
+        , _buildingViewPath{}
         , _groundPrefab{}
         , _roadPrefab{}
         , _modelBuildingPrefab{}
         , _blockBuildingPrefab{}
         , _walkerPrefab{}
         , _roadColor{ 1.0f, 1.0f, 1.0f, 1.0f }
-        , _waterServiceColor{ 0.25f, 0.5f, 0.95f, 1.0f }
-        , _religionServiceColor{ 0.95f, 0.8f, 0.2f, 1.0f }
-        , _entertainmentServiceColor{ 0.7f, 0.35f, 0.85f, 1.0f }
-        , _healthServiceColor{ 0.9f, 0.3f, 0.3f, 1.0f }
-        , _educationServiceColor{ 0.2f, 0.75f, 0.7f, 1.0f }
-        , _taxServiceColor{ 0.95f, 0.55f, 0.15f, 1.0f }
-        , _producerModelTint{ 0.85f, 0.65f, 0.5f, 1.0f }
-        , _storageModelTint{ 0.8f, 0.68f, 0.55f, 1.0f }
-        , _marketModelTint{ 1.0f, 0.75f, 0.55f, 1.0f }
-        , _houseBlockColor{ 0.75f, 0.62f, 0.42f, 1.0f }
-        , _fieldBlockColor{ 0.78f, 0.8f, 0.3f, 1.0f }
-        , _workshopBlockColor{ 0.6f, 0.42f, 0.3f, 1.0f }
-        , _storageBlockColor{ 0.5f, 0.35f, 0.2f, 1.0f }
-        , _marketBlockColor{ 0.9f, 0.45f, 0.2f, 1.0f }
-        , _decorationBlockColor{ 0.3f, 0.75f, 0.35f, 1.0f }
-        , _grassColor{ 0.45f, 0.62f, 0.3f, 1.0f }
-        , _sandColor{ 0.86f, 0.76f, 0.5f, 1.0f }
-        , _floodplainColor{ 0.36f, 0.42f, 0.2f, 1.0f }
-        , _waterColor{ 0.2f, 0.45f, 0.75f, 1.0f }
-        , _rockColor{ 0.5f, 0.47f, 0.44f, 1.0f }
         , _traderColor{ 1.0f, 0.6f, 0.2f, 1.0f }
         , _cartColor{ 0.45f, 0.3f, 0.15f, 1.0f }
-        , _director{}
         , _pBuildingViewCatalog{}
         , _shownBuildingViews{}
         , _buildingModels{}
@@ -117,8 +90,9 @@ namespace sw
         , _listGroundObject{}
         , _listWalkerObject{}
         , _listWalkerLook{}
+        , _shownCatalog{}
+        , _walkerLookStride{ 0 }
         , _shownRevision{ 0 }
-        , _bViewsChecked{ SW_FALSE }
         , _bViewsValid{ SW_FALSE }
         , _bTerrainSpawned{ SW_FALSE }
         , _reserved{ 0 }
@@ -128,34 +102,17 @@ namespace sw
 
     CityViewComponent::~CityViewComponent() = default;
 
-    void CityViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        const GameObject* const pOwner = getOwner();
-        _director                      = TComponentHandle<CityBuilderGameModeComponent>( pOwner != nullptr ? pOwner->getComponent<CityBuilderGameModeComponent>() : nullptr );
-        if ( _director.isValid() == false )
-            SW_LOG_ERROR_ID( "City.ViewWithoutGameMode", "City view on '%#': no city game mode in front of it on the same object - nothing is drawn",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-    }
-
     void CityViewComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
-        _bViewsChecked = SW_FALSE;
+        GameModeViewComponent::onBeginPlay();
+        _shownCatalog.reset();
     }
 
     void CityViewComponent::onEndPlay()
     {
         despawnViews();
         _buildingModels.clear();
-        Component::onEndPlay();
-    }
-
-    void CityViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        context.deferPostTickOnComponent( *this, []( CityViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
+        GameModeViewComponent::onEndPlay();
     }
 
     void CityViewComponent::despawnViews()
@@ -177,22 +134,22 @@ namespace sw
     const shared_ptr<MaterialInstance>& CityViewComponent::findWalkerLook( const CityWalker& walker ) const
     {
         static const shared_ptr<MaterialInstance> kNoLook{};
-        const int32                               key = CityViewComponentInternal::makeWalkerLookKey( walker._kind, walker._service );
+        const int32                               key = CityViewComponentInternal::makeWalkerLookKey( _walkerLookStride, walker._kind, walker._service );
         if ( key < 0 || key >= static_cast<int32>( _listWalkerLook.size() ) )
             return kNoLook;
         // 일꾼 뷰가 워커에서 부른다. 컨테이너 인덱스 대신 포인터로 읽는다.
         return _listWalkerLook.data()[key];
     }
 
-    void CityViewComponent::updateView( GameObjectManager& manager )
+    void CityViewComponent::updateView( GameObjectManager& manager, const CityBuilderGameModeComponent& director )
     {
-        const CityBuilderGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        if ( _bViewsChecked == SW_FALSE )
+        const CityCatalog& catalog = *director.findCatalog(); // 열린 판은 카탈로그를 쥐고 있다
+        if ( _shownCatalog.get() != &catalog )
         {
-            _bViewsChecked = SW_TRUE;
-            _bViewsValid   = acquireBuildingViews( *pDirector->findCatalog() ) ? SW_TRUE : SW_FALSE; // 열린 판은 카탈로그를 쥐고 있다
+            despawnViews(); // 도시가 새 판에 묶였다 — 땅 · 서비스의 색과 집 단계가 바뀌었을 수 있다
+            _listWalkerLook.clear();
+            _shownCatalog = director.getCatalogSnapshot();
+            _bViewsValid  = acquireBuildingViews( catalog ) ? SW_TRUE : SW_FALSE;
         }
         if ( _bViewsValid == SW_FALSE )
             return;
@@ -201,15 +158,15 @@ namespace sw
             despawnViews();
             _shownBuildingViews = _pBuildingViewCatalog.snapshot();
         }
-        const CitySimulation& city = pDirector->getCity();
+        const CitySimulation& city = director.getCity();
         if ( _bTerrainSpawned == SW_FALSE )
-            spawnTerrain( manager, city );
-        if ( _shownRevision != pDirector->getLayoutRevision() )
+            spawnTerrain( manager, city, catalog );
+        if ( _shownRevision != director.getLayoutRevision() )
         {
             syncTiles( manager, city );
-            _shownRevision = pDirector->getLayoutRevision();
+            _shownRevision = director.getLayoutRevision();
         }
-        spawnWalkers( manager, city.getWalkers().size() );
+        spawnWalkers( manager, catalog, city.getWalkers().size() );
     }
 
     bool CityViewComponent::acquireBuildingViews( const CityCatalog& catalog )
@@ -279,30 +236,30 @@ namespace sw
         { return spawnRoad( manager, topology.toCell( static_cast<int32>( tileIndex ) ) ); } );
     }
 
-    void CityViewComponent::spawnTerrain( GameObjectManager& manager, const CitySimulation& city )
+    void CityViewComponent::spawnTerrain( GameObjectManager& manager, const CitySimulation& city, const CityCatalog& catalog )
     {
         using Internal   = CityViewComponentInternal;
         _bTerrainSpawned = SW_TRUE;
         if ( _groundPrefab.empty() )
             return;
-        // 줄마다 같은 땅이 이어지는 구간을 상자 하나로 만든다(타일마다 스폰하면 2000개가 되며, 땅은 바뀌지 않는다). 바위는 타일마다 솟은 상자다.
+        // 줄마다 같은 땅이 이어지는 구간을 상자 하나로 만든다(타일마다 스폰하면 2000개가 되며, 땅은 바뀌지 않는다). 솟은 돌은 타일마다 상자다.
         for ( int32 y = 0; y < city.getHeight(); ++y )
         {
             const float32 centerZ  = static_cast<float32>( y ) + Internal::kHalfCell;
             int32         runStart = 0;
             for ( int32 x = 1; x <= city.getWidth(); ++x )
             {
-                const CityTerrain runTerrain = city.findTile( runStart, y )->_terrain;
+                const uint8 runTerrain = city.findTile( runStart, y )->_terrain;
                 if ( x < city.getWidth() && city.findTile( x, y )->_terrain == runTerrain )
                     continue;
-                const float32 length  = static_cast<float32>( x - runStart );
-                const float32 surface = runTerrain == CityTerrain::Water ? Internal::kWaterSurface : 0.0f;
-                spawnGroundBox( manager, float3{ static_cast<float32>( runStart ) + length * 0.5f, surface - Internal::kGroundThickness * 0.5f, centerZ },
-                                float3{ length, Internal::kGroundThickness, 1.0f }, computeTerrainColor( runTerrain ) );
-                for ( int32 rockX = runStart; runTerrain == CityTerrain::Rock && rockX < x; ++rockX )
+                const float32         length  = static_cast<float32>( x - runStart );
+                const CityTerrainDef& terrain = catalog.getTerrainRows()[runTerrain];
+                spawnGroundBox( manager, float3{ static_cast<float32>( runStart ) + length * 0.5f, terrain._surfaceHeight - Internal::kGroundThickness * 0.5f, centerZ },
+                                float3{ length, Internal::kGroundThickness, 1.0f }, terrain._color );
+                for ( int32 rockX = runStart; terrain._rockHeight > 0.0f && rockX < x; ++rockX )
                 {
-                    spawnGroundBox( manager, float3{ static_cast<float32>( rockX ) + Internal::kHalfCell, Internal::kRockHeight * 0.5f, centerZ },
-                                    float3{ Internal::kRockWidth, Internal::kRockHeight, Internal::kRockWidth }, computeTerrainColor( CityTerrain::Rock ) );
+                    spawnGroundBox( manager, float3{ static_cast<float32>( rockX ) + Internal::kHalfCell, terrain._rockHeight * 0.5f, centerZ },
+                                    float3{ Internal::kRockWidth, terrain._rockHeight, Internal::kRockWidth }, terrain._color );
                 }
                 runStart = x;
             }
@@ -347,7 +304,7 @@ namespace sw
         if ( pBuilding == nullptr )
             return GameObjectHandle{};
         MeshComponent* const pMesh = pBuilding->getComponent<MeshComponent>();
-        if ( pMesh != nullptr && _tintCache.apply( *pMesh, bModel ? computeModelTint( def ) : computeBlockColor( def ) ) == false )
+        if ( pMesh != nullptr && _tintCache.apply( *pMesh, bModel ? def._modelTint : def._blockColor ) == false )
             SW_LOG_ERROR_ONCE_ID( "CityView.BuildingWithoutMaterial", "[City]: prefab '%#' has a mesh without a material - it keeps the prefab colour", ( bModel ? _modelBuildingPrefab : _blockBuildingPrefab ).c_str() );
         CityBuildingViewComponent* const pView = pBuilding->getComponent<CityBuildingViewComponent>();
         if ( pView != nullptr )
@@ -355,7 +312,7 @@ namespace sw
         return pBuilding->getHandle();
     }
 
-    void CityViewComponent::spawnWalkers( GameObjectManager& manager, size_t count )
+    void CityViewComponent::spawnWalkers( GameObjectManager& manager, const CityCatalog& catalog, size_t count )
     {
         if ( _walkerPrefab.empty() )
             return;
@@ -366,7 +323,7 @@ namespace sw
                 return;
             MeshComponent* const pMesh = pWalker->getComponent<MeshComponent>();
             if ( pMesh != nullptr && pMesh->getMaterial() != nullptr && _listWalkerLook.empty() ) // 머티리얼 없이 만들면 빈 모습이 남아 다시 만들지 않는다
-                prepareWalkerLooks( pMesh->getMaterial() );
+                prepareWalkerLooks( catalog, pMesh->getMaterial() );
             CityWalkerViewComponent* const pView = pWalker->getComponent<CityWalkerViewComponent>();
             if ( pView != nullptr )
                 pView->assignWalker( getOwner()->getHandle(), static_cast<int32>( _listWalkerObject.size() ) );
@@ -374,18 +331,19 @@ namespace sw
         }
     }
 
-    void CityViewComponent::prepareWalkerLooks( Material* pMaterial )
+    void CityViewComponent::prepareWalkerLooks( const CityCatalog& catalog, Material* pMaterial )
     {
-        using Internal = CityViewComponentInternal;
-        _listWalkerLook.assign( static_cast<size_t>( Internal::kWalkerKindCount * Internal::kWalkerLookStride ), nullptr );
+        using Internal           = CityViewComponentInternal;
+        const int32 serviceCount = static_cast<int32>( catalog.getServiceRows().size() );
+        _walkerLookStride        = serviceCount + 1;
+        _listWalkerLook.assign( static_cast<size_t>( Internal::kWalkerKindCount * _walkerLookStride ), nullptr );
         for ( int32 kind = 0; kind < Internal::kWalkerKindCount; ++kind )
         {
-            for ( int32 service = 0; service <= static_cast<int32>( CityService::Count ); ++service )
+            for ( int32 service = constant::invalid_index::kInt32; service < serviceCount; ++service )
             {
-                const CityWalkerKind walkerKind    = static_cast<CityWalkerKind>( kind );
-                const CityService    walkerService = static_cast<CityService>( service );
-                _listWalkerLook[static_cast<size_t>( Internal::makeWalkerLookKey( walkerKind, walkerService ) )] =
-                    _tintCache.acquire( pMaterial, computeWalkerColor( walkerKind, walkerService ) );
+                const CityWalkerKind walkerKind = static_cast<CityWalkerKind>( kind );
+                _listWalkerLook[static_cast<size_t>( Internal::makeWalkerLookKey( _walkerLookStride, walkerKind, service ) )] =
+                    _tintCache.acquire( pMaterial, computeWalkerColor( catalog, walkerKind, service ) );
             }
         }
     }
@@ -393,98 +351,25 @@ namespace sw
     GameObject* CityViewComponent::spawnView( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const utf8* pName )
     {
         AssetManager* const pAssets = game::findSubsystem<AssetManager>();
-        return pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefab.path(), pName ) : nullptr;
+        return pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefab.path(), SpawnLifetime::Derived, pName ) : nullptr;
     }
 
     // ------------------------------------------------------------------------------
-    // 색(PROPERTY)
+    // 색 — 땅 · 서비스 · 건물은 카탈로그의 행, 일꾼 종류(코드 동작이 다른 열거형)는 PROPERTY 다
     // ------------------------------------------------------------------------------
-    float4 CityViewComponent::computeServiceColor( CityService service ) const
+    float4 CityViewComponent::computeServiceColor( const CityCatalog& catalog, int32 serviceIndex )
     {
-        switch ( service )
-        {
-            case CityService::Water:
-                return _waterServiceColor;
-            case CityService::Religion:
-                return _religionServiceColor;
-            case CityService::Entertainment:
-                return _entertainmentServiceColor;
-            case CityService::Health:
-                return _healthServiceColor;
-            case CityService::Education:
-                return _educationServiceColor;
-            case CityService::Tax:
-                return _taxServiceColor;
-            case CityService::Count:
-                break;
-        }
+        if ( serviceIndex >= 0 )
+            return catalog.getServiceRows()[static_cast<size_t>( serviceIndex )]._color;
         return float4{ CityViewComponentInternal::kNoServiceGray, CityViewComponentInternal::kNoServiceGray, CityViewComponentInternal::kNoServiceGray, 1.0f }; // 서비스 없음 — 칠할 일이 없는 칸이다.
     }
 
-    float4 CityViewComponent::computeModelTint( const CityBuildingDef& def ) const
-    {
-        const float4 white{ 1.0f, 1.0f, 1.0f, 1.0f };
-        switch ( def._kind )
-        {
-            case CityBuildingKind::Service:
-                return ( computeServiceColor( def._service ) + white ) * 0.5f;
-            case CityBuildingKind::Producer:
-                return _producerModelTint;
-            case CityBuildingKind::Storage:
-                return _storageModelTint;
-            case CityBuildingKind::Market:
-                return _marketModelTint;
-            case CityBuildingKind::House:
-            case CityBuildingKind::Decoration:
-                break;
-        }
-        return white;
-    }
-
-    float4 CityViewComponent::computeBlockColor( const CityBuildingDef& def ) const
-    {
-        switch ( def._kind )
-        {
-            case CityBuildingKind::House:
-                return _houseBlockColor;
-            case CityBuildingKind::Service:
-                return computeServiceColor( def._service );
-            case CityBuildingKind::Producer:
-                return def._bRequiresTerrain != SW_FALSE ? _fieldBlockColor : _workshopBlockColor;
-            case CityBuildingKind::Storage:
-                return _storageBlockColor;
-            case CityBuildingKind::Market:
-                return _marketBlockColor;
-            case CityBuildingKind::Decoration:
-                return _decorationBlockColor;
-        }
-        return float4{ 1.0f, 0.0f, 1.0f, 1.0f }; // 모르는 종류 — 눈에 띄는 자홍색
-    }
-
-    float4 CityViewComponent::computeTerrainColor( CityTerrain terrain ) const
-    {
-        switch ( terrain )
-        {
-            case CityTerrain::Grass:
-                return _grassColor;
-            case CityTerrain::Sand:
-                return _sandColor;
-            case CityTerrain::Floodplain:
-                return _floodplainColor;
-            case CityTerrain::Water:
-                return _waterColor;
-            case CityTerrain::Rock:
-                return _rockColor;
-        }
-        return float4{ 1.0f, 0.0f, 1.0f, 1.0f }; // 모르는 땅 — 눈에 띄는 자홍색
-    }
-
-    float4 CityViewComponent::computeWalkerColor( CityWalkerKind kind, CityService service ) const
+    float4 CityViewComponent::computeWalkerColor( const CityCatalog& catalog, CityWalkerKind kind, int32 serviceIndex ) const
     {
         switch ( kind )
         {
             case CityWalkerKind::Service:
-                return computeServiceColor( service );
+                return computeServiceColor( catalog, serviceIndex );
             case CityWalkerKind::Trader:
                 return _traderColor;
             case CityWalkerKind::Cart:

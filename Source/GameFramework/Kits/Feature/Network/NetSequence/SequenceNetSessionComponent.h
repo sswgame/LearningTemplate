@@ -43,9 +43,9 @@ namespace sw
         const SequenceReplicationClient& getClient() const { return _client; }
 
     private:
-        SequenceReplicationServer _server;
-        SequenceReplicationClient _client;
-        Subscription              _routerSubscription; ///< 라우터에 단 처리기의 등록. 없으면 시작하지 않았다(처리기보다 뒤에 선언 — 먼저 풀린다)
-        uint8                     _bServer;            ///< 서버로 시작했다
+        SW_TRANSIENT SequenceReplicationServer _server;
+        SW_TRANSIENT SequenceReplicationClient _client;
+        Subscription                           _routerSubscription; ///< 라우터에 단 처리기의 등록. 없으면 시작하지 않았다(처리기보다 뒤에 선언 — 먼저 풀린다)
+        SW_TRANSIENT uint8                     _bServer;            ///< 서버로 시작했다
     };
 } // namespace sw

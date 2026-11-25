@@ -9,6 +9,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 #include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Client/Flow/LoadingScreenController.h"
@@ -59,18 +60,17 @@ namespace sw
                 { game::getSubsystem<MinigameFlow>().requestQuit(); } ) ) );
                 scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [pLeaveCommand]()
                 { pLeaveCommand->reset(); } ) );
-                for ( const string& document : definition._listUI )
+                for ( const DataPath& document : definition._listUI )
                 {
-                    const UIScreenHandle handle = pUI->openScreen( document );
-                    if ( handle == kInvalidUIScreenHandle )
+                    const shared_ptr<UIOwnedScreen> pScreen = sw::make_shared<UIOwnedScreen>( *pUI, pUI->openScreen( document.get() ) );
+                    if ( pScreen->isHeld() == false )
                     {
                         SW_LOG_ERROR_ID( "GameInstanceClient.MinigameUINotOpened", "Minigame '%#': UI document '%#' could not be opened (see the messages above)", definition._name.c_str(),
                                          document.c_str() );
                         return false;
                     }
-                    // UI 서비스는 엔진 수명이라 미니게임보다 오래 산다. 이미 닫힌 화면을 닫는 것은 할 일이 없다.
-                    scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [pUI, handle]()
-                    { pUI->closeScreen( handle ); } ) );
+                    scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [pScreen]()
+                    { pScreen->reset(); } ) );
                 }
                 return true;
             }

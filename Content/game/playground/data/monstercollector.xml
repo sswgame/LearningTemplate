@@ -12,8 +12,8 @@
 	<Move id="rootgrip" name="Root Grip" type="Moss" category="Status" pp="20" stat="Speed" stages="-1" target="Foe" useSound="MonsterCollectorStatusMove"/>
 	<Move id="nudge" name="Nudge" type="Spark" power="10" accuracy="0" pp="30" useSound="MonsterCollectorMove"/>
 	<Move id="splash_jab" name="Splash Jab" type="Tide" power="10" accuracy="0" pp="30" useSound="MonsterCollectorMove"/>
-	<Nature id="brisk" up="Speed" down="SpecialDefense"/>
-	<Nature id="stout" up="SpecialDefense" down="SpecialAttack"/>
+	<Nature id="brisk" up="Speed" down="SpecialDefense" upPercent="110" downPercent="90"/>
+	<Nature id="stout" up="SpecialDefense" down="SpecialAttack" upPercent="110" downPercent="90"/>
 	<Species id="fernling" name="Fernling" types="Moss" stats="50 90 50 50 50 100" catchRate="45" baseExp="64">
 		<Learn level="1" move="leafslap"/>
 		<Learn level="5" move="rootgrip"/>

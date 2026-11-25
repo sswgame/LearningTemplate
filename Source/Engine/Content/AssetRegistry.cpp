@@ -254,6 +254,11 @@ namespace sw
         return guid.has_value() ? makeReferenceText( *guid ) : string{ path };
     }
 
+    string AssetRegistry::makeIndexedReferenceText( string_view path )
+    {
+        return makeReferenceText( path, resolveGUID( path ) );
+    }
+
     string AssetRegistry::toCacheKey( string_view path )
     {
         if ( isReferenceText( path ) == false )

@@ -16,14 +16,13 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool HubProfile::write( BitWriter& writer ) const
     {
-        writer.writeVarUint( kFormatVersion );
+        kFormat.writeVersion( writer );
         return ReplicatedLayout::writeFull( *this, writer );
     }
 
     bool HubProfile::read( BitReader& reader )
     {
-        const uint64 formatVersion = reader.readVarUint();
-        if ( reader.hasOverflowed() || formatVersion != kFormatVersion )
+        if ( kFormat.readVersion( reader ) == false )
             return false;
         return ReplicatedLayout::readFull( reader, *this, nullptr ) == FixedReadResult::Ok; // `Ok` 일 때만 값을 바꾼다
     }
@@ -167,15 +166,15 @@ namespace sw
         HubPlacementState& creature = _listPlacement[index];
         if ( creature._bPresent == SW_FALSE )
             return HubActionResult::TargetGone;
-        if ( pAvatar->_attackCooldown > 0.0f )
+        if ( pAvatar->_attackCooldown.isActive() )
             return HubActionResult::CoolingDown;
         if ( float3::getHorizontalDistance( pAvatar->_profile._position, creature._def._position ) > _rules._attackRange )
             return HubActionResult::OutOfRange;
-        pAvatar->_attackCooldown = _rules._attackCooldownSeconds;
+        pAvatar->_attackCooldown.start( _rules._attackCooldownSeconds );
         if ( DepletingValue::take( creature._health, _rules._attackPower )._bDepleted == SW_FALSE )
             return HubActionResult::Ok;
-        creature._bPresent     = SW_FALSE;
-        creature._respawnTimer = _rules._creatureRespawnSeconds;
+        creature._bPresent = SW_FALSE;
+        creature._respawn.start( _rules._creatureRespawnSeconds );
         grantDefeatReward( *pAvatar, creature._def._position );
         return HubActionResult::Ok;
     }
@@ -190,8 +189,8 @@ namespace sw
             return HubActionResult::TargetGone;
         if ( float3::getHorizontalDistance( pAvatar->_profile._position, herb._def._position ) > _rules._gatherRange )
             return HubActionResult::OutOfRange;
-        herb._bPresent     = SW_FALSE;
-        herb._respawnTimer = _rules._herbRespawnSeconds;
+        herb._bPresent = SW_FALSE;
+        herb._respawn.start( _rules._herbRespawnSeconds );
         ++pAvatar->_profile._herbCount;
         addExperience( *pAvatar, _rules._herbExperience );
         return HubActionResult::Ok;
@@ -279,14 +278,14 @@ namespace sw
     {
         for ( auto& entry : _mapAvatar )
         {
-            entry.second._attackCooldown = MathUtil::max( 0.0f, entry.second._attackCooldown - deltaSeconds );
+            (void)entry.second._attackCooldown.update( deltaSeconds );
         }
         for ( HubPlacementState& spawn : _listPlacement )
         {
             if ( spawn._bPresent != SW_FALSE )
                 continue;
-            spawn._respawnTimer -= deltaSeconds;
-            if ( spawn._respawnTimer > 0.0f )
+            (void)spawn._respawn.update( deltaSeconds );
+            if ( spawn._respawn.isActive() )
                 continue;
             spawn._bPresent = SW_TRUE;
             spawn._health   = spawn._def._kind == HubPlacementKind::Creature ? _rules._creatureHealth : 1;

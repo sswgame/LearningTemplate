@@ -21,7 +21,6 @@ namespace sw
         struct FriendListScreenInternal
         {
             static constexpr const utf8* kFriendsName    = "Friends";
-            static constexpr const utf8* kStatusName     = "Status";
             static constexpr const utf8* kRefreshCommand = "Refresh";
             static constexpr const utf8* kCloseCommand   = "Close";
 
@@ -73,10 +72,15 @@ namespace sw
         , _model{}
         , _shownRevision{ 0 }
         , _bBuilt{ SW_FALSE }
+        , _viewModel{}
     {
+        setViewModel( &_viewModel );
     }
 
-    FriendListScreen::~FriendListScreen() = default;
+    FriendListScreen::~FriendListScreen()
+    {
+        setViewModel( nullptr );
+    }
 
     UIScreenHandle FriendListScreen::open( UISystem& ui, string_view documentPath, FriendList& model )
     {
@@ -141,10 +145,9 @@ namespace sw
             return;
         WidgetTree&     tree     = getTree();
         ListViewWidget* pFriends = tree.findWidget<ListViewWidget>( hashed_string( Internal::kFriendsName ) );
-        TextWidget*     pStatus  = tree.findWidget<TextWidget>( hashed_string( Internal::kStatusName ) );
-        if ( pFriends == nullptr || pStatus == nullptr )
+        if ( pFriends == nullptr )
         {
-            SW_LOG_ERROR_ID( "FriendListScreen.FriendListDocumentNeeds", "Friend list document %# needs a '%#' list view and a '%#' text", getDocumentPath().c_str(), Internal::kFriendsName, Internal::kStatusName );
+            SW_LOG_ERROR_ID( "FriendListScreen.FriendListDocumentNeeds", "Friend list document %# needs a '%#' list view", getDocumentPath().c_str(), Internal::kFriendsName );
             _bBuilt = SW_TRUE; // 문서가 틀렸다 — 프레임마다 같은 오류를 되풀이하지 않는다
             return;
         }
@@ -184,7 +187,7 @@ namespace sw
                 break;
             }
         }
-        pStatus->setText( statusText );
+        _viewModel.setStatus( statusText );
         _shownRevision = pModel->getRevision();
         _bBuilt        = SW_TRUE;
     }

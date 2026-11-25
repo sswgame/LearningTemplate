@@ -399,6 +399,56 @@
 				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="HubCard.Blue" source="B">
+			<origins>
+				<item>Source/Games/Playground/Hub/HubCardHUDViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="HubCard.Card" source="{color}{value}">
+			<origins>
+				<item>Source/Games/Playground/Hub/HubCardHUDViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="HubCard.DrawTwo" source="+2">
+			<origins>
+				<item>Source/Games/Playground/Hub/HubCardHUDViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="HubCard.Green" source="G">
+			<origins>
+				<item>Source/Games/Playground/Hub/HubCardHUDViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="HubCard.Red" source="R">
+			<origins>
+				<item>Source/Games/Playground/Hub/HubCardHUDViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="HubCard.Reverse" source="V">
+			<origins>
+				<item>Source/Games/Playground/Hub/HubCardHUDViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="HubCard.Skip" source="S">
+			<origins>
+				<item>Source/Games/Playground/Hub/HubCardHUDViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="HubCard.Wild" source="W">
+			<origins>
+				<item>Source/Games/Playground/Hub/HubCardHUDViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="HubCard.WildDrawFour" source="W+4">
+			<origins>
+				<item>Source/Games/Playground/Hub/HubCardHUDViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="HubCard.Yellow" source="Y">
+			<origins>
+				<item>Source/Games/Playground/Hub/HubCardHUDViewModel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="In orbit - Move and Use buy from the terminal, the lever lands"
 		       source="In orbit - Move and Use buy from the terminal, the lever lands"
 		       context="TextWidget._text">

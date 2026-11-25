@@ -6,7 +6,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -149,15 +148,13 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag        = FourCCUtil::make( "MCBT" );
-        static constexpr uint32 kStateVersion    = 1;
-        static constexpr int32  kPlayerSide      = 0;
-        static constexpr int32  kFoeSide         = 1;
-        static constexpr int32  kSideCount       = 2;
-        static constexpr int32  kMinStage        = -6;
-        static constexpr int32  kMaxStage        = 6;
-        static constexpr int32  kNonMovePriority = 7;  ///< 교체, 볼, 도망의 우선도
-        static constexpr int32  kEndlessWeather  = -1; ///< 끝나지 않는 날씨의 남은 턴(`getWeatherTurns`)
+        static constexpr int32 kPlayerSide      = 0;
+        static constexpr int32 kFoeSide         = 1;
+        static constexpr int32 kSideCount       = 2;
+        static constexpr int32 kMinStage        = -6;
+        static constexpr int32 kMaxStage        = 6;
+        static constexpr int32 kNonMovePriority = 7;  ///< 교체, 볼, 도망의 우선도
+        static constexpr int32 kEndlessWeather  = -1; ///< 끝나지 않는 날씨의 남은 턴(`getWeatherTurns`)
 
         MonsterBattle();
 
@@ -256,11 +253,11 @@ namespace sw
         void               setResult( MonsterBattleResult result );
 
     private:
-        Side                                   _arrSide[kSideCount];
-        NotificationBuffer<MonsterBattleEvent> _eventBuffer;
-        TurnOrder                              _turnOrder;
-        GameRandom                             _random;
-        MonsterInstance                        _captured;
+        SW_CODEC_STATE Side _arrSide[kSideCount];
+        SW_TRANSIENT NotificationBuffer<MonsterBattleEvent> _eventBuffer;
+        SW_CODEC_STATE TurnOrder                            _turnOrder;
+        SW_CODEC_STATE GameRandom                           _random;
+        SW_CODEC_STATE MonsterInstance                      _captured;
         PROPERTY( RuntimeState )
         hashed_string                  _weatherID;
         const MonsterCollectorCatalog* _pCatalog;

@@ -15,7 +15,6 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -26,7 +25,8 @@
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorSession.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorStage.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -74,7 +74,7 @@ namespace sw
      */
     REFLECT( Category = "SurvivalHorror", DisplayName = "Survival Horror Game Mode",
              Tooltip = "Runs one survival horror house: rooms of the area graph, items, keys, clues, puzzles, darkness and turn based fights, until the goal room" )
-    class SW_KIT_API SurvivalHorrorGameModeComponent : public GameModeComponent
+    class SW_KIT_API SurvivalHorrorGameModeComponent : public MatchGameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -100,7 +100,7 @@ namespace sw
         /** @brief 이 판의 카탈로그입니다. 열기 전이면 nullptr 입니다. */
         const SurvivalHorrorCatalog* findCatalog() const { return _pCatalog.get(); }
         /** @brief 판이 열렸고 결과가 나지 않았으면 true 입니다. */
-        bool isAcceptingInput() const { return isStarted() && _result == SurvivalHorrorResult::Ongoing; }
+        bool isAcceptingInput() const override { return isStarted() && _result == SurvivalHorrorResult::Ongoing; }
         /** @brief 전투 중이면 true 입니다. */
         bool isFighting() const { return _encounterSpot >= 0; }
         /** @brief 이미 줍거나 쓰러뜨린 자리이면 true 입니다. */
@@ -131,8 +131,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
-        void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               updateMatch( float32 deltaTime ) override;
 
     private:
         /** @brief 깃발 · 가방 · 상자 · 방 그래프를 비우고 세션을 새로 엽니다(판을 열 때 · 상태를 읽기 전). 세션이 거절하면 이유를 남기고 false 입니다. */
@@ -183,25 +182,22 @@ namespace sw
         float32 _damagePerPoint;
         PROPERTY( Category = "Fight", DisplayName = "Turn Interval", Min = 0.01, Units = s )
         float32 _turnSeconds;
-        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "How long the result stays on screen before the minigame ends", Min = 0.0, Units = s )
-        float32 _resultHoldSeconds;
         PROPERTY( Category = "Result", DisplayName = "Win Reward", Tooltip = "Money the base game gets for getting out", Min = 0 )
         int32 _winReward;
 
-        SharedAssetRef<SurvivalHorrorCatalog> _pCatalog;
-        SharedAssetRef<AreaGraph>             _pGraphAsset;
-        SharedAssetRef<ItemCatalog>           _pItemCatalog; ///< 가방 · 상자의 겹침 수(게임 범위의 아이템 카탈로그)
-        AreaGraph                             _graph;        ///< 방문 상태를 가진 이 판의 사본(세션이 빌린다)
-        GameFlags                             _flags;        ///< 한 판의 문 · 퍼즐(세션이 빌린다)
-        GridInventory                         _bag;          ///< 한 판의 격자 가방(세션이 빌린다)
-        Inventory                             _itemBox;      ///< 한 판의 아이템 상자(세션이 빌린다)
-        SurvivalHorrorSession                 _session;
-        SurvivalHorrorEncounter               _encounter;    ///< `_encounterSpot` 이 있을 때만 뜻이 있다
-        SurvivalHorrorCommand                 _command;      ///< 마지막 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
-        vector<SurvivalHorrorEvent>           _listEvent;    ///< 걸음마다 비워 다시 쓰는 알림 그릇
-        vector<uint8>                         _listUsedSpot; ///< 자리마다 줍거나 쓰러뜨렸는지(씬 데이터 순서)
-        Countdown                             _turn;
-        Countdown                             _resultHold;
+        BoundAssetRef<SurvivalHorrorCatalog>   _pCatalog;
+        BoundAssetRef<AreaGraph>               _pGraphAsset;
+        BoundAssetRef<ItemCatalog>             _pItemCatalog; ///< 가방 · 상자의 겹침 수(게임 범위의 아이템 카탈로그)
+        SW_CODEC_STATE AreaGraph               _graph;        ///< 방문 상태를 가진 이 판의 사본(세션이 빌린다)
+        SW_CODEC_STATE GameFlags               _flags;        ///< 한 판의 문 · 퍼즐(세션이 빌린다)
+        SW_CODEC_STATE GridInventory           _bag;          ///< 한 판의 격자 가방(세션이 빌린다)
+        SW_CODEC_STATE Inventory               _itemBox;      ///< 한 판의 아이템 상자(세션이 빌린다)
+        SW_CODEC_STATE SurvivalHorrorSession   _session;
+        SW_CODEC_STATE SurvivalHorrorEncounter _encounter;   ///< `_encounterSpot` 이 있을 때만 뜻이 있다
+        SW_TRANSIENT SurvivalHorrorCommand     _command;     ///< 마지막 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
+        SW_TRANSIENT vector<SurvivalHorrorEvent> _listEvent; ///< 걸음마다 비워 다시 쓰는 알림 그릇
+        SW_CODEC_STATE vector<uint8> _listUsedSpot;          ///< 자리마다 줍거나 쓰러뜨렸는지(씬 데이터 순서)
+        SW_CODEC_STATE Countdown     _turn;
         PROPERTY( RuntimeState )
         float2 _playerPosition;
         PROPERTY( RuntimeState, Min = -1 )

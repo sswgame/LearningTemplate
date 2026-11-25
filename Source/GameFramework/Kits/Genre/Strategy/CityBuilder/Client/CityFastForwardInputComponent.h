@@ -8,10 +8,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -24,7 +23,7 @@ namespace sw
      * @brief 빨리 감기 액션 하나를 디렉터 명령(`submitFastForward`)으로 바꿉니다. 멈춘 프레임에는 넘기지 않습니다.
      */
     REFLECT( Category = "CityBuilder", DisplayName = "City Fast Forward Input", Tooltip = "Sends the fast forward input to the City Game Mode on the same object" )
-    class SW_KIT_CLIENT_API CityFastForwardInputComponent : public Component
+    class SW_KIT_CLIENT_API CityFastForwardInputComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -34,24 +33,13 @@ namespace sw
         CityFastForwardInputComponent();
         virtual ~CityFastForwardInputComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 액션 이름이 비었으면 오류를 남깁니다(폴백 없음). 틱 그룹은 `PostUpdate` 입니다. */
-        void onBeginPlay() override;
-        /** @brief 입력 명령을 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
-
     private:
         /** @brief 틱 뒤 게임 스레드: 빨리 감기 입력을 넘깁니다. */
-        void updateInput( GameObjectManager& manager );
+        void updateInput( GameObjectManager& manager, CityGameModeComponent& director );
+        void submitInput( const GameModeInput& input, CityGameModeComponent& director );
 
     private:
-        PROPERTY( Category = "Input", DisplayName = "Fast Forward Action", Tooltip = "InputMap action held to fast-forward the city (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Fast Forward Action", Tooltip = "InputMap action held to fast-forward the city (required)" )
         hashed_string _fastForwardAction;
-
-        TComponentHandle<CityGameModeComponent> _director;
-        uint8                                   _bInputLive   : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
-        uint8                                   _bActionValid : 1; ///< 액션 이름이 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                  _reserved     : 6;
     };
 } // namespace sw

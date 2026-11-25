@@ -5,7 +5,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -62,9 +61,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "WALC" );
-        static constexpr uint32 kStateVersion = 1;
-
         MonsterHuntAlchemy();
 
         /** @brief 카탈로그와 레시피를 빌립니다(연금술보다 오래 살아야 합니다). 만들지 않는 판은 레시피 줄이 없는 카탈로그를 줍니다. */
@@ -119,12 +115,12 @@ namespace sw
         void                         spendCharge( const hashed_string& itemID );
 
     private:
-        Crafter _crafter;
+        SW_CODEC_STATE Crafter _crafter;
         PROPERTY( RuntimeState )
-        vector<ChargeEntry>             _listCharge;
-        vector<MonsterHuntActiveEffect> _listEffect;
-        const MonsterHuntCatalog*       _pCatalog;
-        const RecipeCatalog*            _pRecipeCatalog;
+        vector<ChargeEntry> _listCharge;
+        SW_CODEC_STATE vector<MonsterHuntActiveEffect> _listEffect;
+        const MonsterHuntCatalog*                      _pCatalog;
+        const RecipeCatalog*                           _pRecipeCatalog;
         PROPERTY( RuntimeState )
         hashed_string _oilID;
         PROPERTY( RuntimeState, Min = 0 )

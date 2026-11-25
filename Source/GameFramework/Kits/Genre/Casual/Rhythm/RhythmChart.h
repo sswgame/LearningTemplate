@@ -21,6 +21,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 노트가 판정선으로 내려오는 빠르기를 정하는 방식입니다. */
+    ENUM()
     enum class RhythmScrollMode : uint8
     {
         ConstantSpeed = 0, ///< 시간 기반이다. BPM 이 바뀌어도 내려오는 빠르기가 같고, 정지에서도 계속 내려온다

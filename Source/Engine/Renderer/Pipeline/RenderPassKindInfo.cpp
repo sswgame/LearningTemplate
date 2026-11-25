@@ -749,7 +749,7 @@ namespace sw
 
         RenderPassShaderSelection selection;
         if ( pPassDesc != nullptr && pPassDesc->_shaderPath.empty() == false )
-            selection._shaderPath = pPassDesc->_shaderPath;
+            selection._shaderPath = pPassDesc->_shaderPath.path();
         else if ( info._pDefaultShader != nullptr )
             selection._shaderPath = ( engineDefaultAssets.*info._pDefaultShader ).get();
 

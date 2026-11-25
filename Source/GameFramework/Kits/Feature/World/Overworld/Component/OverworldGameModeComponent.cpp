@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Feature/World/Overworld/Component/OverworldGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -11,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/TileMap/Component/TileMapComponent.h"
 
@@ -22,9 +22,7 @@ namespace sw
 {
     namespace
     {
-        constexpr uint32 kGameModeStateTag     = FourCCUtil::make( "TOWN" ); // 게임에서 키트로 옮기기 전 태그 그대로(바꿀 까닭이 없다)
-        constexpr uint32 kGameModeStateVersion = 1;
-
+        constexpr FormatDef kGameModeStateFormat{ "TOWN" }; // 게임에서 키트로 옮기기 전 태그 그대로(바꿀 까닭이 없다)
     } // namespace
 
     SW_AUTOMATION_GETTER_WATCH( overworldHeroTileX, "Overworld.HeroTileX", "Tile column of the hero", OverworldGameModeComponent, &OverworldGameModeComponent::getHeroTileX );
@@ -43,7 +41,7 @@ namespace sw
         , _props{}
         , _hero{}
         , _interactButton{}
-        , _stepSeconds{ 0.18f }
+        , _moverSettings{}
         , _tileMap{}
         , _mover{}
         , _listVillager{}
@@ -106,15 +104,12 @@ namespace sw
         if ( collectVillagers( *pManager ) == false )
             return false;
 
-        OverworldTileMoverSettings settings;
-        settings._encounterRate = 0.0f; // 마을에는 조우가 없다
-        settings._stepSeconds   = _stepSeconds;
-        _mover                  = OverworldTileMover{};
-        _mover.setSettings( settings );
+        _mover = OverworldTileMover{};
+        _mover.setSettings( _moverSettings );
         _mover.setTileMap( &_tileMap );
         _mover.setPosition( _tileMap.getSpawnX(), _tileMap.getSpawnY() );
         _stepFromTile      = int2{ _tileMap.getSpawnX(), _tileMap.getSpawnY() };
-        _stepElapsed       = _stepSeconds;
+        _stepElapsed       = _moverSettings._stepSeconds;
         _talkTarget        = GameObjectHandle{};
         _pendingTarget     = GameObjectHandle{};
         _pendingTalk       = TalkRequest::None;
@@ -196,16 +191,14 @@ namespace sw
 
     void OverworldGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( kGameModeStateTag, kGameModeStateVersion );
+        io.header( kGameModeStateFormat );
         if ( io.isOk() == false )
             return;
-        OverworldTileMover mover = _mover;
-        io.section( OverworldTileMover::kStateTag, OverworldTileMover::kStateVersion, [&mover]( StateIO& bodyIO )
-        { bodyIO.value( mover ); } );
+        io.section( OverworldTileMover::kStateFormat, [this]( StateIO& bodyIO )
+        { bodyIO.value( _mover ); } );
         io.end();
         if ( io.isReading() && io.isOk() )
         {
-            _mover = mover;
             _mover.setTileMap( &_tileMap );
             _mover.setInputEnabled( true ); // 대화는 저장하지 않는다 — 복원한 판은 대화 밖이다
         }
@@ -216,7 +209,7 @@ namespace sw
         if ( bRestored == false )
             SW_LOG_WARNING_ID( "OverworldGameMode.SavedTownStateDoes", "[Overworld] the saved town state does not match this build - starting at the spawn tile" );
         _stepFromTile = int2{ _mover.getTileX(), _mover.getTileY() };
-        _stepElapsed  = _stepSeconds;
+        _stepElapsed  = _moverSettings._stepSeconds;
         updateHeroPosition();
     }
 
@@ -255,7 +248,7 @@ namespace sw
         }
         else
         {
-            _stepElapsed = MathUtil::min( _stepElapsed + deltaTime, _stepSeconds );
+            _stepElapsed = MathUtil::min( _stepElapsed + deltaTime, _moverSettings._stepSeconds );
         }
         if ( _mover.consumeInteractRequest() )
         {
@@ -275,7 +268,7 @@ namespace sw
     {
         const float3  to       = computeTileCenter( _mover.getTileX(), _mover.getTileY() );
         const float3  from     = computeTileCenter( _stepFromTile._x, _stepFromTile._y );
-        const float32 progress = _stepSeconds > 0.0f ? MathUtil::clamp( _stepElapsed / _stepSeconds, 0.0f, 1.0f ) : 1.0f;
+        const float32 progress = _moverSettings._stepSeconds > 0.0f ? MathUtil::clamp( _stepElapsed / _moverSettings._stepSeconds, 0.0f, 1.0f ) : 1.0f;
         _heroPosition          = from + ( to - from ) * progress;
     }
 

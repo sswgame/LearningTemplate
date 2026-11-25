@@ -9,7 +9,7 @@
 namespace sw
 {
     ShooterEffectComponent::ShooterEffectComponent()
-        : _remaining{ 0.0f }
+        : _remaining{}
         , _bShowing{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -18,8 +18,8 @@ namespace sw
 
     void ShooterEffectComponent::activate( float32 lifetime )
     {
-        _remaining = lifetime;
-        _bShowing  = SW_TRUE;
+        _remaining.start( lifetime );
+        _bShowing = SW_TRUE;
     }
 
     void ShooterEffectComponent::onTick( TickContext& context )
@@ -27,8 +27,8 @@ namespace sw
         Component::onTick( context );
         if ( _bShowing == SW_FALSE )
             return;
-        _remaining -= context.getDeltaTime();
-        if ( _remaining > 0.0f )
+        (void)_remaining.update( context.getDeltaTime() );
+        if ( _remaining.isActive() )
             return;
         hide();
     }
@@ -37,7 +37,7 @@ namespace sw
     {
         if ( _bShowing == SW_TRUE )
             hide();
-        _remaining = 0.0f;
+        _remaining.clear();
         return SpawnStateReset::Reset;
     }
 

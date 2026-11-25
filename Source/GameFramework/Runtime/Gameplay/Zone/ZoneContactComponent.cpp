@@ -64,13 +64,13 @@ namespace sw
         Component::onRegister( manager );
         ZoneOccupantIndex::addLayerReader( manager ); // 표면 지역의 근처 역할이 물리 층을 질의한다(`ZoneTracker::resolveRoleTargets`)
         (void)ZoneSystem::getOrCreate( manager );
-        manager.getSubsystem<ScenePhysics>().registerContactStayListener( *this, ContactStayListener{ &ZoneContactComponent::receiveCollisionStay, nullptr } );
+        _staySubscription      = manager.getSubsystem<ScenePhysics>().registerContactStayListener( *this, ContactStayListener{ &ZoneContactComponent::receiveCollisionStay, nullptr } );
         _collisionSubscription = GameObjectEvents::listen<&ZoneContactComponent::recordCollision>( *this, &GameObjectEvents::_collisionBegin );
     }
 
     void ZoneContactComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSubsystem<ScenePhysics>().unregisterContactStayListener( *this );
+        _staySubscription.reset();
         ZoneOccupantIndex::removeLayerReader( manager );
         ZoneSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );

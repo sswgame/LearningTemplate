@@ -42,6 +42,6 @@ namespace sw
         PROPERTY( Required, Category = "Vehicle", DisplayName = "Exit Button", Tooltip = "Intent button of the vehicle pawn that gets the driver off" )
         hashed_string _exitButton;
 
-        optional<int32> _exitIndex;
+        SW_TRANSIENT optional<int32> _exitIndex;
     };
 } // namespace sw

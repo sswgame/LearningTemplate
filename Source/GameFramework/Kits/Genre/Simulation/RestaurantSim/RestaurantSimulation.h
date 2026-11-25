@@ -6,7 +6,6 @@
 #pragma once
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -276,9 +275,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr float32 kStepMinutes  = 1.0f;
-        static constexpr uint32  kStateTag     = FourCCUtil::make( "RSIM" );
-        static constexpr uint32  kStateVersion = 2; ///< 2: 안쪽 시장(`ShopManager`)이 머리표와 되사기 목록을, 조리(`Crafter`)가 꺼낸 재료 조각을 싣는다
+        static constexpr float32 kStepMinutes = 1.0f;
 
         RestaurantSimulation();
 
@@ -393,21 +390,21 @@ namespace sw
         vector<RestaurantCustomer> _listCustomer;
         PROPERTY( RuntimeState )
         deque<KitchenOrder> _listOrder;
-        vector<MenuEntry>   _listMenu; ///< 카탈로그 요리마다 하나 — 저장한 항목을 요리 id 로 짝짓는 손 본문이 싣는다
+        SW_CODEC_STATE vector<MenuEntry> _listMenu; ///< 카탈로그 요리마다 하나 — 저장한 항목을 요리 id 로 짝짓는 손 본문이 싣는다
         PROPERTY( RuntimeState )
         vector<StationSlot> _listStation;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
-        vector<float32>                     _listSatisfaction; ///< 최근 N 손님이며 오래된 것이 앞이다
-        NotificationBuffer<RestaurantEvent> _eventBuffer;
-        vector<IngredientSpoilage>          _listSpoilageScratch;
-        IngredientStock                     _stock;
-        Crafter                             _crafter;
-        ShopManager                         _market;
-        RestaurantSettings                  _settings;
+        vector<float32> _listSatisfaction; ///< 최근 N 손님이며 오래된 것이 앞이다
+        SW_TRANSIENT NotificationBuffer<RestaurantEvent> _eventBuffer;
+        SW_TRANSIENT vector<IngredientSpoilage> _listSpoilageScratch;
+        SW_CODEC_STATE IngredientStock          _stock;
+        SW_CODEC_STATE Crafter                  _crafter;
+        SW_CODEC_STATE ShopManager              _market;
+        SW_CODEC_STATE RestaurantSettings       _settings;
         PROPERTY( RuntimeState )
-        RestaurantDaySummary _today;
-        FixedStepTimer       _stepTimer;
-        GameRandom           _random;
+        RestaurantDaySummary          _today;
+        SW_CODEC_STATE FixedStepTimer _stepTimer;
+        SW_CODEC_STATE GameRandom     _random;
         PROPERTY( RuntimeState )
         hashed_string            _weatherID;
         const RestaurantCatalog* _pCatalog;    ///< 빌린 카탈로그(`initialize` 뒤 늘 있다 — 아래 빌림도 같다)
@@ -419,8 +416,8 @@ namespace sw
         const ShopCatalog*       _pShopCatalog;
         const ExperienceCurve*   _pStaffCurve; ///< 카탈로그의 직원 곡선(적지 않은 식당이면 nullptr)
         PROPERTY( RuntimeState, Min = 0 )
-        float32         _minutes; ///< 문을 연 뒤 지난 분
-        RateAccumulator _arrival; ///< 손님 도착(명)
+        float32                        _minutes; ///< 문을 연 뒤 지난 분
+        SW_CODEC_STATE RateAccumulator _arrival; ///< 손님 도착(명)
         PROPERTY( RuntimeState, Min = 0 )
         int64 _pendingSpoilageCost;
         PROPERTY( RuntimeState, Min = 1 )

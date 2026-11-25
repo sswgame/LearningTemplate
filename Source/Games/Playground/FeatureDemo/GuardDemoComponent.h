@@ -45,7 +45,6 @@ namespace sw
         void               serializeGameState( StateIO& io ) override;
         [[nodiscard]] bool startGame() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 이 오브젝트의 눈 자리와 앞 방향(로컬 +Z)입니다. 씬 컴포넌트가 없으면 false 입니다. */
@@ -92,8 +91,8 @@ namespace sw
         PROPERTY( RuntimeState, Min = 0 )
         int32 _rememberedCount; ///< 기억하는 대상 수(보이지 않아도 기억 시간 안이면 센다)
 
-        AIPerception   _perception;
-        LockOnSelector _lockOn;
-        NavGrid        _sightGrid;
+        SW_TRANSIENT AIPerception   _perception;
+        SW_TRANSIENT LockOnSelector _lockOn;
+        SW_TRANSIENT NavGrid        _sightGrid;
     };
 } // namespace sw

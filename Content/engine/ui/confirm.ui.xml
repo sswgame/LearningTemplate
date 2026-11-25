@@ -1,5 +1,5 @@
 <?asset guid="7380c60af64226c592f196082c98f89d"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<!-- 공통 확인 대화 상자(`ConfirmDialogScreen`). 글은 연 쪽이 넘긴 값을 뷰모델이 바인딩한다. 단추 명령은 `Accept` · `Cancel`, 뒤로 가기는 취소다. -->
 	<UIScreenDef _layer="Modal" _bModal="true" _defaultFocus="Accept" />
 	<_listAnimation>

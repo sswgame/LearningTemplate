@@ -145,10 +145,10 @@ namespace sw
         PROPERTY( Category = "Input", DisplayName = "Throw Speed", Min = 0.0, Tooltip = "Forward speed given when the button lets go (0: put down)", Units = "m/s" )
         float32 _throwSpeed;
 
-        RigidBodyGrabPhysics _fallback;
-        optional<int32>      _grabIndex;              ///< `_grabButton` 의 폰 버튼 번호(없으면 비어 있다)
-        vector<GameObject*>  _listTagged;             ///< 후보 버퍼(태그 색인 결과)
-        Subscription         _unloadSubscription;     ///< 이 오브젝트가 내려가는 알림(`handleUnloading`)
-        Subscription         _heldUnloadSubscription; ///< 쥔 것이 내려가는 알림(`handleUnloading`)
+        SW_TRANSIENT RigidBodyGrabPhysics _fallback;
+        SW_TRANSIENT optional<int32> _grabIndex;                  ///< `_grabButton` 의 폰 버튼 번호(없으면 비어 있다)
+        SW_TRANSIENT vector<GameObject*> _listTagged;             ///< 후보 버퍼(태그 색인 결과)
+        Subscription                     _unloadSubscription;     ///< 이 오브젝트가 내려가는 알림(`handleUnloading`)
+        Subscription                     _heldUnloadSubscription; ///< 쥔 것이 내려가는 알림(`handleUnloading`)
     };
 } // namespace sw

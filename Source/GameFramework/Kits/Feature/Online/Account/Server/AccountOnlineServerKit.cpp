@@ -63,6 +63,7 @@ namespace sw
                 if ( trustFile.has_value() == false )
                     return unexpected( trustFile.error() );
                 LoginServiceConfig loginSettings;
+                static_cast<LoginPolicy&>( loginSettings ) = kitConfig._login;
                 loginSettings._attemptBurst                = kitConfig._attemptBurst;
                 loginSettings._maxConcurrentPasswordHashes = kitConfig._maxConcurrentPasswordHashes;
                 loginSettings._maxQueuedPasswordHashes     = kitConfig._maxQueuedPasswordHashes;
@@ -98,7 +99,7 @@ namespace sw
                 expected<void> assembled =
                     createPlatformProviders( *providersFile, *trustFile, linkSecretKeyEnvironment, context._clock )
                         .and_then( [&]
-                { return exposeAccount( context, entry ); } )
+                { return exposeAccount( context, entry, kitConfig ); } )
                         .and_then( [&]
                 { return addTTLRule( context, entry, LoginStoreLogic::makeSessionTTLRule( kitConfig._expiredSessionTTL.getExpireAfterMs() ), kitConfig._expiredSessionTTL ); } );
                 if ( assembled.has_value() == false )
@@ -148,11 +149,12 @@ namespace sw
 
         private:
             /** @brief 바인딩을 호스트에 올리고 신원 · 접속 상태 · 세션 끊기 · 이름 찾기 · 외부 로그인 연동 조회를 문맥에 겁니다. */
-            [[nodiscard]] expected<void> exposeAccount( OnlineServerKitContext& context, const OnlineServerKitEntry& entry )
+            [[nodiscard]] expected<void> exposeAccount( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const AccountKitConfig& kitConfig )
             {
                 _loginService.setRemoteConfig( context._pRemoteConfig );
                 AccountServerConfig serverSettings;
-                serverSettings._pMetricRegistry = context._pMetricRegistry;
+                static_cast<AccountServerPolicy&>( serverSettings ) = kitConfig._server;
+                serverSettings._pMetricRegistry                     = context._pMetricRegistry;
                 _accountServer.initialize( &_loginService, serverSettings );
                 return registerServerService( context, entry, &_accountServer )
                     .and_then( [&]

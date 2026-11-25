@@ -180,6 +180,7 @@ namespace sw
                 assignArrayIfPresent( config._listComponentBaseType, obj, jsonkey::kParsingComponentBaseTypes );
                 assignArrayIfPresent( config._listTypeStripPrefix, obj, jsonkey::kParsingTypeStripPrefixes );
                 assignArrayIfPresent( config._listNameFieldSkipFolder, obj, jsonkey::kParsingNameFieldSkipFolders );
+                assignArrayIfPresent( config._listStateSkipPath, obj, jsonkey::kParsingStateSkipPaths );
             }
 
             static void applyTuningSection( ParserConfig& config, const nlohmann::json& obj )
@@ -383,6 +384,7 @@ namespace sw
         , _listComponentBaseType{}
         , _listTypeStripPrefix{}
         , _listNameFieldSkipFolder{}
+        , _listStateSkipPath{}
         , _listLoadedFile{}
         , _maxParallelParses{ 0 }
         , _bLoaded{ SW_FALSE }
@@ -579,6 +581,22 @@ namespace sw
                     return true;
             }
             begin = end + 1;
+        }
+        return false;
+    }
+
+    bool ParserConfig::isStateDeclarationSkipped( const string_view headerPath ) const
+    {
+        string path( headerPath );
+        for ( utf8& character : path )
+        {
+            if ( character == '\\' )
+                character = '/';
+        }
+        for ( const string& part : _listStateSkipPath )
+        {
+            if ( path.find( part ) != string::npos )
+                return true;
         }
         return false;
     }

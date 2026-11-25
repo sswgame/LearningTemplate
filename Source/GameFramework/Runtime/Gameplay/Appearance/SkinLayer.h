@@ -7,7 +7,7 @@
  *          층 하나 = 마스크 텍스처(종류가 정함) × 색(견본 묶음 — 염색과 같은 팔레트) × 불투명도, 섞기(보통 · 곱하기 · 오버레이), 머티리얼 덮어쓰기(립스틱 광 = 거칠기, 펄 = 금속).
  *          문신 · 데칼은 배치(UV 이동 · 회전 · 크기 · 좌우 대칭)가 있고 영역 경계(`regionMin` · `regionMax`) 밖은 자른다 — UV 이음새를 넘어가 번지지 않게.
  *          **번짐**은 층마다 실행 상태(`SkinLayerSmearState`)다. 체액 흐름(눈물 · 땀 · 비)과 접촉(손으로 닦기 · 맞음 · 먹기)이 색을 끌고 묽게 하며, 층 종류의 번짐 저항(방수 마스카라)이 줄인다.
- *          번짐은 선택 · 공유 코드에 싣지 않는다(일시 상태). 씻기가 지운다.
+ *          번짐은 선택 · 공유 코드에 싣지 않는다 — 컴포넌트의 상태(`CharacterBodyDynamicsComponent::serializeState`)로 싣는다. 씻기가 지운다.
  */
 #pragma once
 #include "Core/Container/span.h"
@@ -18,13 +18,16 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class AppearanceLoadReport;
+    class Texture2D;
     class XMLNode;
 
     /** @brief 층이 아래 색과 섞이는 방법입니다(`skin_layer_composite.hlsli` 와 같은 식). */
@@ -46,8 +49,8 @@ namespace sw
         hashed_string _id{};
         PROPERTY( Required )
         hashed_string _category{}; ///< 편집 창 묶음과 부분 프리셋 카테고리(Makeup · Tattoo · Scar · Paint)
-        PROPERTY( AssetPath, Required )
-        hashed_string _mask{}; ///< 마스크 텍스처(R = 덮임). 배치가 없는 층은 피부 UV 그대로, 있는 층은 층 UV [0,1]
+        PROPERTY( Required )
+        AssetRef<Texture2D> _mask; ///< 마스크 텍스처(R = 덮임). 배치가 없는 층은 피부 UV 그대로, 있는 층은 층 UV [0,1]
         PROPERTY()
         hashed_string _palette{}; ///< 색 견본 묶음(`customization.xml` 의 `<Palette>`). 비어 있으면 자유 색
         PROPERTY()
@@ -75,6 +78,8 @@ namespace sw
 
         /** @brief 피부 UV 가 영역 경계 안이면 true 입니다. */
         bool isInsideRegion( const float2& skinUV ) const;
+
+        SkinLayerDef(); // 텍스처가 완전한 자리(.cpp)에서 짓는다
     };
 } // namespace sw
 
@@ -182,6 +187,8 @@ namespace sw
         uint32 getRevision() const { return _revision; }
         uint16 getResolution() const { return _resolution; }
         bool   isClean() const { return _bDirty == SW_FALSE; }
+        /** @brief 격자 값입니다(깨끗하면 깃발 하나뿐). 읽을 때 같은 해상도로 `initialize` 되어 있어야 합니다. */
+        SW_DECLARE_STATE_IO();
         /**
          * @brief 격자를 굽기가 읽는 RGBA8 픽셀(해상도²)로 씁니다(비우고 채움). R · G = 0.5 + 이동 ÷ (2 × @p offsetRange)(범위 밖은 끝에서 자른다), B = 묽음, A = 255.
          * @details 굽기 셰이더(`layer_bake.hlsl`)가 같은 식으로 푼다 — 범위는 `TextureLayerBakeConstants::kSmearOffsetRange` 를 넘긴다. 행은 v 가 커지는 쪽(텍스처 위 = v 0)이다.

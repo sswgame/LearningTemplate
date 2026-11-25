@@ -261,27 +261,27 @@ namespace sw
         PROPERTY( Category = "Rig", DisplayName = "Physics Asset", Tooltip = "Sphere / capsule bodies used as spring bone colliders" )
         AssetRef<PhysicsAsset> _physicsAssetPath;
 
-        PoseModifierBinding                             _binding;
-        PoseModifierCurveSource                         _curveSource;         ///< 리그의 커브 출처다(`_instance` 가 빌린다)
-        PoseModifierSocketResolver                      _socketResolver;      ///< 리그의 자기 유닛 소켓 해석이다(`_instance` 가 빌린다)
-        Subscription                                    _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        Subscription                                    _boneRequirement;     ///< 리그가 묶은 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`SkeletalMeshComponent::requireBones`)
-        RigInstance                                     _instance;
-        SharedAssetRef<RigAsset>                        _asset;
-        SharedAssetRef<SocketSet>                       _ownSockets;
-        vector<ExternalTarget>                          _listExternal;
-        vector<SkeletalMeshBinding>                     _listUnitBinding;
-        vector<ObjectBinding>                           _listObjectBinding;
-        vector<TComponentHandle<SkeletalMeshComponent>> _listDependency; ///< 이 컴포넌트가 등록한 의존이다(해제할 때 쓴다).
-        vector<TComponentHandle<SkeletalMeshComponent>> _listTableUnit;  ///< 소켓 테이블의 유닛 번호에서 유닛으로 가는 목록이다.
-        unique_ptr<IRigGroundQuery>                     _groundQuery;    ///< 씬 물리를 감싼 땅 질의다.
-        float4x4                                        _worldFromModel;
-        const ResolvedSocketTable*                      _pSocketTable;
-        const IRigGroundQuery*                          _pGroundQueryOverride;
-        const SkeletalAnimatorComponent*                _pFrameAnimator; ///< 이번 프레임의 같은 유닛 애니메이터(커브 출처, 프레임 시작에 찾음)
-        SkeletalMeshComponent*                          _pSkeletalMesh;
-        const Skeleton*                                 _pBoundSkeleton; ///< 마지막으로 묶으려 한 유닛 스켈레톤(바뀌면 프레임 준비가 다시 묶는다)
-        IdentityToken                                   _boundContentID; ///< 마지막으로 묶은 리그의 내용 토큰(들고 있어 지운 리그의 주소가 새 리그와 같아 보이지 않는다)
+        SW_TRANSIENT PoseModifierBinding        _binding;
+        SW_TRANSIENT PoseModifierCurveSource    _curveSource;         ///< 리그의 커브 출처다(`_instance` 가 빌린다)
+        SW_TRANSIENT PoseModifierSocketResolver _socketResolver;      ///< 리그의 자기 유닛 소켓 해석이다(`_instance` 가 빌린다)
+        Subscription                            _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        Subscription                            _boneRequirement;     ///< 리그가 묶은 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`SkeletalMeshComponent::requireBones`)
+        SW_TRANSIENT RigInstance                _instance;
+        SharedAssetRef<RigAsset>                _asset;
+        SharedAssetRef<SocketSet>               _ownSockets;
+        SW_TRANSIENT vector<ExternalTarget> _listExternal;
+        SW_TRANSIENT vector<SkeletalMeshBinding> _listUnitBinding;
+        SW_TRANSIENT vector<ObjectBinding> _listObjectBinding;
+        SW_TRANSIENT vector<TComponentHandle<SkeletalMeshComponent>> _listDependency; ///< 이 컴포넌트가 등록한 의존이다(해제할 때 쓴다).
+        SW_TRANSIENT vector<TComponentHandle<SkeletalMeshComponent>> _listTableUnit;  ///< 소켓 테이블의 유닛 번호에서 유닛으로 가는 목록이다.
+        SW_TRANSIENT unique_ptr<IRigGroundQuery> _groundQuery;                        ///< 씬 물리를 감싼 땅 질의다.
+        SW_TRANSIENT float4x4                    _worldFromModel;
+        const ResolvedSocketTable*               _pSocketTable;
+        const IRigGroundQuery*                   _pGroundQueryOverride;
+        const SkeletalAnimatorComponent*         _pFrameAnimator; ///< 이번 프레임의 같은 유닛 애니메이터(커브 출처, 프레임 시작에 찾음)
+        SkeletalMeshComponent*                   _pSkeletalMesh;
+        const Skeleton*                          _pBoundSkeleton; ///< 마지막으로 묶으려 한 유닛 스켈레톤(바뀌면 프레임 준비가 다시 묶는다)
+        IdentityToken                            _boundContentID; ///< 마지막으로 묶은 리그의 내용 토큰(들고 있어 지운 리그의 주소가 새 리그와 같아 보이지 않는다)
         PROPERTY( Category = "Rig", DisplayName = "Enabled", Tooltip = "Evaluate the rig; disabled rigs cost nothing" )
         uint8                  _bRigEnabled : 1;
         [[maybe_unused]] uint8 _reserved    : 7;

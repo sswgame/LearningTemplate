@@ -4,21 +4,63 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCarcass.h"
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternHonor.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternLaw.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternSurvival.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
+#include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
+
+namespace sw
+{
+    struct WesternHonorTierDef;
+
+    class GameFlags;
+    class ReputationState;
+    class WesternCatalog;
+
+    /**
+     * @class WesternHonor
+     * @brief 플레이어 한 명의 명예입니다. 평판은 빌려 씁니다(`initialize` 의 @p reputation). 그 평판의 카탈로그에 `WesternCatalog::getHonorReputation()` 의 세력이 있어야 단계가 정해집니다.
+     *        단계가 바뀌면 빌려 온 평판에 `ReputationEvent` 가 쌓입니다. 이벤트는 디렉터(`WesternGameModeComponent`)가 꺼내 알립니다.
+     */
+    class SW_KIT_API WesternHonor
+    {
+    public:
+        WesternHonor();
+
+        void initialize( const WesternCatalog& catalog, ReputationState& reputation );
+        /** @brief 이름이 붙은 행동(낯선 이 돕기, 낙인, 강도)을 반영하고, 실제로 바뀐 값을 반환합니다. 모르는 행동이면 0 을 반환합니다. */
+        int32 applyAction( const hashed_string& actionID );
+        /** @brief 범죄의 명예 변화를 반영합니다(목격 여부와 상관없이 적용합니다. 양심의 문제이기 때문입니다). */
+        int32 applyCrime( const hashed_string& crimeID );
+        int32 changeValue( int32 delta );
+
+        int32         getValue() const;
+        hashed_string getTierName() const;
+        /** @brief 지금 단계의 효과를 반환합니다. 단계가 없으면 nullptr 을 반환합니다. */
+        const WesternHonorTierDef* findTier() const;
+        /** @brief 상점 값에 곱할 배율을 반환합니다(1 − 할인). */
+        float32 computePriceScale() const;
+        /**
+         * @brief 단계마다의 대사 플래그를 @p inoutFlags 에 둡니다. 지금 단계의 플래그는 1로 켜고 다른 단계의 플래그는 지웁니다(대화 조건식이 읽습니다).
+         */
+        void applyDialogueFlags( GameFlags& inoutFlags ) const;
+
+    private:
+        ReputationState*      _pReputation; ///< 빌려 온 평판
+        const WesternCatalog* _pCatalog;
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -75,8 +117,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "WOTL" );
-        static constexpr uint32 kStateVersion = 2; // 2: 전리품 난수 · 지난 시계를 싣는다
+        static constexpr FormatDef kStateFormat{ "WOTL" };
 
         WesternOutlaw();
 
@@ -127,29 +168,29 @@ namespace sw
         void logLawEvents();
 
     private:
-        WesternHonor                        _honor;
-        WesternLawState                     _law;
-        NotificationBuffer<WesternLawEvent> _lawEventBuffer; ///< `pollLawEvents`
-        WesternSurvival                     _survival;
-        WesternPerceptionSight              _sight;
-        GameRandom                          _random;
+        SW_TRANSIENT WesternHonor      _honor;
+        SW_CODEC_STATE WesternLawState _law;
+        SW_TRANSIENT NotificationBuffer<WesternLawEvent> _lawEventBuffer; ///< `pollLawEvents`
+        SW_CODEC_STATE WesternSurvival                   _survival;
+        SW_TRANSIENT WesternPerceptionSight              _sight;
+        SW_CODEC_STATE GameRandom                        _random;
         PROPERTY( RuntimeState )
         vector<WesternCarcass> _listCarcass;
         PROPERTY( RuntimeState )
-        vector<WesternPelt>   _listPelt;
-        Wallet*               _pWallet;     ///< 빌린 지갑(`initialize` 뒤 늘 있다)
-        ReputationState*      _pReputation; ///< 빌린 평판(`initialize` 뒤 늘 있다)
-        WorldClock*           _pClock;      ///< 빌린 시계(`initialize` 뒤 늘 있다)
-        GameFlags*            _pFlags;      ///< 빌린 플래그(`initialize` 뒤 늘 있다)
-        WeatherSystem*        _pWeather;    ///< 빌린 날씨(`initialize` 뒤 늘 있다)
-        Inventory*            _pInventory;  ///< 빌린 가방(전리품을 적은 동물이 없으면 nullptr 일 수 있다)
-        hashed_string         _regionID;
-        const WesternCatalog* _pCatalog;
-        const LootCatalog*    _pLoot;          ///< 빌린 전리품 카탈로그(전리품을 적은 동물이 없으면 nullptr 일 수 있다)
-        float64               _lastClockHours; ///< 지난 `update` 의 시계(날 × 24 + 시)
-        float32               _regionBaseTemperature;
+        vector<WesternPelt>        _listPelt;
+        Wallet*                    _pWallet;     ///< 빌린 지갑(`initialize` 뒤 늘 있다)
+        ReputationState*           _pReputation; ///< 빌린 평판(`initialize` 뒤 늘 있다)
+        WorldClock*                _pClock;      ///< 빌린 시계(`initialize` 뒤 늘 있다)
+        GameFlags*                 _pFlags;      ///< 빌린 플래그(`initialize` 뒤 늘 있다)
+        WeatherSystem*             _pWeather;    ///< 빌린 날씨(`initialize` 뒤 늘 있다)
+        Inventory*                 _pInventory;  ///< 빌린 가방(전리품을 적은 동물이 없으면 nullptr 일 수 있다)
+        SW_TRANSIENT hashed_string _regionID;
+        const WesternCatalog*      _pCatalog;
+        const LootCatalog*         _pLoot;          ///< 빌린 전리품 카탈로그(전리품을 적은 동물이 없으면 nullptr 일 수 있다)
+        SW_CODEC_STATE float64     _lastClockHours; ///< 지난 `update` 의 시계(날 × 24 + 시)
+        SW_TRANSIENT float32       _regionBaseTemperature;
         PROPERTY( RuntimeState )
-        int32 _centsCarry;     ///< 팔고 남은 센트(1 달러 아래)
-        uint8 _bClockSeen : 1; ///< `_lastClockHours` 를 잡았다(불러온 뒤에는 다시 잡는다)
+        int32                _centsCarry;     ///< 팔고 남은 센트(1 달러 아래)
+        SW_CODEC_STATE uint8 _bClockSeen : 1; ///< `_lastClockHours` 를 잡았다(불러온 뒤에는 다시 잡는다)
     };
 } // namespace sw
