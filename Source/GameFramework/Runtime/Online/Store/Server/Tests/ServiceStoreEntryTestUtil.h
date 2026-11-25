@@ -55,6 +55,17 @@ namespace sw
         IServiceStoreConnection& _inner;
     };
 
+    /** @brief 테스트가 표 형식을 거치지 않고 바이트를 쓰고 읽는 길입니다(깨진 레코드를 만들어 손상 처리를 본다). 배포 코드에는 이 형식이 없다. */
+    struct ServiceStoreTestAccess
+    {
+        static void putBytes( ServiceTransaction& inoutTransaction, const hashed_string& table, string_view key, vector<uint8> bytes,
+                              uint64 expectedVersion = ServiceRecord::kAnyVersion )
+        {
+            inoutTransaction.putBytes( table, key, std::move( bytes ), expectedVersion );
+        }
+        static const vector<uint8>& getBytes( const ServiceRecord& record ) { return record._bytes; }
+    };
+
     /** @brief 함수 하나를 저장 일로 감쌉니다. 완료는 쓰지 않습니다. */
     template <typename TFunction>
     class ServiceStoreEntryTestJob final : public ServiceStoreJob
