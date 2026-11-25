@@ -1,6 +1,6 @@
 /**
  * @file LoginStoreLogic.h
- * @brief 로그인의 저장 부분입니다. 저장소 스레드에서 `ServiceStoreJob::run` 이 만들어 한 번 쓰고 버립니다. 서비스 상태는 건드리지 않고 `LoginStoreResult` 에 결과를 적습니다.
+ * @brief 로그인의 저장 부분과, 그 테이블을 다른 키트에 읽어 주는 이름 색인(`AccountNameIndex`) · 외부 연동 조회(`AccountExternalLinks`)입니다. 저장소 스레드에서 `ServiceStoreJob::run` 이 만들어 한 번 쓰고 버립니다. 서비스 상태는 건드리지 않고 `LoginStoreResult` 에 결과를 적습니다.
  * @details 저장소 테이블은 다음과 같고 키는 ASCII 이다.
  *          - `login_account`: 소문자 이름에서 비밀번호 레코드로 가는 테이블이다.
  *          - `login_account_id`: 계정 id(16진)에서 계정 프로필로 가는 테이블이다. 프로필에는 이름 키(없으면 빈 문자열), 표시 이름, 게스트 여부, 탈퇴 예약이 있다.
@@ -27,9 +27,12 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
@@ -213,5 +216,34 @@ namespace sw
         const LoginServiceConfig&   _settings;
         const LoginTicketAuthority& _ticketAuthority;
         LoginStoreResult&           _result;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class AccountExternalLinks
+     * @brief 외부 로그인 연동 조회입니다. @p pCrypto 는 빌려 쓰며 주체를 저장할 때와 같은 다이제스트를 계산합니다.
+     */
+    class SW_KIT_SERVER_API AccountExternalLinks final : public IAccountExternalLinks
+    {
+    public:
+        explicit AccountExternalLinks( ILoginCrypto* pCrypto );
+
+        ServiceStoreResult readIsLinked( IServiceStoreConnection& connection, AccountID accountID, string_view provider, string_view subject, bool& outbLinked ) const override;
+
+    private:
+        ILoginCrypto* _pCrypto;
+    };
+
+    /**
+     * @class AccountNameIndex
+     * @brief 계정 이름 인덱스입니다.
+     */
+    class SW_KIT_SERVER_API AccountNameIndex final : public IAccountNameIndex
+    {
+    public:
+        ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName, AccountIdentity& outIdentity ) const override;
+        ServiceStoreResult readIdentity( IServiceStoreConnection& connection, AccountID accountID, AccountIdentity& outIdentity ) const override;
     };
 } // namespace sw

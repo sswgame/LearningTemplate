@@ -6,10 +6,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     OidcLoginProvider::OidcLoginProvider( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient )
         : _settings{ settings }
         , _keyCache{}

@@ -5,7 +5,6 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/AccountNameIndex.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountServer.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginSecretVault.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginService.h"

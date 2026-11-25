@@ -4,9 +4,5 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     const OnlineProtocolEntry LeaderboardProtocol::kOnlineEntry{ "Leaderboard", LeaderboardProtocol::Table{} };
 } // namespace sw

@@ -9,10 +9,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     HTTP2Client::HTTP2Client( const IClock& clock )
         : _clock{ clock }
         , _mutex{}
