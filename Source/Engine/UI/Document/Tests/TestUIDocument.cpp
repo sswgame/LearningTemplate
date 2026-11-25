@@ -136,23 +136,20 @@ SW_TEST_CASE( UIDocumentTest, SelectedOptionShowsItsText )
     SW_EXPECT_EQUAL( constant::invalid_index::kUint32, pOutOfRange->getSelectedIndex() );
 }
 
-/** @brief [UIDocumentTest] 문서에 적은 슬라이더 값 · 줄 높이는 세터와 같은 범위로 제한되고, 칸이 선언한 범위 밖의 값(음수 걸음 · 1 넘는 진행 비율 · 불투명도)은 읽기가 거절한다 */
+/** @brief [UIDocumentTest] 문서에 적은 슬라이더 값은 세터와 같은 범위로 제한되고, 칸이 선언한 범위 밖의 값(음수 걸음 · 1 넘는 진행 비율 · 불투명도 · 0 줄 높이)은 읽기가 거절한다 */
 SW_TEST_CASE( UIDocumentTest, WrittenValuesAreLimitedLikeTheSetters )
 {
-    // 칸의 `Min` · `Max` 가 막는 값(`_step` · `_percent` · `_opacity`)은 읽기에서 거절한다(Serialization.ValueOutOfRange) — 세터처럼 제한되는 것은 범위가 칸 사이에 걸린 값뿐이다.
-    UIDocumentWidgets     document( "<SliderWidget _name=\"Slider\" _minValue=\"0\" _maxValue=\"10\" _value=\"25\" />"
-                                        "<SliderWidget _name=\"Inverted\" _minValue=\"5\" _maxValue=\"1\" _value=\"3\" />"
-                                        "<ListViewWidget _name=\"List\" _rowHeight=\"0\" />" );
-    const SliderWidget*   pSlider   = document.find<SliderWidget>( "Slider" );
-    const SliderWidget*   pInverted = document.find<SliderWidget>( "Inverted" );
-    const ListViewWidget* pList     = document.find<ListViewWidget>( "List" );
-    SW_REQUIRE_TRUE( pSlider != nullptr && pInverted != nullptr && pList != nullptr );
+    // 칸의 `Min` · `Max` 가 막는 값(`_step` · `_percent` · `_opacity` · `_rowHeight`)은 읽기에서 거절한다(Serialization.ValueOutOfRange) — 세터처럼 제한되는 것은 범위가 칸 사이에 걸린 값뿐이다.
+    UIDocumentWidgets   document( "<SliderWidget _name=\"Slider\" _minValue=\"0\" _maxValue=\"10\" _value=\"25\" />"
+                                    "<SliderWidget _name=\"Inverted\" _minValue=\"5\" _maxValue=\"1\" _value=\"3\" />" );
+    const SliderWidget* pSlider   = document.find<SliderWidget>( "Slider" );
+    const SliderWidget* pInverted = document.find<SliderWidget>( "Inverted" );
+    SW_REQUIRE_TRUE( pSlider != nullptr && pInverted != nullptr );
     SW_EXPECT_EQUAL( 10.0f, pSlider->getValue() );
     SW_EXPECT_EQUAL( 5.0f, pInverted->getValue() );
-    SW_EXPECT_EQUAL( 1.0f, pList->getRowHeight() );
 
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
-    for ( const char* pWidget : { "<BoxPanel><SliderWidget _name=\"Slider\" _step=\"-1\" /></BoxPanel>", "<BoxPanel><ProgressBarWidget _name=\"Progress\" _percent=\"1.5\" /></BoxPanel>", "<BoxPanel><ProgressBarWidget _name=\"Progress\" _opacity=\"2\" /></BoxPanel>" } )
+    for ( const char* pWidget : { "<BoxPanel><SliderWidget _name=\"Slider\" _step=\"-1\" /></BoxPanel>", "<BoxPanel><ProgressBarWidget _name=\"Progress\" _percent=\"1.5\" /></BoxPanel>", "<BoxPanel><ProgressBarWidget _name=\"Progress\" _opacity=\"2\" /></BoxPanel>", "<BoxPanel><ListViewWidget _name=\"List\" _rowHeight=\"0\" /></BoxPanel>" } )
     {
         UIDocumentAsset outOfRange;
         SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( pWidget ), "engine/ui/test.ui.xml", ResourceContext::forDocument(), outOfRange ).has_value() );
