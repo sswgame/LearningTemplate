@@ -61,7 +61,7 @@ namespace sw
             VisemeTrack track;
             VisemeTrack::analyze( listSample, sampleRate, settings, track );
             const AbsolutePath trackPath = FileUtil::toDiskPath( VisemeTrack::makePathForAudio( outputRoot.empty() ? normalized : outputRoot.join( relative ).str() ) );
-            if ( FileUtil::ensureDirectoryExists( trackPath.getParent() ) == false || track.saveToFile( trackPath ) == false )
+            if ( track.saveToFile( trackPath ) == false )
             {
                 SW_LOG_ERROR_ID( "LipSync.WriteFailed", "Lip sync import could not write '%#'", trackPath.c_str() );
                 ++outFailedCount;

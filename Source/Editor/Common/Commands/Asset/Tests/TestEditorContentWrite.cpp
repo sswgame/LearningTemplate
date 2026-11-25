@@ -15,7 +15,6 @@ SW_TEST_CASE( EditorContentWriteTest, ReadOnlyFileIsRefusedAndKept )
 {
     SW_EXPECT_LOG( "EditorContentWrite.ReadOnly" );
     const AbsolutePath path = test::makeScratchPath( "locked.material" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "kept" ) );
     SW_EXPECT_FALSE( EditorContentWrite::warnIfReadOnly( path, EditorContentWriteKind::Save ) );
 
@@ -37,7 +36,6 @@ SW_TEST_CASE( EditorContentWriteTest, FolderIsRefusedByAReadOnlyFileUnderIt )
     const AbsolutePath writable   = folder.join( "a.material" );
     const AbsolutePath readOnly   = folder.join( "deep/b.material" );
     const AbsolutePath missingNew = folder.join( "new.material" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( readOnly ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( writable, "a" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( readOnly, "b" ) );
     SW_EXPECT_FALSE( EditorContentWrite::findReadOnlyAtOrUnder( folder ).has_value() );
@@ -57,7 +55,6 @@ SW_TEST_CASE( EditorContentWriteTest, DeleteRefusesAReadOnlyFile )
 {
     SW_EXPECT_LOG( "EditorContentWrite.ReadOnly" );
     const AbsolutePath path = test::makeScratchPath( "locked.scene.xml" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "<Scene/>" ) );
     SW_REQUIRE_TRUE( FileUtil::setWritable( path, false ) );
 

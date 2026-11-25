@@ -56,7 +56,7 @@ namespace sw
                 const string desired = bHasCurrent ? AssetGUIDHeader::carryOver( normalizeLineEndings( current ), text ) : string( text );
                 if ( bHasCurrent && normalizeLineEndings( current ) == desired )
                     return true;
-                if ( FileUtil::ensureParentDirectoryExists( *diskPath ) == false || FileUtil::writeTextFile( *diskPath, desired ) == false )
+                if ( FileUtil::writeTextFile( *diskPath, desired ) == false )
                 {
                     SW_LOG_ERROR_ID( "MaterialGraph.GeneratedWriteFailed", "Could not write generated material graph file '%#'", assetID );
                     return false;

@@ -198,7 +198,7 @@ namespace sw::editor
             root.set( registration._pID ).assignFrom( section );
             keyCount += writtenCount;
         }
-        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false || document.saveToFile( filePath, 4 ) == false )
+        if ( document.saveToFile( filePath, 4 ) == false )
         {
             SW_LOG_WARNING_ID( "EditorPreferences.EditorPreferencesCouldNot", "Editor preferences could not be saved to %#", string( filePath.str() ).c_str() );
             return false;

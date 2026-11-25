@@ -202,7 +202,7 @@ namespace sw
         }
         const ScenarioRecordOutput output   = _recorder.stop( settings );
         const AbsolutePath         diskPath = ScenarioRecorder::makeOutputDiskPath( _recordPath );
-        if ( FileUtil::ensureParentDirectoryExists( diskPath ) == false || FileUtil::writeTextFile( diskPath, output._xmlText ) == false )
+        if ( FileUtil::writeTextFile( diskPath, output._xmlText ) == false )
         {
             SW_LOG_ERROR_ID( "AutomationSession.CouldNotWrite", "[ScenarioRecord] could not write %#", _recordPath.c_str() );
             return;

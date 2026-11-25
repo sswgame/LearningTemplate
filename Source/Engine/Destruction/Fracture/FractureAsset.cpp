@@ -289,8 +289,6 @@ namespace sw
     {
         vector<uint8> bytes;
         makeBytes( bytes );
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false )
-            return false;
         return FileUtil::writeFile( absPath, bytes.data(), bytes.size() );
     }
 

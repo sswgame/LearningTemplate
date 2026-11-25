@@ -40,8 +40,7 @@ namespace sw
                     return {};
                 string     certificatePem;
                 string     privateKeyPem;
-                const bool bMade = FileUtil::ensureDirectoryExists( folder ) &&
-                                   provider.createSelfSignedCertificate( "localhost", kDevCertificateValidDays, certificatePem, privateKeyPem );
+                const bool bMade = provider.createSelfSignedCertificate( "localhost", kDevCertificateValidDays, certificatePem, privateKeyPem );
                 certificatePem += privateKeyPem; // 한 번의 원자적 쓰기 — 늘 한 쌍
                 const bool bCreated = bMade && FileUtil::writeTextFile( outCertificateFile, certificatePem );
                 if ( bCreated == false )

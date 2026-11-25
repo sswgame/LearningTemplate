@@ -212,7 +212,7 @@ SW_TEST_CASE( TextureBlockEncoderTest, CookedVariantLoadsWithTheFamilyFormat )
     const AbsolutePath root       = test::makeScratchPath( "TextureVariantCook" );
     const AbsolutePath sourcePath = root.join( "textures_raw/odd.tga" );
     const AbsolutePath outputPath = root.join( "textures/odd.astc.dds" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( sourcePath ) && FileUtil::writeFile( sourcePath, bytes.data(), bytes.size() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( sourcePath, bytes.data(), bytes.size() ) );
 
     TextureFormatFamily family;
     family._name   = "ASTC";

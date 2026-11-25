@@ -660,7 +660,6 @@ namespace sw::editor
                     outReply = "select the object to turn into a prefab first";
                     return false;
                 }
-                (void)FileUtil::ensureDirectoryExists( absolutePath.getParent() );                                                    // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
                 const EditorInspectorCommands::AttachResult applied = EditorInspectorCommands::attachChildPrefabInstances( pObject ); // 옮긴 수는 로그가 알린다
                 if ( applied.isRejected() )
                 {

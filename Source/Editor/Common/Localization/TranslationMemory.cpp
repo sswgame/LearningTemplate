@@ -101,7 +101,7 @@ namespace sw
         const string text      = bExisting ? AssetGUIDHeader::carryOver( existing, saveToXMLText() ) : saveToXMLText();
         if ( bExisting && existing == text )
             return true;
-        return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, text );
+        return FileUtil::writeTextFile( absolutePath, text );
     }
 
     bool TranslationMemory::addPair( string_view source, string_view text )

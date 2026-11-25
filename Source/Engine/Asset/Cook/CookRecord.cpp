@@ -213,7 +213,7 @@ namespace sw
                 const string     head = makeEntryHead( keyDescription, payloadHash );
                 AtomicFileWriter writer;
                 FileWriteResult  result = FileWriteResult::WriteFailed;
-                if ( FileUtil::ensureParentDirectoryExists( path ) && writer.open( path ).has_value() &&
+                if ( writer.open( path ).has_value() &&
                      writer.append( reinterpret_cast<const uint8*>( head.data() ), head.size() ).has_value() && appendPayload( writer ) )
                     result = writer.tryCommit();
                 if ( result == FileWriteResult::Written || ( result == FileWriteResult::ReplaceFailed && isSameEntry() ) )
@@ -250,7 +250,7 @@ namespace sw
             text.append( input._source );
         }
         text.append( "\n" );
-        return FileUtil::ensureParentDirectoryExists( absPath ) && FileUtil::writeTextFile( absPath, text );
+        return FileUtil::writeTextFile( absPath, text );
     }
 
     bool CookRecord::read( const AbsolutePath& absPath, CookRecord& outRecord )
@@ -544,7 +544,7 @@ namespace sw
             // 출력은 임시 파일에 흘려 쓰고 본문 해시가 맞을 때만 바꿔 끼운다 — 어긋난 항목이 출력 자리를 건드리지 않는다.
             AtomicFileWriter   writer;
             const AbsolutePath outputDiskPath = outputPath;
-            if ( FileUtil::ensureParentDirectoryExists( outputDiskPath ) == false || writer.open( outputDiskPath ).has_value() == false )
+            if ( writer.open( outputDiskPath ).has_value() == false )
             {
                 SW_LOG_WARNING_ID( "DDC.OutputNotWritable", "DDC: cannot write '%#' from the cache - treated as a miss", outputPath.str() );
                 return false;

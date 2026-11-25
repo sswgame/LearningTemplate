@@ -177,11 +177,7 @@ namespace sw
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not place a source file under the scratch source folder", sourceFile.str() } );
             }
             const AbsolutePath targetFile = scratchDir.join( relative );
-            if ( FileUtil::ensureDirectoryExists( targetFile.getParent() ) == false )
-            {
-                return unexpected( Error{ ErrorKind::ExternalFailure, "could not create the folder of a scratch file", targetFile.str() } );
-            }
-            vector<uint8> bytes;
+            vector<uint8>      bytes;
             if ( FileUtil::readFile( sourceFile, bytes ) == false )
             {
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a scratch source file", sourceFile.str() } );

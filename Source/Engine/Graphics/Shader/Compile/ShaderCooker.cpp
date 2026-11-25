@@ -269,7 +269,7 @@ namespace sw
         const bool         bCurrent   = FileUtil::isRegularFile( outputFile ) && ContentHash::computeFile( outputPath ) == compileResult._record._outputHash;
         if ( bCurrent == false )
         {
-            if ( FileUtil::ensureParentDirectoryExists( outputFile ) == false || FileUtil::writeFile( outputFile, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
+            if ( FileUtil::writeFile( outputFile, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
             {
                 SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookedBytecode", "Failed to write cooked bytecode to %#", outputPath.str() );
                 return false;

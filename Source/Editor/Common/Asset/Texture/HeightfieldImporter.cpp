@@ -208,7 +208,7 @@ namespace sw::editor
                     LayerWeightsAsset data;
                     if ( HeightfieldImporter::readLayerWeights( sourcePath, data ) == false )
                         return false;
-                    return FileUtil::ensureParentDirectoryExists( importedPath ) && data.saveToFile( importedPath );
+                    return data.saveToFile( importedPath );
                 }
                 return HeightfieldImporter::importHeightfield( sourcePath, importedPath );
             }
@@ -402,11 +402,6 @@ namespace sw::editor
         HeightfieldAsset data;
         if ( readHeightfield( sourcePath, data ) == false )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false )
-        {
-            SW_LOG_ERROR_ID( "HeightfieldImporter.CannotCreateFolder", "Cannot create the folder for '%#'", outputPath.str() );
-            return false;
-        }
         return data.saveToFile( outputPath );
     }
 

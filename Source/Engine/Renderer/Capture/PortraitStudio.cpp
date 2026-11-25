@@ -248,7 +248,6 @@ namespace sw
         if ( prefabList.empty() )
             return false;
         const AbsolutePath directory = outputDirectory.empty() ? ProcessRoots::get()._saved.join( "Portraits" ) : outputDirectory;
-        (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
 
         // 그리기 · 읽기(GPU)는 이 스레드가 차례로 하고, 옮기기(RGBA8) · 인코딩 · 쓰기(DDS · PNG)는 읽은 장이 상한(`kMaxHeldCaptureBytes`)에 닿거나 끝나면 장마다 워커가 제 칸에 한다(`WriteJob`).
         PortraitStudio          portrait;

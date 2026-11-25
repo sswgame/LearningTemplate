@@ -195,8 +195,7 @@ namespace sw::editor
             }
 
             // 파일은 엔진의 쓰기 입구로만 쓴다 — 쓰기 게이트를 지나고, 임시 파일에 다 쓴 뒤 바꿔 끼워 쓰는 중인 DDS 를 런타임 리로드가 읽지 않는다(DirectXTex 의 파일 쓰기는 제자리에 쓴다).
-            const bool bWritten = FileUtil::ensureParentDirectoryExists( outputPath ) &&
-                                  FileUtil::writeFile( outputPath, static_cast<const uint8*>( fileBytes.GetConstBufferPointer() ), fileBytes.GetBufferSize() );
+            const bool bWritten = FileUtil::writeFile( outputPath, static_cast<const uint8*>( fileBytes.GetConstBufferPointer() ), fileBytes.GetBufferSize() );
             if ( bWritten == false )
             {
                 SW_LOG_ERROR_ID( "TextureImporter.ImportedTextureNotWritten", "Could not write the imported texture %#", outputPath.str() );
@@ -602,8 +601,6 @@ namespace sw::editor
             if ( pImage == nullptr || TextureBlockEncoder::encodeMip( format, pImage->pixels, static_cast<uint32>( pImage->width ), static_cast<uint32>( pImage->height ), payload ) == false )
                 return false;
         }
-        if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false )
-            return false;
         const uint32 width    = static_cast<uint32>( metadata.width );
         const uint32 rowBytes = ( width + 3 ) / 4 * RHIFormatUtil::getBlockInfo( format )._blockBytes;
         return ImageFileWriter::writeDDS( outputPath, payload, width, static_cast<uint32>( metadata.height ), static_cast<uint32>( metadata.mipLevels ), variantDXGIFormatInternal( format ), rowBytes );

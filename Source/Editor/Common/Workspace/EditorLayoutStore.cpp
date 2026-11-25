@@ -79,8 +79,6 @@ namespace sw::editor
 
     bool EditorLayoutStore::save( const AbsolutePath& folder, string_view name, string_view imguiINIText, const EditorPanelVisibility& panelVisibility )
     {
-        if ( FileUtil::ensureDirectoryExists( folder ) == false )
-            return false;
         if ( FileUtil::writeTextFile( makeImguiINIPath( folder, name ), string( imguiINIText ) ) == false )
             return false;
         return panelVisibility.saveToFile( makeVisibilityPath( folder, name ) );

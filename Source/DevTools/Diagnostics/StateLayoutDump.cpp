@@ -68,7 +68,7 @@ namespace sw
                     entry.set( "version" ).setUint( type._metadata->getVersion() );
                     entry.set( "layout" ).setString( layout );
                 } );
-                return FileUtil::ensureParentDirectoryExists( outputPath ) && document.saveToFile( outputPath, 4 );
+                return document.saveToFile( outputPath, 4 );
             }
         };
     } // namespace

@@ -226,7 +226,6 @@ SW_TEST_CASE( ImportedAssetStoreTest, RemovesOnlyUnreferencedFiles )
     SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( kept, content.data(), content.size() ) );
     SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( stale, content.data(), content.size() ) );
     const AbsolutePath setPath = root.join( "common/models/knight/knight.animset.xml" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( setPath ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( setPath, R"(<AnimationSet formatVersion="0"><clip name="a" path="common/models/_shared/clips/aaaa.animclip"/></AnimationSet>)" ) );
 
     vector<string> listProblem;

@@ -80,7 +80,7 @@ namespace sw::editor
                 settings._clientHeight              = pWindow != nullptr ? pWindow->getHeight() : 0;
                 const ScenarioRecordOutput output   = getState()._recorder.stop( settings );
                 const AbsolutePath         diskPath = ScenarioRecorder::makeOutputDiskPath( getState()._outputPath );
-                if ( FileUtil::ensureParentDirectoryExists( diskPath ) == false || FileUtil::writeTextFile( diskPath, output._xmlText ) == false )
+                if ( FileUtil::writeTextFile( diskPath, output._xmlText ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not write '%#'", getState()._outputPath );

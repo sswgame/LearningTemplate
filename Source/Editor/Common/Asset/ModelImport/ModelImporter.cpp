@@ -725,7 +725,7 @@ namespace sw::editor
                 string existing;
                 if ( FileUtil::exists( outSharedPath ) && FileUtil::readTextFile( outSharedPath, existing ) && existing == body )
                     return true;
-                if ( FileUtil::ensureParentDirectoryExists( outSharedPath ) == false || FileUtil::writeTextFile( outSharedPath, body ) == false )
+                if ( FileUtil::writeTextFile( outSharedPath, body ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", outSharedPath.c_str() );
                     return false;
@@ -1104,8 +1104,7 @@ namespace sw::editor
                     }
                     continue;
                 }
-                const bool bBaked = FileUtil::ensureDirectoryExists( outFile->getParent() ) &&
-                                    PoseRetargeter::bakeClipFile( AssetID{ entry._retargetProfile }, AssetID{ entry._retargetSourceClip }, outFile->str() );
+                const bool bBaked = PoseRetargeter::bakeClipFile( AssetID{ entry._retargetProfile }, AssetID{ entry._retargetSourceClip }, outFile->str() );
                 if ( bBaked == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;

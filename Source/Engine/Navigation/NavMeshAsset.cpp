@@ -259,9 +259,6 @@ namespace sw
     {
         vector<uint8> bytes;
         writeBytes( bytes );
-        const AbsolutePath directory = absPath.getParent();
-        if ( directory.empty() == false && FileUtil::ensureDirectoryExists( directory ) == false )
-            return false;
         return FileUtil::writeFile( absPath, bytes.data(), bytes.size() );
     }
 

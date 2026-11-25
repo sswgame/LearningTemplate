@@ -132,7 +132,7 @@ namespace sw
                     return true;
                 }
                 const AbsolutePath path = context.resolveOutputPath( step.readValidatedProperties<AutomationFileStepParams>()._file );
-                if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, AutomationFrameStats::toJSON( summary, path.str() ) ) == false )
+                if ( FileUtil::writeTextFile( path, AutomationFrameStats::toJSON( summary, path.str() ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> text;
                     text.appendFormat( "could not write the frame stats to %#", path.str() );

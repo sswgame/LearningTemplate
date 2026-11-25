@@ -186,10 +186,8 @@ namespace sw
         if ( crashFolder.empty() )
             return; // 로그 폴더가 서지 않았다 — 덤프를 놓을 곳이 없다
         const AbsolutePath reportsFolder = crashFolder.getParent().join( ServerObservabilityInternal::kServerReportsFolderName );
-        if ( FileUtil::ensureDirectoryExists( reportsFolder ) == false )
-            return; // 실패는 ensureDirectoryExists 가 남겼다
-        string          netStatsLine;
-        GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
+        string             netStatsLine;
+        GameNetSession*    pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         if ( pNetSession != nullptr )
             netStatsLine = pNetSession->makeStatsReport().makeLine(); // 메시지 종류별 누적 셈 — 덤프 순간 한 번만 읽는다(틱마다 읽으면 Profiler 탭의 "지난 보고" 상태를 건드린다)
         string text;

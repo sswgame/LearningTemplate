@@ -40,8 +40,8 @@ namespace
             project._basePath     = root.join( "Config/Engine/EngineConfig.json" );
             project._overridePath = root.join( PlatformConfigOverride::makeEngineConfigPath( "Test" ) );
             SW_EXPECT_TRUE( FileUtil::readTextFile( ProcessRoots::get()._project.join( "Config/Engine/EngineConfig.json" ), project._baseText ) );
-            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( project._basePath ) && FileUtil::writeTextFile( project._basePath, project._baseText ) );
-            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( project._overridePath ) && FileUtil::writeTextFile( project._overridePath, kOverrideText ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( project._basePath, project._baseText ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( project._overridePath, kOverrideText ) );
             return project;
         }
 
@@ -70,7 +70,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, EveryGamePresetOpensEditsAndSaves )
         string text;
         SW_REQUIRE_TRUE( FileUtil::readTextFile( sourcePath, text ) );
         const AbsolutePath copyPath = root.join( FileUtil::getFileNamePart( sourcePath.str() ) );
-        SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( copyPath ) && FileUtil::writeTextFile( copyPath, text ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( copyPath, text ) );
 
         ProjectSettingsDocument document;
         SW_REQUIRE_TRUE( document.open( *GameConfig::StaticType(), copyPath ) == ConfigReadResult::Loaded );

@@ -105,7 +105,7 @@ namespace sw
         }
         writer.writePodAt( hashOffset, ContentHash::computeBytes( bytes.data() + Internal::kHeaderBytes, bytes.size() - Internal::kHeaderBytes ) );
         // 함께 뜬 프로세스(백엔드별 자식)가 같은 자리를 다투는 것이 정상이라 로그 없는 쓰기다 — 진 것은 부르는 쪽이 안다.
-        if ( FileUtil::ensureParentDirectoryExists( cachePath ) == false || FileUtil::tryWriteFile( cachePath, bytes.data(), bytes.size() ) != FileWriteResult::Written )
+        if ( FileUtil::tryWriteFile( cachePath, bytes.data(), bytes.size() ) != FileWriteResult::Written )
             return unexpected( Error{ ErrorKind::ExternalFailure, "asset scan cache cannot be written", cachePath.str() } );
         return {};
     }

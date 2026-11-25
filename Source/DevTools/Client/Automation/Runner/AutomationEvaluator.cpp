@@ -711,8 +711,7 @@ namespace sw
         AutomationImage::encodePpm( image, listEncoded );
         const optional<AbsolutePath> imagePath = engine::getSubsystem<AssetPaths>().toDiskPath( goldenID );
         const optional<AbsolutePath> metaPath  = engine::getSubsystem<AssetPaths>().toDiskPath( AutomationGoldenUtil::makeMetaID( goldenID ) );
-        const bool                   bWritten  = imagePath.has_value() && metaPath.has_value() && FileUtil::ensureParentDirectoryExists( *imagePath ) &&
-                              FileUtil::writeFile( *imagePath, listEncoded.data(), listEncoded.size() ) && FileUtil::writeTextFile( *metaPath, AutomationGoldenUtil::makeMetaText( meta ) );
+        const bool                   bWritten  = imagePath.has_value() && metaPath.has_value() && FileUtil::writeFile( *imagePath, listEncoded.data(), listEncoded.size() ) && FileUtil::writeTextFile( *metaPath, AutomationGoldenUtil::makeMetaText( meta ) );
         if ( bWritten == false )
         {
             StringBuilder<constant::buffer::kMax256> text;

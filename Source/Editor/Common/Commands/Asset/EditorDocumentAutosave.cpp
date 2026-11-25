@@ -35,7 +35,7 @@ namespace sw::editor
     bool EditorDocumentAutosaveEntry::write( const AbsolutePath& sessionFolder ) const
     {
         using Internal = EditorDocumentAutosaveInternal;
-        if ( _documentPath.empty() || FileUtil::ensureDirectoryExists( Internal::makeFolder( sessionFolder ) ) == false )
+        if ( _documentPath.empty() )
             return false;
         const AbsolutePath textPath = Internal::makePath( sessionFolder, _documentPath, Internal::kTextSuffix );
         if ( FileUtil::writeTextFile( textPath, _text ) == false )

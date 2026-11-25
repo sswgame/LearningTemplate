@@ -148,8 +148,6 @@ namespace sw
         _openWatch.restart();
         _state                          = State::Open;
         const AbsolutePath packDiskPath = packPath;
-        if ( FileUtil::ensureParentDirectoryExists( packDiskPath ) == false )
-            return fail( Error{ ErrorKind::ExternalFailure, "pack parent folder cannot be made", packPath.str() } );
         // 앞 빌드 팩은 바꿔 끼우기 전까지 그대로라(임시 파일에 쓴다) 열기 뒤에 읽어도 된다.
         const expected<void> opened = _file.open( packDiskPath );
         if ( opened.has_value() == false )

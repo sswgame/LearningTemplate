@@ -245,7 +245,7 @@ namespace sw
             {
                 const string       file = step.readValidatedProperties<AutomationFileStepParams>()._file;
                 const AbsolutePath path = runner.resolveOutputPath( file );
-                if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
+                if ( FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
                 {
                     fixed_string<constant::buffer::kMax512> message;
                     formatstring( message.data(), message.capacity(), "could not write %#", path.str() );

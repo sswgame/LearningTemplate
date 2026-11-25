@@ -125,7 +125,7 @@ SW_TEST_CASE( MinigameTest, ValidatesFeaturesAndMap )
     for ( const utf8* pFile : { "minigame/arcade.scene.xml", "minigame/hud.ui.xml" } )
     {
         const AbsolutePath path = domain.makeDiskPath( pFile );
-        SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( path.getParent() ) && FileUtil::writeTextFile( path, "<Scene/>" ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "<Scene/>" ) );
     }
     GameFeatureRegistry                  features;
     static const GameFeatureRegistration s_testFeature{ "TestFeature", &activateTestFeature };
@@ -228,7 +228,7 @@ SW_TEST_CASE( MinigameTest, MatchSettingsComeTogether )
 {
     const test::ScopedScratchDomain domain;
     const AbsolutePath              path = domain.makeDiskPath( "minigame/arena.scene.xml" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( path.getParent() ) && FileUtil::writeTextFile( path, "<Scene/>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "<Scene/>" ) );
     const GameFeatureRegistry features;
 
     MinigameDefinition match;

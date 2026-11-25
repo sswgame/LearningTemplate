@@ -147,7 +147,7 @@ namespace sw
                 const string textToWrite = bExisting ? AssetGUIDHeader::carryOver( existing, text ) : text;
                 if ( bExisting && existing == textToWrite )
                     return true;
-                return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, textToWrite );
+                return FileUtil::writeTextFile( absolutePath, textToWrite );
             }
         };
     } // namespace

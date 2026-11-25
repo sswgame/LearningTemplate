@@ -199,10 +199,10 @@ namespace sw
         // 로더는 import 를 파일 이름으로 맞춘다 — 복사본 파일 이름이 곧 세대 이름이다. 같은 모듈의 앞 세대와 겹치지 않게 복사본마다 제 폴더에 둔다.
         const AbsolutePath shadowDirectory = shadowDir.join( tempName );
         const AbsolutePath shadowPath      = shadowDirectory.join( inoutLibraryName._current );
-        const bool         bWritten        = FileUtil::ensureDirectoryExists( shadowDirectory ) && FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
+        const bool         bWritten        = FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
 #else
         const AbsolutePath shadowPath = shadowDir.join( ModuleLibraryUtil::formatSharedLibraryName( tempName ) );
-        const bool         bWritten   = FileUtil::ensureDirectoryExists( shadowDir ) && FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
+        const bool         bWritten   = FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
 #endif
         if ( bWritten == false )
         {

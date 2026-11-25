@@ -1113,7 +1113,7 @@ namespace sw
                 {
                     text.append( name ).append( "\n" );
                 }
-                return FileUtil::ensureDirectoryExists( packOutputDir ) && FileUtil::writeTextFile( packOutputDir.join( kCookedPackLedgerName ), text );
+                return FileUtil::writeTextFile( packOutputDir.join( kCookedPackLedgerName ), text );
             }
 
             /**

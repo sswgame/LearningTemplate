@@ -333,7 +333,6 @@ namespace sw::editor
                 AbsolutePath absolutePath;
                 if ( listArgument.size() != 1 || DevCommandRegistry::readDiskPathArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
-                (void)FileUtil::ensureDirectoryExists( absolutePath.getParent() ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
                 if ( EditorSceneFileCommands::saveActiveSceneAs( absolutePath ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
