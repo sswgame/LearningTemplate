@@ -285,8 +285,6 @@ namespace sw
          *          실패는 여기서 세지 않는다(같은 요청을 컴파일하는 쪽이 세고 오류를 다시 남긴다). 게임 · 기동 스레드에서 부른다.
          */
         static void compileDistinct( const vector<ShaderCompileDesc>& listDesc );
-        /** @brief 전처리한 글에서 바이트코드에 들지 않는 것(`#line` 줄 · 빈칸 · 빈 줄)을 걷어 낸 글입니다 — 글 키(DDC)가 이것을 해시한다. 입력만으로 정해진다. */
-        [[nodiscard]] static string normalizePreprocessedText( string_view text );
 
         /**
          * @brief 엔진이 모든 컴파일에 넣는 define(엔진 텍스처 칸 표 `SW_EMU_SLOT_<이름>=<칸>` · `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index`, 렌더 정책 `SW_TAA_*` · `SW_PROBE_*` · `SW_AUTO_EXPOSURE_*`)을 @p inoutList 뒤에 더합니다.

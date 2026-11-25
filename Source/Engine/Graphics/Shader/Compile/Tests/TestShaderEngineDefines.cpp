@@ -136,17 +136,3 @@ SW_TEST_CASE( ShaderEngineDefinesTest, StageMacroIsUniquePerStage )
             SW_EXPECT_FALSE( StringUtil::equals( string_view( pFirst ), string_view( getShaderStageInfo( static_cast<ShaderStage>( second ) )._pStageMacro ) ) );
     }
 }
-
-/**
- * @brief [ShaderEngineDefinesTest] 전처리한 글의 정규형은 `#line` 줄 · 빈칸 · 빈 줄만 걷어 낸다 — 주석을 고치거나 꺼진 갈래가 다른 변형은 같은 글이고, 낱말이 하나라도 다르면 다른 글이다
- * @details 변이: 줄바꿈까지 빈칸으로 합치면 `#pragma` 줄과 다음 줄이 이어지고, 빈칸을 아예 지우면 `return x` 와 `returnx` 가 같아진다.
- */
-SW_TEST_CASE( ShaderEngineDefinesTest, PreprocessedTextIgnoresLineNumbersAndSpacing )
-{
-    const string base = ShaderCompiler::normalizePreprocessedText( "#line 1 \"a.hlsl\"\nfloat4 main()\n{\n    return x;\n}\n" );
-    SW_EXPECT_EQUAL( string( "float4 main()\n{\nreturn x;\n}" ), base );
-    SW_EXPECT_EQUAL( base, ShaderCompiler::normalizePreprocessedText( "\r\n  #line 77 \"b.hlsli\"\r\n\r\nfloat4\tmain()\r\n{\r\n\r\n  return  x;\r\n}" ) );
-    SW_EXPECT_TRUE( base != ShaderCompiler::normalizePreprocessedText( "float4 main()\n{\n    return y;\n}\n" ) );
-    SW_EXPECT_TRUE( base != ShaderCompiler::normalizePreprocessedText( "float4 main()\n{\n    returnx;\n}\n" ) );
-    SW_EXPECT_TRUE( ShaderCompiler::normalizePreprocessedText( "#pragma a\nb" ) != ShaderCompiler::normalizePreprocessedText( "#pragma a b" ) );
-}

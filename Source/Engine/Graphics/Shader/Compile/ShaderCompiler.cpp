@@ -28,6 +28,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/SPIRVOpenGLPatch.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderReachableText.h"
 #include "Engine/Graphics/Shader/Compile/WebGPUShaderContainer.h"
 
 #include <algorithm>
@@ -323,18 +324,18 @@ namespace sw
             }
 
             /**
-             * @brief 전처리한 글 @p text 를 컴파일한 바이트코드의 DDC 키입니다. 글이 같으면 바이트코드도 같다 — 어느 변형(define 조합)이 그 글을 냈는지는 들지 않는다.
-             * @details 셰이더는 define 의 일부만 읽어 변형 둘 중 하나는 다른 변형과 같은 글이 된다. 변형마다 컴파일하지 않고 글마다 컴파일한다 —
-             *          언리얼이 셰이더 작업을 전처리한 소스의 해시로 겹쳐 합치는 것(`r.ShaderCompiler.PreprocessedCache`)과 같다.
+             * @brief 전처리한 글 @p text 를 컴파일한 바이트코드의 DDC 키입니다. 진입점이 닿는 글(`ShaderReachableText`)이 같으면 같은 셰이더다 — 어느 변형(define 조합)이 그 글을 냈는지는 들지 않는다.
+             * @details 변형마다 컴파일하지 않고 닿는 글마다 컴파일한다 — 언리얼이 셰이더 작업을 걷어 낸(`ShaderMinifier`) 전처리 소스의 해시로 겹쳐 합치는 것(`r.ShaderCompiler.PreprocessedCache`)과 같다.
+             *          닿는 글이 같은 두 글의 바이트코드는 명령이 같다. 드물게 쓰지 않는 선언이 DXC 안의 번호 차례(DXIL 의 내장 함수 선언 순서, SPIR-V 의 id)만 바꾼다.
              */
             static SourceKey makeSourceKey( const CompileSetup& setup, const vector<uint8>& text )
             {
-                const string normalized = ShaderCompiler::normalizePreprocessedText( string_view( reinterpret_cast<const utf8*>( text.data() ), text.size() ) );
+                const string reachable = ShaderReachableText::make( string_view( reinterpret_cast<const utf8*>( text.data() ), text.size() ), setup._desc._entryPoint );
                 SourceKey    sourceKey;
                 sourceKey._description.append( "Shader preprocessed text\ntarget=" ).append( setup._action._jobDesc._target ).append( "\nprofile=" ).append( setup._profile );
                 sourceKey._description.append( "\nentry=" ).append( setup._desc._entryPoint ).append( "\ntoolchain=" ).append( to_string( setup._action._jobDesc._codeFingerprint ) );
-                sourceKey._description.append( "\nfxc=" ).append( to_string( setup._action._fxcHash ) ).append( "\nlength=" ).append( to_string( normalized.size() ) );
-                sourceKey._description.append( "\ntext=" ).append( to_string( HashUtil::computeStringHash64( normalized, false ) ) );
+                sourceKey._description.append( "\nfxc=" ).append( to_string( setup._action._fxcHash ) ).append( "\nlength=" ).append( to_string( reachable.size() ) );
+                sourceKey._description.append( "\ntext=" ).append( to_string( HashUtil::computeStringHash64( reachable, false ) ) );
                 sourceKey._key = HashUtil::computeStringHash64( sourceKey._description, false );
                 return sourceKey;
             }
@@ -1161,46 +1162,5 @@ namespace sw
         vector<uint8>                      listDone( listDistinct.size(), 0 );
         const Internal::DistinctCompileJob compileJob{ &listDistinct };
         engine::runParallelInto<uint8>( listDone, 1, compileJob );
-    }
-
-    string ShaderCompiler::normalizePreprocessedText( string_view text )
-    {
-        constexpr string_view kLineDirective = "#line";
-        string                normalized;
-        normalized.reserve( text.size() );
-        utf8   pendingSeparator = 0; // 다음 글자 앞에 쓸 빈칸 하나 또는 줄바꿈 하나
-        bool   bLineStart       = true;
-        size_t index            = 0;
-        while ( index < text.size() )
-        {
-            const utf8 character = text[index];
-            if ( character == '\n' )
-            {
-                pendingSeparator = '\n';
-                bLineStart       = true;
-                ++index;
-                continue;
-            }
-            if ( character == ' ' || character == '\t' || character == '\r' )
-            {
-                if ( pendingSeparator == 0 )
-                    pendingSeparator = ' ';
-                ++index;
-                continue;
-            }
-            if ( bLineStart && text.substr( index, kLineDirective.size() ) == kLineDirective )
-            {
-                while ( index < text.size() && text[index] != '\n' )
-                    ++index;
-                continue;
-            }
-            bLineStart = false;
-            if ( pendingSeparator != 0 && normalized.empty() == false )
-                normalized.push_back( pendingSeparator );
-            pendingSeparator = 0;
-            normalized.push_back( character );
-            ++index;
-        }
-        return normalized;
     }
 } // namespace sw
