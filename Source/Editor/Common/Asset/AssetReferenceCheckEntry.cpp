@@ -33,7 +33,7 @@ namespace sw::editor
     {
         struct AssetReferenceCheckEntryInternal
         {
-            /** @brief 리플렉션 `AssetPath` 프로퍼티 가운데 칸 목록에 없는 것을 오류로 남깁니다. 반환은 그 수입니다. */
+            /** @brief 리플렉션 경로 칸(`AssetRef<T>` · `DataPath`) 가운데 칸 목록에 없는 것을 오류로 남깁니다. 반환은 그 수입니다. */
             static uint32 validateReflectedProperties( const AssetReferenceFields& params )
             {
                 uint32 problemCount{ 0 };
@@ -43,7 +43,7 @@ namespace sw::editor
                     {
                         if ( property._metadata->_bAssetPath == SW_FALSE || params.isField( property._name.c_str() ) )
                             continue;
-                        SW_LOG_ERROR_ID( "AssetReferenceCheck.FieldNotListed", "%#.%# is an AssetPath property but '%#' is not in %# - its paths would not be checked or fixed on move. The build rewrites that file: commit it",
+                        SW_LOG_ERROR_ID( "AssetReferenceCheck.FieldNotListed", "%#.%# is an asset path field but '%#' is not in %# - its paths would not be checked or fixed on move. The build rewrites that file: commit it",
                                          type._fullyQualifiedName.c_str(), property._name.c_str(), property._name.c_str(), AssetReferenceFields::kGeneratedFile );
                         ++problemCount;
                     }

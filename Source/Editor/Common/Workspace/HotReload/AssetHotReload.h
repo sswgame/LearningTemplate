@@ -183,7 +183,7 @@ namespace sw::editor
 
         /**
          * @brief @p objects 에서 그 에셋을 쓰는 컴포넌트를 찾아, 인스펙터에서 그 프로퍼티를 고쳤을 때처럼 `onPropertyChanged` 를 호출합니다. 언리얼의 PostEditChange 에 해당합니다.
-         * @details 찾는 기준은 리플렉션이다. 값이 그 경로인 에셋 경로 프로퍼티(`PROPERTY( AssetPath )`, `AssetType = …`, 문자열이나 hashed_string)를 찾는다.
+         * @details 찾는 기준은 리플렉션이다. 값이 그 경로인 에셋 경로 프로퍼티(`AssetRef<T>` · `DataPath`)를 찾는다.
          *          컴포넌트에는 리로드 전용 코드가 필요 없다. 에셋에서 계산한 상태는 `onPropertyChanged` 가 값이 같아도 다시 맞춰야 한다.
          * @return `onPropertyChanged` 를 호출한 프로퍼티 수입니다.
          */

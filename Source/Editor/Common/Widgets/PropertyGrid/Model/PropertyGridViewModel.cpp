@@ -591,7 +591,7 @@ namespace sw::editor
             const void* pAssetRef = PropertyGridViewModelInternal::isAssetReference( prop._typeName ) ? prop.getValuePtr<void>( instance.get() ) : nullptr;
             row._valueText        = pAssetRef != nullptr ? PropertyGridViewModelInternal::formatValueText( pAssetRef, prop._typeName )
                                                          : SerializerUtil::formatPropertyText( prop, instance, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-            row._bAssetPath       = ( prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false ) ? SW_TRUE : SW_FALSE;
+            row._bAssetPath       = prop._metadata->_bAssetPath;
             return;
         }
 
@@ -822,7 +822,6 @@ namespace sw::editor
         }
         else if ( builtin._widget == InspectorValueWidget::Text || builtin._widget == InspectorValueWidget::Name )
         {
-            row._bAssetPath = ( prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false ) ? SW_TRUE : SW_FALSE;
             row._bMultiline = prop._metadata->getEditor()._bMultiline != SW_FALSE ? SW_TRUE : SW_FALSE;
             if ( const string* pNameSource = prop.findCustomMeta( hashed_string( "NameSource" ) ); pNameSource != nullptr && builtin._widget == InspectorValueWidget::Name )
                 row._nameSource = hashed_string( pNameSource->c_str() );

@@ -348,7 +348,7 @@ class MoveAssetCommand(Command):
         for problem in list_problem:
             print(f"  - {problem}")
         if list_problem:
-            print(f"[move-asset] 끊어진 참조 {len(list_problem)}건이 남았습니다 — 목록에 없는 칸이면 그 칸을 읽는 구조체에 PROPERTY( AssetPath ) 로 선언한다(Config/Dev/AssetReferenceFields.generated.json)")
+            print(f"[move-asset] 끊어진 참조 {len(list_problem)}건이 남았습니다 — 목록에 없는 칸이면 그 칸을 AssetRef<T> · DataPath 로 선언한다(Config/Dev/AssetReferenceFields.generated.json)")
             return ExitCode.VIOLATION
         return ExitCode.PASSED
 

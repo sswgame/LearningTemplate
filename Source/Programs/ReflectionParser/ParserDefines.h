@@ -88,6 +88,7 @@ namespace sw
     namespace typeidentity
     {
         inline constexpr const utf8* kAssetRef             = "sw::AssetRef";
+        inline constexpr const utf8* kDataPath             = "sw::DataPath";
         inline constexpr const utf8* kCatalogKey           = "sw::CatalogKey";
         inline constexpr const utf8* kTypedComponentHandle = "sw::TComponentHandle";
         inline constexpr const utf8* kComponentHandle      = "sw::ComponentHandle";

@@ -381,7 +381,7 @@ namespace sw
             return;
         }
         if ( PropertyResolver::resolveComponentHandleProperty( prop, fieldType, session, owner ) == false ||
-             PropertyResolver::resolveAssetRefProperty( prop, fieldType, session, owner ) == false || PropertyResolver::resolveCatalogKeyProperty( prop, fieldType, session, owner ) == false )
+             PropertyResolver::resolveAssetPathProperty( prop, fieldType, session, owner ) == false || PropertyResolver::resolveCatalogKeyProperty( prop, fieldType, session, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;
@@ -433,7 +433,7 @@ namespace sw
             return;
         }
         if ( PropertyResolver::resolveComponentHandleProperty( prop, valueType, session, owner ) == false ||
-             PropertyResolver::resolveAssetRefProperty( prop, valueType, session, owner ) == false || PropertyResolver::resolveCatalogKeyProperty( prop, valueType, session, owner ) == false )
+             PropertyResolver::resolveAssetPathProperty( prop, valueType, session, owner ) == false || PropertyResolver::resolveCatalogKeyProperty( prop, valueType, session, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;

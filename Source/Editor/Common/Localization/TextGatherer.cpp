@@ -480,8 +480,7 @@ namespace sw
                             gatherer.addTextOrKey( value, context, originName, static_cast<uint32>( maxLength > 0 ? maxLength : 0 ) );
                             return;
                         }
-                        const bool bExempt = property._metadata->getEditor().findCustomMeta( hashed_string( TextGatherer::kMetaNotLocalizable ) ) != nullptr ||
-                                             property._metadata->_bAssetPath != SW_FALSE || property._metadata->_assetType.empty() == false;
+                        const bool bExempt = property._metadata->getEditor().findCustomMeta( hashed_string( TextGatherer::kMetaNotLocalizable ) ) != nullptr;
                         if ( bExempt == false && isLikelyUserFacingText( value ) )
                         {
                             fixed_string<constant::buffer::kMax512> issueText;
