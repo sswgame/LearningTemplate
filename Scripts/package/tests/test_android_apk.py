@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from package.android_apk import (  # noqa: E402
+from package.apk_packager import (  # noqa: E402
     ApkError, JAVA_SOURCE_ROOT, MANIFEST_TEMPLATE_PATH, collect_java_sources, make_d8_command, make_javac_command, read_preset_android, render_manifest,
     resolve_settings,
 )

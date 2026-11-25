@@ -1,5 +1,5 @@
 """
-텔레메트리 · 크래시 업로드 로컬 실행 — 루프백 HTTP 수신기를 띄우고 게임을 두 번 띄워, 동의한 텔레메트리 스풀 파일과 보낼 줄의 크래시 묶음이 실제 HTTP 로 오는지 본다(H1).
+텔레메트리 · 크래시 업로드 로컬 실행(ctest `Net.telemetry`) — 루프백 HTTP 수신기를 띄우고 게임을 두 번 띄워, 동의한 텔레메트리 스풀 파일과 보낼 줄의 크래시 묶음이 실제 HTTP 로 오는지 본다(H1).
 
   py -3 -m Scripts telemetry-local run                 # 기본: Playground, Ninja-Release
   py -3 -m Scripts telemetry-local run --game NileCity
@@ -7,7 +7,7 @@
 끝점은 gamesettings 칸(`_telemetryUploadEndpoint` · `_crashUploadEndpoint`)이고 저장소의 팩은 적지 않는다 - 이 스크립트는 `-gv_telemetryUploadEndpoint` ·
 `-gv_crashUploadEndpoint` 로 수신기를 가리킨다. 사용자 설정은 `-gv_userSettingsFile` 로 출력 폴더에 따로 두어 사람의 동의 설정을 바꾸지 않는다.
 1 회: 동의를 켜고(`settings.apply telemetry.enabled=true`) 끝낸다. 종료가 업로더를 떼며 스풀 파일을 닫아 보낸다(`TelemetryService::releaseUploader`).
-     로그의 크래시 보고 줄에서 묶음 폴더를 읽는다.
+     로그의 크래시 보고 줄(id `TelemetryUploadLink.CrashReportsSent`, 본문 JSON)에서 묶음 폴더를 읽는다.
 2 회: 그 폴더에 보낼 줄(queued)의 가짜 묶음을 하나 두고 띄운다. 기동이 전용 스레드로 묶음을 올린다(`TelemetryUploadLink`).
 판정: 수신기가 `/telemetry` 로 문맥 줄과 `session.start` 를 담은 ndjson 을, `/crash` 로 그 묶음 세션의 multipart 를 받았고, 두 로그에 허용 밖 `[Error]` · `[Warning]` 이 없다.
 """
@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import shutil
 import threading
 import time
@@ -24,14 +23,18 @@ from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
-from common.process_group import USER_DATA_ROOT_ENVIRONMENT, CheckResult, ProcessGroup, problem_lines, report
+from common.log_lines import count_id, payloads, problem_lines, read_log
+from common.process_group import DEFAULT_PRESET, USER_DATA_ROOT_ENVIRONMENT, ProcessGroup, report
+from net.ctest_items import CtestItem
 
-_TELEMETRY_LINKED = re.compile(r"\[TelemetryUpload\] telemetry uploads go to")
-_CRASH_SENT = re.compile(r"\[TelemetryUpload\] crash reports: (\d+) sent from '([^']+)'")
+CTEST_ITEMS = (CtestItem("telemetry", ("telemetry-local", "run"), 400),)
+
+_TELEMETRY_LINKED_ID = "TelemetryUploadLink.TelemetryLinked"
+_CRASH_SENT_ID = "TelemetryUploadLink.CrashReportsSent"  # 본문 JSON: sent · folder
 _FAKE_SESSION = "telemetrylocalrun"
-_PRESET = "Ninja-Release"  # build/<프리셋>/Bin 의 App 을 쓴다
 _CLIENT_DELAY_SECONDS = 8.0  # 기동 줄을 본 뒤 명령을 보낼 때까지
 _TIMEOUT_SECONDS = 60.0  # 기동 줄을 기다리는 최대 초
 
@@ -74,22 +77,22 @@ def _make_handler(sink: Sink) -> type[BaseHTTPRequestHandler]:
     return Handler
 
 
-def check_run(sink: Sink, list_log_text: list[str]) -> CheckResult:
+def check_run(sink: Sink, list_log_text: list[str]) -> list[str]:
     """받은 요청과 두 로그를 판정한다. 규칙은 파일 머리말을 본다."""
-    result = CheckResult()
+    problems: list[str] = []
     list_telemetry = sink.find("/telemetry")
     if not list_telemetry:
-        result.problems.append("the sink got no telemetry POST - the uploader was not linked or the spool file was not closed at shutdown")
+        problems.append("the sink got no telemetry POST - the uploader was not linked or the spool file was not closed at shutdown")
     elif not any(b"session.start" in request.body for request in list_telemetry):
-        result.problems.append("no telemetry POST carried session.start - consent did not reach the telemetry service")
+        problems.append("no telemetry POST carried session.start - consent did not reach the telemetry service")
     list_crash = sink.find("/crash")
     if not any(_FAKE_SESSION.encode("utf-8") in request.body for request in list_crash):
-        result.problems.append(f"the sink got no crash POST for the queued bundle '{_FAKE_SESSION}'")
+        problems.append(f"the sink got no crash POST for the queued bundle '{_FAKE_SESSION}'")
     for index, text in enumerate(list_log_text):
-        if _TELEMETRY_LINKED.search(text) is None:
-            result.problems.append(f"run {index + 1}: no telemetry link line - TelemetryUploadLink did not take the endpoint")
-        result.problems += problem_lines(f"run {index + 1}", text)
-    return result
+        if count_id(text, _TELEMETRY_LINKED_ID) == 0:
+            problems.append(f"run {index + 1}: no telemetry link line - TelemetryUploadLink did not take the endpoint")
+        problems += problem_lines(f"run {index + 1}", text)
+    return problems
 
 
 def _write_fake_bundle(reports_folder: Path) -> Path:
@@ -121,7 +124,7 @@ def _run_once(argument: argparse.Namespace, group: ProcessGroup, app_exe: Path, 
         app_arguments.variable("gv_telemetryUploadEndpoint", f"http://127.0.0.1:{port}/telemetry"),
         app_arguments.variable("gv_crashUploadEndpoint", f"http://127.0.0.1:{port}/crash"),
     ], environment=environment)
-    client.wait_for(_CRASH_SENT, _TIMEOUT_SECONDS)
+    client.wait_for_log(_CRASH_SENT_ID, _TIMEOUT_SECONDS)
     time.sleep(_CLIENT_DELAY_SECONDS)  # 게임 인스턴스가 서고 표준 입력 명령을 받을 때까지
     try:
         if consent:
@@ -134,7 +137,7 @@ def _run_once(argument: argparse.Namespace, group: ProcessGroup, app_exe: Path, 
 
 
 def _run(argument: argparse.Namespace) -> int:
-    with ProcessGroup("telemetry-local", _PRESET, "TelemetryLocalRun", clean=True) as group:
+    with ProcessGroup("telemetry-local", argument.preset, "TelemetryLocalRun", clean=True) as group:
         list_exe = group.require("App")
         if list_exe is None:
             return int(ExitCode.CHECK_INVALID)
@@ -154,22 +157,26 @@ def _run(argument: argparse.Namespace) -> int:
         bundle: Path | None = None
         try:
             list_log.append(_run_once(argument, group, app_exe, port, 1, True, environment))
-            match = _CRASH_SENT.search(list_log[0].read_text(encoding="utf-8", errors="replace"))
-            if match is None:
+            sent = payloads(read_log(list_log[0]), _CRASH_SENT_ID)
+            if not sent:
                 return group.fail(f"run 1 logged no crash report line - the crash uploader was not linked (log: {list_log[0]})")
-            bundle = _write_fake_bundle(Path(match.group(2)))
+            bundle = _write_fake_bundle(Path(sent[0]["folder"]))
             list_log.append(_run_once(argument, group, app_exe, port, 2, False, environment))
         finally:
             server.shutdown()
             if bundle is not None:
                 shutil.rmtree(bundle, ignore_errors=True)
-    result = check_run(sink, [log.read_text(encoding="utf-8", errors="replace") for log in list_log])
-    return report("telemetry-local", result.problems, list_log, "telemetry spool file and queued crash bundle reached the loopback sink over HTTP")
+    return report("telemetry-local", check_run(sink, [read_log(log) for log in list_log]), list_log, "telemetry spool file and queued crash bundle reached the loopback sink over HTTP")
 
 
-def main(list_argument: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts telemetry-local", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    sub = parser.add_subparsers(dest="mode", required=True)
-    run_parser = sub.add_parser("run", help="수신기를 띄우고 게임을 두 번 띄워 텔레메트리 · 크래시 업로드를 본다")
-    run_parser.add_argument("--game", default="Playground", help="게임 이름")
-    return _run(parser.parse_args(list_argument))
+class TelemetryLocalCommand(Command):
+    name = "telemetry-local"
+    help = "텔레메트리 · 크래시 업로드 로컬 실행 — 루프백 HTTP 수신기와 게임 두 번으로 동의한 스풀 파일 · 보낼 줄의 크래시 묶음이 HTTP 로 오는지 본다(run)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("mode", choices=("run",), help="수신기를 띄우고 게임을 두 번 띄워 텔레메트리 · 크래시 업로드를 본다")
+        parser.add_argument("--game", default="Playground", help="게임 이름")
+        parser.add_argument("--preset", default=DEFAULT_PRESET, help="빌드 프리셋(build/<프리셋>/Bin 의 App 을 쓴다)")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        return _run(args)

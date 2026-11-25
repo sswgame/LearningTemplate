@@ -47,13 +47,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.toolchain_config import ConfigError, require_config  # noqa: E402
-from common.paths import get_bin_dir, get_project_root  # noqa: E402
-from common.project_constants import DIR_RUNTIME_GAME_PRESET  # noqa: E402
+from common.command import Command, ScriptContext  # noqa: E402
+from common.paths import get_bin_dir  # noqa: E402
 from common.run_process import run_cmake  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 from common.host_platform import executable_name, HOST  # noqa: E402
+from package.pack_files import PACK_FOLDER_NAME, PackageError, select_staged_packs  # noqa: E402
 
 #: 단계 이름 — 창이 `[package] step k/n <이름>` 으로 읽는다. 순서가 진행 순서다.
 LIST_STEP_NAME: tuple[str, ...] = ("build", "cook", "stage", "verify")
@@ -74,18 +73,7 @@ LIST_LIBRARY_SUFFIX: tuple[str, ...] = (HOST.shared_library_suffix,)
 #: 쿠킹에만 쓰는 공유 라이브러리(파일 이름의 `lib` 를 뗀 줄기) — 셰이더 컴파일러(DXC). 개발 빌드만 Bin 에 두고(`sw_deploy_runtime_dependencies`),
 #: 배포 App 은 미리 쿠킹한 셰이더만 읽어 패키지에는 넣지 않는다(옛 빌드 폴더 · 개발 Bin 을 스테이징할 때를 거른다). 폴더로 가르지 않는 이유: dxcompiler 가 dxil 을 이름으로 다시 찾아 실행 파일 폴더 밖에 두면 서명하지 못한다.
 LIST_COOK_ONLY_LIBRARY_STEM: tuple[str, ...] = ("dxcompiler", "dxil", "dxildll")
-#: Bin 에서 베끼는 폴더 · 파일.
-PACK_FOLDER_NAME = "Packs"
-#: 미룬 청크(씬 청크 · 공유 청크)의 목록 — 쿠커가 팩 도메인마다 팩 폴더에 쓴다(`PackChunkManifest::makeFileName` — `packchunks.<도메인 줄기>.xml`).
-#: 런타임은 폴더의 목록을 모두 합쳐 목록에 든 팩을 기동 때 올리지 않고 씬을 열 때 올린다.
-CHUNK_MANIFEST_PREFIX = "packchunks."
-CHUNK_MANIFEST_SUFFIX = ".xml"
-
-
-def is_chunk_manifest(path: Path) -> bool:
-    """`packchunks.<줄기>.xml` 이면 참입니다(대소문자 무시)."""
-    name = path.name.lower()
-    return name.startswith(CHUNK_MANIFEST_PREFIX) and name.endswith(CHUNK_MANIFEST_SUFFIX) and len(name) > len(CHUNK_MANIFEST_PREFIX) + len(CHUNK_MANIFEST_SUFFIX)
+#: Bin 에서 베끼는 파일.
 NOTICE_FILE_NAME = "THIRD_PARTY_NOTICES.txt"
 #: 서버 구성 빌드가 실행 파일 옆에 쓰는 클라이언트 전용 형식 이름 표(`ClientOnlyTypeTable::kTableFile`, `Scripts/generate/client_only_types.py`) — 서버 패키지에 반드시 든다.
 CLIENT_ONLY_TYPE_TABLE = "ClientOnlyTypes.json"
@@ -95,28 +83,6 @@ MOD_EXPORT_FOLDER = Path("Saved") / "ModPacks"
 LIST_MOD_FILE_NAME: tuple[str, ...] = ("mod.xml", "content.pack")
 #: 모드 id 의 형식(`ModManifest::isValidID` — 소문자 · 숫자 · `_`, 64 자까지). 경로를 id 로만 만들므로 형식부터 본다.
 MOD_ID_PATTERN = re.compile(r"^[a-z0-9_]{1,64}$")
-
-
-#: 런타임이 늘 올리는 공용 팩. 게임 팩은 `game_<팩 폴더>.pack` 이다(`PackCooker::makePackFileName` 과 같은 이름).
-LIST_SHARED_PACK_NAME: tuple[str, ...] = ("engine.pack", "common.pack")
-
-
-def list_pack_name_of_game(project_root: Path, game: str) -> list[str]:
-    """그 게임의 배포 패키지가 담는 팩 파일 이름들입니다 — 공용 팩과 그 게임의 팩 하나.
-
-    팩 폴더는 게임 프리셋(`Config/Game/<게임>.json`)의 `_packRoot`(`game/<폴더>`)에서 읽는다 — 게임 이름과 폴더 이름이 다를 수 있다.
-    프리셋이나 키가 없으면 ConfigError.
-    """
-    preset_path = project_root / DIR_RUNTIME_GAME_PRESET / f"{game}.json"
-    pack_root = str(require_config(preset_path, preset_path.name).get("_packRoot", ""))
-    folder_name = pack_root.removeprefix("game/")
-    if not pack_root.startswith("game/") or not folder_name or "/" in folder_name:
-        raise ConfigError(f"{preset_path}: `_packRoot` 는 `game/<폴더>` 입니다 (`{pack_root}`)")
-    return [*LIST_SHARED_PACK_NAME, f"game_{folder_name.lower()}.pack"]
-
-
-class PackageError(Exception):
-    """단계 하나가 실패했다. 메시지가 `[package] FAILED` 줄의 이유다."""
 
 
 @dataclass
@@ -180,32 +146,6 @@ def select_staged_entries(bin_dir: Path, target: str) -> list[Path]:
     return list_entry
 
 
-def select_staged_packs(project_root: Path, pack_dir: Path, game: str) -> list[Path]:
-    """패키지에 담는 팩입니다 — 공용 팩과 그 게임의 팩(나눈 형제 팩 포함)만(`list_pack_name_of_game`), 그리고 그 팩 도메인들의 청크 목록(있으면).
-
-    Bin/Packs 는 Dev · Shipping 빌드가 모든 게임의 팩을 굽고 지난 쿠킹의 팩도 남는 폴더라 통째로 베끼지 않는다.
-    이름은 게임 프리셋에서 고르고, 그 팩이 없으면 실패다(빠진 팩을 둔 패키지는 기동하지 못한다).
-    """
-    try:
-        list_name = list_pack_name_of_game(project_root, game)
-    except ConfigError as error:
-        raise PackageError(str(error)) from error
-    list_missing = [name for name in list_name if (pack_dir / name).is_file() is False]
-    if list_missing:
-        raise PackageError(f"{pack_dir} has no {', '.join(list_missing)} for game {game} - cook first")
-    # 나눈 도메인은 형제 팩(`<도메인>.<번호>.pack` · `<도메인>.<청크>.<번호>.pack` — `PackCooker::makePackFileName`)을 함께 싣는다. 쿠커가 쓰지 않은 형제는 지운다.
-    list_pack: list[Path] = []
-    for name in list_name:
-        list_pack.append(pack_dir / name)
-        list_pack.extend(sorted(path for path in pack_dir.glob(f"{Path(name).stem}.*.pack") if path.is_file()))
-    # 청크 목록은 팩과 같은 폴더에 함께 간다(도메인마다 하나) — 빠지면 런타임이 미룬 청크까지 기동 때 올리고, 씬이 기다릴 청크를 모른다.
-    for name in list_name:
-        manifest = pack_dir / f"{CHUNK_MANIFEST_PREFIX}{Path(name).stem}{CHUNK_MANIFEST_SUFFIX}"
-        if manifest.is_file():
-            list_pack.append(manifest)
-    return list_pack
-
-
 def select_staged_mods(project_root: Path, list_mod_id: list[str]) -> list[tuple[str, list[Path]]]:
     """패키지에 담는 모드입니다 — 모드마다 배포 형태(`mod.xml` + `content.pack`)의 파일. 형식이 틀린 id · 묶지 않은 모드는 실패다."""
     list_mod: list[tuple[str, list[Path]]] = []
@@ -260,8 +200,8 @@ def run_cook(request: PackageRequest, project_root: Path, bin_dir: Path) -> None
 def stage_platform_package(request: PackageRequest, project_root: Path, bin_dir: Path, staging_dir: Path) -> None:
     """플랫폼 묶음 도구로 패키지 폴더를 만든다 — 웹은 브라우저 폴더, Android 는 APK 하나. 팩은 빌드가 구운 `Bin/Packs` 다."""
     # 두 도구가 이 모듈의 팩 고르기를 쓴다 — 여기서 부를 때 읽는다.
-    from package.android_apk import ApkError, make_apk
-    from package.web_package import make_web_package, WebPackageError
+    from package.apk_packager import ApkError, make_apk
+    from package.web_packager import make_web_package, WebPackageError
     build_dir = bin_dir.parent
     pack_dir = bin_dir / PACK_FOLDER_NAME
     try:
@@ -369,34 +309,33 @@ def make_package(request: PackageRequest, project_root: Path) -> Path:
     return staging_dir
 
 
-def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Shipping 빌드 · 쿠킹 · 스테이징으로 배포 패키지 하나를 만든다")
-    parser.add_argument("--platform", choices=list(MAP_PLATFORM_PRESET), default=DESKTOP_PLATFORM, help="패키지를 돌릴 플랫폼(Desktop 은 이 호스트)")
-    parser.add_argument("--target", choices=sorted(MAP_TARGET_PRESET), default="Client", help="빌드 타깃(Client · Server)")
-    parser.add_argument("--game", default="Playground", help="게임 프리셋 이름(Config/Game/<이름>.json, SW_ACTIVE_GAME)")
-    parser.add_argument("--rhi", default="", help="Shipping 이 정적으로 링크할 백엔드(쿠킹 표 이름 — DirectX12 · DirectX11 · Vulkan · OpenGL)")
-    parser.add_argument("--output", default="Saved/Packages", help="산출 폴더(저장소 기준 상대 경로 가능). 패키지는 <산출 폴더>/<게임>-<타깃>")
-    parser.add_argument("--bin-dir", default="", help="스테이징할 빌드의 Bin(기본: 타깃 프리셋의 build/<프리셋>/Bin)")
-    parser.add_argument("--skip-build", action="store_true", help="구성 · 빌드를 건너뛴다(이미 빌드된 Bin 을 쓴다)")
-    parser.add_argument("--skip-cook", action="store_true", help="쿠킹을 건너뛴다(Bin/Packs 를 그대로 쓴다). 빌드를 하면 빌드가 쿠킹한다")
-    parser.add_argument("--mods", default="", help="담을 모드 id(쉼표로 가른다). 개발 명령 `mod.pack <id>` 로 Saved/ModPacks/<id> 에 묶어 둔 것을 Mods/<id> 로 담는다")
-    return parser.parse_args(argv)
+class PackCommand(Command):
+    name = "pack"
+    help = "Shipping 빌드 · 쿠킹 · 스테이징으로 배포 패키지 하나를 만든다"
 
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--platform", choices=list(MAP_PLATFORM_PRESET), default=DESKTOP_PLATFORM, help="패키지를 돌릴 플랫폼(Desktop 은 이 호스트)")
+        parser.add_argument("--target", choices=sorted(MAP_TARGET_PRESET), default="Client", help="빌드 타깃(Client · Server)")
+        parser.add_argument("--game", default="Playground", help="게임 프리셋 이름(Config/Game/<이름>.json, SW_ACTIVE_GAME)")
+        parser.add_argument("--rhi", default="", help="Shipping 이 정적으로 링크할 백엔드(쿠킹 표 이름 — DirectX12 · DirectX11 · Vulkan · OpenGL)")
+        parser.add_argument("--output", default="Saved/Packages", help="산출 폴더(저장소 기준 상대 경로 가능). 패키지는 <산출 폴더>/<게임>-<타깃>")
+        parser.add_argument("--bin-dir", default="", help="스테이징할 빌드의 Bin(기본: 타깃 프리셋의 build/<프리셋>/Bin)")
+        parser.add_argument("--skip-build", action="store_true", help="구성 · 빌드를 건너뛴다(이미 빌드된 Bin 을 쓴다)")
+        parser.add_argument("--skip-cook", action="store_true", help="쿠킹을 건너뛴다(Bin/Packs 를 그대로 쓴다). 빌드를 하면 빌드가 쿠킹한다")
+        parser.add_argument("--mods", default="", help="담을 모드 id(쉼표로 가른다). 개발 명령 `mod.pack <id>` 로 Saved/ModPacks/<id> 에 묶어 둔 것을 Mods/<id> 로 담는다")
 
-def main(argv: list[str] | None = None) -> int:
-    args = parse_arguments(argv)
-    request = PackageRequest(target=args.target, game=args.game, rhi=args.rhi, output_root=Path(args.output), platform=args.platform,
-                             bin_dir=Path(args.bin_dir) if args.bin_dir else None, skip_build=args.skip_build, skip_cook=args.skip_cook,
-                             list_mod_id=[part.strip() for part in args.mods.split(",") if part.strip()])
-    project_root = get_project_root()
-    try:
-        staging_dir = make_package(request, project_root)
-    except (PackageError, OSError) as error:
-        print(f"[package] FAILED {request.current_step} {error}", flush=True)
-        return ExitCode.VIOLATION
-    print(f"[package] done {staging_dir} {measure_bytes(staging_dir)}", flush=True)
-    return ExitCode.PASSED
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        request = PackageRequest(target=args.target, game=args.game, rhi=args.rhi, output_root=Path(args.output), platform=args.platform,
+                                 bin_dir=Path(args.bin_dir) if args.bin_dir else None, skip_build=args.skip_build, skip_cook=args.skip_cook,
+                                 list_mod_id=[part.strip() for part in args.mods.split(",") if part.strip()])
+        try:
+            staging_dir = make_package(request, context.root)
+        except (PackageError, OSError) as error:
+            print(f"[package] FAILED {request.current_step} {error}", flush=True)   # 에디터 패키징 창이 이 줄을 읽는다
+            return ExitCode.VIOLATION
+        print(f"[package] done {staging_dir} {measure_bytes(staging_dir)}", flush=True)
+        return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(PackCommand.main())

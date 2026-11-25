@@ -25,8 +25,9 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
+from common.command import Command, ScriptContext  # noqa: E402
 from generate.file_digest_cache import FileDigestCache  # noqa: E402
-from generate.generator_output import write_generated_file  # noqa: E402
+from generate.generator_output import GeneratorError, write_generated_file  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 
 SOURCE_EXTENSIONS = (".h", ".hpp", ".cpp", ".inl", ".xxx")
@@ -89,29 +90,31 @@ def _make_header_text(map_fingerprint: dict[str, int], compiler_version: str) ->
     )
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="쿠커 코드 지문과 셰이더 컴파일러 버전을 C++ 헤더로 씁니다")
-    parser.add_argument("--root", required=True, help="저장소 루트")
-    parser.add_argument("--inputs", required=True, help="쿠커별 입력 경로 JSON")
-    parser.add_argument("--vcpkg-status", required=True, help="vcpkg 설치 기록(<installed>/vcpkg/status)")
-    parser.add_argument("--out", required=True, help="쓸 헤더 경로")
-    parser.add_argument("--cache", required=True, help="파일 지문 캐시(빌드 트리 안 JSON)")
-    args = parser.parse_args(argv)
+class CookCodeFingerprintCommand(Command):
+    name = "cook-code-fingerprint"
+    help = "쿠커 코드 지문과 셰이더 컴파일러 버전을 C++ 헤더로 쓴다(빌드 단계)"
 
-    repository_root = Path(os.path.normpath(Path(args.root).absolute()))
-    try:
-        map_input: dict[str, list[str]] = json.loads(Path(args.inputs).read_text(encoding="utf-8"))
-        cache = FileDigestCache(Path(args.cache))
-        map_fingerprint = {name: _compute_fingerprint(repository_root, list_input, cache) for name, list_input in map_input.items()}
-        cache.save()
-        compiler_version = _make_tool_version_text(Path(args.vcpkg_status))
-    except (OSError, ValueError, TypeError, AttributeError) as error:
-        print(f"[CookCodeFingerprint] {error}", file=sys.stderr)
-        return ExitCode.CHECK_INVALID
-    # 빌드마다 도는 단계라 바뀐 때만 한 줄 찍는다. 내용이 같으면 파일을 다시 쓰지 않아 Ninja 의 restat 이 그 뒤를 멈춘다.
-    write_generated_file(Path(args.out), _make_header_text(map_fingerprint, compiler_version), tag="CookCodeFingerprint", newline="\n", report_unchanged=False)
-    return ExitCode.PASSED
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--root", required=True, help="저장소 루트")
+        parser.add_argument("--inputs", required=True, help="쿠커별 입력 경로 JSON")
+        parser.add_argument("--vcpkg-status", required=True, help="vcpkg 설치 기록(<installed>/vcpkg/status)")
+        parser.add_argument("--out", required=True, help="쓸 헤더 경로")
+        parser.add_argument("--cache", required=True, help="파일 지문 캐시(빌드 트리 안 JSON)")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        repository_root = Path(os.path.normpath(Path(args.root).absolute()))
+        try:
+            map_input: dict[str, list[str]] = json.loads(Path(args.inputs).read_text(encoding="utf-8"))
+            cache = FileDigestCache(Path(args.cache))
+            map_fingerprint = {name: _compute_fingerprint(repository_root, list_input, cache) for name, list_input in map_input.items()}
+            cache.save()
+            compiler_version = _make_tool_version_text(Path(args.vcpkg_status))
+        except (OSError, ValueError, TypeError, AttributeError) as error:
+            raise GeneratorError(str(error)) from error
+        # 빌드마다 도는 단계라 바뀐 때만 한 줄 찍는다. 내용이 같으면 파일을 다시 쓰지 않아 Ninja 의 restat 이 그 뒤를 멈춘다.
+        write_generated_file(Path(args.out), _make_header_text(map_fingerprint, compiler_version), tag="CookCodeFingerprint", newline="\n", report_unchanged=False)
+        return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(CookCodeFingerprintCommand.main())

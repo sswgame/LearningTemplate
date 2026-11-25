@@ -6,9 +6,9 @@
 #   // EXPECT-GEN: <글>        파서가 성공하고 <이름>.gen.cpp 에 이 글이 있다.
 #   // EXPECT-NOT-GEN: <글>    <이름>.gen.cpp 에 이 글이 없다.
 #   // EXPECT-META: <글>       <이름>.gen.meta.cpp(개발 전용 에디터 메타데이터 단위)에 이 글이 있다.
-#   // EXPECT-NOT-ASSET-FIELD: <이름> <대상> <ref|data|path|text>  AssetReferenceFields.list 에 그 줄이 없다.
+#   // EXPECT-NOT-ASSET-FIELD: <이름> <대상>  AssetReferenceFields.list 에 그 줄이 없다.
 #   // EXPECT-TYPE: <FQN>      ReflectedTypes.list 에 `<FQN>\t<모듈>` 줄이 있다.
-#   // EXPECT-ASSET-FIELD: <이름> <대상> <ref|data|path|text>  AssetReferenceFields.list 에 `<이름>\t<대상>\t<ref|data|path|text>` 줄이 있다.
+#   // EXPECT-ASSET-FIELD: <이름> <대상>  AssetReferenceFields.list 에 `<이름>\t<대상>` 줄이 있다.
 # 입력: TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX · GEN_META_CPP_SUFFIX
 foreach(required TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX GEN_META_CPP_SUFFIX)
 	if(NOT DEFINED ${required})

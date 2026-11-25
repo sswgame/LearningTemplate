@@ -15,7 +15,7 @@
 	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
 	<DevCommand line="playground.online.login"/>
 	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
-	<DevCommand line="playground.online.joinhub 127.0.0.1:17977"/>
+	<DevCommand line="playground.online.joinhub {gv_gameServerAddress}"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutSeconds="30"/>
 	<Expect watch="Playground.MatchState" equals="0"/>
 	<!-- ② 줄 → 배정 → 매치 서버 -->

@@ -117,7 +117,9 @@ namespace sw
         const vector<hashed_string>& getAnalogNames() const { return _listAnalog; }
         void                         setAnalogNames( const vector<hashed_string>& listAnalog ) { _listAnalog = listAnalog; }
         const hashed_string&         getMoveAction() const { return _moveAction; }
-        const hashed_string&         getLookAction() const { return _lookAction; }
+        /** @brief 이동 축 액션 이름입니다(빈 이름: 이동 없음 — 입력 맵에 묻지 않는다). 코드로 만든 폰 · 테스트가 쓴다. 씬의 폰은 PROPERTY 가 채운다. */
+        void                 setMoveAction( const hashed_string& moveAction ) { _moveAction = moveAction; }
+        const hashed_string& getLookAction() const { return _lookAction; }
         /** @brief 보기 축 액션 이름입니다(빈 이름: 보기 없음 — 입력 맵에 묻지 않는다). 코드로 만든 폰 · 테스트가 쓴다. 씬의 폰은 PROPERTY 가 채운다. */
         void                 setLookAction( const hashed_string& lookAction ) { _lookAction = lookAction; }
         const hashed_string& getUpAction() const { return _upAction; }

@@ -153,7 +153,7 @@ endfunction()
 #      - 리플렉션(`EditorCoreReflect`)은 `list_editor_model_layer` 폴더와 뷰 층 `Model` 폴더의 REFLECT · ENUM 헤더 전부(위 `list_editor_reflect_core` - 입력을 폴더 정규식으로 못 정해 같은 조건으로 구성 때 모은다)의 `.gen.cpp` 를 한 번만 짓는다. 소비자는 이 헤더를 자기 리플렉션 입력에 넣지 않는다. EditorModule 은 이 폴더들을 자기 리플렉션 입력에서
 #        뺀다(같은 `StaticType()` 이 두 곳에 정의되지 않게). FlagOps 우산과 gen 폴더는 `sw_link_editor_core` 가 소비자에게 같은 값으로 준다.
 #      - 오브젝트는 EditorModule(Dev 의 SHARED) 이미지에 들어간다(`SW_EDITOR_EXPORTS` 로 지어 내보낸다). 에디터 쪽 단위 테스트(`Tests/`)는
-#        에디터 자체 테스트 `editor.unitTests` 가 에디터 안에서 돌린다. 배포 · 전용 서버에는 에디터가 없어 만들지 않는다.
+#        `App --test-editor`(ctest `UnitTests.Editor`)가 창 · GPU 없이 돌린다. 배포 · 전용 서버에는 에디터가 없어 만들지 않는다.
 # ------------------------------------------------------------------------------
 set(editor_model_imgui_block "${CMAKE_BINARY_DIR}/generated/sw/EditorModelForbidsImGui.h")
 file(GENERATE OUTPUT "${editor_model_imgui_block}" CONTENT

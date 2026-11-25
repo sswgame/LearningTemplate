@@ -21,16 +21,12 @@ from __future__ import annotations
 
 import argparse
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-from common.exit_code import ExitCode  # noqa: E402
-from common.git import run_git_or_raise  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.command import Command, ScriptContext
+from common.exit_code import ExitCode
+from common.git import run_git_or_raise
 
 DECLARATION = re.compile(r"^\+\s*(?:\[\[nodiscard\]\]\s*)?(?:(?:static|virtual|inline|constexpr|explicit|SW_\w+)\s+)*[\w:<>,\s\*&]+?\b([a-z][A-Za-z0-9]*)\s*\([^;{]*\)\s*(?:const\s*)?(?:(?:override|final|noexcept)\s*)*(?:=\s*0\s*)?[;{]")
 MEMBER = re.compile(r"^\+\s*(?:(?:static|inline|constexpr|mutable|const)\s+)*[\w:<>,\*&\s]+?[\s\*&>](_[A-Za-z]\w*)\s*(?:\{[^;]*\}|=[^;]*)?;")
@@ -116,27 +112,27 @@ def collect_existing_names(project_root: Path, base: str) -> set[str]:
     return {re.sub(r"^[^:]*:", "", line).split("(")[0].strip() for line in text.splitlines()}
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="묶음이 새로 들인 함수 이름을 검토 목록으로 내고 갈래 사이 같은 새 이름을 찾는다")
-    parser.add_argument("--base", required=True, help="묶음 시작 커밋")
-    parser.add_argument("refs", nargs="*", help="볼 브랜치(없으면 작업 트리)")
-    arguments = parser.parse_args(argv)
-    project_root = get_project_root()
-    existing = collect_existing_names(project_root, arguments.base)
-    map_ref_names = {ref or "(작업 트리)": collect_new_names(project_root, arguments.base, ref) for ref in arguments.refs or [None]}
-    list_row = sorted({(ref, new_name._path, new_name._name) for ref, list_name in map_ref_names.items() for new_name in list_name
-                       if new_name._kind == "function" and new_name._name not in existing})
-    for ref, where, name in list_row:
-        print(f"{ref}  {where}  {name}")
-    print(f"[api-diff] 새 함수 이름 {len({row[2] for row in list_row})}개 — 업계 이름과 대조해 검토한다")
-    overlaps = find_overlaps(map_ref_names)
-    for (kind, name, _), owners in sorted(overlaps.items()):
-        print(f"[api-diff] 겹침 {kind} '{name}': " + ", ".join(f"{ref} ({where})" for ref, where in owners))
-    if overlaps:
-        print(f"[api-diff] 갈래 사이 같은 새 이름 {len(overlaps)}개 — 병합 전에 한 갈래로 모은다")
-        return ExitCode.VIOLATION
-    return ExitCode.PASSED
+class ApiDiffCommand(Command):
+    name = "api-diff"
+    help = "묶음이 새로 들인 함수 이름을 검토 목록으로 내고 갈래 사이 같은 새 이름(함수 · 멤버 · 등록 이름 · Config 키)을 찾는다(--base <묶음 시작> [브랜치 …]) — 통합 검토용"
 
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--base", required=True, help="묶음 시작 커밋")
+        parser.add_argument("refs", nargs="*", help="볼 브랜치(없으면 작업 트리)")
 
-if __name__ == "__main__":
-    sys.exit(main())
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        project_root = context.root
+        existing = collect_existing_names(project_root, args.base)
+        map_ref_names = {ref or "(작업 트리)": collect_new_names(project_root, args.base, ref) for ref in args.refs or [None]}
+        list_row = sorted({(ref, new_name._path, new_name._name) for ref, list_name in map_ref_names.items() for new_name in list_name
+                           if new_name._kind == "function" and new_name._name not in existing})
+        for ref, where, name in list_row:
+            print(f"{ref}  {where}  {name}")
+        print(f"[api-diff] 새 함수 이름 {len({row[2] for row in list_row})}개 — 업계 이름과 대조해 검토한다")
+        overlaps = find_overlaps(map_ref_names)
+        for (kind, name, _), owners in sorted(overlaps.items()):
+            print(f"[api-diff] 겹침 {kind} '{name}': " + ", ".join(f"{ref} ({where})" for ref, where in owners))
+        if overlaps:
+            print(f"[api-diff] 갈래 사이 같은 새 이름 {len(overlaps)}개 — 병합 전에 한 갈래로 모은다")
+            return ExitCode.VIOLATION
+        return ExitCode.PASSED

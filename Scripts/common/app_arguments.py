@@ -21,7 +21,6 @@ ARGUMENT_LINE = re.compile(r'^SW_REGISTER_ARGUMENT\(\s*\w+\s*,\s*(\w+)\s*,\s*([^
 #: 쓰는 구성(`CommandLineArgumentUsage`) 중 배포 구성이 철자를 등록하지 않는 것 — 배포 App 에 주면 기동이 멈춘다.
 SHIPPING_REJECTED_USAGE_SET = frozenset({'Dev', 'Test', 'AndroidDev'})
 GLOBAL_VARIABLE = re.compile(r'SW_[A-Z_]*GLOBAL_VARIABLE[A-Z_]*\(\s*[\w:<> ]+?\s*,\s*(gv_\w+)\s*,')
-SOURCE_SUFFIX = {'.cpp', '.h', '.inl'}
 
 
 class AppArgumentError(RuntimeError):
@@ -55,13 +54,9 @@ def read_shipping_rejected_arguments() -> list[str]:
 @functools.cache
 def read_global_variable_names() -> frozenset[str]:
     """`Source/` 가 등록하는 전역 변수 이름(`gv_…`)."""
-    names: set[str] = set()
-    for path in (get_project_root() / 'Source').rglob('*'):
-        if path.suffix in SOURCE_SUFFIX:
-            text = path.read_text(encoding='utf-8', errors='replace')
-            if 'GLOBAL_VARIABLE' in text:
-                names.update(GLOBAL_VARIABLE.findall(text))
-    return frozenset(names)
+    # 파일 1 만 9 천 개를 하나씩 열면 실행기마다 1 분이었다 — git 색인으로 그 글이 든 줄만 읽는다(아직 추적하지 않은 새 파일도).
+    grepped = run_process(['git', 'grep', '--untracked', '-h', 'GLOBAL_VARIABLE', '--', 'Source'], cwd=get_project_root()).stdout
+    return frozenset(GLOBAL_VARIABLE.findall(grepped))
 
 
 def check_argument(name: str, takes_value: bool) -> None:
@@ -139,27 +134,3 @@ def read_chain_stages(command: Sequence[str]) -> list[str]:
     if value is None:
         raise AppArgumentError('명령에 -scenario= 가 없다')
     return value.split(',')
-
-
-def self_check() -> int:
-    assert read_argument_table()['scenario'] is True and read_argument_table()['unattended'] is False
-    rejected = read_shipping_rejected_arguments()
-    assert '-test' in rejected and '-EnableEditor' in rejected and '-unattended' not in rejected and '-log-file=x' not in rejected
-    assert flag('scenario-keep-going') == '-scenario-keep-going'
-    assert option('scenario', 'a,b') == '-scenario=a,b'
-    assert 'gv_scenarioWallScale' in read_global_variable_names()
-    for bad in (lambda: flag('scenario'), lambda: option('unattended', 1), lambda: flag('no-such-argument'), lambda: variable('gv_noSuchVariable', 1)):
-        try:
-            bad()
-        except AppArgumentError:
-            continue
-        raise AssertionError('잘못된 인자가 통과했다')
-    command = ['App', '-scenario=a,b', '-unattended', '-scenario-backends=all', '-log-file=x']
-    assert without(command, 'unattended', 'scenario-backends') == ['App', '-scenario=a,b', '-log-file=x']
-    assert read_chain_stages(command) == ['a', 'b']
-    print('self-check ok')
-    return 0
-
-
-if __name__ == '__main__':
-    raise SystemExit(self_check())

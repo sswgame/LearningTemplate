@@ -30,6 +30,11 @@ namespace sw
 
         /** @brief 플랫폼 백엔드, 렌더러, 폰트를 초기화합니다. */
         [[nodiscard]] virtual bool initialize( GenericWindow* pWindow, IRHIDevice* pRHIDevice ) = 0;
+        /**
+         * @brief 창 · RHI 없이 에디터 데이터 · ImGui 컨텍스트 · 에디터 컨텍스트만 세웁니다(에디터 단위 테스트). 프레임은 돌리지 않는다.
+         * @details 유니티 EditMode 테스트의 `-batchmode -nographics` 와 같은 자리다.
+         */
+        [[nodiscard]] virtual bool initializeHeadless() = 0;
         /** @brief 에디터 리소스를 해제합니다. */
         virtual void shutdown() = 0;
 

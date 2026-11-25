@@ -9,7 +9,7 @@
  *            `bindSpawned` 하면 다음 `update` 에서 등록된다 — 번호가 없는 오브젝트는 복제하지 않는다.
  *          - **권한**: 서버만 피해를 만든다. 클라이언트는 컴포넌트 권한을 끄고(`DestructionReplicationClient::registerObject`) 서버의 사건을 받는다.
  *            폭발 드럼통(`ExplosiveBarrelComponent`)처럼 피해를 내는 기믹은 서버의 게임플레이라 클라이언트에서 끈다.
- *          - **해시 로그**: 오브젝트의 사건 수가 바뀔 때마다 `[DestructionHash] side=<server|client> id=<번호> events=<사건 수> hash=<16 자리> name=<이름>` 한 줄을 남긴다.
+ *          - **해시 로그**: 오브젝트의 사건 수가 바뀔 때마다 id 가 `DestructionNetSession.HashLine` 인 로그 줄 하나를 JSON 본문(`side` · `id` · `events` · `hash` · `name`)으로 남긴다.
  *            같은 그래프에 같은 사건을 같은 순서로 적용하면 같은 해시다(`DestructionState::computeStateHash`) — 다른 컴파일러 · 플랫폼의 서버와 클라이언트
  *            로그를 `py -3 -m Scripts destruction-net compare`(`Scripts/net/destruction_net_pair.py`)가 (번호, 사건 수) 로 맞대어 본다. 클라이언트가 스냅숏으로 건너뛴 사건 수는 그 줄이 없다.
  *            로그 매크로를 쓰므로 Shipping 에는 줄이 없다.
@@ -104,7 +104,7 @@ namespace sw
         /** @brief 클라이언트 복제기입니다(테스트의 결함 주입 `skipNextEvent`). 서버면 쓰지 않습니다. */
         DestructionReplicationClient& getClientReplication() { return _client; }
 
-        /** @brief 해시 로그 한 줄을 만듭니다(`[DestructionHash] side=… id=… events=… hash=… name=…`). 비교 스크립트가 이 형식을 읽습니다. */
+        /** @brief 해시 로그 한 줄의 JSON 본문을 만듭니다(`{"side":…,"id":…,"events":…,"hash":…,"name":…}`). 비교 스크립트가 읽습니다. */
         static string formatHashLine( DestructionNetSide side, const DestructionHashRecord& record, string_view objectName );
 
     private:

@@ -6,44 +6,41 @@
 돌리기 전에 프리셋을 증분 빌드한다(고친 코드 대신 옛 바이너리가 뜨지 않게). 기본: Ninja-Release, dx12, editor. --stages 는 engine/automation/editor 의 단계 이름 묶음이다.
 """
 import argparse
-import pathlib
 import subprocess
-import sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
-from common import app_arguments  # noqa: E402
-from common.paths import get_build_dir  # noqa: E402
-from common.run_process import build_preset_or_exit  # noqa: E402
-from dev import scenario_bisect  # noqa: E402
+from common.command import Command, ScriptContext
+from common import app_arguments
+from common.paths import get_build_dir
+from common.run_process import build_preset_or_exit
 
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--preset', default='Ninja-Release')
-    parser.add_argument('--backend', default='dx12')
-    parser.add_argument('--stages')
-    parser.add_argument('--speed', type=int, default=1, help='그린 프레임 N 개마다 하나를 내보낸다(1 = 매 프레임)')
-    parser.add_argument('chains', nargs='*', default=['editor'])
-    options = parser.parse_args()
-    if options.speed < 1:
-        parser.error('--speed 는 1 이상이다')
-    build_preset_or_exit(options.preset, cwd=scenario_bisect.REPO)   # 옛 바이너리를 눈으로 보지 않게
-    build_dir = get_build_dir(options.preset)
-    code = 0
-    for chain in options.chains if options.stages is None else ['editor']:
-        command = app_arguments.without(app_arguments.find_chain_command(build_dir, chain), 'unattended', 'scenario-backend-split', 'scenario-backends', 'log-file')
-        if options.stages is not None:
-            listed = ','.join(f'engine/automation/editor/{n}.scenario.xml' for n in options.stages.split(','))
-            command = app_arguments.without(command, 'scenario') + [app_arguments.option('scenario', listed)]
-        log = build_dir / 'Testing' / 'Logs' / f'Watch.{chain}.log'
-        command += [app_arguments.option('scenario-backends', options.backend), app_arguments.option('log-file', log), app_arguments.variable('gv_scenarioPresentInterval', options.speed)]
-        print(f'{chain}: {options.preset} {options.backend} x{options.speed}', flush=True)
-        rc = subprocess.run(command, cwd=build_dir / 'Bin').returncode
-        print(f'{chain} rc={rc} 로그 {log}', flush=True)
-        code = code or rc
-    return code
+class WatchScenariosCommand(Command):
+    name = "watch-scenarios"
+    help = "사람이 보면서 시나리오를 돌린다(창을 띄운다 — 판정은 무인 실행과 같다). --stages 는 engine/automation/editor 의 단계 이름 묶음"
 
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument('--preset', default='Ninja-Release')
+        parser.add_argument('--backend', default='dx12')
+        parser.add_argument('--stages')
+        parser.add_argument('--speed', type=int, default=1, help='그린 프레임 N 개마다 하나를 내보낸다(1 = 매 프레임)')
+        parser.add_argument('chains', nargs='*', default=['editor'])
 
-if __name__ == '__main__':
-    sys.exit(main())
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        if args.speed < 1:
+            self.parser.error('--speed 는 1 이상이다')
+        build_preset_or_exit(args.preset, cwd=context.root)   # 옛 바이너리를 눈으로 보지 않게
+        build_dir = get_build_dir(args.preset)
+        code = 0
+        for chain in args.chains if args.stages is None else ['editor']:
+            command = app_arguments.without(app_arguments.find_chain_command(build_dir, chain), 'unattended', 'scenario-backend-split', 'scenario-backends', 'log-file')
+            if args.stages is not None:
+                listed = ','.join(f'engine/automation/editor/{n}.scenario.xml' for n in args.stages.split(','))
+                command = app_arguments.without(command, 'scenario') + [app_arguments.option('scenario', listed)]
+            log = build_dir / 'Testing' / 'Logs' / f'Watch.{chain}.log'
+            command += [app_arguments.option('scenario-backends', args.backend), app_arguments.option('log-file', log), app_arguments.variable('gv_scenarioPresentInterval', args.speed)]
+            print(f'{chain}: {args.preset} {args.backend} x{args.speed}', flush=True)
+            rc = subprocess.run(command, cwd=build_dir / 'Bin').returncode
+            print(f'{chain} rc={rc} 로그 {log}', flush=True)
+            code = code or rc
+        return code

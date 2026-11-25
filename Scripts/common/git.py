@@ -6,13 +6,11 @@ git 실행 파일 탐색과 git 이 알려 주는 파일 목록 — setup(vcpkg 
 
 from __future__ import annotations
 
-import contextlib
 import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
-from typing import Iterator, Sequence
+from typing import Sequence
 
 from . import HOOK_GIT_ENVIRONMENT
 from .host_platform import is_windows_host
@@ -64,17 +62,6 @@ def make_hook_environment() -> dict[str, str]:
     return {**os.environ, **HOOK_GIT_ENVIRONMENT}
 
 
-@contextlib.contextmanager
-def outside_hook_repository() -> Iterator[None]:
-    """`run_git_in_hook_repository` 가 커밋 훅의 저장소 변수를 되돌려 쓰지 않는 구간 — 임시 저장소를 훅 입구(`make_staged_scope`)로 읽는 자체 검사가 쓴다."""
-    saved = dict(HOOK_GIT_ENVIRONMENT)
-    HOOK_GIT_ENVIRONMENT.clear()
-    try:
-        yield
-    finally:
-        HOOK_GIT_ENVIRONMENT.update(saved)
-
-
 def run_git(args: Sequence[str], *, cwd: Path | None = None) -> ProcessResult:
     """
     Git 명령어를 실행하고 결과를 반환합니다(출력은 UTF-8 — 한글 경로 · 커밋 메시지가 시스템 코드 페이지로 깨지지 않게).
@@ -113,22 +100,3 @@ def run_git_bytes(args: Sequence[str], *, cwd: Path, input_bytes: bytes, hook_re
     completed = subprocess.run([resolve_git_executable() or "git", *args], input=input_bytes, cwd=cwd, capture_output=True, check=False,
                                env=make_hook_environment() if hook_repository else None)
     return completed.returncode, completed.stdout, completed.stderr.decode("utf-8", "replace")
-
-
-def list_git_files(project_root: Path, list_git_argument: list[str], extensions: set[str] | None) -> set[Path]:
-    """
-    git 명령이 한 줄에 하나씩 찍는 저장소 기준 경로를 절대 경로로 풀어 모읍니다. 지금 있는 파일만, `extensions` 가 있으면 그 확장자만.
-
-    staged 전체 · staged C++ · 수정된 C++ · untracked C++ 네 곳이 이 여덟 줄을 각자 적고 있었습니다.
-    """
-    file_set: set[Path] = set()
-    git_result = run_git(list_git_argument, cwd=project_root)
-    if git_result.return_code != 0:
-        # 목록을 못 얻으면 "바뀐 파일 없음" 이 아니다 — 빈 목록이면 커밋 훅이 검사 없이 통과한다.
-        raise RuntimeError(f"git {' '.join(list_git_argument)} 실패: {git_result.stderr.strip()}")
-    for raw_line in git_result.stdout.splitlines():
-        if line := raw_line.strip():
-            resolved_path = (project_root / line).resolve()
-            if resolved_path.is_file() and (extensions is None or resolved_path.suffix.lower() in extensions):
-                file_set.add(resolved_path)
-    return file_set

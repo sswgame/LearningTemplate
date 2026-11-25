@@ -21,16 +21,11 @@ from __future__ import annotations
 
 import argparse
 import re
-import sys
-from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Iterable
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.exit_code import ExitCode  # noqa: E402
-from common.git import run_git, run_git_or_raise  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.command import Command, ScriptContext
+from common.exit_code import ExitCode
+from common.git import run_git, run_git_or_raise
 
 NEXT_PATH = "docs/NEXT.md"
 DONE_LINE = re.compile(r"^NEXT:\s*(\S.*?)\s*끝\.?\s*$", re.M)
@@ -62,21 +57,21 @@ def find_remaining(messages: Iterable[str], base_text: str, head_text: str) -> t
     return list_remaining, list_warning
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts next-done", description="커밋이 끝냈다고 적은 NEXT 줄이 남아 있는지 본다")
-    parser.add_argument("--base", default="origin/main", help="기준 커밋(검증해 push 한 것)")
-    arguments = parser.parse_args(argv)
-    root = get_project_root()
-    messages = run_git_or_raise(["log", "--format=%B%x00", f"{arguments.base}..HEAD"], cwd=root).split("\x00")
-    base = run_git(["show", f"{arguments.base}:{NEXT_PATH}"], cwd=root)
-    head = run_git(["show", f"HEAD:{NEXT_PATH}"], cwd=root)
-    list_remaining, list_warning = find_remaining(messages, base.stdout, head.stdout)
-    for warning in list_warning:
-        print(f"[next-done] 알림: {warning}")
-    for line in list_remaining:
-        print(f"[next-done] 끝났다고 적힌 줄이 {NEXT_PATH} 에 그대로다 — 지우거나 남은 몫으로 고친다: {line}")
-    return ExitCode.VIOLATION if list_remaining else ExitCode.PASSED
+class NextDoneCommand(Command):
+    name = "next-done"
+    help = "커밋 꼬리말 `NEXT: <줄 앞말> 끝` 이 가리킨 줄이 docs/NEXT.md 에 그대로 남아 있는지 본다(--base, 묶음 검증 시작에서)"
 
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--base", default="origin/main", help="기준 커밋(검증해 push 한 것)")
 
-if __name__ == "__main__":
-    sys.exit(main())
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        root = context.root
+        messages = run_git_or_raise(["log", "--format=%B%x00", f"{args.base}..HEAD"], cwd=root).split("\x00")
+        base = run_git(["show", f"{args.base}:{NEXT_PATH}"], cwd=root)
+        head = run_git(["show", f"HEAD:{NEXT_PATH}"], cwd=root)
+        list_remaining, list_warning = find_remaining(messages, base.stdout, head.stdout)
+        for warning in list_warning:
+            print(f"[next-done] 알림: {warning}")
+        for line in list_remaining:
+            print(f"[next-done] 끝났다고 적힌 줄이 {NEXT_PATH} 에 그대로다 — 지우거나 남은 몫으로 고친다: {line}")
+        return ExitCode.VIOLATION if list_remaining else ExitCode.PASSED

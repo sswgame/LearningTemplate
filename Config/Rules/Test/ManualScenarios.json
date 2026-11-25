@@ -1,0 +1,20 @@
+{
+    "_comment": "ctest 항목이 띄울 수 없는 시나리오(Content 기준 경로). 까닭(reason)과 돌리는 명령(command)이 필수다. 여기 없는데 어느 항목도 띄우지 않는 시나리오가 있거나, 항목이 띄우는 것이 여기 있으면 구성이 선다(Test/Scenario/CMakeLists.txt). changed 단계의 표가 까닭을 그대로 낸다(Scripts/dev/test_history.py).",
+    "_scenarios": [
+        {
+            "path": "game/playground/automation/debugger/hotreloadbreakpoint.scenario.xml",
+            "reason": "lldb 아래에서 띄워 브레이크포인트 · PDB 잠금을 보고, 돌아가는 동안 게임 모듈을 다시 짓는다",
+            "command": "py -3 Scripts/dev/hot_reload_debug_check.py"
+        },
+        {
+            "path": "game/playground/automation/debugger/hotreloadlayout.scenario.xml",
+            "reason": "lldb 아래에서 띄우고, 돌아가는 동안 헤더를 바꿔 게임 모듈을 다시 짓는다",
+            "command": "py -3 Scripts/dev/hot_reload_debug_check.py"
+        },
+        {
+            "path": "game/playground/automation/web/dominput.scenario.xml",
+            "reason": "브라우저 페이지의 DOM 이벤트를 보는 웹 빌드 시나리오 — 웹 묶음을 만든 뒤 헤드리스 브라우저가 띄운다",
+            "command": "py -3 -m Scripts web-check --game Playground --scenario game/playground/automation/web/dominput.scenario.xml"
+        }
+    ]
+}

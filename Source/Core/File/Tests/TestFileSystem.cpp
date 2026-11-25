@@ -136,7 +136,7 @@ namespace
     };
     static_assert( CanCallExists<const AbsolutePath&>::value, "disk I/O takes AbsolutePath" );
     static_assert( CanCallExists<string>::value == false && CanCallExists<string_view>::value == false && CanCallExists<const utf8*>::value == false,
-                   "disk I/O does not take strings - lift them with FileUtil::toDiskPath (disk-path-args)" );
+                   "disk I/O does not take strings - lift them with FileUtil::toDiskPath" );
     static_assert( std::is_convertible_v<string, AbsolutePath> == false && std::is_convertible_v<string_view, AbsolutePath> == false,
                    "a string never becomes a disk path implicitly" );
 } // namespace
@@ -148,7 +148,7 @@ namespace
 SW_TEST_CASE( FileSystemTest, ToDiskPathNormalizesAndEmptyFails )
 {
     const AbsolutePath file     = test::makeScratchPath( "disk-path.txt" );
-    string             text     = file.str(); // 글 입구를 본다 — `const` 글이면 바꾸기 도구(disk-path-join)가 형식으로 올린다
+    string             text     = file.str(); // 글 입구를 본다
     const AbsolutePath diskPath = FileUtil::toDiskPath( text );
     SW_REQUIRE_FALSE( diskPath.empty() );
     SW_EXPECT_EQUAL( FileUtil::normalizeSeparators( file.str() ), diskPath.str() );

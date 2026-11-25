@@ -67,24 +67,6 @@ def map_concurrent(
             yield future.result()
 
 
-def flat_map_concurrent(
-    worker: Callable[[TItem], Iterable[TResult]],
-    items: Sequence[TItem],
-    *,
-    worker_count: int | None = None,
-) -> list[TResult]:
-    """
-    `items` 를 동시에 처리하고 각 결과(목록)를 이어 붙여 돌려줍니다 — 위반 목록을 모으는 흔한 모양.
-
-    @note 순서는 **완료 순**이라 결정적이지 않다. 출력이 안정적이어야 하면 호출부가 정렬한다.
-    """
-    collected: list[TResult] = []
-    for result in map_concurrent(worker, items, worker_count=worker_count):
-        if result:
-            collected.extend(result)
-    return collected
-
-
 #: 프로세스 하나가 맡을 최소 항목 수. 이보다 적으면 그만큼 적게 띄우고, 한 개면 띄우지 않는다 — 윈도우에서 프로세스를 띄우고
 #: 스크립트를 다시 import 하는 데 0.3 s 가량 든다(셀프테스트처럼 파일 몇 개짜리 훑기가 그 값을 치르지 않게).
 MIN_ITEMS_PER_PROCESS = 64

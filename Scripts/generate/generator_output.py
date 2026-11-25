@@ -5,19 +5,20 @@
   CMake 가 include 하는 파일이면 configure 가 다시 돈다. 비교는 읽은 글끼리(줄끝을 맞춘 뒤)다.
 - **줄끝은 생성기가 고른다.** 기본은 플랫폼 것(텍스트 모드 — Windows CRLF), `newline="\\n"` 이면 어디서나 LF(바이트를 해시하는 스탬프 · 고지).
 - **CMake 값은 이스케이프한다.** 윈도우 경로(`C:\\Program Files`)를 그대로 넣으면 CMake 가 `\\P` 를 이스케이프로 읽어 조용히 다른 경로가 된다.
-- 진입점 모양 하나 — `run_generator` 가 인자 파싱 · 오류 한 줄 · 종료 코드를 든다.
+- 생성기의 기반 — configure 생성기는 `Generator`, 빌드 단계가 부르는 것은 `Command`(`common/command.py`)다.
 """
 
 from __future__ import annotations
 
-import argparse
+import abc
 import contextlib
+import importlib
 import os
 import sys
 from pathlib import Path
-from typing import Any, Callable, Iterator, Sequence
+from typing import Any, Iterator
 
-from common.exit_code import ExitCode
+from common.command import CommandError
 
 
 def write_generated_file(path: Path, content: str, *, tag: str, summary: str = "", newline: str | None = None,
@@ -98,20 +99,24 @@ def write_input_list(path: Path, files: set[Path], *, tag: str) -> bool:
     return write_generated_file(path, content, tag=tag, newline="\n", report_unchanged=False)
 
 
-class GeneratorError(Exception):
+class GeneratorError(CommandError):
     """생성기가 입력(JSON · 상수)을 읽지 못했다 — 트레이스백 대신 한 줄로 찍고 1 로 끝난다(configure 가 무엇을 고칠지 먼저 보게)."""
 
 
-def run_generator(argv: Sequence[str] | None, *, tag: str, description: str,
-                 add_arguments: Callable[[argparse.ArgumentParser], None],
-                 generate: Callable[[argparse.Namespace], None]) -> int:
-    """생성기 진입점. `generate(args)` 가 `GeneratorError` 를 던지면 `[tag] 메시지` 한 줄 + 1. 인자가 틀리면 argparse 가 2."""
-    parser = argparse.ArgumentParser(description=description)
-    add_arguments(parser)
-    args = parser.parse_args(argv)
-    try:
-        generate(args)
-    except GeneratorError as error:
-        print(f"[{tag}] {error}", file=sys.stderr)
-        return ExitCode.VIOLATION
-    return ExitCode.PASSED
+class Generator(abc.ABC):
+    """
+    configure 생성기 하나 = 파일 하나. 입력 목록을 손으로 적지 않는다 — 도는 동안 읽은 파일을 `record_read_files` 가 모아 configure 의존이 된다. 출력의 낡음은
+    내용 비교(`write_generated_file`)가 본다. 파일을 더하면 configure 가 함께 돌고 지우면 빠진다(`find_generators`).
+    """
+
+    @abc.abstractmethod
+    def generate(self, output_dir: Path, game_name: str) -> None:
+        """`output_dir`(`<빌드>/generated/sw/config`)에 쓴다. 입력이 틀리면 `GeneratorError`."""
+
+
+def find_generators() -> list[Generator]:
+    """`Scripts/generate/*.py` 의 `Generator` 하위 클래스(모듈 이름 순)."""
+    for path in sorted(Path(__file__).resolve().parent.glob("*.py")):
+        if "(Generator):" in path.read_text(encoding="utf-8"):
+            importlib.import_module(f"generate.{path.stem}")
+    return [generator() for generator in sorted(Generator.__subclasses__(), key=lambda generator: generator.__module__)]

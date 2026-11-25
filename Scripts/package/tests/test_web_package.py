@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from package.web_check import RunReport, evaluate_run, evaluate_scenario, AUDIO_STARTED_LINE, PROBE_PATH, write_check_page, write_scenario_page  # noqa: E402
-from package.web_package import IsolatedRequestHandler, WebPackageError, INDEX_HTML, PACK_LOADER_NAME, make_web_package  # noqa: E402
+from package.web_packager import IsolatedRequestHandler, WebPackageError, INDEX_HTML, PACK_LOADER_NAME, make_web_package  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 

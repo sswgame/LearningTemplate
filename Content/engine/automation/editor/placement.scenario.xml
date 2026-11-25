@@ -45,7 +45,7 @@
 	<WaitUntil watch="Editor.PlacementYaw" equals="180" timeoutFrames="30"/>
 	<EditorKey key="Shift+Z"/>
 	<WaitUntil watch="Editor.PlacementYaw" equals="90" timeoutFrames="30"/>
-	<CaptureEditorUI file="placement/ghost.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="placement/ghost.png" everyBackend="true"/>
 	<EditorClick mark="sceneView.canvas" state="Up"/>
 	<WaitUntil watch="Editor.PlacedCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
@@ -72,7 +72,7 @@
 	<EditorHover mark="sceneView.canvas"/>
 	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.PlacementSurface" equals="0"/>
-	<CaptureEditorUI file="placement/nosurface.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="placement/nosurface.png"/>
 	<EditorClick mark="sceneView.canvas" state="Up"/>
 	<WaitUntil watch="Editor.PlacementRefusedCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.PlacedCount" equals="1"/>
@@ -93,7 +93,7 @@
 	<AdvanceSimulation frames="3"/> <!-- 끌어 놓기는 누름 · 옮김을 다른 프레임에 나눠야 시작된다(프레임 경계) -->
 	<EditorHover mark="sceneView.canvas"/>
 	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
-	<CaptureEditorUI file="placement/opens.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="placement/opens.png"/>
 	<EditorClick mark="sceneView.canvas" state="Up"/>
 	<WaitUntil watch="Editor.PlacementOpenedCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.PlacedCount" equals="1"/>

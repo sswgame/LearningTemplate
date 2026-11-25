@@ -8,12 +8,13 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
 {
     /** @struct JSONStringUtil @brief JSON 문자열 이스케이프(전부 static). 파일 머리말 참고. */
-    struct JSONStringUtil
+    struct SW_API JSONStringUtil
     {
         /** @brief 이스케이프한 조각을 받는 함수입니다 — 고정 버퍼에 쓰는 쪽(`JSONWriter`)도 할당 없이 받는다. */
         using AppendFunction = void ( * )( void* pContext, string_view piece );

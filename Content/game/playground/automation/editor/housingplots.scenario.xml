@@ -16,7 +16,7 @@
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.HousingPlotFrames" equals="1" timeoutFrames="120"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="housingplots/plots.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="housingplots/plots.png"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

@@ -189,17 +189,14 @@ class Baseline:
     def write(self, project_root: Path) -> None:
         (project_root / self.path).write_text(self.dump(), encoding="utf-8", newline="\n")
 
-    def update(self, project_root: Path, tag: str, list_file: Sequence[Path], count: Callable[[Sequence[Path]], dict[str, dict[str, int]]],
-               list_accept: Sequence[str] | None) -> None:
-        """`--ratchet`(@p list_accept 없음 — 모든 파일 @p list_file 을 세어 낮춘다) · `--accept <파일…>`(그 파일만 지금 수로)을 적용하고 쓴다."""
+    def update(self, project_root: Path, actual: Mapping[str, Mapping[str, int]], list_accept: Sequence[str] | None) -> None:
+        """`--ratchet`(@p list_accept 없음 — 저장소 전체를 센 @p actual 로 낮춘다) · `--accept <파일…>`(그 파일만 지금 수로)을 적용하고 쓴다."""
         if list_accept is None:
-            self.lower(count(list_file), {path.relative_to(project_root).as_posix() for path in list_file})
+            self.lower(actual, {path for path in self.files if (project_root / path).is_file()})
         else:
-            list_path = [Path(path).resolve() for path in list_accept]
-            actual = count([path for path in list_path if path.is_file()])
-            for path in list_path:
-                relative = path.relative_to(project_root).as_posix()
-                print(f"[{tag}] accept {relative}: {self.files.get(relative, {})} -> {actual.get(relative, {})}")
+            for path in list_accept:
+                relative = Path(path).resolve().relative_to(project_root.resolve()).as_posix()
+                print(f"[lint] accept {relative}: {self.files.get(relative, {})} -> {actual.get(relative, {})}")
                 self.accept(relative, actual.get(relative, {}))
         self.write(project_root)
-        print(f"[{tag}] baseline -> {self.path}")
+        print(f"[lint] baseline -> {self.path}")

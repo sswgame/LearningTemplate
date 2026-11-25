@@ -17,21 +17,18 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Sequence
+from typing import Iterable
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-import common  # noqa: E402,F401 — 콘솔 UTF-8
-from common.exit_code import ExitCode  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from lint.lint_scope import make_whole_scope  # noqa: E402
-from lint.naming_words import collect_source_names, is_external_name, DECLARATION_KINDS, read_table, split_lower_words  # noqa: E402
+from common.command import Command, ScriptContext
+from common.exit_code import ExitCode
+from lint.lint_scope import make_whole_scope
+from lint.name_collection import DECLARATION_KINDS, is_external_name, iterate_names, split_lower_words
+from lint.rule_tables import read_rule_table
 
 
-def build_census(list_name: list[tuple[str, str, str]]) -> dict[str, dict[str, tuple[str, str]]]:
+def build_census(list_name: Iterable[tuple[str, str, str]]) -> dict[str, dict[str, tuple[str, str]]]:
     """(종류, 이름, 파일) → 낱말 → 이름 → (종류, 첫 파일)."""
     census: dict[str, dict[str, tuple[str, str]]] = defaultdict(dict)
     for kind, name, path in list_name:
@@ -60,29 +57,16 @@ def write_census(out_dir: Path, census: dict[str, dict[str, tuple[str, str]]], t
     return len(census)
 
 
-def run_self_check() -> None:
-    census = build_census([("member", "_walkSpeed", "a.h"), ("function", "hoverMark", "a.h"), ("file", "SceneWalkKey", "Source/a/SceneWalkKey.h")])
-    assert set(census["walk"]) == {"_walkSpeed", "SceneWalkKey"} and census["walk"]["_walkSpeed"] == ("member", "a.h"), census
-    assert "hover" in census and "mark" in census and "_" not in "".join(census), census
+class NamingCensusCommand(Command):
+    name = "naming-census"
+    help = "Source 의 모든 이름(형식 · 함수 · 멤버 · 상수 · 매크로 · 파일 · 폴더)을 낱말로 쪼개 종류별로 센다(--out <폴더>) — 이름 전수 대조용"
 
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--out", required=True, help="결과 폴더(words.tsv · words.json)")
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts naming-census", description="Source 의 모든 이름을 낱말로 쪼개 종류별로 센다")
-    parser.add_argument("--out", help="결과 폴더(words.tsv · words.json)")
-    parser.add_argument("--self-check", action="store_true")
-    arguments = parser.parse_args(argv)
-    if arguments.self_check:
-        run_self_check()
-        print("[NamingCensus] self-check OK")
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        project_root = context.root
+        census = build_census(iterate_names(project_root, make_whole_scope(project_root)))
+        count = write_census(Path(args.out), census, read_rule_table(project_root, "naming-words"))
+        print(f"[NamingCensus] 낱말 {count}개 → {args.out}")
         return ExitCode.PASSED
-    if not arguments.out:
-        parser.error("--out 이 필요하다")
-    project_root = get_project_root()
-    census = build_census(collect_source_names(project_root, make_whole_scope(project_root)))
-    count = write_census(Path(arguments.out), census, read_table(project_root))
-    print(f"[NamingCensus] 낱말 {count}개 → {arguments.out}")
-    return ExitCode.PASSED
-
-
-if __name__ == "__main__":
-    sys.exit(main())

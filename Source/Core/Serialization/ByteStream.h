@@ -106,7 +106,6 @@ namespace sw
      *          한 값 읽기는 모두 값을 돌려준다(`[[nodiscard]]`, 실패면 0 · 빈 값) — 출력 인자 `readX( T& out )` 은 없앴다: 반환 `bool` 을 버리면 실패를 잃었고
      *          (`(void)` · 무시), 실패 때 출력 칸이 옛 값으로 남았다. 실패는 깃발 하나라 매 줄 검사하지 않아도 된다 — 형식의 끝에서 `finish()` 한 번이 모든 실패와
      *          남은 바이트를 보고, 중간에 갈라야 하면 `hasOverflowed()` 를 본다(언리얼 `FArchive::IsError` 와 같은 자리). `finish()` 는 `[[nodiscard]]` 라 끝 검사를 잊는 모양이 컴파일 경고다.
-     *          되돌리는 도구 · 남은 옛 모양 검사는 `py -3 -m Scripts byte-reader-values`(린트 `cpp-shape` 규칙 13).
      */
     class ByteReader
     {

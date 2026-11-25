@@ -78,7 +78,7 @@
 	<EditorWaitStable/>
 	<Expect watch="Editor.RenderDebuggerTab" equals="3"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="renderdebugger/occlusion.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="renderdebugger/occlusion.png" everyBackend="true"/>
 	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

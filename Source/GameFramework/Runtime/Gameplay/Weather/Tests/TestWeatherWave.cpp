@@ -5,6 +5,7 @@
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Runtime/Gameplay/Weather/WeatherWaveComponent.h"
 
@@ -31,6 +32,9 @@ SW_TEST_CASE( WeatherWaveTest, NoWeatherKeepsTheWrittenWaves )
     WeatherWaveComponent* pWaves = pObject->addComponent<WeatherWaveComponent>();
     SW_REQUIRE_NOT_NULL( pWater );
     SW_REQUIRE_NOT_NULL( pWaves );
+    const PropertyInfo* pWeatherValue = WeatherWaveComponent::StaticType()->findProperty( hashed_string( "_weatherValue" ) ); // 데이터가 적는 필수 칸이다
+    SW_REQUIRE_NOT_NULL( pWeatherValue );
+    *pWeatherValue->getValuePtr<hashed_string>( static_cast<void*>( pWaves ) ) = hashed_string( "wind" );
     pWater->setMaterialPath( "" );
     pWater->setWaveAmplitudeScale( 3.0f );
     manager.beginPlay();

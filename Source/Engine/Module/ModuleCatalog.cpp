@@ -15,6 +15,8 @@
 
 #include "sw/config/ConfigConstants.h"
 
+#include <algorithm>
+
 namespace sw
 {
     namespace
@@ -406,6 +408,26 @@ namespace sw
     bool ModuleResolution::isActive( string_view name ) const
     {
         return VectorUtil::contains( _listLoadOrder, name );
+    }
+
+    void ModuleResolution::keepOnly( const ModuleCatalog& catalog, string_view moduleName )
+    {
+        // 의존이 먼저인 순서라 거꾸로 훑으면, 남길 모듈의 의존은 늘 아직 보지 않은 쪽에 있다.
+        vector<string> listNeeded{ string( moduleName ) };
+        vector<string> listKept;
+        for ( auto it = _listLoadOrder.rbegin(); it != _listLoadOrder.rend(); ++it )
+        {
+            const ModuleManifest* const pManifest = catalog.findManifest( *it );
+            if ( pManifest == nullptr || VectorUtil::contains( listNeeded, *it ) == false )
+                continue;
+            listKept.push_back( *it );
+            for ( const ModuleDependency& dependency : pManifest->_listDependency )
+            {
+                listNeeded.push_back( dependency._name );
+            }
+        }
+        std::reverse( listKept.begin(), listKept.end() );
+        _listLoadOrder = std::move( listKept );
     }
 } // namespace sw
 

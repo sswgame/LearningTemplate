@@ -15,11 +15,11 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   rerun [체인]           마지막 체인 보고에서 진 단계를 혼자 → 앞을 붙여 → 이분 탐색으로 다시 돈다(scenario_bisect --rerun-failed 와 같은 함수)
   goldens                클론의 .linux 골든을 본 저장소로 복사하고 한 색인 사진을 알린다
   stop                   돌고 있는 실행을 끝낸다(체인 · 게임 · Xvfb). 게임 프로세스는 이름이 GameThread 로 바뀌어 있다
-  all [--record]         build → (Release 단위 ‖ 서버 빌드 · 기동 · 단위) → 모든 체인(병렬, Release · Vulkan). 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다
+  all [--record]         build → (Release 단위 ‖ 서버 빌드 · 기동 · 단위) → 모든 체인(병렬, Release · Vulkan). 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다(어디서 지든 LINUX_FAILED)
   sanitize [address|thread]  새니타이저 Debug(프리셋 Linux-Debug-ASan · Linux-Debug-TSan)로 App 을 짓고 단위 테스트를 돈다. address 는 끝에 퍼저를 타깃마다 30 초. 끝 줄 SANITIZE_OK=<종류>
   fuzz [이름…] [--minutes N]  퍼저(프리셋 Linux-Fuzz, Test/Fuzz)를 짓고 타깃마다 N 분(기본 0.5) 돌린다. 이름이 없으면 Test/Fuzz/Seeds 의 모든 타깃. 끝 줄 FUZZ_OK
-  --self-check           퍼저 로그 · 체인 단계 줄 · 끝 줄(SCENARIO_RESULT=) 판정의 자체 검사(빌드 없이)
 """
+import argparse
 import concurrent.futures
 import contextlib
 import io
@@ -33,10 +33,11 @@ import sys
 import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
+from common.command import Command, ScriptContext  # noqa: E402
 from common.git import run_git_or_raise  # noqa: E402
 from common.host_platform import is_windows_host  # noqa: E402
 from common import app_arguments  # noqa: E402
-from dev import scenario_bisect  # noqa: E402
+from dev import scenario_runs  # noqa: E402
 
 DISTRO = 'Ubuntu-26.04'
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -67,11 +68,10 @@ HEAD_ENV = 'LT_LINUX_HEAD'  # 부른 작업 폴더의 HEAD — 워크트리의 .
 BUILT_COMMIT = f'{RELEASE}/built-commit.txt'  # Release 를 끝까지 지은 커밋(build 가 쓴다) — 모듈 빌드 스탬프(ModuleBuild.stamp)는 시각만 담아 커밋을 모른다
 
 
-def run_in_wsl(argv):
+def run_in_wsl(gpu: str, action: str, arguments: list[str]) -> int:
     """Windows 쪽: HEAD 를 refs/linux-verify 에 적고 같은 명령을 WSL 에서 띄운다."""
-    command = argv[2:] if argv[:1] == ['--gpu'] else argv  # `--gpu <드라이버> all` 도 HEAD 를 옮긴다
     head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=REPO).strip()
-    if command and command[0] in ('build', 'all', 'sanitize', 'fuzz'):  # sanitize 도 클론을 되돌린다 — 옮기지 않으면 따로 돌린 sanitize 가 옛 커밋을 짓는다
+    if action in ('build', 'all', 'sanitize', 'fuzz'):  # sanitize 도 클론을 되돌린다 — 옮기지 않으면 따로 돌린 sanitize 가 옛 커밋을 짓는다
         run_git_or_raise(['update-ref', 'refs/linux-verify', head], cwd=REPO)
     env = dict(os.environ, MSYS_NO_PATHCONV='1', MSYS2_ARG_CONV_EXCL='*')
     env[HEAD_ENV] = head
@@ -80,7 +80,7 @@ def run_in_wsl(argv):
     common_dir = pathlib.Path(run_git_or_raise(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd=REPO).strip())
     env[GIT_SOURCE_ENV] = to_wsl_path(common_dir, env)
     env['WSLENV'] = ':'.join(filter(None, (os.environ.get('WSLENV'), GIT_SOURCE_ENV, HEAD_ENV)))
-    return subprocess.call(['wsl.exe', '-d', DISTRO, '--', 'python3', f'{wsl_repo}/Scripts/dev/linux_scenarios.py'] + argv, env=env)
+    return subprocess.call(['wsl.exe', '-d', DISTRO, '--', 'python3', f'{wsl_repo}/Scripts/dev/linux_scenarios.py', '--gpu', gpu, action, *arguments], env=env)
 
 
 def to_wsl_path(windows_path, env):
@@ -394,7 +394,7 @@ def stages(arguments):
 
 
 def bisect(arguments):
-    """이분 탐색은 scenario_bisect.find_first_bad_step(Windows 와 같은 함수) — 여기는 Xvfb · 드라이버(scenario_env) 실행기와 ctest 목록만 댄다."""
+    """이분 탐색은 scenario_runs.find_first_bad_step(Windows 와 같은 함수) — 여기는 Xvfb · 드라이버(scenario_env) 실행기와 ctest 목록만 댄다."""
     target = arguments[0]
     pack = arguments[1] if len(arguments) > 1 else 'editor'
     require_current_build()
@@ -403,23 +403,23 @@ def bisect(arguments):
         command = app_arguments.find_chain_command(pathlib.Path(RELEASE), pack, env)
         paths = app_arguments.read_chain_stages(command)
         # 단계 이름은 시나리오 파일의 name 속성, 판정은 실행마다 비운 보고 폴더의 JSON(scenario_bisect 과 같은 함수) — 로그 문구를 읽지 않는다.
-        target_index, target_name = scenario_bisect.resolve_target({index: scenario_bisect.read_scenario_name(path) for index, path in enumerate(paths)}, target)
+        target_index, target_name = scenario_runs.resolve_target({index: scenario_runs.read_scenario_name(path) for index, path in enumerate(paths)}, target)
         base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report')
         run_counter = [0]
 
         def fails(prefix):
             listed = ','.join(prefix + [paths[target_index]])
             run_counter[0] += 1
-            run_dir = scenario_bisect.make_run_report_folder(pathlib.Path(RELEASE), run_counter[0])
+            run_dir = scenario_runs.make_run_report_folder(pathlib.Path(RELEASE), run_counter[0])
             subprocess.run(['timeout', '1200', *base, app_arguments.option('scenario', listed), app_arguments.flag('scenario-keep-going'), app_arguments.option('scenario-backends', 'vk'),
                             app_arguments.option('scenario-report', run_dir / 'report.json'),
                             *window_arguments(), app_arguments.option('log-file', 'x_bisect.log')], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            bad = scenario_bisect.stage_failed_in_reports(scenario_bisect.read_run_reports(run_dir), target_name)
+            bad = scenario_runs.stage_failed_in_reports(scenario_runs.read_run_reports(run_dir), target_name)
             print(len(prefix), prefix[0] if prefix else '-', '짐' if bad else '통과', flush=True)
             return bad
 
         before = paths[:target_index]
-        found_index = scenario_bisect.find_first_bad_step(before, fails)
+        found_index = scenario_runs.find_first_bad_step(before, fails)
         if found_index is None:
             print('재현 안 됨 - 체인의 다른 인자(--record) · 앞 체인 상태를 본다')
             return 1
@@ -430,20 +430,22 @@ def bisect(arguments):
 
 
 def retry_failed(arguments):
-    """마지막 체인 실행에서 진 단계를 다시 돈다 — scenario_bisect.retry_failed_stages(Windows 와 같은 함수)에 Xvfb · 드라이버 실행기를 댄다."""
+    """마지막 체인 실행에서 진 단계를 다시 돈다 — scenario_runs.retry_failed_stages(Windows 와 같은 함수)에 Xvfb · 드라이버 실행기를 댄다."""
     pack = arguments[0] if arguments else 'editor'
     require_current_build()
     command = app_arguments.find_chain_command(pathlib.Path(RELEASE), pack)
     paths = app_arguments.read_chain_stages(command)
-    names = [scenario_bisect.read_scenario_name(path) for path in paths]
+    names = [scenario_runs.read_scenario_name(path) for path in paths]
     log_dir = pathlib.Path(f'{RELEASE}/Testing/Logs')
-    folder = scenario_bisect.find_latest_per_backend_folder(pathlib.Path(f'{RELEASE}/Bin/Saved/Automation'), set(names), log_dir / f'Scenario.{pack}.log')
+    folder = scenario_runs.find_latest_per_backend_folder(pathlib.Path(f'{RELEASE}/Bin/Saved/Automation'), set(names), log_dir / f'Scenario.{pack}.log')
     if folder is None:
         print(f'{pack} 의 체인 보고가 없다 - chain {pack} 을 먼저 돌린다')
         return 1
     split = any('scenario-backend-split' in part for part in command)
-    failed = scenario_bisect.select_failed_stages(scenario_bisect.collect_expected_stages(folder, log_dir, pack, names, split), scenario_bisect.read_backend_reports(folder))
-    print(f'{pack}: {folder} 에서 진 단계 {len(failed)} 개', flush=True)
+    list_report = scenario_runs.read_backend_reports(folder)
+    failed = scenario_runs.select_failed_stages(scenario_runs.collect_expected_stages(folder, log_dir, pack, names, split), list_report)
+    code_change = scenario_runs.describe_code_change([report for _, report in list_report], pathlib.Path(CLONE))
+    print(f'{pack}: {folder} 에서 진 단계 {len(failed)} 개{f" — 코드가 바뀌었다: {code_change}" if code_change else ""}', flush=True)
     with Xvfb():
         env = scenario_env(99)
         base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report')
@@ -451,15 +453,15 @@ def retry_failed(arguments):
 
         def run_stage(stage_paths, target_name, backend):
             run_counter[0] += 1
-            run_dir = scenario_bisect.make_run_report_folder(pathlib.Path(RELEASE), run_counter[0])
+            run_dir = scenario_runs.make_run_report_folder(pathlib.Path(RELEASE), run_counter[0])
             subprocess.run(['timeout', '1200', *base, app_arguments.option('scenario', ','.join(stage_paths)), app_arguments.flag('scenario-keep-going'),
                             app_arguments.option('scenario-backends', backend), app_arguments.option('scenario-report', run_dir / 'report.json'),
                             *window_arguments(), app_arguments.option('log-file', 'x_retry.log')], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            bad = scenario_bisect.stage_failed_in_reports(scenario_bisect.read_run_reports(run_dir), target_name)
+            bad = scenario_runs.stage_failed_in_reports(scenario_runs.read_run_reports(run_dir), target_name)
             print(backend, len(stage_paths), target_name, '짐' if bad else '통과', flush=True)
             return bad
 
-        return scenario_bisect.retry_failed_stages(paths, failed, run_stage)
+        return scenario_runs.retry_failed_stages(paths, failed, run_stage, code_change)
 
 
 def read_ppm_colors(path):
@@ -509,11 +511,22 @@ def run_job(steps):
     return 0
 
 
+def finish(failure, work, arguments):
+    """끝 줄이 있는 명령을 돌린다 — work 는 (종료 코드, 끝 줄)을 돌려주므로 끝 줄 없이 지는 길이 없다. 예외(클론 동기화 실패 · sys.exit)로 끝나면 failure 를 찍는다."""
+    try:
+        code, line = work(arguments)
+    except BaseException:
+        print(failure, flush=True)
+        raise
+    print(line, flush=True)
+    return code
+
+
 def verify_all(arguments):
     """묶음 끝 Linux 검증 한 번. Debug 클라이언트는 짓지 않는다 - Release 단위가 키트까지 덮고 단언은 Windows Debug 가 본다. 서버 구성은 렌더러를 빼 여기서만 드러나는 층 위반이 있어 남긴다."""
     code = build()
     if code != 0:
-        return code
+        return code, 'LINUX_FAILED'
     head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=pathlib.Path(CLONE)).strip()
     server_dir = f'{CLONE}/build/Linux-Server'
     # 시간을 판정하지 않는 CPU 일 두 갈래를 겹친다(Release 단위 ‖ 서버 구성 → 빌드 → 기동 → 단위) — 묶음 검증(preflight.sh 의 cpu 단계)과 같은 원칙이다.
@@ -527,41 +540,35 @@ def verify_all(arguments):
         list_code = list(pool.map(run_job, jobs))
     code = next((rc for rc in list_code if rc != 0), 0)
     if code != 0:
-        return code
+        return code, 'LINUX_FAILED'
     # 빠른 실패: 단위 · 서버가 지면 긴 체인을 돌리지 않는다.
     code = chain(arguments + ALL_CHAINS)
     if code != 0:
-        print('LINUX_FAILED')
-        return code
-    print(f'LINUX_OK={head}')
-    return 0
+        return code, 'LINUX_FAILED'
+    return 0, f'LINUX_OK={head}'
 
 
 def sanitize(arguments):
     """새니타이저 Debug 로 단위 테스트를 돈다(감사 P-8). ASan 은 묶음마다 한 번, TSan 은 주기로 — 수명 · 경쟁 결함의 자동 그물이다."""
     kind = arguments[0] if arguments else 'address'
     if kind not in ('address', 'thread'):
-        print(f'sanitize 는 address 또는 thread 다: {kind}')
-        return 2
+        return 2, f'sanitize 는 address 또는 thread 다: {kind}'
     sync_clone()
     preset = 'Linux-Debug-ASan' if kind == 'address' else 'Linux-Debug-TSan'
     build_dir = f'{CLONE}/build/{preset}'
     if configure_and_build(preset, ['App'], tsan=kind == 'thread') != 0:
-        return 1
+        return 1, f'SANITIZE_FAILED={kind}'
     # 누수는 처음에는 끈다 — 기준선을 만든 뒤 켠다(감사 P-8 "detect_leaks=0 으로 시작"). 첫 오류에서 멈춰 보고를 읽게 한다.
     options = ('ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1' if kind == 'address'
                else f'TSAN_OPTIONS=halt_on_error=1:second_deadlock_stack=1:suppressions={CLONE}/Config/Build/TsanSuppressions.txt')
     rc = shell(f'cd {build_dir} && {options} ./Bin/App --test -unattended > {VERIFY_LOGS}/lt.sanitize.log 2>&1; rc=$?; '
                f'grep -E "case run|FAILED|ERROR: (Address|Thread)Sanitizer|runtime error|WARNING: ThreadSanitizer" {VERIFY_LOGS}/lt.sanitize.log | head -n 20 | cut -c1-200; exit $rc').returncode
     if rc != 0:
-        print(f'SANITIZE_FAILED={kind} - {VERIFY_LOGS}/lt.sanitize.log')
-        return rc
+        return rc, f'SANITIZE_FAILED={kind} - {VERIFY_LOGS}/lt.sanitize.log'
     # 퍼저는 ASan 묶음 끝에 타깃마다 30 초 — 클론은 위에서 이미 옮겼다.
-    if kind == 'address' and run_fuzz([], FUZZ_SMOKE_SECONDS, sync=False) != 0:
-        print('SANITIZE_FAILED=fuzz')
-        return 1
-    print(f'SANITIZE_OK={kind}')
-    return 0
+    if kind == 'address' and finish('FUZZ_FAILED', lambda names: run_fuzz(names, FUZZ_SMOKE_SECONDS, sync=False), []) != 0:
+        return 1, 'SANITIZE_FAILED=fuzz'
+    return 0, f'SANITIZE_OK={kind}'
 
 
 def configure_and_build(preset, targets, tsan=False):
@@ -604,7 +611,7 @@ def run_fuzz(names, seconds, sync=True):
     seeds_root = pathlib.Path(f'{CLONE}/Test/Fuzz/Seeds')
     names = names or sorted(path.name for path in seeds_root.iterdir() if path.is_dir())
     if configure_and_build('Linux-Fuzz', [f'Fuzz_{name}' for name in names]) != 0:
-        return 1
+        return 1, 'FUZZ_FAILED'
     build_dir = f'{CLONE}/build/Linux-Fuzz'
     failed = []
     for name in names:
@@ -620,10 +627,8 @@ def run_fuzz(names, seconds, sync=True):
         if reason is not None:
             failed.append(name)
     if failed:
-        print('FUZZ_FAILED=' + ','.join(failed))
-        return 1
-    print('FUZZ_OK')
-    return 0
+        return 1, 'FUZZ_FAILED=' + ','.join(failed)
+    return 0, 'FUZZ_OK'
 
 
 def fuzz(arguments):
@@ -634,26 +639,6 @@ def fuzz(arguments):
         minutes = float(arguments[index + 1])
         arguments = arguments[:index] + arguments[index + 2:]
     return run_fuzz(arguments, max(1, int(minutes * 60)))
-
-
-def self_check():
-    """판정 함수의 자체 검사(빌드 없이) — 크래시 줄, 모듈 수 부족, 정상."""
-    assert evaluate_fuzz_log('INFO: Loaded 3 modules\n==1==ERROR: AddressSanitizer: heap-buffer-overflow') == 'ERROR: AddressSanitizer'
-    assert evaluate_fuzz_log('INFO: Loaded 1 modules   (10 inline 8-bit counters)').startswith('coverage reaches only')
-    assert evaluate_fuzz_log('INFO: Loaded 4 modules   (99 inline 8-bit counters)\nDone 2000 runs') is None
-    # 체인 단계 끝 줄 — 앞머리는 그대로, 진 단계는 판정 값 한 줄(`<종류> - <까닭>`)이 붙는다. `: <Pass/>` 로 끝나는 실패 줄은 없다.
-    failed = '[Error] [Scenario] chain stage 12/94 Failed (game.playground.vfxsort): UnhandledLog - [Warning] (id=Shadow.AtlasFull) atlas full (+2) - 3 later stage(s) skipped'
-    assert parse_chain_stage(failed) == (12, 94, 'Failed', 'game.playground.vfxsort', 'UnhandledLog - [Warning] (id=Shadow.AtlasFull) atlas full (+2)'), parse_chain_stage(failed)
-    assert parse_chain_stage('[Info] [Scenario] chain stage 1/2 Passed (editor.focus)') == (1, 2, 'Passed', 'editor.focus', '')
-    assert parse_chain_stage('chain stage 3/3 Skipped (a.b): no window manager') == (3, 3, 'Skipped', 'a.b', 'no window manager')
-    assert parse_chain_stage('[Scenario] chain Failed (3 stage(s), 1 failed, 0 skipped, 1 not run)') is None
-    # 끝 줄 — 마지막 것을 읽고, 없으면 None(크래시는 통과가 아니다).
-    assert read_result_line('x\n[Info] [Scenario] SCENARIO_RESULT=FAILED stages=4 failed=1 notRun=2\n') == 'SCENARIO_RESULT=FAILED stages=4 failed=1 notRun=2'
-    assert read_result_line('TEST_RESULT=FAILED run=1 failed=1 skipped=0\nTEST_RESULT=PASSED run=3 failed=0 skipped=0') == 'TEST_RESULT=PASSED run=3 failed=0 skipped=0'
-    assert read_result_line('[==========] 3 case run(s)') is None
-    print('SELF_CHECK_OK')
-    return 0
-
 
 
 def find_run_processes():
@@ -707,50 +692,44 @@ def setup_dzn():
     return 0
 
 
-def main(argv):
-    if argv[:1] == ['--self-check']:
-        return self_check()
-    if is_windows_host():
-        return run_in_wsl(argv)
-    os.makedirs(VERIFY_LOGS, exist_ok=True)
-    os.environ['PATH'] = PATH_LINUX  # git(common.git)도 shell() 과 같은 도구를 본다 — 물려받은 PATH 에는 git-lfs 가 없어 클론 reset 이 졌다
-    global GPU
-    if argv[:1] == ['--gpu'] and len(argv) > 1:
-        GPU = argv[1]
-        argv = argv[2:]
-        if GPU not in ('dzn', 'software'):
-            sys.exit(f'--gpu 는 dzn 또는 software 다: {GPU}')
-    command = argv[0] if argv else ''
-    arguments = argv[1:]
-    if command == 'setup':
-        return setup()
-    if command == 'setup-dzn':
-        return setup_dzn()
-    if command == 'build':
-        return build()
-    if command == 'chain':
-        return chain(arguments)
-    if command == 'stages' and arguments:
-        return stages(arguments)
-    if command == 'bisect' and arguments:
-        return bisect(arguments)
-    if command == 'rerun':
-        return retry_failed(arguments)
-    if command == 'report':
-        return report(arguments[0] if arguments else 'editor')
-    if command == 'goldens':
-        return goldens()
-    if command == 'stop':
-        return stop()
-    if command == 'all':
-        return verify_all(arguments)
-    if command == 'sanitize':
-        return sanitize(arguments)
-    if command == 'fuzz':
-        return fuzz(arguments)
-    print(__doc__)
-    return 2
+#: 명령 → 그 일(나머지 인자를 받는다)
+ACTIONS = {
+    'setup': lambda arguments: setup(),
+    'setup-dzn': lambda arguments: setup_dzn(),
+    'build': lambda arguments: build(),
+    'chain': chain,
+    'stages': stages,
+    'bisect': bisect,
+    'report': lambda arguments: report(arguments[0] if arguments else 'editor'),
+    'rerun': retry_failed,
+    'goldens': lambda arguments: goldens(),
+    'stop': lambda arguments: stop(),
+    'all': lambda arguments: finish('LINUX_FAILED', verify_all, arguments),
+    'sanitize': lambda arguments: finish('SANITIZE_FAILED', sanitize, arguments),
+    'fuzz': lambda arguments: finish('FUZZ_FAILED', fuzz, arguments),
+}
+
+
+class LinuxScenariosCommand(Command):
+    name = "linux-scenarios"
+    help = "Linux(WSL 클론) 빌드 · 체인 · 새니타이저 · 골든 입구(setup · all · build · chain · stages · rerun · sanitize · goldens …)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument('--gpu', choices=('dzn', 'software'), default=GPU, help='시나리오 드라이버 — WSL GPU(dzn · d3d12) 또는 소프트웨어(lavapipe · llvmpipe)')
+        parser.add_argument('action', choices=tuple(ACTIONS))
+        parser.add_argument('arguments', nargs=argparse.REMAINDER, help='그 명령의 인자')
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        global GPU
+        if args.action in ('stages', 'bisect') and not args.arguments:
+            self.parser.error(f'{args.action} 는 단계 이름을 받는다')
+        if is_windows_host():
+            return run_in_wsl(args.gpu, args.action, args.arguments)
+        os.makedirs(VERIFY_LOGS, exist_ok=True)
+        os.environ['PATH'] = PATH_LINUX  # git(common.git)도 shell() 과 같은 도구를 본다 — 물려받은 PATH 에는 git-lfs 가 없어 클론 reset 이 졌다
+        GPU = args.gpu
+        return ACTIONS[args.action](args.arguments)
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(LinuxScenariosCommand.main())

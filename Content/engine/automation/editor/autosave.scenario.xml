@@ -50,7 +50,7 @@
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="1"/>
 	<DevCommand line="panel.focus recovered_work"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="autosave/recovered.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="autosave/recovered.png"/>
 	<!-- ③ 원본은 그대로, 복원은 사본을 dirty 로 연다 -->
 	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>

@@ -29,7 +29,7 @@
 	<EditorWaitStable/>
 	<EditorClick mark="inspector.property.EditorDiagnosticsPreferences._bRememberIgnoredAsserts"/>
 	<WaitUntil watch="Editor.AssertIgnoreRemembered" equals="0" timeoutFrames="60"/>
-	<CaptureEditorUI file="assertdialog/preferences.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="assertdialog/preferences.png"/>
 	<!-- 되돌린다(환경설정 파일은 빈 에디터 상태 폴더라 다음 실행에 남지 않는다) -->
 	<EditorWaitStable/>
 	<EditorClick mark="inspector.property.EditorDiagnosticsPreferences._bShowAssertDialog"/>

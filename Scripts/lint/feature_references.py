@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/feature_references.py
 
@@ -19,26 +17,20 @@ Scripts/lint/feature_references.py
 
 예외는 데이터 한 곳(`Config/Rules/Lint/FeatureRefs.json`, 칸마다 이름 → 까닭)에 둔다. 까닭이 비었거나, 이제 참조가 생겼거나, 정의가 사라진 예외도 위반이다 — 표 형식(`rule_tables.ExceptionTable`)이 판정이 묻지 않은 줄을 낡은 예외로 낸다.
 
-`py -3 -m Scripts lint feature-refs [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
+`py -3 -m Scripts lint feature-refs [--self-check]` 로 돌리고, 커밋 훅이 돌린다.
 """
 
 from __future__ import annotations
 
-import argparse
 import re
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Iterable, Mapping
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.exit_code import ExitCode  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from lint.index_cache import open_facts  # noqa: E402
-from lint.lint_scope import LintScope, list_repo_files, make_whole_scope  # noqa: E402
-from lint.rule_tables import ExceptionTable  # noqa: E402
+from lint.index_cache import open_facts
+from lint.lint_rule import LintRule
+from lint.lint_scope import LintScope, list_repo_files
+from lint.rule_tables import ExceptionTable
 
 RULE_ID = "feature-refs"
 SECTIONS = ("_folders", "_components", "_watches", "_devCommands", "_logIDs")
@@ -206,60 +198,47 @@ def read_summary(project_root: Path) -> list[str]:
                           contribute=fold_tokens).summary)
 
 
-def check_feature_references(project_root: Path, scope: LintScope) -> list[str]:
-    """커밋 훅은 훑는 파일이 바뀌었을 때만 돈다(지운 파일 포함 — 참조를 지우면 참조 0 이 생긴다)."""
-    if not scope.whole_repo and not any(classify_path(path) for path in (*scope.list_file, *scope.list_removed)):
-        return []
-    return evaluate_summary(read_summary(project_root), ExceptionTable.load(project_root, RULE_ID, SECTIONS))
+class FeatureRefsRule(LintRule):
+    id = "feature-refs"
+    group = "참조"
+    blocks = "참조 0 인 컴포넌트 · 감시 값 · 개발 명령, 정의 없는 기대 로그 id"
+    why_not_type = "쓰는 곳 · 내는 곳이 있는지는 형식이 말하지 못한다"
+    tables = ("",)
 
+    def evaluate(self, scope: LintScope, found: Mapping[str, object]) -> list[str]:
+        """커밋 훅은 훑는 파일이 바뀌었을 때만 돈다(지운 파일 포함 — 참조를 지우면 참조 0 이 생긴다)."""
+        if not scope.whole_repo and not any(classify_path(path) for path in (*scope.list_file, *scope.list_removed)):
+            return []
+        return evaluate_summary(read_summary(self.root), self.load_exceptions(*SECTIONS))
 
-def run_self_check() -> None:
-    """규칙 자체의 시험 — 저장소를 읽지 않는다."""
-    sources = Sources()
-    sources.dict_header["Source/A/Used.h"] = 'REFLECT( Category = "A" )\nclass SW_API UsedComponent : public Component\n{\n};\n'
-    sources.dict_header["Source/A/Lonely.h"] = 'REFLECT()\nclass SW_API LonelyComponent : public Component\n{\n};\n'
-    sources.dict_header["Source/A/Base.h"] = 'REFLECT()\nclass SW_API BaseThingComponent : public Component\n{\n};\nclass DerivedOne : public BaseThingComponent\n{\n};\n'
-    sources.dict_header["Source/A/Plain.h"] = 'class SW_API PlainComponent : public Component\n{\n};\n'
-    sources.dict_header["Source/A/Coded.h"] = 'REFLECT()\nclass CodedComponent : public Component\n{\n};\n'
-    sources.dict_header["Source/A/Spawner.cpp"] = 'void f( GameObject& o ) { o.addComponent<CodedComponent>(); }\n'
-    sources.dict_header["Source/A/W.cpp"] = ('SW_AUTOMATION_WATCH( a, "A.Read", "tip", &read );\nSW_AUTOMATION_WALL_WATCH( b,\n "A.Unread", "tip", &read );\n'
-                                            'SW_DEV_COMMAND( c, "cmd.used", "cmd.used", "tip", &run );\nSW_DEV_COMMAND( d, "cmd.alone", "cmd.alone <x>",\n "tip", &run );\n'
-                                            'SW_DEV_COMMAND( e, "cmd.sent", "cmd.sent", "tip", &run );\nvoid g() { send( "cmd.sent 1" ); }\n')
-    sources.dict_header["Source/A/Cmd.cpp"] = ('struct I { static bool runLost( const vector<string>& listArgument, string& outReply ) { return true; }\n'
-                                              ' static bool runKept( const vector<string>& listArgument, string& outReply ) { return true; } };\n'
-                                              'SW_DEV_COMMAND( k, "cmd.kept", "cmd.kept", "tip", &I::runKept );\n')
-    sources.dict_content["Content/x.scene.xml"] = "<UsedComponent/>\n"
-    sources.dict_content["Content/x.scenario.xml"] = '<Expect watch="A.Read" equals="1"/>\n<DevCommand line="netplay.command clients cmd.used 3"/>\n<DevCommand line="cmd.kept"/>\n'
+    def self_check(self) -> None:
+        """규칙 자체의 시험 — 저장소를 읽지 않는다."""
+        sources = Sources()
+        sources.dict_header["Source/A/Used.h"] = 'REFLECT( Category = "A" )\nclass SW_API UsedComponent : public Component\n{\n};\n'
+        sources.dict_header["Source/A/Lonely.h"] = 'REFLECT()\nclass SW_API LonelyComponent : public Component\n{\n};\n'
+        sources.dict_header["Source/A/Base.h"] = 'REFLECT()\nclass SW_API BaseThingComponent : public Component\n{\n};\nclass DerivedOne : public BaseThingComponent\n{\n};\n'
+        sources.dict_header["Source/A/Plain.h"] = 'class SW_API PlainComponent : public Component\n{\n};\n'
+        sources.dict_header["Source/A/Coded.h"] = 'REFLECT()\nclass CodedComponent : public Component\n{\n};\n'
+        sources.dict_header["Source/A/Spawner.cpp"] = 'void f( GameObject& o ) { o.addComponent<CodedComponent>(); }\n'
+        sources.dict_header["Source/A/W.cpp"] = ('SW_AUTOMATION_WATCH( a, "A.Read", "tip", &read );\nSW_AUTOMATION_WALL_WATCH( b,\n "A.Unread", "tip", &read );\n'
+                                                'SW_DEV_COMMAND( c, "cmd.used", "cmd.used", "tip", &run );\nSW_DEV_COMMAND( d, "cmd.alone", "cmd.alone <x>",\n "tip", &run );\n'
+                                                'SW_DEV_COMMAND( e, "cmd.sent", "cmd.sent", "tip", &run );\nvoid g() { send( "cmd.sent 1" ); }\n')
+        sources.dict_header["Source/A/Cmd.cpp"] = ('struct I { static bool runLost( const vector<string>& listArgument, string& outReply ) { return true; }\n'
+                                                  ' static bool runKept( const vector<string>& listArgument, string& outReply ) { return true; } };\n'
+                                                  'SW_DEV_COMMAND( k, "cmd.kept", "cmd.kept", "tip", &I::runKept );\n')
+        sources.dict_content["Content/x.scene.xml"] = "<UsedComponent/>\n"
+        sources.dict_content["Content/x.scenario.xml"] = '<Expect watch="A.Read" equals="1"/>\n<DevCommand line="netplay.command clients cmd.used 3"/>\n<DevCommand line="cmd.kept"/>\n'
 
-    empty = make_table()
-    list_problem = find_problems(sources, empty)
-    assert len(list_problem) == 4, list_problem
-    assert any("runLost" in line for line in list_problem)
-    assert any("LonelyComponent" in line for line in list_problem)
-    assert any("A.Unread" in line for line in list_problem)
-    assert any("cmd.alone" in line for line in list_problem)
+        empty = make_table()
+        list_problem = find_problems(sources, empty)
+        assert len(list_problem) == 4, list_problem
+        assert any("runLost" in line for line in list_problem)
+        assert any("LonelyComponent" in line for line in list_problem)
+        assert any("A.Unread" in line for line in list_problem)
+        assert any("cmd.alone" in line for line in list_problem)
 
-    # 예외: 까닭과 함께면 받고, 낡은 줄은 위반이다.
-    assert [line for line in find_problems(sources, make_table(_folders={"Source/A": "x"}, _watches={"A.Unread": "x"}, _devCommands={"cmd.alone": "x"})) if "runLost" not in line] == []
-    list_stale = find_problems(sources, make_table(_components={"LonelyComponent": "", "UsedComponent": "x", "GoneComponent": "x"}, _watches={"A.Unread": "x"}, _devCommands={"cmd.alone": "x"}))
-    assert sum("까닭이 비었다" in line for line in list_stale) == 1, list_stale
-    assert sorted(line.split("'")[1] for line in list_stale if "낡은 예외" in line) == ["GoneComponent", "UsedComponent"], list_stale   # 이제 참조가 있다 · 정의가 없다
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="컴포넌트 · 감시 값 · 개발 명령의 참조 0, 낡은 기대 로그 id 검사(머리말)")
-    parser.add_argument("--self-check", action="store_true", help="규칙 자체를 시험한다")
-    args = parser.parse_args(argv)
-    if args.self_check:
-        run_self_check()
-        print("[FeatureReferences] self-check OK")
-        return ExitCode.PASSED
-    list_problem = check_feature_references(get_project_root(), make_whole_scope(get_project_root()))
-    for line in list_problem:
-        print(f"  - {line}")
-    print(f"[FeatureReferences] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
-    return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+        # 예외: 까닭과 함께면 받고, 낡은 줄은 위반이다.
+        assert [line for line in find_problems(sources, make_table(_folders={"Source/A": "x"}, _watches={"A.Unread": "x"}, _devCommands={"cmd.alone": "x"})) if "runLost" not in line] == []
+        list_stale = find_problems(sources, make_table(_components={"LonelyComponent": "", "UsedComponent": "x", "GoneComponent": "x"}, _watches={"A.Unread": "x"}, _devCommands={"cmd.alone": "x"}))
+        assert sum("까닭이 비었다" in line for line in list_stale) == 1, list_stale
+        assert sorted(line.split("'")[1] for line in list_stale if "낡은 예외" in line) == ["GoneComponent", "UsedComponent"], list_stale   # 이제 참조가 있다 · 정의가 없다

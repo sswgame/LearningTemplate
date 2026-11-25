@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/platform_chains.py
 
@@ -25,25 +23,18 @@ POSIX 계열은 `UNIX` · `CMAKE_HOST_UNIX` 로 이름을 적는다. 다른 변�
 스크립트는 호스트 OS 를 `common/host_platform.py` 의 표에서만 읽는다 — `sys.platform` · `os.name` · `platform.system()` 을
 다른 곳에서 물으면 `else` 가 "Windows 아니면 Linux" 가 된다. 표는 모르는 호스트에서 들여올 때 멈춘다.
 
-`py -3 -m Scripts lint platform-chains [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
+`py -3 -m Scripts lint platform-chains [--self-check]` 로 돌리고, 커밋 훅이 돌린다.
 """
 
 from __future__ import annotations
 
-import argparse
 import re
-import sys
-from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Mapping, Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
+from lint.lint_rule import LintRule, SourceFile
+from lint.lint_scope import LintScope
+from lint.rule_tables import ExceptionTable
 
-from common.exit_code import ExitCode  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from lint.lint_scope import LintScope, make_whole_scope, read_texts  # noqa: E402
-from lint.rule_tables import ExceptionTable, get_table_path, read_rule_table  # noqa: E402
-
-RULE_ID = "platform-chains"
 EXTENSIONS = (".h", ".cpp", ".inl")
 DIRECTIVE = re.compile(r"^\s*#\s*(if|ifdef|ifndef|elif|else|endif)\b(.*)$")
 PLATFORM_ONLY = re.compile(r"^!?defined\( SW_PLATFORM_\w+ \)(?: \|\| !?defined\( SW_PLATFORM_\w+ \))*$")
@@ -84,18 +75,6 @@ def is_exempt(path: str, table: ExceptionTable, platform_folders: Sequence[str])
     if table.allows_prefix("_exemptPaths", path):
         return True
     return any(part in platform_folders for part in path.split("/")[:-1])
-
-
-def find_problems(list_source: Iterable[tuple[str, str]], table: ExceptionTable, platform_folders: Sequence[str]) -> list[str]:
-    list_problem: list[str] = []
-    for path, text in list_source:
-        if not is_exempt(path, table, platform_folders):
-            list_problem.extend(find_problems_in_text(path, text))
-    return list_problem
-
-
-def read_sources(project_root: Path, scope: LintScope) -> list[tuple[str, str]]:
-    return [(path, text) for path, text in read_texts(project_root, scope.select(("Source",), EXTENSIONS)) if "SW_PLATFORM_" in text]
 
 
 # 여러 줄에 걸친 `if(` 도 사슬의 짝을 맞추려고 여는 줄만 본다 — 닫는 괄호가 없는 조건은 플랫폼 검사로 읽히지 않아 건너뛴다.
@@ -175,14 +154,12 @@ def find_python_problems_in_text(path: str, text: str) -> list[str]:
     return list_problem
 
 
-def read_build_sources(project_root: Path, scope: LintScope) -> list[tuple[str, str]]:
-    """CMake · 스크립트 글(뿌리 CMakeLists.txt, cmake/*.cmake, Source 의 CMakeLists.txt, Scripts 의 .py · .sh, .claude/hooks 의 .py)."""
-    list_path = [path for path in scope.list_file
-                if path == "CMakeLists.txt" or (path.startswith("cmake/") and path.endswith(".cmake"))
-                or (path.startswith("Source/") and path.endswith("/CMakeLists.txt"))
-                or (path.startswith(("Scripts/", ".claude/hooks/")) and path.endswith(".py") and "/__pycache__/" not in path)
-                or (path.startswith("Scripts/") and path.endswith(".sh"))]
-    return read_texts(project_root, list_path)
+def is_build_file(path: str) -> bool:
+    """CMake · 스크립트 파일(뿌리 CMakeLists.txt, cmake/*.cmake, Source 의 CMakeLists.txt, Scripts 의 .py · .sh, .claude/hooks 의 .py)."""
+    return (path == "CMakeLists.txt" or (path.startswith("cmake/") and path.endswith(".cmake"))
+            or (path.startswith("Source/") and path.endswith("/CMakeLists.txt"))
+            or (path.startswith(("Scripts/", ".claude/hooks/")) and path.endswith(".py") and "/__pycache__/" not in path)
+            or (path.startswith("Scripts/") and path.endswith(".sh")))
 
 
 def find_shell_problems_in_text(path: str, text: str) -> list[str]:
@@ -200,85 +177,75 @@ def find_cmake_git_problems_in_text(path: str, text: str) -> list[str]:
             for match in CMAKE_DIRECT_GIT.finditer(code)]
 
 
-def find_build_problems(list_source: Iterable[tuple[str, str]]) -> list[str]:
-    list_problem: list[str] = []
-    for path, text in list_source:
-        if path.endswith(".py"):
-            list_problem.extend(find_python_problems_in_text(path, text))
-        elif path.endswith(".sh"):
-            list_problem.extend(find_shell_problems_in_text(path, text))
-        else:
-            list_problem.extend(find_cmake_problems_in_text(path, text) + find_cmake_git_problems_in_text(path, text))
-    return list_problem
+def find_build_problems(path: str, text: str) -> list[str]:
+    if path.endswith(".py"):
+        return find_python_problems_in_text(path, text)
+    if path.endswith(".sh"):
+        return find_shell_problems_in_text(path, text)
+    return find_cmake_problems_in_text(path, text) + find_cmake_git_problems_in_text(path, text)
 
 
-def check_platform_chains(project_root: Path, scope: LintScope) -> list[str]:
-    data = read_rule_table(project_root, RULE_ID)
-    table = ExceptionTable(get_table_path(RULE_ID), data, ("_exemptPaths",))
-    list_problem = find_problems(read_sources(project_root, scope), table, data["_platformFolders"]) + find_build_problems(read_build_sources(project_root, scope))
-    return list_problem + table.list_problems(scope.whole_repo, stale_sections=())   # 앞머리 예외는 낡은 줄을 세지 않는다(예전 판정 그대로)
+class PlatformChainsRule(LintRule):
+    id = "platform-chains"
+    group = "경계"
+    blocks = "빠진 플랫폼을 컴파일 오류로 내지 않는 #if 사슬"
+    why_not_type = "전처리 갈래는 형식이 막지 못한다"
+    tables = ("",)
 
+    def selects(self, path: str) -> bool:
+        return (path.startswith("Source/") and path.endswith(EXTENSIONS)) or is_build_file(path)
 
-def run_self_check() -> None:
-    table = ExceptionTable.make(RULE_ID, _exemptPaths={"Source/Editor/": "이유"})
-    folders = ["Linux"]
-    error = '#else\n    #error "Unsupported platform"\n#endif\n'
-    clean = (
-        "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#endif\n"
-        + "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#elif defined( SW_PLATFORM_POSIX )\nint b;\n" + error
-        + "#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_WAYLAND )\nint a;\n#else\nint b;\n#endif\n"
-        + "#if defined( SW_DEBUG )\nint a;\n#else\nint b;\n#endif\n"
-    )
-    assert find_problems([("Source/a.cpp", clean)], table, folders) == [], "허용 모양은 통과해야 한다"
-    assert len(find_problems([("Source/a.cpp", "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#else\nint b;\n#endif\n")], table, folders)) == 1, "#else 몸"
-    assert len(find_problems([("Source/a.cpp", "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#elif defined( SW_PLATFORM_LINUX )\nint b;\n#endif\n")], table, folders)) == 1, "#else 없음"
-    assert len(find_problems([("Source/a.cpp", "#if !defined( SW_PLATFORM_WINDOWS )\nint a;\n#endif\n")], table, folders)) == 1, "부정"
-    bad = "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#else\nint b;\n#endif\n"
-    assert find_problems([("Source/Editor/a.cpp", bad), ("Source/Engine/Linux/a.cpp", bad)], table, folders) == [], "예외 폴더"
-    fatal = 'else()\n\tmessage(FATAL_ERROR "x")\nendif()\n'
-    clean_cmake = (
-        "if(WIN32)\n\tset(a 1)\nendif()\n"
-        + "if(WIN32)\n\tset(a 1)\nelseif(UNIX)\n\tset(a 2)\n" + fatal
-        + "if(NOT WIN32)\n\treturn()\nendif()\n"
-        + "if(WIN32 AND NOT SW_SHIPPING_BUILD)\n\tset(a 1)\nelse()\n\tset(a 2)\nendif()\n"
-        + 'if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")\n\treturn()\nendif()\n'
-    )
-    assert find_build_problems([("cmake/a.cmake", clean_cmake)]) == [], "CMake 허용 모양은 통과해야 한다"
-    assert len(find_build_problems([("cmake/a.cmake", "if(WIN32)\n\tset(a 1)\nelse()\n\tset(a 2)\nendif()\n")])) == 1, "CMake else 몸"
-    assert len(find_build_problems([("cmake/a.cmake", 'if(WIN32)\n\tset(a 1)\nelseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")\n\tset(a 2)\nendif()\n')])) == 1, "CMake else 없음"
-    assert len(find_build_problems([("cmake/a.cmake", "if(NOT WIN32)\n\tset(a 1)\nendif()\n")])) == 1, "CMake 부정 몸"
-    assert len(find_build_problems([("Scripts/a.py", 'x = sys.platform == "win32"\n')])) == 1, "스크립트 직접 질의"
-    assert find_build_problems([(PYTHON_HOST_TABLE, "platform.system()\n")]) == [], "호스트 표 자체"
-    assert len(find_build_problems([("Scripts/a.py", "subprocess.run(['git', 'mv', a, b], cwd=root)\n")])) == 1, "git 직접 띄우기"
-    assert len(find_build_problems([("Scripts/a.py", "x = subprocess.check_output([\"git\", \"rev-parse\"])\n")])) == 1, "git 직접 띄우기(큰따옴표)"
-    assert len(find_build_problems([("Scripts/a.py", "shell(f'cd {CLONE} && git fetch -q')\n")])) == 1, "셸 글 안의 git"
-    assert len(find_build_problems([("Scripts/a.py", "shell(f'git -C {CLONE} log')\n")])) == 1, "셸 글 git"
-    assert find_build_problems([(PYTHON_GIT_ENTRANCE, "subprocess.run([gitExe, 'status'])\n")]) == [], "입구 자체"
-    assert find_build_problems([("Scripts/a.py", "runGit(['mv', a, b], cwd=root)\n")]) == [], "입구를 거친 git"
-    assert len(find_build_problems([("Scripts/a.sh", "SHA=$(git rev-parse HEAD)\n")])) == 1, "셸 $( git"
-    assert len(find_build_problems([("Scripts/a.sh", "cd x && git status\n")])) == 1, "셸 && git"
-    assert find_build_problems([("Scripts/a.sh", "source Scripts/common/git.sh\nSHA=$(sw_git rev-parse HEAD)\n# git push\necho \"use .gitignore\"\n")]) == [], "셸 입구 · 주석 · 낱말 안 git"
-    assert find_build_problems([(SHELL_GIT_ENTRANCE, "git \"$@\"\n")]) == [], "셸 입구 자체"
-    assert len(find_build_problems([("cmake/a.cmake", "execute_process(\n\tCOMMAND ${GIT_EXECUTABLE} rev-parse HEAD\n\tOUTPUT_VARIABLE x)\n")])) == 1, "CMake execute_process git"
-    assert len(find_build_problems([("cmake/a.cmake", "find_package(Git REQUIRED)\n")])) == 1, "CMake find_package(Git)"
-    assert find_build_problems([("cmake/a.cmake", "# execute_process(COMMAND git status)\nexecute_process(COMMAND python x.py)\n")]) == [], "CMake 주석 · git 없는 execute_process"
-    assert len(find_build_problems([(".claude/hooks/a.py", "subprocess.run(['git', 'status'])\n")])) == 1, "훅의 git 직접 띄우기"
+    def inspect(self, file: SourceFile) -> list[str]:
+        if is_build_file(file.path):
+            return find_build_problems(file.path, file.text)
+        return find_problems_in_text(file.path, file.text) if "SW_PLATFORM_" in file.text else []
 
+    def evaluate(self, scope: LintScope, found: Mapping[str, list[str]]) -> list[str]:
+        table = self.load_exceptions("_exemptPaths")
+        platform_folders = self.read_table()["_platformFolders"]
+        list_problem = [problem for path, list_found in found.items() if is_build_file(path) or not is_exempt(path, table, platform_folders) for problem in list_found]
+        return list_problem + table.list_problems(scope.whole_repo, stale_sections=())   # 앞머리 예외는 낡은 줄을 세지 않는다
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="플랫폼 #if 사슬이 빠진 플랫폼을 컴파일 오류로 내는지 본다")
-    parser.add_argument("--self-check", action="store_true")
-    arguments = parser.parse_args(argv)
-    if arguments.self_check:
-        run_self_check()
-        print("[PlatformChains] self-check OK")
-        return ExitCode.PASSED
-    list_problem = check_platform_chains(get_project_root(), make_whole_scope(get_project_root()))
-    for problem in list_problem:
-        print(f"  - {problem}")
-    print(f"[PlatformChains] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
-    return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    def self_check(self) -> None:
+        table = ExceptionTable.make(self.id, _exemptPaths={"Source/Editor/": "이유"})
+        folders = ["Linux"]
+        error = '#else\n    #error "Unsupported platform"\n#endif\n'
+        clean = (
+            "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#endif\n"
+            + "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#elif defined( SW_PLATFORM_POSIX )\nint b;\n" + error
+            + "#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_WAYLAND )\nint a;\n#else\nint b;\n#endif\n"
+            + "#if defined( SW_DEBUG )\nint a;\n#else\nint b;\n#endif\n"
+        )
+        assert find_problems_in_text("Source/a.cpp", clean) == [], "허용 모양은 통과해야 한다"
+        assert len(find_problems_in_text("Source/a.cpp", "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#else\nint b;\n#endif\n")) == 1, "#else 몸"
+        assert len(find_problems_in_text("Source/a.cpp", "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#elif defined( SW_PLATFORM_LINUX )\nint b;\n#endif\n")) == 1, "#else 없음"
+        assert len(find_problems_in_text("Source/a.cpp", "#if !defined( SW_PLATFORM_WINDOWS )\nint a;\n#endif\n")) == 1, "부정"
+        assert is_exempt("Source/Editor/a.cpp", table, folders) and is_exempt("Source/Engine/Linux/a.cpp", table, folders) and not is_exempt("Source/Engine/a.cpp", table, folders), "예외 폴더"
+        fatal = 'else()\n\tmessage(FATAL_ERROR "x")\nendif()\n'
+        clean_cmake = (
+            "if(WIN32)\n\tset(a 1)\nendif()\n"
+            + "if(WIN32)\n\tset(a 1)\nelseif(UNIX)\n\tset(a 2)\n" + fatal
+            + "if(NOT WIN32)\n\treturn()\nendif()\n"
+            + "if(WIN32 AND NOT SW_SHIPPING_BUILD)\n\tset(a 1)\nelse()\n\tset(a 2)\nendif()\n"
+            + 'if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")\n\treturn()\nendif()\n'
+        )
+        assert find_build_problems("cmake/a.cmake", clean_cmake) == [], "CMake 허용 모양은 통과해야 한다"
+        assert len(find_build_problems("cmake/a.cmake", "if(WIN32)\n\tset(a 1)\nelse()\n\tset(a 2)\nendif()\n")) == 1, "CMake else 몸"
+        assert len(find_build_problems("cmake/a.cmake", 'if(WIN32)\n\tset(a 1)\nelseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")\n\tset(a 2)\nendif()\n')) == 1, "CMake else 없음"
+        assert len(find_build_problems("cmake/a.cmake", "if(NOT WIN32)\n\tset(a 1)\nendif()\n")) == 1, "CMake 부정 몸"
+        assert len(find_build_problems("Scripts/a.py", 'x = sys.platform == "win32"\n')) == 1, "스크립트 직접 질의"
+        assert find_build_problems(PYTHON_HOST_TABLE, "platform.system()\n") == [], "호스트 표 자체"
+        assert len(find_build_problems("Scripts/a.py", "subprocess.run(['git', 'mv', a, b], cwd=root)\n")) == 1, "git 직접 띄우기"
+        assert len(find_build_problems("Scripts/a.py", "x = subprocess.check_output([\"git\", \"rev-parse\"])\n")) == 1, "git 직접 띄우기(큰따옴표)"
+        assert len(find_build_problems("Scripts/a.py", "shell(f'cd {CLONE} && git fetch -q')\n")) == 1, "셸 글 안의 git"
+        assert len(find_build_problems("Scripts/a.py", "shell(f'git -C {CLONE} log')\n")) == 1, "셸 글 git"
+        assert find_build_problems(PYTHON_GIT_ENTRANCE, "subprocess.run([gitExe, 'status'])\n") == [], "입구 자체"
+        assert find_build_problems("Scripts/a.py", "runGit(['mv', a, b], cwd=root)\n") == [], "입구를 거친 git"
+        assert len(find_build_problems("Scripts/a.sh", "SHA=$(git rev-parse HEAD)\n")) == 1, "셸 $( git"
+        assert len(find_build_problems("Scripts/a.sh", "cd x && git status\n")) == 1, "셸 && git"
+        assert find_build_problems("Scripts/a.sh", "source Scripts/common/git.sh\nSHA=$(sw_git rev-parse HEAD)\n# git push\necho \"use .gitignore\"\n") == [], "셸 입구 · 주석 · 낱말 안 git"
+        assert find_build_problems(SHELL_GIT_ENTRANCE, "git \"$@\"\n") == [], "셸 입구 자체"
+        assert len(find_build_problems("cmake/a.cmake", "execute_process(\n\tCOMMAND ${GIT_EXECUTABLE} rev-parse HEAD\n\tOUTPUT_VARIABLE x)\n")) == 1, "CMake execute_process git"
+        assert len(find_build_problems("cmake/a.cmake", "find_package(Git REQUIRED)\n")) == 1, "CMake find_package(Git)"
+        assert find_build_problems("cmake/a.cmake", "# execute_process(COMMAND git status)\nexecute_process(COMMAND python x.py)\n") == [], "CMake 주석 · git 없는 execute_process"
+        assert len(find_build_problems(".claude/hooks/a.py", "subprocess.run(['git', 'status'])\n")) == 1, "훅의 git 직접 띄우기"

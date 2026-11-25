@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 #include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"
@@ -289,6 +290,8 @@ namespace sw
         if ( _bHasBegunPlay == SW_TRUE || isPendingDestroy() )
             return;
         _bHasBegunPlay = SW_TRUE;
+        if constexpr ( build::kShipping == false )
+            (void)ObjectValidation::reportEmptyRequired( *this ); // 코드로 붙인 컴포넌트는 로드의 필수 칸 검사를 지나지 않는다
         onBeginPlay();
     }
 

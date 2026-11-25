@@ -11,7 +11,7 @@
 <Scenario name="game.playground.netpair.hub_walk_north" fixedDelta="0.0166667" realTime="true" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Expect watch="Hub.NetRole" equals="0"/>
 	<Expect watch="Hub.PawnPredicted" equals="0"/>
-	<DevCommand line="net.ticketconnect 127.0.0.1:17880 hub_north hub_north_pw_1 playground_hub 127.0.0.1:17877"/>
+	<DevCommand line="net.ticketconnect {gv_onlineServerAddress} hub_north hub_north_pw_1 playground_hub {gv_gameServerAddress}"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="30"/>
 	<WaitUntil watch="Hub.PawnPredicted" equals="1" timeoutWallSeconds="20"/>
 	<!-- ① 상대의 폰(HubRemotePawn)이 선 뒤 걷는다 — 자리 값이 있으면 보인다 -->
@@ -41,12 +41,13 @@
 	<DevCommand line="hub.cards draw"/>
 	<WaitUntil watch="Hub.CardsActions" atLeast="4" timeoutWallSeconds="30"/>
 	<Expect watch="Hub.CardsRejected" equals="0"/>
-	<!-- ④ 움직이는 바닥: 상대(남쪽)가 왕복 발판에 실려 가는 것이 보인다 — 바닥이 도는 동안 바닥 기준의 자리를 남긴다(상대가 남긴 자기 자리와 `Scripts net-pair mmo` 가 견준다) -->
+	<!-- ④ 움직이는 바닥: 상대(남쪽)가 왕복 발판에 실려 가는 것이 보인다 — 바닥이 도는 동안 바닥 기준의 자리를 보고에 남긴다(상대가 남긴 자기 자리와 `Scripts net-pair mmo` 가 견준다) -->
 	<WaitUntil watch="Hub.RemotePawnFloor" equals="1" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Object.X" target="FloorShuttle" atLeast="8.5" timeoutWallSeconds="20"/>
 	<WaitUntil watch="Object.X" target="FloorShuttle" atMost="5.5" timeoutWallSeconds="20"/>
 	<Expect watch="Hub.RemotePawnFloor" equals="1"/>
-	<DevCommand line="hub.floor"/>
+	<Record watch="Hub.RemotePawnFloorX"/>
+	<Record watch="Hub.RemotePawnFloorZ"/>
 	<DevCommand line="hub.status"/>
 	<Pass/>
 </Scenario>

@@ -26,14 +26,17 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import project_constants as config_constants  # noqa: E402
-from generate.generator_output import format_cmake_set, run_generator, write_generated_file  # noqa: E402
+from common.command import Command, ScriptContext  # noqa: E402
+from common.exit_code import ExitCode  # noqa: E402
+from generate.generator_output import Generator, format_cmake_set, write_generated_file  # noqa: E402
 
 TAG = "CMakeConstants"
 
@@ -77,11 +80,22 @@ def generate_cmake_constants(output_file: Path) -> None:
     write_generated_file(output_file, "\n".join(list_line), tag=TAG, summary=f"{len(map_exported)} constants")
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    return run_generator(argv, tag=TAG, description="project_constants.py → CMake set() 목록",
-                        add_arguments=lambda parser: parser.add_argument("output", type=Path, help="쓸 .cmake 파일"),
-                        generate=lambda args: generate_cmake_constants(args.output))
+class CMakeConstantsGenerator(Generator):
+    def generate(self, output_dir: Path, game_name: str) -> None:
+        generate_cmake_constants(output_dir / "ConfigVars.cmake")
+
+
+class CMakeConstantsCommand(Command):
+    name = "cmake-constants"
+    help = "project_constants.py → CMake set() 목록(LoadConfigConstants.cmake 가 project() 앞에서 부른다)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("output", type=Path, help="쓸 .cmake 파일")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        generate_cmake_constants(args.output)
+        return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(CMakeConstantsCommand.main())

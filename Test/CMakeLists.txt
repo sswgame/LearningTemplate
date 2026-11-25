@@ -27,42 +27,13 @@ endforeach()
 # 몫마다 엔진 기동(약 1 초)이 붙는다. 케이스가 5 천 개를 넘어 한 프로세스 합계가 ASan 에서 약 4 분(2026-11-21, 247 초)이 되자, 묶음 검증이 CPU 일을 겹쳐 돌 때
 # 600 초 시한을 넘겼다 — 시한을 늘리지 않고 몫으로 나눠 `ctest -j` 가 나란히 돌게 한다(GoogleTest 샤딩). 값은 프리셋(base-vcpkg)이 준다 — 캐시 기본값만 바꾸면 이미 있는 빌드 폴더는 옛 1 을 쥔다.
 set(SW_UNIT_TEST_SHARDS 4 CACHE STRING "단위 테스트를 나눠 돌릴 프로세스 수(App --test --test-shard=i/n)")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/Testing/Reports")
 if(SW_UNIT_TEST_SHARDS LESS_EQUAL 1)
-	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/Testing/Reports")
 	add_test(NAME UnitTests
 		COMMAND $<TARGET_FILE:App> --test -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/UnitTests.log
 			--test-report=${CMAKE_BINARY_DIR}/Testing/Reports/UnitTests.json
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(UnitTests PROPERTIES LABELS nogpu TIMEOUT 600)
-
-	# 작업 폴더에 기대지 않는다(R5) — 루트는 실행 파일 위치로 정하고(`ProcessRoots`), 상대 경로 인자는 기동 때의 작업 폴더로 한 번 절대화한다.
-	# 그래서 `Bin` 이 아닌 폴더에서 상대 `-log-file` 로 띄워도 같은 테스트가 돈다(예전에는 작업 폴더에서 위로 `Content` 를 찾았다).
-	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/Testing/Logs")
-	add_test(NAME UnitTests.OtherWorkingFolder
-		COMMAND $<TARGET_FILE:App> --test -unattended --test-filter=FileSystemTest.*,AbsolutePathTest.* -log-file=Logs/UnitTests.OtherWorkingFolder.log
-		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Testing")
-	set_tests_properties(UnitTests.OtherWorkingFolder PROPERTIES LABELS nogpu TIMEOUT 300)
-
-	# 작업 폴더를 바꿔도 같은 자리를 가리키는 상대 경로 인자의 산출물은 같은 자리에 생기고, 빈 작업 폴더에는 아무것도 생기지 않는다(R5 — 스크립트 머리말).
-	add_test(NAME CommandLine.WorkingFolderPair
-		COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DBIN_DIR=${CMAKE_BINARY_DIR}/Bin" "-DOTHER_DIR=${CMAKE_BINARY_DIR}/Testing/WorkingFolder/Empty"
-			"-DOUT_DIR=${CMAKE_BINARY_DIR}/Testing/WorkingFolder/Out" "-DFILTER=FileSystemTest.*,AbsolutePathTest.*"
-			-P "${CMAKE_CURRENT_SOURCE_DIR}/CommandLine/RunWorkingFolderPair.cmake")
-	set_tests_properties(CommandLine.WorkingFolderPair PROPERTIES LABELS nogpu TIMEOUT 300)
-
-	# 틀린 명령줄은 기동을 멈춘다(값을 0 · false 로 바꿔 계속하던 폴백을 없앴다) — 모르는 인자 · 정수 아닌 정수 · 빈 경로.
-	# Windows 의 드라이브 상대(`C:foo`) · 루트 상대(`\foo`) 경로는 절대도 상대도 아니라 디스크 경로 인자가 거절한다(`AbsolutePath::tryResolve`). POSIX 에서 `\foo` 는 이름일 뿐이다.
-	set(list_bad_argument "--no-such-argument" "-W=abc" "-log-file=")
-	if(WIN32)
-		list(APPEND list_bad_argument "--test-report=C:foo.json" "--test-report=\\foo.json")
-	endif()
-	foreach(bad_argument IN LISTS list_bad_argument)
-		string(MAKE_C_IDENTIFIER "${bad_argument}" bad_argument_name)
-		add_test(NAME CommandLine.Rejects${bad_argument_name}
-			COMMAND $<TARGET_FILE:App> --test -unattended ${bad_argument}
-			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-		set_tests_properties(CommandLine.Rejects${bad_argument_name} PROPERTIES LABELS nogpu TIMEOUT 120 WILL_FAIL TRUE)
-	endforeach()
 else()
 	math(EXPR last_shard "${SW_UNIT_TEST_SHARDS} - 1")
 	foreach(shard_index RANGE ${last_shard})
@@ -74,6 +45,35 @@ else()
 		set_tests_properties(UnitTests.${shard_index} PROPERTIES LABELS nogpu TIMEOUT 600)
 	endforeach()
 endif()
+
+# 작업 폴더에 기대지 않는다(R5) — 루트는 실행 파일 위치로 정하고(`ProcessRoots`), 상대 경로 인자는 기동 때의 작업 폴더로 한 번 절대화한다.
+# 그래서 `Bin` 이 아닌 폴더에서 상대 `-log-file` 로 띄워도 같은 테스트가 돈다(예전에는 작업 폴더에서 위로 `Content` 를 찾았다).
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/Testing/Logs")
+add_test(NAME UnitTests.OtherWorkingFolder
+	COMMAND $<TARGET_FILE:App> --test -unattended --test-filter=FileSystemTest.*,AbsolutePathTest.* -log-file=Logs/UnitTests.OtherWorkingFolder.log
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Testing")
+set_tests_properties(UnitTests.OtherWorkingFolder PROPERTIES LABELS nogpu TIMEOUT 300)
+
+# 작업 폴더를 바꿔도 같은 자리를 가리키는 상대 경로 인자의 산출물은 같은 자리에 생기고, 빈 작업 폴더에는 아무것도 생기지 않는다(R5 — 스크립트 머리말).
+add_test(NAME CommandLine.WorkingFolderPair
+	COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DBIN_DIR=${CMAKE_BINARY_DIR}/Bin" "-DOTHER_DIR=${CMAKE_BINARY_DIR}/Testing/WorkingFolder/Empty"
+		"-DOUT_DIR=${CMAKE_BINARY_DIR}/Testing/WorkingFolder/Out" "-DFILTER=FileSystemTest.*,AbsolutePathTest.*"
+		-P "${CMAKE_CURRENT_SOURCE_DIR}/CommandLine/RunWorkingFolderPair.cmake")
+set_tests_properties(CommandLine.WorkingFolderPair PROPERTIES LABELS nogpu TIMEOUT 300)
+
+# 틀린 명령줄은 기동을 멈춘다(값을 0 · false 로 바꿔 계속하던 폴백을 없앴다) — 모르는 인자 · 정수 아닌 정수 · 빈 경로.
+# Windows 의 드라이브 상대(`C:foo`) · 루트 상대(`\foo`) 경로는 절대도 상대도 아니라 디스크 경로 인자가 거절한다(`AbsolutePath::tryResolve`). POSIX 에서 `\foo` 는 이름일 뿐이다.
+set(list_bad_argument "--no-such-argument" "-W=abc" "-log-file=")
+if(WIN32)
+	list(APPEND list_bad_argument "--test-report=C:foo.json" "--test-report=\\foo.json")
+endif()
+foreach(bad_argument IN LISTS list_bad_argument)
+	string(MAKE_C_IDENTIFIER "${bad_argument}" bad_argument_name)
+	add_test(NAME CommandLine.Rejects${bad_argument_name}
+		COMMAND $<TARGET_FILE:App> --test -unattended ${bad_argument}
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(CommandLine.Rejects${bad_argument_name} PROPERTIES LABELS nogpu TIMEOUT 120 WILL_FAIL TRUE)
+endforeach()
 
 # 키트 · 게임 단위 테스트 — 키트 `Tests/` 의 케이스는 그 키트를 싣는 게임으로 돌 때만 등록된다(활성 게임으로 도는 `UnitTests` 에는 없다).
 # 함께 짓는 게임마다 그 게임으로 떠서 그 게임이 싣는 키트 · 게임 폴더의 케이스만 돈다(`--test-source`). 테스트 폴더가 하나도 없는 게임은 항목이 없다(빈 실행은 실패다).
@@ -101,7 +101,7 @@ if(active_game_target)
 			endif()
 			get_target_property(kit_folder ${dependency} SOURCE_DIR)
 			sw_glob_tests_under(list_kit_test "${kit_folder}")
-			list(FILTER list_kit_test EXCLUDE REGEX "/Editor/") # 키트 폴더 아래의 에디터 확장 케이스는 `editor.unitTests` 가 돌린다 — 이 실행에는 등록되지 않는다
+			list(FILTER list_kit_test EXCLUDE REGEX "/Editor/") # 키트 폴더 아래의 에디터 확장 케이스는 `UnitTests.Editor` 가 돌린다 — 이 실행에는 등록되지 않는다
 			if(list_kit_test)
 				file(RELATIVE_PATH kit_relative "${CMAKE_SOURCE_DIR}" "${kit_folder}")
 				list(APPEND list_test_folder "${kit_relative}/")
@@ -123,9 +123,16 @@ if(active_game_target)
 	endforeach()
 endif()
 
-# 편집기 자체 테스트(`SW_EDITOR_SELF_TEST`)와 편집기 단위 테스트는 따로 된 항목이 없다 — 시나리오 단계 `<EditorSelfTest>`(`engine/automation/editor/selftests.scenario.xml`)로
+# 편집기 자체 테스트(`SW_EDITOR_SELF_TEST`)는 따로 된 항목이 없다 — 시나리오 단계 `<EditorSelfTest>`(`engine/automation/editor/selftests.scenario.xml`)로
 # `Scenario.editor` 체인 안에서 돌아 백엔드 넷과 로그 게이트를 함께 받는다(예전 EditorTests 는 기본 백엔드에서 케이스 성패만 봐 로그로만 드러나는 결함을 놓쳤다).
 if(TARGET EditorModule)
+	# 에디터 단위 테스트 — 창 · GPU 없이 에디터 인스턴스를 세워 `/Editor/` 소스의 케이스를 한 번 돈다(예전에는 편집기 체인이 백엔드 넷에서 되풀이했다).
+	# 에디터 화면이 필요한 케이스(태그 `editorApp`)만 편집기 체인의 자체 테스트 `editor.unitTests` 에 남는다.
+	add_test(NAME UnitTests.Editor
+		COMMAND $<TARGET_FILE:App> --test-editor -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/UnitTests.Editor.log
+			--test-report=${CMAKE_BINARY_DIR}/Testing/Reports/UnitTests.Editor.json
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(UnitTests.Editor PROPERTIES LABELS nogpu TIMEOUT 600)
 
 	# 헤드리스 도구 명령 하나 — 현지화 표가 코드 · 데이터와 맞는지 보고, 도구 실행의 기동 · 종료 길을 지난다(모듈이 내려갈 때 서비스를 찾다 죽던 결함이
 	# 모든 도구 명령에 있었는데 위 항목들은 도구 명령을 돌리지 않아 숨었다). 임포트 검사는 산출물을 커밋하지 않아 새 체크아웃에서 늘 지므로 이것을 고른다.
@@ -191,7 +198,8 @@ set_tests_properties(Pack.MakePatch PROPERTIES LABELS nogpu TIMEOUT 300)
 # 스크립트 자체 테스트 — `Scripts/<폴더>/tests/test_*.py` 를 모두 돈다. 손으로 한 줄씩 등록하면 빠뜨린다(test_cook_code_fingerprint ·
 # test_shipping_host_defaults 가 빠져 있었다). 무엇을 보는지는 각 파일 머리말에 있다.
 # 이름은 `Scripts.<줄기의 낙타 이름>`(test_move_asset.py → Scripts.MoveAsset). cmake 를 부르는 테스트(vcpkg 설치 보호)는 SW_CMAKE_COMMAND 로 받는다.
-file(GLOB list_script_test CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Scripts/*/tests/test_*.py")
+# 도구 정책 훅의 판정 테스트(`.claude/hooks/test_*.py`)도 함께 돈다 — 손으로만 돌면 규칙 데이터가 바뀌어도 모른다.
+file(GLOB list_script_test CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Scripts/*/tests/test_*.py" "${CMAKE_SOURCE_DIR}/.claude/hooks/test_*.py")
 foreach(script_test IN LISTS list_script_test)
 	get_filename_component(script_test_stem "${script_test}" NAME_WE)
 	string(REGEX REPLACE "^test_" "" script_test_stem "${script_test_stem}")
@@ -226,7 +234,7 @@ if(TARGET OnlineLoadBot)
 	set_tests_properties(OnlineLoadBot.localServer PROPERTIES LABELS nogpu TIMEOUT 120)
 
 	# 대상 인자의 짝 규칙 — 전용 서버에 붙는 길(`--server` · `--tls` · `--game`)과 외부 저장소(`--store-config` — PostgreSQL · RESP)는 띄울 서버 · 서비스가 있어야 해
-	# 여기서 돌지 않는다(`py -3 -m Scripts net-pair` · `online-local` 몫). 대신 그 인자를 읽고 맞지 않는 짝을 거절하는지 본다(종료 코드가 아니라 거절 글로 판정한다).
+	# 여기서 돌지 않는다(`Net.*` 항목 몫 — Test/Net). 대신 그 인자를 읽고 맞지 않는 짝을 거절하는지 본다(종료 코드가 아니라 거절 글로 판정한다).
 	set(load_bot_base_argument --scenario=${load_bot_dir}/Scenarios/smoke.json --load=${load_bot_dir}/Scenarios/smoke.load.xml -unattended)
 	add_test(NAME OnlineLoadBot.RejectsTwoTargets
 		COMMAND $<TARGET_FILE:OnlineLoadBot> ${load_bot_base_argument} --server=127.0.0.1:1 --local-server=0
@@ -364,6 +372,12 @@ if(SW_CPU_HEAVY_TEST AND TARGET EditorModule)
 	set_tests_properties(Bake.Portraits.DirectX11 Bake.Portraits.DirectX12 Bake.Portraits.Vulkan Bake.Portraits.OpenGL PROPERTIES DEPENDS ${SW_CPU_HEAVY_TEST})
 endif()
 
+# ctest 항목이 띄우는 시나리오(`Content/` 기준 경로)를 적는다 — 항목을 만드는 자리마다 부른다. Scenario/ 의 끝이 어느 항목도 띄우지 않는 시나리오를 찾아 구성을 세운다.
+function(sw_register_scenarios)
+	set_property(GLOBAL APPEND PROPERTY SW_REGISTERED_SCENARIOS ${ARGN})
+endfunction()
+
+add_subdirectory(Net)
 add_subdirectory(Scenario)
 
 # 퍼저(Linux-Fuzz 프리셋만) — 신뢰 경계 파서의 스모크 `Fuzz.<이름>.Smoke`. 임포트 산출물을 읽지 않아 위의 고정 단계를 요구하지 않는다(다른 폴더라 걸리지 않는다).

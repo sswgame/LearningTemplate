@@ -87,6 +87,8 @@ namespace sw
         void requestAcceptFriends( OnlineSession& session );
         /** @brief 친구 신청 · 거래 요청이 거절된 수입니다. */
         int32 getPeopleRefusedCount() const { return _peopleRefusedCount; }
+        /** @brief 마지막으로 거절된 거래 요청의 업무 결과입니다(거절된 적이 없거나 전송 오류면 Ok). */
+        TradeResult getLastTradeRefusal() const { return _lastTradeRefusal; }
         /** @brief 정산된 거래 수입니다(서버 원장이 한 번에 옮겼다). */
         int32 getTradeSettledCount() const { return _tradeSettledCount; }
         void  requestMailList( OnlineSession& session );
@@ -183,6 +185,7 @@ namespace sw
         int32                                   _tradeSettledCount;
         int32                                   _selfMailSentCount;
         PlaygroundMatchState                    _matchState;
+        TradeResult                             _lastTradeRefusal;
         uint8                                   _bHubTicket    : 1; ///< 떠나온 허브에 접속 티켓으로 붙어 있었다
         uint8                                   _bReconnectHub : 1; ///< 잃은 허브에 다시 붙는다(`HubLost`)
         uint8                                   _bFriendsBound : 1; ///< `_friends` 가 친구 클라이언트에 붙었다
