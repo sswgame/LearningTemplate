@@ -596,53 +596,43 @@ namespace sw
         io.header( MetroidvaniaGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false || io.check( io.isWriting() || ( _pCatalog != nullptr && _pAreas != nullptr ) ) == false )
             return;
-        // 방 · 지형 · 배치는 씬 데이터로 `startGame` 이 이미 세웠다. 규칙 객체는 같은 카탈로그로 연 사본에 읽는다(그래프 · 지갑은 이 디렉터의 것을 빌린다).
-        PlatformerMotor2D          motor     = _motor;
-        MetroidvaniaAbilitySet     abilities = _abilities;
-        MetroidvaniaMapState       mapState  = _mapState;
-        MetroidvaniaDeathRestState deathRest = _deathRest;
-        MetroidvaniaTrinketLoadout loadout   = _loadout;
-        MetroidvaniaDuelist        player    = _player;
-        Wallet                     wallet    = _wallet;
-        GameFlags                  flags     = _flags;
-        GameRandom                 random    = _random;
-        FixedStepTimer             timer     = _timer;
-        vector<MetroidvaniaEnemy>  listEnemy = _listEnemy;
-        vector<hashed_string>      listVisited;
-        vector<hashed_string>      listDiscovered;
-        if ( io.isReading() )
-        {
-            abilities.initialize( *_pCatalog );
-            mapState.initialize( *_pCatalog, _graph );
-            if ( io.check( deathRest.initialize( *_pCatalog, _wallet, nullptr ) ) == false )
-                return;
-            loadout.initialize( *_pCatalog );
-            if ( io.check( player.initialize( *_pCatalog ) && populateEnemies( listEnemy ) ) == false )
-                return;
-        }
-        else
+        // 방 · 지형 · 배치는 씬 데이터로 `startGame` 이 이미 세웠다. 규칙 객체는 같은 카탈로그로 연 뒤에 읽는다(그래프 · 지갑은 이 디렉터의 것을 빌린다).
+        vector<hashed_string> listVisited;
+        vector<hashed_string> listDiscovered;
+        if ( io.isWriting() )
         {
             _graph.fillVisitedAreas( listVisited );
             _graph.fillDiscoveredAreas( listDiscovered );
         }
-        Countdown attackCooldown = _attackCooldown;
-        Countdown respawnDelay   = _respawnDelay;
-        io.value( motor );
-        io.value( abilities );
-        io.value( mapState );
-        io.value( deathRest );
-        io.value( loadout );
-        io.value( player );
-        io.value( wallet );
-        io.value( flags );
-        io.value( random );
-        io.value( timer );
-        io.value( attackCooldown );
-        io.value( respawnDelay );
+        io.value( _motor );
+        const bool bRead = io.valueOpened( _abilities, [this]( MetroidvaniaAbilitySet& abilities )
+        {
+            abilities.initialize( *_pCatalog );
+            return true;
+        } ) && io.valueOpened( _mapState, [this]( MetroidvaniaMapState& mapState )
+        {
+            mapState.initialize( *_pCatalog, _graph );
+            return true;
+        } ) && io.valueOpened( _deathRest, [this]( MetroidvaniaDeathRestState& deathRest )
+        { return deathRest.initialize( *_pCatalog, _wallet, nullptr ); } ) &&
+                           io.valueOpened( _loadout, [this]( MetroidvaniaTrinketLoadout& loadout )
+        {
+            loadout.initialize( *_pCatalog );
+            return true;
+        } ) && io.valueOpened( _player, [this]( MetroidvaniaDuelist& player )
+        { return player.initialize( *_pCatalog ); } );
+        if ( bRead == false || ( io.isReading() && io.check( populateEnemies( _listEnemy ) ) == false ) )
+            return;
+        io.value( _wallet );
+        io.value( _flags );
+        io.value( _random );
+        io.value( _timer );
+        io.value( _attackCooldown );
+        io.value( _respawnDelay );
         io.list( listVisited );
         io.list( listDiscovered );
-        io.expect( static_cast<uint32>( listEnemy.size() ) ); // 적은 씬 배치가 정한다
-        for ( MetroidvaniaEnemy& enemy : listEnemy )
+        io.expect( static_cast<uint32>( _listEnemy.size() ) ); // 적은 씬 배치가 정한다
+        for ( MetroidvaniaEnemy& enemy : _listEnemy )
         {
             io.value( enemy._duelist );
             io.value( enemy._startup );
@@ -653,21 +643,8 @@ namespace sw
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        abilities.applyToMotor( motor ); // 몸 설정은 얻은 능력에서 나온다(상태 바이트에 없다)
-        _graph = *_pAreas;               // 다시 읽힌 방 정의가 이긴다
+        _abilities.applyToMotor( _motor ); // 몸 설정은 얻은 능력에서 나온다(상태 바이트에 없다)
+        _graph = *_pAreas;                 // 다시 읽힌 방 정의가 이긴다
         _graph.restoreState( listVisited, listDiscovered );
-        _motor          = motor;
-        _abilities      = std::move( abilities );
-        _mapState       = std::move( mapState );
-        _deathRest      = std::move( deathRest );
-        _loadout        = std::move( loadout );
-        _player         = player;
-        _wallet         = std::move( wallet );
-        _flags          = std::move( flags );
-        _random         = random;
-        _timer          = timer;
-        _attackCooldown = attackCooldown;
-        _respawnDelay   = respawnDelay;
-        _listEnemy      = std::move( listEnemy );
     }
 } // namespace sw

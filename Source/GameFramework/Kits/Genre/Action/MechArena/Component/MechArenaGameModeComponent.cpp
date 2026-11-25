@@ -421,27 +421,17 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 판은 같은 설정 · 카탈로그로 연 뒤에 읽는다(키트 계약). 입력 명령은 싣지 않는다.
-        MechArenaWorld  restoredWorld;
-        FixedStepTimer  timer       = _timer;
-        GameRandom      random      = _random;
-        vector<BotHand> listBotHand = _listBotHand;
-        if ( io.isReading() && io.check( _pMechs != nullptr && _pMoves != nullptr && openWorld( restoredWorld ) ) == false )
+        if ( io.valueOpened( _world, [this]( MechArenaWorld& world )
+        { return _pMechs != nullptr && _pMoves != nullptr && openWorld( world ); } ) == false )
             return;
-        io.value( io.isWriting() ? _world : restoredWorld );
-        io.value( timer );
-        io.value( random );
-        io.list( listBotHand, MechArenaGameModeComponentInternal::kMinBotHandBytes, [&]( BotHand& hand )
+        io.value( _timer );
+        io.value( _random );
+        io.list( _listBotHand, MechArenaGameModeComponentInternal::kMinBotHandBytes, [&]( BotHand& hand )
         {
             io.value( hand._think );
             io.value( hand._strafeSign );
         } );
-        io.check( io.isWriting() || static_cast<int32>( listBotHand.size() ) == restoredWorld.getPilotCount() );
+        io.check( io.isWriting() || static_cast<int32>( _listBotHand.size() ) == _world.getPilotCount() );
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _world       = std::move( restoredWorld );
-        _timer       = timer;
-        _random      = random;
-        _listBotHand = std::move( listBotHand );
     }
 } // namespace sw

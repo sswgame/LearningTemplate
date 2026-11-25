@@ -159,13 +159,10 @@ namespace sw
         io.header( VoxelGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        const VoxelBlockCatalog* const pBoundCatalog = _world.getCatalog();
         if ( io.isReading() && _pCatalog != nullptr )
-            _world.rebindCatalog( *_pCatalog ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
+            _world.rebindCatalog( *_pCatalog ); // 다시 읽힌 카탈로그면 새 판으로 읽는다(거절하면 베이스가 앞 판 바이트를 다시 읽는다)
         io.value( _world );
         io.end();
-        if ( io.isReading() && io.isOk() == false && pBoundCatalog != nullptr )
-            _world.rebindCatalog( *pBoundCatalog ); // 거절했다 — 블록 번호는 앞 판의 것이다(앞 판은 베이스가 쥐고 있다)
     }
 
     void VoxelGameModeComponent::onStateRestored( bool bRestored )

@@ -202,16 +202,10 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 전투는 같은 카탈로그 · 같은 덱으로 연 뒤에 읽는다(키트 계약).
-        CardBattle restoredBattle;
-        Countdown  timer = _autoPlayTimer;
-        if ( io.isReading() && io.check( _pCatalog != nullptr && openBattle( restoredBattle ) ) == false )
+        if ( io.valueOpened( _battle, [this]( CardBattle& battle )
+        { return _pCatalog != nullptr && openBattle( battle ); } ) == false )
             return;
-        io.value( io.isWriting() ? _battle : restoredBattle );
-        io.value( timer );
+        io.value( _autoPlayTimer );
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _battle        = std::move( restoredBattle );
-        _autoPlayTimer = timer;
     }
 } // namespace sw

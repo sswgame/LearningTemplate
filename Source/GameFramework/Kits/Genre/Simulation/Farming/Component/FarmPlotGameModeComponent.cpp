@@ -38,22 +38,17 @@ namespace sw
         io.header( kStateFormat );
         if ( io.isOk() == false )
             return;
-        FarmField restoredField;
-        if ( io.isReading() )
-        {
-            if ( io.check( _pCropCatalog != nullptr ) == false )
-                return;
-            restoredField.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
-        }
-        FarmField& field = io.isWriting() ? _field : restoredField;
-        io.section( FarmField::kStateFormat, [&field]( StateIO& bodyIO )
-        { bodyIO.value( field ); } );
+        io.section( FarmField::kStateFormat, [this]( StateIO& bodyIO )
+        { (void)bodyIO.valueOpened( _field, [this]( FarmField& field )
+          {
+              if ( _pCropCatalog == nullptr )
+                  return false;
+              field.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
+              return true;
+          } ); } ); // 실패는 아카이브에 남는다
         io.end();
         if ( io.isReading() && io.isOk() )
-        {
-            _field = std::move( restoredField );
             ++_fieldRevision;
-        }
     }
 
     bool FarmPlotGameModeComponent::startGame()

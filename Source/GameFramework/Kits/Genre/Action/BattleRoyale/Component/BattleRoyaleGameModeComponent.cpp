@@ -797,17 +797,12 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 판은 같은 카탈로그 · 분대로 연 뒤에 읽는다(키트 계약). 비행 경로는 씨앗으로 `startGame` 이 이미 정했고, 입력 명령은 싣지 않는다.
-        BattleRoyaleMatch              restoredMatch;
-        FixedStepTimer                 timer          = _timer;
-        GameRandom                     random         = _random;
-        vector<Person>                 listPerson     = _listPerson;
-        vector<BattleRoyaleGroundItem> listGroundItem = _listGroundItem;
-        if ( io.isReading() && io.check( _pCatalog != nullptr && openMatch( restoredMatch ) ) == false )
+        if ( io.valueOpened( _match, [this]( BattleRoyaleMatch& match )
+        { return _pCatalog != nullptr && openMatch( match ); } ) == false )
             return;
-        io.value( io.isWriting() ? _match : restoredMatch );
-        io.value( timer );
-        io.value( random );
-        io.list( listPerson, BattleRoyaleGameModeComponentInternal::kMinPersonBytes, [&]( Person& person )
+        io.value( _timer );
+        io.value( _random );
+        io.list( _listPerson, BattleRoyaleGameModeComponentInternal::kMinPersonBytes, [&]( Person& person )
         {
             float3                position = person._skydiver.getPosition();
             BattleRoyaleFallStage stage    = person._skydiver.getStage();
@@ -828,7 +823,7 @@ namespace sw
                 (void)person._skydiver.tryOpenParachute(); // 낮은 높이면 이미 펴졌다
             io.check( person._bJumped == SW_FALSE || person._skydiver.getStage() == stage );
         } );
-        io.list( listGroundItem, BattleRoyaleGameModeComponentInternal::kMinGroundItemBytes, [&]( BattleRoyaleGroundItem& item )
+        io.list( _listGroundItem, BattleRoyaleGameModeComponentInternal::kMinGroundItemBytes, [&]( BattleRoyaleGroundItem& item )
         {
             io.value( item._position );
             io.value( item._itemID );
@@ -836,15 +831,9 @@ namespace sw
             io.value( item._spotIndex );
             io.check( item._count > 0 );
         } );
-        io.check( io.isWriting() || static_cast<int32>( listPerson.size() ) == restoredMatch.getPlayerCount() );
+        io.check( io.isWriting() || static_cast<int32>( _listPerson.size() ) == _match.getPlayerCount() );
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _match          = std::move( restoredMatch );
-        _timer          = timer;
-        _random         = random;
-        _listPerson     = std::move( listPerson );
-        _listGroundItem = std::move( listGroundItem );
-        ++_groundItemRevision;
+        if ( io.isReading() && io.isOk() )
+            ++_groundItemRevision;
     }
 } // namespace sw

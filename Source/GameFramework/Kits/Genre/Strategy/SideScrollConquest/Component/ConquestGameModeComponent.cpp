@@ -255,13 +255,8 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 판은 같은 카탈로그로 `initialize` 한 뒤에 읽는다(키트 계약). 꺼내기 표는 대입이 옮기지 않아 이 디렉터의 표가 그대로다.
-        ConquestWorld restoredWorld;
-        if ( io.isReading() && io.check( _pCatalog != nullptr && restoredWorld.initialize( *_pCatalog ) ) == false )
-            return;
-        io.value( io.isWriting() ? _world : restoredWorld );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _world = std::move( restoredWorld );
+        if ( io.valueOpened( _world, [this]( ConquestWorld& world )
+        { return _pCatalog != nullptr && world.initialize( *_pCatalog ); } ) )
+            io.end();
     }
 } // namespace sw

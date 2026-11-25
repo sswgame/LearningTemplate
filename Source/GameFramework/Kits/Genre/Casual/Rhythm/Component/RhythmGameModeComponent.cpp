@@ -167,13 +167,8 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 판은 같은 채보 · 같은 판정 창으로 연 뒤에 읽는다(키트 계약).
-        RhythmPlaySession restoredSession;
-        if ( io.isReading() && io.check( _pChart != nullptr && openSession( restoredSession ) ) == false )
-            return;
-        io.value( io.isWriting() ? _session : restoredSession );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _session = std::move( restoredSession );
+        if ( io.valueOpened( _session, [this]( RhythmPlaySession& session )
+        { return _pChart != nullptr && openSession( session ); } ) )
+            io.end();
     }
 } // namespace sw

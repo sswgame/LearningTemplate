@@ -159,21 +159,16 @@ namespace sw
         io.header( NileGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        CitySimulation  restoredCity;
-        NileCityPlanner restoredPlanner;
-        Wallet          restoredWallet;
-        WorldClock      restoredClock;
-        if ( io.isReading() )
-        {
-            // 자동 계획을 읽지 못하면 이유는 플래너가 남겼다
-            if ( io.check( restoredPlanner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ) ) == false || io.check( restoredClock.initialize( makeClockSettings() ) ) == false ||
-                 io.check( restoredCity.initialize( findCatalog(), getCity().getWidth(), getCity().getHeight(), _wallet ) ) == false )
-                return;
-        }
-        io.value( io.isWriting() ? getMutableCity() : restoredCity );
-        io.value( io.isWriting() ? _planner : restoredPlanner );
-        io.value( io.isWriting() ? _wallet : restoredWallet );
-        io.value( io.isWriting() ? _clock : restoredClock );
+        const bool bCity = io.valueOpened( getMutableCity(), [this]( CitySimulation& city )
+        { return city.initialize( findCatalog(), getCity().getWidth(), getCity().getHeight(), _wallet ); } );
+        const bool bRead = bCity && io.valueOpened( _planner, [this]( NileCityPlanner& planner )
+        { return planner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ); } ); // 자동 계획을 읽지 못하면 이유는 플래너가 남겼다
+        if ( bRead == false )
+            return;
+        io.value( _wallet );
+        if ( io.valueOpened( _clock, [this]( WorldClock& clock )
+        { return clock.initialize( makeClockSettings() ); } ) == false )
+            return;
         // 달 수 · 진화 수 · 자동 계획 토글은 상태 칸이다(`GameModeComponent::serializeState`). 배속은 `GameSpeedControl` 이 검사하며 되돌린다.
         float32 timeScale = getSpeed().getTimeScale();
         uint8   bPaused   = getSpeed().isPaused() ? SW_TRUE : SW_FALSE;
@@ -182,15 +177,8 @@ namespace sw
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        GameSpeedControl restoredSpeed = getSpeed(); // 같은 범위로 본다
-        if ( io.check( restoredSpeed.restore( timeScale, bPaused != SW_FALSE ) ) == false )
-            return; // 범위 밖 배속(깨진 세이브)은 거절한다
-        getMutableCity()  = std::move( restoredCity );
-        _planner          = std::move( restoredPlanner );
-        _wallet           = std::move( restoredWallet );
-        _clock            = std::move( restoredClock );
-        getMutableSpeed() = restoredSpeed;
-        markLayoutChanged();
+        if ( io.check( getMutableSpeed().restore( timeScale, bPaused != SW_FALSE ) ) ) // 범위 밖 배속(깨진 세이브)은 거절한다
+            markLayoutChanged();
     }
 
     void NileGameModeComponent::onStateRestored( bool bRestored )

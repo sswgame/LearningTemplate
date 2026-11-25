@@ -609,71 +609,58 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 자리 · 체력 · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 규칙 객체는 같은 카탈로그로 연 뒤에 읽는다(키트 계약).
-        MonsterHuntHaggle        restoredHaggle;
-        MonsterHuntInvestigation restoredInvestigation;
-        MonsterHuntBestiary      restoredBestiary;
-        MonsterHuntCombat        restoredCombat;
-        MonsterHuntAlchemy       restoredAlchemy;
-        Inventory                restoredBag;
-        QuestLog                 restoredQuestLog;
-        MonsterHuntMutagens      restoredMutagens;
-        SkillTreeState           restoredSkills;
-        Countdown                attackCooldown = _attackCooldown;
-        Countdown                dodge          = _dodge;
-        Countdown                monsterAttack  = _monsterAttack;
-        if ( io.isReading() )
+        if ( io.isReading() && ( _pCatalog == nullptr || _pChart == nullptr || _pRecipes == nullptr || _pItemCatalog == nullptr ) )
         {
-            const bool bReady = _pCatalog != nullptr && _pChart != nullptr && _pRecipes != nullptr && _pItemCatalog != nullptr && restoredHaggle.initialize( _pCatalog.get(), _contract.key() ) &&
-                                restoredInvestigation.initialize( *_pCatalog, _contract.key(), _questLog ) && restoredCombat.initialize( _pCatalog.get(), _seed ) &&
-                                restoredBag.initialize( *_pItemCatalog, _bagSlotCount );
-            if ( bReady == false )
-            {
-                SW_LOG_ERROR_ID( "MonsterHunt.StateNeedsCatalog", "Monster hunt game mode: state read before the catalog, the recipes, the items and the element chart are loaded - refused" );
-                io.fail();
-                return;
-            }
-            restoredBestiary.initialize( *_pCatalog, *_pChart );
-            restoredAlchemy.initialize( *_pCatalog, *_pRecipes );
-            if ( _pQuests != nullptr )
-                restoredQuestLog.initialize( *_pQuests );
-            restoredMutagens.initialize( *_pCatalog, _hunterLevel );
-            restoredSkills.initialize( _skills.getTree() );
-            restoredSkills.addPoints( _skillPoints );
+            SW_LOG_ERROR_ID( "MonsterHunt.StateNeedsCatalog", "Monster hunt game mode: state read before the catalog, the recipes, the items and the element chart are loaded - refused" );
+            io.fail();
+            return;
         }
-        io.value( io.isWriting() ? _haggle : restoredHaggle );
-        io.value( io.isWriting() ? _investigation : restoredInvestigation );
-        io.value( io.isWriting() ? _questLog : restoredQuestLog );
-        io.value( io.isWriting() ? _bestiary : restoredBestiary );
-        io.value( io.isWriting() ? _combat : restoredCombat );
-        io.value( io.isWriting() ? _alchemy : restoredAlchemy );
-        io.value( io.isWriting() ? _bag : restoredBag );
-        io.value( io.isWriting() ? _mutagens : restoredMutagens );
-        io.value( attackCooldown );
-        io.value( dodge );
-        io.value( monsterAttack );
+        const bool bRead = io.valueOpened( _haggle, [this]( MonsterHuntHaggle& haggle )
+        { return haggle.initialize( _pCatalog.get(), _contract.key() ); } ) &&
+                           io.valueOpened( _investigation, [this]( MonsterHuntInvestigation& investigation )
+        { return investigation.initialize( *_pCatalog, _contract.key(), _questLog ); } ) &&
+                           io.valueOpened( _questLog, [this]( QuestLog& questLog )
+        {
+            if ( _pQuests != nullptr )
+                questLog.initialize( *_pQuests );
+            return true;
+        } ) && io.valueOpened( _bestiary, [this]( MonsterHuntBestiary& bestiary )
+        {
+            bestiary.initialize( *_pCatalog, *_pChart );
+            return true;
+        } ) && io.valueOpened( _combat, [this]( MonsterHuntCombat& combat )
+        { return combat.initialize( _pCatalog.get(), _seed ); } ) &&
+                           io.valueOpened( _alchemy, [this]( MonsterHuntAlchemy& alchemy )
+        {
+            alchemy.initialize( *_pCatalog, *_pRecipes );
+            return true;
+        } ) && io.valueOpened( _bag, [this]( Inventory& bag )
+        { return bag.initialize( *_pItemCatalog, _bagSlotCount ); } ) &&
+                           io.valueOpened( _mutagens, [this]( MonsterHuntMutagens& mutagens )
+        {
+            mutagens.initialize( *_pCatalog, _hunterLevel );
+            return true;
+        } );
+        if ( bRead == false )
+            return;
+        io.value( _attackCooldown );
+        io.value( _dodge );
+        io.value( _monsterAttack );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
         const bool bHealthValid = _playerHP <= _playerMaxHP && _monsterHP <= _monsterMaxHP;
-        const bool bPhaseValid  = ( _phase == MonsterHuntPhase::Haggle ) != restoredHaggle.isClosed();
+        const bool bPhaseValid  = ( _phase == MonsterHuntPhase::Haggle ) != _haggle.isClosed();
         if ( io.check( bHealthValid && bPhaseValid ) == false )
             return;
+        SkillTreeState skills; // 배운 것은 상태 칸(`_listLearnedSkill`)이다 — 트리에 다시 건다
+        skills.initialize( _skills.getTree() );
+        skills.addPoints( _skillPoints );
         for ( const hashed_string& skillID : _listLearnedSkill )
         {
-            if ( io.check( restoredSkills.rankUp( skillID, _hunterLevel ) == SkillResult::Ok ) == false ) // 트리가 바뀌어 배울 수 없는 저장은 거절한다
+            if ( io.check( skills.rankUp( skillID, _hunterLevel ) == SkillResult::Ok ) == false ) // 트리가 바뀌어 배울 수 없는 저장은 거절한다
                 return;
         }
-        _mutagens       = std::move( restoredMutagens );
-        _skills         = std::move( restoredSkills );
-        _haggle         = restoredHaggle;
-        _investigation  = std::move( restoredInvestigation ); // 빌린 일지의 주소는 그대로다
-        _questLog       = std::move( restoredQuestLog );
-        _bestiary       = std::move( restoredBestiary );
-        _combat         = restoredCombat;
-        _alchemy        = std::move( restoredAlchemy );
-        _bag            = std::move( restoredBag );
-        _attackCooldown = attackCooldown;
-        _dodge          = dodge;
-        _monsterAttack  = monsterAttack;
+        _skills = std::move( skills );
     }
 } // namespace sw

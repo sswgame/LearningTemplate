@@ -300,27 +300,18 @@ namespace sw
         io.header( ActionPlatformerGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        // 지형 · 카탈로그는 씬 데이터에서 `startGame` 이 이미 세웠다. 몸과 진행만 싣는다(진행은 카탈로그를 빌려 id 로 스테이지를 찾는다).
-        ActionPlatformerBody restoredBody;
-        ActionStageRun       restoredRun;
-        RespawnFlow          restoredRespawn;
-        if ( io.isReading() )
+        // 지형 · 카탈로그는 씬 데이터에서 `startGame` 이 이미 세웠다. 몸과 진행만 싣는다(진행은 카탈로그를 빌려 id 로 스테이지를 찾는다). 부활 흐름은 읽은 진행의 스테이지 규칙으로 연다.
+        const bool bRead = io.valueOpened( _body, [this]( ActionPlatformerBody& body )
         {
-            restoredBody.initialize( *_pCatalog );
-            restoredRun.bindCatalog( *_pCatalog );
-        }
-        io.value( io.isWriting() ? _body : restoredBody );
-        io.value( io.isWriting() ? _run : restoredRun );
-        // 부활 흐름은 읽은 진행의 스테이지 규칙으로 연 사본에 읽는다 — 다시 읽힌 카탈로그의 규칙이 이긴다.
-        if ( io.isReading() && io.check( restoredRun.getStage() != nullptr && restoredRespawn.initialize( restoredRun.getStage()->_respawn ) ) == false )
-            return;
-        // 점프 키 깃발 · 부활 셈은 상태 칸이다(`GameModeComponent::serializeState`)
-        io.value( io.isWriting() ? _respawn : restoredRespawn );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _body    = std::move( restoredBody );
-        _run     = std::move( restoredRun );
-        _respawn = std::move( restoredRespawn );
+            body.initialize( *_pCatalog );
+            return true;
+        } ) && io.valueOpened( _run, [this]( ActionStageRun& run )
+        {
+            run.bindCatalog( *_pCatalog );
+            return true;
+        } ) && io.valueOpened( _respawn, [this]( RespawnFlow& respawn )
+        { return _run.getStage() != nullptr && respawn.initialize( _run.getStage()->_respawn ); } ); // 점프 키 깃발 · 부활 셈은 상태 칸이다(`GameModeComponent::serializeState`)
+        if ( bRead )
+            io.end();
     }
 } // namespace sw

@@ -335,21 +335,13 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 시리즈는 같은 카탈로그 · 같은 사람 수로, 무대는 읽은 시리즈의 라운드로 연 뒤에 읽는다(키트 계약).
-        PartyRoundSeries restoredSeries;
-        TrampolineArena  restoredArena;
-        Countdown        phaseTimer = _phaseTimer;
-        if ( io.isReading() && io.check( _pCatalog != nullptr && openSeries( restoredSeries ) ) == false )
+        const bool bRead = io.valueOpened( _series, [this]( PartyRoundSeries& series )
+        { return _pCatalog != nullptr && openSeries( series ); } ) &&
+                           io.valueOpened( _arena, [this]( TrampolineArena& arena )
+        { return openRound( _series, arena ); } );
+        if ( bRead == false )
             return;
-        io.value( io.isWriting() ? _series : restoredSeries );
-        if ( io.isReading() && io.check( io.isOk() && openRound( restoredSeries, restoredArena ) ) == false )
-            return;
-        io.value( io.isWriting() ? _arena : restoredArena );
-        io.value( phaseTimer );
+        io.value( _phaseTimer );
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _series     = std::move( restoredSeries );
-        _arena      = std::move( restoredArena );
-        _phaseTimer = phaseTimer;
     }
 } // namespace sw

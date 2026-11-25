@@ -376,23 +376,22 @@ namespace sw
         io.header( ParkGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        ThemeParkSimulation restoredSimulation;
-        if ( io.isReading() && io.check( restoredSimulation.initialize( _settings, _wallet, _walkGrid ) ) == false )
+        if ( io.valueOpened( _simulation, [this]( ThemeParkSimulation& simulation )
+        { return simulation.initialize( _settings, _wallet, _walkGrid ); } ) == false )
             return;
-        ThemeParkSimulation& simulation = io.isWriting() ? _simulation : restoredSimulation;
-        io.value( simulation );
         uint32 placementCount = static_cast<uint32>( _listPlacement.size() );
         io.count( sizeof( int32 ), placementCount );
         // 배치 데이터가 바뀌었으면 건설한 것을 맞출 수 없다.
         if ( io.check( placementCount == _listPlacement.size() ) == false )
             return;
-        const int32   rideCount = static_cast<int32>( simulation.getRides().size() );
-        vector<int32> listRideIndex( placementCount );
-        for ( uint32 index = 0; index < placementCount; ++index )
+        const int32 rideCount = static_cast<int32>( _simulation.getRides().size() );
+        for ( RidePlacement& placement : _listPlacement )
         {
-            listRideIndex[index] = _listPlacement[index]._rideIndex;
-            io.value( listRideIndex[index] );
-            io.check( -1 <= listRideIndex[index] && listRideIndex[index] < rideCount );
+            io.value( placement._rideIndex );
+            if ( io.check( -1 <= placement._rideIndex && placement._rideIndex < rideCount ) == false )
+                return;
+            if ( io.isReading() && placement._rideIndex >= 0 )
+                placement._ride = _simulation.getRides()[static_cast<size_t>( placement._rideIndex )];
         }
         uint32 coasterCount = static_cast<uint32>( _listCoaster.size() );
         io.count( sizeof( int32 ) + sizeof( float32 ) * 2, coasterCount );
@@ -417,20 +416,10 @@ namespace sw
             pCoaster->_train.setSpeed( speed );
             listCoaster.push_back( std::move( pCoaster ) );
         }
-        Wallet restoredWallet; // 두 시계는 상태 칸이다(`GameModeComponent::serializeState`)
-        io.value( io.isWriting() ? _wallet : restoredWallet );
+        io.value( _wallet ); // 두 시계는 상태 칸이다(`GameModeComponent::serializeState`)
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _simulation = std::move( restoredSimulation );
-        _wallet     = std::move( restoredWallet );
-        for ( uint32 placementIndex = 0; placementIndex < placementCount; ++placementIndex )
-        {
-            RidePlacement& placement = _listPlacement[placementIndex];
-            placement._rideIndex     = listRideIndex[placementIndex];
-            if ( placement._rideIndex >= 0 )
-                placement._ride = _simulation.getRides()[static_cast<size_t>( placement._rideIndex )];
-        }
         _listCoaster = std::move( listCoaster );
         ++_parkRevision;
     }

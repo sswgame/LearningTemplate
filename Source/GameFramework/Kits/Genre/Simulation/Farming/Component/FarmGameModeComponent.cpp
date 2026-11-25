@@ -207,26 +207,20 @@ namespace sw
         io.header( FarmGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        FarmField       restoredField;
-        FarmShippingBin restoredShipment;
-        if ( io.isReading() )
-        {
-            if ( io.check( _pCropCatalog != nullptr ) == false )
-                return;
-            restoredField.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
-        }
-        FarmField&       field    = io.isWriting() ? _field : restoredField;
-        FarmShippingBin& shipment = io.isWriting() ? _shipment : restoredShipment;
-        io.section( FarmField::kStateFormat, [&field]( StateIO& bodyIO )
-        { bodyIO.value( field ); } );
-        io.section( FarmShippingBin::kStateFormat, [&shipment]( StateIO& bodyIO )
-        { bodyIO.value( shipment ); } );
-        // 날씨(난수 · 지금 날씨)는 판 상태가 싣는다 — 판 4 부터 이 칸에 비 · 난수가 없다. 농부 자리 · 기력 · 도구 · 하루는 상태 칸이다(`GameModeComponent::serializeState`).
+        io.section( FarmField::kStateFormat, [this]( StateIO& bodyIO )
+        { (void)bodyIO.valueOpened( _field, [this]( FarmField& field )
+          {
+              if ( _pCropCatalog == nullptr )
+                  return false;
+              field.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
+              return true;
+          } ); } ); // 실패는 아카이브에 남는다
+        io.section( FarmShippingBin::kStateFormat, [this]( StateIO& bodyIO )
+        { bodyIO.value( _shipment ); } );
+        // 날씨(난수 · 지금 날씨)는 판 상태가 싣는다. 농부 자리 · 기력 · 도구 · 하루는 상태 칸이다(`GameModeComponent::serializeState`).
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _field    = std::move( restoredField );
-        _shipment = std::move( restoredShipment );
         applyCropCatalog();                                               // 작물 카탈로그가 다시 읽혀 왕복했으면 가방 · 씨앗 목록도 새 판이다
         _stamina           = MathUtil::clamp( _stamina, 0, _maxStamina ); // 칸 사이 맞춤 — 최대는 설정이다
         _selectedSeedIndex = _listSeed.empty() ? 0 : MathUtil::clamp( _selectedSeedIndex, 0, static_cast<int32>( _listSeed.size() ) - 1 );

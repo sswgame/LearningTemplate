@@ -41,17 +41,14 @@ namespace sw
         io.header( kStateFormat ); // 배치를 마쳤는지는 상태 칸이다(`GameModeComponent::serializeState`)
         if ( io.isOk() == false )
             return;
-        CitySimulation restoredCity;
-        if ( io.isReading() && io.check( initializeCity( restoredCity, *pState, *pWallet ) ) == false )
-            return;
-        CitySimulation& city = io.isWriting() ? getMutableCity() : restoredCity;
-        io.section( CitySimulation::kStateFormat, [&city]( StateIO& bodyIO )
-        { bodyIO.value( city ); } );
+        io.section( CitySimulation::kStateFormat, [&]( StateIO& bodyIO )
+        {
+            (void)bodyIO.valueOpened( getMutableCity(), [&]( CitySimulation& city )
+            { return initializeCity( city, *pState, *pWallet ); } ); // 실패는 아카이브에 남는다
+        } );
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        getMutableCity() = std::move( restoredCity );
-        markLayoutChanged();
+        if ( io.isReading() && io.isOk() )
+            markLayoutChanged();
     }
 
     bool CityGameModeComponent::initializeCity( CitySimulation& outCity, GameStateComponent& state, WalletComponent& wallet ) const

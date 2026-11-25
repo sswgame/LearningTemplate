@@ -437,25 +437,18 @@ namespace sw
         io.header( Internal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        // 판은 같은 카탈로그 · 설정으로 `initialize` 한 뒤에 읽는다(키트 계약). 무대와 생존자는 바이트가 정한다.
-        AsymmetricHorrorMatch restoredMatch;
-        if ( io.isReading() )
+        // 판은 같은 카탈로그 · 설정으로 `initialize` 한 뒤에 읽는다(키트 계약). 무대와 생존자는 바이트가 정한다. 사람 비트 · 결과는 상태 칸이다(`GameModeComponent::serializeState`).
+        const bool bMatch = io.valueOpened( _match, [this]( AsymmetricHorrorMatch& match )
         {
-            if ( _pCatalog == nullptr || restoredMatch.initialize( makeSettings(), _pCatalog.get() ) == false )
-            {
-                SW_LOG_ERROR_ID( "AsymmetricHorror.StateNeedsCatalog", "Asymmetric horror game mode: state read before the rules catalog is bound - refused" );
-                io.fail();
-                return;
-            }
-        }
-        Countdown killerRelease = _killerRelease;
-        io.value( io.isWriting() ? _match : restoredMatch ); // 사람 비트 · 결과는 상태 칸이다(`GameModeComponent::serializeState`)
-        io.value( killerRelease );
-        io.check( io.isWriting() || restoredMatch.getSurvivorCount() == static_cast<int32>( _listCommand.size() ) );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
+            if ( _pCatalog != nullptr && match.initialize( makeSettings(), _pCatalog.get() ) )
+                return true;
+            SW_LOG_ERROR_ID( "AsymmetricHorror.StateNeedsCatalog", "Asymmetric horror game mode: state read before the rules catalog is bound - refused" );
+            return false;
+        } );
+        if ( bMatch == false )
             return;
-        _match         = std::move( restoredMatch );
-        _killerRelease = killerRelease;
+        io.value( _killerRelease );
+        io.check( io.isWriting() || _match.getSurvivorCount() == static_cast<int32>( _listCommand.size() ) );
+        io.end();
     }
 } // namespace sw

@@ -340,37 +340,31 @@ namespace sw
         io.header( RestaurantGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        // 날 · 이익 합 · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 식당은 같은 카탈로그 · 설정으로 연 뒤에 읽는다(키트 계약).
-        Wallet               restoredWallet;
-        Inventory            restoredPantry;
-        ReputationState      restoredReputation;
-        WorldClock           restoredClock = _clock; // 설정은 이 판의 것이다
-        RestaurantSimulation restoredSimulation;
-        if ( io.isReading() )
+        // 날 · 이익 합 · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 식당은 같은 카탈로그 · 설정으로 연 뒤에 읽는다(키트 계약) — 빌리는 지갑 · 창고 · 평판을 먼저 읽는다.
+        if ( io.isReading() && ( _pCatalog == nullptr || _pRecipes == nullptr || _pShops == nullptr || _pItemCatalog == nullptr ) )
         {
-            if ( _pCatalog == nullptr || _pRecipes == nullptr || _pShops == nullptr || _pItemCatalog == nullptr || restoredPantry.initialize( *_pItemCatalog, _pantrySlotCount ) == false )
-            {
-                SW_LOG_ERROR_ID( "Restaurant.StateNeedsCatalog", "Restaurant game mode: state read before the restaurant, recipe, shop and item catalogs are loaded - refused" );
-                io.fail();
-                return;
-            }
-            restoredReputation.initialize( RestaurantGameModeComponentInternal::getReputationCatalog( _pReputationCatalog.get() ) );
-            initializeSimulation( restoredSimulation ); // 빌린 지갑 · 창고 · 평판은 이 디렉터의 칸이다 — 읽는 동안은 건드리지 않는다
+            SW_LOG_ERROR_ID( "Restaurant.StateNeedsCatalog", "Restaurant game mode: state read before the restaurant, recipe, shop and item catalogs are loaded - refused" );
+            io.fail();
+            return;
         }
-        io.value( io.isWriting() ? _wallet : restoredWallet );
-        io.value( io.isWriting() ? _pantry : restoredPantry );
-        io.value( io.isWriting() ? _reputation : restoredReputation );
-        io.value( restoredClock );
-        io.value( io.isWriting() ? _simulation : restoredSimulation );
+        io.value( _wallet );
+        const bool bBorrowed = io.valueOpened( _pantry, [this]( Inventory& pantry )
+        { return pantry.initialize( *_pItemCatalog, _pantrySlotCount ); } ) &&
+                               io.valueOpened( _reputation, [this]( ReputationState& reputation )
+        {
+            reputation.initialize( RestaurantGameModeComponentInternal::getReputationCatalog( _pReputationCatalog.get() ) );
+            return true;
+        } );
+        if ( bBorrowed == false )
+            return;
+        io.value( _clock ); // 설정은 이 판의 것이다
+        if ( io.valueOpened( _simulation, [this]( RestaurantSimulation& simulation )
+        {
+            initializeSimulation( simulation );
+            return true;
+        } ) == false )
+            return;
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        if ( io.check( _day <= _dayCount && ( _phase == RestaurantPhase::Open ) == restoredSimulation.isOpen() ) == false )
-            return;
-        _wallet     = std::move( restoredWallet );
-        _pantry     = std::move( restoredPantry );
-        _reputation = std::move( restoredReputation );
-        _clock      = restoredClock;
-        _simulation = std::move( restoredSimulation );
+        io.check( io.isWriting() || ( _day <= _dayCount && ( _phase == RestaurantPhase::Open ) == _simulation.isOpen() ) );
     }
 } // namespace sw

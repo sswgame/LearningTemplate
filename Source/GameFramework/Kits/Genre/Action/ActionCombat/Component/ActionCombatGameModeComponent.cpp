@@ -188,25 +188,19 @@ namespace sw
         io.header( ActionCombatGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        ActionRoom restoredRoom;
-        if ( io.isReading() )
+        const bool bRoom = io.valueOpened( _room, [this]( ActionRoom& room )
         {
             ActionRoomLayout layout;
-            if ( io.check( makeLayout( layout ) ) == false )
-                return;
-            restoredRoom.setLayout( layout );
-        }
-        io.value( io.isWriting() ? _room : restoredRoom );
-        // 자리 · HP · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 손 본문은 룸 · 보스 지연 · 결과 보여 주기(`Countdown`) · 방향(리플렉션 열거가 아니다)만.
-        Countdown       bossDelay = _bossDelay;
-        FacingDirection facing    = _facing;
-        io.value( bossDelay );
-        io.enumValue( facing, FacingDirection::Up );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
+            if ( makeLayout( layout ) == false )
+                return false;
+            room.setLayout( layout );
+            return true;
+        } );
+        if ( bRoom == false )
             return;
-        _room      = std::move( restoredRoom );
-        _bossDelay = bossDelay;
-        _facing    = facing;
+        // 자리 · HP · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 손 본문은 룸 · 보스 지연 · 방향(리플렉션 열거가 아니다)만.
+        io.value( _bossDelay );
+        io.enumValue( _facing, FacingDirection::Up );
+        io.end();
     }
 } // namespace sw

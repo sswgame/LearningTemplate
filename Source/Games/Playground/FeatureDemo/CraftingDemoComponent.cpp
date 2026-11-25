@@ -155,16 +155,10 @@ namespace sw
     void CraftingDemoComponent::serializeGameState( StateIO& io )
     {
         io.header( CraftingDemoComponentInternal::kStateFormat );
-        if ( io.isWriting() )
+        (void)io.valueOpened( _crafter, [this]( Crafter& crafter )
         {
-            io.value( _crafter );
-            return;
-        }
-        Crafter crafter;
-        crafter.initialize( _pRecipes.get() );
-        io.value( crafter );
-        if ( io.isOk() == false )
-            return;
-        _crafter = std::move( crafter );
+            crafter.initialize( _pRecipes.get() );
+            return true;
+        } ); // 실패는 아카이브에 남는다
     }
 } // namespace sw

@@ -478,40 +478,42 @@ namespace sw
             return;
         // 자리 · 볼 · 잡은 수 · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 규칙 객체는 같은 카탈로그로 연 뒤에 읽는다(키트 계약).
         // 전투는 전투 중일 때만 싣는다 — 다음 전투는 시작할 때 새로 열고 시드는 연 전투 수가 정한다.
-        MonsterStorage restoredStorage;
-        MonsterBattle  restoredBattle;
-        GameRandom     random              = _random;
-        int32          stepsSinceEncounter = _encounterCounter.getStepsSinceEncounter();
-        int32          totalSteps          = _encounterCounter.getTotalSteps();
-        const bool     bInBattle           = _phase == MonsterCollectorPhase::Battle;
-        if ( io.isReading() )
+        const bool bStorage = io.valueOpened( _storage, [this]( MonsterStorage& storage )
         {
-            if ( _pCatalog == nullptr || _pChart == nullptr || restoredStorage.initialize( _pCatalog.get(), _boxCapacity ) == false )
-            {
-                SW_LOG_ERROR_ID( "MonsterCollector.StateNeedsCatalog", "Monster collector game mode: state read before the catalog and the element chart are loaded - refused" );
-                io.fail();
-                return;
-            }
-            restoredBattle.initialize( *_pCatalog, *_pChart, _seed );
-        }
-        io.value( io.isWriting() ? _storage : restoredStorage );
+            if ( _pCatalog != nullptr && _pChart != nullptr && storage.initialize( _pCatalog.get(), _boxCapacity ) )
+                return true;
+            SW_LOG_ERROR_ID( "MonsterCollector.StateNeedsCatalog", "Monster collector game mode: state read before the catalog and the element chart are loaded - refused" );
+            return false;
+        } );
+        if ( bStorage == false )
+            return;
+        const bool bInBattle  = _phase == MonsterCollectorPhase::Battle;
+        const auto openBattle = [this]( MonsterBattle& battle )
+        {
+            battle.initialize( *_pCatalog, *_pChart, _seed );
+            return true;
+        };
         if ( bInBattle )
-            io.value( io.isWriting() ? _battle : restoredBattle );
-        io.value( random );
+        {
+            if ( io.valueOpened( _battle, openBattle ) == false )
+                return;
+        }
+        else if ( io.isReading() )
+        {
+            MonsterBattle battle;
+            (void)openBattle( battle ); // 늘 열린다
+            _battle = std::move( battle );
+        }
+        int32 stepsSinceEncounter = _encounterCounter.getStepsSinceEncounter();
+        int32 totalSteps          = _encounterCounter.getTotalSteps();
+        io.value( _random );
         io.value( stepsSinceEncounter );
         io.value( totalSteps );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        StepEncounterCounter restoredCounter;
-        const bool           bBattleOpen = restoredBattle.getResult() == MonsterBattleResult::Ongoing && restoredBattle.getParty( MonsterBattle::kPlayerSide ).empty() == false &&
-                                 restoredBattle.getParty( MonsterBattle::kFoeSide ).empty() == false;
-        const bool bBattleValid = bInBattle == false || bBattleOpen;
-        if ( io.check( restoredStorage.getParty().empty() == false && bBattleValid && restoredCounter.restore( stepsSinceEncounter, totalSteps ) ) == false )
-            return;
-        _storage          = std::move( restoredStorage );
-        _battle           = std::move( restoredBattle );
-        _random           = random;
-        _encounterCounter = restoredCounter;
+        const bool bBattleOpen = _battle.getResult() == MonsterBattleResult::Ongoing && _battle.getParty( MonsterBattle::kPlayerSide ).empty() == false &&
+                                 _battle.getParty( MonsterBattle::kFoeSide ).empty() == false;
+        io.check( _storage.getParty().empty() == false && ( bInBattle == false || bBattleOpen ) && _encounterCounter.restore( stepsSinceEncounter, totalSteps ) );
     }
 } // namespace sw

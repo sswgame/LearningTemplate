@@ -197,13 +197,11 @@ namespace sw
         io.header( kGameModeStateFormat );
         if ( io.isOk() == false )
             return;
-        OverworldTileMover mover = _mover;
-        io.section( OverworldTileMover::kStateFormat, [&mover]( StateIO& bodyIO )
-        { bodyIO.value( mover ); } );
+        io.section( OverworldTileMover::kStateFormat, [this]( StateIO& bodyIO )
+        { bodyIO.value( _mover ); } );
         io.end();
         if ( io.isReading() && io.isOk() )
         {
-            _mover = mover;
             _mover.setTileMap( &_tileMap );
             _mover.setInputEnabled( true ); // 대화는 저장하지 않는다 — 복원한 판은 대화 밖이다
         }

@@ -317,31 +317,17 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 대전은 같은 캐릭터로 연 뒤에 읽는다(키트 계약). 입력 명령은 싣지 않는다.
-        FightingMatch  restoredMatch;
-        FixedStepTimer timer  = _timer;
-        GameRandom     random = _random;
-        CPUHand        arrHand[FightingMatch::kPlayerCount]{};
-        if ( io.isReading() && io.check( _pCatalog != nullptr && openMatch( restoredMatch ) ) == false )
+        if ( io.valueOpened( _match, [this]( FightingMatch& match )
+        { return _pCatalog != nullptr && openMatch( match ); } ) == false )
             return;
-        io.value( io.isWriting() ? _match : restoredMatch );
-        io.value( timer );
-        io.value( random );
-        for ( int32 player = 0; player < FightingMatch::kPlayerCount; ++player )
+        io.value( _timer );
+        io.value( _random );
+        for ( CPUHand& hand : _arrCPUHand )
         {
-            arrHand[player] = _arrCPUHand[player];
-            io.value( arrHand[player]._thinkFramesLeft );
-            io.value( arrHand[player]._direction );
-            io.check( arrHand[player]._thinkFramesLeft >= 0 && arrHand[player]._direction <= FightingGameModeComponentInternal::kLast );
+            io.value( hand._thinkFramesLeft );
+            io.value( hand._direction );
+            io.check( hand._thinkFramesLeft >= 0 && hand._direction <= FightingGameModeComponentInternal::kLast );
         }
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _match  = std::move( restoredMatch );
-        _timer  = timer;
-        _random = random;
-        for ( int32 player = 0; player < FightingMatch::kPlayerCount; ++player )
-        {
-            _arrCPUHand[player] = arrHand[player];
-        }
     }
 } // namespace sw

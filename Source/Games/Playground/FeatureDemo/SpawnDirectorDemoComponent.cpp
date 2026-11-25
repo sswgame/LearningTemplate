@@ -105,16 +105,10 @@ namespace sw
     void SpawnDirectorDemoComponent::serializeGameState( StateIO& io )
     {
         io.header( SpawnDirectorDemoComponentInternal::kStateFormat );
-        if ( io.isWriting() )
+        (void)io.valueOpened( _director, [this]( SpawnDirector& director )
         {
-            io.value( _director );
-            return;
-        }
-        SpawnDirector director;
-        director.initialize( _pTable.get(), _seed );
-        io.value( director );
-        if ( io.isOk() == false )
-            return;
-        _director = std::move( director );
+            director.initialize( _pTable.get(), _seed );
+            return true;
+        } ); // 실패는 아카이브에 남는다
     }
 } // namespace sw

@@ -139,26 +139,17 @@ namespace sw
     void InventoryShopDemoComponent::serializeGameState( StateIO& io )
     {
         io.header( InventoryShopDemoInternal::kStateFormat );
-        if ( io.isWriting() )
+        io.value( _wallet );
+        if ( io.valueOpened( _shop, [this]( ShopManager& shop )
         {
-            io.value( _wallet );
-            io.value( _shop );
+            const AppearanceDatabase* const pDatabase = game::findSubsystem<AppearanceDatabase>();
+            const ItemCatalog* const        pItems    = pDatabase != nullptr ? pDatabase->getItemCatalog() : nullptr;
+            if ( _pShops == nullptr || pItems == nullptr )
+                return false;
+            shop.initialize( *_pShops, *pItems ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
+            return true;
+        } ) == false )
             return;
-        }
-        // 지역 사본에 읽고 끝까지 맞으면 바꾼다.
-        const AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
-        const ItemCatalog* const  pItems    = pDatabase != nullptr ? pDatabase->getItemCatalog() : nullptr;
-        if ( io.check( _pShops != nullptr && pItems != nullptr ) == false )
-            return;
-        Wallet      wallet = _wallet;
-        ShopManager shop;
-        shop.initialize( *_pShops, *pItems ); // 다시 읽힌 카탈로그면 새 판으로 읽는다
-        io.value( wallet );
-        io.value( shop );
-        if ( io.isOk() == false )
-            return;
-        _wallet = std::move( wallet );
-        _shop   = std::move( shop );
     }
 
     CharacterEquipmentComponent* InventoryShopDemoComponent::findCharacter() const

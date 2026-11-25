@@ -208,7 +208,7 @@ namespace sw
         // 감독은 단계 · 웨이브 · 예산 · 산 스폰까지 잇는다. 적 모습은 복원 뒤 걷히고(`onViewsDespawned`) 감독 예산으로 섰던 것만 같은 스폰 id 로 다시 선다.
         if ( bPacing == SW_TRUE )
         {
-            io.valueAtomic( _director );
+            io.value( _director );
         }
         io.end();
     }

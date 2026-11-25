@@ -175,6 +175,29 @@ namespace sw
             inoutValue.serializeState( *this );
         }
 
+        /**
+         * @brief 설정 · 카탈로그로 연 뒤에 읽는 규칙 객체입니다 — 읽을 때 @p open( 새 값 ) 으로 연 새 값에 읽어 옮깁니다(다시 읽힌 카탈로그면 그 판에 묶인다).
+         * @details 열지 못했거나 읽다 어긋나면 실패를 남기고 @p inoutValue 는 그대로다. 앞서 옮긴 다른 값을 되돌리는 것은 바깥 입구의 몫이다(`GameModeComponent::readStateOrRevert`).
+         * @return 쓰기이거나 읽어 옮겼으면 true 입니다. false 면 바로 나갑니다.
+         */
+        template <typename T, typename TOpen>
+        [[nodiscard]] bool valueOpened( T& inoutValue, TOpen&& open )
+        {
+            if ( isWriting() )
+            {
+                value( inoutValue );
+                return true;
+            }
+            T opened;
+            if ( check( open( opened ) ) == false )
+                return false;
+            value( opened );
+            if ( isOk() == false )
+                return false;
+            inoutValue = std::move( opened );
+            return true;
+        }
+
         /** @brief 저장 폭이 @p TStored 인 칸입니다(`int32` 칸을 `uint8` 로 놓거나 범위를 보지 않는 열거). 읽은 값의 범위는 부르는 쪽이 봅니다. */
         template <typename TStored, typename T>
         void valueAs( T& inoutValue )

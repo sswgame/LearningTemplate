@@ -173,15 +173,6 @@ namespace sw
     void TurnOrderDemoComponent::serializeGameState( StateIO& io )
     {
         io.header( TurnOrderDemoComponentInternal::kStateFormat );
-        if ( io.isWriting() )
-        {
-            io.value( _order );
-            return;
-        }
-        TurnOrder order;
-        io.value( order );
-        if ( io.isOk() == false )
-            return;
-        _order = std::move( order );
+        io.value( _order );
     }
 } // namespace sw

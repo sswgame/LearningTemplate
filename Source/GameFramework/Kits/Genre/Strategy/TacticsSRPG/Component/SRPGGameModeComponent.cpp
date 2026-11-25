@@ -283,22 +283,17 @@ namespace sw
         io.header( SRPGGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        // 전장은 같은 카탈로그 · 같은 크기로 `initialize` 한 뒤에 읽는다(키트 계약). 꺼내기 표는 대입이 옮기지 않아 이 디렉터의 표가 그대로다.
-        SRPGBattlefield restoredField;
-        if ( io.isReading() )
+        // 전장은 같은 카탈로그 · 같은 크기로 `initialize` 한 뒤에 읽는다(키트 계약). 꺼내기 표는 대입이 옮기지 않아 이 디렉터의 표가 그대로다. 고른 유닛 · 결과는 상태 칸이다(`GameModeComponent::serializeState`).
+        if ( io.valueOpened( _field, [this]( SRPGBattlefield& field )
         {
             if ( _pCatalog == nullptr )
             {
                 SW_LOG_ERROR_ID( "SRPG.StateNeedsCatalog", "SRPG game mode: state read before the SRPG catalog is loaded - refused" );
-                io.fail();
-                return;
+                return false;
             }
-            restoredField.initialize( *_pCatalog, _width, _height, _defaultTerrain.key(), _seed );
-        }
-        io.value( io.isWriting() ? _field : restoredField ); // 고른 유닛 · 결과는 상태 칸이다(`GameModeComponent::serializeState`)
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _field = std::move( restoredField );
+            field.initialize( *_pCatalog, _width, _height, _defaultTerrain.key(), _seed );
+            return true;
+        } ) )
+            io.end();
     }
 } // namespace sw

@@ -302,13 +302,8 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 경기는 같은 트랙 · 같은 차 수로 연 뒤에 읽는다(키트 계약).
-        KartRace restoredRace;
-        if ( io.isReading() && io.check( _pTrackCatalog != nullptr && _pVehicle != nullptr && openRace( restoredRace ) ) == false )
-            return;
-        io.value( io.isWriting() ? _race : restoredRace );
-        io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _race = std::move( restoredRace );
+        if ( io.valueOpened( _race, [this]( KartRace& race )
+        { return _pTrackCatalog != nullptr && _pVehicle != nullptr && openRace( race ); } ) )
+            io.end();
     }
 } // namespace sw

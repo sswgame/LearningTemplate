@@ -60,17 +60,14 @@ namespace sw
         io.header( kStateFormat );
         if ( io.isOk() == false )
             return;
-        CreatureTown restoredTown;
-        if ( io.isReading() && io.check( initializeTown( restoredTown, *pState, *pReputation, *pQuestLog ) ) == false )
-            return;
-        CreatureTown& town = io.isWriting() ? _town : restoredTown;
-        io.section( CreatureTown::kStateFormat, [&town]( StateIO& bodyIO )
-        { bodyIO.value( town ); } );
+        io.section( CreatureTown::kStateFormat, [&]( StateIO& bodyIO )
+        {
+            (void)bodyIO.valueOpened( _town, [&]( CreatureTown& town )
+            { return initializeTown( town, *pState, *pReputation, *pQuestLog ); } ); // 실패는 아카이브에 남는다
+        } );
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _town = std::move( restoredTown );
-        ++_townRevision;
+        if ( io.isReading() && io.isOk() )
+            ++_townRevision;
     }
 
     bool CreatureTownGameModeComponent::initializeTown( CreatureTown& outTown, GameStateComponent& state, ReputationComponent& reputation, QuestLogComponent& questLog ) const
