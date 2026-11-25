@@ -1,6 +1,6 @@
 <?asset guid="56ef54f8e64fa9dfc3af2e669052ff87"?>
 <!-- 키트 클라이언트 뷰(PrefabViewBatch)가 쓰는 키 1 m 캡슐(발이 자리) — 병사 · 사람. 자리 · 색은 뷰가 정한다. -->
-<Prefab formatVersion="1" name="RulePerson">
+<Prefab formatVersion="0" name="RulePerson">
 	<GameObject _schemaVersion="0" _name="RulePerson" _bActive="true">
 		<_listComponent>
 			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"

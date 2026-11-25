@@ -6,7 +6,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -149,15 +148,13 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag        = FourCCUtil::make( "MCBT" );
-        static constexpr uint32 kStateVersion    = 1;
-        static constexpr int32  kPlayerSide      = 0;
-        static constexpr int32  kFoeSide         = 1;
-        static constexpr int32  kSideCount       = 2;
-        static constexpr int32  kMinStage        = -6;
-        static constexpr int32  kMaxStage        = 6;
-        static constexpr int32  kNonMovePriority = 7;  ///< 교체, 볼, 도망의 우선도
-        static constexpr int32  kEndlessWeather  = -1; ///< 끝나지 않는 날씨의 남은 턴(`getWeatherTurns`)
+        static constexpr int32 kPlayerSide      = 0;
+        static constexpr int32 kFoeSide         = 1;
+        static constexpr int32 kSideCount       = 2;
+        static constexpr int32 kMinStage        = -6;
+        static constexpr int32 kMaxStage        = 6;
+        static constexpr int32 kNonMovePriority = 7;  ///< 교체, 볼, 도망의 우선도
+        static constexpr int32 kEndlessWeather  = -1; ///< 끝나지 않는 날씨의 남은 턴(`getWeatherTurns`)
 
         MonsterBattle();
 

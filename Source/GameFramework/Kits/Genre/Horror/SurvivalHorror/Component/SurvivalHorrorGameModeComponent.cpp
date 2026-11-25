@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/Component/SurvivalHorrorGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -10,6 +9,7 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -20,8 +20,7 @@ namespace sw
     {
         struct SurvivalHorrorGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "SHGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
+            static constexpr FormatDef kStateFormat{ "SHGM" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventSanity        = "SurvivalHorrorSanity";
@@ -492,7 +491,7 @@ namespace sw
     void SurvivalHorrorGameModeComponent::serializeGameState( StateIO& io )
     {
         using Internal = SurvivalHorrorGameModeComponentInternal;
-        io.header( Internal::kStateTag, Internal::kStateVersion );
+        io.header( Internal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 세션은 그래프 · 깃발 · 가방 · 상자를 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 세션에 바로 읽는다(거절되면 베이스가 앞 상태로 되돌린다).

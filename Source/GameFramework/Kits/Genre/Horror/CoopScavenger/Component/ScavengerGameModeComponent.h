@@ -97,7 +97,7 @@ namespace sw
      * @class ScavengerGameModeComponent
      * @brief 궤도 → 착륙 → 고철 나르기 → 이륙 → 회사 매입 → 할당량 판정을 승무원 명령과 봇으로 진행합니다.
      */
-    REFLECT( Version = 2, Category = "CoopScavenger", DisplayName = "Scavenger Game Mode",
+    REFLECT( Category = "CoopScavenger", DisplayName = "Scavenger Game Mode",
              Tooltip = "Runs a coop scavenger expedition: crew from input commands or bots hauls scrap, threats roam, the company buys and the quota decides" )
     class SW_KIT_API ScavengerGameModeComponent : public MatchGameModeComponent
     {

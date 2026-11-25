@@ -36,6 +36,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 
@@ -50,7 +51,7 @@ namespace sw::editor
             static constexpr const utf8* kMetaSuffix  = ".meta";
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션 id 의 키와 형식 판입니다. */
             static constexpr string_view kSessionStoreKey = "editor.autosaveSession";
-            static constexpr uint32      kSessionVersion  = 1;
+            static constexpr FormatDef   kSessionFormat{ "EDAS" };
 
             /** @brief 세션 하나의 자동 저장 상태입니다. 에디터 상태 저장소가 소유한다(UI 스레드만). */
             struct State
@@ -95,19 +96,18 @@ namespace sw::editor
                 if ( pStore->take( kSessionStoreKey, bytes ) )
                 {
                     Archive archive( bytes.data(), bytes.size() );
-                    uint32  version{ 0 };
                     int32   processID{ 0 };
                     int64   startTicks{ 0 };
-                    archive >> version >> processID >> startTicks;
                     // 다른 프로세스의 id 는 올 수 없지만(맡김 칸은 호스트 프로세스 안) 판 · pid 가 다르면 잇지 않는다
-                    if ( archive.isOk() && version == kSessionVersion && processID == session._processID )
+                    if ( kSessionFormat.check( archive ).has_value() && ( archive >> processID >> startTicks ).isOk() && processID == session._processID )
                     {
                         session._startTicks = startTicks;
                         outResumed          = true;
                     }
                 }
                 Archive archive;
-                archive << kSessionVersion << session._processID << session._startTicks;
+                kSessionFormat.write( archive );
+                archive << session._processID << session._startTicks;
                 pStore->store( kSessionStoreKey, vector<uint8>( archive.getData(), archive.getData() + archive.getSize() ) );
                 return session;
             }

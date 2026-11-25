@@ -146,7 +146,7 @@ SW_TEST_CASE( RTSSelectionTest, CommandInputKeepsTheSelectionInItsOwnState )
     const RTSUnitID selected = RTSUnitID::make( 3, 1 );
     const RTSUnitID grouped  = RTSUnitID::make( 5, 2 );
     Archive         written;
-    StateIO::writeHeader( written, RTSCommandInputComponent::kStateTag, RTSCommandInputComponent::kStateVersion );
+    RTSCommandInputComponent::kStateFormat.write( written );
     written << uint64{ 7 }; // 이 고르기가 속한 판
     StateIO::writeIDList( written, vector<uint64>{ selected.packed() } );
     StateIO::writeIDList( written, vector<uint64>{ grouped.packed() } );

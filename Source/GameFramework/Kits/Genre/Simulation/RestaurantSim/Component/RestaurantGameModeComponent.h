@@ -48,7 +48,7 @@ namespace sw
      * @class RestaurantGameModeComponent
      * @brief 준비 → 영업 → 결산을 정한 날 수만큼 명령과 시간으로 진행하고 이익 합으로 승패를 정합니다.
      */
-    REFLECT( Version = 2, Category = "RestaurantSim", DisplayName = "Restaurant Game Mode", Tooltip = "Runs a few RestaurantSim business days: shopping and prices from commands, the open hours by time, the profit target at the end" )
+    REFLECT( Category = "RestaurantSim", DisplayName = "Restaurant Game Mode", Tooltip = "Runs a few RestaurantSim business days: shopping and prices from commands, the open hours by time, the profit target at the end" )
     class SW_KIT_API RestaurantGameModeComponent : public MatchGameModeComponent
     {
     public:

@@ -3,13 +3,13 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Component/ScavengerGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -21,9 +21,8 @@ namespace sw
     {
         struct ScavengerGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "SCGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
-            static constexpr int32  kPlayer       = 0; ///< 늘 사람이 잡는 승무원(카메라 · 감시 값의 주인)
+            static constexpr FormatDef kStateFormat{ "SCGM" };
+            static constexpr int32     kPlayer = 0; ///< 늘 사람이 잡는 승무원(카메라 · 감시 값의 주인)
             /** @brief 축 방향과 이웃 방향이 이만큼은 맞아야 그 이웃으로 본다(내적). */
             static constexpr float32 kNeighborAlignment = 0.5f;
             static constexpr float32 kPercent           = 100.0f;
@@ -645,7 +644,7 @@ namespace sw
     void ScavengerGameModeComponent::serializeGameState( StateIO& io )
     {
         using Internal = ScavengerGameModeComponentInternal;
-        io.header( Internal::kStateTag, Internal::kStateVersion );
+        io.header( Internal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 원정은 지갑 · 깃발 · 창고를 빌린다 — 지역 사본에 읽으면 빌린 주소가 사본을 가리킨다. 새로 연 원정에 바로 읽는다(거절되면 베이스가 앞 상태로 되돌린다).

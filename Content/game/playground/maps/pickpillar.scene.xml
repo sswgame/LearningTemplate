@@ -1,5 +1,5 @@
 <?asset guid="22f760b3229d751ac97623e7d497f18d"?>
-<Scene formatVersion="3" name="PickPillar">
+<Scene formatVersion="0" name="PickPillar">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

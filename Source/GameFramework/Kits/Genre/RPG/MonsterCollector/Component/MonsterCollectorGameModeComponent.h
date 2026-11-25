@@ -48,7 +48,7 @@ namespace sw
      * @class MonsterCollectorGameModeComponent
      * @brief 걷기(걸음 조우) ↔ 야생 전투(기술 · 볼 · 교체 · 도망) → 정한 수 포획 · 전멸을 명령으로 진행합니다.
      */
-    REFLECT( Version = 2, Category = "MonsterCollector", DisplayName = "Monster Collector Game Mode", Tooltip = "Runs one MonsterCollector outing: step encounters, wild battles from commands and a capture goal" )
+    REFLECT( Category = "MonsterCollector", DisplayName = "Monster Collector Game Mode", Tooltip = "Runs one MonsterCollector outing: step encounters, wild battles from commands and a capture goal" )
     class SW_KIT_API MonsterCollectorGameModeComponent : public MatchGameModeComponent
     {
     public:

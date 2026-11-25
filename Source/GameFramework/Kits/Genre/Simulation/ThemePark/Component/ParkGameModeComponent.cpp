@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
 
@@ -14,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Navigation/NavGridObstacle.h"
@@ -25,8 +24,7 @@ namespace sw
     {
         struct ParkGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "PARK" );
-            static constexpr uint32 kStateVersion = 4; ///< 3: 고른 배치를 클라이언트 뷰로 옮겼다. 4: 손님이 남은 길의 점을 싣는다
+            static constexpr FormatDef kStateFormat{ "PARK" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`)가 정한다.
             static constexpr const utf8* kEventBlocked = "ParkBlocked";
@@ -37,16 +35,6 @@ namespace sw
             static constexpr float32 kEntranceSideDistance   = 5.0f;  ///< 스테이션에서 줄 입구까지 바깥쪽 거리(m)
             static constexpr int32   kCoasterBaseRunningCost = 8;     ///< 코스터의 분당 운영비 바탕
             static constexpr float32 kTrackPerRunningCost    = 60.0f; ///< 트랙 이만큼(m)마다 분당 운영비가 1 오른다
-
-            /** @brief 상태 칸 판 1 → 2: 손으로 세던 상태 로그 시간(`_statusTimer`)이 사라졌다 — 첫 칸을 버리고 자동 건설 시간을 옮긴다. */
-            [[nodiscard]] static bool dropStatusTimer( Archive& inOldBody, Archive& outNewBody )
-            {
-                float32 statusTimer    = 0.0f;
-                float32 autoBuildTimer = 0.0f;
-                inOldBody >> statusTimer >> autoBuildTimer;
-                outNewBody << autoBuildTimer;
-                return inOldBody.isOk();
-            }
 
             /** @brief 시나리오 프로브입니다. 첫 공원 디렉터의 손님 수를 반환하며, 그림자 장면이 비어 있지 않다는 전제를 확인합니다. */
             [[nodiscard]] static bool readGuestCount( const ParkGameModeComponent& gameMode, float64& outValue )
@@ -392,7 +380,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ParkGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion );
+        io.header( ParkGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         ThemeParkSimulation restoredSimulation;
@@ -495,7 +483,5 @@ namespace sw
 
 namespace sw
 {
-    SW_TYPE_VERSION_PATCH( parkGameMode1To2, "sw::ParkGameModeComponent", 1, 2, &ParkGameModeComponentInternal::dropStatusTimer );
-
     SW_AUTOMATION_COMPONENT_WATCH( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park game mode", ParkGameModeComponent, &ParkGameModeComponentInternal::readGuestCount );
 } // namespace sw

@@ -1,5 +1,5 @@
 <?asset guid="59f6516016cff9babb0b7078e9c7f8c5"?>
-<Prefab formatVersion="1" name="FrontierTile">
+<Prefab formatVersion="0" name="FrontierTile">
 	<GameObject _schemaVersion="0" _name="FrontierTile" _bActive="true">
 		<_listComponent>
 			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"

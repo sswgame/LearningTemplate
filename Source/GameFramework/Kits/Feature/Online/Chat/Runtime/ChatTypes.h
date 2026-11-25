@@ -84,7 +84,7 @@ namespace sw
     struct SW_KIT_API ChatMessage
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 서버 버스(`ChatBus`)의 의미 버전. 기록 레코드의 판과 따로다
+        static constexpr uint32 kBusVersion = 0; ///< 서버 버스(`ChatBus`)의 의미 버전. 기록 레코드의 판과 따로다
         PROPERTY( MaxCount = ChatLimit::kMaxChannelIDSize )
         string _channelID{}; ///< 귓속말이면 기록 키(`ChatChannelID::makeWhisper`)이다
         PROPERTY( MaxCount = OnlineLimit::kMaxDisplayNameSize )

@@ -410,7 +410,7 @@ SW_TEST_CASE( FractureAssetTest, BytesRoundTrip )
 
 SW_TEST_CASE( FractureAssetTest, RefusesBadMagic )
 {
-    SW_EXPECT_LOG( "FractureAsset.NotFractureAssetBad" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     FractureAsset asset;
     const uint8   arrBytes[16] = {};
     SW_EXPECT_FALSE( asset.readFromBytes( arrBytes, sizeof( arrBytes ) ) );
@@ -424,7 +424,7 @@ SW_TEST_CASE( FractureAssetTest, RefusesOtherVersionAndTruncation )
     vector<uint8> bytes;
     Util::fractureBox( settings ).makeBytes( bytes );
 
-    SW_EXPECT_LOG( "FractureAsset.FractureAssetVersionNot" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     vector<uint8> wrongVersion = bytes;
     wrongVersion[4] ^= 0xFF;
     FractureAsset asset;
@@ -445,7 +445,7 @@ SW_TEST_CASE( FractureAssetTest, RefusesOtherVersionAndTruncation )
 /** @brief [FractureAssetTest] 어느 길이로 잘려도 거절하고 조각을 남기지 않는다 */
 SW_TEST_CASE( FractureAssetTest, EveryTruncatedLengthIsRefused )
 {
-    SW_EXPECT_LOG( "FractureAsset.NotFractureAssetBad" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_LOG( "FractureAsset.FractureAssetTruncated" );
     SW_EXPECT_LOG( "FractureAsset.FractureAssetMalformed" );
     FractureSettings settings;

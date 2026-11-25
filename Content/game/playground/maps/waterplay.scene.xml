@@ -1,5 +1,5 @@
 <?asset guid="c98c08acc17ff8eebf1d60e16b24b2d6"?>
-<Scene formatVersion="3" _base="guid:00b449d65480c509bf9771ffdda59360" name="WaterPlay">
+<Scene formatVersion="0" _base="guid:00b449d65480c509bf9771ffdda59360" name="WaterPlay">
 	<!-- 물 · 지형 물리 시나리오(automation/waterplay)의 무대 — envshowcase 를 물려받아 물리를 얹는다.
 	     지형에 충돌(TerrainColliderComponent)을 더하고, 강 경로를 스플라인이 몰게 하고(SplineRiverPathComponent), 호수 위 상자는 폰툰으로 뜨고(BuoyancyComponent — 파도 있는 물),
 	     공중의 물 상자(BuoyancyVolumeComponent — 상자 부피, 흐름)에 떨어진 상자는 떠서 흐름을 따라 밀리고, 지형에 떨어진 상자는 풀을 눕히며(FoliageInfluencerComponent) 지형 위에 멈추고,

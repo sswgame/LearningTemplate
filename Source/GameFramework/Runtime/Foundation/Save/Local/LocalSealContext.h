@@ -30,7 +30,7 @@ namespace sw
         CompressionCodecRegistry* _pCodecRegistry{ nullptr }; ///< 비면 `CompressionCodecRegistry::getActive()`
 
         // 봉투를 만들고 엽니다. 쓰는 인터페이스들이 스레드 안전하므로 아무 스레드에서나 부를 수 있습니다.
-        static constexpr uint8  kEnvelopeVersion = 1;
+        static constexpr uint8  kEnvelopeVersion = 0;
         static constexpr size_t kHeaderSize      = 36;
 
         static LocalStoreResult seal( const LocalSealContext& context, const uint8* pBody, size_t bodySize, const LocalStoreWriteOptions& options,

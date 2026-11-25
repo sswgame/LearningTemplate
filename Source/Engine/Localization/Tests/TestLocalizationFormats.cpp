@@ -239,12 +239,14 @@ SW_TEST_CASE( CultureDataTest, PluralSampleTextKeepsVisibleDigits )
 SW_TEST_CASE( CultureDataTest, NewLanguageIsOneDataSheet )
 {
     sw::CultureTable                                table;
-    const sw::expected<void>                        loaded = table.loadFromXMLText( R"XML(<CultureTable>
+    const sw::expected<void>                        loaded = table.loadFromXMLText( R"XML(<CultureTable formatVersion="0">
   <numberingSystems><numberingSystem id="deva" digits="०१२३४५६७८९" /></numberingSystems>
   <currencies><currency code="INR" symbol="₹" digits="2" /></currencies>
-  <cultures>
-    <culture code="hi" digits="deva" nativeName="हिन्दी" currencyCode="INR" currencyPattern="¤#"><pluralRules one="i = 0 or n = 1 @integer 0, 1 @decimal 0.0~1.0, 0.00~0.04" other="@integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 1.1~2.6, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" /></culture>
-  </cultures>
+  <CultureInfo _code="hi" _numberingSystem="deva" _nativeName="हिन्दी" _decimalSeparator="." _groupSeparator="," _percentPattern="#%" _currencyCode="INR" _currencyPattern="¤#">
+    <_pluralRules><entry key="one">i = 0 or n = 1 @integer 0, 1 @decimal 0.0~1.0, 0.00~0.04</entry><entry key="other">@integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 1.1~2.6, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry></_pluralRules>
+    <_datePatterns _short="dd/MM/yy" _medium="d MMM y" _long="d MMMM y" />
+    <_timePatterns _short="HH:mm" _medium="HH:mm:ss" />
+  </CultureInfo>
 </CultureTable>)XML",
                                                                                     "hi.cultures.xml" );
     sw::fixed_string<sw::constant::buffer::kMax512> loadError;
@@ -274,28 +276,34 @@ SW_TEST_CASE( CultureDataTest, MalformedDataIsALoadError )
         SW_EXPECT_TRUE_MSG( error.view().find( expectedWord ) != sw::string_view::npos, error.c_str() );
         SW_EXPECT_EQUAL( size_t( 0 ), table.getCultureCount() );
     };
-    static constexpr const utf8* kLatin       = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
-    const auto                   rejectsLatin = [&rejects]( sw::string_view cultures, sw::string_view expectedWord )
+    static constexpr const utf8* kLatin         = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
+    const auto                   rejectsCulture = [&rejects]( sw::string_view numberingSystem, sw::string_view rules, sw::string_view expectedWord )
     {
-        sw::StringBuilder<sw::constant::buffer::kMax512> xml;
-        xml.appendFormat( "<CultureTable>%#%#</CultureTable>", kLatin, cultures );
+        sw::StringBuilder<sw::constant::buffer::kMax2048> xml;
+        xml.appendFormat( R"(<CultureTable formatVersion="0">%#<CultureInfo _code="xx" _numberingSystem="%#" _decimalSeparator="." _groupSeparator="," _percentPattern="#%" _currencyCode="USD" _currencyPattern="¤#">%#<_datePatterns _short="yy" _medium="y" _long="yyyy" /><_timePatterns _short="HH:mm" _medium="HH:mm:ss" /></CultureInfo></CultureTable>)",
+                          kLatin, numberingSystem, rules );
         rejects( xml.view(), expectedWord );
     };
-    rejectsLatin( R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = = 1" /></culture></cultures>)", "one rule" );
-    rejectsLatin( R"(<cultures><culture code="xx" digits="latn"><pluralRules several="n = 1 @integer 1" /></culture></cultures>)", "unknown plural category" );
-    rejectsLatin( R"(<cultures><culture code="xx" digits="latn"><pluralRules other="n = 1 @integer 1" /></culture></cultures>)", "samples only" );
-    rejectsLatin( R"(<cultures><culture code="xx" digits="latn"><pluralRules one="w = 0 @integer 0" /></culture></cultures>)", "operand" );
+    const auto rejectsLatin = [&rejectsCulture]( sw::string_view rules, sw::string_view expectedWord )
+    { rejectsCulture( "latn", rules, expectedWord ); };
+    rejectsLatin( R"(<_pluralRules><entry key="one">i = = 1</entry></_pluralRules>)", "one rule" );
+    rejectsLatin( R"(<_pluralRules><entry key="several">n = 1 @integer 1</entry></_pluralRules>)", "unknown plural category" );
+    rejectsLatin( R"(<_pluralRules><entry key="other">n = 1 @integer 1</entry></_pluralRules>)", "samples only" );
+    rejectsLatin( R"(<_pluralRules><entry key="one">w = 0 @integer 0</entry></_pluralRules>)", "operand" );
     // CLDR 글은 보기째 붙여 넣는다 — 보기 없는 규칙, other 를 뺀 규칙, 보기와 어긋나게 고친 규칙(pl few 의 12..14 를 지운 것)은 읽기 오류다.
-    rejectsLatin( R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = 1 and v = 0" other="@integer 0" /></culture></cultures>)", "samples" );
-    rejectsLatin( R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = 1 and v = 0 @integer 1" /></culture></cultures>)", "other samples" );
+    rejectsLatin( R"(<_pluralRules><entry key="one">i = 1 and v = 0</entry><entry key="other">@integer 0</entry></_pluralRules>)", "samples" );
+    rejectsLatin( R"(<_pluralRules><entry key="one">i = 1 and v = 0 @integer 1</entry></_pluralRules>)", "other samples" );
     rejectsLatin(
-        R"(<cultures><culture code="xx" digits="latn"><pluralRules few="v = 0 and i % 10 = 2..4 @integer 2~4, 22~24" many="v = 0 and i % 100 = 12..14 @integer 12~14" other="@decimal 0.0~1.5" /></culture></cultures>)",
+        R"(<_pluralRules><entry key="few">v = 0 and i % 10 = 2..4 @integer 2~4, 22~24</entry><entry key="many">v = 0 and i % 100 = 12..14 @integer 12~14</entry><entry key="other">@decimal 0.0~1.5</entry></_pluralRules>)",
         "does not match" );
-    rejectsLatin( R"(<cultures><culture code="xx" digits="latn" /></cultures>)", "pluralRules" );
-    rejectsLatin( R"(<cultures><culture code="xx" digits="thai"><pluralRules /></culture></cultures>)", "thai" );
-    rejects( R"(<CultureTable><numberingSystems><numberingSystem id="short" digits="012" /></numberingSystems><cultures /></CultureTable>)", "10 digits" );
-    rejects( R"(<CultureTable><currencies><currency code="KRW" symbol="₩" /></currencies><cultures /></CultureTable>)", "currency" );
-    rejects( R"(<CultureTable><calendars /><cultures /></CultureTable>)", "calendars" );
+    rejectsLatin( "", "pluralRules" );
+    rejectsCulture( "thai", "<_pluralRules></_pluralRules>", "thai" );
+    rejects( R"(<CultureTable formatVersion="0"><numberingSystems><numberingSystem id="short" digits="012" /></numberingSystems></CultureTable>)", "10 digits" );
+    rejects( R"(<CultureTable formatVersion="0"><currencies><currency code="KRW" symbol="₩" /></currencies></CultureTable>)", "currency" );
+    rejects( R"(<CultureTable formatVersion="0"><calendars /></CultureTable>)", "calendars" );
+    // 판 칸이 없는 글은 첫 판(0)이 아니다
+    SW_EXPECT_LOG( "AssetFormat.AssetFormatVersionMissing" );
+    rejects( "<CultureTable/>", "format version" );
 }
 
 /**
@@ -720,26 +728,23 @@ SW_TEST_CASE( LocalizationKeyIndexTest, ManagerRefusesCollidingKeys )
 namespace
 {
     /** @brief 부모 하나와 자식 하나(적은 칸만 덮는다)를 든 표입니다. */
-    constexpr const utf8* kInheritanceTableXML = R"XML(<CultureTable>
+    constexpr const utf8* kInheritanceTableXML = R"XML(<CultureTable formatVersion="0">
   <numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>
   <currencies><currency code="EUR" symbol="€" digits="2" /></currencies>
-  <cultures>
-    <culture code="xx" digits="latn" nativeName="Root" decimalSeparator="," groupSeparator="." percentPattern="# %" currencyCode="EUR" currencyPattern="# ¤">
-      <pluralRules one="i = 1 and v = 0 @integer 1" other="@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
-      <datePatterns short="dd.MM.yy" medium="dd.MM.y" long="d. MMMM y" />
-      <timePatterns short="HH:mm" medium="HH:mm:ss" />
-      <monthNames><item>Jan</item><item>Feb</item><item>Mar</item><item>Apr</item><item>May</item><item>Jun</item><item>Jul</item><item>Aug</item><item>Sep</item><item>Oct</item><item>Nov</item><item>Dec</item></monthNames>
-    </culture>
-    <culture code="xx_yy" parent="xx" decimalSeparator=".">
-      <monthNames><item>M1</item><item>M2</item><item>M3</item><item>M4</item><item>M5</item><item>M6</item><item>M7</item><item>M8</item><item>M9</item><item>M10</item><item>M11</item><item>M12</item></monthNames>
-    </culture>
-  </cultures>
+  <CultureInfo _code="xx" _numberingSystem="latn" _nativeName="Root" _decimalSeparator="," _groupSeparator="." _percentPattern="# %" _currencyCode="EUR" _currencyPattern="# ¤">
+    <_pluralRules><entry key="one">i = 1 and v = 0 @integer 1</entry><entry key="other">@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry></_pluralRules>
+    <_datePatterns _short="dd.MM.yy" _medium="dd.MM.y" _long="d. MMMM y" />
+    <_timePatterns _short="HH:mm" _medium="HH:mm:ss" />
+    <_listMonthName><item>Jan</item><item>Feb</item><item>Mar</item><item>Apr</item><item>May</item><item>Jun</item><item>Jul</item><item>Aug</item><item>Sep</item><item>Oct</item><item>Nov</item><item>Dec</item></_listMonthName>
+  </CultureInfo>
+  <CultureInfo _code="xx_yy" _base="xx" _decimalSeparator=".">
+    <_listMonthName><item>M1</item><item>M2</item><item>M3</item><item>M4</item><item>M5</item><item>M6</item><item>M7</item><item>M8</item><item>M9</item><item>M10</item><item>M11</item><item>M12</item></_listMonthName>
+  </CultureInfo>
 </CultureTable>)XML";
 } // namespace
 
 /**
  * @brief [CultureInfoTest] 자식 문화권은 자기가 적은 칸만 덮는다 — 적지 않은 속성 · 패턴 · 복수형 규칙은 부모 것이다
- * @details 문화권 부모 병합을 리플렉션 상속(`_base`)으로 옮기는 일이 지켜야 하는 동작이다.
  */
 SW_TEST_CASE( CultureInfoTest, ChildOverridesOnlyWhatItWrites )
 {
@@ -768,13 +773,14 @@ SW_TEST_CASE( CultureInfoTest, ChildOverridesOnlyWhatItWrites )
 }
 
 /**
- * @brief [CultureInfoTest] 부모가 없는 문화권에 `<pluralRules>` 가 없으면 읽기 오류다 — 부모가 있으면 물려받으므로 없어도 된다
+ * @brief [CultureInfoTest] 부모가 없는 문화권에 `_pluralRules` 가 없으면 읽기 오류다 — 부모가 있으면 물려받으므로 없어도 된다
  */
 SW_TEST_CASE( CultureInfoTest, RootWithoutPluralRulesIsAnError )
 {
     constexpr const utf8*                            kLatin = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
-    sw::StringBuilder<sw::constant::buffer::kMax256> rootXML;
-    rootXML.appendFormat( R"(<CultureTable>%#<cultures><culture code="xx" digits="latn" /></cultures></CultureTable>)", kLatin );
+    sw::StringBuilder<sw::constant::buffer::kMax512> rootXML;
+    rootXML.appendFormat( R"(<CultureTable formatVersion="0">%#<CultureInfo _code="xx" _numberingSystem="latn" _decimalSeparator="." _groupSeparator="," _percentPattern="#%" _currencyCode="USD" _currencyPattern="¤#"><_datePatterns _short="yy" _medium="y" _long="yyyy" /><_timePatterns _short="HH:mm" _medium="HH:mm:ss" /></CultureInfo></CultureTable>)",
+                          kLatin );
     sw::CultureTable         rootTable;
     const sw::expected<void> rootLoaded = rootTable.loadFromXMLText( rootXML.view(), "root.cultures.xml" );
     SW_REQUIRE_FALSE( rootLoaded.has_value() );
@@ -789,7 +795,7 @@ SW_TEST_CASE( CultureInfoTest, RootWithoutPluralRulesIsAnError )
 
 /**
  * @brief [CultureInfoTest] 부모 순환(서로를 부모로 가리킴)과 없는 부모는 읽기 오류이고 표는 그대로다
- * @details 판 0(`parent`)은 판 올림이 `_base` 로 옮기고, 사슬은 카탈로그 항목 상속이 본다(그 오류 로그가 까닭이다).
+ * @details 사슬은 카탈로그 항목 상속이 본다(그 오류 로그가 까닭이다).
  */
 SW_TEST_CASE( CultureInfoTest, ParentCycleIsAnError )
 {
@@ -797,7 +803,7 @@ SW_TEST_CASE( CultureInfoTest, ParentCycleIsAnError )
     const auto                   rejects = []( sw::string_view cultures )
     {
         sw::StringBuilder<sw::constant::buffer::kMax512> xml;
-        xml.appendFormat( "<CultureTable>%#<cultures>%#</cultures></CultureTable>", kLatin, cultures );
+        xml.appendFormat( "<CultureTable formatVersion=\"0\">%#%#</CultureTable>", kLatin, cultures );
         sw::CultureTable         table;
         const sw::expected<void> loaded = table.loadFromXMLText( xml.view(), "cycle.cultures.xml" );
         SW_EXPECT_FALSE( loaded );
@@ -805,20 +811,20 @@ SW_TEST_CASE( CultureInfoTest, ParentCycleIsAnError )
     };
     {
         SW_EXPECT_LOG( "DataInheritance.Cycle" );
-        rejects( R"(<culture code="aa" parent="bb" /><culture code="bb" parent="aa" />)" );
+        rejects( R"(<CultureInfo _code="aa" _base="bb" /><CultureInfo _code="bb" _base="aa" />)" );
     }
     {
         SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
-        rejects( R"(<culture code="aa" parent="zz" />)" );
+        rejects( R"(<CultureInfo _code="aa" _base="zz" />)" );
     }
 }
 
 /**
- * @brief [CultureInfoTest] 판 1 은 문화권이 리플렉션 원소이고 `_base` 로 같은 표의 부모를 가리킨다 — 패턴 묶음은 적은 스타일만, 규칙 맵 · 목록은 통째로 바뀐다
+ * @brief [CultureInfoTest] 문화권은 리플렉션 원소이고 `_base` 로 같은 표의 부모를 가리킨다 — 패턴 묶음은 적은 스타일만, 규칙 맵 · 목록은 통째로 바뀐다
  */
 SW_TEST_CASE( CultureInfoTest, BaseChainReadsTheReflectedElements )
 {
-    constexpr const utf8*                           kVersion1 = R"XML(<CultureTable formatVersion="1">
+    constexpr const utf8*                           kTableXML = R"XML(<CultureTable formatVersion="0">
   <numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>
   <CultureInfo _code="xx" _nativeName="Root" _numberingSystem="latn" _decimalSeparator="," _groupSeparator="." _percentPattern="# %" _currencyCode="EUR" _currencyPattern="# ¤">
     <_pluralRules><entry key="one">i = 1 and v = 0 @integer 1</entry><entry key="other">@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry></_pluralRules>
@@ -830,7 +836,7 @@ SW_TEST_CASE( CultureInfoTest, BaseChainReadsTheReflectedElements )
   </CultureInfo>
 </CultureTable>)XML";
     sw::CultureTable                                table;
-    const sw::expected<void>                        loaded = table.loadFromXMLText( kVersion1, "version1.cultures.xml" );
+    const sw::expected<void>                        loaded = table.loadFromXMLText( kTableXML, "base.cultures.xml" );
     sw::fixed_string<sw::constant::buffer::kMax512> loadError;
     if ( loaded.has_value() == false )
         sw::formatstring( loadError.data(), loadError.capacity(), "%# (%#)", loaded.error().message(), loaded.error().detail() );

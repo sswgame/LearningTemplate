@@ -5,7 +5,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -13,6 +12,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -215,8 +215,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "WTHR" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 리플렉션 상태 칸(판 1 손 본문은 칸을 옮겨 써 올린다)
+        static constexpr FormatDef kStateFormat{ "WTHR" };
 
         WeatherSystem();
 

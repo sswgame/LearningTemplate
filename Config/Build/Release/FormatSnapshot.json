@@ -1,33 +1,34 @@
 {
-    "_comment": "꾸미기 스키마 출시 스냅숏 — 출시 때 `py -3 -m Scripts customization-release accept` 가 쓴다. 쿠킹이 이것과 견주어 판 올림 단계가 빠진 바뀜을 막는다.",
-    "schemas": {
+    "_comment": "저장 형식 출시 스냅숏 — `py -3 -m Scripts format-release accept` 가 쓴다. released 가 false(출시 전)면 대조는 알리기만 하고, true 면 판을 올리지 않은 바뀜이 실패한다.",
+    "released": false,
+    "customization": {
         "Adventurer": {
-            "version": 1,
+            "version": 0,
             "parameters": {
                 "OutfitDye": "Color",
                 "Roughness": "Slider"
             }
         },
         "ArmorDye": {
-            "version": 1,
+            "version": 0,
             "parameters": {
                 "Tint": "Color"
             }
         },
         "Gun": {
-            "version": 1,
+            "version": 0,
             "parameters": {
                 "Finish": "Choice"
             }
         },
         "HelmetFinish": {
-            "version": 1,
+            "version": 0,
             "parameters": {
                 "Finish": "Choice"
             }
         },
         "HumanoidCustom": {
-            "version": 1,
+            "version": 0,
             "parameters": {
                 "EyeScale": "Slider",
                 "EyeShine": "Slider",
@@ -42,14 +43,14 @@
             }
         },
         "Skeleton": {
-            "version": 1,
+            "version": 0,
             "parameters": {
                 "BoneTint": "Color",
                 "Hood": "Choice"
             }
         },
         "SkeletonBody": {
-            "version": 1,
+            "version": 0,
             "parameters": {
                 "BoneTint": "Color",
                 "Hood": "Choice",
@@ -59,8 +60,9 @@
             }
         },
         "TownsfolkFemale": {
-            "version": 1,
+            "version": 0,
             "parameters": {
+                "ArmLength": "Slider",
                 "Hair": "Choice",
                 "HairHighlight": "Color",
                 "HairHighlightAmount": "Slider",
@@ -68,12 +70,15 @@
                 "HairRoot": "Color",
                 "HairTip": "Color",
                 "Hood": "Choice",
-                "Outfit": "Choice"
+                "LegLength": "Slider",
+                "Outfit": "Choice",
+                "ShoulderWidth": "Slider"
             }
         },
         "TownsfolkMale": {
-            "version": 1,
+            "version": 0,
             "parameters": {
+                "ArmLength": "Slider",
                 "Hair": "Choice",
                 "HairHighlight": "Color",
                 "HairHighlightAmount": "Slider",
@@ -81,8 +86,11 @@
                 "HairRoot": "Color",
                 "HairTip": "Color",
                 "Hood": "Choice",
-                "Outfit": "Choice"
+                "LegLength": "Slider",
+                "Outfit": "Choice",
+                "ShoulderWidth": "Slider"
             }
         }
-    }
+    },
+    "states": {}
 }

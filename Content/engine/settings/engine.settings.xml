@@ -20,7 +20,7 @@
     optionsFrom   런타임 선택지 공급자(localization.languages · display.resolutions). <Option> 을 함께 적으면 공급자가 비었을 때의 대체 목록이다
     text · description  메뉴 글의 로컬라이제이션 키
 -->
-<UserSettingsSchema owner="engine" version="1">
+<UserSettingsSchema owner="engine" version="0">
 	<Category id="display" text="settings.category.display"/>
 	<Category id="graphics" text="settings.category.graphics"/>
 	<Category id="audio" text="settings.category.audio"/>

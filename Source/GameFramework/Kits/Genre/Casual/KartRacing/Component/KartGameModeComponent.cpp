@@ -2,14 +2,13 @@
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Component/KartGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
-
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -18,8 +17,7 @@ namespace sw
     {
         struct KartGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "KRGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
+            static constexpr FormatDef kStateFormat{ "KRGM" };
 
             static constexpr int32 kFirstPlace = 1;
 
@@ -307,7 +305,7 @@ namespace sw
 
     void KartGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( KartGameModeComponentInternal::kStateTag, KartGameModeComponentInternal::kStateVersion );
+        io.header( KartGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 경기는 같은 트랙 · 같은 차 수로 연 뒤에 읽는다(키트 계약).

@@ -1,5 +1,5 @@
 <?asset guid="b383cf42bc4dfff16ba2281561b8874f"?>
-<Prefab formatVersion="1" _base="guid:f79d684d66cdab1cccae4be8c37c442d" name="BoostPad">
+<Prefab formatVersion="0" _base="guid:f79d684d66cdab1cccae4be8c37c442d" name="BoostPad">
 	<PrefabOverrides>
 		<Remove key="#9db080fc534fcdd9" />
 		<Override key="#edcbb43a3dfead50">

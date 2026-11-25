@@ -1,5 +1,5 @@
 <?asset guid="f6af8277b9e66f9b32baa3c516cc50cf"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<UIScreenDef _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
 	<_listStyleSheet>
 		<item>engine/ui/styles/notifications.uistyle.xml</item>

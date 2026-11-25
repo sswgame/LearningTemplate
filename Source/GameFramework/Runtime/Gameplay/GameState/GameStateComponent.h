@@ -7,7 +7,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Memory/Memory.h"
@@ -15,6 +14,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -82,8 +82,7 @@ namespace sw
         static constexpr TickGroup kTickGroup = TickGroup::PrePhysics; ///< 디렉터와 같은 그룹이다. 같은 오브젝트 안에서는 붙은 순서대로 처리하며, 이 컴포넌트가 맨 앞이다.
         REFLECT_INTERFACE( IGameFlagsOwner, _gameFlagsOwnerPort );
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "GTST" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 플레이어 구간(지갑 · 일지 · 평판 · 가방)이 플레이어 상태 컴포넌트로 갔다 — 판 1 은 그 구간을 버리고 올린다
+        static constexpr FormatDef kStateFormat{ "GTST" };
 
         GameStateComponent();
         virtual ~GameStateComponent() override;

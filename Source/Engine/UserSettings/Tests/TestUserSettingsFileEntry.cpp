@@ -48,19 +48,21 @@ SW_TEST_CASE( UserSettingsFileEntryTest, GameUpgradeRunsWhenEngineVersionIsHighe
 }
 
 /**
- * @brief [UserSettingsFileEntryTest] 옛 형식(판 번호 하나)은 주인마다 그 번호로 읽고, 주인의 판보다 크면 주인의 판으로 줄인다(새 판 파일로 보지 않는다)
+ * @brief [UserSettingsFileEntryTest] 판 칸이 없는 파일은 첫 판으로 받아들이지 않고 거절한다. 파일에 없는 주인은 지금 판이다(단계를 돌리지 않는다)
  */
-SW_TEST_CASE( UserSettingsFileEntryTest, LegacySingleVersionIsReadPerOwner )
+SW_TEST_CASE( UserSettingsFileEntryTest, FileWithoutVersionsIsRefused )
 {
     sw::UserSettingsSchema schema;
-    loadEngineAndGame( schema, "<UserSettingsSchema owner=\"engine\" version=\"1\"><Setting id=\"audio.master\" type=\"Float\" default=\"0.5\" min=\"0\" max=\"1\"/></UserSettingsSchema>",
-                       "<UserSettingsSchema owner=\"game\" version=\"2\"><Setting id=\"game.speed\" type=\"Int\" default=\"1\" min=\"0\" max=\"10\"/>"
-                       "<Upgrade version=\"1\" op=\"Rename\" key=\"game.oldSpeed\" to=\"game.speed\"/></UserSettingsSchema>" );
+    loadEngineAndGame( schema, "<UserSettingsSchema owner=\"engine\"><Setting id=\"audio.master\" type=\"Float\" default=\"0.5\" min=\"0\" max=\"1\"/></UserSettingsSchema>",
+                       "<UserSettingsSchema owner=\"game\" version=\"1\"><Setting id=\"game.speed\" type=\"Int\" default=\"1\" min=\"0\" max=\"10\"/>"
+                       "<Upgrade version=\"0\" op=\"Rename\" key=\"game.oldSpeed\" to=\"game.speed\"/></UserSettingsSchema>" );
 
     sw::UserSettingsFileContent content;
-    SW_REQUIRE_TRUE( sw::UserSettingsFileEntry::parseJSON( R"({ "version": 1, "values": { "game.oldSpeed": 4, "audio.master": 0.25 } })", "test", schema, content ) ==
+    SW_EXPECT_LOG( "UserSettings.UserSettingsNoVersions" );
+    SW_EXPECT_TRUE( sw::UserSettingsFileEntry::parseJSON( R"({ "values": { "audio.master": 0.25 } })", "test", schema, content ) == sw::UserSettingsFileReadResult::Unreadable );
+    SW_REQUIRE_TRUE( sw::UserSettingsFileEntry::parseJSON( R"({ "versions": { "engine": 0 }, "values": { "game.oldSpeed": 4, "audio.master": 0.25 } })", "test", schema, content ) ==
                      sw::UserSettingsFileReadResult::Read );
-    SW_EXPECT_TRUE( findEntry( content, "game.speed" ) != nullptr );
+    SW_EXPECT_TRUE( findEntry( content, "game.oldSpeed" ) != nullptr );
     SW_EXPECT_TRUE( findEntry( content, "audio.master" ) != nullptr );
 }
 

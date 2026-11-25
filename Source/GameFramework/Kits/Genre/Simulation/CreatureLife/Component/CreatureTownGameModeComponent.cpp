@@ -57,14 +57,14 @@ namespace sw
         QuestLogComponent*   pQuestLog   = io.isReading() ? findOnPlayerState<QuestLogComponent>() : nullptr;
         if ( io.check( pState != nullptr && pReputation != nullptr && pQuestLog != nullptr ) == false )
             return;
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         if ( io.isOk() == false )
             return;
         CreatureTown restoredTown;
         if ( io.isReading() && io.check( initializeTown( restoredTown, *pState, *pReputation, *pQuestLog ) ) == false )
             return;
         CreatureTown& town = io.isWriting() ? _town : restoredTown;
-        io.section( CreatureTown::kStateTag, CreatureTown::kStateVersion, [&town]( StateIO& bodyIO )
+        io.section( CreatureTown::kStateFormat, [&town]( StateIO& bodyIO )
         { bodyIO.value( town ); } );
         io.end();
         if ( io.isWriting() || io.isOk() == false )

@@ -6,7 +6,6 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -133,11 +132,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag            = FourCCUtil::make( "JPTY" );
-        static constexpr uint32 kStateVersion        = 2; ///< 2: 장비를 아이템 인스턴스로
-        static constexpr int32  kMaxMembers          = 4;
-        static constexpr int32  kInnerMax            = 100;
-        static constexpr int32  kClassChangeMinLevel = 20; ///< DQ3 다마 신전의 최소 레벨
+        static constexpr int32 kMaxMembers          = 4;
+        static constexpr int32 kInnerMax            = 100;
+        static constexpr int32 kClassChangeMinLevel = 20; ///< DQ3 다마 신전의 최소 레벨
 
         JRPGParty();
 

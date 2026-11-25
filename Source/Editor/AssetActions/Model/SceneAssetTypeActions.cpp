@@ -38,7 +38,7 @@ namespace sw::editor
         /** @brief 새 씬의 틀입니다. 빈 엔티티 목록과 스트리밍을 끈 씬 설정입니다. */
         constexpr EditorNewAssetTemplate kSceneTemplate{
             "scene", "Scene", "new_scene", ".scene.xml", nullptr,
-            "<Scene formatVersion=\"3\" name=\"NewScene\">\n\t<SceneSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\" _addToWorldBudgetMicroseconds=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></SceneSettings><entities>\n\t</entities>\n</Scene>\n",
+            "<Scene formatVersion=\"0\" name=\"NewScene\">\n\t<SceneSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\" _addToWorldBudgetMicroseconds=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></SceneSettings><entities>\n\t</entities>\n</Scene>\n",
             nullptr };
 
         /**

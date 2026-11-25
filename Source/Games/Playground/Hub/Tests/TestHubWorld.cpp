@@ -388,7 +388,7 @@ SW_TEST_CASE( HubWorldTest, ProfileBytesRoundTrip )
 
     // 레벨 0(`Min = 1` 밖)을 실은 바이트 — 깨진 레코드를 읽는 경우를 만든다. 판 뒤 칸은 가변 길이 부호 정수 다섯과 실수 셋이다.
     BitWriter corrupt;
-    corrupt.writeVarUint( HubProfile::kFormatVersion );
+    HubProfile::kFormat.writeVersion( corrupt );
     corrupt.writeVarInt( 0 );
     for ( int32 index = 0; index < 4; ++index )
         corrupt.writeVarInt( 0 );
@@ -402,7 +402,7 @@ SW_TEST_CASE( HubWorldTest, ProfileBytesRoundTrip )
     SW_EXPECT_EQUAL( 5, untouched._coins ); // 거절하면 값을 바꾸지 않는다
 
     BitWriter otherVersion;
-    otherVersion.writeVarUint( HubProfile::kFormatVersion + 1 );
+    otherVersion.writeVarUint( HubProfile::kFormat._version + 1 );
     const vector<uint8> otherBytes = otherVersion.releaseBytes();
     BitReader           otherReader( otherBytes.data(), static_cast<int32>( otherBytes.size() ) );
     SW_EXPECT_FALSE( untouched.read( otherReader ) );

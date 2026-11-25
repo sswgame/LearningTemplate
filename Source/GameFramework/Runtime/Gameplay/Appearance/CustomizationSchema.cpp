@@ -258,7 +258,7 @@ namespace sw
 
             /**
              * @brief 판 올림 단계 묶음(`<Migration toVersion="n">` — 자식 `Rename` · `Split` · `PaletteIndexToColor` · `Remove`)을 읽습니다.
-             * @details 판은 2 부터 빈 판 없이 차례로 적는다(n 은 지금까지 읽은 묶음 수 + 2). 견본 묶음은 카탈로그가 다 읽은 뒤 잇는다(`loadFromXML`).
+             * @details 판은 1 부터 빈 판 없이 차례로 적는다(n 은 지금까지 읽은 묶음 수 + 1). 견본 묶음은 카탈로그가 다 읽은 뒤 잇는다(`loadFromXML`).
              */
             static void readMigration( const XMLNode& node, CustomizationSchemaDef& inoutSchema, AppearanceLoadReport& report, string_view sourceName )
             {
@@ -269,7 +269,7 @@ namespace sw
                 AppearanceXMLUtil::readOptionalInt( node, "toVersion", static_cast<int32>( CustomizationMigrationDef::kFirstVersion ), inoutSchema._version, toVersion, report, sourceName );
                 if ( toVersion != expectedVersion )
                 {
-                    report.addErrorWithID( "Appearance.MigrationOrder", "%#: schema '%#' <Migration> needs toVersion=%# (steps go 2, 3, ... up to the schema version %# with no gap)", sourceName, inoutSchema._id.c_str(),
+                    report.addErrorWithID( "Appearance.MigrationOrder", "%#: schema '%#' <Migration> needs toVersion=%# (steps go 1, 2, ... up to the schema version %# with no gap)", sourceName, inoutSchema._id.c_str(),
                                            expectedVersion, inoutSchema._version );
                     return;
                 }
@@ -461,7 +461,7 @@ namespace sw
             }
             // 판 n 의 값은 판 n+1 .. 지금 판의 단계를 모두 지나야 한다 — 빠진 판이 있으면 그 판의 세이브를 올릴 수 없다.
             if ( schema._listMigration.size() + CustomizationMigrationDef::kFirstVersion != static_cast<size_t>( schema._version ) + 1 )
-                report.addErrorWithID( "Appearance.MigrationMissing", "%#: schema '%#' is version %# but has %# <Migration> step(s) - versions 2..%# each need one", sourceName, schema._id.c_str(), schema._version,
+                report.addErrorWithID( "Appearance.MigrationMissing", "%#: schema '%#' is version %# but has %# <Migration> step(s) - versions 1..%# each need one", sourceName, schema._id.c_str(), schema._version,
                                        schema._listMigration.size(), schema._version );
             // 공유 코드와 네트워크는 매개변수 이름을 32 비트 해시로 싣는다. 한 스키마 안에서 해시가 겹치면 안 된다.
             for ( size_t lhs = 0; lhs < schema._listParameter.size(); ++lhs )
@@ -614,13 +614,12 @@ namespace sw
     expected<void> CustomizationSchemaDef::migrate( const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped ) const
     {
         const uint32 current = getVersion();
-        const uint32 stored  = values.getSchemaVersion();
+        const uint32 stored  = values.getSchemaVersion().value_or( current ); // 판을 찍지 않은 값은 지금 판의 값이다
         if ( stored > current )
             return unexpected( Error{ ErrorKind::Unsupported, "customization values are from a newer schema version than this content", _id.view() } );
         vector<CustomizationValue> listValue = values.getValues();
         vector<hashed_string>      listDropped;
-        const uint32               from = stored == CustomizationValueSet::kUnversionedSchemaVersion ? current : stored;
-        for ( uint32 version = from + 1; version <= current; ++version )
+        for ( uint32 version = stored + 1; version <= current; ++version )
         {
             const size_t stepIndex = static_cast<size_t>( version - CustomizationMigrationDef::kFirstVersion );
             if ( stepIndex >= _listMigration.size() )

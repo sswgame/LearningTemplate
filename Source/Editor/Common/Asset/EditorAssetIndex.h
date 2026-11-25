@@ -95,7 +95,7 @@ namespace sw::editor
          */
         static void scan( const AbsolutePath& resourceRoot, const AbsolutePath& scratchFolder, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken = {}, AssetScanCache* pCache = nullptr );
         /** @brief 훑기 캐시에 두는 값(`EditorAssetContent`)의 판입니다. 참조 뽑기(`extractLinks` · 도메인 표) · 텍스트 에셋 판정 · 정체성 읽기 규칙을 바꾸면 올린다. */
-        static constexpr uint32 kScanPayloadVersion = 1;
+        static constexpr uint32 kScanPayloadVersion = 0;
         /** @brief 스캔한 결과로 색인을 바꿉니다. 이후 `isReady` 가 true 입니다. */
         void assign( EditorAssetIndexData&& data );
         /**

@@ -53,7 +53,7 @@ namespace sw
      * @class BattleRoyaleGameModeComponent
      * @brief 낙하 → 전투 → 결과를 플레이어 입력 명령과 컴퓨터 분대로 진행합니다.
      */
-    REFLECT( Version = 2, Category = "BattleRoyale", DisplayName = "Battle Royale Game Mode", Tooltip = "Runs one BattleRoyale match: drop, shrinking zone fight and result; person 0 from input commands, the rest by the computer" )
+    REFLECT( Category = "BattleRoyale", DisplayName = "Battle Royale Game Mode", Tooltip = "Runs one BattleRoyale match: drop, shrinking zone fight and result; person 0 from input commands, the rest by the computer" )
     class SW_KIT_API BattleRoyaleGameModeComponent : public MatchGameModeComponent
     {
     public:

@@ -6,7 +6,6 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Hash/HashUtil.h"
@@ -19,6 +18,7 @@
 #include "Engine/Destruction/Fracture/FractureGraph.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include <algorithm>
 
@@ -28,9 +28,8 @@ namespace sw
     {
         struct DestructionStateInternal
         {
-            static constexpr uint32 kMagic        = FourCCUtil::make( "SWDS" );
-            static constexpr uint32 kVersion      = 1;
-            static constexpr uint32 kNoActiveNode = constant::invalid_index::kUint32;
+            static constexpr FormatDef kFormat{ "SWDS" };
+            static constexpr uint32    kNoActiveNode = constant::invalid_index::kUint32;
 
             /** @brief 0 또는 1 인 바이트 목록을 비트로 씁니다. */
             static void writeFlagBits( BitWriter& writer, const vector<uint8>& listFlag )
@@ -630,8 +629,7 @@ namespace sw
     {
         using Internal = DestructionStateInternal;
         BitWriter writer;
-        writer.writeUint32( Internal::kMagic );
-        writer.writeVarUint( Internal::kVersion );
+        Internal::kFormat.write( writer );
         writer.writeVarUint( _listNodeBroken.size() );
         writer.writeVarUint( _listLinkBroken.size() );
         writer.writeVarUint( _listLeafAnchored.size() );
@@ -667,7 +665,7 @@ namespace sw
             return false;
         const FractureGraph& graph = *_pGraph;
         BitReader            reader( pData, static_cast<int32>( size ) );
-        if ( reader.readUint32() != Internal::kMagic || reader.readVarUint() != Internal::kVersion )
+        if ( Internal::kFormat.check( reader ).has_value() == false )
             return false;
         const uint64 nodeCount           = reader.readVarUint();
         const uint64 linkCount           = reader.readVarUint();

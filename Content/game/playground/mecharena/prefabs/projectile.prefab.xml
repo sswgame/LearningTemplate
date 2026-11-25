@@ -1,6 +1,6 @@
 <?asset guid="46020303de234efab657c1da11224cea"?>
 <!-- 기체 대전 미니게임의 탄 모습 — MechArenaViewComponent 가 풀에서 꺼내 탄 자리에 둔다. -->
-<Prefab formatVersion="1" name="MechArenaProjectile">
+<Prefab formatVersion="0" name="MechArenaProjectile">
 	<GameObject _schemaVersion="0" _name="MechArenaProjectile" _bActive="true">
 		<_listComponent>
 			<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.866" _bVisible="true" />

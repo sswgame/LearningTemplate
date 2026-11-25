@@ -1,5 +1,5 @@
 <?asset guid="43f676198deadfe8e99ccf29edccdef3"?>
-<Scene formatVersion="3" name="SequencerKeys">
+<Scene formatVersion="0" name="SequencerKeys">
 	<!-- 시퀀서 시나리오(editor/sequencerkeys · sequencercuts)의 무대 — Director 의 플레이어가 sequencerkeys.seq.xml 을 틀고, 바인딩 1(Mover)을 Mover 에 묶는다.
 	     시퀀서 패널은 이 플레이어의 바인딩 표로 미리 본다(바인딩 문맥). CamA · CamB 는 컷 차선 시나리오가 바인딩을 더해 컷을 놓는 카메라다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">

@@ -3,7 +3,6 @@
 #include "Games/Playground/Shooter3D/ShooterGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
@@ -16,6 +15,7 @@
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
@@ -43,8 +43,7 @@ namespace sw
     {
         struct ShooterGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "SHOT" );
-            static constexpr uint32 kStateVersion = 3;
+            static constexpr FormatDef kStateFormat{ "SHOT" };
             /** @brief 감독 프로필의 항목이 고르는 일(`effect`)의 낱말입니다 — 항목 id 는 데이터가 마음대로 짓고, 무엇을 할지만 이 낱말로 적는다. */
             static constexpr const utf8* kEffectElite  = "Elite";  ///< 조우: 정예 종류로 낸다(비우면 보통 종류)
             static constexpr const utf8* kEffectAmmo   = "Ammo";   ///< 보상: 탄약 상자
@@ -202,7 +201,7 @@ namespace sw
     {
         // 처치 수는 상태 칸이다(`GameModeComponent::serializeState`). 감독 유무는 지금 판과 대조만 하고 덮지 않아 손 본문에 남는다.
         uint8 bPacing = static_cast<uint8>( _bPacingReady );
-        io.header( ShooterGameModeComponentInternal::kStateTag, ShooterGameModeComponentInternal::kStateVersion );
+        io.header( ShooterGameModeComponentInternal::kStateFormat );
         io.value( bPacing );
         if ( io.check( bPacing != SW_TRUE || _bPacingReady != SW_FALSE ) == false )
             return;

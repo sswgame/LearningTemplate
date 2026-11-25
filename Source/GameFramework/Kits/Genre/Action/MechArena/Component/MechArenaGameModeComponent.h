@@ -35,7 +35,7 @@ namespace sw
      * @class MechArenaGameModeComponent
      * @brief 출격 → 전투(격추 · 리스폰 · 기체 교체) → 팀 게이지나 시간으로 결과를 진행합니다.
      */
-    REFLECT( Version = 2, Category = "MechArena", DisplayName = "Mech Arena Game Mode", Tooltip = "Runs one MechArena team match: pilot 0 from input commands (or the computer on auto play), the rest by the computer" )
+    REFLECT( Category = "MechArena", DisplayName = "Mech Arena Game Mode", Tooltip = "Runs one MechArena team match: pilot 0 from input commands (or the computer on auto play), the rest by the computer" )
     class SW_KIT_API MechArenaGameModeComponent : public MatchGameModeComponent
     {
     public:

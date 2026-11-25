@@ -311,7 +311,7 @@ SW_TEST_CASE( LeaderboardServiceTest, LegacyScoresAreBackfilledFromTheBoardCatal
 
     ServiceTTLRule scoreRule   = LeaderboardService::makeScoreTTLRule( 1000 );
     scoreRule._pBackfillSource = LeaderboardService::makeScoreBackfillSource( listBoard );
-    scoreRule._backfillVersion = 1;
+    scoreRule._backfillVersion = 0;
     ServiceTTLSweepReport report;
     SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, scoreRule, kNowMs + 2 * kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 2, report._backfilledCount ); // 일간 · 시즌 점수 - 초기화 없는 보드의 점수는 줄이 없다
@@ -320,7 +320,7 @@ SW_TEST_CASE( LeaderboardServiceTest, LegacyScoresAreBackfilledFromTheBoardCatal
 
     ServiceTTLRule resultRule   = LeaderboardService::makeSeasonResultTTLRule( 1000 );
     resultRule._pBackfillSource = LeaderboardService::makeSeasonResultBackfillSource( listBoard );
-    resultRule._backfillVersion = 1;
+    resultRule._backfillVersion = 0;
     SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._backfilledCount );
     SW_EXPECT_EQUAL( 0, world._database.countRecords( hashed_string( "lb_season_result" ) ) );

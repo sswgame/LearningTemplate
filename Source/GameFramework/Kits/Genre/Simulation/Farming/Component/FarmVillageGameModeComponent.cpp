@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmVillageGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
@@ -16,6 +15,7 @@
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
@@ -31,8 +31,7 @@ namespace sw
     {
         struct FarmVillageGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "FVIL" );
-            static constexpr uint32 kStateVersion = 3; ///< 3 판: 예약의 씬이 경로 대신 GUID 참조다(`SceneObjectReference::_targetScene`)
+            static constexpr FormatDef kStateFormat{ "FVIL" };
 
             /** @brief 시계의 지금 시각을 0 일 0:00 부터 센 분으로 바꿉니다(일정 시스템의 시간 축). */
             static int32 computeAbsoluteMinute( const WorldClock& clock )
@@ -168,7 +167,7 @@ namespace sw
     {
         using Internal = FarmVillageGameModeComponentInternal;
         // 판이 정확히 같을 때만 읽는다(첫 출시 전이라 옛 판 리더가 없다).
-        io.header( Internal::kStateTag, Internal::kStateVersion );
+        io.header( Internal::kStateFormat );
         if ( io.isOk() == false )
             return;
         ScheduleSaveState state;

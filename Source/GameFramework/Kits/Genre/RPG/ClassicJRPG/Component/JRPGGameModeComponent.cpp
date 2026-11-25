@@ -2,13 +2,13 @@
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/Component/JRPGGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -21,8 +21,7 @@ namespace sw
     {
         struct JRPGGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "JRGM" );
-            static constexpr uint32 kStateVersion = 3; ///< 2: 가방 · 타이밍. 3: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
+            static constexpr FormatDef kStateFormat{ "JRGM" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventEncounter     = "JRPGEncounter";
@@ -736,7 +735,7 @@ namespace sw
 
     void JRPGGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( JRPGGameModeComponentInternal::kStateTag, JRPGGameModeComponentInternal::kStateVersion );
+        io.header( JRPGGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 자리 · 걸음 · 명령 멤버 · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 규칙 객체는 같은 카탈로그로 연 뒤에 읽는다(키트 계약).

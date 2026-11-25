@@ -3,12 +3,12 @@
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/Component/RestaurantGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -19,8 +19,7 @@ namespace sw
     {
         struct RestaurantGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "RSGM" );
-            static constexpr uint32 kStateVersion = 3; ///< 2: 평판. 3: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
+            static constexpr FormatDef kStateFormat{ "RSGM" };
 
             static constexpr const utf8* kCookName       = "cook"; ///< 직원 이름(레벨 오름 알림의 id)
             static constexpr const utf8* kServerName     = "server";
@@ -345,7 +344,7 @@ namespace sw
 
     void RestaurantGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( RestaurantGameModeComponentInternal::kStateTag, RestaurantGameModeComponentInternal::kStateVersion );
+        io.header( RestaurantGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 날 · 이익 합 · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 식당은 같은 카탈로그 · 설정으로 연 뒤에 읽는다(키트 계약).

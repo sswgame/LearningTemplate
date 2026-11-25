@@ -496,7 +496,7 @@ SW_TEST_CASE( ServiceTTLTest, IndexBackfillsLegacyRecordsOnce )
     rig.put( "c", kNowMs - 10 );
     ServiceTTLRule rule   = rig.makeIndexRule();
     rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readLeadingTime>();
-    rule._backfillVersion = 1;
+    rule._backfillVersion = 0;
 
     ServiceTTLSweepReport report;
     SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 2, 100, report ) == ServiceStoreResult::Ok );
@@ -517,7 +517,7 @@ SW_TEST_CASE( ServiceTTLTest, IndexBackfillsLegacyRecordsOnce )
     SW_EXPECT_EQUAL( 1, report._deletedCount ); // c 는 색인으로 지운다
     SW_EXPECT_EQUAL( 1, rig.count() );
 
-    rule._backfillVersion = 2; // 쓰는 쪽의 줄 모양이 바뀌었다 - 새 판은 처음부터 다시 훑어 d 를 줍는다
+    rule._backfillVersion = 1; // 쓰는 쪽의 줄 모양이 바뀌었다 - 새 판은 처음부터 다시 훑어 d 를 줍는다
     SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._backfilledCount );
     SW_EXPECT_EQUAL( 1, report._deletedCount );
@@ -531,7 +531,7 @@ SW_TEST_CASE( ServiceTTLTest, IndexBackfillRepeatsUntilRolloutWindowEnds )
     rig.put( "a", kNowMs - 5000 );
     ServiceTTLRule rule     = rig.makeIndexRule();
     rule._pBackfillSource   = ServiceTTLRule::makeRecordBackfillSource<&readLeadingTime>();
-    rule._backfillVersion   = 1;
+    rule._backfillVersion   = 0;
     rule._backfillRolloutMs = 10000;
 
     ServiceTTLSweepReport report;

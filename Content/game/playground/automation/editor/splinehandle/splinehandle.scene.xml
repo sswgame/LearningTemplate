@@ -1,5 +1,5 @@
 <?asset guid="b3f0b7c25d0a4d8f9b0f6a27c1e84d35"?>
-<Scene formatVersion="3" name="SplineHandle">
+<Scene formatVersion="0" name="SplineHandle">
 	<!-- 스플라인 손잡이 시나리오(editor/splinehandle)의 무대 — 원점 곁에 조절점 셋짜리 스플라인 하나 -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

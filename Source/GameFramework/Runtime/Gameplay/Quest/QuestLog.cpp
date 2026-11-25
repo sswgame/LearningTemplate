@@ -13,62 +13,12 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
-#include "Engine/Serialization/Format/ReflectedStateUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 
 namespace sw
 {
-    namespace
-    {
-        struct QuestLogInternal
-        {
-            /**
-             * @brief 판 1 → 2: 손 본문 바이트 앞에 리플렉션 머리를 붙이고 퀘스트마다 상태를 uint8 에서 int64(리플렉션 열거 폭)로 다시 씁니다. 다른 칸은 순서 · 폭이 같다.
-             */
-            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
-            {
-                if ( ReflectedStateUpgrade::writeHead<QuestLog>( outNewBody ) == false )
-                    return false;
-                StateIO in( inOldBody );
-                StateIO out( outNewBody );
-                uint32  progressCount = 0;
-                in.count( 1, progressCount );
-                out.count( 1, progressCount );
-                for ( uint32 index = 0; index < progressCount && in.isOk(); ++index )
-                {
-                    hashed_string questID;
-                    hashed_string stageID;
-                    vector<int32> listCount;
-                    float32       stageTime       = 0.0f;
-                    int32         completedCount  = 0;
-                    uint8         status          = 0;
-                    uint8         bAwaitingChoice = SW_FALSE;
-                    in.value( questID );
-                    in.value( stageID );
-                    in.list( listCount );
-                    in.value( stageTime );
-                    in.value( completedCount );
-                    in.value( status );
-                    in.value( bAwaitingChoice );
-                    int64 storedStatus = status;
-                    out.value( questID );
-                    out.value( stageID );
-                    out.list( listCount );
-                    out.value( stageTime );
-                    out.value( completedCount );
-                    out.value( storedStatus );
-                    out.value( bAwaitingChoice );
-                }
-                return in.isOk();
-            }
-        };
-    } // namespace
-
-    SW_STATE_FORMAT_UPGRADE( questLog1To2, "QLOG", 1, 2, &QuestLogInternal::upgradeStateFrom1 );
-
     QuestLog::QuestLog()
         : _listProgress{}
         , _eventBuffer{}

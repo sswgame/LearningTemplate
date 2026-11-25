@@ -15,7 +15,7 @@
     uploadRetrySeconds · uploadRetryMaxSeconds  올리기 실패 뒤 다시 보내기까지 기다릴 세션 시간 — 처음 값부터 두 배씩 위 끝까지(지터)
   <Event> id · category · sample(0..1, 줄에 적혀 받는 쪽이 무게를 준다), <Field> name · type(bool int float string) · required
 -->
-<TelemetrySchema version="1">
+<TelemetrySchema version="0">
 	<Pipeline batchEvents="32" flushSeconds="30" maxFileBytes="262144" maxFiles="16" maxTotalBytes="2097152" sessionSample="1" breadcrumbs="32" uploadRetrySeconds="30" uploadRetryMaxSeconds="1800"/>
 
 	<!-- 세션 — 문맥(세션 id · 빌드 · 플랫폼 · 빌드 id · 게임)은 파일마다 첫 줄에 있다. -->

@@ -5,6 +5,8 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -15,17 +17,17 @@ namespace sw
     {
         struct ServiceSchedulerInternal
         {
-            static constexpr int64  kMinuteMs       = constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
-            static constexpr int64  kDayMs          = 24 * 60 * kMinuteMs;
-            static constexpr int64  kDaysPerWeek    = 7;
-            static constexpr int64  kEpochWeekday   = 3; ///< 1970-01-01 은 목요일(ISO 월요일 = 0)
-            static constexpr int64  kRetryMs        = 5000;
-            static constexpr int32  kMaxJobIDSize   = 128;
-            static constexpr uint64 kVersion        = 1;
-            static constexpr uint32 kStateRunning   = 0;
-            static constexpr uint32 kStateSucceeded = 1;
-            static constexpr uint32 kStateFailed    = 2;
-            static constexpr int32  kStateBitCount  = 2;
+            static constexpr int64     kMinuteMs     = constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
+            static constexpr int64     kDayMs        = 24 * 60 * kMinuteMs;
+            static constexpr int64     kDaysPerWeek  = 7;
+            static constexpr int64     kEpochWeekday = 3; ///< 1970-01-01 은 목요일(ISO 월요일 = 0)
+            static constexpr int64     kRetryMs      = 5000;
+            static constexpr int32     kMaxJobIDSize = 128;
+            static constexpr FormatDef kFormat{ "SCHD" };
+            static constexpr uint32    kStateRunning   = 0;
+            static constexpr uint32    kStateSucceeded = 1;
+            static constexpr uint32    kStateFailed    = 2;
+            static constexpr int32     kStateBitCount  = 2;
 
             /** @brief 차지 레코드입니다. */
             struct RunRecord
@@ -47,7 +49,7 @@ namespace sw
             static vector<uint8> encode( const RunRecord& record )
             {
                 BitWriter writer;
-                writer.writeVarUint( kVersion );
+                kFormat.writeVersion( writer );
                 writer.writeVarUint( record._serverID );
                 writer.writeVarInt( record._startMs );
                 writer.writeVarInt( record._endMs );
@@ -58,7 +60,7 @@ namespace sw
             [[nodiscard]] static bool decode( const vector<uint8>& bytes, RunRecord& outRecord )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readVarUint() != kVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 outRecord._serverID = reader.readVarUint();
                 outRecord._startMs  = reader.readVarInt();
@@ -204,7 +206,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &ServiceSchedulerInternal::readRunTimeMs;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&ServiceSchedulerInternal::readRunTimeMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 

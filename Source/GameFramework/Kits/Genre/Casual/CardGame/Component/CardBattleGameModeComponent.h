@@ -25,7 +25,7 @@ namespace sw
      * @class CardBattleGameModeComponent
      * @brief 덱 섞기 → 내 턴(카드 내기) ↔ 상대 턴 → 승패 → 결과를 진행합니다.
      */
-    REFLECT( Version = 3, Category = "CardGame", DisplayName = "Card Battle Game Mode", Tooltip = "Runs one deck battle of the card kit from play card and end turn commands, to victory or defeat" )
+    REFLECT( Category = "CardGame", DisplayName = "Card Battle Game Mode", Tooltip = "Runs one deck battle of the card kit from play card and end turn commands, to victory or defeat" )
     class SW_KIT_API CardBattleGameModeComponent : public MatchGameModeComponent
     {
     public:

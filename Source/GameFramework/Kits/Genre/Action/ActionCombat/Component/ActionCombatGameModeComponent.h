@@ -42,7 +42,7 @@ namespace sw
      * @class ActionCombatGameModeComponent
      * @brief 홀(적 여럿) → 보스 → 승리 · 패배를 플레이어 입력 명령으로 진행합니다.
      */
-    REFLECT( Version = 2, Category = "ActionCombat", DisplayName = "Action Combat Game Mode", Tooltip = "Runs one ActionCombat room run (hall, boss, result) from player input commands" )
+    REFLECT( Category = "ActionCombat", DisplayName = "Action Combat Game Mode", Tooltip = "Runs one ActionCombat room run (hall, boss, result) from player input commands" )
     class SW_KIT_API ActionCombatGameModeComponent : public MatchGameModeComponent
     {
     public:

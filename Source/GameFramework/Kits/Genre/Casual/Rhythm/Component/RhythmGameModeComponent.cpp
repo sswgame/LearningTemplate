@@ -2,13 +2,13 @@
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Component/RhythmGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -17,8 +17,7 @@ namespace sw
     {
         struct RhythmGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "RHGM" );
-            static constexpr uint32 kStateVersion = 3; ///< 2: 등급 수가 판의 리플렉션 상태 칸이다. 3: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
+            static constexpr FormatDef kStateFormat{ "RHGM" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventJudged     = "RhythmJudged";
@@ -171,7 +170,7 @@ namespace sw
 
     void RhythmGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( RhythmGameModeComponentInternal::kStateTag, RhythmGameModeComponentInternal::kStateVersion );
+        io.header( RhythmGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 판은 같은 채보 · 같은 판정 창으로 연 뒤에 읽는다(키트 계약).

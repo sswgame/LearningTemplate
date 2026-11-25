@@ -44,6 +44,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
@@ -66,7 +67,7 @@ namespace sw::editor
 
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 바뀐 파일 목록의 키와 형식 판입니다. */
             static constexpr string_view kPendingStoreKey = "editor.assetHotReload.pending";
-            static constexpr uint32      kPendingVersion  = 1;
+            static constexpr FormatDef   kPendingFormat{ "EDHR" };
 
             /** @brief 에디터 컨텍스트가 없으면 nullptr 입니다(감시 값은 에디터 없는 호스트에도 등록돼 있다). 컨텍스트가 있는데 서비스가 없으면 버그라 멈춘다. */
             static AssetHotReload* findHotReload()
@@ -279,7 +280,7 @@ namespace sw::editor
         if ( listPath.empty() )
             return;
         Archive archive;
-        archive << AssetHotReloadInternal::kPendingVersion;
+        AssetHotReloadInternal::kPendingFormat.write( archive );
         writeUndoArg( archive, listPath );
         store.store( AssetHotReloadInternal::kPendingStoreKey, vector<uint8>( archive.getData(), archive.getData() + archive.getSize() ) );
     }
@@ -291,9 +292,7 @@ namespace sw::editor
         if ( store.take( AssetHotReloadInternal::kPendingStoreKey, bytes ) == false )
             return;
         Archive archive( bytes.data(), bytes.size() );
-        uint32  version{ 0 };
-        archive >> version;
-        if ( archive.isOk() == false || version != AssetHotReloadInternal::kPendingVersion || readUndoArg( archive, outListPath ) == false )
+        if ( AssetHotReloadInternal::kPendingFormat.check( archive ).has_value() == false || readUndoArg( archive, outListPath ) == false )
         {
             outListPath.clear();
             SW_LOG_WARNING_ID( "AssetHotReload.PendingPathsUnreadable", "The changed files the previous editor instance left could not be read - they are handled when they change again" );

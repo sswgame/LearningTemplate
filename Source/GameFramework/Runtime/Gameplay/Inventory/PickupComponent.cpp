@@ -2,7 +2,6 @@
 
 #include "GameFramework/Runtime/Gameplay/Inventory/PickupComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -11,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
@@ -22,8 +22,7 @@ namespace sw
     {
         struct PickupComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "PICK" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "PICK" };
         };
 
         const StatefulComponentRegistrar<PickupComponent> s_stateRegistration{ "PickupComponent" };
@@ -70,7 +69,7 @@ namespace sw
     {
         if ( io.isWriting() && _item.isEmpty() )
             return; // 시작 전 — 씬 데이터가 곧 상태다
-        io.header( PickupComponentInternal::kStateTag, PickupComponentInternal::kStateVersion );
+        io.header( PickupComponentInternal::kStateFormat );
         InventorySlot item = _item;
         Inventory::serializeSlot( io, item );
         if ( io.isWriting() )

@@ -4,13 +4,13 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -49,8 +49,7 @@ namespace sw
         SW_REGISTERED_COMPONENT( InventoryComponent );
         REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort );
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "INVC" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "INVC" };
 
         InventoryComponent();
         ~InventoryComponent() override;

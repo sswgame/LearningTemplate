@@ -1,5 +1,5 @@
 <?asset guid="1610ce044c3606fae71a91ef09d6e4f7"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<BoxPanel _styleClass="settingrow" _spacing="12">
 		<TextWidget _name="Label" _styleClass="settinglabel">
 			<_slot _widthOverride="320" _verticalAlignment="Center" />

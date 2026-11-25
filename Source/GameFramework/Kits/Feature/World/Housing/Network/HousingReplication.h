@@ -126,7 +126,7 @@ namespace sw
     struct NetHousingMessage
     {
         /** @brief 클라이언트 → 서버. 편집 요청 — 요청 번호(varuint) · 부지 id 해시(varuint) · 종류(3 비트) · 종류마다의 날 값. */
-        using Edit = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, 2>; ///< 판 2: 변환을 칸 선언(`HousingTransformNetState`)으로 쓴다
+        using Edit = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>; ///< 변환을 칸 선언(`HousingTransformNetState`)으로 쓴다
         /** @brief 서버 → 요청한 클라이언트. 판정(`HousingReplyBody`). */
         using Reply = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, HousingReplyBody>;
         /** @brief 서버 → 클라이언트. 부지 상태 조각(`HousingPlotSnapshotBody`) — 부지 전체를 메시지 하나(64 KB 상한)가 아니라 조각으로 나눠 보낸다. */
@@ -135,7 +135,7 @@ namespace sw
          * @brief 서버 → 클라이언트. 부지 델타 — 부지 id 해시 · 주인(2 비트) · 잔액(varint) · 다음 배치 id(varuint) · 사라진 id 수와 id 들(varuint) ·
          *        새로 · 바뀐 배치 수와 배치 들(id · 부품 id 해시 · 부품 판 · x · z · 층 · 요).
          */
-        using PlotDelta = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>; ///< 판 2: 변환을 칸 선언(`HousingTransformNetState`)으로 쓴다
+        using PlotDelta = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>; ///< 변환을 칸 선언(`HousingTransformNetState`)으로 쓴다
         /** @brief 클라이언트 → 서버. 부지 상태를 처음부터 다시 달라는 요청(`HousingSnapshotRequestBody`). */
         using SnapshotRequest = NetMessageBodyDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, HousingSnapshotRequestBody>;
         using Table           = NetWorldMessageTable<NetKitMessageRange::kHousing, Edit, Reply, PlotSnapshot, PlotDelta, SnapshotRequest>;

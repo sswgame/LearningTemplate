@@ -71,7 +71,7 @@ namespace sw
      * @class GhostHuntGameModeComponent
      * @brief 방마다 유령을 기절시켜 빨아들이고 불을 켜며 열쇠로 다음 방을 여는 저택 한 채를 입력 명령으로 진행합니다.
      */
-    REFLECT( Version = 2, Category = "GhostHunt", DisplayName = "Ghost Hunt Game Mode",
+    REFLECT( Category = "GhostHunt", DisplayName = "Ghost Hunt Game Mode",
              Tooltip = "Runs one ghost mansion: rooms of the area graph, ghosts stunned by light and caught by the vacuum, keys and doors, until every room is lit" )
     class SW_KIT_API GhostHuntGameModeComponent : public MatchGameModeComponent
     {

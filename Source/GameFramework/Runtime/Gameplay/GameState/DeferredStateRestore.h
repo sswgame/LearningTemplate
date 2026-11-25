@@ -9,6 +9,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/GameState/StateSectionTableUtil.h"
@@ -91,30 +92,30 @@ namespace sw
         }
 
         /**
-         * @brief 머리(@p tag · @p version)와 구간 표(@p sectionCount 개 — @p forEachSection 이 `visit( state, pName )` 을 구간마다 부른다)를 쓰거나 읽습니다. 컴포넌트의 `serializeState` 가 부릅니다.
+         * @brief 머리(@p format)와 구간 표(@p sectionCount 개 — @p forEachSection 이 `visit( state, pName )` 을 구간마다 부른다)를 쓰거나 읽습니다. 컴포넌트의 `serializeState` 가 부릅니다.
          * @details 열리기 전(복원한 직후의 두 번째 캡처)에 바이트를 들고 있으면 그 바이트가 곧 상태이다 — 빈 판을 쓰면 세이브를 잃는다.
          * @return 읽기면 모두 반영했을 때 true(@p pOwnerName 은 거절 오류에 적는다), 쓰기면 true 입니다.
          */
         template <typename TForEach>
-        [[nodiscard]] bool serializeSections( StateIO& io, uint32 tag, uint32 version, uint32 sectionCount, const TForEach& forEachSection, const utf8* pOwnerName ) const
+        [[nodiscard]] bool serializeSections( StateIO& io, const FormatDef& format, uint32 sectionCount, const TForEach& forEachSection, const utf8* pOwnerName ) const
         {
             if ( io.isWriting() == false )
-                return StateSectionTableUtil::read( io, tag, version, sectionCount, forEachSection, pOwnerName );
+                return StateSectionTableUtil::read( io, format, sectionCount, forEachSection, pOwnerName );
             Archive& archive = io.getArchive();
             if ( _bOpen == SW_FALSE && _heldBytes.empty() == false )
                 archive.writeBytes( _heldBytes.data(), _heldBytes.size() );
             else
-                StateSectionTableUtil::write( archive, tag, version, sectionCount, forEachSection );
+                StateSectionTableUtil::write( archive, format, sectionCount, forEachSection );
             return true;
         }
 
         /** @brief 상태 하나(@p state)를 구간 하나로 쓰거나 읽습니다(`serializeSections`). */
         template <typename TState>
-        void serialize( StateIO& io, uint32 tag, uint32 version, TState& state, const utf8* pName ) const
+        void serialize( StateIO& io, const FormatDef& format, TState& state, const utf8* pName ) const
         {
             const auto forEachSection = [&state, pName]( auto&& visit )
             { visit( state, pName ); };
-            (void)serializeSections( io, tag, version, 1, forEachSection, pName );
+            (void)serializeSections( io, format, 1, forEachSection, pName );
         }
 
     private:

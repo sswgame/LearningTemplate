@@ -79,16 +79,8 @@ def read_reports(list_root: Iterable[Path]) -> list[dict]:
 def open_database(path: Path) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(path)
-    prepare_schema(connection)
-    return connection
-
-
-def prepare_schema(connection: sqlite3.Connection) -> None:
-    """표를 만들고, 실행 종류 칸이 없던 옛 DB 에 칸을 더한다(옛 줄은 빈 종류 — 흔들림 판정에 들지 않는다)."""
     connection.executescript(SCHEMA)
-    if "runKind" not in {row[1] for row in connection.execute("PRAGMA table_info(run)")}:
-        connection.execute("ALTER TABLE run ADD COLUMN runKind TEXT NOT NULL DEFAULT ''")
-        connection.commit()
+    return connection
 
 
 def read_verify_config(project_root: Path, key: str) -> float:

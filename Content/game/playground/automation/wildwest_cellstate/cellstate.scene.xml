@@ -1,5 +1,5 @@
 <?asset guid="cd21df3e109e41369a0e320278da65ec"?>
-<Scene formatVersion="3" _base="guid:efba2ec29be47bca685fe4f466e144fa" name="CellState">
+<Scene formatVersion="0" _base="guid:efba2ec29be47bca685fe4f466e144fa" name="CellState">
 	<!-- 셀 경계 시나리오(automation/wildwest_cellstate)의 무대 — prairie(16 m 셀 · 32 m 반경 · 여유 8 m)를 물려받아 서쪽 끝 셀 A(-5, 0: X -80 ~ -64)에 셀 엔티티를 더한다.
 	     NPC · 상자(자동 저장 체크포인트 볼륨 — 발동 수는 RuntimeState) · 문 · 선반은 셀 A 에 들고, 선반 위 상자는 늘 올라 있다(바닥 셀이 내려가도 떨어지지 않는지 본다).
 	     땅 위 상자(GroundCrate)도 늘 올라 있고 셀 A 자리지만 늘 올라 있는 땅(prairie Ground)이 받쳐 쥐지 않는다.

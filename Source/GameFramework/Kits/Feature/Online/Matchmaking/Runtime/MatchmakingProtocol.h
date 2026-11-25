@@ -59,7 +59,7 @@ namespace sw
     struct SW_KIT_API PartyInvite
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전
+        static constexpr uint32 kBusVersion = 0; ///< push 중계(`OnlinePushRelay`)의 의미 버전
         PROPERTY()
         uint64 _partyID{ 0 };
         PROPERTY()
@@ -114,7 +114,7 @@ namespace sw
     struct SW_KIT_API MatchTicketCancel
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전. 버스에만 쓰므로 `MessageTypes` 에 없다
+        static constexpr uint32 kBusVersion = 0; ///< 서버 버스의 의미 버전. 버스에만 쓰므로 `MessageTypes` 에 없다
         PROPERTY()
         uint64 _ticketID{ 0 };
     };

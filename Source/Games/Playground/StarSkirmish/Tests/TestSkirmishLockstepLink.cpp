@@ -20,7 +20,8 @@ using namespace sw;
 SW_TEST_CASE( SkirmishLockstepLinkTest, PeerLeavingTheWorldReleasesTheLockstep )
 {
     GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
-    ServerConfig   config;
+    session.setRunWireContent( GameNetWireContent{} );
+    ServerConfig config;
     config._listenAddress = "127.0.0.1";
     config._gamePort      = 0; // 운영체제가 고른다
     GameNetSessionParams params;
@@ -46,7 +47,8 @@ SW_TEST_CASE( SkirmishLockstepLinkTest, PeerLeavingTheWorldReleasesTheLockstep )
 SW_TEST_CASE( SkirmishLockstepLinkTest, ClosedSessionReleasesTheLockstep )
 {
     GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
-    ServerConfig   config;
+    session.setRunWireContent( GameNetWireContent{} );
+    ServerConfig config;
     config._listenAddress = "127.0.0.1";
     config._gamePort      = 0; // 운영체제가 고른다
     GameNetSessionParams params;

@@ -246,7 +246,7 @@ namespace sw
          */
         static AssetDatabase scan( const AbsolutePath& contentRoot, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue, AssetScanCache* pCache = nullptr );
         /** @brief 훑기 캐시에 두는 글(머리 글 한 줄 · `.meta` 글)의 판입니다. 남기는 글의 규칙이나 머리 글의 읽기 규칙을 바꾸면 올린다. */
-        static constexpr uint32 kScanPayloadVersion = 1;
+        static constexpr uint32 kScanPayloadVersion = 0;
 
         /** @brief @p guid 의 리소스 id 입니다(복사). 없으면 없음입니다. */
         [[nodiscard]] optional<string> findPath( const AssetGUID& guid ) const;

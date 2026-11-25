@@ -2,7 +2,6 @@
 
 #include "GameFramework/Runtime/Gameplay/Progression/PlayerStats.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
@@ -10,6 +9,7 @@
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -23,8 +23,7 @@ namespace sw
     {
         struct PlayerStatsInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "STAT" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr FormatDef kStateFormat{ "STAT" };
         };
     } // namespace
 } // namespace sw
@@ -220,7 +219,7 @@ namespace sw
 
     void PlayerStats::serializeState( StateIO& io )
     {
-        io.header( PlayerStatsInternal::kStateTag, PlayerStatsInternal::kStateVersion );
+        io.header( PlayerStatsInternal::kStateFormat );
         // 카탈로그 순서대로 쓴다. 같은 값이면 같은 바이트가 나온다. 카탈로그에 없는 값은 애초에 보관하지 않는다.
         uint32 statCount = 0;
         if ( io.isWriting() && _pCatalog != nullptr )

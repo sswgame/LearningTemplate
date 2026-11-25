@@ -8,6 +8,7 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineParallel.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -16,7 +17,9 @@ namespace sw
         struct ReflectionProbeAssetInternal
         {
             /// @brief 머리말 바이트 수 — 매직 · 버전 · 찍은 위치 · 한 변 텍셀 수 · 단계 수.
-            static constexpr size_t kHeaderBytes = sizeof( uint32 ) * 2 + sizeof( float32 ) * 3 + sizeof( uint32 ) * 2;
+            static constexpr FormatDef kProbeFormat{ "SWRP" };
+            static constexpr FormatDef kRadianceMapFormat{ "SWRM" };
+            static constexpr size_t    kHeaderBytes = sizeof( uint32 ) * 2 + sizeof( float32 ) * 3 + sizeof( uint32 ) * 2;
             /// @brief 텍셀 하나의 바이트 수입니다(float32 RGB).
             static constexpr size_t kTexelBytes = sizeof( float32 ) * 3;
             /// @brief 거칠기 0 근처의 GGX α 하한 — 셰이더 lighting.hlsli 의 kMinRoughness 와 같은 뜻(0.045² 근처에서 표본이 한 점에 모인다).
@@ -270,8 +273,7 @@ namespace sw
         outBytes.clear();
         outBytes.reserve( Internal::kHeaderBytes + Internal::kTexelBytes * _listTexel.size() );
         ByteWriter writer{ outBytes };
-        writer.writeUint32( kMagic );
-        writer.writeUint32( kVersion );
+        Internal::kProbeFormat.write( outBytes );
         writer.writeFloat32( _capturePosition._x );
         writer.writeFloat32( _capturePosition._y );
         writer.writeFloat32( _capturePosition._z );
@@ -292,10 +294,8 @@ namespace sw
         if ( pData == nullptr || size < Internal::kHeaderBytes )
             return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe file is shorter than its header" } );
         ByteReader reader{ pData, size };
-        if ( reader.readUint32() != kMagic )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe file magic is not SWRP" } );
-        if ( reader.readUint32() != kVersion )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe file version differs - bake the probe again" } );
+        if ( expected<void> head = Internal::kProbeFormat.check( reader ); head.has_value() == false )
+            return unexpected( std::move( head.error() ) );
         float3 capturePosition{};
         capturePosition._x        = reader.readFloat32();
         capturePosition._y        = reader.readFloat32();
@@ -511,8 +511,7 @@ namespace sw
         const size_t texelCount = _listMip.empty() ? 0u : _listMip[0]._listTexel.size();
         outBytes.reserve( Internal::kRadianceMapHeaderBytes + Internal::kTexelBytes * texelCount );
         ByteWriter writer{ outBytes };
-        writer.writeUint32( kMagic );
-        writer.writeUint32( kVersion );
+        Internal::kRadianceMapFormat.write( outBytes );
         writer.writeUint32( getResolution() );
         for ( size_t texelIndex = 0; texelIndex < texelCount; ++texelIndex )
         {
@@ -530,10 +529,8 @@ namespace sw
         if ( pData == nullptr || size < Internal::kRadianceMapHeaderBytes )
             return unexpected( Error{ ErrorKind::InvalidArgument, "radiance map file is shorter than its header" } );
         ByteReader reader{ pData, size };
-        if ( reader.readUint32() != kMagic )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "radiance map file magic is not SWRM" } );
-        if ( reader.readUint32() != kVersion )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "radiance map file version differs - run Scripts/dev/make_sky_hdri_prefabs.py again" } );
+        if ( expected<void> head = Internal::kRadianceMapFormat.check( reader ); head.has_value() == false )
+            return unexpected( std::move( head.error() ) );
         const uint32   resolution   = reader.readUint32();
         const bool     bSizeInRange = kMinResolution <= resolution && resolution <= kMaxResolution;
         const uint64   texelCount   = static_cast<uint64>( resolution ) * resolution; // 범위 안이라 넘치지 않는다

@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
@@ -25,9 +27,9 @@ namespace sw
     {
         struct SocialServiceInternal
         {
-            static constexpr uint8 kFormatVersion     = 1;
-            static constexpr int64 kPresenceTTLMs     = 90000;
-            static constexpr int64 kPresenceRefreshMs = 30000;
+            static constexpr FormatDef kFormat{ "SOCL" };
+            static constexpr int64     kPresenceTTLMs     = 90000;
+            static constexpr int64     kPresenceRefreshMs = 30000;
 
             static const hashed_string& getLinkTable()
             {
@@ -76,7 +78,7 @@ namespace sw
             static vector<uint8> encodeLink( SocialLinkState state, int64 sinceMs )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarUint( static_cast<uint64>( state ) );
                 writer.writeVarInt( sinceMs );
                 return writer.getBytes();
@@ -85,7 +87,7 @@ namespace sw
             [[nodiscard]] static bool decodeLink( const vector<uint8>& bytes, SocialLinkState& outState, int64& outSinceMs )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 const uint64 state = reader.readVarUint();
                 outSinceMs         = reader.readVarInt();
@@ -98,7 +100,7 @@ namespace sw
             static vector<uint8> encodeCounts( const SocialCounts& counts )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarInt( counts._friendCount );
                 writer.writeVarInt( counts._incomingCount );
                 writer.writeVarInt( counts._outgoingCount );
@@ -109,7 +111,7 @@ namespace sw
             [[nodiscard]] static bool decodeCounts( const vector<uint8>& bytes, SocialCounts& outCounts )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 outCounts._friendCount   = reader.readVarInt32();
                 outCounts._incomingCount = reader.readVarInt32();

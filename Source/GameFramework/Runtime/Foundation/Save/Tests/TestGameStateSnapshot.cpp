@@ -13,7 +13,6 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Save/GameStateSnapshot.h"
@@ -65,79 +64,6 @@ namespace
     private:
         sw::ComponentStateCodec _codec;
     };
-
-    /** @brief 판 13 봉투 @p bytes 를 판 12 의 배치로 되돌립니다 — 오브젝트마다의 컴포넌트 상태를 컴포넌트 id 로 모은 섹션으로, 머리의 플레이 시간 · 저장 시각과 미니게임 칸 뒤의 결과 수는 뺀다. */
-    sw::vector<uint8> makeVersion12Envelope( const sw::vector<uint8>& bytes )
-    {
-        using namespace sw;
-        Archive in( bytes.data(), bytes.size() );
-        uint32  magic{ 0 };
-        uint32  version{ 0 };
-        uint64  token{ 0 };
-        in >> magic >> version >> token;
-        const string  scene   = in.readString();
-        const string  content = in.readString();
-        vector<uint8> minigame;
-        vector<uint8> sceneBytes;
-        vector<uint8> stateBytes;
-        vector<uint8> partBytes;
-        float64       playTime{ 0.0 };
-        uint64        savedTime{ 0 };
-        bool          bRead = in.readSection( minigame );
-        in >> playTime >> savedTime;
-        bRead = bRead && in.readSection( sceneBytes ) && in.readSection( stateBytes ) && in.readSection( partBytes ) && in.isError() == false;
-        if ( bRead == false || minigame.size() < sizeof( uint32 ) )
-            return {};
-        minigame.resize( minigame.size() - sizeof( uint32 ) ); // 판 12 의 칸 바이트에는 넘기지 못한 결과가 없다
-
-        uint32 objectCount{ 0 };
-        Memory::copy( &objectCount, sceneBytes.data(), sizeof( uint32 ) );
-        vector<uint8> oldScene( sceneBytes.begin(), sceneBytes.begin() + sizeof( uint32 ) );
-        Archive       entries;
-        uint32        entryCount{ 0 };
-        size_t        offset = sizeof( uint32 );
-        for ( uint32 index = 0; index < objectCount; ++index )
-        {
-            ObjectIdentity identity;
-            const size_t   identityBytes = ObjectStateSerializer::readIdentity( sceneBytes.data() + offset, sceneBytes.size() - offset, identity );
-            uint32         bodySize{ 0 };
-            Memory::copy( &bodySize, sceneBytes.data() + offset + identityBytes, sizeof( uint32 ) );
-            const size_t endOffset = offset + identityBytes + sizeof( uint32 ) + bodySize;
-            oldScene.insert( oldScene.end(), sceneBytes.begin() + static_cast<ptrdiff_t>( offset ), sceneBytes.begin() + static_cast<ptrdiff_t>( endOffset ) );
-            uint32 statesSize{ 0 };
-            Memory::copy( &statesSize, sceneBytes.data() + endOffset, sizeof( uint32 ) );
-            Archive states( sceneBytes.data() + endOffset + sizeof( uint32 ), statesSize );
-            while ( states.getRemainingBytes() > 0 )
-            {
-                string        typeName;
-                string        stableKey;
-                vector<uint8> componentState;
-                states >> typeName >> stableKey >> componentState;
-                for ( const ObjectIdentity::ComponentEntry& component : identity._listComponent )
-                {
-                    if ( component._stableKey != stableKey )
-                        continue;
-                    entries << string_view( typeName ) << component._componentID << componentState;
-                    ++entryCount;
-                }
-            }
-            offset = endOffset + sizeof( uint32 ) + statesSize;
-        }
-        Archive store;
-        store << uint32{ 5 } << entryCount;
-        store.writeBytes( entries.getData(), entries.getSize() );
-
-        Archive out;
-        out << magic << uint32{ 12 } << token;
-        out.writeString( scene );
-        out.writeString( content );
-        out.writeSection( minigame.data(), static_cast<uint32>( minigame.size() ) );
-        out.writeSection( oldScene.data(), static_cast<uint32>( oldScene.size() ) );
-        out.writeSection( stateBytes.data(), static_cast<uint32>( stateBytes.size() ) );
-        out.writeSection( store.getData(), static_cast<uint32>( store.getSize() ) );
-        out.writeSection( partBytes.data(), static_cast<uint32>( partBytes.size() ) );
-        return vector<uint8>( out.getData(), out.getData() + out.getSize() );
-    }
 
     /** @brief 글 하나로 구성을 흉내 냅니다 — 같은 글의 세이브만 받는다(모드 키트의 판정은 TestModManifest 가 본다). */
     struct FakeContentConfiguration final : public sw::IContentConfiguration
@@ -202,56 +128,13 @@ SW_TEST_CASE( GameStateSnapshotTest, RejectsForeignHeaderAndOtherVersion )
 
     vector<uint8> foreign = bytes;
     foreign[0]            = static_cast<uint8>( foreign[0] ^ 0xFFu );
-    SW_EXPECT_LOG( "GameStateSnapshot.StateSnapshotNoSWST" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_FALSE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, foreign.data(), static_cast<uint32>( foreign.size() ) ) );
 
     vector<uint8> otherVersion = bytes;
     otherVersion[4]            = static_cast<uint8>( otherVersion[4] + 1u ); // 판 번호(머리 둘째 칸)의 낮은 바이트
-    SW_EXPECT_LOG( "GameStateSnapshot.StateSnapshotVersionNot" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_FALSE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, otherVersion.data(), static_cast<uint32>( otherVersion.size() ) ) );
-}
-
-/**
- * @brief [GameStateSnapshotTest] 판 12 봉투는 컴포넌트 id 로 모은 상태를 오브젝트마다로 옮겨 이 판으로 올린다 — 올린 봉투가 이 판으로 찍은 것과 같고(플레이 시간 · 저장 시각은 0),
- *        복원이 그 상태를 컴포넌트에 돌려준다. 단계가 없는 더 옛 판은 올리지 못하고, 머리가 다른 바이트는 건드리지 않는다
- */
-SW_TEST_CASE( GameStateSnapshotTest, OldEnvelopesAreUpgradedOnceBeforeReading )
-{
-    constexpr size_t            kVersionOffset = 4; // 매직 다음 칸의 낮은 바이트
-    const ScopedSceneStateCodec codec;
-    SubsystemScope              scope;
-    SceneManager&               sceneManager = scope.emplaceSubsystem<SceneManager>();
-    SW_REQUIRE_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
-    const game::ScopedGameScope scoped{ scope };
-    GameStateSnapshot           snapshot;
-    GameObjectManager* const    pManager = openSceneWithOneObject( sceneManager, "scenes/a.scene" );
-    SW_REQUIRE_NOT_NULL( pManager );
-    SW_REQUIRE_NOT_NULL( pManager->findGameObjectByName( hashed_string( "Marker" ) )->addComponent<SceneComponent>() );
-    const vector<uint8> bytes    = captureEmptyEnvelope( snapshot );
-    const vector<uint8> previous = makeVersion12Envelope( bytes );
-    SW_REQUIRE_TRUE( previous.empty() == false && previous != bytes );
-
-    vector<uint8> upgraded = previous;
-    SW_REQUIRE_TRUE( GameStateSnapshot::upgradeEnvelope( upgraded ) );
-    SW_EXPECT_TRUE( makeVersion12Envelope( upgraded ) == previous ); // 올린 것을 되돌리면 같다
-    const optional<vector<uint8>> upgradedMinigame = GameStateSnapshot::readMinigameBytes( upgraded.data(), static_cast<uint32>( upgraded.size() ) );
-    SW_EXPECT_TRUE( upgradedMinigame.has_value() && *upgradedMinigame == makeMinigameBytes() ); // 옛 세이브는 결과 수 0 이 붙는다
-    const optional<GameStateSnapshot::SaveInfo> info = GameStateSnapshot::readSaveInfo( upgraded.data(), static_cast<uint32>( upgraded.size() ) );
-    SW_EXPECT_TRUE( info.has_value() && info->_playTime == 0.0 && info->_savedTime == UnixMilliseconds{ 0 } );
-    ScopedSceneStateCodec::s_listRestored.clear();
-    SW_EXPECT_TRUE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, upgraded.data(), static_cast<uint32>( upgraded.size() ) ) );
-    SW_EXPECT_TRUE( ( ScopedSceneStateCodec::s_listRestored == vector<uint8>{ ScopedSceneStateCodec::kStateByte } ) );
-
-    vector<uint8> oldest   = bytes;
-    oldest[kVersionOffset] = 10;
-    SW_EXPECT_LOG( "FormatUpgrade.StepMissing" );
-    SW_EXPECT_FALSE( GameStateSnapshot::upgradeEnvelope( oldest ) );
-
-    vector<uint8> foreign         = bytes;
-    foreign[0]                    = static_cast<uint8>( foreign[0] ^ 0xFFu );
-    const vector<uint8> untouched = foreign;
-    SW_EXPECT_TRUE( GameStateSnapshot::upgradeEnvelope( foreign ) );
-    SW_EXPECT_TRUE( foreign == untouched );
 }
 
 /** @brief [GameStateSnapshotTest] 봉투는 컴포넌트 상태를 코덱 하나로 싣고 돌려준다 — 스트리밍 셀 · 씬 전환과 같은 길이다 */
@@ -352,28 +235,6 @@ SW_TEST_CASE( GameStateSnapshotTest, RestoreInAnotherSceneDoesNotMix )
     SW_EXPECT_NOT_NULL( pSceneB->findGameObjectByName( hashed_string( "Marker" ) ) );
 }
 
-/** @brief [GameStateSnapshotTest] 팩을 흡수한 뒤에도 경로를 적던 때의 세이브는 새 경로의 씬에서 읽힌다 — 옛 경로 표의 접두 줄(`AssetRedirect::readSavedReference`)로 한 번 푼다 */
-SW_TEST_CASE( GameStateSnapshotTest, SceneIDFollowsRedirects )
-{
-    SubsystemScope scope;
-    SceneManager&  sceneManager = scope.emplaceSubsystem<SceneManager>();
-    SW_REQUIRE_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
-    const game::ScopedGameScope scoped{ scope };
-    GameStateSnapshot           snapshot;
-
-    SW_REQUIRE_NOT_NULL( openSceneWithOneObject( sceneManager, "game/oldpack/maps/a.scene.xml" ) );
-    const vector<uint8> oldSave = captureEmptyEnvelope( snapshot );
-    SW_REQUIRE_TRUE( oldSave.empty() == false );
-    SW_REQUIRE_TRUE( AssetRedirect::loadFromXMLTexts( vector<string>{ "<Redirects><PrefixRedirect from=\"game/oldpack\" to=\"game/newpack/oldpack\"/></Redirects>" },
-                                                      vector<string>{ "test/redirects.xml" } ) );
-
-    const optional<string> sceneID = GameStateSnapshot::readSceneID( oldSave.data(), static_cast<uint32>( oldSave.size() ) );
-    SW_EXPECT_TRUE( sceneID.has_value() && *sceneID == "game/newpack/oldpack/maps/a.scene.xml" );
-    SW_EXPECT_NOT_NULL( openSceneWithOneObject( sceneManager, "game/newpack/oldpack/maps/a.scene.xml" ) );
-    SW_EXPECT_TRUE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, oldSave.data(), static_cast<uint32>( oldSave.size() ) ) );
-    AssetRedirect::clear();
-}
-
 /**
  * @brief [GameStateSnapshotTest] 머리만 읽기(`readSceneID`)는 찍은 씬의 리소스 id 를 돌려주고 활성 씬을 건드리지 않는다 — 머리가 틀리거나 잘린 버퍼는 없음이다(감사 G-7)
  * @details 슬롯 불러오기는 이 값으로 그 씬을 먼저 연 뒤 적용한다(언리얼 게임이 세이브의 맵으로 `OpenLevel` 한 뒤 적용하는 것과 같다).
@@ -403,7 +264,7 @@ SW_TEST_CASE( GameStateSnapshotTest, ReadSceneIDPeeksTheHeaderOnly )
     // 머리가 없는 버퍼 · 머리 앞에서 잘린 버퍼는 없음이다.
     vector<uint8> foreign = saveA;
     foreign[0]            = static_cast<uint8>( foreign[0] ^ 0xFFu );
-    SW_EXPECT_LOG( "GameStateSnapshot.StateSnapshotNoSWST" );
+    SW_EXPECT_LOG( "Format.HeadRefused" );
     SW_EXPECT_FALSE( GameStateSnapshot::readSceneID( foreign.data(), static_cast<uint32>( foreign.size() ) ).has_value() );
     SW_EXPECT_FALSE( GameStateSnapshot::readSceneID( nullptr, 0 ).has_value() );
     SW_EXPECT_FALSE( GameStateSnapshot::readSceneID( saveA.data(), 18 ).has_value() ); // 씬 정체 글의 길이 칸에서 잘렸다

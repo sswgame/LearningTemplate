@@ -57,7 +57,7 @@ namespace sw
      * @class MonsterHuntGameModeComponent
      * @brief 흥정(올리기 · 받기) → 조사(걷기 · 단서) → 사냥(공격 · 회피 · 표식 · 오일 · 물약) → 승리 · 패배를 명령으로 진행합니다.
      */
-    REFLECT( Version = 2, Category = "MonsterHuntRPG", DisplayName = "Monster Hunt Game Mode", Tooltip = "Runs one MonsterHuntRPG contract: haggling, clue investigation and the hunt from commands" )
+    REFLECT( Category = "MonsterHuntRPG", DisplayName = "Monster Hunt Game Mode", Tooltip = "Runs one MonsterHuntRPG contract: haggling, clue investigation and the hunt from commands" )
     class SW_KIT_API MonsterHuntGameModeComponent : public MatchGameModeComponent
     {
     public:

@@ -1,5 +1,5 @@
 <?asset guid="308e0f591f0edeefc4844bfadfea63fa"?>
-<Prefab formatVersion="1" _base="guid:01fb9f1317ef275b55da67f99cb507ff" name="KeycardDoor3D">
+<Prefab formatVersion="0" _base="guid:01fb9f1317ef275b55da67f99cb507ff" name="KeycardDoor3D">
 	<PrefabOverrides>
 		<Override key="#93b8f1000cacd0ad">
 			<InteractableComponent _interactionID="SwipeKeycard" />

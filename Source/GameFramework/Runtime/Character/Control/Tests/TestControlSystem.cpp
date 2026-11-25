@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
@@ -268,20 +269,18 @@ SW_TEST_CASE( ControlIntentHistoryTest, BrokenBytesAreRefusedWithAReason )
     BitReader            garbage( arrGarbage, 8 );
     const expected<void> garbageRead = history.read( garbage );
     SW_REQUIRE_FALSE( garbageRead.has_value() );
-    SW_EXPECT_TRUE( garbageRead.error().message().find( "magic" ) != string_view::npos );
+    SW_EXPECT_TRUE( garbageRead.error().message().find( "another format" ) != string_view::npos );
 
     BitWriter writer;
-    writer.writeUint32( ControlIntentHistory::kMagic );
-    writer.writeVarUint( ControlIntentHistory::kVersion + 1 );
+    FormatDef{ "SWIN", ControlIntentHistory::kFormat._version + 1 }.write( writer );
     BitReader            badVersion( writer.getBytes().data(), static_cast<int32>( writer.getByteCount() ) );
     const expected<void> badVersionRead = history.read( badVersion );
     SW_REQUIRE_FALSE( badVersionRead.has_value() );
-    SW_EXPECT_TRUE( badVersionRead.error().message().find( "version" ) != string_view::npos );
+    SW_EXPECT_TRUE( badVersionRead.error().message().find( "newer build" ) != string_view::npos );
 
     // 틱 수가 남은 바이트보다 크면 큰 고리를 잡기 전에 거절한다.
     BitWriter hugeWriter;
-    hugeWriter.writeUint32( ControlIntentHistory::kMagic );
-    hugeWriter.writeVarUint( ControlIntentHistory::kVersion );
+    ControlIntentHistory::kFormat.write( hugeWriter );
     hugeWriter.writeVarUint( 1 );
     const uint8 arrName[] = { 'H' };
     hugeWriter.writeBlob( arrName, 1 );

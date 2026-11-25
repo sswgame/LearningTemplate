@@ -39,7 +39,7 @@ namespace sw
     struct SW_GF_API ServiceSanctionChanged
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 의미 버전
+        static constexpr uint32 kBusVersion = 0; ///< 의미 버전
         PROPERTY()
         uint64 _accountID{ 0 };
     };

@@ -343,7 +343,7 @@ static void ViewMode::applyToSurface( inout float4 inoutLitColor, inout float4 i
 // 디퍼드 조명 패스는 머티리얼 PSO 가 아니라 뷰 모드를 모르므로, 뷰 모드를 받는 G버퍼 패스가 픽셀마다 적어 넘긴다(언리얼 G버퍼의 ShadingModelID 와 같은 자리).
 // G버퍼 명세의 판이다 — C++ `GBufferLayout::kVersion`(Renderer/Pipeline/GBufferLayout.h)과 같아야 한다(단위 테스트 GBufferLayoutTest 가 맞춘다).
 // 첨부 · 채널 · 인코딩을 바꾸면 두 곳을 함께 올린다. 판 3: 번호 · 반사율 · 가림 · 화면 속도 · 사용자 칸 · 발광.
-#define SW_GBUFFER_LAYOUT_VERSION 3
+#define SW_GBUFFER_LAYOUT_VERSION 0
 
 static SurfaceShading SurfaceShading::make( uint shadingModel )
 {

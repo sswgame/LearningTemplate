@@ -255,6 +255,7 @@ SW_TEST_CASE( OpsHTTPEndpointTest, GameNetSessionMetricsReachTheMetricsPath )
 {
     MetricRegistry metrics;
     GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
+    session.setRunWireContent( GameNetWireContent{} );
     session.bindMetricRegistry( &metrics );
     GameNetSessionParams params;
     params._role = GameNetRole::Server; // 포트 0 — 운영체제가 고른다

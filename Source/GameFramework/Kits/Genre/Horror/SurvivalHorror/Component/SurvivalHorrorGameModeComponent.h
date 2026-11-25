@@ -72,7 +72,7 @@ namespace sw
      * @class SurvivalHorrorGameModeComponent
      * @brief 열쇠 · 단서 · 자물쇠 · 어둠 · 괴물을 지나 목표 방까지 가는 판을 입력 명령으로 진행합니다.
      */
-    REFLECT( Version = 2, Category = "SurvivalHorror", DisplayName = "Survival Horror Game Mode",
+    REFLECT( Category = "SurvivalHorror", DisplayName = "Survival Horror Game Mode",
              Tooltip = "Runs one survival horror house: rooms of the area graph, items, keys, clues, puzzles, darkness and turn based fights, until the goal room" )
     class SW_KIT_API SurvivalHorrorGameModeComponent : public MatchGameModeComponent
     {

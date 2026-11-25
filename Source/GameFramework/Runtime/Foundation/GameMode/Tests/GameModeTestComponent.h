@@ -6,11 +6,11 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
@@ -87,7 +87,7 @@ namespace sw
         }
         void serializeGameState( StateIO& io ) override
         {
-            io.header( FourCCUtil::make( "TGMC" ), 1 );
+            io.header( FormatDef{ "TGMC" } );
             io.value( _handValue );
             io.check( _handValue >= 0 );
             io.end();

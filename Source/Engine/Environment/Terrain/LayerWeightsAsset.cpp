@@ -32,18 +32,8 @@ namespace sw
         using Internal = LayerWeightsAssetInternal;
         *this          = LayerWeightsAsset{};
         ByteReader reader{ bytes.data(), bytes.size() };
-        if ( bytes.size() < Internal::kHeaderBytes || reader.readUint32() != kMagic )
-        {
-            SW_LOG_ERROR_ID( "LayerWeightsAsset.NotLayerWeightMap", "'%#' is not a layer weight map (magic SWLW missing)", sourceName );
+        if ( kFormat.read( reader, sourceName, Internal::kHeaderBytes ) == false )
             return false;
-        }
-        // 옛 판(레이어 넷, 버전 1)은 읽지 않는다 — 저장소의 파일은 현재 판으로 다시 썼다.
-        const uint32 version = reader.readUint32();
-        if ( version != kVersion )
-        {
-            SW_LOG_ERROR_ID( "LayerWeightsAsset.LayerWeightMapVersion", "'%#' is layer weight map version %# - this build reads version %# only", sourceName, version, kVersion );
-            return false;
-        }
         const uint32 width      = reader.readUint32();
         const uint32 height     = reader.readUint32();
         const uint32 layerCount = reader.readUint32();
@@ -84,8 +74,7 @@ namespace sw
         using Internal = LayerWeightsAssetInternal;
         outBytes.clear();
         outBytes.reserve( Internal::kHeaderBytes + _bytes.size() );
-        LittleEndianUtil::appendUint32( outBytes, kMagic );
-        LittleEndianUtil::appendUint32( outBytes, kVersion );
+        kFormat.write( outBytes );
         LittleEndianUtil::appendUint32( outBytes, _width );
         LittleEndianUtil::appendUint32( outBytes, _height );
         LittleEndianUtil::appendUint32( outBytes, kLayerCount );

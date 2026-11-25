@@ -5,7 +5,6 @@
  * @details 순찰, 조준, 사격, 쉬기로 이어지는 플랫포머의 졸개와 보스 패턴은 이것으로 충분하다. 난수가 없고 프레임으로만 진행하므로 결정적이다.
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -46,9 +45,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "APEB" );
-        static constexpr uint32 kStateVersion = 1;
 
         ActionEnemyBrain();
 

@@ -7,6 +7,8 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
@@ -29,7 +31,7 @@ namespace sw
     {
         struct LeaderboardServiceInternal
         {
-            static constexpr uint8       kFormatVersion        = 1;
+            static constexpr FormatDef   kFormat{ "LDBD" };
             static constexpr int32       kRebuildBatch         = 256;
             static constexpr int32       kPlayersPerPage       = 600; ///< 정산 저장소 일 하나가 쓰는 사람 수(커밋 50 번). 페이지 사이에 다른 요청이 저장소 워커를 쓴다
             static constexpr int64       kDayMs                = 86400000;
@@ -101,7 +103,7 @@ namespace sw
             [[nodiscard]] static bool readScoreTimeMs( const ServiceRecord& record, int64& outTimeMs )
             {
                 BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 (void)reader.readVarInt(); // 점수는 건너뛴다. 넘쳤는지는 아래 hasOverflowed 가 본다
                 outTimeMs = reader.readVarInt();
@@ -206,7 +208,7 @@ namespace sw
             static vector<uint8> encodeScore( int64 score, int64 updatedMs, string_view displayName )
             {
                 BitWriter writer;
-                writer.writeBits( kFormatVersion, 8 );
+                kFormat.writeVersion( writer );
                 writer.writeVarInt( score );
                 writer.writeVarInt( updatedMs );
                 ServiceKeyUtil::writeString( writer, displayName );
@@ -219,7 +221,7 @@ namespace sw
             [[nodiscard]] static bool decodeScoreWithName( const vector<uint8>& bytes, int64& outScore, string& outDisplayName )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 outScore                               = reader.readVarInt();
                 [[maybe_unused]] const int64 updatedMs = reader.readVarInt(); // 쓰지 않지만 읽어야 이름 필드에 닿는다. 넘쳤는지는 아래 hasOverflowed 가 본다
@@ -229,7 +231,7 @@ namespace sw
             [[nodiscard]] static bool decodeScore( const vector<uint8>& bytes, int64& outScore )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readBits( 8 ) != kFormatVersion )
+                if ( kFormat.readVersion( reader ) == false )
                     return false;
                 outScore = reader.readVarInt();
                 return reader.hasOverflowed() == false;
@@ -727,7 +729,7 @@ namespace sw
                 if ( readResult != ServiceStoreResult::Ok )
                     return read;
                 BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
-                if ( reader.readBits( 8 ) != LeaderboardServiceInternal::kFormatVersion )
+                if ( LeaderboardServiceInternal::kFormat.readVersion( reader ) == false )
                     return read;
                 read._value._score = reader.readVarInt();
                 read._value._rank  = reader.readVarInt32();

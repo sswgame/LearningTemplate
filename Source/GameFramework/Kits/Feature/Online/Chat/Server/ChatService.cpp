@@ -842,7 +842,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &ChatServiceInternal::readHistoryTimeMs;
         rule._pBackfillSource = make_shared<ChatHistoryBackfillSource>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 

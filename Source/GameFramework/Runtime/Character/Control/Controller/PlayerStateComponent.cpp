@@ -24,15 +24,9 @@ namespace sw
 
     void PlayerStateComponent::serializeState( StateIO& io )
     {
-        uint32 version = kStateVersion;
-        io.value( version );
-        if ( io.isReading() && ( io.isOk() == false || version != kStateVersion ) )
-        {
-            SW_LOG_WARNING_ID( "PlayerState.StateVersion", "Player state on '%#': saved state version %# did not read - keeping the current progress flags",
-                               getOwner() != nullptr ? getOwner()->getName().c_str() : "?", version );
-            io.fail();
+        io.header( kStateFormat );
+        if ( io.isOk() == false )
             return;
-        }
         _progressFlags.serializeState( io );
     }
 

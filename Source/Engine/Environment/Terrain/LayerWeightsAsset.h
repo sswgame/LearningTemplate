@@ -5,7 +5,7 @@
  *          | 바이트 | 의미 |
  *          |---|---|
  *          | 4 | 매직 `SWLW` |
- *          | 4 | 버전 번호(`kVersion` = 2. 다른 판은 읽지 않는다) |
+ *          | 4 | 판(`kFormat`) |
  *          | 4 | 너비 W(1 이상) |
  *          | 4 | 높이 H(1 이상) |
  *          | 4 | 레이어 수(`kLayerCount`) |
@@ -17,13 +17,13 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Environment/Placement/SurfaceLayerWeights.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -33,7 +33,7 @@ namespace sw
      */
     struct SW_API LayerWeightsAsset
     {
-        static constexpr uint32      kMagic     = FourCCUtil::make( "SWLW" );
+        static constexpr FormatDef   kFormat{ "SWLW" };
         static constexpr string_view kExtension = ".layerweights";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
@@ -41,7 +41,7 @@ namespace sw
         };
         /** @brief 이 에셋 종류입니다(등록은 `LayerWeightsAsset.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "LayerWeightsAsset", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
-        static constexpr uint32       kVersion       = 2u;
+        static constexpr uint32       kVersion       = kFormat._version; ///< 임포트 스탬프가 섞는다
         static constexpr uint32       kLayerCount    = SurfaceLayerWeights::kLayerCount;
         static constexpr uint32       kMaxResolution = 8193u;
 

@@ -44,7 +44,7 @@ namespace sw
      * @class AsymmetricHorrorGameModeComponent
      * @brief 수리 → 전원 → 탈출구(또는 해치) → 탈출 · 희생까지 한 판을 생존자 입력 명령과 봇으로 진행합니다.
      */
-    REFLECT( Version = 2, Category = "AsymmetricHorror", DisplayName = "Asymmetric Horror Game Mode",
+    REFLECT( Category = "AsymmetricHorror", DisplayName = "Asymmetric Horror Game Mode",
              Tooltip = "Runs one asymmetric horror match: survivors from input commands or bots against a killer bot, to escape or sacrifice" )
     class SW_KIT_API AsymmetricHorrorGameModeComponent : public MatchGameModeComponent
     {

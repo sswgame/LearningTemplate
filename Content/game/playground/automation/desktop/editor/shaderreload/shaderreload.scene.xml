@@ -1,5 +1,5 @@
 <?asset guid="fb35613ce6c24989975490bcbb45f703"?>
-<Scene formatVersion="3" name="ShaderReload">
+<Scene formatVersion="0" name="ShaderReload">
 	<!-- 셰이더 리로드 시나리오(desktop/editor/shaderreload)의 무대 — 사본 셰이더(glow.hlsl)를 쓰는 상자 하나. 시나리오가 <Scratch> 사본으로 연다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

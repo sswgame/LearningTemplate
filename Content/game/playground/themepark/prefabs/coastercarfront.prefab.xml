@@ -1,5 +1,5 @@
 <?asset guid="0387581112fae5da240a2bf963a5ba7a"?>
-<Prefab formatVersion="1" _base="guid:e10e1b7a524de7c36fb18505a605af5c" name="CoasterCarFront">
+<Prefab formatVersion="0" _base="guid:e10e1b7a524de7c36fb18505a605af5c" name="CoasterCarFront">
 	<PrefabOverrides>
 		<Override key="#0244d8c8807cd288">
 			<MeshComponent _meshID="guid:daf4fea5a215e3b51b7bcdf663679d04" />

@@ -1,5 +1,5 @@
 <?asset guid="786cfba72802b527df79765962c6b876"?>
-<Scene formatVersion="3" name="StreamingBulk">
+<Scene formatVersion="0" name="StreamingBulk">
 	<!-- 부하 시나리오 load/streamingcells 의 무대 — 20 x 20 셀(한 변 10 m)에 셀마다 상자 5 개(모두 2000). 카메라 · 해만 늘 올라 있고 상자는 쿠킹이 셀로 나눈다. -->
 	<SceneSettings _bStreaming="true" _unloadMargin="10" _maxCellLoadsPerFrame="8" _addToWorldBudgetMicroseconds="2000">
 		<_cellGrid _cellSize="10" _loadingRadius="40" />

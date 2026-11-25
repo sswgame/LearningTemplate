@@ -1,5 +1,5 @@
 <?asset guid="06fa5cc470ee7962a0ffe7abd3581f1d"?>
-<Scene formatVersion="3" name="animvariant_linked">
+<Scene formatVersion="0" name="animvariant_linked">
 	<!-- 시나리오 automation/animvariant 의 무대 — 그래프 · 셋은 그대로이고 슬롯만 채운다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

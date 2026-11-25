@@ -1,5 +1,5 @@
 <?asset guid="cb6b29f3e7d84ce2bddeed6d242d5311"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<BoxPanel _spacing="8">
 		<TextWidget _name="Label" _bRichText="true" _text="[action=UI.Accept] Select" />
 	</BoxPanel>

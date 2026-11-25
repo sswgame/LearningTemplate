@@ -683,7 +683,7 @@ namespace sw
 
     void HousingLayout::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         hashed_string plotID = _settings._plotID;
         io.value( plotID );
         if ( io.isReading() && io.isOk() && plotID != _settings._plotID )

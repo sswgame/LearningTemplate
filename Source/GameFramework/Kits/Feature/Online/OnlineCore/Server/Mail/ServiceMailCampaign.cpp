@@ -4,6 +4,8 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Serialization/Format/FormatDef.h"
+
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -13,8 +15,8 @@ namespace sw
     {
         struct ServiceMailCampaignInternal
         {
-            static constexpr uint64 kFormat   = 1;
-            static constexpr int32  kPageSize = 64;
+            static constexpr FormatDef kFormat{ "MCMP" };
+            static constexpr int32     kPageSize = 64;
         };
 
         /**
@@ -87,7 +89,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &readEndTimeMs;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readEndTimeMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 
@@ -98,7 +100,7 @@ namespace sw
         rule._ttlIndexTable   = getClaimExpiryTable();
         rule._expireAfterMs   = expireAfterMs; // 시각 읽기는 두지 않는다 - 표식에는 시각이 없고, 끝난 캠페인의 표식은 묶음째 쓸모가 없다
         rule._pBackfillSource = make_shared<ServiceMailCampaignClaimBackfillSource>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 
@@ -162,7 +164,7 @@ namespace sw
     vector<uint8> ServiceMailCampaign::encode( const ServiceMailCampaign& campaign )
     {
         BitWriter writer;
-        writer.writeVarUint( ServiceMailCampaignInternal::kFormat );
+        ServiceMailCampaignInternal::kFormat.writeVersion( writer );
         writer.writeVarUint( campaign._campaignID );
         writer.writeVarUint( campaign._actorID );
         writer.writeVarInt( campaign._startMs );
@@ -183,7 +185,7 @@ namespace sw
     bool ServiceMailCampaign::decode( const vector<uint8>& bytes, ServiceMailCampaign& outCampaign )
     {
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( reader.readVarUint() != ServiceMailCampaignInternal::kFormat )
+        if ( ServiceMailCampaignInternal::kFormat.readVersion( reader ) == false )
             return false;
         outCampaign._campaignID   = reader.readVarUint();
         outCampaign._actorID      = reader.readVarUint();

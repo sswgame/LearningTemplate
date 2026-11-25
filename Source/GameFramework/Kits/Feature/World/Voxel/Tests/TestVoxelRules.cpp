@@ -99,7 +99,7 @@ namespace
             {
                 listPaletteID.push_back( block._id );
             }
-            io.header( VoxelWorld::kStateTag, VoxelWorld::kStateVersion );
+            io.header( VoxelWorld::kStateFormat );
             io.value( chunkCountX );
             io.value( chunkCountZ );
             io.list( listPaletteID );
@@ -308,12 +308,12 @@ SW_TEST_CASE( VoxelWorldTest, CraftedStateLeavesTheWorldAlone )
     Archive badBlock( listBadBlock.data(), listBadBlock.size() );
     SW_EXPECT_FALSE( target._world.readState( badBlock ) );
 
-    // 옛 판(1) — 머리의 판 칸(태그 uint32 뒤)을 1 로 되돌린다. 판 1 은 머리표가 없던 판이라 올리는 단계가 없다
-    SW_EXPECT_LOG( "FormatUpgrade.StepMissing" );
-    vector<uint8> listOldVersion     = listSaved;
-    listOldVersion[sizeof( uint32 )] = 1;
-    Archive oldVersion( listOldVersion.data(), listOldVersion.size() );
-    SW_EXPECT_FALSE( target._world.readState( oldVersion ) );
+    // 더 새 판 — 머리의 판 칸(태그 uint32 뒤)을 올린다
+    SW_EXPECT_LOG( "FormatUpgrade.NewerThanSupported" );
+    vector<uint8> listNewerVersion     = listSaved;
+    listNewerVersion[sizeof( uint32 )] = 1;
+    Archive newerVersion( listNewerVersion.data(), listNewerVersion.size() );
+    SW_EXPECT_FALSE( target._world.readState( newerVersion ) );
 
     // 잘린 바이트
     Archive truncated( listSaved.data(), listSaved.size() - 1 );
@@ -398,39 +398,6 @@ SW_TEST_CASE( VoxelWorldTest, UnloadStoresOnlyChangedChunksAndReloadRestoresThem
     SW_REQUIRE_TRUE( restored.loadChunk( 1, 1 ) );
     SW_EXPECT_TRUE( restored.getBlock( 20, 7, 20 ) == rig._glass );
     SW_EXPECT_TRUE( VoxelFixture::save( restored ) == listSaved );
-}
-
-// 판 2 세이브(모든 청크를 순서대로)는 판 올림 단계가 판 3 으로 옮긴다 — 옛 세이브의 블록이 그대로 읽힌다.
-SW_TEST_CASE( VoxelWorldTest, Version2SaveIsUpgraded )
-{
-    VoxelFixture rig;
-    Archive      writing;
-    {
-        StateIO               io( writing );
-        int32                 chunkCountX = 2;
-        int32                 chunkCountZ = 2;
-        vector<hashed_string> listPaletteID{ hashed_string( "stone" ), hashed_string( "water" ), hashed_string( "glass" ) };
-        io.header( VoxelWorld::kStateTag, 2 );
-        io.value( chunkCountX );
-        io.value( chunkCountZ );
-        io.list( listPaletteID );
-        for ( int32 chunkIndex = 0; chunkIndex < 4; ++chunkIndex )
-        {
-            uint16 paletteNumber = chunkIndex == 3 ? 1 : 0; // 마지막 청크 (1, 1) 만 돌로 찼다
-            uint32 length        = static_cast<uint32>( kVoxelChunkVolume );
-            uint16 closeNumber   = 0;
-            uint32 closeLength   = 0;
-            io.value( paletteNumber );
-            io.value( length );
-            io.value( closeNumber );
-            io.value( closeLength );
-        }
-    }
-    Archive reading( writing.getData(), writing.getSize() );
-    SW_REQUIRE_TRUE( rig._world.readState( reading ) );
-    SW_EXPECT_EQUAL( uint32( 4 ), rig._world.getStoredChunkCount() ); // 판 2 는 바뀐 청크를 가리지 않았다 — 모두 저장본이다
-    SW_EXPECT_TRUE( rig._world.getBlock( 20, 9, 20 ) == rig._stone );
-    SW_EXPECT_TRUE( rig._world.getBlock( 3, 9, 3 ) == kVoxelAirBlock );
 }
 
 // 세이브는 블록을 id 팔레트로 적는다 — blocks.xml 중간에 블록이 끼어 순서가 바뀌어도 옛 세이브는 같은 블록으로 읽혀야 한다.
@@ -733,7 +700,7 @@ SW_TEST_CASE( VoxelHotbarTest, StateRoundTripsAndRefusesBadCounts )
     Archive       prefix;
     StateIO       prefixIO( prefix );
     hashed_string glassID = hashed_string( "glass" );
-    prefixIO.header( VoxelHotbar::kStateTag, VoxelHotbar::kStateVersion );
+    prefixIO.header( VoxelHotbar::kStateFormat );
     prefixIO.value( glassID );
     vector<uint8> listBadCount                           = listSaved;
     listBadCount[prefix.getSize() + sizeof( int32 ) - 1] = 0x7f;
@@ -747,11 +714,11 @@ SW_TEST_CASE( VoxelHotbarTest, StateRoundTripsAndRefusesBadCounts )
     Archive badSelect( listBadSelect.data(), listBadSelect.size() );
     SW_EXPECT_FALSE( target.readState( badSelect ) );
 
-    SW_EXPECT_LOG( "FormatUpgrade.StepMissing" ); // 판 1 은 머리표가 없던 판이라 올리는 단계가 없다
-    vector<uint8> listOldVersion     = listSaved;
-    listOldVersion[sizeof( uint32 )] = 1; // 머리의 판 칸(태그 uint32 뒤)
-    Archive oldVersion( listOldVersion.data(), listOldVersion.size() );
-    SW_EXPECT_FALSE( target.readState( oldVersion ) );
+    SW_EXPECT_LOG( "FormatUpgrade.NewerThanSupported" );
+    vector<uint8> listNewerVersion     = listSaved;
+    listNewerVersion[sizeof( uint32 )] = 1; // 머리의 판 칸(태그 uint32 뒤)
+    Archive newerVersion( listNewerVersion.data(), listNewerVersion.size() );
+    SW_EXPECT_FALSE( target.readState( newerVersion ) );
 }
 
 // 핫바도 블록을 id 로 적는다 — 카탈로그 순서가 바뀌어도 같은 블록이고, 없는 블록은 거절한다.

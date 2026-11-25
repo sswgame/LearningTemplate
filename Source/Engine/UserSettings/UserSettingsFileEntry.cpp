@@ -14,11 +14,7 @@ namespace sw
         struct UserSettingsFileInternal
         {
             static constexpr utf8 kVersionsKey[] = "versions";
-            /** @brief 옛 형식(주인별 판 이전)의 판 번호 하나입니다. 읽기만 한다 — `parseJSON` 의 이주 길. */
-            static constexpr utf8 kLegacyVersionKey[] = "version";
-            static constexpr utf8 kValuesKey[]        = "values";
-            /** @brief 판 번호가 없는 파일(판 번호를 쓰기 전에 저장한 파일) · 파일에 없는 주인의 판입니다. 모든 올림 단계를 거친다. */
-            static constexpr uint32 kUnversionedFile = 0;
+            static constexpr utf8 kValuesKey[]   = "values";
 
             /** @brief JSON 값을 텍스트로 바꿉니다. 숫자는 쓰인 그대로, 불리언은 true/false 로 씁니다. */
             static string toText( const JSONValue& value )
@@ -41,24 +37,13 @@ namespace sw
             static bool equalsText( string_view lhs, string_view rhs ) { return StringUtil::equals( lhs, rhs ); }
 
             /**
-             * @brief 파일이 적은 주인 @p owner 의 판입니다. 없으면 0 이고, 판이 부호 없는 정수가 아니면 비어 있습니다(형식 오류).
-             * @details 옛 형식은 판 하나(모든 스키마의 최댓값)라 주인의 판보다 크면 주인의 판으로 줄인다 — 주인별 판으로 바꿀 때 저장소의 스키마는 모두 판 1 이었으므로
-             *          옛 파일의 번호(0 · 1)는 그대로 각 주인의 판이고, 줄이기는 큰 번호를 "이 빌드보다 새 파일" 로 잘못 보지 않게 한다.
+             * @brief 파일이 적은 주인 @p owner 의 판입니다. 판이 부호 없는 정수가 아니면 비어 있습니다(형식 오류).
+             * @details 파일에 없는 주인은 저장할 때 없던 스키마라 올릴 값도 없다 — 지금 판이다.
              */
-            static optional<uint32> readOwnerVersion( const JSONValue& root, const UserSettingsSchemaOwner& owner )
+            static optional<uint32> readOwnerVersion( const JSONValue& versions, const UserSettingsSchemaOwner& owner )
             {
-                const JSONValue versions = root.get( kVersionsKey );
-                if ( versions.isObject() )
-                {
-                    const JSONValue version = versions.get( owner._owner.c_str() );
-                    if ( version.isValid() == false || version.isNull() )
-                        return kUnversionedFile;
-                    return version.read<uint32>();
-                }
-                uint32 legacyVersion{ kUnversionedFile };
-                if ( root.readOptionalInto( kLegacyVersionKey, legacyVersion ) == false )
-                    return nullopt;
-                return legacyVersion < owner._version ? legacyVersion : owner._version;
+                const JSONValue version = versions.get( owner._owner.c_str() );
+                return version.isValid() ? version.read<uint32>() : optional<uint32>{ owner._version };
             }
 
             /** @brief 주인 @p owner 의 판 @p fromVersion 단계를 적힌 순서대로 목록에 적용합니다. */
@@ -137,9 +122,9 @@ namespace sw
             SW_LOG_ERROR_ID( "UserSettings.UserSettingsNoValues", "User settings '%#' has no \"values\" object", sourceName );
             return UserSettingsFileReadResult::Unreadable;
         }
-        if ( versions.isValid() && versions.isNull() == false && versions.isObject() == false )
+        if ( versions.isObject() == false )
         {
-            SW_LOG_ERROR_ID( "UserSettings.UserSettingsVersionsNotObject", "User settings '%#' has a \"versions\" that is not an object", sourceName );
+            SW_LOG_ERROR_ID( "UserSettings.UserSettingsNoVersions", "User settings '%#' has no \"versions\" object", sourceName );
             return UserSettingsFileReadResult::Unreadable;
         }
 
@@ -148,7 +133,7 @@ namespace sw
         vector<uint32>                         listFileVersion;
         for ( const UserSettingsSchemaOwner& owner : listOwner )
         {
-            const optional<uint32> fileVersion = Internal::readOwnerVersion( root, owner );
+            const optional<uint32> fileVersion = Internal::readOwnerVersion( versions, owner );
             if ( fileVersion.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "UserSettings.UserSettingsVersionNot", "User settings '%#' has a version for '%#' that is not an unsigned integer", sourceName,
@@ -163,21 +148,18 @@ namespace sw
             }
             listFileVersion.push_back( *fileVersion );
         }
-        if ( versions.isObject() )
+        for ( const string& ownerName : versions.getMemberNames() )
         {
-            for ( const string& ownerName : versions.getMemberNames() )
+            const hashed_string owner( string_view{ ownerName } );
+            if ( schema.findOwner( owner ) != nullptr )
+                continue;
+            const optional<uint32> version = versions.get( ownerName ).read<uint32>();
+            if ( version.has_value() == false )
             {
-                const hashed_string owner( string_view{ ownerName } );
-                if ( schema.findOwner( owner ) != nullptr )
-                    continue;
-                const optional<uint32> version = versions.get( ownerName ).read<uint32>();
-                if ( version.has_value() == false )
-                {
-                    SW_LOG_ERROR_ID( "UserSettings.UserSettingsVersionNot", "User settings '%#' has a version for '%#' that is not an unsigned integer", sourceName, ownerName );
-                    return UserSettingsFileReadResult::Unreadable;
-                }
-                outContent._listForeignOwner.push_back( UserSettingsFileOwnerVersion{ owner, *version } );
+                SW_LOG_ERROR_ID( "UserSettings.UserSettingsVersionNot", "User settings '%#' has a version for '%#' that is not an unsigned integer", sourceName, ownerName );
+                return UserSettingsFileReadResult::Unreadable;
             }
+            outContent._listForeignOwner.push_back( UserSettingsFileOwnerVersion{ owner, *version } );
         }
 
         for ( const string& key : values.getMemberNames() )

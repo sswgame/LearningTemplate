@@ -15,7 +15,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
@@ -174,9 +173,6 @@ namespace sw
 
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "KRAC" );
-        static constexpr uint32 kStateVersion = 3; ///< 3: 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
 
         KartRace();
 

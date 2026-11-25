@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
 {
@@ -20,11 +20,7 @@ namespace sw
                 /** @brief 중복 검사 이름(`<자리>:<종류>:<판>`)입니다. */
                 static string makeStepName( FormatUpgradeDomain domain, string_view kind, uint32 fromVersion )
             {
-                const utf8* const                        pDomain = domain == FormatUpgradeDomain::AssetXML  ? "AssetXML:"
-                                                                 : domain == FormatUpgradeDomain::SaveBytes ? "SaveBytes:"
-                                                                 : domain == FormatUpgradeDomain::StateBytes
-                                                                     ? "StateBytes:"
-                                                                     : "ReflectedType:";
+                const utf8* const                        pDomain = domain == FormatUpgradeDomain::AssetXML ? "AssetXML:" : "ReflectedType:";
                 StringBuilder<constant::buffer::kMax128> name;
                 name.appendFormat( "%#%#:%#", pDomain, kind, fromVersion );
                 return string( name.view() );
@@ -61,7 +57,7 @@ namespace sw
     {
         if ( fromVersion > toVersion )
         {
-            SW_LOG_ERROR_ID( "FormatUpgrade.NewerThanSupported", "%# format version %# is newer than the supported %# - written by a newer build", string( kind ).c_str(), fromVersion, toVersion );
+            FormatDef::reportCannotRaise( kind, fromVersion, toVersion );
             return false;
         }
         for ( uint32 version = fromVersion; version < toVersion; ++version )
@@ -69,8 +65,7 @@ namespace sw
             const FormatUpgradeStep* pStep = FormatUpgradeInternal::findStep( domain, kind, version );
             if ( pStep == nullptr )
             {
-                SW_LOG_ERROR_ID( "FormatUpgrade.StepMissing", "%# format version %# has no upgrade step to %# (supported %#) - add SW_*_FORMAT_UPGRADE or rewrite the data", string( kind ).c_str(), version, version + 1,
-                                 toVersion );
+                FormatDef::reportCannotRaise( kind, version, toVersion );
                 return false;
             }
             if ( pStep->_pFunction( payload ) == false )
@@ -79,23 +74,6 @@ namespace sw
                 return false;
             }
         }
-        return true;
-    }
-
-    bool FormatUpgradeStep::runStateStep( StateUpgradeFunction pFunction, FormatUpgradePayload& payload )
-    {
-        if ( payload._pBytes == nullptr )
-            return false;
-        vector<uint8>& bytes = *payload._pBytes;
-        Archive        oldBody( bytes.data(), bytes.size() );
-        Archive        newBody;
-        if ( pFunction( oldBody, newBody ) == false || oldBody.isError() || newBody.isError() )
-            return false;
-        // 단계가 읽지 않은 꼬리(바깥 형식의 칸)는 그대로 옮긴다.
-        const uint64 tailSize = oldBody.getRemainingBytes();
-        if ( tailSize > 0 )
-            newBody.writeBytes( bytes.data() + oldBody.getOffset(), tailSize );
-        newBody.writeData( bytes );
         return true;
     }
 

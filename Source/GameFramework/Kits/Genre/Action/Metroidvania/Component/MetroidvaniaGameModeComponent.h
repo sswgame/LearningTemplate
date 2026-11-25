@@ -83,7 +83,7 @@ namespace sw
      * @class MetroidvaniaGameModeComponent
      * @brief 탐험 → 능력 · 부적 줍기 → 쉬기 · 지도 → 전투 → 보스를 플레이어 입력 명령으로 진행합니다.
      */
-    REFLECT( Version = 2, Category = "Metroidvania", DisplayName = "Metroidvania Game Mode", Tooltip = "Runs one Metroidvania exploration (rooms, abilities, rest, duels, boss) from player input commands" )
+    REFLECT( Category = "Metroidvania", DisplayName = "Metroidvania Game Mode", Tooltip = "Runs one Metroidvania exploration (rooms, abilities, rest, duels, boss) from player input commands" )
     class SW_KIT_API MetroidvaniaGameModeComponent : public MatchGameModeComponent
     {
     public:

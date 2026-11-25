@@ -6,7 +6,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include <cstring>
@@ -67,14 +67,12 @@ SW_TEST_CASE( StateIOTest, RateAccumulatorRefusesWholeAmounts )
 
 namespace
 {
-    constexpr uint32 kTag = 0x54534554u; // "TEST"
-
     sw::Archive makeSection( uint32 version, int32 value )
     {
         sw::Archive body;
         body << value;
         sw::Archive outer;
-        sw::StateIO::writeSection( outer, kTag, version, body );
+        sw::StateIO::writeSection( outer, sw::FormatDef{ "TEST", version }, body );
         return outer;
     }
 } // namespace
@@ -88,7 +86,7 @@ SW_TEST_CASE( StateIOTest, ExpectedSectionRejectsOtherVersionOrTag )
 
     sw::Archive same( written.getData(), written.getSize() );
     sw::Archive body;
-    SW_REQUIRE_TRUE( sw::StateIO::readExpectedSection( same, kTag, 2, body ) );
+    SW_REQUIRE_TRUE( sw::StateIO::readExpectedSection( same, sw::FormatDef{ "TEST", 2 }, body ) );
     int32 value = 0;
     body >> value;
     SW_EXPECT_EQUAL( 42, value );
@@ -96,14 +94,14 @@ SW_TEST_CASE( StateIOTest, ExpectedSectionRejectsOtherVersionOrTag )
 
     SW_EXPECT_LOG( "FormatUpgrade.NewerThanSupported" );
     sw::Archive readAsOld( written.getData(), written.getSize() );
-    SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( readAsOld, kTag, 1, body ) ); // 새 판을 옛 판으로 읽지 않는다
+    SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( readAsOld, sw::FormatDef{ "TEST", 1 }, body ) ); // 새 판을 옛 판으로 읽지 않는다
     sw::Archive otherTag( written.getData(), written.getSize() );
-    SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( otherTag, kTag + 1, 2, body ) );
+    SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( otherTag, sw::FormatDef{ "OTHR", 2 }, body ) );
 
     sw::Archive                              any( written.getData(), written.getSize() );
     const sw::optional<sw::StateIO::Section> section = sw::StateIO::readSection( any );
     SW_REQUIRE_TRUE( section.has_value() );
-    SW_EXPECT_EQUAL( kTag, section->_tag );
+    SW_EXPECT_EQUAL( sw::FourCCUtil::make( "TEST" ), section->_tag );
     SW_EXPECT_EQUAL( 2u, section->_version );
 }
 
@@ -226,19 +224,19 @@ SW_TEST_CASE( StateIOTest, RejectedReadLeavesStateUntouched )
  */
 SW_TEST_CASE( StateIOTest, SectionChecksTagVersionAndConsumption )
 {
-    constexpr uint32 kTag = 0x54534554u;
-    sw::Archive      outer;
+    constexpr sw::FormatDef kFormat{ "TEST", 1 };
+    sw::Archive             outer;
     {
         sw::StateIO io( outer );
         int32       value = 42;
-        io.section( kTag, 1, [&value]( sw::StateIO& bodyIO )
+        io.section( kFormat, [&value]( sw::StateIO& bodyIO )
         { bodyIO.value( value ); } );
     }
     {
         sw::Archive reading( outer.getData(), outer.getSize() );
         sw::StateIO io( reading );
         int32       value = 0;
-        io.section( kTag, 1, [&value]( sw::StateIO& bodyIO )
+        io.section( kFormat, [&value]( sw::StateIO& bodyIO )
         { bodyIO.value( value ); } );
         SW_EXPECT_TRUE( io.isOk() );
         SW_EXPECT_EQUAL( 42, value );
@@ -247,13 +245,13 @@ SW_TEST_CASE( StateIOTest, SectionChecksTagVersionAndConsumption )
         SW_EXPECT_LOG( "FormatUpgrade.StepMissing" );
         sw::Archive reading( outer.getData(), outer.getSize() );
         sw::StateIO io( reading );
-        io.section( kTag, 2, []( sw::StateIO& ) {} );
+        io.section( sw::FormatDef{ "TEST", 2 }, []( sw::StateIO& ) {} );
         SW_EXPECT_FALSE( io.isOk() ); // 다른 판 — 올릴 단계가 없다
     }
     {
         sw::Archive reading( outer.getData(), outer.getSize() );
         sw::StateIO io( reading );
-        io.section( kTag, 1, []( sw::StateIO& ) {} );
+        io.section( kFormat, []( sw::StateIO& ) {} );
         SW_EXPECT_FALSE( io.isOk() ); // 읽지 않은 본문이 남았다
     }
 }
@@ -262,14 +260,34 @@ namespace sw
 {
     namespace
     {
+        struct StateUpgradeTestSteps
+        {
+            /** @brief 판 0 → 1: 체력을 int16 에서 int32 로 넓힌다. */
+            static bool convertHealthToInt32( Archive& inOldBody, Archive& outNewBody )
+            {
+                int16 health = 0;
+                inOldBody >> health;
+                outNewBody << static_cast<int32>( health );
+                return inOldBody.isOk();
+            }
+            /** @brief 판 1 → 2: 새 칸 속도를 데이터 규칙(1.5)으로 채운다. */
+            static bool addSpeed( Archive& inOldBody, Archive& outNewBody )
+            {
+                int32 health = 0;
+                inOldBody >> health;
+                outNewBody << health << 1.5f;
+                return inOldBody.isOk();
+            }
+        };
+
         /**
-         * @brief 판 올림을 시험하는 상태입니다. 판 1: 체력 int16, 판 2: 체력 int32, 판 3: 체력 int32 + 속도 float32.
-         * @details 판 0 에서 올리는 단계는 일부러 없다(빠진 단계는 거절).
+         * @brief 판 올림을 시험하는 상태입니다. 판 0: 체력 int16, 판 1: 체력 int32, 판 2: 체력 int32 + 속도 float32.
+         * @details 판은 단계 수(2)다 — 판만 올리고 단계를 빠뜨린 선언은 쓸 수 없다.
          */
         struct StateUpgradeTestState
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "TUPG" );
-            static constexpr uint32 kStateVersion = 3;
+            static constexpr FormatStep kArrStep[] = { &StateUpgradeTestSteps::convertHealthToInt32, &StateUpgradeTestSteps::addSpeed };
+            static constexpr FormatDef  kStateFormat{ "TUPG", kArrStep };
 
             SW_DECLARE_STATE_IO();
 
@@ -279,7 +297,7 @@ namespace sw
 
         void StateUpgradeTestState::serializeState( StateIO& io )
         {
-            io.header( kStateTag, kStateVersion );
+            io.header( kStateFormat );
             io.value( _health );
             io.value( _speed );
         }
@@ -298,39 +316,17 @@ namespace sw
             io.value( _child );
             io.value( _tail );
         }
-
-        struct StateUpgradeTestSteps
-        {
-            /** @brief 판 1 → 2: 체력을 int16 에서 int32 로 넓힌다. */
-            static bool convertHealthToInt32( Archive& inOldBody, Archive& outNewBody )
-            {
-                int16 health = 0;
-                inOldBody >> health;
-                outNewBody << static_cast<int32>( health );
-                return inOldBody.isOk();
-            }
-            /** @brief 판 2 → 3: 새 칸 속도를 데이터 규칙(1.5)으로 채운다. */
-            static bool addSpeed( Archive& inOldBody, Archive& outNewBody )
-            {
-                int32 health = 0;
-                inOldBody >> health;
-                outNewBody << health << 1.5f;
-                return inOldBody.isOk();
-            }
-        };
     } // namespace
 
-    SW_STATE_FORMAT_UPGRADE( stateUpgradeTest1, "TUPG", 1, 2, &StateUpgradeTestSteps::convertHealthToInt32 );
-    SW_STATE_FORMAT_UPGRADE( stateUpgradeTest2, "TUPG", 2, 3, &StateUpgradeTestSteps::addSpeed );
 } // namespace sw
 
 /**
- * @brief [StateIOTest] 옛 판(1) 바이트를 머리가 단계 1 → 2 → 3 으로 올려 읽는다 — 값이 맞고, 머리 없는 바깥 형식의 뒤 칸도 그대로 읽히며 아카이브는 끝까지 소비된다(감사 A-6)
+ * @brief [StateIOTest] 첫 판(0) 바이트를 머리가 단계 0 → 1 → 2 로 올려 읽는다 — 값이 맞고, 머리 없는 바깥 형식의 뒤 칸도 그대로 읽히며 아카이브는 끝까지 소비된다(감사 A-6)
  */
 SW_TEST_CASE( StateIOTest, HeaderUpgradesOldVersionThroughTheChain )
 {
     sw::Archive written;
-    sw::StateIO::writeHeader( written, sw::StateUpgradeTestState::kStateTag, 1 );
+    sw::FormatDef{ "TUPG" }.write( written );
     written << int16{ 7 };
     written << int32{ 99 }; // 바깥 형식의 뒤 칸
 
@@ -354,14 +350,14 @@ SW_TEST_CASE( StateIOTest, HeaderUpgradesOldVersionThroughTheChain )
 }
 
 /**
- * @brief [StateIOTest] 단계가 없는 판(0)과 새 판(4)은 거절하고 상태는 그대로다 — 옛 판을 그대로 읽는 폴백은 없다
+ * @brief [StateIOTest] 올릴 단계가 없는 형식의 옛 판과 새 판(3)은 거절하고 상태는 그대로다 — 옛 판을 그대로 읽는 폴백은 없다
  */
 SW_TEST_CASE( StateIOTest, HeaderRefusesVersionWithoutChain )
 {
     const auto readVersion = []( uint32 version, sw::StateUpgradeTestState& inoutState )
     {
         sw::Archive crafted;
-        sw::StateIO::writeHeader( crafted, sw::StateUpgradeTestState::kStateTag, version );
+        sw::FormatDef{ "TUPG", version }.write( crafted );
         crafted << int32{ 3 } << 2.0f;
         sw::Archive reading( crafted.getData(), crafted.getSize() );
         return inoutState.readState( reading );
@@ -369,11 +365,14 @@ SW_TEST_CASE( StateIOTest, HeaderRefusesVersionWithoutChain )
     sw::StateUpgradeTestState state;
     state._health = 11;
     SW_EXPECT_LOG( "FormatUpgrade.StepMissing" );
-    SW_EXPECT_FALSE( readVersion( 0, state ) );
+    sw::Archive body;
+    body << int32{ 3 } << 2.0f;
+    body.setReadModeAndResetPosition( true );
+    SW_EXPECT_FALSE( sw::StateIO::upgradeSectionBody( sw::FormatDef{ "TUPG", 3 }, 2, body ) ); // 단계 없는 형식은 옛 판을 읽지 않는다
     SW_EXPECT_LOG( "FormatUpgrade.NewerThanSupported" );
-    SW_EXPECT_FALSE( readVersion( 4, state ) );
+    SW_EXPECT_FALSE( readVersion( 3, state ) );
     SW_EXPECT_EQUAL( 11, state._health );
-    SW_EXPECT_TRUE( readVersion( 3, state ) );
+    SW_EXPECT_TRUE( readVersion( 2, state ) );
     SW_EXPECT_EQUAL( 3, state._health );
 }
 
@@ -385,13 +384,13 @@ SW_TEST_CASE( StateIOTest, SectionUpgradesOldVersionThroughTheChain )
     sw::Archive body;
     body << int16{ 21 };
     sw::Archive outer;
-    sw::StateIO::writeSection( outer, sw::StateUpgradeTestState::kStateTag, 1, body );
+    sw::StateIO::writeSection( outer, sw::FormatDef{ "TUPG" }, body );
 
     sw::Archive reading( outer.getData(), outer.getSize() );
     sw::StateIO io( reading );
     int32       health = 0;
     float32     speed  = 0.0f;
-    io.section( sw::StateUpgradeTestState::kStateTag, sw::StateUpgradeTestState::kStateVersion, [&health, &speed]( sw::StateIO& bodyIO )
+    io.section( sw::StateUpgradeTestState::kStateFormat, [&health, &speed]( sw::StateIO& bodyIO )
     {
         bodyIO.value( health );
         bodyIO.value( speed );
@@ -403,7 +402,7 @@ SW_TEST_CASE( StateIOTest, SectionUpgradesOldVersionThroughTheChain )
 }
 
 /**
- * @brief [StateIOTest] 머리표가 다른 바이트(다른 형식, 또는 머리표가 생기기 전의 판)는 판을 알 수 없다는 경고와 함께 거절하고 상태는 그대로다
+ * @brief [StateIOTest] 머리표가 다른 바이트(다른 형식, 머리 없는 바이트)는 판을 알 수 없다는 경고와 함께 거절하고 상태는 그대로다
  */
 SW_TEST_CASE( StateIOTest, HeaderTagMismatchSaysTheVersionIsUnknown )
 {

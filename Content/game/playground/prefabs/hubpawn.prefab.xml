@@ -1,7 +1,7 @@
 <?asset guid="827ff06a965e4f129ef50af195085978"?>
 <!-- 허브에 접속한 계정마다의 폰 — 서버가 접속마다 세우고, 클라이언트는 남의 폰 모습으로 세운다(HubPawnReplicationComponent). 혼자 하는 허브의 기수와 같은 몸이고,
      걸음 · 캡슐 튜닝은 세운 뒤 씬의 Player 에서 옮긴다. 버튼 차례는 Player 와 같아야 한다(의도 비트가 스키마 차례다 — 다르면 세우지 않는다). -->
-<Prefab formatVersion="1" name="HubPawn">
+<Prefab formatVersion="0" name="HubPawn">
 	<GameObject _schemaVersion="0" _name="HubPawn" _bActive="true">
 		<_listComponent>
 			<CharacterControllerComponent _localID="1851894784675401076" _componentName="CharacterControllerComponent"

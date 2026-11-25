@@ -69,8 +69,7 @@ namespace sw
                 bHasBase = true;
             }
         }
-        writer.writeUint32( kMagic );
-        writer.writeVarUint( kVersion );
+        kFormat.write( writer );
         writer.writeVarUint( _listTrack.size() );
         for ( const ControlIntentTrack& track : _listTrack )
         {
@@ -96,16 +95,8 @@ namespace sw
     expected<void> ControlIntentHistory::read( BitReader& reader )
     {
         reset();
-        const uint32 magic   = reader.readUint32();
-        const uint64 version = reader.readVarUint();
-        if ( reader.hasOverflowed() || magic != kMagic )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "not an intent recording (magic)" } );
-        if ( version != kVersion )
-        {
-            StringBuilder<constant::buffer::kMax128> errorBuilder;
-            errorBuilder.appendFormat( "%#, %#", version, kVersion );
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the intent recording version is not supported (found, expected)", errorBuilder.view() } );
-        }
+        if ( expected<void> head = kFormat.check( reader ); head.has_value() == false )
+            return unexpected( std::move( head.error() ) );
         const uint64 trackCount = reader.readVarUint();
         if ( reader.hasOverflowed() || trackCount > static_cast<uint64>( kMaxTrackCount ) )
             return unexpected( Error{ ErrorKind::InvalidArgument, "intent recording has a broken track count" } );

@@ -1,5 +1,5 @@
 <?asset guid="41cd386418a044d982d9ec7a2b2f0bd9"?>
-<Scene formatVersion="2" name="TransparentPreserve">
+<Scene formatVersion="0" name="TransparentPreserve">
 	<!-- 시나리오 automation/transparentpreserve 의 무대 — 같은 유리 머티리얼 상자 600 개가 투명 배치 하나(512 초과 → 다단 정렬)로 묶인다. 앞 300 개는 화면 안, 뒤 300 개는 카메라 뒤(절두체 밖)다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

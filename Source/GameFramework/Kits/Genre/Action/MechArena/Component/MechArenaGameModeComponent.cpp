@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Action/MechArena/Component/MechArenaGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -11,6 +10,7 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -21,8 +21,7 @@ namespace sw
     {
         struct MechArenaGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "MAGM" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
+            static constexpr FormatDef kStateFormat{ "MAGM" };
 
             static constexpr uint32  kBotSalt         = 1; ///< 판 씨앗에서 컴퓨터 손놀림의 수열을 뽑는 소금
             static constexpr float32 kEvenChance      = 0.5f;
@@ -425,7 +424,7 @@ namespace sw
 
     void MechArenaGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( MechArenaGameModeComponentInternal::kStateTag, MechArenaGameModeComponentInternal::kStateVersion );
+        io.header( MechArenaGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 판은 같은 설정 · 카탈로그로 연 뒤에 읽는다(키트 계약). 입력 명령은 싣지 않는다.

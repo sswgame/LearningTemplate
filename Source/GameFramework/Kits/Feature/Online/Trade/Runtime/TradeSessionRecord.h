@@ -153,7 +153,7 @@ namespace sw
     struct SW_KIT_API TradeNotification
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전
+        static constexpr uint32 kBusVersion = 0; ///< push 중계(`OnlinePushRelay`)의 의미 버전
         PROPERTY()
         TradeSnapshot _snapshot{};
         PROPERTY( MaxCount = TradeConstant::kMaxLegsOnWire )

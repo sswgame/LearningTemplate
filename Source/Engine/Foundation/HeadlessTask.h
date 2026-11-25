@@ -71,6 +71,7 @@ namespace sw
         inline constexpr int32 kScenarioPerBackend = 300;
         inline constexpr int32 kCookShaders        = 400;
         inline constexpr int32 kReflectionDocs     = 500;
+        inline constexpr int32 kStateLayouts       = 550;
         inline constexpr int32 kBakeRetarget       = 600;
         inline constexpr int32 kVerifyShaders      = 700;
         inline constexpr int32 kMakePatch          = 800;

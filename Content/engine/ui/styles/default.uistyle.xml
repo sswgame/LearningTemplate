@@ -1,5 +1,5 @@
 <?asset guid="a393253228921ab9b4aa65e6ad6498dc"?>
-<UIStyleSheet _schemaVersion="1">
+<UIStyleSheet _schemaVersion="0">
 	<Variable _name="accent" _value="0.25,0.5,1,1" />
 	<Variable _name="accentHover" _value="0.375,0.625,1,1" />
 	<Variable _name="accentPressed" _value="0.125,0.375,0.875,1" />

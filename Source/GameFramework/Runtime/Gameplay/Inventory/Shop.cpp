@@ -10,7 +10,6 @@
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
-#include "Engine/Serialization/Format/ReflectedStateUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -52,64 +51,9 @@ namespace sw
         {
             static constexpr uint32 kShopMinBytes      = 32; ///< 가게 하나 — 이름(4) + 개수 네 개(16) + 배율 두 개(8) + 날짜(4) 이상
             static constexpr uint32 kSaturatedMinBytes = 8;  ///< 시세가 떨어진 아이템 하나 — 이름(4) + 시세(4)
-
-            /** @brief 판 2 → 3: 가게마다 되사기 조각 슬롯에 꾸미기 스키마 판(1)을 넣는다. 재고 · 시세 · 배율 칸은 그대로 옮긴다. */
-            [[nodiscard]] static bool upgradeStateFrom2( Archive& inOldBody, Archive& outNewBody )
-            {
-                StateIO inOld( inOldBody );
-                StateIO outNew( outNewBody );
-                uint32  shopCount = 0;
-                inOld.count( kShopMinBytes, shopCount );
-                outNew.count( kShopMinBytes, shopCount );
-                for ( uint32 shopIndex = 0; shopIndex < shopCount && inOld.isOk(); ++shopIndex )
-                {
-                    ShopState shop;
-                    inOld.value( shop._shopID );
-                    inOld.list( shop._listStockCount );
-                    uint32 saturatedCount = 0;
-                    inOld.count( kSaturatedMinBytes, saturatedCount );
-                    outNew.value( shop._shopID );
-                    outNew.list( shop._listStockCount );
-                    outNew.count( kSaturatedMinBytes, saturatedCount );
-                    for ( uint32 index = 0; index < saturatedCount && inOld.isOk(); ++index )
-                    {
-                        hashed_string itemID;
-                        float32       sellFactor = 0.0f;
-                        inOld.value( itemID );
-                        inOld.value( sellFactor );
-                        outNew.value( itemID );
-                        outNew.value( sellFactor );
-                    }
-                    inOld.list( shop._listExtraRefused );
-                    inOld.value( shop._buyModifier );
-                    inOld.value( shop._sellModifier );
-                    inOld.value( shop._daysSinceRestock );
-                    outNew.list( shop._listExtraRefused );
-                    outNew.value( shop._buyModifier );
-                    outNew.value( shop._sellModifier );
-                    outNew.value( shop._daysSinceRestock );
-                    // 되사기 판매마다 이름(4) + 돈(8) + 조각 수(4), 조각마다 슬롯 하나
-                    constexpr uint32 kBuybackMinBytes = uint32( sizeof( uint32 ) + sizeof( int64 ) + sizeof( uint32 ) );
-                    uint32           buybackCount     = 0;
-                    inOld.count( kBuybackMinBytes, buybackCount );
-                    outNew.count( kBuybackMinBytes, buybackCount );
-                    for ( uint32 entryIndex = 0; entryIndex < buybackCount && inOld.isOk(); ++entryIndex )
-                    {
-                        ShopBuybackEntry entry;
-                        inOld.value( entry._itemID );
-                        inOld.value( entry._price );
-                        outNew.value( entry._itemID );
-                        outNew.value( entry._price );
-                        Inventory::upgradeSlotListFromUnversioned( inOld, outNew );
-                    }
-                }
-                return inOld.isOk() && outNew.isOk();
-            }
         };
     } // namespace
 
-    SW_STATE_FORMAT_UPGRADE( wallet1To2, "WALT", 1, 2, &ReflectedStateUpgrade::prependHead<Wallet> ); // 판 1 손 본문은 칸 순서 · 폭이 같다
-    SW_STATE_FORMAT_UPGRADE( shop2To3, "SHOP", 2, 3, &ShopStateInternal::upgradeStateFrom2 );
 } // namespace sw
 
 namespace sw
@@ -236,7 +180,6 @@ namespace sw
 
     bool ShopCatalog::loadShop( const XMLNode& node, string_view sourceName )
     {
-
         // 적지 않은 칸은 ShopDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 상점을 넣지 않는 오류다(자르지 않는다).
         ShopDef def;
         bool    bValid = XMLFields::readProperties( node, def, sourceName );
@@ -671,7 +614,7 @@ namespace sw
                 }
             } );
         };
-        io.header( kStateTag, kStateVersion );
+        io.header( kStateFormat );
         uint32 shopCount = static_cast<uint32>( _listRuntime.size() );
         io.count( ShopStateInternal::kShopMinBytes, shopCount );
         if ( io.isOk() == false )

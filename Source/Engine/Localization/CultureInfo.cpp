@@ -230,187 +230,6 @@ namespace sw
                 return {};
             }
 
-            /** @brief 판 0 의 이름과 판 1 의 칸 이름 한 쌍입니다. */
-            struct RenamedName
-            {
-                const utf8* _pOld;
-                const utf8* _pNew;
-            };
-
-            /** @brief 문화권 속성입니다(`pseudo` 는 값 철자도 바뀌어 따로 본다). */
-            static constexpr RenamedName kArrRenamedAttribute[] = {
-                {            "code",             "_code"},
-                {          "parent",             "_base"},
-                {      "nativeName",       "_nativeName"},
-                {          "digits",  "_numberingSystem"},
-                {"decimalSeparator", "_decimalSeparator"},
-                {  "groupSeparator",   "_groupSeparator"},
-                {  "percentPattern",   "_percentPattern"},
-                {    "currencyCode",     "_currencyCode"},
-                { "currencyPattern",  "_currencyPattern"},
-                {     "rightToLeft",     "_bRightToLeft"},
-            };
-
-            /** @brief 문자열 목록 원소입니다(원소 안은 그대로 `<item>` 이다). */
-            static constexpr RenamedName kArrRenamedList[] = {
-                {        "monthNames",         "_listMonthName"},
-                {"monthAbbreviations", "_listMonthAbbreviation"},
-                {        "dayPeriods",         "_listDayPeriod"},
-                {             "fonts",              "_listFont"},
-            };
-
-            /** @brief 패턴 스타일 속성입니다(`short` → `_short`). */
-            static constexpr RenamedName kArrRenamedStyle[] = {
-                { "short",  "_short"},
-                {"medium", "_medium"},
-                {  "long",   "_long"},
-            };
-
-            /** @brief 판 0 의 뿌리가 적지 않으면 코드 초기값을 쓰던 글 칸입니다. 판 1 은 필수 칸이라 판 올림이 그 값을 적는다. */
-            struct RootDefaultRow
-            {
-                const utf8* _pName;
-                string CultureInfo::* _pMember;
-            };
-
-            static constexpr RootDefaultRow kArrRootDefault[] = {
-                {"_decimalSeparator", &CultureInfo::_decimalSeparator},
-                {  "_groupSeparator",   &CultureInfo::_groupSeparator},
-                {  "_percentPattern",   &CultureInfo::_percentPattern},
-                {    "_currencyCode",     &CultureInfo::_currencyCode},
-                { "_currencyPattern",  &CultureInfo::_currencyPattern},
-            };
-
-            /** @brief @p name 이 표 @p arrRow 의 옛 이름이면 새 이름, 아니면 @p pName 그대로입니다(모르는 이름은 읽기가 모르는 칸으로 거절한다). */
-            template <size_t N>
-            static const utf8* rename( const RenamedName ( &arrRow )[N], const utf8* pName )
-            {
-                for ( const RenamedName& row : arrRow )
-                {
-                    if ( string_view{ pName } == row._pOld )
-                        return row._pNew;
-                }
-                return pName;
-            }
-
-            /**
-             * @brief 판 0 의 패턴 묶음(`<datePatterns short medium long/>`)을 판 1 칸(@p pNewName)으로 씁니다.
-             *        뿌리면 빠진 스타일에 판 0 의 코드 초기값(@p listRootDefault, 스타일 차례)을 적습니다.
-             */
-            static void upgradePatterns( const XMLNode& entry, const utf8* pOldName, const utf8* pNewName, const vector<string>& listRootDefault, bool bRoot, const XMLNode& out )
-            {
-                const XMLNode old = entry.findChild( pOldName );
-                if ( old.isValid() == false && bRoot == false )
-                    return;
-                const XMLNode patterns = out.appendChild( pNewName );
-                for ( XMLAttribute attribute = old.isValid() ? old.getFirstAttribute() : XMLAttribute{}; attribute.isValid(); attribute = attribute.getNext() )
-                {
-                    patterns.appendAttribute( rename( kArrRenamedStyle, attribute.getName() ), attribute.getValue() );
-                }
-                for ( size_t index = 0; bRoot && index < listRootDefault.size(); ++index )
-                {
-                    if ( patterns.findAttribute( kArrRenamedStyle[index]._pNew ) == nullptr )
-                        patterns.appendAttribute( kArrRenamedStyle[index]._pNew, string_view{ listRootDefault[index] } );
-                }
-            }
-
-            /** @brief 판 0 의 규칙 묶음(`<pluralRules one="…"/>`)을 판 1 맵(`<_pluralRules><entry key="one">…</entry></_pluralRules>`)으로 씁니다. 자식 원소가 있으면 false 입니다. */
-            [[nodiscard]] static bool upgradeRules( const XMLNode& entry, const utf8* pOldName, const utf8* pNewName, const XMLNode& out )
-            {
-                const XMLNode old = entry.findChild( pOldName );
-                if ( old.isValid() == false )
-                    return true;
-                if ( old.findChild().isValid() )
-                    return false; // 판 0 도 속성만 받았다
-                const XMLNode rules = out.appendChild( pNewName );
-                for ( XMLAttribute attribute = old.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
-                {
-                    const XMLNode rule = rules.appendChild( kXMLEntryTag );
-                    rule.appendAttribute( kXMLKeyAttr, attribute.getName() );
-                    rule.setValue( attribute.getValue() );
-                }
-                return true;
-            }
-
-            /**
-             * @brief 판 0 의 `<culture>` 하나를 판 1 의 `<CultureInfo>` 로 @p out 에 씁니다. 판 0 의 읽기 규칙을 데이터로 옮긴다 —
-             *        뿌리가 적지 않은 글 칸 · 패턴은 코드 초기값, 자식은 이름(`nativeName`)을 물려받지 않고, 의사 방식은 부모가 의사 문화권일 때만 끊는다.
-             */
-            [[nodiscard]] static bool upgradeEntry( const XMLNode& entry, const vector<string>& listPseudoCode, const XMLNode& out )
-            {
-                const bool bRoot = entry.findAttribute( "parent" ) == nullptr;
-                for ( XMLAttribute attribute = entry.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
-                {
-                    if ( string_view{ attribute.getName() } != "pseudo" )
-                    {
-                        out.appendAttribute( rename( kArrRenamedAttribute, attribute.getName() ), attribute.getValue() );
-                        continue;
-                    }
-                    const string_view value{ attribute.getValue() };
-                    if ( value != "accented" && value != "mirrored" )
-                        return false;
-                    out.appendAttribute( "_pseudoMode", value == "accented" ? "Accented" : "Mirrored" );
-                }
-                const CultureInfo defaults;
-                if ( bRoot )
-                {
-                    for ( const RootDefaultRow& row : kArrRootDefault )
-                    {
-                        if ( out.findAttribute( row._pName ) == nullptr )
-                            out.appendAttribute( row._pName, string_view{ defaults.*( row._pMember ) } );
-                    }
-                }
-                else
-                {
-                    if ( out.findAttribute( "_nativeName" ) == nullptr )
-                        out.appendAttribute( "_nativeName", "" );
-                    const string parentCode = CultureTable::normalizeCode( entry.getAttributeText( "parent" ) );
-                    if ( out.findAttribute( "_pseudoMode" ) == nullptr && VectorUtil::contains( listPseudoCode, parentCode ) )
-                        out.appendAttribute( "_pseudoMode", "None" );
-                }
-                if ( upgradeRules( entry, "pluralRules", "_pluralRules", out ) == false || upgradeRules( entry, "ordinalRules", "_ordinalRules", out ) == false )
-                    return false;
-                upgradePatterns( entry, "datePatterns", "_datePatterns", { defaults._datePatterns._short, defaults._datePatterns._medium, defaults._datePatterns._long }, bRoot, out );
-                upgradePatterns( entry, "timePatterns", "_timePatterns", { defaults._timePatterns._short, defaults._timePatterns._medium }, bRoot, out );
-                for ( XMLNode child = entry.findChild(); child.isValid(); child = child.findNextSibling() )
-                {
-                    const string_view name{ child.getName() };
-                    const bool        bConverted = name == "pluralRules" || name == "ordinalRules" || name == "datePatterns" || name == "timePatterns";
-                    if ( bConverted == false )
-                        out.appendClone( child ).setName( rename( kArrRenamedList, child.getName() ) );
-                }
-                return true;
-            }
-
-            /**
-             * @brief 판 0 → 1 판 올림입니다(`SW_ASSET_FORMAT_UPGRADE`). `<cultures>` 래퍼 안의 `<culture code parent …>` 를 루트 바로 아래의
-             *        `<CultureInfo _code _base …>`(리플렉션 칸 이름, 카탈로그 항목)로 옮긴다. 판 0 도 거절하던 모양(틀린 의사 방식 철자, 규칙 묶음 안의 원소)이면 false 입니다.
-             */
-            [[nodiscard]] static bool upgradeVersion0( FormatUpgradePayload& payload )
-            {
-                const XMLNode root     = payload._root;
-                const XMLNode cultures = root.findChild( "cultures" );
-                if ( cultures.isValid() == false )
-                    return true;
-                vector<string> listPseudoCode; // 판 0 은 의사 방식을 물려주지 않았다 — 그 부모를 가리키는 자식만 끊는다
-                for ( XMLNode entry = cultures.findChild(); entry.isValid(); entry = entry.findNextSibling() )
-                {
-                    if ( entry.findAttribute( "pseudo" ) != nullptr )
-                        listPseudoCode.push_back( CultureTable::normalizeCode( entry.getAttributeText( "code" ) ) );
-                }
-                for ( XMLNode entry = cultures.findChild(); entry.isValid(); entry = entry.findNextSibling() )
-                {
-                    if ( string_view{ entry.getName() } != "culture" )
-                    {
-                        (void)root.appendClone( entry ); // 이름 그대로 — 읽기가 모르는 원소로 거절한다
-                        continue;
-                    }
-                    if ( upgradeEntry( entry, listPseudoCode, root.appendChild( CultureInfo::StaticType()->_name.c_str() ) ) == false )
-                        return false;
-                }
-                return root.removeChild( cultures );
-            }
-
             /** @brief 합친 표 루트의 `<CultureInfo>` 를 모두 읽어 @p outMapCulture 에 둡니다. 겹친 코드는 오류입니다. */
             [[nodiscard]] static expected<void> readCultures( const XMLNode& root, const map<string, vector<string>>& mapNumberingSystem, map<string, CultureInfo>& outMapCulture )
             {
@@ -771,25 +590,16 @@ namespace sw
 
     expected<void> CultureTable::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        // 판을 먼저 올린다 — 판 0 의 `parent` 는 판 1 의 `_base` 가 되어야 아래 합치기가 본다.
-        XMLDocument       source;
-        const string_view bodyText = FileUtil::skipUTF8Bom( xmlText );
-        if ( source.parse( bodyText, sourceName ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the document is not well-formed XML", source.getLastError() } );
-        const XMLNode sourceRoot = source.getRoot( "CultureTable" );
-        if ( sourceRoot.isValid() == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "root must be <CultureTable>", sourceName } );
-        const bool bUpgrade = AssetXMLFormat::readXMLVersion( sourceRoot ) != kAssetType._formatVersion;
-        if ( bUpgrade && AssetXMLFormat::upgradeToCurrentXMLVersion( kAssetType, sourceRoot ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the culture table format version cannot be raised to the current one", sourceName } );
-
         // 문화권의 부모 병합은 카탈로그 항목 상속이다(`datacataloginheritance.xml` 의 `CultureTable` 줄) — 순서 · 순환 · 없는 부모도 거기서 오류다.
-        const string upgradedText = bUpgrade ? source.saveToString() : string{};
-        XMLDocument  document;
-        if ( document.parseData( bUpgrade ? string_view{ upgradedText } : bodyText, sourceName ) == false )
+        XMLDocument document;
+        if ( document.parseData( FileUtil::skipUTF8Bom( xmlText ), sourceName ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the culture table could not be read or its _base chain could not be flattened", document.getLastError() } );
         const XMLNode root = document.getRoot( "CultureTable" );
-        string        unknownPart;
+        if ( root.isValid() == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "root must be <CultureTable>", sourceName } );
+        if ( AssetXMLFormat::upgradeToCurrentXMLVersion( kAssetType, root ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the culture table format version cannot be raised to the current one", sourceName } );
+        string unknownPart;
         for ( XMLNode part = root.findChild(); part.isValid() && unknownPart.empty(); part = part.findNextSibling() )
         {
             if ( CultureInfoInternal::isListed( CultureInfoInternal::kArrTablePart, string_view{ part.getName() } ) == false )
@@ -901,5 +711,4 @@ namespace sw
 namespace sw
 {
     SW_ASSET_TYPE( CultureTable, CultureTable::kAssetType );
-    SW_ASSET_FORMAT_UPGRADE( cultureTableVersion0, "CultureTable", 0, 1, &CultureInfoInternal::upgradeVersion0 );
 } // namespace sw

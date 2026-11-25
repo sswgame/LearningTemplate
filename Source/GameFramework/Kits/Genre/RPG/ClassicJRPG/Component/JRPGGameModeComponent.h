@@ -51,7 +51,7 @@ namespace sw
      * @class JRPGGameModeComponent
      * @brief 걷기(걸음 조우) ↔ 전투(멤버마다 명령 하나) → 길 끝의 보스 → 승리 · 패배를 명령으로 진행합니다.
      */
-    REFLECT( Version = 2, Category = "ClassicJRPG", DisplayName = "JRPG Game Mode", Tooltip = "Runs one ClassicJRPG trail: step encounters, round battles from commands and the boss at the end" )
+    REFLECT( Category = "ClassicJRPG", DisplayName = "JRPG Game Mode", Tooltip = "Runs one ClassicJRPG trail: step encounters, round battles from commands and the boss at the end" )
     class SW_KIT_API JRPGGameModeComponent : public MatchGameModeComponent
     {
     public:

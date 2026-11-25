@@ -5,10 +5,10 @@
  *          (`RTSBattlefieldViewComponent`)다. 이 파일은 두 키트를 섞는 게임 몫(공유 땅 · 지갑, 시연 명령)만 든다.
  */
 #pragma once
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/RTSGameModeComponent.h"
@@ -33,8 +33,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "FTSK" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr FormatDef kStateFormat{ "FTSK" };
 
         FrontierSkirmishGameModeComponent();
         virtual ~FrontierSkirmishGameModeComponent() override;

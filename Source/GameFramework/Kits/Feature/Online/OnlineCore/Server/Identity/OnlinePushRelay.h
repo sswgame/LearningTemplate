@@ -32,7 +32,7 @@ namespace sw
     struct SW_KIT_SERVER_API OnlinePushRelay
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion      = 1;   ///< 의미 버전
+        static constexpr uint32 kBusVersion      = 0;   ///< 의미 버전
         static constexpr int32  kMaxTypeNameSize = 128; ///< `_pushEnum` · `_bodyType` 의 FQN 길이
         static constexpr int32  kMaxPushNameSize = 64;
 

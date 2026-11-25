@@ -3,7 +3,6 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetFormat.h"
@@ -15,13 +14,13 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Serialization/GameObjectFormatUpgrade.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Object/Prefab/PrefabPathStack.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
@@ -41,18 +40,16 @@ namespace sw
     {
         struct PrefabAssetInternal
         {
-            static constexpr const utf8* kRoot           = "Prefab";
-            static constexpr int32       kRootParent     = -1; ///< 루트에 붙은 노드의 부모 번호(`PrefabInstanceNode::_parentIndex`)
-            static constexpr const utf8* kName           = "name";
-            static constexpr const utf8* kGameObject     = "GameObject";
-            static constexpr const utf8* kNestedInstance = "PrefabInstance";
-            static constexpr const utf8* kNestedPrefab   = "prefab";
-            /** @brief 지운 칸입니다. 중첩 원본은 경로(`prefab`)로만 가리킨다 — 이 칸이 남은 프리팹은 오류로 읽지 않는다. */
-            static constexpr const utf8* kRemovedNestedGUID = "prefabGUID";
-            static constexpr const utf8* kNestedAttach      = "attach";
-            static constexpr const utf8* kNestedOverrides   = "overrides";
-            static constexpr const utf8* kNestedList        = "_listPrefabInstance";
-            static constexpr const utf8* kNestedLocalID     = "localID";
+            static constexpr const utf8* kRoot            = "Prefab";
+            static constexpr int32       kRootParent      = -1; ///< 루트에 붙은 노드의 부모 번호(`PrefabInstanceNode::_parentIndex`)
+            static constexpr const utf8* kName            = "name";
+            static constexpr const utf8* kGameObject      = "GameObject";
+            static constexpr const utf8* kNestedInstance  = "PrefabInstance";
+            static constexpr const utf8* kNestedPrefab    = "prefab";
+            static constexpr const utf8* kNestedAttach    = "attach";
+            static constexpr const utf8* kNestedOverrides = "overrides";
+            static constexpr const utf8* kNestedList      = "_listPrefabInstance";
+            static constexpr const utf8* kNestedLocalID   = "localID";
 
             /**
              * @brief 노드의 지역 id 키 글 @p text 를 @p outNode 에 읽습니다. 비었거나 꼴이 틀리면 오류로 false 입니다(다른 노드로 대신하지 않는다).
@@ -75,12 +72,8 @@ namespace sw
                 return true;
             }
             static constexpr const utf8* kVariantOverrides = "overrides"; ///< JSON 변형의 다른 점(글 하나 — 중첩 노드의 `overrides` 와 같다)
-            static constexpr uint32      kBinMagic         = FourCCUtil::make( "PFB2" );
-            /**
-             * @brief 버전 1 부터 상태 뒤에 중첩 인스턴스 노드가 붙고, 2 부터 노드에 부품 경로(`_partPath`)가 붙고, 3 에서 노드의 GUID 칸을 지웠다(경로 하나로 가리킨다), 4 부터 상태 · 노드의 컴포넌트 키가 고정 지역 id(`_localID` — 감사 A-2)다.
-             *        다른 버전은 읽지 않는다(쿠킹본은 다시 쿠킹한다).
-             */
-            static constexpr uint32 kBinVersion = 4;
+            /** @brief 상태 뒤에 중첩 인스턴스 노드(부품 경로 `_partPath` · 고정 지역 id `_localID` — 감사 A-2)가 붙는다. 다른 버전은 읽지 않는다(쿠킹본은 다시 쿠킹한다). */
+            static constexpr FormatDef kBinFormat{ "SWPF" };
 
             static void collectPrefabRefsFromText( const utf8* pText, vector<string>& outListPath )
             {
@@ -168,31 +161,6 @@ namespace sw
                 return ( trimmed.empty() == false && trimmed.front() == '{' ) ? PrefabStateFormat::JSON : PrefabStateFormat::XML;
             }
 
-            static bool upgradePrefabXMLBody( string& xmlBody, PrefabStateFormat format )
-            {
-                if ( xmlBody.empty() )
-                    return false;
-                if ( format == PrefabStateFormat::JSON )
-                    return true; // JSON 본문은 XML 업그레이드 대상이 아니다
-
-                string wrapped = "<Prefab>";
-                wrapped += xmlBody;
-                wrapped += "</Prefab>";
-                XMLDocument wrapDoc;
-                if ( wrapDoc.parse( wrapped ) == false )
-                    return false;
-                XMLNode wrapRoot = wrapDoc.getRoot( kRoot );
-                if ( wrapRoot.isValid() == false )
-                    return false;
-                if ( AssetXMLFormat::upgradeToCurrentXMLVersion( PrefabAsset::kAssetType, wrapRoot ) == false )
-                    return false;
-                XMLNode bodyNode = wrapRoot.findChild( kGameObject );
-                if ( bodyNode.isValid() == false )
-                    return false;
-                xmlBody = bodyNode.toString();
-                return true;
-            }
-
             /**
              * @brief 노드 목록이 규칙(부모가 자기보다 앞, 원본 경로나 펼친 상태가 있음, 펼친 노드는 부품 경로가 있고 저작본 노드는 없음)을 지키면 true 입니다.
              *        어긴 노드를 오류로 알립니다.
@@ -217,18 +185,11 @@ namespace sw
                 return true;
             }
 
-            /** @brief `<PrefabInstance>` 원소들(@p parent 의 자식)을 읽어 끝에 더합니다. 안에 둔 `<PrefabInstance>` 는 그 노드에 붙는 노드입니다. 지운 칸(`prefabGUID`)이 있으면 오류로 false 입니다. */
+            /** @brief `<PrefabInstance>` 원소들(@p parent 의 자식)을 읽어 끝에 더합니다. 안에 둔 `<PrefabInstance>` 는 그 노드에 붙는 노드입니다. */
             [[nodiscard]] static bool readNodesFromXML( const XMLNode& parent, int32 parentIndex, vector<PrefabInstanceNode>& inoutListNode, string_view sourceName )
             {
                 for ( XMLNode element = parent.findChild( kNestedInstance ); element.isValid(); element = element.findNextSibling( kNestedInstance ) )
                 {
-                    // 지운 칸은 옮겨 갈 곳을 알려 준다(모르는 칸 오류보다 먼저).
-                    if ( element.findAttribute( kRemovedNestedGUID ) != nullptr )
-                    {
-                        SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabGUIDRemoved", "Nested prefab instance '%#' in '%#' still has '%#' - prefabs are referenced by path only; the prefab is not loaded",
-                                         element.getAttributeText( kName ), sourceName, kRemovedNestedGUID );
-                        return false;
-                    }
                     PrefabInstanceParams params;
                     if ( XMLFields::readProperties( element, params, sourceName ) == false )
                         return false;
@@ -275,7 +236,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief JSON 배열 `_listPrefabInstance`(@p parent 의 멤버)의 노드를 읽어 끝에 더합니다. 객체마다 같은 이름의 배열이 그 노드에 붙는 노드입니다. 지운 칸(`prefabGUID`)이 있으면 오류로 false 입니다. */
+            /** @brief JSON 배열 `_listPrefabInstance`(@p parent 의 멤버)의 노드를 읽어 끝에 더합니다. 객체마다 같은 이름의 배열이 그 노드에 붙는 노드입니다. */
             [[nodiscard]] static bool readNodesFromJSON( const JSONValue& parent, int32 parentIndex, vector<PrefabInstanceNode>& inoutListNode, string_view sourceName )
             {
                 const JSONValue arrayValue = parent.get( kNestedList );
@@ -299,12 +260,6 @@ namespace sw
                     node._parentIndex = parentIndex;
                     if ( readNodeLocalID( element.get( kNestedLocalID ).asString(), node, sourceName ) == false )
                         return false;
-                    if ( element.has( kRemovedNestedGUID ) )
-                    {
-                        SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabGUIDRemovedJSON", "Nested prefab instance '%#' in '%#' still has '%#' - prefabs are referenced by path only; the prefab is not loaded",
-                                         node._name, sourceName, kRemovedNestedGUID );
-                        return false;
-                    }
                     inoutListNode.push_back( std::move( node ) );
                     if ( readNodesFromJSON( element, static_cast<int32>( inoutListNode.size() - 1 ), inoutListNode, sourceName ) == false )
                         return false;
@@ -566,8 +521,6 @@ namespace sw
 namespace sw
 {
     SW_ASSET_TYPE( Prefab, PrefabAsset::kAssetType );
-    // 판 1: 형제 순서 칸 `_siblingIndex` → `_siblingOrder`(분수 색인 키, 설계 E-6)
-    SW_ASSET_FORMAT_UPGRADE( prefabSiblingOrder, "Prefab", 0, 1, &GameObjectFormatUpgrade::renameSiblingIndex );
 
     string PrefabInstanceNode::makePartKey() const
     {
@@ -887,21 +840,8 @@ namespace sw
             return false;
         }
 
-        uint32 magic{ 0 };
-        arch >> magic;
-        if ( magic != PrefabAssetInternal::kBinMagic )
-        {
-            SW_LOG_ERROR_ID( "PrefabAsset.BadBinaryMagic", "Bad binary magic: %#", absPath );
+        if ( PrefabAssetInternal::kBinFormat.read( arch, absPath ) == false )
             return false;
-        }
-
-        uint32 version{ 0 };
-        arch >> version;
-        if ( version != PrefabAssetInternal::kBinVersion )
-        {
-            SW_LOG_ERROR_ID( "PrefabAsset.CookedPrefabVersionNot", "Cooked prefab version %# is not %# in %# - cook the prefabs again", version, PrefabAssetInternal::kBinVersion, absPath );
-            return false;
-        }
 
         // 노드 하나는 글 여섯의 길이와 부모 번호다 — 파일 크기만큼의 노드(한 개가 수백 바이트)를 잡지 않는다.
         constexpr uint32 kMinBytesPerNode = sizeof( uint32 ) * 6 + sizeof( int32 );
@@ -927,12 +867,12 @@ namespace sw
             return false;
         _listNestedInstance = std::move( listNode );
 
-        _stateFormat = PrefabAssetInternal::detectStateFormat( _stateData );
-        if ( PrefabAssetInternal::upgradePrefabXMLBody( _stateData, _stateFormat ) == false )
+        if ( _stateData.empty() )
         {
-            SW_LOG_ERROR_ID( "PrefabAsset.FormatVersionMismatch", "formatVersion mismatch: %#", absPath );
+            SW_LOG_ERROR_ID( "PrefabAsset.BinaryPrefabStreamCorrupted", "Binary prefab stream corrupted in %#", absPath );
             return false;
         }
+        _stateFormat = PrefabAssetInternal::detectStateFormat( _stateData );
 
         _bValid = SW_TRUE;
         SW_LOG_INFO_ID( "PrefabAsset.LoadedBinary", "Loaded '%#' from binary %#", _name, absPath );
@@ -1141,10 +1081,8 @@ namespace sw
 
     bool PrefabAsset::saveToBinaryFile( const AbsolutePath& absPath ) const
     {
-
         Archive arch;
-        arch << PrefabAssetInternal::kBinMagic;
-        arch << PrefabAssetInternal::kBinVersion;
+        PrefabAssetInternal::kBinFormat.write( arch );
         arch << _name;
         arch << _stateData;
         arch << static_cast<uint32>( _listNestedInstance.size() );

@@ -2,10 +2,9 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/ActionCombatGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
-
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
@@ -17,8 +16,7 @@ namespace sw
     {
         struct ActionCombatGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "KDAC" );
-            static constexpr uint32 kStateVersion = 4; ///< 2: 탄의 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다). 3: 결과 보여 주기 시간(`_resultHold`). 4: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
+            static constexpr FormatDef kStateFormat{ "KDAC" };
 
             static constexpr const utf8* kHealValue = "heal"; ///< 승리 결과 값 이름 — 허브 캐릭터의 보상 표(`MinigameRewardComponent`)가 같은 이름을 적는다
 
@@ -194,7 +192,7 @@ namespace sw
 
     void ActionCombatGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( ActionCombatGameModeComponentInternal::kStateTag, ActionCombatGameModeComponentInternal::kStateVersion );
+        io.header( ActionCombatGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         ActionRoom restoredRoom;

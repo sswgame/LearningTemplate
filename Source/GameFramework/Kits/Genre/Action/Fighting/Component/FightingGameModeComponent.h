@@ -32,7 +32,7 @@ namespace sw
      * @class FightingGameModeComponent
      * @brief 라운드 → 대전 끝 → 결과를 플레이어 입력 명령과 컴퓨터 상대로 진행합니다. 0 번이 플레이어, 1 번이 상대입니다.
      */
-    REFLECT( Version = 2, Category = "Fighting", DisplayName = "Fighting Game Mode", Tooltip = "Runs one Fighting kit match: player 0 from input commands (or the computer on auto play), player 1 by the computer" )
+    REFLECT( Category = "Fighting", DisplayName = "Fighting Game Mode", Tooltip = "Runs one Fighting kit match: player 0 from input commands (or the computer on auto play), player 1 by the computer" )
     class SW_KIT_API FightingGameModeComponent : public MatchGameModeComponent
     {
     public:

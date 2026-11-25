@@ -2,12 +2,12 @@
 
 #include "GameFramework/Kits/Genre/Action/Fighting/Component/FightingGameModeComponent.h"
 
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -18,8 +18,7 @@ namespace sw
     {
         struct FightingGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "FGHT" );
-            static constexpr uint32 kStateVersion = 2; ///< 2: 결과 유지 시간은 베이스(`MatchGameModeComponent`)의 상태 칸이다
+            static constexpr FormatDef kStateFormat{ "FGHT" };
 
             // 넘패드 방향 표기다(격투 게임 공용).
             static constexpr uint8 kNeutral = 5;
@@ -321,7 +320,7 @@ namespace sw
 
     void FightingGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( FightingGameModeComponentInternal::kStateTag, FightingGameModeComponentInternal::kStateVersion );
+        io.header( FightingGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
         // 대전은 같은 캐릭터로 연 뒤에 읽는다(키트 계약). 입력 명령은 싣지 않는다.

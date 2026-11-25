@@ -1,5 +1,5 @@
 <?asset guid="73be3aa73dc4412155047fa80cb6838a"?>
-<Prefab formatVersion="1" _base="guid:038e5f36534add2ce05ecd56e01e2f89" name="KnightHelmet">
+<Prefab formatVersion="0" _base="guid:038e5f36534add2ce05ecd56e01e2f89" name="KnightHelmet">
 	<PrefabOverrides>
 		<Override key="#0244d8c8807cd288">
 			<MeshComponent _meshID="guid:54faed3f05c28536635708047238f3df" />

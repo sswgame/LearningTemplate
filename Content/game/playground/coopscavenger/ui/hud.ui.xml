@@ -1,5 +1,5 @@
 <?asset guid="52e008cdf55b4bb9aeb3c6bc3e56b7e3"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
 	<SafeZonePanel _visibility="SelfHitTestInvisible">
 		<CanvasPanel _visibility="SelfHitTestInvisible">

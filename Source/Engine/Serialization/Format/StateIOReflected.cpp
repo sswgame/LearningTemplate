@@ -12,7 +12,6 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
-#include "Engine/Serialization/Format/ReflectedStateUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
@@ -24,7 +23,7 @@ namespace sw
         struct StateIOReflectedInternal
         {
             /** @brief 칸 배치 해시의 규칙 판입니다. 잎 인코딩(열거를 int64 로, 시퀀스 개수를 uint32 로 …)을 바꾸면 올려 모든 배치 해시를 바꾼다. */
-            static constexpr uint32 kLayoutRuleVersion = 1;
+            static constexpr uint32 kLayoutRuleVersion = 0;
 
             /**
              * @brief 잎 칸의 종류입니다. 칸마다 한 번 가른다.
@@ -410,14 +409,4 @@ namespace sw
         }
     }
 
-    bool ReflectedStateUpgrade::writeFirstVersionHead( const hashed_string& typeFqn, Archive& outNewBody )
-    {
-        const TypeInfo* pType = engine::getSubsystem<TypeRegistry>().findType( typeFqn );
-        if ( pType == nullptr )
-            return false;
-        constexpr uint32 kFirstVersion = 1; // 손 본문은 리플렉션 판이 생기기 전이다
-        outNewBody << kFirstVersion;
-        outNewBody << StateIO::computeReflectedLayoutHash( *pType );
-        return true;
-    }
 } // namespace sw

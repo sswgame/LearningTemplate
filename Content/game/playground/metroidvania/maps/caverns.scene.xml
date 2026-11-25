@@ -1,5 +1,5 @@
 <?asset guid="0efedf80b1bc41639e55f62b4dd7ab27"?>
-<Scene formatVersion="3" name="MetroidvaniaCaverns">
+<Scene formatVersion="0" name="MetroidvaniaCaverns">
 	<!-- 메트로배니아 미니게임 판(minigames/metroidvania) — 칸 한 변 1 m, (0,0) 칸의 왼쪽 아래가 원점. 지형 줄(_listTerrainRow)과 벽 모습(Terrain*)은 같은 자리다. 몸 · 적 · 줍는 것은 MetroidvaniaViewComponent 가 옮긴다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

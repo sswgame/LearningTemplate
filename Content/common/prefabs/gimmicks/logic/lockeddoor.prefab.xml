@@ -1,5 +1,5 @@
 <?asset guid="7e9784de72a577a92a99f316f93a6e29"?>
-<Prefab formatVersion="1" name="LockedDoor">
+<Prefab formatVersion="0" name="LockedDoor">
 	<GameObject _schemaVersion="0" _name="LockedDoor" _bActive="true">
 		<_listComponent>
 			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"

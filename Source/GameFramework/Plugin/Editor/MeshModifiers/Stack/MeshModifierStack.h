@@ -25,7 +25,7 @@ namespace sw::editor
     {
     public:
         /** @brief 저장 문서의 형식 버전입니다. */
-        static constexpr uint32 kVersion = 1;
+        static constexpr uint32 kVersion = 0;
         /** @brief 사이드카 문서의 확장자입니다(`<메시 이름>.modifiers.json`). */
         static constexpr string_view kSidecarExtension = ".modifiers.json";
         /** @brief 베이크 결과 메시 이름에 붙는 접미입니다(`<메시 이름>_modified.mesh`). */
