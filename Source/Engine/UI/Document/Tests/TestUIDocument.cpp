@@ -152,10 +152,10 @@ SW_TEST_CASE( UIDocumentTest, WrittenValuesAreLimitedLikeTheSetters )
     SW_EXPECT_EQUAL( 1.0f, pList->getRowHeight() );
 
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
-    for ( const char* pWidget : { "<SliderWidget _name=\"Slider\" _step=\"-1\" />", "<ProgressBarWidget _name=\"Progress\" _percent=\"1.5\" />", "<ProgressBarWidget _name=\"Progress\" _opacity=\"2\" />" } )
+    for ( const char* pWidget : { "<BoxPanel><SliderWidget _name=\"Slider\" _step=\"-1\" /></BoxPanel>", "<BoxPanel><ProgressBarWidget _name=\"Progress\" _percent=\"1.5\" /></BoxPanel>", "<BoxPanel><ProgressBarWidget _name=\"Progress\" _opacity=\"2\" /></BoxPanel>" } )
     {
         UIDocumentAsset outOfRange;
-        SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( formatstring( "<BoxPanel>%#</BoxPanel>", pWidget ).c_str() ), "engine/ui/test.ui.xml", ResourceContext::forDocument(), outOfRange ).has_value() );
+        SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( pWidget ), "engine/ui/test.ui.xml", ResourceContext::forDocument(), outOfRange ).has_value() );
         UIDocumentCache      cache;
         vector<UIBindingDef> listBinding;
         SW_EXPECT_TRUE( UIDocumentLoader::instantiate( outOfRange, cache, ResourceTagSet{}, listBinding ).value_or( nullptr ) == nullptr );
