@@ -20,6 +20,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Serialization/Format/DurableRecordTypeList.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUtil.h"
@@ -32,7 +34,19 @@ namespace sw
     template <typename TRecord>
     struct ServiceRecordCodec
     {
-        [[nodiscard]] static bool decode( string_view key, const vector<uint8>& bytes, TRecord& outRecord ) { return ServiceRecordUtil::readDurable( key, bytes, outRecord ); }
-        [[nodiscard]] static bool encode( const TRecord& record, vector<uint8>& outBytes ) { return ServiceRecordUtil::encode( record, outBytes ); }
+        [[nodiscard]] static bool decode( string_view key, const vector<uint8>& bytes, TRecord& outRecord )
+        {
+            (void)s_recordType;
+            return ServiceRecordUtil::readDurable( key, bytes, outRecord );
+        }
+        [[nodiscard]] static bool encode( const TRecord& record, vector<uint8>& outBytes )
+        {
+            (void)s_recordType;
+            return ServiceRecordUtil::encode( record, outBytes );
+        }
+
+        /** @brief 이 형식을 배치 대조의 레코드 목록에 올린다(코덱을 쓰는 모든 형식이 빠짐없이 — `DurableRecordTypeList.h`). */
+        static inline const DurableRecordType s_recordType{ []() -> const TypeInfo*
+        { return TRecord::StaticType(); } };
     };
 } // namespace sw

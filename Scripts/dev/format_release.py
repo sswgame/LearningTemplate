@@ -4,6 +4,8 @@
   꾸미기 스키마(`<CustomizationSchemaCatalog>` — 콘텐츠 글): 판 올림 단계(`<Migration toVersion>`)가 빠진 바뀜
   상태 배치(`PROPERTY( RuntimeState )` 칸 — `App --write-state-layouts=<파일>` 이 쓴 글): `REFLECT( Version )` 을 올리지 않은 칸 더하기 · 빼기 · 이름 · 형식 · 차례 바꾸기.
   읽기는 배치 해시가 다른 바이트를 거절하므로(`StateIO.ReflectedLayoutChanged`) 빠뜨린 판 올림은 플레이어의 세이브를 잃는다.
+  레코드 형식(저장소 · 휘발 저장소 표가 싣는 형식 — 같은 글의 `records`): 칸을 이름으로 짝짓는 자기 기술형(A)이라 칸 더하기 · 빼기 · 차례 바꾸기는 판 없이 읽힌다.
+  같은 이름 칸의 형식을 바꾼 것만 판을 요구한다(옛 레코드의 그 칸은 읽히지 않아 `readDurable` 이 손상으로 거절한다).
 
 스냅숏의 `released` 한 줄이 규칙을 가른다. false(출시 전): 옛 데이터가 없어 판을 올리지 않는다 — 바뀜을 알리기만 하고 통과한다. true: 아래 표대로 실패한다.
 출시할 때 `accept` 로 지금 배치를 쓰고 `released` 를 true 로 바꾼다.
@@ -14,6 +16,8 @@
 | 꾸미기 매개변수 제거(같은 종류의 새 이름이 없다) | 추론할 수 있다 — `--fix` 가 `<Remove parameter>` 단계와 판 올림을 소스에 적는다(디자이너가 판 번호를 손으로 올리지 않는다) |
 | 이름 바꾸기로 보이는 것(사라진 이름 + 같은 종류의 새 이름) · 종류 바꾸기 | 추론할 수 없다 — 명시 단계(Rename · Split · PaletteIndexToColor · Remove)가 없으면 오류와 적을 줄을 안내한다 |
 | 상태 배치가 다른데 판이 그대로 · 판이 출시 판보다 낮다 | 오류 — `REFLECT( Version )` 을 올리고 `SW_TYPE_VERSION_PATCH` 를 더한다 |
+| 레코드 칸 더하기 · 빼기 · 차례 바꾸기 · 새 레코드 형식 | 단계 없이 통과 |
+| 레코드의 같은 이름 칸 형식 바꾸기(안쪽 구조체 칸 포함) · 판이 출시 판보다 낮다 | 오류 — `REFLECT( Version )` 을 올리고 `SW_TYPE_VERSION_PATCH`(`ServiceRecordUtil::upgradeRecordBody`)를 더한다 |
 
 언리얼 `FCustomVersion` 은 판을 사람이 올리고 Serialize 분기를 손으로 쓰며, 유니티는 `FormerlySerializedAs` 를 손으로 단다 — 둘 다 빠뜨리면 조용히 값을 잃는다.
 
@@ -187,12 +191,13 @@ class Snapshot:
     released: bool
     schemas: dict[str, SchemaInfo]
     states: dict[str, dict]
+    records: dict[str, dict]
 
 
 def load_snapshot(path: Path) -> Snapshot:
     data = json.loads(path.read_text(encoding="utf-8"))
     schemas = {schema_id: SchemaInfo(entry["version"], dict(entry["parameters"])) for schema_id, entry in data["customization"].items()}
-    return Snapshot(data["released"], schemas, data["states"])
+    return Snapshot(data["released"], schemas, data["states"], data.get("records", {}))   # 레코드 절은 뒤에 더했다 — 없으면 빈 절이다
 
 
 def write_snapshot(path: Path, snapshot: Snapshot) -> None:
@@ -201,6 +206,7 @@ def write_snapshot(path: Path, snapshot: Snapshot) -> None:
         "released": snapshot.released,
         "customization": {schema_id: {"version": info.version, "parameters": dict(sorted(info.parameters.items()))} for schema_id, info in sorted(snapshot.schemas.items())},
         "states": dict(sorted(snapshot.states.items())),
+        "records": dict(sorted(snapshot.records.items())),
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=4) + "\n", encoding="utf-8", newline="\n")
@@ -220,6 +226,51 @@ def compare_states(released: dict[str, dict], current: dict[str, dict]) -> list[
     return issues
 
 
+def split_layout(layout: str) -> dict[str, str]:
+    """`이름:형식{안쪽};이름:형식;` 글을 이름 → 형식(안쪽 배치 포함)으로 나눈다. 안쪽 괄호의 `;` 는 나누지 않는다."""
+    fields: dict[str, str] = {}
+    depth = 0
+    start = 0
+    for index, ch in enumerate(layout):
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+        elif ch == ";" and depth == 0:
+            name, _, kind = layout[start:index].partition(":")
+            fields[name] = kind
+            start = index + 1
+    return fields
+
+
+def compare_records(released: dict[str, dict], current: dict[str, dict]) -> list[str]:
+    """판을 올리지 않고 같은 이름 칸의 형식을 바꾼 레코드 · 판이 내려간 레코드. 칸 더하기 · 빼기 · 차례는 A 가 이름으로 짝지어 읽으므로 보지 않는다."""
+    issues = []
+    for name, before in sorted(released.items()):
+        after = current.get(name)
+        if after is None:
+            continue
+        if after["version"] < before["version"]:
+            issues.append(f"record '{name}' version {after['version']} is lower than the released {before['version']}")
+            continue
+        if after["version"] != before["version"]:
+            continue
+        old_fields = split_layout(before["layout"])
+        new_fields = split_layout(after["layout"])
+        changed = [field for field, kind in old_fields.items() if field in new_fields and new_fields[field] != kind]
+        if changed:
+            issues.append(f"record '{name}' changed the type of {', '.join(changed)} without raising REFLECT( Version ) - raise it and add SW_TYPE_VERSION_PATCH (ServiceRecordUtil::upgradeRecordBody)")
+    return issues
+
+
+def load_layouts(layouts_path: Path | None) -> tuple[dict[str, dict], dict[str, dict]]:
+    """`--write-state-layouts` 글의 (상태, 레코드) 절이다."""
+    if layouts_path is None:
+        return {}, {}
+    data = json.loads(layouts_path.read_text(encoding="utf-8"))
+    return data["states"], data["records"]
+
+
 def run(project_root: Path, mode: str, fix: bool, layouts_path: Path | None = None) -> int:
     files = find_content_files(project_root)
     snapshot_path = project_root / SNAPSHOT_PATH
@@ -227,20 +278,20 @@ def run(project_root: Path, mode: str, fix: bool, layouts_path: Path | None = No
         print(f"[format-release] {SNAPSHOT_PATH} is missing", file=sys.stderr)
         return 1
     released = load_snapshot(snapshot_path)
-    states = json.loads(layouts_path.read_text(encoding="utf-8")) if layouts_path is not None else {}
+    states, records = load_layouts(layouts_path)
     if mode == "accept":
         merged: dict[str, SchemaInfo] = {}
         for path in files:
             merged.update(parse_catalog(path.read_text(encoding="utf-8")))
-        refused = compare_states(released.states, states) if released.released else []
+        refused = compare_states(released.states, states) + compare_records(released.records, records) if released.released else []
         for message in refused:
             print(f"[format-release] not accepted: {message}", file=sys.stderr)
         if refused:
             return 1
-        write_snapshot(snapshot_path, Snapshot(released.released, merged, {**released.states, **states}))   # 이 빌드에 없는 타입(다른 타깃)은 남긴다
-        print(f"[format-release] wrote {SNAPSHOT_PATH} ({len(merged)} schemas, {len(states)} states)")
+        write_snapshot(snapshot_path, Snapshot(released.released, merged, {**released.states, **states}, {**released.records, **records}))   # 이 빌드에 없는 타입(다른 타깃)은 남긴다
+        print(f"[format-release] wrote {SNAPSHOT_PATH} ({len(merged)} schemas, {len(states)} states, {len(records)} records)")
         return 0
-    list_message = compare_states(released.states, states)
+    list_message = compare_states(released.states, states) + compare_records(released.records, records)
     for path in files:
         text = path.read_text(encoding="utf-8")
         current = parse_catalog(text)
@@ -264,12 +315,12 @@ def run(project_root: Path, mode: str, fix: bool, layouts_path: Path | None = No
 
 class FormatReleaseCommand(Command):
     name = "format-release"
-    help = "저장 형식(꾸미기 스키마 · 상태 배치)을 출시 스냅숏과 견준다 — 출시 뒤 판을 올리지 않은 바뀜은 실패(쿠킹이 먼저 돈다), --fix 는 추론할 수 있는 제거 단계를 적고, accept 는 스냅숏을 쓴다"
+    help = "저장 형식(꾸미기 스키마 · 상태 배치 · 레코드 형식)을 출시 스냅숏과 견준다 — 출시 뒤 판을 올리지 않은 바뀜은 실패(쿠킹이 먼저 돈다), --fix 는 추론할 수 있는 제거 단계를 적고, accept 는 스냅숏을 쓴다"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("mode", nargs="?", default="check", choices=("check", "accept"))
         parser.add_argument("--fix", action="store_true", help="추론할 수 있는 꾸미기 단계(제거)를 소스에 적는다")
-        parser.add_argument("--layouts", type=Path, default=None, help="상태 배치 글(App --write-state-layouts=<파일>)")
+        parser.add_argument("--layouts", type=Path, default=None, help="상태 · 레코드 배치 글(App --write-state-layouts=<파일>)")
         parser.add_argument("--root", type=Path, default=None, help="프로젝트 뿌리(기본: 이 저장소)")
 
     def run(self, context: ScriptContext, args: argparse.Namespace) -> int:

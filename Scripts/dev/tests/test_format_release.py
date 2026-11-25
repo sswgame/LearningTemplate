@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # Scripts
 
-from dev.format_release import SNAPSHOT_PATH, Snapshot, compare, compare_states, load_snapshot, parse_catalog, run, write_snapshot  # noqa: E402
+from dev.format_release import SNAPSHOT_PATH, Snapshot, compare, compare_records, compare_states, load_snapshot, parse_catalog, run, write_snapshot  # noqa: E402
 
 RELEASED = """<?xml version="1.0" encoding="utf-8"?>
 <CustomizationSchemaCatalog>
@@ -81,7 +81,7 @@ class FixTest(unittest.TestCase):
     def run_in(self, text: str, fix: bool, released: bool = True) -> tuple[int, str]:
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            write_snapshot(root / SNAPSHOT_PATH, Snapshot(released, parse_catalog(RELEASED), {}))
+            write_snapshot(root / SNAPSHOT_PATH, Snapshot(released, parse_catalog(RELEASED), {}, {}))
             path = root / "Content" / "common" / "data" / "appearance" / "customization.xml"
             path.parent.mkdir(parents=True)
             path.write_text(text, encoding="utf-8")
@@ -137,9 +137,9 @@ class StateLayoutTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             (root / "Content").mkdir()
-            write_snapshot(root / SNAPSHOT_PATH, Snapshot(released, {}, self.BEFORE))
+            write_snapshot(root / SNAPSHOT_PATH, Snapshot(released, {}, self.BEFORE, {}))
             layouts = root / "layouts.json"
-            layouts.write_text(json.dumps({"sw::Wallet": {"version": 0, "layout": "_coins:int64;"}}), encoding="utf-8")
+            layouts.write_text(json.dumps({"states": {"sw::Wallet": {"version": 0, "layout": "_coins:int64;"}}, "records": {}}), encoding="utf-8")
             return run(root, mode, False, layouts), load_snapshot(root / SNAPSHOT_PATH).states
 
     def test_released_snapshot_fails_and_is_not_overwritten(self):
@@ -150,6 +150,25 @@ class StateLayoutTest(unittest.TestCase):
         self.assertEqual(0, self.check("check", False)[0])
         code, states = self.check("accept", False)
         self.assertEqual((0, "_coins:int64;"), (code, states["sw::Wallet"]["layout"]))
+
+
+class RecordLayoutTest(unittest.TestCase):
+    BEFORE = {"sw::Mail": {"version": 0, "layout": "_title:string;_holder:LedgerHolder{_kind:LedgerHolderKind;_accountID:uint64;};"}}
+
+    def test_added_removed_and_reordered_properties_pass(self):
+        """레코드는 이름으로 짝지어 읽는다 — 칸 더하기 · 빼기 · 차례는 판을 요구하지 않는다."""
+        changed = {"sw::Mail": {"version": 0, "layout": "_body:string;_holder:LedgerHolder{_kind:LedgerHolderKind;_accountID:uint64;};"}}
+        self.assertEqual([], compare_records(self.BEFORE, changed))
+        self.assertEqual([], compare_records(self.BEFORE, {"sw::Other": {"version": 0, "layout": "_x:int32;"}}))
+
+    def test_type_change_needs_version(self):
+        """같은 이름 칸의 형식(안쪽 구조체 칸 포함)이 바뀌면 판을 올려야 한다. 올리면 통과, 내리면 실패다."""
+        retyped = {"sw::Mail": {"version": 0, "layout": "_title:int32;_holder:LedgerHolder{_kind:LedgerHolderKind;_accountID:uint64;};"}}
+        self.assertEqual(1, len(compare_records(self.BEFORE, retyped)))
+        nested = {"sw::Mail": {"version": 0, "layout": "_title:string;_holder:LedgerHolder{_kind:LedgerHolderKind;_accountID:uint32;};"}}
+        self.assertEqual(1, len(compare_records(self.BEFORE, nested)))
+        self.assertEqual([], compare_records(self.BEFORE, {"sw::Mail": {"version": 1, "layout": "_title:int32;"}}))
+        self.assertEqual(1, len(compare_records({"sw::Mail": {"version": 1, "layout": ""}}, {"sw::Mail": {"version": 0, "layout": ""}})))
 
 
 if __name__ == "__main__":
