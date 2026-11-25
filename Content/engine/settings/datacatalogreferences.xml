@@ -189,6 +189,8 @@
 	<Field owner="RTSCommanderUnits" field="_supplyID" tag="RTSUnitDef"/>
 	<Field owner="RTSCommanderUnits" field="_productionID" tag="RTSUnitDef"/>
 	<Field owner="RTSCommanderUnits" field="_armyUnitID" tag="RTSUnitDef"/>
+	<Struct owner="SkirmishGameModeComponent" field="_matchSettings" type="SkirmishMatchSettings"/>
+	<Struct owner="SkirmishMatchSettings" field="_units" type="RTSCommanderUnits"/>
 	<Field owner="SkirmishUnitPlacement" field="_unitID" tag="RTSUnitDef"/>
 	<Derived type="LockstepSkirmishGameModeComponent" base="SkirmishGameModeComponent"/>
 	<CatalogKey tag="CityBuildingDef" catalog="CityCatalog" entry="Building"/>
@@ -237,6 +239,7 @@
 	<Field owner="VoxelTerrainSettings" field="_leavesBlock" tag="VoxelBlockDef"/>
 	<Field owner="VoxelTerrainSettings" field="_snowBlock" tag="VoxelBlockDef"/>
 	<Field owner="VoxelOreLayer" field="_block" tag="VoxelBlockDef"/>
+	<Struct owner="VoxelGameModeComponent" field="_terrain" type="VoxelTerrainSettings"/>
 	<Field owner="VoxelPlayerComponent" field="_waterBlock" tag="VoxelBlockDef"/>
 	<Field owner="VoxelPlayerComponent" field="_listStartBlock" tag="VoxelBlockDef"/>
 	<CatalogKey tag="CharacterAppearanceDef" catalog="CharacterAppearanceCatalog" entry="CharacterAppearance"/>
