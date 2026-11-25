@@ -2,7 +2,7 @@
 // 이름 풀(hashed_string) 자체의 규칙은 StringTest.HashedStringFollowsFNameRules 가 본다.
 #include "pch.h"
 
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

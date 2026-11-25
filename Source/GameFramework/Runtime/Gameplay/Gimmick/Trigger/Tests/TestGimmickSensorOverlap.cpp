@@ -2,7 +2,7 @@
 // 접속(폰 생성)과 접속 끊김(폰 파괴)을 서버 월드에서 하는 꼴이다 — 전용 서버(`Server --test`)도 GameFramework 를 실어 같은 케이스가 돈다.
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"

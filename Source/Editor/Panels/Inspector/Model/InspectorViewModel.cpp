@@ -3,7 +3,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorViewModel.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"

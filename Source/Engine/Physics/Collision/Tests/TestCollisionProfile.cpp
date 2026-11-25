@@ -2,7 +2,7 @@
 // Jolt · Box2D 에서 막음은 막고 겹침은 밀지 않으며 무시는 아무것도 없는지, 트레이스 채널 질의 거르기. 디바이스 없음(nogpu) — 서버 단위(`Server --test`)에도 돈다.
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Foundation/EngineServices.h"

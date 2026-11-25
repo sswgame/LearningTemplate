@@ -8,7 +8,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorComponentPicker.h"
 #include "Editor/Common/Workspace/EditorContext.h"

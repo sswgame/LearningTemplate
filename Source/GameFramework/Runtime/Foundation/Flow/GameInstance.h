@@ -8,7 +8,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"

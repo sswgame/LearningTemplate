@@ -10,7 +10,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 
 #include "Engine/Graphics/View/PostProcessValues.h"
 #include "Engine/Object/Component/Component.h"

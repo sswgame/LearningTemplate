@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyMirror.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"

@@ -7,7 +7,7 @@
 #include "pch.h"
 
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Panels/Animation/AnimationGraphPanel.h"

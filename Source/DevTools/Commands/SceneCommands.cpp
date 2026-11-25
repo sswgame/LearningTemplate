@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Name/TagID.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/TagID.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 

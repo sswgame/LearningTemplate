@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Network/GameConnectSecurity.h"
 #include "Engine/Network/GameNetSession.h"

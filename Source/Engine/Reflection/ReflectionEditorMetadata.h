@@ -11,8 +11,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
+#include "Core/String/Name/hashed_string.h"
 
 namespace sw
 {

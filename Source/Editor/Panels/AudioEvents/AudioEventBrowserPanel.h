@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"

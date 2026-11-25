@@ -5,7 +5,7 @@
  */
 #pragma once
 #include "Core/Container/unordered_map.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIHandles.h"
 

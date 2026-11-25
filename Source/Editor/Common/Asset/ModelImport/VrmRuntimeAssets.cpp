@@ -4,7 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/ModelImport/VrmAvatarDef.h"

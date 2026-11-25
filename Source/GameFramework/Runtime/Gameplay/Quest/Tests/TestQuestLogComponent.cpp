@@ -3,7 +3,7 @@
 
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 

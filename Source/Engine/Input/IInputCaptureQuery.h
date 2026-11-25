@@ -6,7 +6,7 @@
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw

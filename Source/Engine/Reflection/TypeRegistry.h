@@ -9,7 +9,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/EnumUtil.h"
-#include "Core/Name/NameHashIndex.h"
+#include "Core/String/Name/NameHashIndex.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/EngineMinimal.h"

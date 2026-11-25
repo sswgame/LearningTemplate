@@ -9,7 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Physics/Collision/CollisionLayers.h"

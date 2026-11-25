@@ -11,9 +11,9 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/ComponentHandle.h"

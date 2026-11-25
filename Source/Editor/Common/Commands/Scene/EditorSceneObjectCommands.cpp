@@ -8,7 +8,7 @@
 
 #include "Editor/Common/Commands/Scene/EditorSceneObjectCommands.h"
 
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/EditorCommandIDs.h"
