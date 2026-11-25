@@ -139,9 +139,9 @@ namespace
     };
 
     const utf8* const kArrBadTileLayer[] = {
-        "<TileMap width=\"2\" height=\"1\"><tileLayer tileSet=\"t\"><palette><b name=\"a\"/></palette><cells>1</cells></tileLayer></TileMap>",   // 칸 수가 맞지 않다
-        "<TileMap width=\"2\" height=\"1\"><tileLayer tileSet=\"t\"><palette><b name=\"a\"/></palette><cells>1 2</cells></tileLayer></TileMap>", // 팔레트 밖 번호
-        "<TileMap width=\"2\" height=\"1\"><tileLayer tileSet=\"t\"><palette/><cells>0 a</cells></tileLayer></TileMap>",                         // 숫자가 아니다
+        "<TileMap width=\"2\" height=\"1\"><tileLayer tileSet=\"game/test/t.tileset.xml\"><palette><b name=\"a\"/></palette><cells>1</cells></tileLayer></TileMap>",   // 칸 수가 맞지 않다
+        "<TileMap width=\"2\" height=\"1\"><tileLayer tileSet=\"game/test/t.tileset.xml\"><palette><b name=\"a\"/></palette><cells>1 2</cells></tileLayer></TileMap>", // 팔레트 밖 번호
+        "<TileMap width=\"2\" height=\"1\"><tileLayer tileSet=\"game/test/t.tileset.xml\"><palette/><cells>0 a</cells></tileLayer></TileMap>",                         // 숫자가 아니다
     };
 } // namespace
 
