@@ -16,7 +16,7 @@
 namespace sw
 {
     class AudioEngine;
-    class AudioService;
+    class AudioSubsystem;
 } // namespace sw
 
 namespace sw::editor
@@ -80,7 +80,7 @@ namespace sw::editor
 
     private:
         /** @brief 오디오 서비스입니다. 에디터는 오디오를 짓는 구성이라 늘 있다(전용 서버 구성만 오디오를 짓지 않는다) — 없으면 멈춘다. Model 안에서만 쓴다. */
-        static AudioService& getAudioService();
+        static AudioSubsystem& getAudioSubsystem();
         /** @brief 버스 상태를 읽고 피크 표시 값 · 감시 값을 갱신합니다. 버스가 하나라도 있으면 true 입니다. */
         bool refreshBuses( AudioEngine& engine );
         /** @brief 엔진이나 이벤트 라이브러리 세대가 바뀌었으면 이벤트 이름을 다시 모읍니다(사전순). 고른 이벤트가 범위 밖이면 첫 이벤트로 둡니다. */

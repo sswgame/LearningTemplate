@@ -5,8 +5,8 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/UI/Accessibility/UIAccessibilityService.h"
 #include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
+#include "Engine/UI/Accessibility/UIAccessibilitySubsystem.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
@@ -25,7 +25,7 @@ namespace sw
             static UIScreen* findInteractiveScreen( const UISystem& ui, uint32 screen )
             {
                 vector<UIScreen*> listScreen;
-                UIAccessibilityService::collectInteractiveScreens( ui.getScreens(), listScreen );
+                UIAccessibilitySubsystem::collectInteractiveScreens( ui.getScreens(), listScreen );
                 for ( UIScreen* pScreen : listScreen )
                 {
                     if ( pScreen->getHandle() == screen )

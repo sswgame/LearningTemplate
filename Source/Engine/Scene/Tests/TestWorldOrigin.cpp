@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSpatialGrid.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -189,7 +189,7 @@ SW_TEST_CASE( WorldOriginTest, SubLevelPlacementIsAbsolute )
 
 /**
  * @brief [WorldOriginTest] 원점을 옮기면 씬 공간 색인도 같은 프레임에 새 자리를 본다 — 지역 볼륨이 다음 `SpatialIndex` 단계 전에 옛 자리 격자로 골라 대상을 내보냈다 다시 들이지 않는다
- * @details `Scene::shiftWorldOrigin` → `ISceneService::onWorldOriginShifted` → `SceneSpatialGrid` 의 길을 잇는다(격자 자체는 `SceneSpatialGridTest.OriginShiftRefreshesTheFrontBuffer`).
+ * @details `Scene::shiftWorldOrigin` → `ISceneSubsystem::onWorldOriginShifted` → `SceneSpatialGrid` 의 길을 잇는다(격자 자체는 `SceneSpatialGridTest.OriginShiftRefreshesTheFrontBuffer`).
  */
 SW_TEST_CASE( WorldOriginTest, ShiftRefreshesTheSceneSpatialGrid )
 {

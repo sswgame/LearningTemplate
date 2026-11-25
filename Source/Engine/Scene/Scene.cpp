@@ -24,7 +24,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
-#include "Engine/Object/GameObject/Service/NetObjectTable.h"
+#include "Engine/Object/GameObject/Subsystem/NetObjectTable.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
@@ -401,11 +401,11 @@ namespace sw
 namespace sw
 {
     Scene::Scene( string_view name )
-        : Scene( name, SceneEngineServices::makeFromBoundEngine() )
+        : Scene( name, SceneEngineSubsystems::makeFromBoundEngine() )
     {
     }
 
-    Scene::Scene( string_view name, const SceneEngineServices& services )
+    Scene::Scene( string_view name, const SceneEngineSubsystems& services )
         : _handleSerial{ 0 }
         , _name{ name }
         , _sourcePath{}

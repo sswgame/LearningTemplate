@@ -7,8 +7,8 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
-#include "Engine/UI/Accessibility/UIAccessibilityService.h"
-#include "Engine/UI/Input/UIClipboardService.h"
+#include "Engine/UI/Accessibility/UIAccessibilitySubsystem.h"
+#include "Engine/UI/Input/UIClipboardSubsystem.h"
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/Widget.h"
@@ -32,13 +32,13 @@ namespace sw
             UIClipboardAPI api{};
             api._pRead  = &PlatformClipboard::readText;
             api._pWrite = &PlatformClipboard::writeText;
-            engine::getSubsystem<UIClipboardService>().setAPI( api );
+            engine::getSubsystem<UIClipboardSubsystem>().setAPI( api );
         }
         if ( bEditor )
             return; // 에디터는 창을 ImGui 가 쓴다 — 게임 UI 만 스크린 리더에 내보이지 않는다
         // 스크린 리더: 창의 접근성 요청(Windows `WM_GETOBJECT`)에 런타임 UI 로 답한다. 이 플랫폼에 연결이 없으면 nullptr 이고 UI 는 그대로 동작한다.
         if ( pWindow != nullptr )
-            engine::getSubsystem<UIAccessibilityService>().setBridge( UIAccessibilityBridgeFactory::createForWindow( *pUI, *pWindow ) );
+            engine::getSubsystem<UIAccessibilitySubsystem>().setBridge( UIAccessibilityBridgeFactory::createForWindow( *pUI, *pWindow ) );
         _quitCommandRegistration = engine::getSubsystem<UIGlobalCommandRegistry>().registerCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &UIPlatformBinding::onQuitGameCommand, this ) );
     }
 
@@ -47,8 +47,8 @@ namespace sw
         UISystem* pUI = engine::findSubsystem<UISystem>();
         if ( pUI == nullptr )
             return;
-        engine::getSubsystem<UIClipboardService>().setAPI( UIClipboardAPI{} );
-        engine::getSubsystem<UIAccessibilityService>().setBridge( nullptr ); // 창이 사라지기 전에 창의 접근성 훅을 푼다
+        engine::getSubsystem<UIClipboardSubsystem>().setAPI( UIClipboardAPI{} );
+        engine::getSubsystem<UIAccessibilitySubsystem>().setBridge( nullptr ); // 창이 사라지기 전에 창의 접근성 훅을 푼다
         _quitCommandRegistration.reset();
     }
 

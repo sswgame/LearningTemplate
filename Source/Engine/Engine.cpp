@@ -35,14 +35,14 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Pack/PackManager.h"
-#include "Engine/CoreServices/CommandLineSubsystem.h"
-#include "Engine/CoreServices/ContentRootSubsystem.h"
-#include "Engine/CoreServices/CrashHandlerSubsystem.h"
-#include "Engine/CoreServices/DiagnosticsSubsystem.h"
-#include "Engine/CoreServices/LoggerSubsystem.h"
-#include "Engine/CoreServices/MemoryBudgetSubsystem.h"
-#include "Engine/CoreServices/NamePoolSubsystem.h"
-#include "Engine/CoreServices/StaticStorageSubsystem.h"
+#include "Engine/CoreSubsystems/CommandLineSubsystem.h"
+#include "Engine/CoreSubsystems/ContentRootSubsystem.h"
+#include "Engine/CoreSubsystems/CrashHandlerSubsystem.h"
+#include "Engine/CoreSubsystems/DiagnosticsSubsystem.h"
+#include "Engine/CoreSubsystems/LoggerSubsystem.h"
+#include "Engine/CoreSubsystems/MemoryBudgetSubsystem.h"
+#include "Engine/CoreSubsystems/NamePoolSubsystem.h"
+#include "Engine/CoreSubsystems/StaticStorageSubsystem.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -76,7 +76,7 @@
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Presentation/IEngineAudioDriver.h"
 #include "Engine/Presentation/IEngineRenderDriver.h"
@@ -88,8 +88,8 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
-#include "Engine/Telemetry/TelemetryService.h"
-#include "Engine/Text/FontService.h"
+#include "Engine/Telemetry/TelemetrySubsystem.h"
+#include "Engine/Text/FontSubsystem.h"
 #include "Engine/UserSettings/HardwareDetectionResult.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -123,7 +123,7 @@ namespace sw
         , _startup{}
         , _pRenderDriver{ nullptr }
         , _pRHI{ nullptr }
-        , _pFontService{ nullptr }
+        , _pFontSubsystem{ nullptr }
         , _pUIDriver{ nullptr }
         , _pInputManager{ nullptr }
         , _pAudioDriver{ nullptr }
@@ -249,7 +249,7 @@ namespace sw
             _pInputManager              = _startup.find<InputManager>();
             _pAudioDriver               = _startup.find<IEngineAudioDriver>();
             _pSceneManager              = _startup.find<SceneManager>();
-            _pFontService               = _startup.find<FontService>();
+            _pFontSubsystem             = _startup.find<FontSubsystem>();
             _pUIDriver                  = _startup.find<IEngineUIDriver>();
             _pRenderDriver              = _startup.find<IEngineRenderDriver>();
         }
@@ -266,8 +266,8 @@ namespace sw
             SW_LOG_ERROR_ID( "Engine.RequiredEngineServiceNot", "Required engine service '%#' is not in any subsystem scope", bindResult._pTypeName );
             return false;
         }
-        _pQuitRequest                      = &engine::getSubsystem<QuitRequest>();
-        TelemetryService& telemetryService = _startup.get<TelemetryService>();
+        _pQuitRequest                        = &engine::getSubsystem<QuitRequest>();
+        TelemetrySubsystem& telemetryService = _startup.get<TelemetrySubsystem>();
 
         // 초기화의 순서는 손으로 적지 않는다. 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로 부른다. 종료와 해제는 그 역순이다(`shutdown`).
         SubsystemTimingReport::enableTiming( _startup.getCollection() );
@@ -288,12 +288,12 @@ namespace sw
         // 디버그 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 사용자 설정과 같은 폴더에 둔다. 디버그 키 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
         if ( bDedicatedServer == false && _headlessState.isHeadless() == false )
             _pDebugKeyActions->setUserBindingsPath( DebugKeyActions::makeUserBindingsPath( engine::getSubsystem<UserSettingsManager>().getUserFilePath() ) );
-        // 장면별 프레임 시간 · flush 는 프레임 훅으로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick` 훅). 텔레메트리가 섰을 때만 붙인다.
+        // 장면별 프레임 시간 · flush 는 프레임 훅으로 돈다(씬 틱 뒤 — `TelemetrySubsystem::onAfterSceneTick` 훅). 텔레메트리가 섰을 때만 붙인다.
         // 떼는 것은 `shutdown` 이 단계 종료 전에 구독을 모두 끊는 것으로 끝난다.
         if ( telemetryService.isInitialized() )
         {
             EngineFrameHooks telemetryHooks{};
-            telemetryHooks._onAfterSceneTick = SW_DELEGATE_METHOD( EngineFrameDelegate, &TelemetryService::onAfterSceneTick, &telemetryService );
+            telemetryHooks._onAfterSceneTick = SW_DELEGATE_METHOD( EngineFrameDelegate, &TelemetrySubsystem::onAfterSceneTick, &telemetryService );
             _telemetryFrameSubscription      = _frameHooks.add( telemetryHooks );
         }
         if ( bDedicatedServer )
@@ -363,7 +363,7 @@ namespace sw
         _startup.destroyAll();
         _pRenderDriver  = nullptr;
         _pRHI           = nullptr;
-        _pFontService   = nullptr;
+        _pFontSubsystem = nullptr;
         _pUIDriver      = nullptr;
         _pInputManager  = nullptr;
         _pAudioDriver   = nullptr;
@@ -457,8 +457,8 @@ namespace sw
         if ( AssetLoadProfiler* const pLoadProfiler = engine::findSubsystem<AssetLoadProfiler>() )
             pLoadProfiler->refreshEnabled();
         // 글리프 캐시의 프레임 시계 — 래스터화 예산이 프레임마다 되살아나는 유일한 길이다(프로파일러 프레임 수는 꺼지면 늘 0 이다).
-        if ( _pFontService != nullptr && _pFontService->isInitialized() )
-            _pFontService->getGlyphCache().beginFrame();
+        if ( _pFontSubsystem != nullptr && _pFontSubsystem->isInitialized() )
+            _pFontSubsystem->getGlyphCache().beginFrame();
         // 결정적 실행: 에셋 도착을 프레임에 묶는다. 렌더 스레드가 받은 프레임을 다 끝낸 뒤(그 프레임의 업로드가 이 대기 중 도착한 로드를 집지 않게)
         // 걸린 에셋 일을 모두 끝낸다 — 그러면 지난 프레임에 요청한 에셋은 늘 이번 프레임의 렌더가 올린다.
         const bool bFinishAssetJobs = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;

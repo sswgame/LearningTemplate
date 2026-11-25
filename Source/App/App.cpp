@@ -13,7 +13,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
@@ -461,7 +461,7 @@ namespace sw
             if ( InputManager* const pInput = engine::findSubsystem<InputManager>() ) // 선택: 헤드리스 구성은 입력이 없다
                 pInput->onAppSuspended();
         }
-        if ( AudioService* const pAudio = engine::findSubsystem<AudioService>() ) // 선택: 오디오 없는 구성
+        if ( AudioSubsystem* const pAudio = engine::findSubsystem<AudioSubsystem>() ) // 선택: 오디오 없는 구성
         {
             if ( bSuspended )
                 pAudio->suspendOutput();

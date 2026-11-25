@@ -37,7 +37,7 @@ namespace sw
     class DebugDrawQueue;
     class DebugKeyActions;
     class EventDispatcher;
-    class FontService;
+    class FontSubsystem;
     class FrameProfiler;
     class GlobalVariableManager;
     class IEngineAudioDriver;
@@ -245,7 +245,7 @@ namespace sw
         /** @brief 서브시스템 `RHI` 의 RHI 입니다(`_startup` 소유 — 그 단계가 선 뒤부터 빌려 쓴다). 서지 않았으면(전용 서버 · 헤드리스) nullptr 입니다. */
         RHI* _pRHI;
         /** @brief 서브시스템 `Fonts` 입니다(`_startup` 소유 — 빌려 쓴다). 렌더 패킷의 캔버스가 글리프 캐시를 싣는다. */
-        FontService* _pFontService;
+        FontSubsystem* _pFontSubsystem;
         /** @brief 서브시스템 `UI` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 · 갱신 · 캔버스가 돈다. */
         IEngineUIDriver* _pUIDriver; ///< 런타임 UI 의 프레임 단계(없으면 nullptr — 전용 서버)
         /** @brief 서브시스템 `Input` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 프레임 · 디버그 키 맵 · 관찰자 문맥이 쓴다. */

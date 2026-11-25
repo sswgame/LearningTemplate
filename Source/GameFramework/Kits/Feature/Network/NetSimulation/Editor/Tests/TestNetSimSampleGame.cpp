@@ -58,7 +58,7 @@ namespace
         }
         {
             SceneManager& sceneManager = game::getSubsystem<SceneManager>();
-            const bool    bStarted     = _harness.initialize( sceneManager.getEngineServices(), NetSimConfig{}, &_game );
+            const bool    bStarted     = _harness.initialize( sceneManager.getSceneEngineSubsystems(), NetSimConfig{}, &_game );
             SW_EXPECT_TRUE( bStarted );
             const expected<int32> firstClient  = _harness.addClient( NetSimLinkConditions{} );
             const expected<int32> secondClient = _harness.addClient( NetSimLinkConditions{} );

@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
 #include "Engine/Scene/Scene.h"
@@ -341,7 +341,7 @@ namespace sw
         }
 
         // 파티클 라이트(점광, 그림자 없음)는 라이트 컴포넌트 뒤 · 2D 가림막 앞에 붙는다. 그리드는 종류를 묻지 않고 같은 목록에서 만든다(LightGrid).
-        pScene->getObjectManager()->collectServiceLights( SceneLightPhase::Particles, outList );
+        pScene->getObjectManager()->collectSubsystemLights( SceneLightPhase::Particles, outList );
 
         // 라이트 프로브 볼륨은 3D 라이트 · 파티클 라이트 뒤에 붙는다. 쓸 수 있는 베이크가 없는 볼륨(베이크하지 않음 · 모양이 다름)은 넣지 않는다 —
         // 그곳은 볼륨이 없는 곳과 같다(이유는 볼륨이 읽을 때 남긴다).
@@ -376,7 +376,7 @@ namespace sw
         }
 
         // 2D 그림자 가림막 세그먼트는 빛 **뒤에** 붙는다. 상한을 넘으면 뒤에서부터 잘리므로 빛보다 가림막이 먼저 빠진다(lighting_2d.hlsli).
-        pScene->getObjectManager()->collectServiceLights( SceneLightPhase::ShadowOccluders, outList );
+        pScene->getObjectManager()->collectSubsystemLights( SceneLightPhase::ShadowOccluders, outList );
     }
 
     uint32 GPULightBuffer::selectGPULightSlotCount( LightGridProducer producer, uint32 requestedSlotCount )

@@ -558,7 +558,7 @@ namespace sw
                 return rejected;
             }
             // 분리된 매니저 — 같은 엔진 서비스를 받되 활성 씬과 오브젝트를 나누지 않는다(프리팹 원형이 쓰는 손수 만든 매니저와 같다). 풀어 본 것은 여기서 버린다.
-            GameObjectManager             probeManager( pLiveManager->getSceneEngineServices() );
+            GameObjectManager             probeManager( pLiveManager->getSceneEngineSubsystems() );
             vector<RestoredState>         listProbeState;
             unordered_map<uint64, uint64> mapProbeObjectID;
             if ( deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, probeManager, listProbeState, mapProbeObjectID ) == false )

@@ -10,7 +10,7 @@
 #include "Engine/Renderer/Capture/PortraitStudio.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Telemetry/CrashReportService.h"
+#include "Engine/Telemetry/CrashReportSubsystem.h"
 #include "Engine/Telemetry/CrashReportUploader.h"
 #include "Engine/Window/SplashSubsystem.h"
 #include "Engine/Window/SplashWindow.h"
@@ -37,7 +37,7 @@ namespace sw
                 if ( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) == false || reporterFolder.empty() )
                     return false;
                 NullCrashReportUploader       uploader;
-                [[maybe_unused]] const uint32 sentCount = CrashReportService::runReporter( reporterFolder, uploader );
+                [[maybe_unused]] const uint32 sentCount = CrashReportSubsystem::runReporter( reporterFolder, uploader );
                 SW_LOG_INFO_ID( "App.ReportSent", "[CrashReporter] %# report(s) sent from '%#'", sentCount, reporterFolder.c_str() );
                 return true;
             }
@@ -64,7 +64,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "App.PortraitBakeNeedsRender", "Portrait bake needs a render thread with a device (--render-portraits)" );
                     return TaskResult::Failed;
                 }
-                const bool bBaked = PortraitStudio::renderPrefabList( *pRenderThread, engine::getSubsystem<SceneManager>().getEngineServices(), portraitList, portraitDir,
+                const bool bBaked = PortraitStudio::renderPrefabList( *pRenderThread, engine::getSubsystem<SceneManager>().getSceneEngineSubsystems(), portraitList, portraitDir,
                                                                       static_cast<uint32>( portraitSize > 0 ? portraitSize : 256 ) );
                 return bBaked ? TaskResult::Finished : TaskResult::Failed;
             }

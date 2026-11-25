@@ -20,7 +20,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"

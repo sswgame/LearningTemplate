@@ -19,7 +19,7 @@ namespace
 
     /**
      * @brief 서브시스템 자체를 드러내는 조회 대상 인터페이스입니다(`expose` · `publish`).
-     * @details 서브시스템 인터페이스라 `Subsystem` 을 기반으로 둔다(`IEditorPanelService` 와 같은 모양) — 구현이 `Subsystem` 과 함께 다중 상속하지 않는다.
+     * @details 서브시스템 인터페이스라 `Subsystem` 을 기반으로 둔다(`IEditorPanelSubsystem` 와 같은 모양) — 구현이 `Subsystem` 과 함께 다중 상속하지 않는다.
      */
     class IScopeProbeSubsystem : public Subsystem
     {

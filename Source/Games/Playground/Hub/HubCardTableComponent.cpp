@@ -15,7 +15,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"

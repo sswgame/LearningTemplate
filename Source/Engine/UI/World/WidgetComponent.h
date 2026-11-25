@@ -29,7 +29,7 @@ namespace sw
     class CameraComponent;
     class GameObjectManager;
     class SceneComponent;
-    class UIWidgetComponentService;
+    class UIWidgetComponentSubsystem;
     class Widget;
     class WidgetTree;
 
@@ -83,7 +83,7 @@ namespace sw
     /**
      * @class WidgetComponent
      * @brief 오브젝트 위치에 위젯 하나를 띄웁니다.
-     * @details **Screen**: 위젯 컴포넌트 서비스(`UIWidgetComponentService`)의 HUD 레이어 마커 화면(캔버스 패널)에 위젯을 자식으로 두고, 매 프레임 UI 갱신의 레이아웃 앞 칸
+     * @details **Screen**: 위젯 컴포넌트 서비스(`UIWidgetComponentSubsystem`)의 HUD 레이어 마커 화면(캔버스 패널)에 위젯을 자식으로 두고, 매 프레임 UI 갱신의 레이아웃 앞 칸
      *          (게임 틱과 트랜스폼 적용 뒤, 병렬 틱 밖)이 오브젝트의 월드 점을 게임 카메라로 투영해 그 위젯의 화면 앵커(`UIScreenMarkers::setAnchor`)를 옮긴다.
      *          위젯은 피벗이 앵커 점에 오도록 원점 기준으로 배치 · 칠하고, 위치와 거리 배율은 캔버스 셰이더가 앵커로 적용한다. 그래서 마커가 움직여도
      *          다시 배치 · 칠하지 않고 사각형 버퍼도 다시 올리지 않는다(RTS 이름 2,000 개 기준). 마커 내용은 자르기를 쓸 수 없다.
@@ -177,8 +177,8 @@ namespace sw
          * @brief 등록할 위젯 컴포넌트 서비스를 바꿉니다. 기존 서비스에서 마커를 떼고 등록을 해제한 뒤, 새 서비스에 등록하고 마커를 붙입니다. nullptr 이면 해제만 합니다.
          * @details 시작할 때 씬이 받은 엔진 범위의 서비스로 부르고(서버처럼 없으면 아무것도 하지 않는다), 끝날 때 nullptr 로 부른다. 테스트는 자기 서비스를 넘긴다.
          */
-        void bindUIService( UIWidgetComponentService* pService );
-        /** @brief 서비스가 먼저 종료된 경우 등록과 마커를 알림 없이 잊습니다(`UIWidgetComponentService::shutdownSubsystem` 이 부릅니다). */
+        void bindUIService( UIWidgetComponentSubsystem* pService );
+        /** @brief 서비스가 먼저 종료된 경우 등록과 마커를 알림 없이 잊습니다(`UIWidgetComponentSubsystem::shutdownSubsystem` 이 부릅니다). */
         void removeUIService();
 
         // --- World(렌더 텍스처 사각형) -----------------------------------------------
@@ -191,7 +191,7 @@ namespace sw
          *          다른 렌더 텍스처 카메라)를 게임 스레드가 다 알지 못해, 거르면 다른 뷰에서 비어 보이는 텍스처가 생긴다.
          */
         void updateWorldCanvas( const UILayoutContext& baseLayout, const UIPaintContext& basePaint );
-        /** @brief World 목록을 렌더 텍스처 대상으로 덧붙입니다(`UIWidgetComponentService::appendWorldCanvases`). World 가 아니거나 트리가 없으면 아무것도 하지 않습니다. */
+        /** @brief World 목록을 렌더 텍스처 대상으로 덧붙입니다(`UIWidgetComponentSubsystem::appendWorldCanvases`). World 가 아니거나 트리가 없으면 아무것도 하지 않습니다. */
         void appendWorldCanvas( vector<CanvasTargetDrawList>& inoutListTarget ) const;
         /** @brief 트리가 그대로라 칠하기 · 견주기를 건너뛴 `updateWorldCanvas` 호출 수입니다(테스트용). */
         /** @brief World 사각형 오브젝트입니다(없으면 무효이며, 시작할 때 오브젝트 아래에 만듭니다). */
@@ -251,19 +251,19 @@ namespace sw
         bool isRayBlockedByPhysics( const float3& origin, const float3& direction, float32 distance ) const;
 
     private:
-        unique_ptr<Widget>        _pendingContent; ///< 아직 마커 화면에 붙이지 않은 위젯입니다.
-        WidgetID                  _markerWidget;   ///< 마커 화면에 붙인 위젯입니다(없으면 무효).
-        UIPointerState            _worldPointer;   ///< World 위젯 트리의 호버와 포인터 잡기 상태입니다(광선 입력).
-        UIWidgetComponentService* _pUIService;     ///< 등록한 위젯 컴포넌트 서비스입니다(없으면 nullptr).
-        unique_ptr<WidgetTree>    _worldTree;      ///< World 위젯 트리입니다(루트는 콘텐츠).
-        CanvasDrawList            _worldCanvas;    ///< World 의 마지막 그리기 목록입니다(텍스처 픽셀).
-        CanvasDrawList            _worldScratch;   ///< World 의 칠하는 중인 목록입니다.
-        uint64                    _worldRevision;  ///< World 의 `_worldCanvas` 내용 번호입니다.
-        GameObjectHandle          _worldQuad;      ///< World 의 사각형 자식 오브젝트입니다.
-        uint32                    _gpuAnchor;      ///< GPU 투영 마커의 앵커 번호입니다(`_gpuState` 가 `Off` 가 아닐 때 뜻이 있다).
-        uint8                     _bHidden;        ///< 코드가 숨겼는지 나타냅니다(`setHidden`, 저장하지 않습니다).
-        uint8                     _gpuState;       ///< GPU 투영의 위젯 쪽 상태입니다(0 꺼짐 · 1 접힘 · 2 보임). 상태가 바뀔 때만 위젯을 만진다.
-        uint8                     _bGPUSlotDirty;  ///< GPU 투영 마커의 슬롯을 다시 정해야 합니다(그리기 크기 · 피벗이 바뀌었거나 처음).
+        unique_ptr<Widget>          _pendingContent; ///< 아직 마커 화면에 붙이지 않은 위젯입니다.
+        WidgetID                    _markerWidget;   ///< 마커 화면에 붙인 위젯입니다(없으면 무효).
+        UIPointerState              _worldPointer;   ///< World 위젯 트리의 호버와 포인터 잡기 상태입니다(광선 입력).
+        UIWidgetComponentSubsystem* _pUIService;     ///< 등록한 위젯 컴포넌트 서비스입니다(없으면 nullptr).
+        unique_ptr<WidgetTree>      _worldTree;      ///< World 위젯 트리입니다(루트는 콘텐츠).
+        CanvasDrawList              _worldCanvas;    ///< World 의 마지막 그리기 목록입니다(텍스처 픽셀).
+        CanvasDrawList              _worldScratch;   ///< World 의 칠하는 중인 목록입니다.
+        uint64                      _worldRevision;  ///< World 의 `_worldCanvas` 내용 번호입니다.
+        GameObjectHandle            _worldQuad;      ///< World 의 사각형 자식 오브젝트입니다.
+        uint32                      _gpuAnchor;      ///< GPU 투영 마커의 앵커 번호입니다(`_gpuState` 가 `Off` 가 아닐 때 뜻이 있다).
+        uint8                       _bHidden;        ///< 코드가 숨겼는지 나타냅니다(`setHidden`, 저장하지 않습니다).
+        uint8                       _gpuState;       ///< GPU 투영의 위젯 쪽 상태입니다(0 꺼짐 · 1 접힘 · 2 보임). 상태가 바뀔 때만 위젯을 만진다.
+        uint8                       _bGPUSlotDirty;  ///< GPU 투영 마커의 슬롯을 다시 정해야 합니다(그리기 크기 · 피벗이 바뀌었거나 처음).
         PROPERTY( DisplayName = "Document", Tooltip = "UI document to show (document loading is a later stage; code uses setContent)" )
         AssetRef<UIDocumentAsset> _documentPath;
         PROPERTY( DisplayName = "Space" )

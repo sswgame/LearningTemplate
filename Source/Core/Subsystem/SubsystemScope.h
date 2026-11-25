@@ -151,7 +151,7 @@ namespace sw
         }
 
         /**
-         * @brief 이미 걸린 객체 @p object 를 인터페이스 @p TInterface 로도 찾게 합니다(예: `EditorPanelService` 를 `IEditorPanelService` 로).
+         * @brief 이미 걸린 객체 @p object 를 인터페이스 @p TInterface 로도 찾게 합니다(예: `EditorPanelSubsystem` 를 `IEditorPanelSubsystem` 로).
          * @return 그 인터페이스가 이미 걸려 있으면 false 입니다.
          */
         template <class TInterface, class TObject>

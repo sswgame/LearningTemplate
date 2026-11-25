@@ -66,7 +66,7 @@ namespace sw
         , _bRestartLoad{ SW_FALSE }
         , _sceneGeneration{ 0 }
         , _pRenderBinding{ nullptr }
-        , _services{ SceneEngineServices::makeFromBoundEngine() }
+        , _services{ SceneEngineSubsystems::makeFromBoundEngine() }
         , _asyncLoad{ sw::make_shared<AsyncLoadSlot>() }
         , _queuedPath{}
         , _inFlightPath{}
@@ -113,7 +113,7 @@ namespace sw
      */
     SubsystemInitResult SceneManager::initializeSubsystem()
     {
-        _services = SceneEngineServices::makeFromBoundEngine();
+        _services = SceneEngineSubsystems::makeFromBoundEngine();
         if ( _asyncLoad == nullptr )
             _asyncLoad = sw::make_shared<AsyncLoadSlot>();
         _asyncLoad->_services = _services;
@@ -683,7 +683,7 @@ namespace sw
             bool          bParentMade = false;
             {
                 ScopedTimer parentTimer{ "Scene.save.base" };
-                Scene       parentScene{ "SceneSave.Base", pScene->getEngineServices() };
+                Scene       parentScene{ "SceneSave.Base", pScene->getSceneEngineSubsystems() };
                 parentScene.setBuildAllDataLayers();
                 bParentMade = parentSource.loadXML( AssetID{ doc._baseScenePath } ) && parentScene.instantiate( parentSource ) && parentScene.serializeToDocument( parent );
             }
@@ -1273,7 +1273,7 @@ namespace sw
     span<const utf8* const> SceneManager::getSubsystemDependencies() const
     {
         // 오디오 · 물리는 그쪽이 `getSubsystemDependents` 로 씬 매니저를 자기 뒤에 둔다(씬은 기능 이름을 모른다).
-        // 엔진 기본 에셋: 초기화가 씬 서비스 묶음(`SceneEngineServices::makeFromBoundEngine`)에 그 표를 담는다.
+        // 엔진 기본 에셋: 초기화가 씬 서브시스템 묶음(`SceneEngineSubsystems::makeFromBoundEngine`)에 그 표를 담는다.
         static constexpr const utf8* kArrDependency[] = { AssetStreamingQueue::kSubsystemName, AsyncFileIO::kSubsystemName, InputManager::kSubsystemName,
                                                           AssetManager::kSubsystemName, EngineDefaultAssetsSubsystem::kSubsystemName, TaskManager::kSubsystemName };
         return kArrDependency;

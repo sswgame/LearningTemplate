@@ -39,7 +39,7 @@
 #include "Engine/Server/OpsHTTPEndpoint.h"
 #include "Engine/Server/ServerServiceManager.h"
 #include "Engine/Server/ServiceHealthRegistry.h"
-#include "Engine/Telemetry/CrashReportService.h"
+#include "Engine/Telemetry/CrashReportSubsystem.h"
 
 #include "ModuleManager/GameModuleManager.h"
 #include "ModuleManager/Host/HostDevLayer.h"
@@ -136,7 +136,7 @@ namespace sw
         }
         void shutdownSubsystem() override
         {
-            engine::getSubsystem<CrashReportService>().shutdown(); // 묶을 폴더가 없어 초기화하지 않았어도 된다
+            engine::getSubsystem<CrashReportSubsystem>().shutdown(); // 묶을 폴더가 없어 초기화하지 않았어도 된다
         }
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override
@@ -543,8 +543,8 @@ namespace sw
         const AbsolutePath crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
         if ( crashFolder.empty() || engine::areEngineSubsystemsBound() == false )
             return true;
-        CrashReportService& crashReports  = engine::getSubsystem<CrashReportService>();
-        const AbsolutePath  reportsFolder = crashFolder.getParent().join( CrashReportService::kReportsFolderName );
+        CrashReportSubsystem& crashReports  = engine::getSubsystem<CrashReportSubsystem>();
+        const AbsolutePath    reportsFolder = crashFolder.getParent().join( CrashReportSubsystem::kReportsFolderName );
         crashReports.initialize( crashFolder, reportsFolder, ProcessSession::getID() );
         // 서버의 보내기 동의는 플레이어 설정이 아니라 운영 설정(`ServerConfig::_crashReportConsent`)의 몫이다 — 기본은 기계 안에만(`local`).
         // 서버에는 "보낼까요?" 를 물을 사람이 없어 `ask` 는 받지 않고, 모르는 값은 오류로 기동을 멈춘다(보내지 않는 쪽으로 조용히 바꾸지 않는다).
@@ -558,7 +558,7 @@ namespace sw
         const uint32               newCount = crashReports.collectNewCrashes();
         vector<CrashReportSummary> listReport;
         crashReports.collectReports( listReport );
-        // 지난 실행의 크래시를 묶는 것은 이번 실행의 이상이 아니라 정리다 — 클라이언트(TelemetryService)와 같이 정보로 남긴다. 크래시 자체는 그 실행이 이미
+        // 지난 실행의 크래시를 묶는 것은 이번 실행의 이상이 아니라 정리다 — 클라이언트(TelemetrySubsystem)와 같이 정보로 남긴다. 크래시 자체는 그 실행이 이미
         // 오류로 남겼다. 경고로 두면 같은 바이너리 폴더(Bin/Saved/Logs)를 쓰는 앞선 실행의 잔재가 이번 실행의 판정(시나리오의 처리 안 된 경고)을 바꾼다.
         if ( newCount > 0 )
             SW_LOG_INFO_ID( "Server.BundledCrashReportPrevious", "Bundled %# crash report(s) from previous runs into '%#' (%# kept)", newCount, reportsFolder.c_str(), static_cast<uint32>( listReport.size() ) );

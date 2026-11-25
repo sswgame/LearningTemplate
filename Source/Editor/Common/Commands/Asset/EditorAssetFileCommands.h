@@ -63,7 +63,7 @@ namespace sw::editor
          */
         [[nodiscard]] static bool planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan );
         /**
-         * @brief 지금 열린 문서를 모읍니다 — 에셋 파일을 연 문서 패널(`IEditorPanelService::collectOpenDocuments`)과 소스 파일이 있는 활성 씬(미저장은 `EditorWorkspace::isSceneDirty`).
+         * @brief 지금 열린 문서를 모읍니다 — 에셋 파일을 연 문서 패널(`IEditorPanelSubsystem::collectOpenDocuments`)과 소스 파일이 있는 활성 씬(미저장은 `EditorWorkspace::isSceneDirty`).
          * @details 패널 서비스가 없는 호스트(셸 없는 테스트)는 연 패널이 없다 — 씬만 본다.
          */
         static void collectOpenDocuments( vector<EditorOpenDocument>& outList );

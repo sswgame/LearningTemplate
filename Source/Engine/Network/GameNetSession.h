@@ -69,7 +69,7 @@
 #include "Engine/EngineFrameHooks.h"
 #include "Engine/Network/GameConnectSecurity.h"
 #include "Engine/Network/NetMessageBody.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 

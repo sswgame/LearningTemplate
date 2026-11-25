@@ -49,7 +49,7 @@ namespace sw
     /**
      * @brief 자막 키를 가진 클립이 실제로 시작했다는 신호입니다. 오디오 스레드가 이벤트 인스턴스를 만들 때 쌓고, 게임 스레드가 가져가 자막 서비스에 올립니다.
      * @details 쿨다운 · 동시 재생 상한으로 버려진 재생은 신호를 내지 않는다(언리얼은 활성 사운드가 시작할 때 `FSubtitleManager` 에 큐를 넣는다).
-     *          키는 현지화 전의 `Namespace.Key` 이며, 해석은 받는 쪽(`UISubtitleService::postAudioCues`)이 지금 문화권으로 한다.
+     *          키는 현지화 전의 `Namespace.Key` 이며, 해석은 받는 쪽(`UISubtitleSubsystem::postAudioCues`)이 지금 문화권으로 한다.
      */
     struct AudioSubtitleCue
     {

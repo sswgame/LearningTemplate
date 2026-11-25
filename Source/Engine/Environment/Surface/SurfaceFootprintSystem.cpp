@@ -11,8 +11,8 @@
 #include "Engine/Environment/Surface/SurfaceSample.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Presentation/ISoundPlayer.h"
 
 namespace sw
@@ -200,7 +200,7 @@ namespace sw
         _lastKind        = kind;
     }
 
-    SW_SCENE_SERVICE( SurfaceFootprintSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
+    SW_SCENE_SUBSYSTEM( SurfaceFootprintSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     SurfaceFootprintSystem::SurfaceFootprintSystem( GameObjectManager& manager )
         : _pManager{ &manager }
@@ -280,7 +280,7 @@ namespace sw
 
     void SurfaceFootprintSystem::playSound( const hashed_string& sound, const float3& point ) const
     {
-        ISoundPlayer* pSound = findSubsystemFrom<ISoundPlayer>( _pManager->getSceneEngineServices()._pEngineSubsystems );
+        ISoundPlayer* pSound = findSubsystemFrom<ISoundPlayer>( _pManager->getSceneEngineSubsystems()._pEngineSubsystems );
         if ( pSound != nullptr )
             (void)pSound->postEventAt( sound, point );
     }

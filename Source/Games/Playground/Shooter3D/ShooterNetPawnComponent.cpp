@@ -18,7 +18,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"

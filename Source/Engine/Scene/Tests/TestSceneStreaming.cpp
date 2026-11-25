@@ -18,7 +18,7 @@
 #include "Engine/Object/Component/Tests/StateHashTestComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/NetObjectTable.h"
+#include "Engine/Object/GameObject/Subsystem/NetObjectTable.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"

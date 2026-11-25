@@ -67,7 +67,7 @@ namespace sw
                 const AbsolutePath resourceRoot     = engine::getSubsystem<AssetPaths>().getRootFolderPath();
                 uint32             sceneFailedCount = 0;
                 // 쿠킹용 씬도 런타임 씬과 같은 엔진 서비스 묶음(씬 매니저의 것 — 의존 칸에 있다)으로 짓는다.
-                const SceneEngineServices& sceneServices = engine::getSubsystem<SceneManager>().getEngineServices();
+                const SceneEngineSubsystems& sceneServices = engine::getSubsystem<SceneManager>().getSceneEngineSubsystems();
                 // 쿠커별 시간(`Headless.CookStageTimes`) — 씬 쿠킹 병렬화가 빌드 시간을 줄일 수 있는지의 근거다.
                 Stopwatch    stageStopwatch;
                 const uint32 sceneCount        = SceneCooker::cookAllScenes( sceneServices, resourceRoot, cookedDir, cookStore, reflectionFingerprint, sceneFailedCount );

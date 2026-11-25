@@ -13,7 +13,7 @@
 namespace sw
 {
     class AudioEngine;
-    class AudioService;
+    class AudioSubsystem;
 
     /**
      * @class AudioSoundPlayer
@@ -23,7 +23,7 @@ namespace sw
     class SW_API AudioSoundPlayer final : public ISoundPlayer
     {
     public:
-        explicit AudioSoundPlayer( AudioService& audio );
+        explicit AudioSoundPlayer( AudioSubsystem& audio );
 
         AudioSoundPlayer( const AudioSoundPlayer& )            = delete;
         AudioSoundPlayer& operator=( const AudioSoundPlayer& ) = delete;
@@ -51,7 +51,7 @@ namespace sw
         /** @brief 한 번 쓰는 에미터 id 의 시작입니다 — 컴포넌트 id(작은 수부터 센다)와 겹치지 않는 높은 자리. */
         static constexpr AudioEmitterID kOneShotEmitterBase = AudioEmitterID{ 1 } << 62;
 
-        AudioService&  _audio;              ///< 이 창구를 든 오디오 서비스입니다(수명이 같다).
-        atomic<uint64> _nextOneShotEmitter; ///< 다음 한 번 쓰는 에미터의 번호입니다.
+        AudioSubsystem& _audio;              ///< 이 창구를 든 오디오 서비스입니다(수명이 같다).
+        atomic<uint64>  _nextOneShotEmitter; ///< 다음 한 번 쓰는 에미터의 번호입니다.
     };
 } // namespace sw

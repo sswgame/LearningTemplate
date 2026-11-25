@@ -164,13 +164,13 @@ namespace sw::editor
     /** @brief 툴이 대상으로 삼는 씬입니다. 포커스된 미리보기 창의 씬이고, 없으면 활성 씬입니다(`SceneManager::getFocusedScene`). */
     SW_EDITOR_API Scene* getFocusedScene();
     /**
-     * @brief Ctrl+Z 와 Ctrl+Y 가 쓰는 스택입니다. **부르는 순간**의 키보드 포커스 창으로 고른다(`IEditorPanelService::chooseFocusedCommandStack`) — 포커스 패널의 답,
+     * @brief Ctrl+Z 와 Ctrl+Y 가 쓰는 스택입니다. **부르는 순간**의 키보드 포커스 창으로 고른다(`IEditorPanelSubsystem::chooseFocusedCommandStack`) — 포커스 패널의 답,
      *        패널이 아닌 창(메뉴 · 팝업) · History 면 앞 포커스 패널의 지금 답, 그 패널이 열려 있지 않으면 엔진의 전역 `CommandStack`, 그것도 없으면 nullptr 입니다.
      */
     SW_EDITOR_API CommandStack* getFocusedCommandStack();
     /**
      * @brief 앞 포커스 패널을 패널 id 로 기억합니다. 패널 관리자가 그린 뒤 포커스 창으로 건다(`EditorPanelManager::updateFocusedCommandStack`).
-     * @details 스택 포인터를 걸지 않는다 — 읽는 순간 그 id 의 열린 패널에 스택을 묻는다(`IEditorPanelService::chooseFocusedCommandStack`). 스택이 사라지거나 창이 닫혀도 풀 것이 없다.
+     * @details 스택 포인터를 걸지 않는다 — 읽는 순간 그 id 의 열린 패널에 스택을 묻는다(`IEditorPanelSubsystem::chooseFocusedCommandStack`). 스택이 사라지거나 창이 닫혀도 풀 것이 없다.
      */
     SW_EDITOR_API void setFocusedPanel( string_view panelID );
     /**

@@ -10,7 +10,7 @@
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Content/AssetID.h"
 
 namespace sw::editor
@@ -100,7 +100,7 @@ namespace sw::editor
 
     AudioMixerStatus AudioMixerViewModel::refresh()
     {
-        AudioService& audio = getAudioService();
+        AudioSubsystem& audio = getAudioSubsystem();
         if ( audio.isInitialized() == false )
             return AudioMixerStatus::ServiceStopped;
         if ( refreshBuses( audio.getEngine() ) == false )
@@ -113,30 +113,30 @@ namespace sw::editor
     {
         if ( _selectedEvent >= _listEventName.size() )
             return;
-        (void)getAudioService().getEngine().postEvent( _listEventName[_selectedEvent], 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
+        (void)getAudioSubsystem().getEngine().postEvent( _listEventName[_selectedEvent], 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
     }
 
     bool AudioMixerViewModel::playClip( string_view clipPath ) const
     {
-        return getAudioService().play( AssetID{ clipPath } );
+        return getAudioSubsystem().play( AssetID{ clipPath } );
     }
 
     void AudioMixerViewModel::setBusVolume( uint32 busIndex, float32 volume ) const
     {
         if ( busIndex < _listBusStatus.size() )
-            getAudioService().setBusVolume( _listBusStatus[busIndex]._name, volume );
+            getAudioSubsystem().setBusVolume( _listBusStatus[busIndex]._name, volume );
     }
 
     void AudioMixerViewModel::setBusMuted( uint32 busIndex, bool bMuted ) const
     {
         if ( busIndex < _listBusStatus.size() )
-            getAudioService().getEngine().setBusMuted( _listBusStatus[busIndex]._name, bMuted );
+            getAudioSubsystem().getEngine().setBusMuted( _listBusStatus[busIndex]._name, bMuted );
     }
 
     void AudioMixerViewModel::setBusSolo( uint32 busIndex, bool bSolo ) const
     {
         if ( busIndex < _listBusStatus.size() )
-            getAudioService().getEngine().setBusSolo( _listBusStatus[busIndex]._name, bSolo );
+            getAudioSubsystem().getEngine().setBusSolo( _listBusStatus[busIndex]._name, bSolo );
     }
 
     const AudioMixerWatchValues& AudioMixerViewModel::getWatchValues()
@@ -144,8 +144,8 @@ namespace sw::editor
         return AudioMixerViewModelInternal::editWatchValues();
     }
 
-    AudioService& AudioMixerViewModel::getAudioService()
+    AudioSubsystem& AudioMixerViewModel::getAudioSubsystem()
     {
-        return editor::getSubsystem<AudioService>();
+        return editor::getSubsystem<AudioSubsystem>();
     }
 } // namespace sw::editor

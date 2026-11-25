@@ -28,7 +28,7 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Network/GameConnectSecurity.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/SceneObjectHash.h"

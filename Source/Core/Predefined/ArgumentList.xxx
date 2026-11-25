@@ -175,7 +175,7 @@ SW_REGISTER_ARGUMENT( CHECK_ASSET_REFS, Dev, false, "check-asset-refs" )
 SW_REGISTER_ARGUMENT( EXPORT_PO, Dev, false, "export-po" )
 SW_REGISTER_ARGUMENT( IMPORT_PO, Dev, CommandLineDiskPath{}, "import-po" )
 
-// 크래시 보고 프로세스 — 값은 크래시 묶음 폴더. 앞 실행이 띄운다(`CrashReportService::launchReporterProcess`). 엔진은 명령줄까지만 세우고(크래시 핸들러 · 리소스 루트 ·
+// 크래시 보고 프로세스 — 값은 크래시 묶음 폴더. 앞 실행이 띄운다(`CrashReportSubsystem::launchReporterProcess`). 엔진은 명령줄까지만 세우고(크래시 핸들러 · 리소스 루트 ·
 // 서비스 없이) 대기 중인 묶음을 보낸 뒤 끝낸다(헤드리스).
 SW_REGISTER_ARGUMENT( CRASH_REPORTER, All, CommandLineDiskPath{}, "crash-reporter" )
 

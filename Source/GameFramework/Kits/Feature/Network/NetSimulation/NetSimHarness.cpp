@@ -9,7 +9,7 @@
 #include "Engine/Config/NetSendThrottleSettings.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw
@@ -102,7 +102,7 @@ namespace sw
 
 namespace sw
 {
-    NetSimWorld::NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, INetSimSceneSource* pSceneSource,
+    NetSimWorld::NetSimWorld( const SceneEngineSubsystems& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, INetSimSceneSource* pSceneSource,
                               Scene* pBorrowedScene )
         : _counter{ pTransport }
         , _host{}
@@ -213,7 +213,7 @@ namespace sw
         shutdown();
     }
 
-    bool NetSimHarness::initialize( const SceneEngineServices& services, const NetSimConfig& settings, INetSimGame* pGame )
+    bool NetSimHarness::initialize( const SceneEngineSubsystems& services, const NetSimConfig& settings, INetSimGame* pGame )
     {
         shutdown();
         if ( settings._tickInterval <= 0.0 )

@@ -209,10 +209,10 @@ SW_TEST_CASE( TextMeasureCacheTest, MeasureDoesNotRecomputeEarlierTextWhenTheCac
 {
     constexpr uint32 kTextCount = 4097; // TextLayout.cpp 의 세대 용량 4096 + 1
 
-    sw::test::FakeFontServiceFixture fonts;
-    sw::TextLayoutEngine             layout{ *fonts._fontService };
-    sw::FontCatalogDef               catalog = sw::test::FakeFontServiceFixture::makeCatalog( "Latin" );
-    sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
+    sw::test::FakeFontSubsystemFixture fonts;
+    sw::TextLayoutEngine               layout{ *fonts._fontService };
+    sw::FontCatalogDef                 catalog = sw::test::FakeFontSubsystemFixture::makeCatalog( "Latin" );
+    sw::test::FakeFontSubsystemFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
     SW_REQUIRE_TRUE( fonts.initialize( catalog ) );
 
     sw::TextLayoutStyle style{};

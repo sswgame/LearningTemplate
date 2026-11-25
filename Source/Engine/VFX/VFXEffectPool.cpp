@@ -7,7 +7,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/VFX/VFXComponent.h"
 
 namespace sw
@@ -46,7 +46,7 @@ namespace sw
 
 namespace sw
 {
-    SW_SCENE_SERVICE( VFXEffectPool, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
+    SW_SCENE_SUBSYSTEM( VFXEffectPool, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     VFXEffectPool::VFXEffectPool( GameObjectManager& manager )
         : _pManager{ &manager }

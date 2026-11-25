@@ -160,7 +160,7 @@ Use a banned verb only when it is the domain's own term (`UUID::generate`, `Surf
 | 업계 공용어는 그대로(Cook · Pawn · Possess). 한 엔진 · 게임 고유 이름 · 브랜드는 내용으로(`BugReport`) | 이름은 내용으로 |
 | Pack(`.pack`) · Watch(자동화 감시 값 — Probe 는 라이트 · 리플렉션 프로브, 카메라 충돌 프로브, 운영 상태 프로브만. 확인용 컴포넌트는 `…TestComponent`, 자체 테스트 상태는 `…TestState`) · Scene(씬 컨테이너 — World 는 월드 공간 뜻만) | 같은 단어 한 뜻 |
 | Module 은 동적으로 올리는 코드 단위만(모듈 문맥의 Image → Library). 렌더러 확장점은 `RenderExtension` | 언리얼 SceneViewExtension |
-| Host = 엔진을 돌리는 프로세스와 그 쪽(`HostService`, 짝 `EngineServices`). 네트워크 끝점 `NetEndpoint*`, 에디터 패널 진입점 `IEditorPanelService`, 온라인 키트 `IOnlineServerService` · `OnlineClientService` | 같은 단어 한 뜻 |
+| Host = 엔진을 돌리는 프로세스와 그 쪽(`HostService`, 짝 `EngineServices`). 네트워크 끝점 `NetEndpoint*`, 에디터 패널 진입점 `IEditorPanelSubsystem`, 온라인 키트 `IOnlineServerService` · `OnlineClientService` | 같은 단어 한 뜻 |
 | Runtime = 모든 호스트에서 도는 것(키트 `Runtime/`). 모듈 C-ABI 계약은 `Source/ModuleAPI` | 언리얼 모듈 형식 |
 | Automation = 시나리오 자동 테스트(`Engine/Automation`, 실행기 `DevTools/Client/Automation`). "UI Automation" 은 Windows UIA 만 | 언리얼 Automation System |
 | 대상을 인자로 받는 상태 없는 정적 함수 묶음은 도메인 이름 그대로 | 언리얼 FPaths |

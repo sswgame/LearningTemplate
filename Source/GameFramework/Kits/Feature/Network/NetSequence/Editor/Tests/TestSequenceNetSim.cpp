@@ -5,7 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
@@ -101,7 +101,7 @@ namespace
         SequenceHarnessFixture()
         {
             SceneManager& sceneManager = game::getSubsystem<SceneManager>();
-            SW_EXPECT_TRUE( _harness.initialize( sceneManager.getEngineServices(), NetSimConfig{}, &_game ) );
+            SW_EXPECT_TRUE( _harness.initialize( sceneManager.getSceneEngineSubsystems(), NetSimConfig{}, &_game ) );
             const expected<int32> firstClient  = _harness.addClient( NetSimLinkConditions{} );
             const expected<int32> secondClient = _harness.addClient( NetSimLinkConditions{} );
             SW_EXPECT_TRUE( firstClient.has_value() && secondClient.has_value() );

@@ -4,7 +4,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 #include "Engine/Text/ITextShaper.h"
 #include "Engine/Text/Tests/FakeFontRasterizer.h"
 #include "Engine/Text/TextItemizer.h"
@@ -18,15 +18,15 @@ namespace
         static constexpr const utf8* kAllPath    = "test/fonts/all.ttf";
 
         /** @brief 모든 코드 포인트를 가진 가족 하나("All")의 카탈로그로 시작합니다. */
-        [[nodiscard]] static bool initializeAllCoverage( sw::test::FakeFontServiceFixture& fixture )
+        [[nodiscard]] static bool initializeAllCoverage( sw::test::FakeFontSubsystemFixture& fixture )
         {
-            sw::FontCatalogDef catalog = sw::test::FakeFontServiceFixture::makeCatalog( "All" );
-            sw::test::FakeFontServiceFixture::addFamily( catalog, "All", kAllPath );
+            sw::FontCatalogDef catalog = sw::test::FakeFontSubsystemFixture::makeCatalog( "All" );
+            sw::test::FakeFontSubsystemFixture::addFamily( catalog, "All", kAllPath );
             return fixture.initialize( catalog );
         }
 
         /** @brief 라틴(고른 가족) · 한글(기본 가족) 카탈로그로 시작합니다. 둘 다 공백을 가진다. */
-        [[nodiscard]] static bool initializeLatinHangul( sw::test::FakeFontServiceFixture& fixture )
+        [[nodiscard]] static bool initializeLatinHangul( sw::test::FakeFontSubsystemFixture& fixture )
         {
             sw::test::FakeFontFaceConfig latin{};
             latin.addRange( 0x20u, 0x7Eu );
@@ -34,9 +34,9 @@ namespace
             sw::test::FakeFontFaceConfig hangul{};
             hangul.addRange( 0x20u, 0x20u ).addRange( 0xAC00u, 0xD7A3u );
             fixture._pRasterizer->setFaceConfig( kHangulPath, hangul );
-            sw::FontCatalogDef catalog = sw::test::FakeFontServiceFixture::makeCatalog( "Hangul" );
-            sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", kLatinPath );
-            sw::test::FakeFontServiceFixture::addFamily( catalog, "Hangul", kHangulPath );
+            sw::FontCatalogDef catalog = sw::test::FakeFontSubsystemFixture::makeCatalog( "Hangul" );
+            sw::test::FakeFontSubsystemFixture::addFamily( catalog, "Latin", kLatinPath );
+            sw::test::FakeFontSubsystemFixture::addFamily( catalog, "Hangul", kHangulPath );
             return fixture.initialize( catalog );
         }
 
@@ -47,7 +47,7 @@ namespace
 /** @brief [TextShaperTest] 클러스터는 원문 바이트 위치다 — "A가B" 는 0 · 1 · 4, 런의 시작 바이트를 더한다 */
 SW_TEST_CASE( TextShaperTest, ClustersAreByteOffsets )
 {
-    sw::test::FakeFontServiceFixture fixture;
+    sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( TextShaperTestUtil::initializeAllCoverage( fixture ) );
     const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontSpec{} );
 
@@ -79,7 +79,7 @@ SW_TEST_CASE( TextShaperTest, DefaultShaperIsChosenByTheBuild )
     const sw::unique_ptr<sw::ITextShaper> pShaper = sw::ITextShaper::createDefault();
     SW_REQUIRE_NOT_NULL( pShaper.get() );
 #if !defined( SW_TEXT_COMPLEX_SHAPING )
-    sw::test::FakeFontServiceFixture fixture;
+    sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( TextShaperTestUtil::initializeAllCoverage( fixture ) );
     const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontSpec{} );
     sw::ShapingRun          run{};
@@ -97,7 +97,7 @@ SW_TEST_CASE( TextShaperTest, DefaultShaperIsChosenByTheBuild )
 /** @brief [TextShaperTest] 커닝은 앞 글리프의 전진에 더한다 — ('A','V') = -0.1 이면 첫 전진 0.4 · 결합 분음은 글리프를 내지 않는다 */
 SW_TEST_CASE( TextShaperTest, KerningAddsToPreviousAdvance )
 {
-    sw::test::FakeFontServiceFixture fixture;
+    sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( TextShaperTestUtil::initializeAllCoverage( fixture ) );
     fixture._pRasterizer->setKerning( 'A', 'V', -0.1f );
     const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontSpec{} );
@@ -116,7 +116,7 @@ SW_TEST_CASE( TextShaperTest, KerningAddsToPreviousAdvance )
 /** @brief [TextShaperTest] RTL 런의 커닝은 눈에 보이는 쌍(지금, 앞)으로 지금 글리프의 전진에 더한다 — 배치가 뒤집으면 지금 글리프가 왼쪽이다 */
 SW_TEST_CASE( TextShaperTest, RightToLeftRunKernsVisualPair )
 {
-    sw::test::FakeFontServiceFixture fixture;
+    sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( TextShaperTestUtil::initializeAllCoverage( fixture ) );
     fixture._pRasterizer->setKerning( 0x05D1u, 0x05D0u, -0.1f ); // 눈에 보이는 (ב, א)
     const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontSpec{} );
@@ -136,7 +136,7 @@ SW_TEST_CASE( TextShaperTest, RightToLeftRunKernsVisualPair )
 /** @brief [TextShaperTest] 면이 바뀌는 곳에서 런을 끊고, 공백(중립)은 앞 런에 붙는다 — "Hi 안녕 OK" 는 셋 */
 SW_TEST_CASE( TextShaperTest, ItemizerSplitsOnFaceCoverage )
 {
-    sw::test::FakeFontServiceFixture fixture;
+    sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( TextShaperTestUtil::initializeLatinHangul( fixture ) );
     sw::FontSpec spec{};
     spec._family                  = "Latin";
@@ -159,7 +159,7 @@ SW_TEST_CASE( TextShaperTest, ItemizerSplitsOnFaceCoverage )
 /** @brief [TextShaperTest] 강한 RTL 문자에서 방향이 바뀌고, 숫자 · 공백은 앞 런에 붙는다 — "abc שלום 12" 는 둘, 둘째가 RTL */
 SW_TEST_CASE( TextShaperTest, ItemizerMarksRightToLeftRuns )
 {
-    sw::test::FakeFontServiceFixture fixture;
+    sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( TextShaperTestUtil::initializeAllCoverage( fixture ) );
     const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontSpec{} );
 

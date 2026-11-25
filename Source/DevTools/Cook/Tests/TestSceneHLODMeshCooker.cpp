@@ -14,7 +14,7 @@
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCellSplitter.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -57,7 +57,7 @@ namespace
             }
             scene.append( "</entities></Scene>" );
             return FileUtil::writeTextFile( domain.makeDiskPath( "hlodmesh.scene.xml" ), scene.view() ) && outDoc.loadXMLFromDiskFile( domain.makeDiskPath( "hlodmesh.scene.xml" ) ) &&
-                   SceneCellSplitter::split( SceneEngineServices::makeFromBoundEngine(), outDoc, "hlodmesh.scene.xml" );
+                   SceneCellSplitter::split( SceneEngineSubsystems::makeFromBoundEngine(), outDoc, "hlodmesh.scene.xml" );
         }
     };
     using Util = SceneHLODMeshCookerTestUtil;
@@ -81,7 +81,7 @@ SW_TEST_CASE( SceneHLODMeshCookerTest, ProxiesDrawSectionsOfOneCookedMesh )
     SW_REQUIRE_TRUE( Util::loadSplitScene( domain, doc ) );
 
     MeshAssetData data{};
-    SW_REQUIRE_TRUE( SceneHLODMeshCooker::buildMesh( SceneEngineServices::makeFromBoundEngine(), doc, "hlodmesh.scene.xml", data ) );
+    SW_REQUIRE_TRUE( SceneHLODMeshCooker::buildMesh( SceneEngineSubsystems::makeFromBoundEngine(), doc, "hlodmesh.scene.xml", data ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, data._listSection.size() ); // 셀 둘, 머티리얼 하나씩
     SW_EXPECT_EQUAL( static_cast<size_t>( Util::getMergedIndexCount( "Cube" ) * 3 + Util::getMergedIndexCount( "Sphere" ) ), data._listIndex.size() );
     vector<uint8> bytes;

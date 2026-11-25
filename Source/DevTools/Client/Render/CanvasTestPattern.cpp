@@ -15,7 +15,7 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Canvas/CanvasOverlay.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 
 namespace sw
 {
@@ -29,7 +29,7 @@ namespace sw
          * @brief 그리기 목록에 테스트 이미지를 칠합니다(물리 픽셀 = UI 단위). 글꼴 시스템이 있으면 기본 가족과 문화권 대체 체인으로 글을 씁니다(한글은 시스템 글꼴).
          * @param targetSize 대상 픽셀 크기(가위를 그 안으로 자른다)
          */
-        static void paint( CanvasDrawList& outCanvas, const float2& targetSize, FontService* pFontService, uint64 frameIndex );
+        static void paint( CanvasDrawList& outCanvas, const float2& targetSize, FontSubsystem* pFontSubsystem, uint64 frameIndex );
     };
 
     /**
@@ -48,7 +48,7 @@ namespace sw
                 if ( gv_canvasTestPattern == false )
                     return;
                 target.markContentChanged();
-                CanvasTestPattern::paint( target.acquire(), context._targetSize, context._pFontService, context._glyphFrameIndex );
+                CanvasTestPattern::paint( target.acquire(), context._targetSize, context._pFontSubsystem, context._glyphFrameIndex );
             }
         };
     } // namespace
@@ -56,7 +56,7 @@ namespace sw
     // 주 출력 층 — 이 그림은 Canvas 패스 자체를 보는 확인 대상이라 사진 캡처 · 골든에 들어야 한다(개발 그림의 기본 층은 개발 겹치기다).
     SW_CANVAS_OVERLAY( CanvasTestPattern, "CanvasTestPattern", 1, CanvasOverlayLayer::MainOutput, &CanvasTestPatternInternal::paintOverlay );
 
-    void CanvasTestPattern::paint( CanvasDrawList& outCanvas, const float2& targetSize, FontService* pFontService, uint64 frameIndex )
+    void CanvasTestPattern::paint( CanvasDrawList& outCanvas, const float2& targetSize, FontSubsystem* pFontSubsystem, uint64 frameIndex )
     {
         outCanvas._targetSize = targetSize;
         CanvasPainter painter( outCanvas, 1.0f );
@@ -92,18 +92,18 @@ namespace sw
         painter.fillRect( float2{ 400.0f, 48.0f }, float2{ 100.0f, 100.0f }, white );
         painter.popClip();
 
-        if ( pFontService == nullptr || pFontService->isInitialized() == false )
+        if ( pFontSubsystem == nullptr || pFontSubsystem->isInitialized() == false )
             return;
         CanvasGlyphStyle title{};
         title._fontSize = 40.0f;
         title._color    = float4{ 1.0f, 1.0f, 1.0f, 1.0f };
-        CanvasPainter::drawLine( painter, *pFontService, "Canvas AaBb 0123", float2{ 48.0f, 230.0f }, title, frameIndex );
+        CanvasPainter::drawLine( painter, *pFontSubsystem, "Canvas AaBb 0123", float2{ 48.0f, 230.0f }, title, frameIndex );
         CanvasGlyphStyle outlined{};
         outlined._fontSize     = 32.0f;
         outlined._color        = float4{ 1.0f, 0.85f, 0.3f, 1.0f };
         outlined._outlineColor = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
         outlined._outlineWidth = 2.0f;
         // 저장소 글꼴(라틴)에는 한글이 없으므로 문화권별 대체 글꼴 체인의 시스템 글꼴을 쓴다. 시스템 글꼴도 없으면 빈 네모(두부)로 나온다.
-        CanvasPainter::drawLine( painter, *pFontService, "UI 가나다 SDF", float2{ 48.0f, 290.0f }, outlined, frameIndex );
+        CanvasPainter::drawLine( painter, *pFontSubsystem, "UI 가나다 SDF", float2{ 48.0f, 290.0f }, outlined, frameIndex );
     }
 } // namespace sw

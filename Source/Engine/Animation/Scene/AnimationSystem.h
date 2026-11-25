@@ -1,6 +1,6 @@
 /**
  * @file AnimationSystem.h
- * @brief 애니메이션 유닛(`SkeletalMeshComponent`)을 의존 순서와 단계별로 평가하는 시스템입니다. 씬 서비스(`ISceneService`)라 매니저마다 하나 있고,
+ * @brief 애니메이션 유닛(`SkeletalMeshComponent`)을 의존 순서와 단계별로 평가하는 시스템입니다. 씬 서브시스템(`ISceneSubsystem`)라 매니저마다 하나 있고,
  *        `SceneFrameStep::Animation` 단계에서 돕니다. 얻기는 `manager.getSubsystem<AnimationSystem>()` 입니다 — 코어(`Object/GameObject`)는 이 타입을 모릅니다.
  */
 #pragma once
@@ -23,7 +23,7 @@
 #include "Engine/Animation/Scene/AnimationFrameObserver.h"
 #include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Animation/Skeletal/Pose.h"
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 
 #include <atomic>
 
@@ -452,11 +452,11 @@ namespace sw
      *          (4) 게임 스레드에서 `finishAnimationFrame` 을 부른다. 쉬는 유닛(할 일 없음, 포즈 깨끗함)은 (1) 에서 빠지므로 비용이 없다.
      *          "상태를 가진 시스템 타입, `engine::runParallel` · `runParallelByCost`, 매니저 tick 의 단계 한 줄"이라는 구조를 따른다(`SceneTransformHierarchy` 와 같다).
      */
-    class SW_API AnimationSystem final : public ISceneService
+    class SW_API AnimationSystem final : public ISceneSubsystem
     {
     public:
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
+        /** @brief 씬 서브시스템 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "AnimationSystem";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }

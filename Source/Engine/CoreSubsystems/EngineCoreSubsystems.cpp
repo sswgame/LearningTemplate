@@ -1,0 +1,77 @@
+/**
+ * @file Engine/CoreSubsystems/EngineCoreSubsystems.cpp
+ * @brief Core 층 형식의 서브시스템(이벤트 · 압축 코덱 · 태스크 · 비동기 파일 IO) 등록입니다.
+ * @details Core 는 엔진의 등록 틀(`EngineSubsystemRegistration.h`)을 볼 수 없으므로(층이 아래다) 그 형식의 등록은 Core 서비스의 서브시스템 곁(`Engine/CoreSubsystems`)인 이 파일에 둔다.
+ *          서브시스템 칸 선언(`SW_SUBSYSTEM_SLOT`)은 Core 헤더에 있고 칸 정의 · 등록이 여기 있다. 다른 서브시스템은 제 .cpp 에 등록한다.
+ */
+#include "pch.h"
+
+#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/Event/EventDispatcher.h"
+#include "Core/File/AsyncFileIO.h"
+#include "Core/Task/TaskManager.h"
+
+#include "Engine/Compression/EngineCompressionCodecs.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 엔진 코덱(LZ4 · Zstd · Zlib)의 등록 구독을 듭니다. 레지스트리 바로 뒤에 서서 먼저 내려간다. */
+        class EngineCompressionCodecs final : public Subsystem
+        {
+        public:
+            static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc; ///< 할당 용도(`Subsystem::getSubsystemMemoryTag`)
+            static constexpr const utf8* kSubsystemName      = "EngineCompressionCodecs";
+
+            explicit EngineCompressionCodecs( CompressionCodecRegistry& registry )
+                : _listSubscription{ EngineCompressionCodecUtil::registerAll( registry ) }
+            {
+            }
+
+            SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+            void                shutdownSubsystem() override {}
+            const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+        private:
+            vector<Subscription> _listSubscription;
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( EventDispatcher, GameVisible, GameInstance, Shared, (), SW_ENGINE_DEFAULT_FACTORY( EventDispatcher ) );
+
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( CompressionCodecRegistry, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        (void)scope.emplaceSubsystem<EngineCompressionCodecs>( scope.emplaceSubsystem<CompressionCodecRegistry>() );
+    } );
+
+    // 워커 수는 명령줄 `-workers=N` 이 정한다(없으면 코어 수). 명령줄은 코어 범위에 있어 상위 범위로 올라가며 찾는다 — 공장 범위의 먼저 만들 타입이 아니다.
+    // 게임 모듈에도 보인다 — 키트(계정 서버의 비밀번호 해시 줄 · RTS 길찾기)가 작업 풀을 쓴다(언리얼 게임 모듈도 태스크 그래프를 그대로 쓴다).
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( TaskManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        TaskManager&              taskManager = scope.emplaceSubsystem<TaskManager>();
+        const CommandLineManager& commandLine = getSubsystemFrom<CommandLineManager>( scope.getScope() );
+        int32                     workerCount = 0;
+        if ( commandLine.getArgument( CommandLineArgument::WORKERS, workerCount ) == false )
+            return;
+        if ( workerCount < 1 )
+            reportFatalError( "-workers=%# must be 1 or more", workerCount );
+        taskManager.setSubsystemWorkerCount( static_cast<uint32>( workerCount ) );
+    } );
+
+    // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다. 공장이 태스크 매니저를 찾으므로 그것을 먼저 만든다.
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( AsyncFileIO, HostOnly, Process, Startup, ( TaskManager ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        AsyncFileIOConfig fileIOSettings{};
+        fileIOSettings._pTaskManager = &scope.get<TaskManager>();
+        scope.emplaceSubsystem<AsyncFileIO>().setSubsystemSettings( fileIOSettings );
+    } );
+} // namespace sw

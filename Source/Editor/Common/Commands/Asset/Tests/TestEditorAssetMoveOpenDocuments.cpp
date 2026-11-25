@@ -4,7 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
-#include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 
 using namespace sw;
 using namespace sw::editor;

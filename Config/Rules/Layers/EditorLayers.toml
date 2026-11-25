@@ -41,8 +41,8 @@ SelfTest = 7
 
 # 어느 층에서 include 해도 되는 잎 헤더(위 층을 include 하지 않는다) → 이유. 위 층 껍데기를 놓지 않는다.
 [prelude]
-"Editor/Common/Workspace/EditorSubsystems.h" = "호스트(엔진) 서비스 창구와 활성 씬 바로가기 — Core · ModuleAPI 만 include 하는 잎 헤더라 어느 층에서나 쓴다"
-"Editor/Common/Workspace/EditorStateStore.h" = "에디터 범위 상태 저장소(getEditorState<T>) — Core · EditorSubsystem · EditorService 만 include 하는 잎 헤더라 토대 층(ImGui 백엔드)의 정적 칸 소유자가 쓴다"
+"Editor/Common/Workspace/EditorSubsystems.h" = "호스트(엔진) 서브시스템 창구와 활성 씬 바로가기 — Core · ModuleAPI 만 include 하는 잎 헤더라 어느 층에서나 쓴다"
+"Editor/Common/Workspace/EditorStateStore.h" = "에디터 범위 상태 저장소(getEditorState<T>) — Core · EditorSubsystem · EditorSubsystems 만 include 하는 잎 헤더라 토대 층(ImGui 백엔드)의 정적 칸 소유자가 쓴다"
 "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h" = "프로퍼티 표시 이름 규칙(makeDisplayName · chooseLabel) — Core 만 include 하는 잎 헤더라 프리팹 오버라이드 목록(커맨드 층)도 쓴다"
 "Editor/Viewport/EditorOrbitMath.h" = "궤도 카메라 수식(dolly · panWorldPerPixel) — Core 만 include 하는 순수 수학 잎 헤더라 미리보기 뷰포트(4층)와 씬 뷰가 함께 쓴다"
 "Editor/SelfTest/EditorWatchSupport.h" = "감시 값 대상 전역 변수와 읽기 보조 함수의 선언 — Core 만 include 하는 잎 헤더라 기능 폴더의 *Probes.cpp 가 층을 가리지 않고 쓴다"
@@ -95,7 +95,7 @@ patterns = [
     "^Engine/Scene/",
     "^Engine/.+/Component/",
     "^Engine/Input/InputManager[.]h", # 입력 상태 · 주입은 모델이 쥔다 — View 는 값 묶음(`InputMapDeviceState` · 입력 오버레이 값)과 명령만 쓴다. 열거는 잎 헤더(`InputGlyphStyle.h` · `InputKeyboardFocus.h`)
-    "^Engine/Audio/AudioService[.]h", # 오디오 서비스 · 엔진은 ViewModel 이 찾는다(`AudioMixerViewModel::refresh` · `AudioEventBrowserUtil::readStats`)
+    "^Engine/Audio/AudioSubsystem[.]h", # 오디오 서브시스템 · 엔진은 ViewModel 이 찾는다(`AudioMixerViewModel::refresh` · `AudioEventBrowserUtil::readStats`)
     "^Engine/Audio/AudioEngine[.]h",
     "^Engine/UI/UISystem[.]h",          # UI 시스템은 ViewModel 이 찾는다(`UIPreviewViewModel::isUIRunning`)
     "^Engine/Graphics/RHI/IRHIDevice[.]h", # 장치는 ViewModel 이 값으로 모은다(`ProfilerViewModel::gatherGPUMemory`)
@@ -128,7 +128,7 @@ defaultBan = [
 "Editor/Common/Workspace/Asset/EditorAssetTypeID.h" = "에셋 종류를 가리키는 값과 에디터 전용 종류 id(EditorPanel · 패널 열기 요청이 값으로 든다 — 등록 표 EditorAssetType.h 에서 나눈 잎)"
 "Editor/Common/Workspace/Asset/EditorDiskBaseline.h" = "연 파일의 디스크 내용 해시를 드는 값 형식(문서 패널 바탕이 든다 — Core 와 내보내기만 include)"
 "Editor/Common/Commands/EditorCommandText.h" = "명령의 표시 · 배치 데이터(라벨 · 아이콘 · 메뉴) — 값이고, 허용한 EditorCommandRegistry.h 가 include 한다"
-"Engine/Object/GameObject/Service/ScenePreviewPolicy.h" = "미리보기 씬 틱 정책 값(집합체) — 미리보기 패널이 getPreviewPolicy 로 돌려준다"
+"Engine/Object/GameObject/Subsystem/ScenePreviewPolicy.h" = "미리보기 씬 틱 정책 값(집합체) — 미리보기 패널이 getPreviewPolicy 로 돌려준다"
 "Editor/Common/Commands/Diagnostics/EditorModuleDetail.h" = "모듈 창 상세 한 모듈의 값(집합체) — makeDetail 이 채우고 View 가 그린다"
 "Editor/Common/Commands/EditorBackgroundIO.h" = "백그라운드 잡(요청 · 꺼내기) — 결과 값 헤더와 잡 뼈대(Common/Task)만 include 한다. 작업 본문이 부르는 커맨드는 .cpp 가 본다(Model 이 잡을 값으로 든다)"
 "Editor/Common/Commands/Asset/EditorAssetIndexEntry.h" = "퀵 런처 항목 · 리소스 카탈로그 개수 값"

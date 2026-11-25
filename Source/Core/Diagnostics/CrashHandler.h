@@ -22,7 +22,7 @@ namespace sw
     /**
      * @brief 크래시 문맥 파일(`crash_<세션>.txt`) 끝에 붙일 글을 쓰는 함수입니다. **할당 · 잠금 없이** @p pOutText 에 쓰고 쓴 길이를 돌려줍니다.
      * @details 크래시 시점에 읽어야 하는 소유자 쪽 상태(서버의 최근 틱 이력 링 버퍼 같은 것)를 미리 정해 둔 키-값 대신 그대로 싣는 자리입니다.
-     *          죽어 가는 프로세스에서 새 파일을 쓰지 않고 이미 쓰는 문맥 파일에 얹으므로, 보고 묶음(`CrashReportService`)이 따로 챙길 것이 없습니다.
+     *          죽어 가는 프로세스에서 새 파일을 쓰지 않고 이미 쓰는 문맥 파일에 얹으므로, 보고 묶음(`CrashReportSubsystem`)이 따로 챙길 것이 없습니다.
      */
     using CrashExtraTextWriter = uint32 ( * )( void* pUser, utf8* pOutText, uint32 capacity );
 

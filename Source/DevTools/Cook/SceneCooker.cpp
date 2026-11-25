@@ -131,7 +131,7 @@ namespace sw
              * @brief 데이터 레이어를 넘는 참조를 찾습니다. 대상의 레이어가 가리키는 쪽의 레이어에 모두 들어 있어야 한다 — 그래야 가리키는 쪽이 오를 때 대상이 늘 올라 있다. 셀을 넘는 참조와 같은 규칙이다.
              * @return 위반이 있으면 엔티티마다 오류를 남기고 false 입니다. 레이어를 쓰지 않는 씬은 짓지 않고 true 입니다.
              */
-            [[nodiscard]] static bool validateDataLayerReferences( const SceneEngineServices& services, const SceneDocument& doc, string_view scenePath )
+            [[nodiscard]] static bool validateDataLayerReferences( const SceneEngineSubsystems& services, const SceneDocument& doc, string_view scenePath )
             {
                 bool                                                         bHasLayered = false;
                 unordered_map<uint64, const SceneDocument::SceneObjectNode*> mapNodeByFileID;
@@ -179,7 +179,7 @@ namespace sw
             }
 
             /** @brief 씬 하나를 쿠킹해 @p outputPath 에 씁니다. 작업 범위 안에서 부릅니다 — 씬 · 프리팹 · 그 밖의 읽기가 모두 입력이 된다. */
-            static CookStep cookScene( const SceneEngineServices& services, const TypeRegistry& registry, const AbsolutePath& scenePath, string_view relativeScene,
+            static CookStep cookScene( const SceneEngineSubsystems& services, const TypeRegistry& registry, const AbsolutePath& scenePath, string_view relativeScene,
                                        string_view activePackRoot, const AbsolutePath& outputPath )
             {
                 SceneDocument doc{};
@@ -248,7 +248,7 @@ namespace sw
              * @brief 씬 하나의 합친 HLOD 대리를 메시 하나로 구워 @p outputPath 에 씁니다(`SceneHLODMeshCooker`). 합칠 대리가 없는 씬은 건너뜁니다.
              * @details 대리를 만드는 길은 씬 쿠킹과 같다(묶기 → 셀 나누기) — 입력은 씬이 지어지며 읽은 것과 부품 메시다. 부품 메시를 고치면 이 파일만 다시 굽는다.
              */
-            static CookStep cookHLODMesh( const SceneEngineServices& services, const AbsolutePath& scenePath, const AbsolutePath& outputPath )
+            static CookStep cookHLODMesh( const SceneEngineSubsystems& services, const AbsolutePath& scenePath, const AbsolutePath& outputPath )
             {
                 // 합치기를 켜지 않은 씬은 세우지 않는다 — 글에 설정 칸이 없으면 넘긴다. 작업 안에서 읽어 씬이 이 작업의 입력이 된다.
                 string text;
@@ -280,7 +280,7 @@ namespace sw
              * @brief 씬 하나의 프리로드 목록(`ScenePreloadList`)을 만들어 @p outputPath 에 씁니다. 씬을 런타임과 같은 길로 지어 컴포넌트의 에셋 경로 프로퍼티를 모은다.
              * @details 씬 쿠킹과 따로 도는 작업이다(쿠킹 기록은 작업 하나에 출력 하나). 입력은 씬이 지어지며 읽은 모든 것이라, 프리팹을 고치면 목록도 다시 구워진다.
              */
-            static CookStep cookPreloadList( SceneIterationKey key, const SceneEngineServices& services, const AbsolutePath& scenePath, const AbsolutePath& outputPath )
+            static CookStep cookPreloadList( SceneIterationKey key, const SceneEngineSubsystems& services, const AbsolutePath& scenePath, const AbsolutePath& outputPath )
             {
                 SceneDocument doc{};
                 if ( doc.loadXMLFromDiskFile( scenePath ) == false )
@@ -310,7 +310,7 @@ namespace sw
 
 namespace sw
 {
-    uint32 SceneCooker::cookEntityState( const SceneEngineServices& services, SceneDocument& inoutDoc, uint32* pOutMissingComponentCount )
+    uint32 SceneCooker::cookEntityState( const SceneEngineSubsystems& services, SceneDocument& inoutDoc, uint32* pOutMissingComponentCount )
     {
         if ( pOutMissingComponentCount != nullptr )
             *pOutMissingComponentCount = 0;
@@ -410,7 +410,7 @@ namespace sw
         return cookedCount;
     }
 
-    uint32 SceneCooker::cookAllScenes( const SceneEngineServices& services, const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store,
+    uint32 SceneCooker::cookAllScenes( const SceneEngineSubsystems& services, const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store,
                                        const uint64 reflectionFingerprint, uint32& outFailedCount )
     {
         outFailedCount = 0;
@@ -512,7 +512,7 @@ namespace sw
         return stats.getWrittenCount();
     }
 
-    bool SceneCooker::packStaticMeshes( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view scenePath )
+    bool SceneCooker::packStaticMeshes( const SceneEngineSubsystems& services, SceneDocument& inoutDoc, string_view scenePath )
     {
         // 묶을 주인: 묶는 씬을 넣은 앵커(파일 id)와, 문서 자신이 묶는 씬이면 맨 위(0).
         unordered_set<uint64> uniquePackedAnchor;

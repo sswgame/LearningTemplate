@@ -13,11 +13,11 @@
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/MaterialParameterCollection.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 
 namespace sw
 {
-    SW_SCENE_SERVICE( SceneEnvironment, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
+    SW_SCENE_SUBSYSTEM( SceneEnvironment, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     SceneEnvironment::SceneEnvironment( GameObjectManager& manager )
         : _manager{ manager }

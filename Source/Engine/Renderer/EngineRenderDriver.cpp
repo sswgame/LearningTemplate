@@ -40,7 +40,7 @@
 #include "Engine/Renderer/SceneRHISubsystem.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
@@ -77,7 +77,7 @@ namespace sw
         , _pPacketBuilder{ nullptr }
         , _pSceneManager{ nullptr }
         , _pUISystem{ nullptr }
-        , _pFontService{ nullptr }
+        , _pFontSubsystem{ nullptr }
         , _mainWindowResizeSubscription{}
         , _mainWindowLifecycleSubscription{}
         , _deviceLostPolicy{ RHIDeviceLostPolicy::None }
@@ -116,7 +116,7 @@ namespace sw
         _pPacketBuilder = &_frameRendererSubsystem.getPacketBuilder();
         _pSceneManager  = findSubsystemFrom<SceneManager>( &_startupScope );
         _pUISystem      = findSubsystemFrom<UISystem>( &_startupScope );
-        _pFontService   = findSubsystemFrom<FontService>( &_startupScope );
+        _pFontSubsystem = findSubsystemFrom<FontSubsystem>( &_startupScope );
         // 렌더 스레드가 앞 패킷을 그리며 엔진 설정(`_render`)을 읽는다 — 설정을 제자리에서 덮는 길(품질 옵션 · 파일 다시 읽기)은 받은 패킷을 끝낸 뒤에 덮는다.
         if ( ConfigManager* const pConfigManager = engine::findSubsystem<ConfigManager>() )
             pConfigManager->setWriteFence( SW_DELEGATE_METHOD( ConfigWriteFenceDelegate, &EngineRenderDriver::flushSubmittedPackets, this ) );
@@ -374,7 +374,7 @@ namespace sw
             // 미리보기 씬(에디터 툴 창)은 씬마다 자기 스냅샷 · 렌더 타깃으로 — 활성 씬과 섞이지 않는다.
             if ( _pSceneManager != nullptr )
                 _pPacketBuilder->populateScenePreviews( packet, views, *_pSceneManager );
-            _pPacketBuilder->populateCanvas( packet, views.isSceneViewMain(), _pUISystem, _pFontService, _pRHI );
+            _pPacketBuilder->populateCanvas( packet, views.isSceneViewMain(), _pUISystem, _pFontSubsystem, _pRHI );
             _pPacketBuilder->resolveMarkerInstanceSlots( packet, _pUISystem, pActiveScene );
 
             if ( _pRenderThread != nullptr )

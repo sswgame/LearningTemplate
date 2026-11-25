@@ -7,7 +7,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/IFontRasterizer.h"
@@ -433,7 +433,7 @@ namespace sw
 
 namespace sw
 {
-    void CanvasPainter::drawLine( CanvasPainter& painter, FontService& fontService, string_view text, const float2& origin, const CanvasGlyphStyle& style, uint64 frameIndex )
+    void CanvasPainter::drawLine( CanvasPainter& painter, FontSubsystem& fontService, string_view text, const float2& origin, const CanvasGlyphStyle& style, uint64 frameIndex )
     {
         const FontFaceChain chain      = fontService.getFaceChain( FontSpec{} );
         CanvasGlyphStyle    glyphStyle = style;

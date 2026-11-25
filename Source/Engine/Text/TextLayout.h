@@ -12,7 +12,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 #include "Engine/Text/ITextShaper.h"
 #include "Engine/Text/RichTextParser.h"
 #include "Engine/Text/TextMeasureCache.h"
@@ -138,7 +138,7 @@ namespace sw
     class SW_API TextLayoutEngine
     {
     public:
-        explicit TextLayoutEngine( FontService& fontService );
+        explicit TextLayoutEngine( FontSubsystem& fontService );
 
         TextLayoutEngine( const TextLayoutEngine& )            = delete;
         TextLayoutEngine& operator=( const TextLayoutEngine& ) = delete;
@@ -157,7 +157,7 @@ namespace sw
         float2 measure( string_view text, const TextLayoutStyle& style, float32 maxWidth, const vector<RichTextSpan>* pListSpan = nullptr );
         /**
          * @brief 측정 캐시를 비웁니다. 지금 부르는 곳은 없습니다.
-         * @details 폰트 교체 · 문화권 변경에 연결하지 않는 까닭: 키가 면 연쇄(면 번호는 `FontService` 가 처음 여는 순서로 매기고 다시 쓰지 않는다)를 담고, 문화권의 대체 폰트는
+         * @details 폰트 교체 · 문화권 변경에 연결하지 않는 까닭: 키가 면 연쇄(면 번호는 `FontSubsystem` 가 처음 여는 순서로 매기고 다시 쓰지 않는다)를 담고, 문화권의 대체 폰트는
          *          연쇄를 바꾸므로(`UISystem::updateBindings` 가 `invalidateFaceChains` 를 부르면 다음 측정은 새 연쇄로 키를 만든다) 낡은 항목은 부딪히지 않고 세대 교대로 사라진다.
          *          배치가 폰트 메트릭과 연쇄 말고 문화권을 읽지도 않는다(셰이퍼에 언어 인자가 없다). 면의 메트릭이 같은 번호로 바뀌는 길이 생기면 그 알림에서 이것을 부른다.
          */
@@ -172,7 +172,7 @@ namespace sw
         [[nodiscard]] bool resolveGlyphLevels( string_view text, TextDirection paragraphDirection );
 
     private:
-        FontService&            _fontService;
+        FontSubsystem&          _fontService;
         unique_ptr<ITextShaper> _pShaper;               ///< 이 빌드의 셰이퍼(`ITextShaper::createDefault` — 단순 또는 복합 문자)
         vector<ShapingRun>      _listRunScratch;        ///< 런 나누기 결과입니다.
         vector<ShapedGlyph>     _listShapedScratch;     ///< 셰이핑 결과(논리 순서)

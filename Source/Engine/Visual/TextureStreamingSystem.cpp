@@ -1,6 +1,6 @@
 /**
  * @file TextureStreamingSystem.cpp
- * @brief 텍스처 밉 요청 우선순위입니다 — 화면에서 큰 메시가 쓰는 텍스처의 위쪽 밉을 먼저 올리게 `TextureCache` 에 화면 크기를 알립니다. 씬 서비스(`ISceneService`)라 매니저마다 하나 있고,
+ * @brief 텍스처 밉 요청 우선순위입니다 — 화면에서 큰 메시가 쓰는 텍스처의 위쪽 밉을 먼저 올리게 `TextureCache` 에 화면 크기를 알립니다. 씬 서브시스템(`ISceneSubsystem`)라 매니저마다 하나 있고,
  *        `SceneFrameStep::FlushEnd` 단계(그리기 전)에서 돕니다.
  * @details 텍스처 밉 스트리밍(`TextureCache::updateStreaming`)은 아래쪽 밉으로 먼저 보이고 위쪽 밉을 프레임에 둘씩 바꿔 끼운다. 순서가 읽힌 차례뿐이면 멀리 있는 작은 물체의 텍스처가 가까운 큰 물체보다
  *          먼저 선명해질 수 있다(언리얼 텍스처 스트리머는 보이는 것의 wanted mip 부터 올린다). 여기서는 메시 컴포넌트마다 `MeshLODSystem` 이 쓰는 같은 화면 크기(경계 구의 화면 높이 비율, 주 시점 ·
@@ -28,8 +28,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-#include "Engine/Object/GameObject/Service/ISceneService.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -38,11 +38,11 @@
 namespace sw
 {
     /** @class TextureStreamingSystem @brief 씬 하나의 텍스처 밉 요청 우선순위 알림입니다. 파일 머리말 참고. */
-    class TextureStreamingSystem final : public ISceneService
+    class TextureStreamingSystem final : public ISceneSubsystem
     {
     public:
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
+        /** @brief 씬 서브시스템 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "TextureStreamingSystem";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
@@ -82,7 +82,7 @@ namespace sw
                          "Texture mip requests waiting, reading or uploading (the texture load queue, ordered by streaming priority then screen size; world.streamqueue lists them)",
                          &readTextureStreamingQueueCount );
 
-    SW_SCENE_SERVICE( TextureStreamingSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
+    SW_SCENE_SUBSYSTEM( TextureStreamingSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     TextureStreamingSystem::TextureStreamingSystem( GameObjectManager& manager )
         : _manager{ manager }

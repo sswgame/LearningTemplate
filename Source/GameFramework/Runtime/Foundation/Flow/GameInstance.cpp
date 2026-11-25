@@ -155,7 +155,7 @@ namespace sw
         SW_LOG_ERROR_ID( "GameInstance.GameScopedServiceAlready", "Game scoped service %# is already bound to another instance - two kits share one service type", typeHash );
     }
 
-    bool GameInstance::validateEngineServices( const GenericWindow* pWindow )
+    bool GameInstance::validateEngineSubsystems( const GenericWindow* pWindow )
     {
         // 네트워크 세션은 필수 엔진 서비스다(`SW_SUBSYSTEM_SLOT( GameNetSession, Required )`, 게임 노출). 없으면 세션 없이 조용히 도는 대신 아무것도 걸기 전에 멈춘다.
         if ( game::findSubsystem<GameNetSession>() == nullptr )
@@ -182,7 +182,7 @@ namespace sw
             return false;
         }
         // 필수 엔진 서비스가 없으면 아무것도 걸기 전에 멈춘다. 쓰는 곳(입력 맵 · 세션 명령 · 설정 재적용)은 그 자리에서 게임 창구로 찾는다.
-        if ( validateEngineServices( pWindow ) == false )
+        if ( validateEngineSubsystems( pWindow ) == false )
             return false;
         _pWindow = pWindow;
         if ( startInstance() == false )
@@ -257,7 +257,7 @@ namespace sw
         GameNetWireContent                 wireContent;
         wireContent._contentConfigHash    = pContent != nullptr ? pContent->getContentConfigHash() : 0;
         wireContent._replicatedSchemaHash = replicatedChannel.computeSchemaHash();
-        GameNetSession& netSession        = game::getSubsystem<GameNetSession>(); // `validateEngineServices` 가 있음을 확인했다
+        GameNetSession& netSession        = game::getSubsystem<GameNetSession>(); // `validateEngineSubsystems` 가 있음을 확인했다
         netSession.getConnectSecurity().setProvider( &game::getSubsystem<INetSecurityProvider>() );
         _bSecuritySet         = SW_TRUE;
         _clientSessionOpening = netSession.onClientOpening().add( SW_DELEGATE_METHOD( Delegate<void()>, &GameInstance::onClientSessionOpening, this ) );

@@ -21,7 +21,7 @@
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
@@ -96,7 +96,7 @@ namespace sw::editor
         if ( pContext == nullptr || pLayout == nullptr )
             return;
         EditorPlayLayoutState&        layout = *pLayout;
-        IEditorPanelService&          panels = pContext->getSubsystem<IEditorPanelService>();
+        IEditorPanelSubsystem&        panels = pContext->getSubsystem<IEditorPanelSubsystem>();
         const EditorPlayStateSnapshot play   = EditorPlaySession::getUIState(); // UI 쪽 — 게임 스레드가 넘긴 세션 전이를 본다
         if ( play.isStopped() )
         {

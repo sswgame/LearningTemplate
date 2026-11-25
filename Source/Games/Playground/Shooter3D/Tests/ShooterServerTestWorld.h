@@ -15,7 +15,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"

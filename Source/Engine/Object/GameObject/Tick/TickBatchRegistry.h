@@ -56,7 +56,7 @@ namespace sw
     /**
      * @class TickBatchRegistry
      * @brief 타입 → 일괄 틱 함수의 레지스트리입니다(서비스 범위의 서브시스템 — 등록 줄). 파일 머리말 참고.
-     * @details 씬은 생성 때 받은 서비스 묶음의 칸(`SceneEngineServices::_pTickBatchRegistry`)으로 읽는다 — 칸이 비면(엔진 없는 테스트 매니저) 일괄 경로가 없다.
+     * @details 씬은 생성 때 받은 서비스 묶음의 칸(`SceneEngineSubsystems::_pTickBatchRegistry`)으로 읽는다 — 칸이 비면(엔진 없는 테스트 매니저) 일괄 경로가 없다.
      * @note 조회(`findFunction`)는 게임 스레드에서 틱 밖(`TickRegistry::refresh`)에만 합니다. 등록 · 해제는 모듈을 올리고 내리는 스레드에서 옵니다.
      */
     class SW_API TickBatchRegistry final : public Subsystem

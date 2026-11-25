@@ -9,7 +9,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/UI/Service/UISubtitleService.h"
+#include "Engine/UI/Overlay/UISubtitleSubsystem.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/World/WidgetComponent.h"
@@ -107,7 +107,7 @@ namespace sw
         [[nodiscard]] bool readSubtitleSpeaker( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             (void)query;
-            const UISubtitleService* pSubtitles = engine::findSubsystem<UISubtitleService>();
+            const UISubtitleSubsystem* pSubtitles = engine::findSubsystem<UISubtitleSubsystem>();
             if ( pSubtitles == nullptr )
             {
                 outValue.setText( "no subtitle service" );
@@ -119,9 +119,9 @@ namespace sw
         }
 
         /** @brief 자막 서비스입니다. 없으면(UI 없는 실행) 까닭을 적고 nullptr 입니다. */
-        const UISubtitleService* findSubtitles( AutomationWatchValue& outValue )
+        const UISubtitleSubsystem* findSubtitles( AutomationWatchValue& outValue )
         {
-            const UISubtitleService* pSubtitles = engine::findSubsystem<UISubtitleService>();
+            const UISubtitleSubsystem* pSubtitles = engine::findSubsystem<UISubtitleSubsystem>();
             if ( pSubtitles == nullptr )
                 outValue.setText( "no subtitle service" );
             return pSubtitles;
@@ -131,7 +131,7 @@ namespace sw
         [[nodiscard]] bool readSubtitleLineCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             (void)query;
-            const UISubtitleService* pSubtitles = findSubtitles( outValue );
+            const UISubtitleSubsystem* pSubtitles = findSubtitles( outValue );
             if ( pSubtitles == nullptr )
                 return false;
             outValue.setNumber( static_cast<float64>( pSubtitles->getActiveLineCount() ) );
@@ -142,7 +142,7 @@ namespace sw
         [[nodiscard]] bool readSubtitleShown( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             (void)query;
-            const UISubtitleService* pSubtitles = findSubtitles( outValue );
+            const UISubtitleSubsystem* pSubtitles = findSubtitles( outValue );
             if ( pSubtitles == nullptr )
                 return false;
             outValue.setNumber( pSubtitles->getScreen() != kInvalidUIScreenHandle ? 1.0 : 0.0 );
@@ -153,7 +153,7 @@ namespace sw
         [[nodiscard]] bool readSubtitleTextSize( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             (void)query;
-            const UISubtitleService* pSubtitles = findSubtitles( outValue );
+            const UISubtitleSubsystem* pSubtitles = findSubtitles( outValue );
             if ( pSubtitles == nullptr )
                 return false;
             outValue.setNumber( static_cast<float64>( pSubtitles->makeLayoutReport()._newestTextFontSize ) );
@@ -164,7 +164,7 @@ namespace sw
         [[nodiscard]] bool readSubtitleWrappedLines( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             (void)query;
-            const UISubtitleService* pSubtitles = findSubtitles( outValue );
+            const UISubtitleSubsystem* pSubtitles = findSubtitles( outValue );
             if ( pSubtitles == nullptr )
                 return false;
             outValue.setNumber( static_cast<float64>( pSubtitles->makeLayoutReport()._maxWrappedLineCount ) );
@@ -175,7 +175,7 @@ namespace sw
         [[nodiscard]] bool readSubtitleOverflow( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             (void)query;
-            const UISubtitleService* pSubtitles = findSubtitles( outValue );
+            const UISubtitleSubsystem* pSubtitles = findSubtitles( outValue );
             if ( pSubtitles == nullptr )
                 return false;
             outValue.setNumber( pSubtitles->makeLayoutReport()._bOverflow ? 1.0 : 0.0 );

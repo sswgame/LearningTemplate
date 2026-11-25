@@ -148,7 +148,7 @@ namespace sw
         /** @brief 캐시를 비웁니다. 디코드 중인 요청의 결과는 도착하면 다시 들어갑니다. */
         void clear();
 
-        /** @brief 캐시 예산(바이트)을 정하고 바로 맞춥니다. `AudioService::initialize` 가 설정 값으로 부른다 — 정하기 전(0)에는 퇴출하지 않는다. */
+        /** @brief 캐시 예산(바이트)을 정하고 바로 맞춥니다. `AudioSubsystem::initialize` 가 설정 값으로 부른다 — 정하기 전(0)에는 퇴출하지 않는다. */
         void setBudgetBytes( uint64 budgetBytes );
         /** @brief 지금 캐시에 든 클립 바이트의 합입니다(감시 값 `Audio.ClipCacheBytes`). 재생 중이라 못 뺀 클립 때문에 예산보다 클 수 있다. */
         uint64 getCachedBytes() const;

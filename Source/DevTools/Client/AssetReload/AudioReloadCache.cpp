@@ -9,7 +9,7 @@
 
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
@@ -20,7 +20,7 @@ namespace sw
     {
         /**
          * @class AudioReloadCache
-         * @brief 오디오 데이터 파일(`*.audiomixer.xml`, `*.audioevents.xml`)의 어댑터입니다. 그래프와 라이브러리는 `AudioService` 가 가집니다.
+         * @brief 오디오 데이터 파일(`*.audiomixer.xml`, `*.audioevents.xml`)의 어댑터입니다. 그래프와 라이브러리는 `AudioSubsystem` 가 가집니다.
          * @details 에디터의 핫 리로드 경로 표가 이 접미사를 "경로를 든 캐시가 읽는다" 경로로 돌리면 `isCached` 를 아는 이 캐시가 받는다.
          */
         class AudioReloadCache final : public AssetCacheBase
@@ -38,14 +38,14 @@ namespace sw
             /** @brief 그 경로가 지금 쓰는 믹서 그래프나 이벤트 라이브러리의 파일이면 true 입니다. */
             bool isCached( string_view relativePath ) const override
             {
-                const AudioService* pAudio = engine::findSubsystem<AudioService>();
+                const AudioSubsystem* pAudio = engine::findSubsystem<AudioSubsystem>();
                 return pAudio != nullptr && pAudio->isDataFile( relativePath );
             }
 
-            /** @brief 그 파일을 다시 읽어 바꿉니다(`AudioService::reloadDataFile`). 실패하면 서비스가 오류로 남기고 지금 것을 그대로 씁니다. */
+            /** @brief 그 파일을 다시 읽어 바꿉니다(`AudioSubsystem::reloadDataFile`). 실패하면 서비스가 오류로 남기고 지금 것을 그대로 씁니다. */
             [[nodiscard]] ReloadResult reload( const AssetID& assetID )
             {
-                AudioService* const pAudio = engine::findSubsystem<AudioService>();
+                AudioSubsystem* const pAudio = engine::findSubsystem<AudioSubsystem>();
                 if ( pAudio == nullptr || pAudio->isDataFile( assetID.view() ) == false )
                     return ReloadResult::NotTracked;
                 return pAudio->reloadDataFile( assetID ) ? ReloadResult::Reloaded : ReloadResult::Failed;
@@ -54,7 +54,7 @@ namespace sw
             /** @brief 서비스가 들고 있는 데이터 파일 수의 하한(믹서 그래프가 파일이면 1)입니다. */
             size_t getCachedCount() const override
             {
-                const AudioService* pAudio = engine::findSubsystem<AudioService>();
+                const AudioSubsystem* pAudio = engine::findSubsystem<AudioSubsystem>();
                 return pAudio != nullptr && pAudio->getMixerPath().empty() == false ? 1u : 0u;
             }
 

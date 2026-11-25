@@ -1,4 +1,4 @@
-// 표면 변형 층 — 도장 모양(SurfaceStampDef), 높이 격자(SurfaceDeformGrid: 찍기 · 겹침 · 메우기 · 창 옮기기 · 텍스처 인코딩 · 젖은 자국), 씬 서비스(SurfaceDeformSystem: 붙잡기 · 놓기 · 띠),
+// 표면 변형 층 — 도장 모양(SurfaceStampDef), 높이 격자(SurfaceDeformGrid: 찍기 · 겹침 · 메우기 · 창 옮기기 · 텍스처 인코딩 · 젖은 자국), 씬 서브시스템(SurfaceDeformSystem: 붙잡기 · 놓기 · 띠),
 // 발걸음 반응(SurfaceFootprintSystem: 발자국 · 젖은 발)(nogpu).
 #include "pch.h"
 

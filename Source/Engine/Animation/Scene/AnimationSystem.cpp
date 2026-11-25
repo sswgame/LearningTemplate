@@ -15,7 +15,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
@@ -130,7 +130,7 @@ namespace sw
 
 namespace sw
 {
-    SW_SCENE_SERVICE( AnimationSystem, Animation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::AnimatorState, SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
+    SW_SCENE_SUBSYSTEM( AnimationSystem, Animation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::AnimatorState, SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
 
     AnimationSystem::AnimationSystem( GameObjectManager& manager )
         : _skeletalMeshList{}

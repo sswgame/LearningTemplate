@@ -1243,7 +1243,7 @@ namespace sw
 
     span<const utf8* const> UserSettingsManager::getSubsystemDependencies() const
     {
-        // 오디오는 이 뒤에 서지 않는다 — 오디오가 스스로 앞에 선다고 적는다(`AudioService::getSubsystemDependents`, 서버는 오디오를 짓지 않는다).
+        // 오디오는 이 뒤에 서지 않는다 — 오디오가 스스로 앞에 선다고 적는다(`AudioSubsystem::getSubsystemDependents`, 서버는 오디오를 짓지 않는다).
         static constexpr const utf8* kArrDependency[] = { InputManager::kSubsystemName, AssetManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName };
         return kArrDependency;
     }

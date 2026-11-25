@@ -13,9 +13,9 @@
 
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
+#include "Engine/UI/Overlay/UINotificationSubsystem.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Screen/UIScreenSwitch.h"
-#include "Engine/UI/Service/UINotificationService.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
@@ -169,7 +169,7 @@ namespace sw
                 hint._text            = "[action=UI.Accept] Select";
                 hint._durationSeconds = 600.0f;
                 hint._kind            = UINotificationKind::Hint;
-                game::getSubsystem<UINotificationService>().post( hint );
+                game::getSubsystem<UINotificationSubsystem>().post( hint );
                 return screen;
             }
         };

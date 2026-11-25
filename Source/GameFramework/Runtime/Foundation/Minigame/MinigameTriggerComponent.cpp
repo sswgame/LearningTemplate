@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/IMinigameMatchmaking.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"

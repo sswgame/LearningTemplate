@@ -18,7 +18,7 @@
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Play/EditorSceneGenerationSync.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
@@ -170,7 +170,7 @@ namespace sw::editor
 
     void EditorSceneFileCommands::saveFocusedOrScene()
     {
-        if ( editor::getSubsystem<IEditorPanelService>().saveFocusedDirtyDocument() )
+        if ( editor::getSubsystem<IEditorPanelSubsystem>().saveFocusedDirtyDocument() )
             return;
         saveActiveSceneOrPrompt();
     }
@@ -184,7 +184,7 @@ namespace sw::editor
         EditorNotificationManager& notifications = editor::getSubsystem<EditorNotificationManager>();
         if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) )
         {
-            if ( editor::getSubsystem<IEditorPanelService>().saveAllDirtyDocuments() == false )
+            if ( editor::getSubsystem<IEditorPanelSubsystem>().saveAllDirtyDocuments() == false )
             {
                 notifications.push( SW_LOCKEY( "EdCommon", "NotifyEditorTitle" ), SW_LOCKEY( "EdCommon", "NotifyDocumentSaveFailed" ), NotificationKind::Error );
                 return;
@@ -211,7 +211,7 @@ namespace sw::editor
         if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
         {
             ws.clearSceneDirty();
-            editor::getSubsystem<IEditorPanelService>().discardAllDirtyDocuments();
+            editor::getSubsystem<IEditorPanelSubsystem>().discardAllDirtyDocuments();
         }
 
         if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
@@ -238,7 +238,7 @@ namespace sw::editor
             return false;
 
         const bool   bSceneDirty = workspace.isSceneDirty();
-        const uint32 dirtyDocs   = editor::getSubsystem<IEditorPanelService>().countDirtyDocuments();
+        const uint32 dirtyDocs   = editor::getSubsystem<IEditorPanelSubsystem>().countDirtyDocuments();
         if ( EditorSessionPolicy::needsQuitPrompt( bSceneDirty, dirtyDocs ) == false )
             return true;
 

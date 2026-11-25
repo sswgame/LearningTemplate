@@ -11,7 +11,7 @@
  *          - 거기 닿는 길: 프레임 시스템은 `FrameSystems` 단계(틱 앞)에서 돈다. `runMain` 이 틱 뒤 큐에 일을 넣고(`ApplyPrePhysics` 에서 돈다), 그 일이 다시 넣은 일은
  *            다음 비우기 — `ApplyPostPhysics` 의 맨 앞 — 로 간다(`DeferredDelegateQueue` 는 비우는 중에 넣은 일을 다음 비우기로 넘긴다는 약속). 그 사이 비우기는 없다.
  *          - 틱 밖에서 부른 `updateCamera`(시작 · 프리셋 바꾸기 · 상태 복원)는 예전처럼 바로 푼다 — 깃발은 틱 안에서만 선다.
- *          - 왜 씬 서비스가 아닌가: 씬 서비스 표(`SW_SCENE_SERVICE`)는 Engine 이미지 안에서만 채운다. 첫 카메라 컴포넌트의 `onRegister` 가 붙이고 마지막의 `onUnregister` 가 뗀다.
+ *          - 왜 씬 서브시스템이 아닌가: 씬 서브시스템 표(`SW_SCENE_SUBSYSTEM`)는 Engine 이미지 안에서만 채운다. 첫 카메라 컴포넌트의 `onRegister` 가 붙이고 마지막의 `onUnregister` 가 뗀다.
  */
 #pragma once
 #include "Core/Container/vector.h"

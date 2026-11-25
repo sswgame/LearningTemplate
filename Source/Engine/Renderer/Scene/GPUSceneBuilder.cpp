@@ -1572,7 +1572,7 @@ namespace sw
         _transparentSorter.setAxis( axis );
     }
 
-    /** @brief 씬 서비스가 낸 입자를 스냅샷에 싣습니다(`GPUSceneBuilder::populateParticleBatches`). */
+    /** @brief 씬 서브시스템이 낸 입자를 스냅샷에 싣습니다(`GPUSceneBuilder::populateParticleBatches`). */
     struct GPUSceneBuilderParticleSink final : public ISceneParticleSink
     {
         GPUSceneBuilder&         _builder;

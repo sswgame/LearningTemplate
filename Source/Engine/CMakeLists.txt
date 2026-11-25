@@ -56,7 +56,7 @@ foreach(excluded_folder IN LISTS SW_EXCLUDED_ENGINE_FOLDERS)
 	message(STATUS "[Engine] ${SW_TARGET_TYPE} target: Engine/${excluded_folder} is not built")
 endforeach()
 
-# 오디오를 짓는 구성(클라이언트 · 에디터)은 플랫폼 장치 백엔드(`Audio/<플랫폼>/*AudioBackend.cpp`)를 정확히 하나 담는다 — 없으면 기동에서 `AudioService::create` 가
+# 오디오를 짓는 구성(클라이언트 · 에디터)은 플랫폼 장치 백엔드(`Audio/<플랫폼>/*AudioBackend.cpp`)를 정확히 하나 담는다 — 없으면 기동에서 `AudioSubsystem::create` 가
 # 치명 오류로 섰다(감사 P0-11). 구성에서 멈춰 빌드 오류로 옮긴다. 언리얼 AudioMixer 는 플랫폼마다 백엔드 모듈이 있고 없는 플랫폼은 패키징 대상이 아니다.
 if(NOT "Audio" IN_LIST SW_EXCLUDED_ENGINE_FOLDERS)
 	set(list_audio_backend_source ${ENGINE_SOURCES})

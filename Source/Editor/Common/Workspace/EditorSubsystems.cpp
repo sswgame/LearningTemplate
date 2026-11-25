@@ -13,7 +13,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -157,15 +157,15 @@ namespace sw::editor
     CommandStack* getFocusedCommandStack()
     {
         assertEditorThread();
-        const EditorFocus* const         pFocus  = findSubsystem<EditorFocus>();
-        CommandStack* const              pMain   = findSubsystem<CommandStack>();
-        const IEditorPanelService* const pPanels = findSubsystem<IEditorPanelService>(); // 셸 없는 테스트 호스트에는 패널이 없다
+        const EditorFocus* const           pFocus  = findSubsystem<EditorFocus>();
+        CommandStack* const                pMain   = findSubsystem<CommandStack>();
+        const IEditorPanelSubsystem* const pPanels = findSubsystem<IEditorPanelSubsystem>(); // 셸 없는 테스트 호스트에는 패널이 없다
         if ( pPanels == nullptr )
             return pMain;
         uint32                          focusedWindowID{ 0 };
         vector<EditorPanelCommandStack> listPanel;
         pPanels->collectPanelCommandStacks( focusedWindowID, listPanel );
-        return IEditorPanelService::chooseFocusedCommandStack( focusedWindowID, listPanel, pFocus != nullptr ? string_view( pFocus->_focusedPanelID ) : string_view{}, pMain );
+        return IEditorPanelSubsystem::chooseFocusedCommandStack( focusedWindowID, listPanel, pFocus != nullptr ? string_view( pFocus->_focusedPanelID ) : string_view{}, pMain );
     }
 
     void setFocusedPanel( string_view panelID )

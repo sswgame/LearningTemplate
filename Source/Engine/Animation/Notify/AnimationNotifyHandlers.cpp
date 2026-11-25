@@ -21,7 +21,7 @@
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Presentation/ISoundPlayer.h"
 #include "Engine/VFX/VFXEffectPool.h"
@@ -54,7 +54,7 @@ namespace sw
             static ISoundPlayer* findSoundPlayer( const AnimationNotifyContext& context )
             {
                 GameObjectManager* pManager = context._owner.getMutableManager();
-                return pManager != nullptr ? findSubsystemFrom<ISoundPlayer>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
+                return pManager != nullptr ? findSubsystemFrom<ISoundPlayer>( pManager->getSceneEngineSubsystems()._pEngineSubsystems ) : nullptr;
             }
 
             /** @class PlaySoundHandler @brief 소켓 위치에서 소리를 냅니다(현재 오디오는 위치를 받지 않으므로, 위치는 기록에만 남깁니다). */

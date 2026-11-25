@@ -36,7 +36,7 @@ namespace sw
 
 namespace sw
 {
-    bool SceneNavigationCooker::cookScene( const SceneEngineServices& services, const AssetID& assetID, NavMeshAsset& outAsset )
+    bool SceneNavigationCooker::cookScene( const SceneEngineSubsystems& services, const AssetID& assetID, NavMeshAsset& outAsset )
     {
         const string_view sceneAssetPath = assetID.view();
         outAsset                         = NavMeshAsset{};
@@ -85,7 +85,7 @@ namespace sw
         return bAll;
     }
 
-    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
+    uint32 SceneNavigationCooker::cookAll( const SceneEngineSubsystems& services, const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
                                            uint32& outFailedCount )
     {
         using Internal = SceneNavigationCookerInternal;

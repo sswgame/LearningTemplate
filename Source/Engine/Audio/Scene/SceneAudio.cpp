@@ -7,7 +7,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Audio/Component/AudioEmitterComponent.h"
 #include "Engine/Audio/Component/AudioListenerComponent.h"
 #include "Engine/Audio/Component/AudioReverbZoneComponent.h"
@@ -18,9 +18,9 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
-#include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
+#include "Engine/Object/GameObject/Subsystem/ScenePreviewPolicy.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
@@ -112,7 +112,7 @@ namespace sw
             /** @brief 감시 값 `Audio.OutputUnderruns` 입니다. 지금 스트림이 연 뒤 장치가 알린 언더런 수입니다(출력이 닫혀 있으면 0). */
             [[nodiscard]] static bool readOutputUnderruns( const GameObjectManager* pManager, float64& outValue )
             {
-                const AudioService* pService = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioService() : nullptr;
+                const AudioSubsystem* pService = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioSubsystem() : nullptr;
                 if ( pService == nullptr )
                     return false;
                 outValue = static_cast<float64>( pService->getOutputUnderrunCount() );
@@ -122,7 +122,7 @@ namespace sw
             /** @brief 감시 값 `Audio.RetireOverflows` 입니다. 반납 큐가 차서 오디오 스레드가 직접 놓은 명령 수입니다. */
             [[nodiscard]] static bool readRetireOverflows( const GameObjectManager* pManager, float64& outValue )
             {
-                const AudioService* pService = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioService() : nullptr;
+                const AudioSubsystem* pService = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioSubsystem() : nullptr;
                 if ( pService == nullptr )
                     return false;
                 outValue = static_cast<float64>( pService->getEngine().getRetireOverflowCount().get() );
@@ -165,7 +165,7 @@ namespace sw
 namespace sw
 {
     // 진행은 `Scene::update` 이 카메라와 함께 부른다 — 단계는 자리만 정하고 `update( deltaTime )` 은 빈 함수다.
-    SW_SCENE_SERVICE( SceneAudio, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
+    SW_SCENE_SUBSYSTEM( SceneAudio, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     SceneAudio::SceneAudio( GameObjectManager& manager )
         : _listener{ "SceneAudio.Listener", SW_DELEGATE_METHOD( RegistrationList<AudioListenerComponent>::ReleaseFunction, &SceneAudio::releaseListener, this ) }
@@ -176,7 +176,7 @@ namespace sw
         , _listZoneValue{}
         , _listZoneCurrent{}
         , _manager{ manager }
-        , _pAudioService{ findSubsystemFrom<AudioService>( manager.getSceneEngineServices()._pEngineSubsystems ) }
+        , _pAudioSubsystem{ findSubsystemFrom<AudioSubsystem>( manager.getSceneEngineSubsystems()._pEngineSubsystems ) }
         , _pEngineOverride{ nullptr }
         , _pOcclusionOverride{ nullptr }
         , _primaryListenerPosition{}
@@ -223,9 +223,9 @@ namespace sw
         if ( _pEngineOverride != nullptr )
             return _pEngineOverride;
         // 포인터는 생성할 때 받은 것이고, 오디오가 올라와 있는지는 부를 때마다 본다.
-        if ( _pAudioService == nullptr || _pAudioService->isInitialized() == false )
+        if ( _pAudioSubsystem == nullptr || _pAudioSubsystem->isInitialized() == false )
             return nullptr;
-        return &_pAudioService->getEngine();
+        return &_pAudioSubsystem->getEngine();
     }
 
     Subscription SceneAudio::addListener( AudioListenerComponent* pListener )

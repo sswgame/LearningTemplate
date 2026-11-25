@@ -9,7 +9,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 using namespace sw;

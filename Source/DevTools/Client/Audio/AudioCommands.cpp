@@ -4,7 +4,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 
@@ -22,7 +22,7 @@ namespace sw
             {
                 if ( listArgument.size() != 1 )
                     return false;
-                AudioService* const pAudio = engine::findSubsystem<AudioService>();
+                AudioSubsystem* const pAudio = engine::findSubsystem<AudioSubsystem>();
                 if ( pAudio == nullptr || pAudio->isInitialized() == false )
                 {
                     outReply = "audio.post: no audio service";

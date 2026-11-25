@@ -1,11 +1,11 @@
-// AudioServiceTest — 장치 출력을 잃으면 서비스가 오프라인 렌더로 넘기고 백오프 간격으로 기본 장치를 다시 연다(감사 P0-13). 가짜 출력 장치 — 장치 스레드 없음.
+// AudioSubsystemTest — 장치 출력을 잃으면 서비스가 오프라인 렌더로 넘기고 백오프 간격으로 기본 장치를 다시 연다(감사 P0-13). 가짜 출력 장치 — 장치 스레드 없음.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Config/EngineConfig.h"
 
 namespace
@@ -28,7 +28,7 @@ namespace
             s_bDeviceAvailable = true;
             s_deviceLayout     = sw::AudioChannelLayout::Stereo;
         }
-        static sw::unique_ptr<sw::IAudioOutputDevice> create( sw::AudioService& /*service*/ ) { return sw::make_unique<FakeOutputDevice>(); }
+        static sw::unique_ptr<sw::IAudioOutputDevice> create( sw::AudioSubsystem& /*service*/ ) { return sw::make_unique<FakeOutputDevice>(); }
 
         bool openDevice( sw::AudioOutputDevice& outDevice ) override
         {
@@ -61,14 +61,14 @@ namespace
 } // namespace
 
 /**
- * @brief [AudioServiceTest] 잃은 출력은 오프라인 렌더로 넘기고(흐른 시간만큼만), 장치가 돌아오면 다시 연다
+ * @brief [AudioSubsystemTest] 잃은 출력은 오프라인 렌더로 넘기고(흐른 시간만큼만), 장치가 돌아오면 다시 연다
  * @details 예전에는 ALSA 가 복원에 지면 쉬지 않고 다시 썼고(오디오 시계가 실시간보다 빨리 흘렀다) XAudio2 는 유실을 몰라 렌더가 멈췄다 — 재생 끝남을 기다리는 게임 로직이 영영 기다렸다.
  *          변이: `closeLostOutput` 을 빼면 오프라인 단언이, 오프라인 렌더를 빼면 프레임 아래 끝이, `retryOpenOutput` 을 빼면 마지막 단언이 진다.
  */
-SW_TEST_CASE( AudioServiceTest, OutputLossFallsBackToOfflineRender )
+SW_TEST_CASE( AudioSubsystemTest, OutputLossFallsBackToOfflineRender )
 {
     FakeOutputDevice::reset();
-    sw::AudioService service{ &FakeOutputDevice::create };
+    sw::AudioSubsystem service{ &FakeOutputDevice::create };
     SW_REQUIRE_TRUE( service.initialize( makeOutputConfig() ) );
     SW_REQUIRE_TRUE( service.isOutputOpen() );
 
@@ -76,7 +76,7 @@ SW_TEST_CASE( AudioServiceTest, OutputLossFallsBackToOfflineRender )
 
     const int32  openCountBeforeLoss = FakeOutputDevice::s_openCount;
     const uint64 framesBeforeLoss    = service.getEngine().getStats()._renderedFrameCount;
-    SW_EXPECT_LOG( "AudioService.OutputLost" );
+    SW_EXPECT_LOG( "AudioSubsystem.OutputLost" );
     service.notifyOutputLost(); // 장치 스레드가 알린다
     service.update( 0.1f );     // 닫고 오프라인으로
     SW_EXPECT_FALSE( service.isOutputOpen() );
@@ -99,19 +99,19 @@ SW_TEST_CASE( AudioServiceTest, OutputLossFallsBackToOfflineRender )
 }
 
 /**
- * @brief [AudioServiceTest] 5.1 장치를 잃고 스테레오 장치가 기본이 되면(헤드폰을 꽂음) 자동 스피커 모드는 스테레오로 내려 다시 연다
+ * @brief [AudioSubsystemTest] 5.1 장치를 잃고 스테레오 장치가 기본이 되면(헤드폰을 꽂음) 자동 스피커 모드는 스테레오로 내려 다시 연다
  * @details 변이: 다시 열 때 지금 레이아웃(5.1)의 채널 수만 보면 스테레오 장치를 끝없이 거절해 출력이 열리지 않는다.
  */
-SW_TEST_CASE( AudioServiceTest, ReopenFollowsTheNewDeviceLayout )
+SW_TEST_CASE( AudioSubsystemTest, ReopenFollowsTheNewDeviceLayout )
 {
     FakeOutputDevice::reset();
     FakeOutputDevice::s_deviceLayout = sw::AudioChannelLayout::Surround51;
-    sw::AudioService service{ &FakeOutputDevice::create };
+    sw::AudioSubsystem service{ &FakeOutputDevice::create };
     SW_REQUIRE_TRUE( service.initialize( makeOutputConfig() ) );
     SW_REQUIRE_TRUE( service.getEngine().getChannelLayout() == sw::AudioChannelLayout::Surround51 );
 
     FakeOutputDevice::s_deviceLayout = sw::AudioChannelLayout::Stereo;
-    SW_EXPECT_LOG( "AudioService.OutputLost" );
+    SW_EXPECT_LOG( "AudioSubsystem.OutputLost" );
     service.notifyOutputLost();
     for ( int32 tick = 0; tick < 40 && ( tick == 0 || service.isOutputOpen() == false ); ++tick )
         service.update( 0.1f ); // 백오프(1 · 2 초 …) 안에 다시 연다
@@ -119,26 +119,26 @@ SW_TEST_CASE( AudioServiceTest, ReopenFollowsTheNewDeviceLayout )
     SW_EXPECT_TRUE( service.getEngine().getChannelLayout() == sw::AudioChannelLayout::Stereo );
 }
 
-/** @brief [AudioServiceTest] 다시 열기 상한이 첫 간격보다 작으면 초기화가 실패한다 — 코드 기본값으로 대신하지 않는다. */
-SW_TEST_CASE( AudioServiceTest, InvalidReopenDelayFailsInitialize )
+/** @brief [AudioSubsystemTest] 다시 열기 상한이 첫 간격보다 작으면 초기화가 실패한다 — 코드 기본값으로 대신하지 않는다. */
+SW_TEST_CASE( AudioSubsystemTest, InvalidReopenDelayFailsInitialize )
 {
     FakeOutputDevice::reset();
-    sw::AudioService service{ &FakeOutputDevice::create };
-    sw::AudioConfig  config  = makeOutputConfig();
-    config._reopenMaxDelayMs = config._reopenFirstDelayMs - 1;
-    SW_EXPECT_LOG( "AudioService.InvalidReopenDelay" );
+    sw::AudioSubsystem service{ &FakeOutputDevice::create };
+    sw::AudioConfig    config = makeOutputConfig();
+    config._reopenMaxDelayMs  = config._reopenFirstDelayMs - 1;
+    SW_EXPECT_LOG( "AudioSubsystem.InvalidReopenDelay" );
     SW_EXPECT_FALSE( service.initialize( config ) );
     SW_EXPECT_EQUAL( 0, FakeOutputDevice::s_openCount );
 }
 
 /**
- * @brief [AudioServiceTest] 앱이 멈추면 출력을 닫고 멈춘 동안은 렌더 · 다시 열기를 하지 않으며, 돌아오면 다음 갱신이 바로 연다(감사 P-6)
+ * @brief [AudioSubsystemTest] 앱이 멈추면 출력을 닫고 멈춘 동안은 렌더 · 다시 열기를 하지 않으며, 돌아오면 다음 갱신이 바로 연다(감사 P-6)
  * @details Android onPause · 브라우저 탭 숨김에 소리가 계속 나던 자리다. 변이: `update` 의 멈춤 확인을 빼면 렌더 단언이, `resumeOutput` 의 대기 0 을 빼면 마지막 단언이 진다.
  */
-SW_TEST_CASE( AudioServiceTest, SuspendClosesOutputUntilResume )
+SW_TEST_CASE( AudioSubsystemTest, SuspendClosesOutputUntilResume )
 {
     FakeOutputDevice::reset();
-    sw::AudioService service{ &FakeOutputDevice::create };
+    sw::AudioSubsystem service{ &FakeOutputDevice::create };
     SW_REQUIRE_TRUE( service.initialize( makeOutputConfig() ) );
     SW_REQUIRE_TRUE( service.isOutputOpen() );
 

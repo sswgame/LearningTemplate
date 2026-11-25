@@ -58,7 +58,7 @@ namespace sw::editor
         NetSimConfig config  = settings._harness;
         config._pSceneSource = _pSceneSource.get();
         _pHarness            = make_unique<NetSimHarness>();
-        if ( _pHarness->initialize( pSceneManager->getEngineServices(), config, _pGame.get() ) == false )
+        if ( _pHarness->initialize( pSceneManager->getSceneEngineSubsystems(), config, _pGame.get() ) == false )
         {
             stop();
             return unexpected( Error{ ErrorKind::ExternalFailure, "the harness did not start (see the log)" } );

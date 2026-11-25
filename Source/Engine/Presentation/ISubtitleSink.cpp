@@ -6,6 +6,6 @@
 
 namespace sw
 {
-    // 구현(`UISubtitleService`)이 범위에 인터페이스로 건다. 게임 모듈도 읽는다.
+    // 구현(`UISubtitleSubsystem`)이 범위에 인터페이스로 건다. 게임 모듈도 읽는다.
     SW_ENGINE_SUBSYSTEM_SLOT( ISubtitleSink, GameVisible );
 } // namespace sw

@@ -112,7 +112,7 @@ namespace sw
      *          GPU 컬링이 인스턴스마다 절두체로 거른다. 페이드 구간에서는 정점 셰이더가 인스턴스를 뿌리 쪽으로 줄여 사라지게 한다.
      *          바람(`WindComponent`), 카메라 위치, 휘게 하는 구(`FoliageInfluencerComponent`), 시간은 틱마다 레이어 머티리얼 인스턴스에 싣는다.
      *          인스턴스마다 위상은 셰이더가 위치 해시로 정하고, 밝기 흔들기는 인스턴스 색 필드(`GPUSpriteInstanceData` 의 tint)로 받는다.
-     *          지형을 고치면(`writeHeights` · `writeLayerWeights` · `reloadTerrain`) 높이장 · 스플랫 세대가 오른다. 씬 서비스(`FoliageTerrainFollower`)가 프레임마다
+     *          지형을 고치면(`writeHeights` · `writeLayerWeights` · `reloadTerrain`) 높이장 · 스플랫 세대가 오른다. 씬 서브시스템(`FoliageTerrainFollower`)이 프레임마다
      *          그 변화를 보고, 세대가 `kTerrainStabilityFrames` 프레임 그대로이면(브러시 드래그가 끝나면) 배치를 다시 계산한다 — 칠하는 프레임마다 숲 전체를 다시 뿌리지 않는다.
      *          프레임으로 세는 것은 편집 모드의 씬 프레임에 흐르는 시간이 없어서다(시간으로 세면 편집 모드에서 영영 가라앉지 않았다).
      *          다시 계산은 **바뀐 곳만** 한다. 레이어마다 후보의 표면 판정(`PlacementCandidate`)을 들고 있다가 지형이 알려 준 편집 사각형(`TerrainComponent::findEditedArea`)
@@ -262,7 +262,7 @@ namespace sw
         void markCellsDirty();
         /**
          * @brief 아래 지형의 세대 변화를 따라가다 `kTerrainStabilityFrames` 프레임 그대로이면 true 입니다 - 부르는 쪽이 이어서 `refreshFromTerrainEdits` 를 부른다.
-         * @details 씬 서비스 `FoliageTerrainFollower` 가 프레임마다 부른다 - 컴포넌트 틱이 아니라서 편집 모드(플레이 전)에서도 지형 붓질을 따라간다.
+         * @details 씬 서브시스템 `FoliageTerrainFollower` 가 프레임마다 부른다 - 컴포넌트 틱이 아니라서 편집 모드(플레이 전)에서도 지형 붓질을 따라간다.
          *          예전에는 틱이 불러 편집 모드에서는 붓질 뒤 폴리지가 낡은 채 남았다.
          */
         [[nodiscard]] bool followTerrainEdits( const GameObjectManager& manager );

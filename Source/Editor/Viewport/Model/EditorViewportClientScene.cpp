@@ -8,7 +8,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 #include "Editor/Viewport/EditorViewportCamera.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorGizmoEdit.h"
@@ -97,11 +97,11 @@ namespace sw::editor
 
     bool EditorViewportClientScene::maximizeSceneView()
     {
-        return editor::getSubsystem<EditorContext>().getSubsystem<IEditorPanelService>().maximizePanel( editorpanel::kSceneView );
+        return editor::getSubsystem<EditorContext>().getSubsystem<IEditorPanelSubsystem>().maximizePanel( editorpanel::kSceneView );
     }
 
     bool EditorViewportClientScene::restoreMaximizedLayout()
     {
-        return editor::getSubsystem<EditorContext>().getSubsystem<IEditorPanelService>().restoreMaximizedLayout();
+        return editor::getSubsystem<EditorContext>().getSubsystem<IEditorPanelSubsystem>().restoreMaximizedLayout();
     }
 } // namespace sw::editor

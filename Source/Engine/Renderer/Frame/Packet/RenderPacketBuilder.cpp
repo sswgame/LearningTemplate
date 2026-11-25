@@ -120,8 +120,8 @@ namespace sw
         _scene.resolveMarkerInstanceSlots( packet, pUISystem, pActiveScene );
     }
 
-    void RenderPacketBuilder::populateCanvas( RenderFramePacket& packet, bool bSceneMain, UISystem* pUISystem, FontService* pFontService, const RHI* pRHI )
+    void RenderPacketBuilder::populateCanvas( RenderFramePacket& packet, bool bSceneMain, UISystem* pUISystem, FontSubsystem* pFontSubsystem, const RHI* pRHI )
     {
-        _canvas.populate( packet, bSceneMain, pUISystem, pFontService, pRHI );
+        _canvas.populate( packet, bSceneMain, pUISystem, pFontSubsystem, pRHI );
     }
 } // namespace sw
