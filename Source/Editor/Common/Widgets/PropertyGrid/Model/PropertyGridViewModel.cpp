@@ -605,14 +605,14 @@ namespace sw::editor
             row._kind      = pEnumInfo->_bIsBitFlag ? PropertyRowKind::BitFlagEnum : PropertyRowKind::Enum;
             row._enumValue = pEnumInfo->readValueFromMemory( pEnumMemory );
             Internal::formatEnumPreview( registry, *pEnumInfo, prop, row._enumValue, row._valueText );
-            // 선언 순서로 보이고 `Count` 표식은 선택지가 아니다(`EnumInfo::_listEnumerator`). `ENUMERATOR( Hidden )` 은 숨기고 표시 이름을 쓴다.
+            // 선언 순서로 보이고 `Count` 표식은 선택지가 아니다(`EnumInfo::_listEnumerator`). `ENUMERATOR( Hidden )` 은 숨기고 표시 이름은 현지화한 글이다.
             for ( const EnumeratorInfo& enumerator : pEnumInfo->_listEnumerator )
             {
                 const EnumeratorEditorMetadata& display = pEnumInfo->findEnumeratorEditorMetadata( enumerator._name );
                 if ( display._bHidden != SW_FALSE )
                     continue;
-                const string label = display._displayName.empty() ? string( enumerator._name.toString() ) : display._displayName;
-                row._listChoice.push_back( PropertyEnumChoice{ enumerator._name, label, display._tooltip, enumerator._value } );
+                const string label = display._displayName.empty() ? string( enumerator._name.toString() ) : string( LocalizedText::findEnum( pEnumInfo, enumerator._value ) );
+                row._listChoice.push_back( PropertyEnumChoice{ enumerator._name, label, LocalizedText::findEnumTooltip( pEnumInfo, enumerator._value ), enumerator._value } );
             }
             return;
         }

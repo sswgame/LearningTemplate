@@ -15,6 +15,7 @@
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Localization/Tests/LocalizationTestUtil.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 
 using sw::test::LocalizationTestUtil;
@@ -468,6 +469,26 @@ SW_TEST_CASE( LocalizedMessageTest, ResolvesInTheLanguageOfTheMoment )
     SW_EXPECT_EQUAL( string( "도끼\n도끼: 30에 살까요?" ), LocalizedText::resolve( &localization, lines ) );
     SW_EXPECT_EQUAL( string( "도끼" ), LocalizedText::resolve( &localization, "Item.Axe" ) ); // 인자 없는 키
     SW_EXPECT_EQUAL( string( "plain" ), LocalizedText::resolve( &localization, "plain" ) );   // 표에 없는 글은 그대로
+}
+
+/**
+ * @brief [LocalizedMessageTest] 열거값의 보일 글 — 키는 `Enum.<열거형>.<열거자>` 이고, 표에 없으면 원문(DisplayName)을, 원문도 없으면 열거자 이름을 돌려준다
+ * @details 음성 대조: 키를 열거형 FQN(`sw::TestMetaEnum`)으로 만들면 수집기가 넣은 키와 어긋나 첫 기대와 표 조회가 진다. 범위 밖 값이 이름을 지어내면 마지막 기대가 진다.
+ */
+SW_TEST_CASE( LocalizedMessageTest, EnumeratorDisplayTextUsesEnumKey )
+{
+    SW_EXPECT_EQUAL( string( "Enum.TestMetaEnum.First" ), LocalizedText::makeEnumKey( TestMetaEnum::First ) );
+    SW_EXPECT_EQUAL( string( "First Choice" ), string( LocalizedText::findEnum( TestMetaEnum::First ) ) );
+    SW_EXPECT_EQUAL( string( "The first one" ), string( LocalizedText::findEnumTooltip( TestMetaEnum::First ) ) );
+    SW_EXPECT_EQUAL( string( "Second" ), string( LocalizedText::findEnum( TestMetaEnum::Second ) ) );
+    SW_EXPECT_EQUAL( string(), string( LocalizedText::findEnumTooltip( TestMetaEnum::Second ) ) );
+    SW_EXPECT_EQUAL( string( "Unknown" ), string( LocalizedText::findEnum( static_cast<TestMetaEnum>( 7 ) ) ) );
+
+    // 화면이 든 키는 그릴 때의 표로 풀린다(배포는 메타 없이 이 길만 쓴다).
+    LocalizationManager localization;
+    localization.setString( "ko", hashed_string( "Enum.TestMetaEnum.First" ), "첫째" );
+    SW_REQUIRE_TRUE( localization.setCurrentLanguage( "ko" ) );
+    SW_EXPECT_EQUAL( string( "첫째" ), LocalizedText::resolve( &localization, LocalizedText::makeEnumKey( TestMetaEnum::First ) ) );
 }
 
 /** @brief [LocalizedMessageTest] 글 인자와 글 그대로인 조각은 키로 풀지 않고, 안에 든 구분 문자는 지워져 다른 메시지가 되지 않는다(플레이어가 친 글) */
