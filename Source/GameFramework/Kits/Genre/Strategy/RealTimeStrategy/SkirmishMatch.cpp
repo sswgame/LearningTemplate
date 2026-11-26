@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 
@@ -135,7 +135,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "SkirmishMatch.MapLayoutPlacesBut", "[Skirmish] the map places '%#' but the unit catalog has no such unit - the match cannot start", placement._unitID.c_str() );
                 bValid = false;
             }
-            if ( placement._owner != RTSWorld::kNoOwner && ( placement._owner < 0 || placement._owner >= playerCount ) )
+            if ( placement._owner != RTSSimulation::kNoOwner && ( placement._owner < 0 || placement._owner >= playerCount ) )
             {
                 SW_LOG_ERROR_ID( "SkirmishMatch.MapOwnerUnknown", "[Skirmish] the map places '%#' for player %# but has %# players - the match cannot start", placement._unitID.c_str(), placement._owner, playerCount );
                 bValid = false;
@@ -209,7 +209,7 @@ namespace sw
             if ( player._pAI != nullptr )
                 player._pAI->update( worldDelta );
         }
-        // `RTSWorld::pollEvents` 는 뒤에 붙인다(바꿔 넣지 않는다) — 비우지 않으면 지난 알림을 AI 에 다시 넘긴다.
+        // `RTSSimulation::pollEvents` 는 뒤에 붙인다(바꿔 넣지 않는다) — 비우지 않으면 지난 알림을 AI 에 다시 넘긴다.
         _listFrameEvent.clear();
         _world.pollEvents( _eventLease, _listFrameEvent );
         for ( const RTSEvent& event : _listFrameEvent )

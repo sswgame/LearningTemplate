@@ -1,6 +1,6 @@
 /**
  * @file AssetCookRoot.h
- * @brief 코드가 이름(리터럴 경로)으로 읽는 엔진 에셋의 등록표입니다 — 팩 쿠킹의 뿌리가 됩니다(`PackReachResult`).
+ * @brief 코드가 이름(리터럴 경로)으로 읽는 엔진 에셋의 등록표입니다 — 팩 쿠킹의 뿌리가 됩니다(`PackReachableSet`).
  * @details 쓰는 것만 담는 쿠킹은 참조 칸을 따라가므로, 칸이 아니라 코드 상수로 읽는 파일(`AudioSubsystem::kDefaultMixerPath` 등)은 그 길로 보이지 않는다.
  *          그 상수를 가진 기능이 자기 .cpp 에 `SW_ASSET_COOK_ROOT` 한 줄로 같은 상수를 올린다 — 경로가 상수 한 곳에만 있어 규칙이 한 벌이다.
  *          데이터 표(`EngineDefaultAssets`)로 옮기지 않은 까닭: 이 넷(믹서 · 2D 설정 · 블렌드 프리셋 · 물리 설정)은 서비스 없이도 읽힌다 — 이름 검증(`PhysicsNameValidation`)과
@@ -20,7 +20,7 @@ namespace sw
 {
     /**
      * @struct AssetCookRoot
-     * @brief 코드 뿌리(리소스 id) 하나의 등록 줄과 그 표입니다. 표는 프로세스 값이고 정적 등록자가 채웁니다. 경로는 정적 글(상수)이어야 한다.
+     * @brief 코드 뿌리(에셋 id) 하나의 등록 줄과 그 표입니다. 표는 프로세스 값이고 정적 등록자가 채웁니다. 경로는 정적 글(상수)이어야 한다.
      */
     struct SW_API AssetCookRoot
     {

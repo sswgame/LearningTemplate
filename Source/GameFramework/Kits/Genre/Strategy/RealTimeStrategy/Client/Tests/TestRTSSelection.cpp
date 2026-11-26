@@ -5,13 +5,13 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSCommandInputComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/SkirmishGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSimulation.h"
 
 using namespace sw;
 
@@ -30,7 +30,7 @@ namespace
     struct SelectionWorld
     {
         Wallet            _arrWallet[2];
-        RTSWorld          _world;
+        RTSSimulation     _world;
         vector<RTSUnitID> _arrArmy[2];
 
         bool setUp( const RTSCatalog& catalog )

@@ -18,8 +18,8 @@ namespace sw
      *          받는 쪽이 없어도 되는 알림은 상한이 있는 `NotificationBuffer` 로 든다 — 상한 없는 이 버퍼는 놓치면 안 되는 것(끝난 요청 · 명령)과 소유 쪽이 늘 비우는 것만 쓴다.
      *          언리얼 `TQueue` 를 프레임마다 비우는 용도 · 유니티 이벤트 큐와 같은 역할이지만 스레드 안전하지 않습니다 — 한 스레드(게임 스레드)용입니다.
      * @code
-     *     void RTSWorld::pushEvent( ... ) { _eventBuffer.push( event ); }
-     *     void RTSWorld::pollEvents( vector<RTSEvent>& outListEvent ) { _eventBuffer.moveAllTo( outListEvent ); }
+     *     void RTSSimulation::pushEvent( ... ) { _eventBuffer.push( event ); }
+     *     void RTSSimulation::pollEvents( vector<RTSEvent>& outListEvent ) { _eventBuffer.moveAllTo( outListEvent ); }
      * @endcode
      */
     template <typename T, size_t kMaxPending = 0>

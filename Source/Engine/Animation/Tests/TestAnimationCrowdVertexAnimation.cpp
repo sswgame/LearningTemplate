@@ -54,7 +54,7 @@ namespace
             SW_EXPECT_TRUE( clip->compressFrom( test::makeChainRawClip( *_skeleton, 31u, 30.0f, 0.5f ), *pCodec, AnimationCodecSettings{}, nullptr ) );
             _clip = std::move( clip );
 
-            vector<RHIVertex> listVertex( 3u );
+            vector<MeshVertex> listVertex( 3u );
             for ( size_t index = 0; index < listVertex.size(); ++index )
             {
                 listVertex[index]._arrPosition[0] = static_cast<float32>( index % 2u );

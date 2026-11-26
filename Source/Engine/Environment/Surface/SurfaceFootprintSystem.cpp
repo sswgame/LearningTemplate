@@ -18,11 +18,11 @@ namespace sw
 {
     uint32 SurfaceFootstepRecord::getCount( const hashed_string& kind ) const
     {
-        const SurfaceFootstepKindNote* pNote = findKind( kind );
+        const SurfaceFootstepKindStats* pNote = findKind( kind );
         return pNote != nullptr ? pNote->_count : 0;
     }
 
-    const SurfaceFootstepKindNote* SurfaceFootstepRecord::findKind( const hashed_string& kind ) const
+    const SurfaceFootstepKindStats* SurfaceFootstepRecord::findKind( const hashed_string& kind ) const
     {
         const auto found = _mapKind.find( kind );
         return found != _mapKind.end() ? &found->second : nullptr;
@@ -30,7 +30,7 @@ namespace sw
 
     void SurfaceFootstepRecord::note( const hashed_string& kind, const SurfaceStepResponse& step, bool bWet )
     {
-        SurfaceFootstepKindNote& note = _mapKind[kind];
+        SurfaceFootstepKindStats& note = _mapKind[kind];
         ++note._count;
         note._lastSound  = step._sound;
         note._lastEffect = step._effect.isSet() ? step._effect.get() : string{};

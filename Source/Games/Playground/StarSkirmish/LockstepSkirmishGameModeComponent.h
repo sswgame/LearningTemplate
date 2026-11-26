@@ -12,7 +12,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/SkirmishGameModeComponent.h"
 
-#include "Games/Playground/StarSkirmish/SkirmishLockstepLink.h"
+#include "Games/Playground/StarSkirmish/SkirmishLockstepSession.h"
 
 namespace sw
 {
@@ -37,14 +37,14 @@ namespace sw
         /** @brief 2 인 대전이면 다음 락스텝 입력에 싣고 -1(아직 적용 전), 아니면 바탕 그대로입니다. */
         int32 submitCommand( RTSCommand&& command ) override;
         /** @brief 2 인 대전이면 거절하고 알립니다 — 두 프로세스가 같은 걸음이어야 한다. */
-        bool                        submitTimeInput( bool bPauseTriggered, bool bFasterTriggered, bool bSlowerTriggered ) override;
-        const SkirmishLockstepLink& getLockstep() const { return _lockstep; }
+        bool                           submitTimeInput( bool bPauseTriggered, bool bFasterTriggered, bool bSlowerTriggered ) override;
+        const SkirmishLockstepSession& getLockstep() const { return _lockstep; }
 
     protected:
         [[nodiscard]] optional<uint8> openPlayers( bool bAutoPlay ) override;
         void                          stepMatch( GameSeconds frameTime ) override;
 
     private:
-        SW_TRANSIENT SkirmishLockstepLink _lockstep; ///< 2 인 대전(넷 세션이 열렸을 때)의 락스텝. 판 상태가 아니라 세이브에 싣지 않는다
+        SW_TRANSIENT SkirmishLockstepSession _lockstep; ///< 2 인 대전(넷 세션이 열렸을 때)의 락스텝. 판 상태가 아니라 세이브에 싣지 않는다
     };
 } // namespace sw

@@ -35,7 +35,7 @@ namespace
     shared_ptr<Mesh> makeTriangle()
     {
         const shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
-        vector<RHIVertex>      listVertex( 3 );
+        vector<MeshVertex>     listVertex( 3 );
         listVertex[1]._arrPosition[0] = 1.0f;
         listVertex[2]._arrPosition[1] = 1.0f;
         const bool bSet               = mesh->setGeometry( std::move( listVertex ), vector<uint32>{ 0, 1, 2 } ); // 값 셋 · 인덱스 셋 — 늘 맞다
@@ -48,7 +48,7 @@ namespace
     shared_ptr<Mesh> makeWideMesh( uint32 vertexCount )
     {
         const shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
-        const bool             bSet = mesh->setGeometry( vector<RHIVertex>( vertexCount ), vector<uint32>{ 0, 1, 2 } );
+        const bool             bSet = mesh->setGeometry( vector<MeshVertex>( vertexCount ), vector<uint32>{ 0, 1, 2 } );
         SW_ASSERT( bSet );
         (void)bSet;
         return mesh;
@@ -68,7 +68,7 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, ProxyMeshFillsByGPUCopy )
     SW_REQUIRE_TRUE( mesh->getRenderData().initRHI( &device ) );
     const RHIBufferHandle proxy = mesh->getRenderData().getVertexBuffer();
 
-    GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
+    GPUMeshVertexPool pool{ MeshVertexFormat::Packed };
     SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() }, kMaxPoolVertices ) );
     SW_EXPECT_EQUAL( 1u, factory._gpuVertexBufferCount );  // 풀 정점 버퍼는 GPU 전용이다
     SW_EXPECT_EQUAL( 0u, factory._structuredUpdateCount ); // CPU 정점을 올리지 않았다
@@ -87,7 +87,7 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, ProxyMeshFillsByGPUCopy )
     SW_EXPECT_EQUAL( static_cast<uint64>( placement._baseVertex ) * constant::render::kMeshPositionStride, position._destinationOffset );
     SW_EXPECT_EQUAL( uint64{ 3u * constant::render::kMeshPositionStride }, position._sizeBytes );
     SW_EXPECT_EQUAL( static_cast<uint64>( mesh->getAttributeStreamOffset() ), attribute._sourceOffset );
-    SW_EXPECT_EQUAL( static_cast<uint64>( pool.getAttributeOffset() ) + static_cast<uint64>( placement._baseVertex ) * constant::render::getMeshAttributeStride( RHIMeshVertexFormat::Packed ),
+    SW_EXPECT_EQUAL( static_cast<uint64>( pool.getAttributeOffset() ) + static_cast<uint64>( placement._baseVertex ) * constant::render::getMeshAttributeStride( MeshVertexFormat::Packed ),
                      attribute._destinationOffset );
     SW_EXPECT_EQUAL( list._transitionCount, 8u ); // 복사 둘 × (앞 둘 + 뒤 둘) — 복사마다 원본 · 도착을 앞 · 뒤로 전이한다
     pool.release( &device );
@@ -109,7 +109,7 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, CopiesOfARemovedMeshAreDropped )
     {
         SW_REQUIRE_TRUE( mesh->getRenderData().initRHI( &device ) );
     }
-    GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
+    GPUMeshVertexPool pool{ MeshVertexFormat::Packed };
     SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get() }, kMaxPoolVertices ) ); // 기록하지 않는 프레임
     SW_EXPECT_EQUAL( 2u, GPUMeshVertexPoolTestAccess::getPendingCopyCount( pool ) );
     SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshB.get() }, kMaxPoolVertices ) ); // A 가 나가고 B 가 들어온다
@@ -139,7 +139,7 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, MeshWithoutProxyUploadsCPUVertices )
     device._pResourceFactory    = &factory;
     const shared_ptr<Mesh> mesh = makeTriangle();
 
-    GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
+    GPUMeshVertexPool pool{ MeshVertexFormat::Packed };
     SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() }, kMaxPoolVertices ) );
     SW_EXPECT_EQUAL( 0u, GPUMeshVertexPoolTestAccess::getPendingCopyCount( pool ) );
     SW_EXPECT_EQUAL( 1u, factory._structuredUpdateCount );
@@ -165,7 +165,7 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, PartlyPlacedMeshesRefillFromTheirProxyO
     {
         SW_REQUIRE_TRUE( mesh->getRenderData().initRHI( &device ) );
     }
-    GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
+    GPUMeshVertexPool pool{ MeshVertexFormat::Packed };
     SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get() }, kMaxPoolVertices ) );
     test::FakeRHICommandList firstList{ 0 };
     pool.recordPendingCopies( firstList, device );
@@ -203,13 +203,13 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, NewContentAtSameAddressIsNotACacheHit )
     device._pResourceFactory    = &factory;
     const shared_ptr<Mesh> mesh = makeTriangle();
 
-    GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
+    GPUMeshVertexPool pool{ MeshVertexFormat::Packed };
     SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() }, kMaxPoolVertices ) );
     SW_EXPECT_EQUAL( 1u, factory._structuredUpdateCount );
     SW_EXPECT_FALSE( pool.update( &device, vector<Mesh*>{ mesh.get() }, kMaxPoolVertices ) ); // 같은 내용 — 올릴 것이 없다
 
-    const Mesh* const pAddress = mesh.get();
-    vector<RHIVertex> listVertex( 3 );
+    const Mesh* const  pAddress = mesh.get();
+    vector<MeshVertex> listVertex( 3 );
     listVertex[1]._arrPosition[0] = 2.0f;
     listVertex[2]._arrPosition[1] = 2.0f;
     SW_REQUIRE_TRUE( mesh->setGeometry( std::move( listVertex ), vector<uint32>{ 0, 1, 2 } ) );
@@ -234,12 +234,12 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, LimitComesFromTheCaller )
     {
         listIndex.push_back( index );
     }
-    SW_REQUIRE_TRUE( mesh->setGeometry( vector<RHIVertex>( kSmallLimit + 2u ), std::move( listIndex ) ) );
+    SW_REQUIRE_TRUE( mesh->setGeometry( vector<MeshVertex>( kSmallLimit + 2u ), std::move( listIndex ) ) );
     SW_EXPECT_LOG( "GPUMeshVertexPool.VertexPoolFullVertices" );
-    GPUMeshVertexPool small{ RHIMeshVertexFormat::Packed };
+    GPUMeshVertexPool small{ MeshVertexFormat::Packed };
     (void)small.update( &device, vector<Mesh*>{ mesh.get() }, kSmallLimit );
     SW_EXPECT_TRUE( small.getPlacementOf( mesh.get() )._baseVertex == GPUMeshVertexPool::kInvalidBase );
-    GPUMeshVertexPool large{ RHIMeshVertexFormat::Packed };
+    GPUMeshVertexPool large{ MeshVertexFormat::Packed };
     (void)large.update( &device, vector<Mesh*>{ mesh.get() }, kMaxPoolVertices );
     SW_EXPECT_TRUE( large.getPlacementOf( mesh.get() )._baseVertex != GPUMeshVertexPool::kInvalidBase );
 }

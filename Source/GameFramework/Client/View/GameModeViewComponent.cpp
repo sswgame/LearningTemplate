@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
 
 namespace sw::fixture
 {

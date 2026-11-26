@@ -11,8 +11,8 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -92,7 +92,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr FormatDef kStateFormat{ "CLOK" };
+        static constexpr FormatDesc kStateFormat{ "CLOK" };
 
         WorldClock();
 

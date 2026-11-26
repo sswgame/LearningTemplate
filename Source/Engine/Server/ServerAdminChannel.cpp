@@ -3,7 +3,7 @@
 #include "Engine/Server/ServerAdminChannel.h"
 
 #include "Core/Log/Logger.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ShutdownSignal.h"

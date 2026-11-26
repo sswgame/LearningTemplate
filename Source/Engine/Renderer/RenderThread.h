@@ -15,6 +15,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"

@@ -4,7 +4,7 @@
 
 namespace sw
 {
-    class CommandLineManager;
+    class CommandLine;
 
     /**
      * @class GameSelection
@@ -20,7 +20,7 @@ namespace sw
     {
     public:
         /** @brief 명령줄로 게임을 고릅니다. 그 게임이 이 빌드에 없으면(이름 오타, `SW_GAMES` 에 없는 게임) 오류를 남기고 false 입니다. */
-        [[nodiscard]] static bool select( const CommandLineManager& commandLine );
+        [[nodiscard]] static bool select( const CommandLine& commandLine );
 
         /** @brief 고른 게임 이름입니다. 고르기 전이면 기본 게임(Dev: 빌드의 활성 게임, Shipping: 베이크한 게임)입니다. */
         static string getName();

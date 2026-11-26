@@ -14,13 +14,13 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
@@ -60,7 +60,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr FormatDef kStateFormat{ "MVTN" };
+        static constexpr FormatDesc kStateFormat{ "MVTN" };
 
         CreatureTownGameModeComponent();
         virtual ~CreatureTownGameModeComponent() override;

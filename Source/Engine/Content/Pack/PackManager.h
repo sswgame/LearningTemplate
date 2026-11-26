@@ -87,7 +87,7 @@ namespace sw
         bool hasFile( string_view relativePath ) const;
         /**
          * @brief 패치 팩(도메인 없이 전체 경로로 담은 팩 — 패치 사슬 · 모드)이 전체 경로 @p relativePath 를 가지면 true 입니다. 패치 팩이 없으면 잠금 없이 false 다.
-         * @details 낱개 파일을 먼저 읽는 구성(소스 구성 · 붙인 디스크 도메인)에서 리소스 입구(`AssetIO`)가 패치 팩을 낱개 파일보다 먼저 보게 하는 질의다 —
+         * @details 낱개 파일을 먼저 읽는 구성(소스 구성 · 붙인 디스크 도메인)에서 에셋 입구(`AssetIO`)가 패치 팩을 낱개 파일보다 먼저 보게 하는 질의다 —
          *          언리얼 pak 이 낱개 파일 위에 서고(`FPakPlatformFile`), Godot 의 `load_resource_pack( replace_files )` 가 `res://` 를 덮는 것과 같은 자리다.
          *          그러지 않으면 소스 구성에서 모드의 덮어쓰기가 조용히 빠진다.
          */
@@ -98,7 +98,7 @@ namespace sw
         int32 getTopPriority() const;
 
         /**
-         * @brief 마운트된 팩 전체에서 @p relativeFolder 바로 아래 항목(하위 폴더 안은 빼고)의 리소스 경로를 @p outListPath 뒤에 덧붙입니다.
+         * @brief 마운트된 팩 전체에서 @p relativeFolder 바로 아래 항목(하위 폴더 안은 빼고)의 에셋 경로를 @p outListPath 뒤에 덧붙입니다.
          * @param relativeFolder 가상 상대 폴더(구분자 '/', 끝 '/' 없음. 예: "common/data/appearance/presets")
          * @details 찾는 두 형식은 `hasFile` 과 같습니다 — 전체 경로로 담긴 항목, 그리고 도메인 팩(`engine.pack`)에 도메인을 떼고 담긴 항목.
          *          뒤의 것은 질의의 도메인을 다시 붙여 돌려주므로 결과는 그대로 `readFile` 에 넣을 수 있습니다. 중복 제거 · 정렬은 부르는 쪽(`AssetIO::collectAssets`)이 합니다.
@@ -159,7 +159,7 @@ namespace sw
         vector<string> getMountedDomainsByPriority() const;
         /**
          * @brief 마운트된 패치 팩(도메인 없음 — 패치 사슬 · 모드)마다 팩 루트의 @p fileName 글을 낮은 우선순위부터 @p outListText 에 덧붙입니다. 그 파일이 없는 팩은 건너뛴다.
-         * @details 모드 팩이 자기 에셋의 GUID 색인(`assetindex.xml`, 줄은 전체 리소스 id)을 싣는다 — 런타임 색인이 도메인 색인 뒤 층으로 합친다(`AssetManager`).
+         * @details 모드 팩이 자기 에셋의 GUID 색인(`assetindex.xml`, 줄은 전체 에셋 id)을 싣는다 — 런타임 색인이 도메인 색인 뒤 층으로 합친다(`AssetManager`).
          *          @p outListSource 에는 그 팩 파일 경로를 같은 순서로 덧붙인다. 읽기가 지면 false 입니다.
          */
         [[nodiscard]] bool collectPatchPackTexts( string_view fileName, vector<string>& outListText, vector<string>& outListSource ) const;
@@ -230,7 +230,7 @@ namespace sw
         vector<MountedPack> _listMountedPack SW_GUARDED_BY( _vfsMutex );
         DLCEntitlementDelegate               _dlcValidator;
         atomic<ContentSource>                _contentSource;  ///< 기동 때 정하고 로드 스레드가 잠금 없이 읽는다 — 원자값
-        atomic<uint32>                       _patchPackCount; ///< 도메인 없는 팩 수(`hasPatchFile` 이 모든 리소스 읽기에서 잠금 없이 0 을 본다). 목록을 바꿀 때 잠금 안에서 다시 센다
+        atomic<uint32>                       _patchPackCount; ///< 도메인 없는 팩 수(`hasPatchFile` 이 모든 에셋 읽기에서 잠금 없이 0 을 본다). 목록을 바꿀 때 잠금 안에서 다시 센다
         PackPatchTrust                       _patchTrust;     ///< 기동 스레드가 마운트 전에 한 번 정한다(`setPatchTrust`). `_pProvider` 가 null 이면 서명을 보지 않는다
         Subscription                         _trustRetiring;  ///< 제공자가 내려가기 전의 알림(`onTrustProviderRetiring`)
         uint8                                _bTrustRetired;  ///< 서명을 보는 채널의 제공자가 내려갔다 — 더는 확인할 수 없다

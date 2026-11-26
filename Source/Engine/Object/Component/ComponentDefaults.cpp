@@ -11,7 +11,7 @@
 #include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Serializer/SchemaMigrate.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -144,7 +144,7 @@ namespace sw
         }
 
         string     absPath;
-        const bool bLoaded = _defaultsDoc.loadResource( AssetID{ _customDefaultsPath }, &absPath );
+        const bool bLoaded = _defaultsDoc.loadAsset( AssetID{ _customDefaultsPath }, &absPath );
         if ( bLoaded )
             _bDefaultsLoaded.store( true, std::memory_order_release );
         else

@@ -1,11 +1,11 @@
 /**
  * @file Constants.h
  * @brief Core 의 컴파일 상수 한 곳입니다. 모든 상수는 `sw::constant::<분류>` 아래 둔다(버퍼 · 파일 · 시간 · 메모리 · 로그 · 네트워크 · 경로 · 무효 인덱스).
- * @details 여러 파일이 같은 뜻으로 쓰는 값만 여기 둔다. 한 형식 · 한 시스템만 쓰는 값(파일 형식의 표 · 판 `FormatDef`, 한 알고리즘의 허용 오차)은 그 자리에 둔다 —
+ * @details 여러 파일이 같은 뜻으로 쓰는 값만 여기 둔다. 한 형식 · 한 시스템만 쓰는 값(파일 형식의 표 · 판 `FormatDesc`, 한 알고리즘의 허용 오차)은 그 자리에 둔다 —
  *          모으면 따로 바뀌어야 할 값이 한 값에 묶인다(형식 A 의 버전을 올리면 형식 B 도 올라간다).
  *          위층의 분류는 그 층의 한 파일에 같은 `sw::constant::<분류>` 로 둔다:
  *          - 엔진 기본값(`window` · `physics` · `locale`)과 팩 · 폴더 이름(`path`): `Engine/Foundation/EngineDefines.h`
- *          - 렌더 백엔드 계약(`render` — RHI 형식 값이 필요하다): `Engine/Graphics/RHI/RHIDescriptors.h`
+ *          - 렌더 백엔드 계약(`render` — RHI 형식 값이 필요하다): `Engine/Graphics/RHI/RHIConstants.h`
  *          - 리플렉션 이름 조각(`reflection`): `Engine/Reflection/ReflectionConstants.h`
  *          언리얼의 `MAX_*` · `FPlatformTime` 단위, Godot `core/math/math_defs.h` · `core/typedefs.h` 의 상수와 같은 자리다.
  */
@@ -113,7 +113,7 @@ namespace sw::constant::path
     inline constexpr const utf8* kSavedFolder = "Saved";
     /** @brief 기본 로그 폴더 이름입니다. */
     inline constexpr const utf8* kLogsFolder = "Logs";
-    /** @brief 리소스 루트 폴더 이름입니다(프로젝트 루트 아래). `ProcessRoots` 가 프로젝트 루트를 이 폴더로 알아본다. */
+    /** @brief 콘텐츠 루트 폴더 이름입니다(프로젝트 루트 아래). `ProcessRoots` 가 프로젝트 루트를 이 폴더로 알아본다. */
     inline constexpr const utf8* kContentFolder = "Content";
     /** @brief 구운 팩 폴더 이름입니다(바이너리 폴더 아래 - `ProcessRoots::_packs`). 패키지에는 `Content` 없이 이것만 있다. */
     inline constexpr const utf8* kPacksFolder = "Packs";

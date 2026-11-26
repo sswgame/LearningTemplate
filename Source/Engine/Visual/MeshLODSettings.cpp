@@ -10,16 +10,16 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 
 namespace sw
 {
     bool MeshLODSettings::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        return loadComposed( xml, sourceLabel, ResourceContext::forType( *StaticType() ) );
+        return loadComposed( xml, sourceLabel, AssetComposeContext::forType( *StaticType() ) );
     }
 
-    bool MeshLODSettings::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    bool MeshLODSettings::loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
     {
         *this = MeshLODSettings{};
         // 키는 대소문자까지 맞아야 하고 모르는 속성 · 범위 밖 숫자는 오류다(`readComposedXMLDocument` 가 알린다). 두 값 모두 필수다(0 은 읽지 못한 값).
@@ -40,7 +40,7 @@ namespace sw
             *this = MeshLODSettings{};
             return false;
         }
-        return loadComposed( text, assetID.view(), ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
+        return loadComposed( text, assetID.view(), AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     const MeshLODSettings& MeshLODSettings::getDefault()

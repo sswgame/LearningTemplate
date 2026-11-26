@@ -18,14 +18,14 @@ namespace sw
     class WidgetTree;
 
     /**
-     * @struct UIStyleTransitionSpec
+     * @struct UIStyleTransition
      * @brief `WidgetStyle::_transition` 텍스트를 읽은 결과입니다. 필드마다 길이와 곡선을 가집니다.
      * @details 형식은 `"_backgroundColor 0.12 EaseOut 0.05, _opacity 0.2"` 이다. 쉼표로 나눈 항목마다 필드 이름(또는 보간되는 모든 필드를 뜻하는 `all`), 길이(초), 곡선(`BlendCurve`
      *          이름이며 없으면 `EaseOut`), 지연(초, `transition-delay` — 시작을 늦춘다. 그동안은 옛 값에 머문다)을 적는다. 길이 다음에 숫자가 바로 오면 곡선 없이 지연이다(`"_opacity 0.2 0.1"`,
      *          CSS 가 시간 둘을 길이, 지연 순으로 읽는 것과 같다). 뒤 항목이 앞 항목을 덮어쓴다. 보간되는 필드는 실수 필드(색, 모서리, 두께, 그림자, 여백, 글자 크기, 외곽선, 불투명도)이고
      *          폰트와 전환 자신은 받지 않는다(로드 오류).
      */
-    struct UIStyleTransitionSpec
+    struct UIStyleTransition
     {
         struct Entry
         {
@@ -41,7 +41,7 @@ namespace sw
         const Entry* findEntry( UIStyleField field ) const;
 
         /** @brief 텍스트 @p text 를 읽습니다. 모르는 필드, 보간할 수 없는 필드, 읽지 못한 길이, 모르는 곡선이면 false 를 반환하고 @p outError 에 이유(영어)를 둡니다. */
-        [[nodiscard]] static expected<void> parse( string_view text, UIStyleTransitionSpec& outSpec );
+        [[nodiscard]] static expected<void> parse( string_view text, UIStyleTransition& outTransition );
         /** @brief 필드 @p field 가 보간되는 필드(실수 성분)이면 true 입니다. */
         static bool isInterpolable( UIStyleField field );
     };
@@ -91,7 +91,7 @@ namespace sw
          * @param inoutFrom 출발값입니다. @p bHaveFrom 이 참이면(진행 중이던 채널의 지금 값) 그대로 쓰고, 아니면 옛 스타일 · 위젯의 옛 값으로 채웁니다.
          * @return 새 채널이 필요 없으면 false 입니다(전환을 적지 않은 필드 · 읽지 못하는 위젯 · 출발값과 목표가 같음 — 바로 바뀐다).
          */
-        [[nodiscard]] static bool makeChannel( Widget& widget, const UIComputedStyle& oldStyle, const UIComputedStyle& newStyle, UIStyleField field, const UIStyleTransitionSpec& spec,
+        [[nodiscard]] static bool makeChannel( Widget& widget, const UIComputedStyle& oldStyle, const UIComputedStyle& newStyle, UIStyleField field, const UIStyleTransition& styleTransition,
                                                uint32 oldStates, uint32 newStates, bool bHaveFrom, float32 ( &inoutFrom )[4], UIStyleTransitionState::Channel& outChannel );
         /** @brief 채널이 남은 상태의 보이는 값을 새 스타일에서 다시 만들고(채널의 지금 값을 얹는다), 새로 들어온 위젯이면 트리의 전환 목록에 올립니다. */
         static void refreshShownStyle( Widget& widget, UIStyleTransitionState& state, const UIComputedStyle& newStyle );

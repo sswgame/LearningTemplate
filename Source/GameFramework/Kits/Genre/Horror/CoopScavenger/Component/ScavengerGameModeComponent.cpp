@@ -7,8 +7,8 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
@@ -19,8 +19,8 @@ namespace sw
     {
         struct ScavengerGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "SCGM" };
-            static constexpr int32     kPlayer = 0; ///< 늘 사람이 잡는 승무원(카메라 · 감시 값의 주인)
+            static constexpr FormatDesc kStateFormat{ "SCGM" };
+            static constexpr int32      kPlayer = 0; ///< 늘 사람이 잡는 승무원(카메라 · 감시 값의 주인)
             /** @brief 축 방향과 이웃 방향이 이만큼은 맞아야 그 이웃으로 본다(내적). */
             static constexpr float32 kNeighborAlignment = 0.5f;
             static constexpr float32 kPercent           = 100.0f;

@@ -7,9 +7,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelAutoPlayControllerComponent.h"
@@ -17,7 +17,7 @@
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelTerrain.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
@@ -25,7 +25,7 @@ namespace sw
     {
         struct VoxelGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "VOXL" };
+            static constexpr FormatDesc kStateFormat{ "VOXL" };
         };
     } // namespace
 } // namespace sw

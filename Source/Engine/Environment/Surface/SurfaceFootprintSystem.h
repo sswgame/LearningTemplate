@@ -36,7 +36,7 @@ namespace sw
      *        (여럿이 함께 걸어도 한 오브젝트의 반응을 따로 본다 — 감시 값 `Surface.Object*`).
      */
     /** @brief 표면 종류 하나의 발걸음 기록입니다 — 센 수와 그 종류를 마지막으로 밟은 반응. */
-    struct SurfaceFootstepKindNote
+    struct SurfaceFootstepKindStats
     {
         uint32        _count{ 0 };
         hashed_string _lastSound{};
@@ -47,15 +47,15 @@ namespace sw
     struct SW_API SurfaceFootstepRecord
     {
         /// 종류 이름 → 그 종류의 기록. 두 발이 한 프레임에 다른 종류를 디디면 "마지막 발걸음" 은 나중 것 하나라, 종류마다의 반응은 여기서 본다.
-        unordered_map<hashed_string, SurfaceFootstepKindNote> _mapKind{};
-        hashed_string                                         _lastKind{};
+        unordered_map<hashed_string, SurfaceFootstepKindStats> _mapKind{};
+        hashed_string                                          _lastKind{};
 
         /** @brief 종류 @p kind 를 밟은 발걸음 수입니다. */
         uint32 getCount( const hashed_string& kind ) const;
         /** @brief 종류 @p kind 의 기록입니다. 밟은 적이 없으면 nullptr 입니다. */
-        const SurfaceFootstepKindNote* findKind( const hashed_string& kind ) const;
+        const SurfaceFootstepKindStats* findKind( const hashed_string& kind ) const;
         /** @brief 마지막 발걸음의 기록입니다. 발걸음이 없으면 nullptr 입니다. */
-        const SurfaceFootstepKindNote* findLast() const { return findKind( _lastKind ); }
+        const SurfaceFootstepKindStats* findLast() const { return findKind( _lastKind ); }
         /** @brief 발걸음 하나(종류 @p kind, 고른 반응 @p step, 젖음 @p bWet)를 적습니다. */
         void note( const hashed_string& kind, const SurfaceStepResponse& step, bool bWet );
     };

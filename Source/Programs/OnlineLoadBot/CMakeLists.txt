@@ -34,7 +34,7 @@ foreach(kit IN LISTS load_bot_kit)
 endforeach()
 
 # ------------------------------------------------------------------------------
-# 2) 봇 모듈(`OnlineLoadBotCore` — 봇 · 시나리오 · 지표 · 실행기 · 서버 조립 · 진입점 `LoadBotMain.cpp`)과 그것을 올리는 실행 파일.
+# 2) 봇 모듈(`OnlineLoadBotCore` — 봇 · 시나리오 · 지표 · 실행기 · 서버 조립 · 진입점 `LoadBotModuleEntry.cpp`)과 그것을 올리는 실행 파일.
 #    실행 파일은 Engine · ModuleManager · DevTools 만 링크한다. GameFramework · 키트 DLL 은 정적 초기화에서 이름 풀(`hashed_string`)을 써서 엔진 기동 뒤에만 올라올 수 있다 —
 #    실행 파일이 직접 링크하면 main 전에 DLL 초기화가 실패한다(0xC0000142, 로그 없음, Windows 오류 대화상자로 CTest 가 시간 초과). App · Server 가 모듈을
 #    기동 뒤에 올리는 것과 같은 모양으로, 실행 파일이 엔진의 `ModuleTypes` 단계에서 `SW_LOADBOT_MODULES` 를 순서대로 올리고 진입점(`LoadBotModuleEntry.h`)을 부른다.
@@ -42,7 +42,7 @@ endforeach()
 # ------------------------------------------------------------------------------
 # Tests/ 는 봇 자체의 단위 테스트(보내기 방식 · 시나리오 읽기)다 — `UnitTests.OnlineKits` 가 이 폴더도 넘긴다(IntegrationTests/CMakeLists.txt).
 sw_glob_source_tree(load_bot_core_source "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.h" "${CMAKE_CURRENT_SOURCE_DIR}/Tests/*.cpp")
-# SHARED(진입점 하나만 내보냄): MODULE 종류는 App 이 올리는 동적 모듈 레지스트리에 들어야 한다(`sw_verify_dynamic_module_registry`) — 이 모듈은 봇 실행 파일만 올린다.
+# SHARED(진입점 하나만 내보냄): MODULE 종류는 App 이 올리는 동적 모듈 레지스트리에 들어야 한다(`sw_require_dynamic_module_registry`) — 이 모듈은 봇 실행 파일만 올린다.
 add_library(OnlineLoadBotCore SHARED ${load_bot_core_source})
 target_link_libraries(OnlineLoadBotCore
 	PRIVATE
@@ -53,7 +53,7 @@ target_link_libraries(OnlineLoadBotCore
 		sw_global_options
 )
 # 봇 실행 파일이 올리는 모듈이라 엔진 ABI 도장이 있어야 한다(모듈 로더가 올리기 전에 대조한다). sw_add_module 을 거치지 않아 여기서 붙인다.
-sw_add_module_engine_stamp(OnlineLoadBotCore)
+sw_add_module_engine_abi_digest(OnlineLoadBotCore)
 target_compile_definitions(OnlineLoadBotCore PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"" "SW_REGISTRAR_MODULE=\"OnlineLoadBotCore\"")
 sw_configure_dll_exports(OnlineLoadBotCore SHARED MODULE_SHARED)
 sw_configure_pch(OnlineLoadBotCore "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")

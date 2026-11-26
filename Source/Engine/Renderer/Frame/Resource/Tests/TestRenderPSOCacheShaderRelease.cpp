@@ -179,7 +179,7 @@ SW_TEST_CASE( RenderPSOCacheTest, MaterialVariantKeyComparesEveryAxis )
     MaterialPSOKey viewMode  = makeVariantKey( 7 );
     viewMode._viewMode       = RenderViewMode::Wireframe;
     MaterialPSOKey vertex    = makeVariantKey( 7 );
-    vertex._vertexFormat     = RHIMeshVertexFormat::HighPrecision;
+    vertex._vertexFormat     = MeshVertexFormat::HighPrecision;
     MaterialPSOKey culling   = makeVariantKey( 7 );
     culling._bReverseCulling = SW_TRUE;
     MaterialPSOKey passPSO   = makeVariantKey( 7 );

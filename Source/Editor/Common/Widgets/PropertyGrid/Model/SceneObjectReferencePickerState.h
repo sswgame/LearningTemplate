@@ -21,7 +21,7 @@ namespace sw::editor
     struct SceneObjectReferenceChoice
     {
         string _label;         ///< 오브젝트 이름
-        string _valueText;     ///< 이 오브젝트를 가리키는 참조의 값 글(`SerializerUtil::formatValueText`)
+        string _valueText;     ///< 이 오브젝트를 가리키는 참조의 값 글(`ValueSerializer::formatValueText`)
         uint64 _objectID{ 0 }; ///< 줄 id(ImGui) — 씬 안에서 고유하다
     };
 

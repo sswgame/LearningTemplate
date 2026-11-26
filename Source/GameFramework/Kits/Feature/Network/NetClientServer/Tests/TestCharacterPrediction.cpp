@@ -14,8 +14,8 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ClientPrediction.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
-#include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovementComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Character/Movement/CharacterMovementComponent.h"
 
 using namespace sw;
 

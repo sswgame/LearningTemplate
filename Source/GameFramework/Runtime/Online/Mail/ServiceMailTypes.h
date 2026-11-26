@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    /** @brief 첨부 하나입니다. 온라인 메시지(관리자 요청, 우편함 응답)에 고정 배치형으로 실립니다. `MaxCount` 는 `LedgerConstant::kMaxAssetIDSize` 와 같은 값입니다. */
+    /** @brief 첨부 하나입니다. 온라인 메시지(관리자 요청, 우편함 응답)에 스키마 결합형으로 실립니다. `MaxCount` 는 `LedgerConstant::kMaxAssetIDSize` 와 같은 값입니다. */
     REFLECT()
     struct ServiceMailAttachment
     {

@@ -4227,9 +4227,9 @@ namespace sw
         }
     }
 
-    VkRenderPass VulkanRHIDevice::createRenderPassFromSpec( const VulkanRHIRenderPassCache::RenderPassSpec& spec ) const
+    VkRenderPass VulkanRHIDevice::createRenderPassFromKey( const VulkanRHIRenderPassCache::VulkanRenderPassKey& spec ) const
     {
-        return VulkanRHIRenderPassCache::createFromSpec( _device, spec );
+        return VulkanRHIRenderPassCache::createFromKey( _device, spec );
     }
 
     bool VulkanRHIDevice::ensureOffscreenRenderPass( uint32 vkFormat )
@@ -4244,9 +4244,9 @@ namespace sw
         if ( vkFormat != 0 && vkFormat != sharedFormat )
             return false;
 
-        VulkanRHIRenderPassCache::RenderPassSpec spec{};
+        VulkanRHIRenderPassCache::VulkanRenderPassKey spec{};
         spec.addColor( sharedFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-        _offscreenRenderPass = createRenderPassFromSpec( spec );
+        _offscreenRenderPass = createRenderPassFromKey( spec );
         return _offscreenRenderPass != VK_NULL_HANDLE;
     }
 
@@ -4265,9 +4265,9 @@ namespace sw
         else
         {
             // 포맷별 전용 RP. beginRenderPass 가 전이를 먼저 걸어 두므로 COLOR_ATTACHMENT_OPTIMAL 에서 시작한다.
-            VulkanRHIRenderPassCache::RenderPassSpec spec{};
+            VulkanRHIRenderPassCache::VulkanRenderPassKey spec{};
             spec.addColor( record._format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-            record._renderPass = createRenderPassFromSpec( spec );
+            record._renderPass = createRenderPassFromKey( spec );
             if ( record._renderPass == VK_NULL_HANDLE )
                 return false;
         }
@@ -4358,7 +4358,7 @@ namespace sw
         }
 
         // PSO 호환용. 파이프라인은 이 RP 와 "호환되는" RP 어디에서든 쓰인다(포맷 · 개수 · 샘플 수만 같으면 된다).
-        VulkanRHIRenderPassCache::RenderPassSpec spec{};
+        VulkanRHIRenderPassCache::VulkanRenderPassKey spec{};
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
             spec.addColor( key._arrColorFormat[colorIndex], VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
@@ -4377,7 +4377,7 @@ namespace sw
         uint32      width{ 0 };
         uint32      height{ 0 };
         // beginRenderPass 가 첨부를 미리 COLOR_ATTACHMENT / DEPTH_STENCIL_ATTACHMENT 로 전이해 두므로 그 레이아웃에서 시작·종료한다.
-        VulkanRHIRenderPassCache::RenderPassSpec spec{};
+        VulkanRHIRenderPassCache::VulkanRenderPassKey spec{};
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
             VulkanTextureRecord* pTex                    = resolveTexture( key._arrColor[colorIndex] );

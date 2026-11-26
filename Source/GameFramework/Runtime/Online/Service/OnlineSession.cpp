@@ -10,7 +10,7 @@
 #include "Core/Time/WallClock.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Service/IOnlineLocalServer.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"

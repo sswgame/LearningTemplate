@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/Workspace/EditorPanelID.h"
+#include "Editor/Common/Workspace/Layout/EditorPanelID.h"
 
 namespace sw
 {
@@ -30,7 +30,7 @@ namespace sw::editor
     };
 
     /**
-     * @brief 에셋 파일 하나를 연 문서입니다 — 리소스 id 와 미저장 여부(`IEditorPanelSubsystem::collectOpenDocuments`, 활성 씬은 부른 쪽이 더한다).
+     * @brief 에셋 파일 하나를 연 문서입니다 — 에셋 id 와 미저장 여부(`IEditorPanelSubsystem::collectOpenDocuments`, 활성 씬은 부른 쪽이 더한다).
      * @details 옮기기 · 삭제 계획이 본다(감사 P0-4): 미저장 문서가 옮기는 에셋을 적었으면 디스크에서 고친 참조를 다음 저장이 옛 id 로 덮고, 연 문서를 지우면 다음 저장이 파일을 되살린다.
      */
     struct EditorOpenDocument

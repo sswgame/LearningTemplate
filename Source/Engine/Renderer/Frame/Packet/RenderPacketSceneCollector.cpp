@@ -10,10 +10,10 @@
 #include "Engine/Environment/SceneEnvironment.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
-#include "Engine/Graphics/Lighting/SceneVoxelScene.h"
+#include "Engine/Graphics/Lighting/SceneVoxelizeInput.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/Upload/GPUUploadQueue.h"
+#include "Engine/Graphics/RHI/Transfer/GPUUploadQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -283,7 +283,7 @@ namespace sw
         _listVoxelUploadScene.resize( packet._listRealtimeProbe.size() );
         for ( size_t index = 0; index < packet._listRealtimeProbe.size(); ++index )
         {
-            const shared_ptr<const SceneVoxelScene>& pVoxelScene = packet._listRealtimeProbe[index]._pVoxelScene;
+            const shared_ptr<const SceneVoxelizeInput>& pVoxelScene = packet._listRealtimeProbe[index]._pVoxelScene;
             if ( pVoxelScene == _listVoxelUploadScene[index] )
                 continue;
             const auto requestSource = [&queue]( const SceneVoxelSource& source )

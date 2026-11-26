@@ -10,7 +10,7 @@
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
 #include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
@@ -30,11 +30,11 @@ namespace sw
             static constexpr uint32 kMinResolution = 320;
             static constexpr uint32 kMaxResolution = 16384;
 
-            /** @brief 값을 리소스 태그 축 `param` 의 값으로 넣습니다(`ResourceTags::setAxisValue`). 그 축에 기댄 리소스는 다음 프레임에 다시 읽힌다. */
-            static bool applyResourceTag( const UserSettingApplyParams& context )
+            /** @brief 값을 에셋 태그 축 `param` 의 값으로 넣습니다(`AssetTags::setAxisValue`). 그 축에 기댄 리소스는 다음 프레임에 다시 읽힌다. */
+            static bool applyAssetTag( const UserSettingApplyParams& context )
             {
-                // 모르는 축 · 여러 값 축 · 닫힌 목록 밖의 값은 `ResourceTags` 가 오류로 남긴다 — 스키마의 param 오타가 조용히 지나가지 않는다.
-                return engine::getSubsystem<ResourceTags>().setAxisValue( context._param, context._value );
+                // 모르는 축 · 여러 값 축 · 닫힌 목록 밖의 값은 `AssetTags` 가 오류로 남긴다 — 스키마의 param 오타가 조용히 지나가지 않는다.
+                return engine::getSubsystem<AssetTags>().setAxisValue( context._param, context._value );
             }
 
             /** @brief `1920x1080` 형식의 글을 만듭니다. */
@@ -85,7 +85,7 @@ namespace sw
         _listRegistration.push_back( registry.registerHandler( "display.resolution", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyResolution, this ),
                                                                SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineHandlers::isResolutionText ) ) );
         _listRegistration.push_back( registry.registerHandler( "display.vsync", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyVSync, this ) ) );
-        _listRegistration.push_back( registry.registerHandler( "resource.tag", SW_DELEGATE_FUNCTION( UserSettingHandlerDelegate, &UserSettingsEngineHandlersInternal::applyResourceTag ) ) );
+        _listRegistration.push_back( registry.registerHandler( "asset.tag", SW_DELEGATE_FUNCTION( UserSettingHandlerDelegate, &UserSettingsEngineHandlersInternal::applyAssetTag ) ) );
         _listRegistration.push_back( registry.registerOptionProvider( "display.resolutions",
                                                                       SW_DELEGATE_METHOD( UserSettingOptionProviderDelegate, &UserSettingsEngineHandlers::collectResolutions, this ) ) );
         _listRegistration.push_back( registry.registerOptionProvider( "localization.languages",

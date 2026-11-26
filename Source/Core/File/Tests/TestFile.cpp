@@ -147,7 +147,7 @@ SW_TEST_CASE( FileTest, PathContainmentFollowsTheOSCaseRule )
     SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isPathAtOrUnderRoot( root, otherCased.view() ) );
     SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::startsWithPathComponent( sw::FileUtil::makeComparableDiskPath( otherCased.view() ), sw::FileUtil::makeComparableDiskPath( root ) ) );
 
-    // 리소스 id 는 늘 소문자로 접은 키라 대소문자와 무관하게 구간을 가른다. 구간 경계 — `scratchpad` 는 `scratch` 아래가 아니다
+    // 에셋 id 는 늘 소문자로 접은 키라 대소문자와 무관하게 구간을 가른다. 구간 경계 — `scratchpad` 는 `scratch` 아래가 아니다
     SW_EXPECT_TRUE( sw::FileUtil::startsWithPathComponent( sw::FileUtil::normalizePath( "Scratch\\Copy/A.xml" ), "scratch" ) );
     SW_EXPECT_FALSE( sw::FileUtil::startsWithPathComponent( sw::FileUtil::normalizePath( "scratchpad/a.xml" ), "scratch" ) );
     SW_EXPECT_EQUAL( sw::string( "copy/a.xml" ), sw::FileUtil::suffixAfterPathComponent( sw::FileUtil::normalizePath( "Scratch/Copy/A.xml" ), "scratch" ) );
@@ -263,33 +263,33 @@ SW_TEST_CASE( FileTest, DirectoryThatCannotBeCreatedSaysSo )
  *          없는 파일 · 폴더는 스탬프가 없다(false). 같은 크기의 재쓰기는 쓰기 시각에 달렸는데 그 시각의 눈금은 시스템 시계(~1 ~ 16 ms)라
  *          여기서는 크기가 다른 재쓰기로 본다.
  */
-SW_TEST_CASE( FileTest, FileStampReportsSizeAndDetectsChanges )
+SW_TEST_CASE( FileTest, FileStatReportsSizeAndDetectsChanges )
 {
-    const sw::AbsolutePath dir = sw::test::makeScratchPath( "SwFileStampTestDir" );
+    const sw::AbsolutePath dir = sw::test::makeScratchPath( "SwFileStatTestDir" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( dir ) );
     const sw::AbsolutePath path = dir.join( "Stamp.txt" );
 
     const sw::string shortText = "0123456789";
     SW_REQUIRE_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( shortText.data() ), shortText.size() ) );
-    sw::FileStamp first{};
-    SW_REQUIRE_TRUE( sw::FileUtil::getFileStamp( path, first ) );
+    sw::FileStat first{};
+    SW_REQUIRE_TRUE( sw::FileUtil::getFileStat( path, first ) );
     SW_EXPECT_EQUAL( uint64( 10 ), first._sizeBytes );
     SW_EXPECT_TRUE( first._writeTime != 0u );
 
-    sw::FileStamp again{};
-    SW_REQUIRE_TRUE( sw::FileUtil::getFileStamp( path, again ) );
+    sw::FileStat again{};
+    SW_REQUIRE_TRUE( sw::FileUtil::getFileStat( path, again ) );
     SW_EXPECT_TRUE( first == again );
 
     const sw::string longText = "0123456789abcdefghij";
     SW_REQUIRE_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( longText.data() ), longText.size() ) );
-    sw::FileStamp second{};
-    SW_REQUIRE_TRUE( sw::FileUtil::getFileStamp( path, second ) );
+    sw::FileStat second{};
+    SW_REQUIRE_TRUE( sw::FileUtil::getFileStat( path, second ) );
     SW_EXPECT_EQUAL( uint64( 20 ), second._sizeBytes );
     SW_EXPECT_TRUE( first != second );
 
-    sw::FileStamp none{};
-    SW_EXPECT_FALSE( sw::FileUtil::getFileStamp( dir.join( "Missing.txt" ), none ) );
-    SW_EXPECT_FALSE( sw::FileUtil::getFileStamp( dir, none ) );
+    sw::FileStat none{};
+    SW_EXPECT_FALSE( sw::FileUtil::getFileStat( dir.join( "Missing.txt" ), none ) );
+    SW_EXPECT_FALSE( sw::FileUtil::getFileStat( dir, none ) );
 }
 
 /**

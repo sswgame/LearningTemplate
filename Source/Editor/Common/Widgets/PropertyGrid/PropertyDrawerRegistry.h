@@ -1,6 +1,6 @@
 /**
  * @file PropertyDrawerRegistry.h
- * @brief 프로퍼티 타입명 → IInspectorProperty (EditorContext 소유)
+ * @brief 프로퍼티 타입명 → IPropertyDrawer (EditorContext 소유)
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -19,10 +19,10 @@ namespace sw
 
 namespace sw::editor
 {
-    struct InspectorComponentChoice;
-    struct InspectorMethodArgSlot;
+    struct PropertyGridComponentChoice;
+    struct PropertyGridMethodArgSlot;
 
-    class IInspectorProperty;
+    class IPropertyDrawer;
     class PropertyGridViewModel;
 
     /** @brief 타입별 인스펙터 프로퍼티 UI 관리자 (EditorContext 소유) */
@@ -46,8 +46,8 @@ namespace sw::editor
         PropertyDrawerRegistry( const PropertyDrawerRegistry& )            = delete;
         PropertyDrawerRegistry& operator=( const PropertyDrawerRegistry& ) = delete;
 
-        IInspectorProperty* find( string_view typeName ) const;
-        /** @brief `ReflectBuiltins.xxx` 의 내장 타입마다 위젯을 등록합니다(`InspectorWidgetFor<T>` 가 분기를 정합니다). */
+        IPropertyDrawer* find( string_view typeName ) const;
+        /** @brief `ReflectBuiltins.xxx` 의 내장 타입마다 위젯을 등록합니다(`PropertyGridWidgetFor<T>` 가 분기를 정합니다). */
         void registerDefaults();
         /** @brief 그리기 확장 등록 줄(`SW_EDITOR_PROPERTY_DRAWER`)과 맞춥니다. 세대가 같으면 바로 돌아갑니다. */
         void syncWithRegistry();
@@ -58,16 +58,16 @@ namespace sw::editor
          *          컴포넌트만 고를 수 있다(`PropertyGridViewModel::collectComponentChoices`). 씬이나 대상 타입이 없으면 선택기 대신 오류 글이다(정수 입력으로 물러서지 않는다).
          * @param inoutListChoice 선택기 콤보가 열린 프레임에만 채우는 선택지 버퍼입니다. 부르는 그리드가 든다.
          */
-        static bool drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const PropertyGridViewModel& model,
-                                   vector<InspectorComponentChoice>& inoutListChoice );
+        static bool drawMethodArg( const utf8* pLabel, PropertyGridMethodArgSlot& slot, const FunctionParameterInfo& parameter, const PropertyGridViewModel& model,
+                                   vector<PropertyGridComponentChoice>& inoutListChoice );
 
     private:
         /** @brief 내장 표(`ReflectBuiltins.xxx`)의 위젯을 모두 겁니다(빈 표에 한 번). */
         void registerBuiltins();
 
     private:
-        NameRegistry<unique_ptr<IInspectorProperty>> _registry;               ///< 프로퍼티 타입 이름 → 위젯. 내장은 주인 없는 값, 확장은 주인 있는 값(풀리면 가렸던 내장으로 돌아간다)
-        vector<Subscription>                         _listDrawerSubscription; ///< 지금 걸려 있는 그리기 확장의 등록(`_registry` 뒤 — 먼저 사라진다)
-        uint32                                       _syncedGeneration;       ///< 마지막으로 맞춘 등록 세대
+        NameRegistry<unique_ptr<IPropertyDrawer>> _registry;               ///< 프로퍼티 타입 이름 → 위젯. 내장은 주인 없는 값, 확장은 주인 있는 값(풀리면 가렸던 내장으로 돌아간다)
+        vector<Subscription>                      _listDrawerSubscription; ///< 지금 걸려 있는 그리기 확장의 등록(`_registry` 뒤 — 먼저 사라진다)
+        uint32                                    _syncedGeneration;       ///< 마지막으로 맞춘 등록 세대
     };
 } // namespace sw::editor

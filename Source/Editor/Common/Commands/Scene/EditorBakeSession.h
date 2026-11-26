@@ -1,6 +1,6 @@
 /**
  * @file EditorBakeSession.h
- * @brief 베이크 커맨드(라이트 프로브 · 반사 프로브)가 결과를 쓰는 씬 옆 리소스 경로 하나를 만듭니다.
+ * @brief 베이크 커맨드(라이트 프로브 · 반사 프로브)가 결과를 쓰는 씬 옆 에셋 경로 하나를 만듭니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -11,8 +11,8 @@
 namespace sw::editor
 {
     /**
-     * @brief 오브젝트 하나의 베이크 결과 리소스 id 입니다 — `<씬 id 에서 .scene.xml 을 뗀 것>.<오브젝트 이름 소문자><extension>`. 디스크 자리는 부르는 쪽이 `AssetPaths::toDiskPath` 로 푼다.
-     * @details 씬 id 와 이름만 보는 순수 함수다. 리소스 경로는 소문자만 받는다. 이름의 영숫자 밖 글자는 `_` 로 바꾼다.
+     * @brief 오브젝트 하나의 베이크 결과 에셋 id 입니다 — `<씬 id 에서 .scene.xml 을 뗀 것>.<오브젝트 이름 소문자><extension>`. 디스크 자리는 부르는 쪽이 `AssetPaths::toDiskPath` 로 푼다.
+     * @details 씬 id 와 이름만 보는 순수 함수다. 에셋 경로는 소문자만 받는다. 이름의 영숫자 밖 글자는 `_` 로 바꾼다.
      * @return @p sceneAssetID 가 `.scene.xml` 로 끝나지 않거나 @p ownerName 이 비었으면 빈 문자열입니다 — 다른 글을 씬 id 로 보고 옆에 붙이지 않는다.
      */
     [[nodiscard]] string makeSceneBakeAssetPath( string_view sceneAssetID, string_view ownerName, string_view extension );
@@ -24,23 +24,23 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @class EditorBakeRunState
+     * @class EditorBakeSession
      * @brief 프레임마다 조금씩 도는 베이크 하나의 "돌고 있는가 · 계속해도 되는가" 를 맡습니다. 베이크 본문(무엇을 어떻게 굽는가)은 세션이 가집니다.
      * @details 베이크는 시작할 때의 씬을 읽으며 여러 프레임에 걸쳐 돈다. 그래서 시작하면 씬 편집을 막고(`EditorPlaySession::holdSceneEdits`), 프레임마다 씬이 바뀌었는지(세대),
      *          플레이가 시작됐는지, 잠금을 지나친 편집이 있었는지 묻는다(`findStopReason`). 하나라도 해당하면 세션은 멈춘다. 끝난(취소 포함) 횟수는 씬 세대마다 센다.
      */
-    class EditorBakeRunState
+    class EditorBakeSession
     {
     public:
         /// @brief 한 프레임에 베이크에 쓰는 시간(ms)입니다. 프레임 하나(16 ms)의 절반이라 에디터가 30 fps 밑으로 떨어지지 않는다.
         static constexpr int64 kFrameBudgetMilliseconds = 8;
 
-        EditorBakeRunState();
+        EditorBakeSession();
         /** @brief 돌던 중에 사라지면 편집 잠금을 풉니다(`_hold` 가 사라지며 푼다). */
-        ~EditorBakeRunState();
+        ~EditorBakeSession();
 
-        EditorBakeRunState( const EditorBakeRunState& )            = delete;
-        EditorBakeRunState& operator=( const EditorBakeRunState& ) = delete;
+        EditorBakeSession( const EditorBakeSession& )            = delete;
+        EditorBakeSession& operator=( const EditorBakeSession& ) = delete;
 
         /** @brief 씬 세대 @p sceneGeneration 의 베이크를 시작합니다. 편집 잠금을 겁니다(게임 스레드 — 열쇠를 받는다). 돌고 있지 않을 때만 부릅니다. */
         void begin( EditorPlaySessionWriteKey key, uint64 sceneGeneration );

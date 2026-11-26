@@ -87,7 +87,7 @@ namespace sw
      *          그 총점이 같으면 `_tieRule` 을 따른다. 라운드 번호는 0 부터 시작하고, 라운드 목록(미니 게임, 무대)은 키트가 번호로 고른다.
      *          알림은 내지 않는다. 반환한 결과(`RoundSeriesResult`, `RoundSeriesTick`)를 보고 키트가 자기 이벤트를 낸다. 격투 이벤트는 롤백 상태에 포함되지 않기 때문이다.
      *          상태(총점, 라운드 번호, 남은 라운드 시간, 남은 대기, 우승자, 단계)는 리플렉션 프로퍼티 한 벌이다. 손 코덱은 두지 않는다.
-     *          롤백 키트는 고정 배치형(`FixedLayout`)으로, 세이브는 자기 기술형(`BinarySerializer`)으로 싣는다.
+     *          롤백 키트는 스키마 결합형(`LayoutSerializer`)으로, 세이브는 자기 기술형(`BinarySerializer`)으로 싣는다.
      *          설정(`_settings`)은 `initialize` 가 주는 값이라 싣지 않는다. 참가자 수 대조는 싣는 키트가 한다.
      */
     REFLECT( ReadValidate = validateState )
@@ -96,7 +96,7 @@ namespace sw
     public:
         REFLECT_BODY();
         static constexpr int32  kNoWinner            = constant::invalid_index::kInt32; ///< 우승자 없음을 뜻한다(끝나지 않았거나 무승부). `reportRoundWinner` 에서는 무승부 라운드를 뜻한다
-        static constexpr uint32 kMaxParticipantCount = 64;                              ///< 고정 배치형이 싣는 참가자 수의 상한
+        static constexpr uint32 kMaxParticipantCount = 64;                              ///< 스키마 결합형이 싣는 참가자 수의 상한
 
         RoundSeries();
 

@@ -6,7 +6,7 @@
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Serialization/Format/ReflectedXMLFile.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {
@@ -64,7 +64,7 @@ namespace sw
                 bOk = false;
                 continue;
             }
-            // 원소의 `Min` · `Max` 는 `loadDesc` 가 본다(`SerializerUtil::collectRangeErrors` 는 시퀀스 원소까지 본다).
+            // 원소의 `Min` · `Max` 는 `loadDesc` 가 본다(`PropertyConstraints::collectRangeErrors` 는 시퀀스 원소까지 본다).
             for ( size_t otherIndex = 0; otherIndex < presetIndex; ++otherIndex )
             {
                 if ( StringUtil::equals( _listPreset[otherIndex]._name, preset._name, true ) )

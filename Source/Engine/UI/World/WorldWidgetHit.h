@@ -1,7 +1,7 @@
 /**
  * @file WorldWidgetHit.h
  * @brief 화면 점에서 쏜 광선이 World 위젯 사각형의 어느 위젯 좌표를 맞히는지 계산합니다(언리얼 `WidgetInteractionComponent` 의 광선 → 위젯 좌표 부분).
- * @details 순수 계산이다. 사각형은 단위 스프라이트 사각형(`MeshUtil::createSpriteQuad`: 로컬 XY 평면, ±0.5, 앞면은 −Z 를 향함, 양면)에 월드 행렬을 곱한 것이고,
+ * @details 순수 계산이다. 사각형은 단위 스프라이트 사각형(`PrimitiveMeshBuilder::createSpriteQuad`: 로컬 XY 평면, ±0.5, 앞면은 −Z 를 향함, 양면)에 월드 행렬을 곱한 것이고,
  *          위젯 좌표는 그 사각형에 붙인 렌더 텍스처의 픽셀(= UI 단위)이다. 앞면은 u 가 +X 로, 뒷면은 −X 로 늘고 v 는 위가 0 이다(메시의 UV 와 같은 규약).
  */
 #pragma once

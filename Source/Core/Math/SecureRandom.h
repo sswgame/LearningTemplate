@@ -1,10 +1,10 @@
 /**
  * @file SecureRandom.h
  * @brief 운영체제의 암호학적 난수(Windows `BCryptGenRandom` · 리눅스 `getrandom`)를 읽는 하나의 창구입니다.
- * @details UUID · 챌린지 비밀 · 멱등 키 · 세션 ID 처럼 다른 실행 · 다른 호스트와 겹치지 않고 미리 알 수 없어야 하는 값에 씁니다.
+ * @details GUID · 챌린지 비밀 · 멱등 키 · 세션 ID 처럼 다른 실행 · 다른 호스트와 겹치지 않고 미리 알 수 없어야 하는 값에 씁니다.
  *          `std::random_device` 는 구현이 결정적 엔진이어도 표준을 지키고(옛 MinGW), 엔트로피를 확인할 길이 없고, 실패가 예외라 쓰지 않습니다.
  *          되풀이되어야 하는 수열(테스트 · 리플레이 · 절차 생성)은 이것이 아니라 `DeterministicRandom32` · `DeterministicRandom64` 입니다.
- * @note Math 티어라 `span` 을 받지 못해(Container 가 위 티어) 포인터와 바이트 수를 받습니다.
+ * @note Math 층이라 `span` 을 받지 못해(Container 가 위 층) 포인터와 바이트 수를 받습니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

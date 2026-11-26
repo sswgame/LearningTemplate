@@ -7,7 +7,7 @@
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

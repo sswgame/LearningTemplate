@@ -5,15 +5,15 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
-#include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
+#include "GameFramework/Runtime/Gameplay/Ability/TagCountContainer.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
 
 using namespace sw;

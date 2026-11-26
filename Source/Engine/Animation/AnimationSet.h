@@ -6,7 +6,7 @@
  *          상용 엔진 비교(기억에 의존): 언리얼은 Animation Sequence 를 스켈레톤 에셋이 나눠 쓰게 하고 Animation Blueprint 가 슬롯 이름으로 고른다. 유니티는 Avatar 로 근육 공간을 나누고
  *          AnimatorOverrideController 가 "기반 + 바꾼 클립" 이다. 여기는 뼈 이름 일치로 나누고(Avatar 의 근육 공간 없음), 셋의 `_base` 가 오버라이드 컨트롤러 자리다 —
  *          그래프는 클립 이름(슬롯)만 적고 애니메이터의 셋이 내용을 정한다. 바탕은 공통 상속(`DataInheritance`, 이름이 열쇠)이고 쿠킹이 펼친다.
- *          `set` 은 부모가 아니라 줄 하나를 다른 셋에서 빌리는 믹스인이다(`_listRenderPassRef` 와 같은 까닭으로 합치지 않는다 — 여러 파일을 섞는다).
+ *          `set` 은 부모가 아니라 줄 하나를 다른 셋에서 빌리는 믹스인이다(`_listRenderFeatureRef` 와 같은 까닭으로 합치지 않는다 — 여러 파일을 섞는다).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -23,7 +23,7 @@
 
 namespace sw
 {
-    struct ResourceContext;
+    struct AssetComposeContext;
 
     class AnimationClip;
     class AnimationSet;
@@ -110,11 +110,11 @@ namespace sw
         [[nodiscard]] bool loadCopyFromAsset( const AssetID& assetID ) { return loadFromAsset( assetID ); }
 
     private:
-        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AnimationSet>::acquire` 로 한 벌을 쥔다. */
+        /** @brief 에셋 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AnimationSet>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief @p depth 번째 사슬 칸을 읽습니다. */
-        [[nodiscard]] bool parseChained( string_view xml, string_view sourceLabel, uint32 depth, const ResourceContext& context );
-        /** @brief 리소스 경로의 셋 파일을 @p depth 번째 사슬 칸으로 읽습니다. */
+        [[nodiscard]] bool parseChained( string_view xml, string_view sourceLabel, uint32 depth, const AssetComposeContext& context );
+        /** @brief 에셋 경로의 셋 파일을 @p depth 번째 사슬 칸으로 읽습니다. */
         [[nodiscard]] bool loadChained( string_view path, uint32 depth );
         /** @brief 정렬을 지키며 한 줄을 넣습니다. */
         void insertEntry( string name, string clipPath );

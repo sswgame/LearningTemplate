@@ -10,7 +10,7 @@
  *          쓰러짐은 `AbilityOwnerDiedEvent` 로 알린다. `CombatAttributeSet` 이 체력이 0 에 닿는 순간 한 번 낸다.
  */
 #pragma once
-#include "Core/Event/EventType.h"
+#include "Core/Event/EventBase.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/TagID.h"
@@ -19,7 +19,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityTypes.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityEffectPolicy.h"
 
 namespace sw
 {

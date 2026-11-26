@@ -2,7 +2,7 @@
  * @file ViewGraphResource.h
  * @brief 뷰 그래프 패스 종류가 쓰는 엔진 자원(첨부 밖 — 뷰가 가진 텍스처 · 프레임 그래프 버퍼의 이 뷰 칸)의 접근 핸들입니다.
  * @details 파이프라인 XML 은 첨부만 적는다. 패스 종류가 스스로 쓰는 엔진 자원(자동 노출 기록 · FSR 중간 RT · 그림자 캐시 층 · 깊이 사본 · HZB · 컬링 버퍼)은
- *          종류가 선언한다(`FramePassExecutor::bindPassCallbacks`) — 언리얼 RDG 패스 파라미터가 패스 형식에 박힌 자원을 적는 자리다. 핸들은 뷰마다 `FramePassExecutor::registerViewResources`
+ *          종류가 선언한다(`FrameRecorder::bindPassCallbacks`) — 언리얼 RDG 패스 파라미터가 패스 형식에 박힌 자원을 적는 자리다. 핸들은 뷰마다 `FrameRecorder::registerViewResources`
  *          가 칸 0 으로 등록한다(이 뷰의 것만 — 등록 조건이 곧 실행 조건이다). 패스 몸통은 이 핸들로만 그 자원을 받고(`RenderGraphPassContext::getTexture` · `getBuffer`) 패스 안 왕복도
  *          이 핸들로 옮긴다(`RenderGraphPassContext::transition`).
  */

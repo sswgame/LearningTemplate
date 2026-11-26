@@ -11,7 +11,8 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetMessageRange.h"
+#include "Core/Network/NetProtocol.h"
 
 namespace sw
 {

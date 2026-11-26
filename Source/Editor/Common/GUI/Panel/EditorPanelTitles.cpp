@@ -1,0 +1,74 @@
+#include "pch.h"
+
+#include "Editor/Common/GUI/Panel/EditorPanelTitles.h"
+
+#include "Core/Algorithm/VectorUtil.h"
+
+#include "Editor/Common/Config/EditorDefaultAssets.h"
+#include "Editor/Common/Localization/EditorDataLocalization.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
+
+#include "Engine/Content/AssetID.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
+
+namespace sw::editor
+{
+    namespace
+    {
+        /** @brief 읽은 표와 지금 언어로 푼 이름입니다. 에디터 범위의 상태라 에디터 컨텍스트와 함께 처음으로 돌아간다. */
+        struct PanelTitlesState
+        {
+            vector<EditorPanelTitles> _listRow{};           ///< `_label` 은 지금 언어로 푼 글이다
+            vector<string>            _listReported{};      ///< 줄이 없다고 이미 알린 제목(프레임마다 같은 오류를 남기지 않는다)
+            uint32                    _revision{ 0 };       ///< 푼 때의 현지화 글 판
+            uint8                     _bLoaded{ SW_FALSE }; ///< 표를 읽었다(실패해도 다시 읽지 않는다 — 오류는 한 번)
+        };
+
+        const EditorPanelTitles* findRow( const utf8* pTitle )
+        {
+            PanelTitlesState& state    = getEditorState<PanelTitlesState>();
+            const uint32      revision = EditorDataLocalization::getRevision();
+            if ( state._bLoaded == SW_FALSE || state._revision != revision )
+            {
+                EditorPanelTitleTable table;
+                const string&         tablePath = editor::getSubsystem<const EditorDefaultAssets>()._panelNames.get();
+                state._listRow.clear();
+                if ( XMLSerializer::loadFromAsset( AssetID{ tablePath }, &table, *EditorPanelTitleTable::StaticType() ) == false )
+                    SW_LOG_ERROR_ID( "EditorPanel.TextCannotRead", "Editor panel names '%#' could not be read strictly - tabs show their titles", tablePath );
+                for ( EditorPanelTitles& row : table._listPanel )
+                {
+                    row._label = EditorDataLocalization::localize( row._label );
+                    state._listRow.push_back( std::move( row ) );
+                }
+                state._revision = revision;
+                state._bLoaded  = SW_TRUE;
+            }
+            const EditorPanelTitles* pRow = VectorUtil::findBy<&EditorPanelTitles::_title>( state._listRow, string_view( pTitle ) );
+            if ( pRow == nullptr && VectorUtil::contains( state._listReported, string( pTitle ) ) == false )
+            {
+                state._listReported.push_back( string( pTitle ) );
+                SW_LOG_ERROR_ID( "EditorPanel.NoName", "Panel '%#' has no row in %# - its tab shows the title", pTitle, editor::getSubsystem<const EditorDefaultAssets>()._panelNames.get() );
+            }
+            return pRow;
+        }
+    } // namespace
+
+    EditorWindowName EditorPanelTitles::makeWindowName( const utf8* pTitle )
+    {
+        const EditorPanelTitles* pRow = findRow( pTitle );
+        EditorWindowName         name;
+        name.append( pRow != nullptr ? pRow->_label.c_str() : pTitle );
+        name.append( "###" );
+        name.append( pTitle );
+        return name;
+    }
+
+    EditorWindowName EditorPanelTitles::makeWindowID( const utf8* pTitle )
+    {
+        EditorWindowName name;
+        name.append( "###" );
+        name.append( pTitle );
+        return name;
+    }
+} // namespace sw::editor

@@ -9,7 +9,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -17,7 +17,7 @@ namespace sw
     {
         struct NavMeshAgentComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "NAVA" };
+            static constexpr FormatDesc kStateFormat{ "NAVA" };
         };
     } // namespace
 

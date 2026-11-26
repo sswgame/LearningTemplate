@@ -19,8 +19,8 @@ namespace sw::editor
         struct EditorContentScanInternal
         {
             /**
-             * @brief @p path 가 리소스 루트 안의 작업 도메인 옛 자리(`Content/scratch/`)면 true 입니다 — 지금의 작업 도메인은 실행 뿌리 아래다.
-             * @details 훑는 뿌리가 리소스 루트가 아닐 때(실행 뿌리를 뿌리로 쓰는 작업 도메인 임포트)도 같은 자리를 뺀다 — 그래서 훑는 뿌리가 아니라 프로세스의 리소스 루트로 견준다.
+             * @brief @p path 가 콘텐츠 루트 안의 작업 도메인 옛 자리(`Content/scratch/`)면 true 입니다 — 지금의 작업 도메인은 실행 뿌리 아래다.
+             * @details 훑는 뿌리가 콘텐츠 루트가 아닐 때(실행 뿌리를 뿌리로 쓰는 작업 도메인 임포트)도 같은 자리를 뺀다 — 그래서 훑는 뿌리가 아니라 프로세스의 콘텐츠 루트로 견준다.
              */
             static bool isLeftoverScratch( string_view path )
             {
@@ -34,18 +34,18 @@ namespace sw::editor
                 const AbsolutePath folderPath = folder;
                 if ( FileUtil::isDirectory( folderPath ) == false )
                     return false;
-                const size_t                     firstFile = outListFile.size();
-                unordered_map<string, FileStamp> mapSidecarStamp; // 키: 원본의 디스크 경로
-                auto                             collectEntry = [&outListFile, &mapSidecarStamp, &stopToken]( const DirectoryEntry& entry )
+                const size_t                    firstFile = outListFile.size();
+                unordered_map<string, FileStat> mapSidecarStat; // 키: 원본의 디스크 경로
+                auto                            collectEntry = [&outListFile, &mapSidecarStat, &stopToken]( const DirectoryEntry& entry )
                 {
                     if ( stopToken.isStopRequested() )
                         return false;
                     if ( entry._bDirectory || isLeftoverScratch( entry._path ) )
                         return true;
                     if ( EditorContentScan::isListedFile( entry._path ) )
-                        outListFile.push_back( EditorContentFile{ string( entry._path ), entry._fileStamp, {} } );
+                        outListFile.push_back( EditorContentFile{ string( entry._path ), entry._fileStat, {} } );
                     else
-                        mapSidecarStamp.emplace( string( entry._path.substr( 0, entry._path.size() - AssetMeta::kExtension.size() ) ), entry._fileStamp );
+                        mapSidecarStat.emplace( string( entry._path.substr( 0, entry._path.size() - AssetMeta::kExtension.size() ) ), entry._fileStat );
                     return true;
                 };
                 const bool bListed = FileUtil::forEachDirectoryEntry( folderPath, true, collectEntry );
@@ -53,9 +53,9 @@ namespace sw::editor
                     SW_LOG_WARNING_ID( "EditorContentScan.FolderUnreadable", "Content folder '%#' could not be walked - the list is incomplete", folder.str() );
                 for ( size_t index = firstFile; index < outListFile.size(); ++index )
                 {
-                    const auto itSidecar = mapSidecarStamp.find( outListFile[index]._path );
-                    if ( itSidecar != mapSidecarStamp.end() )
-                        outListFile[index]._sidecarStamp = itSidecar->second;
+                    const auto itSidecar = mapSidecarStat.find( outListFile[index]._path );
+                    if ( itSidecar != mapSidecarStat.end() )
+                        outListFile[index]._sidecarStat = itSidecar->second;
                 }
                 return bListed;
             }

@@ -11,15 +11,15 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmAutoFarmerAIComponent.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
@@ -36,8 +36,8 @@ namespace sw
         struct FarmGameModeComponentInternal
         {
             /** @brief 이 길이보다 짧은 이동 의도는 걷지 않는다(스틱 떨림) — 걸음 판정과 이동이 같은 문턱을 쓴다. */
-            static constexpr float32   kMinMoveLength = 1.0e-4f;
-            static constexpr FormatDef kStateFormat{ "FARM" };
+            static constexpr float32    kMinMoveLength = 1.0e-4f;
+            static constexpr FormatDesc kStateFormat{ "FARM" };
 
             /** @brief 비를 정하는 날씨 값 이름입니다(날씨 카탈로그 `<Values wetness>` — 표면 젖음과 같은 값). 이 값이 반 이상이면 비다. */
             static constexpr const utf8* kWetnessValue     = "wetness";

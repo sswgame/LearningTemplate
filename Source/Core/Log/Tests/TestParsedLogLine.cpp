@@ -2,12 +2,12 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Log/Backend/AsyncLogBackend.h"
+#include "Core/Log/Output/ILogOutput.h"
 #include "Core/Log/ParsedLogLine.h"
-#include "Core/Log/Sink/AsyncLogSink.h"
-#include "Core/Log/Sink/ILogOutput.h"
 #include "Core/TestFramework/TestFramework.h"
 
-// 로그 줄 모양 — 싱크가 쓴 줄을 읽는 쪽이 같은 수준 · id · 본문으로 되읽는다(자식 프로세스 중계가 기댄다). 로그 줄이 아닌 줄은 거절한다.
+// 로그 줄 모양 — 백엔드가 쓴 줄을 읽는 쪽이 같은 수준 · id · 본문으로 되읽는다(자식 프로세스 중계가 기댄다). 로그 줄이 아닌 줄은 거절한다.
 
 using namespace sw;
 
@@ -29,9 +29,9 @@ namespace
     };
 } // namespace
 
-SW_TEST_CASE( LogLineFormatTest, ParsesWhatTheSinkWrote )
+SW_TEST_CASE( LogLineFormatTest, ParsesWhatTheBackendWrote )
 {
-    AsyncLogSink logger;
+    AsyncLogBackend logger;
     logger.initialize();
     unique_ptr<LogLineCaptureOutput> output   = make_unique<LogLineCaptureOutput>();
     LogLineCaptureOutput*            pCapture = output.get();

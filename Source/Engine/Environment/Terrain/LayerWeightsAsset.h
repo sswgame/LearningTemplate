@@ -23,7 +23,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Environment/Placement/SurfaceLayerWeights.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -33,7 +33,7 @@ namespace sw
      */
     struct SW_API LayerWeightsAsset
     {
-        static constexpr FormatDef   kFormat{ "SWLW" };
+        static constexpr FormatDesc  kFormat{ "SWLW" };
         static constexpr string_view kExtension = ".layerweights";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
@@ -54,7 +54,7 @@ namespace sw
 
         /** @brief 바이트 배열에서 읽습니다. 형식이 틀리면 이유를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromMemory( const vector<uint8>& bytes, string_view sourceName );
-        /** @brief 리소스 경로(`game/playground/heightfields/x.layerweights`)에서 읽습니다. 읽지 못하면 오류를 남기고 false 입니다. */
+        /** @brief 에셋 경로(`game/playground/heightfields/x.layerweights`)에서 읽습니다. 읽지 못하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& id );
         /** @brief 형식대로 바이트를 만듭니다. */
         void saveToMemory( vector<uint8>& outBytes ) const;

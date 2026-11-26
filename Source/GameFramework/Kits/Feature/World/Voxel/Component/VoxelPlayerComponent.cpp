@@ -9,20 +9,20 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelAutoPlayControllerComponent.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelGameModeComponent.h"
+#include "GameFramework/Runtime/Character/Camera/FirstPersonCameraComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
-#include "GameFramework/Runtime/Character/Control/FirstPersonCameraComponent.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
@@ -30,7 +30,7 @@ namespace sw
     {
         struct VoxelPlayerComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "PLYR" };
+            static constexpr FormatDesc kStateFormat{ "PLYR" };
 
             // 사운드 이벤트 이름입니다. 클립, 범위, 동시 재생 상한은 게임의 사운드 이벤트 라이브러리(Playground 는 playground.audioevents.xml)가 정합니다.
             static constexpr const utf8* kEventLand  = "VoxelLand";

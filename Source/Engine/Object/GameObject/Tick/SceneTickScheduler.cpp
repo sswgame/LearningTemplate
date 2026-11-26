@@ -37,7 +37,7 @@ namespace sw
             static void runTickItem( const TickFrameTime& time, const TickItem& item )
             {
                 Component*     pComp = item._pComponent;
-                const TickTurn turn  = TickIntervalUtil::computeTurn( item._interval, pComp->getComponentID() + item._subTickID, time );
+                const TickTurn turn  = TickTurn::compute( item._interval, pComp->getComponentID() + item._subTickID, time );
                 if ( turn._intervalCount == 0 )
                     return;
                 if ( item._subTickID == 0 )

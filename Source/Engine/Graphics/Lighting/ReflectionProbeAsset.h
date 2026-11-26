@@ -34,7 +34,7 @@ namespace sw
      *          적은 표본으로도 잡음 없이 거른다(`ReflectionProbeAsset::filterRoughnessLevels`). 언리얼 · 유니티의 큐브맵 밉 사슬 자리이고, 큐브 대신 옥타헤드럴인 까닭은
      *          `ReflectionProbeAsset` 과 같다. 옥타헤드럴 텍셀 (x, y) 의 자식은 한 단계 위 밉의 (2x .. 2x+1, 2y .. 2y+1) 이라 상자 평균이 같은 방향 묶음이다.
      *
-     *          파일(리틀 엔디언): 매직 `SWRM`, 버전, 한 변 텍셀 수 uint32, 텍셀마다 float32 RGB(행 → 열). HDRI 하늘의 원본이고 `Scripts/dev/make_sky_hdri_prefabs.py` 가 쓴다.
+     *          파일(리틀 엔디언): 매직 `SWRM`, 버전, 한 변 텍셀 수 uint32, 텍셀마다 float32 RGB(행 → 열). HDRI 하늘의 원본이고 `Scripts/content/make_sky_hdri_prefabs.py` 가 쓴다.
      */
     struct SW_API OctahedralRadianceMap
     {
@@ -79,7 +79,7 @@ namespace sw
         void makeBytes( vector<uint8>& outBytes ) const;
         /** @brief 바이트를 밉 0 으로 읽습니다(밉 사슬은 `buildMips`). 매직, 버전, 길이, 범위가 틀리면 그 까닭이고 비운다. */
         [[nodiscard]] expected<void> readFromBytes( const uint8* pData, size_t size );
-        /** @brief 리소스 경로에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
+        /** @brief 에셋 경로에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
         [[nodiscard]] expected<void> loadFromAsset( const AssetID& assetID );
     };
 
@@ -146,7 +146,7 @@ namespace sw
         [[nodiscard]] expected<void> readFromBytes( const uint8* pData, size_t size );
         /** @brief 파일로 씁니다. 부모 폴더가 없으면 만듭니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
-        /** @brief 리소스 경로(또는 절대 경로)에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
+        /** @brief 에셋 경로(또는 절대 경로)에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
         [[nodiscard]] expected<void> loadFromAsset( const AssetID& assetID );
 
         /** @brief 길이 1 의 방향을 옥타헤드럴 사각형의 UV([0, 1]²)로 접습니다(+Y 가 가운데). */

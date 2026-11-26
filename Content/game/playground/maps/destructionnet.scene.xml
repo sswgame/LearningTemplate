@@ -459,7 +459,7 @@
 					                   _fracturePath="">
 						<_listAnchorVolume />
 					</FractureComponent>
-					<GimmickSensorComponent _localID="5906677949702648734" _componentName="GimmickSensorComponent"
+					<LogicCircuitSensorComponent _localID="5906677949702648734" _componentName="LogicCircuitSensorComponent"
 					                        _bActive="true"
 					                        _defaultWeight="1"
 					                        _bCountTriggers="false">
@@ -467,7 +467,7 @@
 							<_listTag />
 						</_requiredTags>
 						<_listOccupant />
-					</GimmickSensorComponent>
+					</LogicCircuitSensorComponent>
 					<ExplosiveBarrelComponent _localID="2817874053379422564" _componentName="ExplosiveBarrelComponent"
 					                          _bActive="true"
 					                          _health="30"
@@ -547,7 +547,7 @@
 					                   _fracturePath="">
 						<_listAnchorVolume />
 					</FractureComponent>
-					<GimmickSensorComponent _localID="5906677949702648734" _componentName="GimmickSensorComponent"
+					<LogicCircuitSensorComponent _localID="5906677949702648734" _componentName="LogicCircuitSensorComponent"
 					                        _bActive="true"
 					                        _defaultWeight="1"
 					                        _bCountTriggers="false">
@@ -555,7 +555,7 @@
 							<_listTag />
 						</_requiredTags>
 						<_listOccupant />
-					</GimmickSensorComponent>
+					</LogicCircuitSensorComponent>
 					<ExplosiveBarrelComponent _localID="2817874053379422564" _componentName="ExplosiveBarrelComponent"
 					                          _bActive="true"
 					                          _health="30"

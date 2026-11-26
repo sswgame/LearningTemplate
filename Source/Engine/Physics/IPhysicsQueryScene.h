@@ -35,7 +35,7 @@ namespace sw
                                 const PhysicsQueryFilter& filter, CastHit& outHit ) const = 0;
         /**
          * @brief `raycast` 와 같은 광선이 닿는 바디를 모두 @p outListHit 끝에 붙이고 그 수를 돌려줍니다.
-         * @details 바디마다 가장 가까운 닿음 하나이고(컴파운드의 서브 셰이프가 여럿 닿아도 하나), 가까운 순서다(`PhysicsQueryUtil::keepNearestHitPerBody`).
+         * @details 바디마다 가장 가까운 닿음 하나이고(컴파운드의 서브 셰이프가 여럿 닿아도 하나), 가까운 순서다(`PhysicsCastHit::keepNearestPerBody`).
          *          관통 사격, 시야를 가린 것 모두 찾기에 쓴다. 언리얼 `LineTraceMultiByChannel`(막는 닿음에서 멈추지 않는 형태), 유니티 `RaycastAll` 에 해당한다.
          *          재질 이름은 `raycast` 처럼 채운다.
          */

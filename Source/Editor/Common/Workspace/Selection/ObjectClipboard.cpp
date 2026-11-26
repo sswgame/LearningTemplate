@@ -1,0 +1,68 @@
+#include "pch.h"
+
+#include "Editor/Common/Workspace/Selection/ObjectClipboard.h"
+
+#include "Editor/Common/Workspace/EditorSubsystems.h"
+
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+
+#include "ModuleAPI/Service/IModuleStateStore.h"
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct ObjectClipboardInternal
+        {
+            /** @brief 맡김 칸의 키입니다. */
+            static constexpr string_view kStoreKey = "editor.objectCopyBuffer";
+            /** @brief 맡긴 형식의 판입니다. 항목 모양이 바뀌면 올린다(옛 판은 버린다). */
+            static constexpr FormatDesc kFormat{ "EDCP" };
+        };
+    } // namespace
+
+    SubsystemInitResult ObjectClipboard::initializeSubsystem()
+    {
+        // 선택 조회(②): 맡김 칸이 없는 호스트(테스트 · 도구)는 빈 버퍼로 시작한다.
+        IModuleStateStore* const pStore = editor::findSubsystem<IModuleStateStore>();
+        vector<uint8>            bytes;
+        if ( pStore == nullptr || pStore->take( ObjectClipboardInternal::kStoreKey, bytes ) == false )
+            return SubsystemInitResult::Succeeded;
+        Archive archive( bytes.data(), bytes.size() );
+        uint32  count{ 0 };
+        // 항목 하나는 적어도 글 셋의 길이 · id · 뿌리 표시다.
+        constexpr uint32 kMinEntryBytes = sizeof( uint32 ) * 3 + sizeof( uint64 ) + sizeof( uint8 );
+        if ( ObjectClipboardInternal::kFormat.check( archive ).has_value() == false )
+            return SubsystemInitResult::Succeeded;
+        count = archive.readCount( kMinEntryBytes );
+        if ( archive.isError() )
+            return SubsystemInitResult::Succeeded;
+        vector<ObjectClipboardEntry> listEntry( count );
+        for ( ObjectClipboardEntry& entry : listEntry )
+        {
+            string name;
+            archive >> name >> entry._savedID >> entry._stateBytes >> entry._prefabPath >> entry._bRoot;
+            entry._name = hashed_string( name.c_str() );
+        }
+        if ( archive.isOk() )
+            _listEntry = std::move( listEntry );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void ObjectClipboard::shutdownSubsystem()
+    {
+        // 선택 조회(②): 종료 경로 - 맡김 칸이 먼저 풀렸으면 넘길 곳이 없다.
+        IModuleStateStore* const pStore = editor::findSubsystem<IModuleStateStore>();
+        if ( pStore == nullptr || _listEntry.empty() )
+            return;
+        Archive archive;
+        ObjectClipboardInternal::kFormat.write( archive );
+        archive << static_cast<uint32>( _listEntry.size() );
+        for ( const ObjectClipboardEntry& entry : _listEntry )
+        {
+            archive << string_view{ entry._name.c_str() } << entry._savedID << entry._stateBytes << string_view{ entry._prefabPath } << entry._bRoot;
+        }
+        pStore->store( ObjectClipboardInternal::kStoreKey, vector<uint8>( archive.getData(), archive.getData() + archive.getSize() ) );
+    }
+} // namespace sw::editor

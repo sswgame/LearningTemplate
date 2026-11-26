@@ -21,7 +21,7 @@ namespace sw
 {
     class AssetPaths;
     class TaskManager;
-    struct RHIVertex;
+    struct MeshVertex;
 } // namespace sw
 
 namespace sw::editor
@@ -178,7 +178,7 @@ namespace sw::editor
 {
     /**
      * @struct ModelImporter
-     * @brief cgltf 로 glTF 를 읽어 엔진 공간 에셋으로 바꿉니다. 메시는 meshoptimizer 로 인덱스 순서를 최적화한 뒤 인덱스 없는 삼각형 목록(`RHIVertex`)으로 펼칩니다.
+     * @brief cgltf 로 glTF 를 읽어 엔진 공간 에셋으로 바꿉니다. 메시는 meshoptimizer 로 인덱스 순서를 최적화한 뒤 인덱스 없는 삼각형 목록(`MeshVertex`)으로 펼칩니다.
      * @details 정점에는 위치, 노멀(없으면 면 노멀), TEXCOORD_0(없으면 0), 색이 들어간다. 색은 머티리얼의 baseColorFactor 에 COLOR_0 (있으면)을 곱한 값이다.
      *          삼각형이 아닌 프리미티브는 경고하고 건너뛴다. 첫 baseColorTexture 의 이미지는 로그로만 알린다. 어떤 머티리얼을 쓸지는 게임이 고른다.
      *          씬 루트 목록에 부모가 있는 노드가 들어 있으면(표준 위반이며 UniGLTF 가 이렇게 내보낸다) 그 노드의 최상위 조상으로 바꾸고 경고한다.
@@ -212,7 +212,7 @@ namespace sw::editor
 
         /**
          * @brief glTF 파일 하나를 @p rule 로 `.mesh` 로 임포트합니다. 스킨드 모델이면 옆 폴더에도 씁니다.
-         * @param assetPaths 산출물 경로를 리소스 id 로 바꿀 경로 상태 — 워커에서 불리므로 서비스를 찾지 않고 부른 쪽이 넘긴다.
+         * @param assetPaths 산출물 경로를 에셋 id 로 바꿀 경로 상태 — 워커에서 불리므로 서비스를 찾지 않고 부른 쪽이 넘긴다.
          */
         [[nodiscard]] static bool importModel( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const ModelImportRule& rule, const AbsolutePath& outputPath, TaskManager* pTaskManager = nullptr );
         /**
@@ -224,15 +224,15 @@ namespace sw::editor
         /**
          * @brief 핫 리로드가 넘긴 파일 가운데 모델 원본을 임포트합니다. `models_raw/` 아래의 원본을 옆 `models/` 의 `.mesh` 로 만듭니다.
          * @details 임포트한 `.mesh` 를 쓰면 다음 감시 이벤트로 들어오고, 메시 캐시가 그 즉시 다시 읽는다. `models_raw/` 밖의 원본은 경고만 한다.
-         *          바뀐 원본만 임포트한다(`AssetImportStampUtil::importSources`). 루트 전체의 대조는 `importAllModels`(`App --import-models`)가 한다.
+         *          바뀐 원본만 임포트한다(`AssetImportDigestUtil::importSources`). 루트 전체의 대조는 `importAllModels`(`App --import-models`)가 한다.
          *          워커에서 불린다(`AssetHotReload` 의 임포트 잡) — UI 서브시스템을 건드리지 않고 공유 상태를 두지 않는다. 모델 원본은 임포트했든 경고만 했든 처리한 것이고 `.mesh` 는 처리하지 않은 것이다.
          */
         static void importChangedSources( AssetSourceBatch& batch );
 
         /**
-         * @brief 리소스 루트 아래 모든 `models_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면 어긋난 원본을 임포트합니다.
-         * @details 절차는 `AssetImportStampUtil::importAll` 을 따른다. 텍스처와 같은 스탬프 형식과 판정을 쓴다. 원본마다 @p config 에서 규칙을 고른다.
-         *          @p assetPaths 는 워커의 임포트가 산출물을 리소스 id 로 바꿀 때 쓴다(부른 스레드가 찾아 넘긴다).
+         * @brief 콘텐츠 루트 아래 모든 `models_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면 어긋난 원본을 임포트합니다.
+         * @details 절차는 `AssetImportDigestUtil::importAll` 을 따른다. 텍스처와 같은 스탬프 형식과 판정을 쓴다. 원본마다 @p config 에서 규칙을 고른다.
+         *          @p assetPaths 는 워커의 임포트가 산출물을 에셋 id 로 바꿀 때 쓴다(부른 스레드가 찾아 넘긴다).
          */
         [[nodiscard]] static AssetImportSummary importAllModels( const AssetPaths& assetPaths, const AbsolutePath& resourceRoot, const ModelImportConfig& config, AssetImportMode mode );
         /**

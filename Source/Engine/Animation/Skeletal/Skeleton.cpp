@@ -16,10 +16,10 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -300,15 +300,15 @@ namespace sw
 
     bool Skeleton::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        return loadComposed( xml, sourceLabel, ResourceContext::forMerge( &Skeleton::mergeVariantText ) );
+        return loadComposed( xml, sourceLabel, AssetComposeContext::forMerge( &Skeleton::mergeVariantText ) );
     }
 
-    bool Skeleton::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    bool Skeleton::loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
     {
         clear();
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( xml, sourceLabel, context, flatText, bComposed ) == false )
+        if ( AssetComposer::compose( xml, sourceLabel, context, flatText, bComposed ) == false )
             return false;
         return parseFlat( bComposed ? string_view( flatText ) : xml, sourceLabel );
     }
@@ -359,7 +359,7 @@ namespace sw
             clear();
             return false;
         }
-        return loadComposed( text, path, ResourceContext::forMerge( &Skeleton::mergeVariantText ).withAsset( assetID ) );
+        return loadComposed( text, path, AssetComposeContext::forMerge( &Skeleton::mergeVariantText ).withAsset( assetID ) );
     }
 
     bool Skeleton::rebuildFromLoaded( string_view sourceLabel )
@@ -440,7 +440,7 @@ namespace sw
 
     bool Skeleton::saveToFile( const AbsolutePath& absPath ) const
     {
-        return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
+        return AssetComposer::saveText( absPath, AssetSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }
 } // namespace sw
 

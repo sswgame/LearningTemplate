@@ -39,8 +39,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Network/Connection/NetConnection.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
 #include "Core/Network/Message/NetMessageTable.h"
+#include "Core/Network/Message/NetMessageWriter.h"
 #include "Core/Network/Replication/NetInterestGrid.h"
 #include "Core/Network/Replication/NetParallel.h"
 #include "Core/Network/Replication/NetPrioritizer.h"
@@ -63,10 +64,10 @@ namespace sw
     /** @brief MMO 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetMMOMessage
     {
-        using Enter  = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>; ///< 엔티티 머리를 칸 선언(`MMOEntityEnterHeader`)으로 쓴다
-        using Leave  = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
-        using Update = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable>; ///< 서버 → 클라이언트(비신뢰, 전달 통지). 통지 값은 서버 틱이다. 엔티티 머리를 칸 선언(`MMOEntityUpdateHeader`)으로 쓴다
-        using Table  = NetWorldMessageTable<NetKitMessageRange::kMMO, Enter, Leave, Update>;        ///< 엔티티 id · 서버 틱은 서버 월드의 것이다
+        using Enter  = NetMessageDesc<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>; ///< 엔티티 머리를 칸 선언(`MMOEntityEnterHeader`)으로 쓴다
+        using Leave  = NetMessageDesc<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
+        using Update = NetMessageDesc<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable>; ///< 서버 → 클라이언트(비신뢰, 전달 통지). 통지 값은 서버 틱이다. 엔티티 머리를 칸 선언(`MMOEntityUpdateHeader`)으로 쓴다
+        using Table  = NetWorldMessageTable<NetKitMessageRange::kMMO, Enter, Leave, Update>;         ///< 엔티티 id · 서버 틱은 서버 월드의 것이다
 
         static constexpr uint8 kEnter  = Table::getKindOf<Enter>();
         static constexpr uint8 kLeave  = Table::getKindOf<Leave>();

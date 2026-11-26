@@ -8,7 +8,7 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -17,9 +17,9 @@ namespace sw
         struct ReflectionProbeAssetInternal
         {
             /// @brief 머리말 바이트 수 — 매직 · 버전 · 찍은 위치 · 한 변 텍셀 수 · 단계 수.
-            static constexpr FormatDef kProbeFormat{ "SWRP" };
-            static constexpr FormatDef kRadianceMapFormat{ "SWRM" };
-            static constexpr size_t    kHeaderBytes = sizeof( uint32 ) * 2 + sizeof( float32 ) * 3 + sizeof( uint32 ) * 2;
+            static constexpr FormatDesc kProbeFormat{ "SWRP" };
+            static constexpr FormatDesc kRadianceMapFormat{ "SWRM" };
+            static constexpr size_t     kHeaderBytes = sizeof( uint32 ) * 2 + sizeof( float32 ) * 3 + sizeof( uint32 ) * 2;
             /// @brief 텍셀 하나의 바이트 수입니다(float32 RGB).
             static constexpr size_t kTexelBytes = sizeof( float32 ) * 3;
             /// @brief 거칠기 0 근처의 GGX α 하한 — 셰이더 lighting.hlsli 의 kMinRoughness 와 같은 뜻(0.045² 근처에서 표본이 한 점에 모인다).

@@ -109,7 +109,7 @@ namespace sw::editor
         vector<AudioInstanceStatus>             _listInstanceStatus;
         vector<AudioInstanceStatus>             _listInstanceRow;
         hashed_string                           _selectedEvent;
-        hashed_string                           _selectedLibrary; ///< 고른 이벤트가 들어 있는 라이브러리(리소스 경로)
+        hashed_string                           _selectedLibrary; ///< 고른 이벤트가 들어 있는 라이브러리(에셋 경로)
         fixed_string<constant::buffer::kMax128> _filter;
         bool                                    _bOnlySelectedEvent;     ///< 재생 중 목록을 고른 이벤트로 거른다. NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
         uint8                                   _bVisibleEventStale : 1; ///< 이름 목록이 바뀌어 다시 걸러야 한다

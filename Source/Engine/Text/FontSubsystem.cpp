@@ -189,14 +189,14 @@ namespace sw
         _mapMemoryFile[StringUtil::toLower( path )] = std::move( bytes );
     }
 
-    FontFaceChain FontSubsystem::getFaceChain( const FontSpec& spec )
+    FontFaceChain FontSubsystem::getFaceChain( const FontDesc& desc )
     {
         FontFaceChain chain{};
         if ( _bInitialized == false )
             return chain;
         const string      culture  = _pLocalization != nullptr ? _pLocalization->getCurrentLanguage() : string{};
-        const string_view family   = spec._family.empty() ? string_view{ _catalog._defaultFamily } : string_view{ spec._family };
-        const string      chainKey = FontSubsystemInternal::makeChainKey( culture, FontSubsystemInternal::makeFamilyFaceKey( family, spec._weight, spec._slant ) );
+        const string_view family   = desc._family.empty() ? string_view{ _catalog._defaultFamily } : string_view{ desc._family };
+        const string      chainKey = FontSubsystemInternal::makeChainKey( culture, FontSubsystemInternal::makeFamilyFaceKey( family, desc._weight, desc._slant ) );
         const auto        iter     = _mapChain.find( chainKey );
         if ( iter != _mapChain.end() )
         {
@@ -207,7 +207,7 @@ namespace sw
         // 1) 고른 패밀리: 가짜 굵게와 기울임은 이 면에서 정한다.
         uint8            bFauxBold   = SW_FALSE;
         uint8            bFauxItalic = SW_FALSE;
-        const FontFaceID primaryFace = openFamilyFace( family, spec._weight, spec._slant, bFauxBold, bFauxItalic );
+        const FontFaceID primaryFace = openFamilyFace( family, desc._weight, desc._slant, bFauxBold, bFauxItalic );
         FontSubsystemInternal::appendFace( chain, primaryFace );
         if ( primaryFace != kInvalidFontFaceID )
         {
@@ -221,7 +221,7 @@ namespace sw
             {
                 uint8 bUnusedBold   = SW_FALSE;
                 uint8 bUnusedItalic = SW_FALSE;
-                FontSubsystemInternal::appendFace( chain, openFamilyFace( fallbackFamily, spec._weight, spec._slant, bUnusedBold, bUnusedItalic ) );
+                FontSubsystemInternal::appendFace( chain, openFamilyFace( fallbackFamily, desc._weight, desc._slant, bUnusedBold, bUnusedItalic ) );
             }
         }
         // 3) 모든 문화권의 마지막 대체 패밀리 — 영어 UI 에서 한글 IME 를 넣어도 상자로 그리지 않는다(카탈로그 `_listGlobalFallbackFamily`).
@@ -229,12 +229,12 @@ namespace sw
         {
             uint8 bUnusedBold   = SW_FALSE;
             uint8 bUnusedItalic = SW_FALSE;
-            FontSubsystemInternal::appendFace( chain, openFamilyFace( globalFallbackFamily, spec._weight, spec._slant, bUnusedBold, bUnusedItalic ) );
+            FontSubsystemInternal::appendFace( chain, openFamilyFace( globalFallbackFamily, desc._weight, desc._slant, bUnusedBold, bUnusedItalic ) );
         }
         // 4) 카탈로그 기본 패밀리: 항상 열린다(initialize 가 확인했다).
         uint8            bDefaultBold   = SW_FALSE;
         uint8            bDefaultItalic = SW_FALSE;
-        const FontFaceID defaultFace    = openFamilyFace( _catalog._defaultFamily, spec._weight, spec._slant, bDefaultBold, bDefaultItalic );
+        const FontFaceID defaultFace    = openFamilyFace( _catalog._defaultFamily, desc._weight, desc._slant, bDefaultBold, bDefaultItalic );
         FontSubsystemInternal::appendFace( chain, defaultFace );
         if ( primaryFace == kInvalidFontFaceID )
         {

@@ -1,7 +1,7 @@
 /**
  * @file AccountTypes.h
  * @brief 계정 키트의 와이어 타입입니다. 클라이언트와 서버가 공유하며, 크기 상수, 결과 코드, 세션 종료 사유, 세션 토큰, 게임 접속 티켓, 클라이언트 정보, 빌드 버전 비교를 담고 있습니다.
- * @details 와이어 타입은 고정 배치형(B)이며 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다. 바뀌면 온라인 스키마 해시가 함께 바뀐다(`OnlineProtocolRegistry.h`).
+ * @details 와이어 타입은 스키마 결합형이며 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다. 바뀌면 온라인 스키마 해시가 함께 바뀐다(`OnlineProtocolRegistry.h`).
  *          서버 전용 타입(설정, 저장, 암호)은 `GF_Server_Account` 의 `LoginTypes.h` 에 있다.
  */
 #pragma once

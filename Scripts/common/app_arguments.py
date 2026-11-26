@@ -59,7 +59,7 @@ def read_global_variable_names() -> frozenset[str]:
     return frozenset(GLOBAL_VARIABLE.findall(grepped))
 
 
-def check_argument(name: str, takes_value: bool) -> None:
+def require_known_argument(name: str, takes_value: bool) -> None:
     table = read_argument_table()
     if name not in table:
         raise AppArgumentError(f'-{name}: {ARGUMENT_TABLE} 에 없는 인자다')
@@ -69,13 +69,13 @@ def check_argument(name: str, takes_value: bool) -> None:
 
 def flag(name: str) -> str:
     """bool 인자 `-name`."""
-    check_argument(name, False)
+    require_known_argument(name, False)
     return f'-{name}'
 
 
 def option(name: str, value: object) -> str:
     """값을 받는 인자 `-name=value`."""
-    check_argument(name, True)
+    require_known_argument(name, True)
     return f'-{name}={value}'
 
 
@@ -97,7 +97,7 @@ def read_name(token: str) -> str | None:
     return token[1:].split('=', 1)[0]
 
 
-def check_name(name: str) -> None:
+def require_known_name(name: str) -> None:
     if name not in read_argument_table() and name not in read_global_variable_names():
         raise AppArgumentError(f'-{name}: 인자 표 · 전역 변수 어디에도 없다')
 
@@ -105,12 +105,12 @@ def check_name(name: str) -> None:
 def without(command: Sequence[str], *names: str) -> list[str]:
     """@p command 에서 @p names 인자를 뺀다(값 있는 것 · 없는 것 모두)."""
     for name in names:
-        check_name(name)
+        require_known_name(name)
     return [token for token in command if read_name(token) not in names]
 
 
 def read_value(command: Sequence[str], name: str) -> str | None:
-    check_name(name)
+    require_known_name(name)
     for token in command:
         if read_name(token) == name and '=' in token:
             return token.split('=', 1)[1]

@@ -133,7 +133,7 @@ namespace sw
         }
 
         /**
-         * @brief 쓰기가 생략을 허락한 빈 칸(`PROPERTY( SkipIfEmpty )`)도 씁니다 — 저장 입구에 넘기는 빼지 않은 짝(`ResourceSaveText`)을 만들 때만 켠다.
+         * @brief 쓰기가 생략을 허락한 빈 칸(`PROPERTY( SkipIfEmpty )`)도 씁니다 — 저장 입구에 넘기는 빼지 않은 짝(`AssetSaveText`)을 만들 때만 켠다.
          * @details 빈 칸을 빼면 "그대로" 와 "비움" 을 글만으로 가릴 수 없다(조건이 정한 칸을 비운 편집이 조건에 들지 않는다).
          */
         SerializeContext& setWriteEmptyValues( bool bWrite )
@@ -193,7 +193,7 @@ namespace sw
 
         /**
          * @brief 타입 · enum 을 찾을 레지스트리를 정합니다. nullptr 이면 엔진 전역 레지스트리입니다(기본).
-         * @details 직렬화의 깊은 경로(`SerializerUtil`)는 전역을 직접 부르지 않고 이 컨텍스트에게 묻는다. 테스트는 자기 레지스트리를
+         * @details 직렬화의 깊은 경로(`ValueSerializer`)는 전역을 직접 부르지 않고 이 컨텍스트에게 묻는다. 테스트는 자기 레지스트리를
          *          넣어 전역 등록 상태와 떨어진 채로 직렬화를 돌린다. 레지스트리는 이 컨텍스트로 직렬화하는 동안 살아 있어야 한다.
          */
         SerializeContext& setTypeRegistry( const TypeRegistry* pTypeRegistry )
@@ -317,7 +317,7 @@ namespace sw
  *          어떻게 채우는지는 BinarySerializer 의 규약입니다. 그래서 `makeFrom` / `tryGetFrom` 의
  *          정의와 컨텍스트 핸들러 등록이 모두 이쪽(`SerializeReflectAny.cpp`)에 있습니다.
  *
- * @note 이 코드를 Reflection 쪽에 두면 Reflection 이 Serialization 을 참조해 두 티어가 서로를 참조하는
+ * @note 이 코드를 Reflection 쪽에 두면 Reflection 이 Serialization 을 참조해 두 층이 서로를 참조하는
  *       순환이 됩니다. 핸들러는 "둘 다 아는 쪽" 이 갖습니다. 그쪽이 Serialization 입니다.
  */
 namespace sw

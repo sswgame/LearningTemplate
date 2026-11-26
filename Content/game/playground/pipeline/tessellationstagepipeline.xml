@@ -36,8 +36,8 @@
 			</_listOutput>
 		</RenderGraphPassDesc>
 	</_listPass>
-	<_listRenderPassRef>
+	<_listRenderFeatureRef>
 		<item>guid:57bd09488b11feda78cbced691b416fe</item>
 		<item>guid:3bbe483ea09c587a0612ffacd7007d3d</item>
-	</_listRenderPassRef>
+	</_listRenderFeatureRef>
 </RenderPipelineDesc>

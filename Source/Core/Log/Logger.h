@@ -6,7 +6,7 @@
  * 않으므로 모듈을 로드한 뒤에도 출처가 유지됩니다. 에디터 표시 등은 registerLogWrittenListener 로 구독합니다.
  *
  * 줄의 종류 id. 테스트가 로그 문장을 부분 문자열로 맞추면 문구를 고칠 때마다 지므로(그래서 `countContaining` 을 없앴다), 테스트가 찾을 줄에는 `SW_LOG_ERROR_ID` · `SW_LOG_WARNING_ID` 로
- * 글자 상수 id 를 붙인다(`LogEntry::_pID`, 테스트는 `ScopedLogCollector::countWithID`). 감싸는 싱크(`ILogSink::writeEvent`)는 사건을 그대로 넘겨야 한다.
+ * 글자 상수 id 를 붙인다(`LogEntry::_pID`, 테스트는 `ScopedLogCollector::countWithID`). 감싸는 백엔드(`ILogBackend::writeEvent`)는 사건을 그대로 넘겨야 한다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -28,56 +28,56 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) ILogSink. 매크로가 호출하는 전역 파사드이며, 출력 장치는 ILogOutput 이다.
+    // 2) ILogBackend. 매크로가 호출하는 전역 파사드이며, 출력 장치는 ILogOutput 이다.
     // ------------------------------------------------------------------------------
     /**
-     * @class ILogSink
+     * @class ILogBackend
      * @brief 로깅 파사드입니다. 포맷, 리스너, 로그 폴더까지 책임지는 "로거 전체"의 연결 지점입니다.
      * @details 출력 장치 인터페이스가 아닙니다. 한 줄이 실제로 나가는 곳은 `ILogOutput`(`ConsoleLogOutput` ·
-     *          `FileLogOutput`)이고, 그것들을 여러 개 들고 있는 것이 기본 싱크 `AsyncLogSink` 입니다. 이 인터페이스는 **로거 전체를 감싸거나
-     *          바꿔 끼우는** 곳입니다. 테스트 프레임워크가 로그를 가로채려고 이것을 구현해 기존 싱크를 감쌉니다(`TestFramework.h`).
+     *          `FileLogOutput`)이고, 그것들을 여러 개 들고 있는 것이 기본 백엔드 `AsyncLogBackend` 입니다. 이 인터페이스는 **로거 전체를 감싸거나
+     *          바꿔 끼우는** 곳입니다. 테스트 프레임워크가 로그를 가로채려고 이것을 구현해 기존 백엔드를 감쌉니다(`TestFramework.h`).
      */
-    class SW_API ILogSink
+    class SW_API ILogBackend
     {
     public:
-        ILogSink() = default;
+        ILogBackend() = default;
         /** @brief 가상 소멸자입니다. */
-        virtual ~ILogSink()                        = default;
-        ILogSink( const ILogSink& )                = default;
-        ILogSink& operator=( const ILogSink& )     = default;
-        ILogSink( ILogSink&& ) noexcept            = default;
-        ILogSink& operator=( ILogSink&& ) noexcept = default;
+        virtual ~ILogBackend()                           = default;
+        ILogBackend( const ILogBackend& )                = default;
+        ILogBackend& operator=( const ILogBackend& )     = default;
+        ILogBackend( ILogBackend&& ) noexcept            = default;
+        ILogBackend& operator=( ILogBackend&& ) noexcept = default;
 
         /** @brief 로그 폴더와 출력 장치를 엽니다. */
         virtual void initialize() = 0;
         /** @brief 출력 장치와 리스너를 닫습니다. */
         virtual void shutdown() = 0;
         /**
-         * @brief 사건 하나를 출력 장치와 리스너에 남깁니다. 시각 · 시계 · 스레드 · 문맥은 @p event 의 것만 씁니다 — 싱크는 다시 재지 않는다.
-         * @details 감싸는 싱크는 @p event 를 감싼 싱크로 그대로 넘깁니다. id 를 넘기지 않으면 테스트가 id 로 줄을 찾지 못한다.
+         * @brief 사건 하나를 출력 장치와 리스너에 남깁니다. 시각 · 시계 · 스레드 · 문맥은 @p event 의 것만 씁니다 — 백엔드는 다시 재지 않는다.
+         * @details 감싸는 백엔드는 @p event 를 감싼 백엔드로 그대로 넘깁니다. id 를 넘기지 않으면 테스트가 id 로 줄을 찾지 못한다.
          */
         virtual void writeEvent( const LogEvent& event ) = 0;
         /**
          * @brief 한 줄이 쓰일 때 호출할 리스너를 붙이고 그 구독을 돌려줍니다. 구독이 사라지면 뗍니다(진행 중인 방송이 끝나기를 기다린다).
-         * @details 감싸는 싱크는 감싼 싱크의 구독을 그대로 돌려줍니다. 리스너를 받지 않는 싱크는 빈 구독을 돌려줍니다.
+         * @details 감싸는 백엔드는 감싼 백엔드의 구독을 그대로 돌려줍니다. 리스너를 받지 않는 백엔드는 빈 구독을 돌려줍니다.
          */
         [[nodiscard]] virtual Subscription registerLogWrittenListener( const LogWrittenDelegate& listener ) = 0;
         /** @brief 로그 파일이 있는 폴더의 경로를 반환합니다. */
         virtual string_view getLogFolderPath() = 0;
         /**
-         * @brief 이 프로세스가 지금 쓰는 로그 파일의 경로입니다. 아직 한 줄도 쓰지 않았거나 파일을 쓰지 않는 싱크면 빈 글입니다.
-         * @details 폴더에서 "가장 새 파일" 을 고르면 같은 폴더를 쓰는 다른 프로세스(병렬 실행)의 로그를 집는다 — 이 프로세스의 것은 싱크만 안다.
+         * @brief 이 프로세스가 지금 쓰는 로그 파일의 경로입니다. 아직 한 줄도 쓰지 않았거나 파일을 쓰지 않는 백엔드면 빈 글입니다.
+         * @details 폴더에서 "가장 새 파일" 을 고르면 같은 폴더를 쓰는 다른 프로세스(병렬 실행)의 로그를 집는다 — 이 프로세스의 것은 백엔드만 안다.
          */
         virtual string getLogFilePath() = 0;
         /**
          * @brief 크래시 경로에서 부릅니다: 큐에 남은 줄과 장치 버퍼를 지금 이 스레드에서 내보냅니다. 락을 바로 잡지 못하면 포기합니다.
-         * @details 감싸는 싱크(테스트 프레임워크)는 감싼 싱크로 넘깁니다. 비동기 큐가 없는 싱크는 아무것도 하지 않아도 됩니다.
+         * @details 감싸는 백엔드(테스트 프레임워크)는 감싼 백엔드로 넘깁니다. 비동기 큐가 없는 백엔드는 아무것도 하지 않아도 됩니다.
          */
         virtual void waitUpToCrash() {}
         /**
          * @brief 줄마다 JSON 한 줄을 표준 출력에 쓰는 장치(`JSONLinesLogOutput`)를 달고 콘솔 장치를 끕니다(컨테이너 · 로그 수집기용, 운영 설정 `_bJSONLogs`). 두 번 불러도 한 번입니다.
-         * @return 켰으면 true. 장치를 달 수 없는 싱크(감싸는 싱크 · 비동기 큐가 없는 싱크)는 기본 구현이 false 를 돌려줍니다 — 부른 쪽이 알려야 합니다.
-         * @details 출력 장치 형식(`ILogOutput`)이 이 헤더보다 위 층에 있어 장치를 인자로 받지 않고, 켜는 일만 싱크에 맡깁니다.
+         * @return 켰으면 true. 장치를 달 수 없는 백엔드(감싸는 백엔드 · 비동기 큐가 없는 백엔드)는 기본 구현이 false 를 돌려줍니다 — 부른 쪽이 알려야 합니다.
+         * @details 출력 장치 형식(`ILogOutput`)이 이 헤더보다 위 층에 있어 장치를 인자로 받지 않고, 켜는 일만 백엔드에 맡깁니다.
          */
         virtual bool enableJSONLinesOutput() { return false; }
     };
@@ -86,33 +86,33 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 3) Logger. 매크로가 부르는 전역 진입점이며 전역 싱크와 상세도를 가진다. 줄의 범주는 id 의 영역(`LogEntry::getCategory`)이다 — 파일마다 따로 등록하는 호출자 이름은 없다(언리얼 `UE_LOG` 의 범주 하나와 같다). 인스턴스는 없다.
-    //    기본 싱크(비동기 큐와 출력 장치)는 `AsyncLogSink`(Core/Log/Sink)이고, 생성되면 전역 싱크가 비어 있을 때 자신을 등록한다.
+    // 3) Logger. 매크로가 부르는 전역 진입점이며 전역 백엔드와 상세도를 가진다. 줄의 범주는 id 의 영역(`LogEntry::getCategory`)이다 — 파일마다 따로 등록하는 호출자 이름은 없다(언리얼 `UE_LOG` 의 범주 하나와 같다). 인스턴스는 없다.
+    //    기본 백엔드(비동기 큐와 출력 장치)는 `AsyncLogBackend`(Core/Log/Backend)이고, 생성되면 전역 백엔드가 비어 있을 때 자신을 등록한다.
     // ------------------------------------------------------------------------------
     /**
      * @class Logger
-     * @brief 로그 매크로가 호출하는 전역 진입점입니다. 한 줄은 전역 싱크(`ILogSink`)에 넘기고, 싱크가 없으면 버립니다.
+     * @brief 로그 매크로가 호출하는 전역 진입점입니다. 한 줄은 전역 백엔드(`ILogBackend`)에 넘기고, 백엔드가 없으면 버립니다.
      * @details 이 진입점은 파일, 크래시, 모듈을 모르므로 Core 의 아래 계층(Container, Memory, String 등)이 로그를 쓸 수 있습니다.
-     *          포맷, 리스너, 비동기 큐, 출력 장치는 싱크(`AsyncLogSink`)가 맡습니다.
+     *          포맷, 리스너, 비동기 큐, 출력 장치는 백엔드(`AsyncLogBackend`)가 맡습니다.
      */
     class SW_API Logger final
     {
     public:
         Logger() = delete;
 
-        /** @brief 전역 싱크의 `waitUpToCrash` 입니다. 크래시 핸들러가 리포트를 쓴 뒤 부릅니다. */
+        /** @brief 전역 백엔드의 `waitUpToCrash` 입니다. 크래시 핸들러가 리포트를 쓴 뒤 부릅니다. */
         static void flushGlobalForCrash();
-        /** @brief 매크로가 쓸 전역 싱크를 바꿉니다. */
-        static void setGlobalSink( ILogSink* pSink );
-        /** @brief 전역 싱크가 비어 있으면 @p pSink 를 등록합니다(기본 싱크가 만들어질 때 부릅니다). */
-        static void registerGlobalSink( ILogSink* pSink );
-        /** @brief 전역 싱크가 @p pSink 이면 해제합니다(기본 싱크가 파괴될 때 부릅니다). */
-        static void unregisterGlobalSink( ILogSink* pSink );
+        /** @brief 매크로가 쓸 전역 백엔드를 바꿉니다. */
+        static void setGlobalBackend( ILogBackend* pBackend );
+        /** @brief 전역 백엔드가 비어 있으면 @p pBackend 를 등록합니다(기본 백엔드가 만들어질 때 부릅니다). */
+        static void registerGlobalBackend( ILogBackend* pBackend );
+        /** @brief 전역 백엔드가 @p pBackend 이면 해제합니다(기본 백엔드가 파괴될 때 부릅니다). */
+        static void unregisterGlobalBackend( ILogBackend* pBackend );
         /**
-         * @brief 전역 싱크로 한 줄을 남깁니다. 싱크가 없으면 줄을 버리지 않고 stderr 에 쓰고 비웁니다(기동이 이르거나 로거가 없는 도구에서도 줄이 남는다).
+         * @brief 전역 백엔드로 한 줄을 남깁니다. 백엔드가 없으면 줄을 버리지 않고 stderr 에 쓰고 비웁니다(기동이 이르거나 로거가 없는 도구에서도 줄이 남는다).
          */
         static void writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID = nullptr );
-        /** @brief 이미 남긴 사건을 전역 싱크로 넘깁니다(미룬 줄 — `ScopedDeferredLog`). 사건의 시각 · 순번은 그대로입니다. */
+        /** @brief 이미 남긴 사건을 전역 백엔드로 넘깁니다(미룬 줄 — `ScopedDeferredLog`). 사건의 시각 · 순번은 그대로입니다. */
         static void writeEventGlobal( const LogEvent& event );
         /**
          * @brief `SW_LOG_ASSERT`(Debug)가 멈추기 전에 식 · 메시지 · 위치를 stderr 에 동기로 쓰고 비웁니다.
@@ -126,14 +126,14 @@ namespace sw
         [[nodiscard]] static bool reportAssertFailure( const utf8* pTag, const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line,
                                                        const utf8* pFunction ) noexcept;
         /**
-         * @brief 전역 싱크에 리스너를 붙이고 그 구독을 돌려줍니다. 싱크가 없으면 순서 위반이라 `SW_LOW_LEVEL_ASSERT` 로 보고하고(Debug 는 멈춘다) 빈 구독을 돌려줍니다.
-         * @details 구독은 붙인 싱크를 가리킨다 — 그 뒤 전역 싱크가 바뀌어도 붙인 곳에서 떼고, 싱크가 먼저 사라지면 무효가 된다(종료 순서에서 정상).
+         * @brief 전역 백엔드에 리스너를 붙이고 그 구독을 돌려줍니다. 백엔드가 없으면 순서 위반이라 `SW_LOW_LEVEL_ASSERT` 로 보고하고(Debug 는 멈춘다) 빈 구독을 돌려줍니다.
+         * @details 구독은 붙인 백엔드를 가리킨다 — 그 뒤 전역 백엔드가 바뀌어도 붙인 곳에서 떼고, 백엔드가 먼저 사라지면 무효가 된다(종료 순서에서 정상).
          *          구독을 풀면 진행 중인 방송이 끝날 때까지 기다린다(최대 2 초). 그래서 리스너 콜백이 얻는 락을 쥔 채 풀지 않는다 — 콜백이 그 락을 기다리면
          *          2 초 뒤 stderr 경고로 풀린다. 리스너 콜백 안에서 푸는 것은 기다리지 않는다(자기 방송을 기다리지 않게 막아 두었다).
          */
         [[nodiscard]] static Subscription registerGlobalListener( const LogWrittenDelegate& listener );
-        /** @brief 현재 전역 싱크를 반환합니다. 없으면 nullptr 입니다. */
-        static ILogSink* getGlobalSink();
+        /** @brief 현재 전역 백엔드를 반환합니다. 없으면 nullptr 입니다. */
+        static ILogBackend* getGlobalBackend();
 
         /**
          * @brief 런타임 상세도를 정합니다. 이 수준보다 덜 심각한 줄은 버려집니다.
@@ -185,7 +185,7 @@ static_assert( static_cast<int32>( sw::LogLevel::Trace ) == SW_LOG_VERBOSITY_TRA
 
 #if !defined( SW_LOG_COMPILED_VERBOSITY )
     #if defined( SW_SHIPPING )
-    /// @brief 배포본은 Warning 까지만 컴파일합니다. Info · Trace 는 호출 자체가 사라집니다. 전용 서버 배포본은 Info 까지다(`cmake/Modules/Build/BuildLayout.cmake` 가 정의).
+    /// @brief 배포본은 Warning 까지만 컴파일합니다. Info · Trace 는 호출 자체가 사라집니다. 전용 서버 배포본은 Info 까지다(`cmake/Modules/Build/OutputLayout.cmake` 가 정의).
         #define SW_LOG_COMPILED_VERBOSITY SW_LOG_VERBOSITY_WARNING
     #elif defined( SW_DEBUG )
         #define SW_LOG_COMPILED_VERBOSITY SW_LOG_VERBOSITY_TRACE
@@ -330,8 +330,8 @@ namespace sw
 
     /**
      * @brief 이어 갈 수 없는 결함을 한 줄로 남기고 모든 구성에서 멈춥니다(언리얼 `UE_LOG(Fatal)` · LLVM `report_fatal_error` 자리).
-     * @details 서식은 `SW_LOG_*` 와 같은 `formatstring`(`%#`)입니다. 줄은 stderr 에 먼저 동기로 쓰이고 로그로도 가며, 비동기 싱크를 비운 뒤
-     *          `std::abort` 합니다(`sw::internal::reportFatal`). 로그 수준 필터 · 컴파일 제외를 타지 않습니다. 로그보다 아래 티어는 `SW_LOW_LEVEL_FATAL`.
+     * @details 서식은 `SW_LOG_*` 와 같은 `formatstring`(`%#`)입니다. 줄은 stderr 에 먼저 동기로 쓰이고 로그로도 가며, 비동기 백엔드를 비운 뒤
+     *          `std::abort` 합니다(`sw::internal::reportFatal`). 로그 수준 필터 · 컴파일 제외를 타지 않습니다. 로그보다 아래 층은 `SW_LOW_LEVEL_FATAL`.
      *          버퍼를 부르는 쪽 프레임에 두지 않게 줄 밖에 둔다(`writeFormattedLog` 와 같은 까닭).
      */
     template <typename... Args>

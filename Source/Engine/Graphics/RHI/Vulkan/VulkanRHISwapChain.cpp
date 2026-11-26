@@ -596,12 +596,12 @@ namespace sw
         // CLEAR 변종과 LOAD 변종. 한 프레임 안에서 백버퍼 렌더패스를 두 번 이상 여는 경우(그래프가 백버퍼에 그린 뒤 UI 를 얹는 경로)에 CLEAR 변종으로 다시 열면 앞의 내용이
         // 통째로 지워진다. 첨부 포맷 · 개수 · 샘플 수가 같아 프레임버퍼와 파이프라인은 두 렌더패스 모두와 호환된다(render pass compatibility).
         // LOAD 변종은 앞선 패스의 finalLayout 인 PRESENT_SRC 에서 시작한다.
-        VulkanRHIRenderPassCache::RenderPassSpec clearSpec{};
-        clearSpec.addColor( _imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-        _renderPass = VulkanRHIRenderPassCache::createFromSpec( device, clearSpec );
-        VulkanRHIRenderPassCache::RenderPassSpec loadSpec{};
-        loadSpec.addColor( _imageFormat, VK_ATTACHMENT_LOAD_OP_LOAD, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-        _renderPassLoad = VulkanRHIRenderPassCache::createFromSpec( device, loadSpec );
+        VulkanRHIRenderPassCache::VulkanRenderPassKey clearKey{};
+        clearKey.addColor( _imageFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+        _renderPass = VulkanRHIRenderPassCache::createFromKey( device, clearKey );
+        VulkanRHIRenderPassCache::VulkanRenderPassKey loadKey{};
+        loadKey.addColor( _imageFormat, VK_ATTACHMENT_LOAD_OP_LOAD, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+        _renderPassLoad = VulkanRHIRenderPassCache::createFromKey( device, loadKey );
         if ( _renderPass == VK_NULL_HANDLE || _renderPassLoad == VK_NULL_HANDLE )
         {
             destroyRenderPasses( device );

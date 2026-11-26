@@ -124,7 +124,7 @@ namespace sw
             void visit()
             {
                 typename TPush::Body body{};
-                if ( TProtocol::MessageTypes::read( _body, body ) == FixedReadResult::Ok )
+                if ( TProtocol::MessageTypes::read( _body, body ) == LayoutReadResult::Ok )
                     _client.onPush( TPush{}, body );
             }
         };
@@ -166,7 +166,7 @@ namespace sw
             if ( response.isOk() )
             {
                 BitReader body( response._pBody, response._bodySize );
-                if ( TProtocol::MessageTypes::read( body, result._reply ) != FixedReadResult::Ok )
+                if ( TProtocol::MessageTypes::read( body, result._reply ) != LayoutReadResult::Ok )
                 {
                     result._reply     = Reply{};
                     result._errorCode = OnlineError::kUnavailable; // 같은 스키마 해시인데 못 읽었다. 키트 결과로 꾸미지 않고 일시 장애로 알린다

@@ -531,7 +531,7 @@ namespace sw
                 continue;
             }
             // 가리킬 수 있는 id — 정렬해 두고 이진 검색한다(항목 수십 · 수백). 항목 안 참조(`inEntry`)는 항목마다 다시 모은다.
-            // 다른 파일의 원소(`file`)는 루트가 적은 리소스를 펼쳐 읽어 그 루트에서 모은다 — 루트가 적지 않았으면 이 줄은 보지 않는다(파일 이름이 필수인지는 읽는 코드가 안다).
+            // 다른 파일의 원소(`file`)는 루트가 적은 에셋을 펼쳐 읽어 그 루트에서 모은다 — 루트가 적지 않았으면 이 줄은 보지 않는다(파일 이름이 필수인지는 읽는 코드가 안다).
             vector<string_view> listTargetID;
             XMLDocument         targetDoc;
             string_view         targetFile;
@@ -542,7 +542,7 @@ namespace sw
                     continue;
                 // 파일 칸은 참조 글이다(GUID · 경로) — 풀리지 않으면 읽지 못한 것과 같은 오류다.
                 const expected<AssetReferenceTarget> target = AssetRegistry::readReferenceText( targetFile );
-                if ( target.has_value() == false || targetDoc.loadResource( AssetID{ target->_path } ) == false || targetDoc.getRoot().isValid() == false )
+                if ( target.has_value() == false || targetDoc.loadAsset( AssetID{ target->_path } ) == false || targetDoc.getRoot().isValid() == false )
                 {
                     SW_LOG_ERROR_ID( "XMLCatalog.ReferenceFileUnreadable", "%#: %#=\"%#\" could not be read - <%#> references cannot be checked and the catalog does not load", sourceName,
                                      rule._fileAttribute.c_str(), targetFile, rule._target.c_str() );

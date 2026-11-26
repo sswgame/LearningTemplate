@@ -3,7 +3,7 @@
  * @brief 리그 디버그 창의 ViewModel — 고른 오브젝트의 `PoseModifierComponent` 노드 · 대상 줄을 값으로 모으고(`gather`), 노드 고르기 · 가중치 · 켜짐 · 리그 저장 · 대상 기즈모 ·
  *        본 표시 명령을 받습니다. ImGui 를 모릅니다(`docs/agents/EditorUI.md` MVVM 계약).
  * @details 고친 가중치 · 켜짐은 실행 중인 인스턴스의 노드 복제본에 들어가고 되돌리기는 문서 명령(`EditorTransaction::push`)으로 기록한다. "Save to rig" 는 리그 에셋
- *          (`*.rig.xml`)의 노드 `weight` · `enabled` 에 되써 넣는다(`RigSaveParams::writeToRigFile`). 대상 기즈모 상태는 뷰포트 시각화와 함께 보는 `RigTargetEdit` 다.
+ *          (`*.rig.xml`)의 노드 `weight` · `enabled` 에 되써 넣는다(`RigSaveParams::writeToRigFile`). 대상 기즈모 상태는 뷰포트 시각화와 함께 보는 `RigTargetGizmoViewModel` 다.
  *          감시 값(`Editor.RigDebug*`)도 여기(.cpp)서 읽는다.
  */
 #pragma once

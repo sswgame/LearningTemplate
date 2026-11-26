@@ -2,22 +2,22 @@
 
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheRecordTable.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
 
 namespace sw
 {
     // 휘발 저장소는 서버 전용(Cache/Server/)이라 기록 값을 짓고 읽는 정의는 공용 ServerRecord.cpp 가 아닌 서버 TU 에 둔다(클라이언트 빌드 게이트).
-    bool ServerRecord::makeValue( const ServerStatus& status, EphemeralValue& outValue )
+    bool ServerRecord::makeValue( const ServerStatus& status, CacheValue& outValue )
     {
-        return EphemeralRecordTable<ServerStatus>{}.makeValue( status, outValue );
+        return CacheRecordTable<ServerStatus>{}.makeValue( status, outValue );
     }
 
-    bool ServerRecord::decode( const EphemeralReply& reply, ServerStatus& outStatus )
+    bool ServerRecord::decode( const CacheReply& reply, ServerStatus& outStatus )
     {
         ServerStatus status;
-        if ( EphemeralRecordTable<ServerStatus>{}.decode( reply, status ) == false || status._state == ServerState::Count )
+        if ( CacheRecordTable<ServerStatus>{}.decode( reply, status ) == false || status._state == ServerState::Count )
             return false;
         outStatus = std::move( status );
         return true;
@@ -31,7 +31,7 @@ namespace sw
     {
     }
 
-    bool ServerRegistration::initialize( EphemeralStoreRouter* pRouter, const ServerDescriptor& descriptor )
+    bool ServerRegistration::initialize( CacheStoreRouter* pRouter, const ServerDescriptor& descriptor )
     {
         const bool bNamesOk   = ServerRecord::isValidName( descriptor._kind ) && ServerRecord::isValidName( descriptor._region );
         const bool bAddressOk = descriptor._address.size() <= static_cast<size_t>( ServerRecord::kMaxAddressSize );
@@ -58,8 +58,8 @@ namespace sw
         if ( _pRouter == nullptr )
             return;
         const ServerDescriptor& descriptor = _status._descriptor;
-        _pRouter->submit( EphemeralRequest::makeErase( ServerRecord::makeRecordKey( descriptor._serverID ) ) );
-        _pRouter->submit( EphemeralRequest::makeScoreRemove( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ) ) );
+        _pRouter->submit( CacheRequest::makeErase( ServerRecord::makeRecordKey( descriptor._serverID ) ) );
+        _pRouter->submit( CacheRequest::makeScoreRemove( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ) ) );
         _pRouter = nullptr;
     }
 
@@ -84,7 +84,7 @@ namespace sw
     {
         if ( _pRouter == nullptr || seatCount <= 0 )
             return;
-        _pRouter->submit( EphemeralRequest::makeIncrement( ServerRecord::makeSeatKey( _status._descriptor._serverID ), -static_cast<int64>( seatCount ), reservationTTLMs ) );
+        _pRouter->submit( CacheRequest::makeIncrement( ServerRecord::makeSeatKey( _status._descriptor._serverID ), -static_cast<int64>( seatCount ), reservationTTLMs ) );
     }
 
     void ServerRegistration::setLoad( int32 load )
@@ -107,11 +107,11 @@ namespace sw
     {
         _status._heartbeatMs               = nowMs.count();
         const ServerDescriptor& descriptor = _status._descriptor;
-        EphemeralValue          value;
+        CacheValue              value;
         if ( ServerRecord::makeValue( _status, value ) )
-            _pRouter->submit( EphemeralRequest::makeSet( ServerRecord::makeRecordKey( descriptor._serverID ), std::move( value ), kRecordTTLMs ) );
-        _pRouter->submit( EphemeralRequest::makeScoreSet( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ),
-                                                          nowMs.toSeconds() ) );
+            _pRouter->submit( CacheRequest::makeSet( ServerRecord::makeRecordKey( descriptor._serverID ), std::move( value ), kRecordTTLMs ) );
+        _pRouter->submit( CacheRequest::makeScoreSet( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ),
+                                                      nowMs.toSeconds() ) );
         _lastWrittenMs = nowMs;
         _bDirty        = SW_FALSE;
     }

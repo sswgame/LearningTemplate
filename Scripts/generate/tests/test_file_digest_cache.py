@@ -16,7 +16,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from generate.engine_abi_stamp import drop_comments  # noqa: E402
+from generate.engine_abi_digest import drop_comments  # noqa: E402
 from generate.file_digest_cache import FileDigestCache  # noqa: E402
 
 

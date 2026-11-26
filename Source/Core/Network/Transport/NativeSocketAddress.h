@@ -5,7 +5,7 @@
  *          받는 쪽은 `sockaddr_storage` 로 받아 주소군을 보고 읽는다 — IPv4 사상 IPv6(이중 스택 소켓이 받은 IPv4 상대)는 IPv4 로 되돌린다(같은 상대가 두 주소로 보이지 않게).
  */
 #pragma once
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <WinSock2.h>

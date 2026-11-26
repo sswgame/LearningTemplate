@@ -51,17 +51,17 @@ namespace sw
         static constexpr const utf8* kListSeparators = ",;| \t\r\n";
 
         /**
-         * @brief 경로(리소스 상대 또는 절대)의 문서를 읽고 루트 원소를 찾습니다.
+         * @brief 경로(에셋 상대 또는 절대)의 문서를 읽고 루트 원소를 찾습니다.
          * @param pRootName 루트 원소 이름입니다(철자 그대로).
-         * @param pOutAbsPath 있으면 실제로 읽은 경로를 받습니다(`XMLDocument::loadResource`).
+         * @param pOutAbsPath 있으면 실제로 읽은 경로를 받습니다(`XMLDocument::loadAsset`).
          */
         [[nodiscard]] static XMLRootStatus loadRoot( XMLDocument& outDocument, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot,
                                                      string* pOutAbsPath = nullptr );
         /** @brief 텍스트를 파싱하고 루트 원소를 찾습니다. @p sourceName 은 구문 오류에 적는 이름입니다. */
         [[nodiscard]] static XMLRootStatus parseRoot( XMLDocument& outDocument, string_view xmlText, string_view sourceName, const utf8* pRootName,
                                                       XMLNode& outRoot );
-        /** @brief 부르는 쪽이 이미 읽은 리소스 @p assetID 의 글로 `parseRoot` 합니다(`XMLDocument::parseResourceText`). */
-        [[nodiscard]] static XMLRootStatus parseResourceRoot( XMLDocument& outDocument, string_view xmlText, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot );
+        /** @brief 부르는 쪽이 이미 읽은 에셋 @p assetID 의 글로 `parseRoot` 합니다(`XMLDocument::parseAssetText`). */
+        [[nodiscard]] static XMLRootStatus parseAssetRoot( XMLDocument& outDocument, string_view xmlText, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot );
 
         /**
          * @brief 선택 이름 속성을 앞뒤 공백을 뺀 이름으로 읽습니다. 없거나 비었으면(공백뿐이어도) 빈 이름입니다.
@@ -86,8 +86,8 @@ namespace sw
         // ------------------------------------------------------------------------------
 
         /**
-         * @brief 리소스 @p assetID 를 XML 글로 읽습니다. 팩의 이진 쿠킹본(`XMLBinary`)이면 글로 되살리고, 깨진 쿠킹본이면 오류를 남기고 false 입니다.
-         * @details 문서로 읽기만 하면 `XMLDocument::loadResource` 다(쿠킹본을 그대로 읽는다). 이것은 글을 고쳐 합치는 자리(부모 · 덮어쓰기 층)의 입구다. 쿠킹본은 고쳐 쓸 수 없어
+         * @brief 에셋 @p assetID 를 XML 글로 읽습니다. 팩의 이진 쿠킹본(`XMLBinary`)이면 글로 되살리고, 깨진 쿠킹본이면 오류를 남기고 false 입니다.
+         * @details 문서로 읽기만 하면 `XMLDocument::loadAsset` 다(쿠킹본을 그대로 읽는다). 이것은 글을 고쳐 합치는 자리(부모 · 덮어쓰기 층)의 입구다. 쿠킹본은 고쳐 쓸 수 없어
          *          글로 되살리지 않은 층은 부모를 적지 못하고 원본을 통째로 갈아 끼운다.
          */
         [[nodiscard]] static bool readText( const AssetID& assetID, string& outText );

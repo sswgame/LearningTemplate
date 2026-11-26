@@ -40,8 +40,8 @@ namespace sw
                                 static_cast<int64>( MathUtil::round( position._z * kWeldScale ) ) };
             }
 
-            static float3 getPosition( const RHIVertex& vertex ) { return float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] }; }
-            static float3 getNormal( const RHIVertex& vertex ) { return float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] }; }
+            static float3 getPosition( const MeshVertex& vertex ) { return float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] }; }
+            static float3 getNormal( const MeshVertex& vertex ) { return float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] }; }
 
             static SkinInfluence toInfluence( const MeshSkinVertex& skin )
             {
@@ -116,13 +116,13 @@ namespace sw
              * @param outListTriangleKept 원본 삼각형마다 남았으면 SW_TRUE 입니다(구간 범위를 옮길 때 쓴다).
              */
             static void bakeVertices( const Mesh& source, const vector<float3>& listPositionOffset, const vector<float3>& listNormalOffset, const AppearanceGeometry* pWelded,
-                                      const FitPartResult* pFit, vector<RHIVertex>& outListBaked, vector<MeshSkinVertex>& outListBakedSkin, vector<uint32>& outListBakedIndex,
+                                      const FitPartResult* pFit, vector<MeshVertex>& outListBaked, vector<MeshSkinVertex>& outListBakedSkin, vector<uint32>& outListBakedIndex,
                                       vector<uint32>& outListNewIndex, vector<uint8>& outListTriangleKept )
             {
-                const vector<RHIVertex>& listVertex    = source.getCPUView().getVertices();
-                const vector<uint32>&    listIndex     = source.getIndices();
-                const uint32             triangleCount = source.getIndexCount() / 3;
-                const bool               bUseFit       = pWelded != nullptr && pFit != nullptr;
+                const vector<MeshVertex>& listVertex    = source.getCPUView().getVertices();
+                const vector<uint32>&     listIndex     = source.getIndices();
+                const uint32              triangleCount = source.getIndexCount() / 3;
+                const bool                bUseFit       = pWelded != nullptr && pFit != nullptr;
                 outListNewIndex.assign( source.getVertexCount(), constant::invalid_index::kUint32 );
                 outListTriangleKept.assign( triangleCount, SW_FALSE );
                 outListBaked.reserve( source.getVertexCount() );
@@ -141,8 +141,8 @@ namespace sw
                             outListBakedIndex.push_back( outListNewIndex[vertexIndex] );
                             continue;
                         }
-                        RHIVertex vertex   = listVertex[vertexIndex];
-                        float3    position = getPosition( vertex ) + listPositionOffset[vertexIndex];
+                        MeshVertex vertex   = listVertex[vertexIndex];
+                        float3     position = getPosition( vertex ) + listPositionOffset[vertexIndex];
                         // 형상 정점은 위치로 합친 것이라 같은 정점을 쓰는 모서리는 모두 같은 형상 정점이다 — 처음 쓰인 모서리로 찾는다.
                         if ( bUseFit )
                             position += pFit->_listVertexDelta[pWelded->_listIndex[cornerIndex]];
@@ -306,19 +306,19 @@ namespace sw
              * @brief 조각이 쓰는 정점만 처음 쓰인 순서로 이어 붙이고(훅이 있으면 UV 를 옮긴다) 인덱스를 새 번호로 옮깁니다. 고르지 않은 구간의 정점은 빠진다.
              * @param outListNewIndex 부품 정점 번호 → 합친 정점 번호(조각이 쓰지 않은 정점은 무효)입니다. 스킨 · 모프가 이것으로 따라 옮긴다.
              */
-            static void appendPieceGeometry( const MergePiece& piece, const Mesh& mesh, const IMeshMergeHooks* pHooks, vector<RHIVertex>& inoutListVertex, vector<uint32>& inoutListIndex,
+            static void appendPieceGeometry( const MergePiece& piece, const Mesh& mesh, const IMeshMergeHooks* pHooks, vector<MeshVertex>& inoutListVertex, vector<uint32>& inoutListIndex,
                                              vector<uint32>& outListNewIndex )
             {
                 outListNewIndex.assign( mesh.getVertexCount(), constant::invalid_index::kUint32 );
-                const vector<uint32>&    listIndex  = mesh.getIndices();
-                const vector<RHIVertex>& listVertex = mesh.getCPUView().getVertices();
+                const vector<uint32>&     listIndex  = mesh.getIndices();
+                const vector<MeshVertex>& listVertex = mesh.getCPUView().getVertices();
                 for ( uint32 corner = piece._firstIndex; corner < piece._firstIndex + piece._indexCount; ++corner )
                 {
                     const uint32 index = listIndex[corner];
                     if ( outListNewIndex[index] == constant::invalid_index::kUint32 )
                     {
                         outListNewIndex[index] = static_cast<uint32>( inoutListVertex.size() );
-                        RHIVertex vertex       = listVertex[index];
+                        MeshVertex vertex      = listVertex[index];
                         if ( pHooks != nullptr )
                         {
                             const float2 uv  = pHooks->remapUV( piece._source, float2{ vertex._arrUV[0], vertex._arrUV[1] } );
@@ -368,7 +368,7 @@ namespace sw
     {
         using Internal = CharacterMeshUtilInternal;
         outGeometry.clear();
-        const vector<RHIVertex>&                 listVertex = mesh.getCPUView().getVertices();
+        const vector<MeshVertex>&                listVertex = mesh.getCPUView().getVertices();
         const vector<MeshSkinVertex>&            listSkin   = mesh.getSkinVertices();
         const bool                               bSkinned   = mesh.hasSkin();
         unordered_map<Internal::WeldKey, uint32> mapVertex;
@@ -376,7 +376,7 @@ namespace sw
         vector<uint32> listVertexToWelded( listVertex.size() );
         for ( size_t vertexIndex = 0; vertexIndex < listVertex.size(); ++vertexIndex )
         {
-            const RHIVertex&        vertex = listVertex[vertexIndex];
+            const MeshVertex&       vertex = listVertex[vertexIndex];
             const Internal::WeldKey key    = Internal::makeKey( Internal::getPosition( vertex ) );
             const auto              found  = mapVertex.find( key );
             if ( found != mapVertex.end() )
@@ -444,7 +444,7 @@ namespace sw
 
         vector<uint32>         listNewIndex;
         vector<uint8>          listTriangleKept;
-        vector<RHIVertex>      listBaked;
+        vector<MeshVertex>     listBaked;
         vector<uint32>         listBakedIndex;
         vector<MeshSkinVertex> listBakedSkin;
         Internal::bakeVertices( source, listPositionOffset, listNormalOffset, pWelded, pFit, listBaked, listBakedSkin, listBakedIndex, listNewIndex, listTriangleKept );
@@ -481,7 +481,7 @@ namespace sw
         // 장비는 모서리마다 한 점 — 같은 자리의 모서리는 같은 몸 위치에 묶이므로 이음매가 벌어지지 않는다.
         AppearanceGeometry garment;
         garment._listPosition.reserve( garmentVertexCount );
-        for ( const RHIVertex& vertex : inoutGarment.getCPUView().getVertices() )
+        for ( const MeshVertex& vertex : inoutGarment.getCPUView().getVertices() )
         {
             garment._listPosition.push_back( Internal::getPosition( vertex ) );
         }
@@ -551,7 +551,7 @@ namespace sw
         if ( const expected<void> collected = Internal::collectMergePieces( listPart, pHooks, listPiece, listGroup ); collected.has_value() == false )
             return unexpected( collected.error() );
 
-        vector<RHIVertex>       listVertex;
+        vector<MeshVertex>      listVertex;
         vector<uint32>          listIndex;
         vector<MeshSkinVertex>  listSkin;
         vector<MeshMorphTarget> listTarget;

@@ -25,5 +25,5 @@ namespace sw::editor
 
     SW_EDITOR_COMMAND( AdminToolOpen, "admin.openToolPanel", &openAdminToolPanel, nullptr, NoScene );
 
-    SW_EDITOR_COMMAND_TEXT( OnlineAdmin, "onlineadmin.commands", "editor/commands/onlineadmin.commands.xml" ); // 이 모듈 명령의 표시 · 배치
+    SW_EDITOR_COMMAND_INFO( OnlineAdmin, "onlineadmin.commands", "editor/commands/onlineadmin.commands.xml" ); // 이 모듈 명령의 표시 · 배치
 } // namespace sw::editor

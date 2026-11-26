@@ -15,7 +15,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 리소스 id → 글 표입니다. 부모 · 하위 트리 파일을 디스크 없이 준다. */
+    /** @brief 에셋 id → 글 표입니다. 부모 · 하위 트리 파일을 디스크 없이 준다. */
     class XTestSource final : public DataInheritanceSource
     {
     public:

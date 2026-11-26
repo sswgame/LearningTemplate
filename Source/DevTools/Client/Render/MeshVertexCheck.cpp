@@ -35,7 +35,7 @@ namespace sw
             }
 
             /** @brief 사본 하나의 차이를 로그로 남기고 다른 바이트 수를 돌려줍니다(같으면 0). */
-            static uint32 reportCopy( const string& name, const utf8* pWhich, RHIMeshVertexFormat format, uint32 vertexCount, const uint8* pExpected, const uint8* pActual )
+            static uint32 reportCopy( const string& name, const utf8* pWhich, MeshVertexFormat format, uint32 vertexCount, const uint8* pExpected, const uint8* pActual )
             {
                 const optional<MeshVertexCheck::Difference> difference = MeshVertexCheck::findDifference( format, vertexCount, pExpected, pActual );
                 if ( difference.has_value() == false )
@@ -65,7 +65,7 @@ namespace sw
             }
 
             /** @brief CPU 정점의 첫 영 길이 노멀을 로그로 남깁니다 — 정점 셰이더에서 NaN 이 되는 값인데, GPU 사본이 같으면 바이트 대조로는 드러나지 않는다. */
-            static void reportZeroNormal( const string& name, const vector<RHIVertex>& listVertex )
+            static void reportZeroNormal( const string& name, const vector<MeshVertex>& listVertex )
             {
                 for ( size_t vertexIndex = 0; vertexIndex < listVertex.size(); ++vertexIndex )
                 {
@@ -79,7 +79,7 @@ namespace sw
         };
     } // namespace
 
-    optional<MeshVertexCheck::Difference> MeshVertexCheck::findDifference( RHIMeshVertexFormat format, uint32 vertexCount, const uint8* pExpected, const uint8* pActual )
+    optional<MeshVertexCheck::Difference> MeshVertexCheck::findDifference( MeshVertexFormat format, uint32 vertexCount, const uint8* pExpected, const uint8* pActual )
     {
         const uint32         byteCount      = RHIMeshVertexStreams::computeBufferBytes( format, vertexCount );
         const uint32         attributeStart = RHIMeshVertexStreams::computeAttributeOffset( vertexCount );
@@ -119,12 +119,12 @@ namespace sw
             if ( bComparable == false )
                 continue;
             listSeen.push_back( pMesh );
-            const MeshCPUView        cpu         = pMesh->getCPUView();
-            const vector<RHIVertex>& listVertex  = cpu.getVertices();
-            const vector<RHIVertex>& listLOD     = cpu.getLODVertices();
-            const uint32             lod0Count   = static_cast<uint32>( listVertex.size() );
-            const uint32             vertexCount = pMesh->getDrawVertexCount();
-            CheckedMesh              checked{};
+            const MeshCPUView         cpu         = pMesh->getCPUView();
+            const vector<MeshVertex>& listVertex  = cpu.getVertices();
+            const vector<MeshVertex>& listLOD     = cpu.getLODVertices();
+            const uint32              lod0Count   = static_cast<uint32>( listVertex.size() );
+            const uint32              vertexCount = pMesh->getDrawVertexCount();
+            CheckedMesh               checked{};
             checked._name           = pMesh->getSourceAsset().str();
             checked._format         = pMesh->getVertexFormat();
             checked._vertexCount    = vertexCount;

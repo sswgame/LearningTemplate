@@ -14,10 +14,10 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/AssetScanCache.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw
 {
@@ -27,7 +27,7 @@ namespace sw
         {
             static string toLowerID( string_view assetID ) { return StringUtil::toLower( assetID ); }
 
-            /** @brief 서술 리소스 id(`a/b.png.meta`)의 원본 리소스 id(`a/b.png`)입니다. */
+            /** @brief 서술 에셋 id(`a/b.png.meta`)의 원본 에셋 id(`a/b.png`)입니다. */
             static string_view toSourceID( string_view sidecarID ) { return sidecarID.substr( 0, sidecarID.size() - AssetMeta::kExtension.size() ); }
 
             static bool hasNoEmptyText( const vector<string>& listText, const utf8* pField, string_view path )
@@ -78,8 +78,8 @@ namespace sw
             /** @brief 훑은 파일 하나입니다. */
             struct ScannedFile
             {
-                string    _assetID;
-                FileStamp _fileStamp{};
+                string   _assetID;
+                FileStat _fileStat{};
             };
         };
     } // namespace
@@ -278,7 +278,7 @@ namespace sw
 
     string AssetMeta::toXML() const
     {
-        // 저장소의 서술(.meta)과 `Scripts/lint/asset_identity.py` 의 make_meta_text 는 끝 줄바꿈이 없다 — 같은 바이트여야 저장 → 다시 읽기 → 저장이 같고
+        // 저장소의 서술(.meta)과 `Scripts/lint/asset_guid.py` 의 make_meta_text 는 끝 줄바꿈이 없다 — 같은 바이트여야 저장 → 다시 읽기 → 저장이 같고
         // (editor.importsettings 되돌리기), 린트의 글 비교가 에디터가 쓴 서술을 바뀐 것으로 보지 않는다.
         string text = XMLSerializer::serialize( this, *StaticType() );
         while ( text.empty() == false && ( text.back() == '\n' || text.back() == '\r' ) )
@@ -494,7 +494,7 @@ namespace sw
 
         AssetDatabase                    database;
         vector<const string*>            listOutputID;  // 임포트 산출물 — 원본이 모두 오른 뒤에 줄을 적는다
-        unordered_map<string, AssetMeta> mapSourceMeta; // 원본 리소스 id(소문자) → 그 `.meta`(산출물 표를 본다)
+        unordered_map<string, AssetMeta> mapSourceMeta; // 원본 에셋 id(소문자) → 그 `.meta`(산출물 표를 본다)
         for ( const AssetIdentityFile* pFile : listSorted )
         {
             const string& assetID = pFile->_assetID;
@@ -595,7 +595,7 @@ namespace sw
             // 작업 도메인(시나리오 · 테스트 사본 — 실행이 쓰고 지운다)은 기동 색인에 넣지 않는다: 원본을 머리째 복사해 GUID 가 겹친다. 정체성 규칙(`classify`)은
             // 그 안도 보통 에셋으로 본다 — 사본 안의 가져오기 · 내용 바꾸기가 GUID 를 주고 읽어야 한다(editor.assetidentity).
             if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( assetID ), AssetPaths::kScratchDomain ) == false )
-                listScanned.push_back( Internal::ScannedFile{ std::move( assetID ), entry._fileStamp } );
+                listScanned.push_back( Internal::ScannedFile{ std::move( assetID ), entry._fileStat } );
             return true;
         };
         if ( FileUtil::isDirectory( rootPath ) == false || FileUtil::forEachDirectoryEntry( rootPath, true, collectEntry ) == false )
@@ -613,7 +613,7 @@ namespace sw
             AssetIdentityFile file{ assetID, {} };
             if ( kind == AssetIdentityKind::Header || kind == AssetIdentityKind::Sidecar )
             {
-                const vector<uint8>* pCached = pCache != nullptr ? pCache->find( assetID, scanned._fileStamp ) : nullptr;
+                const vector<uint8>* pCached = pCache != nullptr ? pCache->find( assetID, scanned._fileStat ) : nullptr;
                 if ( pCached != nullptr )
                 {
                     file._text.assign( pCached->begin(), pCached->end() );
@@ -627,7 +627,7 @@ namespace sw
                 {
                     const optional<string> payload = Internal::makeScanPayload( kind, assetID, file._text );
                     if ( payload.has_value() )
-                        pCache->record( assetID, scanned._fileStamp, vector<uint8>( payload->begin(), payload->end() ) );
+                        pCache->record( assetID, scanned._fileStat, vector<uint8>( payload->begin(), payload->end() ) );
                 }
             }
             listFile.push_back( std::move( file ) );

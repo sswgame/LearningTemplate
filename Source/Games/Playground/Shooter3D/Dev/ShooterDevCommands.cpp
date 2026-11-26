@@ -33,17 +33,17 @@
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Runtime/Character/Camera/FirstPersonCameraComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Killcam/KillcamComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
-#include "GameFramework/Runtime/Character/Control/FirstPersonCameraComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -316,7 +316,7 @@ namespace sw
 {
     namespace
     {
-        // 바닥 기준의 자리 — 두 클라이언트 시나리오가 `<Record>` 로 보고에 남기고 `Scripts net-pair match` 가 견준다. 바닥 위가 아니면 값이 없다.
+        // 바닥 기준의 자리 — 두 클라이언트 시나리오가 `<Record>` 로 보고에 남기고 `Scripts login-connect-session match` 가 견준다. 바닥 위가 아니면 값이 없다.
         struct ShooterNetPawnWatches
         {
             [[nodiscard]] static bool readFloorX( const ShooterNetPawnComponent& component, float64& outValue )

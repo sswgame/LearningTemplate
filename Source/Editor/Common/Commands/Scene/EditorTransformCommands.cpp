@@ -14,17 +14,17 @@
 #include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw::editor
 {

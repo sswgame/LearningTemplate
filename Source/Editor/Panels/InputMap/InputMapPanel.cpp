@@ -18,9 +18,9 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
-#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/GamepadButton.h"
 #include "Engine/Input/InputGlyphStyle.h"
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Virtual/InputReplay.h"
@@ -607,7 +607,7 @@ namespace sw::editor
             for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
             {
                 const Key   key      = static_cast<Key>( keyIndex );
-                const utf8* pKeyName = KeyCodeUtil::toName( key );
+                const utf8* pKeyName = getKeyName( key );
                 if ( StringUtil::isNullOrEmpty( pKeyName ) == false )
                 {
                     if ( ImGui::Button( pKeyName, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 11.0f, 1.25f ) ) ) )
@@ -661,7 +661,7 @@ namespace sw::editor
             bool bAnyKey = false;
             for ( const Key key : state._listHeldKey )
             {
-                const utf8* pName = KeyCodeUtil::toName( key );
+                const utf8* pName = getKeyName( key );
                 if ( pName != nullptr )
                 {
                     ImGui::SameLine();

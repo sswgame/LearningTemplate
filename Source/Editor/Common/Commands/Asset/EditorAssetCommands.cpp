@@ -13,9 +13,9 @@
 #include "Editor/Common/Workspace/Asset/EditorPlacementPose.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetPaths.h"
@@ -131,7 +131,7 @@ namespace sw::editor
         SpriteComponent* pSprite = pSpawned->addComponent<SpriteComponent>();
         if ( pSprite != nullptr )
         {
-            // 드롭한 것은 콘텐츠 브라우저의 리소스 id 다. 이것을 프로젝트 루트 기준으로 다시 `makeRelativePath` 하면 경로가 깨져
+            // 드롭한 것은 콘텐츠 브라우저의 에셋 id 다. 이것을 프로젝트 루트 기준으로 다시 `makeRelativePath` 하면 경로가 깨져
             // 스프라이트가 텍스처를 찾지 못하고 흰 사각형으로 그려지므로 주의한다.
             const string textureID = AssetPaths::normalizeAssetID( pPath );
             if ( textureID.empty() )
@@ -153,8 +153,8 @@ namespace sw::editor
             return nullptr;
         if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
             return nullptr;
-        // 메시 id 는 리소스 id 로 저장한다(씬 파일이 다른 PC 에서도 읽힌다). 리소스 트리 밖이면 만들지 않는다.
-        const string meshID = AssetPaths::normalizeAssetID( pPath ); // 드롭한 것은 콘텐츠 브라우저의 리소스 id 다
+        // 메시 id 는 에셋 id 로 저장한다(씬 파일이 다른 PC 에서도 읽힌다). 콘텐츠 트리 밖이면 만들지 않는다.
+        const string meshID = AssetPaths::normalizeAssetID( pPath ); // 드롭한 것은 콘텐츠 브라우저의 에셋 id 다
         if ( meshID.empty() )
         {
             SW_LOG_WARNING_ID( "EditorAssetCommands.MeshDropNotInside", "Mesh drop: '%#' is not inside the resource tree - nothing was placed", pPath );

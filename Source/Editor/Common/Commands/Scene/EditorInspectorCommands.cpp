@@ -10,9 +10,9 @@
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetPaths.h"

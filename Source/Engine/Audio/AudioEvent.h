@@ -23,7 +23,7 @@
 
 namespace sw
 {
-    struct ResourceContext;
+    struct AssetComposeContext;
 
     /** @brief 이벤트가 클립을 고르는 방식입니다. */
     ENUM()
@@ -199,7 +199,7 @@ namespace sw
     struct SW_API AudioEventLibrary
     {
         REFLECT_BODY();
-        /** @brief 이벤트 라이브러리 파일의 접미사입니다. 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
+        /** @brief 이벤트 라이브러리 파일의 접미사입니다. 에디터 종류 등록(`Editor/AssetTypeActions`)이 이 값을 씁니다. */
         static constexpr string_view kExtension = ".audioevents.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
@@ -215,14 +215,14 @@ namespace sw
         PROPERTY( Tooltip = "Events" )
         vector<AudioEventDef> _listEvent{};
 
-        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
+        /** @brief 에셋 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 펼쳐(파일 `_base`, 이벤트 `_parentEvent`) 읽고 검사합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
 
     private:
-        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
-        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context );
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 에셋 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
+        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context );
 
     public:
         /** @brief 파일 안에서만 정해지는 규칙(이름, 클립, 범위, 파라미터 이름, 곡선 순서)을 검사합니다. */
@@ -233,7 +233,7 @@ namespace sw
          */
         string saveToXMLText() const;
         /**
-         * @brief 검사(`validate`)를 통과한 라이브러리를 리소스 경로의 파일에 씁니다. 에디터의 오디오 이벤트 창이 고친 데이터를 저장하는 길입니다.
+         * @brief 검사(`validate`)를 통과한 라이브러리를 에셋 경로의 파일에 씁니다. 에디터의 오디오 이벤트 창이 고친 데이터를 저장하는 길입니다.
          * @details 검사를 통과하지 못하면 쓰지 않는다 — 읽을 수 없는 파일을 남기지 않는다. 저장한 파일은 에셋 핫 리로드가 엔진에 다시 올린다.
          *          지금 파일이 `_base` 를 적었으면 부모와 다른 칸만 쓴다 — 변형을 모든 칸을 적은 파일로 끊지 않는다. 부모를 읽지 못하면 쓰지 않는다.
          *          이벤트 프리셋(`_parentEvent`)도 부모 이벤트와의 차이로 쓴다(`saveToXMLText`).

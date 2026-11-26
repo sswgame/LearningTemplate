@@ -7,7 +7,7 @@
  *          확장자가 없는 값(`cube` 같은 내장 메시 id)과 씬 경로(`.scene.xml` · `.scene.bin`, 다음 씬으로의 이음이지 이 씬의 에셋이 아니다)는 뺀다.
  *          목록은 경로 오름차순이고 중복이 없다 — 같은 씬은 늘 같은 바이트로 구워져 쿠킹 기록(`CookStore`)이 재사용한다.
  *
- *          형식: `{ "version": 1, "paths": [ "game/x/models/a.mesh", … ] }`. 경로는 리소스 id(`/` 구분)다.
+ *          형식: `{ "version": 1, "paths": [ "game/x/models/a.mesh", … ] }`. 경로는 에셋 id(`/` 구분)다.
  *          쿠킹은 씬 하나마다 작업 둘을 돈다(`SceneCooker::cookAllScenes`) — 쿠킹 기록은 작업 하나에 출력 하나라, 씬 쿠킹본(SCN1)에 목록을 싣는 대신 옆 파일을 따로 굽는다.
  */
 #pragma once
@@ -19,7 +19,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/SceneIterationKey.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -29,7 +29,7 @@ namespace sw
     struct SW_API ScenePreloadList
     {
         static constexpr string_view kExtension = ".preload.json";
-        static constexpr FormatDef   kFormat{ "SWPL" };
+        static constexpr FormatDesc  kFormat{ "SWPL" };
 
         /**
          * @brief 씬 파일 경로(`….scene.xml` 또는 `….scene.bin`)의 프리로드 목록 경로(`….preload.json`)를 만듭니다. 씬 파일이 아니면 빈 문자열입니다.
@@ -42,7 +42,7 @@ namespace sw
         /** @brief 목록을 디스크 절대 경로 @p diskPath 에 씁니다(쿠킹 출력). */
         [[nodiscard]] static bool write( const AbsolutePath& diskPath, const vector<string>& listPath );
         /**
-         * @brief 리소스 id @p listAssetID 의 목록을 읽습니다(팩 · 낱개 파일). 파일이 없거나 형식이 틀리면 오류를 남기고 false 입니다.
+         * @brief 에셋 id @p listAssetID 의 목록을 읽습니다(팩 · 낱개 파일). 파일이 없거나 형식이 틀리면 오류를 남기고 false 입니다.
          * @details 파일이 없는 씬(쿠킹 전 Dev 실행)은 부르는 쪽이 `AssetIO::hasAsset` 로 먼저 묻는다 — 없는 파일을 오류로 세지 않는다.
          */
         [[nodiscard]] static bool read( const AssetID& assetID, vector<string>& outListPath );

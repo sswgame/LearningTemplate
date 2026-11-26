@@ -11,8 +11,8 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
@@ -23,7 +23,7 @@ namespace sw
     class GameObjectManager;
     class QuestCatalog;
     struct AbilityOwnerDiedEvent;
-    struct GimmickCueEvent;
+    struct MechanismCueEvent;
     struct InteractionCompletedEvent;
 
     /**
@@ -32,7 +32,7 @@ namespace sw
      * @details - 열기: 퀘스트 카탈로그를 받아 연다(디렉터의 `startGame` — `PlayerComponentUtil::openOnOwner`). 카탈로그는 소유하지 않고 참조만 한다. 카탈로그가 없으면 퀘스트를 시작하지 못한다.
      *          - 찾기 · 세이브: `PlayerComponentUtil` · `DeferredStateRestore`. 정의한 .cpp 가 `StatefulComponentRegistrar` 로 모든 게임의 스냅샷에 올린다.
      *          - 자동 세기: "game" 채널의 쓰러짐(`AbilityOwnerDiedEvent`)과 상호작용 완료(`InteractionCompletedEvent`)를 구독해, 이 일지 주인이 조종하는 폰이 한 것만
-     *            `notify( "Defeat", <쓰러진 대상의 태그> )` · `notify( "Interact", <상호작용 이름> )` · `notify( "Cue", <연출 신호 이름> )`(`GimmickCueEvent` — 자기 폰이 트리거에 들어가 부른 것) 로 센다(Lyra 처럼 대상은 게임플레이 태그로 맞춘다). 게임 고유의 일(보스 종 ·
+     *            `notify( "Defeat", <쓰러진 대상의 태그> )` · `notify( "Interact", <상호작용 이름> )` · `notify( "Cue", <연출 신호 이름> )`(`MechanismCueEvent` — 자기 폰이 트리거에 들어가 부른 것) 로 센다(Lyra 처럼 대상은 게임플레이 태그로 맞춘다). 게임 고유의 일(보스 종 ·
      *            지역 클리어)은 디렉터가 직접 `notify` 한다.
      */
     REFLECT( Category = "Framework", DisplayName = "Quest Log", Tooltip = "One player's quest log, on the controller object (or the director object in a scene without a controller)" )
@@ -42,7 +42,7 @@ namespace sw
         REFLECT_BODY();
         SW_REGISTERED_COMPONENT( QuestLogComponent );
 
-        static constexpr FormatDef kStateFormat{ "QLGC" };
+        static constexpr FormatDesc kStateFormat{ "QLGC" };
         /** @brief 자동으로 세는 목표 종류 — 퀘스트 데이터의 `<Objective kind="…">` 와 같은 글자다. */
         static constexpr const utf8* kDefeatKind   = "Defeat";
         static constexpr const utf8* kInteractKind = "Interact";
@@ -80,8 +80,8 @@ namespace sw
         void handleOwnerDied( const AbilityOwnerDiedEvent& event );
         /** @brief 상호작용 완료를 받습니다. 이 일지 주인이 조종하는 폰이 한 것이면 상호작용 이름으로 `Interact` 를 셉니다. */
         void handleInteractionCompleted( const InteractionCompletedEvent& event );
-        /** @brief 연출 신호를 받습니다. 이 일지 주인이 조종하는 폰이 부른 것(`GimmickCueEvent::_target`)이면 신호 이름으로 `Cue` 를 셉니다. */
-        void handleCue( const GimmickCueEvent& event );
+        /** @brief 연출 신호를 받습니다. 이 일지 주인이 조종하는 폰이 부른 것(`MechanismCueEvent::_target`)이면 신호 이름으로 `Cue` 를 셉니다. */
+        void handleCue( const MechanismCueEvent& event );
 
     private:
         /** @brief 일지를 지금 판의 카탈로그에 다시 묶습니다. */

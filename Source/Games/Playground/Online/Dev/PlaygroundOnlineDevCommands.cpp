@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -16,7 +16,7 @@
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardClient.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
 #include "Games/Playground/Online/PlaygroundOnlineFlow.h"

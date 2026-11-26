@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
@@ -24,7 +24,7 @@ namespace sw
     {
         struct PawnComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "PAWN" };
+            static constexpr FormatDesc kStateFormat{ "PAWN" };
 
             /** @brief 조종 회전 오프셋 고정소수점의 한 라디안입니다(0.00001 rad 간격 — 프레임 사이에 쌓이는 반동은 수 라디안을 넘지 않는다). */
             static constexpr float32 kRotationOffsetUnitsPerRadian = 100000.0f;

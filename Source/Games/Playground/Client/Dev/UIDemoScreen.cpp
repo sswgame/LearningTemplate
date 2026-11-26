@@ -15,7 +15,7 @@
 #include "Engine/UI/Screen/UIScreenSwitch.h"
 #include "Engine/UI/UISystem.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 #include "Games/Playground/Client/Dev/StressTestSceneSettings.h"
 

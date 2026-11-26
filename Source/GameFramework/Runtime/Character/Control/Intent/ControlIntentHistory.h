@@ -16,7 +16,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
@@ -54,7 +54,7 @@ namespace sw
     class SW_GF_API ControlIntentHistory
     {
     public:
-        static constexpr FormatDef   kFormat{ "SWIN" };
+        static constexpr FormatDesc  kFormat{ "SWIN" };
         static constexpr string_view kExtension            = ".swintent";
         static constexpr int32       kDefaultCapacityTicks = 3600; ///< 폰마다 기본 링 버퍼 크기. 60 Hz 로 1 분이다
         static constexpr int32       kMaxTrackCount        = 4096; ///< 파일 하나의 폰 수 상한(깨진 머리를 큰 할당으로 읽지 않게)

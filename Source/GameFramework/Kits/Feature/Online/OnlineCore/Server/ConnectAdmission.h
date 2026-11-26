@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServerKitName.h"
 
 namespace sw

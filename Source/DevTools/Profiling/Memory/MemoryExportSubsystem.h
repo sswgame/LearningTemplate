@@ -10,7 +10,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/Subsystem.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskHandle.h"
 
 #include "DevTools/DevToolsAPI.h"
 

@@ -23,7 +23,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
-#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerDrawList.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 
@@ -204,7 +204,7 @@ namespace sw::editor
         /**
          * @brief 미리보기 탭의 뷰포트에서 몸 표면 집기를 받습니다 — 구간 고르기(별칭 대응)와 배치 층 옮기기(끄는 동안 한 되돌리기 단계), 강조 구간 · 집은 자리 표시.
          * @details 몸 탭에서 집기를 켜고 미리보기 탭에서 누른다(뷰포트는 한 탭이다). 기즈모가 마우스를 쥐었으면 받지 않는다. Esc 가 끈다.
-         *          집기 · 윤곽은 몸과 부품 오브젝트(`collectPickObjects`)를 지금 포즈로 스키닝한 표면(`BodyPickSurface`)으로 한다. 구간 고르기는 부품까지, 층 배치는 몸 피부만 본다.
+         *          집기 · 윤곽은 몸과 부품 오브젝트(`collectPickObjects`)를 지금 포즈로 스키닝한 표면(`BodySurfacePick`)으로 한다. 구간 고르기는 부품까지, 층 배치는 몸 피부만 본다.
          *          윤곽 선은 모은 값(`PreviewViewState::_listPickLine`)이고, 누른 자리는 광선으로 `pickBodySurface` 에 넘긴다.
          */
         void drawBodyPickOverlay();

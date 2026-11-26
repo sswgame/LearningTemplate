@@ -5,8 +5,8 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"

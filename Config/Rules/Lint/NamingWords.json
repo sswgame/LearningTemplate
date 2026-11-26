@@ -1,5 +1,5 @@
 {
-  "_comment": "이름 대조 표(Scripts/lint/naming_words.py). 금지 동사(_banned — 함수 첫 단어) · 금지 명사(_bannedTerms — 모든 이름의 모든 단어), 표준 합성어 예외(_keepTerms), bool 술어 첫 단어(_predicateWords), For · Of 게터의 조회 동사(_lookupWords). 새 단어는 언리얼 · 유니티 · Godot 과 대조한 뒤 올린다. 낱말 표(_words · _scopedWords · _externalPatterns)는 모든 이름의 모든 낱말(함수 첫 낱말 · 형식 끝 낱말 포함)을 본다(word 규칙, 전수 집계는 py -3 -m Scripts naming-census). 약어(_acronyms — 모두 대문자로 쓰는 약어, docs/agents/NamingCpp.md Acronyms)는 식별자 · 파일 · 폴더의 낱말이 첫 글자만 대문자로 쓴 것(Json · Id · Gpu)을 막고, 새 약어는 같은 커밋에서 전수로 고친다. 바깥 이름(서드파티 · OS API)과 데이터 철자(직렬화 키 · 테스트 이름)는 _acronymKeep 에 까닭과 함께.",
+  "_comment": "이름 대조 표(Scripts/lint/rules/naming_words.py). 금지 동사(_banned — 함수 첫 단어) · 금지 명사(_bannedTerms — 모든 이름의 모든 단어), 표준 합성어 예외(_keepTerms), bool 술어 첫 단어(_predicateWords), For · Of 게터의 조회 동사(_lookupWords). 새 단어는 언리얼 · 유니티 · Godot 과 대조한 뒤 올린다. 낱말 표(_words · _scopedWords · _externalPatterns)는 모든 이름의 모든 낱말(함수 첫 낱말 · 형식 끝 낱말 포함)을 본다(word 규칙, 전수 집계는 py -3 -m Scripts naming-census). 약어(_acronyms — 모두 대문자로 쓰는 약어, docs/agents/NamingCpp.md Acronyms)는 식별자 · 파일 · 폴더의 낱말이 첫 글자만 대문자로 쓴 것(Json · Id · Gpu)을 막고, 새 약어는 같은 커밋에서 전수로 고친다. 바깥 이름(서드파티 · OS API)과 데이터 철자(직렬화 키 · 테스트 이름)는 _acronymKeep 에 까닭과 함께.",
   "_banned": {
     "drain": "flush(쌓인 일을 끝낼 때까지 막는다) · poll(큐를 꺼내 처리한다) · take(꺼내 넘긴다). 서버 드레인 · 게임 수치 소모만 예외",
     "note": "동사는 record",
@@ -18,7 +18,8 @@
     "Work": "Job",
     "Judgement": "Result(판정의 결과 — 금지어 Verdict 와 같은 자리)",
     "Tally": "Stats · Count(형식은 이미 …Stats 다)",
-    "Dirtied": "Dirty — markDirty(언리얼 MarkRenderStateDirty)"
+    "Dirtied": "Dirty — markDirty(언리얼 MarkRenderStateDirty)",
+    "Fingerprint": "Digest(내용 해시 — 한 개념에 낱말 하나, 2026-11-27 N10)"
   },
   "_keepTerms": [
     "WorkArea",
@@ -98,7 +99,8 @@
   ],
   "_keep": {
     "DummyType": "리플렉션 테스트의 형식 이름 표본(열거형 끝말 kind 규칙의 예외)",
-    "FixedNumberType": "C++ 수 형식(int32 · float32 …)을 가리킨다 — 값의 갈래가 아니라 형식이다(kind 규칙의 예외)",
+    "LayoutScalarType": "C++ 수 형식(int32 · float32 …)을 가리킨다 — 값의 갈래가 아니라 형식이다(kind 규칙의 예외)",
+    "GlobalVariable": "ConsoleVariable 로 바꾸지 않는다 — 첫 커밋(709739486a)부터 쓴 이름이고 NamingCpp 의 `gv_` 규칙과 묶여 있다(사용자 결정 2026-11-27)",
     "GlobalVariableType": "전역 변수의 C++ 형식을 가리킨다(kind 규칙의 예외)",
     "PredefinedNameType": "미리 정한 이름 번호표 — 형식 이름 표다(kind 규칙의 예외)",
     "GamepadBatteryType": "XInput XINPUT_BATTERY_TYPE 의 자기 용어(kind 규칙의 예외)",
@@ -1097,6 +1099,7 @@
       "class",
       "classes",
       "classic",
+      "classifier",
       "classify",
       "clause",
       "clean",
@@ -1369,6 +1372,7 @@
       "controls",
       "conv",
       "conversation",
+      "convergence",
       "conversion",
       "convert",
       "converted",
@@ -1869,6 +1873,7 @@
       "disguised",
       "disjoint",
       "disk",
+      "dismember",
       "dismemberment",
       "dismiss",
       "dismissed",
@@ -2444,7 +2449,6 @@
       "finds",
       "fine",
       "finger",
-      "fingerprint",
       "finish",
       "finished",
       "finishes",
@@ -2802,6 +2806,7 @@
       "gui",
       "guid",
       "guide",
+      "guides",
       "gust",
       "gv",
       "gvm",
@@ -3169,6 +3174,7 @@
       "instantiated",
       "instigator",
       "instruction",
+      "instrumentation",
       "insufficient",
       "int",
       "intact",
@@ -3208,6 +3214,7 @@
       "interpolate",
       "interpolated",
       "interpolation",
+      "interpreter",
       "interrupt",
       "interrupted",
       "interruptible",
@@ -3750,6 +3757,8 @@
       "measure",
       "measured",
       "measures",
+      "mechanism",
+      "mechanisms",
       "media",
       "medial",
       "median",
@@ -5015,6 +5024,7 @@
       "reduction",
       "reentry",
       "ref",
+      "refactor",
       "reference",
       "referenced",
       "references",
@@ -5471,6 +5481,7 @@
       "sb",
       "sbo",
       "sc",
+      "scaffold",
       "scalability",
       "scalable",
       "scalar",
@@ -7328,8 +7339,6 @@
       "gem",
       "ghost",
       "ghosts",
-      "gimmick",
-      "gimmicks",
       "godori",
       "gold",
       "grapple",
@@ -7679,7 +7688,7 @@
       "paths": [
         "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres",
         "Scripts/generate/third_party_notices.py",
-        "Scripts/package/pack.py"
+        "Scripts/package/package.py"
       ],
       "hint": "libpq NOTICE · 라이선스 NOTICE 파일(Apache NOTICE)만 — 운영 공지는 Announcement, 플레이어 알림은 Notification, 엔진 · 망 사건 값은 Event(NamingCpp.md 알림 줄). 관용구 ShutdownNotice 는 _keepTerms"
     },
@@ -7687,7 +7696,7 @@
       "paths": [
         "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres",
         "Scripts/generate/third_party_notices.py",
-        "Scripts/package/pack.py"
+        "Scripts/package/package.py"
       ],
       "hint": "libpq NOTICE · 라이선스 NOTICE 파일(Apache NOTICE)만 — 운영 공지는 Announcement, 플레이어 알림은 Notification, 엔진 · 망 사건 값은 Event(NamingCpp.md 알림 줄). 관용구 ShutdownNotice 는 _keepTerms"
     },
@@ -7695,7 +7704,7 @@
       "paths": [
         "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres",
         "Scripts/generate/third_party_notices.py",
-        "Scripts/package/pack.py"
+        "Scripts/package/package.py"
       ],
       "hint": "libpq NOTICE · 라이선스 NOTICE 파일(Apache NOTICE)만 — 운영 공지는 Announcement, 플레이어 알림은 Notification, 엔진 · 망 사건 값은 Event(NamingCpp.md 알림 줄). 관용구 ShutdownNotice 는 _keepTerms"
     },
@@ -8062,7 +8071,7 @@
     "getElapsedMicroseconds": "Stopwatch(Core/Time/MonotonicClock.h) — 시계 형식 자체의 읽기다(감시 값 칸이 아니다)",
     "getElapsedMilliseconds": "Stopwatch(Core/Time/MonotonicClock.h) — 시계 형식 자체의 읽기다(감시 값 칸이 아니다)",
     "getRemainingMilliseconds": "Deadline(Core/Time/MonotonicClock.h) — 시한까지 남은 시간, 대기 · 시한 동작에 쓴다",
-    "getBusyNanoseconds": "BusyClock(Core/Time/BusyClock.h) — 바쁜 시간 시계 형식 자체의 읽기다",
+    "getBusyNanoseconds": "BusyTimeAccumulator(Core/Time/BusyTimeAccumulator.h) — 바쁜 시간 누산기 형식 자체의 읽기다",
     "getExpectedEvaluationMicroseconds": "AnimationSystem — LOD 예산 배분(AnimationLODState::allocateBudget)이 계산한 예상 비용이다(시계로 잰 값이 아니다)"
   }
 }

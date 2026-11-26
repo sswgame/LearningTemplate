@@ -54,9 +54,9 @@ SW_TEST_CASE( ShaderIncludeRecordTest, AbsentCandidateThatAppearsMakesTheRecordS
     const IncludeFixture fixture;
     SW_REQUIRE_TRUE( fixture.create() );
     CookJobDesc desc;
-    desc._cookerName      = "Shader";
-    desc._codeFingerprint = 1;
-    desc._target          = "vulkan";
+    desc._cookerName = "Shader";
+    desc._codeDigest = 1;
+    desc._target     = "vulkan";
     CookRecord record;
     {
         CookJob       job{ desc };
@@ -87,9 +87,9 @@ SW_TEST_CASE( ShaderIncludeRecordTest, CachedReadsRecordTheSameInputs )
     const IncludeFixture fixture;
     SW_REQUIRE_TRUE( fixture.create() );
     CookJobDesc desc;
-    desc._cookerName      = "Shader";
-    desc._codeFingerprint = 1;
-    desc._target          = "vulkan";
+    desc._cookerName = "Shader";
+    desc._codeDigest = 1;
+    desc._target     = "vulkan";
     const ShaderIncludeResolver resolver{
         vector<ShaderIncludeRootDomain>{ ShaderIncludeRootDomain{ "engine", fixture._engineShaders }, ShaderIncludeRootDomain{ "common", fixture._commonShaders } },
         sw::make_shared<ShaderIncludeCache>()

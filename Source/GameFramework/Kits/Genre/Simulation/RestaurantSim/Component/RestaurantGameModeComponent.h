@@ -20,7 +20,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"

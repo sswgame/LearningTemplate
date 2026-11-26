@@ -7,14 +7,14 @@
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Client/Inventory/InventoryScreen.h"
 #include "GameFramework/Client/Shop/ShopScreen.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 
@@ -24,7 +24,7 @@ namespace sw
     {
         struct InventoryShopDemoInternal
         {
-            static constexpr FormatDef kStateFormat{ "IVSD" };
+            static constexpr FormatDesc kStateFormat{ "IVSD" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventBought    = "ShopBought";

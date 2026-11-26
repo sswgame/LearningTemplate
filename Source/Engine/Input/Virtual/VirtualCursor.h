@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/GamepadButton.h"
 #include "Engine/Input/InputViewRect.h"
 #include "Engine/Input/RawInputEvent.h"
 

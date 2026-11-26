@@ -7,10 +7,11 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Serializer/SchemaMigrate.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/UI/Animation/UIStyleTransitionState.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
@@ -160,7 +161,7 @@ namespace sw
                     }
                     WidgetStyle scratch{};
                     void*       pTarget = pNested != nullptr ? property.getRawPtr( &scratch ) : &scratch;
-                    const bool  bRead   = SerializerUtil::applyPropertyText( pNested != nullptr ? *pNested : property, MutableObjectAddress{ pTarget }, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                    const bool  bRead   = PropertySerializer::applyPropertyText( pNested != nullptr ? *pNested : property, MutableObjectAddress{ pTarget }, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                     if ( bRead == false )
                     {
                         fixed_string<constant::buffer::kMax256> message;
@@ -169,8 +170,8 @@ namespace sw
                     }
                     if ( field == UIStyleField::Transition )
                     {
-                        UIStyleTransitionSpec spec{};
-                        if ( const expected<void> transition = UIStyleTransitionSpec::parse( assignment._text, spec ); transition.has_value() == false )
+                        UIStyleTransition styleTransition{};
+                        if ( const expected<void> transition = UIStyleTransition::parse( assignment._text, styleTransition ); transition.has_value() == false )
                         {
                             fixed_string<constant::buffer::kMax256> message;
                             formatstring( message.data(), message.capacity(), "Rule _transition: %# '%#'", transition.error().message(), transition.error().detail() );
@@ -218,7 +219,7 @@ namespace sw
                         const utf8*         pName = child.getName();
                         UIStyleField        field{};
                         const PropertyInfo* pProperty = styleType.findPropertyByNameText( pName );
-                        const TypeInfo*     pNested   = pProperty != nullptr ? SerializerUtil::findNestedObjectType( pProperty->_typeName, pProperty->findValueBinding(), SerializeContext::getDefault( SerializePurpose::Authoring ) ) : nullptr;
+                        const TypeInfo*     pNested   = pProperty != nullptr ? ValueSerializer::findNestedObjectType( pProperty->_typeName, pProperty->findValueBinding(), SerializeContext::getDefault( SerializePurpose::Authoring ) ) : nullptr;
                         if ( pNested == nullptr || UIStyleFieldTable::tryFindField( pName, field ) == false )
                         {
                             fixed_string<constant::buffer::kMax256> message;
@@ -396,7 +397,7 @@ namespace sw
         return true;
     }
 
-    expected<void> UIStyleSheetAsset::parse( string_view text, string_view path, const ResourceContext& composeContext, UIStyleSheetAsset& outSheet )
+    expected<void> UIStyleSheetAsset::parse( string_view text, string_view path, const AssetComposeContext& composeContext, UIStyleSheetAsset& outSheet )
     {
         using Internal = UIStyleSheetInternal;
         UIStyleSheetAsset sheet{};
@@ -471,14 +472,14 @@ namespace sw
             return;
         if ( assignment._nestedProperty.isSet() == false )
         {
-            (void)SerializerUtil::applyPropertyText( *pProperty, MutableObjectAddress{ &inoutStyle }, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ); // 읽을 때 이미 확인했다
+            (void)PropertySerializer::applyPropertyText( *pProperty, MutableObjectAddress{ &inoutStyle }, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ); // 읽을 때 이미 확인했다
             return;
         }
         const PropertyInfo* pNestedProperty = assignment._nestedProperty.find();
         if ( pNestedProperty == nullptr )
             return;
         void* pNested = pProperty->getRawPtr( &inoutStyle );
-        (void)SerializerUtil::applyPropertyText( *pNestedProperty, MutableObjectAddress{ pNested }, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ); // 읽을 때 이미 확인했다
+        (void)PropertySerializer::applyPropertyText( *pNestedProperty, MutableObjectAddress{ pNested }, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ); // 읽을 때 이미 확인했다
     }
 } // namespace sw
 

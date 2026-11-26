@@ -1,6 +1,6 @@
 /**
  * @file ZoneWatches.cpp
- * @brief 지역 효과의 감시 값과 진단 HUD 섹션 `zone` 입니다 — 대상이 든 지역(출처) · 위치 값 · 반응(내린 깊이 · 탈출 수 · 화면 가중치) · 이동 방식 · 물리 필드.
+ * @brief 지역 효과의 감시 값입니다(진단 HUD 섹션 `zone` 은 ZoneDebugSections.cpp) — 대상이 든 지역(출처) · 위치 값 · 반응(내린 깊이 · 탈출 수 · 화면 가중치) · 이동 방식 · 물리 필드.
  * @details 값 시나리오(늪 · 모래 · 용암 · 바다 · 유황 · 버프 샘 · 스킬 영역 · 즉사 · 무중력 · 빙판 · 가시덩굴)가 이 값으로 판정한다(골든 없음). 읽기만 하고 상태를 바꾸지 않는다.
  */
 #include "pch.h"
@@ -255,36 +255,6 @@ namespace sw
                 }
                 return true;
             }
-
-            /** @brief HUD 섹션 `zone` — 디버그 대상이 든 지역의 출처 · 위치 값과 최근 진입 · 이탈입니다. */
-            static void writeZone( DebugHUDSectionWriter& writer )
-            {
-                const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
-                // 대상은 지역을 받는 개체다 — 캐릭터(컨트롤러)가 먼저, 없으면 표면 입구를 가진 물체.
-                const CharacterControllerComponent* pController = pManager != nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<CharacterControllerComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
-                const ZoneContactComponent*         pContact    = pManager != nullptr && pController == nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<ZoneContactComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
-                const GameObject* const             pTarget     = pController != nullptr ? pController->getOwner() : ( pContact != nullptr ? pContact->getOwner() : nullptr );
-                if ( pTarget == nullptr )
-                {
-                    writer.addLine( "target", "none (debug.target <object>)" );
-                    return;
-                }
-                uint32 zoneCount = 0;
-                forEachZone( *pManager, *pTarget, [&]( const hashed_string& source, const ZoneSample& sample )
-                {
-                    writer.addLineFormat( source.c_str(), "depth %# dist %# immersion %# time %# impact %#", sample._zoneDepth01, sample._distanceToCenter, sample._immersion,
-                                          sample._timeInside, sample._impactSpeed );
-                    ++zoneCount;
-                } );
-                if ( zoneCount == 0 )
-                    writer.addLine( pTarget->getName().c_str(), "in no zone" );
-                if ( pController != nullptr )
-                {
-                    const PhysicsFieldSample& field = pController->getPhysicsField();
-                    writer.addLineFormat( "movement", "%# gravity %# drag %# fluid %# friction %#", getEnumName( pController->getMovementMode() ), field._gravityScale, field._drag,
-                                          field._fluidDensity, field._friction );
-                }
-            }
         };
     } // namespace
 
@@ -303,5 +273,4 @@ namespace sw
                                &ZoneWatchesInternal::readMovementMode, true, false );
     SW_AUTOMATION_QUERY_WATCH( physicsField, "Physics.Field", "Physics field the target received last physics frame (key: gravityScale, drag, fluidDensity, friction, immersion, flowSpeed)",
                                &ZoneWatchesInternal::readField, true, true );
-    SW_DEBUG_HUD_SECTION( zone, "zone", "Zones the debug target is in, zone values and movement field", 285, DebugHUDSectionFlag::kNone, &ZoneWatchesInternal::writeZone );
 } // namespace sw

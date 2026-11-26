@@ -42,7 +42,7 @@ namespace sw
 
     /** @brief 접속 상태 기록의 운영 값입니다. 코드 기본값이 없다. */
     REFLECT()
-    struct SW_KIT_SERVER_API OnlinePresenceConfig
+    struct SW_KIT_SERVER_API CacheAccountPresenceConfig
     {
         REFLECT_BODY();
         PROPERTY( Required, Min = 1 )
@@ -53,7 +53,7 @@ namespace sw
 
     /** @brief 계정 서버가 도는 주기와 한 번에 다루는 수입니다. 코드 기본값이 없다. */
     REFLECT()
-    struct SW_KIT_SERVER_API AccountServerPolicy
+    struct SW_KIT_SERVER_API AccountServicePolicy
     {
         REFLECT_BODY();
         PROPERTY( Required, Min = 1 )
@@ -65,7 +65,7 @@ namespace sw
         PROPERTY( Required, Min = 1 )
         int32 _purgeCount{ 0 };
         PROPERTY( Required )
-        OnlinePresenceConfig _presence{}; ///< 접속 상태 기록
+        CacheAccountPresenceConfig _presence{}; ///< 접속 상태 기록
     };
 } // namespace sw
 
@@ -118,7 +118,7 @@ namespace sw
         PROPERTY()
         bool _bLightPasswordHash{ false };
         /**
-         * @brief 개발 · 두 프로세스 시나리오(`Scripts/net/net_pair_run.py`)용 시드 계정입니다. DevOnline 단위만 — 그 단위가 없는 구성(배포)은 기동 실패입니다.
+         * @brief 개발 · 두 프로세스 시나리오(`Scripts/sessions/login_connect_session.py`)용 시드 계정입니다. DevOnline 단위만 — 그 단위가 없는 구성(배포)은 기동 실패입니다.
          * @details 비밀번호를 설정 파일에 적어 두는 길을 운영에 남기지 않습니다. 상용 엔진의 테스트 계정 시드(언리얼 서버의 `-ini` 계정 · 유니티 UGS 의 테스트 플레이어)와 같은 자리입니다(기억에 의존).
          */
         PROPERTY()
@@ -137,7 +137,7 @@ namespace sw
         LoginPolicy _login{};
         /** @brief 계정 서버가 도는 주기와 접속 상태 기록입니다. */
         PROPERTY( Required )
-        AccountServerPolicy _server{};
+        AccountServicePolicy _server{};
     };
 
     /** @brief 게임 서버 조립(`gameConnect`)의 서버 설정입니다. */

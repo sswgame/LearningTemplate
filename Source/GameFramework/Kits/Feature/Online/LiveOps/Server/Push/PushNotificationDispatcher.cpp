@@ -9,8 +9,8 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsProtocol.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordCodec.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -478,7 +478,7 @@ namespace sw
 
     void PushNotificationDispatcher::registerDevice( AccountID accountID, const PushDeviceRegistration& registration, uint64 requestTag )
     {
-        // 길이 상한(토큰 · 언어)은 `PushDeviceRegistration` 의 `PROPERTY( MaxCount )` 가 원본이다. 요청 본문 읽기(고정 배치형)와 레코드 쓰기(기기 표의 형식)가 막으므로 여기 다시 적지 않는다.
+        // 길이 상한(토큰 · 언어)은 `PushDeviceRegistration` 의 `PROPERTY( MaxCount )` 가 원본이다. 요청 본문 읽기(스키마 결합형)와 레코드 쓰기(기기 표의 형식)가 막으므로 여기 다시 적지 않는다.
         const bool bValid = accountID != kInvalidAccountID && PushLimit::isValidProviderID( registration._providerID ) && registration._token.empty() == false;
         if ( bValid == false || _store.hasStore() == false )
         {

@@ -14,9 +14,9 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -97,7 +97,7 @@ namespace sw
     bool AnimationSet::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         _listEntry.clear();
-        if ( parseChained( xml, sourceLabel, 0, ResourceContext::forSchema( &AnimationSetInternal::makeInheritanceSchema ) ) )
+        if ( parseChained( xml, sourceLabel, 0, AssetComposeContext::forSchema( &AnimationSetInternal::makeInheritanceSchema ) ) )
             return true;
         _listEntry.clear();
         return false;
@@ -113,7 +113,7 @@ namespace sw
             return false;
         }
         _listEntry.clear();
-        if ( parseChained( text, assetID.view(), 0, ResourceContext::forSchema( &AnimationSetInternal::makeInheritanceSchema ).withAsset( assetID ) ) )
+        if ( parseChained( text, assetID.view(), 0, AssetComposeContext::forSchema( &AnimationSetInternal::makeInheritanceSchema ).withAsset( assetID ) ) )
             return true;
         _listEntry.clear();
         return false;
@@ -133,15 +133,15 @@ namespace sw
             SW_LOG_ERROR_ID( "AnimationSet.ChainNotFound", "Animation set '%#' could not be read - the set that points at it is not loaded", path );
             return false;
         }
-        return parseChained( text, path, depth, ResourceContext::forSchema( &AnimationSetInternal::makeInheritanceSchema ).withAsset( assetID ) );
+        return parseChained( text, path, depth, AssetComposeContext::forSchema( &AnimationSetInternal::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
-    bool AnimationSet::parseChained( string_view xml, string_view sourceLabel, uint32 depth, const ResourceContext& context )
+    bool AnimationSet::parseChained( string_view xml, string_view sourceLabel, uint32 depth, const AssetComposeContext& context )
     {
         // 바탕은 공통 상속(`_base`)이 펼친다 — 같은 이름은 합치고(`_op="Replace"` 는 바꾸고) `_op="Remove"` 는 뺀다. 쿠킹본은 이미 펼친 한 벌이다.
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( xml, sourceLabel, context, flatText, bComposed ) == false )
+        if ( AssetComposer::compose( xml, sourceLabel, context, flatText, bComposed ) == false )
             return false;
         XMLDocument document;
         if ( document.parse( flatText.empty() ? xml : string_view{ flatText } ) == false )

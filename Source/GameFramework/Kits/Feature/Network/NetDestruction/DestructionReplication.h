@@ -33,9 +33,10 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Network/Connection/NetConnection.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
 #include "Core/Network/Message/NetMessageTable.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/Message/NetMessageWriter.h"
+#include "Core/Network/NetChannelKind.h"
 #include "Core/Network/Replication/InterpolationBuffer.h"
 #include "Core/Network/Replication/NetClock.h"
 
@@ -161,16 +162,16 @@ namespace sw
 
     /**
      * @brief 파괴 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
-     * @details 스냅숏 · 해시 · 요청 본문은 고정 배치형(`NetMessageBodyDef`)이다. 이벤트(있으면 덩어리 자세)와 자세(예산에 맞춘 개수 · 멈춤 여부에 따른 양자화)는
+     * @details 스냅숏 · 해시 · 요청 본문은 스키마 결합형(`NetMessageBodyDesc`)이다. 이벤트(있으면 덩어리 자세)와 자세(예산에 맞춘 개수 · 멈춤 여부에 따른 양자화)는
      *          값마다 인코딩을 고르는 손 본문이고, 칸은 선언(`DestructionEventNetState` · `DestructionExactPoseNetState` · `DestructionMovingPoseNetState`)이다.
      */
     struct NetDestructionMessage
     {
-        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableUnordered>;                            ///< 칸 선언으로 쓴다. 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
-        using Snapshot        = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionSnapshotBody>; ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지, 조각이 아니라 메시지 하나)
-        using Pose            = NetMessageSenderChannelDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable>;                      ///< 자세마다 이어짐 비트 · 칸 선언. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다(`beginMessage( channel )`)
-        using Hash            = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionHashBody>;
-        using SnapshotRequest = NetLimitedMessageDef<NetMessageBodyDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, DestructionSnapshotRequestBody>, NetRequestLimit::kBurst>;
+        using Event           = NetMessageDesc<0, NetMessageDirection::ToClient, NetChannelKind::ReliableUnordered>;                            ///< 칸 선언으로 쓴다. 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
+        using Snapshot        = NetMessageBodyDesc<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionSnapshotBody>; ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지, 조각이 아니라 메시지 하나)
+        using Pose            = NetMessageSenderChannelDesc<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable>;                      ///< 자세마다 이어짐 비트 · 칸 선언. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다(`beginMessage( channel )`)
+        using Hash            = NetMessageBodyDesc<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionHashBody>;
+        using SnapshotRequest = NetLimitedMessageDesc<NetMessageBodyDesc<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, DestructionSnapshotRequestBody>, NetRequestLimit::kBurst>;
         using Table           = NetWorldMessageTable<NetKitMessageRange::kDestruction, Event, Snapshot, Pose, Hash, SnapshotRequest>;
 
         static constexpr uint8 kEvent           = Table::getKindOf<Event>();

@@ -179,9 +179,9 @@ namespace sw
             }
 
             /** @brief 리치 텍스트 구간이 바꾼 폰트(굵게, 기울임)입니다. */
-            static FontSpec makeSpanFont( const FontSpec& base, const RichTextSpan& span )
+            static FontDesc makeSpanFont( const FontDesc& base, const RichTextSpan& span )
             {
-                FontSpec font = base;
+                FontDesc font = base;
                 if ( span._bBold == SW_TRUE && static_cast<uint16>( font._weight ) < static_cast<uint16>( FontWeight::Bold ) )
                     font._weight = FontWeight::Bold;
                 if ( span._bItalic == SW_TRUE )

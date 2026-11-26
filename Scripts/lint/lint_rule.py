@@ -3,8 +3,8 @@ Scripts/lint/lint_rule.py
 
 린트 규칙의 기반 — 규칙 하나 = `LintRule` 하위 클래스 하나 = 파일 하나(+ 표 하나). 파일을 더하면 규칙이 생기고 지우면 사라진다(clang-tidy 의 check 등록과 같은 자리).
 
-린트는 형식 · 빌드로 막지 못하는 틈에만 둔다(CLAUDE.md 원칙 1). 규칙을 더하기 전에 형식 · API · 빌드 경계(`Config/Rules/Layers/*.toml` 의 층 · 타깃 게이트
-`#error` 껍데기)로 막을 수 없는지 먼저 본다 — `why_not_type` 을 한 줄로 채우지 못하면 린트가 아니다.
+린트는 형식 · 빌드로 막지 못하는 틈에만 둔다(CLAUDE.md 원칙 1). 규칙을 더하기 전에 형식 · API · 빌드 경계(`Config/Rules/Layers/*.toml` 의 층 · 타깃 가드
+`#error` 가드)로 막을 수 없는지 먼저 본다 — `why_not_type` 을 한 줄로 채우지 못하면 린트가 아니다.
 
 도는 길은 둘로 나뉜다(맵 · 리듀스):
 - `inspect(file)` 은 파일 하나만 보고 찾은 것(피클할 수 있는 값)을 돌려준다. 파일마다 한 번 읽고 한 번 지운 글(`SourceFile.code`)을 고른 규칙 모두가 나눠 쓰고,
@@ -31,7 +31,7 @@ from lint.module_imports import get_module_file, list_imported_module_files
 from lint.parallel import flat_map_in_processes
 from lint.rule_tables import TABLE_FOLDER, ExceptionTable, get_table_path, read_rule_table
 
-LINT_FOLDER = Path(__file__).resolve().parent
+RULES_FOLDER = Path(__file__).resolve().parent / "rules"   # 규칙(`LintRule` 하위 클래스)만 둔다. 도우미 · 명령은 lint/ 에 남는다
 GROUPS = ("경계", "모양", "이름", "셰이더", "참조", "래칫")   # `--list` 와 도는 차례
 
 
@@ -127,11 +127,11 @@ class LintRule(abc.ABC):
 
 @functools.cache
 def find_rules(root: Path) -> dict[str, LintRule]:
-    """id → 규칙. `Scripts/lint/*.py` 의 `LintRule` 하위 클래스를 모은다(차례는 갈래 · id). id 가 겹치거나 갈래가 표에 없으면 멈춘다."""
-    for path in sorted(LINT_FOLDER.glob("*.py")):
+    """id → 규칙. `Scripts/lint/rules/*.py` 의 `LintRule` 하위 클래스를 모은다(차례는 갈래 · id). id 가 겹치거나 갈래가 표에 없으면 멈춘다."""
+    for path in sorted(RULES_FOLDER.glob("*.py")):
         if "(LintRule):" in path.read_text(encoding="utf-8"):
-            importlib.import_module(f"lint.{path.stem}")
-    list_rule = [rule_class(root) for rule_class in LintRule.__subclasses__() if rule_class.__module__.startswith("lint.")]
+            importlib.import_module(f"lint.rules.{path.stem}")
+    list_rule = [rule_class(root) for rule_class in LintRule.__subclasses__() if rule_class.__module__.startswith("lint.rules.")]
     list_bad = [rule.id for rule in list_rule if rule.group not in GROUPS]
     list_bad += [rule_id for rule_id, count in collections.Counter(rule.id for rule in list_rule).items() if count > 1]
     if list_bad:

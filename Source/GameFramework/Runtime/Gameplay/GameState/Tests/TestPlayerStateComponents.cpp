@@ -11,7 +11,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"

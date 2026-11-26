@@ -1,6 +1,6 @@
 /**
  * @file AutomationUserDataRoot.h
- * @brief 자동화 실행(`-unattended` · `-scenario`, `CommandLineManager::isAutomatedRun`)의 사용자 데이터 뿌리(`SW_USER_DATA_ROOT`, `UserDataPath`)를 자동화 폴더(`<Saved>/Automation/`) 아래로 가둡니다.
+ * @brief 자동화 실행(`-unattended` · `-scenario`, `CommandLine::isAutomatedRun`)의 사용자 데이터 뿌리(`SW_USER_DATA_ROOT`, `UserDataPath`)를 자동화 폴더(`<Saved>/Automation/`) 아래로 가둡니다.
  * @details 와일드웨스트 체인에서 백엔드별 자식들이 사람의 `%LOCALAPPDATA%/SWEngine/<게임>/saves` 를 함께 써서, 한 프로세스가 다른 프로세스의 쓰는 중인 임시 파일을 잔재로 지웠다.
  *          러너가 환경 변수를 잘 주는 데 기대지 않는다. 자동화 실행은 기동 때(호스트 서브시스템 · 게임 · 로컬 저장보다 먼저) 뿌리를 정하고, 자동화 폴더 밖이면 거절한다(종료 11, 로드 오류 —
  *          시나리오를 시작할 수 없는 실행이다). 뿌리가 없으면 실행 뿌리(`ProcessRoots::_run`) 아래 `userdata` 를 건다 — 실행 뿌리가 실행마다 새 폴더라 pid 꼬리도 형제 거두기도 없다.
@@ -9,7 +9,7 @@
  *          사람이 일부러 실제 폴더(또는 자동화 폴더 밖 뿌리)를 쓰려면 `-gv_automationAllowOutsideUserData=true` 를 명시한다.
  *          실행마다 따로 써야 하는 상태 자리 변수(`gv_editorStateDir` · `gv_userSettingsFile`)를 명령줄로 주면 그 자리도 사람의 폴더(`Saved/Editor` · OS 사용자 폴더)면 거절하고,
  *          백엔드별 부모는 그 변수를 자식 모두에 넘기지 않는다(한 자리를 함께 쓰게 된다 — 거절).
- *          뿌리 폴더를 리소스 도메인에 두지 않는 까닭: 에디터의 파일 감시 · 색인이 세이브를 에셋으로 본다 — 실행 산출물 자리(`Saved/Automation`)에 둔다
+ *          뿌리 폴더를 콘텐츠 도메인에 두지 않는 까닭: 에디터의 파일 감시 · 색인이 세이브를 에셋으로 본다 — 실행 산출물 자리(`Saved/Automation`)에 둔다
  *          (사용자 설정의 무인 자리 `Saved/Automation/UserSettings/` 와 같은 곳). 언리얼 Automation 의 `FPaths::AutomationDir`(Saved/Automation) · 유니티 Test Runner 가
  *          persistentDataPath 를 비우는 관례와 같은 자리다.
  */
@@ -56,21 +56,21 @@ namespace sw
         [[nodiscard]] static optional<string> findSharedStateArgument( const vector<string>& listArgument );
     };
 
-    /** @struct UserDataFolderStamp @brief 폴더 아래 항목의 수와 가장 늦은 쓰기 시각입니다 — 같은 실행 안에서 폴더가 바뀌었는지 본다(`UserData.PlatformFolderChanged`). */
-    struct UserDataFolderStamp
+    /** @struct UserDataFolderStat @brief 폴더 아래 항목의 수와 가장 늦은 쓰기 시각입니다 — 같은 실행 안에서 폴더가 바뀌었는지 본다(`UserData.PlatformFolderChanged`). */
+    struct UserDataFolderStat
     {
         uint64 _entryCount{ 0 };
         int64  _latestWriteTicks{ 0 };
         bool   _bExists{ false };
 
-        [[nodiscard]] bool operator==( const UserDataFolderStamp& other ) const
+        [[nodiscard]] bool operator==( const UserDataFolderStat& other ) const
         {
             return _entryCount == other._entryCount && _latestWriteTicks == other._latestWriteTicks && _bExists == other._bExists;
         }
-        [[nodiscard]] bool operator!=( const UserDataFolderStamp& other ) const { return ( *this == other ) == false; }
+        [[nodiscard]] bool operator!=( const UserDataFolderStat& other ) const { return ( *this == other ) == false; }
 
         /** @brief @p folder 와 그 아래 모든 항목을 훑어 찍습니다(폴더가 없으면 `_bExists` 가 거짓). */
-        [[nodiscard]] static UserDataFolderStamp take( const AbsolutePath& folder );
+        [[nodiscard]] static UserDataFolderStat take( const AbsolutePath& folder );
     };
 
     /**
@@ -93,15 +93,15 @@ namespace sw
         /** @brief 사람의 데이터 폴더(OS 규칙 · 활성 게임) 경로입니다. 모르면 빈 글. */
         const AbsolutePath& getPlatformFolder() const { return _platformFolder; }
         /** @brief 기동 때 찍은 사람의 데이터 폴더입니다. */
-        const UserDataFolderStamp& getPlatformStartStamp() const { return _platformStartStamp; }
+        const UserDataFolderStat& getPlatformStartStat() const { return _platformStartStat; }
 
     private:
         /** @brief 거절을 알리고 로드 오류(11)로 끝낼 종료 코드를 건 뒤 실패를 돌려줍니다. */
         static SubsystemInitResult reject( const Error& error );
 
     private:
-        string              _root{};
-        AbsolutePath        _platformFolder{};
-        UserDataFolderStamp _platformStartStamp{};
+        string             _root{};
+        AbsolutePath       _platformFolder{};
+        UserDataFolderStat _platformStartStat{};
     };
 } // namespace sw

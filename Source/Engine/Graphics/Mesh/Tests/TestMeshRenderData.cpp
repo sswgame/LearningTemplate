@@ -21,7 +21,7 @@ SW_TEST_CASE( MeshRenderDataTest, ProxyLivesAndDiesWithTheMesh )
     SW_EXPECT_FALSE( pRenderData->isRHIValid() );
 
     // 내용을 바꿔도(핫 리로드 · 지형 LOD 교체) 프록시는 그대로이고 버퍼만 놓인다 — 다음 initRHI 가 새 내용을 올린다.
-    SW_REQUIRE_TRUE( mesh->setGeometry( sw::vector<sw::RHIVertex>( 3 ), sw::vector<uint32>{ 0, 1, 2 } ) );
+    SW_REQUIRE_TRUE( mesh->setGeometry( sw::vector<sw::MeshVertex>( 3 ), sw::vector<uint32>{ 0, 1, 2 } ) );
     SW_EXPECT_TRUE( pRenderData == &mesh->getRenderData() );
     SW_EXPECT_FALSE( pRenderData->isRHIValid() );
 

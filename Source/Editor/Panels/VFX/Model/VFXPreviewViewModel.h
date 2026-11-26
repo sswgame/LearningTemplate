@@ -94,7 +94,7 @@ namespace sw::editor
         /**
          * @brief 읽은 효과 파일의 내용이 그 뒤에 바뀌었으면(카탈로그 편집기의 저장 · 바깥 편집) true 를 돌려주고 새 내용 해시를 기억합니다. 패널은 true 면 다시 읽고 다시 건다(자동 갱신).
          * @details 저장 뒤 Reload 를 누르던 왕복을 없앤다(언리얼 Niagara · 유니티 파티클 미리보기는 저장하면 그 자리에서 바뀐다). 파일 감시(`AssetHotReload` 의 변경 번호 —
-         *          리소스 루트와 작업 도메인 폴더)가 무언가 바뀌었다고 알린 프레임에만 내용 해시를 비교해, 창이 여럿이어도 평소에는 파일을 건드리지 않는다. 에디터 밖의 저장도 같은 길이다.
+         *          콘텐츠 루트와 작업 도메인 폴더)가 무언가 바뀌었다고 알린 프레임에만 내용 해시를 비교해, 창이 여럿이어도 평소에는 파일을 건드리지 않는다. 에디터 밖의 저장도 같은 길이다.
          *          도장(크기 · 쓰기 시각)을 비교하면 같은 틱 안에 같은 크기로 다시 쓴 저장을 놓쳤다 — 해시 캐시(`ContentHash::computeFile`)가 도장이 그대로인 동안은 파일을 열지 않는다.
          */
         [[nodiscard]] bool pollFileChanged();
@@ -119,7 +119,7 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument( AssetWriter& writer );
         /** @brief 이 효과를 고칠 수 있으면 true 입니다. 물려받은 효과(`_base`)는 부모와 다른 칸만 쓴다. */
         [[nodiscard]] bool isEditable() const;
-        /** @brief 물려받은 부모의 리소스 id 입니다. 부모가 없으면 빈 글입니다. */
+        /** @brief 물려받은 부모의 에셋 id 입니다. 부모가 없으면 빈 글입니다. */
         const string& getBaseID() const;
         /** @brief 고른 방출기의 그리드가 감출 칸입니다 — 부모에 있는 방출기의 이름(열쇠)은 바꾸면 다른 방출기가 된다. */
         vector<hashed_string> collectHiddenProperties() const;

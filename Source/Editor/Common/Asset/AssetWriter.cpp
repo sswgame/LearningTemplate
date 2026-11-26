@@ -6,8 +6,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Notification/EditorNotificationManager.h"
 
 #include "Engine/Content/AssetWriteAccess.h"
 #include "Engine/Content/ContentHash.h"

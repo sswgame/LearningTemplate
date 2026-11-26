@@ -25,8 +25,8 @@ namespace sw::editor
     struct EditorAutosaveEntry
     {
         AbsolutePath _snapshotAbs;            ///< 가장 새 사본의 디스크 경로
-        string       _snapshotID;             ///< 그 사본의 리소스 id(`autosave/…` — 붙인 도메인)
-        string       _sourceID;               ///< 원래 씬의 리소스 id(훑은 때의 자리). 비면 저장한 적 없는 새 씬이다
+        string       _snapshotID;             ///< 그 사본의 에셋 id(`autosave/…` — 붙인 도메인)
+        string       _sourceID;               ///< 원래 씬의 에셋 id(훑은 때의 자리). 비면 저장한 적 없는 새 씬이다
         string       _sourceReference;        ///< 메타에 적힌 원래 씬의 참조 글(GUID 참조) — 훑은 뒤 씬을 옮겨도 복원이 지금 자리를 찾는다
         string       _projectRoot;            ///< 사본을 쓴 프로젝트 루트
         int64        _savedTicks{ 0 };        ///< 사본을 쓴 시각(`FileUtil::getCurrentFileWriteTime` 눈금)
@@ -75,7 +75,7 @@ namespace sw::editor
      */
     struct EditorAutosaveCommands
     {
-        /** @brief 사본을 붙이는 리소스 도메인 이름입니다(`autosave/<씬 칸>/<세대>.scene.xml`). */
+        /** @brief 사본을 붙이는 콘텐츠 도메인 이름입니다(`autosave/<씬 칸>/<세대>.scene.xml`). */
         static constexpr const utf8* kDomain = "autosave";
 
         /** @brief 게임 단계가 프레임마다 부릅니다 — 첫 프레임에 세션을 열고(잠금 · 복구 후보), 복원이 끝난 씬의 소스를 돌리고, 요청된 복원을 열고, 주기가 되면 사본을 쓴다. */
@@ -130,11 +130,11 @@ namespace sw::editor
         static void cancelPendingDocumentRestore();
         /** @brief 이번 세션에 문서 복원을 끝낸 수입니다(감시 값 `Editor.AutosaveDocumentRestoredCount`). */
         static uint32 getRestoredDocumentCount();
-        /** @brief 씬 · 문서의 리소스 id 를 사본 폴더 이름(`[a-z0-9_.-]`)으로 바꿉니다. 정체성(GUID)이 있으면 그 이름이라 옮겨도 같고, 없으면 id 의 이름입니다. */
+        /** @brief 씬 · 문서의 에셋 id 를 사본 폴더 이름(`[a-z0-9_.-]`)으로 바꿉니다. 정체성(GUID)이 있으면 그 이름이라 옮겨도 같고, 없으면 id 의 이름입니다. */
         static string makeSlotName( string_view sourceID );
         /** @brief 사본 옆 메타 글(`key=value` 줄들)에서 @p key 의 값을 찾습니다. 없으면 빈 글입니다. 씬 사본 · 문서 사본 · 세션 잠금 파일이 같은 모양이다. */
         [[nodiscard]] static string findMetaValue( string_view metaText, string_view key );
-        /** @brief 리소스 id @p sourceID 의 원본 파일 내용 해시입니다. 풀지 못하거나 아직 없으면(새 문서) 0 입니다 — 사본을 쓸 때와 복구할 때 같은 규칙으로 견준다. */
+        /** @brief 에셋 id @p sourceID 의 원본 파일 내용 해시입니다. 풀지 못하거나 아직 없으면(새 문서) 0 입니다 — 사본을 쓸 때와 복구할 때 같은 규칙으로 견준다. */
         [[nodiscard]] static uint64 computeSourceHash( string_view sourceID );
         /** @brief 문서 사본 @p entry 가 가리키는 원본의 내용 해시입니다 — 에셋 문서는 `computeSourceHash`, 상태 문서는 저장할 파일(`EditorDocumentAutosaveEntry::resolveFileID`). */
         [[nodiscard]] static uint64 computeDocumentSourceHash( const EditorDocumentAutosaveEntry& entry );

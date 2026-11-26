@@ -38,7 +38,7 @@
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameDefinition.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameReplication.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
-#include "GameFramework/Runtime/Foundation/Service/GameInstanceSubsystem.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameInstanceSubsystem.h"
 
 namespace sw
 {
@@ -188,7 +188,7 @@ namespace sw
         /** @brief 마지막으로 넘긴 결과입니다. 없으면 빈 값입니다. 감시 값 `Minigame.LastResult` 이 읽는다. */
         const MinigameResult& getLastResult() const { return _lastResult; }
 
-        /** @brief 이름 @p name 의 미니게임 파일 리소스 id 입니다(`<팩>/minigames/<이름>.minigame.xml`). */
+        /** @brief 이름 @p name 의 미니게임 파일 에셋 id 입니다(`<팩>/minigames/<이름>.minigame.xml`). */
         static string makeAssetPath( const GamePackConfig& packConfig, string_view name );
         /** @brief 팩 @p packConfig 의 미니게임 @p name 의 정의를 읽고 이름이 파일 이름과 같은지 봅니다(참조는 보지 않는다). 실패하면 이유를 알리고 false 입니다 — 인스턴스 없이도 쓴다(넷 시뮬레이션). */
         [[nodiscard]] static bool loadDefinitionFile( const GamePackConfig& packConfig, string_view name, MinigameDefinition& outDefinition );
@@ -225,7 +225,7 @@ namespace sw
         struct ObservedMinigame
         {
             MinigameDefinition _definition;
-            string             _scenePath;             ///< 얹은 바탕 씬(리소스 id)
+            string             _scenePath;             ///< 얹은 바탕 씬(에셋 id)
             uint32             _entryID{ 0 };          ///< 서버의 항목 번호
             uint8              _bAnswered{ SW_FALSE }; ///< 서버에 준비를 알렸다
             uint8              _bFailed{ SW_FALSE };   ///< 세우지 못했다 — 서버의 목록에서 빠질 때까지 다시 시도하지 않는다

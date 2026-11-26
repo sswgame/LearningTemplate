@@ -155,7 +155,7 @@ function(sw_find_dxc_runtime_dlls OUT_DXC OUT_DXIL)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 4) sw_copy_dxc_dlls — 런타임 복사 큐 등록 (실제 복사는 sw_emit_runtime_copies)
+# 4) sw_copy_dxc_dlls — 런타임 복사 큐 등록 (실제 복사는 sw_apply_runtime_copies)
 # ------------------------------------------------------------------------------
 function(sw_copy_dxc_dlls TARGET_NAME)
 	sw_find_dxc_runtime_dlls(dxc_dll dxil_dll)

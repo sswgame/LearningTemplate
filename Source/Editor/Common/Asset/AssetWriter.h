@@ -36,7 +36,7 @@ namespace sw::editor
     /**
      * @class AssetWriter
      * @brief 연(읽은) 파일의 디스크 내용을 기준으로 들고, 쓸 때 그 기준과 읽기 전용을 확인합니다. 문서 패널이 하나 쥐고(`EditorDocumentPanelBase`), 읽고 고쳐 쓰는 명령은 지역 값으로 쓴다.
-     * @details 리소스 id 를 푼 경로(`DiskPath`)는 쓰는 함수(`FileUtil::write*` · `saveToFile`)에 들어가지 않고 이 문이 `AbsolutePath` 로 연다(`AssetWriteAccess`) — 확인을 빠뜨린 쓰기가 컴파일되지 않는다.
+     * @details 에셋 id 를 푼 경로(`DiskPath`)는 쓰는 함수(`FileUtil::write*` · `saveToFile`)에 들어가지 않고 이 문이 `AbsolutePath` 로 연다(`AssetWriteAccess`) — 확인을 빠뜨린 쓰기가 컴파일되지 않는다.
      *          예전에는 읽기 전용 확인 · 디스크 바뀜 검사(세 벌) · 폴더 만들기를 쓰는 자리마다 골라 불렀고, 창 밖 명령 열둘은 아무것도 보지 않았다.
      *          읽기 전용. git LFS lockable 은 잠근 사람 사본만 쓰기 가능으로 두므로 남이 잠근 파일은 이 사본에서 읽기 전용이다. 자동 체크아웃은 두지 않는다(`EditorSourceControl` 머리말).
      *          밖에서 바뀜. 기준과 다른 파일의 첫 저장은 거절하고 알리며, 그 뒤 같은 디스크 내용에 대한 저장은 고른 것으로 보고 덮는다. 기준이 없는 파일(새 자리)은 막지 않는다.

@@ -2,7 +2,7 @@
  * @file RenderDebugRegistry.h
  * @brief 렌더링 런타임 디버그의 우편함입니다 — UI(에디터 렌더 디버거 창 · 개발 명령 · HUD)가 요청하고 렌더 스레드가 프레임 경계에서 처리해 값으로 공개합니다.
  * @details 다섯을 나른다: 렌더 그래프 사본(`RenderGraphSnapshot`), 프레임 디버거(멈춤 지점 설정 · 드로우 기록 — 유니티 Frame Debugger), 프레임 통계(드로우 · 삼각형 상한),
- *          그래프 밖 버퍼 읽기(`FrameBufferTable` 등록분 — `RenderBufferInspector` 가 렌더 쪽에서 읽는다), 메시 정점 대조 요청(`MeshVertexCheck`). `RenderTargetRegistry` 와 같은 꼴이다: 값만 복사해 넘기고
+ *          그래프 밖 버퍼 읽기(`RenderGraphImportedResourceTable` 등록분 — `RenderBufferInspector` 가 렌더 쪽에서 읽는다), 메시 정점 대조 요청(`MeshVertexCheck`). `RenderTargetRegistry` 와 같은 꼴이다: 값만 복사해 넘기고
  *          공개 번호(`get…Serial`)로 다시 읽을지 안다. 렌더러는 호스트(`FrameRendererHost::_pRenderDebug`)로만 이것을 받아 화면 밖 렌더러는 기록하지 않는다.
  *          렌더러 쪽 훅은 배포 구성(`SW_SHIPPING`)에서 빠진다 — 그때 이 객체는 아무도 채우지 않는다.
  *          요청을 처리하는 렌더 스레드 검사(정점 대조 · RHI 계약 · 버퍼 보기)는 개발 도구(`DevTools/Client/Render`)가 `IRenderDebugChecks` 로 붙인다. 배포 구성은 그 코드를 짓지 않는다.
@@ -26,7 +26,7 @@
 
 namespace sw
 {
-    class FrameBufferTable;
+    class RenderGraphImportedResourceTable;
     class GPUScene;
     class IRHICommandList;
     class IRHIDevice;
@@ -55,7 +55,7 @@ namespace sw
         /** @brief 프레임 업로드 단계 바로 뒤(렌더 패스 · 병렬 기록 밖)입니다. 정점 대조 · RHI 계약 검사가 요청을 꺼내 @p cmd 에 기록한다. */
         virtual void recordAfterFrameUploads( IRHICommandList& cmd, IRHIDevice& device, const GPUScene& scene, RenderDebugRegistry& registry ) = 0;
         /** @brief 프레임 그래프를 다 기록한 뒤입니다. 버퍼 보기가 그래프가 둔 접근에서 읽고 되돌린다. */
-        virtual void recordAfterFrameGraph( IRHICommandList& cmd, IRHIDevice* pDevice, const FrameBufferTable& table, const RenderGraphExecutionContext& context, RenderPSOCache& psoCache,
+        virtual void recordAfterFrameGraph( IRHICommandList& cmd, IRHIDevice* pDevice, const RenderGraphImportedResourceTable& table, const RenderGraphExecutionContext& context, RenderPSOCache& psoCache,
                                             RenderDebugRegistry& registry ) = 0;
         /**
          * @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`, 언리얼 `r.CheckNaN`)의 카운터 · 되읽기를 만듭니다(렌더러가 장치 자원을 만들 때). 정책이 끄면 아무것도 하지 않고 true 다.
@@ -137,7 +137,7 @@ namespace sw
         uint64 _serial{ 0 };        ///< 공개 번호(0 이면 아직 없다)
     };
 
-    /** @brief 그래프 밖 버퍼 하나입니다(`FrameBufferTable` 등록 — 늘 크기가 있다). */
+    /** @brief 그래프 밖 버퍼 하나입니다(`RenderGraphImportedResourceTable` 등록 — 늘 크기가 있다). */
     struct RenderBufferEntry
     {
         /** @brief 원소 안의 멤버 하나입니다(그 버퍼를 거는 컴퓨트 셰이더의 리플렉션). */

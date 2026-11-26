@@ -30,7 +30,7 @@ namespace TerrainLODTestUtil
     /** @brief 해상도 — 청크 칸 기본값(32)으로 4 × 4 청크다. */
     constexpr uint32 kResolution = 129;
 
-    /** @brief 평평한 높이장을 케이스 도메인에 쓰고 그 리소스 id 를 돌려줍니다. */
+    /** @brief 평평한 높이장을 케이스 도메인에 쓰고 그 에셋 id 를 돌려줍니다. */
     string writeFlatHeightfield( const test::ScopedScratchDomain& domain )
     {
         HeightfieldAsset asset;

@@ -10,10 +10,10 @@
 namespace
 {
     /** @brief 정점 넷을 나눠 쓰는 사각형(삼각형 둘)입니다. */
-    sw::vector<sw::RHIVertex> makeQuadVertices()
+    sw::vector<sw::MeshVertex> makeQuadVertices()
     {
-        sw::vector<sw::RHIVertex> listVertex( 4 );
-        const float               arrPosition[4][2] = {
+        sw::vector<sw::MeshVertex> listVertex( 4 );
+        const float                arrPosition[4][2] = {
             {0.0f, 0.0f},
             {1.0f, 0.0f},
             {1.0f, 1.0f},
@@ -57,7 +57,7 @@ SW_TEST_CASE( MeshIndicesTest, SetGeometryKeepsSharedVerticesAndRejectsBadIndice
     SW_EXPECT_EQUAL( 0u, mesh->getIndexCount() );
 
     // 삼각형 목록은 인덱스 0..n-1 이다.
-    mesh->setVertices( sw::vector<sw::RHIVertex>( 6 ) );
+    mesh->setVertices( sw::vector<sw::MeshVertex>( 6 ) );
     SW_EXPECT_TRUE( mesh->getIndices() == sw::Mesh::makeTriangleListIndices( 6 ) );
 }
 
@@ -139,24 +139,24 @@ SW_TEST_CASE( MeshIndicesTest, IndexWidthFollowsVertexCount )
 SW_TEST_CASE( MeshIndicesTest, WeldTriangleListMergesOnlyBitIdenticalVertices )
 {
     // 사각형 두 삼각형 (0, 1, 2) · (0, 2, 3) 을 풀어 쓴 것 — 마지막 모서리만 UV 를 조금 바꿔 다른 정점으로 둔다.
-    const sw::vector<sw::RHIVertex> listQuad = makeQuadVertices();
-    sw::vector<sw::RHIVertex>       listTriangle{ listQuad[0], listQuad[1], listQuad[2], listQuad[0], listQuad[2], listQuad[3] };
+    const sw::vector<sw::MeshVertex> listQuad = makeQuadVertices();
+    sw::vector<sw::MeshVertex>       listTriangle{ listQuad[0], listQuad[1], listQuad[2], listQuad[0], listQuad[2], listQuad[3] };
     listTriangle[4]._arrUV[0] += 0.25f;
-    sw::vector<sw::RHIVertex> listVertex;
-    sw::vector<uint32>        listIndex;
+    sw::vector<sw::MeshVertex> listVertex;
+    sw::vector<uint32>         listIndex;
     sw::Mesh::weldTriangleList( listTriangle, listVertex, listIndex );
     SW_EXPECT_EQUAL( 5u, static_cast<uint32>( listVertex.size() ) );
     SW_EXPECT_TRUE( listIndex == ( sw::vector<uint32>{ 0, 1, 2, 0, 3, 4 } ) );
 
     // 탄젠트를 구한 뒤 합치는 메시는 그림이 같다 — 모서리마다 다시 풀면 원래 정점(탄젠트 포함)과 비트까지 같다.
     sw::shared_ptr<sw::Mesh> welded = sw::Mesh::create( sw::MeshCPUAccess::Keep );
-    welded->setTriangleListWelded( sw::vector<sw::RHIVertex>( listTriangle ) );
-    sw::vector<sw::RHIVertex> listExpected = listTriangle;
+    welded->setTriangleListWelded( sw::vector<sw::MeshVertex>( listTriangle ) );
+    sw::vector<sw::MeshVertex> listExpected = listTriangle;
     sw::Mesh::computeTangents( listExpected );
     SW_REQUIRE_EQUAL( 6u, welded->getIndexCount() );
     for ( uint32 corner = 0; corner < 6; ++corner )
     {
-        SW_EXPECT_TRUE( sw::Memory::compare( &welded->getCPUView().getVertices()[welded->getIndices()[corner]], &listExpected[corner], sizeof( sw::RHIVertex ) ) == 0 );
+        SW_EXPECT_TRUE( sw::Memory::compare( &welded->getCPUView().getVertices()[welded->getIndices()[corner]], &listExpected[corner], sizeof( sw::MeshVertex ) ) == 0 );
     }
 }
 
@@ -167,7 +167,7 @@ SW_TEST_CASE( MeshIndicesTest, WeldTriangleListMergesOnlyBitIdenticalVertices )
 SW_TEST_CASE( MeshIndicesTest, CPUViewReadsKeptVertices )
 {
     const sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::create( sw::MeshCPUAccess::Keep );
-    sw::vector<sw::RHIVertex>      listVertex( 3 );
+    sw::vector<sw::MeshVertex>     listVertex( 3 );
     listVertex[1]._arrPosition[0] = 1.0f;
     listVertex[2]._arrPosition[1] = 1.0f;
     SW_REQUIRE_TRUE( mesh->setGeometry( std::move( listVertex ), sw::vector<uint32>{ 0, 1, 2 } ) );

@@ -130,7 +130,7 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
 
     private:
-        /** @brief 리소스 경로를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<DestructionProfile>::acquire` 로 한 벌을 쥔다. */
+        /** @brief 에셋 경로를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<DestructionProfile>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         void               readRoot( const XMLNode& root, CharacterDataReader& reader );
     };

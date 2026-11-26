@@ -1,0 +1,441 @@
+#include "pch.h"
+
+#include "Programs/ReflectionParser/Parse/DeclarationValidator.h"
+
+#include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
+
+#include "Engine/Reflection/ReflectionUnits.h"
+
+#include "Programs/ReflectionParser/Config/ParserConfig.h"
+#include "Programs/ReflectionParser/Parse/AnnotationLookup.h"
+#include "Programs/ReflectionParser/Parse/CursorReader.h"
+#include "Programs/ReflectionParser/Parse/ReflectAnnotation.h"
+#include "Programs/ReflectionParser/TypeMap/ContainerTypeMap.h"
+#include "Programs/ReflectionParser/TypeMap/TypeNameMap.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct DeclarationValidatorInternal
+        {
+            /** @brief 검증 함수(`void fn( ValidationContext& )`)가 그 이름으로 선언됐는지 봅니다. */
+            static bool isValidatorDeclared( const vector<ParsedMethodSignature>& listMethodSignature, const string_view name )
+            {
+                for ( const ParsedMethodSignature& signature : listMethodSignature )
+                {
+                    const bool bMatchesValidationSignature = signature._name == name && signature._listParameterTypeName.size() == 1 &&
+                                                             signature._listParameterTypeName[0] == annotation::kValidationContextTypeName;
+                    if ( bMatchesValidationSignature )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief 이름이 같은 메서드 중 인자 수가 @p maxParameterCount 이하인 첫 것입니다. 없으면 nullptr 입니다. */
+            static const ParsedMethodSignature* findMethodSignature( const vector<ParsedMethodSignature>& listMethodSignature, const string_view name, const size_t maxParameterCount )
+            {
+                for ( const ParsedMethodSignature& signature : listMethodSignature )
+                {
+                    if ( signature._name == name && signature._listParameterTypeName.size() <= maxParameterCount )
+                        return &signature;
+                }
+                return nullptr;
+            }
+
+            /** @brief 열거자 목록에서 이름(대소문자 무시)이 같은 열거자입니다. 없으면 nullptr 입니다. */
+            static const ParsedEnumeratorInfo* findEnumeratorIgnoreCase( const ParsedEnumInfo& enumInfo, const string_view name )
+            {
+                for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
+                {
+                    if ( StringUtil::equals( enumerator._name, name, true ) )
+                        return &enumerator;
+                }
+                return nullptr;
+            }
+
+            /** @brief 식별자(영문 · 숫자 · `_`, 숫자로 시작하지 않는다)인지 봅니다. */
+            static bool isIdentifier( const string_view text ) noexcept
+            {
+                if ( text.empty() || ( '0' <= text.front() && text.front() <= '9' ) )
+                    return false;
+                for ( const utf8 character : text )
+                {
+                    const bool bWord = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || ( '0' <= character && character <= '9' ) ||
+                                       character == '_';
+                    if ( bWord == false )
+                        return false;
+                }
+                return true;
+            }
+
+            /** @brief `name` · `!name` · `name == Value` · `name != Value` 꼴인지 봅니다(값은 식별자 · 정수 · `Enum::Value`). */
+            static bool isEditConditionWellFormed( const string_view text )
+            {
+                const string_view trimmed = StringUtil::trim( text );
+                const size_t      opPos   = trimmed.find( "==" ) != string_view::npos ? trimmed.find( "==" ) : trimmed.find( "!=" );
+                if ( opPos == string_view::npos )
+                {
+                    const string_view name = ( trimmed.empty() == false && trimmed.front() == '!' ) ? StringUtil::trim( trimmed.substr( 1 ) ) : trimmed;
+                    return isIdentifier( name );
+                }
+                const string_view name  = StringUtil::trim( trimmed.substr( 0, opPos ) );
+                string_view       value = StringUtil::trim( trimmed.substr( opPos + 2 ) );
+                const size_t      scope = value.rfind( "::" );
+                if ( scope != string_view::npos )
+                    value = value.substr( scope + 2 );
+                int64 number{ 0 };
+                return isIdentifier( name ) && ( isIdentifier( value ) || StringUtil::parseInt64( value, number ) );
+            }
+
+            /** @brief 조건식이 보는 이름이 @p type 이 선언한 프로퍼티(C++ 이름)인지 봅니다. */
+            static bool hasEditConditionSubject( const ParsedTypeInfo& type, const string_view text )
+            {
+                const string_view trimmed = StringUtil::trim( text );
+                const size_t      opPos   = trimmed.find( "==" ) != string_view::npos ? trimmed.find( "==" ) : trimmed.find( "!=" );
+                string_view       name    = opPos == string_view::npos ? trimmed : trimmed.substr( 0, opPos );
+                if ( name.empty() == false && name.front() == '!' )
+                    name = name.substr( 1 );
+                name = StringUtil::trim( name );
+                for ( const ParsedPropertyInfo& prop : type._listProperty )
+                {
+                    if ( string_view( prop._memberName ) == name )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief @p type 이 부모를 가리키는 칸(`InheritParent`)을 선언했는지 봅니다. */
+            static bool hasInheritParent( const ParsedTypeInfo& type )
+            {
+                for ( const ParsedPropertyInfo& prop : type._listProperty )
+                {
+                    if ( prop._bInheritParent == SW_TRUE )
+                        return true;
+                }
+                return false;
+            }
+        };
+    } // namespace
+
+    bool DeclarationValidator::validateTickMode( const ParsedTypeInfo& type )
+    {
+        if ( type._tickMode.empty() || type._tickMode == "Batch" || type._tickMode == "Task" || type._tickMode == "Main" )
+            return true;
+        SW_LOG_ERROR_ID( "AstVisitor.ERRORUnknownTickMode", "ERROR: REFLECT( TickMode = %# ) on '%#' - TickMode is Batch, Task or Main.", type._tickMode, type._fullyQualifiedName );
+        return false;
+    }
+
+    bool DeclarationValidator::validateMemberFunctions( ParsedTypeInfo& type, const vector<ParsedMethodSignature>& listMethodSignature )
+    {
+        bool bValid = true;
+        if ( type._validate.empty() == false && DeclarationValidatorInternal::isValidatorDeclared( listMethodSignature, type._validate ) == false )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORREFLECTValidateNeeds", "ERROR: REFLECT( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",
+                             type._validate, type._fullyQualifiedName, type._validate );
+            bValid = false;
+        }
+        if ( type._readValidate.empty() == false && DeclarationValidatorInternal::isValidatorDeclared( listMethodSignature, type._readValidate ) == false )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORREFLECTReadValidateNeeds",
+                             "ERROR: REFLECT( ReadValidate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].", type._readValidate,
+                             type._fullyQualifiedName, type._readValidate );
+            bValid = false;
+        }
+        for ( ParsedPropertyInfo& prop : type._listProperty )
+        {
+            if ( prop._validate.empty() == false && DeclarationValidatorInternal::isValidatorDeclared( listMethodSignature, prop._validate ) == false )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYValidateNeeds", "ERROR: PROPERTY( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",
+                                 prop._validate, CursorReader::makeMemberOwnerName( type._fullyQualifiedName, prop._name ), prop._validate );
+                bValid = false;
+            }
+            if ( prop._repNotify.empty() )
+                continue;
+            const string                 owner      = CursorReader::makeMemberOwnerName( type._fullyQualifiedName, prop._name );
+            const ParsedMethodSignature* pSignature = DeclarationValidatorInternal::findMethodSignature( listMethodSignature, prop._repNotify, 1 );
+            const bool                   bTakesOld  = pSignature != nullptr && pSignature->_listParameterTypeName.size() == 1;
+            if ( pSignature == nullptr || ( bTakesOld && pSignature->_listParameterTypeName[0] != prop._typeName ) )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRepNotifyNeeds", "ERROR: PROPERTY( RepNotify = %# ) on '%#' needs a method of the same type named '%#' taking nothing or the old "
+                                                                           "value (const %#&).",
+                                 prop._repNotify, owner, prop._repNotify, prop._typeName );
+                bValid = false;
+                continue;
+            }
+            prop._bRepNotifyTakesOldValue = bTakesOld ? SW_TRUE : SW_FALSE;
+        }
+        return bValid;
+    }
+
+    bool DeclarationValidator::validatePropertyFlags( const ParsedTypeInfo& type )
+    {
+        bool bValid = true;
+        for ( const ParsedPropertyInfo& prop : type._listProperty )
+        {
+            const string owner = CursorReader::makeMemberOwnerName( type._fullyQualifiedName, prop._name );
+            // 기본값은 칸 하나에 넣는 대입으로 생성된다(`_pApplyDefault`) — 컨테이너는 읽기가 원소를 채우므로 기본값 자리가 없다.
+            if ( prop._defaultValue.empty() == false && prop._bIsContainer == SW_TRUE )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYDefaultContainer", "ERROR: PROPERTY( Default = \"%#\" ) on '%#' - a container has no single default value. Initialize it in C++.",
+                                 prop._defaultValue, owner );
+                bValid = false;
+            }
+            // 기반이 없으면 조건식의 이름은 이 타입의 프로퍼티여야 한다. 기반이 있으면 생성된 판정의 멤버 접근이 컴파일에서 본다.
+            if ( prop._editCondition.empty() == false && type._baseCount == 0 && DeclarationValidatorInternal::hasEditConditionSubject( type, prop._editCondition ) == false )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYEditConditionName", "ERROR: PROPERTY( EditCondition = \"%#\" ) on '%#' - names a property '%#' does not declare.", prop._editCondition,
+                                 owner, type._fullyQualifiedName );
+                bValid = false;
+            }
+            // 이름 · 경로 칸의 C++ 문자열 기본값은 데이터가 그 칸을 안 적을 때 조용히 쓰인다(발 뼈 `foot.l` 이 실제 스켈레톤의 `foot_l` 과 어긋나 측정이 늘 0 이었다).
+            // 데이터마다 다른 값이면 Required 로 데이터에 적고, 엔진이 정한 기본값이면 DefaultName 으로 그 뜻을 선언에 적는다.
+            const bool bNameDefaultUndeclared = prop._bHasNameLiteralDefault == SW_TRUE && prop._bRequired == SW_FALSE && prop._bTransient == SW_FALSE && prop._bDefaultName == SW_FALSE;
+            if ( bNameDefaultUndeclared )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYNameDefaultUndeclared", "ERROR: PROPERTY() on '%#' - a name/path field with a C++ string default is used silently when data omits it. Remove the "
+                                                                                  "default and write PROPERTY( Required ) with the value in the data, or mark an engine default with PROPERTY( DefaultName ).",
+                                 owner );
+                bValid = false;
+            }
+            if ( prop._bDefaultName == SW_TRUE && prop._bHasNameLiteralDefault == SW_FALSE )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYDefaultNameWithoutDefault", "ERROR: PROPERTY( DefaultName ) on '%#' - the field is not a name/path field with a C++ string default in the header. "
+                                                                                      "Put the default in the header initializer, or remove DefaultName.",
+                                 owner );
+                bValid = false;
+            }
+            if ( prop._bRequired == SW_TRUE && prop._bRequiredAtRoot == SW_TRUE )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRequiredTwice", "ERROR: PROPERTY( Required, RequiredAtRoot ) on '%#' - Required already covers every element. Keep one.", owner );
+                bValid = false;
+            }
+            // 부모를 가리키는 칸이 없으면 "부모가 없을 때만" 은 늘 참이다 — Required 로 적는다(기반 타입의 칸은 등록이 합쳐 보므로 기반이 있으면 넘긴다).
+            if ( prop._bRequiredAtRoot == SW_TRUE && type._baseCount == 0 && DeclarationValidatorInternal::hasInheritParent( type ) == false )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRequiredAtRootNoParent", "ERROR: PROPERTY( RequiredAtRoot ) on '%#' - '%#' has no PROPERTY( InheritParent ) field, so every element is a root. Write Required.",
+                                 owner, type._fullyQualifiedName );
+                bValid = false;
+            }
+            if ( prop._bRuntimeState == SW_FALSE )
+                continue;
+            if ( prop._bTransient == SW_TRUE )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRuntimeStateTransient", "ERROR: PROPERTY( RuntimeState, Transient ) on '%#' - RuntimeState is written to snapshots and saves, Transient is never "
+                                                                                  "written. Keep one.",
+                                 owner );
+                bValid = false;
+            }
+            if ( prop._bRequired == SW_TRUE )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRuntimeStateRequired", "ERROR: PROPERTY( RuntimeState, Required ) on '%#' - authoring files never write a RuntimeState field, so it cannot be "
+                                                                                 "required.",
+                                 owner );
+                bValid = false;
+            }
+        }
+        return bValid;
+    }
+
+    bool DeclarationValidator::validatePropertyRedirects( const ParsedTypeInfo& type )
+    {
+        bool                              bValid       = true;
+        const vector<ParsedPropertyInfo>& listProperty = type._listProperty;
+        vector<string_view>               listSeenAlias{};
+        for ( const ParsedPropertyInfo& prop : listProperty )
+        {
+            for ( const string& alias : prop._listAlias )
+            {
+                const string owner = CursorReader::makeMemberOwnerName( type._fullyQualifiedName, prop._name );
+                for ( const ParsedPropertyInfo& other : listProperty )
+                {
+                    if ( StringUtil::equals( alias, other._name, true ) )
+                    {
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYAliasCurrent", "ERROR: PROPERTY( Alias = %# ) on '%#' is the current name of '%#' - an old name must not be a field that exists now.", alias,
+                                         owner, other._name );
+                        bValid = false;
+                    }
+                }
+                for ( const string_view seen : listSeenAlias )
+                {
+                    if ( StringUtil::equals( alias, seen, true ) )
+                    {
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYAliasDeclared", "ERROR: PROPERTY( Alias = %# ) on '%#' is declared twice in '%#' - one old name reads into one field.", alias, owner,
+                                         type._fullyQualifiedName );
+                        bValid = false;
+                    }
+                }
+                listSeenAlias.push_back( alias );
+            }
+        }
+        return bValid;
+    }
+
+    bool DeclarationValidator::validateEnumeratorRedirects( const ParsedEnumInfo& enumInfo )
+    {
+        bool                                      bValid       = true;
+        const vector<pair<string, string>>* const arrList[]    = { &enumInfo._listValueAlias, &enumInfo._listRemovedEnumerator };
+        const utf8* const                         arrKeyName[] = { "ValueAlias", "Removed" };
+        vector<string_view>                       listSeenOld{};
+        for ( size_t listIndex = 0; listIndex < SW_COUNT_OF( arrList ); ++listIndex )
+        {
+            for ( const auto& [oldName, targetName] : *arrList[listIndex] )
+            {
+                const utf8* const pKey = arrKeyName[listIndex];
+                if ( oldName.empty() || targetName.empty() )
+                {
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORENUMExpectsOld", "ERROR: ENUM( %# ) on '%#' expects \"Old:Target\", got '%#:%#'.", pKey, enumInfo._fullyQualifiedName, oldName, targetName );
+                    bValid = false;
+                    continue;
+                }
+                const ParsedEnumeratorInfo* pTarget = DeclarationValidatorInternal::findEnumeratorIgnoreCase( enumInfo, targetName );
+                if ( pTarget == nullptr || pTarget->_name != targetName )
+                {
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORENUMNotEnumerator", "ERROR: ENUM( %# = \"%#:%#\" ) on '%#' - '%#' is not an enumerator of it (spell it as declared).", pKey, oldName, targetName,
+                                     enumInfo._fullyQualifiedName, targetName );
+                    bValid = false;
+                }
+                const ParsedEnumeratorInfo* pCurrent = DeclarationValidatorInternal::findEnumeratorIgnoreCase( enumInfo, oldName );
+                if ( pCurrent != nullptr )
+                {
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORENUMStillEnumerator", "ERROR: ENUM( %# = \"%#:%#\" ) on '%#' - '%#' is still an enumerator; an old name must be one that no longer exists.", pKey,
+                                     oldName, targetName, enumInfo._fullyQualifiedName, pCurrent->_name );
+                    bValid = false;
+                }
+                for ( const string_view seen : listSeenOld )
+                {
+                    if ( StringUtil::equals( seen, oldName, true ) )
+                    {
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORENUMDeclaresOld", "ERROR: ENUM() on '%#' declares the old enumerator name '%#' twice (ValueAlias and Removed together count once).",
+                                         enumInfo._fullyQualifiedName, oldName );
+                        bValid = false;
+                    }
+                }
+                listSeenOld.push_back( oldName );
+            }
+        }
+        return bValid;
+    }
+
+    bool DeclarationValidator::applyDisplayMeta( ParsedPropertyInfo& prop, const CXType fieldType, const string_view owner )
+    {
+        // `Meta` 의 `Units` 는 철자 검사를 받지 않으므로 표에 없는 글자(`HP`)만 받는다 — 표에 있는 단위는 `Units = …` 로 적는다.
+        for ( const auto& [key, value] : prop._listCustomMeta )
+        {
+            if ( key == "Units" && ReflectUnit::findUnit( value ) != nullptr )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORWritesMetaUnits", "ERROR: '%#' writes Meta = \"Units=%#\" - a known unit is written PROPERTY( Units = %# ).", owner, value, value );
+                return false;
+            }
+        }
+
+        if ( prop._units.empty() == false )
+        {
+            if ( ReflectUnit::findUnit( prop._units ) == nullptr )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYUnitsUnknown", "ERROR: PROPERTY( Units = %# ) on '%#' - unknown unit. Known: %#. A free-form label is written Meta = \"Units=…\".",
+                                 prop._units, owner, ReflectUnit::makeUnitList() );
+                return false;
+            }
+            // 도로 적는 칸은 형식이 단위를 말한다(`Radians` · `EulerAngles` — 글은 도, 값은 라디안). 실수 칸에 도를 담으면 같은 각 칸이 자리마다 도이기도 라디안이기도 하다.
+            if ( ReflectUnit::findUnit( prop._units )->_kind == ReflectUnitKind::Degree )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYUnitsDegree", "ERROR: PROPERTY( Units = deg ) on '%#' - an angle authored in degrees is a Radians or EulerAngles property (text in degrees, value in radians).", owner );
+                return false;
+            }
+            for ( const auto& [key, value] : prop._listCustomMeta )
+            {
+                if ( key == "Units" )
+                {
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORGivesUnitsTwice", "ERROR: '%#' gives Units twice (Units = %# and Meta = \"Units=%#\").", owner, prop._units, value );
+                    return false;
+                }
+            }
+            // 아는 단위는 커스텀 메타 글이 아니라 런타임 메타데이터의 열거로 싣는다(`CodeGenerator::emitPropertyMetadata`).
+        }
+
+        if ( prop._editCondition.empty() == false && DeclarationValidatorInternal::isEditConditionWellFormed( prop._editCondition ) == false )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYEditConditionUse", "ERROR: PROPERTY( EditCondition = \"%#\" ) on '%#' - use name, !name, name == Value or name != Value.", prop._editCondition, owner );
+            return false;
+        }
+
+        const bool bFixedArrayOfContainers = fieldType.kind == CXType_ConstantArray && prop._containerTree != nullptr && prop._containerTree->_elementNested != nullptr;
+        if ( bFixedArrayOfContainers )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYFixedArray", "ERROR: PROPERTY() on '%#' is a fixed array of containers - use a container of containers (vector<array<…>>) instead.", owner );
+            return false;
+        }
+        return true;
+    }
+
+    bool DeclarationValidator::isInterpAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, const string_view owner )
+    {
+        if ( prop._bInterp == SW_FALSE )
+            return true;
+        const BuiltinTypeTraits* pTraits             = typeNameMap.findTraits( prop._typeName );
+        const bool               bAnimatableProperty = pTraits != nullptr && pTraits->_bInterp == SW_TRUE && prop._bIsContainer == SW_FALSE && prop._bIsBitField == SW_FALSE;
+        if ( bAnimatableProperty )
+            return true;
+        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYInterpOnly",
+                         "ERROR: PROPERTY( Interp ) on '%#' (%#) - only a single value of a builtin with the Interp role (ReflectBuiltins.xxx: numbers, float2/3/4, quaternion, Radians) "
+                         "can be animated by a value track.",
+                         owner, prop._typeName );
+        return false;
+    }
+
+    bool DeclarationValidator::isRuntimeStateAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, const ContainerTypeMap& containerTypeMap,
+                                                      const string_view owner )
+    {
+        if ( prop._bRuntimeState == SW_FALSE || prop._bIsBitField == SW_TRUE )
+            return true;
+        if ( prop._bIsContainer == SW_TRUE )
+        {
+            // 컨테이너는 표(`ReflectBuiltins.xxx` CONTAINER 줄)의 State 역할 — 순서가 정해지고 원소를 제자리에서 쓰는 시퀀스만 원소 차례대로 실린다.
+            const ContainerTypeRule* pRule    = containerTypeMap.findByWrapperStem( prop._containerType );
+            const bool               bNested  = prop._containerTree != nullptr && prop._containerTree->_elementNested != nullptr && prop._containerTree->_elementNested->_bIsContainer == SW_TRUE;
+            const bool               bCarried = pRule != nullptr && pRule->_bState == SW_TRUE && bNested == false;
+            if ( bCarried == false )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRuntimeStateContainer",
+                                 "ERROR: PROPERTY( RuntimeState ) on '%#' (%#) - the container has no State role in ReflectBuiltins.xxx (or nests another container); state fields carry "
+                                 "a single value or an ordered sequence - take it out of RuntimeState and carry it in serializeState.",
+                                 owner, prop._typeName );
+                return false;
+            }
+        }
+        const string&            leafType = prop._bIsContainer == SW_TRUE ? prop._elementTypeName : prop._typeName;
+        const BuiltinTypeTraits* pTraits  = typeNameMap.findTraits( leafType );
+        if ( pTraits == nullptr || pTraits->_bState == SW_TRUE ) // 내장 타입이 아니면 열거 · 반사 구조체다 — 실행 중 판정(`StateIO::reflected`)이 맡는다
+            return true;
+        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRuntimeStateType",
+                         "ERROR: PROPERTY( RuntimeState ) on '%#' (%#) - '%#' has no State role in ReflectBuiltins.xxx, so state serialization and the state hash cannot carry it; "
+                         "use a builtin with the State role, an enum, a reflected struct or a sequence of those.",
+                         owner, prop._typeName, leafType );
+        return false;
+    }
+
+    bool DeclarationValidator::validateBusBodyExport( const ParsedTypeInfo& type, const bool bBusBody, const bool bExported, const bool bModuleLocal )
+    {
+        const bool bMissingExport = bBusBody && bExported == false;
+        if ( bMissingExport == false || bModuleLocal )
+            return true;
+        SW_LOG_ERROR_ID( "AstVisitor.ERRORDeclaresServerBus", "ERROR: '%#' declares '%#' (a server bus body type) but has no module export macro. "
+                                                              "Another module's ServerBusTopic<T> calls T::StaticType(), which then fails to link. "
+                                                              "Write the module's macro before the name: 'struct SW_KIT_API %#' (SW_GF_API in Base, SW_KIT_SERVER_API in a server kit).",
+                         type._fullyQualifiedName, annotation::kBusVersionMember, type._name );
+        return false;
+    }
+
+    bool DeclarationValidator::isInsideReflectType( const CXCursor member, const utf8* pMacroName )
+    {
+        const CXCursor parent = clang_getCursorSemanticParent( member );
+        if ( AnnotationLookup::isReflectedRecord( parent ) )
+            return true;
+
+        SW_LOG_ERROR_ID( "AstVisitor.ERRORUsedClassStruct", "ERROR: %#() is used in class/struct '%#', but it lacks REFLECT()!", pMacroName,
+                         CursorReader::makeFullyQualifiedName( parent ).c_str() );
+        return false;
+    }
+} // namespace sw

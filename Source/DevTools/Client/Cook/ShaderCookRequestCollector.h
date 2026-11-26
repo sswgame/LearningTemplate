@@ -16,12 +16,12 @@ namespace sw
 {
     /**
      * @struct ShaderCookRequestCollector
-     * @brief 리소스 트리가 쿠킹해야 할 셰이더 요청을 모읍니다. `ShaderCookDriver::cookAllShaders` 가 부릅니다.
+     * @brief 콘텐츠 트리가 쿠킹해야 할 셰이더 요청을 모읍니다. `ShaderCookDriver::cookAllShaders` 가 부릅니다.
      */
     struct ShaderCookRequestCollector
     {
         /**
-         * @brief 이 리소스 트리가 쿠킹해야 할 요청을 모두 모읍니다(파이프라인 XML + 머티리얼).
+         * @brief 이 콘텐츠 트리가 쿠킹해야 할 요청을 모두 모읍니다(파이프라인 XML + 머티리얼).
          * @details 런타임이 만드는 퍼뮤테이션과 여기서 만드는 요청이 어긋나면 Shipping 이 매니페스트 미스로
          *          떨어집니다. 그래서 define 을 합치는 규칙과 패스 기본 셰이더를 고르는 규칙이 런타임과 같은 코드
          *          (`RenderPassKindInfo` 테이블, `selectRenderPassShader`, `FrameRendererUtil`)를 봅니다. 그것이 이 함수가 렌더러 층에 있는 이유입니다.

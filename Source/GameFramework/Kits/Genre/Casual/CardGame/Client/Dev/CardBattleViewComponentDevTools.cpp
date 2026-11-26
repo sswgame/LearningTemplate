@@ -17,7 +17,7 @@
 #include "GameFramework/Kits/Genre/Casual/CardGame/Client/CardBattleViewComponent.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Component/CardBattleGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

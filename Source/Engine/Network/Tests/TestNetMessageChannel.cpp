@@ -9,7 +9,7 @@
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Network/NetMessageChannel.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
-#include "Engine/Serialization/Fixed/Tests/FixedLayoutTestTypes.h"
+#include "Engine/Serialization/Layout/Tests/LayoutSerializerTestTypes.h"
 
 using namespace sw;
 
@@ -86,10 +86,10 @@ SW_TEST_CASE( NetMessageChannelTest, ReplicatedSchemaMismatchIsRefusedAtHandshak
     const vector<uint8>    bytes = writer.releaseBytes();
     ReplicatedLayoutSample received;
     BitReader              reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-    SW_REQUIRE_TRUE( same.readReplicated( kPawnTypeForTest, reader, received, nullptr ) == FixedReadResult::Ok );
+    SW_REQUIRE_TRUE( same.readReplicated( kPawnTypeForTest, reader, received, nullptr ) == LayoutReadResult::Ok );
     SW_EXPECT_EQUAL( received._health, 9 );
     PropertyRoleActor wrongType;
     BitReader         wrongReader( bytes.data(), static_cast<int32>( bytes.size() ) );
     SW_EXPECT_LOG( "NetMessageChannel.MessageKindXNot" );
-    SW_EXPECT_TRUE( current.readReplicated( kPawnTypeForTest, wrongReader, wrongType, nullptr ) == FixedReadResult::SchemaMismatch );
+    SW_EXPECT_TRUE( current.readReplicated( kPawnTypeForTest, wrongReader, wrongType, nullptr ) == LayoutReadResult::SchemaMismatch );
 }

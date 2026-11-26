@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 namespace sw::editor
 {
@@ -29,7 +29,7 @@ namespace sw::editor
         PROPERTY( Required )
         DataPath _componentIconTable; ///< 컴포넌트 아이콘 표(`EditorComponentIconTable` — Category → 아이콘 · 색 이름)
         PROPERTY( Required )
-        DataPath _panelNames; ///< 패널 · 팝업 창의 보이는 이름 표(`EditorPanelTextTable`)
+        DataPath _panelNames; ///< 패널 · 팝업 창의 보이는 이름 표(`EditorPanelTitleTable`)
         PROPERTY( Required )
         DataPath _contentBrowserFavorites; ///< 콘텐츠 브라우저의 즐겨찾기 폴더 표(`ContentBrowserFavoriteTable`)
 

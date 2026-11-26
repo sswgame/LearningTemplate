@@ -6,7 +6,7 @@
  */
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/AsyncFileIO.h"
@@ -56,9 +56,9 @@ namespace sw
     SW_ENGINE_SUBSYSTEM_WITH_SLOT( TaskManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
-        TaskManager&              taskManager = scope.emplaceSubsystem<TaskManager>();
-        const CommandLineManager& commandLine = getSubsystemFrom<CommandLineManager>( scope.getScope() );
-        int32                     workerCount = 0;
+        TaskManager&       taskManager = scope.emplaceSubsystem<TaskManager>();
+        const CommandLine& commandLine = getSubsystemFrom<CommandLine>( scope.getScope() );
+        int32              workerCount = 0;
         if ( commandLine.getArgument( CommandLineArgument::WORKERS, workerCount ) == false )
             return;
         if ( workerCount < 1 )

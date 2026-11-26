@@ -21,12 +21,12 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Housing/HousingLayout.h"
 #include "GameFramework/Kits/Feature/World/Housing/HousingReplication.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
@@ -57,7 +57,7 @@ namespace sw
         SW_REGISTERED_COMPONENT( HousingPlotComponent );
         friend class HousingNetSessionComponent; ///< 세션이 틱 뒤에 요청을 꺼내 보내고 판정 · 주인을 돌려준다
 
-        static constexpr FormatDef kStateFormat{ "HPLT" };
+        static constexpr FormatDesc kStateFormat{ "HPLT" };
 
         HousingPlotComponent();
         ~HousingPlotComponent() override;

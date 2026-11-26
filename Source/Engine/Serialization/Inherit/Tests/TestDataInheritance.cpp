@@ -7,8 +7,8 @@
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 using namespace sw;
@@ -352,16 +352,16 @@ SW_TEST_CASE( DataInheritanceTest, ReadWithoutDepthLimitIsAnError )
     SW_EXPECT_FALSE( DataInheritance::collectChain( R"(<Doc _base="base.xml" />)", "child", source, listLayer ) );
 }
 
-/** @brief [DataInheritanceTest] 엔진의 깊이 사본은 뜨기 전엔 없고, 리소스 읽기는 만들 때 엔진의 사본을 싣는다 */
+/** @brief [DataInheritanceTest] 엔진의 깊이 사본은 뜨기 전엔 없고, 에셋 읽기는 만들 때 엔진의 사본을 싣는다 */
 SW_TEST_CASE( DataInheritanceTest, ResourceSourceCarriesTheEngineCopy )
 {
-    ResourceComposition composition;
+    AssetComposition composition;
     SW_EXPECT_FALSE( composition.findInheritanceMaxDepth().has_value() );
     composition.setInheritanceMaxDepth( 3u );
     SW_EXPECT_EQUAL( 3u, composition.findInheritanceMaxDepth().value_or( 0u ) );
-    const optional<uint32> engineCopy = engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
+    const optional<uint32> engineCopy = engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth();
     SW_REQUIRE_TRUE( engineCopy.has_value() ); // 에셋 매니저가 기동에서 떴다
-    SW_EXPECT_EQUAL( *engineCopy, DataInheritanceResourceSource{}.findMaxDepth().value_or( 0u ) );
+    SW_EXPECT_EQUAL( *engineCopy, DataInheritanceAssetSource{}.findMaxDepth().value_or( 0u ) );
 }
 
 /** @brief [DataInheritanceTest] 차이를 부모 위에 다시 펼치면 처음 칸이 나온다 — 삭제 · 추가 · 순서 · 빈 칸까지 */

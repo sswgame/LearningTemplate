@@ -21,7 +21,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/AI/Model/BehaviorTreeLiveRunner.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
@@ -156,7 +156,7 @@ namespace sw::editor
         }
         const string           completeText = _model.write(); // 차이(`_base`)면 부모와 같은 칸을 뺐다 — 펼친 글이 짝이다
         const AssetWriteResult saved        = writer.save( *diskPath, [&saveText, &completeText]( const AbsolutePath& writable )
-               { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( *saveText, completeText ) ); } );
+               { return AssetComposer::saveText( writable, AssetSaveText::makeWithComplete( *saveText, completeText ) ); } );
         if ( saved == AssetWriteResult::Refused )
         {
             _statusText = "Not saved - the file is read-only or changed on disk";

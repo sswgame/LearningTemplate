@@ -10,7 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskHandle.h"
 
 namespace sw
 {

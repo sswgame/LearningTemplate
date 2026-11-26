@@ -1,6 +1,6 @@
 /**
  * @file FrameRenderer.h
- * @brief RenderPipeline XML 을 로드해 RenderGraph 를 만들고, 프레임을 셋업한 뒤 패스 실행(`FramePassExecutor`)에 넘겨 Shadow, Forward, Deferred, Post 패스를 그립니다.
+ * @brief RenderPipeline XML 을 로드해 RenderGraph 를 만들고, 프레임을 셋업한 뒤 패스 실행(`FrameRecorder`)에 넘겨 Shadow, Forward, Deferred, Post 패스를 그립니다.
  */
 #pragma once
 #include "Core/Concurrency/DevCounter.h"
@@ -18,7 +18,7 @@
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Renderer/Capture/FrameCapture.h"
 #include "Engine/Renderer/Extension/FrameExtensionHost.h"
-#include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
+#include "Engine/Renderer/Frame/Execute/FrameRecorder.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRenderState.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
@@ -35,7 +35,7 @@
 #include "Engine/Renderer/Frame/View/FrameViewResources.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
-#include "Engine/Renderer/Frame/View/RenderStability.h"
+#include "Engine/Renderer/Frame/View/RenderConvergence.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
@@ -67,7 +67,7 @@ namespace sw
     class RenderTargetRegistry;
     class Scene;
     class ShaderBindingLayout;
-    class SimulationOnlyFrameQueue;
+    class SimulationOnlyFrameCounter;
     class TaskArgs;
     class TaskManager;
     class Texture2D;
@@ -107,13 +107,13 @@ namespace sw
      */
     struct FrameRendererHost
     {
-        FrameProfiler*            _pProfiler{ nullptr };        ///< 패스별 GPU 시간 보고(타임스탬프 슬롯은 디바이스에 하나 — 렌더러 하나만 계측한다)
-        RenderExtensionRegistry*  _pExtensions{ nullptr };      ///< 모듈 렌더 확장(주 파이프라인에 붙는다)
-        RenderTargetRegistry*     _pRenderTargets{ nullptr };   ///< 렌더 타깃 패널의 목록(주 시점의 첨부)
-        MaterialCache*            _pPinnedMaterials{ nullptr }; ///< 고정 머티리얼의 PSO 미리 만들기 줄(줄은 하나 — 렌더러 하나만 꺼낸다)
-        GPUPixelInspector*        _pPixelInspector{ nullptr };  ///< 개발 명령 `gpu.inspect` · `gpu.thread` · `gpu.show` 의 선택(주 화면의 픽셀 — 미리보기 · 캡처는 고르지 않는다)
-        SimulationOnlyFrameQueue* _pSimulationOnly{ nullptr };  ///< 건너뛴 프레임의 따라잡기 보고(번호는 주 패킷이 싣는다)
-        RenderDebugRegistry*      _pRenderDebug{ nullptr };     ///< 렌더링 런타임 디버그 우편함(프레임 디버거 · 통계 · 그래프 사본 · 버퍼 보기 — 주 시점만)
+        FrameProfiler*              _pProfiler{ nullptr };        ///< 패스별 GPU 시간 보고(타임스탬프 슬롯은 디바이스에 하나 — 렌더러 하나만 계측한다)
+        RenderExtensionRegistry*    _pExtensions{ nullptr };      ///< 모듈 렌더 확장(주 파이프라인에 붙는다)
+        RenderTargetRegistry*       _pRenderTargets{ nullptr };   ///< 렌더 타깃 패널의 목록(주 시점의 첨부)
+        MaterialCache*              _pPinnedMaterials{ nullptr }; ///< 고정 머티리얼의 PSO 미리 만들기 줄(줄은 하나 — 렌더러 하나만 꺼낸다)
+        GPUPixelInspector*          _pPixelInspector{ nullptr };  ///< 개발 명령 `gpu.inspect` · `gpu.thread` · `gpu.show` 의 선택(주 화면의 픽셀 — 미리보기 · 캡처는 고르지 않는다)
+        SimulationOnlyFrameCounter* _pSimulationOnly{ nullptr };  ///< 건너뛴 프레임의 따라잡기 보고(번호는 주 패킷이 싣는다)
+        RenderDebugRegistry*        _pRenderDebug{ nullptr };     ///< 렌더링 런타임 디버그 우편함(프레임 디버거 · 통계 · 그래프 사본 · 버퍼 보기 — 주 시점만)
     };
 
     /**
@@ -127,7 +127,7 @@ namespace sw
      *          주 시점이 렌더 텍스처를 읽으므로 렌더 텍스처 뷰가 먼저 돌고, 화면 사각형 뷰는 주 시점 위에 겹친다.
      *
      *          얇은 지휘자. 렌더러는 프레임 순서(스냅샷 받기 · 라이트 · 그림자 · 하늘 · 뷰 준비 · 업로드 · PSO 준비 · 제출)를 정하고 프레임 데이터(`FrameRenderState`)를 소유한다.
-     *          혼자 서는 일은 소유한 협력 객체가 한다 — 기록과 제출(`FramePassExecutor`), PSO 만들기 · 찾기(`FramePSOManager`), 후처리 효과 셋(`FrameAutoExposure` · `FrameUpscale` · `FrameFog`),
+     *          혼자 서는 일은 소유한 협력 객체가 한다 — 기록과 제출(`FrameRecorder`), PSO 만들기 · 찾기(`FramePSOManager`), 후처리 효과 셋(`FrameAutoExposure` · `FrameUpscale` · `FrameFog`),
      *          모듈 확장 받아들이기(`FrameExtensionHost`), 뷰 GPU 자원 수명(`FrameViewResources`), 캡처(`FrameCapture`).
      *          협력 객체는 지금 그리는 뷰를 인자로 받고 렌더러의 `_pDevice` 변수를 참조한다. 언리얼 `FSceneRenderer` 의 셋업(InitViews)과 패스 기록(RDG 패스 실행)을 나눈 것과 같다.
      */
@@ -207,10 +207,10 @@ namespace sw
         uint32 getLastPendingPSOBatchCount() const { return _lastPendingPSOBatchCount; }
         /** @brief 마지막 프레임의 볼륨 안개 상태(켜졌거나 왜 꺼졌는지)입니다. 렌더 스레드가 주 렌더러의 값을 올린다(`FrameFog::publishMainVolumeState`). */
         FogVolumeState getFogVolumeState() const { return _fog.getVolumeState(); }
-        /** @brief 주 시점의 마지막 정착 값(정지 프레임 · 노출 오차 상한 · TAA · 노출을 돌렸는지)입니다. 렌더 스레드가 올린다(`RenderStabilitySample::publish` — 렌더 정착 조건). */
-        RenderStabilitySample getMainStabilitySample() const
+        /** @brief 주 시점의 마지막 정착 값(정지 프레임 · 노출 오차 상한 · TAA · 노출을 돌렸는지)입니다. 렌더 스레드가 올린다(`RenderConvergenceSample::publish` — 렌더 정착 조건). */
+        RenderConvergenceSample getMainConvergenceSample() const
         {
-            RenderStabilitySample sample{};
+            RenderConvergenceSample sample{};
             sample._stillFrameCount       = _state.getMainView()._stillFrameCount;
             sample._exposureErrorEv       = _state.getMainView()._exposureErrorEv;
             sample._exposureAdaptationEv  = _state.getMainView()._exposureAdaptationEv;
@@ -227,7 +227,7 @@ namespace sw
         /**
          * @brief 풀스크린 패스가 이 역할의 입력을 바인딩하지 않게 합니다. 언리얼의 r.AmbientOcclusion.Levels=0 같은 쇼 플래그입니다.
          * @details 셰이더는 그 인덱스를 kInvalidIndex 로 읽고 폴백한다(AO 는 1). 같은 프레임 안에서 "이 입력이 실제로 이미지를 바꾸는가" 를 비교할 수 있다.
-         *          입력을 매 프레임 계산하기만 하고 화면에는 쓰지 않는 결함을 픽셀로 잡는다. 바인딩은 패스 실행(`FramePassExecutor`)이 한다.
+         *          입력을 매 프레임 계산하기만 하고 화면에는 쓰지 않는 결함을 픽셀로 잡는다. 바인딩은 패스 실행(`FrameRecorder`)이 한다.
          */
         void setInputRoleEnabled( RenderPassInputRole role, bool bEnabled ) { _passExecutor.setInputRoleEnabled( role, bEnabled ); }
         /** @brief 초기화와 파이프라인 상태를 반환합니다. */
@@ -340,7 +340,7 @@ namespace sw
         RHIPipelineStateHandle getEnginePSO( RenderPassKind passType ) const;
         /**
          * @brief 거르기 @p filter 의 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
-         * @details 판정은 `MaterialPassFilter::shouldDraw` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다. 드로우 루프(`FramePassExecutor`)와 같은 함수다.
+         * @details 판정은 `MaterialPassFilter::shouldDraw` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다. 드로우 루프(`FrameRecorder`)와 같은 함수다.
          */
         bool shouldDrawBatchInPass( const MaterialPassFilter& filter, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
         {
@@ -464,7 +464,7 @@ namespace sw
         void applyFrameShadow();
 
         // ------------------------------------------------------------------------------
-        // 5) 업로드와 제출 — 기록은 패스 실행(`FramePassExecutor`)이 한다
+        // 5) 업로드와 제출 — 기록은 패스 실행(`FrameRecorder`)이 한다
         // ------------------------------------------------------------------------------
         /**
          * @brief execute() 와 executePacket() 이 공통으로 쓰는 뒷부분입니다. 스냅샷을 GPU 로 올리고, 기록 전에 준비해야 하는 것(상수 버퍼 슬롯, 머티리얼 PSO)을 갖춘 뒤 그래프를 제출합니다.
@@ -558,7 +558,7 @@ namespace sw
          * @details 프레임 데이터(`_state`)와 협력 객체(`_psoManager` · `_autoExposure` · `_upscale` · `_fog` · `_extensionHost` · `_capture` · `_screenRotation`)를 참조로 쓰므로 그들보다 뒤에 선언한다.
          *          언리얼 `FSceneRenderer::Render` 가 뷰마다 RDG 패스를 더하고 실행하는 자리다.
          */
-        FramePassExecutor _passExecutor;
+        FrameRecorder     _passExecutor;
         FrameRendererHost _host; ///< 주 렌더러만 하는 일의 상대(`bindHost`). 화면 밖 렌더러는 비어 있다
         string            _statusMessage;
         RHITextureHandle  _publishedDisplaySceneTarget; ///< 렌더 타깃 목록에 마지막으로 실은 HDR 장면 출력 RT — 바뀌면 목록을 다시 공개한다(그 RT 는 풀과 따로 만든다)

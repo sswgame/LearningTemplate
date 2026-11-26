@@ -8,7 +8,7 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 
 using namespace sw;
 using namespace sw::editor;

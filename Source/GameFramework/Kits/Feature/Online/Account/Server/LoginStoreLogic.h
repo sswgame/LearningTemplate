@@ -31,7 +31,9 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginStoreRecords.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountExternalLinks.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountNameIndex.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAfterDeleteAccount.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
@@ -131,7 +133,7 @@ namespace sw
         /** @brief 커밋이 "그사이 비밀번호 · 매개변수가 바뀌었다"(`outbHashStale`)고 할 때 읽기 단계부터 다시 하는 상한입니다. 넘으면 `kUnavailable` 이다. */
         static constexpr int32 kMaxHashRestartCount = 4;
 
-        LoginStoreLogic( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& ticketAuthority,
+        LoginStoreLogic( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginLogicConfig& settings, const LoginTicketAuthority& ticketAuthority,
                          LoginStoreResult& outResult );
 
         /** @brief 가입합니다. @p prepared 는 해시 줄이 새 솔트 · 설정 매개변수로 계산한 비밀번호입니다. 비밀번호 형식은 해시를 맡기기 전에 `validateNewCredential` 이 봤다 — 비밀번호는 저장소 일로 오지 않는다. */
@@ -214,7 +216,7 @@ namespace sw
     private:
         ServiceReadSetConnection    _connection; ///< 읽은 레코드(프로필 · 게스트 · 외부 연결)를 다음 커밋의 조건으로 붙인다 — 손으로 `requireVersion` 을 걸지 않는다
         ILoginCrypto&               _crypto;
-        const LoginServiceConfig&   _settings;
+        const LoginLogicConfig&     _settings;
         const LoginTicketAuthority& _ticketAuthority;
         LoginStoreResult&           _result;
     };

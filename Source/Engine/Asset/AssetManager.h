@@ -23,7 +23,8 @@
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskDelegate.h"
+#include "Core/Task/TaskHandle.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
@@ -79,7 +80,7 @@ namespace sw
         /** @brief 마운트된 팩을 언마운트하고, 등록된 에셋 캐시를 비웁니다. */
         void shutdown();
         /**
-         * @brief 기동 순서의 자리: 리소스 루트를 잡고 활성 엔진 설정의 우선순위로 콘텐츠를 마운트합니다(개발 실행 · 쿠킹은 소스 트리, 배포 구성 · `-cooked-content` 는 팩, `ContentSource`).
+         * @brief 기동 순서의 자리: 콘텐츠 루트를 잡고 활성 엔진 설정의 우선순위로 콘텐츠를 마운트합니다(개발 실행 · 쿠킹은 소스 트리, 배포 구성 · `-cooked-content` 는 팩, `ContentSource`).
          * @details 팩 루트는 GameConfig, 팩 스트림은 코덱이다. 종료(`shutdown`)가 에셋 캐시를 비운다 — 에셋을 드는 서브시스템이 모두 이 뒤에 서므로,
          *          역순 해제에서 그들의 소멸자가 에셋을 놓은 뒤다.
          */
@@ -99,7 +100,7 @@ namespace sw
         /** @brief 스트리밍 큐의 완료 기록을 비웁니다. 캐시는 참조가 0 이 되는 시점에 스스로 지우므로 여기서는 할 일이 없습니다. */
         void garbageCollectUnusedAssets();
         /**
-         * @brief 로드 축 태그 · 덮어쓰기 층이 바뀌어 결과가 달라진 리소스(`ResourceComposition::takePendingReload`)를 쥔 캐시마다 다시 읽습니다. 다시 읽은 수를 돌려줍니다.
+         * @brief 로드 축 태그 · 덮어쓰기 층이 바뀌어 결과가 달라진 리소스(`AssetComposition::takePendingReload`)를 쥔 캐시마다 다시 읽습니다. 다시 읽은 수를 돌려줍니다.
          * @details 엔진 루프가 프레임마다 틱 밖(게임 스레드)에서 부른다 — 태그는 틱 중에도 바뀌고(데이터 레이어) 공유 캐시의 다시 읽기(표에서 떼어 냄)는 틱 밖에서만 한다. 배포 구성에도 있다.
          */
         uint32 reloadComposedDependents();
@@ -193,7 +194,7 @@ namespace sw
         /**
          * @brief @p work 를 워커에서 낮은 우선순위로 돌리는 에셋 일로 냅니다(로드 단계에 넣고 제출한다). 에셋 로드와 실행 중에 짓는 파생 에셋(외형이 합친 메시)이 쓴다.
          * @details 게임 모듈은 태스크 매니저를 보지 않는다(`HostOnly`) — 모듈의 백그라운드 일은 이 창구로 내서 결정적 실행의 프레임 경계 대기가 함께 센다(언리얼 DDC 빌드 태스크 자리).
-         *          모듈을 내리기 전에는 엔진이 모든 태스크를 기다린다(`LiveReloadManager::pollBeforeUnload`).
+         *          모듈을 내리기 전에는 엔진이 모든 태스크를 기다린다(`ModuleHotReloadManager::pollBeforeUnload`).
          */
         void launchLoadJob( string_view name, const TaskDelegate& job );
         /** @brief 로드 단계의 태스크만 끝날 때까지 기다립니다(@p pOwner 는 오래 걸릴 때의 로그 이름). 로드 태스크를 낸 캐시가 지워지기 전에 부른다. */
@@ -221,7 +222,7 @@ namespace sw
         /** @brief `getAssetCache<T>()` 의 본체입니다. 종류 이름으로 내장 캐시를 찾습니다. 없으면 단언합니다(등록하지 않은 타입을 물은 경우). */
         AssetCacheBase& getBuiltInAssetCache( string_view assetKindName ) const;
         /**
-         * @brief 마운트한 콘텐츠의 GUID ↔ 리소스 id 색인을 지어 프로세스 표에 겁니다(`AssetRegistry::install`). 참조(`AssetRef<T>` 의 `guid:`)가 이것으로 풀린다.
+         * @brief 마운트한 콘텐츠의 GUID ↔ 에셋 id 색인을 지어 프로세스 표에 겁니다(`AssetRegistry::install`). 참조(`AssetRef<T>` 의 `guid:`)가 이것으로 풀린다.
          * @details 쿠킹한 팩(@p source 가 `Cooked`)은 마운트한 도메인마다 `<도메인>/assetindex.xml` 을 낮은 우선순위부터 합친다(뒤 마운트 패치 · DLC 가 이긴다). 도메인 팩에 색인이 없거나
          *          틀렸거나 한 팩 안에서 겹치면 오류다. 쿠킹은 늘 색인을 담는다(`PackCooker`). 소스 트리는 저작 색인(`AssetDatabase::scan`)이 층 하나다. 결함(겹친 GUID ·
          *          짝 잃은 `.meta`)은 경고로 남기고 결함 파일은 색인에 들지 않는다(그 GUID 참조는 읽을 때 오류다). 규칙 파일을 못 읽으면 false 입니다.

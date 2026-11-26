@@ -37,7 +37,7 @@ namespace sw
     class Scene;
     struct LightProbeGrid;
     struct ReflectionProbeAsset;
-    struct SceneVoxelScene;
+    struct SceneVoxelizeInput;
     struct SkyLightData;
 
     /** @brief 쿠키(빛 텍스처)를 쓰는 빛 하나입니다 — 라이트 목록의 원소 번호와 텍스처 경로입니다. 렌더러가 칸을 나눠 그 원소의 `_extra.w` 에 적습니다(`Light2DCookieAtlas`). */
@@ -57,15 +57,15 @@ namespace sw
      */
     struct RealtimeProbeRequest
     {
-        GPULight                          _volumeElement{};           ///< 라이트 목록에 넣은 볼륨 원소의 사본 - 격자 모양(시작점 `_colorIntensity.xyz` · 간격 `_directionType.xyz` · 수 `_params.xyz`)과 프로브 버퍼 안의 첫 프로브 번호(`_params.w`)
-        uint64                            _volumeID{ 0 };             ///< 컴포넌트 번호 — 프레임을 넘는 기록(history)의 열쇠
-        uint32                            _probeCount{ 0 };           ///< 볼륨의 프로브 수
-        uint32                            _rayCount{ 0 };             ///< 프로브 하나를 한 번 갱신할 때 쏘는 광선 수
-        uint32                            _updatePeriod{ 1 };         ///< 모든 프로브가 한 번씩 갱신되는 프레임 수
-        float32                           _blend{ 1.0f };             ///< 새 값이 기록에 섞이는 비율
-        float32                           _bounceAlbedo{ 0.5f };      ///< 닿은 면의 반사율
-        float32                           _emissiveIntensity{ 0.0f }; ///< 광선이 닿은 발광 칸(`SceneVoxelScene::_listEmissionPalette`)의 빛에 곱하는 배율 — 0 이면 발광을 보지 않는다(이전 그림)
-        shared_ptr<const SceneVoxelScene> _pVoxelScene;               ///< 광선이 걷는 점유 복셀
+        GPULight                             _volumeElement{};           ///< 라이트 목록에 넣은 볼륨 원소의 사본 - 격자 모양(시작점 `_colorIntensity.xyz` · 간격 `_directionType.xyz` · 수 `_params.xyz`)과 프로브 버퍼 안의 첫 프로브 번호(`_params.w`)
+        uint64                               _volumeID{ 0 };             ///< 컴포넌트 번호 — 프레임을 넘는 기록(history)의 열쇠
+        uint32                               _probeCount{ 0 };           ///< 볼륨의 프로브 수
+        uint32                               _rayCount{ 0 };             ///< 프로브 하나를 한 번 갱신할 때 쏘는 광선 수
+        uint32                               _updatePeriod{ 1 };         ///< 모든 프로브가 한 번씩 갱신되는 프레임 수
+        float32                              _blend{ 1.0f };             ///< 새 값이 기록에 섞이는 비율
+        float32                              _bounceAlbedo{ 0.5f };      ///< 닿은 면의 반사율
+        float32                              _emissiveIntensity{ 0.0f }; ///< 광선이 닿은 발광 칸(`SceneVoxelizeInput::_listEmissionPalette`)의 빛에 곱하는 배율 — 0 이면 발광을 보지 않는다(이전 그림)
+        shared_ptr<const SceneVoxelizeInput> _pVoxelScene;               ///< 광선이 걷는 점유 복셀
     };
 } // namespace sw
 
@@ -221,7 +221,7 @@ namespace sw
         /**
          * @brief 라이트 버퍼를 올리고, 뷰마다 라이트 그리드를 준비합니다.
          * @param listGridViewProj 그리드를 만들 뷰의 뷰-투영(셰이더의 `g_ViewProj` 와 같은 값). 순서가 그리드 번호입니다.
-         * @param producer CPU 면 여기서 만들어 그리드 버퍼(t12)로 올리고, GPU 면 뷰 정보만 올리고 그리드 버퍼(UAV)를 잡습니다 — 채우기는 `FramePassExecutor::dispatchLightGrid`.
+         * @param producer CPU 면 여기서 만들어 그리드 버퍼(t12)로 올리고, GPU 면 뷰 정보만 올리고 그리드 버퍼(UAV)를 잡습니다 — 채우기는 `FramePassRecorder::dispatchLightGrid`.
          *                 None 이면 그리드 없이 올립니다.
          * @param requestedGPULightSlotCount GPU 방출기들이 요청한 파티클 라이트 슬롯의 합. 생산자가 GPU 가 아니면 오류를 한 번 남기고 0 으로 받는다(`selectGPULightSlotCount`).
          * @details 프로브 버퍼(t13)는 라이트가 하나도 없어도 올린다 — 스카이 라이트는 라이트 원소 없이 그 버퍼만 쓴다(빛이 없는 하늘 장면).

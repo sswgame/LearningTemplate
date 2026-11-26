@@ -4,9 +4,9 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
-#include "Games/Playground/Hub/HubNetLink.h"
+#include "Games/Playground/Hub/HubNetSession.h"
 
 using namespace sw;
 
@@ -21,7 +21,7 @@ SW_TEST_CASE( HubEntityNetStateTest, EntityStateRoundTripsAndRejectsUnknownType 
 
     BitReader         reader( writer.getBytes().data(), static_cast<int32>( writer.getBytes().size() ) );
     HubEntityNetState received;
-    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == FixedReadResult::Ok );
+    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == LayoutReadResult::Ok );
     SW_EXPECT_EQUAL( sent._typeID, received._typeID );
     SW_EXPECT_EQUAL( sent._stateValue, received._stateValue );
 

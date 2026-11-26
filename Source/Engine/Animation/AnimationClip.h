@@ -17,7 +17,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -70,8 +70,8 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
-        static constexpr FormatDef kFormat{ "SWAC" };
-        static constexpr uint32    kVersion = kFormat._version; ///< 임포트 스탬프가 섞는다
+        static constexpr FormatDesc kFormat{ "SWAC" };
+        static constexpr uint32     kVersion = kFormat._version; ///< 임포트 스탬프가 섞는다
         /** @brief 이 에셋 종류입니다(등록은 `AnimationClip.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "AnimationClip", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
@@ -156,7 +156,7 @@ namespace sw
         [[nodiscard]] bool loadCopyFromAsset( const AssetID& assetID ) { return loadFromAsset( assetID ); }
 
     private:
-        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AnimationClip>::acquire` 로 한 벌을 쥔다. */
+        /** @brief 에셋 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AnimationClip>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 블롭을 정렬된 저장소에 옮깁니다. */
         void assignCodecBytes( const uint8* pData, size_t byteCount );

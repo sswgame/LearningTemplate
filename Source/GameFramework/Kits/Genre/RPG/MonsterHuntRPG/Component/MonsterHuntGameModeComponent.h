@@ -19,7 +19,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntAlchemy.h"
@@ -29,7 +29,7 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntContract.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntMutagens.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"

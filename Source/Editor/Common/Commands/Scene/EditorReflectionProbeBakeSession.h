@@ -2,7 +2,7 @@
  * @file EditorReflectionProbeBakeSession.h
  * @brief 반사 프로브 베이크를 에디터 프레임에 프로브 단위로 나눠 진행하는 세션입니다. 커맨드 `lighting.bakeReflectionProbes` 가 시작합니다.
  * @details 라이트 프로브 세션(`EditorLightProbeBakeSession`)과 같은 틀이다 — 돌고 있는가 · 편집 잠금 · 멈출 이유(씬이 바뀜 / 플레이 시작 / 잠금을 지나친 편집) · 프레임 예산 ·
- *          끝난 횟수는 `EditorBakeRunState` 를 함께 쓴다. 프레임마다 프로브 하나를 GPU 로 찍고(`ReflectionProbeBaker::captureProbes` - 면 여섯을 그려 읽기), 풀기(half → float) ·
+ *          끝난 횟수는 `EditorBakeSession` 를 함께 쓴다. 프레임마다 프로브 하나를 GPU 로 찍고(`ReflectionProbeBaker::captureProbes` - 면 여섯을 그려 읽기), 풀기(half → float) ·
  *          접기 · 거르기 · 파일 쓰기는 에디터 백그라운드 잡(`EditorReflectionProbeFilterJob`)에 맡긴다. 잡이 끝난 프레임에 프로브에 넘기고 다음 프로브를 찍는다(잡은 한 번에 하나 -
  *          같은 잠금 안에서 차례가 지켜진다). 앞서 넘긴 프로브는 취소해도 남는다. 취소 때 접는 중이던 프로브는 넘기지 않는다(파일은 써졌을 수 있다).
  *          상태줄 항목(`EditorStatusBarItems.cpp`)이 진행과 Cancel 단추를 보인다.
@@ -58,7 +58,7 @@ namespace sw::editor
         uint32 getProbeCount() const { return static_cast<uint32>( _listObjectID.size() ); }
         /** @brief 지금까지 처리한(구웠거나 실패한) 프로브 수입니다. */
         uint32 getDoneProbeCount() const { return _nextProbeIndex; }
-        /** @brief 씬 세대 @p sceneGeneration 에서 끝난(취소 포함) 베이크 횟수입니다(감시 값 `Editor.ReflectionProbeBakeCount`). 다른 세대의 베이크는 세지 않는다(`EditorBakeRunState`). */
+        /** @brief 씬 세대 @p sceneGeneration 에서 끝난(취소 포함) 베이크 횟수입니다(감시 값 `Editor.ReflectionProbeBakeCount`). 다른 세대의 베이크는 세지 않는다(`EditorBakeSession`). */
         uint32 getFinishedRunCount( uint64 sceneGeneration ) const { return _run.getFinishedRunCount( sceneGeneration ); }
 
     private:
@@ -77,7 +77,7 @@ namespace sw::editor
         vector<uint64>                             _listObjectID; ///< 굽을 프로브의 오브젝트(프레임을 넘어 포인터를 들지 않는다)
         string                                     _lastError;
         unique_ptr<EditorReflectionProbeFilterJob> _pFilterJob; ///< 찍은 면의 풀기 · 접기 · 거르기 · 파일 쓰기(한 번에 하나)
-        EditorBakeRunState                         _run;        ///< 돌고 있는가 · 편집 잠금 · 멈출 이유 · 끝난 횟수 (라이트 프로브 세션과 같은 틀)
+        EditorBakeSession                          _run;        ///< 돌고 있는가 · 편집 잠금 · 멈출 이유 · 끝난 횟수 (라이트 프로브 세션과 같은 틀)
         uint32                                     _nextProbeIndex;
         uint32                                     _bakedCount;
         atomic<bool>                               _startRequested;       ///< UI 가 남긴 시작 요청(`requestStart`) — 게임 단계가 받는다

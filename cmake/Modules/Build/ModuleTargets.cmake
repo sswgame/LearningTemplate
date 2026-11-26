@@ -5,11 +5,11 @@
 
 # 모듈 · 핫 리로드 타깃의 런타임 출력 — 모듈 DLL(rhi · kit · game · editor)은 `Bin/Modules/`, 모두가 링크하는 GameFramework 는 `Bin/` 이다.
 # 런타임은 `ModuleLibraryUtil::findModuleLibraryPath` 로 같은 순서(Modules → Bin)로 찾는다. SHARED/MODULE 은 플랫폼에 따라 LIBRARY 출력(Lib/)으로
-# 갈 수 있어 둘 다 정한다. `$<0:>` 는 BuildLayout 과 같다.
+# 갈 수 있어 둘 다 정한다. `$<0:>` 는 OutputLayout 과 같다.
 # vcpkg 의 applocal 이 `Bin/Modules` 의 모듈 옆에 서드파티 DLL 을 복사하지 않게 하고, 같은 일을 모듈마다 스테이지 폴더에서 해 `Bin` 으로 옮긴다
-# (`StageModuleRuntimeDLLs.cmake`). 서드파티 DLL 은 `Bin` 에 한 벌이다 — 모듈 로드(`LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | DEFAULT_DIRS`)는 모듈 폴더 다음에
+# (`DeployModuleRuntimeDLLs.cmake`). 서드파티 DLL 은 `Bin` 에 한 벌이다 — 모듈 로드(`LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | DEFAULT_DIRS`)는 모듈 폴더 다음에
 # 실행 파일 폴더를 본다. vcpkg 의 `add_library` 래퍼는 타깃을 만드는 순간 `VCPKG_APPLOCAL_DEPS` 를 읽으므로 부르는 쪽(`sw_add_module_library`)이 그 순간만 끈다.
-function(sw_stage_module_runtime_dlls TARGET_NAME)
+function(sw_deploy_module_runtime_dlls TARGET_NAME)
 	if(NOT WIN32 OR NOT DEFINED Z_VCPKG_EXECUTABLE OR NOT DEFINED VCPKG_INSTALLED_DIR)
 		return()
 	endif()
@@ -20,7 +20,7 @@ function(sw_stage_module_runtime_dlls TARGET_NAME)
 			"-DBIN_DIR=${CMAKE_BINARY_DIR}/Bin"
 			"-DVCPKG_EXECUTABLE=${Z_VCPKG_EXECUTABLE}"
 			"-DINSTALLED_BIN_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}$<$<CONFIG:Debug>:/debug>/bin"
-			-P "${CMAKE_SOURCE_DIR}/cmake/Scripts/StageModuleRuntimeDLLs.cmake"
+			-P "${CMAKE_SOURCE_DIR}/cmake/ScriptMode/DeployModuleRuntimeDLLs.cmake"
 		VERBATIM
 	)
 endfunction()
@@ -83,7 +83,7 @@ endfunction()
 #   REFLECTION_EXCLUDE  자동 훑기에서 뺄 경로 정규식(하위 폴더의 다른 모듈 — 키트 · 게임의 `/Editor/`)
 #   NO_REFLECTION       리플렉션 단계를 두지 않는다(RHI 백엔드)
 #   NO_REGISTRY         동적 모듈 레지스트리에 넣지 않는다 — App 이 `Bin/Modules` 에서 올리지 않는 게임 팩(`sw_add_game_module`, 활성 게임이 아닌 것)
-#   MODULE_NAME         매니페스트 · 산출물 · ABI 스탬프 · 리플렉션 타입의 모듈 이름(기본 타깃 이름) — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame` 이다
+#   MODULE_NAME         매니페스트 · 산출물 · ABI 다이제스트 · 리플렉션 타입의 모듈 이름(기본 타깃 이름) — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame` 이다
 #   CONTENT_OWNER       콘텐츠 모듈 검사에서 이 모듈 타입의 주인(기본 MODULE_NAME) — 게임은 이름이 모두 SWGame 이라 `game:<폴더>` 로 가른다
 # ------------------------------------------------------------------------------
 function(sw_add_module_library TARGET_NAME)
@@ -110,7 +110,7 @@ function(sw_add_module_library TARGET_NAME)
 		set(share_game_pch ON)
 	endif()
 
-	# `Bin/Modules` 에 가는 모듈은 vcpkg applocal 을 끄고(이 함수 범위만) 서드파티 DLL 을 `Bin` 으로 모은다(`sw_stage_module_runtime_dlls`).
+	# `Bin/Modules` 에 가는 모듈은 vcpkg applocal 을 끄고(이 함수 범위만) 서드파티 DLL 을 `Bin` 으로 모은다(`sw_deploy_module_runtime_dlls`).
 	set(stage_runtime_dlls OFF)
 	if(VCPKG_APPLOCAL_DEPS AND NOT lib_type STREQUAL "STATIC" AND NOT ARG_KIND STREQUAL "gameframework")
 		set(VCPKG_APPLOCAL_DEPS OFF)
@@ -124,13 +124,13 @@ function(sw_add_module_library TARGET_NAME)
 	sw_require_deterministic_mark_for_rollback(${TARGET_NAME} ${ARG_SOURCES})
 	sw_keep_import_library_if_unchanged(${TARGET_NAME})
 	if(stage_runtime_dlls)
-		sw_stage_module_runtime_dlls(${TARGET_NAME})
+		sw_deploy_module_runtime_dlls(${TARGET_NAME})
 	endif()
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "${ARG_FOLDER}")
 	if(NOT ARG_MODULE_NAME STREQUAL TARGET_NAME)
 		set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${ARG_MODULE_NAME}")
 	endif()
-	# 모듈 폴더는 include 경로로 내보내지 않는다 — 키트 · 게임 헤더도 `Source/` 기준 전체 경로로 쓴다(`sw_verify_source_include_roots`).
+	# 모듈 폴더는 include 경로로 내보내지 않는다 — 키트 · 게임 헤더도 `Source/` 기준 전체 경로로 쓴다(`sw_require_source_include_roots`).
 	sw_apply_module_layer_guard(${TARGET_NAME} ${ARG_KIND} ${ARG_MODULE_NAME} "${ARG_CONTENT_OWNER}")
 	if(ARG_KIND MATCHES "^(gameframework|kit|game)$")
 		sw_require_template_definitions(${TARGET_NAME}) # 부분(GameFramework 층)보다 먼저 — 부분이 옵션을 복사한다
@@ -216,7 +216,7 @@ endfunction()
 #   LINK        부분이 쓰는 라이브러리(모듈의 LINK_PRIVATE 보다 좁게)
 #   LINK_OWNER  모듈의 링크 목록을 그대로 받는다(층 부분 — 좁힐 것이 없을 때). 다른 부분은 빼고 받는다. 정의 · 옵션 · 링크가 주인과 같으므로
 #               PCH 도 하나를 나눠 쓴다(`<OWNER>PartPch` — Engine 층 12 개가 각자 굽던 1.4 GB 를 하나로, 언리얼 UBT SharedPCH 자리). 주인의 PCH 를
-#               바로 쓰지 않는 까닭: REUSE_FROM 은 그 타깃에 빌드 의존을 거는데 주인은 부분을 링크해 순환이 된다. 층 껍데기 include 자리는 PCH 뒤 TU 에만
+#               바로 쓰지 않는 까닭: REUSE_FROM 은 그 타깃에 빌드 의존을 거는데 주인은 부분을 링크해 순환이 된다. 층 가드 include 자리는 PCH 뒤 TU 에만
 #               걸리지만 PCH 내용(pch.h)은 가장 낮은 층 부분에서도 지어지던 것이라 위 층 헤더를 끌어오지 않는다.
 #               부분만의 정의를 더하는 부분(에디터 MVVM View 의 SW_EDITOR_PANEL_VIEW)은 clang 이 PCH 를 거부하므로 쓰지 않는다.
 # ------------------------------------------------------------------------------
@@ -348,7 +348,7 @@ function(sw_add_game_framework_kit KIT_NAME)
 	# 키트의 에디터 확장은 Plugin/Editor/<이름>/ 의 별도 모듈이다(GF_EditorPlugin_<이름>) — 키트 DLL(배포본 포함)에 섞지 않는다. 게임의 Editor/ 도 같다.
 	list(FILTER list_kit_source EXCLUDE REGEX "/Editor/")
 	# 장르 키트의 클라이언트 · 서버 몫은 키트 폴더 안 `Client/` · `Server/` 의 따로 짓는 모듈(GF_Client_<X> · GF_Server_<X>)이다 — 공유 키트 DLL 에 섞지 않는다
-	# (섞으면 전용 서버 구성이 `Client/` 소스를 짓게 되어 `sw_verify_built_sources` 가 멈춘다). 이 키트 폴더 바로 아래만 본다 — `…/Chat/Client/` 처럼
+	# (섞으면 전용 서버 구성이 `Client/` 소스를 짓게 되어 `sw_require_built_sources` 가 멈춘다). 이 키트 폴더 바로 아래만 본다 — `…/Chat/Client/` 처럼
 	# 그 폴더 자체가 모듈인 키트의 소스는 빼지 않는다.
 	sw_escape_regex(kit_directory_regex "${CMAKE_CURRENT_SOURCE_DIR}")
 	list(FILTER list_kit_source EXCLUDE REGEX "^${kit_directory_regex}/(Client|Server)/")
@@ -390,7 +390,7 @@ endfunction()
 # ------------------------------------------------------------------------------
 # sw_add_game_module — 게임 팩 모듈 하나. 게임 폴더의 CMakeLists 한 줄(`sw_add_game_module(SWGame)`), 인자는 모듈 이름(엔진과의 계약 `SWGame`)이다.
 #
-# 타깃은 `SWGame_<게임>` 이고 산출물 · 매니페스트 · ABI 스탬프는 모듈 이름 그대로(`SWGame`)다 — 핫 리로드 · 모듈 호스트는 모듈 이름으로 찾는다.
+# 타깃은 `SWGame_<게임>` 이고 산출물 · 매니페스트 · ABI 다이제스트는 모듈 이름 그대로(`SWGame`)다 — 핫 리로드 · 모듈 호스트는 모듈 이름으로 찾는다.
 # 활성 게임(`SW_ACTIVE_GAME`): 동적 모듈 레지스트리에 들어가고(App 이 먼저 짓고 Shipping 이 정적으로 링크한다) `Bin/Modules/SWGame` 이다.
 #   타깃 이름은 전역 속성 `SW_ACTIVE_GAME_TARGET` 에 둔다 — 링크 · 테스트 의존은 이 속성으로 묻는다(이름을 적지 않는다).
 # 함께 짓는 게임(`SW_GAMES`, Dev 전용): 레지스트리 밖(`SW_GAME_PACK_TARGETS`)이고 `Bin/Games/<게임>/SWGame`, 링크 PDB 는 `Bin/Symbols/Games/<게임>/` 이다 —
@@ -437,7 +437,7 @@ function(sw_add_game_module MODULE_NAME)
 	# 게임의 클라이언트 전용 소스(Client/ — 그리는 벤치 · UI 시연)는 전용 서버가 짓지 않는다(cmake/Modules/Build/ExcludedSources.cmake).
 	# 게임의 서버 전용 소스(Server/)는 클라이언트 구성이 짓지 않는다.
 	sw_remove_other_target_sources(list_game_source)
-	sw_open_dev_headers(game ${list_game_source}) # 디버그 그리기는 게임의 개발 전용 소스(Dev/)만 본다
+	sw_allow_dev_headers(game ${list_game_source}) # 디버그 그리기는 게임의 개발 전용 소스(Dev/)만 본다
 	sw_add_module_library(${target_name}
 		KIND game
 		DEV_TYPE MODULE
@@ -470,7 +470,7 @@ function(sw_add_game_module MODULE_NAME)
 		PDB_OUTPUT_DIRECTORY_DEBUG "${symbol_dir}"
 		PDB_OUTPUT_DIRECTORY_RELEASE "${symbol_dir}"
 	)
-	sw_add_module_engine_stamp(${target_name} MODULE_NAME ${MODULE_NAME})
+	sw_add_module_engine_abi_digest(${target_name} MODULE_NAME ${MODULE_NAME})
 	set_property(GLOBAL APPEND PROPERTY SW_GAME_PACK_TARGETS ${target_name})
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor")
 		sw_declare_excluded_directory("${CMAKE_CURRENT_SOURCE_DIR}/Editor")
@@ -482,8 +482,8 @@ endfunction()
 # 매니페스트의 의존 가운데 키트 · GameFramework 를 링크한다(목록을 CMake 에 다시 적지 않는다 — 매니페스트가 원본). ImGui 결속 소스를 만들어 넣는다
 # (손으로 빠뜨릴 수 없게 — `cmake/Templates/EditorExtensionUIBinder.cpp.in`). 다시 로드되는 DLL(EditorModule · 키트)도 일반 import 다(모듈 호스트가 이름을 바꾼다).
 #
-#   PANEL_VIEW_SOURCES  MVVM 패널 View 파일(이 폴더 기준). 따로 부분(`<TARGET>PanelView`)으로 짓고 에디터 패널 View 와 같은 모델 · 씬 헤더 껍데기를 받는다
-#                       (Source/Editor/CMakeLists.txt 2-2 — 전역 속성 SW_EDITOR_PANEL_VIEW_STUB_ROOT).
+#   PANEL_VIEW_SOURCES  MVVM 패널 View 파일(이 폴더 기준). 따로 부분(`<TARGET>PanelView`)으로 짓고 에디터 패널 View 와 같은 모델 · 씬 헤더 가드를 받는다
+#                       (Source/Editor/CMakeLists.txt 2-2 — 전역 속성 SW_EDITOR_PANEL_VIEW_GUARD_ROOT).
 # ------------------------------------------------------------------------------
 function(sw_add_editor_extension TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "PANEL_VIEW_SOURCES" ${ARGN})
@@ -519,7 +519,7 @@ function(sw_add_editor_extension TARGET_NAME)
 	endforeach()
 
 	if(list_panel_view_source)
-		list(REMOVE_ITEM list_extension_source ${list_panel_view_source}) # View 는 껍데기를 받는 부분이 짓는다(아래)
+		list(REMOVE_ITEM list_extension_source ${list_panel_view_source}) # View 는 가드를 받는 부분이 짓는다(아래)
 	endif()
 	sw_add_module_library(${TARGET_NAME}
 		KIND editorextension
@@ -530,45 +530,45 @@ function(sw_add_editor_extension TARGET_NAME)
 		SOURCES ${list_extension_source} "${binder_source}"
 		LINK_PRIVATE EditorModule Engine ModuleAPI ${list_linked_module} imgui implot imgui_nodeeditor
 	)
-	sw_apply_editor_input_ban(${TARGET_NAME}) # 확장 패널도 에디터 코드다 — ImGui 입력은 입력 맵 · EditorInputGUI 로
+	sw_apply_editor_input_guard(${TARGET_NAME}) # 확장 패널도 에디터 코드다 — ImGui 입력은 입력 맵 · EditorInputGUI 로
 	if(list_panel_view_source)
-		get_property(panel_view_stub_root GLOBAL PROPERTY SW_EDITOR_PANEL_VIEW_STUB_ROOT)
-		if(NOT panel_view_stub_root)
-			message(FATAL_ERROR "sw_add_editor_extension(${TARGET_NAME}): SW_EDITOR_PANEL_VIEW_STUB_ROOT is not set - Source/Editor must be configured first")
+		get_property(panel_view_guard_root GLOBAL PROPERTY SW_EDITOR_PANEL_VIEW_GUARD_ROOT)
+		if(NOT panel_view_guard_root)
+			message(FATAL_ERROR "sw_add_editor_extension(${TARGET_NAME}): SW_EDITOR_PANEL_VIEW_GUARD_ROOT is not set - Source/Editor must be configured first")
 		endif()
 		sw_add_module_part(${TARGET_NAME}PanelView
 			OWNER ${TARGET_NAME}
 			SOURCES ${list_panel_view_source}
 			LINK EditorModule Engine ModuleAPI ${list_linked_module} imgui implot imgui_nodeeditor
 		)
-		target_include_directories(${TARGET_NAME}PanelView BEFORE PRIVATE "${panel_view_stub_root}")
+		target_include_directories(${TARGET_NAME}PanelView BEFORE PRIVATE "${panel_view_guard_root}")
 		target_compile_definitions(${TARGET_NAME}PanelView PRIVATE SW_EDITOR_PANEL_VIEW=1 SW_DEV_COMMAND_REGISTRATION=0) # 화면 도구 등록 줄(`SW_EDITOR_VISUALIZER_TOOL`)은 View 에서만 짓는다
-		sw_apply_editor_input_ban(${TARGET_NAME}PanelView)
+		sw_apply_editor_input_guard(${TARGET_NAME}PanelView)
 	endif()
 	add_dependencies(EditorAll ${TARGET_NAME})
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_apply_editor_input_ban — 에디터 코드 타깃에 `Source/Editor/Common/Input/EditorInputBan.h` 를 imgui.h 의 사용자 헤더로 붙이고 사용 중단을 오류로 올린다
+# sw_apply_editor_input_guard — 에디터 코드 타깃에 `Source/Editor/Common/Input/EditorImGuiInputGuard.h` 를 imgui.h 의 사용자 헤더로 붙이고 사용 중단을 오류로 올린다
 #
 # 그 헤더가 ImGui 입력 · 팝업 · 끌어 놓기 함수(imgui_internal.h 의 다른 겹 포함)를 [[deprecated]] 로 다시 선언한다(`docs/agents/EditorUI.md` 입력 절).
 # 금지를 받지 않는 파일(ImGui 입력 어댑터 둘 · 노드 캔버스 지우기 입구 EditorNodeGraph.cpp · 입력 위젯을 감싸는 EditorWidgets.cpp)의 표시는 이 함수가 소스 속성으로만 준다
-# (SW_EDITOR_INPUT_ADAPTER=1 · SW_EDITOR_NODE_GRAPH_ADAPTER=1 · SW_EDITOR_WIDGET_ADAPTER=1). 나머지 파일은 강제 포함한 EditorInputBanConfig.h 가 0 으로 정해 두므로 소스 안
+# (SW_EDITOR_INPUT_ADAPTER=1 · SW_EDITOR_NODE_GRAPH_ADAPTER=1 · SW_EDITOR_WIDGET_ADAPTER=1). 나머지 파일은 강제 포함한 EditorImGuiInputGuardConfig.h 가 0 으로 정해 두므로 소스 안
 # `#define` 은 다시 정의 오류(-Werror=macro-redefined)로 멈춘다 — 다른 파일이 매크로로 금지를 풀 수 없다. 소스 정의가 붙은 파일은 유니티 묶음에서 빠지고,
-# 관문이 PCH 에 구워 둔 0 과 부딪히지 않게 PCH 도 쓰지 않는다. 옵션 SW_EDITOR_INPUT_BAN(Source/Editor/CMakeLists.txt, 기본 ON)이 꺼져 있으면 아무것도 하지 않는다.
+# 관문이 PCH 에 구워 둔 0 과 부딪히지 않게 PCH 도 쓰지 않는다. 옵션 SW_EDITOR_INPUT_GUARD(Source/Editor/CMakeLists.txt, 기본 ON)이 꺼져 있으면 아무것도 하지 않는다.
 # ------------------------------------------------------------------------------
-function(sw_apply_editor_input_ban TARGET_NAME)
-	if(NOT SW_EDITOR_INPUT_BAN)
+function(sw_apply_editor_input_guard TARGET_NAME)
+	if(NOT SW_EDITOR_INPUT_GUARD)
 		return()
 	endif()
 	target_compile_definitions(${TARGET_NAME} PRIVATE IMGUI_INCLUDE_IMGUI_USER_H
-		"IMGUI_USER_H_FILENAME=\"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorInputBan.h\"")
+		"IMGUI_USER_H_FILENAME=\"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorImGuiInputGuard.h\"")
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 		target_compile_options(${TARGET_NAME} PRIVATE /we4996 /we4005)
 	else()
 		target_compile_options(${TARGET_NAME} PRIVATE -Werror=deprecated-declarations -Werror=macro-redefined)
 	endif()
-	set(guard_header "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorInputBanConfig.h")
+	set(guard_header "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorImGuiInputGuardConfig.h")
 	if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 		target_compile_options(${TARGET_NAME} PRIVATE "/FI${guard_header}")
 	else()

@@ -6,8 +6,8 @@
 # ------------------------------------------------------------------------------
 # 0) ReflectionSchema — 파서와 엔진 런타임이 함께 지키는 리플렉션 스키마 헤더(헤더만, 구현 없음)
 # 파서는 Engine.dll 을 링크하지 않는다(순환). 그래도 `Source/` 가 Core 의 include 루트라 경로로는 나머지 Engine 헤더를 막지 못한다 —
-# 목록은 타깃 경계 표(`Config/Rules/Layers/TargetLayers.toml` 의 `[allow] reflectionparser`) 하나이고, 파서는 게이트 `reflectionparser` 를 받아
-# 목록 밖 Engine 헤더를 include 하면(전이도) 컴파일이 멈춘다. 연 헤더가 막힌 헤더를 include 하면 configure 가 멈춘다(`target_layers.py`).
+# 목록은 타깃 경계 표(`Config/Rules/Layers/TargetLayers.toml` 의 `[allow] reflectionparser`) 하나이고, 파서는 가드 `reflectionparser` 를 받아
+# 목록 밖 Engine 헤더를 include 하면(전이도) 컴파일이 멈춘다. 연 헤더가 막힌 헤더를 include 하면 configure 가 멈춘다(`target_guards.py`).
 # ------------------------------------------------------------------------------
 if(NOT SW_TARGET_LAYER_ALLOW_reflectionparser)
 	message(FATAL_ERROR "SW_TARGET_LAYER_ALLOW_reflectionparser is empty - Config/Rules/Layers/TargetLayers.toml needs an [allow] reflectionparser list")
@@ -37,7 +37,7 @@ sw_glob_source_tree(PARSER_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 sw_add_executable(ReflectionParser ${PARSER_SOURCES})
 
-# 헤더는 같은 폴더면 짧은 이름, 아니면 `Source/` 기준 전체 경로다 — 이 폴더를 include 경로에 두지 않는다(`sw_verify_source_include_roots`).
+# 헤더는 같은 폴더면 짧은 이름, 아니면 `Source/` 기준 전체 경로다 — 이 폴더를 include 경로에 두지 않는다(`sw_require_source_include_roots`).
 target_link_libraries(ReflectionParser PRIVATE ReflectionSchema)
 sw_apply_target_layer_guard(ReflectionParser reflectionparser) # 목록(ReflectionSchema) 밖 Engine · 위 타깃 헤더를 막는다
 sw_add_pch_entry_directory(ReflectionParser PRIVATE core "Core/pch.h")
@@ -62,7 +62,7 @@ set_property(TARGET ReflectionParser PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE
 sw_set_unity_build(ReflectionParser OFF)
 
 # 빌드 타임 전용 도구다. 런타임 산출물(Bin)과 섞이면 배포물에 파서 실행 파일과
-# libclang.dll(수십 MB)이 그대로 따라 들어가므로 별도 디렉터리로 내보낸다(`$<0:>` 는 구성 이름 하위 폴더를 막는다 — BuildLayout 과 같다).
+# libclang.dll(수십 MB)이 그대로 따라 들어가므로 별도 디렉터리로 내보낸다(`$<0:>` 는 구성 이름 하위 폴더를 막는다 — OutputLayout 과 같다).
 # 호출부는 모두 $<TARGET_FILE:ReflectionParser> 제너레이터 식이라 경로를 따라온다.
 set_target_properties(ReflectionParser PROPERTIES
 	FOLDER "Source/Programs"
@@ -70,7 +70,7 @@ set_target_properties(ReflectionParser PROPERTIES
 )
 
 # 어노테이션 매크로 표 — IDE 에서 보이게 소스로 단다.
-target_sources(ReflectionParser PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/PredefinedReflectAnnotation.xxx")
+target_sources(ReflectionParser PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Parse/PredefinedReflectAnnotation.xxx")
 
 # ------------------------------------------------------------------------------
 # 3) libclang.dll — ReflectionParser 옆(BuildTools)으로 복사

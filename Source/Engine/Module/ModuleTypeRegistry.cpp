@@ -116,7 +116,7 @@ namespace sw
             {
                 if ( moduleName == string_view{ pRegistrar->_pModuleName } )
                     continue;
-                SW_LOG_ERROR_ID( "ModuleTypeRegistry.GlobalVariableBelongsModule", "Global variable %# belongs to module '%#' but was loaded with '%#' — load that module first (LiveReloadManager::loadSharedModule)",
+                SW_LOG_ERROR_ID( "ModuleTypeRegistry.GlobalVariableBelongsModule", "Global variable %# belongs to module '%#' but was loaded with '%#' — load that module first (ModuleHotReloadManager::loadSharedModule)",
                                  pRegistrar->_pName, pRegistrar->_pModuleName, moduleName );
                 bMatched = false;
             }

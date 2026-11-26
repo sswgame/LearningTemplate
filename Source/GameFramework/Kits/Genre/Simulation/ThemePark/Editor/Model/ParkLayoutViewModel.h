@@ -9,7 +9,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/Name/hashed_string.h"
 
-#include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerGeometry.h"
 
 namespace sw
 {

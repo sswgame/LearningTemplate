@@ -100,7 +100,7 @@ namespace sw
         const string_view path = assetID.view();
         _listEntry.clear();
         XMLDocument doc;
-        if ( path.empty() || doc.loadResource( assetID ) == false )
+        if ( path.empty() || doc.loadAsset( assetID ) == false )
         {
             SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskFileCould", "Bone mask file '%#' could not be read", path );
             return false;

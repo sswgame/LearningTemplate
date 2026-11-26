@@ -15,7 +15,7 @@
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
@@ -31,8 +31,8 @@ namespace sw
             /** @brief 땅 광선을 차 위 몇 미터에서 쏘는지 나타냅니다. */
             static constexpr float32 kProbeAbove = 2.0f;
             /** @brief 땅 광선의 길이입니다(미터). */
-            static constexpr float32   kProbeLength = 50.0f;
-            static constexpr FormatDef kStateFormat{ "KVEH" };
+            static constexpr float32    kProbeLength = 50.0f;
+            static constexpr FormatDesc kStateFormat{ "KVEH" };
         };
 
         const StatefulComponentRegistrar<KinematicVehicleComponent> s_kinematicVehicleComponentStateRegistration{ "KinematicVehicleComponent" };

@@ -4,11 +4,11 @@
 
 #include "Core/Network/Message/NetRequest.h"
 
-#include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardLogic.h"
 
 namespace sw
 {
-    LeaderboardScoreSender::LeaderboardScoreSender( LeaderboardService& service )
+    LeaderboardScoreSender::LeaderboardScoreSender( LeaderboardLogic& service )
         : _service{ service }
     {
     }

@@ -72,7 +72,7 @@ namespace sw::editor
     class EditorScenarioList
     {
     public:
-        /** @brief 파일 목록에서 시나리오(`<영역>/automation/<이름>.scenario.xml`)만 @p root 기준 리소스 id 로 담아 정렬합니다. 고른 것이 사라졌으면 고르지 않은 것이 됩니다. */
+        /** @brief 파일 목록에서 시나리오(`<영역>/automation/<이름>.scenario.xml`)만 @p root 기준 에셋 id 로 담아 정렬합니다. 고른 것이 사라졌으면 고르지 않은 것이 됩니다. */
         void setFromFiles( const vector<AbsolutePath>& listFilePath, const AbsolutePath& root );
         void choose( string_view path ) { _chosen = string( path ); }
 

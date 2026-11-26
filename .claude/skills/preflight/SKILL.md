@@ -12,7 +12,7 @@ description: "이 저장소의 묶음 끝 전체 검증과 push 절차: Windows 
 1. 커밋이 다 됐는지 `git status` 와 HEAD 로 본다. 훅이 커밋을 막을 수 있으니 메시지만 믿지 않는다.
    - **새 이름 검토:** `py -3 -m Scripts api-diff --base <묶음 시작 커밋> [작업자 브랜치 …]` 가 낸 새 함수 이름을 언리얼 · 유니티 · Godot 의 같은 일 이름과 대조한다. 이름만으로 하는 일을 모르는 것(`allowsOneMore` · `finishGraceFind`)은 검증 전에 바꾸고, 옛 이름은 `Config/Rules/Lint/NamingWordsBannedNames.json` 의 `_bannedNames` 에 올린다. `naming-words` 는 낱말이 표에 있는지만 보므로 이 단계를 건너뛰지 않는다. 브랜치를 둘 이상 주면 두 갈래가 각자 더한 같은 이름 · Config 키를 `겹침` 으로 내고 실패한다 — 병합 전에 한 갈래로 모은다. <!-- keep-old-name -->
    - **합칠 때마다 먼저:** 작업자 갈래를 하나 합칠 때마다 메인 작업 폴더에서 Release 증분 빌드를 하고, 그 갈래가 더하거나 바꾼 테스트 · 시나리오만 dx12 로 혼자 돌려 고친 뒤 다음 갈래를 합친다.
-2. **`bash Scripts/dev/preflight.sh --no-linux` 를 백그라운드로 한 번.** 단계 · 끝 줄 · 로그 자리의 정본은 `bash Scripts/dev/preflight.sh --help`(단계마다의 까닭은 `preflight_stages.py` 의 클래스)와 `--dry-run`(돌릴 명령 차례)이다. 여기에 다시 적지 않는다. 스크립트를 고치면 `--dry-run` 으로 순서를 본다. 판단할 것:
+2. **`bash Scripts/verify/preflight.sh --no-linux` 를 백그라운드로 한 번.** 단계 · 끝 줄 · 로그 자리의 정본은 `bash Scripts/verify/preflight.sh --help`(단계마다의 까닭은 `preflight_stages.py` 의 클래스)와 `--dry-run`(돌릴 명령 차례)이다. 여기에 다시 적지 않는다. 스크립트를 고치면 `--dry-run` 으로 순서를 본다. 판단할 것:
    - 작업 트리가 깨끗해야 시작하고, 끝에 HEAD 와 추적 파일이 그대로여야 통과다. 그동안 본 트리의 Source · Content 를 고치지 않는다.
    - 묶음마다는 `--no-linux` 로 Windows 까지만 돌린다. Linux(`linux-verify` 의 `all`, 이어서 `sanitize address`)는 여러 묶음을 push 한 뒤 모아서 한 번 — 할 일을 끝낼 때와 Linux 전용 코드를 고친 묶음일 때. Windows 가 지면 Linux 를 돌리지 않는다. Server 배포 구성은 묶음마다 돈다.
    - Debug 는 짓지 않는다(단언 · 검사는 `SW_DO_CHECKS` 로 Release 에 있다). Debug 프리셋은 사람이 디버거로 볼 때만.
@@ -25,18 +25,18 @@ description: "이 저장소의 묶음 끝 전체 검증과 push 절차: Windows 
 3. **로그 분류:** `build/<프리셋>/Testing/Logs/*.log` 의 Error · Warning 을 id 별로 모아 테스트가 선언한 것인지 본다. 통과만 보지 않는다.
 4. **push:** Windows 단계가 모두 통과하면 끝 줄 `WINDOWS_OK=<sha>` 의 sha 를 Linux 를 기다리지 않고 `git push origin <sha>:main`. pre-push 훅(`py -3 -m Scripts setup` 이 깐다)이 `build/verify.ok` 와 다른 sha 를 막는다 — 막히면 검증하지 않은 커밋이다. Linux 가 지면 고친 커밋을 다음 검증에서 push 한다.
 
-실패하면 `scenario-debug` 로 고치고 **진 테스트만** 다시 돌린다. 체인의 진 단계는 `py -3 -m Scripts scenario-bisect <체인> --rerun-failed --preset <프리셋>`(Linux `py -3 -m Scripts linux-scenarios rerun <체인>`)이 마지막 보고에서 골라 혼자 → 앞을 붙여 → 이분 탐색으로 돈다. 고친 것이 공통 코드여도 통과한 단계를 처음부터 다시 돌리지 않는다. 진 테스트가 통과하면 다음 단계부터 `--from` 으로 잇는다(ASan nogpu 에서 졌으면 그 테스트만 ASan 으로 돌리고 `--from gpu-release`, Release 체인이면 그 체인만 돌리고 `--from linux`). 시나리오 · 테스트 한 곳만 고쳤고 남은 단계가 없으면 그 체인만 통과해도 push 한다.
+실패하면 `scenario-debug` 로 고치고 **진 테스트만** 다시 돌린다. 체인의 진 단계는 `py -3 -m Scripts scenario-bisect <체인> --rerun-failed --preset <프리셋>`(Linux `py -3 -m Scripts linux-verify rerun <체인>`)이 마지막 보고에서 골라 혼자 → 앞을 붙여 → 이분 탐색으로 돈다. 고친 것이 공통 코드여도 통과한 단계를 처음부터 다시 돌리지 않는다. 진 테스트가 통과하면 다음 단계부터 `--from` 으로 잇는다(ASan nogpu 에서 졌으면 그 테스트만 ASan 으로 돌리고 `--from gpu-release`, Release 체인이면 그 체인만 돌리고 `--from linux`). 시나리오 · 테스트 한 곳만 고쳤고 남은 단계가 없으면 그 체인만 통과해도 push 한다.
 
 ## 파이썬 도구
 
-입구는 `bash Scripts/dev/preflight.sh` 하나, 도구는 `py -3 -m Scripts <명령>`(`--help`).
+입구는 `bash Scripts/verify/preflight.sh` 하나, 도구는 `py -3 -m Scripts <명령>`(`--help`).
 
 | 명령 | 쓰는 때 |
 | --- | --- |
 | `api-diff --base <묶음 시작> [브랜치 …]` | 1 단계 새 이름 검토 · 갈래 사이 겹침 |
 | `test-history report` · `flaky` | 흔들림 · p95 추세(격리 근거), 흔들림 판정(끝 줄 `FLAKY=`) |
 | `scenario-bisect <체인> --rerun-failed --preset <프리셋>` | 진 체인 단계만 다시 |
-| `linux-scenarios rerun <체인>` | Linux 진 단계만 다시 |
+| `linux-verify rerun <체인>` | Linux 진 단계만 다시 |
 | `verify-record skip <단계> <sha>` | 단계 기록으로 건너뛸지 미리 본다 |
 | `shipping-check [--skip-build]` · `tidy --changed origin/main` | 배포 기동 · 바뀐 파일 clang-tidy 를 따로 볼 때 |
 

@@ -8,13 +8,14 @@ Scripts/common/host_platform.py
 왜 한 자리인가. 스크립트마다 `sys.platform == "win32"` · `os.name` · `platform.system()` 을 따로 물으면 `else` 가 "Windows 가 아니면 Linux" 를
 가정해, 표에 없는 호스트(macOS 등)에서 Linux 가지를 조용히 탔다. 호스트는 이 표의 줄만 될 수 있고 없으면 들여올 때 멈춘다 —
 그래서 `is_windows_host()` 의 `else` 는 표의 나머지 줄(지금 Linux)이다. 다른 곳에서 OS 를 직접 물으면 린트(`platform_chains.py`)가 막는다.
-CMake 쪽의 같은 자리는 `cmake/Modules/Build/BuildLayout.cmake` 의 `SW_PLATFORM_NAME` 이다(대상 플랫폼).
+CMake 쪽의 같은 자리는 `cmake/Modules/Build/OutputLayout.cmake` 의 `SW_PLATFORM_NAME` 이다(대상 플랫폼).
 """
 
 from __future__ import annotations
 
 import platform
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -53,3 +54,30 @@ def is_windows_host() -> bool:
 def executable_name(stem: str) -> str:
     """호스트의 실행 파일 이름(`App` → `App.exe`)."""
     return f"{stem}{HOST.executable_suffix}"
+
+
+def platform_key() -> str:
+    """
+    현재 시스템에 대한 플랫폼 키('windows', 'linux')를 반환합니다.
+    """
+    return HOST.key
+
+
+def shared_library_names(base_name: str) -> list[str]:
+    """
+    플랫폼별 동적 라이브러리 파일명 목록을 반환합니다 (.dll, .so).
+    """
+    if is_windows_host():
+        return [f"{base_name}{HOST.shared_library_suffix}"]
+    name = base_name if base_name.startswith(HOST.shared_library_prefix) else f"{HOST.shared_library_prefix}{base_name}"
+    return [f"{name}{HOST.shared_library_suffix}", f"{name}{HOST.shared_library_suffix}.1"]
+
+
+def platform_script_command(script_path: str | Path) -> list[str]:
+    """
+    플랫폼별 쉘 스크립트 실행 명령어 리스트를 반환합니다 (Windows: cmd /c, POSIX: bash).
+    """
+    resolved = str(script_path)
+    if is_windows_host():
+        return ["cmd", "/c", resolved]  # .bat · .cmd 는 cmd 만 돌린다(CreateProcess 가 직접 띄우지 못한다)
+    return ["bash", resolved]

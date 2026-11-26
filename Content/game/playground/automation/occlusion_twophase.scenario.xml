@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="6f001ea9a5974c23979f37c0dcb3b229"?>
 <!--
-  2 단계 HZB 가림(gpu_cull.hlsl · FrameGraphExecutor::recordLateOcclusion) — 디퍼드(깊이 프리패스가 있다)에서 가림 판정을 켜도 그림이 그대로다(가림은 보이는 것을 빼지 않는다).
+  2 단계 HZB 가림(gpu_cull.hlsl · FramePassRecorder::recordLateOcclusion) — 디퍼드(깊이 프리패스가 있다)에서 가림 판정을 켜도 그림이 그대로다(가림은 보이는 것을 빼지 않는다).
   ① 가림 판정을 켠 채 시작한다 — 2 단계를 쓸 수 있는 백엔드(컬링 · 간접 멀티 드로우: DX12 · Vulkan · GL)는 깊이 프리패스 뒤 뒤 단계가 돈다
      (Render.OcclusionLatePhase = Render.OcclusionTwoPhase. DX11 · WebGPU 는 둘 다 0). 켜고 끄기 · 문턱은 Config/Engine/OcclusionCulling.json.
   ② 켠 그림을 찍고, 끄고 찍는다. 두 그림이 같아야 한다 — 앞 단계(지난 HZB)가 뺀 것을 뒤 단계(이번 프리패스 깊이)가 돌려놓고, 판정이 보수적이다.

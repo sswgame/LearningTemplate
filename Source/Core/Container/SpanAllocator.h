@@ -16,7 +16,7 @@
  * 번호는 부르는 쪽이 정한다(렌더러 풀은 GPU 펜스 값 — `RHIFence`).
  *
  * @note 잠금은 없다 — 한 스레드(정점 풀은 렌더 스레드)가 소유한다. 같은 구간을 두 번 반납하거나 범위 밖을 반납하는 것은 부르는 쪽의
- *       결함이라 단언으로 알리고 무시한다(Container 는 Log 아래 티어라 로그를 쓰지 않는다).
+ *       결함이라 단언으로 알리고 무시한다(Container 는 Log 아래 층이라 로그를 쓰지 않는다).
  */
 #pragma once
 #include "Core/Container/vector.h"

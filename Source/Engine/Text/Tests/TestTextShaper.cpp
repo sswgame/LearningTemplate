@@ -49,7 +49,7 @@ SW_TEST_CASE( TextShaperTest, ClustersAreByteOffsets )
 {
     sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( TextShaperTestUtil::initializeAllCoverage( fixture ) );
-    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontSpec{} );
+    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontDesc{} );
 
     const sw::unique_ptr<sw::ITextShaper> shaper = sw::ITextShaper::createSimple();
     sw::vector<sw::ShapedGlyph>           listGlyph;
@@ -81,7 +81,7 @@ SW_TEST_CASE( TextShaperTest, DefaultShaperIsChosenByTheBuild )
 #if !defined( SW_TEXT_COMPLEX_SHAPING )
     sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( TextShaperTestUtil::initializeAllCoverage( fixture ) );
-    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontSpec{} );
+    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontDesc{} );
     sw::ShapingRun          run{};
     run._text = "AB";
     run._face = chain._arrFace[0];
@@ -100,7 +100,7 @@ SW_TEST_CASE( TextShaperTest, KerningAddsToPreviousAdvance )
     sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( TextShaperTestUtil::initializeAllCoverage( fixture ) );
     fixture._pRasterizer->setKerning( 'A', 'V', -0.1f );
-    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontSpec{} );
+    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontDesc{} );
 
     const sw::unique_ptr<sw::ITextShaper> shaper = sw::ITextShaper::createSimple();
     sw::vector<sw::ShapedGlyph>           listGlyph;
@@ -119,7 +119,7 @@ SW_TEST_CASE( TextShaperTest, RightToLeftRunKernsVisualPair )
     sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( TextShaperTestUtil::initializeAllCoverage( fixture ) );
     fixture._pRasterizer->setKerning( 0x05D1u, 0x05D0u, -0.1f ); // 눈에 보이는 (ב, א)
-    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontSpec{} );
+    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontDesc{} );
 
     const sw::unique_ptr<sw::ITextShaper> shaper = sw::ITextShaper::createSimple();
     sw::vector<sw::ShapedGlyph>           listGlyph;
@@ -138,9 +138,9 @@ SW_TEST_CASE( TextShaperTest, ItemizerSplitsOnFaceCoverage )
 {
     sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( TextShaperTestUtil::initializeLatinHangul( fixture ) );
-    sw::FontSpec spec{};
-    spec._family                  = "Latin";
-    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( spec );
+    sw::FontDesc desc{};
+    desc._family                  = "Latin";
+    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( desc );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( chain._faceCount ) );
 
     const sw::string           text = "Hi \xEC\x95\x88\xEB\x85\x95 OK"; // "Hi 안녕 OK"
@@ -161,7 +161,7 @@ SW_TEST_CASE( TextShaperTest, ItemizerMarksRightToLeftRuns )
 {
     sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( TextShaperTestUtil::initializeAllCoverage( fixture ) );
-    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontSpec{} );
+    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( sw::FontDesc{} );
 
     const sw::string           text = "abc \xD7\xA9\xD7\x9C\xD7\x95\xD7\x9D 12"; // "abc שלום 12"
     sw::vector<sw::ShapingRun> listRun;

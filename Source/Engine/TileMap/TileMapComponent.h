@@ -18,7 +18,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Physics/IPhysicsSceneFwd.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 #include "Engine/TileMap/TileGridUtil.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"

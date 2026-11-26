@@ -16,10 +16,10 @@
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/ReflectionContainers.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -680,9 +680,9 @@ namespace sw
                     const bool      bSequence  = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNested == false;
                     const TypeInfo* pFieldType = nullptr;
                     if ( bContainer == false )
-                        pFieldType = SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
+                        pFieldType = ValueSerializer::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
                     else if ( bSequence )
-                        pFieldType = SerializerUtil::findNestedObjectType( prop._elementTypeName, prop.findElementBinding(), context );
+                        pFieldType = ValueSerializer::findNestedObjectType( prop._elementTypeName, prop.findElementBinding(), context );
                     // 글 목록(글 · 경로 원소)에 InheritKey 를 달면 원소의 글이 열쇠다 — 손 형식의 `kTextKey` 목록과 같은 규칙
                     if ( bSequence && pFieldType == nullptr && prop._metadata->_bInheritKey == SW_TRUE )
                     {
@@ -708,12 +708,12 @@ namespace sw
 
 namespace sw
 {
-    DataInheritanceResourceSource::DataInheritanceResourceSource()
-        : DataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
+    DataInheritanceAssetSource::DataInheritanceAssetSource()
+        : DataInheritanceSource{ engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth() }
     {
     }
 
-    bool DataInheritanceResourceSource::readText( string_view assetID, string& outText )
+    bool DataInheritanceAssetSource::readText( string_view assetID, string& outText )
     {
         return XMLReadUtil::readText( AssetID{ assetID }, outText );
     }

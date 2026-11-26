@@ -25,7 +25,7 @@ namespace sw
      *          상수 버퍼도 패스마다 따로 있어야 한다. 하나를 공유하면 기록은 지연되고
      *          버퍼 쓰기는 즉시 일어나므로, replay 시점에는 마지막으로 쓴 값만 남는다.
      */
-    /** @brief 그림자 패스가 그릴 배치를 정적 여부(`GPUMeshBatch::_bStaticShadowCaster`)로 거르는 방식입니다. 그림자 캐시가 쓴다(`FramePassExecutor::drawLocalShadowTiles`). */
+    /** @brief 그림자 패스가 그릴 배치를 정적 여부(`GPUMeshBatch::_bStaticShadowCaster`)로 거르는 방식입니다. 그림자 캐시가 쓴다(`FrameRecorder::drawLocalShadowTiles`). */
     enum class ShadowCasterFilter : uint8
     {
         All,         ///< 거르지 않는다(그림자 캐시가 아닌 모든 그리기)
@@ -40,7 +40,7 @@ namespace sw
          * @details 전이는 그래프가 선언에서 낸다. 패스 안 왕복은 쓰기로 선언한 자원만 `_pGraphPass->transition` 으로 한다.
          */
         IRHIPassCommandList* _pCmd{ nullptr };
-        /** @brief 이 패스의 그래프 문맥입니다(선언한 접근 · 뷰 자원 표 · 리스트) — 뷰 그래프 패스를 기록하는 동안만 가리킨다(`FramePassExecutor::onGraphPassExecute`). 그 밖에서는 nullptr 이다. */
+        /** @brief 이 패스의 그래프 문맥입니다(선언한 접근 · 뷰 자원 표 · 리스트) — 뷰 그래프 패스를 기록하는 동안만 가리킨다(`FrameRecorder::onGraphPassExecute`). 그 밖에서는 nullptr 이다. */
         const RenderGraphPassContext* _pGraphPass{ nullptr };
         /** @brief 엔진 PassCB 값입니다(이름 기반). ShaderParameterBinder 가 리플렉션 오프셋에 기록합니다. */
         PassConstantValues _passValues{};

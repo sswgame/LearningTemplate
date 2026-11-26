@@ -21,19 +21,19 @@
 #include "Editor/Common/GUI/EditorPlayToolbar.h"
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Panel/EditorPanelText.h"
-#include "Editor/Common/Widgets/PropertyGrid/IInspectorProperty.h"
+#include "Editor/Common/GUI/Panel/EditorPanelTitles.h"
+#include "Editor/Common/Widgets/PropertyGrid/IPropertyDrawer.h"
 #include "Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.h"
-#include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorLayoutStore.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/Console/ConsolePanel.h"
+#include "Editor/Common/Workspace/Layout/EditorLayoutStore.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
+#include "Editor/Common/Workspace/View/EditorCamera.h"
+#include "Editor/Common/Workspace/View/EditorRenderViews.h"
+#include "Editor/Panels/OutputLog/OutputLogPanel.h"
 #include "Editor/Panels/Scene/GameViewPanel.h"
 #include "Editor/Panels/Scene/HierarchyPanel.h"
 #include "Editor/Panels/Scene/HistoryPanel.h"
@@ -41,7 +41,7 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/Model/EditorGridLevel.h"
-#include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerGeometry.h"
 
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Config/GameTimeScale.h"
@@ -64,7 +64,7 @@ namespace sw::editor
         struct EditorSelfTestDevToolsInternal
         {
             /** @brief 그리기 확장 등록 항목의 예제입니다. 테스트 전용 타입 이름에 연결되며 그 타입의 프로퍼티는 없습니다. */
-            class SelfTestPropertyDrawer final : public IInspectorProperty
+            class SelfTestPropertyDrawer final : public IPropertyDrawer
             {
             public:
                 bool draw( const PropertyValueRow& /*row*/, PropertyGridViewModel& /*model*/ ) override { return true; }
@@ -100,7 +100,7 @@ namespace sw::editor
                 if ( context.expect( pPanel != nullptr, "the panel is not registered" ) == false )
                     return nullptr;
                 if ( context.getStepIndex() == 0 )
-                    ImGui::SetWindowFocus( EditorPanelText::makeWindowID( pPanel->getPanelTitle() ).c_str() );
+                    ImGui::SetWindowFocus( EditorPanelTitles::makeWindowID( pPanel->getPanelTitle() ).c_str() );
                 return pPanel;
             }
 
@@ -156,8 +156,8 @@ namespace sw::editor
             {
                 constexpr const utf8* kProbeMessage = "console tag filter probe";
                 EditorContext&        editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<ConsolePanel>( true );
-                ConsolePanel* pConsole = editorContext.getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<OutputLogPanel>( true );
+                OutputLogPanel* pConsole = editorContext.getSubsystem<EditorPanelManager>().findPanel<OutputLogPanel>();
                 if ( context.expect( pConsole != nullptr, "no console panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -219,8 +219,8 @@ namespace sw::editor
             static EditorSelfTestStep runConsoleDevCommands( EditorSelfTestContext& context )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<ConsolePanel>( true );
-                ConsolePanel* pConsole = editorContext.getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<OutputLogPanel>( true );
+                OutputLogPanel* pConsole = editorContext.getSubsystem<EditorPanelManager>().findPanel<OutputLogPanel>();
                 if ( context.expect( pConsole != nullptr, "no console panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -309,7 +309,7 @@ namespace sw::editor
 
                 const EditorPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanelByID( kPanelID );
                 (void)context.expect( pPanel != nullptr && pPanel->isOpen(), "loading the layout did not reopen the panel it saved open" );
-                const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( EditorPanelText::makeWindowID( HierarchyPanel::kPanelTitle ).c_str() );
+                const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( EditorPanelTitles::makeWindowID( HierarchyPanel::kPanelTitle ).c_str() );
                 (void)context.expect( pHierarchy != nullptr && pHierarchy->DockId != 0, "the hierarchy is no longer docked after loading the layout" );
                 (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                 (void)EditorLayoutStore::remove( folder, kLayoutName ); // 임시 폴더이므로 남아도 다음 실행이 덮어쓴다
@@ -542,7 +542,7 @@ namespace sw::editor
                     }
                     destroyProbe( pManager, probe._objectID );
                     // 다음 테스트가 기본 탭(씬 뷰)에서 시작하게 되돌린다.
-                    ImGui::SetWindowFocus( EditorPanelText::makeWindowID( SceneViewPanel::kPanelTitle ).c_str() );
+                    ImGui::SetWindowFocus( EditorPanelTitles::makeWindowID( SceneViewPanel::kPanelTitle ).c_str() );
                     return EditorSelfTestStep::Done;
                 }
 
@@ -556,7 +556,7 @@ namespace sw::editor
             /** @brief 이번 프레임 "Game" 창의 그리기 목록에서 게임 뷰 이미지 뒤에 그린 정점 수를 셉니다. 이미지를 찾지 못하면 false 입니다. */
             static bool countVerticesAfterGameImage( ImTextureID textureID, int32& outVertexCount )
             {
-                const ImGuiWindow* pWindow             = ImGui::FindWindowByName( EditorPanelText::makeWindowID( GameViewPanel::kPanelTitle ).c_str() );
+                const ImGuiWindow* pWindow             = ImGui::FindWindowByName( EditorPanelTitles::makeWindowID( GameViewPanel::kPanelTitle ).c_str() );
                 const bool         bGameWindowNotDrawn = pWindow == nullptr || pWindow->DrawList == nullptr || pWindow->LastFrameActive != ImGui::GetFrameCount();
                 if ( bGameWindowNotDrawn )
                     return false;
@@ -598,7 +598,7 @@ namespace sw::editor
                 (void)context.expect( bDrawn, "the game view was not drawn while its tab was in front" );
 
                 const EditorUIFrameOutput::ViewMark& view    = frame._arrView[EditorViewKind::Game];
-                const ImGuiWindow*                   pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( GameViewPanel::kPanelTitle ).c_str() );
+                const ImGuiWindow*                   pWindow = ImGui::FindWindowByName( EditorPanelTitles::makeWindowID( GameViewPanel::kPanelTitle ).c_str() );
                 if ( context.expect( pWindow != nullptr, "the Game window does not exist" ) == false )
                     return EditorSelfTestStep::Done;
                 // 이미지는 패널 창 안에 놓인다(주 창 클라이언트 픽셀). 주 뷰포트 자리를 빼지 않았거나 패널 밖 값이면 여기서 어긋난다.
@@ -612,7 +612,7 @@ namespace sw::editor
                 const UIViewport& uiViewport = uiSystem.getViewport();
                 (void)context.expect( uiViewport._pointerOrigin == int2{ view._windowX, view._windowY }, "the UI pointer origin differs from the game view image position" );
                 (void)context.expect( input.getGameViewRect()._origin == int2{ view._windowX, view._windowY }, "the input game view origin differs from the game view image position" );
-                ImGui::SetWindowFocus( EditorPanelText::makeWindowID( SceneViewPanel::kPanelTitle ).c_str() ); // 다음 테스트가 기본 탭(씬 뷰)에서 시작하게 되돌린다
+                ImGui::SetWindowFocus( EditorPanelTitles::makeWindowID( SceneViewPanel::kPanelTitle ).c_str() ); // 다음 테스트가 기본 탭(씬 뷰)에서 시작하게 되돌린다
                 return EditorSelfTestStep::Done;
             }
         };

@@ -26,7 +26,7 @@ namespace sw
     {
         using ReadRootFunction = bool ( * )( void* pCatalog, const XMLCatalogRoot& root, string_view sourceName );
 
-        /** @brief 리소스 경로의 XML 을 열어 @p pRootName 루트를 @p pReadRoot 에 넘깁니다. */
+        /** @brief 에셋 경로의 XML 을 열어 @p pRootName 루트를 @p pReadRoot 에 넘깁니다. */
         [[nodiscard]] static bool loadFromAsset( void* pCatalog, ReadRootFunction pReadRoot, const AssetID& assetID, const utf8* pRootName );
         /** @brief `loadFromAsset` 과 같되 카탈로그 프레임(`XMLCatalog`)의 루트가 쿠킹 표(`<Cooked root>`)에 있는지 봅니다 — 글로 읽은 루트에 줄이 없으면 오류입니다(배포본만 글 해석으로 남는 카탈로그가 없게). */
         [[nodiscard]] static bool loadCatalog( void* pCatalog, ReadRootFunction pReadRoot, const AssetID& assetID, const utf8* pRootName );
@@ -83,7 +83,7 @@ namespace sw
         }
 
     protected:
-        /** @brief 리소스 경로의 XML 을 읽습니다. 문서나 루트가 없거나 읽은 것이 없으면 false 입니다. 종류의 로더(공유 캐시 · 스키마 검사)와 자기 읽기를 감싸는 파생만 부른다. */
+        /** @brief 에셋 경로의 XML 을 읽습니다. 문서나 루트가 없거나 읽은 것이 없으면 false 입니다. 종류의 로더(공유 캐시 · 스키마 검사)와 자기 읽기를 감싸는 파생만 부른다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID )
         {
             return XMLCatalogLoader::loadCatalog( this, &XMLCatalog::readRoot, assetID, TCatalog::kXMLRootName );

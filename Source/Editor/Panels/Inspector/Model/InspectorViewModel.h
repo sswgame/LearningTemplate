@@ -14,7 +14,7 @@
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorFavorites.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridFavorites.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 #include "Editor/Panels/Inspector/Model/InspectorImportSettings.h"
 
@@ -121,7 +121,7 @@ namespace sw::editor
     /**
      * @class InspectorViewModel
      * @brief 인스펙터 창의 유일한 모델 창구입니다. `gather` 는 프레임 맨 위에서 한 번 부르고, 명령은 오브젝트 · 컴포넌트 id 를 받습니다.
-     * @details 오브젝트 편집 명령은 되돌리기 한 단계와 씬 dirty 를 남긴다(`InspectorObjectEdit` · 씬 명령). 잠금 · 스크롤 소비는 보기 상태라 남기지 않는다.
+     * @details 오브젝트 편집 명령은 되돌리기 한 단계와 씬 dirty 를 남긴다(`PropertyGridObjectEdit` · 씬 명령). 잠금 · 스크롤 소비는 보기 상태라 남기지 않는다.
      */
     class SW_EDITOR_API InspectorViewModel
     {
@@ -134,9 +134,9 @@ namespace sw::editor
         /** @brief 이번 프레임의 값을 모읍니다. 처음 부를 때 즐겨찾기 파일을 읽습니다. 고른(잠근) 오브젝트가 사라졌으면 선택(잠금)을 풉니다. */
         void gather( InspectorViewState& outState );
         /** @brief 즐겨찾기 집합입니다. 그리드가 행 메뉴 토글 · 별 표시에 쓴다(`EditorPropertyGrid::setFavorites`). */
-        InspectorFavorites& editFavorites() { return _favorites; }
+        PropertyGridFavorites& editFavorites() { return _favorites; }
         /** @brief 메서드 액션 즐겨찾기 집합입니다. 그리드가 메서드 줄의 별 · 목록 맨 위 정렬에 쓴다(`EditorPropertyGrid::setActionFavorites`). */
-        InspectorFavorites& editActionFavorites() { return _actionFavorites; }
+        PropertyGridFavorites& editActionFavorites() { return _actionFavorites; }
         /** @brief 고른 임포트 원본의 설정입니다(`InspectorContent::ImportSettings` 일 때 이번 gather 가 채웠다). 고치기 명령도 여기로 부른다. */
         InspectorImportSettings& editImportSettings() { return _importSettings; }
 
@@ -202,8 +202,8 @@ namespace sw::editor
     private:
         struct MultiEdit;
 
-        InspectorFavorites      _favorites;
-        InspectorFavorites      _actionFavorites; ///< 메서드 액션 즐겨찾기(프로퍼티 즐겨찾기와 다른 파일)
+        PropertyGridFavorites   _favorites;
+        PropertyGridFavorites   _actionFavorites; ///< 메서드 액션 즐겨찾기(프로퍼티 즐겨찾기와 다른 파일)
         InspectorImportSettings _importSettings;  ///< 오브젝트를 고르지 않았을 때 고른 임포트 원본의 설정
         unique_ptr<MultiEdit>   _pMultiEdit;      ///< 다중 선택의 공통 컴포넌트(선택 · 씬 구조가 바뀌면 다시 모은다)
         EditorFileCollectJob    _presetJob;

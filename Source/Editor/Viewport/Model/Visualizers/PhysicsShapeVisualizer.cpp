@@ -8,7 +8,7 @@
 #include "Editor/Viewport/Model/Visualizers/PhysicsShapeVisualizer.h"
 
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerDrawList.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -84,7 +84,7 @@ namespace sw::editor
         };
     } // namespace
 
-    void PhysicsShapeGatherer::gather( const EditorViewportVisualizerArgs& args, EditorVisualizerDrawList& outDrawList )
+    void PhysicsShapeVisualizer::gather( const EditorViewportVisualizerArgs& args, EditorVisualizerDrawList& outDrawList )
     {
         PhysicsShapeVisualizerInternal::gather( args, outDrawList );
     }

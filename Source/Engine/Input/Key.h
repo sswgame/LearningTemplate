@@ -1,0 +1,162 @@
+/**
+ * @file Key.h
+ * @brief 키보드와 마우스 바인드 ID 를 정의합니다. ENUM() 이 Key.gen.cpp 에 등록합니다.
+ */
+#pragma once
+#include "Core/Foundation/Types.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /// @brief Key 종류를 정의하는 열거형입니다.
+    ENUM( Invalid = Unknown )
+    enum class Key : uint8
+    {
+        Unknown = 0,
+
+        // 영문 키
+        A,
+        B,
+        C,
+        D,
+        E,
+        F,
+        G,
+        H,
+        I,
+        J,
+        K,
+        L,
+        M,
+        N,
+        O,
+        P,
+        Q,
+        R,
+        S,
+        T,
+        U,
+        V,
+        W,
+        X,
+        Y,
+        Z,
+
+        // 상단 숫자열
+        Digit0,
+        Digit1,
+        Digit2,
+        Digit3,
+        Digit4,
+        Digit5,
+        Digit6,
+        Digit7,
+        Digit8,
+        Digit9,
+
+        // 기능 키
+        F1,
+        F2,
+        F3,
+        F4,
+        F5,
+        F6,
+        F7,
+        F8,
+        F9,
+        F10,
+        F11,
+        F12,
+
+        // 탐색 / 편집
+        Escape,
+        Tab,
+        CapsLock,
+        Enter,
+        Space,
+        Backspace,
+        Insert,
+        Delete,
+        Home,
+        End,
+        PageUp,
+        PageDown,
+        Left,
+        Right,
+        Up,
+        Down,
+        PrintScreen,
+        ScrollLock,
+        Pause,
+
+        // 수정 키
+        LeftShift,
+        RightShift,
+        LeftControl,
+        RightControl,
+        LeftAlt,
+        RightAlt,
+        LeftSuper, // Win / Cmd 키
+        RightSuper,
+        Menu,
+
+        // 구두점 (US)
+        Minus,
+        Equal,
+        LeftBracket,
+        RightBracket,
+        Backslash,
+        Semicolon,
+        Apostrophe,
+        Grave,
+        Comma,
+        Period,
+        Slash,
+
+        // 숫자 패드
+        NumLock,
+        Numpad0,
+        Numpad1,
+        Numpad2,
+        Numpad3,
+        Numpad4,
+        Numpad5,
+        Numpad6,
+        Numpad7,
+        Numpad8,
+        Numpad9,
+        NumpadDivide,
+        NumpadMultiply,
+        NumpadSubtract,
+        NumpadAdd,
+        NumpadDecimal,
+        NumpadEnter,
+
+        Count
+    };
+
+    /// @brief 마우스 버튼 종류를 정의하는 열거형입니다.
+    ENUM( Invalid = Count )
+    enum class MouseButton : uint8
+    {
+        Left = 0,
+        Right,
+        Middle,
+        X1,
+        X2,
+        Count
+    };
+
+    // 열거형은 멤버를 가질 수 없어 이름 변환은 열거형 옆 자유 함수다(Godot keycode_get_string · find_keycode)
+
+    /** @brief Key 의 안정적인 이름을 반환합니다. 엔진 서비스가 바인딩되어 있지 않으면 "Unknown" 입니다. */
+    SW_API const utf8* getKeyName( Key key );
+    /** @brief 이름(열거자 철자 그대로)의 Key 입니다. 모르는 이름이거나 엔진 서비스가 없으면 `Key::Unknown` 입니다. */
+    SW_API Key findKeyByName( string_view name );
+
+    /** @brief MouseButton 의 안정적인 이름을 반환합니다. */
+    SW_API const utf8* getMouseButtonName( MouseButton button );
+    /** @brief 이름의 MouseButton 입니다. 모르는 이름이거나 엔진 서비스가 없으면 `MouseButton::Count` 입니다. */
+    SW_API MouseButton findMouseButtonByName( string_view name );
+} // namespace sw

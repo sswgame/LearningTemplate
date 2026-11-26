@@ -28,7 +28,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 계정 하나의 제재 상태입니다. 관리자 조회 응답에 고정 배치형으로 실립니다. `_version` 은 레코드 버전이라 `PROPERTY` 가 아니며 와이어에 싣지 않습니다. */
+    /** @brief 계정 하나의 제재 상태입니다. 관리자 조회 응답에 스키마 결합형으로 실립니다. `_version` 은 레코드 버전이라 `PROPERTY` 가 아니며 와이어에 싣지 않습니다. */
     REFLECT()
     struct SW_GF_API ServiceSanctionState
     {
@@ -40,7 +40,7 @@ namespace sw
         PROPERTY( MaxCount = kMaxReasonCodeSize )
         string _reasonCode{}; ///< 표시용 사유 코드(로컬라이제이션 키). 가장 최근 것이다
         PROPERTY()
-        EnumArray<ServiceSanctionKind, int64> _arrUntilMs{};        ///< 0 = 없음. 텍스트 키는 열거자 이름(`EnumArrayWrapper`), 고정 배치형 본문은 `int64[3]` 과 같다(스키마 해시는 칸 철자를 섞어 바뀐다 — 같은 빌드끼리의 바이트라 변환이 필요 없다)
+        EnumArray<ServiceSanctionKind, int64> _arrUntilMs{};        ///< 0 = 없음. 텍스트 키는 열거자 이름(`EnumArrayWrapper`), 스키마 결합형 본문은 `int64[3]` 과 같다(스키마 해시는 칸 철자를 섞어 바뀐다 — 같은 빌드끼리의 바이트라 변환이 필요 없다)
         uint64                                _version{ 0 };        ///< 레코드 판(0 = 레코드 없음). 저장하지 않는다
         ServiceRecordUnknownFields            _unknownProperties{}; ///< 제재 표(`service_sanction`) 레코드가 이 빌드가 모르는 칸을 든다
     };

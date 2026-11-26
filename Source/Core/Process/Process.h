@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    class CommandLineManager;
+    class CommandLine;
 
     /**
      * @struct ProcessCommand
@@ -43,13 +43,13 @@ namespace sw
         [[nodiscard]] static ProcessCommand fromSearchPath( string_view executableName, vector<string> listArgument );
         /**
          * @brief 엔진 실행 파일(App · Server) @p executablePath 를 @p listArgument 로 띄우는 명령입니다. @p parent 가 자동화 실행이면 `-unattended` 를 더합니다(이미 있으면 그대로).
-         * @details 자동화 실행(`-unattended` · `-scenario` — `CommandLineManager::isAutomatedRun`)의 자식도 자동화 실행이어야 한다. 빠지면 자식이 사람의 실행으로 떠
+         * @details 자동화 실행(`-unattended` · `-scenario` — `CommandLine::isAutomatedRun`)의 자식도 자동화 실행이어야 한다. 빠지면 자식이 사람의 실행으로 떠
          *          사용자 설정을 읽고 사양으로 품질을 골라(WSL 의 클라이언트가 low) 서버와 합성이 갈렸고, 사람의 설정 · 세이브를 건드렸다.
-         *          엔진 자식은 이것으로만 만든다 — 엔진 자식에 `at` 을 직접 부르는 모양은 린트(common-shapes 의 engineChildCommand)가 막고, 자기 자신을 띄울 때는
-         *          `FileUtil::getExecutablePath()` 를 넘긴다(File 은 위 티어라 여기서 부르지 않는다). 엔진이 아닌 도구(Tracy · tint · 편집기)는 그 예외 표에 까닭과 함께 있다.
+         *          엔진 자식은 이것으로만 만든다 — 엔진 자식에 `at` 을 직접 부르는 모양은 린트(hand-written-patterns 의 engineChildCommand)가 막고, 자기 자신을 띄울 때는
+         *          `FileUtil::getExecutablePath()` 를 넘긴다(File 은 위 층이라 여기서 부르지 않는다). 엔진이 아닌 도구(Tracy · tint · 편집기)는 그 예외 표에 까닭과 함께 있다.
          * @return 경로가 비었으면 빈 명령입니다 — 띄우기가 실패로 알린다.
          */
-        [[nodiscard]] static ProcessCommand forEngineChild( const CommandLineManager& parent, const AbsolutePath& executablePath, vector<string> listArgument );
+        [[nodiscard]] static ProcessCommand forEngineChild( const CommandLine& parent, const AbsolutePath& executablePath, vector<string> listArgument );
 
         /** @brief 실행 파일을 포함해 CommandLineToArgvW 규칙으로 인용한 명령줄입니다. Windows 가 `CreateProcessW` 에 넘기는 글이고, 양쪽 모두 로그에 씁니다. */
         [[nodiscard]] string toCommandLine() const;
@@ -388,7 +388,7 @@ namespace sw
 {
     // ------------------------------------------------------------------------------
     // 1) ThreadCrashStack — 스레드 시작 때 부르는 준비. 크래시 보고(`CrashHandler`, Diagnostics)보다 아래층이라
-    //    작업 스레드를 띄우는 곳(로그 싱크 · 파일 · 태스크)이 보고기를 몰라도 부를 수 있다
+    //    작업 스레드를 띄우는 곳(로그 백엔드 · 파일 · 태스크)이 보고기를 몰라도 부를 수 있다
     // ------------------------------------------------------------------------------
     /** @brief 스레드별 크래시 스택 준비입니다. */
     struct SW_API ThreadCrashStack

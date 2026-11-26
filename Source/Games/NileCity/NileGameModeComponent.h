@@ -13,8 +13,8 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 #include "Engine/TileMap/TileMapXML.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityBuilderGameModeComponent.h"

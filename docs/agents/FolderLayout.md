@@ -9,7 +9,7 @@
 | `Core` | 엔진 · 게임을 모르는 기반(형식 · 컨테이너 · 글자 · 수학 · 스레드 · 파일 · 로그 · 네트워크 전송) | 씬 · 에셋 · 리플렉션 · 게임 낱말 |
 | `Engine` | 런타임 제품 기능과 그 확장점 | 에디터만 부르는 함수(`WITH_EDITOR` 없음), 개발 도구 구현 |
 | `DevTools` | 엔진 확장점에 스스로 붙는 개발 도구(배포 제외). 클라이언트 전용은 `DevTools/Client`, 머티리얼 그래프 컴파일러는 `DevTools/Material`, 쿠킹 명령 · 쿠커는 `DevTools/Cook`(셰이더는 `DevTools/Client/Cook`) | 게임 · GF · ModuleManager 내부를 아는 것 |
-| `ModuleManager` | 모듈 로드 · 매니페스트 · 호스트 공용 기동. 개발 전용 핫 리로드는 `Dev/LiveReload` | 엔진 기능 |
+| `ModuleManager` | 모듈 로드 · 매니페스트 · 호스트 공용 기동. 개발 전용 핫 리로드는 `DevTools/ModuleReload/HotReload` | 엔진 기능 |
 | `ModuleAPI` | 모듈 C-ABI 계약(헤더만) | 구현 |
 | `App` · `Server` | 그 실행 파일에만 있는 호스트 배선 | 엔진 기능, 개발 도구 구현(붙이는 줄만) |
 | `Editor` | 에디터 기능 전부(키트 하나의 에디터 확장은 그 키트 `Editor/`) | 런타임이 쓰는 것 |
@@ -17,20 +17,20 @@
 | `Programs` | 따로 빌드하는 도구 실행 파일 | |
 | `Games` | 게임 하나(새 게임 폴더를 만들지 않는다 — Playground) | |
 
-## 2 Core 폴더 (티어 = `CoreLayers.toml`, 숫자 큰 쪽이 위)
+## 2 Core 폴더 (층 = `CoreLayers.toml`, 숫자 큰 쪽이 위)
 
-| 폴더(티어) | 두는 것 |
+| 폴더(층) | 두는 것 |
 | --- | --- |
 | `Foundation`(0) | 형식 별칭 · 매크로 · OS 헤더 · enum 깃발 · 글자 하나 수준 도구 |
 | `Hash`(0) | 해시 · 씨앗 상수 · 비밀 비교 · PRF |
 | `Predefined`(0) | `.xxx` 이름 표 |
-| `Concurrency`(1) | 원시 동기화와 경합 검출 훅. 스레드 사이 자료 구조는 `Concurrency/Queue`(Container 위 티어) |
+| `Concurrency`(1) | 원시 동기화와 경합 검출 훅. 스레드 사이 자료 구조는 `Concurrency/Queue`(Container 위 층) |
 | `Math`(1) | 벡터 · 행렬 · 쿼터니언 · 색 · 압축 수치 · 결정적 난수 · 노이즈 |
 | `Memory` · `Algorithm`(2) | 할당기 · 메모리 태그 · 블록, 컨테이너에 묶이지 않은 알고리즘 |
 | `Container`(3) | 컨테이너 · 핸들 표 · 슬롯 · 링 · 큐 · 그래프 자료 구조 |
 | `String` · `Encoding` · `Serialization`(4) | 로그 없는 글자 도구, 바이트 ↔ 글자 인코딩, 바이트 · 비트 직렬화 |
-| `Delegate` · `Path` · `UUID` · `Subsystem` · `Spatial`(4) | 이름 그대로 |
-| `Log`(5) | 로그 매크로 · 창구 · 싱크 포트(구현 `Log/Sink` 는 맨 위) |
+| `Delegate` · `Path` · `GUID` · `Subsystem` · `Spatial`(4) | 이름 그대로 |
+| `Log`(5) | 로그 매크로 · 창구 · 백엔드 포트(구현 `Log/Backend` · 출력 장치 `Log/Output` 은 맨 위) |
 | `Name` · `Registry`(6) | intern 이름(`hashed_string` · `TagID`), `RegistrationList` · `NameRegistry` |
 | `CommandLine` · `Compression` · `Process` · `Time`(6), `GlobalVariable` · `Task`(7), `File` · `Network`(8), `Module`(9), `Diagnostics` · `Event` · `Testing`(10) | 이름 그대로 |
 
@@ -61,7 +61,9 @@ CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Envi
 | `<기능>/Component` 에는 `*Component` 만(린트 `folder-layout` 강제) | 씬 서브시스템 · 질의는 `<기능>/Scene` |
 | 키트 폴더는 평평하게: 장르 키트는 카탈로그 · 규칙 파일(엔진 시계 · 렌더를 모른다)을 키트 바로 아래, 하위 폴더는 `Component/`(디렉터 · 컴포넌트) · `Client/`(뷰 · 입력 · HUD — 따로 짓는 `GF_Client_<X>`, 디렉터의 명령 · 읽기 API 만 쓴다) · `Editor/` · `Tests/` 와 하위 게임만. 뼈대는 `new-kit`. 온라인 키트는 `Runtime/` · `Server/` 바로 아래(뼈대 `new-online-kit`) | 키트는 파일 10 ~ 20 개 |
 | 개발 기능은 `Source/DevTools/`. `Dev/` 폴더는 `Config/Rules/Layers/DevFolders.json` 에 까닭과 함께 적은 자리만(configure 강제) | DevTools 는 GF · 게임 · ModuleManager · App 을 못 본다 — 엔진이 확장점을 내고 DevTools 가 붙는다 |
+| 개발 전용 소스(`GameFramework/Developer` · 키트 `Dev/`)는 등록하는 것으로 이름 짓는다: 개발 명령 `<X>DevCommands`, 자동화 감시 값 `<X>Watches`, HUD 섹션 `<X>DebugSections`, 시나리오 단계 `<X>AutomationSteps`, 캡처 · 끝내기 차단 `<X>CaptureBlock` · `<X>FinishBlock` | 파일 이름으로 그 기능의 명령 · 감시를 찾는다 |
 | 실행 중 바꾸기 · 핫스왑은 개발, 기동 때 고르기는 제품 | 언리얼도 RHI · 모듈 교체는 재시작 |
+| 에디터 작업 공간(`Editor/Common/Workspace`)은 일마다 하위 폴더(`Selection` · `Notification` · `Layout` · `View` · `Undo` · `Play` · `NetPlay` · `HotReload` · `Asset`)에 두고 뿌리에는 에디터 컨텍스트 · 작업 공간(`EditorWorkspace`) · 서브시스템 창구만 둔다. 뷰포트 Model 은 `Gizmo/` · `Visualizers/`, 설정 계열 창은 창마다 폴더(`Panels/Preferences` · `UserSettings` · `Modules` · `GlobalVariables`). 짝을 이루는 기능(시나리오 재생기 · 녹화기)은 한 폴더 | 층은 `Common/<하위 폴더>` 단위라 하위 폴더를 나눠도 층 표가 그대로다. 언리얼 UnrealEd 도 기능마다 폴더 |
 | 층 경계는 실제 순환 · 독립 배포 요구가 확인된 층만 별도 링크 타깃으로 나눈다 | 타깃 수만 는다 |
 | 옮기지 않는 것: `Core/Foundation/BitFlagTrait.h`(생성 헤더가 include 하는 잎), `Engine/UI/Screen/UIScreenSwitch`(확장점 자체), `Core/Diagnostics/SubsystemTimingReport` · `Engine/Profiling/FrameProfileReport`(보고 값 형식) | |
 
@@ -73,7 +75,7 @@ CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Envi
   - Models: glTF under `models_raw/`; `App --import-models` writes `models/<name>.mesh` (`--check-models`). PBR glTF materials become `models/<name>/materials/<material>.material` from `engine/materials/pbrmaterial.material`.
 - **Never reference `_shared` import results** (`<domain>/models/_shared/…`, `<domain>/textures_raw/_shared/…`) from hand-written data — reference the material slot or a clip set.
 - **Animation sets** (`*.animset.xml`): a hand-written set derives with `_base="<set>"` and borrows with `<clip name set [source]/>`, never a `path`. Look clips up by name.
-- **Domains**: `engine` · `common` · `game/<pack>` · `dlc/<name>` each cook into their own pack; an import writes only into its own domain. A game references only `common/` and `engine/`; `common/` never references a game, nor one game another. A source two domains need moves to `common/` with `move-asset`, with its `credits.md` line. A resource pack that `common/` holds is credited once, in `common/credits.md`; a game row names the files and the pack and points there. A content type's module belongs to that domain (configure 강제, `Scripts/generate/content_modules.py`).
-- **Move, rename or delete an asset** with `py -3 -m Scripts move-asset <old id> <new id>` (pre-commit lint `asset_references.py` lists dangling refs). A moved file with `SW_LOCKEY` needs `App --gather-text` and the `Content/**/localization/*.strings.xml` commit.
+- **Domains**: `engine` · `common` · `game/<pack>` · `dlc/<name>` each cook into their own pack; an import writes only into its own domain. A game references only `common/` and `engine/`; `common/` never references a game, nor one game another. A source two domains need moves to `common/` with `move-asset`, with its `credits.md` line. A resource pack that `common/` holds is credited once, in `common/credits.md`; a game row names the files and the pack and points there. A content type's module belongs to that domain (configure 강제, `Scripts/verify/content_modules.py`).
+- **Move, rename or delete an asset** with `py -3 -m Scripts move-asset <old id> <new id>` (pre-commit lint `asset_reference_scan.py` lists dangling refs). A moved file with `SW_LOCKEY` needs `App --gather-text` and the `Content/**/localization/*.strings.xml` commit.
 - **Scanned assets (Poly Haven, CC0)**: `models_raw/polyhaven/`, `textures_raw/polyhaven/<asset>/`, binaries in Git LFS, each in the pack's `credits.md`. Tiling surfaces use `pbr_lit` with `_worldTileSize`, not stretched UVs. 라이선스 기준은 [NEXT](../NEXT.md) "지킬 결정".
 - **Localization key**: entry in `editor.strings.xml` / `engine.strings.xml` → `App -export-po` → fill `po/<culture>.po` → `App -import-po=<po>` → `App --gather-text` → `App --check-text` (0 errors). No English literal UI text, no key without translations.

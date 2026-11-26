@@ -12,13 +12,13 @@
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/CookCodeDigest.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 
 namespace sw
 {
-    uint32 PrefabCooker::cookAll( const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store, const uint64 reflectionFingerprint, uint32& outFailedCount )
+    uint32 PrefabCooker::cookAll( const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store, const uint64 reflectionDigest, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( sourceRoot.empty() || cookedDir.empty() )
@@ -41,7 +41,7 @@ namespace sw
 
         unordered_set<string> uniqueSetWrittenKey; // 중복 판정만 한다 — 출력 순서는 정렬된 `listFile` 가 정한다
         CookStats             stats;
-        const CookJobDesc     desc = makeCookJobDesc( reflectionFingerprint );
+        const CookJobDesc     desc = makeCookJobDesc( reflectionDigest );
         for ( const AbsolutePath& filePath : listFile )
         {
             const AbsolutePath normalized = filePath;
@@ -66,7 +66,7 @@ namespace sw
                 // 중첩 인스턴스의 원본을 읽는 캐시는 작업마다 새로 둔다 — 앞 작업이 읽어 둔 원본을 쓰면 그 읽기가 이 작업의 입력에서 빠진다.
                 PrefabCache nestedPrefabs;
                 PrefabAsset asset;
-                // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
+                // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(에셋 id 입구는 팩 전용 구성에서 콘텐츠 루트 안 절대 경로를 거절한다).
                 const bool bLoaded    = asset.loadFromDiskFile( normalized );
                 const bool bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
                 if ( bFlattened == false || asset.saveToBinaryFile( outputPath ) == false )
@@ -88,13 +88,13 @@ namespace sw
         return stats.getWrittenCount();
     }
 
-    CookJobDesc PrefabCooker::makeCookJobDesc( const uint64 reflectionFingerprint )
+    CookJobDesc PrefabCooker::makeCookJobDesc( const uint64 reflectionDigest )
     {
         CookJobDesc desc;
-        desc._cookerName      = "Prefab";
-        desc._codeFingerprint = CookCodeFingerprint::find( "Prefab" );
-        desc._target          = "Any";
-        desc._settingsHash    = reflectionFingerprint; // 덮어쓰기 · 변형 합치기가 타입 표(필수 · 열쇠 칸)를 본다
+        desc._cookerName   = "Prefab";
+        desc._codeDigest   = CookCodeDigest::find( "Prefab" );
+        desc._target       = "Any";
+        desc._settingsHash = reflectionDigest; // 덮어쓰기 · 변형 합치기가 타입 표(필수 · 열쇠 칸)를 본다
         return desc;
     }
 } // namespace sw

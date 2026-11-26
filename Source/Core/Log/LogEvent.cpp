@@ -1,6 +1,6 @@
 /**
  * @file LogEvent.cpp
- * @brief 로그 사건의 시각 · 순번 · 시계 · 스레드 · 문맥을 남기는 순간에 정합니다(`LogStamp` · `LogEvent`, 선언은 `LogTypes.h`).
+ * @brief 로그 사건의 시각 · 순번 · 시계 · 스레드 · 문맥을 남기는 순간에 정합니다(`LogMetadata` · `LogEvent`, 선언은 `LogTypes.h`).
  */
 #include "pch.h"
 
@@ -20,27 +20,27 @@ namespace sw
         thread_local uint32 t_logThreadID{ 0 };
     } // namespace
 
-    uint64 LogStamp::getNextSequence()
+    uint64 LogMetadata::getNextSequence()
     {
         return s_nextLogSequence.load( std::memory_order_acquire );
     }
 
-    LogStamp LogStamp::captureNow()
+    LogMetadata LogMetadata::captureNow()
     {
         if ( t_logThreadID == 0 )
             t_logThreadID = s_nextLogThreadID.fetch_add( 1, std::memory_order_relaxed );
 
-        LogStamp stamp;
-        stamp._sequence  = s_nextLogSequence.fetch_add( 1, std::memory_order_acq_rel );
-        stamp._time      = WallClock::nowUnixMilliseconds();
-        stamp._bHasClock = Logger::getClockNumber( stamp._clock, stamp._clockNumber );
-        stamp._context   = LogContext::getCurrent();
-        stamp._threadID  = t_logThreadID;
-        return stamp;
+        LogMetadata metadata;
+        metadata._sequence  = s_nextLogSequence.fetch_add( 1, std::memory_order_acq_rel );
+        metadata._time      = WallClock::nowUnixMilliseconds();
+        metadata._bHasClock = Logger::getClockNumber( metadata._clock, metadata._clockNumber );
+        metadata._context   = LogContext::getCurrent();
+        metadata._threadID  = t_logThreadID;
+        return metadata;
     }
 
     LogEvent::LogEvent( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
-        : _stamp{ LogStamp::captureNow() }
+        : _metadata{ LogMetadata::captureNow() }
         , _pTag{ pTag }
         , _pMessage{ pMessage }
         , _pFile{ pFile }

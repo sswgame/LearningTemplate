@@ -7,7 +7,7 @@
 
 #include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 namespace sw
 {
@@ -36,7 +36,7 @@ namespace sw
     {
     }
 
-    void RTSCommanderAI::initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings, const RTSCommanderUnits& units, const BehaviorTree& tree )
+    void RTSCommanderAI::initialize( RTSSimulation* pWorld, int32 player, const RTSCommanderAISettings& settings, const RTSCommanderUnits& units, const BehaviorTree& tree )
     {
         SW_ASSERT( tree.isValid() && "the commander behavior tree must be read from data (BehaviorTreeAsset) before the AI starts" );
         _pWorld   = pWorld;
@@ -168,7 +168,7 @@ namespace sw
     ActionResult RTSCommanderAI::taskGatherIdle( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI& self   = *static_cast<RTSCommanderAI*>( context._pOwner );
-        RTSWorld&       world  = *self._pWorld;
+        RTSSimulation&  world  = *self._pWorld;
         const RTSUnit*  pDepot = world.findUnit( self.findDepot() );
         if ( pDepot == nullptr )
             return ActionResult::Failed;
@@ -192,7 +192,7 @@ namespace sw
     ActionResult RTSCommanderAI::taskTrainWorkers( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI& self               = *static_cast<RTSCommanderAI*>( context._pOwner );
-        RTSWorld&       world              = *self._pWorld;
+        RTSSimulation&  world              = *self._pWorld;
         const RTSUnit*  pDepot             = world.findUnit( self.findDepot() );
         const bool      bCannotTrainWorker = pDepot == nullptr || pDepot->_listProduction.empty() == false || world.countPlanned( self._player, self._units._workerID.key() ) >= self._settings._workerTarget;
         if ( bCannotTrainWorker )
@@ -203,7 +203,7 @@ namespace sw
     ActionResult RTSCommanderAI::taskBuildSupply( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI&  self    = *static_cast<RTSCommanderAI*>( context._pOwner );
-        RTSWorld&        world   = *self._pWorld;
+        RTSSimulation&   world   = *self._pWorld;
         const RTSPlayer* pPlayer = world.findPlayer( self._player );
         if ( pPlayer->_supplyCap >= world.getCatalog()->getSupplyMax() || pPlayer->_supplyCap - pPlayer->_supplyUsed > self._settings._supplyMargin )
             return ActionResult::Failed;
@@ -216,7 +216,7 @@ namespace sw
     ActionResult RTSCommanderAI::taskBuildProduction( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI& self  = *static_cast<RTSCommanderAI*>( context._pOwner );
-        RTSWorld&       world = *self._pWorld;
+        RTSSimulation&  world = *self._pWorld;
         if ( world.countPlanned( self._player, self._units._productionID.key() ) >= self._settings._productionTarget )
             return ActionResult::Failed;
         // 일꾼을 어느 정도 모은 뒤에 시작한다.
@@ -228,7 +228,7 @@ namespace sw
     ActionResult RTSCommanderAI::taskTrainArmy( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI&   self  = *static_cast<RTSCommanderAI*>( context._pOwner );
-        RTSWorld&         world = *self._pWorld;
+        RTSSimulation&    world = *self._pWorld;
         vector<RTSUnitID> listIdleProducer;
         world.forEachUnit( [&]( const RTSUnit& unit )
         {
@@ -247,7 +247,7 @@ namespace sw
     ActionResult RTSCommanderAI::taskAttack( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI&   self  = *static_cast<RTSCommanderAI*>( context._pOwner );
-        RTSWorld&         world = *self._pWorld;
+        RTSSimulation&    world = *self._pWorld;
         vector<RTSUnitID> listArmy;
         self.collectArmy( listArmy );
         vector<RTSUnitID> listIdle;

@@ -24,7 +24,7 @@
 
 namespace sw
 {
-    struct ResourceContext;
+    struct AssetComposeContext;
     struct SequenceSpanHandler;
 } // namespace sw
 
@@ -233,7 +233,7 @@ namespace sw
         /** @brief 카메라 컷: 대상의 카메라 디렉터가 켤 프리셋 id 입니다. 비우면 카메라를 그대로 씁니다. 외형: 대상이 입을 외형 프리셋 id 입니다(필수). */
         PROPERTY( SkipIfEmpty, Tooltip = "Camera cut: preset id the target's camera director turns on (empty: camera as is). Appearance: preset id the target wears (required)" )
         string _preset;
-        /** @brief 시나리오: 시작 프레임을 지날 때 재생할 시나리오(`.scenario.xml` 리소스 id)입니다. 다른 종류는 비운다. */
+        /** @brief 시나리오: 시작 프레임을 지날 때 재생할 시나리오(`.scenario.xml` 에셋 id)입니다. 다른 종류는 비운다. */
         PROPERTY( SkipIfEmpty, Tooltip = "Scenario: scenario (.scenario.xml) played when the start frame is crossed" )
         AssetRef<ScenarioAsset> _scenario;
         /** @brief 애니메이션: 구간 동안 섞을 클립입니다 — 대상 애니메이션 셋의 클립 이름(`SkeletalAnimatorComponent::makeClipPath`, 파일이 아니다). 다른 종류는 비운다. */
@@ -371,7 +371,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        /** @brief 시퀀스 파일의 접미사입니다. 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
+        /** @brief 시퀀스 파일의 접미사입니다. 에디터 종류 등록(`Editor/AssetTypeActions`)이 이 값을 씁니다. */
         static constexpr string_view kExtension = ".seq.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
@@ -383,9 +383,9 @@ namespace sw
         /** @brief 빈 시퀀스를 만듭니다. */
         SequenceAsset() = default;
 
-        /** @brief 리소스 id 의 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 실패하면 빈 에셋이 남습니다. */
+        /** @brief 에셋 id 의 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 실패하면 빈 에셋이 남습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 디스크 파일의 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패하면 빈 에셋이 남습니다. */
+        /** @brief 디스크 파일의 XML 을 읽습니다. 에셋 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패하면 빈 에셋이 남습니다. */
         [[nodiscard]] bool loadFromDiskFile( const DiskPath& diskPath );
         /** @brief XML 파일을 씁니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
@@ -417,7 +417,7 @@ namespace sw
 
     private:
         /** @brief 읽은 본문(@p xml)을 이 에셋에 채우고 의미를 봅니다. 파일 경로와 문자열 경로가 모이는 지점이며, 틀리면 빈 에셋이 남습니다. */
-        [[nodiscard]] bool readText( string_view xml, string_view sourceLabel, const ResourceContext& context );
+        [[nodiscard]] bool readText( string_view xml, string_view sourceLabel, const AssetComposeContext& context );
         /** @brief 프레임 번호의 범위 · 순서와 종류 · 채널 수를 봅니다. 칸 · 바인딩도 본다. 어긋난 곳마다 오류를 남깁니다. */
         [[nodiscard]] bool validateFile( string_view sourceLabel ) const;
         /** @brief 바인딩 표(유일 · 0 아님 · `_nextBindingID` 아래)를 봅니다. */

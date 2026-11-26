@@ -15,21 +15,22 @@
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Server/ServiceHealthRegistry.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
-#include "GameFramework/Runtime/Online/Bus/Server/EphemeralServerBus.h"
-#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Bus/Server/CacheServerBus.h"
+#include "GameFramework/Runtime/Online/Cache/Server/ICacheStoreDriver.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
-#include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
-#include "GameFramework/Runtime/Online/Schedule/Server/ServiceTTLMonitor.h"
+#include "GameFramework/Runtime/Online/Scheduler/Server/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Scheduler/Server/ServiceTTLMonitor.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
-#include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Store/Server/IServiceStoreDriver.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 namespace sw
@@ -41,7 +42,7 @@ namespace sw
             /** @brief 원격 설정을 저장소에서 다시 읽는 간격입니다. 바꾼 서버는 버스로 바로 알리므로, 이것은 버스를 놓친 서버의 늦은 따라잡기다. */
             static constexpr int64 kRemoteConfigReloadMs = 60000;
 
-            static bool isMemoryDriver( string_view driver ) { return driver == kMemoryStoreDriverName; }
+            static bool isMemoryDriver( string_view driver ) { return driver == OnlineServerStoreConfig::kMemoryDriverName; }
 
             /** @brief 서버 설정의 항목 목록에서 @p name 을 찾습니다. 비었거나 없으면 오류입니다(첫 항목이나 메모리로 대신하지 않는다). */
             template <typename TEntry>
@@ -217,31 +218,31 @@ namespace sw
     {
         MemoryServiceDatabase _memoryDatabase{};
 
-        const IClock&                       _clock;                 ///< 설정이 준 단조 시계(메모리 캐시 · 키트의 HTTP 시한)
-        unique_ptr<MemoryEphemeralDatabase> _memoryCacheDatabase{}; ///< 캐시 드라이버가 메모리일 때만 있다
-        OnlineServerConfig                  _config{};
-        SubsystemScope                      _kitScope{}; ///< 기반 노드와 키트 노드를 소유하고, 키트가 내놓은 인터페이스를 타입으로 찾게 한다
-        OnlineServerKitContext              _context{ _kitScope, _clock };
-        unique_ptr<ServiceStore>            _store{};
-        unique_ptr<IEphemeralStore>         _cache{};
-        unique_ptr<IStreamTransport>        _ownedTransport{};
-        unique_ptr<IStreamTransport>        _ownedAdminTransport{};
-        unique_ptr<ITLSContext>             _tlsContext{};
-        ServiceScheduler                    _scheduler{};
-        ServiceTTLMonitor                   _ttlMonitor{};
-        RemoteConfig                        _remoteConfig{};
-        OnlineServiceHost                   _host{};
-        unique_ptr<EphemeralServerBus>      _bus{};
-        unique_ptr<ServerBus>               _busFront{}; ///< 키트 문맥에 넘기는 타입 있는 앞이다. 전송(`_bus`)은 호스트만 받는다
-        ServerRegistration                  _registration{};
-        vector<OnlineServerKitNode*>        _listKit{};      ///< 초기화한 키트(초기화 순서). 소유는 `_kitScope`
-        optional<Error>                     _startupError{}; ///< 노드가 남긴 기동 오류(어느 키트 · 무엇)
-        ServiceHealthRegistry*              _pHealthRegistry{ nullptr };
-        UnixMilliseconds                    _nextRemoteConfigReloadMs{ 0 };
-        optional<int32>                     _gameConnectionCount{}; ///< 게임 포트에 붙은 접속 수(`setGameConnectionCount`). 없으면 게임 포트를 열지 않는 서버다
-        optional<int32>                     _healthCheckIndex;      ///< 헬스 표에 올린 검사(표가 없으면 비어 있다)
-        int32                               _reportedLoad{ 0 };     ///< 마지막으로 등록에 알린 부하 — 늘어난 만큼 서버 사이의 좌석 예약을 확정한다
-        uint8                               _bRegistered{ SW_FALSE };
+        const IClock&                   _clock;                 ///< 설정이 준 단조 시계(메모리 캐시 · 키트의 HTTP 시한)
+        unique_ptr<MemoryCacheDatabase> _memoryCacheDatabase{}; ///< 캐시 드라이버가 메모리일 때만 있다
+        OnlineServerConfig              _config{};
+        SubsystemScope                  _kitScope{}; ///< 기반 노드와 키트 노드를 소유하고, 키트가 내놓은 인터페이스를 타입으로 찾게 한다
+        OnlineServerKitContext          _context{ _kitScope, _clock };
+        unique_ptr<ServiceStore>        _store{};
+        unique_ptr<ICacheStore>         _cache{};
+        unique_ptr<IStreamTransport>    _ownedTransport{};
+        unique_ptr<IStreamTransport>    _ownedAdminTransport{};
+        unique_ptr<ITLSContext>         _tlsContext{};
+        ServiceScheduler                _scheduler{};
+        ServiceTTLMonitor               _ttlMonitor{};
+        RemoteConfig                    _remoteConfig{};
+        OnlineServiceHost               _host{};
+        unique_ptr<CacheServerBus>      _bus{};
+        unique_ptr<ServerBus>           _busFront{}; ///< 키트 문맥에 넘기는 타입 있는 앞이다. 전송(`_bus`)은 호스트만 받는다
+        ServerRegistration              _registration{};
+        vector<OnlineServerKitNode*>    _listKit{};      ///< 초기화한 키트(초기화 순서). 소유는 `_kitScope`
+        optional<Error>                 _startupError{}; ///< 노드가 남긴 기동 오류(어느 키트 · 무엇)
+        ServiceHealthRegistry*          _pHealthRegistry{ nullptr };
+        UnixMilliseconds                _nextRemoteConfigReloadMs{ 0 };
+        optional<int32>                 _gameConnectionCount{}; ///< 게임 포트에 붙은 접속 수(`setGameConnectionCount`). 없으면 게임 포트를 열지 않는 서버다
+        optional<int32>                 _healthCheckIndex;      ///< 헬스 표에 올린 검사(표가 없으면 비어 있다)
+        int32                           _reportedLoad{ 0 };     ///< 마지막으로 등록에 알린 부하 — 늘어난 만큼 서버 사이의 좌석 예약을 확정한다
+        uint8                           _bRegistered{ SW_FALSE };
         explicit Parts( const IClock& clock )
             : _clock{ clock }
         {
@@ -458,18 +459,18 @@ namespace sw
 
         if ( Internal::isMemoryDriver( settings._cache._driver ) )
         {
-            parts._memoryCacheDatabase = make_unique<MemoryEphemeralDatabase>( parts._clock );
-            parts._cache               = make_unique<MemoryEphemeralStore>( parts._memoryCacheDatabase.get() );
+            parts._memoryCacheDatabase = make_unique<MemoryCacheDatabase>( parts._clock );
+            parts._cache               = make_unique<MemoryCacheStore>( parts._memoryCacheDatabase.get() );
         }
         else
         {
-            IEphemeralStoreDriver* const pDriver = game::findSubsystem<IEphemeralStoreDriver>();
+            ICacheStoreDriver* const pDriver = game::findSubsystem<ICacheStoreDriver>();
             if ( pDriver == nullptr )
             {
                 StringUtil::wipeSecret( settings._cache._secret );
                 return unexpected( Error{ ErrorKind::Unsupported, "the cache driver needs a storage kit (GF_Server_CacheStore) that is not loaded", settings._cache._driver } );
             }
-            expected<unique_ptr<IEphemeralStore>> cache = pDriver->createEphemeralStore( settings._cache._driver, settings._cache._connection, settings._cache._secret );
+            expected<unique_ptr<ICacheStore>> cache = pDriver->createCacheStore( settings._cache._driver, settings._cache._connection, settings._cache._secret );
             StringUtil::wipeSecret( settings._cache._secret );
             if ( cache.has_value() == false )
                 return unexpected( cache.error() );
@@ -478,7 +479,7 @@ namespace sw
         StringUtil::wipeSecret( settings._cache._secret );
 
         const uint64 serverID = static_cast<uint64>( parts._config._serverID );
-        parts._bus            = make_unique<EphemeralServerBus>( nullptr, serverID ); // 라우터는 호스트가 연 뒤에 묶는다
+        parts._bus            = make_unique<CacheServerBus>( nullptr, serverID ); // 라우터는 호스트가 연 뒤에 묶는다
         parts._busFront       = make_unique<ServerBus>( *parts._bus );
         parts._scheduler.initialize( *parts._store, serverID );
         parts._scheduler.setRunTTLMs( parts._config._scheduleRunTTL.getExpireAfterMs() ); // 키트가 구간 작업을 등록하기 전이다 // 보존 쓸기는 키트가 규칙을 올린 뒤 `initialize` 가 등록한다
@@ -616,7 +617,7 @@ namespace sw
         hostSettings._transportSettings._maxConnections = parts._config._maxConnections;
         hostSettings._listenAddress                     = settings._listenAddress;
         hostSettings._pServiceStore                     = parts._store.get();
-        hostSettings._pEphemeralStore                   = parts._cache.get();
+        hostSettings._pCacheStore                       = parts._cache.get();
         hostSettings._pServerBusTransport               = parts._bus.get();
         hostSettings._pRemoteConfig                     = &parts._remoteConfig;
         hostSettings._requestBurstPerRemote             = parts._config._requestBurstPerRemote;
@@ -667,7 +668,7 @@ namespace sw
             return unexpected( Error{ ErrorKind::Unsupported, "online services need a stream transport and this platform has none" } );
         if ( expected<void> host = parts._host.initialize( pTransport, hostSettings ); host.has_value() == false )
             return host;
-        parts._context._pRouter                  = parts._host.getEphemeralRouter();
+        parts._context._pRouter                  = parts._host.getCacheRouter();
         [[maybe_unused]] const bool bRouterBound = parts._bus->bindRouter( parts._context._pRouter );
         SW_ASSERT( bRouterBound ); // 호스트를 띄우기 전에는 아무도 버스를 구독하지 않았다
         return {};

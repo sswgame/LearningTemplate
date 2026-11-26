@@ -9,7 +9,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Material/MaterialTypes.h"
+#include "Engine/Graphics/Material/MaterialDef.h"
 
 using namespace sw;
 
@@ -42,7 +42,7 @@ namespace
                    ( bSheen && ( hasDefine( material, "MATERIAL_LOBE_ANISOTROPY" ) || hasDefine( material, "MATERIAL_LOBE_SUBSURFACE" ) ) );
         }
 
-        /** @brief 라이브러리의 .material 을 모두 리소스 id 로 읽습니다(`_base` 를 펼친 결과). 하나라도 못 읽으면 실패를 남긴다. */
+        /** @brief 라이브러리의 .material 을 모두 에셋 id 로 읽습니다(`_base` 를 펼친 결과). 하나라도 못 읽으면 실패를 남긴다. */
         [[nodiscard]] static vector<LoadedMaterial> loadAll()
         {
             vector<LoadedMaterial>                   listLoaded;

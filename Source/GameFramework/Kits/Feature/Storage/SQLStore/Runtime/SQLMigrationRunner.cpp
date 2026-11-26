@@ -13,7 +13,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -162,7 +162,7 @@ namespace sw
             }
 
             /**
-             * @brief 폴더(리소스 id)의 `.sql` 을 읽기와 같은 규칙(`AssetIO::collectAssets` - 낱개 파일 · 팩)으로 나열합니다. 폴더가 없으면 빈 목록이고 true 입니다.
+             * @brief 폴더(에셋 id)의 `.sql` 을 읽기와 같은 규칙(`AssetIO::collectAssets` - 낱개 파일 · 팩)으로 나열합니다. 폴더가 없으면 빈 목록이고 true 입니다.
              * @details 예전에는 글이 디스크 폴더인지 먼저 보고(`isDirectory`) 아니면 낱개 파일 자리로 풀었다 - 팩 구성에서는 대조할 것이 없었다.
              */
             [[nodiscard]] static expected<void> collectMigrationFiles( string_view folder, vector<AssetID>& outListFile )

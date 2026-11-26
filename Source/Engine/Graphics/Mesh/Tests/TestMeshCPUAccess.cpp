@@ -36,7 +36,7 @@ namespace
         return data;
     }
 
-    /** @brief @p data 를 임시 도메인의 `.mesh` 로 쓰고 그 리소스 id 를 돌려줍니다. */
+    /** @brief @p data 를 임시 도메인의 `.mesh` 로 쓰고 그 에셋 id 를 돌려줍니다. */
     string writeMesh( const test::ScopedScratchDomain& domain, const utf8* pFileName, const MeshAssetData& data )
     {
         vector<uint8> bytes;
@@ -61,7 +61,7 @@ SW_TEST_CASE( MeshCPUAccessTest, ReleasesAfterUploadAndKeepRequestRestores )
     const shared_ptr<Mesh> mesh = MeshCache::acquire( path, MeshCPUAccess::ReleaseAfterUpload );
     SW_REQUIRE_NOT_NULL( mesh.get() );
     SW_EXPECT_TRUE( mesh->getCPUAccess() == MeshCPUAccess::ReleaseAfterUpload );
-    SW_EXPECT_EQUAL( uint64{ 6u * sizeof( RHIVertex ) }, mesh->getCPUVertexBytes() );
+    SW_EXPECT_EQUAL( uint64{ 6u * sizeof( MeshVertex ) }, mesh->getCPUVertexBytes() );
     const float3 boundsMax = mesh->getLocalBoundsMax();
     SW_REQUIRE_TRUE( mesh->getRenderData().initRHI( &device ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, mesh->getCPUVertexBytes() );
@@ -81,7 +81,7 @@ SW_TEST_CASE( MeshCPUAccessTest, ReleasesAfterUploadAndKeepRequestRestores )
     SW_REQUIRE_TRUE( mesh->getRenderData().initRHI( &device ) );
     SW_EXPECT_TRUE( MeshCache::acquire( path, MeshCPUAccess::ReleaseAfterUpload ) == mesh );
     SW_EXPECT_TRUE( mesh->getCPUAccess() == MeshCPUAccess::Keep );
-    SW_EXPECT_EQUAL( uint64{ 6u * sizeof( RHIVertex ) }, mesh->getCPUVertexBytes() );
+    SW_EXPECT_EQUAL( uint64{ 6u * sizeof( MeshVertex ) }, mesh->getCPUVertexBytes() );
     mesh->getRenderData().releaseRHI( &device );
 }
 
@@ -104,7 +104,7 @@ SW_TEST_CASE( MeshCPUAccessTest, DeviceSwapReadsTheFileAgain )
     SW_EXPECT_FALSE( renderData.isRHIValid() );
 
     renderData.prepareRHI();
-    SW_EXPECT_EQUAL( uint64{ 6u * sizeof( RHIVertex ) }, mesh->getCPUVertexBytes() );
+    SW_EXPECT_EQUAL( uint64{ 6u * sizeof( MeshVertex ) }, mesh->getCPUVertexBytes() );
     SW_REQUIRE_TRUE( renderData.initRHI( &device ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, mesh->getCPUVertexBytes() );
     SW_EXPECT_TRUE( mesh->getCPUAccess() == MeshCPUAccess::ReleaseAfterUpload );

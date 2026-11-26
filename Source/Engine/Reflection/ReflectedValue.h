@@ -1,14 +1,14 @@
 /**
  * @file ReflectedValue.h
  * @brief 리플렉션 호출 · 이벤트가 주고받는 "타입 이름이 붙은 값" 하나와, 인자 타입마다 값을 바꾸는 표입니다.
- * @details `TaskValue` 는 담긴 타입을 모릅니다(크기만 압니다). 이름으로 함수를 부르는 쪽(콘솔 명령 · 비주얼 스크립팅 · 기믹 배선)은
+ * @details `TaskValue` 는 담긴 타입을 모릅니다(크기만 압니다). 이름으로 함수를 부르는 쪽(콘솔 명령 · 비주얼 스크립팅 · 논리 회로 배선)은
  *          인자의 C++ 타입을 모르고 값을 넘기므로, 값에 타입 이름을 붙이고(`ReflectedValue`) 인자 자리마다 그 이름을 보고 바꿉니다
  *          (`ReflectTypeOps::_pConvert`). 같은 타입이면 그대로, 숫자끼리는 형 변환, 글이면 그 타입으로 읽습니다.
  */
 #pragma once
 #include "Core/Foundation/Expected.h"
 #include "Core/Math/PackedTypesFwd.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/TypeFqn.h"
@@ -88,7 +88,6 @@ namespace sw
         static constexpr ReflectBuiltinTraits kArrTraits[] = {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, Widget, Layout, Roles, ... ) { SW_BUILTIN_LAYOUT_KIND_##Layout, static_cast<uint8>( Roles ) },
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
         };
@@ -154,7 +153,6 @@ namespace sw
         static constexpr ReflectBuiltinIndex kIndex = ReflectBuiltinIndex::k##Canon; \
     };
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
 } // namespace sw

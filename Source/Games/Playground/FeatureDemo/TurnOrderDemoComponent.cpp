@@ -6,8 +6,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 namespace sw
 {
@@ -15,7 +15,7 @@ namespace sw
     {
         struct TurnOrderDemoComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "FDTO" };
+            static constexpr FormatDesc kStateFormat{ "FDTO" };
         };
     } // namespace
 

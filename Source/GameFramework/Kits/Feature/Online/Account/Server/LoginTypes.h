@@ -12,7 +12,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
 
 namespace sw
 {
@@ -27,7 +27,7 @@ namespace sw
 namespace sw
 {
     /** @brief 로그인 서비스 설정입니다. 시간은 밀리초입니다. */
-    struct LoginServiceConfig : LoginPolicy
+    struct LoginLogicConfig : LoginPolicy
     {
         NetPasswordHashParams _passwordHashParams{};             ///< Argon2id 해시 파라미터이다. 기본값은 OWASP 권장(19 MiB, 2회, 1레인)이며, 바꾸면 다음 로그인에서 다시 해시한다
         int32                 _attemptBurst{ 10 };               ///< 연결(주소)마다 한꺼번에 할 수 있는 시도 횟수이다

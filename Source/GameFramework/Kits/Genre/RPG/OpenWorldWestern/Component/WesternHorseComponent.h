@@ -11,9 +11,9 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternHorse.h"
@@ -39,7 +39,7 @@ namespace sw
 
         static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 탈것 컴포넌트(PostPhysics)가 이번 프레임 질주로 스태미나를 쓴 뒤에 회복 · 코어 감소를 흘린다.
 
-        static constexpr FormatDef kStateFormat{ "WWHS" };
+        static constexpr FormatDesc kStateFormat{ "WWHS" };
 
         WesternHorseComponent();
         ~WesternHorseComponent() override;

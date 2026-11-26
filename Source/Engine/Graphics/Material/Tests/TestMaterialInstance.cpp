@@ -7,10 +7,10 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialDef.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
-#include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 // MaterialInstance — 값 덮어쓰기의 사본 재사용과 조회 글, 런타임 스위치 검사와 정적 종류 거절(nogpu).

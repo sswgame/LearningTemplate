@@ -2,7 +2,7 @@
 
 #include "DevTools/DevToolsHost.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -14,16 +14,16 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "DevTools/AssetReload/ConfigReloadSubsystem.h"
+#include "DevTools/AssetReload/ConfigHotReloadSubsystem.h"
 #include "DevTools/AssetReload/ContentFolderWatchService.h"
-#include "DevTools/AssetReload/ReloadTracker.h"
+#include "DevTools/AssetReload/HotReloadTracker.h"
 #include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DebugDraw/DebugDrawQueue.h"
 #include "DevTools/DevToolsClientPart.h"
 #include "DevTools/Diagnostics/FileReadDiagnostics.h"
 #include "DevTools/FileWatch/FileWatchService.h"
 #include "DevTools/Maintenance/SavedCleanupSubsystem.h"
-#include "DevTools/Network/NetLineEmulation.h"
+#include "DevTools/Network/NetEmulationSubsystem.h"
 #include "DevTools/Network/NetListenLaunch.h"
 #include "DevTools/Network/ServerPoseOverlay.h"
 #include "DevTools/Profiling/FrameProfileSession.h"
@@ -48,7 +48,7 @@ namespace sw
 {
     /**
      * @brief `-gv_userSettingsFile=<경로>`: 사용자 설정 파일 자리입니다(비면 사용자 폴더의 usersettings.json, 무인 실행은 실행마다 새 자리).
-     * @details 실행 짝(`Scripts/net/lockstep_pair_run.py`) · 순서 시나리오(`IntegrationTests/Scenario/RunStateDirPair.cmake`)가 한 파일을 이어 쓰거나 사람의 파일을 피할 때 쓴다.
+     * @details 실행 짝(`Scripts/sessions/lockstep_session.py`) · 순서 시나리오(`IntegrationTests/Scenario/RunStateDirPair.cmake`)가 한 파일을 이어 쓰거나 사람의 파일을 피할 때 쓴다.
      *          배포본에는 없다 — 배포본의 자리를 가를 때는 환경 변수 `SW_USER_DATA_ROOT`(`Core/File/UserDataPath.h`)다.
      */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_userSettingsFile, "", "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)" );
@@ -133,7 +133,7 @@ namespace sw
         , _pConsole{}
         , _pContentFolderWatch{ make_unique<ContentFolderWatchService>( fileWatch ) }
         , _pFileReadDiagnostics{ make_unique<FileReadDiagnostics>() }
-        , _frameStall{}
+        , _frameHitchInjection{}
     {
         MemoryProfiler::setLeakBaselineDetailQuery( &DevToolsHostInternal::queryLeakBaselineDetail ); // 기동 기준선(엔진 초기화 끝 · 헤드리스 진입)보다 먼저다 — 호스트 범위가 엔진보다 먼저 선다
     }
@@ -190,24 +190,24 @@ namespace sw
         // RenderDoc — 그래픽 API 를 만들 때 끼어들므로 RHI 디바이스보다 먼저 올린다(기동 단계는 아직 초기화 전이다). `-renderdoc` 이면 설치 경로에서 로드한다.
         if ( pRenderDriver != nullptr ) // 렌더 드라이버는 RHI 와 같은 조건으로 선다
         {
-            const CommandLineManager* const pCommandLine = findSubsystemFrom<CommandLineManager>( &startup );
+            const CommandLine* const pCommandLine = findSubsystemFrom<CommandLine>( &startup );
             RenderDocCapture::initialize( pCommandLine != nullptr && pCommandLine->isArgumentProvided( CommandLineArgument::RENDERDOC ) );
         }
         // 오래된 실행 산출물(`Saved` — 자동화 실행 · 로그 · 스크린샷 · 트레이스 …)을 자기 스레드에서 지운다.
         (void)startup.emplaceSubsystem<SavedCleanupSubsystem>();
         // 리로드 결과 집계 — 설정 · 셰이더 · 에디터 에셋 리로드가 결과를 적는다(`reload.status`). 리로드 주인보다 먼저 선다(셰이더 라이브 리로드는 클라이언트 부분 `IDevToolsClientPart` 가 세운다).
-        (void)startup.emplaceSubsystem<ReloadTracker>();
+        (void)startup.emplaceSubsystem<HotReloadTracker>();
         // 설정 파일 리로드는 서버에도 선다. 헤드리스 작업은 프레임을 돌지 않아 리로드할 자리가 없다 — `Config/` 감시를 걸지 않는다.
-        const CommandLineManager* const pHeadlessCommandLine = findSubsystemFrom<CommandLineManager>( &startup );
-        const bool                      bHeadless            = pHeadlessCommandLine != nullptr && CommandletRegistration::isAnyRequested( *pHeadlessCommandLine );
-        ConfigManager* const            pConfigManager       = startup.find<ConfigManager>();
+        const CommandLine* const pHeadlessCommandLine = findSubsystemFrom<CommandLine>( &startup );
+        const bool               bHeadless            = pHeadlessCommandLine != nullptr && CommandletRegistration::isAnyRequested( *pHeadlessCommandLine );
+        ConfigManager* const     pConfigManager       = startup.find<ConfigManager>();
         if ( pConfigManager != nullptr && bHeadless == false )
-            (void)startup.emplaceSubsystem<ConfigReloadSubsystem>( *pConfigManager, _fileWatch );
+            (void)startup.emplaceSubsystem<ConfigHotReloadSubsystem>( *pConfigManager, _fileWatch );
         // 회선 흉내 — 세션이 열기 전에 샤드 전송 데코레이터를 건다(실행 중 조건은 `net.emulation`).
         // 리슨 포트 덮어쓰기(`-gv_netListenPort`) — 세션이 기동 역할을 정하기 전에 건다.
         if ( GameNetSession* const pNetSession = startup.find<GameNetSession>() )
         {
-            (void)startup.emplaceSubsystem<NetLineEmulationSubsystem>( *pNetSession );
+            (void)startup.emplaceSubsystem<NetEmulationSubsystem>( *pNetSession );
             (void)startup.emplaceSubsystem<NetListenLaunchSubsystem>( *pNetSession );
         }
         // 프로파일러 출력의 실행 인자(Tracy · 종료 트레이스 · 느린 프레임 캡처) — 서비스 범위의 프레임 프로파일러가 이미 섰다.
@@ -237,7 +237,7 @@ namespace sw
     {
         // 디버그 HUD — 씬 틱 뒤 · 런타임 UI 앞(HUD 화면이 UI 갱신의 틱에서 섹션을 부른다). 꺼져 있으면 디버그 키 맵 액션 하나를 읽고 끝난다.
         // 개발 명령 `profile.stall` 이 건 지연 — 엔진의 `GT.Frame` 구간 안이다(스파이크를 프레임 비용에 기대지 않고 만든다).
-        _frameStall.consume();
+        _frameHitchInjection.consume();
         // 서버 포즈 고스트 — 씬 틱 · 디버그 그리기 뒤(이번 프레임에 넣은 선이 프레임 끝에 확정된다).
         if ( ServerPoseOverlay* const pServerPose = engine::findSubsystem<ServerPoseOverlay>() )
             if ( SceneManager* const pSceneManager = engine::findSubsystem<SceneManager>() )
@@ -261,7 +261,7 @@ namespace sw
             exitCode = pProfileSession->onFrameEnd( context._activeSceneID );
         if ( ProfilerLaunchSubsystem* const pProfilerSwitches = engine::findSubsystem<ProfilerLaunchSubsystem>() )
             pProfilerSwitches->onFrameEnd(); // 느린 프레임 자동 캡처(`-gv_traceSlowTickMs`)
-        // 셰이더 재컴파일 · 강제 리로드 단축키(`gv_liveShaderRecompile`) · 시작 인자 사진 — 클라이언트 전용 부분이 한다. 먼저 끝난 쪽의 종료 코드를 돌려준다.
+        // 셰이더 재컴파일 · 강제 리로드 단축키(`gv_shaderHotReload`) · 시작 인자 사진 — 클라이언트 전용 부분이 한다. 먼저 끝난 쪽의 종료 코드를 돌려준다.
         if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )
         {
             const EngineFrameExit clientExit = pClientPart->onFrameEnd();

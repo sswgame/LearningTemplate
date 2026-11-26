@@ -126,7 +126,7 @@ namespace sw
         vector<PackChunkRule> _listChunkRule; ///< 이름 붙은 청크(빈 목록이면 모두 기본 청크). 기동 때 마운트한다
 
         /**
-         * @brief 씬 청크로 미루는 씬 파일 패턴(리소스 id 기준 — `game/<게임>/maps/<이름>.scene.xml` 꼴의 와일드카드)입니다. 빈 목록이면 씬 청크가 없다(모두 기동 필수).
+         * @brief 씬 청크로 미루는 씬 파일 패턴(에셋 id 기준 — `game/<게임>/maps/<이름>.scene.xml` 꼴의 와일드카드)입니다. 빈 목록이면 씬 청크가 없다(모두 기동 필수).
          * @details 맞는 씬 가운데 다른 뿌리(엔진 코드 · 게임 설정의 첫 씬 · 항상 담기)가 참조로 닿지 않는 씬마다 그 씬만 쓰는 에셋을 그 씬의 청크에, 둘 이상이 쓰는 것을
          *          공유 청크에 둔다(`PackSceneChunkPlan`). 그 청크는 기동 때 마운트하지 않고 씬을 열 때 마운트한다(`packchunks.xml` — `PackChunkLoader`).
          *          언리얼 청크 pak · 유니티 Addressables 의 씬 그룹 자리다.
@@ -203,7 +203,7 @@ namespace sw
 
     /**
      * @struct PackCookRules
-     * @brief 무엇을 담을지의 뿌리 규칙입니다 — 쓰는 것만 담는다(`PackReachResult`).
+     * @brief 무엇을 담을지의 뿌리 규칙입니다 — 쓰는 것만 담는다(`PackReachableSet`).
      * @details 담는 것은 뿌리(항상 담기 묶음 · 게임 설정의 필수 데이터)에서 참조 칸(`AssetReferenceFields`)과 곁 파일(`SW_ASSET_COMPANION`)을 따라 닿는 파일이다.
      *          언리얼 쿠커가 맵 · Primary Asset 에서 참조된 패키지만 쿠킹하는 것과 같다. 닿는 참조가 가리키는 파일이 없으면 쿠킹 오류다(조용히 빼지 않는다).
      */

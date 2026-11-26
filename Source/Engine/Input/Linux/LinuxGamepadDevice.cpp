@@ -7,7 +7,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/GamepadButton.h"
 
 namespace sw
 {

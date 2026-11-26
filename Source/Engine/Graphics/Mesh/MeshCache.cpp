@@ -19,7 +19,7 @@
 #include "Engine/Graphics/Mesh/IMeshDerivedCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
 
@@ -75,7 +75,7 @@ namespace sw
                     SW_LOG_WARNING_ID( "MeshCache.MeshAssetCouldNot", "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
             }
 
-            /** @brief 캐시 키(획득 · 리로드가 넘긴 경로)를 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다. 메시 캐시의 키는 리소스 id 만 담는다. */
+            /** @brief 캐시 키(획득 · 리로드가 넘긴 경로)를 로더에 넘길 에셋 id 로 바꾸는 한 곳입니다. 메시 캐시의 키는 에셋 id 만 담는다. */
             [[nodiscard]] static AssetID toAssetID( string_view path ) { return AssetID{ path }; }
         };
     } // namespace
@@ -92,7 +92,7 @@ namespace sw
 
     bool MeshLoadOperation::createFromData( const string& key, MeshAssetData&& data, AssetLoadScope& loadScope )
     {
-        loadScope.setBytes( data._listVertex.size() * sizeof( RHIVertex ) + data._listIndex.size() * sizeof( uint32 ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
+        loadScope.setBytes( data._listVertex.size() * sizeof( MeshVertex ) + data._listIndex.size() * sizeof( uint32 ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
         shared_ptr<Mesh> loaded = Mesh::createForAsset( MeshCacheInternal::toAssetID( getPath() ), _cpuAccess.load( std::memory_order_acquire ) );
         // 읽기가 인덱스 범위를 이미 봤다 — 실패는 깨진 파일 하나뿐이고 아래 판정이 함께 진다. 스킨 · 모프가 있으면 메시가 저절로 `Keep` 이 된다.
         const bool bGeometry = loaded->setGeometryWithTangents( std::move( data._listVertex ), std::move( data._listIndex ) );
@@ -233,7 +233,7 @@ namespace sw
         _pState->_sharedTable.forEachLive( [&outListEntry]( const string& key, const Mesh& mesh, uint32 referenceCount )
         {
             // 그리는 흐름(LOD 0 + 낮은 단계)의 정점 · 인덱스가 GPU 버퍼이고, CPU 는 인덱스와 쥔 정점(`MeshCPUAccess`)이다.
-            const uint64 gpuBytes = static_cast<uint64>( mesh.getDrawVertexCount() ) * sizeof( RHIVertex ) + static_cast<uint64>( mesh.getDrawIndexCount() ) * sizeof( uint32 );
+            const uint64 gpuBytes = static_cast<uint64>( mesh.getDrawVertexCount() ) * sizeof( MeshVertex ) + static_cast<uint64>( mesh.getDrawIndexCount() ) * sizeof( uint32 );
             const uint64 cpuBytes = sizeof( Mesh ) + mesh.getCPUVertexBytes() + static_cast<uint64>( mesh.getDrawIndexCount() ) * sizeof( uint32 );
             outListEntry.push_back( AssetMemoryEntry{ key, cpuBytes, gpuBytes, referenceCount } );
         } );
@@ -321,7 +321,7 @@ namespace sw
 {
     shared_ptr<Mesh> AssetRefCache<MeshAssetFormat>::acquire( string_view path, MeshCPUAccess cpuAccess )
     {
-        return MeshAssetFormat::kAssetType.isBuiltinName( path ) ? MeshUtil::acquirePrimitive( path ) : MeshCache::acquire( path, cpuAccess );
+        return MeshAssetFormat::kAssetType.isBuiltinName( path ) ? PrimitiveMeshBuilder::acquirePrimitive( path ) : MeshCache::acquire( path, cpuAccess );
     }
 
     MeshHandle AssetRefCache<MeshAssetFormat>::request( string_view path, MeshCPUAccess cpuAccess )

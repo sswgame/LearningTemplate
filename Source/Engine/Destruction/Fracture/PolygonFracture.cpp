@@ -6,7 +6,7 @@
 #include "Core/Container/pair.h"
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Spatial/PolygonTriangulation.h"
+#include "Core/Spatial/PolygonTriangulationUtil.h"
 
 #include "Engine/Destruction/DestructionRandom.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
@@ -137,9 +137,9 @@ namespace sw
                 }
             }
 
-            static RHIVertex makeVertex( const float2& point, float32 normalZ, const float2& boundsMin, const float2& extent )
+            static MeshVertex makeVertex( const float2& point, float32 normalZ, const float2& boundsMin, const float2& extent )
             {
-                RHIVertex vertex{};
+                MeshVertex vertex{};
                 vertex._arrPosition[0] = point._x;
                 vertex._arrPosition[1] = point._y;
                 vertex._arrNormal[2]   = normalZ;

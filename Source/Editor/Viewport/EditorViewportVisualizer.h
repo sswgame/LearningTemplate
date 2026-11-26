@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Config/EditorIconName.h"
 #include "Editor/Common/EditorExtensionRegistry.h"
-#include "Editor/Viewport/Model/EditorVisualizerToggles.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerToggles.h"
 
 struct ImDrawList;
 
@@ -146,9 +146,9 @@ namespace sw::editor
 } // namespace sw::editor
 
 // 화면 도구(`_pTool`)를 등록하는 줄은 MVVM View 번역 단위에서만 컴파일된다 — View 부분(`EditorTier<N>MVVMView` · 확장의 `<이름>PanelView`)만 빌드가
-// SW_EDITOR_PANEL_VIEW=1 을 주고, 그 부분은 씬 · 모델 헤더 껍데기를 받는다. 그래서 도구를 등록하면 그 파일이 View 목록에 들어 있지 않고는 짓지 못한다.
+// SW_EDITOR_PANEL_VIEW=1 을 주고, 그 부분은 씬 · 모델 헤더 가드를 받는다. 그래서 도구를 등록하면 그 파일이 View 목록에 들어 있지 않고는 짓지 못한다.
 // 도구 함수 시그니처를 값 문맥으로 좁히는 길은 고르지 않았다 — 언리얼 FEditorViewportClient 확장 · 유니티 EditorTool 처럼 도구 본문은 전역 서비스(활성 씬 · 선택)에
-// 닿을 수 있어 시그니처로는 씬 읽기를 막지 못하고, include 경계(껍데기)만 막는다.
+// 닿을 수 있어 시그니처로는 씬 읽기를 막지 못하고, include 경계(가드)만 막는다.
 #ifndef SW_EDITOR_PANEL_VIEW
     #define SW_EDITOR_PANEL_VIEW 0
 #endif
@@ -170,7 +170,7 @@ namespace sw::editor
  * @brief 화면 도구(`_pTool` — 값을 그리고 마우스를 명령으로 낸다)가 있는 시각화를 등록합니다. MVVM View 파일에서만 컴파일된다(위 주석). 앞 인자는
  *        `SW_EDITOR_VISUALIZER_GATHER` 와 같고, @p pGather 는 모으기가 없으면 nullptr 입니다(Model 의 모으기 함수는 그 Model 헤더가 선언한다).
  */
-#define SW_EDITOR_VISUALIZER_TOOL( name, pID, order, pIcon, pToggleLabel, pTooltip, bDefaultOn, pTool, pGather )                                                \
-    static_assert( SW_EDITOR_PANEL_VIEW, "SW_EDITOR_VISUALIZER_TOOL: a viewport tool draws values and sends commands - register it from an MVVM View file "     \
-                                         "([panelViewBan] views in Config/Rules/Layers/EditorLayers.toml, or PANEL_VIEW_SOURCES of sw_add_editor_extension)" ); \
+#define SW_EDITOR_VISUALIZER_TOOL( name, pID, order, pIcon, pToggleLabel, pTooltip, bDefaultOn, pTool, pGather )                                                  \
+    static_assert( SW_EDITOR_PANEL_VIEW, "SW_EDITOR_VISUALIZER_TOOL: a viewport tool draws values and sends commands - register it from an MVVM View file "       \
+                                         "([panelViewGuard] views in Config/Rules/Layers/EditorLayers.toml, or PANEL_VIEW_SOURCES of sw_add_editor_extension)" ); \
     SW_EDITOR_REGISTER( ::sw::editor::EditorVisualizerRegistration, Visualizer_##name, { pID, order }, pIcon, pToggleLabel, pTooltip, bDefaultOn, pTool, pGather )

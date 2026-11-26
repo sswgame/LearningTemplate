@@ -51,7 +51,7 @@ class ToolPolicyTest(unittest.TestCase):
 
     def test_push_needs_preflight_and_other_commands_pass(self):
         self.assertIsNotNone(self.pre("Bash", {"command": "git push origin abc:main"}))
-        self.assertIsNotNone(self.pre("Bash", {"command": "bash Scripts/dev/preflight.sh --dry-run"}))
+        self.assertIsNotNone(self.pre("Bash", {"command": "bash Scripts/verify/preflight.sh --dry-run"}))
         self.assertIsNone(self.pre("Bash", {"command": "git status"}))
         self.post("Skill", {"skill": "humanizer"})
         self.assertIsNone(self.pre("Edit", {"file_path": "D:/P/docs/NEXT.md"}))
@@ -72,11 +72,11 @@ class ToolPolicyTest(unittest.TestCase):
         self.assertGreater(p95, 0.0)
 
     def test_tool_rules_anchor_on_the_command_position(self):
-        for command in ("py -3 -m Scripts linux-scenarios all", "cd x && py -3 Scripts/dev/linux_scenarios.py chain a", "python3 Scripts/dev/linux_scenarios.py build"):
+        for command in ("py -3 -m Scripts linux-verify all", "cd x && py -3 Scripts/verify/linux_verify.py chain a", "python3 Scripts/verify/linux_verify.py build"):
             self.assertIn("linux-verify-before-linux", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
-        for command in ("git -C D:/P push origin abc:main", "cd x && bash Scripts/dev/preflight.sh --no-linux"):
+        for command in ("git -C D:/P push origin abc:main", "cd x && bash Scripts/verify/preflight.sh --no-linux"):
             self.assertIn("preflight-before-push", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
-        for command in ("git grep -n run_in_wsl Scripts/dev/linux_scenarios.py", "git show HEAD:Scripts/dev/preflight.sh", "grep -n push Scripts/dev/preflight.sh"):
+        for command in ("git grep -n run_in_wsl Scripts/verify/linux_verify.py", "git show HEAD:Scripts/verify/preflight.sh", "grep -n push Scripts/verify/preflight.sh"):
             self.assertIsNone(self.pre("Bash", {"command": command}))
 
     def test_polling_loop_is_refused(self):

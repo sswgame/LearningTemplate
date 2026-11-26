@@ -11,7 +11,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
 
-#include "DevTools/Client/Render/OcclusionDebugStats.h"
+#include "DevTools/Client/Render/OcclusionTileStats.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"

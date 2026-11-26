@@ -6,7 +6,7 @@
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/SecureRandom.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Serialization/LittleEndianUtil.h"
 
 #include <cstring>

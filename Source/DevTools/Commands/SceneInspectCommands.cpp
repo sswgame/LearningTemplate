@@ -15,7 +15,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 
 #include <charconv>
 
@@ -112,7 +112,7 @@ namespace sw
                         outReply += "  ";
                         outReply += prop._name.c_str();
                         outReply += " = ";
-                        outReply += SerializerUtil::formatPropertyText( prop, ObjectAddress{ pComponent }, context );
+                        outReply += PropertySerializer::formatPropertyText( prop, ObjectAddress{ pComponent }, context );
                         outReply += '\n';
                     }, true );
                 } );

@@ -3,7 +3,7 @@
  * @brief 빙의 이벤트입니다. 플레이어 조종자가 다른 폰에 빙의하면 "game" 채널(`GameEventUtil::send`)에 냅니다. 미니맵(`MinimapComponent`)이 받아 조종하는 폰을 따라갑니다.
  */
 #pragma once
-#include "Core/Event/EventType.h"
+#include "Core/Event/EventBase.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 

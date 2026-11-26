@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 

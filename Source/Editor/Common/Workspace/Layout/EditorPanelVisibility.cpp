@@ -1,0 +1,29 @@
+#include "pch.h"
+
+#include "Editor/Common/Workspace/Layout/EditorPanelVisibility.h"
+
+#include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
+
+namespace sw::editor
+{
+    bool EditorPanelVisibility::saveToFile( const AbsolutePath& absPath ) const
+    {
+        return JSONSerializer::saveToFile( absPath, this, *StaticType() );
+    }
+
+    ConfigReadResult EditorPanelVisibility::loadFromFile( const AbsolutePath& absPath )
+    {
+        _mapOpen.clear();
+        return ConfigManager::readConfigFile( *this, absPath );
+    }
+
+    bool EditorPanelVisibility::findOpen( string_view panelID, bool& outOpen ) const
+    {
+        const auto iter = _mapOpen.find( string( panelID ) );
+        if ( iter == _mapOpen.end() )
+            return false;
+        outOpen = iter->second;
+        return true;
+    }
+} // namespace sw::editor

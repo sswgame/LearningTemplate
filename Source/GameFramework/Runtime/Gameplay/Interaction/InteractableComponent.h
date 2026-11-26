@@ -20,7 +20,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionCatalog.h"
@@ -49,7 +49,7 @@ namespace sw
      *          (`SocketSetComponent` 의 `*.sockets.xml`, 마커의 +Z 가 하는 쪽이 볼 방향)에서 찾고, 없으면 오브젝트의 원점과 앞 방향을 쓴다. 하는 쪽이 시작할 때
      *          그 위치를 마커 이름의 워프 목표로 넣으면(`MotionWarpingComponent`), 애니메이션이 모션 워핑으로 손을 문고리에 맞춘다.
      *          강조 요청은 고른 하는 쪽(`InteractorComponent`)이 켜고 끄는 원자 플래그이므로 렌더러와 UI 가 아무 때나 읽을 수 있다(`getHighlightRequest`).
-     *          완료(`completeInteraction`)는 쿨다운을 걸고, 완료 수를 늘리고(같은 오브젝트의 기믹 센서가 읽어 가며, 상호작용은 기믹을 모른다),
+     *          완료(`completeInteraction`)는 쿨다운을 걸고, 완료 수를 늘리고(같은 오브젝트의 논리 회로 센서가 읽어 가며, 상호작용은 장치를 모른다),
      *          `InteractionCompletedEvent` 를 내고, 권한 훅에 알린다. 게임 스레드에서 부르며, 하는 쪽이 호출을 틱 뒤로 미룬다.
      */
     REFLECT( Category = "Interaction", DisplayName = "Interactable", Tooltip = "Something an interactor can use: data-defined kind, alignment point, cooldown, highlight" )
@@ -131,7 +131,7 @@ namespace sw
                 std::invoke( Method, pListener, user );
             } );
         }
-        /** @brief 지금까지 끝난 횟수입니다. 아무 스레드에서 읽어도 됩니다. 기믹 센서가 지난번에 읽은 수와 비교해서 사용 횟수로 셉니다. */
+        /** @brief 지금까지 끝난 횟수입니다. 아무 스레드에서 읽어도 됩니다. 논리 회로 센서가 지난번에 읽은 수와 비교해서 사용 횟수로 셉니다. */
         uint32 getCompletedCount() const { return _completedCount.load( std::memory_order_relaxed ); }
         /** @brief 마지막으로 끝낸 쪽입니다. 밀기 방향과 채집 보상 대상을 정하는 데 씁니다. */
         GameObjectHandle getLastInteractor() const { return _lastInteractor; }
@@ -172,7 +172,7 @@ namespace sw
         SW_TRANSIENT AssetReloadWatch<InteractionCatalog> _catalogReload;    ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
         SW_TRANSIENT InstanceHighlight                    _appliedHighlight; ///< 메시에 마지막으로 옮긴 강조(강조가 있는 동안은 나중에 붙은 메시에도 다시 옮긴다)
         MulticastDelegate<void( const GameObject& )>      _completed;        ///< 끝남 알림(`listenCompleted`)
-        SW_TRANSIENT atomic<uint32> _completedCount;                         ///< 끝난 횟수. 같은 오브젝트의 기믹 센서가 읽어 간다
+        SW_TRANSIENT atomic<uint32> _completedCount;                         ///< 끝난 횟수. 같은 오브젝트의 논리 회로 센서가 읽어 간다
         SW_TRANSIENT atomic<uint8> _bHighlightRequested;
         SW_TRANSIENT uint8         _bHasOverride;
         SW_TRANSIENT SlotHandle    _arrSpatialEntry[2]; ///< 공간(3D · 2D)마다의 색인 항목(등록 ~ 해제)

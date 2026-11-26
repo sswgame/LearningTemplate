@@ -9,7 +9,7 @@
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetImportDigest.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
 #include "Editor/Common/Asset/ModelImport/ModelImporter.h"
 #include "Editor/Common/Asset/Texture/HeightfieldImporter.h"

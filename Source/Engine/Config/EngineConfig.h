@@ -7,7 +7,7 @@
 #include "Engine/Config/IConfig.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 #include "sw/config/CookContract.gen.h"
 
@@ -244,7 +244,7 @@ namespace sw
     /**
      * @struct FileServeConfig
      * @brief 장치가 PC 의 팩 폴더를 받는 개발 전용 전송(`-fileserve=<주소>` — `FileServeContentSource` + 평문 HTTP 클라이언트 `PlainHTTPClient`)의 한도입니다.
-     * @details 응답은 PC 쪽 서버(`py -3 -m Scripts fileserve`)가 보내지만 믿지 않는다 — 머리말 · 본문 상한과 요청 시한이 넘치면 그 요청은 실패다(언리얼 `HttpMaxContentLength` · 요청 시한 자리).
+     * @details 응답은 PC 쪽 서버(`py -3 -m Scripts file-server`)가 보내지만 믿지 않는다 — 머리말 · 본문 상한과 요청 시한이 넘치면 그 요청은 실패다(언리얼 `HttpMaxContentLength` · 요청 시한 자리).
      *          본문 상한은 받는 구간(`FileServeContentSource::kChunkBytes`, 1 MiB) 이상이어야 한다 — 아니면 기동(`AndroidMain`)이 멈춘다. 배포 구성은 이 전송을 짓지 않는다.
      */
     REFLECT()
@@ -756,7 +756,7 @@ namespace sw
         vector<string> _listResourcePriority{}; ///< 리소스 팩 탐색 우선순위(앞이 먼저)
 
         /**
-         * @brief 기동 스플래시 이미지(압축 없는 32bpp `.dds`, 도메인을 포함한 리소스 경로)입니다.
+         * @brief 기동 스플래시 이미지(압축 없는 32bpp `.dds`, 도메인을 포함한 에셋 경로)입니다.
          * @details 스플래시는 엔진 기본 에셋 표(`EngineDefaultAssets`)와 에셋 색인보다 먼저 떠서 GUID 로 적지 못한다 — 엔진 설정의 경로다. 에디터 도메인은 팩에 담기지 않으므로
          *          낱개 파일을 읽지 않는 실행(배포 · `-cooked-content`)은 스플래시를 띄우지 않는다(`SplashSubsystem`).
          */

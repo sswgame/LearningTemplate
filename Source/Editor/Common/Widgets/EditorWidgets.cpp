@@ -1,4 +1,4 @@
-// ImGui 입력 위젯을 직접 부르는 유일한 자리다 — CMake 가 이 파일에만 SW_EDITOR_WIDGET_ADAPTER=1 을 주어 금지 헤더(EditorInputBan.h)의 위젯 절을 받지 않는다(`sw_apply_editor_input_ban`).
+// ImGui 입력 위젯을 직접 부르는 유일한 자리다 — CMake 가 이 파일에만 SW_EDITOR_WIDGET_ADAPTER=1 을 주어 금지 헤더(EditorImGuiInputGuard.h)의 위젯 절을 받지 않는다(`sw_apply_editor_input_guard`).
 #include "pch.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -20,8 +20,8 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"

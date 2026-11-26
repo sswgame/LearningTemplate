@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 namespace sw
 {
@@ -15,8 +15,8 @@ namespace sw
     {
         struct CameraDirectorInternal
         {
-            static constexpr FormatDef kStateFormat{ "CDIR" };
-            static constexpr uint32    kLayerMinBytes = 64; ///< 층 하나의 최소 바이트(이름 · 블렌드 · 진행 · 포즈 둘 · 상태)
+            static constexpr FormatDesc kStateFormat{ "CDIR" };
+            static constexpr uint32     kLayerMinBytes = 64; ///< 층 하나의 최소 바이트(이름 · 블렌드 · 진행 · 포즈 둘 · 상태)
 
             static bool isCut( const BlendCurveDef& blend ) { return blend._curve == BlendCurve::Cut || blend._duration <= 0.0f; }
 

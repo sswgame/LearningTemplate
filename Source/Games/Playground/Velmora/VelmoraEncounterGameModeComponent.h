@@ -10,9 +10,9 @@
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatRoom.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
@@ -47,7 +47,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr FormatDef kStateFormat{ "VLEN" };
+        static constexpr FormatDesc kStateFormat{ "VLEN" };
 
         VelmoraEncounterGameModeComponent();
         virtual ~VelmoraEncounterGameModeComponent() override;
@@ -58,10 +58,10 @@ namespace sw
         [[nodiscard]] bool submitCombatInput( bool bAttackPressed, bool bDashPressed );
 
         // ---- 읽기(클라이언트 · 감시 값) ----
-        const ActionRoom& getRoom() const { return _room; }
-        bool              isFighting() const { return _phase == VelmoraPhase::Hall || _phase == VelmoraPhase::Boss; }
-        int32             getPhase() const { return static_cast<int32>( _phase ); }
-        int32             getAliveEnemyCount() const { return _room.getAliveEnemyCount(); }
+        const ActionCombatRoom& getRoom() const { return _room; }
+        bool                    isFighting() const { return _phase == VelmoraPhase::Hall || _phase == VelmoraPhase::Boss; }
+        int32                   getPhase() const { return static_cast<int32>( _phase ); }
+        int32                   getAliveEnemyCount() const { return _room.getAliveEnemyCount(); }
         /** @brief 다음 공격 입력이 먹으면 true 입니다 — 쿨다운이 끝났고 걸음을 기다리는 공격도 없다. */
         bool isAttackReady() const { return _room.isAttackReady() && _bAttackQueued == SW_FALSE; }
 
@@ -82,13 +82,13 @@ namespace sw
         PROPERTY( Category = "Combat", DisplayName = "Boss Delay", Tooltip = "Seconds between clearing the hall (or entering a boss region) and the boss fight", Min = 0.1, Units = s )
         float32 _bossDelaySeconds;
         PROPERTY( Required, Category = "Player", DisplayName = "Room", Tooltip = "Dash, invulnerability, attack cooldown and damage of the player; every value is required" )
-        ActionRoomSettings _roomSettings;
+        ActionCombatRoomSettings _roomSettings;
 
-        SW_TRANSIENT ActionRoom   _room;
-        SW_TRANSIENT Countdown    _bossDelay;
-        SW_TRANSIENT VelmoraPhase _phase;
-        SW_TRANSIENT uint8        _bAttackQueued : 1; ///< 다음 걸음이 쓸 공격 누름
-        SW_TRANSIENT uint8        _bDashQueued   : 1; ///< 다음 걸음이 쓸 대시 누름
-        [[maybe_unused]] uint8    _reserved      : 6;
+        SW_TRANSIENT ActionCombatRoom _room;
+        SW_TRANSIENT Countdown        _bossDelay;
+        SW_TRANSIENT VelmoraPhase     _phase;
+        SW_TRANSIENT uint8            _bAttackQueued : 1; ///< 다음 걸음이 쓸 공격 누름
+        SW_TRANSIENT uint8            _bDashQueued   : 1; ///< 다음 걸음이 쓸 대시 누름
+        [[maybe_unused]] uint8        _reserved      : 6;
     };
 } // namespace sw

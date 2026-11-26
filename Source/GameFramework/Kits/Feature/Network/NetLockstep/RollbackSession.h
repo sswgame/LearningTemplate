@@ -20,7 +20,8 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
+#include "Core/Network/Message/NetMessageWriter.h"
 #include "Core/Network/Replication/NetInputWindow.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 

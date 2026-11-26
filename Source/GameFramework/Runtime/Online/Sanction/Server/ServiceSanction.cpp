@@ -4,7 +4,7 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordCodec.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw

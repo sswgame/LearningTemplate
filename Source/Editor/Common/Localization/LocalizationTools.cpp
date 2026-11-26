@@ -50,7 +50,7 @@ namespace sw
             }
 
             /**
-             * @brief 리소스 id(파일 · 폴더) 또는 절대 경로를 디스크의 절대 경로로 바꿉니다. 둘 중 무엇인지는 글의 모양이 정한다(엄격한 절대 경로인지). 못 풀면 빈 글이다.
+             * @brief 에셋 id(파일 · 폴더) 또는 절대 경로를 디스크의 절대 경로로 바꿉니다. 둘 중 무엇인지는 글의 모양이 정한다(엄격한 절대 경로인지). 못 풀면 빈 글이다.
              * @details 예전에는 작업 폴더에 그 이름이 있는지 먼저 보고, 리소스로 찾아보고, 그래도 없으면 받은 글을 그대로 돌려줬다(작업 폴더 상대 경로로 읽혔다).
              *          전역 id(`game/playground/…`)는 활성 게임과 상관없이 그 위치다. 도구는 모든 팩을 다룬다 — 붙인 도메인도 같은 입구로 푼다.
              */
@@ -468,7 +468,7 @@ namespace sw
                 }
             }
 
-            /** @brief 에셋 루트 아래의 XML · 대화 파일에서 문구를 모읍니다. 출처는 리소스 id 입니다. */
+            /** @brief 에셋 루트 아래의 XML · 대화 파일에서 문구를 모읍니다. 출처는 에셋 id 입니다. */
             static void gatherAssetRoots( const LocalizationProject& project, TextGatherer& gatherer )
             {
                 for ( const DataPath& assetRootPath : project._listAssetRoot )
@@ -476,7 +476,7 @@ namespace sw
                     const string&    assetRoot   = assetRootPath.get();
                     const DiskPath   assetFolder = resolveAbsolutePath( assetRoot );
                     vector<DiskPath> listFile;
-                    // 에셋 루트가 리소스 루트면 옛 작업 도메인 자리의 찌꺼기가 섞인다 — EditorContentScan 이 뺀다
+                    // 에셋 루트가 콘텐츠 루트면 옛 작업 도메인 자리의 찌꺼기가 섞인다 — EditorContentScan 이 뺀다
                     const bool bListed = FileUtil::isDirectory( assetFolder ) && editor::EditorContentScan::collectFiles( assetFolder, editor::EditorContentScan::kArrDataXMLExtension,
                                                                                                                           SW_COUNT_OF( editor::EditorContentScan::kArrDataXMLExtension ), listFile, true );
                     if ( bListed == false )

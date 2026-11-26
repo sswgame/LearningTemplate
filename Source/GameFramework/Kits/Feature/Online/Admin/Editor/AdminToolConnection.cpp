@@ -2,12 +2,12 @@
 
 #include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolConnection.h"
 
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
 #include "Engine/Reflection/EnumName.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 
 namespace sw::editor

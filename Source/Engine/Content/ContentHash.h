@@ -23,7 +23,7 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -59,11 +59,11 @@ namespace sw
          */
         static uint64 computeFile( const DiskPath& absPath );
         /**
-         * @brief @p stamp 를 열쇠로 내용 값을 캐시해도 되는지 — 쓴 지 시간 창(2 초)이 지났는지입니다.
+         * @brief @p fileStat 를 열쇠로 내용 값을 캐시해도 되는지 — 쓴 지 시간 창(2 초)이 지났는지입니다.
          * @details git 의 racy-git 과 같은 결함이다: 같은 틱 안에 같은 크기로 다시 쓴 파일은 (크기, 시각) 도장이 같아 옛 값이 돌아왔다(셰이더 쿠킹 판정 테스트가 전체 실행에서만 졌다).
          *          막 쓴 파일은 매번 읽고 자리 잡은 파일만 캐시한다. 내용 해시 캐시와 트리 훑기 캐시(`AssetScanCache`)가 이 판정 하나를 쓴다.
          */
-        static bool isStampStable( const FileStamp& stamp );
+        static bool isStatStable( const FileStat& fileStat );
         /** @brief 캐시를 비웁니다(수동 리로드의 "전부 다시 본다"). 이 프로세스의 쓰기는 쓰기 관찰자가 이미 받으므로 테스트가 부를 일은 없다. */
         static void clearCache();
     };
@@ -98,7 +98,7 @@ namespace sw
         /** @brief `ContentHash::computeFile` 의 본문입니다. */
         uint64 computeFile( const DiskPath& absPath ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 영속 캐시 파일의 판입니다. 항목 모양이나 해시 규칙을 바꾸면 올린다 — 다른 판의 파일은 빈 캐시로 읽는다. */
-        static constexpr FormatDef kCacheFormat{ "SWHC" };
+        static constexpr FormatDesc kCacheFormat{ "SWHC" };
         /** @brief 로컬 영속 캐시 파일(`<프로젝트>/Saved/ContentHashCache.bin`)입니다. */
         static AbsolutePath makeLocalCachePath();
         /**
@@ -130,9 +130,9 @@ namespace sw
         /** @brief 항목 하나입니다. 그 해시를 구했을 때의 파일 크기와 쓰기 시각을 함께 둡니다. */
         struct Entry
         {
-            FileStamp _stamp{};
-            uint64    _hash{ 0 };        ///< 0 은 "자기 쓰기 표" — 이 도장의 내용은 이 프로세스가 썼고 해시는 다음 조회가 읽어 채운다
-            uint64    _writeSerial{ 0 }; ///< 이 항목을 만든 자기 쓰기의 번호. 읽는 사이에 다른 자기 쓰기가 끼면 번호가 달라 읽은 해시를 버린다
+            FileStat _fileStat{};
+            uint64   _hash{ 0 };        ///< 0 은 "자기 쓰기 표" — 이 도장의 내용은 이 프로세스가 썼고 해시는 다음 조회가 읽어 채운다
+            uint64   _writeSerial{ 0 }; ///< 이 항목을 만든 자기 쓰기의 번호. 읽는 사이에 다른 자기 쓰기가 끼면 번호가 달라 읽은 해시를 버린다
         };
 
         /** @brief 캐시 열쇠입니다(구분자를 맞춘 경로 — 쓰기 입구와 조회가 같은 열쇠를 쓴다). */

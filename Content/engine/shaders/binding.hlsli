@@ -295,7 +295,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_FlareTint;
     // 화면 공간 반사(screen_space_reflection.hlsl, C++ PostProcessValues) — (세기, 최대 거리 m, 두께 m, 최대 거칠기). ScreenSpaceReflection 패스만 읽는다
     float4 g_SSRParams;
-    float4 g_SSRHZBParams; // 화면 공간 반사의 HZB(hzb.hlsli) — xy 지은 깊이 사각형 px, z 밉 수, w 0. ScreenSpaceReflection 패스만 읽는다(C++ FramePassExecutor::executeScreenSpaceReflectionPass)
+    float4 g_SSRHZBParams; // 화면 공간 반사의 HZB(hzb.hlsli) — xy 지은 깊이 사각형 px, z 밉 수, w 0. ScreenSpaceReflection 패스만 읽는다(C++ FrameRecorder::executeScreenSpaceReflectionPass)
     float4 g_CameraLens;   // 카메라별 피사계 심도 — x 초점 거리(m), y 착란원 반지름 배율(px, 반지름 = y · |1 - x / 깊이|), z 반지름 상한(px), w 켬 1 · 끔 0(depth_of_field.hlsl)
     float4 g_OutlineColor;
     float4 g_OutlineParams;
@@ -328,13 +328,13 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_SkyCloudSun;
     float4 g_SkyCloudAmbient;
     float4 g_SkyCloudGround;
-    // 시간 누적 표본(기록 첨부를 첫 출력으로 쓰는 패스마다, C++ FramePassExecutor::bindOutputHistory) — (텍셀 안 자리 xy: 텍셀 단위 ±0.5, 걸음 시작 0..1, 첨부 나눗수). 기록을 버리면 0 번 표본부터.
+    // 시간 누적 표본(기록 첨부를 첫 출력으로 쓰는 패스마다, C++ FrameRecorder::bindOutputHistory) — (텍셀 안 자리 xy: 텍셀 단위 ±0.5, 걸음 시작 0..1, 첨부 나눗수). 기록을 버리면 0 번 표본부터.
     float4 g_TemporalSample;
     // 스카이 라이트(lighting.hlsli SkyLight, C++ SkyLightData) — 하늘을 거칠기 단계마다 거른 환경광이 g_SwLightProbes(t13)에서 차지한 자리:
     // (옥타헤드럴 한 변 텍셀 수, 거칠기 단계 수, 첫 원소 번호, 0). 씬에 하늘이 없으면 모두 0 이고 환경광은 앰비언트 색이다. 배치는 binding_slots.hlsli 8 절.
     float4 g_SkyLight;
     // 높이 · 거리 지수 안개(안개 패스 fog.hlsl, C++ FogSettings) — (안개 색 rgb, 밀도) · (높이 감쇠, 기준 높이, 시작 거리, 최대 불투명도) · (방향광 산란 색 × 세기 rgb, 지수) ·
-    // (볼륨 안개 켬 1, 볼륨 거리, 산란 배율, 이방성). 씬에 안개가 없으면 안개 패스가 돌지 않는다. 볼륨 켬은 주 시점에서 컴퓨트가 돈 프레임만 1 이다(FramePassExecutor::executeFogPass).
+    // (볼륨 안개 켬 1, 볼륨 거리, 산란 배율, 이방성). 씬에 안개가 없으면 안개 패스가 돌지 않는다. 볼륨 켬은 주 시점에서 컴퓨트가 돈 프레임만 1 이다(FrameRecorder::executeFogPass).
     float4 g_FogColorDensity;
     float4 g_FogHeightParams;
     float4 g_FogInscatter;
@@ -415,7 +415,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  g_SwVertexAnimationCount;    // 그 표의 단어(uint32) 수 — 범위 밖 번호를 막는다
     float g_SwVertexAnimationTime;     // VAT 시계(초) — 게임 스레드의 군중 시계를 EngineConfig _shaderTimeRolloverSeconds 주기로 접은 값(인스턴스 위상도 같은 접힌 시계로 잰다)
     float g_SwMaterialTime;            // 머티리얼 애니메이션 시계(초, 툰 UV 애니메이션) — VAT 시계와 같은 값이지만 VAT 표가 없어도 늘 걸린다
-    // 풀스크린 패스(`_type="Fullscreen"`, C++ FramePassExecutor::executeFullscreenPass)의 칸 — 셰이더가 binding.hlsli 를 include 하기 전에 적는다:
+    // 풀스크린 패스(`_type="Fullscreen"`, C++ FrameRecorder::executeFullscreenPass)의 칸 — 셰이더가 binding.hlsli 를 include 하기 전에 적는다:
     //     #define SW_PASS_CB_USER_PARAMS uint g_<입력>Index; uint g_<출력>HistoryIndex; float g_<값>;
     // 엔진 칸과 같은 규칙으로 C++ 가 리플렉션 이름으로 채운다(미러 없음). 유니티 Full Screen Pass 가 셰이더 프로퍼티 이름으로 거는 쪽이고, 언리얼은 패스마다 C++ 매개변수 구조체를 따로 선언한다.
     // 엔진 칸 뒤에 붙어 엔진 칸의 자리가 바뀌지 않고, 칸 수는 로드 검증이 막는다(RenderGraphPassDesc::kMaxNamedPassCBParams).
@@ -910,7 +910,7 @@ static float4x4 InstanceData::loadPreviousWorld( uint instanceSlot, float4x4 cur
 //      쓰는 셰이더: VS 출력 구조체에 `SW_APPEARANCE_VARYING`, VS 끝에 `SW_APPEARANCE_WRITE( output, instance )`, PS 의 출력을 다 만든 **뒤**(반환 직전)에
 //      `SW_APPEARANCE_CLIP( input )`. Vulkan 1.2 타깃의 `clip` 은 OpKill 이라 버린 픽셀이 쿼드 이웃의 미분(ddx · Sample 의 밉)에서 빠진다 — 텍스처 읽기 앞에서
 //      버리면 이웃의 밉이 틀린다. 1.3 의 demote(도움 호출로 남기기)를 요구하지 않으려고 순서로 막는다(constant::render::kVulkanRequiredMinor).
-//      순서는 커밋 훅의 린트(Scripts/lint/shader_kill_order.py)가 본다 — 버리기 뒤에 미분을 쓰는 읽기 · 호출이 있는 함수는 커밋되지 않는다.
+//      순서는 커밋 훅의 린트(Scripts/lint/rules/shader_kill_order.py)가 본다 — 버리기 뒤에 미분을 쓰는 읽기 · 호출이 있는 함수는 커밋되지 않는다.
 //      변형이 아니면 셋 다 비어 바이트코드가 그대로다.
 // ------------------------------------------------------------------------------
 

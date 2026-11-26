@@ -18,7 +18,7 @@
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/CookCodeDigest.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -62,10 +62,10 @@ namespace sw
     CookJobDesc VertexAnimationCooker::makeCookJobDesc( float32 framesPerSecond )
     {
         CookJobDesc desc;
-        desc._cookerName      = "VertexAnimation";
-        desc._codeFingerprint = CookCodeFingerprint::find( "VertexAnimation" );
-        desc._target          = "Any";
-        desc._settingsHash    = BitUtil::floatToBits( framesPerSecond ); // 설정 해시는 프레임율의 비트 그대로다
+        desc._cookerName   = "VertexAnimation";
+        desc._codeDigest   = CookCodeDigest::find( "VertexAnimation" );
+        desc._target       = "Any";
+        desc._settingsHash = BitUtil::floatToBits( framesPerSecond ); // 설정 해시는 프레임율의 비트 그대로다
         return desc;
     }
 

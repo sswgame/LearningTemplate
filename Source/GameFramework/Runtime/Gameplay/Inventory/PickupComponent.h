@@ -10,7 +10,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"

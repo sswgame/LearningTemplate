@@ -15,10 +15,10 @@
 #include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoomLook.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatRoomLook.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/ActionCombatGameModeComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Health/RuleHealthViewComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
@@ -66,7 +66,7 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Sphere Prefab", Required, Tooltip = "1 m diameter sphere scaled to the actors, projectiles and the player" )
         AssetRef<PrefabAsset> _spherePrefab;
         PROPERTY( Category = "View", DisplayName = "Room Look" )
-        ActionRoomLook _roomLook;
+        ActionCombatRoomLook _roomLook;
         PROPERTY( Category = "View", DisplayName = "Player Radius", Min = 0.01, Units = m )
         float32 _playerRadius;
         PROPERTY( Category = "View", DisplayName = "Player Height", Tooltip = "Height of the player's center above the floor", Units = m )
@@ -155,10 +155,10 @@ namespace sw
 
     void ActionCombatAvatarComponent::showRoom( const ActionCombatGameModeComponent& director, GameObjectManager& manager )
     {
-        const ActionRoom&       room  = director.getRoom();
+        const ActionCombatRoom& room  = director.getRoom();
         const ActionCombatPhase phase = director.getCombatPhase();
         _sphereViews.begin();
-        (void)_sphereViews.show( manager, _spherePrefab, ActionRoomLook::makePosition( director.getPlayerPosition(), _playerHeight ), float3{ _playerRadius * 2.0f }, 0.0f,
+        (void)_sphereViews.show( manager, _spherePrefab, ActionCombatRoomLook::makePosition( director.getPlayerPosition(), _playerHeight ), float3{ _playerRadius * 2.0f }, 0.0f,
                                  room.isPlayerInvulnerable() ? _invulnerableColor : _playerColor );
         if ( phase == ActionCombatPhase::Hall || phase == ActionCombatPhase::Boss )
         {

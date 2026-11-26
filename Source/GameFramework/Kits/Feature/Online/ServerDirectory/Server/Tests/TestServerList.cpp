@@ -20,10 +20,10 @@ namespace
 {
     /**
      * @brief 서버 쪽 가짜 디렉터리 — 목록 요청(`kListServers`)만 받는다. 아는 종류(`kKnownKind`)면 정해 둔 두 서버를, 아니면 `kUnknownKind` 로 답한다.
-     * @details 실제 서버 서비스(`ServerDirectoryServer`)는 서버 키트 DLL 이고 캐시의 서버 레코드를 읽어야 해서, 클라이언트 키트 테스트는 같은 프로토콜 항목의 가짜를 올린다.
+     * @details 실제 서버 서비스(`ServerDirectoryService`)는 서버 키트 DLL 이고 캐시의 서버 레코드를 읽어야 해서, 클라이언트 키트 테스트는 같은 프로토콜 항목의 가짜를 올린다.
      *          `_bHoldAnswers` 를 켜면 답하지 않고 토큰만 들었다가 끄면 다음 서비스 틱에 답한다(묻는 중 상태를 붙잡는다).
      */
-    class FakeServerDirectoryService final : public IOnlineServerService
+    class FakeServerDirectoryLogic final : public IOnlineServerService
     {
     public:
         static constexpr const utf8* kKnownKind = "dedicated";
@@ -31,7 +31,7 @@ namespace
         int32 _requestCount{ 0 };
         uint8 _bHoldAnswers : 1;
 
-        FakeServerDirectoryService()
+        FakeServerDirectoryLogic()
             : _bHoldAnswers{ SW_FALSE }
         {
         }
@@ -42,7 +42,7 @@ namespace
         {
             ++_requestCount;
             ServerListRequest request;
-            if ( context._method != ServerDirectoryMethod::ListServers::kID || ServerDirectoryProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
+            if ( context._method != ServerDirectoryMethod::ListServers::kID || ServerDirectoryProtocol::MessageTypes::read( body, request ) != LayoutReadResult::Ok )
             {
                 (void)host.respondError( context._token, OnlineError::kInvalidRequest );
                 return;
@@ -111,11 +111,11 @@ namespace
      */
     struct ServerListFixture
     {
-        FakeServerDirectoryService _service{};
-        ServerDirectoryClient      _directoryClient{};
-        test::OnlineTestFixture    _rig{ false };
-        ServerList                 _model{};
-        uint8                      _bReady : 1;
+        FakeServerDirectoryLogic _service{};
+        ServerDirectoryClient    _directoryClient{};
+        test::OnlineTestFixture  _rig{ false };
+        ServerList               _model{};
+        uint8                    _bReady : 1;
 
         ServerListFixture()
             : _bReady{ SW_FALSE }
@@ -192,7 +192,7 @@ SW_TEST_CASE( ServerListTest, AnsweredListIsLoaded )
     ServerListFixture rig;
     SW_REQUIRE_TRUE( rig._bReady );
 
-    SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) );
+    SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryLogic::kKnownKind ) );
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Loading );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._model.getRevision() );
     rig.poll();
@@ -200,7 +200,7 @@ SW_TEST_CASE( ServerListTest, AnsweredListIsLoaded )
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Loaded );
     SW_EXPECT_EQUAL( OnlineError::kOk, rig._model.getErrorCode() );
     SW_EXPECT_EQUAL( uint64{ 2 }, rig._model.getRevision() );
-    const vector<ServerListEntry> listExpected = FakeServerDirectoryService::makeKnownList();
+    const vector<ServerListEntry> listExpected = FakeServerDirectoryLogic::makeKnownList();
     SW_REQUIRE_EQUAL( listExpected.size(), rig._model.getEntries().size() );
     for ( size_t index = 0; index < listExpected.size(); ++index )
     {
@@ -215,12 +215,12 @@ SW_TEST_CASE( ServerListTest, OverlappingRefreshIsRejectedWhileLoading )
     SW_REQUIRE_TRUE( rig._bReady );
     rig._service._bHoldAnswers = SW_TRUE;
 
-    SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) );
+    SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryLogic::kKnownKind ) );
     rig.poll(); // 서버가 받고 답을 붙잡는다
     SW_EXPECT_EQUAL( 1, rig._service._requestCount );
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Loading );
 
-    SW_EXPECT_FALSE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) );
+    SW_EXPECT_FALSE( rig._model.refresh( FakeServerDirectoryLogic::kKnownKind ) );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._model.getRevision() ); // 거절은 상태를 건드리지 않는다
     rig.poll();
     SW_EXPECT_EQUAL( 1, rig._service._requestCount ); // 겹친 요청은 나가지 않았다
@@ -230,7 +230,7 @@ SW_TEST_CASE( ServerListTest, OverlappingRefreshIsRejectedWhileLoading )
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Loaded );
     SW_EXPECT_EQUAL( uint64{ 2 }, rig._model.getRevision() );
 
-    SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) ); // Loaded 뒤에는 다시 묻는다
+    SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryLogic::kKnownKind ) ); // Loaded 뒤에는 다시 묻는다
     rig.poll();
     SW_EXPECT_EQUAL( 2, rig._service._requestCount );
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Loaded );
@@ -241,7 +241,7 @@ SW_TEST_CASE( ServerListTest, ServerErrorClearsTheLoadedList )
 {
     ServerListFixture rig;
     SW_REQUIRE_TRUE( rig._bReady );
-    SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) );
+    SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryLogic::kKnownKind ) );
     rig.poll();
     SW_REQUIRE_TRUE( rig._model.getState() == ServerListState::Loaded );
     SW_EXPECT_FALSE( rig._model.getEntries().empty() );

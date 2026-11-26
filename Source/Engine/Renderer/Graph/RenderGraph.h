@@ -19,11 +19,11 @@
 
 namespace sw
 {
-    class FrameBufferTable;
+    class RenderGraphImportedResourceTable;
     class IRHICommandList;
     class IRHIDevice;
     class IRHIPassCommandList;
-    class FramePassExecutor;
+    class FrameRecorder;
     class TaskManager;
 
     /**
@@ -189,7 +189,7 @@ namespace sw
         hashed_string                            _passName;                  ///< 실행 중인 패스 이름
         uint32                                   _payload{ 0 };              ///< `RenderGraph::addPass` 가 받은 패스 번호 — 받는 쪽이 이름 해시로 다시 찾지 않는다(파이프라인 패스 순번 등)
         const vector<RenderGraphResourceAccess>* _pListAccess{ nullptr };    ///< 이 패스가 선언한 접근 전부(이름으로 선언한 패스는 입력 = 셰이더 읽기, 출력 = 렌더 타깃)
-        const FrameBufferTable*                  _pResourceTable{ nullptr }; ///< 그래프 밖 자원의 RHI 핸들 표(프레임 그래프는 프레임 자원 표, 뷰 그래프는 지금 뷰의 엔진 자원 표 — 실행기가 싣는다). 없으면 핸들 요청은 모두 무효다
+        const RenderGraphImportedResourceTable*  _pResourceTable{ nullptr }; ///< 그래프 밖 자원의 RHI 핸들 표(프레임 그래프는 프레임 자원 표, 뷰 그래프는 지금 뷰의 엔진 자원 표 — 실행기가 싣는다). 없으면 핸들 요청은 모두 무효다
 
         /** @brief 이 패스가 선언한 버퍼 접근 @p handle 의 뷰 칸 @p slot 버퍼입니다. 선언하지 않은 접근 · 등록하지 않은 칸은 오류를 남기고 0 입니다. */
         template <RenderGraphAccess kAccess>
@@ -264,8 +264,8 @@ namespace sw
         void              transitionDeclared( const RenderGraphResourceAccess& declared, RenderGraphAccess target, uint32 slot ) const;
 
     private:
-        /// @brief 실행기의 개발 보기(`FramePassExecutor::prepareVisualizedAttachment` — `gpu.show` 가 선언 밖 첨부를 읽는 유일한 길)만 전체 리스트에 닿는다. 패스 몸통은 닿지 않는다.
-        friend class FramePassExecutor;
+        /// @brief 실행기의 개발 보기(`FrameRecorder::prepareVisualizedAttachment` — `gpu.show` 가 선언 밖 첨부를 읽는 유일한 길)만 전체 리스트에 닿는다. 패스 몸통은 닿지 않는다.
+        friend class FrameRecorder;
         IRHICommandList*           _pCmdList{ nullptr };        ///< 이 패스의 리스트(전체) — 전이 · UAV 배리어가 쓴다. 밖에는 패스 기록 면으로만 내준다
         vector<RenderGraphAccess>* _pListExitAccess{ nullptr }; ///< 선언(`_pListAccess`)마다 이 패스가 남긴 끝 접근. 이 패스를 기록하는 스레드만 쓴다
     };
@@ -492,8 +492,8 @@ namespace sw
          *          수명 종류는 선언하지 않았으면 External 로 선언된다(Persistent 로 선언한 자원은 그대로).
          */
         void importResource( hashed_string name, RenderGraphViewableKind type, RenderGraphAccess initialAccess );
-        /** @brief 들인 자원을 표 @p table 의 등록으로 바꿉니다(첨부 등록 `FrameBufferTable::registerAttachment` 은 그래프의 것이라 빼고) — 프레임 · 뷰마다 실행 앞에 부른다. */
-        void importResources( const FrameBufferTable& table );
+        /** @brief 들인 자원을 표 @p table 의 등록으로 바꿉니다(첨부 등록 `RenderGraphImportedResourceTable::registerAttachment` 은 그래프의 것이라 빼고) — 프레임 · 뷰마다 실행 앞에 부른다. */
+        void importResources( const RenderGraphImportedResourceTable& table );
 
         /**
          * @brief 이번 실행의 일시 버퍼 @p name 을 선언합니다 — 그래프 안에서 쓰고 버린다(언리얼 `FRDGBuilder::CreateBuffer`, 유니티 `CreateBuffer` 자리). 실제 버퍼는 `allocateBuffers` 가 준다.
@@ -505,7 +505,7 @@ namespace sw
          * @brief 이번 실행이 선언한 일시 버퍼를 마련해 @p table 에 등록합니다(패스 몸통은 `getBuffer` · `getBufferSRV` · `getBufferUAV` 로 받는다). 셋업에서 실행 앞에 부릅니다.
          * @details 못 만든 버퍼는 등록하지 않는다(오류는 남긴다) — 패스 몸통이 `isRegistered` 로 본다. 어느 패스도 선언하지 않은 이름은 만들지 않는다.
          */
-        void allocateBuffers( IRHIDevice& device, FrameBufferTable& table );
+        void allocateBuffers( IRHIDevice& device, RenderGraphImportedResourceTable& table );
         /** @brief 그래프가 가진 실제 버퍼 수입니다(진단 · 테스트). */
         uint32 getBufferSlotCount() const;
 

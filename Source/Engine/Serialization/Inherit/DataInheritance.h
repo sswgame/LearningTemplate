@@ -1,11 +1,11 @@
 /**
  * @file DataInheritance.h
- * @brief 데이터 파일이 `_base="<리소스 id>"` 로 부모를 가리키고 차이만 적는 공통 구현입니다. 형식마다 합치기 코드를 쓰지 않습니다.
+ * @brief 데이터 파일이 `_base="<에셋 id>"` 로 부모를 가리키고 차이만 적는 공통 구현입니다. 형식마다 합치기 코드를 쓰지 않습니다.
  * @details 규칙과 새 형식을 올리는 법은 `docs/agents/DataInheritance.md` 입니다.
  *          - 칸(속성)은 자식이 적은 것만 덮고, 스키마가 구조체 칸이라고 한 자식 원소는 안으로 들어가 합치고, 그 밖의 자식 원소는 자식이 적으면 같은 이름의 형제까지 통째로 바뀝니다.
  *          - 열쇠가 있는 목록(`PROPERTY( InheritKey )`)은 원소의 이름으로 합칩니다. 적으면 합치거나 더하고, `_op="Replace"` 는 바꾸고, `_op="Remove"` 는 지우며, `_before` · `_after` 는 자리를 옮깁니다.
  *          - 순환 · 없는 부모 · 없는 열쇠의 삭제와 교체 · 깊이 초과는 오류입니다. 깊이 상한은 부모를 읽는 곳(`DataInheritanceSource`)이 사본으로 든다 — 펼치기는 설정을 직접 읽지 않는다.
- *          - 읽는 쪽과 쿠커는 `ResourceComposer::compose` 한 길로 이 펼치기에 닿습니다. 이 파일은 합치기 규칙만 가집니다.
+ *          - 읽는 쪽과 쿠커는 `AssetComposer::compose` 한 길로 이 펼치기에 닿습니다. 이 파일은 합치기 규칙만 가집니다.
  *          - 쿠킹이 펼칩니다(`PackCooker`). 런타임은 펼친 결과만 읽고 에디터 · 개발 실행은 원본을 읽어 합칩니다. 합칠 때 읽는 부모는 `AssetIO` 를 거쳐 쿠킹 작업의 입력이 되므로 부모가 바뀌면 자식의 쿠킹 키도 바뀝니다.
  *
  *          언리얼 델타 직렬화(아키타입과 다른 칸만 쓴다) · 유니티 Prefab Variant(`m_Modifications`) · Godot 씬 상속(부모 씬 + 바뀐 값)과 같은 일입니다. 다른 점은 목록을 인덱스가 아니라 이름으로 짚는 것입니다 —
@@ -26,7 +26,7 @@ namespace sw
 
     /**
      * @class DataInheritanceSource
-     * @brief 부모의 글을 리소스 id 로 읽는 곳입니다. 에디터 · 개발 실행은 리소스(`DataInheritanceResourceSource`), 팩 쿠커는 콘텐츠 트리(`DataInheritanceDiskSource`), 테스트는 표를 넘깁니다.
+     * @brief 부모의 글을 에셋 id 로 읽는 곳입니다. 에디터 · 개발 실행은 에셋(`DataInheritanceAssetSource`), 팩 쿠커는 콘텐츠 트리(`DataInheritanceDiskSource`), 테스트는 표를 넘깁니다.
      */
     class SW_API DataInheritanceSource
     {
@@ -42,7 +42,7 @@ namespace sw
         /**
          * @brief 바탕 형식이라 직접 만들지 않습니다. 깊이 상한(@p maxDepth)은 만드는 쪽이 사본으로 넘긴다.
          * @details 설정(`EngineConfig::_dataInheritanceMaxDepth`)은 다시 읽기가 제자리에서 덮고 그 울타리는 렌더 스레드만 기다린다 — 로드 워커가 설정을 직접 읽으면 덮기와 겹친다.
-         *          그래서 값은 게임 스레드가 뜬 사본(`ResourceComposition::findInheritanceMaxDepth`)을 읽기마다 싣는다(언리얼이 로드 요청에 정책 값을 싣는 것과 같다).
+         *          그래서 값은 게임 스레드가 뜬 사본(`AssetComposition::findInheritanceMaxDepth`)을 읽기마다 싣는다(언리얼이 로드 요청에 정책 값을 싣는 것과 같다).
          */
         explicit DataInheritanceSource( optional<uint32> maxDepth )
             : _maxDepth{ maxDepth }
@@ -55,12 +55,12 @@ namespace sw
         optional<uint32> _maxDepth;
     };
 
-    /** @brief 부모를 리소스로 읽습니다(`AssetIO::readTextAsset`). 쿠킹 작업 안이면 그 작업의 입력이 됩니다. */
-    class SW_API DataInheritanceResourceSource final : public DataInheritanceSource
+    /** @brief 부모를 에셋으로 읽습니다(`AssetIO::readTextAsset`). 쿠킹 작업 안이면 그 작업의 입력이 됩니다. */
+    class SW_API DataInheritanceAssetSource final : public DataInheritanceSource
     {
     public:
-        /** @brief 깊이 상한은 만들 때 엔진의 사본(`ResourceComposition::findInheritanceMaxDepth`)을 뜬다 — 읽기 한 번이 한 값을 쓴다. */
-        DataInheritanceResourceSource();
+        /** @brief 깊이 상한은 만들 때 엔진의 사본(`AssetComposition::findInheritanceMaxDepth`)을 뜬다 — 읽기 한 번이 한 값을 쓴다. */
+        DataInheritanceAssetSource();
         [[nodiscard]] bool readText( string_view assetID, string& outText ) override;
     };
 
@@ -68,7 +68,7 @@ namespace sw
     class SW_API DataInheritanceDiskSource final : public DataInheritanceSource
     {
     public:
-        /** @brief @p contentRoot 아래에서 리소스 id 를 찾습니다. @p maxDepth 는 쿠킹 시작이 뜬 깊이 상한입니다. */
+        /** @brief @p contentRoot 아래에서 에셋 id 를 찾습니다. @p maxDepth 는 쿠킹 시작이 뜬 깊이 상한입니다. */
         DataInheritanceDiskSource( const AbsolutePath& contentRoot, optional<uint32> maxDepth );
         [[nodiscard]] bool readText( string_view assetID, string& outText ) override;
 
@@ -132,7 +132,7 @@ namespace sw
     class SW_API DataInheritanceProvenance
     {
     public:
-        /** @brief 칸 @p fieldPath 를 마지막으로 적은 파일의 리소스 id 입니다. 없는 칸이면 nullptr 입니다. */
+        /** @brief 칸 @p fieldPath 를 마지막으로 적은 파일의 에셋 id 입니다. 없는 칸이면 nullptr 입니다. */
         [[nodiscard]] const string* findOrigin( string_view fieldPath ) const;
         /** @brief 층 하나(차이 문서의 루트)를 얹습니다. 지운 목록 원소의 칸은 빠집니다. */
         void applyLayer( const XMLNode& layerRoot, const DataInheritanceSchema& schema, string_view assetID );
@@ -154,7 +154,7 @@ namespace sw
     /** @brief 부모 사슬의 파일 하나입니다(`DataInheritance::collectChain`). */
     struct DataInheritanceLayer
     {
-        string _id;   ///< 리소스 id(맨 아래 층은 넘긴 이름)
+        string _id;   ///< 에셋 id(맨 아래 층은 넘긴 이름)
         string _text; ///< 파일의 글
     };
 
@@ -172,10 +172,10 @@ namespace sw
         static constexpr const utf8* kOpReplace       = "Replace";
         /**
          * @brief 조건 원소(`<_when _if="…" 칸="값"/>`)입니다. 칸이 아니라 그 원소에 얹는 조건부 차이라 합치기가 다르게 다룬다 —
-         *        부모와 자식의 조건을 차례로 쌓고(자식이 적어도 부모의 조건이 사라지지 않는다), 열쇠 목록의 원소로 세지 않는다. 푸는 일은 `ResourceComposer` 의 조건 단계다.
+         *        부모와 자식의 조건을 차례로 쌓고(자식이 적어도 부모의 조건이 사라지지 않는다), 열쇠 목록의 원소로 세지 않는다. 푸는 일은 `AssetComposer` 의 조건 단계다.
          */
         static constexpr const utf8* kWhenElement = "_when";
-        static constexpr const utf8* kIfAttribute = "_if"; ///< 조건 원소: 리소스 조건식(`ResourceTags::compileTest`)
+        static constexpr const utf8* kIfAttribute = "_if"; ///< 조건 원소: 에셋 조건식(`AssetTags::compileTest`)
 
         /** @brief 조건 원소(`_when`)인지 봅니다. 칸 · 목록 원소가 아니라 쌓이는 조건부 차이입니다. */
         [[nodiscard]] static bool isWhenElement( const XMLNode& node );
@@ -186,19 +186,19 @@ namespace sw
         [[nodiscard]] static bool isLikelyXMLText( string_view text );
 
         /**
-         * @brief `_base` 에 적힌 글 @p baseText 의 파일 부분을 리소스 id 로 푼 글입니다 — `guid:<32자>` 는 지금 경로로, `guid:<32자>#<항목 id>` 는 `<경로>#<항목 id>` 로. 경로 · 항목 id 는 그대로입니다.
+         * @brief `_base` 에 적힌 글 @p baseText 의 파일 부분을 에셋 id 로 푼 글입니다 — `guid:<32자>` 는 지금 경로로, `guid:<32자>#<항목 id>` 는 `<경로>#<항목 id>` 로. 경로 · 항목 id 는 그대로입니다.
          * @details `_base` 를 읽는 곳은 모두 이것을 지난다. 색인에 없는 GUID 는 글 그대로다 — 읽는 쪽이 그 글로 "부모 없음" 오류를 낸다(다른 파일로 대신하지 않는다).
          */
         [[nodiscard]] static string resolveBaseText( string_view baseText );
-        /** @brief 리소스 id @p baseID(뒤에 `#<항목 id>` 가 올 수 있다)를 `_base` 에 적을 글입니다 — 정체성이 있으면 GUID 참조, 없으면 그대로. `resolveBaseText` 의 짝이다. */
+        /** @brief 에셋 id @p baseID(뒤에 `#<항목 id>` 가 올 수 있다)를 `_base` 에 적을 글입니다 — 정체성이 있으면 GUID 참조, 없으면 그대로. `resolveBaseText` 의 짝이다. */
         [[nodiscard]] static string makeBaseText( string_view baseID );
 
-        /** @brief @p text 의 루트가 `_base` 를 적었으면 그 값(푼 리소스 id)입니다. XML 이 아니거나 없으면 빈 글입니다. 부모를 가리키지 않는 파일은 글 검색 한 번으로 끝납니다. */
+        /** @brief @p text 의 루트가 `_base` 를 적었으면 그 값(푼 에셋 id)입니다. XML 이 아니거나 없으면 빈 글입니다. 부모를 가리키지 않는 파일은 글 검색 한 번으로 끝납니다. */
         [[nodiscard]] static string findBasePath( string_view text );
 
         /**
          * @brief @p text 를 사슬 끝까지 합쳐 부모가 없는 한 벌로 만듭니다. 부모를 가리키지 않으면 그대로입니다.
-         * @param sourceName 오류에 적고 출처 기록(@p pOutProvenance)에 쓰는 이름입니다(대개 리소스 id).
+         * @param sourceName 오류에 적고 출처 기록(@p pOutProvenance)에 쓰는 이름입니다(대개 에셋 id).
          * @return 순환 · 없는 부모 · 다른 형식의 부모 · 없는 열쇠의 삭제와 교체 · 깊이 초과면 오류를 남기고 false 입니다. 부모 없이 자식 칸만으로 읽지 않습니다.
          */
         [[nodiscard]] static bool flatten( string_view text, string_view sourceName, const DataInheritanceSchema& schema, DataInheritanceSource& source, string& outText,
@@ -222,7 +222,7 @@ namespace sw
         [[nodiscard]] static bool makeDelta( string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, string& outText );
 
         /**
-         * @brief @p contentRoot 아래에서 @p baseID 를 곧바로 부모로 가리키는 파일의 리소스 id 를 모읍니다(비우고 채웁니다. 정렬). "이 부모의 자식 목록" 의 답입니다. 도구용으로 파일을 훑습니다.
+         * @brief @p contentRoot 아래에서 @p baseID 를 곧바로 부모로 가리키는 파일의 에셋 id 를 모읍니다(비우고 채웁니다. 정렬). "이 부모의 자식 목록" 의 답입니다. 도구용으로 파일을 훑습니다.
          * @param listExtension 볼 확장자(`.xml` · `.material`)입니다.
          * @return 폴더를 훑지 못하면 false 입니다.
          */
@@ -232,7 +232,7 @@ namespace sw
         static void reportCycle( string_view baseID, string_view sourceName );
         /** @brief 사슬이 상한(@p maxDepth)을 넘을 때 남기는 오류입니다. */
         static void reportTooDeep( string_view baseID, string_view sourceName, uint32 maxDepth );
-        /** @brief 읽기에 깊이 상한이 실려 오지 않았을 때 남기는 오류입니다 — 대신 설정을 읽지 않는다(엔진의 사본이 아직 없다: `ResourceComposition::setInheritanceMaxDepth` 전). */
+        /** @brief 읽기에 깊이 상한이 실려 오지 않았을 때 남기는 오류입니다 — 대신 설정을 읽지 않는다(엔진의 사본이 아직 없다: `AssetComposition::setInheritanceMaxDepth` 전). */
         static void reportNoDepthLimit( string_view sourceName );
         /** @brief 부모를 읽지 못할 때 남기는 오류입니다. */
         static void reportBaseNotFound( string_view baseID, string_view sourceName );

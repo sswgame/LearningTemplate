@@ -13,8 +13,8 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/Subsystem.h"
 
-#include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
-#include "DevTools/Client/Automation/Runner/AutomationStageFingerprint.h"
+#include "DevTools/Client/Automation/Runner/AutomationRunTitleTracker.h"
+#include "DevTools/Client/Automation/Runner/AutomationStageSnapshot.h"
 #include "DevTools/Client/Automation/Scenario/ScenarioRecorder.h"
 #include "DevTools/DevToolsAPI.h"
 
@@ -118,9 +118,9 @@ namespace sw
             explicit Runtime( AutomationSession& owner );
             ~Runtime() override; // 재생기(`ScenarioPlayer`)는 앞 선언뿐이다 — 만들기 · 소멸은 .cpp 에서(예외 정리 길도 완전한 형식을 요구한다)
 
-            [[nodiscard]] bool                                 start( Engine& engine, SubsystemScope& host, const CommandLineManager& commandLine ) override;
+            [[nodiscard]] bool                                 start( Engine& engine, SubsystemScope& host, const CommandLine& commandLine ) override;
             bool                                               isBusy() const override;
-            void                                               runPerBackend( string_view backends, CommandLineManager& commandLine, CommandletState& inoutState ) override;
+            void                                               runPerBackend( string_view backends, CommandLine& commandLine, CommandletState& inoutState ) override;
             const AutomationRunStatus*                         findRunStatus() const override;
             [[nodiscard]] unique_ptr<IAutomationShutdownWatch> watchShutdown() override;
             /** @brief 재생기를 호스트 범위에서 풀어 내리고 세션을 엔진 프레임에서 뗍니다(세션 종료가 부른다). 시작하지 않았으면 아무것도 하지 않습니다. */
@@ -184,7 +184,7 @@ namespace sw
         uint32                              _startWindowWidth;         ///< 시작할 때의 주 창 클라이언트 너비(둘째 단계부터 이 크기에서 시작한다, 창이 없으면 0)
         uint32                              _startWindowHeight;        ///< 시작할 때의 주 창 클라이언트 높이
         vector<pair<string, string>>        _listStartVariable;        ///< 세션 시작 때의 전역 변수(이름, 값 글) — 둘째 단계부터 이 값에서 시작한다
-        AutomationStageFingerprint          _stageFingerprint;         ///< 마지막 단계 시작의 상태 지문(`findStageStateLeak`)
+        AutomationStageSnapshot             _stageSnapshot;            ///< 마지막 단계 시작의 상태 지문(`findStageStateLeak`)
         AutomationReproduceInput            _reproduceInput;           ///< 재현 명령 재료(게임 · 시작 때 백엔드 · 에디터 · 시나리오 목록) — 단계마다 실행기에 넘긴다
         uint32                              _screenshotBaseline;       ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 스크린샷 수
         uint8                               _bUnattended : 1;          ///< `-unattended` — 보는 사람이 없다. 시나리오가 `present="true"` 가 아니면 내보내지 않는다(`applyPresentPolicy`)

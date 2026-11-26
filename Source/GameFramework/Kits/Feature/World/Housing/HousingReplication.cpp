@@ -9,8 +9,8 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
@@ -68,7 +68,7 @@ namespace sw
             [[nodiscard]] static bool readTransform( BitReader& reader, HousingTransform& outTransform )
             {
                 HousingTransformNetState state;
-                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
+                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != LayoutReadResult::Ok )
                     return false;
                 outTransform._position = state._position;
                 outTransform._level    = state._level;

@@ -117,7 +117,7 @@ namespace sw
         /**
          * @brief 기동 · 종료 시간을 잴지 정합니다(기본은 재지 않음). 단조 시계(`MonotonicClock`)를 직접 읽는다.
          * @details 종료도 잰다 — 로그 없이 오래 걸린 종료(Debug 의 자식 클라이언트가 15 초 시한에 걸렸다)가 어느 서브시스템인지 줄 하나로 보인다.
-         *          예전에는 Subsystem 층이 Time 층 아래라 위 층이 시계를 함수 포인터로 건넸다 — Time 을 티어 2 로 내려 우회를 없앴다.
+         *          예전에는 Subsystem 층이 Time 층 아래라 위 층이 시계를 함수 포인터로 건넸다 — Time 을 층 2 로 내려 우회를 없앴다.
          */
         void setTimingEnabled( bool bEnabled ) { _bTimingEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
         /** @brief `shutdownDependents` 가 내리고 아직 다시 세우지 않은 서브시스템(자리, 초기화 순서)입니다. */

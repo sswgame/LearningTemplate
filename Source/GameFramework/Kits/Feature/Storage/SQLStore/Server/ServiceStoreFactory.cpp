@@ -17,7 +17,8 @@
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/SQLServiceStore.h"
-#include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
+#include "GameFramework/Runtime/Online/Store/Server/IServiceStoreDriver.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 namespace sw
@@ -52,7 +53,7 @@ namespace sw
          */
         expected<unique_ptr<ServiceStore>> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs )
         {
-            if ( driverName == kMemoryStoreDriverName )
+            if ( driverName == OnlineServerStoreConfig::kMemoryDriverName )
                 return unique_ptr<ServiceStore>( make_unique<MemoryServiceStore>( &_memoryDatabase ) );
             SQLConnectionPoolConfig settings;
             settings._connection                = string( connection );

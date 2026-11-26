@@ -17,14 +17,14 @@
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSimulation.h"
 
 namespace sw
 {
@@ -46,11 +46,11 @@ namespace sw
         void setPlayer( int32 player ) { _player = player; }
 
         /** @brief XZ 평면의 사각형(두 모서리) 안을 고릅니다. @p bAdd 가 true 이면 지금 고른 것에 더합니다(쉬프트). */
-        void selectInRect( const RTSWorld& world, const float3& cornerA, const float3& cornerB, bool bAdd );
+        void selectInRect( const RTSSimulation& world, const float3& cornerA, const float3& cornerB, bool bAdd );
         /** @brief 유닛 하나를 고릅니다. @p bToggle 이 true 이고 이미 골랐으면 선택에서 뺍니다. */
-        void selectUnit( const RTSWorld& world, RTSUnitID unitID, bool bToggle );
+        void selectUnit( const RTSSimulation& world, RTSUnitID unitID, bool bToggle );
         /** @brief 사각형 안에서 @p unitID 와 같은 종류인 내 유닛을 고릅니다(더블 클릭). */
-        void selectSameType( const RTSWorld& world, RTSUnitID unitID, const float3& cornerA, const float3& cornerB );
+        void selectSameType( const RTSSimulation& world, RTSUnitID unitID, const float3& cornerA, const float3& cornerB );
         void clear() { _listSelected.clear(); }
 
         /** @brief 지금 고른 것을 부대로 지정합니다(Ctrl + 숫자). */
@@ -58,10 +58,10 @@ namespace sw
         /** @brief 지금 고른 것을 부대에 추가합니다(Shift + 숫자). */
         void addToGroup( int32 group );
         /** @brief 부대를 선택합니다(숫자). 부대가 비었으면 false 를 반환합니다. */
-        bool recallGroup( const RTSWorld& world, int32 group );
+        bool recallGroup( const RTSSimulation& world, int32 group );
 
         /** @brief 죽은 유닛을 선택과 부대에서 뺍니다. */
-        void prune( const RTSWorld& world );
+        void prune( const RTSSimulation& world );
 
         const vector<RTSUnitID>& getSelected() const { return _listSelected; }
         const vector<RTSUnitID>& getGroup( int32 group ) const;
@@ -69,7 +69,7 @@ namespace sw
         RTSUnitID getPrimary() const { return _listSelected.empty() ? RTSUnitID{} : _listSelected.front(); }
         bool      isSelected( RTSUnitID unitID ) const;
         /** @brief 고른 것이 모두 내 것이라 명령을 줄 수 있는지 반환합니다. */
-        bool  isCommandable( const RTSWorld& world ) const;
+        bool  isCommandable( const RTSSimulation& world ) const;
         int32 getPlayer() const { return _player; }
 
         /**
@@ -112,8 +112,8 @@ namespace sw
         static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
 
         /** @brief 고르기 · 끌기는 틱 뒤 게임 스레드에서만 바뀝니다 — 유닛 뷰 · 끌기 상자가 병렬 틱에서 읽어도 됩니다(자기 틱이 쓰는 것은 따로 둔 `_bInputLive` 뿐이다). */
-        static constexpr bool      kTickReadSafe = true;
-        static constexpr FormatDef kStateFormat{ "RTSI" };
+        static constexpr bool       kTickReadSafe = true;
+        static constexpr FormatDesc kStateFormat{ "RTSI" };
 
         RTSCommandInputComponent();
         virtual ~RTSCommandInputComponent() override;

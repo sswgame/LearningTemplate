@@ -73,7 +73,7 @@ namespace sw
 
     /**
      * @brief 분개 하나(`ledger_journal`, 키는 분개 키)입니다.
-     * @details 다른 레코드와 같은 자기 기술형(A)이다 — 고정 배치형은 같은 빌드끼리만 읽으므로(`FixedLayout.h`) 순차 배포 중 다른 빌드가 쓴 분개를 손상으로 볼 수 있어 쓰지 않는다.
+     * @details 다른 레코드와 같은 자기 기술형이다 — 스키마 결합형은 같은 빌드끼리만 읽으므로(`LayoutSerializer.h`) 순차 배포 중 다른 빌드가 쓴 분개를 손상으로 볼 수 있어 쓰지 않는다.
      *          내용 해시(`_contentHash`)는 저장 배치가 아니라 멱등 키의 뜻이라 원장의 손 해시(`LedgerPosting::write`)를 그대로 쓴다.
      */
     REFLECT()

@@ -20,19 +20,19 @@
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardScoreSender.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchBackfill.h"
+#include "GameFramework/Runtime/Character/Camera/FirstPersonCameraComponent.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
-#include "GameFramework/Runtime/Character/Control/FirstPersonCameraComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/TickedFloorStep.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Movement/TickedFloorStep.h"
 
 #include "Games/Playground/Shooter3D/ShooterAvatarComponent.h"
 #include "Games/Playground/Shooter3D/ShooterEnemyComponent.h"
@@ -111,7 +111,7 @@ namespace sw
             [[nodiscard]] static bool readState( const vector<uint8>& bytes, TState& outState )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                return ReplicatedLayout::readFull( reader, outState, nullptr ) == FixedReadResult::Ok;
+                return ReplicatedLayout::readFull( reader, outState, nullptr ) == LayoutReadResult::Ok;
             }
 
             static_assert( ShooterPlayerComponent::kWeaponCount == 3, "ShooterPawnNetState::_weaponIndex 의 Max 를 무기 슬롯 수와 맞춘다" );

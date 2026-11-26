@@ -10,7 +10,7 @@
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 
 using namespace sw;
 
@@ -18,7 +18,7 @@ using namespace sw;
 SW_TEST_CASE( GameNetSessionTicketLinkTest, LinkFollowsTheServerConfig )
 {
     test::FakeNetSecurityProvider provider;
-    GameNetSession                session{ engine::getSubsystem<ResourceComposition>() };
+    GameNetSession                session{ engine::getSubsystem<AssetComposition>() };
     session.setRunWireContent( GameNetWireContent{} );
     session.getConnectSecurity().setProvider( &provider );
     ServerConfig config;
@@ -43,7 +43,7 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, LinkFollowsTheServerConfig )
 SW_TEST_CASE( GameNetSessionTicketLinkTest, EncryptedSessionClosesBeforeModulesUnload )
 {
     test::FakeNetSecurityProvider provider;
-    GameNetSession                session{ engine::getSubsystem<ResourceComposition>() };
+    GameNetSession                session{ engine::getSubsystem<AssetComposition>() };
     session.setRunWireContent( GameNetWireContent{} );
     session.getConnectSecurity().setProvider( &provider );
     ServerConfig config;
@@ -62,7 +62,7 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, EncryptedSessionClosesBeforeModulesU
 /** @brief [GameNetSessionTicketLinkTest] 암호 제공자가 내려가기 전에 그 봉인기를 쥔 세션이 닫히고 접속 보안 자리가 빈다 — 서브시스템의 종료 순서에 기대지 않는다 */
 SW_TEST_CASE( GameNetSessionTicketLinkTest, RetiringProviderClosesTheSession )
 {
-    GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
+    GameNetSession session{ engine::getSubsystem<AssetComposition>() };
     session.setRunWireContent( GameNetWireContent{} );
     {
         test::FakeNetSecurityProvider provider;
@@ -91,7 +91,7 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, RetiringProviderClosesTheSession )
 /** @brief [GameNetSessionTicketLinkTest] 닫힌 세션의 링크는 비고, 같은 세션 객체로 새로 열어도 되살아나지 않는다 — 새로 만든 링크만 쓸 수 있다 */
 SW_TEST_CASE( GameNetSessionTicketLinkTest, ClosedSessionLinkStaysEmpty )
 {
-    GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
+    GameNetSession session{ engine::getSubsystem<AssetComposition>() };
     session.setRunWireContent( GameNetWireContent{} );
     ServerConfig config;
     config._listenAddress = "127.0.0.1";
@@ -114,9 +114,9 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, ClosedSessionLinkStaysEmpty )
 SW_TEST_CASE( GameNetSessionTicketLinkTest, LostServerLeavesItsReason, ._timeoutSeconds = 60 )
 {
     SW_EXPECT_LOG( SW_LOG_ID_NET_SESSION_LOST_SERVER );
-    GameNetSession server{ engine::getSubsystem<ResourceComposition>() };
+    GameNetSession server{ engine::getSubsystem<AssetComposition>() };
     server.setRunWireContent( GameNetWireContent{} );
-    GameNetSession client{ engine::getSubsystem<ResourceComposition>() };
+    GameNetSession client{ engine::getSubsystem<AssetComposition>() };
     client.setRunWireContent( GameNetWireContent{} );
     ServerConfig config;
     config._listenAddress = "127.0.0.1";
@@ -161,9 +161,9 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, LostServerLeavesItsReason, ._timeout
 /** @brief [GameNetSessionTicketLinkTest] 결함: 서버를 잃은 클라이언트의 씬이 세션이 닫히면 혼자 하는 월드로 여겨져 서버 세계가 저장됐다 — 클라이언트로 묶였던 월드는 세션이 닫혀도 서버의 것이고, 세션을 여는 앞머리를 알린다 */
 SW_TEST_CASE( GameNetSessionTicketLinkTest, ServerWorldOutlivesTheSession )
 {
-    GameNetSession server{ engine::getSubsystem<ResourceComposition>() };
+    GameNetSession server{ engine::getSubsystem<AssetComposition>() };
     server.setRunWireContent( GameNetWireContent{} );
-    GameNetSession client{ engine::getSubsystem<ResourceComposition>() };
+    GameNetSession client{ engine::getSubsystem<AssetComposition>() };
     client.setRunWireContent( GameNetWireContent{} );
     ServerConfig config;
     config._listenAddress = "127.0.0.1";

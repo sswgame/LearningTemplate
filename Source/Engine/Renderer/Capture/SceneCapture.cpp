@@ -6,7 +6,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIConstants.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"

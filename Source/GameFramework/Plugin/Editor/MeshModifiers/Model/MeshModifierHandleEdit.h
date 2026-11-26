@@ -2,7 +2,7 @@
  * @file MeshModifierHandleEdit.h
  * @brief 뷰포트 Modifiers 화면 도구의 Model 쪽 값과 명령입니다 — 고른 모디파이어의 범위 · 기즈모 손잡이 · 격자 제어점을 값으로 모으고(`MeshModifierHandleViewState::gather`),
  *        도구(View `MeshModifiersVisualizer.cpp`)가 보낸 명령(잡기 · 끌기 · 놓기)을 적용합니다(`MeshModifierHandleCommand::apply`). 끌기 하나가 되돌리기 하나다.
- * @details 콜라이더 손잡이(`EditorColliderHandleEdit`)와 같은 모양이다 — 언리얼 컴포넌트 비주얼라이저가 손잡이 끌기를 트랜잭션으로 감싸는 자리. ImGui 를 모릅니다.
+ * @details 콜라이더 손잡이(`EditorColliderHandleViewModel`)와 같은 모양이다 — 언리얼 컴포넌트 비주얼라이저가 손잡이 끌기를 트랜잭션으로 감싸는 자리. ImGui 를 모릅니다.
  *          - 기즈모: 중심의 기준 축 화살표 셋(이동)과 기준 축 둘레 고리 셋(회전 — 고리 k 는 오일러 성분 k 를 바꾼다).
  *          - 범위: 매개변수 정의의 힌트 · 이름으로 반경(구) · 하한/상한(주축 단면 사각형) · 중심(점) · 방향(화살표)을 월드 도형 값으로 낸다(`ModifierGizmoLogic::computeRangeKind`).
  *          - 제어점: 격자(lattice · ffd2 · ffd3 · ffd4)와 ffd2d 의 점. 점을 누르면 고르고(세션의 `setSelectedControlPoint`) 그대로 끌면 카메라를 마주 보는 평면에서,

@@ -5,7 +5,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 
@@ -26,7 +26,7 @@ SW_TEST_CASE( MMOEntityHeaderTest, EnterHeaderRoundTripsAndRejectsOutOfRangePosi
 
     BitReader            reader( writer.getBytes().data(), static_cast<int32>( writer.getBytes().size() ) );
     MMOEntityEnterHeader received;
-    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == FixedReadResult::Ok );
+    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == LayoutReadResult::Ok );
     SW_EXPECT_EQUAL( sent._header._entityID, received._header._entityID );
     SW_EXPECT_TRUE( received._header._position == sent._header._position ); // 양자화하지 않는다 — 비트 그대로
     SW_EXPECT_EQUAL( sent._typeID, received._typeID );
@@ -53,7 +53,7 @@ SW_TEST_CASE( MMOEntityHeaderTest, NonFinitePositionIsRejectedOnBothSides )
     corrupt.writeFloat( 0.0f );
     BitReader             reader( corrupt.getBytes().data(), static_cast<int32>( corrupt.getBytes().size() ) );
     MMOEntityUpdateHeader received;
-    SW_EXPECT_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) != FixedReadResult::Ok );
+    SW_EXPECT_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) != LayoutReadResult::Ok );
     SW_EXPECT_EQUAL( uint32{ 0 }, received._entityID ); // `Ok` 가 아니면 바꾸지 않는다
 
     MMOReplicator replicator;

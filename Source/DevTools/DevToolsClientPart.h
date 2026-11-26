@@ -13,11 +13,11 @@
 
 #include "Engine/EngineHooks.h"
 
-#include "ModuleManager/Host/HostDevLayer.h"
+#include "ModuleManager/Host/IHostDevLayer.h"
 
 namespace sw
 {
-    class CommandLineManager;
+    class CommandLine;
     class Engine;
     class GameModuleManager;
     class IDevConsoleView;
@@ -39,7 +39,7 @@ namespace sw
         /** @brief 콘솔의 그리는 쪽(런타임 UI 오버레이)입니다. UI 가 없으면 nullptr 입니다. */
         [[nodiscard]] virtual unique_ptr<IDevConsoleView> createConsoleView() = 0;
         /** @brief 초상화 굽기(`--render-portraits=a.prefab.xml,b.prefab.xml`)입니다. 인자가 없으면 NotRequested 입니다(개발 계층 `runAfterHostSubsystems`). */
-        [[nodiscard]] virtual HostTaskResult runPortraitBake( Engine& engine, const CommandLineManager& commandLine ) = 0;
+        [[nodiscard]] virtual HostTaskResult runPortraitBake( Engine& engine, const CommandLine& commandLine ) = 0;
         /** @brief 에디터 인스턴스를 드는 모듈 관리자(`-EnableEditor`)를 만듭니다(개발 계층 `makeEditorModuleManager`). */
         [[nodiscard]] virtual unique_ptr<GameModuleManager> makeEditorModuleManager( Engine& engine ) = 0;
 

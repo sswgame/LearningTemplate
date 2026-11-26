@@ -3,7 +3,7 @@
 #include "Core/Process/Process.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/HexDigitUtil.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -231,7 +231,7 @@ namespace sw
 // ------------------------------------------------------------------------------
 namespace sw
 {
-    ProcessCommand ProcessCommand::forEngineChild( const CommandLineManager& parent, const AbsolutePath& executablePath, vector<string> listArgument )
+    ProcessCommand ProcessCommand::forEngineChild( const CommandLine& parent, const AbsolutePath& executablePath, vector<string> listArgument )
     {
         if ( executablePath.empty() )
             return {};

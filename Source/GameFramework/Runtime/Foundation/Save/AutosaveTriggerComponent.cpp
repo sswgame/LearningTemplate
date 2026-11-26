@@ -4,7 +4,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
@@ -25,7 +25,7 @@ namespace sw
     bool AutosaveTriggerComponent::onVolumeActivated( const GameObject& activator )
     {
         (void)activator;
-        AutosaveManager* pAutosave = game::findSubsystem<AutosaveManager>();
+        AutosaveController* pAutosave = game::findSubsystem<AutosaveController>();
         if ( pAutosave == nullptr )
             return false;
         switch ( _trigger )

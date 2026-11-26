@@ -25,7 +25,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"

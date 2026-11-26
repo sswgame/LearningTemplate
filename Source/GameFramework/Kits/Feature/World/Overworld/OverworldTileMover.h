@@ -11,11 +11,11 @@
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/World/Overworld/PlayerLocomotion.h"
+#include "GameFramework/Kits/Feature/World/Overworld/TileStepLocomotion.h"
 #include "GameFramework/Runtime/World/Encounter/StepEncounter.h"
 
 namespace sw
@@ -56,7 +56,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr FormatDef kStateFormat{ "OPLC" };
+        static constexpr FormatDesc kStateFormat{ "OPLC" };
 
         /** @brief 타일 (1,1), 입력 허용으로 시작합니다. */
         OverworldTileMover();
@@ -91,7 +91,7 @@ namespace sw
         /** @brief 현재 타일 Y 를 반환합니다. */
         int32 getTileY() const { return _tile._y; }
         /** @brief 이동 FSM 을 반환합니다. */
-        const PlayerLocomotion& getLocomotion() const { return _loco; }
+        const TileStepLocomotion& getLocomotion() const { return _loco; }
         /** @brief 이동 플래그를 소비하고 이전 값을 반환합니다. */
         bool consumeMovedFlag();
         /** @brief 대기 중인 워프 요청을 소비합니다. */
@@ -119,7 +119,7 @@ namespace sw
         TileMap* _pTileMap;
         PROPERTY( RuntimeState )
         string                                  _pendingWarpMap;
-        SW_CODEC_STATE PlayerLocomotion         _loco;
+        SW_CODEC_STATE TileStepLocomotion       _loco;
         SW_CODEC_STATE int2                     _tile;             ///< 현재 타일 좌표
         SW_CODEC_STATE int2                     _pendingWarpSpawn; ///< 워프 후 배치될 타일 좌표
         SW_TRANSIENT OverworldTileMoverSettings _settings;

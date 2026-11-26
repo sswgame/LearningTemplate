@@ -15,7 +15,7 @@
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Memory/MemoryTag.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskHandle.h"
 
 #include <condition_variable>
 

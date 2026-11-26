@@ -10,7 +10,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -28,7 +28,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY()
-        string _prefix{}; ///< 기본 리소스 폴더(끝 `/`) — 폴더는 정체성이 없어 글이다
+        string _prefix{}; ///< 기본 에셋 폴더(끝 `/`) — 폴더는 정체성이 없어 글이다
         PROPERTY()
         DataPath _path; ///< 기본 리소스 파일 하나
     };
@@ -108,9 +108,9 @@ namespace sw
             SW_LOG_ERROR_ID( "ModSupportSettings.NotFound", "Mod support settings '%#' could not be read", assetID.view() );
             return false;
         }
-        // 리소스 id 로 합친다 — 조건 · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받는다(글 입구 `parseXMLText` 는 id 가 없다).
+        // 에셋 id 로 합친다 — 조건 · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받는다(글 입구 `parseXMLText` 는 id 가 없다).
         XMLDocument doc;
-        if ( doc.parseResourceText( text, assetID ) == false )
+        if ( doc.parseAssetText( text, assetID ) == false )
         {
             SW_LOG_ERROR_ID( "ModSupportSettings.NotXML", "Mod support settings '%#' could not be parsed: %#", assetID.view(), doc.getLastError() );
             return false;

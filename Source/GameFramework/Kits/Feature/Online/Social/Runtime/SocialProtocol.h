@@ -1,7 +1,7 @@
 /**
  * @file SocialProtocol.h
  * @brief 친구 키트의 와이어 형식입니다. 메서드 번호(영역 `OnlineMethodRange::kSocial`), 요청과 응답, 알림, 서버 버스 본문의 형식을 정의합니다.
- * @details - 요청, 응답, 알림은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
+ * @details - 요청, 응답, 알림은 `REFLECT` 구조체 하나씩이고 본문은 스키마 결합형이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
  *            응답은 메서드마다 따로이다. 업무 결과(`_result`)는 도메인 값만이고, 범위 밖 값 · 로그인 없음 · 저장소 장애 · 경합은 공통 범주(`OnlineError`)로 온다.
  *          - 요청은 메서드마다 쓰는 칸만 가진 형식이다. 알림은 `Notification` 하나에 종류를 붙여 보낸다.
  *          - 길드 채팅 채널은 게임 조립 단계가 길드 이벤트(`GuildEvent`)로 채팅 키트에 연결한다. 키트끼리는 서로 모른다.
@@ -308,7 +308,7 @@ namespace sw
 {
     /**
      * @struct SocialProtocol
-     * @brief 친구 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     * @brief 친구 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 스키마 결합형이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      * @details 알림 본문은 `SocialNotification`, 서버 버스 본문은 `SocialPresence` · `SocialLinkChanged` 입니다.
      */
     struct SW_KIT_API SocialProtocol

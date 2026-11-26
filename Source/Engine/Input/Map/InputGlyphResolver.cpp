@@ -2,9 +2,9 @@
 
 #include "Engine/Input/Map/InputGlyphResolver.h"
 
-#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/GamepadButton.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 #include "Engine/Input/Map/InputMap.h"
 
 /**
@@ -29,7 +29,7 @@ namespace sw
                     const Key key = static_cast<Key>( slot._controlIndex );
                     if ( key != Key::Unknown )
                     {
-                        const utf8* pName = KeyCodeUtil::toName( key );
+                        const utf8* pName = getKeyName( key );
                         return pName != nullptr ? pName : "?";
                     }
                 }
@@ -38,7 +38,7 @@ namespace sw
                     const MouseButton btn = static_cast<MouseButton>( slot._controlIndex );
                     if ( btn != MouseButton::Count )
                     {
-                        const utf8* pName = MouseButtonUtil::toName( btn );
+                        const utf8* pName = getMouseButtonName( btn );
                         return pName != nullptr ? pName : "?";
                     }
                 }
@@ -70,7 +70,7 @@ namespace sw
                             if ( btn == GamepadButton::Y )
                                 return "X";
                         }
-                        const utf8* pName = GamepadButtonUtil::toName( btn );
+                        const utf8* pName = getGamepadButtonName( btn );
                         return pName != nullptr ? pName : "?";
                     }
                 }

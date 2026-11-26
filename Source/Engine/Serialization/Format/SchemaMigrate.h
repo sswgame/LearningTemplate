@@ -1,0 +1,236 @@
+/**
+ * @file SchemaMigrate.h
+ * @brief 바이너리 값 인코딩 버전, orphan(모르는 필드) 기록과 정책, 값 강제 변환 도우미입니다.
+ * @details 이 파일은 자기 기술형 스트림 안의 값 강제 변환과 모르는 칸 정책만 맡는다 — 판이 다른 데이터의 이관은 여기가 아니라 판 사슬이다:
+ *          타입 판 `REFLECT( Version = N )` + `SW_TYPE_VERSION_PATCH`(상태 바이트 `StateIO::reflected` · 서비스 레코드 `ServiceRecordUtil`), XML 에셋 종류마다
+ *          `SW_ASSET_FORMAT_UPGRADE`(`FormatUpgrade.h`), 바이트 형식은 선언이 단계를 든다(`FormatDesc`), 스키마 결합형은 `SW_LAYOUT_SCHEMA_MIGRATION`. `deserializeVersioned` 자체는 판이 다르면 거절한다 —
+ *          부르는 쪽이 사슬로 올린 뒤 지금 판으로 읽는다. 파일 이름이 `SchemaMigrate` 로 남은 것은 옛 이름이다.
+ */
+#pragma once
+#include "Core/Delegate/Delegate.h"
+
+#include "Engine/EngineMinimal.h"
+#include "Engine/Reflection/TextAddress.h"
+
+namespace sw
+{
+    enum class FieldReadResult : uint8;
+
+    struct PropertyInfo;
+    struct TypeInfo;
+
+    class SerializeContext;
+    class ReflectValueBinding;
+
+    // ------------------------------------------------------------------------------
+    // 1) SchemaOrphanValue: 현재 TypeInfo 에 맞는 슬롯이 없거나 적용하지 못한 기록 필드
+    // ------------------------------------------------------------------------------
+    /**
+     * @enum BinaryWireVersion
+     * @brief 바이너리 값 인코딩의 버전입니다. 스트림마다 머리에 실립니다. 태그 스트림의 프로퍼티 수(uint32) 위 8비트에 실립니다.
+     * @details 스트림마다 실리므로 그 안의 컨테이너 원소와 맵 키도 같은 버전으로 읽고, 중첩 구조체와 소유 포인터 본문은 자기 머리의 버전을 읽는다.
+     *          세이브, 플레이 스냅샷, 쿠킹 씬, 복사한 컴포넌트가 모두 같은 경로를 쓴다. 읽기는 현재 버전 하나만 받는다. 버전을 올리면 저장소의 데이터를
+     *          다시 쓰고 옛 버전을 읽는 분기는 두지 않는다.
+     */
+    enum class BinaryWireVersion : uint8
+    {
+        EnumByName = 0, ///< enum 을 열거자 이름 해시로 싣는다(비트플래그는 켜진 이름들). 이름이 없는 값이나 비트만 값으로 싣는다.
+    };
+
+    /** @brief 이 빌드가 쓰고 읽는 버전입니다. 다른 버전(앞선 빌드의 데이터)은 거절합니다. */
+    inline constexpr BinaryWireVersion kCurrentBinaryWireVersion = BinaryWireVersion::EnumByName;
+
+    struct SchemaOrphanValue
+    {
+        hashed_string     _name;
+        uint32            _nameHash{ 0 };
+        uint32            _wireTypeHash{ 0 };                        ///< 바이너리에 적힌 프로퍼티 타입 해시(없으면 0)
+        BinaryWireVersion _wireVersion{ kCurrentBinaryWireVersion }; ///< 바이너리 값을 적은 버전이다. 그대로 다시 쓸 때(`serializeKeepingUnknown`) 같은 버전으로 읽는다
+        vector<uint8>     _listBinary;
+        string            _text;
+        /**
+         * @brief 텍스트 형식에 적힌 이름 그대로입니다(타입이 모르는 키, 태그, 속성). 경고에 출력하는 데만 씁니다.
+         *        안쪽 원소(컴포넌트, 구조체 필드)의 이름은 그 타입 이름이 앞에 붙습니다(`SpriteComponent._clipPth`).
+         * @details 파일의 모르는 이름은 전역 이름 테이블에 넣지 않으므로 `_name` 이 비고 해시만 남는다. 그대로는 "어느 필드를 버렸나"를
+         *          말할 수 없다. 바이너리는 이름을 싣지 않아 항상 비어 있다.
+         */
+        string _writtenName;
+
+        /** @brief 경고 · 오류에 적을 이름입니다 — 텍스트에 적힌 이름(`_writtenName`)이 먼저이고, 없으면 intern 이름(`_name`)입니다. 둘 다 없으면(바이너리의 해시뿐인 값) 빈 글입니다. */
+        const utf8* getDisplayName() const { return _writtenName.empty() ? _name.c_str() : _writtenName.c_str(); }
+    };
+
+    /**
+     * @enum SoftReadResult
+     * @brief 소프트 읽기(`JSONSerializer` · `XMLSerializer` · `BinarySerializer` 의 `deserializeSoft`)의 결과입니다. 실패를 둘로 가릅니다.
+     * @details 예전에는 `bool` 하나라 "본문을 못 읽음"과 "읽었지만 범위 밖 값"이 같았다. 그래서 호출부가 실패에서 바로 돌아가며 이미 모은 orphan
+     *          (모르는 키 · 읽지 못한 값)을 알리지 않았고, 범위 밖 값을 "JSON 이 아니다"로 알렸다(C-60).
+     *          부르는 쪽의 한 모양: `NotParsed` 만 바로 돌아간다(모은 것이 없다). `Rejected` 는 orphan 을 모두 알린 뒤 실패로 돌려준다.
+     */
+    enum class SoftReadResult : uint8
+    {
+        NotParsed, ///< 본문을 읽지 못했다(문서 구문 · 루트 · 스트림 머리). orphan 은 모이지 않았다.
+        Rejected,  ///< 본문은 읽었으나 값이 계약을 어겼다(`Min` · `Max` 밖 — 읽기 공통 끝이 칸마다 알렸다 · 읽지 못한 칸). orphan 은 끝까지 모였다.
+        Read,      ///< 읽었다. orphan 이 있으면 그 판단은 부르는 쪽이 한다.
+    };
+} // namespace sw
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 2) 스크래치 인스턴스: 임시 버퍼 생성과 파괴
+    //    $ctor 가 있으면 placement new 와 _destroyInstance 를 쓰고, 없으면 멤버별로 처리한다
+    // ------------------------------------------------------------------------------
+    /**
+     * @brief 임시 스크래치 버퍼를 만듭니다.
+     * @details `$ctor` 가 있으면 객체 전체를 placement new 로 만들고 `_destroyInstance` 로 짝을 맞춰 파괴한다.
+     *          없으면 0 으로 채운 버퍼에서 멤버별로 만든다. 컨테이너, string, hashed_string, reflected_atomic<bool>, TagID 와
+     *          `$ctor` 가 있는 중첩 REFLECT 타입만 생성하고 파괴하며, 나머지는 0 인 채로 둔다.
+     */
+    SW_API void* createScratchInstance( const TypeInfo& typeInfo, vector<uint8>& listStorage );
+    /** @brief 스크래치 인스턴스를 파괴합니다. */
+    SW_API void destroyScratchInstance( void* pInstance, const TypeInfo& typeInfo );
+
+    /**
+     * @enum SchemaOrphanPolicy
+     * @brief 버전은 같은데 모르는 필드(orphan)만 있을 때 통과시킬지 정합니다. 포맷마다 답이 다르고, 그것이 계약입니다.
+     *
+     * @details - 텍스트(XML, JSON)는 `Ignore` 다. 모르는 필드를 건너뛰고 아는 필드는 읽어 성공한다. 손으로 고치고 버전 관리에서
+     *            병합하는 저작 파일이라, 지운 PROPERTY 하나나 오타 하나로 씬, 프리팹, 머티리얼이 통째로 안 읽히면 안 된다. 언리얼의 태그
+     *            직렬화(`FPropertyTag` 는 이름으로 찾고 모르는 태그는 크기만큼 건너뛴다)와 유니티 YAML(모르는 필드는 버린다)이 같은 규칙이다.
+     *            건너뛴 필드는 조용히 넘어가지 않는다. `finishVersionedRead` 가 타입과 필드 이름을 담아 로드마다 한 번 경고한다.
+     *          - 바이너리는 `Reject` 다. 쿠커나 같은 빌드가 쓴 산출물이라, 모르는 필드가 있다는 것은 스키마가 바뀌었다는 뜻이다. 모르는
+     *            필드가 있으면 실패한다. 언리얼 쿠킹 패키지가 버전(`FPackageFileSummary` 의 버전)이 다르면 로드를
+     *            거절하는 것과 같다. 오브젝트 상태처럼 지운 필드를 버려도 되는 호출부는 컨텍스트로 그렇게 말한다
+     *            (`SerializeContext::setAllowUnknownProperties`, 그때 바이너리도 `Ignore`). 버전이 다르면 그래도 거절한다.
+     *          고정하는 테스트: `SchemaMigrateTest.OrphanPolicyDropsWithAWarningOrRejects`.
+     */
+    enum class SchemaOrphanPolicy : uint8
+    {
+        Ignore, ///< orphan 은 버리고(경고하고) 성공으로 봅니다. XML 과 JSON 이 쓰며, 사람이 고치는 저작 파일입니다.
+        Reject  ///< orphan 이 있으면 실패합니다. 바이너리가 쓰며, 스키마가 바뀐 것이 확실합니다.
+    };
+
+    /**
+     * @brief `deserializeVersioned` 의 마지막 단계입니다. 읽은 판이 현재 판과 정확히 같은지, orphan 이 정책(@p orphanPolicy)에 맞는지 판정합니다.
+     * @details soft 역직렬화가 끝난 뒤의 공통 로직이다. 세 포맷 모두 `runVersionedDeserialize` 를 거쳐 여기로 온다. 판이 다르면 이관하지 않고
+     *          오류를 알린 뒤 false 이다(첫 출시 전이라 옛 판 리더가 없다). 판이 같을 때 `Reject` 정책이면 orphan 이 하나라도 있으면 false 이다.
+     *          orphan 의 운명이 정해지는 유일한 곳이기도 하다. 로드가 성공으로 끝나는데 남은 orphan(읽지 못한 값, 타입에 없는 필드)은
+     *          버려진 것이므로, 타입 이름과 필드 이름을 담아 로드마다 한 번 경고한다. JSON 과 XML 의 Ignore 정책도 여기서 알린다
+     *          (숫자 필드의 "abc" 가 말없이 기본값으로 남지 않게 하려는 것이다).
+     */
+    [[nodiscard]] SW_API bool finishVersionedRead( uint32 fromVersion, uint32 currentVersion, const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listOrphan,
+                                                   SchemaOrphanPolicy orphanPolicy );
+
+    /** @brief JSON/XML 루트에 기록하는 스키마 버전 키입니다. */
+    inline constexpr auto kSchemaVersionKey = "_schemaVersion";
+    /** @brief 요소가 PROPERTY 이름을 속성으로 가질 때의 속성 이름입니다. XML orphan 수집은 루트의 자식 요소가 이 속성으로 아는 PROPERTY 를 가리키면 orphan 으로 보지 않습니다. */
+    inline constexpr auto kPropertyNameKey     = "_name";
+    inline constexpr auto kXMLPropertyNameAttr = kPropertyNameKey;
+
+    /** @brief XML 시퀀스 원소 태그입니다. 구조체 원소는 대신 타입 이름을 태그로 씁니다. */
+    inline constexpr auto kXMLItemTag = "item";
+    /** @brief XML 맵 항목 태그와 키 속성입니다(`<entry key="a">`). */
+    inline constexpr auto kXMLEntryTag = "entry";
+    inline constexpr auto kXMLKeyAttr  = "key";
+
+    // ------------------------------------------------------------------------------
+    // 3) 강제 변환: 바이너리와 텍스트 강제 변환
+    // ------------------------------------------------------------------------------
+    /**
+     * @brief 기록 타입과 대상 타입이 값으로만 옮기는 쌍인지 확인합니다. 기록 타입을 아는 스칼라에서 다른 스칼라나 문자열로, 또는 기록 타입이 다른 enum 인 경우입니다.
+     * @details 이 쌍은 `tryCoerceBinaryPayload` 가 기록 값의 텍스트(스칼라는 수, enum 은 열거자 이름)를 대상 타입으로 다시 읽어 옮기고, 못 옮기면 실패한다.
+     *          부르는 쪽은 그 실패 뒤에 제 타입으로 다시 읽으면 안 된다. 크기가 같은 스칼라는 비트가 그대로 재해석되고, enum 의 이름 해시는 수로 읽힌다.
+     * @param wireTypeName 기록 타입. 비어 있으면(모름) false 입니다.
+     */
+    SW_API bool isValueOnlyCoercion( hashed_string targetTypeName, hashed_string wireTypeName );
+
+    /**
+     * @brief 바이너리 페이로드를 대상 타입으로 강제 변환해 봅니다(int32↔string 등).
+     * @details 기록 타입을 아는 스칼라(정수, 실수, bool)를 다른 스칼라나 문자열로 바꿀 때는 값으로 옮긴다
+     *          (`isValueOnlyCoercion`). 기록 타입의 텍스트를 대상 타입으로 다시 읽으므로 JSON, XML 과 같은 규칙이고,
+     *          float32 1.5 → int32 처럼 텍스트가 맞지 않으면 실패한다. 기록 타입이 다른 enum 이면 그 enum 으로 읽어 열거자 이름(문자열)으로
+     *          옮긴다. XML 이 이름을 적어 두는 것과 같은 결과다(문자열이면 이름, 같은 이름을 가진 enum 이면 그 열거자, 정수면 실패).
+     *          그 밖에는 제 타입으로 끝까지 읽히는지부터 보고, 숫자와 문자열 변환, 마지막으로 크기가 같은 POD 재해석을 시도한다.
+     * @param value 값 하나 자체의 주소입니다(프로퍼티 값 위치 — 객체 주소가 아니다). 객체 주소(`MutableObjectAddress`)는 컴파일되지 않습니다.
+     * @param wireTypeName 그 payload 를 쓸 때의 타입입니다. 알면 넘기십시오(`findWireTypeName`). 비워 두면 크기로 짐작하는데, 크기만으로는
+     *                     정수와 실수를 가를 수 없습니다(`sizeof(float32) == sizeof(int32)`).
+     * @param wireVersion 그 payload 를 적은 버전입니다(스트림 머리나 orphan 이 가지고 있습니다).
+     * @return 적용에 성공하면 `Read`, 옮기지 못하면 `FieldFailed` 입니다. 대상이 구조체이고 그 안에 객체째 실패여야 할 것(금지된 필드)이 있으면
+     *         다른 방법을 더 해 보지 않고 `ObjectRejected` 입니다(`ValueSerializer::deserializeValueBinary`).
+     * @warning 비트필드 프로퍼티의 값 주소(그 바이트)를 넘기면 bool 이 같은 바이트의 다른 플래그까지 덮습니다. 프로퍼티는 `tryCoercePropertyBinary` 로 옮깁니다.
+     */
+    [[nodiscard]] SW_API FieldReadResult tryCoerceBinaryPayload( MutableValueAddress value, hashed_string targetTypeName,
+                                                                 const uint8* pPayload, size_t payloadSize,
+                                                                 const SerializeContext& context,
+                                                                 hashed_string           wireTypeName = hashed_string{},
+                                                                 BinaryWireVersion       wireVersion  = kCurrentBinaryWireVersion );
+
+    /**
+     * @brief 기록 타입이 다른 바이너리 페이로드를 프로퍼티 하나에 강제 변환해 씁니다(`tryCoerceBinaryPayload` 의 프로퍼티 판). @p instance 는 프로퍼티를 가진 객체의 주소입니다.
+     * @details 비트필드는 주소를 가질 수 없어 임시 bool 에 옮긴 뒤 그 비트만 씁니다(`PropertySerializer::applyPropertyBinary` 와 같다). 예전에는 태그 스트림
+     *          읽기가 `getRawPtr` 로 그 바이트 주소를 꺼내 bool 을 통째로 써, 같은 바이트의 다른 비트필드가 지워졌다.
+     * @return `tryCoerceBinaryPayload` 와 같습니다.
+     */
+    [[nodiscard]] SW_API FieldReadResult tryCoercePropertyBinary( const PropertyInfo& prop, MutableObjectAddress instance, const uint8* pPayload, size_t payloadSize,
+                                                                  const SerializeContext& context, hashed_string wireTypeName, BinaryWireVersion wireVersion );
+
+    /**
+     * @brief 바이너리 태그의 기록 타입 해시를 이름으로 바꿔 반환합니다. 등록된 타입(원본 이름) 또는 enum(FQN)이며, 모르면 빈 이름입니다.
+     * @details 타입과 enum 이 한 해시 표(`TypeRegistry::findWireTypeNameByHash`)에 있다. 기록 타입을 몰라 크기로 짐작하면 열거자 이름
+     *          해시(4 바이트)가 int32 나 float32 로 그대로 읽힌다.
+     */
+    SW_API hashed_string findWireTypeName( uint32 wireTypeHash );
+
+    /**
+     * @brief 텍스트 토큰을 대상 타입으로 파싱합니다(따옴표 제거, 숫자와 문자열 사이의 강제 변환).
+     * @details 쓰는 곳은 값 하나 자체의 주소입니다(`MutableValueAddress`). 프로퍼티 값에 쓰려면 `applyPropertyTextCoerced` 를 씁니다(비트필드는 값 주소가 없습니다).
+     */
+    [[nodiscard]] SW_API bool parseTextValueCoerced( MutableValueAddress value, hashed_string typeName, string_view valStr,
+                                                     const SerializeContext& context );
+    /** @brief `parseTextValueCoerced` 의 묶음 판입니다 — @p pBinding 은 @p typeName 에 묶은 사실(프로퍼티 · 컨테이너 원소 · 키)이고 nullptr 이면 이름으로 찾습니다. */
+    [[nodiscard]] SW_API bool parseTextValueCoerced( MutableValueAddress value, hashed_string typeName, const ReflectValueBinding* pBinding, string_view valStr,
+                                                     const SerializeContext& context );
+
+    /**
+     * @brief 텍스트를 프로퍼티 하나에 강제 변환해 씁니다(`parseTextValueCoerced` 의 프로퍼티 판). @p instance 는 프로퍼티를 가진 객체의 주소입니다.
+     * @details 비트필드는 값 주소가 없어(`PropertyInfo::getRawPtr`) 임시 bool 에 읽은 뒤 그 비트만 씁니다.
+     * @return 읽지 못하거나 값 주소가 없으면 false 이고 값은 그대로입니다.
+     */
+    [[nodiscard]] SW_API bool applyPropertyTextCoerced( const PropertyInfo& prop, MutableObjectAddress instance, string_view valStr,
+                                                        const SerializeContext& context );
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @enum SchemaVersionSource
+     * @brief 버전 번호를 어디서 얻는지 나타냅니다. 포맷마다 다릅니다.
+     */
+    enum class SchemaVersionSource : uint8
+    {
+        Stream, ///< 본문 앞에서 따로 읽어 옵니다(Binary). 공통 절차에 들어올 때 이미 채워져 있습니다.
+        Payload ///< 본문 안의 필드입니다(JSON/XML 의 `_schemaVersion`). soft 역직렬화가 알려 줍니다.
+    };
+
+    /**
+     * @brief 공통 절차가 포맷에 맡기는 유일한 일입니다. 본문을 읽어 값과 orphan 을 채웁니다.
+     * @details 인자는 (대상 객체의 주소, 그 타입, orphan 수집함, 버전 출력)입니다. 버전을 본문에서 얻지 않는
+     *          포맷(Binary)은 마지막 인자를 건드리지 않습니다.
+     */
+    using SoftDeserializeFn = Delegate<bool( MutableObjectAddress, const TypeInfo&, vector<SchemaOrphanValue>&, uint32& )>;
+
+    /**
+     * @brief `deserializeVersioned` 의 공통 절차입니다. 세 포맷이 함께 씁니다.
+     *
+     * @param streamVersion `SchemaVersionSource::Stream` 이면 본문 앞에서 이미 읽은 판입니다. `Payload` 면 쓰지 않습니다(판은 soft 읽기가 본문에서 낸다).
+     * @return 판이 @p currentVersion 과 같고 읽었으면 true 입니다. 읽은 판은 돌려주지 않는다 — 성공이면 @p currentVersion 이고, 다른 판의 거절은 `Schema.VersionMismatch` 로그가 판을 적는다.
+     * @param softDeserialize (대상, 타입, orphan 수집함, 버전 출력)을 받아 성공 여부를 반환합니다.
+     *                        `Stream` 포맷은 버전 출력을 건드리지 않습니다.
+     * @details 처리 순서는 다음과 같다. 현재 타입으로 soft 역직렬화하고, 버전을 확정한 다음 `finishVersionedRead` 를 부른다.
+     *          판이 현재 판과 다르면 이관하지 않고 실패한다.
+     */
+    [[nodiscard]] SW_API bool runVersionedDeserialize( uint32 streamVersion, MutableObjectAddress instance, const TypeInfo& typeInfo,
+                                                       uint32 currentVersion, SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
+                                                       const SoftDeserializeFn& softDeserialize );
+} // namespace sw

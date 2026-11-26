@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    void VulkanRHIRenderPassCache::RenderPassSpec::addColor( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout )
+    void VulkanRHIRenderPassCache::VulkanRenderPassKey::addColor( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout )
     {
         if ( _colorCount >= kMaxColorAttachments )
             return;
@@ -23,7 +23,7 @@ namespace sw
         ++_colorCount;
     }
 
-    void VulkanRHIRenderPassCache::RenderPassSpec::setDepth( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout )
+    void VulkanRHIRenderPassCache::VulkanRenderPassKey::setDepth( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout )
     {
         _depthFormat        = vkFormat;
         _depthLoadOp        = loadOp;
@@ -96,7 +96,7 @@ namespace sw
     {
     }
 
-    VkRenderPass VulkanRHIRenderPassCache::createFromSpec( VkDevice device, const RenderPassSpec& spec )
+    VkRenderPass VulkanRHIRenderPassCache::createFromKey( VkDevice device, const VulkanRenderPassKey& spec )
     {
         const bool bHasDepth = spec._depthFormat != 0;
         if ( device == nullptr || ( spec._colorCount == 0 && bHasDepth == false ) )
@@ -176,21 +176,21 @@ namespace sw
         return renderPass;
     }
 
-    VkRenderPass VulkanRHIRenderPassCache::ensurePipelineRenderPass( VkDevice device, const PipelineKey& key, const RenderPassSpec& spec )
+    VkRenderPass VulkanRHIRenderPassCache::ensurePipelineRenderPass( VkDevice device, const PipelineKey& key, const VulkanRenderPassKey& spec )
     {
         ScopedLock<mutex> lock{ _pipelineMutex };
         const auto        existing = _mapPipelineRenderPass.find( key );
         if ( existing != _mapPipelineRenderPass.end() )
             return existing->second;
 
-        VkRenderPass renderPass = createFromSpec( device, spec );
+        VkRenderPass renderPass = createFromKey( device, spec );
         if ( renderPass == VK_NULL_HANDLE )
             return VK_NULL_HANDLE;
         _mapPipelineRenderPass.emplace( key, renderPass );
         return renderPass;
     }
 
-    bool VulkanRHIRenderPassCache::ensureComposite( VkDevice device, const CompositeKey& key, const RenderPassSpec& spec,
+    bool VulkanRHIRenderPassCache::ensureComposite( VkDevice device, const CompositeKey& key, const VulkanRenderPassKey& spec,
                                                     const VkImageView* pAttachmentView, uint32 attachmentCount, uint32 width, uint32 height,
                                                     CompositeRecord& outRecord )
     {
@@ -206,7 +206,7 @@ namespace sw
             return false;
 
         CompositeRecord record{};
-        record._renderPass = createFromSpec( device, spec );
+        record._renderPass = createFromKey( device, spec );
         if ( record._renderPass == VK_NULL_HANDLE )
             return false;
 

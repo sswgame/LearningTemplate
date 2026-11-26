@@ -11,26 +11,26 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
-#include "GameFramework/Runtime/Foundation/Flow/GameInstanceClientHook.h"
-#include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionManager.h"
+#include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Flow/ILoadingScreen.h"
+#include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionController.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Save/GameSaveSlots.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
     /**
-     * @brief `"-gv_firstScene=<리소스 경로>"` 인자입니다. 팩 설정(gamesettings)의 시작 씬 대신 이 씬을 처음 엽니다.
+     * @brief `"-gv_firstScene=<에셋 경로>"` 인자입니다. 팩 설정(gamesettings)의 시작 씬 대신 이 씬을 처음 엽니다.
      * @details 배포 전용 서버가 띄울 맵을 고르는 길이라 배포에도 있다(언리얼 `Server.exe <맵>` · 실행 인자 URL 의 맵 자리, `gv_netConnectAddress` 와 같은 일반 변수).
      *          에디터 새 창 플레이 · 멀티 프로세스 재생 · 시나리오(`<Launch>`)도 이것으로 시작 씬을 준다.
      * @note PowerShell 은 점이 든 인자를 쪼개므로 따옴표로 감싸야 한다.
      */
-    SW_GLOBAL_VARIABLE( sw::GlobalString, gv_firstScene, "", "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)" );
+    SW_GLOBAL_VARIABLE( sw::GlobalString, gv_firstScene, "", "팩 설정의 시작 씬 대신 처음 열 씬의 에셋 경로 (비우면 사용 안 함)" );
 
-    GameSceneFlow::GameSceneFlow( const GameSettings& settings, ScreenTransitionManager& screenTransition, ILoadingScreen* pLoadingScreen, SaveLock& saveLock )
+    GameSceneFlow::GameSceneFlow( const GameSettings& settings, ScreenTransitionController& screenTransition, ILoadingScreen* pLoadingScreen, SaveLock& saveLock )
         : _settings{ settings }
         , _screenTransition{ screenTransition }
         , _pLoadingScreen{ pLoadingScreen }
@@ -49,7 +49,7 @@ namespace sw
 
     span<const utf8* const> GameSceneFlow::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { ScreenTransitionManager::kSubsystemName }; // 로딩 화면(클라이언트 전용)은 생성자에서 받고 갱신 때만 부른다
+        static constexpr const utf8* kArrDependency[] = { ScreenTransitionController::kSubsystemName }; // 로딩 화면(클라이언트 전용)은 생성자에서 받고 갱신 때만 부른다
         return kArrDependency;
     }
 
@@ -138,7 +138,7 @@ namespace sw
 
     void GameSceneFlow::resetRunningProgress()
     {
-        if ( AutosaveManager* const pAutosave = game::findSubsystem<AutosaveManager>() )
+        if ( AutosaveController* const pAutosave = game::findSubsystem<AutosaveController>() )
             pAutosave->beginNewGame();
         if ( GameSaveSlots* const pSaveSlots = game::findSubsystem<GameSaveSlots>() )
             pSaveSlots->setPlayTime( 0.0 );

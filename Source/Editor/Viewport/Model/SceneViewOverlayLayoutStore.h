@@ -3,7 +3,7 @@
  * @brief 씬 뷰 오버레이 바 배치(보임 · 접힘 · 붙은 쪽 · 위치 비율)의 주인과 그 저장입니다 — 에디터 서브시스템이라 씬 뷰 창이 그려지지 않아도 명령이 바로 고친다.
  * @details 언리얼이 뷰포트 설정을 설정 객체(`ULevelEditorViewportSettings`)에 두고 명령이 그것을 고치며 뷰포트는 읽기만 하는 것과 같은 선이다.
  *          그리기 · 끌기 런타임(지난 프레임 위치 · 크기)은 View(`EditorViewportOverlays`)가 들고, 배치는 여기서 읽고 바꾸며 바꿀 때마다 저장한다.
- *          View 는 이 서브시스템을 찾지 못한다(서비스 창구가 `[panelViewBan]` 에 막힌다) — 배치는 `EditorViewportOverlaysViewModel` 을 거쳐 읽고 바꾸고, 여기서는 정적 바 표(`kArrBar` · `findBarDesc`)만 본다.
+ *          View 는 이 서브시스템을 찾지 못한다(서비스 창구가 `[panelViewGuard]` 에 막힌다) — 배치는 `EditorViewportOverlaysViewModel` 을 거쳐 읽고 바꾸고, 여기서는 정적 바 표(`kArrBar` · `findBarDesc`)만 본다.
  */
 #pragma once
 #include "Core/Container/string.h"

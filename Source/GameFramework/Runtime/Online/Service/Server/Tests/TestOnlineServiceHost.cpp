@@ -9,8 +9,8 @@
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
-#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/Server/Tests/EphemeralStoreTestUtil.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/Tests/CacheStoreTestUtil.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
@@ -60,7 +60,7 @@ namespace
         vector<AccountID>          _listJoinedAccount{};
         vector<AccountID>          _listLeftAccount{};
         vector<ServerBusMessage>   _listBusMessage{};
-        vector<EphemeralReply>     _listCacheReply{};
+        vector<CacheReply>         _listCacheReply{};
         string                     _cacheKeyToRead{};
         Subscription               _cacheReplyOwner{}; ///< 캐시 답의 주인 몫(틱에서 읽을 때 연다)
         LogContext                 _lastLogContext{};  ///< 마지막 요청을 처리할 때의 로그 문맥
@@ -142,12 +142,12 @@ namespace
                 _listLateAnswer.push_back( host.respondOk( token, BitWriter{}, NetResponseRetention::Keep ) ? SW_TRUE : SW_FALSE );
             }
             _listLateToken.clear();
-            if ( _bReadCacheOnTick && host.getEphemeralRouter() != nullptr )
+            if ( _bReadCacheOnTick && host.getCacheRouter() != nullptr )
             {
                 _bReadCacheOnTick = SW_FALSE;
-                _cacheReplyOwner  = host.getEphemeralRouter()->openReplyOwner();
-                host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( _cacheKeyToRead ),
-                                                   _cacheReplyOwner, [this]( const EphemeralReply& reply )
+                _cacheReplyOwner  = host.getCacheRouter()->openReplyOwner();
+                host.getCacheRouter()->submit( CacheRequest::makeGet( _cacheKeyToRead ),
+                                               _cacheReplyOwner, [this]( const CacheReply& reply )
                 { onCacheReply( reply ); } );
             }
         }
@@ -177,7 +177,7 @@ namespace
             _cacheReplyCountAtHostShutdown = static_cast<int32>( _listCacheReply.size() );
         }
 
-        void onCacheReply( const EphemeralReply& reply ) { _listCacheReply.push_back( reply ); }
+        void onCacheReply( const CacheReply& reply ) { _listCacheReply.push_back( reply ); }
     };
 
     /** @brief 클라이언트 쪽 가짜 키트 — 알림을 적는다. */
@@ -933,17 +933,17 @@ SW_TEST_CASE( OnlineServiceHostTest, RetryableErrorIsNotRememberedForTheSameKey 
     SW_EXPECT_EQUAL( before + 3, rig._serviceB._handledCount ); // 끝난 오류는 기억한 답이다
 }
 
-SW_TEST_CASE( OnlineServiceHostTest, EphemeralRepliesReachOnlyTheSubmittingService )
+SW_TEST_CASE( OnlineServiceHostTest, CacheRepliesReachOnlyTheSubmittingService )
 {
     SystemMonotonicClock    clock;
-    MemoryEphemeralDatabase database{ clock };
-    MemoryEphemeralStore    writer( &database );
-    MemoryEphemeralStore    hostCache( &database );
+    MemoryCacheDatabase     database{ clock };
+    MemoryCacheStore        writer( &database );
+    MemoryCacheStore        hostCache( &database );
     OnlineServiceHostConfig settings = HostFixture::makeSettings();
-    settings._pEphemeralStore        = &hostCache;
+    settings._pCacheStore            = &hostCache;
     HostFixture rig( settings );
-    (void)writer.submit( EphemeralRequest::makeSet( "a", sw::EphemeralStoreTestAccess::makeValue( vector<uint8>{ 1 } ), 0 ) );    // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
-    (void)writer.submit( EphemeralRequest::makeSet( "b", sw::EphemeralStoreTestAccess::makeValue( vector<uint8>{ 2, 2 } ), 0 ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
+    (void)writer.submit( CacheRequest::makeSet( "a", sw::CacheStoreTestAccess::makeValue( vector<uint8>{ 1 } ), 0 ) );    // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
+    (void)writer.submit( CacheRequest::makeSet( "b", sw::CacheStoreTestAccess::makeValue( vector<uint8>{ 2, 2 } ), 0 ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     rig._serviceA._cacheKeyToRead   = "a";
     rig._serviceB._cacheKeyToRead   = "b";
     rig._serviceA._bReadCacheOnTick = SW_TRUE;
@@ -951,9 +951,9 @@ SW_TEST_CASE( OnlineServiceHostTest, EphemeralRepliesReachOnlyTheSubmittingServi
     rig.step( 2 );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._serviceA._listCacheReply.size() );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._serviceB._listCacheReply.size() );
-    SW_EXPECT_TRUE( sw::EphemeralStoreTestAccess::getBytes( rig._serviceA._listCacheReply[0] ) == vector<uint8>{ 1 } );
-    SW_EXPECT_TRUE( ( sw::EphemeralStoreTestAccess::getBytes( rig._serviceB._listCacheReply[0] ) == vector<uint8>{ 2, 2 } ) );
-    SW_EXPECT_EQUAL( 0, rig._host.getEphemeralRouter()->getPendingCount() );
+    SW_EXPECT_TRUE( sw::CacheStoreTestAccess::getBytes( rig._serviceA._listCacheReply[0] ) == vector<uint8>{ 1 } );
+    SW_EXPECT_TRUE( ( sw::CacheStoreTestAccess::getBytes( rig._serviceB._listCacheReply[0] ) == vector<uint8>{ 2, 2 } ) );
+    SW_EXPECT_EQUAL( 0, rig._host.getCacheRouter()->getPendingCount() );
     writer.shutdown();
 }
 
@@ -999,24 +999,24 @@ SW_TEST_CASE( OnlineServiceHostTest, SubscribingWithoutABusTransportIsAnAssembly
 SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCacheReplies )
 {
     SystemMonotonicClock    clock;
-    MemoryEphemeralDatabase database{ clock };
-    MemoryEphemeralStore    hostCache( &database );
+    MemoryCacheDatabase     database{ clock };
+    MemoryCacheStore        hostCache( &database );
     LocalServerBusHub       hub;
     LocalServerBus          busOfHost( &hub, 1 );
     OnlineServiceHostConfig settings = HostFixture::makeSettings();
-    settings._pEphemeralStore        = &hostCache;
+    settings._pCacheStore            = &hostCache;
     settings._pServerBusTransport    = &busOfHost;
     HostFixture        rig( settings );
     const Subscription subscription    = rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
-    const Subscription cacheReplyOwner = rig._host.getEphemeralRouter()->openReplyOwner();
-    rig._host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( "never.pumped" ),
-                                            cacheReplyOwner, [&rig]( const EphemeralReply& reply )
+    const Subscription cacheReplyOwner = rig._host.getCacheRouter()->openReplyOwner();
+    rig._host.getCacheRouter()->submit( CacheRequest::makeGet( "never.pumped" ),
+                                        cacheReplyOwner, [&rig]( const CacheReply& reply )
     { rig._serviceA.onCacheReply( reply ); } );
     rig._host.shutdown();
     SW_EXPECT_EQUAL( 1, rig._serviceA._hostShutdownCount );
     SW_EXPECT_EQUAL( 1, rig._serviceB._hostShutdownCount );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._serviceA._listCacheReply.size() );
-    SW_EXPECT_TRUE( rig._serviceA._listCacheReply[0]._result == EphemeralResult::Unavailable );
+    SW_EXPECT_TRUE( rig._serviceA._listCacheReply[0]._result == CacheResult::Unavailable );
     SW_EXPECT_EQUAL( 1, rig._serviceA._cacheReplyCountAtHostShutdown ); // 답이 먼저
     rig._host.shutdown();                                               // 두 번째는 아무것도 하지 않는다
     SW_EXPECT_EQUAL( 1, rig._serviceA._hostShutdownCount );

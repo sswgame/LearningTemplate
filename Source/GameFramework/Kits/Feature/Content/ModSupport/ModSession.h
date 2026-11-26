@@ -3,7 +3,7 @@
  * @brief 한 게임 세션의 모드 구성입니다 — 시작 때 한 번 검증 · 마운트 · 캐시 갱신하고, 세션이 끝날 때 뗀다. 실행 중에 켜고 끄지 않는다.
  * @details 흐름: 모드 폴더(`<설치 폴더>/<id>/`)의 매니페스트를 읽고(`ModManifest`) 순서를 정하고(`ModResolver`), 팩을 검사하고(경로 · 크기 · 항목 수 · 덮어쓰기),
  *          허용 목록이 있으면 대조하고(서버, `ModAllowList`), 엔진 팩 VFS 에 패치 팩으로 기본 팩 위에 올리고(`PackManager::mountPatchPack`), 층을 밝힌 모드의
- *          층 뿌리(`mods/<id>/layer`)를 엔진 덮어쓰기 층 목록 끝에 더한 뒤(`ResourceLayers` — 모드 순서대로, 뒤가 나중에 얹는다) 덮어쓰거나 층을 얹은 리소스를 쥔
+ *          층 뿌리(`mods/<id>/layer`)를 엔진 덮어쓰기 층 목록 끝에 더한 뒤(`AssetLayers` — 모드 순서대로, 뒤가 나중에 얹는다) 덮어쓰거나 층을 얹은 리소스를 쥔
  *          캐시를 다시 읽힌다(`AssetManager::reloadChangedPaths`). 하나라도 실패하면 이 세션은 모드 없이 서지 않고 실패를 돌려준다 — 서버와 다른 구성으로 조용히 돌지 않는다.
  *
  *          팩 VFS 는 엔진의 것이고 이 키트는 조정자다(팩 기능을 복제하지 않는다). 수명은 게임 인스턴스와 같다 — 시나리오 체인 · 모듈 리로드처럼 인스턴스를 다시 세우는
@@ -83,7 +83,7 @@ namespace sw
 
         /** @brief 모드 설치 폴더입니다 — 패키지는 실행 파일 옆 `Mods`, 저장소는 `IntegrationTests/Mods`(시연 모드는 시나리오 · 테스트 자료). */
         static AbsolutePath getInstallFolder();
-        /** @brief 배포할 묶은 모드를 두는 폴더(`<Saved>/ModPacks`)입니다. 배포 패키지 스크립트(`Scripts/package/pack.py --mods`)가 여기서 베낀다. */
+        /** @brief 배포할 묶은 모드를 두는 폴더(`<Saved>/ModPacks`)입니다. 배포 패키지 스크립트(`Scripts/package/package.py --mods`)가 여기서 베낀다. */
         static AbsolutePath getExportFolder();
         /**
          * @brief 설치 폴더의 소스 모드 @p id(`<id>/content/`)를 배포 형태(`<내보내기 폴더>/<id>/mod.xml` + `content.pack`)로 묶습니다 — 배포 게임은 묶은 모드만 읽는다.
@@ -93,7 +93,7 @@ namespace sw
         [[nodiscard]] static bool exportPackedMod( string_view id, string_view packRoot, AbsolutePath& outFolder );
 
     private:
-        /** @brief 이 세션이 바꾼 기본 리소스 id(덮어쓰기와 층, 겹치지 않게)입니다. 캐시를 다시 읽힐 목록이다. */
+        /** @brief 이 세션이 바꾼 기본 에셋 id(덮어쓰기와 층, 겹치지 않게)입니다. 캐시를 다시 읽힐 목록이다. */
         vector<string> makeChangedPaths() const;
         /** @brief 켤 모드의 매니페스트를 읽습니다(id 형식 · 파일 크기 · id 와 폴더 이름의 일치). */
         [[nodiscard]] static bool loadManifests( const ModSessionRequest& request, const ModSupportSettings& settings, vector<ModManifest>& outListManifest );
@@ -109,9 +109,9 @@ namespace sw
         AssetManager&          _assets;
         vector<string>         _listMountedPackPath;   ///< 이 세션이 올린 팩(마운트 순서)
         vector<AbsolutePath>   _listBuiltPackPath;     ///< 이 세션이 소스 모드에서 묶은 팩 파일(내린 뒤 지운다)
-        vector<string>         _listOverridePath;      ///< 켠 모드가 덮어쓴 기본 리소스 id
-        vector<string>         _listLayerPath;         ///< 켠 모드가 층을 얹은 기본 리소스 id
-        vector<string>         _listPreviousLayerRoot; ///< 모드 층을 더하기 전의 엔진 층 목록(`ResourceLayers` — 내릴 때 되돌린다)
+        vector<string>         _listOverridePath;      ///< 켠 모드가 덮어쓴 기본 에셋 id
+        vector<string>         _listLayerPath;         ///< 켠 모드가 층을 얹은 기본 에셋 id
+        vector<string>         _listPreviousLayerRoot; ///< 모드 층을 더하기 전의 엔진 층 목록(`AssetLayers` — 내릴 때 되돌린다)
         ModSetDigest           _digest;
         uint8                  _bApplied   : 1; ///< `apply` 를 불렀다(성공 여부와 상관없이 세션마다 한 번)
         uint8                  _bLayersSet : 1; ///< 이 세션이 엔진 층 목록에 모드 층을 더했다

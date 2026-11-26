@@ -27,13 +27,13 @@ namespace sw
     {
     public:
         /**
-         * @brief VkRenderPass 하나의 디스크립터입니다. 렌더패스를 만드는 모든 곳이 이것을 채워 `createFromSpec` 에 넘깁니다.
+         * @brief VkRenderPass 하나의 디스크립터입니다. 렌더패스를 만드는 모든 곳이 이것을 채워 `createFromKey` 에 넘깁니다.
          * @details 스왑체인(CLEAR/LOAD), 공용 오프스크린, 포맷별 오프스크린, PSO 호환용, 합성 프레임버퍼, desc 기반 생성이
          *          모두 이것으로 `VkAttachmentDescription` 과 서브패스 의존성을 만듭니다(곳마다 손으로 적으면 의존성 마스크가
          *          조금씩 달라지고 한 곳을 고칠 때 나머지를 빠뜨립니다). 단일 서브패스, 샘플 1,
          *          곳마다 다른 것(포맷, loadOp, storeOp, 레이아웃)만 필드입니다. 깊이 첨부의 스텐실은 깊이와 같은 loadOp · storeOp 입니다.
          */
-        struct RenderPassSpec
+        struct VulkanRenderPassKey
         {
             uint32 _colorCount{ 0 };
             uint32 _arrColorFormat[kMaxColorAttachments]{};        ///< VkFormat
@@ -111,17 +111,17 @@ namespace sw
         VulkanRHIRenderPassCache& operator=( const VulkanRHIRenderPassCache& ) = delete;
 
         /** @brief 서술대로 VkRenderPass 를 만듭니다. 실패하면 VK_NULL_HANDLE 입니다. 캐시하지 않고, 부르는 쪽이 소유합니다. */
-        static VkRenderPass createFromSpec( VkDevice device, const RenderPassSpec& spec );
+        static VkRenderPass createFromKey( VkDevice device, const VulkanRenderPassKey& spec );
 
         /** @brief PSO 호환 렌더패스를 키로 찾고, 없으면 spec 으로 만들어 넣습니다. 실패하면 VK_NULL_HANDLE 입니다. */
-        VkRenderPass ensurePipelineRenderPass( VkDevice device, const PipelineKey& key, const RenderPassSpec& spec );
+        VkRenderPass ensurePipelineRenderPass( VkDevice device, const PipelineKey& key, const VulkanRenderPassKey& spec );
 
         /**
          * @brief 합성 프레임버퍼를 키로 찾고, 없으면 spec 과 첨부 뷰로 렌더패스와 프레임버퍼를 만들어 넣습니다.
          * @details 조회와 생성이 한 임계 구역입니다. RenderGraph::executeParallel 이 여러 스레드에서 동시에 beginRenderPass 를
          *          부르므로, 나눠 놓으면 같은 키를 둘이 만들어 하나가 누수됩니다. 첨부 뷰는 부르는 쪽이 미리 찾아서 넘깁니다.
          */
-        [[nodiscard]] bool ensureComposite( VkDevice device, const CompositeKey& key, const RenderPassSpec& spec, const VkImageView* pAttachmentView,
+        [[nodiscard]] bool ensureComposite( VkDevice device, const CompositeKey& key, const VulkanRenderPassKey& spec, const VkImageView* pAttachmentView,
                                             uint32 attachmentCount, uint32 width, uint32 height, CompositeRecord& outRecord );
         /**
          * @brief 이 텍스처를 쓰는 합성 프레임버퍼를 캐시에서 분리해 반환합니다. 파괴는 부르는 쪽이 GPU 펜스 뒤로 미룹니다.

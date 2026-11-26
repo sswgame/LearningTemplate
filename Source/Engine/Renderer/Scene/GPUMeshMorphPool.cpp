@@ -26,7 +26,7 @@ namespace sw
             static constexpr uint32 kElementStride = static_cast<uint32>( sizeof( float4 ) );
 
             /** @brief 정점의 위치 · 노멀 · 탄젠트를 float4 셋으로 담습니다(레스트). */
-            static GPUMorphVertex makeRestVertex( const RHIVertex& vertex )
+            static GPUMorphVertex makeRestVertex( const MeshVertex& vertex )
             {
                 GPUMorphVertex restVertex{};
                 restVertex._position = float4{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2], 1.0f };
@@ -251,11 +251,11 @@ namespace sw
         restRegion._dstOffset = source._restBase * kStride;
         restRegion._sizeBytes = source._restCount * kStride;
         _listScratchSkinRestRegion.push_back( restRegion );
-        for ( const RHIVertex& vertex : mesh.getCPUView().getVertices() )
+        for ( const MeshVertex& vertex : mesh.getCPUView().getVertices() )
         {
             _listScratchSkinRest.push_back( GPUMeshMorphPoolInternal::makeRestVertex( vertex ) );
         }
-        for ( const RHIVertex& vertex : mesh.getCPUView().getLODVertices() )
+        for ( const MeshVertex& vertex : mesh.getCPUView().getLODVertices() )
         {
             _listScratchSkinRest.push_back( GPUMeshMorphPoolInternal::makeRestVertex( vertex ) );
         }
@@ -517,7 +517,7 @@ namespace sw
         _vertexCount = _skinVertexBase + resultOffset;
     }
 
-    GPUDeformResult GPUDeformResult::fromVertex( const RHIVertex& vertex )
+    GPUDeformResult GPUDeformResult::fromVertex( const MeshVertex& vertex )
     {
         GPUDeformResult result{};
         result._arrPosition[0] = vertex._arrPosition[0];
@@ -706,8 +706,8 @@ namespace sw
             if ( entry._slot == kInvalidBase )
                 entry._slot = _freeMorphSlot.allocate( _listPoolMorph, pMesh );
             // 맵의 메시는 모두 이번 update 에서 본 것이라 살아 있다(못 본 것은 쓸기에서 지웠다).
-            const vector<RHIVertex>& listVertex = pMesh->getCPUView().getVertices();
-            const float32            slotTag    = static_cast<float32>( entry._slot + 1u ); // float 로 정확한 정수(2^24 미만) - 비트 재해석은 비정규 수로 지워질 수 있다
+            const vector<MeshVertex>& listVertex = pMesh->getCPUView().getVertices();
+            const float32             slotTag    = static_cast<float32>( entry._slot + 1u ); // float 로 정확한 정수(2^24 미만) - 비트 재해석은 비정규 수로 지워질 수 있다
             for ( uint32 vertexIndex = 0; vertexIndex < entry._count; ++vertexIndex )
             {
                 GPUMorphVertex restVertex                                          = GPUMeshMorphPoolInternal::makeRestVertex( listVertex[vertexIndex] );
@@ -732,7 +732,7 @@ namespace sw
     {
         // 레스트 노멀의 w 는 칸 번호 + 1 이다 - 컴퓨트가 프로그램 버퍼의 칸 표에서 그 메시의 변형 프로그램을 찾는다(updateDeformPrograms).
         const float32 slotTag = static_cast<float32>( slot + 1u ); // float 로 정확한 정수(2^24 미만) - 비트 재해석은 비정규 수로 지워질 수 있다
-        for ( const RHIVertex& vertex : mesh.getCPUView().getVertices() )
+        for ( const MeshVertex& vertex : mesh.getCPUView().getVertices() )
         {
             GPUMorphVertex restVertex = GPUMeshMorphPoolInternal::makeRestVertex( vertex );
             restVertex._normal._w     = slotTag;

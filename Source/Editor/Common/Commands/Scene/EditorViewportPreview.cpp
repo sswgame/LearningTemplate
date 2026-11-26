@@ -5,13 +5,13 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 
 #include "Engine/Animation/Component/SpriteAnimatorComponent.h"
 #include "Engine/Asset/AssetManager.h"

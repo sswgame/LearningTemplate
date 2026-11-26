@@ -15,7 +15,7 @@ namespace sw
     /**
      * @class TemporalJitterSequence
      * @brief 뷰 하나의 지터 순서(표본 번호)와 그것을 뷰-투영에 싣는 계산입니다. 언리얼 TAA · 유니티 URP/HDRP TAA · Godot TAA 와 같은 Halton(2, 3) 8 표본입니다.
-     * @details 지터는 래스터(`g_ViewProj` · `g_InvViewProj`)에만 싣는다. 컬링 · 지난 뷰-투영 · 그림자는 지터 없는 행렬을 받고(`FramePassExecutor::applyViewProjection`),
+     * @details 지터는 래스터(`g_ViewProj` · `g_InvViewProj`)에만 싣는다. 컬링 · 지난 뷰-투영 · 그림자는 지터 없는 행렬을 받고(`FrameRecorder::applyViewProjection`),
      *          화면 속도는 이번 지터(`g_TemporalJitter`)를 빼서 물체 · 카메라 움직임만 남긴다(material_shader_main.hlsli · binding.hlsli `computeCameraPreviousUv`).
      */
     class SW_API TemporalJitterSequence

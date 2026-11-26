@@ -100,7 +100,7 @@
 			<GameObject _schemaVersion="0" _name="RoomHUD" _bActive="true">
 				<_listComponent>
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true" _documentPath="guid:40d0aa0b4253d754d4447f50f6980bba" />
-					<ActionRoomHUDComponent _localID="5120394671823349907" _componentName="ActionRoomHUDComponent" _bActive="true" />
+					<ActionCombatRoomHUDComponent _localID="5120394671823349907" _componentName="ActionCombatRoomHUDComponent" _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -18,9 +18,9 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/Flow/GameSpeedControl.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameSpeedControl.h"
 
 namespace sw
 {

@@ -5,7 +5,7 @@
 #
 # 크로미움 `fuzzer_test()` 꼴: 타깃마다 실행 파일 + 씨앗 말뭉치. 엔진은 공유 라이브러리 그대로 링크한다 — 정적 구성은 Shipping 뿐이라 정적 링크(크로미움 꼴)는
 # 구성 하나를 더 유지해야 한다. 그 대신 실행 파일만 정적 아카이브 심볼(libFuzzer 의 `__sanitizer_cov_*` 콜백)을 내보낸다 — 대상 속성 `SW_FUZZ_TARGET` 이
-# 리눅스 심볼 숨김(`--exclude-libs,ALL`, BuildLayout.cmake)을 이 타깃에서 뺀다. 실행 파일이 심볼 찾기 순서의 맨 앞이라 엔진 .so 의 계측이 ASan 의 약한
+# 리눅스 심볼 숨김(`--exclude-libs,ALL`, OutputLayout.cmake)을 이 타깃에서 뺀다. 실행 파일이 심볼 찾기 순서의 맨 앞이라 엔진 .so 의 계측이 ASan 의 약한
 # 기본 구현이 아니라 libFuzzer 의 콜백에 묶인다. 빠지면 돌기는 하는데 커버리지가 실행 파일에만 닿는 조용한 결함이라, 스모크 테스트가 `Loaded N modules`
 # (N ≥ 2 — 실행 파일 + 엔진 .so)를 요구한다.
 #

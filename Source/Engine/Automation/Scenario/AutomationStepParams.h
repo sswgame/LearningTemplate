@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 namespace sw
 {
@@ -159,7 +159,7 @@ namespace sw
         uint32 _timeoutFrames{ 600 };
     };
 
-    /** @brief `ExpectActiveScene` 의 인자입니다 — 활성 씬이 온 리소스 경로. */
+    /** @brief `ExpectActiveScene` 의 인자입니다 — 활성 씬이 온 에셋 경로. */
     REFLECT()
     struct SW_API AutomationExpectActiveSceneParams
     {

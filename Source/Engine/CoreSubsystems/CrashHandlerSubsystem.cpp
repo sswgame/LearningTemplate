@@ -2,7 +2,7 @@
 
 #include "Engine/CoreSubsystems/CrashHandlerSubsystem.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
@@ -35,13 +35,13 @@ namespace sw
 
         // 덤프 · 리포트는 로그 폴더에 둔다 — 사용자가 폴더 하나만 보내면 되도록. 로그가 고정 이름 파일(`-log-file`)이면 다음 실행의 보고 묶음이
         // 그 파일을 찾도록 문맥에 적는다(기본 로그는 세션 접미사로 찾는다 — `CrashContextStore::kLogFileKey`).
-        _handler.setReportFolder( Logger::getGlobalSink()->getLogFolderPath() );
+        _handler.setReportFolder( Logger::getGlobalBackend()->getLogFolderPath() );
         string fixedLogFile;
         if ( _pCommandLine != nullptr && _pCommandLine->getCommandLine().getArgument( CommandLineArgument::LOG_FILE, fixedLogFile ) && fixedLogFile.empty() == false )
             _handler.setContextValue( CrashContextStore::kLogFileKey, fixedLogFile );
         _handler.install();
 
-        // 크래시 리포트에 함께 나갈 값들이다. 덤프만으로는 알 수 없는 것들이다. 게임은 리소스 루트 단계가, 백엔드는 RHI 단계가 덧붙인다.
+        // 크래시 리포트에 함께 나갈 값들이다. 덤프만으로는 알 수 없는 것들이다. 게임은 콘텐츠 루트 단계가, 백엔드는 RHI 단계가 덧붙인다.
         _handler.setContextValue( "Build", build::kConfigName );
         _handler.setContextValue( "Platform", build::kPlatformName );
         // 심볼과 짝짓는 열쇠 — 실행 파일과(다르면) 엔진 모듈의 빌드 id. 덤프의 모듈 목록에도 같은 값이 있다.

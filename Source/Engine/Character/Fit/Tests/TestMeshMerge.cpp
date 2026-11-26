@@ -17,7 +17,7 @@ namespace
         /** @brief 사각형(정점 넷 · 삼각형 둘)마다 구간 하나인 스킨드 메시입니다. 정점 i 는 x = i, 뼈 i % 4 에 가중치 1 이다. */
         static shared_ptr<Mesh> makeQuads( uint32 quadCount, bool bSections )
         {
-            vector<RHIVertex>      listVertex( quadCount * 4u );
+            vector<MeshVertex>     listVertex( quadCount * 4u );
             vector<uint32>         listIndex;
             vector<MeshSkinVertex> listSkin( listVertex.size() );
             vector<MeshSection>    listSection;
@@ -26,7 +26,7 @@ namespace
                 const uint32 first = quad * 4u;
                 for ( uint32 corner = 0; corner < 4u; ++corner )
                 {
-                    RHIVertex& vertex      = listVertex[first + corner];
+                    MeshVertex& vertex     = listVertex[first + corner];
                     vertex._arrPosition[0] = static_cast<float>( first + corner );
                     vertex._arrPosition[1] = static_cast<float>( corner / 2u );
                     vertex._arrNormal[2]   = 1.0f;
@@ -122,7 +122,7 @@ SW_TEST_CASE( MeshMergeTest, PartsWithAnotherBindPoseMoveToTheFirstPose )
     const expected<MeshMergeResult> result = CharacterMeshUtil::mergeMeshes( listPart, nullptr );
     SW_REQUIRE_TRUE( result.has_value() );
     SW_EXPECT_TRUE( result->_mesh->getSkinBinding().matches( body->getSkinBinding() ) );
-    const vector<RHIVertex>& listVertex = result->_mesh->getCPUView().getVertices();
+    const vector<MeshVertex>& listVertex = result->_mesh->getCPUView().getVertices();
     SW_REQUIRE_TRUE( listVertex.size() == 8u );
     SW_EXPECT_NEAR( 0.0f, listVertex[1]._arrPosition[2], 1e-4f ); // 몸은 그대로다
     SW_EXPECT_NEAR( 5.0f, listVertex[5]._arrPosition[2], 1e-4f ); // 옷의 본 1 정점은 옮겼다

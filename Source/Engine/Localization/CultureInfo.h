@@ -277,7 +277,7 @@ namespace sw
 
         /** @brief 테이블을 읽습니다(이미 있는 문화권은 바꿉니다). 실패하면 그 까닭(대상 앞에 원본 이름)이고, 테이블은 그대로 둡니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
-        /** @brief 리소스 경로의 테이블을 읽습니다. */
+        /** @brief 에셋 경로의 테이블을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
 
         /** @brief 정확히 그 코드의 문화권입니다(없으면 nullptr). */

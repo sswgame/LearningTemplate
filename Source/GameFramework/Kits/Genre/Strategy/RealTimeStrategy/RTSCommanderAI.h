@@ -10,11 +10,11 @@
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSimulation.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
 
@@ -108,7 +108,7 @@ namespace sw
          * @brief 월드 · 플레이어 · 설정으로 AI 를 시작합니다. 행동 트리는 데이터에서 읽은 것(`BehaviorTreeAsset::getTree`)을 복사해 쥔다 - 트리가 올바르지 않으면 어설트합니다(데이터 읽기가 이미 걸렀어야 한다).
          * @param tree 지휘관 트리입니다. 잎의 `task` 는 이 클래스가 등록한 `rts.*` 이름이어야 한다.
          */
-        void initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings, const RTSCommanderUnits& units, const BehaviorTree& tree );
+        void initialize( RTSSimulation* pWorld, int32 player, const RTSCommanderAISettings& settings, const RTSCommanderUnits& units, const BehaviorTree& tree );
         /** @brief `_thinkInterval` 마다 행동 트리를 한 번 실행합니다. */
         void update( GameSeconds frameTime );
         /** @brief 월드의 알림(공격받음)을 받습니다. */
@@ -148,7 +148,7 @@ namespace sw
         SW_TRANSIENT Blackboard             _blackboard;
         SW_TRANSIENT RTSCommanderAISettings _settings;
         SW_TRANSIENT RTSCommanderUnits      _units;
-        RTSWorld*                           _pWorld;
+        RTSSimulation*                      _pWorld;
         SW_CODEC_STATE Countdown            _thinkTimer;
         SW_TRANSIENT int32                  _player;
         PROPERTY( RuntimeState, Min = 0 )

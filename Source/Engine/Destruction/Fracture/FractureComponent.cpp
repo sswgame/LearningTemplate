@@ -116,10 +116,10 @@ namespace sw
         {
             if ( _fracture.isLeafInAnchoredGroup( leaf ) == false )
                 continue;
-            const vector_reference<const RHIVertex> listVertex = pAsset->getPieceVertices( leaf );
+            const vector_reference<const MeshVertex> listVertex = pAsset->getPieceVertices( leaf );
             if ( listVertex.size() < 3 )
                 continue;
-            outGeometry.addTriangleList( &listVertex.data()->_arrPosition[0], static_cast<uint32>( listVertex.size() ), sizeof( RHIVertex ), world, area );
+            outGeometry.addTriangleList( &listVertex.data()->_arrPosition[0], static_cast<uint32>( listVertex.size() ), sizeof( MeshVertex ), world, area );
         }
     }
 } // namespace sw

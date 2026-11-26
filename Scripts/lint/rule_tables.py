@@ -36,7 +36,7 @@ def get_table_path(rule_id: str, kind: str = "") -> str:
     return TABLE_FOLDER + "".join(part.capitalize() for part in rule_id.split("-")) + kind + ".json"
 
 
-def check_head(path: str, data: object) -> None:
+def require_table_head(path: str, data: object) -> None:
     """표 머리 — 객체이고, `_comment` 가 비지 않았고, 칸 키가 모두 `_` 접두 camelCase 다. 어기면 멈춘다(폴백 없음)."""
     if not isinstance(data, dict):
         raise ValueError(f"{path}: 표는 JSON 객체여야 한다")
@@ -51,7 +51,7 @@ def check_head(path: str, data: object) -> None:
 def read_table(project_root: Path, path: str) -> dict:
     """표 하나를 읽고 머리를 확인한다. 파일이 없으면 멈춘다(빈 표로 대신하지 않는다)."""
     data = json.loads((project_root / path).read_text(encoding="utf-8"))
-    check_head(path, data)
+    require_table_head(path, data)
     return data
 
 
@@ -73,7 +73,7 @@ class ExceptionTable:
     """
 
     def __init__(self, path: str, data: Mapping, sections: Sequence[str]) -> None:
-        check_head(path, data)
+        require_table_head(path, data)
         self.path = path
         self._map_section: dict[str, dict[str, object]] = {}
         for section in sections:
@@ -139,7 +139,7 @@ class Baseline:
     """
 
     def __init__(self, path: str, data: Mapping) -> None:
-        check_head(path, data)
+        require_table_head(path, data)
         self.path = path
         self.comment: str = data["_comment"]
         self.files: dict[str, dict[str, int]] = {file: dict(counts) for file, counts in data["_files"].items()}

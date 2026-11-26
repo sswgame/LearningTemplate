@@ -1,0 +1,133 @@
+#pragma once
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
+
+#include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/Workspace/Selection/EditorSelectionUpdateQueue.h"
+#include "Editor/Common/Workspace/Undo/ObjectSnapshot.h"
+
+namespace sw
+{
+    class CommandStack;
+    class GameObject;
+} // namespace sw
+
+namespace sw::editor
+{
+    using EditorDocumentRestoreDelegate = Delegate<void( string_view )>;
+    using EditorDocumentCaptureDelegate = Delegate<string()>;
+
+    /**
+     * @class EditorTransaction
+     * @brief GameObject 편집을 Undo/Redo 에 기록하는 트랜잭션 관리자입니다.
+     * @details 오브젝트 편집(수정 · 생성 · 삭제)은 데이터 명령(`ObjectSnapshot`)으로 기록해 에디터 모듈 핫 리로드를 넘깁니다. 열린 문서 편집
+     *          (`recordDocumentText`)은 패널 버퍼에 묶인 코드 단계라 기록을 맡길 때 버립니다.
+     *          인스턴스는 거래 구간이다 — 만들 때 열고 사라질 때 닫는다(언리얼 `FScopedTransaction`). 씬을 바꾸는 명령(`EditorCommandEdit::Scene`)은
+     *          레지스트리가 연 이 구간을 인자로 받는다 — 거래 밖에서 씬을 바꾸는 명령 동작은 형식이 받지 않는다.
+     *          기록 함수(`recordModify` · `recordCreation` · `recordDestruction` · `recordObjectLifetime` · `push` · `recordDocumentText`)는 인스턴스 멤버다 — 구간 없이 기록하는 길이 형식에 없다.
+     */
+    class SW_EDITOR_API EditorTransaction
+    {
+    public:
+        /** @brief 오브젝트 수명 편집의 방향입니다(엔진의 `ObjectLifetimeEdit`). */
+        using ObjectLifetimeEdit = sw::ObjectLifetimeEdit;
+
+        /**
+         * @brief 거래 구간을 엽니다(`beginTransaction`). 구간 안의 기록은 되돌리기 한 단계가 된다.
+         * @param label 단계 이름입니다. 비우면 안쪽 거래의 이름, 그것도 없으면 첫 기록의 이름이 된다(`CommandStack::beginTransaction`).
+         */
+        explicit EditorTransaction( string_view label = {} );
+        /** @brief 거래 구간을 닫습니다(`endTransaction`). 기록이 없으면 단계도 없다. */
+        ~EditorTransaction();
+
+        EditorTransaction( const EditorTransaction& )            = delete;
+        EditorTransaction& operator=( const EditorTransaction& ) = delete;
+
+        /**
+         * @brief 활성 씬을 dirty 로 표시합니다. 기록할 때와 데이터 단계가 되돌리기 · 다시 하기로 씬을 바꿀 때 부릅니다.
+         * @details 컨텍스트가 없으면(테스트 · 도구) 지역 서비스로 건 워크스페이스에 표시합니다.
+         */
+        static void markActiveSceneDirty();
+        /** @brief 복합 트랜잭션을 시작합니다. */
+        static void beginTransaction( string_view label = "" );
+        /** @brief 복합 트랜잭션을 커밋하고 종료합니다. */
+        static void endTransaction();
+        /** @brief 복합 트랜잭션을 취소하고 버립니다. */
+        static void cancelTransaction();
+
+        /** @brief 오브젝트 하나의 수정 전후 상태를 Undo/Redo 에 기록합니다. 전후 XML 이 같으면 기록하지 않습니다. */
+        void recordModify( GameObject* pObj, const ObjectSnapshot& before, const ObjectSnapshot& after,
+                           string_view label = "Modify GameObject" );
+
+        /** @brief 오브젝트 하나의 형제 순서 키 바꿈(@p beforeKey → @p afterKey)을 Undo/Redo 에 기록합니다. 같으면 기록하지 않습니다. 길은 `recordModify` 와 같다(미리보기 씬이면 그 창의 스택). */
+        void recordSiblingOrder( GameObject* pObj, uint32 beforeKey, uint32 afterKey, string_view label );
+
+        /**
+         * @brief 오브젝트 @p owner 를 고친 데이터 명령 @p command 를 그 오브젝트가 사는 씬의 스택에 올립니다(미리보기 씬이면 그 창의 스택 — 메인 씬은 dirty 가 아니다).
+         * @details 스냅샷이 아닌 단위로 기록하는 편집(형제 순서 키 · 인스펙터 프로퍼티 값 글 — `PropertyEditStep`)이 쓰는 길이다. 스택은 `recordModify` 와 같은 규칙으로 고른다.
+         */
+        void recordObjectCommand( const GameObject& owner, CommandStack::Command command );
+
+        /** @brief 게임오브젝트 생성을 Undo/Redo에 등록합니다. */
+        void recordCreation( GameObject* pObj, string_view label = "Create GameObject" );
+
+        /** @brief 게임오브젝트 삭제를 Undo/Redo에 등록합니다 (삭제 전 스냅샷 보존). */
+        void recordDestruction( GameObject* pObj, string_view label = "Delete GameObject" );
+
+        /** @brief 현재 게임오브젝트의 전체 상태를 XML 스냅샷으로 캡처합니다(런타임 id 포함). nullptr 이면 빈 스냅샷입니다. */
+        static ObjectSnapshot captureSnapshot( const GameObject* pObj );
+
+        /** @brief 생성·삭제를 한 절차로 기록합니다. 두 절차를 만들고 @p edit 이 순서를 정합니다. */
+        void recordObjectLifetime( GameObject* pObj, string_view label, ObjectLifetimeEdit edit );
+
+        /**
+         * @brief 되돌리기 · 다시 하기 단계를 스택에 올립니다. 대상이 씬 · 파일이면 데이터 단계(`SW_UNDO_STEP` — 리로드를 넘는다), 패널 인스턴스에만 있으면
+         *        코드 단계(`UndoStep::makeTransient` — 기록을 맡길 때 버린다)다. 작업 공간 스택으로 간다(문서 편집은 `recordDocumentText` 가 스택을 받는다).
+         */
+        void push( UndoStep undo, UndoStep redo, string_view label );
+        /** @brief 같은 단계를 문서의 스택 @p documentStack 에 올립니다(`EditorDocumentPanel::getDocumentCommandStack`, 감사 E-3). 씬을 dirty 로 표시하지 않는다 — 문서 dirty 는 패널이 한다. */
+        void push( UndoStep undo, UndoStep redo, string_view label, CommandStack& documentStack );
+        /**
+         * @brief 문서 편집 하나(상호작용 구간 하나 — `DocumentEditSpan`)를 @p stack 에 한 단계로 기록합니다. 바뀐 구간만 쥐고 되돌릴 때 @p capture 의 지금 글에서 다시 짓는다.
+         * @details 스택은 부르는 쪽이 정한다 — 문서 패널이 하나만 답한다(`EditorDocumentPanel::getDocumentCommandStack`, 감사 P0-2). 예전에는 문서 기록은 전역 스택으로
+         *          가는데 미리보기 창에 포커스가 있으면 Ctrl+Z 는 그 창의 스택으로 가 아무 일도 하지 않았다. 합치기 키는 없다 — 구간이 합치기를 대신한다(P0-1).
+         */
+        void recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
+                                 const EditorDocumentRestoreDelegate& restore, const EditorDocumentCaptureDelegate& capture, CommandStack& stack );
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @class EditorObjectEditBindings
+     * @brief 데이터 명령의 알림(`CommandStack::ObjectEditEvent`)을 이 모듈이 받게 거는 주인입니다 — 선택에 입힐 일을 줄에 남기고(`EditorSelectionUpdateQueue`) 씬을 dirty 로 표시합니다.
+     *        선택은 바로 고치지 않는다 — 선택은 되돌리기 기록 밖이고 UI 가 줄을 입힌다(`applySelectionUpdates`).
+     * @details 스택의 알림 칸은 주인이 하나다(`DelegateSlot`). 이 서브시스템(에디터 범위)이 스택마다의 구독을 쥐고, 범위가 내려가면 함께 놓는다.
+     *          에디터가 설 때 전역 스택에, 오브젝트 편집을 기록할 때 그 스택(미리보기 창의 스택 포함)에 겁니다. 모듈 언로드 훑기가 칸을 비웠으면 다시 겁니다 —
+     *          리로드 전에 기록한 명령도 새 모듈의 처리기로 알린다. 에디터 컨텍스트 없이 도는 테스트는 커맨드 스택 서비스와 함께 이것을 범위에 둔다.
+     */
+    class SW_EDITOR_API EditorObjectEditBindings final : public EditorSubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "EditorObjectEditBindings";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         resetToFreshEditor() override { _selectionUpdates = EditorSelectionUpdateQueue{}; }
+        void                         shutdownSubsystem() override { _listSubscription.clear(); }
+
+        /** @brief @p stack 의 알림 칸이 비어 있으면 이 모듈의 처리기를 겁니다(이미 걸려 있으면 아무것도 하지 않는다). */
+        void ensureBound( CommandStack& stack );
+        /** @brief 기록 쪽: 알림 @p event 에서 선택에 입힐 일을 줄에 남깁니다. */
+        void queueSelectionUpdate( const CommandStack::ObjectEditEvent& event ) { _selectionUpdates.push( event ); }
+        /** @brief UI 쪽: 남은 선택 고칠 일을 메인 선택 @p selection 에 입힙니다. UI 프레임 시작과 UI 의 되돌리기 입구가 부른다. */
+        void applySelectionUpdates( EditorSelection& selection ) { _selectionUpdates.applyTo( selection ); }
+
+    private:
+        vector<Subscription>       _listSubscription; ///< 스택마다의 구독(스택이 먼저 사라지면 무효가 되고 다음 걸 때 걷힌다)
+        EditorSelectionUpdateQueue _selectionUpdates; ///< 전역 스택의 알림이 남긴 선택 고칠 일(메인 선택에 입힌다)
+    };
+} // namespace sw::editor

@@ -5,7 +5,7 @@
 #include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorThemeKey.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"

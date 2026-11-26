@@ -14,15 +14,15 @@
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw::editor
@@ -34,7 +34,7 @@ namespace sw::editor
             /** @brief 규칙을 고르는 칸 — 예외로 쓸 수 없고 표에도 보이지 않는다(임포터가 거절하는 키와 같다). */
             static bool isSelectorKey( string_view key ) { return key == "name" || key == "filter" || key == "inherits"; }
 
-            /** @brief 원본 @p assetID 의 서술 디스크 경로입니다. 리소스 id 가 아니면 빈 글입니다. */
+            /** @brief 원본 @p assetID 의 서술 디스크 경로입니다. 에셋 id 가 아니면 빈 글입니다. */
             static DiskPath findMetaPath( string_view assetID )
             {
                 const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
@@ -167,7 +167,7 @@ namespace sw::editor
             row._key = XMLFields::getAttributeName( prop );
             if ( InspectorImportSettingsInternal::isSelectorKey( row._key ) )
                 continue;
-            row._valueText = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pRule }, context );
+            row._valueText = PropertySerializer::formatPropertyText( prop, ObjectAddress{ pRule }, context );
             _listRow.push_back( std::move( row ) );
         }
         // 예외 칸은 서술의 글 그대로 보인다(고칠 때 같은 꼴로 친다). 규칙 구조체에 칸이 없는 예외(손으로 읽는 `lods`)는 줄을 더한다.

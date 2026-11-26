@@ -95,20 +95,20 @@ namespace sw::editor
          * @details 런타임은 DDS 만 읽으므로 소스 이미지는 임포트하는 것이 리로드다. 임포트한 DDS 를 쓰면 다음 감시 이벤트로 들어오고,
          *          텍스처 캐시가 다시 읽는다. 임포트 설정은 매번 읽으므로 규칙을 고치면 재시작 없이 반영된다.
          *          `.hdr` 는 부동소수점으로 읽어 BC6H 와 RGBA16F 로만 임포트한다. 규칙의 포맷이 8비트이면 실패한다. `textures_raw/` 밖의 소스 이미지는 경고만 한다.
-         *          바뀐 원본만 임포트한다(`AssetImportStampUtil::importSources`). 루트 전체의 대조는 `importAllTextures`(`App --import-textures`)가 한다.
+         *          바뀐 원본만 임포트한다(`AssetImportDigestUtil::importSources`). 루트 전체의 대조는 `importAllTextures`(`App --import-textures`)가 한다.
          *          워커에서 불린다(`AssetHotReload` 의 임포트 잡) — UI 서브시스템을 건드리지 않고 공유 상태를 두지 않는다. 소스 이미지는 임포트했든 경고만 했든 처리한 것이고 `.dds` 는 처리하지 않은 것이다.
          */
         static void importChangedSources( AssetSourceBatch& batch );
 
         /**
-         * @brief 리소스 루트 아래 모든 `textures_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면 어긋난 것을 임포트합니다.
-         * @details 절차는 `AssetImportStampUtil::importAll` 을 따른다. 스탬프 한 줄은 `<원본 해시> <DDS 해시> <textures_raw 기준 상대 경로>` 형식이다. 원본 해시는 원본 바이트와 적용한 규칙
+         * @brief 콘텐츠 루트 아래 모든 `textures_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면 어긋난 것을 임포트합니다.
+         * @details 절차는 `AssetImportDigestUtil::importAll` 을 따른다. 스탬프 한 줄은 `<원본 해시> <DDS 해시> <textures_raw 기준 상대 경로>` 형식이다. 원본 해시는 원본 바이트와 적용한 규칙
          *          (`computeSourceHash`)으로 계산하므로 규칙만 바꿔도 어긋남이 된다. DDS 해시는 임포트된 결과 그대로이므로 손으로 바꾼 DDS 도 잡힌다.
          *          판정은 파일 시간이 아니라 내용으로 한다. 원본과 DDS 를 둘 다 커밋하므로 `git` 이 시간 순서를 임의로 뒤집기 때문이다.
          *          원본이 사라진 스탬프 줄도 어긋남이다. ImportStale 은 줄만 지우고 DDS 는 두므로, 남은 DDS 는 사람이 정리한다.
          *          `.hdr` 는 부동소수점으로 읽어 BC6H 와 RGBA16F 로만 임포트한다. 규칙의 포맷이 8비트이면 그 원본의 실패로 보고한다.
          * @param resourceRoot `Content/` 의 절대 경로입니다.
-         * @param config 원본마다 규칙을 고르는 임포트 설정입니다. 리소스 루트 기준 상대 경로로 매칭합니다.
+         * @param config 원본마다 규칙을 고르는 임포트 설정입니다. 콘텐츠 루트 기준 상대 경로로 매칭합니다.
          */
         [[nodiscard]] static AssetImportSummary importAllTextures( const AbsolutePath& resourceRoot, const TextureImportConfig& config, AssetImportMode mode );
 
@@ -120,7 +120,7 @@ namespace sw::editor
 
         /**
          * @brief 접미사를 가진 묶음 @p family(ASTC · ETC2 — 모든 배포 대상의 합, `TextureFormatFamily::resolveCookFamilies`)로 모든 원본의 변형을 굽습니다(`App --cook-texture-variants` · `--check-texture-variants`).
-         * @details 임포트한 DDS 곁에 쓰고 원본 폴더의 `import<접미사>.stamp` 로 대조한다(`AssetImportStampUtil`). 곁 파일 규칙으로 팩에 담긴다(`SW_ASSET_COMPANION`).
+         * @details 임포트한 DDS 곁에 쓰고 원본 폴더의 `import<접미사>.stamp` 로 대조한다(`AssetImportDigestUtil`). 곁 파일 규칙으로 팩에 담긴다(`SW_ASSET_COMPANION`).
          */
         [[nodiscard]] static AssetImportSummary cookTextureVariants( const AbsolutePath& resourceRoot, const TextureImportConfig& config, const TextureFormatFamily& family, AssetImportMode mode );
 
@@ -130,7 +130,7 @@ namespace sw::editor
         static string makeImportedTexturePath( string_view rawTexturePath );
         /** @brief `makeImportedTexturePath` 의 디스크 경로 판입니다. */
         static AbsolutePath makeImportedTexturePath( const AbsolutePath& rawTexturePath );
-        /** @brief 텍스처 칸에 놓은 에셋 @p path 의 쿠킹본 리소스 id 입니다 — 쿠킹본이면 그대로, 원본 이미지면 임포트한 자리다. 산출물 자리가 없는 원본은 @p path 그대로라 칸의 종류 검사가 거절한다. */
+        /** @brief 텍스처 칸에 놓은 에셋 @p path 의 쿠킹본 에셋 id 입니다 — 쿠킹본이면 그대로, 원본 이미지면 임포트한 자리다. 산출물 자리가 없는 원본은 @p path 그대로라 칸의 종류 검사가 거절한다. */
         static string resolveTextureAsset( string_view path );
 
         /**

@@ -177,7 +177,7 @@ namespace sw
         void               addFighter( const FighterDef& fighter );
 
     private:
-        /** @brief 리소스 경로의 카탈로그를 읽습니다. 루트의 `moves` 가 가리키는 기술 카탈로그를 공유 캐시에서 받아 기반으로 씁니다. 종류의 로더(공유 캐시)만 부른다. */
+        /** @brief 에셋 경로의 카탈로그를 읽습니다. 루트의 `moves` 가 가리키는 기술 카탈로그를 공유 캐시에서 받아 기반으로 씁니다. 종류의 로더(공유 캐시)만 부른다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 파일 루트 읽기입니다 — `moves` 의 기술 카탈로그를 받아 `loadRoot` 에 넘깁니다. 없거나 읽지 못하면 오류이고 0 입니다. */
         uint32 loadFileRoot( const XMLCatalogRoot& root, string_view sourceName );

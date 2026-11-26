@@ -1,7 +1,7 @@
 // GhostHuntGameModeTest — 유령 사냥 디렉터: 명령은 판이 열린 동안만 받고, 손전등 → 흡입으로 유령을 잡으면 방의 불 · 열쇠가 오며, 잠긴 문을 밀면 열쇠로 열리고, 모든 방을 밝히면 이기며, 상태는 왕복한다(nogpu).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/File/FileUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -11,14 +11,14 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/Component/GhostHuntGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 using namespace sw;
 
@@ -58,7 +58,7 @@ namespace
         static bool setProperty( GhostHuntGameModeComponent& director, const utf8* pName, const string& text )
         {
             const PropertyInfo* const pProperty = GhostHuntGameModeComponent::StaticType()->findPropertyInHierarchy( hashed_string( pName ) );
-            return pProperty != nullptr && SerializerUtil::applyPropertyText( *pProperty, MutableObjectAddress{ &director }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            return pProperty != nullptr && PropertySerializer::applyPropertyText( *pProperty, MutableObjectAddress{ &director }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) );
         }
 
         static GhostHuntGameModeComponent* addDirector( GameObjectManager& manager, const utf8* pStartRoom )

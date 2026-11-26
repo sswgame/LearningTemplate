@@ -8,7 +8,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 /**
  * @brief UI 안전 영역 비율(0..0.1)입니다. 각 변을 물리 크기의 이 비율만큼 안쪽으로 밉니다 — TV 가장자리 잘림(오버스캔)에 맞추는 화면 설정이고, 휴대 기기 노치 흉내 · 미리보기에도 쓴다.
@@ -101,12 +101,12 @@ namespace sw
         return MathUtil::max( scaled, MathUtil::min( fontSize, kMinScaledFontSize ) );
     }
 
-    optional<ResourceTagSet> UIScaleSettings::makeScreenTags( const UIViewport& viewport ) const
+    optional<AssetTagSet> UIScaleSettings::makeScreenTags( const UIViewport& viewport ) const
     {
         if ( viewport._size._x <= 0.0f || viewport._size._y <= 0.0f )
             return nullopt;
-        const float32  widthDp = viewport._physicalSize._x / ( viewport._contentScale > 0.0f ? viewport._contentScale : 1.0f );
-        ResourceTagSet tags;
+        const float32 widthDp = viewport._physicalSize._x / ( viewport._contentScale > 0.0f ? viewport._contentScale : 1.0f );
+        AssetTagSet   tags;
         tags.add( widthDp < _compactMaxWidth ? "screen.compact" : "screen.regular" );
         tags.add( viewport._size._y > viewport._size._x ? "orientation.portrait" : "orientation.landscape" );
         return tags;

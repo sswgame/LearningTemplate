@@ -7,14 +7,14 @@
 
 #include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorPaths.h"
-#include "Editor/Common/Localization/EditorDataText.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Localization/EditorDataLocalization.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserViewModel.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw::editor
 {
@@ -38,7 +38,7 @@ namespace sw::editor
     const vector<ContentBrowserFavorite>& ContentBrowserFavorite::getFavorites()
     {
         ContentBrowserFavoriteState& state    = getEditorState<ContentBrowserFavoriteState>();
-        const uint32                 revision = EditorDataText::getRevision();
+        const uint32                 revision = EditorDataLocalization::getRevision();
         if ( state._bLoaded == SW_TRUE && state._revision == revision )
             return state._listFavorite;
         ContentBrowserFavoriteTable table;
@@ -50,7 +50,7 @@ namespace sw::editor
         }
         for ( ContentBrowserFavorite& favorite : table._listFavorite )
         {
-            favorite._label = EditorDataText::localize( favorite._label );
+            favorite._label = EditorDataLocalization::localize( favorite._label );
         }
         state._listFavorite = std::move( table._listFavorite );
         state._revision     = revision;

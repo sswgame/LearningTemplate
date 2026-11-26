@@ -47,9 +47,9 @@ namespace sw
                 return float4{ base._x * shade, base._y * shade, base._z * shade, 1.0f };
             }
 
-            static RHIVertex makeVertex( const float3& position, const float4& color )
+            static MeshVertex makeVertex( const float3& position, const float4& color )
             {
-                RHIVertex vertex{};
+                MeshVertex vertex{};
                 vertex._arrPosition[0] = position._x;
                 vertex._arrPosition[1] = position._y;
                 vertex._arrPosition[2] = position._z;
@@ -62,7 +62,7 @@ namespace sw
             }
 
             /** @brief 두 점을 잇는 폭 0.12 m 띠(위를 보는 사각형 둘 — 양면)를 더합니다. */
-            static void appendRibbon( const float3& from, const float3& to, const float4& color, vector<RHIVertex>& outListVertex )
+            static void appendRibbon( const float3& from, const float3& to, const float4& color, vector<MeshVertex>& outListVertex )
             {
                 const float3  delta  = to - from;
                 const float32 length = float3::getHorizontalDistance( from, to );
@@ -209,9 +209,9 @@ namespace sw
         // 정점은 내비메시의 절대 자리이고 오브젝트가 (절대 0 의 로컬 자리)에 선다 — 원점을 옮기면 루트와 함께 옮겨진다.
         const WorldOrigin& origin = manager.getWorldOrigin();
         pMeshComponent->setLocalPosition( origin.toLocal( float3{} ) );
-        vector<RHIVertex> listVertex;
-        vector<float3>    listCorner;
-        vector<uint8>     listArea;
+        vector<MeshVertex> listVertex;
+        vector<float3>     listCorner;
+        vector<uint8>      listArea;
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
         {
             pRuntime->_pNavMesh->collectDebugTriangles( listCorner, listArea );

@@ -59,12 +59,12 @@ namespace sw
         return true;
     }
 
-    bool GPUVertexAnimationPool::placeWanted( IRHIDevice* pDevice, const vector<Wanted>& listWanted, const vector<size_t>& listIndex )
+    bool GPUVertexAnimationPool::placeWanted( IRHIDevice* pDevice, const vector<VertexAnimationMeshRequest>& listWanted, const vector<size_t>& listIndex )
     {
         for ( const size_t index : listIndex )
         {
-            const Wanted& wanted = listWanted[index];
-            const auto    shared = _mapEntry.find( wanted._pAnimation );
+            const VertexAnimationMeshRequest& wanted = listWanted[index];
+            const auto                        shared = _mapEntry.find( wanted._pAnimation );
             if ( shared != _mapEntry.end() )
             {
                 ++shared->second._refCount;
@@ -113,7 +113,7 @@ namespace sw
             return;
 
         _listBuiltContentID.clear();
-        vector<Wanted> listWanted;
+        vector<VertexAnimationMeshRequest> listWanted;
         for ( const Mesh* pMesh : listMesh )
         {
             const IdentityToken contentID = pMesh != nullptr ? pMesh->getContentID() : IdentityToken{};
@@ -121,7 +121,7 @@ namespace sw
             const MeshVertexAnimation* pAnimation = ( pMesh != nullptr ) ? pMesh->findVertexAnimation() : nullptr;
             if ( pAnimation == nullptr || pAnimation->isEmpty() )
                 continue;
-            listWanted.push_back( Wanted{ pAnimation, contentID } );
+            listWanted.push_back( VertexAnimationMeshRequest{ pAnimation, contentID } );
         }
 
         // 반납한 구간은 그 재구성이 낸 펜스 값을 GPU 가 끝낸 뒤에야 다시 내준다(앞 프레임이 아직 읽는 구간을 덮어쓰지 않는다).
@@ -134,9 +134,9 @@ namespace sw
         vector<size_t>                                    listPending;
         for ( size_t index = 0; index < listWanted.size(); ++index )
         {
-            const Wanted& wanted = listWanted[index];
-            const auto    record = _mapRecord.find( wanted._contentID );
-            const bool    bKept  = record != _mapRecord.end() && record->second._pAnimation == wanted._pAnimation && _mapEntry.find( wanted._pAnimation ) != _mapEntry.end();
+            const VertexAnimationMeshRequest& wanted = listWanted[index];
+            const auto                        record = _mapRecord.find( wanted._contentID );
+            const bool                        bKept  = record != _mapRecord.end() && record->second._pAnimation == wanted._pAnimation && _mapEntry.find( wanted._pAnimation ) != _mapEntry.end();
             if ( bKept )
             {
                 mapKeptRecord.emplace( wanted._contentID, record->second );
@@ -171,7 +171,7 @@ namespace sw
         if ( placeWanted( pDevice, listWanted, listPending ) == false )
         {
             size_t totalWords = 0;
-            for ( const Wanted& wanted : listWanted )
+            for ( const VertexAnimationMeshRequest& wanted : listWanted )
             {
                 totalWords += shaderslot::kVertexAnimationHeaderWords + wanted._pAnimation->_listFrameVertex.size() * shaderslot::kVertexAnimationWordsPerElement;
             }

@@ -16,14 +16,14 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
 
 #include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/Component/CreatureTownGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/SimulationViewSync.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

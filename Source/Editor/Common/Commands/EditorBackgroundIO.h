@@ -4,7 +4,7 @@
  *
  * @details 공통 규약(락, 세대, 완료 플래그)은 EditorBackgroundJob 에 있다. 여기 있는 잡들은 입력 타입과 실제
  *          작업 본문만 가진다.
- *          이 헤더는 결과 값 헤더(`EditorAssetIndexEntry.h` · `EditorFolderListingEntry.h` · `EditorLocalizationSheet.h`)와 잡 뼈대만 include 한다 — 패널 Model 이 잡을 값으로 들어도 커맨드 동작이 View 로 새지 않는다
+ *          이 헤더는 결과 값 헤더(`EditorAssetIndexEntry.h` · `EditorFolderListingEntry.h` · `LocalizationSheet.h`)와 잡 뼈대만 include 한다 — 패널 Model 이 잡을 값으로 들어도 커맨드 동작이 View 로 새지 않는다
  *          (MVVM View include 계약, `Config/Rules/Layers/EditorLayers.toml` 의 `[panelViewAllowed]`). 작업 본문이 부르는 커맨드는 .cpp 가 include 한다.
  */
 #pragma once
@@ -16,7 +16,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndexEntry.h"
 #include "Editor/Common/Commands/Asset/EditorFolderListingEntry.h"
-#include "Editor/Common/Commands/Asset/EditorLocalizationSheet.h"
+#include "Editor/Common/Commands/Asset/LocalizationSheet.h"
 #include "Editor/Common/Job/EditorBackgroundJob.h"
 
 namespace sw

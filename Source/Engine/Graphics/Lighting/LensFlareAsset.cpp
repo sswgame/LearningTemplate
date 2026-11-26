@@ -3,7 +3,7 @@
 #include "Engine/Graphics/Lighting/LensFlareAsset.h"
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
-#include "Engine/Serialization/Format/ReflectedXMLFile.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {

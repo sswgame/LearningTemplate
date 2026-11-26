@@ -13,13 +13,14 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Environment/EnvironmentMaterial.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Environment/Terrain/TerrainLayerRule.h"
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 namespace sw
 {

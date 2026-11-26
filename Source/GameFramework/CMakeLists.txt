@@ -35,20 +35,20 @@ list(FILTER list_game_framework_header INCLUDE REGEX "${reflection_input_regex}"
 include("${CMAKE_BINARY_DIR}/generated/sw/config/GameFrameworkLayers.cmake")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/GameFrameworkLayers.toml")
 set(list_game_framework_layer_source "")
-foreach(tier IN LISTS SW_GAMEFRAMEWORK_TIER_LIST)
+foreach(layer IN LISTS SW_GAMEFRAMEWORK_LAYER_LIST)
 	# 이 구성이 짓는 것(list_game_framework_source — 서버 · 클라이언트 전용을 뺀 것)만 남긴다.
-	list(TRANSFORM SW_GAMEFRAMEWORK_TIER_${tier}_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/Runtime/" OUTPUT_VARIABLE list_tier_source)
-	set(list_tier_excluded ${list_tier_source})
-	list(REMOVE_ITEM list_tier_excluded ${list_game_framework_source})
-	if(list_tier_excluded)
-		list(REMOVE_ITEM list_tier_source ${list_tier_excluded})
+	list(TRANSFORM SW_GAMEFRAMEWORK_LAYER_${layer}_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/Runtime/" OUTPUT_VARIABLE list_layer_source)
+	set(list_layer_excluded ${list_layer_source})
+	list(REMOVE_ITEM list_layer_excluded ${list_game_framework_source})
+	if(list_layer_excluded)
+		list(REMOVE_ITEM list_layer_source ${list_layer_excluded})
 	endif()
-	list(APPEND list_game_framework_layer_source ${list_tier_source})
+	list(APPEND list_game_framework_layer_source ${list_layer_source})
 	# 개발 전용 소스는 모듈 라이브러리(sw_add_module_library)가 빼는 것과 같게 부분에서도 뺀다.
 	if(SW_SHIPPING_BUILD)
-		sw_remove_excluded_sources(list_tier_source ${SW_DEV_ONLY_SOURCE_PATTERNS})
+		sw_remove_excluded_sources(list_layer_source ${SW_DEV_ONLY_SOURCE_PATTERNS})
 	endif()
-	set(game_framework_tier_source_${tier} ${list_tier_source})
+	set(game_framework_layer_source_${layer} ${list_layer_source})
 endforeach()
 set(list_game_framework_module_source ${list_game_framework_source})
 if(list_game_framework_layer_source)
@@ -92,19 +92,19 @@ target_link_libraries(GameFramework PRIVATE openssl)
 
 # ------------------------------------------------------------------------------
 # 2) 층 부분 — 층마다 OBJECT 라이브러리 `GameFrameworkLayer<N>`(오브젝트는 GameFramework 이미지 안, `sw_add_module_part`). 부분 N 은 N 보다 위 층의 헤더마다
-#    같은 경로의 `#error` 껍데기를 자기 include 자리 맨 앞에 둔다(`sw_add_layer_stubs`) — 엔진 층과 같은 방식이다.
+#    같은 경로의 `#error` 가드를 자기 include 자리 맨 앞에 둔다(`sw_add_layer_guards`) — 엔진 층과 같은 방식이다.
 #    부분은 GameFramework 의 정의 · 옵션 · include · 링크 목록을 이 파일이 끝날 때 받는다(`LINK_OWNER`, DEFER).
 # ------------------------------------------------------------------------------
-foreach(tier IN LISTS SW_GAMEFRAMEWORK_TIER_LIST)
-	if(NOT game_framework_tier_source_${tier})
+foreach(layer IN LISTS SW_GAMEFRAMEWORK_LAYER_LIST)
+	if(NOT game_framework_layer_source_${layer})
 		continue()   # 이 구성이 짓지 않는 층
 	endif()
-	sw_add_module_part(GameFrameworkLayer${tier}
+	sw_add_module_part(GameFrameworkLayer${layer}
 		OWNER GameFramework
-		SOURCES ${game_framework_tier_source_${tier}}
+		SOURCES ${game_framework_layer_source_${layer}}
 		LINK_OWNER
 	)
-	sw_add_layer_stubs(GameFrameworkLayer${tier} ${tier} SW_GAMEFRAMEWORK_TIER GameFramework)
+	sw_add_layer_guards(GameFrameworkLayer${layer} ${layer} SW_GAMEFRAMEWORK_LAYER GameFramework)
 endforeach()
 
 add_subdirectory(Kits)

@@ -1,0 +1,51 @@
+/**
+ * @file SQLLocalStoreBackend.h
+ * @brief 로컬 저장소 백엔드의 SQLite 구현입니다. 테이블 `sw_local_slot( slot, bytes, written_at_ms )` 을 쓰며, 쓰기는 upsert 문 하나로 처리해 SQLite 의 원자성에 맡깁니다.
+ * @details 마이그레이션은 `Content/common/sql/localstore/` 에 있다. 서버 저장소와는 다른 DB 이고 번호 체계도 다르다. DB 파일은 `<루트>/localstore.db` 이다.
+ *          기반 계층의 `LocalStoreFactory` 에 "sqlite" 이름으로 등록한다. 등록은 모듈 수명을 따른다(`.cpp` 의 정적 `LocalStoreFactoryRegistration`).
+ */
+#pragma once
+#include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreBackend.h"
+
+namespace sw
+{
+    class ISQLConnection;
+    class LocalStoreLocation;
+
+    /**
+     * @class SQLLocalStoreBackend
+     * @brief SQLite 백엔드입니다. `ThreadedLocalStore` 의 스레드에서만 호출합니다.
+     */
+    class SW_KIT_API SQLLocalStoreBackend final : public ILocalStoreBackend
+    {
+    public:
+        static constexpr const utf8* kBackendName        = "sqlite";
+        static constexpr const utf8* kMigrationFolder    = "common/sql/localstore";
+        static constexpr const utf8* kDatabaseFileName   = "localstore.db";
+        static constexpr string_view kMemoryDatabasePath = ":memory:"; ///< SQLite 의 메모리 데이터베이스 이름(메모리 자리 - `LocalStoreLocation::Kind::Memory`)
+
+        SQLLocalStoreBackend();
+        ~SQLLocalStoreBackend() override;
+
+        /** @brief @p databasePath(파일 경로나 `:memory:`)를 열고 마이그레이션을 적용합니다. 실패하면 false 와 실패 이유를 반환합니다. */
+        [[nodiscard]] expected<void> initialize( string_view databasePath );
+
+        LocalStoreResult readSlot( const string& slot, vector<uint8>& outEnvelopeBytes ) override;
+        /** @brief 직전 세대를 두지 않는다 — 쓰기가 SQL 트랜잭션이라 반쪽이 없다(SQLite 저널이 지킨다). 늘 NotFound 다. */
+        LocalStoreResult readPreviousSlot( const string& slot, vector<uint8>& outEnvelopeBytes ) override;
+        LocalStoreResult writeSlot( const string& slot, const vector<uint8>& envelopeBytes ) override;
+        LocalStoreResult eraseSlot( const string& slot ) override;
+        LocalStoreResult listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo ) override;
+
+        /** @brief 팩토리가 부르는 생성 함수입니다. 디스크 자리면 `<자리>/localstore.db`, 메모리 자리면 SQLite 메모리 데이터베이스를 엽니다. */
+        static expected<unique_ptr<ILocalStoreBackend>> createForLocation( const LocalStoreLocation& location, string_view gameName );
+
+    private:
+        unique_ptr<ISQLConnection> _connection;
+    };
+} // namespace sw

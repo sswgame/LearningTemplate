@@ -34,7 +34,7 @@ DIR_RUNTIME_SERVER_PRESET = "Config/Server"
 # 빌드의 활성 게임 이름을 담는 파일(Dev, `Bin/Modules/<이 이름>`) — `-game=` 이 없을 때 `GameSelection` 이 읽는다. 엔진 TU 에 게임 이름을 굽지 않으려고 파일로 둔다.
 FILE_ACTIVE_GAME = "ActiveGame.txt"
 # 모듈 빌드 성공 스탬프(Dev, `Bin/Modules/<이 이름>`) — 빌드가 동적 모듈을 모두 링크한 뒤에만 다시 쓴다(`sw_add_module_build_stamp`).
-# 바깥 빌드(터미널 · IDE)의 모듈 변경은 `LiveReloadManager` 가 이 파일이 바뀔 때만 올린다(반쯤 링크된 집합을 올리지 않는다).
+# 바깥 빌드(터미널 · IDE)의 모듈 변경은 `ModuleHotReloadManager` 가 이 파일이 바뀔 때만 올린다(반쯤 링크된 집합을 올리지 않는다).
 FILE_MODULE_BUILD_STAMP = "ModuleBuild.stamp"
 # 함께 지은 게임 팩 폴더(Dev, `Bin/<이 이름>/<게임>/SWGame` · `Bin/Symbols/<이 이름>/<게임>/`) — `SW_GAMES`.
 DIR_BIN_GAMES = "Games"
@@ -93,14 +93,14 @@ SHADER_SOURCE_EXTENSIONS: set[str] = {".hlsl", ".hlsli"}
 MINIMUM_PYTHON_VERSION: tuple[int, int] = (3, 10)
 
 DIR_TOOLS_CACHE = "Tools/_cache"
-DIR_TOOLS_REFLECTION_TEMPLATES = "Source/Programs/ReflectionParser/Templates"
+DIR_TOOLS_REFLECTION_TEMPLATES = "Source/Programs/ReflectionParser/Emit/Templates"
 
 # =============================================================================
 # --- 4. Script Entry Points (스크립트 실행 진입점 경로) ------------------------
 # =============================================================================
 
 SCRIPT_SETUP_VCPKG = "Scripts/setup/vcpkg.py"
-SCRIPT_SETUP_ENVIRONMENT = "Scripts/setup/environment.py"
+SCRIPT_SETUP_ENVIRONMENT = "Scripts/setup/setup_environment.py"
 
 # =============================================================================
 # --- 5. JSON Schema Keys & Environment Variables (JSON 필드명 및 환경변수 심볼) -
@@ -150,7 +150,7 @@ KEY_VCPKG_AUTO_BOOTSTRAP = "vcpkg_auto_bootstrap"
 ENV_SW_LLVM_AUTO_BOOTSTRAP = "SW_LLVM_AUTO_BOOTSTRAP"
 ENV_SW_VCPKG_AUTO_BOOTSTRAP = "SW_VCPKG_AUTO_BOOTSTRAP"
 
-#: 전용 서버가 짓지 않는 엔진 폴더(`Source/Engine/` 기준) — CMake 의 `SW_EXCLUDED_ENGINE_FOLDERS`(BuildLayout.cmake)와 서버 게이트(`target_layers.py`)가 함께 읽는 정본이다.
+#: 전용 서버가 짓지 않는 엔진 폴더(`Source/Engine/` 기준) — CMake 의 `SW_EXCLUDED_ENGINE_FOLDERS`(OutputLayout.cmake)와 서버 가드(`target_guards.py`)가 함께 읽는 정본이다.
 SERVER_EXCLUDED_ENGINE_FOLDERS: tuple[str, ...] = ("Audio", "Renderer", "UI", "Window/Linux", "Input/Linux")
 
 # =============================================================================

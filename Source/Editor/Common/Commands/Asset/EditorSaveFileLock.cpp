@@ -9,7 +9,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 

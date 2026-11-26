@@ -3,7 +3,7 @@
  * @brief 콘텐츠 트리 훑기의 디스크 캐시입니다 — 파일마다 (크기 · 쓰기 시각 도장, 그 파일에서 뽑은 바이트)를 들고 도장이 같으면 파일을 열지 않습니다.
  * @details 기동 훑기가 파일을 모두 열면 콘텐츠 수에 비례해 기동이 늘어난다. 언리얼 `CachedAssetRegistry.bin`(패키지마다 시각 도장), 유니티 `Library/SourceAssetDB`, Godot `filesystem_cache` 와 같은
  *          자리다. 뽑은 바이트의 뜻은 훑는 쪽의 것이다 — 정체성 색인(`AssetDatabase::scan`)은 머리 글, 에디터 색인(`EditorAssetIndex::scan`)은 GUID 와 참조 줄을 둔다.
- *          파일이 없거나 판이 다르면 빈 캐시다(모두 다시 읽는다) — 캐시라 폴백이 아니다. 막 쓴 파일은 두지 않는다(`ContentHash::isStampStable`).
+ *          파일이 없거나 판이 다르면 빈 캐시다(모두 다시 읽는다) — 캐시라 폴백이 아니다. 막 쓴 파일은 두지 않는다(`ContentHash::isStatStable`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -38,16 +38,16 @@ namespace sw
          */
         [[nodiscard]] expected<void> save( const AbsolutePath& cachePath ) const;
 
-        /** @brief @p key(리소스 id)의 줄이 있고 도장이 @p stamp 와 같으면 뽑은 바이트, 아니면 nullptr 입니다. 다음 `record` 까지 유효합니다. */
-        [[nodiscard]] const vector<uint8>* find( const string& key, const FileStamp& stamp );
-        /** @brief 읽은 파일의 줄을 적습니다. 막 쓴 파일(`ContentHash::isStampStable` 가 아닌 것)은 적지 않습니다. */
-        void record( const string& key, const FileStamp& stamp, vector<uint8> payload );
+        /** @brief @p key(에셋 id)의 줄이 있고 도장이 @p fileStat 와 같으면 뽑은 바이트, 아니면 nullptr 입니다. 다음 `record` 까지 유효합니다. */
+        [[nodiscard]] const vector<uint8>* find( const string& key, const FileStat& fileStat );
+        /** @brief 읽은 파일의 줄을 적습니다. 막 쓴 파일(`ContentHash::isStatStable` 가 아닌 것)은 적지 않습니다. */
+        void record( const string& key, const FileStat& fileStat, vector<uint8> payload );
 
     private:
         /** @brief 줄 하나입니다. */
         struct Entry
         {
-            FileStamp     _stamp{};
+            FileStat      _fileStat{};
             vector<uint8> _payload{};
             bool          _bUsed{ false }; ///< 이번 훑기가 찾거나 적었다
         };

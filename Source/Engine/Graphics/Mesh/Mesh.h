@@ -21,8 +21,8 @@
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 
 // ------------------------------------------------------------------------------
-// MeshBuildVertex: 게임 코드가 메시를 지을 때 넘기는 정점(위치 · 노멀 · UV · 색)입니다. GPU 정점 칸(`RHIVertex`)의 배치를 모르고 메시를 짓습니다.
-//   `RHIVertex` 로 옮기는 일은 메시(`Mesh::setBuildVertices`)가 한다. 언리얼 `FDynamicMeshVertex` → 정점 버퍼가 렌더 쪽에서 갈리는 것과 같은 자리다(기억).
+// MeshBuildVertex: 게임 코드가 메시를 지을 때 넘기는 정점(위치 · 노멀 · UV · 색)입니다. GPU 정점 칸(`MeshVertex`)의 배치를 모르고 메시를 짓습니다.
+//   `MeshVertex` 로 옮기는 일은 메시(`Mesh::setBuildVertices`)가 한다. 언리얼 `FDynamicMeshVertex` → 정점 버퍼가 렌더 쪽에서 갈리는 것과 같은 자리다(기억).
 // ------------------------------------------------------------------------------
 namespace sw
 {
@@ -92,7 +92,7 @@ namespace sw
          * @details 행렬이 스킨 팔레트(`SkeletalMeshComponent::getSkinPalette`)면 CPU 스키닝(GPU 스키닝 컴퓨트와 같은 행렬 — 듀얼 쿼터니언 방식이면 근사)이고,
          *          `makeRebindMatrices` 면 다른 바인드 자세로 옮기기다. CPU 스키닝 한 벌 — 절단 조각 · 병합 · 편집기 표면 집기가 같이 쓴다.
          */
-        static void skinVertex( const vector<float4x4>& listMatrix, const MeshSkinVertex& skin, RHIVertex& inoutVertex );
+        static void skinVertex( const vector<float4x4>& listMatrix, const MeshSkinVertex& skin, MeshVertex& inoutVertex );
 
     private:
         /** @brief 본 하나의 역 바인드가 허용 오차 안이면 true 입니다. 본 수가 같아야 합니다. */
@@ -165,9 +165,9 @@ namespace sw
      */
     struct MeshLODLevel
     {
-        vector<RHIVertex> _listVertex;
-        vector<uint32>    _listIndex;
-        float32           _screenSize{ 0.0f };
+        vector<MeshVertex> _listVertex;
+        vector<uint32>     _listIndex;
+        float32            _screenSize{ 0.0f };
         /// @brief 스킨드 메시의 단계면 정점마다의 본 영향(`_listVertex` 와 길이가 같다). 스킨 없는 메시의 단계는 비어 있다. `.mesh` 의 `LSKN` 덩어리에 싣는다.
         vector<MeshSkinVertex> _listSkinVertex{};
         /// @brief 구간 있는 메시의 단계면 구간마다 이 단계 인덱스(`_listIndex`) 안의 범위(LOD 0 구간 순서). 구간 없는 메시는 비어 있다.
@@ -231,9 +231,9 @@ namespace sw
     {
     public:
         /** @brief CPU 고유 정점(LOD 0)입니다. GPU 업로드 뒤에도 원본이 남아 있다(`MeshCPUAccess::Keep`). */
-        const vector<RHIVertex>& getVertices() const;
+        const vector<MeshVertex>& getVertices() const;
         /** @brief LOD 1 이상의 CPU 정점을 단계 순서로 이은 것입니다. GPU 업로드가 LOD 0 뒤에 붙인다. */
-        const vector<RHIVertex>& getLODVertices() const;
+        const vector<MeshVertex>& getLODVertices() const;
         /** @brief CPU 정점을 읽을 수 있으면(메시가 `Keep`) true 입니다. */
         bool isAvailable() const { return _pMesh != nullptr; }
 
@@ -283,7 +283,7 @@ namespace sw
 
         /**
          * @brief 빈 메시를 Engine.dll 안에서 shared_ptr 로 만듭니다.
-         * @details 도형을 만드는 것은 이 클래스의 일이 아니다. `MeshUtil` 이 이 함수로 메시를 만들어 정점을 채운다.
+         * @details 도형을 만드는 것은 이 클래스의 일이 아니다. `PrimitiveMeshBuilder` 이 이 함수로 메시를 만들어 정점을 채운다.
          *          Mesh 가 책임지는 것은 정점 버퍼와 그 수명뿐이다.
          * @param cpuAccess CPU 정점을 업로드 뒤에도 쥐는가입니다. 되읽을 파일이 없는 메시라 `Keep` 만 된다(assert) — 놓을 수 있는 것은 `createForAsset` 의 파일 메시다
          */
@@ -305,39 +305,39 @@ namespace sw
          * @brief 고유 정점과 인덱스를 설정합니다. 탄젠트는 받은 값을 버리고 `computeTangents` 로 다시 구합니다.
          * @details 인덱스 수가 3 의 배수이고 번호가 정점 수보다 작아야 한다 — 아니면 오류를 남기고 메시를 비운 채 false 다.
          */
-        [[nodiscard]] bool setGeometry( vector<RHIVertex>&& listVertex, vector<uint32>&& listIndex );
+        [[nodiscard]] bool setGeometry( vector<MeshVertex>&& listVertex, vector<uint32>&& listIndex );
         /** @brief 탄젠트가 이미 들어 있는 고유 정점과 인덱스를 그대로 설정합니다(`.mesh` 를 읽은 값, 다른 메시의 사본). 검사는 `setGeometry` 와 같습니다. */
-        [[nodiscard]] bool setGeometryWithTangents( vector<RHIVertex>&& listVertex, vector<uint32>&& listIndex );
+        [[nodiscard]] bool setGeometryWithTangents( vector<MeshVertex>&& listVertex, vector<uint32>&& listIndex );
         /**
          * @brief 삼각형 목록 정점(정점 셋이 삼각형 하나, 공유 정점 없음)을 설정합니다 — 인덱스는 0..n-1 입니다. 탄젠트는 `computeTangents` 로 다시 구합니다.
          * @details 탄젠트는 위치 · 노멀 · UV 에서 나오는 값이라(경계 반지름처럼) 메시가 정한다. 정점을 만드는 쪽(도형 · 지형 · 물 · 잘린 조각 · 테스트)은
          *          탄젠트를 채우지 않아도 되고, 채우지 않은 정점이 0 탄젠트로 그려지는 일이 없다. 이미 구한 탄젠트(`.mesh`)는 `setVerticesWithTangents` 로 넣는다.
          */
-        void setVertices( const vector<RHIVertex>& listVertex );
-        void setVertices( vector<RHIVertex>&& listVertex );
+        void setVertices( const vector<MeshVertex>& listVertex );
+        void setVertices( vector<MeshVertex>&& listVertex );
         /** @brief 게임 코드의 정점(`MeshBuildVertex`)으로 `setVertices` 와 같이 설정합니다 — GPU 정점 칸으로 옮기는 일은 여기 하나다. */
         void setBuildVertices( const vector<MeshBuildVertex>& listVertex );
         /**
          * @brief 탄젠트가 이미 들어 있는 정점 배열을 그대로 설정합니다(`.mesh` 를 읽은 값, 다른 메시의 사본).
          * @details 임포트가 `computeTangents` 로 구해 파일에 실은 값이다. 런타임이 로드마다 다시 구하지 않는다(언리얼 · 유니티가 임포트 때 MikkTSpace 를 베이크하는 것과 같다).
          */
-        void setVerticesWithTangents( vector<RHIVertex>&& listVertex );
+        void setVerticesWithTangents( vector<MeshVertex>&& listVertex );
         /**
-         * @brief 인덱스 삼각형의 탄젠트(`RHIVertex::_arrTangent`)를 위치 · 노멀 · UV 로 구합니다. 기준은 이 함수 하나입니다(런타임 · 임포트 · `.mesh` 쓰기).
+         * @brief 인덱스 삼각형의 탄젠트(`MeshVertex::_arrTangent`)를 위치 · 노멀 · UV 로 구합니다. 기준은 이 함수 하나입니다(런타임 · 임포트 · `.mesh` 쓰기).
          * @details MikkTSpace 와 같은 규약이다 — 면마다 UV 기울기에서 탄젠트 · 바이탄젠트를 구해 모서리 각도로 가중하고, 위치 · 노멀 · UV 가 비트까지 같은 정점끼리
          *          (손잡이가 같은 면끼리만) 모아 더한 뒤 노멀에 직교화한다. W 는 바이탄젠트 부호(cross( N, T ) 와 면의 바이탄젠트가 같은 쪽이면 +1)다.
          *          UV 가 퇴화해(면적 0) 기울기가 없는 정점은 노멀에 수직이고 +X 에 가장 가까운 방향을 받는다(노멀이 X 축이면 +Z). 셰이더의 노멀 맵은 평평한 맵에서 노멀을 그대로 낸다.
          */
-        static void computeTangents( vector<RHIVertex>& inoutListVertex, const vector<uint32>& listIndex );
+        static void computeTangents( vector<MeshVertex>& inoutListVertex, const vector<uint32>& listIndex );
         /**
-         * @brief `computeTangents` 가 표시한 이음매 정점에 변 묶음을 적어 이음매 변과 안쪽 변을 두 끝점만으로 가르게 합니다(`RHIVertex::isSeamEdge`).
+         * @brief `computeTangents` 가 표시한 이음매 정점에 변 묶음을 적어 이음매 변과 안쪽 변을 두 끝점만으로 가르게 합니다(`MeshVertex::isSeamEdge`).
          * @details 헐 셰이더는 이웃 삼각형을 모른다 — 변을 가르려면 두 끝점의 값뿐이다. 이음매 변마다 두 끝이 비트 하나를 나눠 갖고, 이음매가 아닌 변으로 이어진 정점과는 비트를 나누지 않는다
          *          (그래프 색칠, 비트 6 개). 끝점 하나만 갈린 이음매 변(다트의 끝)의 다른 끝도 이음매 정점이 된다. 정렬이 들어 임포트(`.mesh` 쓰기) · 내장 도형만 부른다 — 런타임에 짓는 메시는
          *          모든 비트(두 끝이 이음매면 이음매 변)로 둔다.
          */
-        static void refineSeamEdges( vector<RHIVertex>& inoutListVertex, const vector<uint32>& listIndex );
+        static void refineSeamEdges( vector<MeshVertex>& inoutListVertex, const vector<uint32>& listIndex );
         /** @brief 삼각형 목록 정점(인덱스 0..n-1)의 탄젠트를 구합니다. */
-        static void computeTangents( vector<RHIVertex>& inoutListVertex );
+        static void computeTangents( vector<MeshVertex>& inoutListVertex );
         /** @brief 삼각형 목록(정점 셋이 삼각형 하나)의 인덱스 0..@p vertexCount-1 입니다. */
         static vector<uint32> makeTriangleListIndices( uint32 vertexCount );
         /**
@@ -345,19 +345,19 @@ namespace sw
          * @details 그림은 비트까지 같다 — 합치는 정점은 셰이더가 받는 값이 같다. 고유 정점은 처음 쓰인 순서다(정점 읽기가 삼각형 순서를 따른다).
          *          탄젠트를 먼저 구한 정점을 넘긴다(구하기 전에 합치면 이웃 면의 탄젠트가 합쳐진 정점 하나에 모여 값이 달라진다 — 결과는 같지만 순서를 고정한다).
          */
-        static void weldTriangleList( const vector<RHIVertex>& listTriangleVertex, vector<RHIVertex>& outListVertex, vector<uint32>& outListIndex );
+        static void weldTriangleList( const vector<MeshVertex>& listTriangleVertex, vector<MeshVertex>& outListVertex, vector<uint32>& outListIndex );
         /**
          * @brief 삼각형 목록 정점을 탄젠트를 구한 뒤 합쳐(`weldTriangleList`) 설정합니다. 정점마다의 스킨 · 모프를 뒤따라 붙이지 않는 생산자(도형 · 지형 · 물)가 씁니다.
          * @details 정점 번호가 바뀌므로, 삼각형 목록 순서로 스킨 · 모프를 만든 생산자는 `setVertices` 를 쓴다.
          */
-        void setTriangleListWelded( vector<RHIVertex>&& listTriangleVertex );
+        void setTriangleListWelded( vector<MeshVertex>&& listTriangleVertex );
         /**
          * @brief CPU 정점을 읽는 접근 토큰입니다(`MeshCPUView` — CPU 정점의 유일한 입구, R-15). `Keep` 이 아니면 오류를 남기고 빈 토큰을 돌려준다.
          */
         [[nodiscard]] MeshCPUView getCPUView() const;
         /** @brief CPU 정점을 업로드 뒤에도 쥐는가입니다. `Keep` 이면 `getCPUView` 로 읽을 수 있다. */
         MeshCPUAccess getCPUAccess() const { return _cpuAccess.load( std::memory_order_acquire ); }
-        /** @brief 이 메시를 읽은 `.mesh` 의 리소스 id 입니다. 절차 메시는 비어 있다. */
+        /** @brief 이 메시를 읽은 `.mesh` 의 에셋 id 입니다. 절차 메시는 비어 있다. */
         const AssetID& getSourceAsset() const { return _sourceAsset; }
         /** @brief CPU 정점을 지금 쥐고 있으면 `Keep` 으로 바꾸고 true 입니다. 이미 놓았으면 바꾸지 않고 false 입니다(파일을 다시 읽는 것은 `retainCPUVertices`). 어느 스레드에서 불러도 된다. */
         [[nodiscard]] bool tryRetainCPUVertices();
@@ -400,9 +400,9 @@ namespace sw
          * @details 노멀 · 탄젠트 칸에 단위 벡터가 아닌 데이터를 싣는 메시(지형 형태 변환 — `TerrainMeshBuilder`)는 `Full` 이어야 한다. 바꾸면 내용 번호를 새로 받아
          *          정점 풀이 다시 올린다. 배치의 머티리얼 PSO 가 이 형식으로 지어진다(언리얼에서 메시 종류가 vertex factory 를 고르는 자리).
          */
-        void setVertexFormat( RHIMeshVertexFormat format );
+        void setVertexFormat( MeshVertexFormat format );
         /** @brief GPU 정점 형식을 반환합니다. */
-        RHIMeshVertexFormat getVertexFormat() const { return _vertexFormat; }
+        MeshVertexFormat getVertexFormat() const { return _vertexFormat; }
         /** @brief GPU 정점 버퍼에서 속성 구간이 시작하는 바이트입니다(위치 구간 뒤 — `RHIMeshVertexStreams`). 슬롯 2 를 여기서 건다. */
         uint32 getAttributeStreamOffset() const;
 
@@ -508,14 +508,14 @@ namespace sw
          */
         float32 getUVDensity() const { return _uvDensity; }
         /** @brief 삼각형 @p listIndex 의 메시 공간 면적 합과 UV 면적 합으로 UV 밀도를 구합니다(`getUVDensity`). UV 면적이 0 이면 0 입니다. */
-        [[nodiscard]] static float32 computeUVDensity( const vector<RHIVertex>& listVertex, const vector<uint32>& listIndex );
+        [[nodiscard]] static float32 computeUVDensity( const vector<MeshVertex>& listVertex, const vector<uint32>& listIndex );
         /**
          * @brief 평균 변 길이(메시 공간) — 평균 넓이 정삼각형의 변입니다. `setVertices` 가 UV 밀도와 함께 구합니다. 삼각형이 없으면 0 입니다.
          * @details 머티리얼 변위가 원래 꼭짓점의 높이 밉을 고를 때 쓴다 — 꼭짓점을 나누는 패치마다 변이 달라, 메시 하나에 같은 값이어야 틈이 없다(`MaterialDisplacement::computeVertexHeightMipLevel`).
          */
         float32 getMeanEdgeLength() const { return _meanEdgeLength; }
         /** @brief 삼각형 @p listIndex 의 메시 공간 면적 합과 수로 평균 변 길이를 구합니다(`getMeanEdgeLength`). */
-        [[nodiscard]] static float32 computeMeanEdgeLength( const vector<RHIVertex>& listVertex, const vector<uint32>& listIndex );
+        [[nodiscard]] static float32 computeMeanEdgeLength( const vector<MeshVertex>& listVertex, const vector<uint32>& listIndex );
         /** @brief 메시 공간 경계 상자의 중심입니다(경계 구의 중심). 정점이 없으면 원점입니다. */
         const float3& getLocalBoundsCenter() const { return _localBoundsCenter; }
         /** @brief 메시 공간의 축 정렬 경계(최소)입니다. 정점이 없으면 원점입니다. `setVertices` 가 구합니다. */
@@ -553,7 +553,7 @@ namespace sw
     private:
         friend class MeshCPUView;    // CPU 정점은 토큰으로만 읽는다
         friend class MeshRenderData; // GPU 에 올리는 쪽 — 올릴 때 읽고 올린 뒤 놓는다
-        vector<RHIVertex>     _listVertex;
+        vector<MeshVertex>    _listVertex;
         uint32                _vertexCount{ 0 };             ///< LOD 0 정점 수 — CPU 정점을 놓아도 남는다
         uint32                _lodVertexCount{ 0 };          ///< 낮은 단계 정점 수의 합 — CPU 정점을 놓아도 남는다
         AssetID               _sourceAsset;                  ///< 되읽을 `.mesh`(절차 메시는 비어 있다)
@@ -572,7 +572,7 @@ namespace sw
         vector<MeshSection> _listSection;
         /// @brief setLODs 를 참고하세요. LOD 1 이상의 범위(그릴 정점 흐름 기준)와 그 정점입니다.
         vector<MeshLOD>        _listLOD;
-        vector<RHIVertex>      _listLODVertex;
+        vector<MeshVertex>     _listLODVertex;
         vector<uint32>         _listLODIndex;
         vector<MeshSkinVertex> _listLODSkinVertex;
         /// @brief setVertexAnimation 을 참고하세요.
@@ -593,7 +593,7 @@ namespace sw
         /// @brief setDynamic 을 참고하세요. 업로드 큐에 넣지 않는(정점 풀이 올리는) 프레임마다의 메시입니다.
         uint8 _bDynamic{ SW_FALSE };
         /// @brief setVertexFormat 을 참고하세요.
-        RHIMeshVertexFormat _vertexFormat{ RHIMeshVertexFormat::Packed };
+        MeshVertexFormat _vertexFormat{ MeshVertexFormat::Packed };
         /// @brief setGPUDeformProgram 을 참고하세요. 잠금(`_deformProgramMutex`) 안에서만 읽고 씁니다.
         shared_ptr<const vector<float4>> _deformProgram SW_GUARDED_BY( _deformProgramMutex );
         mutable mutex                                   _deformProgramMutex;

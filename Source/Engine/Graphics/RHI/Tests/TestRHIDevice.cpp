@@ -370,7 +370,7 @@ SW_TEST_CASE( RHINativeHandlesTest, QueryRejectsAnotherLayoutAndFillsTheMatching
  * @brief [VulkanAPIVersionTest] 물리 디바이스 선택이 요구 판(셰이더 쿠킹 타깃) 미만의 디바이스를 거른다
  * @details 셰이더는 vulkan1.2 타깃(SPIR-V 1.5)으로 쿠킹한다. 1.1 디바이스는 SPIR-V 1.3 까지만 받으므로 그 디바이스를 고르면 셰이더 모듈 전부가 무효다.
  *          맨 위 변형 비트는 판 비교에 넣지 않는다. 요구 판이 1.2 인 것도 본다 — Android 기기 다수와 dzn 이 1.2 라 올리면 그 기기를 잃는다
- *          (올리려면 이 줄과 RHIDescriptors.h 의 까닭을 함께 고친다).
+ *          (올리려면 이 줄과 RHIConstants.h 의 까닭을 함께 고친다).
  */
 SW_TEST_CASE( VulkanAPIVersionTest, DeviceBelowTheShaderTargetIsRejected )
 {

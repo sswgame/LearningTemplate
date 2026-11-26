@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="a3f00409be984613b6d14becb330ec0b"?>
 <!--
-  움직이는 바닥 위의 두 사람(첫 사람) — `py -3 -m Scripts net-pair match` 의 둘째 단계가 허브 서버 · 매치 서버(움직이는 바닥 맵) · 두 클라이언트로 돈다.
+  움직이는 바닥 위의 두 사람(첫 사람) — `py -3 -m Scripts login-connect-session match` 의 둘째 단계가 허브 서버 · 매치 서버(움직이는 바닥 맵) · 두 클라이언트로 돈다.
   ① 바닥에 올라 실려 간다(Shooter.FloorNumber). ② 바닥 기준의 자기 자리를 보고에 남긴다(records — 둘째가 본 자리와 스크립트가 견준다).
   ③ 실려 가는 동안 둘째의 사격에 쓰러지고 같은 매치에서 다시 태어난다.
 -->

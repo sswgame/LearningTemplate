@@ -8,7 +8,7 @@
  *          - 서비스 스레드 하나(`tick` 을 부르는 스레드)에서 돈다. 서비스의 콜백은 모두 그 스레드에서 불린다.
  *            계정과 연결의 테이블을 갖고 알림(`sendPush`)을 보낸다.
  *          - 캐시 앞과 서버 버스의 소비자는 호스트 하나이다.
- *            캐시 답과 채널 메시지는 `getEphemeralRouter()` 가 요청 id 와 채널로, 버스 메시지는 `subscribeServerBus` 한 서비스에 나눠 준다.
+ *            캐시 답과 채널 메시지는 `getCacheRouter()` 가 요청 id 와 채널로, 버스 메시지는 `subscribeServerBus` 한 서비스에 나눠 준다.
  *            서비스가 `pollReplies` 나 `pollMessages` 를 직접 부르면 서로의 답을 가져간다.
  *          - 메서드 영역이 겹치는 서비스는 `registerServerService` 가 거절한다.
  *          - GM 리슨(`_pAdminTransport`)을 주면 리슨이 둘이 된다. 호스트 안의 묶음 전송(`ListenerTransport`)이 연결 핸들에 리슨 번호를 섞어 두 전송을 전송 하나로 보이므로
@@ -33,20 +33,20 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
+#include "GameFramework/Runtime/Online/RateLimit/Server/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 
 namespace sw
 {
-    class IEphemeralStore;
+    class ICacheStore;
     class ServiceStore;
     class IStreamTransport;
     class OnlineServiceHost;
@@ -153,7 +153,7 @@ namespace sw
         NetAddress            _adminListenAddress{ NetAddress::makeLoopback( 0 ) };                                   ///< `_pAdminTransport` 가 받을 주소. 포트 0 = 아무 포트(`getAdminListenPort`)
         IStreamTransport*     _pAdminTransport{ nullptr };                                                            ///< 빌려 쓴다. 있으면 GM 리슨을 따로 열고 서비스의 노출(`getExposure`)대로 리슨을 가른다
         ServiceStore*         _pServiceStore{ nullptr };
-        IEphemeralStore*      _pEphemeralStore{ nullptr };     ///< 없으면 서버 한 대(라우터 없음)
+        ICacheStore*          _pCacheStore{ nullptr };         ///< 없으면 서버 한 대(라우터 없음)
         IServerBusTransport*  _pServerBusTransport{ nullptr }; ///< 없으면 서버 한 대. 키트에는 호스트가 만든 앞(`getServerBus`)만 간다
         RemoteConfig*         _pRemoteConfig{ nullptr };
         int32                 _requestBurstPerAccount{ 0 }; ///< 필수(온라인 서버 설정) — 0 이하면 `initialize` 가 거절한다
@@ -237,7 +237,7 @@ namespace sw
         int32 sendPushToAll( uint16 kind, const BitWriter& body );
 
         /** @brief 캐시 답과 채널 메시지를 나눠 주는 라우터입니다. 캐시가 없으면(서버 한 대) nullptr 이며, 호스트 `tick` 이 비웁니다. */
-        EphemeralStoreRouter* getEphemeralRouter();
+        CacheStoreRouter* getCacheRouter();
         /**
          * @brief @p pService 가 @p topic 의 버스 메시지를 받게 하고, 그 구독을 돌려줍니다. 구독이 사라지면 끊고, 그 주제를 듣는 서비스가 없으면 버스 구독도 닫습니다.
          * @details 같은 주제를 둘이 구독해도 버스에는 한 번만 구독한다. 버스가 없거나(서버 한 대 · `initialize` 전) 같은 서비스가 같은 주제를 이미 구독했으면
@@ -247,10 +247,10 @@ namespace sw
 
         RemoteConfig* getRemoteConfig() const { return _settings._pRemoteConfig; }
         /** @brief 버스의 타입 있는 앞입니다. 버스가 없으면(서버 한 대) nullptr 입니다. `initialize` 뒤부터 있습니다. */
-        ServerBus*       getServerBus() const { return _pServerBus.get(); }
-        ServiceStore*    getServiceStore() const { return _settings._pServiceStore; }
-        IEphemeralStore* getEphemeralStore() const { return _settings._pEphemeralStore; }
-        uint16           getListenPort() const;
+        ServerBus*    getServerBus() const { return _pServerBus.get(); }
+        ServiceStore* getServiceStore() const { return _settings._pServiceStore; }
+        ICacheStore*  getCacheStore() const { return _settings._pCacheStore; }
+        uint16        getListenPort() const;
         /** @brief 서비스 하나가 응답을 기다리게 둘 호출 상한입니다(`OnlineServiceHostConfig::_maxPendingCallsPerService`). */
         int32 getMaxPendingCallsPerService() const { return _settings._maxPendingCallsPerService; }
         /** @brief GM 리슨의 포트입니다. GM 리슨이 없으면 0 입니다. */
@@ -319,7 +319,7 @@ namespace sw
         OnlineServiceHostConfig                          _settings;
         StreamMessageEndpoint                            _endpoint;
         NetRequestServer                                 _requestServer;
-        EphemeralStoreRouter                             _ephemeralRouter;
+        CacheStoreRouter                                 _ephemeralRouter;
         TokenBucketMap                                   _accountBucket;
         TokenBucketMap                                   _remoteBucket;
         vector<IOnlineServerService*>                    _listService;

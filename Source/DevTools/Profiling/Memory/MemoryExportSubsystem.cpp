@@ -2,7 +2,7 @@
 
 #include "DevTools/Profiling/Memory/MemoryExportSubsystem.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Log/Logger.h"
 #include "Core/Task/TaskManager.h"
 
@@ -92,8 +92,8 @@ namespace sw
 
     void MemoryExportSubsystem::exportOnLoopEnd()
     {
-        const CommandLineManager* pCommandLine = engine::findSubsystem<CommandLineManager>();
-        AbsolutePath              root;
+        const CommandLine* pCommandLine = engine::findSubsystem<CommandLine>();
+        AbsolutePath       root;
         if ( pCommandLine == nullptr || pCommandLine->getArgument( CommandLineArgument::MEMORY_EXPORT, root ) == false )
             return;
         const expected<MemorySnapshotPolicy> policy = ConfigManager::readConfig( MemorySnapshotPolicy::kConfigFile );

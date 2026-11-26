@@ -60,7 +60,7 @@ namespace sw
         if ( filePath.empty() )
             return false;
 
-        // 사용자 바인딩은 `save` 가 디스크에 쓴 플레이어 파일이다 — 리소스 id 가 아니므로 디스크 입구로 읽는다.
+        // 사용자 바인딩은 `save` 가 디스크에 쓴 플레이어 파일이다 — 에셋 id 가 아니므로 디스크 입구로 읽는다.
         XMLDocument doc;
         if ( doc.loadFromFile( filePath ) == false )
             return false;

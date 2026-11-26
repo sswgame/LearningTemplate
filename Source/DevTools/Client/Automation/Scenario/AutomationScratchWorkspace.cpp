@@ -2,7 +2,7 @@
 
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -87,7 +87,7 @@ namespace sw
                 }
             }
 
-            /** @brief `FileUtil::WriteFilter` — 리소스 루트 아래 쓰기(사본은 실행 뿌리 아래라 루트 밖이다)와 프로젝트의 `docs/` · `Config/`(허용 목록 밖) 쓰기를 거절합니다. 그 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
+            /** @brief `FileUtil::WriteFilter` — 콘텐츠 루트 아래 쓰기(사본은 실행 뿌리 아래라 루트 밖이다)와 프로젝트의 `docs/` · `Config/`(허용 목록 밖) 쓰기를 거절합니다. 그 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
             static expected<void> allowWrite( string_view path )
             {
                 // 지킬 원본(`Content`)이 없는 구성(패키지 - 팩만)에는 막을 것이 없다.
@@ -102,7 +102,7 @@ namespace sw
                 wrapped.appendFormat( "/%#/", FileUtil::normalizeSeparators( path ) );
                 if ( wrapped.view().find( "/../" ) != string_view::npos )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the path has a '..' segment - a scenario writes to a resolved path", path } );
-                // 포함 판정은 OS 대소문자 규칙이다(`isPathAtOrUnderRoot`). 사본(작업 도메인)은 실행 뿌리 아래라 리소스 루트 밖이다 — 아래 "루트 밖은 연다" 가 연다.
+                // 포함 판정은 OS 대소문자 규칙이다(`isPathAtOrUnderRoot`). 사본(작업 도메인)은 실행 뿌리 아래라 콘텐츠 루트 밖이다 — 아래 "루트 밖은 연다" 가 연다.
                 const AbsolutePath projectRoot = ProcessRoots::get()._project;
 
                 // 프로젝트 루트의 추적 폴더 — 허용 목록에 든 하위 폴더만 연다.
@@ -128,7 +128,7 @@ namespace sw
                 bool bRecordMissingGolden = false;
                 if ( engine::areEngineSubsystemsBound() )
                 {
-                    const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+                    const CommandLine& commandLine = engine::getSubsystem<CommandLine>();
                     (void)commandLine.getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, bUpdateGolden );
                     (void)commandLine.getArgument( CommandLineArgument::SCENARIO_RECORD_MISSING_GOLDEN, bRecordMissingGolden );
                 }

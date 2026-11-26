@@ -2,7 +2,7 @@
  * @file RenderPipelineAsset.h
  * @brief 프레임 렌더 파이프라인 디스크립터(패스 그래프 + 임시 어태치먼트)입니다.
  *
- * RenderPassAsset 와의 차이:
+ * RenderFeatureAsset 와의 차이:
  * - RenderPass = 여러 파이프라인이 함께 쓰는 첨부 묶음(이름, 포맷, 클리어)
  * - Pipeline   = 프레임 그래프 + 패스별 PSO(셰이더, 진입점, 블렌드 · 깊이 · 컬, 퍼뮤테이션)
  */
@@ -18,7 +18,7 @@
 #include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 namespace sw
 {
@@ -44,7 +44,7 @@ namespace sw
 
         /**
          * @brief 프레임 그래프의 자원(서브시스템의 버퍼 · 히스토리)입니다. 프레임 패스의 입출력은 이 이름이다(첨부가 아니다).
-         * @details `_listRenderPassRef` 의 자원이 읽을 때 앞에 합쳐진다. 이름은 첨부와 겹칠 수 없다(검증).
+         * @details `_listRenderFeatureRef` 의 자원이 읽을 때 앞에 합쳐진다. 이름은 첨부와 겹칠 수 없다(검증).
          */
         PROPERTY( SkipIfEmpty )
         vector<RenderGraphResourceDesc> _listResource;
@@ -52,18 +52,18 @@ namespace sw
         /**
          * @brief 프레임 그래프 노드입니다. 프레임에 한 번, 뷰 그래프보다 먼저 돌며 모든 뷰의 몫을 기록한다(컬링 · 라이트 그리드 · 깊이 히스토리 · 스키닝 등 — `isFramePassType`).
          * @details 순서는 `_listResource` 이름의 읽기 · 쓰기가 정한다(뷰 그래프와 같은 규칙). 선언하지 않은 종류는 PSO 도 없고 돌지 않는다.
-         *          `_listRenderPassRef` 의 프레임 패스가 읽을 때 앞에 합쳐진다(여러 파이프라인이 `engine/renderpass/framecomputerenderpass.xml` 한 벌을 쓴다).
+         *          `_listRenderFeatureRef` 의 프레임 패스가 읽을 때 앞에 합쳐진다(여러 파이프라인이 `engine/renderfeature/framecomputerenderfeature.xml` 한 벌을 쓴다).
          */
         PROPERTY( SkipIfEmpty )
         vector<RenderGraphPassDesc> _listFramePass;
 
         /**
-         * @brief 첨부 · 프레임 자원 · 프레임 패스를 가져올 RenderPass XML 경로입니다(선택, 예: engine/renderpass/defaultrenderpass.xml).
+         * @brief 첨부 · 프레임 자원 · 프레임 패스를 가져올 RenderFeature XML 경로입니다(선택, 예: engine/renderfeature/defaultrenderfeature.xml).
          * @details 읽을 때 적은 순서대로 그 파일의 첨부 · 자원 · 프레임 패스를 이 파이프라인 목록 앞에 합친다(`RenderPipelineAsset::mergeRenderPassRefs`) — 렌더러는 합친 목록만 본다.
          *          읽지 못하면 로드 실패이고, 이름이 겹치면 검증 오류다. 열쇠는 원소의 글이다(`_base` 자식은 하나씩 더하고 `_op="Remove"` 로 지운다).
          */
         PROPERTY( SkipIfEmpty, InheritKey )
-        vector<DataPath> _listRenderPassRef;
+        vector<DataPath> _listRenderFeatureRef;
 
         /**
          * @brief 모듈 확장이 패스 프로그램(`ExtensionProgramDesc::_shaderPath`)으로 쓸 수 있는 셰이더 경로입니다(ExtensionRenderPass).
@@ -105,7 +105,7 @@ namespace sw
         [[nodiscard]] bool loadFromXMLFile( const AssetID& assetID );
         /**
          * @brief 디스크 파일에서 파이프라인 XML 을 로드합니다. 팩을 보지 않습니다(`ReflectedXMLFile::loadDescFromDiskFile`).
-         * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
+         * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 콘텐츠 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
          */
         [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief 파이프라인 디스크립터를 반환합니다. */
@@ -171,9 +171,9 @@ namespace sw
         vector<RenderGraphResourceAccess> buildFramePassAccesses( const RenderGraphPassDesc& pass ) const;
 
     private:
-        /** @brief `_listRenderPassRef` 의 첨부 · 자원 · 프레임 패스를 이 파이프라인 목록 앞에 합칩니다. 렌더 패스 파일을 읽지 못하면 오류를 남기고 false 입니다. */
+        /** @brief `_listRenderFeatureRef` 의 첨부 · 자원 · 프레임 패스를 이 파이프라인 목록 앞에 합칩니다. 렌더 패스 파일을 읽지 못하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool mergeRenderPassRefs( string_view sourcePath );
-        /** @brief 읽기 입구 둘(리소스 id · 디스크 파일)이 같이 쓰는 끝 처리입니다(첨부 합치기 · 검사 · 로그). 문제가 있으면 false 입니다. */
+        /** @brief 읽기 입구 둘(에셋 id · 디스크 파일)이 같이 쓰는 끝 처리입니다(첨부 합치기 · 검사 · 로그). 문제가 있으면 false 입니다. */
         [[nodiscard]] bool finishLoad( string_view sourcePath );
 
     private:
@@ -184,16 +184,16 @@ namespace sw
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// RenderPassAsset — 렌더 패스 XML(여러 파이프라인이 함께 쓰는 첨부 묶음) 에셋을 정의합니다.
+// RenderFeatureAsset — 렌더 패스 XML(여러 파이프라인이 함께 쓰는 첨부 묶음) 에셋을 정의합니다.
 // ------------------------------------------------------------------------------
 namespace sw
 {
     /**
-     * @brief 여러 파이프라인이 함께 쓰는 묶음 서술입니다(첨부 · 프레임 자원 · 프레임 패스). 파이프라인이 `_listRenderPassRef` 로 가져옵니다.
-     * @details 뷰 그래프(`_listPass`)는 RenderPipelineDesc 가 담당한다. 프레임 패스는 셰이딩 방식과 무관해 포워드 · 디퍼드가 한 벌을 나눈다(`framecomputerenderpass.xml`).
+     * @brief 여러 파이프라인이 함께 쓰는 묶음 서술입니다(첨부 · 프레임 자원 · 프레임 패스). 파이프라인이 `_listRenderFeatureRef` 로 가져옵니다.
+     * @details 뷰 그래프(`_listPass`)는 RenderPipelineDesc 가 담당한다. 프레임 패스는 셰이딩 방식과 무관해 포워드 · 디퍼드가 한 벌을 나눈다(`framecomputerenderfeature.xml`).
      */
     REFLECT()
-    struct RenderPassDesc
+    struct RenderFeatureDesc
     {
         REFLECT_BODY();
         PROPERTY( Required )
@@ -213,15 +213,15 @@ namespace sw
 namespace sw
 {
     /// @brief RenderPass XML 에셋입니다.
-    class SW_API RenderPassAsset
+    class SW_API RenderFeatureAsset
     {
     public:
         /** @brief XML 파일에서 렌더 패스 디스크립터를 로드합니다. */
         [[nodiscard]] bool loadFromXMLFile( const AssetID& assetID );
 
-        const RenderPassDesc& getDesc() const { return _desc; }
+        const RenderFeatureDesc& getDesc() const { return _desc; }
 
     private:
-        RenderPassDesc _desc;
+        RenderFeatureDesc _desc;
     };
 } // namespace sw

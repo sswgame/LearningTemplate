@@ -11,8 +11,8 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Presentation/AudioPlayableAsset.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw
 {
@@ -25,21 +25,21 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioMusic.MusicNotFound", "Music not found: %#", assetPath );
             return false;
         }
-        return loadComposed( text, assetPath, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
+        return loadComposed( text, assetPath, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool AudioMusicDef::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        return loadComposed( xmlText, sourceName, ResourceContext::forType( *StaticType() ) );
+        return loadComposed( xmlText, sourceName, AssetComposeContext::forType( *StaticType() ) );
     }
 
-    bool AudioMusicDef::loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context )
+    bool AudioMusicDef::loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context )
     {
         *this = AudioMusicDef{};
         // 변형(`_base`)은 부모를 펼친 뒤 읽는다 — 구간은 이름이 열쇠이고 전환 규칙 · 레이어 목록은 통째로 바뀐다(규칙은 문서 표 `<Document>`).
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
+        if ( AssetComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
             return false;
         if ( XMLSerializer::deserialize( this, *StaticType(), bComposed ? string_view{ flatText } : xmlText ) == false )
         {

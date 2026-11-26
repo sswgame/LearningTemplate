@@ -24,9 +24,10 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
 #include "Core/Network/Message/NetMessageTable.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/Message/NetMessageWriter.h"
+#include "Core/Network/NetChannelKind.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -36,7 +37,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
-#include "GameFramework/Runtime/Character/Camera/SequenceTriggerComponent.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/SequenceTriggerComponent.h"
 
 namespace sw
 {
@@ -80,12 +81,12 @@ namespace sw
         uint32 _playID{ 0 };
     };
 
-    /** @brief 컷씬 재생 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). 본문은 모두 고정 배치형이다. */
+    /** @brief 컷씬 재생 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). 본문은 모두 스키마 결합형이다. */
     struct NetSequenceMessage
     {
-        using Start       = NetMessageBodyDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetStartBody>;
-        using End         = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetEndBody>; ///< 시작 뒤에 닿아야 한다(같은 순서 채널)
-        using SkipRequest = NetLimitedMessageDef<NetMessageBodyDef<2, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, SequenceNetSkipRequestBody>, NetRequestLimit::kCommand>;
+        using Start       = NetMessageBodyDesc<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetStartBody>;
+        using End         = NetMessageBodyDesc<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetEndBody>; ///< 시작 뒤에 닿아야 한다(같은 순서 채널)
+        using SkipRequest = NetLimitedMessageDesc<NetMessageBodyDesc<2, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, SequenceNetSkipRequestBody>, NetRequestLimit::kCommand>;
         using Table       = NetWorldMessageTable<NetKitMessageRange::kSequence, Start, End, SkipRequest>;
 
         static constexpr uint8 kStart       = Table::getKindOf<Start>();

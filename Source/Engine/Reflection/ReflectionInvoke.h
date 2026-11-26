@@ -1,11 +1,12 @@
 /**
  * @file ReflectionInvoke.h
- * @brief 타입을 모른 채 이름으로 함수를 부르고, 이벤트를 묶고 · 부릅니다(콘솔 명령 · 비주얼 스크립팅 · 기믹 배선 · 에디터).
+ * @brief 타입을 모른 채 이름으로 함수를 부르고, 이벤트를 묶고 · 부릅니다(콘솔 명령 · 비주얼 스크립팅 · 논리 회로 배선 · 에디터).
  * @details 인자는 `ReflectedValue`(타입 이름이 붙은 값) 목록입니다. 인자 자리마다 그 타입의 변환(`ReflectTypeOps`)이 값을 바꿔 넣으므로,
  *          글 "35" 를 `int32` 인자에, `int32` 를 `float32` 인자에 넘길 수 있습니다. 빠진 뒤쪽 인자는 기본 인자로 채웁니다.
  */
 #pragma once
 #include "Core/Delegate/Delegate.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectedValue.h"
@@ -132,7 +133,7 @@ namespace sw
          */
         static bool canBindEventToFunction( const EventInfo& event, const FunctionInfo& function );
         /**
-         * @brief 이벤트가 불리면 @p pTarget 의 함수를 부르게 묶습니다(기믹 배선 · 비주얼 스크립팅). 함수는 부를 때마다 이름으로 찾습니다 —
+         * @brief 이벤트가 불리면 @p pTarget 의 함수를 부르게 묶습니다(논리 회로 배선 · 비주얼 스크립팅). 함수는 부를 때마다 이름으로 찾습니다 —
          *        모듈을 다시 올려도 묶음이 옛 코드를 가리키지 않습니다.
          * @warning @p pTarget 의 수명은 부르는 쪽이 지킵니다. 돌려받은 구독을 @p pTarget 과 같은 수명에 두십시오(구독이 사라지면 뗀다).
          * @return 넘길 수 없으면(`canBindEventToFunction`) 빈 구독입니다

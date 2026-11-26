@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Network/NetProtocol.h"
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"

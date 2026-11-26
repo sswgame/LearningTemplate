@@ -140,7 +140,7 @@ if(TARGET EditorModule)
 	set_tests_properties(ToolCheckText PROPERTIES LABELS nogpu TIMEOUT 300)
 
 	# 에셋 참조 — 에셋은 경로 하나로 가리키므로(.meta · GUID 없음) 글 에셋 · 이 파일의 경로 칸이 모두 있는 것을 가리키는지, 리플렉션 `AssetPath` 프로퍼티가 모두
-	# 칸 목록(`Config/Dev/AssetReferenceFields.json`)에 있는지 본다. 커밋 전 검사(`Scripts/lint/asset_references.py`)와 같은 목록이다. 임포트 산출물을 보므로 임포트 뒤에 돈다.
+	# 칸 목록(`Config/Dev/AssetReferenceFields.json`)에 있는지 본다. 커밋 전 검사(`Scripts/lint/asset_reference_scan.py`)와 같은 목록이다. 임포트 산출물을 보므로 임포트 뒤에 돈다.
 	add_test(NAME ToolCheckAssetRefs
 		COMMAND $<TARGET_FILE:App> --check-asset-refs -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/ToolCheckAssetRefs.log
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
@@ -191,7 +191,7 @@ add_test(NAME Pack.MakePatch
 	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 set_tests_properties(Pack.MakePatch PROPERTIES LABELS nogpu TIMEOUT 300)
 
-# 스크립트 자체 테스트 — `Scripts/<폴더>/tests/test_*.py` 를 모두 돈다. 손으로 한 줄씩 등록하면 빠뜨린다(test_cook_code_fingerprint ·
+# 스크립트 자체 테스트 — `Scripts/<폴더>/tests/test_*.py` 를 모두 돈다. 손으로 한 줄씩 등록하면 빠뜨린다(test_cook_code_digest ·
 # test_shipping_host_defaults 가 빠져 있었다). 무엇을 보는지는 각 파일 머리말에 있다.
 # 이름은 `Scripts.<줄기의 낙타 이름>`(test_move_asset.py → Scripts.MoveAsset). cmake 를 부르는 테스트(vcpkg 설치 보호)는 SW_CMAKE_COMMAND 로 받는다.
 # 도구 정책 훅의 판정 테스트(`.claude/hooks/test_*.py`)도 함께 돈다 — 손으로만 돌면 규칙 데이터가 바뀌어도 모른다.

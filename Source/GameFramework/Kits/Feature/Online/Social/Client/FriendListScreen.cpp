@@ -11,7 +11,7 @@
 #include "Engine/UI/Widgets/ListViewWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

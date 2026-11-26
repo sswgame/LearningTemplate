@@ -1,0 +1,67 @@
+<?asset guid="d8c00415936cf73eb3e17c1c1dcaed48"?>
+<Prefab formatVersion="0" name="Torch">
+	<GameObject _schemaVersion="0" _name="Torch" _bActive="true">
+		<_listComponent>
+			<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+			                _bActive="true"
+			                _localPosition="0,0,0"
+			                _localRotation="0,0,0"
+			                _localScale="1,1,1"
+			                _attachOwner="None"
+			                _attachOwnerID="0"
+			                _attachComponent="None" />
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.2,1.2,0.2"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="#ae80bcb72e918025"
+			               _meshID="Cube"
+			               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<LogicCircuitSensorComponent _localID="5906677949702648734" _componentName="LogicCircuitSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</LogicCircuitSensorComponent>
+			<ElementStatusComponent _localID="11244445018458652199" _componentName="ElementStatusComponent"
+			                        _bActive="true"
+			                        _tablePath="guid:ac01140596a95e56bae3086435957f8a"
+			                        _elementMaterial="Torch"
+			                        _signalStatus="Burning"
+			                        _startStimulus="None" />
+			<PointLightComponent _localID="6048688584444471341" _componentName="PointLightComponent"
+			                     _bActive="true"
+			                     _localPosition="0,1.4,0"
+			                     _localRotation="0,0,0"
+			                     _localScale="1,1,1"
+			                     _attachOwner="None"
+			                     _attachOwnerID="0"
+			                     _attachComponent="#ae80bcb72e918025"
+			                     _color="0.55,0.75,1"
+			                     _intensity="2"
+			                     _radius="6" />
+			<LogicCircuitComponent _localID="12667660158642495557" _componentName="LogicCircuitComponent" _bActive="true" _stepTime="0.016666668">
+				<_listNode>
+					<LogicCircuitNodeDesc _id="flame" _kind="Signal" _params="" />
+					<LogicCircuitNodeDesc _id="light" _kind="Light" _params="intensity=1" />
+				</_listNode>
+				<_listNodeTarget>
+					<item>0</item>
+					<item>0</item>
+				</_listNodeTarget>
+				<_listWire>
+					<LogicCircuitWireDesc _from="flame.Active" _to="light.On" _bInvert="false" />
+				</_listWire>
+			</LogicCircuitComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

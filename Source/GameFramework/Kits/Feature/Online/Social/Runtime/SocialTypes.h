@@ -70,7 +70,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 관계 한 줄입니다. 응답(`SocialLinksReply`)에 고정 배치형으로 실립니다. */
+    /** @brief 관계 한 줄입니다. 응답(`SocialLinksReply`)에 스키마 결합형으로 실립니다. */
     REFLECT()
     struct SocialLink
     {
@@ -103,8 +103,8 @@ namespace sw
 {
     /**
      * @brief 한 계정의 접속 상태입니다. 친구에게 보이는 값입니다.
-     * @details 응답과 알림에는 고정 배치형(B)으로, 서버 버스(`SocialBus::kPresenceTopic`)에는 자기 기술형(A)으로 실립니다.
-     *          캐시 값(시한 있는 접속 상태)은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `EphemeralRecordTable<SocialPresence>`)입니다.
+     * @details 응답과 알림에는 스키마 결합형으로, 서버 버스(`SocialBus::kPresenceTopic`)에는 자기 기술형으로 실립니다.
+     *          캐시 값(시한 있는 접속 상태)은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `CacheRecordTable<SocialPresence>`)입니다.
      */
     REFLECT()
     struct SW_KIT_API SocialPresence
@@ -198,7 +198,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 길드 정보입니다. 조회는 멤버 목록까지 담고, 만들기 응답은 id 와 이름만 담습니다. 응답(`GuildInfoReply`)에 고정 배치형으로 실립니다. */
+    /** @brief 길드 정보입니다. 조회는 멤버 목록까지 담고, 만들기 응답은 id 와 이름만 담습니다. 응답(`GuildInfoReply`)에 스키마 결합형으로 실립니다. */
     REFLECT()
     struct GuildInfo
     {
@@ -218,7 +218,7 @@ namespace sw
         PROPERTY()
         int32 _memberCount{ 0 };
         PROPERTY()
-        int64 _experience{ 0 }; ///< 길드 경험치이다. 서버 시스템(`GuildService::addExperience`)만 늘린다
+        int64 _experience{ 0 }; ///< 길드 경험치이다. 서버 시스템(`GuildLogic::addExperience`)만 늘린다
         PROPERTY()
         int32 _level{ 1 }; ///< 경험치와 서버 설정의 레벨 표(`SocialKitConfig::_listGuildLevelExperience`)로 응답할 때 정한다. 저장하지 않는다
         PROPERTY( Min = 0, Max = 1 )

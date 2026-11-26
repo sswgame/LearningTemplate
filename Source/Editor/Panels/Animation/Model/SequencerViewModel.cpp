@@ -7,9 +7,9 @@
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -45,7 +45,7 @@ namespace sw::editor
         GameObjectManager* pManager = editor::getActiveObjectManager();
         if ( pManager == nullptr || documentPath.empty() )
             return nullptr;
-        // 리소스 id 는 대소문자를 가리지 않는다.
+        // 에셋 id 는 대소문자를 가리지 않는다.
         const auto isPlayerOfDocument = [documentPath]( const SequencePlayerComponent* pPlayer )
         { return pPlayer != nullptr && pPlayer->getOwner() != nullptr && StringUtil::equals( pPlayer->getSequencePath(), documentPath, true ); };
         GameObject* const              pContextOwner = pManager->resolveGameObject( _contextPlayer );

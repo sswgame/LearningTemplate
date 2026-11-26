@@ -13,7 +13,7 @@
  *          </Mod>
  *
  *          `<Override>` 는 기본 리소스를 통째로 바꾸고(팩 우선순위 — 두 모드가 같은 파일을 덮으면 충돌이다), `<Layer>` 는 기본 리소스 위에 차이를 얹는다
- *          (엔진 덮어쓰기 층 `ResourceLayers` — 층 파일 `mods/<id>/layer/<경로>` 가 원본을 부모로 삼아 항목을 더하고 고친다). DLC · 확장처럼 표에 항목을 더하는 모드는
+ *          (엔진 덮어쓰기 층 `AssetLayers` — 층 파일 `mods/<id>/layer/<경로>` 가 원본을 부모로 삼아 항목을 더하고 고친다). DLC · 확장처럼 표에 항목을 더하는 모드는
  *          층을 쓴다 — 여럿이 같은 표에 얹어도 서로를 지우지 않는다. 언리얼 Game Feature 플러그인이 데이터 레지스트리에 행을 더하는 자리다(기억에 의존).
  */
 #pragma once
@@ -128,9 +128,9 @@ namespace sw
     {
         static constexpr const utf8* kFileName      = "mod.xml";
         static constexpr const utf8* kRootElement   = "Mod";
-        static constexpr size_t      kMaxIDLength   = 48;      ///< id 글자 수 상한(폴더 이름 · 리소스 경로 한 칸)
+        static constexpr size_t      kMaxIDLength   = 48;      ///< id 글자 수 상한(폴더 이름 · 에셋 경로 한 칸)
         static constexpr const utf8* kModDomainRoot = "mods";  ///< 모드가 새로 더하는 리소스의 도메인 뿌리(`mods/<id>/…`)
-        static constexpr const utf8* kLayerFolder   = "layer"; ///< 모드 콘텐츠 안 덮어쓰기 층 폴더(`mods/<id>/layer/<기본 리소스 id>`)
+        static constexpr const utf8* kLayerFolder   = "layer"; ///< 모드 콘텐츠 안 덮어쓰기 층 폴더(`mods/<id>/layer/<기본 에셋 id>`)
 
         string                _id;
         ModVersion            _version;
@@ -139,17 +139,17 @@ namespace sw
         int32                 _priority{ 0 };          ///< 의존이 순서를 정하지 않는 모드끼리의 순서 — 클수록 뒤(위)에 올라 이긴다. 같으면 id 순
         vector<ModDependency> _listDependency;
         vector<string>        _listConflict; ///< 함께 켜면 거절하는 모드 id
-        vector<string>        _listOverride; ///< 덮어쓰는 기본 리소스 id(정규형). 모드 팩에 그 경로가 있어야 한다
-        vector<string>        _listLayer;    ///< 층으로 얹는 기본 리소스 id(정규형). 모드 팩에 `makeLayerRoot( id ) + "/" + 경로` 가 있어야 한다. 덮어쓰기와 겹치지 않는다
+        vector<string>        _listOverride; ///< 덮어쓰는 기본 에셋 id(정규형). 모드 팩에 그 경로가 있어야 한다
+        vector<string>        _listLayer;    ///< 층으로 얹는 기본 에셋 id(정규형). 모드 팩에 `makeLayerRoot( id ) + "/" + 경로` 가 있어야 한다. 덮어쓰기와 겹치지 않는다
 
         /**
          * @brief id 규칙(소문자 · 숫자 · `_`, 1 ~ `kMaxIDLength` 글자)을 지키면 true 입니다.
-         * @details id 는 폴더 이름과 리소스 경로(`mods/<id>/`)가 되므로 구분자 · `.` · 대문자를 받지 않는다 — 경로 탈출과 대소문자가 다른 같은 모드를 형식으로 막는다.
+         * @details id 는 폴더 이름과 에셋 경로(`mods/<id>/`)가 되므로 구분자 · `.` · 대문자를 받지 않는다 — 경로 탈출과 대소문자가 다른 같은 모드를 형식으로 막는다.
          */
         static bool isValidID( string_view id );
         /** @brief 모드 @p id 가 새로 더하는 리소스의 경로 접두(`mods/<id>/`)입니다. */
         static string makeContentPrefix( string_view id );
-        /** @brief 모드 @p id 의 덮어쓰기 층 뿌리(`mods/<id>/layer` — 끝 `/` 없음, `ResourceLayers` 의 뿌리 꼴)입니다. */
+        /** @brief 모드 @p id 의 덮어쓰기 층 뿌리(`mods/<id>/layer` — 끝 `/` 없음, `AssetLayers` 의 뿌리 꼴)입니다. */
         static string makeLayerRoot( string_view id );
 
         /**
@@ -166,9 +166,9 @@ namespace sw
         [[nodiscard]] bool readDependency( const XMLNode& node, string_view sourceName );
         /** @brief `<Conflict>` 한 줄을 읽습니다. */
         [[nodiscard]] bool readConflict( const XMLNode& node, string_view sourceName );
-        /** @brief `<Override>` 한 줄을 읽습니다(정규형 기본 리소스 id 만). */
+        /** @brief `<Override>` 한 줄을 읽습니다(정규형 기본 에셋 id 만). */
         [[nodiscard]] bool readOverride( const XMLNode& node, string_view sourceName );
-        /** @brief `<Layer>` 한 줄을 읽습니다(정규형 기본 리소스 id 만, 덮어쓰기와 겹치지 않는다). */
+        /** @brief `<Layer>` 한 줄을 읽습니다(정규형 기본 에셋 id 만, 덮어쓰기와 겹치지 않는다). */
         [[nodiscard]] bool readLayer( const XMLNode& node, string_view sourceName );
     };
 } // namespace sw

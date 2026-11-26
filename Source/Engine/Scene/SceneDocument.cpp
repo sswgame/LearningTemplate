@@ -14,14 +14,14 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -46,7 +46,7 @@ namespace sw
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
             // 셀 색인의 구간 뒤에 그 조각의 HLOD 대리 파일 id(`StreamingCell::_hlodFileID`, 0 이면 없음)가 온다.
             // 그 뒤에 조각 내용의 XZ 경계(`StreamingCell::_contentBounds`, 최소 x · z · 최대 x · z — 빈 경계면 최소가 최대보다 크다)가 온다.
-            static constexpr FormatDef kBinFormat{ "SWSC" };
+            static constexpr FormatDesc kBinFormat{ "SWSC" };
             // 고정 머리: 매직 · 판 · 머리 길이 · 내용 길이.
             static constexpr uint64 kFixedHeadBytes = 2u * sizeof( uint32 ) + 2u * sizeof( uint64 );
             // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯, 목록 수 둘, 파일 id · id 범위 · 앵커 id(8바이트씩)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
@@ -277,20 +277,20 @@ namespace sw
         XMLDocument    doc;
         string         absPath;
         string         baseID; // 펼친 글에는 `_base` 가 없다 - 저장이 부모와의 차이로 쓰려고 원문에서 받는다
-        const bool     bRead = doc.loadResourceAs( assetID, ResourceContext::forSchema( &SceneDocumentInternal::makeInheritanceSchema ), &absPath, &baseID );
+        const bool     bRead = doc.loadAssetAs( assetID, AssetComposeContext::forSchema( &SceneDocumentInternal::makeInheritanceSchema ), &absPath, &baseID );
         return readXMLSource( doc, bRead, absPath, baseID, loadScope, inoutListChain );
     }
 
     bool SceneDocument::loadXMLFromDiskFile( const AbsolutePath& diskPath )
     {
-        // 디스크 파일은 부르는 쪽이 이름(`loadXMLFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
+        // 디스크 파일은 부르는 쪽이 이름(`loadXMLFromDiskFile`)으로 고른 것이다 — 에셋 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
         *this       = {};
         _sourcePath = diskPath.str();
         AssetLoadScope loadScope( "Scene", diskPath.str() );
         XMLDocument    doc;
-        // 리소스 id 읽기와 같은 규칙으로 펼친다 — 날것으로 읽으면 쿠킹본에만 조건(`_when`)이 풀리지 않는다(개발 실행은 푼다).
+        // 에셋 id 읽기와 같은 규칙으로 펼친다 — 날것으로 읽으면 쿠킹본에만 조건(`_when`)이 풀리지 않는다(개발 실행은 푼다).
         string         baseID;
-        const bool     bRead = doc.loadDataFileAs( diskPath, ResourceContext::forSchema( &SceneDocumentInternal::makeInheritanceSchema ), &baseID );
+        const bool     bRead = doc.loadDataFileAs( diskPath, AssetComposeContext::forSchema( &SceneDocumentInternal::makeInheritanceSchema ), &baseID );
         vector<string> listChain;
         return readXMLSource( doc, bRead, string( diskPath.str() ), baseID, loadScope, listChain );
     }
@@ -315,7 +315,7 @@ namespace sw
             return false;
         }
 
-        // 씬 상속: 두 입구(리소스 id · 디스크)가 부모 위에 차이를 얹어 한 벌로 펼친 글을 넘긴다(Godot 씬 상속 · 유니티 Prefab Variant 와 같은 모델). 부모는 `AssetIO` 로 읽으므로 쿠킹 입력이 된다.
+        // 씬 상속: 두 입구(에셋 id · 디스크)가 부모 위에 차이를 얹어 한 벌로 펼친 글을 넘긴다(Godot 씬 상속 · 유니티 Prefab Variant 와 같은 모델). 부모는 `AssetIO` 로 읽으므로 쿠킹 입력이 된다.
         _baseScenePath = flattenedBaseID;
 
         if ( AssetXMLFormat::upgradeToCurrentXMLVersion( kAssetType, root ) == false )
@@ -407,7 +407,7 @@ namespace sw
         // 자기 포함은 사슬로 잡는다. 디스크 입구로 연 맨 위 씬은 경로 모양이 달라 한 겹 더 돈 뒤에 잡힌다.
         inoutListChain.push_back( FileUtil::normalizePath( _sourcePath ).str() );
         // 깊이 상한은 엔진의 사본이다(씬 로드 워커가 `EngineConfig` 를 직접 읽으면 설정 제자리 덮기와 겹친다). 없으면 대신 읽지 않고 진다.
-        const optional<uint32> maxDepth = engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
+        const optional<uint32> maxDepth = engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth();
         if ( maxDepth.has_value() == false )
         {
             DataInheritance::reportNoDepthLimit( absPath );
@@ -545,7 +545,7 @@ namespace sw
         XMLDocument parentDoc;
         if ( _baseScenePath.empty() || buildXML( fullDoc ) == false || parent.buildXML( parentDoc ) == false )
             return false;
-        if ( ResourceComposer::saveDelta( absPath, fullDoc.getRoot().toString(), parentDoc.getRoot().toString(), SceneDocumentInternal::makeInheritanceSchema(), _baseScenePath ) == false )
+        if ( AssetComposer::saveDelta( absPath, fullDoc.getRoot().toString(), parentDoc.getRoot().toString(), SceneDocumentInternal::makeInheritanceSchema(), _baseScenePath ) == false )
             return false;
         SW_LOG_INFO_ID( "SceneDocument.SavedDelta", "Saved '%#' as a difference from '%#' -> %#", _name, _baseScenePath, absPath.str() );
         return true;

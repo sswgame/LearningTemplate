@@ -8,13 +8,13 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/View/EditorCamera.h"
 #include "Editor/Viewport/EditorViewportCamera.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 #include "Editor/Viewport/Model/EditorOrbitMath.h"
 
 #include "Engine/Object/Component/CameraComponent.h"

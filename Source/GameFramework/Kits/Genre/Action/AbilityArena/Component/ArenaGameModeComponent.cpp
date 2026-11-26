@@ -9,9 +9,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Action/AbilityArena/ArenaProjectileQuery.h"
@@ -21,7 +21,7 @@
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
@@ -32,7 +32,7 @@ namespace sw
     {
         struct ArenaGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "ARNA" };
+            static constexpr FormatDesc kStateFormat{ "ARNA" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 팩의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventWave       = "ArenaWaveStart";

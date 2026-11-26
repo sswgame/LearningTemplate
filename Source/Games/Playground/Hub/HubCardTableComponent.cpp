@@ -3,11 +3,10 @@
 #include "Games/Playground/Hub/HubCardTableComponent.h"
 
 #include "Core/Foundation/Constants.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Math/SecureRandom.h"
+#include "Core/Network/Message/NetMessageRouter.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Serialization/ByteStream.h"
 #include "Core/Time/MonotonicClock.h"
-#include "Core/UUID/UUID.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -16,10 +15,10 @@
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Fixed/FixedLayout.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
 
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 #include "Games/Playground/Hub/HubCardHUDViewModel.h"
 
@@ -32,9 +31,7 @@ namespace sw
             /** @brief 섞기의 비밀 키입니다(운영체제 난수 16 바이트). */
             static SipHashKey makeShuffleKey()
             {
-                const UUID uuid = UUID::generate();
-                ByteReader reader( uuid._arrBytes, sizeof( uuid._arrBytes ) );
-                return SipHashKey{ reader.readUint64(), reader.readUint64() }; // 중괄호 초기화는 왼쪽부터 평가한다
+                return SipHashKey{ SecureRandom::nextUint64(), SecureRandom::nextUint64() };
             }
         };
     } // namespace
@@ -113,7 +110,7 @@ namespace sw
         view._winner            = game.getWinner();
         view._color             = game.getCurrentColor();
         BitWriter writer;
-        if ( FixedLayout::write( view, writer ) == false )
+        if ( LayoutSerializer::write( view, writer ) == false )
             return false; // 칸 범위 밖 — 오류 로그가 남았다
         outView = writer.getBytes();
         return true;
@@ -122,7 +119,7 @@ namespace sw
     bool HubCardTurnPolicy::readSeatView( const vector<uint8>& bytes, HubCardSeatView& outView )
     {
         HubCardSeatView view;
-        if ( FixedLayout::read( bytes.data(), static_cast<int32>( bytes.size() ), view ) != FixedReadResult::Ok )
+        if ( LayoutSerializer::read( bytes.data(), static_cast<int32>( bytes.size() ), view ) != LayoutReadResult::Ok )
             return false;
         bool bInDeck = view._topCardID < SheddingCardGame::kDeckCardCount;
         for ( const uint16 cardID : view._listHandCardID )

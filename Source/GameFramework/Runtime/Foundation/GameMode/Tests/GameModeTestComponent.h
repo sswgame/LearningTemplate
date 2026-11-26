@@ -11,10 +11,10 @@
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/RuleViewCatalog.h"
 
@@ -88,7 +88,7 @@ namespace sw
         }
         void serializeGameState( StateIO& io ) override
         {
-            io.header( FormatDef{ "TGMC" } );
+            io.header( FormatDesc{ "TGMC" } );
             io.value( _handValue );
             io.check( _handValue >= 0 );
             io.end();

@@ -1,0 +1,74 @@
+#include "pch.h"
+
+#include "GameFramework/Runtime/Gameplay/Mechanism/Trigger/TagGateComponent.h"
+
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/TagIndex.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
+
+#include "GameFramework/Runtime/Gameplay/Mechanism/MechanismUtil.h"
+
+namespace sw
+{
+    TagGateComponent::TagGateComponent()
+        : _requiredTags{}
+        , _openRadius{ 2.0f }
+        , _bStaysOpen{ true }
+        , _bPlanar{ SW_FALSE }
+        , _bOpen{ false }
+        , _listTagged{}
+    {
+    }
+
+    void TagGateComponent::onBeginPlay()
+    {
+        Component::onBeginPlay();
+        // 세이브나 핫 리로드로 열린 채 돌아왔으면 몸을 꺼 둔다.
+        GameObject* pOwner = getOwner();
+        if ( _bOpen && pOwner != nullptr )
+            MechanismUtil::setBodyActive( *pOwner, false, this );
+    }
+
+    void TagGateComponent::onTick( TickContext& context )
+    {
+        Component::onTick( context );
+        const int32 stepCount = context.getIntervalCount();
+        for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
+            stepOnce();
+        }
+    }
+
+    void TagGateComponent::stepOnce()
+    {
+        GameObject*              pOwner           = getOwner();
+        const GameObjectManager* pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const SceneComponent*    pScene           = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const bool               bCannotCheckDoor = pManager == nullptr || pScene == nullptr || ( _bOpen && _bStaysOpen ) || _requiredTags.getTagCount() == 0;
+        if ( bCannotCheckDoor )
+            return;
+        const float3 center     = pScene->getWorldPosition();
+        const uint64 selfID     = pOwner->getObjectID();
+        bool         bQualified = false;
+        // 요구 태그를 가진 것만 태그 색인에서 받는다(씬을 훑지 않는다).
+        pManager->getTagIndex().findObjectsWithTags( _requiredTags, _listTagged );
+        for ( const GameObject* pObject : _listTagged )
+        {
+            const SceneComponent* pOther = pObject->getPrimarySceneComponent();
+            if ( pOther == nullptr || pObject->getObjectID() == selfID || pObject->isActiveInHierarchy() == false )
+                continue; // 꺼진 것(주운 열쇠 · 풀에 돌아간 것)은 앞에 서 있지 않다
+            float3 offset = pOther->getWorldPosition() - center;
+            if ( _bPlanar )
+                offset._z = 0.0f;
+            bQualified = offset.getLength() <= _openRadius;
+            if ( bQualified )
+                break;
+        }
+        if ( bQualified == _bOpen )
+            return;
+        _bOpen = bQualified;
+        MechanismUtil::setBodyActive( *pOwner, _bOpen == false, this );
+    }
+} // namespace sw

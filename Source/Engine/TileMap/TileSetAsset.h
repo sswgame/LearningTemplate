@@ -224,7 +224,7 @@ namespace sw
          * @details `loadFromXMLText` 의 앞 절반이다. 에디터의 되돌리기 글은 편집 중의 상태라 위반(밖으로 나간 셀 등)이 든 채로 돌아와야 해 이것으로 읽는다.
          */
         [[nodiscard]] static bool parseContent( string_view xmlText, string_view sourceName, TileSetContent& outContent );
-        /** @brief 읽은 문서(조건을 푼 글)를 내용으로 옮깁니다(형식만). 글 입구와 리소스 입구가 함께 쓴다. */
+        /** @brief 읽은 문서(조건을 푼 글)를 내용으로 옮깁니다(형식만). 글 입구와 에셋 입구가 함께 쓴다. */
         [[nodiscard]] static bool parseDocument( const XMLDocument& doc, string_view sourceName, TileSetContent& outContent );
         /** @brief 읽은 내용입니다. 에디터는 이것을 복사해 고친다. */
         const TileSetContent& getContent() const { return _content; }
@@ -255,7 +255,7 @@ namespace sw
         const TileVisual* resolveVisual( const vector<uint16>& listBrushIndex, int32 width, int32 height, int32 x, int32 y ) const;
 
     private:
-        /** @brief 리소스 경로의 타일셋을 읽습니다. 실패하면 오류를 남기고 false 이며 내용은 바뀌지 않습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<TileSetAsset>::acquire` 로 한 벌을 쥔다. */
+        /** @brief 에셋 경로의 타일셋을 읽습니다. 실패하면 오류를 남기고 false 이며 내용은 바뀌지 않습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<TileSetAsset>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 형식 뒤의 규칙(`collectIssues`)을 보고 통과하면 내용을 들인다. 실패하면 오류를 남기고 내용은 바뀌지 않는다. */
         [[nodiscard]] bool applyContent( TileSetContent&& loaded, string_view sourceName );

@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/ActionCombatGameModeComponent.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -14,7 +14,7 @@ namespace sw
     {
         struct ActionCombatGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "KDAC" };
+            static constexpr FormatDesc kStateFormat{ "KDAC" };
 
             static constexpr const utf8* kHealValue = "heal"; ///< 승리 결과 값 이름 — 허브 캐릭터의 보상 표(`MinigameRewardComponent`)가 같은 이름을 적는다
 
@@ -48,7 +48,7 @@ namespace sw
 
     ActionCombatGameModeComponent::~ActionCombatGameModeComponent() = default;
 
-    bool ActionCombatGameModeComponent::makeLayout( ActionRoomLayout& outLayout ) const
+    bool ActionCombatGameModeComponent::makeLayout( ActionCombatRoomLayout& outLayout ) const
     {
         const bool bHallMatches = _listHallMonster.size() == _listHallPosition.size();
         const bool bBossMatches = _listBossMonster.size() == _listBossPosition.size();
@@ -58,21 +58,21 @@ namespace sw
                              _listHallMonster.size(), _listHallPosition.size(), _listBossMonster.size(), _listBossPosition.size() );
             return false;
         }
-        outLayout = ActionRoomLayout{};
+        outLayout = ActionCombatRoomLayout{};
         for ( size_t index = 0; index < _listHallMonster.size(); ++index )
         {
-            outLayout._listHallSpawn.push_back( ActionRoomSpawnDef{ _listHallMonster[index], _listHallPosition[index] } );
+            outLayout._listHallSpawn.push_back( ActionCombatRoomSpawnDef{ _listHallMonster[index], _listHallPosition[index] } );
         }
         for ( size_t index = 0; index < _listBossMonster.size(); ++index )
         {
-            outLayout._listBossSpawn.push_back( ActionRoomSpawnDef{ _listBossMonster[index], _listBossPosition[index] } );
+            outLayout._listBossSpawn.push_back( ActionCombatRoomSpawnDef{ _listBossMonster[index], _listBossPosition[index] } );
         }
         return true;
     }
 
     bool ActionCombatGameModeComponent::startGame()
     {
-        ActionRoomLayout layout;
+        ActionCombatRoomLayout layout;
         if ( makeLayout( layout ) == false )
             return false;
         _room.setSettings( _roomSettings );
@@ -109,7 +109,7 @@ namespace sw
         return true;
     }
 
-    ActionRoomFrameInput ActionCombatGameModeComponent::consumeInput( float32 deltaTime )
+    ActionCombatRoomFrameInput ActionCombatGameModeComponent::consumeInput( float32 deltaTime )
     {
         _playerPosition._x += _commandMove._x * _playerSpeed * deltaTime;
         _playerPosition._y += _commandMove._y * _playerSpeed * deltaTime;
@@ -118,7 +118,7 @@ namespace sw
         else if ( _commandMove._x < -ActionCombatGameModeComponentInternal::kFacingDeadZone )
             _facing = FacingDirection::Left;
 
-        ActionRoomFrameInput input;
+        ActionCombatRoomFrameInput input;
         input._playerPos      = _playerPosition;
         input._facing         = _facing;
         input._bAttackPressed = _bAttackQueued;
@@ -128,7 +128,7 @@ namespace sw
         return input;
     }
 
-    void ActionCombatGameModeComponent::applyResult( const ActionRoomFrameResult& result )
+    void ActionCombatGameModeComponent::applyResult( const ActionCombatRoomFrameResult& result )
     {
         if ( DepletingValue::take( _playerHP, result._damageToPlayer )._bDepleted == SW_TRUE )
         {
@@ -154,8 +154,8 @@ namespace sw
 
     void ActionCombatGameModeComponent::updateMatch( GameSeconds frameTime )
     {
-        const float32              deltaTime = frameTime.count();
-        const ActionRoomFrameInput input     = consumeInput( deltaTime );
+        const float32                    deltaTime = frameTime.count();
+        const ActionCombatRoomFrameInput input     = consumeInput( deltaTime );
         if ( _phase == ActionCombatPhase::BossWait )
         {
             if ( _bossDelay.update( frameTime ) )
@@ -181,9 +181,9 @@ namespace sw
         io.header( ActionCombatGameModeComponentInternal::kStateFormat );
         if ( io.isOk() == false )
             return;
-        const bool bRoom = io.valueOpened( _room, [this]( ActionRoom& room )
+        const bool bRoom = io.valueOpened( _room, [this]( ActionCombatRoom& room )
         {
-            ActionRoomLayout layout;
+            ActionCombatRoomLayout layout;
             if ( makeLayout( layout ) == false )
                 return false;
             room.setSettings( _roomSettings );

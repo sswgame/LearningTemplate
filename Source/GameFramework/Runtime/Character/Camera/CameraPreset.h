@@ -24,8 +24,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Camera/CameraBlend.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPoseBlender.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
 #include "GameFramework/Runtime/World/Spline/SplinePath.h"

@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/RHI/RHIConstants.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 

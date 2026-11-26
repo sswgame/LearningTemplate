@@ -14,6 +14,6 @@
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Editor.ObjectCount" atLeast="1"/>
 	<EditorExpectDockLayout/>
-	<ExpectLog id="LiveReload.ManualQueued" contains="GF_Chat" atLeast="1"/>
+	<ExpectLog id="HotReload.ManualQueued" contains="GF_Chat" atLeast="1"/>
 	<Pass/>
 </Scenario>

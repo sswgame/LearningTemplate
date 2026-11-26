@@ -69,7 +69,7 @@ namespace sw
     struct GPUSkinPalette;
 
     class IRHIDevice;
-    struct RHIVertex;
+    struct MeshVertex;
     class Mesh;
 
     /**
@@ -100,7 +100,7 @@ namespace sw
         OctahedralNormal _tangent{};
 
         /** @brief 레스트 정점을 변형 없이 결과 배치로 담습니다. */
-        [[nodiscard]] static GPUDeformResult fromVertex( const RHIVertex& vertex );
+        [[nodiscard]] static GPUDeformResult fromVertex( const MeshVertex& vertex );
     };
 } // namespace sw
 

@@ -5,7 +5,6 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -14,10 +13,10 @@
 #include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Widgets/PropertyGrid/IInspectorProperty.h"
-#include "Editor/Common/Widgets/PropertyGrid/InspectorPropertyUndo.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Widgets/PropertyGrid/IPropertyDrawer.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridLayout.h"
 #include "Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.h"
+#include "Editor/Common/Widgets/PropertyGrid/PropertyGridUndo.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Content/AssetPaths.h"
@@ -27,7 +26,7 @@
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Serializer/AssetRefBase.h"
+#include "Engine/Serialization/Reference/AssetRefBase.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -522,7 +521,7 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawAssetRowMenuItems( const PropertyValueRow& row )
     {
-        // 에셋 칸은 콘텐츠 브라우저의 에셋 명령을 빌린다(R13 — 언리얼 Details 의 Browse to Asset · 참조 찾기). 대상 id 는 끌기 · 콘텐츠 브라우저와 같은 리소스 id 의 에셋 페이로드 id 다.
+        // 에셋 칸은 콘텐츠 브라우저의 에셋 명령을 빌린다(R13 — 언리얼 Details 의 Browse to Asset · 참조 찾기). 대상 id 는 끌기 · 콘텐츠 브라우저와 같은 에셋 id 의 에셋 페이로드 id 다.
         if ( row._bAssetPath == SW_FALSE )
             return;
         const string        assetPath = row._kind == PropertyRowKind::Text ? row._valueText : _model.formatPropertyText( row._rowID );
@@ -649,7 +648,7 @@ namespace sw::editor
         ImGui::SetNextItemWidth( -FLT_MIN );
         ImGui::BeginDisabled( row._bDisabled != SW_FALSE );
         // 되돌리기 구간은 행 단위다 — 행을 그리는 사이 활성 위젯이 그려졌으면 그 행의 구간이 이어진다(위젯 여럿인 행도 하나다).
-        const bool bActiveDrawnBefore = InspectorPropertyUndo::isActiveItemDrawn();
+        const bool bActiveDrawnBefore = PropertyGridUndo::isActiveItemDrawn();
         // 노드 머리는 펼치면 들여쓰기를 연 채 자식 행으로 이어져 묶음으로 감싸지 않는다 — 그 행의 휠클릭 자리는 이름 칸이다.
         const bool bNodeRow = row._kind == PropertyRowKind::Sequence || row._kind == PropertyRowKind::KeyedSequence || row._kind == PropertyRowKind::Map ||
                               row._kind == PropertyRowKind::Struct;
@@ -662,7 +661,7 @@ namespace sw::editor
             const bool bResetRequested = EditorWidgets::endResetToDefaultGroup( canResetRow( row ), bHovered );
             handleRowPointer( row, bResetRequested, bHovered );
         }
-        InspectorPropertyUndo::trackRow( _model, row._rowID, bActiveDrawnBefore );
+        PropertyGridUndo::trackRow( _model, row._rowID, bActiveDrawnBefore );
         _listOpenScope.push_back( OpenRowScope{ row._rowID, row._depth, static_cast<uint8>( bTreeOpen ? 1 : 0 ) } );
     }
 
@@ -694,7 +693,7 @@ namespace sw::editor
     bool EditorPropertyGrid::drawRowWidget( const PropertyValueRow& row )
     {
         // 그리기 확장(내장 값 위젯 포함)이 먼저 그린다. 맡지 않으면 행 종류대로 그린다.
-        IInspectorProperty* pDrawer = PropertyGridViewModel::getPropertyManager().find( row._typeName.c_str() );
+        IPropertyDrawer* pDrawer = PropertyGridViewModel::getPropertyManager().find( row._typeName.c_str() );
         if ( pDrawer != nullptr && pDrawer->draw( row, _model ) )
             return false;
         switch ( row._kind )
@@ -903,7 +902,7 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawLastInvokeResult()
     {
-        const InspectorInvokeResult& result = _model.getLastInvokeResult();
+        const PropertyGridInvokeResult& result = _model.getLastInvokeResult();
         if ( result._methodName.empty() || result._targetCount == 0 )
             return;
         if ( result.hasFailure() == false )
@@ -1003,13 +1002,13 @@ namespace sw::editor
         // 키는 타입 · 메서드 이름 원문이다(해시 조합은 부딪히면 다른 메서드의 인자 슬롯을 쓴다).
         StringBuilder<constant::buffer::kMax512> slotKeyBuilder;
         slotKeyBuilder.appendFormat( "%#\x1F%#", pTypeInfo->_fullyQualifiedName.c_str(), method._hashName.c_str() );
-        const string                    slotKey  = string( slotKeyBuilder.view() );
-        vector<InspectorMethodArgSlot>& listSlot = _mapMethodArgSlot[slotKey];
-        const bool                      bArgsOk  = InspectorBuiltinValue::prepareMethodArgs( method, listSlot );
+        const string                       slotKey  = string( slotKeyBuilder.view() );
+        vector<PropertyGridMethodArgSlot>& listSlot = _mapMethodArgSlot[slotKey];
+        const bool                         bArgsOk  = PropertyGridBuiltinValue::prepareMethodArgs( method, listSlot );
         drawMethodArgInputs( method, listSlot );
 
-        if ( paramCount > InspectorBuiltinValue::kMaxMethodArgCount )
-            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "TooManyArgumentsMax", TextArgumentList().addInteger( "maxMethodArgCount", static_cast<int64>( InspectorBuiltinValue::kMaxMethodArgCount ) ) ).c_str() );
+        if ( paramCount > PropertyGridBuiltinValue::kMaxMethodArgCount )
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "TooManyArgumentsMax", TextArgumentList().addInteger( "maxMethodArgCount", static_cast<int64>( PropertyGridBuiltinValue::kMaxMethodArgCount ) ) ).c_str() );
 
         if ( bArgsOk == false )
         {
@@ -1026,13 +1025,13 @@ namespace sw::editor
                 EditorSelfTestMarks::recordFormat( "inspector.method.invoke.%#", method._name.c_str() );
             }
             if ( bInvoke )
-                _model.invokeMethod( method, InspectorBuiltinValue::makeMethodArgs( listSlot ) );
+                _model.invokeMethod( method, PropertyGridBuiltinValue::makeMethodArgs( listSlot ) );
         }
 
         ImGui::PopID();
     }
 
-    void EditorPropertyGrid::drawMethodArgInputs( const FunctionInfo& method, vector<InspectorMethodArgSlot>& inoutListSlot )
+    void EditorPropertyGrid::drawMethodArgInputs( const FunctionInfo& method, vector<PropertyGridMethodArgSlot>& inoutListSlot )
     {
         for ( uint32 paramIndex = 0; paramIndex < static_cast<uint32>( inoutListSlot.size() ); ++paramIndex )
         {
@@ -1072,7 +1071,7 @@ namespace sw::editor
         pTypeInfo->forEachEventWithBase( [this]( const EventInfo& event )
         {
             ImGui::PushID( event._name.c_str() );
-            const string signature = InspectorPropertyLayout::formatParameterList( event._listParameter );
+            const string signature = PropertyGridLayout::formatParameterList( event._listParameter );
             ImGui::BulletText( "%s(%s)", event._name.c_str(), signature.c_str() );
             EditorWidgets::drawTooltip( event._metadata->getEditor()._tooltip.c_str() );
             ImGui::SameLine();

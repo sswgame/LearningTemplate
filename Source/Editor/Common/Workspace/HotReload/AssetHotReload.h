@@ -65,7 +65,7 @@ namespace sw::editor
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
         SubsystemInitResult initializeSubsystem() override
         {
-            (void)initialize(); // 리소스 루트가 없으면(팩만 실린 실행) 꺼진 채로 둔다
+            (void)initialize(); // 콘텐츠 루트가 없으면(팩만 실린 실행) 꺼진 채로 둔다
             return SubsystemInitResult::Succeeded;
         }
         void        shutdownSubsystem() override { shutdown(); }
@@ -77,7 +77,7 @@ namespace sw::editor
 
         /**
          * @brief 파일 감시를 시작하고 `Content/` 워치를 등록합니다.
-         * @return 감시자를 만들었으면 true 입니다. 리소스 루트가 없으면(팩만 있는 실행) false 입니다.
+         * @return 감시자를 만들었으면 true 입니다. 콘텐츠 루트가 없으면(팩만 있는 실행) false 입니다.
          */
         [[nodiscard]] bool initialize();
 
@@ -104,8 +104,8 @@ namespace sw::editor
         uint64 getContentChangeSerial() const { return _contentChangeSerial; }
 
         /**
-         * @brief 마지막으로 꺼낸(또는 버린) 뒤 바뀐 파일의 리소스 id(소문자)를 꺼내 비웁니다. 디스크 목록을 가진 화면이 바뀐 파일만 다시 읽게 합니다(언리얼 에셋 레지스트리의 증분 갱신).
-         * @return 개별 파일을 모두 알면 true 입니다. 폴더가 생기거나 사라지거나 이름이 바뀌었거나, 수가 `kMaxTrackedChangedPaths` 를 넘었거나, 경로를 리소스 id 로 못 바꾼 변경이 있으면
+         * @brief 마지막으로 꺼낸(또는 버린) 뒤 바뀐 파일의 에셋 id(소문자)를 꺼내 비웁니다. 디스크 목록을 가진 화면이 바뀐 파일만 다시 읽게 합니다(언리얼 에셋 레지스트리의 증분 갱신).
+         * @return 개별 파일을 모두 알면 true 입니다. 폴더가 생기거나 사라지거나 이름이 바뀌었거나, 수가 `kMaxTrackedChangedPaths` 를 넘었거나, 경로를 에셋 id 로 못 바꾼 변경이 있으면
          *         false 이며 호출한 쪽이 전체를 다시 읽어야 합니다(@p outListPath 는 비어 있다). 어느 쪽이든 기억은 비워진다.
          * @details 파일 추가 · 삭제도 id 로 올라온다 — 그것이 색인의 구조를 바꾸는지는 받는 쪽이 판단한다(저장은 새 이름으로 오므로 이름만으로는 알 수 없다).
          */
@@ -125,7 +125,7 @@ namespace sw::editor
         [[nodiscard]] bool isReferenceScanPending() const;
 
         /**
-         * @brief 에디터가 방금 저장한 에셋 하나(리소스 id)를 파일 감시를 기다리지 않고 그 자리에서 반영합니다 — 캐시 리로드 · 씬 알림 · 연쇄 리로드. 에디터 스레드에서만 부릅니다.
+         * @brief 에디터가 방금 저장한 에셋 하나(에셋 id)를 파일 감시를 기다리지 않고 그 자리에서 반영합니다 — 캐시 리로드 · 씬 알림 · 연쇄 리로드. 에디터 스레드에서만 부릅니다.
          * @details 문서 패널의 저장(`EditorDocumentPanel`)이 부른다. 저장한 파일의 도장(크기 · 쓰기 시각)을 기억해, 같은 저장이 뒤늦게 감시 사건으로 와도 두 번 읽지 않는다. `Content/` 밖의 문서는 감시 · 색인이 없어 그 캐시만 다시 읽는다.
          */
         void applySavedAsset( string_view assetID );
@@ -176,7 +176,7 @@ namespace sw::editor
          */
         [[nodiscard]] static ReloadResult reloadInCachesHolding( AssetManager& resources, const AssetID& assetID );
         /**
-         * @brief `reloadCaches` 의 본문 — 캐시를 다시 읽기만 하고 적지 않습니다. 결과를 집계(`ReloadTracker`)에 적는 곳은 `reloadCaches` 한 곳이다.
+         * @brief `reloadCaches` 의 본문 — 캐시를 다시 읽기만 하고 적지 않습니다. 결과를 집계(`HotReloadTracker`)에 적는 곳은 `reloadCaches` 한 곳이다.
          * @param outReason 실패면 까닭 한 줄(정적 글)을 받습니다.
          */
         [[nodiscard]] static ReloadResult reloadCacheEntries( const AssetReloadRoute& route, const AssetID& assetID, const utf8*& outReason );
@@ -205,7 +205,7 @@ namespace sw::editor
         /** @brief 트리 표기 @p relativePath 의 바뀐 파일을 처리합니다(`onResourceFileChanged` · 앞선 인스턴스가 맡긴 파일의 공통 입구). */
         void routeChangedFile( string relativePath );
         /**
-         * @brief 파일 @p assetID(리소스 id — 우리 형식 글, 원본, 원본 곁 `.meta`)의 정체성을 읽어 런타임 GUID 색인(`AssetRegistry`)에 적습니다.
+         * @brief 파일 @p assetID(에셋 id — 우리 형식 글, 원본, 원본 곁 `.meta`)의 정체성을 읽어 런타임 GUID 색인(`AssetRegistry`)에 적습니다.
          * @details 소스 실행의 색인은 기동 때 한 번 훑은 것이다 — 바깥 편집기 · git 이 만들거나 옮긴 에셋을 다음 기동 전에도 GUID 참조가 풀게 한다(옮긴 에셋은 같은 GUID 의 새 자리로 바뀐다).
          *          지운 파일의 줄은 남는다 — 그 GUID 의 참조는 없는 파일을 읽어 로드 오류다.
          */
@@ -271,7 +271,7 @@ namespace sw::editor
         Subscription                      _scratchResourceWatch;           ///< 작업 도메인의 리소스 종류 감시 구독(`_resourceWatch` 와 같은 처리)
         Subscription                      _scratchContentWatch;            ///< 작업 도메인의 확장자와 무관한 감시 구독(`_contentWatch` 와 같은 처리)
         uint64                            _contentChangeSerial;
-        vector<string>                    _listChangedPath;          ///< 마지막 `takeChangedPaths` 뒤 바뀐 파일의 리소스 id(소문자, 중복 없음)
+        vector<string>                    _listChangedPath;          ///< 마지막 `takeChangedPaths` 뒤 바뀐 파일의 에셋 id(소문자, 중복 없음)
         unique_ptr<AssetIdentityRules>    _pIdentityRules;           ///< 정체성 규칙(`Config/Dev/AssetIdentity.json`) — 파일 사건마다 런타임 GUID 색인의 줄을 고친다(`recordIdentity`). 못 읽으면 비었다
         uint64                            _fencePrepareCount;        ///< 울타리를 마친(또는 포기한) 때의 `AutomationScratchWorkspace::getPrepareCount`
         uint64                            _fenceArmedCount;          ///< 지금 세운 울타리가 본 `AutomationScratchWorkspace::getPrepareCount`

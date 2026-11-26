@@ -1,7 +1,7 @@
 """
 명령의 기반 — 명령 하나 = `Command` 하위 클래스 하나 = 파일 하나(언리얼 AutomationTool 의 BuildCommand, Django 의 management command 와 같은 모양).
 
-파일을 더하면 명령이 생기고 지우면 사라진다: `find_commands` 가 `Scripts/<폴더>/*.py` 의 클래스 머리만 글로 훑는다. import 는 부른 명령의 모듈 하나만 하므로
+파일을 더하면 명령이 생기고 지우면 사라진다: `find_commands` 가 `Scripts/<폴더>/**/*.py`(tests 뺌)의 클래스 머리만 글로 훑는다. import 는 부른 명령의 모듈 하나만 하므로
 명령을 더해도 다른 명령(커밋 훅 린트)이 느려지지 않고, 망가진 명령 하나가 나머지를 막지 않는다. 그래서 `name` · `help` 는 한 줄 문자열 리터럴이다(아니면 멈춘다).
 """
 
@@ -27,7 +27,7 @@ LITERAL_ROW = re.compile(r'^    (name|help) = "((?:[^"\\]|\\.)*)"$', re.M)
 
 
 class CommandError(Exception):
-    """일이 실패했다 — 트레이스백 대신 `[명령] FAILED 까닭` 한 줄과 VIOLATION 으로 끝난다."""
+    """일이 실패했다 — 트레이스백 대신 `[명령] FAILED 까닭` 한 줄과 FAILURE 으로 끝난다."""
 
 
 @dataclass(frozen=True)
@@ -65,7 +65,7 @@ class Command(abc.ABC):
             return command.run(ScriptContext(get_project_root()), args)
         except CommandError as error:
             print(f"[{cls.name}] FAILED {error}", file=sys.stderr, flush=True)
-            return ExitCode.VIOLATION
+            return ExitCode.FAILURE
 
 
 @dataclass(frozen=True)
@@ -83,12 +83,15 @@ class CommandEntry:
 def find_commands() -> dict[str, CommandEntry]:
     """이름 → 명령. 이름이 겹치거나 `name` · `help` 리터럴이 없으면 멈춘다."""
     map_entry: dict[str, CommandEntry] = {}
-    for path in sorted(SCRIPTS_DIR.glob("*/*.py")):
+    for path in sorted(SCRIPTS_DIR.glob("*/**/*.py")):   # 하위 폴더까지(`lint/rules/asset_ids.py` 는 규칙이자 명령이다), 테스트는 뺀다
+        relative = path.relative_to(SCRIPTS_DIR)
+        if "tests" in relative.parts:
+            continue
         text = path.read_text(encoding="utf-8")
         for match in CLASS_HEAD.finditer(text):
             body = text[match.end():text.find("\n\n", match.end())]
             literal = {key: value.replace('\\"', '"') for key, value in LITERAL_ROW.findall(body)}
-            module = f"{path.parent.name}.{path.stem}"
+            module = ".".join(relative.with_suffix("").parts)
             if literal.keys() != {"name", "help"} or literal["name"] in map_entry:
                 sys.exit(f"[Scripts] {module}.{match.group(1)}: 머리에 한 줄 리터럴 name · help 가 있고 이름이 겹치지 않아야 한다")
             map_entry[literal["name"]] = CommandEntry(module, match.group(1), literal["help"])

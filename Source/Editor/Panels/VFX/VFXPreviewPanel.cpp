@@ -127,7 +127,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 창이 지금 연 문서가 `gv_editorWatchAsset`(리소스 id)이면 1 입니다. */
+            /** @brief 창이 지금 연 문서가 `gv_editorWatchAsset`(에셋 id)이면 1 입니다. */
             [[nodiscard]] static bool readDocumentIsWatchAsset( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const VFXPreviewPanel* pPanel = findOpenPanel();

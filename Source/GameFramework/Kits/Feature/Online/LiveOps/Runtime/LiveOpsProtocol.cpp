@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsProtocol.h"
 
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 
 namespace sw
 {

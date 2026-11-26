@@ -1,13 +1,13 @@
 /**
  * @file NetLockstepMessage.h
  * @brief 락스텝 키트(락스텝 · 롤백 세션)의 메시지 표입니다. 두 세션이 한 영역을 나눠 받으므로 표를 따로 둔다.
- * @details 입력 · 체크섬 · 이탈 본문은 고정 배치형(`NetMessageBodyDef`)이다. 롤백 입력은 비트 예산에 맞춰 잘라 싣는 입력 버퍼(`RollbackInputBuffer`)라 손으로 쓰는 본문이다.
+ * @details 입력 · 체크섬 · 이탈 본문은 스키마 결합형(`NetMessageBodyDesc`)이다. 롤백 입력은 비트 예산에 맞춰 잘라 싣는 입력 버퍼(`RollbackInputBuffer`)라 손으로 쓰는 본문이다.
  */
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessageTable.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetChannelKind.h"
 
 #include "Engine/Network/NetMessageBody.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -71,10 +71,10 @@ namespace sw
     /** @brief 락스텝 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetLockstepMessage
     {
-        using Input         = NetLimitedMessageDef<NetMessageBodyDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepInputBody>, NetRequestLimit::kBurst>;
-        using Checksum      = NetLimitedMessageDef<NetMessageBodyDef<1, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepChecksumBody>, NetRequestLimit::kBurst>;
-        using RollbackInput = NetLimitedMessageDef<NetMessageDef<2, NetMessageDirection::Both, NetChannelKind::Unreliable>, NetRequestLimit::kBurst>; ///< 판 번호(`RollbackConfig::_matchID`)를 앞에 싣는다
-        using Leave         = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, LockstepLeaveBody>;                ///< 서버 → 모두
+        using Input         = NetLimitedMessageDesc<NetMessageBodyDesc<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepInputBody>, NetRequestLimit::kBurst>;
+        using Checksum      = NetLimitedMessageDesc<NetMessageBodyDesc<1, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepChecksumBody>, NetRequestLimit::kBurst>;
+        using RollbackInput = NetLimitedMessageDesc<NetMessageDesc<2, NetMessageDirection::Both, NetChannelKind::Unreliable>, NetRequestLimit::kBurst>; ///< 판 번호(`RollbackConfig::_matchID`)를 앞에 싣는다
+        using Leave         = NetMessageBodyDesc<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, LockstepLeaveBody>;                 ///< 서버 → 모두
         using Table         = NetMessageTable<NetKitMessageRange::kLockstep, Input, Checksum, RollbackInput, Leave>;
 
         static constexpr uint8 kInput         = Table::getKindOf<Input>();

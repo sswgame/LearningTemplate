@@ -12,8 +12,9 @@
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
+#include "Core/Task/TaskArgs.h"
 #include "Core/Task/TaskFuture.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskHandle.h"
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
@@ -165,7 +166,7 @@ namespace sw
         [[nodiscard]] bool saveActiveScene();
         /**
          * @brief 활성 씬을 디스크 경로 @p absPath 에 저장하고 그 자리를 씬의 소스로 삼습니다(다른 이름 저장).
-         * @details 소스는 늘 리소스 id 다 — 리소스 트리 · 붙인 디스크 도메인 밖의 자리는 다시 열 수 없으므로 거절한다(예전에는 다른 이름 저장 뒤 소스가 디스크 경로가 됐다).
+         * @details 소스는 늘 에셋 id 다 — 콘텐츠 트리 · 붙인 디스크 도메인 밖의 자리는 다시 열 수 없으므로 거절한다(예전에는 다른 이름 저장 뒤 소스가 디스크 경로가 됐다).
          */
         [[nodiscard]] bool saveActiveSceneAs( const AbsolutePath& absPath );
         /**

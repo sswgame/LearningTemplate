@@ -10,7 +10,7 @@
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 
 namespace sw::editor
 {
@@ -215,7 +215,7 @@ namespace sw::editor
     {
         const string           text  = _override.saveToXMLText();
         const AssetWriteResult saved = writer.save( path, [&text]( const AbsolutePath& writable )
-        { return ResourceComposer::saveText( writable, ResourceSaveText::makeComplete( text ) ); } ); // 뼈마다 모든 칸을 쓴다
+        { return AssetComposer::saveText( writable, AssetSaveText::makeComplete( text ) ); } ); // 뼈마다 모든 칸을 쓴다
         if ( saved == AssetWriteResult::Refused )
             return false; // 문이 이미 알렸다
         if ( saved == AssetWriteResult::Failed )

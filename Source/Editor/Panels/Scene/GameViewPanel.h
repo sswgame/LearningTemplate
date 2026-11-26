@@ -7,7 +7,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanel.h"
-#include "Editor/Common/Workspace/EditorPanelID.h"
+#include "Editor/Common/Workspace/Layout/EditorPanelID.h"
 #include "Editor/Panels/Scene/Model/GameViewModel.h"
 
 namespace sw::editor

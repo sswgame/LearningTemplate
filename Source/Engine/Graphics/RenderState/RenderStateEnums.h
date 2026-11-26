@@ -2,7 +2,7 @@
  * @file RenderStateEnums.h
  * @brief 렌더 상태 열거(블렌드 · 깊이 · 스텐실 · 래스터)입니다. 머티리얼 · 파이프라인 XML 이 적고 PSO 가 품는 저작 어휘라 RHI 폴더 밖에 둔다.
  * @details 유니티 `UnityEngine.Rendering.CompareFunction` · `CullMode` · `BlendMode` 가 엔진 쪽 형식이고 백엔드가 옮기는 것과 같은 자리다 — 게임이 보는 머티리얼 헤더가
- *          RHI 헤더를 include 하지 않는다(타깃 게이트). 이름에 `RHI` 머리를 붙이지 않는다 — 저작 어휘다(유니티 `CullMode` · `BlendOp` 자리, 옛 `RHI*` 이름은 `_bannedNames`).
+ *          RHI 헤더를 include 하지 않는다(타깃 가드). 이름에 `RHI` 머리를 붙이지 않는다 — 저작 어휘다(유니티 `CullMode` · `BlendOp` 자리, 옛 `RHI*` 이름은 `_bannedNames`).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

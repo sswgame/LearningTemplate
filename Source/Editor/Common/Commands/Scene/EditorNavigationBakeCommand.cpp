@@ -9,9 +9,9 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
+#include "Editor/Common/Workspace/Notification/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"

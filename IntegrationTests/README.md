@@ -5,7 +5,7 @@ GPU 없이 되는 확인은 기능 폴더 옆 `Tests/` 의 `SW_TEST_CASE` 로 �
 | 확인할 것 | 쓰는 곳 | 도는 방법 |
 |---|---|---|
 | 순수 식 · 형식 · 파일 형식 · 등록표 · 엔진 서비스(창 · GPU 없음) | `Source/<…>/<기능>/Tests/Test<이름>.cpp` | `App --test`(`ctest -L nogpu`) |
-| 화면 · 입력 · 씬 · 백엔드 | `Content/<도메인>/automation/<이름>.scenario.xml` | `App -scenario=<리소스 경로> -unattended`(`ctest -L hostgpu`) |
+| 화면 · 입력 · 씬 · 백엔드 | `Content/<도메인>/automation/<이름>.scenario.xml` | `App -scenario=<에셋 경로> -unattended`(`ctest -L hostgpu`) |
 
 모든 ctest 항목은 먼저 `Import.assets`(텍스처 · 모델 · 높이장, 고정 단계 `ImportedAssets`)를 거친다. 스탬프가 낡은 원본만 다시 임포트하므로 형식 · 임포터 판을 올린 묶음도 손으로 임포트하지 않는다.
 
@@ -53,7 +53,7 @@ SW_TEST_CASE_EACH( PoolTest, KeepsCapacity, kArrSize ) { SW_EXPECT_TRUE( Pool( p
 - `._bIsolated = true` 인 케이스는 실행기가 이 실행 파일을 자식으로 다시 띄워(`--test-isolated-case=<이름>`) 그 하나만 돌린다. 크래시 · 교착이 그 케이스의 실패로 남고 나머지는 이어진다. 기동 비용이 붙으니 프로세스를 죽일 수 있는 케이스만 쓴다. App 에 등록된 케이스만 된다(에디터 케이스는 안 된다).
 - 케이스 시한은 기본 30 초(`._timeoutSeconds`)다. 넘기면 `[ TIMEOUT ]` 에 이름을 남기고 실행을 끝낸다(종료 코드 12). 디버거가 붙어 있으면 시한을 보지 않는다.
 
-프로세스를 죽이거나 멈출 수 있는 일 · 표준 출력 · 표준 에러 · 프로세스 전역 상태(전역 싱크 떼기)는 자식 역할로 쓴다. 자식 역할은 평소 실행 · 목록 · 케이스 수에서 빠지고, 부모 케이스가 자식으로 띄워 그 하나만 돌린다.
+프로세스를 죽이거나 멈출 수 있는 일 · 표준 출력 · 표준 에러 · 프로세스 전역 상태(전역 백엔드 떼기)는 자식 역할로 쓴다. 자식 역할은 평소 실행 · 목록 · 케이스 수에서 빠지고, 부모 케이스가 자식으로 띄워 그 하나만 돌린다.
 
 ```cpp
 SW_TEST_CHILD_ROLE( LogTest, ConsoleChild ) { const string mode = test::getChildRoleArgument(); … }  // 인자는 환경 변수 대신 명령줄로

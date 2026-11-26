@@ -59,20 +59,20 @@ namespace sw
     };
 
     /** @brief 채널 하나입니다. */
-    struct GBufferChannelSpec
+    struct GBufferChannelDesc
     {
         const utf8*        _pMeaning;
         GBufferChannelKind _kind;
     };
 
     /** @brief G버퍼 첨부 하나입니다. 순서는 MRT 슬롯(SV_TARGET0 ..) 순서입니다. */
-    struct GBufferAttachmentSpec
+    struct GBufferAttachmentDesc
     {
         const utf8*         _pName; ///< 파이프라인 XML 의 첨부 이름이자 입력 역할 이름
         RenderPassInputRole _role;
         RHIFormat           _format;
         float4              _clearColor;
-        GBufferChannelSpec  _arrChannel[4];
+        GBufferChannelDesc  _arrChannel[4];
         uint32              _channelCount;
         uint8               _bPipelineClear; ///< 1 이면 클리어 값은 파이프라인의 것이다(장면 색 — 배경색). 0 이면 표의 클리어 값이어야 한다
     };
@@ -103,7 +103,7 @@ namespace sw
         static constexpr uint32 kVelocitySlot = 3;
 
         // clang-format off
-        static constexpr GBufferAttachmentSpec kArrAttachment[kAttachmentCount] = {
+        static constexpr GBufferAttachmentDesc kArrAttachment[kAttachmentCount] = {
             { "GBufferAlbedo",   RenderPassInputRole::GBufferAlbedo,   RHIFormat::R8G8B8A8_UNORM, float4{ 0.0f, 0.0f, 0.0f, 0.0f },
               { { "Albedo R", GBufferChannelKind::Unorm }, { "Albedo G", GBufferChannelKind::Unorm }, { "Albedo B", GBufferChannelKind::Unorm }, { "Shading model", GBufferChannelKind::ShadingModel } }, 4, SW_FALSE },
             { "GBufferNormal",   RenderPassInputRole::GBufferNormal,   RHIFormat::R16G16_SNORM,   float4{ 0.0f, 0.0f, 0.0f, 0.0f },
@@ -132,11 +132,11 @@ namespace sw
         static_assert( kArrAttachment[kVelocitySlot]._role == RenderPassInputRole::Velocity, "화면 속도는 G버퍼의 넷째 슬롯이다(셰이더 SurfaceOutput 의 SV_TARGET3)" );
 
         /** @brief 이름의 첨부 명세입니다. G버퍼 첨부가 아니면 nullptr 입니다. */
-        static const GBufferAttachmentSpec* findAttachment( string_view name );
+        static const GBufferAttachmentDesc* findAttachment( string_view name );
         /**
-         * @brief 첨부 @p spec 에서 읽은 텍셀 @p raw(포맷대로 푼 float4)를 뜻 있는 값으로 풉니다 — 노멀은 옥타헤드럴을 풀어 단위 벡터, 셰이딩 모델은 번호(이름은 값 줄의 이름)입니다.
+         * @brief 첨부 @p desc 에서 읽은 텍셀 @p raw(포맷대로 푼 float4)를 뜻 있는 값으로 풉니다 — 노멀은 옥타헤드럴을 풀어 단위 벡터, 셰이딩 모델은 번호(이름은 값 줄의 이름)입니다.
          * @details 셰이더 읽기와 같은 식이다(`OctahedralNormal::decodeOctant` — 셰이더 `Octahedral::decode` 와 같다). 먼저 출력 목록을 비운다.
          */
-        static void decodeTexel( const GBufferAttachmentSpec& spec, const float4& raw, vector<GBufferDecodedValue>& outListValue );
+        static void decodeTexel( const GBufferAttachmentDesc& desc, const float4& raw, vector<GBufferDecodedValue>& outListValue );
     };
 } // namespace sw

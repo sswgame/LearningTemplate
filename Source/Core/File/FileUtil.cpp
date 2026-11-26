@@ -424,7 +424,7 @@ namespace sw
                 entry._path       = string_view{ path };
                 entry._bDirectory = bDirectory;
                 if ( status._kind == PlatformFileSystem::FileKind::File )
-                    entry._fileStamp = FileStamp{ status._size, static_cast<uint64>( status._writeTicks ) };
+                    entry._fileStat = FileStat{ status._size, static_cast<uint64>( status._writeTicks ) };
                 if ( walk._visit( walk._pContext, entry ) == false )
                 {
                     walk._bStopped = SW_TRUE;
@@ -820,14 +820,14 @@ namespace sw
         return toDiskPath( executablePath );
     }
 
-    bool FileUtil::getFileStamp( const DiskPath& fileName, FileStamp& outStamp )
+    bool FileUtil::getFileStat( const DiskPath& fileName, FileStat& outStat )
     {
         // 크기와 시각을 한 번의 조회로 얻는다(`getFileSize` · `getFileWriteTime` 두 번이 아니라). 폴더는 false 다.
         PlatformFileSystem::FileStatus status;
         if ( PlatformFileSystem::queryStatus( fileName.str(), status ) == false || status._kind != PlatformFileSystem::FileKind::File )
             return false;
-        outStamp._sizeBytes = status._size;
-        outStamp._writeTime = static_cast<uint64>( status._writeTicks );
+        outStat._sizeBytes = status._size;
+        outStat._writeTime = static_cast<uint64>( status._writeTicks );
         return true;
     }
 
@@ -1279,7 +1279,7 @@ namespace sw
             return true;
 
         const AbsolutePath directory = directoryPath.join( {} );
-        // 새 폴더도 새 자리라 이름 규칙(리소스 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다. 이미 있는 폴더에 흔히 부르는 입구다(`bindWriteFilter`).
+        // 새 폴더도 새 자리라 이름 규칙(콘텐츠 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다. 이미 있는 폴더에 흔히 부르는 입구다(`bindWriteFilter`).
         if ( isCreateAllowed( directory ) == false )
             return false;
         if ( FileUtilInternal::createDirectoryTree( directory ) )

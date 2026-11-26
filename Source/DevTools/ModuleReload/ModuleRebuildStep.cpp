@@ -1,7 +1,7 @@
 /**
  * @file ModuleRebuildStep.cpp
  * @brief 시나리오 단계 `<RebuildModule name="SWGame" variant="…"/>` — 판 머리를 판 글로 덮고(원본은 실행기에 맡긴다) 모듈을 다시 지어 갈아 끼웁니다.
- * @details 모듈 리로드 폴더라 정적 모듈 구성은 짓지 않는다(그 구성에는 이 단계가 없다). 판 표 읽기는 `AutomationReloadSteps::parseVariant`, 빌드와 교체 예약은
+ * @details 모듈 리로드 폴더라 정적 모듈 구성은 짓지 않는다(그 구성에는 이 단계가 없다). 판 표 읽기는 `AutomationHotReloadSteps::parseVariant`, 빌드와 교체 예약은
  *          `ModuleReloadDriver::queueRebuild`, 끝 기다리기는 감시 값 `Module.ReloadPending` 이다. 빌드 도구를 부르는 단계라 단위 테스트는 판 표 읽기만 본다.
  */
 #include "pch.h"
@@ -11,7 +11,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
-#include "DevTools/AssetReload/AutomationReloadSteps.h"
+#include "DevTools/AssetReload/AutomationHotReloadSteps.h"
 #include "DevTools/ModuleReload/ModuleReloadDriver.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -62,7 +62,7 @@ namespace sw
             {
                 const AutomationRebuildModuleParams params  = step.readValidatedProperties<AutomationRebuildModuleParams>();
                 ModuleReloadDriver* const           pDriver = engine::findSubsystem<ModuleReloadDriver>();
-                if ( pDriver == nullptr || pDriver->getLiveReloadManager() == nullptr )
+                if ( pDriver == nullptr || pDriver->getModuleHotReloadManager() == nullptr )
                 {
                     context.recordFailure( step, "this host has no module reload driver - RebuildModule needs a dynamic-module dev build" );
                     return true;

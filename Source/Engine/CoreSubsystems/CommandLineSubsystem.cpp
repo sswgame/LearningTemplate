@@ -2,7 +2,7 @@
 
 #include "Engine/CoreSubsystems/CommandLineSubsystem.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
@@ -12,7 +12,7 @@
 namespace sw
 {
     CommandLineSubsystem::CommandLineSubsystem( int32 argc, utf8* pArgv[] )
-        : _commandLine{ make_unique<CommandLineManager>() }
+        : _commandLine{ make_unique<CommandLine>() }
         , _globalVariables{ make_unique<GlobalVariableManager>() }
         , _argc{ argc }
         , _ppArgv{ pArgv }
@@ -65,7 +65,7 @@ namespace sw
 
     span<const utf8* const> CommandLineSubsystem::getSubsystemDependencies() const
     {
-        // 로거보다 먼저 선다 — 로그 파일(`-log-file`)이 명령줄로 정해진다. 그 사이의 경고(모르는 인자 · 틀린 값)는 Logger 가 쌓았다가 싱크에 넘긴다.
+        // 로거보다 먼저 선다 — 로그 파일(`-log-file`)이 명령줄로 정해진다. 그 사이의 경고(모르는 인자 · 틀린 값)는 Logger 가 쌓았다가 백엔드에 넘긴다.
         // 로그 인자 · 전역 변수 이름에 이름(hashed_string)이 쓰인다 — 이름 풀이 먼저 선다.
         static constexpr const utf8* kArrDependency[] = { NamePoolSubsystem::kSubsystemName };
         return kArrDependency;
@@ -75,6 +75,6 @@ namespace sw
 namespace sw
 {
     // 이 서브시스템이 든 명령줄 · 전역 변수 표의 서브시스템 칸 — 엔진 범위의 코어 범위에 건다(`Engine::initialize`). 게임은 전역 변수만 본다.
-    SW_ENGINE_SUBSYSTEM_SLOT( CommandLineManager, HostOnly );
+    SW_ENGINE_SUBSYSTEM_SLOT( CommandLine, HostOnly );
     SW_ENGINE_SUBSYSTEM_SLOT( GlobalVariableManager, GameVisible );
 } // namespace sw

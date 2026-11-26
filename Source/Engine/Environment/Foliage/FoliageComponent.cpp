@@ -13,6 +13,7 @@
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Environment/EnvironmentMaterial.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Foliage/FoliageInfluencerComponent.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
@@ -23,13 +24,13 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 namespace sw
@@ -98,7 +99,7 @@ namespace sw
                 {
                     const FoliageMesh& foliageMesh = layer._listMesh[meshIndex];
                     const bool         bHasLoad    = meshIndex < listLoad.size() && listLoad[meshIndex].isValid();
-                    shared_ptr<Mesh>   mesh        = bHasLoad ? listLoad[meshIndex].get() : MeshUtil::acquirePrimitive( foliageMesh._meshID );
+                    shared_ptr<Mesh>   mesh        = bHasLoad ? listLoad[meshIndex].get() : PrimitiveMeshBuilder::acquirePrimitive( foliageMesh._meshID );
                     if ( mesh == nullptr )
                         SW_LOG_WARNING_ID( "FoliageComponent.FoliageLayerMeshCould", "Foliage layer '%#': mesh '%#' could not be acquired - its instances are skipped", layer._name.c_str(), foliageMesh._meshID.c_str() );
                     const expected<void> sections = mesh != nullptr ? FoliageComponent::validateMeshSections( foliageMesh, *mesh ) : expected<void>{};

@@ -11,7 +11,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 

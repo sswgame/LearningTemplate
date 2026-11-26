@@ -13,7 +13,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
@@ -113,7 +113,7 @@ namespace sw
     bool InstancedMeshComponent::computeStreamingBounds( AABB& outBox ) const
     {
         const string&          meshID = _meshID.path();
-        const shared_ptr<Mesh> mesh   = MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID, MeshCPUAccess::ReleaseAfterUpload ) : MeshUtil::acquirePrimitive( meshID );
+        const shared_ptr<Mesh> mesh   = MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID, MeshCPUAccess::ReleaseAfterUpload ) : PrimitiveMeshBuilder::acquirePrimitive( meshID );
         if ( mesh == nullptr || mesh->getVertexCount() == 0 || _listInstance.empty() )
             return false;
         const AABB     local{ mesh->getLocalBoundsMin(), mesh->getLocalBoundsMax() };
@@ -201,7 +201,7 @@ namespace sw
         else
         {
             _meshLoad = MeshHandle{};
-            outMesh   = MeshUtil::acquirePrimitive( meshID );
+            outMesh   = PrimitiveMeshBuilder::acquirePrimitive( meshID );
         }
         if ( outMesh != nullptr )
             return MeshArrival::Ready;

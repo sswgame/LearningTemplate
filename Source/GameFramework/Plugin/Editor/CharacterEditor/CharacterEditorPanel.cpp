@@ -12,9 +12,9 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Engine/Character/Socket/SocketSet.h"
@@ -59,11 +59,11 @@ namespace sw::editor
              * @details 파일을 읽는 쪽이 같은 범위로 거절하므로 에디터가 따로 정하지 않는다.
              */
             template <typename TDef>
-            static InspectorNumericRange getDataRange( const utf8* pProperty )
+            static PropertyGridNumericRange getDataRange( const utf8* pProperty )
             {
                 const PropertyInfo* const pInfo = TDef::StaticType()->findPropertyInHierarchy( hashed_string( pProperty ) );
                 SW_ASSERT( pInfo != nullptr );
-                const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( *pInfo, ObjectAddress{ nullptr } );
+                const PropertyGridNumericRange range = PropertyGridLayout::getNumericRange( *pInfo, ObjectAddress{ nullptr } );
                 SW_ASSERT( range._bHasClampMin && range._bHasClampMax );
                 return range;
             }
@@ -911,8 +911,8 @@ namespace sw::editor
             };
             for ( const JiggleField& field : arrField )
             {
-                const InspectorNumericRange range = Internal::getDataRange<RigJiggleGroupParams>( field._pProperty );
-                float32                     value = field._value;
+                const PropertyGridNumericRange range = Internal::getDataRange<RigJiggleGroupParams>( field._pProperty );
+                float32                        value = field._value;
                 ImGui::PushID( field._pAttribute );
                 EditorWidgets::drawPropertyRowLabel( field._pAttribute ); // 이름은 데이터 칸 이름이다(파일과 같은 철자)
                 const bool bChanged = EditorWidgets::sliderFloat( SW_WIDGET_ID( "##value" ), &value, static_cast<float32>( range._clampMin ), static_cast<float32>( range._clampMax ) );
@@ -929,10 +929,10 @@ namespace sw::editor
 
         // 주름 — 표정이 주름 마스크 채널을 얼마나 켜는지.
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "Wrinkles" ) );
-        const InspectorNumericRange intensityRange = Internal::getDataRange<CharacterBodyProfileDef>( "_wrinkleIntensity" );
-        const InspectorNumericRange maskRange      = Internal::getDataRange<WrinkleRegionDef>( "_mask" );
-        const InspectorNumericRange weightRange    = Internal::getDataRange<WrinkleSourceDef>( "_weight" );
-        float32                     intensity      = state._wrinkleIntensity;
+        const PropertyGridNumericRange intensityRange = Internal::getDataRange<CharacterBodyProfileDef>( "_wrinkleIntensity" );
+        const PropertyGridNumericRange maskRange      = Internal::getDataRange<WrinkleRegionDef>( "_mask" );
+        const PropertyGridNumericRange weightRange    = Internal::getDataRange<WrinkleSourceDef>( "_weight" );
+        float32                        intensity      = state._wrinkleIntensity;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "WrinkleIntensity" ) );
         if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##wrinkleIntensity" ), &intensity, static_cast<float32>( intensityRange._clampMin ), static_cast<float32>( intensityRange._clampMax ) ) )
             (void)BodyCustomizationViewModel::setWrinkleIntensity( profiles, state._bodyProfile, intensity, true );
@@ -1009,8 +1009,8 @@ namespace sw::editor
             };
             for ( const FluidField& field : arrField )
             {
-                const InspectorNumericRange range = Internal::getDataRange<BodyFluidDef>( field._pProperty );
-                float32                     value = field._value;
+                const PropertyGridNumericRange range = Internal::getDataRange<BodyFluidDef>( field._pProperty );
+                float32                        value = field._value;
                 ImGui::PushID( field._pAttribute );
                 EditorWidgets::drawPropertyRowLabel( field._pAttribute ); // 데이터 칸 이름
                 const bool bValueChanged = EditorWidgets::dragFloat( SW_WIDGET_ID( "##value" ), &value, field._speed, static_cast<float32>( range._clampMin ), static_cast<float32>( range._clampMax ) );

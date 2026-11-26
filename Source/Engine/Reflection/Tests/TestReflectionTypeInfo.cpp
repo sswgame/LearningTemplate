@@ -20,8 +20,8 @@
 #include "Engine/Reflection/Tests/ScopedTestModule.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 
 // 리플렉션 데이터 모델 — TypeInfo · TypeRegistry · PropertyInfo · 메타데이터.
 /**

@@ -1,6 +1,6 @@
 /**
  * @file SceneVoxelizer.h
- * @brief 씬의 정적 불투명 메시를 점유 복셀로 칠할 장면(`SceneVoxelScene`)을 모으고, GPU 가 칠할 일(`scene_voxelize.hlsl` 의 입력 행)을 짭니다.
+ * @brief 씬의 정적 불투명 메시를 점유 복셀로 칠할 장면(`SceneVoxelizeInput`)을 모으고, GPU 가 칠할 일(`scene_voxelize.hlsl` 의 입력 행)을 짭니다.
  * @details 실시간 프로브 갱신(R6)이 GPU 에서 광선을 쏠 장면 표현을 만든다. 모으는 것은 프리미티브 레지스트리의 메시 컴포넌트 중 불투명 · 보이는 · 스킨 없는 것이다
  *          (스킨 메시와 반투명은 빛을 가리지 않는다, 한계로 둔다). 칠하기는 GPU 가 한다. 렌더 프록시의 위치 흐름을 복사한 버퍼와 CPU 인덱스(LOD 0)를 컴퓨트가 읽어 격자의 점유 비트에
  *          원자 OR 로 쓴다. CPU 정점을 읽지 않는다(R-15). 면의 반사율은 메시가 아니라 볼륨 한 값이다(`LightProbeVolumeComponent::getBounceAlbedo` — 베이커와 같은 규칙).
@@ -20,7 +20,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/Lighting/SceneVoxelScene.h"
+#include "Engine/Graphics/Lighting/SceneVoxelizeInput.h"
 
 namespace sw
 {
@@ -31,12 +31,12 @@ namespace sw
     /** @brief 이번에 칠할 격자 하나입니다 — 장면, 복셀 버퍼 안의 자리, 그 자리에 이미 칠해진 지난 장면. */
     struct SceneVoxelPaintTarget
     {
-        const SceneVoxelScene* _pScene{ nullptr };
-        const SceneVoxelScene* _pPainted{ nullptr };                                      ///< 지금 자리에 칠해져 있는 장면 — nullptr 이면 격자 전체를 새로 칠한다
-        uint32                 _wordOffset{ 0 };                                          ///< 점유 단어의 첫 단어
-        uint32                 _emissionOffset{ 0 };                                      ///< 발광 단어의 첫 단어. 발광 칸이 없으면 `SceneVoxelizer::kNoEmission`
-        uint32                 _staticWordOffset{ constant::invalid_index::kUint32 };     ///< 정적 사본의 점유 첫 단어(`SceneVoxelizer::kNoStaticCopy` 면 움직이는 층이 없는 장면 — 그 자리에 바로 칠한다)
-        uint32                 _staticEmissionOffset{ constant::invalid_index::kUint32 }; ///< 정적 사본의 발광 첫 단어(`kNoEmission` 이면 없다)
+        const SceneVoxelizeInput* _pScene{ nullptr };
+        const SceneVoxelizeInput* _pPainted{ nullptr };                                      ///< 지금 자리에 칠해져 있는 장면 — nullptr 이면 격자 전체를 새로 칠한다
+        uint32                    _wordOffset{ 0 };                                          ///< 점유 단어의 첫 단어
+        uint32                    _emissionOffset{ 0 };                                      ///< 발광 단어의 첫 단어. 발광 칸이 없으면 `SceneVoxelizer::kNoEmission`
+        uint32                    _staticWordOffset{ constant::invalid_index::kUint32 };     ///< 정적 사본의 점유 첫 단어(`SceneVoxelizer::kNoStaticCopy` 면 움직이는 층이 없는 장면 — 그 자리에 바로 칠한다)
+        uint32                    _staticEmissionOffset{ constant::invalid_index::kUint32 }; ///< 정적 사본의 발광 첫 단어(`kNoEmission` 이면 없다)
     };
 
     /**
@@ -87,20 +87,20 @@ namespace sw
          * @param cellSize 목표 칸 크기(m) — 상자가 크면 `SceneVoxelGrid::make` 가 키운다
          * @return 모은 장면. 상자가 유효하지 않으면 격자가 빈 장면이다.
          */
-        [[nodiscard]] static SceneVoxelScene makeScene( const PrimitiveRegistry& primitives, Material* pSceneDefault, const AABB& bounds, float32 cellSize );
+        [[nodiscard]] static SceneVoxelizeInput makeScene( const PrimitiveRegistry& primitives, Material* pSceneDefault, const AABB& bounds, float32 cellSize );
         /**
          * @brief 등록 · 해제된 칸(`PrimitiveRegistry::collectMeshSetChanges`)과 움직였거나 모습이 바뀐 칸(`appendMeshChanges`)인 @p listChangedSlot 만 다시 모읍니다(같은 칸이 여럿이어도 된다). 칠한 결과가 바뀌면 true 입니다.
          * @details 가리개가 아니거나 격자 밖인 칸의 변화(투사체 · 반투명 · 먼 스폰)와 같은 것으로 다시 든 칸은 건너뛴다 — 장면이 그대로라 GPU 가 다시 칠하지 않는다.
          *          칠해 둔 칸이 처음 바뀌면 정적 층에서 움직이는 층으로 옮기고, 그 뒤로는 움직이는 목록만 고친다(정적 층은 지난 장면과 나눠 든다).
          */
-        [[nodiscard]] static bool updateScene( SceneVoxelScene& inoutScene, const PrimitiveRegistry& primitives, Material* pSceneDefault, const vector<uint32>& listChangedSlot );
+        [[nodiscard]] static bool updateScene( SceneVoxelizeInput& inoutScene, const PrimitiveRegistry& primitives, Material* pSceneDefault, const vector<uint32>& listChangedSlot );
         /**
          * @brief 지난 장면 @p painted 를 칠한 격자를 @p scene 으로 바꾸려면 다시 칠할 정적 층의 칸 구간들을 @p outListRange 에 적습니다(바뀐 원천이 덮던 · 덮는 구간).
          * @details 격자 모양이나 발광 목록(순위)이 다르거나 구간들의 칸 합이 격자보다 많으면 격자 전체 하나다. 바뀐 것이 없으면 빈 목록이다.
          */
-        static void collectDirtyRanges( const SceneVoxelScene& painted, const SceneVoxelScene& scene, vector<SceneVoxelGrid::CellRange>& outListRange );
+        static void collectDirtyRanges( const SceneVoxelizeInput& painted, const SceneVoxelizeInput& scene, vector<SceneVoxelGrid::CellRange>& outListRange );
         /** @brief 움직이는 층의 바뀐 원천이 덮던 · 덮는 구간들을 @p inoutListRange 뒤에 덧붙입니다. 구간의 칸 합이 격자보다 많으면 격자 전체 하나로 바꿉니다. */
-        static void appendMovingRanges( const SceneVoxelScene& painted, const SceneVoxelScene& scene, vector<SceneVoxelGrid::CellRange>& inoutListRange );
+        static void appendMovingRanges( const SceneVoxelizeInput& painted, const SceneVoxelizeInput& scene, vector<SceneVoxelGrid::CellRange>& inoutListRange );
         /**
          * @brief 월드 상자 @p box 인 메시의 삼각형 하나를 구간 @p range 안에서 몇 토막(스레드)으로 나눠 칠할지입니다.
          * @details 삼각형이 덮는 칸 수는 CPU 가 모른다(정점을 읽지 않는다). 상자에서 잡은 줄 수를 √삼각형 수로 나눈다 — 면을 고르게 나눈 메시에서 삼각형 하나가 덮는 줄 수다. 바닥판처럼

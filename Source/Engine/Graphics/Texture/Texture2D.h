@@ -11,8 +11,9 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/RenderTargetDeclaration.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
+#include "Engine/Graphics/RHI/RHITransferTicket.h"
 #include "Engine/Graphics/Texture/Texture2DAssetKind.h"
 
 namespace sw
@@ -74,7 +75,7 @@ namespace sw
 
     /**
      * @class Texture2D
-     * @brief 리소스 경로의 DDS 를 읽어 createTexture2D + uploadTexture2DAndWait + registerBindlessTexture 까지 한 번에 하는 에셋입니다.
+     * @brief 에셋 경로의 DDS 를 읽어 createTexture2D + uploadTexture2DAndWait + registerBindlessTexture 까지 한 번에 하는 에셋입니다.
      * @details 셰이더는 SRV 인덱스만 받습니다(MaterialCB 의 uint 슬롯). 머티리얼이 Texture2D 프로퍼티의 assetPath 로
      *          이 에셋을 얻어 인덱스를 패킹합니다. 소유권은 TextureCache 가 갖습니다.
      */

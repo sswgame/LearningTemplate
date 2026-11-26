@@ -72,9 +72,9 @@ namespace sw
      */
     struct SW_API AssetPathRule
     {
-        string_view _prefix{};   ///< 리소스 id 가 이것으로 시작해야 합니다(`game/`)
-        string_view _contains{}; ///< 리소스 id 가 이것을 담아야 합니다(`/data/appearance/`)
-        string_view _suffix{};   ///< 리소스 id 가 이것으로 끝나야 합니다(`/data/items.xml`)
+        string_view _prefix{};   ///< 에셋 id 가 이것으로 시작해야 합니다(`game/`)
+        string_view _contains{}; ///< 에셋 id 가 이것을 담아야 합니다(`/data/appearance/`)
+        string_view _suffix{};   ///< 에셋 id 가 이것으로 끝나야 합니다(`/data/items.xml`)
 
         /** @brief 규칙이 하나도 없으면 true 입니다 — 어떤 파일에도 맞지 않습니다(카탈로그가 아닌 종류). */
         [[nodiscard]] constexpr bool isEmpty() const { return _prefix.empty() && _contains.empty() && _suffix.empty(); }
@@ -169,7 +169,7 @@ namespace sw
         }
         /**
          * @brief @p arrName 을 내장 에셋 이름으로 가진 사본입니다(헤더의 `kAssetType`).
-         * @details 내장 이름은 철자 그대로만 맞는다(대소문자를 가리지 않으면 같은 에셋을 여러 철자로 적어 캐시 자리가 갈린다 — `MeshUtil`). 모르는 이름은 받지 않는다.
+         * @details 내장 이름은 철자 그대로만 맞는다(대소문자를 가리지 않으면 같은 에셋을 여러 철자로 적어 캐시 자리가 갈린다 — `PrimitiveMeshBuilder`). 모르는 이름은 받지 않는다.
          *          언리얼은 내장 도형을 엔진 콘텐츠의 진짜 에셋(`/Engine/BasicShapes/Cube`)으로, Godot 은 `PrimitiveMesh` 리소스로 둔다(기억에 의존) — 여기는 파일이 없으므로 종류가 이름 목록을 가진다.
          */
         template <uint32 Count>

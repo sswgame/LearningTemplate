@@ -11,7 +11,7 @@
 #include "Engine/Graphics/2D/SlicedSpriteDef.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Visual/2D/SpriteRenderUtil.h"
@@ -293,7 +293,7 @@ namespace sw
                 return;
             _bSliceMeshApplied       = SW_FALSE;
             const string_view meshID = getMeshID().empty() ? getDefaultMeshID() : string_view{ getMeshID() };
-            setMesh( MeshUtil::acquirePrimitive( meshID ) );
+            setMesh( PrimitiveMeshBuilder::acquirePrimitive( meshID ) );
             return;
         }
         SlicedSpriteDef desc{};

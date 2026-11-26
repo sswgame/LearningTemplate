@@ -6,7 +6,12 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIBufferDesc.h"
+#include "Engine/Graphics/RHI/RHIBufferSlice.h"
+#include "Engine/Graphics/RHI/RHITextureAllocationInfo.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
+#include "Engine/Graphics/RHI/RHIThreadGroupSize.h"
+#include "Engine/Graphics/RHI/RHITransferTicket.h"
 
 namespace sw
 {
@@ -91,8 +96,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 그래픽스 파이프라인 상태(PSO)를 만듭니다.
-         * @details 모든 PSO 생성이 지나는 한 입구다 — 셰이더 컴파일과 드라이버 링크 · 특수화(GL 은 프레임 하나에 수십 초)를 컴파일 바쁜 시계
-         *          (`ShaderCache::getCompileBusyClock`)에 센다. 자동화 시한이 그 시간을 뺀다.
+         * @details 모든 PSO 생성이 지나는 한 입구다 — 셰이더 컴파일과 드라이버 링크 · 특수화(GL 은 프레임 하나에 수십 초)를 컴파일 바쁜 시간
+         *          (`ShaderCache::getCompileBusyTimeAccumulator`)에 센다. 자동화 시한이 그 시간을 뺀다.
          *          셰이더는 여기서 한 번 컴파일한다: 서술체 해석 → 기동 능력으로 선택 스테이지 거절 → 컴파일 → 정점 리플렉션(실패면 끊는다) → 정점 속성 마스크.
          *          백엔드는 그 바이트코드 서술(`RHICompiledGraphicsStages`)만 받는다(`createPipelineStateNative`). 실패는 오류 로그와 핸들 0 이다.
          */

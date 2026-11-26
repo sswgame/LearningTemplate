@@ -16,9 +16,9 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Format/ReflectedXMLFile.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
@@ -352,12 +352,12 @@ namespace sw::editor
 
     string UIPreviewLogic::formatWidgetProperty( const Widget& widget, const PropertyInfo& prop )
     {
-        return SerializerUtil::formatPropertyText( prop, ObjectAddress{ &widget }, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        return PropertySerializer::formatPropertyText( prop, ObjectAddress{ &widget }, SerializeContext::getDefault( SerializePurpose::Authoring ) );
     }
 
     bool UIPreviewLogic::applyWidgetProperty( Widget& widget, const PropertyInfo& prop, string_view text )
     {
-        if ( SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ &widget }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+        if ( PropertySerializer::applyPropertyText( prop, MutableObjectAddress{ &widget }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
             return false;
         widget.notifyPropertyWritten( prop );
         return true;
@@ -594,12 +594,12 @@ namespace sw::editor
         return true;
     }
 
-    expected<string> UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath, ResourceFieldWrite fieldWrite )
+    expected<string> UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath, AssetFieldWrite fieldWrite )
     {
         const Widget* pRoot = screen.getTree().getRoot();
         if ( pRoot == nullptr )
             return unexpected( Error{ ErrorKind::NotFound, "the preview has no widget tree" } );
-        const expected<shared_ptr<const UIDocumentAsset>> document = documents.acquire( documentPath, screen.getResourceTagOverride() );
+        const expected<shared_ptr<const UIDocumentAsset>> document = documents.acquire( documentPath, screen.getAssetTagOverride() );
         if ( document.has_value() == false )
             return unexpected( Error{ ErrorKind::NotFound, "the document could not be loaded", document.error().message() }.appendDetail( document.error().detail() ) );
         return UIDocumentWriter::write( screen.getDesc(), ( *document )->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations(), fieldWrite );

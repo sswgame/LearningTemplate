@@ -12,7 +12,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIEnums.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/VFX/VFXParticleOrder.h"
@@ -26,7 +27,7 @@ namespace sw
     struct GPUVFXMeshEmitter;
     struct VFXCollisionDef;
 
-    class FrameBufferTable;
+    class RenderGraphImportedResourceTable;
     class IRHICommandList;
     class IRHIDevice;
 
@@ -143,13 +144,13 @@ namespace sw
         void prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter,
                            vector_reference<const VFXGPUParticleSortJob> listSortJob, uint32 gpuOrderCount, const VFXSimulationFrameInput& input );
         /**
-         * @brief 이번 프레임 디스패치가 쓰고 읽는 방출기 버퍼를 프레임 그래프 표 @p table 에 등록합니다(`prepareFrame` 뒤, 프레임 그래프 앞 — `FrameGraphExecutor::beginFrame`).
+         * @brief 이번 프레임 디스패치가 쓰고 읽는 방출기 버퍼를 프레임 그래프 표 @p table 에 등록합니다(`prepareFrame` 뒤, 프레임 그래프 앞 — `FramePassRecorder::beginFrame`).
          * @details 시뮬레이션하는 방출기는 `ParticleState` · `Particles` · `ParticleArgs`(칸 = 시뮬레이션 디스패치 번호), 시뮬레이션하지 않고 정렬 · 메시 쓰기만 읽는 방출기는
          *          `IdleParticles` · `IdleParticleArgs`(칸 = 읽기 번호), 정렬이 있으면 `ParticleOrder`(칸 0)다. 그래프는 이름마다 상태 하나를 들어 쓰는 패스가 다른 방출기는
          *          이름을 나눈다 — 한 이름이면 시뮬레이션하지 않은 방출기도 UAV 로 오가 전이가 는다(언리얼은 방출기마다 RDG 버퍼).
          *          등록 접근(프레임 시작이자 끝)은 상태 UAV, 렌더 입력 · 순서 셰이더 읽기, 인자 간접 인자(투명 패스의 간접 그리기)다.
          */
-        void registerFrameResources( FrameBufferTable& table ) const;
+        void registerFrameResources( RenderGraphImportedResourceTable& table ) const;
         /** @brief 이번 프레임 시뮬레이션이 라이트 버퍼 GPU 구간에 쓰는지입니다 — 그때만 `LightBuffer` 를 등록한다(쓰지 않는 프레임에 UAV 로 오가지 않게). */
         bool writesParticleLights() const;
         /** @brief 이번 프레임 메시 입자가 인스턴스 칸에 쓰는지입니다 — 그때만 `InstanceBuffer` 를 등록한다. */
@@ -179,7 +180,7 @@ namespace sw
 
         /**
          * @brief 이번 프레임의 디스패치를 다 돌고도 남는 단계 수의 최댓값입니다(방출기 하나가 디스패치 상한 `SW_VFX_MAX_STEPS_PER_DISPATCH` 보다 밀렸다).
-         * @details 그리지 않고 진행한 프레임(`SimulationOnlyFrameQueue`) 뒤에 따라잡는 중이면 0 이 아니다 — 캡처 준비가 이것이 0 이 될 때까지 기다린다.
+         * @details 그리지 않고 진행한 프레임(`SimulationOnlyFrameCounter`) 뒤에 따라잡는 중이면 0 이 아니다 — 캡처 준비가 이것이 0 이 될 때까지 기다린다.
          */
         uint64 getPendingStepCount() const { return _pendingStepCount; }
         /** @brief 이번 프레임에 인스턴스 칸을 쓰는 GPU 메시 방출기마다 되읽기 출처를 @p outListSource 에 채웁니다(앞의 내용은 지운다). 실린 칸이 없는 방출기는 넣지 않는다. */

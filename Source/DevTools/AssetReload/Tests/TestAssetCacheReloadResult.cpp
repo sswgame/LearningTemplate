@@ -5,8 +5,8 @@
 #include "Core/String/Name/hashed_string.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "DevTools/AssetReload/ReloadSource.h"
-#include "DevTools/AssetReload/ReloadTracker.h"
+#include "DevTools/AssetReload/HotReloadKind.h"
+#include "DevTools/AssetReload/HotReloadTracker.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
@@ -66,8 +66,8 @@ SW_TEST_CASE( AssetCacheReloadResultTest, BrokenMaterialFailsAndKeepsPreviousVer
     SW_REQUIRE_NOT_NULL( pRoughness );
     SW_EXPECT_EQUAL( string( "0.3" ), pRoughness->_defaultValue ); // 이전 판 그대로
 
-    ReloadTracker tracker;
-    tracker.record( ReloadSource::Asset, id.view(), result, "parse failed" );
+    HotReloadTracker tracker;
+    tracker.record( HotReloadKind::Asset, id.view(), result, "parse failed" );
     SW_EXPECT_EQUAL( uint32( 1 ), tracker.countStale() );
     cache.release( id.view() );
 }
@@ -90,14 +90,14 @@ SW_TEST_CASE( AssetCacheReloadResultTest, BrokenCatalogFailsAndKeepsPreviousVers
     const shared_ptr<const TileSetAsset> pAfter = SharedAssetCache<TileSetAsset>::acquire( id.view() ).snapshot();
     SW_EXPECT_TRUE( pAfter.get() == pHeld.get() ); // 새 판을 넣지 않았다
 
-    ReloadTracker tracker;
-    tracker.record( ReloadSource::Asset, id.view(), broken, "parse failed" );
+    HotReloadTracker tracker;
+    tracker.record( HotReloadKind::Asset, id.view(), broken, "parse failed" );
     SW_EXPECT_EQUAL( uint32( 1 ), tracker.countStale() );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "probe.tileset.xml" ), kCatalogXML ) );
     const ReloadResult fixed = reloadThroughRegistry( SharedAssetCache<TileSetAsset>::kAssetKindName, id );
     SW_EXPECT_TRUE( fixed == ReloadResult::Reloaded );
-    tracker.record( ReloadSource::Asset, id.view(), fixed );
+    tracker.record( HotReloadKind::Asset, id.view(), fixed );
     SW_EXPECT_EQUAL( uint32( 0 ), tracker.countStale() );
 }
 

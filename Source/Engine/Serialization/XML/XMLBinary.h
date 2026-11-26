@@ -4,7 +4,7 @@
  * @details 언리얼 DataTable(uasset 이진) · 유니티 ScriptableObject(이진) · Godot 의 내보내기(글 `.tres` → 이진 `.res`)와 같은 자리다. Godot 처럼 형식을 모르는 속성 나무다 —
  *          팩 쿠킹은 게임 · 키트 모듈을 올리기 전에 돌아 카탈로그의 행 형식을 보지 못한다(`DataCatalogInheritance.h`). 그래서 카탈로그 코드는 그대로이고(읽는 길 `XMLNode` 하나)
  *          글자 해석 · 주석 · 엔티티 · 조건(`_when`) 찾기 · 참조 규칙 검사가 배포 읽기에서 빠진다(쿠커가 이미 했다).
- *          - 리소스 id · 파일 이름은 원본과 같다 — 팩 안의 내용만 이진이다. 글로 다루는 자리(덮어쓰기 층 · 모드가 부모로 삼을 때)는 `decodeText` 로 글을 되살린다.
+ *          - 에셋 id · 파일 이름은 원본과 같다 — 팩 안의 내용만 이진이다. 글로 다루는 자리(덮어쓰기 층 · 모드가 부모로 삼을 때)는 `decodeText` 로 글을 되살린다.
  *          - 나무는 앞 순서(preorder)로 놓인 레코드 배열이다. 첫 자식 · 다음 형제의 번호는 늘 자기보다 뒤라 순환을 적을 수 없고, 읽기는 한 번의 범위 검사(`validate`) 뒤 주소만 따라간다.
  *          - 리틀 엔디언이다. 글(원소 글 · 속성 값)은 `XMLDocument` 가 읽은 뒤의 값(다듬은 글)이다.
  */
@@ -13,7 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -52,8 +52,8 @@ namespace sw
     /** @struct XMLBinary @brief 파일 머리말 참고. */
     struct SW_API XMLBinary
     {
-        static constexpr FormatDef kFormat{ "LMXB" }; ///< 글 XML 의 첫 글자(`<` · 공백 · BOM)와 겹치지 않는다
-        static constexpr uint32    kNone = 0xFFFFFFFFu;
+        static constexpr FormatDesc kFormat{ "LMXB" }; ///< 글 XML 의 첫 글자(`<` · 공백 · BOM)와 겹치지 않는다
+        static constexpr uint32     kNone = 0xFFFFFFFFu;
 
         /** @brief @p bytes 가 쿠킹본이면 true 입니다(머리의 표식만 본다). */
         [[nodiscard]] static bool isBinary( string_view bytes );

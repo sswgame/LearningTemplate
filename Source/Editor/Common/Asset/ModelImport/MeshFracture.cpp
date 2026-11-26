@@ -9,7 +9,7 @@
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Spatial/PolygonTriangulation.h"
+#include "Core/Spatial/PolygonTriangulationUtil.h"
 #include "Core/Spatial/PositionWelder.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
@@ -31,8 +31,8 @@ namespace sw::editor
             /** @brief 삼각형 하나와, 안쪽 면이면 그 면을 만든 이웃 시드입니다. */
             struct Triangle
             {
-                RHIVertex _arrVertex[3];
-                int32     _tag;
+                MeshVertex _arrVertex[3];
+                int32      _tag;
             };
 
             /** @brief 자른 곳의 선분 하나입니다. 남는 쪽 면의 경계 방향이며, 나가는 점에서 들어오는 점으로 향합니다. */
@@ -42,7 +42,7 @@ namespace sw::editor
                 float3 _to;
             };
 
-            static float3 getPosition( const RHIVertex& vertex ) { return float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] }; }
+            static float3 getPosition( const MeshVertex& vertex ) { return float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] }; }
 
             static bool isLess( const float3& lhs, const float3& rhs )
             {
@@ -79,7 +79,7 @@ namespace sw::editor
              */
             static float3 weldPosition( PositionWelder& inoutWelder, const float3& position ) { return inoutWelder.getPoint( inoutWelder.weld( position ) ); }
 
-            static void setPosition( RHIVertex& inoutVertex, const float3& position )
+            static void setPosition( MeshVertex& inoutVertex, const float3& position )
             {
                 inoutVertex._arrPosition[0] = position._x;
                 inoutVertex._arrPosition[1] = position._y;
@@ -87,18 +87,18 @@ namespace sw::editor
             }
 
             /** @brief 허용 오차 안의 위치를 처음 본 위치로 맞춥니다(입력 메시). */
-            static void weldPositions( vector<RHIVertex>& inoutListVertex )
+            static void weldPositions( vector<MeshVertex>& inoutListVertex )
             {
                 PositionWelder welder;
-                for ( RHIVertex& vertex : inoutListVertex )
+                for ( MeshVertex& vertex : inoutListVertex )
                 {
                     setPosition( vertex, weldPosition( welder, getPosition( vertex ) ) );
                 }
             }
 
-            static RHIVertex lerpVertex( const RHIVertex& from, const RHIVertex& to, float32 t )
+            static MeshVertex lerpVertex( const MeshVertex& from, const MeshVertex& to, float32 t )
             {
-                RHIVertex result{};
+                MeshVertex result{};
                 for ( uint32 axis = 0; axis < 3; ++axis )
                 {
                     result._arrPosition[axis] = from._arrPosition[axis] + ( to._arrPosition[axis] - from._arrPosition[axis] ) * t;
@@ -124,7 +124,7 @@ namespace sw::editor
              * @brief 모서리 위의 교점을 구합니다. 엔드포인트를 위치 순으로 정렬해 구하므로, 그 모서리를 나누는 두 삼각형이 비트까지 같은 위치를 얻습니다.
              *        한 엔드포인트가 평면 위(거리 0)면 그 엔드포인트를 그대로 씁니다.
              */
-            static RHIVertex intersect( const RHIVertex& vertexA, float32 distanceA, const RHIVertex& vertexB, float32 distanceB )
+            static MeshVertex intersect( const MeshVertex& vertexA, float32 distanceA, const MeshVertex& vertexB, float32 distanceB )
             {
                 if ( distanceA == 0.0f )
                     return vertexA;
@@ -240,10 +240,10 @@ namespace sw::editor
                         continue;
 
                     // 서덜랜드-호지먼 알고리즘이다. 남는 다각형(볼록, 4 개 이하)과 나가는 점, 들어오는 점을 구한다.
-                    RHIVertex arrPolygon[4];
-                    uint32    polygonCount = 0;
-                    RHIVertex exitVertex{};
-                    RHIVertex entryVertex{};
+                    MeshVertex arrPolygon[4];
+                    uint32     polygonCount = 0;
+                    MeshVertex exitVertex{};
+                    MeshVertex entryVertex{};
                     for ( uint32 corner = 0; corner < 3; ++corner )
                     {
                         const uint32 next      = ( corner + 1 ) % 3;
@@ -316,7 +316,7 @@ namespace sw::editor
                     {
                         const uint32  pointIndex = listIndex[index + corner];
                         const float3& point      = listPoint3[pointIndex];
-                        RHIVertex&    vertex     = cap._arrVertex[corner];
+                        MeshVertex&   vertex     = cap._arrVertex[corner];
                         vertex._arrPosition[0]   = point._x;
                         vertex._arrPosition[1]   = point._y;
                         vertex._arrPosition[2]   = point._z;
@@ -372,11 +372,11 @@ namespace sw::editor
                 return appendCap( listSegment, normal, tag, settings, outListOutput );
             }
 
-            static void collectBounds( vector_reference<const RHIVertex> listVertex, float3& outMin, float3& outMax )
+            static void collectBounds( vector_reference<const MeshVertex> listVertex, float3& outMin, float3& outMax )
             {
                 outMin = float3{ MathUtil::kMaxFloat };
                 outMax = float3{ MathUtil::kMinFloat };
-                for ( const RHIVertex& vertex : listVertex )
+                for ( const MeshVertex& vertex : listVertex )
                 {
                     outMin = float3::min( outMin, getPosition( vertex ) );
                     outMax = float3::max( outMax, getPosition( vertex ) );
@@ -384,7 +384,7 @@ namespace sw::editor
             }
 
             /** @brief 시드 점을 놓습니다(메시 안의 점만). */
-            static void placeSites( vector_reference<const RHIVertex> listVertex, const FractureSettings& settings, vector<float3>& outListSite )
+            static void placeSites( vector_reference<const MeshVertex> listVertex, const FractureSettings& settings, vector<float3>& outListSite )
             {
                 float3 boundsMin{};
                 float3 boundsMax{};
@@ -453,7 +453,7 @@ namespace sw::editor
                 unordered_map<uint64, uint32> mapSeen;
                 for ( const Triangle& triangle : listTriangle )
                 {
-                    for ( const RHIVertex& vertex : triangle._arrVertex )
+                    for ( const MeshVertex& vertex : triangle._arrVertex )
                     {
                         const float3 point = getPosition( vertex );
                         const uint64 key   = makePointKey( point );
@@ -505,7 +505,7 @@ namespace sw::editor
                 PositionWelder welder;
                 for ( Triangle& triangle : inoutListTriangle )
                 {
-                    for ( RHIVertex& vertex : triangle._arrVertex )
+                    for ( MeshVertex& vertex : triangle._arrVertex )
                     {
                         setPosition( vertex, weldPosition( welder, getPosition( vertex ) ) );
                     }
@@ -556,12 +556,12 @@ namespace sw::editor
                 }
             }
 
-            static void addFace( vector<RHIVertex>& inoutList, const float3& a, const float3& b, const float3& c )
+            static void addFace( vector<MeshVertex>& inoutList, const float3& a, const float3& b, const float3& c )
             {
                 const float3 normal = CharacterGeometryUtil::makeUnitOr( ( b - a ).cross( c - a ), float3{ 0.0f, 1.0f, 0.0f } );
                 for ( const float3* pPoint : { &a, &b, &c } )
                 {
-                    RHIVertex vertex{};
+                    MeshVertex vertex{};
                     vertex._arrPosition[0] = pPoint->_x;
                     vertex._arrPosition[1] = pPoint->_y;
                     vertex._arrPosition[2] = pPoint->_z;
@@ -577,7 +577,7 @@ namespace sw::editor
             }
 
             /** @brief 경계 상자(바깥 반시계)입니다. */
-            static void makeBoundsVolume( vector_reference<const RHIVertex> listVertex, vector<RHIVertex>& outListVertex )
+            static void makeBoundsVolume( vector_reference<const MeshVertex> listVertex, vector<MeshVertex>& outListVertex )
             {
                 float3 lo{};
                 float3 hi{};
@@ -627,7 +627,7 @@ namespace sw::editor
                 {
                     for ( const uint32 index : _listGroupTriangle[group] )
                     {
-                        for ( const RHIVertex& vertex : listTriangle[index]._arrVertex )
+                        for ( const MeshVertex& vertex : listTriangle[index]._arrVertex )
                         {
                             _mapKeep[makePointKey( getPosition( vertex ) )] = SW_TRUE;
                         }
@@ -662,7 +662,7 @@ namespace sw::editor
             {
                 for ( const Triangle& triangle : listTriangle )
                 {
-                    for ( const RHIVertex& vertex : triangle._arrVertex )
+                    for ( const MeshVertex& vertex : triangle._arrVertex )
                     {
                         const float3 point = getPosition( vertex );
                         const uint64 key   = makePointKey( point );
@@ -787,7 +787,7 @@ namespace sw::editor
                     bool bInnerPoint = false;
                     for ( const uint32 index : inoutState._listGroupTriangle[group] )
                     {
-                        for ( const RHIVertex& vertex : listTriangle[index]._arrVertex )
+                        for ( const MeshVertex& vertex : listTriangle[index]._arrVertex )
                         {
                             bInnerPoint = bInnerPoint || mapOnLoop.find( makePointKey( getPosition( vertex ) ) ) == mapOnLoop.end();
                         }
@@ -872,7 +872,7 @@ namespace sw::editor
                     for ( uint32 corner = 0; corner < 3; ++corner )
                     {
                         const uint32 pointIndex = listIndex[index + corner];
-                        RHIVertex&   vertex     = cap._arrVertex[corner];
+                        MeshVertex&  vertex     = cap._arrVertex[corner];
                         vertex                  = sample._arrVertex[0];
                         setPosition( vertex, listPoint3[pointIndex] );
                         vertex._arrUV[0] = listPoint2[pointIndex]._x * settings._interiorUvScale;
@@ -940,13 +940,13 @@ namespace sw::editor
                 inoutListTriangle = std::move( listResult );
             }
 
-            static vector_reference<const RHIVertex> asVertices( const vector<Triangle>& listTriangle, vector<RHIVertex>& outListScratch )
+            static vector_reference<const MeshVertex> asVertices( const vector<Triangle>& listTriangle, vector<MeshVertex>& outListScratch )
             {
                 outListScratch.clear();
                 outListScratch.reserve( listTriangle.size() * 3 );
                 for ( const Triangle& triangle : listTriangle )
                 {
-                    for ( const RHIVertex& vertex : triangle._arrVertex )
+                    for ( const MeshVertex& vertex : triangle._arrVertex )
                     {
                         outListScratch.push_back( vertex );
                     }
@@ -1095,8 +1095,8 @@ namespace sw::editor
                 /** @brief 부피가 있는 조각만 번호를 매기고 그래프 노드(무게중심 · 부피)를 만듭니다. 빈 셀과 부피 0 은 뺍니다. */
                 void numberPieces( PieceSet& outPieces ) const
                 {
-                    const uint32      siteCount = static_cast<uint32>( _listSitePiece.size() );
-                    vector<RHIVertex> listScratchVertex;
+                    const uint32       siteCount = static_cast<uint32>( _listSitePiece.size() );
+                    vector<MeshVertex> listScratchVertex;
                     outPieces._listPieceOfSite.assign( siteCount, 0xFFFFFFFFu );
                     for ( uint32 site = 0; site < siteCount; ++site )
                     {
@@ -1160,7 +1160,7 @@ namespace sw::editor
                         piece._firstVertex = static_cast<uint32>( inoutAsset._listVertex.size() );
                         appendPieceMesh( listTriangle, _listSiteSurface[site], bProxy, inoutAsset );
                         piece._vertexCount = static_cast<uint32>( inoutAsset._listVertex.size() ) - piece._firstVertex;
-                        MeshFractureInternal::collectBounds( vector_reference<const RHIVertex>{ inoutAsset._listVertex.data() + piece._firstVertex, piece._vertexCount }, piece._boundsMin,
+                        MeshFractureInternal::collectBounds( vector_reference<const MeshVertex>{ inoutAsset._listVertex.data() + piece._firstVertex, piece._vertexCount }, piece._boundsMin,
                                                              piece._boundsMax );
                         vector<float3> listHull;
                         MeshFractureInternal::makeHull( listTriangle, inoutAsset._graph._listNode[leaf]._centroid, MathUtil::max( settings._maxHullPoint, 8u ), listHull );
@@ -1172,7 +1172,7 @@ namespace sw::editor
                 }
             };
 
-            static void makeTriangles( const vector<RHIVertex>& listInput, int32 tag, vector<Triangle>& outListTriangle )
+            static void makeTriangles( const vector<MeshVertex>& listInput, int32 tag, vector<Triangle>& outListTriangle )
             {
                 outListTriangle.reserve( listInput.size() / 3 );
                 for ( size_t index = 0; index + 2 < listInput.size(); index += 3 )
@@ -1192,7 +1192,7 @@ namespace sw::editor
                 float32 radiusSquared = 0.0f;
                 for ( const Triangle& triangle : listTriangle )
                 {
-                    for ( const RHIVertex& vertex : triangle._arrVertex )
+                    for ( const MeshVertex& vertex : triangle._arrVertex )
                     {
                         radiusSquared = MathUtil::max( radiusSquared, float3::getDistanceSquared( MeshFractureInternal::getPosition( vertex ), site ) );
                     }
@@ -1204,7 +1204,7 @@ namespace sw::editor
              * @brief 쪼갤 부피를 고릅니다. 메시 자체이거나 닫힌 대리(경계 상자, 볼록 껍질)입니다.
              * @details 대리면 원래 겉면은 따로 막지 않고 자른다.
              */
-            static void pickVolume( const vector<RHIVertex>& listWelded, const FractureSettings& settings, bool bProxy, vector<RHIVertex>& outListVolume )
+            static void pickVolume( const vector<MeshVertex>& listWelded, const FractureSettings& settings, bool bProxy, vector<MeshVertex>& outListVolume )
             {
                 if ( settings._volume == FractureVolume::Hull )
                     MeshFractureUtil::makeConvexHull( listWelded, outListVolume );
@@ -1242,7 +1242,7 @@ namespace sw::editor
                         float32       maxDistance = -MathUtil::kMaxFloat;
                         for ( const Triangle& triangle : listPieceTriangle )
                         {
-                            for ( const RHIVertex& vertex : triangle._arrVertex )
+                            for ( const MeshVertex& vertex : triangle._arrVertex )
                             {
                                 maxDistance = MathUtil::max( maxDistance, normal.dot( MeshFractureInternal::getPosition( vertex ) ) - offset );
                             }
@@ -1275,7 +1275,7 @@ namespace sw::editor
             {
                 const auto appendTriangle = [&inoutAsset]( const Triangle& triangle, FractureSurfaceSlot slot )
                 {
-                    for ( const RHIVertex& vertex : triangle._arrVertex )
+                    for ( const MeshVertex& vertex : triangle._arrVertex )
                     {
                         inoutAsset._listVertex.push_back( vertex );
                     }
@@ -1299,13 +1299,13 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void MeshFractureUtil::makeConvexHull( vector_reference<const RHIVertex> listVertex, vector<RHIVertex>& outListVertex )
+    void MeshFractureUtil::makeConvexHull( vector_reference<const MeshVertex> listVertex, vector<MeshVertex>& outListVertex )
     {
         outListVertex.clear();
         // 고유한 점만 모은다.
         vector<float3>                listPoint;
         unordered_map<uint64, uint32> mapSeen;
-        for ( const RHIVertex& vertex : listVertex )
+        for ( const MeshVertex& vertex : listVertex )
         {
             const float3 point = MeshFractureInternal::getPosition( vertex );
             if ( mapSeen.emplace( MeshFractureInternal::makePointKey( point ), 0u ).second )
@@ -1335,7 +1335,7 @@ namespace sw::editor
         }
     }
 
-    bool MeshFractureUtil::isClosedMesh( vector_reference<const RHIVertex> listVertex )
+    bool MeshFractureUtil::isClosedMesh( vector_reference<const MeshVertex> listVertex )
     {
         // 위치가 비트까지 같은 정점만 같은 정점이다. 세 평면이 만나는 꼭짓점 둘레의 아주 짧은 변(1e-5 미만)도 변으로 센다.
         unordered_map<uint64, uint32> mapEdgeCount;
@@ -1373,14 +1373,14 @@ namespace sw::editor
         return true;
     }
 
-    bool MeshFractureUtil::isClosedWithinTolerance( vector_reference<const RHIVertex> listVertex )
+    bool MeshFractureUtil::isClosedWithinTolerance( vector_reference<const MeshVertex> listVertex )
     {
         AppearanceGeometry geometry;
         geometry._listPosition.reserve( listVertex.size() );
         geometry._listNormal.reserve( listVertex.size() );
         geometry._listUV.reserve( listVertex.size() );
         geometry._listIndex.reserve( listVertex.size() );
-        for ( const RHIVertex& vertex : listVertex )
+        for ( const MeshVertex& vertex : listVertex )
         {
             geometry._listIndex.push_back( static_cast<uint32>( geometry._listPosition.size() ) );
             geometry._listPosition.push_back( MeshFractureInternal::getPosition( vertex ) );
@@ -1390,7 +1390,7 @@ namespace sw::editor
         return geometry.getTriangleCount() > 0 && AppearanceGeometry::isClosed( geometry );
     }
 
-    float32 MeshFractureUtil::computeVolume( vector_reference<const RHIVertex> listVertex, float3& outCentroid )
+    float32 MeshFractureUtil::computeVolume( vector_reference<const MeshVertex> listVertex, float3& outCentroid )
     {
         float64 volume6      = 0.0;
         float64 arrMoment[3] = { 0.0, 0.0, 0.0 };
@@ -1408,7 +1408,7 @@ namespace sw::editor
         if ( MathUtil::abs( volume6 ) < 1.0e-18 )
         {
             outCentroid = float3{};
-            for ( const RHIVertex& vertex : listVertex )
+            for ( const MeshVertex& vertex : listVertex )
             {
                 outCentroid += MeshFractureInternal::getPosition( vertex );
             }
@@ -1421,7 +1421,7 @@ namespace sw::editor
         return static_cast<float32>( MathUtil::abs( volume6 ) / 6.0 );
     }
 
-    bool MeshFractureUtil::isPointInside( vector_reference<const RHIVertex> listVertex, const float3& point )
+    bool MeshFractureUtil::isPointInside( vector_reference<const MeshVertex> listVertex, const float3& point )
     {
         float64 solidAngle = 0.0;
         for ( size_t index = 0; index + 2 < listVertex.size(); index += 3 )
@@ -1446,7 +1446,7 @@ namespace sw::editor
         return MathUtil::abs( winding ) > 0.5;
     }
 
-    expected<FractureAsset> MeshFractureUtil::fracture( vector_reference<const RHIVertex> listMeshVertex, vector_reference<const uint32> listMeshIndex, const FractureSettings& settings )
+    expected<FractureAsset> MeshFractureUtil::fracture( vector_reference<const MeshVertex> listMeshVertex, vector_reference<const uint32> listMeshIndex, const FractureSettings& settings )
     {
         using Triangle = MeshFractureInternal::Triangle;
         using Build    = MeshFractureInternal;
@@ -1456,7 +1456,7 @@ namespace sw::editor
             return unexpected( Error{ ErrorKind::InvalidArgument, "the mesh has no triangles" } );
         }
         // 자르기는 삼각형 목록(모서리마다 정점)으로 한다 — 아래 용접이 위치를 다시 맞춘다.
-        vector<RHIVertex> listVertex;
+        vector<MeshVertex> listVertex;
         listVertex.reserve( listMeshIndex.size() );
         for ( const uint32 index : listMeshIndex )
         {
@@ -1473,9 +1473,9 @@ namespace sw::editor
         }
 
         // 용접: 허용 오차 안의 위치를 한 점으로 맞춘다. 자르기는 위치가 비트까지 같아야 이웃 삼각형의 교점이 같다.
-        vector<RHIVertex> listWelded( listVertex.begin(), listVertex.end() );
+        vector<MeshVertex> listWelded( listVertex.begin(), listVertex.end() );
         MeshFractureInternal::weldPositions( listWelded );
-        vector<RHIVertex> listVolume;
+        vector<MeshVertex> listVolume;
         Build::pickVolume( listWelded, settings, bProxy, listVolume );
         float3 volumeCentroid{};
         if ( computeVolume( listVolume, volumeCentroid ) <= 0.0f )

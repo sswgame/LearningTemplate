@@ -24,7 +24,7 @@ namespace sw
 {
     /**
      * @struct RegistrationReloadScope
-     * @brief 핫 리로드가 교체 이미지를 올리는 동안 켜 두는 플래그입니다(`LiveReloadManager` 가 새 이미지를 올리는 동안 잡는다). 켜진 동안 `RegistrationList::add` 는
+     * @brief 핫 리로드가 교체 이미지를 올리는 동안 켜 두는 플래그입니다(`ModuleHotReloadManager` 가 새 이미지를 올리는 동안 잡는다). 켜진 동안 `RegistrationList::add` 는
      *        같은 이름의 등록을 거절하지 않고 대체합니다.
      * @details 새 이미지의 정적 등록자는 옛 이미지가 아직 도는 동안 돈다. 옛 등록이 이름을 쥐고 있어 새 등록이 거절되면, 옛 이미지가 내려간 뒤 그 이름이 아무것도 가리키지 않는다
      *          (리로드한 개발 명령 · 감시 값 · 시나리오 단계가 사라진다). 대체된 옛 등록은 목록이 그림자로 보관한다 — 옛 이미지가 내려가며 빼면 버리고, 새 이미지가 취소되면 복원한다.

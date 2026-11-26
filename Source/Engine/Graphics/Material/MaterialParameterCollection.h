@@ -31,7 +31,7 @@ namespace sw
 {
     /** @brief 묶음의 값 하나입니다. */
     REFLECT()
-    struct SW_API MaterialCollectionParameterDef
+    struct SW_API MaterialParameterCollectionEntryDef
     {
         REFLECT_BODY();
 
@@ -50,7 +50,7 @@ namespace sw
      * @brief `*.matparams.xml` 하나입니다. 변형은 루트의 `_base` 로 적고 값을 이름으로 합칩니다(계절 · 지역별 묶음).
      * @code
      *     <MaterialParameterCollectionDef>
-     *       <_listParameter><MaterialCollectionParameterDef _name="WorldTint" _value="1, 0.9, 0.8, 1" /></_listParameter>
+     *       <_listParameter><MaterialParameterCollectionEntryDef _name="WorldTint" _value="1, 0.9, 0.8, 1" /></_listParameter>
      *     </MaterialParameterCollectionDef>
      * @endcode
      */
@@ -69,7 +69,7 @@ namespace sw
         static constexpr AssetTypeDef kAssetType{ "MaterialParameterCollection", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         PROPERTY( Tooltip = "Values shared by every material that binds this collection" )
-        vector<MaterialCollectionParameterDef> _listParameter{};
+        vector<MaterialParameterCollectionEntryDef> _listParameter{};
 
         /** @brief 이름이 비거나 겹치거나, 한 전역 칸을 둘이 먹이면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;

@@ -2,7 +2,7 @@
 
 #include "DevTools/Client/Automation/Runner/AutomationPerBackend.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
@@ -382,7 +382,7 @@ namespace sw
         vector<string>                       listArgument;
         for ( const string& argument : listOriginalArgument )
         {
-            const string_view key    = CommandLineManager::getArgumentName( argument );
+            const string_view key    = CommandLine::getArgumentName( argument );
             const bool        bOwned = std::any_of( std::begin( kArrOwned ), std::end( kArrOwned ),
                                                     [key]( CommandLineArgument owned )
                    { return key == getCommandLineArgumentSpelling( owned ); } ) ||
@@ -403,7 +403,7 @@ namespace sw
         for ( const AutomationAttribute& variable : scenario.getTestOptions()._listLaunchVariable )
         {
             if ( std::any_of( listGivenArgument.begin(), listGivenArgument.end(), [&variable]( const string& given )
-            { return CommandLineManager::getArgumentName( given ) == string_view{ variable._name }; } ) )
+            { return CommandLine::getArgumentName( given ) == string_view{ variable._name }; } ) )
                 continue;
             StringBuilder<constant::buffer::kMax256> argument;
             argument.appendFormat( "-%#=%#", variable._name, variable._value );
@@ -549,7 +549,7 @@ namespace sw
         // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다. 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 스스로 정한다(`GenericWindow::createMainWindow`).
         const bool bTileWindows = std::none_of( options._listPassThroughArgument.begin(), options._listPassThroughArgument.end(), []( const string& argument )
         {
-            const string_view key = CommandLineManager::getArgumentName( argument );
+            const string_view key = CommandLine::getArgumentName( argument );
             return key == getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_X ) || key == getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE );
         } );
         // 나눌 때 배정의 시작점 — 주지 않았으면 UTC 날짜(일)로 정해 날마다 한 칸씩 돌린다. 백엔드와 무관하다고 본 시나리오도 나흘이면 모든 백엔드를 거친다.

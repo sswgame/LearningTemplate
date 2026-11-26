@@ -9,7 +9,7 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerDrawList.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"

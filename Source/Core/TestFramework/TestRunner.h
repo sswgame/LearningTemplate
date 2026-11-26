@@ -53,7 +53,7 @@ namespace sw::test
         bool              _bListOnly{ false };
         bool              _bRunDisabled{ false }; ///< `_disabledReason` 이 있는 케이스도 돈다(고친 뒤 확인)
         Delegate<void()>  _onCaseBegin{};         ///< 케이스 앞에 부른다 — 부르는 쪽(엔진을 아는 쪽)이 프로세스 상태를 찍는다
-        /// 케이스 뒤, 로그를 아직 이 케이스의 것으로 모으는 동안 부른다 — 케이스가 흘린 것을 한 줄씩 채우면 그 케이스가 `StateLeak` 으로 진다(`DevTools/Diagnostics/TestCaseStateProbe`)
+        /// 케이스 뒤, 로그를 아직 이 케이스의 것으로 모으는 동안 부른다 — 케이스가 흘린 것을 한 줄씩 채우면 그 케이스가 `StateLeak` 으로 진다(`DevTools/Diagnostics/TestCaseStateSnapshot`)
         Delegate<void( vector<string>& )> _onCaseEnd{};
         CrashHandler*                     _pCrashHandler{ nullptr }; ///< 도는 케이스 이름을 문맥(`TestCase`)에 적을 크래시 처리기 — 크래시 보고에 어느 케이스였는지 남는다. nullptr 이면 적지 않는다
     };

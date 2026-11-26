@@ -5,7 +5,7 @@
  */
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/DevCounter.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Log/Logger.h"
@@ -33,7 +33,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
-#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameCounter.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"

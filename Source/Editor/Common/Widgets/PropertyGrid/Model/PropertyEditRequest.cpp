@@ -4,15 +4,16 @@
 
 #include "Core/Memory/MemoryBlock.h"
 
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorBuiltinValue.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridBuiltinValue.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridLayout.h"
 
 #include "Engine/Reflection/EnumInfo.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 namespace sw::editor
 {
@@ -81,7 +82,7 @@ namespace sw::editor
                     void* const pValue = findContainerValue( *pProp, pInstance, node );
                     if ( pValue == nullptr )
                         return false;
-                    unique_ptr<PropertyInfo> pElementProp = make_unique<PropertyInfo>( InspectorPropertyLayout::makeElementProperty( *pProp ) );
+                    unique_ptr<PropertyInfo> pElementProp = make_unique<PropertyInfo>( PropertyGridLayout::makeElementProperty( *pProp ) );
                     pInstance                             = pValue;
                     pProp                                 = pElementProp.get();
                     pOwned                                = std::move( pElementProp );
@@ -103,27 +104,27 @@ namespace sw::editor
                     prop.setValue<bool>( slot._instance.get(), *pValue );
                     return true;
                 }
-                const InspectorBuiltinValue* pBuiltin = InspectorBuiltinValue::findBuiltin( prop._typeName.c_str() );
-                void* const                  pMember  = prop.getValuePtr<void>( slot._instance.get() );
+                const PropertyGridBuiltinValue* pBuiltin = PropertyGridBuiltinValue::findBuiltin( prop._typeName.c_str() );
+                void* const                     pMember  = prop.getValuePtr<void>( slot._instance.get() );
                 return pBuiltin != nullptr && pMember != nullptr && pBuiltin->_pWriteValue( value, pMember );
             }
 
             static bool setNumber( const Slot& slot, float64 storedValue )
             {
-                const PropertyInfo&          prop     = *slot._pProp;
-                const InspectorBuiltinValue* pBuiltin = InspectorBuiltinValue::findBuiltin( prop._typeName.c_str() );
-                void* const                  pMember  = prop.getValuePtr<void>( slot._instance.get() );
-                if ( pBuiltin == nullptr || pMember == nullptr || pBuiltin->_widget != InspectorValueWidget::Number )
+                const PropertyInfo&             prop     = *slot._pProp;
+                const PropertyGridBuiltinValue* pBuiltin = PropertyGridBuiltinValue::findBuiltin( prop._typeName.c_str() );
+                void* const                     pMember  = prop.getValuePtr<void>( slot._instance.get() );
+                if ( pBuiltin == nullptr || pMember == nullptr || pBuiltin->_widget != PropertyGridValueWidget::Number )
                     return false;
-                // 위젯은 `UIMin` · `UIMax` 안에서 움직이고, 값은 항상 `Min` · `Max` 로 제한한다(`InspectorNumericRange` — 직접 입력이 범위 밖일 수 있다).
-                const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( prop, ObjectAddress{ slot._instance } );
-                return ReflectedValueUtil::writeNumber( static_cast<ReflectBuiltinIndex>( pBuiltin->_index ), pMember, InspectorPropertyLayout::clampToAllowedRange( range, storedValue ) );
+                // 위젯은 `UIMin` · `UIMax` 안에서 움직이고, 값은 항상 `Min` · `Max` 로 제한한다(`PropertyGridNumericRange` — 직접 입력이 범위 밖일 수 있다).
+                const PropertyGridNumericRange range = PropertyGridLayout::getNumericRange( prop, ObjectAddress{ slot._instance } );
+                return ReflectedValueUtil::writeNumber( static_cast<ReflectBuiltinIndex>( pBuiltin->_index ), pMember, PropertyGridLayout::clampToAllowedRange( range, storedValue ) );
             }
 
             static bool setText( const Slot& slot, const string& text )
             {
                 // 그 프로퍼티 하나만 쓴다(비트필드는 그 비트만). `{"이름":값}` 을 JSON 으로 읽히면 읽기에서 빠진 프로퍼티마다 기본값을 채워 다른 프로퍼티까지 바뀐다.
-                if ( SerializerUtil::applyPropertyText( *slot._pProp, slot._instance, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
+                if ( PropertySerializer::applyPropertyText( *slot._pProp, slot._instance, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
                     return true;
                 SW_LOG_WARNING_ID( "EditorPropertyGrid.CouldNotApplied", "'%#' could not be applied to %#", text.c_str(), slot._pProp->_name.c_str() );
                 return false;
@@ -155,13 +156,13 @@ namespace sw::editor
                 mapWrapper.defaultConstructKey( pKey );
                 mapWrapper.defaultConstructValue( pValue );
                 bool bInserted = false;
-                if ( SerializerUtil::parseTextValue( MutableValueAddress{ pKey }, prop._keyTypeName, keyText, context ) )
+                if ( ValueSerializer::parseTextValue( MutableValueAddress{ pKey }, prop._keyTypeName, keyText, context ) )
                 {
-                    const string stagedText = SerializerUtil::formatValueText( ValueAddress{ pKey }, prop._keyTypeName, context );
+                    const string stagedText = ValueSerializer::formatValueText( ValueAddress{ pKey }, prop._keyTypeName, context );
                     bool         bExists    = false;
                     mapWrapper.forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [&]( const void* pExistingKey, const void* )
                     {
-                        if ( SerializerUtil::formatValueText( ValueAddress{ pExistingKey }, prop._keyTypeName, context ) == stagedText )
+                        if ( ValueSerializer::formatValueText( ValueAddress{ pExistingKey }, prop._keyTypeName, context ) == stagedText )
                             bExists = true;
                     } ) );
                     if ( bExists == false )
@@ -187,7 +188,7 @@ namespace sw::editor
                 const ISequenceContainerWrapper* pSeq    = prop._containerWrapper->asSequence();
                 const SerializeContext&          context = SerializeContext::getDefault( SerializePurpose::Authoring );
                 const auto                       fill    = [&]( void* pElement ) -> bool
-                { return SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, prop._elementTypeName, request._text, context ); };
+                { return ValueSerializer::parseTextValue( MutableValueAddress{ pElement }, prop._elementTypeName, request._text, context ); };
                 switch ( request._kind )
                 {
                     case PropertyEditKind::AddElement:

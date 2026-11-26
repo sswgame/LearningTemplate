@@ -13,15 +13,15 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 #include "Engine/UI/Screen/UIOwnedScreen.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 #include "GameFramework/Client/Flow/LoadingScreenViewModel.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Flow/GameInstanceClientHook.h"
+#include "GameFramework/Runtime/Foundation/Flow/ILoadingScreen.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
-#include "GameFramework/Runtime/Foundation/Service/GameInstanceSubsystem.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameInstanceSubsystem.h"
 
 namespace sw
 {
@@ -29,7 +29,7 @@ namespace sw
     struct SaveGameSavedEvent;
     struct SceneLoadCompletedEvent;
 
-    class ScreenTransitionManager;
+    class ScreenTransitionController;
     class UIScreen;
     class UISystem;
 
@@ -112,8 +112,8 @@ namespace sw
          * @param loadProgress 로드 진행(0~1)입니다. 모르면 비웁니다 — 진행 슬라이더(`Progress`)를 접는다.
          * @param transition 그릴 화면 페이드를 쥔 전환 관리자이다. 로딩 화면을 닫을 때 밝히기를 청한다(`fadeInFromBlack`). 페이드를 진행시키는 것(`ScreenFade::update`)은 주인(전환 관리자)의 일이다.
          */
-        void update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenTransitionManager& transition );
-        /** @brief 게임 인스턴스의 씬 흐름이 받는 창구(`ILoadingScreen`)입니다. 컨트롤러가 그 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-shape`). */
+        void update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenTransitionController& transition );
+        /** @brief 게임 인스턴스의 씬 흐름이 받는 창구(`ILoadingScreen`)입니다. 컨트롤러가 그 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-style`). */
         ILoadingScreen& getLoadingScreen() { return _loadingScreenPort; }
 
         /** @brief 로딩 화면이 떠 있으면 true 입니다. */
@@ -157,7 +157,7 @@ namespace sw
 
             [[nodiscard]] bool hasLoadingScreenDocument() const override { return _owner.hasLoadingScreenDocument(); }
             bool               beginLoading() override { return _owner.beginLoading(); }
-            void               update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenTransitionManager& transition ) override { _owner.update( deltaSeconds, bLoading, loadProgress, transition ); }
+            void               update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenTransitionController& transition ) override { _owner.update( deltaSeconds, bLoading, loadProgress, transition ); }
 
         private:
             LoadingScreenController& _owner;

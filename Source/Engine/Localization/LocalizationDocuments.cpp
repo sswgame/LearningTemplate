@@ -11,7 +11,7 @@
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -70,7 +70,7 @@ namespace sw
                 for ( const string& text : listText )
                 {
                     DataPath path;
-                    if ( SerializerUtil::parseTextValue( MutableValueAddress{ &path }, hashed_string( "DataPath" ), text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+                    if ( ValueSerializer::parseTextValue( MutableValueAddress{ &path }, hashed_string( "DataPath" ), text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
                         return false;
                     outList.push_back( std::move( path ) );
                 }

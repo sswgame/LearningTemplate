@@ -11,9 +11,9 @@
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
-#include "GameFramework/Runtime/Character/Camera/SequenceTriggerComponent.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/SequenceTriggerComponent.h"
 
 // SequenceTriggerProgressTest: 지역 진입 컷씬의 진행 플래그(판 상태 플래그, 세이브 · 같은 플래그의 볼륨끼리)와 이미 안에 나타난 활성자의 규칙(_spawnInside)을 본다.
 // 판 상태(게임플레이 층)를 열어야 해서 시퀀스 트리거(캐릭터 층) 테스트와 나눠 이 층에 둔다(nogpu, 에셋 없음).

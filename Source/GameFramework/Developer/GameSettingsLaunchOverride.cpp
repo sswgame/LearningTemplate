@@ -9,11 +9,11 @@
 // 개발 구성에만 있다(GameFrameworkDev 모듈, 매니페스트가 배포에서 끈다). 배포에는 이 모듈이 없어 게임은 팩의 gamesettings 그대로 선다(끝점 · 서버 주소는 운영자가 gamesettings 에 적는 값이다).
 namespace sw
 {
-    /** @brief `-gv_onlineServerAddress=<주소:포트>`: gamesettings 의 온라인 서버 대신 붙을 주소입니다(로컬 실행 `Scripts/net/online_local_run.py` · 자동화). */
+    /** @brief `-gv_onlineServerAddress=<주소:포트>`: gamesettings 의 온라인 서버 대신 붙을 주소입니다(로컬 실행 `Scripts/sessions/online_service_session.py` · 자동화). */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_onlineServerAddress, "", "gamesettings 의 온라인 서버 대신 붙을 주소 (주소:포트, 비면 gamesettings)" );
     /** @brief `-gv_gameServerAddress=<주소:포트>`: 시나리오가 붙을 게임 서버(허브 · 매치)의 주소입니다. 개발 명령 줄이 `{gv_gameServerAddress}` 로 읽습니다(띄우는 쪽이 빈 포트를 받아 준다 — `Scripts/net`). */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_gameServerAddress, "", "시나리오가 붙을 게임 서버 주소 (주소:포트)" );
-    /** @brief `-gv_telemetryUploadEndpoint=<주소>`: gamesettings 의 텔레메트리 끝점 대신 쓸 주소입니다(로컬 수신기 `Scripts/net/telemetry_local_run.py` · 자동화). */
+    /** @brief `-gv_telemetryUploadEndpoint=<주소>`: gamesettings 의 텔레메트리 끝점 대신 쓸 주소입니다(로컬 수신기 `Scripts/sessions/telemetry_session.py` · 자동화). */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_telemetryUploadEndpoint, "", "gamesettings 의 텔레메트리 업로드 끝점 대신 쓸 주소 (비면 gamesettings)" );
     /** @brief `-gv_crashUploadEndpoint=<주소>`: gamesettings 의 크래시 보고 끝점 대신 쓸 주소입니다(로컬 수신기 · 자동화). */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_crashUploadEndpoint, "", "gamesettings 의 크래시 보고 업로드 끝점 대신 쓸 주소 (비면 gamesettings)" );

@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Config/EditorPaths.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -32,7 +32,7 @@ namespace sw::editor
 
             /**
              * @brief 상태 폴더 @p folder 를 만들고 돌려줍니다. 경로를 묻는 함수라 폴더를 못 만들어도 경로는 돌려준다 — 이유는 ensure 가 남기고, 이 폴더에 쓰는 쪽이 쓰기 실패로 다시 알린다.
-             * @details 자동화 실행(`-unattended` · `-scenario` — `CommandLineManager::isAutomatedRun`)은 실행 뿌리 아래 `editor` 를 쓴다. 시나리오가 닫은 패널 · 바꾼 설정이
+             * @details 자동화 실행(`-unattended` · `-scenario` — `CommandLine::isAutomatedRun`)은 실행 뿌리 아래 `editor` 를 쓴다. 시나리오가 닫은 패널 · 바꾼 설정이
              *          사용자의 Saved/Editor 에 남아 다음 실행(사람 · 다른 시나리오)이 그 상태로 시작했다. 실행 뿌리(`ProcessRoots::_run`)가 실행마다 새 폴더라 비우지 않고,
              *          동시에 도는 App 끼리 겹치지 않는다. 리로드 · 백엔드 교체로 다시 선 인스턴스는 같은 폴더를 이어 쓴다(자동 저장 세션 폴더 · 레이아웃).
              */
@@ -66,8 +66,8 @@ namespace sw::editor
         if ( variableDir.empty() == false )
             return EditorPathsInternal::ensureStateDirectory( variableDir );
         const ProcessRoots& roots = ProcessRoots::get();
-        return EditorPathsInternal::ensureStateDirectory( editor::getSubsystem<CommandLineManager>().isAutomatedRun() ? roots._run.join( EditorPathsInternal::kRunStateFolder )
-                                                                                                                      : roots._project.join( config::kDirSavedEditor ) );
+        return EditorPathsInternal::ensureStateDirectory( editor::getSubsystem<CommandLine>().isAutomatedRun() ? roots._run.join( EditorPathsInternal::kRunStateFolder )
+                                                                                                               : roots._project.join( config::kDirSavedEditor ) );
     }
 
     AbsolutePath EditorPaths::resolveEditorStateFile( const utf8* pFileName )

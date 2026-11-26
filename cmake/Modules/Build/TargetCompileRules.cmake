@@ -46,8 +46,8 @@ endfunction()
 # ------------------------------------------------------------------------------
 # sw_add_pch_entry_directory — `.cpp` 첫 줄 `#include "pch.h"` 를 푸는 include 경로를 타깃에 준다.
 #   그 폴더에는 PCH 진입 헤더(ENTRY, `Source/` 기준 — `Engine/pch.h` · `Core/pch.h`)로 넘기는 생성 헤더 하나뿐이다. 소스 폴더(`Source/Engine`)를
-#   include 경로로 내보내면 `#include "Scene/SceneManager.h"` 같은 접두 없는 include 가 풀려 층 게이트(`Engine/` 접두로 본다)를 비껴간다.
-#   그래서 폴더가 아니라 이 헤더 하나만 내보낸다(`sw_verify_source_include_roots` 가 소스 폴더 include 경로를 막는다). NAME 은 생성 폴더 이름이다.
+#   include 경로로 내보내면 `#include "Scene/SceneManager.h"` 같은 접두 없는 include 가 풀려 층 가드(`Engine/` 접두로 본다)를 비껴간다.
+#   그래서 폴더가 아니라 이 헤더 하나만 내보낸다(`sw_require_source_include_roots` 가 소스 폴더 include 경로를 막는다). NAME 은 생성 폴더 이름이다.
 # ------------------------------------------------------------------------------
 function(sw_add_pch_entry_directory TARGET_NAME VISIBILITY NAME ENTRY)
 	if(NOT EXISTS "${CMAKE_SOURCE_DIR}/Source/${ENTRY}")
@@ -65,12 +65,12 @@ function(sw_add_pch_entry_directory TARGET_NAME VISIBILITY NAME ENTRY)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_verify_source_include_roots — `Source/` 아래 폴더를 include 경로로 가진 타깃이 있으면 구성을 세운다.
-#   include 는 `Source/` 기준 전체 경로(`Engine/Scene/SceneManager.h`)로만 풀려야 층 게이트가 경로 앞부분으로 층을 안다. `Source/Engine` · 모듈 폴더를
+# sw_require_source_include_roots — `Source/` 아래 폴더를 include 경로로 가진 타깃이 있으면 구성을 세운다.
+#   include 는 `Source/` 기준 전체 경로(`Engine/Scene/SceneManager.h`)로만 풀려야 층 가드가 경로 앞부분으로 층을 안다. `Source/Engine` · 모듈 폴더를
 #   include 경로로 주면 접두 없는 include 가 다른 층으로 풀린다. 경로를 주는 줄은 CMake 어디에나 쓸 수 있어 형식으로 막지 못하므로 구성 끝에 여기서 본다.
 #   남는 틈(그 파일의 폴더 기준 경로 — 컴파일러가 늘 먼저 본다)은 리뷰가 본다. 루트 CMakeLists 가 모든 타깃을 만든 뒤 부른다.
 # ------------------------------------------------------------------------------
-function(sw_verify_source_include_roots)
+function(sw_require_source_include_roots)
 	set(source_prefix "${CMAKE_SOURCE_DIR}/Source/")
 	string(LENGTH "${source_prefix}" source_prefix_length)
 	set(list_directory "${CMAKE_SOURCE_DIR}")
@@ -136,7 +136,7 @@ endfunction()
 #     타깃 고유 정의 헤더(`sw_set_target_defs_header`)가 사라진다. 그래서 PCH 플래그를 타깃 옵션 맨 앞(`BEFORE`)에 직접 넣어 정의 헤더 ·
 #     의존 타깃의 `FlagOps.gen.h` 가 PCH **뒤에** 읽히게 한다.
 #   GNU 드라이버(Linux · Android)는 `-include-pch <소유자>/cmake_pch.hxx.pch`(CMake Compiler/Clang.cmake 의 USE_PCH 와 같은 파일)다 — clang 은 이 PCH 를
-#     어떤 `-include` 보다 먼저 싣는다. 명령줄에서 소스 하나만 뺄 수 없으므로 `SKIP_PRECOMPILE_HEADERS` 소스(ABI 스탬프 · 서버 전용 표시 TU)도
+#     어떤 `-include` 보다 먼저 싣는다. 명령줄에서 소스 하나만 뺄 수 없으므로 `SKIP_PRECOMPILE_HEADERS` 소스(ABI 다이제스트 · 서버 전용 표시 TU)도
 #     PCH 를 싣는다 — 같은 정의 · 옵션이라 결과는 같고 의존만 하나 는다. 소스별 옵션은 유니티 묶음에서 그 소스를 빼므로 쓰지 않는다.
 #   PCH 안 헤더는 `/showIncludes` · depfile 에 나오지 않으므로 소유자의 PCH 산출물을 C++ 소스의 `OBJECT_DEPENDS` 로 건다 —
 #   소스가 다 붙은 뒤(리플렉션 단계 뒤) 부른다. clang-cl 의 `SKIP_PRECOMPILE_HEADERS` 소스는 `/Y-` 로 PCH 를 끈다.
@@ -264,11 +264,11 @@ function(sw_require_deterministic_mark_for_rollback TARGET_NAME)
 	endforeach()
 	if(list_rollback_header)
 		# DEFER 의 인자는 실행할 때 풀리므로 지금 값을 글로 박아 넘긴다.
-		cmake_language(EVAL CODE "cmake_language(DEFER CALL sw_verify_deterministic_mark [[${TARGET_NAME}]] [[${list_rollback_header}]])")
+		cmake_language(EVAL CODE "cmake_language(DEFER CALL sw_require_deterministic_mark [[${TARGET_NAME}]] [[${list_rollback_header}]])")
 	endif()
 endfunction()
 
-function(sw_verify_deterministic_mark TARGET_NAME ROLLBACK_HEADERS)
+function(sw_require_deterministic_mark TARGET_NAME ROLLBACK_HEADERS)
 	get_property(list_marked GLOBAL PROPERTY SW_DETERMINISTIC_TARGETS)
 	if(NOT TARGET_NAME IN_LIST list_marked)
 		message(FATAL_ERROR "${TARGET_NAME} implements the rollback contract (saveState( vector<uint8>& ) in ${ROLLBACK_HEADERS}) "
@@ -277,83 +277,83 @@ function(sw_verify_deterministic_mark TARGET_NAME ROLLBACK_HEADERS)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 층 경계 껍데기 — 아래 층 부분의 include 자리 맨 앞에, 위 층 헤더와 같은 경로의 `#error` 파일을 둔다. 아래 층이 위 층 헤더를 include 하면
-# (헤더를 거쳐 닿는 전이 include 도) 진짜 헤더 대신 껍데기를 찾아 컴파일이 멈춘다. Engine 층 · Editor 층이 함께 쓴다.
+# 층 경계 가드 — 아래 층 부분의 include 자리 맨 앞에, 위 층 헤더와 같은 경로의 `#error` 파일을 둔다. 아래 층이 위 층 헤더를 include 하면
+# (헤더를 거쳐 닿는 전이 include 도) 진짜 헤더 대신 가드를 찾아 컴파일이 멈춘다. Engine 층 · Editor 층이 함께 쓴다.
 #
-# sw_write_layer_stub: 내용이 같으면 쓰지 않는다(다시 짓지 않게). LIST_VAR 에 경로를 더한다.
-# sw_apply_layer_stubs: 이번 구성이 쓰지 않은 옛 껍데기(사라진 헤더)를 지우고 PART 의 include 자리 맨 앞에 STUB_ROOT 를 둔다.
+# sw_write_layer_guard: 내용이 같으면 쓰지 않는다(다시 짓지 않게). LIST_VAR 에 경로를 더한다.
+# sw_apply_layer_guards: 이번 구성이 쓰지 않은 옛 가드(사라진 헤더)를 지우고 PART 의 include 자리 맨 앞에 GUARD_ROOT 를 둔다.
 # ------------------------------------------------------------------------------
-function(sw_write_layer_stub LIST_VAR STUB_PATH CONTENT)
+function(sw_write_layer_guard LIST_VAR GUARD_PATH CONTENT)
 	set(old_content "")
-	if(EXISTS "${STUB_PATH}")
-		file(READ "${STUB_PATH}" old_content)
+	if(EXISTS "${GUARD_PATH}")
+		file(READ "${GUARD_PATH}" old_content)
 	endif()
 	if(NOT old_content STREQUAL CONTENT)
-		file(WRITE "${STUB_PATH}" "${CONTENT}")
+		file(WRITE "${GUARD_PATH}" "${CONTENT}")
 	endif()
-	list(APPEND ${LIST_VAR} "${STUB_PATH}")
+	list(APPEND ${LIST_VAR} "${GUARD_PATH}")
 	set(${LIST_VAR} ${${LIST_VAR}} PARENT_SCOPE)
 endfunction()
 
-function(sw_apply_layer_stubs PART STUB_ROOT)
-	set(list_new_stub ${ARGN})
-	set(manifest_path "${STUB_ROOT}.manifest")
+function(sw_apply_layer_guards PART GUARD_ROOT)
+	set(list_new_guard ${ARGN})
+	set(manifest_path "${GUARD_ROOT}.manifest")
 	if(EXISTS "${manifest_path}")
-		file(STRINGS "${manifest_path}" list_old_stub)
-		if(list_new_stub)
-			list(REMOVE_ITEM list_old_stub ${list_new_stub})
+		file(STRINGS "${manifest_path}" list_old_guard)
+		if(list_new_guard)
+			list(REMOVE_ITEM list_old_guard ${list_new_guard})
 		endif()
-		foreach(old_stub IN LISTS list_old_stub)
-			file(REMOVE "${old_stub}")
+		foreach(old_guard IN LISTS list_old_guard)
+			file(REMOVE "${old_guard}")
 		endforeach()
 	endif()
 	string(REPLACE ";" "
-" manifest_content "${list_new_stub}")
+" manifest_content "${list_new_guard}")
 	file(WRITE "${manifest_path}" "${manifest_content}
 ")
-	target_include_directories(${PART} BEFORE PRIVATE "${STUB_ROOT}")
+	target_include_directories(${PART} BEFORE PRIVATE "${GUARD_ROOT}")
 endfunction()
 
-# sw_add_layer_stubs: 모듈 층 표(`Scripts/generate/module_layers.py` 가 쓴 `<VAR_PREFIX>_LIST` · `<VAR_PREFIX>_<N>_HEADERS`)를 읽어 부분 PART(층 TIER)에
-#   TIER 보다 위 층의 헤더마다 `#error` 껍데기를 둔다. MODULE 은 껍데기 폴더 · 메시지 이름이고 표 파일은 `Config/Rules/Layers/<MODULE>Layers.toml` 이다.
-function(sw_add_layer_stubs PART TIER VAR_PREFIX MODULE)
-	set(stub_root "${CMAKE_BINARY_DIR}/generated/sw/${MODULE}LayerStubs/tier${TIER}")
-	set(list_new_stub "")
-	foreach(upper_tier IN LISTS ${VAR_PREFIX}_LIST)
-		if(NOT upper_tier GREATER TIER)
+# sw_add_layer_guards: 모듈 층 표(`Scripts/generate/module_layer_guards.py` 가 쓴 `<VAR_PREFIX>_LIST` · `<VAR_PREFIX>_<N>_HEADERS`)를 읽어 부분 PART(층 LAYER)에
+#   LAYER 보다 위 층의 헤더마다 `#error` 가드를 둔다. MODULE 은 가드 폴더 · 메시지 이름이고 표 파일은 `Config/Rules/Layers/<MODULE>Layers.toml` 이다.
+function(sw_add_layer_guards PART LAYER VAR_PREFIX MODULE)
+	set(guard_root "${CMAKE_BINARY_DIR}/generated/sw/${MODULE}LayerGuards/layer${LAYER}")
+	set(list_new_guard "")
+	foreach(upper_layer IN LISTS ${VAR_PREFIX}_LIST)
+		if(NOT upper_layer GREATER LAYER)
 			continue()
 		endif()
-		set(stub_content "#error \"${MODULE} layer ${upper_tier} header cannot be included from layer ${TIER} code (Config/Rules/Layers/${MODULE}Layers.toml). A lower layer must not see an upper layer: move what you need down, or invert the dependency.\"
+		set(guard_content "#error \"${MODULE} layer ${upper_layer} header cannot be included from layer ${LAYER} code (Config/Rules/Layers/${MODULE}Layers.toml). A lower layer must not see an upper layer: move what you need down, or invert the dependency.\"
 ")
-		foreach(header IN LISTS ${VAR_PREFIX}_${upper_tier}_HEADERS)
-			sw_write_layer_stub(list_new_stub "${stub_root}/${header}" "${stub_content}")
+		foreach(header IN LISTS ${VAR_PREFIX}_${upper_layer}_HEADERS)
+			sw_write_layer_guard(list_new_guard "${guard_root}/${header}" "${guard_content}")
 		endforeach()
 	endforeach()
-	sw_apply_layer_stubs(${PART} "${stub_root}" ${list_new_stub})
+	sw_apply_layer_guards(${PART} "${guard_root}" ${list_new_guard})
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 타깃 경계 게이트 — 위 층 껍데기와 같은 틀을 타깃 단위로 넓힌다. `Source/` 가 모든 타깃의 include 루트라 층 표 밖(Core → Engine, Engine → GameFramework, 키트 → 매니페스트 밖 키트)은
-# 헤더만 쓰면 컴파일 · 링크가 되었다. 껍데기는 configure 의 `Scripts/generate/target_layers.py` 가 표(`Config/Rules/Layers/TargetLayers.toml`)와 매니페스트로 쓴다.
+# 타깃 경계 가드 — 위 층 가드와 같은 틀을 타깃 단위로 넓힌다. `Source/` 가 모든 타깃의 include 루트라 층 표 밖(Core → Engine, Engine → GameFramework, 키트 → 매니페스트 밖 키트)은
+# 헤더만 쓰면 컴파일 · 링크가 되었다. 가드는 configure 의 `Scripts/generate/target_guards.py` 가 표(`Config/Rules/Layers/TargetLayers.toml`)와 매니페스트로 쓴다.
 #
-# sw_apply_target_layer_guard: 타깃의 include 자리 맨 앞에 게이트 폴더들을 둔다. 부분(`sw_add_module_part`)은 디렉터리 끝에 소유 타깃의 include 자리를 받는다(DEFER).
-# sw_apply_module_layer_guard: 모듈 종류의 공통 게이트와 모듈별 게이트(`module/<이름>` — 매니페스트 전이 폐쇄 밖 모듈의 헤더)를 건다.
+# sw_apply_target_layer_guard: 타깃의 include 자리 맨 앞에 가드 폴더들을 둔다. 부분(`sw_add_module_part`)은 디렉터리 끝에 소유 타깃의 include 자리를 받는다(DEFER).
+# sw_apply_module_layer_guard: 모듈 종류의 공통 가드와 모듈별 가드(`module/<이름>` — 매니페스트 전이 폐쇄 밖 모듈의 헤더)를 건다.
 # ------------------------------------------------------------------------------
 include("${CMAKE_BINARY_DIR}/generated/sw/config/TargetLayers.cmake")
 set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/TargetLayers.toml")
 
 function(sw_apply_target_layer_guard TARGET_NAME)
-	set(list_gate ${ARGN})
+	set(list_guard ${ARGN})
 	if(SW_TARGET_TYPE STREQUAL "Server")
-		list(APPEND list_gate serverbuild) # 전용 서버 구성은 렌더러 · `Client/` 헤더를 읽지 않는다
+		list(APPEND list_guard serverbuild) # 전용 서버 구성은 렌더러 · `Client/` 헤더를 읽지 않는다
 	elseif(SW_TARGET_TYPE STREQUAL "Client")
-		list(APPEND list_gate clientbuild) # 클라이언트 구성은 `Server/` 헤더를 읽지 않는다
+		list(APPEND list_guard clientbuild) # 클라이언트 구성은 `Server/` 헤더를 읽지 않는다
 	endif()
-	foreach(gate IN LISTS list_gate)
-		if(NOT gate IN_LIST SW_TARGET_LAYER_GUARDS)
-			message(FATAL_ERROR "sw_apply_target_layer_guard(${TARGET_NAME}): unknown gate '${gate}' (Config/Rules/Layers/TargetLayers.toml, or a module without a manifest)")
+	foreach(guard IN LISTS list_guard)
+		if(NOT guard IN_LIST SW_TARGET_LAYER_GUARDS)
+			message(FATAL_ERROR "sw_apply_target_layer_guard(${TARGET_NAME}): unknown guard '${guard}' (Config/Rules/Layers/TargetLayers.toml, or a module without a manifest)")
 		endif()
-		target_include_directories(${TARGET_NAME} BEFORE PRIVATE "${SW_TARGET_LAYER_STUB_DIR}/${gate}")
+		target_include_directories(${TARGET_NAME} BEFORE PRIVATE "${SW_TARGET_LAYER_GUARD_DIR}/${guard}")
 	endforeach()
 endfunction()
 
@@ -370,17 +370,17 @@ function(sw_require_template_definitions TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_open_dev_headers: 소스 목록 가운데 개발 전용 `Dev/` 의 C++ 파일에만 게이트 GATE 의 `[devopen]` 헤더를 연다(TargetLayers.toml). 소스의 include 자리는 타깃의 것보다 앞이라
-# 진짜 헤더를 잇는 파일이 `#error` 껍데기보다 먼저 잡힌다. 소스 속성이 다른 파일은 유니티 묶음에서 빠진다 — 묶음 안에서 다른 소스로 새지 않는다. 타깃을 만드는 디렉터리에서 부른다.
+# sw_allow_dev_headers: 소스 목록 가운데 개발 전용 `Dev/` 의 C++ 파일에만 가드 GUARD 의 `[devallow]` 헤더를 연다(TargetLayers.toml). 소스의 include 자리는 타깃의 것보다 앞이라
+# 진짜 헤더를 잇는 파일이 `#error` 가드보다 먼저 잡힌다. 소스 속성이 다른 파일은 유니티 묶음에서 빠진다 — 묶음 안에서 다른 소스로 새지 않는다. 타깃을 만드는 디렉터리에서 부른다.
 # ------------------------------------------------------------------------------
-function(sw_open_dev_headers GATE)
-	if(NOT GATE IN_LIST SW_TARGET_LAYER_DEV_OPEN_GUARDS)
-		message(FATAL_ERROR "sw_open_dev_headers: '${GATE}' is not in [devopen] (Config/Rules/Layers/TargetLayers.toml)")
+function(sw_allow_dev_headers GUARD)
+	if(NOT GUARD IN_LIST SW_TARGET_LAYER_DEV_ALLOW_GUARDS)
+		message(FATAL_ERROR "sw_allow_dev_headers: '${GUARD}' is not in [devallow] (Config/Rules/Layers/TargetLayers.toml)")
 	endif()
 	set(list_dev_source ${ARGN})
 	list(FILTER list_dev_source INCLUDE REGEX "/Dev/.*\\.cpp$")
 	if(list_dev_source)
-		set_property(SOURCE ${list_dev_source} APPEND PROPERTY INCLUDE_DIRECTORIES "${SW_TARGET_LAYER_STUB_DIR}/devopen/${GATE}")
+		set_property(SOURCE ${list_dev_source} APPEND PROPERTY INCLUDE_DIRECTORIES "${SW_TARGET_LAYER_GUARD_DIR}/devallow/${GUARD}")
 	endif()
 endfunction()
 

@@ -12,7 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "Editor/Common/Commands/Asset/EditorLocalizationSheet.h"
+#include "Editor/Common/Commands/Asset/LocalizationSheet.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
@@ -165,7 +165,7 @@ namespace sw::editor
          * @return 읽었으면 true 입니다. 못 읽으면 아무 파일도 열지 않습니다 — 앞 파일의 글을 든 채 열면 저장이 앞 파일의 내용을 이 파일에 쓴다.
          */
         [[nodiscard]] bool openGameDataFile( const DiskPath& absolutePath );
-        /** @brief 목록 항목의 디스크 경로 @p absolutePath 를 문서 열기(워크스페이스 포커스)가 받는 리소스 id 로 바꿉니다. 리소스 트리 밖이면 빈 문자열입니다. */
+        /** @brief 목록 항목의 디스크 경로 @p absolutePath 를 문서 열기(워크스페이스 포커스)가 받는 에셋 id 로 바꿉니다. 콘텐츠 트리 밖이면 빈 문자열입니다. */
         static string makeGameDataAssetID( const DiskPath& absolutePath );
         /** @brief 열린 게임 데이터 파일의 디스크 경로입니다. 비면 열린 파일이 없다. */
         const string& getGameDataPath() const { return _gameDataPath.str(); }

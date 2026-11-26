@@ -1,0 +1,346 @@
+#include "pch.h"
+
+#include "GameFramework/Runtime/Online/Scheduler/Server/ServiceScheduler.h"
+
+#include "Core/Foundation/Constants.h"
+#include "Core/Serialization/BitStream.h"
+
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordCodec.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct ServiceSchedulerInternal
+        {
+            static constexpr int64                   kMinuteMs       = constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
+            static constexpr int64                   kDayMs          = 24 * 60 * kMinuteMs;
+            static constexpr int64                   kDaysPerWeek    = 7;
+            static constexpr int64                   kEpochWeekday   = 3; ///< 1970-01-01 은 목요일(ISO 월요일 = 0)
+            static constexpr int32                   kMaxJobIDSize   = 128;
+            static constexpr ServiceScheduleRunState kStateRunning   = ServiceScheduleRunState::Running;
+            static constexpr ServiceScheduleRunState kStateSucceeded = ServiceScheduleRunState::Succeeded;
+            static constexpr ServiceScheduleRunState kStateFailed    = ServiceScheduleRunState::Failed;
+
+            using RunRecord = ServiceScheduleRunRecord;
+
+            static string makeKey( string_view jobID, int64 occurrenceMs )
+            {
+                string key{ jobID };
+                key.push_back( '/' );
+                ServiceKeyUtil::appendHex64( key, static_cast<uint64>( occurrenceMs ) );
+                return key;
+            }
+
+            [[nodiscard]] static bool decode( const ServiceRecord& raw, RunRecord& outRecord ) { return ServiceScheduler::getTable().decode( raw, outRecord ); }
+
+            static const ServiceIndexTable& getExpiryTable()
+            {
+                static const ServiceIndexTable s_table{ "service_schedule_expiry" };
+                return s_table;
+            }
+
+            /** @brief 차지 레코드의 기준 시각입니다 — 시작과 끝 중 늦은 쪽(끝나지 않은 레코드는 시작). */
+            static int64 computeRunTimeMs( const RunRecord& record ) { return record._endMs > record._startMs ? record._endMs : record._startMs; }
+
+            /** @brief 차지 레코드를 쓰고 그 기준 시각의 TTL 색인 줄을 함께 넣습니다. 차지 · 끝 쓰기가 모두 이 함수를 지난다 — 끝을 적으면 늦은 줄이 하나 더 생긴다. */
+            static void stageRun( ServiceTransaction& inoutTransaction, string_view key, const RunRecord& record, uint64 expectedVersion )
+            {
+                inoutTransaction.put( ServiceScheduler::getTable(), key, record, expectedVersion );
+                inoutTransaction.put( getExpiryTable(), ServiceTTLRule::makeTTLIndexKey( computeRunTimeMs( record ), key ), ServiceRecord::kAnyVersion );
+            }
+
+            [[nodiscard]] static bool readRunTimeMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                RunRecord run;
+                if ( decode( record, run ) == false )
+                    return false;
+                outTimeMs = computeRunTimeMs( run );
+                return true;
+            }
+
+            static int64 floorDivide( int64 value, int64 divisor )
+            {
+                const int64 quotient = value / divisor;
+                return ( value % divisor != 0 && ( value < 0 ) != ( divisor < 0 ) ) ? quotient - 1 : quotient;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    ServiceScheduler::ClaimReport ServiceScheduler::claimOccurrence( IServiceStoreConnection& connection, const string& jobID, int64 occurrenceMs, uint64 serverID, int64 nowMs,
+                                                                     int64 leaseMs )
+    {
+        ClaimReport              attempt;
+        const string             key = ServiceSchedulerInternal::makeKey( jobID, occurrenceMs );
+        ServiceRecord            record;
+        const ServiceStoreResult readResult = connection.readRecord( getTable(), key, record );
+        if ( readResult != ServiceStoreResult::Ok && readResult != ServiceStoreResult::NotFound )
+            return attempt;
+        uint64 expectedVersion = ServiceRecord::kAbsentVersion;
+        if ( readResult == ServiceStoreResult::Ok )
+        {
+            ServiceSchedulerInternal::RunRecord existing;
+            if ( ServiceSchedulerInternal::decode( record, existing ) == false )
+                return attempt; // 깨진 레코드 — 다시 보지 않으면 영영 안 돈다. 운영이 고칠 때까지 다시 해 본다
+            if ( existing._state != ServiceSchedulerInternal::kStateRunning )
+            {
+                attempt._result = ClaimResult::Finished;
+                return attempt;
+            }
+            const int64 leaseEndMs = existing._startMs + leaseMs;
+            if ( nowMs < leaseEndMs )
+            {
+                attempt._result    = ClaimResult::Busy;
+                attempt._retryAtMs = leaseEndMs;
+                return attempt;
+            }
+            expectedVersion = record._version; // 임대가 지났다 — 이어받는다
+        }
+        ServiceSchedulerInternal::RunRecord claim;
+        claim._serverID = serverID;
+        claim._startMs  = nowMs;
+        ServiceTransaction transaction;
+        ServiceSchedulerInternal::stageRun( transaction, key, claim, expectedVersion );
+        ServiceCommitInfo        info;
+        const ServiceStoreResult commitResult = ServiceCommitRunner::commitOnce( connection, transaction, &info );
+        if ( commitResult == ServiceStoreResult::Ok )
+        {
+            attempt._result   = ClaimResult::Claimed;
+            attempt._runToken = info._commitVersion;
+            return attempt;
+        }
+        if ( commitResult == ServiceStoreResult::Conflict )
+        {
+            attempt._result    = ClaimResult::Busy; // 같은 순간 다른 서버가 차지했다
+            attempt._retryAtMs = nowMs + leaseMs;
+        }
+        return attempt;
+    }
+
+    ServiceStoreResult ServiceScheduler::writeFinish( IServiceStoreConnection& connection, const ScheduledRun& run, uint64 serverID, bool bSucceeded, int64 nowMs )
+    {
+        ServiceSchedulerInternal::RunRecord finished;
+        finished._serverID = serverID;
+        finished._startMs  = nowMs;
+        finished._endMs    = nowMs;
+        finished._state    = bSucceeded ? ServiceSchedulerInternal::kStateSucceeded : ServiceSchedulerInternal::kStateFailed;
+        ServiceTransaction transaction;
+        ServiceSchedulerInternal::stageRun( transaction, ServiceSchedulerInternal::makeKey( run._jobID, run._occurrenceMs.count() ), finished, run._runToken );
+        return ServiceCommitRunner::commitOnce( connection, transaction );
+    }
+} // namespace sw
+
+namespace sw
+{
+    ServiceScheduler::ServiceScheduler()
+        : _listJob{}
+        , _serverID{ 0 }
+        , _lastTickMs{ 0 }
+        , _runTTLMs{ 0 }
+        , _store{}
+    {
+    }
+
+    ServiceScheduler::~ServiceScheduler()
+    {
+        shutdown();
+    }
+
+    void ServiceScheduler::initialize( ServiceStore& store, uint64 serverID )
+    {
+        _store.bindStore( &store );
+        _serverID = serverID;
+        _listJob.clear();
+    }
+
+    void ServiceScheduler::shutdown()
+    {
+        _listJob.clear();
+        _store.bindStore( nullptr );
+    }
+
+    ServiceTTLRule ServiceScheduler::makeRunTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table           = getTable();
+        rule._ttlIndexTable   = ServiceSchedulerInternal::getExpiryTable();
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &ServiceSchedulerInternal::readRunTimeMs;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&ServiceSchedulerInternal::readRunTimeMs>();
+        rule._backfillVersion = 0;
+        return rule;
+    }
+
+    bool ServiceScheduler::registerJob( const ScheduleDef& definition, const ScheduledJobFunction& function )
+    {
+        if ( function.isBound() == false || isValidDefinition( definition ) == false )
+        {
+            SW_LOG_WARNING_ID( "ServiceScheduler.IgnoredScheduledJobInvalid", "Ignored scheduled job '%#' — invalid schedule or no handler", definition._jobID );
+            return false;
+        }
+        const bool bWindowOutlivesRecord = definition._kind == ScheduleKind::Window && _runTTLMs > 0 && definition._windowEndMs - definition._windowStartMs >= _runTTLMs;
+        if ( bWindowOutlivesRecord )
+        {
+            // 구간이 열린 채 차지 레코드가 TTL 로 지워지면 같은 구간을 다시 돈다 - 구간은 레코드 수명보다 짧아야 한다
+            SW_LOG_ERROR_ID( "ServiceScheduler.WindowOutlivesRunRecord", "Scheduled job '%#' has a window longer than the run record TTL (%# ms) - raise _scheduleRunTTL", definition._jobID, _runTTLMs );
+            return false;
+        }
+        Job& job        = _listJob.emplace_back();
+        job._definition = definition;
+        job._function   = function;
+        return true;
+    }
+
+    void ServiceScheduler::update( UnixMilliseconds nowMs )
+    {
+        if ( _store.hasStore() == false )
+            return;
+        _lastTickMs = nowMs;
+        for ( size_t jobIndex = 0; jobIndex < _listJob.size(); ++jobIndex )
+        {
+            Job& job = _listJob[jobIndex];
+            if ( job._bClaimPending == SW_TRUE )
+                continue;
+            const optional<int64> latest = computeLatestOccurrence( job._definition, nowMs.count() );
+            if ( latest.has_value() == false || *latest <= job._handledOccurrenceMs )
+                continue;
+            const int64 occurrenceMs  = *latest;
+            const bool  bWaitingRetry = job._retryOccurrenceMs == occurrenceMs && nowMs.count() < job._retryAtMs;
+            if ( bWaitingRetry )
+                continue;
+            job._bClaimPending = SW_TRUE;
+            _store.submit( [jobID = job._definition._jobID, occurrenceMs, serverID = _serverID, now = nowMs.count(), leaseMs = job._definition._leaseMs]( IServiceStoreConnection& connection )
+            { return claimOccurrence( connection, jobID, occurrenceMs, serverID, now, leaseMs ); },
+                           [this, jobIndex, occurrenceMs]( const ClaimReport& attempt )
+            { onClaimCompleted( jobIndex, occurrenceMs, attempt._result, attempt._runToken, attempt._retryAtMs ); } );
+        }
+    }
+
+    void ServiceScheduler::completeRun( const ScheduledRun& run, bool bSucceeded )
+    {
+        if ( _store.hasStore() == false )
+            return;
+        _store.submit( [run, serverID = _serverID, bSucceeded, nowMs = _lastTickMs.count()]( IServiceStoreConnection& connection )
+        { return writeFinish( connection, run, serverID, bSucceeded, nowMs ); },
+                       [jobID = run._jobID]( ServiceStoreResult result, ServiceStoreCompletion completion )
+        {
+            if ( result != ServiceStoreResult::Ok && completion.isCancelled() == false ) // 종료 때문에 취소된 일은 경고하지 않는다
+                SW_LOG_WARNING_ID( "ServiceScheduler.CouldNotRecordEnd", "Could not record the end of scheduled run '%#' (another server took it over or the store is unavailable)", jobID );
+        } );
+    }
+
+    optional<int64> ServiceScheduler::computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs )
+    {
+        if ( nowMs < 0 )
+            return nullopt;
+        const int64 minuteOffsetMs = static_cast<int64>( definition._minuteOfDay ) * ServiceSchedulerInternal::kMinuteMs;
+        const int64 dayIndex       = ServiceSchedulerInternal::floorDivide( nowMs, ServiceSchedulerInternal::kDayMs );
+        int64       occurrenceMs   = 0;
+        switch ( definition._kind )
+        {
+            case ScheduleKind::Daily:
+            {
+                occurrenceMs = dayIndex * ServiceSchedulerInternal::kDayMs + minuteOffsetMs;
+                if ( occurrenceMs > nowMs )
+                    occurrenceMs -= ServiceSchedulerInternal::kDayMs;
+                break;
+            }
+            case ScheduleKind::Weekly:
+            {
+                const int64 weekday   = ( dayIndex + ServiceSchedulerInternal::kEpochWeekday ) % ServiceSchedulerInternal::kDaysPerWeek;
+                const int64 daysSince = ( weekday - definition._dayOfWeek + ServiceSchedulerInternal::kDaysPerWeek ) % ServiceSchedulerInternal::kDaysPerWeek;
+                occurrenceMs          = ( dayIndex - daysSince ) * ServiceSchedulerInternal::kDayMs + minuteOffsetMs;
+                if ( occurrenceMs > nowMs )
+                    occurrenceMs -= ServiceSchedulerInternal::kDaysPerWeek * ServiceSchedulerInternal::kDayMs;
+                break;
+            }
+            case ScheduleKind::Window:
+            {
+                if ( nowMs < definition._windowStartMs || definition._windowEndMs <= nowMs )
+                    return nullopt;
+                occurrenceMs = definition._windowStartMs;
+                break;
+            }
+            case ScheduleKind::Interval:
+            {
+                occurrenceMs = ServiceSchedulerInternal::floorDivide( nowMs, definition._intervalMs ) * definition._intervalMs;
+                break;
+            }
+        }
+        if ( occurrenceMs < 0 )
+            return nullopt; // 유닉스 시각 0 앞의 회차는 없다
+        return occurrenceMs;
+    }
+
+    bool ServiceScheduler::isValidDefinition( const ScheduleDef& definition )
+    {
+        const bool bInvalidJobDefinition = ServiceKeyUtil::isTokenText( definition._jobID, ServiceSchedulerInternal::kMaxJobIDSize, "_." ) == false || definition._leaseMs <= 0;
+        if ( bInvalidJobDefinition )
+            return false;
+        switch ( definition._kind )
+        {
+            case ScheduleKind::Daily:
+                return 0 <= definition._minuteOfDay && definition._minuteOfDay < 24 * 60;
+            case ScheduleKind::Weekly:
+                return 0 <= definition._minuteOfDay && definition._minuteOfDay < 24 * 60 && 0 <= definition._dayOfWeek && definition._dayOfWeek < 7;
+            case ScheduleKind::Window:
+                return 0 <= definition._windowStartMs && definition._windowStartMs < definition._windowEndMs;
+            case ScheduleKind::Interval:
+                return definition._intervalMs >= ServiceSchedulerInternal::kMinuteMs;
+        }
+        return false;
+    }
+
+    const ServiceRecordTable<ServiceScheduleRunRecord>& ServiceScheduler::getTable()
+    {
+        static const ServiceRecordTable<ServiceScheduleRunRecord> s_table{ "service_schedule" };
+        return s_table;
+    }
+
+    void ServiceScheduler::onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimResult serviceResult, uint64 runToken, int64 retryAtMs )
+    {
+        if ( jobIndex >= _listJob.size() )
+            return; // 종료한 뒤에 회수한 일
+        Job& job           = _listJob[jobIndex];
+        job._bClaimPending = SW_FALSE;
+        if ( serviceResult != ClaimResult::Retry )
+            job._retryBackoff.reset();
+        switch ( serviceResult )
+        {
+            case ClaimResult::Claimed:
+            {
+                job._handledOccurrenceMs = occurrenceMs;
+                ScheduledRun run;
+                run._jobID        = job._definition._jobID;
+                run._occurrenceMs = UnixMilliseconds{ occurrenceMs }; // 회차는 `update` 가 받은 유닉스 시각에서 계산했다(`computeLatestOccurrence`)
+                run._runToken     = runToken;
+                job._function( run );
+                break;
+            }
+            case ClaimResult::Finished:
+            {
+                job._handledOccurrenceMs = occurrenceMs;
+                break;
+            }
+            case ClaimResult::Busy:
+            {
+                job._retryOccurrenceMs = occurrenceMs;
+                job._retryAtMs         = retryAtMs;
+                break;
+            }
+            case ClaimResult::Retry:
+            {
+                job._retryOccurrenceMs = occurrenceMs;
+                job._retryAtMs         = _lastTickMs.count() + job._retryBackoff.takeDelayMs( kMaxRetryDelayMs ); // 서버마다 지터가 달라 살아난 저장소에 같은 순간 몰리지 않는다
+                break;
+            }
+        }
+    }
+} // namespace sw

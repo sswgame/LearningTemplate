@@ -1,4 +1,4 @@
-// 노드 캔버스 지우기 구간 금지(EditorInputBan.h)를 받지 않는 유일한 자리다 — collectRemovals 가 그 구간의 입구다(표시 SW_EDITOR_NODE_GRAPH_ADAPTER=1 은 CMake `sw_apply_editor_input_ban` 만 준다).
+// 노드 캔버스 지우기 구간 금지(EditorImGuiInputGuard.h)를 받지 않는 유일한 자리다 — collectRemovals 가 그 구간의 입구다(표시 SW_EDITOR_NODE_GRAPH_ADAPTER=1 은 CMake `sw_apply_editor_input_guard` 만 준다).
 #include "pch.h"
 
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
@@ -15,7 +15,7 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 

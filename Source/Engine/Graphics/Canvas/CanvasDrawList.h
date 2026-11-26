@@ -81,7 +81,7 @@ namespace sw
     struct SW_API CanvasTextureRef
     {
         shared_ptr<const Texture2D> _texture{};                                     ///< 이미지와 9-슬라이스. 패킷이 수명을 잡는다(머티리얼과 같은 규칙).
-        hashed_string               _texturePath{};                                 ///< 이미지의 리소스 경로(DDS). 렌더 스레드가 찾는다. 텍스처 객체가 없을 때 쓴다.
+        hashed_string               _texturePath{};                                 ///< 이미지의 에셋 경로(DDS). 렌더 스레드가 찾는다. 텍스처 객체가 없을 때 쓴다.
         uint16                      _atlasPage{ constant::invalid_index::kUint16 }; ///< 글리프 아틀라스 페이지(텍스처와 경로가 없을 때)
 
         /** @brief 같은 텍스처를 가리키면 true 입니다. */
@@ -93,7 +93,7 @@ namespace sw
 {
     /**
      * @brief 캔버스 일괄의 가위 사각형입니다(렌더 타깃 픽셀, 원점 왼쪽 위). 렌더러가 `RHIScissorRect` 로 옮긴다(`CanvasRenderer`).
-     * @details 게임이 보는 캔버스 헤더가 RHI 헤더를 include 하지 않도록 주인 형식으로 둔다(타깃 게이트). 일괄을 합칠 때 바이트로 비교해 패딩이 없다.
+     * @details 게임이 보는 캔버스 헤더가 RHI 헤더를 include 하지 않도록 주인 형식으로 둔다(타깃 가드). 일괄을 합칠 때 바이트로 비교해 패딩이 없다.
      */
     struct CanvasScissorRect
     {
@@ -230,7 +230,7 @@ namespace sw
         shared_ptr<const CanvasDrawList> _pMainOutput{};
         /**
          * @brief 개발 겹치기 목록(디버그 HUD — `UIScreen::isDevOverlay`)입니다. 없으면 nullptr 입니다(`getDevOverlay` 는 빈 목록).
-         * @details 주 출력 목록과 달리 사진 캡처가 읽는 지점 뒤, 화면에 내보내기 직전의 대상(백버퍼)에 그린다(`FramePassExecutor::drawDevOverlay`) — 그래서 스크린샷 ·
+         * @details 주 출력 목록과 달리 사진 캡처가 읽는 지점 뒤, 화면에 내보내기 직전의 대상(백버퍼)에 그린다(`FrameRecorder::drawDevOverlay`) — 그래서 스크린샷 ·
          *          `<ExpectImage>` 골든에 들지 않는다. 주 출력이 호스트 렌더 타깃(에디터 게임 뷰)이면 그 타깃에 그리지 않고 자기 렌더 텍스처 대상(`kDevOverlayTargetPath`)으로 싣는다 —
          *          에디터가 게임 뷰 위에 겹치고 에디터 UI 캡처는 그 텍스처를 빼고 다시 그린다.
          */

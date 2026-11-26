@@ -7,7 +7,7 @@
 
 namespace sw
 {
-    // 렌더 백엔드 계약 상수(`constant::render` — 프레임 수 · 형식 · 정렬)는 RHI 형식 값이 필요해 `RHIDescriptors.h` 에 있다. 분류 목록은 `Core/Foundation/Constants.h`.
+    // 렌더 백엔드 계약 상수(`constant::render` — 프레임 수 · 형식 · 정렬)는 RHI 형식 값이 필요해 `RHIConstants.h` 에 있다. 분류 목록은 `Core/Foundation/Constants.h`.
     namespace constant::window
     {
         /** @brief 기본 뷰포트 너비입니다. */
@@ -30,7 +30,7 @@ namespace sw
 
     /**
      * @brief Resource 아래 팩 · 폴더 이름입니다.
-     * @details XML 보다 먼저 리소스 루트를 찾아야 하므로 컴파일 상수로 둡니다.
+     * @details XML 보다 먼저 콘텐츠 루트를 찾아야 하므로 컴파일 상수로 둡니다.
      *          파이프라인 · 셰이더 · InputMap 경로는 EngineDefaultAssets 가 정합니다.
      */
     namespace constant::path

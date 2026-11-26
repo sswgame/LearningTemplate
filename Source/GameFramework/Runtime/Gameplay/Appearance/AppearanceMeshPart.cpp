@@ -23,7 +23,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
 
 namespace sw
@@ -74,7 +74,7 @@ namespace sw
             {
                 if ( pMesh == nullptr )
                     return 0;
-                return static_cast<uint64>( pMesh->getDrawVertexCount() ) * sizeof( RHIVertex ) + static_cast<uint64>( pMesh->getDrawIndexCount() ) * sizeof( uint32 );
+                return static_cast<uint64>( pMesh->getDrawVertexCount() ) * sizeof( MeshVertex ) + static_cast<uint64>( pMesh->getDrawIndexCount() ) * sizeof( uint32 );
             }
 
             static void appendReport( string& inoutReport, string_view message )

@@ -160,7 +160,7 @@ namespace sw::editor
         /**
          * @brief 스택을 건 결과를 새 메시 에셋(`<메시>_modified.mesh`)으로 씁니다. 원본은 덮어쓰지 않습니다.
          * @details 스킨 가중치는 정점 수가 같아 그대로 옮긴다. 모프 타깃은 위치가 바뀌어 차이가 맞지 않으므로 버리고 경고한다.
-         * @param pOutPath 쓴 리소스 id 를 받습니다(선택).
+         * @param pOutPath 쓴 에셋 id 를 받습니다(선택).
          */
         [[nodiscard]] bool bake( string* pOutPath ) const;
 

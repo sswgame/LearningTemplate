@@ -1,7 +1,7 @@
 /**
  * @file RHIPipelineStateDesc.h
  * @brief 그래픽스 · 컴퓨트 파이프라인 상태 서술체입니다.
- * @details PSO 를 짓는 곳(백엔드 팩토리 · PSO 캐시)만 읽는다 — 서술체 묶음(`RHIDescriptors.h`)에서 떼어 렌더 상태 · 메시 정점 헤더를 그 몇 곳만 끈다.
+ * @details PSO 를 짓는 곳(백엔드 팩토리 · PSO 캐시)만 읽는다 — 서술체 묶음(`RHITypes.h`)에서 떼어 렌더 상태 · 메시 정점 헤더를 그 몇 곳만 끈다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -44,7 +44,7 @@ namespace sw
          * @details 그리는 메시의 형식과 같아야 한다 — 머티리얼 PSO 는 배치의 형식으로 짓는다(`MaterialPSOKey::_vertexFormat`). 다르면 속성 스트림 원소 크기가 달라
          *          드로우가 버려진다(`RHIDrawDiagnostics::validateVertexSlotsBound`). 언리얼에서 정점 선언이 vertex factory 로 PSO 에 드는 자리다.
          */
-        RHIMeshVertexFormat _meshVertexFormat;
+        MeshVertexFormat _meshVertexFormat;
 
         /** @brief 기본 토폴로지로, 컬링 · 깊이 테스트 없이 만듭니다. */
         RHIPipelineStateDesc() noexcept;

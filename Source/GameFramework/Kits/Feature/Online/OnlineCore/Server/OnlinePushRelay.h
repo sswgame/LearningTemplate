@@ -23,7 +23,7 @@
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
 
 namespace sw
 {

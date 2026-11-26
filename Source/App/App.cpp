@@ -15,7 +15,7 @@
 
 #include "App/AppEntry.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/UserDataPath.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -56,8 +56,8 @@
 #include "Engine/Window/SplashWindow.h"
 
 #include "ModuleManager/GameModuleManager.h"
-#include "ModuleManager/Host/HostDevLayer.h"
 #include "ModuleManager/Host/HostLaunch.h"
+#include "ModuleManager/Host/IHostDevLayer.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #if defined( SW_PLATFORM_WEB )
@@ -84,7 +84,7 @@ namespace sw
     struct FramePacingInputs;
     struct NativeWindowEvent;
 
-    class CommandLineManager;
+    class CommandLine;
     class FramePacer;
     class GameModuleManager;
     class GenericWindow;
@@ -128,7 +128,7 @@ namespace sw
 
         // 부팅 단계. initialize() 가 차례로 부른다.
         /** @brief 플랫폼 창을 확보합니다. Engine 가 이미 만들어 두었으면 그 소유권을 넘겨받습니다. */
-        bool acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager );
+        bool acquireMainWindow( const EngineConfig& engineConfig, const CommandLine& commandLine );
         /**
          * @brief 기동 단계 `ModuleLoadStage` 의 호스트 로더입니다. 타입 공급자 모듈(GameFramework, 키트, SWGame)의 이미지를 로드해 그 타입을 등록합니다.
          * @details 헤드리스 작업(씬 쿠킹)도 이 단계를 지나므로 쿠킹이 게임과 키트 컴포넌트를 제 타입으로 쿠킹합니다. 인스턴스는 게임 호스트 서비스가 만듭니다.
@@ -210,9 +210,9 @@ namespace sw
             /**
              * @brief 크래시 보고 프로세스(`-crash-reporter=<폴더>`)입니다. 엔진은 명령줄 처리까지만 시작한 상태이며(서비스와 게임 모듈이 없습니다) 번들만 보내고 끝냅니다. 청해지지 않았으면 false 입니다.
              * @note App 은 GameFramework 의 HTTP 클라이언트를 링크하지 않아(층) 이 프로세스의 업로더는 보내지 않는 기본값이고 묶음을 건드리지 않습니다(`Kept`).
-             *       끝점이 있는 게임은 다음 기동의 게임 프로세스가 같은 폴더를 올립니다(`TelemetryUploadLink`).
+             *       끝점이 있는 게임은 다음 기동의 게임 프로세스가 같은 폴더를 올립니다(`TelemetryUploadAdapter`).
              */
-            static bool runCrashReporter( const CommandLineManager& commandLine )
+            static bool runCrashReporter( const CommandLine& commandLine )
             {
                 AbsolutePath reporterFolder;
                 if ( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) == false || reporterFolder.empty() )
@@ -227,7 +227,7 @@ namespace sw
              * @brief 헤드리스로 선 App 의 작업을 실행합니다 — 크래시 보고(`-crash-reporter`)면 그것만 하고, 아니면 개발 계층 @p pDevLayer 의 에디터 모듈 작업 표를 돌립니다(배포는 nullptr).
              * @return 실패한 작업이 없으면 true 입니다(명령줄이 없으면 아무것도 실행하지 않고 true).
              */
-            [[nodiscard]] static bool runAll( const CommandLineManager* pCommandLine, IHostDevLayer* pDevLayer )
+            [[nodiscard]] static bool runAll( const CommandLine* pCommandLine, IHostDevLayer* pDevLayer )
             {
                 if ( pCommandLine == nullptr )
                     return true;
@@ -243,7 +243,7 @@ namespace sw
             /**
              * @brief 개발 계층에만 있는 일(에디터 · 자동화 시나리오 · 초상화 굽기)을 청하는 인자가 있으면 true 입니다. 배포는 그 일을 조용히 건너뛰지 않고 기동 오류로 멈춘다.
              */
-            static bool hasDevOnlyArgument( const CommandLineManager& commandLine )
+            static bool hasDevOnlyArgument( const CommandLine& commandLine )
             {
                 bool   bEnableEditor = false;
                 string value;
@@ -312,7 +312,7 @@ namespace sw
 
         SubsystemInitResult initializeSubsystem() override
         {
-            const bool bStarted = _app.getModuleManager()->initializeClient( _app._launch.getLiveReloadManager(), _app._launch.getEngine().getRHI(), _app._pWindow,
+            const bool bStarted = _app.getModuleManager()->initializeClient( _app._launch.getModuleHotReloadManager(), _app._launch.getEngine().getRHI(), _app._pWindow,
                                                                              _app._launch.getEngine().getRenderDriver() );
             if ( bStarted == false )
             {
@@ -397,7 +397,7 @@ namespace sw
     // `Engine::initialize` 와 같은 이유다. 기동 단계표는 개발 계층이 든다(만든 때부터 잰다 — 배포는 재지 않는다).
     bool App::initialize( int32 argc, utf8* pArgv[] )
     {
-        // 리소스 루트 탐색은 Engine 가 로거를 시작한 뒤에 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단 메시지가
+        // 콘텐츠 루트 탐색은 Engine 가 로거를 시작한 뒤에 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단 메시지가
         // 사라지고, 반환값도 여기서는 쓸 곳이 없다.
 
         // 0. 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleLoadStage` 기동 단계가 여기서 모듈 라이브러리 창구를 찾아 타입 공급자 모듈을 올리고
@@ -418,7 +418,7 @@ namespace sw
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
         // App 이 맡는 헤드리스 작업은 크래시 보고와, 개발 계층의 에디터 모듈 작업 표(로컬라이제이션 도구, 원본 임포트)를 부르는 일이다(`AppCommandlets`).
         if ( engineStart == HostEngineStart::Headless )
-            return AppCommandlets::runAll( _launch.getEngine().getCommandLineManager(), _launch.getDevLayer() );
+            return AppCommandlets::runAll( _launch.getEngine().getCommandLine(), _launch.getDevLayer() );
 
         // 무인 실행(-unattended)은 보는 사람이 없다 — 스플래시도 메인 창도 띄우지 않고 그리기 · 캡처만 한다(언리얼 -RenderOffScreen). 화면 표시를 보는 시나리오
         // (present="true")는 그 단계에서 자동화 세션이 메인 창을 띄운다(`AutomationSession::applyPresentPolicy`).
@@ -429,9 +429,9 @@ namespace sw
 
         splash.updateStatus( "Loading Configuration & Display...", 0.40f );
 
-        ConfigManager*            pConfigManager      = _launch.getEngine().getConfigManager();
-        const CommandLineManager* pCommandLineManager = _launch.getEngine().getCommandLineManager();
-        if ( pConfigManager == nullptr || pCommandLineManager == nullptr )
+        ConfigManager*     pConfigManager = _launch.getEngine().getConfigManager();
+        const CommandLine* pCommandLine   = _launch.getEngine().getCommandLine();
+        if ( pConfigManager == nullptr || pCommandLine == nullptr )
         {
             splash.dismiss();
             return false;
@@ -446,7 +446,7 @@ namespace sw
 
         // 자동화 시나리오는 엔진 기동이 끝난 지금, 모듈을 올리기 전에 시작한다(첫 단계의 시작 조건이 모듈 · 씬이 설 때까지 기다린다). 배포는 실행기가 없다.
         IHostDevLayer* const pRunningDevLayer = _launch.getDevLayer();
-        if ( pRunningDevLayer != nullptr && pRunningDevLayer->startAutomation( *pCommandLineManager ) == false )
+        if ( pRunningDevLayer != nullptr && pRunningDevLayer->startAutomation( *pCommandLine ) == false )
         {
             splash.dismiss();
             return false;
@@ -458,7 +458,7 @@ namespace sw
 
         // 2. 창 소유권을 가져온다(초기화 중에는 숨긴 상태로 시작한다).
         splash.updateStatus( "Initializing Platform Window & Graphics...", 0.60f );
-        if ( acquireMainWindow( *pEngineConfig, *pCommandLineManager ) == false )
+        if ( acquireMainWindow( *pEngineConfig, *pCommandLine ) == false )
         {
             splash.dismiss();
             return false;
@@ -480,7 +480,7 @@ namespace sw
         markStartupPhase( "modules" );
 
         // 모듈이 선 뒤 한 번 하고 끝나는 작업(초상화 굽기)은 개발 계층이 맡는다. 실행했으면 창을 띄우지 않고 끝낸다.
-        const HostTaskResult afterServices = pRunningDevLayer != nullptr ? pRunningDevLayer->runAfterHostSubsystems( *pCommandLineManager ) : HostTaskResult::NotRequested;
+        const HostTaskResult afterServices = pRunningDevLayer != nullptr ? pRunningDevLayer->runAfterHostSubsystems( *pCommandLine ) : HostTaskResult::NotRequested;
         if ( afterServices != HostTaskResult::NotRequested )
         {
             splash.dismiss();
@@ -495,7 +495,7 @@ namespace sw
         // 보는 사람이 있으면(무인이 아니거나, 무인이어도 지켜보는 표시가 있으면) 창을 띄운다 — `MainWindowSubsystem::shouldRenderOffScreen`.
         // 띄우는 것은 첫 그림이 나온 뒤다(`onStartupFrameEnded`): 첫 프레임은 시작 씬을 받느라 길어(Debug 수 초) 그동안 빈 흰 창이 보였다. 그 사이는 스플래시가 진행을 보인다
         // (언리얼도 첫 맵이 설 때까지 스플래시를 둔다).
-        if ( MainWindowSubsystem::shouldRenderOffScreen( *_launch.getEngine().getCommandLineManager() ) == false )
+        if ( MainWindowSubsystem::shouldRenderOffScreen( *_launch.getEngine().getCommandLine() ) == false )
         {
             splash.updateStatus( "Loading First Scene...", 1.0f );
             _bShowWindowPending = SW_TRUE;
@@ -509,12 +509,12 @@ namespace sw
         return true;
     }
 
-    bool App::acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager )
+    bool App::acquireMainWindow( const EngineConfig& engineConfig, const CommandLine& commandLine )
     {
         uint32 width  = engineConfig._window._width;
         uint32 height = engineConfig._window._height;
-        commandLineManager.getArgument( CommandLineArgument::WIDTH, width );
-        commandLineManager.getArgument( CommandLineArgument::HEIGHT, height );
+        commandLine.getArgument( CommandLineArgument::WIDTH, width );
+        commandLine.getArgument( CommandLineArgument::HEIGHT, height );
 
         // 주 창은 엔진 범위의 서브시스템(MainWindow)이 소유한다. 엔진 기동(RHI)이 기본 창을 만들어 넘겨 두었으면 그것을 쓰고, 없으면(헤드리스 작업 등) 여기서 만들어 넘긴다.
         // App 은 관찰 포인터만 든다 — 창은 엔진 종료 때 그 서브시스템이 파괴한다.
@@ -526,7 +526,7 @@ namespace sw
         }
         if ( pWindowHost->getWindow() == nullptr )
         {
-            unique_ptr<GenericWindow> window = GenericWindow::createMainWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), width, height, commandLineManager );
+            unique_ptr<GenericWindow> window = GenericWindow::createMainWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), width, height, commandLine );
             if ( window == nullptr )
             {
                 SW_LOG_ERROR_ID( "App.FailedCreatePlatformWindow", "Failed to create platform window!" );
@@ -545,7 +545,7 @@ namespace sw
 
     bool App::loadModuleLibraries()
     {
-        const CommandLineManager* const pCommandLine = _launch.getEngine().getCommandLineManager();
+        const CommandLine* const pCommandLine = _launch.getEngine().getCommandLine();
         if ( pCommandLine == nullptr )
             return false;
         IHostDevLayer* const pDevLayer = _launch.getDevLayer();

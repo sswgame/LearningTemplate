@@ -14,12 +14,12 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
-#include "GameFramework/Runtime/Character/Combat/TurnOrder.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
+#include "GameFramework/Runtime/Gameplay/Match/TurnOrder.h"
 #include "GameFramework/Runtime/World/Encounter/StepEncounter.h"
 
 namespace sw

@@ -22,7 +22,7 @@
 
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Localization/StringTable.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -33,7 +33,7 @@ namespace sw
     class SW_API LocalizationBinaryTable
     {
     public:
-        static constexpr FormatDef   kFormat{ "SWLR" };
+        static constexpr FormatDesc  kFormat{ "SWLR" };
         static constexpr const utf8* kExtension = ".locres";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

@@ -48,7 +48,7 @@ namespace sw
         [[nodiscard]] bool read( const vector<uint8>& bytes );
 
         /** @brief 소스 하나 · 형식 하나의 DDC 항목 서술입니다. 변형(define · 진입점 · 스테이지)은 항목의 동작 키가 가른다. */
-        [[nodiscard]] static string makeKeyDescription( string_view source, string_view target, uint64 toolchainFingerprint, uint64 sourceHash );
+        [[nodiscard]] static string makeKeyDescription( string_view source, string_view target, uint64 toolchainDigest, uint64 sourceHash );
 
     private:
         vector<vector<CookInput>>     _listInputList;

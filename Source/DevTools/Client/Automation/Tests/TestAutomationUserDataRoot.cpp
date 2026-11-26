@@ -10,7 +10,7 @@
 #include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 
 // AutomationUserDataRootTest — 시나리오 실행의 사용자 데이터 뿌리가 자동화 폴더(`Saved/Automation`) 밖이면 세션 시작이 거절되는 규칙(`validateUnderBase` · `resolve`)과
-// 사람의 폴더가 바뀌었는지 보는 도장(`UserDataFolderStamp`)(nogpu).
+// 사람의 폴더가 바뀌었는지 보는 도장(`UserDataFolderStat`)(nogpu).
 
 namespace
 {
@@ -153,15 +153,15 @@ SW_TEST_CASE( AutomationUserDataRootTest, FolderStampChangesWhenAFileIsAdded )
 {
     const sw::AbsolutePath folder = sw::AutomationUserDataRoot::getBaseFolder().join( "unit_test_stamp" );
     (void)sw::FileUtil::removeDirectory( folder );
-    const sw::UserDataFolderStamp missing = sw::UserDataFolderStamp::take( folder );
+    const sw::UserDataFolderStat missing = sw::UserDataFolderStat::take( folder );
     SW_EXPECT_FALSE( missing._bExists );
 
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( folder ) );
-    const sw::UserDataFolderStamp empty = sw::UserDataFolderStamp::take( folder );
+    const sw::UserDataFolderStat empty = sw::UserDataFolderStat::take( folder );
     SW_EXPECT_TRUE( empty != missing );
-    SW_EXPECT_TRUE( sw::UserDataFolderStamp::take( folder ) == empty );
+    SW_EXPECT_TRUE( sw::UserDataFolderStat::take( folder ) == empty );
 
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( folder.join( "save.dat" ), "x" ) );
-    SW_EXPECT_TRUE( sw::UserDataFolderStamp::take( folder ) != empty );
+    SW_EXPECT_TRUE( sw::UserDataFolderStat::take( folder ) != empty );
     (void)sw::FileUtil::removeDirectory( folder );
 }

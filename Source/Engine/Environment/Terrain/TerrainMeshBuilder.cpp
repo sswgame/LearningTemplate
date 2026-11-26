@@ -44,8 +44,8 @@ namespace sw
                 return point;
             }
 
-            static RHIVertex makeVertex( const TerrainHeightfield& heightfield, const float3& translation, uint32 centerSampleX, uint32 centerSampleZ, uint32 sampleX,
-                                         uint32 sampleZ )
+            static MeshVertex makeVertex( const TerrainHeightfield& heightfield, const float3& translation, uint32 centerSampleX, uint32 centerSampleZ, uint32 sampleX,
+                                          uint32 sampleZ )
             {
                 const float32 height   = heightfield.getSampleHeight( static_cast<int32>( sampleX ), static_cast<int32>( sampleZ ) );
                 const float3  normal   = heightfield.computeSampleNormal( sampleX, sampleZ );
@@ -54,7 +54,7 @@ namespace sw
                 // x 와 z 는 (정수 셀 차이) × 셀 크기다. (원점 + 셀 × 크기) - 이동 으로 빼면 청크마다 반올림이 달라져 이웃의 같은 정점이 어긋난다.
                 const float32 localX = static_cast<float32>( static_cast<int32>( sampleX ) - static_cast<int32>( centerSampleX ) ) * cellSize._x;
                 const float32 localZ = static_cast<float32>( static_cast<int32>( sampleZ ) - static_cast<int32>( centerSampleZ ) ) * cellSize._y;
-                RHIVertex     vertex{};
+                MeshVertex    vertex{};
                 vertex._arrPosition[0] = localX;
                 vertex._arrPosition[1] = height - translation._y;
                 vertex._arrPosition[2] = localZ;
@@ -176,7 +176,7 @@ namespace sw
     }
 
     void TerrainMeshBuilder::makeChunkVertices( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod,
-                                                const uint32 ( &arrNeighborLOD )[static_cast<uint32>( TerrainChunkSide::Count )], vector<RHIVertex>& outListVertex )
+                                                const uint32 ( &arrNeighborLOD )[static_cast<uint32>( TerrainChunkSide::Count )], vector<MeshVertex>& outListVertex )
     {
         using Internal = TerrainMeshBuilderInternal;
         outListVertex.clear();
@@ -207,7 +207,7 @@ namespace sw
                 const Internal::GridPoint p10 = Internal::collapse( x + step, z, cells, arrSideStep );
                 const Internal::GridPoint p01 = Internal::collapse( x, z + step, cells, arrSideStep );
                 const Internal::GridPoint p11 = Internal::collapse( x + step, z + step, cells, arrSideStep );
-                // 위에서 볼 때 앞면이 되는 감김(MeshUtil::createPlane 과 같다): (00, 01, 11), (00, 11, 10). 접혀 넓이가 0 이 된 것은 버린다.
+                // 위에서 볼 때 앞면이 되는 감김(PrimitiveMeshBuilder::createPlane 과 같다): (00, 01, 11), (00, 11, 10). 접혀 넓이가 0 이 된 것은 버린다.
                 const Internal::GridPoint arrTriangle[2][3] = {
                     {p00, p01, p11},
                     {p00, p11, p10}
@@ -227,7 +227,7 @@ namespace sw
     }
 
     void TerrainMeshBuilder::applyGeomorph( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod, float32 lodDistance,
-                                            vector<RHIVertex>& inoutListVertex )
+                                            vector<MeshVertex>& inoutListVertex )
     {
         using Internal = TerrainMeshBuilderInternal;
         if ( heightfield.isValid() == false || layout._chunkCells == 0 )
@@ -250,7 +250,7 @@ namespace sw
         const float32 minZ           = origin._z + static_cast<float32>( baseZ ) * cellSize._y;
         const float32 maxZ           = origin._z + static_cast<float32>( baseZ + cells ) * cellSize._y;
         const float32 groundHeight   = heightfield.getSampleHeight( static_cast<int32>( baseX + cells / 2 ), static_cast<int32>( baseZ + cells / 2 ) );
-        for ( RHIVertex& vertex : inoutListVertex )
+        for ( MeshVertex& vertex : inoutListVertex )
         {
             const uint32  sampleX = static_cast<uint32>( MathUtil::round( vertex._arrUV[0] * last ) );
             const uint32  sampleZ = static_cast<uint32>( MathUtil::round( vertex._arrUV[1] * last ) );

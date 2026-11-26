@@ -1,8 +1,8 @@
 /**
  * @file TaskNode.h
  * @brief TaskManager 의 내부 노드입니다(태스크 · 스테이지 · 병렬 그룹 · 조인 카운터 · 후속 목록).
- * @details 공개 API 가 아닙니다. `Core/Task` 안의 구현 파일만 include 합니다. 바깥에서는 `TaskTypes.h` 의 핸들과
- *          `TaskManager.h` 만 봅니다. 스케줄러(`TaskManager.cpp`) · 풀(`TaskNode.cpp`) · 핸들 구현(`TaskTypes.cpp`)이
+ * @details 공개 API 가 아닙니다. `Core/Task` 안의 구현 파일만 include 합니다. 바깥에서는 `TaskHandle.h` 의 핸들과
+ *          `TaskManager.h` 만 봅니다. 스케줄러(`TaskManager.cpp`) · 풀(`TaskNode.cpp`) · 핸들 구현(`TaskHandle.cpp`)이
  *          같은 노드와 그 풀(`TaskNodePool` — 프레임이 안정되면 힙을 건드리지 않는다)을 다루므로, 셋이 공유하는 정의를 여기 둡니다.
  */
 #pragma once
@@ -19,7 +19,10 @@
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Task/LockFreeObjectPool.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
+#include "Core/Task/TaskDelegate.h"
+#include "Core/Task/TaskHandle.h"
+#include "Core/Task/TaskProfileHook.h"
 
 #include <variant>
 

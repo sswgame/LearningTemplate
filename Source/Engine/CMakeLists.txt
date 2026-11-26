@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file Source/Engine/CMakeLists.txt
-# @brief Engine 라이브러리 — 소스 목록 · 타깃(ABI 스탬프 · PCH · 내보내기) · 서드파티 링크 · RHI · 시스템 라이브러리 · 유니티 · 리플렉션 코드젠 · Jolt 오브젝트
+# @brief Engine 라이브러리 — 소스 목록 · 타깃(ABI 다이제스트 · PCH · 내보내기) · 서드파티 링크 · RHI · 시스템 라이브러리 · 유니티 · 리플렉션 코드젠 · Jolt 오브젝트
 # @details
 # 폴더(Common/Reflection/...)는 소스를 나눠 두기 위한 것이고, 모듈 사이의
 # 순환 참조(Reflection <-> Graphics 등) 때문에 하나의 라이브러리로 링크한다
@@ -44,8 +44,8 @@ list(REMOVE_ITEM ENGINE_SOURCES ${list_rhi_backend_source})
 # 엔진에 남는 것은 런타임 코드가 선언하는 얇은 창구다: 감시 값(`Watch/`), 단계 · 차단 조건 · 단계 초기화 등록과 시나리오 형식(`Scenario/`), 실행기 창구 `IAutomationRuntime`.
 # 등록 매크로는 `SW_SHIPPING` 에서 빈 선언이 된다(`AutomationStepRegistry.h` · `AutomationWatch.h` · `AutomationStageReset.h`).
 
-# 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Modules/Build/BuildLayout.cmake 의 `SW_EXCLUDED_ENGINE_FOLDERS`).
-# 그 폴더의 헤더는 타깃 게이트 `serverbuild` 가 막는다(서버는 `IEngineRenderDriver` 만 본다). 리플렉션 헤더도 아래 8) 에서 뺀다.
+# 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Modules/Build/OutputLayout.cmake 의 `SW_EXCLUDED_ENGINE_FOLDERS`).
+# 그 폴더의 헤더는 타깃 가드 `serverbuild` 가 막는다(서버는 `IEngineRenderDriver` 만 본다). 리플렉션 헤더도 아래 8) 에서 뺀다.
 set(excluded_folder_regex "")
 foreach(excluded_folder IN LISTS SW_EXCLUDED_ENGINE_FOLDERS)
 	sw_remove_excluded_sources(ENGINE_SOURCES "/Source/Engine/${excluded_folder}/.*\\.(c|cpp)$")
@@ -74,7 +74,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	sw_remove_excluded_sources(ENGINE_SOURCES "/Source/Engine/(Window|Input)/Headless/.*\\.(c|cpp)$")
 endif()
 # 서버 전용 소스(`Server` — 운영 HTTP 끝점 · 관리 채널 · 서버 서비스 레지스트리, `Config/Server` — 서버 비밀)는 클라이언트 구성이, 클라이언트 전용 소스(`Client/`)는
-# 전용 서버가 짓지 않는다(헤더는 게이트 `clientbuild` · `serverbuild`). 소스를 트리째 모으는 다른 타깃과 같은 함수다.
+# 전용 서버가 짓지 않는다(헤더는 가드 `clientbuild` · `serverbuild`). 소스를 트리째 모으는 다른 타깃과 같은 함수다.
 # 렌더러에 기대는 감시 값 · 조건은 `Client/` 가 아니라 렌더러 폴더 안 주인 곁에 둔다(서버는 `Renderer` 를 통째로 짓지 않는다).
 sw_remove_other_target_sources(ENGINE_SOURCES)
 
@@ -92,16 +92,16 @@ endif()
 include("${CMAKE_BINARY_DIR}/generated/sw/config/EngineLayers.cmake")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/EngineLayers.toml")
 set(list_engine_layer_source "")
-foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
+foreach(layer IN LISTS SW_ENGINE_LAYER_LIST)
 	# 이 구성이 짓는 것(ENGINE_SOURCES — 짓지 않는 폴더 · RHI 백엔드 · Jolt 를 뺀 것)만 남긴다.
-	list(TRANSFORM SW_ENGINE_TIER_${tier}_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" OUTPUT_VARIABLE list_tier_source)
-	set(list_tier_excluded ${list_tier_source})
-	list(REMOVE_ITEM list_tier_excluded ${ENGINE_SOURCES})
-	if(list_tier_excluded)
-		list(REMOVE_ITEM list_tier_source ${list_tier_excluded})
+	list(TRANSFORM SW_ENGINE_LAYER_${layer}_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" OUTPUT_VARIABLE list_layer_source)
+	set(list_layer_excluded ${list_layer_source})
+	list(REMOVE_ITEM list_layer_excluded ${ENGINE_SOURCES})
+	if(list_layer_excluded)
+		list(REMOVE_ITEM list_layer_source ${list_layer_excluded})
 	endif()
-	set(engine_tier_source_${tier} ${list_tier_source})
-	list(APPEND list_engine_layer_source ${list_tier_source})
+	set(engine_layer_source_${layer} ${list_layer_source})
+	list(APPEND list_engine_layer_source ${list_layer_source})
 endforeach()
 list(REMOVE_ITEM ENGINE_SOURCES ${list_engine_layer_source})
 
@@ -111,7 +111,7 @@ list(REMOVE_ITEM ENGINE_SOURCES ${list_engine_layer_source})
 sw_find_engine_compression_libraries(list_engine_compression_lib)
 
 # ------------------------------------------------------------------------------
-# 3) Engine 타겟 — ABI 스탬프 · include 전파 · 정의 · PCH · Core OBJECT 재사용 · 내보내기
+# 3) Engine 타겟 — ABI 다이제스트 · include 전파 · 정의 · PCH · Core OBJECT 재사용 · 내보내기
 # Core 소스는 한 번만 컴파일. 동일 .obj를 Engine에 넣어
 # Dev에서 App/Editor가 Engine.dll로부터 FileUtil/Logger를 dllimport
 # ReflectionParser는 Core STATIC만 링크해 Engine.dll 순환을 피함
@@ -120,15 +120,15 @@ add_library(Engine ${core_lib_type} ${ENGINE_SOURCES})
 sw_apply_target_layer_guard(Engine engine) # 타깃 경계 — Engine 은 GameFramework · Editor · 호스트를 보지 못한다. 층 부분 · Jolt 오브젝트는 이 include 자리를 복사한다
 sw_require_template_definitions(Engine) # `.inl` 누락을 링크가 아니라 컴파일에서 — 층 부분 · Jolt 오브젝트도 이 옵션을 복사한다
 
-# 핫 리로드 ABI 스탬프 — Engine 이 자기 헤더 지문을 박는다(`Engine/Module/EngineABIStamp.cpp`). 모듈도 같은 값을 박는다.
-sw_define_engine_abi_stamp()
-add_dependencies(Engine SwEngineABIStamp)
+# 핫 리로드 ABI 다이제스트 — Engine 이 자기 헤더 지문을 박는다(`Engine/Module/EngineABIDigest.cpp`). 모듈도 같은 값을 박는다.
+sw_define_engine_abi_digest()
+add_dependencies(Engine SwEngineABIDigest)
 target_include_directories(Engine PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
-set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineABIStamp.cpp" PROPERTIES
-	OBJECT_DEPENDS "${SW_ENGINE_ABI_STAMP_HEADER}"
+set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineABIDigest.cpp" PROPERTIES
+	OBJECT_DEPENDS "${SW_ENGINE_ABI_DIGEST_HEADER}"
 )
 
-# 쿠커 코드 지문 — 쿠킹 재사용 판단의 입력을 소스 내용에서 산출한다(`Engine/Content/CookCodeFingerprint.h`). 엔진 소스 어디가 바뀌어도 돌지만 결과가 같으면 파일을 다시 쓰지 않는다.
+# 쿠커 코드 지문 — 쿠킹 재사용 판단의 입력을 소스 내용에서 산출한다(`Engine/Content/CookCodeDigest.h`). 엔진 소스 어디가 바뀌어도 돌지만 결과가 같으면 파일을 다시 쓰지 않는다.
 sw_glob_source_tree(cook_code_inputs RECURSE
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.h"
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.hpp"
@@ -138,7 +138,7 @@ sw_glob_source_tree(cook_code_inputs RECURSE
 	"${CMAKE_SOURCE_DIR}/Source/DevTools/Cook/*.h" # 쿠커는 DevTools 에 있다 — 지문은 소스 글만 읽는다
 	"${CMAKE_SOURCE_DIR}/Source/DevTools/Cook/*.cpp"
 )
-set(cook_code_header "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeFingerprint.gen.h")
+set(cook_code_header "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeDigest.gen.h")
 # 쿠커 도구 판은 쿠킹하는 쪽의 vcpkg 기록이다 — 교차 빌드는 호스트 빌드의 것(HostTools.cmake), 아니면 이 빌드의 것.
 if(CMAKE_CROSSCOMPILING)
 	set(cook_vcpkg_status "${SW_HOST_VCPKG_STATUS}")
@@ -147,18 +147,18 @@ else()
 endif()
 add_custom_command(
 	OUTPUT "${cook_code_header}"
-	COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/cook_code_fingerprint.py"
+	COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/cook_code_digest.py"
 		--root "${CMAKE_SOURCE_DIR}" --inputs "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json"
 		--vcpkg-status "${cook_vcpkg_status}" --out "${cook_code_header}"
-		--cache "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeFingerprint.cache.json" # 파일 지문 캐시 — 바뀐 소스만 다시 읽는다
+		--cache "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeDigest.cache.json" # 파일 지문 캐시 — 바뀐 소스만 다시 읽는다
 	DEPENDS ${cook_code_inputs} "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json" "${cook_vcpkg_status}"
-		"${CMAKE_SOURCE_DIR}/Scripts/generate/cook_code_fingerprint.py"
-	COMMENT "Fingerprinting cooker code"
+		"${CMAKE_SOURCE_DIR}/Scripts/generate/cook_code_digest.py"
+	COMMENT "Hashing cooker code"
 	VERBATIM
 )
-add_custom_target(SwCookCodeFingerprint DEPENDS "${cook_code_header}")
-set_target_properties(SwCookCodeFingerprint PROPERTIES FOLDER "CMakePredefinedTargets")
-set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Content/CookCodeFingerprint.cpp" PROPERTIES OBJECT_DEPENDS "${cook_code_header}")
+add_custom_target(SwCookCodeDigest DEPENDS "${cook_code_header}")
+set_target_properties(SwCookCodeDigest PROPERTIES FOLDER "CMakePredefinedTargets")
+set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Content/CookCodeDigest.cpp" PROPERTIES OBJECT_DEPENDS "${cook_code_header}")
 
 # `Source/Engine` 자체는 include 경로가 아니다 — `#include "pch.h"` 만 진입 헤더로 푼다(소비하는 타깃 모두가 받는다).
 sw_add_pch_entry_directory(Engine PUBLIC engine "Engine/pch.h")
@@ -179,7 +179,7 @@ target_sources(Engine PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/../sw.natvis"
 )
 
-# Core 의 OBJECT 들(티어 부분 `Core_tier<N>_objects`) — 목록은 Core 의 `SW_CORE_OBJECTS` 속성이다(Source/Core/CMakeLists.txt).
+# Core 의 OBJECT 들(층 부분 `Core_layer<N>_objects`) — 목록은 Core 의 `SW_CORE_OBJECTS` 속성이다(Source/Core/CMakeLists.txt).
 get_target_property(list_core_objects Core SW_CORE_OBJECTS)
 if(NOT list_core_objects)
 	message(FATAL_ERROR "[Engine] Core 의 SW_CORE_OBJECTS 속성이 비었다 — Source/Core 를 먼저 add_subdirectory 해야 한다")
@@ -300,7 +300,7 @@ endif()
 # 다시 넣고 싶어지면 먼저 `SW_ENABLE_UNITY_BUILD` 를 켠 빌드로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
 #
 # 매크로는 이름 규칙으로 못 막는다. X11 을 include 하는 .cpp(`Convex` · `None` … 매크로)는 리눅스에서 `sw_set_unity_build` 가
-# include 줄을 보고 저절로 묶음에서 뺀다 — 이것도 목록이 아니다(`cmake/Toolchain/Options/UnityBuild.cmake`).
+# include 줄을 보고 저절로 묶음에서 뺀다 — 이것도 목록이 아니다(`cmake/Modules/Build/UnityBuild.cmake`).
 # ------------------------------------------------------------------------------
 sw_set_unity_build(Engine)
 
@@ -329,10 +329,10 @@ sw_add_reflection_step(Engine
 	MODULE Engine
 	EXCLUDE_REGEX "${excluded_folder_regex}"
 )
-sw_add_reflect_builtins_gen(Engine)
+sw_add_reflect_builtins_step(Engine)
 
 # ------------------------------------------------------------------------------
-# 9) Jolt 백엔드 소스 — 자기 PCH 를 가진 OBJECT 라이브러리(목적 파일은 Core 티어 부분처럼 Engine 에 들어간다)
+# 9) Jolt 백엔드 소스 — 자기 PCH 를 가진 OBJECT 라이브러리(목적 파일은 Core 층 부분처럼 Engine 에 들어간다)
 #
 # Jolt 백엔드 소스는 Jolt 의 대상 기능(-mavx2 ...)으로 컴파일되므로 Engine PCH 를 쓸 수 없다(대상 기능이 다른 PCH 는 clang 이 거부한다).
 # PCH 없이 지으면 TU 마다 엔진 `pch.h` 를 다시 파싱한다 — 그 파싱이 TU 시간의 절반이다. 그래서 이 소스만 따로 묶어 `pch.h` + Jolt
@@ -366,21 +366,21 @@ add_dependencies(Engine EngineJolt_objects)
 
 # ------------------------------------------------------------------------------
 # 10) 층 부분 — 층마다 OBJECT 라이브러리 `EngineLayer<N>`(오브젝트는 Engine 이미지 안, `sw_add_module_part`). 부분 N 은 N 보다 위 층의 헤더마다 같은 경로의
-#     `#error` 껍데기를 자기 include 자리 맨 앞에 둔다 — 아래 층이 위 층 헤더를 include 하면(전이 include 도) 컴파일이 멈춘다. 에디터 층과 같은 방식이다.
+#     `#error` 가드를 자기 include 자리 맨 앞에 둔다 — 아래 층이 위 층 헤더를 include 하면(전이 include 도) 컴파일이 멈춘다. 에디터 층과 같은 방식이다.
 #     부분은 Engine 의 정의 · 옵션 · include · 링크 목록을 이 파일이 끝날 때 받는다(`LINK_OWNER`, DEFER — 놓는 자리 순서에 기대지 않는다).
 # ------------------------------------------------------------------------------
-foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
-	if(NOT engine_tier_source_${tier})
+foreach(layer IN LISTS SW_ENGINE_LAYER_LIST)
+	if(NOT engine_layer_source_${layer})
 		continue()   # 이 구성이 짓지 않는 층(전용 서버의 렌더러)
 	endif()
-	sw_add_module_part(EngineLayer${tier}
+	sw_add_module_part(EngineLayer${layer}
 		OWNER Engine
-		SOURCES ${engine_tier_source_${tier}}
+		SOURCES ${engine_layer_source_${layer}}
 		LINK_OWNER
 	)
-	sw_add_layer_stubs(EngineLayer${tier} ${tier} SW_ENGINE_TIER Engine)
-	target_include_directories(EngineLayer${tier} PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
-	add_dependencies(EngineLayer${tier} SwCookCodeFingerprint)
+	sw_add_layer_guards(EngineLayer${layer} ${layer} SW_ENGINE_LAYER Engine)
+	target_include_directories(EngineLayer${layer} PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
+	add_dependencies(EngineLayer${layer} SwCookCodeDigest)
 endforeach()
 
 # ------------------------------------------------------------------------------

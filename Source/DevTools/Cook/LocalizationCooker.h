@@ -28,7 +28,7 @@ namespace sw
     struct LocalizationCooker
     {
         /**
-         * @brief @p sourceRoot 아래 프로젝트(`*.locproject.xml`)마다 쿠킹된 문화권(`LocalizationProject::collectCookedCultures`)의 표를 `<cookedDir>/<리소스 id>` 에 굽습니다.
+         * @brief @p sourceRoot 아래 프로젝트(`*.locproject.xml`)마다 쿠킹된 문화권(`LocalizationProject::collectCookedCultures`)의 표를 `<cookedDir>/<에셋 id>` 에 굽습니다.
          * @details 출력 하나가 쿠킹 작업 하나다 — 입력(프로젝트 · 원문 표 · 그 문화권 번역 표)은 작업 안의 읽기로 기록된다. 문화권 목록은 작업 밖에서 프로젝트 파일을 읽어 정한다.
          * @return 쓴(다시 쓴 것 포함) 표 수입니다. 실패는 @p outFailedCount 로 센다(프로젝트를 읽지 못함 · 화면에 나올 글이 없는 문화권 · 해시 충돌 · 쓰기 실패).
          */

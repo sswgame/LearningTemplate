@@ -167,7 +167,7 @@ namespace sw
      *          `Clock` 은 결과를 로그로 늦게 내는 백그라운드 작업(저장 검증)이 쓴다. 시계가 그 작업보다 앞서 가면 뒤 단계(임시 폴더 지우기)가 작업이 읽을 파일을 바꾸고,
      *          결과 줄이 다음 시나리오 창에 떨어진다. 언리얼 자동화가 셰이더 · 에셋 컴파일을 기다린 뒤 다음 명령을 도는 것과 같다.
      *          `Capture` 는 그림을 덮는 것(페이드)이다 — 캡처가 자리 잡은 화면을 찍게 한다(`AutomationCaptureUtil::isReadyForCapture`).
-     *          `RenderStable` 은 그 상태를 만든 기능이 제 폴더에서 등록한다(TAA 기록은 `Renderer/Frame/View/RenderStability.cpp`) — 실행기는 조건 이름만 안다.
+     *          `RenderStable` 은 그 상태를 만든 기능이 제 폴더에서 등록한다(TAA 기록은 `Renderer/Frame/View/RenderConvergence.cpp`) — 실행기는 조건 이름만 안다.
      */
     struct AutomationBlocker
     {

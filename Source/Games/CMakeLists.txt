@@ -1,11 +1,11 @@
 # ==============================================================================
 # @file Source/Games/CMakeLists.txt
-# @brief 활성 게임 팩 → 타겟명 SWGame (App LiveReload / Shipping 링크), 함께 짓는 게임 팩(SW_GAMES) → SWGame_<게임>
+# @brief 활성 게임 팩 → 타겟명 SWGame (App HotReload / Shipping 링크), 함께 짓는 게임 팩(SW_GAMES) → SWGame_<게임>
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
 # 1) 활성 게임 팩 — 타깃 SWGame_<게임>, 모듈 이름 · 산출물은 SWGame(`Bin/Modules/SWGame`)
-# App LiveReload 는 모듈 이름을, Shipping 정적 링크는 전역 속성 SW_ACTIVE_GAME_TARGET 을 본다
+# App HotReload 는 모듈 이름을, Shipping 정적 링크는 전역 속성 SW_ACTIVE_GAME_TARGET 을 본다
 # ------------------------------------------------------------------------------
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${SW_ACTIVE_GAME}/CMakeLists.txt")
 	# 무엇을 고를 수 있는지, 어떻게 고치는지까지 알려준다. 여기 걸리는 흔한 경우가 **낡은 캐시**다 —

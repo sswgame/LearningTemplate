@@ -64,7 +64,7 @@
 - 결과는 `Pass` · `PassNearLimit`(한 축이라도 상한의 `_nearLimitRatio` 를 넘음) · `Fail`(`AutomationGoldenUtil::judge`). 근접은 통과이고 보고 `nearLimitGoldens[]` 와 경고 `Automation.GoldenNearLimit` 로 알린다(로그 게이트가 세지 않는다).
 - `-scenario-update-golden` 은 없거나 · 크기가 다르거나 · 근접이거나 · 진 골든만 다시 쓰고 옆에 메타 `*.golden.json`(커밋 · 백엔드 · 까닭 · 측정값 · 상한)을 쓴다. 보고의 `updatedGoldens` 그림을 확인한 뒤 커밋한다.
 - `-scenario-record-missing-golden` 은 없는 골든만 쓰고 그 시나리오는 `MissingBaseline` 으로 진다. 두 깃발을 함께 주면 이미지 단언마다 진다.
-- 기록 모드가 아닌 실행은 보고 `goldenSamples[]` 에 골든마다 측정값과 상한을 남긴다. 실행 사이 흔들림은 `py -3 Scripts/dev/scenario_bisect.py --golden-margins [보고 폴더…]`.
+- 기록 모드가 아닌 실행은 보고 `goldenSamples[]` 에 골든마다 측정값과 상한을 남긴다. 실행 사이 흔들림은 `py -3 Scripts/verify/scenario_bisect.py --golden-margins [보고 폴더…]`.
 - 검증 체인 백엔드(쿠킹 표 `scenario_backends`)마다 골든이 있는지는 `ScenarioGoldensTest` 가 본다. 백엔드를 고르는 시나리오(`<SkipUnless>` · `<SwapBackend>`)는 하나 이상이면 된다.
 - 개발 겹치기 화면(`UIScreen::isDevOverlay` — 디버그 HUD 등)은 캡처를 백버퍼로 옮긴 뒤에 그려 사진에 들지 않는다. 게임 UI(토스트 포함)는 든다. `<ExpectUI screens>` 는 게임 화면만 센다. 디버그 드로우 · 테스트 그림 겹치기(`CanvasOverlays`)는 아직 주 출력에 칠한다.
 - 같은 시나리오 안에서 같은 파일을 두 번 찍지 못한다(읽을 때 거절). 파일 쓰기와 `<ExpectImage>` · `<CaptureEditorUI>` 의 마젠타 판정은 `<Pass/>` 에서 한 번에 한다.
@@ -90,7 +90,7 @@
 |---|---|
 | `Scenario.<팩>` | 구성이 짓는 게임마다(활성 게임 + `SW_GAMES`, Release 는 `ALL`) `Content/game/<팩>/automation/*.scenario.xml` 체인. 팩 이름은 `Config/Game/<게임>.json` 의 `_packRoot`, 활성 게임이 아니면 `-game=<게임>`. 엔진 시나리오(`engine/automation/`)는 활성 게임 체인에 든다 |
 | `Scenario.engine.rhiswap.<이름>` | `rhiswap/` — 네 백엔드가 있는 Windows |
-| `Net.<이름>` | `netpair/`(라벨 `net`) — 실행기(`Scripts/net`)의 `CTEST_ITEMS` |
+| `Net.<세션>.<하위 명령>` | `netpair/`(라벨 `net`) — 실행기(`Scripts/sessions`)의 `CTEST_ITEMS` |
 | `Scenario.<팩>.showcase` | `showcase/`(골든 `showcase/golden/`) |
 | `Scenario.<팩>.desktop.<이름>` | `desktop/` — OS 전역 상태를 쓰거나 프로세스를 끝낸다, 하나씩 혼자. `desktop/editor/` 는 편집기로 빌드 트리 · 모듈 · `Config/Editor` 를 바꾼다(`…desktop.editor.<이름>`) |
 | `Scenario.<팩>.sequence.<묶음>` | `sequence/<묶음>.1` · `.2` — 같은 사용자 설정 파일로 두 번 기동 |
@@ -113,4 +113,4 @@
 
 ## 새 시나리오 · 기준 파일(`changed` 단계)
 
-묶음 검증(`Scripts/dev/preflight.sh`)은 빌드 직후 `py -3 Scripts/dev/test_history.py changed --preset Ninja-Release` 로 `git diff origin/main...HEAD` 에서 (a) 바뀐 소스 · 테스트의 기능 폴더를 단위 항목에 `--test-source` 로 좁혀 돌리고, (b) 더해지거나 바뀐 시나리오를 하나씩 제 프로세스로 체인의 백엔드마다 돈다. 기준 파일은 없는 것만 쓰고(`--record-missing-snapshots` · `-scenario-record-missing-golden`) 표 하나(항목 · 새것/바뀐 것 · 실패 종류 · 까닭 · 갈래)를 낸다. 모든 백엔드에서 같은 단언으로 지면 `전제`, 한 백엔드만 지면 `백엔드 <이름>`. 지거나 처음 쓴 기준 파일이 있으면 끝 줄 `CHANGED_FAILED` 로 멈추고, 그림 · 글을 보고 커밋한 뒤 `--from changed` 로 잇는다. 에디터 폴더(`/Editor/`) 케이스는 이 단계가 고르지 않는다(편집기 체인이 돈다).
+묶음 검증(`Scripts/verify/preflight.sh`)은 빌드 직후 `py -3 Scripts/verify/history_command.py changed --preset Ninja-Release` 로 `git diff origin/main...HEAD` 에서 (a) 바뀐 소스 · 테스트의 기능 폴더를 단위 항목에 `--test-source` 로 좁혀 돌리고, (b) 더해지거나 바뀐 시나리오를 하나씩 제 프로세스로 체인의 백엔드마다 돈다. 기준 파일은 없는 것만 쓰고(`--record-missing-snapshots` · `-scenario-record-missing-golden`) 표 하나(항목 · 새것/바뀐 것 · 실패 종류 · 까닭 · 갈래)를 낸다. 모든 백엔드에서 같은 단언으로 지면 `전제`, 한 백엔드만 지면 `백엔드 <이름>`. 지거나 처음 쓴 기준 파일이 있으면 끝 줄 `CHANGED_FAILED` 로 멈추고, 그림 · 글을 보고 커밋한 뒤 `--from changed` 로 잇는다. 에디터 폴더(`/Editor/`) 케이스는 이 단계가 고르지 않는다(편집기 체인이 돈다).

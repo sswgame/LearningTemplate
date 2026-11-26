@@ -22,7 +22,7 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmPlotGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/SimulationViewSync.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 namespace sw

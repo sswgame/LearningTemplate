@@ -8,7 +8,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/JsonValue.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/MemoryBackend.cmake")
 
 # 빌드 타깃 종류 — 언리얼 TargetType(Game · Client · Server)과 같은 자리. 모듈 매니페스트의 `_listTarget` 과 코드 상수
-# (`sw::build::kWithClientCode` · `kWithServerCode` — `SW_TARGET_NAME`, `cmake/Modules/Build/BuildLayout.cmake`)가 이 값을 따른다.
+# (`sw::build::kWithClientCode` · `kWithServerCode` — `SW_TARGET_NAME`, `cmake/Modules/Build/OutputLayout.cmake`)가 이 값을 따른다.
 # Game   — 클라이언트 + 서버 코드 전부(개발 · 에디터 · 한 프로세스 서버/클라 테스트 · 리슨 서버). App 과 Server 를 짓는다.
 # Client — 서버 전용 모듈이 없는 플레이어 배포본. App 만 짓는다.
 # Server — 클라이언트 전용 모듈(에디터 · RHI 백엔드)과 창 · GPU · 오디오 장치 코드가 없는 전용 서버. Server 만 짓는다.

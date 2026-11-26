@@ -13,9 +13,9 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetrySubsystem.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -24,10 +24,10 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Movement/InterpToMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/PlayerStatsSubsystem.h"
 
 #include "Games/Playground/Shooter3D/ShooterAutoAimControllerComponent.h"
@@ -42,7 +42,7 @@ namespace sw
     {
         struct ShooterGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "SHOT" };
+            static constexpr FormatDesc kStateFormat{ "SHOT" };
             /** @brief 감독 프로필의 항목이 고르는 일(`effect`)의 낱말입니다 — 항목 id 는 데이터가 마음대로 짓고, 무엇을 할지만 이 낱말로 적는다. */
             static constexpr const utf8* kEffectElite  = "Elite";  ///< 조우: 정예 종류로 낸다(비우면 보통 종류)
             static constexpr const utf8* kEffectAmmo   = "Ammo";   ///< 보상: 탄약 상자

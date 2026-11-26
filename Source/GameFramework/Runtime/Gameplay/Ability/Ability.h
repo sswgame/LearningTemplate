@@ -18,7 +18,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityTypes.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityHandles.h"
 
 namespace sw
 {

@@ -151,7 +151,7 @@ namespace sw
 
         // CPU 스냅샷이 그대로면 인스턴스 버퍼 · 간접 인자 재업로드를 생략한다.
         // 컬링 컴퓨트가 개수를 InterlockedAdd 로 만드는 동안 개수는 매 프레임 0 으로 되돌아가야 하는데, 그 일은 GPU 가 컬링 바로 앞에서 한다
-        // (RenderPassKind::IndirectArgsReset — FrameGraphExecutor::dispatchCullView). 그 커널이 없으면 GPU 가 개수를 맡지 않는다(usesGPUGeneratedCommands).
+        // (RenderPassKind::IndirectArgsReset — FramePassRecorder::dispatchCullView). 그 커널이 없으면 GPU 가 개수를 맡지 않는다(usesGPUGeneratedCommands).
         // 배치 표 · 간접 인자는 스냅샷이 그대로여도 풀 오프셋이 바뀌면(_bBatchTablesDirty) 다시 올린다.
         const bool bCPUDirty = _snapshot._bCPUDirty != SW_FALSE || _instances._buffer == 0 || getIndirectArgsBuffer() == 0;
         if ( bCPUDirty == false && _bBatchTablesDirty == SW_FALSE )
@@ -229,7 +229,7 @@ namespace sw
         {
             const GPUMeshBatch&                batch     = listBatch[batchIndex];
             GPUMeshBatchBinding&               gpu       = _listBatchBinding[batchIndex];
-            const RHIMeshVertexFormat          format    = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
+            const MeshVertexFormat             format    = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : MeshVertexFormat::Packed;
             const GPUMeshVertexPool&           pool      = _arrVertexPool[static_cast<size_t>( format )];
             const GPUMeshVertexPool::Placement placement = pool.getPlacementOf( batch._mesh.get() );
             if ( placement._baseVertex != GPUMeshVertexPool::kInvalidBase && pool.getVertexBuffer() != 0 )
@@ -560,10 +560,10 @@ namespace sw
         { return listBinding[index].hasGeometry() && listBatch[index].hasDrawSlots() && listBinding[index]._bDeformRefused == SW_FALSE; };
         const auto isSameSegment = [&listBatch, &listBinding]( uint32 head, uint32 other )
         {
-            const GPUMeshBatch&       headBatch   = listBatch[head];
-            const GPUMeshBatch&       otherBatch  = listBatch[other];
-            const RHIMeshVertexFormat headFormat  = headBatch._mesh != nullptr ? headBatch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
-            const RHIMeshVertexFormat otherFormat = otherBatch._mesh != nullptr ? otherBatch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
+            const GPUMeshBatch&    headBatch   = listBatch[head];
+            const GPUMeshBatch&    otherBatch  = listBatch[other];
+            const MeshVertexFormat headFormat  = headBatch._mesh != nullptr ? headBatch._mesh->getVertexFormat() : MeshVertexFormat::Packed;
+            const MeshVertexFormat otherFormat = otherBatch._mesh != nullptr ? otherBatch._mesh->getVertexFormat() : MeshVertexFormat::Packed;
             return headBatch._shaderPermutation == otherBatch._shaderPermutation && headBatch._bReverseCulling == otherBatch._bReverseCulling && headFormat == otherFormat &&
                    headBatch._bStaticShadowCaster == otherBatch._bStaticShadowCaster && listBinding[head]._vertexBuffer == listBinding[other]._vertexBuffer &&
                    GPUMeshBatchBinding::canShareMaterialBinding( listBinding[head], listBinding[other], false );

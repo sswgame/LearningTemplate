@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "Editor/Common/Commands/Asset/EditorLocalizationSheet.h"
+#include "Editor/Common/Commands/Asset/LocalizationSheet.h"
 
 namespace sw::editor
 {

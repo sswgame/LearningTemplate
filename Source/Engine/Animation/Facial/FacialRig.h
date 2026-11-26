@@ -21,7 +21,7 @@
 
 namespace sw
 {
-    struct ResourceContext;
+    struct AssetComposeContext;
 } // namespace sw
 
 namespace sw
@@ -137,10 +137,10 @@ namespace sw
         [[nodiscard]] optional<uint32> findVisemeIndex( const hashed_string& name ) const;
 
     private:
-        /** @brief 리소스 경로의 리그를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<FacialRig>::acquire` 로 한 벌을 쥔다. */
+        /** @brief 에셋 경로의 리그를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<FacialRig>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 합친 글을 읽고 검사합니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
-        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context );
+        /** @brief 합친 글을 읽고 검사합니다(`ConfigManager::readComposedXMLDocument`). 에셋 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
+        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context );
         /** @brief 파일만으로 알 수 있는 의미를 봅니다(포즈 이름 · 깜빡임과 사카드 간격 · 앞 축). 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validateFile( string_view sourceLabel ) const;
 

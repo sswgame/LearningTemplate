@@ -15,8 +15,8 @@
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"
 
 namespace sw
@@ -278,7 +278,7 @@ namespace sw
         if ( findBlockReason( interactor ) != InteractionBlockReason::None )
             return;
         _cooldownRemaining = pDef->_cooldown;
-        _lastInteractor    = interactor.getHandle(); // 완료 수보다 먼저 — 수가 늘어난 것을 본 기믹(채집 · 밀기 · 숨기)이 끝낸 쪽을 읽는다
+        _lastInteractor    = interactor.getHandle(); // 완료 수보다 먼저 — 수가 늘어난 것을 본 장치(채집 · 밀기 · 숨기)이 끝낸 쪽을 읽는다
         _completedCount.fetch_add( 1, std::memory_order_relaxed );
         InteractionCompletedEvent event;
         event._request._interactor        = interactor.getHandle();

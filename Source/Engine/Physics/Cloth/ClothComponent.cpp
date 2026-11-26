@@ -17,9 +17,9 @@ namespace sw
     namespace
     {
         /** @brief 천 메시 정점 하나입니다. 칸 이름으로 채운다(정점 형식에 칸이 늘어도 그대로 맞는다). 색은 1 — 머티리얼 색이 그대로 보인다. */
-        RHIVertex makeClothRenderVertex( const float3& position, const float3& normal, float32 u, float32 v )
+        MeshVertex makeClothRenderVertex( const float3& position, const float3& normal, float32 u, float32 v )
         {
-            RHIVertex vertex{};
+            MeshVertex vertex{};
             vertex._arrPosition[0] = position._x;
             vertex._arrPosition[1] = position._y;
             vertex._arrPosition[2] = position._z;
@@ -396,7 +396,7 @@ namespace sw
         pScene->setSoftBodySkinningPose( _softBody, _listPinBoneWorld, bHardSkinAll );
     }
 
-    bool ClothComponent::makeRenderVertices( const vector<float3>& listWorldVertex, const float4x4& worldToLocal, vector<RHIVertex>& outListVertex ) const
+    bool ClothComponent::makeRenderVertices( const vector<float3>& listWorldVertex, const float4x4& worldToLocal, vector<MeshVertex>& outListVertex ) const
     {
         outListVertex.clear();
         const size_t vertexCount   = static_cast<size_t>( _columnCount ) * _rowCount;
@@ -493,7 +493,7 @@ namespace sw
             _bPinBoneErrorReported = SW_TRUE;
             return;
         }
-        vector<RHIVertex> listVertex;
+        vector<MeshVertex> listVertex;
         if ( makeRenderVertices( _listVertex, pMesh->getWorldMatrix().invert(), listVertex ) == false )
         {
             SW_LOG_ERROR_ID( "ClothComponent.ClothVerticesDoNot", "Cloth vertices (%#) do not match the %# x %# grid - the cloth mesh is not updated", static_cast<uint64>( _listVertex.size() ), _columnCount, _rowCount );

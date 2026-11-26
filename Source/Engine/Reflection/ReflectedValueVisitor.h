@@ -3,7 +3,7 @@
  * @brief 리플렉션 값 하나를 구조체 필드와 컨테이너 단계까지 재귀로 내려가며, 지정한 타입의 잎을 제자리에서 바꾸는 방문입니다.
  * @details 쓰기 쪽(타입 처리기)은 값이 어느 깊이에 있든 잎마다 불리므로, 읽은 뒤 잎을 옮기는 쪽도 같은 깊이를 봐야 쓰기와 읽기가 대칭이다
  *          (예: `GameObjectHandle` 을 저장 id 로 적고, 읽은 뒤 이 실행의 오브젝트로 옮기기 — `ObjectStateBatch::resolveObjectReferences`).
- *          - 각 깊이에서 필드 거르기(@p TFieldFilter, 보통 `SerializerUtil::shouldSerializeProperty`)가 false 인 필드는 내려가지 않는다. 읽지 않은 필드는 지금 값이다.
+ *          - 각 깊이에서 필드 거르기(@p TFieldFilter, 보통 `PropertySerializer::shouldSerializeProperty`)가 false 인 필드는 내려가지 않는다. 읽지 않은 필드는 지금 값이다.
  *          - 순서 컨테이너는 제자리에서 고치고, set 의 잎 원소와 map 의 잎 키는 빼고 다시 넣는다.
  *          - 제자리에서 고칠 수 없는 잎(구조체 · 컨테이너를 원소로 가진 set 안의 잎, 구조체 키 안의 잎)이 있으면 `visit*` 가 false 다.
  *            부르는 쪽이 로드 오류로 처리한다 — 그 잎을 그대로 두면 다른 실행의 id 가 남는다.

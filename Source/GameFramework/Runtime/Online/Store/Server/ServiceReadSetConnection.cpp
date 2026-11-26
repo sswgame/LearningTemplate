@@ -43,18 +43,18 @@ namespace sw
         const ServiceStoreResult read  = ServiceRecordReader::readPage( _inner, table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord )._result;
         if ( read != ServiceStoreResult::Ok )
             return read; // 읽지 못한 것은 판단에 쓰이지 않는다
-        const uint64 fingerprint = ServiceTransaction::computeRangeFingerprint( outListRecord, first );
-        const uint8  descending  = bDescending ? SW_TRUE : SW_FALSE;
+        const uint64 digest     = ServiceTransaction::computeRangeDigest( outListRecord, first );
+        const uint8  descending = bDescending ? SW_TRUE : SW_FALSE;
         for ( RangeEntry& entry : _listRangeRead )
         {
             const bool bSame = entry._table == table && entry._keyPrefix == keyPrefix && entry._cursorKey == cursorKey && entry._maxCount == maxCount && entry._bDescending == descending;
             if ( bSame )
             {
-                entry._fingerprint = fingerprint;
+                entry._digest = digest;
                 return read;
             }
         }
-        _listRangeRead.push_back( RangeEntry{ table, string( keyPrefix ), string( cursorKey ), fingerprint, maxCount, descending } );
+        _listRangeRead.push_back( RangeEntry{ table, string( keyPrefix ), string( cursorKey ), digest, maxCount, descending } );
         return read;
     }
 
@@ -103,7 +103,7 @@ namespace sw
                                                  write._range._bDescending == entry._bDescending );
             }
             if ( bConditioned == false )
-                conditioned.requireRange( entry._table, entry._keyPrefix, entry._cursorKey, entry._maxCount, entry._bDescending == SW_TRUE, entry._fingerprint );
+                conditioned.requireRange( entry._table, entry._keyPrefix, entry._cursorKey, entry._maxCount, entry._bDescending == SW_TRUE, entry._digest );
         }
         _listRead.clear();
         _listRangeRead.clear();

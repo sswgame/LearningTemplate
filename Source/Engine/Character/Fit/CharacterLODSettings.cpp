@@ -54,7 +54,7 @@ namespace sw
         }
         XMLDocument document;
         XMLNode     root;
-        return loadFromRoot( XMLReadUtil::parseResourceRoot( document, text, assetID, "CharacterLODSettings", root ), root, assetID.view() );
+        return loadFromRoot( XMLReadUtil::parseAssetRoot( document, text, assetID, "CharacterLODSettings", root ), root, assetID.view() );
     }
 
     const CharacterLODSettings& CharacterLODSettings::getDefault()
@@ -107,17 +107,17 @@ namespace sw
             {
                 if ( indexCount == 0 )
                     return 0;
-                const vector<RHIVertex>& listVertex  = mesh.getCPUView().getVertices();
-                const uint32*            pSource     = mesh.getIndices().data() + firstIndex;
-                const size_t             targetCount = MathUtil::max( static_cast<size_t>( static_cast<float32>( indexCount / 3u ) * rule._triangleRatio ), size_t( 1 ) ) * 3u;
-                const size_t             start       = outListIndex.size();
+                const vector<MeshVertex>& listVertex  = mesh.getCPUView().getVertices();
+                const uint32*             pSource     = mesh.getIndices().data() + firstIndex;
+                const size_t              targetCount = MathUtil::max( static_cast<size_t>( static_cast<float32>( indexCount / 3u ) * rule._triangleRatio ), size_t( 1 ) ) * 3u;
+                const size_t              start       = outListIndex.size();
                 outListIndex.resize( start + indexCount );
                 // 언리얼 스켈레탈 메시 감소처럼 가까운 단계는 경계 · 이음매를 지키고 먼 단계는 풀어 준다(표가 단계마다 정한다). 법선을 오차에 넣어 이음매를 넘어도 음영이 덜 망가진다.
                 const unsigned int options = ( rule._bLockBorder ? meshopt_SimplifyLockBorder : 0u ) | ( rule._bPermissive ? meshopt_SimplifyPermissive : 0u ) |
                                              ( rule._bPrune ? meshopt_SimplifyPrune : 0u );
                 constexpr float32 arrNormalWeight[3] = { 0.5f, 0.5f, 0.5f };
-                const size_t      kept               = meshopt_simplifyWithAttributes( outListIndex.data() + start, pSource, indexCount, &listVertex[0]._arrPosition[0], listVertex.size(), sizeof( RHIVertex ),
-                                                                                       &listVertex[0]._arrNormal[0], sizeof( RHIVertex ), arrNormalWeight, 3, nullptr, targetCount, rule._maxError, options, nullptr );
+                const size_t      kept               = meshopt_simplifyWithAttributes( outListIndex.data() + start, pSource, indexCount, &listVertex[0]._arrPosition[0], listVertex.size(), sizeof( MeshVertex ),
+                                                                                       &listVertex[0]._arrNormal[0], sizeof( MeshVertex ), arrNormalWeight, 3, nullptr, targetCount, rule._maxError, options, nullptr );
                 // 단순화는 삼각형 순서를 정점 캐시에 맞추지 않는다 — 다시 맞춘다(meshoptimizer 권장 순서, 임포터 `ModelImportGeometry` 와 같다).
                 meshopt_optimizeVertexCache( outListIndex.data() + start, outListIndex.data() + start, kept, listVertex.size() );
                 outListIndex.resize( start + kept );
@@ -132,7 +132,7 @@ namespace sw
         if ( settings._listLevel.empty() || inoutMesh.getIndexCount() == 0 )
             return true;
         const vector<MeshSection>&    listSection = inoutMesh.getSections();
-        const vector<RHIVertex>&      listVertex  = inoutMesh.getCPUView().getVertices();
+        const vector<MeshVertex>&     listVertex  = inoutMesh.getCPUView().getVertices();
         const vector<MeshSkinVertex>& listSkin    = inoutMesh.getSkinVertices();
         vector<MeshLODLevel>          listLevel;
         vector<uint32>                listLevelIndex;

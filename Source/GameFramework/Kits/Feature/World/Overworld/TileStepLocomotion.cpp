@@ -1,0 +1,80 @@
+#include "pch.h"
+
+#include "GameFramework/Kits/Feature/World/Overworld/TileStepLocomotion.h"
+
+#include "Engine/Reflection/TypeFqn.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
+
+namespace sw
+{
+    TileStepLocomotion::TileStepLocomotion()
+        : _state{ LocomotionState::Idle }
+        , _facing{ FacingDirection::Down }
+        , _stateTimer{}
+    {
+    }
+
+    void TileStepLocomotion::setState( LocomotionState state )
+    {
+        _state = state;
+        _stateTimer.clear();
+    }
+
+    void TileStepLocomotion::update( GameSeconds frameTime )
+    {
+        if ( _stateTimer.isActive() == false )
+            return;
+        if ( _stateTimer.update( frameTime ) == false )
+            return;
+
+        if ( _state == LocomotionState::Walk || _state == LocomotionState::Interact )
+            _state = LocomotionState::Idle;
+    }
+
+    void TileStepLocomotion::notifyStepStarted( float32 stepSeconds )
+    {
+        // 시간이 0 이하면 타이머가 서지 않아 Walk 에 갇힌다 - 그 자리에서 끝난 걸음이다.
+        _stateTimer.start( stepSeconds );
+        _state = _stateTimer.isActive() ? LocomotionState::Walk : LocomotionState::Idle;
+    }
+
+    void TileStepLocomotion::notifyStepFinished()
+    {
+        if ( _state == LocomotionState::Walk )
+            _state = LocomotionState::Idle;
+        _stateTimer.clear();
+    }
+
+    void TileStepLocomotion::beginInteract( float32 duration )
+    {
+        _stateTimer.start( duration );
+        _state = _stateTimer.isActive() ? LocomotionState::Interact : LocomotionState::Idle;
+    }
+
+    void TileStepLocomotion::setFacingFromDelta( int32 dx, int32 dy )
+    {
+        if ( dy < 0 )
+            _facing = FacingDirection::Up;
+        else if ( dy > 0 )
+            _facing = FacingDirection::Down;
+        else if ( dx < 0 )
+            _facing = FacingDirection::Left;
+        else if ( dx > 0 )
+            _facing = FacingDirection::Right;
+    }
+
+    bool TileStepLocomotion::canAcceptMoveInput() const
+    {
+        return _state == LocomotionState::Idle;
+    }
+
+    void TileStepLocomotion::serializeState( StateIO& io )
+    {
+        io.reflected( *this ); // 상태(열거자 밖은 거절)
+        io.enumValue( _facing, FacingDirection::Up );
+        io.value( _stateTimer );                                               // 리플렉션 밖 값 — 남은 시간(`Countdown`)은 손 코덱이다
+        io.check( _state == LocomotionState::Idle || _stateTimer.isActive() ); // 남은 시간 없는 걸음은 깨어날 길이 없다
+    }
+
+} // namespace sw

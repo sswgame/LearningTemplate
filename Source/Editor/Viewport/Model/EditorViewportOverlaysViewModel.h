@@ -1,7 +1,7 @@
 /**
  * @file EditorViewportOverlaysViewModel.h
  * @brief 씬 뷰 오버레이 바(View `EditorViewportOverlays` · 감시 값)가 배치를 읽고 바꾸는 ViewModel 입니다.
- * @details View 는 서비스 창구(`EditorService.h`)를 보지 못한다(`[panelViewBan] patterns`) — 배치의 주인(`SceneViewOverlayLayoutStore`)은 여기서 찾는다.
+ * @details View 는 서비스 창구(`EditorService.h`)를 보지 못한다(`[panelViewGuard] patterns`) — 배치의 주인(`SceneViewOverlayLayoutStore`)은 여기서 찾는다.
  *          읽기는 값 사본(`gather` · `findBar`)이라 그리는 중의 명령(리셋)이 주인의 목록을 다시 채워도 View 가 지난 원소를 가리키지 않는다.
  */
 #pragma once

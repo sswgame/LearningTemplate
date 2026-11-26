@@ -25,7 +25,7 @@
 namespace sw
 {
     /** @brief 커맨드라인 파서. registerToCommandLine / updateFromCommandLine 에 넘깁니다. */
-    class CommandLineManager;
+    class CommandLine;
 
     /** @brief 등록된 전역 변수 한 항목입니다. */
     struct GlobalVariableInfo;
@@ -313,14 +313,14 @@ namespace sw
         }
 
         /** @brief 커맨드라인 매니저에 변수들을 인자로 등록합니다. */
-        void registerToCommandLine( class CommandLineManager* pCmdLineManager );
+        void registerToCommandLine( class CommandLine* pCmdLineManager );
 
         /**
          * @brief 커맨드라인 인자 값으로 전역 변수들을 갱신합니다.
          * @details enum 변수는 열거자 이름만 받는다(숫자는 `applyPendingEnumText` 가 오류로 알린다). 이름은 파서가 등록된 뒤에 적용하므로
          *          그때까지 받아만 둔다. 명령줄은 리플렉션 등록보다 먼저 파싱되기 때문이다.
          */
-        void updateFromCommandLine( const CommandLineManager* pCmdLineManager );
+        void updateFromCommandLine( const CommandLine* pCmdLineManager );
 
         /**
          * @brief enum 변수의 문자열 값(열거자 이름)을 정수로 바꾸는 파서를 등록합니다. 빈 델리게이트를 주면 해제합니다.
@@ -409,9 +409,9 @@ namespace sw
         /**
          * @brief `registerToCommandLine` 이 넘겨준 파서입니다. 나중에 등록되는 변수의 보류값을 여기서 꺼냅니다.
          * @details 소유하지 않습니다. 둘 다 `Engine` 이 들고 있고, 선언 순서상 이 매니저가 먼저 파괴됩니다. 모듈은
-         *          `CommandLineManager` 를 서비스로 받을 수 없으므로(HostOnly) 보류값을 꺼내는 경로는 이 포인터뿐입니다.
+         *          `CommandLine` 을 서비스로 받을 수 없으므로(HostOnly) 보류값을 꺼내는 경로는 이 포인터뿐입니다.
          */
-        class CommandLineManager* _pCmdLineManager{ nullptr };
+        class CommandLine* _pCmdLineManager{ nullptr };
         /** @brief 명령줄에서 글로 받아 파서를 기다리는 enum 변수 값입니다(이름 → 글). `applyPendingEnumText` 가 비웁니다. */
         unordered_map<string, string> _mapPendingEnumText;
         /** @brief enum 변수의 글 값 파서입니다(`setEnumTextParser`). 등록한 enum 변수가 이 주소를 가리키므로 매니저는 옮겨지지 않습니다(복사 금지). */

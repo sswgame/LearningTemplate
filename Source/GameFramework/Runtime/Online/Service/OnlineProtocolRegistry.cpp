@@ -52,7 +52,7 @@ namespace sw
         {
             canonical.appendFormat( "%#,", name );
         }
-        return FixedLayout::computeSchemaHash( FixedLayout::kVersion, canonical.view(), {} );
+        return LayoutSerializer::computeSchemaHash( LayoutSerializer::kVersion, canonical.view(), {} );
     }
 
     vector<string> OnlineProtocolEntry::collectEnumNames( const hashed_string& enumFqn, const int32 count )

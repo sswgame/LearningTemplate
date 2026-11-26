@@ -288,7 +288,7 @@ namespace sw
         void collectEncounterIDs( vector<hashed_string>& outListID ) const;
 
     private:
-        /** @brief 리소스 경로의 프로필을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AIDirectorProfile>::acquire` 로 한 벌을 쥔다. */
+        /** @brief 에셋 경로의 프로필을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AIDirectorProfile>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool readIntensity( const XMLNode& node, string_view sourceName );

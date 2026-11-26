@@ -569,8 +569,8 @@ SW_TEST_CASE_F( TurnRelayTest, UnknownRejectReasonIsMalformed )
 // 본문 판은 본문 형식의 스키마 해시다 - 형식이 다르면 표 판이 달라 라우터가 상대와 맞출 때 끊는다(`NetMessageRouterTest.DifferentMessageTableVersionsDisconnect`).
 SW_TEST_CASE( TurnRelayWireTest, BodyRevisionFollowsTheBodySchema )
 {
-    using JoinTable   = NetMessageTable<NetKitMessageRange::kTurnRelay, NetMessageBodyDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnJoinBody>>;
-    using JoinedTable = NetMessageTable<NetKitMessageRange::kTurnRelay, NetMessageBodyDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnJoinedBody>>;
+    using JoinTable   = NetMessageTable<NetKitMessageRange::kTurnRelay, NetMessageBodyDesc<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnJoinBody>>;
+    using JoinedTable = NetMessageTable<NetKitMessageRange::kTurnRelay, NetMessageBodyDesc<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnJoinedBody>>;
     SW_EXPECT_NOT_EQUAL( NetTurnRelayMessage::Join::getBodyRevision(), NetTurnRelayMessage::Joined::getBodyRevision() );
     SW_EXPECT_NOT_EQUAL( JoinTable::computeWireVersion(), JoinedTable::computeWireVersion() );
     SW_EXPECT_EQUAL( JoinTable::computeWireVersion(), JoinTable::computeWireVersion() ); // 같은 형식은 같은 판(결정적)

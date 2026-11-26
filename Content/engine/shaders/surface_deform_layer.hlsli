@@ -2,7 +2,7 @@
  * surface_deform_layer.hlsli — 씬의 표면 변형 층(C++ SurfaceDeformSystem)을 읽는 함수 묶음. 지면(surface_deform.hlsl)과 지형(terrain.hlsl)이 같은 식을 쓴다.
  *
  * 층은 머티리얼 칸이 아니라 패스가 거는 값이다 — 엔진 텍스처 칸 SurfaceDeform(g_SurfaceDeformIndex)과 패스 상수 g_SurfaceDeformParams(창)를
- * 씬 지오메트리 패스마다 한 번 건다(C++ FramePassExecutor::registerInstanceBuffer · FrameRenderer::updatePassConstants). 그래서 정점 셰이더와 그림자 패스가
+ * 씬 지오메트리 패스마다 한 번 건다(C++ FrameRecorder::registerInstanceBuffer · FrameRenderer::updatePassConstants). 그래서 정점 셰이더와 그림자 패스가
  * 같은 오프셋을 읽는다(언리얼 런타임 가상 텍스처 변위 · 유니티 Shader.SetGlobalTexture 와 같은 자리).
  *
  * 텍스처 인코딩(C++ SurfaceDeformGrid): R = 1 - 꺼짐 / 범위, G = 1 - 솟음 / 범위 — 높이 = (R - G) × 범위, B = 1 - 젖음(젖은 발자국). 흰색이 평평 · 마름이다.

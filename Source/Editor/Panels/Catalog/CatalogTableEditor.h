@@ -17,7 +17,7 @@
 #include "Editor/Panels/Catalog/Model/CatalogChildSection.h"
 #include "Editor/Panels/Catalog/Model/CatalogCurve.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
-#include "Editor/Panels/Catalog/Model/CatalogTableEdit.h"
+#include "Editor/Panels/Catalog/Model/CatalogTableEditModel.h"
 
 namespace sw::editor
 {
@@ -82,7 +82,7 @@ namespace sw::editor
         string                                  _editText;
         string                                  _lastActionText;
         uint32                                  _editID;
-        CatalogTableEdit                        _pending;    ///< 표를 다 그린 뒤 반영할 편집 하나
+        CatalogTableEditModel                   _pending;    ///< 표를 다 그린 뒤 반영할 편집 하나
         EditorCurveEditorState                  _graphState; ///< 곡선 창 그래프(키 끌기 · 메뉴) 상태 — 놓을 때 `SetCurveKeys` 편집 하나가 된다
         fixed_string<constant::buffer::kMax128> _rowFilter;
     };

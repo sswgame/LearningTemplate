@@ -66,7 +66,7 @@ namespace sw
         size_t getSkippedResultCount() const { return _skippedResultCount; }
         /**
          * @brief 단계 하나의 끝을 한 줄로 적습니다(`chain stage 2/3 Failed (shooter3d.reload): Assertion - <까닭> - 1 later stage(s) skipped`). `[Scenario]` 로그 줄 뒤에 붙습니다.
-         * @details 앞머리(`chain stage i/n <결과> (<이름>)`)는 그대로다 — `linux_scenarios.py` 의 정규식이 읽는다. 진 단계 · 건너뛴 단계는 `: ` 뒤에 판정 값 한 줄(`AutomationRunResult::describe`)이 붙는다.
+         * @details 앞머리(`chain stage i/n <결과> (<이름>)`)는 그대로다 — `linux_verify.py` 의 정규식이 읽는다. 진 단계 · 건너뛴 단계는 `: ` 뒤에 판정 값 한 줄(`AutomationRunResult::describe`)이 붙는다.
          * @param stageIndex 방금 끝난 단계 번호
          */
         string describeStageEnd( size_t stageIndex, const AutomationRunResult& runResult, string_view scenarioName ) const;

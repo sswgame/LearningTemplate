@@ -53,7 +53,7 @@ namespace sw::editor
     using AssetSourceImporterFunc = bool ( * )( const AssetPaths& assetPaths, string_view relativePath );
     /**
      * @brief 바뀐 원본들을 백그라운드 잡(`EditorAssetImportJob`)의 워커에서 한 번에 임포트하는 임포터입니다(`AssetSourceBatch`) — 긴 일은 에디터 스레드에서 동기로 돌지 않는다.
-     * @details UI 와 공유 상태를 건드리지 않고 에디터 서비스 범위를 읽지 않습니다. 원본을 나눠 도는 일 · 순서 의존 · 스탬프는 일괄 임포트(`AssetImportStampUtil`)가 합니다. 결과 적용(캐시 리로드 · 씬 알림)은 에디터 스레드가 합니다.
+     * @details UI 와 공유 상태를 건드리지 않고 에디터 서비스 범위를 읽지 않습니다. 원본을 나눠 도는 일 · 순서 의존 · 스탬프는 일괄 임포트(`AssetImportDigestUtil`)가 합니다. 결과 적용(캐시 리로드 · 씬 알림)은 에디터 스레드가 합니다.
      */
     using AssetSourceBatchImporterFunc = void ( * )( AssetSourceBatch& batch );
 
@@ -196,7 +196,7 @@ namespace sw::editor
 } // namespace sw::editor
 
 /**
- * @brief 애셋 종류 하나를 등록합니다. 종류의 파일(보통 `Editor/AssetActions/Model/<종류>AssetTypeActions.cpp` — 썸네일 그리기는 View `EditorAssetThumbnailRenderer`, 플러그인은 그 모듈 파일)에 한 줄 둡니다.
+ * @brief 애셋 종류 하나를 등록합니다. 종류의 파일(보통 `Editor/AssetTypeActions/Model/<종류>AssetTypeActions.cpp` — 썸네일 그리기는 View `EditorAssetThumbnailRenderer`, 플러그인은 그 모듈 파일)에 한 줄 둡니다.
  * @param name 파일 안에서 유일한 식별자 조각
  * @param pID 종류의 id. 엔진 포맷이 있으면 `X::kAssetType._name.data()`, 없으면 `EditorAssetTypeIDs::k…`
  * @details 나머지 인자는 `EditorAssetTypeRegistration` 의 필드 순서다(표시 이름 · 브라우저 라벨 · 패널 제목 · 아이콘 이름 · 색 키 · Other 제외 · 임포트 · 규칙 표 · 규칙 수 · 새 에셋 틀 · 동작).

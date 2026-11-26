@@ -9,7 +9,7 @@
  *          바닥 층(0)이라 어느 층의 기능 폴더든 자기 작업을 올릴 수 있다(쿠커를 DevTools/Cook 으로 옮길 때 줄도 함께 옮긴다).
  */
 #pragma once
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Container/span.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Foundation/Macros.h"
@@ -83,13 +83,13 @@ namespace sw
     /** @brief 작업 본문이 받는 문맥입니다. */
     struct CommandletContext
     {
-        CommandLineManager& _commandLine;
-        CommandletState&    _state;            ///< 본문이 실패 종료 코드(`_failureExitCode`)를 정할 때 쓴다. `_bFailed` 는 본문의 반환값이 정한다
-        bool                _bDedicatedServer; ///< 전용 서버가 굽는 팩은 서버가 읽지 않는 종류를 뺀다.
+        CommandLine&     _commandLine;
+        CommandletState& _state;            ///< 본문이 실패 종료 코드(`_failureExitCode`)를 정할 때 쓴다. `_bFailed` 는 본문의 반환값이 정한다
+        bool             _bDedicatedServer; ///< 전용 서버가 굽는 팩은 서버가 읽지 않는 종류를 뺀다.
     };
 
     /** @brief 이 명령줄이 작업을 청했으면 true 입니다. 읽기만 합니다. */
-    using CommandletRequestFunction = bool ( * )( const CommandLineManager& commandLine );
+    using CommandletRequestFunction = bool ( * )( const CommandLine& commandLine );
     /** @brief 작업 본문입니다. 성공이면 true 입니다(헤드리스 표시 · 누수 기준선은 부르기 전에 잡혔다). */
     using CommandletRunFunction = bool ( * )( CommandletContext& context );
 
@@ -136,7 +136,7 @@ namespace sw
          * @brief 이 명령줄이 등록된 작업을 하나라도 청했으면 true 입니다 — `Headless` 단계보다 먼저 서는 것(오디오 장치 · 파일 감시 · 모듈 로드)이 헤드리스 실행인지 미리 본다.
          * @details 작업은 엔진 · 개발 도구 이미지에 있어 기동 단계를 채울 때 모두 올라와 있다(모듈이 올리는 헤드리스 작업은 없다 — 모듈 로드 뒤라 여기서 보이지 않는다).
          */
-        [[nodiscard]] static bool isAnyRequested( const CommandLineManager& commandLine );
+        [[nodiscard]] static bool isAnyRequested( const CommandLine& commandLine );
     };
 } // namespace sw
 

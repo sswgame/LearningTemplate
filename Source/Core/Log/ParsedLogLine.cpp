@@ -13,7 +13,7 @@ namespace sw
         struct LogLineFormatInternal
         {
             static constexpr auto kArrLevelLabel = makeEnumTable<LogLevel, const utf8*>( "Error", "Warning", "Info", "Trace" );
-            /** @brief 머리와 본문을 가르는 글입니다(`AsyncLogSink` 의 `- `). */
+            /** @brief 머리와 본문을 가르는 글입니다(`AsyncLogBackend` 의 `- `). */
             static constexpr string_view kMessageSeparator = "- ";
         };
     } // namespace
@@ -43,7 +43,7 @@ namespace sw
         const size_t separator = line.find( LogLineFormatInternal::kMessageSeparator, levelEnd );
         if ( separator == string_view::npos )
             return false;
-        // id 꼬리표 `[id:영역.사건] ` 는 구분 뒤 본문 맨 앞에 붙는다(`AsyncLogSink::formatLine`).
+        // id 꼬리표 `[id:영역.사건] ` 는 구분 뒤 본문 맨 앞에 붙는다(`AsyncLogBackend::formatLine`).
         string_view body = line.substr( separator + LogLineFormatInternal::kMessageSeparator.size() );
         outLine._id      = string_view{};
         if ( body.substr( 0, LogIDTag::kOpenLength ) == LogIDTag::kOpen )

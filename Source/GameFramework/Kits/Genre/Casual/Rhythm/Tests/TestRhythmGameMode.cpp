@@ -1,7 +1,7 @@
 // RhythmGameModeTest — 리듬 디렉터: 열기 전 명령 거절, 음악 시계(넘긴 시각까지만 흐르고 되감기지 않는다), 레인 명령 판정과 상태 왕복, 자동 플레이로 깬 곡의 결과(nogpu).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/File/FileUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -11,14 +11,14 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Component/RhythmGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 using namespace sw;
 
@@ -72,7 +72,7 @@ namespace
         {
             const PropertyInfo* const pInfo = RhythmGameModeComponent::StaticType()->findPropertyInHierarchy( hashed_string( pProperty ) );
             SW_REQUIRE_NOT_NULL( pInfo );
-            SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( *pInfo, MutableObjectAddress{ _pGameMode }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
+            SW_REQUIRE_TRUE( PropertySerializer::applyPropertyText( *pInfo, MutableObjectAddress{ _pGameMode }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
         }
 
         void advance( int32 frameCount )

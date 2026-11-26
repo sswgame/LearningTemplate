@@ -12,7 +12,7 @@ namespace sw
 {
     namespace
     {
-        expected<shared_ptr<const void>> parseDocument( string_view text, string_view path, const ResourceContext& context )
+        expected<shared_ptr<const void>> parseDocument( string_view text, string_view path, const AssetComposeContext& context )
         {
             shared_ptr<UIDocumentAsset> document = make_shared<UIDocumentAsset>();
             if ( expected<void> parsed = UIDocumentAsset::parse( text, path, context, *document ); parsed.has_value() == false )
@@ -53,10 +53,10 @@ namespace sw
 
     expected<shared_ptr<const UIDocumentAsset>> UIDocumentCache::acquire( string_view path )
     {
-        return acquire( path, ResourceTagSet{} );
+        return acquire( path, AssetTagSet{} );
     }
 
-    expected<shared_ptr<const UIDocumentAsset>> UIDocumentCache::acquire( string_view path, const ResourceTagSet& tagOverride )
+    expected<shared_ptr<const UIDocumentAsset>> UIDocumentCache::acquire( string_view path, const AssetTagSet& tagOverride )
     {
         return _cache.acquireAsset( path, tagOverride ).transform( []( const shared_ptr<const void>& pAsset )
         { return std::static_pointer_cast<const UIDocumentAsset>( pAsset ); } );

@@ -8,12 +8,12 @@
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Component/AdventureGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 
 #include "Games/Playground/Velmora/VelmoraEncounterGameModeComponent.h"

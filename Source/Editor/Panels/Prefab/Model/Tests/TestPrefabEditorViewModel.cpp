@@ -5,7 +5,7 @@
 
 #include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Scene/EditorPrefabIsolation.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 #include "Editor/Panels/Prefab/Model/PrefabEditorViewModel.h"
 
 #include "Engine/Object/GameObject/GameObject.h"

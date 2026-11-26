@@ -10,8 +10,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
@@ -22,7 +22,7 @@ namespace sw
     {
         struct CraftingDemoComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "FDCR" };
+            static constexpr FormatDesc kStateFormat{ "FDCR" };
         };
     } // namespace
 

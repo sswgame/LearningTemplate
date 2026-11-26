@@ -100,7 +100,7 @@ namespace sw
 
             /** @brief 확장 함수(AcceptEx, ConnectEx)를 얻습니다. 함수 포인터 변수에 바로 받으므로 객체와 함수 포인터 사이의 캐스트가 없습니다. */
             template <typename TFunction>
-            static TFunction findExtension( SOCKET socket, GUID guid )
+            static TFunction findExtension( SOCKET socket, ::GUID guid )
             {
                 TFunction pFunction = nullptr;
                 DWORD     bytes     = 0;

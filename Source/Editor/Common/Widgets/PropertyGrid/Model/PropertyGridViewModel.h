@@ -20,9 +20,9 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorEditRecorder.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorLayoutCache.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditRequest.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridEditRecorder.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridLayoutCache.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewState.h"
 
 #include "Engine/Reflection/ReflectedValue.h"
@@ -33,7 +33,7 @@
 namespace sw::editor
 {
     /** @brief 마지막 FUNCTION 호출(대상 하나 이상)의 결과입니다. `begin` 으로 비우고 대상마다 `record` 합니다. */
-    struct InspectorInvokeResult
+    struct PropertyGridInvokeResult
     {
         string            _methodName;                            ///< 부른 메서드 이름. 비면 아직 부르지 않았다
         string            _returnText;                            ///< 첫 성공 대상의 반환값 글(void 면 빈 글)
@@ -91,7 +91,7 @@ namespace sw::editor
     struct EditorAssetIndexEntry;
     struct PropertyEditTarget;
 
-    class InspectorFavorites;
+    class PropertyGridFavorites;
     class PropertyDrawerRegistry;
 } // namespace sw::editor
 
@@ -180,7 +180,7 @@ namespace sw::editor
          * @details Model 층의 값 모음(`SceneObjectReferencePickerState`)이 행 하나의 값을 읽는 길이다. View 는 부르지 않는다(값은 행에 있다).
          */
         [[nodiscard]] bool findRowValue( uint32 rowID, MutableObjectAddress& outInstance, const PropertyInfo*& outProp ) const;
-        /** @brief 숫자 행 @p rowID 의 printf 서식입니다 — @p pNumberFormat 에 단위를 붙인다(`InspectorPropertyLayout::appendUnitSuffix`). 묶음에 든 프로퍼티는 처음 한 번만 짓습니다. */
+        /** @brief 숫자 행 @p rowID 의 printf 서식입니다 — @p pNumberFormat 에 단위를 붙인다(`PropertyGridLayout::appendUnitSuffix`). 묶음에 든 프로퍼티는 처음 한 번만 짓습니다. */
         const utf8* getUnitNumberFormat( uint32 rowID, const utf8* pNumberFormat );
         /** @brief 배치 묶음을 새로 지은 횟수입니다(감시 값 `Editor.InspectorLayoutRebuildCount`). */
         uint32 getLayoutRebuildCount() const { return _layoutCache.getRebuildCount(); }
@@ -197,13 +197,13 @@ namespace sw::editor
         // 즐겨찾기
         // ------------------------------------------------------------------------------
         /** @brief 즐겨찾기 집합을 연결합니다. nullptr 이면 끕니다. 집합의 주인은 인스펙터 패널이다. */
-        void setFavorites( InspectorFavorites* pFavorites ) { _pFavorites = pFavorites; }
+        void setFavorites( PropertyGridFavorites* pFavorites ) { _pFavorites = pFavorites; }
         /** @brief 즐겨찾기를 쓰는 그리드이면 true 입니다. */
         bool hasFavorites() const { return _pFavorites != nullptr; }
         /** @brief 키 @p favoriteKey 의 즐겨찾기를 켜고 끄고 바로 저장합니다(언리얼 Details 의 Add to Favorites · Remove from Favorites). */
         void toggleFavorite( string_view favoriteKey );
         /** @brief 메서드 액션 즐겨찾기 집합을 연결합니다. nullptr 이면 끕니다(별을 그리지 않는다). 집합의 주인은 인스펙터 패널이다. */
-        void setActionFavorites( InspectorFavorites* pActionFavorites ) { _pActionFavorites = pActionFavorites; }
+        void setActionFavorites( PropertyGridFavorites* pActionFavorites ) { _pActionFavorites = pActionFavorites; }
         /** @brief 메서드 액션 즐겨찾기를 쓰는 그리드이면 true 입니다. */
         bool hasActionFavorites() const { return _pActionFavorites != nullptr; }
         /** @brief @p type 의 메서드 @p method 가 액션 즐겨찾기(목록 맨 위 고정)이면 true 입니다. */
@@ -225,8 +225,8 @@ namespace sw::editor
         /** @brief 숫자 행 @p rowID 에 저장 단위 값 @p storedValue 를 허용 범위(`Min` · `Max`)로 자른 뒤 씁니다. 되돌리기는 `setRowValue` 와 같다. */
         void setRowNumber( uint32 rowID, float64 storedValue );
         /**
-         * @brief 행 @p rowID 에 텍스트 값(`SerializerUtil::formatPropertyText` 형식)을 적용하고 편집으로 기록합니다.
-         * @details Reset, Paste Value, 그리기 확장(`IInspectorProperty`)의 팝업 편집기 · 선택기가 함께 쓴다.
+         * @brief 행 @p rowID 에 텍스트 값(`PropertySerializer::formatPropertyText` 형식)을 적용하고 편집으로 기록합니다.
+         * @details Reset, Paste Value, 그리기 확장(`IPropertyDrawer`)의 팝업 편집기 · 선택기가 함께 쓴다.
          *          다중 선택은 편집이 닿는 컴포넌트 전부의 값 글을 찍고(`_collectEditTargets`), `_onEdited` 가 값을 나머지에도 입힌다.
          */
         void setPropertyText( uint32 rowID, string_view text, const utf8* pUndoLabel );
@@ -234,12 +234,12 @@ namespace sw::editor
         bool setAssetPath( uint32 rowID, string_view path );
         /** @brief 행 @p rowID 를 기본값으로 되돌립니다. 기본값은 대상 컴포넌트의 기본 인스턴스(CDO)이고, 없으면 메타 텍스트입니다. */
         void resetToDefault( uint32 rowID );
-        /** @brief 행 @p rowID 의 값 글(`SerializerUtil::formatPropertyText`)입니다 — Copy Value 가 부른다. 없는 행은 빈 글입니다. */
+        /** @brief 행 @p rowID 의 값 글(`PropertySerializer::formatPropertyText`)입니다 — Copy Value 가 부른다. 없는 행은 빈 글입니다. */
         string formatPropertyText( uint32 rowID ) const;
         /**
          * @brief 글 @p text 를 행 @p rowID 에 붙여 넣을 수 있으면 true 입니다(R13 — Paste Value 의 켜짐). 값은 바꾸지 않는다.
          * @details 내장 값(수 · 벡터 · bool …)과 열거형은 그 타입의 빈 사본에 읽혀야 한다 — 읽히지 않는 글을 켜 두면 눌러도 아무 일이 없다(유니티의 타입 있는 클립보드가 회색으로 두는 것).
-         *          글 칸(`string` · `hashed_string`)은 어떤 글이든 받는다. 그 밖의 타입(구조체 · 컨테이너 · 에셋 참조)은 적용(`SerializerUtil::applyPropertyText`)이 거르고 값은 그대로다.
+         *          글 칸(`string` · `hashed_string`)은 어떤 글이든 받는다. 그 밖의 타입(구조체 · 컨테이너 · 에셋 참조)은 적용(`PropertySerializer::applyPropertyText`)이 거르고 값은 그대로다.
          *          타입 핸들은 선택기만이 입력 길이라 false 다(`PropertyValueRow::_bPasteAllowed`).
          */
         [[nodiscard]] bool canPasteText( uint32 rowID, string_view text ) const;
@@ -271,12 +271,12 @@ namespace sw::editor
          *        부르기는 이름으로 그때 다시 찾는다(`ReflectionInvoke::callByName`) — 모듈을 다시 올려 함수가 사라졌으면 `NotBound`, 인자를 못 바꾸면 `ArgumentMismatch` 다.
          *        다중 선택(`_collectEditTargets`)이면 같은 타입 컴포넌트 전부에 같은 인자로 부르고 되돌리기는 한 단계다(언리얼 Details 의 CallInEditor 와 같다).
          * @details 주인 오브젝트가 있으면 호출을 오브젝트 편집 하나로 감싼다 — 바뀐 것이 있으면 되돌리기 한 단계와 씬 dirty, 없으면 아무것도 남기지 않는다.
-         *          Play 중에는 기록 없이 호출한다(`InspectorObjectEdit::applyObjectEdit` 와 같은 규칙). 씬 대상의 호출은 게임 단계가 한다(쓰기 명령과 같은 줄 — 결과 글은
+         *          Play 중에는 기록 없이 호출한다(`PropertyGridObjectEdit::applyObjectEdit` 와 같은 규칙). 씬 대상의 호출은 게임 단계가 한다(쓰기 명령과 같은 줄 — 결과 글은
          *          같은 프레임의 게임 단계 뒤에 오른다). 씬 밖 대상은 바로 부른다.
          */
         void invokeMethod( const FunctionInfo& method, const vector<ReflectedValue>& listArg );
         /** @brief 마지막으로 부른 메서드의 결과입니다. 부른 적이 없으면 메서드 이름이 비어 있습니다. */
-        const InspectorInvokeResult& getLastInvokeResult() const { return *_pLastInvokeResult; }
+        const PropertyGridInvokeResult& getLastInvokeResult() const { return *_pLastInvokeResult; }
         /** @brief 묶은 대상의 이벤트 @p event 에 받는 쪽이 걸려 있으면 true 입니다. */
         [[nodiscard]] bool isEventBound( const EventInfo& event ) const;
         /** @brief 묶은 대상의 이벤트 @p event 를 인자 없이 방송합니다. 씬 대상은 게임 단계가 이벤트 이름으로 다시 찾아 방송한다. */
@@ -296,9 +296,9 @@ namespace sw::editor
          * @brief 대상 타입 @p targetTypeName 의 핸들 @p handle 을 편집 대상의 씬에서 풀어 미리보기 글과 상태를 채웁니다(타입 핸들 선택기).
          * @return 대상 타입이 레지스트리에 없거나 편집 대상의 씬이 없으면 false 이고 @p outPreview 가 오류 글입니다(활성 씬으로 넓히지 않는다).
          */
-        bool describeComponentHandle( const hashed_string& targetTypeName, const ComponentHandle& handle, string& outPreview, InspectorHandleState& outState ) const;
+        bool describeComponentHandle( const hashed_string& targetTypeName, const ComponentHandle& handle, string& outPreview, PropertyGridHandleState& outState ) const;
         /** @brief 편집 대상의 씬에서 @p targetTypeName 이나 그 파생 컴포넌트를 라벨 순으로 모읍니다. 타입 · 씬이 없으면 비웁니다. */
-        void collectComponentChoices( const hashed_string& targetTypeName, vector<InspectorComponentChoice>& outListChoice ) const;
+        void collectComponentChoices( const hashed_string& targetTypeName, vector<PropertyGridComponentChoice>& outListChoice ) const;
 
         // ------------------------------------------------------------------------------
         // 편집 구간 — View 가 위젯 상태를 넘기고 프레임 끝에 마감한다(`PropertyEditSpanSet`)
@@ -330,15 +330,15 @@ namespace sw::editor
         /** @brief 행 표의 한 줄입니다 — 값 행이 가리키는 값 자리. 이 표만 인스턴스 주소를 든다. */
         struct RowBinding
         {
-            MutableObjectAddress      _instance{ nullptr };             ///< 프로퍼티를 가진 객체(원소 · 맵 값은 그 값 자리 — 원소 프로퍼티의 오프셋이 0 이다)
-            const PropertyInfo*       _pProp{ nullptr };                ///< 프로퍼티(원소 프로퍼티는 `_listElementProp` 의 것). 카테고리 머리 · 화면 밖 행은 nullptr
-            InspectorPropertyDisplay* _pDisplay{ nullptr };             ///< 묶음 줄의 표시 정보. 깊이 0 값 행만 갖는다(중첩 필드 · 원소 · 맵 값은 nullptr)
-            uint64                    _key{ 0 };                        ///< `PropertyValueRow::_key`
-            uint32                    _rootRowID{ 0 };                  ///< 깊이 0 조상 행 — 알림은 그 프로퍼티로 한다
-            uint32                    _parentRowID{ 0 };                ///< 부모 행. 깊이 0 행은 자신이다 — 편집 경로(`buildEditPath`)가 이것으로 올라간다
-            uint32                    _ordinal{ 0 };                    ///< 원소 · 맵 항목의 자리(경로 마디)
-            PropertyRowChild          _child{ PropertyRowChild::None }; ///< 부모 아래 갈래(경로 마디의 종류). None 이고 부모가 있으면 값 자리가 부모와 같다(키 원소)
-            uint8                     _bDefaultOpen{ 0 };               ///< 펼침 상태를 적지 않았을 때 펼쳐져 있다(카테고리 머리)
+            MutableObjectAddress _instance{ nullptr };             ///< 프로퍼티를 가진 객체(원소 · 맵 값은 그 값 자리 — 원소 프로퍼티의 오프셋이 0 이다)
+            const PropertyInfo*  _pProp{ nullptr };                ///< 프로퍼티(원소 프로퍼티는 `_listElementProp` 의 것). 카테고리 머리 · 화면 밖 행은 nullptr
+            PropertyGridDisplay* _pDisplay{ nullptr };             ///< 묶음 줄의 표시 정보. 깊이 0 값 행만 갖는다(중첩 필드 · 원소 · 맵 값은 nullptr)
+            uint64               _key{ 0 };                        ///< `PropertyValueRow::_key`
+            uint32               _rootRowID{ 0 };                  ///< 깊이 0 조상 행 — 알림은 그 프로퍼티로 한다
+            uint32               _parentRowID{ 0 };                ///< 부모 행. 깊이 0 행은 자신이다 — 편집 경로(`buildEditPath`)가 이것으로 올라간다
+            uint32               _ordinal{ 0 };                    ///< 원소 · 맵 항목의 자리(경로 마디)
+            PropertyRowChild     _child{ PropertyRowChild::None }; ///< 부모 아래 갈래(경로 마디의 종류). None 이고 부모가 있으면 값 자리가 부모와 같다(키 원소)
+            uint8                _bDefaultOpen{ 0 };               ///< 펼침 상태를 적지 않았을 때 펼쳐져 있다(카테고리 머리)
         };
 
         /** @brief 행 @p rowID 의 행 표 줄입니다. 없으면 nullptr 입니다. */
@@ -360,19 +360,19 @@ namespace sw::editor
          * @param pDisplay 묶음 줄의 표시 정보. 묶음 밖(중첩 필드 · 원소 · 맵 값)이면 nullptr 이고 단위를 그때 계산한다.
          */
         void appendValueRow( PropertyGridViewState& outState, MutableObjectAddress instance, const PropertyInfo& prop, uint16 depth, uint32 rootRowID, uint64 key,
-                             PropertyRowChild child, bool bDisabled, InspectorPropertyDisplay* pDisplay );
+                             PropertyRowChild child, bool bDisabled, PropertyGridDisplay* pDisplay );
         /** @brief 펼친 노드 행 @p rowID 의 자식(구조체 필드 · 원소 · 맵 값)을 채웁니다. */
         void appendChildRows( PropertyGridViewState& outState, uint32 rowID, MutableObjectAddress instance, const PropertyInfo& prop );
         /** @brief 내장 값 행의 사본 · 숫자 범위 · 단위 · 읽기 전용 글을 채웁니다. */
-        void fillBuiltinRow( PropertyValueRow& row, MutableObjectAddress instance, const PropertyInfo& prop, const InspectorBuiltinValue& builtin, const InspectorPropertyDisplay* pDisplay );
+        void fillBuiltinRow( PropertyValueRow& row, MutableObjectAddress instance, const PropertyInfo& prop, const PropertyGridBuiltinValue& builtin, const PropertyGridDisplay* pDisplay );
         /** @brief 묶음 밖 임시 프로퍼티(컨테이너 원소 · 맵 값)를 하나 더해 @p containerProp 의 원소 프로퍼티로 채웁니다. 다음 `gather` 까지 주소가 그대로다. */
         const PropertyInfo& appendElementProperty( const PropertyInfo& containerProp );
         /** @brief @p pInstance 의 기본값 비교 대상입니다. 묶은 컴포넌트 자신이면 그 타입의 기본 인스턴스(CDO), 그 밖(중첩 구조체 · 씬 밖 객체)은 비어 있습니다(메타 기본값 텍스트를 쓴다). */
         ObjectAddress findDefaultInstance( const void* pInstance, const TypeInfo& type ) const;
         /** @brief 즐겨찾기한 프로퍼티만 타입 표시 이름 머리 하나로 모아 @p inoutListGroup 을 바꿉니다. 하나도 없으면 비웁니다. */
-        void keepFavoriteProperties( const TypeInfo& type, vector<InspectorPropertyGroup>& inoutListGroup ) const;
+        void keepFavoriteProperties( const TypeInfo& type, vector<PropertyGridGroup>& inoutListGroup ) const;
         /** @brief 기본값과 같은 프로퍼티를 빼고, 남은 것이 없는 카테고리는 머리째 뺍니다. 다중 선택에서 값이 갈린 프로퍼티는 남깁니다. */
-        void removeDefaultValued( ObjectAddress instance, ObjectAddress defaultInstance, vector<InspectorPropertyGroup>& inoutListGroup );
+        void removeDefaultValued( ObjectAddress instance, ObjectAddress defaultInstance, vector<PropertyGridGroup>& inoutListGroup );
         /** @brief 다중 선택에서 @p prop 값이 오브젝트마다 다르면 true 입니다. */
         bool isMixed( const PropertyInfo& prop );
         /** @brief 키 @p favoriteKey 가 즐겨찾기이면 true 입니다. */
@@ -410,11 +410,11 @@ namespace sw::editor
         Delegate<bool( const PropertyInfo& )> _isMixed;            ///< 묶은 대상의 `_isMixed`
         Delegate<void( vector<Component*>& )> _collectEditTargets; ///< 묶은 대상의 `_collectEditTargets`
         PropertyEditSpanSet                   _editSpans;          ///< 이 그리드의 편집 구간(인스펙터 창마다 따로 닫힌다)
-        InspectorFavorites*                   _pFavorites;         ///< 즐겨찾기 집합. nullptr 이면 즐겨찾기를 쓰지 않는다
-        InspectorFavorites*                   _pActionFavorites;   ///< 메서드 액션 즐겨찾기 집합. nullptr 이면 쓰지 않는다
-        InspectorLayoutCache                  _layoutCache;        ///< 타입 · 확장이 그린 이름 · 검색 글 · 레지스트리 세대마다 지은 묶음과 프로퍼티별 표시 정보
+        PropertyGridFavorites*                _pFavorites;         ///< 즐겨찾기 집합. nullptr 이면 즐겨찾기를 쓰지 않는다
+        PropertyGridFavorites*                _pActionFavorites;   ///< 메서드 액션 즐겨찾기 집합. nullptr 이면 쓰지 않는다
+        PropertyGridLayoutCache               _layoutCache;        ///< 타입 · 확장이 그린 이름 · 검색 글 · 레지스트리 세대마다 지은 묶음과 프로퍼티별 표시 정보
         string                                _scratchUnitFormat;  ///< 묶음 밖 행(컨테이너 원소 · 중첩 필드)의 단위 붙은 서식 — 부를 때마다 다시 짓는다
-        vector<InspectorPropertyGroup>        _listFilteredGroup;  ///< 즐겨찾기 · 바뀐 것만 보기로 거른 묶음 사본(저장 공간을 다시 쓴다)
+        vector<PropertyGridGroup>             _listFilteredGroup;  ///< 즐겨찾기 · 바뀐 것만 보기로 거른 묶음 사본(저장 공간을 다시 쓴다)
         vector<RowBinding>                    _listBinding;        ///< 이번 `gather` 의 행 표(행 번호 → 값 자리)
         vector<unique_ptr<PropertyInfo>>      _listElementProp;    ///< 이번 `gather` 의 원소 · 맵 값 프로퍼티(행 표가 주소를 들므로 따로 할당한다)
         unordered_map<uint64, float32>        _mapRowHeight;       ///< 행 키 → 지난번에 잰 높이
@@ -424,6 +424,6 @@ namespace sw::editor
         uint64                                _targetObjectID;     ///< 묶은 씬 대상의 오브젝트 id(쓰기 요청이 대상을 다시 찾는 값)
         uint64                                _targetComponentID;  ///< 묶은 씬 대상의 컴포넌트 id. 0 이면 오브젝트 자신
         EditorPropertyGridScope               _targetScope;        ///< 묶은 씬 대상의 범위. 씬 밖 대상이면 None
-        shared_ptr<InspectorInvokeResult>     _pLastInvokeResult;  ///< 마지막으로 부른 메서드의 결과 — 게임 단계의 호출이 쓰는 결과 칸이라 요청과 함께 나눠 든다(그리드가 먼저 사라져도 칸은 산다)
+        shared_ptr<PropertyGridInvokeResult>  _pLastInvokeResult;  ///< 마지막으로 부른 메서드의 결과 — 게임 단계의 호출이 쓰는 결과 칸이라 요청과 함께 나눠 든다(그리드가 먼저 사라져도 칸은 산다)
     };
 } // namespace sw::editor

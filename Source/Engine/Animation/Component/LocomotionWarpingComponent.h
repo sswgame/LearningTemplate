@@ -94,7 +94,7 @@ namespace sw
         /**
          * @brief 재생 속도를 다른 쪽이 쥐었는지 정합니다(게임 스레드). 쥔 동안 보폭 보정은 재생 속도를 쓰지 않고 보폭 배율은 1 입니다.
          * @details 페어드 애니메이션 세션(`PairedAnimationSession`)이 역할에 들어올 때 쥐고 나갈 때 놓는다 — 세션 시계는 모든 역할의 속도가 1 이라는
-         *          데에 기대므로, 여기서 속도를 바꾸면 세션이 어긋남으로 보고 중단한다. 세션은 위 티어(Character)라 이쪽이 세션을 묻지 않고 세션이 알려 준다.
+         *          데에 기대므로, 여기서 속도를 바꾸면 세션이 어긋남으로 보고 중단한다. 세션은 위 층(Character)라 이쪽이 세션을 묻지 않고 세션이 알려 준다.
          */
         void setPlayRateHeld( bool bHeld ) { _bPlayRateHeld = bHeld; }
         bool isPlayRateHeld() const { return _bPlayRateHeld; }

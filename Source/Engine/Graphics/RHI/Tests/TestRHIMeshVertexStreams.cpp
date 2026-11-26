@@ -16,9 +16,9 @@ using namespace sw;
 
 namespace
 {
-    RHIVertex makeVertex( float32 x, float32 normalY, float32 tangentW, float32 dataInTangent )
+    MeshVertex makeVertex( float32 x, float32 normalY, float32 tangentW, float32 dataInTangent )
     {
-        RHIVertex vertex{};
+        MeshVertex vertex{};
         vertex._arrPosition[0] = x;
         vertex._arrPosition[1] = 2.0f;
         vertex._arrPosition[2] = 3.0f;
@@ -33,12 +33,12 @@ namespace
 
 SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedSplitsPositionAndAttributes )
 {
-    const RHIVertex arrVertex[2] = { makeVertex( 1.0f, 1.0f, -1.0f, 0.5f ), makeVertex( 4.0f, -1.0f, 1.0f, 0.0f ) };
-    const uint32    capacity     = 2;
-    vector<uint8>   listByte( RHIMeshVertexStreams::computeBufferBytes( RHIMeshVertexFormat::Packed, capacity ) );
-    const uint32    attributeAt = RHIMeshVertexStreams::computeAttributeOffset( capacity );
-    RHIMeshVertexStreams::write( RHIMeshVertexFormat::Packed, &arrVertex[0], 1, 0, capacity, listByte.data() );
-    RHIMeshVertexStreams::write( RHIMeshVertexFormat::Packed, &arrVertex[1], 1, 1, capacity, listByte.data() ); // 자리를 받아 이어 쓴다(LOD 단계 · 풀의 메시)
+    const MeshVertex arrVertex[2] = { makeVertex( 1.0f, 1.0f, -1.0f, 0.5f ), makeVertex( 4.0f, -1.0f, 1.0f, 0.0f ) };
+    const uint32     capacity     = 2;
+    vector<uint8>    listByte( RHIMeshVertexStreams::computeBufferBytes( MeshVertexFormat::Packed, capacity ) );
+    const uint32     attributeAt = RHIMeshVertexStreams::computeAttributeOffset( capacity );
+    RHIMeshVertexStreams::write( MeshVertexFormat::Packed, &arrVertex[0], 1, 0, capacity, listByte.data() );
+    RHIMeshVertexStreams::write( MeshVertexFormat::Packed, &arrVertex[1], 1, 1, capacity, listByte.data() ); // 자리를 받아 이어 쓴다(LOD 단계 · 풀의 메시)
 
     SW_EXPECT_EQUAL( 2u * ( 12u + 24u ), static_cast<uint32>( listByte.size() ) ); // 정점 색이 half 라 속성이 24 B(R-15)
     SW_EXPECT_EQUAL( 24u, attributeAt );
@@ -55,9 +55,9 @@ SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedSplitsPositionAndAttributes )
 
 SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedKeepsTheSeamMark )
 {
-    const RHIVertex arrVertex[2] = { makeVertex( 1.0f, 1.0f, RHIVertex::makeSeamTangentW( -1.0f, 5u ), 0.5f ), makeVertex( 4.0f, 1.0f, RHIVertex::makeSeamTangentW( 1.0f, RHIVertex::kSeamEdgeMaskAll ), 0.0f ) };
-    vector<uint8>   listByte( RHIMeshVertexStreams::computeBufferBytes( RHIMeshVertexFormat::Packed, 2 ) );
-    RHIMeshVertexStreams::write( RHIMeshVertexFormat::Packed, arrVertex, 2, 0, 2, listByte.data() );
+    const MeshVertex arrVertex[2] = { makeVertex( 1.0f, 1.0f, MeshVertex::makeSeamTangentW( -1.0f, 5u ), 0.5f ), makeVertex( 4.0f, 1.0f, MeshVertex::makeSeamTangentW( 1.0f, MeshVertex::kSeamEdgeMaskAll ), 0.0f ) };
+    vector<uint8>    listByte( RHIMeshVertexStreams::computeBufferBytes( MeshVertexFormat::Packed, 2 ) );
+    RHIMeshVertexStreams::write( MeshVertexFormat::Packed, arrVertex, 2, 0, 2, listByte.data() );
     const RHIPackedMeshAttributes* pAttributes = reinterpret_cast<const RHIPackedMeshAttributes*>( listByte.data() + RHIMeshVertexStreams::computeAttributeOffset( 2 ) );
     SW_EXPECT_EQUAL( int8{ -6 }, pAttributes[0]._arrTangent[3] ); // 1 + 변 묶음 5
     SW_EXPECT_EQUAL( int8{ 64 }, pAttributes[1]._arrTangent[3] );
@@ -65,9 +65,9 @@ SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedKeepsTheSeamMark )
 
 SW_TEST_CASE( RHIMeshVertexStreamsTest, FullKeepsDataCarriedInTangent )
 {
-    const RHIVertex vertex = makeVertex( 1.0f, 1.0f, 1.0f, 4096.0f ); // 지형 형태 변환이 탄젠트에 싣는 경계 좌표
-    vector<uint8>   listByte( RHIMeshVertexStreams::computeBufferBytes( RHIMeshVertexFormat::HighPrecision, 1 ) );
-    RHIMeshVertexStreams::write( RHIMeshVertexFormat::HighPrecision, &vertex, 1, 0, 1, listByte.data() );
+    const MeshVertex vertex = makeVertex( 1.0f, 1.0f, 1.0f, 4096.0f ); // 지형 형태 변환이 탄젠트에 싣는 경계 좌표
+    vector<uint8>    listByte( RHIMeshVertexStreams::computeBufferBytes( MeshVertexFormat::HighPrecision, 1 ) );
+    RHIMeshVertexStreams::write( MeshVertexFormat::HighPrecision, &vertex, 1, 0, 1, listByte.data() );
 
     SW_EXPECT_EQUAL( 12u + 52u, static_cast<uint32>( listByte.size() ) );
     const RHIHighPrecisionMeshAttributes* pAttributes = reinterpret_cast<const RHIHighPrecisionMeshAttributes*>( listByte.data() + 12 );

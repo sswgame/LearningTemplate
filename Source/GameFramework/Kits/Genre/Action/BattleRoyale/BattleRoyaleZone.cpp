@@ -6,9 +6,9 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 namespace sw
 {
@@ -160,7 +160,7 @@ namespace sw
     bool BattleRoyaleZone::readState( BitReader& reader )
     {
         BattleRoyaleZone loaded = *this; // 단계 검사까지 지난 뒤에만 옮긴다
-        if ( ReplicatedLayout::readFull( reader, loaded, nullptr ) != FixedReadResult::Ok || loaded.isPhaseValid() == false )
+        if ( ReplicatedLayout::readFull( reader, loaded, nullptr ) != LayoutReadResult::Ok || loaded.isPhaseValid() == false )
             return false;
         *this = std::move( loaded );
         return true;

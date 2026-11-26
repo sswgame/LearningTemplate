@@ -3,9 +3,9 @@
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
+#include "Editor/Common/Workspace/Notification/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/View/EditorRenderViews.h"
 
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Localization/LocText.h"

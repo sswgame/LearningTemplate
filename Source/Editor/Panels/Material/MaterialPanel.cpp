@@ -278,7 +278,7 @@ namespace sw::editor
                 return EditorPanelManager::findOpenPanelInEditorContext<MaterialPanel>();
             }
 
-            /** @brief 패널이 지금 연 문서가 `gv_editorWatchAsset`(리소스 id)이면 1 입니다 — 문서 교체와 미리보기 계산을 나눠 보는 길입니다. */
+            /** @brief 패널이 지금 연 문서가 `gv_editorWatchAsset`(에셋 id)이면 1 입니다 — 문서 교체와 미리보기 계산을 나눠 보는 길입니다. */
             [[nodiscard]] static bool readDocumentIsWatchAsset( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const MaterialPanel* pPanel = findOpenPanel();

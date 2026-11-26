@@ -8,7 +8,7 @@
 
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/UI/Accessibility/UIAccessibilitySubsystem.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
@@ -244,7 +244,7 @@ namespace sw
         UIDocumentCache&                                  documents = engine::getSubsystem<UIDocumentCache>();
         const expected<shared_ptr<const UIDocumentAsset>> document  = documents.acquire( _pUI->getEngineDocuments()._notificationEntry );
         vector<UIBindingDef>                              listBinding;
-        expected<unique_ptr<Widget>>                      built = document.has_value() ? ( **document ).instantiate( documents, ResourceTagSet{}, listBinding ) : unexpected( document.error() );
+        expected<unique_ptr<Widget>>                      built = document.has_value() ? ( **document ).instantiate( documents, AssetTagSet{}, listBinding ) : unexpected( document.error() );
         if ( built.has_value() == false )
         {
             SW_LOG_ERROR_ID( "UINotificationSubsystem.NotificationEntryFailed", "[UI] Notification entry failed: %# (%#)", built.error().message(), built.error().detail() );

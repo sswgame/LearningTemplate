@@ -4,7 +4,7 @@
 #include "Engine/Config/IConfig.h"
 #include "Engine/Config/PackCookRuleTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 namespace sw
 {
@@ -24,7 +24,7 @@ namespace sw
         static constexpr const utf8* kConfigFolder = "Config/Game";
 
         PROPERTY( Required )
-        DataPath _packRoot; ///< 활성 게임 팩의 리소스 경로(`game/<팩 폴더>`) — 팩 마운트 · 게임 도메인 경로가 이것으로 풀린다
+        DataPath _packRoot; ///< 활성 게임 팩의 에셋 경로(`game/<팩 폴더>`) — 팩 마운트 · 게임 도메인 경로가 이것으로 풀린다
 
         PROPERTY()
         GameCookRules _cookRules; ///< 팩 쿠커가 엔진 쿠킹 규칙 뒤에 합치는 이 게임의 규칙(`PackCookRules::mergeGameRules`). 쿠킹만 읽는다

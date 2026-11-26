@@ -5,6 +5,6 @@
   키트는 게임 기능으로 걸 것이 없다(등록하지 않는다) — 카탈로그(starskirmish/data/units.xml)는 맵의 디렉터가 씬 참조로 받는다(개척 마을 미니게임은 다른 카탈로그를 쓴다).
   맵의 SkirmishGameMode 오브젝트에 LockstepSkirmishGameModeComponent → RTSCommandInputComponent · RTSBattlefieldViewComponent(GF_Client_RealTimeStrategy)가 그 순서로 붙는다.
   입력은 확대 · 이동 · 현황 · 속도 공통 레이어와 Skirmish 레이어(starskirmish/data/skirmish.input.xml — 패드 가상 커서를 켠다)만 켠다. 걷기(왼쪽 스틱) · 시연(패드 A · B) 레이어는 꺼진다.
-  시나리오 automation/starskirmish_* · automation/load/starskirmish_aiskirmish 와 lockstep-pair 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+  시나리오 automation/starskirmish_* · automation/load/starskirmish_aiskirmish 와 lockstep-session 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
 <Minigame name="starskirmish" map="guid:6187b6628a0c77f66ec7c2e24502e5dd" entry="SceneSwitch" portalSlot="8" inputContexts="Camera,CameraPan,Menu,Time,Skirmish"/>

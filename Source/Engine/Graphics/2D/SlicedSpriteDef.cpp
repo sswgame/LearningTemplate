@@ -12,7 +12,7 @@
 #include "Engine/Asset/Cache/WeakInternCache.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 
 namespace sw
 {
@@ -90,9 +90,9 @@ namespace sw
             /** @brief 프레임 좌표(축 방향으로 자람)를 UV 로 옮깁니다. 세로는 v 가 위에서 0 이라 뒤집습니다. */
             static float32 toUV( bool bFlipUV, float32 frameCoord ) { return bFlipUV ? ( 1.0f - frameCoord ) : frameCoord; }
 
-            static RHIVertex makeVertex( float32 x, float32 y, float32 normalZ, float32 u, float32 v )
+            static MeshVertex makeVertex( float32 x, float32 y, float32 normalZ, float32 u, float32 v )
             {
-                return RHIVertex{
+                return MeshVertex{
                     { x, y, 0.0f },
                     { 0.0f, 0.0f, normalZ },
                     { u, v },
@@ -105,7 +105,7 @@ namespace sw
              * @brief 사각형 하나를 삼각형 둘로 붙입니다. @p mirror 가 -1 이면 X 를 거울에 비춘 뒷면입니다.
              * @details 감김은 `createSpriteQuad` 와 같다. 앞면은 (왼아래, 오른위, 오른아래), (왼아래, 왼위, 오른위) 순서이다. X 를 뒤집으면 감김이 뒤집혀 노멀이 +Z 가 된다.
              */
-            static void appendQuad( const Span& column, const Span& row, float32 mirror, vector<RHIVertex>& outListVertex )
+            static void appendQuad( const Span& column, const Span& row, float32 mirror, vector<MeshVertex>& outListVertex )
             {
                 const float32 normalZ = ( mirror > 0.0f ) ? -1.0f : 1.0f;
                 const float32 left    = column._start * mirror;
@@ -150,7 +150,7 @@ namespace sw
             /** @brief 값에 맞는 정점을 만들어 메시 하나로 만듭니다. 정점이 없으면(크기 0) nullptr 입니다. */
             static shared_ptr<Mesh> createSlicedMesh( const SlicedSpriteDef& desc )
             {
-                vector<RHIVertex> listVertex;
+                vector<MeshVertex> listVertex;
                 SlicedSpriteDef::makeSlicedVertices( desc, listVertex );
                 if ( listVertex.empty() )
                     return {};
@@ -173,7 +173,7 @@ namespace sw
                _bTiled == other._bTiled;
     }
 
-    void SlicedSpriteDef::makeSlicedVertices( const SlicedSpriteDef& desc, vector<RHIVertex>& outListVertex )
+    void SlicedSpriteDef::makeSlicedVertices( const SlicedSpriteDef& desc, vector<MeshVertex>& outListVertex )
     {
         using Internal = SpriteMeshBuilderInternal;
         outListVertex.clear();
@@ -222,7 +222,7 @@ namespace sw
 
     shared_ptr<Mesh> SlicedSpriteDef::acquireSlicedMesh( const SlicedSpriteDef& desc )
     {
-        const ScopedMemoryTag memoryScope{ MeshUtil::kMemoryTag };
+        const ScopedMemoryTag memoryScope{ PrimitiveMeshBuilder::kMemoryTag };
         return SpriteMeshBuilderInternal::getSlicedMeshCache().acquire( desc, &SpriteMeshBuilderInternal::createSlicedMesh );
     }
 } // namespace sw

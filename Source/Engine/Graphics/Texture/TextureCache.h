@@ -2,7 +2,7 @@
  * @file TextureCache.h
  * @brief 경로를 키로 Texture2D 소유권을 관리합니다(MaterialCache 와 같은 구조).
  * @details 게임이 보는 헤더라 `Texture2D`(GPU 텍스처 · SRV)를 앞선 선언으로만 안다 — 텍스처 몸체가 필요한 쪽(렌더러 · 에디터)이 `Texture2D.h` 를 include 한다.
- *          SRV 번호 형식은 `Engine/Foundation/RHIDescriptorIndex.h` 에서 받는다 — 게임 타깃 게이트가 `Engine/Graphics/RHI`(RHIHandles.h)를 막는다.
+ *          SRV 번호 형식은 `Engine/Foundation/RHIDescriptorIndex.h` 에서 받는다 — 게임 타깃 가드가 `Engine/Graphics/RHI`(RHIHandles.h)를 막는다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"

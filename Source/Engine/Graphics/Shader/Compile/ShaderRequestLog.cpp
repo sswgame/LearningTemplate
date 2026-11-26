@@ -20,7 +20,7 @@ namespace sw
     {
         struct ShaderRequestLogInternal
         {
-            /** @brief 줄의 칸 구분자입니다. 리소스 경로 · 진입점 · define 에 탭은 없다. */
+            /** @brief 줄의 칸 구분자입니다. 에셋 경로 · 진입점 · define 에 탭은 없다. */
             static constexpr char kFieldSeparator = '\t';
             /** @brief define 앞의 고정 칸 수(형식 · 스테이지 · 소스 · 진입점)입니다. */
             static constexpr size_t kFixedFieldCount = 4;

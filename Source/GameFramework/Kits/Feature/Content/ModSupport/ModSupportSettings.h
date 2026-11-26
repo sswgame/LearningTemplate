@@ -50,12 +50,12 @@ namespace sw
         uint32 _maxEntryBytes{ 0 }; ///< 항목 하나의 풀린 크기 상한
         PROPERTY( Required, Min = 65536, Max = 262144 )
         uint32         _packBlockSize{ 0 };    ///< 모드 팩을 묶을 때(`ModPackBuilder`)의 블록 크기 — 2 의 거듭제곱(`kPackMinBlockSize` ~ `kPackMaxBlockSize`). 런타임에는 `Config/` 의 팩 설정이 없어 게임 데이터가 든다
-        vector<string> _listOverridablePrefix; ///< 모드가 덮어쓸 수 있는 기본 리소스 id 접두(끝 `/`). 이것과 `_listOverridablePath` 가 모두 비면 덮어쓰기를 받지 않는다
-        vector<string> _listOverridablePath;   ///< 모드가 덮어쓸 수 있는 기본 리소스 id 하나씩 — 여러 미니게임의 표가 함께 든 폴더를 통째로 열지 않으려고 파일로 연다
+        vector<string> _listOverridablePrefix; ///< 모드가 덮어쓸 수 있는 기본 에셋 id 접두(끝 `/`). 이것과 `_listOverridablePath` 가 모두 비면 덮어쓰기를 받지 않는다
+        vector<string> _listOverridablePath;   ///< 모드가 덮어쓸 수 있는 기본 에셋 id 하나씩 — 여러 미니게임의 표가 함께 든 폴더를 통째로 열지 않으려고 파일로 연다
 
         /** @brief 설정 글을 읽습니다. 모르는 원소 · 빠진 칸 · 0 인 한계 · 끝이 `/` 가 아니거나 정규형이 아닌 접두 · 정규형 파일이 아닌 경로면 이유를 오류로 남기고 false 입니다. */
         [[nodiscard]] static bool parseXMLText( string_view text, string_view sourceName, ModSupportSettings& outSettings );
-        /** @brief 읽은 문서(조건을 푼 글)를 설정으로 옮깁니다. 글 입구와 리소스 입구가 함께 쓴다. */
+        /** @brief 읽은 문서(조건을 푼 글)를 설정으로 옮깁니다. 글 입구와 에셋 입구가 함께 쓴다. */
         [[nodiscard]] static bool parseDocument( const XMLDocument& doc, string_view sourceName, ModSupportSettings& outSettings );
         /** @brief 리소스 @p assetID 의 설정을 읽습니다(데이터 종류의 로더). */
         [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, ModSupportSettings& outSettings );

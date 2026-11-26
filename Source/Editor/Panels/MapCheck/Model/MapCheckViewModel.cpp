@@ -11,13 +11,13 @@
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
+#include "Editor/Common/Workspace/Notification/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 #include "Editor/Panels/Scene/EditorSceneViewUtil.h"
 
 #include "Engine/Localization/LocText.h"
@@ -32,7 +32,7 @@
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 
 // 맵 검사 결과의 안전한 고침(`ValidationPropertyEdit`)을 적용합니다 — 되돌리기 한 단계, 적용 뒤 그 오브젝트를 다시 검증합니다(ImGui 없음).
 namespace sw::editor
@@ -319,7 +319,7 @@ namespace sw::editor
                     SW_LOG_WARNING_ID( "MapCheckFixCommands.PropertyGone", "Fix skipped - %# has no property '%#'", issue._typeName.c_str(), issue._fix._propertyName.c_str() );
                     return false;
                 }
-                if ( SerializerUtil::applyPropertyText( *pProp, MutableObjectAddress{ pComponent }, issue._fix._valueText, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+                if ( PropertySerializer::applyPropertyText( *pProp, MutableObjectAddress{ pComponent }, issue._fix._valueText, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
                 {
                     SW_LOG_WARNING_ID( "MapCheckFixCommands.ValueRejected", "Fix skipped - '%#' could not be written to %#.%#", issue._fix._valueText, issue._typeName.c_str(), pProp->_name.c_str() );
                     return false;

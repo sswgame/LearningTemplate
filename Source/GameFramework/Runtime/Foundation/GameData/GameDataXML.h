@@ -35,7 +35,7 @@ namespace sw
     struct SW_GF_API GameDataXML
     {
         /**
-         * @brief 리소스 경로의 XML 을 열어 @p pRootName 루트를 카탈로그의 루트 읽기(@p pLoadRoot)에 넘깁니다. 문서나 루트가 없거나 읽은 것이 없으면 false 입니다.
+         * @brief 에셋 경로의 XML 을 열어 @p pRootName 루트를 카탈로그의 루트 읽기(@p pLoadRoot)에 넘깁니다. 문서나 루트가 없거나 읽은 것이 없으면 false 입니다.
          * @details 카탈로그마다 같았던 `loadFromAsset` 의 몸통이다. 카탈로그는 이 한 줄만 두면 된다.
          * @code
          *     bool CropCatalog::loadFromAsset( const AssetID& assetID ) { const string_view path = assetID.view(); return GameDataXML::loadFromAsset( *this, &CropCatalog::loadRoot, path, "CropCatalog" ); }
@@ -156,7 +156,7 @@ namespace sw
          * @brief @p parent 의 첫 @p pElement 자식(`<Curve>`)이 든 `<Key time value interpolation/>` 를 읽어 @p outCurve 를 채웁니다. 먼저 키를 비웁니다.
          * @details `time` · `value` 는 필수이고 값이 @p minValue 아래면 오류다(자르지 않는다). `interpolation` 은 `linear`(기본) · `constant` · `cubic` 이고, 접선은 이웃 키로 센다.
          *          원소가 없으면 키도 없다(커브가 대체값을 쓴다). 모르는 속성 · 원소 · 보간 이름, 빠진 · 깨진 값이 있으면 오류를 남기고 false 를 반환한다(그 키는 넣지 않는다).
-         *          손 읽기 정본(`XMLReadUtil`)이 아니라 여기 있는 까닭: 엔진의 Serialization 과 Utility(`FloatCurve`)가 같은 티어라 서로 include 하지 못한다.
+         *          손 읽기 정본(`XMLReadUtil`)이 아니라 여기 있는 까닭: 엔진의 Serialization 과 Utility(`FloatCurve`)가 같은 층이라 서로 include 하지 못한다.
          * @code
          *     <Curve><Key time="0" value="0.5"/><Key time="600" value="2" interpolation="cubic"/></Curve>
          * @endcode

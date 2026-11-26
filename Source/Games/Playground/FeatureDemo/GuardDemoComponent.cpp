@@ -9,8 +9,8 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
 
@@ -22,7 +22,7 @@ namespace sw
     {
         struct GuardDemoComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "FDGU" };
+            static constexpr FormatDesc kStateFormat{ "FDGU" };
         };
     } // namespace
 

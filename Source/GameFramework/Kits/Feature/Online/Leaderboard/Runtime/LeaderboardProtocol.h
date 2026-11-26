@@ -1,7 +1,7 @@
 /**
  * @file LeaderboardProtocol.h
  * @brief 순위표 키트의 와이어 형식입니다. 메서드 번호(영역 `OnlineMethodRange::kLeaderboard`), 요청과 응답, 업적 알림의 형식을 정의합니다.
- * @details - 요청, 응답, 알림은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
+ * @details - 요청, 응답, 알림은 `REFLECT` 구조체 하나씩이고 본문은 스키마 결합형이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
  *            메서드마다 응답 타입이 따로이다. 업무 결과는 응답의 `_result`(도메인 값만)이고, 범위 밖 요청 · 일시 장애 · 경합 · 로그인 없음은 공통 범주(`OnlineError`)로 온다.
  *          - 점수 제출(`SubmitScore`)은 보드 정의의 `_bClientSubmit` 이 켜진 보드만 받는다. 아니면 본문의 결과가 NotAllowed 이다.
  *          - 시즌 결과는 항목 하나(점수와 순위)와 기간 id(시즌 id)로 싣는다.
@@ -213,7 +213,7 @@ namespace sw
 {
     /**
      * @struct LeaderboardProtocol
-     * @brief 순위표 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     * @brief 순위표 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 스키마 결합형이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      * @details 업적 알림의 본문은 `AchievementState` 하나입니다.
      */
     struct SW_KIT_API LeaderboardProtocol

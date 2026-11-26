@@ -11,6 +11,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
+#include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
@@ -20,8 +21,7 @@
 #include "GameFramework/Runtime/Foundation/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Save/GameStateSnapshot.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
@@ -29,7 +29,7 @@ namespace sw
     {
         struct GameSaveSlotsInternal
         {
-            /** @brief 활성 씬의 리소스 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면 빈 글입니다 — 세이브 머리의 씬 정체와 같은 뜻이다. */
+            /** @brief 활성 씬의 에셋 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면 빈 글입니다 — 세이브 머리의 씬 정체와 같은 뜻이다. */
             static string findActiveSceneID()
             {
                 const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
@@ -303,7 +303,7 @@ namespace sw
         if ( bLoaded )
         {
             ++_counts._loaded;
-            if ( AutosaveManager* const pAutosave = game::findSubsystem<AutosaveManager>() )
+            if ( AutosaveController* const pAutosave = game::findSubsystem<AutosaveController>() )
                 pAutosave->resetProgress(); // 앞 진행의 체크포인트 · 요청으로 되돌린 진행을 저장하지 않는다(자동 저장 되돌리기는 아래 완료가 제 슬롯의 것으로 잇는다)
         }
         GameSceneFlow&      sceneFlow = _owner.getSubsystem<GameSceneFlow>();

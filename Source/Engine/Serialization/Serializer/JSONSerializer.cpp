@@ -1,0 +1,789 @@
+#include "pch.h"
+
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
+
+#include "Core/Container/InlineAllocator.h"
+#include "Core/File/FileUtil.h"
+
+#include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Reflection/ReflectVisit.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Serializer/ContainerVisitor.h"
+#include "Engine/Serialization/Serializer/NestedObjectCodec.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
+#include "Engine/Serialization/Serializer/PropertyReadRollback.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct JSONSerializerInternal
+        {
+            /** @brief 빠진 필수 칸을 경로마다 알립니다. 하나도 없으면 true 입니다(엄격한 읽기 `deserialize` · `loadFromFile` 의 끝). */
+            static bool reportMissingRequired( const JSONValue& root, const TypeInfo& typeInfo )
+            {
+                vector<string> listMissing;
+                JSONSerializer::collectMissingRequired( root, typeInfo, listMissing );
+                for ( const string& missingPath : listMissing )
+                {
+                    SW_LOG_ERROR_ID( "Serialization.RequiredMissing", "%# has no required '%#' (PROPERTY( Required ) - the initial value is not a default)", typeInfo._name.c_str(),
+                                     missingPath.c_str() );
+                }
+                return listMissing.empty();
+            }
+
+            /**
+             * @brief @p field 의 원문을 @p orphan 에 담아 목록에 넣습니다. 글로 못 쓰는 값(잘못된 UTF-8)은 경고를 남기고 버립니다.
+             * @details 파서는 잘못된 UTF-8 을 받지 않으므로 읽은 글에서는 생기지 않는다 — `setString` 으로 손으로 넣은 값만 닿는다.
+             */
+            static void pushOrphan( vector<SchemaOrphanValue>& outListOrphan, SchemaOrphanValue orphan, const JSONValue& field, string_view name )
+            {
+                expected<string> text = field.dump();
+                if ( text.has_value() == false )
+                {
+                    SW_LOG_WARNING_ID( "Serialization.OrphanNotWritable", "'%#' could not be kept as JSON text: %# (%#) - value dropped", name, text.error().message(),
+                                       text.error().detail() );
+                    return;
+                }
+                orphan._text = std::move( *text );
+                outListOrphan.push_back( std::move( orphan ) );
+            }
+
+            /** @brief 파일의 모르는 키를 orphan 으로 담습니다. 전역 이름 표에 넣지 않는다(XML 과 같다 — 아는 이름이면 그것을, 아니면 해시만). */
+            static void pushUnknownKeyOrphan( vector<SchemaOrphanValue>& outListOrphan, const string& keyRaw, const JSONValue& field )
+            {
+                SchemaOrphanValue orphan;
+                orphan._name     = hashed_string::findInterned( string_view{ keyRaw.c_str(), keyRaw.size() } );
+                orphan._nameHash = hashed_string::computeHash( string_view{ keyRaw.c_str(), keyRaw.size() } );
+                // 버렸다고 알릴 때 찍을 이름 — 위의 `_name` 은 intern 된 이름일 때만 찬다
+                orphan._writtenName = keyRaw;
+                pushOrphan( outListOrphan, std::move( orphan ), field, keyRaw );
+            }
+
+            /** @brief 읽지 못한 알려진 필드를 orphan 으로 담습니다. */
+            static void pushUnreadableFieldOrphan( vector<SchemaOrphanValue>& outListOrphan, const PropertyInfo& prop, const JSONValue& field )
+            {
+                SchemaOrphanValue orphan;
+                orphan._name     = prop._name;
+                orphan._nameHash = prop.getNameHash();
+                pushOrphan( outListOrphan, std::move( orphan ), field, prop._name.c_str() );
+            }
+
+            /** @brief 문서를 글로 씁니다. 못 쓰면(잘못된 UTF-8 문자열 칸) 타입 이름을 앞에 붙인 오류입니다. */
+            [[nodiscard]] static expected<string> dumpDocument( const JSONDocument& doc, const TypeInfo& typeInfo, int32 indent )
+            {
+                expected<string> text = doc.dump( indent );
+                if ( text.has_value() == false )
+                    text.error().prependDetail( ": " ).prependDetail( typeInfo._name.c_str() );
+                return text;
+            }
+
+            /** @brief 읽은 필드가 아닌 프로퍼티는 기본값으로 채웁니다. 이 목적이 다루지 않는 필드는 지금 값 그대로다. */
+            static void applyDefaultsToUnmatched( const TypeInfo& typeInfo, void* pInstance, const SerializeContext& context, const unordered_set<uint32>& uniqueMatched )
+            {
+                for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+                {
+                    const bool bKeepCurrent = uniqueMatched.find( prop.getNameHash() ) != uniqueMatched.end() ||
+                                              PropertySerializer::shouldSerializeProperty( typeInfo, prop, context ) == false;
+                    if ( bKeepCurrent )
+                        continue;
+                    PropertySerializer::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
+                }
+            }
+
+            // 주소는 값 자체다(프로퍼티 오프셋을 더한 뒤). 객체 주소는 `writeProperty` 가 받는다.
+            static void writeJSONValue( JSONValue dst, const ValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context )
+            {
+                if ( dst.isValid() == false )
+                    return;
+
+                // 묶음(`pBinding`)이 있으면 처리기 · 열거형 · 구조체를 이름 조회 없이 고른다 — 바이너리와 같은 길(`ValueSerializer::findValueCodecs`).
+                const ValueSerializer::ValueCodecs codecs    = ValueSerializer::findValueCodecs( typeName, pBinding, context );
+                const hashed_string&               resolved  = codecs.getHandlerName();
+                const bool                         bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) || resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
+                                         resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
+                const bool                         bIsBool   = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) || resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
+                const bool                         bIsEnum   = codecs.findEnum( context ) != nullptr;
+
+                if ( bIsString || bIsEnum )
+                {
+                    StringBuilder<constant::buffer::kMax8192> text;
+                    ValueSerializer::valueToText( text, value, typeName, pBinding, context );
+                    dst.setString( text.view() );
+                    return;
+                }
+
+                if ( bIsBool )
+                {
+                    StringBuilder<constant::buffer::kMax8192> text;
+                    ValueSerializer::valueToText( text, value, typeName, pBinding, context );
+                    bool bValue{ false };
+                    if ( StringUtil::tryParseBool( text.view(), bValue ) )
+                        dst.setBool( bValue );
+                    else
+                        dst.setString( text.view() ); // 읽지 못한 글을 false 로 바꿔 쓰지 않는다 — 읽기가 거절하고 알린다
+                    return;
+                }
+
+                if ( codecs.findTextWriter( context ) != nullptr )
+                {
+                    StringBuilder<constant::buffer::kMax8192> text;
+                    ValueSerializer::valueToText( text, value, typeName, pBinding, context );
+                    JSONDocument parsed;
+                    const bool   bParsedScalar = parsed.tryParse( text.view() ) && parsed.getRoot().isObject() == false && parsed.getRoot().isArray() == false;
+                    if ( bParsedScalar )
+                    {
+                        dst.assignFrom( parsed.getRoot() );
+                        return;
+                    }
+                    dst.setString( text.view() );
+                    return;
+                }
+
+                if ( const TypeInfo* pStructInfo = codecs.findStructType( context ) )
+                {
+                    JSONSerializer::writeObject( dst, value.get(), *pStructInfo, context );
+                    return;
+                }
+
+                StringBuilder<constant::buffer::kMax8192> text;
+                ValueSerializer::valueToText( text, value, typeName, pBinding, context );
+                dst.setString( text.view() );
+            }
+
+            /** @brief 컨테이너를 자연스러운 JSON 으로 적습니다 — 시퀀스는 배열, 맵은 오브젝트, 소유 포인터 원소만 `{ "TypeName": {...} }` 로 감쌉니다. */
+            class ContainerWriter final : public IContainerWriter
+            {
+            public:
+                ContainerWriter( const JSONValue& root, const SerializeContext& context, const NestedContainerInfo& shape )
+                    : _listSlot{}
+                    , _context{ context }
+                    , _shape{ shape }
+                {
+                    _listSlot.push_back( root );
+                }
+
+                void beginSequence( size_t ) override { _listSlot.back().setArray(); }
+                void endSequence() override {}
+                void beginMap( size_t ) override { _listSlot.back().setObject(); }
+                void endMap() override {}
+
+                // `JSONValue` 는 빌린 포인터다 — 같은 부모에 새 키 · 원소를 더하면 앞서 꺼낸 형제 핸들이 죽으므로, 꺼낸 자리는 다 채운 뒤 버린다(스택).
+                void beginMapEntry( const ValueAddress key, const hashed_string& keyTypeName ) override
+                {
+                    StringBuilder<constant::buffer::kMax8192> keyText;
+                    ValueSerializer::valueToText( keyText, key, keyTypeName, _shape.findBinding( keyTypeName ), _context );
+                    const JSONValue entry = _listSlot.back().set( keyText.view() );
+                    _listSlot.push_back( entry );
+                }
+
+                void endMapEntry() override { _listSlot.pop_back(); }
+
+                void beginNestedContainer( const ContainerSlot slot ) override
+                {
+                    if ( slot == ContainerSlot::SequenceElement )
+                    {
+                        const JSONValue element = _listSlot.back().pushBack();
+                        _listSlot.push_back( element );
+                    }
+                }
+
+                void endNestedContainer( const ContainerSlot slot ) override
+                {
+                    if ( slot == ContainerSlot::SequenceElement )
+                        _listSlot.pop_back();
+                }
+
+                void writeOwnedPointer( const ObjectAddress object ) override
+                {
+                    const void* const pObject = object.get();
+                    if ( pObject == nullptr )
+                        return; // 널 원소는 배열에 넣지 않는다
+                    // 맡아 둔 원소(모르는 타입)는 읽은 원문 그대로 다시 쓴다.
+                    SerializeContext::OpaqueElementView opaque{};
+                    if ( _context.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::JSON )
+                    {
+                        JSONDocument rawDoc;
+                        if ( rawDoc.tryParse( opaque._text ) )
+                        {
+                            _listSlot.back().pushBack().assignFrom( rawDoc.getRoot() );
+                            return;
+                        }
+                    }
+                    const TypeInfo* pRuntimeType = _context.getRuntimeTypeInfo( pObject );
+                    if ( pRuntimeType == nullptr )
+                        return; // 쓰지 않는 원소는 XML 처럼 자리도 남기지 않는다
+                    const JSONValue dst = _listSlot.back().pushBack();
+                    dst.setObject();
+                    const JSONValue body = dst.set( pRuntimeType->_name.c_str() );
+                    JSONSerializer::writeObject( body, pObject, *pRuntimeType, _context );
+                    body.set( kSchemaVersionKey ).setUint( 0 );
+                }
+
+                // 값 구조체는 타입 래핑 없이 본문을 그대로 쓴다(리더도 본문만 받는다).
+                void writeValueObject( const ValueAddress value, const hashed_string&, const TypeInfo& typeInfo, const ContainerSlot slot ) override
+                {
+                    JSONSerializer::writeObject( openElementSlot( slot ), value.get(), typeInfo, _context );
+                }
+
+                void writeScalar( const ValueAddress value, const hashed_string& typeName, const ContainerSlot slot ) override
+                {
+                    writeJSONValue( openElementSlot( slot ), value, typeName, _shape.findBinding( typeName ), _context );
+                }
+
+            private:
+                /** @brief 원소 하나를 적을 자리입니다 — 시퀀스면 새 배열 원소, 맵 값이면 항목이 연 자리입니다. */
+                JSONValue openElementSlot( const ContainerSlot slot ) const
+                {
+                    if ( slot == ContainerSlot::SequenceElement )
+                        return _listSlot.back().pushBack();
+                    return _listSlot.back();
+                }
+
+            private:
+                vector<JSONValue, InlineAllocator<JSONValue, 4>> _listSlot;
+                const SerializeContext&                          _context;
+                NestedContainerInfo                              _shape; ///< 맨 바깥 단계의 원소 · 키 묶음(`findBinding`)
+            };
+
+            /** @brief 컨테이너를 자연스러운 JSON 에서 읽습니다. 모양이 다른 값(배열 자리에 글)은 그 칸만 실패입니다 — 다음 자리는 압니다. */
+            class ContainerReader final : public IContainerReader
+            {
+            public:
+                ContainerReader( const JSONValue& root, const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan,
+                                 const PropertyInfo& propForOrphan )
+                    : _listCursor{}
+                    , _pCurrentKey{ nullptr }
+                    , _context{ context }
+                    , _pOutListOrphan{ pOutListOrphan }
+                    , _propForOrphan{ propForOrphan }
+                    , _shape{ propForOrphan.getContainerShape() }
+                {
+                    _listCursor.push_back( root );
+                }
+
+                ContainerReadResult beginSequence( size_t& outCountHint ) override
+                {
+                    const JSONValue& current = _listCursor.back();
+                    if ( current.isArray() == false )
+                        return ContainerReadResult::FieldFailed;
+                    outCountHint = current.size();
+                    return ContainerReadResult::Read;
+                }
+
+                ContainerReadResult beginMap( size_t& outCountHint ) override
+                {
+                    outCountHint = 0;
+                    return _listCursor.back().isObject() ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
+                }
+
+                ContainerReadResult forEachElement( const ContainerElementVisitDelegate& visit ) override
+                {
+                    const JSONValue     container = _listCursor.back();
+                    ContainerReadResult total{ ContainerReadResult::Read };
+                    if ( container.isArray() )
+                    {
+                        for ( size_t elementIndex = 0; elementIndex < container.size() && ContainerVisitor::shouldStopReading( total ) == false; ++elementIndex )
+                        {
+                            _listCursor.push_back( container.at( elementIndex ) );
+                            total = ContainerVisitor::mergeResult( total, visit( elementIndex ) );
+                            _listCursor.pop_back();
+                        }
+                        return total;
+                    }
+                    const vector<string> listKey = container.getMemberNames();
+                    for ( size_t entryIndex = 0; entryIndex < listKey.size() && ContainerVisitor::shouldStopReading( total ) == false; ++entryIndex )
+                    {
+                        _pCurrentKey = &listKey[entryIndex];
+                        _listCursor.push_back( container.get( listKey[entryIndex] ) );
+                        total = ContainerVisitor::mergeResult( total, visit( entryIndex ) );
+                        _listCursor.pop_back();
+                    }
+                    _pCurrentKey = nullptr;
+                    return total;
+                }
+
+                // 키는 멤버 이름(글)이다 — XML 의 `key` 속성과 같은 길로 읽는다.
+                ContainerReadResult readMapKey( const MutableValueAddress key, const hashed_string& keyTypeName ) override
+                {
+                    const bool bRead = _pCurrentKey != nullptr && parseTextValueCoerced( key, keyTypeName, _shape.findBinding( keyTypeName ), *_pCurrentKey, _context );
+                    return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
+                }
+
+                ContainerReadResult readOwnedPointer() override
+                {
+                    // `{ "타입이름": {...} }` 꼴이 아니면 원소로 읽을 수 없다 - 그 원소만 orphan 으로 남긴다(XML 의 못 읽은 원소와 같다).
+                    const JSONValue& element = _listCursor.back();
+                    if ( element.isObject() == false )
+                        return rejectElement( element );
+                    const vector<string> listKey = element.getMemberNames();
+                    if ( listKey.size() != 1 )
+                        return rejectElement( element );
+                    const hashed_string typeName = hashed_string::findInterned( listKey[0] );
+                    const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getSubsystem<TypeRegistry>().findType( typeName );
+                    void*               pObject  = ( pType != nullptr ) ? _context.createOwnedPointer( typeName ) : nullptr;
+                    if ( pObject == nullptr )
+                    {
+                        // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다.
+                        const expected<string> rawJSON = element.dump();
+                        if ( rawJSON.has_value() == false )
+                            return ContainerReadResult::FieldFailed; // 원문을 그대로 맡을 수 없다(잘못된 UTF-8) — 바꾼 바이트를 다음 저장에 쓰지 않는다
+                        SerializeContext::OpaqueElementView opaque{};
+                        opaque._typeName = listKey[0];
+                        opaque._format   = SerializeContext::OpaqueFormat::JSON;
+                        opaque._text     = *rawJSON;
+                        (void)_context.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다
+                        return ContainerReadResult::Read;
+                    }
+                    // 원소 안의 못 읽은 칸은 바깥 orphan 목록으로(XML 과 같다) — 엄격하게 읽으면 칸 하나가 `_listComponent` 칸 전체를 실패로 만든다.
+                    // 금지된 필드 · 되돌리지 못한 필드는 ObjectRejected 로 올라간다(칸 실패로 낮추지 않는다).
+                    return ContainerVisitor::toElementResult( JSONSerializer::readObject( element.get( listKey[0] ), pObject, *pType, _pOutListOrphan, nullptr, _context ) );
+                }
+
+                // 값 구조체 원소는 본문 그대로다(쓰는 쪽이 타입 이름으로 감싸지 않는다). 감싼 원소는 모르는 키 하나로 읽힌다.
+                ContainerReadResult readValueObject( const MutableValueAddress value, const hashed_string&, const TypeInfo& typeInfo, ContainerSlot ) override
+                {
+                    const JSONValue& element = _listCursor.back();
+                    if ( element.isObject() == false )
+                        return ContainerReadResult::FieldFailed;
+                    return ContainerVisitor::toElementResult( JSONSerializer::readObject( element, value.get(), typeInfo, nullptr, nullptr, _context ) );
+                }
+
+                ContainerReadResult readScalar( const MutableValueAddress value, const hashed_string& typeName, ContainerSlot ) override
+                {
+                    return ContainerVisitor::toElementResult( readJSONValue( value, typeName, _shape.findBinding( typeName ), _listCursor.back(), _context ) );
+                }
+
+                ContainerReadResult skipElement( size_t ) override { return ContainerReadResult::FieldFailed; }
+
+            private:
+                /**
+                 * @brief 모양이 틀린 소유 포인터 원소를 알리고 orphan 으로 남깁니다.
+                 * @details orphan 목록이 있으면 원소 하나만 거기 남고 Read 다 - 돌려주는 실패가 `_listComponent` 칸 전체를 orphan 으로 만들지 않게 한다.
+                 *          엄격 읽기(목록 없음)면 FieldFailed 다.
+                 */
+                ContainerReadResult rejectElement( const JSONValue& element ) const
+                {
+                    SW_LOG_WARNING_ID( "Serialization.MalformedOwnedPointerElement", "'%#' has an owned-pointer element that is not a single-key type object - element dropped", _propForOrphan._name.c_str() );
+                    if ( _pOutListOrphan == nullptr )
+                        return ContainerReadResult::FieldFailed;
+                    SchemaOrphanValue orphan;
+                    orphan._name         = _propForOrphan._name;
+                    orphan._nameHash     = _propForOrphan.getNameHash();
+                    orphan._wireTypeHash = 0;
+                    JSONSerializerInternal::pushOrphan( *_pOutListOrphan, std::move( orphan ), element, _propForOrphan._name.c_str() );
+                    return ContainerReadResult::Read;
+                }
+
+            private:
+                vector<JSONValue, InlineAllocator<JSONValue, 4>> _listCursor;
+                const string*                                    _pCurrentKey;
+                const SerializeContext&                          _context;
+                vector<SchemaOrphanValue>*                       _pOutListOrphan;
+                const PropertyInfo&                              _propForOrphan;
+                NestedContainerInfo                              _shape; ///< 맨 바깥 단계의 원소 · 키 묶음(`findBinding`)
+            };
+
+            /** @brief 값 하나를 읽었는지(`bool`)를 필드 결과로 바꿉니다. 값 하나의 실패는 그 필드의 실패입니다 — 객체째 실패는 구조체 읽기만 압니다. */
+            static FieldReadResult makeFieldResult( const bool bRead )
+            {
+                return bRead ? FieldReadResult::Read : FieldReadResult::FieldFailed;
+            }
+
+            /** @brief @p src 를 @p typeName 값 하나로 읽습니다. 구조체이면 그 객체의 결과(금지된 필드면 ObjectRejected)를 그대로 돌려줍니다. */
+            [[nodiscard]] static FieldReadResult readJSONValue( const MutableValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding, const JSONValue& src,
+                                                                const SerializeContext& context )
+            {
+                void* const pValPtr = value.get();
+                if ( pValPtr == nullptr || src.isValid() == false )
+                    return FieldReadResult::FieldFailed;
+
+                const ValueSerializer::ValueCodecs  codecs      = ValueSerializer::findValueCodecs( typeName, pBinding, context );
+                const SerializeContext::TextReadFn* pTextReader = codecs.findTextReader( context );
+                if ( pTextReader != nullptr )
+                {
+                    if ( src.isString() )
+                        return makeFieldResult( ( *pTextReader )( pValPtr, src.asString() ) );
+                    const expected<string> text = src.dump();
+                    return makeFieldResult( text.has_value() && ( *pTextReader )( pValPtr, *text ) );
+                }
+
+                const EnumInfo* pEnumInfo = codecs.findEnum( context );
+                if ( pEnumInfo != nullptr )
+                {
+                    // 모르는 이름 · 값이면 쓰지 않고 실패한다(XML 과 같다 — `EnumInfo::tryParseText`).
+                    int64                 parsedValue{ 0 };
+                    const optional<int64> number = src.isNumber() ? src.read<int64>() : nullopt;
+                    const string          text   = src.isString() ? string( src.asString() ) : number.has_value() ? sw::to_string( *number )
+                                                                                                                  : src.describe(); // 아래 경고에만 쓰인다
+                    if ( ( src.isString() || number.has_value() ) && pEnumInfo->tryParseText( text, parsedValue ) )
+                    {
+                        pEnumInfo->writeValueToMemory( pValPtr, parsedValue );
+                        return FieldReadResult::Read;
+                    }
+                    SW_LOG_WARNING_ID( "Serialization.UnknownEnumerator", "'%#' is not a value of enum %# - the field keeps its current value", text,
+                                       pEnumInfo->_fullyQualifiedName.c_str() );
+                    return FieldReadResult::FieldFailed;
+                }
+
+                if ( const TypeInfo* pStructInfo = codecs.findStructType( context ) )
+                {
+                    if ( src.isObject() )
+                        return JSONSerializer::readObject( src, pValPtr, *pStructInfo, nullptr, nullptr, context );
+                    const expected<string> text = src.dump();
+                    return makeFieldResult( text.has_value() && JSONSerializer::deserialize( pValPtr, *pStructInfo, *text, context ) );
+                }
+
+                if ( src.isString() )
+                    return makeFieldResult( parseTextValueCoerced( value, typeName, pBinding, src.asString(), context ) );
+                const expected<string> text = src.dump();
+                return makeFieldResult( text.has_value() && parseTextValueCoerced( value, typeName, pBinding, *text, context ) );
+            }
+            /** @brief 이 목적이 쓰는 칸을 모두 @p dst(객체)에 씁니다. 차례(기반부터)는 걷기 한 곳(`ReflectPropertyVisitor`)이 정한다 — XML · 바이너리 쓰기와 같은 차례다. */
+            static void writeProperties( JSONValue dst, const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
+            {
+                const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
+                (void)propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
+                {
+                    if ( PropertySerializer::shouldSerializeProperty( typeInfo, field._property, context ) )
+                        writeProperty( dst, field._property, ObjectAddress{ pInstance }, context );
+                    return ReflectVisitFlow::Continue;
+                } );
+            }
+
+            static void writeProperty( JSONValue parent, const PropertyInfo& prop, const ObjectAddress instance, const SerializeContext& context )
+            {
+                if ( prop._bIsBitField == SW_TRUE )
+                {
+                    const bool bVal = prop.getValue<bool>( instance.get() );
+                    parent.set( prop._name.c_str() ).setBool( bVal );
+                    return;
+                }
+                const ValueAddress propValue{ prop.getRawPtr( instance.get() ) };
+                if ( prop._bIsContainer && prop.hasContainerWrapper() )
+                {
+                    // 프로퍼티 이름 아래에 바로 배열/오브젝트로 쓴다.
+                    const NestedContainerInfo shape = prop.getContainerShape();
+                    ContainerWriter           writer( parent.set( prop._name.c_str() ), context, shape );
+                    ContainerVisitor::write( propValue, shape, writer, context );
+                    return;
+                }
+                writeJSONValue( parent.set( prop._name.c_str() ), propValue, prop._typeName, prop.findValueBinding(), context );
+            }
+
+            [[nodiscard]] static FieldReadResult readProperty( const JSONValue& field, const PropertyInfo& prop, const MutableObjectAddress instance, const SerializeContext& context,
+                                                               vector<SchemaOrphanValue>* pOutListOrphan = nullptr )
+            {
+                if ( prop._bIsBitField == SW_TRUE )
+                {
+                    // 불리언 · 정수 · 불리언 글만 받는다. 그 밖의 것("ture" · 0.5 · 오브젝트 · null)은 실패다.
+                    bool bVal = false;
+                    if ( field.isBool() || field.isNumber() )
+                    {
+                        const optional<bool>  flag   = field.isBool() ? field.read<bool>() : nullopt;
+                        const optional<int64> number = field.isNumber() ? field.read<int64>() : nullopt;
+                        if ( flag.has_value() == false && number.has_value() == false )
+                            return FieldReadResult::FieldFailed;
+                        bVal = flag.has_value() ? *flag : *number != 0;
+                    }
+                    else if ( field.isString() == false || StringUtil::tryParseBool( field.asString(), bVal ) == false )
+                        return FieldReadResult::FieldFailed;
+                    prop.setValue<bool>( instance.get(), bVal );
+                    return FieldReadResult::Read;
+                }
+                const MutableValueAddress propValue{ prop.getRawPtr( instance.get() ) };
+                if ( prop._bIsContainer && prop.hasContainerWrapper() )
+                {
+                    ContainerReader reader( field, context, pOutListOrphan, prop );
+                    return ContainerVisitor::toFieldResult( ContainerVisitor::read( propValue, prop.getContainerShape(), reader, context ) );
+                }
+                return readJSONValue( propValue, prop._typeName, prop.findValueBinding(), field, context );
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    expected<string> JSONSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
+    {
+        JSONDocument doc;
+        writeObject( doc.makeObject(), pInstance, typeInfo, context );
+        return JSONSerializerInternal::dumpDocument( doc, typeInfo, JSONDocument::kSingleLineIndent );
+    }
+
+    expected<string> JSONSerializer::serializePretty( const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
+                                                      const SerializeContext& context )
+    {
+        JSONDocument doc;
+        writeObject( doc.makeObject(), pInstance, typeInfo, context );
+        return JSONSerializerInternal::dumpDocument( doc, typeInfo, static_cast<int32>( indentSpaces == 0 ? 4 : indentSpaces ) );
+    }
+
+    bool JSONSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
+                                      const SerializeContext& context )
+    {
+        const bool bRead = deserializeSoft( pInstance, typeInfo, jsonStr, nullptr, nullptr, context ) == SoftReadResult::Read;
+        // 필수 칸은 초기값으로 대신하지 않는다. 문서를 한 번 더 읽는다 — 엄격한 읽기는 표 · 설정 크기다.
+        JSONDocument document;
+        if ( document.parse( jsonStr ) == false )
+            return false;
+        return JSONSerializerInternal::reportMissingRequired( document.getRoot(), typeInfo ) && bRead;
+    }
+
+    void JSONSerializer::collectMissingRequired( const JSONValue& object, const TypeInfo& typeInfo, vector<string>& outListPath, const string& prefix )
+    {
+        for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+        {
+            if ( prop._bIsBitField == SW_TRUE )
+                continue;
+            StringBuilder<constant::buffer::kMax256> pathBuilder;
+            if ( prefix.empty() == false )
+                pathBuilder.appendFormat( "%#.", prefix );
+            pathBuilder.append( prop._name.c_str() );
+            const string    path  = string( pathBuilder.view() );
+            const JSONValue value = object.get( prop._name.c_str() );
+            // 판정은 XML 과 한 함수다(`PropertyConstraints::isRequiredValueMissing`) — 빈 이름 글도 빠진 것이다.
+            const string      valueText = value.isValid() && value.isString() ? value.asString() : string{};
+            const string_view textView( valueText );
+            if ( PropertyConstraints::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr, RequiredScope::Root ) )
+            {
+                outListPath.push_back( path );
+                continue;
+            }
+            if ( value.isValid() == false )
+                continue;
+            const bool      bContainer = prop._bIsContainer == SW_TRUE;
+            const TypeInfo* pNested    = ValueSerializer::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, bContainer ? prop.findElementBinding() : prop.findValueBinding(), SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            if ( bContainer == false && value.isObject() )
+            {
+                if ( pNested != nullptr )
+                    collectMissingRequired( value, *pNested, outListPath, path );
+                continue;
+            }
+            if ( bContainer == false || value.isArray() == false )
+                continue;
+            const bool bOwnedPointer = ValueSerializer::isOwnedPointerElementType( prop._elementTypeName );
+            for ( size_t elementIndex = 0; elementIndex < value.size(); ++elementIndex )
+            {
+                const JSONValue element = value.at( elementIndex );
+                if ( element.isObject() == false )
+                    continue;
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#[%#]", path, static_cast<uint64>( elementIndex ) );
+                // 소유 포인터 원소(컴포넌트 목록)는 `{ "타입이름": {...} }` 다 — 그 런타임 타입의 칸으로 본다(XML 은 태그 이름, 같은 규칙).
+                const vector<string> listMember = bOwnedPointer ? element.getMemberNames() : vector<string>{};
+                if ( listMember.size() == 1 )
+                {
+                    const hashed_string memberType = hashed_string::findInterned( listMember[0] );
+                    const TypeInfo*     pMember    = memberType.empty() ? nullptr : engine::getSubsystem<TypeRegistry>().findType( memberType );
+                    const JSONValue     body       = element.get( listMember[0] );
+                    if ( pMember != nullptr && body.isObject() )
+                    {
+                        textBuilder.appendFormat( "(%#)", pMember->_name.c_str() );
+                        collectMissingRequired( body, *pMember, outListPath, string( textBuilder.view() ) );
+                    }
+                    continue;
+                }
+                if ( pNested != nullptr )
+                    collectMissingRequired( element, *pNested, outListPath, string( textBuilder.view() ) );
+            }
+        }
+    }
+
+    bool JSONSerializer::saveToFile( const AbsolutePath& absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
+                                     const SerializeContext& context )
+    {
+        JSONDocument doc;
+        writeObject( doc.makeObject(), pInstance, typeInfo, context );
+        const int32 indent = static_cast<int32>( indentSpaces == 0 ? 4 : indentSpaces );
+        return doc.saveToFile( absPath, indent );
+    }
+
+    bool JSONSerializer::loadFromAsset( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
+    {
+        JSONDocument doc;
+        if ( doc.loadAsset( assetID ) == false )
+            return false;
+        const bool bRead = readObject( doc.getRoot(), pInstance, typeInfo, nullptr, nullptr, context ) == FieldReadResult::Read;
+        return JSONSerializerInternal::reportMissingRequired( doc.getRoot(), typeInfo ) && bRead;
+    }
+
+    void JSONSerializer::writeObject( JSONValue dst, const void* pInstance, const TypeInfo& typeInfo,
+                                      const SerializeContext& context )
+    {
+        if ( dst.isValid() == false || pInstance == nullptr )
+            return;
+        dst.setObject();
+        JSONSerializerInternal::writeProperties( dst, pInstance, typeInfo, context );
+    }
+
+    FieldReadResult JSONSerializer::readObject( JSONValue src, void* pInstance, const TypeInfo& typeInfo,
+                                                vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
+                                                const SerializeContext& context )
+    {
+        if ( pInstance == nullptr || src.isObject() == false )
+            return FieldReadResult::FieldFailed;
+
+        const PropertyListView listProp = typeInfo.getPropertiesWithBase();
+        unordered_set<uint32>  uniqueMatched;
+        bool                   bFieldError{ false };
+        bool                   bForbiddenField{ false };
+        // 소프트 읽기(orphan 목록이 있음)는 읽지 못한 필드를 orphan 으로 넘기고 이어 읽는다. 그 필드는 읽기 전 값이다(바이너리 · XML 과 같다).
+        const bool           bContinuesAfterUnreadable = pOutListOrphan != nullptr;
+        PropertyReadRollback rollback;
+
+        if ( pOutVersion != nullptr )
+            *pOutVersion = 0;
+
+        for ( const string& keyRaw : src.getMemberNames() )
+        {
+            const JSONValue field = src.get( keyRaw );
+            if ( PropertySerializer::isKeyEqual( keyRaw, kSchemaVersionKey ) )
+            {
+                if ( pOutVersion == nullptr )
+                    continue;
+                // 판 번호가 부호 없는 정수가 아니면 이관을 고를 수 없다 — 0 판으로 읽지 않고 실패한다(읽기가 값을 알린다).
+                const optional<uint32> version = field.read<uint32>();
+                if ( version.has_value() == false )
+                    return FieldReadResult::ObjectRejected; // 판을 모르면 이관할 수 없다 — 칸 하나가 아니라 객체째 실패다
+                *pOutVersion = *version;
+                continue;
+            }
+            // 키는 철자 그대로 맞춘다 — 대소문자만 다른 키(`_Width`)도 모르는 키라 아래에서 알린다(조용히 묶거나 버리지 않는다).
+            const PropertyInfo* pMatched = PropertySerializer::matchProperty( listProp, keyRaw );
+
+            if ( pMatched == nullptr || pMatched->_metadata->_bTransient == SW_TRUE )
+            {
+                if ( pOutListOrphan != nullptr )
+                    JSONSerializerInternal::pushUnknownKeyOrphan( *pOutListOrphan, keyRaw, field );
+                else
+                    bFieldError = true;
+                continue;
+            }
+            // 저작 파일의 런타임 상태는 로드 오류다. 이 목적이 다루지 않는 그 밖의 필드(옵트인 세이브의 나머지)는 지금 값 그대로 둔다.
+            if ( PropertySerializer::isForbiddenInFile( *pMatched, context ) )
+            {
+                PropertySerializer::reportForbiddenProperty( typeInfo, *pMatched );
+                bForbiddenField = true;
+                continue;
+            }
+            if ( PropertySerializer::shouldSerializeProperty( typeInfo, *pMatched, context ) == false )
+                continue;
+
+            uniqueMatched.insert( pMatched->getNameHash() );
+            if ( bContinuesAfterUnreadable && rollback.keepValueBeforeRead( typeInfo, *pMatched, ObjectAddress{ pInstance }, context ) == false )
+                return FieldReadResult::ObjectRejected;
+            const FieldReadResult fieldResult = JSONSerializerInternal::readProperty( field, *pMatched, MutableObjectAddress{ pInstance }, context, pOutListOrphan );
+            switch ( fieldResult )
+            {
+                case FieldReadResult::Read:
+                {
+                    break;
+                }
+                case FieldReadResult::FieldFailed:
+                {
+                    if ( pOutListOrphan != nullptr )
+                    {
+                        // 읽다 만 값(원소를 채우다 만 컨테이너, 필드를 채우다 만 구조체)을 읽기 전 값으로 되돌린다. 되돌릴 수 없으면 객체째 실패다.
+                        if ( rollback.restoreValueBeforeRead( MutableObjectAddress{ pInstance }, context ) == false )
+                            return FieldReadResult::ObjectRejected;
+                        JSONSerializerInternal::pushUnreadableFieldOrphan( *pOutListOrphan, *pMatched, field );
+                    }
+                    else
+                    {
+                        bFieldError = true;
+                    }
+                    break;
+                }
+                case FieldReadResult::ObjectRejected:
+                {
+                    // 안쪽(구조체 칸, 컨테이너 원소인 구조체 · 컴포넌트)의 금지된 필드 · 되돌리지 못한 필드다. 이 필드를 orphan 으로 넘기지 않고 객체째 실패한다.
+                    return FieldReadResult::ObjectRejected;
+                }
+            }
+        }
+
+        JSONSerializerInternal::applyDefaultsToUnmatched( typeInfo, pInstance, context, uniqueMatched );
+
+        // 금지된 필드는 소프트 읽기에서도 실패다(XML · 바이너리와 같다). 바깥 칸도 이것을 칸 실패로 낮추지 않는다.
+        if ( bForbiddenField )
+            return FieldReadResult::ObjectRejected;
+        // 소프트 읽기(orphan 목록이 있음)는 읽지 못한 칸을 목록으로 넘기고 계속한다. 선언된 범위는 어느 쪽이든 읽기 공통 끝에서 본다(바이너리 · XML 과 같다).
+        const bool bStrictFieldError = pOutListOrphan == nullptr && bFieldError;
+        if ( bStrictFieldError )
+            return FieldReadResult::FieldFailed;
+        return PropertyConstraints::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, rollback.getRestoredValues() ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
+    }
+
+    FieldReadResult JSONSerializer::readField( const JSONValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& context )
+    {
+        return JSONSerializerInternal::readProperty( field, prop, MutableObjectAddress{ pInstance }, context );
+    }
+
+    SoftReadResult JSONSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
+                                                    vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
+                                                    const SerializeContext& context )
+    {
+        JSONDocument doc;
+        const bool   bNotObject = pInstance == nullptr || doc.parse( jsonStr ) == false || doc.getRoot().isObject() == false;
+        if ( bNotObject )
+            return SoftReadResult::NotParsed;
+        // 객체를 읽은 뒤의 실패는 칸 값이다(범위 밖 · orphan 목록 없이 읽지 못한 칸). `readObject` 는 그 전에 모든 키를 지난다.
+        return readObject( doc.getRoot(), pInstance, typeInfo, pOutListOrphan, pOutVersion, context ) == FieldReadResult::Read ? SoftReadResult::Read : SoftReadResult::Rejected;
+    }
+
+    expected<string> JSONSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
+                                                         const SerializeContext& context )
+    {
+        JSONDocument doc;
+        JSONValue    root = doc.makeObject();
+        root.set( kSchemaVersionKey ).setUint( version );
+        JSONSerializerInternal::writeProperties( root, pInstance, typeInfo, context );
+        return JSONSerializerInternal::dumpDocument( doc, typeInfo, JSONDocument::kSingleLineIndent );
+    }
+
+    bool JSONSerializer::deserializeVersioned( void* pInstance, const TypeInfo& typeInfo,
+                                               string_view jsonStr, uint32 currentVersion, const SerializeContext& context )
+    {
+        // 절차는 JSON · XML · Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다.
+        // 버전이 어디서 오는가(본문 안의 `_schemaVersion`)와 orphan 만 있을 때의 정책이다.
+        return runVersionedDeserialize(
+            0, MutableObjectAddress{ pInstance }, typeInfo, currentVersion,
+            SchemaVersionSource::Payload, SchemaOrphanPolicy::Ignore,
+            SW_DELEGATE_LAMBDA( SoftDeserializeFn,
+                                [&]( const MutableObjectAddress target, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& outSoftVersion ) -> bool
+        {
+            return deserializeSoft( target.get(), targetType, jsonStr, &listOrphan, &outSoftVersion, context ) == SoftReadResult::Read;
+        } ) );
+    }
+
+} // namespace sw
+
+namespace sw
+{
+    // Base 가 선언한 구조체 칸 창구의 JSON 몸통이다(`NestedObjectCodec.h` — Base 가 이 형식을 include 하지 않게).
+    string NestedObjectCodec::writeJSON( const void* pObject, const TypeInfo& typeInfo, const SerializeContext& context )
+    {
+        JSONDocument doc;
+        JSONSerializer::writeObject( doc.makeObject(), pObject, typeInfo, context );
+        expected<string> text = JSONSerializerInternal::dumpDocument( doc, typeInfo, JSONDocument::kSingleLineIndent );
+        if ( text.has_value() )
+            return std::move( text ).value();
+        // 이 글은 다른 글 값(XML 속성 · 맵 키 · 표시 글) 안에 들어간다 — 그 쓰기 창구(`ValueSerializer::valueToText`)는 실패를 올릴 길이 없다.
+        // 잘못된 UTF-8 은 U+FFFD 로 바꿔 쓰고(JSONWriter 와 같은 규칙) 오류로 알린다 — 빈 글로 값을 지우지 않고, 조용히 넘기지도 않는다.
+        SW_LOG_ERROR_ID( "JSONSerializer.NestedObjectInvalidUTF8", "Nested %# written into a text value has invalid UTF-8 - replaced with U+FFFD: %# (%#)", typeInfo._name.c_str(),
+                         text.error().message(), text.error().detail() );
+        return doc.getRoot().describe();
+    }
+
+    bool NestedObjectCodec::readJSON( void* pObject, const TypeInfo& typeInfo, string_view jsonText, const SerializeContext& context )
+    {
+        return JSONSerializer::deserialize( pObject, typeInfo, jsonText, context );
+    }
+} // namespace sw

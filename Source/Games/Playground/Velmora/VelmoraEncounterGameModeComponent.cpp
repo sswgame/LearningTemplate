@@ -4,12 +4,12 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Component/AdventureGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 
 namespace sw
@@ -19,12 +19,12 @@ namespace sw
         struct VelmoraEncounterGameModeComponentInternal
         {
             /** @brief 지역 표의 배치 줄을 액션 룸의 배치 줄로 옮깁니다(두 키트는 서로의 형식을 모른다). */
-            static vector<ActionRoomSpawnDef> makeRoomSpawns( const vector<AdventureSpawnDef>& listSpawn )
+            static vector<ActionCombatRoomSpawnDef> makeRoomSpawns( const vector<AdventureSpawnDef>& listSpawn )
             {
-                vector<ActionRoomSpawnDef> listRoomSpawn;
+                vector<ActionCombatRoomSpawnDef> listRoomSpawn;
                 for ( const AdventureSpawnDef& spawn : listSpawn )
                 {
-                    listRoomSpawn.push_back( ActionRoomSpawnDef{ spawn._monsterID, spawn._position } );
+                    listRoomSpawn.push_back( ActionCombatRoomSpawnDef{ spawn._monsterID, spawn._position } );
                 }
                 return listRoomSpawn;
             }
@@ -116,7 +116,7 @@ namespace sw
 
     void VelmoraEncounterGameModeComponent::beginEncounter( const AdventureRegionDef& region, AdventureGameModeComponent& director )
     {
-        ActionRoomLayout layout;
+        ActionCombatRoomLayout layout;
         layout._listHallSpawn = VelmoraEncounterGameModeComponentInternal::makeRoomSpawns( region._listHallSpawn );
         layout._listBossSpawn = VelmoraEncounterGameModeComponentInternal::makeRoomSpawns( region._listBossSpawn );
         _room.setSettings( _roomSettings ); // 룸 규칙에는 기본값이 없다 — 씬 데이터가 그대로 들어간다(ActionCombatGameModeComponent 와 같다)
@@ -136,7 +136,7 @@ namespace sw
         const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
-        ActionRoomFrameInput input;
+        ActionCombatRoomFrameInput input;
         input._bAttackPressed = _bAttackQueued;
         input._bDashPressed   = _bDashQueued;
         _bAttackQueued        = SW_FALSE;
@@ -171,9 +171,9 @@ namespace sw
             }
             return;
         }
-        input._playerPos                   = pDirector->getPlayerPosition();
-        input._facing                      = pDirector->getFacing();
-        const ActionRoomFrameResult result = _room.update( frameTime, input );
+        input._playerPos                         = pDirector->getPlayerPosition();
+        input._facing                            = pDirector->getFacing();
+        const ActionCombatRoomFrameResult result = _room.update( frameTime, input );
         // 적의 닿은 피해(`MonsterStatsDef::_atk`)는 4분의 1 하트 단위다.
         if ( result._damageToPlayer > 0 && pDirector->applyPlayerDamage( result._damageToPlayer ) )
         {

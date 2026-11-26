@@ -7,7 +7,7 @@
      런타임에 값을 바꾸면(MaterialParameterCollection::setValue) 다음 프레임에 모든 셰이더가 함께 따른다 — 머티리얼을 다시 패킹하지 않는다. -->
 <MaterialParameterCollectionDef>
 	<_listParameter>
-		<MaterialCollectionParameterDef _name="Weather" _value="0, 0, 0, 0" _global="Weather" />
-		<MaterialCollectionParameterDef _name="Rain" _value="0, 0, 0, 0" _global="Rain" />
+		<MaterialParameterCollectionEntryDef _name="Weather" _value="0, 0, 0, 0" _global="Weather" />
+		<MaterialParameterCollectionEntryDef _name="Rain" _value="0, 0, 0, 0" _global="Rain" />
 	</_listParameter>
 </MaterialParameterCollectionDef>

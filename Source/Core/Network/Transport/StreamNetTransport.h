@@ -16,6 +16,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/StreamFrame.h"
+#include "Core/Network/NetProtocol.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/NetTransport.h"
 

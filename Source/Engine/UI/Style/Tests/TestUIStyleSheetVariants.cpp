@@ -3,8 +3,8 @@
 #include "Core/Container/string.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
@@ -87,7 +87,7 @@ SW_TEST_CASE( UIStyleSheetVariantTest, ChildSheetMergesByKey )
                                                       "child", schema, source, flat ) );
 
     UIStyleSheetAsset sheet;
-    SW_REQUIRE_TRUE( UIStyleSheetAsset::parse( flat, "child.uistyle.xml", ResourceContext::forDocument(), sheet ).has_value() );
+    SW_REQUIRE_TRUE( UIStyleSheetAsset::parse( flat, "child.uistyle.xml", AssetComposeContext::forDocument(), sheet ).has_value() );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( sheet._listRule.size() ) );
     const UIStyleRule* pPrimary = Util::findRule( sheet, "primary", 0u );
     SW_REQUIRE_NOT_NULL( pPrimary );
@@ -108,7 +108,7 @@ SW_TEST_CASE( UIStyleSheetVariantTest, TypeVariationClonesRulesBeforeItsOwn )
         <Rule _selector="ButtonWidget.primary:hover" _backgroundColor="0,1,0,1" />
         <Rule _selector="ButtonWidget.other" _borderWidth="9" />
     </UIStyleSheet>)",
-                                               "sheet.uistyle.xml", ResourceContext::forDocument(), sheet )
+                                               "sheet.uistyle.xml", AssetComposeContext::forDocument(), sheet )
                          .has_value() );
     // 적은 넷 + danger 의 복제 둘(primary 둘) + dangerSmall 의 복제 셋(danger 하나, danger 복제 둘)
     SW_REQUIRE_EQUAL( 9u, static_cast<uint32>( sheet._listRule.size() ) );
@@ -135,9 +135,9 @@ SW_TEST_CASE( UIStyleSheetVariantTest, TypeVariationClonesRulesBeforeItsOwn )
 SW_TEST_CASE( UIStyleSheetVariantTest, TypeVariationErrors )
 {
     UIStyleSheetAsset    sheet;
-    const expected<void> unused = UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="0"><TypeVariation _name="a" _extends="nope" /><Rule _selector=".b" _borderWidth="1" /></UIStyleSheet>)", "s", ResourceContext::forDocument(), sheet );
+    const expected<void> unused = UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="0"><TypeVariation _name="a" _extends="nope" /><Rule _selector=".b" _borderWidth="1" /></UIStyleSheet>)", "s", AssetComposeContext::forDocument(), sheet );
     SW_REQUIRE_FALSE( unused.has_value() );
     SW_EXPECT_TRUE( unused.error().detail().find( "no rule uses" ) != string_view::npos );
-    SW_EXPECT_FALSE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="0"><TypeVariation _name="a" /></UIStyleSheet>)", "s", ResourceContext::forDocument(), sheet ).has_value() );
-    SW_EXPECT_FALSE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="0"><TypeVariation _name="a" _extends="a" /></UIStyleSheet>)", "s", ResourceContext::forDocument(), sheet ).has_value() );
+    SW_EXPECT_FALSE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="0"><TypeVariation _name="a" /></UIStyleSheet>)", "s", AssetComposeContext::forDocument(), sheet ).has_value() );
+    SW_EXPECT_FALSE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="0"><TypeVariation _name="a" _extends="a" /></UIStyleSheet>)", "s", AssetComposeContext::forDocument(), sheet ).has_value() );
 }

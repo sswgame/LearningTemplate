@@ -21,7 +21,7 @@
 
 namespace sw
 {
-    struct ResourceContext;
+    struct AssetComposeContext;
 
     class Texture2D;
 
@@ -93,9 +93,9 @@ namespace sw
         vector<SpriteLibraryCategory> _listCategory;
 
     private:
-        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
-        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context );
-        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<SpriteLibrary>::acquire` 로 한 벌을 쥔다. */
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 에셋 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
+        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context );
+        /** @brief 에셋 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<SpriteLibrary>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 읽은 값의 의미를 보고 비율 테두리를 채웁니다. 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool resolveLoadedValues( string_view sourceLabel );

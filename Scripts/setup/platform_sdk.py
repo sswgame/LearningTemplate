@@ -107,7 +107,7 @@ class PlatformSdk:
         return root
 
 
-    def check_presets(self) -> None:
+    def require_presets_match(self) -> None:
         """프리셋의 Tools 경로가 설정의 판 · 폴더와 같은지 봅니다. 다르면 ValueError 로 멈춘다(엉뚱한 NDK · emsdk 로 짓지 않게)."""
         list_preset = json.loads(PRESET_FILE.read_text(encoding="utf-8"))["configurePresets"]
         presets = {preset["name"]: preset for preset in list_preset}
@@ -138,7 +138,7 @@ class PlatformSdkCommand(Command):
 
     def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
         sdk = PlatformSdk()
-        sdk.check_presets()
+        sdk.require_presets_match()
         if args.target in ("web", "all"):
             sdk.install_web()
         if args.target in ("android", "all"):

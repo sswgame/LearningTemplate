@@ -28,12 +28,12 @@
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorPreferences.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/EditorProfile.h"
+#include "Editor/Common/EditorProfileScope.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/GUI/EditorPlayToolbar.h"
-#include "Editor/Common/GUI/EditorUIContextState.h"
+#include "Editor/Common/GUI/EditorUIContextBinder.h"
 #include "Editor/Common/GUI/Panel/EditorPanelDump.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
@@ -43,23 +43,23 @@
 #include "Editor/Common/Input/EditorFileDrop.h"
 #include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Job/EditorBackgroundJob.h"
-#include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorFrameStep.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
-#include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
+#include "Editor/Common/Workspace/Notification/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
+#include "Editor/Common/Workspace/Undo/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
+#include "Editor/Common/Workspace/View/EditorCamera.h"
+#include "Editor/Common/Workspace/View/EditorFrameStep.h"
+#include "Editor/Common/Workspace/View/EditorRenderViews.h"
+#include "Editor/EditorBuiltinSubsystems.h"
 #include "Editor/EditorModuleExports.h"
-#include "Editor/EditorSubsystemSet.h"
 #include "Editor/SelfTest/EditorExtensionRegistryDump.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -77,8 +77,8 @@
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 #include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -243,7 +243,7 @@ namespace sw::editor
 
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션 상태의 키와 형식 판입니다. */
             static constexpr string_view kSessionStoreKey = "editor.session";
-            static constexpr FormatDef   kSessionFormat{ "EDSE" };
+            static constexpr FormatDesc  kSessionFormat{ "EDSE" };
 
             /** @brief 인스턴스가 종료하기 전에 선택 · 미저장 표시를 호스트의 맡김 칸에 맡깁니다. 다음 인스턴스가 `resumeEditSession` 으로 찾아갑니다. */
             static void storeEditSession( EditorContext& context )
@@ -271,7 +271,7 @@ namespace sw::editor
             /**
              * @brief 앞선 인스턴스가 맡긴 선택 · 미저장 표시를 되찾습니다. 앞선 인스턴스가 있었으면 true 입니다(씬이 그 뒤에 바뀌었으면 값은 버리지만 true).
              * @details 워크스페이스는 지금 씬 세대를 이미 본 것으로 둔다 — 새 인스턴스가 지금 씬을 "새 씬" 으로 여겨 되돌리기 기록을 비우지 않게 한다
-             *          (`EditorSceneGenerationSync`). 씬 오브젝트는 같은 id 로 이어지므로(게임 상태 복원 · 같은 씬) 선택 id 와 되돌리기 명령이 그대로 맞는다.
+             *          (`EditorSceneGenerationReset`). 씬 오브젝트는 같은 id 로 이어지므로(게임 상태 복원 · 같은 씬) 선택 id 와 되돌리기 명령이 그대로 맞는다.
              */
             static bool resumeEditSession( EditorContext& context )
             {
@@ -486,12 +486,12 @@ namespace sw::editor
 {
     // 이 파일만 읽으므로 여기서 정의하고 헤더에는 선언하지 않는다.
     /**
-     * @brief `-gv_editorStartupScene=<리소스 경로>`: 에디터가 시작할 때 이 씬을 엽니다.
+     * @brief `-gv_editorStartupScene=<에셋 경로>`: 에디터가 시작할 때 이 씬을 엽니다.
      * @details 빈 씬으로 기동 검증을 하면 오브젝트를 순회하는 코드가 실행되지 않습니다. 뷰포트 피킹, 컴포넌트 시각화, Hierarchy 트리,
      *          Profiler 분포 테이블, 씬 세대 변경 훅이 그 예입니다. 이 스위치로 테스트 씬을 열면 이 경로가 모두 실행됩니다.
      *          예: `-gv_editorStartupScene=game/playground/maps/editortest.scene.xml`
      */
-    SW_GLOBAL_VARIABLE( sw::GlobalString, gv_editorStartupScene, "", "에디터 시작 시 열 씬의 리소스 경로 (비우면 열지 않는다)" );
+    SW_GLOBAL_VARIABLE( sw::GlobalString, gv_editorStartupScene, "", "에디터 시작 시 열 씬의 에셋 경로 (비우면 열지 않는다)" );
 
     /**
      * @brief `-gv_editorUiScale=<배율>`: 에디터 UI 배율입니다. 0 이면 창이 놓인 모니터의 DPI 를 따릅니다.
@@ -555,7 +555,7 @@ namespace sw::editor
         _bHeadless = SW_TRUE;
         if ( startStages() == false )
             return false;
-        EditorSubsystemSet::syncExtensionRegistrations( *_editorContext ); // 프레임 앞(`prepareFrameState`)이 하던 일 — 헤드리스는 프레임을 돌지 않는다
+        EditorBuiltinSubsystems::syncExtensionRegistrations( *_editorContext ); // 프레임 앞(`prepareFrameState`)이 하던 일 — 헤드리스는 프레임을 돌지 않는다
         return true;
     }
 
@@ -624,7 +624,7 @@ namespace sw::editor
         ImGui::CreateContext();
         ImPlot::CreateContext();
         // 확장 DLL 의 ImGui 사본에 이 컨텍스트를 바인딩한다. 확장마다 CMake 가 만든 바인더를 쓴다. EditorModule 자신은 여기서 CreateContext 를 호출했다.
-        EditorUIContextState::publish( EditorUIContextState{ ImGui::GetCurrentContext(), ImPlot::GetCurrentContext() } );
+        EditorUIContextBinder::publish( EditorUIContextBinder{ ImGui::GetCurrentContext(), ImPlot::GetCurrentContext() } );
 
         SW_LOG_TRACE_ID( "ImGuiEditor.ConfiguringImGuiIO", "Configuring ImGui IO" );
         ImGuiIO& io = ImGui::GetIO();
@@ -651,7 +651,7 @@ namespace sw::editor
     void ImGuiEditor::shutdownImGuiContext()
     {
         // 글꼴 아틀라스는 컨텍스트가 보관한다. 확장 DLL 의 사본에서 먼저 분리한다.
-        EditorUIContextState::publish( EditorUIContextState{} );
+        EditorUIContextBinder::publish( EditorUIContextBinder{} );
         if ( ImPlot::GetCurrentContext() != nullptr )
             ImPlot::DestroyContext();
         if ( ImGui::GetCurrentContext() != nullptr )
@@ -728,7 +728,7 @@ namespace sw::editor
     SubsystemInitResult ImGuiEditor::initializeEditorContext()
     {
         _editorContext = make_unique<EditorContext>();
-        _editorContext->initialize( *_editorToolDefaults, *_pIconGlyphTable, *_pComponentIconTable, *_defaultAssets, &EditorSubsystemSet::install );
+        _editorContext->initialize( *_editorToolDefaults, *_pIconGlyphTable, *_pComponentIconTable, *_defaultAssets, &EditorBuiltinSubsystems::install );
         _editorContext->setDockLayout( &_dockLayout );
         _pUICapture = &_editorContext->getSubsystem<EditorUICapture>();
         // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이
@@ -785,7 +785,7 @@ namespace sw::editor
 
     void ImGuiEditor::shutdownEditorContext()
     {
-        // 되돌리기 기록 · 복사 버퍼는 컨텍스트의 서브시스템이 내려가며 맡긴다(`EditorUndoHistory` · `ObjectCopyBuffer`). 선택 · 미저장 표시는 여기서.
+        // 되돌리기 기록 · 복사 버퍼는 컨텍스트의 서브시스템이 내려가며 맡긴다(`EditorUndoHistory` · `ObjectClipboard`). 선택 · 미저장 표시는 여기서.
         if ( _editorContext == nullptr )
             return;
         ImGuiEditorInternal::storeEditSession( *_editorContext );
@@ -852,7 +852,7 @@ namespace sw::editor
             return;
         // 프레임 앞의 상태 정리는 단계로 옮기지 않는다. 메뉴 · 패널이 이번 프레임에 읽을 값이라 프레임을 열기 전이어야 한다.
         // 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다. 등록 세대가 바뀌었으면 인스턴스를 맞추고, 같으면 비교 한 번으로 끝난다.
-        EditorSubsystemSet::syncExtensionRegistrations( *_editorContext );
+        EditorBuiltinSubsystems::syncExtensionRegistrations( *_editorContext );
         // 토큰 파일이 바뀌었으면(핫 리로드) 프레임을 열기 전에 다시 읽어 이번 프레임부터 새 스타일로 그린다.
         if ( _editorContext->getSubsystem<EditorTheme>().consumeTokensChanged() )
             EditorThemeUtil::reloadThemes();

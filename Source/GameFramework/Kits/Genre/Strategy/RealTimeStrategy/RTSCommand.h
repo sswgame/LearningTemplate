@@ -1,10 +1,10 @@
 /**
  * @file RTSCommand.h
- * @brief 사람이 내리는 RTS 명령 하나를 값으로 담습니다. 화면이 월드에 바로 내리든 락스텝 입력으로 보내든 같은 값이 같은 길(`RTSWorld::applyCommand`)로 들어갑니다.
+ * @brief 사람이 내리는 RTS 명령 하나를 값으로 담습니다. 화면이 월드에 바로 내리든 락스텝 입력으로 보내든 같은 값이 같은 길(`RTSSimulation::applyCommand`)로 들어갑니다.
  * @details - 락스텝(`LockstepSession`)은 틱마다 플레이어의 입력 바이트만 모두에게 나눈다. 명령을 값으로 두면 보낸 쪽 · 받은 쪽이 같은 틱에 같은 명령을 같은 순서로 적용해
  *            월드가 결정적으로 같다(스타크래프트 · 에이지 오브 엠파이어의 명령 스트림). 화면이 월드 함수를 바로 부르던 모양은 혼자 할 때만 맞았다.
  *          - 바이트는 `StateIO` 로 쓰고 읽는다. 머리(`kFormat`)가 첫 칸이라 다른 빌드의 입력은 거절된다. 유닛 id 는 슬롯 핸들의 묶은 값이다.
- *          - 적용은 명령을 낸 플레이어의 유닛에만 한다(`RTSWorld::applyCommand` 가 주인을 본다). 망을 건너온 입력이 남의 유닛을 움직이지 못한다.
+ *          - 적용은 명령을 낸 플레이어의 유닛에만 한다(`RTSSimulation::applyCommand` 가 주인을 본다). 망을 건너온 입력이 남의 유닛을 움직이지 못한다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -14,11 +14,11 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSimulation.h"
 
 namespace sw
 {
@@ -42,8 +42,8 @@ namespace sw
      */
     struct SW_KIT_API RTSCommand
     {
-        static constexpr FormatDef kFormat{ "RTSC" };
-        static constexpr int32     kMaxUnitCount = 64; ///< 명령 하나가 담는 유닛 상한(락스텝 입력 한 틱 상한 `NetLockstepMessage::kMaxInputBytes` 안에 든다)
+        static constexpr FormatDesc kFormat{ "RTSC" };
+        static constexpr int32      kMaxUnitCount = 64; ///< 명령 하나가 담는 유닛 상한(락스텝 입력 한 틱 상한 `NetLockstepMessage::kMaxInputBytes` 안에 든다)
 
         vector<RTSUnitID> _listUnit{};
         float3            _target{};

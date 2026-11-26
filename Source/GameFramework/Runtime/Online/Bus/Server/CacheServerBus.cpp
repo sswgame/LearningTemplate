@@ -1,0 +1,138 @@
+#include "pch.h"
+
+#include "GameFramework/Runtime/Online/Bus/Server/CacheServerBus.h"
+
+#include "Core/Serialization/ByteStream.h"
+#include "Core/String/StringUtil.h"
+
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct CacheServerBusInternal
+        {
+            static constexpr uint8  kEnvelopeVersion = 0;
+            static constexpr size_t kEnvelopeSize    = 1 + 8 + 8;
+            static constexpr utf8   kChannelPrefix[] = "bus:";
+
+            static string makeChannel( string_view topic )
+            {
+                StringBuilder<constant::buffer::kMax128> channel;
+                channel.appendFormat( "%#%#", kChannelPrefix, topic );
+                return string( channel.view() );
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    CacheServerBus::CacheServerBus( CacheStoreRouter* pRouter, uint64 serverID )
+        : _listSubscription{}
+        , _messageBuffer{}
+        , _pRouter{ pRouter }
+        , _serverID{ serverID }
+        , _nextSequence{ 1 }
+        , _droppedCount{ 0 }
+    {
+    }
+
+    CacheServerBus::~CacheServerBus() = default; // 구독이 라우터의 델리게이트를 뗀다. 라우터가 먼저 내려갔으면(`shutdown`) 구독은 이미 무효다
+
+    bool CacheServerBus::bindRouter( CacheStoreRouter* pRouter )
+    {
+        if ( _listSubscription.empty() == false )
+            return false;
+        _pRouter = pRouter;
+        return true;
+    }
+
+    void CacheServerBus::publish( string_view topic, const uint8* pData, int32 size )
+    {
+        const bool bValid = isValidTopic( topic ) && 0 <= size && size <= kMaxMessageSize && ( size == 0 || pData != nullptr );
+        if ( bValid == false )
+        {
+            SW_LOG_WARNING_ID( "ServerBus.InvalidMessage", "Dropped a bus message: topic '%#' size %#", topic, size );
+            return;
+        }
+        if ( _pRouter == nullptr || _pRouter->getStore() == nullptr )
+        {
+            SW_LOG_WARNING_ID( "ServerBus.NoRouter", "Dropped a bus message on topic '%#' - the cache router is not initialized", topic );
+            return;
+        }
+        vector<uint8> envelopeBytes;
+        envelopeBytes.reserve( CacheServerBusInternal::kEnvelopeSize + static_cast<size_t>( size ) );
+        envelopeBytes.push_back( CacheServerBusInternal::kEnvelopeVersion );
+        LittleEndianUtil::appendUint64( envelopeBytes, _serverID );
+        LittleEndianUtil::appendUint64( envelopeBytes, _nextSequence++ );
+        envelopeBytes.insert( envelopeBytes.end(), pData, pData + size );
+        // 발행 답(받은 수)은 쓰지 않는다 — 최대 한 번 배달. 빈 델리게이트면 라우터가 답을 버린다.
+        _pRouter->submit( CacheRequest::makePublish( CacheServerBusInternal::makeChannel( topic ), std::move( envelopeBytes ) ) );
+    }
+
+    void CacheServerBus::subscribe( string_view topic )
+    {
+        if ( isValidTopic( topic ) == false )
+        {
+            SW_LOG_WARNING_ID( "ServerBus.InvalidTopic", "Ignored a bus subscription to an invalid topic '%#'", topic );
+            return;
+        }
+        for ( const TopicSubscription& subscription : _listSubscription )
+        {
+            if ( subscription._topic == topic )
+                return;
+        }
+        if ( _pRouter == nullptr )
+        {
+            SW_LOG_WARNING_ID( "ServerBus.NoRouter", "Bus subscription to '%#' failed - no cache router is bound", topic );
+            return;
+        }
+        Subscription routerSubscription = _pRouter->subscribe( CacheServerBusInternal::makeChannel( topic ),
+                                                               SW_DELEGATE_METHOD( CacheStoreRouter::MessageDelegate, &CacheServerBus::onChannelMessage, this ) );
+        if ( routerSubscription.isActive() == false )
+            return; // 라우터가 이유(초기화 전)를 오류로 남겼다
+        TopicSubscription& subscription = _listSubscription.emplace_back();
+        subscription._topic             = string( topic );
+        subscription._subscription      = std::move( routerSubscription );
+    }
+
+    void CacheServerBus::unsubscribe( string_view topic )
+    {
+        for ( size_t index = 0; index < _listSubscription.size(); ++index )
+        {
+            if ( _listSubscription[index]._topic != topic )
+                continue;
+            _listSubscription.erase( _listSubscription.begin() + static_cast<ptrdiff_t>( index ) );
+            return;
+        }
+    }
+
+    int32 CacheServerBus::pollMessages( vector<ServerBusMessage>& outListMessage )
+    {
+        const int32 addedCount = static_cast<int32>( _messageBuffer.getCount() );
+        _messageBuffer.moveAllTo( outListMessage );
+        return addedCount;
+    }
+
+    void CacheServerBus::onChannelMessage( const CacheMessage& message )
+    {
+        const string_view prefix{ CacheServerBusInternal::kChannelPrefix };
+        const bool        bEnvelope = message._channel.size() > prefix.size() && StringUtil::startsWith( message._channel, prefix ) &&
+                               message._bytes.size() >= CacheServerBusInternal::kEnvelopeSize &&
+                               message._bytes[0] == CacheServerBusInternal::kEnvelopeVersion;
+        if ( bEnvelope == false )
+        {
+            ++_droppedCount;
+            return;
+        }
+        // 봉투: 판(1 바이트) 뒤 uint64 둘 — 길이는 위에서 kEnvelopeSize 로 맞췄다.
+        ByteReader    envelope( message._bytes.data() + 1, CacheServerBusInternal::kEnvelopeSize - 1 );
+        const uint64  first  = envelope.readUint64();
+        const uint64  second = envelope.readUint64();
+        vector<uint8> bodyBytes( message._bytes.begin() + static_cast<ptrdiff_t>( CacheServerBusInternal::kEnvelopeSize ), message._bytes.end() );
+        _messageBuffer.push( ServerBusMessage( std::move( bodyBytes ), string( message._channel.substr( prefix.size() ) ), first, second ) );
+    }
+} // namespace sw

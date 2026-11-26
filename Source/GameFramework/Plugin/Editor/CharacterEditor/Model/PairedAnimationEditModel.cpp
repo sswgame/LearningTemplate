@@ -7,7 +7,7 @@
 
 #include "Editor/Common/Asset/AssetWriter.h"
 
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 
 namespace sw::editor
 {
@@ -38,7 +38,7 @@ namespace sw::editor
 {
     PairedAnimationEditModel::PairedAnimationEditModel()
         : _content{}
-        , _state{ PairedAnimationDef::makeXMLText( PairedAnimationContentDef{}, ResourceFieldWrite::OmitDefaults ) }
+        , _state{ PairedAnimationDef::makeXMLText( PairedAnimationContentDef{}, AssetFieldWrite::OmitDefaults ) }
         , _scrubTime{ 0.0f }
     {
         _state.bind( SW_DELEGATE_LAMBDA( CaptureDelegate, [this]()
@@ -74,9 +74,9 @@ namespace sw::editor
         if ( isValid() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "The paired animation breaks a rule (see the log) - fix it before saving" } );
         const string           text         = saveToXMLText();
-        const string           completeText = PairedAnimationDef::makeXMLText( _content, ResourceFieldWrite::WriteAll );
+        const string           completeText = PairedAnimationDef::makeXMLText( _content, AssetFieldWrite::WriteAll );
         const AssetWriteResult saved        = writer.save( path, [&text, &completeText]( const AbsolutePath& writable )
-               { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( text, completeText ) ); } );
+               { return AssetComposer::saveText( writable, AssetSaveText::makeWithComplete( text, completeText ) ); } );
         // 거절은 문이 경고로 알렸다 — 상태 줄이 쓰기 실패와 다른 까닭을 보이게 글을 나눈다(파일을 바꾼 것은 바깥, 버전 관리 · 다른 편집기다)
         if ( saved == AssetWriteResult::Refused )
             return unexpected( Error{ ErrorKind::ExternalFailure, "Not saved - the file is read-only or changed on disk", path.str() } );

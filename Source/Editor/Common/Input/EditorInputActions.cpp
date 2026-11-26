@@ -13,9 +13,9 @@
 #include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/View/EditorRenderViews.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"

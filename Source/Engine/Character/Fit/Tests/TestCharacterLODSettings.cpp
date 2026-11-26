@@ -19,7 +19,7 @@ namespace
         /** @brief 평면 격자 둘(구간 둘, x 로 떨어져 있다)인 스킨드 메시입니다. 구간 0 의 정점은 x < kGrid, 구간 1 은 x > kGrid 다. */
         static shared_ptr<Mesh> makeTwoSectionGrid( bool bSkin = true )
         {
-            vector<RHIVertex>      listVertex;
+            vector<MeshVertex>     listVertex;
             vector<uint32>         listIndex;
             vector<MeshSkinVertex> listSkin;
             vector<MeshSection>    listSection;
@@ -31,7 +31,7 @@ namespace
                 {
                     for ( uint32 x = 0; x <= kGrid; ++x )
                     {
-                        RHIVertex vertex{};
+                        MeshVertex vertex{};
                         vertex._arrPosition[0] = static_cast<float>( x + section * ( kGrid + 2u ) );
                         vertex._arrPosition[1] = static_cast<float>( y );
                         vertex._arrNormal[2]   = 1.0f;

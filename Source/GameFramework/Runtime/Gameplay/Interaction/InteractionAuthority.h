@@ -5,7 +5,7 @@
  *          알린다. 서버는 요청을 검증해서 결과(문 열림, 아이템)를 복제하고, 클라이언트는 예측으로 진행 표시만 한다. 등록된 훅이 없으면 모두 로컬에서 처리한다.
  */
 #pragma once
-#include "Core/Event/EventType.h"
+#include "Core/Event/EventBase.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 

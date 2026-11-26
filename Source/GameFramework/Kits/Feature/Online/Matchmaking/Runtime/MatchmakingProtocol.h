@@ -1,10 +1,10 @@
 /**
  * @file MatchmakingProtocol.h
  * @brief 매칭 서비스의 와이어 형식입니다. 메서드와 알림 번호(영역 `OnlineMethodRange::kMatchmaking`), 본문, 캐시 기록, 버스 메시지의 형식을 정의하며 클라이언트와 서버가 함께 씁니다.
- * @details 요청, 응답, 알림, 서버 버스 본문은 `REFLECT` 구조체 하나씩이고 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
+ * @details 요청, 응답, 알림, 서버 버스 본문은 `REFLECT` 구조체 하나씩이고 스키마 결합형이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
  *          응답은 메서드마다 따로이다. 업무 결과(`_result`)는 도메인 값만이고, 규칙 밖 값 · 일시 장애 · 경합은 공통 범주(`OnlineError`)로 온다.
  *          공통 범주(`OnlineError`)는 오류 코드로만 오며, 로그인 없음, 손상된 본문, 경합, 일시 장애, 시한 초과가 해당한다.
- *          캐시 기록(파티, 로비)은 자기 기술형(A)이며 기록 버전이 다르면 읽지 않는다.
+ *          캐시 기록(파티, 로비)은 자기 기술형이며 기록 버전이 다르면 읽지 않는다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -196,7 +196,7 @@ namespace sw
 {
     /**
      * @struct MatchmakingProtocol
-     * @brief 매칭의 메시지 타입 목록, 등록 항목, 캐시 기록 코덱입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     * @brief 매칭의 메시지 타입 목록, 등록 항목, 캐시 기록 코덱입니다. 본문은 스키마 결합형이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      * @details 알림 본문은 `PartySnapshot`, `PartyInvite`, `LobbySnapshot`, `MatchAssignment` 입니다. 서버 버스 본문(`MatchTicket`, `MatchTicketCancel`, `MatchFormed`, `MatchAssignment`)은
      *          B 가 아니라 주제 정의(`MatchQueueBus`)로 쓰며, 버스에만 쓰는 타입은 이 목록에 없습니다.
      */

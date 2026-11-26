@@ -735,7 +735,7 @@ namespace sw
         return parse( text, absPath.str() );
     }
 
-    bool JSONDocument::loadResource( const AssetID& assetID, string* pOutAbsPath )
+    bool JSONDocument::loadAsset( const AssetID& assetID, string* pOutAbsPath )
     {
         const string_view relativePath = assetID.view();
         if ( relativePath.empty() )

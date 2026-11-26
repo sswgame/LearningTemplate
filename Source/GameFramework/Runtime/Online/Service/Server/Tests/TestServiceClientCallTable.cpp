@@ -216,8 +216,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, ResponsesFindTheirOwnDelegateOverLoopb
     goodBody.writeVarUint( 42 );
     BitWriter badBody;
     badBody.writeVarUint( 0 ); // 계정 0 — 테스트 로그인이 거절한다
-    (void)tableClient.send( test::TestLoginService::kLoginMethod, badBody, SW_DELEGATE_METHOD( DoneDelegate, &DoneRecorder::onDone, &badRecorder ) );
-    (void)tableClient.send( test::TestLoginService::kLoginMethod, goodBody, SW_DELEGATE_METHOD( DoneDelegate, &DoneRecorder::onDone, &goodRecorder ) );
+    (void)tableClient.send( test::TestLoginLogic::kLoginMethod, badBody, SW_DELEGATE_METHOD( DoneDelegate, &DoneRecorder::onDone, &badRecorder ) );
+    (void)tableClient.send( test::TestLoginLogic::kLoginMethod, goodBody, SW_DELEGATE_METHOD( DoneDelegate, &DoneRecorder::onDone, &goodRecorder ) );
     SW_EXPECT_EQUAL( tableClient._callTable.getCount(), size_t( 2 ) );
     test::updateAll( { &rig._server }, rig._clients, 0 );
 
@@ -262,7 +262,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, CancelledRequestsDropTheirAnswersWitho
     DoneRecorder recorder;
     BitWriter    body;
     body.writeVarUint( 42 );
-    (void)tableClient->send( test::TestLoginService::kLoginMethod, body, SW_DELEGATE_METHOD( DoneDelegate, &DoneRecorder::onDone, &recorder ) );
+    (void)tableClient->send( test::TestLoginLogic::kLoginMethod, body, SW_DELEGATE_METHOD( DoneDelegate, &DoneRecorder::onDone, &recorder ) );
     rig._clients.getClient( clientIndex ).cancelRequests( OnlineMethodRange::kGame );
     tableClient.reset();
     test::updateAll( { &rig._server }, rig._clients, 0 );

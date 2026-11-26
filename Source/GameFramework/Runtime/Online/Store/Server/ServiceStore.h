@@ -96,7 +96,7 @@ namespace sw
         struct Range
         {
             string _cursorKey{};
-            uint64 _fingerprint{ 0 }; ///< `ServiceTransaction::computeRangeFingerprint` — 읽은 레코드의 키 · 버전 순서열
+            uint64 _digest{ 0 }; ///< `ServiceTransaction::computeRangeDigest` — 읽은 레코드의 키 · 버전 순서열
             int32  _maxCount{ 0 };
             uint8  _bDescending{ SW_FALSE };
         };
@@ -149,10 +149,10 @@ namespace sw
         void erase( const hashed_string& table, string_view key, uint64 expectedVersion = ServiceRecord::kAnyVersion );
         void requireVersion( const hashed_string& table, string_view key, uint64 expectedVersion );
         /**
-         * @brief 목록 읽기 하나(인자 그대로)가 커밋 때도 지문 @p fingerprint 의 결과(키 · 버전 순서열)를 내야 한다는 조건입니다. 그사이 범위에 레코드가 들거나 빠지거나 바뀌면 Conflict 다.
+         * @brief 목록 읽기 하나(인자 그대로)가 커밋 때도 지문 @p digest 의 결과(키 · 버전 순서열)를 내야 한다는 조건입니다. 그사이 범위에 레코드가 들거나 빠지거나 바뀌면 Conflict 다.
          * @details 저장소는 같은 트랜잭션 안에서 범위를 다시 읽어 견준다(이 트랜잭션의 쓰기 전에). 버전 조건 상한(`kMaxConditionCount`)에 든다.
          */
-        void requireRange( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, uint64 fingerprint );
+        void requireRange( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, uint64 digest );
         /** @brief 이 트랜잭션을 커밋하지 못하게 합니다(`Invalid`). 넣으려던 값이 규칙을 어겨 일부만 쓰면 안 될 때 — 빈 키 같은 가짜 쓰기로 대신하지 않는다. */
         void markMalformed() { _bMalformed = SW_TRUE; }
         /** @brief 쓰기 하나를 그대로 덧붙입니다(조건을 고친 사본을 다시 짤 때 — 읽기 집합 연결 · 운영 쓰기). */
@@ -180,7 +180,7 @@ namespace sw
         /** @brief 키가 키 규칙(`[0-9a-z_./-]`, 1..256 B)을 지키면 true 입니다. */
         static bool isValidKey( string_view key );
         /** @brief 목록 읽기 결과 @p listRecord 의 @p first 번부터 끝까지의 지문(개수 · 키 · 버전)입니다. 범위 조건을 거는 쪽과 견주는 저장소가 같은 함수를 쓴다. */
-        static uint64 computeRangeFingerprint( const vector<ServiceRecord>& listRecord, size_t first );
+        static uint64 computeRangeDigest( const vector<ServiceRecord>& listRecord, size_t first );
 
     private:
         friend struct ServiceStoreTestAccess;

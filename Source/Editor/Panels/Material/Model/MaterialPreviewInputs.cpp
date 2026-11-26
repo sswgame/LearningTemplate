@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Graphics/Material/MaterialTypes.h"
+#include "Engine/Graphics/Material/MaterialDef.h"
 
 namespace sw::editor
 {

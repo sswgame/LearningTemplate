@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    struct ResourceContext;
+    struct AssetComposeContext;
 } // namespace sw
 
 namespace sw
@@ -32,10 +32,10 @@ namespace sw
 
         /** @brief XML 을 읽습니다. 모르는 키 · 범위 밖 값은 오류이고 false 입니다(`ConfigManager::readConfigXMLDocument`). */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
-        /** @brief 리소스 경로의 파일을 읽습니다. */
+        /** @brief 에셋 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 합친 글을 읽고 검사합니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
-        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context );
+        /** @brief 합친 글을 읽고 검사합니다(`ConfigManager::readComposedXMLDocument`). 에셋 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
+        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context );
         /** @brief 엔진 기본 표(`EngineDefaultAssets::_meshLODSettings`)를 한 번 읽어 돌려줍니다. 읽지 못하면 오류로 멈춘다(값이 없으면 단계 · 컬링이 정해지지 않는다). */
         static const MeshLODSettings& getDefault();
     };

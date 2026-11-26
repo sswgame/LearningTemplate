@@ -22,7 +22,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/View/RenderViewSettings.h"
-#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameCounter.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
@@ -111,7 +111,7 @@ namespace sw
         host._pRenderTargets   = engine::findSubsystem<RenderTargetRegistry>();
         host._pRenderDebug     = engine::findSubsystem<RenderDebugRegistry>();
         host._pPixelInspector  = engine::findSubsystem<GPUPixelInspector>();
-        host._pSimulationOnly  = engine::findSubsystem<SimulationOnlyFrameQueue>();
+        host._pSimulationOnly  = engine::findSubsystem<SimulationOnlyFrameCounter>();
         host._pPinnedMaterials = &engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
         _frameRenderer->bindHost( host );
         // 커맨드라인이 주 출력의 보기 모드를 정했으면 여기서 받는다(에디터 씬 뷰는 툴바가 따로 정한다).
@@ -191,7 +191,7 @@ namespace sw
 
     void FrameRendererSubsystem::requestPipelineChange( const string& change, RenderPipelineRequest pipeline )
     {
-        // 렌더 쪽 객체(렌더러 · PSO 캐시)는 렌더 스레드가 다음 프레임 기록 전에 고친다 — 렌더 스레드와 GPU 를 세우지 않는다(셰이더 리로드 `LiveShaderSubsystem` 과 같은 길).
+        // 렌더 쪽 객체(렌더러 · PSO 캐시)는 렌더 스레드가 다음 프레임 기록 전에 고친다 — 렌더 스레드와 GPU 를 세우지 않는다(셰이더 리로드 `ShaderHotReloadSubsystem` 과 같은 길).
         // 옛 패스 자원은 디바이스가 그것을 쓴 프레임의 GPU 완료 뒤로 미뤄 놓는다(백엔드 해제 큐). 렌더 스레드는 변수도 파일도 읽지 않는다 — 부르는 쪽(게임 스레드)이 읽어 넘긴다.
         _chosenPipelinePath                   = pipeline._path;
         RenderThreadSubsystem* pRenderThreads = engine::findSubsystem<RenderThreadSubsystem>();

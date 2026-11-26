@@ -83,7 +83,7 @@ namespace sw
      * @details 에디터 화면(활성 씬 · 프레임)이 필요한 케이스는 태그 `editorApp` 으로 빠져 에디터 자체 테스트 `editor.unitTests` 가 돈다.
      * @return 하나도 지지 않았으면 true 를 반환합니다.
      */
-    [[nodiscard]] bool runUnitTestsWithEditorModule( EditorModuleHeadlessSession& session, const CommandLineManager& commandLine );
+    [[nodiscard]] bool runUnitTestsWithEditorModule( EditorModuleHeadlessSession& session, const CommandLine& commandLine );
 
     /**
      * @struct EditorModuleCommandlet
@@ -93,15 +93,15 @@ namespace sw
     struct EditorModuleCommandlet
     {
         /** @brief 작업 본문입니다. @p editorModule 은 실행 한 번에 에디터 모듈을 한 번만 올리는 세션이다. 성공이면 true 입니다. */
-        using RunFunction = bool ( * )( const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule );
+        using RunFunction = bool ( * )( const CommandLine& commandLine, EditorModuleHeadlessSession& editorModule );
 
         CommandletRequestFunction _pIsRequested; ///< 이 명령줄이 작업을 청했는가 — 엔진의 헤드리스 기동 판정과 실행 판정이 같은 함수다
         CommandletHost            _host;         ///< 도는 호스트 — 그 밖의 호스트에 청해지면 기동이 실패한다(`CommandletRegistration::selectAndRun`)
         RunFunction               _pRun;
 
         /** @brief 표에서 청해진 작업을 차례로 돌립니다(세션 하나를 같이 쓴다). 실패한 작업이 없으면 true 입니다. */
-        [[nodiscard]] static bool runRequested( const CommandLineManager& commandLine );
+        [[nodiscard]] static bool runRequested( const CommandLine& commandLine );
         /** @brief @p listTask 에서 청해진 작업을 차례로 돌립니다. 표와 떼어 둔 것은 규칙(청해진 줄만, 실패해도 계속)을 모듈 없이 테스트하기 위해서입니다. */
-        [[nodiscard]] static bool runTable( span<const EditorModuleCommandlet> listTask, const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule );
+        [[nodiscard]] static bool runTable( span<const EditorModuleCommandlet> listTask, const CommandLine& commandLine, EditorModuleHeadlessSession& editorModule );
     };
 } // namespace sw

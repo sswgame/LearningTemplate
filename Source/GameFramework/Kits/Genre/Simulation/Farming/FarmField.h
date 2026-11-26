@@ -9,8 +9,8 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
@@ -32,7 +32,7 @@ namespace sw
     class SW_KIT_API FarmShippingBin
     {
     public:
-        static constexpr FormatDef kStateFormat{ "FSHP" };
+        static constexpr FormatDesc kStateFormat{ "FSHP" };
 
         FarmShippingBin();
 
@@ -104,7 +104,7 @@ namespace sw
     class SW_KIT_API FarmField
     {
     public:
-        static constexpr FormatDef kStateFormat{ "FFLD" };
+        static constexpr FormatDesc kStateFormat{ "FFLD" };
 
         FarmField();
 

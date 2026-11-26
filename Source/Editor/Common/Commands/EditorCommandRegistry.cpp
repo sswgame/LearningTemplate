@@ -13,10 +13,10 @@
 #include "Editor/Common/Commands/EditorCommandTarget.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
+#include "Editor/Common/Workspace/View/EditorFrameStep.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 
@@ -140,7 +140,7 @@ namespace sw::editor
         }
     }
 
-    void EditorCommandRegistry::applyMenuLabels( const EditorCommandTextSet& texts )
+    void EditorCommandRegistry::applyMenuLabels( const EditorCommandInfoSet& texts )
     {
         for ( EditorMenu& menu : _listMenu )
         {
@@ -391,7 +391,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void EditorCommandTableUtil::appendRegistrations( EditorCommandRegistry& registry, EditorCommandTextSet& texts )
+    void EditorCommandTableUtil::appendRegistrations( EditorCommandRegistry& registry, EditorCommandInfoSet& texts )
     {
         using CommandRegistry = EditorExtensionRegistry<EditorCommandRegistration>;
         for ( uint32 index = 0; index < CommandRegistry::getCount(); ++index )
@@ -415,7 +415,7 @@ namespace sw::editor
     }
 
     // 에디터 코어의 명령 표시 파일 — 명령 표(`EditorCommandGUI`)와 코어 파일들의 등록 줄이 쓴다. 확장 모듈은 자기 파일을 등록한다.
-    SW_EDITOR_COMMAND_TEXT( EditorCore, "editor.commands", "editor/commands/editor.commands.xml" );
+    SW_EDITOR_COMMAND_INFO( EditorCore, "editor.commands", "editor/commands/editor.commands.xml" );
 } // namespace sw::editor
 
 namespace sw::editor

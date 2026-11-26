@@ -44,7 +44,7 @@ namespace sw
         vector<uint32> _listEmissionWordOffset;    ///< 볼륨마다 발광 칸(순위) 단어의 첫 단어 — 점유 단어 바로 뒤. 발광하는 메시가 없으면 `SceneVoxelizer::kNoEmission`
         vector<uint32> _listStaticWordOffset;      ///< 볼륨마다 정적 사본의 점유 첫 단어(읽는 자리들 뒤). 움직이는 층이 없는 장면이면 `SceneVoxelizer::kNoStaticCopy`
         vector<uint32> _listStaticEmissionOffset;  ///< 볼륨마다 정적 사본의 발광 첫 단어. 발광하는 메시가 없거나 정적 사본이 없으면 `SceneVoxelizer::kNoEmission`
-        vector<uint32> _listPaletteRow;            ///< 볼륨마다 발광 목록(`SceneVoxelScene::_listEmissionPalette`)의 첫 입력 행 — 볼륨 행들 뒤
+        vector<uint32> _listPaletteRow;            ///< 볼륨마다 발광 목록(`SceneVoxelizeInput::_listEmissionPalette`)의 첫 입력 행 — 볼륨 행들 뒤
         vector<uint32> _listHistoryOffset;         ///< 볼륨마다 기록 버퍼 안의 첫 float4(`RealtimeProbeHistoryAllocator` 가 볼륨 정체로 매긴 구간 — 이어지지 않을 수 있다)
         vector<uint32> _listFirstThread;           ///< 볼륨마다 첫 스레드 번호(= 앞 볼륨들의 프로브 수의 합)
         uint32         _totalVoxelWords{ 0 };      ///< 점유 단어와 발광 단어의 합(정적 사본 포함)
@@ -111,7 +111,7 @@ namespace sw
      * @struct RealtimeProbeAccumulation
      * @brief 프로브 기록이 지금 입력에 수렴한 프레임 수이며 사진 앞 정착 조건 `RenderRealtimeGI` 의 진척. 갱신한 프레임마다 한 번 `advance` 를 부릅니다(순수 값이라 단위 테스트가 바로 부른다).
      * @details 되돌림(기록이 0 에서 시작)은 처음부터 센다. 입력의 변화(가리개 · 발광 · 빛 · 하늘 — `RealtimeProbeUpdater::prepare`)는 두 때를 가른다.
-     *          - 변화가 이어지는 동안: 이어진 변화가 시작한 뒤의 프레임 수다. 멈추지 않는 변화(도는 기믹 · 깜빡이는 등 · 흐르는 시각)는 기록이 같은 시차로 따라가는 정상 상태에 이르면 다 된 것이다 —
+     *          - 변화가 이어지는 동안: 이어진 변화가 시작한 뒤의 프레임 수다. 멈추지 않는 변화(도는 장치 · 깜빡이는 등 · 흐르는 시각)는 기록이 같은 시차로 따라가는 정상 상태에 이르면 다 된 것이다 —
      *            끝나지 않는 변화가 사진을 막지 않는다(카메라만 보는 TAA 정지 프레임과 같은 까닭). 고정 프레임 시간의 결정적 실행에서는 같은 프레임이면 같은 그림이다.
      *          - 멈춘 뒤: 마지막 변화 뒤의 프레임 수다. 막 멈춘 문 · 막 켠 등의 시차가 가라앉을 때까지 기다린다.
      *
@@ -171,7 +171,7 @@ namespace sw
          * @brief 기록 전에 부릅니다 - 버퍼를 갖추고 이번 프레임의 입력을 올립니다. 요청이 없거나 프로브 버퍼를 쓸 수 없으면 `isActive` 가 false 입니다.
          * @details 못 켜는 이유(컴퓨트 PSO 없음 · 프로브 버퍼 UAV 없음 · 버퍼 할당 실패)는 한 번만 오류로 남긴다 - 실시간 볼륨은 그동안 검게 남는다(베이크로 대신하지 않는다).
          * @param bCreateMissingMeshes 업로드 큐가 넘기기 전에 메시를 만들지 않는 구성이면 true 입니다 — 칠할 메시의 GPU 버퍼가 없으면 여기서 만든다(만드는 쪽은 하나다, `GPUUploadQueue::shouldCreateMeshes`)
-         * @param stableError 정착으로 보는 오차(`RenderStabilitySample::readMaxGIError` — 정착 조건과 같은 문턱). 정착을 보는 시나리오가 없으면 0 이다
+         * @param stableError 정착으로 보는 오차(`RenderConvergenceSample::readMaxGIError` — 정착 조건과 같은 문턱). 정착을 보는 시나리오가 없으면 0 이다
          */
         void prepare( IRHIDevice* pDevice, const vector<RealtimeProbeRequest>& listRequest, const GPULightBuffer& lightBuffer, const SkyGradient& sky, bool bHasSky, bool bPipelineReady,
                       bool bCreateMissingMeshes, float32 stableError );
@@ -214,12 +214,12 @@ namespace sw
         /** @brief 복셀 버퍼의 볼륨 자리 하나와 거기 칠한 장면입니다(포인터 비교가 믿을 수 있도록 장면을 붙들고 있는다). */
         struct PaintedVolume
         {
-            uint64                            _volumeID{ 0 };
-            uint32                            _wordOffset{ 0 };
-            uint32                            _emissionOffset{ 0 };
-            uint32                            _staticWordOffset{ 0 };
-            uint32                            _staticEmissionOffset{ 0 };
-            shared_ptr<const SceneVoxelScene> _pScene{};
+            uint64                               _volumeID{ 0 };
+            uint32                               _wordOffset{ 0 };
+            uint32                               _emissionOffset{ 0 };
+            uint32                               _staticWordOffset{ 0 };
+            uint32                               _staticEmissionOffset{ 0 };
+            shared_ptr<const SceneVoxelizeInput> _pScene{};
         };
         /** @brief 위치 흐름의 GPU 복사 하나입니다(렌더 프록시 정점 버퍼의 앞 구간 → 위치 버퍼). 기록할 때까지 메시를 쥔다. */
         struct PendingPositionCopy

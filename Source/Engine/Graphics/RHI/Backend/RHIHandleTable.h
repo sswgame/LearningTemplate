@@ -13,7 +13,7 @@
 #include "Core/Container/SlotHandleTable.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIConstants.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
 
 namespace sw

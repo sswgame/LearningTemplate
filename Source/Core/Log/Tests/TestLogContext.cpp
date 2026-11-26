@@ -2,11 +2,11 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Log/Backend/AsyncLogBackend.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
-#include "Core/Log/Sink/AsyncLogSink.h"
-#include "Core/Log/Sink/ILogOutput.h"
+#include "Core/Log/Output/ILogOutput.h"
 #include "Core/TestFramework/TestFramework.h"
 
 #include <thread>
@@ -105,7 +105,7 @@ SW_TEST_CASE( LogContextTest, TagHasOnlyThePresentProperties )
 
 SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
 {
-    AsyncLogSink logger;
+    AsyncLogBackend logger;
     logger.initialize();
     unique_ptr<LogContextCaptureOutput> output   = make_unique<LogContextCaptureOutput>();
     LogContextCaptureOutput*            pCapture = output.get();
@@ -130,9 +130,9 @@ SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
     SW_EXPECT_TRUE_MSG( tagged.find( "[Test] [Info] [trace=0123456789abcdef0000000000000001 acct=0000000000000042] - context line\n" ) != string::npos,
                         tagged.c_str() );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( entryCapture._listEntry.size() ) );
-    SW_EXPECT_TRUE( entryCapture._listEntry[0]._stamp._context.isEmpty() );
-    SW_EXPECT_TRUE( entryCapture._listEntry[1]._stamp._context._traceID == context._traceID );
-    SW_EXPECT_EQUAL( entryCapture._listEntry[1]._stamp._context._principalID, uint64( 0x42 ) );
+    SW_EXPECT_TRUE( entryCapture._listEntry[0]._metadata._context.isEmpty() );
+    SW_EXPECT_TRUE( entryCapture._listEntry[1]._metadata._context._traceID == context._traceID );
+    SW_EXPECT_EQUAL( entryCapture._listEntry[1]._metadata._context._principalID, uint64( 0x42 ) );
 }
 
 /**
@@ -140,7 +140,7 @@ SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
  */
 SW_TEST_CASE( LogContextTest, TickTagAppearsOnlyWhileTheTickNumberIsSet )
 {
-    AsyncLogSink logger;
+    AsyncLogBackend logger;
     logger.initialize();
     unique_ptr<LogContextCaptureOutput> output   = make_unique<LogContextCaptureOutput>();
     LogContextCaptureOutput*            pCapture = output.get();

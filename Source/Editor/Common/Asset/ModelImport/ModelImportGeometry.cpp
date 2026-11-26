@@ -552,10 +552,10 @@ namespace sw::editor
         }
     }
 
-    RHIVertex ModelImportGeometry::makeRHIVertex( const ModelImportUtil::ImportVertex& source, const float3& faceNormal )
+    MeshVertex ModelImportGeometry::makeMeshVertex( const ModelImportUtil::ImportVertex& source, const float3& faceNormal )
     {
         const float3 normal = source._bHasNormal ? source._normal : faceNormal;
-        RHIVertex    vertex{};
+        MeshVertex   vertex{};
         vertex._arrPosition[0] = source._position._x;
         vertex._arrPosition[1] = source._position._y;
         vertex._arrPosition[2] = source._position._z;
@@ -634,7 +634,7 @@ namespace sw::editor
                 if ( bShared )
                     listSourceToOutput[source] = output;
                 outData._listIndex.push_back( output );
-                outData._listVertex.push_back( makeRHIVertex( *arrCorner[corner], faceNormal ) );
+                outData._listVertex.push_back( makeMeshVertex( *arrCorner[corner], faceNormal ) );
                 listOutputSource.push_back( source );
                 if ( skinBoneCount > 0 )
                     outData._listSkinVertex.push_back( makeSkinVertex( *arrCorner[corner] ) );

@@ -1,0 +1,77 @@
+#include "pch.h"
+
+#include "Editor/Panels/Animation/Model/AnimationGraphEditModel.h"
+
+#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
+#include "Editor/Common/GUI/Panel/Model/EditorGraphEditSession.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
+
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
+#include "Engine/Animation/Skeletal/AnimationPoseNode.h"
+
+namespace sw::editor
+{
+    ToolAssetLoadResult AnimationGraphEditModel::loadGraph( AnimationGraphAsset& outGraph, const string_view path )
+    {
+        return EditorToolAssetCommands::loadAnimationGraph( outGraph, path );
+    }
+
+    bool AnimationGraphEditModel::saveGraph( AssetWriter& writer, const AnimationGraphAsset& graph, const string_view path )
+    {
+        return EditorToolAssetCommands::saveAnimationGraph( writer, graph, path );
+    }
+
+    vector<hashed_string> AnimationGraphEditModel::getPoseNodeTypeNames()
+    {
+        return getSubsystem<AnimationPoseNodeRegistry>().getTypeNames();
+    }
+
+    bool AnimationGraphEditModel::makeDefaultPoseNode( const hashed_string& typeName, AnimationGraphPoseNodeDef& outDef )
+    {
+        return getSubsystem<AnimationPoseNodeRegistry>().makeDefaultDef( typeName, outDef );
+    }
+
+    const AnimationPoseNodeType* AnimationGraphEditModel::findPoseNodeType( const hashed_string& typeName )
+    {
+        return getSubsystem<AnimationPoseNodeRegistry>().findType( typeName );
+    }
+
+    void AnimationGraphEditModel::commitLayerEdit( const EditorGraphEditSession& session, const utf8* pLayerEditLabel )
+    {
+        session.recordDocumentEdit( pLayerEditLabel );
+    }
+
+    void AnimationGraphEditModel::commitNodeAdded( const EditorGraphEditSession& session )
+    {
+        session.recordDocumentEdit( "Add Animation Graph Node" );
+    }
+
+    void AnimationGraphEditModel::addLink( AnimationGraphAsset& inoutGraph, const EditorGraphEditSession& session, const AnimationGraphLink& link )
+    {
+        inoutGraph._listLink.push_back( link );
+        session.recordDocumentEdit( "Link Animation Graph Nodes" );
+    }
+
+    void AnimationGraphEditModel::renameState( string& inoutStateName, const EditorGraphEditSession& session, string_view name )
+    {
+        inoutStateName = string{ name };
+        session.recordDocumentEdit( "Rename Animation State" );
+    }
+
+    void AnimationGraphEditModel::setStateLoop( optional<bool>& inoutLoop, const EditorGraphEditSession& session, const optional<bool>& loop )
+    {
+        inoutLoop = loop;
+        session.recordDocumentEdit( "Edit Animation State" );
+    }
+
+    void AnimationGraphEditModel::setPoseNode( AnimationGraphPoseNodeDef& inoutPoseNode, const EditorGraphEditSession& session, AnimationGraphPoseNodeDef&& edited )
+    {
+        inoutPoseNode = std::move( edited );
+        session.recordDocumentEdit( "Edit Animation Pose Node" );
+    }
+
+    void AnimationGraphEditModel::commitTransitionEdit( const EditorGraphEditSession& session )
+    {
+        session.recordDocumentEdit( "Edit Animation Transition" );
+    }
+} // namespace sw::editor

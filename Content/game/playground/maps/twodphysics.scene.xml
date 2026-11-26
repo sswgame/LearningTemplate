@@ -194,12 +194,12 @@
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false">
+					<LogicCircuitSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false">
 						<_requiredTags>
 							<_listTag />
 						</_requiredTags>
 						<_listOccupant />
-					</GimmickSensorComponent>
+					</LogicCircuitSensorComponent>
 					<ExplosiveBarrelComponent _localID="2817874053379422564" _health="30" _radius="5" _damage="80" _fuseTime="1.5" _fractureStrain="200" _blastImpulse="400" />
 				</_listComponent>
 			</GameObject>

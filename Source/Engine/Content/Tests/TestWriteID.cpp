@@ -7,7 +7,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 
-// 쓰기 입구(`AssetPaths::toDiskPath`)는 리소스 id 만 받는다 — 전역 id 는 그 도메인 루트 아래(없는 파일도), 상대 키는 읽기가 고른 있는 파일이다.
+// 쓰기 입구(`AssetPaths::toDiskPath`)는 에셋 id 만 받는다 — 전역 id 는 그 도메인 루트 아래(없는 파일도), 상대 키는 읽기가 고른 있는 파일이다.
 
 using namespace sw;
 
@@ -19,8 +19,8 @@ SW_TEST_CASE( WriteIDTest, GlobalIDKeepsItsDomain )
 }
 
 /**
- * @brief [WriteIDTest] 리소스 트리에 쓰는 자리는 모든 플랫폼에서 소문자다 — 대문자가 섞인 id 를 풀어도 도메인 루트 아래 부분은 소문자이고, `toAssetID` 왕복도 소문자 id 다
- * @details 사용자 규칙("리소스 경로 아래에 저장할 때는 무조건 소문자")의 그물. 비교 자리를 OS 대소문자 규칙으로 바꿔도 쓰는 자리는 이 규칙을 지킨다.
+ * @brief [WriteIDTest] 콘텐츠 트리에 쓰는 자리는 모든 플랫폼에서 소문자다 — 대문자가 섞인 id 를 풀어도 도메인 루트 아래 부분은 소문자이고, `toAssetID` 왕복도 소문자 id 다
+ * @details 사용자 규칙("에셋 경로 아래에 저장할 때는 무조건 소문자")의 그물. 비교 자리를 OS 대소문자 규칙으로 바꿔도 쓰는 자리는 이 규칙을 지킨다.
  *          변이: `toDiskPath` 가 id 를 접지 않고(`normalizeAssetID` 를 건너뛰고) 이으면 리눅스 · Windows 모두 `Test/MixedCase.XML` 이 남아 진다.
  */
 SW_TEST_CASE( WriteIDTest, MixedCaseIDWritesLowercaseInTheResourceTree )
@@ -36,7 +36,7 @@ SW_TEST_CASE( WriteIDTest, MixedCaseIDWritesLowercaseInTheResourceTree )
 }
 
 /**
- * @brief [WriteIDTest] 리소스 트리에 새로 생기는 이름은 쓰기 경로가 막는다 — 대문자가 든 새 자리는 거절, 소문자 · 트리 밖은 통과. 입구가 이름을 접지 않아도 대문자 파일이 생기지 않는다
+ * @brief [WriteIDTest] 콘텐츠 트리에 새로 생기는 이름은 쓰기 경로가 막는다 — 대문자가 든 새 자리는 거절, 소문자 · 트리 밖은 통과. 입구가 이름을 접지 않아도 대문자 파일이 생기지 않는다
  * @details 변이: 규칙을 걸지 않거나(`AssetPaths::initialize`) 상대 부분이 아닌 전체 경로를 보면(`Content` 의 C) 첫 · 둘째 단언이 진다.
  */
 SW_TEST_CASE( WriteIDTest, NewNamesUnderContentMustBeLowercase )

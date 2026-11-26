@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw
 {

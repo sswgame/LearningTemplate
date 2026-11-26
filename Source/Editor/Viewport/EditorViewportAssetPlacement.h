@@ -17,7 +17,7 @@ namespace sw
 
 namespace sw::editor
 {
-    struct ViewportToolbarSettings;
+    struct EditorViewportOverlayBars;
 
     /**
      * @class EditorViewportAssetPlacement
@@ -34,7 +34,7 @@ namespace sw::editor
          * @brief 이번 프레임의 끌기를 처리합니다. 캔버스 위로 끌려 온 애셋은 고스트를 그리고, 놓였으면 만들거나 엽니다. 캔버스 이미지를 그린 창 안에서 부른다.
          * @param viewProj 캔버스 이미지를 그린 카메라의 뷰-투영 행렬입니다.
          */
-        void process( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float4x4& viewProj, const ViewportToolbarSettings& settings );
+        void process( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float4x4& viewProj, const EditorViewportOverlayBars& settings );
         /** @brief 마지막으로 한 일입니다. */
         const EditorPlacementStats& getStats() const { return _stats; }
 

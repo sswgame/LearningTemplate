@@ -25,7 +25,7 @@
     #include "Engine/Window/Android/AndroidWindow.h"
 
     #if !defined( SW_SHIPPING )
-        #include "Core/CommandLine/CommandLineManager.h"
+        #include "Core/CommandLine/CommandLine.h"
 
         #include "Engine/Config/ConfigManager.h"
         #include "Engine/Config/ConfigOverride.h"
@@ -62,8 +62,8 @@ namespace
     {
         FileServeMount mount;
         sw::string     baseURL;
-        if ( sw::CommandLineManager::findValueBeforeParse( static_cast<int32>( listArgumentPointer.size() - 1 ), listArgumentPointer.data(), sw::CommandLineArgument::FILESERVE,
-                                                           baseURL ) == false )
+        if ( sw::CommandLine::findValueBeforeParse( static_cast<int32>( listArgumentPointer.size() - 1 ), listArgumentPointer.data(), sw::CommandLineArgument::FILESERVE,
+                                                    baseURL ) == false )
             return mount;
         if ( sw::PlainHTTPClient::isServerRootURL( baseURL ) == false )
             sw::reportFatalError( "AndroidMain: -fileserve='%#' is not http://<host>:<port> (no path, query or trailing slash, printable ASCII)", baseURL );

@@ -37,7 +37,7 @@ namespace sw::editor
         _favoriteKey.clear();
         _value.reset();
         _listChoice.clear();
-        _range                = InspectorNumericRange{};
+        _range                = PropertyGridNumericRange{};
         _typeName             = hashed_string{};
         _propName             = hashed_string{};
         _handleTargetTypeName = hashed_string{};
@@ -54,8 +54,8 @@ namespace sw::editor
         _depth                = 0;
         _kind                 = PropertyRowKind::Builtin;
         _child                = PropertyRowChild::None;
-        _widget               = InspectorValueWidget::None;
-        _handleState          = InspectorHandleState{};
+        _widget               = PropertyGridValueWidget::None;
+        _handleState          = PropertyGridHandleState{};
         _builtinIndex         = 0;
         _bReadOnly            = SW_FALSE;
         _bDisabled            = SW_FALSE;

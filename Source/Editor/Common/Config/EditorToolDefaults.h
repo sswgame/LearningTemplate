@@ -11,7 +11,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 namespace sw::editor
 {
@@ -30,18 +30,18 @@ namespace sw::editor
     {
         REFLECT_BODY();
         PROPERTY()
-        DataPath _defaultMap; ///< 타일맵 패널이 처음 여는 맵(리소스 경로, 칸이 없으면 없음)
+        DataPath _defaultMap; ///< 타일맵 패널이 처음 여는 맵(에셋 경로, 칸이 없으면 없음)
         PROPERTY()
-        DataPath _warpMap; ///< 타일맵 패널의 워프 대상 기본값(리소스 경로, 칸이 없으면 없음)
+        DataPath _warpMap; ///< 타일맵 패널의 워프 대상 기본값(에셋 경로, 칸이 없으면 없음)
         PROPERTY()
-        DataPath _spriteAtlas; ///< 스프라이트 클립 패널의 기본 아틀라스(리소스 경로, 칸이 없으면 없음)
+        DataPath _spriteAtlas; ///< 스프라이트 클립 패널의 기본 아틀라스(에셋 경로, 칸이 없으면 없음)
         PROPERTY( Required )
-        DataPath _uiPreviewDocument; ///< UI 미리보기 패널이 처음 여는 UI 문서(리소스 경로)
+        DataPath _uiPreviewDocument; ///< UI 미리보기 패널이 처음 여는 UI 문서(에셋 경로)
 
         PROPERTY( Required )
-        DataPath _inputReplayFile; ///< 입력 맵 패널의 리플레이 탭이 처음 가리키는 .swreplay 파일(리소스 경로)
+        DataPath _inputReplayFile; ///< 입력 맵 패널의 리플레이 탭이 처음 가리키는 .swreplay 파일(에셋 경로)
         PROPERTY( Required )
-        DataPath _editorInputMap; ///< 에디터 단축키 · 몸짓의 입력 맵(리소스 경로, `EditorInputActions` — 패널마다 레이어)
+        DataPath _editorInputMap; ///< 에디터 단축키 · 몸짓의 입력 맵(에셋 경로, `EditorInputActions` — 패널마다 레이어)
 
         PROPERTY( Required )
         float4 _clearColor{}; ///< 씬 뷰 · 게임 뷰 렌더 타깃 클리어 색

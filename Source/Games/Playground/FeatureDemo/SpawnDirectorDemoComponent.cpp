@@ -15,11 +15,11 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
@@ -82,7 +82,7 @@ namespace sw
     {
         struct SpawnDirectorDemoComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "FDSP" };
+            static constexpr FormatDesc kStateFormat{ "FDSP" };
         };
     } // namespace
 

@@ -8,9 +8,9 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -112,15 +112,15 @@ namespace sw
 
     bool RetargetProfile::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        return loadComposed( xml, sourceLabel, ResourceContext::forSchema( &RetargetProfileInternal::makeInheritanceSchema ) );
+        return loadComposed( xml, sourceLabel, AssetComposeContext::forSchema( &RetargetProfileInternal::makeInheritanceSchema ) );
     }
 
-    bool RetargetProfile::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    bool RetargetProfile::loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
     {
         clear();
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( xml, sourceLabel, context, flatText, bComposed ) == false )
+        if ( AssetComposer::compose( xml, sourceLabel, context, flatText, bComposed ) == false )
             return false;
         XMLDocument document;
         XMLNode     root;
@@ -150,13 +150,13 @@ namespace sw
                 DataInheritance::reportBaseNotFound( _baseID, absPath.str() );
                 return false;
             }
-            return ResourceComposer::saveDelta( absPath, fullText, parent.toXML(), RetargetProfileInternal::makeInheritanceSchema(), _baseID, [&absPath]( const string& deltaText )
+            return AssetComposer::saveDelta( absPath, fullText, parent.toXML(), RetargetProfileInternal::makeInheritanceSchema(), _baseID, [&absPath]( const string& deltaText )
             {
                 RetargetProfile reread;
                 return reread.loadFromXMLText( deltaText, absPath.str() ) ? reread.toXML() : string{};
             } );
         }
-        if ( ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( text, fullText ) ) == false ) // 차이면 펼친 글이 짝이다
+        if ( AssetComposer::saveText( absPath, AssetSaveText::makeWithComplete( text, fullText ) ) == false ) // 차이면 펼친 글이 짝이다
         {
             SW_LOG_ERROR_ID( "RetargetProfile.WriteFailed", "Retarget profile could not be written: %#", absPath.str() );
             return false;
@@ -174,7 +174,7 @@ namespace sw
             clear();
             return false;
         }
-        return loadComposed( text, path, ResourceContext::forSchema( &RetargetProfileInternal::makeInheritanceSchema ).withAsset( assetID ) );
+        return loadComposed( text, path, AssetComposeContext::forSchema( &RetargetProfileInternal::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
     string RetargetProfile::toXML() const

@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
@@ -22,7 +22,7 @@ namespace sw
     {
         struct PickupComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "PICK" };
+            static constexpr FormatDesc kStateFormat{ "PICK" };
         };
 
         const StatefulComponentRegistrar<PickupComponent> s_pickupComponentStateRegistration{ "PickupComponent" };

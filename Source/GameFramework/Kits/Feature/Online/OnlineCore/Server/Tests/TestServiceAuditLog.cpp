@@ -4,7 +4,7 @@
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordCodec.h"
 #include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 // ServiceAuditLogTest — 감사 로그: 효과와 같은 트랜잭션(효과가 지면 줄도 없다), 같은 고유 값은 한 줄, 최근 것부터 · 커서, 상한을 넘는 줄은 효과까지 Invalid,

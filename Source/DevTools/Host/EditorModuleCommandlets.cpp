@@ -2,7 +2,7 @@
 
 #include "DevTools/Host/EditorModuleCommandlets.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Log/Logger.h"
@@ -185,7 +185,7 @@ namespace sw
         } );
     }
 
-    bool runUnitTestsWithEditorModule( EditorModuleHeadlessSession& session, const CommandLineManager& commandLine )
+    bool runUnitTestsWithEditorModule( EditorModuleHeadlessSession& session, const CommandLine& commandLine )
     {
         if ( commandLine.isAutomatedRun() == false )
         {
@@ -255,7 +255,7 @@ namespace sw
         {
             /** @brief 인자 @p kArgument 가운데 하나라도 주어졌으면 true 입니다(줄의 "청해졌는가"). */
             template <CommandLineArgument... kArgument>
-            static bool isAnyProvided( const CommandLineManager& commandLine )
+            static bool isAnyProvided( const CommandLine& commandLine )
             {
                 return ( commandLine.isArgumentProvided( kArgument ) || ... );
             }
@@ -264,7 +264,7 @@ namespace sw
              * @brief 로컬라이제이션 도구(`--gather-text`, `--check-text`, `--import-po=<파일>`, `--export-po`, 프로젝트는 `-loc-project`)입니다.
              * @details 번역을 수집한 직후 교환할 수 있도록, 한 번의 실행에서 수집, 가져오기, 내보내기 순서로 처리합니다. 이 단계는 타입 공급자 모듈 뒤라 글 수집이 리플렉션 프로퍼티(`Meta = "Localizable"`)를 본다.
              */
-            static bool runLocalizationTools( const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule )
+            static bool runLocalizationTools( const CommandLine& commandLine, EditorModuleHeadlessSession& editorModule )
             {
                 bool   bGatherText = false;
                 bool   bCheckText  = false;
@@ -301,7 +301,7 @@ namespace sw
             }
 
             /** @brief 에셋 참조 검사(`--check-asset-refs`)입니다. 글 에셋 · 테스트 CMake 의 경로 칸과 리플렉션 `AssetPath` 프로퍼티를 칸 목록(`Config/Dev/AssetReferenceFields.json`)으로 본다. */
-            static bool runAssetReferenceCheck( const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule )
+            static bool runAssetReferenceCheck( const CommandLine& commandLine, EditorModuleHeadlessSession& editorModule )
             {
                 bool bCheck = false;
                 commandLine.getArgument( CommandLineArgument::CHECK_ASSET_REFS, bCheck );
@@ -319,7 +319,7 @@ namespace sw
             }
 
             /** @brief 에디터 단위 테스트(`--test-editor`)입니다. */
-            static bool runEditorUnitTests( const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule )
+            static bool runEditorUnitTests( const CommandLine& commandLine, EditorModuleHeadlessSession& editorModule )
             {
                 bool bRun = false;
                 commandLine.getArgument( CommandLineArgument::TEST_EDITOR, bRun );
@@ -341,7 +341,7 @@ namespace sw
              * @tparam kKind 임포트 종류. @tparam kImportArgument 임포트 인자. @tparam kCheckArgument 대조만 하는 인자.
              */
             template <EditorImportKind kKind, CommandLineArgument kImportArgument, CommandLineArgument kCheckArgument>
-            static bool runEditorImport( const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule )
+            static bool runEditorImport( const CommandLine& commandLine, EditorModuleHeadlessSession& editorModule )
             {
                 bool bImport = false;
                 bool bCheck  = false;
@@ -391,7 +391,7 @@ namespace sw
         {
             /** @brief 표에서 호스트가 @p kHost 인 줄이 하나라도 청해졌으면 true 입니다 — 엔진 `Headless` 단계의 등록 줄이 호스트 값마다 하나씩 이것으로 묻는다. */
             template <CommandletHost kHost>
-            static bool isRequestedOnHost( const CommandLineManager& commandLine )
+            static bool isRequestedOnHost( const CommandLine& commandLine )
             {
                 for ( const EditorModuleCommandlet& task : kArrEditorModuleCommandlet )
                 {
@@ -421,13 +421,13 @@ namespace sw
 
 namespace sw
 {
-    bool EditorModuleCommandlet::runRequested( const CommandLineManager& commandLine )
+    bool EditorModuleCommandlet::runRequested( const CommandLine& commandLine )
     {
         EditorModuleHeadlessSession editorModule; // 에디터 모듈 작업이 여럿이어도 모듈은 한 번 올리고 표가 끝나면 내린다
         return runTable( kArrEditorModuleCommandlet, commandLine, editorModule );
     }
 
-    bool EditorModuleCommandlet::runTable( span<const EditorModuleCommandlet> listTask, const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule )
+    bool EditorModuleCommandlet::runTable( span<const EditorModuleCommandlet> listTask, const CommandLine& commandLine, EditorModuleHeadlessSession& editorModule )
     {
         bool bSucceeded = true;
         for ( const EditorModuleCommandlet& task : listTask )

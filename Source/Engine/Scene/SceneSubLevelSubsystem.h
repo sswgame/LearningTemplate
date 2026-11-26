@@ -35,7 +35,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
+#include "Core/Task/TaskHandle.h"
 
 #include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 #include "Engine/Scene/Scene.h"

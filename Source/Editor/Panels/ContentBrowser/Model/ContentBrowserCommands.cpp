@@ -3,7 +3,7 @@
  * @brief 에셋 맥락 메뉴 · 단축키 명령(`asset.*`)과 `content.open` 입니다. 메뉴 · 키 · 팔레트가 같은 명령을 부른다(R4).
  * @details 명령은 모델을 바꾸므로 View 가 아니라 여기(Model)에 있다. 버전 관리 · 탐색기 · 클립보드는 바로 부르고, 창이 열어야 하는 것(이름 칸 · 지우기 확인 ·
  *          참조 결과 창 · 폴더 이동)은 ViewModel 요청(`ContentBrowserViewModel::postRequest`)으로 넣는다 — 창이 닫혀 있으면 열고 꺼낸다(언리얼 Sync to Content Browser).
- *          대상 id 는 리소스 id 를 올린 에셋 페이로드 id 다(`EditorWidgets::registerAssetPayload` — 끌기와 같은 한 형식). 대상이 없으면(단축키) 창이 내건 지금 선택이다.
+ *          대상 id 는 에셋 id 를 올린 에셋 페이로드 id 다(`EditorWidgets::registerAssetPayload` — 끌기와 같은 한 형식). 대상이 없으면(단축키) 창이 내건 지금 선택이다.
  */
 #include "pch.h"
 
@@ -109,7 +109,7 @@ namespace sw::editor
             /** @brief 지우기 전에 확인한다(파일은 휴지통으로). 모달은 창이 메뉴 밖의 창 단위에서 연다. */
             static void deleteAsset( const EditorCommandTarget& target ) { postForTarget( ContentBrowserRequestKind::Delete, target ); }
 
-            /** @brief `content.open <리소스 폴더>` 명령입니다. 콘텐츠 브라우저를 열고 그 폴더로 이동합니다. 언리얼의 Sync to Content Browser 와 같습니다. */
+            /** @brief `content.open <에셋 폴더>` 명령입니다. 콘텐츠 브라우저를 열고 그 폴더로 이동합니다. 언리얼의 Sync to Content Browser 와 같습니다. */
             static bool runContentOpen( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() != 1 )

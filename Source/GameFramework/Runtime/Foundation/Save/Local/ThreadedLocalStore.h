@@ -13,7 +13,7 @@
 #include "Core/Task/DedicatedWorker.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Save/Local/LocalSlotStorage.h"
+#include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreBackend.h"
 
 namespace sw
 {
@@ -25,7 +25,7 @@ namespace sw
     {
     public:
         /** @brief 백엔드는 이 프런트가 소유하고, 봉인 인터페이스는 빌려 씁니다. 스레드를 바로 시작합니다. */
-        ThreadedLocalStore( unique_ptr<ILocalSlotStorage> storage, const LocalSealContext& sealContext );
+        ThreadedLocalStore( unique_ptr<ILocalStoreBackend> storage, const LocalSealContext& sealContext );
         ~ThreadedLocalStore() override;
 
         uint64 submitRead( string_view slot ) override;
@@ -44,7 +44,7 @@ namespace sw
     private:
         vector<LocalStoreCompletion> _listCompletion SW_GUARDED_BY( _mutex );
         LocalSealContext                             _sealContext;
-        unique_ptr<ILocalSlotStorage>                _storage;
+        unique_ptr<ILocalStoreBackend>               _storage;
         DedicatedWorker<LocalStoreRequest>           _worker;
         mutable mutex                                _mutex; ///< 완료 목록과 대기 수를 보호한다
         IDAllocator<uint64> _requestIDAllocator      SW_GUARDED_BY( _mutex );

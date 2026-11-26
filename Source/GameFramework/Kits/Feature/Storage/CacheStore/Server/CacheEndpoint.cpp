@@ -11,11 +11,12 @@
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
-#include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPEphemeralStore.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
-#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPCacheStore.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
+#include "GameFramework/Runtime/Online/Cache/Server/ICacheStoreDriver.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
-#include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 
 namespace sw
 {
@@ -79,18 +80,18 @@ namespace sw
 namespace sw
 {
     /**
-     * @class RESPEphemeralStoreDriver
-     * @brief 캐시 키트의 캐시 드라이버입니다 — 이 키트의 모듈 서브시스템(`SW_MODULE_SUBSYSTEM( Engine, … )`)이고 `IEphemeralStoreDriver` 로 공개된다.
+     * @class RESPCacheStoreDriver
+     * @brief 캐시 키트의 캐시 드라이버입니다 — 이 키트의 모듈 서브시스템(`SW_MODULE_SUBSYSTEM( Engine, … )`)이고 `ICacheStoreDriver` 로 공개된다.
      * @details "memory" 캐시의 데이터(같은 프로세스의 저장소끼리 나눠 쓴다)와 그 시계를 값으로 든다 — 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다. 저장소는 이 데이터를
      *          주소로 들므로 키트가 내려가기(자식 범위가 걷히기) 전에 소멸해야 한다(서버 조립이 그렇게 한다 — 저장소 코드도 이 키트에 있다).
-     *          `IEphemeralStoreDriver` 는 상속하지 않는다 — 서브시스템이 가진 어댑터 멤버가 구현하고, 등록이 그 멤버를 공개한다(`getPublishedPart`).
+     *          `ICacheStoreDriver` 는 상속하지 않는다 — 서브시스템이 가진 어댑터 멤버가 구현하고, 등록이 그 멤버를 공개한다(`getPublishedPart`).
      */
-    class RESPEphemeralStoreDriver final : public Subsystem
+    class RESPCacheStoreDriver final : public Subsystem
     {
     public:
-        static constexpr const utf8* kSubsystemName = "RespEphemeralStoreDriver";
+        static constexpr const utf8* kSubsystemName = "RespCacheStoreDriver";
 
-        RESPEphemeralStoreDriver()
+        RESPCacheStoreDriver()
             : _memoryClock{}
             , _memoryDatabase{ _memoryClock }
             , _driver{ *this }
@@ -106,41 +107,41 @@ namespace sw
          * @brief 저장소를 만들고 초기화합니다. 실패하면 그 이유입니다(대상에 비밀을 담지 않는다).
          * @param secret AUTH 비밀(`ServerSecret::read` 로 읽은 것)입니다. 쓰고 나면 호출한 쪽이 비웁니다.
          */
-        expected<unique_ptr<IEphemeralStore>> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret );
+        expected<unique_ptr<ICacheStore>> createCacheStore( string_view driverName, string_view endpoint, string_view secret );
 
-        /** @brief 공개할 캐시 드라이버입니다(`ModuleSubsystemRegistration` 이 `IEphemeralStoreDriver` 로 공개한다). 이 서브시스템과 수명이 같습니다. */
-        IEphemeralStoreDriver& getPublishedPart() { return _driver; }
+        /** @brief 공개할 캐시 드라이버입니다(`ModuleSubsystemRegistration` 이 `ICacheStoreDriver` 로 공개한다). 이 서브시스템과 수명이 같습니다. */
+        ICacheStoreDriver& getPublishedPart() { return _driver; }
 
     private:
         /** @brief 캐시 드라이버 능력입니다. 서브시스템의 같은 이름 함수로 넘깁니다(수명은 서브시스템과 같다). */
-        class Driver final : public IEphemeralStoreDriver
+        class Driver final : public ICacheStoreDriver
         {
         public:
-            explicit Driver( RESPEphemeralStoreDriver& owner )
+            explicit Driver( RESPCacheStoreDriver& owner )
                 : _owner{ owner }
             {
             }
 
-            expected<unique_ptr<IEphemeralStore>> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret ) override
+            expected<unique_ptr<ICacheStore>> createCacheStore( string_view driverName, string_view endpoint, string_view secret ) override
             {
-                return _owner.createEphemeralStore( driverName, endpoint, secret );
+                return _owner.createCacheStore( driverName, endpoint, secret );
             }
 
         private:
-            RESPEphemeralStoreDriver& _owner;
+            RESPCacheStoreDriver& _owner;
         };
 
-        SystemMonotonicClock    _memoryClock;    ///< "memory" 캐시의 시계 — 데이터보다 먼저 만들어지고 나중에 사라진다(선언 순서)
-        MemoryEphemeralDatabase _memoryDatabase; ///< "memory" 캐시의 데이터 — 같은 프로세스의 저장소끼리 나눠 쓴다
-        Driver                  _driver;         ///< `IEphemeralStoreDriver` 로 공개되는 부분
+        SystemMonotonicClock _memoryClock;    ///< "memory" 캐시의 시계 — 데이터보다 먼저 만들어지고 나중에 사라진다(선언 순서)
+        MemoryCacheDatabase  _memoryDatabase; ///< "memory" 캐시의 데이터 — 같은 프로세스의 저장소끼리 나눠 쓴다
+        Driver               _driver;         ///< `ICacheStoreDriver` 로 공개되는 부분
     };
 
-    SW_MODULE_SUBSYSTEM( Engine, Process, RESPEphemeralStoreDriver, IEphemeralStoreDriver );
+    SW_MODULE_SUBSYSTEM( Engine, Process, RESPCacheStoreDriver, ICacheStoreDriver );
 
-    expected<unique_ptr<IEphemeralStore>> RESPEphemeralStoreDriver::createEphemeralStore( string_view driverName, string_view endpoint, string_view secret )
+    expected<unique_ptr<ICacheStore>> RESPCacheStoreDriver::createCacheStore( string_view driverName, string_view endpoint, string_view secret )
     {
-        if ( driverName == kMemoryStoreDriverName )
-            return unique_ptr<IEphemeralStore>( make_unique<MemoryEphemeralStore>( &_memoryDatabase ) );
+        if ( driverName == OnlineServerStoreConfig::kMemoryDriverName )
+            return unique_ptr<ICacheStore>( make_unique<MemoryCacheStore>( &_memoryDatabase ) );
         if ( driverName != CacheEndpoint::kRESPDriverName )
             return unexpected( Error{ ErrorKind::Unsupported, "the cache driver is not in this build (memory, resp)", driverName } );
         CacheEndpoint parsed;
@@ -172,15 +173,15 @@ namespace sw
             settings._password = string( secret.substr( colon + 1 ) );
         }
         StreamTransportConfig transportSettings;
-        transportSettings._ioThreadCount           = 1;
-        transportSettings._maxConnections          = 4;
-        transportSettings._idleTimeoutSeconds      = 0.0; // 캐시 연결은 조용해도 유지한다. 구독 연결이 그렇다
-        unique_ptr<RESPEphemeralStore> store       = make_unique<RESPEphemeralStore>( CacheStoreFactoryInternal::getRESPClock() );
-        const expected<void>           initialized = store->initialize( std::move( transport ), transportSettings, settings, std::move( tlsContext ) );
+        transportSettings._ioThreadCount       = 1;
+        transportSettings._maxConnections      = 4;
+        transportSettings._idleTimeoutSeconds  = 0.0; // 캐시 연결은 조용해도 유지한다. 구독 연결이 그렇다
+        unique_ptr<RESPCacheStore> store       = make_unique<RESPCacheStore>( CacheStoreFactoryInternal::getRESPClock() );
+        const expected<void>       initialized = store->initialize( std::move( transport ), transportSettings, settings, std::move( tlsContext ) );
         StringUtil::wipeSecret( settings._password ); // 다시 이을 때 쓰는 사본은 저장소가 지닌다
         if ( initialized.has_value() == false )
             return unexpected( initialized.error() );
-        return unique_ptr<IEphemeralStore>( std::move( store ) );
+        return unique_ptr<ICacheStore>( std::move( store ) );
     }
 
     expected<void> CacheEndpoint::parseEndpoint( string_view endpoint, CacheEndpoint& outEndpoint )

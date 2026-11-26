@@ -3,7 +3,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -19,7 +19,7 @@
 #include "Engine/Localization/PseudoLocalizer.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 
 namespace sw
 {
@@ -31,8 +31,8 @@ namespace sw
         struct LocalizationManagerInternal
         {
             /**
-             * @brief 리소스 id 의 글을 읽습니다(낱개 파일 또는 팩).
-             * @details 프로젝트 · 테이블 · 번역 경로는 모두 리소스 id 다. 루트 밖 폴더(테스트 임시 폴더, 도구 작업 폴더)는 `AssetPaths::mountDiskDomain`
+             * @brief 에셋 id 의 글을 읽습니다(낱개 파일 또는 팩).
+             * @details 프로젝트 · 테이블 · 번역 경로는 모두 에셋 id 다. 루트 밖 폴더(테스트 임시 폴더, 도구 작업 폴더)는 `AssetPaths::mountDiskDomain`
              *          으로 붙여 id 로 부른다 — 예전에는 디스크를 먼저 보고 없으면 리소스로 다시 찾아 두 종류의 경로가 한 입구로 들어왔다.
              */
             [[nodiscard]] static bool readLocalizationFile( const AssetID& assetID, string& outText ) { return AssetIO::readTextAsset( assetID, outText ); }
@@ -62,10 +62,10 @@ namespace sw
                 }
             }
 
-            /** @brief 두 리소스 id 가 같은 파일인지 확인합니다(구분자 · 대소문자 무시). */
+            /** @brief 두 에셋 id 가 같은 파일인지 확인합니다(구분자 · 대소문자 무시). */
             static bool isSamePath( string_view lhs, string_view rhs )
             {
-                // 둘 다 리소스 id 다(파일 감시 · 데이터 표 편집 · 이 매니저) - 정규화한 id 가 같은지만 본다. 예전에는 꼬리 글자로도 같다고 봐(`a/x` 와 `b/a/x`)
+                // 둘 다 에셋 id 다(파일 감시 · 데이터 표 편집 · 이 매니저) - 정규화한 id 가 같은지만 본다. 예전에는 꼬리 글자로도 같다고 봐(`a/x` 와 `b/a/x`)
                 // 다른 폴더의 같은 이름 파일 저장이 엉뚱한 프로젝트를 다시 읽게 했다.
                 return lhs.empty() == false && FileUtil::normalizePath( lhs ) == FileUtil::normalizePath( rhs );
             }
@@ -685,7 +685,7 @@ namespace sw
 
         string preferredLanguage;
         if ( engine::areEngineSubsystemsBound() )
-            engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::LANGUAGE, preferredLanguage );
+            engine::getSubsystem<CommandLine>().getArgument( CommandLineArgument::LANGUAGE, preferredLanguage );
         if ( preferredLanguage.empty() || hasLanguage( preferredLanguage ) == false )
             preferredLanguage = string( defaultLanguage );
         if ( hasLanguage( preferredLanguage ) == false )
@@ -1270,12 +1270,12 @@ namespace sw
     void LocalizationManager::syncLocaleTag() const
     {
         if ( _bEngineInstance == SW_FALSE )
-            return; // 엔진의 관리자가 아니다 — 리소스 조건은 엔진의 언어를 따른다
-        // 리소스 조건의 `locale` 축 — 언어별 값 · 경로 교체(`<_when _if="locale.ko">` · `<Remap when>`)가 읽는다. 식의 이름 글자에 '-' 가 없어 `en-US` 는 `locale.en_US` 다.
-        // 언어 코드에는 '.' 이 없어(`normalizeLanguageCode`) 축 값으로 늘 받힌다 — 받히지 않으면 `ResourceTags` 가 오류를 남긴다. 언어가 없으면 축도 없다.
+            return; // 엔진의 관리자가 아니다 — 에셋 조건은 엔진의 언어를 따른다
+        // 에셋 조건의 `locale` 축 — 언어별 값 · 경로 교체(`<_when _if="locale.ko">` · `<Remap when>`)가 읽는다. 식의 이름 글자에 '-' 가 없어 `en-US` 는 `locale.en_US` 다.
+        // 언어 코드에는 '.' 이 없어(`normalizeLanguageCode`) 축 값으로 늘 받힌다 — 받히지 않으면 `AssetTags` 가 오류를 남긴다. 언어가 없으면 축도 없다.
         string localeValue = getCurrentLanguage();
         std::replace( localeValue.begin(), localeValue.end(), '-', '_' );
-        (void)engine::getSubsystem<ResourceTags>().setAxisValue( "locale", localeValue );
+        (void)engine::getSubsystem<AssetTags>().setAxisValue( "locale", localeValue );
     }
 
     void LocalizationManager::notifyLanguageChanged( string_view oldLanguage, string_view newLanguage )

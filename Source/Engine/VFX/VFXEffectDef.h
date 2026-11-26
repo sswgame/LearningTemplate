@@ -332,7 +332,7 @@ namespace sw
         /**
          * @brief 칸의 기본값으로 만듭니다.
          * @details .cpp 에 두는 까닭: `AssetRef<Texture2D>` 칸은 만드는 자리에서 `Texture2D::kAssetType` 이 완전해야 한다 — 이 헤더가 `Texture2D.h`(RHI)를 include 하지 않게
-         *          .cpp 만 읽는다(`AssetRef.h` 의 규칙, 게임이 보는 헤더의 타깃 게이트).
+         *          .cpp 만 읽는다(`AssetRef.h` 의 규칙, 게임이 보는 헤더의 타깃 가드).
          */
         VFXEmitterDef();
 

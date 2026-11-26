@@ -15,7 +15,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 namespace sw
 {

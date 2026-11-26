@@ -208,7 +208,7 @@ namespace sw::editor
         const string&              getDebugChannelToken() const { return _debugChannelToken; }
         int32                      getProcessCount() const { return static_cast<int32>( _listProcess.size() ); }
         EditorNetPlayProcessStatus getProcessStatus( int32 processIndex ) const;
-        /** @brief 동기화 탭의 모델이 받는 창구(`IEditorNetPlayProcesses`)입니다. 세션이 그 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-shape`). */
+        /** @brief 동기화 탭의 모델이 받는 창구(`IEditorNetPlayProcesses`)입니다. 세션이 그 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-style`). */
         IEditorNetPlayProcesses& getNetPlayProcesses() { return _processes; }
         /** @brief 패널 필터용 최근 줄입니다. `update` 가 채웁니다. */
         const vector<EditorNetPlayLogLine>& getLogLines() const { return _listLogLine; }

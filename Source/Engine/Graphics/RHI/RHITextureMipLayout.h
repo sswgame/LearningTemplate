@@ -1,14 +1,14 @@
 /**
  * @file RHITextureMipLayout.h
  * @brief 텍스처 밉 배치 계산입니다: 밉 하나의 크기 · 행 바이트(`computeRHITextureMipLayout`)와 업로드 서술체를 밉 배열로 풀기(`resolveTextureUploadMips`).
- * @details 포맷 블록 표(`RHIFormatInfo.h`)를 읽으므로 서술체 묶음(`RHIDescriptors.h`)에서 떼었다 — 업로드 · 되읽기를 하는 곳만 포함한다.
+ * @details 포맷 블록 표(`RHIFormatInfo.h`)를 읽으므로 서술체 묶음(`RHITypes.h`)에서 떼었다 — 업로드 · 되읽기를 하는 곳만 포함한다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 
 namespace sw
 {

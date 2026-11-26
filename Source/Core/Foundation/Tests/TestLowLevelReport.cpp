@@ -1,4 +1,4 @@
-// 로그보다 아래 티어의 보고(`SW_LOW_LEVEL_*`, `Core/Foundation/Macros.h` 10 절) — 보고자로 테스트 함수를 걸고 stderr 를 케이스 폴더의 파일로 돌려,
+// 로그보다 아래 층의 보고(`SW_LOW_LEVEL_*`, `Core/Foundation/Macros.h` 10 절) — 보고자로 테스트 함수를 걸고 stderr 를 케이스 폴더의 파일로 돌려,
 // 한 줄이 파일 · 줄 · 글을 정확히 받는지, Error 가 보고자보다 먼저 stderr 에 쓰이는지, 받는 쪽이 없을 때 stderr 로 가는지, 넘침이 표시되는지 본다.
 // 케이스 동안 로그의 보고자를 떼므로 일부러 낸 경고 · 오류가 로그 게이트에 닿지 않는다(끝에 되돌린다).
 #include "pch.h"
@@ -291,7 +291,7 @@ SW_TEST_CASE( LowLevelReportTest, WithoutReporterWarningGoesToStderr )
 }
 
 /**
- * @brief 보고자가 받지 못한 경고(싱크 없음)는 stderr 로 가고, 오류는 이미 쓴 것을 한 번 더 쓰지 않는다.
+ * @brief 보고자가 받지 못한 경고(백엔드 없음)는 stderr 로 가고, 오류는 이미 쓴 것을 한 번 더 쓰지 않는다.
  */
 SW_TEST_CASE( LowLevelReportTest, UnhandledReportFallsBackToStderrOnce )
 {

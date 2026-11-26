@@ -26,8 +26,8 @@ namespace sw::editor
     struct EditorAssetMovePlan
     {
         vector<EditorAssetMove> _listMove;            ///< 정규화한 옮기기(폴더는 그 안의 파일마다 하나)
-        vector<string>          _listOldID;           ///< 옮기기마다 지금 리소스 id
-        vector<string>          _listNewID;           ///< 옮기기마다 새 리소스 id
+        vector<string>          _listOldID;           ///< 옮기기마다 지금 에셋 id
+        vector<string>          _listNewID;           ///< 옮기기마다 새 에셋 id
         vector<string>          _listReferrerID;      ///< 글을 고칠 참조 파일(지금 id)
         vector<string>          _listUnfixedReferrer; ///< 경로 칸 밖에서 옮기는 에셋을 적은 파일 — 하나라도 있으면 옮기지 않는다
         vector<string>          _listOutsideDomain;   ///< 묶음 밖 참조 파일의 도메인

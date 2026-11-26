@@ -12,7 +12,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/Name/hashed_string.h"
 
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
 
 namespace sw
 {

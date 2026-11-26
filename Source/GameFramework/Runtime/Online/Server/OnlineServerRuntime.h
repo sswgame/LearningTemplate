@@ -8,7 +8,7 @@
  *            → 키트 `start`(초기화 순서) → 서버 등록입니다. 종료: 서버 등록 → 컬렉션 `shutdownAll` 이 키트 `stop`(역순) → 기반 stop(호스트 → 예약 작업 → 저장소와
  *            남은 완료) → 키트 `shutdown`(역순) → 기반 shutdown(캐시)을 돕니다. 온라인 기반의 종료 계약과 같습니다.
  *          - `start` 는 컬렉션의 단계가 아니라 런타임이 초기화 순서(`getInitializedIndices`)로 부릅니다 — 호스트 기동이 모든 키트의 `initialize` 와 `start` 사이에 있어서다.
- *          - 버스는 캐시 위 버스(`EphemeralServerBus`)이고 캐시 앞은 호스트의 라우터로 서비스와 나눠 씁니다. 메모리 캐시이면 이 프로세스 안에서만 돌므로 서버 여러 대 구성(`OnlineServerTopology::MultiServer`)은 거절합니다.
+ *          - 버스는 캐시 위 버스(`CacheServerBus`)이고 캐시 앞은 호스트의 라우터로 서비스와 나눠 씁니다. 메모리 캐시이면 이 프로세스 안에서만 돌므로 서버 여러 대 구성(`OnlineServerTopology::MultiServer`)은 거절합니다.
  *          - 서비스 스레드 하나(`tick` 을 부르는 스레드)에서 씁니다.
  */
 #pragma once
@@ -16,7 +16,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -38,7 +38,10 @@ namespace sw
     /** @brief 저장소나 캐시 하나의 드라이버 항목입니다. 비밀은 이미 환경 변수에서 읽은 값입니다. */
     struct OnlineServerStoreConfig
     {
-        string _driver{};     ///< 필수. 프로세스 안 저장소도 `kMemoryStoreDriverName` 이라고 적는다 - 비면 런타임이 기동을 멈춘다
+        /** @brief 서버 설정의 `memory` 드라이버 이름입니다(저장소 · 캐시 공통). 그 런타임 안에서만 나눠 쓰는 메모리 구현을 서버 조립이 직접 만든다. */
+        static constexpr const utf8* kMemoryDriverName = "memory";
+
+        string _driver{};     ///< 필수. 프로세스 안 저장소도 `kMemoryDriverName` 이라고 적는다 - 비면 런타임이 기동을 멈춘다
         string _connection{}; ///< 저장소의 접속 문자열 · 캐시의 엔드포인트
         string _secret{};     ///< 런타임이 드라이버에 넘긴 뒤 비운다
     };

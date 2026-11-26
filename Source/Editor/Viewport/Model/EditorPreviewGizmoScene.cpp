@@ -4,7 +4,7 @@
 #include "Core/Math/Ray.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
@@ -21,7 +21,7 @@ namespace sw::editor
         if ( selection.isPreviewScope() == false || pScene == nullptr || pScene->getObjectManager() == nullptr )
             return false;
         pScene->getObjectManager()->flushSceneTransforms(); // 기즈모가 읽는 월드 행렬을 이번 프레임 값으로
-        EditorGizmoEdit::gather( selection, _state );
+        EditorGizmoViewModel::gather( selection, _state );
         return true;
     }
 

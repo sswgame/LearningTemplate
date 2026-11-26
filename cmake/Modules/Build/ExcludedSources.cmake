@@ -69,14 +69,14 @@ if(stray_dev_folders)
 endif()
 
 # 전용 서버가 짓지 않는 클라이언트 전용 소스 — GameFramework · 게임 모듈 안의 `Client/` 폴더(HUD · 마커 · 로딩 화면 · UI 시연). 키트의 `Client/` 는
-# 따로 짓는 모듈(`GF_Client_<X>`, 대상 Client)이라 여기 걸리지 않는다. 공유 코드는 그 헤더를 include 하지 않는다 — 서버 구성 게이트 `serverbuild` 가 이름이 `Client` 인 모든 폴더의 헤더를 막는다(`TargetLayers.toml` 의 `[gatefolder]`).
+# 따로 짓는 모듈(`GF_Client_<X>`, 대상 Client)이라 여기 걸리지 않는다. 공유 코드는 그 헤더를 include 하지 않는다 — 서버 구성 가드 `serverbuild` 가 이름이 `Client` 인 모든 폴더의 헤더를 막는다(`TargetLayers.toml` 의 `[guardfolder]`).
 # 서버가 그 컴포넌트를 씬에서 만나면 MissingComponent 가 아니라 조용히 건너뛴다(서버 빌드가 만드는 `Bin/ClientOnlyTypes.json` — Source/Server/CMakeLists.txt).
 set(SW_CLIENT_ONLY_SOURCE_PATTERNS "/Client/")
 
 # 클라이언트 구성이 짓지 않는 서버 전용 소스 — 위의 반대쪽. Engine · GameFramework · DevTools · 게임 모듈 안의 `Server/` 폴더(전용 서버 운영 `Engine/Server` · 서버 비밀 `Engine/Config/Server` ·
 # 온라인 서버 조립 `GameFramework/Runtime/Online/Server` · 기능마다의 서버 구현 `Online/<기능>/Server` — 서비스 호스트 · 메모리 저장소 · 캐시 · 버스). 키트의 `Server/` 는 따로 짓는 모듈(`GF_Server_<X>`, 대상 Server)이고 전용 서버 실행 파일 `Source/Server` 는
-# 제 CMake 가 Client 에서 빼므로 여기 걸리지 않는다. 공유 코드는 그 헤더를 include 하지 않는다 — 클라이언트 구성 게이트 `clientbuild` 가 이름이 `Server` 인 모든 폴더의
-# 헤더를 막는다(`TargetLayers.toml` 의 `[gatefolder]`). 세션이 서버를 띄우는 일은 창구(`IOnlineLocalServerFactory`)로 부른다. 언리얼 `WITH_SERVER_CODE` 와 서버 전용 모듈 자리다(기억).
+# 제 CMake 가 Client 에서 빼므로 여기 걸리지 않는다. 공유 코드는 그 헤더를 include 하지 않는다 — 클라이언트 구성 가드 `clientbuild` 가 이름이 `Server` 인 모든 폴더의
+# 헤더를 막는다(`TargetLayers.toml` 의 `[guardfolder]`). 세션이 서버를 띄우는 일은 창구(`IOnlineLocalServerFactory`)로 부른다. 언리얼 `WITH_SERVER_CODE` 와 서버 전용 모듈 자리다(기억).
 set(SW_SERVER_ONLY_SOURCE_PATTERNS "/Server/")
 
 # 이 구성이 짓지 않는 소스를 적는다(절대 경로). 헤더도 받아 두지만 목록에는 `.c` · `.cpp` 만 쓴다.
@@ -172,14 +172,14 @@ function(sw_filter_platform_sources LIST_VAR)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_verify_built_sources — 구성 끝(모든 타깃이 선 뒤) 한 번: 어느 타깃이든 이 구성이 짓지 않을 소스를 SOURCES 에 들고 있으면 멈춘다.
+# sw_require_built_sources — 구성 끝(모든 타깃이 선 뒤) 한 번: 어느 타깃이든 이 구성이 짓지 않을 소스를 SOURCES 에 들고 있으면 멈춘다.
 #   빼기는 타깃마다 고른 자리(`if(SW_SHIPPING_BUILD) sw_remove_excluded_sources(…)`)라 새 타깃 · 팩토리를 거치지 않는 타깃(App · Server · Core · DevTools)이
 #   빠뜨리면 조용히 지어졌다. 팩토리 인자로는 팩토리 밖 타깃을 못 잡아 모든 타깃을 훑는다. 판정은 `Source/` 아래 .c · .cpp 만:
 #     - 적어 둔 "짓지 않는 소스"(SW_EXCLUDED_SOURCES)
 #     - 플랫폼 폴더 규칙(sw_is_platform_folder_built)
 #     - 배포 구성의 개발 전용 폴더(SW_DEV_ONLY_SOURCE_PATTERNS), 전용 서버의 `Client/`, 클라이언트 구성의 `Server/`
 # ------------------------------------------------------------------------------
-function(sw_verify_built_sources)
+function(sw_require_built_sources)
 	set(list_forbidden_pattern "")
 	if(SW_SHIPPING_BUILD)
 		list(APPEND list_forbidden_pattern ${SW_DEV_ONLY_SOURCE_PATTERNS})

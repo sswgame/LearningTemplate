@@ -10,8 +10,8 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
@@ -49,7 +49,7 @@ namespace sw
         SW_REGISTERED_COMPONENT( InventoryComponent );
         REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort );
 
-        static constexpr FormatDef kStateFormat{ "INVC" };
+        static constexpr FormatDesc kStateFormat{ "INVC" };
 
         InventoryComponent();
         ~InventoryComponent() override;

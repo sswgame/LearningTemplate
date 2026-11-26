@@ -79,7 +79,7 @@ namespace sw
     /**
      * @class PhysicsMeshShapeTable
      * @brief 경로 → 메시 셰이프 기하 표와 읽지 못한 경로 기억입니다(서비스 범위의 서브시스템). `PhysicsMeshShapeCache` 창구만 부릅니다.
-     * @details 상한은 두지 않습니다. 표의 크기는 경로 수이고, 경로는 물리 셰이프 서술자가 적은 `.mesh` 리소스 경로뿐이라 콘텐츠에 있는 메시 파일 수가 위쪽 한계입니다
+     * @details 상한은 두지 않습니다. 표의 크기는 경로 수이고, 경로는 물리 셰이프 서술자가 적은 `.mesh` 에셋 경로뿐이라 콘텐츠에 있는 메시 파일 수가 위쪽 한계입니다
      *          (런타임에 만들어지는 경로 · 키가 없고, 같은 경로는 한 항목). 씬을 바꿔도 같은 메시를 다시 읽지 않으려고 남깁니다. 비우는 때는 메시가 다시 읽힐 때와
      *          메시 캐시를 비울 때(`IMeshDerivedCache`)뿐이다. 크기는 `[CacheStats] PhysicsMeshShape` 줄의 항목 수로 본다.
      *          읽지 못한 경로는 영원히 믿지 않는다. 기억한 때의 `FileUtil::getCreationEpoch` 가 지금과 같은 동안만 믿고, 바뀌었으면 다시 읽어 본다.

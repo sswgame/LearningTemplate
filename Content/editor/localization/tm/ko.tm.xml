@@ -855,7 +855,7 @@
 		<entry source="Gamepad Left Stick (X/Y):" text="게임패드 왼쪽 스틱(X/Y):" />
 		<entry source="Gather Text" text="원문 수집" />
 		<entry source="Geometry &amp; Rounding" text="모양 · 둥글기" />
-		<entry source="Gimmick Graph" text="기믹 그래프" />
+		<entry source="Logic Circuit Graph" text="논리 회로 그래프" />
 		<entry source="Give this action's binding a different key to resolve the conflict."
 		       text="충돌을 풀려고 이 액션의 바인딩에 다른 키를 지정합니다." />
 		<entry source="Give this combo to the selected command and remove it from the other command"
@@ -1456,7 +1456,7 @@
 		<entry source="Open the character editor panel" text="캐릭터 편집 패널을 엽니다" />
 		<entry source="Open the document with this copy as unsaved changes. Save to keep it"
 		       text="이 사본을 저장하지 않은 변경으로 문서를 엽니다. 남기려면 저장하세요" />
-		<entry source="Open the gimmick graph panel" text="기믹 그래프 패널을 엽니다" />
+		<entry source="Open the logic circuit graph panel" text="논리 회로 그래프 패널을 엽니다" />
 		<entry source="Open the material graph editor" text="머티리얼 그래프 편집기를 엽니다" />
 		<entry source="Open the mesh modifier stack panel" text="메시 모디파이어 스택 패널을 엽니다" />
 		<entry source="Open the most recent saved log file in the file explorer"
@@ -1488,7 +1488,7 @@
 		       text="오디오 믹서 창을 엽니다(버스 미터 · 음소거 · 솔로 · 볼륨)" />
 		<entry source="Opens the character editor panel" text="캐릭터 편집 패널을 엽니다" />
 		<entry source="Opens the editor preferences window" text="에디터 환경설정 창을 엽니다" />
-		<entry source="Opens the gimmick circuit graph window" text="기믹 회로 그래프 창을 엽니다" />
+		<entry source="Opens the logic circuit graph window" text="논리 회로 그래프 창을 엽니다" />
 		<entry source="Opens the material graph window (node canvas, live preview, save)"
 		       text="머티리얼 그래프 창을 엽니다(노드 캔버스, 실시간 미리 보기, 저장)" />
 		<entry source="Opens the mesh modifier stack panel" text="메시 모디파이어 스택 패널을 엽니다" />

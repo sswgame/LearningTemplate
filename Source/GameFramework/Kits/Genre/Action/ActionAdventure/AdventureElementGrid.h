@@ -20,11 +20,11 @@
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementGrid.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementRuleCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Element/ElementGrid.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Element/ElementRuleCatalog.h"
 
 namespace sw
 {

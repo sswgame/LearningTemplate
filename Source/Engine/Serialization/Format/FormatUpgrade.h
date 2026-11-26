@@ -1,7 +1,7 @@
 /**
  * @file FormatUpgrade.h
  * @brief 종류 · 타입이 판을 든 형식(XML 에셋 · 리플렉션 본문)의 판 올림 사슬입니다 — n → n+1 순수 함수를 등록하고(`SW_ASSET_FORMAT_UPGRADE` · `SW_TYPE_VERSION_PATCH`) 읽는 쪽이 지금 판까지 한 판씩 올립니다.
- * @details 바이트 형식(세이브 · 상태 · 쿠킹본 · 캐시)은 단계를 선언 자신이 든다(`FormatDef`). 이 둘만 판이 밖(종류 정의 · 생성 코드)에 있어 단계를 이름으로 잇는다.
+ * @details 바이트 형식(세이브 · 상태 · 쿠킹본 · 캐시)은 단계를 선언 자신이 든다(`FormatDesc`). 이 둘만 판이 밖(종류 정의 · 생성 코드)에 있어 단계를 이름으로 잇는다.
  *          빠진 단계는 오류다 — 옛 판을 그대로 읽거나 기본값으로 채우는 폴백은 없다.
  */
 #pragma once
@@ -10,7 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -84,4 +84,4 @@ namespace sw
  */
 #define SW_TYPE_VERSION_PATCH( id, typeFqn, fromVersion, toVersion, pFunction )                                \
     static_assert( ( toVersion ) == ( fromVersion ) + 1, "a format upgrade step raises exactly one version" ); \
-    SW_STATIC_REGISTRATION( formatUpgrade, ::sw::FormatUpgradeStep, ::sw::FormatUpgradeRegistrar, id, ::sw::FormatUpgradeDomain::ReflectedType, typeFqn, fromVersion, +[]( ::sw::FormatUpgradePayload& payload ) -> bool { return ::sw::FormatDef::runStep( pFunction, *payload._pBytes ); } )
+    SW_STATIC_REGISTRATION( formatUpgrade, ::sw::FormatUpgradeStep, ::sw::FormatUpgradeRegistrar, id, ::sw::FormatUpgradeDomain::ReflectedType, typeFqn, fromVersion, +[]( ::sw::FormatUpgradePayload& payload ) -> bool { return ::sw::FormatDesc::runStep( pFunction, *payload._pBytes ); } )

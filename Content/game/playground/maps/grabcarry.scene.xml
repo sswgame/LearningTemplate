@@ -1,7 +1,7 @@
 <?asset guid="a35fd2ad632585f8c4dde43a3abe0c81"?>
 <Scene formatVersion="0" name="GrabCarry">
 	<!-- 집기 · 눌림판 무게 · 씬 너머 남기기 시나리오(automation/grabcarry)의 무대.
-	     Hand(GrabberComponent)가 상자(Crate)를 집어 눌림판(Plate — 트리거 강체 + GimmickSensorComponent) 위로 옮겨 놓는다. 상자의 강체 질량은 5 kg 이지만
+	     Hand(GrabberComponent)가 상자(Crate)를 집어 눌림판(Plate — 트리거 강체 + LogicCircuitSensorComponent) 위로 옮겨 놓는다. 상자의 강체 질량은 5 kg 이지만
 	     SensorWeightOverrideComponent 가 눌림판이 재는 무게를 40 kg 으로 덮는다(무거운 짐을 가볍게 보이는 상자에 싣는 퍼즐 자리). Keeper 는 PersistAcrossScenesComponent 로 씬을 바꿔도 남는다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
@@ -48,12 +48,12 @@
 						</_listShape>
 					</RigidBodyComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.15,0" _localRotation="0,0,0" _localScale="1.2,0.1,1.2" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="0.9" />
-					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false">
+					<LogicCircuitSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false">
 						<_requiredTags>
 							<_listTag />
 						</_requiredTags>
 						<_listOccupant />
-					</GimmickSensorComponent>
+					</LogicCircuitSensorComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

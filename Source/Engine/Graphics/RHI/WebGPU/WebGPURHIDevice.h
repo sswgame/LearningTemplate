@@ -35,6 +35,7 @@
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIGeometryBindings.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/RHI/WebGPU/WebGPURHIUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"

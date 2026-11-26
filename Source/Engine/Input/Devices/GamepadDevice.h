@@ -10,7 +10,7 @@
 
 #include "Engine/Input/Feedback/HapticPlayback.h"
 #include "Engine/Input/Feedback/IInputFeedbackDevice.h"
-#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/GamepadButton.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -5,12 +5,12 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
+#include "Engine/Serialization/Serializer/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestSimulation.h"
 #include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
 
 #include <algorithm>
@@ -77,7 +77,7 @@ namespace
     /** @brief 상태 바이트의 비교입니다. */
     struct ConquestTestUtil
     {
-        static bool isSameState( const sw::ConquestWorld& lhs, const sw::ConquestWorld& rhs )
+        static bool isSameState( const sw::ConquestSimulation& lhs, const sw::ConquestSimulation& rhs )
         {
             sw::Archive left;
             sw::Archive right;
@@ -191,7 +191,7 @@ namespace
             written << _facing;
             written << _commanderAlive;
             sw::StateIO::writeStepTimer( written, timer );
-            sw::StateIO::writeReflectedHeader<sw::ConquestWorld>( written ); // 판 수 칸은 리플렉션 상태 칸이다(머리 + 선언 순서)
+            sw::StateIO::writeReflectedHeader<sw::ConquestSimulation>( written ); // 판 수 칸은 리플렉션 상태 칸이다(머리 + 선언 순서)
             written << _elapsed;
             written << _incomeTimer;
             written << _waveTimer;
@@ -206,7 +206,7 @@ namespace
     {
         sw::ConquestCatalog           _catalog{};
         sw::ConquestCatalog           _otherCatalog{};
-        sw::ConquestWorld             _world{};
+        sw::ConquestSimulation        _world{};
         sw::ConsumerLease             _lease{};
         sw::vector<sw::ConquestEvent> _listEvent{};
 
@@ -656,8 +656,8 @@ SW_TEST_CASE_F( ConquestRulesTest, LosingASiteReleasesWorkers )
     // 이 상태도 읽힌다(남는 일꾼이 음수면 읽기가 거절한다).
     sw::Archive written;
     _world.writeState( written );
-    sw::Archive       reading( written.getData(), written.getSize() );
-    sw::ConquestWorld restored;
+    sw::Archive            reading( written.getData(), written.getSize() );
+    sw::ConquestSimulation restored;
     SW_REQUIRE_TRUE( restored.initialize( _otherCatalog ) );
     SW_EXPECT_TRUE( restored.readState( reading ) );
 }
@@ -685,13 +685,13 @@ SW_TEST_CASE_F( ConquestRulesTest, BrokenInput )
     SW_EXPECT_FALSE( _world.spawnUnit( "nope", sw::ConquestTeam::Player, 0.0f, sw::ConquestOrder::Hold ).has_value() );
     SW_EXPECT_FALSE( _world.spawnUnit( "spear", sw::ConquestTeam::Neutral, 0.0f, sw::ConquestOrder::Hold ).has_value() );
 
-    SW_EXPECT_LOG( "ConquestWorld.NegativeResource" );
+    SW_EXPECT_LOG( "ConquestSimulation.NegativeResource" );
     _world.addResource( "gold", -5.0f );
     SW_EXPECT_EQUAL( 100, _world.getResource( "gold" ) );
     _world.addResource( "gold", 5.0f );
     SW_EXPECT_EQUAL( 105, _world.getResource( "gold" ) );
 
-    sw::ConquestWorld empty;
+    sw::ConquestSimulation empty;
     // 열지 않은 판이다
     empty.update( sw::GameSeconds{ 1.0f } );
     SW_EXPECT_EQUAL( 0, empty.computePopulationCap() );
@@ -726,8 +726,8 @@ SW_TEST_CASE_F( ConquestRulesTest, StateRoundTrip )
 
     sw::Archive written;
     _world.writeState( written );
-    sw::Archive       reading( written.getData(), written.getSize() );
-    sw::ConquestWorld restored;
+    sw::Archive            reading( written.getData(), written.getSize() );
+    sw::ConquestSimulation restored;
     SW_REQUIRE_TRUE( restored.initialize( _catalog ) );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( ConquestTestUtil::isSameState( _world, restored ) );
@@ -763,8 +763,8 @@ SW_TEST_CASE_F( ConquestRulesTest, StateRoundTripWithFallenCommander )
 
     sw::Archive written;
     _world.writeState( written );
-    sw::Archive       reading( written.getData(), written.getSize() );
-    sw::ConquestWorld restored;
+    sw::Archive            reading( written.getData(), written.getSize() );
+    sw::ConquestSimulation restored;
     SW_REQUIRE_TRUE( restored.initialize( _catalog ) );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( ConquestTestUtil::isSameState( _world, restored ) );
@@ -775,11 +775,11 @@ SW_TEST_CASE_F( ConquestRulesTest, StateRoundTripWithFallenCommander )
  */
 SW_TEST_CASE_F( ConquestRulesTest, WorldDeterminism )
 {
-    const auto setup = [this]( sw::ConquestWorld& world )
+    const auto setup = [this]( sw::ConquestSimulation& world )
     {
         return world.initialize( _catalog );
     };
-    const auto step = []( sw::ConquestWorld& world, int32 stepIndex )
+    const auto step = []( sw::ConquestSimulation& world, int32 stepIndex )
     {
         if ( stepIndex == 0 )
         {
@@ -798,7 +798,7 @@ SW_TEST_CASE_F( ConquestRulesTest, WorldDeterminism )
             world.issueOrder( stepIndex % 90 == 20 ? sw::ConquestOrder::Charge : sw::ConquestOrder::Follow );
         world.update( sw::GameSeconds{ stepIndex % 4 == 3 ? 0.25f : 0.5f } ); // 고정 걸음에 못 미친 시간도 지난다
     };
-    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::ConquestWorld>( setup, step, 180 ) );
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::ConquestSimulation>( setup, step, 180 ) );
 }
 
 /**
@@ -807,8 +807,8 @@ SW_TEST_CASE_F( ConquestRulesTest, WorldDeterminism )
  */
 SW_TEST_CASE_F( ConquestRulesTest, StateRefusals )
 {
-    const sw::ConquestWorld snapshot = _world;
-    const auto              refuses  = [this, &snapshot]( auto mutate )
+    const sw::ConquestSimulation snapshot = _world;
+    const auto                   refuses  = [this, &snapshot]( auto mutate )
     {
         ConquestFixtureWorld fixture;
         mutate( fixture );
@@ -1053,8 +1053,8 @@ SW_TEST_CASE( ConquestTest, CatalogReportsUnknownReferences )
   <Site id="s" owner="Enemy" garrison="nope:2"/>
 </ConquestCatalog>)",
                                               "ConquestTest" ) );
-    sw::ConquestWorld world;
-    SW_EXPECT_LOG( "ConquestWorld.GarrisonUnitMissing" );
+    sw::ConquestSimulation world;
+    SW_EXPECT_LOG( "ConquestSimulation.GarrisonUnitMissing" );
     SW_EXPECT_FALSE( world.initialize( catalog ) );
     SW_EXPECT_TRUE( world.getUnits().empty() );
 }

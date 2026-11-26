@@ -1,7 +1,7 @@
 /**
  * @file EconomyProtocol.h
  * @brief 경제 서비스의 와이어 형식입니다. 메서드 번호(영역 `OnlineMethodRange::kEconomy`), 결과, 요청과 응답 형식을 정의하며 클라이언트와 서버가 함께 씁니다.
- * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 아래 `PROPERTY` 선언 순서와 키가 정하며 손 코덱과 손 버전 상수는 없다.
+ * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 스키마 결합형이다. 바이트 배치는 아래 `PROPERTY` 선언 순서와 키가 정하며 손 코덱과 손 버전 상수는 없다.
  *          응답은 메서드마다 따로이다(`EconomyWalletReply` · `EconomyHistoryReply` · `EconomyPurchaseReply` · `EconomyRedeemReply` · `EconomyWithdrawReply`). 업무 결과는 응답의 `_result` 이다.
  *          공통 범주(`OnlineError`)는 오류 코드로만 오며 로그인 없음, 손상된 본문, 충돌, 일시 장애, 시한 초과가 해당한다. 업무 결과(`EconomyResult`)는 도메인 값만이다.
  */
@@ -265,7 +265,7 @@ namespace sw
 {
     /**
      * @struct EconomyProtocol
-     * @brief 경제 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     * @brief 경제 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 스키마 결합형이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      * @details 범위 · 길이 상한은 메시지 타입의 `PROPERTY` 키가 원본입니다. 범위 밖 값은 쓰기가 실패하고, 읽을 때는 `OutOfRange` 로 거절됩니다.
      */
     struct SW_KIT_API EconomyProtocol

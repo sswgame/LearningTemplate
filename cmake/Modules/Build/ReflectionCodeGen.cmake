@@ -217,9 +217,9 @@ endfunction()
 # 어느 쌍이 include 경로를 공유하는지는 타깃 그래프에 달려 있어 여기서 가려내지 않는다 - 전역 레지스트리(stem → 소유 타깃 · 헤더)로 모든 쌍을 막는다.
 # 예외 · 별칭은 없다: 걸리면 헤더 이름을 고친다. 레지스트리는 구성마다 비어 시작한다(전역 속성).
 function(sw_claim_reflection_stem STEM TARGET_NAME HEADER)
-	get_property(stem_owner GLOBAL PROPERTY SW_REFLECT_GEN_STEM_${STEM})
+	get_property(stem_owner GLOBAL PROPERTY SW_REFLECTION_STEM_${STEM})
 	if(NOT stem_owner)
-		set_property(GLOBAL PROPERTY SW_REFLECT_GEN_STEM_${STEM} "${TARGET_NAME}|${HEADER}")
+		set_property(GLOBAL PROPERTY SW_REFLECTION_STEM_${STEM} "${TARGET_NAME}|${HEADER}")
 		return()
 	endif()
 	string(REPLACE "|" ";" stem_owner_parts "${stem_owner}")
@@ -324,8 +324,8 @@ function(sw_add_reflection_candidate_check TARGET_NAME OUTPUT_DIR)
 	add_custom_command(
 		OUTPUT "${reflect_scan_stamp}"
 		COMMAND ${CMAKE_COMMAND} "-DCANDIDATE_LIST=${reflect_candidate_list}" "-DSTAMP=${reflect_scan_stamp}" "-DTARGET_NAME=${TARGET_NAME}" "-DSW_GENERATED_CMAKE_VARS=${SW_GENERATED_CMAKE_VARS}"
-			-P "${CMAKE_SOURCE_DIR}/cmake/Scripts/CheckReflectionCandidates.cmake"
-		DEPENDS ${ARGN} "${reflect_candidate_list}" "${CMAKE_SOURCE_DIR}/cmake/Scripts/CheckReflectionCandidates.cmake"
+			-P "${CMAKE_SOURCE_DIR}/cmake/ScriptMode/CheckReflectionCandidates.cmake"
+		DEPENDS ${ARGN} "${reflect_candidate_list}" "${CMAKE_SOURCE_DIR}/cmake/ScriptMode/CheckReflectionCandidates.cmake"
 		COMMENT "[Reflection] Checking ${TARGET_NAME} headers for new reflection macros"
 		VERBATIM
 	)
@@ -512,10 +512,10 @@ function(sw_add_reflection_step TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 2) sw_add_reflect_builtins_gen — Engine/Reflection/ReflectBuiltins.xxx → TypeRegistrar .gen.cpp
+# 2) sw_add_reflect_builtins_step — Engine/Reflection/ReflectBuiltins.xxx → TypeRegistrar .gen.cpp
 # Engine 전용. Unity 배치에서 제외
 # ------------------------------------------------------------------------------
-function(sw_add_reflect_builtins_gen TARGET_NAME)
+function(sw_add_reflect_builtins_step TARGET_NAME)
 	sw_skip_without_reflection_parser(${TARGET_NAME} skip)
 	if(skip)
 		return()
@@ -598,8 +598,8 @@ function(sw_add_content_module_check)
 	set(stamp "${CMAKE_BINARY_DIR}/generated/ContentModules.stamp")
 	add_custom_command(
 		OUTPUT "${stamp}"
-		COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/content_modules.py" --inputs "${inputs}" --stamp "${stamp}"
-		DEPENDS ${list_type_list} "${inputs}" "${CMAKE_SOURCE_DIR}/Scripts/generate/content_modules.py"
+		COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/verify/content_modules.py" --inputs "${inputs}" --stamp "${stamp}"
+		DEPENDS ${list_type_list} "${inputs}" "${CMAKE_SOURCE_DIR}/Scripts/verify/content_modules.py"
 		COMMENT "[Reflection] Checking that content uses only modules its domain has"
 		VERBATIM
 	)

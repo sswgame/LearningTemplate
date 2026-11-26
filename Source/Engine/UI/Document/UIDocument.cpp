@@ -7,17 +7,17 @@
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
-#include "Engine/Serialization/Serializer/SchemaMigrate.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
@@ -259,7 +259,7 @@ namespace sw
             struct InstantiateContext
             {
                 UIDocumentCache*      _pCache;
-                const ResourceTagSet* _pTagOverride; ///< 조각을 찾을 변형의 태그(문서와 같은 것)
+                const AssetTagSet*    _pTagOverride; ///< 조각을 찾을 변형의 태그(문서와 같은 것)
                 vector<string>        _listFragmentStack;
                 vector<UIBindingDef>* _pOutListBinding;
                 string*               _pError;
@@ -466,7 +466,7 @@ namespace sw
 
 namespace sw
 {
-    expected<void> UIDocumentAsset::parse( string_view sourceText, string_view path, const ResourceContext& composeContext, UIDocumentAsset& outAsset )
+    expected<void> UIDocumentAsset::parse( string_view sourceText, string_view path, const AssetComposeContext& composeContext, UIDocumentAsset& outAsset )
     {
         using Internal = UIDocumentAssetInternal;
         UIDocumentAsset asset{};
@@ -475,7 +475,7 @@ namespace sw
         // 리소스 글의 한 길(조건 · 층)을 지난다 — 예전에는 원문을 바로 읽어 `_when="screen.compact"` 가 풀리지 않았다(`docs/agents/Platform.md`).
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( sourceText, path, composeContext, flatText, bComposed ) == false )
+        if ( AssetComposer::compose( sourceText, path, composeContext, flatText, bComposed ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document could not be composed (the log says why)", path } );
         const string_view text = bComposed ? string_view( flatText ) : sourceText;
 
@@ -573,7 +573,7 @@ namespace sw
         return unique_ptr<Widget>( static_cast<Widget*>( block.release() ) );
     }
 
-    expected<unique_ptr<Widget>> UIDocumentAsset::instantiate( UIDocumentCache& cache, const ResourceTagSet& tagOverride, vector<UIBindingDef>& outListBinding ) const
+    expected<unique_ptr<Widget>> UIDocumentAsset::instantiate( UIDocumentCache& cache, const AssetTagSet& tagOverride, vector<UIBindingDef>& outListBinding ) const
     {
         if ( _listNode.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document cannot be built", XMLDocument::makeSourceError( _path, 0, "document has no root widget" ) } );

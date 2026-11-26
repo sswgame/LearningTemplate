@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Modules/Build/ModuleRegistry.cmake
-# @brief 동적 모듈 레지스트리 — 등록(ABI 스탬프 · 서버 전용 표식을 같이 단다) · 종류별 조회 · 빌드 순서 · 빠진 등록 대조
+# @brief 동적 모듈 레지스트리 — 등록(ABI 다이제스트 · 서버 전용 표식을 같이 단다) · 종류별 조회 · 빌드 순서 · 빠진 등록 대조
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -46,7 +46,7 @@ namespace
 	set_source_files_properties("${marker_source}" PROPERTIES SKIP_PRECOMPILE_HEADERS ON SKIP_UNITY_BUILD_INCLUSION ON)
 endfunction()
 
-# MODULE_NAME 은 매니페스트 · ABI 스탬프의 모듈 이름이다(기본 타깃 이름 — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame`). 레지스트리에는 타깃 이름이 든다.
+# MODULE_NAME 은 매니페스트 · ABI 다이제스트의 모듈 이름이다(기본 타깃 이름 — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame`). 레지스트리에는 타깃 이름이 든다.
 function(sw_register_dynamic_module TARGET_NAME KIND)
 	cmake_parse_arguments(ARG "" "MODULE_NAME" "" ${ARGN})
 	set(module_name ${TARGET_NAME})
@@ -60,7 +60,7 @@ function(sw_register_dynamic_module TARGET_NAME KIND)
 	endif()
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${TARGET_NAME})
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES_${KIND} ${TARGET_NAME})
-	sw_add_module_engine_stamp(${TARGET_NAME} MODULE_NAME ${module_name})
+	sw_add_module_engine_abi_digest(${TARGET_NAME} MODULE_NAME ${module_name})
 	sw_add_server_only_marker(${TARGET_NAME} ${module_name})
 endfunction()
 
@@ -106,7 +106,7 @@ endfunction()
 
 # 모듈 빌드 성공 스탬프 — 레지스트리의 동적 모듈이 **모두** 지어진 뒤에만 `Bin/Modules/${SW_FILE_MODULE_BUILD_STAMP}` 를 다시 쓴다.
 #
-# 핫 리로드(`LiveReloadManager`)가 바깥 빌드(터미널 · IDE 의 `cmake --build`)의 모듈 변경을 올리는 신호다. DLL 의 mtime 만 보면 연쇄 빌드가
+# 핫 리로드(`ModuleHotReloadManager`)가 바깥 빌드(터미널 · IDE 의 `cmake --build`)의 모듈 변경을 올리는 신호다. DLL 의 mtime 만 보면 연쇄 빌드가
 # 모듈을 하나씩 다시 쓰는 도중의 반쯤 링크된 집합을 올린다. 이 타깃은 모든 모듈에 의존하므로 ninja 가 그것들을 다 링크한 뒤에만 돌고,
 # 링크가 하나라도 실패하면 돌지 않는다. 언리얼 Live Coding · 유니티 도메인 리로드처럼 "빌드가 끝난 뒤"에 올리는 규칙을 바깥 빌드에도 준다.
 # 스탬프는 모듈 산출물에 파일 단위로 의존한다(`DEPENDS` 에 타깃 이름) — 다시 링크된 모듈이 있을 때만 새로 쓰이고, 할 일 없는 빌드는 그대로 "no work" 다.
@@ -119,7 +119,7 @@ function(sw_add_module_build_stamp)
 	endif()
 	set(stamp_path "${CMAKE_BINARY_DIR}/Bin/Modules/${SW_FILE_MODULE_BUILD_STAMP}")
 	add_custom_command(OUTPUT "${stamp_path}"
-		COMMAND "${CMAKE_COMMAND}" "-DSTAMP_PATH=${stamp_path}" -P "${CMAKE_SOURCE_DIR}/cmake/Scripts/WriteModuleBuildStamp.cmake"
+		COMMAND "${CMAKE_COMMAND}" "-DSTAMP_PATH=${stamp_path}" -P "${CMAKE_SOURCE_DIR}/cmake/ScriptMode/WriteModuleBuildStamp.cmake"
 		DEPENDS ${list_module}
 		COMMENT "Module build stamp (live reload signal)"
 		VERBATIM
@@ -136,7 +136,7 @@ endfunction()
 # MODULE 은 정의상 "이름으로 찾아 올리는 플러그인" 이라 App 이 반드시 먼저 빌드해야 하는 것들이다.
 #
 # 빠진 것이 있으면 **구성이 선다.** 조용히 빠지는 것보다 낫다.
-function(sw_verify_dynamic_module_registry)
+function(sw_require_dynamic_module_registry)
 	get_property(list_registered GLOBAL PROPERTY SW_DYNAMIC_MODULES)
 	# 함께 짓는 게임 팩(`sw_add_game_module`, 활성 게임이 아닌 것)은 App 이 `Bin/Modules` 에서 올리지 않으므로 레지스트리 밖이다.
 	get_property(list_game_pack_target GLOBAL PROPERTY SW_GAME_PACK_TARGETS)

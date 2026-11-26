@@ -1,7 +1,7 @@
 /**
  * @file RESPConnection.h
  * @brief RESP 연결 하나입니다. 스트림 핸들, 증분 파서, 보낸 명령의 답을 기다리는 FIFO 큐, 선택 사항인 TLS 세션, 처음에 보낼 AUTH 를 가집니다.
- * @details - 스레드 안전하지 않다. 소유자(`RESPEphemeralStore`)가 락을 잡고 호출해야 한다. 전송 콜백은 I/O 스레드에서, 송신과 회수는 서비스 스레드에서 실행된다.
+ * @details - 스레드 안전하지 않다. 소유자(`RESPCacheStore`)가 락을 잡고 호출해야 한다. 전송 콜백은 I/O 스레드에서, 송신과 회수는 서비스 스레드에서 실행된다.
  *          - 명령 연결은 답을 보낸 순서대로 태그에 짝짓는다. RESP 는 답의 순서가 곧 명령의 순서이기 때문이다.
  *            구독 연결(`_bPushMode`)도 보낸 명령마다 태그 하나를 두고 확인(subscribe · unsubscribe)이 오면 떼며, `message` 만 넘긴다 — 확인을 기다리는 수가 연결과 함께 사라져 옛 연결의 확인을 새 연결의 것으로 세지 않는다.
  *          - 다시 연결하기 전의 물러섬도 연결이 든다. 어느 길로 닫혀도(저쪽이 닫음 · 시한 · 보내기 실패 · 깨진 답 · 연결 실패) 닫히는 한 곳에서 다음 시각을 정하고,
@@ -14,7 +14,7 @@
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Network/Transport/StreamTypes.h"
 #include "Core/Time/Clock.h"
 #include "Core/Time/ExponentialBackoff.h"

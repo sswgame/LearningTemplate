@@ -15,7 +15,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshRenderData.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
@@ -389,7 +389,7 @@ namespace sw
         else
         {
             // 내장 도형은 메모리에서 바로 만든다(디스크가 없다).
-            pMesh = MeshUtil::acquirePrimitive( meshID.view() );
+            pMesh = PrimitiveMeshBuilder::acquirePrimitive( meshID.view() );
             if ( pMesh == nullptr )
             {
                 StringBuilder<constant::buffer::kMax256> failureKey;

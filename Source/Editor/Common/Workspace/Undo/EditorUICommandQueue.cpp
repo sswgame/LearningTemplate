@@ -1,0 +1,262 @@
+#include "pch.h"
+
+#include "Editor/Common/Workspace/Undo/EditorUICommandQueue.h"
+
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Notification/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/View/EditorCamera.h"
+#include "Editor/Common/Workspace/View/EditorRenderViews.h"
+
+#include "Engine/Localization/LocText.h"
+#include "Engine/Object/Component/CameraComponent.h"
+
+namespace sw::editor
+{
+    EditorUICommand EditorUICommand::makeFitViewTarget( EditorViewKind view, uint32 width, uint32 height )
+    {
+        EditorUICommand command;
+        command._kind   = EditorUICommandKind::FitViewTarget;
+        command._view   = view;
+        command._width  = width;
+        command._height = height;
+        return command;
+    }
+
+    EditorUICommand EditorUICommand::makeFitPreviewTarget( uint32 targetID, uint32 width, uint32 height )
+    {
+        EditorUICommand command;
+        command._kind     = EditorUICommandKind::FitPreviewTarget;
+        command._targetID = targetID;
+        command._width    = width;
+        command._height   = height;
+        return command;
+    }
+
+    EditorUICommand EditorUICommand::makeFreePreviewTarget( uint32 targetID )
+    {
+        EditorUICommand command;
+        command._kind     = EditorUICommandKind::FreePreviewTarget;
+        command._targetID = targetID;
+        return command;
+    }
+
+    EditorUICommand EditorUICommand::makeStart( bool bSimulate, bool bStartAtCamera )
+    {
+        EditorUICommand command;
+        command._kind           = bSimulate ? EditorUICommandKind::StartSimulate : EditorUICommandKind::StartPlay;
+        command._bStartAtCamera = bStartAtCamera ? SW_TRUE : SW_FALSE;
+        return command;
+    }
+
+    EditorUICommand EditorUICommand::makeStep( uint32 frameCount )
+    {
+        EditorUICommand command;
+        command._kind           = EditorUICommandKind::Step;
+        command._stepFrameCount = frameCount;
+        return command;
+    }
+
+    EditorUICommand EditorUICommand::make( EditorUICommandKind kind )
+    {
+        EditorUICommand command;
+        command._kind = kind;
+        return command;
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    EditorUICommandQueue::EditorUICommandQueue()
+        : _queue{}
+        , _collectingFrame{ 1 }
+        , _droppedCount{ 0 }
+        , _listTaken{}
+        , _listDue{}
+    {
+    }
+
+    void EditorUICommandQueue::shutdownSubsystem()
+    {
+        resetToFreshEditor();
+    }
+
+    void EditorUICommandQueue::resetToFreshEditor()
+    {
+        _queue.clear();
+        _listTaken.clear();
+        _listDue.clear();
+    }
+
+    bool EditorUICommandQueue::post( const EditorUICommand& command )
+    {
+        return postAt( command, getCollectingFrame() );
+    }
+
+    bool EditorUICommandQueue::postAt( const EditorUICommand& command, uint32 frame )
+    {
+        if ( _queue.enqueue( QueuedCommand{ command, frame } ) )
+            return true;
+        _droppedCount.fetch_add( 1, std::memory_order_relaxed );
+        SW_LOG_ERROR_ID( "EditorUICommandQueue.Full", "The editor UI command queue is full (%# slots) - command %# dropped", kCapacity, static_cast<uint32>( command._kind ) );
+        return false;
+    }
+
+    void EditorUICommandQueue::takeDue( vector<EditorUICommand>& outList )
+    {
+        outList.clear();
+        const uint32 frame = _collectingFrame.fetch_add( 1, std::memory_order_acq_rel );
+        _queue.popAll( _listTaken );
+        size_t keptCount = 0;
+        for ( const QueuedCommand& queued : _listTaken )
+        {
+            if ( queued._frame <= frame )
+                outList.push_back( queued._command );
+            else
+                _listTaken[keptCount++] = queued;
+        }
+        _listTaken.resize( keptCount );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct EditorUICommandApplyInternal
+        {
+            /** @brief 재생을 시작합니다. 카메라에서 시작은 멈춤에서 시작할 때만 정한다(Simulate 는 옮길 플레이어가 없지만 시작 위치는 세션 값이라 같이 지운다). */
+            static void start( EditorPlaySessionWriteKey key, const EditorUICommand& command )
+            {
+                PlaySessionData* pData = EditorPlaySession::findData( key );
+                if ( pData != nullptr && EditorPlaySession::isStopped() )
+                {
+                    const CameraComponent* pEditorCamera = EditorCamera::find( editor::getActiveScene() );
+                    if ( command._bStartAtCamera != SW_FALSE && pEditorCamera != nullptr )
+                        EditorPlaySession::setStartPosition( *pData, pEditorCamera->getWorldPosition() );
+                    else
+                        EditorPlaySession::clearStartPosition( *pData );
+                }
+                if ( command._kind == EditorUICommandKind::StartSimulate )
+                    EditorPlaySession::simulate( key );
+                else
+                    EditorPlaySession::play( key );
+            }
+
+            /**
+             * @brief F8 Eject/Possess — 세션 종류(Simulate/Play)와 `_bEjected` 를 이 한 적용이 함께 바꾼다.
+             * @details 플레이어 조종 중이면 조종을 놓는다 — 월드는 계속 돌고(Simulate) 에디터 카메라로 둘러본다. Eject 한 세션이면 다시 조종한다(언리얼 F8 Eject/Possess).
+             *          배치(최대화 되돌리기)와 패널 포커스는 UI 가 세션 전이를 보고 정한다(`EditorPlayCommands::update`) — 게임 스레드는 작업 공간을 고치지 않는다.
+             */
+            static void toggleEject( EditorPlaySessionWriteKey key )
+            {
+                PlaySessionData* pData                = EditorPlaySession::findData( key );
+                const bool       bNoActivePlaySession = pData == nullptr || pData->_state == PlaySessionState::Stopped;
+                if ( bNoActivePlaySession )
+                    return;
+                if ( EditorPlaySession::isPlayerActive( *pData ) )
+                {
+                    EditorPlaySession::simulate( key );
+                    pData->_bEjected = SW_TRUE;
+                    return;
+                }
+                if ( pData->_bEjected == SW_TRUE )
+                {
+                    EditorPlaySession::play( key );
+                    pData->_bEjected = SW_FALSE;
+                }
+            }
+
+            /** @brief Keep Simulation Changes — 플레이 세션은 메인 월드에서 돈다. 남길 변경은 메인 씬의 선택이다. 적었으면 알린다. */
+            static void keepSelectedChanges( EditorPlaySessionWriteKey key )
+            {
+                PlaySessionData* pData                = EditorPlaySession::findData( key );
+                const bool       bNoActivePlaySession = pData == nullptr || pData->_state == PlaySessionState::Stopped;
+                if ( bNoActivePlaySession )
+                    return;
+                vector<GameObject*> listSelected;
+                editor::getMainSceneSelection().getSelectedObjects( listSelected );
+                uint32 keptCount{ 0 };
+                for ( const GameObject* pObject : listSelected )
+                {
+                    keptCount += EditorPlaySession::keepObjectState( *pData, pObject ) ? 1u : 0u;
+                }
+                if ( keptCount > 0 )
+                    editor::getSubsystem<EditorContext>().getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyKeepSimulationTitle" ),
+                                                                                                          SW_LOCKEY( "EdCommon", "NotifyKeepSimulation" ), NotificationKind::Info );
+            }
+
+            static void fitViewTarget( const EditorUICommand& command )
+            {
+                EditorRenderViews&      views = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
+                const EditorViewTarget& view  = views.getViewTarget( command._view );
+                // 같은 크기를 두 프레임 보낼 수 있다(UI 는 적용 전 프레임에 요청한 크기를 아직 모른다) — 적용 쪽이 다시 견준다.
+                if ( EditorViewTargetUtil::needsResize( view.getRequestedWidth(), view.getRequestedHeight(), command._width, command._height ) )
+                    views.ensureViewTargetSize( command._view, command._width, command._height );
+            }
+        };
+    } // namespace
+
+    void EditorUICommandQueue::postToEditor( const EditorUICommand& command )
+    {
+        EditorContext* const pContext = editor::findSubsystem<EditorContext>(); // 컨텍스트 없이 도는 테스트 · 종료 정리
+        if ( pContext != nullptr )
+            (void)pContext->getSubsystem<EditorUICommandQueue>().post( command ); // 차면 큐가 오류를 남겼다
+    }
+
+    void EditorUICommandQueue::applyDue()
+    {
+        takeDue( _listDue );
+        for ( const EditorUICommand& command : _listDue )
+        {
+            command.apply();
+        }
+    }
+
+    void EditorUICommand::apply() const
+    {
+        using Internal                          = EditorUICommandApplyInternal;
+        const EditorUICommand&          command = *this;
+        const EditorPlaySessionWriteKey key{}; // 게임 스레드 입구 — 아래 적용만 세션을 바꾼다
+        switch ( _kind )
+        {
+            case EditorUICommandKind::FitViewTarget:
+                Internal::fitViewTarget( command );
+                break;
+            case EditorUICommandKind::FitPreviewTarget:
+                editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().ensurePreviewTargetSize( command._targetID, command._width, command._height );
+                break;
+            case EditorUICommandKind::FreePreviewTarget:
+                editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().freePreviewTarget( command._targetID );
+                break;
+            case EditorUICommandKind::StartPlay:
+            case EditorUICommandKind::StartSimulate:
+                Internal::start( key, command );
+                break;
+            case EditorUICommandKind::Pause:
+                EditorPlaySession::pause( key );
+                break;
+            case EditorUICommandKind::Resume:
+                if ( EditorPlaySession::isPaused() )
+                    EditorPlaySession::setState( key, PlaySessionState::Playing );
+                break;
+            case EditorUICommandKind::Step:
+                EditorPlaySession::stepFrames( key, command._stepFrameCount );
+                break;
+            case EditorUICommandKind::Stop:
+                EditorPlaySession::stop( key );
+                break;
+            case EditorUICommandKind::ToggleEject:
+                Internal::toggleEject( key );
+                break;
+            case EditorUICommandKind::KeepSelectedChanges:
+                Internal::keepSelectedChanges( key );
+                break;
+            case EditorUICommandKind::Count:
+                SW_LOG_ERROR_ID( "EditorUICommandQueue.EmptyCommand", "An editor UI command without a kind reached the game thread" );
+                break;
+        }
+    }
+} // namespace sw::editor

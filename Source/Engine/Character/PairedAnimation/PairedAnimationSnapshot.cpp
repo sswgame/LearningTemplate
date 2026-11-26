@@ -5,7 +5,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 namespace sw
 {
@@ -56,7 +56,7 @@ namespace sw
             return ReadResult::WrongMagic;
         // 역할 수 상한 · 등록 밖 단계 · 유한하지 않은 시각은 칸 선언이 거절한다.
         PairedAnimationSessionSnapshot snapshot{};
-        if ( ReplicatedLayout::readFull( reader, snapshot, nullptr ) != FixedReadResult::Ok || reader.hasOverflowed() )
+        if ( ReplicatedLayout::readFull( reader, snapshot, nullptr ) != LayoutReadResult::Ok || reader.hasOverflowed() )
             return ReadResult::Truncated;
         outSnapshot = std::move( snapshot );
         return ReadResult::Success;

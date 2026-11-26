@@ -5,8 +5,8 @@
 #include "pch.h"
 
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
-#include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerDrawList.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerGeometry.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"

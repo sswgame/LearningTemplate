@@ -191,7 +191,7 @@ namespace sw
                                 outInfo._conflictIndex = constant::invalid_index::kInt32;
                             return toStoreResult( result );
                         }
-                        if ( ServiceTransaction::computeRangeFingerprint( listRecord, 0 ) != write._range._fingerprint )
+                        if ( ServiceTransaction::computeRangeDigest( listRecord, 0 ) != write._range._digest )
                         {
                             outInfo._conflictIndex = static_cast<int32>( writeIndex );
                             return ServiceStoreResult::Conflict;

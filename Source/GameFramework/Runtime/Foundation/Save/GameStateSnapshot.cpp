@@ -18,14 +18,14 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Save/SnapshotFaultHook.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
@@ -42,13 +42,13 @@ namespace sw
              *          머리의 씬 정체는 찍을 때 활성 씬의 GUID 참조(`AssetRegistry::makeReferenceText`)다 — 읽을 때 지금 경로로 풀고, 지금 활성 씬과 다르면 섞지 않고 거절한다.
              *          옛 판은 슬롯에서 읽은 자리가 형식의 단계로 한 번 올린다(`upgradeEnvelope`).
              */
-            static constexpr FormatDef kFormat{ "SWST" };
+            static constexpr FormatDesc kFormat{ "SWST" };
 
             /** @brief 봉투 머리(매직 · 판 뒤의 칸)입니다. */
             struct Header
             {
                 uint64        _processToken{ 0 }; ///< 찍은 프로세스의 토큰 — 같으면 id 를 복원한다
-                string        _sceneID;           ///< 찍을 때 활성 씬의 지금 리소스 id(읽을 때 GUID 를 푼다 — 씬이 없었으면 빈 글)
+                string        _sceneID;           ///< 찍을 때 활성 씬의 지금 에셋 id(읽을 때 GUID 를 푼다 — 씬이 없었으면 빈 글)
                 string        _contentText;       ///< 찍을 때 콘텐츠 구성(켠 모드) 글
                 vector<uint8> _minigameBytes;     ///< 찍을 때의 미니게임 칸 스택(`MinigameStack::writeSaveState`, 밖이면 빈 바이트)
                 float64       _playTime{ 0.0 };   ///< 찍을 때까지의 플레이 시간(초)
@@ -241,7 +241,7 @@ namespace sw
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 return pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
             }
-            /** @brief 활성 씬의 리소스 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면(씬 없는 스냅샷) 빈 글입니다. */
+            /** @brief 활성 씬의 에셋 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면(씬 없는 스냅샷) 빈 글입니다. */
             static string findActiveSceneID()
             {
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
@@ -461,10 +461,10 @@ namespace sw
 
     bool GameStateSnapshot::upgradeEnvelope( vector<uint8>& inoutBytes )
     {
-        constexpr const FormatDef& kFormat = StateEnvelopeInternal::kFormat;
-        ByteReader                 reader{ inoutBytes.data(), inoutBytes.size() };
-        const uint32               tag     = reader.readUint32();
-        const uint32               version = reader.readUint32();
+        constexpr const FormatDesc& kFormat = StateEnvelopeInternal::kFormat;
+        ByteReader                  reader{ inoutBytes.data(), inoutBytes.size() };
+        const uint32                tag     = reader.readUint32();
+        const uint32                version = reader.readUint32();
         if ( reader.hasOverflowed() || tag != kFormat._tag || version >= kFormat._version )
             return true; // 잘린 봉투 · 다른 바이트 · 새 판은 읽기가 까닭을 남긴다
         vector<uint8> body( inoutBytes.begin() + static_cast<ptrdiff_t>( reader.getOffset() ), inoutBytes.end() );

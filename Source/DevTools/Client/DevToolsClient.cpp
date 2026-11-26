@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/AssertDialogSlot.h"
@@ -14,17 +14,17 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "DevTools/Client/Audio/AudioDumpListener.h"
+#include "DevTools/Client/Audio/AudioDumpBuffer.h"
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 #include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 #include "DevTools/Client/Capture/StartupCaptureSubsystem.h"
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
-#include "DevTools/Client/Shader/LiveShaderSubsystem.h"
+#include "DevTools/Client/Shader/ShaderHotReloadSubsystem.h"
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
 #include "DevTools/Console/DevConsoleController.h"
 #include "DevTools/DevToolsClientPart.h"
-#include "DevTools/Diagnostics/CrashInjection.h"
-#include "DevTools/Host/Client/EditorGameModuleManager.h"
+#include "DevTools/Diagnostics/CrashInjector.h"
+#include "DevTools/Host/Editor/EditorGameModuleManager.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Engine.h"
@@ -223,7 +223,7 @@ namespace sw
             static constexpr const utf8* kArrAutomationVariable[] = { "gv_profileFrames", "gv_profileSeconds", "gv_editorSelfTest" };
 
             /** @brief 사람이 지켜보지 않는 실행이면 true 를 반환합니다(-unattended, 시나리오, 프로파일, 자체 테스트). */
-            static bool isAutomatedRun( const CommandLineManager& commandLine )
+            static bool isAutomatedRun( const CommandLine& commandLine )
             {
                 if ( commandLine.isAutomatedRun() )
                     return true;
@@ -281,7 +281,7 @@ namespace sw
 #endif
 
         /** @brief 사람이 지켜보는 실행이면 단언 대화상자를 겁니다. Windows 검사 구성이 아니면 아무것도 하지 않습니다. 개발 도구의 클라이언트 부분이 에디터 실행의 첫 프레임 끝에 한 번 부릅니다(`onFrameEnd`). */
-        void installAssertDialogForInteractiveRun( [[maybe_unused]] const CommandLineManager& commandLine )
+        void installAssertDialogForInteractiveRun( [[maybe_unused]] const CommandLine& commandLine )
         {
 #if defined( SW_DO_CHECKS ) && defined( SW_PLATFORM_WINDOWS )
             // 다시 불려도(호스트 모듈을 다시 세움) 이미 건 주인이면 다시 걸지 않는다 — 대화상자 칸은 하나라 둘째 등록은 단언이다.
@@ -377,7 +377,7 @@ namespace sw
                 RenderThreadSubsystem* const  pRenderThread  = startup.find<RenderThreadSubsystem>();
                 if ( pFrameRenderer != nullptr && pRenderThread != nullptr )
                 {
-                    (void)startup.emplaceSubsystem<LiveShaderSubsystem>( *pFrameRenderer, *pRenderThread );
+                    (void)startup.emplaceSubsystem<ShaderHotReloadSubsystem>( *pFrameRenderer, *pRenderThread );
                     (void)startup.emplaceSubsystem<CrashInjectionSubsystem>(); // `-gv_crashTest` — 렌더러 뒤에 죽어 백엔드 이름까지 보고에 든다
                     (void)startup.emplaceSubsystem<StartupCaptureSubsystem>(); // `-gv_screenshot` · `-gv_screenshotQuit` — 렌더 스레드의 실행 중 요청 창구로 찍는다
                 }
@@ -400,15 +400,15 @@ namespace sw
                 // 예전에는 App 이 개발 폴더(`App/Dev`)를 거쳐 걸었다 — 개발 기능이 스스로 붙는다(docs/agents/CppStyle.md "Build configuration switches" 셋째 줄).
                 if ( _bAssertDialogChecked == SW_FALSE )
                 {
-                    _bAssertDialogChecked                 = SW_TRUE;
-                    const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
-                    bool                      bEditor     = false;
+                    _bAssertDialogChecked          = SW_TRUE;
+                    const CommandLine& commandLine = engine::getSubsystem<CommandLine>();
+                    bool               bEditor     = false;
                     if ( commandLine.getArgument( CommandLineArgument::ENABLE_EDITOR, bEditor ) && bEditor )
                         installAssertDialogForInteractiveRun( commandLine );
                 }
-                // 셰이더 재컴파일 · 강제 리로드 단축키(`ReloadShaders`)는 재컴파일기가 선 실행만(`gv_liveShaderRecompile`). 단축키의 뜻은 재컴파일기를 가진 이쪽이 읽는다(디버그 키 맵은 입력 사실만 낸다).
-                LiveShaderSubsystem* const pLiveShader = engine::findSubsystem<LiveShaderSubsystem>();
-                if ( ShaderRecompiler* const pRecompiler = pLiveShader != nullptr ? pLiveShader->findShaderRecompiler() : nullptr )
+                // 셰이더 재컴파일 · 강제 리로드 단축키(`ReloadShaders`)는 재컴파일기가 선 실행만(`gv_shaderHotReload`). 단축키의 뜻은 재컴파일기를 가진 이쪽이 읽는다(디버그 키 맵은 입력 사실만 낸다).
+                ShaderHotReloadSubsystem* const pShaderHotReload = engine::findSubsystem<ShaderHotReloadSubsystem>();
+                if ( ShaderRecompiler* const pRecompiler = pShaderHotReload != nullptr ? pShaderHotReload->findShaderRecompiler() : nullptr )
                 {
                     pRecompiler->update();
                     if ( engine::getSubsystem<DebugKeyActions>().wasActionTriggered( hashed_string( InputMapDefaults::kReloadShadersAction ) ) )
@@ -428,7 +428,7 @@ namespace sw
                 return pUI != nullptr ? make_unique<DevConsoleOverlay>( *pUI ) : nullptr;
             }
 
-            HostTaskResult runPortraitBake( Engine& engine, const CommandLineManager& commandLine ) override
+            HostTaskResult runPortraitBake( Engine& engine, const CommandLine& commandLine ) override
             {
                 string portraitList;
                 if ( commandLine.getArgument( CommandLineArgument::RENDER_PORTRAITS, portraitList ) == false || portraitList.empty() )

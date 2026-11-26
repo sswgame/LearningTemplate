@@ -99,8 +99,8 @@ namespace sw
         /** @brief @p path 의 파일 형식입니다(접미사 칸). 프리팹 접미사가 아니면 비어 있습니다. */
         [[nodiscard]] static optional<PrefabFileFormat> findFileFormat( string_view path );
         /**
-         * @brief 디스크 파일에서 프리팹 원본을 로드합니다(형식은 확장자 `.prefab.xml` · `.prefab.json`). 리소스 id 로 풀지 않고 팩을 보지 않습니다.
-         * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
+         * @brief 디스크 파일에서 프리팹 원본을 로드합니다(형식은 확장자 `.prefab.xml` · `.prefab.json`). 에셋 id 로 풀지 않고 팩을 보지 않습니다.
+         * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 콘텐츠 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
          *          게임 런타임 코드는 쓰지 않습니다.
          */
         [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
@@ -201,7 +201,7 @@ namespace sw
 
         /**
          * @brief XML 원본 읽기 입구 둘(`loadFromXMLFile` · `loadFromDiskFile`)이 읽은 문서를 풉니다.
-         * @details 리소스 id 와 디스크 경로는 입구가 형식으로 갈라 읽는다 — 안쪽이 열거형으로 고르면 같은 `string_view` 가 어느 쪽으로도 흘러간다.
+         * @details 에셋 id 와 디스크 경로는 입구가 형식으로 갈라 읽는다 — 안쪽이 열거형으로 고르면 같은 `string_view` 가 어느 쪽으로도 흘러간다.
          * @param bRead 입구의 읽기 결과입니다. @param absPath 로그에 찍는 경로(리소스면 푼 절대 경로)입니다.
          */
         [[nodiscard]] bool readXMLSource( XMLDocument& doc, bool bRead, const string& absPath, AssetLoadScope& loadScope );

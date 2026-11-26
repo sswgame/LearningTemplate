@@ -10,8 +10,8 @@
 #include "Engine/Object/GameObject/Tick/TickInterval.h"
 
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/MechanismUtil.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Trigger/LogicCircuitSensorComponent.h"
 
 namespace sw
 {
@@ -47,7 +47,7 @@ namespace sw
         if ( pStimulus != nullptr )
             pStimulus->reportNoise( _noiseRadius );
         const SceneComponent* pRoot = pOwner->getPrimarySceneComponent();
-        GimmickUtil::sendCue( *pOwner, hashed_string( "Noise" ), pRoot != nullptr ? pRoot->getWorldPosition() : float3{}, radius );
+        MechanismUtil::sendCue( *pOwner, hashed_string( "Noise" ), pRoot != nullptr ? pRoot->getWorldPosition() : float3{}, radius );
     }
 
     void NoiseEmitterComponent::onTick( TickContext& context )
@@ -72,11 +72,11 @@ namespace sw
     void NoiseEmitterComponent::stepOnce()
     {
         ++_steps;
-        if ( _interval > 0.0f && _steps % TickIntervalUtil::secondsToCount( kTickInterval, _interval, 1 ) == 0 )
+        if ( _interval > 0.0f && _steps % TickTurn::secondsToIntervalCount( kTickInterval, _interval, 1 ) == 0 )
             emit( _radius );
-        const GameObject*             pOwner  = getOwner();
-        const GimmickSensorComponent* pSensor = pOwner != nullptr ? pOwner->getComponent<GimmickSensorComponent>() : nullptr;
-        const int32                   count   = pSensor != nullptr ? pSensor->getOccupantCount() : 0;
+        const GameObject*                  pOwner  = getOwner();
+        const LogicCircuitSensorComponent* pSensor = pOwner != nullptr ? pOwner->getComponent<LogicCircuitSensorComponent>() : nullptr;
+        const int32                        count   = pSensor != nullptr ? pSensor->getOccupantCount() : 0;
         if ( _bOnStep && count > _lastOccupantCount )
             emit( _radius );
         _lastOccupantCount = count;

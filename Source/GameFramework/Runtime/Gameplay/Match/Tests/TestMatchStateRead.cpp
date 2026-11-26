@@ -2,8 +2,8 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/Tests/StateIOTestUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/Tests/StateIOTestUtil.h"
 
 #include "GameFramework/Runtime/Gameplay/Match/MatchState.h"
 

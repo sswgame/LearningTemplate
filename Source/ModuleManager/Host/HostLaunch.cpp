@@ -2,7 +2,7 @@
 
 #include "ModuleManager/Host/HostLaunch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -19,7 +19,7 @@ namespace sw
          * @brief 모르는 `-gv_*` 키를 경고합니다. 파서는 모듈이 선언하기 전이라 모르는 키를 보류 테이블에 남긴다 — 모두 선 뒤에도 가져간 곳이 없으면 오타다.
          * @details 테이블은 비우지 않는다. 핫 리로드로 나중에 올라오는 모듈이 여전히 가져갈 수 있다.
          */
-        void warnUnknownGlobalOverrides( const CommandLineManager& commandLine )
+        void warnUnknownGlobalOverrides( const CommandLine& commandLine )
         {
             const vector<string> listPendingName = commandLine.collectPendingGlobalNames();
             for ( const string& pendingName : listPendingName )
@@ -87,12 +87,12 @@ namespace sw
         if ( _pDevLayer != nullptr && _pDevLayer->initializeModuleReload( targetMask, _host, *_pModuleLoader, _moduleCatalog, _moduleResolution ) == false )
             return false;
         _moduleManager = std::move( moduleManager );
-        return _moduleManager->loadModuleLibraries( getLiveReloadManager(), _moduleCatalog, _moduleResolution );
+        return _moduleManager->loadModuleLibraries( getModuleHotReloadManager(), _moduleCatalog, _moduleResolution );
     }
 
     bool HostLaunch::startHostSubsystems()
     {
-        const CommandLineManager* pCommandLine = _engine.getCommandLineManager();
+        const CommandLine* pCommandLine = _engine.getCommandLine();
         if ( pCommandLine == nullptr )
             return false;
         if ( _hostSubsystems.initializeAll( SubsystemHostMask::All ) == false )

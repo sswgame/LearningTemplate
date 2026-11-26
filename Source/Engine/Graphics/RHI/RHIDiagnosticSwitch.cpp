@@ -4,7 +4,7 @@
 
 namespace sw
 {
-    expected<bool> resolveRHIDiagnosticSwitch( RHIDiagnosticSwitch configValue, CommandLineArgument argument, const CommandLineManager* pCommandLine, RHIDiagnosticBuild build )
+    expected<bool> resolveRHIDiagnosticSwitch( RHIDiagnosticSwitch configValue, CommandLineArgument argument, const CommandLine* pCommandLine, RHIDiagnosticBuild build )
     {
         bool bConfigValue = false;
         switch ( configValue )
@@ -32,7 +32,7 @@ namespace sw
         return bConfigValue;
     }
 
-    expected<RHIDiagnosticSwitches> resolveRHIDiagnosticSwitches( const RHIConfig& config, const CommandLineManager* pCommandLine, RHIDiagnosticBuild build )
+    expected<RHIDiagnosticSwitches> resolveRHIDiagnosticSwitches( const RHIConfig& config, const CommandLine* pCommandLine, RHIDiagnosticBuild build )
     {
         const expected<bool> validation  = resolveRHIDiagnosticSwitch( config._validationLayer, CommandLineArgument::RHI_VALIDATION, pCommandLine, build );
         const expected<bool> dred        = resolveRHIDiagnosticSwitch( config._dred, CommandLineArgument::RHI_DRED, pCommandLine, build );

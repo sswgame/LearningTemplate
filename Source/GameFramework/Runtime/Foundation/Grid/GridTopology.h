@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 namespace sw
 {
@@ -17,7 +17,7 @@ namespace sw
      * @brief 너비 × 높이 셀 격자의 셀 번호(`y × 너비 + x`), 경계, 이웃 순서를 담습니다.
      * @details 이웃 순서는 하나로 고정이다. 앞 네 개가 직교(+x, -x, +y, -y)이고, 뒤 네 개가 대각선(+x+y, +x-y, -x+y, -x-y)이다.
      *          탐색 결과(경로, 흐름장, 번짐 알림 순서)가 이 순서에 매이므로, 바꾸면 결정적 시뮬레이션의 결과가 바뀐다.
-     *          내비, 기믹, 키트가 같은 표를 쓴다.
+     *          내비, 장치, 키트가 같은 표를 쓴다.
      *          셀 격자를 든 클래스는 `_width` 와 `_height` 를 따로 두지 않고 이것 하나를 멤버로 들며, `y × 너비 + x` 를 손으로 적지 않는다.
      * @note 셀 번호는 int32 이다. 셀 수가 int32 를 넘는 격자는 저장소부터 만들 수 없다. 타일맵은 `TileMapXMLData::kMaxTileCount` 로 막는다.
      */

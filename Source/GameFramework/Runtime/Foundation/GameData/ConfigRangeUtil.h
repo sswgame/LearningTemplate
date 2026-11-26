@@ -16,7 +16,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
 
 namespace sw
 {
@@ -35,7 +35,7 @@ namespace sw
             if ( pType == nullptr )
                 return string( "the reflection type is not registered in this process (no engine type registry), so the ranges cannot be checked" );
             vector<string> listError;
-            SerializerUtil::collectRangeErrors( *pType, ObjectAddress{ &config }, string(), listError );
+            PropertyConstraints::collectRangeErrors( *pType, ObjectAddress{ &config }, string(), listError );
             StringBuilder<constant::buffer::kMax1024> joined;
             for ( const string& rangeError : listError )
             {

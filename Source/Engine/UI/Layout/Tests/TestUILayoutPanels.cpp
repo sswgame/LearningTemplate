@@ -2,7 +2,7 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/GridPanel.h"
@@ -610,7 +610,7 @@ SW_TEST_CASE( UILayoutPanelsTest, StyleSizeFixesTheWidgetUnlessTheSlotOverrides 
 {
     shared_ptr<UIStyleSheetAsset> sheet = make_shared<UIStyleSheetAsset>();
     SW_REQUIRE_TRUE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="0"><Rule _selector=".cell" _size="40,20" /></UIStyleSheet>)", "cell.uistyle.xml",
-                                               ResourceContext::forDocument(), *sheet )
+                                               AssetComposeContext::forDocument(), *sheet )
                          .has_value() );
     UIStyleSet styleSet;
     styleSet.setSheets( vector<shared_ptr<const UIStyleSheetAsset>>{ sheet } );

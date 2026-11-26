@@ -14,7 +14,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Inherit/ResourceFieldWrite.h"
+#include "Engine/Serialization/Compose/AssetFieldWrite.h"
 
 namespace sw
 {
@@ -163,7 +163,7 @@ namespace sw
     /** @brief TileMap XML 전체 문서 */
     struct TileMapXMLData
     {
-        /** @brief 타일맵 파일의 접미사입니다. 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
+        /** @brief 타일맵 파일의 접미사입니다. 에디터 종류 등록(`Editor/AssetTypeActions`)이 이 값을 씁니다. */
         static constexpr string_view kExtension = ".tilemap.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
@@ -283,13 +283,13 @@ namespace sw
          */
         SW_API bool mapTileCells( const TileSetAsset& tileSet, vector<uint16>& outListBrushIndex ) const;
 
-        /** @brief 리소스 id 의 타일맵 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). */
+        /** @brief 에셋 id 의 타일맵 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). */
         [[nodiscard]] SW_API bool load( const AssetID& assetID );
-        /** @brief 디스크 파일의 타일맵 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
+        /** @brief 디스크 파일의 타일맵 XML 을 읽습니다. 에셋 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] SW_API bool loadFromDiskFile( const DiskPath& diskPath );
         /** @brief XML 본문에서 타일맵을 읽습니다(리소스가 아닌 글 — 덮어쓰기 층 · 다시 읽기 기록을 받지 않는다). */
         [[nodiscard]] SW_API bool loadFromXML( string_view xml );
-        /** @brief 읽어 둔 문서(`load` 는 리소스 id 를 싣고 `parseResourceText` 로 읽는다)에서 타일맵을 읽습니다. */
+        /** @brief 읽어 둔 문서(`load` 는 에셋 id 를 싣고 `parseAssetText` 로 읽는다)에서 타일맵을 읽습니다. */
         [[nodiscard]] SW_API bool loadFromDocument( const XMLDocument& doc );
         /** @brief Resource 상대 또는 절대 경로로 타일맵 XML을 씁니다. */
         [[nodiscard]] SW_API bool save( const AbsolutePath& absPath ) const;
@@ -301,7 +301,7 @@ namespace sw
          */
         SW_API string toXML() const;
         /** @brief `toXML` 과 같고, @p fieldWrite 가 `WriteAll` 면 기본값과 같은 타일 칸(깃발 · 아틀라스)도 씁니다 — 저장 입구에 넘기는 빼지 않은 짝입니다. */
-        SW_API string toXML( ResourceFieldWrite fieldWrite ) const;
+        SW_API string toXML( AssetFieldWrite fieldWrite ) const;
     };
 
 } // namespace sw

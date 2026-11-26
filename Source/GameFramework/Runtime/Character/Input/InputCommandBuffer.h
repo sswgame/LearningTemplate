@@ -87,7 +87,7 @@ namespace sw
     /**
      * @class InputCommandBuffer
      * @brief 지난 몇십 틱의 입력을 쌓아 둔 버퍼입니다. 매 고정 틱 `push` 한 뒤 `findCompleted` 로 이번 틱에 끝난 커맨드를 고릅니다.
-     * @details 링 버퍼(`_listFrame`, `_head`, `_count`)가 리플렉션 프로퍼티라서 롤백 키트는 고정 배치형(`FixedLayout`)으로 그대로 싣습니다.
+     * @details 링 버퍼(`_listFrame`, `_head`, `_count`)가 리플렉션 프로퍼티라서 롤백 키트는 스키마 결합형(`LayoutSerializer`)으로 그대로 싣습니다.
      *          용량은 생성할 때 정하는 설정이라 싣지 않고, 읽은 고리 버퍼의 길이가 용량과 다르면 `validateState` 가 거절합니다.
      *          `clear` 는 슬롯을 중립 입력으로 되돌리므로, 쌓인 수 밖의 슬롯에 지난 입력이 남아 같은 버퍼가 다른 바이트가 되는 일이 없습니다.
      */
@@ -97,7 +97,7 @@ namespace sw
     public:
         REFLECT_BODY();
         static constexpr int32  kSimultaneousFrames = 2;   ///< 버튼 둘을 이 틱 안에 누르면 동시
-        static constexpr uint32 kMaxFrameCount      = 240; ///< 고정 배치형이 싣는 고리 버퍼 용량의 상한
+        static constexpr uint32 kMaxFrameCount      = 240; ///< 스키마 결합형이 싣는 고리 버퍼 용량의 상한
 
         explicit InputCommandBuffer( int32 capacity = 60 );
 

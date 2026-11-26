@@ -28,7 +28,7 @@ namespace
         /** @brief 해상도 — 청크 칸 기본값(32)의 청크 하나다. 크기 32 m 라 칸 하나가 1 m 다. */
         static constexpr uint32 kResolution = 33;
 
-        /** @brief 평평한 높이장(구멍 없음)을 케이스 도메인에 쓰고 그 리소스 id 를 돌려줍니다. */
+        /** @brief 평평한 높이장(구멍 없음)을 케이스 도메인에 쓰고 그 에셋 id 를 돌려줍니다. */
         static string writeFlatHeightfield( const test::ScopedScratchDomain& domain )
         {
             HeightfieldAsset asset;

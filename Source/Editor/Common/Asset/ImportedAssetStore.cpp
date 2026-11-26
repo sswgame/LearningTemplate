@@ -12,7 +12,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetImportDigest.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
 #include "Editor/Common/Asset/ModelImport/ModelImporter.h"
@@ -129,7 +129,7 @@ namespace sw::editor
         const string  marker     = ImportedAssetStoreInternal::makeMarker();
         for ( const string& reference : listReference )
         {
-            // 리소스 경로의 도메인(`common` · `game/x`)을 디스크 경로에서 찾아 리소스 루트를 얻는다.
+            // 에셋 경로의 도메인(`common` · `game/x`)을 디스크 경로에서 찾아 콘텐츠 루트를 얻는다.
             const string                             domain = reference.substr( 0, reference.find( marker ) );
             StringBuilder<constant::buffer::kMax256> rootBuilder;
             rootBuilder.appendFormat( "/%#/%#/", domain, kModelFolderName );
@@ -138,7 +138,7 @@ namespace sw::editor
             if ( rootEnd != string::npos )
             {
                 const AbsolutePath resourceRoot = FileUtil::toDiskPath( string_view( normalized ).substr( 0, rootEnd ) );
-                fileHash                        = AssetImportStampUtil::computeFileHash( resourceRoot.join( reference ) );
+                fileHash                        = AssetImportDigestUtil::computeFileHash( resourceRoot.join( reference ) );
             }
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
         }

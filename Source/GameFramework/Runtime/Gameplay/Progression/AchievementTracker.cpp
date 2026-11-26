@@ -4,7 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Runtime/Gameplay/Progression/PlayerStats.h"
 #include "GameFramework/Runtime/Online/Platform/PlatformServices.h"
@@ -15,7 +15,7 @@ namespace sw
     {
         struct AchievementTrackerInternal
         {
-            static constexpr FormatDef kStateFormat{ "ACHV" };
+            static constexpr FormatDesc kStateFormat{ "ACHV" };
 
             /** @brief @p value 가 그 통계 종류로 문턱에 닿았는가입니다. 최소 통계는 작을수록 좋은 기록이라 문턱 이하다. */
             static bool isPastThreshold( StatKind kind, float64 value, float64 threshold ) { return kind == StatKind::Min ? value <= threshold : value >= threshold; }

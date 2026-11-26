@@ -1,115 +1,94 @@
 /**
  * @file TradeService.h
- * @brief 거래 서비스입니다. 상태 기계는 저장소 위의 거래 레코드에서 동작하고, 요청마다 저장 작업 하나를 만듭니다. 서버 프로세스마다 하나입니다.
- * @details 저장 작업은 읽기, 상태 기계, 버전 조건 쓰기 순서로 진행하며 정산이면 원장 분개를 같은 커밋에 넣는다.
- *          - 서비스 스레드 하나에서 부른다. 결과는 요청 태그와 함께 `takeCompletions` 로, 바뀐 거래는 `pollUpdates` 로 회수한다. 바인딩이 두 당사자에게 알리며 다른 서버의 상대에게는 버스로 알린다.
- *          - 상태가 저장소에 있으므로 상대가 다른 서버에 접속해 있어도 그 서버의 서비스가 같은 레코드를 버전 조건으로 바꾼다. 주인 서버를 거치지 않는다.
- *          - 기동할 때 `recoverOwnedTrades` 가 이 서버가 연 열린 거래를 ServerRestart 로 닫는다. 아무것도 움직이지 않았으므로 안전하다.
- *          - 시한은 이 서비스가 본 거래의 마지막 변경 시각에 시한을 더한 값이다. 지나면 `tick` 이 닫기를 맡긴다. 다른 서버가 연 거래도 다음 신청 때 지연해서 닫힌다.
- *
- *          자체 MMO 서버가 거래 확정을 DB 트랜잭션 하나(두 인벤토리와 거래 기록)로 처리하는 것과 같은 구조이다. 언리얼에는 거래 시스템이 없다.
+ * @brief 거래 서비스의 스트림 바인딩입니다. 프로토콜 표(`OnlineProtocolService`, 영역 `kTrade`)로 섭니다.
+ * @details 요청을 `TradeLogic` 에 맡기고 완료는 응답으로, 바뀐 거래는 두 당사자에게 알림으로 보낸다.
+ *          - 상대는 표시 이름으로 찾는다. 이 프로세스에 접속한 계정은 `IAccountDirectory`(계정 키트)에서 찾고, 없으면 접속 상태 관리자(`AccountPresence`)에 묻는다. 서버가 여러 대일 때 쓰며 비동기이다.
+ *          - 상대가 이 프로세스에 없으면 알림을 접속 상태 관리자에 맡긴다(버스). 상태가 저장소에 있으므로 상대 서버의 바인딩이 같은 레코드를 바꾼다. 주인 서버를 거치지 않는다.
+ *          - 원격 설정 `feature.trade_enabled`(기본값은 켬)가 꺼져 있으면 모든 요청이 `kFeatureDisabled` 로 끝난다. 계정이 떠나면 그 계정의 열린 거래를 닫는다(PartyLeft).
  */
 #pragma once
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
-#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresenceTracker.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/IBalanceChangedListener.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProtocolService.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeLogic.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountDirectory.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 namespace sw
 {
-    struct TradeCallInput;
+    class MetricRegistry;
 
-    class ServiceStore;
-
-    /** @brief 거래 서비스의 작업 종류입니다. */
-    enum class TradeOperation : uint8
-    {
-        Invite = 0,
-        Respond,
-        SetOffer,
-        Lock,
-        Confirm,
-        Cancel,
-        Expire,
-        Leave,
-        Recover
-    };
-
-    /** @brief 끝난 요청 하나입니다. */
-    struct TradeCompletion
-    {
-        TradeSnapshot        _snapshot{};
-        LedgerTransferResult _ledger{}; ///< 정산 결과이다. 이동 뒤 잔액이며 게임이 미러에 넣는다
-        uint64               _requestTag{ 0 };
-        TradeServiceResult   _result{ TradeResult::Ok };
-        TradeOperation       _operation{ TradeOperation::Invite };
-    };
-} // namespace sw
-
-namespace sw
-{
     /**
      * @class TradeService
-     * @brief 거래 서비스입니다.
+     * @brief 거래 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_KIT_SERVER_API TradeService
+    class SW_KIT_SERVER_API TradeService final : public OnlineProtocolService<TradeService, TradeSessionRecord>
     {
     public:
+        static constexpr const utf8* kFeatureFlag = "feature.trade_enabled";
         TradeService();
 
-        /** @brief 넘긴 객체는 모두 빌려 씁니다. @p serverID 는 이 서버 프로세스의 id 이며 0이 아니어야 합니다. 재시작 복구 인덱스에 씁니다. */
-        void initialize( ServiceStore& store, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings );
+        /** @brief 넘긴 객체는 빌려 씁니다. @p pPresence 는 서버가 여러 대일 때만 넘기며, 없으면 nullptr 이고 서버가 한 대입니다. */
+        void initialize( TradeLogic* pTradeLogic, const IAccountDirectory* pDirectory, AccountPresence* pPresence, MetricRegistry* pMetricRegistry = nullptr );
         void shutdown();
-        /** @brief 이 서버가 연 열린 거래를 모두 닫습니다. 기동할 때 한 번 부르며 닫힌 거래는 `pollUpdates` 로 회수합니다. 저장소 실패 · 충돌로 다 닫지 못하면 `update` 가 다시 합니다. */
-        void recoverOwnedTrades( UnixMilliseconds nowMs );
+        /** @brief 정산으로 바뀐 잔액을 알릴 창구(경제 키트)를 겁니다. 빌려 쓰며 없으면 알리지 않는다. */
+        void setBalanceNotification( IBalanceChangedListener* pBalanceNotification ) { _pBalanceNotification = pBalanceNotification; }
 
-        void invite( AccountID fromID, AccountID toID, UnixMilliseconds nowMs, uint64 requestTag );
-        void respondInvite( AccountID responderID, uint64 tradeID, bool bAccept, UnixMilliseconds nowMs, uint64 requestTag );
-        void setOffer( AccountID actorID, uint64 tradeID, const vector<TradeLeg>& listLeg, UnixMilliseconds nowMs, uint64 requestTag );
-        void lock( AccountID actorID, uint64 tradeID, UnixMilliseconds nowMs, uint64 requestTag );
-        void confirm( AccountID actorID, uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, UnixMilliseconds nowMs, uint64 requestTag );
-        void cancel( AccountID actorID, uint64 tradeID, UnixMilliseconds nowMs, uint64 requestTag );
-        /** @brief 계정이 떠나거나 제재됐을 때 부릅니다. 그 계정의 열린 거래를 닫으며 완료는 없고 변경만 발생합니다. */
-        void closeForAccount( AccountID accountID, TradeCloseReason reason, UnixMilliseconds nowMs );
-        /** @brief 아는 거래의 시한을 확인합니다. */
-        void update( UnixMilliseconds nowMs );
+        // 프로토콜 표의 메서드 - 결과는 호출 번호로 `takeCompletions` 에서 받는다.
+        void handleCall( OnlineServerCall<TradeMethod::Invite> call, const OnlineCallContext& context, const TradeInviteRequest& request );
+        void handleCall( OnlineServerCall<TradeMethod::Respond> call, const OnlineCallContext& context, const TradeRespondRequest& request );
+        void handleCall( OnlineServerCall<TradeMethod::SetOffer> call, const OnlineCallContext& context, const TradeOfferRequest& request );
+        void handleCall( OnlineServerCall<TradeMethod::Lock> call, const OnlineCallContext& context, const TradeIDRequest& request );
+        void handleCall( OnlineServerCall<TradeMethod::Confirm> call, const OnlineCallContext& context, const TradeConfirmRequest& request );
+        void handleCall( OnlineServerCall<TradeMethod::Cancel> call, const OnlineCallContext& context, const TradeIDRequest& request );
 
-        void takeCompletions( vector<TradeCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
-        void pollUpdates( vector<TradeSnapshot>& outListUpdate ) { _updateBuffer.moveAllTo( outListUpdate ); }
+        // IOnlineServerService
+        void onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
+        void onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
 
-        int32 getPendingCount() const { return _store.getOpenCount(); }
-
-        /** @brief 이 서비스가 보고 있는 열린 거래 수입니다(시한 감시 대상). 서버 종료 드레인이 끝나기를 기다린다. */
-        int32                     getOpenTradeCount() const { return static_cast<int32>( _mapTradeToDeadline.size() ); }
-        const TradeServiceConfig& getSettings() const { return _settings; }
+    protected:
+        /** @brief 원격 설정의 기능 플래그가 꺼져 있으면 본문을 읽기 전에 `kFeatureDisabled` 로 끝냅니다. */
+        uint16 validateRequest( OnlineServiceHost& host, const OnlineCallContext& context ) override;
 
     private:
-        static TradeCallInput makeCallInput( TradeOperation operation, uint64 requestTag, UnixMilliseconds nowMs );
-        /** @brief 거래 일 하나를 맡깁니다. 완료가 `applyCompletion` 으로 간다. */
-        void submitCall( TradeCallInput&& input );
-        /** @brief 저장소 일의 완료입니다. */
-        void applyCompletion( TradeCompletion&& completion, const vector<TradeSnapshot>& listChanged );
-        /** @brief 시한 처리가 저장소 실패로 졌습니다. 시한을 다시 넣는다. */
-        void retryExpiry( uint64 tradeID, UnixMilliseconds nowMs );
-        void submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, UnixMilliseconds nowMs, uint64 requestTag );
-        void trackTrade( const TradeSnapshot& snapshot );
+        struct PendingLookup
+        {
+            uint64           _callID{ 0 };
+            AccountID        _accountID{ kInvalidAccountID };
+            UnixMilliseconds _nowMs{ 0 };
+        };
+
+        /** @brief 이름 찾기가 답한 신청입니다. 다음 서비스 틱에 초대로 잇는다. */
+        struct FoundLookup
+        {
+            PendingLookup _lookup{};
+            AccountID     _peerID{ kInvalidAccountID }; ///< 찾은 상대(못 찾았으면 무효)
+        };
+
+        void        pushSnapshot( OnlineServiceHost& host, const TradeSnapshot& snapshot );
+        void        respondImmediately( uint64 callID, TradeServiceResult result );
+        static void collectBalances( const LedgerTransferResult& ledger, AccountID accountID, vector<TradeBalance>& outListBalance );
+        /** @brief 정산으로 바뀐 잔액을 계정마다 알립니다(경제 키트의 `BalanceChanged`). */
+        void notifySettledBalances( const LedgerTransferResult& ledger );
 
     private:
-        EventBuffer<TradeCompletion> _completionBuffer;
-        EventBuffer<TradeSnapshot>   _updateBuffer;
-        unordered_map<uint64, int64> _mapTradeToDeadline; ///< 이 서비스가 본 열린 거래에서 시한으로 가는 맵이다
-        TradeServiceConfig           _settings;
-        const ITradePolicy*          _pPolicy;
-        const ILedgerPolicy*         _pLedgerPolicy;
-        uint64                       _serverID;
-        uint64                       _nextSeed;
-        int64                        _recoverAtMs; ///< 다 하지 못한 기동 복구를 다시 할 시각이다(0 이면 없다)
-        ServiceStoreTracker          _store;       ///< 저장소에 맡긴 일의 앞이다
+        unordered_map<uint64, AccountID>            _mapCallToAccount; ///< 응답을 기다리는 호출의 계정이다. 정산 잔액을 그 계정 몫만 싣는다
+        unordered_map<uint64, LedgerTransferResult> _mapTradeToLedger; ///< 이번 틱에 정산된 거래의 이동 뒤 잔액이다. 알림에 싣는다
+        vector<TradeCompletion>                     _listCompletionScratch;
+        vector<TradeSnapshot>                       _listUpdateScratch;
+        vector<FoundLookup>                         _listFound; ///< 이름 찾기가 답한 신청이다. 다음 서비스 틱에 초대로 이어 간다
+        vector<FoundLookup>                         _listFoundScratch;
+        TradeLogic*                                 _pTradeLogic;
+        const IAccountDirectory*                    _pDirectory;
+        IBalanceChangedListener*                    _pBalanceNotification; ///< 정산 잔액을 두 당사자의 지갑에 알린다(`setBalanceNotification`)
+        AccountPresenceTracker                      _presenceFinds;        ///< 상대 이름 찾기 · 다른 서버로의 알림(서버 여러 대일 때만 묶인다)
+        UnixMilliseconds                            _nowMs;
     };
 } // namespace sw

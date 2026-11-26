@@ -2,7 +2,7 @@
  * @file EditorSelfTestWatches.cpp
  * @brief 입력 흉내 진입점(`EditorClick` · `EditorDrag` …)로 만든 결과를 시나리오가 읽을 에디터 감시 값 몇 개입니다(열거형 프로퍼티 값, 오브젝트의 부모 깊이, 저장하지 않은 문서 수). 그리고 자체 테스트 통과 수(`Editor.TestRunnerPassCount`).
  * @details 값을 고르는 쪽(인스펙터 콤보, Hierarchy 끌어 놓기, 문서 패널 저장)이 바뀐 결과가 화면이 아니라 데이터에서 읽히게 한다. 대상은 `gv_editorWatchProperty` · `gv_editorWatchObject`
- *          (`EditorWatchSupport.h` 가 선언하는 시나리오용 전역 변수)가 정한다.
+ *          (`EditorWatchState.h` 가 선언하는 시나리오용 전역 변수)가 정한다.
  */
 #include "pch.h"
 
@@ -11,10 +11,10 @@
 #include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
-#include "Editor/SelfTest/EditorWatchSupport.h"
+#include "Editor/SelfTest/EditorWatchState.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/Component.h"

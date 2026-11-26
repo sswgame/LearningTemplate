@@ -52,10 +52,10 @@ namespace sw
         /** @brief 인스턴스에 XML 기본값을 리플렉션으로 주입합니다(루트 타입부터 파생 순). 여러 스레드가 함께 불러도 됩니다. */
         void apply( void* pInstance, const TypeInfo& typeInfo );
 
-        /** @brief 게임 gamesettings.xml 리소스 경로를 지정합니다. 비어 있으면 주입하지 않습니다. */
+        /** @brief 게임 gamesettings.xml 에셋 경로를 지정합니다. 비어 있으면 주입하지 않습니다. */
         void setPath( string_view path );
 
-        /** @brief 현재 게임 gamesettings.xml 리소스 경로를 반환합니다. */
+        /** @brief 현재 게임 gamesettings.xml 에셋 경로를 반환합니다. */
         string getPath() const;
 
         /**

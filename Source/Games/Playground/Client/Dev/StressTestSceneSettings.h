@@ -25,7 +25,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 #include "Engine/UI/Document/UIDocument.h"
 
 namespace sw

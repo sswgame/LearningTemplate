@@ -2,7 +2,7 @@
 
 #include "Engine/Window/GenericWindow.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -203,7 +203,7 @@ namespace sw
         outY                = MathUtil::min( workArea._position._y + row * frameHeight, bottomY );
     }
 
-    unique_ptr<GenericWindow> GenericWindow::createMainWindow( const utf8* pTitle, uint32 width, uint32 height, const CommandLineManager& commandLine )
+    unique_ptr<GenericWindow> GenericWindow::createMainWindow( const utf8* pTitle, uint32 width, uint32 height, const CommandLine& commandLine )
     {
         // 위치 인자는 둘 중 하나다 — 좌표(`-WinX` · `-WinY`, 둘 다)나 바둑판 칸(`-WinTile` · `-WinTileColumns`, 둘 다). 반쪽이나 둘을 함께 주면 플랫폼 값으로 채우지 않고 멈춘다.
         const bool bHasX           = commandLine.isArgumentProvided( CommandLineArgument::WINDOW_X );

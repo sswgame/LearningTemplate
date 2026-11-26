@@ -9,8 +9,8 @@
 #include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Backend/Model/EditorDrawReleaseQueue.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/View/EditorRenderViews.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -202,15 +202,15 @@ namespace sw::editor
             outProbe._channelCount = 1;
             return true;
         }
-        // G버퍼 첨부면 명세(`GBufferAttachmentSpec`)의 뜻으로 채널을 이름 짓고 값을 푼다(노멀은 옥타헤드럴을 풀어 단위 벡터) — 셰이더 읽기와 같은 식이다.
-        const GBufferAttachmentSpec* pSpec = GBufferLayout::findAttachment( pSelected->_name );
+        // G버퍼 첨부면 명세(`GBufferAttachmentDesc`)의 뜻으로 채널을 이름 짓고 값을 푼다(노멀은 옥타헤드럴을 풀어 단위 벡터) — 셰이더 읽기와 같은 식이다.
+        const GBufferAttachmentDesc* pDesc = GBufferLayout::findAttachment( pSelected->_name );
         outProbe._channelCount             = RenderTargetReadback::getChannelCount( pSelected->_format, false );
         for ( uint32 channelIndex = 0; channelIndex < 4; ++channelIndex )
-            outProbe._arrMeaning[channelIndex] = ( pSpec != nullptr && channelIndex < pSpec->_channelCount ) ? pSpec->_arrChannel[channelIndex]._pMeaning : nullptr;
-        if ( pSpec != nullptr )
+            outProbe._arrMeaning[channelIndex] = ( pDesc != nullptr && channelIndex < pDesc->_channelCount ) ? pDesc->_arrChannel[channelIndex]._pMeaning : nullptr;
+        if ( pDesc != nullptr )
         {
             outProbe._bGBuffer = SW_TRUE;
-            GBufferLayout::decodeTexel( *pSpec, value, outProbe._listDecodedValue );
+            GBufferLayout::decodeTexel( *pDesc, value, outProbe._listDecodedValue );
         }
         return true;
     }

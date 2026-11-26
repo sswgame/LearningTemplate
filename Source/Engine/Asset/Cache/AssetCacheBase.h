@@ -74,7 +74,7 @@ namespace sw
      */
     struct AssetMemoryEntry
     {
-        string _path{};              ///< 리소스 id. 경로가 키가 아닌 캐시(지어 나누는 값)는 `<종류>#<번호>` 다
+        string _path{};              ///< 에셋 id. 경로가 키가 아닌 캐시(지어 나누는 값)는 `<종류>#<번호>` 다
         uint64 _cpuBytes{ 0 };       ///< CPU 쪽 추정 바이트(객체 + 쥔 버퍼)
         uint64 _gpuBytes{ 0 };       ///< GPU 쪽 논리 바이트(텍스처 밉 · 메시 정점 · 인덱스). GPU 자원이 없으면 0
         uint32 _referenceCount{ 0 }; ///< 쥔 쪽 수(캐시 자신과 이 질의의 사본은 뺀다)
@@ -154,7 +154,7 @@ namespace sw
         virtual void clear() = 0;
 
         /**
-         * @brief 지금 쥔 @p relativePath 를 다시 읽습니다 — 합성 문맥(로드 축 태그 · 덮어쓰기 층)이 바뀌어 같은 파일이 다른 결과가 됐다(`ResourceComposition`). 다시 읽었으면 true 입니다.
+         * @brief 지금 쥔 @p relativePath 를 다시 읽습니다 — 합성 문맥(로드 축 태그 · 덮어쓰기 층)이 바뀌어 같은 파일이 다른 결과가 됐다(`AssetComposition`). 다시 읽었으면 true 입니다.
          * @details 핫 리로드(`AssetCacheReloadFunction`, 개발 전용)와 달리 배포 구성에도 있다 — 품질 · 언어를 바꾸는 것은 플레이어다. 기본은 다시 읽지 않는 캐시다:
          *          GPU 수명 · 쓰는 쪽의 수정이 있는 캐시(텍스처 · 머티리얼 · 메시 · 프리팹)는 다음 읽기가 새 결과를 본다. 공유 캐시(`SharedAssetCache`)는 새 판을 넣는다(`SharedAssetRef` 로 쥔 쪽이 새 판을 본다).
          */

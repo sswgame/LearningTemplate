@@ -89,7 +89,7 @@ namespace sw
 
             static const FieldRow& getRow( UIStyleField field ) { return kArrRow[field]; }
 
-            static bool isSameFont( const FontSpec& lhs, const FontSpec& rhs ) { return lhs._family == rhs._family && lhs._weight == rhs._weight && lhs._slant == rhs._slant; }
+            static bool isSameFont( const FontDesc& lhs, const FontDesc& rhs ) { return lhs._family == rhs._family && lhs._weight == rhs._weight && lhs._slant == rhs._slant; }
 
             /** @brief 필드 하나의 값이 같으면 true 입니다. 수치 필드는 표의 성분을 하나씩 견줍니다(`float4 ==` 와 같은 성분별 `==`). */
             static bool isSameValue( const WidgetStyle& lhs, const WidgetStyle& rhs, UIStyleField field )

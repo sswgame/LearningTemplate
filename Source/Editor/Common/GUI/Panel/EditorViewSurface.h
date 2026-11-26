@@ -10,7 +10,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Workspace/EditorViewTargetUtil.h"
+#include "Editor/Common/Workspace/View/EditorViewTargetUtil.h"
 
 #include "Engine/Graphics/RHI/RHIHandles.h"
 

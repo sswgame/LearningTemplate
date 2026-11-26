@@ -2,7 +2,7 @@
  * @file Main.cpp
  * @brief 온라인 부하 테스트 봇의 실행 파일 — 엔진(`DedicatedServer`)을 세우고, GameFramework · 키트 · 봇 모듈(`OnlineLoadBotCore`)을 이름으로 올려 봇 진입점을 부릅니다.
  * @details - 인자는 대시 수로 가른다: `-이름`(대시 하나 — `-log-file=<path>` · `-gv_…`)은 엔진 인자로 엔진이 읽고(모르면 기동 오류), `--이름`(대시 둘)은 봇 인자로
- *            봇 모듈이 읽는다(`LoadBotMain.cpp`). 종료 코드는 `LoadBotModuleEntry` 의 것이고, 엔진 · 모듈이 서지 못하면 3 이다.
+ *            봇 모듈이 읽는다(`LoadBotModuleEntry.cpp`). 종료 코드는 `LoadBotModuleEntry` 의 것이고, 엔진 · 모듈이 서지 못하면 3 이다.
  *          - 이 실행 파일은 Engine · ModuleManager · DevTools(개발 계층 — 단위 테스트 같은 헤드리스 작업의 등록자)만 링크한다. GameFramework · 키트 DLL 은 정적 초기화에서 이름 풀(`hashed_string`)을 쓰므로, 실행 파일이 직접 링크해
  *            main 전에 올라오면 DLL 초기화가 실패하고(0xC0000142) 로그 한 줄 없이 죽는다(Windows 는 오류 대화상자를 띄워 CTest 가 시간 초과까지 기다렸다).
  *            App · Server 처럼 엔진 기동 단계 `ModuleTypes` 에서 의존 순서대로 올리고, 올릴 때마다 그 모듈 이름으로 타입을 등록한다.
@@ -18,11 +18,11 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Engine.h"
-#include "Engine/Module/EngineABIStamp.h"
+#include "Engine/Module/EngineABIDigest.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
-#include "ModuleManager/Host/HostDevLayer.h"
 #include "ModuleManager/Host/HostLaunch.h"
+#include "ModuleManager/Host/IHostDevLayer.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "Programs/OnlineLoadBot/LoadBotModuleEntry.h"

@@ -3,11 +3,11 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordCodec.h"
 #include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 

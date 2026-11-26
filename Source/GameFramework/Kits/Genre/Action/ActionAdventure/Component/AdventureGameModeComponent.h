@@ -16,14 +16,14 @@
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureCampaign.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureVitals.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Grid/FacingDirection.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -54,7 +54,7 @@ namespace sw
         REFLECT_BODY();
         SW_REGISTERED_COMPONENT( AdventureGameModeComponent );
 
-        static constexpr FormatDef kStateFormat{ "VLDR" };
+        static constexpr FormatDesc kStateFormat{ "VLDR" };
 
         AdventureGameModeComponent();
         virtual ~AdventureGameModeComponent() override;

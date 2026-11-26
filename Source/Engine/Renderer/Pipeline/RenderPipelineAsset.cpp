@@ -11,14 +11,15 @@
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
+#include "Engine/Graphics/RHI/RHIConstants.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
-#include "Engine/Serialization/Format/ReflectedXMLFile.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {
@@ -163,15 +164,15 @@ namespace sw
         vector<RenderPassAttachment>    listAttachment;
         vector<RenderGraphResourceDesc> listResource;
         vector<RenderGraphPassDesc>     listFramePass;
-        for ( const DataPath& passRef : _desc._listRenderPassRef )
+        for ( const DataPath& passRef : _desc._listRenderFeatureRef )
         {
-            RenderPassAsset renderPass;
+            RenderFeatureAsset renderPass;
             if ( renderPass.loadFromXMLFile( AssetID{ passRef.get() } ) == false )
             {
                 SW_LOG_ERROR_ID( "RenderPipelineAsset.RenderPassRefNotLoaded", "[%#] render pass '%#' could not be loaded", sourcePath, passRef.get() );
                 return false;
             }
-            const RenderPassDesc& refDesc = renderPass.getDesc();
+            const RenderFeatureDesc& refDesc = renderPass.getDesc();
             listAttachment.insert( listAttachment.end(), refDesc._listAttachment.begin(), refDesc._listAttachment.end() );
             listResource.insert( listResource.end(), refDesc._listResource.begin(), refDesc._listResource.end() );
             listFramePass.insert( listFramePass.end(), refDesc._listFramePass.begin(), refDesc._listFramePass.end() );
@@ -693,7 +694,7 @@ namespace sw
             /**
              * @brief 2-0d) 시간 누적 패스(기록 칸 `_historyRole` 이나 지터 `_bTemporalJitter` 를 가진 패스)의 첫 출력은 기록(`_bHistory`)을 적어야 하고, 기록 첨부는 쓰는 패스가 하나다.
              *        기록은 그 패스가 끝에 출력을 복사한 것이다.
-             * @details 기록 · 기록 칸 · 지터는 패스 종류가 아니라 서술 칸으로 붙는다(`FrameViewResources` · `FramePassExecutor` 의 공통 단계). XML 에 시간 누적 패스를 더해도 코드를 고치지 않는다.
+             * @details 기록 · 기록 칸 · 지터는 패스 종류가 아니라 서술 칸으로 붙는다(`FrameViewResources` · `FrameRecorder` 의 공통 단계). XML 에 시간 누적 패스를 더해도 코드를 고치지 않는다.
              *          기록 칸은 아는 역할이고 이 패스의 입력 역할과 겹치지 않으며, 레지스트리로 거는 그래픽스 패스(역할 바인딩)만 적는다. 지터 패스는 하나이고 TAA 는 지터를 적는다.
              */
             static uint32 validateAttachmentHistories( const RenderPipelineDesc& desc, string_view sourcePath )
@@ -1198,7 +1199,7 @@ namespace sw
             }
 
             /**
-             * @brief 3-1) G버퍼 패스의 출력이 명세(`GBufferAttachmentSpec` 판 `kVersion`)와 같은가 — MRT 슬롯마다 첨부의 포맷 · 클리어 값.
+             * @brief 3-1) G버퍼 패스의 출력이 명세(`GBufferAttachmentDesc` 판 `kVersion`)와 같은가 — MRT 슬롯마다 첨부의 포맷 · 클리어 값.
              * @details 셰이더는 명세의 슬롯 순서 · 인코딩으로 쓰고(SV_TARGET0 ..) PSO 포맷도 명세에서 온다. 첨부 이름은 파이프라인이 고른다(역할로 읽는다).
              *          XML 의 포맷이 다르면 PSO 와 첨부가 어긋나고, 클리어 값이 다르면 "그려지지 않은 픽셀" 표시(알파 0)가 깨진다 — 로드 오류로 막는다.
              */
@@ -1211,18 +1212,18 @@ namespace sw
                         continue;
                     for ( uint32 slot = 0; slot < GBufferLayout::kAttachmentCount; ++slot )
                     {
-                        const GBufferAttachmentSpec& spec           = GBufferLayout::kArrAttachment[slot];
+                        const GBufferAttachmentDesc& attachmentDesc = GBufferLayout::kArrAttachment[slot];
                         const hashed_string&         outputName     = pass._listResolvedColorOutput[slot]._attachment;
                         const RenderPassAttachment*  pAttachment    = findAttachment( desc, outputName.view() );
-                        const bool                   bFormatMatches = pAttachment != nullptr && pAttachment->_format == spec._format;
+                        const bool                   bFormatMatches = pAttachment != nullptr && pAttachment->_format == attachmentDesc._format;
                         const float4                 clear          = pAttachment != nullptr ? pAttachment->_clearColor : float4{};
                         // 장면 색 칸(자체 발광)의 클리어는 파이프라인의 배경색이다 — 표가 정하지 않는다.
-                        const bool bClearMatches = pAttachment != nullptr && ( spec._bPipelineClear != 0 || ( clear._x == spec._clearColor._x && clear._y == spec._clearColor._y &&
-                                                                                                              clear._z == spec._clearColor._z && clear._w == spec._clearColor._w ) );
+                        const bool bClearMatches = pAttachment != nullptr && ( attachmentDesc._bPipelineClear != 0 || ( clear._x == attachmentDesc._clearColor._x && clear._y == attachmentDesc._clearColor._y &&
+                                                                                                                        clear._z == attachmentDesc._clearColor._z && clear._w == attachmentDesc._clearColor._w ) );
                         if ( bFormatMatches && bClearMatches )
                             continue;
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.GBufferLayoutMismatch", "[%#] pass '%#': G-buffer slot %# ('%#', %#) must be %# cleared to 0 by the G-buffer layout v%#%#",
-                                         sourcePath, pass._name, slot, outputName.c_str(), spec._pName, getEnumName( spec._format ), GBufferLayout::kVersion,
+                                         sourcePath, pass._name, slot, outputName.c_str(), attachmentDesc._pName, getEnumName( attachmentDesc._format ), GBufferLayout::kVersion,
                                          pAttachment == nullptr ? " - the attachment is not declared" : ( bFormatMatches ? " - its clear color differs" : " - its format differs" ) );
                         ++issueCount;
                     }
@@ -1238,7 +1239,7 @@ namespace sw
             static uint32 validateVelocityOutputs( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32                       issueCount{ 0 };
-                const GBufferAttachmentSpec& velocitySpec = GBufferLayout::kArrAttachment[GBufferLayout::kVelocitySlot];
+                const GBufferAttachmentDesc& velocitySpec = GBufferLayout::kArrAttachment[GBufferLayout::kVelocitySlot];
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
                     const vector<RenderGraphPassDesc::ResolvedAttachment>& listColor = pass._listResolvedColorOutput;
@@ -1688,7 +1689,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 공유 캐시의 로더입니다 — 리소스 id 로 읽고 검증한다(`RenderPipelineAsset::loadFromXMLFile`). */
+        /** @brief 공유 캐시의 로더입니다 — 에셋 id 로 읽고 검증한다(`RenderPipelineAsset::loadFromXMLFile`). */
         bool loadPipelineAsset( const AssetID& assetID, RenderPipelineAsset& outAsset )
         {
             return outAsset.loadFromXMLFile( assetID );
@@ -1699,11 +1700,11 @@ namespace sw
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// RenderPassAsset
+// RenderFeatureAsset
 // ------------------------------------------------------------------------------
 namespace sw
 {
-    bool RenderPassAsset::loadFromXMLFile( const AssetID& assetID )
+    bool RenderFeatureAsset::loadFromXMLFile( const AssetID& assetID )
     {
         _desc = {};
         return ReflectedXMLFile::loadDesc( assetID, _desc );

@@ -46,7 +46,7 @@ namespace sw::editor
         /** @brief 그리드가 마지막 프레임에 맨 위에 그린 액션 즐겨찾기 메서드 행 수입니다. */
         uint32 getFavoriteMethodRowCount() const { return _propertyGrid.getFavoriteMethodRowCount(); }
         /** @brief 그리드의 마지막 FUNCTION 호출 결과입니다. */
-        const InspectorInvokeResult& getLastInvokeResult() const { return _propertyGrid.getLastInvokeResult(); }
+        const PropertyGridInvokeResult& getLastInvokeResult() const { return _propertyGrid.getLastInvokeResult(); }
         /** @brief 그리드가 마지막 프레임에 값을 채운 프로퍼티 행 수입니다(`EditorPropertyGrid::getFilledRowCount`). */
         uint32 getFilledRowCount() const { return _propertyGrid.getFilledRowCount(); }
         /** @brief 그리드가 마지막 프레임에 화면 밖이라 높이만 둔 행 수입니다(`EditorPropertyGrid::getSkippedRowCount`). */
@@ -81,7 +81,7 @@ namespace sw::editor
          */
         void drawFavoritesSection();
         /**
-         * @brief 미리보기 창의 선택을 그립니다. 값 편집만 낸다 — 기록은 그 창의 스택이다(`InspectorEditRecorder`).
+         * @brief 미리보기 창의 선택을 그립니다. 값 편집만 낸다 — 기록은 그 창의 스택이다(`PropertyGridEditRecorder`).
          * @details 프리팹 줄은 활성 씬의 명령이라 내지 않는다. 컴포넌트 카드 메뉴는 메인 카드와 같은 컴포넌트 메뉴다.
          */
         void drawPreviewSelection();

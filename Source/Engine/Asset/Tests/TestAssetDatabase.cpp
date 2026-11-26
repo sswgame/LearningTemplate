@@ -331,7 +331,7 @@ SW_TEST_CASE( AssetMetaTest, ImportOverrideRoundTrips )
 }
 
 /**
- * @brief [AssetMetaTest] 쓴 서술이 저장소의 정규형(`Scripts/lint/asset_identity.py` make_meta_text — 끝 줄바꿈 없음)과 바이트로 같다
+ * @brief [AssetMetaTest] 쓴 서술이 저장소의 정규형(`Scripts/lint/asset_guid.py` make_meta_text — 끝 줄바꿈 없음)과 바이트로 같다
  * @details 변이: 직렬화기의 끝 줄바꿈을 남기면 인스펙터가 예외를 지운 서술이 원본과 한 바이트 달라 editor.importsettings 의 왕복이 졌다.
  */
 SW_TEST_CASE( AssetMetaTest, TextMatchesTheRepositoryForm )
@@ -451,8 +451,8 @@ SW_TEST_CASE( AssetDatabaseTest, ScanCacheReopensOnlyChangedFiles )
 SW_TEST_CASE( AssetScanCacheTest, KeepsStableRowsOfItsOwnVersion )
 {
     const AbsolutePath path = sw::test::makeScratchPath( "cache.bin" );
-    const FileStamp    stable{ 4u, static_cast<uint64>( FileUtil::getCurrentFileWriteTime() - 3600 * FileUtil::kFileTimeTicksPerSecond ) };
-    const FileStamp    fresh{ 4u, static_cast<uint64>( FileUtil::getCurrentFileWriteTime() ) };
+    const FileStat     stable{ 4u, static_cast<uint64>( FileUtil::getCurrentFileWriteTime() - 3600 * FileUtil::kFileTimeTicksPerSecond ) };
+    const FileStat     fresh{ 4u, static_cast<uint64>( FileUtil::getCurrentFileWriteTime() ) };
     {
         AssetScanCache cache{ 1u };
         cache.record( "a.xml", stable, { uint8{ 7 } } );

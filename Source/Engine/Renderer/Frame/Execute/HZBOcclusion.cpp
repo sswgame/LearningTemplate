@@ -23,7 +23,7 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/HZBPyramid.h"
-#include "Engine/Renderer/Graph/FrameBufferTable.h"
+#include "Engine/Renderer/Graph/RenderGraphImportedResourceTable.h"
 
 namespace sw
 {
@@ -101,7 +101,7 @@ namespace sw
         return RenderGraphBufferUAV{ kName };
     }
 
-    void HZBOcclusion::registerFrameResources( FrameBufferTable& table, uint32 viewSlot, const FrameViewTarget& target )
+    void HZBOcclusion::registerFrameResources( RenderGraphImportedResourceTable& table, uint32 viewSlot, const FrameViewTarget& target )
     {
         if ( target._hzb.isValid() == false || target._occlusionTiles.isValid() == false )
             return;
@@ -154,7 +154,7 @@ namespace sw
             return false;
         }
 
-        // 깊이 사본은 방금 RT 로 썼고 복사 풀스크린이 끝에 RW 텍스처 상태로 넘겨 두었다(`FrameGraphExecutor::recordDepthHistory` · `recordCurrentDepthHZB` — 짓는 세 자리 모두 그 복사 뒤다).
+        // 깊이 사본은 방금 RT 로 썼고 복사 풀스크린이 끝에 RW 텍스처 상태로 넘겨 두었다(`FramePassRecorder::recordDepthHistory` · `recordCurrentDepthHZB` — 짓는 세 자리 모두 그 복사 뒤다).
         barriers.begin();
         // 깊이 사본은 에뮬 백엔드의 RW 칸 0 이다(네이티브는 셰이더가 루트 상수의 번호로 읽어 칸이 리플렉션에 없다).
         ComputeShaderParameters<HZBBuildShader> parameters;

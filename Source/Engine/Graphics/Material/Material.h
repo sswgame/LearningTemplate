@@ -14,9 +14,10 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Graphics/Material/MaterialDef.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/MaterialRenderBinding.h"
 #include "Engine/Graphics/Material/MaterialRenderVersion.h"
-#include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 
 namespace sw
@@ -25,7 +26,7 @@ namespace sw
     enum class ShaderTargetFormat : uint8;
 
     struct float4;
-    struct ResourceContext;
+    struct AssetComposeContext;
     struct ShaderBufferInfo;
     struct ShaderCompileResult;
     struct ShaderReflectionData;
@@ -66,7 +67,7 @@ namespace sw
     class SW_API Material final : public std::enable_shared_from_this<Material>
     {
     public:
-        /** @brief 머티리얼 파일의 확장자입니다. 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
+        /** @brief 머티리얼 파일의 확장자입니다. 에디터 종류 등록(`Editor/AssetTypeActions`)이 이 값을 씁니다. */
         static constexpr string_view kExtension = ".material";
         /** @brief 머티리얼 파일의 접미사입니다(쿠킹하지 않는다). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
@@ -130,11 +131,11 @@ namespace sw
         /** @brief 텍스처를 빌린 디바이스입니다(초기화 전이면 nullptr). 인스턴스가 덮어쓴 텍스처를 같은 디바이스로 요청한다. */
         IRHIDevice* getRHIDevice() const { return _pRHIDevice; }
 
-        /** @brief 리소스 id 의 머티리얼을 로드합니다(팩 · 소스 트리). */
+        /** @brief 에셋 id 의 머티리얼을 로드합니다(팩 · 소스 트리). */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /**
-         * @brief 디스크 파일에서 머티리얼을 로드합니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(`XMLDocument::loadFromFile`).
-         * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromFile` 에 넣으면 팩 전용 구성이 거절합니다.
+         * @brief 디스크 파일에서 머티리얼을 로드합니다. 에셋 id 로 풀지 않고 팩을 보지 않습니다(`XMLDocument::loadFromFile`).
+         * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 콘텐츠 루트 안 절대 경로를 `loadFromFile` 에 넣으면 팩 전용 구성이 거절합니다.
          */
         [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief 파일로 저장합니다. */
@@ -350,8 +351,8 @@ namespace sw
         bool getScalarParameter( hashed_string name, float32& outValue ) const;
 
     private:
-        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다. */
-        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceLabel, const ResourceContext& context );
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 에셋 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다. */
+        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceLabel, const AssetComposeContext& context );
 
         /** @brief `alphaCutoff` 칸이 값을 넣는 프로퍼티 이름입니다(셰이더의 `MaterialSurface._alphaCutoff` 를 채운다). */
         static constexpr const utf8* kAlphaCutoffProperty = "_alphaCutoff";

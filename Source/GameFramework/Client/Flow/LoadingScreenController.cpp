@@ -15,12 +15,12 @@
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 
-#include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionManager.h"
+#include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionController.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Foundation/Save/GameSaveSlots.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
@@ -250,7 +250,7 @@ namespace sw
         return true;
     }
 
-    void LoadingScreenController::update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenTransitionManager& transition )
+    void LoadingScreenController::update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenTransitionController& transition )
     {
         UIScreen* pScreen = findLoadingScreen();
         if ( pScreen != nullptr )

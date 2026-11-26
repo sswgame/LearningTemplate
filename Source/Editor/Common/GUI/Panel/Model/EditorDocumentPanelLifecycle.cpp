@@ -6,20 +6,20 @@
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
+#include "Editor/Common/Commands/Asset/EditorAssetClassifier.h"
 #include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/Panel/Model/EditorDocumentOpenUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditSpan.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 
@@ -38,7 +38,7 @@ namespace sw::editor
     {
         // 열 때 한 번 모은다 — 에디터의 에셋 색인에서 읽는다(디스크를 걷지 않는다).
         vector<EditorAssetIndexEntry> listEntry;
-        EditorAssetCatalog::collectEntriesOnUIThread( editor::getSubsystem<AssetPaths>(), listEntry );
+        EditorAssetClassifier::collectEntriesOnUIThread( editor::getSubsystem<AssetPaths>(), listEntry );
         EditorDocumentOpenUtil::collectCandidates( listEntry, _kind, [this]( string_view path )
         { return canAcceptDocumentPath( path ); }, _listOpenCandidate );
     }

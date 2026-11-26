@@ -29,7 +29,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 경로 표 하나(프로젝트 · 리소스 루트, 검색 우선순위 · 검색 루트, 호스트가 읽지 않는 에셋 묶음)입니다. 만든 뒤 바꾸지 않는다.
+         * @brief 경로 표 하나(프로젝트 · 콘텐츠 루트, 검색 우선순위 · 검색 루트, 호스트가 읽지 않는 에셋 묶음)입니다. 만든 뒤 바꾸지 않는다.
          * @details 읽는 쪽(로더 · 디코드 워커 · 게임 스레드)은 지금 표를 원자 포인터로 한 번 잡아 잠금 없이 읽는다 — 쓰는 쪽이 칸을 제자리에서 고치던 때는 읽는 쪽이
          *          반쯤 고친 벡터를 볼 수 있었다. 쓰기는 사본을 고쳐 새 표로 갈아 끼운다(`AssetPathsInternal::publishTable`).
          */
@@ -71,7 +71,7 @@ namespace sw
             AbsolutePath _folder; ///< 디스크 폴더(끝 `/` 없음)
         };
 
-        /** @brief 리소스 id 하나가 가리키는 디스크 자리입니다 — 도메인 루트 폴더와 그 아래 키(빈 키는 도메인 루트 자신). */
+        /** @brief 에셋 id 하나가 가리키는 디스크 자리입니다 — 도메인 루트 폴더와 그 아래 키(빈 키는 도메인 루트 자신). */
         struct DomainLocation
         {
             AbsolutePath _root;
@@ -91,7 +91,7 @@ namespace sw
 
     /**
      * @brief 객체 하나의 경로 상태 전부(경로 표 · 붙인 디스크 도메인 · 푼 경로 캐시)입니다 — 예전에는 이 파일의 프로세스 정적이었다.
-     * @details 정적이던 때는 서비스가 서기 전(리소스 루트 단계 · `setHostTarget` · `AssetManager::initialize`)과 엔진 없는 도구가 같은 한 벌을 나눠 썼고,
+     * @details 정적이던 때는 서비스가 서기 전(콘텐츠 루트 단계 · `setHostTarget` · `AssetManager::initialize`)과 엔진 없는 도구가 같은 한 벌을 나눠 썼고,
      *          캐시만 떼어 서비스로 보내면 한 상태가 두 주인으로 갈렸다. 이제 주인은 이 객체를 가진 쪽(`ContentRootSubsystem` · 도구) 하나다.
      */
     struct AssetPaths::State
@@ -195,7 +195,7 @@ namespace sw
                     const string token = FileUtil::normalizePath( tokenRaw ).str();
                     if ( token == "game" )
                     {
-                        // 게임 프리셋을 읽기 전(기동의 리소스 루트 단계 - 서비스 표가 서기 전이거나 아직 읽지 않았다)에는 활성 팩이 아직 없다 - 그때는 game/ 아래 팩만 순서에 넣는다.
+                        // 게임 프리셋을 읽기 전(기동의 콘텐츠 루트 단계 - 서비스 표가 서기 전이거나 아직 읽지 않았다)에는 활성 팩이 아직 없다 - 그때는 game/ 아래 팩만 순서에 넣는다.
                         const GameConfig*  pGameConfig = engine::findSubsystem<GameConfig>();
                         const AbsolutePath activePack  = pGameConfig != nullptr && pGameConfig->_packRoot.isSet() ? findDomainFolderUnder( root, pGameConfig->_packRoot.get() ) : AbsolutePath{};
                         if ( activePack.empty() == false )
@@ -291,7 +291,7 @@ namespace sw
             /** @brief 소문자 id 의 첫 성분이 붙인 도메인이면 그 폴더와 나머지 키입니다. */
             [[nodiscard]] static optional<DomainLocation> findMountedDiskDomain( State& state, string_view lowerRel )
             {
-                // 도메인 이름만인 id(`testproject`)는 그 폴더 자신이다 — 리소스 트리의 도메인(`engine` · `game/<팩>`)이 빈 키로 뿌리를 가리키는 것과 같다.
+                // 도메인 이름만인 id(`testproject`)는 그 폴더 자신이다 — 콘텐츠 트리의 도메인(`engine` · `game/<팩>`)이 빈 키로 뿌리를 가리키는 것과 같다.
                 const size_t firstSlash = lowerRel.find( '/' );
                 if ( firstSlash == 0 || lowerRel.empty() )
                     return nullopt;
@@ -373,14 +373,14 @@ namespace sw
              */
             [[nodiscard]] static optional<DomainLocation> mapGlobalIDToRoot( State& state, string_view lowerRel )
             {
-                // 0. 붙인 디스크 도메인(`mountDiskDomain`)은 리소스 루트와 무관하게 그 폴더로 푼다.
+                // 0. 붙인 디스크 도메인(`mountDiskDomain`)은 콘텐츠 루트와 무관하게 그 폴더로 푼다.
                 const bool bAssetID = lowerRel.empty() == false && FileUtil::isAbsolutePath( lowerRel ) == false;
                 if ( bAssetID )
                 {
                     if ( optional<DomainLocation> mounted = findMountedDiskDomain( state, lowerRel ); mounted.has_value() )
                         return mounted;
                 }
-                // 리소스 id 구간 판정은 접은 키 형식으로 한다(`PathKey` — 이미 접은 글이라 다시 접어도 같다).
+                // 에셋 id 구간 판정은 접은 키 형식으로 한다(`PathKey` — 이미 접은 글이라 다시 접어도 같다).
                 const PathKey key = FileUtil::normalizePath( lowerRel );
                 // 작업 도메인은 실행 뿌리 아래다(`getScratchFolderPath`) — 처음 쓸 때 생기는 폴더라 아직 없어도 도메인이다(빈 트리의 첫 쓰기가 상대 키로 거절되지 않게).
                 if ( bAssetID && FileUtil::startsWithPathComponent( key, AssetPaths::kScratchDomain ) )
@@ -486,7 +486,7 @@ namespace sw
     }
 
     /**
-     * @brief 상대 id 에 `..` 성분이 있으면 true 입니다 — 리소스 루트 밖으로 나가는 id 입니다.
+     * @brief 상대 id 에 `..` 성분이 있으면 true 입니다 — 콘텐츠 루트 밖으로 나가는 id 입니다.
      * @details 거르지 않으면 `engine/../../x` 같은 id 가 도메인 루트에 붙어 루트 밖 파일을 읽는다(언리얼은 경로를 가상
      *          경로 · 팩 마운트 지점 안으로 가둔다). 저장소의 데이터 · 코드에는 `..` 를 쓰는 id 가 없다.
      */
@@ -507,10 +507,10 @@ namespace sw
 
     expected<void> AssetPaths::validateLowercaseResourceName( string_view diskPath )
     {
-        // 리소스 id 는 소문자이고 디스크 이름이 곧 id 다 — 대문자 이름은 리눅스에서 id 로 다시 찾지 못하고 Windows 에서는 소문자 파일과 겹친다.
+        // 에셋 id 는 소문자이고 디스크 이름이 곧 id 다 — 대문자 이름은 리눅스에서 id 로 다시 찾지 못하고 Windows 에서는 소문자 파일과 겹친다.
         string relative;
         if ( FileUtil::tryMakePathUnderRoot( ProcessRoots::get()._content.str(), diskPath, relative ) == false )
-            return {}; // 리소스 트리 밖(Saved · 붙인 디스크 도메인 · 임시 폴더)은 이 규칙이 아니다
+            return {}; // 콘텐츠 트리 밖(Saved · 붙인 디스크 도메인 · 임시 폴더)은 이 규칙이 아니다
         const bool bUppercase = std::any_of( relative.begin(), relative.end(), []( utf8 ch )
         { return 'A' <= ch && ch <= 'Z'; } );
         if ( bUppercase )
@@ -522,7 +522,7 @@ namespace sw
     {
         string relative;
         if ( FileUtil::tryMakePathUnderRoot( ProcessRoots::get()._content.str(), diskPath, relative ) == false )
-            return false; // 리소스 트리 밖(Saved · 빌드 · 임시 폴더)의 읽기 전용은 잠금이 아니다
+            return false; // 콘텐츠 트리 밖(Saved · 빌드 · 임시 폴더)의 읽기 전용은 잠금이 아니다
         const string_view                      relativeView{ relative };
         fixed_string<constant::buffer::kMax32> scratchPrefix;
         formatstring( scratchPrefix.data(), scratchPrefix.capacity(), "%#/", kScratchDomain );
@@ -531,9 +531,9 @@ namespace sw
 
     bool AssetPaths::initialize()
     {
-        // 리소스 트리에 새로 생기는 이름은 소문자 — 쓰기 경로 하나가 막는다(입구마다 접는 것을 잊어도 대문자 파일이 생기지 않는다). 함수가 상태 없이 루트를 읽어 다시 걸어도 같다.
+        // 콘텐츠 트리에 새로 생기는 이름은 소문자 — 쓰기 경로 하나가 막는다(입구마다 접는 것을 잊어도 대문자 파일이 생기지 않는다). 함수가 상태 없이 루트를 읽어 다시 걸어도 같다.
         FileUtil::setCreateRule( &AssetPaths::validateLowercaseResourceName );
-        // 리소스 트리의 읽기 전용 파일은 체크아웃하지 않은 파일이다 — 지우기 · 옮기기 · 덮는 복사가 모두 Core 입구에서 거절된다(임포트 정리 · 옮기기 · 삭제가 따로 묻지 않는다).
+        // 콘텐츠 트리의 읽기 전용 파일은 체크아웃하지 않은 파일이다 — 지우기 · 옮기기 · 덮는 복사가 모두 Core 입구에서 거절된다(임포트 정리 · 옮기기 · 삭제가 따로 묻지 않는다).
         (void)FileUtil::setCheckoutRule( &AssetPaths::isUnderSourceControl );
         // `_bInitialized` 는 "시작했다" 가 아니라 "성공했다" 를 뜻한다 — 루트를 못 찾아 false 로 나가면 다음 호출이 다시 찾는다.
         // 예전에는 프로세스 정적이라 `call_once` 로 막았다. 이제 부르는 쪽은 이 객체의 소유자 하나(기동의 직렬 구간)라 겹치지 않는다.
@@ -545,7 +545,7 @@ namespace sw
         const AbsolutePath rootPath = ProcessRoots::get()._project;
         SW_LOG_INFO_ID( "AssetPaths.RootFolder", "RootFolder : %#", rootPath.str() );
         // Content/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
-        // 패키지에는 `Content` 가 없다(팩만) - 그때 느슨한 리소스 루트는 비어 있다.
+        // 패키지에는 `Content` 가 없다(팩만) - 그때 느슨한 콘텐츠 루트는 비어 있다.
         const AbsolutePath resourceRootFolderPath = FileUtil::isDirectory( ProcessRoots::get()._content ) ? ProcessRoots::get()._content : AbsolutePath{};
 
         vector<string> listSearchPriority = AssetPathsInternal::getTable( *_pState )._listSearchPriority;
@@ -555,7 +555,7 @@ namespace sw
         {
             // 읽지 못한 이유를 여기서 남긴다(읽는 함수는 정적 초기화 가드 안이라 로그하지 않는다). 가드 안에서 만든 값이므로 다시 읽어도 같은 문장이다.
             SW_LOG_ERROR_ID( "AssetPaths.BasePriorityInvalid", "%#", AssetPathsInternal::readBasePriority()._error );
-            return false; // 검색 목록 없이는 어떤 리소스도 찾지 못한다 — 플래그를 켜지 않아 false 를 반환한다.
+            return false; // 검색 목록 없이는 어떤 에셋도 찾지 못한다 — 플래그를 켜지 않아 false 를 반환한다.
         }
 
         // 루트 · 우선순위 · 검색 루트를 한 표로 한 번에 갈아 끼운다(읽는 쪽이 새 루트와 옛 검색 루트를 섞어 보지 않는다).
@@ -580,7 +580,7 @@ namespace sw
 
     optional<DiskPath> AssetPaths::findLooseFile( string_view resourceID ) const
     {
-        // 리소스 id 만 받는다 - 디스크 경로를 받아 있으면 그대로 돌려주던 길은 "id 인가 디스크 경로인가" 를 추측하게 했다(디스크 경로는 `AbsolutePath::tryMake`).
+        // 에셋 id 만 받는다 - 디스크 경로를 받아 있으면 그대로 돌려주던 길은 "id 인가 디스크 경로인가" 를 추측하게 했다(디스크 경로는 `AbsolutePath::tryMake`).
         // 루트 밖으로 나가는 id 는 풀지 않는다(`readResourceCommon` 과 같은 규칙).
         if ( resourceID.empty() || FileUtil::isAbsolutePath( resourceID ) || hasParentDirectoryComponent( resourceID ) )
             return nullopt;
@@ -619,7 +619,7 @@ namespace sw
                 found               = AssetPathsInternal::tryUnderRoot( location->_root, rawKey );
             }
             // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있고, 기록해 둔 id(쿠킹 입력 등)는 소문자뿐이라 원래 표기가 없다 — 폴더를 훑어 소문자가 같은 항목으로 푼다.
-            // 리소스 트리의 도메인은 소문자 규칙이라 훑지 않는다(없는 파일을 묻는 호출이 훑기를 부르지 않게).
+            // 콘텐츠 트리의 도메인은 소문자 규칙이라 훑지 않는다(없는 파일을 묻는 호출이 훑기를 부르지 않게).
             if ( found.empty() )
             {
                 if ( const optional<DomainLocation> mounted = AssetPathsInternal::findMountedDiskDomain( state, lowerFile ); mounted.has_value() )
@@ -666,7 +666,7 @@ namespace sw
         const string rawFolder = FileUtil::normalizeSeparators( folderID );
         for ( const AbsolutePath& root : AssetPathsInternal::getTable( state )._listResourceFolder )
         {
-            // 리소스 트리는 소문자 규칙이다. 원래 표기는 대소문자를 가리는 파일시스템에서 소문자로 못 찾았을 때만 본다.
+            // 콘텐츠 트리는 소문자 규칙이다. 원래 표기는 대소문자를 가리는 파일시스템에서 소문자로 못 찾았을 때만 본다.
             AbsolutePath found = AssetPathsInternal::tryUnderRoot( root, lowerFolder );
             if ( found.empty() && rawFolder != lowerFolder )
                 found = AssetPathsInternal::tryUnderRoot( root, rawFolder );
@@ -692,14 +692,14 @@ namespace sw
             return normalizeAssetID( builder.view() );
         }
         string domainID;
-        // 붙인 디스크 도메인(시나리오의 `Saved/` 등) 아래면 그 도메인의 id 다 — 리소스 입구는 OS 경로를 받지 않는다.
+        // 붙인 디스크 도메인(시나리오의 `Saved/` 등) 아래면 그 도메인의 id 다 — 에셋 입구는 OS 경로를 받지 않는다.
         if ( AssetPathsInternal::findDiskDomainID( *_pState, absolutePath, domainID ) )
             return normalizeAssetID( domainID );
         const AbsolutePath& root = getRootFolderPath();
         string              underRoot;
         if ( root.empty() || FileUtil::makeRelativePath( root.str(), absolutePath.str(), underRoot ) == false )
             return {};
-        // 리소스 트리 안의 `scratch/` 는 작업 도메인의 옛 자리에 남은 찌꺼기다 — 그 id 는 실행 뿌리의 사본을 가리키므로 돌려주지 않는다(디스크 경로라 OS 규칙으로 견준다).
+        // 콘텐츠 트리 안의 `scratch/` 는 작업 도메인의 옛 자리에 남은 찌꺼기다 — 그 id 는 실행 뿌리의 사본을 가리키므로 돌려주지 않는다(디스크 경로라 OS 규칙으로 견준다).
         if ( FileUtil::isPathAtOrUnderRoot( root.join( kScratchDomain ).str(), absolutePath.str() ) )
             return {};
         return normalizeAssetID( underRoot );
@@ -741,7 +741,7 @@ namespace sw
         }
         AbsolutePath result = location->makePath();
         // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템에서 소문자 키를 그대로 이으면 이미 있는 폴더 옆에 대소문자만 다른 새 폴더가 생기므로,
-        // 있는 성분은 디스크 표기를 쓰고 없는 성분부터는 id 의 표기를 쓴다. 리소스 트리의 도메인은 소문자 규칙이라 훑지 않고 새 성분도 소문자다(Windows 도 그대로 소문자로 잇는다).
+        // 있는 성분은 디스크 표기를 쓰고 없는 성분부터는 id 의 표기를 쓴다. 콘텐츠 트리의 도메인은 소문자 규칙이라 훑지 않고 새 성분도 소문자다(Windows 도 그대로 소문자로 잇는다).
         if constexpr ( AssetPathsInternal::kCaseSensitiveFileSystem )
         {
             if ( const optional<DomainLocation> mounted = AssetPathsInternal::findMountedDiskDomain( *_pState, id ); mounted.has_value() )
@@ -776,7 +776,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AssetPaths.MountInsideContentRoot", "Cannot mount disk domain '%#' - '%#' is inside the content root (packs-only builds would read loose assets)", domainName, diskFolder.str() );
             return false;
         }
-        // 락 안에서는 목록만 만지고, 오류는 이미 붙은 폴더를 적어 두었다가 락을 놓은 뒤에 남긴다(락을 쥔 채 로그를 부르지 않는다 — 로그 싱크가 무엇을 하든
+        // 락 안에서는 목록만 만지고, 오류는 이미 붙은 폴더를 적어 두었다가 락을 놓은 뒤에 남긴다(락을 쥔 채 로그를 부르지 않는다 — 로그 백엔드가 무엇을 하든
         // 이 락과 얽히지 않게 한다).
         State&       state = *_pState;
         AbsolutePath conflictFolder;

@@ -13,15 +13,15 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/Flow/GameSpeedControl.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameSpeedControl.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 namespace sw
@@ -40,7 +40,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr FormatDef kStateFormat{ "MVFM" };
+        static constexpr FormatDesc kStateFormat{ "MVFM" };
 
         FarmPlotGameModeComponent();
         virtual ~FarmPlotGameModeComponent() override;

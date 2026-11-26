@@ -14,14 +14,14 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorFrameStep.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
+#include "Editor/Common/Workspace/Notification/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
-#include "Editor/Common/Workspace/Play/EditorSceneGenerationSync.h"
+#include "Editor/Common/Workspace/Play/EditorSceneGenerationReset.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/View/EditorFrameStep.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -105,7 +105,7 @@ namespace sw::editor
         // 씬을 여는 모든 입구(메뉴 · 콘솔 `scene.open` · 복원 · 미저장 확인 뒤)가 여기로 온다 — 플레이 중에 열면 Stop 이 연 씬을 스냅샷으로 덮는다.
         if ( EditorSceneFileCommandsInternal::isPlayStoppedForSceneFile() == false )
             return false;
-        // 리소스 id 로만 연다 - 디스크 경로는 받는 쪽(대화상자 · 개발 명령)이 `AssetPaths::toAssetID` 로 바꿔 온다.
+        // 에셋 id 로만 연다 - 디스크 경로는 받는 쪽(대화상자 · 개발 명령)이 `AssetPaths::toAssetID` 로 바꿔 온다.
         const string loadPath = AssetPaths::normalizeAssetID( path );
         if ( loadPath.empty() )
         {
@@ -222,11 +222,11 @@ namespace sw::editor
 
     void EditorSceneFileCommands::syncAfterSceneGenerationChange()
     {
-        // 이전 씬을 가리키던 상태(선택, dirty, Undo, 프리팹 격리)를 버린다. 이유는 `EditorSceneGenerationSync::apply` 에 있다.
+        // 이전 씬을 가리키던 상태(선택, dirty, Undo, 프리팹 격리)를 버린다. 이유는 `EditorSceneGenerationReset::apply` 에 있다.
         // 스택은 선택 조회(②): `apply` 가 nullptr 스택을 받는다(스택 없는 구성은 되돌릴 기록이 없다).
         EditorWorkspace& workspace = editor::getSubsystem<EditorWorkspace>();
         const bool       bStopped  = EditorPlaySession::isStopped();
-        const bool       bChanged  = EditorSceneGenerationSync::apply( workspace, editor::getSubsystem<SceneManager>().getSceneGeneration(), bStopped == false, editor::findSubsystem<CommandStack>() );
+        const bool       bChanged  = EditorSceneGenerationReset::apply( workspace, editor::getSubsystem<SceneManager>().getSceneGeneration(), bStopped == false, editor::findSubsystem<CommandStack>() );
         if ( bChanged && bStopped )
             workspace.captureSceneDiskBaseline();
     }
@@ -349,7 +349,7 @@ namespace sw::editor
                 AbsolutePath absolutePath;
                 if ( listArgument.size() != 1 || EditorAssetFileCommands::readSourceFileArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
-                // 씬은 리소스 id 로 연다 - 리소스 트리 · 붙인 디스크 도메인 밖의 파일은 씬의 소스가 될 수 없다.
+                // 씬은 에셋 id 로 연다 - 콘텐츠 트리 · 붙인 디스크 도메인 밖의 파일은 씬의 소스가 될 수 없다.
                 const string sceneID = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
                 if ( sceneID.empty() )
                 {

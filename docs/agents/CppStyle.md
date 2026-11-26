@@ -17,15 +17,15 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 - 초기값은 한 곳에: with a constructor, initialize every field there in declaration order, braces, one per line, leading `,`. An iterator pair takes parentheses.
 - Header defaults only for a `= default` / inline default constructor, a delegating constructor, or a type with no constructor.
 - A field default-initialization leaves indeterminate gets a value in every constructor (copy · move included) or a header default; byte buffers are exempt.
-- **Bit packing**: order fields to minimize padding; a flag is `uint8 _bX : 1`, kept together per access section (린트 `cpp-shape` 강제). An aggregate (built by braces, no constructor) keeps `bool _bX{ false }` — a C++17 bit-field cannot have a default member initializer; any other type with a flag writes the constructor. In a type with a constructor, `bool` + `NOLINT(sw-bool-flag): <reason>` only when its address is taken or it is atomic.
-- Declaration order: public fields; constructors; `initialize`/`shutdown`; `process`; getters/setters; private functions; private fields last (린트 `cpp-shape` 강제).
+- **Bit packing**: order fields to minimize padding; a flag is `uint8 _bX : 1`, kept together per access section (린트 `cpp-style` 강제). An aggregate (built by braces, no constructor) keeps `bool _bX{ false }` — a C++17 bit-field cannot have a default member initializer; any other type with a flag writes the constructor. In a type with a constructor, `bool` + `NOLINT(sw-bool-flag): <reason>` only when its address is taken or it is atomic.
+- Declaration order: public fields; constructors; `initialize`/`shutdown`; `process`; getters/setters; private functions; private fields last (린트 `cpp-style` 강제).
 
 ### Types, strings, functions
 
 - `auto` only for iterators, structured bindings or similarly complex types. Lambdas only when they buy performance. `const` wherever free.
 - **Strings**: `formatstring` and `%#` (no `operator+` — 컴파일 강제). Text used once: `fixed_string<constant::buffer::kMaxN>`; text kept or never cut (path, key, serialized): `StringBuilder::appendFormat`. No helper returns a formatted `string`. Booleans in text: `StringUtil::tryParseBool`.
 - No wrapper with one caller; change the existing function's shape.
-- **Inheritance: one base** (린트 `cpp-shape` 강제). Expose an interface by holding the implementation as a member and registering it (`SubsystemScope::exposeMember`, `SW_MODULE_PART`); a capability is a separate object holding a reference; a per-build choice is a CMake file choice.
+- **Inheritance: one base** (린트 `cpp-style` 강제). Expose an interface by holding the implementation as a member and registering it (`SubsystemScope::exposeMember`, `SW_MODULE_PART`); a capability is a separate object holding a reference; a per-build choice is a CMake file choice.
 - Split a class only into bundles with their own state and rules; never split a file for size alone.
 - Vectors: no erase-in-loop (mark, then `VectorUtil::removeIf` · `removeAtSwap`); dedupe with a set or `VectorUtil::sortUnique`, not `contains` before `push_back`.
 
@@ -34,8 +34,8 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 - Static registration tables are `RegistrationList` · `RegistrationSlot<T>` with `SW_DEFINE_*` / `SW_STATIC_REGISTRATION` registrars, removed at module unload; a cached reader compares `getGeneration()`.
 - A name-keyed registry does not check empty or duplicate names with its own `if`: `RegistrationList` (`bRequireName`), `NamedEntryRegistry<T>` (named static entries found across modules) or `NameRegistry`, and the caller reports `add`. Duplicate ids of one kind in XML are errors.
 - Subscriptions go through `RegistrationList::addSubscribed`, `ItemSubscriptionList<T>` or a `MulticastDelegate`; never turn an id back into an address.
-- 델리게이트는 `SW_DELEGATE_FUNCTION` · `SW_DELEGATE_METHOD` · `SW_DELEGATE_LAMBDA` 로 붙인다(린트 `cpp-shape` 강제). 꺾쇠 안 쉼표가 있으면 `SW_DECLARE_DELEGATE` 별칭.
-- Cannot go on: `reportFatalError( "...%#", value )` (below the log tier `SW_LOW_LEVEL_FATAL`), never `std::abort()`.
+- 델리게이트는 `SW_DELEGATE_FUNCTION` · `SW_DELEGATE_METHOD` · `SW_DELEGATE_LAMBDA` 로 붙인다(린트 `cpp-style` 강제). 꺾쇠 안 쉼표가 있으면 `SW_DECLARE_DELEGATE` 별칭.
+- Cannot go on: `reportFatalError( "...%#", value )` (below the log layer `SW_LOW_LEVEL_FATAL`), never `std::abort()`.
 - Never discard a graphics device result: `isVkSuccess` / `isHrSuccess`, `requireVk` / `requireHr`, or `FAILED()` with a comment (SDK types cannot be `[[nodiscard]]` — review keeps this).
 
 ## Constants
@@ -46,14 +46,14 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 | --- | --- |
 | One `.cpp` | That file's `XxxInternal` struct as `static constexpr` (or the function) |
 | One module | The owning type (`MeshAssetFormat::kExtension`) or the module namespace in its types header. No per-folder `*Constants.h` |
-| A contract between modules or backends | `sw::constant::<category>` in its layer's file (`Constants.h`, `EngineDefines.h`, `RHIDescriptors.h`, `ReflectionConstants.h`); shader ↔ C++ in `binding_slots.hlsli`. A per-side copy is the bug |
+| A contract between modules or backends | `sw::constant::<category>` in its layer's file (`Constants.h`, `EngineDefines.h`, `RHIConstants.h`, `ReflectionConstants.h`); shader ↔ C++ in `binding_slots.hlsli`. A per-side copy is the bug |
 
 - One home: math constants `MathUtil`; gravity `PhysicsSystem::getConfiguredGravity`; hashes `HashUtil`; FourCC `FourCCUtil::make`; units `constant::time::` · `constant::memory::` (never `1e9`, `1024 * 1024`); buffer sizes `constant::buffer::kMax*`, `constant::file::kMaxPathSize`.
 - **Sentinels:** "none" follows [Errors](#errors); a stored or wire "none" is `constant::invalid_index::*` or a domain name from it; "unlimited / default" is a named constant plus a predicate on the owning type. Naming a sentinel never changes saved or replicated bytes.
 - No aliases of another constant; a local name only when it adds meaning.
 - **Tuning values are data** (`PROPERTY` defaulted in the constructor, or the kit's settings · catalog); performance thresholds are named constants next to their use (`gv_*` if they must change without a rebuild); asset paths are data. Format, protocol and math tables stay in code.
 - A missing required value stops with an error — no fallback (`*OrDefault`, `fallback` parameters, discarded load results).
-- `kPascalCase` with the unit unless the type says it. Byte formats (save, state, cooked asset, cache, store record) declare one `static constexpr FormatDef kFormat{ "TAGS" };` (state sections `kStateFormat`) and `kExtension` on their owning type: an upgradable format passes its step array (the version is the step count), others raise the number. `FormatDef` writes, checks and refuses the head — no hand-written magic / version compare.
+- `kPascalCase` with the unit unless the type says it. Byte formats (save, state, cooked asset, cache, store record) declare one `static constexpr FormatDesc kFormat{ "TAGS" };` (state sections `kStateFormat`) and `kExtension` on their owning type: an upgradable format passes its step array (the version is the step count), others raise the number. `FormatDesc` writes, checks and refuses the head — no hand-written magic / version compare.
 - Literals stay literal in obvious `0` · `1` · `-1` · `2`, test expectations, table rows, log · assert strings, reflection metadata, all-bits masks.
 - **The ratchet** (`Config/Rules/Lint/MagicLiteralsBaseline.json`): grown → name it or move it to data; shrunk → `py -3 -m Scripts lint magic-literals --ratchet`; raise only with `--accept <file…>`; a false positive gets a `--self-check` case.
 - 프로세스 종료 코드는 `Config/Engine/ProcessExitCodes.json` 한 곳 + 생성기.
@@ -79,7 +79,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 
 먼저 주인 타입을 찾는다. 첫 "예" 에서 멈춘다.
 
-1. **주인 우선 — one type owns it?** A function over one type's data or invariants is its member (`static` / `private` as needed); static-only types or `vector<T>` functions beside a data type belong to it (린트 `cpp-shape` 규칙 4 강제); a `.cpp` state struct mutated by static functions becomes a class (린트 `cpp-shape` 규칙 10 강제).
+1. **주인 우선 — one type owns it?** A function over one type's data or invariants is its member (`static` / `private` as needed); static-only types or `vector<T>` functions beside a data type belong to it (린트 `cpp-style` 규칙 4 강제); a `.cpp` state struct mutated by static functions becomes a class (린트 `cpp-style` 규칙 10 강제). 주인이 열거형이면 멤버를 둘 수 없으니 그 옆 자유 함수(`getKeyName` · `findKeyByName`, Godot `keycode_get_string`)로 두고 `XxxUtil` 을 만들지 않는다.
 2. **No owner, several TUs** → a `XxxUtil` static struct in a header (never `Internal`).
 3. **No owner, one `.cpp`** → that file's anonymous namespace.
 
@@ -90,14 +90,14 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 
 - TU-only helpers: constants only → anonymous namespace; one function → a free function there with a file-unique name; more → one `XxxInternal` struct named after the TU (`D3D11RHIDevice.cpp` → `D3D11RHIDeviceInternal`).
 - One class definition per named `namespace` block.
-- One non-empty anonymous namespace per `.cpp` holding everything TU-local, no free `static` functions (린트 `cpp-shape` 규칙 3 강제).
+- One non-empty anonymous namespace per `.cpp` holding everything TU-local, no free `static` functions (린트 `cpp-style` 규칙 3 강제).
 
 ## Includes and layers
 
 - Headers prefer forward declarations (`ObjectFwd.h` · `ReflectionFwd.h`), never include ThirdParty headers. Exception: a backend folder's own headers (`Physics/Jolt`, `Graphics/RHI/<backend>`) that only that folder includes may include its SDK, like Unreal's module `Private/` headers; pimpl there only adds an indirection. Diet headers have a fan-in ceiling (린트 `header-include-limits` 강제); a diet commit adds the ceiling.
 - `.cpp` include order (clang-format 강제). Includes are full paths from a root or bare same-folder names.
 - Prefer `StdHeaders.h` · `PlatformOSHeaders.h`; heavy rarely-used standard headers are included by their user. Platform includes go in **one** `#if SW_PLATFORM_…` chain after the others.
-- **Layers:** a lower layer never includes an upper one (`#error` 껍데기 · 린트 `layer-includes` 강제). Fix the dependency, not the table; reach up through an interface or function pointer. Below `Log` report with `SW_LOW_LEVEL_*`.
+- **Layers:** a lower layer never includes an upper one (`#error` 가드 · 린트 `layer-includes` 강제). Fix the dependency, not the table; reach up through an interface or function pointer. Below `Log` report with `SW_LOW_LEVEL_*`.
 - A kit, editor extension or game sees other modules only through its manifest `_listDependency` closure; kit dependencies live only in `*.module.json`.
 - **Dedicated server** sees no `Engine/Renderer` · `UI` · `Audio` and no `Client/` folder: shared code reaches client work through interfaces (`IEngineRenderDriver`, `ISoundPlayer`, `IGameClientPart` …). The client builds no `Server/` folder; an in-process server starts through `IOnlineLocalServerFactory`.
 - **Game code** sees no `Engine/Graphics/RHI` · `Shader` header except `RHIEnums.h`; a game-visible GPU constant is its own constant with a `static_assert` in its `.cpp`.
@@ -198,5 +198,5 @@ Change the type or API so the shape cannot be written.
 2. **One fact known in two places.** One owner; the other side reads it.
 3. **Failure or truncation not returned as a value.** `sw::expected` / `[[nodiscard]]`.
 4. **Platform hooks that still compile when left out.** Pure virtual.
-5. **Saves and settings with no version upgrade.** `REFLECT( Version = N )` + `SW_TYPE_VERSION_PATCH`, `FormatDef` steps, `SW_ASSET_FORMAT_UPGRADE` (from release on; before release every version stays 0 — `format-release` only reports); runtime state is `PROPERTY( RuntimeState )` via `StateIO::reflected`.
+5. **Saves and settings with no version upgrade.** `REFLECT( Version = N )` + `SW_TYPE_VERSION_PATCH`, `FormatDesc` steps, `SW_ASSET_FORMAT_UPGRADE` (from release on; before release every version stays 0 — `serialization-compat` only reports); runtime state is `PROPERTY( RuntimeState )` via `StateIO::reflected`.
 6. **State changes handled by call-order rules.** Put the state in a value the next step reads.

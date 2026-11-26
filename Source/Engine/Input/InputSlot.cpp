@@ -32,7 +32,7 @@ namespace sw
 
         if ( StringUtil::equals( device, InputSlotInternal::kKeyPrefix ) )
         {
-            const Key key = KeyCodeUtil::fromName( name );
+            const Key key = findKeyByName( name );
             if ( key == Key::Unknown )
                 return false;
             outSlot = InputSlot::fromKey( key );
@@ -40,7 +40,7 @@ namespace sw
         }
         if ( StringUtil::equals( device, InputSlotInternal::kMousePrefix ) )
         {
-            const MouseButton button = MouseButtonUtil::fromName( name );
+            const MouseButton button = findMouseButtonByName( name );
             if ( button == MouseButton::Count )
                 return false;
             outSlot = InputSlot::fromMouseButton( button );
@@ -64,7 +64,7 @@ namespace sw
             const bool bPadInRange = 0 <= padIndex && padIndex < static_cast<int32>( kMaxGamepadSlot );
             if ( bPadInRange == false )
                 return false;
-            const GamepadButton button = GamepadButtonUtil::fromName( name );
+            const GamepadButton button = findGamepadButtonByName( name );
             if ( button == GamepadButton::Count )
                 return false;
             outSlot = InputSlot::fromGamepadButton( button, static_cast<uint8>( padIndex ) );
@@ -80,13 +80,13 @@ namespace sw
             case InputDeviceKind::Keyboard:
             {
                 StringBuilder<constant::buffer::kMax64> builder;
-                builder.appendFormat( "%#.%#", InputSlotInternal::kKeyPrefix, KeyCodeUtil::toName( static_cast<Key>( slot._controlIndex ) ) );
+                builder.appendFormat( "%#.%#", InputSlotInternal::kKeyPrefix, getKeyName( static_cast<Key>( slot._controlIndex ) ) );
                 return string( builder.view() );
             }
             case InputDeviceKind::Mouse:
             {
                 StringBuilder<constant::buffer::kMax64> builder;
-                builder.appendFormat( "%#.%#", InputSlotInternal::kMousePrefix, MouseButtonUtil::toName( static_cast<MouseButton>( slot._controlIndex ) ) );
+                builder.appendFormat( "%#.%#", InputSlotInternal::kMousePrefix, getMouseButtonName( static_cast<MouseButton>( slot._controlIndex ) ) );
                 return string( builder.view() );
             }
             case InputDeviceKind::Gamepad:
@@ -95,7 +95,7 @@ namespace sw
                 builder.append( InputSlotInternal::kGamepadPrefix );
                 if ( slot._deviceIndex != 0 )
                     builder.appendFormat( "%#", static_cast<uint32>( slot._deviceIndex ) );
-                const utf8* pName = GamepadButtonUtil::toName( static_cast<GamepadButton>( slot._controlIndex ) );
+                const utf8* pName = getGamepadButtonName( static_cast<GamepadButton>( slot._controlIndex ) );
                 builder.appendFormat( ".%#", pName != nullptr ? pName : "" );
                 return string( builder.view() );
             }

@@ -1,6 +1,6 @@
 /**
  * @file EditorAssetIndexEntry.h
- * @brief Resource 트리 분류의 결과 값 — 퀵 런처 항목과 리소스 카탈로그 개수(분류 동작은 `EditorAssetCatalog.h`).
+ * @brief Resource 트리 분류의 결과 값 — 퀵 런처 항목과 리소스 카탈로그 개수(분류 동작은 `EditorAssetClassifier.h`).
  * @details 값만 둔다: 백그라운드 잡(`EditorBackgroundIO.h`)과 패널 Model 이 결과를 값으로 들 때 분류 · 디스크 동작을 끌어오지 않게 가른다(MVVM View include 계약, `docs/agents/EditorUI.md`).
  */
 #pragma once
@@ -19,7 +19,7 @@ namespace sw::editor
         string          _category; ///< 종류의 단수 이름(`EditorAssetTypeRegistration::_pDisplayName`)
         string          _title;
         string          _detail;
-        string          _path; ///< 리소스 id(콘텐츠 브라우저 · 끌어 놓기와 같은 형태)
+        string          _path; ///< 에셋 id(콘텐츠 브라우저 · 끌어 놓기와 같은 형태)
     };
 } // namespace sw::editor
 

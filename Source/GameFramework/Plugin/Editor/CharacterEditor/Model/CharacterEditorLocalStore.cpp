@@ -6,8 +6,8 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
-#include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/View/EditorFrameStep.h"
 
 #include "Engine/Config/GameSelection.h"
 

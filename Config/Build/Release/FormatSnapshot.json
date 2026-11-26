@@ -1,5 +1,5 @@
 {
-    "_comment": "저장 형식 출시 스냅숏 — `py -3 -m Scripts format-release accept` 가 쓴다. released 가 false(출시 전)면 대조는 알리기만 하고, true 면 판을 올리지 않은 바뀜이 실패한다.",
+    "_comment": "저장 형식 출시 스냅숏 — `py -3 -m Scripts serialization-compat accept` 가 쓴다. released 가 false(출시 전)면 대조는 알리기만 하고, true 면 판을 올리지 않은 바뀜이 실패한다.",
     "released": false,
     "customization": {
         "Adventurer": {

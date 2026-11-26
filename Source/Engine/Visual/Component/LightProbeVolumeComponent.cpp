@@ -83,7 +83,7 @@ namespace sw
         return AABB{ center - half, center + half };
     }
 
-    shared_ptr<const SceneVoxelScene> LightProbeVolumeComponent::findRealtimeVoxelScene( uint64& outPrimitiveSetGeneration, uint64& outMeshChangeGeneration ) const
+    shared_ptr<const SceneVoxelizeInput> LightProbeVolumeComponent::findRealtimeVoxelScene( uint64& outPrimitiveSetGeneration, uint64& outMeshChangeGeneration ) const
     {
         const AABB bounds = computeRealtimeVoxelBounds();
         // 상자(볼륨을 옮기거나 키웠다) · 칸 크기가 그대로여야 캐시를 쓸 수 있다. 프리미티브 집합은 부르는 쪽이 세대로 따진다(바뀐 칸만 다시 칠한다).
@@ -94,7 +94,7 @@ namespace sw
         return bUsable ? _pRealtimeVoxelScene : nullptr;
     }
 
-    void LightProbeVolumeComponent::setRealtimeVoxelScene( shared_ptr<const SceneVoxelScene> scene, uint64 primitiveSetGeneration, uint64 meshChangeGeneration ) const
+    void LightProbeVolumeComponent::setRealtimeVoxelScene( shared_ptr<const SceneVoxelizeInput> scene, uint64 primitiveSetGeneration, uint64 meshChangeGeneration ) const
     {
         _pRealtimeVoxelScene           = std::move( scene );
         _realtimeVoxelSetGeneration    = primitiveSetGeneration;

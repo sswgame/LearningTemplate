@@ -1,7 +1,7 @@
 // SurvivalHorrorGameModeTest — 생존 공포 디렉터: 명령은 판이 열린 동안만 받고, 배치가 카탈로그 · 방과 다르면 열지 않으며, 열쇠 → 잠긴 문 → 전투 → 목표 방으로 이기고, 전투 중의 상태는 왕복한다(nogpu).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/File/FileUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -11,14 +11,14 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/Component/SurvivalHorrorGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 using namespace sw;
 
@@ -76,7 +76,7 @@ namespace
         static bool setProperty( SurvivalHorrorGameModeComponent& director, const utf8* pName, const string& text )
         {
             const PropertyInfo* const pProperty = SurvivalHorrorGameModeComponent::StaticType()->findPropertyInHierarchy( hashed_string( pName ) );
-            return pProperty != nullptr && SerializerUtil::applyPropertyText( *pProperty, MutableObjectAddress{ &director }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            return pProperty != nullptr && PropertySerializer::applyPropertyText( *pProperty, MutableObjectAddress{ &director }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) );
         }
 
         static SurvivalHorrorGameModeComponent* addDirector( GameObjectManager& manager, const SurvivalHorrorStage& stage )

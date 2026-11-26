@@ -100,12 +100,12 @@ namespace sw
         static bool isAllowedOutputPath( string_view path );
         /**
          * @brief 작업 폴더의 `Saved` 를 붙이는 디스크 도메인입니다. 녹화는 디스크 경로 `Saved/Automation/a.scenario.xml` 로 쓰고 id `saved/Automation/a.scenario.xml` 로 다시 읽습니다.
-         * @details 시나리오 입구는 리소스 id 만 받는다. Godot 의 `user://` 처럼 사용자 데이터 폴더를 도메인으로 붙인 자리다.
+         * @details 시나리오 입구는 에셋 id 만 받는다. Godot 의 `user://` 처럼 사용자 데이터 폴더를 도메인으로 붙인 자리다.
          */
         static constexpr string_view kSavedDomain = "saved";
         /** @brief @p workingFolder 아래 `Saved` 를 `kSavedDomain` 으로 붙입니다(없으면 만든다). 못 붙이면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool mountSavedDomain();
-        /** @brief 녹화 경로(`isAllowedOutputPath`)를 다시 돌릴 때의 리소스 id 로 바꿉니다. 허락되지 않은 경로면 빈 문자열입니다. */
+        /** @brief 녹화 경로(`isAllowedOutputPath`)를 다시 돌릴 때의 에셋 id 로 바꿉니다. 허락되지 않은 경로면 빈 문자열입니다. */
         static string makeReplayID( string_view outputPath );
         /** @brief 녹화 경로(`isAllowedOutputPath`)를 쓸 디스크 자리로 바꿉니다 — `Saved/` 는 작업 폴더가 아니라 이 실행의 저장 폴더다. 허락되지 않은 경로면 빈 경로입니다. */
         static AbsolutePath makeOutputDiskPath( string_view outputPath );

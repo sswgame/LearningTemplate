@@ -10,17 +10,17 @@
 	<Launch variable="gv_firstScene" value="game/playground/maps/grabcarry.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Grab.Held" target="Hand" is="none"/>
-	<Expect watch="Gimmick.OccupantWeight" target="Plate" equals="0"/>
+	<Expect watch="LogicCircuit.OccupantWeight" target="Plate" equals="0"/>
 
 	<DevCommand line="grab.pick Hand Crate"/>
 	<Expect watch="Grab.Held" target="Hand" is="Crate"/>
 	<DevCommand line="object.place Hand 2 1.5 0"/>
 	<WaitUntil watch="Object.DistanceTo" target="Crate" key="Hand" atMost="0.05" timeoutFrames="10"/>
-	<Expect watch="Gimmick.OccupantWeight" target="Plate" equals="0"/>
+	<Expect watch="LogicCircuit.OccupantWeight" target="Plate" equals="0"/>
 
 	<DevCommand line='exec Hand throwHeld "0 0 0"'/>
 	<Expect watch="Grab.Held" target="Hand" is="none"/>
-	<WaitUntil watch="Gimmick.OccupantWeight" target="Plate" near="40" tolerance="0.01" timeoutSeconds="3"/>
+	<WaitUntil watch="LogicCircuit.OccupantWeight" target="Plate" near="40" tolerance="0.01" timeoutSeconds="3"/>
 	<WaitUntil watch="Object.Y" target="Crate" atMost="0.3" timeoutSeconds="3"/>
 
 	<LoadScene path="guid:d9c0a74a5927680c5048ad84c27854d6" timeoutFrames="600"/>

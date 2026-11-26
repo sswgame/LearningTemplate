@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/Commands/Asset/EditorPrefabOverrideItem.h"
+#include "Editor/Common/Commands/Asset/PrefabOverrideItem.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 #include "Engine/Content/AssetID.h"
@@ -58,7 +58,7 @@ namespace sw::editor
         static ToolAssetLoadResult loadTileSet( string_view path, TileSetContent& outData, string& outStatus );
         /** @brief 타일셋을 씁니다(`TileSetContent::saveToXMLText`). 되읽지 못하는 내용이면 원본을 덮지 않고 false 입니다. */
         [[nodiscard]] static bool saveTileSet( AssetWriter& writer, string_view path, const TileSetContent& data );
-        /** @brief 도구 문서 경로(리소스 id 또는 절대 경로)에 파일이 있으면 true 입니다. 읽기(`load*`)와 같은 해석이다(R7) - 입력란의 "불러오기 전에 있나" 확인이 쓴다. */
+        /** @brief 도구 문서 경로(에셋 id 또는 절대 경로)에 파일이 있으면 true 입니다. 읽기(`load*`)와 같은 해석이다(R7) - 입력란의 "불러오기 전에 있나" 확인이 쓴다. */
         [[nodiscard]] static bool hasToolDocument( string_view path );
         /**
          * @brief SpriteClip JSON 을 읽습니다. path 가 비어 있으면 에디터 설정의 기본 파일을 씁니다. 결과는 `loadTileMap` 과 같은 세 가지입니다.
@@ -84,7 +84,7 @@ namespace sw::editor
 
         /**
          * @brief 인스턴스와 프리팹 기본값(CDO)의 컴포넌트 프로퍼티 차이를 모읍니다.
-         * @details 컴포넌트는 안정 키(`타입#n`)로 짝짓고, 값은 `SerializerUtil` 한 벌로 비교하고 기록한다. 타입 이름으로 짝지으면 같은 타입의
+         * @details 컴포넌트는 안정 키(`타입#n`)로 짝짓고, 값은 `PropertySerializer` 한 벌로 비교하고 기록한다. 타입 이름으로 짝지으면 같은 타입의
          *          두 번째 컴포넌트가 첫 번째의 원형과 비교되고, 비트필드를 바이트째 비교하면 같은 바이트의 다른 플래그까지 오버라이드로 보이므로 주의한다.
          */
         static void collectComponentOverrides( GameObject* pInstance, GameObject* pCdo, vector<PrefabOverrideItem>& outListOverride );

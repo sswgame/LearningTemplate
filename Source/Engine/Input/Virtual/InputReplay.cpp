@@ -9,7 +9,7 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -28,7 +28,7 @@ namespace sw
          * @brief 리플레이 파일 형식입니다. 프레임마다 `deltaTime(float32)`, `eventCount(uint32)`, `RawInputEvent` n 개가 이어집니다.
          * @details `RawInputEvent` 를 구조체째로 쓰므로 그 배치가 바뀌면 버전을 올린다(다른 버전은 읽지 않는다).
          */
-        constexpr FormatDef kReplayFormat{ "SWIR" };
+        constexpr FormatDesc kReplayFormat{ "SWIR" };
 
         struct InputReplayInternal
         {

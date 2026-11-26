@@ -1,0 +1,76 @@
+/**
+ * @file ServiceMailCampaign.h
+ * @brief 전체 우편(캠페인)입니다. 캠페인 레코드 하나(`mail_campaign`, 키는 id 16 진)와 계정마다의 수령 표식(`mail_campaign_claim`, 키 `<id 16 진>/<계정 16 진>`)을 둡니다.
+ * @details 운영의 "전 서버 우편" 은 계정마다 행을 만들지 않는다(수십만 쓰기가 된다). 레코드 하나와 받은 계정만의 표식("없어야 한다")으로 처리한다. 재원은 늘 발행이다.
+ *          GM 키트(GF_Admin)가 만들고(`stageCreate`), 우편함 키트(GF_Server_Mailbox)가 목록에 넣고 수령시킨다. 쓰는 쪽과 읽는 쪽이 다른 키트라 기반에 둔다.
+ *          저장소 스레드의 동기 함수다. 국내 MMO 의 "전체 우편 = 캠페인 + 수령 기록" 과 같은 모양.
+ */
+#pragma once
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/Name/hashed_string.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
+
+namespace sw
+{
+    template <typename TRecord>
+    class ServiceRecordTable;
+
+    /** @brief 캠페인 하나입니다. 캠페인 표(`mail_campaign`)의 레코드 형식이기도 하다. */
+    REFLECT()
+    struct SW_GF_API ServiceMailCampaign
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxAttachmentCount )
+        vector<ServiceMailAttachment> _listAttachment{};
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxTitleSize )
+        string _titleKey{};
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxBodySize )
+        string _body{};
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxSenderNameSize )
+        string _senderName{};
+        PROPERTY()
+        uint64 _campaignID{ 0 };
+        PROPERTY()
+        uint64 _actorID{ 0 }; ///< 만든 GM
+        PROPERTY()
+        int64 _startMs{ 0 };
+        PROPERTY()
+        int64 _endMs{ 0 }; ///< 이 시각부터 받을 수 없다(목록에서도 빠진다)
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bLiteralText{ SW_FALSE };
+
+        ServiceRecordUnknownFields _unknownProperties{};
+
+        bool isActive( int64 nowMs ) const { return _startMs <= nowMs && nowMs < _endMs; }
+
+        // 캠페인 레코드 · 수령 표식입니다(저장소 스레드). */
+        static const ServiceRecordTable<ServiceMailCampaign>& getCampaignTable();       ///< "mail_campaign"
+        static const ServiceIndexTable&                       getClaimTable();          ///< "mail_campaign_claim"
+        static const ServiceIndexTable&                       getCampaignExpiryTable(); ///< "mail_campaign_expiry" — 캠페인의 TTL 색인(`<끝>/<id>`)
+        static const ServiceIndexTable&                       getClaimExpiryTable();    ///< "mail_campaign_claim_expiry" — 수령 표식 묶음의 TTL 색인(`<끝>/<id>/`)
+        /** @brief 캠페인 레코드의 끝 시각을 읽습니다(TTL 쓸기 · 백필). */
+        [[nodiscard]] static bool readEndTimeMs( const ServiceRecord& record, int64& outTimeMs );
+        /** @brief 끝난 캠페인 레코드의 TTL 규칙입니다. 서비스가 주기마다 전부 읽는 표라 끝난 캠페인이 쌓이면 읽기도 커진다. */
+        static ServiceTTLRule makeCampaignTTLRule( int64 expireAfterMs );
+        /** @brief 끝난 캠페인의 수령 표식 묶음 TTL 규칙입니다(접두어 묶음 줄 하나가 그 캠페인의 표식 전부를 지운다). */
+        static ServiceTTLRule makeClaimTTLRule( int64 expireAfterMs );
+
+        /** @brief 캠페인을 붙입니다("없어야 한다"). 규칙 위반(id 0, 기간, 첨부 수, 금액, 글 길이)은 false 이고 아무것도 붙이지 않는다. */
+        [[nodiscard]] static bool stageCreate( const ServiceMailCampaign& campaign, ServiceTransaction& inoutTransaction );
+        /** @brief 모든 캠페인(id 순)을 @p outListCampaign 뒤에 붙입니다. 서비스가 주기마다 읽어 둡니다. 읽지 못한 레코드는 오류 로그와 함께 건너뛴다. */
+        [[nodiscard]] static ServiceStoreResult listCampaigns( IServiceStoreConnection& connection, vector<ServiceMailCampaign>& outListCampaign );
+        static string                           makeClaimKey( uint64 campaignID, uint64 accountID );
+        /** @brief 받은 캠페인 레코드를 읽습니다. 깨졌으면(표가 오류 로그를 남긴다) false 입니다. */
+        [[nodiscard]] static bool decode( const ServiceRecord& raw, ServiceMailCampaign& outCampaign );
+    };
+} // namespace sw

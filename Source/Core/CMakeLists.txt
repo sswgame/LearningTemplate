@@ -34,30 +34,30 @@ if(SW_SHIPPING_BUILD)
 endif()
 
 # ------------------------------------------------------------------------------
-# 2) 티어 표 — 폴더 목록을 CMake 에 또 적지 않고 `Config/Rules/Layers/CoreLayers.toml` 의 `[tier]`(폴더 = 숫자)와 `[subtier]`("폴더/하위" = 숫자)를
-#    그대로 읽는다. 파일의 티어는 그 폴더 경로의 가장 긴 표 키가 정한다(`Log/Sink/X.cpp` 는 `Log/Sink`). 표에 없는 폴더는 구성이 선다.
+# 2) 층 표 — 폴더 목록을 CMake 에 또 적지 않고 `Config/Rules/Layers/CoreLayers.toml` 의 `[layer]`(폴더 = 숫자)와 `[sublayer]`("폴더/하위" = 숫자)를
+#    그대로 읽는다. 파일의 층은 그 폴더 경로의 가장 긴 표 키가 정한다(`Log/Backend/X.cpp` 는 `Log/Backend`). 표에 없는 폴더는 구성이 선다.
 # ------------------------------------------------------------------------------
-set(core_tier_table "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/CoreLayers.toml")
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${core_tier_table}")
-file(STRINGS "${core_tier_table}" list_core_tier_line ENCODING UTF-8 REGEX "^\"?[A-Za-z0-9_/]+\"?[ \t]*=[ \t]*[0-9]+")
-foreach(tier_line IN LISTS list_core_tier_line)
-	string(REGEX MATCH "^\"?([A-Za-z0-9_/]+)\"?[ \t]*=[ \t]*([0-9]+)" ignored "${tier_line}")
-	set(core_tier_${CMAKE_MATCH_1} ${CMAKE_MATCH_2})
+set(core_layer_table "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/CoreLayers.toml")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${core_layer_table}")
+file(STRINGS "${core_layer_table}" list_core_layer_line ENCODING UTF-8 REGEX "^\"?[A-Za-z0-9_/]+\"?[ \t]*=[ \t]*[0-9]+")
+foreach(layer_line IN LISTS list_core_layer_line)
+	string(REGEX MATCH "^\"?([A-Za-z0-9_/]+)\"?[ \t]*=[ \t]*([0-9]+)" ignored "${layer_line}")
+	set(core_layer_${CMAKE_MATCH_1} ${CMAKE_MATCH_2})
 endforeach()
-if(NOT DEFINED core_tier_Network)
-	message(FATAL_ERROR "[Core] ${core_tier_table} 의 [tier] 에서 Network 의 티어를 읽지 못했다 — 소켓 링크(ws2_32)를 걸 부분을 가를 수 없다")
+if(NOT DEFINED core_layer_Network)
+	message(FATAL_ERROR "[Core] ${core_layer_table} 의 [layer] 에서 Network 의 층을 읽지 못했다 — 소켓 링크(ws2_32)를 걸 부분을 가를 수 없다")
 endif()
-if(NOT DEFINED core_tier_Log)
-	message(FATAL_ERROR "[Core] ${core_tier_table} 의 [tier] 에서 Log 의 티어를 읽지 못했다 — 로그가 있는 티어를 가를 수 없다")
+if(NOT DEFINED core_layer_Log)
+	message(FATAL_ERROR "[Core] ${core_layer_table} 의 [layer] 에서 Log 의 층을 읽지 못했다 — 로그가 있는 층을 가를 수 없다")
 endif()
 
-# sw_get_core_tier: `Source/Core` 기준 파일 경로의 티어(가장 긴 표 키). 바로 아래 파일이거나 표에 없는 폴더면 빈 값이다.
-function(sw_get_core_tier RELATIVE_PATH OUT_VAR)
+# sw_get_core_layer: `Source/Core` 기준 파일 경로의 층(가장 긴 표 키). 바로 아래 파일이거나 표에 없는 폴더면 빈 값이다.
+function(sw_get_core_layer RELATIVE_PATH OUT_VAR)
 	get_filename_component(folder "${RELATIVE_PATH}" DIRECTORY)
 	set(result "")
 	while(folder)
-		if(DEFINED core_tier_${folder})
-			set(result ${core_tier_${folder}})
+		if(DEFINED core_layer_${folder})
+			set(result ${core_layer_${folder}})
 			break()
 		endif()
 		get_filename_component(folder "${folder}" DIRECTORY)
@@ -66,10 +66,10 @@ function(sw_get_core_tier RELATIVE_PATH OUT_VAR)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 3) 소스를 티어로 가른다 — 티어마다 OBJECT 부분 `Core_tier<N>_objects` 하나(Engine 층 부분 `EngineLayer<N>` 과 같은 틀).
-#    단위 테스트(`<폴더>/Tests/`)와 `Source/Core` 바로 아래 파일은 테스트 틀(TestFramework)을 쓰므로 맨 위 티어 부분이 짓는다.
+# 3) 소스를 층으로 가른다 — 층마다 OBJECT 부분 `Core_layer<N>_objects` 하나(Engine 층 부분 `EngineLayer<N>` 과 같은 틀).
+#    단위 테스트(`<폴더>/Tests/`)와 `Source/Core` 바로 아래 파일은 테스트 틀(TestFramework)을 쓰므로 맨 위 층 부분이 짓는다.
 # ------------------------------------------------------------------------------
-set(list_core_tier "")
+set(list_core_layer "")
 set(list_core_top_source "")
 foreach(source IN LISTS list_core_source)
 	file(RELATIVE_PATH relative_source "${CMAKE_CURRENT_SOURCE_DIR}" "${source}")
@@ -77,110 +77,86 @@ foreach(source IN LISTS list_core_source)
 		list(APPEND list_core_top_source "${source}")
 		continue()
 	endif()
-	sw_get_core_tier("${relative_source}" source_tier)
-	if(source_tier STREQUAL "")
-		message(FATAL_ERROR "[Core] ${relative_source} 의 폴더가 티어 표(Config/Rules/Layers/CoreLayers.toml 의 [tier])에 없다 — 티어를 정해 넣는다")
+	sw_get_core_layer("${relative_source}" source_layer)
+	if(source_layer STREQUAL "")
+		message(FATAL_ERROR "[Core] ${relative_source} 의 폴더가 층 표(Config/Rules/Layers/CoreLayers.toml 의 [layer])에 없다 — 층을 정해 넣는다")
 	endif()
-	list(APPEND core_tier_source_${source_tier} "${source}")
-	list(APPEND list_core_tier ${source_tier})
+	list(APPEND core_layer_source_${source_layer} "${source}")
+	list(APPEND list_core_layer ${source_layer})
 endforeach()
-list(REMOVE_DUPLICATES list_core_tier)
-list(SORT list_core_tier COMPARE NATURAL)
-list(GET list_core_tier -1 core_top_tier)
-list(APPEND core_tier_source_${core_top_tier} ${list_core_top_source})
+list(REMOVE_DUPLICATES list_core_layer)
+list(SORT list_core_layer COMPARE NATURAL)
+list(GET list_core_layer -1 core_top_layer)
+list(APPEND core_layer_source_${core_top_layer} ${list_core_top_source})
 
-# 헤더마다 티어 — 껍데기(아래 4)와 티어별 pch(아래 5)가 읽는다. 바로 아래 헤더(pch · CoreMinimal 진입 헤더)는 티어가 없다.
+# 헤더마다 층 — 가드(아래 4)와 층별 pch(아래 5)가 읽는다. 바로 아래 헤더(pch · CoreMinimal 진입 헤더)는 층이 없다.
 sw_glob_source_tree(list_core_header RECURSE RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
 	"${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.inl")
-set(list_core_tiered_header "")
+set(list_core_layer_header "")
 foreach(header IN LISTS list_core_header)
 	if(NOT header MATCHES "/")
 		continue()
 	endif()
-	sw_get_core_tier("${header}" header_tier)
-	if(header_tier STREQUAL "")
-		message(FATAL_ERROR "[Core] ${header} 의 폴더가 티어 표(Config/Rules/Layers/CoreLayers.toml 의 [tier])에 없다 — 티어를 정해 넣는다")
+	sw_get_core_layer("${header}" header_layer)
+	if(header_layer STREQUAL "")
+		message(FATAL_ERROR "[Core] ${header} 의 폴더가 층 표(Config/Rules/Layers/CoreLayers.toml 의 [layer])에 없다 — 층을 정해 넣는다")
 	endif()
-	set(core_header_tier_${header} ${header_tier})
-	list(APPEND list_core_tiered_header "${header}")
+	set(core_header_layer_${header} ${header_layer})
+	list(APPEND list_core_layer_header "${header}")
 endforeach()
 
 # ------------------------------------------------------------------------------
-# 4) 위 티어 껍데기 — 부분 N 은 N 보다 위 티어의 헤더마다 같은 경로의 `#error` 파일을 include 자리 맨 앞에 둔다. 티어 N 의 .cpp 가 위 티어 헤더를
-#    include 하면(헤더를 거친 전이 include 도) 컴파일이 멈춘다. 예전에는 Log 아래 · 위 두 부분만 짓고 나머지 티어는 린트(`CoreTiers.py`)가 직접 include 를 봤다.
-#    헤더는 그 헤더를 include 하는 같은 · 아래 티어 .cpp 와 부분의 pch 를 컴파일할 때 걸린다(Engine 층 부분과 같은 틈 — 아무도 include 하지 않는 헤더는 보지 않는다).
+# 4) 위 층 가드 — 부분 N 은 N 보다 위 층의 헤더마다 같은 경로의 `#error` 파일을 include 자리 맨 앞에 둔다. 층 N 의 .cpp 가 위 층 헤더를
+#    include 하면(헤더를 거친 전이 include 도) 컴파일이 멈춘다. 쓰기 · 낡은 가드 지우기는 Engine · Editor 층과 같은 함수다(TargetCompileRules.cmake).
+#    헤더는 그 헤더를 include 하는 같은 · 아래 층 .cpp 와 부분의 pch 를 컴파일할 때 걸린다(Engine 층 부분과 같은 틈 — 아무도 include 하지 않는 헤더는 보지 않는다).
 # ------------------------------------------------------------------------------
-function(sw_write_core_tier_stubs PART TIER)
-	set(stub_root "${CMAKE_BINARY_DIR}/generated/sw/CoreLayerStubs/tier${TIER}")
-	set(list_stub "")
-	foreach(header IN LISTS list_core_tiered_header)
-		set(header_tier ${core_header_tier_${header}})
-		if(NOT header_tier GREATER TIER)
+function(sw_write_core_layer_guards PART LAYER)
+	set(guard_root "${CMAKE_BINARY_DIR}/generated/sw/CoreLayerGuards/layer${LAYER}")
+	set(list_guard "")
+	foreach(header IN LISTS list_core_layer_header)
+		set(header_layer ${core_header_layer_${header}})
+		if(NOT header_layer GREATER LAYER)
 			continue()
 		endif()
-		set(stub_content "#error \"Core tier ${header_tier} header cannot be included from tier ${TIER} Core code (Config/Rules/Layers/CoreLayers.toml). A lower tier must not see an upper one: move what you need down, or report through SW_LOW_LEVEL_REPORT.\"
+		sw_write_layer_guard(list_guard "${guard_root}/Core/${header}" "#error \"Core layer ${header_layer} header cannot be included from layer ${LAYER} Core code (Config/Rules/Layers/CoreLayers.toml). A lower layer must not see an upper one: move what you need down, or report through SW_LOW_LEVEL_REPORT.\"
 ")
-		set(stub_path "${stub_root}/Core/${header}")
-		set(old_stub "")
-		if(EXISTS "${stub_path}")
-			file(READ "${stub_path}" old_stub)
-		endif()
-		if(NOT old_stub STREQUAL stub_content)
-			file(WRITE "${stub_path}" "${stub_content}")
-		endif()
-		list(APPEND list_stub "${stub_path}")
 	endforeach()
-	# 헤더가 사라지거나 티어가 바뀌면 그 껍데기도 지운다(남으면 옮겨 온 아래 티어 헤더를 가린다).
-	set(manifest_path "${stub_root}.manifest")
-	if(EXISTS "${manifest_path}")
-		file(STRINGS "${manifest_path}" list_old_stub)
-		if(list_stub)
-			list(REMOVE_ITEM list_old_stub ${list_stub})
-		endif()
-		foreach(old_stub_path IN LISTS list_old_stub)
-			file(REMOVE "${old_stub_path}")
-		endforeach()
-	endif()
-	string(REPLACE ";" "
-" manifest_content "${list_stub}")
-	file(WRITE "${manifest_path}" "${manifest_content}
-")
-	target_include_directories(${PART} BEFORE PRIVATE "${stub_root}")
+	sw_apply_layer_guards(${PART} "${guard_root}" ${list_guard})
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 5) 티어 부분 — 한 번만 컴파일한다. ReflectionParser 는 Core STATIC 을 링크하고, Engine 은 같은 OBJECT 들을 넣어 Dev 에서 Engine.dll 로 export 한다
+# 5) 층 부분 — 한 번만 컴파일한다. ReflectionParser 는 Core STATIC 을 링크하고, Engine 은 같은 OBJECT 들을 넣어 Dev 에서 Engine.dll 로 export 한다
 #    (`Core` 의 `SW_CORE_OBJECTS` 속성이 목록이다). SW_EXPORTS: App · Editor(SW_IMPORTS)가 dllimport 할 수 있게 한다.
-#    pch: 부분마다 `CoreMinimal.h` 의 include 가운데 그 티어 이하만 담은 생성 헤더를 쓴다 — 소스의 `#include "pch.h"` 는 그대로 두고 생성 폴더만 다르다.
-#    위 티어 선언(티어 3 코드의 `formatString`, Log 아래의 `SW_LOG_*` …)을 pch 가 몰래 넣어 주지 않는다. Engine 층 부분처럼 pch 는 부분 수만큼 짓는다.
+#    pch: 부분마다 `CoreMinimal.h` 의 include 가운데 그 층 이하만 담은 생성 헤더를 쓴다 — 소스의 `#include "pch.h"` 는 그대로 두고 생성 폴더만 다르다.
+#    위 층 선언(층 3 코드의 `formatString`, Log 아래의 `SW_LOG_*` …)을 pch 가 몰래 넣어 주지 않는다. Engine 층 부분처럼 pch 는 부분 수만큼 짓는다.
 # ------------------------------------------------------------------------------
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/CoreMinimal.h" list_core_minimal_line ENCODING UTF-8 REGEX "^#include \"Core/[^\"]+\"")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/CoreMinimal.h")
 set(list_core_objects "")
-foreach(tier IN LISTS list_core_tier)
-	set(part_name Core_tier${tier}_objects)
-	set(pch_entry_dir "${CMAKE_BINARY_DIR}/generated/sw/pchentry/coretier${tier}")
-	set(pch_content "// generated by Source/Core/CMakeLists.txt — CoreMinimal.h 의 include 가운데 티어 ${tier} 이하\n#pragma once\n")
+foreach(layer IN LISTS list_core_layer)
+	set(part_name Core_layer${layer}_objects)
+	set(pch_entry_dir "${CMAKE_BINARY_DIR}/generated/sw/pchentry/corelayer${layer}")
+	set(pch_content "// generated by Source/Core/CMakeLists.txt — CoreMinimal.h 의 include 가운데 층 ${layer} 이하\n#pragma once\n")
 	foreach(include_line IN LISTS list_core_minimal_line)
 		string(REGEX MATCH "^#include \"Core/([^\"]+)\"" ignored "${include_line}")
-		set(included_tier ${core_header_tier_${CMAKE_MATCH_1}})
-		if(included_tier STREQUAL "")
-			message(FATAL_ERROR "[Core] CoreMinimal.h 의 ${CMAKE_MATCH_1} 티어를 모른다 — 티어 표를 고친다")
+		set(included_layer ${core_header_layer_${CMAKE_MATCH_1}})
+		if(included_layer STREQUAL "")
+			message(FATAL_ERROR "[Core] CoreMinimal.h 의 ${CMAKE_MATCH_1} 층을 모른다 — 층 표를 고친다")
 		endif()
-		if(NOT included_tier GREATER tier)
+		if(NOT included_layer GREATER layer)
 			string(APPEND pch_content "#include \"Core/${CMAKE_MATCH_1}\"\n")
 		endif()
 	endforeach()
 	file(CONFIGURE OUTPUT "${pch_entry_dir}/pch.h" CONTENT "${pch_content}" @ONLY)
 
-	add_library(${part_name} OBJECT ${core_tier_source_${tier}})
+	add_library(${part_name} OBJECT ${core_layer_source_${layer}})
 	set_target_properties(${part_name} PROPERTIES
 		POSITION_INDEPENDENT_CODE ON
 		FOLDER "Source/Core"
 	)
 	target_include_directories(${part_name} PRIVATE "${pch_entry_dir}") # `Source/Core` 자체는 include 경로가 아니다 — `#include "pch.h"` 만 이 생성 헤더로 푼다
 	sw_apply_target_layer_guard(${part_name} core) # 타깃 경계 — Core 는 Engine 과 그 위를 보지 못한다
-	sw_write_core_tier_stubs(${part_name} ${tier})
+	sw_write_core_layer_guards(${part_name} ${layer})
 	target_link_libraries(${part_name} PUBLIC sw_public_source_includes)
 	target_link_libraries(${part_name} PUBLIC sw_third_party_includes)
 	if(NOT SW_STATIC_MODULES) # Engine 이 공유 라이브러리일 때만 내보낸다
@@ -188,14 +164,14 @@ foreach(tier IN LISTS list_core_tier)
 	endif()
 	if(WIN32)
 		target_link_libraries(${part_name} PUBLIC bcrypt comdlg32 ole32 shell32 dbghelp synchronization)
-		# 소켓은 맨 위 티어 Network 만 쓴다 — 다른 부분이 Winsock 을 물려받지 않는다(Core STATIC · Engine 은 아래에서 그대로 링크한다).
-		if(tier EQUAL core_tier_Network)
+		# 소켓은 맨 위 층 Network 만 쓴다 — 다른 부분이 Winsock 을 물려받지 않는다(Core STATIC · Engine 은 아래에서 그대로 링크한다).
+		if(layer EQUAL core_layer_Network)
 			target_link_libraries(${part_name} PUBLIC ws2_32)
 		endif()
 	endif()
-	# `SW_LOG_TAG` · 등록자의 모듈 이름(`SW_REGISTRAR_MODULE` — Core 오브젝트가 들어가는 이미지 이름, Engine 과 같다)은 로그가 있는 티어만 정의한다.
+	# `SW_LOG_TAG` · 등록자의 모듈 이름(`SW_REGISTRAR_MODULE` — Core 오브젝트가 들어가는 이미지 이름, Engine 과 같다)은 로그가 있는 층만 정의한다.
 	# 부분마다 pch 를 따로 지으므로(clang 은 pch 와 `-D` 가 다르면 거부) 정의가 달라도 된다.
-	if(NOT tier LESS core_tier_Log)
+	if(NOT layer LESS core_layer_Log)
 		target_compile_definitions(${part_name} PRIVATE "SW_LOG_TAG=\"Engine\"" "SW_REGISTRAR_MODULE=\"Engine\"")
 	endif()
 	sw_configure_pch(${part_name} "${pch_entry_dir}/pch.h")
@@ -214,15 +190,15 @@ endforeach()
 # 롤백 시뮬레이션은 삼각함수를 `DeterministicMathUtil` 로 부른다. 표시 비용(FMA 합치기 없음 · 유니티 묶음에서 빠짐)은 재지 않았다.
 sw_glob_source_tree(list_deterministic_math_source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/Math/*.cpp")
 foreach(deterministic_source IN LISTS list_deterministic_math_source ITEMS Spatial/PolygonTriangulation.cpp)
-	sw_get_core_tier("${deterministic_source}" deterministic_tier)
-	if(NOT "${CMAKE_CURRENT_SOURCE_DIR}/${deterministic_source}" IN_LIST core_tier_source_${deterministic_tier})
-		message(FATAL_ERROR "[Core] ${deterministic_source} 가 티어 ${deterministic_tier} 부분 소스에 없다 — 결정성 표시(sw_mark_deterministic_sources)가 걸릴 타깃을 다시 정한다")
+	sw_get_core_layer("${deterministic_source}" deterministic_layer)
+	if(NOT "${CMAKE_CURRENT_SOURCE_DIR}/${deterministic_source}" IN_LIST core_layer_source_${deterministic_layer})
+		message(FATAL_ERROR "[Core] ${deterministic_source} 가 층 ${deterministic_layer} 부분 소스에 없다 — 결정성 표시(sw_mark_deterministic_sources)가 걸릴 타깃을 다시 정한다")
 	endif()
-	sw_mark_deterministic_sources(Core_tier${deterministic_tier}_objects ${deterministic_source})
+	sw_mark_deterministic_sources(Core_layer${deterministic_layer}_objects ${deterministic_source})
 endforeach()
 
 # ------------------------------------------------------------------------------
-# 6) Core STATIC — 파서가 링크하는 껍데기. Engine 은 OBJECT 들을 직접 가져간다
+# 6) Core STATIC — 파서가 링크하는 정적 라이브러리(층 부분의 오브젝트를 모은다). Engine 은 OBJECT 들을 직접 가져간다
 # ------------------------------------------------------------------------------
 set(list_core_object_file "")
 foreach(core_objects IN LISTS list_core_objects)
@@ -243,18 +219,18 @@ endif()
 add_dependencies(Core ${list_core_objects})
 set_property(TARGET Core PROPERTY SW_CORE_OBJECTS ${list_core_objects})
 
-# 힙 백엔드 라이브러리 — 백엔드 구현 파일이 든 티어 부분만 헤더를 보고, Core 오브젝트를 담는 쪽(Core STATIC · Engine)이 링크한다.
+# 힙 백엔드 라이브러리 — 백엔드 구현 파일이 든 층 부분만 헤더를 보고, Core 오브젝트를 담는 쪽(Core STATIC · Engine)이 링크한다.
 # Engine 은 오브젝트를 `$<TARGET_OBJECTS>` 로 가져가 부분의 링크 의존을 물려받지 못하므로 `SW_CORE_LINK_LIBRARIES` 속성으로 넘긴다(Source/Engine/CMakeLists.txt).
 set(list_core_link_library "")
 if(SW_MEMORY_BACKEND STREQUAL "mimalloc")
 	list(APPEND list_core_link_library sw_mimalloc)
 endif()
 if(list_core_link_library)
-	sw_get_core_tier("Memory/MemoryBackend${memory_backend_file}.cpp" memory_backend_tier)
-	target_link_libraries(Core_tier${memory_backend_tier}_objects PRIVATE ${list_core_link_library})
+	sw_get_core_layer("Memory/MemoryBackend${memory_backend_file}.cpp" memory_backend_layer)
+	target_link_libraries(Core_layer${memory_backend_layer}_objects PRIVATE ${list_core_link_library})
 	target_link_libraries(Core PRIVATE ${list_core_link_library})
 endif()
 set_property(TARGET Core PROPERTY SW_CORE_LINK_LIBRARIES ${list_core_link_library})
 
 list(LENGTH list_core_objects core_object_count)
-message(STATUS "[Core] STATIC - foundation, ${core_object_count} tier parts (ReflectionParser links Core; Engine shares the parts' objects)")
+message(STATUS "[Core] STATIC - foundation, ${core_object_count} layer parts (ReflectionParser links Core; Engine shares the parts' objects)")

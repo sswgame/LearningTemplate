@@ -2,8 +2,10 @@
 
 #include "Core/Delegate/Subscription.h"
 #include "Core/Network/Connection/NetEndpoint.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
+#include "Core/Network/Message/NetMessageRouter.h"
 #include "Core/Network/Message/NetMessageTable.h"
+#include "Core/Network/Message/NetMessageWriter.h"
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
 #include "Core/Network/Tests/NetTestUtil.h"
@@ -500,11 +502,11 @@ SW_TEST_CASE( NetMessageRouterTest, WorldGenerationReachesEveryClient )
 /**
  * @brief [NetMessageRouterTest] 표가 메시지 서술자의 방향에서 방향 마스크를 낸다 — 서버 쪽은 `ToServer` · `Both`, 클라이언트 쪽은 `ToClient` · `Both`
  */
-SW_TEST_CASE( NetMessageRouterTest, TableBuildsDirectionMaskFromMessageDefs )
+SW_TEST_CASE( NetMessageRouterTest, TableBuildsDirectionMaskFromMessageDescs )
 {
-    using Up                                = NetLimitedMessageDef<NetMessageDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>, 8>;
-    using Down                              = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
-    using Both                              = NetLimitedMessageDef<NetMessageDef<2, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 8>;
+    using Up                                = NetLimitedMessageDesc<NetMessageDesc<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>, 8>;
+    using Down                              = NetMessageDesc<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;
+    using Both                              = NetLimitedMessageDesc<NetMessageDesc<2, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 8>;
     using Table                             = NetMessageTable<NetMessageRange::kGame, Up, Down, Both>;
     constexpr NetMessageDirectionMask kMask = Table::makeDirectionMask<Up, Down, Both>();
     static_assert( kMask._toServerMask == 0x5u, "ToServer and Both travel to the server" );
@@ -659,7 +661,7 @@ namespace
     /** @brief 손 본문 메시지 하나를 받는 처리기 — 넘침을 보지 않고 Handled 를 돌려준다(빠뜨린 검사의 흉내). */
     struct NoOverflowCheckHandler
     {
-        using Message = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
+        using Message = NetMessageDesc<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
 
         NetHandleResult receive( Message, const NetMessageContext& context, BitReader& body )
         {
@@ -716,8 +718,8 @@ SW_TEST_CASE( NetMessageRouterTest, WriterSendsTypedMessagesOnlyOnTheirDescripto
  */
 SW_TEST_CASE( NetMessageRouterTest, HandWrittenTableMessagesTakeTheirChannelFromTheDescriptor )
 {
-    using Fixed         = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
-    using SenderChannel = NetMessageSenderChannelDef<1, NetMessageDirection::Both, NetChannelKind::Unreliable>;
+    using Fixed         = NetMessageDesc<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
+    using SenderChannel = NetMessageSenderChannelDesc<1, NetMessageDirection::Both, NetChannelKind::Unreliable>;
     using Table         = NetMessageTable<NetMessageRange::kGame, Fixed, SenderChannel>;
 
     test::LoopbackCluster pair( 81u );
@@ -754,11 +756,11 @@ SW_TEST_CASE( NetMessageRouterTest, HandWrittenTableMessagesTakeTheirChannelFrom
 namespace
 {
     /** @brief 열쇠(첫 값)가 준비됐을 때만 처리하는 보류 처리기입니다. 처리한 (열쇠, 값)을 순서대로 적습니다. */
-    class HoldingHandler final : public NetTableHandler<HoldingHandler, NetMessageTable<NetMessageRange::kGame, NetHeldMessageDef<NetLimitedMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1024>, 1000>>,
-                                                        NetHeldMessageDef<NetLimitedMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1024>, 1000>>
+    class HoldingHandler final : public NetTableHandler<HoldingHandler, NetMessageTable<NetMessageRange::kGame, NetHeldMessageDesc<NetLimitedMessageDesc<NetMessageDesc<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1024>, 1000>>,
+                                                        NetHeldMessageDesc<NetLimitedMessageDesc<NetMessageDesc<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1024>, 1000>>
     {
     public:
-        using Message = NetHeldMessageDef<NetLimitedMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1024>, 1000>;
+        using Message = NetHeldMessageDesc<NetLimitedMessageDesc<NetMessageDesc<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1024>, 1000>;
 
         struct Entry
         {
@@ -928,8 +930,8 @@ namespace
     /** @brief 월드 범위 표를 받는 처리기입니다 — 받은 값을 순서대로 적습니다. */
     struct WorldTestMessage
     {
-        using Order = NetLimitedMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1024>;
-        using Pose  = NetLimitedMessageDef<NetMessageDef<1, NetMessageDirection::Both, NetChannelKind::Unreliable>, 1024>;
+        using Order = NetLimitedMessageDesc<NetMessageDesc<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1024>;
+        using Pose  = NetLimitedMessageDesc<NetMessageDesc<1, NetMessageDirection::Both, NetChannelKind::Unreliable>, 1024>;
         using Table = NetWorldMessageTable<NetMessageRange::kGame, Order, Pose>;
     };
 

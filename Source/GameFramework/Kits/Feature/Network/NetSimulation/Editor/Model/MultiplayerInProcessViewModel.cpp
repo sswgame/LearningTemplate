@@ -5,8 +5,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/View/EditorRenderViews.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/EditorNetSimSession.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"

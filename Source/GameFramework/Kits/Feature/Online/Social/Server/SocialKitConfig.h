@@ -9,7 +9,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/GuildLogic.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 

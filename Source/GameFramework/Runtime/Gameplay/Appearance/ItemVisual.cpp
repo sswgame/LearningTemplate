@@ -18,6 +18,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearancePart.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 namespace sw

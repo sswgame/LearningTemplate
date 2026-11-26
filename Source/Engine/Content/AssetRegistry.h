@@ -1,6 +1,6 @@
 /**
  * @file AssetRegistry.h
- * @brief 런타임의 GUID ↔ 리소스 id 색인(`AssetRegistry`)과 참조 글 표기 `guid:<32자>` 입니다.
+ * @brief 런타임의 GUID ↔ 에셋 id 색인(`AssetRegistry`)과 참조 글 표기 `guid:<32자>` 입니다.
  * @details 정체성은 무작위 GUID(`AssetGUID`)이고 경로는 그 에셋이 지금 있는 자리일 뿐이다 — 참조는 GUID 를 적고(`AssetRef<T>` 의 저장 꼴), 읽을 때 이 색인으로 경로를 푼다.
  *          색인은 층을 마운트 순서(낮은 우선순위 먼저)로 합친다. 배포 구성은 마운트한 도메인 팩마다 `assetindex.xml`(`AssetPackIndex`)이 한 층이고, 개발 실행(느슨한 소스 트리)은
  *          저작 색인(`AssetDatabase::scan`) 하나가 층이다(`AssetManager::mountContent` 가 건다). 뒤 층(패치 · DLC)의 줄이 앞 층의 같은 GUID 를 이기고, 한 층 안의 겹침은 오류다.
@@ -19,7 +19,7 @@
 
 namespace sw
 {
-    /** @brief 색인 한 줄입니다 — 리소스 id 는 도메인부터 적은 전체 id(`engine/x.xml`)다. */
+    /** @brief 색인 한 줄입니다 — 에셋 id 는 도메인부터 적은 전체 id(`engine/x.xml`)다. */
     struct AssetRegistryEntry
     {
         AssetGUID _guid;
@@ -29,7 +29,7 @@ namespace sw
     /** @brief 참조 글 하나를 푼 것입니다(`AssetRegistry::readReferenceText`). */
     struct AssetReferenceTarget
     {
-        string              _path; ///< 지금 리소스 id(빈 글이면 "가리키지 않음")
+        string              _path; ///< 지금 에셋 id(빈 글이면 "가리키지 않음")
         optional<AssetGUID> _guid; ///< 정체성 — 색인에 없는 경로 글이면 없음
     };
 
@@ -50,7 +50,7 @@ namespace sw
 
     /**
      * @class AssetRegistry
-     * @brief 합친 GUID ↔ 리소스 id 색인입니다(값 형식). 프로세스 표는 `install` 로 걸고 `resolve` 로 묻는다 — 읽기는 로드 워커 · IO 스레드에서도 온다.
+     * @brief 합친 GUID ↔ 에셋 id 색인입니다(값 형식). 프로세스 표는 `install` 로 걸고 `resolve` 로 묻는다 — 읽기는 로드 워커 · IO 스레드에서도 온다.
      */
     class SW_API AssetRegistry
     {
@@ -66,9 +66,9 @@ namespace sw
          */
         [[nodiscard]] static expected<AssetRegistry> merge( const vector<AssetRegistryLayer>& listLayer );
 
-        /** @brief @p guid 의 리소스 id 입니다(복사). 그 GUID 의 에셋이 없으면 정체성 대체 줄을 따라간 에셋의 것이고, 그것도 없으면 없음입니다. */
+        /** @brief @p guid 의 에셋 id 입니다(복사). 그 GUID 의 에셋이 없으면 정체성 대체 줄을 따라간 에셋의 것이고, 그것도 없으면 없음입니다. */
         [[nodiscard]] optional<string> findPath( const AssetGUID& guid ) const;
-        /** @brief 리소스 id @p assetID 의 GUID 입니다. 대소문자는 가리지 않습니다. 없으면 없음입니다. */
+        /** @brief 에셋 id @p assetID 의 GUID 입니다. 대소문자는 가리지 않습니다. 없으면 없음입니다. */
         [[nodiscard]] optional<AssetGUID> findGUID( string_view assetID ) const;
         /** @brief 색인의 에셋 수입니다. */
         [[nodiscard]] size_t getCount() const { return _mapGUIDToPath.size(); }
@@ -85,9 +85,9 @@ namespace sw
         static void record( const AssetGUID& guid, string_view assetID );
         /** @brief 프로세스 표에서 @p oldAssetID 의 에셋을 @p newAssetID 로 옮깁니다(에디터 옮기기 · 이름 바꾸기 — GUID 는 그대로다). 그 경로가 색인에 없으면 false 입니다. */
         static bool move( string_view oldAssetID, string_view newAssetID );
-        /** @brief 프로세스 표에서 @p guid 의 리소스 id 입니다. 표가 없거나 줄이 없으면 없음입니다. */
+        /** @brief 프로세스 표에서 @p guid 의 에셋 id 입니다. 표가 없거나 줄이 없으면 없음입니다. */
         [[nodiscard]] static optional<string> resolve( const AssetGUID& guid );
-        /** @brief 프로세스 표에서 리소스 id @p assetID 의 GUID 입니다. 표가 없거나 줄이 없으면 없음입니다. */
+        /** @brief 프로세스 표에서 에셋 id @p assetID 의 GUID 입니다. 표가 없거나 줄이 없으면 없음입니다. */
         [[nodiscard]] static optional<AssetGUID> resolveGUID( string_view assetID );
 
         // ------------------------------------------------------------------------------
@@ -113,7 +113,7 @@ namespace sw
         /**
          * @brief 경로로 찾는 에셋 캐시(메시 · 프리팹 · 머티리얼 · 텍스처 · UI 글 · 물리 메시)의 키를 만드는 한 곳입니다 — 맵 키 꼴(`FileUtil::normalizePath`)로 접은 지금 경로다. GUID 참조 글도 받는다.
          * @details 캐시마다 접기를 따로 적으면 한쪽이 빠뜨려 같은 에셋이 두 칸에 올랐다(A-20). 키가 GUID 글이 아니라 경로인 까닭: 경로를 옮겨 적는 리다이렉트가 없어 경로와 GUID 가
-         *          일대일이고, 키는 곧 읽을 리소스 id 이자 파일 감시 사건의 이름이다(Godot 도 uid 를 경로로 풀어 경로로 ResourceCache 를 찾는다). GUID 키면 모든 조회가 색인 잠금을 한 번 더 탄다.
+         *          일대일이고, 키는 곧 읽을 에셋 id 이자 파일 감시 사건의 이름이다(Godot 도 uid 를 경로로 풀어 경로로 ResourceCache 를 찾는다). GUID 키면 모든 조회가 색인 잠금을 한 번 더 탄다.
          */
         [[nodiscard]] static string toCacheKey( string_view path );
 
@@ -122,7 +122,7 @@ namespace sw
 
     private:
         unordered_map<AssetGUID, string>    _mapGUIDToPath;
-        unordered_map<string, AssetGUID>    _mapPathToGUID; ///< 키는 소문자 리소스 id
+        unordered_map<string, AssetGUID>    _mapPathToGUID; ///< 키는 소문자 에셋 id
         unordered_map<AssetGUID, AssetGUID> _mapRedirect;   ///< 정체성 대체(옛 GUID → 끝 GUID, 사슬은 합칠 때 접는다)
     };
 } // namespace sw

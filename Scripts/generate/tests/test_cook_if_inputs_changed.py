@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from generate.cook_if_inputs_changed import fingerprint, CookIfInputsChangedCommand, split_commands  # noqa: E402
+from generate.cook_if_inputs_changed import compute_inputs_digest, CookIfInputsChangedCommand, split_commands  # noqa: E402
 
 
 def touch_later(path: Path, text: str) -> None:
@@ -73,9 +73,9 @@ class CookIfInputsChangedTest(unittest.TestCase):
         self.assertEqual(self.runs(), 5)   # 새 입력 파일
 
     def test_binary_folder_ignores_runtime_folders(self) -> None:
-        before = fingerprint([], [self.root / "Bin"])
+        before = compute_inputs_digest([], [self.root / "Bin"])
         (self.root / "Bin" / "Saved" / "log.txt").write_text("run", encoding="utf-8")
-        self.assertEqual(before, fingerprint([], [self.root / "Bin"]))
+        self.assertEqual(before, compute_inputs_digest([], [self.root / "Bin"]))
 
     def test_failure_runs_again_next_time(self) -> None:
         self.assertNotEqual(self.cook(exit_code=3), 0)

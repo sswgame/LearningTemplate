@@ -17,7 +17,7 @@ namespace sw
     /**
      * @struct FixedStringWarningGuard
      * @brief 이 스레드가 지금 `basic_fixed_string` 의 잘림 경고를 남기는 중인지 지키는 가드입니다.
-     * @details 잘림 경고는 로거를 부르고, 로그 싱크가 다시 `basic_fixed_string` 에 넘치게 쓰면 경고가 경고를 부른다(끝없는 재귀).
+     * @details 잘림 경고는 로거를 부르고, 로그 백엔드가 다시 `basic_fixed_string` 에 넘치게 쓰면 경고가 경고를 부른다(끝없는 재귀).
      *          가드가 서 있는 동안의 잘림은 경고 없이 자르기만 합니다. 용량이 다른 인스턴스끼리도 같은 플래그를 봐야 하므로
      *          템플릿 밖에 둡니다.
      */
@@ -342,7 +342,7 @@ namespace sw
          * @brief 용량 N 을 넘는 길이를 N 으로 잘라 반환합니다.
          * @details 단언은 실행을 멈추지 않으므로(Debug 는 브레이크, 그 밖은 로그만) 알리기만 하고 원래 길이로 복사하면 `_arrData` 뒤를
          *          덮어쓰는 버퍼 오버플로입니다. 넘치는 길이는 데이터에서 옵니다(긴 대사 · 긴 경로). 프로그래밍 계약 위반이 아니므로
-         *          단언으로 멈추지 않고, 잘라 낸 뒤 경고를 남깁니다. 경고는 Shipping 에도 남습니다. 경고 안에서 다시 넘치면(로그 싱크가
+         *          단언으로 멈추지 않고, 잘라 낸 뒤 경고를 남깁니다. 경고는 Shipping 에도 남습니다. 경고 안에서 다시 넘치면(로그 백엔드가
          *          fixed_string 에 쓰는 경우) 경고 없이 자릅니다(`FixedStringWarningGuard`).
          */
         static uint32 clampToCapacity( const T* pSource, size_t length )

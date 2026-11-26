@@ -9,8 +9,8 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw
 {
@@ -130,7 +130,7 @@ namespace sw
             SW_LOG_WARNING_ID( "DialogueGraph.CouldNotReadDialogue", "Could not read dialogue graph '%#'", path );
             return false;
         }
-        return readText( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
+        return readText( text, path, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool DialogueGraphAsset::loadFromDiskFile( const DiskPath& diskPath )
@@ -148,22 +148,22 @@ namespace sw
             SW_LOG_WARNING_ID( "DialogueGraph.CouldNotReadDialogue2", "Could not read dialogue graph file '%#'", diskPath.str() );
             return false;
         }
-        return readText( text, diskPath.str(), ResourceContext::forType( *StaticType() ) );
+        return readText( text, diskPath.str(), AssetComposeContext::forType( *StaticType() ) );
     }
 
     bool DialogueGraphAsset::saveToFile( const AbsolutePath& absPath ) const
     {
         if ( absPath.str().empty() )
             return false;
-        return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
+        return AssetComposer::saveText( absPath, AssetSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }
 
     bool DialogueGraphAsset::loadFromXMLText( string_view xmlView )
     {
-        return readText( xmlView, "<dialogue graph text>", ResourceContext::forType( *StaticType() ) );
+        return readText( xmlView, "<dialogue graph text>", AssetComposeContext::forType( *StaticType() ) );
     }
 
-    bool DialogueGraphAsset::readText( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    bool DialogueGraphAsset::readText( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
     {
         _listSpeaker.clear();
         _listNode.clear();

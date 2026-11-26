@@ -7,9 +7,9 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 namespace sw
 {
@@ -17,7 +17,7 @@ namespace sw
     {
         struct ConquestGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "CQGM" };
+            static constexpr FormatDesc kStateFormat{ "CQGM" };
 
             static constexpr int32   kStartBuilding = 0;    ///< 시작 건물의 번호 — 판을 열며 처음 짓는다
             static constexpr float32 kAutoPlayAxis  = 1.0f; ///< 자동 플레이의 지휘관 이동 축(오른쪽 — 적 쪽)
@@ -247,7 +247,7 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 판은 같은 카탈로그로 `initialize` 한 뒤에 읽는다(키트 계약). 꺼내기 표는 대입이 옮기지 않아 이 디렉터의 표가 그대로다.
-        if ( io.valueOpened( _world, [this]( ConquestWorld& world )
+        if ( io.valueOpened( _world, [this]( ConquestSimulation& world )
         { return _pCatalog != nullptr && world.initialize( *_pCatalog ); } ) )
             io.end();
     }

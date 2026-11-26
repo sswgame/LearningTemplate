@@ -2,7 +2,7 @@
  * @file SkirmishMatch.h
  * @brief RTS 교전 한 판의 규칙입니다. 지도 데이터(`SkirmishMap`: 절벽 · 시작 지점 · 처음 놓이는 유닛과 자원)로 판을 열고, 컴퓨터 상대(`RTSCommanderAI`), 정리 사냥, 상태 · 승패 로그를 맡습니다.
  *
- * @details 화면 · 입력을 모르는 순수 규칙이라 엔진 밖 하네스에서 그대로 돌려 볼 수 있습니다(`RTSWorld` · `RTSCommanderAI` 만 씁니다).
+ * @details 화면 · 입력을 모르는 순수 규칙이라 엔진 밖 하네스에서 그대로 돌려 볼 수 있습니다(`RTSSimulation` · `RTSCommanderAI` 만 씁니다).
  *          사람이 맡은 플레이어(`kHumanPlayer0` · `kHumanPlayer1` 깃발)는 AI 가 돌지 않습니다 — 혼자 하면 0 번만, 2 인 락스텝이면 둘 다, 자동 플레이면 아무도 사람이 아닙니다.
  *          모두 AI 면 시작 지점마다 적은 성향(`SkirmishAIRole`)으로 돕니다 — 같은 AI 끼리면 대칭이라
  *          가운데서 서로 지우기만 하고 끝나지 않는다.
@@ -17,13 +17,13 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 #include "Engine/TileMap/TileMapXML.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommanderAI.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSimulation.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 namespace sw
@@ -74,7 +74,7 @@ namespace sw
         PROPERTY( Required, Tooltip = "Unit id in the unit catalog" )
         CatalogKey<RTSUnitDef> _unitID{};
         PROPERTY( Required, Min = -1, Tooltip = "Player index, -1 = nobody (resources)" )
-        int32 _owner{ RTSWorld::kNoOwner };
+        int32 _owner{ RTSSimulation::kNoOwner };
         PROPERTY( Required, Tooltip = "Cell; the lower-left cell of buildings and resources" )
         int2 _cell{ 0, 0 };
     };
@@ -155,7 +155,7 @@ namespace sw
          * @param humanMask 사람이 맡는 플레이어 깃발(`kHumanPlayer0` · `kHumanPlayer1`, 0 이면 모두 AI). 사람 쪽 일꾼도 처음에는 광물을 캐러 간다.
          * @param startMinerals 플레이어마다 시작 광물입니다.
          * @param pCommanderTree 컴퓨터 상대의 행동 트리입니다. AI 마다 트리를 복사해 쥐어 판은 받은 때의 트리로 끝까지 돈다. 모두 사람이면 nullptr 입니다.
-         * @return 지도가 틀렸거나(절벽 레이어 없음 · 플레이어 수 · 맵 밖 시작 지점 · 놓을 수 없는 배치) 월드(`RTSWorld::initialize`)가 거절하면 까닭을 남기고 false 입니다. 그러면 판을 시작하지 않는다.
+         * @return 지도가 틀렸거나(절벽 레이어 없음 · 플레이어 수 · 맵 밖 시작 지점 · 놓을 수 없는 배치) 월드(`RTSSimulation::initialize`)가 거절하면 까닭을 남기고 false 입니다. 그러면 판을 시작하지 않는다.
          */
         [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, const SkirmishMap& map, const TileMapXMLData& tileMap, uint8 humanMask, const SkirmishMatchSettings& matchSettings,
                                        int32 startMinerals, const BehaviorTreeAsset* pCommanderTree );
@@ -164,10 +164,10 @@ namespace sw
         /** @brief 이번까지 쌓인 월드 알림(화면용 사본)을 꺼냅니다. */
         void pollEvents( vector<RTSEvent>& outListEvent );
 
-        RTSWorld&       getWorld() { return _world; }
-        const RTSWorld& getWorld() const { return _world; }
-        bool            hasHumanPlayer() const { return _humanMask != 0; }
-        bool            isHumanPlayer( int32 player ) const { return 0 <= player && player < getPlayerCount() && ( _humanMask & ( 1u << player ) ) != 0; }
+        RTSSimulation&       getWorld() { return _world; }
+        const RTSSimulation& getWorld() const { return _world; }
+        bool                 hasHumanPlayer() const { return _humanMask != 0; }
+        bool                 isHumanPlayer( int32 player ) const { return 0 <= player && player < getPlayerCount() && ( _humanMask & ( 1u << player ) ) != 0; }
         /** @brief 플레이어 수(지도의 시작 지점 수)입니다. 판을 열기 전에는 0 입니다. */
         int32 getPlayerCount() const { return static_cast<int32>( _listPlayer.size() ); }
         /** @brief 판 상태(세이브와 같은 바이트)의 해시입니다. 락스텝 두 프로세스가 같은 틱에 같은 값을 내야 합니다. */
@@ -209,8 +209,8 @@ namespace sw
         void huntRemaining( int32 player, int32 enemy );
 
     private:
-        SW_CODEC_STATE RTSWorld _world;
-        ConsumerLease           _eventLease;       ///< 월드의 이벤트를 꺼내는 표(이 매치 하나만 꺼낸다)
+        SW_CODEC_STATE RTSSimulation _world;
+        ConsumerLease                _eventLease;  ///< 월드의 이벤트를 꺼내는 표(이 매치 하나만 꺼낸다)
         SW_CODEC_STATE vector<Player> _listPlayer; ///< 판을 열 때 크기를 정한다 — 월드가 지갑의 주소를 쥔다
         SW_TRANSIENT vector<RTSEvent> _listEvent;  ///< 화면이 꺼내 갈 사본
         SW_TRANSIENT vector<RTSEvent>      _listFrameEvent;

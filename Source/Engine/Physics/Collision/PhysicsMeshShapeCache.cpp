@@ -21,7 +21,7 @@ namespace sw
             /** @brief 물리 셰이프 캐시의 계측 칸 이름입니다(`CacheStats`). `AssetCacheBase` 가 아니라 레지스트리에 종류 이름이 없어 이 이름으로 올린다. */
             static constexpr const utf8* kStatsName = "PhysicsMeshShape";
 
-            /** @brief 셰이프 캐시 키(메시 리소스 id 의 글)를 읽기 함수에 넘길 리소스 id 로 바꾸는 한 곳입니다. 이 캐시의 키는 리소스 id 만 담는다. */
+            /** @brief 셰이프 캐시 키(메시 에셋 id 의 글)를 읽기 함수에 넘길 에셋 id 로 바꾸는 한 곳입니다. 이 캐시의 키는 에셋 id 만 담는다. */
             [[nodiscard]] static AssetID toAssetID( string_view path ) { return AssetID{ path }; }
 
             /** @brief 물리 셰이프 캐시의 계측 칸입니다. 표는 엔진을 다시 세우면 새로 서도 칸은 프로세스 끝까지 살아 이어 센다. */
@@ -39,7 +39,7 @@ namespace sw
                     return false;
                 outListPosition.clear();
                 outListPosition.reserve( data._listVertex.size() );
-                for ( const RHIVertex& vertex : data._listVertex )
+                for ( const MeshVertex& vertex : data._listVertex )
                 {
                     outListPosition.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
                 }

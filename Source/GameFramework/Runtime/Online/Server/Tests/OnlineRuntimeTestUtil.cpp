@@ -34,7 +34,7 @@ namespace sw::test
             void stop() override {}
 
         private:
-            TestLoginService _service{};
+            TestLoginLogic _service{};
         };
     } // namespace
 

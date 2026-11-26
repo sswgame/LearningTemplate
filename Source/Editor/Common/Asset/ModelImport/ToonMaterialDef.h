@@ -10,7 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -101,7 +101,7 @@ namespace sw::editor
 
         /**
          * @brief 엔진 툰 머티리얼을 템플릿으로 @p desc 의 값을 넣은 `.material` 문자열을 만듭니다. 템플릿을 읽지 못하거나 템플릿에 쓸 프로퍼티가 없으면 빈 문자열입니다.
-         * @param listTexturePath glTF 텍스처 번호에서 리소스 경로(DDS)로의 대응입니다. 비어 있는 항목은 그 텍스처가 없는 것으로 씁니다.
+         * @param listTexturePath glTF 텍스처 번호에서 에셋 경로(DDS)로의 대응입니다. 비어 있는 항목은 그 텍스처가 없는 것으로 씁니다.
          * @param toonTemplate 툰 머티리얼 템플릿의 경로입니다 — 원본은 엔진 기본 에셋 표(`EngineDefaultAssets::_toonMaterialTemplate`). 워커에서도 부르므로 서비스를 찾지 않고 호출한 쪽이 넘긴다.
          */
         static string makeMaterialXML( const ToonMaterialDef& desc, const vector<string>& listTexturePath, const DataPath& toonTemplate );

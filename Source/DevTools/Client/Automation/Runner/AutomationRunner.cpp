@@ -12,13 +12,13 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Time/BusyClock.h"
+#include "Core/Time/BusyTimeAccumulator.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationExitCode.h"
 #include "DevTools/Client/Automation/Runner/AutomationImage.h"
-#include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
+#include "DevTools/Client/Automation/Runner/AutomationRunTitleTracker.h"
 #include "DevTools/Client/Automation/Runner/AutomationStepArgs.h"
 #include "DevTools/Client/Automation/Scenario/AutomationEnvironmentSteps.h"
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
@@ -37,7 +37,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
-#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameCounter.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -621,7 +621,7 @@ namespace sw
         _run._lastFrameEndSeconds = _run._wallStartSeconds;
         // 셰이더 컴파일(빈 캐시의 첫 실행)은 일하는 시간이다 — 시한에 세지 않는다(언리얼 자동화도 셰이더 컴파일을 기다린다). 행 감시도 같은 값을 뺀다.
         const ShaderCache* const pShaderCache = engine::findSubsystem<ShaderCache>();
-        _run._pCompileBusy                    = pShaderCache != nullptr ? &pShaderCache->getCompileBusyClock() : nullptr;
+        _run._pCompileBusy                    = pShaderCache != nullptr ? &pShaderCache->getCompileBusyTimeAccumulator() : nullptr;
         _run._compileBusyAtStartNanoseconds   = _run._pCompileBusy != nullptr ? _run._pCompileBusy->getBusyNanoseconds( MonotonicClock::nowNanoseconds() ) : 0;
         _startedUnixMs                        = WallClock::nowUnixMilliseconds().count();
         LocalCalendarTime calendar{};
@@ -637,8 +637,8 @@ namespace sw
         AutomationFrameKind kind = AutomationFrameKind::Start;
         if ( _bStarted == SW_TRUE )
         {
-            const bool                            bStepRan        = _run._nextStepIndex != stepIndexBefore;
-            const SimulationOnlyFrameQueue* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameQueue>();
+            const bool                              bStepRan        = _run._nextStepIndex != stepIndexBefore;
+            const SimulationOnlyFrameCounter* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameCounter>();
             // 그리지 않고 진행한 프레임은 따로 센다 — 고정 대기를 얼마나 줄였는지 보고(`timeline` 의 simulationOnly)에 남는다.
             if ( pSimulationOnly != nullptr && pSimulationOnly->wasLastFrameSimulationOnly() )
                 kind = AutomationFrameKind::SimulationOnly;
@@ -671,8 +671,8 @@ namespace sw
         if ( frameCount <= policy->_advanceDrawnFrames )
             return; // 모두 그린다
         frameCount -= policy->_advanceDrawnFrames;
-        const float32                   fixedFrameDelta = engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta;
-        SimulationOnlyFrameQueue* const pQueue          = engine::findSubsystem<SimulationOnlyFrameQueue>(); // 클라이언트 호스트 전용 서비스(HostOnly)다 — 없으면 이 단계를 받을 수 없다
+        const float32                     fixedFrameDelta = engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta;
+        SimulationOnlyFrameCounter* const pQueue          = engine::findSubsystem<SimulationOnlyFrameCounter>(); // 클라이언트 호스트 전용 서비스(HostOnly)다 — 없으면 이 단계를 받을 수 없다
         if ( pQueue == nullptr || pQueue->request( frameCount, fixedFrameDelta ) == false )
         {
             finish( AutomationRunResult::failed( AutomationFailureKind::Assertion, "<AdvanceSimulation> could not hand its frames to the simulation-only frame queue", {} ) );

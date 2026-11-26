@@ -16,9 +16,9 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -145,15 +145,15 @@ namespace sw
 
     bool RigAsset::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        return loadComposed( xml, sourceLabel, ResourceContext::forSchema( &RigAssetInternal::makeInheritanceSchema ) );
+        return loadComposed( xml, sourceLabel, AssetComposeContext::forSchema( &RigAssetInternal::makeInheritanceSchema ) );
     }
 
-    bool RigAsset::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    bool RigAsset::loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
     {
         clear();
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( xml, sourceLabel, context, flatText, bComposed ) == false )
+        if ( AssetComposer::compose( xml, sourceLabel, context, flatText, bComposed ) == false )
             return false;
         XMLDocument document;
         XMLNode     root;
@@ -181,7 +181,7 @@ namespace sw
             clear();
             return false;
         }
-        return loadComposed( text, path, ResourceContext::forSchema( &RigAssetInternal::makeInheritanceSchema ).withAsset( assetID ) );
+        return loadComposed( text, path, AssetComposeContext::forSchema( &RigAssetInternal::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
     bool RigAsset::parseRoot( const XMLNode& root, string_view sourceLabel )

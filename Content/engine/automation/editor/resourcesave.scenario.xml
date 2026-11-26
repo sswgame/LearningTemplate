@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="8557490ce30081728c93dc966b9335b4"?>
 <!--
-  에디터 시나리오: 저장이 리소스 조건(_when)을 지킨다(ResourceComposer::saveText 가 restoreConditions 를 지난다).
+  에디터 시나리오: 저장이 리소스 조건(_when)을 지킨다(AssetComposer::saveText 가 restoreConditions 를 지난다).
   문서(resourcesave/resourcesave.animgraph.xml)의 전이 101 은 quality.low 이면 빠진다. 편집기 사본은 지금 태그로 푼 값을 들어
   그대로 쓰면 조건이 사라지고 푼 값이 파일에 박힌다. 그래서 두 태그에서 저장하고 다른 태그로 다시 읽어 조건이 남았는지 값으로 본다.
   1. quality high 로 열면 전이 둘(조건 거짓). 저장한다.

@@ -8,9 +8,9 @@
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw::editor
@@ -197,11 +197,11 @@ namespace sw::editor
         _baseID = DataInheritance::findBasePath( _text );
         if ( isInherited() )
         {
-            string                        parentSource;
-            string                        parentFlat;
-            DataInheritanceResourceSource source;
-            const ReflectedInstance       parent = source.readText( _baseID, parentSource ) ? readFlattened( parentSource, _baseID, parentFlat ) : ReflectedInstance{};
-            _parentText                          = parent.isValid() ? XMLSerializer::serialize( parent.get(), type ) : string{};
+            string                     parentSource;
+            string                     parentFlat;
+            DataInheritanceAssetSource source;
+            const ReflectedInstance    parent = source.readText( _baseID, parentSource ) ? readFlattened( parentSource, _baseID, parentFlat ) : ReflectedInstance{};
+            _parentText                       = parent.isValid() ? XMLSerializer::serialize( parent.get(), type ) : string{};
             if ( _parentParsed.parse( _parentText ).has_value() == false )
             {
                 const string baseID = _baseID;
@@ -244,8 +244,8 @@ namespace sw::editor
 
     ReflectedInstance ReflectedXMLDocument::readFlattened( string_view text, string_view sourceID, string& outFlat ) const
     {
-        DataInheritanceResourceSource source;
-        ReflectedInstance             fresh = ReflectedInstance::create( *_pType );
+        DataInheritanceAssetSource source;
+        ReflectedInstance          fresh = ReflectedInstance::create( *_pType );
         if ( fresh.isValid() && ( DataInheritance::flatten( text, sourceID, DataInheritanceSchema::makeFromType( *_pType ), source, outFlat ) == false ||
                                   XMLSerializer::deserialize( fresh.get(), *_pType, outFlat ) == false ) )
             fresh.reset();
@@ -342,7 +342,7 @@ namespace sw::editor
         const string parentItemText = string( string_view{ _parentText }.substr( parentItem._begin, parentItem._end - parentItem._begin ) );
         string       deltaText;
         XMLDocument  delta;
-        if ( ResourceComposer::makeCheckedDelta( itemText, parentItemText, DataInheritanceSchema::makeFromType( itemType ), {}, nullptr, deltaText ).has_value() == false || delta.parse( deltaText ) == false )
+        if ( AssetComposer::makeCheckedDelta( itemText, parentItemText, DataInheritanceSchema::makeFromType( itemType ), {}, nullptr, deltaText ).has_value() == false || delta.parse( deltaText ) == false )
             return false;
         const XMLNode deltaRoot = delta.getRoot();
 

@@ -11,7 +11,7 @@
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"

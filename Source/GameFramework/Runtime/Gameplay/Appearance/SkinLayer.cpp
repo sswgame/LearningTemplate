@@ -14,7 +14,7 @@
 #include "Engine/Graphics/Texture/Texture2DAssetKind.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceLoadReport.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 namespace sw

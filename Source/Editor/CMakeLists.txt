@@ -12,9 +12,9 @@
 sw_glob_source_tree(list_editor_source RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 set(list_editor_all_source ${list_editor_source})
 
-# 에디터 폴더는 층이고 아래 층은 위 층의 헤더를 include 하지 못한다. 층과 티어의 표는 `Config/Rules/Layers/EditorLayers.toml` 이고
-# configure 가 `EditorLayers.cmake` 로 옮긴다(`Scripts/generate/editor_layers.py` — 표와 폴더가 어긋나면 거기서 멈춘다).
-# 2) 가 티어마다 부분(OBJECT 라이브러리)을 짓고, 부분마다 자기 티어보다 위 층의 모든 헤더 자리에 `#error` 껍데기를 먼저 놓는다.
+# 에디터 폴더는 층이고 아래 층은 위 층의 헤더를 include 하지 못한다. 층 표는 `Config/Rules/Layers/EditorLayers.toml` 이고
+# configure 가 `EditorLayers.cmake` 로 옮긴다(`Scripts/generate/editor_layer_guards.py` — 표와 폴더가 어긋나면 거기서 멈춘다).
+# 2) 가 층마다 부분(OBJECT 라이브러리)을 짓고, 부분마다 자기 층보다 위 층의 모든 헤더 자리에 `#error` 가드를 먼저 놓는다.
 # EditorModule 자신은 `Source/Editor` 바로 아래 파일(셸 · 모든 매니저를 만드는 조립 파일)만 가진다.
 include("${CMAKE_BINARY_DIR}/generated/sw/config/EditorLayers.cmake")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/EditorLayers.toml")
@@ -59,20 +59,20 @@ endfunction()
 set(list_editor_root_source "")
 set(list_editor_part_source "")
 set(list_editor_view_model_regex "")   # 뷰 층 안 `Model` 폴더의 절대 경로 정규식(코어 리플렉션 입력 · EditorModule 훑기 제외에 같이 쓴다)
-set(editor_mvvm_view_count 0)       # MVVM View(`SW_EDITOR_MVVM_VIEW_PATHS` 의 Model 밖 파일) 수 — 아래 2-2) 의 티어별 부분이 MVVM 껍데기와 함께 짓는다
-foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
-	set(editor_tier_model_source_${tier} "")
-	set(editor_tier_view_source_${tier} "")
-	set(editor_tier_mvvm_view_source_${tier} "")
-	foreach(layer IN LISTS SW_EDITOR_TIER_${tier}_LAYERS)
+set(editor_mvvm_view_count 0)       # MVVM View(`SW_EDITOR_MVVM_VIEW_PATHS` 의 Model 밖 파일) 수 — 아래 2-2) 의 층별 부분이 MVVM 가드와 함께 짓는다
+foreach(layer_number IN LISTS SW_EDITOR_LAYER_LIST)
+	set(editor_part_model_source_${layer_number} "")
+	set(editor_part_view_source_${layer_number} "")
+	set(editor_part_mvvm_view_source_${layer_number} "")
+	foreach(layer IN LISTS SW_EDITOR_LAYER_${layer_number}_FOLDERS)
 		string(MAKE_C_IDENTIFIER "${layer}" layer_key)
 		sw_glob_editor_layer("${layer}" editor_layer_${layer_key})
 		if(layer STREQUAL "<root>")
 			list(APPEND list_editor_root_source ${editor_layer_${layer_key}Source})
 		elseif(layer IN_LIST list_editor_model_layer)
-			list(APPEND editor_tier_model_source_${tier} ${editor_layer_${layer_key}Source})
+			list(APPEND editor_part_model_source_${layer_number} ${editor_layer_${layer_key}Source})
 		else()
-			# 뷰 층 안의 `Model` 폴더(`Panels/<패널>/Model` · `Viewport/Model`)는 ImGui 를 모르는 헤드리스 파일이라 같은 티어의 모델 부분이 짓는다.
+			# 뷰 층 안의 `Model` 폴더(`Panels/<패널>/Model` · `Viewport/Model`)는 ImGui 를 모르는 헤드리스 파일이라 같은 층의 모델 부분이 짓는다.
 			set(layer_model_source ${editor_layer_${layer_key}Source})
 			set(layer_view_source ${editor_layer_${layer_key}Source})
 			set(layer_model_regex "/Source/Editor/${layer}/([^/]+/)*Model/")
@@ -81,8 +81,8 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 			endif()
 			list(FILTER layer_model_source INCLUDE REGEX "${layer_model_regex}")
 			list(FILTER layer_view_source EXCLUDE REGEX "${layer_model_regex}")
-			list(APPEND editor_tier_model_source_${tier} ${layer_model_source})
-			# 표의 View 경로(층 · 폴더 · 파일)에 드는 파일은 MVVM View 부분이 짓는다(2-2) — 같은 티어 껍데기와 모델 · 씬 헤더 껍데기를 함께 받는다.
+			list(APPEND editor_part_model_source_${layer_number} ${layer_model_source})
+			# 표의 View 경로(층 · 폴더 · 파일)에 드는 파일은 MVVM View 부분이 짓는다(2-2) — 같은 층 가드와 모델 · 씬 헤더 가드를 함께 받는다.
 			foreach(view_source IN LISTS layer_view_source)
 				file(RELATIVE_PATH view_relative "${CMAKE_CURRENT_SOURCE_DIR}" "${view_source}")
 				set(is_mvvm_view FALSE)
@@ -94,18 +94,18 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 					endif()
 				endforeach()
 				if(is_mvvm_view)
-					list(APPEND editor_tier_mvvm_view_source_${tier} "${view_source}")
+					list(APPEND editor_part_mvvm_view_source_${layer_number} "${view_source}")
 					math(EXPR editor_mvvm_view_count "${editor_mvvm_view_count} + 1")
 				else()
-					list(APPEND editor_tier_view_source_${tier} "${view_source}")
+					list(APPEND editor_part_view_source_${layer_number} "${view_source}")
 				endif()
 			endforeach()
 		endif()
 	endforeach()
-	list(APPEND list_editor_part_source ${editor_tier_model_source_${tier}} ${editor_tier_view_source_${tier}} ${editor_tier_mvvm_view_source_${tier}})
+	list(APPEND list_editor_part_source ${editor_part_model_source_${layer_number}} ${editor_part_view_source_${layer_number}} ${editor_part_mvvm_view_source_${layer_number}})
 endforeach()
 if(editor_mvvm_view_count EQUAL 0)
-	message(FATAL_ERROR "[Editor] no MVVM view sources (EditorLayers.toml [panelViewBan] views '${SW_EDITOR_MVVM_VIEW_PATHS}')")
+	message(FATAL_ERROR "[Editor] no MVVM view sources (EditorLayers.toml [panelViewGuard] views '${SW_EDITOR_MVVM_VIEW_PATHS}')")
 endif()
 set(list_editor_unassigned_source ${list_editor_source})
 list(REMOVE_ITEM list_editor_unassigned_source ${list_editor_root_source} ${list_editor_part_source})
@@ -116,40 +116,40 @@ set(list_editor_source ${list_editor_root_source})
 
 
 # ------------------------------------------------------------------------------
-# 2) 티어마다 부분(`EditorTier<N>Model` · `EditorTier<N>View`): 오브젝트는 EditorModule DLL 안에 그대로 들어간다(`sw_add_module_part`).
-#    a) 위 층 헤더 껍데기: 부분 N 은 티어가 N 보다 큰 층의 헤더마다 같은 경로의 `#error` 파일을 자기 include 자리 맨 앞에 둔다. `Editor/Panels/X.h` 를
-#       include 하면 진짜 헤더 대신 껍데기를 찾아 멈춘다(헤더를 거쳐 닿는 전이 include 도 같다). 껍데기 폴더는 `<빌드>/generated/sw/EditorLayerStubs/tier<N>`.
-#       표의 `[prelude]` 헤더(위 층을 include 하지 않는 잎)는 어느 층에서나 쓰므로 껍데기를 놓지 않는다.
+# 2) 층마다 부분(`EditorLayer<N>Model` · `EditorLayer<N>View`): 오브젝트는 EditorModule DLL 안에 그대로 들어간다(`sw_add_module_part`).
+#    a) 위 층 헤더 가드: 부분 N 은 층이 N 보다 큰 층의 헤더마다 같은 경로의 `#error` 파일을 자기 include 자리 맨 앞에 둔다. `Editor/Panels/X.h` 를
+#       include 하면 진짜 헤더 대신 가드를 찾아 멈춘다(헤더를 거쳐 닿는 전이 include 도 같다). 가드 폴더는 `<빌드>/generated/sw/EditorLayerGuards/layer<N>`.
+#       표의 `[prelude]` 헤더(위 층을 include 하지 않는 잎)는 어느 층에서나 쓰므로 가드를 놓지 않는다.
 #    b) ImGui 를 모르는 `*Model`: vcpkg 는 모든 패키지 헤더를 한 include 자리에 두므로(DirectXTex · meshoptimizer 를 링크하면 imgui.h 도 보인다)
 #       include 자리만으로는 막지 못한다. 그래서 ImGui 가 사용자 설정을 읽는 자리(`IMGUI_USER_CONFIG`, imgui.h 첫머리)에 #error 헤더를 준다.
 #       imgui.h 를 거치는 헤더(implot · ImGuizmo · 노드 편집기 · 백엔드 포함)를 include 하면 컴파일이 멈춘다.
 # ------------------------------------------------------------------------------
 
-# `TIER` 부분에 놓을 껍데기를 만든다(내용이 같으면 쓰지 않아 다시 짓지 않는다). 사라진 헤더의 껍데기는 지운다.
-function(sw_add_editor_layer_stubs PART TIER)
-	set(stub_root "${CMAKE_BINARY_DIR}/generated/sw/EditorLayerStubs/tier${TIER}")
-	set(list_new_stub "")
-	foreach(upper_tier IN LISTS SW_EDITOR_TIER_LIST)
-		if(NOT upper_tier GREATER TIER)
+# `LAYER` 부분에 놓을 가드를 만든다(내용이 같으면 쓰지 않아 다시 짓지 않는다). 사라진 헤더의 가드는 지운다.
+function(sw_add_editor_layer_guards PART LAYER)
+	set(guard_root "${CMAKE_BINARY_DIR}/generated/sw/EditorLayerGuards/layer${LAYER}")
+	set(list_new_guard "")
+	foreach(upper_layer IN LISTS SW_EDITOR_LAYER_LIST)
+		if(NOT upper_layer GREATER LAYER)
 			continue()
 		endif()
-		foreach(layer IN LISTS SW_EDITOR_TIER_${upper_tier}_LAYERS)
+		foreach(layer IN LISTS SW_EDITOR_LAYER_${upper_layer}_FOLDERS)
 			string(MAKE_C_IDENTIFIER "${layer}" layer_key)
 			foreach(header IN LISTS editor_layer_${layer_key}Header)
 				if("Editor/${header}" IN_LIST SW_EDITOR_PRELUDE_HEADERS)
 					continue()
 				endif()
-				sw_write_layer_stub(list_new_stub "${stub_root}/Editor/${header}" "#error \"Editor layer '${layer}' (tier ${upper_tier}) cannot be included from tier ${TIER} code. A lower layer must not see an upper layer: move what you need down, or invert the dependency.\"\n")
+				sw_write_layer_guard(list_new_guard "${guard_root}/Editor/${header}" "#error \"Editor folder '${layer}' (layer ${upper_layer}) cannot be included from layer ${LAYER} code. A lower layer must not see an upper layer: move what you need down, or invert the dependency.\"\n")
 			endforeach()
 		endforeach()
 	endforeach()
-	sw_apply_layer_stubs(${PART} "${stub_root}" ${list_new_stub})
+	sw_apply_layer_guards(${PART} "${guard_root}" ${list_new_guard})
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 1-1) EditorCore: ImGui 를 모르는 층(`list_editor_model_layer`)의 오브젝트 — 모델 층이 ImGui 를 include 하면 컴파일이 멈춘다(위 `#error` 껍데기). 소비자는 EditorModule 이다.
-#      소스 목록은 위 층 표 한 곳(`editor_tier_model_source_<N>`)에서 나오고, 테스트는 손으로 나열하지 않는다(폴더에 파일을 더하면 둘 다 받는다).
-#      - 티어마다 부분(`EditorTier<N>Model`)을 따로 짓는다 — 티어 N 부분은 N 보다 위 층 헤더 자리에 `#error` 껍데기가 놓여 층 방향을 컴파일이 지킨다.
+# 1-1) EditorCore: ImGui 를 모르는 층(`list_editor_model_layer`)의 오브젝트 — 모델 층이 ImGui 를 include 하면 컴파일이 멈춘다(위 `#error` 가드). 소비자는 EditorModule 이다.
+#      소스 목록은 위 층 표 한 곳(`editor_part_model_source_<N>`)에서 나오고, 테스트는 손으로 나열하지 않는다(폴더에 파일을 더하면 둘 다 받는다).
+#      - 층마다 부분(`EditorLayer<N>Model`)을 따로 짓는다 — 층 N 부분은 N 보다 위 층 헤더 자리에 `#error` 가드가 놓여 층 방향을 컴파일이 지킨다.
 #      - 리플렉션(`EditorCoreReflect`)은 `list_editor_model_layer` 폴더와 뷰 층 `Model` 폴더의 REFLECT · ENUM 헤더 전부(위 `list_editor_reflect_core` - 입력을 폴더 정규식으로 못 정해 같은 조건으로 구성 때 모은다)의 `.gen.cpp` 를 한 번만 짓는다. 소비자는 이 헤더를 자기 리플렉션 입력에 넣지 않는다. EditorModule 은 이 폴더들을 자기 리플렉션 입력에서
 #        뺀다(같은 `StaticType()` 이 두 곳에 정의되지 않게). FlagOps 우산과 gen 폴더는 `sw_link_editor_core` 가 소비자에게 같은 값으로 준다.
 #      - 오브젝트는 EditorModule(Dev 의 SHARED) 이미지에 들어간다(`SW_EDITOR_EXPORTS` 로 지어 내보낸다). 에디터 쪽 단위 테스트(`Tests/`)는
@@ -251,23 +251,23 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_STATIC_MODULES)
 		list(APPEND list_editor_core_target EditorCoreReflect)
 	endif()
 
-	foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
-		if(NOT editor_tier_model_source_${tier})
+	foreach(layer_number IN LISTS SW_EDITOR_LAYER_LIST)
+		if(NOT editor_part_model_source_${layer_number})
 			continue()
 		endif()
-		set(part EditorTier${tier}Model)
-		add_library(${part} OBJECT ${editor_tier_model_source_${tier}})
+		set(part EditorLayer${layer_number}Model)
+		add_library(${part} OBJECT ${editor_part_model_source_${layer_number}})
 		sw_apply_editor_core_settings(${part})
 		# 모델은 imgui 링크가 없다. vcpkg 는 모든 헤더를 한 include 자리에 두므로, ImGui 가 사용자 설정을 읽는 자리에 #error 를 건다.
 		target_compile_definitions(${part} PRIVATE "IMGUI_USER_CONFIG=\"${editor_model_imgui_block}\"")
-		sw_add_editor_layer_stubs(${part} ${tier})
+		sw_add_editor_layer_guards(${part} ${layer_number})
 		sw_inherit_editor_core_reflection(${part} PRIVATE)
 		list(APPEND list_editor_core_target ${part})
 	endforeach()
 	set_property(GLOBAL PROPERTY SW_EDITOR_CORE_TARGETS "${list_editor_core_target}")
 
 	# 모델 임포트의 메시 쪼개기는 같은 모델 · 설정 · 시드면 구성마다 같은 조각을 굽는다 — Engine 에 있을 때의 결정성 표시를 그대로 옮긴다.
-	# 그 파일을 짓는 부분을 소스 목록으로 찾는다(티어 번호를 적지 않는다). 못 찾으면 결정성이 소리 없이 꺼지므로 멈춘다.
+	# 그 파일을 짓는 부분을 소스 목록으로 찾는다(층 번호를 적지 않는다). 못 찾으면 결정성이 소리 없이 꺼지므로 멈춘다.
 	set(editor_fracture_source "${CMAKE_CURRENT_SOURCE_DIR}/Common/Asset/ModelImport/MeshFracture.cpp")
 	set(fracture_marked FALSE)
 	foreach(part IN LISTS list_editor_core_target)
@@ -314,59 +314,59 @@ sw_add_module_library(EditorModule
 sw_link_editor_core(EditorModule PUBLIC)
 
 set(list_editor_part "")
-foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
-	if(editor_tier_view_source_${tier})
-		sw_add_module_part(EditorTier${tier}View
+foreach(layer_number IN LISTS SW_EDITOR_LAYER_LIST)
+	if(editor_part_view_source_${layer_number})
+		sw_add_module_part(EditorLayer${layer_number}View
 			OWNER EditorModule
-			SOURCES ${editor_tier_view_source_${tier}}
+			SOURCES ${editor_part_view_source_${layer_number}}
 			LINK ${list_editor_view_link}
 		)
-		sw_add_editor_layer_stubs(EditorTier${tier}View ${tier})
+		sw_add_editor_layer_guards(EditorLayer${layer_number}View ${layer_number})
 		if(TARGET EditorCoreReflect)
-			add_dependencies(EditorTier${tier}View EditorCoreReflect_ReflectionGen)
+			add_dependencies(EditorLayer${layer_number}View EditorCoreReflect_ReflectionGen)
 		endif()
-		list(APPEND list_editor_part EditorTier${tier}View)
+		list(APPEND list_editor_part EditorLayer${layer_number}View)
 	endif()
 endforeach()
 
 # ------------------------------------------------------------------------------
-# 2-2) MVVM View 의 경계(`docs/agents/EditorUI.md` 'MVVM' 절): View(표 `[panelViewBan] views` 의 `Model` 폴더 밖)는 모델 · 씬 헤더를 include 하지 못한다.
-#      표 `EditorLayers.toml` 의 `[panelViewBan]`(Source 기준 정규식)에 맞는 헤더마다 `#error` 껍데기를 놓는다 — 값 · 창구 헤더(`[panelViewAllowed]`)만 뺀다.
-#      층 껍데기와 같은 장치라 헤더를 거친 전이 include 도 멈춘다. View 는 티어마다 부분(`EditorTier<N>MVVMView`)이고 그 티어 껍데기도 받는다(아직 옮기지 않은 같은 티어 파일은 `EditorTier<N>View`).
-#      확장 모듈의 View 는 `sw_add_editor_extension( … PANEL_VIEW_SOURCES … )` 가 같은 껍데기 자리(전역 속성 SW_EDITOR_PANEL_VIEW_STUB_ROOT)를 받는다.
+# 2-2) MVVM View 의 경계(`docs/agents/EditorUI.md` 'MVVM' 절): View(표 `[panelViewGuard] views` 의 `Model` 폴더 밖)는 모델 · 씬 헤더를 include 하지 못한다.
+#      표 `EditorLayers.toml` 의 `[panelViewGuard]`(Source 기준 정규식)에 맞는 헤더마다 `#error` 가드를 놓는다 — 값 · 창구 헤더(`[panelViewAllowed]`)만 뺀다.
+#      층 가드와 같은 장치라 헤더를 거친 전이 include 도 멈춘다. View 는 층마다 부분(`EditorLayer<N>MVVMView`)이고 그 층 가드도 받는다(아직 옮기지 않은 같은 층 파일은 `EditorLayer<N>View`).
+#      확장 모듈의 View 는 `sw_add_editor_extension( … PANEL_VIEW_SOURCES … )` 가 같은 가드 자리(전역 속성 SW_EDITOR_PANEL_VIEW_GUARD_ROOT)를 받는다.
 #      언리얼 Slate 는 위젯이 모델을 바로 보지만, 유니티 UI Toolkit 바인딩처럼 View 는 ViewModel 값만 본다 — 목록 린트 대신 형식으로 막는다.
 # ------------------------------------------------------------------------------
-set(editor_panel_view_stub_root "${CMAKE_BINARY_DIR}/generated/sw/EditorPanelViewStubs")
-set(list_panel_view_ban_glob "")
-foreach(pattern IN LISTS SW_EDITOR_PANEL_VIEW_BAN_REGEX SW_EDITOR_PANEL_VIEW_DEFAULT_BAN_REGEX)
+set(editor_panel_view_guard_root "${CMAKE_BINARY_DIR}/generated/sw/EditorPanelViewGuards")
+set(list_panel_view_guard_glob "")
+foreach(pattern IN LISTS SW_EDITOR_PANEL_VIEW_GUARD_REGEX SW_EDITOR_PANEL_VIEW_DEFAULT_GUARD_REGEX)
 	if(NOT pattern MATCHES "^\\^([A-Za-z0-9_]+)/")
-		message(FATAL_ERROR "[Editor] [panelViewBan] pattern '${pattern}' must start with ^<top folder under Source>/")
+		message(FATAL_ERROR "[Editor] [panelViewGuard] pattern '${pattern}' must start with ^<top folder under Source>/")
 	endif()
-	list(APPEND list_panel_view_ban_glob "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}/*.h" "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}/*.hpp" "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}/*.inl")
+	list(APPEND list_panel_view_guard_glob "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}/*.h" "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}/*.hpp" "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}/*.inl")
 endforeach()
-list(REMOVE_DUPLICATES list_panel_view_ban_glob)
-sw_glob_source_tree(list_panel_view_ban_candidate RECURSE RELATIVE "${CMAKE_SOURCE_DIR}/Source" ${list_panel_view_ban_glob})
-set(list_panel_view_stub "")
-foreach(header IN LISTS list_panel_view_ban_candidate)
+list(REMOVE_DUPLICATES list_panel_view_guard_glob)
+sw_glob_source_tree(list_panel_view_guard_candidate RECURSE RELATIVE "${CMAKE_SOURCE_DIR}/Source" ${list_panel_view_guard_glob})
+set(list_panel_view_guard "")
+foreach(header IN LISTS list_panel_view_guard_candidate)
 	if(header IN_LIST SW_EDITOR_PANEL_VIEW_ALLOWED_HEADERS)
 		continue()
 	endif()
-	set(panel_view_banned FALSE)
-	foreach(pattern IN LISTS SW_EDITOR_PANEL_VIEW_BAN_REGEX)
+	set(panel_view_guarded FALSE)
+	foreach(pattern IN LISTS SW_EDITOR_PANEL_VIEW_GUARD_REGEX)
 		if(header MATCHES "${pattern}")
-			set(panel_view_banned TRUE)
+			set(panel_view_guarded TRUE)
 			break()
 		endif()
 	endforeach()
 	# 기본 금지 폴더(허용 목록 방식) — 허용 폴더 접두(`[panelViewAllowedFolders]`)에 들지 않으면 막는다. 강한 금지(`patterns`)가 앞선다.
-	if(NOT panel_view_banned)
-		foreach(pattern IN LISTS SW_EDITOR_PANEL_VIEW_DEFAULT_BAN_REGEX)
+	if(NOT panel_view_guarded)
+		foreach(pattern IN LISTS SW_EDITOR_PANEL_VIEW_DEFAULT_GUARD_REGEX)
 			if(header MATCHES "${pattern}")
-				set(panel_view_banned TRUE)
+				set(panel_view_guarded TRUE)
 				foreach(folder IN LISTS SW_EDITOR_PANEL_VIEW_ALLOWED_FOLDERS)
 					string(FIND "${header}" "${folder}" folder_position)
 					if(folder_position EQUAL 0)
-						set(panel_view_banned FALSE)
+						set(panel_view_guarded FALSE)
 						break()
 					endif()
 				endforeach()
@@ -374,46 +374,46 @@ foreach(header IN LISTS list_panel_view_ban_candidate)
 			endif()
 		endforeach()
 	endif()
-	if(panel_view_banned)
-		sw_write_layer_stub(list_panel_view_stub "${editor_panel_view_stub_root}/${header}" "#error \"Editor panel view (MVVM View) cannot include the model/scene header '${header}' (Config/Rules/Layers/EditorLayers.toml [panelViewBan] patterns · defaultBan). Gather the value into the ViewState in the ViewModel, and call ViewModel commands to change things.\"
+	if(panel_view_guarded)
+		sw_write_layer_guard(list_panel_view_guard "${editor_panel_view_guard_root}/${header}" "#error \"Editor panel view (MVVM View) cannot include the model/scene header '${header}' (Config/Rules/Layers/EditorLayers.toml [panelViewGuard] patterns · defaultGuard). Gather the value into the ViewState in the ViewModel, and call ViewModel commands to change things.\"
 ")
 	endif()
 endforeach()
-foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
-	if(NOT editor_tier_mvvm_view_source_${tier})
+foreach(layer_number IN LISTS SW_EDITOR_LAYER_LIST)
+	if(NOT editor_part_mvvm_view_source_${layer_number})
 		continue()
 	endif()
-	sw_add_module_part(EditorTier${tier}MVVMView
+	sw_add_module_part(EditorLayer${layer_number}MVVMView
 		OWNER EditorModule
-		SOURCES ${editor_tier_mvvm_view_source_${tier}}
+		SOURCES ${editor_part_mvvm_view_source_${layer_number}}
 		LINK ${list_editor_view_link}
 	)
-	sw_add_editor_layer_stubs(EditorTier${tier}MVVMView ${tier})
-	sw_apply_layer_stubs(EditorTier${tier}MVVMView "${editor_panel_view_stub_root}" ${list_panel_view_stub})
+	sw_add_editor_layer_guards(EditorLayer${layer_number}MVVMView ${layer_number})
+	sw_apply_layer_guards(EditorLayer${layer_number}MVVMView "${editor_panel_view_guard_root}" ${list_panel_view_guard})
 	# 화면 도구 등록 줄(`SW_EDITOR_VISUALIZER_TOOL`)은 이 표시가 있는 번역 단위에서만 컴파일된다 — 도구를 등록한 파일은 View 목록에 들어야 짓는다.
-	target_compile_definitions(EditorTier${tier}MVVMView PRIVATE SW_EDITOR_PANEL_VIEW=1 SW_DEV_COMMAND_REGISTRATION=0) # 명령 등록 줄(`SW_EDITOR_COMMAND` · `SW_DEV_COMMAND`)도 View 에서 짓지 못한다
+	target_compile_definitions(EditorLayer${layer_number}MVVMView PRIVATE SW_EDITOR_PANEL_VIEW=1 SW_DEV_COMMAND_REGISTRATION=0) # 명령 등록 줄(`SW_EDITOR_COMMAND` · `SW_DEV_COMMAND`)도 View 에서 짓지 못한다
 	if(TARGET EditorCoreReflect)
-		add_dependencies(EditorTier${tier}MVVMView EditorCoreReflect_ReflectionGen)
+		add_dependencies(EditorLayer${layer_number}MVVMView EditorCoreReflect_ReflectionGen)
 	endif()
-	list(APPEND list_editor_part EditorTier${tier}MVVMView)
+	list(APPEND list_editor_part EditorLayer${layer_number}MVVMView)
 endforeach()
-set_property(GLOBAL PROPERTY SW_EDITOR_PANEL_VIEW_STUB_ROOT "${editor_panel_view_stub_root}")
+set_property(GLOBAL PROPERTY SW_EDITOR_PANEL_VIEW_GUARD_ROOT "${editor_panel_view_guard_root}")
 
 # ------------------------------------------------------------------------------
 # 2-1) 에디터 코드의 ImGui 입력 함수 금지(`docs/agents/EditorUI.md` 입력 절 — 형식이 먼저, 린트는 형식이 못 막는 `ImGuiIO` 필드 읽기만)
-#      모든 뷰 부분(EditorTier<N>View)과 루트(EditorModule), 에디터 확장 모듈(`sw_add_editor_extension`)이 imgui.h 끝(사용자 헤더 자리)에
-#      `Common/Input/EditorInputBan.h` 를 붙이고 사용 중단 경고를 오류로 올린다(`sw_apply_editor_input_ban`). 모델 부분은 ImGui 를 아예 include 하지 못한다.
+#      모든 뷰 부분(EditorLayer<N>View)과 루트(EditorModule), 에디터 확장 모듈(`sw_add_editor_extension`)이 imgui.h 끝(사용자 헤더 자리)에
+#      `Common/Input/EditorImGuiInputGuard.h` 를 붙이고 사용 중단 경고를 오류로 올린다(`sw_apply_editor_input_guard`). 모델 부분은 ImGui 를 아예 include 하지 못한다.
 #      받지 않는 곳은 어댑터 두 파일(SW_EDITOR_INPUT_ADAPTER=1)과 노드 캔버스 입구(SW_EDITOR_NODE_GRAPH_ADAPTER=1)뿐이고, 그 표시는 CMake 소스 속성만 준다.
 # ------------------------------------------------------------------------------
-option(SW_EDITOR_INPUT_BAN "Editor code fails to compile when it calls ImGui input/popup/drag functions directly (EditorInputBan.h)" ON)
-foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
-	foreach(view_part IN ITEMS EditorTier${tier}View EditorTier${tier}MVVMView)
+option(SW_EDITOR_INPUT_GUARD "Editor code fails to compile when it calls ImGui input/popup/drag functions directly (EditorImGuiInputGuard.h)" ON)
+foreach(layer_number IN LISTS SW_EDITOR_LAYER_LIST)
+	foreach(view_part IN ITEMS EditorLayer${layer_number}View EditorLayer${layer_number}MVVMView)
 		if(TARGET ${view_part})
-			sw_apply_editor_input_ban(${view_part})
+			sw_apply_editor_input_guard(${view_part})
 		endif()
 	endforeach()
 endforeach()
-sw_apply_editor_input_ban(EditorModule)
+sw_apply_editor_input_guard(EditorModule)
 
 # 에디터는 LTO 를 받지 않는다(링크 시간 — Tools/ 와 같은 이유).
 set_target_properties(EditorModule ${list_editor_part} PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE)   # EditorCore 부분은 만들 때 이미 껐다

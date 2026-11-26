@@ -7,8 +7,9 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
 #include "Core/Network/Message/NetMessageTable.h"
+#include "Core/Network/Message/NetMessageWriter.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Input/InputManager.h"
@@ -20,7 +21,7 @@
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
@@ -36,9 +37,9 @@ namespace sw
             static constexpr float32 kSmoothing      = 0.5f;   ///< 클라이언트가 받은 위치로 틱마다 다가가는 비율
             static constexpr float32 kSnapDistance   = 0.001f; ///< 이 거리 안이면 받은 위치로 붙는다(멈춘 뒤 서버와 같은 값이 되게)
             /** @brief 클라이언트 → 서버: 이동 입력(`NetSimSampleInputBody`). */
-            using InputMessage = NetLimitedMessageDef<NetMessageBodyDef<0, NetMessageDirection::ToServer, NetChannelKind::Unreliable, NetSimSampleInputBody>, NetRequestLimit::kPerTick>;
+            using InputMessage = NetLimitedMessageDesc<NetMessageBodyDesc<0, NetMessageDirection::ToServer, NetChannelKind::Unreliable, NetSimSampleInputBody>, NetRequestLimit::kPerTick>;
             /** @brief 서버 → 클라이언트: 아바타 목록(`NetSimSampleStateBody`). */
-            using StateMessage = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::Unreliable, NetSimSampleStateBody>;
+            using StateMessage = NetMessageBodyDesc<1, NetMessageDirection::ToClient, NetChannelKind::Unreliable, NetSimSampleStateBody>;
             using MessageTable = NetMessageTable<NetMessageRange::kGame, InputMessage, StateMessage>;
 
             /** @brief 아바타 외곽선 색입니다. 엔티티 id 로 고른다. */

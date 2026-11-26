@@ -17,7 +17,8 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -299,7 +300,7 @@ namespace sw
                     for ( uint32 keyIndex = 0; keyIndex < HLODMeshTypes::kKeyCount; ++keyIndex )
                     {
                         if ( pSource->_arrProp[keyIndex] != nullptr )
-                            arrText[keyIndex] = SerializerUtil::formatPropertyText( *pSource->_arrProp[keyIndex], ObjectAddress{ pComponent }, context );
+                            arrText[keyIndex] = PropertySerializer::formatPropertyText( *pSource->_arrProp[keyIndex], ObjectAddress{ pComponent }, context );
                     }
                     if ( arrText[HLODMeshTypes::kStatic] != "true" || arrText[HLODMeshTypes::kVisible] != "true" )
                         continue;
@@ -323,9 +324,9 @@ namespace sw
                         if ( pGroup == nullptr )
                             pGroup = &inoutListGroup.emplace_back( HLODGroup{ arrText[HLODMeshTypes::kMesh], arrText[HLODMeshTypes::kMaterial], arrText[HLODMeshTypes::kSection], {}, {} } );
                         pGroup->_listPosition.push_back( position );
-                        pGroup->_listTransformText.push_back( SerializerUtil::formatValueText( ValueAddress{ &position }, types._vectorTypeName, context ) );
-                        pGroup->_listTransformText.push_back( SerializerUtil::formatValueText( ValueAddress{ &euler }, types._vectorTypeName, context ) );
-                        pGroup->_listTransformText.push_back( SerializerUtil::formatValueText( ValueAddress{ &scale }, types._vectorTypeName, context ) );
+                        pGroup->_listTransformText.push_back( ValueSerializer::formatValueText( ValueAddress{ &position }, types._vectorTypeName, context ) );
+                        pGroup->_listTransformText.push_back( ValueSerializer::formatValueText( ValueAddress{ &euler }, types._vectorTypeName, context ) );
+                        pGroup->_listTransformText.push_back( ValueSerializer::formatValueText( ValueAddress{ &scale }, types._vectorTypeName, context ) );
                     }
                 }
                 vector<GameObject*> listChild;
@@ -376,7 +377,7 @@ namespace sw
                     XMLNode component = appendComponent( kMergedTypeName );
                     component.setAttribute( "_materialPath", string_view( listGroup[firstIndex]._materialText ) );
                     const XMLNode instance = component.appendChild( "_listInstance" ).appendChild( kTransformTypeName );
-                    instance.setAttribute( "_position", string_view( SerializerUtil::formatValueText( ValueAddress{ &center }, types._vectorTypeName, context ) ) );
+                    instance.setAttribute( "_position", string_view( ValueSerializer::formatValueText( ValueAddress{ &center }, types._vectorTypeName, context ) ) );
                     const XMLNode listPart = component.appendChild( "_listPart" );
                     for ( const size_t groupIndex : listMember )
                     {
@@ -388,7 +389,7 @@ namespace sw
                             const XMLNode part     = listPart.appendChild( kPartTypeName );
                             part.setAttribute( "_meshID", string_view( group._meshText ) );
                             part.setAttribute( "_sectionName", string_view( group._sectionText ) );
-                            part.setAttribute( "_position", string_view( SerializerUtil::formatValueText( ValueAddress{ &relative }, types._vectorTypeName, context ) ) );
+                            part.setAttribute( "_position", string_view( ValueSerializer::formatValueText( ValueAddress{ &relative }, types._vectorTypeName, context ) ) );
                             part.setAttribute( "_rotation", string_view( group._listTransformText[instanceIndex * 3 + 1] ) );
                             part.setAttribute( "_scale", string_view( group._listTransformText[instanceIndex * 3 + 2] ) );
                         }

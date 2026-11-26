@@ -15,7 +15,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Client/CityBuildInputComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityBuilderGameModeComponent.h"
@@ -23,7 +23,7 @@
 #include "GameFramework/Runtime/Character/Input/InputActionCheckUtil.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 namespace sw

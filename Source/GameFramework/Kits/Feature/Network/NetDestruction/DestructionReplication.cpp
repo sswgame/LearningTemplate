@@ -14,7 +14,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 namespace sw
 {
@@ -49,7 +49,7 @@ namespace sw
             [[nodiscard]] static bool readEvent( BitReader& reader, DestructionDamageEvent& outEvent )
             {
                 DestructionEventNetState state;
-                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
+                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != LayoutReadResult::Ok )
                     return false;
                 outEvent._kind      = static_cast<DestructionDamageKind>( state._kind );
                 outEvent._leafHint  = state._leafHint;
@@ -74,7 +74,7 @@ namespace sw
             [[nodiscard]] static bool readExactPose( BitReader& reader, float3& outPosition, quaternion& outRotation )
             {
                 DestructionExactPoseNetState state;
-                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
+                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != LayoutReadResult::Ok )
                     return false;
                 outPosition = state._position;
                 outRotation = state._rotation;
@@ -100,7 +100,7 @@ namespace sw
             [[nodiscard]] static bool readMovingPose( BitReader& reader, float3& outPosition, quaternion& outRotation )
             {
                 DestructionMovingPoseNetState state;
-                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
+                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != LayoutReadResult::Ok )
                     return false;
                 outPosition = state._position;
                 outRotation = state._rotation;

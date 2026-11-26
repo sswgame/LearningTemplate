@@ -1,6 +1,6 @@
 /**
  * @file RHIScissorRect.h
- * @brief 가위(scissor) 사각형입니다. RHI 서술체 전체(`RHIDescriptors.h`) 없이 이것만 쓰는 헤더가 include 하도록 따로 둡니다(캔버스 그리기 목록은 게임이 보는 헤더라 제 형식 `CanvasScissorRect` 를 둔다).
+ * @brief 가위(scissor) 사각형입니다. RHI 서술체 묶음(`RHITypes.h`) 없이 이것만 쓰는 헤더가 include 하도록 따로 둡니다(캔버스 그리기 목록은 게임이 보는 헤더라 제 형식 `CanvasScissorRect` 를 둔다).
  */
 #pragma once
 #include "Core/Foundation/Types.h"

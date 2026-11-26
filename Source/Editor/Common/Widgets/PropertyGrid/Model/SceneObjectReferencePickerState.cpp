@@ -17,7 +17,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneObjectReference.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 namespace sw::editor
 {
@@ -28,7 +28,7 @@ namespace sw::editor
             static string formatValue( const SceneObjectReference& value, const PropertyInfo& prop )
             {
                 // 참조는 값 자체라 값 주소 쪽 변환으로 쓴다(객체 주소 쪽은 오프셋을 한 번 더 더한다).
-                return SerializerUtil::formatValueText( ValueAddress{ &value }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                return ValueSerializer::formatValueText( ValueAddress{ &value }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
             }
 
             /** @brief 해석된 번호의 오브젝트를 그 참조의 씬에서 찾습니다. */

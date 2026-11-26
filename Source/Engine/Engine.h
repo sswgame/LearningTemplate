@@ -30,7 +30,7 @@ namespace sw
     class AssetManager;
     class AssetStreamingQueue;
     class CameraComponent;
-    class CommandLineManager;
+    class CommandLine;
     class CommandLineSubsystem;
     class CompressionCodecRegistry;
     class ConfigManager;
@@ -152,8 +152,8 @@ namespace sw
         // ----------------------------------------------------------------------
         ConfigManager* getConfigManager() const { return _pConfigManager; }
         /** @brief 코어 범위의 명령줄입니다. 기동 전 · 종료 뒤에는 nullptr 입니다. */
-        CommandLineManager* getCommandLineManager() const;
-        RHI*                getRHI() const { return _pRHI; }
+        CommandLine* getCommandLine() const;
+        RHI*         getRHI() const { return _pRHI; }
         /** @brief 렌더러 창구입니다. 렌더러를 짓지 않는 구성(전용 서버)과 렌더러를 두지 않은 기동은 nullptr 입니다. */
         IEngineRenderDriver* getRenderDriver() const { return _pRenderDriver; }
         /** @brief 렌더 스레드입니다(클라이언트 호스트 전용 — 서지 않았으면 nullptr). 다른 호스트는 `getRenderDriver` 만 씁니다. */

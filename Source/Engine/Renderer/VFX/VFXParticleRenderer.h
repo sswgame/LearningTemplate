@@ -5,7 +5,7 @@
  *          CPU 방출기의 입자는 프레임마다 모두 이어 붙인 구조 버퍼 하나로 올리고(패스 전용 슬롯 t11 — `shaderslot::kPassBuffer`), 방출기 하나가 `drawInstanced( 6, 입자 수 )` 하나다.
  *          정렬 모드가 있는 CPU 방출기는 자리(`GPUTransparentParticleSlot::_order`)의 구간으로 순서 목록(t3, `shaderslot::kParticleOrderBuffer`)을 거쳐 입자를 고른다. 입자는 옮기지 않는다.
  *          GPU 방출기는 `VFXGPUSimulation` 이 프레임 그래프에서 만든 자기 렌더 입력을 t11 에 걸고 간접 인자(`drawIndirect`)로 그린다 — 입자 수를 CPU 가 모른다.
- *          PSO 와 PassCB 바인딩은 부르는 쪽(`FramePassExecutor::drawParticleSlots`)이 한다. 그리는 순서와 메시 투명 배치 사이의 자리는 스냅샷의 자리 목록이 정한다.
+ *          PSO 와 PassCB 바인딩은 부르는 쪽(`FrameRecorder::drawParticleSlots`)이 한다. 그리는 순서와 메시 투명 배치 사이의 자리는 스냅샷의 자리 목록이 정한다.
  *          메시 배치 사이에 끼는 자리마다 PSO 를 입자 것으로 바꿨다가 되돌린다(교차 정렬의 비용 — 자리가 이어지는 입자는 한 번에 그린다).
  *
  *          주의: 표본 효과의 텍스처(Kenney 파티클)는 RGB 가 알파와 함께 어두워지는 형태라 곧은 알파로 섞으면 가장자리가 두 번 곱해져 흐리다.
@@ -62,7 +62,7 @@ namespace sw
         const VFXGPUSimulation& getGPUSimulation() const { return _gpuSimulation; }
         /**
          * @brief 지금 열린 렌더 패스에 @p listSlot 의 방출기마다 그리기 하나를 그 순서로 기록합니다. PSO 와 PassCB 는 부르는 쪽이 걸어 두었어야 합니다.
-         * @details 투명 패스는 메시 투명 배치 사이의 자리마다 그 자리의 구간으로 부른다(`FramePassExecutor::drawParticleSlots`).
+         * @details 투명 패스는 메시 투명 배치 사이의 자리마다 그 자리의 구간으로 부른다(`FrameRecorder::drawParticleSlots`).
          * @param listBatch      `prepareFrame` 에 넘긴 것과 같은 목록(같은 프레임)
          * @param listSlot       그릴 입자 그리기(`GPUTransparentParticleSlot::_particleBatchIndex` 가 @p listBatch 의 번호)
          * @return 그린 방출기 수입니다(텍스처가 없는 방출기는 그리지 않습니다)

@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Input/EditorFileDrop.h"
 
-#include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 
 #include <imgui.h>
 

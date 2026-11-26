@@ -59,13 +59,13 @@ namespace sw
 
         /** @brief XML 을 읽습니다. 모르는 이름, 범위 밖 값, 앞 단계보다 크거나 같은 비율 · 임계값은 오류이고 false 입니다(표가 빈다). */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
-        /** @brief 리소스 경로의 파일을 읽습니다. */
+        /** @brief 에셋 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 엔진 기본 표(`EngineDefaultAssets::_characterLODSettings`)를 한 번 읽어 돌려줍니다. 읽지 못하면 오류를 한 번 남기고 빈 표입니다(LOD 0 만 그린다). 부품별 차이는 `CharacterLODSectionRule` 이다. */
         static const CharacterLODSettings& getDefault();
 
     private:
-        /** @brief 찾은 루트를 읽습니다. 글 입구(`loadFromXMLText`)와 리소스 입구(`loadFromAsset` — `XMLReadUtil::parseResourceRoot` 로 층 · 다시 읽기 기록 · 접속 대조를 받는다)가 함께 쓴다. */
+        /** @brief 찾은 루트를 읽습니다. 글 입구(`loadFromXMLText`)와 에셋 입구(`loadFromAsset` — `XMLReadUtil::parseAssetRoot` 로 층 · 다시 읽기 기록 · 접속 대조를 받는다)가 함께 쓴다. */
         [[nodiscard]] bool loadFromRoot( XMLRootStatus status, const XMLNode& root, string_view sourceLabel );
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
 

@@ -1,7 +1,7 @@
 /**
  * @file TextureLayerBake.h
  * @brief UV 공간 층 굽기 요청입니다 — 밑 텍스처 위에 층(마스크 × 색, 섞기, 배치, 영역 경계, 번짐 텍스처)을 차례로 그려 렌더 타깃 두 장(알베도 · 표면 덮어쓰기)에 굽습니다.
- * @details 게임 스레드가 요청을 텍스처 캐시에 맡기고(`TextureCache::requestLayerBake`) 렌더 스레드가 프레임 프리패스 리스트에서 층마다 전체 화면 한 번씩 그린다(`FramePassExecutor::drawTextureLayerBakes`).
+ * @details 게임 스레드가 요청을 텍스처 캐시에 맡기고(`TextureCache::requestLayerBake`) 렌더 스레드가 프레임 프리패스 리스트에서 층마다 전체 화면 한 번씩 그린다(`FrameRecorder::drawTextureLayerBakes`).
  *          층마다 아래 결과를 읽어야 해서(오버레이 섞기는 고정 블렌드로 못 한다) 결과 · 작업 타깃 두 벌을 번갈아 쓰고, 마지막 층이 결과 타깃에 떨어지게 순서를 잡는다.
  *          층 값은 루트 상수 한 묶음(`kRootDwordCount`)에 담는다 — 굽기는 층 목록이 바뀔 때만 돌아 버퍼를 따로 두지 않는다.
  *          언리얼 `UKismetRenderingLibrary::DrawMaterialToRenderTarget` · 유니티 `CommandBuffer.Blit` 으로 런타임 데칼을 굽는 자리와 같다(기억에 의존한 비교). 식은 `skin_layer_composite.hlsli` 와 같다.

@@ -1,6 +1,6 @@
 /**
  * @file SharedAssetTable.h
- * @brief 리소스 id → 약한 참조 에셋 표 하나입니다(키는 리다이렉트를 푼 지금 id). 경로로 나눠 주는 캐시(스켈레톤 · 클립 · 물리 에셋 · 캐릭터 데이터 표)가 같은 구현을 씁니다.
+ * @brief 에셋 id → 약한 참조 에셋 표 하나입니다(키는 리다이렉트를 푼 지금 id). 경로로 나눠 주는 캐시(스켈레톤 · 클립 · 물리 에셋 · 캐릭터 데이터 표)가 같은 구현을 씁니다.
  * @details 같은 경로는 같은 객체를 받고, 마지막 사용자가 놓으면 사라집니다(표는 `WeakInternTable`). 읽기(파일 IO)는 잠금 밖에서 하고, 같은 경로의
  *          동시 요청은 진행 중 표가 같은 로드 작업(`SharedAssetLoadOperation`)으로 묶습니다. 다시 읽기(`reloadShared`)는 새 객체를 새 판으로 넣고 옛 판이 그것을 가리키게 하며
  *          다시 읽은 횟수(`getReloadCount`)를 올립니다. 표는 `const` 값만 들어 나눠 준 객체를 제자리에서 바꿀 길이 없습니다 — 워커가 쥔 `shared_ptr<const T>` 를 읽는 동안
@@ -32,7 +32,7 @@ namespace sw
     class SharedAssetTable
     {
     public:
-        /** @brief 리소스 id 의 파일을 @p outAsset 에 읽습니다. 읽지 못하면 false 입니다. */
+        /** @brief 에셋 id 의 파일을 @p outAsset 에 읽습니다. 읽지 못하면 false 입니다. */
         using LoadFunction = bool ( * )( const AssetID& assetID, AssetType& outAsset );
 
         SharedAssetTable()
@@ -179,7 +179,7 @@ namespace sw
          * @details 참조는 GUID 를 지금 경로로 풀어 온다(`AssetRefBase` · `DataPath`) — 한 에셋의 경로는 하나라 옮긴 에셋이 두 칸에 오르지 않는다.
          */
         static string makeKey( string_view path ) { return FileUtil::normalizeSeparators( path ); }
-        /** @brief 캐시 키(획득 · 리로드가 넘긴 경로)를 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다. 공유 캐시의 키는 리소스 id 만 담는다. */
+        /** @brief 캐시 키(획득 · 리로드가 넘긴 경로)를 로더에 넘길 에셋 id 로 바꾸는 한 곳입니다. 공유 캐시의 키는 에셋 id 만 담는다. */
         static AssetID toAssetID( string_view path ) { return AssetID{ path }; }
 
         WeakInternTable<string, const AssetType>                                              _table; ///< `const` 값만 — 나눠 준 객체는 바뀌지 않는다

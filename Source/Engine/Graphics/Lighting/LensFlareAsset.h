@@ -18,7 +18,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 namespace sw
 {
@@ -80,7 +80,7 @@ namespace sw
         PROPERTY( Required, Min = 0 )
         float32 _occlusionRadius{ 0.0f };
 
-        /** @brief 리소스 경로에서 읽습니다. 못 읽거나 원소가 없으면 그 까닭입니다. */
+        /** @brief 에셋 경로에서 읽습니다. 못 읽거나 원소가 없으면 그 까닭입니다. */
         [[nodiscard]] expected<void> loadFromAsset( const AssetID& assetID );
     };
 

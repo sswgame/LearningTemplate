@@ -12,7 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Panels/Multiplayer/Model/EditorNetConditions.h"
+#include "Editor/Panels/Multiplayer/Model/EditorNetEmulationSettings.h"
 
 #include "Engine/Config/NetEmulationPresetTable.h"
 
@@ -21,11 +21,11 @@ namespace sw::editor
     /** @brief Conditions 탭이 한 프레임 그릴 값입니다. 포인터 · 참조를 두지 않는다(MVVM 계약). */
     struct MultiplayerConditionsViewState
     {
-        vector<string>        _listPresetLabel{};              ///< 프리셋 단추 이름(엔진 프리셋 표의 순서 — `applyPreset` 의 번호)
-        EditorNetLinkSettings _up{};                           ///< 대상의 보내는 쪽 패널 값
-        EditorNetLinkSettings _down{};                         ///< 대상의 받는 쪽 패널 값
-        uint8                 _bActive{ SW_FALSE };            ///< 세션이 돌고 대상이 있다 — 아니면 안내 한 줄만 그린다
-        uint8                 _bPresetTableFailed{ SW_FALSE }; ///< 프리셋 표를 읽지 못했다 — 단추 자리에 그렇다고 적는다
+        vector<string>             _listPresetLabel{};              ///< 프리셋 단추 이름(엔진 프리셋 표의 순서 — `applyPreset` 의 번호)
+        EditorNetEmulationSettings _up{};                           ///< 대상의 보내는 쪽 패널 값
+        EditorNetEmulationSettings _down{};                         ///< 대상의 받는 쪽 패널 값
+        uint8                      _bActive{ SW_FALSE };            ///< 세션이 돌고 대상이 있다 — 아니면 안내 한 줄만 그린다
+        uint8                      _bPresetTableFailed{ SW_FALSE }; ///< 프리셋 표를 읽지 못했다 — 단추 자리에 그렇다고 적는다
     };
 
     /**
@@ -40,9 +40,9 @@ namespace sw::editor
         /** @brief 대상 @p targetIndex 의 패널 값을 채웁니다. 세션이 돌지 않거나 대상이 없으면 패널 값을 지우고 `_bActive` 가 거짓입니다. 프리셋 표는 처음 쓸 때 한 번 읽습니다. */
         void gather( optional<int32> targetIndex, MultiplayerConditionsViewState& outState );
         /** @brief 대상의 패널 값을 둡니다(슬라이더를 끄는 동안 — 보내지 않는다). */
-        void setLink( int32 targetIndex, const EditorNetLinkSettings& up, const EditorNetLinkSettings& down );
+        void setLink( int32 targetIndex, const EditorNetEmulationSettings& up, const EditorNetEmulationSettings& down );
         /** @brief 대상의 한 방향 패널 값을 그 프로세스(들)에 보냅니다(슬라이더를 놓았을 때). */
-        void sendLink( EditorNetLinkDirection direction, int32 targetIndex, bool bApplyToAll );
+        void sendLink( NetEmulationDirection direction, int32 targetIndex, bool bApplyToAll );
         /** @brief 프리셋 @p presetIndex 를 두 방향 패널 값으로 두고 보냅니다(왕복이 그 회선이 된다). */
         void applyPreset( size_t presetIndex, int32 targetIndex, bool bApplyToAll );
         void disconnect( int32 targetIndex, bool bApplyToAll );
@@ -56,8 +56,8 @@ namespace sw::editor
         /** @brief 프로세스 하나의 패널 값입니다. */
         struct ProcessLink
         {
-            EditorNetLinkSettings _up{};
-            EditorNetLinkSettings _down{};
+            EditorNetEmulationSettings _up{};
+            EditorNetEmulationSettings _down{};
         };
 
         /** @brief 대상(또는 모두)에 명령 한 줄을 보냅니다. 끝난 프로세스는 경고로 알립니다. */

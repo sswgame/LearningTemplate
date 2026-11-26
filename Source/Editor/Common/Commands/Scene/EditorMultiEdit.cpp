@@ -5,7 +5,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 
 namespace sw::editor
 {
@@ -52,12 +52,12 @@ namespace sw::editor
     bool EditorMultiEditGroup::hasMixedValues( const PropertyInfo& prop, const vector<ObjectAddress>& listInstance )
     {
         const SerializeContext& context     = SerializeContext::getDefault( SerializePurpose::Authoring );
-        const bool              bComparable = listInstance.size() >= 2 && SerializerUtil::canCarryProperty( prop, context );
+        const bool              bComparable = listInstance.size() >= 2 && PropertySerializer::canCarryProperty( prop, context );
         if ( bComparable == false )
             return false;
         for ( size_t index = 1; index < listInstance.size(); ++index )
         {
-            if ( SerializerUtil::arePropertyValuesEqual( prop, listInstance[0], listInstance[index], context ) == false )
+            if ( PropertySerializer::arePropertyValuesEqual( prop, listInstance[0], listInstance[index], context ) == false )
                 return true;
         }
         return false;

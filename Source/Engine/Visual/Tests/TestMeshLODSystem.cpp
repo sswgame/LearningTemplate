@@ -23,10 +23,10 @@ namespace
     struct TestMeshLODSystemInternal
     {
         /** @brief 정점 넷의 사각형(반지름 약 0.7)입니다. */
-        static vector<RHIVertex> makeQuadVertices()
+        static vector<MeshVertex> makeQuadVertices()
         {
-            vector<RHIVertex> listVertex( 4 );
-            const float32     arrPosition[4][2] = {
+            vector<MeshVertex> listVertex( 4 );
+            const float32      arrPosition[4][2] = {
                 {0.0f, 0.0f},
                 {1.0f, 0.0f},
                 {1.0f, 1.0f},

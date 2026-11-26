@@ -5,15 +5,15 @@
 #include "Core/TestFramework/TestWait.h"
 #include "Core/Time/TimePoint.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLMigrationRunner.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/Tests/FakeSQLDriver.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/SQLServiceStore.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
-#include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
+#include "GameFramework/Runtime/Online/Store/Server/IServiceStoreDriver.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
@@ -366,11 +366,11 @@ namespace
     /** @brief 범위 조건(`requireRange`)의 약속을 글 줄로 적습니다. 메모리와 SQL 이 같은 줄을 내야 합니다. 저장소 일 안(읽기 집합 연결)에서 돈다. */
     struct ServiceRangeParity
     {
-        static uint64 listFingerprint( IServiceStoreConnection& connection, string_view cursor, int32 maxCount, bool bDescending )
+        static uint64 listDigest( IServiceStoreConnection& connection, string_view cursor, int32 maxCount, bool bDescending )
         {
             vector<ServiceRecord> listRecord;
             SW_EXPECT_TRUE( ServiceRecordReader::readPage( connection, kRangeTable, "q/", cursor, maxCount, bDescending, listRecord )._result == ServiceStoreResult::Ok );
-            return ServiceTransaction::computeRangeFingerprint( listRecord, 0 );
+            return ServiceTransaction::computeRangeDigest( listRecord, 0 );
         }
 
         static void put( IServiceStoreConnection& connection, string_view key, string_view text )
@@ -380,12 +380,12 @@ namespace
             SW_EXPECT_TRUE( ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok );
         }
 
-        /** @brief "q/" 범위를 @p fingerprint 로 걸고 범위 밖 키 @p otherKey 를 쓰는(비면 조건만) 커밋의 결과 줄입니다. */
+        /** @brief "q/" 범위를 @p digest 로 걸고 범위 밖 키 @p otherKey 를 쓰는(비면 조건만) 커밋의 결과 줄입니다. */
         static void recordGuardedCommit( vector<string>& inoutListLine, IServiceStoreConnection& connection, string_view step, string_view cursor, int32 maxCount, bool bDescending,
-                                         uint64 fingerprint, string_view writeKey )
+                                         uint64 digest, string_view writeKey )
         {
             ServiceTransaction transaction;
-            transaction.requireRange( kRangeTable, "q/", cursor, maxCount, bDescending, fingerprint );
+            transaction.requireRange( kRangeTable, "q/", cursor, maxCount, bDescending, digest );
             if ( writeKey.empty() == false )
                 ServiceStoreTestAccess::putBytes( transaction, kRangeTable, writeKey, SQLServiceStoreTestUtil::makeBytes( "w" ) );
             ServiceCommitInfo        info;
@@ -399,43 +399,43 @@ namespace
             put( connection, "q/1", "1" );
             put( connection, "q/2", "2" );
 
-            uint64 fingerprint = listFingerprint( connection, "", 10, false );
-            recordGuardedCommit( listLine, connection, "unchanged", "", 10, false, fingerprint, "z/a" );
+            uint64 digest = listDigest( connection, "", 10, false );
+            recordGuardedCommit( listLine, connection, "unchanged", "", 10, false, digest, "z/a" );
 
-            fingerprint = listFingerprint( connection, "", 10, false );
+            digest = listDigest( connection, "", 10, false );
             put( connection, "q/3", "3" ); // 범위에 끼어든 삽입(팬텀)
-            recordGuardedCommit( listLine, connection, "inserted", "", 10, false, fingerprint, "z/b" );
+            recordGuardedCommit( listLine, connection, "inserted", "", 10, false, digest, "z/b" );
 
-            fingerprint = listFingerprint( connection, "", 10, false );
+            digest = listDigest( connection, "", 10, false );
             put( connection, "z/c", "c" ); // 범위 밖
-            recordGuardedCommit( listLine, connection, "outside", "", 10, false, fingerprint, "z/d" );
+            recordGuardedCommit( listLine, connection, "outside", "", 10, false, digest, "z/d" );
 
-            fingerprint = listFingerprint( connection, "", 10, false );
-            recordGuardedCommit( listLine, connection, "own write", "", 10, false, fingerprint, "q/4" ); // 이 트랜잭션의 쓰기는 견줄 대상이 아니다
+            digest = listDigest( connection, "", 10, false );
+            recordGuardedCommit( listLine, connection, "own write", "", 10, false, digest, "q/4" ); // 이 트랜잭션의 쓰기는 견줄 대상이 아니다
 
-            fingerprint = listFingerprint( connection, "", 1, false );
+            digest = listDigest( connection, "", 1, false );
             put( connection, "q/9", "9" ); // 본 쪽(첫 줄) 밖
-            recordGuardedCommit( listLine, connection, "past the page", "", 1, false, fingerprint, "z/e" );
+            recordGuardedCommit( listLine, connection, "past the page", "", 1, false, digest, "z/e" );
 
-            fingerprint = listFingerprint( connection, "", 10, false );
+            digest = listDigest( connection, "", 10, false );
             put( connection, "q/1", "one" ); // 범위 안 레코드가 바뀌었다
-            recordGuardedCommit( listLine, connection, "updated", "", 10, false, fingerprint, "" );
+            recordGuardedCommit( listLine, connection, "updated", "", 10, false, digest, "" );
 
-            fingerprint = listFingerprint( connection, "", 10, false );
+            digest = listDigest( connection, "", 10, false );
             {
                 ServiceTransaction erase;
                 erase.erase( kRangeTable, "q/2" );
                 SW_EXPECT_TRUE( ServiceCommitRunner::commitOnce( connection, erase ) == ServiceStoreResult::Ok );
             }
-            recordGuardedCommit( listLine, connection, "erased", "", 10, false, fingerprint, "" );
+            recordGuardedCommit( listLine, connection, "erased", "", 10, false, digest, "" );
 
-            fingerprint = listFingerprint( connection, "q/4", 10, true ); // 커서 앞(작은 키)을 거꾸로
+            digest = listDigest( connection, "q/4", 10, true ); // 커서 앞(작은 키)을 거꾸로
             put( connection, "q/0", "0" );
-            recordGuardedCommit( listLine, connection, "inserted before cursor", "q/4", 10, true, fingerprint, "" );
+            recordGuardedCommit( listLine, connection, "inserted before cursor", "q/4", 10, true, digest, "" );
 
-            fingerprint = listFingerprint( connection, "q/4", 10, true );
+            digest = listDigest( connection, "q/4", 10, true );
             put( connection, "q/5", "5" ); // 커서 뒤
-            recordGuardedCommit( listLine, connection, "inserted after cursor", "q/4", 10, true, fingerprint, "" );
+            recordGuardedCommit( listLine, connection, "inserted after cursor", "q/4", 10, true, digest, "" );
             return listLine;
         }
     };

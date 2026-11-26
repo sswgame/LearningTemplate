@@ -7,7 +7,7 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/MonotonicClock.h"
-#include "Core/Time/TimeRollover.h"
+#include "Core/Time/TimeRolloverUtil.h"
 
 // ------------------------------------------------------------------------------
 // 1) Core_Time — 스코프 타이머 · 스톱워치

@@ -132,7 +132,7 @@ namespace sw
         BugReport            _report;                      ///< info.txt 에 쓸 값(메모, 씬, 백엔드, 빌드, 게임, 카메라)
         AbsolutePath         _root;                        ///< BugReport 폴더들의 루트(엔진에서는 `Saved/BugReports`)
         ScreenshotLocalTime  _localTime{};                 ///< 폴더 이름의 시각
-        AbsolutePath         _logFilePath;                 ///< log.txt 로 복사할 이 프로세스의 로그 파일(`ILogSink::getLogFilePath`). 비면 건너뛴다
+        AbsolutePath         _logFilePath;                 ///< log.txt 로 복사할 이 프로세스의 로그 파일(`ILogBackend::getLogFilePath`). 비면 건너뛴다
         string               _backendFlag;                 ///< 재현 명령의 백엔드 플래그(쿠킹 표의 명령줄 이름 `dx12` · `wgpu`, `RHIBackendInfoTable::findCommandLineName`). 장치가 없으면 빔
         SceneManager*        _pSceneManager{ nullptr };    ///< 활성 씬 사본을 저장할 씬 관리자. 활성 씬이 없으면 null
         const FrameProfiler* _pFrameProfiler{ nullptr };   ///< 최근 프레임 trace 를 담을 프로파일러. null 이면 건너뛴다

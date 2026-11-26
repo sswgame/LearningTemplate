@@ -11,7 +11,7 @@
 #include "Engine/Environment/Terrain/Tests/TerrainTestServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 using namespace sw;
 
@@ -20,7 +20,7 @@ namespace TerrainStateTestUtil
     /** @brief 해상도 — 청크 칸 기본값(32)의 청크 하나다. */
     constexpr uint32 kResolution = 33;
 
-    /** @brief 평평한 높이장(구멍 없음)을 케이스 도메인에 쓰고 그 리소스 id 를 돌려줍니다. */
+    /** @brief 평평한 높이장(구멍 없음)을 케이스 도메인에 쓰고 그 에셋 id 를 돌려줍니다. */
     string writeFlatHeightfield( const test::ScopedScratchDomain& domain )
     {
         HeightfieldAsset asset;

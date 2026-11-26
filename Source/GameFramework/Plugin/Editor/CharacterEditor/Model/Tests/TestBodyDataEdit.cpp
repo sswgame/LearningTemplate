@@ -131,8 +131,8 @@ SW_TEST_CASE( BodyDataEditTest, FluidPathAxisAndAliasEdits )
  */
 SW_TEST_CASE( BodyDataEditTest, SurfacePickFindsNearestSectionAndUV )
 {
-    vector<RHIVertex> listVertex( 8 );
-    const float32     arrCorner[4][2] = {
+    vector<MeshVertex> listVertex( 8 );
+    const float32      arrCorner[4][2] = {
         {0.0f, 0.0f},
         {1.0f, 0.0f},
         {1.0f, 1.0f},
@@ -142,7 +142,7 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFindsNearestSectionAndUV )
     {
         for ( uint32 corner = 0; corner < 4; ++corner )
         {
-            RHIVertex& vertex      = listVertex[layer * 4 + corner];
+            MeshVertex& vertex     = listVertex[layer * 4 + corner];
             vertex._arrPosition[0] = arrCorner[corner][0];
             vertex._arrPosition[1] = arrCorner[corner][1];
             vertex._arrPosition[2] = static_cast<float32>( layer );
@@ -156,8 +156,8 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFindsNearestSectionAndUV )
         MeshSection{ hashed_string( "back" ), 6, 6, MeshPersonVisibility::Both}
     };
 
-    vector<BodyPickSurface> listSurface( 1 );
-    BodyPickSurface::build( listVertex, {}, {}, {}, {}, float4x4::Identity, listSurface[0] );
+    vector<BodySurfacePick> listSurface( 1 );
+    BodySurfacePick::build( listVertex, {}, {}, {}, {}, float4x4::Identity, listSurface[0] );
     listSurface[0]._listIndex   = listIndex;
     listSurface[0]._listSection = listSection;
 
@@ -178,8 +178,8 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFindsNearestSectionAndUV )
  */
 SW_TEST_CASE( BodyDataEditTest, SurfacePickFollowsPoseAndParts )
 {
-    vector<RHIVertex> listVertex( 4 );
-    const float32     arrCorner[4][2] = {
+    vector<MeshVertex> listVertex( 4 );
+    const float32      arrCorner[4][2] = {
         {0.0f, 0.0f},
         {1.0f, 0.0f},
         {1.0f, 1.0f},
@@ -196,8 +196,8 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFollowsPoseAndParts )
     const vector<MeshSkinVertex> listSkin( 4 ); // 기본 영향 — 본 0 에 가중치 1
     const vector<float4x4>       listPalette{ float4x4::makeTranslation( 2.0f, 0.0f, 0.0f ) };
 
-    vector<BodyPickSurface> listSurface( 1 );
-    BodyPickSurface::build( listVertex, {}, {}, listSkin, listPalette, float4x4::Identity, listSurface[0] );
+    vector<BodySurfacePick> listSurface( 1 );
+    BodySurfacePick::build( listVertex, {}, {}, listSkin, listPalette, float4x4::Identity, listSurface[0] );
     listSurface[0]._listIndex = listIndex;
 
     BodySurfaceHit hit{};
@@ -208,7 +208,7 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFollowsPoseAndParts )
 
     // 부품 표면 — 같은 사각형을 몸 앞(z = 1)에 단단하게 둔다.
     listSurface.emplace_back();
-    BodyPickSurface::build( listVertex, {}, {}, {}, {}, float4x4::makeTranslation( 2.0f, 0.0f, 1.0f ), listSurface[1] );
+    BodySurfacePick::build( listVertex, {}, {}, {}, {}, float4x4::makeTranslation( 2.0f, 0.0f, 1.0f ), listSurface[1] );
     listSurface[1]._listIndex = listIndex;
     SW_REQUIRE_TRUE( BodySurfaceHit::pick( listSurface, float3{ 2.25f, 0.5f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
     SW_EXPECT_EQUAL( 1u, hit._surface );
@@ -221,8 +221,8 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFollowsPoseAndParts )
  */
 SW_TEST_CASE( BodyDataEditTest, SurfacePickAppliesMorphWeights )
 {
-    vector<RHIVertex> listVertex( 4 );
-    const float32     arrCorner[4][2] = {
+    vector<MeshVertex> listVertex( 4 );
+    const float32      arrCorner[4][2] = {
         {0.0f, 0.0f},
         {1.0f, 0.0f},
         {1.0f, 1.0f},
@@ -243,15 +243,15 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickAppliesMorphWeights )
     const vector<float32>         listWeight{ 0.5f };
     const vector<uint32>          listIndex{ 0, 1, 2, 0, 2, 3 };
 
-    vector<BodyPickSurface> listSurface( 1 );
-    BodyPickSurface::build( listVertex, listTarget, listWeight, {}, {}, float4x4::Identity, listSurface[0] );
+    vector<BodySurfacePick> listSurface( 1 );
+    BodySurfacePick::build( listVertex, listTarget, listWeight, {}, {}, float4x4::Identity, listSurface[0] );
     listSurface[0]._listIndex = listIndex;
     BodySurfaceHit hit{};
     SW_EXPECT_FALSE( BodySurfaceHit::pick( listSurface, float3{ 0.5f, 0.5f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
     SW_REQUIRE_TRUE( BodySurfaceHit::pick( listSurface, float3{ 2.5f, 0.5f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
     SW_EXPECT_NEAR( 2.5f, hit._position._x, 1e-4f );
 
-    BodyPickSurface::build( listVertex, listTarget, {}, {}, {}, float4x4::Identity, listSurface[0] ); // 가중치가 없으면 레스트 그대로
+    BodySurfacePick::build( listVertex, listTarget, {}, {}, {}, float4x4::Identity, listSurface[0] ); // 가중치가 없으면 레스트 그대로
     SW_EXPECT_TRUE( BodySurfaceHit::pick( listSurface, float3{ 0.5f, 0.5f, 5.0f }, float3{ 0.0f, 0.0f, -1.0f }, hit ) );
 }
 

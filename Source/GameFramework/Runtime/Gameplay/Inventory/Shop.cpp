@@ -8,9 +8,9 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"

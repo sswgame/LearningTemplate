@@ -39,24 +39,24 @@ namespace sw
         return id < ShadingModelID::Count ? s_arrShadingModelName[id] : "Shading model: (out of table)";
     }
 
-    const GBufferAttachmentSpec* GBufferLayout::findAttachment( string_view name )
+    const GBufferAttachmentDesc* GBufferLayout::findAttachment( string_view name )
     {
-        for ( const GBufferAttachmentSpec& spec : kArrAttachment )
+        for ( const GBufferAttachmentDesc& desc : kArrAttachment )
         {
-            if ( name == string_view( spec._pName ) )
-                return &spec;
+            if ( name == string_view( desc._pName ) )
+                return &desc;
         }
         return nullptr;
     }
 
-    void GBufferLayout::decodeTexel( const GBufferAttachmentSpec& spec, const float4& raw, vector<GBufferDecodedValue>& outListValue )
+    void GBufferLayout::decodeTexel( const GBufferAttachmentDesc& desc, const float4& raw, vector<GBufferDecodedValue>& outListValue )
     {
         outListValue.clear();
         const float32 arrRaw[4] = { raw._x, raw._y, raw._z, raw._w };
-        for ( uint32 channel = 0; channel < spec._channelCount; ++channel )
+        for ( uint32 channel = 0; channel < desc._channelCount; ++channel )
         {
-            const GBufferChannelSpec& channelSpec = spec._arrChannel[channel];
-            switch ( channelSpec._kind )
+            const GBufferChannelDesc& channelDesc = desc._arrChannel[channel];
+            switch ( channelDesc._kind )
             {
                 case GBufferChannelKind::Unused:
                 case GBufferChannelKind::OctahedralV:
@@ -68,7 +68,7 @@ namespace sw
                 {
                     // 값 그대로 — 화면 속도는 UV 차이(부호 있는 실수)라 풀 것이 없다.
                     outListValue.push_back( GBufferDecodedValue{
-                        channelSpec._pMeaning, float3{ arrRaw[channel], 0.0f, 0.0f },
+                        channelDesc._pMeaning, float3{ arrRaw[channel], 0.0f, 0.0f },
                         1
                     } );
                     break;

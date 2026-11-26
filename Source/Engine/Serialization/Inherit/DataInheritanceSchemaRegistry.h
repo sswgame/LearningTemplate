@@ -38,7 +38,7 @@ namespace sw
     SW_STATIC_REGISTRATION( dataInheritanceSchema, ::sw::DataInheritanceSchemaEntry, ::sw::DataInheritanceSchemaRegistrar, RootName, #RootName, pfnMakeSchema, nullptr )
 
 /**
- * @brief 칸 규칙으로 풀리지 않는 Engine 형식의 합치기 함수를 올립니다. 읽기(`ResourceContext::forMerge`)와 팩 쿠커가 같은 함수로 부모 없는 한 벌을 만듭니다.
+ * @brief 칸 규칙으로 풀리지 않는 Engine 형식의 합치기 함수를 올립니다. 읽기(`AssetComposeContext::forMerge`)와 팩 쿠커가 같은 함수로 부모 없는 한 벌을 만듭니다.
  * @details 예외 길이 아니다 — 결과는 다른 형식과 똑같이 펼친 글이고, 런타임은 그 글만 읽는다. 게임 · 키트 형식은 쓸 수 없다(`SW_DATA_INHERITANCE_SCHEMA` 와 같은 까닭).
  */
 #define SW_DATA_INHERITANCE_MERGE( RootName, pfnMerge )                                                                                          \

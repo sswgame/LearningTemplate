@@ -3,7 +3,7 @@
 #include "Engine/Asset/Cook/CookRecord.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Encoding/HexUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
@@ -359,7 +359,7 @@ namespace sw
     {
         const string_view bucketName = getEnumName( bucket ); // 폴더 이름은 열거자 이름이다
         AbsolutePath      overrideRoot;
-        if ( engine::areEngineSubsystemsBound() && engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::DDC_DIR, overrideRoot ) )
+        if ( engine::areEngineSubsystemsBound() && engine::getSubsystem<CommandLine>().getArgument( CommandLineArgument::DDC_DIR, overrideRoot ) )
             return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ overrideRoot.join( bucketName ), DerivedDataAccess::ReadWrite } } };
         const expected<DerivedDataConfig> config = ConfigManager::readConfig( DerivedDataConfig::kConfigFile );
         if ( config.has_value() == false )
@@ -426,11 +426,11 @@ namespace sw
             uint64        totalBytes = 0;
             const bool    bScanned   = FileUtil::forEachDirectoryEntry( layer._rootPath, true, [&]( const DirectoryEntry& entry )
                  {
-                FileStamp stamp;
-                if ( entry._bDirectory == false && FileUtil::getFileStamp( entry.makePath(), stamp ) )
+                FileStat fileStat;
+                if ( entry._bDirectory == false && FileUtil::getFileStat( entry.makePath(), fileStat ) )
                 {
-                    listEntry.push_back( Entry{ entry.makePath(), stamp._sizeBytes, stamp._writeTime } );
-                    totalBytes += stamp._sizeBytes;
+                    listEntry.push_back( Entry{ entry.makePath(), fileStat._sizeBytes, fileStat._writeTime } );
+                    totalBytes += fileStat._sizeBytes;
                 }
                 return true;
             } );

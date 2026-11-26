@@ -27,7 +27,7 @@ namespace sw::editor
     struct EditorDocumentAutosaveEntry
     {
         string       _documentReference;      ///< 메타에 적힌 문서의 참조 글(복구 후보만) — GUID 참조라 훑은 뒤 문서를 옮겨도 복원이 지금 자리를 찾는다
-        string       _documentPath;           ///< 문서의 리소스 id(후보면 훑은 때의 자리). 상태 문서(`_panelID` 가 있다)면 그 문서가 저장할 파일(`makeFileID`)이다
+        string       _documentPath;           ///< 문서의 에셋 id(후보면 훑은 때의 자리). 상태 문서(`_panelID` 가 있다)면 그 문서가 저장할 파일(`makeFileID`)이다
         string       _panelID;                ///< 상태 문서(프로젝트 설정 · 전역 변수 · 메시 모디파이어)의 패널 id. 비면 에셋 문서다 — 복원이 이 패널을 연다
         string       _text;                   ///< 문서 글(쓸 때만 — 복구 후보는 `_textAbs` 에서 읽는다)
         AbsolutePath _textAbs;                ///< 사본 글 파일의 디스크 경로(복구 후보)

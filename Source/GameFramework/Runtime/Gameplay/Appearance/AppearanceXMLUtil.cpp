@@ -9,7 +9,8 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceLoadReport.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearancePlacement.h"
 
 namespace sw
 {

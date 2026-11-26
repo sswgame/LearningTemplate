@@ -26,7 +26,8 @@
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
 #include "GameFramework/Runtime/Foundation/Trigger/TriggerComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
-#include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
+#include "GameFramework/Runtime/Gameplay/Zone/IZoneModuleProcessor.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneCompiledModule.h"
 
 namespace sw
 {
@@ -75,12 +76,12 @@ namespace sw
         public:
             const utf8*      getKindName() const override { return "Action"; }
             TriggerAuthority getAuthority() const override { return TriggerAuthority::Server; } // 이펙트 · 피해 · 스킬 · 즉사 · 규칙 신호는 게임 상태다 — 서버가 걸고 복제로 보낸다(클라이언트가 따로 걸면 두 번 걸린다)
-            void             collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            void             collectParamInfo( vector<ZoneParamInfo>& outListInfo ) const override
             {
-                outListSpec.push_back( ZoneParamSpec{ "on", ZoneParamKind::Text, "Enter" } );
-                outListSpec.push_back( ZoneParamSpec{ "interval", ZoneParamKind::Number, "0" } );
-                outListSpec.push_back( ZoneParamSpec{ "delay", ZoneParamKind::Number, "0" } );
-                outListSpec.push_back( ZoneParamSpec{ "do", ZoneParamKind::Actions, "" } );
+                outListInfo.push_back( ZoneParamInfo{ "on", ZoneParamKind::Text, "Enter" } );
+                outListInfo.push_back( ZoneParamInfo{ "interval", ZoneParamKind::Number, "0" } );
+                outListInfo.push_back( ZoneParamInfo{ "delay", ZoneParamKind::Number, "0" } );
+                outListInfo.push_back( ZoneParamInfo{ "do", ZoneParamKind::Actions, "" } );
             }
             bool supportsActionParams() const override { return true; }
             bool supportsCaseList() const override { return true; }
@@ -170,16 +171,16 @@ namespace sw
         public:
             const utf8*      getKindName() const override { return "PhysicsField"; }
             TriggerAuthority getAuthority() const override { return TriggerAuthority::Local; } // 이동 시뮬레이션이다 — 바디를 모는 월드마다 같은 힘을 받는다(언리얼 `APhysicsVolume` 은 서버와 조종 클라이언트의 이동 컴포넌트가 함께 읽는다)
-            void             collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            void             collectParamInfo( vector<ZoneParamInfo>& outListInfo ) const override
             {
-                outListSpec.push_back( ZoneParamSpec{ "direction", ZoneParamKind::Text, "Uniform" } );
-                outListSpec.push_back( ZoneParamSpec{ "axis", ZoneParamKind::Vector, "0,0,0" } );
-                outListSpec.push_back( ZoneParamSpec{ "strength", ZoneParamKind::Number, "0" } );
-                outListSpec.push_back( ZoneParamSpec{ "flowSpeed", ZoneParamKind::Number, "0" } );
-                outListSpec.push_back( ZoneParamSpec{ "gravityScale", ZoneParamKind::Number, "1" } );
-                outListSpec.push_back( ZoneParamSpec{ "drag", ZoneParamKind::Number, "0" } );
-                outListSpec.push_back( ZoneParamSpec{ "fluidDensity", ZoneParamKind::Number, "0" } );
-                outListSpec.push_back( ZoneParamSpec{ "friction", ZoneParamKind::Number, "1" } );
+                outListInfo.push_back( ZoneParamInfo{ "direction", ZoneParamKind::Text, "Uniform" } );
+                outListInfo.push_back( ZoneParamInfo{ "axis", ZoneParamKind::Vector, "0,0,0" } );
+                outListInfo.push_back( ZoneParamInfo{ "strength", ZoneParamKind::Number, "0" } );
+                outListInfo.push_back( ZoneParamInfo{ "flowSpeed", ZoneParamKind::Number, "0" } );
+                outListInfo.push_back( ZoneParamInfo{ "gravityScale", ZoneParamKind::Number, "1" } );
+                outListInfo.push_back( ZoneParamInfo{ "drag", ZoneParamKind::Number, "0" } );
+                outListInfo.push_back( ZoneParamInfo{ "fluidDensity", ZoneParamKind::Number, "0" } );
+                outListInfo.push_back( ZoneParamInfo{ "friction", ZoneParamKind::Number, "1" } );
             }
             bool validateModule( const ZoneCompiledModule& module, string_view sourceName ) const override
             {
@@ -239,10 +240,10 @@ namespace sw
         public:
             const utf8*      getKindName() const override { return "Blackboard"; }
             TriggerAuthority getAuthority() const override { return TriggerAuthority::Server; } // AI 판단은 서버가 돈다(클라이언트에는 AI 가 돌지 않는다)
-            void             collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            void             collectParamInfo( vector<ZoneParamInfo>& outListInfo ) const override
             {
-                outListSpec.push_back( ZoneParamSpec{ "key", ZoneParamKind::Text, nullptr } );
-                outListSpec.push_back( ZoneParamSpec{ "value", ZoneParamKind::Number, "1" } );
+                outListInfo.push_back( ZoneParamInfo{ "key", ZoneParamKind::Text, nullptr } );
+                outListInfo.push_back( ZoneParamInfo{ "value", ZoneParamKind::Number, "1" } );
             }
 
             void onStay( ZoneEventContext& context, float32 deltaTime ) const override
@@ -275,12 +276,12 @@ namespace sw
         public:
             const utf8*      getKindName() const override { return "NavArea"; }
             TriggerAuthority getAuthority() const override { return TriggerAuthority::Server; } // 길 찾기는 서버의 AI 가 쓴다
-            void             collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            void             collectParamInfo( vector<ZoneParamInfo>& outListInfo ) const override
             {
-                outListSpec.push_back( ZoneParamSpec{ "area", ZoneParamKind::Text, nullptr } );
-                outListSpec.push_back( ZoneParamSpec{ "agents", ZoneParamKind::Text, "" } );
-                outListSpec.push_back( ZoneParamSpec{ "cost", ZoneParamKind::Number, "1" } );
-                outListSpec.push_back( ZoneParamSpec{ "blocked", ZoneParamKind::Number, "0" } );
+                outListInfo.push_back( ZoneParamInfo{ "area", ZoneParamKind::Text, nullptr } );
+                outListInfo.push_back( ZoneParamInfo{ "agents", ZoneParamKind::Text, "" } );
+                outListInfo.push_back( ZoneParamInfo{ "cost", ZoneParamKind::Number, "1" } );
+                outListInfo.push_back( ZoneParamInfo{ "blocked", ZoneParamKind::Number, "0" } );
             }
 
             void onSourceBegin( GameObjectManager& manager, const ZoneCompiledModule& module ) const override
@@ -309,10 +310,10 @@ namespace sw
         public:
             const utf8*      getKindName() const override { return "SurfaceChannel"; }
             TriggerAuthority getAuthority() const override { return TriggerAuthority::Local; } // 젖음 · 진흙은 겉모습이다 — 월드마다 제 화면에 그린다(복제하지 않는다)
-            void             collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            void             collectParamInfo( vector<ZoneParamInfo>& outListInfo ) const override
             {
-                outListSpec.push_back( ZoneParamSpec{ "channel", ZoneParamKind::Text, nullptr } );
-                outListSpec.push_back( ZoneParamSpec{ "rate", ZoneParamKind::Number, nullptr } );
+                outListInfo.push_back( ZoneParamInfo{ "channel", ZoneParamKind::Text, nullptr } );
+                outListInfo.push_back( ZoneParamInfo{ "rate", ZoneParamKind::Number, nullptr } );
             }
 
             void onStay( ZoneEventContext& context, float32 deltaTime ) const override
@@ -346,18 +347,18 @@ namespace sw
         public:
             const utf8*      getKindName() const override { return "SurfaceStamp"; }
             TriggerAuthority getAuthority() const override { return TriggerAuthority::Local; } // 보이는 것만 고친다(충돌 · 내비 아님) — 월드마다 제 화면에 찍는다
-            void             collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            void             collectParamInfo( vector<ZoneParamInfo>& outListInfo ) const override
             {
-                outListSpec.push_back( ZoneParamSpec{ "shape", ZoneParamKind::Text, "Print" } );
-                outListSpec.push_back( ZoneParamSpec{ "size", ZoneParamKind::Vector, nullptr } );
-                outListSpec.push_back( ZoneParamSpec{ "depth", ZoneParamKind::Number, nullptr } );
-                outListSpec.push_back( ZoneParamSpec{ "rimHeight", ZoneParamKind::Number, "0" } );
-                outListSpec.push_back( ZoneParamSpec{ "rimWidth", ZoneParamKind::Number, "0" } );
-                outListSpec.push_back( ZoneParamSpec{ "fillSpeed", ZoneParamKind::Number, nullptr } );
-                outListSpec.push_back( ZoneParamSpec{ "spinSpeed", ZoneParamKind::Number, "0" } );
-                outListSpec.push_back( ZoneParamSpec{ "armCount", ZoneParamKind::Number, "0" } );
-                outListSpec.push_back( ZoneParamSpec{ "at", ZoneParamKind::Text, "Target" } );
-                outListSpec.push_back( ZoneParamSpec{ "interval", ZoneParamKind::Number, "0" } );
+                outListInfo.push_back( ZoneParamInfo{ "shape", ZoneParamKind::Text, "Print" } );
+                outListInfo.push_back( ZoneParamInfo{ "size", ZoneParamKind::Vector, nullptr } );
+                outListInfo.push_back( ZoneParamInfo{ "depth", ZoneParamKind::Number, nullptr } );
+                outListInfo.push_back( ZoneParamInfo{ "rimHeight", ZoneParamKind::Number, "0" } );
+                outListInfo.push_back( ZoneParamInfo{ "rimWidth", ZoneParamKind::Number, "0" } );
+                outListInfo.push_back( ZoneParamInfo{ "fillSpeed", ZoneParamKind::Number, nullptr } );
+                outListInfo.push_back( ZoneParamInfo{ "spinSpeed", ZoneParamKind::Number, "0" } );
+                outListInfo.push_back( ZoneParamInfo{ "armCount", ZoneParamKind::Number, "0" } );
+                outListInfo.push_back( ZoneParamInfo{ "at", ZoneParamKind::Text, "Target" } );
+                outListInfo.push_back( ZoneParamInfo{ "interval", ZoneParamKind::Number, "0" } );
             }
             bool validateModule( const ZoneCompiledModule& module, string_view sourceName ) const override
             {

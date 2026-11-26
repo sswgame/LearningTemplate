@@ -9,7 +9,9 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIRenderPassInfo.h"
+#include "Engine/Graphics/RHI/RHITransition.h"
+#include "Engine/Graphics/RHI/RHIViewport.h"
 
 namespace sw
 {

@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetProtocol.h"
 
 namespace sw
 {

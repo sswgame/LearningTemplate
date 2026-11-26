@@ -4,7 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/DebugReplyLine.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetMessageKindStats.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 

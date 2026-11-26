@@ -8,8 +8,8 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorPreferences.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/NetPlay/EditorStateHashCompare.h"
 #include "Editor/Panels/Multiplayer/Model/MultiplayerSessionViewModel.h"

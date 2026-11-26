@@ -88,7 +88,7 @@ namespace sw
         }
         XMLDocument document;
         XMLNode     root;
-        return loadFromRoot( XMLReadUtil::parseResourceRoot( document, text, assetID, "AnimationCrowdSettings", root ), root, path );
+        return loadFromRoot( XMLReadUtil::parseAssetRoot( document, text, assetID, "AnimationCrowdSettings", root ), root, path );
     }
 
     bool AnimationCrowdSettings::parseRoot( const XMLNode& root, string_view sourceLabel )
@@ -431,7 +431,7 @@ namespace sw
         bake._animation           = make_shared<MeshVertexAnimation>();
         bake._skinMesh            = Mesh::create( MeshCPUAccess::Keep );
         // 원본에서 이미 검사한 정점 · 인덱스 · 스킨이다. 정점 순서가 원본과 같아 VAT 표(정점 번호)와 구간(인덱스 범위)도 그대로다.
-        (void)bake._skinMesh->setGeometryWithTangents( vector<RHIVertex>( sourceMesh->getCPUView().getVertices() ), vector<uint32>( sourceMesh->getIndices() ) );
+        (void)bake._skinMesh->setGeometryWithTangents( vector<MeshVertex>( sourceMesh->getCPUView().getVertices() ), vector<uint32>( sourceMesh->getIndices() ) );
         (void)bake._skinMesh->setSections( sourceMesh->getSections() );
         bake._skinMesh->setSkin( sourceMesh->getSkinVertices(), sourceMesh->getSkinBinding() );
         // 결정적 실행은 이번 프레임에 끝낸다 — 언제 넘어가느냐가 워커 도착에 달리지 않게. 작업 풀이 없으면(테스트 · 도구) 지금 한다.
@@ -455,7 +455,7 @@ namespace sw
         if ( bake->_bReady == SW_FALSE )
             return;
         inoutEntry._mesh = Mesh::create( MeshCPUAccess::Keep );
-        (void)inoutEntry._mesh->setGeometryWithTangents( vector<RHIVertex>( bake->_skinMesh->getCPUView().getVertices() ), vector<uint32>( bake->_skinMesh->getIndices() ) );
+        (void)inoutEntry._mesh->setGeometryWithTangents( vector<MeshVertex>( bake->_skinMesh->getCPUView().getVertices() ), vector<uint32>( bake->_skinMesh->getIndices() ) );
         (void)inoutEntry._mesh->setSections( bake->_skinMesh->getSections() );
         inoutEntry._mesh->setVertexAnimation( std::move( bake->_animation ) );
         SW_LOG_INFO_ID( "AnimationCrowd.VertexAnimationReadyFrames", "Vertex animation '%#' ready (%# frames x %# vertices)", inoutEntry._clip->getName().c_str(),

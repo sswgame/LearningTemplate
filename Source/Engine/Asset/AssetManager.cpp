@@ -3,7 +3,7 @@
 #include "Engine/Asset/AssetManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
@@ -28,7 +28,7 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 
 namespace sw
 {
@@ -47,10 +47,10 @@ namespace sw
             return pKindName != nullptr ? string_view{ pKindName } : string_view{};
         }
 
-        /** @brief 읽기가 싣는 설정 사본(데이터 상속 깊이 상한 — `ResourceComposition::setInheritanceMaxDepth`)을 뜹니다. 게임 스레드(기동 · 다시 읽기 알림)만 부른다. */
+        /** @brief 읽기가 싣는 설정 사본(데이터 상속 깊이 상한 — `AssetComposition::setInheritanceMaxDepth`)을 뜹니다. 게임 스레드(기동 · 다시 읽기 알림)만 부른다. */
         void publishLoadPolicy()
         {
-            engine::getSubsystem<ResourceComposition>().setInheritanceMaxDepth( engine::getSubsystem<EngineConfig>()._dataInheritanceMaxDepth );
+            engine::getSubsystem<AssetComposition>().setInheritanceMaxDepth( engine::getSubsystem<EngineConfig>()._dataInheritanceMaxDepth );
         }
     } // namespace
 } // namespace sw
@@ -222,7 +222,7 @@ namespace sw
     uint32 AssetManager::reloadComposedDependents()
     {
         vector<string> listAssetID;
-        engine::getSubsystem<ResourceComposition>().takePendingReload( listAssetID );
+        engine::getSubsystem<AssetComposition>().takePendingReload( listAssetID );
         if ( listAssetID.empty() )
             return 0;
         const vector<AssetCacheBase*> listCache     = getAllAssetCache();
@@ -391,8 +391,8 @@ namespace sw
         ContentSource source = kBuildContentSource;
         if ( engine::areEngineSubsystemsBound() )
         {
-            const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
-            const auto                isGiven     = [&commandLine]( CommandLineArgument argument )
+            const CommandLine& commandLine = engine::getSubsystem<CommandLine>();
+            const auto         isGiven     = [&commandLine]( CommandLineArgument argument )
             {
                 bool bGiven = false;
                 return commandLine.getArgument( argument, bGiven ) && bGiven;
@@ -506,7 +506,7 @@ namespace sw
             _bSourceRegistryBaseReady = source == ContentSource::Source ? SW_TRUE : SW_FALSE;
         }
         vector<AssetRegistryLayer> listLayer = _listBaseRegistryLayer;
-        // 패치 · 모드 팩이 실은 자기 색인(줄은 전체 리소스 id) — 도메인 층 뒤에 쌓아 그 팩의 새 에셋과 옮긴 줄이 이긴다. 색인을 싣지 않은 패치 팩(바뀐 파일만)은 건너뛴다.
+        // 패치 · 모드 팩이 실은 자기 색인(줄은 전체 에셋 id) — 도메인 층 뒤에 쌓아 그 팩의 새 에셋과 옮긴 줄이 이긴다. 색인을 싣지 않은 패치 팩(바뀐 파일만)은 건너뛴다.
         vector<string> listPatchText;
         vector<string> listPatchSource;
         if ( _pPackManager->collectPatchPackTexts( AssetPackIndex::kFileName, listPatchText, listPatchSource ) == false )
@@ -553,10 +553,10 @@ namespace sw
     {
         (void)build;
         AssetManager& assetManager = scope.emplaceSubsystem<AssetManager>();
-        (void)scope.exposeMember( assetManager, assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서브시스템 칸으로 찾는다
+        (void)scope.exposeMember( assetManager, assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 에셋 입구(`AssetIO`)가 서브시스템 칸으로 찾는다
     } );
 
-    // 위 공장이 건 팩 매니저의 서브시스템 칸(아래 층 · 아무 스레드의 리소스 입구가 읽는다). 비어 있을 수 있다 — 엔진 없이 도는 도구 · 쿠커 · 테스트는 팩이 없고
+    // 위 공장이 건 팩 매니저의 서브시스템 칸(아래 층 · 아무 스레드의 에셋 입구가 읽는다). 비어 있을 수 있다 — 엔진 없이 도는 도구 · 쿠커 · 테스트는 팩이 없고
     // 빌드 기본 정책을 읽는다(언리얼 `FPakPlatformFile` 이 플랫폼 파일 계층에 걸리는 자리).
     SW_ENGINE_SUBSYSTEM_SLOT( PackManager, HostOnly );
 } // namespace sw

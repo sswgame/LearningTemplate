@@ -52,7 +52,7 @@ namespace
             if ( context._method == EconomyMethod::RedeemReceipt::kID )
             {
                 EconomyRedeemRequest request;
-                SW_EXPECT_TRUE( EconomyProtocol::MessageTypes::read( body, request ) == FixedReadResult::Ok );
+                SW_EXPECT_TRUE( EconomyProtocol::MessageTypes::read( body, request ) == LayoutReadResult::Ok );
                 _listRedeem.push_back( request );
             }
             respond( host, context );

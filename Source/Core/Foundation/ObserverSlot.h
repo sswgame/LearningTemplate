@@ -1,12 +1,12 @@
 /**
  * @file ObserverSlot.h
- * @brief 아래 티어가 위 티어의 관찰자 · 기록기 하나를 부르는 전역 칸입니다. 거는 쪽은 이동 전용 구독(`Subscription`)을 받고, 구독이 사라지면 칸이 아직 자기 값일 때만 빕니다.
- * @details 할당기(Memory, 티어 2)가 프로파일러(Engine)의 할당 관찰자를 부르는 자리처럼, 위 티어를 모르는 코드가 포인터 하나를 읽는다. 손으로 쓴 원자 칸은
+ * @brief 아래 층이 위 층의 관찰자 · 기록기 하나를 부르는 전역 칸입니다. 거는 쪽은 이동 전용 구독(`Subscription`)을 받고, 구독이 사라지면 칸이 아직 자기 값일 때만 빕니다.
+ * @details 할당기(Memory, 층 2)가 프로파일러(Engine)의 할당 관찰자를 부르는 자리처럼, 위 층을 모르는 코드가 포인터 하나를 읽는다. 손으로 쓴 원자 칸은
  *          덮어쓰기 · 말없는 실패 · 앞 값 반환 · bool 반환이 섞여 두 주인이 서로의 등록을 지웠다(테스트 할당 계수기가 Tracy 관찰자를 덮고 nullptr 로 지움).
  *          - `bind` 는 빈 칸에만 건다. 이미 걸려 있으면 이중 등록이라 단언으로 알리고 빈 토큰을 돌려준다(덮어쓰지 않는다).
  *          - `tryBind` 는 이미 걸려 있으면 말없이 빈 토큰이다 — "먼저 건 쪽이 주인" 이 계약인 자리(엔진 기록기가 걸린 뒤 테스트의 지역 기록기)만 쓴다.
  *          - 토큰 해제는 비교 교환이라 그사이 다른 쪽이 건 값을 지우지 않는다.
- *          `sw::Subscription`(Delegate, 티어 4)을 쓸 수 없는 티어용이라 같은 뜻의 중첩 `Subscription` 을 두고(티어 0 — 단언 대화상자 칸도 쓴다), 정적 초기화 순서를 타지 않게 상수 초기화된다(main 전 할당도 읽는다).
+ *          `sw::Subscription`(Delegate, 층 4)을 쓸 수 없는 층용이라 같은 뜻의 중첩 `Subscription` 을 두고(층 0 — 단언 대화상자 칸도 쓴다), 정적 초기화 순서를 타지 않게 상수 초기화된다(main 전 할당도 읽는다).
  *          언리얼은 `FMallocProfiler` 같은 칸을 손으로 둔다 — 여기서는 칸을 형식 하나로 묶어 계약을 한 벌로 한다.
  */
 #pragma once
@@ -153,6 +153,6 @@ namespace sw
         }
 
     private:
-        std::atomic<T*> _pObserver{ nullptr }; ///< 바닥 티어(Foundation — 단언 대화상자 · 아래 티어 보고자도 쓴다)라 `sw::atomic`(Concurrency) 대신 표준 원자다
+        std::atomic<T*> _pObserver{ nullptr }; ///< 바닥 층(Foundation — 단언 대화상자 · 아래 층 보고자도 쓴다)라 `sw::atomic`(Concurrency) 대신 표준 원자다
     };
 } // namespace sw

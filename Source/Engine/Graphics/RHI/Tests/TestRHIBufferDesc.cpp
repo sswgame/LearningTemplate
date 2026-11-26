@@ -6,7 +6,8 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIBufferDesc.h"
+#include "Engine/Graphics/RHI/RHIDeviceDesc.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 
 using namespace sw;

@@ -17,14 +17,14 @@ namespace sw
     {
         struct ContentHashInternal
         {
-            /** @brief 1601-01-01 부터 1970-01-01 까지의 밀리초(`FileStamp::_writeTime` 의 기원과 유닉스 기원의 차). */
+            /** @brief 1601-01-01 부터 1970-01-01 까지의 밀리초(`FileStat::_writeTime` 의 기원과 유닉스 기원의 차). */
             static constexpr int64 kFileTimeEpochOffsetMs = 11644473600000LL;
             /**
              * @brief 바깥 도구가 이보다 최근에 쓴 파일의 해시는 캐시에 두지 않는다(밀리초). 쓰기 시각은 시계 틱(Windows 약 16 ms) 단위라 그 안에서 같은 크기로 다시 쓰면 도장이 같다.
              * @details 이 프로세스의 쓰기도 이 창을 거친다 — 쓰기 관찰자(`recordOwnWrite`)는 같은 도장의 옛 해시를 지울 뿐이고, 그 틱에 바깥 쓰기가 겹칠 수 있다(git racy-git 과 같은 자리).
              */
             static constexpr int64 kRacyWindowMs = 2000;
-            /** @brief `FileStamp::_writeTime` 의 100 ns 눈금이 1 ms 에 드는 수입니다. */
+            /** @brief `FileStat::_writeTime` 의 100 ns 눈금이 1 ms 에 드는 수입니다. */
             static constexpr uint64 kWriteTicksPerMs = 10000u;
 
             /** @brief 영속 항목 하나가 파일에서 차지하는 최소 바이트입니다(빈 경로 길이 4 + 크기 · 시각 · 해시 24). */
@@ -52,10 +52,10 @@ namespace sw
 
 namespace sw
 {
-    bool ContentHash::isStampStable( const FileStamp& stamp )
+    bool ContentHash::isStatStable( const FileStat& fileStat )
     {
         const int64 nowFileTimeMs = WallClock::nowUnixMilliseconds().count() + ContentHashInternal::kFileTimeEpochOffsetMs;
-        const int64 writeTimeMs   = static_cast<int64>( stamp._writeTime / ContentHashInternal::kWriteTicksPerMs );
+        const int64 writeTimeMs   = static_cast<int64>( fileStat._writeTime / ContentHashInternal::kWriteTicksPerMs );
         return nowFileTimeMs - writeTimeMs > ContentHashInternal::kRacyWindowMs;
     }
 
@@ -146,11 +146,11 @@ namespace sw
     uint64 ContentHashCache::computeFile( const DiskPath& absPath )
     {
         const string key = makeKey( absPath.str() );
-        FileStamp    stamp{};
-        const bool   bStamped   = FileUtil::getFileStamp( absPath, stamp );
-        uint64       serialSeen = 0;
-        bool         bHadEntry  = false;
-        if ( bStamped )
+        FileStat     fileStat{};
+        const bool   bHasFileStat = FileUtil::getFileStat( absPath, fileStat );
+        uint64       serialSeen   = 0;
+        bool         bHadEntry    = false;
+        if ( bHasFileStat )
         {
             ScopedLock<mutex> lock{ _mutex };
             const auto        iter = _mapEntry.find( key );
@@ -158,33 +158,33 @@ namespace sw
             if ( bHadEntry )
             {
                 serialSeen = iter->second._writeSerial;
-                if ( iter->second._stamp == stamp && iter->second._hash != 0 )
+                if ( iter->second._fileStat == fileStat && iter->second._hash != 0 )
                     return iter->second._hash; // 자기 쓰기 표(해시 0)면 다시 읽는다
             }
         }
 
         const uint64 hash = ContentHashInternal::readFileHash( absPath, _hashedByteCount );
         // 자기 쓰기도 시간 창이 지나야 남긴다 — 쓴 그 틱에 바깥 도구가 같은 크기로 다시 쓰면 도장으로 알 길이 없다(두 프로세스의 순서 없는 경합).
-        if ( bStamped == false || hash == 0 || ContentHash::isStampStable( stamp ) == false )
+        if ( bHasFileStat == false || hash == 0 || ContentHash::isStatStable( fileStat ) == false )
             return hash;
         ScopedLock<mutex> lock{ _mutex };
         // 읽는 사이에 자기 쓰기가 끼었으면(번호가 바뀌었거나 새 표가 생겼다) 읽은 내용이 어느 쓰기의 것인지 모른다 — 남기지 않는다. 바깥 쓰기가 끼었으면 다음 조회의 도장이 달라 다시 읽는다.
         const auto iter             = _mapEntry.find( key );
         const bool bOwnWriteBetween = iter != _mapEntry.end() ? ( bHadEntry == false || iter->second._writeSerial != serialSeen ) : bHadEntry;
         if ( bOwnWriteBetween == false )
-            _mapEntry[key] = Entry{ stamp, hash, serialSeen };
+            _mapEntry[key] = Entry{ fileStat, hash, serialSeen };
         return hash;
     }
 
     void ContentHashCache::recordOwnWrite( const AbsolutePath& filePath )
     {
         const string      key = makeKey( filePath.str() );
-        FileStamp         stamp{};
-        const bool        bFile = FileUtil::getFileStamp( filePath, stamp );
+        FileStat          fileStat{};
+        const bool        bFile = FileUtil::getFileStat( filePath, fileStat );
         ScopedLock<mutex> lock{ _mutex };
         ++_writeSerial;
         if ( bFile )
-            _mapEntry[key] = Entry{ stamp, 0, _writeSerial }; // 해시는 다음 조회가 읽어 채운다(쓰는 길에서 해시하지 않는다 — 수십 MB 팩도 이 길로 쓴다)
+            _mapEntry[key] = Entry{ fileStat, 0, _writeSerial }; // 해시는 다음 조회가 읽어 채운다(쓰는 길에서 해시하지 않는다 — 수십 MB 팩도 이 길로 쓴다)
         else
             _mapEntry.erase( key ); // 지웠거나 폴더다
     }
@@ -220,11 +220,11 @@ namespace sw
         vector<LoadedEntry> listLoaded;
         const auto          readEntry = [&reader]( LoadedEntry& outLoaded )
         {
-            outLoaded._key                     = reader.readString();
-            const bool bKey                    = reader.hasOverflowed() == false;
-            outLoaded._entry._stamp._sizeBytes = reader.readUint64();
-            outLoaded._entry._stamp._writeTime = reader.readUint64();
-            outLoaded._entry._hash             = reader.readUint64();
+            outLoaded._key                        = reader.readString();
+            const bool bKey                       = reader.hasOverflowed() == false;
+            outLoaded._entry._fileStat._sizeBytes = reader.readUint64();
+            outLoaded._entry._fileStat._writeTime = reader.readUint64();
+            outLoaded._entry._hash                = reader.readUint64();
             return bKey && outLoaded._entry._hash != 0;
         };
         const bool bRead = reader.readCountedList( listLoaded, ContentHashInternal::kMinCacheEntryBytes, readEntry );
@@ -255,11 +255,11 @@ namespace sw
             for ( const auto& [key, entry] : _mapEntry )
             {
                 // 해시가 아직 없는 자기 쓰기 표와, 저장 시각의 시간 창 안에 고쳐진 도장은 싣지 않는다 — 다음 프로세스는 도장만 믿는다.
-                if ( entry._hash == 0 || ContentHash::isStampStable( entry._stamp ) == false )
+                if ( entry._hash == 0 || ContentHash::isStatStable( entry._fileStat ) == false )
                     continue;
                 writer.writeString( key );
-                writer.writeUint64( entry._stamp._sizeBytes );
-                writer.writeUint64( entry._stamp._writeTime );
+                writer.writeUint64( entry._fileStat._sizeBytes );
+                writer.writeUint64( entry._fileStat._writeTime );
                 writer.writeUint64( entry._hash );
                 ++count;
             }

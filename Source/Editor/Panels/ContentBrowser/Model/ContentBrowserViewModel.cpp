@@ -14,18 +14,18 @@
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorPreferences.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorPanelID.h"
-#include "Editor/Common/Workspace/EditorSelectionSync.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
+#include "Editor/Common/Workspace/Layout/EditorPanelID.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
+#include "Editor/Common/Workspace/Selection/EditorSelectionSync.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileDrop.h"
 
 #include "Engine/Config/GameConfig.h"
@@ -387,7 +387,7 @@ namespace sw::editor
         if ( bRecordHistory )
             _history.record( normalizedPath, listBreadcrumb );
 
-        // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 새로 만드는 파일 이름은 소문자다(리소스 id 규칙).
+        // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 새로 만드는 파일 이름은 소문자다(에셋 id 규칙).
         _selectedFolderAbs = normalizedPath;
         _listBreadcrumb    = listBreadcrumb;
         _selectedAssetAbs  = {};

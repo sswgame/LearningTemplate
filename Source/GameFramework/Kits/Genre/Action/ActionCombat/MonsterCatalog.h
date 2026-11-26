@@ -28,7 +28,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
@@ -125,7 +125,7 @@ namespace sw
     /**
      * @brief 몬스터 한 종의 데이터 정의입니다(이름과 행동 유형, 스탯, AI, 사격, 드롭 보상).
      * @details 스탯(`_stats`)과 AI(`_ai`)는 각자의 스키마로 읽는다 — 원소 하나가 스키마 하나다(언리얼 DataTable 행의 하위 구조체 자리).
-     *          액션 룸(`ActionRoom`)은 스탯과 사격(`_ai._attackCoolTime`, `_ai._firstAttackDelay`, `_listShot`)을 읽는다.
+     *          액션 룸(`ActionCombatRoom`)은 스탯과 사격(`_ai._attackCoolTime`, `_ai._firstAttackDelay`, `_listShot`)을 읽는다.
      */
     REFLECT()
     struct SW_KIT_API MonsterDef

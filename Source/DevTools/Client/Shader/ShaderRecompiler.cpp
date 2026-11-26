@@ -7,9 +7,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "DevTools/AssetReload/ReloadSource.h"
-#include "DevTools/AssetReload/ReloadTracker.h"
-#include "DevTools/Client/Shader/LiveShaderSubsystem.h"
+#include "DevTools/AssetReload/HotReloadKind.h"
+#include "DevTools/AssetReload/HotReloadTracker.h"
+#include "DevTools/Client/Shader/ShaderHotReloadSubsystem.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
@@ -36,11 +36,11 @@ namespace sw
 
             static const ShaderRecompiler* findRecompiler()
             {
-                const LiveShaderSubsystem* const pLiveShader = engine::findSubsystem<LiveShaderSubsystem>();
-                return pLiveShader != nullptr ? pLiveShader->findShaderRecompiler() : nullptr;
+                const ShaderHotReloadSubsystem* const pShaderHotReload = engine::findSubsystem<ShaderHotReloadSubsystem>();
+                return pShaderHotReload != nullptr ? pShaderHotReload->findShaderRecompiler() : nullptr;
             }
 
-            /** @brief 감시 값 `Shader.LiveRecompile`: 이 실행에 셰이더 재컴파일기(Ctrl+F8)가 섰으면 1 입니다(`gv_liveShaderRecompile`, `LiveShaderSubsystem`). 셰이더 리로드 시나리오가 켰는지 확인한다. */
+            /** @brief 감시 값 `Shader.HotReload`: 이 실행에 셰이더 재컴파일기(Ctrl+F8)가 섰으면 1 입니다(`gv_shaderHotReload`, `ShaderHotReloadSubsystem`). 셰이더 리로드 시나리오가 켰는지 확인한다. */
             [[nodiscard]] static bool readLiveCompiler( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = findRecompiler() != nullptr ? 1.0 : 0.0;
@@ -59,7 +59,7 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_WATCH( shaderLiveRecompile, "Shader.LiveRecompile", "1 when this run has the live shader recompiler (Ctrl+F8 - gv_liveShaderRecompile), else 0",
+    SW_AUTOMATION_WATCH( shaderHotReload, "Shader.HotReload", "1 when this run has the shader hot reload recompiler (Ctrl+F8 - gv_shaderHotReload), else 0",
                          &ShaderRecompilerInternal::readLiveCompiler );
     SW_AUTOMATION_WATCH( shaderRecompilePassCount, "Shader.RecompilePassCount", "Shader recompile passes (Ctrl+F8) that finished in this run",
                          &ShaderRecompilerInternal::readCompilePassCount );
@@ -117,8 +117,8 @@ namespace sw
         vector<string>            listChangedPath;
         uint32                    changed  = 0;
         uint32                    failed   = 0;
-        ReloadTracker* const      pTracker = engine::findSubsystem<ReloadTracker>();
-        vector<ReloadBatchResult> listReloadResult; // 변형마다의 결과 — 묶음 끝에 파일마다 한 번 적는다(`ReloadTracker::recordBatch`)
+        HotReloadTracker* const   pTracker = engine::findSubsystem<HotReloadTracker>();
+        vector<ReloadBatchResult> listReloadResult; // 변형마다의 결과 — 묶음 끝에 파일마다 한 번 적는다(`HotReloadTracker::recordBatch`)
         listReloadResult.reserve( listToCompile.size() );
         // 셰이더 DDC 는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 컴파일러 안에서 DDC 에 맞아 컴파일러를
         // 타지 않는다. DDC 항목은 소스와 자기가 연 헤더의 내용(의존 기록)을 보므로, 바뀐 헤더를
@@ -184,8 +184,8 @@ namespace sw
 
         if ( pTracker != nullptr )
         {
-            pTracker->recordBatch( ReloadSource::Shader, listReloadResult );
-            pTracker->recordElapsed( ReloadSource::Shader, ( MonotonicClock::nowSeconds() - startSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
+            pTracker->recordBatch( HotReloadKind::Shader, listReloadResult );
+            pTracker->recordElapsed( HotReloadKind::Shader, ( MonotonicClock::nowSeconds() - startSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
         }
         _completedPassCount.fetch_add( 1, std::memory_order_release );
         SW_LOG_INFO_ID( "ShaderRecompiler.ShaderReloadCheckedUpdated", "Shader reload: %# checked, %# updated, %# failed.",

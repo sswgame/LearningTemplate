@@ -96,10 +96,10 @@
 	<EditorWaitStable/>
 	<DevCommand line="panel.close dialogue_graph"/>
 	<EditorWaitStable/>
-	<DevCommand line="panel.focus gimmick_graph"/>
-	<CaptureEditorUI file="audit/18_gimmick_graph.png"/>
+	<DevCommand line="panel.focus logic_circuit_graph"/>
+	<CaptureEditorUI file="audit/18_logic_circuit_graph.png"/>
 	<EditorWaitStable/>
-	<DevCommand line="panel.close gimmick_graph"/>
+	<DevCommand line="panel.close logic_circuit_graph"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus sequencer"/>
 	<CaptureEditorUI file="audit/19_sequencer.png"/>

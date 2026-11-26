@@ -13,10 +13,10 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceLoadReport.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearancePart.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
 
 namespace sw
 {

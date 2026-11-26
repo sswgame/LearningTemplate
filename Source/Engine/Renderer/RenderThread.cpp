@@ -27,7 +27,8 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
-#include "Engine/Renderer/Frame/View/RenderStability.h"
+#include "Engine/Renderer/Frame/View/RenderConvergence.h"
+#include "Engine/Renderer/Frame/View/RenderPresentCounter.h"
 
 namespace sw
 {
@@ -780,7 +781,7 @@ namespace sw
         if ( bMainDrew )
         {
             FrameFog::publishMainVolumeState( _pFrameRenderer->getFogVolumeState() );
-            RenderStabilitySample::publish( _pFrameRenderer->getMainStabilitySample() ); // 사진 앞 렌더 정착 조건(`RenderStability.cpp`)
+            RenderConvergenceSample::publish( _pFrameRenderer->getMainConvergenceSample() ); // 사진 앞 렌더 정착 조건(`RenderConvergence.cpp`)
         }
 
         // 미리보기 씬(에디터 툴 창)은 씬마다의 렌더러로 자기 타깃에 그린다(`OffscreenSceneRenderers` — 캡처와 같은 길). 사라진 씬의 렌더러는 그 씬과 함께 내린다.

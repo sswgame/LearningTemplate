@@ -5,7 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Time/CalendarDate.h"
 
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw
 {

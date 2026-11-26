@@ -1,6 +1,6 @@
 /**
  * @file EditorScratchDomain.h
- * @brief 에디터 테스트가 케이스 폴더를 리소스 도메인으로 붙이는 픽스처입니다.
+ * @brief 에디터 테스트가 케이스 폴더를 콘텐츠 도메인으로 붙이는 픽스처입니다.
  * @details 엔진 쪽 픽스처(`ScopedScratchDomain`)는 `EngineServices.h` 를 봐 에디터가 include 하지 못한다 — 에디터 창구(`editor::getSubsystem`)를 쓴다.
  */
 #pragma once
@@ -39,7 +39,7 @@ namespace sw::test
 
         /** @brief 도메인 폴더 아래 @p relativePath 의 디스크 경로입니다(`AbsolutePath::join` — I/O 에 그대로 넘긴다, 글이 필요하면 `.str()`). */
         [[nodiscard]] AbsolutePath makeDiskPath( string_view relativePath ) const { return _folder.join( relativePath ); }
-        /** @brief 도메인 폴더 아래 @p relativePath 의 리소스 id 입니다. */
+        /** @brief 도메인 폴더 아래 @p relativePath 의 에셋 id 입니다. */
         [[nodiscard]] static string makeID( string_view relativePath )
         {
             StringBuilder<constant::buffer::kMax256> idBuilder;

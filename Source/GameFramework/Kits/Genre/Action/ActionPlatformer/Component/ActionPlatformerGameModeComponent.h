@@ -18,14 +18,14 @@
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerBody.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionStageRun.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
 

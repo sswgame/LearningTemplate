@@ -3,7 +3,7 @@
  * @brief 코드로 짓는 값(내장 도형 · 9-슬라이스 메시 · 스프라이트 텍스처 인스턴스)을 키로 나눠 주는 표이자, 그 표를 에셋 캐시 레지스트리에 보이는 창구입니다.
  * @details 캐시는 종류마다 이름 있는 파생 타입(`kAssetKindName` 을 둔다)이고, `AssetManager` 가 내장 캐시로 만들어 소유합니다(`SW_BUILT_IN_ASSET_CACHE`).
  *          정적 창구는 `engine::getSubsystem<AssetManager>().getAssetCache<파생 타입>()` 으로 찾는다 — 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다. 그래서 진단
- *          (`getCachedCount`)과 종료 · 재초기화의 비우기(`clear`)가 경로 캐시와 같은 길을 탑니다. 키가 리소스 경로가 아니므로 핫 리로드로 다시 읽을
+ *          (`getCachedCount`)과 종료 · 재초기화의 비우기(`clear`)가 경로 캐시와 같은 길을 탑니다. 키가 에셋 경로가 아니므로 핫 리로드로 다시 읽을
  *          것이 없습니다(`isCached` 는 false, `reload` 는 할 일이 없다) — 값이 기대는 파일(텍스처 · 머티리얼)은 그 파일의 캐시가 제자리로 다시 읽습니다.
  */
 #pragma once
@@ -57,7 +57,7 @@ namespace sw
         }
 
         const utf8* getAssetKindName() const override { return _pKindName; }
-        /** @brief 키가 리소스 경로가 아니라 늘 false 입니다. */
+        /** @brief 키가 에셋 경로가 아니라 늘 false 입니다. */
         bool isCached( string_view relativePath ) const override
         {
             (void)relativePath;

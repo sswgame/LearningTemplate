@@ -5,7 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetImportDigest.h"
 
 namespace sw::editor
 {

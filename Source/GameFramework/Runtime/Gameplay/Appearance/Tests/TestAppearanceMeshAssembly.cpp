@@ -23,7 +23,7 @@ namespace
         /** @brief 사각형(정점 넷 · 삼각형 둘) @p quadCount 개인 스킨드 메시입니다. 정점 i 는 x = i 이고 뼈 i % 4 에 가중치 1 이다. */
         static shared_ptr<Mesh> makeQuads( uint32 quadCount )
         {
-            vector<RHIVertex>      listVertex( quadCount * 4u );
+            vector<MeshVertex>     listVertex( quadCount * 4u );
             vector<uint32>         listIndex;
             vector<MeshSkinVertex> listSkin( listVertex.size() );
             for ( uint32 quad = 0; quad < quadCount; ++quad )
@@ -31,7 +31,7 @@ namespace
                 const uint32 first = quad * 4u;
                 for ( uint32 corner = 0; corner < 4u; ++corner )
                 {
-                    RHIVertex& vertex      = listVertex[first + corner];
+                    MeshVertex& vertex     = listVertex[first + corner];
                     vertex._arrPosition[0] = static_cast<float>( first + corner );
                     vertex._arrPosition[1] = static_cast<float>( corner / 2u );
                     vertex._arrNormal[2]   = 1.0f;

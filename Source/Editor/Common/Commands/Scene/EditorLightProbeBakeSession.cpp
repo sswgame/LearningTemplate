@@ -13,11 +13,11 @@
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
-#include "Editor/Common/Workspace/EditorFrameStep.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Notification/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/View/EditorFrameStep.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
@@ -181,7 +181,7 @@ namespace sw::editor
         }
         Scene*          pScene = editor::getActiveScene(); // 멈출 이유가 없으면 활성 씬이 있다
         const Stopwatch stopwatch;
-        while ( _run.isRunning() && stopwatch.getElapsedMilliseconds() < EditorBakeRunState::kFrameBudgetMilliseconds )
+        while ( _run.isRunning() && stopwatch.getElapsedMilliseconds() < EditorBakeSession::kFrameBudgetMilliseconds )
         {
             if ( _bJobActive == false && beginNextVolume( *pScene ) == false )
                 continue; // 다음 볼륨으로(이유는 `_lastError`) — 끝이면 `finish` 가 `_run` 을 끝낸다
@@ -232,7 +232,7 @@ namespace sw::editor
             return;
         }
         // 출력 경로 규칙(`<씬>.<오브젝트 이름>.probes`)은 반사 프로브 베이크와 같은 함수 하나다.
-        const string& sceneAssetID = scene.getSourcePath(); // 씬의 소스는 늘 리소스 id 다(`SceneManager::saveActiveSceneAs`)
+        const string& sceneAssetID = scene.getSourcePath(); // 씬의 소스는 늘 에셋 id 다(`SceneManager::saveActiveSceneAs`)
         if ( sceneAssetID.empty() )
         {
             reportFailure( "the scene has never been saved - save it before baking light probes" );

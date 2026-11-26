@@ -21,7 +21,7 @@
 #include "Engine/Content/Pack/PackCompressionUtil.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include <algorithm>
 
@@ -154,7 +154,7 @@ namespace sw
         {
             closeLocked();
             lock.unlock();
-            return FormatDef::report( head, packFilePath );
+            return FormatDesc::report( head, packFilePath );
         }
 
         // 암호화한 팩은 받지 않는다. 풀 방법이 없으므로 플래그 · 방식을 보고 거절한다(평문으로 풀지 않는다).

@@ -10,7 +10,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ConnectAdmission.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"

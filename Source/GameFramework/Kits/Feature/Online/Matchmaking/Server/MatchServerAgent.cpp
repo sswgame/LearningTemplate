@@ -7,11 +7,11 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchQueueLogic.h"
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheRecordTable.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
 
 namespace sw
 {
@@ -49,7 +49,7 @@ namespace sw
         trimToCapacity();
     }
 
-    void MatchServerAgent::startReading( EphemeralStoreRouter* pRouter )
+    void MatchServerAgent::startReading( CacheStoreRouter* pRouter )
     {
         SW_ASSERT( pRouter != nullptr );
         _pRouter    = pRouter;
@@ -67,7 +67,7 @@ namespace sw
 
     string MatchServerAgent::getAssignTopic() const
     {
-        return MatchQueueService::makeAssignTopic( _serverID );
+        return MatchQueueLogic::makeAssignTopic( _serverID );
     }
 
     bool MatchServerAgent::handleAssign( const ServerBusMessage& message, UnixMilliseconds nowMs )
@@ -217,45 +217,45 @@ namespace sw
         }
         _nextListReadMs = _nowMs + _policy._recordRefreshMs;
         _bListPending   = SW_TRUE;
-        _pRouter->submit( EphemeralRequest::makeScoreRange( MatchQueueService::makeMatchListKey( _serverID ), 0, _policy._maxRecordCount ), _replyOwner, [this]( const EphemeralReply& reply )
+        _pRouter->submit( CacheRequest::makeScoreRange( MatchQueueLogic::makeMatchListKey( _serverID ), 0, _policy._maxRecordCount ), _replyOwner, [this]( const CacheReply& reply )
         { onListReply( reply ); } );
     }
 
-    void MatchServerAgent::onListReply( const EphemeralReply& reply )
+    void MatchServerAgent::onListReply( const CacheReply& reply )
     {
         _bListPending = SW_FALSE;
-        if ( reply._result != EphemeralResult::Ok )
+        if ( reply._result != CacheResult::Ok )
             return; // 목록이 없거나(배정이 없다) 캐시에 닿지 못했다. 다음 주기에 다시 읽는다
-        const string listKey = MatchQueueService::makeMatchListKey( _serverID );
-        for ( const EphemeralScoredMember& member : reply._listMember )
+        const string listKey = MatchQueueLogic::makeMatchListKey( _serverID );
+        for ( const CacheScoredMember& member : reply._listMember )
         {
             if ( member._score <= _nowMs )
             {
-                _pRouter->submit( EphemeralRequest::makeScoreRemove( listKey, member._member ) ); // 끝난 경기이다. 기록은 수명으로 이미 사라졌다
+                _pRouter->submit( CacheRequest::makeScoreRemove( listKey, member._member ) ); // 끝난 경기이다. 기록은 수명으로 이미 사라졌다
                 continue;
             }
             if ( _mapRecordToExpiresMs.count( member._member ) != 0 )
                 continue;
             _mapRecordToExpiresMs[member._member] = member._score;
-            _pRouter->submit( EphemeralRequest::makeGet( MatchQueueService::makeMatchRecordKey( _serverID, member._member ) ), _replyOwner, [this, recordName = member._member]( const EphemeralReply& recordReply )
+            _pRouter->submit( CacheRequest::makeGet( MatchQueueLogic::makeMatchRecordKey( _serverID, member._member ) ), _replyOwner, [this, recordName = member._member]( const CacheReply& recordReply )
             { onRecordReply( recordName, recordReply ); } );
         }
     }
 
-    void MatchServerAgent::onRecordReply( const string& recordName, const EphemeralReply& reply )
+    void MatchServerAgent::onRecordReply( const string& recordName, const CacheReply& reply )
     {
         const auto recordIt = _mapRecordToExpiresMs.find( recordName );
         if ( recordIt == _mapRecordToExpiresMs.end() )
             return; // 읽는 사이에 시한이 지났다
-        if ( reply._result == EphemeralResult::Unavailable )
+        if ( reply._result == CacheResult::Unavailable )
         {
             _mapRecordToExpiresMs.erase( recordIt ); // 다음 주기에 다시 읽는다
             return;
         }
-        if ( reply._result != EphemeralResult::Ok )
+        if ( reply._result != CacheResult::Ok )
             return; // 수명이 다한 기록이다. 끝나는 시각까지 다시 읽지 않는다
         MatchFormed match;
-        if ( EphemeralRecordTable<MatchFormed>{}.decode( reply, match ) == false )
+        if ( CacheRecordTable<MatchFormed>{}.decode( reply, match ) == false )
         {
             SW_LOG_WARNING_ID( "MatchServerAgent.MatchRecordUnreadable", "MatchServerAgent: match record '%#' could not be read (other build or corrupt) - its players are refused", recordName );
             return;

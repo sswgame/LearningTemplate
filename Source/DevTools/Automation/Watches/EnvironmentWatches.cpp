@@ -56,7 +56,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -84,7 +84,7 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 // Engine/Environment/Surface/SurfaceFootprintSystem.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
@@ -149,12 +149,12 @@ namespace sw
             }
 
             /** @brief 반응을 볼 종류의 기록입니다 — @p bByKind 면 키의 종류, 아니면 마지막 발걸음. 없으면 까닭을 적고 nullptr 입니다. */
-            static const SurfaceFootstepKindNote* findNote( const AutomationWatchQuery& query, bool bTarget, bool bByKind, AutomationWatchValue& outValue )
+            static const SurfaceFootstepKindStats* findNote( const AutomationWatchQuery& query, bool bTarget, bool bByKind, AutomationWatchValue& outValue )
             {
                 const SurfaceFootstepRecord* pRecord = bByKind ? findRecord( query, bTarget, outValue ) : findLastStep( query, bTarget, outValue );
                 if ( pRecord == nullptr )
                     return nullptr;
-                const SurfaceFootstepKindNote* pNote = bByKind ? pRecord->findKind( hashed_string( query._key ) ) : pRecord->findLast();
+                const SurfaceFootstepKindStats* pNote = bByKind ? pRecord->findKind( hashed_string( query._key ) ) : pRecord->findLast();
                 if ( pNote == nullptr )
                     outValue.setText( "no footstep on that surface kind yet" );
                 return pNote;
@@ -188,7 +188,7 @@ namespace sw
             template <bool bTarget>
             [[nodiscard]] static bool readLastState( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const SurfaceFootstepKindNote* pNote = findNote( query, bTarget, false, outValue );
+                const SurfaceFootstepKindStats* pNote = findNote( query, bTarget, false, outValue );
                 if ( pNote == nullptr )
                     return false;
                 outValue.setText( pNote->_bLastWet == SW_TRUE ? "wet" : "dry" );
@@ -199,7 +199,7 @@ namespace sw
             template <bool bTarget, bool bByKind = false>
             [[nodiscard]] static bool readLastSound( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const SurfaceFootstepKindNote* pNote = findNote( query, bTarget, bByKind, outValue );
+                const SurfaceFootstepKindStats* pNote = findNote( query, bTarget, bByKind, outValue );
                 if ( pNote == nullptr )
                     return false;
                 outValue.setText( pNote->_lastSound.empty() ? "none" : pNote->_lastSound.c_str() );
@@ -210,7 +210,7 @@ namespace sw
             template <bool bTarget, bool bByKind = false>
             [[nodiscard]] static bool readLastEffect( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const SurfaceFootstepKindNote* pNote = findNote( query, bTarget, bByKind, outValue );
+                const SurfaceFootstepKindStats* pNote = findNote( query, bTarget, bByKind, outValue );
                 if ( pNote == nullptr )
                     return false;
                 outValue.setText( pNote->_lastEffect.empty() ? "none" : pNote->_lastEffect.c_str() );

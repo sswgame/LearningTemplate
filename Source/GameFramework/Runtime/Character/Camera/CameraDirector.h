@@ -10,12 +10,12 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Camera/CameraBlend.h"
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPoseBlender.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPreset.h"
 #include "GameFramework/Runtime/Character/Camera/CameraShake.h"
 #include "GameFramework/Runtime/Character/Camera/CameraUserSettings.h"

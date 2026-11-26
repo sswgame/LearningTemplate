@@ -12,7 +12,7 @@
 # ------------------------------------------------------------------------------
 # 1) Python 헬퍼 로드 및 자동 부트스트랩 환경 변수 전달
 # ------------------------------------------------------------------------------
-include("${CMAKE_CURRENT_LIST_DIR}/PythonUtils.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/PythonScript.cmake")
 
 if(SW_VCPKG_AUTO_BOOTSTRAP)
 	set(ENV{SW_VCPKG_AUTO_BOOTSTRAP} "1")
@@ -40,7 +40,7 @@ sw_execute_python_script(
 # 다른 철자(상수 · 리터럴)로 적게 된다.
 # 키는 Environment 가 늘 모두 쓴다. 값이 빈 것은 "이 호스트에 그 도구가 없다" 이다(리눅스의 Windows SDK 등) —
 # 그래서 아래는 `if(X AND EXISTS ...)` 로 묻는다. 파일 자체가 없으면 구성을 세운다.
-# 생성기는 `Scripts/generate/toolchain_cmake.py`(위 1) 의 Environment 가 부른다).
+# 생성기는 `Scripts/generate/toolchain_variables.py`(위 1) 의 Environment 가 부른다).
 include("${SW_GENERATED_TOOLCHAIN_VARS}")
 
 if(NOT SW_TOOLCHAIN_CONFIG_FOUND)
@@ -83,7 +83,7 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
 
 			# 정적 아카이브(lib.exe/llvm-lib.exe) 및 매니페스트 도구(mt.exe/llvm-mt.exe) 탐색
 			include("${CMAKE_CURRENT_LIST_DIR}/ToolchainBinaries.cmake")
-			include("${CMAKE_CURRENT_LIST_DIR}/FindWindowsTools.cmake")
+			include("${CMAKE_CURRENT_LIST_DIR}/WindowsToolPaths.cmake")
 			sw_find_windows_archive_and_mt(ar mt)
 
 			# 아카이버 · 매니페스트 도구가 없으면 정적 라이브러리 · 링크가 나중에 선다 — 지금 세운다.

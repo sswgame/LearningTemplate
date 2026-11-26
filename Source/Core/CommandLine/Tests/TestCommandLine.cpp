@@ -1,8 +1,8 @@
-// CommandLineManager — 기본값 · 인자마다 철자 하나 · RHI 플래그 · 커스텀 인자 · "적혔는가" 와 "읽히는가" · 열거형 조회 = 문자열 조회 · 값 빠진 인자 · initialize 의 표 비우기.
+// CommandLine — 기본값 · 인자마다 철자 하나 · RHI 플래그 · 커스텀 인자 · "적혔는가" 와 "읽히는가" · 열거형 조회 = 문자열 조회 · 값 빠진 인자 · initialize 의 표 비우기.
 // 틀린 인자(모르는 이름 · 빠진 값)는 경고 없이 `getParseErrors` 에 모인다(호스트가 기동을 멈춘다) — 케이스는 그 수를 본다.
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/StringUtil.h"
 #include "Core/TestFramework/TestFramework.h"
@@ -22,7 +22,7 @@ namespace
  */
 SW_TEST_CASE( CommandLineTest, WindowSizeHasNoCommandLineDefault )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
 
     // 창 크기의 기본값은 EngineConfig 가 갖는다. 여기서 기본값을 돌려주면 호출부의
@@ -42,7 +42,7 @@ SW_TEST_CASE( CommandLineTest, WindowSizeHasNoCommandLineDefault )
  */
 SW_TEST_CASE( CommandLineTest, ParseWidthArgument )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
 
     utf8* argv[] = {
@@ -64,7 +64,7 @@ SW_TEST_CASE( CommandLineTest, ParseWidthArgument )
  */
 SW_TEST_CASE( CommandLineTest, EnumeratorNameIsNotACommandLineKey )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
 
     utf8* argv[] = {
@@ -111,7 +111,7 @@ SW_TEST_CASE( CommandLineTest, EnumeratorNameIsNotACommandLineKey )
  */
 SW_TEST_CASE( CommandLineTest, GetArgumentNotFoundReturnsFalse )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
 
     sw::string cookedDir;
@@ -124,7 +124,7 @@ SW_TEST_CASE( CommandLineTest, GetArgumentNotFoundReturnsFalse )
  */
 SW_TEST_CASE( CommandLineTest, MultiWordArgumentAcceptsOnlyHyphenatedSpelling )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
 
     utf8* argv[] = {
@@ -173,7 +173,7 @@ SW_TEST_CASE( CommandLineTest, MultiWordArgumentAcceptsOnlyHyphenatedSpelling )
  */
 SW_TEST_CASE( CommandLineTest, StringKeyAndUTF16Parse )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
 
     utf16* wargv[] = {
@@ -194,7 +194,7 @@ SW_TEST_CASE( CommandLineTest, StringKeyAndUTF16Parse )
 SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlags )
 {
     {
-        sw::CommandLineManager cmdManager;
+        sw::CommandLine cmdManager;
         cmdManager.initialize();
         utf8* argv[] = {
             const_cast<utf8*>( "TestApp.exe" ),
@@ -208,7 +208,7 @@ SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlags )
     }
 
     {
-        sw::CommandLineManager cmdManager;
+        sw::CommandLine cmdManager;
         cmdManager.initialize();
         utf8* argv[] = {
             const_cast<utf8*>( "TestApp.exe" ),
@@ -223,7 +223,7 @@ SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlags )
     }
 
     {
-        sw::CommandLineManager cmdManager;
+        sw::CommandLine cmdManager;
         cmdManager.initialize();
         utf8* argv[] = {
             const_cast<utf8*>( "TestApp.exe" ),
@@ -237,7 +237,7 @@ SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlags )
     }
 
     {
-        sw::CommandLineManager cmdManager;
+        sw::CommandLine cmdManager;
         cmdManager.initialize();
         utf8* argv[] = {
             const_cast<utf8*>( "TestApp.exe" ),
@@ -256,7 +256,7 @@ SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlags )
  */
 SW_TEST_CASE( CommandLineTest, ComplexPrefixAndCustomArguments )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
 
     // 커스텀 인자 등록
@@ -290,7 +290,7 @@ SW_TEST_CASE( CommandLineTest, ComplexPrefixAndCustomArguments )
  */
 SW_TEST_CASE( CommandLineTest, UnprovidedFlagIsNotReadable )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
 
     utf8* argv[] = {
@@ -324,7 +324,7 @@ SW_TEST_CASE( CommandLineTest, UnprovidedFlagIsNotReadable )
  */
 SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
     cmdManager.addArgument<int32>( { "given_value" }, 7 );
     cmdManager.addArgument<int32>( { "omitted_value" }, 7 );
@@ -357,7 +357,7 @@ SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
  */
 SW_TEST_CASE( CommandLineTest, EnumLookupMatchesStringLookup )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
 
     utf8* argv[] = {
@@ -398,7 +398,7 @@ SW_TEST_CASE( CommandLineTest, EnumLookupMatchesStringLookup )
  */
 SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
     cmdManager.addArgument<int32>( { "gv_benchMeshes" }, 200 );
     cmdManager.addArgument<sw::string>( { "gv_startupScene" }, sw::string( "default" ) );
@@ -430,7 +430,7 @@ SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
                         "값 없이 적은 int 인자를 '주었다' 로 셌습니다" );
 
     // 값을 제대로 준 같은 인자는 당연히 읽힌다 — 위가 "그냥 다 무시" 가 아님을 못박는다.
-    sw::CommandLineManager withValue;
+    sw::CommandLine withValue;
     withValue.initialize();
     withValue.addArgument<int32>( { "gv_benchMeshes" }, 200 );
     utf8* argvWithValue[] = {
@@ -452,7 +452,7 @@ SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
  */
 SW_TEST_CASE( CommandLineTest, BooleanArgumentAcceptsBothForms )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
 
     utf8* argv[] = {
@@ -484,7 +484,7 @@ SW_TEST_CASE( CommandLineTest, BooleanArgumentAcceptsBothForms )
  */
 SW_TEST_CASE( CommandLineTest, InitializeIsNotShiftedByEarlierArguments )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.addArgument<int32>( { "early_custom" }, 99 );
     cmdManager.initialize();
 
@@ -521,16 +521,16 @@ SW_TEST_CASE( CommandLineTest, InitializeIsNotShiftedByEarlierArguments )
 SW_TEST_CASE( CommandLineTest, DeadlockDetectionFlagIsReadBeforeParse )
 {
     utf8* argvOn[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-W=800" ), const_cast<utf8*>( "-deadlock-detection" ) };
-    SW_EXPECT_TRUE( sw::CommandLineManager::isFlagGivenBeforeParse( 3, argvOn, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
+    SW_EXPECT_TRUE( sw::CommandLine::isFlagGivenBeforeParse( 3, argvOn, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
 
     utf8* argvDashes[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "--deadlock-detection=true" ) };
-    SW_EXPECT_TRUE( sw::CommandLineManager::isFlagGivenBeforeParse( 2, argvDashes, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
+    SW_EXPECT_TRUE( sw::CommandLine::isFlagGivenBeforeParse( 2, argvDashes, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
 
     utf8* argvOff[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-deadlock-detection=0" ) };
-    SW_EXPECT_FALSE( sw::CommandLineManager::isFlagGivenBeforeParse( 2, argvOff, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
+    SW_EXPECT_FALSE( sw::CommandLine::isFlagGivenBeforeParse( 2, argvOff, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
 
     utf8* argvNone[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-rhi-validation" ) };
-    SW_EXPECT_FALSE( sw::CommandLineManager::isFlagGivenBeforeParse( 2, argvNone, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
+    SW_EXPECT_FALSE( sw::CommandLine::isFlagGivenBeforeParse( 2, argvNone, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
 }
 
 /** @brief 엔진 전 값 읽기(`findValueBeforeParse`)는 플래그 읽기와 같은 찾기를 쓴다 — 철자 · 하이픈 · `=값`, 값 없이 적으면 빈 글로 true. */
@@ -538,15 +538,15 @@ SW_TEST_CASE( CommandLineTest, ValueIsReadBeforeParse )
 {
     sw::string value       = "stale";
     utf8*      argvValue[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-W=800" ), const_cast<utf8*>( " --scenario=a/b.xml " ) };
-    SW_EXPECT_TRUE( sw::CommandLineManager::findValueBeforeParse( 3, argvValue, sw::CommandLineArgument::SCENARIO, value ) );
+    SW_EXPECT_TRUE( sw::CommandLine::findValueBeforeParse( 3, argvValue, sw::CommandLineArgument::SCENARIO, value ) );
     SW_EXPECT_TRUE( value == "a/b.xml" );
 
     utf8* argvBare[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-scenario" ) };
-    SW_EXPECT_TRUE( sw::CommandLineManager::findValueBeforeParse( 2, argvBare, sw::CommandLineArgument::SCENARIO, value ) );
+    SW_EXPECT_TRUE( sw::CommandLine::findValueBeforeParse( 2, argvBare, sw::CommandLineArgument::SCENARIO, value ) );
     SW_EXPECT_TRUE( value.empty() );
 
     utf8* argvNone[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-scenario-report=x" ) };
-    SW_EXPECT_FALSE( sw::CommandLineManager::findValueBeforeParse( 2, argvNone, sw::CommandLineArgument::SCENARIO, value ) );
+    SW_EXPECT_FALSE( sw::CommandLine::findValueBeforeParse( 2, argvNone, sw::CommandLineArgument::SCENARIO, value ) );
 }
 
 /**
@@ -554,11 +554,11 @@ SW_TEST_CASE( CommandLineTest, ValueIsReadBeforeParse )
  */
 SW_TEST_CASE( CommandLineTest, ArgumentNameDropsHyphensAndValue )
 {
-    SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( "-scenario=a/b.xml" ) == "scenario" );
-    SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( "--dx12" ) == "dx12" );
-    SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( "gv_x=1=2" ) == "gv_x" );
-    SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( " -W = 800 " ) == "W" );
-    SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( "" ).empty() );
+    SW_EXPECT_TRUE( sw::CommandLine::getArgumentName( "-scenario=a/b.xml" ) == "scenario" );
+    SW_EXPECT_TRUE( sw::CommandLine::getArgumentName( "--dx12" ) == "dx12" );
+    SW_EXPECT_TRUE( sw::CommandLine::getArgumentName( "gv_x=1=2" ) == "gv_x" );
+    SW_EXPECT_TRUE( sw::CommandLine::getArgumentName( " -W = 800 " ) == "W" );
+    SW_EXPECT_TRUE( sw::CommandLine::getArgumentName( "" ).empty() );
 }
 
 /**
@@ -566,7 +566,7 @@ SW_TEST_CASE( CommandLineTest, ArgumentNameDropsHyphensAndValue )
  */
 SW_TEST_CASE( CommandLineTest, StageGlobalVariablesCountAsProvided )
 {
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize();
     SW_EXPECT_FALSE( cmdManager.isGlobalVariableProvided( "gv_displayOutput" ) );
 
@@ -631,7 +631,7 @@ SW_TEST_CASE( CommandLineTest, ShippingPolicyRejectsDevArguments )
 {
     sw::CommandLineBuildPolicy shipping = sw::CommandLineBuildPolicy::current();
     shipping._bShipping                 = SW_TRUE;
-    sw::CommandLineManager cmdManager;
+    sw::CommandLine cmdManager;
     cmdManager.initialize( shipping );
 
     utf8* argv[] = {

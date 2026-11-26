@@ -18,7 +18,8 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Trigger/TriggerComponent.h"
-#include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
+#include "GameFramework/Runtime/Gameplay/Zone/IZoneModuleProcessor.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneCompiledModule.h"
 
 namespace sw
 {

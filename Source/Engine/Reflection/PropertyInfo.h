@@ -135,7 +135,7 @@ namespace sw
 
         /**
          * @brief 옛 이름(`PROPERTY( Alias = … )`) 중 하나의 해시와 일치하면 true 입니다. 지금 이름은 보지 않습니다.
-         * @details 태그 스트림 읽기는 모든 프로퍼티의 지금 이름을 먼저 보고, 없을 때만 이것을 봅니다(`SerializerUtil::findPropertyIndexByNameHash`).
+         * @details 태그 스트림 읽기는 모든 프로퍼티의 지금 이름을 먼저 보고, 없을 때만 이것을 봅니다(`PropertySerializer::findPropertyIndexByNameHash`).
          */
         bool matchesRedirectHash( const uint32 oldNameHash ) const noexcept
         {

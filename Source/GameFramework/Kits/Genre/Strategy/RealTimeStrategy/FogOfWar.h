@@ -10,7 +10,7 @@
 #include "Core/Time/Countdown.h"
 #include "Core/Time/TimeSeconds.h"
 
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
@@ -31,7 +31,7 @@ namespace sw
      * @class FogOfWar
      * @brief 팀마다 셀의 `RTSVisibility` 를 담습니다. 칠하기는 `beginRepaint`(보이던 셀을 본 적 있음으로) 뒤 시야원마다 `reveal` 입니다.
      * @details 무엇이 시야를 내는지(유닛 · 건물 · 주인)는 월드가 정한다 — 이 클래스는 셀 상태와 다시 칠할 때(`_repaintTimer`)만 든다.
-     *          `RTSWorld` 에서 뗐다(시야 상태 묶음이 유닛 · 명령과 따로 저장 · 복원된다). 팀 수는 플레이어를 더할 때 늘고 줄지 않는다.
+     *          `RTSSimulation` 에서 뗐다(시야 상태 묶음이 유닛 · 명령과 따로 저장 · 복원된다). 팀 수는 플레이어를 더할 때 늘고 줄지 않는다.
      */
     class SW_KIT_API FogOfWar
     {

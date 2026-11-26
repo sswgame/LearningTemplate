@@ -15,13 +15,13 @@
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneObjectCommands.h"
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorObjectEdit.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridObjectEdit.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorMultiSelection.h"
 
@@ -169,8 +169,8 @@ namespace sw::editor
     }
 
     InspectorViewModel::InspectorViewModel()
-        : _favorites{ InspectorFavorites::kPropertyFileName }
-        , _actionFavorites{ InspectorFavorites::kActionFileName }
+        : _favorites{ PropertyGridFavorites::kPropertyFileName }
+        , _actionFavorites{ PropertyGridFavorites::kActionFileName }
         , _importSettings{}
         , _pMultiEdit{ make_unique<MultiEdit>() }
         , _presetJob{}
@@ -364,7 +364,7 @@ namespace sw::editor
             GameObject* pObj = InspectorViewModelInternal::findMainObject( objectID );
             if ( pObj == nullptr || pObj->getName().isEqual( newName, NameCase::CaseSensitive ) )
                 return;
-            InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Rename GameObject", [pObj, newName]()
+            PropertyGridObjectEdit::applyObjectEdit( transaction, pObj, "Rename GameObject", [pObj, newName]()
             { pObj->setName( newName ); } );
         } );
     }
@@ -385,7 +385,7 @@ namespace sw::editor
         {
             GameObject* pObj = InspectorViewModelInternal::findMainObject( objectID );
             if ( pObj != nullptr )
-                InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Unparent GameObject", [pObj]()
+                PropertyGridObjectEdit::applyObjectEdit( transaction, pObj, "Unparent GameObject", [pObj]()
                 { pObj->detachFromParent(); } );
         } );
     }
@@ -398,7 +398,7 @@ namespace sw::editor
             GameObject* pObj  = PropertyGridViewModel::findSceneObject( scope, objectID );
             Component*  pComp = pObj != nullptr ? pObj->findComponentByID( componentID ) : nullptr;
             if ( pComp != nullptr )
-                InspectorObjectEdit::applyObjectEdit( transaction, pObj, "Toggle Component Active", [pComp, bActive]()
+                PropertyGridObjectEdit::applyObjectEdit( transaction, pObj, "Toggle Component Active", [pComp, bActive]()
                 { pComp->setActive( bActive ); } );
         } );
     }

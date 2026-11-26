@@ -1,0 +1,46 @@
+<?asset guid="4bff2692797cc9838ade7e7f91e5ef26"?>
+<Prefab formatVersion="0" name="CrumblePlatform">
+	<GameObject _schemaVersion="0" _name="CrumblePlatform" _bActive="true">
+		<_listComponent>
+			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
+			                        _bActive="true"
+			                        _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachOwnerID="0"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="2,0.6"
+			                        _layer="Default"
+			                        _bContinuous="false"
+			                        _bTrigger="false" />
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="2,0.4,2"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="#edcbb43a3dfead50"
+			               _meshID="Cube"
+			               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<LogicCircuitSensorComponent _localID="5906677949702648734" _componentName="LogicCircuitSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</LogicCircuitSensorComponent>
+			<CrumblePlatformComponent _localID="17677550886606026876" _componentName="CrumblePlatformComponent"
+			                          _bActive="true"
+			                          _crumbleDelay="0.5"
+			                          _respawnDelay="3" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

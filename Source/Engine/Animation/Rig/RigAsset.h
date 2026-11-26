@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    struct ResourceContext;
+    struct AssetComposeContext;
 
     /** @brief 노드 하나를 만드는 함수입니다. */
     using RigNodeFactory = unique_ptr<RigNode> ( * )();
@@ -118,9 +118,9 @@ namespace sw
         optional<uint32> findTargetIndex( const hashed_string& name ) const;
 
     private:
-        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
-        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context );
-        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<RigAsset>::acquire` 로 한 벌을 쥔다. */
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 에셋 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
+        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context );
+        /** @brief 에셋 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<RigAsset>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
         [[nodiscard]] bool parseTarget( const XMLNode& value, string_view sourceLabel );

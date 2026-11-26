@@ -46,16 +46,16 @@ namespace sw::editor
          *          겉면은 원래 메시를 같은 평면으로 막지 않고 잘라 조각마다 붙인다. 열린 판자나 겹친 부품으로 된 모델(Kenney 상자)도 쪼갠다.
          * @return 입력이 (Mesh 부피인데) 닫혀 있지 않거나 삼각형이 없거나 조각이 하나도 남지 않으면 그 이유입니다.
          */
-        [[nodiscard]] static expected<FractureAsset> fracture( vector_reference<const RHIVertex> listMeshVertex, vector_reference<const uint32> listMeshIndex, const FractureSettings& settings );
+        [[nodiscard]] static expected<FractureAsset> fracture( vector_reference<const MeshVertex> listMeshVertex, vector_reference<const uint32> listMeshIndex, const FractureSettings& settings );
         /** @brief 삼각형 목록이 닫혔는지 반환합니다. 위치가 비트까지 같은 점만 같은 정점으로 봅니다(쪼갠 조각이 정확히 닫혔는지 확인할 때 씁니다). */
-        static bool isClosedMesh( vector_reference<const RHIVertex> listVertex );
+        static bool isClosedMesh( vector_reference<const MeshVertex> listVertex );
         /** @brief 허용 오차(1e-5) 안의 위치를 같은 정점으로 보고 닫혔는지 반환합니다. `AppearanceGeometry::isClosed` 를 쓰며, 임포트한 입력을 검사합니다. */
-        static bool isClosedWithinTolerance( vector_reference<const RHIVertex> listVertex );
+        static bool isClosedWithinTolerance( vector_reference<const MeshVertex> listVertex );
         /** @brief 닫힌 삼각형 목록의 부피(감은 방향과 무관한 절댓값)와 무게 중심을 반환합니다. */
-        static float32 computeVolume( vector_reference<const RHIVertex> listVertex, float3& outCentroid );
+        static float32 computeVolume( vector_reference<const MeshVertex> listVertex, float3& outCentroid );
         /** @brief 정점들의 볼록 껍질(닫힌 삼각형 목록, 바깥이 반시계)을 반환합니다. 점이 한 평면에 있으면 비어 있습니다. */
-        static void makeConvexHull( vector_reference<const RHIVertex> listVertex, vector<RHIVertex>& outListVertex );
+        static void makeConvexHull( vector_reference<const MeshVertex> listVertex, vector<MeshVertex>& outListVertex );
         /** @brief 점이 닫힌 삼각형 목록 안에 있는지 반환합니다(감음 수, 구면각 합). */
-        static bool isPointInside( vector_reference<const RHIVertex> listVertex, const float3& point );
+        static bool isPointInside( vector_reference<const MeshVertex> listVertex, const float3& point );
     };
 } // namespace sw::editor

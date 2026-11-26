@@ -2,7 +2,7 @@
 
 #include "Engine/Engine.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Diagnostics/CrashHandler.h"
@@ -64,7 +64,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/View/FrameViewports.h"
-#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameCounter.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
@@ -87,7 +87,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/Telemetry/TelemetrySubsystem.h"
 #include "Engine/Text/FontSubsystem.h"
 #include "Engine/UserSettings/HardwareDetectionResult.h"
@@ -133,7 +133,7 @@ namespace sw
 
     Engine::~Engine() = default;
 
-    CommandLineManager* Engine::getCommandLineManager() const
+    CommandLine* Engine::getCommandLine() const
     {
         return _pCommandLineSubsystem != nullptr ? &_pCommandLineSubsystem->getCommandLine() : nullptr;
     }
@@ -152,7 +152,7 @@ namespace sw
         constexpr bool kDiagnostics = build::kMemoryDiagnostics;
         // 코어 범위는 호스트 값(명령줄 인자)을 서로 넘겨 만들고 수가 적어 등록 줄 없이 여기서 채운다. 안의 객체를 묶는 서브시스템 칸은 주인 서브시스템의 .cpp 가 등록한다(`SW_ENGINE_SUBSYSTEM_SLOT`).
         // 교착 탐지(`-deadlock-detection`)는 명령줄 표가 서기 전에 읽는다 — 진단 서브시스템이 코어 범위의 첫째라, 잠금 추적을 그보다 늦게 켜면 이미 쥔 잠금을 놓친다.
-        const bool            bDeadlockDetection = build::kDeadlockDetection && CommandLineManager::isFlagGivenBeforeParse( argc, pArgv, CommandLineArgument::DEADLOCK_DETECTION );
+        const bool            bDeadlockDetection = build::kDeadlockDetection && CommandLine::isFlagGivenBeforeParse( argc, pArgv, CommandLineArgument::DEADLOCK_DETECTION );
         DiagnosticsSubsystem& diagnostics        = _coreScope.emplaceSubsystem<DiagnosticsSubsystem>( kDiagnostics, bDeadlockDetection );
         _coreScope.emplaceSubsystem<NamePoolSubsystem>();
         CommandLineSubsystem& commandLine = _coreScope.emplaceSubsystem<CommandLineSubsystem>( argc, pArgv );
@@ -163,12 +163,12 @@ namespace sw
         _coreScope.emplaceSubsystem<StaticStorageSubsystem>();
         _pMemoryBudget = &_coreScope.emplaceSubsystem<MemoryBudgetSubsystem>( crashHandler );
         // 서브시스템 안의 객체도 서브시스템 칸이다 — 그 타입으로 건다(새 범위라 겹치지 않는다).
-        (void)_coreScope.exposeMember( commandLine, commandLine.getCommandLine() );         // 명령줄 — 주인은 명령줄 서브시스템이다(초기화 중 조회는 그 의존을 선언해야 한다)
-        (void)_coreScope.exposeMember( commandLine, commandLine.getGlobalVariables() );     // 전역 변수 표 — 같은 주인
-        (void)_coreScope.exposeMember( contentRoot, contentRoot.getAssetPaths() );          // 리소스 경로 상태 — 주인은 리소스 루트 서브시스템 하나다
-        (void)_coreScope.exposeMember( contentRoot, contentRoot.getResourceTags() );        // 리소스 조건 태그 — 같은 주인
-        (void)_coreScope.exposeMember( contentRoot, contentRoot.getResourceComposition() ); // 합성 기록 · 덮어쓰기 층 — 같은 주인
-        (void)_coreScope.exposeMember( crashHandler, crashHandler.getHandler() );           // 크래시 처리기 — 주인은 크래시 서브시스템 하나다
+        (void)_coreScope.exposeMember( commandLine, commandLine.getCommandLine() );      // 명령줄 — 주인은 명령줄 서브시스템이다(초기화 중 조회는 그 의존을 선언해야 한다)
+        (void)_coreScope.exposeMember( commandLine, commandLine.getGlobalVariables() );  // 전역 변수 표 — 같은 주인
+        (void)_coreScope.exposeMember( contentRoot, contentRoot.getAssetPaths() );       // 에셋 경로 상태 — 주인은 콘텐츠 루트 서브시스템 하나다
+        (void)_coreScope.exposeMember( contentRoot, contentRoot.getAssetTags() );        // 에셋 조건 태그 — 같은 주인
+        (void)_coreScope.exposeMember( contentRoot, contentRoot.getAssetComposition() ); // 합성 기록 · 덮어쓰기 층 — 같은 주인
+        (void)_coreScope.exposeMember( crashHandler, crashHandler.getHandler() );        // 크래시 처리기 — 주인은 크래시 서브시스템 하나다
         if ( _coreScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
         {
             // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전일 수 있다 — 낮은 층 보고는 stderr 에 동기로 쓰고 로거가 있으면 로그에도 남긴다.
@@ -179,7 +179,7 @@ namespace sw
         // 렌더 진단 정책을 명령줄(`-gv_…`, 코어 범위의 명령줄이 막 적용했다)이 든 값으로 내보낸다 — 기동 단계(셰이더 캐시 · 렌더러 초기화)가 이 사본을 읽는다.
         RenderDiagnostics::publish();
         // 크래시 보고 프로세스(`-crash-reporter=<폴더>`)는 헤드리스다 — 공용 · 기동 단계를 세우지 않고 App 이 묶음을 보내고 끝낸다.
-        // 이 모드에서는 크래시 핸들러(죽으면 보고 프로세스를 또 띄운다) · 리소스 루트를 세우지 않았다.
+        // 이 모드에서는 크래시 핸들러(죽으면 보고 프로세스를 또 띄운다) · 콘텐츠 루트를 세우지 않았다.
         if ( crashHandler.isCrashReporterRun() )
         {
             _hostRole = role;
@@ -196,15 +196,15 @@ namespace sw
         }
         const SubsystemHostMask hostMask = bDedicatedServer ? EngineSubsystemHost::kServer : EngineSubsystemHost::kClient;
         // 서버 패키지에 없는 에셋 종류(텍스처 · 셰이더 바이너리 · 오디오 — 쿠킹 표의 target_excluded_asset_kinds)는 서버가 읽지 않는다.
-        // 서브시스템 칸 표가 서기 전이라 경로 상태의 주인(코어 범위의 리소스 루트)에게 직접 건넨다.
+        // 서브시스템 칸 표가 서기 전이라 경로 상태의 주인(코어 범위의 콘텐츠 루트)에게 직접 건넨다.
         contentRoot.getAssetPaths().setHostTarget( bDedicatedServer ? "Server" : "Client" );
-        // 리소스 조건의 쿠킹 축(`ResourceTags`) — 쿠커와 런타임이 같은 자리에서 같은 값을 넣는다. 그래서 쿠킹본에 남은 쿠킹 축 조건도 런타임이 쿠커와 같은 답을 낸다.
-        // 서브시스템 칸 표가 서기 전이라 태그의 주인(코어 범위의 리소스 루트)에게 직접 건넨다.
-        ResourceTags& resourceTags    = contentRoot.getResourceTags();
-        const bool    bPlatformTagged = resourceTags.setAxisValue( "platform", StringUtil::toLower( build::kPlatformName ) );
-        const bool    bTargetTagged   = resourceTags.setAxisValue( "target", bDedicatedServer ? "server" : "client" );
+        // 에셋 조건의 쿠킹 축(`AssetTags`) — 쿠커와 런타임이 같은 자리에서 같은 값을 넣는다. 그래서 쿠킹본에 남은 쿠킹 축 조건도 런타임이 쿠커와 같은 답을 낸다.
+        // 서브시스템 칸 표가 서기 전이라 태그의 주인(코어 범위의 콘텐츠 루트)에게 직접 건넨다.
+        AssetTags& assetTags       = contentRoot.getAssetTags();
+        const bool bPlatformTagged = assetTags.setAxisValue( "platform", StringUtil::toLower( build::kPlatformName ) );
+        const bool bTargetTagged   = assetTags.setAxisValue( "target", bDedicatedServer ? "server" : "client" );
         if ( bPlatformTagged == false || bTargetTagged == false )
-            return false; // 플랫폼 이름이 축의 값 목록에 없다(`ResourceTagsInternal::kArrPlatformValue` 에 한 줄 — 오류는 위에서 남겼다)
+            return false; // 플랫폼 이름이 축의 값 목록에 없다(`AssetTagsInternal::kArrPlatformValue` 에 한 줄 — 오류는 위에서 남겼다)
         // 외부 프로파일러(공용 범위의 `ProfilerBackend`)의 스레드 이름 — 공용 범위가 서기 전에 둔다.
         ThreadName::setCurrentThreadName( "GameThread" );
 
@@ -604,9 +604,9 @@ namespace sw
         updateRuntimeUI( mainOutput, vpWidth, vpHeight );
         if ( _pRenderDriver != nullptr )
         {
-            // 그리지 않고 진행하는 고정 걸음(`SimulationOnlyFrameQueue` — 시나리오 `<AdvanceSimulation>`)이면 패킷은 짓되 그리지 않는다. 고정 프레임 시간이 없으면 서비스가 거절한다.
-            SimulationOnlyFrameQueue* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameQueue>();
-            const FrameDrawMode             drawMode        = pSimulationOnly != nullptr ? pSimulationOnly->beginFrame( engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta ) : FrameDrawMode::Draw;
+            // 그리지 않고 진행하는 고정 걸음(`SimulationOnlyFrameCounter` — 시나리오 `<AdvanceSimulation>`)이면 패킷은 짓되 그리지 않는다. 고정 프레임 시간이 없으면 서비스가 거절한다.
+            SimulationOnlyFrameCounter* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameCounter>();
+            const FrameDrawMode               drawMode        = pSimulationOnly != nullptr ? pSimulationOnly->beginFrame( engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta ) : FrameDrawMode::Draw;
             _pRenderDriver->submitFrame( deltaTime, views, sceneViewCameraProvider, drawMode );
         }
     }

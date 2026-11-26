@@ -13,7 +13,7 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -39,7 +39,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 씬 흐름, 기본 세이브, 다국어, 입력과 범용 게임플레이 튜닝 설정입니다.
-     * @details 경로 필드는 `DataPath` 이다 — 값은 팩의 gamesettings 만 넣고 코드는 문자열로 채울 수 없다. 리소스 경로는 도메인을 포함한 전역 id 이다
+     * @details 경로 필드는 `DataPath` 이다 — 값은 팩의 gamesettings 만 넣고 코드는 문자열로 채울 수 없다. 에셋 경로는 도메인을 포함한 전역 id 이다
      *          (`game/<팩>/maps/start.scene.xml`). 시작 맵만 필수이고, 나머지 경로 칸은 적지 않으면 "읽지 않음"(`isSet` false)이며 그 뜻은 칸마다 적었다.
      *          XML 자식 요소 이름은 필드 이름에서 앞의 `_` 를 뗀 것이고(`_startMap` → `<startMap>`), 읽기는 리플렉션 칸 표를 따른다(`loadRoot`).
      *          `GameInstance` 가 읽은 뒤 게임 서비스로 등록하고 다국어와 입력 맵을 적용한다.
@@ -64,7 +64,7 @@ namespace sw
         string _defaultSaveSlot; ///< 기본 세이브 슬롯 이름(`save/slot0` - 슬롯 이름 없는 `GameSaveSlots::save` · `load`). 자리는 로컬 저장소가 정한다. 없으면 슬롯 없는 저장은 오류다
 
         PROPERTY()
-        DataPath _localizationProject; ///< 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음
+        DataPath _localizationProject; ///< 로컬라이제이션 프로젝트(`*.locproject.xml`, 에셋 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음
 
         PROPERTY( Required )
         string _defaultLanguage; ///< 기본 활성 언어
@@ -124,7 +124,7 @@ namespace sw
         PROPERTY( Max = 10 )
         int32 _onlineRequestRetryLimit{ kUnsetRetryLimit }; ///< 서버가 다시 하라고 답한 요청(kBusy · kRateLimited · 멱등 키 있는 kUnavailable)을 다시 보내는 최대 횟수(`OnlineRetryPolicy`). 온라인 서버를 적었으면 필수다 — 비면(-1) 연결하지 않는다
 
-        // 텔레메트리 · 크래시 보고를 받을 곳(`TelemetryUploadLink`). 운영자가 정하는 값이라 저장소의 팩은 적지 않는다 — 적지 않으면 동의해도 기계 밖으로 나가지 않는다.
+        // 텔레메트리 · 크래시 보고를 받을 곳(`TelemetryUploadAdapter`). 운영자가 정하는 값이라 저장소의 팩은 적지 않는다 — 적지 않으면 동의해도 기계 밖으로 나가지 않는다.
         // 언리얼 `DefaultEngine.ini` 의 `[Analytics]` · `[CrashReportClient] DataRouterUrl` 자리다(기억에 의존).
         PROPERTY()
         string _telemetryUploadEndpoint; ///< 텔레메트리 스풀 파일을 POST 할 주소(`http://` · `https://`). 개발 구성은 `-gv_telemetryUploadEndpoint` 가 덮어쓴다(`IGameSettingsOverride`)
@@ -145,7 +145,7 @@ namespace sw
         vector<hashed_string> _listGameFeature{}; ///< 게임 범위에 켤 게임 기능 이름(`SW_GAME_FEATURE`, 적은 순서). 게임 인스턴스가 `onInitialize` 뒤 첫 씬 전에 켜 인스턴스 내내 둔다(언리얼 Game Features 의 늘 켜진 기능). 켜지 못하면 게임 초기화가 실패한다. 그 기능이 읽는 카탈로그는 이 파일의 데이터 항목에 경로가 있으면 선언된 것이다
 
         PROPERTY()
-        DataPath _autosaveSettings; ///< 자동 저장 정책(`<팩>/data/autosave.xml`). 적으면 `GameInstance` 가 `AutosaveManager` 를 세워 게임 범위에 건다. 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 자동 저장 없음
+        DataPath _autosaveSettings; ///< 자동 저장 정책(`<팩>/data/autosave.xml`). 적으면 `GameInstance` 가 `AutosaveController` 를 세워 게임 범위에 건다. 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 자동 저장 없음
 
         /**
          * 필수 데이터를 이 게임 팩 밖에서 읽는 종류와 그 팩입니다 — `<RequiredData kind="items" pack="common"/>`, 종류 이름 → 팩 루트.
@@ -154,7 +154,7 @@ namespace sw
          */
         map<string, string> _mapRequiredDataPack{};
 
-        /** @brief 리소스 경로(XML)에서 팩 설정 테이블을 로드합니다. */
+        /** @brief 에셋 경로(XML)에서 팩 설정 테이블을 로드합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID = {} );
         /** @brief `loadFromAsset` 의 XML 문자열 버전이며 테스트가 씁니다. 먼저 비우고 읽습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
@@ -162,7 +162,7 @@ namespace sw
     private:
         /**
          * @brief `<GameSettings>` 루트의 표준 칸을 읽습니다(`GameDataXML::loadFromAsset`).
-         * @details 자식 요소마다 같은 이름의 리플렉션 칸을 찾아 그 형식의 텍스트 읽기(`SerializerUtil::applyPropertyText`, 경로 칸은 `DataPath` 처리기)로 넣는다.
+         * @details 자식 요소마다 같은 이름의 리플렉션 칸을 찾아 그 형식의 텍스트 읽기(`PropertySerializer::applyPropertyText`, 경로 칸은 `DataPath` 처리기)로 넣는다.
          *          칸 표, `<Defaults>`(`ComponentDefaults` 가 같은 파일을 읽는다), `<Engine>`(`PackEngineSettings` 가 읽는다) 밖의 원소는 로드 오류이고,
          *          `PROPERTY( Required )` 칸이 빠져도 로드 오류다. 철자가 틀린 칸이 조용히 사라지지 않게 하려는 것이다.
          */

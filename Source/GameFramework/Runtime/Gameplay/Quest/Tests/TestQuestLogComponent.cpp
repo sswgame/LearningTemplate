@@ -8,18 +8,18 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/MechanismEvents.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLogComponent.h"
 
@@ -89,7 +89,7 @@ SW_TEST_CASE( QuestLogComponentTest, CountsOnlyWhatItsOwnPawnDid )
     GameEventUtil::send( completed );
     SW_EXPECT_TRUE( log.getStatus( hashed_string( "shrine" ) ) == QuestStatus::Completed );
 
-    GimmickCueEvent cue;
+    MechanismCueEvent cue;
     cue._cue    = hashed_string( "Cue.Scare" );
     cue._target = pStranger->getHandle();
     GameEventUtil::send( cue ); // 남이 트리거에 들어갔다 — 세지 않는다

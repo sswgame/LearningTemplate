@@ -44,7 +44,7 @@ namespace sw
                 return nullopt;
             }
 
-            /** @brief 디스크 읽기 입력의 종류와 출처입니다. 붙인 도메인 · 리소스 루트 아래면 리소스(id), 밖이면 디스크 파일(절대 경로)입니다. */
+            /** @brief 디스크 읽기 입력의 종류와 출처입니다. 붙인 도메인 · 콘텐츠 루트 아래면 리소스(id), 밖이면 디스크 파일(절대 경로)입니다. */
             [[nodiscard]] static bool makeDiskInput( const DiskPath& diskPath, CookInputKind& outKind, string& outSource )
             {
                 const optional<AbsolutePath> absPath = collapseDiskPath( diskPath );
@@ -196,7 +196,7 @@ namespace sw
             return true;
         CookInput input;
         input._kind = CookInputKind::Listing;
-        // 폴더는 절대 경로로 둔다 — 도메인 폴더(`engine`)는 리소스 id 로 줄이면 다시 풀 때 같은 폴더로 돌아오지 않는다.
+        // 폴더는 절대 경로로 둔다 — 도메인 폴더(`engine`)는 에셋 id 로 줄이면 다시 풀 때 같은 폴더로 돌아오지 않는다.
         const optional<AbsolutePath> folder = CookJobInternal::collapseDiskPath( folderPath );
         if ( folder.has_value() == false )
             return false;
@@ -286,9 +286,9 @@ namespace sw
 
         // 사람이 읽을 수 있는 기준 글을 만들어 해시한다 — 칸 사이 구분자가 있어 이름 둘이 붙어 다른 이름이 되지 않는다.
         string canonical;
-        SW_ASSERT( desc._codeFingerprint != 0 && "CookJobDesc needs the cooker's code fingerprint - is it listed in Config/Dev/CookCodeInputs.json?" );
+        SW_ASSERT( desc._codeDigest != 0 && "CookJobDesc needs the cooker's code digest - is it listed in Config/Dev/CookCodeInputs.json?" );
         canonical.append( "format=" ).append( sw::to_string( kCookFormatVersion ) ).append( "\n" );
-        canonical.append( "cooker=" ).append( desc._cookerName ).append( "\ncode=" ).append( sw::to_string( desc._codeFingerprint ) );
+        canonical.append( "cooker=" ).append( desc._cookerName ).append( "\ncode=" ).append( sw::to_string( desc._codeDigest ) );
         canonical.append( "\ntarget=" ).append( desc._target ).append( "\nsettings=" ).append( sw::to_string( desc._settingsHash ) ).append( "\n" );
         if ( desc._output.empty() == false )
             canonical.append( "output=" ).append( desc._output ).append( "\n" );

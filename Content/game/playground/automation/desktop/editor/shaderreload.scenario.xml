@@ -5,12 +5,12 @@
   ⑤ 바뀌지 않은 재컴파일 묶음이 끝나고(Shader.RecompilePassCount) 걸린 시간이 적힌다(Reload.LastMs.Shader).
   실패 길: 사본 셰이더를 깨뜨리면(asset.overwriteScratch — 원본 셰이더는 쓰기 게이트가 막는다) 재컴파일이 지고(ShaderRecompiler.ShaderReloadFailedEntry ·
   Reload.FailedCount) 이전 바이트코드로 계속 그린다(앞뒤 사진이 같다). 되돌리면 낡음이 풀린다(Reload.StaleCount 0).
-  재컴파일기는 Debug 만 기본으로 세우므로 <Launch> 로 켠다(gv_liveShaderRecompile, LiveShaderSubsystem). 서지 않았으면 첫 판정에서 진다.
+  재컴파일기는 Debug 만 기본으로 세우므로 <Launch> 로 켠다(gv_shaderHotReload, ShaderHotReloadSubsystem). 서지 않았으면 첫 판정에서 진다.
   편집 모드에서 누른다. 에디터 패널이 키보드를 쥔 동안에도 셸 디버그 키 맵은 Ctrl 조합을 읽는다(InputMap::setToolShortcutReader). 셰이더 캐시 · 재컴파일기는 플레이와 편집이 같다.
   실행: App -EnableEditor -scenario=game/playground/automation/desktop/editor/shaderreload.scenario.xml -unattended (ctest -R Scenario.playground.desktop.editor.shaderreload)
 -->
 <Scenario name="game.playground.shaderreload" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
-	<Launch variable="gv_liveShaderRecompile" value="1"/>
+	<Launch variable="gv_shaderHotReload" value="1"/>
 	<Scratch from="game/playground/automation/desktop/editor/shaderreload" as="scratch/shaderreload"/>
 	<EditorWaitStable/>
 	<DevCommand line="scene.open scratch/shaderreload/shaderreload.scene.xml"/>
@@ -18,7 +18,7 @@
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>
-	<Expect watch="Shader.LiveRecompile" equals="1"/>
+	<Expect watch="Shader.HotReload" equals="1"/>
 
 	<!-- ⑤ 바뀌지 않은 재컴파일 -->
 	<Store watch="Shader.RecompilePassCount" as="passStart"/>

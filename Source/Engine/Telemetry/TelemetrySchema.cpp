@@ -70,7 +70,7 @@ namespace sw
         const string_view path = assetID.view();
         XMLDocument       doc;
         string            sourceName( path );
-        if ( doc.loadResource( assetID, &sourceName ) == false )
+        if ( doc.loadAsset( assetID, &sourceName ) == false )
         {
             SW_LOG_WARNING_ID( "TelemetrySchema.FailedReadTelemetrySchema", "Failed to read telemetry schema %#", path );
             return false;

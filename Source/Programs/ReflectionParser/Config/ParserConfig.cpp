@@ -1,0 +1,621 @@
+#include "pch.h"
+
+#include "Programs/ReflectionParser/Config/ParserConfig.h"
+
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
+
+#include "Engine/Foundation/Foundation.h"
+
+#include "Programs/ReflectionParser/Config/ParserConfigKeys.h"
+
+#include <nlohmann/json.hpp>
+
+namespace sw
+{
+    namespace
+    {
+        struct ParserConfigInternal
+        {
+            /**
+             * @brief 커밋된 기본 설정(`--config`) 옆의 설정 파일 경로입니다 — 로컬 `parser_config.json` · `toolchain_config.json` 은 같은 폴더에 있다.
+             * @details 예전에는 작업 폴더에서 위로 올라가며 찾았고, 그다음엔 프로젝트 루트를 추측했다 - 이제 CMake 가 기본 설정의 절대 경로를 넘긴다.
+             */
+            static AbsolutePath makeSiblingPath( const AbsolutePath& defaultsPath, const utf8* pConfigRelPath )
+            {
+                return defaultsPath.getParent().join( FileUtil::getFileNamePart( pConfigRelPath ) );
+            }
+
+            /**
+             * @brief 설정 파일을 JSON 으로 읽고, 읽었으면 경로를 남깁니다.
+             * @return 선택 파일이 없거나 비었으면 null 객체와 true, 필수 파일(@p bRequired)이 없거나 있는데 못 읽거나 JSON 이 깨졌으면 false 입니다.
+             * @details 깨진 설정을 기본값으로 대신하지 않는다 — 어느 칸이 왜 무시됐는지 남지 않고 libclang 오류가 엉뚱한 자리에서 난다.
+             */
+            [[nodiscard]] static bool loadDocument( const AbsolutePath& path, vector<AbsolutePath>& inoutListLoadedFile, nlohmann::json& outDocument, const bool bRequired = false )
+            {
+                outDocument         = nlohmann::json{};
+                const bool bPresent = FileUtil::isRegularFile( path );
+                if ( bPresent == false && bRequired )
+                {
+                    SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileMissing", "Parser setting file '%#' is missing - it is committed and required", path.str() );
+                    return false;
+                }
+                if ( bPresent == false )
+                    return true;
+
+                string text;
+                if ( FileUtil::readTextFile( path, text ) == false )
+                {
+                    SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileExists", "Parser setting file '%#' exists but cannot be read", path.str() );
+                    return false;
+                }
+                inoutListLoadedFile.push_back( path );
+                if ( text.empty() )
+                    return true;
+                try
+                {
+                    outDocument = nlohmann::json::parse( text );
+                }
+                catch ( const nlohmann::json::parse_error& exception )
+                {
+                    SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileNot", "Parser setting file '%#' is not valid JSON: %#", path.str(), exception.what() );
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 타깃 인자의 `-DSW_PLATFORM_*` 로 설정 표(`parser_args.platform`)의 열쇠를 고릅니다. 모르는 플랫폼이면 nullopt 입니다. */
+            [[nodiscard]] static optional<string_view> findTargetPlatformKey( const vector<string>& listTargetArg )
+            {
+                constexpr std::pair<string_view, string_view> kArrPlatform[] = {
+                    {"-DSW_PLATFORM_WINDOWS", "windows"},
+                    {  "-DSW_PLATFORM_LINUX",   "linux"},
+                    {"-DSW_PLATFORM_ANDROID", "android"},
+                    {    "-DSW_PLATFORM_WEB",     "web"},
+                };
+                for ( const string& targetArg : listTargetArg )
+                {
+                    for ( const auto& [macro, key] : kArrPlatform )
+                    {
+                        if ( targetArg == macro )
+                            return key;
+                    }
+                }
+                return nullopt;
+            }
+
+            static void appendUnique( vector<string>& inoutListDst, const vector<string>& listSrc )
+            {
+                for ( const string& item : listSrc )
+                {
+                    VectorUtil::addUnique( inoutListDst, item );
+                }
+            }
+
+            /** @brief JSON 객체에서 pKey의 문자열 값을 dst에 덮어씁니다 (키 없으면 그대로). */
+            static void assignIfPresent( string& dst, const nlohmann::json& obj, const utf8* pKey )
+            {
+                const auto it = obj.find( pKey );
+                if ( it != obj.end() && it->is_string() )
+                    dst = it->get_ref<const std::string&>().c_str();
+            }
+
+            /** @brief JSON 객체에서 pKey의 uint 값을 읽습니다 (키 없으면 defaultValue). */
+            static uint32 getUintOrDefault( const nlohmann::json& obj, const utf8* pKey, uint32 defaultValue )
+            {
+                const auto it = obj.find( pKey );
+                if ( it != obj.end() && it->is_number_unsigned() )
+                    return it->get<uint32>();
+                return defaultValue;
+            }
+
+            /** @brief JSON 배열 항목들을 string 벡터로 변환합니다. */
+            static vector<string> collectStringArray( const nlohmann::json& arr )
+            {
+                vector<string> listResult;
+                if ( arr.is_array() == false )
+                    return listResult;
+                for ( const auto& item : arr )
+                {
+                    if ( item.is_string() )
+                        listResult.push_back( item.get_ref<const std::string&>().c_str() );
+                }
+                return listResult;
+            }
+
+            /** @brief 키가 있고 배열이면 목록을 통째로 바꿉니다. */
+            static void assignArrayIfPresent( vector<string>& outListValue, const nlohmann::json& obj, const utf8* pKey )
+            {
+                const auto it = obj.find( pKey );
+                if ( it != obj.end() && it->is_array() )
+                    outListValue = collectStringArray( *it );
+            }
+
+            struct StringBinding
+            {
+                string ParserConfig::* _member;
+                const utf8*            _pKey;
+            };
+
+            static void applyBindings( ParserConfig& config, const nlohmann::json& obj, std::initializer_list<StringBinding> listBinding )
+            {
+                for ( const auto& [member, key] : listBinding )
+                {
+                    assignIfPresent( config.*member, obj, key );
+                }
+            }
+
+            static void applyPathsSection( ParserConfig& config, const nlohmann::json& obj )
+            {
+                applyBindings( config, obj, {
+                                                {    &ParserConfig::_llvmClangRel,     jsonkey::kLlvmClangRel},
+                                                { &ParserConfig::_clangIncludeRel,  jsonkey::kClangIncludeRel},
+                                                {  &ParserConfig::_msvcIncludeRel,   jsonkey::kMsvcIncludeRel},
+                                                {&ParserConfig::_winSdkIncludeRel, jsonkey::kWinSdkIncludeRel},
+                                                {   &ParserConfig::_winSdkUcrtRel,    jsonkey::kWinSdkUcrtRel},
+                } );
+            }
+
+            static void applyClangFlagsSection( ParserConfig& config, const nlohmann::json& obj )
+            {
+                applyBindings( config, obj, {
+                                                {         &ParserConfig::_flagIncludePrefix,      jsonkey::kFlagIncludePrefix},
+                                                {               &ParserConfig::_flagIsystem,            jsonkey::kFlagIsystem},
+                                                {           &ParserConfig::_flagResourceDir,        jsonkey::kFlagResourceDir},
+                                                {          &ParserConfig::_flagForceInclude,       jsonkey::kFlagForceInclude},
+                                                {      &ParserConfig::_flagFmsCompatibility,   jsonkey::kFlagFmsCompatibility},
+                                                {         &ParserConfig::_flagFmsExtensions,      jsonkey::kFlagFmsExtensions},
+                                                {&ParserConfig::_flagFmsCompatVersionPrefix, jsonkey::kFlagFmsCompatVerPrefix},
+                } );
+            }
+
+            static void applyParsingSection( ParserConfig& config, const nlohmann::json& obj )
+            {
+                assignArrayIfPresent( config._listComponentBaseType, obj, jsonkey::kParsingComponentBaseTypes );
+                assignArrayIfPresent( config._listTypeStripPrefix, obj, jsonkey::kParsingTypeStripPrefixes );
+                assignArrayIfPresent( config._listNameFieldSkipFolder, obj, jsonkey::kParsingNameFieldSkipFolders );
+                assignArrayIfPresent( config._listStateSkipPath, obj, jsonkey::kParsingStateSkipPaths );
+            }
+
+            static void applyTuningSection( ParserConfig& config, const nlohmann::json& obj )
+            {
+                config._maxParallelParses         = getUintOrDefault( obj, jsonkey::kMaxParallelParses, config._maxParallelParses );
+                config._minTranslationUnitsForPch = getUintOrDefault( obj, jsonkey::kMinTranslationUnitsForPch, config._minTranslationUnitsForPch );
+            }
+
+            /**
+             * @brief 로컬 문서에서 이 기계에 딸린 키만 남깁니다 — `paths.*` 와 `parser_args.extra` · `parser_args.force_include`.
+             * @details 나머지 키는 기본값과 다르면 경고하고 버린다(기본값이 이긴다) — 셋업이 로컬에 기본값 전체 사본을 써 두므로, 로컬이
+             *          키마다 이기면 나중에 커밋된 기본값을 고쳐도 그 기계는 옛 값을 계속 쓴다(예: `flag_ops_marker` 가 바뀌면 FlagOps 우산이 비어
+             *          Engine 빌드가 깨진다). 기본값에 없는 키(지운 이름)도 알린다.
+             */
+            static nlohmann::json keepMachineLocalKeys( const nlohmann::json& defaultsDoc, const nlohmann::json& localDoc, const string& localPath )
+            {
+                nlohmann::json kept = nlohmann::json::object();
+                if ( localDoc.is_object() == false )
+                    return kept;
+                for ( auto sectionIt = localDoc.begin(); sectionIt != localDoc.end(); ++sectionIt )
+                {
+                    const std::string& section = sectionIt.key();
+                    if ( section == jsonkey::kPaths )
+                    {
+                        kept[section] = sectionIt.value();
+                        continue;
+                    }
+                    const auto defaultsIt = defaultsDoc.is_object() ? defaultsDoc.find( section ) : defaultsDoc.end();
+                    if ( defaultsIt == defaultsDoc.end() )
+                    {
+                        SW_LOG_WARNING_ID( "ParserConfig.NotParserSettingOld", "%#: '%#' is not a parser setting (an old name?) and is ignored - remove it", localPath, section.c_str() );
+                        continue;
+                    }
+                    if ( sectionIt.value().is_object() == false || defaultsIt->is_object() == false )
+                    {
+                        if ( *defaultsIt != sectionIt.value() )
+                            SW_LOG_WARNING_ID( "ParserConfig.DiffersParserConfigDefaults", "%#: '%#' differs from parser_config.defaults.json and is ignored - only paths.*, parser_args.extra and "
+                                                                                           "parser_args.force_include are local settings",
+                                               localPath, section.c_str() );
+                        continue;
+                    }
+                    for ( auto keyIt = sectionIt.value().begin(); keyIt != sectionIt.value().end(); ++keyIt )
+                    {
+                        const std::string& key           = keyIt.key();
+                        const bool         bMachineLocal = section == jsonkey::kParserArgsSection &&
+                                                   ( key == jsonkey::kArgsExtra || key == jsonkey::kArgsForceInclude );
+                        if ( bMachineLocal )
+                        {
+                            kept[section][key] = keyIt.value();
+                            continue;
+                        }
+                        const auto defaultIt = defaultsIt->find( key );
+                        if ( defaultIt == defaultsIt->end() || *defaultIt != keyIt.value() )
+                        {
+                            SW_LOG_WARNING_ID( "ParserConfig.DiffersParserConfigDefaults2", "%#: '%#.%#' differs from parser_config.defaults.json and is ignored - only paths.*, parser_args.extra "
+                                                                                            "and parser_args.force_include are local settings (remove it, or rerun Scripts/setup/setup_environment.py)",
+                                               localPath, section.c_str(), key.c_str() );
+                        }
+                    }
+                }
+                return kept;
+            }
+
+            /**
+             * @brief 커밋된 기본 설정이 채워야 하는 값이 모두 있는지 봅니다. 빠진 것마다 키를 알리고 false 입니다.
+             * @details 예전에는 같은 값을 생성자 기본값에도 적어(설정과 두 벌) 키가 빠지면 코드의 옛 값으로 조용히 진행했다.
+             */
+            [[nodiscard]] static bool hasRequiredValues( const ParserConfig& config, const string& defaultsPath )
+            {
+                const pair<const string*, const utf8*> arrRequiredText[] = {
+                    {              &config._llvmClangRel,                  "paths.llvm_clang_rel"},
+                    {           &config._clangIncludeRel,               "paths.clang_include_rel"},
+                    {            &config._msvcIncludeRel,                "paths.msvc_include_rel"},
+                    {          &config._winSdkIncludeRel,              "paths.winsdk_include_rel"},
+                    {             &config._winSdkUcrtRel,                 "paths.winsdk_ucrt_rel"},
+                    {         &config._flagIncludePrefix,            "clang_flags.include_prefix"},
+                    {               &config._flagIsystem,                   "clang_flags.isystem"},
+                    {           &config._flagResourceDir,              "clang_flags.resource_dir"},
+                    {          &config._flagForceInclude,             "clang_flags.force_include"},
+                    {      &config._flagFmsCompatibility,         "clang_flags.fms_compatibility"},
+                    {         &config._flagFmsExtensions,            "clang_flags.fms_extensions"},
+                    {&config._flagFmsCompatVersionPrefix, "clang_flags.fms_compat_version_prefix"},
+                };
+                bool bComplete = true;
+                for ( const auto& [pValue, pKey] : arrRequiredText )
+                {
+                    if ( pValue->empty() == false )
+                        continue;
+                    SW_LOG_ERROR_ID( "ParserConfig.Required", "%#: '%#' is required", defaultsPath, pKey );
+                    bComplete = false;
+                }
+                const pair<const vector<string>*, const utf8*> arrRequiredList[] = {
+                    {&config._listComponentBaseType, "parsing.component_base_types"},
+                    {  &config._listTypeStripPrefix,  "parsing.type_strip_prefixes"},
+                };
+                for ( const auto& [pList, pKey] : arrRequiredList )
+                {
+                    if ( pList->empty() == false )
+                        continue;
+                    SW_LOG_ERROR_ID( "ParserConfig.RequiredNonEmptyList", "%#: '%#' is required (a non-empty list)", defaultsPath, pKey );
+                    bComplete = false;
+                }
+                if ( config._maxParallelParses == 0 )
+                {
+                    SW_LOG_ERROR_ID( "ParserConfig.TuningMaxParallelParses", "%#: 'tuning.max_parallel_parses' is required (a positive number)", defaultsPath );
+                    bComplete = false;
+                }
+                if ( config._minTranslationUnitsForPch < 2 )
+                {
+                    SW_LOG_ERROR_ID( "ParserConfig.TuningMinTranslationUnitsForPch", "%#: 'tuning.min_translation_units_for_pch' is required (2 or more - one unit gains nothing from a PCH)",
+                                     defaultsPath );
+                    bComplete = false;
+                }
+                return bComplete;
+            }
+
+            using ApplyFn = void ( * )( ParserConfig&, const nlohmann::json& );
+
+            /** @brief 기본값 문서 다음 로컬 문서 순으로 한 섹션을 덮어씁니다(로컬이 이긴다). */
+            static void mergeConfigSection( ParserConfig& config, const nlohmann::json& defaultsDoc, const nlohmann::json& localDoc,
+                                            const utf8* sectionKey, ApplyFn applyFn )
+            {
+                const auto itDefaults = defaultsDoc.find( sectionKey );
+                if ( itDefaults != defaultsDoc.end() && itDefaults->is_object() )
+                    applyFn( config, *itDefaults );
+                const auto itLocal = localDoc.find( sectionKey );
+                if ( itLocal != localDoc.end() && itLocal->is_object() )
+                    applyFn( config, *itLocal );
+            }
+
+            static vector<string> loadArgsFromDocument( const nlohmann::json& doc, const utf8* pPlatformKey )
+            {
+                vector<string> outList;
+                const auto     itArgs = doc.find( jsonkey::kParserArgsSection );
+                if ( itArgs == doc.end() || itArgs->is_object() == false )
+                    return outList;
+
+                const nlohmann::json& argsSection = *itArgs;
+                appendUnique( outList, collectStringArray( argsSection.value( jsonkey::kArgsDefault, nlohmann::json{} ) ) );
+
+#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX )
+                {
+                    const auto            itPlatform  = argsSection.find( jsonkey::kArgsPlatform );
+                    const nlohmann::json& platformSrc = ( itPlatform != argsSection.end() && itPlatform->is_object() )
+                                                          ? *itPlatform
+                                                          : argsSection;
+                    appendUnique( outList, collectStringArray( platformSrc.value( pPlatformKey, nlohmann::json{} ) ) );
+                }
+#else
+                (void)pPlatformKey;
+#endif
+
+                appendUnique( outList, collectStringArray( argsSection.value( jsonkey::kArgsExtra, nlohmann::json{} ) ) );
+                return outList;
+            }
+
+            /** @brief @p text 가 @p arr(글 배열)의 접두어 하나로 시작하면 true 입니다. */
+            static bool startsWithAnyPrefix( const string_view text, const nlohmann::json& arr )
+            {
+                for ( const string& prefix : collectStringArray( arr ) )
+                {
+                    if ( prefix.empty() == false && StringUtil::startsWith( text, prefix ) )
+                        return true;
+                }
+                return false;
+            }
+
+            /**
+             * @brief 타깃 컴파일 옵션을 libclang 인자로 바꿔 @p outListArg 에 더합니다. 표 셋 중 하나에 있어야 한다 — 바꾸는 표(`target_options`: 옵션 → 인자),
+             *        그대로 넘기는 접두어(`target_option_pass_prefixes`: `-march=` 같은 대상 기능), 파싱 뜻이 없어 버리는 접두어(`target_option_ignored_prefixes`: 경고 · 최적화 · `/FI`).
+             * @details 어느 표에도 없는 옵션은 생성 오류다. 조용히 버리면 뜻 있는 옵션(매크로를 정의하거나 언어 규칙을 바꾸는 것)이 새로 생겨도 파서만 옛 규칙으로 읽는다.
+             */
+            [[nodiscard]] static bool appendTargetOptions( const nlohmann::json& defaultsDoc, const vector<string>& listTargetOption, vector<string>& outListArg )
+            {
+                const auto mapIt          = defaultsDoc.find( jsonkey::kTargetOptionMap );
+                const auto passIt         = defaultsDoc.find( jsonkey::kTargetOptionPass );
+                const auto ignoreIt       = defaultsDoc.find( jsonkey::kTargetOptionIgnore );
+                const bool bTablesMissing = mapIt == defaultsDoc.end() || mapIt->is_object() == false || passIt == defaultsDoc.end() || passIt->is_array() == false ||
+                                            ignoreIt == defaultsDoc.end() || ignoreIt->is_array() == false;
+                if ( bTablesMissing )
+                {
+                    SW_LOG_ERROR_ID( "ParserConfig.NoTargetOptionMap", "parser config needs '%#' (object), '%#' and '%#' (arrays) for the target compile options", jsonkey::kTargetOptionMap,
+                                     jsonkey::kTargetOptionPass, jsonkey::kTargetOptionIgnore );
+                    return false;
+                }
+                bool bAllKnown = true;
+                for ( const string& targetOption : listTargetOption )
+                {
+                    const auto rowIt = mapIt->find( targetOption.c_str() );
+                    if ( rowIt != mapIt->end() )
+                    {
+                        if ( rowIt->is_array() == false )
+                        {
+                            SW_LOG_ERROR_ID( "ParserConfig.BadTargetOptionRow", "'%#.%#' must be an array of clang arguments", jsonkey::kTargetOptionMap, targetOption );
+                            return false;
+                        }
+                        for ( const string& arg : collectStringArray( *rowIt ) )
+                            outListArg.push_back( arg );
+                        continue;
+                    }
+                    if ( startsWithAnyPrefix( targetOption, *passIt ) )
+                    {
+                        outListArg.push_back( targetOption );
+                        continue;
+                    }
+                    if ( startsWithAnyPrefix( targetOption, *ignoreIt ) )
+                    {
+                        SW_LOG_TRACE_ID( "ParserConfig.TargetOptionDropped", "Target compile option '%#' does not change parsing; dropped.", targetOption );
+                        continue;
+                    }
+                    SW_LOG_ERROR_ID( "ParserConfig.UnknownTargetOption",
+                                     "Target compile option '%#' is in none of %# / %# / %# (Config/Environment/parser_config.defaults.json) - say whether it changes parsing",
+                                     targetOption, jsonkey::kTargetOptionMap, jsonkey::kTargetOptionPass, jsonkey::kTargetOptionIgnore );
+                    bAllKnown = false;
+                }
+                return bAllKnown;
+            }
+
+            static vector<string> loadForceIncludeFromDocument( const nlohmann::json& doc )
+            {
+                const auto itArgs = doc.find( jsonkey::kParserArgsSection );
+                if ( itArgs == doc.end() || itArgs->is_object() == false )
+                    return {};
+                return collectStringArray( itArgs->value( jsonkey::kArgsForceInclude, nlohmann::json{} ) );
+            }
+
+#if defined( SW_PLATFORM_POSIX )
+            static bool isMsvcCompatArg( const string& arg, const ParserConfig& config )
+            {
+                if ( arg == config._flagFmsCompatibility || arg == config._flagFmsExtensions )
+                    return true;
+                return StringUtil::startsWith( arg, config._flagFmsCompatVersionPrefix );
+            }
+
+            static void eraseMsvcCompatArgs( vector<string>& inoutListArg, const ParserConfig& config )
+            {
+                size_t writeIndex = 0;
+                for ( size_t readIndex = 0; readIndex < inoutListArg.size(); ++readIndex )
+                {
+                    if ( isMsvcCompatArg( inoutListArg[readIndex], config ) )
+                        continue;
+                    if ( writeIndex != readIndex )
+                        inoutListArg[writeIndex] = inoutListArg[readIndex];
+                    ++writeIndex;
+                }
+                inoutListArg.resize( writeIndex );
+            }
+#endif
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    ParserConfig::ParserConfig() noexcept
+        : _listBaseArg{}
+        , _listForceInclude{}
+        , _llvmClangRel{}
+        , _clangIncludeRel{}
+        , _msvcIncludeRel{}
+        , _winSdkIncludeRel{}
+        , _winSdkUcrtRel{}
+        , _flagIncludePrefix{}
+        , _flagIsystem{}
+        , _flagResourceDir{}
+        , _flagForceInclude{}
+        , _flagFmsCompatibility{}
+        , _flagFmsExtensions{}
+        , _flagFmsCompatVersionPrefix{}
+        , _listComponentBaseType{}
+        , _listTypeStripPrefix{}
+        , _listNameFieldSkipFolder{}
+        , _listStateSkipPath{}
+        , _listLoadedFile{}
+        , _maxParallelParses{ 0 }
+        , _minTranslationUnitsForPch{ 0 }
+        , _bLoaded{ SW_FALSE }
+        , _reserved{ 0 }
+        , _padding{ 0 }
+    {
+    }
+
+    bool ParserConfig::load( const AbsolutePath& defaultsPath, const vector<string>& listTargetArg, const vector<string>& listTargetOption )
+    {
+        _listBaseArg.clear();
+        _listForceInclude.clear();
+        _listLoadedFile.clear();
+        _bLoaded = SW_FALSE;
+
+        // 대상 플랫폼은 CMake 가 넘긴 타깃 매크로가 정한다(교차 빌드에서 파서를 지은 호스트와 다르다). 표에 없는 플랫폼은 오류다.
+        const optional<string_view> platformParserKey = ParserConfigInternal::findTargetPlatformKey( listTargetArg );
+        if ( platformParserKey.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "ParserConfig.NoTargetPlatform", "%# names no SW_PLATFORM_* macro the parser knows (-DSW_PLATFORM_WINDOWS / LINUX / ANDROID / WEB)", cli::kTargetArg );
+            return false;
+        }
+        const string kPlatformParserKey{ *platformParserKey };
+
+        if ( defaultsPath.empty() )
+        {
+            SW_LOG_ERROR_ID( "ParserConfig.MustAbsolutePathGot", "%# must be an absolute path to %# (got '%#')", cli::kConfig, parserpath::kParserConfigDefaults, defaultsPath.str() );
+            return false;
+        }
+        const AbsolutePath localPath = ParserConfigInternal::makeSiblingPath( defaultsPath, parserpath::kParserConfig );
+        nlohmann::json     defaultsDoc;
+        nlohmann::json     rawLocalDoc;
+        if ( ParserConfigInternal::loadDocument( defaultsPath, _listLoadedFile, defaultsDoc, true ) == false ||
+             ParserConfigInternal::loadDocument( localPath, _listLoadedFile, rawLocalDoc ) == false )
+            return false;
+        // 로컬은 이 기계에 딸린 키만 받는다(`keepMachineLocalKeys`) — 나머지는 커밋된 기본값이 정한다.
+        const nlohmann::json localDoc = ParserConfigInternal::keepMachineLocalKeys( defaultsDoc, rawLocalDoc, localPath.str() );
+
+        BLOCK( "Load Base Arguments from Config" )
+        {
+            vector<string> listMerged = ParserConfigInternal::loadArgsFromDocument( defaultsDoc, kPlatformParserKey.c_str() );
+            ParserConfigInternal::appendUnique( listMerged, ParserConfigInternal::loadArgsFromDocument( localDoc, kPlatformParserKey.c_str() ) );
+            _listBaseArg = std::move( listMerged );
+        }
+
+        BLOCK( "Load paths / clang_flags / parsing / tuning" )
+        {
+            ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kPaths, ParserConfigInternal::applyPathsSection );
+            ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kClangFlags, ParserConfigInternal::applyClangFlagsSection );
+            ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kParsing, ParserConfigInternal::applyParsingSection );
+            ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kTuning, ParserConfigInternal::applyTuningSection );
+            if ( ParserConfigInternal::hasRequiredValues( *this, defaultsPath.str() ) == false )
+                return false;
+        }
+
+#if defined( SW_PLATFORM_POSIX )
+        // clang_flags 를 읽고 검사한 뒤에 지운다 — 앞에서 지우면 빈 접두사(`_flagFmsCompatVersionPrefix`)가 모든 인자와 맞아 목록이 통째로 빈다.
+        ParserConfigInternal::eraseMsvcCompatArgs( _listBaseArg, *this );
+#endif
+
+        BLOCK( "Load force_include" )
+        {
+            ParserConfigInternal::appendUnique( _listForceInclude, ParserConfigInternal::loadForceIncludeFromDocument( defaultsDoc ) );
+            ParserConfigInternal::appendUnique( _listForceInclude, ParserConfigInternal::loadForceIncludeFromDocument( localDoc ) );
+        }
+
+        string llvmPath;
+        string msvcToolsDir;
+        string winSdkDir;
+        string winSdkVer;
+        BLOCK( "Load Engine Config" )
+        {
+            nlohmann::json engineDoc;
+            if ( ParserConfigInternal::loadDocument( ParserConfigInternal::makeSiblingPath( defaultsPath, parserpath::kToolchainConfig ), _listLoadedFile, engineDoc ) == false )
+                return false;
+            if ( engineDoc.is_object() )
+            {
+                ParserConfigInternal::assignIfPresent( llvmPath, engineDoc, jsonkey::kLlvmPath );
+                ParserConfigInternal::assignIfPresent( msvcToolsDir, engineDoc, jsonkey::kMsvcToolsDir );
+                ParserConfigInternal::assignIfPresent( winSdkDir, engineDoc, jsonkey::kWindowsSdkDir );
+                ParserConfigInternal::assignIfPresent( winSdkVer, engineDoc, jsonkey::kWindowsSdkVersion );
+            }
+        }
+
+        if ( _listBaseArg.empty() )
+        {
+            SW_LOG_ERROR_ID( "ParserConfig.NoParserArgsAvailable", "No parser_args available (config empty)." );
+            return false;
+        }
+
+        BLOCK( "Target Macros" )
+        {
+            // 헤더는 CMake 가 정의하는 타깃 매크로만 읽고 `Core/Foundation/TargetMacroCheck.h` 가 그것을 실제 컴파일러와 대조한다.
+            // libclang 은 CMake 를 거치지 않으므로 대상 빌드의 매크로 · 트리플 · 시스템 헤더를 CMake 가 `--target-arg` 로 넘긴다(ReflectionCodeGen.cmake).
+            // 파서 자신의 매크로를 쓰지 않는다 — 교차 빌드(웹 · Android)는 호스트에서 지은 파서가 다른 대상을 읽는다. libclang 은 언제나 clang 이다.
+            for ( const string& targetArg : listTargetArg )
+                _listBaseArg.push_back( targetArg );
+            // 타깃의 컴파일 옵션(clang-cl 의 `/GR-` · `/EHsc` · `-clang:…` 등)은 표 `target_options` 가 libclang 이 받는 꼴로 바꾼다. 표에 없는 옵션
+            // (경고 · 최적화 · 코드 생성 · `/FI`)은 파싱 뜻이 없어 버린다 — 옵션마다 손으로 파서 설정에 다시 적지 않는다.
+            if ( ParserConfigInternal::appendTargetOptions( defaultsDoc, listTargetOption, _listBaseArg ) == false )
+                return false;
+            _listBaseArg.emplace_back( "-DSW_COMPILER_CLANG" );
+        }
+
+        appendToolchainIncludes( std::move( llvmPath ), msvcToolsDir, winSdkDir, winSdkVer, kPlatformParserKey );
+
+        _bLoaded = SW_TRUE;
+        SW_LOG_TRACE_ID( "ParserConfig.LoadedClangConfigBase", "Loaded clang config (%# base args).", static_cast<uint32>( _listBaseArg.size() ) );
+        return true;
+    }
+
+    vector<string> ParserConfig::makeArgs( const vector<string>& listIncludePath ) const
+    {
+        vector<string> listArg = _listBaseArg;
+        listArg.reserve( listArg.size() + listIncludePath.size() + _listForceInclude.size() * 2 );
+        for ( const string& includePath : listIncludePath )
+        {
+            StringBuilder<constant::buffer::kMax1024> arg;
+            arg.appendFormat( "%#%#", _flagIncludePrefix, includePath );
+            listArg.emplace_back( arg.view() );
+        }
+        for ( const string& forceInclude : _listForceInclude )
+        {
+            listArg.push_back( _flagForceInclude );
+            listArg.push_back( forceInclude );
+        }
+        return listArg;
+    }
+
+    bool ParserConfig::isNameFieldCheckSkipped( const string_view headerPath ) const
+    {
+        // 경로 마디마다 견준다 — 이름 앞부분만 같은 폴더(`TestsData`)는 빼지 않는다. 구분자는 두 OS 것을 모두 받는다.
+        size_t begin = 0;
+        while ( begin <= headerPath.size() )
+        {
+            size_t end = headerPath.find_first_of( "/\\", begin );
+            if ( end == string_view::npos )
+                end = headerPath.size();
+            const string_view part = headerPath.substr( begin, end - begin );
+            for ( const string& folder : _listNameFieldSkipFolder )
+            {
+                if ( part == folder && end < headerPath.size() )
+                    return true;
+            }
+            begin = end + 1;
+        }
+        return false;
+    }
+
+    bool ParserConfig::isStateDeclarationSkipped( const string_view headerPath ) const
+    {
+        string path( headerPath );
+        for ( utf8& character : path )
+        {
+            if ( character == '\\' )
+                character = '/';
+        }
+        for ( const string& part : _listStateSkipPath )
+        {
+            if ( path.find( part ) != string::npos )
+                return true;
+        }
+        return false;
+    }
+} // namespace sw

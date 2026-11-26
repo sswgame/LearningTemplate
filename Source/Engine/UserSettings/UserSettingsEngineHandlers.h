@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    class CommandLineManager;
+    class CommandLine;
     class GlobalVariableManager;
     class InputMap;
     class LocalizationManager;
@@ -23,10 +23,10 @@ namespace sw
     /** @brief 엔진 핸들러가 값을 넣는 대상입니다. 테스트는 자기 것을 넘기고, 엔진은 서비스를 넘깁니다. 비어 있는 대상의 핸들러는 아무것도 하지 않습니다. */
     struct UserSettingsTargets
     {
-        GlobalVariableManager*    _pGlobalVariableManager{ nullptr };
-        const CommandLineManager* _pCommandLineManager{ nullptr }; ///< 있으면 명령줄로 준 전역 변수(`-gv_*`)는 기동 적용이 덮지 않는다(명령줄이 이긴다)
-        InputMap*                 _pInputMap{ nullptr };
-        LocalizationManager*      _pLocalizationManager{ nullptr };
+        GlobalVariableManager* _pGlobalVariableManager{ nullptr };
+        const CommandLine*     _pCommandLine{ nullptr }; ///< 있으면 명령줄로 준 전역 변수(`-gv_*`)는 기동 적용이 덮지 않는다(명령줄이 이긴다)
+        InputMap*              _pInputMap{ nullptr };
+        LocalizationManager*   _pLocalizationManager{ nullptr };
     };
 } // namespace sw
 
@@ -60,7 +60,7 @@ namespace sw
      *            `input.toggleMode`(param 은 액션, 값은 `hold`/`toggle`), `input.keyBinding`(키 바인딩 설정의 기본 대상)
      *          - `localization.language`(빈 값은 게임 기본 언어 그대로)
      *          - `display.windowMode`(`windowed`/`borderless`), `display.resolution`(`<너비>x<높이>`), `display.vsync`
-     *          - `resource.tag`(param 은 리소스 태그 축 — `graphics.quality` 가 `quality` 축을 켠다. 리소스의 `<_when _if="quality.low">` 가 읽는다)
+     *          - `asset.tag`(param 은 에셋 태그 축 — `graphics.quality` 가 `quality` 축을 켠다. 리소스의 `<_when _if="quality.low">` 가 읽는다)
      *          선택지 공급자: `localization.languages`(읽은 언어 목록), `display.resolutions`(기본 모니터가 내는 해상도 — 못 읽으면 스키마의 고정 선택지).
      *          기능 폴더의 묶음(`UserSettingsHandlerSetRegistrar` — 오디오의 `audio.busVolume` · `audio.mute` · `audio.speakerMode`)을 이 뒤에 함께 올린다.
      */

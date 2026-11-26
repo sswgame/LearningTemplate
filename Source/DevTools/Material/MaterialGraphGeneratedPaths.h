@@ -2,7 +2,7 @@
  * @file MaterialGraphGeneratedPaths.h
  * @brief 그래프를 생성물(`<도메인>/shaders/matgraph/<줄기>_<해시>.hlsl` · `<그래프 옆>.gen.material`)로 바꿔 소스 트리에 씁니다. 셰이더 쿠킹이 시작할 때와 에디터의 임포터가 부릅니다.
  * @details 생성물은 소스 트리에 둔다 — 그 뒤는 손으로 쓴 셰이더 · 머티리얼과 같은 쿠킹 입력이다(셰이더 스탬프가 내용 해시로 추적하고, 머티리얼은 요청 수집과 팩이 그대로 읽는다).
- *          런타임은 생성물만 읽고 배포에는 이 코드가 없다(`Dev/`). 언리얼은 파생 캐시에 두지만, 이 엔진은 셰이더 소스 해석이 리소스 경로 하나라 같은 길을 태우는 쪽이 작다(기억에 의존).
+ *          런타임은 생성물만 읽고 배포에는 이 코드가 없다(`Dev/`). 언리얼은 파생 캐시에 두지만, 이 엔진은 셰이더 소스 해석이 에셋 경로 하나라 같은 길을 태우는 쪽이 작다(기억에 의존).
  *          내용이 바뀌면 파일 이름이 바뀐다. PSO · 리플렉션 캐시가 경로를 열쇠로 하므로, 새 내용을 새 경로로 내면 무효화 코드 없이 Debug 밖의 개발 구성에서도 핫 리로드가 된다(`ShaderRecompiler` 는 Debug 전용이다).
  *          쿠킹은 바이트가 같으면 쓰지 않는다 — 깨끗한 트리에서 쿠킹이 소스를 건드리지 않는다.
  */
@@ -19,7 +19,7 @@ namespace sw
     class AssetPaths;
     struct MaterialGraphCompileResult;
 
-    /** @brief 그래프 하나의 생성물 자리입니다(리소스 id). */
+    /** @brief 그래프 하나의 생성물 자리입니다(에셋 id). */
     struct SW_DEVTOOLS_API MaterialGraphGeneratedPaths
     {
         string _shadersFolder; ///< 셰이더가 드는 폴더(`game/x/shaders/matgraph`)
@@ -34,7 +34,7 @@ namespace sw
         [[nodiscard]] static bool makeGeneratedPaths( string_view graphID, MaterialGraphGeneratedPaths& outPaths );
         /** @brief 편집기 미리보기의 자리입니다 — 작업 도메인(`scratch`, 쿠킹이 훑지 않는다)이라 저장 전 편집이 콘텐츠를 건드리지 않습니다. */
         [[nodiscard]] static MaterialGraphGeneratedPaths makePreviewPaths( const MaterialGraphGeneratedPaths& paths );
-        /** @brief 셰이더 파일의 리소스 id 입니다. */
+        /** @brief 셰이더 파일의 에셋 id 입니다. */
         [[nodiscard]] static string makeShaderPath( const MaterialGraphGeneratedPaths& paths, const MaterialGraphCompileResult& result );
         /**
          * @brief 컴파일 결과를 @p paths 자리에 씁니다(바이트가 같으면 쓰지 않는다). 같은 줄기의 옛 해시 셰이더는 지웁니다.

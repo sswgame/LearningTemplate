@@ -20,7 +20,7 @@
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyItemSpawner.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyRoundSeries.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineArena.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw

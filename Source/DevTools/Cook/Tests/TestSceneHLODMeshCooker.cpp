@@ -11,7 +11,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
@@ -39,7 +39,7 @@ namespace
         /** @brief 도형 @p pMesh 하나가 합친 메시에 더하는 인덱스 수입니다(가장 낮은 LOD). */
         static uint32 getMergedIndexCount( const utf8* pMesh )
         {
-            const shared_ptr<Mesh> mesh = MeshUtil::acquirePrimitive( pMesh );
+            const shared_ptr<Mesh> mesh = PrimitiveMeshBuilder::acquirePrimitive( pMesh );
             if ( mesh == nullptr )
                 return 0;
             return mesh->getLODs().empty() ? mesh->getIndexCount() : mesh->getLODs().back()._indexCount;

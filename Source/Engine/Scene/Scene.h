@@ -267,7 +267,7 @@ namespace sw
 
         /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 반환합니다(없으면 빈 문자열). */
         string_view getEntityPrefabPath( uint64 objectID ) const;
-        /** @brief 씬 인스턴스 앵커면 넣은 씬의 리소스 id 입니다(없으면 빈 문자열). */
+        /** @brief 씬 인스턴스 앵커면 넣은 씬의 에셋 id 입니다(없으면 빈 문자열). */
         string_view getSceneInstancePath( uint64 objectID ) const;
         /** @brief 씬 인스턴스 멤버면 true 입니다. */
         bool isSceneInstanceMember( uint64 objectID ) const { return _mapInstanceMember.find( objectID ) != _mapInstanceMember.end(); }

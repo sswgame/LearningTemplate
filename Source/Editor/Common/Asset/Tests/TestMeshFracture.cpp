@@ -15,9 +15,9 @@ namespace
     /** @brief 한 변 2 의 상자(가운데 @p center)와 그 부피 계산을 돕습니다. */
     struct MeshFractureTestUtil
     {
-        static RHIVertex makeVertex( const float3& position )
+        static MeshVertex makeVertex( const float3& position )
         {
-            RHIVertex vertex{};
+            MeshVertex vertex{};
             vertex._arrPosition[0] = position._x;
             vertex._arrPosition[1] = position._y;
             vertex._arrPosition[2] = position._z;
@@ -25,7 +25,7 @@ namespace
         }
 
         /** @brief 바깥이 반시계인 상자 삼각형 목록과 인덱스(0 부터 차례)입니다. @p skipFaces 만큼 뒤 면을 뺍니다(열린 상자). */
-        static void makeBox( const float3& center, vector<RHIVertex>& outListVertex, vector<uint32>& outListIndex, uint32 skipFaces = 0 )
+        static void makeBox( const float3& center, vector<MeshVertex>& outListVertex, vector<uint32>& outListIndex, uint32 skipFaces = 0 )
         {
             static constexpr int32 kArrFace[6][4][3] = {
                 { { -1, -1, 1 },   { 1, -1, 1 },   { 1, 1, 1 },  { -1, 1, 1 }},
@@ -49,10 +49,10 @@ namespace
             }
         }
 
-        static vector<RHIVertex> makeBoxVertices( const float3& center = float3{} )
+        static vector<MeshVertex> makeBoxVertices( const float3& center = float3{} )
         {
-            vector<RHIVertex> listVertex;
-            vector<uint32>    listIndex;
+            vector<MeshVertex> listVertex;
+            vector<uint32>     listIndex;
             makeBox( center, listVertex, listIndex );
             return listVertex;
         }
@@ -60,8 +60,8 @@ namespace
         /** @brief 상자 하나를 쪼갭니다. 실패하면 테스트가 집니다. */
         static FractureAsset fractureBox( const FractureSettings& settings )
         {
-            vector<RHIVertex> listVertex;
-            vector<uint32>    listIndex;
+            vector<MeshVertex> listVertex;
+            vector<uint32>     listIndex;
             makeBox( float3{}, listVertex, listIndex );
             expected<FractureAsset> asset = MeshFractureUtil::fracture( listVertex, listIndex, settings );
             SW_EXPECT_TRUE_MSG( asset.has_value(), asset.has_value() ? "" : asset.error().message().data() );
@@ -110,24 +110,24 @@ namespace
 // 닫힌 검사: 상자는 닫혔다. 면이 빠지면 열리고, 같은 위치의 정점을 쓴 퇴화 삼각형도 받지 않는다.
 SW_TEST_CASE( MeshFractureTest, ClosedChecks )
 {
-    vector<RHIVertex> listVertex = Util::makeBoxVertices();
+    vector<MeshVertex> listVertex = Util::makeBoxVertices();
     SW_EXPECT_TRUE( MeshFractureUtil::isClosedMesh( listVertex ) );
     SW_EXPECT_TRUE( MeshFractureUtil::isClosedWithinTolerance( listVertex ) );
 
-    vector<RHIVertex> listOpen( listVertex.begin(), listVertex.end() - 3 );
+    vector<MeshVertex> listOpen( listVertex.begin(), listVertex.end() - 3 );
     SW_EXPECT_FALSE( MeshFractureUtil::isClosedMesh( listOpen ) );
     SW_EXPECT_FALSE( MeshFractureUtil::isClosedWithinTolerance( listOpen ) );
 
-    vector<RHIVertex> listShifted = listVertex;
+    vector<MeshVertex> listShifted = listVertex;
     listShifted[0]._arrPosition[0] += 1.0e-6f; // 비트 검사는 열렸다고 보고, 허용 오차 검사는 닫혔다고 본다
     SW_EXPECT_FALSE( MeshFractureUtil::isClosedMesh( listShifted ) );
     SW_EXPECT_TRUE( MeshFractureUtil::isClosedWithinTolerance( listShifted ) );
 
-    const RHIVertex         point = Util::makeVertex( float3{} );
-    const vector<RHIVertex> listDegenerate{ point, point, point };
+    const MeshVertex         point = Util::makeVertex( float3{} );
+    const vector<MeshVertex> listDegenerate{ point, point, point };
     SW_EXPECT_FALSE( MeshFractureUtil::isClosedMesh( listDegenerate ) );
-    SW_EXPECT_FALSE( MeshFractureUtil::isClosedMesh( vector<RHIVertex>{} ) );
-    SW_EXPECT_FALSE( MeshFractureUtil::isClosedWithinTolerance( vector<RHIVertex>{} ) );
+    SW_EXPECT_FALSE( MeshFractureUtil::isClosedMesh( vector<MeshVertex>{} ) );
+    SW_EXPECT_FALSE( MeshFractureUtil::isClosedWithinTolerance( vector<MeshVertex>{} ) );
 }
 
 // 부피와 무게 중심: 위치와 감은 방향에 흔들리지 않는다. 부피가 없으면 0 과 정점 평균이다.
@@ -137,8 +137,8 @@ SW_TEST_CASE( MeshFractureTest, VolumeAndCentroid )
     SW_EXPECT_NEAR( MeshFractureUtil::computeVolume( Util::makeBoxVertices(), centroid ), 8.0f, 1.0e-4f );
     SW_EXPECT_NEAR( centroid.getLength(), 0.0f, 1.0e-4f );
 
-    const float3      center{ 5.0f, -3.0f, 2.0f };
-    vector<RHIVertex> listVertex = Util::makeBoxVertices( center );
+    const float3       center{ 5.0f, -3.0f, 2.0f };
+    vector<MeshVertex> listVertex = Util::makeBoxVertices( center );
     SW_EXPECT_NEAR( MeshFractureUtil::computeVolume( listVertex, centroid ), 8.0f, 1.0e-3f );
     SW_EXPECT_NEAR( ( centroid - center ).getLength(), 0.0f, 1.0e-3f );
 
@@ -149,41 +149,41 @@ SW_TEST_CASE( MeshFractureTest, VolumeAndCentroid )
     SW_EXPECT_NEAR( MeshFractureUtil::computeVolume( listVertex, centroid ), 8.0f, 1.0e-3f );
     SW_EXPECT_NEAR( ( centroid - center ).getLength(), 0.0f, 1.0e-3f );
 
-    const vector<RHIVertex> listFlat{ Util::makeVertex( float3{ 0.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 3.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 0.0f, 3.0f, 0.0f } ) };
+    const vector<MeshVertex> listFlat{ Util::makeVertex( float3{ 0.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 3.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 0.0f, 3.0f, 0.0f } ) };
     SW_EXPECT_NEAR( MeshFractureUtil::computeVolume( listFlat, centroid ), 0.0f, 1.0e-6f );
     SW_EXPECT_NEAR( centroid._x, 1.0f, 1.0e-5f );
-    SW_EXPECT_NEAR( MeshFractureUtil::computeVolume( vector<RHIVertex>{}, centroid ), 0.0f, 1.0e-6f );
+    SW_EXPECT_NEAR( MeshFractureUtil::computeVolume( vector<MeshVertex>{}, centroid ), 0.0f, 1.0e-6f );
 }
 
 // 볼록 껍질: 안쪽 점은 빠지고 닫혀 있으며 부피가 같다. 한 평면 · 점 부족은 비어 있다.
 SW_TEST_CASE( MeshFractureTest, ConvexHullDropsInnerPoints )
 {
-    vector<RHIVertex> listVertex = Util::makeBoxVertices();
+    vector<MeshVertex> listVertex = Util::makeBoxVertices();
     listVertex.push_back( Util::makeVertex( float3{ 0.25f, 0.25f, 0.25f } ) );
-    vector<RHIVertex> listHull;
+    vector<MeshVertex> listHull;
     MeshFractureUtil::makeConvexHull( listVertex, listHull );
     SW_REQUIRE_FALSE( listHull.empty() );
     SW_EXPECT_TRUE( MeshFractureUtil::isClosedMesh( listHull ) );
     float3 centroid{};
     SW_EXPECT_NEAR( MeshFractureUtil::computeVolume( listHull, centroid ), 8.0f, 1.0e-3f );
-    for ( const RHIVertex& vertex : listHull )
+    for ( const MeshVertex& vertex : listHull )
     {
         SW_EXPECT_NEAR( MathUtil::abs( vertex._arrPosition[0] ), 1.0f, 1.0e-5f );
     }
 
-    const vector<RHIVertex> listPlanar{ Util::makeVertex( float3{ 0.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 1.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 0.0f, 1.0f, 0.0f } ),
-                                        Util::makeVertex( float3{ 1.0f, 1.0f, 0.0f } ), Util::makeVertex( float3{ 2.0f, 2.0f, 0.0f } ) };
+    const vector<MeshVertex> listPlanar{ Util::makeVertex( float3{ 0.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 1.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 0.0f, 1.0f, 0.0f } ),
+                                         Util::makeVertex( float3{ 1.0f, 1.0f, 0.0f } ), Util::makeVertex( float3{ 2.0f, 2.0f, 0.0f } ) };
     MeshFractureUtil::makeConvexHull( listPlanar, listHull );
     SW_EXPECT_TRUE( listHull.empty() );
 
-    const vector<RHIVertex> listFew{ Util::makeVertex( float3{ 0.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 1.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 0.0f, 1.0f, 0.0f } ) };
+    const vector<MeshVertex> listFew{ Util::makeVertex( float3{ 0.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 1.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 0.0f, 1.0f, 0.0f } ) };
     MeshFractureUtil::makeConvexHull( listFew, listHull );
     SW_EXPECT_TRUE( listHull.empty() );
 }
 
 SW_TEST_CASE( MeshFractureTest, PointInsideUsesWinding )
 {
-    vector<RHIVertex> listVertex = Util::makeBoxVertices();
+    vector<MeshVertex> listVertex = Util::makeBoxVertices();
     SW_EXPECT_TRUE( MeshFractureUtil::isPointInside( listVertex, float3{ 0.5f, 0.5f, 0.5f } ) );
     SW_EXPECT_FALSE( MeshFractureUtil::isPointInside( listVertex, float3{ 1.5f, 0.0f, 0.0f } ) );
     for ( size_t index = 0; index + 2 < listVertex.size(); index += 3 )
@@ -213,7 +213,7 @@ SW_TEST_CASE( MeshFractureTest, UniformPiecesPartitionTheVolume )
 
     for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
     {
-        const vector_reference<const RHIVertex> listVertex = asset.getPieceVertices( piece );
+        const vector_reference<const MeshVertex> listVertex = asset.getPieceVertices( piece );
         SW_EXPECT_TRUE( MeshFractureUtil::isClosedMesh( listVertex ) );
         float3        centroid{};
         const float32 volume = MeshFractureUtil::computeVolume( listVertex, centroid );
@@ -331,8 +331,8 @@ SW_TEST_CASE( MeshFractureTest, HullPointsStayWithinTheLimit )
 // 입력 오류는 이유를 돌려준다.
 SW_TEST_CASE( MeshFractureTest, BadInputExplainsItself )
 {
-    vector<RHIVertex> listVertex;
-    vector<uint32>    listIndex;
+    vector<MeshVertex> listVertex;
+    vector<uint32>     listIndex;
     Util::makeBox( float3{}, listVertex, listIndex );
     const FractureSettings settings;
 
@@ -342,8 +342,8 @@ SW_TEST_CASE( MeshFractureTest, BadInputExplainsItself )
     SW_REQUIRE_FALSE( pastEnd.has_value() );
     SW_EXPECT_TRUE( pastEnd.error().message().find( "index" ) != string_view::npos );
 
-    vector<RHIVertex> listOpen;
-    vector<uint32>    listOpenIndex;
+    vector<MeshVertex> listOpen;
+    vector<uint32>     listOpenIndex;
     Util::makeBox( float3{}, listOpen, listOpenIndex, 1 );
     const expected<FractureAsset> open = MeshFractureUtil::fracture( listOpen, listOpenIndex, settings );
     SW_REQUIRE_FALSE( open.has_value() );
@@ -353,8 +353,8 @@ SW_TEST_CASE( MeshFractureTest, BadInputExplainsItself )
 // 열린 모델은 대리 부피로 쪼갠다: 부피는 대리의 것이고, 겉면은 원래 메시의 조각이다(열린 곳은 열린 채다).
 SW_TEST_CASE( MeshFractureTest, ProxyVolumesCutOpenMeshes )
 {
-    vector<RHIVertex> listOpen;
-    vector<uint32>    listOpenIndex;
+    vector<MeshVertex> listOpen;
+    vector<uint32>     listOpenIndex;
     Util::makeBox( float3{}, listOpen, listOpenIndex, 1 );
 
     for ( const FractureVolume volume : { FractureVolume::Bounds, FractureVolume::Hull } )
@@ -377,9 +377,9 @@ SW_TEST_CASE( MeshFractureTest, ProxyVolumesCutOpenMeshes )
     }
 
     // 평면 메시는 껍질이 없고 경계 상자도 두께가 0 이다 - 자르기 전에 이유를 돌려준다.
-    const vector<RHIVertex> listFlat{ Util::makeVertex( float3{ 0.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 1.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 0.0f, 1.0f, 0.0f } ) };
-    const vector<uint32>    listFlatIndex{ 0, 1, 2 };
-    FractureSettings        settings;
+    const vector<MeshVertex> listFlat{ Util::makeVertex( float3{ 0.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 1.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 0.0f, 1.0f, 0.0f } ) };
+    const vector<uint32>     listFlatIndex{ 0, 1, 2 };
+    FractureSettings         settings;
     settings._volume                   = FractureVolume::Hull;
     const expected<FractureAsset> flat = MeshFractureUtil::fracture( listFlat, listFlatIndex, settings );
     SW_REQUIRE_FALSE( flat.has_value() );

@@ -1,7 +1,7 @@
 /**
  * @file ServiceRecordUtil.h
  * @brief 저장소 레코드 값(`ServiceRecord::_bytes`)을 `REFLECT` 타입 하나에서 읽고 씁니다. 형식은 버전 헤더가 붙은 자기 기술형(A, `BinarySerializer`)입니다.
- * @details 저장소 레코드는 쓴 빌드와 다른 빌드가 읽으므로 고정 배치형(B)을 쓰지 않습니다.
+ * @details 저장소 레코드는 쓴 빌드와 다른 빌드가 읽으므로 스키마 결합형을 쓰지 않습니다.
  *          판은 레코드 타입 한 곳이다 — `REFLECT( Version = N )`(없으면 0, `TypeMetadata::getVersion`). 호출부가 판 상수를 따로 넘기지 않는다(그릇마다 판을 두면
  *          같은 타입을 싣는 두 곳이 판을 따로 올려 한쪽이 옛 판을 새 판으로 읽는다).
  *          A 는 필드를 이름으로 짝짓습니다. 필드를 더하면 옛 레코드의 그 필드는 타입의 기본값으로 채워집니다. 필드를 빼면 옛 레코드에 남은 그 필드는 이 빌드가 모르는 칸이 되고,
@@ -14,7 +14,7 @@
  *          읽지 못한 아는 필드(모르는 열거자)와 다른 버전은 없는 것으로 봅니다. 영속 레코드는 옛 빌드가 모르는 필드를 버리고 다시 쓰면 새 빌드의 값이 지워지므로
  *          레코드가 모르는 칸을 든다: 영속 레코드 타입은 `ServiceRecordUnknownFields _unknownProperties{};`(PROPERTY 가 아닌 칸)를 가져야 하고(`readDurable` 의 static_assert),
  *          `readDurable` 이 같은 버전의 모르는 칸을 거기 담고 `encode` 가 그대로 다시 싣는다. 레코드를 복사해 고쳐 쓰는 서비스 코드는 손대지 않아도 칸이 따라간다.
- *          A 는 `MaxCount` 를 보지 않으므로 쓰기와 두 읽기는 고정 배치형 코덱이 있는 타입이면 언제나 선언된 범위(`Min`, `Max`, `MaxCount`)도 확인합니다.
+ *          A 는 `MaxCount` 를 보지 않으므로 쓰기와 두 읽기는 레이아웃 스키마가 있는 타입이면 언제나 선언된 범위(`Min`, `Max`, `MaxCount`)도 확인합니다.
  *          코덱이 없는 타입(지역 목록 같은 문자열 목록)은 서비스가 쓰기 때와 같은 규칙으로 확인합니다.
  */
 #pragma once
@@ -27,10 +27,10 @@
 
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Fixed/FixedLayout.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
@@ -73,7 +73,7 @@ namespace sw
             const uint32 version = getVersion<T>();
             outBytes.clear();
             BitWriter  scratch;
-            const bool bInRange = FixedLayout::findCodec<T>().has_value() == false || FixedLayout::write( record, scratch );
+            const bool bInRange = LayoutSerializer::findSchema<T>().has_value() == false || LayoutSerializer::write( record, scratch );
             bool       bWritten = false;
             // 모르는 칸을 드는 레코드는 읽을 때 담은 칸을 받은 그대로 뒤에 싣는다(옛 빌드가 고쳐 써도 새 빌드의 값이 남는다).
             if constexpr ( ServiceRecordKeepsUnknown<T>::value )
@@ -202,15 +202,15 @@ namespace sw
             return isWithinDeclaredRange( outRecord );
         }
 
-        /** @brief 고정 배치형 코덱이 있는 타입이면 선언된 범위(`Min`, `Max`, `MaxCount`) 안인가입니다. 코덱이 없는 타입은 서비스가 확인하므로 true 입니다. */
+        /** @brief 레이아웃 스키마가 있는 타입이면 선언된 범위(`Min`, `Max`, `MaxCount`) 안인가입니다. 코덱이 없는 타입은 서비스가 확인하므로 true 입니다. */
         template <typename T>
         [[nodiscard]] static bool isWithinDeclaredRange( const T& record )
         {
-            if ( FixedLayout::findCodec<T>().has_value() == false )
+            if ( LayoutSerializer::findSchema<T>().has_value() == false )
                 return true;
-            // 범위 확인은 고정 배치형 코덱의 쓰기 검사가 맡으므로 범위의 원본은 PROPERTY 선언 하나다
+            // 범위 확인은 레이아웃 스키마의 쓰기 검사가 맡으므로 범위의 원본은 PROPERTY 선언 하나다
             BitWriter scratch;
-            return FixedLayout::write( record, scratch );
+            return LayoutSerializer::write( record, scratch );
         }
     };
 } // namespace sw

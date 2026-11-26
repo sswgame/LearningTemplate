@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Commands/Play/EditorPlayCommands.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
@@ -12,16 +12,16 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPreferences.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
+#include "Editor/Common/Workspace/Notification/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/Undo/EditorUICommandQueue.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Localization/LocText.h"
@@ -158,7 +158,7 @@ namespace sw::editor
         // 새 창은 디스크의 씬을 연다(언리얼 Standalone 처럼) — 저장하지 않은 편집은 들어가지 않는다고 알린다.
         if ( editorContext.getSubsystem<EditorWorkspace>().isSceneDirty() )
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowUnsaved" ), NotificationKind::Warning );
-        const ProcessCommand command = makeStandaloneCommand( editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), pScene->getSourcePath(),
+        const ProcessCommand command = makeStandaloneCommand( editor::getSubsystem<CommandLine>(), FileUtil::getExecutablePath(), pScene->getSourcePath(),
                                                               getPreferences<EditorPlayPreferences>()._standaloneArguments );
         if ( Process::launchDetached( command ).has_value() == false )
         {
@@ -169,7 +169,7 @@ namespace sw::editor
         return true;
     }
 
-    ProcessCommand EditorPlayCommands::makeStandaloneCommand( const CommandLineManager& parent, const AbsolutePath& executablePath, string_view scenePath, string_view extraArguments )
+    ProcessCommand EditorPlayCommands::makeStandaloneCommand( const CommandLine& parent, const AbsolutePath& executablePath, string_view scenePath, string_view extraArguments )
     {
         StringBuilder<constant::buffer::kMax256> sceneArgument;
         sceneArgument.appendFormat( "-gv_firstScene=%#", scenePath );

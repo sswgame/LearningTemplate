@@ -6,12 +6,12 @@
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/View/EditorFrameStep.h"
 
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 

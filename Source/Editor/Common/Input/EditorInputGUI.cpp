@@ -2,7 +2,7 @@
  * @file EditorInputGUI.cpp
  * @brief 맥락 메뉴(R1 · R2 · R3 · R6), 끌어 놓기(`{종류, id}` 한 형식), 항목 클릭 · 포인터 상태, 비맥락 팝업의 ImGui 어댑터입니다.
  */
-// 금지 헤더(EditorInputBan.h)를 받지 않는 두 파일 중 하나다 — ImGui 입력을 직접 읽는 유일한 자리(표시 SW_EDITOR_INPUT_ADAPTER=1 은 CMake `sw_apply_editor_input_ban` 만 준다).
+// 금지 헤더(EditorImGuiInputGuard.h)를 받지 않는 두 파일 중 하나다 — ImGui 입력을 직접 읽는 유일한 자리(표시 SW_EDITOR_INPUT_ADAPTER=1 은 CMake `sw_apply_editor_input_guard` 만 준다).
 #include "pch.h"
 
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -16,8 +16,8 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Input/RawInputEvent.h"

@@ -1,0 +1,186 @@
+"""
+Scripts/lint/rules/layer_includes.py
+
+층 표(`Config/Rules/Layers/{Core,Engine,GameFramework,Editor}Layers.toml`)에서 아래 층 파일이 위 층 헤더를 include 하는지 본다.
+
+왜 린트인가. 막는 것은 빌드다 — 층마다 부분을 짓고 위 층 헤더 자리에 `#error` 가드를 둔다. 그런데 가드는 그 부분을 컴파일할 때만
+드러나서, 층 위반이 커밋을 지나 Debug 빌드에서야 멈췄다(아무도 include 하지 않는 헤더는 빌드도 보지 않는다). 같은 표로 커밋 때 직접 include 를 먼저 본다.
+헤더마다 자기 층에서 검사되므로 직접 include 만 보아도 전이 include 가 덮인다 — 예외는 어느 층에서나 쓰는 에디터 `[prelude]` 헤더라, 그 헤더를 거친 include 는 따라간다.
+
+파일의 층은 생성기 · CMake 와 같은 규칙이다(가장 긴 키가 이긴다):
+- Core: `[layer]` · `[sublayer]` 키. 단위 테스트(`/Tests/`)와 `Source/Core` 바로 아래 파일은 맨 위 층 부분이 짓는다(헤더는 가드가 없다).
+- Engine · GameFramework(`Runtime`): `[layer]` 키(파일 또는 폴더 접두어).
+- Editor: 층 이름(`Common/<하위>` · `Common` · 최상위 폴더 · `<root>`)의 `[layer]`.
+
+  py -3 -m Scripts lint layer-includes [--self-check]
+"""
+
+from __future__ import annotations
+
+import functools
+import re
+import tomllib
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable, Mapping, Sequence
+
+from lint.lint_rule import LintRule, SourceFile
+from lint.lint_scope import LintScope, list_repo_files, read_text
+
+EXTENSIONS = (".h", ".hpp", ".inl", ".cpp", ".c", ".xxx")
+INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
+
+
+@dataclass(frozen=True)
+class LayerModule:
+    """층 표 하나 — include 줄 머리(`Source/` 기준 폴더)와 파일 → 층 함수(`Source/<root>` 기준 경로, 없으면 None)."""
+    _name: str
+    _root: str
+    _find_layer: Callable[[str, bool], int | None]
+    _set_prelude: frozenset[str]
+
+
+def find_longest_key(map_layer: dict[str, int], relative: str) -> int | None:
+    best: str | None = None
+    for key in map_layer:
+        if (relative == key or relative.startswith(key + "/")) and (best is None or len(key) > len(best)):
+            best = key
+    return map_layer[best] if best is not None else None
+
+
+def make_core_layer(table: dict) -> Callable[[str, bool], int | None]:
+    map_layer = {**table["layer"], **table.get("sublayer", {})}
+    top_layer = max(map_layer.values())
+
+    def find_layer(relative: str, is_includer: bool) -> int | None:
+        if "/" not in relative:
+            return top_layer if is_includer else None   # 바로 아래 파일: 맨 위 부분이 짓고, 헤더는 가드가 없다
+        if "/Tests/" in f"/{relative}":
+            return top_layer                           # 테스트는 맨 위 부분이 짓는다
+        return find_longest_key(map_layer, relative)
+    return find_layer
+
+
+def make_module_layer(table: dict) -> Callable[[str, bool], int | None]:
+    map_layer: dict[str, int] = table["layer"]
+    return lambda relative, is_includer: find_longest_key(map_layer, relative)
+
+
+def get_editor_layer_name(relative: str) -> str:
+    list_part = relative.split("/")
+    if len(list_part) == 1:
+        return "<root>"
+    if list_part[0] != "Common":
+        return list_part[0]
+    return "Common" if len(list_part) == 2 else f"Common/{list_part[1]}"
+
+
+def make_editor_layer(table: dict) -> Callable[[str, bool], int | None]:
+    map_layer: dict[str, int] = table["layer"]
+    return lambda relative, is_includer: map_layer.get(get_editor_layer_name(relative))
+
+
+def find_problems(module: LayerModule, found: Mapping[str, Sequence[str]], read_includes: Callable[[str], Sequence[str] | None]) -> list[str]:
+    """@p found 는 볼 파일(`Source/<root>` 기준 경로) → include 글이다. 있는 헤더인지 · 거쳐 가는 prelude 헤더가 무엇을 include 하는지는 @p read_includes(없는 파일이면 None)로 묻는다."""
+    head = module._root + "/"
+    list_problem: list[str] = []
+    for relative, list_include in found.items():
+        layer = module._find_layer(relative, True)
+        if layer is None:
+            continue
+        list_pending = [(include, None) for include in list_include]
+        set_seen: set[str] = set()
+        while list_pending:
+            include, via = list_pending.pop()
+            if include in set_seen or not include.startswith(head):
+                continue
+            set_seen.add(include)
+            target = include[len(head):]
+            if include in module._set_prelude:
+                list_pending.extend((nested, include) for nested in read_includes(target) or ())
+                continue
+            target_layer = module._find_layer(target, False)
+            if target_layer is not None and target_layer > layer and read_includes(target) is not None:
+                route = f" (`{via}` 를 거쳐)" if via else ""
+                list_problem.append(f"Source/{module._root}/{relative}: {module._name} 층 {layer} 파일이 층 {target_layer} 헤더 `{include}` 를 include 한다{route} — 빌드의 #error 가드가 멈춘다. 필요한 것을 아래로 내리거나 의존을 뒤집는다")
+    return list_problem
+
+
+def read_table(project_root: Path, name: str) -> dict:
+    return tomllib.loads((project_root / "Config" / "Rules" / "Layers" / f"{name}Layers.toml").read_text(encoding="utf-8"))
+
+
+def list_modules(project_root: Path) -> list[LayerModule]:
+    editor = read_table(project_root, "Editor")
+    return [
+        LayerModule("Core", "Core", make_core_layer(read_table(project_root, "Core")), frozenset()),
+        LayerModule("Engine", "Engine", make_module_layer(read_table(project_root, "Engine")), frozenset()),
+        LayerModule("GameFramework", "GameFramework/Runtime", make_module_layer(read_table(project_root, "GameFramework")), frozenset()),
+        LayerModule("Editor", "Editor", make_editor_layer(editor), frozenset(editor.get("prelude", {}))),
+    ]
+
+
+class LayerIncludesRule(LintRule):
+    id = "layer-includes"
+    group = "경계"
+    blocks = "아래 층 파일이 위 층 헤더를 include(Core · Engine · GameFramework · Editor 층 표)"
+    why_not_type = "빌드의 #error 가드가 막지만 그 부분을 컴파일할 때(Debug 빌드)에야 드러나고, 아무도 include 하지 않는 헤더는 보지 않는다 — 같은 표로 커밋 때 먼저 본다"
+    inputs = ("Config/Rules/Layers/",)
+
+    @functools.cached_property
+    def modules(self) -> list[LayerModule]:
+        return list_modules(self.root)
+
+    def selects(self, path: str) -> bool:
+        return path.endswith(EXTENSIONS) and path.startswith(tuple(f"Source/{module._root}/" for module in self.modules))
+
+    def inspect(self, file: SourceFile) -> list[str]:
+        return INCLUDE.findall(file.text)
+
+    def evaluate(self, scope: LintScope, found: Mapping[str, list[str]]) -> list[str]:
+        set_repo = set(list_repo_files(self.root))
+        list_problem: list[str] = []
+        for module in self.modules:
+            head = f"Source/{module._root}/"
+
+            def read_includes(target: str) -> Sequence[str] | None:
+                path = head + target
+                if path not in set_repo:
+                    return None
+                if path in found or target not in {include[len(module._root) + 1:] for include in module._set_prelude}:
+                    return found.get(path, ())   # prelude 가 아닌 헤더는 있는지만 본다
+                return INCLUDE.findall(read_text(self.root / path, errors="replace") or "")
+
+            list_problem += find_problems(module, {path[len(head):]: list_include for path, list_include in found.items() if path.startswith(head)}, read_includes)
+        return list_problem
+
+    def self_check(self) -> None:
+        def check(module: LayerModule, map_text: Mapping[str, str]) -> list[str]:
+            map_include = {path: INCLUDE.findall(text) for path, text in sorted(map_text.items())}
+            return find_problems(module, map_include, map_include.get)
+
+        engine = LayerModule("Engine", "Engine", make_module_layer({"layer": {"Low": 0, "High": 2, "Low/Up.h": 3}}), frozenset())
+        map_source = {
+            "Low/a.cpp": '#include "Engine/Low/b.h"\n#include "Core/x.h"\n',
+            "Low/b.h": "",
+            "High/c.h": '#include "Engine/Low/b.h"\n',
+            "Low/Up.h": "",
+        }
+        assert check(engine, map_source) == [], "아래 · 같은 층 · 다른 모듈은 통과한다"
+        upward = dict(map_source, **{"Low/a.cpp": '#include "Engine/High/c.h"\n'})
+        assert len(check(engine, upward)) == 1, "위 층 include"
+        file_key = dict(map_source, **{"Low/b.h": '#include "Engine/Low/Up.h"\n'})
+        assert len(check(engine, file_key)) == 1, "더 긴 파일 키가 층을 정한다"
+
+        core = LayerModule("Core", "Core", make_core_layer({"layer": {"Math": 1, "TestFramework": 10}}), frozenset())
+        core_source = {"Math/Tests/TestX.cpp": '#include "Core/TestFramework/T.h"\n', "TestFramework/T.h": "", "pch.h": "", "Math/m.h": '#include "Core/pch.h"\n'}
+        assert check(core, core_source) == [], "Core 테스트는 맨 위 부분, 바로 아래 헤더는 가드가 없다"
+
+        editor = LayerModule("Editor", "Editor", make_editor_layer({"layer": {"Common": 0, "Common/Workspace": 2, "Panels": 6}}),
+                             frozenset({"Editor/Common/Workspace/Leaf.h"}))
+        editor_source = {"Common/u.cpp": '#include "Editor/Common/Workspace/Leaf.h"\n', "Common/Workspace/Leaf.h": "", "Common/Workspace/W.h": "", "Panels/P.h": ""}
+        assert check(editor, editor_source) == [], "prelude 헤더는 어느 층에서나"
+        via_prelude = dict(editor_source, **{"Common/Workspace/Leaf.h": '#include "Editor/Common/Workspace/W.h"\n'})
+        list_via_prelude = check(editor, via_prelude)
+        assert len(list_via_prelude) == 1 and "Leaf.h" in list_via_prelude[0], "prelude 를 거친 위 층 include"
+        assert len(check(editor, dict(editor_source, **{"Common/u.cpp": '#include "Editor/Panels/P.h"\n'}))) == 1, "에디터 위 층"

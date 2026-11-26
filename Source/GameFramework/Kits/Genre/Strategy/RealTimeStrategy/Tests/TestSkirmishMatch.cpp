@@ -4,7 +4,7 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/SkirmishMatch.h"
@@ -76,7 +76,7 @@ namespace
             add( "command_center", player, cell );
             for ( int32 index = 0; index < kStartWorkers; ++index )
             {
-                add( "minerals", RTSWorld::kNoOwner, int2{ cell._x - 5, cell._y + index } );
+                add( "minerals", RTSSimulation::kNoOwner, int2{ cell._x - 5, cell._y + index } );
                 add( "worker", player, int2{ cell._x - 2, cell._y + index } );
             }
         }
@@ -164,7 +164,7 @@ SW_TEST_CASE( SkirmishMatchTest, MissingLayoutUnitRefusesTheMatch )
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kNoGeyserUnitXML, "SkirmishMatchTest" ) );
     SW_EXPECT_LOG( "SkirmishMatch.MapLayoutPlacesBut" );
     SkirmishTestMap map;
-    map.add( "geyser", RTSWorld::kNoOwner, int2{ 8, 2 } );
+    map.add( "geyser", RTSSimulation::kNoOwner, int2{ 8, 2 } );
     SkirmishMatch match;
     SW_EXPECT_FALSE( map.open( match, catalog, kBothHuman, makeSettings() ) );
 }

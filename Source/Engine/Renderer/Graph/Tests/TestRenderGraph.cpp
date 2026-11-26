@@ -11,8 +11,8 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
-#include "Engine/Renderer/Graph/FrameBufferTable.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
+#include "Engine/Renderer/Graph/RenderGraphImportedResourceTable.h"
 
 using namespace sw;
 
@@ -712,7 +712,7 @@ SW_TEST_CASE( RenderGraphTest, InPassTransitionBecomesTheTrackedAccess )
     buffer._buffer           = RHIBufferHandle{ 11 };
     buffer._elementSize      = 8;
     buffer._capacityElements = 16;
-    FrameBufferTable table;
+    RenderGraphImportedResourceTable table;
     table.registerBuffer( hzb, 0, buffer, RenderGraphAccess::ShaderRead );
 
     for ( const bool bParallel : { false, true } )
@@ -758,7 +758,7 @@ SW_TEST_CASE( RenderGraphTest, ParallelExecutionReturnsImportsAfterAParallelLeve
     buffer._buffer           = RHIBufferHandle{ 21 };
     buffer._elementSize      = 8;
     buffer._capacityElements = 16;
-    FrameBufferTable table;
+    RenderGraphImportedResourceTable table;
     table.registerBuffer( grid, 0, buffer, RenderGraphAccess::ShaderRead );
     table.registerAttachment( depth, RHITextureHandle{ 22 } );
 
@@ -1122,7 +1122,7 @@ SW_TEST_CASE( RenderGraphTest, FirstParallelRunKeepsTheAllocatedBuffers )
     factory._bufferSRV = RHIBufferSRVIndex{ 1 };
     test::FakeRHIDevice device;
     device._pResourceFactory = &factory;
-    FrameBufferTable table;
+    RenderGraphImportedResourceTable table;
     graph.importResources( table );
     graph.createBuffer( buffer, RenderGraphBufferDesc{ sizeof( uint32 ), 64, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource } );
     graph.allocateBuffers( device, table );
@@ -1161,7 +1161,7 @@ SW_TEST_CASE( RenderGraphTest, CreatedBuffersShareOneBufferWhenLevelsDoNotOverla
     RHIBufferHandle                 firstRunA{};
     for ( uint32 run = 0; run < 2; ++run )
     {
-        FrameBufferTable table;
+        RenderGraphImportedResourceTable table;
         graph.importResources( table );
         for ( const hashed_string& name : { bufferC, bufferA, bufferB, hashed_string( "NoPassDeclaresIt" ) } )
         {

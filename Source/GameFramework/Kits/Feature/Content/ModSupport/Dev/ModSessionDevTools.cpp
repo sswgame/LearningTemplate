@@ -29,7 +29,7 @@
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackReader.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModAllowList.h"
@@ -37,7 +37,7 @@
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModResolver.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
 #include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

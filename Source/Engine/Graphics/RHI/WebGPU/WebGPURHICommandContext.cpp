@@ -7,6 +7,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
+#include "Engine/Graphics/RHI/RHIIndirectCommand.h"
 #include "Engine/Graphics/RHI/WebGPU/WebGPURHIDevice.h"
 
 namespace sw

@@ -7,7 +7,7 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorPopup.h"
-#include "Editor/Common/Input/EditorPopupManager.h"
+#include "Editor/Common/GUI/Popup/EditorPopupManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Animation/Model/BoneHierarchyViewModel.h"
 

@@ -10,14 +10,14 @@
 #pragma once
 #include "Core/Container/span.h"
 #include "Core/String/NamedValue.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Engine/Reflection/ContainerKind.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 
 namespace sw
 {
-    struct FixedCodec;
+    struct LayoutSchema;
     struct IContainerWrapper;
     struct ReflectEventOps;
     struct ReflectTypeOps;
@@ -267,8 +267,8 @@ namespace sw
         DestroyFunction          _pDestroyInstance{ nullptr };
         AddComponentFunction     _pAddComponent{ nullptr };
         ReflectValidateFunction  _pValidate{ nullptr };     ///< `REFLECT( Validate )` — 에디터 데이터 검증. 생성 코드가 `SW_DEV_ONLY_FUNCTION` 으로 넣어 배포는 nullptr
-        ReflectValidateFunction  _pReadValidate{ nullptr }; ///< `REFLECT( ReadValidate )` — 배포에서도 도는 읽기 검사(고정 배치형 · 세이브 읽기가 오류면 거절)
-        const FixedCodec*        _pFixedCodec{ nullptr };
+        ReflectValidateFunction  _pReadValidate{ nullptr }; ///< `REFLECT( ReadValidate )` — 배포에서도 도는 읽기 검사(스키마 결합형 · 세이브 읽기가 오류면 거절)
+        const LayoutSchema*      _pLayoutSchema{ nullptr };
         const PropertyDesc*      _pProperty{ nullptr };
         const FunctionDesc*      _pMethod{ nullptr };
         const EventDesc*         _pEvent{ nullptr };
@@ -329,10 +329,10 @@ namespace sw
             copy._pReadValidate = pReadValidate;
             return copy;
         }
-        constexpr TypeDesc withFixedCodec( const FixedCodec* pFixedCodec ) const
+        constexpr TypeDesc withLayoutSchema( const LayoutSchema* pLayoutSchema ) const
         {
-            TypeDesc copy     = *this;
-            copy._pFixedCodec = pFixedCodec;
+            TypeDesc copy       = *this;
+            copy._pLayoutSchema = pLayoutSchema;
             return copy;
         }
         template <size_t N>

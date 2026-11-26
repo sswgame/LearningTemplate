@@ -57,7 +57,7 @@ namespace sw
     /**
      * @class MeshCache
      * @brief 메시 에셋을 경로로 공유하고, 에셋 캐시 레지스트리(`AssetManager`)에 등록되어 핫 리로드, 종료, 진단이 다른 캐시와 같은 경로를 탑니다.
-     * @details 캐시는 에셋 매니저가 내장 캐시로 만들어 소유하고(정적 창구는 `engine::getSubsystem<AssetManager>().getAssetCache<MeshCache>()` 의 상태를 쓴다) 약한 참조입니다. `MeshUtil::acquirePrimitive`, `SharedAssetCache<SpriteClipAsset>` 와 같은 구조이므로
+     * @details 캐시는 에셋 매니저가 내장 캐시로 만들어 소유하고(정적 창구는 `engine::getSubsystem<AssetManager>().getAssetCache<MeshCache>()` 의 상태를 쓴다) 약한 참조입니다. `PrimitiveMeshBuilder::acquirePrimitive`, `SharedAssetCache<SpriteClipAsset>` 와 같은 구조이므로
      *          마지막 사용자가 놓으면 메시도 사라지고, 디바이스가 종료될 때 이 캐시가 보관하는 GPU 자원이 남지 않습니다. 같은 경로는 같은 `Mesh` 이므로
      *          배치 키(메시 포인터)가 갈라지지 않습니다. 씬 로드 워커에서 불러도 됩니다(내부에서 잠급니다).
      *
@@ -143,7 +143,7 @@ namespace sw
     template <>
     struct SW_API AssetRefCache<MeshAssetFormat>
     {
-        /** @brief `.mesh` 경로는 메시 캐시, 내장 도형 이름(`MeshAssetFormat::kArrBuiltinName`)은 공유 내장 도형(`MeshUtil::acquirePrimitive`)입니다. */
+        /** @brief `.mesh` 경로는 메시 캐시, 내장 도형 이름(`MeshAssetFormat::kArrBuiltinName`)은 공유 내장 도형(`PrimitiveMeshBuilder::acquirePrimitive`)입니다. */
         static shared_ptr<Mesh> acquire( string_view path, MeshCPUAccess cpuAccess );
         /** @brief `.mesh` 경로를 비동기로 요청합니다. 내장 도형은 읽을 파일이 없어 요청하지 않는다 — 오류를 남기고 빈 핸들이다(`acquire` 로 받는다). */
         static MeshHandle request( string_view path, MeshCPUAccess cpuAccess );

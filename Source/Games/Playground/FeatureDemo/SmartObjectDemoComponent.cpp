@@ -12,10 +12,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
@@ -23,7 +23,7 @@ namespace sw
     {
         struct SmartObjectDemoComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "FDSO" };
+            static constexpr FormatDesc kStateFormat{ "FDSO" };
         };
     } // namespace
 

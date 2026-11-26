@@ -18,15 +18,15 @@
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorPreferences.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorFrameStep.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorPanelID.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Layout/EditorPanelID.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
+#include "Editor/Common/Workspace/Notification/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/View/EditorFrameStep.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -35,8 +35,8 @@
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 
@@ -51,7 +51,7 @@ namespace sw::editor
             static constexpr const utf8* kMetaSuffix  = ".meta";
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션 id 의 키와 형식 판입니다. */
             static constexpr string_view kSessionStoreKey = "editor.autosaveSession";
-            static constexpr FormatDef   kSessionFormat{ "EDAS" };
+            static constexpr FormatDesc  kSessionFormat{ "EDAS" };
 
             /** @brief 세션 하나의 자동 저장 상태입니다. 에디터 상태 저장소가 소유한다(UI 스레드만). */
             struct State
@@ -456,7 +456,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_SETTINGS( EditorAutosavePreferences, "autosave", "Editor/Autosave", 150, nullptr );
+    SW_EDITOR_PREFERENCES( EditorAutosavePreferences, "autosave", "Editor/Autosave", 150, nullptr );
     // 명령 단계 뒤(이번 프레임의 씬 세션 처리 · 세대 동기화가 끝난 뒤)에 돈다
     SW_EDITOR_GAME_STEP( Autosave, "autosave", EditorGameStepOrder::kAutosave, &EditorAutosaveCommandsInternal::runGameStep );
     SW_DEV_COMMAND( AutosaveNow, "autosave.now", "autosave.now", "Write an autosave copy of the open scene now (ignores the interval)", &EditorAutosaveCommandsInternal::runNow );

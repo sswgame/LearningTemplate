@@ -1,7 +1,7 @@
 // GlobalVariableManager — 등록 정보 · 값 수정 · 리셋 · 불리언 아닌 글 거절, 명령줄 연동(enum 은 열거자 이름만), 미등록 조회, 동시 읽기 · 쓰기, 찾은 포인터의 안정성, 등록 세대.
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -163,10 +163,10 @@ SW_TEST_CASE( GlobalVariableTest, DirectValueModificationAndReset )
 SW_TEST_CASE( GlobalVariableTest, CommandLineIntegration )
 {
     GlobalVariableFixture fixture;
-    // 부분 CommandLineManager 에서 GlobalVariableManager::updateFromCommandLine 을 쓰지 않는다.
+    // 부분 CommandLine 에서 GlobalVariableManager::updateFromCommandLine 을 쓰지 않는다.
     // CLI 맵에 GV 이름이 없으면 getArgument 가 assert 한다.
     // 테스트 대상 변수만 파싱한 뒤 setValueFromString 으로 적용한다.
-    sw::CommandLineManager cmd;
+    sw::CommandLine cmd;
     cmd.initialize();
     cmd.addArgument<int32>( { "gv_testInt" }, int32{ 60 } );
     cmd.addArgument<sw::string>( { "gv_testString" }, sw::string( "InitialValue" ) );
@@ -206,7 +206,7 @@ SW_TEST_CASE( GlobalVariableTest, EnumTakesEnumeratorNamesFromTheCommandLine )
     SW_REQUIRE_TRUE( manager.registerVariable( "gv_testEnumByName", sw::GlobalVariableType::Enum, &namedValue, int32{ 0 }, "", "TestMode" ) );
     SW_REQUIRE_TRUE( manager.registerVariable( "gv_testEnumUnknown", sw::GlobalVariableType::Enum, &unknownValue, int32{ 0 }, "", "TestMode" ) );
 
-    sw::CommandLineManager cmd;
+    sw::CommandLine cmd;
     cmd.initialize();
     manager.registerToCommandLine( &cmd );
     utf8  arg0[] = "CoreTest";
@@ -251,7 +251,7 @@ SW_TEST_CASE( GlobalVariableTest, EnumRejectsNumbersOnTheCommandLine )
     int32                     numberValue{ 0 };
     SW_REQUIRE_TRUE( manager.registerVariable( "gv_testEnumNumber", sw::GlobalVariableType::Enum, &numberValue, int32{ 0 }, "", "TestMode" ) );
 
-    sw::CommandLineManager cmd;
+    sw::CommandLine cmd;
     cmd.initialize();
     manager.registerToCommandLine( &cmd );
     utf8  arg0[] = "CoreTest";

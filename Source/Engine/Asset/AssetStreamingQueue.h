@@ -4,8 +4,9 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
+#include "Core/Task/TaskArgs.h"
 #include "Core/Task/TaskFuture.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskHandle.h"
 
 #include "Engine/EngineMinimal.h"
 

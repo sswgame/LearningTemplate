@@ -10,13 +10,13 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorCurveEditorState.h"
-#include "Editor/Common/Widgets/PropertyGrid/IInspectorProperty.h"
+#include "Editor/Common/Widgets/PropertyGrid/IPropertyDrawer.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewState.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Curve/FloatCurve.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -31,7 +31,7 @@ namespace sw::editor
          * @details 값은 값 행의 글(`_valueText`)로 받아 곡선으로 읽는다(글이 바뀐 때만 다시 읽는다). 열린 팝업은 하나뿐이라 상태도 하나입니다.
          *          끄는 중이 아니면 프레임마다 값에서 사본을 다시 떠서 Undo · 다른 편집이 바로 보입니다.
          */
-        class FloatCurvePropertyDrawer final : public IInspectorProperty
+        class FloatCurvePropertyDrawer final : public IPropertyDrawer
         {
         public:
             bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override
@@ -66,7 +66,7 @@ namespace sw::editor
                     _state._working = _curve;
                 if ( EditorCurveEditorState::drawEditor( _state, "inspector.curveEditor" ) )
                 {
-                    const string text = SerializerUtil::formatValueText( ValueAddress{ &_state._working }, row._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                    const string text = ValueSerializer::formatValueText( ValueAddress{ &_state._working }, row._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                     model.setPropertyText( row._rowID, text, "Edit Curve" );
                 }
                 ImGui::EndPopup();
@@ -80,7 +80,7 @@ namespace sw::editor
                 if ( _bCurveRead && row._valueText == _curveText )
                     return true;
                 FloatCurve curve{};
-                if ( SerializerUtil::parseTextValue( MutableValueAddress{ &curve }, row._typeName, row._valueText, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+                if ( ValueSerializer::parseTextValue( MutableValueAddress{ &curve }, row._typeName, row._valueText, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
                     return false;
                 _curve      = std::move( curve );
                 _curveText  = row._valueText;

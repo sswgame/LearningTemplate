@@ -15,7 +15,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Renderer/Graph/FrameBufferTable.h"
+#include "Engine/Renderer/Graph/RenderGraphImportedResourceTable.h"
 
 #include <algorithm>
 #include <atomic>
@@ -425,15 +425,15 @@ namespace sw
 
     RHIBufferSRVIndex RenderGraphPassContext::findDeclaredSRV( const RenderGraphResourceAccess& access, uint32 slot ) const
     {
-        const bool                           bFound = findDeclaredHandle( access, slot ) != 0;
-        const FrameBufferTable::Entry* const pEntry = bFound ? _pResourceTable->findEntry( access._resource, slot ) : nullptr;
+        const bool                                           bFound = findDeclaredHandle( access, slot ) != 0;
+        const RenderGraphImportedResourceTable::Entry* const pEntry = bFound ? _pResourceTable->findEntry( access._resource, slot ) : nullptr;
         return pEntry != nullptr ? pEntry->_srv : kInvalidDescriptorIndex;
     }
 
     RHIUnorderedAccessIndex RenderGraphPassContext::getBufferUAV( RenderGraphBufferUAV handle, uint32 slot ) const
     {
-        const bool                           bFound = findDeclaredHandle( handle, slot ) != 0;
-        const FrameBufferTable::Entry* const pEntry = bFound ? _pResourceTable->findEntry( handle._name, slot ) : nullptr;
+        const bool                                           bFound = findDeclaredHandle( handle, slot ) != 0;
+        const RenderGraphImportedResourceTable::Entry* const pEntry = bFound ? _pResourceTable->findEntry( handle._name, slot ) : nullptr;
         return pEntry != nullptr ? pEntry->_uav : kInvalidDescriptorIndex;
     }
 
@@ -576,13 +576,13 @@ namespace sw
         _listImportedResource.push_back( RenderGraphResourceAccess{ name, initialAccess, type } );
     }
 
-    void RenderGraph::importResources( const FrameBufferTable& table )
+    void RenderGraph::importResources( const RenderGraphImportedResourceTable& table )
     {
         _listImportedResource.clear();
         _pBufferPool->_listRequest.clear();
         for ( const uint32 entryIndex : table.getFirstEntries() )
         {
-            const FrameBufferTable::Entry& entry = table.getEntries()[entryIndex];
+            const RenderGraphImportedResourceTable::Entry& entry = table.getEntries()[entryIndex];
             if ( entry._bGraphOwned == false )
                 importResource( entry._name, entry._viewable, entry._initialAccess );
         }
@@ -597,7 +597,7 @@ namespace sw
         _pBufferPool->_listRequest.push_back( BufferPool::Request{ name, desc, pLifetime->_firstLevel, pLifetime->_lastLevel } );
     }
 
-    void RenderGraph::allocateBuffers( IRHIDevice& device, FrameBufferTable& table )
+    void RenderGraph::allocateBuffers( IRHIDevice& device, RenderGraphImportedResourceTable& table )
     {
         BufferPool& pool = *_pBufferPool;
         if ( pool._pDevice != &device )

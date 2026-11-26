@@ -1,0 +1,129 @@
+#include "pch.h"
+
+#include "GameFramework/Runtime/Gameplay/Mechanism/Loot/GatheringNodeComponent.h"
+
+#include "Core/Math/MathUtil.h"
+
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/Tick/TickInterval.h"
+
+#include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/MechanismUtil.h"
+
+namespace sw
+{
+    GatheringNodeComponent::GatheringNodeComponent()
+        : _item{}
+        , _count{ 1 }
+        , _uses{ 3 }
+        , _respawnDelay{ 30.0f }
+        , _fallDuration{ 0.0f }
+        , _usesTaken{ 0 }
+        , _respawnStepsLeft{ 0 }
+        , _fallStepsLeft{ 0 }
+        , _fallYaw{ 0.0f }
+        , _standingRotation{}
+    {
+    }
+
+    void GatheringNodeComponent::onBeginPlay()
+    {
+        Component::onBeginPlay();
+        _usedSubscription = InteractableComponent::listenCompleted<&GatheringNodeComponent::handleUsed>( *this ); // 상호작용이 없는 지점은 코드(`gather`)가 부른다
+    }
+
+    void GatheringNodeComponent::handleUsed( const GameObject& user )
+    {
+        (void)gather( user ); // 줬는지는 쓰지 않는다 — 못 주면 giveItem 이 경고를 남긴다
+    }
+
+    bool GatheringNodeComponent::gather( const GameObject& who )
+    {
+        GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr || isDepleted() )
+            return false;
+        if ( MechanismUtil::giveItem( *pOwner, who, _item, _count ) == false )
+            return false; // 받을 가방이 없거나 차면 채집 횟수를 쓰지 않는다
+        ++_usesTaken;
+        if ( isDepleted() )
+            handleDepleted( who );
+        return true;
+    }
+
+    void GatheringNodeComponent::configure( const hashed_string& item, int32 count, int32 uses )
+    {
+        _item  = item;
+        _count = count;
+        _uses  = uses;
+    }
+
+    void GatheringNodeComponent::handleDepleted( const GameObject& who )
+    {
+        GameObject&           owner = *getOwner(); // gather 가 이미 봤다
+        const SceneComponent* pRoot = owner.getPrimarySceneComponent();
+        const SceneComponent* pWho  = who.getPrimarySceneComponent();
+        _respawnStepsLeft           = _respawnDelay > 0.0f ? TickTurn::secondsToIntervalCount( kTickInterval, _respawnDelay, 1 ) : 0;
+        MechanismUtil::setInteractableEnabled( owner, false );
+        if ( _fallDuration <= 0.0f || pRoot == nullptr )
+        {
+            MechanismUtil::setBodyActive( owner, false, this );
+            return;
+        }
+        const float3 away = pWho != nullptr ? pRoot->getWorldPosition() - pWho->getWorldPosition() : float3{ 0.0f, 0.0f, 1.0f };
+        _fallYaw          = MathUtil::atan2( away._x, away._z );
+        _standingRotation = pRoot->getLocalRotation();
+        _fallStepsLeft    = TickTurn::secondsToIntervalCount( kTickInterval, _fallDuration, 1 );
+    }
+
+    void GatheringNodeComponent::applyFall( float32 amount )
+    {
+        SceneComponent* pRoot = getOwner() != nullptr ? getOwner()->getPrimarySceneComponent() : nullptr;
+        if ( pRoot == nullptr )
+            return;
+        // 쓰러지는 쪽을 앞(+Z)으로 본 요에서 앞으로 눕힌다(피치) — 서 있던 회전은 그 앞에 얹는다. 오브젝트 원점이 밑동이라 축은 밑동이다.
+        const quaternion standing = quaternion::makeFromYawPitchRoll( _standingRotation._y, _standingRotation._x, _standingRotation._z );
+        const float3     axis{ MathUtil::cos( _fallYaw ), 0.0f, -MathUtil::sin( _fallYaw ) };
+        const quaternion fallen = quaternion::concatenate( standing, quaternion::makeFromAxisAngle( axis, MathUtil::kHalfPi * amount ) ).normalize();
+        pRoot->setLocalRotation( amount > 0.0f ? fallen.getEulerAngles() : _standingRotation );
+    }
+
+    void GatheringNodeComponent::onTick( TickContext& context )
+    {
+        Component::onTick( context );
+        const int32 stepCount = context.getIntervalCount();
+        for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
+            stepOnce();
+        }
+    }
+
+    void GatheringNodeComponent::stepOnce()
+    {
+        GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr )
+            return;
+        if ( _fallStepsLeft > 0 )
+        {
+            --_fallStepsLeft;
+            const int32   total = TickTurn::secondsToIntervalCount( kTickInterval, _fallDuration, 1 );
+            const float32 time  = 1.0f - static_cast<float32>( _fallStepsLeft ) / static_cast<float32>( total );
+            applyFall( time * time );
+            if ( _fallStepsLeft == 0 )
+                MechanismUtil::setBodyActive( *pOwner, false, this );
+            return; // 다시 자라는 시간은 다 쓰러진 뒤부터 센다
+        }
+        if ( isDepleted() == false || _respawnStepsLeft <= 0 )
+            return;
+        --_respawnStepsLeft;
+        if ( _respawnStepsLeft > 0 )
+            return;
+        _usesTaken = 0;
+        if ( _fallDuration > 0.0f )
+            applyFall( 0.0f );
+        MechanismUtil::setBodyActive( *pOwner, true, this );
+        MechanismUtil::setInteractableEnabled( *pOwner, true );
+    }
+} // namespace sw

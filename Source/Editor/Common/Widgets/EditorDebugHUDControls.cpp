@@ -7,7 +7,7 @@
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -29,7 +29,7 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_SETTINGS_PAGE( DebugHUD, "debug_hud", "Editor/Debug HUD", 360, &EditorDebugHUDControls::drawPreferencesPage );
+    SW_EDITOR_PREFERENCES_PAGE( DebugHUD, "debug_hud", "Editor/Debug HUD", 360, &EditorDebugHUDControls::drawPreferencesPage );
 
     void EditorDebugHUDControls::drawMasterToggle( const utf8* pMark )
     {

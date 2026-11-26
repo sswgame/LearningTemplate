@@ -10,9 +10,9 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/Model/EditorColliderHandleEdit.h"
+#include "Editor/Viewport/Model/Gizmo/EditorColliderHandleViewModel.h"
 #include "Editor/Viewport/Model/Visualizers/PhysicsShapeVisualizer.h"
 
 #include "Engine/Localization/LocText.h"
@@ -54,7 +54,7 @@ namespace sw::editor
                 session._listCommand.clear();
 
                 EditorColliderHandleDragTracker& tracker = session._tracker;
-                EditorColliderHandleEdit::gather( tracker.isDragging() ? tracker.getObject() : GameObjectHandle{}, session._state );
+                EditorColliderHandleViewModel::gather( tracker.isDragging() ? tracker.getObject() : GameObjectHandle{}, session._state );
                 const bool bAvailable = session._state._bAvailable && args._pViewProj != nullptr && args._pDrawList != nullptr;
                 Ray        ray{};
                 const bool bRay   = bAvailable && EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray );
@@ -63,7 +63,7 @@ namespace sw::editor
                 {
                     session._edit.apply( session._listCommand );
                     if ( bDrawn )
-                        EditorColliderHandleEdit::gather( tracker.getObject(), session._state );
+                        EditorColliderHandleViewModel::gather( tracker.getObject(), session._state );
                 }
                 if ( bDrawn == false )
                     return;
@@ -123,7 +123,7 @@ namespace sw::editor
         return session._bCapturing && session._frame == ImGui::GetFrameCount();
     }
 
-    // 물리 셰이프 시각화와 같은 토글이다 — 셰이프 선은 Model 의 모으기(`PhysicsShapeGatherer`), 손잡이는 이 화면 도구.
+    // 물리 셰이프 시각화와 같은 토글이다 — 셰이프 선은 Model 의 모으기(`PhysicsShapeVisualizer`), 손잡이는 이 화면 도구.
     SW_EDITOR_VISUALIZER_TOOL( PhysicsShapes, "physics_shapes", EditorColliderHandleToolInternal::kPhysicsShapesOrder, SW_EDITOR_ICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesLabel" ),
-                               SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesTip" ), false, &EditorColliderHandleTool::process, &PhysicsShapeGatherer::gather );
+                               SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesTip" ), false, &EditorColliderHandleTool::process, &PhysicsShapeVisualizer::gather );
 } // namespace sw::editor

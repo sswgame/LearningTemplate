@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from common.cook_table import CookContractSpec, COOK_CONTRACT_CONFIG_RELATIVE
-from generate.generator_output import Generator, GeneratorError, write_generated_file
+from common.cook_contract_config import CookContractSpec, COOK_CONTRACT_CONFIG_RELATIVE
+from generate.generator_output import CodeGenerator, GeneratorError, write_generated_file
 from common.paths import get_project_root
 
 TAG = "CookContract"
@@ -108,6 +108,6 @@ def generate_cook_contract(header_path: Path, cmake_path: Path) -> None:
     write_generated_file(cmake_path, make_cmake_text(spec), tag=TAG)
 
 
-class CookContractGenerator(Generator):
+class CookContractGenerator(CodeGenerator):
     def generate(self, output_dir: Path, game_name: str) -> None:
         generate_cook_contract(output_dir / "CookContract.gen.h", output_dir / "CookContract.cmake")

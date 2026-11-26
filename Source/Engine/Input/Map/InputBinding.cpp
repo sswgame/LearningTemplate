@@ -5,7 +5,7 @@
 #include "Core/Container/EnumArray.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/GamepadButton.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/Virtual/VirtualJoystick.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

@@ -18,7 +18,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/CookCodeDigest.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/Component.h"
@@ -33,7 +33,8 @@
 #include "Engine/Scene/SceneCellSplitter.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/ScenePreloadList.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -183,7 +184,7 @@ namespace sw
                                        string_view activePackRoot, const AbsolutePath& outputPath )
             {
                 SceneDocument doc{};
-                // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
+                // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(에셋 id 입구는 팩 전용 구성에서 콘텐츠 루트 안 절대 경로를 거절한다).
                 if ( doc.loadXMLFromDiskFile( scenePath ) == false )
                 {
                     SW_LOG_ERROR_ID( "SceneCooker.SceneCookFailedRead", "Scene cook failed to read '%#'.", scenePath.str() );
@@ -411,7 +412,7 @@ namespace sw
     }
 
     uint32 SceneCooker::cookAllScenes( const SceneEngineSubsystems& services, const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store,
-                                       const uint64 reflectionFingerprint, uint32& outFailedCount )
+                                       const uint64 reflectionDigest, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( cookedDir.empty() )
@@ -455,9 +456,9 @@ namespace sw
 
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot.str() ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
-        const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
-        const CookJobDesc preloadDesc    = makePreloadCookJobDesc( reflectionFingerprint );
-        const CookJobDesc meshDesc       = makeHLODMeshCookJobDesc( reflectionFingerprint );
+        const CookJobDesc desc           = makeCookJobDesc( reflectionDigest );
+        const CookJobDesc preloadDesc    = makePreloadCookJobDesc( reflectionDigest );
+        const CookJobDesc meshDesc       = makeHLODMeshCookJobDesc( reflectionDigest );
 
         // 다시 구운 씬의 시간 합과 가장 느린 씬(요약 로그). 씬은 차례로 굽는다 — 에셋 캐시와 결과가 프로세스 하나의 것이라, 나눈다면 언리얼 멀티프로세스 쿡처럼 프로세스를 가른다.
         CookStats stats;
@@ -597,7 +598,7 @@ namespace sw
 
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
         const float4            zeroData{};
-        const string            zeroDataText = SerializerUtil::formatValueText( ValueAddress{ &zeroData }, arrMeshProp[kCustomData0]->_typeName, context );
+        const string            zeroDataText = ValueSerializer::formatValueText( ValueAddress{ &zeroData }, arrMeshProp[kCustomData0]->_typeName, context );
         struct PackGroup
         {
             uint64         _ownerFileID{ 0 };
@@ -626,7 +627,7 @@ namespace sw
             const Component* pMesh = pObject->getComponents()[0];
             for ( uint32 keyIndex = 0; keyIndex < kMeshKeyCount; ++keyIndex )
             {
-                arrText[keyIndex] = SerializerUtil::formatPropertyText( *arrMeshProp[keyIndex], ObjectAddress{ pMesh }, context );
+                arrText[keyIndex] = PropertySerializer::formatPropertyText( *arrMeshProp[keyIndex], ObjectAddress{ pMesh }, context );
             }
             // 묶은 인스턴스는 정적 그리기만 싣는다 — 움직이는 메시 · 사용자 값(인스턴스마다 다른 셰이더 값)은 그대로 둔다.
             if ( arrText[kStatic] != "true" || arrText[kCustomData0] != zeroDataText || arrText[kCustomData1] != zeroDataText )
@@ -714,34 +715,34 @@ namespace sw
         return true;
     }
 
-    CookJobDesc SceneCooker::makePreloadCookJobDesc( const uint64 reflectionFingerprint )
+    CookJobDesc SceneCooker::makePreloadCookJobDesc( const uint64 reflectionDigest )
     {
         CookJobDesc desc;
-        desc._cookerName      = "ScenePreload";
-        desc._codeFingerprint = CookCodeFingerprint::find( "ScenePreload" );
-        desc._target          = "Any";
-        desc._settingsHash    = reflectionFingerprint; // 어느 칸이 경로인지 · 파일에 없는 칸의 기본값은 타입 표가 정한다 — 입력 파일만으로는 모른다
+        desc._cookerName   = "ScenePreload";
+        desc._codeDigest   = CookCodeDigest::find( "ScenePreload" );
+        desc._target       = "Any";
+        desc._settingsHash = reflectionDigest; // 어느 칸이 경로인지 · 파일에 없는 칸의 기본값은 타입 표가 정한다 — 입력 파일만으로는 모른다
         return desc;
     }
 
-    CookJobDesc SceneCooker::makeHLODMeshCookJobDesc( const uint64 reflectionFingerprint )
+    CookJobDesc SceneCooker::makeHLODMeshCookJobDesc( const uint64 reflectionDigest )
     {
         CookJobDesc desc;
-        desc._cookerName      = "SceneHLODMesh";
-        desc._codeFingerprint = CookCodeFingerprint::find( "SceneHLODMesh" );
-        desc._target          = "Any";
-        desc._settingsHash    = reflectionFingerprint; // 대리를 짓는 씬의 값이 타입 표에서 온다(씬 쿠킹과 같다)
+        desc._cookerName   = "SceneHLODMesh";
+        desc._codeDigest   = CookCodeDigest::find( "SceneHLODMesh" );
+        desc._target       = "Any";
+        desc._settingsHash = reflectionDigest; // 대리를 짓는 씬의 값이 타입 표에서 온다(씬 쿠킹과 같다)
         return desc;
     }
 
-    CookJobDesc SceneCooker::makeCookJobDesc( const uint64 reflectionFingerprint )
+    CookJobDesc SceneCooker::makeCookJobDesc( const uint64 reflectionDigest )
     {
         CookJobDesc desc;
-        desc._cookerName      = "Scene";
-        desc._codeFingerprint = CookCodeFingerprint::find( "Scene" );
-        desc._target          = "Any";
+        desc._cookerName = "Scene";
+        desc._codeDigest = CookCodeDigest::find( "Scene" );
+        desc._target     = "Any";
         // 쿠킹된 상태는 리플렉션 표로 쓴다 — 타입 · 프로퍼티가 바뀌면 같은 XML 이라도 다시 베이크한다.
-        desc._settingsHash = reflectionFingerprint;
+        desc._settingsHash = reflectionDigest;
         return desc;
     }
 

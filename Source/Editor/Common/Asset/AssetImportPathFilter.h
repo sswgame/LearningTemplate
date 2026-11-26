@@ -25,7 +25,7 @@ namespace sw::editor
 {
     /**
      * @struct AssetImportPathFilter
-     * @brief 리소스 루트 기준 경로에 대한 포함 · 제외 조건입니다.
+     * @brief 콘텐츠 루트 기준 경로에 대한 포함 · 제외 조건입니다.
      * @details 패턴은 `/` 가 없으면 파일 이름에만 맞춥니다. `/` 가 있으면 경로를 마디(폴더 이름 · 파일 이름) 단위로 맞춥니다.
      *          마디 안에서 `*`(0 글자 이상) · `?`(한 글자)는 마디를 넘지 않고, 마디 하나가 통째로 `**` 이면 0 개 이상의 마디에 맞습니다
      *          (`**` 만 폴더를 넘는다). 대소문자는 가리지 않습니다. 경로(`includePaths` · `excludePaths`)는 폴더 마디의 연속이며
@@ -54,7 +54,7 @@ namespace sw::editor
         {
         }
 
-        /** @brief @p relativePath(리소스 루트 기준)가 조건에 맞는지 봅니다. */
+        /** @brief @p relativePath(콘텐츠 루트 기준)가 조건에 맞는지 봅니다. */
         bool matchesPath( string_view relativePath ) const;
 
         /** @brief 네 목록이 모두 비어 무엇에나 맞는지 봅니다. */
@@ -153,7 +153,7 @@ namespace sw::editor
         }
 
         /**
-         * @brief 조건 있는 규칙 중 @p listAssetPath(리소스 루트 기준 원본 경로 — `select` 가 받는 경로) 어느 것에도 맞지 않는 규칙의 이름입니다.
+         * @brief 조건 있는 규칙 중 @p listAssetPath(콘텐츠 루트 기준 원본 경로 — `select` 가 받는 경로) 어느 것에도 맞지 않는 규칙의 이름입니다.
          * @details 그런 규칙은 죽은 패턴이다 — 원본 폴더를 옮기며 패턴만 남은 것(예: 별표 마디 + `common/...` 패턴은 맨 앞 마디 `common` 앞에 별표가 맞을 마디가 없어 맞지 않는다)이 조용히 기본 규칙으로 임포트된다.
          *          일괄 임포트가 문제로 알려 설정을 고치게 한다. 조건 없는 규칙(나머지)은 보지 않는다.
          */

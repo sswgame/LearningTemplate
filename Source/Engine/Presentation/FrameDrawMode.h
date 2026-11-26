@@ -7,7 +7,7 @@
 
 namespace sw
 {
-    /** @brief 이번 프레임을 그리는가입니다. 정하는 쪽은 `SimulationOnlyFrameQueue::beginFrame` 하나다. */
+    /** @brief 이번 프레임을 그리는가입니다. 정하는 쪽은 `SimulationOnlyFrameCounter::beginFrame` 하나다. */
     enum class FrameDrawMode : uint8
     {
         Draw,           ///< 그린다(Present 포함)

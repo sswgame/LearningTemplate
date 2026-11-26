@@ -6,8 +6,8 @@
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"

@@ -1,7 +1,7 @@
 // KartGameModeTest — 카트 경기 디렉터: 열기 전 명령 거절, 사람 차의 운전 명령, 상태 왕복, 자동 플레이로 끝까지 달린 경기의 순위 · 상금 · 끝내기(nogpu).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/File/FileUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -12,14 +12,14 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Component/KartGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 using namespace sw;
 
@@ -73,7 +73,7 @@ _brakeAngle="2.2" _brakeThrottle="0.4" _itemUseDelay="0.8" _itemMaxHold="8" _she
         {
             const PropertyInfo* const pInfo = KartGameModeComponent::StaticType()->findPropertyInHierarchy( hashed_string( pProperty ) );
             SW_REQUIRE_NOT_NULL( pInfo );
-            SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( *pInfo, MutableObjectAddress{ _pGameMode }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
+            SW_REQUIRE_TRUE( PropertySerializer::applyPropertyText( *pInfo, MutableObjectAddress{ _pGameMode }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
         }
 
         void advance( int32 frameCount )

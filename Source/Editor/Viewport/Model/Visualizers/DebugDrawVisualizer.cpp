@@ -9,12 +9,12 @@
 
 #include "DevTools/DebugDraw/DebugDrawQueue.h"
 
-#include "Editor/Common/Workspace/EditorCamera.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
+#include "Editor/Common/Workspace/View/EditorCamera.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
-#include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerDrawList.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerGeometry.h"
 
 #include "Engine/Console/DebugOverlayState.h"
 #include "Engine/Console/DevCommandRegistry.h"
