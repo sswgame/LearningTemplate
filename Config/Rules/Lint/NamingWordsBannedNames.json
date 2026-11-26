@@ -60,6 +60,7 @@
     "INavMeshQuery": "INavMesh — 질의는 내비메시 인터페이스 멤버다(2026-11-26)",
     "INavMeshDynamics": "INavMesh — 링크 막기 · 장애물은 내비메시 인터페이스 멤버다(2026-11-26)",
     "INavMeshDebug": "INavMesh — 디버그 그리기는 내비메시 인터페이스 멤버다(2026-11-26)",
+    "PackPatchTrustSource": "PackPatchTrust::resolve — 정적 함수 하나뿐이라 주인 형식의 멤버로 합쳤다(2026-11-26)",
     "runFloorStatus": "지움 — 바닥 위 자리는 감시 값 Hub.PawnFloorX/Z · Shooter.FloorX/Z 를 시나리오 <Record> 가 보고에 남긴다(2026-11-25)",
     "runLockstepStatus": "지움 — 감시 값 Skirmish.Lockstep*(LockstepSkirmishGameModeComponent.cpp, 2026-11-25)",
     "EngineSubsystemSet": "지움 — 코어 범위는 Engine::initialize 가 직접 채우고 서비스 · 기동 단계는 등록 줄이 채운다(2026-11-25)",

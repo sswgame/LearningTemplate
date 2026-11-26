@@ -22,7 +22,7 @@
  *  - InputMapEvaluate.cpp: 평가기 · 상태 — update() 가 매 프레임 도는 상태 머신과 is/wasActionXxx() 상태 조회.
  *  - InputMapAsset.cpp: InputMap XML 정의 · 묶음의 로드와 저장.
  *  - InputBinding.cpp: 바인딩 종류 표(`BindingKinds`).
- * 맵이 들고 있거나 맵을 읽는 협력 클래스는 따로 있다.
+ * 맵이 들고 있거나 맵을 읽는 협력 클래스 — 앞의 둘(InputActionBuffer · InputAccessibilitySettings)은 이 파일 끝에 정의가 있다.
  *  - InputActionBuffer: 선입력 버퍼링과 격투 게임식 커맨드 시퀀스, 패턴 판정(맵이 들고 프레임마다 진행).
  *  - InputGlyphResolver: 액션을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회(상태 없음).
  *  - InputAccessibilitySettings: 감도 · 축 반전 · 데드존 · 토글 액션(맵이 들고, 맵을 다시 읽어도 남는다).
@@ -999,5 +999,185 @@ namespace sw
     {
         auto it = _mapAction.find( action );
         return it != _mapAction.end() ? &_listActionEntry[it->second] : nullptr;
+    }
+} // namespace sw
+
+namespace sw
+{
+    InputActionBuffer::InputActionBuffer()
+        : _listBufferedAction{}
+        , _listCommandHistory{}
+        , _elapsedSeconds{ 0.0f }
+    {
+    }
+
+    void InputActionBuffer::clear()
+    {
+        _elapsedSeconds = 0.0f;
+        _listBufferedAction.clear();
+        _listCommandHistory.clear();
+    }
+
+    void InputActionBuffer::update( float32 deltaSeconds )
+    {
+        _elapsedSeconds += deltaSeconds;
+        for ( BufferedActionItem& item : _listBufferedAction )
+        {
+            item._remainingTime -= deltaSeconds;
+        }
+        while ( _listBufferedAction.empty() == false && _listBufferedAction.front()._remainingTime <= 0.0f )
+        {
+            _listBufferedAction.popFront();
+        }
+        while ( _listCommandHistory.empty() == false && ( _elapsedSeconds - _listCommandHistory.front()._timestamp ) > kHistorySeconds )
+        {
+            _listCommandHistory.popFront();
+        }
+    }
+
+    void InputActionBuffer::recordTriggered( const hashed_string& action )
+    {
+        CommandHistoryEntry entry;
+        entry._action    = action;
+        entry._timestamp = _elapsedSeconds;
+        _listCommandHistory.push( entry );
+    }
+
+    void InputActionBuffer::bufferAction( const hashed_string& action, float32 expirationSeconds )
+    {
+        if ( action.empty() )
+            return;
+
+        BufferedActionItem item;
+        item._action        = action;
+        item._remainingTime = expirationSeconds;
+        _listBufferedAction.push( item );
+    }
+
+    bool InputActionBuffer::consumeBufferedAction( const hashed_string& action )
+    {
+        for ( BufferedActionItem& item : _listBufferedAction )
+        {
+            if ( item._action == action && item._remainingTime > 0.0f )
+            {
+                item._remainingTime = 0.0f;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool InputActionBuffer::wasCommandSequenceTriggered( const vector<hashed_string>& listSequence, float32 maxWindowSeconds ) const
+    {
+        if ( listSequence.empty() || _listCommandHistory.size() < listSequence.size() )
+            return false;
+
+        const size_t seqCount = listSequence.size();
+        size_t       matchIdx = seqCount;
+        float32      lastTime = 0.0f;
+
+        for ( int32 index = static_cast<int32>( _listCommandHistory.size() ) - 1; index >= 0; --index )
+        {
+            const CommandHistoryEntry& historyEntry = _listCommandHistory[static_cast<uint32>( index )];
+
+            if ( matchIdx == seqCount )
+            {
+                if ( historyEntry._action == listSequence[seqCount - 1] )
+                {
+                    lastTime = historyEntry._timestamp;
+                    --matchIdx;
+                    if ( matchIdx == 0 )
+                        return true;
+                }
+            }
+            else
+            {
+                if ( ( lastTime - historyEntry._timestamp ) > maxWindowSeconds )
+                    return false;
+
+                if ( historyEntry._action == listSequence[matchIdx - 1] )
+                {
+                    --matchIdx;
+                    if ( matchIdx == 0 )
+                        return true;
+                }
+            }
+        }
+        return matchIdx == 0;
+    }
+
+    bool InputActionBuffer::wasCommandPatternTriggered( const hashed_string& pattern, float32 maxWindowSeconds ) const
+    {
+        string_view patternText = pattern.view();
+        if ( patternText.empty() || _listCommandHistory.empty() )
+            return false;
+
+        vector<hashed_string> listExpected;
+        string                actionToken;
+
+        for ( size_t index = 0; index < patternText.size(); ++index )
+        {
+            const utf8 character = patternText[index];
+            if ( character == '2' )
+                listExpected.push_back( "Down" );
+            else if ( character == '3' )
+                listExpected.push_back( "DownRight" );
+            else if ( character == '6' )
+                listExpected.push_back( "Right" );
+            else if ( character == '4' )
+                listExpected.push_back( "Left" );
+            else if ( character == '1' )
+                listExpected.push_back( "DownLeft" );
+            else if ( character == '7' )
+                listExpected.push_back( "UpLeft" );
+            else if ( character == '8' )
+                listExpected.push_back( "Up" );
+            else if ( character == '9' )
+                listExpected.push_back( "UpRight" );
+            else
+                actionToken.push_back( character );
+        }
+
+        if ( actionToken.empty() == false )
+            listExpected.push_back( hashed_string( actionToken ) );
+
+        if ( listExpected.empty() )
+            return false;
+
+        return wasCommandSequenceTriggered( listExpected, maxWindowSeconds );
+    }
+} // namespace sw
+
+// InputAccessibilitySettings — 플레이어마다의 입력 설정(토글 액션 목록).
+
+namespace sw
+{
+    InputAccessibilitySettings::InputAccessibilitySettings()
+        : _mouseSensitivity{ 1.0f, 1.0f }
+        , _gamepadSensitivity{ 1.0f, 1.0f }
+        , _stickDeadzoneOverride{ -1.0f }
+        , _deadzoneShape{ DeadzoneShape::Radial }
+        , _digitalNormalization{ DigitalNormalization::Circular }
+        , _bInvertX{ SW_FALSE }
+        , _bInvertY{ SW_FALSE }
+        , _listToggleAction{}
+    {
+    }
+
+    void InputAccessibilitySettings::setToggleAction( const hashed_string& action, bool bToggle )
+    {
+        if ( action.empty() )
+            return;
+        if ( bToggle == false )
+        {
+            (void)VectorUtil::removeFirst( _listToggleAction, action ); // 없으면 지울 것이 없다
+            return;
+        }
+        VectorUtil::addUnique( _listToggleAction, action );
+    }
+
+    bool InputAccessibilitySettings::isToggleAction( const hashed_string& action ) const
+    {
+        return VectorUtil::contains( _listToggleAction, action );
     }
 } // namespace sw

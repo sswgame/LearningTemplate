@@ -6,7 +6,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/UI/UIEngineDocuments.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/TextWidget.h"

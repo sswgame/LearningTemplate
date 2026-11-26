@@ -24,7 +24,7 @@
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/AssetScanCache.h"
 #include "Engine/Content/Pack/PackManager.h"
-#include "Engine/Content/Pack/PackPatchTrustSource.h"
+#include "Engine/Content/Pack/PackPatch.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -162,7 +162,7 @@ namespace sw
         if ( const EngineConfig* pEngineConfig = engine::findSubsystem<EngineConfig>() )
         {
             PackPatchTrust trust;
-            const auto     trustResult = PackPatchTrustSource::resolve( *pEngineConfig, trust );
+            const auto     trustResult = PackPatchTrust::resolve( *pEngineConfig, trust );
             if ( trustResult == PackPatchTrustResult::Invalid )
                 return false;
             if ( trustResult == PackPatchTrustResult::Ready && _pPackManager->setPatchTrust( trust ) == false )

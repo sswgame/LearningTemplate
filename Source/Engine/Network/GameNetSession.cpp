@@ -24,7 +24,7 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/NetSendThrottleSettings.h"
 #include "Engine/Config/ServerConfig.h"
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineHooks.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Network/GameConnectSecurity.h"

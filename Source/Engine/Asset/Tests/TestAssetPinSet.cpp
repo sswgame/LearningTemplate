@@ -2,7 +2,7 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Asset/AssetPinSet.h"
+#include "Engine/Asset/PreloadSet.h"
 
 // AssetPinSetTest — 미리 읽은 에셋 고정 세트: 예산을 넘으면 가장 오래 안 쓴 것부터 놓고(쓰기 · 다시 넣기가 순서를 새로 한다), 경로 철자는 정규화해 찾는다.
 // 혼자 예산보다 큰 것은 붙들지 않는다. 토큰은 가짜 값이다(nogpu).

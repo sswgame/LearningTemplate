@@ -6,6 +6,9 @@
 
 #include "DevTools/Profiling/FrameProfileSession.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
@@ -13,11 +16,13 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/Profiling/ProfilerTraceExport.h"
 
-#include "Engine/Asset/Cache/CacheStatsUtil.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -28,6 +33,128 @@
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 캐시 계측(`CacheStats`) 보고입니다 — 측정 창 보고만 쓴다(개발 도구 전용이라 배포 엔진에 두지 않는다). */
+        struct CacheStatsReportInternal
+        {
+            static constexpr uint32 kItemCountTextSize  = 24;   ///< 항목 수 글 칸(int64 열 자리 + 부호)
+            static constexpr uint64 kPermille           = 1000; ///< 적중률을 천분율로 셈한다
+            static constexpr uint64 kPermillePerPercent = 10;   ///< 천분율 → 백분율 소수 한 자리
+
+            /** @brief 보고 한 줄입니다. 계측 칸이 있으면 `_bCounted`, 없으면 레지스트리에만 있는 `AssetCacheBase` 입니다. */
+            struct Row
+            {
+                string _name{};
+                uint64 _hitCount{ 0 };
+                uint64 _missCount{ 0 };
+                uint64 _clearCount{ 0 };
+                int64  _itemCount{ 0 };
+                bool   _bItemCountKnown{ false };
+                bool   _bCounted{ false };
+                string _uncountedReason{}; ///< `_bCounted` 가 아닐 때 캐시가 선언한 사유(`CacheTracking::uncounted`). 칸이 없는데 선언도 없으면 비어 있다(오류)
+            };
+
+            static bool isNameBefore( const Row& lhs, const Row& rhs ) { return lhs._name < rhs._name; }
+
+            /** @brief 그 이름의 줄이 이미 있는지 봅니다. */
+            static bool containsName( const vector<Row>& listRow, string_view name )
+            {
+                for ( const Row& row : listRow )
+                {
+                    if ( string_view{ row._name } == name )
+                        return true;
+                }
+                return false;
+            }
+
+            /**
+             * @brief 캐시 계측(`CacheStats`)의 센 값과 `AssetManager` 의 캐시 목록을 합쳐 캐시마다 한 줄로 남기는 보고입니다.
+             * @details 한 줄은 이름 · 항목 수 · 적중 · 실패 · 적중률 · 비우기 횟수입니다. 항목 수는 캐시가 계측에 알린 값(`CacheStatsCounters::addItemCount`)이고, 알리지 않은 캐시는
+             *          `AssetCacheBase::getCachedCount` 로 묻습니다. 계측에 칸이 없는 `AssetCacheBase`(조회가 없는 어댑터 — 오디오 · 현지화)는 적중 · 실패 자리에 `n/a` 를 찍어
+             *          "세지 않는 캐시" 가 보고에서 빠지지 않고 보이게 합니다. 보고는 Info 로그라 Shipping 에서는 본문이 사라집니다.
+             *
+             *          `-gv_profileFrames=N` 측정 창 보고가 나온 프레임에 개발 도구의 측정 세션(`DevTools/Profiling/FrameProfileSession`)이 GPU 메모리 표와 함께 부릅니다.
+             *          적중 · 실패는 창 시작(워밍업 뒤, `CacheStats::markWindowStart`)부터의 값입니다.
+             * @param pTitle 첫 줄에 찍는 보고 이름입니다(문자열 상수).
+             */
+            static void logReport( [[maybe_unused]] const utf8* pTitle )
+            {
+                // 보고는 Info 로그로만 나간다. 그것이 사라지는 구성(Shipping)에는 본문도 두지 않는다.
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
+                vector<CacheStatsSnapshot> listSnapshot;
+                CacheStats::collect( listSnapshot );
+                AssetManager* pAssetManager = engine::findSubsystem<AssetManager>(); // 바인딩 전이면 nullptr — 항목 수만 모른다
+                vector<Row>   listRow;
+                listRow.reserve( listSnapshot.size() );
+                for ( const CacheStatsSnapshot& snapshot : listSnapshot )
+                {
+                    Row row{};
+                    row._name            = snapshot._name;
+                    row._hitCount        = snapshot._hitCount;
+                    row._missCount       = snapshot._missCount;
+                    row._clearCount      = snapshot._clearCount;
+                    row._itemCount       = snapshot._itemCount;
+                    row._bItemCountKnown = snapshot._bItemCountKnown;
+                    row._bCounted        = true;
+                    if ( row._bItemCountKnown == false && pAssetManager != nullptr )
+                    {
+                        const AssetCacheBase* pCache = pAssetManager->findAssetCache( row._name );
+                        if ( pCache != nullptr )
+                        {
+                            row._itemCount       = static_cast<int64>( pCache->getCachedCount() );
+                            row._bItemCountKnown = true;
+                        }
+                    }
+                    listRow.push_back( std::move( row ) );
+                }
+                // 계측 칸이 없는 캐시도 보인다 — 세지 않는 캐시가 보고에서 조용히 빠지지 않게.
+                if ( pAssetManager != nullptr )
+                {
+                    for ( const AssetCacheBase* pCache : pAssetManager->getAllAssetCache() )
+                    {
+                        const utf8* pKindName = pCache->getAssetKindName();
+                        if ( pKindName == nullptr || containsName( listRow, pKindName ) )
+                            continue;
+                        Row row{};
+                        row._name            = pKindName;
+                        row._itemCount       = static_cast<int64>( pCache->getCachedCount() );
+                        row._bItemCountKnown = true;
+                        if ( pCache->getUncountedReason() != nullptr )
+                            row._uncountedReason = pCache->getUncountedReason();
+                        listRow.push_back( std::move( row ) );
+                    }
+                }
+                VectorUtil::sort( listRow, &isNameBefore );
+
+                SW_LOG_INFO_ID( "CacheStats.CachesHitMissClear", "[CacheStats] %# - %# caches (hit / miss / clear counted since the measure window started; 'no counters' = the cache has no lookup to count)", pTitle,
+                                listRow.size() );
+                for ( const Row& row : listRow )
+                {
+                    utf8 arrItemCount[kItemCountTextSize]{};
+                    formatstring( arrItemCount, static_cast<uint32>( sizeof( arrItemCount ) ), "%#", row._itemCount );
+                    const utf8* pItemCount = row._bItemCountKnown ? arrItemCount : "?";
+                    if ( row._bCounted == false )
+                    {
+                        SW_LOG_INFO_ID( "CacheStats.ItemsNoCounters", "[CacheStats]   %#  items %#  no counters (%#)", row._name, pItemCount,
+                                        row._uncountedReason.empty() ? "declared counted but has no counter slot" : row._uncountedReason.c_str() );
+                        continue;
+                    }
+                    const uint64 lookupCount  = row._hitCount + row._missCount;
+                    const uint64 ratePermille = lookupCount == 0 ? 0 : ( row._hitCount * kPermille ) / lookupCount;
+                    if ( lookupCount == 0 )
+                    {
+                        SW_LOG_INFO_ID( "CacheStats.ItemsHitMissRate", "[CacheStats]   %#  items %#  hit %#  miss %#  rate -  clear %#", row._name, pItemCount, row._hitCount, row._missCount, row._clearCount );
+                        continue;
+                    }
+                    SW_LOG_INFO_ID( "CacheStats.ItemsHitMissRate2", "[CacheStats]   %#  items %#  hit %#  miss %#  rate %#.%#%%  clear %#", row._name, pItemCount, row._hitCount, row._missCount, ratePermille / kPermillePerPercent,
+                                    ratePermille % kPermillePerPercent, row._clearCount );
+                }
+#endif
+            }
+        };
+    } // namespace
+
     /**
      * @brief `-gv_profileFrames=N`: 워밍업 뒤 N 프레임을 재고 보고한 다음 종료합니다.
      * @details 선언이 여기 있는 이유: 이 스위치를 해석하고 판정하는 코드가 모두 이 파일에 있습니다.
@@ -183,7 +310,7 @@ namespace sw
         if ( bHasDevice )
             pRHI->getDevice().getMemoryTracker().report( pRHI->getDevice().getBackendName() );
         // 캐시 적중 · 실패 표도 같은 자리에서 남긴다.
-        CacheStatsUtil::logReport( "profile window" );
+        CacheStatsReportInternal::logReport( "profile window" );
         // 기계 판독 보고(`-gv_profileReportPath`). 실패는 `saveToFile` 이 오류로 남긴다.
         if ( gv_profileReportPath.get().empty() )
             return;

@@ -13,8 +13,7 @@
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/EngineFrameHookList.h"
-#include "Engine/EngineStartupExtension.h"
+#include "Engine/EngineHooks.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/HeadlessSubsystem.h"
