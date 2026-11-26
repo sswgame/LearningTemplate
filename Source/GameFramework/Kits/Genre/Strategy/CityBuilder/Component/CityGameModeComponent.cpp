@@ -134,7 +134,7 @@ namespace sw
             addMoneyResult( outListValue, pCityWallet->getBalance( getCity().getCurrency() ) - getStartingMoney() );
     }
 
-    void CityGameModeComponent::updateGame( float32 deltaTime )
+    void CityGameModeComponent::updateGame( GameSeconds frameTime )
     {
         GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
@@ -145,7 +145,7 @@ namespace sw
         const bool bFastForward = isAutoPlayOn() || _bFastForward == SW_TRUE;
         if ( getMutableSpeed().setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false || pState->getClock().setTimeScale( getSpeed().getTimeScale() ) == false )
             return;
-        (void)getMutableCity().update( deltaTime, getSpeed().getTimeScale() ); // 시계와 같은 배율 — 시계만 밀면 빨리 감는 동안 결산만 잦고 생산 · 일꾼은 1 배속이다(감사 K-2 · K-10, 유니티 Time.timeScale 자리)
+        (void)getMutableCity().update( frameTime, getSpeed().getTimeScale() ); // 시계와 같은 배율 — 시계만 밀면 빨리 감는 동안 결산만 잦고 생산 · 일꾼은 1 배속이다(감사 K-2 · K-10, 유니티 Time.timeScale 자리)
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
         {
             if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )

@@ -272,8 +272,9 @@ namespace sw
         enterRoom( walk._pEntered->_id );
     }
 
-    void GhostHuntGameModeComponent::applyVacuum( const GhostHuntCommand& command, float32 deltaTime )
+    void GhostHuntGameModeComponent::applyVacuum( const GhostHuntCommand& command, GameSeconds frameTime )
     {
+        const float32   deltaTime = frameTime.count();
         GhostEncounter& encounter = _mansion.getEncounter();
         if ( command._bVacuum == SW_FALSE )
         {
@@ -292,7 +293,7 @@ namespace sw
         }
         if ( isSucking() )
         {
-            const GhostSuctionResult suction = encounter.updateSuction( float3{ command._move._x, 0.0f, command._move._y }, deltaTime );
+            const GhostSuctionResult suction = encounter.updateSuction( float3{ command._move._x, 0.0f, command._move._y }, frameTime );
             movePlayer( float2{ suction._drag._x, suction._drag._z } );
             return;
         }
@@ -333,8 +334,9 @@ namespace sw
         }
     }
 
-    void GhostHuntGameModeComponent::applyTools( const GhostHuntCommand& command, float32 deltaTime )
+    void GhostHuntGameModeComponent::applyTools( const GhostHuntCommand& command, GameSeconds frameTime )
     {
+        const float32   deltaTime = frameTime.count();
         GhostEncounter& encounter = _mansion.getEncounter();
         const float3    eye       = getPlayerPosition()._value;
         const float3    forward   = getFacing();
@@ -345,7 +347,7 @@ namespace sw
         _bStrobeHeld = command._bStrobe;
         if ( command._bLight == SW_TRUE )
             (void)encounter.shineBeam( eye, forward );
-        applyVacuum( command, deltaTime );
+        applyVacuum( command, frameTime );
         if ( command._bUseTriggered == SW_TRUE )
             use();
     }
@@ -372,20 +374,21 @@ namespace sw
         }
     }
 
-    void GhostHuntGameModeComponent::updateMatch( float32 deltaTime )
+    void GhostHuntGameModeComponent::updateMatch( GameSeconds frameTime )
     {
-        const GhostHuntCommand command = _command;
-        _command._bUseTriggered        = SW_FALSE; // 쓴 누름이다
-        const float32 moveLength       = command._move.getLength();
+        const float32          deltaTime = frameTime.count();
+        const GhostHuntCommand command   = _command;
+        _command._bUseTriggered          = SW_FALSE; // 쓴 누름이다
+        const float32 moveLength         = command._move.getLength();
         if ( moveLength > MathUtil::kEpsilon && isSucking() == false )
         {
             // 줄다리기 동안 스틱은 당기는 방향이다 — 걷지도 돌아서지도 않는다.
             _facing = command._move * ( 1.0f / moveLength );
             movePlayer( command._move * ( _moveSpeed * deltaTime / MathUtil::max( 1.0f, moveLength ) ) );
         }
-        applyTools( command, deltaTime );
+        applyTools( command, frameTime );
         moveGhosts( deltaTime );
-        _mansion.update( deltaTime );
+        _mansion.update( frameTime );
         settle();
     }
 

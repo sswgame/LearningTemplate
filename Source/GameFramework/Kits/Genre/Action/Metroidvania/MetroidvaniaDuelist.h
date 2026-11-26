@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -64,7 +65,7 @@ namespace sw
          */
         [[nodiscard]] bool initialize( const MetroidvaniaCatalog& catalog );
         /** @brief 시간을 흘립니다. 체력(강인도 회복), 스태미나, 반격 창이 갱신됩니다. */
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
 
         /** @brief 공격합니다. 스태미나가 모자라면 false 를 반환합니다(공격하지 못합니다). */
         [[nodiscard]] bool tryAttack();

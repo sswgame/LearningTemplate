@@ -21,6 +21,7 @@
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -264,7 +265,7 @@ namespace sw
         [[nodiscard]] expected<int32> addGate( const float3& position );
         void                          setHatchPosition( const float3& position );
         void                          start();
-        void                          update( float32 deltaTime );
+        void                          update( GameSeconds frameTime );
 
         // --- 생존자 ---
         /** @brief @p direction(XZ 평면, 길이 1 이하) 쪽으로 이번 프레임만큼 움직입니다. 하던 일은 그만둡니다. */
@@ -356,13 +357,13 @@ namespace sw
     private:
         bool isValidSurvivor( int32 survivor ) const { return survivor >= 0 && survivor < static_cast<int32>( _listSurvivor.size() ); }
         bool isNear( const float3& from, const float3& to, float32 range ) const;
-        void step( float32 deltaTime );
-        void stepKiller( float32 deltaTime );
-        void stepSurvivor( int32 survivor, float32 deltaTime );
-        void stepGenerators( float32 deltaTime );
-        void stepGates( float32 deltaTime );
+        void step( StepSeconds step );
+        void stepKiller( StepSeconds step );
+        void stepSurvivor( int32 survivor, StepSeconds step );
+        void stepGenerators( StepSeconds step );
+        void stepGates( StepSeconds step );
         void stepWindows( float32 deltaTime );
-        void stepEndgame( float32 deltaTime );
+        void stepEndgame( StepSeconds step );
         /** @brief 진행 도구의 이벤트를 꺼내 스킬 체크, 소음, 점수로 옮깁니다. 이번에 끝났으면 true 를 반환합니다. */
         bool drainProgress( InteractionProgress& progress, const float3& position );
         /** @brief 발전기 진행의 이벤트를 처리합니다. 끝났으면 고치던 사람을 떼고 완료 수와 전원을 처리합니다. 스킬 체크 응답은 걸음 사이에 오므로 응답에서도 부릅니다. */

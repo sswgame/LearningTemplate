@@ -54,7 +54,7 @@ namespace sw
             _endedSeconds = 0.0f;
             return;
         }
-        _endedSeconds += context.getDeltaTime();
+        _endedSeconds += context.getDeltaTime().count();
         if ( _endedSeconds < _restartDelay )
             return;
         // 세션은 다른 오브젝트의 애니메이터를 바꾼다 — 틱 뒤에 시작한다.

@@ -162,12 +162,13 @@ namespace sw
         SW_LOG_INFO_ID( "ActionCombat.Victory", "[ActionCombat] boss defeated (%#) with %# HP left", result._bBossDefeated == SW_TRUE ? "boss" : "room", _playerHP );
     }
 
-    void ActionCombatGameModeComponent::updateMatch( float32 deltaTime )
+    void ActionCombatGameModeComponent::updateMatch( GameSeconds frameTime )
     {
-        const ActionRoomFrameInput input = consumeInput( deltaTime );
+        const float32              deltaTime = frameTime.count();
+        const ActionRoomFrameInput input     = consumeInput( deltaTime );
         if ( _phase == ActionCombatPhase::BossWait )
         {
-            if ( _bossDelay.update( deltaTime ) )
+            if ( _bossDelay.update( frameTime ) )
             {
                 _room.beginBoss();
                 _phase = ActionCombatPhase::Boss;
@@ -175,7 +176,7 @@ namespace sw
             }
             return;
         }
-        applyResult( _room.update( deltaTime, input ) );
+        applyResult( _room.update( frameTime, input ) );
     }
 
     void ActionCombatGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const

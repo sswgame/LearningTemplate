@@ -50,7 +50,7 @@ namespace
     protected:
         void serializeGameState( StateIO& io ) override { (void)io; }
         bool startGame() override { return true; }
-        void updateMatch( float32 deltaTime ) override { (void)deltaTime; }
+        void updateMatch( GameSeconds frameTime ) override { (void)frameTime; }
     };
 
     constexpr string_view kValidXML = R"(<Minigame name="arcade" map="testproject/minigame/arcade.scene.xml" entry="SceneSwitch" features="TestFeature"

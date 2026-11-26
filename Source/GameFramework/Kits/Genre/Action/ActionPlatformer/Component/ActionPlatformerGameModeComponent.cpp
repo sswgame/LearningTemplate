@@ -253,7 +253,7 @@ namespace sw
         return true;
     }
 
-    void ActionPlatformerGameModeComponent::updateRespawn( float32 deltaTime )
+    void ActionPlatformerGameModeComponent::updateRespawn( GameSeconds frameTime )
     {
         const ActionPlatformerRespawnWorld world( _map, _pCatalog->getMotorSettings()._halfExtents );
         RespawnContext                     context;
@@ -261,7 +261,7 @@ namespace sw
         context._pSpawnPoints                = &_listSpawnPoint;
         context._pWorld                      = &world;
         const float3                 death   = _respawn.getDeathPosition();
-        const optional<RespawnSpawn> respawn = _respawn.update( deltaTime, context );
+        const optional<RespawnSpawn> respawn = _respawn.update( frameTime, context );
         if ( respawn.has_value() == false )
             return;
         placeBody( float2{ respawn->_position._x, respawn->_position._y } );
@@ -272,14 +272,15 @@ namespace sw
                         respawn->_pointID.empty() ? "-" : respawn->_pointID.c_str() );
     }
 
-    void ActionPlatformerGameModeComponent::updateGame( float32 deltaTime )
+    void ActionPlatformerGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f || _run.getState() != ActionStageState::Playing )
             return;
         // 죽어 있는 동안 몸은 멈춘다 — 흐름이 다시 세울 때까지 입력 · 몸을 진행하지 않는다.
         if ( _respawn.isDead() )
         {
-            updateRespawn( deltaTime );
+            updateRespawn( frameTime );
             return;
         }
         const bool bJumpHeld = _bCommandJumpHeld == SW_TRUE;
@@ -290,7 +291,7 @@ namespace sw
         input._motor._bJumpPressed = bJumpHeld && _bJumpHeldLastFrame == SW_FALSE ? SW_TRUE : SW_FALSE;
         _bJumpHeldLastFrame        = bJumpHeld ? SW_TRUE : SW_FALSE;
 
-        _body.update( _map, _terrain, input, deltaTime );
+        _body.update( _map, _terrain, input, frameTime );
         _run.update( deltaTime );
         applyMarkers();
     }

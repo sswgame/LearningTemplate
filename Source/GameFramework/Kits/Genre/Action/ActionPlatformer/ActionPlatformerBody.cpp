@@ -177,9 +177,10 @@ namespace sw
         return _mode == ActionMoveMode::Grapple || _mode == ActionMoveMode::Drill ? _velocity : _motor.getVelocity();
     }
 
-    void ActionPlatformerBody::update( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, float32 deltaTime )
+    void ActionPlatformerBody::update( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, GameSeconds frameTime )
     {
-        _events = 0;
+        const float32 deltaTime = frameTime.count();
+        _events                 = 0;
         if ( deltaTime <= 0.0f )
             return;
         if ( _mode == ActionMoveMode::Grapple )
@@ -189,7 +190,7 @@ namespace sw
         }
         if ( _mode == ActionMoveMode::Drill )
         {
-            updateDrill( map, terrain, input, deltaTime );
+            updateDrill( map, terrain, input, frameTime );
             return;
         }
 
@@ -201,13 +202,13 @@ namespace sw
         }
         if ( input._bDrillHeld == SW_TRUE && tryEnterDrill( terrain, input ) )
         {
-            updateDrill( map, terrain, input, deltaTime );
+            updateDrill( map, terrain, input, frameTime );
             return;
         }
         const bool bWantGlide = input._bGlideHeld == SW_TRUE && _motor.isGrounded() == false;
         if ( bWantGlide != ( _mode == ActionMoveMode::Glide ) )
             setGlide( bWantGlide );
-        _motor.update( map, input._motor, deltaTime );
+        _motor.update( map, input._motor, frameTime );
         if ( _mode == ActionMoveMode::Glide && _motor.isGrounded() )
             setGlide( false );
     }
@@ -327,8 +328,9 @@ namespace sw
         _velocity = velocity;
     }
 
-    void ActionPlatformerBody::updateDrill( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, float32 deltaTime )
+    void ActionPlatformerBody::updateDrill( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         // 방향은 입력으로 정한다(입력이 없으면 지금 진행 방향을 쓴다). 속도는 항상 일정하다.
         const float2 heading   = _velocity.normalizeOr( float2{ static_cast<float32>( _motor.getFacing() ), 0.0f }, ActionPlatformerBodyInternal::kMinDirectionLength );
         const float2 direction = input._motor._move.normalizeOr( heading, ActionPlatformerBodyInternal::kMinDirectionLength );
@@ -342,7 +344,7 @@ namespace sw
         {
             // 바위는 팔 수 없다(방향을 바꿀 때까지 멈춘다). 아직 흙에 닿지 못했으면 찾기 시간은 흐른다 — 멈추면 드릴 모드에 영영 갇힌다.
             if ( _bInsideDirt == SW_FALSE )
-                updateDrillSearch( deltaTime );
+                updateDrillSearch( frameTime );
             return;
         }
         _position = next;
@@ -353,7 +355,7 @@ namespace sw
         }
         if ( _bInsideDirt == SW_FALSE )
         {
-            updateDrillSearch( deltaTime );
+            updateDrillSearch( frameTime );
             return;
         }
 
@@ -380,9 +382,9 @@ namespace sw
         returnToMotor( exitVelocity );
     }
 
-    void ActionPlatformerBody::updateDrillSearch( float32 deltaTime )
+    void ActionPlatformerBody::updateDrillSearch( GameSeconds frameTime )
     {
-        _drillSearchTimer.update( deltaTime );
+        _drillSearchTimer.update( frameTime );
         if ( _drillSearchTimer.isActive() )
             return;
         returnToMotor( _velocity * 0.5f );

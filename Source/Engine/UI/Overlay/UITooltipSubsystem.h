@@ -7,6 +7,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UI/Screen/UIOwnedScreen.h"
@@ -53,7 +54,7 @@ namespace sw
         SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 
         /** @brief 호버 경로로 커서 모양을 정하고, 머문 시간을 세어 툴팁을 열고 닫고 옮깁니다. UI 갱신의 화면 틱 앞 칸이 부릅니다(화면 그리기를 막은 동안은 건너뛴다). */
-        void update( float32 deltaSeconds );
+        void update( RealSeconds unscaledDeltaTime );
         /** @brief 툴팁을 닫고 머문 시간을 지웁니다(종료 `shutdownSubsystem`). */
         void clear();
 

@@ -16,6 +16,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
@@ -241,8 +242,8 @@ namespace sw
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         /** @brief 시간이 멈춘 프레임 · 끝난 판에서도 플레이어 보기 · 바닥 걸음을 잇고 판의 걸음은 베이스에 맡깁니다. */
-        void updateGame( float32 deltaTime ) override;
-        void updateMatch( float32 deltaTime ) override;
+        void updateGame( GameSeconds frameTime ) override;
+        void updateMatch( GameSeconds frameTime ) override;
         void onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         void onViewsDespawned() override;
         /** @brief 스폰 요청이 쌓였거나 자동 플레이 스위치와 플레이어 폰의 조종자가 어긋났으면 true 를 반환합니다. 베이스가 틱 끝에 플러시를 잡습니다. */

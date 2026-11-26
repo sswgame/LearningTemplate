@@ -17,6 +17,7 @@
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -313,7 +314,7 @@ namespace sw
          */
         [[nodiscard]] bool initialize( const ThemeParkSettings& settings, Wallet& wallet, const NavGrid& walkGrid );
         /** @brief 시간을 진행합니다. 큰 시간은 0.25초씩 나눠 처리합니다. */
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
 
         /**
          * @brief 공유 땅을 빌립니다. 월드 원점이 땅의 원점과 셀 크기를 따릅니다(공원은 셀 격자가 없으므로 월드 사각형으로 얻습니다). @p pLand 가 nullptr 이면 빌린 땅을 반납합니다.
@@ -361,10 +362,10 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        void stepFixed( float32 deltaTime );
+        void stepFixed( StepSeconds step );
         void spawnGuests( float32 deltaTime );
         void updateGuests( float32 deltaTime );
-        void runRides( float32 deltaTime );
+        void runRides( StepSeconds step );
         void chooseNextRide( ParkGuest& guest );
         /** @brief @p destination 까지의 길을 정하고 첫 다리를 걷기 시작합니다. */
         void startWalking( ParkGuest& guest, const float3& destination );

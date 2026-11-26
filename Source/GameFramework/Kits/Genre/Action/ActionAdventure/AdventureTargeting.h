@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -76,7 +77,7 @@ namespace sw
         /** @brief 잡은 채로 다음 대상으로 넘깁니다(@p direction 이 1이면 오른쪽, −1이면 왼쪽). */
         uint64 cycleTarget( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate, int32 direction );
         /** @brief 한 틱 진행합니다. 대상 유지 여부와 몸놀림 상태를 갱신합니다. */
-        AdventureTargetingState update( const float3& eye, const vector<LockOnCandidate>& listCandidate, const float2& moveInput, bool bJumpPressed, float32 deltaTime );
+        AdventureTargetingState update( const float3& eye, const vector<LockOnCandidate>& listCandidate, const float2& moveInput, bool bJumpPressed, GameSeconds frameTime );
         /**
          * @brief 이동 입력을 월드 방향(XZ, 길이는 입력 크기)으로 바꿉니다. 대상을 잡았으면 대상 쪽이 앞이 되어 옆 입력이 대상을 도는 원의 접선이 되고,
          *        아니면 @p cameraForward 가 앞입니다.

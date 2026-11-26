@@ -22,6 +22,7 @@
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -249,7 +250,7 @@ namespace sw
         [[nodiscard]] expected<int32> addPilot( const MechPilotConfig& config );
         /** @brief 팀 게이지를 정하고(코스트 합) 출격시킵니다. */
         void start();
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
 
         void setInput( int32 pilot, const MechInput& input );
         /** @brief 격추된 동안 다음에 탈 덱 슬롯을 고릅니다. 코스트가 팀의 남은 게이지 안이어야 합니다. */
@@ -293,16 +294,16 @@ namespace sw
 
     private:
         bool isValidPilot( int32 pilot ) const { return pilot >= 0 && pilot < static_cast<int32>( _listPilot.size() ); }
-        void step( float32 deltaTime );
+        void step( StepSeconds step );
         void spawnPilot( int32 pilot, bool bRespawn );
-        void stepPilot( int32 pilot, float32 deltaTime );
-        void stepMovement( int32 pilot, bool bControl, bool bPressedDash, bool bPressedJump, float32 deltaTime );
+        void stepPilot( int32 pilot, StepSeconds step );
+        void stepMovement( int32 pilot, bool bControl, bool bPressedDash, bool bPressedJump, StepSeconds step );
         void stepLockOn( int32 pilot, bool bPressedLockOn, float32 deltaTime );
         void stepWeapons( int32 pilot, float32 deltaTime );
         void stepMelee( int32 pilot, bool bPressedMelee );
-        void stepSkills( int32 pilot, float32 deltaTime );
+        void stepSkills( int32 pilot, StepSeconds step );
         void stepProjectiles( float32 deltaTime );
-        void stepMatch( float32 deltaTime );
+        void stepMatch( StepSeconds step );
         void fireShot( int32 pilot, int32 slotIndex, const MechWeaponSlotDef& slot, bool bPressed );
         void fireSpecial( int32 pilot, int32 slotIndex, const MechWeaponSlotDef& slot );
         /**

@@ -436,23 +436,24 @@ namespace sw
             _velocity._y = MathUtil::max( _velocity._y, -_settings._wallSlideSpeed );
     }
 
-    void PlatformerMotor2D::update( const PlatformTileMap& map, const PlatformerInput& input, float32 deltaTime )
+    void PlatformerMotor2D::update( const PlatformTileMap& map, const PlatformerInput& input, GameSeconds frameTime )
     {
-        _events = 0;
+        const float32 deltaTime = frameTime.count();
+        _events                 = 0;
         if ( deltaTime <= 0.0f )
             return;
         const bool bWasGrounded = _bGrounded != SW_FALSE;
         if ( bWasGrounded )
             _coyote.start( _settings._coyoteTime );
         else
-            _coyote.update( deltaTime );
+            _coyote.update( frameTime );
         if ( input._bJumpPressed )
             _jumpBuffer.start( _settings._jumpBufferTime );
         else
-            _jumpBuffer.update( deltaTime );
-        _wallLock.update( deltaTime );
-        _dashCooldown.update( deltaTime );
-        _dropThrough.update( deltaTime );
+            _jumpBuffer.update( frameTime );
+        _wallLock.update( frameTime );
+        _dashCooldown.update( frameTime );
+        _dropThrough.update( frameTime );
         if ( bWasGrounded )
         {
             _extraJumpsLeft = _settings._extraJumpCount;
@@ -489,7 +490,7 @@ namespace sw
 
         if ( _dash.isActive() )
         {
-            if ( _dash.update( deltaTime ) )
+            if ( _dash.update( frameTime ) )
                 _velocity = _velocity * _settings._dashEndSpeedScale; // 대시 끝에 속도를 꺾는다
         }
         else if ( _bClimbing )

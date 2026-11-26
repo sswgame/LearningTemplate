@@ -11,6 +11,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Object/GameObject/Tick/SceneFrameAccess.h"
 
@@ -29,7 +30,7 @@ namespace sw
     public:
         using Callback = Delegate<void()>;
 
-        SceneJobContext( const GameObjectManager& manager, StructuralChangeBuffer& commandBuffer, float32 deltaTime )
+        SceneJobContext( const GameObjectManager& manager, StructuralChangeBuffer& commandBuffer, GameSeconds deltaTime )
             : _pManager{ &manager }
             , _pCommandBuffer{ &commandBuffer }
             , _deltaTime{ deltaTime }
@@ -38,15 +39,15 @@ namespace sw
 
         /** @brief 씬을 읽기 전용으로 봅니다. */
         const GameObjectManager& getManager() const { return *_pManager; }
-        /** @brief 이번 프레임의 시간입니다. */
-        float32 getDeltaTime() const { return _deltaTime; }
+        /** @brief 이번 프레임의 게임 시간입니다(정지면 0, 배율이 곱해졌다) — 실제 시간 · 고정 스텝과 섞이지 않게 형식이 다르고, 수식에는 `count()` 로 푼다. */
+        GameSeconds getDeltaTime() const { return _deltaTime; }
         /** @brief 씬을 바꾸는 일을 틱 뒤 큐에 넣습니다(게임 스레드가 `ApplyPrePhysics` 에서 돌린다). 남의 오브젝트 쓰기 · 구조 변경은 여기로만 간다. */
         void deferPostTick( Callback func );
 
     private:
         const GameObjectManager* _pManager;
         StructuralChangeBuffer*  _pCommandBuffer;
-        float32                  _deltaTime;
+        GameSeconds              _deltaTime;
     };
 
     /**

@@ -243,16 +243,17 @@ namespace sw
                            _pacingProfile.c_str() );
     }
 
-    void ShooterGameModeComponent::updateGame( float32 deltaTime )
+    void ShooterGameModeComponent::updateGame( GameSeconds frameTime )
     {
         updatePlayerView();
         updateFloorSteps();
-        MatchGameModeComponent::updateGame( deltaTime );
+        MatchGameModeComponent::updateGame( frameTime );
     }
 
-    void ShooterGameModeComponent::updateMatch( float32 deltaTime )
+    void ShooterGameModeComponent::updateMatch( GameSeconds frameTime )
     {
-        const float32 step = MathUtil::min( deltaTime, 0.1f );
+        const float32 deltaTime = frameTime.count();
+        const float32 step      = MathUtil::min( deltaTime, 0.1f );
         if ( _bReplica == SW_TRUE )
         {
             updateReplicaEnemies();

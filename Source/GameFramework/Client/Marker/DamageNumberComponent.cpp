@@ -60,7 +60,7 @@ namespace sw
     {
         Component::onTick( context );
 
-        const bool bExpired = LifeSpanUtil::advance( _currentLife, _lifeTime, context.getDeltaTime() );
+        const bool bExpired = LifeSpanUtil::advance( _currentLife, _lifeTime, context.getDeltaTime().count() );
         if ( _lifeTime > 0.0f )
         {
             _alpha             = computeAlpha();
@@ -80,7 +80,7 @@ namespace sw
             {
                 // 위로 떠오른다 — 월드 위다(돌아가거나 커진 부모 아래에서도). 마커가 이 점을 따라간다.
                 float3 pos = pSceneComp->getWorldPosition();
-                pos._y += _floatSpeed * context.getDeltaTime();
+                pos._y += _floatSpeed * context.getDeltaTime().count();
                 pSceneComp->setWorldPosition( pos );
             }
         }

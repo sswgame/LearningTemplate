@@ -136,7 +136,7 @@ SW_TEST_CASE( KillcamTest, ComponentCutsToItsCameraAndReleases )
     for ( int32 tickIndex = 0; tickIndex < 400 && pKillcam->isPlaying(); ++tickIndex )
     {
         {
-            TickContext context{ *pKillcam->getOwner(), 0.05f };
+            TickContext context{ *pKillcam->getOwner(), GameSeconds{ 0.05f } };
             pKillcam->onTick( context );
         }
     }

@@ -222,7 +222,7 @@ namespace sw
             { (void)self.skipToEnd(); } );
             return;
         }
-        _pendingStep = _player.update( context.getDeltaTime() );
+        _pendingStep = _player.update( context.getDeltaTime().count() );
         // 묶인 오브젝트(남의 오브젝트)에 값 · 스폰 · 구간을 적용하는 것은 틱 뒤(같은 프레임)에 한다 — 틱은 시간만 민다.
         context.deferPostTickOnComponent( *this, []( SequencePlayerComponent& self )
         { self.applyPendingStep(); } );

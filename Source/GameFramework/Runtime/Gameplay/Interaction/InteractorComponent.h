@@ -7,6 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -92,7 +93,7 @@ namespace sw
         /** @brief 강조를 켠 대상(`_highlightComponent`)을 초점에 맞춥니다 — 옛 대상은 끄고 새 대상은 켠다(틱 밖 · 틱 뒤). */
         void syncHighlight( GameObjectManager& manager );
         /** @brief 진행 중인 상호작용을 이어 갑니다. 진행 중에는 대상을 바꾸지 않고, 대상을 쓸 수 없게 됐거나 멀어지면 취소합니다. */
-        void updateActiveSession( const GameObjectManager& manager, const InteractionView& viewer, float32 deltaTime, bool bHeld, bool bPressed );
+        void updateActiveSession( const GameObjectManager& manager, const InteractionView& viewer, GameSeconds frameTime, bool bHeld, bool bPressed );
         /** @brief 가장 알맞은 후보로 초점을 옮기고, 눌렀으면 권한을 확인한 뒤 상호작용을 시작합니다. */
         void updateFocusAndBegin( const GameObjectManager& manager, GameObject& owner, const InteractionView& viewer, bool bPressed );
         /**

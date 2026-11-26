@@ -63,7 +63,7 @@ namespace
         static void update( GameObjectManager& manager, SequencePlayerComponent& player, float32 deltaSeconds )
         {
             {
-                TickContext context{ *player.getOwner(), deltaSeconds };
+                TickContext context{ *player.getOwner(), GameSeconds{ deltaSeconds } };
                 player.onTick( context );
             }
             manager.update( 0.0f ); // 틱 뒤 큐를 비운다(시간은 흐르지 않는다)

@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -38,7 +39,7 @@ namespace sw
     protected:
         void               serializeGameState( StateIO& io ) override;
         [[nodiscard]] bool startGame() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
 
     private:
         /** @brief 쌓인 일정 이벤트를 점유 · 비우기로 잇습니다. */

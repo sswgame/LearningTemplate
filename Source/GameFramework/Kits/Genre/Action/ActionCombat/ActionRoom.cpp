@@ -191,16 +191,17 @@ namespace sw
         return count;
     }
 
-    ActionRoomFrameResult ActionRoom::update( float32 deltaTime, const ActionRoomFrameInput& input )
+    ActionRoomFrameResult ActionRoom::update( GameSeconds frameTime, const ActionRoomFrameInput& input )
     {
+        const float32         deltaTime = frameTime.count();
         ActionRoomFrameResult result{};
         // 음수 시간은 적과 탄을 거꾸로 움직인다.
         if ( _kind == ActionRoomKind::None || deltaTime < 0.0f )
             return result;
 
-        _attackCooldown.update( deltaTime );
-        _dashCooldown.update( deltaTime );
-        _invulnerable.update( deltaTime );
+        _attackCooldown.update( frameTime );
+        _dashCooldown.update( frameTime );
+        _invulnerable.update( frameTime );
 
         if ( input._bDashPressed == SW_TRUE && _dashCooldown.isActive() == false )
         {
@@ -212,7 +213,7 @@ namespace sw
         }
 
         tryPlayerAttack( input );
-        updateActors( deltaTime, input._playerPos._x, input._playerPos._y, result );
+        updateActors( frameTime, input._playerPos._x, input._playerPos._y, result );
         updateProjectiles( deltaTime );
         resolvePlayerHits( input._playerPos._x, input._playerPos._y, result );
         refreshCleared( result );
@@ -297,8 +298,9 @@ namespace sw
         }
     }
 
-    void ActionRoom::updateActors( float32 deltaTime, float32 playerX, float32 playerY, ActionRoomFrameResult& outResult )
+    void ActionRoom::updateActors( GameSeconds frameTime, float32 playerX, float32 playerY, ActionRoomFrameResult& outResult )
     {
+        const float32 deltaTime = frameTime.count();
         for ( Actor& actor : _listActor )
         {
             if ( actor._bAlive == SW_FALSE )
@@ -311,7 +313,7 @@ namespace sw
 
             if ( def._listShot.empty() )
                 continue;
-            actor._attackTimer.update( deltaTime );
+            actor._attackTimer.update( frameTime );
             if ( actor._attackTimer.isActive() )
                 continue;
             // 늦은 시간을 이어서 발사 빈도가 fps 에 묶이지 않게 한다(최대 한 간격까지만 이어 가므로, 멈춘 프레임 뒤에 몰아 쏘지 않는다).

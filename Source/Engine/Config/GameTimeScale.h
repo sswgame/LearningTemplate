@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
+#include "Core/Time/TimeSeconds.h"
 
 namespace sw
 {
@@ -63,12 +64,12 @@ namespace sw
          *        (App 은 `FrameTime::_unscaledDeltaTime`, 서버는 틱 길이). 엔진 없이 게임 인스턴스를 돌리는 쪽은 이 서비스를 세워 직접 적습니다.
          * @details 게임이 멈춰도 도는 것 — 런타임 UI(정지 메뉴의 애니메이션 · 탐색 반복) · 화면 전환 페이드 · 로딩 화면 — 이 읽습니다(유니티 `Time.unscaledDeltaTime`).
          */
-        void setUnscaledDeltaTime( float32 deltaSeconds );
+        void setUnscaledDeltaTime( RealSeconds deltaTime );
         /**
          * @brief 이번 프레임의 실제 경과입니다. 적은 적이 없으면 단언으로 멈춥니다.
          * @details 대신할 값(ImGui 벽시계 · 배율 걸린 경과)을 받지 않습니다 — 받으면 호출부마다 다른 시간을 고르고, 시나리오 녹화(벽시계)와 재생(고정 스텝)이 어긋납니다.
          */
-        float32 getUnscaledDeltaTime() const;
+        RealSeconds getUnscaledDeltaTime() const;
 
     private:
         /** @brief 정지 요청 하나의 구독이 풀렸습니다(@p reason 은 `GamePauseReason`). */

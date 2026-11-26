@@ -739,7 +739,7 @@ namespace sw
         /**
          * @brief 한 프레임이 돌릴 수 있는 고정 스텝 수의 상한입니다.
          * @details 상한을 넘긴 남은 시간은 버립니다. 남기면 느린 프레임이 더 많은 스텝을 불러
-         *          더 느려지는 악순환이 됩니다. FixedTimestep 이 이 값을 적용합니다.
+         *          더 느려지는 악순환이 됩니다. FrameClock 이 이 값을 적용합니다.
          */
         PROPERTY( Min = 1 )
         uint32 _maxFixedStepPerFrame{};

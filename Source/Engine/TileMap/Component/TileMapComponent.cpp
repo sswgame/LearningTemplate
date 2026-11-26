@@ -150,7 +150,7 @@ namespace sw
         }
         if ( _listChunkBatch.empty() )
             return;
-        _elapsedSeconds += context.getDeltaTime();
+        _elapsedSeconds += context.getDeltaTime().count();
         if ( bOwnerMoved )
         {
             for ( int32 chunkIndex = 0; chunkIndex < _chunkGrid.getChunkCount(); ++chunkIndex )

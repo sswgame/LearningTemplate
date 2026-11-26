@@ -180,7 +180,7 @@ namespace sw
         return HubActionResult::Ok;
     }
 
-    HubActionResult HubWorld::moveAvatar( uint32 avatarID, const AbsolutePosition& position, float32 stepSeconds, bool bRiding )
+    HubActionResult HubWorld::moveAvatar( uint32 avatarID, const AbsolutePosition& position, StepSeconds stepSeconds, bool bRiding )
     {
         const float3& target  = position._value; // 규칙의 계산은 모두 절대 자리다
         HubAvatar*    pAvatar = findAvatarMutable( avatarID );
@@ -188,7 +188,7 @@ namespace sw
             return HubActionResult::UnknownTarget;
         // 예산은 이 걸음의 시간이 채운다 — 걸음을 낸 시간(입력 몫)과 같은 시계다.
         const float32 speedLimit = bRiding ? _rules._rideSpeed : _rules._moveSpeed;
-        pAvatar->_moveBudget     = MathUtil::min( _rules._maxMoveStep, pAvatar->_moveBudget + speedLimit * MathUtil::max( stepSeconds, 0.0f ) );
+        pAvatar->_moveBudget     = MathUtil::min( _rules._maxMoveStep, pAvatar->_moveBudget + speedLimit * MathUtil::max( stepSeconds.count(), 0.0f ) );
         if ( isInsideHub( target._x, target._z ) == false || MathUtil::isFinite( target._y ) == false )
             return HubActionResult::StepTooLong;
         // 걸음 길이만 보면 몰아서 아무 속도로나 갈 수 있었다(감사 K-1 — 공격에는 서버 쿨다운이 있는데 이동에는 없었다). 간 거리를
@@ -262,13 +262,13 @@ namespace sw
     {
         for ( auto& entry : _mapAvatar )
         {
-            (void)entry.second._attackCooldown.update( deltaSeconds );
+            (void)entry.second._attackCooldown.update( GameSeconds{ deltaSeconds } );
         }
         for ( HubPlacementState& spawn : _listPlacement )
         {
             if ( spawn._bPresent != SW_FALSE )
                 continue;
-            (void)spawn._respawn.update( deltaSeconds );
+            (void)spawn._respawn.update( GameSeconds{ deltaSeconds } );
             if ( spawn._respawn.isActive() )
                 continue;
             spawn._bPresent = SW_TRUE;

@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -41,7 +42,7 @@ namespace sw
 
     protected:
         [[nodiscard]] optional<uint8> openPlayers( bool bAutoPlay ) override;
-        void                          stepMatch( float32 deltaTime ) override;
+        void                          stepMatch( GameSeconds frameTime ) override;
 
     private:
         SW_TRANSIENT SkirmishLockstepLink _lockstep; ///< 2 인 대전(넷 세션이 열렸을 때)의 락스텝. 판 상태가 아니라 세이브에 싣지 않는다

@@ -107,9 +107,8 @@ namespace sw
         // 첫 패킷 전에 파이프라인을 묶는 일(트랜지언트 나눔 · 비동기 큐 계획)이 읽을 설정 — 게임 스레드가 뜬 사본이다(화면 밖 렌더러는 주 렌더러의 사본).
         _state._settings        = settings;
         _state._occlusionConfig = occlusionConfig;
-        // 인스턴스 애니메이션 시계는 여기서 한 번 돌린다(GameTimer 는 만들면 멈춘 상태다).
-        _state._deform._animationTimer.resetTimer();
-        _state._deform._animationTimer.startTimer();
+        // 인스턴스 애니메이션 시계는 렌더러를 연 때부터 잰다.
+        _state._deform._animationTimer.restart();
         if ( pDevice == nullptr )
         {
             _status        = FrameRendererStatus::Failed;

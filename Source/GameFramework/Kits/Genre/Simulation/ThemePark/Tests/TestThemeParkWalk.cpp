@@ -54,7 +54,7 @@ SW_TEST_CASE( ThemeParkWalkTest, GuestWalksAroundBlockedCells )
     int32             step      = 0;
     for ( ; step < kThemeParkWalkStepLimit && test._park.getGuests().front()._state == ParkGuestState::Walking; ++step )
     {
-        test._park.update( kThemeParkWalkStep );
+        test._park.update( GameSeconds{ kThemeParkWalkStep } );
         SW_EXPECT_FALSE( test.isGuestOnBlockedCell() );
         if ( bRestored || test._park.getGuests().front()._listWalkPoint.empty() )
             continue;
@@ -85,7 +85,7 @@ SW_TEST_CASE( ThemeParkWalkTest, EmptyGridGuestWalksStraight )
     bool bCrossed = false;
     for ( int32 step = 0; step < kThemeParkWalkStepLimit && test._park.getGuests().front()._state == ParkGuestState::Walking; ++step )
     {
-        test._park.update( kThemeParkWalkStep );
+        test._park.update( GameSeconds{ kThemeParkWalkStep } );
         bCrossed = bCrossed || test.isGuestOnBlockedCell();
     }
     SW_EXPECT_TRUE( bCrossed );
@@ -111,9 +111,9 @@ SW_TEST_CASE( ThemeParkWalkTest, LongQueueFollowsTheWalkRoute )
     }
     for ( int32 step = 0; step < kThemeParkWalkStepLimit && test._park.getRides()[0]._listQueue.size() + 1 < static_cast<size_t>( kGuestCount ); ++step )
     {
-        test._park.update( kThemeParkWalkStep );
+        test._park.update( GameSeconds{ kThemeParkWalkStep } );
     }
-    test._park.update( kThemeParkWalkStep );
+    test._park.update( GameSeconds{ kThemeParkWalkStep } );
     SW_REQUIRE_EQUAL( size_t( kGuestCount - 1 ), test._park.getRides()[0]._listQueue.size() );
     bool bPastWall = false;
     for ( const ParkGuest& guest : test._park.getGuests() )

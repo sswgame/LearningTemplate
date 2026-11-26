@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -141,7 +142,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateMatch( float32 deltaTime ) override;
+        void               updateMatch( GameSeconds frameTime ) override;
         /** @brief 승리면 흥정한 보상을 돈으로 냅니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 
@@ -165,7 +166,7 @@ namespace sw
         /** @brief 흥정이 끝났으면 명상으로 횟수를 채우고 조사로 넘어갑니다. */
         void beginInvestigation();
         void beginHunt();
-        void updateHunt( float32 deltaTime );
+        void updateHunt( GameSeconds frameTime );
         /** @brief 괴물에게 속성 @p element 의 피해 @p baseDamage 를 줍니다(상성 반영). 쓰러지면 승리입니다. */
         void damageMonster( float32 baseDamage, const hashed_string& element );
         /** @brief 쌓인 도감 · 조사 알림을 로그로 냅니다. */

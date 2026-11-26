@@ -141,8 +141,9 @@ namespace sw
         addProgress( 0.0f );
     }
 
-    void InteractionProgress::update( float32 deltaTime )
+    void InteractionProgress::update( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( _bCompleted == SW_TRUE || deltaTime <= 0.0f )
             return;
         _time += deltaTime;
@@ -173,7 +174,7 @@ namespace sw
         const bool bSkillChecks = _pJudge != nullptr && _config._skillCheckInterval > 0.0f;
         if ( bSkillChecks && _bSkillCheckPending == SW_FALSE )
         {
-            _skillCheckCountdown.update( deltaTime );
+            _skillCheckCountdown.update( frameTime );
             if ( _skillCheckCountdown.isActive() == false )
             {
                 const int32 pick    = _random.nextInt( 0, participantCount - 1 );

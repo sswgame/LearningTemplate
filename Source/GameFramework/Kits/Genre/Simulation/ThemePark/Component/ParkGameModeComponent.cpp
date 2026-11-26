@@ -83,12 +83,13 @@ namespace sw
         addMoneyResult( outListValue, _wallet.getBalance( _settings._currency ) - _startingCash );
     }
 
-    void ParkGameModeComponent::updateGame( float32 deltaTime )
+    void ParkGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
 
-        _simulation.update( deltaTime );
+        _simulation.update( frameTime );
         if ( isAutoPlayOn() )
         {
             _autoBuildTimer += deltaTime;
@@ -101,7 +102,7 @@ namespace sw
         // 열차만 나아간다. 차 · 평지 놀이기구의 모습은 클라이언트 뷰가 이 상태를 읽어 맞춘다.
         for ( unique_ptr<CoasterRuntime>& pCoaster : _listCoaster )
         {
-            pCoaster->_train.step( deltaTime );
+            pCoaster->_train.step( frameTime );
         }
     }
 

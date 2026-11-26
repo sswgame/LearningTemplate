@@ -326,8 +326,9 @@ namespace sw
         return true;
     }
 
-    void AdventureDungeonState::update( float32 deltaTime, GameFlags& flags )
+    void AdventureDungeonState::update( GameSeconds frameTime, GameFlags& flags )
     {
+        const float32 deltaTime = frameTime.count();
         if ( _pCatalog == nullptr || deltaTime <= 0.0f )
             return;
         const vector<AdventureDungeonDef>& listDungeon = _pCatalog->getAll();
@@ -342,13 +343,13 @@ namespace sw
                 const bool                bTorchTimerRunning = def._kind == AdventureDeviceKind::TorchGroup && device._bActive == SW_FALSE && device._litCount > 0 && def._duration > 0.0f;
                 if ( def._kind == AdventureDeviceKind::TimedSwitch && device._bActive == SW_TRUE )
                 {
-                    device._timer.update( deltaTime );
+                    device._timer.update( frameTime );
                     if ( device._timer.isActive() == false )
                         setDeviceActive( dungeon, static_cast<int32>( deviceIndex ), false, flags );
                 }
                 else if ( bTorchTimerRunning )
                 {
-                    device._timer.update( deltaTime );
+                    device._timer.update( frameTime );
                     if ( device._timer.isActive() == false )
                     {
                         device._litCount = 0;

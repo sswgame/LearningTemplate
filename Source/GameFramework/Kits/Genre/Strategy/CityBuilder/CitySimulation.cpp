@@ -526,14 +526,14 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 시간
     // ------------------------------------------------------------------------------
-    float32 CitySimulation::update( float32 deltaTime, float32 timeScale )
+    float32 CitySimulation::update( GameSeconds frameTime, float32 timeScale )
     {
-        const int32 stepCount = _stepTimer.consumeScaled( deltaTime, timeScale );
+        const int32 stepCount = _stepTimer.consumeScaled( frameTime, timeScale );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepFixed( _stepTimer.getStep() );
         }
-        return static_cast<float32>( stepCount ) * _stepTimer.getStep();
+        return static_cast<float32>( stepCount ) * _stepTimer.getStep().count();
     }
 
     void CitySimulation::pollEvents( const ConsumerLease& lease, vector<CityEvent>& outListEvent )
@@ -541,8 +541,9 @@ namespace sw
         _eventBuffer.moveAllTo( lease, outListEvent );
     }
 
-    void CitySimulation::stepFixed( float32 deltaTime )
+    void CitySimulation::stepFixed( StepSeconds step )
     {
+        const float32 deltaTime = step.count();
         _time += deltaTime;
         // 시각은 서비스 만료(차이)만 본다 — float32 걸음을 지키려 기준을 옮기고, 비교하는 서비스 시각도 같이 옮긴다(감사 K-5).
         if ( TimeRolloverUtil::rebase( _time ) )

@@ -84,7 +84,7 @@ namespace sw
             enterState( SocketBindingState::ReleasedAnimated );
             return;
         }
-        _returnElapsed += MathUtil::max( 0.0f, context.getDeltaTime() );
+        _returnElapsed += MathUtil::max( 0.0f, context.getDeltaTime().count() );
         const float32 progress = getReturnProgress();
         if ( progress >= 1.0f )
         {

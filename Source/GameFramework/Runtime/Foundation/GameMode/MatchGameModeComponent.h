@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -43,7 +44,7 @@ namespace sw
         explicit MatchGameModeComponent( float32 resultHoldSeconds );
 
         /** @brief 도는 판의 걸음입니다. 시간이 흐른 프레임에만(@p deltaTime 0 초과), 판이 끝날 때까지 불립니다(`updateGame` 계약). */
-        virtual void updateMatch( float32 deltaTime ) = 0;
+        virtual void updateMatch( GameSeconds frameTime ) = 0;
         /**
          * @brief 디렉터 계약 ③ — 판을 결과 @p resultName(`kWinResult` 등)으로 끝냅니다. `_resultHoldSeconds` 뒤 미니게임을 끝내며, 0 이면 지금 끝낸다.
          * @details 판마다 한 번이다. 넘길 값은 미니게임을 끝낼 때 `collectMinigameResult` 가 모은다.
@@ -51,7 +52,7 @@ namespace sw
         void endMatch( const hashed_string& resultName );
 
         /** @brief 도는 판이면 `updateMatch` 를, 끝난 판이면 결과를 보이는 시간을 흘립니다. */
-        void updateGame( float32 deltaTime ) override;
+        void updateGame( GameSeconds frameTime ) override;
 
     private:
         /**

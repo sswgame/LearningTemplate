@@ -20,6 +20,7 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
 #include "Core/Time/ExponentialBackoff.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioSoundPlayer.h"
@@ -270,7 +271,7 @@ namespace sw
             {
             }
 
-            void update( float32 unscaledDeltaSeconds ) override { _owner.update( unscaledDeltaSeconds ); }
+            void update( RealSeconds unscaledDeltaTime ) override { _owner.update( unscaledDeltaTime.count() ); }
             void setGamePaused( bool bPaused ) override { _owner.setGamePaused( bPaused ); }
 
         private:

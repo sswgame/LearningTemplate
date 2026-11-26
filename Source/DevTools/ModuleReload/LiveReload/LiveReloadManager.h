@@ -25,7 +25,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Time/GameTimer.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/AssetReload/ReloadTracker.h"
 #include "DevTools/ModuleReload/LiveReload/DeferredLibraryUnloadQueue.h"
@@ -249,7 +249,7 @@ namespace sw
             void*                    _pLibraryModule;
             FileStamp                _loadedSourceStamp; ///< 로드한 원본의 도장. 이것과 **다르면** 다시 빌드된 것이다(초 단위 크기 비교는 같은 초 안의 빌드를 놓쳤다)
             FileStamp                _debounceStamp;     ///< 조용해지기를 기다리는 동안 마지막으로 본 원본의 도장
-            GameTimer                _debounceTimer;
+            Stopwatch                _debounceTimer;
             atomic<bool>             _bPendingReload;
             atomic<bool>             _bMtimeDebouncing;
             atomic<bool>             _bForceReload;

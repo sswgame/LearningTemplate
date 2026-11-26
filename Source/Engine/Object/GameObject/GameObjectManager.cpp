@@ -167,7 +167,7 @@ namespace sw
 
             void runRange( uint32 start, uint32 end ) const
             {
-                SceneJobContext context{ *_pManager, *_pCommandBuffer, _deltaTime };
+                SceneJobContext context{ *_pManager, *_pCommandBuffer, GameSeconds{ _deltaTime } };
                 for ( uint32 jobIndex = start; jobIndex < end; ++jobIndex )
                 {
                     const ScopedFrameProfile systemScope{ _arrEntry[jobIndex]._scopeID };
@@ -186,7 +186,7 @@ namespace sw
         _pCommandBuffer->deferPostTick( std::move( func ) );
     }
 
-    TickContext::TickContext( GameObject& self, float32 deltaTime )
+    TickContext::TickContext( GameObject& self, GameSeconds deltaTime )
         : SceneJobContext{ *self._pOwnerManager, self._pOwnerManager->_structuralChangeBuffer, deltaTime } // 디스패치 안이라 getMutableManager(틱 단언)를 지나지 않는다
         , _pSelf{ &self }
         , _pSceneManager{ self._pOwnerManager }
@@ -195,14 +195,14 @@ namespace sw
     }
 
     TickContext::TickContext( GameObject& self, const TickTurn& turn )
-        : TickContext{ self, turn._deltaTime }
+        : TickContext{ self, GameSeconds{ turn._deltaTime } }
     {
         _intervalCount = turn._intervalCount;
     }
 
     void ISceneParallelFrameSystem::runMain( GameObjectManager& manager, float32 deltaTime )
     {
-        SceneJobContext context{ manager, manager._structuralChangeBuffer, deltaTime };
+        SceneJobContext context{ manager, manager._structuralChangeBuffer, GameSeconds{ deltaTime } };
         runOnAnyThread( context );
     }
 

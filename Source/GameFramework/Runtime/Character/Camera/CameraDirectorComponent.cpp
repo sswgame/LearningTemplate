@@ -509,7 +509,7 @@ namespace sw
         Component::onTick( context );
         if ( _bViewRequested == false )
             releaseViewOverride(); // 덮은 쪽이 이번 틱까지 다시 묻지 않았다 — 풀기를 그쪽에 맡기지 않는다
-        updateCamera( context.getDeltaTime() );
+        updateCamera( context.getDeltaTime().count() );
         _bViewRequested = false;
     }
 
@@ -607,7 +607,7 @@ namespace sw
             return;
         // 포토 모드는 게임이 멈춰도 움직이므로 실제 경과로 돌고, 게임 카메라에는 입력을 주지 않는다.
         if ( _photoMode.isActive() )
-            gatherPhotoModeInput( game::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() );
+            gatherPhotoModeInput( game::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count() );
         else
         {
             gatherContextInput();

@@ -120,7 +120,7 @@ namespace sw::editor
             {
                 if ( getState()._recorder.isRecording() == false )
                     return;
-                getState()._recorder.update( editor::getSubsystem<InputManager>(), editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() );
+                getState()._recorder.update( editor::getSubsystem<InputManager>(), editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count() );
             }
         };
     } // namespace

@@ -162,8 +162,9 @@ namespace sw
         inoutClaim = 0;
     }
 
-    void SmartObjectDemoComponent::updateGame( float32 deltaTime )
+    void SmartObjectDemoComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         (void)deltaTime; // 시각은 명령으로만 흐른다
     }
 

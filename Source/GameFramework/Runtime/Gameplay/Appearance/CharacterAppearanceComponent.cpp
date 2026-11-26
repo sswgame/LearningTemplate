@@ -384,7 +384,7 @@ namespace sw
             return;
         if ( hasSurfaceState() )
         {
-            _surface.update( context.getDeltaTime() ); // 감쇠한다. 바뀐 프레임에만 머티리얼로 올라간다
+            _surface.update( context.getDeltaTime().count() ); // 감쇠한다. 바뀐 프레임에만 머티리얼로 올라간다
             // 부품은 다른 오브젝트의 메시라 머티리얼 올리기는 틱 뒤(같은 프레임)에 한다.
             if ( _surfaceAppliedRevision != _surface.getRevision() )
                 context.deferPostTickOnComponent( *this, []( CharacterAppearanceComponent& self, GameObjectManager& manager )

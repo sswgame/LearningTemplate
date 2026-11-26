@@ -166,8 +166,9 @@ namespace sw
         return true;
     }
 
-    void SurvivalHorrorSession::update( float32 deltaTime, bool bInDarkness )
+    void SurvivalHorrorSession::update( GameSeconds frameTime, bool bInDarkness )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         if ( _bFlashlightOn == SW_TRUE && _battery.drain( deltaTime ) == false )
@@ -180,8 +181,8 @@ namespace sw
         if ( bInDarkness && _bFlashlightOn == SW_FALSE )
             (void)_sanity.drain( deltaTime ); // 0 에 붙어 있어도 계속 깎는 중이므로 회복 지연이 다시 센다
         else
-            _sanity.update( deltaTime );
-        _battery.update( deltaTime );
+            _sanity.update( frameTime );
+        _battery.update( frameTime );
         refreshHallucination();
     }
 

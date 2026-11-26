@@ -65,7 +65,7 @@ namespace sw
         if ( configure( engine::getSubsystem<EngineConfig>()._subtitles ) == false )
             return SubsystemInitResult::Failed;
         _pUI                = &engine::getSubsystem<UISystem>();
-        _updateSubscription = _pUI->onUpdateBeforeScreens().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UISubtitleSubsystem::update, this ) );
+        _updateSubscription = _pUI->onUpdateBeforeScreens().add( SW_DELEGATE_METHOD( Delegate<void( RealSeconds )>, &UISubtitleSubsystem::update, this ) );
         return SubsystemInitResult::Succeeded;
     }
 
@@ -165,13 +165,13 @@ namespace sw
         _screen.reset();
     }
 
-    void UISubtitleSubsystem::update( float32 deltaSeconds )
+    void UISubtitleSubsystem::update( RealSeconds unscaledDeltaTime )
     {
         // 1) 시간: 게임이 멈추면 게임 소리 · 시퀀스와 같이 선다(실제 시간으로 흐르면 다시 시작한 뒤 줄이 소리보다 먼저 사라진다). 설정이 꺼져 있어도 흐른다(켜면 지금 줄부터 보인다). 음성이 나는 줄은 시간이 다 돼도 남는다.
         for ( UISubtitleLine& line : _listActive )
         {
             if ( _bGamePaused == SW_FALSE || line._bRunsInGamePause )
-                line._remainingSeconds -= deltaSeconds;
+                line._remainingSeconds -= unscaledDeltaTime.count();
         }
         VectorUtil::removeIf( _listActive, []( const UISubtitleLine& line )
         { return line._remainingSeconds <= 0.0f && line._bVoicePlaying == false; } );

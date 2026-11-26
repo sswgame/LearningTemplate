@@ -15,6 +15,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -82,7 +83,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateMatch( float32 deltaTime ) override;
+        void               updateMatch( GameSeconds frameTime ) override;
         /** @brief 이겼으면 결과 값 `money`(`_victoryMoney`)를 냅니다. 지거나 비기면 넘길 값이 없다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 
@@ -101,7 +102,7 @@ namespace sw
         /** @brief 받아 둔 입력 명령으로 한 걸음의 입력을 만듭니다. 모은 누름은 여기서 비운다. */
         MechInput consumePlayerInput();
         /** @brief 컴퓨터가 쥔 @p pilot 의 한 걸음 입력입니다 — 가까운 적에게 다가가 쏘고, 거리를 지키며 옆으로 돌고, 닿으면 벤다. */
-        MechInput       makeBotInput( int32 pilot, float32 deltaTime );
+        MechInput       makeBotInput( int32 pilot, StepSeconds step );
         optional<int32> findNearestEnemy( int32 pilot ) const;
         /** @brief 판의 알림 @p event 의 소리입니다 — 특수기는 슬롯, 근접은 기술 표, 나머지는 알림마다 하나다. 없으면 빈 이름입니다. */
         hashed_string findEventSound( const MechArenaEvent& event ) const;

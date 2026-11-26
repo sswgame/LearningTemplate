@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -104,7 +105,7 @@ namespace sw
                                        Inventory& itemBox );
 
         /** @brief 시간을 진행합니다. 손전등 배터리, 어둠에서의 정신력 감소, 밝은 곳에서의 회복을 처리합니다. */
-        void update( float32 deltaTime, bool bInDarkness );
+        void update( GameSeconds frameTime, bool bInDarkness );
 
         // ── 가방, 상자, 조합 ───────────────────────────────────────────────
         GridInventory&       getInventory() { return *_pInventory; }

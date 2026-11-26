@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 namespace sw
 {
@@ -52,21 +53,6 @@ namespace sw
             _remaining             = interval + lateness;
         }
 
-        /**
-         * @brief 반복 간격 하나를 한 스텝 돌립니다.
-         * @details `tick` 한 뒤 @p bWant(누르고 있음, 사정거리 안)이고 끝나 있으면 `restart( interval )` 하고 true 를 반환한다. 이번 스텝에 한 번만 true 이다.
-         *          "시간을 흘리고, 원하고 끝났으면 늦음을 넘겨 다시 시작한다"를 한 줄로 합친 것이다.
-         *          손으로 `x -= dt; if ( want && x <= 0 ) x = interval;` 을 쓰면 지나친 시간을 버려서 빈도가 스텝 크기에 매인다.
-         *          0.1 초 스텝에 0.25 초 간격이면 0.3 초마다 발생한다.
-         */
-        constexpr bool updateRepeat( float32 deltaTime, float32 interval, bool bWant )
-        {
-            (void)update( deltaTime ); // 끝난 걸음인지는 아래 isActive 로 본다. 원하지 않는 걸음에도 시간은 흐른다.
-            if ( bWant == false || isActive() )
-                return false;
-            restart( interval );
-            return true;
-        }
         /** @brief 남은 시간을 @p duration 까지 늘립니다. 이미 더 길게 남았으면 그대로이며, 무적이나 부스트가 겹칠 때 씁니다. */
         constexpr void extendTo( float32 duration )
         {
@@ -78,10 +64,27 @@ namespace sw
         constexpr void clear() { _remaining = 0.0f; }
 
         /**
-         * @brief @p deltaTime 만큼 흘립니다. 남아 있던 시간이 이번에 0 이하가 됐으면 true 이며, 끝난 스텝에 한 번만 true 입니다.
-         * @details 이미 끝나 있었으면 늦음을 지우고 false 를 반환한다. @p deltaTime 이 0 이하면(일시정지, 0 스텝) 아무것도 하지 않는다.
+         * @brief 게임 시간 @p deltaTime 만큼 흘립니다. 남아 있던 시간이 이번에 0 이하가 됐으면 true 이며, 끝난 스텝에 한 번만 true 입니다.
+         * @details 이미 끝나 있었으면 늦음을 지우고 false 를 반환한다. 0 이하면(일시정지, 0 스텝) 아무것도 하지 않는다.
+         *          받는 시간은 게임 시간뿐이다(고정 스텝 하나는 게임 시간으로 넓어진다) — 실제 시간 · 맨 float 는 컴파일되지 않는다(결함 이력 모양 1).
          */
-        constexpr bool update( float32 deltaTime )
+        constexpr bool update( GameSeconds deltaTime ) { return tickSeconds( deltaTime.count() ); }
+        /**
+         * @brief 반복 간격 하나를 한 스텝 돌립니다.
+         * @details 흘린 뒤 @p bWant(누르고 있음, 사정거리 안)이고 끝나 있으면 `restart( interval )` 하고 true 를 반환한다. 이번 스텝에 한 번만 true 이다.
+         *          손으로 `x -= dt; if ( want && x <= 0 ) x = interval;` 을 쓰면 지나친 시간을 버려서 빈도가 스텝 크기에 매인다.
+         *          0.1 초 스텝에 0.25 초 간격이면 0.3 초마다 발생한다.
+         */
+        constexpr bool updateRepeat( GameSeconds deltaTime, float32 interval, bool bWant ) { return repeatSeconds( deltaTime.count(), interval, bWant ); }
+
+        /** @brief 아직 남아 있으면(쿨다운 중이거나 지속 중이면) true 입니다. */
+        constexpr bool isActive() const { return _remaining > 0.0f; }
+        /** @brief 남은 시간(0 이상)입니다. 화면 표시와 비율 계산에 씁니다. */
+        constexpr float32 getRemaining() const { return _remaining > 0.0f ? _remaining : 0.0f; }
+
+    private:
+        /** @brief `update` 의 몸통 — 시계를 가린 뒤의 초입니다. */
+        constexpr bool tickSeconds( float32 deltaTime )
         {
             if ( deltaTime <= 0.0f )
                 return false;
@@ -93,11 +96,15 @@ namespace sw
             _remaining = 0.0f;
             return false;
         }
-
-        /** @brief 아직 남아 있으면(쿨다운 중이거나 지속 중이면) true 입니다. */
-        constexpr bool isActive() const { return _remaining > 0.0f; }
-        /** @brief 남은 시간(0 이상)입니다. 화면 표시와 비율 계산에 씁니다. */
-        constexpr float32 getRemaining() const { return _remaining > 0.0f ? _remaining : 0.0f; }
+        /** @brief `updateRepeat` 의 몸통입니다. */
+        constexpr bool repeatSeconds( float32 deltaTime, float32 interval, bool bWant )
+        {
+            (void)tickSeconds( deltaTime ); // 끝난 걸음인지는 아래 isActive 로 본다. 원하지 않는 걸음에도 시간은 흐른다.
+            if ( bWant == false || isActive() )
+                return false;
+            restart( interval );
+            return true;
+        }
     };
 } // namespace sw
 

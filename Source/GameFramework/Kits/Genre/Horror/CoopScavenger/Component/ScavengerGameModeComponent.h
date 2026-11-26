@@ -15,6 +15,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -164,7 +165,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
-        void               updateMatch( float32 deltaTime ) override;
+        void               updateMatch( GameSeconds frameTime ) override;
 
     private:
         /** @brief 씬 데이터가 가리키는 위성 · 가게 · 아이템이 카탈로그에 있는지 봅니다. 없으면 오류를 남기고 false 입니다. */
@@ -174,7 +175,7 @@ namespace sw
         /** @brief 내려 있는 동안만 월드 상태의 시계(와 날씨)를 흘립니다. */
         void updateClock();
         /** @brief 승무원 하나의 명령을 적용합니다. */
-        void applyCommand( int32 player, const ScavengerCommand& command, float32 deltaTime );
+        void applyCommand( int32 player, const ScavengerCommand& command, GameSeconds frameTime );
         /** @brief 쓰기 — 회사의 우주선 안이면 팔고, 우주선 안이면 싣고, 바닥 고철이 있으면 줍고, 아니면 자물쇠 따개로 곁의 잠긴 문을 엽니다. */
         void use( int32 player );
         /** @brief 레버 — 궤도면 (마감 날이면 회사로 잡고) 내리고, 우주선 안이면 이륙합니다. */

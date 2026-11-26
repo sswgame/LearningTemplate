@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -98,7 +99,7 @@ namespace sw
         bool join( uint32 actorID );
         /** @brief 떠납니다. 붙어 있지 않았으면 false 입니다. */
         bool leave( uint32 actorID );
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
         /**
          * @brief 스킬 체크에 응답합니다. @p pressTime 은 `getTime()` 시계의 시각입니다.
          * @return 그 사람에게 뜬 체크가 있어서 판정했으면 true 입니다. 성공과 실패는 이벤트로 알립니다. 체크가 없으면 false 입니다.

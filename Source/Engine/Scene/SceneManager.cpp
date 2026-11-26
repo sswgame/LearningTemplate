@@ -990,7 +990,7 @@ namespace sw
         return nullptr;
     }
 
-    void SceneManager::updatePreviewScenes( float32 deltaTime, vector_reference<const uint32> listDrawnSceneKey )
+    void SceneManager::updatePreviewScenes( RealSeconds unscaledDeltaTime, vector_reference<const uint32> listDrawnSceneKey )
     {
         if ( _listPreviewScene.empty() )
             return;
@@ -1000,7 +1000,7 @@ namespace sw
             const bool bManagerTicks = entry._policy._tick == ScenePreviewTick::WhenDrawn;
             if ( bManagerTicks == false || VectorUtil::contains( listDrawnSceneKey, entry._key ) == false )
                 continue;
-            entry._scene->update( deltaTime * entry._policy._timeScale );
+            entry._scene->update( unscaledDeltaTime.count() * entry._policy._timeScale ); // 미리보기 씬의 게임 시간 = 실제 시간 × 정책 배율
             ++entry._tickCount;
         }
     }

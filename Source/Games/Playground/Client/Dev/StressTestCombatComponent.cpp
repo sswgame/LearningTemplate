@@ -179,7 +179,7 @@ namespace sw
         const GameObjectManager& sceneManager = context.getManager();
         if ( sceneManager.resolveGameObject( _enemy ) == nullptr || sceneManager.resolveGameObject( _sword ) == nullptr )
             return;
-        _elapsed += context.getDeltaTime();
+        _elapsed += context.getDeltaTime().count();
         ++_frame;
 
         // 적 · 칼의 컴포넌트(알림 기록 · 래그돌)는 다른 워커가 같은 순간 틱하며 쓸 수 있어 틱 안에서 읽지 않는다 — 읽기 · 물리 · 질의 · 스폰 모두

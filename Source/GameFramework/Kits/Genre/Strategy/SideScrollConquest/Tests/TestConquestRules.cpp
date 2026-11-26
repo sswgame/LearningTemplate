@@ -228,7 +228,7 @@ namespace
         {
             for ( int32 step = 0; step < stepCount; ++step )
             {
-                _world.update( 0.5f );
+                _world.update( sw::GameSeconds{ 0.5f } );
             }
         }
 
@@ -693,7 +693,7 @@ SW_TEST_CASE_F( ConquestRulesTest, BrokenInput )
 
     sw::ConquestWorld empty;
     // 열지 않은 판이다
-    empty.update( 1.0f );
+    empty.update( sw::GameSeconds{ 1.0f } );
     SW_EXPECT_EQUAL( 0, empty.computePopulationCap() );
     SW_EXPECT_EQUAL( 0, empty.computeWaveSize() );
     SW_EXPECT_FALSE( empty.spawnUnit( "spear", sw::ConquestTeam::Player, 0.0f, sw::ConquestOrder::Hold ).has_value() );
@@ -722,7 +722,7 @@ SW_TEST_CASE_F( ConquestRulesTest, StateRoundTrip )
     SW_EXPECT_TRUE( spawn( "ladder", sw::ConquestTeam::Player, 94.0f, sw::ConquestOrder::Charge ) >= 1 );
     _world.setCommanderMove( 0.5f );
     run( 3 );
-    _world.update( 0.25f ); // 고정 걸음에 못 미친 시간도 싣는다
+    _world.update( sw::GameSeconds{ 0.25f } ); // 고정 걸음에 못 미친 시간도 싣는다
 
     sw::Archive written;
     _world.writeState( written );
@@ -741,8 +741,8 @@ SW_TEST_CASE_F( ConquestRulesTest, StateRoundTrip )
 
     for ( int32 step = 0; step < 20; ++step )
     {
-        _world.update( 0.5f );
-        restored.update( 0.5f );
+        _world.update( sw::GameSeconds{ 0.5f } );
+        restored.update( sw::GameSeconds{ 0.5f } );
     }
     SW_EXPECT_TRUE( ConquestTestUtil::isSameState( _world, restored ) );
 }
@@ -796,7 +796,7 @@ SW_TEST_CASE_F( ConquestRulesTest, WorldDeterminism )
         world.setCommanderMove( stepIndex % 50 < 30 ? 1.0f : -0.5f );
         if ( stepIndex % 45 == 20 )
             world.issueOrder( stepIndex % 90 == 20 ? sw::ConquestOrder::Charge : sw::ConquestOrder::Follow );
-        world.update( stepIndex % 4 == 3 ? 0.25f : 0.5f ); // 고정 걸음에 못 미친 시간도 지난다
+        world.update( sw::GameSeconds{ stepIndex % 4 == 3 ? 0.25f : 0.5f } ); // 고정 걸음에 못 미친 시간도 지난다
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::ConquestWorld>( setup, step, 180 ) );
 }

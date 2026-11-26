@@ -313,11 +313,11 @@ namespace sw
         return best;
     }
 
-    MechInput MechArenaGameModeComponent::makeBotInput( int32 pilot, float32 deltaTime )
+    MechInput MechArenaGameModeComponent::makeBotInput( int32 pilot, StepSeconds step )
     {
         using Internal                    = MechArenaGameModeComponentInternal;
         BotHand&              hand        = _listBotHand[static_cast<size_t>( pilot )];
-        const bool            bDecision   = hand._think.updateRepeat( deltaTime, _botThinkSeconds, true );
+        const bool            bDecision   = hand._think.updateRepeat( step, _botThinkSeconds, true );
         const optional<int32> target      = findNearestEnemy( pilot );
         const MechPilot&      self        = *_world.findPilot( pilot );
         const bool            bCannotPlay = self._state != MechPilotState::Active || target.has_value() == false;
@@ -393,10 +393,10 @@ namespace sw
         }
     }
 
-    void MechArenaGameModeComponent::updateMatch( float32 deltaTime )
+    void MechArenaGameModeComponent::updateMatch( GameSeconds frameTime )
     {
         const bool  bAutoPlay = isAutoPlayOn();
-        const int32 stepCount = _timer.consume( deltaTime );
+        const int32 stepCount = _timer.consume( frameTime );
         for ( int32 step = 0; step < stepCount && _world.isEnded() == false; ++step )
         {
             for ( int32 pilot = 0; pilot < _world.getPilotCount(); ++pilot )

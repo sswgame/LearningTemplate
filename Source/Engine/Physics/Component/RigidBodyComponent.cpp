@@ -545,7 +545,7 @@ namespace sw
     void RigidBodyComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics&           physics        = context.getPhysics();
-        const float32           fixedDeltaTime = context.getFixedDeltaTime();
+        const float32           fixedDeltaTime = context.getFixedDeltaTime().count();
         const uint32            stepIndex      = context.getStepIndex();
         const uint32            stepCount      = context.getStepCount();
         IPhysicsBodyScene3D*    pScene         = physics.findScene3D();

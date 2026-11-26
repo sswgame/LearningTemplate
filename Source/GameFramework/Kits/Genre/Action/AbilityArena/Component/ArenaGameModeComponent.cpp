@@ -204,8 +204,9 @@ namespace sw
             SW_LOG_WARNING_ID( "ArenaGameMode.SavedArenaStateDoes", "[Arena] the saved arena state does not match this build - starting from wave 1" );
     }
 
-    void ArenaGameModeComponent::updateGame( float32 deltaTime )
+    void ArenaGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( _bUnitsRequested == SW_FALSE )
         {
             // 처음이거나 상태를 저장하기 전에 정리한 뒤다. 플레이어와 현재 웨이브를 스폰한다.
@@ -641,7 +642,7 @@ namespace sw
             if ( unit._death.has_value() )
             {
                 // 유닛이 납작해지는 동안 기다렸다가 정리한다. 조종하던 AI 조종자도 함께 정리한다.
-                (void)unit._death->update( deltaTime );
+                (void)unit._death->update( GameSeconds{ deltaTime } );
                 if ( unit._death->isActive() == false )
                 {
                     retireUnit( *pManager, unit );
@@ -711,7 +712,7 @@ namespace sw
         // 쓰러진 플레이어는 정리된 뒤 잠시 있다가 중앙에 다시 등장한다(웨이브는 이어진다).
         if ( _playerRespawn.has_value() == false )
             _playerRespawn = Countdown( _playerRespawnDelay );
-        (void)_playerRespawn->update( deltaTime );
+        (void)_playerRespawn->update( GameSeconds{ deltaTime } );
         if ( _playerRespawn->isActive() )
             return;
         _playerRespawn.reset();

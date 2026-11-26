@@ -199,13 +199,13 @@ namespace sw
         if ( isFinished() )
             return false;
         const KartGhostFrame& frame = _pGhost->getFrames()[static_cast<size_t>( _frameIndex )];
-        _motor.update( KartGhost::decodeInput( frame ), _pGhost->getStep() );
+        _motor.update( KartGhost::decodeInput( frame ), StepSeconds{ _pGhost->getStep() } );
         (void)_pTrack->applyBoostPad( _motor, _lastBoostPad ); // 걸었는지는 쓰지 않는다. 모터가 상태를 가지고 있다
         ++_frameIndex;
         return true;
     }
 
-    int32 KartGhostPlayer::advance( float32 frameTime )
+    int32 KartGhostPlayer::advance( GameSeconds frameTime )
     {
         const int32 stepCount = _timer.consume( frameTime );
         int32       stepped   = 0;

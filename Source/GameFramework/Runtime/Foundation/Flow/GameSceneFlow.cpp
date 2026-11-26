@@ -88,7 +88,7 @@ namespace sw
         if ( pSceneManager != nullptr && pSceneManager->tryGetLoadProgress( progressValue ) )
             loadProgress = progressValue;
         // 페이드와 로딩 화면은 실제 시간으로 돌린다. 게임 시간으로 돌리면 정지 메뉴(게임 시간 0)가 뜬 동안 페이드가 반쯤 검은 채로 멈춘다.
-        const float32 realDeltaTime = game::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
+        const float32 realDeltaTime = game::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count();
         _screenTransition.update( realDeltaTime );
         if ( _pLoadingScreen != nullptr )
             _pLoadingScreen->update( realDeltaTime, bLoading, loadProgress, _screenTransition );

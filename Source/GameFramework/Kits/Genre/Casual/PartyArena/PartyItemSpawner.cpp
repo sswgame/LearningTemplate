@@ -84,8 +84,9 @@ namespace sw
         return high > low ? _random.nextRange( low, high ) : low;
     }
 
-    void PartyItemSpawner::update( float32 deltaTime )
+    void PartyItemSpawner::update( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         // 1) 수명.
@@ -112,7 +113,7 @@ namespace sw
         // 2) 새로 놓기: 슬롯이 차 있으면 타이머는 멈춰 있고, 빈 슬롯이 나면 곧 나온다.
         if ( _catalog.isEmpty() || static_cast<int32>( _listInstance.size() ) >= _settings._maxActive )
             return;
-        _spawnTimer.update( deltaTime );
+        _spawnTimer.update( frameTime );
         if ( _spawnTimer.isActive() )
             return;
         spawnOne();

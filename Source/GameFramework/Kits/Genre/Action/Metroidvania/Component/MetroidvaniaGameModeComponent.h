@@ -18,6 +18,7 @@
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -126,7 +127,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateMatch( float32 deltaTime ) override;
+        void               updateMatch( GameSeconds frameTime ) override;
         /** @brief 가진 통화를 결과 값 `money` 로 냅니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 
@@ -136,10 +137,10 @@ namespace sw
         [[nodiscard]] bool populateTerrain();
         /** @brief 씬 배치로 적을 세웁니다. 카탈로그 체력 규칙이 거절되면 false 입니다. */
         [[nodiscard]] bool populateEnemies( vector<MetroidvaniaEnemy>& outListEnemy ) const;
-        void               stepExplore( float32 deltaTime );
-        void               stepMovement( float32 deltaTime );
-        void               stepPlayerCombat( float32 deltaTime );
-        void               stepEnemies( float32 deltaTime );
+        void               stepExplore( StepSeconds step );
+        void               stepMovement( StepSeconds step );
+        void               stepPlayerCombat( StepSeconds step );
+        void               stepEnemies( StepSeconds step );
         /** @brief 지금 자리의 방 · 줍는 것 · 시체를 봅니다. */
         void stepMarkers();
         /** @brief 바라보는 쪽 사거리 안의 적을 모두 칩니다. */

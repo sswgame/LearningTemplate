@@ -61,7 +61,7 @@ namespace sw
     SubsystemInitResult UINotificationSubsystem::initializeSubsystem()
     {
         _pUI                = &engine::getSubsystem<UISystem>();
-        _updateSubscription = _pUI->onUpdateAfterScreens().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UINotificationSubsystem::update, this ) );
+        _updateSubscription = _pUI->onUpdateAfterScreens().add( SW_DELEGATE_METHOD( Delegate<void( RealSeconds )>, &UINotificationSubsystem::update, this ) );
         return SubsystemInitResult::Succeeded;
     }
 
@@ -123,7 +123,7 @@ namespace sw
         return hashed_string( name );
     }
 
-    void UINotificationSubsystem::update( float32 deltaSeconds )
+    void UINotificationSubsystem::update( RealSeconds unscaledDeltaTime )
     {
         // 0) 사라지는 중인 항목: 페이드가 끝나면 위젯을 지운다.
         // 시간을 더하고 끝난 것의 뒤처리를 한 번 돈 뒤, 지우는 것은 `removeIf` 한 번이다(한 프레임에 여럿이 끝나도 뒤 원소를 한 번만 옮긴다).
@@ -132,7 +132,7 @@ namespace sw
         { return ( fading._remainingSeconds > 0.0f ) == false; };
         for ( FadingEntry& fading : _listFading )
         {
-            fading._remainingSeconds -= deltaSeconds;
+            fading._remainingSeconds -= unscaledDeltaTime.count();
             if ( isFadeDone( fading ) )
                 removeEntryWidget( fading._widget );
         }
@@ -142,7 +142,7 @@ namespace sw
         { return ( entry._ageSeconds < entry._desc._durationSeconds ) == false; };
         for ( Entry& entry : _listVisible )
         {
-            entry._ageSeconds += deltaSeconds;
+            entry._ageSeconds += unscaledDeltaTime.count();
             if ( isTimeUp( entry ) )
                 startFadeOut( entry ); // 페이드 목록에 더한다(위 순회는 이미 끝났다)
         }

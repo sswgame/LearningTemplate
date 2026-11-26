@@ -108,7 +108,7 @@ SW_TEST_CASE( AbilitySystemTest, SaveRoundTripKeepsCooldownAndDot )
     SW_REQUIRE_TRUE( rig._pSource->applyGameplayEffectToSelf( hashed_string( "GE_Cooldown" ) ).isValid() );
     SW_REQUIRE_TRUE( rig._pSource->applyGameplayEffectToSelf( hashed_string( "GE_Burn" ) ).isValid() );
     rig._pSource->getOwnedTagCounts().updateCount( looseTag, 1 );
-    rig._pSource->advanceTime( 3.0f ); // 화상이 1 · 2 · 3 초에 5 씩
+    rig._pSource->advanceTime( GameSeconds{ 3.0f } ); // 화상이 1 · 2 · 3 초에 5 씩
     SW_REQUIRE_TRUE( Rig::base( *rig._pSource, CombatAttributes::health() ) == 85.0f );
 
     SW_REQUIRE_TRUE( rig.roundTrip() );
@@ -121,9 +121,9 @@ SW_TEST_CASE( AbilitySystemTest, SaveRoundTripKeepsCooldownAndDot )
     cooldownTags.addTag( cooldownTag );
     SW_EXPECT_NEAR( 7.0f, rig._pTarget->findLongestRemainingTimeWithGrantedTags( cooldownTags ), 1.0e-3f );
 
-    rig._pTarget->advanceTime( 1.0f );
+    rig._pTarget->advanceTime( GameSeconds{ 1.0f } );
     SW_EXPECT_NEAR( 80.0f, Rig::base( *rig._pTarget, CombatAttributes::health() ), 1.0e-3f );
-    rig._pTarget->advanceTime( 7.0f ); // 화상은 6 초에 끝나고(5 · 6 초에 더), 쿨다운은 10 초에 끝난다
+    rig._pTarget->advanceTime( GameSeconds{ 7.0f } ); // 화상은 6 초에 끝나고(5 · 6 초에 더), 쿨다운은 10 초에 끝난다
     SW_EXPECT_NEAR( 70.0f, Rig::base( *rig._pTarget, CombatAttributes::health() ), 1.0e-3f );
     SW_EXPECT_EQUAL( 0, rig._pTarget->getOwnedTagCounts().getCount( cooldownTag ) );
     SW_EXPECT_EQUAL( 0u, rig._pTarget->getActiveEffectCount() );

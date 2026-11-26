@@ -48,7 +48,7 @@ namespace sw
     {
         Component::onTick( context );
 
-        const bool bExpired = LifeSpanUtil::advance( _currentTimer, _duration, context.getDeltaTime() );
+        const bool bExpired = LifeSpanUtil::advance( _currentTimer, _duration, context.getDeltaTime().count() );
         if ( _duration <= 0.0f )
             return;
         _currentAlpha = LifeSpanUtil::computeFade( _currentTimer, _duration );

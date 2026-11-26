@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuitDef.h"
@@ -83,9 +84,9 @@ namespace sw
         /** @brief 한 스텝을 평가합니다. 충격(`addSensorImpulse`)은 이 스텝이 소비하고 비웁니다. */
         void step();
         /** @brief 시간을 누적해서 고정 스텝을 실행합니다. 실행한 스텝 수를 반환합니다. */
-        int32 update( float32 deltaTime );
+        int32 update( GameSeconds frameTime );
         /** @brief 시간을 누적만 하고 이번에 실행할 스텝 수를 반환합니다. 스텝마다 센서를 넣고 액추에이터를 적용하는 쪽이 그 수만큼 `step` 을 부릅니다. */
-        int32 consumeTime( float32 deltaTime );
+        int32 consumeTime( GameSeconds frameTime );
 
         /** @brief 센서의 수준 값(인원, 무게, 거리, 신호)을 넣습니다. 다음 스텝부터 반영됩니다. */
         void setSensorValue( int32 node, float32 value );

@@ -44,7 +44,7 @@ namespace sw
     void GameModeViewComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        _bTimeRunning = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 명령 · 모습은 틱 뒤에 낸다
+        _bTimeRunning = context.getDeltaTime().count() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 명령 · 모습은 틱 뒤에 낸다
         context.deferPostTickOnComponent( *this, []( GameModeViewComponent& view, GameObjectManager& manager )
         { view.updateOpenGame( manager ); } );
     }

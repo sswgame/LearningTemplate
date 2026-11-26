@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -52,7 +53,7 @@ namespace sw
          * @brief 시간을 흘립니다.
          * @param deltaTime 실제 초(게이지와 데드아이) @param gameHours 이번에 흐른 게임 시간(코어) @param airTemperature 지금 기온(섭씨)
          */
-        void update( float32 deltaTime, float32 gameHours, float32 airTemperature );
+        void update( GameSeconds frameTime, float32 gameHours, float32 airTemperature );
         /** @brief 날씨의 "temperature" 값을 지역 기본 기온에 더한 기온을 반환합니다(눈 덮인 산, 사막). */
         static float32 computeAirTemperature( const WeatherSystem& weather, float32 regionBaseTemperature );
 

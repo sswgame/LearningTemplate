@@ -140,8 +140,9 @@ namespace sw
         SW_LOG_INFO_ID( "Velmora.HallStarted", "[Velmora] '%#': a fight with %# enemies", region._name, _room.getAliveEnemyCount() );
     }
 
-    void VelmoraEncounterGameModeComponent::updateGame( float32 deltaTime )
+    void VelmoraEncounterGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         ActionRoomFrameInput input;
@@ -171,7 +172,7 @@ namespace sw
         }
         if ( _phase == VelmoraPhase::BossWait )
         {
-            if ( _bossDelay.update( deltaTime ) )
+            if ( _bossDelay.update( frameTime ) )
             {
                 _room.beginBoss();
                 _phase = VelmoraPhase::Boss;
@@ -181,7 +182,7 @@ namespace sw
         }
         input._playerPos                   = pDirector->getPlayerPosition();
         input._facing                      = pDirector->getFacing();
-        const ActionRoomFrameResult result = _room.update( deltaTime, input );
+        const ActionRoomFrameResult result = _room.update( frameTime, input );
         // 적의 닿은 피해(`MonsterStatsDef::_atk`)는 4분의 1 하트 단위다.
         if ( result._damageToPlayer > 0 && pDirector->applyPlayerDamage( result._damageToPlayer ) )
         {

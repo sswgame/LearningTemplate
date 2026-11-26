@@ -1,6 +1,6 @@
 /**
- * @file FixedTimestep.h
- * @brief 프레임 시간 정책입니다. 가변 델타의 상한과 고정 스텝 분할을 한 곳에서 정합니다.
+ * @file FrameClock.h
+ * @brief 프레임 시계입니다 — 지난 실제 시간을 재고, 가변 델타 상한 · 시간 배율 · 고정 스텝 분할(프레임 시간 정책)을 한 곳에서 정합니다(언리얼 `FApp::DeltaTime` · `FixedDeltaTime`, 유니티 `Time.deltaTime` · `maximumDeltaTime`).
  *
  * @details 루프 본문에 흩어져 있던 시간 값(최대 델타 · 고정 스텝 길이 · 누산기)을 한 타입으로 모읍니다. 상용 엔진이 이 값들을
  *          설정으로 노출하는 이유는 두 가지입니다. 프로젝트마다 시뮬레이션 주기가 다르고, 고정 스텝에는 **프레임당 상한**이
@@ -11,8 +11,8 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/FixedStepTimer.h"
-#include "Core/Time/GameTimer.h"
 
 namespace sw
 {
@@ -41,7 +41,7 @@ namespace sw
 namespace sw
 {
     /** @brief 시간 정책 값 셋입니다(최대 델타 · 고정 스텝 길이 · 프레임당 스텝 상한). */
-    struct FixedTimestepParams
+    struct FrameClockParams
     {
         float32 _maxFrameDeltaTime{ 0.0f };
         float32 _fixedDeltaTime{ 0.0f };
@@ -52,21 +52,21 @@ namespace sw
 namespace sw
 {
     /**
-     * @class FixedTimestep
+     * @class FrameClock
      * @brief 실시간 경과를 가변 델타와 고정 스텝 수로 나눕니다.
      */
-    class SW_API FixedTimestep
+    class SW_API FrameClock
     {
     public:
         /** @brief 정책 없이 만듭니다. 설정을 읽은 뒤 `configure` 하기 전에는 `start` · `advance` 할 수 없습니다(값의 출처는 설정 파일 하나). */
-        FixedTimestep();
+        FrameClock();
         /** @brief @p params 를 정책으로 두고 만듭니다. 값은 모두 0 보다 커야 합니다. */
-        explicit FixedTimestep( const FixedTimestepParams& params );
+        explicit FrameClock( const FrameClockParams& params );
         /** @brief @p params 를 정책으로 두고 @p clock 으로 경과를 잽니다(테스트는 `ManualClock` 을 밀어 잠들지 않는다). 시계는 빌려 쓰므로 이 객체보다 오래 살아야 합니다. */
-        FixedTimestep( const FixedTimestepParams& params, const IClock& clock );
+        FrameClock( const FrameClockParams& params, const IClock& clock );
 
         /** @brief 시간 정책을 설정합니다. 값은 모두 0 보다 커야 합니다(설정 로드가 `Min` 으로 이미 본다 — 여기서 다른 값으로 바꾸지 않는다). */
-        void configure( const FixedTimestepParams& params );
+        void configure( const FrameClockParams& params );
         /** @brief 정책을 받았으면 true 입니다. */
         bool isConfigured() const { return _params._fixedDeltaTime > 0.0f; }
         /** @brief 타이머와 누산기를 0 에서 다시 시작합니다. 루프 진입 직전에 한 번 부릅니다. */
@@ -81,8 +81,9 @@ namespace sw
         FrameTime advance( float32 timeScale = 1.0f, float32 overrideFrameSeconds = 0.0f );
 
     private:
-        GameTimer           _timer;
-        FixedTimestepParams _params;
+        const IClock*    _pClock;          ///< 실제 시간을 읽는 시계(빌려 쓴다)
+        int64            _prevNanoseconds; ///< 직전 `start` · `advance` 의 시각
+        FrameClockParams _params;
         /** @brief 고정 스텝 누적기입니다. 한 프레임에 받는 시간 상한은 스텝 길이 × 프레임당 스텝 상한이다. */
         FixedStepTimer _stepTimer;
     };

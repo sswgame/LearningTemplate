@@ -33,7 +33,7 @@ namespace sw
         pMovement->setMaxGait( bCanGallop ? MountGait::Gallop : MountGait::Canter );
         if ( pMovement->getGait() == MountGait::Gallop )
         {
-            if ( _pHorse->gallop( context.getDeltaTime() ) == false )
+            if ( _pHorse->gallop( context.getDeltaTime().count() ) == false )
                 pMovement->setGallopAllowed( false );
         }
         else if ( pMovement->isGallopAllowed() == false && _pHorse->getStamina().getRatio() >= _resumeGallopRatio )

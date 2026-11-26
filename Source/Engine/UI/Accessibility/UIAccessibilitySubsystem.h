@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
@@ -73,7 +74,7 @@ namespace sw
         /** @brief 화면 하나의 접근성 노드를 스냅샷에 덧붙입니다(포커스 위젯을 알아 둔다). */
         static void appendScreen( const UISystem& ui, const UIScreen& screen, UIAccessibilitySnapshot& inoutSnapshot );
         /** @brief UI 갱신의 레이아웃 앞 칸입니다 — 스크린 리더가 붙어 있으면 포커스가 옮겨 갔는지 보고 브리지에 알립니다. */
-        void updateFocus( float32 deltaSeconds );
+        void updateFocus( RealSeconds unscaledDeltaTime );
 
     private:
         UISystem*                          _pUI;                      ///< 화면 스택(기동이 찾는다, 그 전 · 종료 뒤에는 nullptr)

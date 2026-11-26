@@ -297,15 +297,15 @@ SW_TEST_CASE_F( MonsterHuntAlchemyTest, DecoctionLocksToxicityUntilItEnds )
     SW_EXPECT_EQUAL( sw::MonsterHuntUseResult::Ok, _alchemy.drink( "swallow", _inventory ) );
     SW_EXPECT_NEAR( 90.0f, _alchemy.getToxicity(), kMonsterHuntTolerance );
 
-    _alchemy.update( 5.0f ); // 묶이지 않은 20 이 10 으로 준다
+    _alchemy.update( sw::GameSeconds{ 5.0f } ); // 묶이지 않은 20 이 10 으로 준다
     SW_EXPECT_NEAR( 80.0f, _alchemy.getToxicity(), kMonsterHuntTolerance );
 
-    _alchemy.update( -100.0f ); // 되돌리지 않는다
-    _alchemy.update( 0.0f );
+    _alchemy.update( sw::GameSeconds{ -100.0f } ); // 되돌리지 않는다
+    _alchemy.update( sw::GameSeconds{ 0.0f } );
     SW_EXPECT_NEAR( 80.0f, _alchemy.getToxicity(), kMonsterHuntTolerance );
     SW_EXPECT_TRUE( _alchemy.isEffectActive( "decoct" ) );
 
-    _alchemy.update( 25.0f );
+    _alchemy.update( sw::GameSeconds{ 25.0f } );
     SW_EXPECT_NEAR( 0.0f, _alchemy.getToxicity(), kMonsterHuntTolerance ); // 바닥 아래로 내려가지 않는다
     SW_EXPECT_TRUE( _alchemy.getActiveEffects().empty() );
     SW_EXPECT_EQUAL( sw::MonsterHuntUseResult::Ok, _alchemy.drink( "decoct", _inventory ) );
@@ -318,7 +318,7 @@ SW_TEST_CASE_F( MonsterHuntAlchemyTest, RedrinkingPotionRestartsItsEffect )
 {
     brew( "make_swallow" );
     SW_EXPECT_EQUAL( sw::MonsterHuntUseResult::Ok, _alchemy.drink( "swallow", _inventory ) );
-    _alchemy.update( 4.0f );
+    _alchemy.update( sw::GameSeconds{ 4.0f } );
     SW_EXPECT_EQUAL( sw::MonsterHuntUseResult::Ok, _alchemy.drink( "swallow", _inventory ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), _alchemy.getActiveEffects().size() );
     SW_EXPECT_NEAR( 10.0f, _alchemy.getActiveEffects()[0]._remaining.getRemaining(), kMonsterHuntTolerance );
@@ -406,7 +406,7 @@ SW_TEST_CASE_F( MonsterHuntAlchemyTest, StateRoundTrips )
     SW_EXPECT_EQUAL( sw::MonsterHuntUseResult::Ok, _alchemy.drink( "decoct", _inventory ) );
     SW_EXPECT_EQUAL( sw::MonsterHuntUseResult::Ok, _alchemy.drink( "swallow", _inventory ) );
     SW_EXPECT_EQUAL( sw::MonsterHuntUseResult::Ok, _alchemy.applyOil( "necro_oil", _inventory ) );
-    _alchemy.update( 1.0f );
+    _alchemy.update( sw::GameSeconds{ 1.0f } );
 
     sw::Archive written;
     _alchemy.writeState( written );
@@ -1357,7 +1357,7 @@ SW_TEST_CASE_F( MonsterHuntCombatTest, CombatDeterminism )
             combat.registerHitTaken();
         if ( stepIndex % 40 == 39 )
             (void)combat.consumeAdrenalinePoints();
-        combat.update( 1.0f / 30.0f );
+        combat.update( sw::GameSeconds{ 1.0f / 30.0f } );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::MonsterHuntCombat>( setup, step, 240 ) );
 }

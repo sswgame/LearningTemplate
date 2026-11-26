@@ -409,11 +409,11 @@ namespace sw
         }
     }
 
-    void MechArenaWorld::update( float32 deltaTime )
+    void MechArenaWorld::update( GameSeconds frameTime )
     {
         if ( _bStarted == SW_FALSE )
             return;
-        const int32 stepCount = _timer.consume( deltaTime );
+        const int32 stepCount = _timer.consume( frameTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             step( _timer.getStep() );
@@ -501,23 +501,24 @@ namespace sw
 
     // --- 걸음 -------------------------------------------------------------------------------------
 
-    void MechArenaWorld::step( float32 deltaTime )
+    void MechArenaWorld::step( StepSeconds step )
     {
+        const float32 deltaTime = step.count();
         ++_tick;
         if ( isEnded() == false )
         {
             for ( int32 pilot = 0; pilot < getPilotCount(); ++pilot )
             {
-                stepPilot( pilot, deltaTime );
+                stepPilot( pilot, step );
             }
             stepProjectiles( deltaTime );
         }
-        stepMatch( deltaTime );
+        stepMatch( step );
     }
 
-    void MechArenaWorld::stepMatch( float32 deltaTime )
+    void MechArenaWorld::stepMatch( StepSeconds step )
     {
-        _match.update( deltaTime );
+        _match.update( step );
         for ( const MatchEvent& event : _match.takeEvents() )
         {
             if ( event._kind == MatchEvent::Kind::Respawned )
@@ -1208,9 +1209,10 @@ namespace sw
         }
     }
 
-    void MechArenaWorld::stepPilot( int32 pilotIndex, float32 deltaTime )
+    void MechArenaWorld::stepPilot( int32 pilotIndex, StepSeconds step )
     {
-        MechPilot& pilot = _listPilot[static_cast<size_t>( pilotIndex )];
+        const float32 deltaTime = step.count();
+        MechPilot&    pilot     = _listPilot[static_cast<size_t>( pilotIndex )];
         if ( pilot._state != MechPilotState::Active && pilot._state != MechPilotState::Down )
         {
             pilot._previousInput = pilot._input;
@@ -1220,7 +1222,7 @@ namespace sw
         const MechInput& previous = pilot._previousInput;
         const MechDef*   pMech    = pilot.getMech();
 
-        pilot._healthMachine.update( deltaTime );
+        pilot._healthMachine.update( step );
         pilot._healthMachine.discardEvents();
         if ( pilot._state == MechPilotState::Down && pilot._healthMachine.isPoiseBroken() == false )
         {
@@ -1229,17 +1231,17 @@ namespace sw
             pilot._healthMachine.setInvulnerable( pMech->_wakeInvulnerable );
             pushEvent( MechArenaEvent::Kind::WokeUp, pilotIndex, nullopt, pMech->_wakeInvulnerable, hashed_string{} );
         }
-        pilot._staggerRemaining.update( deltaTime );
-        pilot._transformCooldown.update( deltaTime );
+        pilot._staggerRemaining.update( step );
+        pilot._transformCooldown.update( step );
         for ( WeaponState& weapon : pilot._listWeaponState )
         {
-            weapon.update( deltaTime );
+            weapon.update( step );
         }
         for ( Countdown& cooldown : pilot._listSpecialCooldown )
         {
-            cooldown.update( deltaTime );
+            cooldown.update( step );
         }
-        stepSkills( pilotIndex, deltaTime );
+        stepSkills( pilotIndex, step );
 
         bool bControl = false;
         if ( pilot._state == MechPilotState::Active )
@@ -1263,10 +1265,10 @@ namespace sw
             }
         }
         stepMovement( pilotIndex, bControl, MechArenaWorldInternal::isPressed( input._bDash, previous._bDash ),
-                      MechArenaWorldInternal::isPressed( input._bJump, previous._bJump ), deltaTime );
+                      MechArenaWorldInternal::isPressed( input._bJump, previous._bJump ), step );
 
         pilot._boost.setRegenScale( computeModifier( pilotIndex, MechArenaWorldInternal::getBoostRegenName() ) );
-        pilot._boost.update( deltaTime );
+        pilot._boost.update( step );
         const bool bOverheated = pilot._boost.isOverheated();
         if ( bOverheated && pilot._bWasOverheated == SW_FALSE )
             pushEvent( MechArenaEvent::Kind::Overheated, pilotIndex, nullopt, 0.0f, hashed_string{} );
@@ -1274,8 +1276,9 @@ namespace sw
         pilot._previousInput  = input;
     }
 
-    void MechArenaWorld::stepMovement( int32 pilotIndex, bool bControl, bool bPressedDash, bool bPressedJump, float32 deltaTime )
+    void MechArenaWorld::stepMovement( int32 pilotIndex, bool bControl, bool bPressedDash, bool bPressedJump, StepSeconds step )
     {
+        const float32 deltaTime    = step.count();
         using Internal             = MechArenaWorldInternal;
         MechPilot&         pilot   = _listPilot[static_cast<size_t>( pilotIndex )];
         const MechDef*     pMech   = pilot.getMech();
@@ -1304,7 +1307,7 @@ namespace sw
             if ( pilot._dashRemaining.isActive() )
             {
                 horizontal = pilot._dashDirection * pMech->_dashSpeed;
-                pilot._dashRemaining.update( deltaTime );
+                pilot._dashRemaining.update( step );
             }
             else
             {
@@ -1468,15 +1471,15 @@ namespace sw
                     move._bKnockdown == SW_TRUE, MechWeaponKind::Melee, move._id );
     }
 
-    void MechArenaWorld::stepSkills( int32 pilotIndex, float32 deltaTime )
+    void MechArenaWorld::stepSkills( int32 pilotIndex, StepSeconds step )
     {
         MechPilot&  pilot = _listPilot[static_cast<size_t>( pilotIndex )];
         const int32 count = countActiveSkills( pilot );
         for ( int32 index = 0; index < count; ++index )
         {
             Countdown& remaining = pilot._listSkillRemaining[static_cast<size_t>( index )];
-            pilot._listSkillCooldown[static_cast<size_t>( index )].update( deltaTime );
-            if ( remaining.update( deltaTime ) )
+            pilot._listSkillCooldown[static_cast<size_t>( index )].update( step );
+            if ( remaining.update( step ) )
                 pushEvent( MechArenaEvent::Kind::SkillEnded, pilotIndex, nullopt, 0.0f, pilot._listSkill[static_cast<size_t>( index )]->_id );
         }
         const int32 slot                       = pilot._input._skillSlot;

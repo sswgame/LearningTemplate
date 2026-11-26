@@ -325,18 +325,19 @@ namespace sw
             interact( survivor );
     }
 
-    void AsymmetricHorrorGameModeComponent::updateMatch( float32 deltaTime )
+    void AsymmetricHorrorGameModeComponent::updateMatch( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         for ( int32 survivor = 0; survivor < _match.getSurvivorCount(); ++survivor )
         {
             AsymmetricHorrorCommand& pending = _listCommand[static_cast<size_t>( survivor )];
             applyCommand( survivor, isHuman( survivor ) ? pending : _bot.decideSurvivor( _match, _stage, survivor ), deltaTime );
             pending._bUseTriggered = SW_FALSE; // 쓴 누름이다(봇이 움직인 걸음의 누름은 버린다)
         }
-        (void)_killerRelease.update( deltaTime ); // 풀려난 뒤의 첫 걸음을 따로 알리지 않는다
+        (void)_killerRelease.update( frameTime ); // 풀려난 뒤의 첫 걸음을 따로 알리지 않는다
         if ( _killerRelease.isActive() == false )
             _bot.stepKiller( _match, _stage, deltaTime );
-        _match.update( deltaTime );
+        _match.update( frameTime );
         settle();
     }
 

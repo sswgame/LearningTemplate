@@ -25,7 +25,7 @@ namespace sw
     SubsystemInitResult UIAccessibilitySubsystem::initializeSubsystem()
     {
         _pUI                      = &engine::getSubsystem<UISystem>();
-        _beforeLayoutSubscription = _pUI->onUpdateBeforeLayout().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UIAccessibilitySubsystem::updateFocus, this ) );
+        _beforeLayoutSubscription = _pUI->onUpdateBeforeLayout().add( SW_DELEGATE_METHOD( Delegate<void( RealSeconds )>, &UIAccessibilitySubsystem::updateFocus, this ) );
         return SubsystemInitResult::Succeeded;
     }
 
@@ -99,7 +99,7 @@ namespace sw
         }
     }
 
-    void UIAccessibilitySubsystem::updateFocus( [[maybe_unused]] float32 deltaSeconds )
+    void UIAccessibilitySubsystem::updateFocus( [[maybe_unused]] RealSeconds unscaledDeltaTime )
     {
         if ( _bridge != nullptr )
             _bridge->onUIUpdated();

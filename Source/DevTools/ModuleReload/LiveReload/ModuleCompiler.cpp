@@ -76,8 +76,7 @@ namespace sw
         _bBlockedByLoadedBinary.store( 0, std::memory_order_relaxed );
         _bIsCompiling.store( true, std::memory_order_relaxed );
         _buildState.store( BuildState::Compiling, std::memory_order_relaxed );
-        _buildTimer.resetTimer();
-        _buildTimer.startTimer();
+        _buildTimer.restart();
         // 빌드가 쓰는 모듈을 하나씩 올리지 않게 감시를 멈춘다 — 끝나면 `runBuildThread` 가 결과를 넘긴다.
         if ( _pLiveReloadManager != nullptr )
             _pLiveReloadManager->notifyBuildStarted();
@@ -108,7 +107,7 @@ namespace sw
         if ( _bIsCompiling.load( std::memory_order_relaxed ) == false )
             return _lastDurationSec.load( std::memory_order_relaxed );
 
-        return static_cast<float32>( _buildTimer.getTotalTime() );
+        return static_cast<float32>( _buildTimer.getElapsedSeconds() );
     }
 
     string ModuleCompiler::getTargetName() const
@@ -168,8 +167,7 @@ namespace sw
             }
         }
 
-        _buildTimer.stopTimer();
-        const float64 durationSec = _buildTimer.getTotalTime();
+        const float64 durationSec = _buildTimer.getElapsedSeconds();
 
         if ( waited.has_value() == false )
             SW_LOG_ERROR_ID( "ModuleCompiler.BuildWaitFailed", "Could not wait for the build process (target: %#): %# %#", targetDisplayName.c_str(), string( waited.error().message() ),

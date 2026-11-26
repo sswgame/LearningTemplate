@@ -35,7 +35,7 @@ SW_TEST_CASE( PhaseTimingsTest, SameNameMerges )
 SW_TEST_CASE( PhaseTimingsTest, ScopedTimerReadsFromItsStart )
 {
     const ScopedTimer timer( "PhaseTimingsTest" );
-    const float32     first  = timer.getElapsedTimeInSeconds();
-    const float32     second = timer.getElapsedTimeInSeconds();
-    SW_EXPECT_TRUE( first >= 0.0f && second >= first );
+    const float64     first  = timer.getElapsedSeconds();
+    const float64     second = timer.getElapsedSeconds();
+    SW_EXPECT_TRUE( first >= 0.0 && second >= first );
 }

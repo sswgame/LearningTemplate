@@ -5,7 +5,7 @@
  * 소유권: App 은 최상위 창 콜백과 부팅 열(`HostLaunch` — Engine · 모듈 관리자 · 호스트 서비스)만 들고, 나머지 엔진 핵심 로직은 모두 Engine 에 맡깁니다.
  *
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
- *          시간 정책은 FixedTimestep, 장치 교체 · 다시 만들기와 모듈 수명은 모듈 관리자(`GameModuleManager` — 교체 요청은 개발 도구의 RHIBackendSwitcher)가 맡습니다.
+ *          시간 정책은 FrameClock, 장치 교체 · 다시 만들기와 모듈 수명은 모듈 관리자(`GameModuleManager` — 교체 요청은 개발 도구의 RHIBackendSwitcher)가 맡습니다.
  *          개발 전용 몫(에디터 모듈 관리자 · 자동화 실행기 · 핫 리로드 · 개발 콘솔 · 셸 액션 · 에디터 모듈 헤드리스 작업 · 초상화 굽기 · 기동 측정)은 개발 계층(`IHostDevLayer` — Server 와 같이 쓴다)이
  *          DevTools 에 든다 — 배포 App 은 그 코드를 컴파일하지 않고, 개발 전용 인자를 받으면 오류로 멈춘다. 크래시 보고 프로세스는 배포도 쓰므로 이 TU 의 `AppCommandlets` 다.
  *          자동화가 찾아야 하는 호스트 객체(리로드 구동기)는 정적 포인터가 아니라 호스트 범위(`HostLaunch::getHostScope`)에 걸고 `engine::findSubsystem<T>()` 로 찾게 합니다.
@@ -23,7 +23,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Time/FixedTimestep.h"
+#include "Core/Time/FrameClock.h"
 
 #include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Automation/AutomationRuntime.h"
@@ -171,7 +171,7 @@ namespace sw
         /** @brief 주 창입니다(관찰 포인터). 소유자는 엔진 범위의 `MainWindowSubsystem` 이라 엔진 종료 때 창이 파괴된다. `acquireMainWindow` 가 채운다. */
         GenericWindow* _pWindow;
 
-        FixedTimestep    _fixedTimestep;
+        FrameClock       _frameClock;
         UserSettingsHost _userSettingsHost;
         /** @brief 런타임 UI 의 호스트 훅(클립보드 · 스크린 리더 · 끝내기)입니다. 호스트 서비스 `RuntimeUIHooksHostSubsystem` 가 세우고 내린다. */
         UIPlatformBinding _uiPlatformBinding;
@@ -260,9 +260,9 @@ namespace sw
             }
 
             /** @brief 엔진 설정에서 프레임 시간 정책 값을 꺼냅니다(값의 출처는 `Config/Engine/EngineConfig.json` 하나다). */
-            static FixedTimestepParams makeFixedTimestepParams( const EngineConfig& config )
+            static FrameClockParams makeFrameClockParams( const EngineConfig& config )
             {
-                FixedTimestepParams params;
+                FrameClockParams params;
                 params._maxFrameDeltaTime    = config._maxFrameDeltaTime;
                 params._fixedDeltaTime       = config._fixedDeltaTime;
                 params._maxFixedStepPerFrame = config._maxFixedStepPerFrame;
@@ -316,7 +316,7 @@ namespace sw
     App::App()
         : _launch{}
         , _pWindow{ nullptr }
-        , _fixedTimestep{}
+        , _frameClock{}
         , _userSettingsHost{}
         , _uiPlatformBinding{}
         , _sceneViewCameraProvider{}
@@ -489,7 +489,7 @@ namespace sw
             return false;
         }
 
-        _fixedTimestep.configure( AppInternal::makeFixedTimestepParams( *pEngineConfig ) );
+        _frameClock.configure( AppInternal::makeFrameClockParams( *pEngineConfig ) );
         // 에디터가 Config/ 를 감시해 다시 읽으면(ConfigManager::reloadConfigFile) 프레임 시간 정책도 따라간다.
         _configReloadedSubscription = pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &App::onConfigReloaded, this ) );
 
@@ -700,14 +700,14 @@ namespace sw
 
         // 결정적 실행의 프레임 고정 시간(0 이면 벽시계) — 채우는 쪽(자동화 · 개발 스위치)이 없는 배포본은 늘 0 이다.
         const float32   fixedFrameDelta = engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta;
-        const FrameTime frameTime       = _fixedTimestep.advance( engine::getSubsystem<GameTimeScale>().get(), fixedFrameDelta );
+        const FrameTime frameTime       = _frameClock.advance( engine::getSubsystem<GameTimeScale>().get(), fixedFrameDelta );
 
         // 사용자 설정의 화면 변경(창 방식, 해상도, VSync)은 OS 리사이즈와 같은 시점인 프레임 시작 전에 처리한다.
         _userSettingsHost.update( frameTime._deltaTime );
         // 메시지 처리 · 화면 설정이 모은 크기 변경을 여기서 마지막 크기로 한 번 적용한다(스왑체인 resize — 감사 P-2). 멈춘 틱은 이 함수에 오지 않아 표면이 없는 동안은 미룬 채 둔다.
         _pWindow->applyPendingResize();
 
-        _launch.getEngine().beginFrame( frameTime._deltaTime, frameTime._unscaledDeltaTime ); // 정지 메뉴와 페이드는 게임이 멈춰도 돈다.
+        _launch.getEngine().beginFrame( GameSeconds{ frameTime._deltaTime }, RealSeconds{ frameTime._unscaledDeltaTime } ); // 정지 메뉴와 페이드는 게임이 멈춰도 돈다.
         // 에디터 Play/Pause 상태를 여기서 한 번 고정한다. 아래 고정 스텝이 여러 번 돌아도 DLL 경계를 넘어 다시 묻지 않고,
         // 모든 단계가 같은 답을 본다.
         getModuleManager()->beginFrame();
@@ -760,7 +760,7 @@ namespace sw
 
         if ( IHostDevLayer* const pDevLayer = _launch.getDevLayer() )
             pDevLayer->onMainLoopEntered();
-        _fixedTimestep.start();
+        _frameClock.start();
 
         // 페이서는 주 창 서비스가 든다 — 창(`_pWindow`)을 그 서비스에서 받았으므로 여기서 없으면 결함이다.
         MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
@@ -790,7 +790,7 @@ namespace sw
         if ( _bRenderPaused == SW_TRUE )
         {
             _bRenderPaused = SW_FALSE;
-            _fixedTimestep.start();
+            _frameClock.start();
         }
         return runFrame( *_pFramePacer );
     }
@@ -846,7 +846,7 @@ namespace sw
         const ConfigManager* pConfigManager = _launch.getEngine().getConfigManager();
         const EngineConfig*  pEngineConfig  = pConfigManager != nullptr ? pConfigManager->getConfig<EngineConfig>() : nullptr;
         if ( pEngineConfig != nullptr )
-            _fixedTimestep.configure( AppInternal::makeFixedTimestepParams( *pEngineConfig ) );
+            _frameClock.configure( AppInternal::makeFrameClockParams( *pEngineConfig ) );
     }
 
     bool App::onWindowMessage( const NativeWindowEvent& event )

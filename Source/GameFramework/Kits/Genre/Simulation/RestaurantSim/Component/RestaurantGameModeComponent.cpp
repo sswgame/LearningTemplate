@@ -320,11 +320,11 @@ namespace sw
         }
     }
 
-    void RestaurantGameModeComponent::updateMatch( float32 deltaTime )
+    void RestaurantGameModeComponent::updateMatch( GameSeconds frameTime )
     {
         if ( _phase != RestaurantPhase::Open )
             return; // 준비 · 결산은 명령이 진행한다
-        _simulation.update( deltaTime * _minutesPerSecond );
+        _simulation.update( frameTime, _minutesPerSecond );
         reportEvents();
         if ( isDayOver() )
             closeDay();

@@ -269,9 +269,10 @@ namespace sw
         }
     }
 
-    void KartGameModeComponent::updateMatch( float32 deltaTime )
+    void KartGameModeComponent::updateMatch( GameSeconds frameTime )
     {
-        (void)_race.update( deltaTime ); // 걸음 수는 쓰지 않는다
+        const float32 deltaTime = frameTime.count();
+        (void)_race.update( frameTime ); // 걸음 수는 쓰지 않는다
         reportEvents();
         if ( _race.getPhase() != MatchPhase::Ended )
             return;

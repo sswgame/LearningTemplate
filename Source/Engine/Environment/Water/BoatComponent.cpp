@@ -115,7 +115,7 @@ namespace sw
     void BoatComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics& physics        = context.getPhysics();
-        const float32 fixedDeltaTime = context.getFixedDeltaTime();
+        const float32 fixedDeltaTime = context.getFixedDeltaTime().count();
         _state                       = BoatState{};
         if ( isSimulated() == false )
             return;

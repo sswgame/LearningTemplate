@@ -11,6 +11,7 @@
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Presentation/IPlayerNotificationSink.h"
@@ -90,7 +91,7 @@ namespace sw
         /** @brief 게임 코드의 알림을 받는 자리(`IPlayerNotificationSink`)입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). */
         IPlayerNotificationSink& getPlayerNotificationSink() { return _notificationSink; }
         /** @brief 보이는 알림의 시간을 재고, 끝난 것을 내리고, 기다리는 것을 올립니다(UI 갱신의 화면 틱 뒤 칸이 부른다). */
-        void update( float32 deltaSeconds );
+        void update( RealSeconds unscaledDeltaTime );
         /** @brief 모두 버리고 화면을 닫습니다. */
         void clear();
 

@@ -222,8 +222,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 규칙(PrePhysics, 워커)
     // ------------------------------------------------------------------------------
-    void OverworldGameModeComponent::updateGame( float32 deltaTime )
+    void OverworldGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         const PawnComponent* pHero = findHeroPawn();
@@ -240,7 +241,7 @@ namespace sw
         }
 
         const int2 tileBefore{ _mover.getTileX(), _mover.getTileY() };
-        _mover.update( deltaTime, intent, interactButton );
+        _mover.update( frameTime, intent, interactButton );
         if ( _mover.consumeMovedFlag() )
         {
             _stepFromTile = tileBefore;

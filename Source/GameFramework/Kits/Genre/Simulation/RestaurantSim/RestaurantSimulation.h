@@ -14,6 +14,7 @@
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -301,8 +302,11 @@ namespace sw
 
         /** @brief 문을 엽니다. 그날의 날씨와 집계를 새로 정합니다. */
         void openDay( const hashed_string& weatherID );
-        /** @brief 시간(게임 분)을 진행합니다. 닫는 시각이 지나도 안에 있는 손님은 계속 받습니다. */
-        void update( float32 deltaMinutes );
+        /**
+         * @brief 게임 시간 @p frameTime 에 @p minutesPerSecond(게임 초당 가게 분)를 곱한 만큼 진행합니다. 닫는 시각이 지나도 안에 있는 손님은 계속 받습니다.
+         * @details 걸음 상한은 곱하기 전의 프레임 시간에 건다(`FixedStepTimer::consumeScaled`).
+         */
+        void update( GameSeconds frameTime, float32 minutesPerSecond );
         /** @brief 손님 하나를 바로 들입니다(예약과 테스트용). 손님 id 를 반환하고, 모르는 성향이면 -1 입니다. */
         optional<int32> admitCustomer( const hashed_string& typeID );
         /** @brief 닫습니다. 남은 손님을 정리하고 급여를 낸 뒤 결산을 @p outSummary 에 적습니다. */

@@ -459,8 +459,9 @@ namespace sw
             SW_LOG_INFO_ID( "MonsterCollector.Defeat", "[MonsterCollector] the party fell" );
     }
 
-    void MonsterCollectorGameModeComponent::updateMatch( float32 deltaTime )
+    void MonsterCollectorGameModeComponent::updateMatch( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( _phase == MonsterCollectorPhase::Explore )
             updateExplore( deltaTime ); // 전투는 명령이 진행한다
     }

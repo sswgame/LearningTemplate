@@ -11,6 +11,7 @@
 #include "Core/Math/AABB.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -254,7 +255,7 @@ namespace sw
         int32 getAliveEnemyCount() const;
 
         /** @brief 한 프레임 전투를 갱신합니다. 이 프레임에 클리어했으면 룸 이벤트를 냅니다(클래스 설명 참고). */
-        ActionRoomFrameResult update( float32 deltaTime, const ActionRoomFrameInput& input );
+        ActionRoomFrameResult update( GameSeconds frameTime, const ActionRoomFrameInput& input );
         /**
          * @brief 플레이어가 이 룸에서 졌음을 알립니다. `PlayerDefeatedInRoomEvent` 와 게이트 열림을 내고 룸을 비웁니다. 룸이 활성이 아니면 아무것도 하지 않습니다.
          * @details 룸은 플레이어 HP 를 가지지 않는다(피해는 `ActionRoomFrameResult::_damageToPlayer` 로 돌려주고 게임이 깎는다). 그래서 패배는 HP 를 가진 게임이 알린다.
@@ -323,7 +324,7 @@ namespace sw
         /** @brief 플레이어 공격을 시도합니다. */
         void tryPlayerAttack( const ActionRoomFrameInput& input );
         /** @brief 액터를 갱신합니다. 적이 쏜 횟수를 @p outResult 에 더합니다. */
-        void updateActors( float32 deltaTime, float32 playerX, float32 playerY, ActionRoomFrameResult& outResult );
+        void updateActors( GameSeconds frameTime, float32 playerX, float32 playerY, ActionRoomFrameResult& outResult );
         /** @brief 투사체를 갱신합니다. */
         void updateProjectiles( float32 deltaTime );
         /** @brief 플레이어 피격을 처리합니다. */

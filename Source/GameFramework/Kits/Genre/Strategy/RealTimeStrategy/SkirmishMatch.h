@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -159,7 +160,7 @@ namespace sw
         [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, const SkirmishMap& map, const TileMapXMLData& tileMap, uint8 humanMask, const SkirmishMatchSettings& matchSettings,
                                        int32 startMinerals, const BehaviorTreeAsset* pCommanderTree );
         /** @brief 월드를 배속 @p timeScale 로 돌리고 AI 는 월드가 진행한 시간만큼 돌려 알림을 넘깁니다. 상태는 30 초마다, 승패는 한 번 로그로 남깁니다. */
-        void update( float32 deltaTime, float32 timeScale );
+        void update( GameSeconds frameTime, float32 timeScale );
         /** @brief 이번까지 쌓인 월드 알림(화면용 사본)을 꺼냅니다. */
         void pollEvents( vector<RTSEvent>& outListEvent );
 

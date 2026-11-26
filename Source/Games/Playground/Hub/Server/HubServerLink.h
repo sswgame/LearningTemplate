@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Scene/StreamingCellGrid.h"
 
@@ -75,7 +76,7 @@ namespace sw
         /** @brief 규칙 · 저장 · 복제를 한 틱 돌립니다. */
         void            update( float32 deltaSeconds ) override;
         void            collectAvatars( vector<HubAvatarSession>& outListSession ) const override;
-        HubActionResult moveAvatar( uint32 avatarID, const AbsolutePosition& position, float32 stepSeconds, bool bRiding ) override { return _world.moveAvatar( avatarID, position, stepSeconds, bRiding ); }
+        HubActionResult moveAvatar( uint32 avatarID, const AbsolutePosition& position, StepSeconds stepSeconds, bool bRiding ) override { return _world.moveAvatar( avatarID, position, stepSeconds, bRiding ); }
 
         /**
          * @brief 연결을 계정 @p accountID 로 들입니다 — 진행 읽기를 맡기고, 읽히면 아바타를 세운다. 계정이 0 이면 받지 않고 끊습니다.

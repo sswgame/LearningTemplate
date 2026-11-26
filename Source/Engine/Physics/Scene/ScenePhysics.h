@@ -22,6 +22,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
@@ -176,7 +177,7 @@ namespace sw
         /**
          * @brief 프레임 시간만큼 물리를 진행하고 이벤트를 모읍니다(나눠 주기는 `deliverFrameEvents`). 파일 머리말의 순서입니다.
          */
-        void step( float32 deltaTime );
+        void step( GameSeconds frameTime );
         /** @brief 3D · 2D 씬의 바디 · 캐릭터를 선으로 냅니다. */
         void drawDebug( IPhysicsDebugRenderer& renderer ) const;
 

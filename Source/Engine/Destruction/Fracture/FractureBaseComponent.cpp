@@ -601,7 +601,7 @@ namespace sw
 
     void FractureBaseComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
-        const float32 fixedDeltaTime = context.getFixedDeltaTime();
+        const float32 fixedDeltaTime = context.getFixedDeltaTime().count();
         if ( _physics == nullptr )
             return;
         for ( const FractureGroupRuntime& runtime : _listRuntime )
@@ -614,7 +614,7 @@ namespace sw
     void FractureBaseComponent::onPostPhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();
-        _frameSimulatedTime += physics.getStepTimer().getStep();
+        _frameSimulatedTime += physics.getStepTimer().getStep().count();
     }
 
     void FractureBaseComponent::onPhysicsFrameEnd( const FixedStepContext& context )

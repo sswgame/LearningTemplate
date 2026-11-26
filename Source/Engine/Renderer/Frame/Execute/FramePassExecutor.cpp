@@ -230,7 +230,6 @@ namespace sw
         _pCmd->beginCommandList();
         _pendingPSOBatchCount.store( 0, std::memory_order_relaxed );
         _fallbackPSOBatchCount.store( 0, std::memory_order_relaxed );
-        _state._deform._animationTimer.updateTimer();
 
         // 프레임의 첫 GPU 명령 위치다(Shipping 포함 — 자동 렌더 배율의 입력). 패스 시간 합과 이 값의 차이가 "패스 밖의 GPU 시간"(컴퓨트
         // 프리패스, 업로드, 배리어)이다. 쓸지는 시계가 정한다(`GPUFrameClock::readBack`).

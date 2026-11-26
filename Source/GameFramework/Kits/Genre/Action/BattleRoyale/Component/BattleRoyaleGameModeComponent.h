@@ -16,6 +16,7 @@
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -108,7 +109,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateMatch( float32 deltaTime ) override;
+        void               updateMatch( GameSeconds frameTime ) override;
         /** @brief 이겼으면 결과 값 `money`(`_victoryMoney`)를 냅니다. 지면 넘길 값이 없다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 
@@ -133,15 +134,15 @@ namespace sw
         /** @brief 이 판의 씨앗(`_matchSeed`)과 카탈로그로 비행 경로를 정합니다. 비행 설정이 범위 밖이면 false 입니다. */
         [[nodiscard]] bool makeFlightPath();
         [[nodiscard]] bool prepareDrop();
-        void               stepDrop( float32 deltaTime );
-        void               stepBattle( float32 deltaTime );
+        void               stepDrop( StepSeconds step );
+        void               stepBattle( StepSeconds step );
         /** @brief 땅에 닿은 사람 @p person 을 맵 안의 설 자리(건물 안이면 그 곁)로 판에 알립니다. */
         void landPerson( int32 person );
         void stepPlayer( float32 deltaTime );
         /** @brief 컴퓨터 하나의 걸음 — 구역 안으로, 기절한 동료에게, 가까운 적에게 순으로 움직이고 닿으면 쏜다. */
-        void stepBot( int32 person, float32 deltaTime );
+        void stepBot( int32 person, StepSeconds step );
         /** @brief 컴퓨터 @p person 을 @p goal 로 가는 내비메시 길을 따라 한 걸음 옮깁니다. 길은 `_botRouteInterval` 마다 다시 구한다. */
-        void walkRoute( int32 person, const float2& goal, float32 deltaTime );
+        void walkRoute( int32 person, const float2& goal, StepSeconds step );
         /** @brief @p person 을 @p direction 으로 한 걸음 옮깁니다. 건물에 막히면 미끄러지고 맵 밖으로 나가지 않는다. */
         void movePerson( int32 person, const float2& direction, float32 speed, float32 deltaTime );
         /** @brief 사거리 안의 가장 가까운 보이는 적에게 방아쇠를 당깁니다. 알마다 명중 확률로 맞힌다(퍼짐 광선은 쓰지 않는다 — 사람은 바디가 없다). */
@@ -153,7 +154,7 @@ namespace sw
         /** @brief 이 판의 총이 쓰는 탄 아이템이면 true 입니다. */
         bool isAmmoItem( const hashed_string& itemID ) const;
         /** @brief 총의 시간을 흘리고, 빈 탄창은 인벤토리의 탄으로 재장전을 시작합니다. */
-        void updateWeapon( int32 person, float32 deltaTime );
+        void updateWeapon( int32 person, StepSeconds step );
         /** @brief 탄창이나 더 넣을 탄이 있으면 true 입니다. */
         bool canShoot( int32 person ) const { return _listPerson[static_cast<size_t>( person )]._weapon.getMagazineAmmo() > 0 || countSpareAmmo( person ) > 0; }
         /** @brief 든 총에 더 넣을 탄(예비탄과 인벤토리의 탄 아이템)입니다. */

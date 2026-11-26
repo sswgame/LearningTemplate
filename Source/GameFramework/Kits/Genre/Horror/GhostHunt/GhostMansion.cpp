@@ -112,9 +112,9 @@ namespace sw
         return spawnedCount;
     }
 
-    void GhostMansion::update( float32 deltaTime )
+    void GhostMansion::update( GameSeconds frameTime )
     {
-        _encounter.update( deltaTime );
+        _encounter.update( frameTime );
         collectEncounterEvents();
 
         for ( size_t booIndex = 0; booIndex < _listBoo.size(); ++booIndex )
@@ -122,7 +122,7 @@ namespace sw
             HidingGhostRuntime& boo = _listBoo[booIndex];
             if ( boo._state != HidingGhostState::Revealed )
                 continue;
-            boo._timer.update( deltaTime );
+            boo._timer.update( frameTime );
             if ( boo._timer.isActive() == false )
                 moveBooAway( booIndex );
         }

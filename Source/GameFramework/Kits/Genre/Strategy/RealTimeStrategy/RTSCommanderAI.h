@@ -7,6 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -109,7 +110,7 @@ namespace sw
          */
         void initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings, const RTSCommanderUnits& units, const BehaviorTree& tree );
         /** @brief `_thinkInterval` 마다 행동 트리를 한 번 실행합니다. */
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
         /** @brief 월드의 알림(공격받음)을 받습니다. */
         void notify( const RTSEvent& event );
 

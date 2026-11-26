@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -152,7 +153,7 @@ namespace sw
         /** @brief 참가자를 추가하고 번호를 돌려줍니다. 없는 팀이면 이유를 돌려줍니다. */
         [[nodiscard]] expected<int32> addParticipant( int32 team, const hashed_string& role, int32 respawnCost = 0 );
         void                          start();
-        void                          update( float32 deltaTime );
+        void                          update( GameSeconds frameTime );
 
         /** @brief 피해를 기록합니다. 도움 판정과 통계에 씁니다. @p attacker 가 없으면(환경) 기록하지 않습니다. */
         void reportDamage( optional<int32> attacker, int32 victim, float32 amount );

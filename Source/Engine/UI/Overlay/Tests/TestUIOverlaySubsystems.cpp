@@ -165,7 +165,7 @@ SW_TEST_CASE( UIScreenServicesTest, SubtitleRemoveByLineID )
         const uint32   firstID = sink.postSubtitle( "", "first", 5.0f );
         (void)sink.postSubtitle( "", "second", 5.0f );
         const uint32 thirdID = sink.postSubtitle( "", "third", 5.0f );
-        service.update( 0.1f );
+        service.update( RealSeconds{ 0.1f } );
         SW_EXPECT_EQUAL( uint32( 2 ), service.getActiveLineCount() );
         SW_EXPECT_EQUAL( uint32( 1 ), service.getQueuedLineCount() );
 
@@ -198,23 +198,23 @@ SW_TEST_CASE( UIScreenServicesTest, SubtitleQueueOrder )
         (void)service.post( "", "third", 1.0f );
         SW_EXPECT_EQUAL( uint32( 3 ), service.getQueuedLineCount() );
 
-        service.update( 0.1f );
+        service.update( RealSeconds{ 0.1f } );
         SW_EXPECT_EQUAL( config._maxVisibleLineCount, service.getActiveLineCount() );
         SW_EXPECT_EQUAL( uint32( 1 ), service.getQueuedLineCount() );
 
-        service.update( 1.0f ); // 첫 줄이 끝났다
+        service.update( RealSeconds{ 1.0f } ); // 첫 줄이 끝났다
         SW_EXPECT_EQUAL( uint32( 2 ), service.getActiveLineCount() );
         SW_EXPECT_EQUAL( uint32( 0 ), service.getQueuedLineCount() );
 
-        service.update( 1.0f ); // 세 번째 줄은 올라온 뒤로 1 초를 다 썼다
+        service.update( RealSeconds{ 1.0f } ); // 세 번째 줄은 올라온 뒤로 1 초를 다 썼다
         SW_EXPECT_EQUAL( uint32( 1 ), service.getActiveLineCount() );
 
-        service.update( 2.0f );
+        service.update( RealSeconds{ 2.0f } );
         SW_EXPECT_EQUAL( uint32( 0 ), service.getActiveLineCount() );
 
         const uint32 nextID = service.post( "", "again", 0.0f ); // 0 이면 읽는 시간으로 정한다
         SW_EXPECT_FALSE( nextID == firstID );
-        service.update( config._minDisplaySeconds - 0.5f );
+        service.update( RealSeconds{ config._minDisplaySeconds - 0.5f } );
         SW_EXPECT_EQUAL( uint32( 1 ), service.getActiveLineCount() );
 
         service.clear();
@@ -236,22 +236,22 @@ SW_TEST_CASE( UIScreenServicesTest, SubtitlesStandWhileTheGameIsPaused )
     UISubtitleSubsystem service;
     SW_REQUIRE_TRUE( service.configure( makeSubtitleTestConfig() ) );
     const uint32 sequenceLine = service.post( "", "sequence", 3.0f );
-    service.update( 0.1f ); // 보이기 시작한다
+    service.update( RealSeconds{ 0.1f } ); // 보이기 시작한다
     AudioSubtitleCue uiVoice{};
     uiVoice._bPlaysInGamePause = true;
     service.postAudioCues( vector<AudioSubtitleCue>{ uiVoice } ); // 재생 id 가 없어 시간만 따른다
-    service.update( 0.1f );
+    service.update( RealSeconds{ 0.1f } );
     SW_REQUIRE_EQUAL( uint32( 2 ), service.getActiveLineCount() );
 
     service.setGamePaused( true );
-    service.update( 100.0f );
+    service.update( RealSeconds{ 100.0f } );
     SW_REQUIRE_EQUAL( uint32( 1 ), service.getActiveLineCount() );
     SW_EXPECT_EQUAL( sequenceLine, service.getActiveLine( 0 )._id );
 
     service.setGamePaused( false );
-    service.update( 2.0f );
+    service.update( RealSeconds{ 2.0f } );
     SW_EXPECT_EQUAL( uint32( 1 ), service.getActiveLineCount() ); // 2.9 초 가운데 2 초를 썼다
-    service.update( 1.0f );
+    service.update( RealSeconds{ 1.0f } );
     SW_EXPECT_EQUAL( uint32( 0 ), service.getActiveLineCount() );
 }
 

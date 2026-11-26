@@ -116,7 +116,7 @@ namespace sw
         // 이펙트의 이동 제약(둔화 배율 · 속박/기절 · 점프 차단) — 이동기는 이 한 곳에서 읽는다(`MovementConstraint`).
         CharacterMoveState state         = getState();
         state._facingYaw                 = _facingYaw; // 트랜스폼에 쓴 값 그대로 — 감은 값과 견주면 저작한 각이 ±π 밖일 때 다시 쓴다
-        const CharacterMotionInput input = advance( state, pPawn->getIntent(), MovementConstraint::read( *pOwner ), *pController, context.getDeltaTime() );
+        const CharacterMotionInput input = advance( state, pPawn->getIntent(), MovementConstraint::read( *pOwner ), *pController, context.getDeltaTime().count() );
         _velocity                        = state._velocity;
         _climbReleaseLeft                = state._climbReleaseLeft;
         _bClimbing                       = state._bClimbing == SW_TRUE;

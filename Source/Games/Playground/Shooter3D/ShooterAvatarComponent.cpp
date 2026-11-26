@@ -261,7 +261,7 @@ namespace sw
         const ShooterPlayerComponent* pPlayer             = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
         SkeletalAnimatorComponent*    pAnimator           = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         SceneComponent*               pScene              = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        const bool                    bMissingAvatarParts = ( pPlayer == nullptr && _bReplicated == SW_FALSE ) || pScene == nullptr || context.getDeltaTime() <= 0.0f;
+        const bool                    bMissingAvatarParts = ( pPlayer == nullptr && _bReplicated == SW_FALSE ) || pScene == nullptr || context.getDeltaTime().count() <= 0.0f;
         if ( bMissingAvatarParts )
             return;
         ShooterAvatarPose pose = _replicatedPose;
@@ -276,7 +276,8 @@ namespace sw
             pose._bOnGround        = pPlayer->isOnGround() ? SW_TRUE : SW_FALSE;
             pose._bTwoHanded       = pPlayer->getWeapon( pPlayer->getWeaponIndex() ).getDef()._bTwoHanded;
         }
-        const float32 step = MathUtil::min( context.getDeltaTime(), 0.1f );
+        const GameSeconds stepTime{ MathUtil::min( context.getDeltaTime().count(), 0.1f ) }; // 긴 프레임을 자른 게임 시간
+        const float32     step = stepTime.count();
         sampleGunJerk( _locomotion.getDirection() != LocomotionDirection::Idle );
 
         // 몸은 발 자리에 서서 보는 쪽을 본다(KayKit 은 +Z 가 앞).
@@ -298,7 +299,7 @@ namespace sw
                 pAnimator->getParameters().setTrigger( hashed_string( ShooterAnimationParameter::kHit ) );
             }
         }
-        (void)_hitTimer.update( step );
+        (void)_hitTimer.update( stepTime );
         AnimationParameterSet& parameters = pAnimator->getParameters();
         // 대각선 · 임계값 근처에서 상태가 오가면 클립이 매번 처음부터 다시 돈다 — 히스테리시스로 고르고 바뀐 것은 잠깐 이어져야 받아들인다.
         const LocomotionDirection candidate     = LocomotionMath::classifyFrom( _locomotion.getDirection(), pose._velocity, _bodyYaw,

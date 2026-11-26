@@ -206,7 +206,7 @@ namespace sw
             return;
         SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
         updateStreamingHolds();
-        step( deltaTime );
+        step( GameSeconds{ deltaTime } ); // 씬 갱신의 시간은 씬의 게임 시간이다
     }
 
     void ScenePhysics::updateStreamingHolds()
@@ -804,8 +804,9 @@ namespace sw
         _listStepEventEnd2D.push_back( _listFrameEvent2D.size() );
     }
 
-    void ScenePhysics::step( float32 deltaTime )
+    void ScenePhysics::step( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         _listFrameEvent3D.clear();
         _listFrameEvent2D.clear();
         _listStepEventEnd3D.clear();
@@ -822,8 +823,8 @@ namespace sw
         (void)_manager.tickFixedStepGroup( FixedStepGroup::FrameBegin, FixedStepContext{ *this, deltaTime, 0.0f, 0, 0, 0.0f } );
         sweepContinuousColliders2D();
 
-        const uint32  stepCount = static_cast<uint32>( _stepTimer.consume( deltaTime ) );
-        const float32 fixedStep = _stepTimer.getStep();
+        const uint32  stepCount = static_cast<uint32>( _stepTimer.consume( frameTime ) );
+        const float32 fixedStep = _stepTimer.getStep().count();
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             const FixedStepContext stepContext{ *this, deltaTime, fixedStep, stepIndex, stepCount, 0.0f };

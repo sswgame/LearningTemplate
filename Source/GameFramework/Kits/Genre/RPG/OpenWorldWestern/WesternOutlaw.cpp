@@ -114,7 +114,7 @@ namespace sw
         return _pWallet != nullptr && _pCatalog != nullptr ? _pWallet->getBalance( _pCatalog->getCurrency() ) : 0;
     }
 
-    void WesternOutlaw::update( float32 deltaTime )
+    void WesternOutlaw::update( GameSeconds frameTime )
     {
         using Internal = WesternOutlawInternal;
         if ( _pCatalog == nullptr )
@@ -126,12 +126,12 @@ namespace sw
         _lastClockHours          = clockHours;
         _bClockSeen              = SW_TRUE;
 
-        _survival.update( deltaTime, gameHours, computeAirTemperature() );
+        _survival.update( frameTime, gameHours, computeAirTemperature() );
         for ( WesternCarcass& carcass : _listCarcass )
         {
             WesternCarcass::ageCarcass( carcass, gameHours );
         }
-        _law.update( deltaTime );
+        _law.update( frameTime );
         for ( int32 dayIndex = 0; dayIndex < dayCount; ++dayIndex )
         {
             _law.advanceDay();

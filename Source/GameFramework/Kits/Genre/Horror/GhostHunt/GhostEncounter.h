@@ -13,6 +13,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -127,13 +128,13 @@ namespace sw
         /**
          * @brief 흡입 한 틱을 진행합니다. @p pullDirection 은 플레이어가 당기는 방향(XZ 평면이며 스틱 입력)입니다. 도망 방향의 반대로 당기면 보너스 피해, 서지 게이지, 덜 끌리는 효과가 있습니다.
          */
-        GhostSuctionResult updateSuction( const float3& pullDirection, float32 deltaTime );
+        GhostSuctionResult updateSuction( const float3& pullDirection, GameSeconds frameTime );
         /** @brief 서지 게이지가 찼으면 한 번에 큰 피해를 줍니다. 흡입 중이 아니거나 덜 찼으면 false 를 반환합니다. */
         bool triggerSurge();
         /** @brief 청소기 강화 단계를 정합니다(없는 단계는 마지막 단계로 자릅니다). */
         void setVacuumStage( int32 stage );
         /** @brief 시간을 진행합니다. 숨음, 나타남, 공격, 기절 시간과 흡입 중 도망 방향 바꾸기를 처리합니다. */
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
         /** @brief 쌓인 이벤트를 @p outListEvent 뒤에 붙이고 비웁니다. */
         void pollEvents( vector<GhostEvent>& outListEvent );
 

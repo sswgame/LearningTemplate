@@ -8,6 +8,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -48,7 +49,7 @@ namespace sw
     protected:
         void               serializeGameState( StateIO& io ) override;
         [[nodiscard]] bool startGame() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
 
     private:
         /** @brief 같은 씬 캐릭터의 가방입니다(장비 컴포넌트가 시작했을 때만). */

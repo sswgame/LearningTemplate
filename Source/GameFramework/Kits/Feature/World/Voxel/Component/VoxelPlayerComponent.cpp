@@ -272,12 +272,13 @@ namespace sw
         const PawnComponent*          pPawn           = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         const VoxelGameModeComponent* pGameMode       = findGameMode<VoxelGameModeComponent>();
         const VoxelBlockCatalog*      pCatalog        = game::findSubsystem<const VoxelBlockCatalog>();
-        const bool                    bNotReadyToTick = pCamera == nullptr || pPawn == nullptr || pGameMode == nullptr || pCatalog == nullptr || pGameMode->isStarted() == false || context.getDeltaTime() <= 0.0f;
+        const bool                    bNotReadyToTick = pCamera == nullptr || pPawn == nullptr || pGameMode == nullptr || pCatalog == nullptr || pGameMode->isStarted() == false || context.getDeltaTime().count() <= 0.0f;
         if ( bNotReadyToTick )
             return;
         if ( _bBodyPlaced == SW_FALSE )
             initializeBody( *pGameMode );
-        const float32 step = MathUtil::min( context.getDeltaTime(), 0.1f );
+        const GameSeconds stepTime{ MathUtil::min( context.getDeltaTime().count(), 0.1f ) }; // 긴 프레임을 자른 게임 시간
+        const float32     step = stepTime.count();
 
         float3 wish{ 0.0f, 0.0f, 0.0f };
         bool   bJump   = false;
@@ -298,7 +299,7 @@ namespace sw
         updateTarget( *pGameMode, *pCamera );
         updateBreaking( step, *pCatalog, bBreak );
         // 버튼을 누르고 있으면 간격마다 하나씩 놓습니다. 지나간 시간을 이어서 세므로 놓기 빈도가 프레임 시간에 좌우되지 않습니다(`Countdown::updateRepeat`).
-        if ( _placeCooldown.updateRepeat( step, _placeInterval, bPlace ) )
+        if ( _placeCooldown.updateRepeat( stepTime, _placeInterval, bPlace ) )
             placeBlock( *pGameMode, *pCatalog );
         if ( _listPendingEdit.empty() == false || _soundQueue.isEmpty() == false )
             scheduleFlush();

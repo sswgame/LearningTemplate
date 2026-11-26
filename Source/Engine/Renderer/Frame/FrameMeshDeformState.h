@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Time/GameTimer.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/RHIConstantBuffer.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -63,7 +63,7 @@ namespace sw
          *          렌더러가 자기 시계를 가지므로 델타를 여기까지 실어 나르지 않아도 되고, 렌더 스레드에서
          *          게임 시간을 건드리지 않는다.
          */
-        GameTimer _animationTimer{};
+        Stopwatch _animationTimer{};
         /// @brief 진단(`-gv_meshMorphDebugMode=SkipDispatch`)으로 변형 컴퓨트를 건너뛰었는지 여부입니다 — 스킨 결과가 없어 칸 표를 걸지 않는다.
         uint8 _bDeformDispatchSkipped{ SW_FALSE };
     };

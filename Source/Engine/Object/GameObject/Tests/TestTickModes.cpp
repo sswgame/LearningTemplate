@@ -510,7 +510,7 @@ SW_TEST_CASE( TickModesTest, OtherObjectLookupInSameParallelGroupAsserts )
         SW_EXPECT_TRUE( readManager.resolveComponent( targetRootHandle ) == pTargetRoot ); // 단언 2
         SW_EXPECT_TRUE( pTarget->getTickSafeComponent<SceneComponent>() == pTargetRoot );
         SW_EXPECT_TRUE( pReader->getComponent<SceneComponent>() != nullptr );
-        const TickContext context{ *pReader, 0.0f };
+        const TickContext context{ *pReader, GameSeconds{ 0.0f } };
         SW_EXPECT_TRUE( context.readOther<SceneComponent>( pTarget->getHandle() ) == pTargetRoot );
         threadState._parallelTickGroup = static_cast<uint8>( TickGroup::PostUpdate ); // 대상은 이 그룹에서 틱하지 않는다 — 그룹 사이는 장벽
         SW_EXPECT_TRUE( pTarget->getComponent<SceneComponent>() == pTargetRoot );

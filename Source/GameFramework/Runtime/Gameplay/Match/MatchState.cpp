@@ -82,9 +82,10 @@ namespace sw
         return MathUtil::max( 0.0f, _settings._timeLimit - ( _phase == MatchPhase::InProgress ? _phaseTime : 0.0f ) );
     }
 
-    void MatchState::update( float32 deltaTime )
+    void MatchState::update( GameSeconds frameTime )
     {
-        const bool bNotRunning = deltaTime <= 0.0f || _phase == MatchPhase::Waiting || _phase == MatchPhase::Ended;
+        const float32 deltaTime   = frameTime.count();
+        const bool    bNotRunning = deltaTime <= 0.0f || _phase == MatchPhase::Waiting || _phase == MatchPhase::Ended;
         if ( bNotRunning )
             return;
         _elapsed += deltaTime;
@@ -100,7 +101,7 @@ namespace sw
             MatchParticipant& participant = _listParticipant[index];
             if ( participant._bAlive || participant._bEliminated )
                 continue;
-            participant._respawnTimer.update( deltaTime );
+            participant._respawnTimer.update( frameTime );
             if ( participant._respawnTimer.isActive() == false )
             {
                 participant._bAlive = SW_TRUE;

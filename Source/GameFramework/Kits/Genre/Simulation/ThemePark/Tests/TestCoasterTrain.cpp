@@ -109,7 +109,7 @@ namespace
             const int32 frameCount = static_cast<int32>( std::lround( seconds * 60.0f ) );
             for ( int32 frame = 0; frame < frameCount; ++frame )
             {
-                inoutTrain.step( 1.0f / 60.0f );
+                inoutTrain.step( GameSeconds{ 1.0f / 60.0f } );
             }
         }
     };
@@ -166,7 +166,7 @@ SW_TEST_CASE( CoasterTrainTest, ZeroGravityIsRefused )
 SW_TEST_CASE( CoasterTrainTest, TrainWithoutTrackDoesNothing )
 {
     CoasterTrain train;
-    train.step( 1.0f );
+    train.step( GameSeconds{ 1.0f } );
     train.setDistance( 5.0f );
     SW_EXPECT_EQUAL( 0.0f, train.getDistance() );
     SW_EXPECT_EQUAL( 0.0f, train.getElapsedTime() );

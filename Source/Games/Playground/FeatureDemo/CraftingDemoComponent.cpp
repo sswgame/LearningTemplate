@@ -141,9 +141,10 @@ namespace sw
         return bCancelled;
     }
 
-    void CraftingDemoComponent::updateGame( float32 deltaTime )
+    void CraftingDemoComponent::updateGame( GameSeconds frameTime )
     {
-        Inventory* pBag = findBag();
+        const float32 deltaTime = frameTime.count();
+        Inventory*    pBag      = findBag();
         if ( pBag == nullptr )
             return;
         vector<hashed_string> listFinished;

@@ -251,11 +251,11 @@ namespace sw
         _bStarted = SW_TRUE;
     }
 
-    void AsymmetricHorrorMatch::update( float32 deltaTime )
+    void AsymmetricHorrorMatch::update( GameSeconds frameTime )
     {
         if ( _bStarted == SW_FALSE )
             return;
-        const int32 stepCount = _timer.consume( deltaTime );
+        const int32 stepCount = _timer.consume( frameTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             step( _timer.getStep() );
@@ -1574,34 +1574,35 @@ namespace sw
         io.check( constant::invalid_index::kInt32 <= killer._carrying && killer._carrying < static_cast<int32>( survivorCount ) && constant::invalid_index::kInt32 <= killer._breakingPallet && killer._breakingPallet < static_cast<int32>( palletCount ) );
     }
 
-    void AsymmetricHorrorMatch::step( float32 deltaTime )
+    void AsymmetricHorrorMatch::step( StepSeconds step )
     {
+        const float32 deltaTime = step.count();
         ++_tick;
         if ( isEnded() == false )
         {
-            stepKiller( deltaTime );
+            stepKiller( step );
             for ( int32 survivor = 0; survivor < getSurvivorCount(); ++survivor )
             {
-                stepSurvivor( survivor, deltaTime );
+                stepSurvivor( survivor, step );
             }
-            stepGenerators( deltaTime );
-            stepGates( deltaTime );
+            stepGenerators( step );
+            stepGates( step );
             stepWindows( deltaTime );
-            stepEndgame( deltaTime );
+            stepEndgame( step );
             resolveEnd();
         }
-        _match.update( deltaTime );
+        _match.update( step );
     }
 
-    void AsymmetricHorrorMatch::stepKiller( float32 deltaTime )
+    void AsymmetricHorrorMatch::stepKiller( StepSeconds step )
     {
-        _killer._attackCooldown.update( deltaTime );
-        _killer._abilityCooldown.update( deltaTime );
-        _killer._abilityRemaining.update( deltaTime );
-        _killer._stunRemaining.update( deltaTime );
+        _killer._attackCooldown.update( step );
+        _killer._abilityCooldown.update( step );
+        _killer._abilityRemaining.update( step );
+        _killer._stunRemaining.update( step );
         if ( _killer._busyRemaining.isActive() == false )
             return;
-        if ( _killer._busyRemaining.update( deltaTime ) == false )
+        if ( _killer._busyRemaining.update( step ) == false )
             return;
         if ( _killer._breakingPallet >= 0 )
         {
@@ -1620,18 +1621,19 @@ namespace sw
         }
     }
 
-    void AsymmetricHorrorMatch::stepSurvivor( int32 survivorIndex, float32 deltaTime )
+    void AsymmetricHorrorMatch::stepSurvivor( int32 survivorIndex, StepSeconds step )
     {
-        AsymmetricHorrorSurvivor&    survivor = _listSurvivor[static_cast<size_t>( survivorIndex )];
-        const AsymmetricHorrorRules& rules    = _pCatalog->getRules();
-        survivor._hasteRemaining.update( deltaTime );
-        survivor._noiseRemaining.update( deltaTime );
+        const float32                deltaTime = step.count();
+        AsymmetricHorrorSurvivor&    survivor  = _listSurvivor[static_cast<size_t>( survivorIndex )];
+        const AsymmetricHorrorRules& rules     = _pCatalog->getRules();
+        survivor._hasteRemaining.update( step );
+        survivor._noiseRemaining.update( step );
         if ( survivor._noiseRemaining.isActive() == false )
             survivor._noiseRadius = 0.0f;
 
         if ( survivor._activity == SurvivorActivity::Vaulting )
         {
-            survivor._vaultRemaining.update( deltaTime );
+            survivor._vaultRemaining.update( step );
             if ( survivor._vaultRemaining.isActive() == false )
             {
                 survivor._position       = survivor._vaultExit;
@@ -1647,7 +1649,7 @@ namespace sw
             case SurvivorState::Injured:
             case SurvivorState::Dying:
             {
-                survivor._healthMachine.update( deltaTime );
+                survivor._healthMachine.update( step );
                 survivor._healthMachine.discardEvents();
                 if ( survivor._healthMachine.isDead() )
                 {
@@ -1705,7 +1707,7 @@ namespace sw
         // 이 생존자를 치료하는 진행이며, 치료하는 쪽들이 붙어 있다.
         if ( survivor._healing.getParticipantCount() > 0 )
         {
-            survivor._healing.update( deltaTime );
+            survivor._healing.update( step );
             settleHealing( survivorIndex );
         }
         survivor._lastMoveSpeed = 0.0f; // 이동은 걸음 사이에 들어오므로, 다음 걸음까지만 빠른 넘기 판정에 쓴다
@@ -1718,7 +1720,7 @@ namespace sw
             finishHeal( patient );
     }
 
-    void AsymmetricHorrorMatch::stepGenerators( float32 deltaTime )
+    void AsymmetricHorrorMatch::stepGenerators( StepSeconds step )
     {
         for ( int32 index = 0; index < static_cast<int32>( _listGenerator.size() ); ++index )
         {
@@ -1726,7 +1728,7 @@ namespace sw
             if ( generator._progress.isCompleted() || generator._bBlocked == SW_TRUE )
                 continue;
             const float32 before = generator._progress.getProgress();
-            generator._progress.update( deltaTime );
+            generator._progress.update( step );
             const float32 gained = generator._progress.getProgress() - before;
             if ( gained > 0.0f )
             {
@@ -1781,14 +1783,14 @@ namespace sw
         pushEvent( AsymmetricHorrorEvent::Kind::GatesPowered, nullopt, nullopt, 0.0f, generator._position );
     }
 
-    void AsymmetricHorrorMatch::stepGates( float32 deltaTime )
+    void AsymmetricHorrorMatch::stepGates( StepSeconds step )
     {
         for ( int32 index = 0; index < static_cast<int32>( _listGate.size() ); ++index )
         {
             AsymmetricHorrorGate& gate = _listGate[static_cast<size_t>( index )];
             if ( gate._progress.isCompleted() || gate._progress.getParticipantCount() == 0 )
                 continue;
-            gate._progress.update( deltaTime );
+            gate._progress.update( step );
             if ( drainProgress( gate._progress, gate._position ) == false )
                 continue;
             for ( int32 survivor = 0; survivor < getSurvivorCount(); ++survivor )
@@ -1813,7 +1815,7 @@ namespace sw
         }
     }
 
-    void AsymmetricHorrorMatch::stepEndgame( float32 deltaTime )
+    void AsymmetricHorrorMatch::stepEndgame( StepSeconds step )
     {
         const AsymmetricHorrorRules& rules            = _pCatalog->getRules();
         const int32                  standing         = countStandingSurvivors();
@@ -1831,7 +1833,7 @@ namespace sw
             const bool bHelpless = survivor._state == SurvivorState::Dying || survivor._state == SurvivorState::Carried || survivor._state == SurvivorState::Hooked;
             bSlowed              = bSlowed || bHelpless;
         }
-        _collapseRemaining.update( deltaTime * ( bSlowed ? rules._endgame._slowScale : 1.0f ) );
+        _collapseRemaining.update( step * ( bSlowed ? rules._endgame._slowScale : 1.0f ) );
         if ( _collapseRemaining.isActive() )
             return;
         // 붕괴가 끝났다. 아직 남은 생존자는 모두 희생된다.

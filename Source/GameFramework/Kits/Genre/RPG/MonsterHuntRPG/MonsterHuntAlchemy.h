@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -79,7 +80,7 @@ namespace sw
         hashed_string consumeOilHit();
         /** @brief 명상합니다. 술 하나를 쓰고 가진 모든 연금술 물건의 사용 횟수를 채웁니다. 술이 없으면 false 를 반환합니다. */
         [[nodiscard]] bool meditate( Inventory& inoutInventory );
-        void               update( float32 deltaTime );
+        void               update( GameSeconds frameTime );
 
         float32                                getToxicity() const;
         float32                                getMaxToxicity() const;

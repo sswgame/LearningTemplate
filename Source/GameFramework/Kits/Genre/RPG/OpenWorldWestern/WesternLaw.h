@@ -10,6 +10,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -141,7 +142,7 @@ namespace sw
         void setSeenByLaw( const hashed_string& regionID, bool bSeen );
         /** @brief 옷을 갈아입었음을 알립니다(변장하면 수배가 빨리 식습니다). 새 범죄가 신고되면 변장이 풀립니다. */
         void setDisguised( bool bDisguised ) { _bDisguised = bDisguised ? SW_TRUE : SW_FALSE; }
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
         /** @brief 하루가 지났음을 알립니다. 현상금이 지역마다 줄어듭니다. */
         void advanceDay();
         /** @brief 현상금을 내고 그 지역의 기록을 지웁니다. */

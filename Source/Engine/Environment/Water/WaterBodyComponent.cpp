@@ -266,7 +266,7 @@ namespace sw
     {
         SceneComponent::onTick( context );
         if ( engine::getSubsystem<DeterministicRun>().getPolicy()._bFreezeEnvironmentTime == SW_FALSE ) // 결정적 사진은 바람 · 파도 시간을 0 에 멈춘다
-            _waveTime += context.getDeltaTime();
+            _waveTime += context.getDeltaTime().count();
         // 다시 만들기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다. 틱 뒤로 미룬다(줄 선 것과 합치는 규칙은 `queueRebuild` 와 같다).
         if ( _bOriginDirty.exchange( false, std::memory_order_relaxed ) && _bRebuildQueued == false )
         {

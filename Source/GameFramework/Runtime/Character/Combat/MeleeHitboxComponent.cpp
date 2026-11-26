@@ -50,7 +50,7 @@ namespace sw
             return;
 
         requestSweep();
-        _currentDuration += context.getDeltaTime();
+        _currentDuration += context.getDeltaTime().count();
         if ( _duration > 0.0f && _currentDuration >= _duration )
         {
             _bIsAttacking    = false;

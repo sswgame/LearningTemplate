@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Behavior/ConditionExpr.h"
@@ -249,7 +250,7 @@ namespace sw
         /** @brief 횃불 하나에 불을 붙입니다(불화살, 디쿠의 막대). 이번에 새로 켜진 횃불이 있으면 true 를 반환합니다. */
         bool lightTorch( const hashed_string& dungeonID, const hashed_string& deviceID, GameFlags& flags );
         /** @brief 시간을 흘립니다. 시간제 스위치가 꺼지고, 시간 안에 다 켜지 못한 횃불이 꺼집니다. */
-        void update( float32 deltaTime, GameFlags& flags );
+        void update( GameSeconds frameTime, GameFlags& flags );
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void pollEvents( vector<AdventureDungeonEvent>& outListEvent );
 

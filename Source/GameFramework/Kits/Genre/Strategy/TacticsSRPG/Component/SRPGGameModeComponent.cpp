@@ -271,8 +271,9 @@ namespace sw
         }
     }
 
-    void SRPGGameModeComponent::updateGame( float32 deltaTime )
+    void SRPGGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         // 아군 페이즈는 명령(`confirmCell` · `endPlayerPhase`)이 진행한다 — 디렉터는 적 · 제3세력 페이즈만 스스로 돈다.
         if ( deltaTime <= 0.0f || _result != SRPGBattleResult::Ongoing || _field.getPhaseTeam() == SRPGTeam::Player )
             return;

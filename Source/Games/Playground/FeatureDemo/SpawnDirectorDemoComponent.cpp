@@ -54,8 +54,9 @@ namespace sw
         _budget     = _director.getBudget();
     }
 
-    void SpawnDirectorDemoComponent::updateGame( float32 deltaTime )
+    void SpawnDirectorDemoComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         // 사라진 것(파괴 · 죽음)을 먼저 알린다 — 그 자리가 이번 갱신의 동시 상한에 든다.
         for ( SpawnedView& view : _listView )
         {

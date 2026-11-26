@@ -36,17 +36,18 @@ namespace sw
 
     MatchGameModeComponent::~MatchGameModeComponent() = default;
 
-    void MatchGameModeComponent::updateGame( float32 deltaTime )
+    void MatchGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         if ( isMatchEnded() == false )
         {
-            updateMatch( deltaTime );
+            updateMatch( frameTime );
             return;
         }
         Countdown  resultHold( _resultHoldLeft );
-        const bool bHeld = resultHold.update( deltaTime ); // 다 된 걸음에 한 번만 true 다
+        const bool bHeld = resultHold.update( frameTime ); // 다 된 걸음에 한 번만 true 다
         _resultHoldLeft  = resultHold._remaining;
         if ( bHeld )
             finishMinigame();

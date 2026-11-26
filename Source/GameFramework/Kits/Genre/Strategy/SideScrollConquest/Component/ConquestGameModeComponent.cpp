@@ -232,11 +232,11 @@ namespace sw
         }
     }
 
-    void ConquestGameModeComponent::updateMatch( float32 deltaTime )
+    void ConquestGameModeComponent::updateMatch( GameSeconds frameTime )
     {
         if ( isAutoPlayOn() )
             stepAutoPlay();
-        _world.update( deltaTime );
+        _world.update( frameTime );
         reportEvents();
         if ( _world.isVictory() == false && _world.isDefeat() == false )
             return;

@@ -83,7 +83,7 @@ namespace
         {
             for ( int32 step = 0; step < steps; ++step )
             {
-                _match.update( kMatchStep );
+                _match.update( sw::GameSeconds{ kMatchStep } );
             }
         }
 
@@ -644,7 +644,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, MatchDeterminism )
             (void)match.beginRevive( 1, 0 );
         if ( stepIndex % 25 == 10 )
             (void)match.applyDamage( 2, 1, 20.0f, sw::BattleRoyaleHitZone::Body );
-        match.update( kMatchStep );
+        match.update( sw::GameSeconds{ kMatchStep } );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::BattleRoyaleMatch>( setup, step, 200 ) );
 }

@@ -324,7 +324,7 @@ namespace sw
         _bFrameClimb        = bClimb ? SW_TRUE : SW_FALSE;
         if ( bManual )
         {
-            const float32 frameSeconds = context.getFrameDeltaTime();
+            const float32 frameSeconds = context.getFrameDeltaTime().count();
             _frameSurfaceVelocity      = surfaceVelocity;
             _frameMoveScale            = moveScale;
             _frameRootMotionVelocity   = frameSeconds > 0.0f ? rootMotion * ( 1.0f / frameSeconds ) : float3{}; // 시간이 서면 걸음도 없다
@@ -398,7 +398,7 @@ namespace sw
     void CharacterControllerComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics& physics        = context.getPhysics();
-        const float32 fixedDeltaTime = context.getFixedDeltaTime();
+        const float32 fixedDeltaTime = context.getFixedDeltaTime().count();
         const uint32  stepIndex      = context.getStepIndex();
         const uint32  stepCount      = context.getStepCount();
         _physicsStep.assumeHeld(); // 물리 스텝은 이 컴포넌트마다 한 번에 한 스레드가 돈다

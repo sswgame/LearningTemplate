@@ -378,7 +378,7 @@ namespace sw
         } );
     }
 
-    void InteractorComponent::updateActiveSession( const GameObjectManager& manager, const InteractionView& viewer, float32 deltaTime, bool bHeld, bool bPressed )
+    void InteractorComponent::updateActiveSession( const GameObjectManager& manager, const InteractionView& viewer, GameSeconds frameTime, bool bHeld, bool bPressed )
     {
         const InteractableComponent* pTarget = manager.resolveComponent( _focusComponent );
         bool                         bKeep   = pTarget != nullptr && pTarget->isActive() && pTarget->getDefinition() != nullptr;
@@ -392,7 +392,7 @@ namespace sw
             bKeep = InteractionView::isInReach( viewer, candidate, distance );
         }
         if ( bKeep )
-            _session.update( deltaTime, bHeld, bPressed );
+            _session.update( frameTime, bHeld, bPressed );
         else
             _session.cancel();
     }

@@ -44,7 +44,7 @@ namespace sw
     {
         _pUI                            = &engine::getSubsystem<UISystem>();
         _pThemes                        = &engine::getSubsystem<UIThemeController>();
-        _updateSubscription             = _pUI->onUpdateAfterPaint().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UIOffscreenScreens::update, this ) );
+        _updateSubscription             = _pUI->onUpdateAfterPaint().add( SW_DELEGATE_METHOD( Delegate<void( RealSeconds )>, &UIOffscreenScreens::update, this ) );
         _documentReloadedSubscription   = engine::getSubsystem<UIDocumentCache>().onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UIOffscreenScreens::onDocumentReloaded, this ) );
         _styleSheetReloadedSubscription = engine::getSubsystem<UIStyleSheetCache>().onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UIOffscreenScreens::onStyleSheetReloaded, this ) );
         _widgetSkinChangedSubscription  = engine::getSubsystem<UIWidgetSkinService>().onSkinChanged().add( SW_DELEGATE_METHOD( Delegate<void()>, &UIOffscreenScreens::onWidgetSkinChanged, this ) );
@@ -183,11 +183,11 @@ namespace sw
         }
     }
 
-    void UIOffscreenScreens::update( float32 deltaSeconds )
+    void UIOffscreenScreens::update( RealSeconds unscaledDeltaTime )
     {
         if ( _listOffscreen.empty() )
             return;
-        updateAnimations( deltaSeconds );
+        updateAnimations( unscaledDeltaTime.count() );
         paintScreens( _pUI->makeLayoutContext(), _pUI->makePaintContext() );
     }
 
