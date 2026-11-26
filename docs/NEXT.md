@@ -6,10 +6,37 @@
 - 게임이 완성되기 전의 측정값은 고칠지를 정하는 기준이 아니다(사용자 결정). 5 절과 "측정 뒤" 줄은 상용 엔진과 구조를 견줘 정한다: 틀린 모양 · 규모에 따라 나빠지는 모양이면 재지 말고 고치고, 이미 정본이거나 상용 엔진도 하지 않으면 줄을 지운다. 측정은 조절 값(합성 벤치)과 고친 뒤 느려지지 않았는지 보는 데만 쓴다.
 - 차례: 결함 · 계약 → 구조 장치(형식으로 막기) → 정본과 다른 성능 구조.
 
-## 0. 인계(2026-11-24 — 다음 세션은 여기부터)
+## 0. 인계(2026-11-26 — 다음 세션은 여기부터)
 
-- 다음 차례: ① 합친 묶음 검증 · push(2 절) → ② Linux 검증(`linux-verify`) → ③ 에셋 GUID 데이터 이전(8 절).
+- 다음 차례: ① 통합 묶음 검증 · push(아래 "통합 중") → ② Linux 검증(`linux-verify`) → ③ 에셋 GUID 데이터 이전(8 절).
 - `[코드]` 는 빌드 없이 지금 짤 수 있는 일, 나머지는 실행 · 실기기 · 계정이 있어야 한다.
+- 맡긴 갈래는 아래 표에 있는 동안 다른 작업자에게 다시 주지 않는다. 합쳐 push 하면 그 줄을 지운다.
+
+### 통합 중(main, push 전)
+
+- 합친 것: .cpp 리플렉션 · 헤더만 읽던 도구, Core 정리(C1 · normalize 제자리 판 삭제), 렌더 데이터 R1~R4, E1 · E2a · E2b · P2, E3 · E5 · H1~H4 · D1a · D1b, G2 · E4, ReflectionParser 정리 · 최적화 2 개.
+- 남은 검증: Release · Server · Shipping 빌드 → 단위 테스트 → ReflectionParser 단계 시간(기준 106 회 · 165 초 · 최대 7.4 초)으로 최적화 2 개 유지 여부 → preflight(렌더 골든 네 백엔드) → push.
+- 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈(Core 결정성 TU 로 합침), RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로.
+- 판단 남음: TAA 출력의 앨리어싱 제외를 지울지(`-gv_transientAliasing=0` 비교), `--gather-text --check` 가 지면 수집기를 다시 돌려 커밋.
+
+### 맡긴 갈래(작업 중)
+
+| 갈래 · 워크트리 | 몫 |
+| --- | --- |
+| w-cpp-reflect · LT-wt/cppreflect | 파서 정의 · include 를 타깃 속성에서(671f8c8988 · fd2dac7d65 끝), 컴파일 옵션 · 옵션 표 엄격화 · 구성 경로 ctest(9d9872a619 · 4de5136b58 · 1f9504d287 끝), Core (c) 열거 이름 6 개(9d545b213c 끝), 남은 (a) 열거 이름 23 건 |
+| w-enum-meta · LT-wt/enummeta | ENUM 잎 헤더 · 열거형 둘(2898146f6c 끝), 키트별 현지화 표(모듈 단위 탑재 · 수집 대상 · 쿠킹 · 표 이전), AssetTypeDef 접미사 중복(AudioPlayableAsset) |
+| w-gf-dev · LT-wt/gfdev | 배포 매크로 오류 · 확장자 글 · 내비 베이크(1994afb762 · 300285e7e5 · d46c67287a 끝), 에디터 `.hlsl` · `.hlsli` 글 셋, 개발 구성에서도 등록 자리 막기 |
+| w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
+| w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 4 개(7cd17031ac · 432e884715 · 7049625e66 끝), 리플렉션 형식 단일 .cpp 헤더 약 45 개, VulkanRHISamplerPreset |
+| w-server-subsystem · LT-wt/serversub | 6 절 서버 서비스를 모듈 서브시스템으로 |
+| w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · Source shortcut(3b97e3a2c6 · ab3f9659f4 끝), Scripts · cmake 의 shortcut, mesh_modifier.hlsli 노이즈 대조 |
+| w-engine-owner · LT-wt/engineowner | 끝남(3c5d1c924a 까지) — 다음 묶음에 합친다 |
+
+### 아직 아무도 맡지 않은 몫 [코드]
+
+- 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
+- AssertDialog 합치기 — 사용자에게 물을 것.
+- 나머지 `sw_*` CMake 함수(모듈 매니페스트 · 층 문지기 · 쿠킹 표)의 구성 단계 경로 테스트.
 
 ## 1. 다음 순서
 
