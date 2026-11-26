@@ -8,7 +8,7 @@
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

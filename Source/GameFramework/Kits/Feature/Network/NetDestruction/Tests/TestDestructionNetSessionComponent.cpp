@@ -8,7 +8,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionNetSessionComponent.h"

@@ -15,7 +15,7 @@
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 #include "Games/Playground/Shooter3D/ShooterAutoAimControllerComponent.h"

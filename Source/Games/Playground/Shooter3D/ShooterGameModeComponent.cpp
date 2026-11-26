@@ -12,20 +12,20 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
-#include "Engine/Telemetry/TelemetryService.h"
+#include "Engine/Telemetry/TelemetrySubsystem.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
@@ -598,8 +598,8 @@ namespace sw
                 case AIDirectorEventKind::PhaseChanged:
                 {
                     // 쌓기로 돌아왔다 = 새 웨이브. 진행 사건(동의가 없으면 텔레메트리가 버린다).
-                    TelemetryService* pTelemetry = game::findSubsystem<TelemetryService>();
-                    const bool        bNewWave   = event._source.empty() == false && event._id == _pProfile->getPhases()[static_cast<size_t>( _pProfile->getStartPhaseIndex().value() )]._id;
+                    TelemetrySubsystem* pTelemetry = game::findSubsystem<TelemetrySubsystem>();
+                    const bool          bNewWave   = event._source.empty() == false && event._id == _pProfile->getPhases()[static_cast<size_t>( _pProfile->getStartPhaseIndex().value() )]._id;
                     if ( pTelemetry != nullptr && bNewWave )
                     {
                         TelemetryEvent waveReached( "progression.waveReached" );

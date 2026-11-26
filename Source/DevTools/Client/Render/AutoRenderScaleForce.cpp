@@ -4,7 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 

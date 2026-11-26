@@ -12,7 +12,7 @@
 #include "ModuleAPI/ABI/GameAPI.h"
 #include "ModuleAPI/ABI/ModuleABI.h"
 #include "ModuleAPI/Export/ModuleForwardUtil.h"
-#include "ModuleAPI/Service/GameServiceBinding.h"
+#include "ModuleAPI/Service/GameSubsystemBinding.h"
 
 namespace sw
 {
@@ -49,9 +49,9 @@ namespace sw
         pOutAPI->bindService = []( const sw::ISubsystemLocator* pService )                                                                                                                         \
         {                                                                                                                                                                                          \
             if ( pService != nullptr )                                                                                                                                                             \
-                sw::game::bindGameService( *pService );                                                                                                                                            \
+                sw::game::bindGameSubsystems( *pService );                                                                                                                                         \
             else                                                                                                                                                                                   \
-                sw::game::unbindGameService();                                                                                                                                                     \
+                sw::game::unbindGameSubsystems();                                                                                                                                                  \
         };                                                                                                                                                                                         \
         pOutAPI->serializeState = []( sw::GameHandle gameHandle, const sw::StateBufferSink* pSink ) -> bool                                                                                        \
         {                                                                                                                                                                                          \

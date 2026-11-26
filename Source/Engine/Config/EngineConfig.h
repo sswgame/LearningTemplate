@@ -2,7 +2,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Config/RHIBackendType.h"
@@ -98,7 +98,7 @@ namespace sw
 {
     /**
      * @struct AudioConfig
-     * @brief 오디오 서비스(`AudioService::initialize`)가 읽는 설정입니다 — 출력 장치 다시 열기 간격과 클립 캐시 예산.
+     * @brief 오디오 서비스(`AudioSubsystem::initialize`)가 읽는 설정입니다 — 출력 장치 다시 열기 간격과 클립 캐시 예산.
      * @details 다시 열기는 장치를 잃었거나 없이 시작했을 때 기본 장치를 다시 열어 보는 백오프다(지터를 섞어 두 배씩 상한까지). 헤드폰을 다시 꽂으면 곧 붙고(첫 간격),
      *          장치가 없는 기계는 상한마다 한 번만 본다. 언리얼 AudioMixer 의 장치 스왑 재시도 · 유니티 `OnAudioConfigurationChanged` 자리다.
      */
@@ -167,7 +167,7 @@ namespace sw
 {
     /**
      * @struct SubtitleConfig
-     * @brief 자막 서비스(`UISubtitleService::configure`)의 표시 규칙입니다 — 동시에 보이는 줄 수, 최소 표시 시간, 읽기 속도, 크기 설정 배율.
+     * @brief 자막 서비스(`UISubtitleSubsystem::configure`)의 표시 규칙입니다 — 동시에 보이는 줄 수, 최소 표시 시간, 읽기 속도, 크기 설정 배율.
      * @details Xbox Accessibility Guidelines(XAG 104)의 자막 항목 — 한 번에 많은 줄을 쌓지 않고, 읽을 시간을 주고, 크기를 고르게 한다 — 을 데이터로 둔다.
      *          언리얼 `USubtitleManager` 는 같은 값을 코드 상수로 두지만, 여기서는 정책 값이라 설정 파일이 정하고 없으면 자막 서비스 기동이 오류로 멈춘다.
      */
@@ -213,7 +213,7 @@ namespace sw
         PROPERTY( Min = 1, Meta = "Units=MB" )
         uint32 _budgetMegabytes{}; ///< 캐시 예산(MB). 0 이면(키가 없다) 캐시가 처음 남길 때 오류로 멈춘다
 
-        SW_SERVICE_SLOT_CONST( CharacterMeshCacheConfig, Required );
+        SW_SUBSYSTEM_SLOT_CONST( CharacterMeshCacheConfig, Required );
     };
 } // namespace sw
 
@@ -235,7 +235,7 @@ namespace sw
         PROPERTY( Min = 0.1, Units = s )
         float32 _subLevelReadySeconds{}; ///< 넷 세션의 서버가 하위 레벨 미니게임을 짓기 전에 클라이언트가 맵을 다 읽기를 기다리는 한도(초) — 답하지 않는 연결 하나가 서버를 붙잡지 못한다. 0 이면(키가 없다) 세션 중 진입이 오류로 진다
 
-        SW_SERVICE_SLOT_CONST( MinigameConfig, Required );
+        SW_SUBSYSTEM_SLOT_CONST( MinigameConfig, Required );
     };
 } // namespace sw
 
@@ -821,6 +821,6 @@ namespace sw
         PROPERTY( Min = 1, Units = s )
         float64 _shaderTimeRolloverSeconds{};
 
-        SW_SERVICE_SLOT_CONST( EngineConfig, Required );
+        SW_SUBSYSTEM_SLOT_CONST( EngineConfig, Required );
     };
 } // namespace sw

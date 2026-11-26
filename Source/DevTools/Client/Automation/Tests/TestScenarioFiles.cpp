@@ -10,7 +10,7 @@
 #include "DevTools/Client/Automation/Tests/ScenarioFileCheck.h"
 
 #include "Engine/Config/GameSelection.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 using namespace sw;
 

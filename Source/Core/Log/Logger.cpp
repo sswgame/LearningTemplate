@@ -71,7 +71,7 @@ namespace sw
         }
 
         /// @brief 기동 때 건 보고자의 등록이다. 칸이 상수 초기화돼 정적 초기화 순서를 타지 않고, 프로세스가 끝날 때 토큰이 떼어 낸다(그 뒤 보고는 stderr).
-        internal::LowLevelReporterRegistration s_lowLevelReporterRegistration = internal::bindLowLevelReporter( &forwardLowLevelReport );
+        internal::LowLevelReporterSubscription s_lowLevelReporterRegistration = internal::bindLowLevelReporter( &forwardLowLevelReport );
     } // namespace
 } // namespace sw
 

@@ -2,7 +2,7 @@
  * @file Engine/UI/UIPlatformBinding.h
  * @brief 런타임 UI 를 플랫폼에 잇습니다 — 운영체제 클립보드, 스크린 리더 연결, 에디터 없이 뜬 게임 창이면 일시정지 메뉴의 "끝내기".
  * @details 엔진 일이다(예전 자리는 App 의 `RuntimeUIHost`): 엔진 서비스(UI · 클립보드 · 접근성 · 전역 명령 · 종료 요청)와 창만 쓰고, 호스트만 아는 것은
- *          "에디터 안인가" 깃발 하나라 인자로 받는다. App 의 호스트 서비스 `RuntimeUIHooks` 가 세우고 내린다(언리얼 GameViewportClient 가 플랫폼 클립보드 · 접근성 ·
+ *          "에디터 안인가" 깃발 하나라 인자로 받는다. App 의 호스트 서브시스템 `RuntimeUIHooks` 가 세우고 내린다(언리얼 GameViewportClient 가 플랫폼 클립보드 · 접근성 ·
  *          종료 요청을 UI 에 잇는 자리 — 그쪽도 Engine 모듈이다).
  *          에디터 안에서는 끝내기 · 스크린 리더를 걸지 않는다(게임을 끝내는 것은 에디터의 플레이 중지다 — 언리얼 PIE 의 Quit 이 PIE 만 끝내는 것과 같은 자리).
  *          클립보드는 플랫폼이 운영체제 클립보드를 이으면(`PlatformClipboard::isAvailable`) 글 입력 칸의 복사 · 붙여넣기가 다른 프로그램과 오간다.

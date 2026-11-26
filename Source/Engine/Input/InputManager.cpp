@@ -9,8 +9,8 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
@@ -1498,5 +1498,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( InputManager, GameVisible, GameInstance, Startup, (), SW_ENGINE_DEFAULT_FACTORY( InputManager ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( InputManager, GameVisible, GameInstance, Startup, (), SW_ENGINE_DEFAULT_FACTORY( InputManager ) );
 } // namespace sw

@@ -11,13 +11,13 @@
 #include "Engine/Environment/Rain/RainOcclusionComponent.h"
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/MaterialParameterCollection.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 
 namespace sw
 {
-    SW_SCENE_SERVICE( SceneEnvironment, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
+    SW_SCENE_SUBSYSTEM( SceneEnvironment, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     SceneEnvironment::SceneEnvironment( GameObjectManager& manager )
         : _manager{ manager }
@@ -31,7 +31,7 @@ namespace sw
 
     void SceneEnvironment::update( float32 deltaTime )
     {
-        const bool bFrozen = engine::areEngineServicesBound() && engine::getSubsystem<DeterministicRun>().getPolicy()._bFreezeEnvironmentTime == SW_TRUE;
+        const bool bFrozen = engine::areEngineSubsystemsBound() && engine::getSubsystem<DeterministicRun>().getPolicy()._bFreezeEnvironmentTime == SW_TRUE;
         if ( bFrozen == false ) // 결정적 사진은 바람 시간을 0 에 멈춘다
             _environment._w += deltaTime;
         float3 viewPosition{};
@@ -82,7 +82,7 @@ namespace sw
 
     MaterialGlobals SceneEnvironment::collectMaterialGlobals()
     {
-        if ( _bGlobalParametersRequested == SW_FALSE && engine::areEngineServicesBound() )
+        if ( _bGlobalParametersRequested == SW_FALSE && engine::areEngineSubsystemsBound() )
         {
             _bGlobalParametersRequested = SW_TRUE;
             _globalParameters           = MaterialParameterCollection::acquire( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._materialGlobals.get() } ); // 읽지 못하면 받기가 오류를 남긴다

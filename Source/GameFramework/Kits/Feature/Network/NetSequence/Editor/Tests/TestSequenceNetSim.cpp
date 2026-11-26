@@ -5,14 +5,14 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSequence/Editor/Sample/SequenceNetSimGame.h"
 #include "GameFramework/Kits/Feature/Network/NetSequence/SequenceNetSessionComponent.h"
 #include "GameFramework/Kits/Feature/Network/NetSequence/SequenceReplication.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 // SequenceNetSimTest — 컷씬 재생 복제(GF_NetSequence)를 화면 없는 하니스(서버 1 + 클라이언트 N)로 본다: 서버만 판정, 전원 재생 · 늦게 들어온 클라이언트는 서버 프레임부터,
 // 그 플레이어만 재생과 플레이어별 진행 플래그, 건너뛰기 요청은 소유 연결로 검증(에디터 케이스).
@@ -101,7 +101,7 @@ namespace
         SequenceHarnessFixture()
         {
             SceneManager& sceneManager = game::getSubsystem<SceneManager>();
-            SW_EXPECT_TRUE( _harness.initialize( sceneManager.getEngineServices(), NetSimConfig{}, &_game ) );
+            SW_EXPECT_TRUE( _harness.initialize( sceneManager.getSceneEngineSubsystems(), NetSimConfig{}, &_game ) );
             const expected<int32> firstClient  = _harness.addClient( NetSimLinkConditions{} );
             const expected<int32> secondClient = _harness.addClient( NetSimLinkConditions{} );
             SW_EXPECT_TRUE( firstClient.has_value() && secondClient.has_value() );

@@ -16,7 +16,7 @@
 #include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
@@ -32,7 +32,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/Scene.h"
@@ -51,7 +51,7 @@ namespace sw
 {
     // 군중 진행(⑤)은 `Navigation` 단계 끝에 워커로 가고 `FlushPostAnimation` 본문 앞에서 마친다(⑥) — 그 사이 `Animation` 단계와 겹친다.
     // 그 일이 만지는 씬 데이터는 내비게이션(군중 · 에이전트 이동 상태)뿐이다. 오브젝트 자리 · 컨트롤러 속도는 ⑥ 이 게임 스레드에서 쓴다.
-    SW_SCENE_SERVICE_WITH_FRAME_JOB( SceneNavigation, Navigation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Navigation, SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ), FlushPostAnimation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{} ) )
+    SW_SCENE_SUBSYSTEM_WITH_FRAME_JOB( SceneNavigation, Navigation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Navigation, SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ), FlushPostAnimation, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
     SceneNavigation::SceneNavigation( GameObjectManager& manager )
         : _settings{}
@@ -844,7 +844,7 @@ namespace sw
     void SceneNavigation::launchPathRequests()
     {
         // 한 갱신의 경로 일은 설정의 상한까지다 — 몰린 요청이 한 프레임을 붙들지 않고 다음 갱신으로 넘어간다(요청 순서는 그대로).
-        _pathQueue.launch( "NavPathQuery", engine::areEngineServicesBound() ? &engine::getSubsystem<TaskManager>() : nullptr, getSettings()._maxPathRequestsPerUpdate );
+        _pathQueue.launch( "NavPathQuery", engine::areEngineSubsystemsBound() ? &engine::getSubsystem<TaskManager>() : nullptr, getSettings()._maxPathRequestsPerUpdate );
     }
 
     NavMeshWriteAccess SceneNavigation::completeNavMeshReads()
@@ -1099,7 +1099,7 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.Navigation.launchCrowd" );
         _crowdDeltaTime       = deltaTime;
         _bCrowdUpdateLaunched = SW_TRUE;
-        const bool bWorkers   = engine::areEngineServicesBound();
+        const bool bWorkers   = engine::areEngineSubsystemsBound();
         // 종류 하나의 군중은 일 하나가 통째로 진행한다(Detour 군중은 안에서 나누지 않는다) — 종류끼리는 서로 모르므로 같이 돈다. 결과는 스레드 수와 상관없다.
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
         {

@@ -7,8 +7,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -101,5 +101,5 @@ namespace sw
 namespace sw
 {
     // 정지 요청 · 이번 프레임의 실제 경과.
-    SW_ENGINE_SERVICE_SUBSYSTEM( GameTimeScale, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( GameTimeScale ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( GameTimeScale, GameVisible, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( GameTimeScale ) );
 } // namespace sw

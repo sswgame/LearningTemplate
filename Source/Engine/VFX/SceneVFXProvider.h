@@ -1,6 +1,6 @@
 /**
  * @file Engine/VFX/SceneVFXProvider.h
- * @brief VFX 의 렌더 기여입니다(씬 서비스) — 파티클 라이트와 방출기마다의 입자 그리기를 렌더러에 냅니다. 렌더러는 `VFXComponent` 를 모릅니다.
+ * @brief VFX 의 렌더 기여입니다(씬 서브시스템) — 파티클 라이트와 방출기마다의 입자 그리기를 렌더러에 냅니다. 렌더러는 `VFXComponent` 를 모릅니다.
  * @details 언리얼 나이아가라가 시스템 프록시로 렌더러에 내는 자리와 같습니다(기억). 입자 형식 자체(`VFXParticle.h`)는 렌더러의 VFX 절반(`Renderer/VFX`)과 함께 읽습니다.
  */
 #pragma once
@@ -10,7 +10,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/Name/hashed_string.h"
 
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 #include "Engine/VFX/VFXParticle.h"
 
 namespace sw
@@ -43,14 +43,14 @@ namespace sw
         virtual void addGPUMeshEmitter( const VFXGPUEmitterRequest& request, const MeshInstanceBatch& batch, const float4x4& world, float32 meshRadius ) = 0;
     };
 
-    /** @class SceneVFXProvider @brief 씬의 `VFXComponent` 를 렌더러에 내는 씬 서비스입니다. */
-    class SceneVFXProvider final : public ISceneService
+    /** @class SceneVFXProvider @brief 씬의 `VFXComponent` 를 렌더러에 내는 씬 서브시스템입니다. */
+    class SceneVFXProvider final : public ISceneSubsystem
     {
     public:
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
-        static constexpr const utf8*           kSubsystemName = "SceneVFXProvider";
-        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 씬 서브시스템 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
+        static constexpr const utf8*             kSubsystemName = "SceneVFXProvider";
+        const utf8*                              getSubsystemName() const override { return kSubsystemName; }
 
         explicit SceneVFXProvider( GameObjectManager& manager );
 

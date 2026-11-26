@@ -22,8 +22,8 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Backend/EditorUICapture.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/SelfTest/EditorScenarioStepValidation.h"
 #include "Editor/SelfTest/EditorStabilityWait.h"
 

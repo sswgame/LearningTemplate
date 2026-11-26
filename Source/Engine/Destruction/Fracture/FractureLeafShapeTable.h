@@ -2,7 +2,7 @@
  * @file FractureLeafShapeTable.h
  * @brief 파괴 잎 셰이프(조각의 볼록 껍질)를 에셋 · 배율 · 껍질 축소 · 재질이 같은 파괴물끼리 나눠 쓰는 표입니다.
  * @details 같은 벽 수백 장이 한 에셋을 쓰면 잎 셰이프도 한 벌이다 — 파괴물마다 따로 지으면 짓는 시간과 메모리가 파괴물 수에 비례한다. 언리얼 `UBodySetup` 이 볼록 껍질을
- *          에셋에 하나만 들고 바디가 나눠 쓰는 것, 유니티 `MeshCollider` 가 구운 메시를 나눠 쓰는 것과 같다. 물리 씬의 셰이프 핸들은 씬의 것이라 표는 씬마다 하나다(씬 서비스).
+ *          에셋에 하나만 들고 바디가 나눠 쓰는 것, 유니티 `MeshCollider` 가 구운 메시를 나눠 쓰는 것과 같다. 물리 씬의 셰이프 핸들은 씬의 것이라 표는 씬마다 하나다(씬 서브시스템).
  *          소유는 나눠 받은 파괴물에 있다 — 마지막 파괴물이 놓으면 묶음이 셰이프를 지운다. 이미 선 바디는 백엔드가 참조를 세므로 그대로 산다.
  *          게임 스레드의 물리 프레임(`FixedStepGroup::FrameBegin`)에서만 쓴다.
  */
@@ -15,7 +15,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/WeakInternTable.h"
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 #include "Engine/Physics/IPhysicsSceneFwd.h"
 #include "Engine/Physics/PhysicsTypes.h"
 
@@ -88,13 +88,13 @@ namespace sw
      * @class FractureLeafShapeTable
      * @brief 씬 하나의 잎 셰이프 묶음 표입니다. 규칙은 파일 머리말을 보세요.
      */
-    class SW_API FractureLeafShapeTable final : public ISceneService
+    class SW_API FractureLeafShapeTable final : public ISceneSubsystem
     {
     public:
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
-        static constexpr const utf8*           kSubsystemName = "FractureLeafShapeTable";
-        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 씬 서브시스템 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
+        static constexpr const utf8*             kSubsystemName = "FractureLeafShapeTable";
+        const utf8*                              getSubsystemName() const override { return kSubsystemName; }
 
         explicit FractureLeafShapeTable( GameObjectManager& manager );
         ~FractureLeafShapeTable() override = default;

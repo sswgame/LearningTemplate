@@ -24,7 +24,7 @@
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h"
 
 namespace sw

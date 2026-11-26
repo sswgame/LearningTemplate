@@ -1,7 +1,7 @@
 /**
  * @file AAudioAudioBackend.cpp
  * @brief Android 오디오 장치 백엔드입니다(AAudio 데이터 콜백 — API 26+, 이 저장소의 최소 API 는 29).
- * @details 예전에는 Android 클라이언트에 등록된 백엔드가 없어 기동에서 `AudioService::create` 가 치명 오류였다(감사 P0-11).
+ * @details 예전에는 Android 클라이언트에 등록된 백엔드가 없어 기동에서 `AudioSubsystem::create` 가 치명 오류였다(감사 P0-11).
  *          언리얼 AudioMixer 의 Android 백엔드(AAudio · OpenSL)와 같은 자리다. 장치가 콜백 스레드에서 프레임을 달라고 하면 엔진이 그 자리에 렌더한다.
  */
 #include "pch.h"
@@ -13,7 +13,7 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioRenderThread.h"
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Audio/IAudioOutputDevice.h"
 
 #include <aaudio/AAudio.h>
@@ -30,7 +30,7 @@ namespace sw
     {
     public:
         /** @brief 장치를 잡지 않은 채로 만듭니다. */
-        explicit AAudioAudioBackend( AudioService& service );
+        explicit AAudioAudioBackend( AudioSubsystem& service );
         /** @brief 장치를 닫고 엔진을 내립니다. */
         ~AAudioAudioBackend() override;
 
@@ -50,7 +50,7 @@ namespace sw
         void renderCallback( float32* pOutput, uint32 frameCount );
 
     private:
-        AudioService& _service; ///< 이 장치가 당기는 서비스(엔진 · 유실 알림) — 서비스가 장치를 들고 먼저 내린다
+        AudioSubsystem& _service; ///< 이 장치가 당기는 서비스(엔진 · 유실 알림) — 서비스가 장치를 들고 먼저 내린다
         friend struct AAudioAudioBackendCallback;
         unique_ptr<AAudioAudioBackendImpl> _impl; /**< Android 전용 상태입니다. */
     };
@@ -81,7 +81,7 @@ namespace sw
             return AAUDIO_CALLBACK_RESULT_CONTINUE;
         }
 
-        /** @brief 오류 콜백 — 장치가 사라지면(헤드폰 뽑기 · 블루투스 끊김) 스트림이 멈춘다. 서비스에 알린다(`AudioService::notifyOutputLost`). */
+        /** @brief 오류 콜백 — 장치가 사라지면(헤드폰 뽑기 · 블루투스 끊김) 스트림이 멈춘다. 서비스에 알린다(`AudioSubsystem::notifyOutputLost`). */
         static void onError( AAudioStream* pStream, void* pUserData, aaudio_result_t error )
         {
             (void)pStream;
@@ -91,7 +91,7 @@ namespace sw
         }
     };
 
-    AAudioAudioBackend::AAudioAudioBackend( AudioService& service )
+    AAudioAudioBackend::AAudioAudioBackend( AudioSubsystem& service )
         : _service{ service }
         , _impl{ make_unique<AAudioAudioBackendImpl>( service.getEngine() ) }
     {
@@ -99,7 +99,7 @@ namespace sw
 
     AAudioAudioBackend::~AAudioAudioBackend()
     {
-        // 서비스가 소멸자에서 출력 · 장치를 먼저 내린다(`AudioService::~AudioService`) — 여기서는 남은 것을 놓기만 한다.
+        // 서비스가 소멸자에서 출력 · 장치를 먼저 내린다(`AudioSubsystem::~AudioSubsystem`) — 여기서는 남은 것을 놓기만 한다.
     }
 
     bool AAudioAudioBackend::openDevice( AudioOutputDevice& outDevice )
@@ -203,5 +203,5 @@ namespace sw
         return deviceCount + _impl->_renderThread.getUnderrunCount();
     }
 
-    SW_REGISTER_AUDIO_BACKEND( AAudioAudioBackend ); // Android 클라이언트의 장치 백엔드(`AudioService::create` 가 등록표에서 고른다)
+    SW_REGISTER_AUDIO_BACKEND( AAudioAudioBackend ); // Android 클라이언트의 장치 백엔드(`AudioSubsystem::create` 가 등록표에서 고른다)
 } // namespace sw

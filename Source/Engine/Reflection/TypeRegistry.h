@@ -10,7 +10,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/String/Name/NameHashIndex.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionFwd.h"
@@ -367,6 +367,6 @@ namespace sw
         /** @brief 이 배치에서 다시 등록됐거나 별칭이 붙은 타입입니다. */
         unordered_set<const TypeInfo*> _uniqueBatchRoot SW_GUARDED_BY( _mutex );
 
-        SW_SERVICE_SLOT( TypeRegistry, Required );
+        SW_SUBSYSTEM_SLOT( TypeRegistry, Required );
     };
 } // namespace sw

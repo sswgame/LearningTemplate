@@ -12,8 +12,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Content/AssetID.h"
@@ -54,7 +54,7 @@ namespace sw
     private:
         NameRegistry<RigNodeFactory> _registry; ///< 종류 이름 → 생성 함수(등록 순서)
 
-        SW_SERVICE_SLOT( RigNodeRegistry, Required );
+        SW_SUBSYSTEM_SLOT( RigNodeRegistry, Required );
     };
 } // namespace sw
 

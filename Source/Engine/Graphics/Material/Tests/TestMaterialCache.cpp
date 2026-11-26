@@ -5,7 +5,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 
 using namespace sw;

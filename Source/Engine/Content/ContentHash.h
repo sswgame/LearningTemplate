@@ -20,8 +20,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Serialization/Format/FormatDef.h"
 
@@ -144,9 +144,9 @@ namespace sw
         AbsolutePath _cachePath                     SW_GUARDED_BY( _mutex );    ///< `load` 가 정한 영속 파일 경로(빈 글이면 `save` 할 곳이 없다)
         atomic<uint64>                              _hashedByteCount;           ///< 해시하려고 읽은 바이트 누적(워커가 함께 더한다)
         WriteObserver                               _writeObserver;             ///< 파일 계층에 건 쓰기 관찰자
-        PlatformFileUtil::WriteObserverRegistration _writeObserverRegistration; ///< 쓰기 관찰자 등록 — 내릴 때 뗀다(관찰자는 하나라 둘째는 단언)
+        PlatformFileUtil::WriteObserverSubscription _writeObserverRegistration; ///< 쓰기 관찰자 등록 — 내릴 때 뗀다(관찰자는 하나라 둘째는 단언)
 
-        SW_SERVICE_SLOT( ContentHashCache, Required );
+        SW_SUBSYSTEM_SLOT( ContentHashCache, Required );
     };
 } // namespace sw
 

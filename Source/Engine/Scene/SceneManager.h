@@ -10,14 +10,14 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
-#include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/ScenePreviewPolicy.h"
 #include "Engine/Scene/SceneHandle.h"
 #include "Engine/Scene/SceneLoadLeakCheck.h"
 
@@ -92,7 +92,7 @@ namespace sw
         static constexpr const utf8* kSubsystemName      = "Scene";
         static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Scene;
         /**
-         * @brief 빈 매니저로 만듭니다. 엔진 서비스 묶음은 바인딩된 표에서 한 번 읽어 둡니다(`SceneEngineServices::makeFromBoundEngine`).
+         * @brief 빈 매니저로 만듭니다. 엔진 서비스 묶음은 바인딩된 표에서 한 번 읽어 둡니다(`SceneEngineSubsystems::makeFromBoundEngine`).
          * @details 서비스 저장소(`EngineServiceCollection`)는 표를 묶기 **전에** 이것을 만든다 — 그래서 `initializeSubsystem` 이 묶인 뒤의 표를 다시 읽습니다.
          */
         SceneManager();
@@ -286,7 +286,7 @@ namespace sw
          */
         void collectAllScenes( vector<Scene*>& outListScene ) const;
         /** @brief 이 매니저와 그 씬이 쓰는 엔진 서비스 묶음입니다. */
-        const SceneEngineServices& getEngineServices() const { return _services; }
+        const SceneEngineSubsystems& getSceneEngineSubsystems() const { return _services; }
 
         /**
          * @brief 루트 오브젝트를 플레이 중 씬 전환 너머로 가져갑니다 — 유니티 `Object.PersistAcrossScenes` · 언리얼 심리스 트래블의 액터 목록 자리입니다.
@@ -320,7 +320,7 @@ namespace sw
             StopSource               _stop;
             TaskPromise<SceneHandle> _promise{};
             uint32                   _typeTableGeneration{ 0 }; ///< 로드를 띄울 때의 `TypeRegistry::getGeneration` — 다르면 짓는 동안 타입(생성 함수)이 바뀌었다
-            SceneEngineServices      _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initializeSubsystem` 이 적는다 — 워커는 전역 표를 읽지 않는다)
+            SceneEngineSubsystems    _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initializeSubsystem` 이 적는다 — 워커는 전역 표를 읽지 않는다)
         };
         /** @brief 활성 씬을 @p absPath 에 쓰고, @p sourceID 가 있으면 씬의 소스로 삼습니다. 저장이 막혔거나 활성 씬이 없으면 false 입니다. */
         [[nodiscard]] bool writeActiveScene( const AbsolutePath& absPath, const string& sourceID );
@@ -385,7 +385,7 @@ namespace sw
         uint8                     _bRestartLoad  : 1; ///< `suspendPendingLoad` 가 멈춰 둔 로드가 있다 — 다음 `updateTransitions` 가 같은 약속으로 다시 띄운다
         uint64                    _sceneGeneration;
         ISceneRenderBinding*      _pRenderBinding;
-        SceneEngineServices       _services; ///< 생성자가 읽고 `initializeSubsystem` 이 다시 읽은 엔진 서비스 묶음(빌림)
+        SceneEngineSubsystems     _services; ///< 생성자가 읽고 `initializeSubsystem` 이 다시 읽은 엔진 서비스 묶음(빌림)
 
         shared_ptr<AsyncLoadSlot> _asyncLoad;
         string                    _queuedPath;
@@ -413,7 +413,7 @@ namespace sw
         SceneLoadLeakCheck            _leakCheck;         ///< 씬 로드 누수 곡선 감시 값(`startLoadLeakCheck`)
         unique_ptr<ScenePlaySnapshot> _heldPlaySnapshot;  ///< 에디터 모듈 리로드 동안 맡은 롤백 스냅샷(`holdPlaySnapshot`). 없으면 nullptr
 
-        SW_SERVICE_SLOT( SceneManager, Required );
+        SW_SUBSYSTEM_SLOT( SceneManager, Required );
     };
 } // namespace sw
 

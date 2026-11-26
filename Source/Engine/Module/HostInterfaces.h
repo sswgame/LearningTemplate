@@ -15,7 +15,7 @@ namespace sw
     /**
      * @class IModuleLoader
      * @brief 타입 공급자 모듈을 올리고, 씬이 사라진 뒤 모듈 DLL 을 내리는 호스트의 창구입니다.
-     * @details 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 기동 단계가 `locateSubsystem<IModuleLoader>` 로 호스트 범위에서 찾아 부릅니다(읽기 전용 조회).
+     * @details 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 기동 단계가 `findSubsystemFrom<IModuleLoader>` 로 호스트 범위에서 찾아 부릅니다(읽기 전용 조회).
      */
     class IModuleLoader : public Subsystem
     {

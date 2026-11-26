@@ -3,7 +3,7 @@
 
 #include "Editor/Common/Workspace/Undo/EditorUndoEntry.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 

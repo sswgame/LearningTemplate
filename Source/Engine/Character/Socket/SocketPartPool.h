@@ -16,7 +16,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 
 namespace sw
 {
@@ -27,13 +27,13 @@ namespace sw
      * @class SocketPartPool
      * @brief 씬마다 하나 있는 소켓 부품 풀입니다(파일 머리말 참고). 에셋 경로마다 쉬는 부품 목록을 둡니다.
      */
-    class SW_API SocketPartPool final : public ISceneService
+    class SW_API SocketPartPool final : public ISceneSubsystem
     {
     public:
-        /** @brief 이 서비스의 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
-        static constexpr const utf8*           kSubsystemName = "SocketPartPool";
-        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 이 서비스의 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
+        static constexpr const utf8*             kSubsystemName = "SocketPartPool";
+        const utf8*                              getSubsystemName() const override { return kSubsystemName; }
 
         explicit SocketPartPool( GameObjectManager& manager );
 

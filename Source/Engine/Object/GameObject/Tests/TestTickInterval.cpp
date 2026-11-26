@@ -5,7 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 #include "Engine/Object/GameObject/Tests/TickModeTestComponents.h"
 #include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickInterval.h"
@@ -64,10 +64,10 @@ namespace
         TickIntervalRig& operator=( const TickIntervalRig& ) = delete;
 
         /** @brief 엔진 서비스 묶음에 이 씬의 일괄 함수 표를 끼웁니다. */
-        static SceneEngineServices makeServices( TickBatchRegistry& batchRegistry )
+        static SceneEngineSubsystems makeServices( TickBatchRegistry& batchRegistry )
         {
-            SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
-            services._pTickBatchRegistry = &batchRegistry;
+            SceneEngineSubsystems services = SceneEngineSubsystems::makeFromBoundEngine();
+            services._pTickBatchRegistry   = &batchRegistry;
             return services;
         }
 

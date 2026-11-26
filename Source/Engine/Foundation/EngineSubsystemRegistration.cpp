@@ -13,7 +13,7 @@ namespace sw::engine
     {
         struct EngineRegistrationListInternal
         {
-            /** @brief @p pScope 부터 상위로 올라가며 @p typeHash 를 찾습니다(`locateSubsystem` 의 해시 판). */
+            /** @brief @p pScope 부터 상위로 올라가며 @p typeHash 를 찾습니다(`findSubsystemFrom` 의 해시 판). */
             static void* locate( const ISubsystemLocator* pScope, uint64 typeHash )
             {
                 for ( ; pScope != nullptr; pScope = pScope->getParentScope() )
@@ -60,9 +60,9 @@ namespace sw::engine
             }
 
             /** @brief 목록에서 @p typeHash 의 공장 등록입니다. 없으면 nullptr 입니다. */
-            static const EngineSubsystemRecord* findSubsystem( const EngineSubsystemRecord* pHead, uint64 typeHash )
+            static const EngineSubsystemRegistration* findSubsystem( const EngineSubsystemRegistration* pHead, uint64 typeHash )
             {
-                for ( const EngineSubsystemRecord* pRecord = pHead; pRecord != nullptr; pRecord = pRecord->_pNext )
+                for ( const EngineSubsystemRegistration* pRecord = pHead; pRecord != nullptr; pRecord = pRecord->_pNext )
                 {
                     if ( pRecord->_typeHash == typeHash )
                         return pRecord;
@@ -72,21 +72,21 @@ namespace sw::engine
         };
     } // namespace
 
-    EngineServiceRecord::EngineServiceRecord( EngineRegistrationList& list, const utf8* pTypeName, uint64 typeHash, ServiceSlot& slot, bool ( *pfnBind )( SubsystemScope&, void* ),
-                                              ServiceRequirement requirement, EngineServiceVisibility visibility )
+    EngineSubsystemSlotRegistration::EngineSubsystemSlotRegistration( EngineRegistrationList& list, const utf8* pTypeName, uint64 typeHash, SubsystemSlot& slot, bool ( *pfnBind )( SubsystemScope&, void* ),
+                                                                      SubsystemRequirement requirement, EngineSubsystemVisibility visibility )
         : _pTypeName{ pTypeName }
         , _typeHash{ typeHash }
         , _pSlot{ &slot }
         , _pfnBind{ pfnBind }
         , _requirement{ requirement }
         , _visibility{ visibility }
-        , _pNext{ list._pServiceHead }
+        , _pNext{ list._pSlotHead }
     {
-        list._pServiceHead = this;
+        list._pSlotHead = this;
     }
 
-    EngineSubsystemRecord::EngineSubsystemRecord( EngineRegistrationList& list, const utf8* pTypeName, uint64 typeHash, EngineSubsystemStage stage, span<const uint64> listAfterHash,
-                                                  const utf8* pAfterNames, EngineSubsystemFactory pfnFactory, MemoryTag memoryTag )
+    EngineSubsystemRegistration::EngineSubsystemRegistration( EngineRegistrationList& list, const utf8* pTypeName, uint64 typeHash, EngineSubsystemStage stage, span<const uint64> listAfterHash,
+                                                              const utf8* pAfterNames, EngineSubsystemFactory pfnFactory, MemoryTag memoryTag )
         : _pTypeName{ pTypeName }
         , _typeHash{ typeHash }
         , _stage{ stage }
@@ -99,7 +99,7 @@ namespace sw::engine
         list._pSubsystemHead = this;
     }
 
-    EngineSubsystemFactoryScope::EngineSubsystemFactoryScope( SubsystemScope& scope, const EngineSubsystemRecord& record )
+    EngineSubsystemFactoryScope::EngineSubsystemFactoryScope( SubsystemScope& scope, const EngineSubsystemRegistration& record )
         : _scope{ scope }
         , _record{ record }
     {
@@ -124,7 +124,7 @@ namespace sw::engine
     }
 
     EngineRegistrationList::EngineRegistrationList()
-        : _pServiceHead{ nullptr }
+        : _pSlotHead{ nullptr }
         , _pSubsystemHead{ nullptr }
         , _pBoundScope{ nullptr }
     {
@@ -136,28 +136,28 @@ namespace sw::engine
         return s_list;
     }
 
-    EngineServiceBindResult EngineRegistrationList::bindServices( const ISubsystemLocator& subsystems )
+    EngineSubsystemBindResult EngineRegistrationList::bindSubsystemSlots( const ISubsystemLocator& subsystems )
     {
         // 칸은 타입마다 프로세스에 하나다 — 두 번째 범위가 덮으면 앞 엔진의 조회가 소리 없이 다른 객체로 간다. 덮지 않고 알린다.
         if ( _pBoundScope != nullptr )
-            return EngineServiceBindResult{ EngineServiceBindKind::AlreadyBound, nullptr };
-        for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
+            return EngineSubsystemBindResult{ EngineSubsystemBindKind::AlreadyBound, nullptr };
+        for ( const EngineSubsystemSlotRegistration* pRecord = _pSlotHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
             pRecord->_pSlot->_pBound = EngineRegistrationListInternal::locate( &subsystems, pRecord->_typeHash );
             pRecord->_pSlot->_pOwner = EngineRegistrationListInternal::locateOwner( &subsystems, pRecord->_typeHash );
         }
         _pBoundScope               = &subsystems;
-        const utf8* const pMissing = findMissingRequiredService();
+        const utf8* const pMissing = findMissingRequiredSubsystem();
         if ( pMissing != nullptr )
-            return EngineServiceBindResult{ EngineServiceBindKind::MissingRequired, pMissing };
-        return EngineServiceBindResult{ EngineServiceBindKind::Bound, nullptr };
+            return EngineSubsystemBindResult{ EngineSubsystemBindKind::MissingRequired, pMissing };
+        return EngineSubsystemBindResult{ EngineSubsystemBindKind::Bound, nullptr };
     }
 
-    void EngineRegistrationList::unbindServices( const ISubsystemLocator& subsystems )
+    void EngineRegistrationList::unbindSubsystemSlots( const ISubsystemLocator& subsystems )
     {
         if ( _pBoundScope != &subsystems )
             return; // 묶지 못한 범위(두 번째 엔진)는 앞 엔진의 칸을 비우지 않는다
-        for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
+        for ( const EngineSubsystemSlotRegistration* pRecord = _pSlotHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
             pRecord->_pSlot->_pBound = nullptr;
             pRecord->_pSlot->_pOwner = nullptr;
@@ -165,34 +165,34 @@ namespace sw::engine
         _pBoundScope = nullptr;
     }
 
-    bool EngineRegistrationList::isHostOnlyService( uint64 typeHash ) const
+    bool EngineRegistrationList::isHostOnlySubsystem( uint64 typeHash ) const
     {
-        for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
+        for ( const EngineSubsystemSlotRegistration* pRecord = _pSlotHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
             if ( pRecord->_typeHash == typeHash )
-                return pRecord->_visibility == EngineServiceVisibility::HostOnly;
+                return pRecord->_visibility == EngineSubsystemVisibility::HostOnly;
         }
         return false;
     }
 
-    const utf8* EngineRegistrationList::findMissingRequiredService() const
+    const utf8* EngineRegistrationList::findMissingRequiredSubsystem() const
     {
         const utf8* pMissing = nullptr;
-        for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
+        for ( const EngineSubsystemSlotRegistration* pRecord = _pSlotHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
-            const bool bMissing = pRecord->_requirement == ServiceRequirement::Required && pRecord->_pSlot->_pBound == nullptr;
+            const bool bMissing = pRecord->_requirement == SubsystemRequirement::Required && pRecord->_pSlot->_pBound == nullptr;
             if ( bMissing && ( pMissing == nullptr || EngineRegistrationListInternal::isNameBefore( pRecord->_pTypeName, pMissing ) ) )
                 pMissing = pRecord->_pTypeName;
         }
         return pMissing;
     }
 
-    void EngineRegistrationList::bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly, bool bSkipAlreadyBound ) const
+    void EngineRegistrationList::bindModuleSubsystems( SubsystemScope& outScope, bool bGameModuleOnly, bool bSkipAlreadyBound ) const
     {
-        for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
+        for ( const EngineSubsystemSlotRegistration* pRecord = _pSlotHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
             void* const pService  = pRecord->_pSlot->_pBound;
-            const bool  bVisible  = bGameModuleOnly == false || pRecord->_visibility == EngineServiceVisibility::GameVisible;
+            const bool  bVisible  = bGameModuleOnly == false || pRecord->_visibility == EngineSubsystemVisibility::GameVisible;
             const bool  bFresh    = bSkipAlreadyBound == false || outScope.findInScope( pRecord->_typeHash ) == nullptr;
             const bool  bBindable = pService != nullptr && bVisible;
             if ( bBindable && bFresh )
@@ -201,11 +201,11 @@ namespace sw::engine
         }
     }
 
-    expected<void> EngineRegistrationList::orderSubsystems( EngineSubsystemStage stage, vector<const EngineSubsystemRecord*>& outListOrder ) const
+    expected<void> EngineRegistrationList::orderSubsystems( EngineSubsystemStage stage, vector<const EngineSubsystemRegistration*>& outListOrder ) const
     {
         outListOrder.clear();
-        vector<const EngineSubsystemRecord*> listRecord;
-        for ( const EngineSubsystemRecord* pRecord = _pSubsystemHead; pRecord != nullptr; pRecord = pRecord->_pNext )
+        vector<const EngineSubsystemRegistration*> listRecord;
+        for ( const EngineSubsystemRegistration* pRecord = _pSubsystemHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
             if ( pRecord->_stage == stage )
                 listRecord.push_back( pRecord );
@@ -214,10 +214,10 @@ namespace sw::engine
         vector<vector<const utf8*>> listDependencyName( listRecord.size() );
         for ( size_t recordIndex = 0; recordIndex < listRecord.size(); ++recordIndex )
         {
-            const EngineSubsystemRecord& record = *listRecord[recordIndex];
+            const EngineSubsystemRegistration& record = *listRecord[recordIndex];
             for ( const uint64 afterHash : record._listAfterHash )
             {
-                const EngineSubsystemRecord* const pAfter = EngineRegistrationListInternal::findSubsystem( _pSubsystemHead, afterHash );
+                const EngineSubsystemRegistration* const pAfter = EngineRegistrationListInternal::findSubsystem( _pSubsystemHead, afterHash );
                 if ( pAfter == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "an engine subsystem is built after a type that has no registration (SW_ENGINE_SUBSYSTEM)", record._pTypeName }
                                            .appendDetail( " after " )
@@ -246,7 +246,7 @@ namespace sw::engine
         return {};
     }
 
-    expected<void> EngineRegistrationList::findLifetimeMismatch( const vector<const EngineSubsystemRecord*>& listOrder, const vector<vector<uint32>>& listBuilt, const SubsystemCollection& collection )
+    expected<void> EngineRegistrationList::findLifetimeMismatch( const vector<const EngineSubsystemRegistration*>& listOrder, const vector<vector<uint32>>& listBuilt, const SubsystemCollection& collection )
     {
         // 수명 의존 그래프 — 이름으로 잇는다(서브시스템 목록의 정렬과 같은 규칙: 내 의존 칸, 그리고 상대가 나를 적은 의존자 칸).
         const uint32           subsystemCount = collection.getSubsystemCount();
@@ -271,7 +271,7 @@ namespace sw::engine
         }
         for ( size_t recordIndex = 0; recordIndex < listOrder.size(); ++recordIndex )
         {
-            const EngineSubsystemRecord& record = *listOrder[recordIndex];
+            const EngineSubsystemRegistration& record = *listOrder[recordIndex];
             for ( const uint64 afterHash : record._listAfterHash )
             {
                 size_t afterIndex = listOrder.size();
@@ -305,16 +305,16 @@ namespace sw::engine
 
     void EngineRegistrationList::buildSubsystems( EngineSubsystemStage stage, SubsystemScope& scope, EngineSubsystemBuild& build ) const
     {
-        vector<const EngineSubsystemRecord*> listOrder;
+        vector<const EngineSubsystemRegistration*> listOrder;
         if ( const expected<void> ordered = orderSubsystems( stage, listOrder ); ordered.has_value() == false )
             reportFatalError( "Engine subsystem build order: %# (%#)", ordered.error().message(), ordered.error().detail() );
         // 공장마다 그 공장이 더한 서브시스템 번호 — 수명 의존 대조(`findLifetimeMismatch`)가 쓴다.
         vector<vector<uint32>> listBuilt( listOrder.size() );
         for ( size_t recordIndex = 0; recordIndex < listOrder.size(); ++recordIndex )
         {
-            const EngineSubsystemRecord& record     = *listOrder[recordIndex];
-            const uint32                 countStart = scope.getCollection().getSubsystemCount();
-            EngineSubsystemFactoryScope  factoryScope{ scope, record };
+            const EngineSubsystemRegistration& record     = *listOrder[recordIndex];
+            const uint32                       countStart = scope.getCollection().getSubsystemCount();
+            EngineSubsystemFactoryScope        factoryScope{ scope, record };
             {
                 const ScopedMemoryTag factoryMemoryTag{ record._memoryTag }; // 공장 본문(형식 밖 객체 · 노출 칸)도 그 서브시스템의 용도로 센다 — 공장이 태그를 적지 않는다
                 record._pfnFactory( factoryScope, build );

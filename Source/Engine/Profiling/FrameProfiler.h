@@ -28,8 +28,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Profiling/FrameProfileReport.h"
 #include "Engine/Profiling/ProfileScopeID.h"
@@ -126,7 +126,7 @@ namespace sw
          */
         static ProfileScopeID registerEngineScopeSite( const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line );
         /**
-         * @brief 실행 중에 정해지는 이름(붙인 프레임 시스템 · 씬 서비스의 등록 이름)의 구간을 등록합니다 — 이름은 @p pPrefix 뒤에 @p pName 을 이은 것입니다.
+         * @brief 실행 중에 정해지는 이름(붙인 프레임 시스템 · 씬 서브시스템의 등록 이름)의 구간을 등록합니다 — 이름은 @p pPrefix 뒤에 @p pName 을 이은 것입니다.
          * @details 디스패치하는 쪽이 항목을 붙일 때 **한 번** 받아 항목에 들고, 부를 때마다 그 값으로 `ScopedFrameProfile` 을 엽니다 — 프레임마다 이름을 잇거나
          *          찾지 않는다. 시스템마다 손으로 구간을 더하지 않으므로 새 시스템도 계측에서 빠지지 않는다(언리얼 `FTickFunction` 이 틱 함수 이름으로
          *          stat 을 여는 자리). 이름은 두 표(이 표 · 외부 출력)가 사본을 든다.
@@ -234,7 +234,7 @@ namespace sw
         atomic<uint64>       _frameCount{ 0 };
         atomic<bool>         _bEnabled{ SW_FALSE };
 
-        SW_SERVICE_SLOT( FrameProfiler, Required );
+        SW_SUBSYSTEM_SLOT( FrameProfiler, Required );
     };
 } // namespace sw
 

@@ -79,7 +79,7 @@ namespace sw::editor
         }
         /**
          * @brief 연 에셋 파일의 리소스 id 입니다. 연 경로가 없는 문서(`EditorStateDocumentPanel`)와 아직 연 문서가 없는 패널은 빈 글입니다.
-         * @details 두 기반이 각각 정한다(순수 가상) — 옮기기 · 삭제 계획(`IEditorPanelService::collectOpenDocuments`)이 연 문서를 묻는 길이다(감사 P0-4).
+         * @details 두 기반이 각각 정한다(순수 가상) — 옮기기 · 삭제 계획(`IEditorPanelSubsystem::collectOpenDocuments`)이 연 문서를 묻는 길이다(감사 P0-4).
          */
         [[nodiscard]] virtual string_view getDocumentAssetPath() const = 0;
         /**

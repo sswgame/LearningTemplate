@@ -26,7 +26,7 @@
 #include "DevTools/Profiling/ProfilerTraceExport.h"
 
 #include "Editor/Common/Task/EditorBackgroundTask.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Network/GameNetSession.h"

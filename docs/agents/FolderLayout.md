@@ -39,11 +39,11 @@
 | 폴더(층) | 두는 것 |
 | --- | --- |
 | `Foundation` · `Compression`(0) | 아래 층이 앞으로 선언만 하는 핸들 · 엔진 상수 · 서비스 창구, 압축 코덱 |
-| `Reflection` · `Serialization` · `Config` · `Content` · `Console` · `Observability` · `Curve` · `CoreServices` · `Behavior`(1) | 이름 그대로(`Behavior` 는 조건식 · 동작 어휘) |
+| `Reflection` · `Serialization` · `Config` · `Content` · `Console` · `Observability` · `Curve` · `CoreSubsystems` · `Behavior`(1) | 이름 그대로(`Behavior` 는 조건식 · 동작 어휘) |
 | `Profiling`(1) | 런타임 계측과 그 포트만 — 보고서를 쓰는 쪽은 DevTools |
 | `Asset` · `Text` · `Localization` · `Presentation`(2) | 에셋 · 글 배치 · 번역, 게임 코드가 UI · 오디오 없이 아는 표현 창구(I*Sink · I*Driver · 뷰모델) |
 | `Window` · `Input`(3), `Graphics`(4), `Object` · `Scene`(5) | |
-| 기능 폴더(6~9) | 컴포넌트는 `<기능>/Component`, 씬 서비스 · 시스템은 `<기능>/Scene`, 데이터는 `<기능>/` 바로 아래. 층: 바닥(6) → 애니메이션(7) → 합성(8) → 알림 디스패치(9). 같은 층끼리 include 하면 린트 `layer-cycles` 가 멈춘다 |
+| 기능 폴더(6~9) | 컴포넌트는 `<기능>/Component`, 씬 서브시스템 · 시스템은 `<기능>/Scene`, 데이터는 `<기능>/` 바로 아래. 층: 바닥(6) → 애니메이션(7) → 합성(8) → 알림 디스패치(9). 같은 층끼리 include 하면 린트 `layer-cycles` 가 멈춘다 |
 | `Renderer`(10) | 렌더 스레드 · 프레임 그래프 · GPU 파이프라인 |
 | `Module` · `Automation`(11) | 엔진 루프 조립 · 핫 리로드 바인딩 · 자동화 창구. 실행기 · 판정 · 녹화는 `DevTools/Client/Automation` |
 
@@ -56,7 +56,7 @@ CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Envi
 | 규칙 | 까닭 |
 | --- | --- |
 | `Util` · `Utility` · `Helpers` · `Misc` 폴더 금지, `Common` 도 새로 만들지 않는다(`Editor/Common` 만). 린트 `folder-layout` 강제(예외 `Config/Rules/Lint/FolderLayout.json`) | 잡동사니 폴더는 하는 일로 찾을 수 없다 |
-| `<기능>/Component` 에는 `*Component` 만(린트 `folder-layout` 강제) | 씬 서비스 · 질의는 `<기능>/Scene` |
+| `<기능>/Component` 에는 `*Component` 만(린트 `folder-layout` 강제) | 씬 서브시스템 · 질의는 `<기능>/Scene` |
 | 키트 폴더는 평평하게: 장르 키트는 카탈로그 · 규칙 파일(엔진 시계 · 렌더를 모른다)을 키트 바로 아래, 하위 폴더는 `Component/`(디렉터 · 컴포넌트) · `Client/`(뷰 · 입력 · HUD — 따로 짓는 `GF_Client_<X>`, 디렉터의 명령 · 읽기 API 만 쓴다) · `Editor/` · `Tests/` 와 하위 게임만. 뼈대는 `new-kit`. 온라인 키트는 `Runtime/` · `Server/` 바로 아래(뼈대 `new-online-kit`) | 키트는 파일 10 ~ 20 개 |
 | 개발 기능은 `Source/DevTools/`. `Dev/` 폴더는 `Config/Rules/Layers/DevFolders.json` 에 까닭과 함께 적은 자리만(configure 강제) | DevTools 는 GF · 게임 · ModuleManager · App 을 못 본다 — 엔진이 확장점을 내고 DevTools 가 붙는다 |
 | 실행 중 바꾸기 · 핫스왑은 개발, 기동 때 고르기는 제품 | 언리얼도 RHI · 모듈 교체는 재시작 |

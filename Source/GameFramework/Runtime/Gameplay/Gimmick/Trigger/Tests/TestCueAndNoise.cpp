@@ -16,7 +16,7 @@
 #include "GameFramework/Runtime/Character/AI/NoiseEmitterComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IAbilityCueSink.h"
 #include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"

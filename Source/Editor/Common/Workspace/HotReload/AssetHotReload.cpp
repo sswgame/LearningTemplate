@@ -22,7 +22,7 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetImportJob.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/HotReload/AssetReferenceTracker.h"
 #include "Editor/Common/Workspace/HotReload/AssetReloadCascade.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"

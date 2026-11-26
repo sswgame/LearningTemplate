@@ -1,0 +1,38 @@
+#include "pch.h"
+
+#include "Engine/CoreSubsystems/MemoryBudgetSubsystem.h"
+
+#include "Core/File/FileUtil.h"
+
+#include "Engine/Content/AssetPaths.h"
+#include "Engine/CoreSubsystems/ContentRootSubsystem.h"
+#include "Engine/CoreSubsystems/CrashHandlerSubsystem.h"
+#include "Engine/Foundation/EngineSubsystems.h"
+
+namespace sw
+{
+    MemoryBudgetSubsystem::MemoryBudgetSubsystem( const CrashHandlerSubsystem& crashHandler )
+        : _crashHandler{ crashHandler }
+        , _monitor{}
+        , _bBudgetFileRead{ SW_FALSE }
+    {
+    }
+
+    void MemoryBudgetSubsystem::onFrameEnd()
+    {
+        if ( _bBudgetFileRead == false )
+        {
+            _bBudgetFileRead = SW_TRUE;
+            if ( _crashHandler.isCrashReporterRun() == false )
+                (void)_monitor.loadBudgetFile(); // 틀린 표는 오류를 남기고 예산 없이 간다
+        }
+        _monitor.onFrameEnd();
+    }
+
+    span<const utf8* const> MemoryBudgetSubsystem::getSubsystemDependencies() const
+    {
+        // 예산 표는 게임 프로젝트 폴더에 있다 — 리소스 루트 · 게임을 정하는 단계 뒤에 선다.
+        static constexpr const utf8* kArrDependency[] = { ContentRootSubsystem::kSubsystemName };
+        return kArrDependency;
+    }
+} // namespace sw

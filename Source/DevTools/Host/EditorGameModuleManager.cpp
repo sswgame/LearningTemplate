@@ -8,7 +8,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Engine.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
@@ -320,7 +320,7 @@ namespace sw
         if ( ModuleInstanceUtil::exportAPIFromLibrary<EditorAPI, PFN_ExportEditorAPI>( library, kEditorModuleSymbols, _editorAPI ) == false )
             return false;
 
-        rebindEditorService();
+        rebindEditorSubsystems();
 
         if ( engine::registerModuleTypes( sw::config::kTargetEditorModule ) == false )
             return false;
@@ -336,7 +336,7 @@ namespace sw
             return _editor != nullptr;
         }
 
-        rebindEditorService();
+        rebindEditorSubsystems();
         return createEditorInstance();
     }
 

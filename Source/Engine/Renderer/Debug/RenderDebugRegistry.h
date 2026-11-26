@@ -16,8 +16,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Renderer/Graph/RenderGraphSnapshot.h"
 
@@ -239,6 +239,6 @@ namespace sw
         atomic<uint8>  _bBufferListRequested{ SW_FALSE };
         atomic<uint8>  _bRecording{ SW_FALSE };
 
-        SW_SERVICE_SLOT( RenderDebugRegistry, Optional );
+        SW_SUBSYSTEM_SLOT( RenderDebugRegistry, Optional );
     };
 } // namespace sw

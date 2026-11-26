@@ -20,7 +20,7 @@
 #include "Editor/Common/Asset/Texture/TextureBlockEncoder.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Config/EditorPaths.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/Cook/CookRecord.h"

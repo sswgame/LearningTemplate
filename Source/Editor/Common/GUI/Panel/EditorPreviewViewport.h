@@ -15,7 +15,7 @@
 #include "Editor/Common/EditorExports.h"
 
 #include "Engine/Graphics/View/ScreenshotTicketState.h"
-#include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
+#include "Engine/Object/GameObject/Subsystem/ScenePreviewPolicy.h"
 
 namespace sw
 {

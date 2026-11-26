@@ -8,7 +8,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/Component/SceneComponent.h"

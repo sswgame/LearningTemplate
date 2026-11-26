@@ -15,7 +15,7 @@
 #include "Engine/Environment/Fog/FogSettings.h"
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -119,9 +119,9 @@ namespace sw
         }
 
         if ( pTaskManager != nullptr )
-            bindServices( pTaskManager );
-        else if ( engine::areEngineServicesBound() )
-            bindServices( &engine::getSubsystem<TaskManager>() );
+            bindSubsystemSlots( pTaskManager );
+        else if ( engine::areEngineSubsystemsBound() )
+            bindSubsystemSlots( &engine::getSubsystem<TaskManager>() );
         // 패스별 GPU 시간을 보고할 프로파일러다 — 호스트가 건 렌더러 하나만 계측한다(타임스탬프 슬롯 · `GPU.<패스>` 구간이 하나다).
         _state._gpuPassTimeline.bindProfiler( _host._pProfiler );
 
@@ -160,7 +160,7 @@ namespace sw
         return true;
     }
 
-    void FrameRenderer::bindServices( TaskManager* pTaskManager )
+    void FrameRenderer::bindSubsystemSlots( TaskManager* pTaskManager )
     {
         _state._pTaskManager = pTaskManager;
     }
@@ -446,7 +446,7 @@ namespace sw
         // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 전송은 이번 프레임이 기록한 것보다 먼저 실행되므로(전송 계약 3) **아무것도 기록하기 전에 한 번** 부른다.
         // 렌더러마다 부르면 미리보기가 주 화면을 기록한 뒤에 전송을 내고(주 화면이 전이를 기록한 텍스처의 앞 상태가 어긋나고 백엔드마다 보는 내용이 다르다), 프레임당 상한 · 프레임 수를 여러 번 센다.
         // 그리지 않는 프레임도 같은 길이다 — 결정적 실행은 상한 없이 끝내므로 그리는 프레임이 따라잡을 몫이 남지 않는다.
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return;
         // 결정적 실행(`DeterministicRunPolicy::_bFinishAssetJobsEachFrame`)이면 아래 프레임당 상한을 모두 푼다 — 상한 안에 무엇이 드느냐가 워커의 도착 순서에 달린다.
         const bool bFinishAssetJobs = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
@@ -679,8 +679,8 @@ namespace sw
         if ( hdriPath != _state._skyHdriPath )
         {
             _state._skyHdriPath = hdriPath;
-            _state._skyHdriLoad = hdriPath.empty() || engine::areEngineServicesBound() == false ? TextureHandle{}
-                                                                                                : engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( hdriPath.view(), AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
+            _state._skyHdriLoad = hdriPath.empty() || engine::areEngineSubsystemsBound() == false ? TextureHandle{}
+                                                                                                  : engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( hdriPath.view(), AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
         }
         if ( bHasSky == false )
         {
@@ -1375,7 +1375,7 @@ namespace sw
 
         // 렌더 텍스처는 캐시에서 빌린다 — 머티리얼이 같은 경로로 읽는다. 크기는 텍스처의 실제 크기다(먼저 만든 쪽이 정했다).
         const bool bRenderTexture       = view._outputKind == RenderViewOutputKind::RenderTexture;
-        const bool bBorrowRenderTexture = bRenderTexture && ( view._outputPath == request._renderTexture ) == false && engine::areEngineServicesBound();
+        const bool bBorrowRenderTexture = bRenderTexture && ( view._outputPath == request._renderTexture ) == false && engine::areEngineSubsystemsBound();
         if ( bBorrowRenderTexture )
         {
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();

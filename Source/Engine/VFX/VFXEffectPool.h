@@ -1,6 +1,6 @@
 /**
  * @file Engine/VFX/VFXEffectPool.h
- * @brief 한 번 터지는 효과(`*.vfx.xml`)를 월드 한 점에서 트는 씬 서비스입니다 — 효과마다 `VFXComponent` 오브젝트 풀을 돌려 씁니다.
+ * @brief 한 번 터지는 효과(`*.vfx.xml`)를 월드 한 점에서 트는 씬 서브시스템입니다 — 효과마다 `VFXComponent` 오브젝트 풀을 돌려 씁니다.
  * @details 발걸음 · 탄착처럼 자주 나는 짧은 효과는 날 때마다 오브젝트를 만들고 지우지 않는다. 효과 경로마다 풀을 두고, 놀고 있는(재생이 끝난) 것을 다시 틀고,
  *          모두 재생 중이면 상한(@p poolLimit — 부르는 쪽 데이터)까지 새로 만들며, 상한이면 가장 오래 전에 튼 것을 새 자리에서 다시 튼다
  *          (언리얼 `UNiagaraFunctionLibrary::SpawnSystemAtLocation` 의 컴포넌트 풀 · 시스템 에셋의 MaxPoolSize 자리).
@@ -8,7 +8,7 @@
  *          그리는 것이 없는 전용 서버(`build::kWithClientCode` 가 거짓)는 틀지 않는다.
  *          **오브젝트는 안전 지점에서만 만든다.** `play` 는 매니저의 구조 변경 명령 버퍼(`executeOrDeferPostTickOnScene`)로 넘긴다 — 틱 중(병렬 틱 · 알림 처리)이면
  *          틱 뒤 게임 스레드로 미루고, 틱 밖이면 바로 튼다(언리얼 Mass 의 Defer() 명령 버퍼 · 유니티 EntityCommandBuffer 자리). 그래서 부르는 쪽이 어느 스레드 · 어느 단계인지 몰라도 된다.
- *          씬 서비스(`ISceneService`)이고 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생긴다(`manager.getSubsystem<sw::VFXEffectPool>()`).
+ *          씬 서브시스템(`ISceneSubsystem`)이고 `SW_SCENE_SUBSYSTEM` 줄로 매니저마다 하나 생긴다(`manager.getSubsystem<sw::VFXEffectPool>()`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -20,7 +20,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 
 namespace sw
 {
@@ -31,13 +31,13 @@ namespace sw
      * @class VFXEffectPool
      * @brief 씬마다 하나 있는 한 번 터지는 효과의 풀입니다(파일 머리말 참고).
      */
-    class SW_API VFXEffectPool final : public ISceneService
+    class SW_API VFXEffectPool final : public ISceneSubsystem
     {
     public:
-        /** @brief 이 서비스의 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
-        static constexpr const utf8*           kSubsystemName = "VFXEffectPool";
-        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 이 서비스의 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
+        static constexpr const utf8*             kSubsystemName = "VFXEffectPool";
+        const utf8*                              getSubsystemName() const override { return kSubsystemName; }
 
         explicit VFXEffectPool( GameObjectManager& manager );
 

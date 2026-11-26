@@ -9,8 +9,8 @@
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 #include "Engine/UI/Style/WidgetStyle.h"
@@ -314,5 +314,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIWidgetSkinService, HostOnly, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIWidgetSkinService ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( UIWidgetSkinService, HostOnly, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIWidgetSkinService ) );
 } // namespace sw

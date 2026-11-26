@@ -6,7 +6,14 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
+#include "Engine/Config/GameConfig.h"
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetPaths.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw

@@ -5,11 +5,11 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Telemetry/CrashReportService.h"
-#include "Engine/Telemetry/TelemetryService.h"
+#include "Engine/Telemetry/CrashReportSubsystem.h"
+#include "Engine/Telemetry/TelemetrySubsystem.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -82,10 +82,10 @@ namespace sw
 
     expected<void> TelemetryUploadLink::linkTelemetry( const string& endpoint )
     {
-        TelemetryService* const pTelemetry = game::findSubsystem<TelemetryService>();
+        TelemetrySubsystem* const pTelemetry = game::findSubsystem<TelemetrySubsystem>();
         if ( pTelemetry == nullptr )
         {
-            // 텔레메트리는 클라이언트 호스트 서비스다(`TelemetryService::getSubsystemHost`). 전용 서버는 운영 지표를 따로 낸다(`ServerObservability`).
+            // 텔레메트리는 클라이언트 호스트 서브시스템다(`TelemetrySubsystem::getSubsystemHost`). 전용 서버는 운영 지표를 따로 낸다(`ServerObservability`).
             SW_LOG_INFO_ID( "TelemetryUploadLink.NoTelemetryHost", "[TelemetryUpload] this host has no telemetry service - '%#' is not used", endpoint.c_str() );
             return {};
         }
@@ -105,8 +105,8 @@ namespace sw
 
     expected<void> TelemetryUploadLink::linkCrashReports( const string& endpoint )
     {
-        const CrashReportService* const pCrashReports = game::findSubsystem<CrashReportService>();
-        const AbsolutePath              reportsFolder = pCrashReports != nullptr ? pCrashReports->getReportsFolder() : AbsolutePath{};
+        const CrashReportSubsystem* const pCrashReports = game::findSubsystem<CrashReportSubsystem>();
+        const AbsolutePath                reportsFolder = pCrashReports != nullptr ? pCrashReports->getReportsFolder() : AbsolutePath{};
         if ( reportsFolder.empty() )
         {
             // 묶음 폴더는 텔레메트리 기동이 정한다(크래시 처리기가 있는 클라이언트). 없으면 보낼 묶음도 없다.
@@ -130,7 +130,7 @@ namespace sw
     {
         (void)bStopping; // 받은 묶음은 정지 중에도 보낸다 — 시도 수 상한과 상태는 매니페스트가 지킨다
         // 동의는 묶을 때 정해져 보낼 줄(Queued)에 선 묶음만 올라간다. 보고 프로세스(기본 업로더)와 같은 폴더를 보아도 그쪽은 매니페스트를 쓰지 않는다.
-        const uint32 sentCount = CrashReportService::runReporter( job._reportsFolder, *_pCrashUploader );
+        const uint32 sentCount = CrashReportSubsystem::runReporter( job._reportsFolder, *_pCrashUploader );
         string       folder;
         StringUtil::appendJSONEscaped( folder, job._reportsFolder.str() );
         // 본문은 JSON 이다 — `Scripts telemetry-local` 이 묶음 폴더를 읽는다.

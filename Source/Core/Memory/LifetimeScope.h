@@ -162,14 +162,14 @@ namespace sw
 
         /**
          * @brief 값을 돌려주고, 없으면 만들어 범위에 등록합니다. **범위가 닫힌 뒤의 접근이 결함인 곳**이 씁니다.
-         * @details 닫혔으면 모든 구성에서 오류를 남기고 멈춥니다(`internal::reportMissingRequiredService`). `getOrCreate` 뒤의 `SW_ASSERT( p != nullptr )` 와 역참조는
+         * @details 닫혔으면 모든 구성에서 오류를 남기고 멈춥니다(`internal::reportMissingRequiredSubsystem`). `getOrCreate` 뒤의 `SW_ASSERT( p != nullptr )` 와 역참조는
          *          Release 에서 단언이 사라져 널 역참조가 되므로 쓰지 않는다. 범위가 닫힌 뒤의 호출이 합법인 종료 경로 · 선택 조회는 `getOrCreate` 로 받아 nullptr 을 확인한다.
          */
         T& getRequired()
         {
             T* const pValue = getOrCreate();
             if ( pValue == nullptr )
-                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
             return *pValue;
         }
 

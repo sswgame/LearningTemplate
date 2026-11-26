@@ -8,12 +8,12 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 
 namespace sw
 {
-    SW_SCENE_SERVICE( PrefabInstanceRegistry, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure }, SceneDataKindSet{}, SceneDataKindSet{} ) )
+    SW_SCENE_SUBSYSTEM( PrefabInstanceRegistry, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
     PrefabInstanceRegistry::PrefabInstanceRegistry( GameObjectManager& manager )
         : _pManager{ &manager }

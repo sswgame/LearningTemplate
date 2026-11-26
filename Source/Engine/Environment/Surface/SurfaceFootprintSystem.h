@@ -11,7 +11,7 @@
  *            표면 층(Environment)은 VFX 층을 include 하지 않는다(같은 단 — `EngineLayers.toml`).
  *          - **소리**: 반응의 오디오 이벤트를 발 자리에서 낸다(`ISoundPlayer::postEventAt`).
  *          소리 · 자국은 보이고 들리는 것뿐이라 전용 서버(`build::kWithClientCode` 가 거짓)는 내지 않는다 — 세기와 마지막 반응(감시 값)은 서버도 적는다.
- *          씬 서비스(`ISceneService`)이고 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생긴다(`manager.getSubsystem<sw::SurfaceFootprintSystem>()`).
+ *          씬 서브시스템(`ISceneSubsystem`)이고 `SW_SCENE_SUBSYSTEM` 줄로 매니저마다 하나 생긴다(`manager.getSubsystem<sw::SurfaceFootprintSystem>()`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -21,7 +21,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/Name/hashed_string.h"
 
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 
 namespace sw
 {
@@ -64,13 +64,13 @@ namespace sw
      * @class SurfaceFootprintSystem
      * @brief 씬마다 하나 있는 발걸음 반응입니다(파일 머리말 참고).
      */
-    class SW_API SurfaceFootprintSystem final : public ISceneService
+    class SW_API SurfaceFootprintSystem final : public ISceneSubsystem
     {
     public:
-        /** @brief 이 서비스의 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
-        static constexpr const utf8*           kSubsystemName = "SurfaceFootprintSystem";
-        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 이 서비스의 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
+        static constexpr const utf8*             kSubsystemName = "SurfaceFootprintSystem";
+        const utf8*                              getSubsystemName() const override { return kSubsystemName; }
 
         explicit SurfaceFootprintSystem( GameObjectManager& manager );
 

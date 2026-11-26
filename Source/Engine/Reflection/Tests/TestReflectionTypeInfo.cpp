@@ -6,7 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/ThreadTestAccess.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/PropertyHandle.h"
 #include "Engine/Reflection/ReflectedAny.h"
 #include "Engine/Reflection/ReflectedValue.h"

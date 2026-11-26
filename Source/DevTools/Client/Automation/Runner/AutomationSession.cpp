@@ -32,7 +32,7 @@
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Engine.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/HeadlessSubsystem.h"
@@ -248,7 +248,7 @@ namespace sw
         _reproduceInput._backendName      = AutomationRunner::findBackendName();
         _reproduceInput._scenarioArgument = string( scenarioArgument );
         _reproduceInput._bKeepGoing       = bKeepGoing;
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
             (void)commandLine.getArgument( CommandLineArgument::ENABLE_EDITOR, _reproduceInput._bEditor ); // 적지 않았으면 false 그대로

@@ -53,7 +53,7 @@ namespace sw
     class SQLConnectionPool;            // DB 드라이버 호출이 망을 막고 기다린다 — 연결 하나가 스레드 하나
     class MaterialPSOBuilder;           // PSO 생성 — 드라이버가 직렬이라 하나가 워커를 수 ms 막는다(DedicatedWorker)
     class ShaderCache;                  // 디스크를 읽지 않는 스레드(렌더 스레드)가 기다리는 셰이더 로드 · 컴파일(DedicatedWorker)
-    class TelemetryService;             // 텔레메트리 스풀 쓰기 · 올리기(DedicatedWorker)
+    class TelemetrySubsystem;           // 텔레메트리 스풀 쓰기 · 올리기(DedicatedWorker)
     class TelemetryUploadLink;          // 크래시 보고 올리기 — 막히는 HTTP(DedicatedWorker)
     class HTTPClient;                   // 이름 해석(getaddrinfo)(DedicatedWorker)
     class HTTP2Client;                  // 이름 해석(getaddrinfo)(DedicatedWorker)
@@ -102,7 +102,7 @@ namespace sw
         friend class SQLConnectionPool;
         friend class MaterialPSOBuilder;
         friend class ShaderCache;
-        friend class TelemetryService;
+        friend class TelemetrySubsystem;
         friend class TelemetryUploadLink;
         friend class HTTPClient;
         friend class HTTP2Client;

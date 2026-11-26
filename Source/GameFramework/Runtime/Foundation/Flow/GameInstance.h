@@ -217,11 +217,11 @@ namespace sw
          * @return 걸었으면 true 입니다. 충돌이면 false 이고 부르는 쪽(`onInitialize`)은 그것을 초기화 실패로 돌려준다 — 키트가 다른 객체를 보며 도는 게임을 띄우지 않는다.
          */
         template <class T>
-        [[nodiscard]] bool bindScopedService( T* pService )
+        [[nodiscard]] bool bindScopedSubsystem( T* pService )
         {
             if ( _gameScope.bind( pService ) )
                 return true;
-            reportScopedServiceConflict( getSubsystemTypeHash<T>() );
+            reportScopedSubsystemConflict( getSubsystemTypeHash<T>() );
             return false;
         }
         /** @brief 이 인스턴스의 게임 범위입니다(기동 뒤 `game::findGameScope()` 와 같다). */
@@ -258,7 +258,7 @@ namespace sw
                 return outCatalog != nullptr;
             } ) == false )
                 return false;
-            return bindScopedService( outCatalog.get() ); // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()` 로 찾는다
+            return bindScopedSubsystem( outCatalog.get() ); // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()` 로 찾는다
         }
         /**
          * @brief 멤버로 쥐는 카탈로그(@p outCatalog)를 받아 게임 범위에 겁니다. 다시 읽히면 `update` 가 범위의 칸도 새 판으로 바꿔 건다 — 찾는 쪽이 옛 판을 계속 보지 않게.
@@ -273,14 +273,14 @@ namespace sw
                 return outCatalog != nullptr;
             } ) == false )
                 return false;
-            if ( bindScopedService( outCatalog.get() ) == false ) // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()` 로 찾는다
+            if ( bindScopedSubsystem( outCatalog.get() ) == false ) // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()` 로 찾는다
                 return false;
-            followScopedService( outCatalog );
+            followScopedSubsystem( outCatalog );
             return true;
         }
         /** @brief 게임 범위에 건 @p ref 의 칸을 다시 읽힌 판으로 따라 바꾸게 합니다(`update` 앞머리 — 틱 밖). @p ref 는 인스턴스보다 오래 살아야 한다. */
         template <class TCatalog>
-        void followScopedService( const SharedAssetRef<TCatalog>& ref )
+        void followScopedSubsystem( const SharedAssetRef<TCatalog>& ref )
         {
             const SharedAssetRef<TCatalog>* const pRef = &ref;
             _listBoundCatalog.push_back( ref.snapshot() );
@@ -312,10 +312,10 @@ namespace sw
         [[nodiscard]] bool startInstance();
         /**
          * @brief 기동(`initialize`)이 쓰는 엔진 서비스가 있는지 아무것도 걸기 전에 확인합니다(언리얼 `InitializeDependency`). 들고 있지 않고 쓰는 자리에서 게임 창구로 찾는다.
-         * @details 네트워크 세션은 모든 호스트의 필수 서비스다. UI · 사용자 설정은 Client 호스트 서비스라 창이 있는 호스트(클라이언트)에서는 필수이고,
+         * @details 네트워크 세션은 모든 호스트의 필수 서비스다. UI · 사용자 설정은 Client 호스트 서브시스템라 창이 있는 호스트(클라이언트)에서는 필수이고,
          *          창이 없는 호스트(전용 서버 · 테스트)에서만 없다. 필수 서비스가 없으면 오류를 남기고 false 입니다(인스턴스가 서지 않는다).
          */
-        [[nodiscard]] static bool validateEngineServices( const GenericWindow* pWindow );
+        [[nodiscard]] static bool validateEngineSubsystems( const GenericWindow* pWindow );
         /**
          * @brief `GameSettings` 의 다국어 · 입력 맵 칸을 적용합니다. 파일을 못 읽은 것은 알리고 넘어갑니다(게임은 뜬다).
          * @return 입력 맵을 적었는데 입력 서비스(`InputManager`)가 없으면 오류를 남기고 false 입니다 — 호스트의 결함이라 조용히 건너뛰지 않는다.
@@ -355,8 +355,8 @@ namespace sw
         void requestHomeScene();
         /** @brief 이 인스턴스의 게임 범위를 지금 범위 사슬에서 뗍니다(지금 범위면 앞 범위로 되돌리고, 테스트 범위(`ScopedGameScope`)가 이 범위를 상위로 이었으면 그 위를 잇게 한다). */
         void detachGameScope();
-        /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedService`). */
-        void reportScopedServiceConflict( uint64 typeHash ) const;
+        /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedSubsystem`). */
+        void reportScopedSubsystemConflict( uint64 typeHash ) const;
 
     protected:
         GamePackConfig _packConfig; ///< 팩 루트와 gamesettings
@@ -376,8 +376,8 @@ namespace sw
         unique_ptr<GameFeatureScope>      _pGameFeatureScope;    ///< gamesettings `gameFeatures` 의 게임 범위 기능(`activateGameFeatures` 가 켜고 서브시스템 종료 뒤에 끈다)
         unique_ptr<IGameDevPart>          _pDevPart;             ///< 게임 `Dev/` 의 개발 전용 부분(`IGameDevPartFactory` — 배포 구성에는 공장이 없어 비었다). `onInitialize` 뒤에 서고 `onShutdown` 앞에 진다
         string                            _loadedAudioEvents;    ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
-        vector<shared_ptr<const void>>    _listBoundCatalog;     ///< 범위의 칸에 건 카탈로그의 판들(`followScopedService` — 인스턴스와 함께 놓는다. 다시 읽기는 개발 구성에만 있다)
-        vector<Delegate<void()>>          _listFollowedService;  ///< 다시 읽힌 카탈로그를 범위의 칸에 다시 거는 일(`followScopedService`)
+        vector<shared_ptr<const void>>    _listBoundCatalog;     ///< 범위의 칸에 건 카탈로그의 판들(`followScopedSubsystem` — 인스턴스와 함께 놓는다. 다시 읽기는 개발 구성에만 있다)
+        vector<Delegate<void()>>          _listFollowedService;  ///< 다시 읽힌 카탈로그를 범위의 칸에 다시 거는 일(`followScopedSubsystem`)
         uint8                             _bStarted        : 1;  ///< `initialize` 가 끝까지 섰다 — 종료 저장 · 세션 명령은 이때만
         uint8                             _bDerivedEntered : 1;  ///< `onInitialize` 에 들어갔다 — `onShutdown` 은 이때만(파생은 자기 부분 실패를 스스로 거둔다)
         uint8                             _bInputMapLoaded : 1;  ///< 엔진의 통합 입력 맵에 이 인스턴스의 묶음을 실었다 — 종료가 비운다(다음 게임 · 하네스가 앞 게임의 바인딩을 들고 돌지 않는다)

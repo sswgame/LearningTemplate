@@ -11,8 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -173,6 +173,6 @@ namespace sw
         vector<DebugText>                                       _listVisibleText;
         unordered_map<hashed_string, uint8> _mapCategoryEnabled SW_GUARDED_BY( _mutex ); ///< 본 카테고리 → 켜짐(1) 또는 꺼짐(0)
 
-        SW_SERVICE_SLOT( DebugDrawQueue, Required );
+        SW_SUBSYSTEM_SLOT( DebugDrawQueue, Required );
     };
 } // namespace sw

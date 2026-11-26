@@ -14,8 +14,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
@@ -306,7 +306,7 @@ namespace sw
     private:
         NameRegistry<AnimationPoseNodeType> _registry; ///< 종류 이름 → 계약(등록 순서)
 
-        SW_SERVICE_SLOT( AnimationPoseNodeRegistry, Required );
+        SW_SUBSYSTEM_SLOT( AnimationPoseNodeRegistry, Required );
     };
 } // namespace sw
 

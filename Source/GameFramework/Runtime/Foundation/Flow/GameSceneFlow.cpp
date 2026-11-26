@@ -18,7 +18,7 @@
 #include "GameFramework/Runtime/Foundation/Save/GameSaveSlots.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
 #include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {

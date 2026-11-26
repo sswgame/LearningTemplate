@@ -18,7 +18,7 @@
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewState.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 

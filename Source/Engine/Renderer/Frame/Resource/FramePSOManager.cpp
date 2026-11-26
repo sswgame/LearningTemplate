@@ -10,7 +10,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -702,7 +702,7 @@ namespace sw
         // 셰이더 읽기 · 컴파일(DXC · FXC, 병렬 쿠킹이 이미 워커에서 돌린다)은 디바이스를 쓰지 않아 모든 백엔드에서 워커로 나눈다. PSO 생성은 나누지 않는다 —
         // 드라이버 생성이 직렬이라 병렬 이득이 9 % 로 기각됐고(`MaterialPSOBuilder.h`), GL 은 컨텍스트가 이 스레드에 묶여 워커가 만들 수 없다
         // (언리얼도 셰이더 컴파일은 ShaderCompileWorker 로 나누고 PSO 는 RHI 스레드가 만든다).
-        if ( listShader.empty() || engine::areEngineServicesBound() == false )
+        if ( listShader.empty() || engine::areEngineSubsystemsBound() == false )
             return;
         SW_PROFILE_SCOPE( "RT.PSO.prewarmShaders" );
         ShaderWarmJob warmJob{};
@@ -715,7 +715,7 @@ namespace sw
     {
         // PSO 를 만드는 스레드는 하나라(`MaterialPSOBuilder.h`) 그 안에서 셰이더를 처음 컴파일하면 변형들의 컴파일(한 건 수백 ms)이 한 줄로 선다 — 셰이더는 백그라운드 로드 워커가 나눠 얻고,
         // 만드는 쪽은 같은 요청에 합류해 남은 것만 기다린다(언리얼도 셰이더 컴파일 작업과 PSO 생성을 나눈다).
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return;
         vector<ShaderCompileDesc> listShader;
         appendShaderWarm( desc, listShader );

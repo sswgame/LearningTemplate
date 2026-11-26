@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 
 #include "Engine/Content/AssetPaths.h"

@@ -29,8 +29,8 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -424,7 +424,7 @@ namespace sw
     void TextureCache::refreshQualitySettings()
     {
         // 로드 워커 · 렌더 스레드는 변수를 직접 읽지 않는다 — 게임 스레드가 여기서 뜬 사본만 본다(언리얼 콘솔 변수의 렌더 스레드 사본과 같은 생각).
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<TaskManager>().ensureMainThread();
         _impl->_qualityMipDrop.store( gv_textureMipDrop, std::memory_order_relaxed );
     }
@@ -449,7 +449,7 @@ namespace sw
 
     void TextureCache::ensureStandInTextures()
     {
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return; // 도구 · 테스트 — 자리 텍스처가 없으면 번호를 예약하지 않는다(업로드가 끝날 때 등록한다)
         const auto isResident = []( const Texture2D* pTexture )
         { return pTexture != nullptr && pTexture->isRHIValid(); };

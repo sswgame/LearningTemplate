@@ -10,7 +10,7 @@
 
 #include "DevTools/Diagnostics/TestCaseStateProbe.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {

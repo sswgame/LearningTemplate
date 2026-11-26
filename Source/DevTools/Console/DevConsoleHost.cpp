@@ -10,7 +10,7 @@
 #include "DevTools/Console/DevConsoleController.h"
 #include "DevTools/DevToolsClientPart.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Scene/SceneManager.h"
@@ -43,7 +43,7 @@ namespace sw
         _bEnableEditor        = bEnableEditor ? SW_TRUE : SW_FALSE;
         _devConsoleController = make_unique<DevConsoleController>();
         // 에디터가 있으면 입력을 받지 않는다(Output Log 입력 줄이 같은 콘솔이다). 시작 명령만 실행한다.
-        if ( bEnableEditor == false && engine::areEngineServicesBound() )
+        if ( bEnableEditor == false && engine::areEngineSubsystemsBound() )
         {
             // 그리는 쪽은 런타임 UI 오버레이다(클라이언트 전용 부분) — 전용 서버는 그 소스를 짓지 않아 그리는 쪽 없이 입력과 시작 명령만 돈다.
             IDevToolsClientPart* const  pClientPart = IDevToolsClientPart::find();
@@ -69,7 +69,7 @@ namespace sw
     void DevConsoleHost::runPendingExec()
     {
         // 시작 씬이 다 열린 뒤에 실행한다. 씬을 보는 명령(teleport, select, debugdraw.demo)이 빈 씬에 닿지 않게 하기 위해서다.
-        const bool bConsoleNotReadyToExecute = _bExecPending == SW_FALSE || _devConsoleController == nullptr || engine::areEngineServicesBound() == false;
+        const bool bConsoleNotReadyToExecute = _bExecPending == SW_FALSE || _devConsoleController == nullptr || engine::areEngineSubsystemsBound() == false;
         if ( bConsoleNotReadyToExecute )
             return;
         const SceneManager& sceneManager = engine::getSubsystem<SceneManager>();

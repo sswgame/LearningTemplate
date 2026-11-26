@@ -6,7 +6,7 @@
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -23,7 +23,7 @@ namespace sw
                 if constexpr ( build::kWithClientCode == false )
                     return true;
                 else
-                    return engine::areEngineServicesBound() && engine::getSubsystem<ResourceTags>().capture().contains( "target.server" );
+                    return engine::areEngineSubsystemsBound() && engine::getSubsystem<ResourceTags>().capture().contains( "target.server" );
             }
 
             /** @brief 표를 읽어 이름 집합을 만듭니다. 없거나 틀리면 오류를 남기고 빈 집합이다 — 그때는 모르는 형식마다 예전처럼 경고가 남아 빠진 표가 드러난다. */

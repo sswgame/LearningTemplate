@@ -1,13 +1,13 @@
 /**
  * @file Engine/Presentation/IEngineUIDriver.h
  * @brief 엔진 루프 · 모듈 관리자가 런타임 UI 를 돌리는 창구입니다 — 엔진 루프는 UI 헤더를 읽지 않고 이 창구만 부릅니다(`IEngineRenderDriver` 와 같은 모양).
- * @details 구현은 `UISystem` 이고 기동 범위와 엔진 서비스 칸에 이 타입으로 건다. 전용 서버는 UI 폴더를 짓지 않아 창구가 없고 엔진은 그 단계를 건너뛴다.
+ * @details 구현은 `UISystem` 이고 기동 범위와 엔진 서브시스템 칸에 이 타입으로 건다. 전용 서버는 UI 폴더를 짓지 않아 창구가 없고 엔진은 그 단계를 건너뛴다.
  *          언리얼 `FSlateApplication` 의 틱을 엔진 루프가 묻지 않고 호스트가 붙이는 것과 같은 자리다(기억).
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -36,6 +36,6 @@ namespace sw
         /** @brief 게임 update 가 돌지 않는 동안(에디터 멈춤 · Simulate) 화면 그리기와 포인터 입력을 막습니다. */
         virtual void setOnScreenSuppressed( bool bSuppressed ) = 0;
 
-        SW_SERVICE_SLOT( IEngineUIDriver, Optional );
+        SW_SUBSYSTEM_SLOT( IEngineUIDriver, Optional );
     };
 } // namespace sw

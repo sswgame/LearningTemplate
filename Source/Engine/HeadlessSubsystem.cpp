@@ -8,15 +8,15 @@
 #include "Core/Subsystem/SubsystemCollection.h"
 
 #include "Engine/Asset/EngineDefaultAssetsSubsystem.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Module/ModuleLoadStageSubsystem.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/SplashSubsystem.h"
 
@@ -84,7 +84,7 @@ namespace sw
     span<const utf8* const> HeadlessSubsystem::getSubsystemDependents() const
     {
         // 스플래시도 막는다 — 창을 띄우지 않는 작업(단위 테스트 · 쿠킹 · 백엔드마다 시나리오를 자식으로 돌리는 조정 프로세스)에 스플래시가 서면 작업 내내 갱신되지 않은 채 떠 있었다.
-        static constexpr const utf8* kArrDependent[] = { FontService::kSubsystemName, kRHISubsystemName, UserSettingsManager::kSubsystemName, SplashSubsystem::kSubsystemName };
+        static constexpr const utf8* kArrDependent[] = { FontSubsystem::kSubsystemName, kRHISubsystemName, UserSettingsManager::kSubsystemName, SplashSubsystem::kSubsystemName };
         return kArrDependent;
     }
 } // namespace sw

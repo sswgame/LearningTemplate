@@ -12,7 +12,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Task/EditorExternalToolJob.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"

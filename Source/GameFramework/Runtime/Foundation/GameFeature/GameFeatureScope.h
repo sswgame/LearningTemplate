@@ -88,7 +88,7 @@ namespace sw
         [[nodiscard]] bool bindService( T* pService )
         {
             using TPlain = std::remove_const_t<T>;
-            if ( pService == nullptr || locateSubsystem<const TPlain>( &_gameScope ) != nullptr || _gameScope.bind( pService ) == false )
+            if ( pService == nullptr || findSubsystemFrom<const TPlain>( &_gameScope ) != nullptr || _gameScope.bind( pService ) == false )
             {
                 reportServiceConflict( getSubsystemTypeHash<T>() );
                 return false;
@@ -102,7 +102,7 @@ namespace sw
          * @brief 카탈로그 @p TCatalog(종류 `TCatalog::kDataKind`)를 공유 캐시에서 받아 게임 범위에 const 로 겁니다(`game::findSubsystem<const TCatalog>()`). 끌 때 풀고 놓습니다.
          * @details 종류는 선언되어 있어야 한다(`CatalogRule`). 경로는 게임 인스턴스의 필수 데이터와 같은 규칙이다(`GamePackConfig::makeRequiredDataPath`).
          *          공유 캐시의 `SharedAssetRef` 를 쥐고 다시 읽히면 `rebindReloadedCatalogs` 가 칸을 새 판으로 바꿔 건다 — 게임 인스턴스의 필수 카탈로그
-         *          (`GameInstance::loadRequiredCatalog` · `followScopedService`)와 같은 길이다. 스냅숏 사본은 두지 않는다(찾는 쪽이 옛 판을 계속 보지 않게).
+         *          (`GameInstance::loadRequiredCatalog` · `followScopedSubsystem`)와 같은 길이다. 스냅숏 사본은 두지 않는다(찾는 쪽이 옛 판을 계속 보지 않게).
          * @return 선언되지 않은 종류이거나 경로를 못 만들거나 못 읽거나 이미 걸려 있으면 알리고 false 입니다.
          */
         template <class TCatalog>

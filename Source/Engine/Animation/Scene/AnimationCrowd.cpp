@@ -15,7 +15,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -436,7 +436,7 @@ namespace sw
         (void)bake._skinMesh->setSections( sourceMesh->getSections() );
         bake._skinMesh->setSkin( sourceMesh->getSkinVertices(), sourceMesh->getSkinBinding() );
         // 결정적 실행은 이번 프레임에 끝낸다 — 언제 넘어가느냐가 워커 도착에 달리지 않게. 작업 풀이 없으면(테스트 · 도구) 지금 한다.
-        const bool bRunNow = engine::areEngineServicesBound() == false || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
+        const bool bRunNow = engine::areEngineSubsystemsBound() == false || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
         if ( bRunNow )
         {
             bake.run();
@@ -465,7 +465,7 @@ namespace sw
 
     void AnimationCrowd::waitForVertexAnimations()
     {
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<TaskManager>().waitStage( _vertexAnimationStage, "AnimationCrowd::waitForVertexAnimations" );
     }
 

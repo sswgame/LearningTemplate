@@ -10,7 +10,7 @@
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Visual/Component/InstancedMeshComponent.h"
@@ -84,7 +84,7 @@ SW_TEST_CASE( InstancedMeshPackingTest, PackedAnchorMergesStaticMeshMembers )
     SW_EXPECT_TRUE( doc._listSceneObjectNode[0]._instancePacking == SceneInstancePacking::StaticMeshes ); // 내부 씬의 설정이 앵커에 실렸다
     SW_REQUIRE_EQUAL( size_t{ 6 }, doc._listSceneObjectNode.size() );
 
-    SW_REQUIRE_TRUE( SceneCooker::packStaticMeshes( SceneEngineServices::makeFromBoundEngine(), doc, "outer.scene.xml" ) );
+    SW_REQUIRE_TRUE( SceneCooker::packStaticMeshes( SceneEngineSubsystems::makeFromBoundEngine(), doc, "outer.scene.xml" ) );
     SW_EXPECT_FALSE( Util::hasNode( doc, "Village/Rock1" ) );
     SW_EXPECT_FALSE( Util::hasNode( doc, "Village/Rock2" ) );
     SW_EXPECT_TRUE( Util::hasNode( doc, "Village/Lamp" ) ); // 움직인다
@@ -122,7 +122,7 @@ SW_TEST_CASE( InstancedMeshPackingTest, UnpackedSourceKeepsMemberEntities )
     SW_EXPECT_TRUE( scene.getObjectManager()->findGameObjectByName( hashed_string( "Village/Packed0" ) ) == nullptr );
 
     doc._listSceneObjectNode[0]._instancePacking = SceneInstancePacking::Separate;
-    SW_REQUIRE_TRUE( SceneCooker::packStaticMeshes( SceneEngineServices::makeFromBoundEngine(), doc, "outer.scene.xml" ) );
+    SW_REQUIRE_TRUE( SceneCooker::packStaticMeshes( SceneEngineSubsystems::makeFromBoundEngine(), doc, "outer.scene.xml" ) );
     SW_EXPECT_EQUAL( size_t{ 6 }, doc._listSceneObjectNode.size() );
 }
 

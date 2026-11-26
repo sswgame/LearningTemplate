@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/RenderTargetDeclaration.h"
 #include "Engine/Graphics/View/SceneViewQuery.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -159,7 +159,7 @@ namespace sw
     void CameraComponent::declareRenderTexture() const
     {
         // 렌더 텍스처의 크기를 먼저 알린다 — 그 텍스처를 읽는 머티리얼이 카메라보다 먼저 빌려도 같은 크기로 만들어지게.
-        const bool bNoRenderTextureToDeclare = _renderOutput._target != CameraOutputTarget::RenderTexture || _renderOutput._renderTexture.empty() || engine::areEngineServicesBound() == false;
+        const bool bNoRenderTextureToDeclare = _renderOutput._target != CameraOutputTarget::RenderTexture || _renderOutput._renderTexture.empty() || engine::areEngineSubsystemsBound() == false;
         if ( bNoRenderTextureToDeclare )
             return;
         IRenderTargetDeclarationSink* pSink = engine::findSubsystem<IRenderTargetDeclarationSink>();

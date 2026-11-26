@@ -15,7 +15,7 @@
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/WeakInternTable.h"
 #include "Engine/Content/AssetRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/IMeshDerivedCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -250,7 +250,7 @@ namespace sw
 
     void MeshCache::clear()
     {
-        // 자기 상태를 비운다(매니저 종료 때도 불려 서비스 칸을 거치지 않는다). 다시 읽으면 다시 알리도록 경고 기록도 잊는다.
+        // 자기 상태를 비운다(매니저 종료 때도 불려 서브시스템 칸을 거치지 않는다). 다시 읽으면 다시 알리도록 경고 기록도 잊는다.
         _pState->_sharedTable.clear();
         _pState->_warned.clear();
         MeshCacheInternal::getStats().recordClear();

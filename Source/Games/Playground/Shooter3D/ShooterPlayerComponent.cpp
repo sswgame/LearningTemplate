@@ -25,7 +25,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
-#include "Engine/Telemetry/TelemetryService.h"
+#include "Engine/Telemetry/TelemetrySubsystem.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
@@ -38,7 +38,8 @@
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -653,7 +654,7 @@ namespace sw
         if ( pGameMode != nullptr )
         {
             SW_LOG_INFO_ID( "ShooterPlayer.YouOverrunWaveAfter", "[Shooter] you were overrun on wave %# after %# kills - starting over", pGameMode->getWave(), pGameMode->getKillCount() );
-            TelemetryService* pTelemetry = game::findSubsystem<TelemetryService>();
+            TelemetrySubsystem* pTelemetry = game::findSubsystem<TelemetrySubsystem>();
             if ( pTelemetry != nullptr )
             {
                 TelemetryEvent roundEnded( "progression.roundEnded" );

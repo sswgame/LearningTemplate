@@ -11,7 +11,7 @@
 #include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 

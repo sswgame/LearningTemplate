@@ -6,7 +6,7 @@
 
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 

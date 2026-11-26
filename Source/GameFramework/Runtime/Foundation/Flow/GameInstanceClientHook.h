@@ -59,10 +59,10 @@ namespace sw
         /** @brief 걸린 창구를 뗍니다(건 이미지가 내려갈 때). 걸려 있지 않으면 할 일이 없다. */
         static void detach( IGameInstanceClientHook* pHook );
 
-        /** @struct Registration @brief 클라이언트 전용 소스가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
-        struct Registration final : StaticRegistrar<IGameInstanceClientHook*>
+        /** @struct Registrar @brief 클라이언트 전용 소스가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
+        struct Registrar final : StaticRegistrar<IGameInstanceClientHook*>
         {
-            explicit Registration( IGameInstanceClientHook& hook )
+            explicit Registrar( IGameInstanceClientHook& hook )
                 : StaticRegistrar{ &hook, &IGameInstanceClientHook::attach, &IGameInstanceClientHook::detach }
             {
             }

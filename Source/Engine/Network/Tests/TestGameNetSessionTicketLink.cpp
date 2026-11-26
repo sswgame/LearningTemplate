@@ -6,10 +6,10 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Config/ServerConfig.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 using namespace sw;

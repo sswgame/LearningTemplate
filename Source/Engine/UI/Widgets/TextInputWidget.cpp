@@ -7,15 +7,15 @@
 #include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
-#include "Engine/UI/Input/UIClipboardService.h"
+#include "Engine/UI/Input/UIClipboardSubsystem.h"
+#include "Engine/UI/Overlay/UINotificationSubsystem.h"
 #include "Engine/UI/Screen/UIScreen.h"
-#include "Engine/UI/Service/UINotificationService.h"
 #include "Engine/UI/Style/UIWidgetSkin.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
@@ -269,12 +269,12 @@ namespace sw
         return bBackward ? -1 : 1;
     }
 
-    UIClipboardService* TextInputWidget::findClipboard() const
+    UIClipboardSubsystem* TextInputWidget::findClipboard() const
     {
         WidgetTree* const pTree   = getTree();
         UIScreen* const   pScreen = pTree != nullptr ? pTree->getScreen() : nullptr;
         UISystem* const   pUI     = pScreen != nullptr ? pScreen->getUISystem() : nullptr;
-        return pUI != nullptr ? &engine::getSubsystem<UIClipboardService>() : nullptr; // 화면 스택의 위젯만 클립보드를 쓴다
+        return pUI != nullptr ? &engine::getSubsystem<UIClipboardSubsystem>() : nullptr; // 화면 스택의 위젯만 클립보드를 쓴다
     }
 
     void TextInputWidget::notifyClipboardWriteFailed() const
@@ -287,7 +287,7 @@ namespace sw
         UINotificationDef notification{};
         notification._text = SW_LOCALIZED_MESSAGE( "Notification", "ClipboardWriteFailed" ).str();
         notification._kind = UINotificationKind::Warning;
-        engine::getSubsystem<UINotificationService>().post( notification );
+        engine::getSubsystem<UINotificationSubsystem>().post( notification );
     }
 
     bool TextInputWidget::handleEditAction( const hashed_string& action )
@@ -364,7 +364,7 @@ namespace sw
         {
             if ( _composition.empty() == false )
                 return true;
-            UIClipboardService* const pClipboard = findClipboard();
+            UIClipboardSubsystem* const pClipboard = findClipboard();
             if ( pClipboard == nullptr )
                 return true;
             if ( bPaste )

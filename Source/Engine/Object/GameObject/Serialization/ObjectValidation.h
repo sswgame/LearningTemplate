@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
@@ -49,13 +49,13 @@ namespace sw
      * @details 출처마다의 결과라 월드가 소유한다 — 에디터 미리보기 창 · 씬 둘의 결과가 섞이지 않는다(언리얼 Map Check 의 월드별 메시지 로그).
      *          씬을 비우면(`GameObjectManager::clear`) 표도 비고, 오브젝트 파괴는 `GameObject` 소멸자가 자기 출처를 지운다.
      */
-    class SW_API SceneValidationIssues final : public ISceneService
+    class SW_API SceneValidationIssues final : public ISceneSubsystem
     {
     public:
-        /** @brief 이 서비스의 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
-        static constexpr const utf8*           kSubsystemName = "SceneValidationIssues";
-        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 이 서비스의 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
+        static constexpr const utf8*             kSubsystemName = "SceneValidationIssues";
+        const utf8*                              getSubsystemName() const override { return kSubsystemName; }
 
         explicit SceneValidationIssues( GameObjectManager& manager );
 

@@ -13,7 +13,7 @@
 #include "GameFramework/Kits/Genre/Action/Fighting/Client/FightingHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Action/Fighting/Component/FightingGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {

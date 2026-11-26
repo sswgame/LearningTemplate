@@ -6,7 +6,7 @@
  *          (`ApplyPrePhysics` 의 틱 뒤 큐 — 노출의 틱 그룹 `DuringPhysics` 가 미루던 자리)에서 등록 순서로 돈다. 지역 시스템(`ZoneSystem`)과 같은 모양이다.
  *          언리얼 `UWorldSubsystem` 이 등록받은 목록을 돌고, Mass 처리기가 한 종류를 한 번에 도는 자리다.
  *
- *          - 왜 씬 서비스가 아닌가: 씬 서비스 표(`SW_SCENE_SERVICE`)는 Engine 이미지 안에서만 채운다. GameFramework 의 타입은 프레임 시스템으로 붙고 뗀다 —
+ *          - 왜 씬 서브시스템이 아닌가: 씬 서브시스템 표(`SW_SCENE_SUBSYSTEM`)는 Engine 이미지 안에서만 채운다. GameFramework 의 타입은 프레임 시스템으로 붙고 뗀다 —
  *            첫 노출 컴포넌트의 `onRegister` 가 붙이고(`getOrCreate`), 마지막의 `onUnregister` 가 뗀다(`releaseIfUnused`).
  *          - 같은 프레임의 순서: 넣은 일은 그 프레임의 틱이 미룬 일보다 앞에 돈다(넣은 순서). 노출이 쓰는 외형 표면 상태는 외형의 다음 틱이 감쇠 · 머티리얼로 올린다 — 예전과 같다.
  */

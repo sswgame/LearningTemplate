@@ -18,7 +18,7 @@
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Wind/WindComponent.h"
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -247,7 +247,7 @@ namespace sw
     {
         SceneComponent::onBeginPlay();
         // 로드 순서상 지형이 뒤에 생성되면 처음 계산은 평면 위에서 했다. 모두 생성된 지금 지형을 다시 찾는다. 레지스트리를 바꾸므로 틱 뒤에 한다.
-        // 시작 때 한 번이라 틱 뒤 큐에 둔다 — 매 프레임 지형 따라가기는 씬 서비스(`FoliageTerrainFollower`)가 한다.
+        // 시작 때 한 번이라 틱 뒤 큐에 둔다 — 매 프레임 지형 따라가기는 씬 서브시스템(`FoliageTerrainFollower`)이 한다.
         const GameObject*        pOwner   = getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _bBuiltOnTerrain == SW_TRUE )

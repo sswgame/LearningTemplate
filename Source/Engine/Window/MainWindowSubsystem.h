@@ -11,8 +11,8 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Window/FramePacer.h"
 #include "Engine/Window/IWindowTitleTarget.h"
@@ -123,6 +123,6 @@ namespace sw
         uint32                    _pendingClientWidth;  ///< `setPendingClientSize` 가 적은 너비(0 이면 요청 없음)
         uint32                    _pendingClientHeight; ///< `setPendingClientSize` 가 적은 높이
 
-        SW_SERVICE_SLOT( MainWindowSubsystem, Optional );
+        SW_SUBSYSTEM_SLOT( MainWindowSubsystem, Optional );
     };
 } // namespace sw

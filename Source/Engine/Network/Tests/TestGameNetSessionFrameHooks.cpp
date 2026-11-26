@@ -4,7 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/EngineFrameHooks.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 

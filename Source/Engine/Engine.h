@@ -37,7 +37,7 @@ namespace sw
     class DebugDrawQueue;
     class DebugKeyActions;
     class EventDispatcher;
-    class FontService;
+    class FontSubsystem;
     class FrameProfiler;
     class GlobalVariableManager;
     class IEngineAudioDriver;
@@ -94,7 +94,7 @@ namespace sw
         [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role, SubsystemScope* pHostScope );
         /**
          * @brief 매니저들을 종료하고 정리합니다.
-         * @param hostScope `initialize` 에 넘긴 호스트 범위입니다. 엔진 범위(기동 · 서비스)를 내린 뒤, 코어 범위보다 **먼저** 비웁니다(`destroyAll`).
+         * @param hostScope `initialize` 에 넘긴 호스트 범위입니다. 엔진 범위(기동 · 공용)를 내린 뒤, 코어 범위보다 **먼저** 비웁니다(`destroyAll`).
          * @details 코어의 진단 서브시스템이 소멸하며 종료 누수 창을 닫습니다. 호스트 범위는 기동 뒤에 칸 · 부품 · 종료 순서를 키우므로(`bind`,
          *          `shutdownDependents`), 창보다 늦게 비우면 그 저장소가 "창 안에서 태어나 살아 있는 블록" 으로 보고됩니다. 호스트의 서브시스템도
          *          로거 · 이름 풀(코어)이 아직 있을 때 소멸합니다.
@@ -138,7 +138,7 @@ namespace sw
          * @details 창 수명은 App 이 쥐고 있으므로 여기서는 의사만 알립니다.
          */
         bool isQuitRequested() const { return _bQuitRequested || ( _pQuitRequest != nullptr && _pQuitRequest->isRequested() ); }
-        /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다(호스트). 모듈은 서비스 `QuitRequest` 에 직접 건다 — 이것도 그리로 간다. 여럿이면 처음 것의 코드를 씁니다. */
+        /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다(호스트). 모듈은 서브시스템 `QuitRequest` 에 직접 건다 — 이것도 그리로 간다. 여럿이면 처음 것의 코드를 씁니다. */
         void requestQuit( ProcessExitCode exitCode );
         /** @brief App 이 돌려줄 종료 코드입니다(요청이 없었으면 `Passed`). */
         ProcessExitCode getExitCode() const { return _bQuitRequested == false && _pQuitRequest != nullptr && _pQuitRequest->isRequested() ? _pQuitRequest->getExitCode() : _exitCode; }
@@ -147,7 +147,7 @@ namespace sw
          *        (관찰자의 결과가 프로파일 세션의 종료보다 이긴다).
          */
         void onWindowClosed();
-        // 셸 디버그 키 맵은 서비스 범위의 서브시스템이다(`engine::getSubsystem<DebugKeyActions>()`) — 호스트 루프가 돌리고 리로드 단축키 · 개발 도구가 읽는다.
+        // 셸 디버그 키 맵은 공용 범위의 서브시스템이다(`engine::getSubsystem<DebugKeyActions>()`) — 호스트 루프가 돌리고 리로드 단축키 · 개발 도구가 읽는다.
 
         // ----------------------------------------------------------------------
         // Getter (App 이 GameModuleManager 등과 연동하는 데 필요)
@@ -161,7 +161,7 @@ namespace sw
         /** @brief 렌더 스레드입니다(클라이언트 호스트 전용 — 서지 않았으면 nullptr). 다른 호스트는 `getRenderDriver` 만 씁니다. */
         RenderThread* getRenderThread() const;
         /**
-         * @brief 서비스 · 기동 범위의 서브시스템 초기화 시간을 오래 걸린 것부터 "이름=ms" 로 이은 글입니다(1 ms 미만은 뺀다). 시동 요약 로그의 재료입니다.
+         * @brief 공용 · 기동 범위의 서브시스템 초기화 시간을 오래 걸린 것부터 "이름=ms" 로 이은 글입니다(1 ms 미만은 뺀다). 시동 요약 로그의 재료입니다.
          * @details `SubsystemCollection::getInitTimings` 를 모은 것이라 `initialize` 가 끝난 뒤에만 뜻이 있습니다.
          */
         [[nodiscard]] string describeSubsystemInitTimings() const;
@@ -180,8 +180,8 @@ namespace sw
         void onConfigReloaded( const hashed_string& configTypeName );
         /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수 · 프레임 시간 · 활성 씬)을 만듭니다. */
         EngineFrameContext makeFrameContext() const;
-        /** @brief 프레임 앞 서비스를 돌립니다 — 셰이더 핫 리로드, 파일 대화 상자 결과, 에셋 스트리밍 큐, 씬 전환, 이벤트, 오디오(`update` 의 첫 구간). */
-        void updateFrameServices();
+        /** @brief 프레임 앞 서브시스템을 돌립니다 — 셰이더 핫 리로드, 파일 대화 상자 결과, 에셋 스트리밍 큐, 씬 전환, 이벤트, 오디오(`update` 의 첫 구간). */
+        void updateFrameSubsystems();
         /**
          * @brief 활성 씬을 틱합니다. 게임 카메라와 입력이 쓰는 게임 화면 크기를 틱 전에 적고(@p vpWidth · @p vpHeight), 미리보기 씬은 활성 씬의 정지 · 재생과 무관하게 돌립니다.
          * @details 미리보기 씬은 @p views 가 이번 프레임에 그려 달라고 한 씬만 틱합니다(`ScenePreviewTick::WhenDrawn`).
@@ -196,17 +196,17 @@ namespace sw
          * @details 멤버 중 맨 앞이라 소멸도 맨 마지막이다(기동이 중간에 멈춰 `shutdown` 없이 소멸해도 위 범위가 먼저 사라진다).
          */
         SubsystemScope _coreScope;
-        /** @brief 서비스 범위입니다 — 엔진 범위의 어느 것보다 오래 사는 공용 서비스(이벤트 · 지역화 · 디버그 도구 · 프로파일러 · 백엔드 레지스트리 …). 부모는 `_coreScope`. */
-        SubsystemScope _services;
+        /** @brief 공용 범위입니다 — 엔진 범위의 어느 것보다 오래 사는 공용 서브시스템(이벤트 · 지역화 · 디버그 도구 · 프로파일러 · 백엔드 레지스트리 …). 부모는 `_coreScope`. */
+        SubsystemScope _sharedScope;
         /** @brief 코어 범위의 명령줄 서브시스템입니다(`_coreScope` 소유 — 빌려 쓴다). */
         CommandLineSubsystem* _pCommandLineSubsystem;
-        /** @brief 서비스 범위의 이벤트 디스패처입니다(`_services` 소유 — 빌려 쓴다). 프레임마다 큐를 비운다. */
+        /** @brief 공용 범위의 이벤트 디스패처입니다(`_sharedScope` 소유 — 빌려 쓴다). 프레임마다 큐를 비운다. */
         EventDispatcher* _pEventDispatcher;
         /** @brief 서브시스템 `Config` 의 설정 표입니다(`_startup` 소유 — 빌려 쓴다). App · 서버가 `getConfigManager` 로 읽는다. */
         ConfigManager* _pConfigManager;
         /** @brief 설정 다시 읽기 알림(`ConfigManager::onConfigReloaded`)의 구독입니다. 설정 표가 먼저 사라지면 무효가 된다. */
         Subscription _configReloadedSubscription;
-        /** @brief 서비스 범위의 디버그 키 맵입니다(`_services` 소유 — 빌려 쓴다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 맵을 놓는다. */
+        /** @brief 공용 범위의 디버그 키 맵입니다(`_sharedScope` 소유 — 빌려 쓴다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 맵을 놓는다. */
         DebugKeyActions* _pDebugKeyActions;
         /**
          * @brief 프레임 관찰자 목록입니다(대상은 소유하지 않는다). 부르는 시점은 루프가 정한다(`beginFrame` · `update` · `endFrame` · `onWindowClosed`) —
@@ -219,7 +219,7 @@ namespace sw
         /** @brief 클라이언트 호스트의 넷 세션 훅 구독입니다(`GameNetSession::makeClientHostFrameHooks`). 텔레메트리 구독처럼 `shutdown` 이 목록을 비울 때 끝난다. */
         Subscription _netFrameSubscription;
 
-        /** @brief 이 엔진을 띄운 호스트의 역할입니다. 서비스를 만들기 전에 정한다(오디오 장치 · 기동 표 대상). */
+        /** @brief 이 엔진을 띄운 호스트의 역할입니다. 공용 서브시스템을 만들기 전에 정한다(오디오 장치 · 기동 표 대상). */
         EngineHostRole _hostRole;
         /** @brief 헤드리스 작업의 결과입니다(서브시스템 `Headless` 가 적는다 · 크래시 보고 프로세스도 헤드리스다). */
         HeadlessTaskState _headlessState;
@@ -233,19 +233,19 @@ namespace sw
         float32 _frameDeltaSeconds;
         /** @brief `requestQuit` 이 정한 종료 코드입니다. */
         ProcessExitCode _exitCode;
-        /** @brief 서비스 범위의 종료 요청입니다(`_services` 소유 — 빌려 쓴다). 서비스가 내려가기 전에 `shutdown` 이 코드를 위 칸으로 옮기고 비운다. */
+        /** @brief 공용 범위의 종료 요청입니다(`_sharedScope` 소유 — 빌려 쓴다). 공용 서브시스템이 내려가기 전에 `shutdown` 이 코드를 위 칸으로 옮기고 비운다. */
         QuitRequest* _pQuitRequest;
 
         /** @brief 코어 범위의 메모리 태그 예산 감시입니다(`_coreScope` 소유 — 프레임 끝마다 부른다. 배포본에서는 아무 일도 하지 않는다). */
         MemoryBudgetSubsystem* _pMemoryBudget;
-        /** @brief 엔진 범위(기동 단계)입니다 — 선언된 의존으로 위상 정렬해 초기화하고 역순으로 종료 · 소멸합니다. 부모는 `_services`. 서브시스템 객체를 소유합니다. */
+        /** @brief 엔진 범위(기동 단계)입니다 — 선언된 의존으로 위상 정렬해 초기화하고 역순으로 종료 · 소멸합니다. 부모는 `_sharedScope`. 서브시스템 객체를 소유합니다. */
         SubsystemScope _startup;
         /** @brief 렌더러 창구입니다(`_startup` 소유 — 빌려 쓴다). 렌더러를 짓지 않는 구성과 렌더러를 두지 않은 기동은 nullptr 이고, 루프는 그것을 보고 건너뜁니다. */
         IEngineRenderDriver* _pRenderDriver;
         /** @brief 서브시스템 `RHI` 의 RHI 입니다(`_startup` 소유 — 그 단계가 선 뒤부터 빌려 쓴다). 서지 않았으면(전용 서버 · 헤드리스) nullptr 입니다. */
         RHI* _pRHI;
         /** @brief 서브시스템 `Fonts` 입니다(`_startup` 소유 — 빌려 쓴다). 렌더 패킷의 캔버스가 글리프 캐시를 싣는다. */
-        FontService* _pFontService;
+        FontSubsystem* _pFontSubsystem;
         /** @brief 서브시스템 `UI` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 · 갱신 · 캔버스가 돈다. */
         IEngineUIDriver* _pUIDriver; ///< 런타임 UI 의 프레임 단계(없으면 nullptr — 전용 서버)
         /** @brief 서브시스템 `Input` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 프레임 · 디버그 키 맵 · 관찰자 문맥이 쓴다. */

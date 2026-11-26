@@ -4,7 +4,7 @@
 
 #include "Engine/Scene/SceneManager.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {

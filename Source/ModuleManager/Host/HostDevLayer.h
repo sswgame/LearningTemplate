@@ -34,7 +34,7 @@ namespace sw
     /** @brief 리로드 묶음을 시작하기 전에 부르는 델리게이트입니다(바꿀 모듈 이름들). false 면 이번 묶음을 미룬다. */
     using BeforeReloadBatchDelegate = Delegate<bool( const vector<string>& listModuleName )>;
 
-    /** @brief 호스트 서비스가 선 뒤 한 번 하고 끝나는 작업(`IHostDevLayer::runAfterHostServices`)의 결과입니다. */
+    /** @brief 호스트 서비스가 선 뒤 한 번 하고 끝나는 작업(`IHostDevLayer::runAfterHostSubsystems`)의 결과입니다. */
     enum class HostTaskResult : uint8
     {
         NotRequested, ///< 인자가 없어 실행하지 않았다(기동을 이어 간다).
@@ -103,7 +103,7 @@ namespace sw
          * @brief 호스트 서비스(게임 · 에디터 인스턴스)가 선 뒤 한 번 하고 끝나는 작업(초상화 굽기 `--render-portraits`)을 실행합니다.
          * @return 실행한 작업이 없으면 `NotRequested` 입니다. 그 밖이면 호스트는 메인 루프에 들어가지 않고 끝낸다.
          */
-        [[nodiscard]] virtual HostTaskResult runAfterHostServices( const CommandLineManager& commandLine ) = 0;
+        [[nodiscard]] virtual HostTaskResult runAfterHostSubsystems( const CommandLineManager& commandLine ) = 0;
 
         // ---- 기동 측정 — 단계표(`PhaseTimings`)는 개발 계층을 만든 때부터 잰다 ----
         /** @brief 앞 단계 끝부터 지금까지를 @p pPhaseName 단계로 적습니다(프로그램 내내 사는 글). */

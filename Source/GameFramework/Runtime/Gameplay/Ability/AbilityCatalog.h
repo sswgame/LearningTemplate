@@ -332,7 +332,7 @@ namespace sw
     /**
      * @class AbilityClassRegistry
      * @brief 클래스 이름으로 어빌리티 · 어트리뷰트 세트를 만드는 레지스트리입니다. 게임 모듈의 코드(팩토리)이므로 데이터 카탈로그와 나눈다.
-     * @details **소유자**: 게임이 하나 들고 게임 범위에 건다(게임 인스턴스 `bindScopedService` · 게임 기능 `GameFeatureScope::emplaceService`). 컴포넌트에 따로 정하지 않았으면 이 서비스를 쓴다.
+     * @details **소유자**: 게임이 하나 들고 게임 범위에 건다(게임 인스턴스 `bindScopedSubsystem` · 게임 기능 `GameFeatureScope::emplaceService`). 컴포넌트에 따로 정하지 않았으면 이 서비스를 쓴다.
      *          키트의 클래스는 그 키트의 게임 기능이 켤 때 올리고 구독을 쥔다(`register…Class` · `GameFeatureScope::holdSubscription`) — 이름은 게임 하나에서 겹치지 않는다.
      *          예전에는 카탈로그가 팩토리를 함께 들어 카탈로그를 게임마다 사본으로 읽어야 했다 — 데이터는 공유 캐시의 한 벌(`SharedAssetCache<AbilityCatalog>`)이고 코드는 여기다.
      *          언리얼 GAS 도 어빌리티 클래스(코드)와 데이터 에셋을 나눈다(기억에 의존). 등록한 팩토리는 게임 모듈의 코드이므로 레지스트리의 수명은 게임 모듈과 같다.

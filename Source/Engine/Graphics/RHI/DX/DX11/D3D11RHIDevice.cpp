@@ -350,7 +350,7 @@ namespace sw
     void D3D11RHIDevice::UploadStaging::attachTexture( Microsoft::WRL::ComPtr<ID3D11Texture2D> texture, uint64 sourceBytes )
     {
         if ( _pDevice == nullptr || texture == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
         SW_ASSERT( _texture == nullptr );
         _texture = std::move( texture );
         // 추적기 크기는 소스 바이트(논리 크기)다 — 드라이버가 행 간격을 늘린 실제 할당은 물을 API 가 없다.

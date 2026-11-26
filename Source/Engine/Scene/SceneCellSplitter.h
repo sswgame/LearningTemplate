@@ -13,7 +13,7 @@
 namespace sw
 {
     struct SceneDocument;
-    struct SceneEngineServices;
+    struct SceneEngineSubsystems;
 
     class Scene;
 } // namespace sw
@@ -63,7 +63,7 @@ namespace sw
          *          스트리밍하지 않는 문서면 아무것도 하지 않고 true 입니다.
          * @param pOutListViolation 주면 셀을 넘는 참조를 파일 id 로 채웁니다(먼저 비운다). 다른 이유로 실패하면 빈 채로 false 다.
          */
-        [[nodiscard]] SW_API static bool split( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view sceneName,
+        [[nodiscard]] SW_API static bool split( const SceneEngineSubsystems& services, SceneDocument& inoutDoc, string_view sceneName,
                                                 vector<StreamingCellReference>* pOutListViolation = nullptr );
     };
 } // namespace sw

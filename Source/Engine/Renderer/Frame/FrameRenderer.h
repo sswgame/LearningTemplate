@@ -12,7 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
@@ -167,7 +167,7 @@ namespace sw
          */
         [[nodiscard]] bool initializeOffscreen( IRHIDevice* pDevice, FrameRenderer& mainRenderer, const RenderPipelineRequest& pipeline );
         /** @brief 핫패스에서 쓰는 TaskManager 를 연결합니다. */
-        void bindServices( TaskManager* pTaskManager );
+        void bindSubsystemSlots( TaskManager* pTaskManager );
         /** @brief GPU 자원을 해제하고 종료합니다. */
         void shutdown();
 
@@ -583,6 +583,6 @@ namespace sw
         atomic<uint8>  _publishedOcclusionTwoPhase;
         atomic<uint8>  _publishedOcclusionLatePhase;
 
-        SW_SERVICE_SLOT( FrameRenderer, Optional );
+        SW_SUBSYSTEM_SLOT( FrameRenderer, Optional );
     };
 } // namespace sw

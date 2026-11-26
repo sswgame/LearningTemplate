@@ -11,7 +11,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"

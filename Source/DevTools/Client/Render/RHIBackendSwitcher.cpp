@@ -16,9 +16,9 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
@@ -36,7 +36,7 @@ namespace sw
             /** @brief gv_rhiBackend 의 변수 정보를 찾습니다. 없거나 엔진 서비스가 묶이지 않았으면(크래시 보고 프로세스) nullptr 입니다. */
             static GlobalVariableInfo* findBackendVariable()
             {
-                if ( engine::areEngineServicesBound() == false )
+                if ( engine::areEngineSubsystemsBound() == false )
                     return nullptr;
                 return engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_rhiBackend" );
             }

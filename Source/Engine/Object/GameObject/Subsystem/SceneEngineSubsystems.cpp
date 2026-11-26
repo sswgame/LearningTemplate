@@ -1,0 +1,28 @@
+#include "pch.h"
+
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
+
+#include "Core/Task/TaskManager.h"
+
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Object/GameObject/ObjectIDAllocator.h"
+#include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
+#include "Engine/Reflection/TypeRegistry.h"
+
+namespace sw
+{
+    SceneEngineSubsystems SceneEngineSubsystems::makeFromBoundEngine()
+    {
+        SceneEngineSubsystems sceneServices{};
+        sceneServices._pAssetManager      = engine::findSubsystem<AssetManager>();
+        sceneServices._pDefaultAssets     = engine::findSubsystem<EngineDefaultAssets>();
+        sceneServices._pTaskManager       = engine::findSubsystem<TaskManager>();
+        sceneServices._pTypeRegistry      = engine::findSubsystem<TypeRegistry>();
+        sceneServices._pTickBatchRegistry = engine::findSubsystem<TickBatchRegistry>();
+        sceneServices._pEngineSubsystems  = engine::getEngineSubsystems();
+        sceneServices._pObjectIDAllocator = engine::findSubsystem<ObjectIDAllocator>();
+        return sceneServices;
+    }
+} // namespace sw

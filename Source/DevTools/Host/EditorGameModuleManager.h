@@ -129,8 +129,8 @@ namespace sw
         /** @brief 이번 프레임의 게임 뷰와 씬 뷰 RT 핸들과 크기를 에디터에서 조회해 프레임 상태에 담습니다(보이지 않는 패널의 뷰는 비어 있습니다). */
         void sampleViewTargets();
 
-        /** @brief 호스트 서비스 범위를 다시 만들어 에디터 모듈에 넘깁니다. 개발 도구 서비스는 스스로 호스트 모듈에 보인다고 선언해 부모 창구로 찾힌다(`SubsystemModuleVisibility`). */
-        void rebindEditorService() { rebindModuleService( _editorAPI.bindService, _editorServices, false ); }
+        /** @brief 호스트 서브시스템 범위를 다시 만들어 에디터 모듈에 넘깁니다. 개발 도구 서비스는 스스로 호스트 모듈에 보인다고 선언해 부모 창구로 찾힌다(`SubsystemModuleVisibility`). */
+        void rebindEditorSubsystems() { rebindModuleSubsystems( _editorAPI.bindService, _editorServices, false ); }
         /**
          * @brief 에디터 인스턴스를 shutdown, destroy 하고 핸들을 비웁니다.
          * @param bReleaseAPITable true 면 API 테이블과 타입 등록까지 해제합니다(모듈 언로드 직전). RHI 핫스왑처럼 **같은 모듈로 다시
@@ -171,7 +171,7 @@ namespace sw
         EditorReloadClient            _editorReloadClient{ *this };
         EditorAPI                     _editorAPI;
         EditorHandle                  _editor;
-        unique_ptr<SubsystemScope>    _editorServices;      ///< 에디터 모듈에 넘긴 호스트 서비스 범위(`rebindModuleService` 가 새로 만든다)
+        unique_ptr<SubsystemScope>    _editorServices;      ///< 에디터 모듈에 넘긴 호스트 서비스 범위(`rebindModuleSubsystems` 가 새로 만든다)
         vector<EditorExtensionModule> _listEditorExtension; ///< 켜진 확장 모듈(로드 순서이며, `loadModuleLibraries` 가 모은다).
 
         uint8                  _bEditorModuleActive  : 1; ///< 매니페스트가 에디터 모듈을 켰는가(`loadModuleLibraries` 가 정한다).

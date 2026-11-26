@@ -11,7 +11,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/AssetWriter.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Panels/Catalog/Model/ReflectedXMLDocument.h"
 #include "Editor/Viewport/Model/EditorColliderHandleMath.h"
 

@@ -13,8 +13,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -86,7 +86,7 @@ namespace sw
         bool isEnabled() const;
         /** @brief 기록을 켜거나 끕니다(`-gv_assetLoadProfile` 을 바꾸고 사본도 다시 뜬다). 게임 스레드 전용입니다. */
         void setEnabled( bool bEnabled );
-        /** @brief 사본을 지금 변수 값으로 다시 뜹니다. **게임 스레드 전용**(Debug 단언) — 기동 때와 프레임마다 엔진이 부른다(`Engine::updateFrameServices`). */
+        /** @brief 사본을 지금 변수 값으로 다시 뜹니다. **게임 스레드 전용**(Debug 단언) — 기동 때와 프레임마다 엔진이 부른다(`Engine::updateFrameSubsystems`). */
         void refreshEnabled();
         /** @brief 로드 한 번을 더합니다. 꺼져 있으면 버립니다. */
         void submit( const AssetLoadRecord& record );
@@ -135,7 +135,7 @@ namespace sw
         atomic<uint8>                          _bEnabled;               ///< `-gv_assetLoadProfile` 의 사본(게임 스레드가 뜬다) — 로드 워커 · 렌더 스레드의 `submit` 이 잠금 없이 읽는다
         atomic<uint8>                          _bSceneUpdateActive;     ///< 게임 스레드가 쓰고, 로드를 끝낸 스레드가 읽는다
 
-        SW_SERVICE_SLOT( AssetLoadProfiler, Optional );
+        SW_SUBSYSTEM_SLOT( AssetLoadProfiler, Optional );
     };
 } // namespace sw
 

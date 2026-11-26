@@ -5,7 +5,7 @@
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

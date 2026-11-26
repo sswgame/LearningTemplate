@@ -8,9 +8,9 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {

@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/ObjectIDAllocator.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"

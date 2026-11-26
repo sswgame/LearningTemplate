@@ -33,10 +33,10 @@ namespace sw
         /** @brief 걸린 창구를 뗍니다(건 이미지가 내려갈 때). 걸려 있지 않으면 할 일이 없다. */
         static void detach( IGameSettingsOverride* pSettingsOverride );
 
-        /** @struct Registration @brief 개발 전용 소스가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
-        struct Registration final : StaticRegistrar<IGameSettingsOverride*>
+        /** @struct Registrar @brief 개발 전용 소스가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
+        struct Registrar final : StaticRegistrar<IGameSettingsOverride*>
         {
-            explicit Registration( IGameSettingsOverride& settingsOverride )
+            explicit Registrar( IGameSettingsOverride& settingsOverride )
                 : StaticRegistrar{ &settingsOverride, &IGameSettingsOverride::attach, &IGameSettingsOverride::detach }
             {
             }

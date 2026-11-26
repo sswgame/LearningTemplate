@@ -15,7 +15,7 @@
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Server/ServiceHealthRegistry.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/Server/EphemeralServerBus.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
@@ -745,7 +745,7 @@ namespace sw
     OnlineServiceHost& OnlineServerRuntime::getHost()
     {
         if ( _parts == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
         return _parts->_host;
     }
 
@@ -795,14 +795,14 @@ namespace sw
     const OnlineServerKitContext& OnlineServerRuntime::getContext() const
     {
         if ( _parts == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
         return _parts->_context;
     }
 
     SubsystemScope& OnlineServerRuntime::getKitScope() const
     {
         if ( _parts == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
         return _parts->_kitScope;
     }
 } // namespace sw

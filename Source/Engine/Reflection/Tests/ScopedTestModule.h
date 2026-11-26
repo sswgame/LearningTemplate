@@ -5,7 +5,7 @@
  *          그래서 손 등록은 시험 모듈 이름(`_moduleName`)을 달고 이 객체로 감싼다.
  */
 #pragma once
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw::test

@@ -15,7 +15,7 @@ namespace sw
 {
     struct MeshAssetData;
     struct SceneDocument;
-    struct SceneEngineServices;
+    struct SceneEngineSubsystems;
 
     /** @struct SceneHLODMeshCooker @brief 파일 머리말 참고(전부 static). */
     struct SceneHLODMeshCooker
@@ -37,6 +37,6 @@ namespace sw
          * @brief 나눈 문서의 합친 대리마다 부품을 합쳐 구간 하나로 @p outData 에 담습니다. 합친 대리가 없으면 true 이고 정점이 비어 있습니다.
          * @return 부품 메시를 읽지 못했거나 구간이 없으면 오류를 남기고 false 입니다 — 빠진 대리를 싣지 않는다.
          */
-        [[nodiscard]] static bool buildMesh( const SceneEngineServices& services, const SceneDocument& doc, string_view scenePath, MeshAssetData& outData );
+        [[nodiscard]] static bool buildMesh( const SceneEngineSubsystems& services, const SceneDocument& doc, string_view scenePath, MeshAssetData& outData );
     };
 } // namespace sw

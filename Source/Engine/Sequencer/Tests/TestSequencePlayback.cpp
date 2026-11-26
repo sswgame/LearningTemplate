@@ -656,7 +656,7 @@ SW_TEST_CASE( SequencePlaybackTest, SpansFollowTheCurrentFrame )
     GameObjectManager manager;
     // 소리 이벤트 "Beat" 는 등록되지 않았다 — 소리 재생기가 있는 구성(오디오 엔진)이면 구간이 들어갈 때 모르는 이벤트 오류를 한 번 낸다. 이 케이스는 구간 상태만 본다.
     // 구간 처리기와 같은 길(장면의 엔진 서비스)로 찾는다 — 오디오가 없는 구성(ASan nogpu)은 소리를 내지 않아 로그도 없다.
-    if ( locateSubsystem<ISoundPlayer>( manager.getSceneEngineServices()._pEngineSubsystems ) != nullptr )
+    if ( findSubsystemFrom<ISoundPlayer>( manager.getSceneEngineSubsystems()._pEngineSubsystems ) != nullptr )
         SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" );
     SequenceAsset asset;
     asset._frameMax = 10;

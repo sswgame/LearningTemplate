@@ -17,7 +17,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Content/AssetRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -155,7 +155,7 @@ namespace sw
 
     MaterialCache* MaterialCache::findBound()
     {
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return nullptr;
         return &engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
     }

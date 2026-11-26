@@ -12,8 +12,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -36,7 +36,7 @@
 
 namespace sw
 {
-    class FontService;
+    class FontSubsystem;
     class InputManager;
     class InputMap;
     class LocalizationManager;
@@ -81,11 +81,11 @@ namespace sw
      *          입력 라우팅 `UIInputRouter`(포인터 · 포커스 · 소비는 화면 트리를 따라 간다 — `getInputRouter`, 포커스를 함께 옮기는 `setInputMode`),
      *          그리기 목록과 재사용 판정 상태 · 레이어 숨김 요청 수 `UICanvasPaintState`(스택을 칠한 결과다 — `getPaintState`. 숨김 요청은 화면마다 `_bHiddenByLayer` 를 맞추므로
      *          `addLayerHideRequest` 가 이 클래스에 있다). 화면 스택과 프레임 순서도 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 기준이다).
-     *          **따로 선 서브시스템**(값 멤버가 아니다 — `engine::getSubsystem<T>()`): 이 시스템이 의존하는 것 — 클립보드 `UIClipboardService` · 전역 명령 표 `UIGlobalCommandRegistry` ·
+     *          **따로 선 서브시스템**(값 멤버가 아니다 — `engine::getSubsystem<T>()`): 이 시스템이 의존하는 것 — 클립보드 `UIClipboardSubsystem` · 전역 명령 표 `UIGlobalCommandRegistry` ·
      *          바인딩 변환기 `UIBindingConverterRegistry` · 문서 캐시 `UIDocumentCache` · 스타일 시트 캐시 `UIStyleSheetCache` · 테마 `UIThemeController`.
      *          이 시스템에 의존하고 UI 갱신 칸(`onPointerProcessed` · `onUpdateBeforeScreens` · `onUpdateAfterScreens` · `onUpdateBeforeLayout` · `onUpdateAfterPaint`)에 거는 것 —
-     *          알림 `UINotificationService` · 자막 `UISubtitleService` · 툴팁 `UITooltipService` · 접근성 `UIAccessibilityService` ·
-     *          위젯 컴포넌트(화면 마커 · World 위젯) `UIWidgetComponentService` · 오프스크린 화면 `UIOffscreenScreens`.
+     *          알림 `UINotificationSubsystem` · 자막 `UISubtitleSubsystem` · 툴팁 `UITooltipSubsystem` · 접근성 `UIAccessibilitySubsystem` ·
+     *          위젯 컴포넌트(화면 마커 · World 위젯) `UIWidgetComponentSubsystem` · 오프스크린 화면 `UIOffscreenScreens`.
      */
     class SW_API UISystem final : public Subsystem
     {
@@ -98,11 +98,11 @@ namespace sw
         /**
          * @brief 입력을 연결하고 시작합니다.
          * @param inputManager 액션과 포인터를 읽는 입력입니다(테스트는 자기 것을 넘깁니다).
-         * @param pFontService 텍스트 측정과 그리기가 쓰는 글꼴입니다(레이아웃부터 사용). 없으면 텍스트 위젯의 크기가 0 입니다.
+         * @param pFontSubsystem 텍스트 측정과 그리기가 쓰는 글꼴입니다(레이아웃부터 사용). 없으면 텍스트 위젯의 크기가 0 입니다.
          * @param uiInputMapPath UI 액션 맵 리소스(`engine/input/ui.input.xml`)입니다. 비우면 UI 액션이 없습니다(포인터만 동작).
          * @return 액션 맵을 지정했는데 읽지 못하면 false 입니다.
          */
-        [[nodiscard]] bool initialize( InputManager& inputManager, FontService* pFontService, const AssetID& assetID = {} );
+        [[nodiscard]] bool initialize( InputManager& inputManager, FontSubsystem* pFontSubsystem, const AssetID& assetID = {} );
         /** @brief 화면을 모두 즉시 닫고 입력을 놓습니다. 걸어 둔 게임 정지 요청도 해제합니다. */
         void shutdown();
         bool isInitialized() const { return _input.getInputManager() != nullptr; }
@@ -240,16 +240,16 @@ namespace sw
 
         // --- 화면 스택 위의 UI 서비스 -------------------------------------------------------
         /**
-         * @brief 화면 틱 **앞**에서 도는 UI 서비스의 칸입니다(자막 `UISubtitleService` · 툴팁 `UITooltipService`). 인자는 실제 프레임 시간입니다.
-         * @details 화면 스택 위에서 자기 화면을 여닫는 서비스는 이 시스템의 값 멤버가 아니라 서브시스템이다(UI 에 의존 — `engine::getSubsystem<UINotificationService>()` 처럼
+         * @brief 화면 틱 **앞**에서 도는 UI 서비스의 칸입니다(자막 `UISubtitleSubsystem` · 툴팁 `UITooltipSubsystem`). 인자는 실제 프레임 시간입니다.
+         * @details 화면 스택 위에서 자기 화면을 여닫는 서비스는 이 시스템의 값 멤버가 아니라 서브시스템이다(UI 에 의존 — `engine::getSubsystem<UINotificationSubsystem>()` 처럼
          *          찾는다). 기동에서 이 칸에 걸고 종료에서 푼다 — 언리얼 Slate 의 `OnPreTick` · Godot `SceneTree.process_frame` 신호와 같은 자리다.
          *          화면 그리기를 막은 동안(`isOnScreenSuppressed`)에도 불린다 — 포인터를 보는 서비스(툴팁)는 스스로 거른다.
          */
         UIUpdateDelegate& onUpdateBeforeScreens() { return _onUpdateBeforeScreens; }
-        /** @brief 화면 틱 **뒤**에서 도는 UI 서비스의 칸입니다(알림 `UINotificationService` — 이번 프레임에 화면이 올린 알림까지 본다). */
+        /** @brief 화면 틱 **뒤**에서 도는 UI 서비스의 칸입니다(알림 `UINotificationSubsystem` — 이번 프레임에 화면이 올린 알림까지 본다). */
         UIUpdateDelegate& onUpdateAfterScreens() { return _onUpdateAfterScreens; }
         /**
-         * @brief 스타일 뒤, 레이아웃 **앞**에서 도는 UI 서비스의 칸입니다(위젯 컴포넌트 `UIWidgetComponentService` 의 화면 마커 투영 — 같은 프레임에 배치된다).
+         * @brief 스타일 뒤, 레이아웃 **앞**에서 도는 UI 서비스의 칸입니다(위젯 컴포넌트 `UIWidgetComponentSubsystem` 의 화면 마커 투영 — 같은 프레임에 배치된다).
          * @details 게임 틱과 트랜스폼 적용 뒤의 월드 점을 이번 뷰포트(`getViewport`)로 투영하는 자리다. 화면 그리기를 막은 동안에도 불린다.
          */
         UIUpdateDelegate& onUpdateBeforeLayout() { return _onUpdateBeforeLayout; }
@@ -308,7 +308,7 @@ namespace sw
         void setInputMode( UIInputMode mode );
 
         InputManager*     getInputManager() const { return _input.getInputManager(); }
-        FontService*      getFontService() const { return _pFontService; }
+        FontSubsystem*    getFontSubsystem() const { return _pFontSubsystem; }
         const UIViewport& getViewport() const { return _viewport; }
         /** @brief 텍스트 측정 엔진입니다(글꼴이 없으면 nullptr). 레이아웃 컨텍스트가 넘깁니다. */
         TextLayoutEngine* getTextLayout() const { return _textLayout.get(); }
@@ -498,7 +498,7 @@ namespace sw
         UIUpdateDelegate             _onPointerProcessed;             ///< 포인터 처리 뒤의 UI 서비스(World 위젯 광선)
         UIActionGlyphSource          _actionGlyphs;                   ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
         UIInputRouter                _input;                          ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
-        FontService*                 _pFontService;
+        FontSubsystem*               _pFontSubsystem;
         const LocalizationManager*   _pLocalization; ///< 문화권 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
         UserSettingsManager*         _pUserSettings; ///< 설정 바인딩 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
         unique_ptr<TextLayoutEngine> _textLayout;
@@ -527,6 +527,6 @@ namespace sw
         unique_ptr<SubscriptionList> _screenCloseSubscriptions; ///< 소유한 쪽이 닫을 화면의 구독입니다(`ownScreen`).
         unique_ptr<SubscriptionList> _layerHideSubscriptions;   ///< 레이어 숨김 요청의 구독입니다(`addLayerHideRequest`).
 
-        SW_SERVICE_SLOT( UISystem, Required );
+        SW_SUBSYSTEM_SLOT( UISystem, Required );
     };
 } // namespace sw

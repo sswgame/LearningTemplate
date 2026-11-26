@@ -311,8 +311,8 @@ SW_TEST_CASE( GlyphAtlasTest, LayoutComesFromCatalogValues )
 /** @brief [GlyphAtlasTest] 카탈로그에 아틀라스 모양이 없거나 범위 밖이면 검사가 진다(기본값으로 대신하지 않는다) */
 SW_TEST_CASE( GlyphAtlasTest, CatalogRejectsMissingAtlasLayout )
 {
-    sw::FontCatalogDef catalog = sw::test::FakeFontServiceFixture::makeCatalog( "Latin" );
-    sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
+    sw::FontCatalogDef catalog = sw::test::FakeFontSubsystemFixture::makeCatalog( "Latin" );
+    sw::test::FakeFontSubsystemFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
     SW_EXPECT_TRUE( catalog.validate() );
     SW_EXPECT_LOG( "FontCatalog.GlyphAtlasLayoutOutOfRange" ); // 아래 세 거절마다 한 줄
     catalog._glyphAtlasPageSize = 0;

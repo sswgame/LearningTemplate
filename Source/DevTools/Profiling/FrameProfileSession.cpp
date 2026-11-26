@@ -18,7 +18,7 @@
 #include "DevTools/Profiling/ProfilerTraceExport.h"
 
 #include "Engine/Asset/Cache/CacheStatsUtil.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"

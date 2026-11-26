@@ -42,7 +42,7 @@
 #include "GameFramework/Runtime/Foundation/Minigame/IMinigameMatchmaking.h"
 #include "GameFramework/Runtime/Foundation/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 #include <type_traits>
 

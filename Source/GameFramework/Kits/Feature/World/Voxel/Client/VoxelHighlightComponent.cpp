@@ -13,7 +13,7 @@
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelPlayerComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 namespace sw

@@ -42,7 +42,7 @@ namespace sw
             }
         };
 
-        GameSettingsLaunchOverride                s_gameSettingsLaunchOverride;
-        const IGameSettingsOverride::Registration s_gameSettingsLaunchOverrideRegistration{ s_gameSettingsLaunchOverride };
+        GameSettingsLaunchOverride             s_gameSettingsLaunchOverride;
+        const IGameSettingsOverride::Registrar s_gameSettingsLaunchOverrideRegistrar{ s_gameSettingsLaunchOverride };
     } // namespace
 } // namespace sw

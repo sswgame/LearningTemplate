@@ -11,7 +11,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/AssetWriter.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Panels/Catalog/Model/ReflectedXMLDocument.h"
 
@@ -24,7 +24,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
+#include "Engine/Object/GameObject/Subsystem/ScenePreviewPolicy.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

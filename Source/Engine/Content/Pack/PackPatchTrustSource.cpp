@@ -7,7 +7,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {

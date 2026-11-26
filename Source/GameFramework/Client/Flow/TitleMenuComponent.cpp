@@ -5,7 +5,7 @@
 #include "Engine/UI/Menu/MainMenuScreen.h"
 #include "Engine/UI/UISystem.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {

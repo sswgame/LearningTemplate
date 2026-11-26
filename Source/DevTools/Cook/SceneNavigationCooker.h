@@ -16,7 +16,7 @@
 namespace sw
 {
     struct CookJobDesc;
-    struct SceneEngineServices;
+    struct SceneEngineSubsystems;
 
     class CookStore;
     class NavMeshAsset;
@@ -29,14 +29,14 @@ namespace sw
          * @param services 쿠킹용 씬을 지을 엔진 서비스 묶음입니다. 런타임 씬과 같은 묶음을 받고, 전역 표를 다시 찾지 않습니다(`SceneCooker` 와 같음).
          * @return 씬을 읽지 못했거나 어느 종류를 베이크하지 못하면 false 입니다.
          */
-        [[nodiscard]] static bool cookScene( const SceneEngineServices& services, const AssetID& assetID, NavMeshAsset& outAsset );
+        [[nodiscard]] static bool cookScene( const SceneEngineSubsystems& services, const AssetID& assetID, NavMeshAsset& outAsset );
         /**
          * @brief @p resourceRoot 아래의 모든 씬(`*.scene.xml`) 가운데 표면이 있는 것을 `<cookedDir>/<씬 경로의 .navmesh>` 로 씁니다. 활성 게임이 아닌
          *        게임 팩의 씬은 건너뜁니다(배포본은 활성 게임의 팩만 연다).
          * @param store 기록과 DDC 입니다. 씬마다 작업 하나로 베이크하고 — 씬 · 프리팹 · 메시 등 씬을 세우며 읽은 것이 입력이다 — 기록이 새것이면 DDC 의 출력을 다시 씁니다.
          * @return 쓴 파일 수입니다. 실패는 @p outFailedCount 에 셉니다.
          */
-        static uint32 cookAll( const SceneEngineServices& services, const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, const CookStore& store, uint64 reflectionFingerprint,
+        static uint32 cookAll( const SceneEngineSubsystems& services, const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, const CookStore& store, uint64 reflectionFingerprint,
                                uint32& outFailedCount );
         /** @brief 내비메시 쿠킹 작업의 키 값입니다. 설정 해시는 리플렉션 지문(`CookReflectionFingerprint`)입니다. */
         static CookJobDesc makeCookJobDesc( uint64 reflectionFingerprint );

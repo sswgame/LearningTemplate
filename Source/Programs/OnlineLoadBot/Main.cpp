@@ -51,7 +51,7 @@ namespace sw
 
             ~ToolHostScope()
             {
-                _launch.stopHostServices();
+                _launch.stopHostSubsystems();
                 _launch.shutdownEngine();
             }
 
@@ -73,7 +73,7 @@ namespace sw
                     return false;
                 }
                 // 엔진 종료의 모듈 내리기 자리(`ModuleUnloadStage`)에서 등록을 역순으로 거둔다 — 모듈 서브시스템(GameFramework · 키트의 캐시)이 엔진보다 먼저 내려간다.
-                _unloadSubscription             = requireSubsystem<ModuleLoaderSubsystem>( _launch.getHostScope() ).bindScenesReleasedHook( SW_DELEGATE_METHOD( Delegate<void()>, &ToolHostScope::unregisterModules, this ) );
+                _unloadSubscription             = getSubsystemFrom<ModuleLoaderSubsystem>( _launch.getHostScope() ).bindScenesReleasedHook( SW_DELEGATE_METHOD( Delegate<void()>, &ToolHostScope::unregisterModules, this ) );
                 const int32 engineArgumentCount = static_cast<int32>( listEngineArgument.size() );
                 listEngineArgument.push_back( nullptr );
                 // 진 헤드리스 작업도 Failed 다 — 그 결과는 `runBot` 이 종료 코드로 낸다. 엔진이 서지 못한 것만 여기서 멈춘다.

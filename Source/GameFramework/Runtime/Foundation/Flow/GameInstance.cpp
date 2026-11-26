@@ -34,7 +34,7 @@
 #include "GameFramework/Runtime/Foundation/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Save/GameSaveSlots.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDataWatcher.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -150,20 +150,20 @@ namespace sw
         _gameScope.setParentScope( nullptr );
     }
 
-    void GameInstance::reportScopedServiceConflict( uint64 typeHash ) const
+    void GameInstance::reportScopedSubsystemConflict( uint64 typeHash ) const
     {
         SW_LOG_ERROR_ID( "GameInstance.GameScopedServiceAlready", "Game scoped service %# is already bound to another instance - two kits share one service type", typeHash );
     }
 
-    bool GameInstance::validateEngineServices( const GenericWindow* pWindow )
+    bool GameInstance::validateEngineSubsystems( const GenericWindow* pWindow )
     {
-        // 네트워크 세션은 필수 엔진 서비스다(`SW_SERVICE_SLOT( GameNetSession, Required )`, 게임 노출). 없으면 세션 없이 조용히 도는 대신 아무것도 걸기 전에 멈춘다.
+        // 네트워크 세션은 필수 엔진 서비스다(`SW_SUBSYSTEM_SLOT( GameNetSession, Required )`, 게임 노출). 없으면 세션 없이 조용히 도는 대신 아무것도 걸기 전에 멈춘다.
         if ( game::findSubsystem<GameNetSession>() == nullptr )
         {
             SW_LOG_ERROR_ID( "GameInstance.GameInstanceCannotStart", "Game instance cannot start - the required engine service GameNetSession is not bound to the game services" );
             return false;
         }
-        // UI(입력 포획 창구로 본다) · 사용자 설정은 Client 호스트 서비스다. 창이 있는 호스트(클라이언트)에 없으면 호스트의 결함이라 멈춘다 — 타이틀 명령 · 설정 재적용을 조용히 건너뛰지 않는다.
+        // UI(입력 포획 창구로 본다) · 사용자 설정은 Client 호스트 서브시스템다. 창이 있는 호스트(클라이언트)에 없으면 호스트의 결함이라 멈춘다 — 타이틀 명령 · 설정 재적용을 조용히 건너뛰지 않는다.
         if ( pWindow != nullptr && ( game::findSubsystem<IInputCaptureQuery>() == nullptr || game::findSubsystem<UserSettingsManager>() == nullptr ) )
         {
             SW_LOG_ERROR_ID( "GameInstance.GameInstanceCannotStart2", "Game instance cannot start - a windowed (client) host must bind the engine services UISystem and UserSettingsManager to the game services" );
@@ -182,7 +182,7 @@ namespace sw
             return false;
         }
         // 필수 엔진 서비스가 없으면 아무것도 걸기 전에 멈춘다. 쓰는 곳(입력 맵 · 세션 명령 · 설정 재적용)은 그 자리에서 게임 창구로 찾는다.
-        if ( validateEngineServices( pWindow ) == false )
+        if ( validateEngineSubsystems( pWindow ) == false )
             return false;
         _pWindow = pWindow;
         if ( startInstance() == false )
@@ -228,7 +228,7 @@ namespace sw
             _gameScope.setParentScope( game::findGameScope() );
         game::setGameScope( &_gameScope );
         // 자신도 건다 — 도는 인스턴스(`findRunningInstance`)는 지금 게임 범위에서 찾는다.
-        if ( bindScopedService( this ) == false || bindScopedService( &_packConfig._data ) == false || bindScopedService( &_saveLock ) == false || applyPackConfig() == false )
+        if ( bindScopedSubsystem( this ) == false || bindScopedSubsystem( &_packConfig._data ) == false || bindScopedSubsystem( &_saveLock ) == false || applyPackConfig() == false )
             return false;
         // 인스턴스 서브시스템을 onInitialize 앞에 세운다(의존 순서: 화면 전환 · 로딩 화면 → 씬 흐름) — 씬 흐름이 씬 로드 받아들임 알림을 걸어 첫 씬 요청(`startFirstScene`)이
         // 로딩 화면을 띄우고, 파생이 네트워크 역할을 보고 키트 처리기를 단다. 하나라도 서지 않으면(로딩 팁 파일을 못 읽었다) 게임을 띄우지 않는다 — 파생 초기화도 부르지 않는다.
@@ -257,7 +257,7 @@ namespace sw
         GameNetWireContent                 wireContent;
         wireContent._contentConfigHash    = pContent != nullptr ? pContent->getContentConfigHash() : 0;
         wireContent._replicatedSchemaHash = replicatedChannel.computeSchemaHash();
-        GameNetSession& netSession        = game::getSubsystem<GameNetSession>(); // `validateEngineServices` 가 있음을 확인했다
+        GameNetSession& netSession        = game::getSubsystem<GameNetSession>(); // `validateEngineSubsystems` 가 있음을 확인했다
         netSession.getConnectSecurity().setProvider( &game::getSubsystem<INetSecurityProvider>() );
         _bSecuritySet         = SW_TRUE;
         _clientSessionOpening = netSession.onClientOpening().add( SW_DELEGATE_METHOD( Delegate<void()>, &GameInstance::onClientSessionOpening, this ) );
@@ -430,7 +430,7 @@ namespace sw
                                      SW_DELEGATE_LAMBDA( AutosaveManager::LoadDelegate, [this]( const string& slot, const AutosaveManager::RestoreCompletedFunction& onCompleted )
         { return getSubsystem<GameSaveSlots>().loadSlot( slot, onCompleted ); } ) ) == false ) // 슬롯 불러오기와 같은 길 — 찍은 씬으로 옮긴 뒤 적용한다(감사 G-7)
             return false;                                                                      // 까닭은 관리자가 남겼다
-        return bindScopedService( _pAutosave.get() );
+        return bindScopedSubsystem( _pAutosave.get() );
     }
 
     bool GameInstance::activateGameFeatures()
@@ -475,7 +475,7 @@ namespace sw
         } );
         if ( bLoaded == false )
             return false;
-        return bindScopedService( _pAppearanceDatabase.get() );
+        return bindScopedSubsystem( _pAppearanceDatabase.get() );
     }
 
     bool GameInstance::makeRequiredDataPath( string_view kindLabel, string& outPath ) const

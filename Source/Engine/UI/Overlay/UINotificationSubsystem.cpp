@@ -1,0 +1,328 @@
+#include "pch.h"
+
+#include "Engine/UI/Overlay/UINotificationSubsystem.h"
+
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
+
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/UI/Accessibility/UIAccessibilitySubsystem.h"
+#include "Engine/UI/Document/UIDocumentCache.h"
+#include "Engine/UI/Document/UIDocumentLoader.h"
+#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/PanelWidget.h"
+#include "Engine/UI/Widgets/TextWidget.h"
+#include "Engine/UserSettings/UserSettingsVariables.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct UINotificationSubsystemInternal
+        {
+            static constexpr utf8 kStackName[]   = "Stack";
+            static constexpr utf8 kMessageName[] = "Message";
+            static constexpr utf8 kCountName[]   = "Count";
+
+            static const utf8* getKindClass( UINotificationKind kind )
+            {
+                switch ( kind )
+                {
+                    case UINotificationKind::Info:
+                        return "notification info";
+                    case UINotificationKind::Achievement:
+                        return "notification achievement";
+                    case UINotificationKind::Warning:
+                        return "notification warning";
+                    case UINotificationKind::Hint:
+                        return "notification hint";
+                }
+                return "notification info";
+            }
+        };
+    } // namespace
+
+    UINotificationSubsystem::UINotificationSubsystem()
+        : _notificationSink{ *this }
+        , _listVisible{}
+        , _listQueued{}
+        , _listFading{}
+        , _pUI{ nullptr }
+        , _updateSubscription{}
+        , _nextOrder{ 0 }
+        , _screen{}
+    {
+    }
+
+    SubsystemInitResult UINotificationSubsystem::initializeSubsystem()
+    {
+        _pUI                = &engine::getSubsystem<UISystem>();
+        _updateSubscription = _pUI->onUpdateAfterScreens().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UINotificationSubsystem::update, this ) );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void UINotificationSubsystem::shutdownSubsystem()
+    {
+        _updateSubscription.reset();
+        clear(); // 화면 스택이 아직 있다(이것이 먼저 내려간다) — 연 화면을 닫는다
+        _pUI = nullptr;
+    }
+
+    span<const utf8* const> UINotificationSubsystem::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName, UIDocumentCache::kSubsystemName, UIAccessibilitySubsystem::kSubsystemName };
+        return kArrDependency;
+    }
+
+    void UINotificationSubsystem::postNotification( const string& text, const float32 durationSeconds, const PlayerNotificationKind kind )
+    {
+        UINotificationDef notification{};
+        notification._text            = text;
+        notification._durationSeconds = durationSeconds;
+        if ( kind == PlayerNotificationKind::Hint )
+        {
+            notification._kind     = UINotificationKind::Hint;
+            notification._priority = 1; // 힌트는 지금 할 일이라 쌓인 알림보다 먼저
+        }
+        post( notification );
+    }
+
+    void UINotificationSubsystem::post( const UINotificationDef& desc )
+    {
+        if ( desc._text.empty() )
+            return;
+        if ( desc._bMergeSameText )
+        {
+            if ( Entry* pSame = findSameText( desc._text ); pSame != nullptr )
+            {
+                ++pSame->_count;
+                pSame->_ageSeconds     = 0.0f;
+                pSame->_desc._priority = desc._priority > pSame->_desc._priority ? desc._priority : pSame->_desc._priority;
+                refreshEntry( *pSame );
+                return;
+            }
+        }
+        Entry entry{};
+        entry._desc  = desc;
+        entry._order = _nextOrder++;
+        _listQueued.push_back( entry );
+    }
+
+    hashed_string UINotificationSubsystem::getEntryWidgetName( uint64 order, string_view part )
+    {
+        string name = to_string( order );
+        if ( part.empty() == false )
+        {
+            name += ".";
+            name.append( part.data(), part.size() );
+        }
+        return hashed_string( name );
+    }
+
+    void UINotificationSubsystem::update( float32 deltaSeconds )
+    {
+        // 0) 사라지는 중인 항목: 페이드가 끝나면 위젯을 지운다.
+        // 시간을 더하고 끝난 것의 뒤처리를 한 번 돈 뒤, 지우는 것은 `removeIf` 한 번이다(한 프레임에 여럿이 끝나도 뒤 원소를 한 번만 옮긴다).
+        // 위젯을 지우거나 페이드를 거는 호출은 두 목록을 건드리지 않는다. 남은 순서는 그대로다(보이는 알림의 쌓는 순서).
+        const auto isFadeDone = []( const FadingEntry& fading )
+        { return ( fading._remainingSeconds > 0.0f ) == false; };
+        for ( FadingEntry& fading : _listFading )
+        {
+            fading._remainingSeconds -= deltaSeconds;
+            if ( isFadeDone( fading ) )
+                removeEntryWidget( fading._widget );
+        }
+        VectorUtil::removeIf( _listFading, isFadeDone );
+        // 1) 보이는 알림의 시간: 끝난 것을 내린다(자리는 바로 비고, 위젯은 페이드 뒤에 지운다).
+        const auto isTimeUp = []( const Entry& entry )
+        { return ( entry._ageSeconds < entry._desc._durationSeconds ) == false; };
+        for ( Entry& entry : _listVisible )
+        {
+            entry._ageSeconds += deltaSeconds;
+            if ( isTimeUp( entry ) )
+                startFadeOut( entry ); // 페이드 목록에 더한다(위 순회는 이미 끝났다)
+        }
+        VectorUtil::removeIf( _listVisible, isTimeUp );
+        // 2) 자리가 나면 기다리는 알림을 올린다. 우선순위가 큰 것이 먼저이고, 같으면 먼저 온 것이 먼저다.
+        while ( _listVisible.size() < kMaxVisible && _listQueued.empty() == false )
+        {
+            size_t best = 0;
+            for ( size_t index = 1; index < _listQueued.size(); ++index )
+            {
+                const Entry& candidate = _listQueued[index];
+                const Entry& current   = _listQueued[best];
+                if ( candidate._desc._priority > current._desc._priority ||
+                     ( candidate._desc._priority == current._desc._priority && candidate._order < current._order ) )
+                    best = index;
+            }
+            Entry entry = _listQueued[best];
+            _listQueued.erase( _listQueued.begin() + static_cast<ptrdiff_t>( best ) );
+            entry._ageSeconds = 0.0f;
+            _listVisible.push_back( entry );
+            showEntry( _listVisible.back() );
+        }
+        announceVisible();
+        // 3) 보일 것이 없으면 화면을 닫는다(오버레이라 입력과 무관하며, 열고 닫는 비용은 알림 단위로 든다).
+        const bool bIdleScreenOpen = _listVisible.empty() && _listFading.empty() && _screen.isHeld();
+        if ( bIdleScreenOpen )
+            _screen.reset();
+    }
+
+    void UINotificationSubsystem::announceVisible()
+    {
+        UIScreen* pScreen = _screen.find();
+        if ( pScreen == nullptr )
+            return;
+        for ( Entry& entry : _listVisible )
+        {
+            if ( entry._bAnnounced )
+                continue;
+            const TextWidget* pMessage = pScreen->getTree().findWidget<TextWidget>( getEntryWidgetName( entry._order, "Message" ) );
+            if ( pMessage == nullptr || pMessage->getDisplayText().empty() )
+                continue; // 아직 배치 전이다 — 다음 갱신에 다시 본다
+            const UIAnnouncePriority priority = entry._desc._kind == UINotificationKind::Warning ? UIAnnouncePriority::Assertive : UIAnnouncePriority::Polite;
+            engine::getSubsystem<UIAccessibilitySubsystem>().announce( pMessage->getDisplayText(), priority );
+            entry._bAnnounced = true;
+        }
+    }
+
+    void UINotificationSubsystem::clear()
+    {
+        _listVisible.clear();
+        _listQueued.clear();
+        _listFading.clear();
+        _screen.reset();
+    }
+
+    void UINotificationSubsystem::resetGameInstanceState( GameInstanceBoundary boundary )
+    {
+        if ( boundary == GameInstanceBoundary::Ended )
+            clear();
+    }
+
+    const utf8* UINotificationSubsystem::findGameInstanceState() const
+    {
+        return _listVisible.empty() && _listQueued.empty() && _listFading.empty() ? nullptr : "notifications";
+    }
+
+    UINotificationSubsystem::Entry* UINotificationSubsystem::findSameText( const string& text )
+    {
+        for ( Entry& entry : _listVisible )
+        {
+            if ( entry._desc._text == text )
+                return &entry;
+        }
+        return VectorUtil::findIf( _listQueued, [&]( Entry& entry )
+        { return entry._desc._text == text; } );
+    }
+
+    UIScreen* UINotificationSubsystem::acquireScreen()
+    {
+        UIScreen* pScreen = _screen.find();
+        if ( pScreen != nullptr )
+            return pScreen;
+        _screen = UIOwnedScreen( *_pUI, _pUI->openScreen( _pUI->getEngineDocuments()._notifications ) );
+        return _screen.find();
+    }
+
+    void UINotificationSubsystem::showEntry( Entry& entry )
+    {
+        using Internal    = UINotificationSubsystemInternal;
+        UIScreen* pScreen = acquireScreen();
+        if ( pScreen == nullptr )
+            return; // 문서를 만들지 못했다. 오류는 문서 생성 단계가 남겼다
+        PanelWidget* pStack = pScreen->getTree().findWidget<PanelWidget>( Internal::kStackName );
+        if ( pStack == nullptr )
+        {
+            SW_LOG_ERROR_ID( "UINotificationSubsystem.NotificationDocumentNoPanel", "[UI] Notification document %# has no '%#' panel", _pUI->getEngineDocuments()._notifications.c_str(), Internal::kStackName );
+            return;
+        }
+        UIDocumentCache&                                  documents = engine::getSubsystem<UIDocumentCache>();
+        const expected<shared_ptr<const UIDocumentAsset>> document  = documents.acquire( _pUI->getEngineDocuments()._notificationEntry );
+        vector<UIBindingDef>                              listBinding;
+        expected<unique_ptr<Widget>>                      built = document.has_value() ? UIDocumentLoader::instantiate( **document, documents, ResourceTagSet{}, listBinding ) : unexpected( document.error() );
+        if ( built.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "UINotificationSubsystem.NotificationEntryFailed", "[UI] Notification entry failed: %# (%#)", built.error().message(), built.error().detail() );
+            return;
+        }
+        unique_ptr<Widget> widget = std::move( *built );
+        widget->setStyleClass( Internal::getKindClass( entry._desc._kind ) );
+        // 같은 조각을 항목마다 붙이므로 붙이기 전에 이름을 항목 번호로 가른다(붙은 뒤에는 "name is used twice" 경고가 난다).
+        widget->setName( getEntryWidgetName( entry._order ) );
+        if ( Widget* pMessage = widget->findDescendant( Internal::kMessageName ); pMessage != nullptr )
+            pMessage->setName( getEntryWidgetName( entry._order, Internal::kMessageName ) );
+        if ( Widget* pCount = widget->findDescendant( Internal::kCountName ); pCount != nullptr )
+            pCount->setName( getEntryWidgetName( entry._order, Internal::kCountName ) );
+        entry._widget = widget->getID();
+        widget->setOpacity( 0.0f ); // 페이드로 들어온다(움직임 줄이기이면 아래 트윈이 바로 1 을 쓴다)
+        (void)pStack->addChild( std::move( widget ) );
+        if ( pScreen->getAnimationPlayer().tween( entry._widget, "_opacity", "1", kFadeSeconds, BlendCurve::EaseOut ) == false )
+        {
+            if ( Widget* pAdded = pScreen->getTree().findWidgetByID( entry._widget ); pAdded != nullptr )
+                pAdded->setOpacity( 1.0f ); // 트윈을 걸지 못하면 보이지 않는 채로 남지 않게 한다
+        }
+        refreshEntry( entry );
+    }
+
+    void UINotificationSubsystem::refreshEntry( const Entry& entry )
+    {
+        using Internal = UINotificationSubsystemInternal;
+        // 연 화면이 없으면 고칠 위젯도 없다 — 기동 전(`_pUI` 가 아직 없다)에 같은 글이 다시 와 합치기만 한 경우다(`announceVisible` 과 같은 기준).
+        UIScreen* pScreen = _screen.find();
+        Widget*   pEntry  = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
+        if ( pEntry == nullptr )
+            return; // 아직 기다리는 중이다
+        if ( TextWidget* pMessage = castTo<TextWidget>( pEntry->findDescendant( getEntryWidgetName( entry._order, Internal::kMessageName ) ) ); pMessage != nullptr )
+            pMessage->setText( entry._desc._text );
+        if ( TextWidget* pCount = castTo<TextWidget>( pEntry->findDescendant( getEntryWidgetName( entry._order, Internal::kCountName ) ) ); pCount != nullptr )
+        {
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "x%#", entry._count );
+            pCount->setText( string( textBuilder.view() ) );
+            pCount->setVisibility( entry._count > 1 ? WidgetVisibility::Visible : WidgetVisibility::Collapsed );
+        }
+    }
+
+    void UINotificationSubsystem::startFadeOut( const Entry& entry )
+    {
+        UIScreen* pScreen = _screen.find();
+        Widget*   pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
+        if ( pWidget == nullptr )
+            return; // 위젯을 만들지 못했던 항목이다
+        if ( gv_uiReduceMotion || pScreen->getAnimationPlayer().tween( entry._widget, "_opacity", "0", kFadeSeconds, BlendCurve::EaseIn ) == false )
+        {
+            removeEntryWidget( entry._widget );
+            return;
+        }
+        FadingEntry fading{};
+        fading._widget           = entry._widget;
+        fading._remainingSeconds = kFadeSeconds;
+        _listFading.push_back( fading );
+    }
+
+    void UINotificationSubsystem::removeEntryWidget( WidgetID widget )
+    {
+        UIScreen*    pScreen = _screen.find();
+        Widget*      pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( widget ) : nullptr;
+        PanelWidget* pParent = pWidget != nullptr ? pWidget->getParent() : nullptr;
+        if ( pParent != nullptr )
+            (void)pParent->removeChild( pWidget ); // 부모에서 찾은 위젯이라 항상 제거된다
+    }
+} // namespace sw
+
+namespace sw
+{
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( UINotificationSubsystem, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        UINotificationSubsystem& service  = scope.emplaceSubsystem<UINotificationSubsystem>();
+        const bool               bExposed = scope.exposeMember<IPlayerNotificationSink>( service, service.getPlayerNotificationSink() );
+        SW_ASSERT( bExposed );
+        (void)bExposed;
+    } );
+} // namespace sw

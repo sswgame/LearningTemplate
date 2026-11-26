@@ -16,7 +16,7 @@
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
 #include "Engine/Graphics/Mesh/Mesh.h"

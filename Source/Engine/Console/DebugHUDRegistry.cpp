@@ -6,8 +6,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -244,5 +244,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( DebugHUDRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugHUDRegistry ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( DebugHUDRegistry, GameVisible, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( DebugHUDRegistry ) );
 } // namespace sw

@@ -8,7 +8,7 @@
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 
 #include "Engine/Content/AssetPaths.h"

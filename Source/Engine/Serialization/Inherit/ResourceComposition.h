@@ -15,7 +15,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -109,7 +109,7 @@ namespace sw
     private:
         unique_ptr<State> _pState;
 
-        SW_SERVICE_SLOT( ResourceComposition, Required );
+        SW_SUBSYSTEM_SLOT( ResourceComposition, Required );
     };
 
     /** @brief 유예가 지나도 어긋난 한 줄입니다(`ResourceDigestComparer::update`). */

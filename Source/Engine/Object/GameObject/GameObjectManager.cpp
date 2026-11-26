@@ -12,7 +12,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/Component/Component.h"
@@ -23,9 +23,9 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
-#include "Engine/Object/GameObject/Service/ISceneService.h"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
@@ -206,12 +206,12 @@ namespace sw
         runOnAnyThread( context );
     }
 
-    struct GameObjectManager::SceneServiceEntry
+    struct GameObjectManager::SceneSubsystemEntry
     {
-        const SceneServiceRegistration* _pRegistration;
-        ISceneService*                  _pService;
-        ProfileScopeID                  _updateScopeID;   ///< `update` 구간(`GT.Scene.service.<이름>`) — 서비스 이름으로 만들 때 한 번 받는다
-        ProfileScopeID                  _completeScopeID; ///< `completeFrameJob` 구간(`GT.Scene.serviceJob.<이름>`)
+        const SceneSubsystemRegistration* _pRegistration;
+        ISceneSubsystem*                  _pService;
+        ProfileScopeID                    _updateScopeID;   ///< `update` 구간(`GT.Scene.service.<이름>`) — 서비스 이름으로 만들 때 한 번 받는다
+        ProfileScopeID                    _completeScopeID; ///< `completeFrameJob` 구간(`GT.Scene.serviceJob.<이름>`)
     };
 
     /**
@@ -222,7 +222,7 @@ namespace sw
     {
         WorldOrigin             _worldOrigin; ///< 오브젝트 자리가 기준한 월드 원점(`getWorldOrigin`)
         SceneTransformHierarchy _transformHierarchy;
-        SceneMoveDispatch       _moveDispatch; ///< 구독자(씬 서비스)보다 먼저 서고 나중에 내려간다
+        SceneMoveDispatch       _moveDispatch; ///< 구독자(씬 서브시스템)보다 먼저 서고 나중에 내려간다
         PrimitiveRegistry       _primitiveRegistry;
         CameraRegistry          _cameraRegistry;
         TagIndex                _tagIndex;
@@ -231,12 +231,12 @@ namespace sw
         ComponentRegistry _componentRegistry;
         /** @brief 오브젝트 저장소(생성 · 이름 · id 표 · 조회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄)입니다. 게임이 부르는 API 는 매니저의 전달 함수입니다. */
         GameObjectStore _store;
-        /** @brief 씬 범위입니다 — 레지스트리(`SceneServiceRegistry`)에서 만든 기능 서비스(물리 · 오디오 · 내비게이션 …)를 소유한다. 부모는 엔진 범위. */
+        /** @brief 씬 범위입니다 — 레지스트리(`SceneSubsystemRegistry`)에서 만든 기능 서비스(물리 · 오디오 · 내비게이션 …)를 소유한다. 부모는 엔진 범위. */
         SubsystemScope _sceneScope;
-        /** @brief 씬 서비스를 범위의 초기화 순서로 든 목록입니다. 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
-        vector<SceneServiceEntry> _listSceneService;
+        /** @brief 씬 서브시스템을 범위의 초기화 순서로 든 목록입니다. 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
+        vector<SceneSubsystemEntry> _listSceneSubsystem;
 
-        State( GameObjectManager& manager, StructuralChangeBuffer& structuralChangeBuffer, ObjectIDAllocator& objectIDAllocator, const SceneEngineServices& services )
+        State( GameObjectManager& manager, StructuralChangeBuffer& structuralChangeBuffer, ObjectIDAllocator& objectIDAllocator, const SceneEngineSubsystems& services )
             : _worldOrigin{}
             , _transformHierarchy{}
             , _moveDispatch{}
@@ -247,23 +247,23 @@ namespace sw
             , _componentRegistry{}
             , _store{ manager, _tickScheduler, structuralChangeBuffer, objectIDAllocator }
             , _sceneScope{ services._pEngineSubsystems }
-            , _listSceneService{}
+            , _listSceneSubsystem{}
         {
         }
     };
 
     GameObjectManager::GameObjectManager()
-        : GameObjectManager( SceneEngineServices::makeFromBoundEngine() )
+        : GameObjectManager( SceneEngineSubsystems::makeFromBoundEngine() )
     {
     }
 
     GameObjectManager::GameObjectManager( TransientTag )
-        : GameObjectManager( SceneEngineServices::makeFromBoundEngine() )
+        : GameObjectManager( SceneEngineSubsystems::makeFromBoundEngine() )
     {
         _bTransient = SW_TRUE;
     }
 
-    GameObjectManager::GameObjectManager( const SceneEngineServices& services )
+    GameObjectManager::GameObjectManager( const SceneEngineSubsystems& services )
         : _pOwnedObjectIDAllocator{ services._pObjectIDAllocator == nullptr ? make_unique<ObjectIDAllocator>() : nullptr } // 엔진 범위가 없으면 이 매니저가 번호 공간의 주인이다
         , _pObjectIDAllocator{ services._pObjectIDAllocator != nullptr ? services._pObjectIDAllocator : _pOwnedObjectIDAllocator.get() }
         , _structuralChangeBuffer{}
@@ -286,71 +286,71 @@ namespace sw
         , _listDeferredPostLoad{}
         , _pollBatch{}
     {
-        // 기능 서비스는 기능 폴더가 정적 초기화에서 올린 줄로 만든다 — 코어는 그 타입을 모른다(`ISceneService.h`). 씬 범위가 소유하고 의존 순서로 세운다.
-        const vector<const SceneServiceRegistration*>& listRegistration = SceneServiceRegistry::getAll();
-        vector<SceneServiceEntry>                      listCreated;
+        // 기능 서비스는 기능 폴더가 정적 초기화에서 올린 줄로 만든다 — 코어는 그 타입을 모른다(`ISceneSubsystem.h`). 씬 범위가 소유하고 의존 순서로 세운다.
+        const vector<const SceneSubsystemRegistration*>& listRegistration = SceneSubsystemRegistry::getAll();
+        vector<SceneSubsystemEntry>                      listCreated;
         listCreated.reserve( listRegistration.size() );
-        for ( const SceneServiceRegistration* pRegistration : listRegistration )
+        for ( const SceneSubsystemRegistration* pRegistration : listRegistration )
         {
-            ISceneService& service = pRegistration->_pCreate( *this, _pState->_sceneScope );
+            ISceneSubsystem& service = pRegistration->_pCreate( *this, _pState->_sceneScope );
             // 구간은 서비스 이름으로 여기서 한 번 받는다 — 서비스마다 손으로 구간을 걸지 않아도 새 서비스가 계측에서 빠지지 않는다.
             const utf8* pName = service.getSubsystemName();
             // 프레임 일이 없는 서비스는 `completeFrameJob` 구간을 받지 않는다(불리지 않는다 — 슬롯 수 `FrameProfiler::kMaxScope` 를 아낀다).
             const ProfileScopeID updateScopeID   = FrameProfiler::registerEngineNamedScope( "GT.Scene.service.", pName, __func__, __FILE__, __LINE__ );
             const ProfileScopeID completeScopeID = pRegistration->hasFrameJob() ? FrameProfiler::registerEngineNamedScope( "GT.Scene.serviceJob.", pName, __func__, __FILE__, __LINE__ ) : ProfileScopeID{};
-            listCreated.push_back( SceneServiceEntry{ pRegistration, &service, updateScopeID, completeScopeID } );
+            listCreated.push_back( SceneSubsystemEntry{ pRegistration, &service, updateScopeID, completeScopeID } );
         }
         SubsystemCollection& collection = _pState->_sceneScope.getCollection();
         if ( collection.initializeAll( SubsystemHostMask::All ) == false )
-            SW_LOG_ERROR_ID( "GameObjectManager.SceneServicesFailedStart", "Scene services failed to start: %#", collection.getError().c_str() );
+            SW_LOG_ERROR_ID( "GameObjectManager.SceneSubsystemsFailedStart", "Scene subsystems failed to start: %#", collection.getError().c_str() );
         // 갱신도 초기화 순서다 — 같은 단계의 서비스가 서로 기대면 의존으로 적는다.
-        _pState->_listSceneService.reserve( listCreated.size() );
+        _pState->_listSceneSubsystem.reserve( listCreated.size() );
         for ( const uint32 index : collection.getInitializeOrder() )
         {
             const Subsystem& subsystem = collection.getSubsystem( index );
-            for ( const SceneServiceEntry& entry : listCreated )
+            for ( const SceneSubsystemEntry& entry : listCreated )
             {
                 if ( entry._pService == &subsystem )
-                    _pState->_listSceneService.push_back( entry );
+                    _pState->_listSceneSubsystem.push_back( entry );
             }
         }
-        validateSceneServiceJobs();
+        validateSceneSubsystemJobs();
     }
 
-    void GameObjectManager::validateSceneServiceJobs() const
+    void GameObjectManager::validateSceneSubsystemJobs() const
     {
-        for ( size_t serviceIndex = 0; serviceIndex < _pState->_listSceneService.size(); ++serviceIndex )
+        for ( size_t serviceIndex = 0; serviceIndex < _pState->_listSceneSubsystem.size(); ++serviceIndex )
         {
-            const SceneServiceRegistration& registration = *_pState->_listSceneService[serviceIndex]._pRegistration;
+            const SceneSubsystemRegistration& registration = *_pState->_listSceneSubsystem[serviceIndex]._pRegistration;
             if ( registration.hasFrameJob() == false )
                 continue;
-            const utf8* pName = _pState->_listSceneService[serviceIndex]._pService->getSubsystemName();
+            const utf8* pName = _pState->_listSceneSubsystem[serviceIndex]._pService->getSubsystemName();
             if ( registration._completeStep <= registration._frameStep )
             {
                 SW_LOG_ERROR_ID( "GameObjectManager.FrameJobCompleteStep", "Scene service '%#' completes its frame job at step %# which is not after its update step %# - the job would be waited a frame late",
                                  pName, getSceneFrameStepName( registration._completeStep ), getSceneFrameStepName( registration._frameStep ) );
                 continue;
             }
-            for ( size_t otherIndex = serviceIndex + 1; otherIndex < _pState->_listSceneService.size(); ++otherIndex )
+            for ( size_t otherIndex = serviceIndex + 1; otherIndex < _pState->_listSceneSubsystem.size(); ++otherIndex )
             {
-                const SceneServiceRegistration& other = *_pState->_listSceneService[otherIndex]._pRegistration;
+                const SceneSubsystemRegistration& other = *_pState->_listSceneSubsystem[otherIndex]._pRegistration;
                 // 두 일의 사이(넘긴 단계 끝 ~ 마치는 단계 앞)가 겹치면 같이 돈다 — 겹치는 접근이면 워커끼리 경합한다.
                 const bool bWindowsOverlap = other.hasFrameJob() && other._frameStep < registration._completeStep && registration._frameStep < other._completeStep;
                 if ( bWindowsOverlap == false || hasFrameAccessConflict( registration._jobAccess, other._jobAccess ) == false )
                     continue;
                 SW_LOG_ERROR_ID( "GameObjectManager.FrameJobAccessConflict", "Scene services '%#' and '%#' run frame jobs at the same time with conflicting scene data access - move one completion step or split the data",
-                                 pName, _pState->_listSceneService[otherIndex]._pService->getSubsystemName() );
+                                 pName, _pState->_listSceneSubsystem[otherIndex]._pService->getSubsystemName() );
             }
             // 일이 도는 사이(넘긴 단계의 뒤 서비스 ~ 마치는 단계 앞)에 다른 서비스의 갱신이 겹치는 데이터를 고치거나 일이 쓰는 데이터를 읽으면 경합이다 — 갱신의 접근 선언을 읽는 자리.
-            for ( size_t otherIndex = 0; otherIndex < _pState->_listSceneService.size(); ++otherIndex )
+            for ( size_t otherIndex = 0; otherIndex < _pState->_listSceneSubsystem.size(); ++otherIndex )
             {
-                const SceneServiceRegistration& other         = *_pState->_listSceneService[otherIndex]._pRegistration;
-                const bool                      bAfterLaunch  = other._frameStep == registration._frameStep && otherIndex > serviceIndex;
-                const bool                      bInsideWindow = other._frameStep > registration._frameStep && other._frameStep < registration._completeStep;
+                const SceneSubsystemRegistration& other         = *_pState->_listSceneSubsystem[otherIndex]._pRegistration;
+                const bool                        bAfterLaunch  = other._frameStep == registration._frameStep && otherIndex > serviceIndex;
+                const bool                        bInsideWindow = other._frameStep > registration._frameStep && other._frameStep < registration._completeStep;
                 if ( otherIndex == serviceIndex || ( bAfterLaunch == false && bInsideWindow == false ) || hasFrameAccessConflict( other._updateAccess, registration._jobAccess ) == false )
                     continue;
                 SW_LOG_ERROR_ID( "GameObjectManager.ServiceUpdateDuringFrameJob", "Scene service '%#' updates at step %# while the frame job of '%#' runs with conflicting scene data access - move the update or the job's completion step",
-                                 _pState->_listSceneService[otherIndex]._pService->getSubsystemName(), getSceneFrameStepName( other._frameStep ), pName );
+                                 _pState->_listSceneSubsystem[otherIndex]._pService->getSubsystemName(), getSceneFrameStepName( other._frameStep ), pName );
             }
         }
     }
@@ -666,7 +666,7 @@ namespace sw
         _pState->_tickScheduler.getTickRegistry().clear();
         markTickStagesDirty();
         // 컴포넌트가 바디 · 등록을 놓았다 — 서비스가 남은 것을 버린다(물리는 빈 씬과 쌓인 시간을 버리고 다음 씬은 처음 쓸 때 새로 만든다).
-        for ( SceneServiceEntry& entry : _pState->_listSceneService )
+        for ( SceneSubsystemEntry& entry : _pState->_listSceneSubsystem )
         {
             entry._pService->onSceneCleared();
         }
@@ -674,7 +674,7 @@ namespace sw
 
     void GameObjectManager::notifySceneLoading( const string_view sourcePath )
     {
-        for ( SceneServiceEntry& entry : _pState->_listSceneService )
+        for ( SceneSubsystemEntry& entry : _pState->_listSceneSubsystem )
         {
             entry._pService->onSceneLoading( sourcePath );
         }
@@ -695,7 +695,7 @@ namespace sw
         // 남은 디버그 도형은 옛 원점 기준 자리다 — 세계와 함께 옮긴다.
         if ( DebugDrawQueue* const pDebugDraw = engine::findSubsystem<DebugDrawQueue>(); pDebugDraw != nullptr )
             pDebugDraw->shiftOrigin( delta );
-        for ( SceneServiceEntry& entry : _pState->_listSceneService )
+        for ( SceneSubsystemEntry& entry : _pState->_listSceneSubsystem )
         {
             entry._pService->onWorldOriginShifted( delta );
         }
@@ -715,15 +715,15 @@ namespace sw
 
     void GameObjectManager::applyPreviewPolicy( const ScenePreviewPolicy& policy )
     {
-        for ( SceneServiceEntry& entry : _pState->_listSceneService )
+        for ( SceneSubsystemEntry& entry : _pState->_listSceneSubsystem )
         {
             entry._pService->applyPreviewPolicy( policy );
         }
     }
 
-    void GameObjectManager::collectServiceLights( const SceneLightPhase phase, vector<GPULight>& inoutList ) const
+    void GameObjectManager::collectSubsystemLights( const SceneLightPhase phase, vector<GPULight>& inoutList ) const
     {
-        for ( const SceneServiceEntry& entry : _pState->_listSceneService )
+        for ( const SceneSubsystemEntry& entry : _pState->_listSceneSubsystem )
         {
             entry._pService->contributeLights( phase, inoutList );
         }
@@ -731,7 +731,7 @@ namespace sw
 
     void GameObjectManager::collectServiceParticles( ISceneParticleSink& sink ) const
     {
-        for ( const SceneServiceEntry& entry : _pState->_listSceneService )
+        for ( const SceneSubsystemEntry& entry : _pState->_listSceneSubsystem )
         {
             entry._pService->contributeParticles( sink );
         }
@@ -799,7 +799,7 @@ namespace sw
     {
         if ( pGameObject == nullptr )
             return nullptr;
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
         {
             if ( bLogWarning )
                 SW_LOG_WARNING_ID( "GameObjectManager.CannotCreateComponentName", "Cannot create component '%#' by name - engine services (TypeRegistry) are not bound", typeName.c_str() );
@@ -825,7 +825,7 @@ namespace sw
     vector<hashed_string> GameObjectManager::getRegisteredComponentTypeNames()
     {
         vector<hashed_string> listName;
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return listName;
         engine::getSubsystem<TypeRegistry>().forEachType( [&listName]( const TypeInfo& info )
         {
@@ -877,19 +877,19 @@ namespace sw
         if ( deltaTime > 0.0f )
             ++_runningUpdateCount;
         // 순서는 표 하나가 갖는다(`SceneFrameStepList.xxx`).
-        // 단계마다 본문 뒤에 그 단계에 등록한 씬 서비스를 부른다 — 본문이 부르게 두면 부르지 않는 단계에 등록한 서비스가 조용히 돌지 않는다.
+        // 단계마다 본문 뒤에 그 단계에 등록한 씬 서브시스템을 부른다 — 본문이 부르게 두면 부르지 않는 단계에 등록한 서비스가 조용히 돌지 않는다.
         // 본문 앞에는 이 단계에서 마치기로 한 서비스의 프레임 일을 마친다(워커 일 결과를 쓴다) — 본문(트랜스폼 펼치기 등)이 그 결과를 본다.
-#define SW_SCENE_FRAME_STEP( Name )                   \
-    completeSceneServiceJobs( SceneFrameStep::Name ); \
-    runFrameStep##Name( deltaTime );                  \
-    updateSceneServices( SceneFrameStep::Name, deltaTime );
+#define SW_SCENE_FRAME_STEP( Name )                     \
+    completeSceneSubsystemJobs( SceneFrameStep::Name ); \
+    runFrameStep##Name( deltaTime );                    \
+    updateSceneSubsystems( SceneFrameStep::Name, deltaTime );
 #include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
 #undef SW_SCENE_FRAME_STEP
     }
 
     void GameObjectManager::runFrameStepMainThreadTasks( float32 /*deltaTime*/ )
     {
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<TaskManager>().dispatchMainThreadTasks();
     }
 
@@ -1010,13 +1010,13 @@ namespace sw
 
     void GameObjectManager::runFrameStepNavigation( float32 /*deltaTime*/ )
     {
-        // 내비게이션(`SceneNavigation`)은 이 단계에 등록된 씬 서비스다(`update` 가 단계 끝에 부른다). 끝난 타일 재베이크 · 비동기 경로 결과를 끼우고, 군중 진행을 워커에 넘긴다.
+        // 내비게이션(`SceneNavigation`)은 이 단계에 등록된 씬 서브시스템다(`update` 가 단계 끝에 부른다). 끝난 타일 재베이크 · 비동기 경로 결과를 끼우고, 군중 진행을 워커에 넘긴다.
         // 군중 결과(자리 · 컨트롤러 속도)는 `FlushPostAnimation` 본문 앞(`completeFrameJob`)에서 쓴다 — 그 사이 애니메이션이 군중과 겹쳐 돈다.
     }
 
-    void GameObjectManager::completeSceneServiceJobs( SceneFrameStep step )
+    void GameObjectManager::completeSceneSubsystemJobs( SceneFrameStep step )
     {
-        for ( SceneServiceEntry& entry : _pState->_listSceneService )
+        for ( SceneSubsystemEntry& entry : _pState->_listSceneSubsystem )
         {
             if ( entry._pRegistration->_completeStep != step )
                 continue;
@@ -1026,9 +1026,9 @@ namespace sw
         }
     }
 
-    void GameObjectManager::updateSceneServices( SceneFrameStep step, float32 deltaTime )
+    void GameObjectManager::updateSceneSubsystems( SceneFrameStep step, float32 deltaTime )
     {
-        for ( SceneServiceEntry& entry : _pState->_listSceneService )
+        for ( SceneSubsystemEntry& entry : _pState->_listSceneSubsystem )
         {
             if ( entry._pRegistration->_frameStep != step )
                 continue;
@@ -1040,7 +1040,7 @@ namespace sw
 
     void GameObjectManager::runFrameStepAnimation( float32 /*deltaTime*/ )
     {
-        // 애니메이션 평가(`AnimationSystem`)는 이 단계에 등록된 씬 서비스다. 래그돌의 바디 자세는 물리 뒤에 읽혀 다음 포즈에 섞인다.
+        // 애니메이션 평가(`AnimationSystem`)는 이 단계에 등록된 씬 서브시스템다. 래그돌의 바디 자세는 물리 뒤에 읽혀 다음 포즈에 섞인다.
     }
 
     void GameObjectManager::runFrameStepFlushPostAnimation( float32 /*deltaTime*/ )
@@ -1067,7 +1067,7 @@ namespace sw
 
     void GameObjectManager::runFrameStepSpatialIndex( float32 /*deltaTime*/ )
     {
-        // 공간 색인(`SceneSpatialGrid`)은 이 단계에 등록된 씬 서비스다. 단계를 따로 둔 것은 같은 단계 안의 서비스 순서(의존)가 아니라 표가 접촉 처리(`ScenePhysicsEvents`) 뒤를 정하게 하려는 것이다.
+        // 공간 색인(`SceneSpatialGrid`)은 이 단계에 등록된 씬 서브시스템다. 단계를 따로 둔 것은 같은 단계 안의 서비스 순서(의존)가 아니라 표가 접촉 처리(`ScenePhysicsEvents`) 뒤를 정하게 하려는 것이다.
     }
 
     void GameObjectManager::runFrameStepTickPostPhysics( float32 /*deltaTime*/ )

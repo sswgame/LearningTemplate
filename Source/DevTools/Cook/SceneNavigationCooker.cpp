@@ -14,7 +14,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookCodeFingerprint.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Navigation/Component/NavMeshSurfaceComponent.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
@@ -36,7 +36,7 @@ namespace sw
 
 namespace sw
 {
-    bool SceneNavigationCooker::cookScene( const SceneEngineServices& services, const AssetID& assetID, NavMeshAsset& outAsset )
+    bool SceneNavigationCooker::cookScene( const SceneEngineSubsystems& services, const AssetID& assetID, NavMeshAsset& outAsset )
     {
         const string_view sceneAssetPath = assetID.view();
         outAsset                         = NavMeshAsset{};
@@ -85,7 +85,7 @@ namespace sw
         return bAll;
     }
 
-    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
+    uint32 SceneNavigationCooker::cookAll( const SceneEngineSubsystems& services, const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
                                            uint32& outFailedCount )
     {
         using Internal = SceneNavigationCookerInternal;

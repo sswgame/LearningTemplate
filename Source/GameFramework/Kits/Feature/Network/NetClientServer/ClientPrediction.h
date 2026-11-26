@@ -78,7 +78,7 @@ namespace sw
             {
                 Entry* pNext = _listEntry.find( tick );
                 if ( pNext == nullptr )
-                    ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                    ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
                 state              = simulate( state, pNext->_input );
                 pNext->_stateAfter = state;
             }

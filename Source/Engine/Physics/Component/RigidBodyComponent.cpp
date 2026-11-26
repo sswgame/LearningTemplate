@@ -5,7 +5,7 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObject.h"

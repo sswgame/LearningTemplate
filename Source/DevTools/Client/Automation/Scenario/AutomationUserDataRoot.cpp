@@ -15,7 +15,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameSelection.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/QuitRequest.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -86,7 +86,7 @@ namespace sw
             /** @brief 감시 값 `UserData.PlatformFolderChanged` — 사람의 데이터 폴더(활성 게임)가 이 실행의 기동 뒤로 바뀌었으면 1 입니다. 그 폴더를 모르면 값이 없다. */
             [[nodiscard]] static bool readPlatformFolderChanged( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const AutomationUserDataIsolation* const pIsolation = engine::areEngineServicesBound() ? engine::findSubsystem<AutomationUserDataIsolation>() : nullptr;
+                const AutomationUserDataIsolation* const pIsolation = engine::areEngineSubsystemsBound() ? engine::findSubsystem<AutomationUserDataIsolation>() : nullptr;
                 if ( pIsolation == nullptr || pIsolation->getPlatformFolder().empty() )
                     return false;
                 outValue = UserDataFolderStamp::take( pIsolation->getPlatformFolder() ) != pIsolation->getPlatformStartStamp() ? 1.0 : 0.0;

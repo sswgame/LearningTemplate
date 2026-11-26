@@ -26,7 +26,7 @@ namespace sw
     enum class RHIDeviceLostPolicy : uint8;
     enum class WindowLifecycleEvent : uint8;
 
-    class FontService;
+    class FontSubsystem;
     class FrameRenderer;
     class FrameRendererSubsystem;
     class IRHIDevice;
@@ -92,7 +92,7 @@ namespace sw
         /**
          * @brief 주 창의 수명 이벤트입니다 — 표면이 사라지기 전에 렌더 스레드가 받은 패킷을 끝내게 합니다(창 스레드).
          * @details 표면을 잃으면 렌더 스레드를 쉬게 한 뒤 스왑체인 · 표면을 놓고(`IRHIDevice::releaseSurface`), 돌아오면 새 표면으로 다시 짓는다(`restoreSurface`).
-         *          앱 멈춤의 오디오 출력 닫기 · 입력 리셋은 앱 몫이다(`App::onAppLifecycle` → `AudioService::suspendOutput`).
+         *          앱 멈춤의 오디오 출력 닫기 · 입력 리셋은 앱 몫이다(`App::onAppLifecycle` → `AudioSubsystem::suspendOutput`).
          */
         void onMainWindowLifecycle( WindowLifecycleEvent event );
         /**
@@ -113,7 +113,7 @@ namespace sw
         RenderPacketBuilder*    _pPacketBuilder;               ///< 프레임 패킷을 채우는 GT 쪽 상태(씬 스냅샷 빌더 · 패킷 · 업로드 큐 · 추가 뷰 스케줄러)
         SceneManager*           _pSceneManager;                ///< 활성 씬 · 미리보기 씬을 패킷에 싣는다
         UISystem*               _pUISystem;                    ///< 캔버스를 패킷에 싣는다
-        FontService*            _pFontService;                 ///< 캔버스가 글리프 캐시를 싣는다
+        FontSubsystem*          _pFontSubsystem;               ///< 캔버스가 글리프 캐시를 싣는다
         Subscription            _mainWindowResizeSubscription; ///< 주 창 크기 칸의 구독입니다(RHI 가 선 클라이언트만). `onShutdownBegin` 이 창보다 먼저 놓는다
         Subscription            _mainWindowLifecycleSubscription;
         RHIDeviceLostPolicy     _deviceLostPolicy;          ///< `onStartupFinished` 가 `EngineConfig::_deviceLostPolicy` 에서 읽는다

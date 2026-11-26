@@ -8,8 +8,8 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Input/EditorFileDrop.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

@@ -1,7 +1,7 @@
 /**
  * @file Engine/Server/ServerObservability.h
  * @brief 전용 서버의 운영 관측 — 지표 · 상태 레지스트리, 운영 HTTP 엔드포인트, 프로세스 지표, 틱 지표, 프레임 이력(O1)과 느린 틱 덤프, 틱 사용률(O5).
- * @details `ServerApp` 이 호스트 서비스 `Observability` 로 세우고 내리는 협력 객체다(언리얼 전용 서버의 FPerfCounters · CSV 프로파일러가 엔진 루프 밖 모듈인 것과 같은 자리).
+ * @details `ServerApp` 이 호스트 서브시스템 `Observability` 로 세우고 내리는 협력 객체다(언리얼 전용 서버의 FPerfCounters · CSV 프로파일러가 엔진 루프 밖 모듈인 것과 같은 자리).
  *          서버 루프는 틱마다 `recordTick`, 초마다 `updateEverySecond` 를 부르고, 드레인 · 점검 모드는 `getHealthRegistry` 로 `/readyz` 를 바꾼다.
  *          서버 서비스와 게임 · 키트는 지표와 상태 레지스트리를 서버 문맥(`ServerServiceContext`)으로 받는다.
  */

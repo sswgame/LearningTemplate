@@ -13,7 +13,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Foundation/EngineScope.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Module/ModuleObjectRegistrar.h"
 #include "Engine/Module/ModuleRegistrationHost.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
@@ -41,7 +41,7 @@ namespace sw
         {
             ModuleRegistrationHost* const pHost = engine::findSubsystem<ModuleRegistrationHost>();
             if ( pHost == nullptr )
-                ::sw::internal::reportMissingRequiredService( "ModuleRegistrationHost" );
+                ::sw::internal::reportMissingRequiredSubsystem( "ModuleRegistrationHost" );
             return *pHost;
         }
 

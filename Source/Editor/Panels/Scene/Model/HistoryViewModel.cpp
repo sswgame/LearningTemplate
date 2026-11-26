@@ -5,7 +5,7 @@
 #include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorCommandTarget.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoEntry.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 

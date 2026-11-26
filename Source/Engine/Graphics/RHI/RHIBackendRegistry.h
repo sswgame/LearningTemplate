@@ -12,8 +12,8 @@
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
@@ -129,6 +129,6 @@ namespace sw
         vector<LoadedModule>    _listLoadedModule;
         uint32                  _lastDeviceGeneration; ///< `createDevice` 가 마지막으로 붙인 장치 세대(0 은 "세대 없음")
 
-        SW_SERVICE_SLOT( RHIBackendRegistry, Required );
+        SW_SUBSYSTEM_SLOT( RHIBackendRegistry, Required );
     };
 } // namespace sw

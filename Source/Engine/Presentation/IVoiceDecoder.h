@@ -35,10 +35,10 @@ namespace sw
         /** @brief 걸린 창구를 뗍니다(건 이미지가 내려갈 때). 걸려 있지 않으면 할 일이 없다. */
         static void detach( IVoiceDecoder* pDecoder );
 
-        /** @struct Registration @brief 오디오 폴더가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
-        struct Registration final : StaticRegistrar<IVoiceDecoder*>
+        /** @struct Registrar @brief 오디오 폴더가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
+        struct Registrar final : StaticRegistrar<IVoiceDecoder*>
         {
-            explicit Registration( IVoiceDecoder& decoder )
+            explicit Registrar( IVoiceDecoder& decoder )
                 : StaticRegistrar{ &decoder, &IVoiceDecoder::attach, &IVoiceDecoder::detach }
             {
             }

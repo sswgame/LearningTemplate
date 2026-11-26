@@ -25,7 +25,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/FixedTimestep.h"
 
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
@@ -34,7 +34,7 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Engine.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
@@ -46,7 +46,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Telemetry/CrashReportService.h"
+#include "Engine/Telemetry/CrashReportSubsystem.h"
 #include "Engine/Telemetry/CrashReportUploader.h"
 #include "Engine/UI/UIPlatformBinding.h"
 #include "Engine/UserSettings/UserSettingsHost.h"
@@ -136,10 +136,10 @@ namespace sw
          *          명령줄을 처음 보는 호스트 자리라 여기서 `-EnableEditor` 를 읽고(에디터 관리자는 개발 계층이 만든다), 개발 계층이 없는 배포가 개발 전용 인자를 받았으면 오류로 멈춘다.
          */
         [[nodiscard]] bool loadModuleLibraries();
-        // 호스트 서비스 — 이름 · 의존 · 몸통을 한 형식에 둔다(`App.cpp`). 중첩 형식이라 App 의 멤버를 쓴다. `initialize` 가 `HostLaunch::addHostService` 로 더한다.
-        class GameHostService;
-        class UserSettingsHostService;
-        class RuntimeUIHooksHostService;
+        // 호스트 서비스 — 이름 · 의존 · 몸통을 한 형식에 둔다(`App.cpp`). 중첩 형식이라 App 의 멤버를 쓴다. `initialize` 가 `HostLaunch::addHostSubsystem` 로 더한다.
+        class GameHostSubsystem;
+        class UserSettingsHostSubsystem;
+        class RuntimeUIHooksHostSubsystem;
         /** @brief 창 콜백 · 개발 도구의 프레임 시작 훅을 연결합니다(호스트 서비스가 선 뒤). */
         void bindHostCallbacks();
 
@@ -173,7 +173,7 @@ namespace sw
 
         FixedTimestep    _fixedTimestep;
         UserSettingsHost _userSettingsHost;
-        /** @brief 런타임 UI 의 호스트 훅(클립보드 · 스크린 리더 · 끝내기)입니다. 호스트 서비스 `RuntimeUIHooksHostService` 가 세우고 내린다. */
+        /** @brief 런타임 UI 의 호스트 훅(클립보드 · 스크린 리더 · 끝내기)입니다. 호스트 서비스 `RuntimeUIHooksHostSubsystem` 가 세우고 내린다. */
         UIPlatformBinding _uiPlatformBinding;
 
         // 프레임마다 다시 만들 이유가 없는 델리게이트다. bindHostCallbacks 에서 한 번 묶는다.
@@ -219,7 +219,7 @@ namespace sw
                 if ( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) == false || reporterFolder.empty() )
                     return false;
                 NullCrashReportUploader       uploader;
-                [[maybe_unused]] const uint32 sentCount = CrashReportService::runReporter( reporterFolder, uploader );
+                [[maybe_unused]] const uint32 sentCount = CrashReportSubsystem::runReporter( reporterFolder, uploader );
                 SW_LOG_INFO_ID( "App.ReportSent", "[CrashReporter] %# report(s) sent from '%#'", sentCount, reporterFolder.c_str() );
                 return true;
             }
@@ -337,12 +337,12 @@ namespace sw
     App::~App() = default;
 
     /** @brief 게임(과 에디터) 인스턴스 — 모듈 호스트입니다. 모듈 관리자가 게임(에디터 관리자면 에디터도) 인스턴스를 만든다(라이브러리는 `loadModuleLibraries` 가 이미 올렸다). */
-    class App::GameHostService final : public Subsystem
+    class App::GameHostSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "Game";
 
-        explicit GameHostService( App& app )
+        explicit GameHostSubsystem( App& app )
             : _app{ app }
         {
         }
@@ -374,12 +374,12 @@ namespace sw
     };
 
     /** @brief 사용자 설정의 화면 적용입니다. */
-    class App::UserSettingsHostService final : public Subsystem
+    class App::UserSettingsHostSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "UserSettings";
 
-        explicit UserSettingsHostService( App& app )
+        explicit UserSettingsHostSubsystem( App& app )
             : _app{ app }
         {
         }
@@ -397,12 +397,12 @@ namespace sw
     };
 
     /** @brief 런타임 UI 의 클립보드 · 접근성 · 끝내기 명령입니다. */
-    class App::RuntimeUIHooksHostService final : public Subsystem
+    class App::RuntimeUIHooksHostSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "RuntimeUIHooks";
 
-        explicit RuntimeUIHooksHostService( App& app )
+        explicit RuntimeUIHooksHostSubsystem( App& app )
             : _app{ app }
         {
         }
@@ -502,14 +502,14 @@ namespace sw
         }
         markStartupPhase( "window" );
 
-        // 3. 호스트 서비스(게임 · 에디터 인스턴스, 교체기, 사용자 설정, 런타임 UI 훅, 개발 콘솔)을 의존 순서로 세운다. 내리는 것은 `shutdown` 의 역순 한 줄이다.
+        // 3. 호스트 서브시스템(게임 · 에디터 인스턴스, 교체기, 사용자 설정, 런타임 UI 훅, 개발 콘솔)을 의존 순서로 세운다. 내리는 것은 `shutdown` 의 역순 한 줄이다.
         splash.updateStatus( "Loading Modules & Compiling Shaders...", 0.75f );
-        _launch.addHostService<GameHostService>( *this );
-        _launch.addHostService<UserSettingsHostService>( *this );
-        _launch.addHostService<RuntimeUIHooksHostService>( *this );
+        _launch.addHostSubsystem<GameHostSubsystem>( *this );
+        _launch.addHostSubsystem<UserSettingsHostSubsystem>( *this );
+        _launch.addHostSubsystem<RuntimeUIHooksHostSubsystem>( *this );
         if ( pRunningDevLayer != nullptr )
-            pRunningDevLayer->addConsoleHostService( _launch, GameHostService::kSubsystemName, _bEnableEditor == SW_TRUE );
-        if ( _launch.startHostServices() == false )
+            pRunningDevLayer->addConsoleHostService( _launch, GameHostSubsystem::kSubsystemName, _bEnableEditor == SW_TRUE );
+        if ( _launch.startHostSubsystems() == false )
         {
             splash.dismiss();
             return false;
@@ -517,7 +517,7 @@ namespace sw
         markStartupPhase( "modules" );
 
         // 모듈이 선 뒤 한 번 하고 끝나는 작업(초상화 굽기)은 개발 계층이 맡는다. 실행했으면 창을 띄우지 않고 끝낸다.
-        const HostTaskResult afterServices = pRunningDevLayer != nullptr ? pRunningDevLayer->runAfterHostServices( *pCommandLineManager ) : HostTaskResult::NotRequested;
+        const HostTaskResult afterServices = pRunningDevLayer != nullptr ? pRunningDevLayer->runAfterHostSubsystems( *pCommandLineManager ) : HostTaskResult::NotRequested;
         if ( afterServices != HostTaskResult::NotRequested )
         {
             splash.dismiss();
@@ -612,7 +612,7 @@ namespace sw
             if ( InputManager* const pInput = engine::findSubsystem<InputManager>() ) // 선택: 헤드리스 구성은 입력이 없다
                 pInput->onAppSuspended();
         }
-        if ( AudioService* const pAudio = engine::findSubsystem<AudioService>() ) // 선택: 오디오 없는 구성
+        if ( AudioSubsystem* const pAudio = engine::findSubsystem<AudioSubsystem>() ) // 선택: 오디오 없는 구성
         {
             if ( bSuspended )
                 pAudio->suspendOutput();
@@ -633,7 +633,7 @@ namespace sw
         // 나눌 필요가 없다.
         if ( _bEnableEditor == SW_TRUE )
         {
-            // 모듈 매니저는 루프가 도는 동안 산다(호스트 서비스 `GameHostService` 가 세우고 루프 뒤 `shutdown` 이 내린다) — App 이 중계하지 않고 바로 묶는다.
+            // 모듈 매니저는 루프가 도는 동안 산다(호스트 서비스 `GameHostSubsystem` 가 세우고 루프 뒤 `shutdown` 이 내린다) — App 이 중계하지 않고 바로 묶는다.
             _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &GameModuleManager::getSceneViewCamera, static_cast<const GameModuleManager*>( getModuleManager() ) );
             // 창 최소 크기 · 에디터 렌더 훅은 에디터 관리자가, 단언 대화상자(`AssertDialog`)는 개발 도구가 스스로 건다 — 배포는 DevTools 를 링크하지 않는다.
         }
@@ -641,8 +641,8 @@ namespace sw
 
     void App::shutdown()
     {
-        // 호스트 서비스를 선 순서의 역순으로 내린다(순서는 각 서비스 형식의 의존 선언 — 게임에 기대는 콘솔이 게임보다 먼저, 게임이 엔진보다 먼저).
-        _launch.stopHostServices();
+        // 호스트 서브시스템을 선 순서의 역순으로 내린다(순서는 각 서비스 형식의 의존 선언 — 게임에 기대는 콘솔이 게임보다 먼저, 게임이 엔진보다 먼저).
+        _launch.stopHostSubsystems();
 
         // 창은 엔진(RHI) 뒤에 파괴한다 — 소유자(MainWindow 서브시스템)가 RHI 에 기대는 순서로 내린다(제목은 창 안의 고정 버퍼라 누수 보고에 남지 않는다).
         _launch.shutdownEngine();
@@ -674,7 +674,7 @@ namespace sw
 
     FramePacingInputs App::makeFramePacingInputs() const
     {
-        const GameNetSession*      pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
+        const GameNetSession*      pNetSession = engine::areEngineSubsystemsBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         FramePacingInputs          inputs;
         const IHostDevLayer* const pDevLayer = _launch.getDevLayer();
         inputs._bAutomationRun               = pDevLayer != nullptr && pDevLayer->isAutomationBusy();
@@ -852,7 +852,7 @@ namespace sw
     bool App::onWindowMessage( const NativeWindowEvent& event )
     {
         // 사람 입력은 버리기 전에 센다(데모 재생의 "손대면 멈춤"). 무인 자동화는 사람의 마우스와 키보드 입력을 여기서 버린다. 에디터(ImGui)와 게임 입력 둘 다에 닿지 않는다.
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             InputManager& inputManager = engine::getSubsystem<InputManager>();
             inputManager.recordNativeEvent( event );
@@ -865,7 +865,7 @@ namespace sw
         const bool               bConsumedByEditor = ( pModuleManager != nullptr && pModuleManager->processHostModuleEvent( event ) );
 
         // 에디터가 가로채지 않았을 때만 게임 InputManager 로 전달한다.
-        if ( bConsumedByEditor == false && engine::areEngineServicesBound() )
+        if ( bConsumedByEditor == false && engine::areEngineSubsystemsBound() )
             engine::getSubsystem<InputManager>().processNativeEvent( event );
 
         // Win32 OS 수준의 포커스와 활성화(DefWindowProc)가 정상적으로 동작하도록 false 를 반환한다.

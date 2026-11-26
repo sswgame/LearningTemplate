@@ -1,9 +1,9 @@
 /**
  * @file ScenePhysics.h
  * @brief 씬 하나의 강체 물리 — 3D · 2D 물리 씬(처음 쓸 때 만든다), 고정 스텝 누적기, 물리 컴포넌트 레지스트리, 접촉 이벤트를 컴포넌트에 나눠 주기입니다.
- * @details 씬 서비스(`ISceneService`)입니다. 이 .cpp 의 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생기고(`manager.getSubsystem<sw::ScenePhysics>()`),
+ * @details 씬 서브시스템(`ISceneSubsystem`)입니다. 이 .cpp 의 `SW_SCENE_SUBSYSTEM` 줄로 매니저마다 하나 생기고(`manager.getSubsystem<sw::ScenePhysics>()`),
  *          매니저는 프레임 표의 `Physics` 단계(`SceneFrameStepList.xxx`)에서 게임 스레드로 `update` 를 한 번 부릅니다. 물리 서비스(`PhysicsSystem`)는
- *          매니저의 서비스 묶음(`SceneEngineServices`)에서 받습니다. 2D 콜라이더(`BoxCollider2DComponent`)도 같은 2D 씬의 Box2D 센서 바디이고(유니티 트리거 ·
+ *          매니저의 서비스 묶음(`SceneEngineSubsystems`)에서 받습니다. 2D 콜라이더(`BoxCollider2DComponent`)도 같은 2D 씬의 Box2D 센서 바디이고(유니티 트리거 ·
  *          Godot Area2D 처럼 물리 월드 하나), 에디터 시각화가 훑을 콜라이더 목록(`getColliders2D`)과 연속 콜라이더가 쓸어 낸 겹침(`queueSweptOverlap2D`)을 이 서비스가 듭니다.
  *
  *          프레임 하나: 누적기가 스텝 수 n 을 정한다 → 고정 스텝 그룹 `FrameBegin`(컴포넌트 `onPhysicsFrameBegin` — 틱 스케줄러 `tickFixedStepGroup`) → 연속 콜라이더 쓸기(`sweepContinuousColliders2D` — 모든 콜라이더가
@@ -24,7 +24,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/IPhysicsBodyScene.h"
@@ -143,16 +143,16 @@ namespace sw
     };
 
     /** @class ScenePhysics @brief 씬 하나의 강체 물리입니다. 파일 머리말 참고. */
-    class SW_API ScenePhysics final : public ISceneService
+    class SW_API ScenePhysics final : public ISceneSubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "ScenePhysics";
         /** @brief 할당 용도입니다 — 만들 때 · 틱 · 프레임 일 동안 매니저가 건다(`Subsystem::getSubsystemMemoryTag`). */
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Physics;
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
-        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 씬 서브시스템 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
+        const utf8*                              getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 매니저 @p manager 의 서비스 묶음에 든 물리 서비스로 씬을 만들 물리를 둡니다(소유하지 않음).
@@ -449,15 +449,15 @@ namespace sw
 
     /**
      * @class ScenePhysicsEvents
-     * @brief 물리 접촉 이벤트를 `FlushPostPhysics` 단계(물리가 쓴 트랜스폼을 펼친 뒤)에서 나눠 주는 씬 서비스입니다(`ScenePhysics::deliverFrameEvents`).
+     * @brief 물리 접촉 이벤트를 `FlushPostPhysics` 단계(물리가 쓴 트랜스폼을 펼친 뒤)에서 나눠 주는 씬 서브시스템입니다(`ScenePhysics::deliverFrameEvents`).
      * @details 물리 단계 안의 동기 가상 호출을 시뮬레이션 밖 한 자리로 뺀다 — 처리는 이번 프레임의 펼친 자리를 보고, 그 뒤 PostPhysics 틱이 처리 결과를 본다.
      */
-    class SW_API ScenePhysicsEvents final : public ISceneService
+    class SW_API ScenePhysicsEvents final : public ISceneSubsystem
     {
     public:
-        static constexpr const utf8*           kSubsystemName = "ScenePhysicsEvents";
-        static const SceneServiceRegistration& getSceneServiceRegistration();
-        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        static constexpr const utf8*             kSubsystemName = "ScenePhysicsEvents";
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
+        const utf8*                              getSubsystemName() const override { return kSubsystemName; }
         /** @brief 물리 서비스(`ScenePhysics`)가 먼저 선다. */
         span<const utf8* const> getSubsystemDependencies() const override;
 

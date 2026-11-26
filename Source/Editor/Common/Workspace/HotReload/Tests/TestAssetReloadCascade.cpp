@@ -14,7 +14,7 @@
 #include "Editor/Common/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Asset/Tests/EditorScratchDomain.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/HotReload/AssetReloadCascade.h"
 
 #include "Engine/Content/AssetPaths.h"

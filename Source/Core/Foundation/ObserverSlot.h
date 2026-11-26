@@ -1,12 +1,12 @@
 /**
  * @file ObserverSlot.h
- * @brief 아래 티어가 위 티어의 관찰자 · 기록기 하나를 부르는 전역 칸입니다. 거는 쪽은 이동 전용 등록 토큰을 받고, 토큰이 사라지면 칸이 **아직 자기 값일 때만** 빕니다.
+ * @brief 아래 티어가 위 티어의 관찰자 · 기록기 하나를 부르는 전역 칸입니다. 거는 쪽은 이동 전용 구독(`Subscription`)을 받고, 구독이 사라지면 칸이 **아직 자기 값일 때만** 빕니다.
  * @details 할당기(Memory, 티어 2)가 프로파일러(Engine)의 할당 관찰자를 부르는 자리처럼, 위 티어를 모르는 코드가 포인터 하나를 읽는다. 손으로 쓴 원자 칸은
  *          덮어쓰기 · 말없는 실패 · 앞 값 반환 · bool 반환이 섞여 두 주인이 서로의 등록을 지웠다(테스트 할당 계수기가 Tracy 관찰자를 덮고 nullptr 로 지움).
  *          - `bind` 는 빈 칸에만 건다. 이미 걸려 있으면 이중 등록이라 단언으로 알리고 빈 토큰을 돌려준다(덮어쓰지 않는다).
  *          - `tryBind` 는 이미 걸려 있으면 말없이 빈 토큰이다 — "먼저 건 쪽이 주인" 이 계약인 자리(엔진 기록기가 걸린 뒤 테스트의 지역 기록기)만 쓴다.
  *          - 토큰 해제는 비교 교환이라 그사이 다른 쪽이 건 값을 지우지 않는다.
- *          `Subscription`(Delegate, 티어 4)을 쓸 수 없는 티어용이고(티어 0 — 단언 대화상자 칸도 쓴다), 정적 초기화 순서를 타지 않게 상수 초기화된다(main 전 할당도 읽는다).
+ *          `sw::Subscription`(Delegate, 티어 4)을 쓸 수 없는 티어용이라 같은 뜻의 중첩 `Subscription` 을 두고(티어 0 — 단언 대화상자 칸도 쓴다), 정적 초기화 순서를 타지 않게 상수 초기화된다(main 전 할당도 읽는다).
  *          언리얼은 `FMallocProfiler` 같은 칸을 손으로 둔다 — 여기서는 칸을 형식 하나로 묶어 계약을 한 벌로 한다.
  */
 #pragma once
@@ -26,25 +26,25 @@ namespace sw
     {
     public:
         /**
-         * @class Registration
-         * @brief 칸에 건 등록 하나입니다. 이동 전용이고, 소멸 · `reset` 때 칸이 이 값을 들고 있으면 비웁니다. 빈 토큰은 아무것도 하지 않습니다.
+         * @class Subscription
+         * @brief 칸에 건 연결 하나의 구독입니다. 이동 전용이고, 소멸 · `reset` 때 칸이 이 값을 들고 있으면 비웁니다. 빈 토큰은 아무것도 하지 않습니다.
          */
-        class [[nodiscard]] Registration final
+        class [[nodiscard]] Subscription final
         {
         public:
-            constexpr Registration() noexcept = default;
-            ~Registration() { reset(); }
+            constexpr Subscription() noexcept = default;
+            ~Subscription() { reset(); }
 
-            Registration( const Registration& )            = delete;
-            Registration& operator=( const Registration& ) = delete;
-            Registration( Registration&& other ) noexcept
+            Subscription( const Subscription& )            = delete;
+            Subscription& operator=( const Subscription& ) = delete;
+            Subscription( Subscription&& other ) noexcept
                 : _pSlot{ other._pSlot }
                 , _pObserver{ other._pObserver }
             {
                 other._pSlot     = nullptr;
                 other._pObserver = nullptr;
             }
-            Registration& operator=( Registration&& other ) noexcept
+            Subscription& operator=( Subscription&& other ) noexcept
             {
                 if ( this != &other )
                 {
@@ -71,7 +71,7 @@ namespace sw
 
         private:
             friend class ObserverSlot;
-            constexpr Registration( ObserverSlot* pSlot, T* pObserver ) noexcept
+            constexpr Subscription( ObserverSlot* pSlot, T* pObserver ) noexcept
                 : _pSlot{ pSlot }
                 , _pObserver{ pObserver }
             {
@@ -124,22 +124,22 @@ namespace sw
         ObserverSlot& operator=( ObserverSlot&& )      = delete;
 
         /** @brief 빈 칸에 @p pObserver 를 겁니다. 이미 걸려 있으면 이중 등록 결함이라 단언으로 알리고 빈 토큰입니다. nullptr 이면 빈 토큰입니다. */
-        Registration bind( T* pObserver ) noexcept
+        Subscription bind( T* pObserver ) noexcept
         {
-            Registration registration = tryBind( pObserver );
+            Subscription registration = tryBind( pObserver );
             SW_LOW_LEVEL_ASSERT( pObserver == nullptr || registration.isActive(), "ObserverSlot is already bound - release the earlier registration before binding another observer" );
             return registration;
         }
 
         /** @brief 빈 칸이면 @p pObserver 를 겁니다. 이미 걸려 있으면 말없이 빈 토큰입니다(먼저 건 쪽이 주인인 자리용 — 부르는 쪽이 `isActive` 를 본다). */
-        Registration tryBind( T* pObserver ) noexcept
+        Subscription tryBind( T* pObserver ) noexcept
         {
             if ( pObserver == nullptr )
                 return {};
             T* pExpected = nullptr;
             if ( _pObserver.compare_exchange_strong( pExpected, pObserver, std::memory_order_acq_rel, std::memory_order_relaxed ) == false )
                 return {};
-            return Registration{ this, pObserver };
+            return Subscription{ this, pObserver };
         }
 
         /** @brief 지금 걸린 관찰자입니다. 없으면 nullptr 입니다. 어느 스레드에서나 읽습니다. */

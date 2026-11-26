@@ -6,6 +6,11 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {

@@ -9,7 +9,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineParallel.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderSource.h"
 

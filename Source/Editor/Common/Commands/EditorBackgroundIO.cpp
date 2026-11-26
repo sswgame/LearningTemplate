@@ -8,7 +8,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Content/AssetPaths.h"
 

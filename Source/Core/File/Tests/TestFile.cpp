@@ -784,7 +784,7 @@ SW_TEST_CASE( FileTest, WriteFilterRefusesEveryMutatingEntry )
     bool bRemoved  = true;
     {
         SW_EXPECT_LOG( "File.WriteRefused" ); // 게이트가 거절한 쓰기는 오류로 남는다
-        sw::FileUtil::WriteFilterRegistration filter = sw::FileUtil::bindWriteFilter( &refuseEveryWrite );
+        sw::FileUtil::WriteFilterSubscription filter = sw::FileUtil::bindWriteFilter( &refuseEveryWrite );
         bWritten                                     = sw::FileUtil::writeTextFile( path, "changed" );
         bAppended                                    = sw::FileUtil::appendTextFile( path, "more" );
         bTrashed                                     = sw::FileUtil::moveToRecycleBin( sw::vector<sw::AbsolutePath>{ path } );
@@ -967,9 +967,9 @@ SW_TEST_CASE( FileTest, SecondFileObserverOrWriteFilterBindAsserts )
     sw::test::ScopedAssertCapture capture;
     SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 이중 등록 단언은 이 테스트가 보려는 대상이다
     {
-        const sw::PlatformFileUtil::ReadObserverRegistration  read   = sw::PlatformFileUtil::bindReadObserver( &firstRead );
-        const sw::PlatformFileUtil::WriteObserverRegistration write  = sw::PlatformFileUtil::bindWriteObserver( &firstWrite );
-        const sw::FileUtil::WriteFilterRegistration           filter = sw::FileUtil::bindWriteFilter( &allowEveryWriteForTest );
+        const sw::PlatformFileUtil::ReadObserverSubscription  read   = sw::PlatformFileUtil::bindReadObserver( &firstRead );
+        const sw::PlatformFileUtil::WriteObserverSubscription write  = sw::PlatformFileUtil::bindWriteObserver( &firstWrite );
+        const sw::FileUtil::WriteFilterSubscription           filter = sw::FileUtil::bindWriteFilter( &allowEveryWriteForTest );
         SW_EXPECT_TRUE( read.isActive() && write.isActive() && filter.isActive() );
 
         SW_EXPECT_FALSE( sw::PlatformFileUtil::bindReadObserver( &secondRead ).isActive() );
@@ -979,7 +979,7 @@ SW_TEST_CASE( FileTest, SecondFileObserverOrWriteFilterBindAsserts )
             SW_EXPECT_EQUAL( 3u, capture.getCount() );
     }
     // 토큰이 사라져 칸이 비었다 — 다시 걸린다(앞 등록이 남아 있으면 단언이 하나 더 센다)
-    const sw::PlatformFileUtil::ReadObserverRegistration again = sw::PlatformFileUtil::bindReadObserver( &secondRead );
+    const sw::PlatformFileUtil::ReadObserverSubscription again = sw::PlatformFileUtil::bindReadObserver( &secondRead );
     SW_EXPECT_TRUE( again.isActive() );
     if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
         SW_EXPECT_EQUAL( 3u, capture.getCount() );

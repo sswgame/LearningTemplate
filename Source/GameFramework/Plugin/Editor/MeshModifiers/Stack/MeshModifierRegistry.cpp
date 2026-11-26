@@ -13,7 +13,7 @@
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw::editor
 {
@@ -70,12 +70,12 @@ namespace sw::editor
 
     void MeshModifierRegistration::attach( const ISubsystemLocator& scope )
     {
-        (void)requireSubsystem<MeshModifierRegistrations>( scope )._listRegistration.addLogged( this, "Mesh modifier id", _pID );
+        (void)getSubsystemFrom<MeshModifierRegistrations>( scope )._listRegistration.addLogged( this, "Mesh modifier id", _pID );
     }
 
     void MeshModifierRegistration::detach( const ISubsystemLocator& scope )
     {
-        MeshModifierRegistrations* const pRegistrations = locateSubsystem<MeshModifierRegistrations>( &scope ); // 종료 때는 표가 먼저 내려갔을 수 있다
+        MeshModifierRegistrations* const pRegistrations = findSubsystemFrom<MeshModifierRegistrations>( &scope ); // 종료 때는 표가 먼저 내려갔을 수 있다
         if ( pRegistrations != nullptr )
             (void)pRegistrations->_listRegistration.remove( this ); // 거절된 중복 등록은 목록에 없다
     }

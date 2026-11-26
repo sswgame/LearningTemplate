@@ -9,8 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/UI/Screen/UIScreenTypes.h"
 
@@ -60,6 +60,6 @@ namespace sw
     private:
         NameRegistry<UICommandDelegate> _registry; ///< 등록은 주인 있는 값(`addOwned`) — 구독이 풀리면 거두거나 덮었던 값으로 돌아간다
 
-        SW_SERVICE_SLOT( UIGlobalCommandRegistry, Required );
+        SW_SUBSYSTEM_SLOT( UIGlobalCommandRegistry, Required );
     };
 } // namespace sw

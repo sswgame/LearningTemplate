@@ -7,7 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 #include "ModuleManager/GameModuleManager.h"
 
@@ -25,7 +25,7 @@ namespace sw
             for ( const string& pendingName : listPendingName )
             {
                 if ( engine::getSubsystem<GlobalVariableManager>().findVariable( pendingName ) == nullptr )
-                    SW_LOG_WARNING_ID( "HostServices.NoSuchGlobalVariable", "%#: no such global variable. Ignored", pendingName.c_str() );
+                    SW_LOG_WARNING_ID( "HostSubsystems.NoSuchGlobalVariable", "%#: no such global variable. Ignored", pendingName.c_str() );
             }
         }
     } // namespace
@@ -41,7 +41,7 @@ namespace sw
         , _moduleManager{ nullptr }
         , _moduleCatalog{}
         , _moduleResolution{}
-        , _hostServices{}
+        , _hostSubsystems{}
     {
     }
 
@@ -94,30 +94,30 @@ namespace sw
         return _moduleManager->loadModuleLibraries( getLiveReloadManager(), _moduleCatalog, _moduleResolution );
     }
 
-    bool HostLaunch::startHostServices()
+    bool HostLaunch::startHostSubsystems()
     {
         const CommandLineManager* pCommandLine = _engine.getCommandLineManager();
         if ( pCommandLine == nullptr )
             return false;
-        if ( _hostServices.initializeAll( SubsystemHostMask::All ) == false )
+        if ( _hostSubsystems.initializeAll( SubsystemHostMask::All ) == false )
         {
-            SW_LOG_ERROR_ID( "HostServices.HostServicesFailedStart", "Host services failed to start: %#", _hostServices.getError().c_str() );
+            SW_LOG_ERROR_ID( "HostSubsystems.FailedStart", "Host subsystems failed to start: %#", _hostSubsystems.getError().c_str() );
             return false;
         }
-        SW_LOG_INFO_ID( "HostServices.HostServicesUp", "Host services up: %#", describeHostServiceOrder().c_str() );
+        SW_LOG_INFO_ID( "HostSubsystems.Up", "Host subsystems up: %#", describeHostSubsystemOrder().c_str() );
         // 모듈 · 게임이 모두 선 지금까지 가져간 곳이 없는 `-gv_*` 는 오타다.
         warnUnknownGlobalOverrides( *pCommandLine );
         return true;
     }
 
-    string HostLaunch::describeHostServiceOrder() const
+    string HostLaunch::describeHostSubsystemOrder() const
     {
         string text;
-        for ( const uint32 index : _hostServices.getInitializedIndices() )
+        for ( const uint32 index : _hostSubsystems.getInitializedIndices() )
         {
             if ( text.empty() == false )
                 text += " > ";
-            text += _hostServices.getSubsystem( index ).getSubsystemName();
+            text += _hostSubsystems.getSubsystem( index ).getSubsystemName();
         }
         return text;
     }
@@ -130,10 +130,10 @@ namespace sw
 #endif
     }
 
-    void HostLaunch::stopHostServices()
+    void HostLaunch::stopHostSubsystems()
     {
-        _hostServices.destroyAll();
-        // 헤드리스 부팅은 라이브러리만 올리고 호스트 서비스(게임)을 세우지 않는다 — 라이브러리를 쥔 모듈 관리자는 엔진(모듈 라이브러리 종료 단계)보다 먼저 놓는다.
+        _hostSubsystems.destroyAll();
+        // 헤드리스 부팅은 라이브러리만 올리고 호스트 서브시스템(게임)을 세우지 않는다 — 라이브러리를 쥔 모듈 관리자는 엔진(모듈 라이브러리 종료 단계)보다 먼저 놓는다.
         _moduleManager.reset();
     }
 

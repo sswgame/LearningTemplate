@@ -10,12 +10,12 @@
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -24,7 +24,7 @@
 
 namespace sw
 {
-    SW_SCENE_SERVICE( MeshLODSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
+    SW_SCENE_SUBSYSTEM( MeshLODSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     MeshLODSystem::MeshLODSystem( GameObjectManager& manager )
         : _manager{ manager }

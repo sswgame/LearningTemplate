@@ -132,5 +132,5 @@ namespace sw
         VectorUtil::sort( outListName );
     }
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( DevCommandRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( DevCommandRegistry ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( DevCommandRegistry, GameVisible, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( DevCommandRegistry ) );
 } // namespace sw

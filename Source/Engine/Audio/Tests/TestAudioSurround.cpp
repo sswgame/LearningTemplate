@@ -10,7 +10,7 @@
 #include "Engine/Audio/AudioDownmix.h"
 #include "Engine/Audio/AudioPCM.h"
 #include "Engine/Audio/AudioPanDirection.h"
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 
 namespace
 {
@@ -205,17 +205,17 @@ SW_TEST_CASE( AudioSurroundTest, SpeakerModeResolvesAgainstTheDevice )
     full71._channelMask  = Util::getChannelMask( sw::AudioChannelLayout::Surround71 );
 
     sw::AudioChannelLayout layout{ sw::AudioChannelLayout::Stereo };
-    SW_EXPECT_TRUE( sw::AudioService::resolveLayout( sw::AudioSpeakerMode::Auto, none, layout ) && layout == sw::AudioChannelLayout::Stereo );
-    SW_EXPECT_TRUE( sw::AudioService::resolveLayout( sw::AudioSpeakerMode::Auto, side51, layout ) && layout == sw::AudioChannelLayout::Surround51 );
-    SW_EXPECT_TRUE( sw::AudioService::resolveLayout( sw::AudioSpeakerMode::Auto, full71, layout ) && layout == sw::AudioChannelLayout::Surround71 );
-    SW_EXPECT_TRUE( sw::AudioService::resolveLayout( sw::AudioSpeakerMode::Surround51, full71, layout ) && layout == sw::AudioChannelLayout::Surround51 );
-    SW_EXPECT_TRUE( sw::AudioService::resolveLayout( sw::AudioSpeakerMode::Surround71, none, layout ) && layout == sw::AudioChannelLayout::Surround71 );
-    SW_EXPECT_FALSE( sw::AudioService::resolveLayout( sw::AudioSpeakerMode::Surround51, stereo, layout ) );
-    SW_EXPECT_TRUE( sw::AudioService::resolveLayout( sw::AudioSpeakerMode::Headphones, stereo, layout ) && layout == sw::AudioChannelLayout::Binaural );
+    SW_EXPECT_TRUE( sw::AudioSubsystem::resolveLayout( sw::AudioSpeakerMode::Auto, none, layout ) && layout == sw::AudioChannelLayout::Stereo );
+    SW_EXPECT_TRUE( sw::AudioSubsystem::resolveLayout( sw::AudioSpeakerMode::Auto, side51, layout ) && layout == sw::AudioChannelLayout::Surround51 );
+    SW_EXPECT_TRUE( sw::AudioSubsystem::resolveLayout( sw::AudioSpeakerMode::Auto, full71, layout ) && layout == sw::AudioChannelLayout::Surround71 );
+    SW_EXPECT_TRUE( sw::AudioSubsystem::resolveLayout( sw::AudioSpeakerMode::Surround51, full71, layout ) && layout == sw::AudioChannelLayout::Surround51 );
+    SW_EXPECT_TRUE( sw::AudioSubsystem::resolveLayout( sw::AudioSpeakerMode::Surround71, none, layout ) && layout == sw::AudioChannelLayout::Surround71 );
+    SW_EXPECT_FALSE( sw::AudioSubsystem::resolveLayout( sw::AudioSpeakerMode::Surround51, stereo, layout ) );
+    SW_EXPECT_TRUE( sw::AudioSubsystem::resolveLayout( sw::AudioSpeakerMode::Headphones, stereo, layout ) && layout == sw::AudioChannelLayout::Binaural );
 
     sw::AudioSpeakerMode mode{ sw::AudioSpeakerMode::Auto };
-    SW_EXPECT_TRUE( sw::AudioService::tryParseSpeakerMode( "surround71", mode ) && mode == sw::AudioSpeakerMode::Surround71 );
-    SW_EXPECT_FALSE( sw::AudioService::tryParseSpeakerMode( "quad", mode ) );
+    SW_EXPECT_TRUE( sw::AudioSubsystem::tryParseSpeakerMode( "surround71", mode ) && mode == sw::AudioSpeakerMode::Surround71 );
+    SW_EXPECT_FALSE( sw::AudioSubsystem::tryParseSpeakerMode( "quad", mode ) );
 }
 
 /**

@@ -24,8 +24,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Mesh/IMeshDerivedCache.h"
@@ -133,6 +133,6 @@ namespace sw
         unordered_map<string, shared_ptr<const PhysicsMeshShapeData>> _mapPathToData SW_GUARDED_BY( _mutex );
         unordered_map<string, uint64> _mapFailedPathToEpoch                          SW_GUARDED_BY( _mutex ); ///< 읽지 못한 경로 → 그때의 만든 횟수
 
-        SW_SERVICE_SLOT( PhysicsMeshShapeTable, Optional );
+        SW_SUBSYSTEM_SLOT( PhysicsMeshShapeTable, Optional );
     };
 } // namespace sw

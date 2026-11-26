@@ -7,9 +7,9 @@
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 
 namespace sw::editor
 {
@@ -28,7 +28,7 @@ namespace sw::editor
                     return candidate;
             }
             // 결함: OS 폴더 바로 아래만 봐 리눅스(`truetype/<패밀리>/`)에서 글꼴을 못 찾고 에디터가 서지 못했다 - 엔진의 찾기를 그대로 쓴다.
-            const DiskPath systemFont = getSubsystem<FontService>().findSystemFontFile( name.c_str() );
+            const DiskPath systemFont = getSubsystem<FontSubsystem>().findSystemFontFile( name.c_str() );
             if ( systemFont.empty() == false )
                 return systemFont;
         }
@@ -40,7 +40,7 @@ namespace sw::editor
         vector<uint8> bytes;
         if ( FileUtil::readFile( path, bytes ) == false )
             return false;
-        IFontRasterizer& rasterizer = getSubsystem<FontService>().getRasterizer();
+        IFontRasterizer& rasterizer = getSubsystem<FontSubsystem>().getRasterizer();
         const FontFaceID face       = rasterizer.loadFace( std::move( bytes ), 0, path.str() );
         FontFaceMetrics  metrics{};
         const bool       bRead = face != kInvalidFontFaceID && rasterizer.findFaceMetrics( face, metrics );

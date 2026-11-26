@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Config/PackCookRuleTypes.h"
@@ -30,6 +30,6 @@ namespace sw
         GameCookRules _cookRules; ///< 팩 쿠커가 엔진 쿠킹 규칙 뒤에 합치는 이 게임의 규칙(`PackCookRules::mergeGameRules`). 쿠킹만 읽는다
         // 정적 창구는 두지 않는다 — 소유자는 `ConfigManager` 이고 쓰는 쪽이 범위 창구(`engine::` · `editor::` · `game::getSubsystem<const GameConfig>()`)로 찾는다.
 
-        SW_SERVICE_SLOT_CONST( GameConfig, Required );
+        SW_SUBSYSTEM_SLOT_CONST( GameConfig, Required );
     };
 } // namespace sw

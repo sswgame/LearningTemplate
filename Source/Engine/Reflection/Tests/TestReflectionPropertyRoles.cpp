@@ -5,7 +5,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionContainers.h"

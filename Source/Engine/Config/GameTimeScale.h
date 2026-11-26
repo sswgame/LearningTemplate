@@ -7,8 +7,8 @@
 #include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -83,6 +83,6 @@ namespace sw
         SubscriptionList _pauseSubscriptions;
         SubscriptionList _worldTimeShareSubscriptions;
 
-        SW_SERVICE_SLOT( GameTimeScale, Required );
+        SW_SUBSYSTEM_SLOT( GameTimeScale, Required );
     };
 } // namespace sw

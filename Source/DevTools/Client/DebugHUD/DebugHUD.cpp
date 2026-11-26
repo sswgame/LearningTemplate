@@ -20,7 +20,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
@@ -725,7 +725,7 @@ namespace sw
     {
         _screen.reset();
         _window.reset();
-        if ( _bProfilerEnabledByHUD == SW_TRUE && engine::areEngineServicesBound() )
+        if ( _bProfilerEnabledByHUD == SW_TRUE && engine::areEngineSubsystemsBound() )
             engine::getSubsystem<FrameProfiler>().setEnabled( false );
         _bProfilerEnabledByHUD = SW_FALSE;
         _pUI                   = nullptr;

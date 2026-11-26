@@ -5,7 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Diagnostics/NanDiagnostic.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/ComponentStableKey.h"

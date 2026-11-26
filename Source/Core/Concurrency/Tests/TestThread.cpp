@@ -111,7 +111,7 @@ SW_TEST_CASE( ThreadTest, JoinIsAWaitOnTheThreadsJoinKey )
 {
     const ScopedHostLockObserverRemoval hostObserverRemoval;
     RecordingLockObserver               observer;
-    mutex::LockObserverRegistration     registration = mutex::bindLockObserver( &observer );
+    mutex::LockObserverSubscription     registration = mutex::bindLockObserver( &observer );
     SW_REQUIRE_TRUE( mutex::getLockObserver() == &observer );
 
     std::thread::id workerID;

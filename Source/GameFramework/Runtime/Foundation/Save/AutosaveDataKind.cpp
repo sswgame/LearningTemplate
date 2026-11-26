@@ -10,7 +10,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Save/Autosave.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {

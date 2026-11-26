@@ -248,7 +248,7 @@ namespace sw
         const T& get() const
         {
             if ( _pState == nullptr )
-                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
             return _pState->get();
         }
 
@@ -340,7 +340,7 @@ namespace sw
         void get() const
         {
             if ( _pState == nullptr )
-                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
             _pState->get();
         }
 

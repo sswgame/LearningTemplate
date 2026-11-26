@@ -9,7 +9,7 @@
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Reflection/EnumName.h"
 
@@ -166,7 +166,7 @@ namespace sw
 
     string TextureFormatFamily::selectVariantSuffix( const IRHIDevice& device )
     {
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return {};
         const EngineConfig* const pConfig = engine::findSubsystem<EngineConfig>();
         if ( pConfig == nullptr )

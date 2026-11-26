@@ -7,7 +7,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Text/IFontRasterizer.h"
 

@@ -14,8 +14,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
@@ -628,6 +628,6 @@ namespace sw
         SubscriptionList                          _virtualInputSubscriptions;           /**< 가상 입력 붙임의 구독입니다. 다른 멤버보다 먼저 닫히게 맨 끝에 둔다. */
 
     private:
-        SW_SERVICE_SLOT( InputManager, Required );
+        SW_SUBSYSTEM_SLOT( InputManager, Required );
     };
 } // namespace sw

@@ -1,10 +1,10 @@
-// EditorFocusedCommandStackTest — Ctrl+Z 가 갈 스택을 처리하는 순간의 포커스 창으로 고른다(`IEditorPanelService::chooseFocusedCommandStack`, 감사 E-3).
+// EditorFocusedCommandStackTest — Ctrl+Z 가 갈 스택을 처리하는 순간의 포커스 창으로 고른다(`IEditorPanelSubsystem::chooseFocusedCommandStack`, 감사 E-3).
 // 예전에는 패널 관리자가 그린 뒤 걸어 둔 스택을 썼다 — 포커스를 옮긴 바로 그 프레임의 Ctrl+Z 가 앞 창의 스택으로 갔다.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 using namespace sw;
@@ -37,8 +37,8 @@ SW_TEST_CASE( EditorFocusedCommandStackTest, FocusedPanelWinsOverTheRegisteredSt
         EditorPanelCommandStack{   Internal::kSceneWindow,        nullptr, false, "scene_view"},
         EditorPanelCommandStack{ Internal::kHistoryWindow,        nullptr,  true,    "history"},
     };
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kDocumentWindow, listPanel, "other_document", &mainStack ) == &documentStack );
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kSceneWindow, listPanel, "other_document", &mainStack ) == &mainStack );
+    SW_EXPECT_TRUE( IEditorPanelSubsystem::chooseFocusedCommandStack( Internal::kDocumentWindow, listPanel, "other_document", &mainStack ) == &documentStack );
+    SW_EXPECT_TRUE( IEditorPanelSubsystem::chooseFocusedCommandStack( Internal::kSceneWindow, listPanel, "other_document", &mainStack ) == &mainStack );
 }
 
 /** @brief [EditorFocusedCommandStackTest] History · 메뉴 · 포커스 없음은 걸어 둔 스택(앞 포커스 패널)을 쓰고, 그것도 없으면 메인이다 */
@@ -56,10 +56,10 @@ SW_TEST_CASE( EditorFocusedCommandStackTest, NonPanelFocusKeepsTheRegisteredStac
         EditorPanelCommandStack{Internal::kDocumentWindow, &documentStack, false, "document"},
         EditorPanelCommandStack{ Internal::kHistoryWindow,        nullptr,  true,  "history"},
     };
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kHistoryWindow, listPanel, "document", &mainStack ) == &documentStack );
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kMenuWindow, listPanel, "document", &mainStack ) == &documentStack );
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( 0, listPanel, "document", &mainStack ) == &documentStack );
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kMenuWindow, listPanel, "", &mainStack ) == &mainStack );
+    SW_EXPECT_TRUE( IEditorPanelSubsystem::chooseFocusedCommandStack( Internal::kHistoryWindow, listPanel, "document", &mainStack ) == &documentStack );
+    SW_EXPECT_TRUE( IEditorPanelSubsystem::chooseFocusedCommandStack( Internal::kMenuWindow, listPanel, "document", &mainStack ) == &documentStack );
+    SW_EXPECT_TRUE( IEditorPanelSubsystem::chooseFocusedCommandStack( 0, listPanel, "document", &mainStack ) == &documentStack );
+    SW_EXPECT_TRUE( IEditorPanelSubsystem::chooseFocusedCommandStack( Internal::kMenuWindow, listPanel, "", &mainStack ) == &mainStack );
 }
 
 /** @brief [EditorFocusedCommandStackTest] 앞 포커스 패널이 닫혀 목록에 없으면 메인이다 — 스택 포인터를 기억하지 않아 닫힌 문서 · 사라진 스택을 겨누지 않는다 */
@@ -72,6 +72,6 @@ SW_TEST_CASE( EditorFocusedCommandStackTest, ClosedRememberedPanelFallsBackToMai
     const vector<EditorPanelCommandStack> listPanel{
         EditorPanelCommandStack{ Internal::kHistoryWindow, nullptr, true, "history" },
     };
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kHistoryWindow, listPanel, "document", &mainStack ) == &mainStack );
-    SW_EXPECT_TRUE( IEditorPanelService::chooseFocusedCommandStack( Internal::kMenuWindow, listPanel, "document", &mainStack ) == &mainStack );
+    SW_EXPECT_TRUE( IEditorPanelSubsystem::chooseFocusedCommandStack( Internal::kHistoryWindow, listPanel, "document", &mainStack ) == &mainStack );
+    SW_EXPECT_TRUE( IEditorPanelSubsystem::chooseFocusedCommandStack( Internal::kMenuWindow, listPanel, "document", &mainStack ) == &mainStack );
 }

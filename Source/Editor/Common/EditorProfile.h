@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Profiling/FrameProfiler.h"
 

@@ -18,7 +18,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -76,7 +76,7 @@ namespace sw
                     outReply = string( reply.view() );
                     return true;
                 }
-                MemoryExportSubsystem* const pExport = engine::findSubsystem<MemoryExportSubsystem>(); // 개발 도구 클라이언트가 기동 범위에 세운다 — 엔진 서비스 칸이 없는 타입이다
+                MemoryExportSubsystem* const pExport = engine::findSubsystem<MemoryExportSubsystem>(); // 개발 도구 클라이언트가 기동 범위에 세운다 — 엔진 서브시스템 칸이 없는 타입이다
                 if ( pExport == nullptr )
                 {
                     outReply = "memory.export: no memory export subsystem in this host";

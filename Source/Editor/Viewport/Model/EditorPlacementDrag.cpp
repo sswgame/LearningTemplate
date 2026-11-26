@@ -9,7 +9,7 @@
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Workspace/Asset/EditorPlacementPose.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Viewport/Model/EditorAssetPlacement.h"
 

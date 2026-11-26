@@ -13,7 +13,7 @@
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Destruction/Fracture/FractureLeafShapeTable.h"
 #include "Engine/Destruction/Fracture/FractureRenderUtil.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Object/Component/ComponentStateCodec.h"

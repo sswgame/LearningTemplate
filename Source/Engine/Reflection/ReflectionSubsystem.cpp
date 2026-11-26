@@ -52,6 +52,6 @@ namespace sw
         (void)scope.exposeMember( reflection, reflection.getTypeRegistry() ); // 새 범위 — 겹치지 않는다
     } );
 
-    // 위 공장이 건 타입 표의 서비스 칸 — 컴포넌트 캐스트 · 직렬화가 프레임마다 읽는다.
-    SW_ENGINE_SERVICE( TypeRegistry, GameVisible );
+    // 위 공장이 건 타입 표의 서브시스템 칸 — 컴포넌트 캐스트 · 직렬화가 프레임마다 읽는다.
+    SW_ENGINE_SUBSYSTEM_SLOT( TypeRegistry, GameVisible );
 } // namespace sw

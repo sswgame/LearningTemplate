@@ -8,7 +8,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw

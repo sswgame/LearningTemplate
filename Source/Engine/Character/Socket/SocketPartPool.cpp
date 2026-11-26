@@ -5,11 +5,11 @@
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 
 namespace sw
 {
-    SW_SCENE_SERVICE( SocketPartPool, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure }, SceneDataKindSet{}, SceneDataKindSet{} ) )
+    SW_SCENE_SUBSYSTEM( SocketPartPool, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
     SocketPartPool::SocketPartPool( GameObjectManager& manager )
         : _pManager{ &manager }

@@ -34,7 +34,7 @@
 #include "Engine/Content/Pack/PackTypes.h"
 #include "Engine/Content/Pack/PackWriter.h"
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"

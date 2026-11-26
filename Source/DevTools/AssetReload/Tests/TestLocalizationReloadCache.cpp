@@ -8,7 +8,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/Tests/LocalizationTestUtil.h"
 

@@ -16,8 +16,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetID.h"
@@ -417,7 +417,7 @@ namespace sw
         /** @brief 키 바인딩 대상 맵 등록의 구독입니다. 풀리면 `releaseKeyBindingInputMap` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<const InputMap> _subscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<const InputMap>::ReleaseFunction, &UserSettingsManager::releaseKeyBindingInputMap, this ) };
 
-        SW_SERVICE_SLOT( UserSettingsManager, Required );
+        SW_SUBSYSTEM_SLOT( UserSettingsManager, Required );
     };
 
     template <typename T>

@@ -7,13 +7,13 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEvent.h"
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Audio/Component/AudioEmitterComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw
 {
-    AudioSoundPlayer::AudioSoundPlayer( AudioService& audio )
+    AudioSoundPlayer::AudioSoundPlayer( AudioSubsystem& audio )
         : _audio{ audio }
         , _nextOneShotEmitter{ 0 }
     {

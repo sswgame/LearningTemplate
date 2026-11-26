@@ -12,7 +12,7 @@
 #include "Core/Time/WallClock.h"
 
 #include "Engine/Config/ServerConfig.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/ProcessMetrics.h"
@@ -186,7 +186,7 @@ namespace sw
             return; // 로그 폴더가 서지 않았다 — 덤프를 놓을 곳이 없다
         const AbsolutePath reportsFolder = crashFolder.getParent().join( ServerObservabilityInternal::kServerReportsFolderName );
         string             netStatsLine;
-        GameNetSession*    pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
+        GameNetSession*    pNetSession = engine::areEngineSubsystemsBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         if ( pNetSession != nullptr )
             netStatsLine = pNetSession->makeStatsReport().makeLine(); // 메시지 종류별 누적 셈 — 덤프 순간 한 번만 읽는다(틱마다 읽으면 Profiler 탭의 "지난 보고" 상태를 건드린다)
         string text;

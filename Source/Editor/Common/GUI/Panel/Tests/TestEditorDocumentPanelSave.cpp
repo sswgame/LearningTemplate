@@ -8,7 +8,7 @@
 #include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/Panel/EditorStateDocumentPanel.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 

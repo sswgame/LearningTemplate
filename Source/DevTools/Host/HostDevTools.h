@@ -29,9 +29,9 @@ namespace sw
         void addToHostScope( SubsystemScope& host, Engine& engine, FileWatchService& fileWatch );
         /** @brief 엔진이 선 뒤 개발 도구의 프레임 훅(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드)을 붙입니다. */
         void attachFrameHooks( Engine& engine );
-        /** @brief 개발 콘솔을 세웁니다(App 의 호스트 서비스 `DevConsole`). */
+        /** @brief 개발 콘솔을 세웁니다(App 의 호스트 서브시스템 `DevConsole`). */
         void startConsole( bool bEnableEditor );
-        /** @brief 개발 콘솔을 내립니다(App 의 호스트 서비스 `DevConsole`). */
+        /** @brief 개발 콘솔을 내립니다(App 의 호스트 서브시스템 `DevConsole`). */
         void stopConsole();
         /** @brief 개발 도구의 프레임 훅을 뗍니다. 개발 도구는 엔진 서비스를 빌려 쓰므로 엔진 종료 앞에 부릅니다. */
         void detach();

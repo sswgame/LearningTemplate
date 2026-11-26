@@ -9,7 +9,7 @@
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
 #include "Engine/Object/GameObject/Tests/TickModeTestComponents.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
@@ -34,7 +34,7 @@ namespace
         vector<SceneComponent*>                _listMoverRoot;
         vector<TickModeFollowerTestComponent*> _listFollower;
 
-        TickModeRig( const SceneEngineServices& services, bool bBatchPath )
+        TickModeRig( const SceneEngineSubsystems& services, bool bBatchPath )
             : _manager{ services }
         {
             _manager.getTickRegistry().setBatchPathEnabled( bBatchPath );
@@ -124,9 +124,9 @@ namespace
  */
 SW_TEST_CASE( TickModesTest, WavePathMatchesObjectEntryPath )
 {
-    const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
-    TickModeRig               batched{ services, true };
-    TickModeRig               reference{ services, false };
+    const SceneEngineSubsystems services = SceneEngineSubsystems::makeFromBoundEngine();
+    TickModeRig                 batched{ services, true };
+    TickModeRig                 reference{ services, false };
     batched.run( 12 );
     reference.run( 12 );
     SW_EXPECT_EQUAL( reference.computeHash(), batched.computeHash() );
@@ -151,8 +151,8 @@ SW_TEST_CASE( TickModesTest, DeclaredModesRunWhereDeclared )
     SW_REQUIRE_TRUE( tickBatchRegistry.registerEntry( moverEntry ) );
     SW_REQUIRE_TRUE( tickBatchRegistry.registerEntry( mainEntry ) );
 
-    SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
-    services._pTickBatchRegistry = &tickBatchRegistry;
+    SceneEngineSubsystems services = SceneEngineSubsystems::makeFromBoundEngine();
+    services._pTickBatchRegistry   = &tickBatchRegistry;
     {
         TickModeRig                       batched{ services, true };
         TickModeMainTestComponent*        pMain    = batched._manager.createGameObject( hashed_string( "Main" ) )->addComponent<TickModeMainTestComponent>();
@@ -176,7 +176,7 @@ SW_TEST_CASE( TickModesTest, DeclaredModesRunWhereDeclared )
         }
         SW_EXPECT_TRUE( bTypedList );
 
-        TickModeRig reference{ SceneEngineServices::makeFromBoundEngine(), false };
+        TickModeRig reference{ SceneEngineSubsystems::makeFromBoundEngine(), false };
         (void)reference._manager.createGameObject( hashed_string( "Main" ) )->addComponent<TickModeMainTestComponent>();
         (void)reference._manager.createGameObject( hashed_string( "Derived" ) )->addComponent<TickModeMainDerivedTestComponent>();
         reference.run( 6 );
@@ -206,9 +206,9 @@ static_assert( HasOnTickOverride_v<TickModeMoverTestComponent> && HasOnTickOverr
  */
 SW_TEST_CASE( TickModesTest, TickGroupComesFromTheType )
 {
-    const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
-    GameObjectManager         manager{ services };
-    GameObject*               pObject = manager.createGameObject( hashed_string( "Grouped" ) );
+    const SceneEngineSubsystems services = SceneEngineSubsystems::makeFromBoundEngine();
+    GameObjectManager           manager{ services };
+    GameObject*                 pObject = manager.createGameObject( hashed_string( "Grouped" ) );
     SW_REQUIRE_TRUE( pObject != nullptr );
     const Component* pDeclared  = pObject->addComponent<TickModeProtectedTickTestComponent>();
     const Component* pInherited = pObject->addComponent<TickModeInheritedGroupTestComponent>();
@@ -324,9 +324,9 @@ SW_TEST_CASE( TickModesTest, ParallelFrameSystemRunsThroughJobContext )
  */
 SW_TEST_CASE( TickModesTest, StageNeighborBatchesMatchOldOrder )
 {
-    const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
-    TickModeRig               batched{ services, true };
-    TickModeRig               reference{ services, false };
+    const SceneEngineSubsystems services = SceneEngineSubsystems::makeFromBoundEngine();
+    TickModeRig                 batched{ services, true };
+    TickModeRig                 reference{ services, false };
     batched.run( 4 );
     reference.run( 4 );
     SW_EXPECT_EQUAL( reference.computeHash(), batched.computeHash() );
@@ -371,7 +371,7 @@ namespace
         vector<TickModeChainTestComponent*> _listLink;
         TickModeChainTestComponent*         _pSecond{ nullptr }; ///< 2 번 오브젝트의 둘째 고리(3 번을 기다린다)
 
-        TickChainRig( const SceneEngineServices& services, bool bBatchPath )
+        TickChainRig( const SceneEngineSubsystems& services, bool bBatchPath )
             : _manager{ services }
         {
             _manager.getTickRegistry().setBatchPathEnabled( bBatchPath );
@@ -424,9 +424,9 @@ namespace
  */
 SW_TEST_CASE( TickModesTest, OrderOnlyPrerequisitesBecomeTaskEdges )
 {
-    const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
-    TickChainRig              batched{ services, true };
-    TickChainRig              reference{ services, false };
+    const SceneEngineSubsystems services = SceneEngineSubsystems::makeFromBoundEngine();
+    TickChainRig                batched{ services, true };
+    TickChainRig                reference{ services, false };
     batched.run( 6 );
     reference.run( 6 );
     batched.expectChainValues();
@@ -487,10 +487,10 @@ SW_TEST_CASE( TickModesTest, OrderOnlyPrerequisitesBecomeTaskEdges )
 SW_TEST_CASE( TickModesTest, OtherObjectLookupInSameParallelGroupAsserts )
 {
     SW_EXPECT_LOG( SW_ASSERT_LOG_ID );
-    const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
-    GameObjectManager         manager{ services };
-    GameObject*               pReader = manager.createGameObject( hashed_string( "Reader" ) );
-    GameObject*               pTarget = manager.createGameObject( hashed_string( "Target" ) );
+    const SceneEngineSubsystems services = SceneEngineSubsystems::makeFromBoundEngine();
+    GameObjectManager           manager{ services };
+    GameObject*                 pReader = manager.createGameObject( hashed_string( "Reader" ) );
+    GameObject*                 pTarget = manager.createGameObject( hashed_string( "Target" ) );
     (void)pReader->addComponent<SceneComponent>();
     const SceneComponent* pTargetRoot = pTarget->addComponent<SceneComponent>();
     (void)pTarget->addComponent<TickModeMainTestComponent>(); // 기본 그룹(DuringPhysics)에서 틱한다
