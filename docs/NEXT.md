@@ -56,7 +56,6 @@
 
 ## 3. 알려진 실패 · 흔들림
 
-- 셰이더 리로드 시나리오(`desktop/editor/shaderreload`)가 묶음 검증에서 한 번도 돌지 않았다 — 재컴파일기가 Debug 전용이다. 개발 빌드에서 켤 수 있게(시나리오가 `<Launch>` 로 켬) 하고, 켰을 때 Ctrl+F8 이 재컴파일 묶음을 끝내지 않는 단축키 경로(편집 모드의 디버그 키)를 고친 뒤 격리(만료 2026-12-10)를 뺀다.
 
 - **Linux:** sequencercuts · sequencerkeys `SequencerUnboundCount`(`--gpu software chain editor`), netresourcedigest, 에디터 체인 약 18 단계(입력 초점), themepark 체인 멈춤, lavapipe `blendEnable` + `R16G16_SNORM`(재현 안 되면 지운다), `editor.screenrectview` 1.09375 %(`all` 에서만 — 사진 앞 대기를 정착 조건으로). 빈 골든은 `scenario_bisect.py --golden-coverage` 로 찾아 채운다.
 - 흔들리는 게임 골든: 다시 지면 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다.
@@ -107,10 +106,6 @@
 - **P-4 [14] Android IME 조합:** 실기기(4 절).
 - **O-12 [30] 원장 경로 부하:** PostgreSQL · RESP 로 `OnlineLoadBot` `ledger_mix`(`--store-config=Config/Server/Online/Playground.external.json`) — 재시도 · busy · 버린 도착 수. 종료 코드 5 는 재화 보존 깨짐.
 - **A-13 [36] · K-11 [50]:** 2 절.
-
-## 10. 코드 `shortcut:` 정리
-
-정본 모양이 있으면 크기와 무관하게 고친다. 문턱이 규모인 것(`PackWriter` · `LinkJobPool` · `AssetAndToolTargets` · `GPUSceneBuilder` 둘 · `SceneVoxelizer`)만 남긴다.
 
 ## 11. 리소스
 
