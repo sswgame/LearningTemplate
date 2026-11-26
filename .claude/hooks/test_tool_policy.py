@@ -131,5 +131,33 @@ class ToolPolicyTest(unittest.TestCase):
             self.assertIsNone(self.pre(tool, tool_input), (tool, tool_input))
 
 
+class AgentDispatchTest(unittest.TestCase):
+    """agent_prompt_check: 작업 종류 표에 맞는 종류 · 모델 · effort 만 받는다."""
+
+    def setUp(self):
+        import agent_prompt_check
+        self.check = agent_prompt_check.check
+        with open(agent_prompt_check.RULES_PATH, encoding="utf-8") as file:
+            self.rules = json.load(file)["agentPrompt"]
+
+    def test_read_only_kind_needs_only_matching_choice(self):
+        call = {"subagent_type": "Explore", "model": "haiku", "effort": "low", "prompt": "작업 종류: find\nX 를 찾는다"}
+        self.assertIsNone(self.check(call, self.rules))
+        self.assertIn("model", self.check({**call, "model": "opus"}, self.rules))
+        self.assertIn("effort", self.check({**call, "effort": None}, self.rules))
+
+    def test_missing_or_unknown_kind_is_refused(self):
+        self.assertIn("작업 종류", self.check({"subagent_type": "Explore", "prompt": "찾는다"}, self.rules))
+        self.assertIn("작업 종류", self.check({"prompt": "작업 종류: whatever"}, self.rules))
+
+    def test_editing_kind_also_needs_the_required_text(self):
+        call = {"model": "opus", "effort": "high", "prompt": "작업 종류: implement\n고친다"}
+        self.assertIn("빠진 것", self.check(call, self.rules))
+
+    def test_inherited_call_and_refused_isolation(self):
+        self.assertIsNone(self.check({"subagent_type": "fork", "prompt": "이어서"}, self.rules))
+        self.assertIsNotNone(self.check({"subagent_type": "fork", "isolation": "worktree", "prompt": "x"}, self.rules))
+
+
 if __name__ == "__main__":
     unittest.main()

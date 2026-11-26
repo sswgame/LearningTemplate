@@ -1,6 +1,6 @@
 # SW Engine Project Instructions
 
-> 결론: 아래 공통 규칙과 빌드 명령을 지키고, 세부 규칙은 표에서 일에 맞는 `docs/agents/` 파일만 읽는다(본문은 영어 · 한국어 섞임, 큰 파일은 `## ` 절만). 린트 · 훅 · 컴파일이 강제하는 규칙은 "강제" 로 표시돼 있다. 할 일 · 계획은 `docs/NEXT.md` 하나.
+아래 공통 규칙과 빌드 명령을 지키고, 세부 규칙은 표에서 일에 맞는 `docs/agents/` 파일만 읽는다(본문은 영어 · 한국어 섞임, 큰 파일은 `## ` 절만). 린트 · 훅 · 컴파일이 강제하는 규칙은 "강제" 로 표시돼 있다. 할 일 · 계획은 `docs/NEXT.md` 하나.
 
 Preserve existing project conventions unless the user explicitly requests otherwise.
 
