@@ -346,8 +346,11 @@ function(sw_write_reflection_target_args TARGET_NAME OUTPUT_FILE)
 		"$<$<BOOL:${target_standard}>:--target-arg\n-std=c++${target_standard}\n>"
 		"$<$<BOOL:${target_options}>:--target-option\n$<JOIN:${target_options},\n--target-option\n>\n>"
 		"$<$<BOOL:${target_includes}>:--include\n$<JOIN:${target_includes},\n--include\n>\n>")
+	# file(GENERATE) 는 켠 언어(C · CXX · RC …)마다 따로 평가한다. 옵션 · 정의의 `$<COMPILE_LANGUAGE:…>` 때문에 내용이 언어마다 달라 같은 파일을 여러 벌로 쓰려다 멈춘다.
+	# 파서는 C++ 로만 읽으므로 CXX 평가 하나만 쓴다(CONDITION 이 거짓인 평가는 파일을 쓰지 않는다).
 	file(GENERATE OUTPUT "${OUTPUT_FILE}"
 		CONTENT "${target_args_text}"
+		CONDITION "$<COMPILE_LANGUAGE:CXX>"
 		TARGET ${TARGET_NAME})
 endfunction()
 

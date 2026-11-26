@@ -1,7 +1,7 @@
 # `sw_add_reflection_step` 의 구성 · 생성 경로를 작은 프로젝트(IntegrationTests/ReflectionParser/ReflectionStep)로 구성하고 산출물을 본다(cmake -P).
 # 왜: 자리 표시자 · OBJECT_DEPENDS · 후보 검사 명령 · 타깃 응답 파일은 구성 때만 돌아 파서 사례가 지나지 않는다(file(GENERATE) 인자 꼴 오류가 모든 구성을 멈춘 뒤에야 보였다).
-# 입력: SOURCE_ROOT · WORK_DIR · GENERATED_CMAKE_VARS · GENERATOR · MAKE_PROGRAM · CXX_COMPILER
-foreach(required SOURCE_ROOT WORK_DIR GENERATED_CMAKE_VARS GENERATOR MAKE_PROGRAM CXX_COMPILER)
+# 입력: SOURCE_ROOT · WORK_DIR · GENERATED_CMAKE_VARS · GENERATOR · MAKE_PROGRAM · C_COMPILER · CXX_COMPILER
+foreach(required SOURCE_ROOT WORK_DIR GENERATED_CMAKE_VARS GENERATOR MAKE_PROGRAM C_COMPILER CXX_COMPILER)
 	if(NOT DEFINED ${required})
 		message(FATAL_ERROR "RunReflectionStepCheck: ${required} is not given")
 	endif()
@@ -12,7 +12,7 @@ set(project_dir "${SOURCE_ROOT}/IntegrationTests/ReflectionParser/ReflectionStep
 set(build_dir "${WORK_DIR}/build")
 execute_process(
 	COMMAND "${CMAKE_COMMAND}" -S "${project_dir}" -B "${build_dir}" -G "${GENERATOR}"
-		"-DCMAKE_MAKE_PROGRAM=${MAKE_PROGRAM}" "-DCMAKE_CXX_COMPILER=${CXX_COMPILER}" "-DSW_SOURCE_ROOT=${SOURCE_ROOT}" "-DSW_GENERATED_CMAKE_VARS=${GENERATED_CMAKE_VARS}"
+		"-DCMAKE_MAKE_PROGRAM=${MAKE_PROGRAM}" "-DCMAKE_C_COMPILER=${C_COMPILER}" "-DCMAKE_CXX_COMPILER=${CXX_COMPILER}" "-DSW_SOURCE_ROOT=${SOURCE_ROOT}" "-DSW_GENERATED_CMAKE_VARS=${GENERATED_CMAKE_VARS}"
 	RESULT_VARIABLE exit_code
 	OUTPUT_VARIABLE output_text
 	ERROR_VARIABLE output_text)
@@ -45,9 +45,14 @@ if(found EQUAL -1)
 	message(FATAL_ERROR "Plain.cpp is not watched by the candidate check:\n${candidate_text}")
 endif()
 
-# 타깃 응답 파일 — 자기 정의와 링크한 타깃의 정의 · include 자리(전이)
+# 타깃 응답 파일 — 자기 정의와 링크한 타깃의 정의 · include 자리(전이). 언어별 정의는 CXX 평가 것만 든다(C 소스가 섞인 타깃).
 file(READ "${out_dir}/ReflectionParser.target.rsp" target_text)
-foreach(needle "--target-arg\n-DSW_FIXTURE_MODULE_DEFINE=1\n" "--target-arg\n-DSW_FIXTURE_DEPENDENCY_DEFINE=1\n" "--include\n${project_dir}/dependency_include\n")
+string(FIND "${target_text}" "SW_FIXTURE_C_ONLY" found)
+if(NOT found EQUAL -1)
+	message(FATAL_ERROR "ReflectionParser.target.rsp has the C-only definition (it must be the CXX evaluation):\n${target_text}")
+endif()
+foreach(needle "--target-arg\n-DSW_FIXTURE_MODULE_DEFINE=1\n" "--target-arg\n-DSW_FIXTURE_DEPENDENCY_DEFINE=1\n" "--target-arg\n-DSW_FIXTURE_CXX_ONLY=1\n"
+		"--include\n${project_dir}/dependency_include\n")
 	string(FIND "${target_text}" "${needle}" found)
 	if(found EQUAL -1)
 		message(FATAL_ERROR "ReflectionParser.target.rsp lacks '${needle}':\n${target_text}")
