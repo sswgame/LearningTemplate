@@ -15,7 +15,7 @@
 
 - 비슷한 파이프라인은 `_base` 로 부모를 가리키고 차이만 적는다([DataInheritance](DataInheritance.md)). 이름이 겹치는 첨부는 오류다. `_listPermutation` · `_listRenderPassRef` 는 글이 열쇠라 하나씩 더하고 `<item _op="Remove">` 로 지운다(한 퍼뮤테이션 이름은 한 번).
 - 패스 칸은 리플렉션 enum 이다 — 철자 오타는 읽기 오류. 메시 · 증폭 스테이지는 없다.
-- 뷰 패스 종류는 파이프라인에 한 번이다. 표가 `kRepeatable` 로 적은 종류(그림자 · Compute · 후처리 머티리얼)만 여럿 둔다. 그래픽스 패스 PSO 는 패스 이름이 열쇠라(`FramePSOManager::getPassPSO`) 같은 종류의 패스마다 제 서술로 그린다.
+- 뷰 패스 종류는 파이프라인에 한 번이다. `isRepeatablePassType` 종류(그림자 · Compute · 후처리 머티리얼)만 여럿 둔다. 그래픽스 패스 PSO 는 패스 이름이 열쇠라(`FramePSOManager::getPassPSO`) 같은 종류의 패스마다 제 서술로 그린다. 종류 하나의 패스는 `RenderPipelineAsset::findUniquePass<종류>()` 로만 찾는다(여러 번 두는 종류는 컴파일 오류 — 서술로 고른다).
 - 씬 메시 패스가 그릴 머티리얼은 패스 칸 `_requiredMaterialDefine` · `_excludedMaterialDefine` 이 정한다(유니티 LightMode 자리). 비운 칸은 표의 기본값이다(G버퍼는 `MATERIAL_FORWARD_ONLY` 를 빼고, 메시 외곽선은 `MATERIAL_OUTLINE` 을 요구한다). 드로우 · PSO 변형 · 쿠커가 `MaterialPassFilter` 하나를 본다.
 - 표가 XML 에 끄는 것만 허락한 칸(깊이 테스트 `kDepthTest` · 깊이 쓰기 `kDepthWrite` · 앞면 컬링 `kCullFront`)을 XML 이 켜거나 뒤집으면 로드 오류다.
 - 로드는 뷰 그래프 · 프레임 그래프를 서술만으로 한 번 컴파일한다(`validateGraphsCompile`). 순환은 첫 프레임 로그가 아니라 로드 오류다.

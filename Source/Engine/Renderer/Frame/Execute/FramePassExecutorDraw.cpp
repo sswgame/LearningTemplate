@@ -424,17 +424,6 @@ namespace sw
         return _pLastSwapchainWriter == nullptr || &passDesc == _pLastSwapchainWriter;
     }
 
-    const RenderGraphPassDesc* FramePassExecutor::findPassDescByType( RenderPassKind passType ) const
-    {
-        // 값만 비교한다 — 표기는 읽을 때 enum 으로 검사했다.
-        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
-        {
-            if ( pass._type == passType )
-                return &pass;
-        }
-        return nullptr;
-    }
-
     void FramePassExecutor::registerRainOcclusion( FramePassContext& context )
     {
         const FrameRainOcclusion& rain = _state._rainOcclusion;
@@ -445,8 +434,9 @@ namespace sw
     void FramePassExecutor::drawRainOcclusion()
     {
         FrameRainOcclusion& rain = _state._rainOcclusion;
-        // 그림자 패스 밖의 그리기다 — 그림자 종류의 첫 패스(방향광) PSO 와 그 서술로 그린다.
-        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+        // 그림자 패스 밖의 그리기다 — 방향광 그림자 패스(깊이 역할 ShadowMap)의 PSO 와 그 서술(머티리얼 거르기)로 그린다.
+        const RenderGraphPassDesc*   pShadowPass = nullptr;
+        const RHIPipelineStateHandle pso         = _psoManager.getDirectionalShadowPSO( pShadowPass );
         if ( rain.isActive() == false || pso == 0 || _pCmd == nullptr )
             return;
         SW_PROFILE_SCOPE( "RT.RainOcclusion" );
@@ -454,7 +444,7 @@ namespace sw
         FramePassContext context = _state._frameContext;
         context._pCmd            = _pCmd;
         context._passType        = RenderPassKind::Shadow;
-        context._pPassDesc       = findPassDescByType( RenderPassKind::Shadow );
+        context._pPassDesc       = pShadowPass;
         context._cullViewIndex   = rain.getCullSlot();
         context._resourceRegistry.reset();
         registerLightBuffer( context );

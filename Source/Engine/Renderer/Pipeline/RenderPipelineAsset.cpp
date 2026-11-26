@@ -62,6 +62,57 @@ namespace sw
         return false;
     }
 
+    bool RenderPipelineAsset::hasPass( RenderPassKind type ) const
+    {
+        return VectorUtil::containsIf( _desc._listPass, [type]( const RenderGraphPassDesc& pass )
+        { return pass._type == type; } );
+    }
+
+    namespace
+    {
+        /** @brief 조건 @p fnMatch 에 맞는 뷰 패스 하나를 찾습니다. 둘이면 @p pWhat 으로 오류를 남기고 nullptr 이다(로드 검증의 차례에 기대지 않는다). */
+        template <typename TMatch>
+        const RenderGraphPassDesc* findSinglePass( const vector<RenderGraphPassDesc>& listPass, const TMatch& fnMatch, const utf8* pWhat )
+        {
+            const RenderGraphPassDesc* pFound = nullptr;
+            for ( const RenderGraphPassDesc& pass : listPass )
+            {
+                if ( fnMatch( pass ) == false )
+                    continue;
+                if ( pFound != nullptr )
+                {
+                    SW_LOG_ERROR_ONCE_ID( "RenderPipelineAsset.UniquePassDeclaredTwice", "Passes '%#' and '%#' are both the %# - a single-pass lookup gets none", pFound->_name, pass._name, pWhat );
+                    return nullptr;
+                }
+                pFound = &pass;
+            }
+            return pFound;
+        }
+    } // namespace
+
+    const RenderGraphPassDesc* RenderPipelineAsset::findUniquePass( RenderPassKind type ) const
+    {
+        if ( isRepeatablePassType( type ) )
+        {
+            SW_LOG_ERROR_ONCE_ID( "RenderPipelineAsset.UniquePassRepeatableType", "Pass type %# repeats in a pipeline - there is no single pass of it (pick the pass by its description)", getEnumName( type ) );
+            return nullptr;
+        }
+        return findSinglePass( _desc._listPass, [type]( const RenderGraphPassDesc& pass )
+        { return pass._type == type; }, "pass of one type" );
+    }
+
+    const RenderGraphPassDesc* RenderPipelineAsset::findUniquePassByDepthRole( RenderPassKind type, uint8 depthRole ) const
+    {
+        return findSinglePass( _desc._listPass, [type, depthRole]( const RenderGraphPassDesc& pass )
+        { return pass._type == type && pass._resolvedDepthRole == depthRole; }, "pass of one type and depth role" );
+    }
+
+    const RenderGraphPassDesc* RenderPipelineAsset::findTonemapPass() const
+    {
+        return findSinglePass( _desc._listPass, []( const RenderGraphPassDesc& pass )
+        { return passAppliesTonemap( pass ); }, "tonemapping pass" );
+    }
+
     vector<RenderGraphResourceAccess> RenderPipelineAsset::buildFramePassAccesses( const RenderGraphPassDesc& pass ) const
     {
         // 규칙은 여기 한 곳이다 — 입력은 읽기(SRV), 출력은 버퍼면 UAV · 텍스처면 렌더 타깃(깊이 히스토리 복사 같은 그리기), 규칙 밖은 세 목록(언리얼 RDG 패스 파라미터의 접근 하나).
@@ -538,7 +589,7 @@ namespace sw
             }
 
             /**
-             * @brief 2-0a) 뷰 패스 종류는 한 번이다 — 여러 번 둘 수 있다고 표가 적은 종류(`kRepeatable`)만 빼고. 프레임 패스의 `FramePassTypeDuplicated` 와 같은 규칙이다.
+             * @brief 2-0a) 뷰 패스 종류는 한 번이다 — 여러 번 둘 수 있는 종류(`isRepeatablePassType`)만 빼고. 프레임 패스의 `FramePassTypeDuplicated` 와 같은 규칙이다. 톤맵하는 패스도 하나다.
              * @details 실행이 종류 하나의 상태(TAA 기록 · 조명 타일 · 입자 원본 · 깊이 프리패스 표시)를 쥐고 그 종류의 첫 패스를 찾는다. 둘째 패스의 서술은 조용히 무시되거나 첫째의 상태를 덮는다.
              */
             static uint32 validatePassTypesUnique( const RenderPipelineDesc& desc, string_view sourcePath )
@@ -547,7 +598,19 @@ namespace sw
                 for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
                 {
                     const RenderGraphPassDesc& pass = desc._listPass[passIndex];
-                    if ( pass._type == RenderPassKind::Invalid || getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kRepeatable ) )
+                    if ( passAppliesTonemap( pass ) )
+                    {
+                        for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
+                        {
+                            if ( passAppliesTonemap( desc._listPass[earlierIndex] ) == false )
+                                continue;
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassTonemapsTwice", "[%#] pass '%#' tonemaps, and so does pass '%#' - one pass applies the tonemap (auto exposure reads it)", sourcePath, pass._name,
+                                             desc._listPass[earlierIndex]._name );
+                            ++issueCount;
+                            break;
+                        }
+                    }
+                    if ( pass._type == RenderPassKind::Invalid || isRepeatablePassType( pass._type ) )
                         continue;
                     for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
                     {

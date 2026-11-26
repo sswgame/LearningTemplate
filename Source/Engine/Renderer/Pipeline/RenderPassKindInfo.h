@@ -135,13 +135,8 @@ namespace sw
     {
         static constexpr uint32 kDepthTest  = BitUtil::bit( 0 ); ///< PSO 기본값으로 깊이 테스트를 쓴다(XML 로 끌 수는 있어도 켤 수는 없다).
         static constexpr uint32 kDepthWrite = BitUtil::bit( 1 ); ///< PSO 기본값으로 깊이 쓰기를 한다. 없는 종류는 XML 이 깊이 쓰기를 켤 수 없다(로드 오류 `PassDepthWriteNotWritable`).
-        /**
-         * @brief 한 파이프라인에 이 종류의 뷰 패스를 여럿 둘 수 있다 — 실행과 PSO 가 종류가 아니라 패스 서술로 갈린다(그림자: 깊이 첨부의 역할이 타일을 고른다, Compute: 셰이더가 패스마다 다르다, 후처리 머티리얼: 블렌더블 자리가 패스마다 다르다).
-         * @details 없는 종류를 두 번 선언하면 로드 오류다(`RenderPipelineAsset::validate`) — 실행이 종류 하나의 상태(기록 · 타일 · 입자 원본)를 쥐어 둘째 패스가 그것을 덮는다.
-         *          그래픽스 패스 PSO 는 패스 이름이 열쇠다(`FramePSOManager::getPassPSO`). 이 비트를 붙이는 종류는 실행이 그 종류의 첫 패스를 찾지 않아야 한다(`findPassDescByType`).
-         */
-        static constexpr uint32 kRepeatable = BitUtil::bit( 2 );
-        // 비트 13 은 비워 둔다 — 블렌드는 깃발이 아니라 `RenderPassKindInfo::_blend` 칸 하나다(프리멀티플라이인데 블렌드가 꺼진 줄을 적을 수 없다).
+        // 비트 2 · 13 은 비워 둔다 — 블렌드는 깃발이 아니라 `RenderPassKindInfo::_blend` 칸 하나다(프리멀티플라이인데 블렌드가 꺼진 줄을 적을 수 없다).
+        // 여러 번 둘 수 있는 종류는 깃발이 아니라 `isRepeatablePassType` 이다 — 종류 하나의 패스를 찾는 조회(`RenderPipelineAsset::findUniquePass`)가 컴파일 때 그것을 본다.
         static constexpr uint32 kDepthOnly             = BitUtil::bit( 3 );  ///< 깊이만 쓴다. 출력 선언이 없을 때 컬러 RT 수가 0이 되는 근거다.
         static constexpr uint32 kDrawsSceneMeshes      = BitUtil::bit( 4 );  ///< 씬 메시(GPUScene 배치)를 그린다. 머티리얼 변형 PSO 를 만들 대상이다.
         static constexpr uint32 kDrawsTransparentBatch = BitUtil::bit( 5 );  ///< 씬 메시 중 반투명 배치 목록을 그린다(아니면 불투명 목록을 그린다).

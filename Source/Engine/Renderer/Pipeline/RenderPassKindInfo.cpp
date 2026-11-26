@@ -72,7 +72,7 @@ namespace sw
                         info._pDefaultShader   = &EngineDefaultAssets::_shaderShadowDepth;
                         info._pPassDefine      = kPassShadowDefine;
                         info._colorTargetCount = 0;
-                        info._flags            = Flag::kDepthTest | Flag::kDepthWrite | Flag::kDepthOnly | Flag::kDrawsSceneMeshes | Flag::kRepeatable;
+                        info._flags            = Flag::kDepthTest | Flag::kDepthWrite | Flag::kDepthOnly | Flag::kDrawsSceneMeshes;
                         break;
                     }
                     case RenderPassKind::DepthPrepass:
@@ -367,7 +367,7 @@ namespace sw
                         // 톤맵 앞 · 뒤 자리는 그릴 머티리얼이 없는 뷰에서 출력이 원본을 가리킨다(kBypassesToSource). 입력은 원본 말고 모두 선택이다(머티리얼 그래프 "Post Process" 노드가 읽는 것).
                         info._inputContract = makeContract( { Role::SourceColor }, { Role::SceneDepth, Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::GBufferCustomData } );
                         // 블렌더블 자리마다 패스 하나다(자리는 패스 서술의 `_blendableLocation` — 검증이 자리 하나에 패스 하나를 본다).
-                        info._flags = Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource | Flag::kRepeatable;
+                        info._flags = Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
                     case RenderPassKind::VolumetricClouds:
@@ -389,7 +389,7 @@ namespace sw
                     case RenderPassKind::Compute:
                     {
                         // 셰이더는 XML 이 고른다 — 표의 기본값이 없고, 첨부를 RW 텍스처로 묶는 전용 실행이다(`FramePassExecutor::executeComputePass`).
-                        info._flags = Flag::kPipelineCompute | Flag::kDrawsDeclaredColor | Flag::kRepeatable;
+                        info._flags = Flag::kPipelineCompute | Flag::kDrawsDeclaredColor;
                         break;
                     }
                     case RenderPassKind::ForwardOpaqueNoDepthWrite:

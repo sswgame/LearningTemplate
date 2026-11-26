@@ -342,6 +342,17 @@ namespace sw
     }
 
     /**
+     * @brief 한 파이프라인에 이 종류의 뷰 패스를 여럿 둘 수 있으면 true 입니다 — 실행과 PSO 가 종류가 아니라 패스 서술로 갈린다.
+     * @details 그림자는 깊이 첨부의 역할이 타일을 고르고(방향광 · 점광), Compute 는 셰이더가 패스마다 다르고, 후처리 머티리얼은 블렌더블 자리가 패스마다 다르다.
+     *          나머지 종류를 두 번 선언하면 로드 오류다(`RenderPipelineAsset::validate`). 종류 하나의 패스를 찾는 조회(`RenderPipelineAsset::findUniquePass`)는 이 종류를 컴파일 때 거절한다 —
+     *          "그 종류의 첫 패스" 는 둘째 패스의 서술을 조용히 버린다. 언리얼 RDG · 유니티 Render Graph 도 패스는 인스턴스 단위다.
+     */
+    constexpr bool isRepeatablePassType( RenderPassKind type )
+    {
+        return type == RenderPassKind::Shadow || type == RenderPassKind::Compute || type == RenderPassKind::PostProcessMaterial;
+    }
+
+    /**
      * @brief 렌더 해상도 색을 출력 해상도로 넘기는(시간 업스케일) 패스 종류인지 반환합니다 — TAA 하나다(언리얼 TAAU · TSR 자리).
      * @details 해상도 공간 검증(`RenderPipelineAsset::validate`)과 업스케일 상수(`FramePassExecutor::executeTAAPass`)가 같은 질문을 이 함수로 한다.
      */

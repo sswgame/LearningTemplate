@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
+#include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
@@ -474,7 +475,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, PermutationNameIsDefinedOnce )
 
 /**
  * @brief [RenderPipelineAssetTest] 같은 종류의 뷰 패스는 한 번이다 — 표가 여러 번 둘 수 있다고 적은 종류(그림자 · Compute · 후처리 머티리얼)만 빼고. 패스 이름은 로드 때 intern 된다
- * @details 변이: 검사를 지우면 둘째 ForwardOpaque 가 읽혀 마지막 단언이 진다. 그림자에 `kRepeatable` 이 없으면 엔진 포워드 파이프라인(방향광 · 점광 그림자 둘)이 읽히지 않아 첫 단언이 진다.
+ * @details 변이: 검사를 지우면 둘째 ForwardOpaque 가 읽혀 마지막 단언이 진다. 그림자가 `isRepeatablePassType` 이 아니면 엔진 포워드 파이프라인(방향광 · 점광 그림자 둘)이 읽히지 않아 첫 단언이 진다.
  */
 SW_TEST_CASE( RenderPipelineAssetTest, ViewPassTypeIsDeclaredOnce )
 {
@@ -540,6 +541,31 @@ SW_TEST_CASE( RenderPipelineAssetTest, PassDescriptionOverridesTheMaterialFilter
     RenderPipelineAsset rejected;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, RenderPipelineTestUtil::makeXML( invalidFilter.view() ) ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, ComputePassTestUtil::makeXML( ComputePassTestUtil::withShader( "_requiredMaterialDefine=\"MATERIAL_X\"" ), "<item>A</item>", "<item>B</item>" ) ) );
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 종류 하나의 패스 조회는 여러 번 두는 종류를 거절한다 — 그림자는 깊이 역할로, 나머지는 종류로 하나를 찾는다(컴파일 때는 `findUniquePass<종류>` 의 static_assert)
+ * @details 변이: 실행 중 조회가 여러 번 두는 종류를 받으면 첫 그림자 패스가 나와 첫 단언이 진다. 역할 조회가 종류만 보면 점광 그림자와 겹쳐 nullptr 이 되어 둘째 묶음이 진다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, UniquePassLookupRejectsRepeatableTypes )
+{
+    RenderPipelineAsset forward;
+    SW_REQUIRE_TRUE( forward.loadFromXMLFile( AssetID{ "engine/pipeline/forwardpipeline.xml" } ) );
+    SW_EXPECT_LOG( "RenderPipelineAsset.UniquePassRepeatableType" );
+    SW_EXPECT_TRUE( forward.findUniquePass( RenderPassKind::Shadow ) == nullptr );
+    SW_EXPECT_TRUE( forward.hasPass( RenderPassKind::Shadow ) );
+
+    const RenderGraphPassDesc* pCascade = forward.findUniquePassByDepthRole( RenderPassKind::Shadow, static_cast<uint8>( RenderPassInputRole::ShadowMap ) );
+    const RenderGraphPassDesc* pLocal   = forward.findUniquePassByDepthRole( RenderPassKind::Shadow, static_cast<uint8>( RenderPassInputRole::LocalShadowMap ) );
+    SW_REQUIRE_TRUE( pCascade != nullptr && pLocal != nullptr );
+    SW_EXPECT_EQUAL( string( "Shadow" ), pCascade->_name );
+    SW_EXPECT_EQUAL( string( "LocalShadow" ), pLocal->_name );
+
+    const RenderGraphPassDesc* pTonemap = forward.findTonemapPass();
+    SW_REQUIRE_TRUE( pTonemap != nullptr );
+    SW_EXPECT_TRUE( pTonemap->_type == RenderPassKind::Present ); // 후처리 체인이 톤맵한다
+    SW_EXPECT_TRUE( forward.findUniquePass<RenderPassKind::Transparent>() != nullptr );
+    SW_EXPECT_TRUE( forward.findUniquePass<RenderPassKind::Lighting>() == nullptr ); // 포워드에는 없다
 }
 
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */

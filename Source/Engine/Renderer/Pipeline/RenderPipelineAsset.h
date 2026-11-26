@@ -124,6 +124,32 @@ namespace sw
          *        준비 단계부터 하지 않는다 — 채우는 패스가 없는 버퍼를 읽게 두지 않는다.
          */
         bool hasFramePass( RenderPassKind type ) const;
+        /** @brief 이 파이프라인이 종류 @p type 의 뷰 패스를 하나라도 선언했는지입니다(있는지만 묻는다 — 여러 번 둘 수 있는 종류도 된다). */
+        bool hasPass( RenderPassKind type ) const;
+        /**
+         * @brief 종류 @p kType 의 뷰 패스 하나입니다. 없으면 nullptr 입니다. 여러 번 둘 수 있는 종류(`isRepeatablePassType`)는 컴파일 오류다 — 그 종류는 패스 서술 · 이름으로 고른다.
+         * @details 종류 하나의 상태를 쥐는 실행(조명 타일 · 톤맵 · 입자 원본 · 출력 PSO)이 쓴다. 로드 검증의 차례에 기대지 않는다 — 같은 종류가 둘이면 여기서도 오류를 남기고 nullptr 이다.
+         */
+        template <RenderPassKind kType>
+        const RenderGraphPassDesc* findUniquePass() const
+        {
+            static_assert( isViewPassType( kType ) && isRepeatablePassType( kType ) == false, "a repeatable pass type has no single pass - pick the pass by its description (getPassPSO, findUniquePassByDepthRole)" );
+            return findUniquePass( kType );
+        }
+        /**
+         * @brief 종류가 실행 중에 정해지는 조회입니다(종류 표를 훑는 셋업). 규칙은 `findUniquePass<kType>` 와 같다 — 여러 번 둘 수 있는 종류 · 둘 선언한 종류는 오류를 남기고 nullptr 이다.
+         */
+        const RenderGraphPassDesc* findUniquePass( RenderPassKind type ) const;
+        /**
+         * @brief 종류 @p type 이면서 깊이 첨부의 역할이 @p depthRole(`RenderPassInputRole` 정수 — `RenderGraphPassDesc::_resolvedDepthRole`)인 뷰 패스 하나입니다(방향광 그림자 = ShadowMap).
+         *        없으면 nullptr 이고, 둘이면 오류를 남기고 nullptr 이다. 여러 번 둘 수 있는 종류에서 패스 하나를 서술로 고르는 자리다.
+         */
+        const RenderGraphPassDesc* findUniquePassByDepthRole( RenderPassKind type, uint8 depthRole ) const;
+        /**
+         * @brief 톤맵하는 뷰 패스(`passAppliesTonemap` — Tonemap 또는 후처리 체인 Present) 하나입니다. 없으면 nullptr 이다. 둘이면 로드 오류(`PassTonemapsTwice`)이고 여기서도 nullptr 이다.
+         * @details 자동 노출 기록을 읽고 쓰는 패스 · 업스케일 자리가 이 답 하나를 본다.
+         */
+        const RenderGraphPassDesc* findTonemapPass() const;
         /**
          * @brief 프레임 패스 @p pass 의 접근 목록입니다(`RenderGraph::addPass` 의 접근 판). 규칙: 입력 = 읽기(SRV), 출력 = 버퍼면 UAV · 텍스처(`_viewable`)면 렌더 타깃,
          *        `_listIndirectArgs` · `_listCopySource` · `_listCopyDest` = 간접 인자 · 복사 원본 · 복사 대상. 한 이름이 두 번 오지 않음은 로드 검증이 보증한다.

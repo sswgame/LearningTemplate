@@ -106,6 +106,11 @@ namespace sw
          */
         RHIPipelineStateHandle getPassPSO( const RenderGraphPassDesc& pass ) const;
         /**
+         * @brief 그림자 패스 밖에서 그림자 PSO 로 그리는 일(비 가림 맵)의 PSO 입니다. 방향광 그림자 패스(깊이 역할 ShadowMap — @p outPass)의 것이고, 그 패스가 없으면 표의 엔진 슬롯이다(@p outPass 는 nullptr).
+         * @details 그림자는 여러 번 둘 수 있는 종류라 종류로 찾지 않는다(`isRepeatablePassType`) — 서술(깊이 역할)로 고른다.
+         */
+        RHIPipelineStateHandle getDirectionalShadowPSO( const RenderGraphPassDesc*& outPass ) const;
+        /**
          * @brief 컴퓨트 패스 타입의 엔진 PSO 와 그 PSO 에서 풀어 둔 매개변수 표입니다(`ComputeShaderParameters::apply` 가 받는다). 없으면 빈 값입니다. 프레임 패스 규칙은 `getEnginePSO` 와 같다.
          */
         ComputePipeline getComputePSO( RenderPassKind passType ) const;
@@ -252,8 +257,6 @@ namespace sw
          * @return 0 이면 만들지 못한 것입니다(오류를 남겼다).
          */
         RHIPipelineStateHandle getOrCreateGlobalPSO( const RHIPipelineStateDesc& desc, const utf8* pPurpose );
-        /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
-        const RenderGraphPassDesc* findPassDescByType( RenderPassKind passType ) const;
         /**
          * @brief 패스 PSO 의 컬러 RT 수와 포맷을 정합니다. 고정 배열이 있으면 그것을, 없으면 출력 선언 순서를 씁니다.
          * @return 컬러 RT 가 있는데 포맷을 정할 근거가 없거나 출력 선언에 포맷을 모르는 출력(Swapchain)이 있으면 false 입니다 — RGBA8 로 짐작하지 않는다.

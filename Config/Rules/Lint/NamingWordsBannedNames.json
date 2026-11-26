@@ -1,6 +1,8 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "findPassDescByType": "RenderPipelineAsset::findUniquePass<종류>() — 종류 하나의 패스는 여러 번 두는 종류를 컴파일 때 거절하는 조회로만 찾는다(isRepeatablePassType)(2026-11-26)",
+    "kRepeatable": "isRepeatablePassType — 여러 번 두는 종류는 컴파일 때 보는 constexpr 판정이다(2026-11-26)",
     "shouldDrawMaterial": "MaterialPassFilter::shouldDraw — 머티리얼 거르기는 패스 서술이 덮는 값이다(RenderGraphPassDesc::_resolvedMaterialFilter, 표 기본값은 RenderPassKindInfo::getDefaultMaterialFilter)(2026-11-26)",
     "shouldFilterBatchesByMaterial": "MaterialPassFilter::isEmpty — 머티리얼 거르기는 패스 서술이 덮는 값이다(2026-11-26)",
     "UnitStatsComponent": "지움 — 체력 · 피해는 AbilitySystemComponent + CombatAttributeSet(2026-11-26)",

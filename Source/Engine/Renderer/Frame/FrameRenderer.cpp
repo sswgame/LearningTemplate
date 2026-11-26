@@ -1272,7 +1272,8 @@ namespace sw
         const bool    bWet       = weather._x > 0.0f || weather._y > 0.0f || weather._z > 0.0f || packet._materialGlobals._rain._x > 0.0f;
         const bool    bParticles = VFXGPUSimulation::usesRainOcclusion( _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters() );
         // 그림자 PSO 로 그린다(깊이만 쓰는 같은 셰이더 · 머티리얼 변형) — 깊이 형식도 그 PSO 의 것이다. 그림자 패스가 없는 파이프라인(2D)은 맵이 없다.
-        const RHIPipelineStateHandle shadowPSO   = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+        const RenderGraphPassDesc*   pShadowPass = nullptr;
+        const RHIPipelineStateHandle shadowPSO   = _psoManager.getDirectionalShadowPSO( pShadowPass );
         const RHIFormat              depthFormat = shadowPSO != 0 ? _psoManager.findDepthStencilFormat( shadowPSO ) : RHIFormat::Unknown;
         _state._rainOcclusion.beginFrame( _pDevice, packet._rainOcclusion, packet._cameraPos, depthFormat, bWet || bParticles, bParticles );
     }

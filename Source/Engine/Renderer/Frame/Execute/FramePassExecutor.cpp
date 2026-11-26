@@ -842,7 +842,7 @@ namespace sw
 
         // 컴퓨트 구현(`_implementation="Compute"`)은 네이티브 bindless 에서만 돈다 — PSO 와 실행이 같은 판정을 본다(`FramePSOManager::createPassPSOs` · `executeGenericFullscreenPass`).
         const bool                 bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
-        const RenderGraphPassDesc* pTonemapPass    = FrameAutoExposure::findTonemapPass( _pipelineResource );
+        const RenderGraphPassDesc* pTonemapPass    = _pipelineResource.findTonemapPass();
         for ( uint32 index = 0; index < passCount; ++index )
         {
             addModulePassesAt( index );
