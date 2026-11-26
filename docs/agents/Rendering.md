@@ -35,6 +35,7 @@
 - 인스턴스 모델은 둘이다: 에셋 변형은 자식 머티리얼(`_base` — 렌더 상태 · `alphaMode` · `renderQueue` · 정적 스위치 · 멀티 컴파일 · 값), 실행 중 값은 `MaterialInstance::create`(값 · 텍스처 · 런타임 스위치만 — 드로우마다 PSO 를 가르지 않는다).
 - 자식의 `_permutations` 는 부모와 이름으로 합친다 — 더할 define · 바꿀 스위치만 적는다.
 - 게임 · 도구가 머티리얼을 물을 때는 배포에서도 되는 형식 멤버를 쓴다: 키워드 `isKeywordEnabled`, 패스가 그리는지 `isDrawnByPass( pass._resolvedMaterialFilter )`, 셰이더 · 퍼뮤테이션 `getShaderPath` · `getCachedShaderDefines`(`Material` · `MaterialInstance` 같은 이름). define 목록을 따로 훑어 판정하지 않는다.
+- 읽지 않은 머티리얼을 키워드 · 셰이더 경로 · 패스로 찾을 때는 `MaterialTagIndex::loadMounted` 의 `findByKeyword` · `findByShaderPath` · `findDrawnByPass` 를 쓴다(언리얼 에셋 레지스트리 태그 자리). 배포는 팩 쿠킹이 도메인 첫 팩에 쓴 `materialindex.xml` 을, 소스 실행은 머티리얼을 읽어 같은 줄(`makeEntry`)을 만든다. 실행 중 켠 런타임 스위치는 색인에 없다(읽은 인스턴스에 묻는다).
 - 모든 머티리얼이 같은 값을 읽고 자주 바뀌는 것(날씨 · 환경 시간)은 머티리얼 칸에 묶지 않고 전역 값(`MaterialGlobals` → PassCB `g_MaterialGlobal*`)으로 둔다. 파라미터 묶음의 값은 `_global` 로 먹이고, 전역 값에는 프로퍼티를 묶지 않는다(오류).
 - 퍼뮤테이션을 바꾸는 값(정적 스위치 · 키워드 칸)은 자식 머티리얼에 적거나, 부모가 선언한 런타임 스위치(`bShaderFeature="0"`)를 `enableKeyword` 로 켠다. 값 API(`setParameter` 등)는 키워드 칸을 오류로 거절한다 — 런타임 값은 쿠킹하지 않은 조합이다(언리얼 MID 와 같은 경계).
 
