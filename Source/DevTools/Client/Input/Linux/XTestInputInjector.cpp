@@ -5,7 +5,7 @@
  *          `XSendEvent` 로는 이 경로를 만들 수 없다(자동 반복은 서버가 키를 누르고 있는 동안 만든다).
  *          상용 엔진과 같은 선: 언리얼 Automation Driver 와 유니티 Input Test Fixture 도 앱 안 이벤트 합성이 아니라 장치 층에서 입력을 넣는다.
  *          `libxtst`(CMake `SW_ENABLE_XTEST`)는 선택 의존이다 — 꺼져 있으면 `isCompiledIn()` 이 false 이고 나머지는 실패를 돌려준다(폴백 없음).
- * @note 리눅스 클라이언트 전용입니다. 주입기는 자기 X 연결을 따로 연다(창과 무관). 개발 명령은 `input.xtest`.
+ * @note 리눅스 클라이언트 개발 도구입니다(DevTools — 배포는 짓지 않는다). 주입기는 자기 X 연결을 따로 연다(창과 무관). 개발 명령은 `input.xtest`.
  */
 #include "pch.h"
 
