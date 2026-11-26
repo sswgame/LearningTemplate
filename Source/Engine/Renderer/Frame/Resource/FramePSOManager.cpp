@@ -368,9 +368,11 @@ namespace sw
         vector<uint64> listPassDescHash( listGraphPass.size(), 0 );
         for ( size_t passIndex = 0; passIndex < listGraphPass.size(); ++passIndex )
         {
-            const RenderGraphPassDesc& pass     = listGraphPass[passIndex];
-            const RenderPassKindInfo&  info     = getRenderPassKindInfo( pass._type );
-            const bool                 bSkipped = info._pDefaultShader == nullptr || info.hasFlag( RenderPassTraitFlag::kCompute ) || shouldCreatePassPSO( pass._type, caps ) == false ||
+            const RenderGraphPassDesc& pass = listGraphPass[passIndex];
+            const RenderPassKindInfo&  info = getRenderPassKindInfo( pass._type );
+            // 표에 기본 셰이더가 없는 종류(Fullscreen)는 패스가 고른 셰이더로 만든다 — 둘 다 없으면 검증이 로드 오류로 알렸다.
+            const bool bHasShader = info._pDefaultShader != nullptr || pass._shaderPath.empty() == false;
+            const bool bSkipped   = bHasShader == false || info.hasFlag( RenderPassTraitFlag::kCompute ) || shouldCreatePassPSO( pass._type, caps ) == false ||
                                   hasRenderTargetFormatSource( info, &pass ) == false;
             if ( bSkipped )
                 continue;
@@ -379,7 +381,7 @@ namespace sw
             if ( makePassPSODesc( pass._type, &pass, nullptr, job._desc ) == false )
             {
                 SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", pass._type,
-                                 ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
+                                 selectRenderPassShader( pass._type, &pass, &pass, engineDefaultAssets )._shaderPath.c_str() );
                 continue;
             }
             const uint64  descHash = job._desc.computeHash();

@@ -359,7 +359,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, OptionalStagesFollowTheRules )
 SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesLoad )
 {
     for ( const utf8* pPath : { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/forwardpipelinestaged.xml", "engine/pipeline/forwardprepasspipeline.xml", "engine/pipeline/forwardtoonpipeline.xml",
-                                "engine/pipeline/forward2dpipeline.xml", "engine/pipeline/deferredpipeline.xml", "game/playground/pipeline/computepasspipeline.xml", "game/playground/pipeline/extensionpasspipeline.xml" } )
+                                "engine/pipeline/forward2dpipeline.xml", "engine/pipeline/deferredpipeline.xml", "game/playground/pipeline/computepasspipeline.xml", "game/playground/pipeline/extensionpasspipeline.xml",
+                                "game/playground/pipeline/fullscreenpasspipeline.xml" } )
     {
         RenderPipelineAsset asset;
         SW_EXPECT_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( pPath ) } ), pPath );
@@ -699,13 +700,89 @@ SW_TEST_CASE( RenderPipelineAssetTest, NamedComputeBindingTakesValues )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "Name", "<item>A</item>", 14, "Compute" ) ) );
 }
 
+/**
+ * @brief [RenderPipelineAssetTest] 풀스크린 패스: 이름 바인딩으로 입력 · 출력 기록 · 값을 PassCB 칸 이름으로 받는다. 역할 바인딩 · 셰이더 없음 · 제 출력 읽기 · 칸 넘침은 읽기 오류다
+ * @details 변이: 값의 칸 이름 해석(`resolvePass` 의 `_resolvedConstant`)을 지우면 첫 단언 묶음이 지고, 풀스크린 검증 묶음을 지우면 거절 넷이 읽힌다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, FullscreenPassBindsByName )
+{
+    const auto makeXML = []( string_view binding, string_view shader, string_view inputs, uint32 valueCount )
+    {
+        StringBuilder<constant::buffer::kMax4096> xml;
+        xml.append( "<RenderPipelineDesc _name=\"Test\"><_listAttachment>"
+                    "<RenderPassAttachment _name=\"A\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                    "<RenderPassAttachment _name=\"D\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
+                    "<RenderPassAttachment _name=\"Out\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Load\" _bHistory=\"true\"/>"
+                    "</_listAttachment><_listPass>" );
+        xml.appendFormat( "<RenderGraphPassDesc _name=\"Pass\" _type=\"Fullscreen\" _inputBinding=\"%#\" %# %#><_listInput>%#</_listInput><_listOutput><item>Out</item></_listOutput><_listValue>",
+                          binding, shader, ComputePassTestUtil::kNoState, inputs );
+        for ( uint32 index = 0; index < valueCount; ++index )
+            xml.appendFormat( "<RenderPassValue _name=\"Value%#\" _value=\"0.25\"/>", index );
+        xml.append( "</_listValue></RenderGraphPassDesc></_listPass></RenderPipelineDesc>" );
+        return string( xml.view() );
+    };
+    const string_view kShader = "_shaderPath=\"game/playground/shaders/fullscreen_trail.hlsl\"";
+    SW_EXPECT_TRUE( isViewPassType( RenderPassKind::Fullscreen ) );
+    SW_EXPECT_TRUE( isRepeatablePassType( RenderPassKind::Fullscreen ) );
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::Fullscreen ).hasFlag( RenderPassTraitFlag::kRequiresNativeBindless ) );
+    SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::Fullscreen ).hasFlag( RenderPassTraitFlag::kGenericFullscreen ) ); // 역할 계약이 없다
+
+    RenderPipelineAsset named;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( named, makeXML( "Name", kShader, "<item>A</item><item>D</item>", 2 ) ) );
+    const RenderGraphPassDesc& pass = named.getGraphPass()[0];
+    SW_EXPECT_EQUAL( 5u, pass.countNamedParams() ); // 출력 기록 + 입력 둘(깊이도 읽는다) + 값 둘
+    SW_REQUIRE_EQUAL( size_t( 2 ), pass._listValue.size() );
+    SW_EXPECT_TRUE( pass._listValue[1]._resolvedConstant == hashed_string( "g_Value1" ) );
+    SW_EXPECT_TRUE( pass._listResolvedColorOutput[0]._historyResource == hashed_string( "OutHistory" ) ); // 셰이더 칸 g_OutHistoryIndex 의 레지스트리 열쇠
+
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassFullscreenNeedsNamedBinding" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassFullscreenNeedsShader" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassFullscreenInputIsOutput" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassFullscreenParamsFull" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    RenderPipelineAsset rejected;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "Role", kShader, "<item>A</item>", 0 ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "Name", "", "<item>A</item>", 0 ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "Name", kShader, "<item>Out</item>", 0 ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "Name", kShader, "<item>A</item>", 15 ) ) ); // 기록 + 입력 + 값 열다섯 = 17 칸
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 그림자 패스의 깊이 첨부는 그림자 역할(ShadowMap · LocalShadowMap)을 적어야 한다 — 역할이 그릴 타일을 고른다. 역할 없는 깊이는 읽기 오류다
+ * @details 변이: `validateShadowDepthRoles` 를 지우면 역할 없는 그림자 패스가 읽혀 마지막 단언이 진다(실행은 방향광 캐스케이드로 짐작해 그렸다).
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, ShadowPassNeedsShadowDepthRole )
+{
+    const auto makeXML = []( string_view role )
+    {
+        StringBuilder<constant::buffer::kMax1024> xml;
+        xml.appendFormat( "<RenderPipelineDesc _name=\"Test\"><_listAttachment>"
+                          "<RenderPassAttachment _name=\"CasterDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\" _role=\"%#\"/>"
+                          "</_listAttachment><_listPass><RenderGraphPassDesc _name=\"Shadow\" _type=\"Shadow\" _depthAttachment=\"CasterDepth\" %#>"
+                          "<_listInput/><_listOutput><item>CasterDepth</item></_listOutput></RenderGraphPassDesc></_listPass></RenderPipelineDesc>",
+                          role, RenderPipelineTestUtil::kOpaqueState );
+        return string( xml.view() );
+    };
+    RenderPipelineAsset cascade;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( cascade, makeXML( "ShadowMap" ) ) );
+    SW_EXPECT_TRUE( cascade.findUniquePassByDepthRole( RenderPassKind::Shadow, static_cast<uint8>( RenderPassInputRole::ShadowMap ) ) != nullptr );
+
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassShadowDepthRole" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    RenderPipelineAsset missingRole;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( missingRole, makeXML( "" ) ) );
+}
+
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */
 SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
 {
     const AbsolutePath& contentRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
     const TypeInfo&     typeInfo    = *RenderPipelineDesc::StaticType();
     for ( const utf8* pID : { "engine/pipeline/forwardtoonpipeline.xml", "engine/pipeline/forwardprepasspipeline.xml", "engine/pipeline/forward2dpipeline.xml", "engine/pipeline/forwardpipelinestaged.xml",
-                              "game/playground/pipeline/extensionpasspipeline.xml", "game/playground/pipeline/geometrystagepipeline.xml", "game/playground/pipeline/computepasspipeline.xml" } )
+                              "game/playground/pipeline/extensionpasspipeline.xml", "game/playground/pipeline/geometrystagepipeline.xml", "game/playground/pipeline/computepasspipeline.xml",
+                              "game/playground/pipeline/fullscreenpasspipeline.xml" } )
     {
         string sourceText;
         SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ pID }, sourceText ) );
@@ -844,10 +921,11 @@ SW_TEST_CASE( RenderPipelineAssetTest, DiscardedAttachmentCannotBeRead )
     SW_EXPECT_EQUAL( 3, static_cast<int32>( ops._clearStencil ) );
     SW_EXPECT_TRUE( ops._storeOp == RHIRenderPassStoreOp::DontCare );
 
-    // 같은 첨부를 여는 패스가 둘이면 뒤 패스가 정의되지 않은 값을 읽는다.
+    // 같은 첨부를 여는 패스가 둘이면 뒤 패스가 정의되지 않은 값을 읽는다. 뒤 패스는 다른 종류다 — 같은 종류를 두 번 두면 그 규칙(`PassTypeDuplicated`)이 먼저 난다.
     string                                   xml = Util::makeXML( passAttributes, "", "", "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _storeOp=\"DontCare\"/>" );
     StringBuilder<constant::buffer::kMax512> secondPass;
-    secondPass.appendFormat( "<RenderGraphPassDesc _name=\"Second\" %#><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>", passAttributes );
+    secondPass.appendFormat( "<RenderGraphPassDesc _name=\"Second\" _type=\"ForwardOnlyOpaque\" _depthAttachment=\"SceneDepth\" %#><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>",
+                             Util::kOpaqueState );
     xml.insert( xml.find( "</_listPass>" ), secondPass.c_str(), secondPass.size() );
     SW_EXPECT_FALSE( Util::load( asset, xml ) );
 }

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="244358d4769d41b6bb79e681ad9d1ca1"?>
+<!--
+  파이프라인 XML 의 풀스크린 패스 — 코드 없이 XML 한 줄과 셰이더 하나로 더한 효과가 돈다. 장면이 자홍빛(초록을 줄였다)으로 나오면 패스가 이름으로 건 입력 · 값 · 지난 프레임 기록을 읽어 출력에 쓴 것이다.
+  실행: ctest -R Scenario.playground
+-->
+<Scenario name="game.playground.fullscreenpass" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/rendertest3d.scene.xml"/>
+	<Launch variable="gv_renderPipeline" value="game/playground/pipeline/fullscreenpasspipeline.xml"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<SkipUnless watch="RHI.NativeBindless" reason="name-bound passes read inputs by bindless index - DX11, OpenGL and WebGPU have no PSO for them (FramePassExecutor.FullscreenPassNotReady)"/>
+	<Screenshot file="fullscreentrail.ppm"/>
+	<ExpectImage file="fullscreentrail.ppm" golden="fullscreentrail"/>
+	<Pass/>
+</Scenario>

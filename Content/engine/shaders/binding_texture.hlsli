@@ -1465,6 +1465,26 @@ static float4 PassTexture::sampleAlbedoPrevious( float2 uv )
 {
     return Bindless::sampleIndex( SW_ENGINE_ROLE( GBufferAlbedo ), PassTexture::scaleToViewRect( uv, g_ViewRectScale.zw, g_OutputRectSize.zw ) );
 }
+/**
+ * @brief 풀스크린 패스가 이름으로 건 입력 · 출력 기록을 읽습니다. 그 패스는 네이티브 bindless 에서만 PSO 가 있어(C++ 표의 kRequiresNativeBindless) 에뮬 백엔드의 몸통은 컴파일만 된다.
+ * @details 에뮬 백엔드는 칸이 역할마다 정해져(SW_EMU_SLOT_<역할>) 셰이더가 고른 이름의 칸이 없다 — 그 패스는 거기서 그리지 않는다.
+ */
+static float4 PassTexture::sampleNamed( uint index, float2 uv )
+{
+    #if defined( SW_NATIVE_BINDLESS )
+    return Bindless::sampleArrayWith( index, SW_ENGINE_TEXTURE_SAMPLER, PassTexture::toViewRectUV( uv ) );
+    #else
+    return float4( 0, 0, 0, 1 );
+    #endif
+}
+static float4 PassTexture::sampleNamedPrevious( uint index, float2 uv )
+{
+    #if defined( SW_NATIVE_BINDLESS )
+    return Bindless::sampleArrayWith( index, SW_ENGINE_TEXTURE_SAMPLER, PassTexture::toPreviousViewRectUV( uv ) );
+    #else
+    return float4( 0, 0, 0, 1 );
+    #endif
+}
 static float4 PassTexture::sampleAlbedo( float2 uv )
 {
     return Bindless::sampleIndex( SW_ENGINE_ROLE( GBufferAlbedo ), PassTexture::toViewRectUV( uv ) );

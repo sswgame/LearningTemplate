@@ -1,0 +1,35 @@
+<?asset guid="e3c6f9edd1d44289a9d73d41d09280da"?>
+<!--
+	파이프라인 XML 만으로 픽셀 효과를 더한 포워드 파이프라인 — 코드 없이 패스 한 줄과 셰이더 하나다. 첨부 · 값은 이름으로 셰이더에 간다(네이티브 bindless). 시나리오: automation/fullscreenpass.
+	고르는 법: `-gv_renderPipeline=game/playground/pipeline/fullscreenpasspipeline.xml`.
+-->
+<RenderPipelineDesc _base="guid:c755b53333008817343dd6bd2fea1ed9" _name="FullscreenPassPipeline">
+	<_listAttachment>
+		<RenderPassAttachment _name="TonemapColor" _op="Remove" />
+		<RenderPassAttachment _name="TrailColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Load" _role="" _resolutionDivisor="1" _bHistory="true" />
+	</_listAttachment>
+	<_listPass>
+		<RenderGraphPassDesc _name="Tonemap" _op="Remove" />
+		<RenderGraphPassDesc _name="Trail" _after="ForwardOpaque" _type="Fullscreen" _inputBinding="Name" _depthAttachment="" _shaderPath="guid:86380c90847e43efbe56ccc587e6342d" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _minPostQuality="0">
+			<_listInput>
+				<item>SceneColor</item>
+			</_listInput>
+			<_listOutput>
+				<item>TrailColor</item>
+			</_listOutput>
+			<_listValue>
+				<RenderPassValue _name="TrailBlend" _value="0.5" />
+				<RenderPassValue _name="GreenScale" _value="0.25" />
+			</_listValue>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Present" _shaderPath="guid:1596bb5708612b810adf07569f2a2936">
+			<_listInput>
+				<item>TrailColor</item>
+			</_listInput>
+			<_listPermutation>
+				<item>SW_POST_TONEMAP=1</item>
+			</_listPermutation>
+		</RenderGraphPassDesc>
+	</_listPass>
+</RenderPipelineDesc>

@@ -556,10 +556,28 @@ namespace sw
                 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
-                    // 이름 바인딩 · 값은 컴퓨트 패스의 루트 상수다 — 다른 패스는 읽는 쪽이 없다(풀스크린 패스의 이름 바인딩은 아직 없다).
-                    const bool bNamed = pass._inputBinding == RenderPassInputBinding::Name;
-                    if ( ( bNamed || pass._listValue.empty() == false ) && pass._type != RenderPassKind::Compute )
-                        report( "RenderPipelineAsset.PassNamedBindingNotCompute", pass, "_inputBinding Name and _listValue are for a Compute pass" );
+                    // 이름 바인딩 · 값은 컴퓨트 패스의 루트 상수, 풀스크린 패스의 PassCB 끝 칸이다 — 다른 패스는 읽는 쪽이 없다.
+                    const bool bNamed      = pass._inputBinding == RenderPassInputBinding::Name;
+                    const bool bFullscreen = pass._type == RenderPassKind::Fullscreen;
+                    if ( ( bNamed || pass._listValue.empty() == false ) && pass._type != RenderPassKind::Compute && bFullscreen == false )
+                        report( "RenderPipelineAsset.PassNamedBindingNotCompute", pass, "_inputBinding Name and _listValue are for a Compute or Fullscreen pass" );
+                    if ( bFullscreen )
+                    {
+                        // 풀스크린 패스는 셰이더가 고른 이름으로만 읽는다 — 역할 바인딩의 입력 계약(종류 표)이 없다.
+                        if ( bNamed == false )
+                            report( "RenderPipelineAsset.PassFullscreenNeedsNamedBinding", pass, "a Fullscreen pass binds by name - set _inputBinding=\"Name\"" );
+                        if ( pass._shaderPath.empty() )
+                            report( "RenderPipelineAsset.PassFullscreenNeedsShader", pass, "a Fullscreen pass needs _shaderPath - there is no default fullscreen shader" );
+                        if ( pass._listOutput.size() != 1 || pass._listResolvedColorOutput.size() != 1 )
+                            report( "RenderPipelineAsset.PassFullscreenOneOutput", pass, "a Fullscreen pass writes exactly one color attachment (not Swapchain, not depth)" );
+                        if ( pass.countNamedParams() > RenderGraphPassDesc::kMaxNamedPassCBParams )
+                            report( "RenderPipelineAsset.PassFullscreenParamsFull", pass, "output history, inputs and values do not fit the PassCB user params (kMaxNamedPassCBParams)" );
+                        for ( const string& inputName : pass._listInput )
+                        {
+                            if ( VectorUtil::contains( pass._listOutput, inputName ) )
+                                report( "RenderPipelineAsset.PassFullscreenInputIsOutput", pass, "a Fullscreen pass cannot read the attachment it writes - read its history instead" );
+                        }
+                    }
                     if ( pass._listValue.empty() == false && bNamed == false )
                         report( "RenderPipelineAsset.PassValueNeedsNamedBinding", pass, "_listValue goes to root constants of a name-bound pass - set _inputBinding=\"Name\"" );
                     for ( size_t valueIndex = 0; valueIndex < pass._listValue.size(); ++valueIndex )
@@ -822,6 +840,12 @@ namespace sw
                     const RenderPassAttachment* pOutput = findAttachment( desc, outputName );
                     if ( pOutput != nullptr && isDepthAttachment( pOutput ) == false )
                         pass._listResolvedColorOutput.push_back( resolveAttachment( outputName ) );
+                }
+                for ( RenderPassValue& value : pass._listValue )
+                {
+                    StringBuilder<constant::buffer::kMax128> constantName;
+                    constantName.appendFormat( "g_%#", value._name );
+                    value._resolvedConstant = hashed_string( string( constantName.view() ).c_str() );
                 }
             }
 
@@ -1510,6 +1534,15 @@ namespace sw
                 const RenderPipelineDesc& desc = asset.getDesc();
                 if ( desc._listPass.empty() == false )
                 {
+                    // 시험 그래프는 순서(순환 · 섞인 읽기)만 본다. 로드에는 모듈 · 확장 패스와 엔진이 채우는 자원이 없어 "아무도 쓰지 않는 읽기" 를 판정할 수 없다 —
+                    // 그 판정은 모든 패스가 든 프레임 그래프의 경고(`RenderGraph.ResourceReadButNever`)가 한다. 그래서 XML 패스가 쓰지 않는 입력은 시험 그래프에 넣지 않는다(간선이 없어 순서에도 영향이 없다).
+                    vector<hashed_string> listWritten;
+                    for ( const RenderGraphPassDesc& pass : desc._listPass )
+                    {
+                        listWritten.insert( listWritten.end(), pass._listResolvedOutput.begin(), pass._listResolvedOutput.end() );
+                        if ( pass._resolvedDepthAttachment.empty() == false )
+                            listWritten.push_back( pass._resolvedDepthAttachment );
+                    }
                     RenderGraph viewGraph;
                     for ( const RenderGraphPassDesc& pass : desc._listPass )
                     {
@@ -1519,7 +1552,7 @@ namespace sw
                         vector<hashed_string> listInput;
                         for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
                         {
-                            if ( VectorUtil::contains( listOutput, input._attachment ) == false )
+                            if ( VectorUtil::contains( listOutput, input._attachment ) == false && VectorUtil::contains( listWritten, input._attachment ) )
                                 listInput.push_back( input._attachment );
                         }
                         (void)viewGraph.addPass( pass._resolvedName, std::move( listInput ), std::move( listOutput ) ); // 이름 겹침은 앞 규칙(2-0)이 막았다

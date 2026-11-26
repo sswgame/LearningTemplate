@@ -348,6 +348,8 @@ namespace sw
         void copyOutputHistories( FramePassContext& context, const RenderGraphPassDesc& passDesc );
         /** @brief 이름 바인딩 컴퓨트 패스(`RenderPassInputBinding::Name`)를 돌립니다 — 루트 상수를 선언 차례로 채워 출력 크기만큼 디스패치한다(`executeComputePass` 가 부른다). */
         void executeNamedComputePass( const PassExecuteInput& input, const ComputePipeline& pipeline, const TransientAttachmentPool::Attachment& output );
+        /** @brief 이름 바인딩 풀스크린 패스(`RenderPassKind::Fullscreen`)를 그립니다 — 입력 · 출력 기록 · 값을 PassCB 끝 칸에 이름으로 걸고 첫 컬러 출력에 풀스크린 삼각형 하나를 그린다. */
+        void executeFullscreenPass( const PassExecuteInput& input );
         /** @brief 패스 @p passDesc 의 첫 컬러 출력의 기록입니다(시간 누적 패스가 자기 지난 출력을 읽는다). 기록이 없으면 nullptr 입니다. */
         const FrameViewHistory* findPassHistory( const FrameViewTarget& view, const RenderGraphPassDesc& passDesc ) const;
         /** @brief 역할의 셰이더 이름입니다. intern 된 hashed_string 입니다. */

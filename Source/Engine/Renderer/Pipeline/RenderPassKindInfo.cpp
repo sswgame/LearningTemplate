@@ -392,6 +392,12 @@ namespace sw
                         info._flags = Flag::kPipelineCompute | Flag::kDrawsDeclaredColor;
                         break;
                     }
+                    case RenderPassKind::Fullscreen:
+                    {
+                        // 셰이더는 XML 이 고르고 첨부는 이름으로 건다 — 입력 계약(역할)이 없는 전용 실행이다(`FramePassExecutor::executeFullscreenPass`). 입력을 번호로 읽어 에뮬 백엔드에는 PSO 가 없다.
+                        info._flags = Flag::kDrawsDeclaredColor | Flag::kRequiresNativeBindless;
+                        break;
+                    }
                     case RenderPassKind::ForwardOpaqueNoDepthWrite:
                     {
                         // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 하고, 그리는 대상은 ForwardOpaque 패스의 선언이다.
