@@ -1,7 +1,7 @@
 /**
  * @file StressTestScene.h
  * @brief 메시 벤치 하네스입니다. `-gv_stressTestMeshes=N` 으로 켜지는 측정용 씬입니다.
- * @details **새 게임을 시작할 때 지울 파일이다.** 이 템플릿이 벤치를 가지고 있는 이유는 하나다.
+ * @details 새 게임을 시작할 때 지울 파일이다. 이 템플릿이 벤치를 가지고 있는 이유는 하나다.
  *          렌더 경로를 측정하려면 그릴 오브젝트를 씬에 올려야 하고, 씬을 만드는 일은 엔진이 아니라 게임의
  *          일이다. 벤치 시나리오(`Content/game/playground/automation/benchmark.scenario.xml` 등)가
  *          이 플래그에 기대고 있으므로 타깃과 플래그 이름은 바꾸지 않는다.
@@ -187,13 +187,13 @@ namespace sw
         void updateProbes( GameObjectManager* pObjects );
         /**
          * @brief `-gv_stressTestLights=N` 개의 점광과 스포트라이트를 격자 위에 흩뿌립니다.
-         * @details 위치는 **결정적 해시**로 정합니다. 실행마다 같은 이미지가 나와야 스크린샷을 비교할 수 있기 때문입니다.
+         * @details 위치는 결정적 해시로 정합니다. 실행마다 같은 이미지가 나와야 스크린샷을 비교할 수 있기 때문입니다.
          *          홀수 번째 광원은 스포트라이트입니다. 점광만 두면 원뿔 감쇠 경로가 한 번도 실행되지 않습니다.
          */
         void spawnBenchLights( Scene* pScene, float32 halfExtent );
         /**
          * @brief `-gv_stressTestGround=1` 이면 격자 아래에 바닥 평면을 깝니다.
-         * @details 그림자를 **받는 면**입니다. 큐브만 떠 있으면 그림자가 어디에 생기는지 이미지로 확인할 수 없습니다.
+         * @details 그림자를 받는 면입니다. 큐브만 떠 있으면 그림자가 어디에 생기는지 이미지로 확인할 수 없습니다.
          */
         void spawnGround( Scene* pScene, float32 halfExtent );
         /** @brief `-gv_stressTestViews=N` 이면 격자 둘레에 캡처 카메라(렌더 텍스처) N 개를 둡니다. */
@@ -249,17 +249,17 @@ namespace sw
         /** @brief 벤치가 만든 주 광원의 핸들입니다. despawn 이 정리할 때 씁니다. */
         TComponentHandle<DirectionalLightComponent> _keyLight;
         /**
-         * @brief 벤치가 만든 **큐브가 아닌** 것들의 핸들입니다. 흩뿌린 라이트와 바닥 평면입니다.
+         * @brief 벤치가 만든 큐브가 아닌 것들의 핸들입니다. 흩뿌린 라이트와 바닥 평면입니다.
          * @details 모듈 리로드와 RHI 교체는 `despawn()` 과 `spawnFromGlobals()` 를 한 쌍으로
          *          돈다. 주의: 벤치가 만든 것을 여기 적지 않으면 `despawn()` 이 정리하지 못해 그때마다
-         *          **한 벌씩 더 쌓이고**, 측정하려는 경로가 측정을 망가뜨린다.
+         *          한 벌씩 더 쌓이고, 측정하려는 경로가 측정을 망가뜨린다.
          */
         vector<ComponentHandle> _listBenchExtra;
         /** @brief 반투명 큐브가 쓰는 머티리얼 에셋입니다(블렌드 모드와 퍼뮤테이션이 불투명과 다릅니다). */
         shared_ptr<Material> _glassMaterial;
         /**
          * @brief 벤치가 만든 머티리얼 인스턴스 전부입니다. 스트레스가 흔들 대상입니다.
-         * @details 소유를 여기서도 가진다. 제거한 인스턴스를 이 목록에서도 해제해야 참조가 **실제로**
+         * @details 소유를 여기서도 가진다. 제거한 인스턴스를 이 목록에서도 해제해야 참조가 실제로
          *          사라지고, 그래야 요소 회수와 상수 버퍼 해제 경로가 돈다.
          */
         vector<shared_ptr<MaterialInstance>> _listChurnInstance;

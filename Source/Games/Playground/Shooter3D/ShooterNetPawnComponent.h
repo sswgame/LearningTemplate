@@ -3,24 +3,24 @@
  * @brief 슈터 플레이어 몸의 네트워크 이동입니다 — 서버 권위 + 내 폰만 예측 · 재조정 + 보정 녹이기.
  * @details 이 컴포넌트의 월드에 넷 링크(`SceneNetLink` — 전역 세션 또는 가상 서버 하니스 월드가 올린다)가 올라 있을 때만 일한다. 혼자 하는 게임에서는 아무것도 하지 않아 몸 이동이 예전처럼 프레임마다 돈다.
  *          고정 틱(`_tickInterval`)으로 돈다 — 예측과 서버 시뮬레이션이 같은 걸음 크기여야 재조정이 맞는다. 켜지면 몸 이동을 네트워크 몫으로 돌린다(`setNetDriven`).
- *          **선의 입력은 폰 의도(`ControlIntent`) 하나다**(언리얼 `PlayerController` → 서버 RPC · 유니티 Netcode `ICommandData` 자리). 예전의 자기 입력 바이트(이동 · 달리기 · 점프)는 지웠다 —
+ *          선의 입력은 폰 의도(`ControlIntent`) 하나다(언리얼 `PlayerController` → 서버 RPC · 유니티 Netcode `ICommandData` 자리). 예전의 자기 입력 바이트(이동 · 달리기 · 점프)는 지웠다 —
  *          사격 · 무기 버튼과 시선이 몸 이동과 같은 길로 서버에 닿는다.
- *          - 서버: **접속마다 몸 하나다**(언리얼 DM 의 접속마다 폰 · 유니티 NGO 플레이어 프리팹). 자리 0 은 씬의 플레이어 몸이고 나머지 자리(`_listGuestSpawn`)는 접속이 앉을 때 그 몸의 설정을 옮겨
+ *          - 서버: 접속마다 몸 하나다(언리얼 DM 의 접속마다 폰 · 유니티 NGO 플레이어 프리팹). 자리 0 은 씬의 플레이어 몸이고 나머지 자리(`_listGuestSpawn`)는 접속이 앉을 때 그 몸의 설정을 옮겨
  *            세우고 나가면 거둔다(`ServerPawn`). 걸음 · 스폰은 남의 오브젝트라 모두 틱 뒤(게임 스레드)에 한다. 틱마다 자리의 연결에서 다음 입력 틱을 꺼내
  *            (`ReplicationServer::popNextIntent`, 온 만큼 흐른 시간의 몫 안에서 — 오지 않았으면 그 자리) `ShooterBodyMovementComponent::simulate` 로 움직이고, 상태를 소유자 상태(그 입력 틱과 한 쌍)와
  *            엔티티로 싣는다. 꺼낸 의도는 원격 조종자(`RemoteControllerComponent`)에도 넣어 폰의 시선 · 감시 값이 그 의도를 따른다(사격 · 무기는 걸음이 한다). 엔티티 자리는 관심 영역 정책(`InterestReplicationPolicy`)에 알린다.
  *          - 클라이언트: 틱마다 폰 의도를 보내고(`ReplicationClient::sendIntent`) 바로 같은 함수로 예측한다(`ClientPrediction::record`).
  *            새 소유자 상태가 오면 그 입력 틱의 기록과 비교해(`reconcile`) 다르면 남은 입력을 다시 시뮬레이션하고, 보정 전후 자리 차이를 `PredictionSmoother` 로 녹인다.
  *            발동은 한 프레임의 사건이다 — 입력 틱이 없던 프레임의 사건을 프레임마다 모아 다음 입력 틱에 싣는다(사건이 자기 시선 · 보던 시각을 든다).
- *          **이동과 발동은 명령 하나의 한 걸음이다** — 서버 · 예측 모두 이동한 자리에서 바로 무기 · 근접을 판정한다(`ShooterPlayerComponent::stepNetCommand`). 합친 폰 의도로 쏘지 않는다.
- *          **명중은 서버가 정한다(랙 보정).** 서버는 틱마다 산 적의 자리를 기록하고(`LagCompensationHistory`), 서버의 플레이어가 쏘면 발동이 들고 온 보던 서버 틱
- *          (`ControlTrigger::getViewTick` — 서버가 자른 값)으로 되감아 명중을 본다(`raycastRewound`). 히트박스(래그돌 바디 — 히트 존 배율)는 바디마다 과거 자세에서 지금 자세로 광선을 옮겨 묻는다(포즈까지 되감는다).
+ *          이동과 발동은 명령 하나의 한 걸음이다 — 서버 · 예측 모두 이동한 자리에서 바로 무기 · 근접을 판정한다(`ShooterPlayerComponent::stepNetCommand`). 합친 폰 의도로 쏘지 않는다.
+ *          명중은 서버가 정한다(랙 보정). 서버는 틱마다 산 적의 자리를 기록하고(`LagCompensationHistory`), 서버의 플레이어가 쏘면 발동이 들고 온 보던 서버 틱
+ *          (`ControlTrigger::getViewTick`, 서버가 자른 값)으로 되감아 명중을 본다(`raycastRewound`). 히트박스(래그돌 바디, 히트 존 배율)는 바디마다 과거 자세에서 지금 자세로 광선을 옮겨 묻는다(포즈까지 되감는다).
  *          판정 결과(맞힌 발 수 · 체력)는 소유자 상태에 실어 클라이언트 HUD 가 서버의 값을 보인다(`ShooterPlayerComponent::applyServerReport`).
- *          **근접은 주장을 확인한다.** 클라이언트가 예측 스윕으로 맞힌 적을 의도 입력에 주장으로 싣고(`queueMeleeClaim`), 서버는 그 입력을 처리한 프레임의 자기 스윕 기록(`MeleeSweepHistory`)과
+ *          근접은 주장을 확인한다. 클라이언트가 예측 스윕으로 맞힌 적을 의도 입력에 주장으로 싣고(`queueMeleeClaim`), 서버는 그 입력을 처리한 프레임의 자기 스윕 기록(`MeleeSweepHistory`)과
  *          클라이언트가 보던 틱으로 되감은 적 자리를 맞춰 인정하면 맞음을 전달한다. 휘두르지 않은 주장은 기록이 없어 거절된다.
- *          **남의 몸도 엔티티로 복제한다** — 클라이언트는 자기 것이 아닌 몸(`ShooterPawnNetState`)을 보간해 몸 프리팹의 모습에 둔다. 다른 플레이어도 서버의 랙 보정 기록(캡슐)으로 맞고, 쓰러지면 잠시 뒤
+ *          남의 몸도 엔티티로 복제한다 — 클라이언트는 자기 것이 아닌 몸(`ShooterPawnNetState`)을 보간해 몸 프리팹의 모습에 둔다. 다른 플레이어도 서버의 랙 보정 기록(캡슐)으로 맞고, 쓰러지면 잠시 뒤
  *          자기 자리에서 다시 태어난다. 매치는 정해진 횟수(`ShooterGameModeComponent::getMatchDownLimit`)만큼 쓰러진 사람의 판을 끝낸다(점수는 계정마다).
- *          **적은 엔티티로 복제한다** — 서버가 산 적을 틱마다 싣고(자리는 관심 영역 정책에 알린다), 클라이언트의 감독이 받은 것을 보간해 복제 모습으로 그린다(`collectReplicatedEnemies`).
+ *          적은 엔티티로 복제한다 — 서버가 산 적을 틱마다 싣고(자리는 관심 영역 정책에 알린다), 클라이언트의 감독이 받은 것을 보간해 복제 모습으로 그린다(`collectReplicatedEnemies`).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -382,7 +382,7 @@ namespace sw
         SW_TRANSIENT ClientPrediction<ShooterMoveState, ControlIntent> _prediction;
         SW_TRANSIENT PredictionSmoother                                _smoother;
         SW_TRANSIENT vector<uint8> _bytesScratch;
-        SW_TRANSIENT vector<MeleeHitClaim> _listClaim;   ///< 클라이언트 — 다음 입력에 실을 주장, 서버 — 이번 입력에서 꺼낸 주장
+        SW_TRANSIENT vector<MeleeHitClaim> _listClaim;   ///< 클라이언트는 다음 입력에 실을 주장, 서버는 이번 입력에서 꺼낸 주장
         SW_TRANSIENT vector<ServerPawn> _listServerPawn; ///< 서버 — 자리마다 하나(자리 0 이 씬의 몸)
         SW_TRANSIENT vector<RemotePawn> _listRemotePawn; ///< 클라이언트 — 보이는 남의 몸
         SW_TRANSIENT vector<int32> _listConnectionScratch;
@@ -394,7 +394,7 @@ namespace sw
         SW_TRANSIENT float32                _accumulator;
         SW_TRANSIENT vector<ControlTrigger> _listPendingTrigger;  ///< 클라이언트 — 다음 입력 틱에 실을 발동 사건
         SW_TRANSIENT uint32                 _stride;              ///< 이 컴포넌트의 틱 하나가 월드의 서버 틱 몇 개인지
-        SW_TRANSIENT uint32                 _tick;                ///< 서버 — 월드의 서버 시계에서 낸 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
+        SW_TRANSIENT uint32                 _tick;                ///< 서버는 월드의 서버 시계에서 낸 시뮬레이션 틱, 클라이언트는 예측한 입력 틱
         SW_TRANSIENT uint32                 _pawnEntityID;        ///< 클라이언트 — 서버가 알려 준 내 몸의 엔티티(0 이면 아직)
         SW_TRANSIENT uint32                 _reconciledTick;      ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
         SW_TRANSIENT uint32                 _rewoundShotCount;    ///< 서버 — 랙 보정으로 판정한 광선 수

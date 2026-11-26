@@ -76,7 +76,7 @@ namespace sw
 
         /** @brief 계정 id 의 레코드 키입니다(`a` + 16자 16 진수 — 키 규칙 `[0-9a-z_./-]` 안). */
         static string makeRecordKey( uint64 accountID );
-        /** @brief 레코드 바이트입니다 — 진행의 바이트(`HubProfile::write` — 판 뒤에 칸) 그대로. 칸이 선언 범위 밖이면 false 이고 @p outBytes 는 비웁니다. */
+        /** @brief 레코드 바이트입니다. 진행의 바이트(`HubProfile::write`, 판 뒤에 칸) 그대로. 칸이 선언 범위 밖이면 false 이고 @p outBytes 는 비웁니다. */
         [[nodiscard]] static bool encodeRecord( const HubProfile& profile, vector<uint8>& outBytes );
         /** @brief 레코드 바이트를 읽습니다. 판을 모르거나 깨졌거나 값이 범위 밖이면 false 입니다. */
         [[nodiscard]] static bool decodeRecord( const vector<uint8>& bytes, HubProfile& outProfile );

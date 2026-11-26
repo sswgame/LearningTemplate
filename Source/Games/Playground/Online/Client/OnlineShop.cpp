@@ -1,7 +1,7 @@
 /**
  * @file Games/Playground/Online/Client/OnlineShop.cpp
  * @brief Playground 의 온라인 상점 화면을 여는 개발 명령(`playground.online.shop`)입니다. 화면은 공용 상점 화면(`ShopScreen`), 공급자는 흐름이 든 경제 키트 공급자(`EconomyShopPurchaseProvider`)다.
- * @details 클라이언트 전용 소스다(Client/ — 전용 서버는 짓지 않는다). 같은 화면을 오프라인 시연(Empty `InventoryShopDemoComponent`)은 가게 공급자로 연다 — 공급자만 갈아 끼운다.
+ * @details 클라이언트 전용 소스다(Client/, 전용 서버는 짓지 않는다). 같은 화면을 오프라인 시연(Empty `InventoryShopDemoComponent`)은 가게 공급자로 연다. 공급자만 갈아 끼운다.
  *          시나리오: `game/playground/automation/shooter3d_onlineshop.scenario.xml`.
  */
 #include "pch.h"

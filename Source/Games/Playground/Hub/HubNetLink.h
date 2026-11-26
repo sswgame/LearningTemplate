@@ -4,7 +4,7 @@
  * @details - 세션 대상: 연결마다 `HubAvatarAgent` 하나가 양쪽의 id 0 이다(언리얼 PlayerController 자리). 클라이언트는 `Server` 함수(공격 · 채집 · 파티)를 부르고,
  *            서버는 그 결과와 진행을 `Client` 함수로 알린다. 행동의 판정은 서버의 `HubWorld` 가 한다 — 클라이언트는 결과를 보여 줄 뿐이다.
  *          - 검증 짝(`validate*`)은 지어낸 번호 · 자기 초대 같은 조작만 거른다(실패하면 연결을 끊는다). 사거리 · 재사용 대기 같은 게임 규칙은 결과로 알린다.
- *          - 계정: 접속 인증기의 주체(`INetPeers::getConnectionPrincipal` — 게임 접속 티켓의 계정)만 쓴다. 주체가 없는 연결(자격 없이 붙은)은 경고하고 끊는다 —
+ *          - 계정: 접속 인증기의 주체(`INetPeers::getConnectionPrincipal`, 게임 접속 티켓의 계정)만 쓴다. 주체가 없는 연결(자격 없이 붙은)은 경고하고 끊는다.
  *            클라이언트가 보낸 이름으로 계정을 고르면 남의 진행을 가져갈 수 있다. 같은 계정이 다시 붙으면 앞 연결을 저장한 뒤 끊는다(재접속이 옛 연결을 기다리지 않는다).
  *          - 저장: 접속 끝 · 주기(`HubRules::_autosaveSeconds`) · 서버 내림에 쓴다. 읽기는 접속 때 한 번이다(서버 전용 `Server/HubProfileStore`).
  *          - 서버 링크(`Server/HubServerLink`)는 서버 전용 코드라 여기에는 공유 창구(`IHubServer` · `IHubServerFactory`)만 둔다.

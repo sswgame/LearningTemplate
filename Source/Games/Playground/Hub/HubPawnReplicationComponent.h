@@ -2,7 +2,7 @@
  * @file HubPawnReplicationComponent.h
  * @brief 허브에 접속한 계정마다 폰을 세우고 그 움직임을 맞춥니다 — 서버 권위, 자기 폰(걷기 · 말)은 예측 · 재조정 · 보정 녹이기, 남의 폰과 말은 보간.
  * @details 허브 오브젝트(`HubWorldComponent`)에 함께 붙는다. 넷 링크가 걸리고 허브 링크(서버 `IHubServer` · 클라이언트 `HubClientLink`)가 선 뒤에만 일한다 — 혼자 하는 허브는 예전 그대로다.
- *          **선의 입력은 조종 의도(`ControlIntent`) 하나와 그 의도를 낸 폰의 엔티티 id 다** — 자리 · 속도 · 명중을 클라이언트가 보내지 않는다(언리얼 `ServerMove` 와 달리 클라이언트의 끝 자리도 싣지 않는다).
+ *          선의 입력은 조종 의도(`ControlIntent`) 하나와 그 의도를 낸 폰의 엔티티 id 다 — 자리 · 속도 · 명중을 클라이언트가 보내지 않는다(언리얼 `ServerMove` 와 달리 클라이언트의 끝 자리도 싣지 않는다).
  *          - 서버: 들인 아바타(`IHubServer::collectAvatars`)마다 폰 프리팹을 세우고 원격 조종자(`RemoteControllerComponent::spawnForConnection`)로 소유 연결을 준다. 연결이 나가면 내리게 하고 거둔다.
  *            걸음은 도착한 입력만큼, 흐른 시간의 몫 안에서 돈다(`ReplicationServer::popNextIntent` — 속도 치트 · 끊김). 튜닝은 씬의 플레이어 몸에서 옮긴다(데이터가 한 벌).
  *            끝 자리는 허브 규칙이 다시 본다(`IHubServer::moveAvatar` — 경계 · 속도 한도). 받지 않으면 폰을 앞 자리로 되돌린다.
@@ -10,8 +10,8 @@
  *          - 말: 컨트롤러 없이 루트를 옮기는 탈것이라 걸음이 순수 함수다(`MountMovementComponent::simulate`) — 탄 쪽이 자기 폰처럼 예측한다. 타고 내리는 것은 서버만 정한다: 클라이언트의 상호작용 버튼은
  *            의도로 서버의 폰에 닿고, 서버 상태의 탈것 번호가 바뀌면 클라이언트가 자리를 맞춘다(언리얼 `Possess` → `ClientRestart`). 타지 않은 말은 서버 권위 + 보간이다.
  *          - 남: 폰 · 말은 엔티티(`HubPawnPose`)로 오고 렌더 시각의 앞뒤 스냅샷을 보간해 프리팹 모습에 둔다. 캡슐은 켜 둔다(막히는 느낌이 서버와 같게 — 자리는 보간 지연만큼 과거다).
- *          고정 틱은 **실제 시간**으로 센다 — 게임 시간은 배율 · 정지 · 시나리오의 고정 프레임이 걸려 서버와 다르게 흐른다.
- *          **자리는 모두 절대다** — 선의 상태 · 모습, 예측 기록, 허브 규칙(`moveAvatar` · 경계), 관심 영역. 씬의 몸(물리 · 트랜스폼)에 닿는 자리에서만 그 월드의 원점으로 옮긴다
+ *          고정 틱은 실제 시간으로 센다 — 게임 시간은 배율 · 정지 · 시나리오의 고정 프레임이 걸려 서버와 다르게 흐른다.
+ *          자리는 모두 절대다 — 선의 상태 · 모습, 예측 기록, 허브 규칙(`moveAvatar` · 경계), 관심 영역. 씬의 몸(물리 · 트랜스폼)에 닿는 자리에서만 그 월드의 원점으로 옮긴다
  *          (`toLocalState` · `toAbsoluteState`). 서버와 클라이언트의 원점이 달라도, 예측 도중 원점이 옮겨져도 기록과 서버 상태가 같은 자리를 말한다.
  */
 #pragma once
@@ -309,7 +309,7 @@ namespace sw
         SW_TRANSIENT vector<ControlTrigger> _listPendingTrigger;  ///< 클라이언트 — 다음 입력 틱에 실을 발동 사건
         SW_TRANSIENT uint32                 _pendingPawnEntityID; ///< 클라이언트 — 모은 발동을 낸 폰(폰이 바뀌면 모은 것을 버린다)
         SW_TRANSIENT uint32                 _stride;              ///< 이 컴포넌트의 틱 하나가 월드의 서버 틱 몇 개인지
-        SW_TRANSIENT uint32                 _tick;                ///< 서버 — 월드의 서버 시계에서 낸 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
+        SW_TRANSIENT uint32                 _tick;                ///< 서버는 월드의 서버 시계에서 낸 시뮬레이션 틱, 클라이언트는 예측한 입력 틱
         SW_TRANSIENT uint32                 _reconciledTick;      ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
         SW_TRANSIENT uint32                 _localAvatarID;       ///< 클라이언트 — 예측하는 자기 아바타(0 이면 아직 없다)
         SW_TRANSIENT Role                   _role;

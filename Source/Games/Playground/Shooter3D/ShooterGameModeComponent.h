@@ -5,7 +5,7 @@
  *          이동, 사격, 체력은 플레이어 컴포넌트(`ShooterPlayerComponent`)가, 적 하나의 움직임은 `ShooterEnemyComponent` 가 맡는다.
  *
  *          틱 규칙은 다음과 같다. 디렉터는 `TickGroup::PrePhysics` 에서 쓰러진 적을 세고, 시체를 정리하고, 이번 프레임의 적 위치와 플레이어 위치를 기록한다.
- *          플레이어와 적(`DuringPhysics`)은 그 기록을 **읽기만** 한다(목록은 `data()` 로 읽는다). 스폰, 효과음, 효과는 틱 안에서 할 수 없으므로 쌓아 두었다가
+ *          플레이어와 적(`DuringPhysics`)은 그 기록을 읽기만 한다(목록은 `data()` 로 읽는다). 스폰, 효과음, 효과는 틱 안에서 할 수 없으므로 쌓아 두었다가
  *          `executeOrDeferPostTick` 한 번으로 틱이 끝난 뒤에 처리한다.
  */
 #pragma once
@@ -154,11 +154,11 @@ namespace sw
      *          감독의 순환 수에 1 을 더한 값이다. 스폰한 적과 효과는 핸들로 보관하고, 상태를 저장하기 전에 정리한다(`despawnViews`). 감독 예산으로 스폰한 적은 같은 스폰 ID 로 다시 스폰한다.
      *          적의 AI 조종자는 적 폰의 자동 빙의가 만들고 폰과 함께 지워진다.
      *
-     *          **자동 플레이는 AI 조종자의 빙의로 구현한다.** 자동 플레이 스위치(`gv_playgroundAutoPlay`, 씬의 `_bAutoPlay`, 에디터 툴바)가 바뀌면 틱이 끝난 뒤 플러시에서 플레이어 폰을
+     *          자동 플레이는 AI 조종자의 빙의로 구현한다. 자동 플레이 스위치(`gv_playgroundAutoPlay`, 씬의 `_bAutoPlay`, 에디터 툴바)가 바뀌면 틱이 끝난 뒤 플러시에서 플레이어 폰을
      *          `ShooterAutoAimControllerComponent`(스폰한 오브젝트) 또는 플레이어 0 의 조종자(`ControlSystem::getOrCreatePlayerController`)에게 넘긴다.
      *          플레이어 몸에는 자동 플레이 분기가 없다.
      *
-     *          **네트 클라이언트의 월드**(넷 링크 역할이 Client)는 판을 돌리지 않는다 — 페이싱 감독 · 적 규칙은 서버 몫이고, 스냅샷의 적을 복제 모습으로 세워(`ShooterEnemyComponent::launchReplica`)
+     *          네트 클라이언트의 월드(넷 링크 역할이 Client)는 판을 돌리지 않는다 — 페이싱 감독 · 적 규칙은 서버 몫이고, 스냅샷의 적을 복제 모습으로 세워(`ShooterEnemyComponent::launchReplica`)
      *          적 목록(`getEnemyViews`)을 그 자리로 채운다. 그래서 자동 플레이 AI · 사격 예측 · 근접 예측이 혼자 하는 게임과 같은 목록을 본다. 역할은 프로세스 구성(한 프로세스 재생 · 전용 서버 + 앱)을 가리지 않고 링크가 정한다.
      */
     REFLECT( Category = "Shooter", DisplayName = "Shooter Game Mode", Tooltip = "Runs the skeleton waves, kills, blockers, the effect pools and the runtime spawns" )

@@ -44,28 +44,28 @@ namespace sw
      * @brief 플레이어 오브젝트의 게임 규칙입니다. 같은 오브젝트에 카메라, `FirstPersonCameraComponent`, `PawnComponent`, `ShooterBodyMovementComponent`,
      *        1인칭 손에 든 총, HUD(클라이언트 전용 `HUDControllerComponent`)가 있습니다.
      * @details 기본 틱 그룹(`DuringPhysics`)에서 돈다. 같은 오브젝트의 1인칭 카메라가 `PrePhysics` 에서 폰의 조종 회전으로 시점을 정한 뒤라, 그 시점으로
-     *          걷고 쏘고 `setEyePosition` 으로 눈 위치를 넣는다. **폰의 의도만 읽는다**(버튼 Jump, Sprint, Fire, Reload, SwitchWeapon, Weapon1..3, 아날로그
+     *          걷고 쏘고 `setEyePosition` 으로 눈 위치를 넣는다. 폰의 의도만 읽는다(버튼 Jump, Sprint, Fire, Reload, SwitchWeapon, Weapon1..3, 아날로그
      *          SwitchWeapon). 사람(플레이어 조종자가 입력 맵 `data/shooter.input.xml` 에서 만든다)이든 자동 플레이 AI(`ShooterAutoAimControllerComponent`)든 같다.
      *          걷기와 점프는 몸 이동(`ShooterBodyMovementComponent`, 적과 같은 코드)이 한다. 막는 상자와 적 위치는 디렉터가 `PrePhysics` 에서 기록한 것을 읽기만 한다.
      *
-     *          **몸**: 플레이가 시작되면 몸 프리팹(`_bodyPrefab`, 스킨드 메시, 애니메이터, 외형, `ShooterAvatarComponent`)을 스폰한다. 몸이 이 컴포넌트의
+     *          몸: 플레이가 시작되면 몸 프리팹(`_bodyPrefab`, 스킨드 메시, 애니메이터, 외형, `ShooterAvatarComponent`)을 스폰한다. 몸이 이 컴포넌트의
      *          상태(발, 요, 속도, 사격, 맞음, 쓰러짐, 무기)를 읽어 스스로 움직이고, 무기는 외형의 MainHand 슬롯 아이템(무기 표의 `item`)이 된다.
      *          시점 카메라의 프리셋이 1인칭(`CameraPresetMode::FirstPerson`)이면 몸의 머리 · 머리 장비 · 몸 무기만 숨기고(`ShooterAvatarComponent::setFirstPerson`)
      *          손에 든 총과 조준선을 보이며, 아니면 반대로 한다. 눈높이는 몸 소켓
      *          `Eyes` 의 바인드 포즈 높이에 체형의 다리 길이가 몸을 올린 높이(몸 리그 `rest_leg_lift`)를 더한 값이다(없으면 `_eyeHeight`) — 1인칭 카메라가
      *          머리를 따른다(언리얼 트루 1인칭 · 스카이림 종족 키). 애니메이션 머리 흔들림은 섞지 않아 조준 원점이 흔들리지 않는다.
      *
-     *          **HUD**: 게임의 뷰모델(`ShooterHUDViewModel`)을 이 컴포넌트가 들고 틱이 끝난 뒤 값을 넣으며, `IHUDViewModelBinder` 로 같은 오브젝트의 HUD 에 건다(전용 서버는 창구가 없어 걸지 않는다). 조준선(1인칭이고 살아 있을 때),
+     *          HUD: 게임의 뷰모델(`ShooterHUDViewModel`)을 이 컴포넌트가 들고 틱이 끝난 뒤 값을 넣으며, `IHUDViewModelBinder` 로 같은 오브젝트의 HUD 에 건다(전용 서버는 창구가 없어 걸지 않는다). 조준선(1인칭이고 살아 있을 때),
      *          맞음 표시(맞힌 직후, 1인칭), 체력, 탄약(탄창과 예비), 무기 이름(무기의 장비 아이템 표의 이름이 곧 현지화 키)이 대상이다. 위젯은 문서(`game/playground/shooter3d/ui/hud.ui.xml`)의
      *          `{bind:필드}` 가 연결한다. 이 컴포넌트는 위젯 이름을 모른다.
      *
-     *          **탄도선과 총구 섬광**: 총구(1인칭이면 손에 든 총과 무기 소켓 `Muzzle`, 아니면 몸 외형의 `MainHand.Muzzle`)에서 맞은 위치까지의 상자와
+     *          탄도선과 총구 섬광: 총구(1인칭이면 손에 든 총과 무기 소켓 `Muzzle`, 아니면 몸 외형의 `MainHand.Muzzle`)에서 맞은 위치까지의 상자와
      *          섬광 구를 디렉터의 풀에서 꺼낸다. 에디터 없이 App 에서도 보인다.
      *          적에게 주는 피해, 효과, 효과음, 손에 든 총 교체는 쌓아 두었다가 틱이 끝난 뒤 한 번에 처리한다(게임 스레드).
-     *          **히트스캔**: 틱 안에서는 막는 상자 · 바닥까지의 거리만 재고(`traceCover`), 적은 틱 뒤에 그 거리 안에서 물리 질의로 래그돌 히트박스를 묻는다
+     *          히트스캔: 틱 안에서는 막는 상자 · 바닥까지의 거리만 재고(`traceCover`), 적은 틱 뒤에 그 거리 안에서 물리 질의로 래그돌 히트박스를 묻는다
      *          (`resolveShots`, 레이어 `_hitboxLayer`). 피해는 장전한 탄의 피해(`WeaponState::getShot`) × 맞은 바디의 히트 존 배율이다.
-     *          **근접**(버튼 Melee): 눈앞의 짧은 호를 칼날로 쓸어(`MeleeHit::sweep`, 틱 뒤 · 게임 스레드) 히트박스를 맞힌다. 네트 클라이언트는 맞음을 찾아 서버에 주장하고, 서버는 자기 스윕과 주장을 맞춰 정한다(`MeleeSweepHistory`).
-     *          **탄**: 사거리 · 피해 · 궤적(탄도선 색 · 두께)은 장전한 탄(`ProjectileCatalog`, projectiles.xml)이고, 탄착 효과(색 · 크기)는 탄과 표면(`Body` · `Cover`)의 맞음 표다.
+     *          근접(버튼 Melee): 눈앞의 짧은 호를 칼날로 쓸어(`MeleeHit::sweep`, 틱 뒤 · 게임 스레드) 히트박스를 맞힌다. 네트 클라이언트는 맞음을 찾아 서버에 주장하고, 서버는 자기 스윕과 주장을 맞춰 정한다(`MeleeSweepHistory`).
+     *          탄: 사거리 · 피해 · 궤적(탄도선 색 · 두께)은 장전한 탄(`ProjectileCatalog`, projectiles.xml)이고, 탄착 효과(색 · 크기)는 탄과 표면(`Body` · `Cover`)의 맞음 표다.
      *          탄은 무기가 받는 것만 넣는다(`WeaponDef::_accepts`). 적을 맞히면 그 탄의 맞음 동작(`<OnHit>`)을 적의 태그 문맥으로 부른다.
      */
     REFLECT( Category = "Shooter", DisplayName = "Shooter Player", Tooltip = "Movement, weapons, hitscan, health, the body and the tracers of the shooter player" )
@@ -282,7 +282,7 @@ namespace sw
          */
         [[nodiscard]] bool findMuzzlePosition( float3& outMuzzle );
         /**
-         * @brief 몸(남의 오브젝트)에서 읽는 값 — 눈높이 · 다리 올림 · 3인칭 총구 — 을 사본으로 받습니다. 틱 뒤(게임 스레드)에 매 프레임 부른다.
+         * @brief 몸(남의 오브젝트)에서 읽는 값(눈높이 · 다리 올림 · 3인칭 총구)을 사본으로 받습니다. 틱 뒤(게임 스레드)에 매 프레임 부른다.
          * @details 몸의 리그 · 포즈 · 외형은 같은 틱 그룹에서 몸의 틱이 쓰므로 플레이어 틱(워커)에서 읽지 않는다 — 틱은 지난 프레임의 사본을 쓴다.
          */
         void refreshBodySnapshot();

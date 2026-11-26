@@ -73,7 +73,7 @@ namespace sw
 {
     /**
      * @brief 몸 이동의 상태입니다. 같은 상태와 입력이면 서버와 클라이언트가 같은 다음 상태를 낸다(`ShooterBodyMovementComponent::simulate`).
-     * @details 엔티티 · 소유자 상태 바이트는 이 칸 선언이 정한다(`Replicated` — `ReplicatedLayout`, 손으로 쓴 바이트 코덱은 지웠다). 실수는 양자화하지 않는다 —
+     * @details 엔티티 · 소유자 상태 바이트는 이 칸 선언이 정한다(`Replicated`, `ReplicatedLayout`). 실수는 양자화하지 않는다 —
      *          예측과 재조정이 서버와 같은 값에서 시작해야 한다. 범위는 NaN · 무한대와 아레나 밖 값을 읽기에서 거절하는 경계다. 칸을 바꾸면 와이어 버전이 바뀐다
      *          (`PlaygroundGame::onRegisterReplicatedTypes`).
      */

@@ -38,16 +38,16 @@ namespace sw
     /**
      * @class ShooterEnemyComponent
      * @brief 적 프리팹(`prefabs/quadshell.prefab.xml` · `trilobite.prefab.xml` · `skeleton.prefab.xml` — 종류마다 하나)의 규칙 컴포넌트입니다. 디렉터가 틱 뒤에 스폰하고 `launch` 로 위치 · 체력 · 속도를 줍니다.
-     * @details 몸(같은 오브젝트의 `SkeletalMeshComponent`) · 애니메이터 · 외형(`CharacterAppearanceComponent` — 디렉터가 프리셋 · 씨앗을 고른다) · 폰(`PawnComponent` —
+     * @details 몸(같은 오브젝트의 `SkeletalMeshComponent`) · 애니메이터 · 외형(`CharacterAppearanceComponent`, 디렉터가 프리셋 · 씨앗을 고른다) · 폰(`PawnComponent`:
      *          버튼 `Attack`, 자동 빙의 `AI` → `ShooterEnemyAIControllerComponent`) · 몸 이동(`ShooterBodyMovementComponent` — 플레이어와 같은 이동)과 같은 오브젝트입니다.
-     *          판단(쫓기 · 멈추기 · 휘두를지)은 AI 조종자가 하고, 여기는 **폰의 의도만** 읽습니다: 쫓는 단계에서 몸 이동을 한 걸음 부르고, 몸 요를 조종 요 쪽으로 돌리고,
-     *          `Attack` 이 눌려 있으면 휘두르기 간격마다 휘두릅니다. 기본 틱 그룹(`DuringPhysics`)에서 디렉터가 적은 플레이어 위치 · 막는 상자를 읽고 **자기 오브젝트에만**
+     *          판단(쫓기 · 멈추기 · 휘두를지)은 AI 조종자가 하고, 여기는 폰의 의도만 읽습니다: 쫓는 단계에서 몸 이동을 한 걸음 부르고, 몸 요를 조종 요 쪽으로 돌리고,
+     *          `Attack` 이 눌려 있으면 휘두르기 간격마다 휘두릅니다. 기본 틱 그룹(`DuringPhysics`)에서 디렉터가 적은 플레이어 위치 · 막는 상자를 읽고 자기 오브젝트에만
      *          씁니다(위치 · 요 · 애니메이터 파라미터 · HP 바 — 체력 원천 알림 `notifyHealthChanged`). 내비메시 에이전트(`SteerOnly`)는 그 위치를 다음 갱신에서 받는다.
      *          애니메이터 그래프(`data/anim/skeleton.animgraph.xml`)는 파라미터 `Move`(0 서기 · 1 걷기 · 2 달리기) ·
      *          `Attack` · `Hit`(트리거) · `Dead` 로 움직입니다. 플레이어를 때리는 것은 다른 오브젝트에 쓰는 일이라 틱 뒤로 미룹니다.
      *          휘두름이 맞는 시각은 클립 데이터다 — 클립 알림 `Impact` → 알림 표(`characters/skeleton_minion/skeleton_minion.notifies.xml`)의 `AbilityEvent` →
      *          알림 사건(`GameObjectEvents::_animationNotify`)이 이벤트 `_attackHitEvent` 를 주면 다음 틱에 손이 닿는지 보고 때린다. 휘두름이 끝날 때까지 이벤트가 없으면 데이터 오류로 알린다.
-     *          **맞음**은 플레이어의 물리 질의 히트스캔이 틱 뒤에 `CharacterRayHit::deliverHit` 으로 보낸다(맞음 사건 `GameObjectEvents::_hitReceived`). 히트박스는 같은 오브젝트의
+     *          맞음은 플레이어의 물리 질의 히트스캔이 틱 뒤에 `CharacterRayHit::deliverHit` 으로 보낸다(맞음 사건 `GameObjectEvents::_hitReceived`). 히트박스는 같은 오브젝트의
      *          `RagdollComponent`(물리 에셋 `skeleton_warrior.physics.xml` — 뼈마다 바디와 히트 존 배율)이고, 피해는 기본 피해 × 히트 존 배율이다.
      *          쓰러지면 치명 신호를 다시 보낸다(`deliverFatalHit`) — 래그돌이 맞은 바디에 충격량을 받으며 넘어가고, 절단이 있는 해골은 맞은 영역이 떨어진다. 쓰러지지 않은 맞음의 몸 흔들림은 래그돌 컴포넌트가 같은 맞음으로 스스로 한다.
      *          `_radius` · `_height` 는 몸 이동 · 내비 에이전트 · 자동 조준이 쓰는 몸 크기다(판정에는 쓰지 않는다).
